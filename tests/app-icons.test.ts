@@ -36,9 +36,33 @@ function readIcoSizes(path: string): number[] {
   });
 }
 
+// The Fluent Flat mammoth's body colour. The centre of the stock Next.js favicon is white.
+const MAMMOTH_BROWN = { red: 0xa5, green: 0x69, blue: 0x53 };
+
+/**
+ * The RGB of the centre pixel of an ICO's `size`-px image. magick writes each image as a 32-bit
+ * bottom-up BMP (a 40-byte header, then BGRA rows), which is all this reads.
+ */
+function readIcoCentrePixel(path: string, size: number) {
+  const bytes = readFileSync(path);
+  const index = readIcoSizes(path).indexOf(size);
+  assert.notEqual(index, -1, `${path} has no ${size} px image`);
+  const image = bytes.readUInt32LE(6 + index * 16 + 12);
+  assert.equal(bytes.readUInt32LE(image), 40, "expected a BMP (BITMAPINFOHEADER) image");
+  assert.equal(bytes.readUInt16LE(image + 14), 32, "expected 32 bits per pixel");
+  const centre = size / 2;
+  const row = size - 1 - centre; // rows are stored bottom-up
+  const pixel = image + 40 + (row * size + centre) * 4;
+  return { red: bytes[pixel + 2], green: bytes[pixel + 1], blue: bytes[pixel] };
+}
+
 describe("app icons", () => {
   test("favicon.ico holds 16, 32 and 48 px images", () => {
     assert.deepEqual(readIcoSizes(join(appDir, "favicon.ico")), [16, 32, 48]);
+  });
+
+  test("favicon.ico shows the mammoth, not the Next.js logo", () => {
+    assert.deepEqual(readIcoCentrePixel(join(appDir, "favicon.ico"), 48), MAMMOTH_BROWN);
   });
 
   test("icon.svg is the scalable source artwork", () => {

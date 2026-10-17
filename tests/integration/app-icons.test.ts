@@ -8,6 +8,8 @@ const appDir = path.resolve(import.meta.dirname, "../../packages/app");
 
 type IconLink = { rel: string; href: string; sizes: string | null; type: string | null };
 
+const PAGES = ["/", "/admin"];
+
 /** Fetches a URL (absolute, or relative to the app) and asserts it answers 200 with this type. */
 async function fetchAs(url: string, contentType: string) {
   const response = await fetch(new URL(url, baseUrl));
@@ -18,21 +20,25 @@ async function fetchAs(url: string, contentType: string) {
 
 describe("the mammoth app icons", () => {
   let browser: Browser;
-  let links: IconLink[];
+  // The icon <link>s of each page, keyed by path. The home page is static; /admin is partially
+  // prerendered, so both rendering modes are covered.
+  const links: Record<string, IconLink[]> = {};
 
   beforeAll(async () => {
     browser = openBrowser();
-    await browser.open(baseUrl);
-    links = await browser.evaluate<IconLink[]>(
-      `[...document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"], link[rel="manifest"]')]
-        .map((l) => ({ rel: l.rel, href: l.getAttribute("href"), sizes: l.getAttribute("sizes"), type: l.getAttribute("type") }))`,
-    );
+    for (const page of PAGES) {
+      await browser.open(`${baseUrl}${page}`);
+      links[page] = await browser.evaluate<IconLink[]>(
+        `[...document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"], link[rel="manifest"]')]
+          .map((l) => ({ rel: l.rel, href: l.getAttribute("href"), sizes: l.getAttribute("sizes"), type: l.getAttribute("type") }))`,
+      );
+    }
   });
   afterAll(() => browser.close());
 
-  it("links the favicon, SVG icon, Apple touch icon and manifest from the home page", () => {
+  it.each(PAGES)("links the favicon, SVG icon, Apple touch icon and manifest from %s", (page) => {
     // Pinned to what Next.js emits, so a framework change in how browsers pick an icon fails here.
-    expect(links).toEqual([
+    expect(links[page]).toEqual([
       { rel: "manifest", href: "/manifest.webmanifest", sizes: null, type: null },
       { rel: "icon", href: expect.stringMatching(/^\/favicon\.ico\?/), sizes: "48x48", type: "image/x-icon" },
       { rel: "icon", href: expect.stringMatching(/^\/icon\.svg\?/), sizes: "any", type: "image/svg+xml" },
@@ -52,7 +58,7 @@ describe("the mammoth app icons", () => {
       "image/png": "src/app/apple-icon.png",
     } as const;
 
-    for (const link of links.filter((l) => l.rel !== "manifest")) {
+    for (const link of links["/"].filter((l) => l.rel !== "manifest")) {
       const type = link.type as keyof typeof committed;
       const body = await fetchAs(link.href, type);
       expect(body.equals(readFileSync(path.join(appDir, committed[type]))), link.href).toBe(true);
