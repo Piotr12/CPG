@@ -20,7 +20,7 @@ Replace the Next.js favicon with the 🦣 mammoth (Fluent Emoji Flat, MIT) in ev
 - `packages/app/public/icons/`: `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`.
 - `THIRD_PARTY_NOTICES.md` at the repo root.
 - `tests/app-icons.test.ts`.
-- `tests/integration/smoke.test.ts`.
+- `tests/integration/app-icons.test.ts` (a new file, so `smoke.test.ts` stays as it is).
 
 **Non-goals** (from the spec):
 
