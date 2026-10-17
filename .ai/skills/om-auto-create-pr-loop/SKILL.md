@@ -19,4 +19,4 @@ Match an existing run by slug, not by exact path: the slot is taken when `${RUNS
 
 ## Run log
 
-AGENTS.md also requires a run log in `.ai/runs/` for autonomous runs. Keep it short and link to `$RUN_DIR` instead of repeating the plan.
+`$RUN_DIR` is this run's run log (AGENTS.md, "Before starting any task"). Do not create a separate log in `.ai/runs/`.

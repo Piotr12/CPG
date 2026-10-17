@@ -19,4 +19,4 @@ The stamp carries the minute, so match an existing run by slug, not by exact pat
 
 ## Run log
 
-AGENTS.md also requires a run log in `.ai/runs/` for autonomous runs. Keep it short and link to `$PLAN_PATH` instead of repeating the plan.
+`$PLAN_PATH` is this run's run log (AGENTS.md, "Before starting any task"). Do not create a separate log in `.ai/runs/`.
