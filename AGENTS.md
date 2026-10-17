@@ -65,12 +65,21 @@ All AI working metadata lives in `.ai/`. Using it is **mandatory**, not optional
 │   ├── README.md
 │   └── YYYY-MM-DD--HHMMUTC-slug.md
 ├── lessons.md                       # long-term memory: index of lessons learned
-└── lessons/                         # long-form write-ups linked from lessons.md
-    ├── README.md
-    └── YYYY-MM-DD--HHMMUTC-slug.md
+├── lessons/                         # long-form write-ups linked from lessons.md
+│   ├── README.md
+│   └── YYYY-MM-DD--HHMMUTC-slug.md
+├── agentic.config.json              # om-* agent pipeline config (see "Agent pipeline" below)
+├── pipeline/runs/                   # om-* execution plans and run folders
+├── skills/                          # repo-local overrides of the om-* skills
+├── trackers/ browsers/              # tracker (GitHub) and browser (agent-browser) descriptors
+└── analysis/ scripts/ qa/           # om-* reports, test-env scripts, QA state
 ```
 
 `.ai/cezar/` is local state of the cezar cockpit — it is gitignored; never edit or commit it.
+
+### Agent pipeline (om-* skills)
+
+The open-mercato om-* skills (`.agents/skills/`, symlinked into `.claude/skills/`) run the issue → PR → review → QA → merge flow. [`SDLC.md`](SDLC.md) describes that flow, [`CODE_REVIEW.md`](CODE_REVIEW.md) adds review rules on top of the engineering-standards checklist, and [`BACKWARD_COMPATIBILITY.md`](BACKWARD_COMPATIBILITY.md) lists the protected contract surfaces. Their settings live in `.ai/agentic.config.json`. Never edit the vendored skills in `.agents/skills/`. Put repo-specific changes in `.ai/skills/<skill-name>/SKILL.md` ([README](.ai/skills/README.md)); those overrides make the skills follow the naming convention below. The rules in this file still apply to om-* runs. An autonomous om-* run also writes its run log in `runs/`, linking to its plan in `pipeline/runs/`.
 
 ### Naming convention
 
@@ -80,7 +89,9 @@ Every file in `specs/` (and its subfolders), `runs/` and `lessons/` is named `YY
 - `slug` — short, lowercase, kebab-case description, e.g. `2026-10-17--1432UTC-user-login.md`.
 - If the name is already taken, append a counter: `2026-10-17--1432UTC-user-login-2.md`.
 
-`README.md` files and `.ai/docs/` (standing documents with stable names, updated in place) are the only exceptions. `npm test` enforces this rule, and CI runs it on every pull request and before every deploy.
+Each entry directly inside `pipeline/runs/` follows the same rule: a flat plan file, or a run folder named the same way without `.md` (its files keep fixed names such as `PLAN.md`).
+
+The exceptions are `README.md` files, `.ai/docs/` (standing documents with stable names, updated in place), and the files the om-* skills keep in `specs/` under fixed names: `product-brief.md`, `backlog.md`, `assets/` and `research/`. `npm test` enforces this rule, and CI runs it on every pull request and before every deploy.
 
 ## Mandatory workflow
 
