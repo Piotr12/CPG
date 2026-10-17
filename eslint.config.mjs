@@ -40,7 +40,8 @@ const eslintConfig = defineConfig([
   { rules: { "no-console": ["error", { allow: ["info", "warn", "error"] }] } },
   { files: ["packages/*/scripts/**", "tests/**"], rules: { "no-console": "off" } },
   // Override default ignores of eslint-config-next (paths are relative to the repo root).
-  globalIgnores(["**/.next/**", "**/out/**", "**/build/**", "**/next-env.d.ts", "data/**", "coverage/**"]),
+  // .ai/tmp/ holds the om-* skills' temporary git worktrees, full repo copies.
+  globalIgnores(["**/.next/**", "**/out/**", "**/build/**", "**/next-env.d.ts", "data/**", "coverage/**", ".ai/tmp/**"]),
 ]);
 
 export default eslintConfig;

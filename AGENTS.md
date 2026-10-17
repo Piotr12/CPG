@@ -65,12 +65,21 @@ All AI working metadata lives in `.ai/`. Using it is **mandatory**, not optional
 │   ├── README.md
 │   └── YYYY-MM-DD--HHMMUTC-slug.md
 ├── lessons.md                       # long-term memory: index of lessons learned
-└── lessons/                         # long-form write-ups linked from lessons.md
-    ├── README.md
-    └── YYYY-MM-DD--HHMMUTC-slug.md
+├── lessons/                         # long-form write-ups linked from lessons.md
+│   ├── README.md
+│   └── YYYY-MM-DD--HHMMUTC-slug.md
+├── agentic.config.json              # om-* agent pipeline config (see "Agent pipeline" below)
+├── pipeline/runs/                   # om-* execution plans and run folders
+├── skills/                          # repo-local overrides of the om-* skills
+├── trackers/ browsers/              # tracker (GitHub) and browser (agent-browser) descriptors
+└── analysis/ scripts/ qa/           # om-* reports, test-env scripts, QA state
 ```
 
 `.ai/cezar/` is local state of the cezar cockpit — it is gitignored; never edit or commit it.
+
+### Agent pipeline (om-* skills)
+
+The open-mercato om-* skills (`.agents/skills/`, symlinked into `.claude/skills/`) run the issue → PR → review → QA → merge flow. [`SDLC.md`](SDLC.md) describes that flow, [`CODE_REVIEW.md`](CODE_REVIEW.md) adds review rules on top of the engineering-standards checklist, and [`BACKWARD_COMPATIBILITY.md`](BACKWARD_COMPATIBILITY.md) lists the protected contract surfaces. Their settings live in `.ai/agentic.config.json`. Never edit the vendored skills in `.agents/skills/`. Put repo-specific changes in `.ai/skills/<skill-name>/SKILL.md` ([README](.ai/skills/README.md)); those overrides make the skills follow the naming convention below. The rules in this file still apply to om-* runs. An om-* execution plan in `pipeline/runs/` is that run's run log (see "Before starting any task").
 
 ### Naming convention
 
@@ -80,7 +89,9 @@ Every file in `specs/` (and its subfolders), `runs/` and `lessons/` is named `YY
 - `slug` — short, lowercase, kebab-case description, e.g. `2026-10-17--1432UTC-user-login.md`.
 - If the name is already taken, append a counter: `2026-10-17--1432UTC-user-login-2.md`.
 
-`README.md` files and `.ai/docs/` (standing documents with stable names, updated in place) are the only exceptions. `npm test` enforces this rule, and CI runs it on every pull request and before every deploy.
+Each entry directly inside `pipeline/runs/` follows the same rule: a flat plan file, or a run folder named the same way without `.md` (its files keep fixed names such as `PLAN.md`).
+
+The exceptions are `README.md` files, `.ai/docs/` (standing documents with stable names, updated in place), and the files the om-* skills keep in `specs/` under fixed names: `product-brief.md`, `backlog.md`, `assets/` and `research/`. `npm test` enforces this rule, and CI runs it on every pull request and before every deploy.
 
 ## Mandatory workflow
 
@@ -88,7 +99,7 @@ Every file in `specs/` (and its subfolders), `runs/` and `lessons/` is named `YY
 
 1. **Read `.ai/lessons.md`** and open any linked lesson relevant to the task. Do not repeat a mistake that is already recorded there. For any code change, also read `.ai/docs/engineering-standards.md`.
 2. **Check `.ai/specs/`** for a spec covering the task. If one exists, it is the source of truth — implement what it says. If the task conflicts with the spec, stop and ask the human instead of guessing.
-3. **If this is an autonomous run** (you are working without a human approving each step — e.g. dispatched by cezar, a scheduled/automated job, a headless session), **create the run log** `.ai/runs/YYYY-MM-DD--HHMMUTC-slug.md` right away (template below).
+3. **If this is an autonomous run** (you are working without a human approving each step — e.g. dispatched by cezar, a scheduled/automated job, a headless session), **create the run log** `.ai/runs/YYYY-MM-DD--HHMMUTC-slug.md` right away (template below). Exception: when an om-* skill writes an execution plan for the run (`om-auto-create-pr`, `om-auto-create-pr-loop`, `om-auto-continue-pr`), that plan in `.ai/pipeline/runs/` **is** the run log. Don't create a second one; the plan, its Progress section and the PR's summary comment carry what the template asks for. Every other autonomous run, including om-* skills that write no plan, still logs in `.ai/runs/`.
 4. **Plan complex tasks before writing code** (multi-file changes, new features, bugs with an unclear cause). Write down the steps, the files you will touch and how you will verify the result — in the run log, or shown to the human in an interactive session. Aim for a plan good enough to implement in one pass. Resolve ambiguity by asking, not by guessing.
 
 ### 2. While working
