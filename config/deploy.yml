@@ -1,0 +1,35 @@
+# Name of your application. Used to uniquely configure containers.
+service: cpg
+
+# Name of the container image.
+image: cpg
+
+# Deploy to these servers.
+servers:
+  web:
+    - 146.59.105.8
+
+# kamal-proxy terminates TLS with a Let's Encrypt certificate for these hosts.
+proxy:
+  ssl: true
+  hosts:
+    - cpg.baby
+    - www.cpg.baby
+  app_port: 3000
+  healthcheck:
+    path: /up
+
+# Local registry: the image is pushed to a registry on the deploying machine and
+# pulled by the server through the SSH tunnel, so no external registry is needed.
+registry:
+  server: localhost:5555
+
+builder:
+  arch: amd64
+
+ssh:
+  user: ubuntu
+
+aliases:
+  logs: app logs -f
+  shell: app exec --interactive --reuse "sh"
