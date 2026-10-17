@@ -65,6 +65,10 @@ Every pull request runs lint, typecheck, unit tests (100% coverage required), th
 
 Start with [`AGENTS.md`](AGENTS.md). Specs, run logs and lessons learned are in [`.ai/`](.ai/).
 
+## License
+
+[GNU Affero General Public License v3.0](LICENSE) (`AGPL-3.0-only`). If you run a modified version as a network service, you must offer its source code to the users of that service.
+
 ---
 
 Demand come. Caveman plan. Caveman make. **Planning good.**
