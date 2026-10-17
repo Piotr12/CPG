@@ -54,7 +54,17 @@ Replace the Next.js favicon with the 🦣 mammoth (Fluent Emoji Flat, MIT) in ev
 
 ### Phase 1: Mammoth icons
 
-- [ ] 1.1 Artwork, exports, notices and asset-size test
-- [ ] 1.2 Web manifest
-- [ ] 1.3 Integration test
-- [ ] 1.4 Verify
+- [x] 1.1 Artwork, exports, notices and asset-size test — c79c0ea
+- [x] 1.2 Web manifest — cc2b3e0
+- [x] 1.3 Integration test — ff0cd02
+- [x] 1.4 Verify — full gate green (lint, typecheck, 77 unit tests at 100% coverage, build, 7 integration tests on the Docker image)
+
+## Notes
+
+- Built output confirms Next.js 16 emits the following, and the integration test pins all of it:
+  - `manifest` → `/manifest.webmanifest`;
+  - ICO → `sizes="48x48" type="image/x-icon"`;
+  - SVG → `sizes="any" type="image/svg+xml"`;
+  - Apple → `sizes="180x180" type="image/png"`.
+- The spec file lives on spec PR #5, which has not merged. It is not committed here, so moving it to `implemented/` is owed once #5 merges.
+- A headless Chrome screenshot cannot show the browser tab strip. UI evidence comes from `om-auto-qa-pr`, and the Firefox, Safari and dark-mode check stays with human QA.
