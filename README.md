@@ -2,51 +2,67 @@
 
 ### MRP II. Because planning hard. Caveman try anyway.
 
-After years of working in supply chain IT, I have finally
-come to the inevitable conclusion that the world needs
-another MRP II system.
+After years in supply chain IT, I concluded the world needs another MRP II system. This conclusion is almost certainly wrong. Here we are anyway.
 
-This conclusion is almost certainly wrong.
+CPG is deliberately primitive manufacturing planning. No seventeen-layer optimisation engine that needs a consulting firm to explain why nothing works. Just four things:
 
-Nevertheless, here we are.
+- **Demand Forecast**: guess what people will want. They will want something else.
+- **Bill of Materials**: know what things are made of, ideally before making them.
+- **Production Planning**: decide what to make, how much, and when. Preferably before it's needed.
+- **Production Execution**: make things. Discover why the plan was wrong.
 
-**Caveman Planning Good** is a deliberately primitive attempt
-at manufacturing planning. No grand ambitions, no enterprise
-complexity, no seventeen-layer optimization engines that
-require a consulting firm to explain why nothing works.
+**Philosophy:** if a reasonably intelligent caveman can't follow the planning logic, the logic is too clever.
 
-Just four things:
+**Who builds this?** An LLM writes it while I sit nearby making increasingly skeptical noises, which isn't far from how enterprise software has always been made.
 
-- **Demand Forecast** — Guess what people will want.
-  They will, of course, want something else.
-- **Bill of Materials (BOM)** — Know what things are made of.
-  Surprisingly useful before attempting to make them.
-- **Production Planning** — Decide what to make, how much,
-  and when. Preferably before it's needed.
-- **Production Execution** — Actually make things.
-  Discover why the plan was wrong.
+## Architecture
 
-## Philosophy
+| Layer | Choice |
+| --- | --- |
+| Framework | Next.js 16 (App Router, Turbopack, Cache Components), React 19, TypeScript |
+| Database | SQLite (better-sqlite3) through MikroORM 7, with migrations |
+| Dependency injection | Awilix |
+| Styling | Tailwind CSS 4 for frontend pages, shadcn/ui for backend (admin) pages |
+| Repo layout | npm workspaces monorepo |
+| Deployment | Docker + Kamal on a single VM, from GitHub Actions |
 
-Keep it simple. Keep it understandable. Make it work.
+```
+packages/
+├── app/    @cpg/app   Next.js app: routes, pages, DI composition root, startup migrations
+├── core/   @cpg/core  reusable bits: config, DI container factory, shared logic
+├── db/     @cpg/db    MikroORM config, entities, migrations, DB registrations
+└── ui/     @cpg/ui    shadcn/ui components, theme, Tailwind entry CSS
+```
 
-If a reasonably intelligent caveman cannot understand
-the planning logic, the planning logic is probably too clever.
+Dependencies only point one way: `app → core, db, ui` and `db → core`. Packages ship TypeScript source, so there's no build step per package; Turbopack compiles them as part of the app.
 
-## Who is building this?
+**Request flow.** At startup, `instrumentation.ts` applies any pending migrations. A request resolves what it needs from the Awilix container (`getContainer()` / `requestScope()`), which holds the config, the ORM and a request-scoped `EntityManager`. Packages register their own services and extend the typed `Cradle`.
 
-After spending a significant portion of my professional life
-implementing other people's supply chain software, I decided
-it was time to write my own.
+**Data.** Everything the app persists lives under `DATA_DIR`: the SQLite file (`cpg.sqlite`, WAL mode) and any other files. In production, that's `/externaldata` inside the container, bind-mounted from `/externaldata/cpg.baby` on the VM, so it survives deploys. Locally, it's `./data/`.
 
-Or, more realistically, have an LLM write it while I sit
-nearby making increasingly skeptical noises.
+**Health.** `/up` queries the database, so kamal-proxy won't switch traffic to a container that can't reach its data.
 
-Which, come to think of it, is not entirely unlike how
-enterprise software has always been developed.
+## Development
 
-## The Grand Vision
+```sh
+npm install
+npm run dev                               # http://localhost:3000, admin at /admin
+npm run lint && npm run typecheck && npm run build
 
-Demand come. Caveman plan. Caveman make.
+npm run db:migration:create -- add-items  # after changing an entity
+npm run db:migrate                        # apply migrations (also runs on server start)
 
-**Planning good.**
+cd packages/ui && npx shadcn@latest add dialog   # add a shadcn component
+```
+
+## Deployment
+
+Pushing to `main` builds the Docker image and deploys it with Kamal (`config/deploy.yml`, `.github/workflows/deploy.yml`). The VM directory `/externaldata/cpg.baby` must exist and be writable by uid 1001 (the container user).
+
+## For AI agents
+
+Start with [`AGENTS.md`](AGENTS.md). Specs, run logs and lessons learned are in [`.ai/`](.ai/).
+
+---
+
+Demand come. Caveman plan. Caveman make. **Planning good.**

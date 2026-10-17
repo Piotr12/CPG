@@ -2,11 +2,12 @@
 .github
 .ai
 .kamal
-.next
-node_modules
 npm-debug.log*
 .env*
 Dockerfile
 .dockerignore
 README.md
 config/deploy*.yml
+**/.next
+**/node_modules
+data

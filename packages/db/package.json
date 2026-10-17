@@ -1,0 +1,21 @@
+{
+  "name": "@cpg/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "migrate": "tsx scripts/migrations.ts up",
+    "migration:create": "tsx scripts/migrations.ts create"
+  },
+  "dependencies": {
+    "@cpg/core": "^0.1.0",
+    "@mikro-orm/core": "^7.2.5",
+    "@mikro-orm/migrations": "^7.2.5",
+    "@mikro-orm/sqlite": "^7.2.5",
+    "awilix": "^13.0.5"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

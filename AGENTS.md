@@ -1,16 +1,33 @@
-<!-- BEGIN:nextjs-agent-rules -->
-
-## This is NOT the Next.js you know
-
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
-
-This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
-
-<!-- END:nextjs-agent-rules -->
-
 # AGENTS.md
 
-Instructions for every AI agent (Claude Code, Codex, Cursor, …) working in this repository. `CLAUDE.md` only imports this file — keep all agent rules here.
+Instructions for every AI agent (Claude Code, Codex, Cursor, …) working in this repository. `CLAUDE.md` only imports this file — keep all agent rules here. The one other `AGENTS.md`, in `packages/app/`, holds the block `next dev` maintains there (imported by `packages/app/CLAUDE.md`).
+
+## Stack and architecture — non-negotiable
+
+These are the project's architectural decisions. Follow them; do not introduce alternatives (another ORM, DI library, CSS framework or component kit, package manager) without the human's explicit approval.
+
+- **Next.js 16 (App Router, Turbopack, Cache Components) + React 19 + TypeScript (strict)**, always on the latest stable versions. This Next.js has breaking changes versus your training data: read the relevant guide in `node_modules/next/dist/docs/` before writing Next.js code.
+- **npm workspaces monorepo.** Every package lives in `packages/` and is named `@cpg/<name>`. Packages export their TypeScript source directly (`exports` → `./src/…`, no build step); Turbopack transpiles them. Never use relative imports across packages.
+
+  | Package | Contains | May depend on |
+  | --- | --- | --- |
+  | `packages/app` (`@cpg/app`) | The Next.js application: routes, pages, server actions, the DI composition root (`src/server/container.ts`), startup migrations (`src/instrumentation.ts`) | `core`, `db`, `ui` |
+  | `packages/core` (`@cpg/core`) | Reusable, framework-agnostic code: config (`loadConfig`), DI helpers (`createAppContainer`, `Cradle`), shared utilities and domain logic that needs no database | — |
+  | `packages/db` (`@cpg/db`) | Data management: MikroORM config, entities, migrations, DB helpers, Awilix registrations (`registerDb`) | `core` |
+  | `packages/ui` (`@cpg/ui`) | Reusable UI: shadcn/ui components, `cn`, theme and Tailwind entry CSS | — |
+
+- **Database: SQLite through MikroORM 7** (`@mikro-orm/sqlite`, better-sqlite3 driver).
+  - Define entities with `defineEntity` (no decorators) and list them in `packages/db/src/entities/index.ts`.
+  - Change the schema **only through migrations**: edit the entity → `npm run db:migration:create -- <name>` → commit the migration, `.snapshot.json` and the regenerated `migrations/index.ts` together. Never edit a migration that has been pushed; never use `schema:update` against a real database.
+  - Migrations run automatically when the server starts (`instrumentation.ts`); `npm run db:migrate` runs them by hand.
+  - Query through the request-scoped `em` (`(await requestScope()).cradle.em`), never the global `orm.em`.
+  - SQLite allows one writer at a time, so the "pool" is a single better-sqlite3 connection per ORM, running in WAL mode. Keep transactions short.
+- **All persisted files go under `config.dataDir`** (`DATA_DIR`): the database and every other file the app writes (uploads, exports, …). The container filesystem is thrown away on every deploy. Production: `/externaldata` in the container, bind-mounted from `/externaldata/cpg.baby` on the VM (`config/deploy.yml`). Locally: `<repo>/data/` (gitignored).
+- **Dependency injection: Awilix** in `PROXY` injection mode, `strict` on. Services take dependencies by destructuring the cradle (`({ em, config }) => …`), which keeps working after minification; never use `CLASSIC` mode. The package that owns a dependency registers it (`registerDb(container, orm)`) and adds it to `Cradle` via `declare module "@cpg/core"`. Resolve only in server code, through `getContainer()` / `requestScope()` from `packages/app/src/server/container.ts`.
+- **Styling.** Frontend (public) pages: plain **Tailwind CSS 4** utilities. Backend (admin) pages under `/admin`: compose **shadcn/ui** components from `@cpg/ui` (`radix-nova` style), and add missing ones with `npx shadcn@latest add <component>` in `packages/ui` rather than hand-writing them. Theme tokens live in `packages/ui/src/styles/globals.css`, the single Tailwind entry point.
+- **Server components that read the database** must call `await connection()` and sit inside a `<Suspense>` boundary (Cache Components would otherwise try to prerender them at build time).
+- **Commands** (from the repo root): `npm run dev`, `npm run build`, `npm run lint`, `npm run typecheck`, `npm run db:migrate`, `npm run db:migration:create -- <name>`.
+- **Deployment:** pushing to `main` deploys with Kamal from GitHub Actions. kamal-proxy only switches traffic once `/up` answers, and `/up` queries the database.
 
 ## The `.ai/` metadata folder
 
@@ -67,7 +84,7 @@ Every file in `specs/` (and its subfolders), `runs/` and `lessons/` is named `YY
 
 ### 3. Before finishing
 
-1. **Verify your changes — never claim "done" without evidence.** At minimum run `npm run lint` and `npm run build` (and the tests, once they exist). For UI or route changes, run the app (`npm run dev`) and check the actual behaviour. Record what you ran and what it printed; if something could not be verified, say so explicitly.
+1. **Verify your changes — never claim "done" without evidence.** At minimum run `npm run lint`, `npm run typecheck` and `npm run build` (and the tests, once they exist). For UI or route changes, run the app (`npm run dev`) and check the actual behaviour. Record what you ran and what it printed; if something could not be verified, say so explicitly.
 2. **Raise the bar**: review your own diff and ask, *"knowing everything I know now, is there a simpler, more elegant solution?"* If so, replace the hacky fix before handing over.
 3. **Finalize the run log**: outcome, what changed, how it was verified, follow-ups.
 4. **Record lessons**: after **every correction from the human**, after fixing a bug, hitting a non-obvious pitfall, or discovering something worth remembering long-term, add an entry to `.ai/lessons.md` (see format below). Phrase it as a rule that prevents the mistake from happening again; if it is a standing project rule, propose adding it to this file instead. Update or remove entries that turned out to be wrong.

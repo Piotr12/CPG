@@ -9,6 +9,11 @@ servers:
   web:
     - 146.59.105.8
 
+# Persistent data: the SQLite database and every other file the app writes. The image sets
+# DATA_DIR=/externaldata; the host directory must be writable by the container user (uid 1001).
+volumes:
+  - "/externaldata/cpg.baby:/externaldata"
+
 # kamal-proxy terminates TLS with a Let's Encrypt certificate for these hosts.
 proxy:
   ssl: true
