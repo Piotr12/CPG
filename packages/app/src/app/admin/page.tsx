@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { connection } from "next/server";
 import { Badge } from "@cpg/ui/components/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@cpg/ui/components/card";
-import { requestScope } from "@/server/container";
+import { requestScope } from "@cpg/core";
 
 export const metadata: Metadata = { title: "Admin · Caveman Planning Good" };
 

@@ -1,5 +1,5 @@
 import { connection } from "next/server";
-import { requestScope } from "@/server/container";
+import { requestScope } from "@cpg/core";
 
 // Health check used by kamal-proxy before switching traffic. Touches the database, so a deploy
 // with an unwritable /externaldata never goes live.

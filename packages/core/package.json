@@ -4,9 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "migrate": "tsx scripts/migrations.ts up",
+    "migration:create": "tsx scripts/migrations.ts create"
   },
   "dependencies": {
+    "@cpg/db": "^0.1.0",
     "awilix": "^13.0.5"
   },
   "exports": {

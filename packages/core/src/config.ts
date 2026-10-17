@@ -7,6 +7,8 @@ export interface AppConfig {
   dataDir: string;
   /** Absolute path of the SQLite database file (inside `dataDir`). */
   databasePath: string;
+  /** Log every SQL statement (`DEBUG_SQL=1`, development only). */
+  debugSql: boolean;
 }
 
 /**
@@ -14,16 +16,20 @@ export interface AppConfig {
  *
  * - `DATA_DIR` — defaults to `<repo>/data` locally; the Docker image sets `/externaldata`.
  * - `DATABASE_FILE` — file name inside `DATA_DIR`, defaults to `cpg.sqlite`.
+ * - `DEBUG_SQL=1` — log SQL in development.
  */
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const dataDir = path.resolve(
     /* turbopackIgnore: true */ env.DATA_DIR ?? path.join(findWorkspaceRoot(), "data"),
   );
 
+  const appEnv = env.NODE_ENV === "production" || env.NODE_ENV === "test" ? env.NODE_ENV : "development";
+
   return {
-    env: env.NODE_ENV === "production" || env.NODE_ENV === "test" ? env.NODE_ENV : "development",
+    env: appEnv,
     dataDir,
     databasePath: path.join(/* turbopackIgnore: true */ dataDir, env.DATABASE_FILE ?? "cpg.sqlite"),
+    debugSql: appEnv === "development" && env.DEBUG_SQL === "1",
   };
 }
 

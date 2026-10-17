@@ -1,7 +1,5 @@
-import type { AppConfig } from "@cpg/core";
-import type { EntityManager } from "@mikro-orm/sqlite";
-import { Setting } from "../../entities";
-import type { Orm } from "../../orm";
+import { getMigrationStatus, Setting, type EntityManager, type Orm } from "@cpg/db";
+import type { AppConfig } from "../../config";
 
 export interface SystemStatus {
   databasePath: string;
@@ -28,16 +26,12 @@ export class SystemStatusService {
   }
 
   async getStatus(): Promise<SystemStatus> {
-    const [executed, pending, settings] = await Promise.all([
-      this.orm.migrator.getExecuted(),
-      this.orm.migrator.getPending(),
-      this.em.count(Setting),
-    ]);
+    const [migrations, settings] = await Promise.all([getMigrationStatus(this.orm), this.em.count(Setting)]);
 
     return {
       databasePath: this.config.databasePath,
-      appliedMigrations: executed.length,
-      pendingMigrations: pending.length,
+      appliedMigrations: migrations.applied,
+      pendingMigrations: migrations.pending,
       settings,
     };
   }

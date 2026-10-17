@@ -22,10 +22,10 @@ Section 6 lists every place where these standards deliberately differ from the D
 | File | kebab-case everywhere, including components (as shadcn generates them); the export inside is PascalCase/camelCase | `data-table.tsx` exports `DataTable` |
 | Entity | `defineEntity` const + `InferEntity` type, both PascalCase singular, in `<name>.entity.ts` inside its concept folder | `WorkOrder` → `db/src/entities/work-orders/work-order.entity.ts` |
 | DB table / column | snake_case, produced by MikroORM's default naming strategy (singular table from the entity name). Don't set `tableName` | `WorkOrder.dueDate` → `work_order.due_date` |
-| Service (uses the database) | PascalCase class + `Service` suffix, `<name>.service.ts` | `WorkOrderService` → `db/src/services/work-orders/work-order.service.ts` |
+| Service | PascalCase class + `Service` suffix, `<name>.service.ts` | `WorkOrderService` → `core/src/services/work-orders/work-order.service.ts` |
 | Domain logic (pure, no database) | camelCase functions, `<name>.ts` | `explodeBom()` → `core/src/domain/boms/explode-bom.ts` |
-| Port (external integration interface) | PascalCase + `Port`/`Gateway` suffix, `<name>.port.ts` | `ErpExportPort` → `core/src/ports/erp-export.port.ts` |
-| Adapter (port implementation) | PascalCase, adapter name first, under `adapters/` | `CsvErpExport` → `db/src/adapters/csv-erp-export.ts` |
+| Port (external integration interface) | PascalCase + `Port`/`Gateway` suffix, `<name>.port.ts` next to its service | `ErpExportPort` → `core/src/services/exports/erp-export.port.ts` |
+| Adapter (port implementation) | PascalCase, adapter name first, under the service's `adapters/` | `CsvErpExport` → `core/src/services/exports/adapters/csv-erp-export.ts` |
 | DI cradle key | camelCase of the class/value, one per dependency | `workOrderService: WorkOrderService` |
 | Zod schema | camelCase + `Schema`, `<name>-<action>.schema.ts`, shared by client and server | `workOrderCreateSchema` → `core/src/validators/work-orders/work-order-create.schema.ts` |
 | Event ID | `concept.entity.action`, past tense | `work-orders.work-order.released` |
@@ -37,15 +37,15 @@ Section 6 lists every place where these standards deliberately differ from the D
 ### Package layering
 
 ```
-app ──▶ core, db, ui
-db  ──▶ core
-core, ui ──▶ (no workspace packages)
+app ──▶ core ──▶ db
+app ──▶ ui
+db, ui ──▶ (no workspace packages)
 ```
 
-- **`core`** holds framework-agnostic code with no database. That means config, DI helpers, pure domain logic (MRP netting, BOM explosion, lot sizing, scheduling maths), Zod validators, the typed error hierarchy and result envelope, the event bus, and port interfaces. It never imports `next`, `react`, `@mikro-orm/*` or another `@cpg/*` package.
-- **`db`** holds persistence: entities, migrations, the services that load and save entities (calling `core` domain functions for the business rules), adapters that need the database, and the Awilix registrations for all of it. It is the only package that imports `@mikro-orm/*`.
+- **`db`** holds persistence only: entities, migrations, the MikroORM config and `initOrm`/`migrate`, and the migration CLI (`@cpg/db/cli`). It takes plain `DbOptions` (`{ databasePath, debug }`) and knows nothing about the app config or DI. It is the only package that imports `@mikro-orm/*`, and it re-exports the types the others need (`Orm`, `EntityManager`, entity types).
+- **`core`** holds business logic and the composition. That means config (`loadConfig`), the DI container (`container/container.ts` + `container/cradle.ts`, `getContainer`/`requestScope`), services, pure domain logic (MRP netting, BOM explosion, lot sizing, scheduling maths), Zod validators, the typed error hierarchy and result envelope, the event bus, ports and adapters. It is framework-agnostic: it never imports `next`, `react`, `@mikro-orm/*`, `@cpg/ui` or `@cpg/app`.
 - **`ui`** holds generic, domain-agnostic presentation: shadcn primitives and the reusable `backend/` panel building blocks. It knows nothing about CPG's domain or any other `@cpg/*` package.
-- **`app`** holds HTTP and rendering: pages, server actions, route handlers, domain-specific components, and the composition root (`src/server/container.ts`). It reads and writes data **only through services from the cradle**. A page, action or route never queries the `em`/`orm` directly.
+- **`app`** holds HTTP and rendering: pages, server actions, route handlers, domain-specific components and `instrumentation.ts`. It imports `@cpg/core` and `@cpg/ui`, never `@cpg/db`. It reads and writes data **only through services from the cradle**. A page, action or route never queries the `em`/`orm` directly.
 - ESLint (`no-restricted-imports` in `eslint.config.mjs`) enforces these edges and the "no relative imports across packages" rule. Don't loosen them for convenience.
 
 ### Reusable server & UI layers
@@ -82,7 +82,7 @@ No action or route writes its own `try/catch` + response mapping.
 ### Architecture
 
 - **Concept folders are created only when their first file is added.** Never scaffold empty ones, and never create a `modules/<concept>/` directory, a per-concept `setup.ts`/`acl.ts` or any auto-discovery mechanism.
-- **Explicit registration.** Every DI binding is one greppable line in the owning package's `register*()` function (e.g. `registerDb`), and its type is added to `Cradle` with `declare module "@cpg/core"`. Never use Awilix `loadModules` or folder globbing. Services are `asClass(X).scoped()`, and take dependencies by destructuring the cradle in the constructor (`constructor({ em, config }: Deps)`). Injection mode is PROXY.
+- **Explicit registration.** Every DI binding is one greppable line in `createAppContainer` (`core/src/container/container.ts`), and its type is one line in `Cradle` (`core/src/container/cradle.ts`). Never use Awilix `loadModules` or folder globbing. Services are `asClass(X).scoped()`, and take dependencies by destructuring the cradle in the constructor (`constructor({ em, config }: Deps)`). Injection mode is PROXY.
 - **External integrations** (ERP export, e-mail, a supplier API, …) are reached through a **port interface in `core`**, with a mock/in-memory adapter first and the real adapter registered later without touching callers. Vendor SDKs stay out of `core`.
 - **Domain events** use a lightweight typed emitter in `core/src/events/` (`event-bus.ts`, `event-map.ts`), registered as a singleton in the cradle and emitted by services after a successful mutation. They are in-process only: no queue or worker. Add it with the first concept that needs a side effect.
 - **Shared Zod schemas** live in `core/src/validators/<concept>/`. The server action/route and the form both import the same schema. Client components import them through the `@cpg/core/validators/*` subpath export, never the `@cpg/core` barrel, which pulls in `node:fs`. Add `zod` and that export with the first schema.
@@ -96,9 +96,9 @@ When two principles pull in different directions, prefer the one that keeps the 
 
 - **SRP — one file, one reason to change.** An entity file owns the schema, a service owns one concept's persistence workflow, a domain function owns one calculation, and an action/route owns the HTTP wiring (parse → authorize → service → envelope). `work-order.service.ts` decides whether a work order can be released. It never builds a response, and the action never contains that check inline.
 - **DRY — one definition, every call site imports it.** One Zod schema per input, one error/envelope mapping, one feedback component per state. If you are about to copy a `try/catch` or a validation block, extract it.
-- **Separation of concerns — layers don't leak.** Persistence stays in `db`, business rules in `core` (pure) and `db` services (orchestration), HTTP/rendering in `app`, generic presentation in `ui`.
+- **Separation of concerns — layers don't leak.** Persistence stays in `db`, business rules in `core` (services + pure domain functions), HTTP/rendering in `app`, generic presentation in `ui`.
 - **Dependency inversion — depend on a port, not a vendor SDK.** Awilix wires the chosen adapter at startup. Only `db` is coupled to MikroORM.
-- **Explicit over implicit.** A new service is a new line in `register*()` and in `Cradle`, never discovered from a folder scan.
+- **Explicit over implicit.** A new service is a new line in `container.ts` and in `cradle.ts`, never discovered from a folder scan.
 - **Convention over configuration, applied consistently.** The concept-folder convention replaces a module system. It only works if every concept follows it.
 - **YAGNI.** Don't build a layer, folder, dependency or option before the change that uses it.
 - **Composition over inheritance.** Prefer small services and functions composed together over base classes with template methods.
@@ -139,7 +139,7 @@ CPG has no authentication yet, so **`/admin` is currently public**. Authenticati
 
 **Structure & conventions**
 
-- [ ] Concept folders follow the naming table, with the same name in every layer. No entity without the service that owns it, and no service without its entity.
+- [ ] Concept folders follow the naming table, with the same name in every layer. No entity without the service that owns it, and no service without its entity (cross-cutting services like `system` excepted).
 - [ ] No import breaks the package layering (ESLint passes), and no code reaches into another concept's internals instead of its service.
 - [ ] Pages/actions/routes go through services, never `em`/`orm`.
 - [ ] Actions/routes use the shared wrappers, forms use `CrudForm`, lists use `DataTable` and states use the `feedback/` components. A bespoke alternative needs a stated reason.
@@ -173,7 +173,7 @@ Example: "add work orders". Create each file only when the change needs it.
 1. **Entity:** `packages/db/src/entities/work-orders/work-order.entity.ts`. Add it to `entities/index.ts`, then `npm run db:migration:create -- <name>` and commit the migration, snapshot and index together.
 2. **Pure rules** (if any): `packages/core/src/domain/work-orders/*.ts`, with tests.
 3. **Validation:** `packages/core/src/validators/work-orders/work-order-<action>.schema.ts`. This is required once there is any create/update input.
-4. **Service:** `packages/db/src/services/work-orders/work-order.service.ts`. Register it in `registerDb` (`workOrderService: asClass(WorkOrderService).scoped()`) and add it to `Cradle` in `db/src/container.ts`. Export it from `db/src/index.ts`. It throws `AppError`s and runs check-then-write in `em.transactional()`.
+4. **Service:** `packages/core/src/services/work-orders/work-order.service.ts`. Register it in `core/src/container/container.ts` (`workOrderService: asClass(WorkOrderService).scoped()`) and add it to `Cradle` in `core/src/container/cradle.ts`. Export it from `core/src/index.ts`. It throws `AppError`s and runs check-then-write in `em.transactional()`. Entity types and `EntityManager` come from `@cpg/db`, never from `@mikro-orm/*`.
 5. **Events** (if a side effect is needed): add `work-orders.work-order.<action>` to `core/src/events/event-map.ts` and emit it from the service after the mutation succeeds.
 6. **HTTP surface:**
    - From CPG's own pages, a server action in `actions.ts` next to the page, wrapped in the shared `server-action` helper.
@@ -202,21 +202,22 @@ packages/
       api/<concept>/…/route.ts                   # only for external callers / client fetching
       up/route.ts                                # kamal-proxy health check
     components/<concept>/                        # domain-specific components
-    server/container.ts                          # composition root
-    instrumentation.ts                           # startup migrations
-  core/src/
-    config.ts  container.ts  singleton.ts
-    http/{errors,result,server-action,api-handler,make-crud-route,auth}.ts
-    events/{event-bus,event-map}.ts
-    ports/<name>.port.ts
-    domain/<concept>/<name>.ts                   # pure MRP logic
-    validators/<concept>/<name>-<action>.schema.ts
+    instrumentation.ts                           # startup migrations (migrateDatabase)
+  core/
+    scripts/migrations.ts                        # `npm run db:migrate` / `db:migration:create`
+    src/
+      config.ts  database.ts  singleton.ts
+      container/{container,cradle}.ts            # composition root, getContainer/requestScope
+      http/{errors,result,server-action,api-handler,make-crud-route,auth}.ts
+      events/{event-bus,event-map}.ts
+      services/<concept>/<name>.service.ts
+      services/<concept>/<name>.port.ts  services/<concept>/adapters/<name>.ts
+      domain/<concept>/<name>.ts                 # pure MRP logic
+      validators/<concept>/<name>-<action>.schema.ts
   db/src/
     entities/<concept>/<name>.entity.ts  entities/index.ts
-    services/<concept>/<name>.service.ts
-    adapters/<name>.ts
     migrations/
-    config.ts  container.ts  orm.ts
+    config.ts  orm.ts  cli.ts
   ui/src/
     components/                                  # shadcn primitives only
     backend/{api,forms,tables,feedback}/         # generic panel building blocks
@@ -236,8 +237,9 @@ packages/
 Done when these standards were adopted:
 
 - `Setting` moved to `db/src/entities/settings/setting.entity.ts` (table name unchanged, so no migration).
-- The first service, `SystemStatusService` (`db/src/services/system/`), is registered in `registerDb`. `/admin` and `/up` read through it instead of querying the ORM. It is the reference for service placement and registration.
+- The first service, `SystemStatusService` (`core/src/services/system/`), is registered in `core/src/container/container.ts`. `/admin` and `/up` read through it instead of querying the ORM. It is the reference for service placement and registration.
 - ESLint boundaries added.
+- Layering switched to DevMentor's `app → core → db` (the first version of this document kept CPG's original `db → core`). Config and DI moved fully into `core`, the composition root moved from `app/src/server/container.ts` into `core`, and the migration CLI entry point moved to `core/scripts/`. `db` now has no workspace dependencies.
 
 Deliberately **not built yet** (YAGNI). Each arrives with the first concept that needs it, and that concept's change is the reference implementation:
 
@@ -255,13 +257,13 @@ Known `npm audit` state: 10 high advisories, all from `braces` (GHSA-vfj7-8cjw-p
 
 | DevMentor | CPG | Why |
 | --- | --- | --- |
-| Dependency direction `app → core → db`, services in `core` | `app → core, db, ui`; `db → core`; DB services in `db`, pure logic in `core` | CPG's `db` already depends on `core` (config, `Cradle`), and `core` is defined as database-free. Inverting it would mean moving config/DI out of `core`. MRP logic is mostly pure computation, which tests best as `core` functions. |
+| `app` may import `db` (not stated) | `app` imports only `core` and `ui`; ESLint forbids `@cpg/db` in `app` | Makes "pages go through services" enforceable rather than a convention. |
 | Every page fetches through `apiCall` → `/api` route; `/admin/users` rewritten that way | Server components read through services; mutations via server actions; `apiCall` only in client components | Next.js docs: "do not call Route Handlers from Server Components". The App Router with Cache Components makes the client-fetch-everything pattern redundant. |
 | `export const dynamic = "force-dynamic"` for DB routes | `await connection()` inside `<Suspense>` | Route-segment `dynamic` is removed under Cache Components (`cacheComponents: true`). |
 | Concept components in `ui/src/components/<concept>/`, primitives in `components/ui/` | Concept components in `app/src/components/<concept>/`; primitives stay in `ui/src/components/` | `ui` has no access to domain types and is domain-agnostic. The shadcn aliases already target `ui/src/components/`. |
+| Ports in `services/<concept>/`, adapters in `services/<concept>/adapters/` | Same, plus pure domain functions in `core/src/domain/<concept>/` | MRP logic is mostly pure computation, which tests best as plain functions. |
 | Mixed file casing (`apiHandler.ts`, `CrudForm.tsx`, `mentor-card.tsx`) | kebab-case for every file | The original contradicted itself. shadcn generates kebab-case. |
 | Plural table names | MikroORM's default singular snake_case | Avoids a `tableName` on every entity and a rename migration for the existing `setting` table. |
-| `container.ts` + `cradle.ts` with `asClass` lines | `register*()` per owning package + `declare module "@cpg/core"` | That is CPG's existing DI pattern. It stays just as explicit. |
 | JWT HS256 + bcrypt, `env.ts` with zod, `pino` | Auth mechanism decided in a future spec (minimums kept); config via `loadConfig`; no logger until needed | CPG has no auth, zod or logger yet, and adding them speculatively breaks YAGNI. |
 | Persona route groups `(student)`, `(mentor)`, …; bookings, payments, slot races, money | Public frontend vs `/admin` backend; MRP concepts; stock/release races, recomputed quantities/costs | Different product. The underlying rules carry over unchanged. |
 | `npm audit` as a gate | `npm audit` triage | It currently reports 10 unfixable dev-tooling/unused-path advisories, so a hard gate would block every deploy. |

@@ -51,3 +51,22 @@ Apply the DevMentor engineering standards to CPG, flag what doesn't fit, save th
 - Human to confirm the layering deviation (services in `db`, not `core`).
 - `/admin` is public: an authentication spec is needed before anything sensitive lands there.
 - Build `core/src/http` + `ui/src/backend` with the first real concept, as its reference implementation.
+
+## Follow-up: switch to DevMentor's layering (human decision)
+
+The human chose `app → core → db` over the CPG layering kept above.
+
+- `db` no longer depends on `core` (dropped `@cpg/core` and `awilix` deps). `initOrm`/`migrate`/`createOrmConfig` take plain `DbOptions { databasePath, debug }`. Added `getMigrationStatus(orm)` and re-exported `EntityManager`, so `core` never imports `@mikro-orm/*`. `db/src/container.ts` (`registerDb` + `declare module`) deleted.
+- `core` depends on `db`, and the composition root moved here from `app/src/server/container.ts`: `container/container.ts` (`createAppContainer`, `getContainer` keyed by `entities`, `requestScope`) + `container/cradle.ts` (full `Cradle`). `database.ts` has `toDbOptions` and `migrateDatabase`. `SystemStatusService` moved to `core/src/services/system/`. `loadConfig` gained `debugSql` (it was read inside db before).
+- Migration CLI: the logic is now `db/src/cli.ts` (`runMigrationCli`, exported only as `@cpg/db/cli` so Next never bundles it), and the entry point is `core/scripts/migrations.ts`, because only core knows the database path. Root `db:*` scripts point at `@cpg/core`.
+- `app` drops its `@cpg/db` dependency and imports `requestScope`/`migrateDatabase` from `@cpg/core`. ESLint: app ✗ `@cpg/db`; db ✗ `@cpg/core`; core may use `@cpg/db`.
+- Docs: the standards doc (layering, naming table, registration, Section 2/3/5/6), `AGENTS.md` package table + DI rules, `README.md` layout, and the lesson bullet about `getContainer()`.
+- Pitfall: my runtime checks were first answered by a stale `next-server` left over from the earlier `npm run start` (`pkill -f "next start"` didn't match it), which made `DATA_DIR` look ignored. Killed it and re-verified; recorded as a lesson.
+
+### Verification
+
+- `npm install` (lockfile updated for the changed workspace deps). `npm run lint` clean. Probes: `@cpg/db`/`@mikro-orm` in app, `@mikro-orm`/`next` in core, `@cpg/core` in db → 5 expected errors; `@cpg/core` in app and `@cpg/db` in core allowed.
+- `npm run typecheck` exit 0 (4 packages). `npm test` 2/2.
+- `npm run db:migration:create -- probe` → "No schema changes"; `npm run db:migrate` → "Nothing to migrate."
+- `npm run build` succeeds (same route table).
+- Standalone server with `DATA_DIR=/tmp/cpg-fresh` (empty): startup log "Applied migrations: Migration20261017091007_initial"; `/up` 200 OK; `/admin` shows `/tmp/cpg-fresh/cpg.sqlite`, 1 applied / 0 pending / 0 settings; `/` 200. Port confirmed free afterwards.

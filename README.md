@@ -28,15 +28,15 @@ CPG is deliberately primitive manufacturing planning. No seventeen-layer optimis
 
 ```
 packages/
-├── app/    @cpg/app   Next.js app: routes, pages, DI composition root, startup migrations
-├── core/   @cpg/core  reusable bits: config, DI container factory, shared logic
-├── db/     @cpg/db    MikroORM config, entities, migrations, DB registrations
+├── app/    @cpg/app   Next.js app: routes, pages, server actions, startup migrations
+├── core/   @cpg/core  business layer: config, DI composition root, services, domain logic
+├── db/     @cpg/db    persistence: MikroORM config, entities, migrations
 └── ui/     @cpg/ui    shadcn/ui components, theme, Tailwind entry CSS
 ```
 
-Dependencies only point one way: `app → core, db, ui` and `db → core`. Packages ship TypeScript source, so there's no build step per package; Turbopack compiles them as part of the app.
+Dependencies only point one way: `app → core → db` and `app → ui` (ESLint enforces it; see [`.ai/docs/engineering-standards.md`](.ai/docs/engineering-standards.md)). Packages ship TypeScript source, so there's no build step per package; Turbopack compiles them as part of the app.
 
-**Request flow.** At startup, `instrumentation.ts` applies any pending migrations. A request resolves what it needs from the Awilix container (`getContainer()` / `requestScope()`), which holds the config, the ORM and a request-scoped `EntityManager`. Packages register their own services and extend the typed `Cradle`.
+**Request flow.** At startup, `instrumentation.ts` applies any pending migrations. A request resolves what it needs from the Awilix container (`getContainer()` / `requestScope()`), which holds the config, the ORM, a request-scoped `EntityManager` and the services. Every registration is one line in `packages/core/src/container/container.ts`, typed in `cradle.ts`.
 
 **Data.** Everything the app persists lives under `DATA_DIR`: the SQLite file (`cpg.sqlite`, WAL mode) and any other files. In production, that's `/externaldata` inside the container, bind-mounted from `/externaldata/cpg.baby` on the VM, so it survives deploys. Locally, it's `./data/`.
 
