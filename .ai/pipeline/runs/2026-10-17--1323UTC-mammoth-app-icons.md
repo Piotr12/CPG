@@ -50,6 +50,8 @@ Replace the Next.js favicon with the 🦣 mammoth (Fluent Emoji Flat, MIT) in ev
 
 ## Progress
 
+PR: #6
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Mammoth icons
