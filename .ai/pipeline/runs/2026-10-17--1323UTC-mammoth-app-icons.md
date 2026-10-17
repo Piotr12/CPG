@@ -58,6 +58,8 @@ Replace the Next.js favicon with the 🦣 mammoth (Fluent Emoji Flat, MIT) in ev
 - [x] 1.2 Web manifest — cc2b3e0
 - [x] 1.3 Integration test — ff0cd02
 - [x] 1.4 Verify — full gate green (lint, typecheck, 77 unit tests at 100% coverage, build, 7 integration tests on the Docker image)
+- [x] Post-review fix: the favicon centre pixel guards against the Next.js artwork, and the link assertion now runs on /admin too — c190c24
+- [x] Post-review fix: lesson on Next.js icon links, plan scope corrected — b83d407
 
 ## Notes
 
