@@ -19,7 +19,7 @@ Choose the useful principles from Boris Cherny's 10 Claude Code tips (ykdojo.git
 ## Changes
 
 - `AGENTS.md`
-- `.ai/runs/2026-10-17-boris-tips-agents-md.md`
+- `.ai/runs/2026-10-17--0851UTC-boris-tips-agents-md.md`
 
 ## Verification
 

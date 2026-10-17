@@ -34,7 +34,7 @@ Turn the single Next.js app into an npm-workspaces monorepo (`packages/app`, `co
 
 ## Changes
 
-- Root: `package.json` (workspaces + scripts), `package-lock.json`, `tsconfig.base.json`, `eslint.config.mjs`, `.gitignore`, `.dockerignore`, `Dockerfile`, `config/deploy.yml` (volume), `AGENTS.md`, `README.md`, `.ai/lessons.md`, `.ai/lessons/2026-10-17-mikroorm-entity-identity-next-bundles.md`
+- Root: `package.json` (workspaces + scripts), `package-lock.json`, `tsconfig.base.json`, `eslint.config.mjs`, `.gitignore`, `.dockerignore`, `Dockerfile`, `config/deploy.yml` (volume), `AGENTS.md`, `README.md`, `.ai/lessons.md`, `.ai/lessons/2026-10-17--0920UTC-mikroorm-entity-identity-next-bundles.md`
 - `packages/app` (moved from root `src/`, `public/`, `next.config.ts`, `tsconfig.json`), `packages/core`, `packages/db`, `packages/ui`
 
 ## Verification

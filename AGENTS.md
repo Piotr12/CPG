@@ -26,7 +26,7 @@ These are the project's architectural decisions. Follow them; do not introduce a
 - **Dependency injection: Awilix** in `PROXY` injection mode, `strict` on. Services take dependencies by destructuring the cradle (`({ em, config }) => …`), which keeps working after minification; never use `CLASSIC` mode. The package that owns a dependency registers it (`registerDb(container, orm)`) and adds it to `Cradle` via `declare module "@cpg/core"`. Resolve only in server code, through `getContainer()` / `requestScope()` from `packages/app/src/server/container.ts`.
 - **Styling.** Frontend (public) pages: plain **Tailwind CSS 4** utilities. Backend (admin) pages under `/admin`: compose **shadcn/ui** components from `@cpg/ui` (`radix-nova` style), and add missing ones with `npx shadcn@latest add <component>` in `packages/ui` rather than hand-writing them. Theme tokens live in `packages/ui/src/styles/globals.css`, the single Tailwind entry point.
 - **Server components that read the database** must call `await connection()` and sit inside a `<Suspense>` boundary (Cache Components would otherwise try to prerender them at build time).
-- **Commands** (from the repo root): `npm run dev`, `npm run build`, `npm run lint`, `npm run typecheck`, `npm run db:migrate`, `npm run db:migration:create -- <name>`.
+- **Commands** (from the repo root): `npm run dev`, `npm run build`, `npm run lint`, `npm run typecheck`, `npm test`, `npm run db:migrate`, `npm run db:migration:create -- <name>`.
 - **Deployment:** pushing to `main` deploys with Kamal from GitHub Actions. kamal-proxy only switches traffic once `/up` answers, and `/up` queries the database.
 
 ## The `.ai/` metadata folder
@@ -36,33 +36,33 @@ All AI working metadata lives in `.ai/`. Using it is **mandatory**, not optional
 ```
 .ai/
 ├── README.md
-├── specs/                  # SDD specifications (written by the human, implemented by agents)
+├── specs/                           # SDD specifications (written by the human, implemented by agents)
 │   ├── README.md
-│   ├── YYYY-MM-DD-slug.md  # active specs — not yet fully implemented
-│   ├── implemented/        # specs that have been fully implemented
+│   ├── YYYY-MM-DD--HHMMUTC-slug.md  # active specs — not yet fully implemented
+│   ├── implemented/                 # specs that have been fully implemented
 │   │   └── README.md
-│   └── archive/            # specs that were superseded, abandoned or rejected
+│   └── archive/                     # specs that were superseded, abandoned or rejected
 │       └── README.md
-├── runs/                   # one log per autonomous AI run
+├── runs/                            # one log per autonomous AI run
 │   ├── README.md
-│   └── YYYY-MM-DD-slug.md
-├── lessons.md              # long-term memory: index of lessons learned
-└── lessons/                # long-form write-ups linked from lessons.md
+│   └── YYYY-MM-DD--HHMMUTC-slug.md
+├── lessons.md                       # long-term memory: index of lessons learned
+└── lessons/                         # long-form write-ups linked from lessons.md
     ├── README.md
-    └── YYYY-MM-DD-slug.md
+    └── YYYY-MM-DD--HHMMUTC-slug.md
 ```
 
 `.ai/cezar/` is local state of the cezar cockpit — it is gitignored; never edit or commit it.
 
 ### Naming convention
 
-Every file in `specs/` (and its subfolders), `runs/` and `lessons/` is named `YYYY-MM-DD-slug.md`:
+Every file in `specs/` (and its subfolders), `runs/` and `lessons/` is named `YYYY-MM-DD--HHMMUTC-slug.md`:
 
-- `YYYY-MM-DD` — the date the file was **created** (never changed afterwards, even when a spec is moved).
-- `slug` — short, lowercase, kebab-case description, e.g. `2026-10-17-user-login.md`.
-- If the name is already taken, append a counter: `2026-10-17-user-login-2.md`.
+- `YYYY-MM-DD--HHMMUTC` — the date and time the file was **created**, in **UTC**, 24-hour clock, with a double hyphen before the time and the literal `UTC` suffix. Never changed afterwards, even when a spec is moved. Get it with `date -u +%Y-%m-%d--%H%MUTC`.
+- `slug` — short, lowercase, kebab-case description, e.g. `2026-10-17--1432UTC-user-login.md`.
+- If the name is already taken, append a counter: `2026-10-17--1432UTC-user-login-2.md`.
 
-`README.md` files are the only exception.
+`README.md` files are the only exception. `npm test` enforces this rule, and the deploy workflow runs it before every deploy.
 
 ## Mandatory workflow
 
@@ -70,7 +70,7 @@ Every file in `specs/` (and its subfolders), `runs/` and `lessons/` is named `YY
 
 1. **Read `.ai/lessons.md`** and open any linked lesson relevant to the task. Do not repeat a mistake that is already recorded there.
 2. **Check `.ai/specs/`** for a spec covering the task. If one exists, it is the source of truth — implement what it says. If the task conflicts with the spec, stop and ask the human instead of guessing.
-3. **If this is an autonomous run** (you are working without a human approving each step — e.g. dispatched by cezar, a scheduled/automated job, a headless session), **create the run log** `.ai/runs/YYYY-MM-DD-slug.md` right away (template below).
+3. **If this is an autonomous run** (you are working without a human approving each step — e.g. dispatched by cezar, a scheduled/automated job, a headless session), **create the run log** `.ai/runs/YYYY-MM-DD--HHMMUTC-slug.md` right away (template below).
 4. **Plan complex tasks before writing code** (multi-file changes, new features, bugs with an unclear cause). Write down the steps, the files you will touch and how you will verify the result — in the run log, or shown to the human in an interactive session. Aim for a plan good enough to implement in one pass. Resolve ambiguity by asking, not by guessing.
 
 ### 2. While working
@@ -84,7 +84,7 @@ Every file in `specs/` (and its subfolders), `runs/` and `lessons/` is named `YY
 
 ### 3. Before finishing
 
-1. **Verify your changes — never claim "done" without evidence.** At minimum run `npm run lint`, `npm run typecheck` and `npm run build` (and the tests, once they exist). For UI or route changes, run the app (`npm run dev`) and check the actual behaviour. Record what you ran and what it printed; if something could not be verified, say so explicitly.
+1. **Verify your changes — never claim "done" without evidence.** At minimum run `npm run lint`, `npm run typecheck`, `npm test` and `npm run build`. For UI or route changes, run the app (`npm run dev`) and check the actual behaviour. Record what you ran and what it printed; if something could not be verified, say so explicitly.
 2. **Raise the bar**: review your own diff and ask, *"knowing everything I know now, is there a simpler, more elegant solution?"* If so, replace the hacky fix before handing over.
 3. **Finalize the run log**: outcome, what changed, how it was verified, follow-ups.
 4. **Record lessons**: after **every correction from the human**, after fixing a bug, hitting a non-obvious pitfall, or discovering something worth remembering long-term, add an entry to `.ai/lessons.md` (see format below). Phrase it as a rule that prevents the mistake from happening again; if it is a standing project rule, propose adding it to this file instead. Update or remove entries that turned out to be wrong.
@@ -93,13 +93,13 @@ Every file in `specs/` (and its subfolders), `runs/` and `lessons/` is named `YY
 
 ## Templates
 
-### Spec — `.ai/specs/YYYY-MM-DD-slug.md`
+### Spec — `.ai/specs/YYYY-MM-DD--HHMMUTC-slug.md`
 
 ```markdown
 # <Title>
 
 **Status:** draft | ready | in progress | implemented | archived
-**Created:** YYYY-MM-DD
+**Created:** YYYY-MM-DD HH:MM UTC
 
 ## Goal
 ## Context
@@ -109,12 +109,12 @@ Every file in `specs/` (and its subfolders), `runs/` and `lessons/` is named `YY
 ## Acceptance criteria
 ```
 
-### Run log — `.ai/runs/YYYY-MM-DD-slug.md`
+### Run log — `.ai/runs/YYYY-MM-DD--HHMMUTC-slug.md`
 
 ```markdown
 # <Title>
 
-**Date:** YYYY-MM-DD
+**Date:** YYYY-MM-DD HH:MM UTC
 **Agent:** <tool / model>
 **Spec:** <path to spec, or "none">
 **Status:** in progress | done | partial | failed | blocked
@@ -132,7 +132,7 @@ Every file in `specs/` (and its subfolders), `runs/` and `lessons/` is named `YY
 ### Lesson — entry in `.ai/lessons.md`
 
 ```markdown
-- **YYYY-MM-DD — <short title>** — <what happened / what to do instead, one or two sentences>. [details](lessons/YYYY-MM-DD-slug.md)
+- **YYYY-MM-DD — <short title>** — <what happened / what to do instead, one or two sentences>. [details](lessons/YYYY-MM-DD--HHMMUTC-slug.md)
 ```
 
-Keep `lessons.md` short and scannable — one bullet per lesson, grouped by topic. When a lesson needs more than a couple of sentences (root cause analysis, reproduction steps, code samples), write it up in `.ai/lessons/YYYY-MM-DD-slug.md` and link it from the bullet.
+Keep `lessons.md` short and scannable — one bullet per lesson, grouped by topic. When a lesson needs more than a couple of sentences (root cause analysis, reproduction steps, code samples), write it up in `.ai/lessons/YYYY-MM-DD--HHMMUTC-slug.md` and link it from the bullet.

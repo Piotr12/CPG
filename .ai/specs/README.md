@@ -2,7 +2,7 @@
 
 Specifications for spec-driven development (SDD). Each spec describes a feature or change **before** it is implemented; agents implement against it and treat it as the source of truth.
 
-- **Naming:** `YYYY-MM-DD-slug.md` — creation date + short kebab-case slug, e.g. `2026-10-17-user-login.md`.
+- **Naming:** `YYYY-MM-DD--HHMMUTC-slug.md` — creation date and 24-hour UTC time + short kebab-case slug, e.g. `2026-10-17--1432UTC-user-login.md`.
 - **Lifecycle:**
   - `specs/` — active specs, not yet fully implemented.
   - [`implemented/`](implemented/) — specs that have been fully implemented and verified.

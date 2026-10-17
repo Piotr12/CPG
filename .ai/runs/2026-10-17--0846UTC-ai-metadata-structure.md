@@ -20,7 +20,7 @@ Create `AGENTS.md`, `CLAUDE.md` (importing `@AGENTS.md`) and the `.ai/` folder w
 - `.gitignore`, `AGENTS.md`, `CLAUDE.md`
 - `.ai/README.md`, `.ai/lessons.md`
 - `.ai/specs/README.md`, `.ai/specs/implemented/README.md`, `.ai/specs/archive/README.md`
-- `.ai/runs/README.md`, `.ai/runs/2026-10-17-ai-metadata-structure.md`
+- `.ai/runs/README.md`, `.ai/runs/2026-10-17--0846UTC-ai-metadata-structure.md`
 - `.ai/lessons/README.md`
 
 ## Verification

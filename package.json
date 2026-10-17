@@ -11,6 +11,7 @@
     "start": "npm run start -w @cpg/app",
     "lint": "eslint",
     "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "node --test \"tests/**/*.test.mts\"",
     "db:migrate": "npm run migrate -w @cpg/db",
     "db:migration:create": "npm run migration:create -w @cpg/db"
   },

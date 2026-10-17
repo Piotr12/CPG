@@ -47,7 +47,7 @@ Dependencies only point one way: `app → core, db, ui` and `db → core`. Packa
 ```sh
 npm install
 npm run dev                               # http://localhost:3000, admin at /admin
-npm run lint && npm run typecheck && npm run build
+npm run lint && npm run typecheck && npm test && npm run build
 
 npm run db:migration:create -- add-items  # after changing an entity
 npm run db:migrate                        # apply migrations (also runs on server start)
@@ -57,7 +57,7 @@ cd packages/ui && npx shadcn@latest add dialog   # add a shadcn component
 
 ## Deployment
 
-Pushing to `main` builds the Docker image and deploys it with Kamal (`config/deploy.yml`, `.github/workflows/deploy.yml`). The VM directory `/externaldata/cpg.baby` must exist and be writable by uid 1001 (the container user).
+Pushing to `main` runs `npm test`, then builds the Docker image and deploys it with Kamal (`config/deploy.yml`, `.github/workflows/deploy.yml`). The VM directory `/externaldata/cpg.baby` must exist and be writable by uid 1001 (the container user).
 
 ## For AI agents
 

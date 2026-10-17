@@ -11,4 +11,4 @@ Metadata for AI-assisted development of this project. The rules for using it liv
 
 `cezar/` holds local state of the cezar cockpit and is gitignored.
 
-All files in `specs/`, `runs/` and `lessons/` are named `YYYY-MM-DD-slug.md`.
+All files in `specs/`, `runs/` and `lessons/` are named `YYYY-MM-DD--HHMMUTC-slug.md` — creation date and 24-hour **UTC** time, e.g. `2026-10-17--1432UTC-user-login.md` (`date -u +%Y-%m-%d--%H%MUTC`). `npm test` checks it.
