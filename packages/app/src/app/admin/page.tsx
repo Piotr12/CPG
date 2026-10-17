@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import { connection } from "next/server";
 import { Badge } from "@cpg/ui/components/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@cpg/ui/components/card";
-import { Setting } from "@cpg/db";
 import { requestScope } from "@/server/container";
 
 export const metadata: Metadata = { title: "Admin · Caveman Planning Good" };
@@ -21,21 +20,21 @@ export default function AdminPage() {
 
 async function DatabaseCard() {
   await connection();
-  const { config, orm, em } = (await requestScope()).cradle;
-  const executed = await orm.migrator.getExecuted();
-  const pending = await orm.migrator.getPending();
-  const settings = await em.count(Setting);
+  const { systemStatusService } = (await requestScope()).cradle;
+  const status = await systemStatusService.getStatus();
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Database</CardTitle>
-        <CardDescription className="font-mono">{config.databasePath}</CardDescription>
+        <CardDescription className="font-mono">{status.databasePath}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-wrap gap-2">
-        <Badge variant="secondary">{executed.length} migrations applied</Badge>
-        <Badge variant={pending.length ? "destructive" : "outline"}>{pending.length} pending</Badge>
-        <Badge variant="outline">{settings} settings</Badge>
+        <Badge variant="secondary">{status.appliedMigrations} migrations applied</Badge>
+        <Badge variant={status.pendingMigrations ? "destructive" : "outline"}>
+          {status.pendingMigrations} pending
+        </Badge>
+        <Badge variant="outline">{status.settings} settings</Badge>
       </CardContent>
     </Card>
   );

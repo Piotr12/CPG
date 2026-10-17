@@ -5,6 +5,6 @@ export async function register() {
     const { loadConfig } = await import("@cpg/core");
     const { migrate } = await import("@cpg/db");
     const applied = await migrate(loadConfig());
-    if (applied.length) console.log(`Applied migrations: ${applied.join(", ")}`);
+    if (applied.length) console.info(`Applied migrations: ${applied.join(", ")}`);
   }
 }

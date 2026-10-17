@@ -18,5 +18,6 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 ## Next.js
 
+- **2026-10-17 — Patterns from pre-Cache-Components projects don't transfer as-is** — `export const dynamic = "force-dynamic"` no longer exists (use `await connection()` + `<Suspense>`), and server components must not fetch the app's own `/api` routes (Next.js docs: extra request). Read through services; mutate through server actions. Check imported standards against `node_modules/next/dist/docs/` before adopting them.
 - **2026-10-17 — One ORM per bundle, keyed by entity identity** — Next.js gives route handlers, pages and instrumentation separate copies of `@cpg/db`, and MikroORM matches entities by object identity. Never cache the container/ORM on `globalThis` under a string key; `getContainer()` keys it by the `entities` array. [details](lessons/2026-10-17--0920UTC-mikroorm-entity-identity-next-bundles.md)
 - **2026-10-17 — Dynamic `fs` paths make Turbopack trace the whole project** — paths built from env/`process.cwd()` pull every source file into the standalone output. Mark them with `/* turbopackIgnore: true */` (see `packages/core/src/config.ts`).
