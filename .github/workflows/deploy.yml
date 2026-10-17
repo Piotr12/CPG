@@ -32,8 +32,10 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
+      # Pinned (not ssh-keyscan'd) so a spoofed host can't be trusted on first use.
+      # Plain, unhashed entry: net-ssh failed to match hashed ones.
       - name: Trust server host key
-        run: ssh-keyscan -H 146.59.105.8 >> ~/.ssh/known_hosts
+        run: echo "146.59.105.8 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOqaLxYJYe/jp8ZQih5EJzUUJ8BMClWWtIM6IgDwt2Fb" >> ~/.ssh/known_hosts
 
       - name: Deploy
         run: kamal deploy
