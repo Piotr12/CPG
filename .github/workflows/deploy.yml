@@ -10,22 +10,12 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-
-      # The tests only use Node built-ins, so no `npm ci` yet.
-      - name: Test
-        run: npm test
+  # The same checks as on pull requests: lint, typecheck, unit tests, build, integration tests.
+  ci:
+    uses: ./.github/workflows/ci.yml
 
   deploy:
-    needs: test
+    needs: ci
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:

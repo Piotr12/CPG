@@ -1,0 +1,41 @@
+import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
+import { openBrowser, type Browser } from "./browser";
+
+const baseUrl = inject("baseUrl");
+
+describe("a fresh app instance", () => {
+  let browser: Browser;
+
+  beforeAll(() => {
+    browser = openBrowser();
+  });
+  afterAll(() => browser.close());
+
+  it("passes the health check", async () => {
+    const response = await fetch(`${baseUrl}/up`);
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("OK");
+  });
+
+  it("serves the home page with the four MRP II steps", async () => {
+    await browser.open(baseUrl);
+
+    expect(await browser.title()).toBe("Caveman Planning Good");
+    expect(await browser.text("h1")).toBe("Caveman Planning Good");
+    expect(await browser.texts("li h2")).toEqual([
+      "Demand Forecast",
+      "Bill of Materials",
+      "Production Planning",
+      "Production Execution",
+    ]);
+  });
+
+  it("shows a migrated, empty database on the admin page", async () => {
+    await browser.open(`${baseUrl}/admin`);
+
+    expect(await browser.title()).toBe("Admin · Caveman Planning Good");
+    expect(await browser.text("h1")).toBe("Cave control");
+    expect(await browser.texts("[data-slot=badge]")).toEqual(["1 migrations applied", "0 pending", "0 settings"]);
+  });
+});

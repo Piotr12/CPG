@@ -40,7 +40,7 @@ const eslintConfig = defineConfig([
   { rules: { "no-console": ["error", { allow: ["info", "warn", "error"] }] } },
   { files: ["packages/*/scripts/**", "tests/**"], rules: { "no-console": "off" } },
   // Override default ignores of eslint-config-next (paths are relative to the repo root).
-  globalIgnores(["**/.next/**", "**/out/**", "**/build/**", "**/next-env.d.ts", "data/**"]),
+  globalIgnores(["**/.next/**", "**/out/**", "**/build/**", "**/next-env.d.ts", "data/**", "coverage/**"]),
 ]);
 
 export default eslintConfig;

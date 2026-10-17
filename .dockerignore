@@ -11,3 +11,4 @@ config/deploy*.yml
 **/.next
 **/node_modules
 data
+coverage

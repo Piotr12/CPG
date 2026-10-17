@@ -13,8 +13,16 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 ## General
 
 - **2026-10-17 — Docker `npm ci` tries to compile better-sqlite3** — npm runs `node-gyp rebuild` because the package has a `binding.gyp`, which fails without Python/a compiler. better-sqlite3 ships prebuilt binaries (musl included), so the Dockerfile uses `npm ci --ignore-scripts`.
-- **2026-10-17 — Root-level tests are `.mts` run by `node --test`** — the root `package.json` has no `"type"`, so a `.ts` test triggers `MODULE_TYPELESS_PACKAGE_JSON`; `.mts` doesn't, and Node 24 strips the types itself. Put them in `tests/` (picked up by `npm test`, which CI runs before deploying).
 - **2026-10-17 — shadcn v4 imports `cn` from the `cn` npm package** — `import { cn } from "cn"` in generated components is correct, not a broken alias. The `new-york` style is legacy; this repo uses `radix-nova`.
+
+## Testing
+
+- **2026-10-17 — Root-level config files are `.mts`** — the root `package.json` has no `"type"`, so Vite loads `vitest.config.ts` as CommonJS and warns. Name root-level ESM files `.mts` (`vitest.config.mts`, `vitest.integration.config.mts`). Root tests (`tests/*.test.ts`) run through Vitest, so `.ts` is fine there.
+- **2026-10-17 — `tmpdir()` can be inside the repo** — cezar points `TMPDIR` at `.ai/cezar/tmp/…`, so a temp dir has the monorepo as an ancestor. Don't assume a temp dir is outside the workspace; use the filesystem root when a test needs "no workspace above me".
+- **2026-10-17 — Don't run MikroORM migrator calls concurrently** — `getExecuted()` and `getPending()` each create `mikro_orm_migrations` if missing, and under `Promise.all` on a never-migrated database the second one fails with "table already exists". Await them one after the other (there is one SQLite connection anyway).
+- **2026-10-17 — React DOM can't render async server components** — React suspends forever on them and Testing Library only shows the `<Suspense>` fallback. Call the page function and await its async children before `render()` (`resolveServerComponents` in `app/src/app/admin/page.test.tsx`).
+- **2026-10-17 — Testcontainers `withBuildkit()` fails on this repo** — the build stops with "failed to read dockerfile: archive/tar: invalid tar header". The default (classic) builder builds the Dockerfile fine; `tests/integration/global-setup.ts` uses it.
+- **2026-10-17 — Reading output from agent-browser** — `get text`/`get title` print plain text, but `eval` prints pretty-printed JSON or a quoted string. Use `--json eval` and read `.data.result` (the `evaluate()` helper in `tests/integration/browser.ts`). Give each test its own `--session` so parallel tests never share a page.
 
 ## Next.js
 

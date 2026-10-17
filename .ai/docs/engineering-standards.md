@@ -143,7 +143,7 @@ CPG has no authentication yet, so **`/admin` is currently public**. Authenticati
 - [ ] No import breaks the package layering (ESLint passes), and no code reaches into another concept's internals instead of its service.
 - [ ] Pages/actions/routes go through services, never `em`/`orm`.
 - [ ] Actions/routes use the shared wrappers, forms use `CrudForm`, lists use `DataTable` and states use the `feedback/` components. A bespoke alternative needs a stated reason.
-- [ ] `npm run lint`, `npm run typecheck`, `npm test` and `npm run build` pass.
+- [ ] `npm run lint`, `npm run typecheck`, `npm run test:coverage`, `npm run build` and `npm run test:integration` pass (CI runs them all on the pull request).
 
 **Security** (apply in full once authentication exists)
 
@@ -162,7 +162,10 @@ CPG has no authentication yet, so **`/admin` is currently public**. Authenticati
 
 - [ ] Concurrency-sensitive flows (stock, releases, imports) have a test of the concurrent/repeated case, not only the happy path.
 - [ ] Anything client-supplied that affects quantities, costs or record ownership is revalidated on the server.
-- [ ] A behaviour change ships a test that fails on the old code, and a bug fix ships a regression test. (Package-level test infrastructure arrives with the first domain logic. Today `npm test` runs `tests/**/*.test.mts` with `node --test`.)
+- [ ] Every line, branch and function the change adds or touches is covered by unit tests, and coverage is still 100%. (blocker)
+- [ ] No coverage threshold lowered, no coverage `exclude` widened and no `v8 ignore` comment added without the human's approval. (blocker)
+- [ ] Tests assert on behaviour. A behaviour change ships a test that fails on the old code, and a bug fix ships a regression test.
+- [ ] A new user-visible page or flow has an integration test in `tests/integration/`.
 
 ---
 
@@ -184,6 +187,7 @@ Example: "add work orders". Create each file only when the change needs it.
    - Forms use `CrudForm` bound to the schema from step 3, through a small client component in `app/src/components/work-orders/` (a Zod schema can't be passed as a prop from a server component).
    - Lists use `DataTable`.
    - Before writing a component, check `ui/src/backend/` and `app/src/components/work-orders/`.
+8. **Tests:** a `<name>.test.ts(x)` next to every file from steps 1–7, keeping coverage at 100% (`npm run test:coverage`). Service tests run against a real SQLite file in a temp directory, and page tests mock `@cpg/core`. Add an integration test in `tests/integration/` for each new page or flow.
 
 ---
 
@@ -222,6 +226,10 @@ packages/
     components/                                  # shadcn primitives only
     backend/{api,forms,tables,feedback}/         # generic panel building blocks
     lib/  styles/globals.css
+# Every source file has its unit test next to it: <name>.test.ts (Node) or <name>.test.tsx (jsdom)
+tests/
+  *.test.ts                                      # repo-wide checks (e.g. .ai/ file names)
+  integration/                                   # Testcontainers + agent-browser, against the production image
 ```
 
 ---
@@ -229,7 +237,9 @@ packages/
 ## 4. How it is enforced
 
 - `eslint.config.mjs` enforces the package layering, the ban on relative imports across packages and `@mikro-orm/*` outside `db`, `no-explicit-any` and `no-console` (except `info`/`warn`/`error`).
-- `AGENTS.md` makes reading this document part of the workflow, and its verification step runs lint, typecheck, tests, build and `npm audit` triage.
+- `vitest.config.mts` sets 100% coverage thresholds (lines, branches, functions, statements) over `packages/*/src` and `packages/*/scripts`, so `npm run test:coverage` fails on any uncovered code.
+- `.github/workflows/ci.yml` runs lint, typecheck, unit tests with coverage, build and integration tests on every pull request, and `deploy.yml` runs the same workflow before deploying.
+- `AGENTS.md` makes reading this document part of the workflow, and its verification step runs lint, typecheck, tests with coverage, build, integration tests and `npm audit` triage.
 - Review uses the checklist in Section 1.
 
 ## 5. Adoption status (2026-10-17)
@@ -239,6 +249,7 @@ Done when these standards were adopted:
 - `Setting` moved to `db/src/entities/settings/setting.entity.ts` (table name unchanged, so no migration).
 - The first service, `SystemStatusService` (`core/src/services/system/`), is registered in `core/src/container/container.ts`. `/admin` and `/up` read through it instead of querying the ORM. It is the reference for service placement and registration.
 - ESLint boundaries added.
+- Test infrastructure: Vitest unit tests next to every source file at 100% coverage, integration tests (Testcontainers runs the production image, agent-browser drives it), and a CI workflow for pull requests.
 - Layering switched to DevMentor's `app → core → db` (the first version of this document kept CPG's original `db → core`). Config and DI moved fully into `core`, the composition root moved from `app/src/server/container.ts` into `core`, and the migration CLI entry point moved to `core/scripts/`. `db` now has no workspace dependencies.
 
 Deliberately **not built yet** (YAGNI). Each arrives with the first concept that needs it, and that concept's change is the reference implementation:

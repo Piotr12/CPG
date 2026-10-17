@@ -32,8 +32,19 @@ These are the project's architectural decisions. Follow them; do not introduce a
 - **Dependency injection: Awilix** in `PROXY` injection mode, `strict` on. Every binding is one explicit line in `core/src/container/container.ts` and its type one line in `cradle.ts` (no `loadModules`); services are `asClass(X).scoped()`. Services take dependencies by destructuring the cradle (`({ em, config }) => …`), which keeps working after minification; never use `CLASSIC` mode. Resolve only in server code, through `getContainer()` / `requestScope()` from `@cpg/core`.
 - **Styling.** Frontend (public) pages: plain **Tailwind CSS 4** utilities. Backend (admin) pages under `/admin`: compose **shadcn/ui** components from `@cpg/ui` (`radix-nova` style), and add missing ones with `npx shadcn@latest add <component>` in `packages/ui` rather than hand-writing them. Theme tokens live in `packages/ui/src/styles/globals.css`, the single Tailwind entry point.
 - **Server components that read the database** must call `await connection()` and sit inside a `<Suspense>` boundary (Cache Components would otherwise try to prerender them at build time).
-- **Commands** (from the repo root): `npm run dev`, `npm run build`, `npm run lint`, `npm run typecheck`, `npm test`, `npm run db:migrate`, `npm run db:migration:create -- <name>`.
+- **Testing: Vitest** for unit tests (with React Testing Library + jsdom for components) and for integration tests, which run the app's production Docker image through **Testcontainers** and drive it with **agent-browser**. The rules are in [Testing](#testing--mandatory) below.
+- **Commands** (from the repo root): `npm run dev`, `npm run build`, `npm run lint`, `npm run typecheck`, `npm test`, `npm run test:coverage`, `npm run test:integration`, `npm run db:migrate`, `npm run db:migration:create -- <name>`.
+- **CI:** `.github/workflows/ci.yml` runs lint, typecheck, unit tests with coverage, build and integration tests on every pull request. `deploy.yml` calls the same workflow, so nothing deploys unless it passes.
 - **Deployment:** pushing to `main` deploys with Kamal from GitHub Actions. kamal-proxy only switches traffic once `/up` answers, and `/up` queries the database.
+
+## Testing — mandatory
+
+- **Every new feature, bug fix and behaviour change ships with unit tests that cover 100% of the code it adds or changes: lines, branches, functions and statements.** No exceptions for "simple" code, glue code, pages or components. `npm run test:coverage` fails below 100% across `packages/*/src` and `packages/*/scripts`, and CI runs it on every pull request. A change that drops coverage is not done.
+- **Never lower the thresholds, widen the coverage `exclude` list or add `/* v8 ignore */` (or similar) comments** without the human's explicit approval. If code is hard to test, restructure it (inject the dependency, extract a pure function) rather than excluding it.
+- **Tests check behaviour, not just lines.** Every test asserts on outcomes; a test that only executes code to reach the number doesn't count. A bug fix ships a regression test that fails without the fix.
+- **Where tests go.** Next to the code they cover: `<name>.test.ts` (runs in Node) or `<name>.test.tsx` (React, runs in jsdom with Testing Library). Repo-wide checks go in `tests/*.test.ts`.
+- **Mock only at the boundaries**: Next.js APIs (`next/server`, `next/font/*`), `@cpg/core` in app tests, and the filesystem where the real one would be written. Database code runs against a real SQLite file in a temp directory (`mkdtempSync(path.join(tmpdir(), …))`) with the migrations applied. Async server components are awaited before rendering (see `app/src/app/admin/page.test.tsx`).
+- **Integration tests** (`tests/integration/*.test.ts`, `npm run test:integration`) build the production `Dockerfile`, start it with Testcontainers on an empty data directory (so the app migrates a fresh SQLite database) and drive it in Chrome through `agent-browser` (the `openBrowser()` helper in `tests/integration/browser.ts`). Every user-visible page or flow gets at least one. They need Docker and `npx agent-browser install`; set `CPG_BASE_URL=http://localhost:3000` to run them against a server that is already running.
 
 ## The `.ai/` metadata folder
 
@@ -69,7 +80,7 @@ Every file in `specs/` (and its subfolders), `runs/` and `lessons/` is named `YY
 - `slug` — short, lowercase, kebab-case description, e.g. `2026-10-17--1432UTC-user-login.md`.
 - If the name is already taken, append a counter: `2026-10-17--1432UTC-user-login-2.md`.
 
-`README.md` files and `.ai/docs/` (standing documents with stable names, updated in place) are the only exceptions. `npm test` enforces this rule, and the deploy workflow runs it before every deploy.
+`README.md` files and `.ai/docs/` (standing documents with stable names, updated in place) are the only exceptions. `npm test` enforces this rule, and CI runs it on every pull request and before every deploy.
 
 ## Mandatory workflow
 
@@ -91,7 +102,7 @@ Every file in `specs/` (and its subfolders), `runs/` and `lessons/` is named `YY
 
 ### 3. Before finishing
 
-1. **Verify your changes — never claim "done" without evidence.** At minimum run `npm run lint`, `npm run typecheck`, `npm test` and `npm run build`. If dependencies changed, run `npm audit` too and triage every advisory not already listed as known in the standards doc. For UI or route changes, run the app (`npm run dev`) and check the actual behaviour. Record what you ran and what it printed; if something could not be verified, say so explicitly.
+1. **Verify your changes — never claim "done" without evidence.** At minimum run `npm run lint`, `npm run typecheck`, `npm run test:coverage` (100% required), `npm run build` and `npm run test:integration`. If dependencies changed, run `npm audit` too and triage every advisory not already listed as known in the standards doc. For UI or route changes, run the app (`npm run dev`) and check the actual behaviour. Record what you ran and what it printed; if something could not be verified, say so explicitly.
 2. **Raise the bar**: review your own diff against the checklist in `.ai/docs/engineering-standards.md` and ask, *"knowing everything I know now, is there a simpler, more elegant solution?"* If so, replace the hacky fix before handing over.
 3. **Finalize the run log**: outcome, what changed, how it was verified, follow-ups.
 4. **Record lessons**: after **every correction from the human**, after fixing a bug, hitting a non-obvious pitfall, or discovering something worth remembering long-term, add an entry to `.ai/lessons.md` (see format below). Phrase it as a rule that prevents the mistake from happening again; if it is a standing project rule, propose adding it to this file instead. Update or remove entries that turned out to be wrong.
