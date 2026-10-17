@@ -46,7 +46,8 @@ next-env.d.ts
 # local data (SQLite DB and other files; /externaldata in production)
 /data/
 
-# agent pipeline QA state (per run, not source)
+# agent pipeline: om-* worktrees and QA state (per run, not source)
+/.ai/tmp/
 /.ai/qa/artifacts_*/
 /.ai/qa/test-env.json
 /.ai/qa/test-env.env

@@ -15,7 +15,7 @@ Wherever the skill or its references write `<date>-<slug>`, `<YYYY-MM-DD>-<slug>
 
 ## Slot check
 
-Match an existing run by slug, not by exact path: the slot is taken when `${RUNS_DIR}/????-??-??--????UTC-${SLUG}/` (or a flat `….md` plan with that slug) exists on `origin/$BASE_BRANCH` or any remote branch, or an open PR references it. The branch and PR checks are unchanged.
+Match by today's UTC date and the slug rather than the exact path, which keeps the installed skill's same-day collision rule. The slot is taken when `${RUNS_DIR}/$(date -u +%Y-%m-%d)--????UTC-${SLUG}/` (or a flat `….md` plan with that date and slug) exists on `origin/$BASE_BRANCH` or any remote branch, or an open PR references it. The branch and PR checks are unchanged.
 
 ## Run log
 

@@ -17,4 +17,4 @@ Metadata for AI-assisted development of this project. The rules for using it liv
 
 `cezar/` holds local state of the cezar cockpit and is gitignored.
 
-All files in `specs/`, `runs/` and `lessons/` (not `docs/`, whose files keep stable names), and each run in `pipeline/runs/`, are named `YYYY-MM-DD--HHMMUTC-slug.md` — creation date and 24-hour **UTC** time, e.g. `2026-10-17--1432UTC-user-login.md` (`date -u +%Y-%m-%d--%H%MUTC`). The om-* skills' fixed-name spec files (`product-brief.md`, `backlog.md`, `assets/`, `research/`) are exempt. `npm test` checks it.
+All files in `specs/`, `runs/` and `lessons/` (not `docs/`, whose files keep stable names), are named `YYYY-MM-DD--HHMMUTC-slug.md`, and each run in `pipeline/runs/` is named `YYYY-MM-DD--HHMMUTC-slug` (plus `.md` for a flat plan) — creation date and 24-hour **UTC** time, e.g. `2026-10-17--1432UTC-user-login.md` (`date -u +%Y-%m-%d--%H%MUTC`). The om-* skills' fixed-name spec files (`product-brief.md`, `backlog.md`, `assets/`, `research/`) are exempt. `npm test` checks it.
