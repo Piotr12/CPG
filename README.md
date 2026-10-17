@@ -24,6 +24,7 @@ CPG is deliberately primitive manufacturing planning. No seventeen-layer optimis
 | Dependency injection | Awilix |
 | Styling | Tailwind CSS 4 for frontend pages, shadcn/ui for backend (admin) pages |
 | Repo layout | npm workspaces monorepo |
+| Tests | Vitest (unit, 100% coverage), Testcontainers + agent-browser (integration) |
 | Deployment | Docker + Kamal on a single VM, from GitHub Actions |
 
 ```
@@ -47,7 +48,8 @@ Dependencies only point one way: `app → core → db` and `app → ui` (ESLint 
 ```sh
 npm install
 npm run dev                               # http://localhost:3000, admin at /admin
-npm run lint && npm run typecheck && npm test && npm run build
+npm run lint && npm run typecheck && npm run test:coverage && npm run build
+npm run test:integration                  # needs Docker and `npx agent-browser install` once
 
 npm run db:migration:create -- add-items  # after changing an entity
 npm run db:migrate                        # apply migrations (also runs on server start)
@@ -57,7 +59,7 @@ cd packages/ui && npx shadcn@latest add dialog   # add a shadcn component
 
 ## Deployment
 
-Pushing to `main` runs `npm test`, then builds the Docker image and deploys it with Kamal (`config/deploy.yml`, `.github/workflows/deploy.yml`). The VM directory `/externaldata/cpg.baby` must exist and be writable by uid 1001 (the container user).
+Every pull request runs lint, typecheck, unit tests (100% coverage required), the build and browser integration tests against a throwaway container (`.github/workflows/ci.yml`). Pushing to `main` runs the same checks, then builds the Docker image and deploys it with Kamal (`config/deploy.yml`, `.github/workflows/deploy.yml`). The VM directory `/externaldata/cpg.baby` must exist and be writable by uid 1001 (the container user).
 
 ## For AI agents
 

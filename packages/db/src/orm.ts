@@ -37,6 +37,9 @@ export async function migrate(options: DbOptions): Promise<string[]> {
 
 /** How many migrations have been applied to the database and how many are still pending. */
 export async function getMigrationStatus(orm: Orm): Promise<{ applied: number; pending: number }> {
-  const [executed, pending] = await Promise.all([orm.migrator.getExecuted(), orm.migrator.getPending()]);
+  // Sequential on purpose: on a never-migrated database both calls create the migrations table,
+  // and run concurrently the second one fails with "table already exists".
+  const executed = await orm.migrator.getExecuted();
+  const pending = await orm.migrator.getPending();
   return { applied: executed.length, pending: pending.length };
 }
