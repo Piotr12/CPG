@@ -51,3 +51,5 @@ next-env.d.ts
 /.ai/qa/artifacts_*/
 /.ai/qa/test-env.json
 /.ai/qa/test-env.env
+/.ai/qa/test-env-build-cache.json
+/.ai/qa/test-env.lock/
