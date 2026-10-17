@@ -54,18 +54,25 @@ Every file in `specs/` (and its subfolders), `runs/` and `lessons/` is named `YY
 1. **Read `.ai/lessons.md`** and open any linked lesson relevant to the task. Do not repeat a mistake that is already recorded there.
 2. **Check `.ai/specs/`** for a spec covering the task. If one exists, it is the source of truth — implement what it says. If the task conflicts with the spec, stop and ask the human instead of guessing.
 3. **If this is an autonomous run** (you are working without a human approving each step — e.g. dispatched by cezar, a scheduled/automated job, a headless session), **create the run log** `.ai/runs/YYYY-MM-DD-slug.md` right away (template below).
+4. **Plan complex tasks before writing code** (multi-file changes, new features, bugs with an unclear cause). Write down the steps, the files you will touch and how you will verify the result — in the run log, or shown to the human in an interactive session. Aim for a plan good enough to implement in one pass. Resolve ambiguity by asking, not by guessing.
 
 ### 2. While working
 
 - Keep the run log up to date as you go (decisions, deviations from the spec, blockers) — not only at the end, so an interrupted run still leaves a trail.
 - Do not rewrite the intent of a spec. Specs are authored by the human. You may tick off checklist items or add an `## Implementation notes` section; anything that changes scope must be raised with the human.
+- **When things go sideways, stop and re-plan** instead of piling on patches. Record in the run log why the first approach failed.
+- **Fix bugs end-to-end yourself.** Given a bug report, failing check or log, reproduce it, find the root cause and fix it — read the logs and code rather than asking the human how.
+- **Keep your context clean**: delegate broad searches and independent side tasks to subagents when your tool supports them.
+- If you find yourself repeating the same multi-step workflow, propose turning it into a skill or command committed to the repo.
 
 ### 3. Before finishing
 
-1. **Finalize the run log**: outcome, what changed, how it was verified, follow-ups.
-2. **Record lessons**: after fixing a bug, hitting a non-obvious pitfall, or discovering something worth remembering long-term, add an entry to `.ai/lessons.md` (see format below). Update or remove entries that turned out to be wrong.
-3. **Move the spec** once it is fully implemented and verified: `git mv .ai/specs/<file> .ai/specs/implemented/`. Superseded or abandoned specs go to `.ai/specs/archive/` (add a one-line note at the top of the spec saying why).
-4. Commit the `.ai/` changes together with the code they describe.
+1. **Verify your changes — never claim "done" without evidence.** At minimum run `npm run lint` and `npm run build` (and the tests, once they exist). For UI or route changes, run the app (`npm run dev`) and check the actual behaviour. Record what you ran and what it printed; if something could not be verified, say so explicitly.
+2. **Raise the bar**: review your own diff and ask, *"knowing everything I know now, is there a simpler, more elegant solution?"* If so, replace the hacky fix before handing over.
+3. **Finalize the run log**: outcome, what changed, how it was verified, follow-ups.
+4. **Record lessons**: after **every correction from the human**, after fixing a bug, hitting a non-obvious pitfall, or discovering something worth remembering long-term, add an entry to `.ai/lessons.md` (see format below). Phrase it as a rule that prevents the mistake from happening again; if it is a standing project rule, propose adding it to this file instead. Update or remove entries that turned out to be wrong.
+5. **Move the spec** once it is fully implemented and verified: `git mv .ai/specs/<file> .ai/specs/implemented/`. Superseded or abandoned specs go to `.ai/specs/archive/` (add a one-line note at the top of the spec saying why).
+6. Commit the `.ai/` changes together with the code they describe.
 
 ## Templates
 
