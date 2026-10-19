@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { openBrowser, type Browser } from "./browser";
-import { signIn, signInAsAdmin } from "./sign-in";
+import { signedInAs, signIn, signInAsAdmin } from "./sign-in";
 
 const baseUrl = inject("baseUrl");
 const adminPassword = inject("adminPassword");
@@ -33,10 +33,10 @@ async function createUser(admin: Browser, username: string, password: string) {
   await admin.waitForText(username);
 }
 
-/** Opens the tokens screen from the header link. */
+/** Opens the tokens screen from the menu. */
 async function openTokens(browser: Browser) {
   await browser.open(`${baseUrl}/admin`);
-  await browser.waitFor("main strong");
+  await browser.waitUntil(signedInAs());
   await browser.clickRole("link", "API tokens");
   await browser.waitFor("table");
 }

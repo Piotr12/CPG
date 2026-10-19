@@ -33,6 +33,8 @@ export function openBrowser() {
     click: (selector: string) => command("click", selector),
     /** Clicks the element with this ARIA role and exact accessible name, e.g. a button or menu item. */
     clickRole: (role: string, name: string) => command("find", "role", role, "click", "--name", name, "--exact"),
+    /** Presses a key in the focused element, e.g. `Escape`. */
+    press: (key: string) => command("press", key),
     /** Clears the input labelled exactly `label` and types `value` into it. */
     fillLabel: (label: string, value: string) => command("find", "label", label, "fill", value, "--exact"),
     /** Waits until `text` appears anywhere on the page. */

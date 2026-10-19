@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { openBrowser, type Browser } from "./browser";
-import { signIn, signInAsAdmin } from "./sign-in";
+import { signedInAs, signIn, signInAsAdmin, signOut } from "./sign-in";
 
 const baseUrl = inject("baseUrl");
 const adminPassword = inject("adminPassword");
@@ -36,7 +36,7 @@ describe("signing in", () => {
     await signInAsAdmin(browser, baseUrl, adminPassword);
 
     expect(new URL(await browser.url()).pathname).toBe("/admin");
-    expect(await browser.text("strong")).toBe("admin");
+    await browser.waitUntil(signedInAs("admin"));
     expect(await sessionCookie(browser)).toMatchObject({ httpOnly: true, secure: true, sameSite: "Lax", path: "/" });
   });
 
@@ -48,8 +48,7 @@ describe("signing in", () => {
   });
 
   it("signs out, and /admin is closed again", async () => {
-    await browser.click("form[data-action=sign-out] button");
-    await browser.waitFor("#username");
+    await signOut(browser);
 
     expect(new URL(await browser.url()).pathname).toBe("/login");
     expect(await sessionCookie(browser)).toBeUndefined();

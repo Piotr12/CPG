@@ -16,13 +16,13 @@ describe("dictionaries", () => {
     expect(keyPaths(pl)).toEqual(keyPaths(en));
   });
 
-  it("translate every string rather than copy it (the product name aside)", () => {
+  it("translate every string rather than copy it (the product name, and Menu, which is Polish too, aside)", () => {
     const copied = keyPaths(en).filter((path) => {
       const read = (dictionary: object) => path.split("/").reduce<unknown>((node, key) => (node as Record<string, unknown>)[key], dictionary);
       return typeof read(en) === "string" && read(en) === read(pl);
     });
 
-    expect(copied).toEqual(["home/title"]);
+    expect(copied).toEqual(["home/title", "nav/menu"]);
   });
 
   it.each([

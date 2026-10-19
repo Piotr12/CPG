@@ -12,6 +12,8 @@ export const pl: Messages = {
       { name: "Realizacja produkcji", grunt: "Rób rzeczy. Dowiedz się, czemu plan zły." },
     ],
     motto: "Popyt przyjść. Jaskiniowiec planować. Jaskiniowiec robić.",
+    signIn: "Zaloguj się",
+    open: "Otwórz CPG",
   },
   login: {
     title: "🦣 Zaloguj się do CPG",
@@ -23,18 +25,13 @@ export const pl: Messages = {
   },
   admin: {
     heading: "Kontrola jaskini",
-    signedInAs: "Zalogowano jako",
-    signOut: "Wyloguj",
     database: "Baza danych",
     migrationsApplied: (count) => `Zastosowane migracje: ${count}`,
     migrationsPending: (count) => `Oczekujące: ${count}`,
     settings: (count) => `Ustawienia: ${count}`,
-    users: "Użytkownicy",
-    tokens: "Tokeny API",
   },
   users: {
     heading: "Użytkownicy",
-    back: "Kontrola jaskini",
     neverDeleted: "Użytkownicy nigdy nie są usuwani. Dezaktywuj konto, aby odebrać dostęp; historia zachowa jego nazwę.",
     empty: "Nie ma jeszcze kont.",
     columns: { username: "Nazwa użytkownika", role: "Rola", status: "Stan", created: "Utworzono", actions: "Akcje" },
@@ -84,7 +81,6 @@ export const pl: Messages = {
   },
   tokens: {
     heading: "Tokeny API",
-    back: "Kontrola jaskini",
     intro:
       "Token pozwala skryptowi lub narzędziu korzystać z API CPG w twoim imieniu, w środowiskach Test i Prod, dopóki go nie unieważnisz. Tokeny nie wygasają.",
     empty: "Nie masz jeszcze tokenów.",
@@ -129,7 +125,6 @@ export const pl: Messages = {
   audit: {
     globalHeading: "Audyt globalny",
     tenantHeading: (name) => `Audyt — ${name}`,
-    back: "Kontrola jaskini",
     globalIntro: "Tu zapisywana jest każda zmiana kont. Nikt nie może edytować ani usunąć wpisu, nawet administrator.",
     tenantIntro:
       "Tu pojawiają się zmiany rekordów tego środowiska. Nikt nie może edytować ani usunąć wpisu. Zmiany kont są w audycie globalnym.",
@@ -178,7 +173,17 @@ export const pl: Messages = {
     noRecords: "Brak rekordów biznesowych",
   },
   nav: {
+    menu: "Menu",
+    close: "Zamknij",
+    account: "Konto",
+    tenants: "Środowiska",
+    audit: "Audyt",
+    tokens: "Tokeny API",
+    users: "Użytkownicy",
     help: "Pomoc",
+    signIn: "Zaloguj się",
+    signedInAs: "Zalogowano jako",
+    signOut: "Wyloguj",
   },
   help: {
     heading: "Pomoc",
