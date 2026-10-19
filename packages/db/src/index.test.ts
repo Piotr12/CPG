@@ -4,7 +4,10 @@ import * as db from "./index";
 describe("@cpg/db", () => {
   it("exports the public API", () => {
     expect(Object.keys(db).sort()).toEqual([
+      "AUDIT_APPEND_ONLY",
+      "AUDIT_CHANNELS",
       "GLOBAL_ENTITIES",
+      "GlobalAuditEvent",
       "LOCALES",
       "Session",
       "Setting",
@@ -12,6 +15,7 @@ describe("@cpg/db", () => {
       "TENANT_FILTER",
       "THEMES",
       "Tenant",
+      "TenantAuditEvent",
       "TenantViolationError",
       "USER_ROLES",
       "UniqueConstraintViolationException",
@@ -27,7 +31,15 @@ describe("@cpg/db", () => {
       "selectTenant",
       "tenantOwned",
     ]);
-    expect(db.entities).toEqual([db.Setting, db.User, db.Session, db.UserPreference, db.Tenant]);
-    expect(db.GLOBAL_ENTITIES).toEqual(db.entities);
+    expect(db.entities).toEqual([
+      db.Setting,
+      db.User,
+      db.Session,
+      db.UserPreference,
+      db.Tenant,
+      db.GlobalAuditEvent,
+      db.TenantAuditEvent,
+    ]);
+    expect(db.GLOBAL_ENTITIES).toEqual(db.entities.filter((entity) => entity !== db.TenantAuditEvent));
   });
 });
