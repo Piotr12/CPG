@@ -53,6 +53,28 @@ describe("CreateTokenDialog", () => {
     expect((screen.getByLabelText(/^Name/) as HTMLInputElement).value).toBe("");
   });
 
+  it("keeps the secret open on Escape: only Done closes it", async () => {
+    mocks.createApiToken.mockResolvedValue({ ok: true, data: created });
+    render(<CreateTokenDialog labels={tokensLabels(en)} />);
+    fireEvent.click(screen.getByRole("button", { name: "Create token" }));
+    create("agent1");
+    await screen.findByLabelText("Secret");
+
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+
+    expect(screen.getByLabelText("Secret")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
+  });
+
+  it("closes the form on Escape before a token exists", () => {
+    render(<CreateTokenDialog labels={tokensLabels(en)} />);
+    fireEvent.click(screen.getByRole("button", { name: "Create token" }));
+
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
   it("says when the name is taken and stays on the form (API-003)", async () => {
     mocks.createApiToken.mockResolvedValue({
       ok: false,

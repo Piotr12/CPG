@@ -111,6 +111,7 @@ export const en = {
       usage: "Send it as Authorization: Bearer <secret>.",
       copy: "Copy",
       copied: "Copied",
+      copyFailed: "Couldn't copy. Select the secret and copy it yourself.",
       done: "Done",
     },
     revoke: {

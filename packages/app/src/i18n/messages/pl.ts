@@ -107,6 +107,7 @@ export const pl: Messages = {
       usage: "Wysyłaj go jako Authorization: Bearer <sekret>.",
       copy: "Kopiuj",
       copied: "Skopiowano",
+      copyFailed: "Nie udało się skopiować. Zaznacz sekret i skopiuj go ręcznie.",
       done: "Gotowe",
     },
     revoke: {

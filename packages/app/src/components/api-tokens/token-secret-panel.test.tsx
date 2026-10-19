@@ -52,6 +52,19 @@ describe("TokenSecretPanel", () => {
     expect(writeText).toHaveBeenCalledWith(SECRET);
   });
 
+  it.each([
+    ["the clipboard refuses", { clipboard: { writeText: vi.fn().mockRejectedValue(new Error("denied")) } }],
+    ["there is no clipboard (no secure context)", {}],
+  ])("says to copy by hand when %s", async (_case, navigator) => {
+    vi.stubGlobal("navigator", navigator);
+    renderPanel();
+
+    fireEvent.click(screen.getByRole("button", { name: "Copy" }));
+
+    expect((await screen.findByRole("alert")).textContent).toBe("Couldn't copy. Select the secret and copy it yourself.");
+    expect(screen.getByRole("button", { name: "Copy" })).toBeTruthy();
+  });
+
   it("calls onDone from Done", () => {
     const onDone = renderPanel();
 

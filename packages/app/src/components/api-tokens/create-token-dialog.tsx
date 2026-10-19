@@ -31,13 +31,17 @@ export function CreateTokenDialog({ labels }: { labels: TokensLabels }) {
     if (!next) setCreated(null);
   }
   const close = () => onOpenChange(false);
+  // While the secret shows, only Done closes the dialog: a stray click or Escape would lose it for good.
+  const keepSecretOpen = (event: Event) => {
+    if (created) event.preventDefault();
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
         <Button>{t.open}</Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent showCloseButton={!created} onInteractOutside={keepSecretOpen} onEscapeKeyDown={keepSecretOpen}>
         {created ? (
           <TokenSecretPanel name={created.token.name} secret={created.secret} labels={labels} onDone={close} />
         ) : (

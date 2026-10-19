@@ -3,7 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 // Tokens are minted only in the signed-in UI, never through the bearer API (R07, API-032; spec
-// .ai/specs/2026-10-19--1053UTC-api-tokens.md). `ApiTokenService.create` takes a cookie session,
+// .ai/specs/implemented/2026-10-19--1053UTC-api-tokens.md). `ApiTokenService.create` takes a cookie session,
 // which the type system enforces; this test pins who may reach the service at all, and that the
 // cookie-session lookup never starts reading bearer tokens.
 const appDir = path.resolve(import.meta.dirname, "../packages/app/src");

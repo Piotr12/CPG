@@ -117,11 +117,19 @@ describe("named API tokens", () => {
     expect((await api("/api/tenants", secrets.omar)).status).toBe(200);
   });
 
-  it("revokes a token through the API at once, leaving the other working (API-008, API-007)", async () => {
+  it("revokes only the caller's own token through the API, at once, leaving the other working (API-008, API-007)", async () => {
     const listed = (await api("/api/tokens", secrets.agent2)).body.data as TokenRow[];
     expect(listed.map((token) => token.name)).toEqual(["agent2", "agent1"]);
     const agent1 = listed.find((token) => token.name === "agent1")!;
     expect(agent1.lastUsedAt).not.toBeNull();
+
+    const foreign = await api(`/api/tokens/${agent1.id}`, secrets.omar, "DELETE");
+    expect(foreign.status).toBe(404);
+    expect(foreign.body.error.code).toBe("TOKEN_NOT_FOUND");
+    expect((await api("/api/tenants", secrets.agent1)).status).toBe(200);
+
+    const cookieOnly = await fetch(`${baseUrl}/api/tokens/${agent1.id}`, { method: "DELETE" });
+    expect(cookieOnly.status).toBe(401);
 
     const revoked = await api(`/api/tokens/${agent1.id}`, secrets.agent2, "DELETE");
     expect(revoked).toEqual({ status: 200, body: { ok: true, data: { id: agent1.id } } });
@@ -165,7 +173,10 @@ describe("named API tokens", () => {
     await admin.clickRole("menuitem", "Deactivate");
     await admin.waitFor("[role=alertdialog]");
     await admin.clickRole("button", "Deactivate");
-    await admin.waitForText("Inactive");
+    // Scoped to omar's row: other files leave their own inactive users in this shared database.
+    await admin.waitUntil(
+      `[...document.querySelectorAll("tbody tr")].some((row) => row.innerText.startsWith("omar\\t") && row.innerText.includes("Inactive"))`,
+    );
 
     for (const secret of [secrets.agent2, secrets.omar]) {
       expect((await api("/api/tenants", secret)).status).toBe(401);

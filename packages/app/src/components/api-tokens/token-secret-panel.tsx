@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ErrorMessage } from "@cpg/ui/backend/feedback/error-message";
 import { Button } from "@cpg/ui/components/button";
 import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@cpg/ui/components/dialog";
 import { Input } from "@cpg/ui/components/input";
@@ -16,12 +17,17 @@ interface TokenSecretPanelProps {
 
 /** The one time a token's secret is shown: copy it now, CPG keeps only its hash (API-006). */
 export function TokenSecretPanel({ name, secret, labels, onDone }: TokenSecretPanelProps) {
-  const [copied, setCopied] = useState(false);
+  const [copy, setCopy] = useState<"idle" | "copied" | "failed">("idle");
   const t = labels.secret;
 
-  async function copy() {
-    await navigator.clipboard.writeText(secret);
-    setCopied(true);
+  async function copySecret() {
+    try {
+      // `navigator.clipboard` is missing outside a secure context; that fails here too.
+      await navigator.clipboard.writeText(secret);
+      setCopy("copied");
+    } catch {
+      setCopy("failed");
+    }
   }
 
   return (
@@ -40,10 +46,11 @@ export function TokenSecretPanel({ name, secret, labels, onDone }: TokenSecretPa
             className="font-mono text-xs"
             onFocus={(event) => event.currentTarget.select()}
           />
-          <Button type="button" variant="outline" onClick={copy}>
-            {copied ? t.copied : t.copy}
+          <Button type="button" variant="outline" onClick={copySecret}>
+            {copy === "copied" ? t.copied : t.copy}
           </Button>
         </div>
+        {copy === "failed" && <ErrorMessage>{t.copyFailed}</ErrorMessage>}
       </div>
       <p className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
         {t.warning}
