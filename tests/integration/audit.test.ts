@@ -99,7 +99,7 @@ describe("every change is kept in an append-only audit", () => {
 
     await signIn(alice, baseUrl, NEW_PASSWORD, USERNAME);
     await alice.waitUntil(signedInAs(USERNAME));
-    await alice.clickRole("link", "Audit");
+    await alice.clickRole("link", "Global audit");
     await alice.waitFor("table");
 
     expect(new URL(await alice.url()).pathname).toBe("/admin/audit");
@@ -159,7 +159,7 @@ describe("every change is kept in an append-only audit", () => {
 
   it("keeps each tenant's audit to itself: no account changes there", async () => {
     await alice.open(`${baseUrl}/admin/test`);
-    // The page streams in after the static shell (strip, footer), first inside a hidden container:
+    // The page streams in after the static shell (header row, footer), first inside a hidden container:
     // wait until its link is really shown.
     await alice.waitUntil(
       `[...document.querySelectorAll("a")].some((a) => a.innerText === "Audit — Test" && !a.closest("[hidden]"))`,

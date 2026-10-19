@@ -1,11 +1,12 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import { openBrowser, type Browser } from "./browser";
+import { clickHydrated, openBrowser, type Browser } from "./browser";
 import {
   choosePreference,
   closeAccountMenu,
+  hydrated,
   openAccountMenu,
   restoreDefaultPreferences,
-  signedInAs,
+  signedInAndHydrated,
   signIn,
   signInAsAdmin,
 } from "./sign-in";
@@ -14,7 +15,7 @@ import { createUser } from "./users";
 const baseUrl = inject("baseUrl");
 const adminPassword = inject("adminPassword");
 
-/** 32 characters, the longest username there is: the bar must still fit at 768 px. */
+/** 32 characters, the longest username there is: the sidebar must still fit. */
 const NAV_USER = "nav-ursula-with-a-very-long-name";
 const NAV_PASSWORD = "nav ursula's first password";
 
@@ -24,19 +25,24 @@ interface Entry {
   current: boolean;
 }
 
-/** The bar's inline entries (from 768 px), with which one is marked as the open screen. */
-const inlineEntries = (browser: Browser) =>
-  browser.evaluate<Entry[]>(`[...document.querySelectorAll("header nav a")]
-    .filter((link) => !link.closest("[hidden]"))
-    .map((link) => ({ label: link.textContent, href: link.getAttribute("href"), current: link.getAttribute("aria-current") === "page" }))`);
-const labels = async (browser: Browser) => (await inlineEntries(browser)).map((entry) => entry.label);
-const currentEntry = async (browser: Browser) => (await inlineEntries(browser)).filter((entry) => entry.current).map((entry) => entry.label);
+/** The sidebar's entries (the tree, not the brand or the switch), in order, with the open screen marked. */
+const ENTRIES = "[data-slot=sidebar] [data-slot=sidebar-menu] a";
+const sidebarEntries = (browser: Browser) =>
+  browser.evaluate<Entry[]>(`[...document.querySelectorAll(${JSON.stringify(ENTRIES)})]
+    .map((link) => ({ label: link.textContent.trim(), href: link.getAttribute("href"), current: link.getAttribute("aria-current") === "page" }))`);
+const labels = async (browser: Browser) => (await sidebarEntries(browser)).map((entry) => entry.label);
+const currentEntry = async (browser: Browser) => (await sidebarEntries(browser)).filter((entry) => entry.current).map((entry) => entry.label);
 
-/** Whether anything sticks out sideways: the page, or the bar's own content. */
+/** The visitor bar's links. */
+const visitorEntries = (browser: Browser) =>
+  browser.evaluate<Entry[]>(`[...document.querySelectorAll("[data-visitor-bar] nav a")]
+    .map((link) => ({ label: link.textContent, href: link.getAttribute("href"), current: link.getAttribute("aria-current") === "page" }))`);
+
+/** Whether anything sticks out sideways: the page, or the sidebar's, the drawer's or a bar's own content. */
 const overflows = (browser: Browser) =>
   browser.evaluate<boolean>(`(() => {
-    const bar = document.querySelector("header");
-    return document.documentElement.scrollWidth > innerWidth || bar.scrollWidth > bar.clientWidth;
+    const boxes = document.querySelectorAll("[data-slot=sidebar-header], [data-slot=sidebar-content], [data-slot=sidebar-footer], [data-mobile-bar], [data-visitor-bar]");
+    return document.documentElement.scrollWidth > innerWidth || [...boxes].some((box) => box.offsetParent && box.scrollWidth > box.clientWidth);
   })()`);
 
 /** Where the footer sits against the viewport, measured before any scrolling. */
@@ -46,24 +52,57 @@ const footerBox = (browser: Browser) =>
     return { top: box.top + scrollY, bottom: box.bottom + scrollY, height: innerHeight };
   })()`);
 
-/** Whether the account controls show in the bar itself, with the popover button out of the way (from 1280 px). */
-const accountInBar = (browser: Browser) =>
-  browser.evaluate<boolean>(
-    `!!document.querySelector("header [data-account-panel=inline]")?.offsetParent && !document.querySelector("header [data-action=account-menu]").offsetParent`,
-  );
+/** The tenant header row the page shows: Next.js keeps earlier pages' rows mounted but hidden. */
+const shownHeader = `[...document.querySelectorAll("[role=region][data-tenant]")].find((row) => row.offsetParent)`;
+const header = (browser: Browser) =>
+  browser.evaluate<{ tenant: string; name: string; text: string }>(`(() => {
+    const row = ${shownHeader};
+    const name = row.getAttribute("aria-labelledby").split(" ").map((id) => document.getElementById(id).textContent).join(" ");
+    return { tenant: row.dataset.tenant, name, text: row.textContent };
+  })()`);
 
-/** Opens a page and waits until the bar has streamed in and React has hydrated it. */
+const sidebar = `document.querySelector("[data-slot=sidebar]")`;
+const sidebarWidth = (browser: Browser) =>
+  browser.evaluate<number>(`Math.round(document.querySelector("[data-slot=sidebar-container]").getBoundingClientRect().width)`);
+const pathname = async (browser: Browser) => new URL(await browser.url()).pathname;
+
+/** Opens a signed-in page and waits until the sidebar has streamed in and React has hydrated it. */
 async function openPage(browser: Browser, path: string) {
   await browser.open(`${baseUrl}${path}`);
+  await browser.waitUntil(`[...document.querySelectorAll(${JSON.stringify(ENTRIES)})].some((link) => !link.closest("[hidden]") && ${hydrated("link")})`);
+}
+
+/** Opens a page as a visitor and waits until the visitor bar is hydrated. */
+async function openVisitorPage(browser: Browser, path: string) {
+  await browser.open(`${baseUrl}${path}`);
+  await browser.waitUntil(hydrated(`document.querySelector("[data-visitor-bar] nav a")`));
+}
+
+/** Follows a sidebar entry and waits until the page has arrived and the sidebar marks it. */
+async function follow(browser: Browser, href: string, label: string) {
+  await clickHydrated(browser, `${ENTRIES}[href='${href}']`);
+  await browser.waitUntil(`location.pathname === ${JSON.stringify(href)}`);
   await browser.waitUntil(
-    `[...document.querySelectorAll("header nav a")].some((link) => !link.closest("[hidden]") && Object.keys(link).some((key) => key.startsWith("__reactFiber")))`,
+    `[...document.querySelectorAll(${JSON.stringify(`${ENTRIES}[aria-current=page]`)})].map((link) => link.textContent.trim()).join() === ${JSON.stringify(label)}`,
   );
 }
 
-const pathname = async (browser: Browser) => new URL(await browser.url()).pathname;
+const ADMIN_TREE = [
+  { label: "Overview", href: "/admin/test" },
+  { label: "Materials", href: "/admin/test/materials" },
+  { label: "Locations", href: "/admin/test/locations" },
+  { label: "Customers", href: "/admin/test/customers" },
+  { label: "Suppliers", href: "/admin/test/suppliers" },
+  { label: "Audit", href: "/admin/test/audit" },
+  { label: "Users", href: "/admin/users" },
+  { label: "Tenants", href: "/admin" },
+  { label: "Global audit", href: "/admin/audit" },
+  { label: "Help", href: "/help" },
+];
 
-// Issue #43: one menu on every page, by role, usable on a phone; a way in from the homepage.
-describe("navigation menu", () => {
+// Issue #58, spec 2026-10-19--2048UTC-sidebar-navigation: one sidebar on every page, a Test | Prod
+// switch, by role, as an icon rail and as a drawer on a phone. The visitor's bar keeps #43's way in.
+describe("sidebar navigation", () => {
   let visitor: Browser;
   let admin: Browser;
   let ursula: Browser;
@@ -74,7 +113,7 @@ describe("navigation menu", () => {
     await signInAsAdmin(admin, baseUrl, adminPassword);
     await createUser(admin, baseUrl, NAV_USER, NAV_PASSWORD);
     await signIn(ursula, baseUrl, NAV_PASSWORD, NAV_USER);
-    await ursula.waitUntil(signedInAs(NAV_USER));
+    await ursula.waitUntil(signedInAndHydrated(NAV_USER));
   });
   afterAll(async () => {
     // The admin is shared with every other file; ursula is this file's own account and keeps hers.
@@ -83,13 +122,14 @@ describe("navigation menu", () => {
     await Promise.all([visitor, admin, ursula].map((browser) => browser.close()));
   });
 
-  it("shows a visitor Sign in on the homepage, with the footer in view at 1280×800", async () => {
-    await openPage(visitor, "/");
+  it("shows a visitor a slim bar with Help and Sign in, and Sign in on the homepage, footer in view at 1280×800", async () => {
+    await openVisitorPage(visitor, "/");
 
-    expect(await inlineEntries(visitor)).toEqual([
+    expect(await visitorEntries(visitor)).toEqual([
       { label: "Help", href: "/help", current: false },
       { label: "Sign in", href: "/login", current: false },
     ]);
+    expect(await visitor.evaluate<boolean>(`!document.querySelector("[data-slot=sidebar-container], [data-mobile-bar]")`)).toBe(true);
     expect(await visitor.text("main a[href='/login']")).toBe("Sign in");
     const footer = await footerBox(visitor);
     expect(footer.bottom).toBeLessThanOrEqual(footer.height);
@@ -97,15 +137,10 @@ describe("navigation menu", () => {
     await visitor.click("main a[href='/login']");
     await visitor.waitFor("#username");
     expect(await pathname(visitor)).toBe("/login");
+    await visitor.waitUntil(`document.querySelector("[data-visitor-bar] a[href='/login']").getAttribute("aria-current") === "page"`);
   });
 
-  it("marks Sign in as the open screen on the sign-in page", async () => {
-    await openPage(visitor, "/login");
-
-    expect(await currentEntry(visitor)).toEqual(["Sign in"]);
-  });
-
-  it("offers a signed-in account Open CPG on the homepage instead, footer still in view", async () => {
+  it("offers a signed-in account Open CPG on the homepage, with the sidebar beside it and the footer in view", async () => {
     await openPage(ursula, "/");
 
     expect(await ursula.text("main a[href='/admin']")).toBe("Open CPG");
@@ -114,33 +149,62 @@ describe("navigation menu", () => {
     expect(footer.bottom).toBeLessThanOrEqual(footer.height);
   });
 
-  it("gives the admin every screen, Users included, and marks the open one", async () => {
-    await openPage(admin, "/admin");
+  it("gives the admin every screen at 1280 px, each one click away and marked on arrival", async () => {
+    await openPage(admin, "/admin/test/materials");
 
-    expect(await inlineEntries(admin)).toEqual([
-      { label: "Tenants", href: "/admin", current: true },
-      { label: "Test", href: "/admin/test", current: false },
-      { label: "Prod", href: "/admin/prod", current: false },
-      { label: "Audit", href: "/admin/audit", current: false },
-      { label: "API tokens", href: "/admin/tokens", current: false },
-      { label: "Users", href: "/admin/users", current: false },
-      { label: "Help", href: "/help", current: false },
-    ]);
+    expect(await sidebarEntries(admin)).toEqual(ADMIN_TREE.map((entry) => ({ ...entry, current: entry.label === "Materials" })));
+    expect(await sidebarWidth(admin)).toBe(256);
 
-    await admin.clickRole("link", "Users");
-    await admin.waitFor("table");
-    expect(await pathname(admin)).toBe("/admin/users");
-    expect(await currentEntry(admin)).toEqual(["Users"]);
-
-    await openPage(admin, "/admin/test/audit");
-    expect(await currentEntry(admin)).toEqual(["Test"]);
+    for (const { label, href } of ADMIN_TREE) await follow(admin, href, label);
+    expect(await pathname(admin)).toBe("/help");
   });
 
-  it("gives a normal user no Users entry, and /admin/users still sends them back (regression)", async () => {
+  it("switches tenant on the same screen and back, and from a record to the other tenant's list (TEN-010, TEN-012)", async () => {
+    await openPage(admin, "/admin/test/materials");
+    const switchLink = (href: string) => `[data-slot=sidebar] [data-tenant-switch] a[href='${href}']`;
+
+    await clickHydrated(admin, switchLink("/admin/prod/materials"));
+    await admin.waitUntil(`location.pathname === "/admin/prod/materials" && ${shownHeader}?.dataset.tenant === "prod"`);
+    expect(await currentEntry(admin)).toEqual(["Materials"]);
+    expect(await admin.evaluate<string>(`document.querySelector("[data-slot=sidebar] [data-tenant-switch] [aria-current=page]").textContent`)).toBe("Prod");
+
+    await clickHydrated(admin, switchLink("/admin/test/materials"));
+    await admin.waitUntil(`location.pathname === "/admin/test/materials" && ${shownHeader}?.dataset.tenant === "test"`);
+
+    await openPage(admin, "/admin/test/materials/00000001");
+    await clickHydrated(admin, switchLink("/admin/prod/materials"));
+    await admin.waitUntil(`location.pathname === "/admin/prod/materials"`);
+  });
+
+  it("names the scope in the header row: TEST or PROD on tenant pages, GLOBAL and shared elsewhere (TEN-011)", async () => {
+    await openPage(admin, "/admin/prod/customers");
+    await admin.waitUntil(`${shownHeader}?.textContent.includes("Customers")`);
+    expect(await header(admin)).toMatchObject({ tenant: "prod", name: "PROD Active tenant", text: expect.stringContaining("Master data") });
+
+    await openPage(admin, "/admin/users");
+    await admin.waitUntil(`${shownHeader}?.textContent.includes("Users")`);
+    expect(await header(admin)).toMatchObject({
+      tenant: "global",
+      name: "GLOBAL Shared by Test and Prod — switching tenant doesn't change this page",
+    });
+    // A fresh load of a shared page targets Test; the switch re-targets the tree without leaving the page (Q7).
+    expect(await admin.evaluate<string>(`document.querySelector("[data-slot=sidebar] [data-tenant-switch]").getAttribute("aria-label")`)).toBe(
+      "Menu shows: Test",
+    );
+    await clickHydrated(admin, "[data-slot=sidebar] [data-tenant-switch] button[aria-pressed=false]");
+    await admin.waitUntil(`!!document.querySelector("[data-slot=sidebar] a[href='/admin/prod/materials']")`);
+    expect(await admin.evaluate<string>(`document.querySelector("[data-slot=sidebar] [data-tenant-switch]").getAttribute("aria-label")`)).toBe(
+      "Menu shows: Prod",
+    );
+    expect(await pathname(admin)).toBe("/admin/users");
+  });
+
+  it("gives a normal user no Administration, and /admin/users still sends them back (regression)", async () => {
     await openPage(ursula, "/admin/tokens");
 
-    expect(await labels(ursula)).toEqual(["Tenants", "Test", "Prod", "Audit", "API tokens", "Help"]);
-    expect(await currentEntry(ursula)).toEqual(["API tokens"]);
+    expect(await labels(ursula)).toEqual(["Overview", "Materials", "Locations", "Customers", "Suppliers", "Audit", "Global audit", "Help"]);
+    expect(await currentEntry(ursula)).toEqual([]);
+    expect(await ursula.evaluate<string>(`document.querySelector("[data-slot=sidebar] [data-action=account-menu]").dataset.active`)).toBe("true");
 
     await ursula.open(`${baseUrl}/admin/users`);
     await ursula.waitUntil(`location.pathname === "/admin"`);
@@ -148,89 +212,100 @@ describe("navigation menu", () => {
     expect(await pathname(ursula)).toBe("/admin");
   });
 
-  it("opens the menu from a button at 360 px, closes it with Escape and gives focus back", async () => {
-    await ursula.setViewport(360, 800);
-    await openPage(ursula, "/admin");
-    const menuButton = `document.querySelector("header [data-action=open-menu]")`;
-    await ursula.waitUntil(`Object.keys(${menuButton} ?? {}).some((key) => key.startsWith("__reactFiber"))`);
+  it("collapses to an icon rail, where the Master data fly-out reaches Locations, and expands back", async () => {
+    await openPage(admin, "/admin/test/materials");
 
-    // The inline entries and the account button give way to the Menu button.
-    expect(await ursula.evaluate<boolean>(`!!document.querySelector("header nav").offsetParent`)).toBe(false);
-    expect(await overflows(ursula)).toBe(false);
+    await clickHydrated(admin, "[data-action=toggle-sidebar]");
+    await admin.waitUntil(`${sidebar}.dataset.state === "collapsed"`);
+    await admin.waitUntil(`Math.round(document.querySelector("[data-slot=sidebar-container]").getBoundingClientRect().width) === 48`);
+    expect(await overflows(admin)).toBe(false);
 
-    await ursula.clickRole("button", "Menu");
-    await ursula.waitUntil(`!!document.querySelector("[role=dialog] nav")`);
-    expect(
-      await ursula.evaluate<string[]>(`[...document.querySelectorAll("[role=dialog] nav a")].map((link) => link.textContent)`),
-    ).toEqual(["Tenants", "Test", "Prod", "Audit", "API tokens", "Help"]);
-    expect(await ursula.evaluate<string | null>(`document.querySelector("[role=dialog] a[aria-current=page]")?.textContent ?? null`)).toBe(
-      "Tenants",
-    );
-    expect(await ursula.evaluate<boolean>(`!!document.querySelector("[role=dialog] form[data-action=sign-out]")`)).toBe(true);
-    expect(await overflows(ursula)).toBe(false);
+    await clickHydrated(admin, "[data-group=masterData]");
+    await admin.waitUntil(`!!document.querySelector("[role=menu] a[href='/admin/test/locations']")`);
+    await admin.click("[role=menu] a[href='/admin/test/locations']");
+    await admin.waitUntil(`location.pathname === "/admin/test/locations" && !document.querySelector("[role=menu]")`);
+    expect(await admin.evaluate<string>(`${sidebar}.dataset.state`)).toBe("collapsed");
 
-    await ursula.press("Escape");
-    await ursula.waitUntil(`!document.querySelector("[role=dialog]")`);
-    await ursula.waitUntil(`document.activeElement === ${menuButton}`);
+    await clickHydrated(admin, "[data-action=toggle-sidebar]");
+    await admin.waitUntil(`${sidebar}.dataset.state === "expanded"`);
+    await admin.waitUntil(`Math.round(document.querySelector("[data-slot=sidebar-container]").getBoundingClientRect().width) === 256`);
+    expect(await currentEntry(admin)).toEqual(["Locations"]);
   });
 
-  it("follows an entry from the sheet and closes it", async () => {
-    await ursula.clickRole("button", "Menu");
-    await ursula.waitUntil(`!!document.querySelector("[role=dialog] nav")`);
-    await ursula.click("[role=dialog] nav a[href='/admin/tokens']");
-    await ursula.waitUntil(`location.pathname === "/admin/tokens" && !document.querySelector("[role=dialog]")`);
+  describe.each([
+    ["the normal user", () => ursula, false],
+    ["the admin", () => admin, true],
+  ] as const)("at 390 px, for %s", (_, who, isAdmin) => {
+    const menuButton = `document.querySelector("[data-action=open-menu]")`;
+    const drawer = "[data-slot=sidebar][data-mobile=true]";
 
-    expect(await pathname(ursula)).toBe("/admin/tokens");
+    it("opens the drawer from Menu, closes it with Escape and gives focus back to Menu", async () => {
+      const browser = who();
+      await browser.setViewport(390, 844);
+      await browser.open(`${baseUrl}/admin/test`);
+      await browser.waitUntil(`${hydrated(menuButton)} && !!${menuButton}.offsetParent`);
+      expect(await overflows(browser)).toBe(false);
+
+      await browser.click("[data-action=open-menu]");
+      await browser.waitUntil(`!!document.querySelector(${JSON.stringify(`${drawer} a[href='/admin/test/materials']`)})`);
+      expect(await browser.evaluate<boolean>(`!!document.querySelector(${JSON.stringify(`${drawer} [data-group=administration]`)})`)).toBe(isAdmin);
+      expect(await overflows(browser)).toBe(false);
+
+      await browser.press("Escape");
+      await browser.waitUntil(`!document.querySelector(${JSON.stringify(drawer)})`);
+      await browser.waitUntil(`document.activeElement === ${menuButton}`);
+    });
+
+    it("closes the drawer when one of its links is followed", async () => {
+      const browser = who();
+      await browser.click("[data-action=open-menu]");
+      await browser.waitUntil(`!!document.querySelector(${JSON.stringify(`${drawer} a[href='/admin/test/suppliers']`)})`);
+      await clickHydrated(browser, `${drawer} a[href='/admin/test/suppliers']`);
+      await browser.waitUntil(`location.pathname === "/admin/test/suppliers" && !document.querySelector(${JSON.stringify(drawer)})`);
+    });
+
+    it("switches tenant from the top bar, one tap away", async () => {
+      const browser = who();
+      await clickHydrated(browser, "[data-mobile-bar] [data-tenant-switch] a[href='/admin/prod/suppliers']");
+      await browser.waitUntil(`location.pathname === "/admin/prod/suppliers" && ${shownHeader}?.dataset.tenant === "prod"`);
+      expect(await overflows(browser)).toBe(false);
+      await browser.setViewport(1280, 800);
+    });
   });
 
-  it("keeps the footer within two screens of the top of the homepage at 360×800", async () => {
-    await openPage(ursula, "/");
+  it("keeps the footer within two screens of the top of the homepage at 390×844", async () => {
+    await ursula.setViewport(390, 844);
+    try {
+      await ursula.open(`${baseUrl}/`);
+      await ursula.waitUntil(signedInAndHydrated(NAV_USER));
 
-    const footer = await footerBox(ursula);
-    expect(footer.top).toBeLessThan(2 * footer.height);
-    expect(await overflows(ursula)).toBe(false);
+      const footer = await footerBox(ursula);
+      expect(footer.top).toBeLessThan(2 * footer.height);
+      expect(await overflows(ursula)).toBe(false);
+    } finally {
+      await ursula.setViewport(1280, 800);
+    }
   });
 
-  it("fits the bar at 1280 and 768 px in Polish and dark, with the longest username", async () => {
-    await ursula.setViewport(1280, 800);
-    await openPage(ursula, "/admin");
+  it("fits at 1280 px in Polish and dark with the longest username, its account card speaking Polish", async () => {
+    await openPage(ursula, "/admin/test/materials");
     await choosePreference(ursula, "pl");
     await choosePreference(ursula, "dark");
     await closeAccountMenu(ursula);
 
-    // From 1280 px the account controls sit in the bar itself, the long name truncated.
-    await openPage(ursula, "/admin");
-    expect(await accountInBar(ursula)).toBe(true);
-    expect(await overflows(ursula)).toBe(false);
-
-    await ursula.setViewport(768, 800);
-    await openPage(ursula, "/admin");
-
-    expect(await labels(ursula)).toEqual(["Środowiska", "Test", "Prod", "Audyt", "Tokeny API", "Pomoc"]);
+    await openPage(ursula, "/admin/test/materials");
+    expect(await labels(ursula)).toEqual(["Przegląd", "Materiały", "Lokalizacje", "Klienci", "Dostawcy", "Audyt", "Audyt globalny", "Pomoc"]);
     expect(await ursula.evaluate<boolean>(`document.documentElement.classList.contains("dark")`)).toBe(true);
     expect(await overflows(ursula)).toBe(false);
+    // The long name truncates inside the card instead of widening the sidebar.
+    expect(await sidebarWidth(ursula)).toBe(256);
 
-    await openAccountMenu(ursula);
+    const panel = await openAccountMenu(ursula);
     expect(await ursula.evaluate<string | null>(`document.querySelector("[data-slot=popover-content]").getAttribute("lang")`)).toBe("pl");
-    expect(await ursula.text("[data-slot=popover-content] form[data-action=sign-out] button")).toBe("Wyloguj");
-    expect(await ursula.text("[data-slot=popover-content] strong")).toBe(NAV_USER);
+    expect(await ursula.text(`${panel} form[data-action=sign-out] button`)).toBe("Wyloguj");
+    expect(await ursula.text(`${panel} a[href='/admin/tokens']`)).toBe("Tokeny API");
+    expect(await ursula.text(`${panel} strong`)).toBe(NAV_USER);
     expect(await overflows(ursula)).toBe(false);
-  });
-
-  it("fits the admin's bar, the widest one with Users, at 1280 and 768 px in Polish", async () => {
-    await openPage(admin, "/admin");
-    await choosePreference(admin, "pl");
-    await closeAccountMenu(admin);
-
-    // At 1280 px the bar holds seven entries and the account controls in one row.
-    await openPage(admin, "/admin");
-    expect(await accountInBar(admin)).toBe(true);
-    expect(await overflows(admin)).toBe(false);
-
-    await admin.setViewport(768, 800);
-    await openPage(admin, "/admin");
-
-    expect(await labels(admin)).toEqual(["Środowiska", "Test", "Prod", "Audyt", "Tokeny API", "Użytkownicy", "Pomoc"]);
-    expect(await overflows(admin)).toBe(false);
+    await closeAccountMenu(ursula);
   });
 });

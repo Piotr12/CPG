@@ -35,9 +35,9 @@ const documentState = (browser: Browser) =>
 const waitForHeading = (browser: Browser, heading: string) =>
   browser.waitUntil(`document.querySelector("h1")?.textContent === ${JSON.stringify(heading)}`);
 
-/** The tenant strip the page shows: Next.js keeps earlier pages' strips mounted but hidden. */
-const STRIP = "[role=region][data-tenant]";
-const shownStrip = `[...document.querySelectorAll(${JSON.stringify(STRIP)})].find((strip) => strip.offsetParent)`;
+/** The tenant header row the page shows: Next.js keeps earlier pages' rows mounted but hidden. */
+const HEADER = "[role=region][data-tenant]";
+const shownHeader = `[...document.querySelectorAll(${JSON.stringify(HEADER)})].find((row) => row.offsetParent)`;
 
 // UX-001 to UX-007.
 describe("language and theme", () => {
@@ -118,15 +118,12 @@ describe("language and theme", () => {
   });
 
   it("keeps Polish and dark while switching between Test and Prod (UX-004, UX-007)", async () => {
-    for (const [tenant, description] of [
-      ["test", "Środowisko Test"],
-      ["prod", "Środowisko Prod"],
-      ["test", "Środowisko Test"],
-    ]) {
-      await clickHydrated(browser, `${STRIP} a[href='/admin/${tenant}']`);
-      // The strip's sentence streams in the reader's language.
+    for (const tenant of ["test", "prod", "test"]) {
+      // The sidebar's first link to the tenant's home: the brand on a shared page, the switch on the other tenant's.
+      await clickHydrated(browser, `[data-slot=sidebar] a[href='/admin/${tenant}']`);
+      // The header row's words stream in the reader's language.
       await browser.waitUntil(
-        `${shownStrip}?.dataset.tenant === ${JSON.stringify(tenant)} && ${shownStrip}.innerText.includes(${JSON.stringify(description)})`,
+        `${shownHeader}?.dataset.tenant === ${JSON.stringify(tenant)} && ${shownHeader}.textContent.includes("Aktywne środowisko")`,
       );
 
       expect(new URL(await browser.url()).pathname).toBe(`/admin/${tenant}`);
@@ -135,12 +132,12 @@ describe("language and theme", () => {
 
     // A soft navigation keeps the root layout, so <html> still holds what signing in set. Open Prod
     // afresh without the theme cookie: the account alone must bring back Polish and dark, and the
-    // bar writes the account's theme back into the cookie once it has applied it.
+    // sidebar writes the account's theme back into the cookie once it has applied it.
     await browser.evaluate(`(() => { document.cookie = "cpg_theme=; Max-Age=0; Path=/"; return true; })()`);
     expect(await browser.evaluate<boolean>(`document.cookie.includes("cpg_theme=")`)).toBe(false);
     await browser.open(`${baseUrl}/admin/prod`);
     await browser.waitUntil(
-      `${shownStrip}?.dataset.tenant === "prod" && ${shownStrip}.innerText.includes("Środowisko Prod") && document.cookie.includes("cpg_theme=")`,
+      `${shownHeader}?.dataset.tenant === "prod" && ${shownHeader}.textContent.includes("Aktywne środowisko") && document.cookie.includes("cpg_theme=")`,
     );
 
     expect(await documentState(browser)).toMatchObject({ lang: "pl", isDark: true });
