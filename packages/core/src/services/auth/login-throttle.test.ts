@@ -109,6 +109,31 @@ describe("LoginThrottle", () => {
     expect(bucketsOf(throttle).size).toBe(0);
   });
 
+  it("keeps an account blocked however many client buckets a flood of addresses creates", () => {
+    for (let i = 0; i < MAX_FAILURES_PER_ACCOUNT; i++) throttle.recordFailure(`2001:db8::${i}`, "admin");
+    expect(throttle.isBlocked("2001:db8::ffff", "admin")).toBe(true);
+
+    for (let i = 0; i < MAX_BUCKETS; i++) throttle.recordFailure(`flood-${i}`, null);
+
+    expect(throttle.isBlocked("2001:db8::ffff", "admin")).toBe(true);
+  });
+
+  it("evicts unblocked client buckets before blocked ones", () => {
+    fail(throttle, MAX_FAILURES_PER_CLIENT, "blocked-client", null);
+    for (let i = 0; i < MAX_BUCKETS; i++) throttle.recordFailure(`client-${i}`, null);
+
+    expect(throttle.isBlocked("blocked-client", null)).toBe(true);
+    expect(bucketsOf(throttle).has("client:client-0:*")).toBe(false);
+  });
+
+  it("falls back to the oldest blocked client when every client is blocked", () => {
+    for (let i = 0; i <= MAX_BUCKETS; i++) fail(throttle, MAX_FAILURES_PER_CLIENT, `c-${i}`, null);
+
+    expect(bucketsOf(throttle).size).toBe(MAX_BUCKETS);
+    expect(bucketsOf(throttle).has("client:c-0:*")).toBe(false);
+    expect(throttle.isBlocked(`c-${MAX_BUCKETS}`, null)).toBe(true);
+  });
+
   it("never holds more than MAX_BUCKETS, dropping the least recently active", () => {
     for (let i = 0; i <= MAX_BUCKETS; i++) throttle.recordFailure(`client-${i}`, null);
 

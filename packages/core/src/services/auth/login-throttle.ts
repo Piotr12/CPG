@@ -4,7 +4,7 @@ export const THROTTLE_WINDOW_MS = 15 * 60_000;
 export const MAX_FAILURES_PER_CLIENT = 5;
 /** Failures from any client against one account inside the window: stops many-IP guessing. */
 export const MAX_FAILURES_PER_ACCOUNT = 20;
-/** Memory ceiling: past this many buckets the oldest are dropped (~a few MB at worst). */
+/** Memory ceiling for per-client buckets: past it the oldest are dropped (~a few MB at worst). */
 export const MAX_BUCKETS = 10_000;
 /** Expired buckets are swept at most this often, so a check never scans the map every time. */
 export const PRUNE_INTERVAL_MS = 60_000;
@@ -16,8 +16,10 @@ interface Bucket {
 
 /**
  * In-memory brute-force protection for sign-in, per client IP + account and per account. Unknown
- * usernames all share the client's `*` bucket, and the map holds at most `MAX_BUCKETS` entries
- * (oldest dropped first), so neither random names nor rotating addresses grow it without bound.
+ * usernames all share the client's `*` bucket, and past `MAX_BUCKETS` the least recently active
+ * client buckets are dropped (unblocked ones first), so neither random names nor rotating
+ * addresses grow the map without bound. Account buckets are never evicted: flooding the map from
+ * many addresses must not lift an account's block.
  * Counters live in the process: they reset on restart and aren't shared between instances, which
  * is fine for CPG's single server.
  */
@@ -56,7 +58,17 @@ export class LoginThrottle {
     // Re-insert so Map order stays oldest-activity first, then evict past the ceiling.
     this.buckets.delete(key);
     this.buckets.set(key, bucket);
-    while (this.buckets.size > MAX_BUCKETS) this.buckets.delete(this.buckets.keys().next().value!);
+    while (this.buckets.size > MAX_BUCKETS) this.evictOldestClient(now, key);
+  }
+
+  /**
+   * Drops the least recently active client bucket other than `current` (the one just counted),
+   * preferring one that isn't blocking anyone.
+   */
+  private evictOldestClient(now: number, current: string): void {
+    const clients = [...this.buckets.entries()].filter(([key]) => key.startsWith("client:") && key !== current);
+    const [key] = clients.find(([, bucket]) => bucket.blockedUntil <= now) ?? clients[0];
+    this.buckets.delete(key);
   }
 
   private prune(now: number): void {
