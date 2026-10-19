@@ -54,6 +54,14 @@ In each tenant the admin creates, renames, deactivates and reactivates locations
 - **The ID schema is `validators/business-ids/business-id.schema.ts`**, and a separate `named-record-fields.schema.ts` holds the name rule and the messages the screens translate.
 - **`seedDemoData` returns a per-kind result** (`{ seeded } | { error }`). `instrumentation.ts` logs each, and an outer `catch` still covers a failure to open the connection.
 - **The tenant-audit help topic** now names locations, customers and suppliers.
+- **The action tests don't re-test a stale generation.** They mock `tenantServerAction`, and its own tests (`core/src/http/tenant-server-action.test.ts`) cover the refusal. The materials actions are tested the same way.
+- **Code review (fresh context, verdict approve, five Low findings):**
+  - `NamedRecords` now trims names itself, so a caller that skips the schema (the import, #27) can't store spaces or record a no-op rename;
+  - the app's kind union is renamed `NamedRecordScreenKind`, to avoid a clash with core's `NamedRecordKind`;
+  - `BACKWARD_COMPATIBILITY.md` lists the `CONFLICT`/`*_IDS_EXHAUSTED` codes and the three help topic IDs;
+  - the services' doc comments are fixed.
+
+  Not done: folding the near-identical per-kind page, action and route tests into shared `describe.each` suites (about 800 lines). The entry points must stay per kind, and the tests are correct as they are. Follow-up.
 
 ## Implementation Plan
 

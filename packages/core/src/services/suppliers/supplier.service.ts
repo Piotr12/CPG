@@ -8,9 +8,9 @@ interface Deps {
 }
 
 /**
- * A tenant's suppliers (E03-S02). Who the tenant buys from. Resolved from a tenant scope, so every read and write is that
- * tenant's only (R05); the admin maintains them, which callers check with `assertAdmin` before a
- * write. The rules are the shared `NamedRecords` ones (spec Q9).
+ * A tenant's suppliers (E03-S02): who the tenant buys from. Resolved from a tenant scope, so every read and
+ * write is that tenant's only (R05). The admin maintains them, which callers check with `assertAdmin`
+ * before a write. The rules are the shared `NamedRecords` ones (spec Q9).
  */
 export class SupplierService {
   private readonly records: NamedRecords;

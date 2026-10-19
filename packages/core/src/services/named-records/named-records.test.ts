@@ -186,6 +186,15 @@ describe.each(KINDS)("$Service.name", ({ Service, subjectType, prefix, code, nou
       expect((await audit()).slice(1).map(({ action }) => action).sort()).toEqual([`${prefix}.deactivated`, `${prefix}.updated`]);
     });
 
+    it("trims names itself, whatever the caller sent, so surrounding spaces are no rename", async () => {
+      expect((await service().create({ name: "  Site  " }, ACTOR)).name).toBe("Site");
+
+      const same = await service().update("00000001", { name: " Site " }, 1, ACTOR);
+
+      expect(same).toMatchObject({ name: "Site", version: 1 });
+      expect(await audit()).toHaveLength(1);
+    });
+
     it("writes and records nothing when no value differs", async () => {
       await service().create({ name: "Site" }, ACTOR);
 

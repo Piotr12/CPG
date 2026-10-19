@@ -1,11 +1,11 @@
 import type { Locale, NamedRecordView } from "@cpg/core";
 import type { Messages } from "../../i18n/messages/en";
 import { CreateNamedRecordDialog } from "./create-named-record-dialog";
-import { namedRecordsLabels, type CreateNamedRecord, type NamedRecordKind, type UpdateNamedRecord } from "./labels";
+import { namedRecordsLabels, type CreateNamedRecord, type NamedRecordScreenKind, type UpdateNamedRecord } from "./labels";
 import { NamedRecordsTable } from "./named-records-table";
 
 interface NamedRecordsScreenProps {
-  kind: NamedRecordKind;
+  kind: NamedRecordScreenKind;
   tenant: { code: string; name: string; generation: number };
   records: NamedRecordView[];
   locale: Locale;

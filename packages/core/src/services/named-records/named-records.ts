@@ -69,7 +69,7 @@ export class NamedRecords {
   async create({ name }: { name: string }, actor: AuditActor): Promise<NamedRecordView> {
     try {
       return await this.em.transactional(async (em) => {
-        const record = await this.insert(em, name);
+        const record = await this.insert(em, name.trim());
         recordTenantAudit(em, actor, this.entry("created", record, null, snapshot(record)));
         await em.flush();
         return toView(record);
@@ -86,7 +86,8 @@ export class NamedRecords {
 
   /**
    * Renames and/or (de)activates at `version`. A field counts only when it differs from the stored
-   * value; with nothing changed, nothing is written or recorded. A rename is `{prefix}.updated` with
+   * value, a name once trimmed (whatever the caller sent); with nothing changed, nothing is written
+   * or recorded. A rename is `{prefix}.updated` with
    * the name before and after, a flag change `{prefix}.deactivated` or `.reactivated` (AUD-003).
    */
   async update(id: string, changes: NamedRecordChanges, version: number, actor: AuditActor): Promise<NamedRecordView> {
@@ -94,9 +95,10 @@ export class NamedRecords {
       return await this.em.transactional(async (em) => {
         const record = await this.find(em, id, { refresh: true });
         if (record.version !== version) throw versionConflict();
-        if (changes.name !== undefined && changes.name !== record.name) {
+        const name = changes.name?.trim();
+        if (name !== undefined && name !== record.name) {
           const before = record.name;
-          record.name = changes.name;
+          record.name = name;
           recordTenantAudit(em, actor, this.entry("updated", record, { name: before }, { name: record.name }));
         }
         if (changes.active !== undefined && changes.active !== record.active) {

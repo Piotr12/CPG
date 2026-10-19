@@ -6,7 +6,7 @@ import {
 import type { Messages } from "../../i18n/messages/en";
 
 /** The screens that list a kind of named record: locations, customers, suppliers (E03-S02). */
-export type NamedRecordKind = "locations" | "customers" | "suppliers";
+export type NamedRecordScreenKind = "locations" | "customers" | "suppliers";
 
 /**
  * One kind's screen strings in the reader's language: plain strings, so they can reach client
@@ -27,10 +27,10 @@ export type UpdateNamedRecord = (
 ) => Promise<Result<NamedRecordView>>;
 
 /** Builds a kind's labels from a dictionary (server side, where `messages` is available). */
-export function namedRecordsLabels(messages: Messages, kind: NamedRecordKind): NamedRecordsLabels {
-  const labels: Partial<Messages[NamedRecordKind]> = { ...messages[kind] };
+export function namedRecordsLabels(messages: Messages, kind: NamedRecordScreenKind): NamedRecordsLabels {
+  const labels: Partial<Messages[NamedRecordScreenKind]> = { ...messages[kind] };
   delete labels.heading;
-  return { ...(labels as Omit<Messages[NamedRecordKind], "heading">), errors: { ...messages.errors, ...messages[kind].errors } };
+  return { ...(labels as Omit<Messages[NamedRecordScreenKind], "heading">), errors: { ...messages.errors, ...messages[kind].errors } };
 }
 
 /** A field message from the shared schema in the reader's language; unknown messages pass through. */
