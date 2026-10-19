@@ -88,6 +88,16 @@ describe("the admin manages normal users", () => {
     expect(await landsOn(aliceA, `${baseUrl}/admin/users`)).toBe("/admin");
   });
 
+  it("lets alice open both tenants, like every active account (TEN-010)", async () => {
+    for (const tenant of ["test", "prod"]) {
+      await aliceA.open(`${baseUrl}/admin/${tenant}`);
+      await aliceA.waitUntil(`document.querySelector("strong")?.innerText === "alice"`);
+
+      expect(await pathname(aliceA)).toBe(`/admin/${tenant}`);
+      expect(await aliceA.text("h1")).toMatch(new RegExp(`— ${tenant === "test" ? "Test" : "Prod"}$`));
+    }
+  });
+
   it("signs alice out everywhere on a password reset; only the new password works (TEN-006)", async () => {
     await aliceMenu(admin, "Reset password");
     await admin.fillLabel("New password", ALICE_NEW_PASSWORD);
