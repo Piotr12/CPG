@@ -34,7 +34,8 @@ function assertSameTenant(target: object, code: TenantCode, where: string): void
   if (tenantOf(target) !== code) throw new TenantViolationError(`${where} points at a record of another tenant`);
 }
 
-function checkChangeSet(changeSet: ChangeSet<object>, code: TenantCode): void {
+/** A changed entity's own tenant: it must be the scope's, loaded, and never changed. */
+function checkOwnership(changeSet: ChangeSet<object>, code: TenantCode): void {
   const { entity, meta, payload, type } = changeSet;
   const name = meta.className;
   if (type !== ChangeSetType.CREATE && !helper(entity).isInitialized()) {
@@ -44,31 +45,38 @@ function checkChangeSet(changeSet: ChangeSet<object>, code: TenantCode): void {
     throw new TenantViolationError(`${name}.tenant can't change`);
   }
   if (tenantOf(entity) !== code) throw new TenantViolationError(`${name} belongs to another tenant, or its tenant isn't loaded`);
+}
 
-  for (const prop of meta.relations) {
-    if (!TO_ONE.includes(prop.kind) || prop.name === "tenant" || !(prop.name in payload)) continue;
+/** The tenant-owned records a change points at through to-one references it sets. */
+function referencedRecords({ entity, meta, payload }: ChangeSet<object>): { target: object; where: string }[] {
+  return meta.relations.flatMap((prop) => {
+    if (!TO_ONE.includes(prop.kind) || prop.name === "tenant" || !(prop.name in payload)) return [];
     const target = (entity as Record<string, object | null | undefined>)[prop.name];
-    if (target && isTenantOwned(prop.targetMeta)) assertSameTenant(target, code, `${name}.${prop.name}`);
-  }
+    return target && isTenantOwned(prop.targetMeta) ? [{ target, where: `${meta.className}.${prop.name}` }] : [];
+  });
 }
 
 /**
  * Rejects a flush (before any SQL runs) that would write tenant-owned data outside the scope's
  * tenant: no tenant selected, an entity or reference of another tenant, a changed `tenant`, or a
- * reference whose tenant can't be checked. Flushes of global entities only pass untouched.
+ * reference whose tenant can't be checked. References from global records to tenant-owned ones
+ * (to-one or collections) are checked the same way. Flushes that touch no tenant-owned data pass.
  */
 export class TenantGuard implements EventSubscriber {
   onFlush({ em, uow }: FlushEventArgs): void {
-    const changeSets = uow.getChangeSets().filter(({ meta }) => isTenantOwned(meta));
+    const changeSets = uow.getChangeSets();
+    const owned = changeSets.filter(({ meta }) => isTenantOwned(meta));
+    const references = changeSets.flatMap(referencedRecords);
     const collections = uow
       .getCollectionUpdates()
       .filter((collection) => isTenantOwned(helper(collection.owner).__meta) || isTenantOwned(collection.property.targetMeta));
-    if (changeSets.length === 0 && collections.length === 0) return;
+    if (owned.length === 0 && references.length === 0 && collections.length === 0) return;
 
     const code = currentTenant(em as EntityManager);
     if (!code) throw new TenantViolationError("writing tenant-owned data without a tenant scope");
 
-    for (const changeSet of changeSets) checkChangeSet(changeSet, code);
+    for (const changeSet of owned) checkOwnership(changeSet, code);
+    for (const { target, where } of references) assertSameTenant(target, code, where);
     for (const collection of collections) {
       const where = `${helper(collection.owner).__meta.className}.${collection.property.name}`;
       if (isTenantOwned(helper(collection.owner).__meta)) assertSameTenant(collection.owner, code, where);

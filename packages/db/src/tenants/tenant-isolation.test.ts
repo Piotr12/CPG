@@ -45,6 +45,7 @@ const FixtureBoard = defineEntity({
     id: p.integer().primary().autoincrement(),
     pins: () => p.manyToMany(FixtureParent),
     members: () => p.manyToMany(User),
+    featured: () => p.manyToOne(FixtureParent).nullable(),
   },
 });
 
@@ -160,13 +161,24 @@ describe("tenant isolation", () => {
       await expect(scope().nativeDelete(FixtureParent, {})).rejects.toThrow(/change tenant-owned data without a tenant scope/);
     });
 
-    it("refuse to move rows to another tenant", async () => {
-      const { testId } = await seedParents();
+    it("refuse anything but plain fields: no move to another tenant, no cross-tenant reference", async () => {
+      const { testId, prodId } = await seedParents();
+      const em = scope("test");
+      const child = em.create(FixtureChild, { name: "child", parent: await em.findOneOrFail(FixtureParent, testId) });
+      await em.flush();
 
+      await expect(em.nativeUpdate(FixtureParent, { id: testId }, { tenant: "prod" })).rejects.toThrow(
+        /nativeUpdate\(\) may only set plain fields of FixtureParent; 'tenant'/,
+      );
+      // A raw column name is not a field either (MikroORM would pass it through as SQL).
       await expect(
-        scope("test").nativeUpdate(FixtureParent, { id: testId }, { tenant: "prod" }),
-      ).rejects.toThrow(/nativeUpdate\(\) bypasses tenant checks/);
+        em.nativeUpdate(FixtureParent, { id: testId }, { tenant_code: "prod" } as never),
+      ).rejects.toThrow(/'tenant_code' is a reference or not a field/);
+      await expect(em.nativeUpdate(FixtureChild, { id: child.id }, { parent: prodId })).rejects.toThrow(
+        /nativeUpdate\(\) may only set plain fields of FixtureChild; 'parent'/,
+      );
       expect(await parentNames("test")).toEqual(["test parent"]);
+      expect((await execute(`select parent_id from fixture_child where id = ${child.id}`))[0].parent_id).toBe(testId);
     });
   });
 
@@ -186,7 +198,20 @@ describe("tenant isolation", () => {
       await expect(em.clone(FixtureParent, { id: testId }, { tenant: "prod" })).rejects.toThrow(refused);
       expect(() => em.createQueryBuilder(FixtureParent)).toThrow(refused);
       expect(() => em.qb(FixtureParent)).toThrow(refused);
+      await expect(em.countBy(FixtureParent, "name")).rejects.toThrow(/countBy\(\) bypasses tenant checks/);
       expect(await rawCount("fixture_parent")).toBe(2);
+    });
+
+    it("refuse a QueryBuilder re-rooted on tenant-owned data through from()", async () => {
+      await seedParents();
+      const em = scope("test");
+      const refused = /QueryBuilder.from\(\) bypasses tenant checks; use em.create\(\) and flush\(\) for FixtureParent/;
+
+      expect(() => em.createQueryBuilder(Setting).from(FixtureParent)).toThrow(refused);
+      // A raw table name (typed only for CTEs, hence the cast) is matched against tenant-owned tables.
+      expect(() => em.qb(Setting).from("fixture_parent" as never)).toThrow(refused);
+      expect(em.createQueryBuilder(Setting).from(Setting).getFormattedQuery()).toContain("from `setting`");
+      expect(em.qb(Setting).from(em.qb(Setting), "s").getFormattedQuery()).toContain("from (select");
     });
 
     it("still work for global entities", async () => {
@@ -202,6 +227,7 @@ describe("tenant isolation", () => {
       expect(em.createQueryBuilder(reused).getFormattedQuery()).toContain("from `setting`");
       expect((await qb.getResultList()).map(({ key }) => key).sort()).toEqual(["bulk.one", "bulk.two"]);
       expect((await em.qb(Setting).where({ key: "bulk.one" }).getSingleResult())?.value).toBe("uno");
+      expect(await em.countBy(Setting, "value", { where: { key: { $like: "bulk.%" } } })).toEqual({ uno: 1, two: 1 });
     });
   });
 
@@ -348,6 +374,24 @@ describe("tenant isolation", () => {
       own.create(FixtureBoard, {}).pins.add(await own.findOneOrFail(FixtureParent, testId));
       await own.flush();
       expect(await rawCount("fixture_board_pins")).toBe(1);
+    });
+
+    it("checks a global record's reference to a tenant-owned one like any other", async () => {
+      const { testId, prodId } = await seedParents();
+
+      const unscoped = scope();
+      unscoped.create(FixtureBoard, { featured: unscoped.getReference(FixtureParent, prodId) });
+      await expect(unscoped.flush()).rejects.toThrow(/writing tenant-owned data without a tenant scope/);
+
+      const prodParent = await scope("prod").findOneOrFail(FixtureParent, prodId);
+      const foreign = scope("test");
+      foreign.create(FixtureBoard, { featured: foreign.merge(prodParent) });
+      await expect(foreign.flush()).rejects.toThrow(/FixtureBoard.featured points at a record of another tenant/);
+
+      const own = scope("test");
+      own.create(FixtureBoard, { featured: await own.findOneOrFail(FixtureParent, testId) });
+      await own.flush();
+      expect(await rawCount("fixture_board")).toBe(1);
     });
 
     it("keeps the tenant inside transactions", async () => {

@@ -1,7 +1,10 @@
 import {
+  ReferenceKind,
   Utils,
   type ConnectionType,
+  type Dictionary,
   type EntityData,
+  type EntityKey,
   type EntityName,
   type FilterQuery,
   type LoggingOptions,
@@ -12,19 +15,24 @@ import {
   type UpsertManyOptions,
   type UpsertOptions,
 } from "@mikro-orm/core";
-import { QueryBuilder, SqlEntityManager, type SqliteDriver } from "@mikro-orm/sqlite";
+import { QueryBuilder, SqlEntityManager, type CountByOptions, type SqliteDriver } from "@mikro-orm/sqlite";
 import { isTenantOwned, TenantViolationError } from "../entities/tenants/tenant-owned";
 
 type Target = EntityName<object> | object | object[];
 
+/** Fields `nativeUpdate` may set on a tenant-owned entity: plain values, never references. */
+const PLAIN_FIELDS: readonly ReferenceKind[] = [ReferenceKind.SCALAR, ReferenceKind.EMBEDDED];
+
 /**
- * The ORM's EntityManager class (`entityManager` in the config; every fork keeps it). It refuses
- * the write paths that skip both the flush guard and the tenant filter — `insert`, `insertMany`,
- * `upsert`, `upsertMany`, `clone` and the QueryBuilder — for tenant-owned entities, and a
- * `nativeUpdate` that would move rows to another tenant. Global entities are unaffected.
+ * The ORM's EntityManager class (`entityManager` in the config; every fork keeps it). For
+ * tenant-owned entities it refuses the paths that skip the flush guard or the tenant filter:
+ * `insert`, `insertMany`, `upsert`, `upsertMany`, `clone`, `countBy` and the QueryBuilder (as its
+ * root or through `from()`), and a `nativeUpdate` that sets anything but plain fields, since a
+ * reference or raw column could point a row at, or move it to, another tenant. Global entities
+ * are unaffected.
  */
 export class TenantEntityManager extends SqlEntityManager<SqliteDriver> {
-  private refselectTenantOwned(target: Target, method: string): void {
+  private refuseTenantOwned(target: Target, method: string): void {
     const sample: unknown = Array.isArray(target) ? target[0] : target;
     const entityName = (Utils.isEntity(sample) ? sample.constructor : sample) as EntityName<object>;
     const meta = this.getMetadata().find(entityName);
@@ -33,12 +41,21 @@ export class TenantEntityManager extends SqlEntityManager<SqliteDriver> {
     }
   }
 
+  /** A `from()` target: a tenant-owned entity, or the raw name of a tenant-owned table. */
+  private refuseTenantFrom(target: unknown): void {
+    if (target instanceof QueryBuilder) return; // created (and checked) by createQueryBuilder
+    const owned = [...this.getMetadata().getAll().values()].find(
+      (meta) => isTenantOwned(meta) && meta.tableName === target,
+    );
+    this.refuseTenantOwned((owned?.class ?? target) as EntityName<object>, "QueryBuilder.from");
+  }
+
   override async insert<Entity extends object>(
     entityNameOrEntity: EntityName<Entity> | Entity,
     data?: NoInfer<RequiredEntityData<Entity> | Entity>,
     options?: NativeInsertUpdateOptions<Entity>,
   ): Promise<Primary<Entity>> {
-    this.refselectTenantOwned(entityNameOrEntity, "insert");
+    this.refuseTenantOwned(entityNameOrEntity, "insert");
     return super.insert(entityNameOrEntity, data, options);
   }
 
@@ -47,7 +64,7 @@ export class TenantEntityManager extends SqlEntityManager<SqliteDriver> {
     data?: NoInfer<RequiredEntityData<Entity>[] | Entity[]>,
     options?: NativeInsertUpdateOptions<Entity>,
   ): Promise<Primary<Entity>[]> {
-    this.refselectTenantOwned(entityNameOrEntities, "insertMany");
+    this.refuseTenantOwned(entityNameOrEntities, "insertMany");
     return super.insertMany(entityNameOrEntities, data, options);
   }
 
@@ -56,7 +73,7 @@ export class TenantEntityManager extends SqlEntityManager<SqliteDriver> {
     data?: EntityData<Entity> | NoInfer<Entity>,
     options?: UpsertOptions<Entity, Fields>,
   ): Promise<Entity> {
-    this.refselectTenantOwned(entityNameOrEntity, "upsert");
+    this.refuseTenantOwned(entityNameOrEntity, "upsert");
     return super.upsert(entityNameOrEntity, data, options);
   }
 
@@ -65,7 +82,7 @@ export class TenantEntityManager extends SqlEntityManager<SqliteDriver> {
     data?: (EntityData<Entity> | NoInfer<Entity>)[],
     options?: UpsertManyOptions<Entity, Fields>,
   ): Promise<Entity[]> {
-    this.refselectTenantOwned(entityNameOrEntity, "upsertMany");
+    this.refuseTenantOwned(entityNameOrEntity, "upsertMany");
     return super.upsertMany(entityNameOrEntity, data, options);
   }
 
@@ -75,7 +92,7 @@ export class TenantEntityManager extends SqlEntityManager<SqliteDriver> {
     overridesOrOptions?: EntityData<Entity> | NativeInsertUpdateOptions<Entity>,
     options?: NativeInsertUpdateOptions<Entity>,
   ): Promise<Entity> {
-    this.refselectTenantOwned(entityNameOrEntity, "clone");
+    this.refuseTenantOwned(entityNameOrEntity, "clone");
     return super.clone(entityNameOrEntity, whereOrOverrides, overridesOrOptions, options);
   }
 
@@ -85,8 +102,26 @@ export class TenantEntityManager extends SqlEntityManager<SqliteDriver> {
     data: EntityData<Entity>,
     options?: UpdateOptions<Entity>,
   ): Promise<number> {
-    if ("tenant" in data) this.refselectTenantOwned(entityName, "nativeUpdate");
+    const meta = this.getMetadata().find(entityName);
+    if (isTenantOwned(meta)) {
+      const field = Object.keys(data).find((key) => !PLAIN_FIELDS.includes(meta?.properties[key as EntityKey<Entity>]?.kind as ReferenceKind));
+      if (field !== undefined) {
+        throw new TenantViolationError(
+          `nativeUpdate() may only set plain fields of ${meta?.className}; '${field}' is a reference or not a field`,
+        );
+      }
+    }
     return super.nativeUpdate(entityName, where, data, options);
+  }
+
+  /** It builds its query with `createQueryBuilder`; `count()` covers tenant-owned entities. */
+  override async countBy<Entity extends object>(
+    entityName: EntityName<Entity>,
+    groupBy: EntityKey<Entity> | readonly EntityKey<Entity>[],
+    options?: CountByOptions<Entity>,
+  ): Promise<Dictionary<number>> {
+    this.refuseTenantOwned(entityName, "countBy");
+    return super.countBy(entityName, groupBy, options);
   }
 
   /** `qb()` delegates here. A QueryBuilder passed in was already created (and checked) here. */
@@ -96,7 +131,15 @@ export class TenantEntityManager extends SqlEntityManager<SqliteDriver> {
     type?: ConnectionType,
     loggerContext?: LoggingOptions,
   ): QueryBuilder<Entity, RootAlias> {
-    if (!(entityName instanceof QueryBuilder)) this.refselectTenantOwned(entityName, "createQueryBuilder");
-    return super.createQueryBuilder(entityName, alias, type, loggerContext);
+    if (!(entityName instanceof QueryBuilder)) this.refuseTenantOwned(entityName, "createQueryBuilder");
+    const qb = super.createQueryBuilder(entityName, alias, type, loggerContext);
+    // `from()` replaces the root, so `createQueryBuilder(Setting).from(Material)` would escape the check.
+    const from = qb.from.bind(qb) as (target: unknown, aliasName?: string) => unknown;
+    return Object.assign(qb, {
+      from: (target: unknown, aliasName?: string) => {
+        this.refuseTenantFrom(target);
+        return from(target, aliasName);
+      },
+    });
   }
 }
