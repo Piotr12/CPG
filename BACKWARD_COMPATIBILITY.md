@@ -89,7 +89,19 @@ Every tenant-scoped endpoint lives under `/api/tenants/{tenant}/`.
 - Tokens are `cpg_`-prefixed and never expire.
 - No route creates a token (R07). Adding one is a product change, not an API addition.
 
-**Announced, not yet enforced:** once E02-S03 (#21) lands, every state-changing bearer request must carry an `Idempotency-Key` header (R07), including `DELETE /api/tokens/{id}`. Until then the header is optional.
+**Writes are keyed** (R07, spec `2026-10-19--1548UTC-api-idempotency`). Every state-changing request (`POST`, `PUT`, `PATCH`, `DELETE`) must carry an `Idempotency-Key` header: 1–255 visible ASCII characters, compared case-sensitively.
+- **Missing or malformed key:** 400 `IDEMPOTENCY_KEY_REQUIRED`.
+- **Scope:** a key belongs to the account (all its tokens) and to the global scope or one tenant.
+- **Repeats within 24 hours:**
+  - the same method, path and body replays the first successful response, with the header `Idempotent-Replayed: true`, and changes nothing;
+  - anything else is 409 `IDEMPOTENCY_KEY_REUSED`.
+- **Failed requests** store nothing, so their key stays unused.
+- **Tenant writes** under `/api/tenants/{tenant}/` also take a `Dataset-Generation` header carrying the tenant's current generation, from tenant metadata:
+  - required for Test: missing or malformed is 428 `GENERATION_REQUIRED`;
+  - optional for Prod;
+  - a stale value is 409 `GENERATION_STALE`.
+
+These header names, codes and statuses are part of the contract. `tests/api-writes.test.ts` keeps every write route on the keyed wrapper.
 
 ### 5. Commands used by CI, deploy and the docs
 
