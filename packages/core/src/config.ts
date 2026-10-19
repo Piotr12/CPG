@@ -9,7 +9,15 @@ export interface AppConfig {
   databasePath: string;
   /** Log every SQL statement (`DEBUG_SQL=1`, development only). */
   debugSql: boolean;
+  /**
+   * The built-in administrator's password (`CPG_ADMIN_PASSWORD`). Optional here so the migration
+   * CLI and tests run without it; the server requires it through `assertServerConfig`.
+   */
+  adminPassword: string | undefined;
 }
+
+/** Shorter admin passwords stop the server: a floor against trivially guessable credentials. */
+export const MIN_ADMIN_PASSWORD_LENGTH = 12;
 
 /**
  * Reads the app configuration from environment variables.
@@ -17,6 +25,7 @@ export interface AppConfig {
  * - `DATA_DIR` — defaults to `<repo>/data` locally; the Docker image sets `/externaldata`.
  * - `DATABASE_FILE` — file name inside `DATA_DIR`, defaults to `cpg.sqlite`.
  * - `DEBUG_SQL=1` — log SQL in development.
+ * - `CPG_ADMIN_PASSWORD` — the built-in admin's password (see `assertServerConfig`).
  */
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const dataDir = path.resolve(
@@ -30,7 +39,21 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     dataDir,
     databasePath: path.join(/* turbopackIgnore: true */ dataDir, env.DATABASE_FILE ?? "cpg.sqlite"),
     debugSql: appEnv === "development" && env.DEBUG_SQL === "1",
+    adminPassword: env.CPG_ADMIN_PASSWORD,
   };
+}
+
+/**
+ * Throws unless the config can run the server: the admin password must be set and at least
+ * `MIN_ADMIN_PASSWORD_LENGTH` characters once trimmed. The message never contains the value.
+ */
+export function assertServerConfig(config: AppConfig): void {
+  const length = config.adminPassword?.trim().length ?? 0;
+  if (length < MIN_ADMIN_PASSWORD_LENGTH) {
+    throw new Error(
+      `Missing or too short CPG_ADMIN_PASSWORD: set it to at least ${MIN_ADMIN_PASSWORD_LENGTH} characters.`,
+    );
+  }
 }
 
 /**

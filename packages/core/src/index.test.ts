@@ -4,7 +4,9 @@ import * as core from "./index";
 describe("@cpg/core", () => {
   it("exports the public API", () => {
     expect(Object.keys(core).sort()).toEqual([
+      "MIN_ADMIN_PASSWORD_LENGTH",
       "SystemStatusService",
+      "assertServerConfig",
       "createAppContainer",
       "findWorkspaceRoot",
       "getContainer",
