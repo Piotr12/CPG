@@ -49,11 +49,11 @@ See the spec's Implementation Plan. Its Steps 1–10 map onto the Progress below
 
 ### Phase 1: The flag and the gate in core
 
-- [ ] 1.1 Schema: Tenant.readOnly and its migration
-- [ ] 1.2 assertWritable and TENANT_READ_ONLY
-- [ ] 1.3 TenantService: currentState, setReadOnly, readOnly in TenantInfo, seed gate
-- [ ] 1.4 Validator: tenant read-only schema
-- [ ] 1.5 The gate in tenantServerAction and IdempotencyService, tightened entry-point test
+- [x] 1.1 Schema: Tenant.readOnly and its migration — 326bec7
+- [x] 1.2 assertWritable and TENANT_READ_ONLY — 528c0cb
+- [x] 1.3 TenantService: currentState, setReadOnly, readOnly in TenantInfo, seed gate — 528c0cb, ca6e37c
+- [x] 1.4 Validator: tenant read-only schema — 528c0cb
+- [x] 1.5 The gate in tenantServerAction and IdempotencyService, tightened entry-point test — ca6e37c
 
 ### Phase 2: The API
 
