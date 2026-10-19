@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { formatDecimal, parseDecimal } from "../../domain/quantities/decimal";
+import { businessIdSchema } from "../business-ids/business-id.schema";
 
 /**
  * The three material types (R02). Re-declared here (equal to `@cpg/db`'s, which a test asserts) so
@@ -53,4 +54,4 @@ function canonical(text: string): string {
 }
 
 /** A material's business ID in a path or a reference: eight digits (R01). */
-export const materialIdSchema = z.string().regex(/^\d{8}$/);
+export const materialIdSchema = businessIdSchema;
