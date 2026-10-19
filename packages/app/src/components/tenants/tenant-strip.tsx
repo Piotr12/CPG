@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { TENANT_NAMES, TENANT_CODES, type TenantCode } from "@cpg/core";
+import { requestScope, TENANT_NAMES, TENANT_CODES, type TenantCode } from "@cpg/core";
 import { cn } from "@cpg/ui/lib/utils";
 import { getMessages } from "../../i18n/get-messages";
 import { TenantSwitchLinks, tenantHome } from "./tenant-switch-links";
@@ -34,7 +34,7 @@ const TENANTS = TENANT_CODES.map((code) => ({ code, name: TENANT_NAMES[code] }))
  * switcher. Rendered by the admin layouts, so no page can leave it out. The static shell carries
  * only language-neutral parts (the TEST/PROD/GLOBAL label, the colour and the tenant names); the
  * sentence describing the scope streams in, in the reader's language, and completes the strip's
- * accessible name ("TEST Test tenant — …").
+ * accessible name ("TEST Test tenant — …"), with a read-only tenant's Read-only label (R05).
  */
 export function TenantStrip({ scope }: { scope: TenantStripScope }) {
   const { label, className } = STRIPS[scope];
@@ -63,13 +63,33 @@ export function TenantStrip({ scope }: { scope: TenantStripScope }) {
   );
 }
 
-/** The scope in words, in the reader's language. */
+/**
+ * The scope in words, in the reader's language, and whether a tenant is read-only now. The flag is
+ * global tenant metadata, read through the request scope: this component sits outside the tenant
+ * entry points, so it never opens the tenant itself. The spaces between the parts keep the strip's
+ * accessible name readable: the flex gap alone would run the words together.
+ */
 export async function TenantStripText({ scope }: { scope: TenantStripScope }) {
   await connection();
-  const { locale, messages } = await getMessages();
+  const [{ locale, messages }, readOnly] = await Promise.all([getMessages(), isReadOnly(scope)]);
+  const t = messages.tenants;
   return (
-    <span id={TEXT_ID} lang={locale}>
-      {messages.tenants.strip[scope]}
+    <span id={TEXT_ID} lang={locale} className="flex flex-wrap items-center gap-x-3 gap-y-1">
+      {t.strip[scope]}
+      {readOnly && (
+        <>
+          {" "}
+          <span data-read-only className="rounded-full bg-background px-2 py-0.5 text-xs font-bold tracking-wide text-foreground uppercase">
+            {t.readOnly}
+          </span>{" "}
+          <span>{t.readOnlyStrip}</span>
+        </>
+      )}
     </span>
   );
+}
+
+async function isReadOnly(scope: TenantStripScope): Promise<boolean> {
+  if (scope === "global") return false;
+  return (await (await requestScope()).cradle.tenantService.get(scope)).readOnly;
 }

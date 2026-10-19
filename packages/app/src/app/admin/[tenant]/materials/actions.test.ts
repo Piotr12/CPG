@@ -126,6 +126,15 @@ describe("materials actions", () => {
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/prod/materials/00000002");
   });
 
+  it("refreshes after a read-only refusal, so the strip shows it and the controls disappear (R05)", async () => {
+    mocks.materialService.create.mockRejectedValue(new ConflictError("Read-only.", "TENANT_READ_ONLY"));
+
+    await expect(createMaterial("prod", 1, { type: "raw", description: "Bolt", baseUnit: "each" })).resolves.toMatchObject({
+      error: { code: "TENANT_READ_ONLY" },
+    });
+    expect(mocks.revalidatePath.mock.calls).toEqual([["/admin/prod/materials"]]);
+  });
+
   it("returns field errors without refreshing, and treats non-object values as empty", async () => {
     const result = await addConversion("prod", 1, "00000002", "not a form");
 

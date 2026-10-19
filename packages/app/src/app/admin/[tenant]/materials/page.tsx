@@ -24,7 +24,8 @@ export default function MaterialsPage({ params }: PageProps<"/admin/[tenant]/mat
 
 /**
  * One tenant's materials, read through that tenant's own scope (R05), by any signed-in account; only
- * the admin gets Create material (TEN-004). The form is bound to the tenant and generation shown.
+ * the admin gets Create material (TEN-004), and only while the tenant isn't read-only (the strip
+ * says why). The form is bound to the tenant and generation shown.
  */
 async function Materials({ params }: { params: Promise<{ tenant: string }> }) {
   await connection();
@@ -36,17 +37,18 @@ async function Materials({ params }: { params: Promise<{ tenant: string }> }) {
   const { tenant, materialService } = cradle;
   const materials = await materialService.list();
   const labels = materialsLabels(messages);
+  const editable = user.role === "admin" && !tenant.readOnly;
 
   return (
     <div lang={locale} className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold tracking-tight">{messages.materials.heading(tenant.name)}</h1>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">{labels.intro}</p>
-        {user.role === "admin" && (
+        {editable && (
           <CreateMaterialDialog context={{ tenant: tenant.code, generation: tenant.generation }} labels={labels} />
         )}
       </div>
-      <MaterialsTable tenant={tenant} materials={materials} labels={labels} editable={user.role === "admin"} />
+      <MaterialsTable tenant={tenant} materials={materials} labels={labels} editable={editable} />
     </div>
   );
 }

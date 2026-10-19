@@ -55,7 +55,7 @@ describe("MaterialPage", () => {
   beforeEach(() => {
     mocks.requireUser.mockResolvedValue({ username: "admin", role: "admin" });
     mocks.tenantScope.mockResolvedValue({
-      cradle: { tenant: { code: "prod", name: "Prod", generation: 1 }, materialService: { get: mocks.get } },
+      cradle: { tenant: { code: "prod", name: "Prod", generation: 1, readOnly: false }, materialService: { get: mocks.get } },
     });
     mocks.get.mockResolvedValue(bolt);
     mocks.getMessages.mockResolvedValue({ locale: "en", messages: en });
@@ -85,6 +85,17 @@ describe("MaterialPage", () => {
     render(await resolveServerComponents(page("00000002")));
 
     expect(screen.getByText("Active")).toBeTruthy();
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("shows the admin no control while the tenant is read-only (R05)", async () => {
+    mocks.tenantScope.mockResolvedValue({
+      cradle: { tenant: { code: "prod", name: "Prod", generation: 1, readOnly: true }, materialService: { get: mocks.get } },
+    });
+
+    render(await resolveServerComponents(page("00000002")));
+
+    expect(screen.getByText("1 case = 12 each")).toBeTruthy();
     expect(screen.queryByRole("button")).toBeNull();
   });
 

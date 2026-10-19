@@ -29,7 +29,8 @@ export default function MaterialPage({ params }: PageProps<"/admin/[tenant]/mate
 /**
  * One material and its unit conversions, read through the tenant's own scope: an ID this tenant
  * doesn't have, another tenant's included, is the not-found state (TEN-012, TEN-014). Any signed-in
- * account reads it; only the admin gets the controls (TEN-004).
+ * account reads it; only the admin gets the controls (TEN-004), and only while the tenant isn't
+ * read-only (R05).
  */
 async function Material({ params }: { params: Promise<{ tenant: string; id: string }> }) {
   await connection();
@@ -43,7 +44,7 @@ async function Material({ params }: { params: Promise<{ tenant: string; id: stri
   const { conversions, ...material } = await orNotFound(materialService.get(id), ["MATERIAL_NOT_FOUND"]);
   const labels = materialsLabels(messages);
   const context = { tenant: tenant.code, generation: tenant.generation };
-  const editable = user.role === "admin";
+  const editable = user.role === "admin" && !tenant.readOnly;
   const details = [
     { label: labels.columns.type, value: labels.types[material.type] },
     { label: labels.columns.baseUnit, value: material.baseUnit },

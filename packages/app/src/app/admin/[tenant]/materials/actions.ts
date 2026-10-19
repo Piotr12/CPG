@@ -100,13 +100,17 @@ function fields(values: unknown): object {
   return typeof values === "object" && values !== null ? values : {};
 }
 
+/** Refusals after which the page must show the current state: a newer version, or a read-only tenant. */
+const REFRESHING_ERRORS = ["VERSION_CONFLICT", "TENANT_READ_ONLY"];
+
 /**
- * Refreshes the list, and the material's page when there is one, after a success or a stale
- * version (so the page shows what changed and a retry carries the new version). Only then: a
- * failed write may carry a tenant or ID that names no page.
+ * Refreshes the list, and the material's page when there is one, after a success, a stale version
+ * (so the page shows what changed and a retry carries the new version) or a read-only tenant (so
+ * the strip says so and the controls disappear). Only then: a failed write may carry a tenant or ID
+ * that names no page.
  */
 function refreshed<T>(result: Result<T>, tenant: string, materialId?: string): Result<T> {
-  if (result.ok || result.error.code === "VERSION_CONFLICT") {
+  if (result.ok || REFRESHING_ERRORS.includes(result.error.code)) {
     revalidatePath(`/admin/${tenant}/materials`);
     if (materialId) revalidatePath(`/admin/${tenant}/materials/${materialId}`);
   }
