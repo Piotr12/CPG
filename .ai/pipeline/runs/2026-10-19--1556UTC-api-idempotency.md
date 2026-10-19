@@ -47,6 +47,7 @@ Every state-changing bearer request needs an `Idempotency-Key`. A same-key repea
   - A lost race, whether a unique violation or a stale snapshot ("database is locked"), rolls back and tries once more. The second attempt then replays.
 
   Tested with two ORMs on one file.
+- **`tenantServerAction` checks the generation after parsing the input**, not before as the spec's step 5 says. The check still runs before the handler, inside its transaction. `serverAction` drops the field errors of a `ValidationError` thrown inside a handler, so parsing must stay outside, and a malformed form still shows its field errors.
 - **`IdempotencyService.run`, not `execute`.** ESLint bans `.execute(` everywhere as the raw-SQL entry point.
 
 ## Implementation Plan
@@ -65,8 +66,8 @@ Follows the spec's Implementation Plan, Steps 1–10, unchanged.
 
 ### Phase 2: Tenant writes
 
-- [ ] 2.1 Generation precondition
-- [ ] 2.2 tenantServerAction with the generation
+- [x] 2.1 Generation precondition — d9a83cc, 1d157c6
+- [x] 2.2 tenantServerAction with the generation — 4da519d
 
 ### Phase 3: Versions
 
