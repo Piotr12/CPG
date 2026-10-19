@@ -13,7 +13,7 @@ import {
 import { createUserSchema } from "@cpg/core/validators/users/create-user.schema";
 import { resetPasswordSchema } from "@cpg/core/validators/users/reset-password.schema";
 import { setUserActiveSchema } from "@cpg/core/validators/users/set-user-active.schema";
-import { currentUser } from "../../../auth/require-admin";
+import { currentUser } from "../../../../auth/require-admin";
 
 /** The users screen, refreshed after every successful change. */
 const USERS_PATH = "/admin/users";

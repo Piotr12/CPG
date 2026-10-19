@@ -17,7 +17,7 @@ vi.mock("@cpg/core", async (importOriginal) => ({
   requestScope: async () => ({ cradle: { userService: mocks.userService } }),
 }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
-vi.mock("../../../auth/require-admin", () => ({ currentUser: mocks.currentUser }));
+vi.mock("../../../../auth/require-admin", () => ({ currentUser: mocks.currentUser }));
 
 describe("users actions", () => {
   beforeEach(() => {

@@ -13,7 +13,7 @@ import {
   AlertDialogTitle,
 } from "@cpg/ui/components/alert-dialog";
 import { Button } from "@cpg/ui/components/button";
-import { setUserActive } from "../../app/admin/users/actions";
+import { setUserActive } from "../../app/admin/(global)/users/actions";
 import { errorFormatter, withUsername, type UsersLabels } from "./labels";
 
 interface SetActiveDialogProps {

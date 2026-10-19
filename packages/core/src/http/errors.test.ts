@@ -14,7 +14,23 @@ describe("AppError hierarchy", () => {
     const error = new AppError("SOMETHING", "Something happened.");
 
     expect(error).toBeInstanceOf(Error);
-    expect(error).toMatchObject({ code: "SOMETHING", message: "Something happened.", name: "AppError" });
+    expect(error).toMatchObject({ code: "SOMETHING", message: "Something happened.", name: "AppError", status: 400 });
+    expect(new AppError("TEAPOT", "I'm a teapot.", 418).status).toBe(418);
+  });
+
+  it("gives every subclass its HTTP status", () => {
+    expect(new ValidationError({}).status).toBe(400);
+    expect(new UnauthorizedError().status).toBe(401);
+    expect(new NotFoundError().status).toBe(404);
+    expect(new TooManyRequestsError().status).toBe(429);
+  });
+
+  it("names what wasn't found, generically by default", () => {
+    expect(new NotFoundError()).toMatchObject({ code: "NOT_FOUND", message: "Not found.", name: "NotFoundError" });
+    expect(new NotFoundError("TENANT_NOT_FOUND", "Unknown tenant.")).toMatchObject({
+      code: "TENANT_NOT_FOUND",
+      message: "Unknown tenant.",
+    });
   });
 
   it("keeps the field errors of a validation failure", () => {
@@ -43,13 +59,8 @@ describe("AppError hierarchy", () => {
   });
 
   it("refuses a signed-in account that lacks the right", () => {
-    expect(new ForbiddenError()).toMatchObject({ code: "FORBIDDEN", message: "You don't have access to this." });
+    expect(new ForbiddenError()).toMatchObject({ code: "FORBIDDEN", message: "You don't have access to this.", status: 403 });
     expect(new ForbiddenError("Admins only.").message).toBe("Admins only.");
-  });
-
-  it("reports a missing record", () => {
-    expect(new NotFoundError()).toMatchObject({ code: "NOT_FOUND", message: "Not found.", name: "NotFoundError" });
-    expect(new NotFoundError("No such user.").message).toBe("No such user.");
   });
 
   it("reports a clash with existing data", () => {
@@ -57,6 +68,7 @@ describe("AppError hierarchy", () => {
       code: "CONFLICT",
       message: "That username is taken.",
       name: "ConflictError",
+      status: 409,
     });
   });
 });

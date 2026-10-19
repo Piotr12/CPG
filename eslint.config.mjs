@@ -22,6 +22,46 @@ const framework = forbid(["next", "next/*", "react", "react-dom", "react/*"], "K
 const app = forbid(["@cpg/app", "@cpg/app/*"], "Nothing depends on @cpg/app.");
 const ui = forbid(["@cpg/ui", "@cpg/ui/*"], "Only @cpg/app uses @cpg/ui.");
 
+// Tenant isolation (R05; spec .ai/specs/2026-10-19--0913UTC-test-prod-tenants.md). @cpg/db enforces
+// it at runtime; these rules close what it can't see: switching the filter off, picking the tenant
+// anywhere but tenantScope, adding filters, the QueryBuilder and the driver, and raw SQL. Tests may
+// do all of it, to prove the runtime checks.
+const tenantRules = {
+  filters: {
+    selector: "Property[key.name='filters'], Property[key.value='filters']",
+    message: "Never pass `filters`: the tenant filter must stay on (tenant isolation, R05).",
+  },
+  setFilterParams: {
+    selector: "CallExpression[callee.property.name='setFilterParams']",
+    message: "Only tenantScope() selects the tenant.",
+  },
+  selectTenant: {
+    selector: "CallExpression[callee.name='selectTenant']",
+    message: "Only tenantScope() selects the tenant.",
+  },
+  bypass: {
+    selector: "CallExpression[callee.property.name=/^(addFilter|getDriver|createQueryBuilder|qb)$/]",
+    message: "This bypasses tenant isolation (R05). Use the entity APIs (find, create, flush) through a service.",
+  },
+  rawSql: {
+    selector: "CallExpression[callee.property.name=/^(execute|getKysely)$/]",
+    message: "No raw SQL: it bypasses tenant isolation. Use the entity APIs through a service.",
+  },
+};
+const tenantSource = ["packages/core/src/**/*.ts", "packages/app/src/**/*.{ts,tsx}"];
+const restrictTenantSyntax = (files, ...allowed) => ({
+  files,
+  ignores: ["**/*.test.ts", "**/*.test.tsx"],
+  rules: {
+    "no-restricted-syntax": [
+      "error",
+      ...Object.entries(tenantRules)
+        .filter(([name]) => !allowed.includes(name))
+        .map(([, rule]) => rule),
+    ],
+  },
+});
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
@@ -36,6 +76,10 @@ const eslintConfig = defineConfig([
     app,
     forbid(["@cpg/core", "@cpg/core/*", "@cpg/db", "@cpg/db/*"], "@cpg/ui is domain-agnostic; pass data in as props."),
   ),
+  restrictTenantSyntax(tenantSource),
+  restrictTenantSyntax(["packages/core/src/container/tenant-scope.ts"], "selectTenant"),
+  // The health check's database round trip touches no tenant data.
+  restrictTenantSyntax(["packages/core/src/services/system/system-status.service.ts"], "rawSql"),
   // Debug output doesn't ship; CLIs and tests may print.
   { rules: { "no-console": ["error", { allow: ["info", "warn", "error"] }] } },
   { files: ["packages/*/scripts/**", "tests/**"], rules: { "no-console": "off" } },

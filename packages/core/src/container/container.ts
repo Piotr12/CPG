@@ -7,6 +7,7 @@ import { LoginThrottle } from "../services/auth/login-throttle";
 import { UserPreferenceService } from "../services/preferences/user-preference.service";
 import { SystemStatusService } from "../services/system/system-status.service";
 import { UserService } from "../services/users/user.service";
+import { TenantService } from "../services/tenants/tenant.service";
 import { globalSingleton } from "../singleton";
 import type { AppContainer, Cradle } from "./cradle";
 
@@ -28,6 +29,8 @@ export function createAppContainer(config: AppConfig, orm: Orm): AppContainer {
     authService: asClass(AuthService).scoped(),
     userService: asClass(UserService).scoped(),
     userPreferenceService: asClass(UserPreferenceService).scoped(),
+    tenantService: asClass(TenantService).scoped(),
+    // `tenant` is registered only by tenantScope(): resolving it from a global scope fails (strict).
   });
   return container;
 }

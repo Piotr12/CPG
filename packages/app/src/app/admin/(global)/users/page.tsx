@@ -3,11 +3,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { requestScope } from "@cpg/core";
-import { requireAdmin } from "../../../auth/require-admin";
-import { CreateUserDialog } from "../../../components/users/create-user-dialog";
-import { usersLabels } from "../../../components/users/labels";
-import { UsersTable } from "../../../components/users/users-table";
-import { getMessages } from "../../../i18n/get-messages";
+import { requireAdmin } from "../../../../auth/require-admin";
+import { CreateUserDialog } from "../../../../components/users/create-user-dialog";
+import { usersLabels } from "../../../../components/users/labels";
+import { UsersTable } from "../../../../components/users/users-table";
+import { getMessages } from "../../../../i18n/get-messages";
 
 export const metadata: Metadata = { title: "Users · Caveman Planning Good" };
 

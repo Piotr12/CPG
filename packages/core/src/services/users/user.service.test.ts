@@ -125,7 +125,7 @@ describe("UserService", () => {
       await em.flush();
 
       await expect(service().resetPassword(admin.id, "brand new password")).rejects.toEqual(
-        new NotFoundError(USER_NOT_FOUND),
+        new NotFoundError("NOT_FOUND", USER_NOT_FOUND),
       );
       await expect(service().resetPassword(MISSING_ID, "brand new password")).rejects.toBeInstanceOf(NotFoundError);
       expect((await stored("admin")).passwordHash).toBeNull();

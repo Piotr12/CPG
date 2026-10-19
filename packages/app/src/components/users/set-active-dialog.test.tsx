@@ -6,7 +6,7 @@ import { usersLabels } from "./labels";
 import { SetActiveDialog } from "./set-active-dialog";
 
 const mocks = vi.hoisted(() => ({ setUserActive: vi.fn() }));
-vi.mock("../../app/admin/users/actions", () => ({ setUserActive: mocks.setUserActive }));
+vi.mock("../../app/admin/(global)/users/actions", () => ({ setUserActive: mocks.setUserActive }));
 
 const alice = { id: "b", username: "alice", role: "user" as const, active: true, createdAt: new Date() };
 

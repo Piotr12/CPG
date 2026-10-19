@@ -85,7 +85,7 @@ export class UserService {
   private async changeNormalUser(userId: string, change: (user: User) => boolean): Promise<UserSummary> {
     return this.em.transactional(async (em) => {
       const user = await em.findOne(User, { id: userId, role: "user" });
-      if (!user) throw new NotFoundError(USER_NOT_FOUND);
+      if (!user) throw new NotFoundError("NOT_FOUND", USER_NOT_FOUND);
       if (change(user)) await em.nativeDelete(Session, { user: user.id });
       await em.flush();
       return toSummary(user);

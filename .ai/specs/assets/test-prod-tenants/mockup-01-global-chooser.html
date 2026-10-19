@@ -1,0 +1,29 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Mockup — /admin Global chooser</title><style>*{box-sizing:border-box}body{margin:0;font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;background:#fff;color:#252525}
+.note{position:fixed;bottom:12px;left:12px;font-size:12px;color:#8a8a8a;font-family:ui-monospace,monospace}
+.strip{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 24px;font-size:14px}
+.strip .lbl{font-weight:700;letter-spacing:.08em;font-size:12px;padding:3px 8px;border-radius:6px;margin-right:10px}
+.test{background:#fde68a;color:#422006;border-bottom:2px solid #d97706}.test .lbl{background:#92400e;color:#fffbeb}
+.prod{background:#1f1f1f;color:#f5f5f5;border-bottom:3px solid #dc2626}.prod .lbl{background:#dc2626;color:#fff}
+.global{background:#f4f4f5;color:#3f3f46;border-bottom:1px solid #e4e4e7}.global .lbl{background:#e4e4e7;color:#3f3f46}
+.seg{display:flex;border-radius:8px;overflow:hidden;border:1px solid rgba(0,0,0,.25)}.prod .seg{border-color:rgba(255,255,255,.35)}
+.seg span{padding:4px 14px;font-weight:500;font-size:13px}.seg .on{background:rgba(0,0,0,.8);color:#fff}.prod .seg .on{background:#fff;color:#111}
+main{max-width:768px;margin:0 auto;padding:40px 24px;display:flex;flex-direction:column;gap:24px}
+.top{display:flex;align-items:center;justify-content:space-between}
+h1{font-size:24px;margin:0;letter-spacing:-.01em}.who{display:flex;gap:12px;align-items:center;font-size:14px;color:#737373}
+.out{height:32px;padding:0 12px;border:1px solid #e5e5e5;border-radius:8px;display:flex;align-items:center;color:#252525;font-weight:500}
+.card{border:1px solid #e8e8e8;border-radius:14px;padding:20px}.t{font-weight:600}.d{font-size:14px;color:#737373;margin:4px 0 14px}.mono{font-family:ui-monospace,monospace;font-size:13px}
+.b{display:inline-block;font-size:12px;border:1px solid #e5e5e5;border-radius:999px;padding:2px 8px;margin-right:6px}
+.choose{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.pick{border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:6px}
+.pick.t1{background:#fffbeb;border:1px solid #f59e0b}.pick.p1{background:#fafafa;border:1px solid #dc2626}
+.pick b{font-size:18px}.pick small{color:#737373;font-size:13px}.go{margin-top:8px;font-weight:600;font-size:14px}
+.empty{color:#737373;font-size:14px;border:1px dashed #d4d4d4;border-radius:10px;padding:14px;text-align:center}</style></head><body>
+<div class="strip global" role="region" aria-label="Active tenant"><div><span class="lbl">GLOBAL</span>Global — no tenant selected</div><div class="seg" role="navigation" aria-label="Switch tenant"><span class="">Test</span><span class="">Prod</span></div></div>
+<main><div class="top"><h1>Cave control</h1><div class="who">Signed in as <b style="color:#252525">admin</b><span class="out">Sign out</span></div></div>
+<div class="choose">
+<div class="pick t1"><b>Test</b><small>Demonstration data, safe to experiment</small><span class="go">Open Test →</span></div>
+<div class="pick p1"><b>Prod</b><small>Live data</small><span class="go">Open Prod →</span></div>
+</div>
+<div class="card"><div class="t">Database</div><div class="d mono">/externaldata/cpg.sqlite</div>
+<span class="b">3 migrations applied</span><span class="b">0 pending</span><span class="b">0 settings</span></div>
+</main><div class="note">MOCKUP · /admin (Global) · illustrative only</div></body></html>

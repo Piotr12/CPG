@@ -6,7 +6,7 @@ import { usersLabels } from "./labels";
 import { CreateUserDialog } from "./create-user-dialog";
 
 const mocks = vi.hoisted(() => ({ createUser: vi.fn() }));
-vi.mock("../../app/admin/users/actions", () => ({ createUser: mocks.createUser }));
+vi.mock("../../app/admin/(global)/users/actions", () => ({ createUser: mocks.createUser }));
 
 function fill(label: string, value: string) {
   fireEvent.change(screen.getByLabelText(label), { target: { value } });

@@ -27,6 +27,7 @@ describe("HelpPage", () => {
       "Signing in",
       "Cave control",
       "Managing users",
+      "Test and Prod",
       "Language and theme",
       "Using help",
     ]);

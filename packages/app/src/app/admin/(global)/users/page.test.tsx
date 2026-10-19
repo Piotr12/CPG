@@ -1,8 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { resolveServerComponents } from "../../../../../../tests/setup/server-components";
-import { en } from "../../../i18n/messages/en";
-import { pl } from "../../../i18n/messages/pl";
+import { resolveServerComponents } from "../../../../../../../tests/setup/server-components";
+import { en } from "../../../../i18n/messages/en";
+import { pl } from "../../../../i18n/messages/pl";
 import UsersPage, { metadata } from "./page";
 
 const mocks = vi.hoisted(() => ({
@@ -15,12 +15,12 @@ vi.mock("next/server", () => ({ connection: mocks.connection }));
 vi.mock("@cpg/core", () => ({
   requestScope: async () => ({ cradle: { userService: { list: mocks.list } } }),
 }));
-vi.mock("../../../auth/require-admin", () => ({ requireAdmin: mocks.requireAdmin }));
-vi.mock("../../../i18n/get-messages", () => ({ getMessages: mocks.getMessages }));
-vi.mock("../../../components/users/create-user-dialog", () => ({
+vi.mock("../../../../auth/require-admin", () => ({ requireAdmin: mocks.requireAdmin }));
+vi.mock("../../../../i18n/get-messages", () => ({ getMessages: mocks.getMessages }));
+vi.mock("../../../../components/users/create-user-dialog", () => ({
   CreateUserDialog: ({ labels }: { labels: { create: { open: string } } }) => <button>{labels.create.open}</button>,
 }));
-vi.mock("../../../components/users/users-table", () => ({
+vi.mock("../../../../components/users/users-table", () => ({
   UsersTable: ({ users, labels }: { users: { username: string }[]; labels: { heading: string } }) => (
     <p>
       {labels.heading} table: {users.map((user) => user.username).join(", ")}

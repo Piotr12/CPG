@@ -30,7 +30,6 @@ export const pl: Messages = {
     migrationsPending: (count) => `Oczekujące: ${count}`,
     settings: (count) => `Ustawienia: ${count}`,
     users: "Użytkownicy",
-    userHome: "Ekrany materiałów, BOM-ów i transakcji pojawią się w kolejnych etapach.",
   },
   users: {
     heading: "Użytkownicy",
@@ -81,6 +80,18 @@ export const pl: Messages = {
       NOT_FOUND: "Ten użytkownik już nie istnieje.",
       FORBIDDEN: "Tylko administrator może zarządzać użytkownikami.",
     },
+  },
+  tenants: {
+    choose: "Wybierz środowisko",
+    open: (name) => `Otwórz ${name} →`,
+    description: { test: "Dane demonstracyjne, można bezpiecznie eksperymentować", prod: "Dane rzeczywiste" },
+    strip: {
+      test: "Środowisko Test — dane demonstracyjne, można bezpiecznie eksperymentować",
+      prod: "Środowisko Prod — dane rzeczywiste",
+      global: "Globalnie — nie wybrano środowiska",
+    },
+    generation: (generation) => `Generacja zbioru danych: ${generation}`,
+    noRecords: "Brak rekordów biznesowych",
   },
   nav: {
     help: "Pomoc",

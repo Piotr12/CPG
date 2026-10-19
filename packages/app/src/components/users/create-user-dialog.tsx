@@ -12,7 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@cpg/ui/components/dialog";
-import { createUser } from "../../app/admin/users/actions";
+import { createUser } from "../../app/admin/(global)/users/actions";
 import { errorFormatter, fieldErrorFormatter, type UsersLabels } from "./labels";
 
 /** The Create user button and its form (TEN-004). */

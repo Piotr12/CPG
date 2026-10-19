@@ -4,7 +4,7 @@ import type { UserSummary } from "@cpg/core";
 import { newPasswordSchema } from "@cpg/core/validators/users/reset-password.schema";
 import { CrudForm } from "@cpg/ui/backend/forms/crud-form";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@cpg/ui/components/dialog";
-import { resetUserPassword } from "../../app/admin/users/actions";
+import { resetUserPassword } from "../../app/admin/(global)/users/actions";
 import { errorFormatter, fieldErrorFormatter, withUsername, type UsersLabels } from "./labels";
 
 interface ResetPasswordDialogProps {

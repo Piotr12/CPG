@@ -6,7 +6,7 @@ import { usersLabels } from "./labels";
 import { ResetPasswordDialog } from "./reset-password-dialog";
 
 const mocks = vi.hoisted(() => ({ resetUserPassword: vi.fn() }));
-vi.mock("../../app/admin/users/actions", () => ({ resetUserPassword: mocks.resetUserPassword }));
+vi.mock("../../app/admin/(global)/users/actions", () => ({ resetUserPassword: mocks.resetUserPassword }));
 
 const alice = { id: "b", username: "alice", role: "user" as const, active: true, createdAt: new Date() };
 

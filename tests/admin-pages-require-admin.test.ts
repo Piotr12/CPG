@@ -8,7 +8,7 @@ const adminDir = path.resolve(import.meta.dirname, "../packages/app/src/app/admi
  * Pages only the admin may open, relative to `app/admin`. Every other `/admin` page is open to any
  * signed-in account, so a page belongs here as soon as it shows or changes admin-only data.
  */
-const ADMIN_ONLY_PAGES = ["users/page.tsx"];
+const ADMIN_ONLY_PAGES = ["(global)/users/page.tsx"];
 
 /** Every page.tsx under `dir`, recursively. */
 function pages(dir: string): string[] {

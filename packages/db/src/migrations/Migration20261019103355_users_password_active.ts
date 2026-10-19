@@ -1,8 +1,8 @@
 import { Migration } from '@mikro-orm/migrations';
 
-export class Migration20261019094413_users_password_active extends Migration {
+export class Migration20261019103355_users_password_active extends Migration {
 
-  override name = 'Migration20261019094413_users_password_active';
+  override name = 'Migration20261019103355_users_password_active';
 
   override up(): void | Promise<void> {
     this.addSql(`alter table \`user\` add column \`password_hash\` text null;`);

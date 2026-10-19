@@ -6,6 +6,7 @@ export const HELP_TOPIC_IDS = [
   "signing-in",
   "admin-home",
   "managing-users",
+  "test-and-prod",
   "language-and-theme",
   "using-help",
 ] as const;
@@ -21,6 +22,7 @@ export const HELP_TOPIC_ROUTES: Record<HelpTopicId, string> = {
   "signing-in": "/login",
   "admin-home": "/admin",
   "managing-users": "/admin/users",
+  "test-and-prod": "/admin/[tenant]",
   "language-and-theme": "/admin",
   "using-help": "/help",
 };
@@ -59,6 +61,15 @@ const en: Record<HelpTopicId, HelpText> = {
       "Cave control is the home page of every account. Normal users see their name, their language and theme, and Sign out. There is no password change: only the administrator sets passwords.",
       "The administrator also sees the Users link and the Database card. The card shows where CPG keeps its data, how many migrations are applied, whether any are still pending, and how many settings are stored.",
       "A pending migration normally means CPG is still starting. If it stays, tell whoever runs CPG.",
+      "Open Test or Open Prod takes you to that tenant's business data.",
+    ],
+  },
+  "test-and-prod": {
+    title: "Test and Prod",
+    body: [
+      "CPG keeps two separate sets of business data: Test, with demonstration data that is safe to experiment with, and Prod, the live data.",
+      "The strip at the top of every page says which one you are working in: TEST in amber, PROD in dark with a red edge, or GLOBAL on pages that belong to neither.",
+      "Switch with Test and Prod on the right of the strip. Nothing you do in one ever appears in the other, and the same number can mean a different record in each.",
     ],
   },
   "managing-users": {
@@ -112,6 +123,15 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Kontrola jaskini to strona startowa każdego konta. Zwykły użytkownik widzi swoją nazwę, język i motyw oraz przycisk Wyloguj. Nie ma tu zmiany hasła: hasła ustawia tylko administrator.",
       "Administrator widzi też link Użytkownicy i kartę Baza danych. Karta pokazuje, gdzie CPG przechowuje dane, ile migracji zastosowano, czy jakieś jeszcze oczekują i ile ustawień zapisano.",
       "Oczekująca migracja zwykle oznacza, że CPG jeszcze się uruchamia. Jeśli nie znika, powiedz o tym osobie, która utrzymuje CPG.",
+      "Przyciski Otwórz Test i Otwórz Prod prowadzą do danych biznesowych wybranego środowiska.",
+    ],
+  },
+  "test-and-prod": {
+    title: "Środowiska Test i Prod",
+    body: [
+      "CPG przechowuje dwa oddzielne zbiory danych biznesowych: Test z danymi demonstracyjnymi, na których można bezpiecznie eksperymentować, oraz Prod z danymi rzeczywistymi.",
+      "Pasek u góry każdej strony pokazuje, w którym środowisku pracujesz: TEST na bursztynowo, PROD na ciemno z czerwoną krawędzią albo GLOBAL na stronach, które nie należą do żadnego z nich.",
+      "Przełączaj się przyciskami Test i Prod po prawej stronie paska. Nic, co zrobisz w jednym środowisku, nie pojawi się w drugim, a ten sam numer może oznaczać w każdym z nich inny rekord.",
     ],
   },
   "managing-users": {

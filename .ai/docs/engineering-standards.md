@@ -102,6 +102,26 @@ No action or route writes its own `try/catch` + response mapping.
 - **Database reads in server components** call `await connection()` and sit inside `<Suspense>`. Never use `export const dynamic = "force-dynamic"` or other route-segment config: it doesn't exist under Cache Components. The app must build with no database present.
 - **Check-then-write on shared state** (stock on hand, work-order status, planned-order release) runs inside one `em.transactional()` in the service, backed by a unique constraint where one applies. SQLite has a single writer: keep transactions short and never await a network call inside one.
 - **Everything persisted** lives under `config.dataDir`. **Schema changes** go through migrations only (see `AGENTS.md`).
+- **Tenant isolation (R05).** Business data belongs to Test or Prod (spec `2026-10-19--0913UTC-test-prod-tenants`). Every entity is either declared with `tenantOwned()` (`db/src/entities/tenants/tenant-owned.ts`) or listed in `GLOBAL_ENTITIES` (accounts, sessions, settings, tenants); `tests/tenant-ownership.test.ts` enforces it.
+  - **The tenant comes from the request, explicitly.** Pages under `app/admin/[tenant]/`, route handlers under `app/api/tenants/[tenant]/`, and server actions bound to the page's tenant through `tenantServerAction`. All of them resolve `tenantScope(code)` from `@cpg/core` (`tests/tenant-entry-points.test.ts`). There is no tenant cookie and no tenant on the session.
+  - **A plain `requestScope()` has no tenant.** Reading a tenant-owned entity there throws.
+  - **`@cpg/db` enforces the rest at runtime.**
+    - The default-on `tenant` filter scopes every read, `nativeUpdate` and `nativeDelete`.
+    - `TenantGuard` rejects a flush that touches another tenant's record, or a reference that wasn't loaded through the scope. That includes references held by global records.
+    - `TenantEntityManager` covers every entity that touches tenant data: tenant-owned ones, and global ones referencing them. For those it refuses:
+      - `insert`, `insertMany`, `upsert`, `upsertMany`, `clone` and `countBy`;
+      - the QueryBuilder as a root, and through `from()` (clones included, raw table names matched case-insensitively);
+      - a `nativeUpdate` that sets anything but plain fields.
+  - **Writes go through `em.create`/`assign`/`remove` and a flush.** Services never set `tenant`, because it is filled on create.
+  - **Client-supplied references are loaded with `findOneOrFail` in the scope.** A Prod ID used in Test is then "not found" (TEN-014).
+  - **Tenant-local unique keys include `tenant`.**
+  - **ESLint forbids, in `core` and `app`, what the runtime can't fully see:**
+    - `filters` options;
+    - `setFilterParams`/`selectTenant` outside `tenantScope`;
+    - `addFilter`, `getDriver` and the QueryBuilder (`createQueryBuilder`, `qb`);
+    - raw SQL (`execute`, `getKysely`).
+
+    `tests/tenant-lint.test.ts` proves each rule fires.
 
 ### Engineering principles
 
@@ -163,6 +183,7 @@ Authentication is server-side sessions (specs `2026-10-19--0746UTC-admin-sign-in
 - [ ] Auth is enforced server-side on every non-public page, action and route. (blocker)
 - [ ] Authorization checks the specific record. (blocker)
 - [ ] Check-then-write on shared state runs in a transaction and/or behind a unique constraint. (blocker)
+- [ ] Tenant data is reached only through `tenantScope`. New entities are `tenantOwned()` or deliberately global, nothing bypasses the tenant filter or guard, and references are loaded in the scope. (blocker)
 - [ ] No secret, token or password in logs, errors or client payloads. (blocker)
 - [ ] No untrusted input reaches a query, shell command or file path unparameterized/uncanonicalized. (blocker)
 - [ ] Writes use a Zod-parsed explicit shape, with no mass assignment. (blocker)
@@ -186,16 +207,16 @@ Authentication is server-side sessions (specs `2026-10-19--0746UTC-admin-sign-in
 
 Example: "add work orders". Create each file only when the change needs it.
 
-1. **Entity:** `packages/db/src/entities/work-orders/work-order.entity.ts`. Add it to `entities/index.ts`, then `npm run db:migration:create -- <name>` and commit the migration, snapshot and index together.
+1. **Entity:** `packages/db/src/entities/work-orders/work-order.entity.ts`, declared with `tenantOwned()` unless it is genuinely global (then add it to `GLOBAL_ENTITIES`). Add it to `entities/index.ts`, then `npm run db:migration:create -- <name>` and commit the migration, snapshot and index together.
 2. **Pure rules** (if any): `packages/core/src/domain/work-orders/*.ts`, with tests.
 3. **Validation:** `packages/core/src/validators/work-orders/work-order-<action>.schema.ts`. This is required once there is any create/update input.
 4. **Service:** `packages/core/src/services/work-orders/work-order.service.ts`. Register it in `core/src/container/container.ts` (`workOrderService: asClass(WorkOrderService).scoped()`) and add it to `Cradle` in `core/src/container/cradle.ts`. Export it from `core/src/index.ts`. It throws `AppError`s and runs check-then-write in `em.transactional()`. Entity types and `EntityManager` come from `@cpg/db`, never from `@mikro-orm/*`.
 5. **Events** (if a side effect is needed): add `work-orders.work-order.<action>` to `core/src/events/event-map.ts` and emit it from the service after the mutation succeeds.
 6. **HTTP surface:**
-   - From CPG's own pages, a server action in `actions.ts` next to the page, wrapped in the shared `server-action` helper.
+   - From CPG's own pages, a server action in `actions.ts` next to the page, wrapped in the shared `server-action` helper. For tenant data, it uses `tenantServerAction`, and the page binds its tenant with `action.bind(null, tenant)`.
    - For external callers or client fetching, `app/src/app/api/work-orders/…/route.ts` via `apiHandler` (or `makeCrudRoute` for plain CRUD).
    - Authentication checks come first, once auth exists.
-7. **Pages:** backend screens under `app/src/app/admin/work-orders/` (shadcn via `@cpg/ui`), public ones under `app/src/app/` (plain Tailwind).
+7. **Pages:** tenant screens under `app/src/app/admin/[tenant]/work-orders/`, read through `tenantScope(tenant)`; global backend screens under `app/src/app/admin/(global)/`. Both use shadcn via `@cpg/ui`. Public pages go under `app/src/app/` (plain Tailwind).
    - Read in a server component through the service, with `await connection()` inside `<Suspense>` and a `feedback/` fallback.
    - Forms use `CrudForm` bound to the schema from step 3, through a small client component in `app/src/components/work-orders/` (a Zod schema can't be passed as a prop from a server component).
    - Lists use `DataTable`.
@@ -264,13 +285,18 @@ Done when these standards were adopted:
 - ESLint boundaries added.
 - Authentication (2026-10-19, admin sign-in): `core/src/http/{errors,result,server-action}.ts`, `core/src/validators/` with `zod`, and `AuthService`/`LoginThrottle` (`core/src/services/auth/`), with `User` and `Session` in the cross-cutting `auth` entity folder (like `system`). They are the reference for the shared server layer.
 - Language, theme, footer and help (2026-10-19, E01-S04): the `UserPreference` entity and `UserPreferenceService` (`preferences` concept), `app/src/i18n/`, `app/src/preferences/` and `app/src/help/`. They are the reference for translated screens.
+- Tenants (2026-10-19, spec `2026-10-19--0913UTC-test-prod-tenants`):
+  - `core/src/http/api-handler.ts` (each `AppError` carries its HTTP `status`) and `tenant-server-action.ts`;
+  - `core/src/container/tenant-scope.ts`;
+  - the first route handlers, `app/api/tenants/`, authenticated by `app/src/auth/require-api-user.ts`;
+  - the tenant enforcement in `db` (`tenantOwned`, `TenantGuard`, `TenantEntityManager`).
 - Users (2026-10-19, user management): `core/src/http/auth.ts`, `UserService` (`core/src/services/users/`), and the first client layers: `ui/src/backend/tables/data-table.tsx` (columns, empty state, row actions; pagination, sorting and filtering wait for the first list that needs them), `forms/crud-form.tsx`, `feedback/{error-message,empty-state}.tsx` and `api/result.ts` (`loading-message.tsx` waits for its first consumer: pages use an `aria-busy` placeholder as their `<Suspense>` fallback). `/admin/users` is the reference for a list screen with create and row actions.
 - Test infrastructure: Vitest unit tests next to every source file at 100% coverage, integration tests (Testcontainers runs the production image, agent-browser drives it), and a CI workflow for pull requests.
 - Layering switched to DevMentor's `app → core → db` (the first version of this document kept CPG's original `db → core`). Config and DI moved fully into `core`, the composition root moved from `app/src/server/container.ts` into `core`, and the migration CLI entry point moved to `core/scripts/`. `db` now has no workspace dependencies.
 
 Deliberately **not built yet** (YAGNI). Each arrives with the first concept that needs it, and that concept's change is the reference implementation:
 
-- `core/src/http/api-handler.ts`, `make-crud-route.ts`
+- `core/src/http/make-crud-route.ts`
 - `ui/src/backend/api/api-call.ts`
 - `core/src/events/*`
 - `core/src/domain/*`

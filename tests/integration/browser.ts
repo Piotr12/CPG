@@ -39,8 +39,12 @@ export function openBrowser() {
     waitForText: (text: string) => command("wait", "--text", text),
     /** Waits until an element matching the CSS selector is on the page. */
     waitFor: (selector: string) => command("wait", selector),
-    /** Waits until a JavaScript expression is truthy in the page. */
-    waitUntil: (expression: string) => command("wait", "--fn", expression),
+    /**
+     * Waits until a JavaScript expression is truthy in the page. The result is coerced to a boolean:
+     * agent-browser serializes it over CDP, and a DOM element (with its React fiber) can fail with
+     * "Object reference chain is too long".
+     */
+    waitUntil: (expression: string) => command("wait", "--fn", `Boolean(${expression})`),
     url: () => command("get", "url"),
     /** The browser's cookies for the current page, including httpOnly ones. */
     cookies: async () =>
