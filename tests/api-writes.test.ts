@@ -19,24 +19,32 @@ function routes(dir: string): string[] {
 }
 
 const MUTATING = "POST|PUT|PATCH|DELETE";
-/** Any export of a mutating method, whatever its form. */
-const MUTATING_EXPORT = new RegExp(`export\\s+(?:const|let|var|async\\s+function|function)\\s+(${MUTATING})\\b`, "g");
+/** Any export of a mutating method, whatever its form, `export { handler as POST }` included. */
+const MUTATING_EXPORT = new RegExp(
+  `export\\s+(?:const|let|var|async\\s+function|function)\\s+(${MUTATING})\\b|\\bas\\s+(${MUTATING})\\b`,
+  "g",
+);
 /** The one accepted form: `export const METHOD = apiWrite(` (or `tenantApiWrite(`). */
 const keyedExport = (wrapper: string) => new RegExp(`export\\s+const\\s+(${MUTATING})\\s*=\\s*${wrapper}\\(`, "g");
-const OWN_SCOPE = /\b(requestScope|tenantScope)\(/;
+/** A read export: its code may resolve a scope. */
+const READ_EXPORT = /^export\s+(?:const|let|var|async\s+function|function)\s+(?:GET|HEAD)\b/;
+const OWN_SCOPE = /\b(requestScope|tenantScope|getContainer)\(/;
 
 const read = (file: string) => readFileSync(file, "utf8");
 const rel = (file: string) => path.relative(apiDir, file);
-const methods = (source: string, pattern: RegExp) => [...source.matchAll(pattern)].map(([, method]) => method).sort();
+const methods = (source: string, pattern: RegExp) =>
+  [...source.matchAll(pattern)].map(([, declared, aliased]) => declared ?? aliased).sort();
 
 /**
- * The source of each mutating export: from its `export` to the next top-level `export`. A GET in the
- * same file may resolve a scope; a write's own code may not.
+ * A route's source without its read exports (each from its `export` to the next top-level
+ * `export`). What remains, helpers included, is what a write can reach, so it may not resolve a
+ * scope of its own.
  */
-function mutatingExports(source: string): string[] {
+function writeReachable(source: string): string {
   return source
     .split(/^(?=export\s)/m)
-    .filter((chunk) => new RegExp(`^export\\s+(?:const|let|var|async\\s+function|function)\\s+(${MUTATING})\\b`).test(chunk));
+    .filter((chunk) => !READ_EXPORT.test(chunk))
+    .join("");
 }
 
 /** The mutating exports of a route source that aren't built with the expected wrapper. */
@@ -61,8 +69,7 @@ describe("API write routes", () => {
   });
 
   it("never resolve their own request scope", () => {
-    const offenders = writers.filter((file) => mutatingExports(read(file)).some((chunk) => OWN_SCOPE.test(chunk)));
-    expect(offenders.map(rel)).toEqual([]);
+    expect(writers.filter((file) => OWN_SCOPE.test(writeReachable(read(file)))).map(rel)).toEqual([]);
   });
 
   it("would notice an unkeyed or wrongly keyed write", () => {
@@ -70,11 +77,13 @@ describe("API write routes", () => {
     expect(unkeyed("export async function DELETE() {}", false)).toEqual(["DELETE"]);
     expect(unkeyed("export const PATCH = apiWrite(handler);", true)).toEqual(["PATCH"]);
     expect(unkeyed("export const PUT = tenantApiWrite(handler);\nexport const GET = apiHandler(read);", true)).toEqual([]);
-    const mixed = [
-      "export const GET = apiHandler(async () => (await requestScope()).cradle.x.list());",
-      "export const POST = apiWrite(async () => (await requestScope()).cradle.x.create());",
-    ].join("\n");
-    expect(mutatingExports(mixed).map((chunk) => OWN_SCOPE.test(chunk))).toEqual([true]);
-    expect(mutatingExports(mixed.split("\n")[0])).toEqual([]);
+    expect(unkeyed("const handler = apiWrite(write);\nexport { handler as POST };", false)).toEqual(["POST"]);
+
+    const read = "export const GET = apiHandler(async () => (await requestScope()).cradle.x.list());";
+    const write = "export const POST = apiWrite(async () => (await requestScope()).cradle.x.create());";
+    const helper = "const services = async () => (await getContainer()).cradle;\n";
+    expect(OWN_SCOPE.test(writeReachable(read))).toBe(false);
+    expect(OWN_SCOPE.test(writeReachable(`${read}\n${write}`))).toBe(true);
+    expect(OWN_SCOPE.test(writeReachable(`${helper}${read}\nexport const PUT = apiWrite(handler);`))).toBe(true);
   });
 });

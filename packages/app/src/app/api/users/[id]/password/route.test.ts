@@ -10,15 +10,16 @@ vi.mock("../../../../../auth/api-write", async () => {
   return {
     apiWrite: (handler: (write: WriteContext<unknown>) => Promise<unknown>, options?: unknown) => {
       mocks.options.push(options);
-      return apiHandler(async (request: Request, context: unknown) =>
-        handler({
+      return apiHandler(async (request: Request, context: unknown) => {
+        (options as { authorize?: (c: unknown) => unknown } | undefined)?.authorize?.(mocks.caller.current);
+        return handler({
           request,
           context,
           caller: mocks.caller.current as WriteContext<unknown>["caller"],
           body: await request.json(),
           cradle: { userService: { resetPassword: mocks.resetPassword } } as unknown as WriteContext<unknown>["cradle"],
-        }),
-      );
+        });
+      });
     },
   };
 });
@@ -31,8 +32,8 @@ const put = (id: string, body: unknown) =>
 describe("PUT /api/users/{id}/password", () => {
   afterEach(() => mocks.resetPassword.mockReset());
 
-  it("is keyed with an argon2 fingerprint, since its body holds a password", () => {
-    expect(mocks.options).toEqual([{ secretBody: true }]);
+  it("is keyed with an argon2 fingerprint, and authorized before any hashing", () => {
+    expect(mocks.options).toEqual([{ secretBody: true, authorize: expect.any(Function) }]);
   });
 
   it("resets the path's user at the version sent, audited as the token (R06, R07)", async () => {

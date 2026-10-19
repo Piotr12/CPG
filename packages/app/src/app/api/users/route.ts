@@ -11,12 +11,9 @@ export const GET = apiHandler(async (request: Request) => {
 
 /**
  * Creates a normal user, as the users screen does (R07, TEN-004). Admin only, checked before the
- * body. The body carries a password, so its idempotency fingerprint is an argon2id hash.
+ * key and the body. The body carries a password, so its idempotency fingerprint is an argon2id hash.
  */
 export const POST = apiWrite(
-  async ({ caller, body, cradle }) => {
-    assertAdmin(caller);
-    return cradle.userService.create(parseInput(createUserSchema, body), apiActor(caller));
-  },
-  { secretBody: true },
+  async ({ caller, body, cradle }) => cradle.userService.create(parseInput(createUserSchema, body), apiActor(caller)),
+  { secretBody: true, authorize: assertAdmin },
 );

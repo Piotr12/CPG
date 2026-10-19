@@ -49,6 +49,9 @@ Every state-changing bearer request needs an `Idempotency-Key`. A same-key repea
   Tested with two ORMs on one file.
 - **`tenantServerAction` checks the generation after parsing the input**, not before as the spec's step 5 says. The check still runs before the handler, inside its transaction. `serverAction` drops the field errors of a `ValidationError` thrown inside a handler, so parsing must stay outside, and a malformed form still shows its field errors.
 - **Fixed a flaky ApiTokenService audit test on the way** (5b3aab0). Create and revoke in the same millisecond sorted by their random id.
+- **API body schemas sit next to their action schemas.** The spec's `user-api.schema.ts` became `resetPasswordBodySchema` and `setUserActiveBodySchema`, as `.omit({ userId })` of the action schemas, so the two can't drift. `versionSchema` sits in `validators/users/` for now; promote it when #22's first versioned record needs it.
+- **`apiWrite` takes an `authorize` option** (from the review). The admin routes check the role before the key, the body and any argon2 work, so a normal user's token can't make the server hash.
+- **Only a stale snapshot is retried** (from the review). A real `SQLITE_BUSY` already waited `busy_timeout` and answers 500, as spec Q6 says.
 - **`IdempotencyService.run`, not `execute`.** ESLint bans `.execute(` everywhere as the raw-SQL entry point.
 
 ## Implementation Plan

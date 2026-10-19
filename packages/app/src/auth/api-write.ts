@@ -34,14 +34,20 @@ export interface WriteContext<Context> {
 export interface WriteOptions {
   /** The body carries a password: its stored fingerprint is an argon2id hash (spec Q4). */
   secretBody?: boolean;
+  /**
+   * Who may call the route at all, such as `assertAdmin`. Runs right after authentication, before
+   * the key, the body or any argon2 work, so a caller without the right can't make the server hash.
+   */
+  authorize?: (caller: ApiActor) => unknown;
 }
 
 type Handler<T, Context> = (write: WriteContext<Context>) => Promise<T>;
 type Route<Context> = (request: Request, context: Context) => Promise<Response>;
 
 /**
- * Wraps every state-changing route outside a tenant (R07): bearer only (401), an `Idempotency-Key`
- * (400 `IDEMPOTENCY_KEY_REQUIRED`), a JSON body (400), then the handler runs once per key through
+ * Wraps every state-changing route outside a tenant (R07): bearer only (401), the route's
+ * `authorize` (403), an `Idempotency-Key` (400 `IDEMPOTENCY_KEY_REQUIRED`), a JSON body (400), then
+ * the handler runs once per key through
  * `IdempotencyService`. A repeat within 24 hours answers the first result with
  * `Idempotent-Replayed: true` and writes nothing; reusing the key for another request is 409.
  */
@@ -90,6 +96,7 @@ function keyedWrite<T, Context>(
     const response = await apiHandler(async (request: Request, context: Context) => {
       const caller = await requireApiUser(request);
       if (!("tokenId" in caller)) throw new UnauthorizedError(BEARER_REQUIRED);
+      options.authorize?.(caller);
       const key = readIdempotencyKey(request);
       const { scope, idempotency } = await resolve(request, context);
       const body = await readJsonBody(request);

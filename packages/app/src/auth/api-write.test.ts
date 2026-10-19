@@ -117,6 +117,20 @@ describe("apiWrite", () => {
     expect((await response.json()).error.message).toBe("Invalid or revoked token.");
   });
 
+  it("runs the route's authorize first: 403 before the key, the body or any hashing", async () => {
+    const { ForbiddenError } = await vi.importActual<typeof import("@cpg/core")>("@cpg/core");
+    const authorize = vi.fn(() => {
+      throw new ForbiddenError();
+    });
+
+    const response = await apiWrite(vi.fn(), { secretBody: true, authorize })(post("{not json", {}), {});
+
+    expect(response.status).toBe(403);
+    expect(authorize).toHaveBeenCalledWith(TOKEN_CALLER);
+    expect(mocks.requestScope).not.toHaveBeenCalled();
+    expect(mocks.run).not.toHaveBeenCalled();
+  });
+
   it("refuses a session caller: writes need a bearer token", async () => {
     mocks.requireApiUser.mockResolvedValue({ userId: "u1", username: "alice", role: "user", sessionId: "s1" });
 

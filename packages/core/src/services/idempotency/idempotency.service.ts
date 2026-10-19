@@ -84,11 +84,10 @@ export class IdempotencyService {
   async run<T>(request: IdempotentWrite, scope: IdempotencyScope, write: () => Promise<T>): Promise<IdempotentResult<T>> {
     const attempt = await this.attempt(request, scope, write).catch((error: unknown) => {
       // Another connection wrote between our lookup and our write: it stored the key first, or its
-      // commit made our read snapshot stale ("database is locked"). Everything we wrote was rolled
-      // back, so one more attempt finds its result, or (if it wrote something else) writes anew.
-      if (error instanceof KeyTakenError || error instanceof LockWaitTimeoutException) {
-        return this.attempt(request, scope, write);
-      }
+      // commit made our read snapshot stale. Everything we wrote was rolled back, so one more attempt
+      // finds its result, or (if it wrote something else) writes anew. A real lock timeout is not
+      // retried: it already waited `busy_timeout` and answers 500 (spec Q6).
+      if (error instanceof KeyTakenError || isStaleSnapshot(error)) return this.attempt(request, scope, write);
       throw error;
     });
     if (attempt.kind === "written") return { data: attempt.data, replayed: false };
@@ -150,6 +149,9 @@ export class IdempotencyService {
       // Stored as the JSON the response carries, so a replay answers the same bytes.
       response: JSON.parse(JSON.stringify(data ?? null)) as unknown,
     };
+    // The write's own pending changes first, so their errors stay theirs (a taken name is a 409, not
+    // a lost key race); only the key's insert below can mean another writer stored it first.
+    await this.em.flush();
     if (generation === null) this.em.create(GlobalIdempotencyKey, record);
     else this.em.create(TenantIdempotencyKey, { ...record, generation });
     try {
@@ -159,6 +161,14 @@ export class IdempotencyService {
       throw error;
     }
   }
+}
+
+/**
+ * SQLite refused this transaction's first write because another connection committed after its first
+ * read (`SQLITE_BUSY_SNAPSHOT`). It fails at once, without waiting, and a new transaction succeeds.
+ */
+function isStaleSnapshot(error: unknown): boolean {
+  return error instanceof LockWaitTimeoutException && error.code === "SQLITE_BUSY_SNAPSHOT";
 }
 
 /**

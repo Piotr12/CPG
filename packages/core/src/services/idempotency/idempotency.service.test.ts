@@ -1,7 +1,17 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { GlobalIdempotencyKey, initOrm, Tenant, TenantIdempotencyKey, User, selectTenant, type Orm } from "@cpg/db";
+import {
+  GlobalIdempotencyKey,
+  initOrm,
+  LockWaitTimeoutException,
+  Tenant,
+  TenantIdempotencyKey,
+  UniqueConstraintViolationException,
+  User,
+  selectTenant,
+  type Orm,
+} from "@cpg/db";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadConfig } from "../../config";
 import { migrateDatabase, toDbOptions } from "../../database";
@@ -288,12 +298,49 @@ describe("IdempotencyService", () => {
       NO_HANG,
     );
 
-    it("passes through a database error that isn't a key race", async () => {
+    it.each([
+      ["flushing the write's own changes", 0],
+      ["inserting the key", 1],
+    ])("passes through a database error that isn't a key race, while %s", async (_case, flushesFirst) => {
       const { em, idempotency } = scope();
-      vi.spyOn(em, "flush").mockRejectedValueOnce(new Error("disk full"));
+      const flush = vi.spyOn(em, "flush");
+      for (let i = 0; i < flushesFirst; i++) flush.mockImplementationOnce(() => Promise.resolve());
+      flush.mockRejectedValueOnce(new Error("disk full"));
+      const write = vi.fn(async () => "x");
 
-      await expect(idempotency.run(await keyed(), GLOBAL, async () => "x")).rejects.toThrow("disk full");
+      await expect(idempotency.run(await keyed(), GLOBAL, write)).rejects.toThrow("disk full");
+      expect(write).toHaveBeenCalledOnce();
       expect(await globalKeys()).toEqual([]);
+    });
+
+    it("keeps a write's own unique violation its own: not a key race, not retried", async () => {
+      const { em, idempotency, users } = scope();
+      await users.create({ username: "taken", password: "a password 123" }, ACTOR);
+      const write = vi.fn(async () => {
+        // A handler that leaves its change for the commit to flush, and collides on its own.
+        em.create(User, { username: "taken", role: "user" });
+        return "never";
+      });
+
+      await expect(idempotency.run(await keyed(), GLOBAL, write)).rejects.toBeInstanceOf(UniqueConstraintViolationException);
+      expect(write).toHaveBeenCalledOnce();
+      expect(await globalKeys()).toEqual([]);
+    });
+
+    it.each([
+      ["retries once on a stale snapshot", "SQLITE_BUSY_SNAPSHOT", 2],
+      ["doesn't retry a real lock timeout, which already waited", "SQLITE_BUSY", 1],
+    ])("%s", async (_case, code, attempts) => {
+      const { em, idempotency } = scope();
+      const locked = new LockWaitTimeoutException(Object.assign(new Error("database is locked"), { code }));
+      vi.spyOn(em, "flush").mockRejectedValueOnce(locked);
+      const write = vi.fn(async () => "written");
+
+      const outcome = idempotency.run(await keyed(), GLOBAL, write);
+
+      if (attempts === 2) await expect(outcome).resolves.toEqual({ data: "written", replayed: false });
+      else await expect(outcome).rejects.toBe(locked);
+      expect(write).toHaveBeenCalledTimes(attempts);
     });
 
     it(

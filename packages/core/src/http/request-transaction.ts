@@ -7,6 +7,8 @@ import type { EntityManager } from "@cpg/db";
  * here would put the transaction on a child fork the services never see; their own transaction
  * would then wait forever for the single SQLite connection (spec Q6). On any error the transaction
  * is rolled back and the identity map cleared, so nothing from the failed attempt is flushed later.
+ * The caller always sees the original error: a rollback that fails too (SQLite may already have
+ * rolled back on its own) is logged, as MikroORM's own `transactional()` does.
  */
 export async function inRequestTransaction<T>(em: EntityManager, fn: () => Promise<T>): Promise<T> {
   await em.begin();
@@ -15,8 +17,13 @@ export async function inRequestTransaction<T>(em: EntityManager, fn: () => Promi
     await em.commit();
     return result;
   } catch (error) {
-    await em.rollback();
-    em.clear();
+    try {
+      await em.rollback();
+    } catch (rollbackError) {
+      console.error("Rollback failed:", rollbackError);
+    } finally {
+      em.clear();
+    }
     throw error;
   }
 }

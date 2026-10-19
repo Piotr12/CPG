@@ -103,8 +103,9 @@ Every tenant-scoped endpoint lives under `/api/tenants/{tenant}/`.
   - anything else is 409 `IDEMPOTENCY_KEY_REUSED`.
 - **Failed requests** store nothing, so their key stays unused.
 - **Tenant writes** under `/api/tenants/{tenant}/` also take a `Dataset-Generation` header carrying the tenant's current generation, from tenant metadata:
-  - required for Test: missing or malformed is 428 `GENERATION_REQUIRED`;
+  - required for Test: missing is 428 `GENERATION_REQUIRED`;
   - optional for Prod;
+  - a malformed value is 428 `GENERATION_REQUIRED` in either tenant;
   - a stale value is 409 `GENERATION_STALE`.
 
 These header names, codes and statuses are part of the contract. `tests/api-writes.test.ts` keeps every write route on the keyed wrapper.

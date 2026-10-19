@@ -8,16 +8,17 @@ const mocks = vi.hoisted(() => ({ setActive: vi.fn(), caller: { current: null as
 vi.mock("../../../../auth/api-write", async () => {
   const { apiHandler } = await vi.importActual<typeof import("@cpg/core")>("@cpg/core");
   return {
-    apiWrite: (handler: (write: WriteContext<unknown>) => Promise<unknown>) =>
-      apiHandler(async (request: Request, context: unknown) =>
-        handler({
+    apiWrite: (handler: (write: WriteContext<unknown>) => Promise<unknown>, options?: { authorize?: (c: unknown) => unknown }) =>
+      apiHandler(async (request: Request, context: unknown) => {
+        options?.authorize?.(mocks.caller.current);
+        return handler({
           request,
           context,
           caller: mocks.caller.current as WriteContext<unknown>["caller"],
           body: await request.json(),
           cradle: { userService: { setActive: mocks.setActive } } as unknown as WriteContext<unknown>["cradle"],
-        }),
-      ),
+        });
+      }),
   };
 });
 

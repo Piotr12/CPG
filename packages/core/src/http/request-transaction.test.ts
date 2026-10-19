@@ -2,7 +2,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { initOrm, migrate, Setting, type Orm } from "@cpg/db";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { inRequestTransaction } from "./request-transaction";
 
 describe("inRequestTransaction", () => {
@@ -17,6 +17,7 @@ describe("inRequestTransaction", () => {
   });
   afterAll(() => orm.close());
   beforeEach(() => orm.em.fork().nativeDelete(Setting, {}));
+  afterEach(() => vi.restoreAllMocks());
 
   it("commits what the callback persisted, flushing it first, and returns its result", async () => {
     const em = orm.em.fork();
@@ -56,6 +57,27 @@ describe("inRequestTransaction", () => {
       }),
     ).rejects.toThrow("boom");
 
+    await em.flush();
+    expect(await settings()).toEqual([]);
+  });
+
+  it("reports the original error when the rollback fails too, logging the rollback's and clearing the em", async () => {
+    const em = orm.em.fork();
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const rollback = em.rollback.bind(em);
+    vi.spyOn(em, "rollback").mockImplementationOnce(async () => {
+      await rollback();
+      throw new Error("cannot rollback - no transaction is active");
+    });
+
+    await expect(
+      inRequestTransaction(em, async () => {
+        em.create(Setting, { key: "pending", value: "1" });
+        throw new Error("the real cause");
+      }),
+    ).rejects.toThrow("the real cause");
+
+    expect(log).toHaveBeenCalledWith("Rollback failed:", expect.objectContaining({ message: "cannot rollback - no transaction is active" }));
     await em.flush();
     expect(await settings()).toEqual([]);
   });
