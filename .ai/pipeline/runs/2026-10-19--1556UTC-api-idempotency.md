@@ -39,6 +39,16 @@ Every state-changing bearer request needs an `Idempotency-Key`. A same-key repea
 - **MikroORM transaction propagation (spec Q6).** The transaction opens with `em.begin()` on the request `em`. Step 2's timeout tests prove that nested `transactional()` joins it. If they don't, stop and re-plan; never patch around a hang.
 - **Tightened contract.** `DELETE /api/tokens/{id}` now requires the key. It was announced in `BACKWARD_COMPATIBILITY.md`.
 
+## Deviations from the spec
+
+- **Lock order (spec Q6).** The spec has the purge run first, to take SQLite's write lock before any read. Doing so deadlocked a two-connection test. better-sqlite3 waits for a lock synchronously, which blocks the event loop, so a second connection in the same process (another Next.js bundle) stalls everything for `busy_timeout`. The design changed in three ways:
+  - `run` reads first, and does the key's writes (purge, then insert) last. The write lock is taken only with the handler's first write, after any argon2 await.
+  - The lookup filters out expired records itself.
+  - A lost race, whether a unique violation or a stale snapshot ("database is locked"), rolls back and tries once more. The second attempt then replays.
+
+  Tested with two ORMs on one file.
+- **`IdempotencyService.run`, not `execute`.** ESLint bans `.execute(` everywhere as the raw-SQL entry point.
+
 ## Implementation Plan
 
 Follows the spec's Implementation Plan, Steps 1–10, unchanged.
@@ -49,9 +59,9 @@ Follows the spec's Implementation Plan, Steps 1–10, unchanged.
 
 ### Phase 1: Idempotency keys for global routes
 
-- [ ] 1.1 Entities and migration
-- [ ] 1.2 Fingerprint, headers, request transaction and IdempotencyService
-- [ ] 1.3 apiWrite and the token route
+- [x] 1.1 Entities and migration — b1645b7
+- [x] 1.2 Fingerprint, headers, request transaction and IdempotencyService — d9a83cc
+- [x] 1.3 apiWrite and the token route — 2fc3e50
 
 ### Phase 2: Tenant writes
 
