@@ -22,7 +22,14 @@ describe("HelpPage", () => {
     await renderHelp(undefined);
 
     expect(screen.getByRole("heading", { level: 1, name: "Help" })).toBeTruthy();
-    expect(topicTitles()).toEqual(["Getting started with CPG", "Signing in", "Cave control", "Language and theme", "Using help"]);
+    expect(topicTitles()).toEqual([
+      "Getting started with CPG",
+      "Signing in",
+      "Cave control",
+      "Test and Prod",
+      "Language and theme",
+      "Using help",
+    ]);
     expect(screen.getByRole("heading", { name: "Signing in" }).closest("section")?.id).toBe("signing-in");
     expect(screen.getByText("Screen: /login")).toBeTruthy();
     expect(screen.queryByRole("link", { name: "Show all topics" })).toBeNull();

@@ -28,11 +28,11 @@ describe("Button", () => {
   it("renders its child instead of a button with asChild", () => {
     render(
       <Button asChild>
-        <a href="/admin">Admin</a>
+        <a href="https://example.com/">Example</a>
       </Button>,
     );
 
-    expect(screen.getByRole("link", { name: "Admin" }).dataset.slot).toBe("button");
+    expect(screen.getByRole("link", { name: "Example" }).dataset.slot).toBe("button");
   });
 
   it("exposes the variant classes for non-button elements", () => {

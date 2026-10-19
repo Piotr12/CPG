@@ -1,13 +1,14 @@
 import { render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { resolveServerComponents } from "../../../../../tests/setup/server-components";
-import { en } from "../../i18n/messages/en";
-import { pl } from "../../i18n/messages/pl";
+import { resolveServerComponents } from "../../../../../../tests/setup/server-components";
+import { en } from "../../../i18n/messages/en";
+import { pl } from "../../../i18n/messages/pl";
 import AdminPage, { metadata } from "./page";
 
 const mocks = vi.hoisted(() => ({
   connection: vi.fn(),
   getStatus: vi.fn(),
+  listTenants: vi.fn(),
   requireAdmin: vi.fn(),
   getMessages: vi.fn(),
   currentPreferences: vi.fn(),
@@ -16,14 +17,26 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock("next/server", () => ({ connection: mocks.connection }));
 vi.mock("@cpg/core", () => ({
-  requestScope: async () => ({ cradle: { systemStatusService: { getStatus: mocks.getStatus } } }),
+  requestScope: async () => ({
+    cradle: { systemStatusService: { getStatus: mocks.getStatus }, tenantService: { list: mocks.listTenants } },
+  }),
 }));
-vi.mock("../../auth/require-admin", () => ({ requireAdmin: mocks.requireAdmin }));
-vi.mock("../../i18n/get-messages", () => ({ getMessages: mocks.getMessages }));
-vi.mock("../../preferences/current-preferences", () => ({ currentPreferences: mocks.currentPreferences }));
-vi.mock("./actions", () => ({ signOut: mocks.signOut, updatePreferences: mocks.updatePreferences }));
+vi.mock("../../../auth/require-admin", () => ({ requireAdmin: mocks.requireAdmin }));
+vi.mock("../../../i18n/get-messages", () => ({ getMessages: mocks.getMessages }));
+vi.mock("../../../preferences/current-preferences", () => ({ currentPreferences: mocks.currentPreferences }));
+vi.mock("../actions", () => ({ signOut: mocks.signOut, updatePreferences: mocks.updatePreferences }));
 
 const status = { databasePath: "/externaldata/cpg.sqlite", appliedMigrations: 3, pendingMigrations: 0, settings: 7 };
+const tenants = [
+  { code: "test", name: "Test", generation: 1 },
+  { code: "prod", name: "Prod", generation: 1 },
+];
+/** The chooser's links as [href, text]. */
+const choices = (label: string) =>
+  [...screen.getByRole("navigation", { name: label }).querySelectorAll("a")].map((link) => [
+    link.getAttribute("href"),
+    link.textContent,
+  ]);
 const admin = { sessionId: "s1", userId: "u1", username: "admin", role: "admin" };
 
 function as(locale: "en" | "pl", theme: "light" | "dark" = "light") {
@@ -35,6 +48,7 @@ describe("AdminPage", () => {
   beforeEach(() => {
     mocks.requireAdmin.mockResolvedValue(admin);
     mocks.getStatus.mockResolvedValue(status);
+    mocks.listTenants.mockResolvedValue(tenants);
     as("en");
   });
   afterEach(() => vi.clearAllMocks());
@@ -79,11 +93,32 @@ describe("AdminPage", () => {
     expect(screen.getByRole("button", { name: "Wyloguj" })).toBeTruthy();
   });
 
+  it("offers both tenants to choose from (TEN-001, TEN-010)", async () => {
+    render(await resolveServerComponents(AdminPage()));
+
+    expect(choices("Choose a tenant")).toEqual([
+      ["/admin/test", "TestDemonstration data, safe to experimentOpen Test →"],
+      ["/admin/prod", "ProdLive dataOpen Prod →"],
+    ]);
+  });
+
+  it("offers the tenants in Polish to a Polish account", async () => {
+    as("pl");
+
+    render(await resolveServerComponents(AdminPage()));
+
+    expect(choices("Wybierz środowisko")).toEqual([
+      ["/admin/test", "TestDane demonstracyjne, można bezpiecznie eksperymentowaćOtwórz Test →"],
+      ["/admin/prod", "ProdDane rzeczywisteOtwórz Prod →"],
+    ]);
+  });
+
   it("renders no data when the gate refuses the visitor", async () => {
     mocks.requireAdmin.mockRejectedValue(new Error("NEXT_REDIRECT /login"));
 
     await expect(resolveServerComponents(AdminPage())).rejects.toThrow("NEXT_REDIRECT /login");
     expect(mocks.getStatus).not.toHaveBeenCalled();
+    expect(mocks.listTenants).not.toHaveBeenCalled();
   });
 
   it("flags pending migrations", async () => {

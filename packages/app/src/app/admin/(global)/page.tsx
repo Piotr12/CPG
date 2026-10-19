@@ -1,17 +1,23 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { connection } from "next/server";
 import { Badge } from "@cpg/ui/components/badge";
-import { Button } from "@cpg/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@cpg/ui/components/card";
-import { requestScope } from "@cpg/core";
-import { requireAdmin } from "../../auth/require-admin";
-import { PreferencesControls } from "../../components/preferences/preferences-controls";
-import { getMessages } from "../../i18n/get-messages";
-import { currentPreferences } from "../../preferences/current-preferences";
-import { signOut, updatePreferences } from "./actions";
+import { cn } from "@cpg/ui/lib/utils";
+import { requestScope, type TenantCode } from "@cpg/core";
+import { requireAdmin } from "../../../auth/require-admin";
+import { SignedInBar } from "../../../components/auth/signed-in-bar";
+import { getMessages } from "../../../i18n/get-messages";
+import { currentPreferences } from "../../../preferences/current-preferences";
 
 export const metadata: Metadata = { title: "Admin · Caveman Planning Good" };
+
+/** How the chooser frames each tenant: Test is the safe playground, Prod is live. */
+const CHOICE_STYLES: Record<TenantCode, string> = {
+  test: "border-amber-500 bg-amber-50 dark:bg-amber-950/40",
+  prod: "border-red-600",
+};
 
 export default function AdminPage() {
   return (
@@ -27,9 +33,10 @@ export default function AdminPage() {
 async function AdminContent() {
   await connection();
   const user = await requireAdmin();
-  const { systemStatusService } = (await requestScope()).cradle;
-  const [status, { locale, messages }, { theme }] = await Promise.all([
+  const { systemStatusService, tenantService } = (await requestScope()).cradle;
+  const [status, tenants, { locale, messages }, { theme }] = await Promise.all([
     systemStatusService.getStatus(),
+    tenantService.list(),
     getMessages(),
     currentPreferences(),
   ]);
@@ -37,18 +44,21 @@ async function AdminContent() {
 
   return (
     <div lang={locale} className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-end gap-3 text-sm text-muted-foreground">
-        <span>
-          {t.signedInAs} <strong className="text-foreground">{user.username}</strong>
-        </span>
-        <PreferencesControls locale={locale} theme={theme} labels={messages.preferences} action={updatePreferences} />
-        <form action={signOut} data-action="sign-out">
-          <Button type="submit" variant="outline" size="sm">
-            {t.signOut}
-          </Button>
-        </form>
-      </div>
+      <SignedInBar username={user.username} locale={locale} theme={theme} messages={messages} />
       <h1 className="text-2xl font-semibold tracking-tight">{t.heading}</h1>
+      <nav aria-label={messages.tenants.choose} className="grid gap-4 sm:grid-cols-2">
+        {tenants.map(({ code, name }) => (
+          <Link
+            key={code}
+            href={`/admin/${code}`}
+            className={cn("flex flex-col gap-1 rounded-xl border p-5 transition-shadow hover:shadow-md", CHOICE_STYLES[code])}
+          >
+            <span className="text-lg font-semibold">{name}</span>
+            <span className="text-sm text-muted-foreground">{messages.tenants.description[code]}</span>
+            <span className="mt-2 text-sm font-semibold">{messages.tenants.open(name)}</span>
+          </Link>
+        ))}
+      </nav>
       <Card>
         <CardHeader>
           <CardTitle>{t.database}</CardTitle>

@@ -32,6 +32,18 @@ export const en = {
     migrationsPending: (count: number) => `${count} pending`,
     settings: (count: number) => `${count} settings`,
   },
+  tenants: {
+    choose: "Choose a tenant",
+    open: (name: string) => `Open ${name} →`,
+    description: { test: "Demonstration data, safe to experiment", prod: "Live data" },
+    strip: {
+      test: "Test tenant — demonstration data, safe to experiment",
+      prod: "Prod tenant — live data",
+      global: "Global — no tenant selected",
+    },
+    generation: (generation: number) => `Dataset generation ${generation}`,
+    noRecords: "No business records yet",
+  },
   nav: {
     help: "Help",
   },

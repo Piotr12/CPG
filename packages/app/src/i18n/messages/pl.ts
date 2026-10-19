@@ -30,6 +30,18 @@ export const pl: Messages = {
     migrationsPending: (count) => `Oczekujące: ${count}`,
     settings: (count) => `Ustawienia: ${count}`,
   },
+  tenants: {
+    choose: "Wybierz środowisko",
+    open: (name) => `Otwórz ${name} →`,
+    description: { test: "Dane demonstracyjne, można bezpiecznie eksperymentować", prod: "Dane rzeczywiste" },
+    strip: {
+      test: "Środowisko Test — dane demonstracyjne, można bezpiecznie eksperymentować",
+      prod: "Środowisko Prod — dane rzeczywiste",
+      global: "Globalnie — nie wybrano środowiska",
+    },
+    generation: (generation) => `Generacja zbioru danych: ${generation}`,
+    noRecords: "Brak rekordów biznesowych",
+  },
   nav: {
     help: "Pomoc",
   },
