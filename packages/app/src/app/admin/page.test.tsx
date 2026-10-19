@@ -49,6 +49,14 @@ describe("AdminPage", () => {
     expect(screen.getByRole("button", { name: "Sign out" })).toBeTruthy();
   });
 
+  it("links the admin to the users screen", async () => {
+    mocks.getStatus.mockResolvedValue(status);
+
+    render(await resolveServerComponents(AdminPage()));
+
+    expect(screen.getByRole("link", { name: "Users" }).getAttribute("href")).toBe("/admin/users");
+  });
+
   it("shows a normal user their name but no database detail", async () => {
     mocks.requireUser.mockResolvedValue(alice);
 
@@ -58,6 +66,7 @@ describe("AdminPage", () => {
     expect(screen.getByRole("button", { name: "Sign out" })).toBeTruthy();
     expect(screen.getByText(/arrive with later stories/)).toBeTruthy();
     expect(screen.queryByText("Database")).toBeNull();
+    expect(screen.queryByRole("link", { name: "Users" })).toBeNull();
     expect(screen.queryByRole("link", { name: /password/i })).toBeNull();
     expect(mocks.getStatus).not.toHaveBeenCalled();
   });

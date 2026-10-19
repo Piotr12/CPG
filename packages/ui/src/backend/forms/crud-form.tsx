@@ -70,16 +70,20 @@ export function CrudForm<T>({
     }
     startTransition(async () => {
       const result = await action(values);
-      if (result.ok) {
-        setFieldErrors({});
-        setFormError(null);
-        onSuccess?.(result.data);
-        return;
-      }
-      const { fieldErrors: serverFieldErrors, message } = result.error;
-      const named = Object.keys(serverFieldErrors ?? {}).some((name) => fields.some((field) => field.name === name));
-      setFieldErrors(serverFieldErrors ?? {});
-      setFormError(named ? null : message);
+      // Updates after an await leave the transition unless wrapped again; wrapped, the errors and
+      // the end of the pending state render together.
+      startTransition(() => {
+        if (result.ok) {
+          setFieldErrors({});
+          setFormError(null);
+          onSuccess?.(result.data);
+          return;
+        }
+        const { fieldErrors: serverFieldErrors, message } = result.error;
+        const named = Object.keys(serverFieldErrors ?? {}).some((name) => fields.some((field) => field.name === name));
+        setFieldErrors(serverFieldErrors ?? {});
+        setFormError(named ? null : message);
+      });
     });
   }
 

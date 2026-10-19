@@ -50,7 +50,7 @@ db, ui ──▶ (no workspace packages)
 
 ### Reusable server & UI layers
 
-There will be many concepts, and the main risk is that each route, action and page re-invents validation, error handling and loading states slightly differently. Two shared layers exist to prevent that. **Each piece is built once, together with the first concept that needs it, and reused afterwards. A second inline implementation is a review blocker.** (None of them exist yet. See Section 5.)
+There will be many concepts, and the main risk is that each route, action and page re-invents validation, error handling and loading states slightly differently. Two shared layers exist to prevent that. **Each piece is built once, together with the first concept that needs it, and reused afterwards. A second inline implementation is a review blocker.** (Section 5 lists which exist.)
 
 **Server — `packages/core/src/http/`:**
 
@@ -59,13 +59,13 @@ There will be many concepts, and the main risk is that each route, action and pa
 - `server-action.ts` — wraps a server action. It parses the input with a Zod schema, maps thrown `AppError`s to the envelope, and logs anything else without leaking a stack trace. It is the default for mutations made from CPG's own pages.
 - `api-handler.ts` — the same wrapper for route handlers (`Response.json` + status code). Use it for endpoints called from outside the app or fetched by client components.
 - `make-crud-route.ts` — only once a plain-CRUD JSON API is genuinely needed. It takes a schema and service methods and returns `{ GET, POST, PUT, DELETE }`.
-- `auth.ts` — ownership/permission assertions on a validated session, once a second role needs them. Reading the session cookie can't live in `core` (it needs `next/headers`): `app/src/auth/` holds the cookie helpers and the `requireAdmin()` page gate, which validate through `AuthService`.
+- `auth.ts` — `assertSignedIn(user)` and `assertAdmin(user)` on a validated session, for actions and routes: they throw `UnauthorizedError` or `ForbiddenError` inside the wrapper, after parsing. Reading the session cookie can't live in `core` (it needs `next/headers`): `app/src/auth/` holds the cookie helpers and the `requireUser()`/`requireAdmin()` page gates, which validate through `AuthService`.
 
 No action or route writes its own `try/catch` + response mapping.
 
 **Client — `packages/ui/src/backend/`:**
 
-- `api/api-call.ts` — the only place a client component calls `fetch()` on `/api/*`. It parses the envelope defensively and returns a typed `ApiResult<T>`, and `apiCallOrThrow` throws instead. `ui` declares its own `ApiResult` type with the same shape, because `ui` must not import `core`.
+- `api/api-call.ts` — the only place a client component calls `fetch()` on `/api/*`. It parses the envelope defensively and returns a typed `ApiResult<T>`, and `apiCallOrThrow` throws instead. `ui` declares its own `ApiResult` type with the same shape in `api/result.ts`, because `ui` must not import `core`.
 - `forms/crud-form.tsx` — a schema-driven form: fields, server `fieldErrors` next to the right field, submit/cancel/pending states, `Cmd/Ctrl+Enter` submits, `Escape` cancels. It is bound to a server action (or `apiCall`). Use it for every create/edit form, and write a bespoke form only when the UX isn't form-over-schema (e.g. a planning board).
 - `tables/data-table.tsx` — column-config-driven lists with loading/empty/error states, pagination and row actions. Use it for every list screen.
 - `feedback/{loading-message,error-message,empty-state}.tsx` — the only sanctioned loading/error/empty renderers, including `<Suspense>` fallbacks.
@@ -107,9 +107,9 @@ When two principles pull in different directions, prefer the one that keeps the 
 
 ### Security & validation — minimum requirements
 
-Authentication is server-side sessions (spec `2026-10-19--0746UTC-admin-sign-in`): the built-in admin signs in at `/login`, a random token goes into the `httpOnly` `cpg_session` cookie, and only its SHA-256 is stored. Every `/admin` page calls `requireAdmin()` inside the `<Suspense>` child that renders its data (`tests/admin-pages-require-admin.test.ts` enforces it), so nothing renders outside the gate. The following hold:
+Authentication is server-side sessions (specs `2026-10-19--0746UTC-admin-sign-in` and `2026-10-19--0912UTC-user-management`): the built-in admin and normal users sign in at `/login`, a random token goes into the `httpOnly` `cpg_session` cookie, and only its SHA-256 is stored. Every `/admin` page calls `requireUser()`, or `requireAdmin()` when it is admin-only, inside the `<Suspense>` child that renders its data. `tests/admin-pages-require-admin.test.ts` enforces both and keeps the list of admin-only pages. Nothing renders outside the gate. The following hold:
 
-- **Passwords** (if stored): `argon2id` (memory ≥ 19 MiB, iterations ≥ 2, parallelism 1) or `bcrypt` with cost ≥ 12. Don't pick a third option.
+- **Passwords** (if stored): `argon2id` (memory ≥ 19 MiB, iterations ≥ 2, parallelism 1) or `bcrypt` with cost ≥ 12. Don't pick a third option. CPG uses argon2id through Node's built-in `crypto.argon2` (`core/src/services/auth/password-hash.ts`, PHC strings), which is why `engines.node` is `>=24.7` and `assertServerConfig` refuses older runtimes.
 - **Sessions:** a server-side session or a signed token (HS256+, secret ≥ 32 random bytes) in an `httpOnly`, `secure` (production), `sameSite=lax` cookie with a scoped `path` and a short expiry. Never use `localStorage` or a non-httpOnly cookie. Document missing refresh/rotation as a known limitation rather than silently lengthening the expiry.
 - **Server-side enforcement:** every non-public page, action and route checks the session itself. Hiding a button is not enforcement.
 - **Record-level authorization:** check access to *this* record (no insecure direct object references). A missing ownership/permission check is as serious as a missing auth check.
@@ -250,13 +250,14 @@ Done when these standards were adopted:
 - The first service, `SystemStatusService` (`core/src/services/system/`), is registered in `core/src/container/container.ts`. `/admin` and `/up` read through it instead of querying the ORM. It is the reference for service placement and registration.
 - ESLint boundaries added.
 - Authentication (2026-10-19, admin sign-in): `core/src/http/{errors,result,server-action}.ts`, `core/src/validators/` with `zod`, and `AuthService`/`LoginThrottle` (`core/src/services/auth/`), with `User` and `Session` in the cross-cutting `auth` entity folder (like `system`). They are the reference for the shared server layer.
+- Users (2026-10-19, user management): `core/src/http/auth.ts`, `UserService` (`core/src/services/users/`), and the first client layers: `ui/src/backend/tables/data-table.tsx` (columns, empty state, row actions; pagination, sorting and filtering wait for the first list that needs them), `forms/crud-form.tsx`, `feedback/{loading-message,error-message,empty-state}.tsx` and `api/result.ts`. `/admin/users` is the reference for a list screen with create and row actions.
 - Test infrastructure: Vitest unit tests next to every source file at 100% coverage, integration tests (Testcontainers runs the production image, agent-browser drives it), and a CI workflow for pull requests.
 - Layering switched to DevMentor's `app → core → db` (the first version of this document kept CPG's original `db → core`). Config and DI moved fully into `core`, the composition root moved from `app/src/server/container.ts` into `core`, and the migration CLI entry point moved to `core/scripts/`. `db` now has no workspace dependencies.
 
 Deliberately **not built yet** (YAGNI). Each arrives with the first concept that needs it, and that concept's change is the reference implementation:
 
 - `core/src/http/api-handler.ts`, `make-crud-route.ts`
-- `ui/src/backend/*`
+- `ui/src/backend/api/api-call.ts`
 - `core/src/events/*`
 - `core/src/domain/*`
 - a shared logger

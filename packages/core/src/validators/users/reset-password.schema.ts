@@ -8,3 +8,6 @@ export const resetPasswordSchema = z.object({
 });
 
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
+/** The Reset password form's own fields: the user id comes from the row, not the form. */
+export const newPasswordSchema = resetPasswordSchema.pick({ password: true });

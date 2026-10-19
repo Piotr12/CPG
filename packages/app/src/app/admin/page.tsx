@@ -1,10 +1,12 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { connection } from "next/server";
 import { Badge } from "@cpg/ui/components/badge";
 import { Button } from "@cpg/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@cpg/ui/components/card";
 import { requestScope } from "@cpg/core";
+import { LoadingMessage } from "@cpg/ui/backend/feedback/loading-message";
 import { requireUser } from "../../auth/require-admin";
 import { signOut } from "./actions";
 
@@ -14,7 +16,7 @@ export default function AdminPage() {
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-6 py-12">
       <h1 className="text-2xl font-semibold tracking-tight">Cave control</h1>
-      <Suspense fallback={<p className="text-sm text-muted-foreground">Caveman count rocks…</p>}>
+      <Suspense fallback={<LoadingMessage>Caveman count rocks…</LoadingMessage>}>
         <AdminContent />
       </Suspense>
     </main>
@@ -29,6 +31,11 @@ async function AdminContent() {
   return (
     <>
       <div className="flex items-center justify-end gap-3 text-sm text-muted-foreground">
+        {user.role === "admin" && (
+          <Link href="/admin/users" className="font-medium text-foreground underline underline-offset-4">
+            Users
+          </Link>
+        )}
         <span>
           Signed in as <strong className="text-foreground">{user.username}</strong>
         </span>
