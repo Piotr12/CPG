@@ -18,6 +18,8 @@ import { errorFormatter, withUsername, type UsersLabels } from "./labels";
 
 interface SetActiveDialogProps {
   user: UserSummary;
+  /** What confirming does, chosen when the dialog opened. */
+  mode: "deactivate" | "reactivate";
   labels: UsersLabels;
   open: boolean;
   onClose: () => void;
@@ -27,11 +29,11 @@ interface SetActiveDialogProps {
  * Confirms deactivating an active user (signed out everywhere, TEN-007) or reactivating an
  * inactive one (back with their old password, so the dialog suggests a reset).
  */
-export function SetActiveDialog({ user, labels, open, onClose }: SetActiveDialogProps) {
+export function SetActiveDialog({ user, mode, labels, open, onClose }: SetActiveDialogProps) {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const deactivating = user.active;
-  const t = deactivating ? labels.deactivate : labels.reactivate;
+  const deactivating = mode === "deactivate";
+  const t = labels[mode];
 
   function confirm() {
     startTransition(async () => {

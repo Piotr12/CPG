@@ -7,6 +7,7 @@ import {
   MAX_FAILURES_PER_IP,
   PRUNE_INTERVAL_MS,
   THROTTLE_WINDOW_MS,
+  UNKNOWN_CLIENT,
 } from "./login-throttle";
 
 const IP = "203.0.113.7";
@@ -83,6 +84,13 @@ describe("LoginThrottle", () => {
 
     expect(throttle.isBlocked(IP, "never-tried")).toBe(true);
     expect(throttle.isBlocked("198.51.100.1", "never-tried")).toBe(false);
+  });
+
+  it("gives clients without a known address no shared IP-wide bucket", () => {
+    for (let i = 0; i < MAX_FAILURES_PER_IP; i++) throttle.recordFailure(UNKNOWN_CLIENT, `name-${i}`);
+
+    expect(throttle.isBlocked(UNKNOWN_CLIENT, "never-tried")).toBe(false);
+    expect([...bucketsOf(throttle).keys()].some((key) => key.startsWith("ip:"))).toBe(false);
   });
 
   it("clears the client's failures on success but keeps the username-wide count", () => {

@@ -187,10 +187,12 @@ describe("AuthService", () => {
         await change(alice.id);
         return transactional(...args);
       });
+      const success = vi.spyOn(throttle, "recordSuccess");
       const attempt = auth.signIn({ username: "alice", password: USER_PASSWORD, clientIp: IP });
 
       await expect(attempt).rejects.toEqual(new UnauthorizedError(INVALID_CREDENTIALS));
       expect(await sessionsOf("alice")).toBe(0);
+      expect(success).not.toHaveBeenCalled(); // the client's earlier failures still count
     });
   });
 

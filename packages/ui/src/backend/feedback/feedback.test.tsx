@@ -2,17 +2,8 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { EmptyState } from "./empty-state";
 import { ErrorMessage } from "./error-message";
-import { LoadingMessage } from "./loading-message";
 
 describe("feedback", () => {
-  it("announces loading politely, with a default and a custom text", () => {
-    const { rerender } = render(<LoadingMessage />);
-    expect(screen.getByRole("status").textContent).toBe("Loading…");
-
-    rerender(<LoadingMessage>Caveman count rocks…</LoadingMessage>);
-    expect(screen.getByRole("status").textContent).toBe("Caveman count rocks…");
-  });
-
   it("announces an error at once", () => {
     render(<ErrorMessage>{"That didn't work."}</ErrorMessage>);
 

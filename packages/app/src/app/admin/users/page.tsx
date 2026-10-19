@@ -5,6 +5,7 @@ import { connection } from "next/server";
 import { requestScope } from "@cpg/core";
 import { requireAdmin } from "../../../auth/require-admin";
 import { CreateUserDialog } from "../../../components/users/create-user-dialog";
+import { usersLabels } from "../../../components/users/labels";
 import { UsersTable } from "../../../components/users/users-table";
 import { getMessages } from "../../../i18n/get-messages";
 
@@ -26,7 +27,7 @@ async function UsersContent() {
   await requireAdmin();
   const { userService } = (await requestScope()).cradle;
   const [users, { locale, messages }] = await Promise.all([userService.list(), getMessages()]);
-  const t = messages.users;
+  const t = usersLabels(messages);
 
   return (
     <div lang={locale} className="flex flex-col gap-6">

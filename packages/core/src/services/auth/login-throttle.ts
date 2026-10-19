@@ -6,6 +6,11 @@ export const MAX_FAILURES_PER_CLIENT = 5;
 export const MAX_FAILURES_PER_ACCOUNT = 20;
 /** Failures one client may make across all usernames inside the window: stops name spraying. */
 export const MAX_FAILURES_PER_IP = 50;
+/**
+ * What callers pass when a request has no usable client address. It isn't an identity, so it gets
+ * no IP-wide bucket: one would lock out every such client at once.
+ */
+export const UNKNOWN_CLIENT = "unknown";
 /** Memory ceiling: past it the least recently active buckets are dropped (~a few MB at worst). */
 export const MAX_BUCKETS = 10_000;
 /** Expired buckets are swept at most this often, so a check never scans the map every time. */
@@ -19,12 +24,12 @@ interface Bucket {
 interface Keys {
   client: string;
   account: string;
-  ip: string;
+  ip?: string;
 }
 
 /**
  * In-memory brute-force protection for sign-in, counted per client IP + username, per username
- * and per client IP. Buckets are keyed by the username as submitted (normalized by the caller),
+ * and per client IP (except `UNKNOWN_CLIENT`). Buckets are keyed by the username as submitted (normalized by the caller),
  * whether or not that account exists, so being blocked never reveals which usernames exist.
  *
  * Past `MAX_BUCKETS` the least recently active buckets that aren't blocking anyone are dropped,
@@ -42,9 +47,7 @@ export class LoginThrottle {
   isBlocked(clientIp: string, username: string): boolean {
     const now = Date.now();
     this.prune(now);
-    return Object.values(this.keys(clientIp, username)).some(
-      (key) => (this.buckets.get(key)?.blockedUntil ?? 0) > now,
-    );
+    return allKeys(this.keys(clientIp, username)).some((key) => (this.buckets.get(key)?.blockedUntil ?? 0) > now);
   }
 
   recordFailure(clientIp: string, username: string): void {
@@ -52,8 +55,8 @@ export class LoginThrottle {
     const keys = this.keys(clientIp, username);
     this.count(keys.client, MAX_FAILURES_PER_CLIENT, now);
     this.count(keys.account, MAX_FAILURES_PER_ACCOUNT, now);
-    this.count(keys.ip, MAX_FAILURES_PER_IP, now);
-    const counted = new Set(Object.values(keys));
+    if (keys.ip) this.count(keys.ip, MAX_FAILURES_PER_IP, now);
+    const counted = new Set(allKeys(keys));
     while (this.buckets.size > MAX_BUCKETS && this.evictOne(now, counted));
   }
 
@@ -63,7 +66,9 @@ export class LoginThrottle {
   }
 
   private keys(clientIp: string, username: string): Keys {
-    return { client: `client:${clientIp}:${username}`, account: `account:${username}`, ip: `ip:${clientIp}` };
+    const keys: Keys = { client: `client:${clientIp}:${username}`, account: `account:${username}` };
+    if (clientIp !== UNKNOWN_CLIENT) keys.ip = `ip:${clientIp}`;
+    return keys;
   }
 
   private count(key: string, limit: number, now: number): void {
@@ -97,4 +102,8 @@ export class LoginThrottle {
       if (!isRecent && bucket.blockedUntil <= now) this.buckets.delete(key);
     }
   }
+}
+
+function allKeys({ client, account, ip }: Keys): string[] {
+  return ip ? [client, account, ip] : [client, account];
 }

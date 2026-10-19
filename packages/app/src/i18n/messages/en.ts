@@ -79,14 +79,11 @@ export const en = {
       passwordTooShort: "Use at least 12 characters.",
       passwordTooLong: "Use at most 256 characters.",
     },
-    /** Keyed by the result envelope's error `code`, as the users screen means them. */
+    /** What these error codes mean on the users screen, merged over the shared `errors` by `usersLabels`. */
     errors: {
       CONFLICT: "That username is taken.",
       NOT_FOUND: "That user no longer exists.",
       FORBIDDEN: "Only the administrator can manage users.",
-      UNAUTHORIZED: "You need to sign in.",
-      VALIDATION_FAILED: "Some fields are invalid.",
-      INTERNAL: "Something went wrong. Try again.",
     },
   },
   nav: {

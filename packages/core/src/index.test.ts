@@ -26,6 +26,7 @@ describe("@cpg/core", () => {
       "THEMES",
       "THROTTLE_WINDOW_MS",
       "TooManyRequestsError",
+      "UNKNOWN_CLIENT",
       "USERNAME_TAKEN",
       "USER_NOT_FOUND",
       "UnauthorizedError",

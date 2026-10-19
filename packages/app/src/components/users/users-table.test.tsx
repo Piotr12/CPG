@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/messages/en";
 import { pl } from "../../i18n/messages/pl";
+import { usersLabels } from "./labels";
 import { UsersTable } from "./users-table";
 
 vi.mock("./user-actions", () => ({
@@ -16,7 +17,7 @@ const users = [
 
 describe("UsersTable", () => {
   it("shows username, role, status and creation date, with actions for normal users only", () => {
-    render(<UsersTable labels={en.users} users={users} />);
+    render(<UsersTable labels={usersLabels(en)} users={users} />);
 
     const rows = within(screen.getByRole("table", { name: "Users" })).getAllByRole("row").slice(1);
     expect(rows.map((row) => within(row).getAllByRole("cell").map((cell) => cell.textContent))).toEqual([
@@ -29,13 +30,13 @@ describe("UsersTable", () => {
   });
 
   it("says so when there are no accounts", () => {
-    render(<UsersTable labels={en.users} users={[]} />);
+    render(<UsersTable labels={usersLabels(en)} users={[]} />);
 
     expect(screen.getByText("No accounts yet.")).toBeTruthy();
   });
 
   it("speaks Polish", () => {
-    render(<UsersTable labels={pl.users} users={users.slice(0, 2)} />);
+    render(<UsersTable labels={usersLabels(pl)} users={users.slice(0, 2)} />);
 
     expect(screen.getByRole("table", { name: "Użytkownicy" })).toBeTruthy();
     expect(screen.getByRole("columnheader", { name: "Nazwa użytkownika" })).toBeTruthy();

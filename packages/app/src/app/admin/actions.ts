@@ -35,7 +35,7 @@ export async function updatePreferences(_previous: PreferencesState, formData: F
 
   if (!result.ok) {
     if (result.error.code === "UNAUTHORIZED") redirect(SIGN_IN_PATH);
-    return { error: errorMessage((await getMessages()).messages, result.error) };
+    return { error: errorMessage((await getMessages()).messages.errors, result.error) };
   }
 
   await writeThemeCookie(result.data.theme, { secure: config.env === "production" });

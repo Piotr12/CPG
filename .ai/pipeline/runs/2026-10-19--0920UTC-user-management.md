@@ -84,6 +84,15 @@ PR: #34
   Then `614e894` brought the users screen up to #18's conventions: en/pl messages, translated schema and server errors, a "Managing users" help topic (required by `tests/every-page-has-help.test.ts`) and an updated Cave control topic. Follow-up #37 is therefore done in this PR.
 - **Integration helper fix.** `wait --fn` must return a boolean: a DOM element fails with "Object reference chain is too long". Fixed in my test, and in `restoreDefaultPreferences` from #18.
 
+- **Review autofix** (`om-auto-review-pr --autofix`; a fresh-context review asked for changes: 1 major, 2 minor, 3 nits):
+  - `errorMessage()` now takes an errors map, and the users screen merges its own `CONFLICT`/`NOT_FOUND`/`FORBIDDEN` over the shared errors (`usersLabels`); the duplicate translator is gone.
+  - Requests with no client address (`UNKNOWN_CLIENT`, now exported by core) get no IP-wide bucket.
+  - `recordSuccess` runs only after the session exists.
+  - The unused `LoadingMessage` is dropped.
+  - The confirm dialog's mode is fixed when it opens.
+  - Declined: moving `requestScope()` inside the action wrapper, which would diverge from the existing actions' pattern.
+- **Spec deviation:** the per-IP cap (`MAX_FAILURES_PER_IP = 50`) isn't in the spec; it was added with the name-keyed buckets, see the throttle note above. Noted on spec PR #33.
+
 ## Verification
 
 - `npm run lint`: clean.
@@ -92,4 +101,5 @@ PR: #34
 - `npm run build`: OK; `/admin/users` is partially prerendered.
 - `npm run test:integration`: 5 files, 22 tests passed, including the new `users.test.ts` (TEN-004…009 flows).
 - After merging `main` (#18): lint and typecheck clean; 415 unit tests at 100%; build OK; `test:integration` 8 files, 36 tests passed.
+- After the review fixes: lint and typecheck clean; 417 unit tests at 100%; build OK; `test:integration` 8 files, 36 tests passed.
 - `npm audit`: only the known `braces` advisories (10 high); no dependency changes.

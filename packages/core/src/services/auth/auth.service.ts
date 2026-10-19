@@ -71,19 +71,13 @@ export class AuthService {
       this.loginThrottle.recordFailure(clientIp, name);
       throw new UnauthorizedError(INVALID_CREDENTIALS);
     }
-    this.loginThrottle.recordSuccess(clientIp, name);
 
     const token = generateSessionToken();
     const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
-    const tokenHash = hashSessionToken(token);
-    if (verified.kind === "admin") {
-      const admin = await this.ensureBuiltInAdmin();
-      this.em.create(Session, { tokenHash, user: admin, expiresAt });
-      await this.em.flush();
-      return { token, expiresAt, userId: admin.id };
-    }
-    await this.openUserSession(verified, tokenHash, expiresAt);
-    return { token, expiresAt, userId: verified.userId };
+    const userId = await this.openSession(verified, hashSessionToken(token), expiresAt);
+    // Only now: a session that couldn't be opened isn't a success to forget failures for.
+    this.loginThrottle.recordSuccess(clientIp, name);
+    return { token, expiresAt, userId };
   }
 
   /** The signed-in user for a session token, or null when it is missing, unknown or expired. */
@@ -120,16 +114,24 @@ export class AuthService {
   }
 
   /**
-   * Inserts the session only if the account is still active with the hash just verified. A reset
-   * or deactivation that commits during the hash check makes this fail rather than leave a
-   * session opened with the old credential behind (R06).
+   * Opens the session and returns its account id. A normal user's session is inserted only if the
+   * account is still active with the hash just verified: a reset or deactivation that commits
+   * during the hash check makes this fail rather than leave a session opened with the old
+   * credential behind (R06).
    */
-  private async openUserSession(verified: { userId: string; passwordHash: string }, tokenHash: string, expiresAt: Date) {
+  private async openSession(verified: Verified, tokenHash: string, expiresAt: Date): Promise<string> {
+    if (verified.kind === "admin") {
+      const admin = await this.ensureBuiltInAdmin();
+      this.em.create(Session, { tokenHash, user: admin, expiresAt });
+      await this.em.flush();
+      return admin.id;
+    }
     await this.em.transactional(async (em) => {
       const user = await em.findOne(User, { id: verified.userId, active: true, passwordHash: verified.passwordHash });
       if (!user) throw new UnauthorizedError(INVALID_CREDENTIALS);
       em.create(Session, { tokenHash, user, expiresAt });
     });
+    return verified.userId;
   }
 
   /** Constant-time comparison of SHA-256 digests (equal length whatever the input). Fails closed. */

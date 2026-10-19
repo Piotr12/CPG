@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/messages/en";
 import { pl } from "../../i18n/messages/pl";
+import { usersLabels } from "./labels";
 import { ResetPasswordDialog } from "./reset-password-dialog";
 
 const mocks = vi.hoisted(() => ({ resetUserPassword: vi.fn() }));
@@ -13,7 +14,7 @@ describe("ResetPasswordDialog", () => {
   afterEach(() => vi.clearAllMocks());
 
   it("stays closed until opened", () => {
-    render(<ResetPasswordDialog labels={en.users} user={alice} open={false} onClose={vi.fn()} />);
+    render(<ResetPasswordDialog labels={usersLabels(en)} user={alice} open={false} onClose={vi.fn()} />);
 
     expect(screen.queryByRole("dialog")).toBeNull();
   });
@@ -21,7 +22,7 @@ describe("ResetPasswordDialog", () => {
   it("warns that the user is signed out, checks the length, then resets and closes", async () => {
     mocks.resetUserPassword.mockResolvedValue({ ok: true, data: alice });
     const onClose = vi.fn();
-    render(<ResetPasswordDialog labels={en.users} user={alice} open onClose={onClose} />);
+    render(<ResetPasswordDialog labels={usersLabels(en)} user={alice} open onClose={onClose} />);
 
     expect(screen.getByRole("dialog", { name: "Reset password for alice" })).toBeTruthy();
     expect(screen.getByText(/signs them out everywhere/)).toBeTruthy();
@@ -39,7 +40,7 @@ describe("ResetPasswordDialog", () => {
 
   it("closes on cancel and on Escape", () => {
     const onClose = vi.fn();
-    render(<ResetPasswordDialog labels={en.users} user={alice} open onClose={onClose} />);
+    render(<ResetPasswordDialog labels={usersLabels(en)} user={alice} open onClose={onClose} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -48,7 +49,7 @@ describe("ResetPasswordDialog", () => {
   });
 
   it("speaks Polish, field errors included", () => {
-    render(<ResetPasswordDialog labels={pl.users} user={alice} open onClose={vi.fn()} />);
+    render(<ResetPasswordDialog labels={usersLabels(pl)} user={alice} open onClose={vi.fn()} />);
 
     expect(screen.getByRole("dialog", { name: "Reset hasła: alice" })).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Nowe hasło"), { target: { value: "short" } });
