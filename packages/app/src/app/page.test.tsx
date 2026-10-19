@@ -5,11 +5,13 @@ import { en } from "../i18n/messages/en";
 import { pl } from "../i18n/messages/pl";
 import HomePage from "./page";
 
-const mocks = vi.hoisted(() => ({ connection: vi.fn(), getMessages: vi.fn() }));
+const mocks = vi.hoisted(() => ({ connection: vi.fn(), getMessages: vi.fn(), currentUser: vi.fn() }));
 vi.mock("next/server", () => ({ connection: mocks.connection }));
 vi.mock("../i18n/get-messages", () => ({ getMessages: mocks.getMessages }));
+vi.mock("../auth/require-admin", () => ({ currentUser: mocks.currentUser, HOME_PATH: "/admin", SIGN_IN_PATH: "/login" }));
 
-async function renderAs(locale: "en" | "pl") {
+async function renderAs(locale: "en" | "pl", user: object | null = null) {
+  mocks.currentUser.mockResolvedValue(user);
   mocks.getMessages.mockResolvedValue({ locale, messages: locale === "en" ? en : pl });
   render(await resolveServerComponents(HomePage()));
 }
@@ -22,6 +24,21 @@ describe("HomePage", () => {
 
     expect(screen.getByRole("heading", { level: 1, name: "Caveman Planning Good" })).toBeTruthy();
     expect(mocks.connection.mock.invocationCallOrder[0]).toBeLessThan(mocks.getMessages.mock.invocationCallOrder[0]);
+  });
+
+  it("offers a visitor the way in: Sign in, to the sign-in screen", async () => {
+    await renderAs("en");
+
+    expect(screen.getByRole("link", { name: "Sign in" }).getAttribute("href")).toBe("/login");
+    expect(screen.queryByRole("link", { name: "Open CPG" })).toBeNull();
+    expect(mocks.connection.mock.invocationCallOrder[0]).toBeLessThan(mocks.currentUser.mock.invocationCallOrder[0]);
+  });
+
+  it("offers a signed-in account Open CPG instead, in its language", async () => {
+    await renderAs("pl", { userId: "u1", username: "alice", role: "user" });
+
+    expect(screen.getByRole("link", { name: "Otwórz CPG" }).getAttribute("href")).toBe("/admin");
+    expect(screen.queryByRole("link", { name: "Zaloguj się" })).toBeNull();
   });
 
   it("lists the four MRP II steps in order, numbered", async () => {

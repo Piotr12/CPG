@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { openBrowser, type Browser } from "./browser";
-import { choosePreference, restoreDefaultPreferences, signInAsAdmin } from "./sign-in";
+import { choosePreference, closeAccountMenu, restoreDefaultPreferences, signInAsAdmin } from "./sign-in";
 
 const baseUrl = inject("baseUrl");
 const adminPassword = inject("adminPassword");
@@ -47,6 +47,7 @@ describe("help", () => {
   it("speaks Polish to a Polish account, linked from /admin, and finds “logowanie”", async () => {
     await signInAsAdmin(browser, baseUrl, adminPassword);
     await choosePreference(browser, "pl");
+    await closeAccountMenu(browser);
     await browser.waitFor("nav a[href='/help']");
     expect(await browser.text("nav a[href='/help']")).toBe("Pomoc");
 

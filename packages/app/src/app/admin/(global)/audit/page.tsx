@@ -31,7 +31,6 @@ async function GlobalAudit({ searchParams }: { searchParams: Promise<Record<stri
     <div lang={locale} className="flex flex-col gap-6">
       <AuditView
         heading={t.globalHeading}
-        back={{ href: "/admin", label: t.back }}
         intro={t.globalIntro}
         page={page}
         path="/admin/audit"

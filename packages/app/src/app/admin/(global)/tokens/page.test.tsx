@@ -45,7 +45,8 @@ describe("TokensPage", () => {
     expect(mocks.requireUser).toHaveBeenCalledOnce();
     expect(mocks.list).toHaveBeenCalledWith("u2");
     expect(screen.getByRole("heading", { name: "API tokens" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Cave control" }).getAttribute("href")).toBe("/admin");
+    // The menu leads back; the page carries no back link of its own.
+    expect(screen.queryByRole("link", { name: "Cave control" })).toBeNull();
     expect(screen.getByText(/as you, in Test and Prod, until you revoke it\. Tokens never expire\./)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Create token" })).toBeTruthy();
     expect(screen.getByText("API tokens table: agent1")).toBeTruthy();

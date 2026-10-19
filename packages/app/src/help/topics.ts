@@ -49,23 +49,23 @@ const en: Record<HelpTopicId, HelpText> = {
     body: [
       "CPG is a small MRP II planning tool: it turns what customers want into plans for what to buy and what to make.",
       "Sign in on the sign-in page with the account the administrator gave you. The built-in administrator signs in as admin.",
-      "Help is linked at the top of every page, and every new screen of CPG adds its own topic here.",
+      "The menu at the top of every page lists the screens your account can open, Help included. On a phone, open it with the Menu button. Every new screen of CPG adds its own topic here.",
     ],
   },
   "signing-in": {
     title: "Signing in",
     body: [
-      "Enter your username and password, then choose Sign in.",
+      "Choose Sign in on the homepage or in the menu, enter your username and password, then choose Sign in.",
       "If either is wrong you see “Invalid username or password.” CPG never says which of the two was wrong.",
       "After several failed attempts, signing in pauses for 15 minutes. Wait, then try again.",
-      "A session lasts 12 hours. Sign out from the header when you are done.",
+      "A session lasts 12 hours. Sign out from the menu when you are done. On a medium-width screen it is behind the button with your name.",
     ],
   },
   "admin-home": {
     title: "Cave control",
     body: [
-      "Cave control is the home page of every account. Normal users see their name, their language and theme, and Sign out. There is no password change: only the administrator sets passwords.",
-      "The administrator also sees the Users link and the Database card. The card shows where CPG keeps its data, how many migrations are applied, whether any are still pending, and how many settings are stored.",
+      "Cave control is the home page of every account: choose the Test or Prod tenant there. Your name, language and theme, and Sign out are in the menu. There is no password change: only the administrator sets passwords.",
+      "The administrator also sees Users in the menu and the Database card here. The card shows where CPG keeps its data, how many migrations are applied, whether any are still pending, and how many settings are stored.",
       "A pending migration normally means CPG is still starting. If it stays, tell whoever runs CPG.",
       "Open Test or Open Prod takes you to that tenant's business data.",
     ],
@@ -90,7 +90,7 @@ const en: Record<HelpTopicId, HelpText> = {
   "api-tokens": {
     title: "API tokens",
     body: [
-      "API tokens let a script or tool use the CPG API as you. Open API tokens in the header, choose Create token, give it a name and create it.",
+      "API tokens let a script or tool use the CPG API as you. Open API tokens in the menu, choose Create token, give it a name and create it.",
       "The secret is shown once. Copy it straight away: CPG stores only a fingerprint of it and can never show it again. If you lose it, revoke the token and create a new one.",
       "Send the secret in every API request as the Authorization: Bearer header. The token can do exactly what your account can, in Test and Prod, and it never expires.",
       "Revoke ends a token at once. A password reset or a deactivation ends all of an account's tokens. Tokens can be listed and revoked through the API too, but only created here.",
@@ -101,7 +101,7 @@ const en: Record<HelpTopicId, HelpText> = {
   "global-audit": {
     title: "The Global audit",
     body: [
-      "Global audit, in the header, opens it: every change to accounts, newest first. It lists users created, passwords reset, accounts deactivated or reactivated, language or theme changes, and API tokens created or revoked.",
+      "Audit, in the menu, opens the Global audit: every change to accounts, newest first. It lists users created, passwords reset, accounts deactivated or reactivated, language or theme changes, and API tokens created or revoked.",
       "Each entry shows when it happened (in UTC), the account that made it, the session it came from, the channel (UI for CPG's screens, API for programs) and what changed, as before → after.",
       "A password reset is listed without the password: CPG never records passwords or their hashes.",
       "Every account can read the audit, and nobody can change or delete an entry, not even the administrator. Older entries shows the previous page.",
@@ -118,7 +118,7 @@ const en: Record<HelpTopicId, HelpText> = {
   "language-and-theme": {
     title: "Language and theme",
     body: [
-      "Choose English or Polski, and Light or Dark, in the header next to Sign out.",
+      "Choose English or Polski, and Light or Dark, in the menu next to Sign out.",
       "The choice belongs to your account: it stays after you sign out, follows you to other browsers, and never changes anyone else's.",
       "Before you sign in, CPG shows English and the light theme.",
     ],
@@ -139,23 +139,23 @@ const pl: Record<HelpTopicId, HelpText> = {
     body: [
       "CPG to małe narzędzie do planowania MRP II: zamienia to, czego chcą klienci, w plany zakupów i produkcji.",
       "Zaloguj się na stronie logowania kontem, które dał ci administrator. Wbudowany administrator loguje się jako admin.",
-      "Pomoc jest dostępna u góry każdej strony, a każdy nowy ekran CPG dodaje tu własny temat.",
+      "Menu u góry każdej strony pokazuje ekrany, które twoje konto może otworzyć, w tym Pomoc. Na telefonie otwórz je przyciskiem Menu. Każdy nowy ekran CPG dodaje tu własny temat.",
     ],
   },
   "signing-in": {
     title: "Logowanie",
     body: [
-      "Wpisz nazwę użytkownika i hasło, a następnie wybierz Zaloguj.",
+      "Wybierz Zaloguj się na stronie głównej lub w menu, wpisz nazwę użytkownika i hasło, a następnie wybierz Zaloguj.",
       "Jeśli któreś z nich jest błędne, zobaczysz komunikat o nieprawidłowej nazwie użytkownika lub haśle. CPG nigdy nie mówi, które z nich było błędne.",
       "Po kilku nieudanych próbach logowanie zostaje wstrzymane na 15 minut. Odczekaj i spróbuj ponownie.",
-      "Sesja trwa 12 godzin. Gdy skończysz, wyloguj się w nagłówku.",
+      "Sesja trwa 12 godzin. Gdy skończysz, wyloguj się w menu. Na ekranie średniej szerokości jest pod przyciskiem z twoją nazwą.",
     ],
   },
   "admin-home": {
     title: "Kontrola jaskini",
     body: [
-      "Kontrola jaskini to strona startowa każdego konta. Zwykły użytkownik widzi swoją nazwę, język i motyw oraz przycisk Wyloguj. Nie ma tu zmiany hasła: hasła ustawia tylko administrator.",
-      "Administrator widzi też link Użytkownicy i kartę Baza danych. Karta pokazuje, gdzie CPG przechowuje dane, ile migracji zastosowano, czy jakieś jeszcze oczekują i ile ustawień zapisano.",
+      "Kontrola jaskini to strona startowa każdego konta: wybierz tu środowisko Test lub Prod. Twoja nazwa, język i motyw oraz przycisk Wyloguj są w menu. Nie ma tu zmiany hasła: hasła ustawia tylko administrator.",
+      "Administrator widzi też Użytkowników w menu i tutaj kartę Baza danych. Karta pokazuje, gdzie CPG przechowuje dane, ile migracji zastosowano, czy jakieś jeszcze oczekują i ile ustawień zapisano.",
       "Oczekująca migracja zwykle oznacza, że CPG jeszcze się uruchamia. Jeśli nie znika, powiedz o tym osobie, która utrzymuje CPG.",
       "Przyciski Otwórz Test i Otwórz Prod prowadzą do danych biznesowych wybranego środowiska.",
     ],
@@ -180,7 +180,7 @@ const pl: Record<HelpTopicId, HelpText> = {
   "api-tokens": {
     title: "Tokeny API",
     body: [
-      "Tokeny API pozwalają skryptowi lub narzędziu korzystać z API CPG w twoim imieniu. Otwórz Tokeny API w nagłówku, wybierz Utwórz token, nadaj mu nazwę i utwórz go.",
+      "Tokeny API pozwalają skryptowi lub narzędziu korzystać z API CPG w twoim imieniu. Otwórz Tokeny API w menu, wybierz Utwórz token, nadaj mu nazwę i utwórz go.",
       "Sekret jest pokazywany tylko raz. Skopiuj go od razu: CPG przechowuje wyłącznie jego odcisk i nigdy nie pokaże go ponownie. Jeśli go zgubisz, unieważnij token i utwórz nowy.",
       "Wysyłaj sekret w każdym żądaniu do API jako nagłówek Authorization: Bearer. Token może dokładnie to, co twoje konto, w środowiskach Test i Prod, i nigdy nie wygasa.",
       "Unieważnij natychmiast kończy działanie tokenu. Reset hasła lub dezaktywacja kończy działanie wszystkich tokenów konta. Tokeny można też wyświetlać i unieważniać przez API, ale tworzyć tylko tutaj.",
@@ -191,7 +191,7 @@ const pl: Record<HelpTopicId, HelpText> = {
   "global-audit": {
     title: "Audyt globalny",
     body: [
-      "Audyt globalny w nagłówku otwiera ten audyt: każdą zmianę kont, od najnowszej. Znajdziesz tu utworzonych użytkowników, zresetowane hasła, dezaktywowane i ponownie aktywowane konta, zmiany języka lub motywu oraz utworzone i unieważnione tokeny API.",
+      "Audyt w menu otwiera Audyt globalny: każdą zmianę kont, od najnowszej. Znajdziesz tu utworzonych użytkowników, zresetowane hasła, dezaktywowane i ponownie aktywowane konta, zmiany języka lub motywu oraz utworzone i unieważnione tokeny API.",
       "Każdy wpis pokazuje, kiedy nastąpiła zmiana (w UTC), które konto ją wprowadziło, z jakiej sesji, jakim kanałem (Ekran dla ekranów CPG, Interfejs API dla programów) i co się zmieniło, jako przed → po.",
       "Reset hasła jest zapisany bez hasła: CPG nigdy nie zapisuje haseł ani ich skrótów.",
       "Audyt może przeglądać każde konto, a nikt nie może zmienić ani usunąć wpisu, nawet administrator. Starsze wpisy pokazują poprzednią stronę.",
@@ -208,7 +208,7 @@ const pl: Record<HelpTopicId, HelpText> = {
   "language-and-theme": {
     title: "Język i motyw",
     body: [
-      "Wybierz English lub Polski oraz Jasny lub Ciemny w nagłówku obok przycisku Wyloguj.",
+      "Wybierz English lub Polski oraz Jasny lub Ciemny w menu obok przycisku Wyloguj.",
       "Wybór należy do twojego konta: zostaje po wylogowaniu, działa w innych przeglądarkach i nigdy nie zmienia ustawień innych osób.",
       "Przed zalogowaniem CPG wyświetla się po angielsku i w jasnym motywie.",
     ],

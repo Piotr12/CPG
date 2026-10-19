@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { openBrowser, type Browser } from "./browser";
-import { signIn, signInAsAdmin } from "./sign-in";
+import { signedInAs, signIn, signInAsAdmin } from "./sign-in";
 
 const baseUrl = inject("baseUrl");
 const adminPassword = inject("adminPassword");
@@ -17,7 +17,7 @@ const ownRows = async (admin: Browser, selector: string) =>
 /** Signs alice in and waits for /admin to greet her. */
 async function signInAsAlice(browser: Browser, password: string) {
   await signIn(browser, baseUrl, password, "alice");
-  await browser.waitUntil(`document.querySelector("strong")?.innerText === "alice"`);
+  await browser.waitUntil(signedInAs("alice"));
 }
 
 /** Opens alice's row menu on /admin/users and picks an item. */
@@ -37,7 +37,7 @@ const aliceRow = (condition: string) =>
 async function landsOn(browser: Browser, url: string) {
   await browser.open(url);
   await browser.waitFor("main");
-  await browser.waitUntil(`!!(document.querySelector("#username") || document.querySelector("strong"))`);
+  await browser.waitUntil(`!!document.querySelector("#username") || (${signedInAs()})`);
   return pathname(browser);
 }
 
@@ -102,7 +102,7 @@ describe("the admin manages normal users", () => {
   it("lets alice open both tenants, like every active account (TEN-010)", async () => {
     for (const tenant of ["test", "prod"]) {
       await aliceA.open(`${baseUrl}/admin/${tenant}`);
-      await aliceA.waitUntil(`document.querySelector("strong")?.innerText === "alice"`);
+      await aliceA.waitUntil(signedInAs("alice"));
 
       expect(await pathname(aliceA)).toBe(`/admin/${tenant}`);
       expect(await aliceA.text("h1")).toMatch(new RegExp(`— ${tenant === "test" ? "Test" : "Prod"}$`));

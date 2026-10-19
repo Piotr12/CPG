@@ -47,7 +47,8 @@ describe("UsersPage", () => {
     expect(mocks.connection).toHaveBeenCalledOnce();
     expect(mocks.requireAdmin).toHaveBeenCalledOnce();
     expect(screen.getByRole("heading", { name: "Users" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Cave control" }).getAttribute("href")).toBe("/admin");
+    // The menu leads back; the page carries no back link of its own.
+    expect(screen.queryByRole("link")).toBeNull();
     expect(screen.getByText(/Users are never deleted\. Deactivate an account to end its access/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Create user" })).toBeTruthy();
     expect(screen.getByText("Users table: admin, alice")).toBeTruthy();
@@ -60,7 +61,6 @@ describe("UsersPage", () => {
 
     const heading = screen.getByRole("heading", { name: "Użytkownicy" });
     expect(heading.closest("[lang]")?.getAttribute("lang")).toBe("pl");
-    expect(screen.getByRole("link", { name: "Kontrola jaskini" })).toBeTruthy();
     expect(screen.getByText(/Użytkownicy nigdy nie są usuwani/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Utwórz użytkownika" })).toBeTruthy();
   });

@@ -21,7 +21,7 @@ const LOCALE_OPTIONS = Object.entries(LANGUAGE_NAMES) as [Locale, string][];
 const THEME_OPTIONS: Theme[] = ["light", "dark"];
 
 /**
- * The language and theme switches in the signed-in header. Each option is a submit button carrying
+ * The language and theme switches in the menu's account controls. Each option is a submit button carrying
  * its own `name`/`value`, so one form serves both groups and a click sends exactly one change.
  */
 export function PreferencesControls({ locale, theme, labels, action }: PreferencesControlsProps) {

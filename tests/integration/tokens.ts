@@ -1,9 +1,10 @@
 import type { Browser } from "./browser";
+import { signedInAs } from "./sign-in";
 
-/** Opens the tokens screen from the header link. */
+/** Opens the tokens screen from the menu. */
 export async function openTokens(browser: Browser, baseUrl: string) {
   await browser.open(`${baseUrl}/admin`);
-  await browser.waitFor("main strong");
+  await browser.waitUntil(signedInAs());
   await browser.clickRole("link", "API tokens");
   await browser.waitFor("table");
 }

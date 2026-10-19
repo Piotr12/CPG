@@ -237,7 +237,7 @@ Example: "add work orders". Create each file only when the change needs it.
    - From CPG's own pages, a server action in `actions.ts` next to the page, wrapped in the shared `server-action` helper. For tenant data, it uses `tenantServerAction`, and the page binds its tenant with `action.bind(null, tenant)`.
    - For external callers or client fetching, `app/src/app/api/work-orders/…/route.ts` via `apiHandler` (or `makeCrudRoute` for plain CRUD).
    - Authentication checks come first, once auth exists.
-7. **Pages:** tenant screens under `app/src/app/admin/[tenant]/work-orders/`, read through `tenantScope(tenant)`; global backend screens under `app/src/app/admin/(global)/`. Both use shadcn via `@cpg/ui`. Public pages go under `app/src/app/` (plain Tailwind).
+7. **Pages:** tenant screens under `app/src/app/admin/[tenant]/work-orders/`, read through `tenantScope(tenant)`; global backend screens under `app/src/app/admin/(global)/`. Both use shadcn via `@cpg/ui`. Public pages go under `app/src/app/` (plain Tailwind). The one exception is the app bar the root layout renders on every page (`app/src/components/layout/`): it is built from `@cpg/ui` (`Button`, `Sheet`, `Popover`) on public pages too.
    - Read in a server component through the service, with `await connection()` inside `<Suspense>` and a `feedback/` fallback.
    - Forms use `CrudForm` bound to the schema from step 3, through a small client component in `app/src/components/work-orders/` (a Zod schema can't be passed as a prop from a server component).
    - Lists use `DataTable`.
