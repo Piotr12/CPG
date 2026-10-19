@@ -10,6 +10,8 @@ describe("@cpg/db", () => {
       "ApiToken",
       "GLOBAL_ENTITIES",
       "GlobalAuditEvent",
+      "GlobalIdempotencyKey",
+      "IDEMPOTENCY_KEY_MAX",
       "LOCALES",
       "Session",
       "Setting",
@@ -18,6 +20,7 @@ describe("@cpg/db", () => {
       "THEMES",
       "Tenant",
       "TenantAuditEvent",
+      "TenantIdempotencyKey",
       "TenantViolationError",
       "USER_ROLES",
       "UniqueConstraintViolationException",
@@ -42,7 +45,10 @@ describe("@cpg/db", () => {
       db.ApiToken,
       db.GlobalAuditEvent,
       db.TenantAuditEvent,
+      db.GlobalIdempotencyKey,
+      db.TenantIdempotencyKey,
     ]);
-    expect(db.GLOBAL_ENTITIES).toEqual(db.entities.filter((entity) => entity !== db.TenantAuditEvent));
+    const tenantOwned: unknown[] = [db.TenantAuditEvent, db.TenantIdempotencyKey];
+    expect(db.GLOBAL_ENTITIES).toEqual(db.entities.filter((entity) => !tenantOwned.includes(entity)));
   });
 });

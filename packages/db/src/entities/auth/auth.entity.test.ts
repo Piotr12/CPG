@@ -46,6 +46,31 @@ describe("User and Session", () => {
     expect(stored.passwordHash).toBeNull();
   });
 
+  it("starts every account at version 1 and raises it on each update", async () => {
+    const em = orm.em.fork();
+    const user = em.create(User, { username: "versioned", role: "user" });
+    await em.flush();
+    expect(user.version).toBe(1);
+
+    user.active = false;
+    await em.flush();
+    expect((await orm.em.fork().findOneOrFail(User, { id: user.id })).version).toBe(2);
+  });
+
+  it("refuses a flush over a version another writer has moved on", async () => {
+    const em = orm.em.fork();
+    const user = em.create(User, { username: "contended", role: "user" });
+    await em.flush();
+
+    const stale = orm.em.fork();
+    const copy = await stale.findOneOrFail(User, { id: user.id });
+    user.active = false;
+    await em.flush();
+
+    copy.passwordHash = "changed-elsewhere";
+    await expect(stale.flush()).rejects.toThrow(/optimistic lock/);
+  });
+
   it("keeps usernames and token hashes unique", async () => {
     const em = orm.em.fork();
     em.create(User, { username: "admin", role: "user" });
