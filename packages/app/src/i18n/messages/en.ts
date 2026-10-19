@@ -32,6 +32,7 @@ export const en = {
     migrationsPending: (count: number) => `${count} pending`,
     settings: (count: number) => `${count} settings`,
     users: "Users",
+    tokens: "API tokens",
   },
   /** The users screen. Its strings go to client components, so `{username}` is filled in there. */
   users: {
@@ -83,6 +84,50 @@ export const en = {
       CONFLICT: "That username is taken.",
       NOT_FOUND: "That user no longer exists.",
       FORBIDDEN: "Only the administrator can manage users.",
+    },
+  },
+  /** The API tokens screen. Its strings go to client components, so `{name}` is filled in there. */
+  tokens: {
+    heading: "API tokens",
+    back: "Cave control",
+    intro: "A token lets a script or tool use the CPG API as you, in Test and Prod, until you revoke it. Tokens never expire.",
+    empty: "No tokens yet.",
+    never: "Never",
+    columns: { name: "Name", created: "Created", lastUsed: "Last used", actions: "Actions" },
+    cancel: "Cancel",
+    create: {
+      open: "Create token",
+      title: "Create token",
+      description: "This token can do everything you can, in both tenants, until you revoke it.",
+      name: "Name",
+      nameHint: "Up to 64 characters, different from your other tokens' names.",
+      submit: "Create token",
+      submitting: "Creating…",
+    },
+    secret: {
+      title: "Token “{name}” created",
+      label: "Secret",
+      warning: "Copy it now. You won't see it again.",
+      usage: "Send it as Authorization: Bearer <secret>.",
+      copy: "Copy",
+      copied: "Copied",
+      done: "Done",
+    },
+    revoke: {
+      open: "Revoke",
+      label: "Revoke {name}",
+      title: "Revoke {name}?",
+      description: "Anything using it stops working at once.",
+      confirm: "Revoke",
+    },
+    fieldErrors: {
+      nameRequired: "Enter a name.",
+      nameTooLong: "Use at most 64 characters.",
+    },
+    /** What these error codes mean on the tokens screen, merged over the shared `errors` by `tokensLabels`. */
+    errors: {
+      CONFLICT: "You already have a token with that name.",
+      TOKEN_NOT_FOUND: "That token no longer exists.",
     },
   },
   tenants: {

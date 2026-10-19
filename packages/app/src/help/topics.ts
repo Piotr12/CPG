@@ -6,6 +6,7 @@ export const HELP_TOPIC_IDS = [
   "signing-in",
   "admin-home",
   "managing-users",
+  "api-tokens",
   "test-and-prod",
   "language-and-theme",
   "using-help",
@@ -22,6 +23,7 @@ export const HELP_TOPIC_ROUTES: Record<HelpTopicId, string> = {
   "signing-in": "/login",
   "admin-home": "/admin",
   "managing-users": "/admin/users",
+  "api-tokens": "/admin/tokens",
   "test-and-prod": "/admin/[tenant]",
   "language-and-theme": "/admin",
   "using-help": "/help",
@@ -79,6 +81,15 @@ const en: Record<HelpTopicId, HelpText> = {
       "Reset password, in a user's row menu, sets a new password and signs that user out everywhere at once.",
       "Deactivate signs the user out everywhere and stops them signing in. Reactivate lets them back in with their current password, so reset it too if the account may have been compromised.",
       "Users are never deleted: an account stays, so its history keeps its name. The built-in administrator can't be changed here.",
+    ],
+  },
+  "api-tokens": {
+    title: "API tokens",
+    body: [
+      "API tokens let a script or tool use the CPG API as you. Open API tokens in the header, choose Create token, give it a name and create it.",
+      "The secret is shown once. Copy it straight away: CPG stores only a fingerprint of it and can never show it again. If you lose it, revoke the token and create a new one.",
+      "Send the secret in every API request as the Authorization: Bearer header. The token can do exactly what your account can, in Test and Prod, and it never expires.",
+      "Revoke ends a token at once. A password reset or a deactivation ends all of an account's tokens. Tokens can be listed and revoked through the API too, but only created here.",
     ],
   },
   "language-and-theme": {
@@ -141,6 +152,15 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Resetuj hasło w menu wiersza ustawia nowe hasło i od razu wylogowuje tego użytkownika ze wszystkich sesji.",
       "Dezaktywuj wylogowuje użytkownika ze wszystkich sesji i blokuje logowanie. Aktywuj ponownie wpuszcza go z obecnym hasłem, więc zresetuj je także wtedy, gdy konto mogło zostać przejęte.",
       "Użytkownicy nigdy nie są usuwani: konto zostaje, więc historia zachowuje jego nazwę. Wbudowanego administratora nie można tu zmienić.",
+    ],
+  },
+  "api-tokens": {
+    title: "Tokeny API",
+    body: [
+      "Tokeny API pozwalają skryptowi lub narzędziu korzystać z API CPG w twoim imieniu. Otwórz Tokeny API w nagłówku, wybierz Utwórz token, nadaj mu nazwę i utwórz go.",
+      "Sekret jest pokazywany tylko raz. Skopiuj go od razu: CPG przechowuje wyłącznie jego odcisk i nigdy nie pokaże go ponownie. Jeśli go zgubisz, unieważnij token i utwórz nowy.",
+      "Wysyłaj sekret w każdym żądaniu do API jako nagłówek Authorization: Bearer. Token może dokładnie to, co twoje konto, w środowiskach Test i Prod, i nigdy nie wygasa.",
+      "Unieważnij natychmiast kończy działanie tokenu. Reset hasła lub dezaktywacja kończy działanie wszystkich tokenów konta. Tokeny można też wyświetlać i unieważniać przez API, ale tworzyć tylko tutaj.",
     ],
   },
   "language-and-theme": {

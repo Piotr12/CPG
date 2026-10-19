@@ -30,6 +30,7 @@ export const pl: Messages = {
     migrationsPending: (count) => `Oczekujące: ${count}`,
     settings: (count) => `Ustawienia: ${count}`,
     users: "Użytkownicy",
+    tokens: "Tokeny API",
   },
   users: {
     heading: "Użytkownicy",
@@ -79,6 +80,49 @@ export const pl: Messages = {
       CONFLICT: "Ta nazwa użytkownika jest zajęta.",
       NOT_FOUND: "Ten użytkownik już nie istnieje.",
       FORBIDDEN: "Tylko administrator może zarządzać użytkownikami.",
+    },
+  },
+  tokens: {
+    heading: "Tokeny API",
+    back: "Kontrola jaskini",
+    intro:
+      "Token pozwala skryptowi lub narzędziu korzystać z API CPG w twoim imieniu, w środowiskach Test i Prod, dopóki go nie unieważnisz. Tokeny nie wygasają.",
+    empty: "Nie masz jeszcze tokenów.",
+    never: "Nigdy",
+    columns: { name: "Nazwa", created: "Utworzono", lastUsed: "Ostatnio użyto", actions: "Akcje" },
+    cancel: "Anuluj",
+    create: {
+      open: "Utwórz token",
+      title: "Utwórz token",
+      description: "Ten token może robić wszystko to, co ty, w obu środowiskach, dopóki go nie unieważnisz.",
+      name: "Nazwa",
+      nameHint: "Do 64 znaków, inna niż nazwy twoich pozostałych tokenów.",
+      submit: "Utwórz token",
+      submitting: "Tworzenie…",
+    },
+    secret: {
+      title: "Utworzono token „{name}”",
+      label: "Sekret",
+      warning: "Skopiuj go teraz. Nie zobaczysz go ponownie.",
+      usage: "Wysyłaj go jako Authorization: Bearer <sekret>.",
+      copy: "Kopiuj",
+      copied: "Skopiowano",
+      done: "Gotowe",
+    },
+    revoke: {
+      open: "Unieważnij",
+      label: "Unieważnij {name}",
+      title: "Unieważnić {name}?",
+      description: "Wszystko, co go używa, natychmiast przestanie działać.",
+      confirm: "Unieważnij",
+    },
+    fieldErrors: {
+      nameRequired: "Podaj nazwę.",
+      nameTooLong: "Użyj co najwyżej 64 znaków.",
+    },
+    errors: {
+      CONFLICT: "Masz już token o tej nazwie.",
+      TOKEN_NOT_FOUND: "Ten token już nie istnieje.",
     },
   },
   tenants: {

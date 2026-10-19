@@ -22,6 +22,15 @@ describe("SignedInBar", () => {
     expect(screen.getByText(/Zalogowano jako/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Wyloguj" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Użytkownicy" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Tokeny API" })).toBeTruthy();
+  });
+
+  it("links every account to its API tokens", () => {
+    const { rerender } = render(<SignedInBar user={{ username: "admin", role: "admin" }} locale="en" theme="light" messages={en} />);
+    expect(screen.getByRole("link", { name: "API tokens" }).getAttribute("href")).toBe("/admin/tokens");
+
+    rerender(<SignedInBar user={{ username: "alice", role: "user" }} locale="en" theme="light" messages={en} />);
+    expect(screen.getByRole("link", { name: "API tokens" }).getAttribute("href")).toBe("/admin/tokens");
   });
 
   it("links only the admin to the users screen", () => {
