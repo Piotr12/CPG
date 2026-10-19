@@ -9,6 +9,10 @@ const ALICE_PASSWORD = "alice's first password";
 const ALICE_NEW_PASSWORD = "alice's second password";
 
 const pathname = async (browser: Browser) => new URL(await browser.url()).pathname;
+/** This file's accounts: other files share the app (and its never-deleted users), so ignore theirs. */
+const OWN_ACCOUNTS = ["admin", "alice"];
+const ownRows = async (admin: Browser, selector: string) =>
+  (await admin.texts(selector)).filter((text) => OWN_ACCOUNTS.includes(text.split("\t")[0]));
 
 /** Signs alice in and waits for /admin to greet her. */
 async function signInAsAlice(browser: Browser, password: string) {
@@ -50,7 +54,7 @@ describe("the admin manages normal users", () => {
     expect(await admin.text("main p")).toBe(
       "Users are never deleted. Deactivate an account to end its access; its history keeps its name.",
     );
-    expect(await admin.texts("tbody tr")).toEqual([expect.stringMatching(/^admin\tadmin\tActive\t\d{4}-\d{2}-\d{2}/)]);
+    expect(await ownRows(admin, "tbody tr")).toEqual([expect.stringMatching(/^admin\tadmin\tActive\t\d{4}-\d{2}-\d{2}/)]);
     const controls = await admin.texts("button, a, [role=menuitem]");
     expect(controls.filter((text) => /delete|remove/i.test(text))).toEqual([]);
   });
@@ -63,7 +67,7 @@ describe("the admin manages normal users", () => {
     await admin.waitUntil(`!document.querySelector("[role=dialog]")`);
     await admin.waitForText("alice");
 
-    expect(await admin.texts("tbody td:first-child")).toEqual(["admin", "alice"]);
+    expect(await ownRows(admin, "tbody td:first-child")).toEqual(["admin", "alice"]);
   });
 
   it("refuses a second alice", async () => {
