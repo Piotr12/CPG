@@ -142,7 +142,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** The gate doesn't look at the role: `packages/core/src/http/tenant-server-action.test.ts` refuses a normal user's write to a read-only tenant with `TENANT_READ_ONLY` and runs nothing, and `tests/integration/read-only.test.ts` shows the read-only explanation on a refused screen write. No normal user can write business data yet (materials are admin-only), so the order-creation part waits for slice 2. E02-S04, #25.
+- **Evidence:** The gate doesn't look at the role: `packages/core/src/http/tenant-server-action.test.ts` refuses a normal user's write to a read-only tenant with `TENANT_READ_ONLY` and runs nothing, and `tests/integration/read-only.test.ts` shows the read-only explanation on a refused screen write (the admin's). No normal user can write business data yet (materials are admin-only), so the order-creation part waits for slice 2. E02-S04, #25.
 - **Given:** Prod set read-only by admin
 - **When:** Normal user attempts order creation
 - **Then:** No document or audit business mutation posts; clear read-only explanation.
@@ -151,7 +151,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/read-only.test.ts` (the admin's Create material on a read-only tenant is refused, and nothing is stored), `packages/core/src/http/tenant-server-action.test.ts`. E02-S04, #25.
+- **Evidence:** `tests/integration/read-only-api.test.ts` (the admin token's update of a Test material while Test is read-only is 409 `TENANT_READ_ONLY`, and the stored description and version remain), `tests/integration/read-only.test.ts` (on the screens, the admin's Create material from a page loaded before the flag is refused with the explanation, and nothing is stored), `packages/core/src/http/tenant-server-action.test.ts`. E02-S04, #25.
 - **Given:** Test set read-only
 - **When:** Admin attempts master-data update
 - **Then:** Update is blocked despite admin role; previously stored values remain.

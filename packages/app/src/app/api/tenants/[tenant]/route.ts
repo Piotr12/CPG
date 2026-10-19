@@ -15,7 +15,7 @@ export const GET = apiHandler(async (request: Request, { params }: Context) => {
 });
 
 /**
- * Makes the tenant read-only or writable again (R05), as the Admin page's Read-only card does.
+ * Makes the tenant read-only or writable again (R05), as the Read-only card on Cave control (/admin) does.
  * Admin only, checked before the key and the body. The flag is global metadata, not tenant data, so
  * this is the one write under /api/tenants/{tenant}/ keyed in the global store and without
  * `Dataset-Generation`, and it keeps working while the tenant is read-only. Recorded in the Global

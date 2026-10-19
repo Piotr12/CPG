@@ -69,7 +69,7 @@ export class TenantService {
       tenant.readOnly = readOnly;
       recordGlobalAudit(em, actor, {
         action: "tenants.tenant.read-only-changed",
-        subject: { type: "tenant", id: code, label: TENANT_NAMES[code] },
+        subject: { type: "Tenant", id: code, label: TENANT_NAMES[code] },
         before,
         after: { readOnly },
       });

@@ -104,7 +104,7 @@ export class IdempotencyService {
     return inRequestTransaction(this.em, async () => {
       // Records at or before this instant are past their 24 hours (API-026).
       const expired = new Date(Date.now() - IDEMPOTENCY_TTL_MS);
-      const state = scope.kind === "tenant" ? await this.checkGeneration(scope) : null;
+      const state = scope.kind === "tenant" ? await this.checkTenant(scope) : null;
       const stored = await this.find(request, scope, expired);
       if (stored) return { kind: "found", stored } as const;
       if (state) assertWritable(state);
@@ -116,8 +116,11 @@ export class IdempotencyService {
     });
   }
 
-  /** The tenant's current state, read fresh inside the transaction, once the sent generation matches it. */
-  private async checkGeneration(scope: Extract<IdempotencyScope, { kind: "tenant" }>): Promise<TenantState> {
+  /**
+   * The tenant's current generation and read-only flag, read fresh inside the transaction, once the
+   * sent generation matches it. The flag is checked by the caller, after the key lookup.
+   */
+  private async checkTenant(scope: Extract<IdempotencyScope, { kind: "tenant" }>): Promise<TenantState> {
     const current = await this.tenantService.currentState(scope.tenant);
     assertCurrentGeneration(current.generation, scope.generation, scope.requireGeneration);
     return current;

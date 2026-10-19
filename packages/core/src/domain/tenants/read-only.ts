@@ -2,7 +2,7 @@ import { ConflictError } from "../../http/errors";
 
 /** What a refused write says. It names no tenant: screens show one translation per code. */
 export const TENANT_READ_ONLY =
-  "This tenant is read-only, so its business data can't be changed. The admin can make it writable on the Admin page.";
+  "This tenant is read-only, so its business data can't be changed. The administrator can make it writable on the Cave control page (/admin).";
 
 /**
  * Refuses a business write to a read-only tenant (R05, TEN-015…017, API-030), whoever makes it: the

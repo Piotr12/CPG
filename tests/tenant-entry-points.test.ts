@@ -22,6 +22,8 @@ const inTenant = (file: string) => tenantRoots.some((root) => file.startsWith(ro
 const named = (name: string) => all.filter((file) => inTenant(file) && path.basename(file) === name);
 const rel = (file: string) => path.relative(appDir, file);
 const read = (file: string) => readFileSync(file, "utf8");
+/** A `"use server"` directive, at the top of a module or inside a function (an inline action). */
+const USE_SERVER = /["']use server["']/;
 
 /**
  * What in a tenant `actions.ts` could write around the gate: each export that doesn't call
@@ -53,6 +55,16 @@ describe("tenant entry points", () => {
     const offenders = named("actions.ts").flatMap((file) => ungated(read(file)).map((name) => `${rel(file)}: ${name}`));
     expect(named("actions.ts").length).toBeGreaterThan(0);
     expect(offenders).toEqual([]);
+  });
+
+  it("declare server actions only in actions.ts, so the gate check above sees every one", () => {
+    const elsewhere = all
+      .filter((file) => inTenant(file) && path.basename(file) !== "actions.ts" && USE_SERVER.test(read(file)))
+      .map(rel);
+    expect(elsewhere).toEqual([]);
+    expect(USE_SERVER.test(`export default async function Page() {\n  async function save() {\n    "use server";\n  }\n}`)).toBe(true);
+    expect(USE_SERVER.test(`'use server';\nexport async function x() {}`)).toBe(true);
+    expect(USE_SERVER.test(`const note = "users serve";`)).toBe(false);
   });
 
   it("would notice a tenant action that skips the gate", () => {

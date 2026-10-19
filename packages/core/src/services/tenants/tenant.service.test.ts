@@ -83,7 +83,7 @@ describe("TenantService", () => {
       expect(await audit()).toEqual([
         {
           action: "tenants.tenant.read-only-changed",
-          subject: "tenant prod Prod",
+          subject: "Tenant prod Prod",
           before: { readOnly: false },
           after: { readOnly: true },
           actorUsername: "admin",

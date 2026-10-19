@@ -40,7 +40,7 @@ async function setReadOnly(admin: Browser, name: string, readOnly: boolean) {
 }
 
 // Read-only tenants on the screens (spec .ai/specs/2026-10-19--2018UTC-read-only-tenants.md):
-// TEN-015, TEN-016, TEN-018, TEN-021, AUD-016.
+// TEN-016, TEN-018, TEN-021, AUD-016.
 describe("read-only tenants on the screens (R05)", () => {
   let admin: Browser;
   let stale: Browser;
@@ -71,7 +71,7 @@ describe("read-only tenants on the screens (R05)", () => {
     expect(chooser).toEqual(["Test Demonstration data, safe to experiment Open Test →", "Prod Live data Read-only Open Prod →"]);
   });
 
-  it("refuses the admin's write from a page loaded before the flag, and keeps what was stored (TEN-015, TEN-016)", async () => {
+  it("refuses the admin's write from a page loaded before the flag, and keeps what was stored (TEN-016)", async () => {
     await stale.clickRole("button", "Create material");
     await stale.select("[role=dialog] select[name=type]", "raw");
     await stale.fillLabel("Description", REFUSED);

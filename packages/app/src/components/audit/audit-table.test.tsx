@@ -84,7 +84,7 @@ describe("AuditTable", () => {
   it("names a read-only flag change, with its before and after (AUD-016)", () => {
     const change = entry({
       action: "tenants.tenant.read-only-changed",
-      subject: { type: "tenant", id: "prod", label: "Prod" },
+      subject: { type: "Tenant", id: "prod", label: "Prod" },
       before: { readOnly: false },
       after: { readOnly: true },
     });

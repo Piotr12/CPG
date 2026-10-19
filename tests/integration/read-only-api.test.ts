@@ -26,7 +26,7 @@ const write = (method: string, path: string, secret: string, body?: unknown, gen
   api(method, path, secret, { key: randomUUID(), body, generation });
 
 // Read-only tenants through the API (spec .ai/specs/2026-10-19--2018UTC-read-only-tenants.md):
-// TEN-017, TEN-018, TEN-020, TEN-021, API-030, AUD-016.
+// TEN-016, TEN-017, TEN-018, TEN-020, TEN-021, API-030, AUD-016.
 describe("read-only tenants through the API (R05)", () => {
   let admin: Browser;
   let una: Browser;
@@ -136,6 +136,31 @@ describe("read-only tenants through the API (R05)", () => {
     expect(json(preferences).data).toMatchObject({ theme: "dark" });
     expect(revoked.status).toBe(200);
     expect((await tenants()).map(({ readOnly }) => readOnly)).toEqual([true, true]);
+  });
+
+  it("refuses the admin's master-data update in read-only Test and keeps the stored values (TEN-016)", async () => {
+    const { generation, readOnly } = (await tenants()).find(({ code }) => code === "test")!;
+    const [bolt] = json(await api("GET", "/api/tenants/test/materials", adminSecret)).data as {
+      id: string;
+      description: string;
+      version: number;
+    }[];
+
+    const edited = await write(
+      "PATCH",
+      `/api/tenants/test/materials/${bolt.id}`,
+      adminSecret,
+      { version: bolt.version, description: "roapi renamed" },
+      generation,
+    );
+
+    expect(readOnly).toBe(true);
+    expect(edited.status).toBe(409);
+    expect(json(edited).error.code).toBe("TENANT_READ_ONLY");
+    expect(json(await api("GET", `/api/tenants/test/materials/${bolt.id}`, adminSecret)).data).toMatchObject({
+      description: bolt.description,
+      version: bolt.version,
+    });
   });
 
   it("records each flag change in the Global audit, before and after (AUD-016)", async () => {
