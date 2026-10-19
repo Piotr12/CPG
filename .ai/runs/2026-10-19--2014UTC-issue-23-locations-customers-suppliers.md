@@ -3,7 +3,7 @@
 **Date:** 2026-10-19 20:14 UTC
 **Agent:** Claude Code (Opus 5.5) via cezar: `om-auto-fix-issue 23` → `om-auto-write-spec 23` → `om-spec-writing --autonomous`
 **Spec:** `.ai/specs/2026-10-19--2014UTC-locations-customers-suppliers.md` (written in this run)
-**Status:** done (spec PR #54 draft; implementation PR #56 draft; both gated on ⚠ Q2 and Q5)
+**Status:** done (spec PR #54 and implementation PR #56 ready for review; Q2 and Q5 accepted as defaults)
 
 ## Goal
 
@@ -41,6 +41,8 @@
   - A fresh-context code review approved. Its Low findings were fixed, except a test-deduplication follow-up.
   - UI evidence is posted on #56. Released the issue lock.
 
+- 21:05 The owner told the run to proceed on reasonable assumptions without asking, so Q2 and Q5 stand as accepted defaults, recorded in the spec. Marked #54 and #56 ready for review.
+
 ## Changes
 
 - `.ai/specs/2026-10-19--2014UTC-locations-customers-suppliers.md` (the spec) and `.ai/specs/assets/locations-customers-suppliers/` (one current screenshot, three mockups with their HTML).
@@ -49,6 +51,6 @@
 - `npx vitest run tests/ai-filenames.test.ts` passes. This PR is docs only; the implementation PR #56 ran the full gate (lint, typecheck, test:coverage 100%, build, test:integration).
 
 ## Follow-ups
-- The owner confirms Q2 (server-assigned eight-digit IDs) and Q5 (the deferred "can't be picked" check) on #54, then merges it. #56 then moves the spec to `implemented/` and can be marked ready after QA.
+- Q2 and Q5 can still be overridden before merge. Merge #54 first; #56 then moves the spec to `implemented/` (merge `main`, `git mv`) and goes through human QA (`needs-qa`).
 - #24's spec must refuse inactive locations and materials in new entries (Q5).
 - The near-identical per-kind page, action and route tests in #56 could share `describe.each` suites.
