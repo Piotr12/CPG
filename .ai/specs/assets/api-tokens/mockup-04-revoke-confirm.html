@@ -1,0 +1,27 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Mockup — /admin/tokens</title><style>*{box-sizing:border-box}body{margin:0;font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;background:#fff;color:#252525}
+.note{position:fixed;bottom:12px;left:12px;font-size:12px;color:#8a8a8a;font-family:ui-monospace,monospace}
+.strip{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 24px;font-size:14px;background:#f4f4f5;color:#3f3f46;border-bottom:1px solid #e4e4e7}
+.strip .lbl{font-weight:700;letter-spacing:.08em;font-size:12px;padding:3px 8px;border-radius:6px;margin-right:10px;background:#e4e4e7;color:#3f3f46}
+.seg{display:flex;border-radius:8px;overflow:hidden;border:1px solid rgba(0,0,0,.25)}.seg span{padding:4px 14px;font-weight:500;font-size:13px}
+main{max-width:768px;margin:0 auto;padding:40px 24px;display:flex;flex-direction:column;gap:20px}
+.top{display:flex;align-items:center;justify-content:space-between}h1{font-size:24px;margin:0;letter-spacing:-.01em}
+.who{display:flex;gap:12px;align-items:center;font-size:14px;color:#737373}
+.btn{height:32px;padding:0 12px;border:1px solid #e5e5e5;border-radius:8px;display:inline-flex;align-items:center;color:#252525;font-weight:500;font-size:14px;background:#fff}
+.primary{background:#252525;color:#fff;border-color:#252525}.destructive{background:#c0362c;color:#fff;border-color:#c0362c}
+.link{color:#252525;font-weight:500;text-decoration:underline;text-underline-offset:3px}.muted{color:#737373;font-size:14px;margin:0}
+table{width:100%;border-collapse:collapse;font-size:14px}th{text-align:left;color:#737373;font-weight:500;padding:10px 12px;border-bottom:1px solid #e8e8e8}
+td{padding:12px;border-bottom:1px solid #f0f0f0}.r{text-align:right}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center}
+.dlg{width:460px;background:#fff;border-radius:14px;padding:24px;display:flex;flex-direction:column;gap:14px}
+.dlg h2{margin:0;font-size:18px}.f{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500}
+.in{height:36px;border:1px solid #e5e5e5;border-radius:8px;padding:0 10px;display:flex;align-items:center;font-weight:400}
+.mono{font-family:ui-monospace,monospace;font-size:13px;background:#fafafa}
+.err{color:#c0362c;font-size:13px;font-weight:400}.inerr{border-color:#c0362c}.row{display:flex;justify-content:flex-end;gap:8px}
+.warn{font-size:13px;color:#92400e;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:10px 12px}</style></head><body>
+<div class="strip"><div><span class="lbl">GLOBAL</span>Global — no tenant selected</div><div class="seg"><span>Test</span><span>Prod</span></div></div>
+<main><div class="top"><h1>API tokens</h1><div class="who"><a class="link">Cave control</a><span>Signed in as <b style="color:#252525">alice</b></span><span class="btn">Sign out</span></div></div>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:16px"><p class="muted">A token lets a script or tool use the CPG API as you, in Test and Prod, until you revoke it. Tokens never expire.</p><span class="btn primary" style="flex:none">Create token</span></div>
+<table><tr><th>Name</th><th>Created</th><th>Last used</th><th></th></tr>
+<tr><td><b>agent1</b></td><td>2026-10-19 11:02</td><td>2026-10-19 11:40</td><td class="r"><span class="btn">Revoke</span></td></tr>
+<tr><td><b>build</b></td><td>2026-10-19 11:05</td><td style="color:#8a8a8a">Never</td><td class="r"><span class="btn">Revoke</span></td></tr></table></main>
+<div class="overlay"><div class="dlg" style="width:420px"><h2>Revoke agent1?</h2><p class="muted">Anything using it stops working at once.</p><div class="row"><span class="btn">Cancel</span><span class="btn destructive">Revoke</span></div></div></div><div class="note">MOCKUP · revoke confirmation · illustrative only</div></body></html>
