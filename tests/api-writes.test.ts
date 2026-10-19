@@ -8,6 +8,15 @@ import { describe, expect, it } from "vitest";
 // scope would write outside that transaction, so write routes never call requestScope/tenantScope.
 const apiDir = path.resolve(import.meta.dirname, "../packages/app/src/app/api");
 const tenantDir = path.join(apiDir, "tenants", "[tenant]");
+/**
+ * The one global write under the tenant tree: the tenant's own metadata route, whose PATCH sets the
+ * read-only flag (spec .ai/specs/2026-10-19--2018UTC-read-only-tenants.md, Q6). The flag is global
+ * data, so it is keyed in the global store, and it must keep working while the tenant is read-only,
+ * which tenantApiWrite would refuse. Named exactly, so the exception can't widen.
+ */
+const tenantMetadataRoute = path.join(tenantDir, "route.ts");
+/** Whether a route's writes are tenant writes, keyed through tenantApiWrite. */
+const isTenantWrite = (file: string) => file.startsWith(tenantDir + path.sep) && file !== tenantMetadataRoute;
 
 /** Every route.ts under `dir`, recursively. */
 function routes(dir: string): string[] {
@@ -63,9 +72,16 @@ describe("API write routes", () => {
 
   it("are all keyed through apiWrite, or tenantApiWrite in a tenant", () => {
     const offenders = writers
-      .map((file) => ({ route: rel(file), unkeyed: unkeyed(read(file), file.startsWith(tenantDir + path.sep)) }))
+      .map((file) => ({ route: rel(file), unkeyed: unkeyed(read(file), isTenantWrite(file)) }))
       .filter(({ unkeyed }) => unkeyed.length > 0);
     expect(offenders).toEqual([]);
+  });
+
+  it("key only the tenant metadata route globally inside the tenant tree", () => {
+    expect(writers.filter((file) => file.startsWith(tenantDir + path.sep) && !isTenantWrite(file)).map(rel)).toEqual([
+      path.join("tenants", "[tenant]", "route.ts"),
+    ]);
+    expect(isTenantWrite(path.join(tenantDir, "materials", "route.ts"))).toBe(true);
   });
 
   it("never resolve their own request scope", () => {

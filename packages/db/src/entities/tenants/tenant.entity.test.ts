@@ -25,6 +25,15 @@ describe("Tenant", () => {
     ]);
   });
 
+  it("starts writable: neither tenant is read-only until the admin says so", async () => {
+    const tenants = await orm.em.fork().find(Tenant, {});
+
+    expect(tenants.map(({ code, readOnly }) => ({ code, readOnly })).sort((a, b) => a.code.localeCompare(b.code))).toEqual([
+      { code: "prod", readOnly: false },
+      { code: "test", readOnly: false },
+    ]);
+  });
+
   it("rejects any other tenant code", async () => {
     await expect(
       orm.em.getConnection().execute("insert into tenant (code, generation) values ('staging', 1)"),

@@ -76,9 +76,22 @@ describe("AuditTable", () => {
   });
 
   it("shows an action it has no name for as its ID", () => {
-    render(<AuditTable entries={[entry({ action: "tenants.tenant.read-only-changed" })]} label="Global audit" labels={en.audit} />);
+    render(<AuditTable entries={[entry({ action: "tenants.tenant.reset" })]} label="Global audit" labels={en.audit} />);
 
-    expect(screen.getByText("tenants.tenant.read-only-changed")).toBeTruthy();
+    expect(screen.getByText("tenants.tenant.reset")).toBeTruthy();
+  });
+
+  it("names a read-only flag change, with its before and after (AUD-016)", () => {
+    const change = entry({
+      action: "tenants.tenant.read-only-changed",
+      subject: { type: "Tenant", id: "prod", label: "Prod" },
+      before: { readOnly: false },
+      after: { readOnly: true },
+    });
+    render(<AuditTable entries={[change]} label="Global audit" labels={en.audit} />);
+
+    expect(screen.getByText("Read-only flag changed")).toBeTruthy();
+    expect(screen.getByRole("row", { name: /Read-only flag changed/ }).textContent).toMatch(/read-only: no → yes/);
   });
 
   it("offers no way to change an entry (AUD-009)", () => {

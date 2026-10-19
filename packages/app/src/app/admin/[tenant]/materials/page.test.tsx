@@ -41,7 +41,7 @@ describe("MaterialsPage", () => {
   beforeEach(() => {
     mocks.requireUser.mockResolvedValue({ username: "admin", role: "admin" });
     mocks.tenantScope.mockResolvedValue({
-      cradle: { tenant: { code: "test", name: "Test", generation: 2 }, materialService: { list: mocks.list } },
+      cradle: { tenant: { code: "test", name: "Test", generation: 2, readOnly: false }, materialService: { list: mocks.list } },
     });
     mocks.list.mockResolvedValue([bolt]);
     mocks.getMessages.mockResolvedValue({ locale: "en", messages: en });
@@ -67,6 +67,18 @@ describe("MaterialsPage", () => {
     expect(screen.getByRole("heading", { name: "Materiały — Test" }).closest("[lang]")?.getAttribute("lang")).toBe("pl");
     expect(screen.getByText("Surowiec")).toBeTruthy();
     expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("offers the admin no Create while the tenant is read-only (R05)", async () => {
+    mocks.tenantScope.mockResolvedValue({
+      cradle: { tenant: { code: "test", name: "Test", generation: 2, readOnly: true }, materialService: { list: mocks.list } },
+    });
+    mocks.list.mockResolvedValue([]);
+
+    render(await resolveServerComponents(page("test")));
+
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.getByText("No materials in Test yet.")).toBeTruthy();
   });
 
   it("reads nothing for a visitor the gate refuses", async () => {

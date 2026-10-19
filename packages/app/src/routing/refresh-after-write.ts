@@ -9,7 +9,9 @@ export function formValues(values: unknown): object {
 /**
  * Refreshes `paths` after a write that succeeded or met a stale version (so the page shows what
  * changed and a retry carries the new version), and passes the result on. Only then: a failed write
- * may carry a tenant or ID that names no page.
+ * may carry a tenant or ID that names no page. A read-only refusal (`TENANT_READ_ONLY`) must not
+ * refresh either: the refreshed page hides its write controls, which would drop the dialog that
+ * explains the refusal.
  */
 export function refreshAfterWrite<T>(result: Result<T>, ...paths: string[]): Result<T> {
   if (result.ok || result.error.code === "VERSION_CONFLICT") {

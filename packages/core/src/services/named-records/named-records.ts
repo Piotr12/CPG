@@ -9,6 +9,7 @@ import { nextSequentialId } from "../../domain/business-ids/sequential-id";
 import { ConflictError, NotFoundError, versionConflict } from "../../http/errors";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
+import { isScopeReadOnly } from "../tenants/tenant.service";
 
 /** What the screens and the API show about a location, customer or supplier. `id` is its business ID. */
 export interface NamedRecordView {
@@ -119,11 +120,12 @@ export class NamedRecords {
   /**
    * Creates the kind's demonstration records (D06) when the tenant has none of the kind, and returns
    * how many. Not audited, like the demo materials (spec Q8). Each is flushed before the next reads
-   * the highest ID, so they get consecutive IDs.
+   * the highest ID, so they get consecutive IDs. Seeds nothing into a read-only tenant (R05): its
+   * flag is read in the seed's own transaction.
    */
   async seedDemo(): Promise<number> {
     return this.em.transactional(async (em) => {
-      if ((await em.count(this.kind.entity, {})) > 0) return 0;
+      if ((await em.count(this.kind.entity, {})) > 0 || (await isScopeReadOnly(em))) return 0;
       for (const name of this.kind.demoNames) {
         await this.insert(em, name);
         await em.flush();

@@ -13,7 +13,7 @@ The original export marked every scenario `Not executed`. Scenarios are updated 
 - **Partially verified**: only part of the scenario can be or is asserted today; the **Evidence** line says which part is missing and why.
 - **Not executed**: not yet built or not yet checked.
 
-Last updated 2026-10-19 for epic E01 (#9), against CI on `main` at `9ea5973`, and for its end-to-end follow-up (#52), whose statuses hold once that PR passes CI and merges.
+Last updated 2026-10-19 for epic E01 (#9), against CI on `main` at `9ea5973`, for its end-to-end follow-up (#52), and for E02-S04 read-only tenants (#25), whose statuses hold once that PR passes CI and merges.
 
 This document contains the complete acceptance catalogue for the CPG MVP. Each test preserves its ID, title, priority, execution channel, and Given / When / Then criteria.
 
@@ -140,32 +140,36 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### TEN-015 — Tenant read-only blocks normal writes
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** The gate doesn't look at the role: `packages/core/src/http/tenant-server-action.test.ts` refuses a normal user's write to a read-only tenant with `TENANT_READ_ONLY` and runs nothing, and `tests/integration/read-only.test.ts` shows the read-only explanation on a refused screen write (the admin's). No normal user can write business data yet (materials are admin-only), so the order-creation part waits for slice 2. E02-S04, #25.
 - **Given:** Prod set read-only by admin
 - **When:** Normal user attempts order creation
 - **Then:** No document or audit business mutation posts; clear read-only explanation.
 
 ### TEN-016 — Read-only also blocks administrator
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/read-only-api.test.ts` (the admin token's update of a Test material while Test is read-only is 409 `TENANT_READ_ONLY`, and the stored description and version remain), `tests/integration/read-only.test.ts` (on the screens, the admin's Create material from a page loaded before the flag is refused with the explanation, and nothing is stored), `packages/core/src/http/tenant-server-action.test.ts`. E02-S04, #25.
 - **Given:** Test set read-only
 - **When:** Admin attempts master-data update
 - **Then:** Update is blocked despite admin role; previously stored values remain.
 
 ### TEN-017 — Read-only covers API writes
 
-**Priority:** P0 · **Channel:** API · **Status:** Not executed
+**Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/read-only-api.test.ts` (an admin token's material create and edit in read-only Prod answer 409 `TENANT_READ_ONLY`, with nothing changed), `packages/core/src/services/idempotency/idempotency.service.test.ts` (no key is stored). Goods issues come in slice 2; the gate covers every tenant write route. E02-S04, #25.
 - **Given:** Prod read-only
 - **When:** API attempts goods issue with otherwise valid token and idempotency key
 - **Then:** Request is rejected; no inventory movement or order change is created.
 
 ### TEN-018 — Read-only allows reads
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `tests/integration/read-only-api.test.ts` (materials and the tenant audit read through the API for the admin and a normal user), `tests/integration/read-only.test.ts` (the screens). Inventory and MRP reports wait for slices 2 and 3. E02-S04, #25.
 - **Given:** Test read-only with records and last MRP run
 - **When:** Normal user opens inventory, MRP report and audit
 - **Then:** All read-only views still work.
@@ -180,16 +184,18 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### TEN-020 — Global account operations during tenant read-only
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/read-only-api.test.ts`: with both tenants read-only, the admin creates a user, a normal user changes their theme, creates an API token on the tokens screen and revokes it. E02-S04, #25.
 - **Given:** Both business tenants read-only
 - **When:** Admin creates user; user changes theme and creates own API token
 - **Then:** Global allowed operations succeed without writing tenant business records.
 
 ### TEN-021 — Read-only flags independent
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/read-only-api.test.ts` (Test writes while Prod is read-only), `tests/integration/read-only.test.ts` (Test keeps Create material), `packages/core/src/services/tenants/tenant.service.test.ts`. E02-S04, #25.
 - **Given:** Test and Prod both available
 - **When:** Set Test read-only, inspect Prod and try Prod transaction
 - **Then:** Prod remains in its previous write state and can be modified if previously writable.
@@ -3468,8 +3474,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### API-030 — API cannot bypass tenant read-only
 
-**Priority:** P0 · **Channel:** API · **Status:** Not executed
+**Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/read-only-api.test.ts` (an admin token's update of a Prod material is 409 `TENANT_READ_ONLY` and changes nothing). E02-S04, #25.
 - **Given:** Prod read-only and admin token provided
 - **When:** Try admin-originated business record update via API
 - **Then:** Blocked regardless of token privilege; no write.
@@ -3631,8 +3638,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### AUD-016 — Global audit covers read-only toggle
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/read-only-api.test.ts` (both changes, with before and after, through `GET /api/audit`), `tests/integration/read-only.test.ts` (the Global audit screen), `packages/core/src/services/tenants/tenant.service.test.ts`. E02-S04, #25.
 - **Given:** Admin sets Prod read-only true then false
 - **When:** Read Global audit
 - **Then:** Both changes logged with before/after read-only flag values.

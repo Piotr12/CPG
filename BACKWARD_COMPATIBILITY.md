@@ -75,8 +75,8 @@ Rename either one only by reading the old name for one release.
 
 Route handlers under `app/api/` are protected the same way: their paths, methods, request schemas, the result envelope (`{ ok, data }` / `{ ok: false, error: { code, message, fieldErrors? } }`), error codes and HTTP statuses. Changes are additive (new optional fields, new routes), and removals go through a deprecation release. Today's routes:
 
-- `GET /api/tenants`;
-- `GET /api/tenants/{tenant}` (404 `TENANT_NOT_FOUND`);
+- `GET /api/tenants` and `GET /api/tenants/{tenant}` (404 `TENANT_NOT_FOUND`). Each tenant is `{ code, name, generation, readOnly }`;
+- `PATCH /api/tenants/{tenant}` (`{ readOnly }` and nothing else, admin only; spec `2026-10-19--2018UTC-read-only-tenants`). It sets the tenant's read-only flag and answers the tenant. It is global metadata, not tenant data, so it is the stated exception to the tenant-write rules below: its key goes in the global store, it takes no `Dataset-Generation`, and it works while the tenant is read-only;
 - `GET /api/tokens` (the caller's own tokens);
 - `DELETE /api/tokens/{id}` (404 `TOKEN_NOT_FOUND`);
 - `GET /api/users` (403 `FORBIDDEN` for a normal user). Each row carries `version`;
@@ -120,6 +120,7 @@ Every tenant-scoped endpoint lives under `/api/tenants/{tenant}/`.
   - optional for Prod;
   - a malformed value is 428 `GENERATION_REQUIRED` in either tenant;
   - a stale value is 409 `GENERATION_STALE`.
+- **Read-only tenants** (R05): every tenant write to a read-only tenant is 409 `TENANT_READ_ONLY`, whoever the caller is. It is checked after the generation and after the key lookup, so a repeat of a write stored before the flag was set still replays. Nothing is written, and the key stays unused.
 
 These header names, codes and statuses are part of the contract. `tests/api-writes.test.ts` keeps every write route on the keyed wrapper.
 

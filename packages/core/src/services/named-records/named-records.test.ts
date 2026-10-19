@@ -1,7 +1,7 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { initOrm, Location, OptimisticLockError, selectTenant, TenantAuditEvent, type Orm, type TenantCode } from "@cpg/db";
+import { initOrm, Location, OptimisticLockError, selectTenant, Tenant, TenantAuditEvent, type Orm, type TenantCode } from "@cpg/db";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { loadConfig } from "../../config";
@@ -245,6 +245,15 @@ describe.each(KINDS)("$Service.name", ({ Service, subjectType, prefix, code, nou
       );
       expect(await audit("test")).toEqual([]);
       expect(await service("prod").list()).toEqual([]);
+    });
+
+    it("seeds nothing into a read-only tenant, read past the identity map (R05)", async () => {
+      const em = scopedEm("test");
+      await em.findOneOrFail(Tenant, { code: "test" });
+      await orm.em.fork().nativeUpdate(Tenant, { code: "test" }, { readOnly: true });
+
+      expect(await service("test", em).seedDemo()).toBe(0);
+      expect(await service("test").list()).toEqual([]);
     });
   });
 });

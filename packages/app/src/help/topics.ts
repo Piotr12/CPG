@@ -77,6 +77,7 @@ const en: Record<HelpTopicId, HelpText> = {
       "Cave control is the page every account lands on after signing in: choose the Test or Prod tenant there. Your language and theme, your API tokens and Sign out are in your account card at the bottom of the sidebar. There is no password change: only the administrator sets passwords.",
       "The administrator opens this page from Administration → Tenants in the sidebar, next to Users, and also sees the Database card here. The card shows where CPG keeps its data, how many migrations are applied, whether any are still pending, and how many settings are stored.",
       "A pending migration normally means CPG is still starting. If it stays, tell whoever runs CPG.",
+      "The administrator's Read-only card makes Test or Prod read-only, and writable again, after a confirmation. Each tenant has its own flag, and every change is kept in the Global audit. A read-only tenant shows Read-only on the chooser and on its strip.",
       "Open Test or Open Prod takes you to that tenant's business data.",
     ],
   },
@@ -86,6 +87,7 @@ const en: Record<HelpTopicId, HelpText> = {
       "CPG keeps two separate sets of business data: Test, with demonstration data that is safe to experiment with, and Prod, the live data.",
       "The row at the top of every page says which one you are working in: TEST in amber, PROD in dark with a red edge, or GLOBAL on pages shared by both, followed by where you are, such as Master data › Materials.",
       "Switch with TEST | PROD at the top of the sidebar: you stay on the same screen in the other tenant, or land on its list when you were on one record. On a page shared by both, the switch only changes which tenant the sidebar's screens open. Nothing you do in one ever appears in the other, and the same number can mean a different record in each.",
+      "When the administrator makes a tenant read-only, the switch shows a lock on its side and a banner under the row at the top of its pages says so. Nobody can change its business data then, the administrator and the API included, so the buttons that would change it are gone. You can still read everything, including the audit, and change your own language, theme and API tokens.",
     ],
   },
   "managing-users": {
@@ -212,6 +214,7 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Kontrola jaskini to strona, na którą trafia każde konto po zalogowaniu: wybierz tu środowisko Test lub Prod. Język i motyw, tokeny API oraz przycisk Wyloguj są na karcie konta na dole panelu bocznego. Nie ma tu zmiany hasła: hasła ustawia tylko administrator.",
       "Administrator otwiera tę stronę pozycją Administracja → Środowiska w panelu bocznym, obok Użytkowników, i widzi tu też kartę Baza danych. Karta pokazuje, gdzie CPG przechowuje dane, ile migracji zastosowano, czy jakieś jeszcze oczekują i ile ustawień zapisano.",
       "Oczekująca migracja zwykle oznacza, że CPG jeszcze się uruchamia. Jeśli nie znika, powiedz o tym osobie, która utrzymuje CPG.",
+      "Karta Tylko do odczytu administratora po potwierdzeniu ustawia Test lub Prod tylko do odczytu i z powrotem jako zapisywalne. Każde środowisko ma własne ustawienie, a każda zmiana trafia do audytu globalnego. Środowisko tylko do odczytu jest tak oznaczone przy wyborze środowiska i na swoim pasku.",
       "Przyciski Otwórz Test i Otwórz Prod prowadzą do danych biznesowych wybranego środowiska.",
     ],
   },
@@ -221,6 +224,7 @@ const pl: Record<HelpTopicId, HelpText> = {
       "CPG przechowuje dwa oddzielne zbiory danych biznesowych: Test z danymi demonstracyjnymi, na których można bezpiecznie eksperymentować, oraz Prod z danymi rzeczywistymi.",
       "Wiersz u góry każdej strony pokazuje, w którym środowisku pracujesz: TEST na bursztynowo, PROD na ciemno z czerwoną krawędzią albo GLOBAL na stronach wspólnych dla obu, a za nim miejsce, w którym jesteś, na przykład Dane podstawowe › Materiały.",
       "Przełączaj się przełącznikiem TEST | PROD na górze panelu bocznego: zostajesz na tym samym ekranie w drugim środowisku albo trafiasz na jego listę, jeśli byłeś na jednym rekordzie. Na stronie wspólnej dla obu przełącznik zmienia tylko to, które środowisko otwierają ekrany panelu. Nic, co zrobisz w jednym środowisku, nie pojawi się w drugim, a ten sam numer może oznaczać w każdym z nich inny rekord.",
+      "Gdy administrator ustawi środowisko tylko do odczytu, przełącznik pokazuje kłódkę po jego stronie, a baner pod wierszem u góry jego stron to mówi. Nikt nie może wtedy zmienić jego danych biznesowych, także administrator i API, więc przyciski, które by je zmieniały, znikają. Nadal możesz wszystko czytać, także audyt, i zmieniać własny język, motyw i tokeny API.",
     ],
   },
   "managing-users": {
