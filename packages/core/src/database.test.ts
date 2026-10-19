@@ -29,6 +29,7 @@ describe("migrateDatabase", () => {
       "Migration20261019110502_audit_events",
       "Migration20261019115945_api_tokens",
       "Migration20261019155802_api_idempotency",
+      "Migration20261019191302_materials",
     ]);
     expect(await migrateDatabase(config)).toEqual([]);
   });
