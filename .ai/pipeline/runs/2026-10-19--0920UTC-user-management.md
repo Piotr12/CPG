@@ -98,6 +98,8 @@ PR: #34
   - `SignedInBar` takes the user and shows the Users link;
   - #19's `NotFoundError(code, message)` replaces this branch's copy, and `ForbiddenError`/`ConflictError` got HTTP statuses 403/409;
   - the users migration was regenerated on top of `tenants` (`Migration20261019103355`).
+- **Migration renamed twice on a pushed branch** (each merge of `main` regenerated it, now `Migration20261019103355`). A local `data/` that applied an earlier name from this branch fails at startup: reset that local database. Production never ran it.
+- **Merge review** (fresh context): approve. The minors are addressed: the tenants spec now has an implementation note on `requireUser()`, and the migration rename is noted above. `mockup-04` in the user-management spec predates the tenant chooser; it is illustrative only.
 - **Pre-existing build log** "Route handler failed … /api/tenants" during prerender: it is on `main` since #36 and was filed as #38.
 
 ## Verification
