@@ -35,7 +35,10 @@ describe("migrate", () => {
   it("applies pending migrations once and closes its connection", async () => {
     const databasePath = tempDatabase();
 
-    expect(await migrate({ databasePath })).toEqual(["Migration20261017091007_initial"]);
+    expect(await migrate({ databasePath })).toEqual([
+      "Migration20261017091007_initial",
+      "Migration20261019080354_auth_users_sessions",
+    ]);
     expect(await migrate({ databasePath })).toEqual([]);
   });
 });
@@ -46,9 +49,9 @@ describe("getMigrationStatus", () => {
     const orm = await initOrm({ databasePath });
 
     try {
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 1 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 2 });
       await orm.migrator.up();
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 1, pending: 0 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 2, pending: 0 });
     } finally {
       await orm.close();
     }
@@ -56,15 +59,25 @@ describe("getMigrationStatus", () => {
 });
 
 describe("migrations", () => {
-  it("can be rolled back", async () => {
+  it("can be rolled back, one at a time", async () => {
     const databasePath = tempDatabase();
     await migrate({ databasePath });
     const orm = await initOrm({ databasePath });
+    const tables = async () =>
+      (
+        await orm.em
+          .getConnection()
+          .execute<{ name: string }[]>("select name from sqlite_master where name in ('setting', 'user', 'session')")
+      )
+        .map(({ name }) => name)
+        .sort();
 
     try {
+      expect(await tables()).toEqual(["session", "setting", "user"]);
       await orm.migrator.down();
-      const tables = await orm.em.getConnection().execute("select name from sqlite_master where name = 'setting'");
-      expect(tables).toEqual([]);
+      expect(await tables()).toEqual(["setting"]);
+      await orm.migrator.down();
+      expect(await tables()).toEqual([]);
     } finally {
       await orm.close();
     }

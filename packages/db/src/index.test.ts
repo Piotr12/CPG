@@ -4,13 +4,16 @@ import * as db from "./index";
 describe("@cpg/db", () => {
   it("exports the public API", () => {
     expect(Object.keys(db).sort()).toEqual([
+      "Session",
       "Setting",
+      "USER_ROLES",
+      "User",
       "createOrmConfig",
       "entities",
       "getMigrationStatus",
       "initOrm",
       "migrate",
     ]);
-    expect(db.entities).toEqual([db.Setting]);
+    expect(db.entities).toEqual([db.Setting, db.User, db.Session]);
   });
 });
