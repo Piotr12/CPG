@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@cpg/ui/components/card";
 import { currentUser } from "../../auth/require-admin";
 import { signIn } from "./actions";
@@ -29,6 +30,7 @@ export default function LoginPage() {
 
 /** Someone already signed in has nothing to do here. */
 async function RedirectWhenSignedIn() {
+  await connection();
   if ((await currentUser())?.role === "admin") redirect("/admin");
   return null;
 }

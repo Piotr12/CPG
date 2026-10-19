@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { signIn, signOut } from "./actions";
+import { signIn } from "./actions";
 
 const expiresAt = new Date("2026-10-19T20:00:00Z");
 const mocks = vi.hoisted(() => ({
@@ -9,9 +9,7 @@ const mocks = vi.hoisted(() => ({
   redirect: vi.fn((path: string) => {
     throw new Error(`NEXT_REDIRECT ${path}`);
   }),
-  readSessionToken: vi.fn(),
   writeSessionCookie: vi.fn(),
-  clearSessionCookie: vi.fn(),
 }));
 vi.mock("@cpg/core", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@cpg/core")>()),
@@ -19,11 +17,7 @@ vi.mock("@cpg/core", async (importOriginal) => ({
 }));
 vi.mock("next/headers", () => ({ headers: mocks.headers }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
-vi.mock("../../auth/session-cookie", () => ({
-  readSessionToken: mocks.readSessionToken,
-  writeSessionCookie: mocks.writeSessionCookie,
-  clearSessionCookie: mocks.clearSessionCookie,
-}));
+vi.mock("../../auth/session-cookie", () => ({ writeSessionCookie: mocks.writeSessionCookie }));
 
 function form(fields: Record<string, string>) {
   const data = new FormData();
@@ -70,21 +64,16 @@ describe("signIn", () => {
   it.each([
     ["an empty password", { username: "admin", password: "" }],
     ["a missing field", { username: "admin" }],
+    ["a blank username", { username: "   ", password: "pw" }],
   ])("asks for both fields on %s without calling the service", async (_case, fields) => {
     await expect(signIn({}, form(fields))).resolves.toEqual({ error: "Enter your username and password." });
     expect(mocks.authService.signIn).not.toHaveBeenCalled();
   });
-});
 
-describe("signOut", () => {
-  afterEach(() => vi.clearAllMocks());
-
-  it("ends the session, clears the cookie and goes to /login", async () => {
-    mocks.readSessionToken.mockResolvedValue("tok");
-
-    await expect(signOut()).rejects.toThrow("NEXT_REDIRECT /login");
-
-    expect(mocks.authService.signOut).toHaveBeenCalledWith("tok");
-    expect(mocks.clearSessionCookie).toHaveBeenCalledOnce();
+  it("answers an over-long password like any wrong credentials", async () => {
+    await expect(signIn({}, form({ username: "admin", password: "x".repeat(257) }))).resolves.toEqual({
+      error: "Invalid username or password.",
+    });
+    expect(mocks.authService.signIn).not.toHaveBeenCalled();
   });
 });

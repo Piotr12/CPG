@@ -32,6 +32,13 @@ describe("currentUser", () => {
     expect(mocks.validateSession).toHaveBeenCalledWith("tok");
   });
 
+  it("doesn't touch the database without a session cookie", async () => {
+    mocks.readSessionToken.mockResolvedValue(undefined);
+
+    await expect(currentUser()).resolves.toBeNull();
+    expect(mocks.requestScope).not.toHaveBeenCalled();
+  });
+
   it("treats an error as signed out and logs it", async () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     const error = new Error("database is locked");

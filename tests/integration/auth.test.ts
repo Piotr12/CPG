@@ -40,6 +40,13 @@ describe("signing in", () => {
     expect(await sessionCookie(browser)).toMatchObject({ httpOnly: true, secure: true, sameSite: "Lax", path: "/" });
   });
 
+  it("sends a signed-in admin who opens /login on to /admin", async () => {
+    await browser.open(`${baseUrl}/login`);
+    await browser.waitFor("[data-slot=badge]");
+
+    expect(new URL(await browser.url()).pathname).toBe("/admin");
+  });
+
   it("signs out, and /admin is closed again", async () => {
     await browser.click("main form button[type=submit]");
     await browser.waitFor("#username");

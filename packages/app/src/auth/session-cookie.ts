@@ -12,7 +12,8 @@ export async function readSessionToken(): Promise<string | undefined> {
  * while a Server Component renders. `secure` is on in production (plain HTTP works in development).
  */
 export async function writeSessionCookie(token: string, expiresAt: Date, { secure }: { secure: boolean }) {
-  (await cookies()).set(SESSION_COOKIE, token, { httpOnly: true, secure, sameSite: "lax", path: "/", expires: expiresAt });
+  const maxAge = Math.max(0, Math.floor((expiresAt.getTime() - Date.now()) / 1000));
+  (await cookies()).set(SESSION_COOKIE, token, { httpOnly: true, secure, sameSite: "lax", path: "/", maxAge });
 }
 
 export async function clearSessionCookie() {

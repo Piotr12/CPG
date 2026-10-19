@@ -4,12 +4,14 @@ import { resolveServerComponents } from "../../../../../tests/setup/server-compo
 import LoginPage, { metadata } from "./page";
 
 const mocks = vi.hoisted(() => ({
+  connection: vi.fn(),
   currentUser: vi.fn(),
   redirect: vi.fn((path: string) => {
     throw new Error(`NEXT_REDIRECT ${path}`);
   }),
 }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
+vi.mock("next/server", () => ({ connection: mocks.connection }));
 vi.mock("../../auth/require-admin", () => ({ currentUser: mocks.currentUser }));
 vi.mock("./actions", () => ({ signIn: vi.fn() }));
 
@@ -25,6 +27,7 @@ describe("LoginPage", () => {
     expect(screen.getByLabelText("Username")).toBeTruthy();
     expect(screen.getByLabelText("Password")).toBeTruthy();
     expect(mocks.redirect).not.toHaveBeenCalled();
+    expect(mocks.connection.mock.invocationCallOrder[0]).toBeLessThan(mocks.currentUser.mock.invocationCallOrder[0]);
   });
 
   it("sends a signed-in admin to /admin", async () => {

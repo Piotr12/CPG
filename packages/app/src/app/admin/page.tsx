@@ -6,7 +6,7 @@ import { Button } from "@cpg/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@cpg/ui/components/card";
 import { requestScope } from "@cpg/core";
 import { requireAdmin } from "../../auth/require-admin";
-import { signOut } from "../login/actions";
+import { signOut } from "./actions";
 
 export const metadata: Metadata = { title: "Admin · Caveman Planning Good" };
 

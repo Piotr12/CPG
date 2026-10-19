@@ -14,7 +14,7 @@ vi.mock("@cpg/core", () => ({
   requestScope: async () => ({ cradle: { systemStatusService: { getStatus: mocks.getStatus } } }),
 }));
 vi.mock("../../auth/require-admin", () => ({ requireAdmin: mocks.requireAdmin }));
-vi.mock("../login/actions", () => ({ signOut: mocks.signOut }));
+vi.mock("./actions", () => ({ signOut: mocks.signOut }));
 
 const status = { databasePath: "/externaldata/cpg.sqlite", appliedMigrations: 3, pendingMigrations: 0, settings: 7 };
 const admin = { sessionId: "s1", userId: "u1", username: "admin", role: "admin" };

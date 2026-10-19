@@ -4,6 +4,10 @@ export const THROTTLE_WINDOW_MS = 15 * 60_000;
 export const MAX_FAILURES_PER_CLIENT = 5;
 /** Failures from any client against one account inside the window: stops many-IP guessing. */
 export const MAX_FAILURES_PER_ACCOUNT = 20;
+/** Memory ceiling: past this many buckets the oldest are dropped (~a few MB at worst). */
+export const MAX_BUCKETS = 10_000;
+/** Expired buckets are swept at most this often, so a check never scans the map every time. */
+export const PRUNE_INTERVAL_MS = 60_000;
 
 interface Bucket {
   failures: number[];
@@ -12,12 +16,14 @@ interface Bucket {
 
 /**
  * In-memory brute-force protection for sign-in, per client IP + account and per account. Unknown
- * usernames all share the client's `*` bucket, so random names can't grow the map without bound.
+ * usernames all share the client's `*` bucket, and the map holds at most `MAX_BUCKETS` entries
+ * (oldest dropped first), so neither random names nor rotating addresses grow it without bound.
  * Counters live in the process: they reset on restart and aren't shared between instances, which
  * is fine for CPG's single server.
  */
 export class LoginThrottle {
   private readonly buckets = new Map<string, Bucket>();
+  private lastPrunedAt = 0;
 
   /** Whether sign-in attempts from `clientIp` for `account` (null: an unknown username) are blocked. */
   isBlocked(clientIp: string, account: string | null): boolean {
@@ -47,10 +53,15 @@ export class LoginThrottle {
     const bucket = this.buckets.get(key) ?? { failures: [], blockedUntil: 0 };
     bucket.failures = [...bucket.failures.filter((at) => now - at < THROTTLE_WINDOW_MS), now];
     if (bucket.failures.length >= limit) bucket.blockedUntil = now + THROTTLE_WINDOW_MS;
+    // Re-insert so Map order stays oldest-activity first, then evict past the ceiling.
+    this.buckets.delete(key);
     this.buckets.set(key, bucket);
+    while (this.buckets.size > MAX_BUCKETS) this.buckets.delete(this.buckets.keys().next().value!);
   }
 
   private prune(now: number): void {
+    if (now - this.lastPrunedAt < PRUNE_INTERVAL_MS) return;
+    this.lastPrunedAt = now;
     for (const [key, bucket] of this.buckets) {
       const isRecent = bucket.failures.some((at) => now - at < THROTTLE_WINDOW_MS);
       if (!isRecent && bucket.blockedUntil <= now) this.buckets.delete(key);

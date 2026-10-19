@@ -60,6 +60,15 @@ describe("assertServerConfig", () => {
     );
   });
 
+  it.each([
+    ["a trailing newline", "correct horse battery\n"],
+    ["a leading space", " correct horse battery"],
+  ])("refuses a long enough password with %s", (_case, password) => {
+    expect(() => assertServerConfig(withPassword(password))).toThrow(
+      "CPG_ADMIN_PASSWORD starts or ends with whitespace: remove it (a stray newline is the usual cause).",
+    );
+  });
+
   it("accepts a password of the minimum length", () => {
     expect(() => assertServerConfig(withPassword("x".repeat(MIN_ADMIN_PASSWORD_LENGTH)))).not.toThrow();
   });

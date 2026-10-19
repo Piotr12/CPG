@@ -44,15 +44,20 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
 }
 
 /**
- * Throws unless the config can run the server: the admin password must be set and at least
- * `MIN_ADMIN_PASSWORD_LENGTH` characters once trimmed. The message never contains the value.
+ * Throws unless the config can run the server: the admin password must be set, at least
+ * `MIN_ADMIN_PASSWORD_LENGTH` characters once trimmed, and free of leading or trailing whitespace
+ * (a secret pasted with a stray newline would otherwise start fine and never match at sign-in).
+ * The message never contains the value.
  */
 export function assertServerConfig(config: AppConfig): void {
-  const length = config.adminPassword?.trim().length ?? 0;
-  if (length < MIN_ADMIN_PASSWORD_LENGTH) {
+  const password = config.adminPassword ?? "";
+  if (password.trim().length < MIN_ADMIN_PASSWORD_LENGTH) {
     throw new Error(
       `Missing or too short CPG_ADMIN_PASSWORD: set it to at least ${MIN_ADMIN_PASSWORD_LENGTH} characters.`,
     );
+  }
+  if (password !== password.trim()) {
+    throw new Error("CPG_ADMIN_PASSWORD starts or ends with whitespace: remove it (a stray newline is the usual cause).");
   }
 }
 

@@ -5,11 +5,17 @@ import { readSessionToken } from "./session-cookie";
 /** Where an unauthenticated visitor is sent. */
 export const SIGN_IN_PATH = "/login";
 
-/** The signed-in user for this request, or null. Any error counts as signed out (fail closed). */
+/**
+ * The signed-in user for this request, or null. Any error counts as signed out (fail closed).
+ * The cookie is read first: it makes the caller request-time, and without one there is no reason
+ * to open the database.
+ */
 export async function currentUser(): Promise<SessionUser | null> {
   try {
+    const token = await readSessionToken();
+    if (!token) return null;
     const { authService } = (await requestScope()).cradle;
-    return await authService.validateSession(await readSessionToken());
+    return await authService.validateSession(token);
   } catch (error) {
     // Next.js signals dynamic rendering and redirects by throwing; those must propagate.
     unstable_rethrow(error);

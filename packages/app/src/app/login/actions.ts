@@ -2,11 +2,10 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { requestScope, serverAction } from "@cpg/core";
+import { INVALID_CREDENTIALS, requestScope, serverAction } from "@cpg/core";
 import { signInSchema } from "@cpg/core/validators/auth/sign-in.schema";
 import { clientIpFrom } from "../../auth/client-ip";
-import { SIGN_IN_PATH } from "../../auth/require-admin";
-import { clearSessionCookie, readSessionToken, writeSessionCookie } from "../../auth/session-cookie";
+import { writeSessionCookie } from "../../auth/session-cookie";
 
 export interface SignInState {
   error?: string;
@@ -23,16 +22,15 @@ export async function signIn(_previous: SignInState, formData: FormData): Promis
   const attempt = serverAction(signInSchema, (input) => authService.signIn({ ...input, clientIp }));
   const result = await attempt({ username: formData.get("username"), password: formData.get("password") });
 
-  if (!result.ok) return { error: result.error.code === "VALIDATION_FAILED" ? MISSING_FIELDS : result.error.message };
+  if (!result.ok) return { error: errorMessage(result.error, formData) };
 
   await writeSessionCookie(result.data.token, result.data.expiresAt, { secure: config.env === "production" });
   redirect(AFTER_SIGN_IN_PATH);
 }
 
-/** Ends the current session (if any), drops the cookie and goes back to sign-in. */
-export async function signOut(): Promise<void> {
-  const { authService } = (await requestScope()).cradle;
-  await authService.signOut(await readSessionToken());
-  await clearSessionCookie();
-  redirect(SIGN_IN_PATH);
+/** Missing fields get a prompt; anything else the schema refuses reads like any wrong credentials. */
+function errorMessage(error: { code: string; message: string }, formData: FormData): string {
+  if (error.code !== "VALIDATION_FAILED") return error.message;
+  const isFilled = (name: string) => String(formData.get(name) ?? "").trim() !== "";
+  return isFilled("username") && isFilled("password") ? INVALID_CREDENTIALS : MISSING_FIELDS;
 }

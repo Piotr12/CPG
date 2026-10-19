@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { LoginThrottle, MAX_FAILURES_PER_ACCOUNT, MAX_FAILURES_PER_CLIENT, THROTTLE_WINDOW_MS } from "./login-throttle";
+import {
+  LoginThrottle,
+  MAX_BUCKETS,
+  MAX_FAILURES_PER_ACCOUNT,
+  MAX_FAILURES_PER_CLIENT,
+  PRUNE_INTERVAL_MS,
+  THROTTLE_WINDOW_MS,
+} from "./login-throttle";
 
 const IP = "203.0.113.7";
 
@@ -75,14 +82,38 @@ describe("LoginThrottle", () => {
     expect(throttle.isBlocked(IP, null)).toBe(false);
   });
 
+  const bucketsOf = (instance: LoginThrottle) =>
+    (instance as unknown as { buckets: Map<string, unknown> }).buckets;
+
   it("prunes buckets that have nothing left to remember", () => {
     for (let i = 0; i < 1000; i++) throttle.recordFailure(`10.1.${i >> 8}.${i & 255}`, null);
-    const buckets = (throttle as unknown as { buckets: Map<string, unknown> }).buckets;
-    expect(buckets.size).toBe(1000);
+    expect(bucketsOf(throttle).size).toBe(1000);
 
     vi.advanceTimersByTime(THROTTLE_WINDOW_MS);
     throttle.isBlocked(IP, null);
 
-    expect(buckets.size).toBe(0);
+    expect(bucketsOf(throttle).size).toBe(0);
+  });
+
+  it("sweeps at most once per prune interval", () => {
+    fail(throttle, 1, "10.9.9.9", null);
+    vi.advanceTimersByTime(THROTTLE_WINDOW_MS - 1);
+    throttle.isBlocked(IP, null); // sweeps now, while the failure is still recent
+
+    vi.advanceTimersByTime(1);
+    throttle.isBlocked(IP, null); // expired, but the last sweep was just now
+    expect(bucketsOf(throttle).size).toBe(1);
+
+    vi.advanceTimersByTime(PRUNE_INTERVAL_MS);
+    throttle.isBlocked(IP, null);
+    expect(bucketsOf(throttle).size).toBe(0);
+  });
+
+  it("never holds more than MAX_BUCKETS, dropping the least recently active", () => {
+    for (let i = 0; i <= MAX_BUCKETS; i++) throttle.recordFailure(`client-${i}`, null);
+
+    expect(bucketsOf(throttle).size).toBe(MAX_BUCKETS);
+    expect(bucketsOf(throttle).has("client:client-0:*")).toBe(false);
+    expect(bucketsOf(throttle).has(`client:client-${MAX_BUCKETS}:*`)).toBe(true);
   });
 });
