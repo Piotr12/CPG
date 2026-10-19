@@ -1,0 +1,39 @@
+import { render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { resolveServerComponents } from "../../../../../tests/setup/server-components";
+import LoginPage, { metadata } from "./page";
+
+const mocks = vi.hoisted(() => ({
+  currentUser: vi.fn(),
+  redirect: vi.fn((path: string) => {
+    throw new Error(`NEXT_REDIRECT ${path}`);
+  }),
+}));
+vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
+vi.mock("../../auth/require-admin", () => ({ currentUser: mocks.currentUser }));
+vi.mock("./actions", () => ({ signIn: vi.fn() }));
+
+describe("LoginPage", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("shows the sign-in form to a visitor", async () => {
+    mocks.currentUser.mockResolvedValue(null);
+
+    render(await resolveServerComponents(LoginPage()));
+
+    expect(screen.getByText("🦣 Sign in to CPG")).toBeTruthy();
+    expect(screen.getByLabelText("Username")).toBeTruthy();
+    expect(screen.getByLabelText("Password")).toBeTruthy();
+    expect(mocks.redirect).not.toHaveBeenCalled();
+  });
+
+  it("sends a signed-in admin to /admin", async () => {
+    mocks.currentUser.mockResolvedValue({ role: "admin" });
+
+    await expect(resolveServerComponents(LoginPage())).rejects.toThrow("NEXT_REDIRECT /admin");
+  });
+
+  it("has its own title", () => {
+    expect(metadata.title).toBe("Sign in · Caveman Planning Good");
+  });
+});

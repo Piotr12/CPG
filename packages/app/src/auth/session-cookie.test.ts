@@ -5,7 +5,9 @@ const jar = vi.hoisted(() => ({ get: vi.fn(), set: vi.fn(), delete: vi.fn() }));
 vi.mock("next/headers", () => ({ cookies: async () => jar }));
 
 describe("session cookie", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it("reads the token from the session cookie", async () => {
     jar.get.mockReturnValue({ value: "tok" });
