@@ -48,6 +48,8 @@ Follows the spec's Implementation Plan, Steps 1–10, unchanged.
 
 ## Progress
 
+PR: #34
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Accounts and sign-in
@@ -61,10 +63,10 @@ Follows the spec's Implementation Plan, Steps 1–10, unchanged.
 
 ### Phase 2: The users screen
 
-- [ ] 2.1 Shared UI layers
-- [ ] 2.2 Actions
-- [ ] 2.3 Page and components
-- [ ] 2.4 Integration tests and full gate
+- [x] 2.1 Shared UI layers — fa778d6
+- [x] 2.2 Actions — eafde57
+- [x] 2.3 Page and components — c8e4f6b
+- [x] 2.4 Integration tests and full gate — ff70e99
 
 ## Notes
 
@@ -72,4 +74,15 @@ Follows the spec's Implementation Plan, Steps 1–10, unchanged.
 - **Race test.** It hooks the service's `em.transactional` so the reset or deactivation commits just before the session transaction opens. Reverting the compare-and-set makes both race tests fail, which is checked.
 - **Lockfile.** `npm install --package-lock-only` added unrelated wasm bundle entries. Only the `engines` hunk was kept, and `npm ci --dry-run` passes.
 
+- **React 19 transitions.** State set after an `await` inside `startTransition` leaves the transition, so an error could render while the button still said "Saving…". This showed up as a flaky unit test under the full parallel run. `CrudForm` and `SetActiveDialog` now wrap the post-await updates in `startTransition`; five consecutive full runs passed.
+- **Username conflicts.** "That username is taken." is a form-level alert, not a field error: `ConflictError` carries no field. The mockup's under-the-field placement is illustrative only.
+- **Help for `/admin/users`.** #18 isn't on `main`, so no help entry was added; a follow-up issue tracks it.
+
 ## Verification
+
+- `npm run lint`: clean.
+- `npm run typecheck`: clean.
+- `npm run test:coverage`: 297 tests, 100% statements, branches, functions and lines.
+- `npm run build`: OK; `/admin/users` is partially prerendered.
+- `npm run test:integration`: 5 files, 22 tests passed, including the new `users.test.ts` (TEN-004…009 flows).
+- `npm audit`: only the known `braces` advisories (10 high); no dependency changes.
