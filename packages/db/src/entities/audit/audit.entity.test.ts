@@ -82,24 +82,45 @@ describe("GlobalAuditEvent and TenantAuditEvent", () => {
     await expect(scope().find(TenantAuditEvent, {})).rejects.toThrow(TenantViolationError);
   });
 
-  describe.each([
-    ["global_audit_event", () => scope(), GlobalAuditEvent],
-    ["tenant_audit_event", () => scope("test"), TenantAuditEvent],
-  ] as const)("%s is append-only (AUD-010)", (table, open, entity) => {
+  /** The ORM calls each store is probed with, typed per entity (the two schemas don't unify). */
+  const stores = [
+    {
+      table: "global_audit_event",
+      create: async () => {
+        const em = scope();
+        const { id } = em.create(GlobalAuditEvent, entry());
+        await em.flush();
+        return id;
+      },
+      update: (id: string) => scope().nativeUpdate(GlobalAuditEvent, { id }, { subjectLabel: "mallory" }),
+      remove: (id: string) => scope().nativeDelete(GlobalAuditEvent, { id }),
+    },
+    {
+      table: "tenant_audit_event",
+      create: async () => {
+        const em = scope("test");
+        const { id } = em.create(TenantAuditEvent, entry());
+        await em.flush();
+        return id;
+      },
+      update: (id: string) => scope("test").nativeUpdate(TenantAuditEvent, { id }, { subjectLabel: "mallory" }),
+      remove: (id: string) => scope("test").nativeDelete(TenantAuditEvent, { id }),
+    },
+  ];
+
+  describe.each(stores)("$table is append-only (AUD-010)", ({ table, create, update, remove }) => {
     let id: string;
 
     beforeAll(async () => {
-      const em = open();
-      id = em.create(entity, entry()).id;
-      await em.flush();
+      id = await create();
     });
 
     it("aborts an update through the ORM", async () => {
-      await expect(open().nativeUpdate(entity, { id }, { subjectLabel: "mallory" })).rejects.toThrow(AUDIT_APPEND_ONLY);
+      await expect(update(id)).rejects.toThrow(AUDIT_APPEND_ONLY);
     });
 
     it("aborts a delete through the ORM", async () => {
-      await expect(open().nativeDelete(entity, { id })).rejects.toThrow(AUDIT_APPEND_ONLY);
+      await expect(remove(id)).rejects.toThrow(AUDIT_APPEND_ONLY);
     });
 
     it("aborts raw SQL updates and deletes, and the entry is unchanged", async () => {
