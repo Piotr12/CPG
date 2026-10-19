@@ -13,15 +13,15 @@ Today nothing stops a write to Prod: the admin and any admin token can change it
 | # | Question | Chosen answer | Rationale |
 |---|---|---|---|
 | Q1 | Split the issue (flag and toggle vs the gate)? | No. One story, one spec. | A flag nobody enforces and a gate nobody can switch on are both useless alone. The issue's acceptance criteria cover both. |
-| Q2 | Where is the write refused? | In the two tenant write wrappers every tenant write already goes through: `tenantServerAction` (screens) and `IdempotencyService.run` behind `tenantApiWrite` (API). Each reads the tenant fresh **inside the write's transaction**, next to the dataset-generation check, and refuses before the handler runs. `tests/tenant-entry-points.test.ts` and `tests/api-writes.test.ts` already make those wrappers the only way to write tenant data from `app`. No check in `@cpg/db`. | One check in the two places that already gate the generation, with no new mechanism. A flush-time guard in `db` would have to query the tenant inside MikroORM's flush hook, and would also block the slice-2 Test reset, which the PRD lets override the flag internally. Reading inside the transaction makes a concurrent toggle safe (Edge Cases). |
-| Q3 | What does a refused write answer? | `ConflictError` with code `TENANT_READ_ONLY`, HTTP 409: "Prod is read-only, so its business data can't be changed. The admin can make it writable on the Admin page." Screens show the translated message. A refused write changes nothing and records nothing, no tenant audit entry and no idempotency key. | 409 is what this API already answers when the tenant's state refuses a write (`GENERATION_STALE`), and clients branch on the code. 403 would wrongly say the caller lacks a permission (the admin has every permission). 423 Locked is WebDAV-specific. A new code and status can still change before this ships. Once shipped they are protected (`BACKWARD_COMPATIBILITY.md` §4). |
+| Q2 | Where is the write refused? | In the two tenant write wrappers every tenant write already goes through: `tenantServerAction` (screens) and `IdempotencyService.run` behind `tenantApiWrite` (API). Each reads the tenant fresh **inside the write's transaction**, next to the dataset-generation check, and refuses before the handler runs. `tests/api-writes.test.ts` already keeps every tenant write route on `tenantApiWrite`. `tests/tenant-entry-points.test.ts` is tightened so that every export of a tenant `actions.ts` goes through `tenantServerAction`, and none opens `tenantScope` itself. No check in `@cpg/db`. | One check in the two places that already gate the generation, with no new mechanism. Reading inside the transaction makes a concurrent toggle safe (Edge Cases). Considered and deferred: making a tenant scope's `em` write-locked by default, with only the wrappers unlocking it. That would also stop a page or a `GET` that wrongly writes through a service, but it changes `TenantGuard`, the lock would have to follow MikroORM's forks, and every test that writes in a scope would have to unlock it. Pages and `GET` handlers write nothing today, and the standards already route every mutation through actions and write routes. |
+| Q3 | What does a refused write answer? | `ConflictError` with code `TENANT_READ_ONLY`, HTTP 409: "This tenant is read-only, so its business data can't be changed. The admin can make it writable on the Admin page." The copy doesn't name the tenant: screens translate the code to one fixed string, and the strip already names the tenant. A refused write changes nothing and records nothing, no tenant audit entry and no idempotency key. | 409 is what this API already answers when the tenant's state refuses a write (`GENERATION_STALE`), and clients branch on the code. 403 would wrongly say the caller lacks a permission (the admin has every permission). 423 Locked is WebDAV-specific. A new code and status can still change before this ships. Once shipped they are protected (`BACKWARD_COMPATIBILITY.md` §4). |
 | Q4 | An API retry of a write that succeeded before the tenant became read-only? | It replays the stored result, `Idempotent-Replayed: true`, and changes nothing. The read-only check sits after the key lookup and before the handler. The generation check stays before the lookup, as today. | A replay writes nothing, so it doesn't break the rule. Refusing it would tell a client whose response was lost that its write failed, when it is in fact stored. |
 | Q5 | Where does the admin switch the flag? | On the Global admin page (`/admin`): an admin-only **Read-only** card lists Test and Prod with their state and a "Make read-only" / "Make writable" button behind a confirmation. The server action lives in `app/admin/(global)/actions.ts`. | The flag is global tenant metadata, not tenant data, and the toggle must keep working while the tenant is read-only (PRD §05). A tenant page's action goes through `tenantServerAction`, which would refuse it. `/admin` is already where both tenants are side by side. |
 | Q6 | API parity (R07)? | Yes, in this story. `PATCH /api/tenants/{tenant}` with `{ readOnly: boolean }`, admin only (403 otherwise). It is keyed through `apiWrite` in the **global** key store and takes no `Dataset-Generation`. `readOnly` is added to `GET /api/tenants` and `GET /api/tenants/{tenant}`, and the new route goes into `BACKWARD_COMPATIBILITY.md`. | Every UI operation gets its API equivalent. The flag is global, so the key goes in the global store, and no generation precondition applies, because it isn't a Test data write. `tests/api-writes.test.ts` gets one named exception: the tenant's metadata route uses `apiWrite`. |
 | Q7 | Does the flag carry a version (optimistic locking)? | No. The request **sets** the flag, it doesn't toggle it: `{ readOnly: true }` sent twice stays true. Setting the current value succeeds, returns the tenant and records nothing. | A set is idempotent and there is a single admin, so a stale copy can't do harm: the worst case is setting the value that is already stored. The confirmation fixes the target value when it opens, as the material Deactivate does. A `version` would add a protected field for no case it prevents. |
 | Q8 | How is the change audited (AUD-016)? | `tenants.tenant.read-only-changed` in the Global audit, subject `{ type: "tenant", id: "prod", label: "Prod" }`, before and after `{ readOnly }`, recorded with the change in one transaction. The action ID is the one the #42 hand-off on #25 named. | The PRD puts tenant-flag administration in the Global audit. The standards: one allowlisted snapshot, and a write that changes nothing records nothing. |
 | Q9 | What does a read-only tenant's screen show? | Every tenant page's strip adds a **Read-only** label and the sentence "Business data can't be changed." The Global chooser shows a Read-only badge on that tenant. The admin's write controls (Create material, Edit, Deactivate, conversion Add/Change/Remove) are hidden while the tenant is read-only. A page loaded before the flag was set still has them: its write is refused with the translated message, and the page refreshes, so the controls disappear. | TEN-015 asks for a "clear read-only explanation". Hiding controls is not enforcement, the server is; it just doesn't offer what will fail. One message on the strip explains it on every tenant page, so there is no per-screen copy. |
-| Q10 | Is the startup demo seed gated? | No. It writes only into an empty Test, which happens on a fresh database before any request, while both flags are still off. | The seed can't meet a read-only tenant today. The slice-2 Test reset defines how system writes override the flag (PRD: "reset temporarily overrides Test data writes internally with exclusive operation lock"). |
+| Q10 | Is the startup demo seed gated? | Yes. `seedDemo` reads the flag fresh in its transaction and seeds nothing while Test is read-only. It runs at every start and seeds whenever Test has no materials, and a seed that failed once is retried at the next start, so it can meet a read-only, empty Test. | "Every business write" includes the system's. The slice-2 Test reset defines the one sanctioned override (PRD: "reset temporarily overrides Test data writes internally with exclusive operation lock"). |
 | Q11 | TEN-015 asks for a normal user's write. Which one? | None exists yet: every tenant business write today (materials) is admin-only. The gate doesn't look at the role, so a unit test runs the wrapper with a normal user's handler and expects `TENANT_READ_ONLY`. The scenario is **partially verified** until slice 2 brings documents that normal users write. | Building a normal-user write just for this test would be scope creep (D04). |
 
 No assumption needs human confirmation: each one is reversible before merge, and none weakens isolation, a protected contract or an active decision.
@@ -34,7 +34,7 @@ R05: "A read-only tenant blocks every business write and new MRP runs, even for 
 
 1. **The flag.** `Tenant.readOnly`, a boolean that defaults to false, added by a migration. `TenantInfo` (what pages and the API show) gains `readOnly`.
 2. **The toggle.** `TenantService.setReadOnly(code, readOnly, actor)` writes the flag and its Global audit entry in one transaction. It is called by the admin-only server action on `/admin` and by `PATCH /api/tenants/{tenant}`.
-3. **The gate.** `TenantService.currentState(code)` replaces `currentGeneration` and returns `{ generation, readOnly }`, read fresh. `assertWritable(state, name)` (`core/src/domain/tenants/read-only.ts`) throws `TENANT_READ_ONLY`. `tenantServerAction` calls it after the generation check. `IdempotencyService` calls it for a tenant write after the key lookup and before the handler.
+3. **The gate.** `TenantService.currentState(code)` replaces `currentGeneration` and returns `{ generation, readOnly }`, read fresh. `assertWritable(state, name)` (`core/src/domain/tenants/read-only.ts`) throws `TENANT_READ_ONLY`. `tenantServerAction` calls it after the generation check. `IdempotencyService` calls it for a tenant write after the key lookup and before the handler. `MaterialService.seedDemo` checks it too, and seeds nothing into a read-only Test.
 4. **The screens.** The strip's read-only label, the chooser badge, write controls hidden while read-only, and the refusal translated.
 
 **Alternatives considered.**
@@ -87,7 +87,7 @@ Every tenant business write already passes through one of the two wrappers. Addi
 | Route | Change |
 |---|---|
 | `GET /api/tenants`, `GET /api/tenants/{tenant}` | Each tenant gains `readOnly: boolean`. Additive. |
-| `PATCH /api/tenants/{tenant}` (new) | Body `{ readOnly: boolean }`; any other field, or a missing or non-boolean `readOnly`, is 400 `VALIDATION_FAILED`. Admin only: 403 `FORBIDDEN` for a normal user's token, checked before the key and the body. `Idempotency-Key` required (global store), no `Dataset-Generation`. Unknown tenant: 404 `TENANT_NOT_FOUND`. Answers the tenant `{ code, name, generation, readOnly }`. Setting the current value answers the same and records nothing. |
+| `PATCH /api/tenants/{tenant}` (new) | The one write under `/api/tenants/{tenant}/` that is not tenant data: §4's rules that tenant writes store their key in the tenant's store and take `Dataset-Generation` get this route as a stated exception. Body `{ readOnly: boolean }`; any other field, or a missing or non-boolean `readOnly`, is 400 `VALIDATION_FAILED`. Admin only: 403 `FORBIDDEN` for a normal user's token, checked before the key and the body. `Idempotency-Key` required (global store), no `Dataset-Generation`. Unknown tenant: 404 `TENANT_NOT_FOUND`. Answers the tenant `{ code, name, generation, readOnly }`. Setting the current value answers the same and records nothing. |
 | Every write under `/api/tenants/{tenant}/` | When the tenant is read-only: 409 `TENANT_READ_ONLY`, after the generation check (428/409 keep their precedence) and after a matching key's replay (Q4). Nothing is written and the key stays unused. |
 
 ## 📝 UI/UX
@@ -98,7 +98,7 @@ Every tenant business write already passes through one of the two wrappers. Addi
   - **Make read-only** opens a confirmation: "Make Prod read-only? Nobody, the admin included, can change Prod's business data until it is made writable again. Reading, the audit and account settings keep working." Confirming sets the flag, and the page refreshes.
   - **Make writable** asks the reverse.
   - A failure shows the translated error in the dialog.
-- **Tenant pages:** the strip's streamed sentence is followed by a **Read-only** label and "Business data can't be changed." The admin's write controls on the materials list and detail pages are hidden.
+- **Tenant pages:** the strip's streamed sentence is followed by a **Read-only** label and "Business data can't be changed." Both sit inside the `#tenant-strip-text` span, so they are part of the strip's accessible name. `TenantStripText` reads the flag with `(await requestScope()).cradle.tenantService.get(code)`, only for a tenant scope: `components/tenants/` is outside the tenant roots, so it must not open `tenantScope`. The admin's write controls on the materials list and detail pages are hidden.
 - **A stale page:** a write refused with `TENANT_READ_ONLY` shows its translated message in the form or dialog. The page then refreshes (the same revalidation as `VERSION_CONFLICT`), so the strip and the hidden controls catch up.
 - **Help:** the `/admin` topic explains the read-only card, and the tenant-home topic explains what a read-only tenant allows. English and Polish.
 - All strings in `en.ts`/`pl.ts`.
@@ -111,10 +111,12 @@ Prototype: `.ai/specs/assets/read-only-tenants/` (static mockups; see the PR's e
 
 ## 📝 Edge Cases & Failure Scenarios
 
-- **Flag set while a write is in flight.** The write's transaction read the tenant before the toggle committed.
-  - Its first write then fails with `SQLITE_BUSY_SNAPSHOT`. Both wrappers already retry once (`retryingStaleSnapshot`, `IdempotencyService.run`), and the retry reads the flag and refuses.
-  - If the write had already taken the write lock, the toggle waits for it to commit: the write happened before the flag.
+- **Flag set while a write is in flight.** Both wrappers open a deferred transaction whose first statement is the fresh tenant read, so that read takes the snapshot (WAL).
+  - When the toggle commits after that read, the write's first statement fails with `SQLITE_BUSY_SNAPSHOT`. Both wrappers already retry once (`retryingStaleSnapshot`, `IdempotencyService.run`), and the retry reads the flag and refuses.
+  - When the write already holds the write lock, the toggle can't commit before it. In one process, better-sqlite3 waits for the lock synchronously, which can stall both until `busy_timeout`; the toggle then fails with "database is locked" and the admin retries it.
   - Either way no write lands after the flag is committed. A two-ORM unit test proves the first case.
+- **A write commits while the toggle is in flight.** `setReadOnly` reads the tenant fresh (`refresh: true`) and then writes, so it can meet the same stale snapshot. The screen action wraps it in `retryingStaleSnapshot`, and the API route already gets the retry from `IdempotencyService`.
+- **A tenant action that only reads.** `tenantServerAction` becomes write-only: on a read-only tenant it refuses before its handler runs. No tenant action only reads today (pages read in server components). A future read action (search, preview) needs a non-gated variant, and the wrapper's doc comment says so.
 - **Flag cleared while a refused page is open.** The next write succeeds. The page was refreshed after the refusal, so it shows the controls again.
 - **Both tenants read-only (TEN-020).** Users, tokens, preferences, sign-in and sign-out are global writes and never reach the gate.
 - **Unknown tenant on the toggle.** 404 `TENANT_NOT_FOUND`, the same as every tenant route.
@@ -133,7 +135,8 @@ Prototype: `.ai/specs/assets/read-only-tenants/` (static mockups; see the PR's e
 
   All are additive. Removing or renaming any of them later needs a deprecation release.
 - **Gate coverage depends on the wrapper tests.** A future tenant write that bypassed `tenantServerAction`/`tenantApiWrite` would bypass the flag. The existing repo tests already fail on that for `app`. A background job in `core` (automatic MRP) needs its own call: noted under Architecture.
-- **The `api-writes` exception** (the tenant's own metadata route keyed globally) is named in the test, not a pattern match, so it can't silently widen.
+- **The `api-writes` exception** (the tenant's own metadata route keyed globally) matches exactly `tenants/[tenant]/route.ts`, not a pattern, so it can't silently widen.
+- **Residual gap:** a page or `GET` handler that wrote through a service from `tenantScope` would bypass the gate. Nothing does today, and the standards forbid it. The write-locked scope (Q2) closes it if it is ever needed.
 
 ## 📝 Decisions in play
 
@@ -164,9 +167,10 @@ One phase per layer. Each phase leaves the app working: the flag exists and defa
      - the same value records nothing;
      - the flags are independent (TEN-021);
      - an unknown code is `TENANT_NOT_FOUND`;
-     - `currentState` bypasses the identity map.
+     - `currentState` and `setReadOnly`'s comparison bypass the identity map;
+     - `seedDemo` seeds nothing into a read-only, empty Test.
 4. **Validator.** `validators/tenants/tenant-read-only.schema.ts`: `{ readOnly: z.boolean() }`, strict, plus the action's variant with `tenant`. Unit tests for each rule.
-5. **The gate.** `tenantServerAction` and `IdempotencyService` call `assertWritable`. Unit tests:
+5. **The gate.** `tenantServerAction` and `IdempotencyService` call `assertWritable`. `tests/tenant-entry-points.test.ts`: every export of a tenant `actions.ts` calls `tenantServerAction`, and none calls `tenantScope`. The test proves it catches both. Unit tests:
    - a read-only tenant refuses a screen write and an API write, with nothing stored (no material, no tenant audit entry, no key);
    - the admin's and a normal user's handler are both refused (TEN-015, TEN-016);
    - the other tenant still writes (TEN-021);
@@ -179,20 +183,20 @@ One phase per layer. Each phase leaves the app working: the flag exists and defa
 6. **`PATCH /api/tenants/{tenant}`** with `apiWrite(…, { authorize: assertAdmin })` and `apiActor(caller)`. `tests/api-writes.test.ts` names the metadata route as the one `apiWrite` route under `api/tenants/[tenant]/`.
    - Unit tests with `@cpg/core` mocked: the body is parsed with the shared schema, an unknown tenant is 404, and the tenant comes back.
    - `GET` routes return `readOnly`.
-   - Add the route, the field and `TENANT_READ_ONLY` to `BACKWARD_COMPATIBILITY.md` §4.
+   - Add the route, the field and `TENANT_READ_ONLY` to `BACKWARD_COMPATIBILITY.md` §4, and state the route's exception to the tenant key-store and `Dataset-Generation` rules there.
 7. **API integration tests** (`tests/integration/read-only-api.test.ts`). The file restores both flags to writable in `afterAll`.
    - An admin token sets Prod read-only; a normal user's token gets 403.
    - A material `POST`/`PATCH` in Prod with the admin token is 409 `TENANT_READ_ONLY`, and the material is unchanged (TEN-017, API-030).
    - A Test write still succeeds (TEN-021).
    - `GET` of materials and the Prod audit work (TEN-018).
-   - Users, tokens and preferences writes succeed with both tenants read-only (TEN-020).
+   - With both tenants read-only, creating a user, revoking a token and changing preferences succeed (TEN-020). Token creation is screen-only (R07) and is covered by the screen test.
    - Global audit shows both changes with before/after (AUD-016).
    - After clearing the flag, the same write succeeds.
 
 ### Phase 3 — The screens
 
 8. **Action and controls.**
-   - `setTenantReadOnly` in `app/admin/(global)/actions.ts` (`serverAction`, `assertAdmin`, revalidates `/admin` and both tenant trees).
+   - `setTenantReadOnly` in `app/admin/(global)/actions.ts` (`serverAction`, `assertAdmin`, `retryingStaleSnapshot`, revalidates `/admin` and both tenant trees).
    - `components/tenants/read-only-controls.tsx` (`ConfirmDialog`, target fixed on open) and the `/admin` card and badges.
    - Unit tests: admin vs normal user (no card), the confirmation copy for both directions, an error shown, signed out `UNAUTHORIZED`.
 9. **Tenant pages.**
