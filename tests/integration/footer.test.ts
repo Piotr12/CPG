@@ -57,6 +57,12 @@ describe("the footer", () => {
     await expectFooter();
   });
 
+  it("ends the help page", async () => {
+    await browser.open(`${baseUrl}/help`);
+    await browser.waitFor("section#signing-in");
+    await expectFooter();
+  });
+
   it("ends the admin page", async () => {
     await signInAsAdmin(browser, baseUrl, adminPassword);
     await expectFooter();

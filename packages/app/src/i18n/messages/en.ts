@@ -32,6 +32,18 @@ export const en = {
     migrationsPending: (count: number) => `${count} pending`,
     settings: (count: number) => `${count} settings`,
   },
+  nav: {
+    help: "Help",
+  },
+  help: {
+    heading: "Help",
+    searchLabel: "Search help",
+    search: "Search",
+    matches: (count: number, query: string) => `${count} ${count === 1 ? "topic matches" : "topics match"} “${query}”.`,
+    noMatch: (query: string) => `No help topics match “${query}”.`,
+    showAll: "Show all topics",
+    screen: (route: string) => `Screen: ${route}`,
+  },
   preferences: {
     language: "Language",
     theme: "Theme",

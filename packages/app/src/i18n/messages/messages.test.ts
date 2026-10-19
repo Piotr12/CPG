@@ -30,4 +30,14 @@ describe("dictionaries", () => {
     expect(en.admin[key](3)).toBe(english);
     expect(pl.admin[key](3)).toBe(polish);
   });
+
+  it("formats help search results in both languages", () => {
+    expect(en.help.matches(1, "x")).toBe("1 topic matches “x”.");
+    expect(en.help.matches(2, "x")).toBe("2 topics match “x”.");
+    expect(pl.help.matches(2, "x")).toBe("Pasujące tematy dla „x”: 2.");
+    expect(en.help.noMatch("x")).toBe("No help topics match “x”.");
+    expect(pl.help.noMatch("x")).toBe("Żaden temat nie pasuje do „x”.");
+    expect(en.help.screen("/login")).toBe("Screen: /login");
+    expect(pl.help.screen("/login")).toBe("Ekran: /login");
+  });
 });

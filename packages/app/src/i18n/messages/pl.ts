@@ -30,6 +30,18 @@ export const pl: Messages = {
     migrationsPending: (count) => `Oczekujące: ${count}`,
     settings: (count) => `Ustawienia: ${count}`,
   },
+  nav: {
+    help: "Pomoc",
+  },
+  help: {
+    heading: "Pomoc",
+    searchLabel: "Szukaj w pomocy",
+    search: "Szukaj",
+    matches: (count, query) => `Pasujące tematy dla „${query}”: ${count}.`,
+    noMatch: (query) => `Żaden temat nie pasuje do „${query}”.`,
+    showAll: "Pokaż wszystkie tematy",
+    screen: (route) => `Ekran: ${route}`,
+  },
   preferences: {
     language: "Język",
     theme: "Motyw",

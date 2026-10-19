@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { AppBar } from "../components/layout/app-bar";
+import { AppBar, AppBarPlaceholder } from "../components/layout/app-bar";
 import { AppFooter } from "../components/layout/app-footer";
 import { THEME_SCRIPT } from "../preferences/theme";
 import "./globals.css";
@@ -37,7 +37,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
       <body className="min-h-full flex flex-col font-sans">
-        <Suspense>
+        <Suspense fallback={<AppBarPlaceholder />}>
           <AppBar />
         </Suspense>
         {children}
