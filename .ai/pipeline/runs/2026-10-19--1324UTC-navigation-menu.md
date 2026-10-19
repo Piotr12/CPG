@@ -47,6 +47,25 @@ The spec's Implementation Plan, steps 1–6, one Step each.
 
 Docker isn't available to this macOS account (see lessons), so the integration suite ran against `next start` of this branch with `CPG_BASE_URL`. Two full runs on a fresh database each: 71 passed, 1 skipped (`startup-guard` needs the Docker image). Lint, typecheck, `test:coverage` (756 tests, 100%) and `build` are green.
 
+## Review
+
+A fresh-context `om-auto-review-pr` pass approved the PR, with no Critical or High findings. One autofix round (742c3a4):
+- the admin's bar is checked at 768 px in Polish;
+- a visible-strip assertion in `tenants.test.ts`;
+- a modal account popover;
+- the shadcn-on-public-pages exception in the standards;
+- the Polish "Zaloguj się";
+- help copy.
+
+Accepted, not changed: the overlays don't close when the window crosses `md`.
+
+After the round: lint, typecheck, `test:coverage` (756 tests), build and integration (72 passed, 1 skipped) are green. CI was green on ebcbc3d.
+
+## Follow-ups
+
+- Confirm Q1, Q3 and Q4 on spec PR #45. That gates both drafts.
+- Once #45 merges, move the spec to `.ai/specs/implemented/`. It isn't on `main` yet, so this branch can't move it.
+
 ## Progress
 
 PR: #46
