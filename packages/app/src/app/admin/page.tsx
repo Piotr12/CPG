@@ -5,7 +5,7 @@ import { Badge } from "@cpg/ui/components/badge";
 import { Button } from "@cpg/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@cpg/ui/components/card";
 import { requestScope } from "@cpg/core";
-import { requireAdmin } from "../../auth/require-admin";
+import { requireUser } from "../../auth/require-admin";
 import { signOut } from "./actions";
 
 export const metadata: Metadata = { title: "Admin · Caveman Planning Good" };
@@ -21,12 +21,10 @@ export default function AdminPage() {
   );
 }
 
-/** Everything behind the sign-in gate: nothing here renders without an admin session. */
+/** Everything behind the sign-in gate: nothing here renders without a session. */
 async function AdminContent() {
   await connection();
-  const user = await requireAdmin();
-  const { systemStatusService } = (await requestScope()).cradle;
-  const status = await systemStatusService.getStatus();
+  const user = await requireUser();
 
   return (
     <>
@@ -40,19 +38,35 @@ async function AdminContent() {
           </Button>
         </form>
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Database</CardTitle>
-          <CardDescription className="font-mono">{status.databasePath}</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          <Badge variant="secondary">{status.appliedMigrations} migrations applied</Badge>
-          <Badge variant={status.pendingMigrations ? "destructive" : "outline"}>
-            {status.pendingMigrations} pending
-          </Badge>
-          <Badge variant="outline">{status.settings} settings</Badge>
-        </CardContent>
-      </Card>
+      {user.role === "admin" ? (
+        <DatabaseStatus />
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          Screens for materials, BOMs and transactions arrive with later stories.
+        </p>
+      )}
     </>
+  );
+}
+
+/** Where the database lives and its migration state: system detail for the admin only. */
+async function DatabaseStatus() {
+  const { systemStatusService } = (await requestScope()).cradle;
+  const status = await systemStatusService.getStatus();
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Database</CardTitle>
+        <CardDescription className="font-mono">{status.databasePath}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-wrap gap-2">
+        <Badge variant="secondary">{status.appliedMigrations} migrations applied</Badge>
+        <Badge variant={status.pendingMigrations ? "destructive" : "outline"}>
+          {status.pendingMigrations} pending
+        </Badge>
+        <Badge variant="outline">{status.settings} settings</Badge>
+      </CardContent>
+    </Card>
   );
 }

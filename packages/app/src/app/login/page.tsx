@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@cpg/ui/components/card";
-import { currentUser } from "../../auth/require-admin";
+import { currentUser, HOME_PATH } from "../../auth/require-admin";
 import { signIn } from "./actions";
 import { SignInForm } from "./sign-in-form";
 
@@ -31,6 +31,6 @@ export default function LoginPage() {
 /** Someone already signed in has nothing to do here. */
 async function RedirectWhenSignedIn() {
   await connection();
-  if ((await currentUser())?.role === "admin") redirect("/admin");
+  if (await currentUser()) redirect(HOME_PATH);
   return null;
 }
