@@ -81,8 +81,8 @@ In each tenant the admin creates, renames, deactivates and reactivates locations
 
 ### Phase 2: the API
 
-- [ ] 2.1 Routes and BACKWARD_COMPATIBILITY
-- [ ] 2.2 API integration tests
+- [x] 2.1 Routes and BACKWARD_COMPATIBILITY — 2a83073
+- [x] 2.2 API integration tests — e526e04
 
 ### Phase 3: the screens
 
