@@ -13,6 +13,7 @@ describe("@cpg/db", () => {
       "GlobalIdempotencyKey",
       "IDEMPOTENCY_KEY_MAX",
       "LOCALES",
+      "LockWaitTimeoutException",
       "Session",
       "Setting",
       "TENANT_CODES",

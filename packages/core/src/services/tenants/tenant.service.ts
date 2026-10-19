@@ -35,6 +35,16 @@ export class TenantService {
     if (!tenant) throw tenantNotFound();
     return toInfo(tenant);
   }
+
+  /**
+   * The tenant's dataset generation as stored now, bypassing the identity map: a write checks it
+   * inside its transaction, and a copy loaded earlier in the request could predate a reset.
+   */
+  async currentGeneration(code: TenantCode): Promise<number> {
+    const tenant = await this.em.findOne(Tenant, { code }, { refresh: true });
+    if (!tenant) throw tenantNotFound();
+    return tenant.generation;
+  }
 }
 
 function toInfo({ code, generation }: Tenant): TenantInfo {

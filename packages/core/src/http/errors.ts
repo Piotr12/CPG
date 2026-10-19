@@ -52,9 +52,31 @@ export class ForbiddenError extends AppError {
   }
 }
 
-/** The write clashes with existing data, such as a taken unique name. */
+/**
+ * The write clashes with existing data: a taken unique name (`CONFLICT`), a stale version
+ * (`VERSION_CONFLICT`), a reused idempotency key (`IDEMPOTENCY_KEY_REUSED`) or a stale tenant
+ * generation (`GENERATION_STALE`).
+ */
 export class ConflictError extends AppError {
-  constructor(message: string) {
-    super("CONFLICT", message, 409);
+  constructor(message: string, code = "CONFLICT") {
+    super(code, message, 409);
+  }
+}
+
+/** A state-changing API request came without a usable `Idempotency-Key` header (API-019). */
+export class IdempotencyKeyRequiredError extends AppError {
+  constructor() {
+    super(
+      "IDEMPOTENCY_KEY_REQUIRED",
+      "Send an Idempotency-Key header: 1–255 visible ASCII characters, unique per write.",
+      400,
+    );
+  }
+}
+
+/** A write lacks a precondition it must carry, such as the Test tenant's generation (API-034). */
+export class PreconditionRequiredError extends AppError {
+  constructor(code: string, message: string) {
+    super(code, message, 428);
   }
 }

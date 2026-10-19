@@ -5,6 +5,7 @@ import type { ApiTokenService } from "../services/api-tokens/api-token.service";
 import type { AuditService } from "../services/audit/audit.service";
 import type { AuthService } from "../services/auth/auth.service";
 import type { LoginThrottle } from "../services/auth/login-throttle";
+import type { IdempotencyService } from "../services/idempotency/idempotency.service";
 import type { UserPreferenceService } from "../services/preferences/user-preference.service";
 import type { SystemStatusService } from "../services/system/system-status.service";
 import type { UserService } from "../services/users/user.service";
@@ -24,6 +25,7 @@ export interface Cradle {
   tenantService: TenantService;
   apiTokenService: ApiTokenService;
   auditService: AuditService;
+  idempotencyService: IdempotencyService;
   /** The active tenant. Only in scopes built by `tenantScope()`. */
   tenant: TenantInfo;
 }
