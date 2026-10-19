@@ -42,12 +42,13 @@ describe("AuthService", () => {
 
   describe("signIn", () => {
     it("opens a 12-hour session for the admin and stores only the token's hash", async () => {
-      const { token, expiresAt } = await signIn();
+      const { token, expiresAt, userId } = await signIn();
 
       expect(expiresAt).toEqual(new Date(NOW.getTime() + SESSION_TTL_MS));
       const sessions = await orm.em.fork().find(Session, {}, { populate: ["user"] });
       expect(sessions).toHaveLength(1);
       expect(sessions[0].tokenHash).toBe(hashSessionToken(token));
+      expect(userId).toBe(sessions[0].user.id);
       expect(sessions[0].tokenHash).not.toContain(token);
       expect(sessions[0].user).toMatchObject({ username: "admin", role: "admin" });
     });

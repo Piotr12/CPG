@@ -23,6 +23,8 @@ export interface SignedIn {
   /** The raw session token: goes into the cookie and nowhere else. */
   token: string;
   expiresAt: Date;
+  /** The signed-in account, so the caller can apply its preferences. */
+  userId: string;
 }
 
 export interface SessionUser {
@@ -66,7 +68,7 @@ export class AuthService {
     const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
     this.em.create(Session, { tokenHash: hashSessionToken(token), user, expiresAt });
     await this.em.flush();
-    return { token, expiresAt };
+    return { token, expiresAt, userId: user.id };
   }
 
   /** The signed-in user for a session token, or null when it is missing, unknown or expired. */

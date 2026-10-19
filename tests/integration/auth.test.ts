@@ -48,7 +48,7 @@ describe("signing in", () => {
   });
 
   it("signs out, and /admin is closed again", async () => {
-    await browser.click("main form button[type=submit]");
+    await browser.click("form[data-action=sign-out] button");
     await browser.waitFor("#username");
 
     expect(new URL(await browser.url()).pathname).toBe("/login");
