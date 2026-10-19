@@ -84,10 +84,10 @@ Implement E01-S04 as the spec describes:
 
 ### Phase 3: Language and theme in the UI
 
-- [ ] 3.1 Dictionaries and per-request lookup
-- [ ] 3.2 Theme mechanism
-- [ ] 3.3 Switches and the action
-- [ ] 3.4 Integration test
+- [x] 3.1 Dictionaries and per-request lookup — 838d9de
+- [x] 3.2 Theme mechanism — 838d9de
+- [x] 3.3 Switches and the action — 838d9de
+- [x] 3.4 Integration test — 5f62609
 
 ### Phase 4: Help
 
