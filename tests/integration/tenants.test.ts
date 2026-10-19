@@ -78,3 +78,54 @@ describe("tenants in the admin", () => {
     expect(await browser.evaluate<boolean>(`document.querySelector("${STRIP}") === null`)).toBe(true);
   });
 });
+
+// API-013, API-034: tenant metadata, and the tenant always named in the path.
+describe("the tenant API", () => {
+  let browser: Browser;
+  /** Calls the API from the signed-in page, so the session cookie goes along. */
+  const api = (path: string) =>
+    browser.evaluate<{ status: number; body: unknown }>(
+      `fetch(${JSON.stringify(path)}).then(async (r) => ({ status: r.status, body: await r.json() }))`,
+    );
+
+  beforeAll(async () => {
+    browser = openBrowser();
+    await signInAsAdmin(browser, baseUrl, adminPassword);
+  });
+  afterAll(() => browser.close());
+
+  it("lists both tenants with their generation", async () => {
+    expect(await api("/api/tenants")).toEqual({
+      status: 200,
+      body: {
+        ok: true,
+        data: [
+          { code: "test", name: "Test", generation: 1 },
+          { code: "prod", name: "Prod", generation: 1 },
+        ],
+      },
+    });
+  });
+
+  it("reads one tenant by its path", async () => {
+    expect(await api("/api/tenants/prod")).toEqual({
+      status: 200,
+      body: { ok: true, data: { code: "prod", name: "Prod", generation: 1 } },
+    });
+  });
+
+  it("rejects a tenant that doesn't exist", async () => {
+    expect(await api("/api/tenants/staging")).toEqual({
+      status: 404,
+      body: { ok: false, error: { code: "TENANT_NOT_FOUND", message: "Unknown tenant." } },
+    });
+  });
+
+  it.each(["/api/tenants", "/api/tenants/test"])("refuses %s without a session", async (path) => {
+    const response = await fetch(`${baseUrl}${path}`);
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(await response.json()).toEqual({ ok: false, error: { code: "UNAUTHORIZED", message: "You need to sign in." } });
+  });
+});

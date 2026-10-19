@@ -24,8 +24,9 @@ const rel = (file: string) => path.relative(appDir, file);
 const read = (file: string) => readFileSync(file, "utf8");
 
 describe("tenant entry points", () => {
-  it("include the tenant home page", () => {
+  it("include the tenant home page and the tenant metadata route", () => {
     expect(named("page.tsx").map(rel)).toContain(path.join("app", "admin", "[tenant]", "page.tsx"));
+    expect(named("route.ts").map(rel)).toContain(path.join("app", "api", "tenants", "[tenant]", "route.ts"));
   });
 
   it("read tenant pages and route handlers through tenantScope()", () => {

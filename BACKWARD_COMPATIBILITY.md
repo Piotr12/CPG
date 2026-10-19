@@ -57,11 +57,22 @@ Source: `packages/app/src/app/up/route.ts`, `Dockerfile`, `config/deploy.yml`.
 
 ### 4. Public URLs
 
-Source: `packages/app/src/app/` (today `/`, `/login` and `/admin`, which requires an admin session and redirects to `/login` otherwise).
+Source: `packages/app/src/app/`. Today's pages:
+
+- `/` and `/login`;
+- `/admin`, the Global tenant chooser;
+- `/admin/test` and `/admin/prod`, the tenant homes. Every tenant page lives under `/admin/{tenant}/`.
+
+Every `/admin` page requires an admin session and redirects to `/login` otherwise.
 
 **Breaking:** removing or renaming a page URL users can bookmark. **Required path:** a redirect from the old URL in the same PR.
 
-Once `app/api/<concept>/` route handlers exist, their paths, methods, request schemas and the result envelope (`{ ok, data }` / `{ ok: false, error: { code, message, fieldErrors? } }`) become protected the same way: changes are additive (new optional fields, new routes), and removals go through a deprecation release.
+Route handlers under `app/api/` are protected the same way: their paths, methods, request schemas, the result envelope (`{ ok, data }` / `{ ok: false, error: { code, message, fieldErrors? } }`), error codes and HTTP statuses. Changes are additive (new optional fields, new routes), and removals go through a deprecation release. Today's routes:
+
+- `GET /api/tenants`;
+- `GET /api/tenants/{tenant}` (404 `TENANT_NOT_FOUND`).
+
+Every tenant-scoped endpoint lives under `/api/tenants/{tenant}/`.
 
 ### 5. Commands used by CI, deploy and the docs
 
