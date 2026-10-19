@@ -7,6 +7,8 @@ export const HELP_TOPIC_IDS = [
   "admin-home",
   "managing-users",
   "test-and-prod",
+  "global-audit",
+  "tenant-audit",
   "language-and-theme",
   "using-help",
 ] as const;
@@ -23,6 +25,8 @@ export const HELP_TOPIC_ROUTES: Record<HelpTopicId, string> = {
   "admin-home": "/admin",
   "managing-users": "/admin/users",
   "test-and-prod": "/admin/[tenant]",
+  "global-audit": "/admin/audit",
+  "tenant-audit": "/admin/[tenant]/audit",
   "language-and-theme": "/admin",
   "using-help": "/help",
 };
@@ -79,6 +83,23 @@ const en: Record<HelpTopicId, HelpText> = {
       "Reset password, in a user's row menu, sets a new password and signs that user out everywhere at once.",
       "Deactivate signs the user out everywhere and stops them signing in. Reactivate lets them back in with their current password, so reset it too if the account may have been compromised.",
       "Users are never deleted: an account stays, so its history keeps its name. The built-in administrator can't be changed here.",
+    ],
+  },
+  "global-audit": {
+    title: "The Global audit",
+    body: [
+      "Global audit, in the header, opens it: every change to accounts, newest first. It lists users created, passwords reset, accounts deactivated or reactivated, and language or theme changes.",
+      "Each entry shows when it happened (in UTC), the account that made it, the session it came from, the channel (UI for CPG's screens, API for programs) and what changed, as before → after.",
+      "A password reset is listed without the password: CPG never records passwords or their hashes.",
+      "Every account can read the audit, and nobody can change or delete an entry, not even the administrator. Older entries shows the previous page.",
+    ],
+  },
+  "tenant-audit": {
+    title: "A tenant's audit",
+    body: [
+      "Audit — Test or Audit — Prod, on that tenant's page, opens its own audit: the changes to its business records, kept apart from the other tenant's.",
+      "It is empty until CPG holds records such as materials. Account changes are always in the Global audit.",
+      "Like the Global audit, it is read-only for everyone.",
     ],
   },
   "language-and-theme": {
@@ -141,6 +162,23 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Resetuj hasło w menu wiersza ustawia nowe hasło i od razu wylogowuje tego użytkownika ze wszystkich sesji.",
       "Dezaktywuj wylogowuje użytkownika ze wszystkich sesji i blokuje logowanie. Aktywuj ponownie wpuszcza go z obecnym hasłem, więc zresetuj je także wtedy, gdy konto mogło zostać przejęte.",
       "Użytkownicy nigdy nie są usuwani: konto zostaje, więc historia zachowuje jego nazwę. Wbudowanego administratora nie można tu zmienić.",
+    ],
+  },
+  "global-audit": {
+    title: "Audyt globalny",
+    body: [
+      "Audyt globalny w nagłówku otwiera ten audyt: każdą zmianę kont, od najnowszej. Znajdziesz tu utworzonych użytkowników, zresetowane hasła, dezaktywowane i ponownie aktywowane konta oraz zmiany języka lub motywu.",
+      "Każdy wpis pokazuje, kiedy nastąpiła zmiana (w UTC), które konto ją wprowadziło, z jakiej sesji, jakim kanałem (Ekran dla ekranów CPG, Interfejs API dla programów) i co się zmieniło, jako przed → po.",
+      "Reset hasła jest zapisany bez hasła: CPG nigdy nie zapisuje haseł ani ich skrótów.",
+      "Audyt może przeglądać każde konto, a nikt nie może zmienić ani usunąć wpisu, nawet administrator. Starsze wpisy pokazują poprzednią stronę.",
+    ],
+  },
+  "tenant-audit": {
+    title: "Audyt środowiska",
+    body: [
+      "Audyt — Test lub Audyt — Prod na stronie środowiska otwiera jego własny audyt: zmiany jego rekordów biznesowych, oddzielone od drugiego środowiska.",
+      "Jest pusty, dopóki CPG nie przechowuje rekordów, na przykład materiałów. Zmiany kont są zawsze w audycie globalnym.",
+      "Tak jak audyt globalny, jest tylko do odczytu dla wszystkich.",
     ],
   },
   "language-and-theme": {

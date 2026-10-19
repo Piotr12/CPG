@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@cpg/ui/components/card";
@@ -44,6 +45,12 @@ async function TenantHome({ params }: { params: Promise<{ tenant: string }> }) {
           <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
             {messages.tenants.noRecords}
           </p>
+          <Link
+            href={`/admin/${tenant.code}/audit`}
+            className="mt-4 inline-block text-sm font-medium underline underline-offset-4"
+          >
+            {messages.audit.tenantHeading(tenant.name)}
+          </Link>
         </CardContent>
       </Card>
     </div>

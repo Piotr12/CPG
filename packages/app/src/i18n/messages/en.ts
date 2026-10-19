@@ -85,6 +85,38 @@ export const en = {
       FORBIDDEN: "Only the administrator can manage users.",
     },
   },
+  /** The Global and tenant audit screens: read-only for every account (AUD-009, AUD-010). */
+  audit: {
+    globalHeading: "Global audit",
+    tenantHeading: (name: string) => `Audit — ${name}`,
+    back: "Cave control",
+    globalIntro: "Every change to accounts is kept here. Nobody can edit or delete an entry, not even the administrator.",
+    tenantIntro:
+      "Changes to this tenant's records appear here. Nobody can edit or delete an entry. Account changes are in the Global audit.",
+    toGlobal: "Open the Global audit",
+    empty: "Nothing has been recorded yet.",
+    older: "Older entries →",
+    newest: "← Newest entries",
+    columns: {
+      time: "Time (UTC)",
+      account: "Account",
+      session: "Session",
+      channel: "Channel",
+      action: "Action",
+      subject: "Subject",
+      changes: "Changes",
+    },
+    channels: { ui: "UI", api: "API" },
+    /** Keyed by the entry's action ID; an action missing here is shown as its ID. */
+    actions: {
+      "users.user.created": "User created",
+      "users.user.password-reset": "Password reset",
+      "users.user.deactivated": "User deactivated",
+      "users.user.reactivated": "User reactivated",
+      "preferences.user-preference.updated": "Language or theme changed",
+    },
+    passwordNotRecorded: "Password replaced (not recorded)",
+  },
   tenants: {
     choose: "Choose a tenant",
     open: (name: string) => `Open ${name} →`,
