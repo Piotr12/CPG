@@ -74,6 +74,12 @@ Implement E02-S01 as the spec describes:
 
 - `useTenant` was renamed `selectTenant`: the React hooks lint rule treats any `use*` call as a hook.
 - `tenantServerAction` resolves the tenant through `serverAction` itself, so both share one error mapping.
+- **Deviation from the spec's edge-case table: an unknown tenant URL returns HTTP 200, not 404.** `partialPrefetching` is on, and since Next 16.3 the route's App Shell is served for params missing from `generateStaticParams`. So the layout's `notFound()` fires mid-stream: Next.js shows its 404 UI with `<meta name="robots" content="noindex">` but can't change the status (`next/dist/docs/01-app/02-guides/streaming.md`, "The HTTP contract").
+  - `ensureStatic = 'navigation'` would force a blocking render, but it forbids `connection()` and DB reads.
+  - A proxy would have to know every global admin segment.
+  - The user-visible behaviour (a 404 page with no strip and no data) holds and is integration-tested.
+- `tests/admin-pages-require-admin.test.ts` is unchanged and covers the new pages. `packages/ui/src/components/button.test.tsx` now links to an external URL: the Next lint rule `no-html-link-for-pages` started flagging its `<a href="/admin">` once `/admin` moved into a route group.
+- The sign-in header became `components/auth/signed-in-bar.tsx`, because two pages use it now.
 
 ## Progress
 
@@ -88,9 +94,9 @@ Implement E02-S01 as the spec describes:
 
 ### Phase 2: Tenant UI
 
-- [ ] 2.1 Strip and switcher
-- [ ] 2.2 Layouts and pages
-- [ ] 2.3 Integration test (UI)
+- [x] 2.1 Strip and switcher — 42376e5
+- [x] 2.2 Layouts and pages — cd7bcd4
+- [x] 2.3 Integration test (UI) — 207b639
 
 ### Phase 3: Tenant API
 
