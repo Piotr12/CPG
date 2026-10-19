@@ -102,7 +102,7 @@ No action or route writes its own `try/catch` + response mapping.
 - **Database reads in server components** call `await connection()` and sit inside `<Suspense>`. Never use `export const dynamic = "force-dynamic"` or other route-segment config: it doesn't exist under Cache Components. The app must build with no database present.
 - **Check-then-write on shared state** (stock on hand, work-order status, planned-order release) runs inside one `em.transactional()` in the service, backed by a unique constraint where one applies. SQLite has a single writer: keep transactions short and never await a network call inside one.
 - **Everything persisted** lives under `config.dataDir`. **Schema changes** go through migrations only (see `AGENTS.md`).
-- **Tenant isolation (R05).** Business data belongs to Test or Prod (spec `2026-10-19--0913UTC-test-prod-tenants`). Every entity is either declared with `tenantOwned()` (`db/src/entities/tenants/tenant-owned.ts`) or listed in `GLOBAL_ENTITIES` (accounts, sessions, settings, tenants); `tests/tenant-ownership.test.ts` enforces it.
+- **Tenant isolation (R05).** Business data belongs to Test or Prod (spec `2026-10-19--0913UTC-test-prod-tenants`). Every entity is either declared with `tenantOwned()` (`db/src/entities/tenants/tenant-owned.ts`) or listed in `GLOBAL_ENTITIES` (accounts, sessions, settings, tenants, the Global audit); `tests/tenant-ownership.test.ts` enforces it.
   - **The tenant comes from the request, explicitly.** Pages under `app/admin/[tenant]/`, route handlers under `app/api/tenants/[tenant]/`, and server actions bound to the page's tenant through `tenantServerAction`. All of them resolve `tenantScope(code)` from `@cpg/core` (`tests/tenant-entry-points.test.ts`). There is no tenant cookie and no tenant on the session.
   - **A plain `requestScope()` has no tenant.** Reading a tenant-owned entity there throws.
   - **`@cpg/db` enforces the rest at runtime.**
@@ -122,6 +122,13 @@ No action or route writes its own `try/catch` + response mapping.
     - raw SQL (`execute`, `getKysely`).
 
     `tests/tenant-lint.test.ts` proves each rule fires.
+
+- **Audit (R08).** Every change is recorded in an append-only audit (spec `2026-10-19--1050UTC-audit-log`): account-level changes in the Global audit (`GlobalAuditEvent`), tenant records in that tenant's audit (`TenantAuditEvent`, tenant-owned).
+  - **Every mutating service method takes an `actor: Actor`.** Actions build it from the validated session with `uiActor(user)`; API writes will name their token.
+  - **The service records the entry itself**, with `recordGlobalAudit(em, actor, entry)` or `recordTenantAudit(…)` on the EntityManager it writes with. The entry then commits or rolls back with the change. Never record from an event handler: events fire after the commit.
+  - **Snapshots are explicit allowlists** of the entity's fields, never the whole entity. The recorder refuses keys that look like secrets (`password`, `hash`, `secret`), but the allowlist is the real protection.
+  - **A write that changes nothing records nothing.** Action IDs follow the event naming (`concept.entity.action`).
+  - **Nothing updates or deletes an entry.** Entity-level triggers abort it in SQLite, the audit routes export only `GET`, and `tests/audit-append-only.test.ts` scans the source.
 
 ### Engineering principles
 
@@ -187,6 +194,7 @@ Authentication is server-side sessions (specs `2026-10-19--0746UTC-admin-sign-in
 - [ ] No secret, token or password in logs, errors or client payloads. (blocker)
 - [ ] No untrusted input reaches a query, shell command or file path unparameterized/uncanonicalized. (blocker)
 - [ ] Writes use a Zod-parsed explicit shape, with no mass assignment. (blocker)
+- [ ] Every mutating service method takes an `actor` and records its audit entry in the same flush or transaction, with an allowlisted snapshot that holds no secret. (blocker)
 - [ ] Errors around a security decision fail closed. (blocker)
 - [ ] Cookie flags are preserved whenever auth-cookie code changes. (major)
 - [ ] A security bug fix ships with a regression test that fails without the fix. (major)
@@ -291,6 +299,13 @@ Done when these standards were adopted:
   - the first route handlers, `app/api/tenants/`, authenticated by `app/src/auth/require-api-user.ts`;
   - the tenant enforcement in `db` (`tenantOwned`, `TenantGuard`, `TenantEntityManager`).
 - Users (2026-10-19, user management): `core/src/http/auth.ts`, `UserService` (`core/src/services/users/`), and the first client layers: `ui/src/backend/tables/data-table.tsx` (columns, empty state, row actions; pagination, sorting and filtering wait for the first list that needs them), `forms/crud-form.tsx`, `feedback/{error-message,empty-state}.tsx` and `api/result.ts` (`loading-message.tsx` waits for its first consumer: pages use an `aria-busy` placeholder as their `<Suspense>` fallback). `/admin/users` is the reference for a list screen with create and row actions.
+- Audit (2026-10-19, spec `2026-10-19--1050UTC-audit-log`):
+  - `GlobalAuditEvent` and `TenantAuditEvent` (`db/src/entities/audit/`), with append-only triggers declared on the entities;
+  - `core/src/services/audit/` (`Actor`/`uiActor`, `audit-recorder.ts`, `AuditService` with keyset paging);
+  - `core/src/http/parse-input.ts` (`parseInput` for query strings and route parameters, shared with `serverAction`);
+  - `/admin/audit` and `/admin/[tenant]/audit` (`app/src/components/audit/`), and `GET /api/audit` and `GET /api/tenants/{tenant}/audit`.
+
+  `UserService` and `UserPreferenceService` are the first producers.
 - Test infrastructure: Vitest unit tests next to every source file at 100% coverage, integration tests (Testcontainers runs the production image, agent-browser drives it), and a CI workflow for pull requests.
 - Layering switched to DevMentor's `app → core → db` (the first version of this document kept CPG's original `db → core`). Config and DI moved fully into `core`, the composition root moved from `app/src/server/container.ts` into `core`, and the migration CLI entry point moved to `core/scripts/`. `db` now has no workspace dependencies.
 
