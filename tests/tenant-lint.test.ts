@@ -17,6 +17,11 @@ const SERVICE = "packages/core/src/services/example/example.service.ts";
 describe("tenant lint rules", () => {
   it.each([
     ["a filters option", "await em.find(X, {}, { filters: false });", /Never pass `filters`/],
+    ["a quoted filters option", 'await em.find(X, {}, { "filters": false });', /Never pass `filters`/],
+    ["addFilter", 'em.addFilter({ name: "tenant", cond: {} });', /bypasses tenant isolation/],
+    ["the driver", "await em.getDriver().find(X, {});", /bypasses tenant isolation/],
+    ["createQueryBuilder", "em.createQueryBuilder(X);", /bypasses tenant isolation/],
+    ["qb", "em.qb(X);", /bypasses tenant isolation/],
     ["setFilterParams", 'em.setFilterParams("tenant", { code: "prod" });', /Only tenantScope\(\) selects the tenant/],
     ["selectTenant", 'selectTenant(em, "prod");', /Only tenantScope\(\) selects the tenant/],
     ["raw SQL", 'await em.getConnection().execute("select 1");', /No raw SQL/],

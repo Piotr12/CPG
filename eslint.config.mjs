@@ -24,10 +24,11 @@ const ui = forbid(["@cpg/ui", "@cpg/ui/*"], "Only @cpg/app uses @cpg/ui.");
 
 // Tenant isolation (R05; spec .ai/specs/2026-10-19--0913UTC-test-prod-tenants.md). @cpg/db enforces
 // it at runtime; these rules close what it can't see: switching the filter off, picking the tenant
-// anywhere but tenantScope, and raw SQL. Tests may do all three, to prove the runtime checks.
+// anywhere but tenantScope, adding filters, the QueryBuilder and the driver, and raw SQL. Tests may
+// do all of it, to prove the runtime checks.
 const tenantRules = {
   filters: {
-    selector: "Property[key.name='filters']",
+    selector: "Property[key.name='filters'], Property[key.value='filters']",
     message: "Never pass `filters`: the tenant filter must stay on (tenant isolation, R05).",
   },
   setFilterParams: {
@@ -37,6 +38,10 @@ const tenantRules = {
   selectTenant: {
     selector: "CallExpression[callee.name='selectTenant']",
     message: "Only tenantScope() selects the tenant.",
+  },
+  bypass: {
+    selector: "CallExpression[callee.property.name=/^(addFilter|getDriver|createQueryBuilder|qb)$/]",
+    message: "This bypasses tenant isolation (R05). Use the entity APIs (find, create, flush) through a service.",
   },
   rawSql: {
     selector: "CallExpression[callee.property.name=/^(execute|getKysely)$/]",
