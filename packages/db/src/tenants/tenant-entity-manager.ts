@@ -5,6 +5,7 @@ import {
   type Dictionary,
   type EntityData,
   type EntityKey,
+  type EntityMetadata,
   type EntityName,
   type FilterQuery,
   type LoggingOptions,
@@ -20,34 +21,61 @@ import { isTenantOwned, TenantViolationError } from "../entities/tenants/tenant-
 
 type Target = EntityName<object> | object | object[];
 
-/** Fields `nativeUpdate` may set on a tenant-owned entity: plain values, never references. */
+/** Fields `nativeUpdate` may set where tenant data is involved: plain values, never references. */
 const PLAIN_FIELDS: readonly ReferenceKind[] = [ReferenceKind.SCALAR, ReferenceKind.EMBEDDED];
 
+/** Whether writing this entity can touch tenant data: its own rows, or references to them. */
+function touchesTenantData(meta: EntityMetadata | undefined): boolean {
+  return isTenantOwned(meta) || Boolean(meta?.relations.some((prop) => isTenantOwned(prop.targetMeta)));
+}
+
+type FromTarget = Parameters<QueryBuilder<object>["from"]>[0];
+
+/** The two QueryBuilder methods `guarded()` wraps. */
+interface Rerootable {
+  from(target: FromTarget, aliasName?: string): unknown;
+  clone(...args: unknown[]): unknown;
+}
+
 /**
- * The ORM's EntityManager class (`entityManager` in the config; every fork keeps it). For
- * tenant-owned entities it refuses the paths that skip the flush guard or the tenant filter:
- * `insert`, `insertMany`, `upsert`, `upsertMany`, `clone`, `countBy` and the QueryBuilder (as its
- * root or through `from()`), and a `nativeUpdate` that sets anything but plain fields, since a
- * reference or raw column could point a row at, or move it to, another tenant. Global entities
- * are unaffected.
+ * The ORM's EntityManager class (`entityManager` in the config; every fork keeps it). For every
+ * entity that touches tenant data — tenant-owned ones, and global ones referencing them — it
+ * refuses the paths that skip the flush guard or the tenant filter: `insert`, `insertMany`,
+ * `upsert`, `upsertMany`, `clone`, `countBy` and the QueryBuilder (as its root, through `from()`,
+ * also on clones), and a `nativeUpdate` that sets anything but plain fields, since a reference or
+ * raw column could point a row at, or move it to, another tenant. Other global entities are
+ * unaffected. ESLint bans the QueryBuilder in core and app outright; this is the runtime backstop.
  */
 export class TenantEntityManager extends SqlEntityManager<SqliteDriver> {
   private refuseTenantOwned(target: Target, method: string): void {
     const sample: unknown = Array.isArray(target) ? target[0] : target;
     const entityName = (Utils.isEntity(sample) ? sample.constructor : sample) as EntityName<object>;
     const meta = this.getMetadata().find(entityName);
-    if (isTenantOwned(meta)) {
+    if (touchesTenantData(meta)) {
       throw new TenantViolationError(`${method}() bypasses tenant checks; use em.create() and flush() for ${meta?.className}`);
     }
   }
 
-  /** A `from()` target: a tenant-owned entity, or the raw name of a tenant-owned table. */
+  /** A `from()` target: an entity, or a raw table name (SQLite matches those case-insensitively). */
   private refuseTenantFrom(target: unknown): void {
     if (target instanceof QueryBuilder) return; // created (and checked) by createQueryBuilder
-    const owned = [...this.getMetadata().getAll().values()].find(
-      (meta) => isTenantOwned(meta) && meta.tableName === target,
-    );
-    this.refuseTenantOwned((owned?.class ?? target) as EntityName<object>, "QueryBuilder.from");
+    const table = typeof target === "string" ? target.toLowerCase().split(".").pop() : undefined;
+    const named = [...this.getMetadata().getAll().values()].find((meta) => meta.tableName.toLowerCase() === table);
+    this.refuseTenantOwned((named?.class ?? target) as EntityName<object>, "QueryBuilder.from");
+  }
+
+  /** Re-checks every later `from()`, including on clones, which are built without this manager. */
+  private guarded<Q extends object>(qb: Q): Q {
+    const builder = qb as unknown as Rerootable;
+    const from = builder.from.bind(builder);
+    const clone = builder.clone.bind(builder) as (...args: unknown[]) => Q;
+    return Object.assign(qb, {
+      from: (target: FromTarget, aliasName?: string) => {
+        this.refuseTenantFrom(target);
+        return from(target, aliasName);
+      },
+      clone: (...args: unknown[]) => this.guarded(clone(...args)),
+    });
   }
 
   override async insert<Entity extends object>(
@@ -103,7 +131,7 @@ export class TenantEntityManager extends SqlEntityManager<SqliteDriver> {
     options?: UpdateOptions<Entity>,
   ): Promise<number> {
     const meta = this.getMetadata().find(entityName);
-    if (isTenantOwned(meta)) {
+    if (touchesTenantData(meta)) {
       const field = Object.keys(data).find((key) => !PLAIN_FIELDS.includes(meta?.properties[key as EntityKey<Entity>]?.kind as ReferenceKind));
       if (field !== undefined) {
         throw new TenantViolationError(
@@ -132,14 +160,7 @@ export class TenantEntityManager extends SqlEntityManager<SqliteDriver> {
     loggerContext?: LoggingOptions,
   ): QueryBuilder<Entity, RootAlias> {
     if (!(entityName instanceof QueryBuilder)) this.refuseTenantOwned(entityName, "createQueryBuilder");
-    const qb = super.createQueryBuilder(entityName, alias, type, loggerContext);
     // `from()` replaces the root, so `createQueryBuilder(Setting).from(Material)` would escape the check.
-    const from = qb.from.bind(qb) as (target: unknown, aliasName?: string) => unknown;
-    return Object.assign(qb, {
-      from: (target: unknown, aliasName?: string) => {
-        this.refuseTenantFrom(target);
-        return from(target, aliasName);
-      },
-    });
+    return this.guarded(super.createQueryBuilder(entityName, alias, type, loggerContext));
   }
 }

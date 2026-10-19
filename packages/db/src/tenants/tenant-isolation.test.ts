@@ -43,6 +43,7 @@ const FixtureBoard = defineEntity({
   name: "FixtureBoard",
   properties: {
     id: p.integer().primary().autoincrement(),
+    title: p.string().nullable(),
     pins: () => p.manyToMany(FixtureParent),
     members: () => p.manyToMany(User),
     featured: () => p.manyToOne(FixtureParent).nullable(),
@@ -210,6 +211,11 @@ describe("tenant isolation", () => {
       expect(() => em.createQueryBuilder(Setting).from(FixtureParent)).toThrow(refused);
       // A raw table name (typed only for CTEs, hence the cast) is matched against tenant-owned tables.
       expect(() => em.qb(Setting).from("fixture_parent" as never)).toThrow(refused);
+      expect(() => em.qb(Setting).from("FIXTURE_PARENT" as never)).toThrow(refused);
+      expect(() => em.qb(Setting).from("main.fixture_parent" as never)).toThrow(refused);
+      // A clone is built without this EntityManager; it keeps the check.
+      expect(() => em.createQueryBuilder(Setting).clone().from(FixtureParent)).toThrow(refused);
+      expect(em.qb(Setting).clone().from(Setting).getFormattedQuery()).toContain("from `setting`");
       expect(em.createQueryBuilder(Setting).from(Setting).getFormattedQuery()).toContain("from `setting`");
       expect(em.qb(Setting).from(em.qb(Setting), "s").getFormattedQuery()).toContain("from (select");
     });
@@ -228,6 +234,32 @@ describe("tenant isolation", () => {
       expect((await qb.getResultList()).map(({ key }) => key).sort()).toEqual(["bulk.one", "bulk.two"]);
       expect((await em.qb(Setting).where({ key: "bulk.one" }).getSingleResult())?.value).toBe("uno");
       expect(await em.countBy(Setting, "value", { where: { key: { $like: "bulk.%" } } })).toEqual({ uno: 1, two: 1 });
+    });
+  });
+
+  describe("global entities that reference tenant data", () => {
+    it("get the same refusals as tenant-owned ones, outside the flush", async () => {
+      const { testId, prodId } = await seedParents();
+      const em = scope("test");
+      const refused = /bypasses tenant checks; use em.create\(\) and flush\(\) for FixtureBoard/;
+
+      await expect(em.insert(FixtureBoard, { featured: prodId })).rejects.toThrow(refused);
+      await expect(em.insertMany(FixtureBoard, [{ featured: prodId }])).rejects.toThrow(refused);
+      await expect(em.upsert(FixtureBoard, { id: 1, featured: prodId })).rejects.toThrow(refused);
+      await expect(em.upsertMany(FixtureBoard, [{ id: 1, featured: prodId }])).rejects.toThrow(refused);
+      expect(() => em.createQueryBuilder(FixtureBoard)).toThrow(refused);
+      expect(await rawCount("fixture_board")).toBe(0);
+
+      const board = em.create(FixtureBoard, { featured: await em.findOneOrFail(FixtureParent, testId) });
+      await em.flush();
+      await expect(scope().nativeUpdate(FixtureBoard, { id: board.id }, { featured: prodId })).rejects.toThrow(
+        /nativeUpdate\(\) may only set plain fields of FixtureBoard; 'featured'/,
+      );
+      expect(await scope().nativeUpdate(FixtureBoard, { id: board.id }, { title: "pinned" })).toBe(1);
+      expect((await execute(`select featured_id, title from fixture_board where id = ${board.id}`))[0]).toEqual({
+        featured_id: testId,
+        title: "pinned",
+      });
     });
   });
 
