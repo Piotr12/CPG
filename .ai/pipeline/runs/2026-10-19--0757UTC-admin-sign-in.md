@@ -60,9 +60,9 @@ Follows the spec's Implementation Plan, Steps 1–9, unchanged.
 
 ### Phase 1: Startup guard
 
-- [ ] 1.1 Config adminPassword and assertServerConfig
-- [ ] 1.2 Startup guard in register and integration harness
-- [ ] 1.3 Deploy and dev plumbing
+- [x] 1.1 Config adminPassword and assertServerConfig — 61b21ce
+- [x] 1.2 Startup guard in register and integration harness — b42df95
+- [x] 1.3 Deploy and dev plumbing — ff7f7dc
 
 ### Phase 2: Sign-in
 
@@ -72,3 +72,8 @@ Follows the spec's Implementation Plan, Steps 1–9, unchanged.
 - [ ] 2.4 App auth helpers and standards update
 - [ ] 2.5 Login page, actions and gated admin
 - [ ] 2.6 Integration tests and full gate
+
+## Notes
+
+- 1.2 deviation from the spec: in the standalone server (`node server.js`, the Docker image), a throwing `register()` doesn't exit. Next.js logs "Failed to prepare server" and answers every request with a 500 (verified with `docker run` and no password). The spec's claim, taken from `next start`'s `start-server.js`, doesn't hold for standalone. So `register()` logs the guard's message and calls `process.exit(1)` itself. `tests/integration/startup-guard.test.ts` proves the container exits non-zero.
+- 1.3 also updates `.ai/scripts/test-env-up.sh` (QA env): it passes a test admin password and records it as the admin credential, because otherwise the QA container wouldn't start.
