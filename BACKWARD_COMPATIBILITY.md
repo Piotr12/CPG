@@ -39,6 +39,7 @@ Source: `packages/core/src/config.ts` (`loadConfig`), `Dockerfile`, `config/depl
 | `DATA_DIR` | `/externaldata` in the image, bind-mounted from `/externaldata/cpg.baby` on the VM; `<repo>/data` locally |
 | `DATABASE_FILE` | `cpg.sqlite` inside `DATA_DIR` |
 | `DEBUG_SQL` | `1` logs SQL, development only |
+| `CPG_ADMIN_PASSWORD` | Required by the server: the built-in admin's password, 12+ characters, no leading or trailing whitespace. Missing or invalid → the process exits at startup, so `/up` never turns healthy. Comes from `.kamal/secrets` / the GitHub Actions secret of the same name |
 | Container user | uid 1001, which must be able to write `DATA_DIR` |
 | Everything the app persists | under `DATA_DIR` |
 
@@ -56,7 +57,7 @@ Source: `packages/app/src/app/up/route.ts`, `Dockerfile`, `config/deploy.yml`.
 
 ### 4. Public URLs
 
-Source: `packages/app/src/app/` (today `/` and `/admin`).
+Source: `packages/app/src/app/` (today `/`, `/login` and `/admin`, which requires an admin session and redirects to `/login` otherwise).
 
 **Breaking:** removing or renaming a page URL users can bookmark. **Required path:** a redirect from the old URL in the same PR.
 

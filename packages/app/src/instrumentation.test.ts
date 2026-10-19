@@ -1,29 +1,71 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { register } from "./instrumentation";
 
-const core = vi.hoisted(() => ({ loadConfig: vi.fn(() => ({ databasePath: "/data/cpg.sqlite" })), migrateDatabase: vi.fn() }));
+const config = { databasePath: "/data/cpg.sqlite" };
+const core = vi.hoisted(() => ({
+  loadConfig: vi.fn(),
+  assertServerConfig: vi.fn(),
+  migrateDatabase: vi.fn(),
+  revokeBuiltInAdminSessions: vi.fn(),
+}));
 vi.mock("@cpg/core", () => core);
 
 describe("register", () => {
   beforeEach(() => {
+    core.loadConfig.mockReturnValue(config);
+    core.assertServerConfig.mockReset();
+    core.revokeBuiltInAdminSessions.mockResolvedValue(0);
     vi.spyOn(console, "info").mockImplementation(() => {});
   });
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.clearAllMocks();
     vi.unstubAllEnvs();
   });
 
-  it("migrates the database on the Node.js runtime and logs what it applied", async () => {
+  it("checks the config, then migrates the database and logs what it applied", async () => {
     vi.stubEnv("NEXT_RUNTIME", "nodejs");
     core.migrateDatabase.mockResolvedValue(["M1", "M2"]);
 
     await register();
 
-    expect(core.migrateDatabase).toHaveBeenCalledWith({ databasePath: "/data/cpg.sqlite" });
+    expect(core.assertServerConfig).toHaveBeenCalledWith(config);
+    expect(core.migrateDatabase).toHaveBeenCalledWith(config);
     expect(console.info).toHaveBeenCalledWith("Applied migrations: M1, M2");
   });
 
-  it("stays quiet when there was nothing to migrate", async () => {
+  it("signs the admin out of every session after migrating", async () => {
+    vi.stubEnv("NEXT_RUNTIME", "nodejs");
+    core.migrateDatabase.mockResolvedValue([]);
+    core.revokeBuiltInAdminSessions.mockResolvedValue(3);
+
+    await register();
+
+    expect(core.revokeBuiltInAdminSessions).toHaveBeenCalledWith(config);
+    expect(core.migrateDatabase.mock.invocationCallOrder[0]).toBeLessThan(
+      core.revokeBuiltInAdminSessions.mock.invocationCallOrder[0],
+    );
+    expect(console.info).toHaveBeenCalledWith("Signed the admin out of 3 session(s)");
+  });
+
+  it("logs why and exits, without migrating, when the config is not usable", async () => {
+    vi.stubEnv("NEXT_RUNTIME", "nodejs");
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const exit = vi.spyOn(process, "exit").mockImplementation((() => {
+      throw new Error("process.exit");
+    }) as never);
+    core.assertServerConfig.mockImplementation(() => {
+      throw new Error("Missing or too short CPG_ADMIN_PASSWORD");
+    });
+
+    await expect(register()).rejects.toThrow("process.exit");
+    expect(console.error).toHaveBeenCalledWith("Missing or too short CPG_ADMIN_PASSWORD");
+    expect(exit).toHaveBeenCalledWith(1);
+    expect(core.migrateDatabase).not.toHaveBeenCalled();
+    expect(core.revokeBuiltInAdminSessions).not.toHaveBeenCalled();
+  });
+
+  it("stays quiet when there was nothing to migrate or revoke", async () => {
     vi.stubEnv("NEXT_RUNTIME", "nodejs");
     core.migrateDatabase.mockResolvedValue([]);
 
@@ -38,6 +80,7 @@ describe("register", () => {
 
     await register();
 
+    expect(core.assertServerConfig).not.toHaveBeenCalled();
     expect(core.migrateDatabase).not.toHaveBeenCalled();
   });
 });

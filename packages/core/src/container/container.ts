@@ -2,6 +2,8 @@ import { entities, initOrm, type Orm } from "@cpg/db";
 import { asClass, asFunction, asValue, createContainer, InjectionMode } from "awilix";
 import { loadConfig, type AppConfig } from "../config";
 import { toDbOptions } from "../database";
+import { AuthService } from "../services/auth/auth.service";
+import { LoginThrottle } from "../services/auth/login-throttle";
 import { SystemStatusService } from "../services/system/system-status.service";
 import { globalSingleton } from "../singleton";
 import type { AppContainer, Cradle } from "./cradle";
@@ -19,6 +21,9 @@ export function createAppContainer(config: AppConfig, orm: Orm): AppContainer {
     orm: asValue(orm),
     em: asFunction(({ orm }: { orm: Orm }) => orm.em.fork()).scoped(),
     systemStatusService: asClass(SystemStatusService).scoped(),
+    // One per process (per bundle): its failure counters must outlive the request.
+    loginThrottle: asClass(LoginThrottle).singleton(),
+    authService: asClass(AuthService).scoped(),
   });
   return container;
 }

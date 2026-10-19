@@ -43,4 +43,6 @@ jobs:
         run: echo "146.59.105.8 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOqaLxYJYe/jp8ZQih5EJzUUJ8BMClWWtIM6IgDwt2Fb" >> ~/.ssh/known_hosts
 
       - name: Deploy
+        env:
+          CPG_ADMIN_PASSWORD: ${{ secrets.CPG_ADMIN_PASSWORD }}
         run: kamal deploy

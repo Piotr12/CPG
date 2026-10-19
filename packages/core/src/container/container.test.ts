@@ -5,6 +5,8 @@ import { entities, initOrm, type Orm } from "@cpg/db";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { loadConfig } from "../config";
 import { toDbOptions } from "../database";
+import { AuthService } from "../services/auth/auth.service";
+import { LoginThrottle } from "../services/auth/login-throttle";
 import { SystemStatusService } from "../services/system/system-status.service";
 import { createAppContainer, getContainer, requestScope } from "./container";
 
@@ -23,6 +25,14 @@ describe("createAppContainer", () => {
     expect(cradle.config).toBe(config);
     expect(cradle.orm).toBe(orm);
     expect(cradle.systemStatusService).toBeInstanceOf(SystemStatusService);
+    expect(cradle.authService).toBeInstanceOf(AuthService);
+    expect(cradle.loginThrottle).toBeInstanceOf(LoginThrottle);
+  });
+
+  it("shares one login throttle across request scopes", () => {
+    const container = createAppContainer(config, orm);
+
+    expect(container.createScope().cradle.loginThrottle).toBe(container.createScope().cradle.loginThrottle);
   });
 
   it("gives every scope its own EntityManager fork", () => {

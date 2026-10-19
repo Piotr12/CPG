@@ -1,0 +1,36 @@
+"use server";
+
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { INVALID_CREDENTIALS, requestScope, serverAction } from "@cpg/core";
+import { signInSchema } from "@cpg/core/validators/auth/sign-in.schema";
+import { clientIpFrom } from "../../auth/client-ip";
+import { writeSessionCookie } from "../../auth/session-cookie";
+
+export interface SignInState {
+  error?: string;
+}
+
+/** Where a successful sign-in lands. */
+const AFTER_SIGN_IN_PATH = "/admin";
+const MISSING_FIELDS = "Enter your username and password.";
+
+/** The login form's action: on success sets the session cookie and goes to `/admin`. */
+export async function signIn(_previous: SignInState, formData: FormData): Promise<SignInState> {
+  const { authService, config } = (await requestScope()).cradle;
+  const clientIp = clientIpFrom(await headers());
+  const attempt = serverAction(signInSchema, (input) => authService.signIn({ ...input, clientIp }));
+  const result = await attempt({ username: formData.get("username"), password: formData.get("password") });
+
+  if (!result.ok) return { error: errorMessage(result.error, formData) };
+
+  await writeSessionCookie(result.data.token, result.data.expiresAt, { secure: config.env === "production" });
+  redirect(AFTER_SIGN_IN_PATH);
+}
+
+/** Missing fields get a prompt; anything else the schema refuses reads like any wrong credentials. */
+function errorMessage(error: { code: string; message: string }, formData: FormData): string {
+  if (error.code !== "VALIDATION_FAILED") return error.message;
+  const isFilled = (name: string) => String(formData.get(name) ?? "").trim() !== "";
+  return isFilled("username") && isFilled("password") ? INVALID_CREDENTIALS : MISSING_FIELDS;
+}

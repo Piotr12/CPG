@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { findWorkspaceRoot, loadConfig } from "./config";
+import { assertServerConfig, findWorkspaceRoot, loadConfig, MIN_ADMIN_PASSWORD_LENGTH } from "./config";
 
 const repoRoot = path.resolve(import.meta.dirname, "../../..");
 
@@ -15,7 +15,12 @@ describe("loadConfig", () => {
       dataDir: path.join(repoRoot, "data"),
       databasePath: path.join(repoRoot, "data", "cpg.sqlite"),
       debugSql: false,
+      adminPassword: undefined,
     });
+  });
+
+  it("reads the admin password from CPG_ADMIN_PASSWORD", () => {
+    expect(loadConfig({ CPG_ADMIN_PASSWORD: "correct horse battery" }).adminPassword).toBe("correct horse battery");
   });
 
   it("reads DATA_DIR and DATABASE_FILE, resolving a relative DATA_DIR", () => {
@@ -37,6 +42,43 @@ describe("loadConfig", () => {
     expect(loadConfig({ DEBUG_SQL: "1" }).debugSql).toBe(true);
     expect(loadConfig({ DEBUG_SQL: "true" }).debugSql).toBe(false);
     expect(loadConfig({ DEBUG_SQL: "1", NODE_ENV: "production" }).debugSql).toBe(false);
+  });
+});
+
+describe("assertServerConfig", () => {
+  const withPassword = (adminPassword: string | undefined) => ({ ...loadConfig({}), adminPassword });
+
+  it.each([
+    ["missing", undefined],
+    ["empty", ""],
+    ["whitespace only", "               "],
+    ["one character short", "x".repeat(MIN_ADMIN_PASSWORD_LENGTH - 1)],
+    ["short once trimmed", `  ${"x".repeat(MIN_ADMIN_PASSWORD_LENGTH - 1)}  `],
+  ])("refuses a %s admin password", (_case, password) => {
+    expect(() => assertServerConfig(withPassword(password))).toThrow(
+      "Missing or too short CPG_ADMIN_PASSWORD: set it to at least 12 characters.",
+    );
+  });
+
+  it.each([
+    ["a trailing newline", "correct horse battery\n"],
+    ["a leading space", " correct horse battery"],
+  ])("refuses a long enough password with %s", (_case, password) => {
+    expect(() => assertServerConfig(withPassword(password))).toThrow(
+      "CPG_ADMIN_PASSWORD starts or ends with whitespace: remove it (a stray newline is the usual cause).",
+    );
+  });
+
+  it("accepts a password of the minimum length", () => {
+    expect(() => assertServerConfig(withPassword("x".repeat(MIN_ADMIN_PASSWORD_LENGTH)))).not.toThrow();
+  });
+
+  it("never puts the password in the error message", () => {
+    const secret = "s3cret-but-short";
+
+    expect(() => assertServerConfig(withPassword(secret.slice(0, 11)))).toThrow(
+      expect.objectContaining({ message: expect.not.stringContaining(secret.slice(0, 11)) }),
+    );
   });
 });
 

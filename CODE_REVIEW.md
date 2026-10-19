@@ -7,7 +7,7 @@ How PRs in this repository are reviewed, by humans and by `om-code-review` / `om
 ## Priorities, in order
 
 1. **Correctness.** Does the change do what its issue or spec says? A spec in `.ai/specs/` is the source of truth. A PR that drifts from it is a finding, even when the code is good.
-2. **Security.** The engineering-standards security items (blockers once authentication exists). Until then, `/admin` is public: anything sensitive appearing there is a blocker.
+2. **Security.** The engineering-standards security items are blockers. `/admin` requires an admin session: a new admin page that doesn't call `requireAdmin()` inside its data boundary is a blocker (`tests/admin-pages-require-admin.test.ts` catches the missing call, not a misplaced one).
 3. **Contracts.** Every surface in [`BACKWARD_COMPATIBILITY.md`](BACKWARD_COMPATIBILITY.md). A merge to `main` is a production deploy.
 4. **Tests.** 100% coverage of what the PR adds or changes, tests that assert behaviour, and an integration test for each new page or flow.
 5. **Structure and quality.** Layering, the reuse-once rule, naming, the code-quality rules.

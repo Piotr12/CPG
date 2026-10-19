@@ -47,7 +47,8 @@ Dependencies only point one way: `app → core → db` and `app → ui` (ESLint 
 
 ```sh
 npm install
-npm run dev                               # http://localhost:3000, admin at /admin
+echo 'CPG_ADMIN_PASSWORD=choose-12-plus-chars' > packages/app/.env.local   # the app won't start without it
+npm run dev                               # http://localhost:3000, admin at /admin (sign in as admin)
 npm run lint && npm run typecheck && npm run test:coverage && npm run build
 npm run test:integration                  # needs Docker and `npx agent-browser install` once
 
@@ -59,7 +60,7 @@ cd packages/ui && npx shadcn@latest add dialog   # add a shadcn component
 
 ## Deployment
 
-Every pull request runs lint, typecheck, unit tests (100% coverage required), the build and browser integration tests against a throwaway container (`.github/workflows/ci.yml`). Pushing to `main` runs the same checks, then builds the Docker image and deploys it with Kamal (`config/deploy.yml`, `.github/workflows/deploy.yml`). The VM directory `/externaldata/cpg.baby` must exist and be writable by uid 1001 (the container user).
+Every pull request runs lint, typecheck, unit tests (100% coverage required), the build and browser integration tests against a throwaway container (`.github/workflows/ci.yml`). Pushing to `main` runs the same checks, then builds the Docker image and deploys it with Kamal (`config/deploy.yml`, `.github/workflows/deploy.yml`). The VM directory `/externaldata/cpg.baby` must exist and be writable by uid 1001 (the container user). The `CPG_ADMIN_PASSWORD` repository secret must be set (12+ characters): it is the built-in admin's password, and the app refuses to start without it.
 
 ## For AI agents
 

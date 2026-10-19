@@ -1,7 +1,9 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { openBrowser, type Browser } from "./browser";
+import { signInAsAdmin } from "./sign-in";
 
 const baseUrl = inject("baseUrl");
+const adminPassword = inject("adminPassword");
 
 describe("a fresh app instance", () => {
   let browser: Browser;
@@ -32,10 +34,10 @@ describe("a fresh app instance", () => {
   });
 
   it("shows a migrated, empty database on the admin page", async () => {
-    await browser.open(`${baseUrl}/admin`);
+    await signInAsAdmin(browser, baseUrl, adminPassword);
 
     expect(await browser.title()).toBe("Admin · Caveman Planning Good");
     expect(await browser.text("h1")).toBe("Cave control");
-    expect(await browser.texts("[data-slot=badge]")).toEqual(["1 migrations applied", "0 pending", "0 settings"]);
+    expect(await browser.texts("[data-slot=badge]")).toEqual(["2 migrations applied", "0 pending", "0 settings"]);
   });
 });

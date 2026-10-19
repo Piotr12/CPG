@@ -59,7 +59,7 @@ There will be many concepts, and the main risk is that each route, action and pa
 - `server-action.ts` — wraps a server action. It parses the input with a Zod schema, maps thrown `AppError`s to the envelope, and logs anything else without leaking a stack trace. It is the default for mutations made from CPG's own pages.
 - `api-handler.ts` — the same wrapper for route handlers (`Response.json` + status code). Use it for endpoints called from outside the app or fetched by client components.
 - `make-crud-route.ts` — only once a plain-CRUD JSON API is genuinely needed. It takes a schema and service methods and returns `{ GET, POST, PUT, DELETE }`.
-- `auth.ts` — `requireSession`, ownership/permission assertions. It arrives with authentication (see Security).
+- `auth.ts` — ownership/permission assertions on a validated session, once a second role needs them. Reading the session cookie can't live in `core` (it needs `next/headers`): `app/src/auth/` holds the cookie helpers and the `requireAdmin()` page gate, which validate through `AuthService`.
 
 No action or route writes its own `try/catch` + response mapping.
 
@@ -107,7 +107,7 @@ When two principles pull in different directions, prefer the one that keeps the 
 
 ### Security & validation — minimum requirements
 
-CPG has no authentication yet, so **`/admin` is currently public**. Authentication needs its own spec in `.ai/specs/` (mechanism, users, roles). Until it exists, nothing sensitive goes into `/admin`. Once it exists, the following hold regardless of the mechanism chosen:
+Authentication is server-side sessions (spec `2026-10-19--0746UTC-admin-sign-in`): the built-in admin signs in at `/login`, a random token goes into the `httpOnly` `cpg_session` cookie, and only its SHA-256 is stored. Every `/admin` page calls `requireAdmin()` inside the `<Suspense>` child that renders its data (`tests/admin-pages-require-admin.test.ts` enforces it), so nothing renders outside the gate. The following hold:
 
 - **Passwords** (if stored): `argon2id` (memory ≥ 19 MiB, iterations ≥ 2, parallelism 1) or `bcrypt` with cost ≥ 12. Don't pick a third option.
 - **Sessions:** a server-side session or a signed token (HS256+, secret ≥ 32 random bytes) in an `httpOnly`, `secure` (production), `sameSite=lax` cookie with a scoped `path` and a short expiry. Never use `localStorage` or a non-httpOnly cookie. Document missing refresh/rotation as a known limitation rather than silently lengthening the expiry.
@@ -120,7 +120,7 @@ CPG has no authentication yet, so **`/admin` is currently public**. Authenticati
 - **No injection:** persistence goes through MikroORM's entity/query APIs. Raw SQL only with bound parameters, never with interpolated input. User input never reaches a shell command or a file path without canonicalization (stay inside `config.dataDir`).
 - **Server-side recomputation:** quantities, costs and dates derived from master data (BOM cost roll-up, MRP net requirements, scheduled dates) are always recomputed on the server. A client-supplied total is never trusted or persisted as-is.
 - **IDs:** new entities use a UUID primary key. Human-facing business keys (item code, work-order number) are separate unique columns. Small configuration tables keyed by a stable natural key (like `Setting.key`) are the exception.
-- **Secrets:** secrets come only from the environment and are read and validated in `loadConfig`. They live in `.kamal/secrets` (which only references env vars, never values) and GitHub Actions secrets, and `.env*` stays git-ignored. Nothing logs or returns a password, token, session ID or secret.
+- **Secrets:** secrets come only from the environment, are read in `loadConfig` and are validated for the server in `assertServerConfig` (called first in `instrumentation.ts`, which exits the process on failure). They live in `.kamal/secrets` (which only references env vars, never values) and GitHub Actions secrets, and `.env*` stays git-ignored. Nothing logs or returns a password, token, session ID or secret.
 - **Dependency hygiene:** run `npm audit` before finishing and triage every new advisory (see `AGENTS.md`). Don't add a dependency for something ~20 lines of local code covers.
 
 ### Code quality
@@ -249,18 +249,17 @@ Done when these standards were adopted:
 - `Setting` moved to `db/src/entities/settings/setting.entity.ts` (table name unchanged, so no migration).
 - The first service, `SystemStatusService` (`core/src/services/system/`), is registered in `core/src/container/container.ts`. `/admin` and `/up` read through it instead of querying the ORM. It is the reference for service placement and registration.
 - ESLint boundaries added.
+- Authentication (2026-10-19, admin sign-in): `core/src/http/{errors,result,server-action}.ts`, `core/src/validators/` with `zod`, and `AuthService`/`LoginThrottle` (`core/src/services/auth/`), with `User` and `Session` in the cross-cutting `auth` entity folder (like `system`). They are the reference for the shared server layer.
 - Test infrastructure: Vitest unit tests next to every source file at 100% coverage, integration tests (Testcontainers runs the production image, agent-browser drives it), and a CI workflow for pull requests.
 - Layering switched to DevMentor's `app → core → db` (the first version of this document kept CPG's original `db → core`). Config and DI moved fully into `core`, the composition root moved from `app/src/server/container.ts` into `core`, and the migration CLI entry point moved to `core/scripts/`. `db` now has no workspace dependencies.
 
 Deliberately **not built yet** (YAGNI). Each arrives with the first concept that needs it, and that concept's change is the reference implementation:
 
-- `core/src/http/*`
+- `core/src/http/api-handler.ts`, `make-crud-route.ts`
 - `ui/src/backend/*`
 - `core/src/events/*`
-- `core/src/validators/*` (+ `zod`)
 - `core/src/domain/*`
 - a shared logger
-- authentication
 
 Known `npm audit` state: 10 high advisories, all from `braces` (GHSA-vfj7-8cjw-p6xm, no patched version) via `fast-glob`. That reaches the app only through `awilix` (`loadModules`, which this project never calls). Otherwise it is dev tooling (`eslint-config-next`, `shadcn`). `npm audit fix --force` would downgrade `awilix` to 6.0.0: don't. Re-check when `braces` ships a fix.
 
