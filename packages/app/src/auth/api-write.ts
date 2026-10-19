@@ -3,9 +3,11 @@ import {
   AppError,
   fingerprintOf,
   operationOf,
+  readGeneration,
   readIdempotencyKey,
   REPLAYED_HEADER,
   requestScope,
+  tenantScope,
   UnauthorizedError,
   type ApiActor,
   type Cradle,
@@ -47,11 +49,35 @@ export function apiWrite<T, Context = unknown>(handler: Handler<T, Context>, opt
   return keyedWrite(handler, options, async () => ({ scope: await requestScope(), idempotency: { kind: "global" } }));
 }
 
+/** The context of a route under `/api/tenants/{tenant}/`. */
+interface TenantRouteContext {
+  params: Promise<{ tenant: string }>;
+}
+
+/**
+ * Wraps every state-changing route under `/api/tenants/{tenant}/`: `apiWrite`, run in the path's
+ * tenant scope (404 `TENANT_NOT_FOUND` for anything but `test` or `prod`), with the key stored in
+ * that tenant's store (API-024). The `Dataset-Generation` header must match the tenant's current
+ * generation: required for Test (428 `GENERATION_REQUIRED`), optional for Prod, 409
+ * `GENERATION_STALE` when stale (API-033, API-034). It is checked inside the write's transaction.
+ */
+export function tenantApiWrite<T, Context extends TenantRouteContext>(
+  handler: Handler<T, Context>,
+  options: WriteOptions = {},
+): Route<Context> {
+  return keyedWrite(handler, options, async (request, context) => {
+    const scope = await tenantScope((await context.params).tenant);
+    const tenant = scope.cradle.tenant.code;
+    const generation = readGeneration(request);
+    return { scope, idempotency: { kind: "tenant", tenant, generation, requireGeneration: tenant === "test" } };
+  });
+}
+
 /**
  * The shared write pipeline. `resolve` picks the request scope and the key store; it runs after the
  * caller and the key are checked, so a bad credential or key never reaches the database.
  */
-export function keyedWrite<T, Context>(
+function keyedWrite<T, Context>(
   handler: Handler<T, Context>,
   options: WriteOptions,
   resolve: (

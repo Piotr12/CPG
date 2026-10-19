@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { apiWrite } from "./api-write";
+import { apiWrite, tenantApiWrite } from "./api-write";
 
 const TOKEN_CALLER = { userId: "u1", username: "alice", role: "user", tokenId: "t1", tokenName: "ci" } as const;
 
 const mocks = vi.hoisted(() => ({
   requireApiUser: vi.fn(),
   requestScope: vi.fn(),
+  tenantScope: vi.fn(),
   /** A stand-in for IdempotencyService.run: stores the first result as JSON, replays it after. */
   stored: new Map<string, unknown>(),
   run: vi.fn(),
@@ -17,6 +18,7 @@ vi.mock("./require-api-user", () => ({
 vi.mock("@cpg/core", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@cpg/core")>()),
   requestScope: mocks.requestScope,
+  tenantScope: mocks.tenantScope,
 }));
 
 const cradle = { idempotencyService: { run: mocks.run } };
@@ -134,5 +136,64 @@ describe("apiWrite", () => {
     expect(response.status).toBe(409);
     expect((await response.json()).error.code).toBe("VERSION_CONFLICT");
     expect(response.headers.get("Idempotent-Replayed")).toBeNull();
+  });
+});
+
+describe("tenantApiWrite", () => {
+  const tenantCradle = (code: string) => ({ ...cradle, tenant: { code, name: code, generation: 1 } });
+  const write = (tenant: string, headers: Record<string, string>, body = "{}") =>
+    tenantApiWrite(async ({ cradle }) => `written in ${(cradle as unknown as { tenant: { code: string } }).tenant.code}`)(
+      new Request(`http://cpg.test/api/tenants/${tenant}/things`, { method: "POST", headers, body }),
+      { params: Promise.resolve({ tenant }) },
+    );
+
+  beforeEach(() => {
+    mocks.requireApiUser.mockResolvedValue(TOKEN_CALLER);
+    mocks.tenantScope.mockImplementation(async (code: string) => ({ cradle: tenantCradle(code) }));
+    mocks.run.mockImplementation(async (_request: unknown, _scope: unknown, run: () => Promise<unknown>) => ({
+      data: await run(),
+      replayed: false,
+    }));
+  });
+  afterEach(() => vi.clearAllMocks());
+
+  it("writes in the path's tenant scope, keyed in Test's store with the required generation", async () => {
+    const response = await write("test", { "Idempotency-Key": "k1", "Dataset-Generation": "3" });
+
+    expect(await response.json()).toEqual({ ok: true, data: "written in test" });
+    expect(mocks.tenantScope).toHaveBeenCalledWith("test");
+    expect(mocks.run).toHaveBeenCalledWith(
+      expect.objectContaining({ operation: "POST /api/tenants/test/things" }),
+      { kind: "tenant", tenant: "test", generation: 3, requireGeneration: true },
+      expect.any(Function),
+    );
+  });
+
+  it("leaves the generation optional in Prod", async () => {
+    await write("prod", { "Idempotency-Key": "k1" });
+
+    expect(mocks.run).toHaveBeenCalledWith(
+      expect.anything(),
+      { kind: "tenant", tenant: "prod", generation: null, requireGeneration: false },
+      expect.any(Function),
+    );
+  });
+
+  it("refuses a malformed generation with 428 GENERATION_REQUIRED (API-034)", async () => {
+    const response = await write("test", { "Idempotency-Key": "k1", "Dataset-Generation": "latest" });
+
+    expect(response.status).toBe(428);
+    expect((await response.json()).error.code).toBe("GENERATION_REQUIRED");
+    expect(mocks.run).not.toHaveBeenCalled();
+  });
+
+  it("answers 404 for an unknown tenant before reading the body", async () => {
+    const { tenantNotFound } = await vi.importActual<typeof import("@cpg/core")>("@cpg/core");
+    mocks.tenantScope.mockRejectedValue(tenantNotFound());
+
+    const response = await write("staging", { "Idempotency-Key": "k1" }, "{not json");
+
+    expect(response.status).toBe(404);
+    expect((await response.json()).error.code).toBe("TENANT_NOT_FOUND");
   });
 });
