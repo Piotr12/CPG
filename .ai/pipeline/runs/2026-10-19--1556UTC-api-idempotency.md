@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-19 15:56 UTC
 **Agent:** Claude Code / claude-opus-5-5. cezar → `om-auto-fix-issue 21` → feature route → `om-auto-write-spec 21` (spec PR #47) → `om-auto-implement-spec` → `om-auto-create-pr`
-Source doc: .ai/specs/2026-10-19--1548UTC-api-idempotency.md (spec PR #47)
+Source doc: .ai/specs/implemented/2026-10-19--1548UTC-api-idempotency.md (spec PR #47, merged)
 Issue: #21
 
 ## Goal
@@ -35,7 +35,7 @@ Every state-changing bearer request needs an `Idempotency-Key`. A same-key repea
 
 ## Risks
 
-- **The spec isn't on `main` yet.** It sits on spec PR #47 and is read from there; this branch doesn't commit it.
+- **The spec was not on `main` while this was built.** It came from spec PR #47, which merged first; the merge of `main` brought it in, and it then moved to `implemented/`.
 - **MikroORM transaction propagation (spec Q6).** The transaction opens with `em.begin()` on the request `em`. Step 2's timeout tests prove that nested `transactional()` joins it. If they don't, stop and re-plan; never patch around a hang.
 - **Tightened contract.** `DELETE /api/tokens/{id}` now requires the key. It was announced in `BACKWARD_COMPATIBILITY.md`.
 

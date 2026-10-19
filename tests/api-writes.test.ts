@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-// Every state-changing API route is keyed (R07, spec .ai/specs/2026-10-19--1548UTC-api-idempotency.md):
+// Every state-changing API route is keyed (R07, spec .ai/specs/implemented/2026-10-19--1548UTC-api-idempotency.md):
 // it is built with apiWrite, or tenantApiWrite under api/tenants/[tenant]/, which store the
 // Idempotency-Key in the same transaction as the write. A route that resolved its own request
 // scope would write outside that transaction, so write routes never call requestScope/tenantScope.
