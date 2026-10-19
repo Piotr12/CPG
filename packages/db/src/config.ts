@@ -2,6 +2,8 @@ import { Migrator } from "@mikro-orm/migrations";
 import { defineConfig, type Options } from "@mikro-orm/sqlite";
 import { entities } from "./entities";
 import { migrations } from "./migrations";
+import { TenantEntityManager } from "./tenants/tenant-entity-manager";
+import { TenantGuard } from "./tenants/tenant-guard";
 import type { DbOptions } from "./orm";
 
 /**
@@ -12,6 +14,9 @@ export function createOrmConfig(options: DbOptions, overrides: Partial<Options> 
   return defineConfig({
     dbName: options.databasePath,
     entities,
+    // Tenant isolation (R05): bulk write paths refused for tenant-owned entities, flushes checked.
+    entityManager: TenantEntityManager,
+    subscribers: [new TenantGuard()],
     extensions: [Migrator],
     debug: options.debug ?? false,
     ...overrides,
