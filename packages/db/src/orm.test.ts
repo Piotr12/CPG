@@ -45,6 +45,7 @@ describe("migrate", () => {
       "Migration20261019115945_api_tokens",
       "Migration20261019155802_api_idempotency",
       "Migration20261019191302_materials",
+      "Migration20261019202843_locations_customers_suppliers",
     ]);
     expect(await migrate({ databasePath })).toEqual([]);
   });
@@ -56,9 +57,9 @@ describe("getMigrationStatus", () => {
     const orm = await initOrm({ databasePath });
 
     try {
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 9 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 10 });
       await orm.migrator.up();
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 9, pending: 0 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 10, pending: 0 });
     } finally {
       await orm.close();
     }
@@ -75,7 +76,7 @@ describe("migrations", () => {
         await orm.em
           .getConnection()
           .execute<{ name: string }[]>(
-            "select name from sqlite_master where name in ('setting', 'user', 'session', 'user_preference', 'tenant', 'api_token', 'global_audit_event', 'tenant_audit_event', 'global_idempotency_key', 'tenant_idempotency_key', 'material', 'material_conversion')",
+            "select name from sqlite_master where name in ('setting', 'user', 'session', 'user_preference', 'tenant', 'api_token', 'global_audit_event', 'tenant_audit_event', 'global_idempotency_key', 'tenant_idempotency_key', 'material', 'material_conversion', 'location', 'customer', 'supplier')",
           )
       )
         .map(({ name }) => name)
@@ -92,6 +93,24 @@ describe("migrations", () => {
         .sort();
 
     try {
+      expect(await tables()).toEqual([
+        "api_token",
+        "customer",
+        "global_audit_event",
+        "global_idempotency_key",
+        "location",
+        "material",
+        "material_conversion",
+        "session",
+        "setting",
+        "supplier",
+        "tenant",
+        "tenant_audit_event",
+        "tenant_idempotency_key",
+        "user",
+        "user_preference",
+      ]);
+      await orm.migrator.down();
       expect(await tables()).toEqual([
         "api_token",
         "global_audit_event",
@@ -219,8 +238,34 @@ describe("materials migration", () => {
         { numerator: "1000", kind: "text" },
       ]);
 
+      await orm.migrator.down(); // locations, customers and suppliers
       await orm.migrator.down();
       expect(await execute(orm, "select name from sqlite_master where name like 'material%'")).toEqual([]);
+    } finally {
+      await orm.close();
+    }
+  });
+});
+
+describe("locations, customers and suppliers migration", () => {
+  const execute = (orm: Awaited<ReturnType<typeof initOrm>>, sql: string) => orm.em.getConnection().execute(sql);
+
+  it.each(["location", "customer", "supplier"])("keeps %s IDs unique per tenant, and rolls back with rows", async (table) => {
+    const databasePath = tempDatabase();
+    await migrate({ databasePath });
+    const orm = await initOrm({ databasePath });
+    const insert = (id: string, tenant: string, code: string) =>
+      execute(orm, `insert into ${table} (id, tenant_code, code, name, created_at) values ('${id}', '${tenant}', '${code}', 'x', 0)`);
+
+    try {
+      await insert("r1", "test", "00000001");
+      await insert("r2", "prod", "00000001");
+      await expect(insert("r3", "test", "00000001")).rejects.toThrow(/UNIQUE/);
+      expect(await execute(orm, `select active, version from ${table} where id = 'r1'`)).toEqual([{ active: 1, version: 1 }]);
+
+      await orm.migrator.down();
+      expect(await execute(orm, "select name from sqlite_master where name in ('location', 'customer', 'supplier')")).toEqual([]);
+      expect(await execute(orm, "select name from sqlite_master where name = 'material'")).toEqual([{ name: "material" }]);
     } finally {
       await orm.close();
     }

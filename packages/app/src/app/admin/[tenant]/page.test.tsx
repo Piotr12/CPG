@@ -51,6 +51,9 @@ describe("TenantHomePage", () => {
     expect(screen.getByText("Prod")).toBeTruthy();
     expect(screen.getByText("Dataset generation 1")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Materials" }).getAttribute("href")).toBe("/admin/prod/materials");
+    expect(screen.getByRole("link", { name: "Locations" }).getAttribute("href")).toBe("/admin/prod/locations");
+    expect(screen.getByRole("link", { name: "Customers" }).getAttribute("href")).toBe("/admin/prod/customers");
+    expect(screen.getByRole("link", { name: "Suppliers" }).getAttribute("href")).toBe("/admin/prod/suppliers");
     expect(screen.getByRole("link", { name: "Audit — Prod" }).getAttribute("href")).toBe("/admin/prod/audit");
   });
 

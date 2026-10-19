@@ -26,6 +26,12 @@ describe("dictionaries", () => {
       "home/title",
       "materials/columns/status",
       "materials/conversions/tiny",
+      "locations/columns/id",
+      "locations/columns/status",
+      "customers/columns/id",
+      "customers/columns/status",
+      "suppliers/columns/id",
+      "suppliers/columns/status",
       "audit/fields/id",
       "nav/menu",
     ]);

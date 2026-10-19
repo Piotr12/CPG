@@ -21,6 +21,11 @@ import {
   MATERIAL_UNIT_MAX,
   type MaterialType,
 } from "./materials/material.entity";
+import { Customer } from "./customers/customer.entity";
+import { Location } from "./locations/location.entity";
+import type { NamedRecord, NamedRecordEntity } from "./named-records/named-record";
+import { NAMED_RECORD_NAME_MAX } from "./named-records/named-record-properties";
+import { Supplier } from "./suppliers/supplier.entity";
 import { LOCALES, THEMES, UserPreference, type Locale, type Theme } from "./preferences/user-preference.entity";
 import { Setting } from "./settings/setting.entity";
 import { Tenant, TENANT_CODES, type TenantCode } from "./tenants/tenant.entity";
@@ -38,6 +43,8 @@ export { AUDIT_APPEND_ONLY, AUDIT_CHANNELS, GlobalAuditEvent, TenantAuditEvent }
 export { GlobalIdempotencyKey, IDEMPOTENCY_KEY_MAX, TenantIdempotencyKey };
 export { Material, MATERIAL_DESCRIPTION_MAX, MATERIAL_TYPES, MATERIAL_UNIT_MAX, MaterialConversion };
 export type { MaterialType };
+export { Customer, Location, NAMED_RECORD_NAME_MAX, Supplier };
+export type { NamedRecord, NamedRecordEntity };
 export type { AuditChannel, AuditSnapshot, AuditValue, Locale, TenantCode, Theme, UserRole };
 export { currentTenant, isTenantOwned, TENANT_FILTER, tenantOwned, TenantViolationError, selectTenant };
 
@@ -55,6 +62,9 @@ export const entities = [
   TenantIdempotencyKey,
   Material,
   MaterialConversion,
+  Location,
+  Customer,
+  Supplier,
 ];
 
 /**
