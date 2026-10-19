@@ -29,6 +29,16 @@ const read = (file: string) => readFileSync(file, "utf8");
 const rel = (file: string) => path.relative(apiDir, file);
 const methods = (source: string, pattern: RegExp) => [...source.matchAll(pattern)].map(([, method]) => method).sort();
 
+/**
+ * The source of each mutating export: from its `export` to the next top-level `export`. A GET in the
+ * same file may resolve a scope; a write's own code may not.
+ */
+function mutatingExports(source: string): string[] {
+  return source
+    .split(/^(?=export\s)/m)
+    .filter((chunk) => new RegExp(`^export\\s+(?:const|let|var|async\\s+function|function)\\s+(${MUTATING})\\b`).test(chunk));
+}
+
 /** The mutating exports of a route source that aren't built with the expected wrapper. */
 function unkeyed(source: string, tenant: boolean): string[] {
   const keyed = methods(source, keyedExport(tenant ? "tenantApiWrite" : "apiWrite"));
@@ -51,7 +61,8 @@ describe("API write routes", () => {
   });
 
   it("never resolve their own request scope", () => {
-    expect(writers.filter((file) => OWN_SCOPE.test(read(file))).map(rel)).toEqual([]);
+    const offenders = writers.filter((file) => mutatingExports(read(file)).some((chunk) => OWN_SCOPE.test(chunk)));
+    expect(offenders.map(rel)).toEqual([]);
   });
 
   it("would notice an unkeyed or wrongly keyed write", () => {
@@ -59,6 +70,11 @@ describe("API write routes", () => {
     expect(unkeyed("export async function DELETE() {}", false)).toEqual(["DELETE"]);
     expect(unkeyed("export const PATCH = apiWrite(handler);", true)).toEqual(["PATCH"]);
     expect(unkeyed("export const PUT = tenantApiWrite(handler);\nexport const GET = apiHandler(read);", true)).toEqual([]);
-    expect(OWN_SCOPE.test("const { cradle } = await requestScope();")).toBe(true);
+    const mixed = [
+      "export const GET = apiHandler(async () => (await requestScope()).cradle.x.list());",
+      "export const POST = apiWrite(async () => (await requestScope()).cradle.x.create());",
+    ].join("\n");
+    expect(mutatingExports(mixed).map((chunk) => OWN_SCOPE.test(chunk))).toEqual([true]);
+    expect(mutatingExports(mixed.split("\n")[0])).toEqual([]);
   });
 });

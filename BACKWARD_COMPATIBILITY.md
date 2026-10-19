@@ -79,7 +79,13 @@ Route handlers under `app/api/` are protected the same way: their paths, methods
 - `GET /api/tenants/{tenant}` (404 `TENANT_NOT_FOUND`);
 - `GET /api/tokens` (the caller's own tokens);
 - `DELETE /api/tokens/{id}` (404 `TOKEN_NOT_FOUND`);
-- `GET /api/users` (403 `FORBIDDEN` for a normal user).
+- `GET /api/users` (403 `FORBIDDEN` for a normal user). Each row carries `version`;
+- `POST /api/users` (`{ username, password }`, admin only; 409 `CONFLICT` for a taken name);
+- `PATCH /api/users/{id}` (`{ active, version }`, admin only);
+- `PUT /api/users/{id}/password` (`{ password, version }`, admin only);
+- `GET /api/preferences` and `PATCH /api/preferences` (`{ locale?, theme? }`, the caller's own).
+
+**Versions.** An edit of a versioned record (today: a user) carries the `version` it loaded. A stale one is 409 `VERSION_CONFLICT`, and the newer change is kept. The user routes answer 404 `NOT_FOUND` for the built-in admin, an unknown id or a malformed one.
 
 Every tenant-scoped endpoint lives under `/api/tenants/{tenant}/`.
 
