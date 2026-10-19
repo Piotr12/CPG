@@ -79,8 +79,8 @@ Implement E01-S04 as the spec describes:
 
 ### Phase 2: Stored preferences
 
-- [ ] 2.1 Entity and migration
-- [ ] 2.2 UserPreferenceService and schema
+- [x] 2.1 Entity and migration — 03ad7b9
+- [x] 2.2 UserPreferenceService and schema — 43a907d
 
 ### Phase 3: Language and theme in the UI
 
