@@ -43,6 +43,19 @@ See the spec's Implementation Plan. Its Steps 1–10 map onto the Progress below
 - **Schema (risk-high):** `kamal rollback` ignores `read_only`, so flags are not enforced while rolled back.
 - **Concurrency:** the toggle against an in-flight write is covered by a two-ORM test.
 
+## Deviations
+
+- The first full integration run failed. Revalidating the whole `/admin` layout after the toggle made Next.js re-prerender the tenant pages' static shells at runtime (`NEXT_STATIC_GEN_BAILOUT`), and they hung. The toggle now revalidates `/admin` only (b5f6df7, lesson added).
+- A read-only refusal no longer refreshes the materials page: the refresh unmounted the dialog together with its explanation. The spec on #55 was amended (Implementation notes).
+
+## Verification
+
+- `npm run lint`, `npm run typecheck`: pass.
+- `npm run test:coverage`: 177 files, 1148 tests, 100% coverage.
+- `npm run build`: pass.
+- `npm run test:integration` (Docker, production image): 18 files, 115 tests pass.
+- `npm audit`: not re-run, because no dependency changed (`package.json`/`package-lock.json` untouched).
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
@@ -57,11 +70,11 @@ See the spec's Implementation Plan. Its Steps 1–10 map onto the Progress below
 
 ### Phase 2: The API
 
-- [ ] 2.1 PATCH /api/tenants/{tenant}, readOnly in GET, BACKWARD_COMPATIBILITY
-- [ ] 2.2 API integration tests
+- [x] 2.1 PATCH /api/tenants/{tenant}, readOnly in GET, BACKWARD_COMPATIBILITY — 761b85a
+- [x] 2.2 API integration tests — fc71c7c
 
 ### Phase 3: The screens
 
-- [ ] 3.1 setTenantReadOnly action and the /admin Read-only card
-- [ ] 3.2 Tenant pages: strip label, hidden controls, refresh, i18n, help
-- [ ] 3.3 Screen integration test
+- [x] 3.1 setTenantReadOnly action and the /admin Read-only card — 2f25abf, b5f6df7
+- [x] 3.2 Tenant pages: strip label, hidden controls, refresh, i18n, help — 3f988eb, b5f6df7
+- [x] 3.3 Screen integration test — 1ee2679, b5f6df7
