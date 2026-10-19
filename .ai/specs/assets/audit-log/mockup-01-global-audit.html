@@ -1,0 +1,28 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Mockup — /admin/audit</title><style>*{box-sizing:border-box}body{margin:0;font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;background:#fff;color:#252525}
+.note{position:fixed;top:6px;left:12px;font-size:11px;color:#8a8a8a;font-family:ui-monospace,monospace}
+.help{text-align:right;padding:14px 24px 6px;font-size:14px}.help a{color:#252525;text-decoration:underline;text-underline-offset:3px}
+.strip{display:flex;align-items:center;justify-content:space-between;padding:10px 24px;border-bottom:1px solid #e8e8e8;background:#f4f4f5;font-size:14px;color:#555}
+.strip.test{background:#fef9e7;border-color:#f5d36b}.tag{font-weight:700;letter-spacing:.08em;font-size:12px;background:#e4e4e7;padding:3px 8px;border-radius:4px;margin-right:10px;color:#252525}
+.test .tag{background:#f5c542}.seg{border:1px solid #e0e0e0;border-radius:8px;display:flex;background:#fff}.seg span{padding:5px 12px}.seg .on{background:#f0f0f0;font-weight:600}
+main{max-width:1040px;margin:0 auto;padding:40px 24px;display:flex;flex-direction:column;gap:18px}
+.top{display:flex;align-items:center;justify-content:space-between}h1{font-size:24px;margin:0}
+.who{display:flex;gap:14px;align-items:center;font-size:14px;color:#737373}.link{color:#252525;font-weight:500;text-decoration:underline;text-underline-offset:3px}
+.muted{color:#737373;font-size:14px;margin:0}table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:#737373;font-weight:500;padding:9px 10px;border-bottom:1px solid #e8e8e8;white-space:nowrap}
+td{padding:10px;border-bottom:1px solid #f0f0f0;vertical-align:top}.mono{font-family:ui-monospace,monospace;font-size:12px;color:#555}
+.b{display:inline-block;font-size:11px;border:1px solid #e5e5e5;border-radius:999px;padding:1px 7px;background:#f4f4f5}
+.ch div{white-space:nowrap}.ch s{color:#a3a3a3}.arrow{color:#a3a3a3;margin:0 4px}
+.older{align-self:flex-start}.empty{border:1px dashed #e0e0e0;border-radius:12px;padding:40px;text-align:center;color:#737373;font-size:14px}</style></head><body>
+<div class="note">MOCKUP · /admin/audit (every signed-in account) · read-only · illustrative only</div>
+<div class="help"><a>Help</a></div>
+<div class="strip"><div><span class="tag">GLOBAL</span>Global — no tenant selected</div><div class="seg"><span>Test</span><span>Prod</span></div></div>
+<main><div class="top"><h1>Global audit</h1><div class="who"><a class="link">Cave control</a><span>Signed in as <b style="color:#252525">alice</b></span></div></div>
+<p class="muted">Every change to accounts is kept here. Nobody can edit or delete an entry, not even the admin.</p>
+<table><tr><th>Time (UTC)</th><th>Account</th><th>Session</th><th>Channel</th><th>Action</th><th>Subject</th><th>Changes</th></tr>
+<tr><td class="mono">2026-10-19 10:42:07</td><td>alice</td><td class="mono" title="7d3f9a21-…">7d3f9a21</td><td><span class="b">UI</span></td><td>Preferences changed</td><td>alice</td><td class="ch"><div>theme: light<span class="arrow">→</span>dark</div></td></tr>
+<tr><td class="mono">2026-10-19 10:31:55</td><td>admin</td><td class="mono">c41e08b6</td><td><span class="b">UI</span></td><td>User reactivated</td><td>alice</td><td class="ch"><div>active: false<span class="arrow">→</span>true</div></td></tr>
+<tr><td class="mono">2026-10-19 10:30:12</td><td>admin</td><td class="mono">c41e08b6</td><td><span class="b">UI</span></td><td>User deactivated</td><td>alice</td><td class="ch"><div>active: true<span class="arrow">→</span>false</div></td></tr>
+<tr><td class="mono">2026-10-19 10:29:40</td><td>admin</td><td class="mono">c41e08b6</td><td><span class="b">UI</span></td><td>Password reset</td><td>alice</td><td class="ch"><div style="color:#737373">Password replaced (not recorded)</div></td></tr>
+<tr><td class="mono">2026-10-19 10:27:03</td><td>admin</td><td class="mono">c41e08b6</td><td><span class="b">UI</span></td><td>User created</td><td>alice</td><td class="ch"><div>username: alice</div><div>role: user</div><div>active: true</div></td></tr>
+<tr><td class="mono">2026-10-19 09:58:31</td><td>admin</td><td class="mono">5a90e2c7</td><td><span class="b">UI</span></td><td>User created</td><td>bob.planner</td><td class="ch"><div>username: bob.planner</div><div>role: user</div><div>active: true</div></td></tr>
+</table><a class="link older" style="font-size:14px">Older entries →</a></main></body></html>
