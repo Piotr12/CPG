@@ -4,7 +4,7 @@ import path from "node:path";
 import { defineEntity, p, type InferEntity } from "@mikro-orm/core";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { entities, Setting, Tenant, User, type TenantCode } from "../entities";
-import { TENANT_FILTER, tenantOwned, TenantViolationError, useTenant } from "../entities/tenants/tenant-owned";
+import { TENANT_FILTER, tenantOwned, TenantViolationError, selectTenant } from "../entities/tenants/tenant-owned";
 import { initOrm, migrate, type Orm } from "../orm";
 import { TenantEntityManager } from "./tenant-entity-manager";
 
@@ -57,7 +57,7 @@ describe("tenant isolation", () => {
   /** A request-like EntityManager, scoped to a tenant or (without one) global. */
   const scope = (code?: TenantCode) => {
     const em = orm.em.fork();
-    if (code) useTenant(em, code);
+    if (code) selectTenant(em, code);
     return em;
   };
   const execute = (sql: string) => orm.em.getConnection().execute(sql);

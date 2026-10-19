@@ -22,7 +22,7 @@ export function currentTenant(em: Pick<EntityManager, "getFilterParams">): Tenan
 }
 
 /** Scopes an EntityManager (and every fork of it) to one tenant. Only `tenantScope` in core calls this. */
-export function useTenant(em: Pick<EntityManager, "setFilterParams">, code: TenantCode): void {
+export function selectTenant(em: Pick<EntityManager, "setFilterParams">, code: TenantCode): void {
   em.setFilterParams(TENANT_FILTER, { code } satisfies TenantParams);
 }
 

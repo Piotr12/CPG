@@ -24,7 +24,7 @@ type Target = EntityName<object> | object | object[];
  * `nativeUpdate` that would move rows to another tenant. Global entities are unaffected.
  */
 export class TenantEntityManager extends SqlEntityManager<SqliteDriver> {
-  private refuseTenantOwned(target: Target, method: string): void {
+  private refselectTenantOwned(target: Target, method: string): void {
     const sample: unknown = Array.isArray(target) ? target[0] : target;
     const entityName = (Utils.isEntity(sample) ? sample.constructor : sample) as EntityName<object>;
     const meta = this.getMetadata().find(entityName);
@@ -38,7 +38,7 @@ export class TenantEntityManager extends SqlEntityManager<SqliteDriver> {
     data?: NoInfer<RequiredEntityData<Entity> | Entity>,
     options?: NativeInsertUpdateOptions<Entity>,
   ): Promise<Primary<Entity>> {
-    this.refuseTenantOwned(entityNameOrEntity, "insert");
+    this.refselectTenantOwned(entityNameOrEntity, "insert");
     return super.insert(entityNameOrEntity, data, options);
   }
 
@@ -47,25 +47,25 @@ export class TenantEntityManager extends SqlEntityManager<SqliteDriver> {
     data?: NoInfer<RequiredEntityData<Entity>[] | Entity[]>,
     options?: NativeInsertUpdateOptions<Entity>,
   ): Promise<Primary<Entity>[]> {
-    this.refuseTenantOwned(entityNameOrEntities, "insertMany");
+    this.refselectTenantOwned(entityNameOrEntities, "insertMany");
     return super.insertMany(entityNameOrEntities, data, options);
   }
 
-  override async upsert<Entity extends object, Fields extends string = any>(
+  override async upsert<Entity extends object, Fields extends string = never>(
     entityNameOrEntity: EntityName<Entity> | Entity,
     data?: EntityData<Entity> | NoInfer<Entity>,
     options?: UpsertOptions<Entity, Fields>,
   ): Promise<Entity> {
-    this.refuseTenantOwned(entityNameOrEntity, "upsert");
+    this.refselectTenantOwned(entityNameOrEntity, "upsert");
     return super.upsert(entityNameOrEntity, data, options);
   }
 
-  override async upsertMany<Entity extends object, Fields extends string = any>(
+  override async upsertMany<Entity extends object, Fields extends string = never>(
     entityNameOrEntity: EntityName<Entity> | Entity[],
     data?: (EntityData<Entity> | NoInfer<Entity>)[],
     options?: UpsertManyOptions<Entity, Fields>,
   ): Promise<Entity[]> {
-    this.refuseTenantOwned(entityNameOrEntity, "upsertMany");
+    this.refselectTenantOwned(entityNameOrEntity, "upsertMany");
     return super.upsertMany(entityNameOrEntity, data, options);
   }
 
@@ -75,7 +75,7 @@ export class TenantEntityManager extends SqlEntityManager<SqliteDriver> {
     overridesOrOptions?: EntityData<Entity> | NativeInsertUpdateOptions<Entity>,
     options?: NativeInsertUpdateOptions<Entity>,
   ): Promise<Entity> {
-    this.refuseTenantOwned(entityNameOrEntity, "clone");
+    this.refselectTenantOwned(entityNameOrEntity, "clone");
     return super.clone(entityNameOrEntity, whereOrOverrides, overridesOrOptions, options);
   }
 
@@ -85,7 +85,7 @@ export class TenantEntityManager extends SqlEntityManager<SqliteDriver> {
     data: EntityData<Entity>,
     options?: UpdateOptions<Entity>,
   ): Promise<number> {
-    if ("tenant" in data) this.refuseTenantOwned(entityName, "nativeUpdate");
+    if ("tenant" in data) this.refselectTenantOwned(entityName, "nativeUpdate");
     return super.nativeUpdate(entityName, where, data, options);
   }
 
@@ -96,7 +96,7 @@ export class TenantEntityManager extends SqlEntityManager<SqliteDriver> {
     type?: ConnectionType,
     loggerContext?: LoggingOptions,
   ): QueryBuilder<Entity, RootAlias> {
-    if (!(entityName instanceof QueryBuilder)) this.refuseTenantOwned(entityName, "createQueryBuilder");
+    if (!(entityName instanceof QueryBuilder)) this.refselectTenantOwned(entityName, "createQueryBuilder");
     return super.createQueryBuilder(entityName, alias, type, loggerContext);
   }
 }

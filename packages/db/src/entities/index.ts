@@ -8,11 +8,11 @@ import {
   TENANT_FILTER,
   tenantOwned,
   TenantViolationError,
-  useTenant,
+  selectTenant,
 } from "./tenants/tenant-owned";
 
 export { Session, Setting, Tenant, TENANT_CODES, User, USER_ROLES, type TenantCode, type UserRole };
-export { currentTenant, isTenantOwned, TENANT_FILTER, tenantOwned, TenantViolationError, useTenant };
+export { currentTenant, isTenantOwned, TENANT_FILTER, tenantOwned, TenantViolationError, selectTenant };
 
 /** Every entity the ORM knows about — add new ones here. */
 export const entities = [Setting, User, Session, Tenant];

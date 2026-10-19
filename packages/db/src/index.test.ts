@@ -20,8 +20,8 @@ describe("@cpg/db", () => {
       "initOrm",
       "isTenantOwned",
       "migrate",
+      "selectTenant",
       "tenantOwned",
-      "useTenant",
     ]);
     expect(db.entities).toEqual([db.Setting, db.User, db.Session, db.Tenant]);
     expect(db.GLOBAL_ENTITIES).toEqual(db.entities);

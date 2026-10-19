@@ -89,6 +89,17 @@ No action or route writes its own `try/catch` + response mapping.
 - **Database reads in server components** call `await connection()` and sit inside `<Suspense>`. Never use `export const dynamic = "force-dynamic"` or other route-segment config: it doesn't exist under Cache Components. The app must build with no database present.
 - **Check-then-write on shared state** (stock on hand, work-order status, planned-order release) runs inside one `em.transactional()` in the service, backed by a unique constraint where one applies. SQLite has a single writer: keep transactions short and never await a network call inside one.
 - **Everything persisted** lives under `config.dataDir`. **Schema changes** go through migrations only (see `AGENTS.md`).
+- **Tenant isolation (R05).** Business data belongs to Test or Prod (spec `2026-10-19--0913UTC-test-prod-tenants`). Every entity is either declared with `tenantOwned()` (`db/src/entities/tenants/tenant-owned.ts`) or listed in `GLOBAL_ENTITIES` (accounts, sessions, settings, tenants); `tests/tenant-ownership.test.ts` enforces it.
+  - **The tenant comes from the request, explicitly.** Pages under `app/admin/[tenant]/`, route handlers under `app/api/tenants/[tenant]/`, and server actions bound to the page's tenant through `tenantServerAction`. All of them resolve `tenantScope(code)` from `@cpg/core` (`tests/tenant-entry-points.test.ts`). There is no tenant cookie and no tenant on the session.
+  - **A plain `requestScope()` has no tenant.** Reading a tenant-owned entity there throws.
+  - **`@cpg/db` enforces the rest at runtime.**
+    - The default-on `tenant` filter scopes every read, `nativeUpdate` and `nativeDelete`.
+    - `TenantGuard` rejects a flush that touches another tenant's record, or a reference that wasn't loaded through the scope.
+    - `TenantEntityManager` refuses `insert`, `upsert`, `clone` and the QueryBuilder on tenant-owned entities.
+  - **Writes go through `em.create`/`assign`/`remove` and a flush.** Services never set `tenant`, because it is filled on create.
+  - **Client-supplied references are loaded with `findOneOrFail` in the scope.** A Prod ID used in Test is then "not found" (TEN-014).
+  - **Tenant-local unique keys include `tenant`.**
+  - **ESLint forbids what the runtime can't see:** `filters` options, `setFilterParams`/`selectTenant` outside `tenantScope`, and raw SQL (`execute`, `getKysely`).
 
 ### Engineering principles
 
@@ -150,6 +161,7 @@ Authentication is server-side sessions (spec `2026-10-19--0746UTC-admin-sign-in`
 - [ ] Auth is enforced server-side on every non-public page, action and route. (blocker)
 - [ ] Authorization checks the specific record. (blocker)
 - [ ] Check-then-write on shared state runs in a transaction and/or behind a unique constraint. (blocker)
+- [ ] Tenant data is reached only through `tenantScope`. New entities are `tenantOwned()` or deliberately global, nothing bypasses the tenant filter or guard, and references are loaded in the scope. (blocker)
 - [ ] No secret, token or password in logs, errors or client payloads. (blocker)
 - [ ] No untrusted input reaches a query, shell command or file path unparameterized/uncanonicalized. (blocker)
 - [ ] Writes use a Zod-parsed explicit shape, with no mass assignment. (blocker)
@@ -173,16 +185,16 @@ Authentication is server-side sessions (spec `2026-10-19--0746UTC-admin-sign-in`
 
 Example: "add work orders". Create each file only when the change needs it.
 
-1. **Entity:** `packages/db/src/entities/work-orders/work-order.entity.ts`. Add it to `entities/index.ts`, then `npm run db:migration:create -- <name>` and commit the migration, snapshot and index together.
+1. **Entity:** `packages/db/src/entities/work-orders/work-order.entity.ts`, declared with `tenantOwned()` unless it is genuinely global (then add it to `GLOBAL_ENTITIES`). Add it to `entities/index.ts`, then `npm run db:migration:create -- <name>` and commit the migration, snapshot and index together.
 2. **Pure rules** (if any): `packages/core/src/domain/work-orders/*.ts`, with tests.
 3. **Validation:** `packages/core/src/validators/work-orders/work-order-<action>.schema.ts`. This is required once there is any create/update input.
 4. **Service:** `packages/core/src/services/work-orders/work-order.service.ts`. Register it in `core/src/container/container.ts` (`workOrderService: asClass(WorkOrderService).scoped()`) and add it to `Cradle` in `core/src/container/cradle.ts`. Export it from `core/src/index.ts`. It throws `AppError`s and runs check-then-write in `em.transactional()`. Entity types and `EntityManager` come from `@cpg/db`, never from `@mikro-orm/*`.
 5. **Events** (if a side effect is needed): add `work-orders.work-order.<action>` to `core/src/events/event-map.ts` and emit it from the service after the mutation succeeds.
 6. **HTTP surface:**
-   - From CPG's own pages, a server action in `actions.ts` next to the page, wrapped in the shared `server-action` helper.
+   - From CPG's own pages, a server action in `actions.ts` next to the page, wrapped in the shared `server-action` helper. For tenant data, it uses `tenantServerAction`, and the page binds its tenant with `action.bind(null, tenant)`.
    - For external callers or client fetching, `app/src/app/api/work-orders/…/route.ts` via `apiHandler` (or `makeCrudRoute` for plain CRUD).
    - Authentication checks come first, once auth exists.
-7. **Pages:** backend screens under `app/src/app/admin/work-orders/` (shadcn via `@cpg/ui`), public ones under `app/src/app/` (plain Tailwind).
+7. **Pages:** tenant screens under `app/src/app/admin/[tenant]/work-orders/`, read through `tenantScope(tenant)`; global backend screens under `app/src/app/admin/(global)/`. Both use shadcn via `@cpg/ui`. Public pages go under `app/src/app/` (plain Tailwind).
    - Read in a server component through the service, with `await connection()` inside `<Suspense>` and a `feedback/` fallback.
    - Forms use `CrudForm` bound to the schema from step 3, through a small client component in `app/src/components/work-orders/` (a Zod schema can't be passed as a prop from a server component).
    - Lists use `DataTable`.
