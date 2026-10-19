@@ -124,7 +124,7 @@ No action or route writes its own `try/catch` + response mapping.
     `tests/tenant-lint.test.ts` proves each rule fires.
 
 - **Audit (R08).** Every change is recorded in an append-only audit (spec `2026-10-19--1050UTC-audit-log`): account-level changes in the Global audit (`GlobalAuditEvent`), tenant records in that tenant's audit (`TenantAuditEvent`, tenant-owned).
-  - **Every mutating service method takes an `actor: Actor`.** Actions build it from the validated session with `uiActor(user)`; API writes will name their token.
+  - **Every mutating service method takes an `actor: AuditActor`.** Actions build it from the validated session with `uiActor(user)`; API writes will name their token.
   - **The service records the entry itself**, with `recordGlobalAudit(em, actor, entry)` or `recordTenantAudit(…)` on the EntityManager it writes with. The entry then commits or rolls back with the change. Never record from an event handler: events fire after the commit.
   - **Snapshots are explicit allowlists** of the entity's fields, never the whole entity. The recorder refuses keys that look like secrets (`password`, `hash`, `secret`), but the allowlist is the real protection.
   - **A write that changes nothing records nothing.** Action IDs follow the event naming (`concept.entity.action`).
@@ -301,7 +301,7 @@ Done when these standards were adopted:
 - Users (2026-10-19, user management): `core/src/http/auth.ts`, `UserService` (`core/src/services/users/`), and the first client layers: `ui/src/backend/tables/data-table.tsx` (columns, empty state, row actions; pagination, sorting and filtering wait for the first list that needs them), `forms/crud-form.tsx`, `feedback/{error-message,empty-state}.tsx` and `api/result.ts` (`loading-message.tsx` waits for its first consumer: pages use an `aria-busy` placeholder as their `<Suspense>` fallback). `/admin/users` is the reference for a list screen with create and row actions.
 - Audit (2026-10-19, spec `2026-10-19--1050UTC-audit-log`):
   - `GlobalAuditEvent` and `TenantAuditEvent` (`db/src/entities/audit/`), with append-only triggers declared on the entities;
-  - `core/src/services/audit/` (`Actor`/`uiActor`, `audit-recorder.ts`, `AuditService` with keyset paging);
+  - `core/src/services/audit/` (`AuditActor`/`uiActor`, `audit-recorder.ts`, `AuditService` with keyset paging);
   - `core/src/http/parse-input.ts` (`parseInput` for query strings and route parameters, shared with `serverAction`);
   - `/admin/audit` and `/admin/[tenant]/audit` (`app/src/components/audit/`), and `GET /api/audit` and `GET /api/tenants/{tenant}/audit`.
 
