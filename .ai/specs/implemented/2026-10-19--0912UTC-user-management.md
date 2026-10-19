@@ -1,6 +1,6 @@
 # The admin manages normal users
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-19 09:12 UTC
 **Issue:** #16 (E01-S02), epic #9 · **Builds on:** `2026-10-19--0746UTC-admin-sign-in.md` (#15, merged) · **Design authority:** `.ai/specs/product-brief.md`, `.ai/specs/research/CPG-prd001.pdf` §05
 
@@ -285,3 +285,14 @@ Nothing is superseded.
     - the users screen offers no Delete and shows the never-deleted line (TEN-008).
 
     Then run the full gate: lint, typecheck, `test:coverage` (100%), build and `test:integration`. Also run `npm audit` (there is no new dependency, so the triage should be a no-op).
+
+## Implementation notes
+
+Implemented on PR #34. What this spec deferred was picked up by later stories, so parts of the text above no longer describe the code:
+
+- **Bearer-token API (Q5, and "No route handlers" under API Contracts).** E01-S03 (#17, PR #41) built bearer authentication and `GET /api/users`. E02-S03 (#21, PR #48) added `POST /api/users`, `PATCH /api/users/{id}` (activate or deactivate) and `PUT /api/users/{id}/password`. All three go through `apiWrite` with `authorize: assertAdmin`, which checks the role before the `Idempotency-Key` and the body. The two routes that carry a password store their request fingerprint as an argon2 hash. There is no `DELETE`, so accounts still can't be removed (TEN-008).
+- **Audit (Q6).** E02-S02 (#20, PR #42) records account creation, password resets and activation changes in the Global audit, in the same transaction as the change. The snapshot never holds a password or its hash.
+- **Optimistic locking ("No `version` column" under Data Model).** E02-S03 (#21, PR #48) added `User.version`. The screen's reset and activation actions and the API routes reject a stale version (`VERSION_CONFLICT`, HTTP 409 over the API).
+- **Tokens (R06).** E01-S03 deletes the user's API tokens in the same transaction as the sessions on a reset or deactivation.
+- **Paths.** The users screen lives at `app/src/app/admin/(global)/users/`, since E02-S01 (#19) moved the global screens into the `(global)` route group. The header link became an entry in #43's role-based menu (`components/layout/nav-items.ts`).
+- **Shared UI.** `ui/src/backend/feedback/loading-message.tsx` was not built: no screen needed it, and the standards add it with its first consumer. `DataTable` has no pagination yet, for the same reason.

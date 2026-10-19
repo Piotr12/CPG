@@ -2,7 +2,7 @@
 
 **Status:** ready
 **Created:** 2026-10-19 13:12 UTC
-**Issue:** #43 · **Builds on:** `implemented/2026-10-19--1053UTC-api-tokens.md` (#17, merged), `implemented/2026-10-19--1050UTC-audit-log.md` (#20, merged), `2026-10-19--0855UTC-user-preferences-footer-help.md` (#18, merged) · **Design authority:** `.ai/specs/product-brief.md` (R11, Q03), `.ai/specs/research/CPG-acceptance.md` (UX-002, UX-008…010)
+**Issue:** #43 · **Builds on:** `implemented/2026-10-19--1053UTC-api-tokens.md` (#17, merged), `implemented/2026-10-19--1050UTC-audit-log.md` (#20, merged), `implemented/2026-10-19--0855UTC-user-preferences-footer-help.md` (#18, merged) · **Design authority:** `.ai/specs/product-brief.md` (R11, Q03), `.ai/specs/research/CPG-acceptance.md` (UX-002, UX-008…010)
 
 ## 📝 TLDR
 
