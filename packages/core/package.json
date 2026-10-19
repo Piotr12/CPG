@@ -11,9 +11,11 @@
   },
   "dependencies": {
     "@cpg/db": "^0.1.0",
-    "awilix": "^13.0.5"
+    "awilix": "^13.0.5",
+    "zod": "^4.6.7"
   },
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./validators/*": "./src/validators/*.ts"
   }
 }
