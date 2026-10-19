@@ -1,8 +1,8 @@
 import { Migration } from '@mikro-orm/migrations';
 
-export class Migration20261019110425_api_tokens extends Migration {
+export class Migration20261019115945_api_tokens extends Migration {
 
-  override name = 'Migration20261019110425_api_tokens';
+  override name = 'Migration20261019115945_api_tokens';
 
   override up(): void | Promise<void> {
     this.addSql(`create table \`api_token\` (\`id\` text not null primary key, \`user_id\` text not null, \`name\` text not null, \`token_hash\` text not null, \`created_at\` datetime not null, \`last_used_at\` datetime null, constraint \`api_token_user_id_foreign\` foreign key (\`user_id\`) references \`user\` (\`id\`) on delete cascade);`);

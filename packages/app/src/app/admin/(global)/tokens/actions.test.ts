@@ -41,7 +41,13 @@ describe("API token actions", () => {
     await revokeApiToken({ tokenId: TOKEN_ID, userId: "u1" });
 
     expect(mocks.apiTokenService.create).toHaveBeenCalledWith(alice, "agent1");
-    expect(mocks.apiTokenService.revoke).toHaveBeenCalledWith("u2", TOKEN_ID);
+    expect(mocks.apiTokenService.revoke).toHaveBeenCalledWith("u2", TOKEN_ID, {
+      userId: "u2",
+      username: "alice",
+      sessionId: "s2",
+      channel: "ui",
+      token: null,
+    });
   });
 
   it("reports a taken name and a vanished token without refreshing", async () => {

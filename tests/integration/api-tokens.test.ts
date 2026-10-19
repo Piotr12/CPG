@@ -170,6 +170,26 @@ describe("named API tokens", () => {
     expect(await tara.texts("tbody tr")).toEqual([expect.stringMatching(/^agent2\t.+ UTC\t\d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC/)]);
   });
 
+  it("keeps token creation and revocation in the Global audit, naming the token behind an API call (AUD-007, AUD-014)", async () => {
+    const audit = (await api("/api/audit?limit=100", secrets.agent2)).body.data.entries as {
+      action: string;
+      subject: { label: string };
+      actor: { username: string };
+      channel: string;
+      token: { name: string } | null;
+    }[];
+    const about = (name: string) =>
+      audit
+        .filter((entry) => entry.subject.label === name && entry.actor.username === "tara")
+        .map(({ action, channel, token }) => [action, channel, token?.name ?? null]);
+
+    expect(about("agent1")).toEqual([
+      ["tokens.api-token.revoked", "api", "agent2"],
+      ["tokens.api-token.created", "ui", null],
+    ]);
+    expect(JSON.stringify(audit)).not.toContain(secrets.agent1);
+  });
+
   it("gives the admin's own token admin rights, and revokes it from the screen (API-002)", async () => {
     await openTokens(admin);
     secrets.admin = await createToken(admin, "ops");

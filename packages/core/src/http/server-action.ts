@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { AppError, ValidationError } from "./errors";
+import { AppError } from "./errors";
+import { validationError } from "./parse-input";
 import { fail, ok, type Result } from "./result";
 
 /** What the client sees for anything that isn't an `AppError`: no message, no stack. */
@@ -18,9 +19,8 @@ export function serverAction<Schema extends z.ZodType, T>(
   return async (raw) => {
     const parsed = schema.safeParse(raw);
     if (!parsed.success) {
-      const { fieldErrors } = z.flattenError(parsed.error) as { fieldErrors: Record<string, string[]> };
-      const error = new ValidationError(fieldErrors);
-      return fail({ code: error.code, message: error.message, fieldErrors });
+      const { code, message, fieldErrors } = validationError(parsed.error);
+      return fail({ code, message, fieldErrors });
     }
     try {
       return ok(await handler(parsed.data));

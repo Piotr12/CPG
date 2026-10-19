@@ -21,6 +21,8 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
   - `nativeUpdate` data with a relation key or a raw column name (MikroORM passes unknown keys through as SQL).
 
   The same holds for a global entity that references tenant data. `TenantEntityManager` refuses these at runtime for every entity that touches tenant data, but joins and raw SQL can't be fully checked there, so ESLint bans the QueryBuilder, the driver, `addFilter` and raw SQL in `core`/`app`. After a MikroORM upgrade, re-read the `EntityManager` write methods and run `packages/db/src/tenants/tenant-isolation.test.ts`.
+- **2026-10-19 — MikroORM 7 entities can declare triggers** — `defineEntity({ triggers: [...] })` makes `db:migration:create` emit `create trigger`/`drop trigger`, and the snapshot tracks them, so a second `create` sees no drift. Prefer that to hand-written trigger SQL in a migration (the audit's append-only triggers).
+- **2026-10-19 — `p.….nullable()` infers `T | null | undefined`** — an entity still held in the identity map from this request's own `em.create` has unset optional fields as `undefined`, not `null`. Map with `?? null` when a view promises `null`, and test it by reading back through the same EntityManager.
 - **2026-10-17 — shadcn v4 imports `cn` from the `cn` npm package** — `import { cn } from "cn"` in generated components is correct, not a broken alias. The `new-york` style is legacy; this repo uses `radix-nova`.
 
 ## Testing
@@ -40,8 +42,11 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 - **2026-10-19 — A cezar worktree may have no `node_modules` of its own** — Node then resolves `@cpg/*` to the main checkout's `node_modules`, whose workspace links point at the main checkout's packages: tests and typecheck run the wrong code. Run `npm ci` in the worktree before the first test.
 - **2026-10-19 — MikroORM's identity map hides a concurrent change from `findOne`** — re-reading an entity already loaded in the same EntityManager returns the cached value inside a later transaction, so a compare-and-set on it silently passes. Compare with `count(Entity, { key, value })` (see `ApiTokenService.create`).
 - **2026-10-19 — agent-browser can click before React hydrates** — a click on the static HTML of a streamed page is silently lost, and a wait on state the static shell already shows (`<html lang="en">`) passes too early. Wait until the target element has a `__reactFiber` key, then wait for server-rendered state such as `aria-pressed` (`choosePreference` in `tests/integration/sign-in.ts`).
+- **2026-10-19 — Streamed content sits in a hidden container before it is swapped in** — Next.js streams a `<Suspense>` child into a `<div hidden>` first. A `wait --fn` on `innerText` or an element's presence passes while it is still hidden, and the next `find role … click` then reports that the link doesn't exist. Wait for the element *outside* `[hidden]`: `!el.closest("[hidden]")` (`tests/integration/audit.test.ts`).
 - **2026-10-19 — `agent-browser wait --fn` must not return a DOM element** — the result is serialized over CDP, and a hydrated element (React fiber attached) intermittently fails with "Object reference chain is too long". When that hit `restoreDefaultPreferences`, the admin stayed in Polish and the next file failed on English text. `waitUntil` in `tests/integration/browser.ts` now wraps every expression in `Boolean(…)`.
 - **2026-10-19 — A hook must not return a function by accident** — `beforeEach(() => mock.mockResolvedValue(x))` returns the mock, and Vitest runs a function returned from a hook as its teardown, so the mock fires after the test and a rejecting mock fails it with a confusing stack. Give hooks a block body: `beforeEach(() => { … })`.
+
+- **2026-10-19 — Integration files share one app, and users are never deleted** — an account one file creates shows up in every later file's users list. Assert on your own accounts only (`ownRows` in `tests/integration/users.test.ts`), leave accounts active when the file ends, and give each file its own usernames (`audit-alice`).
 
 ## Next.js
 

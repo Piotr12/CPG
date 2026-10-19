@@ -4,6 +4,7 @@ import * as route from "./route";
 const mocks = vi.hoisted(() => ({ revoke: vi.fn(), requireApiUser: vi.fn() }));
 vi.mock("@cpg/core", async (importOriginal) => ({
   apiHandler: (await importOriginal<typeof import("@cpg/core")>()).apiHandler,
+  callerActor: (await importOriginal<typeof import("@cpg/core")>()).callerActor,
   requestScope: async () => ({ cradle: { apiTokenService: { revoke: mocks.revoke } } }),
 }));
 vi.mock("../../../../auth/require-api-user", () => ({ requireApiUser: mocks.requireApiUser }));
@@ -18,13 +19,20 @@ describe("DELETE /api/tokens/{id}", () => {
   afterEach(() => vi.clearAllMocks());
 
   it("revokes the caller's own token (API-008)", async () => {
-    mocks.requireApiUser.mockResolvedValue({ userId: "u2", username: "alice", role: "user" });
+    mocks.requireApiUser.mockResolvedValue({ userId: "u2", username: "alice", role: "user", tokenId: "t9", tokenName: "ci" });
     mocks.revoke.mockResolvedValue({ id: "t1" });
 
     const response = await remove("t1");
 
     expect(mocks.requireApiUser).toHaveBeenCalledWith(expect.any(Request));
-    expect(mocks.revoke).toHaveBeenCalledWith("u2", "t1");
+    // The Global audit names the token that made the call (AUD-007).
+    expect(mocks.revoke).toHaveBeenCalledWith("u2", "t1", {
+      userId: "u2",
+      username: "alice",
+      sessionId: null,
+      channel: "api",
+      token: { id: "t9", name: "ci" },
+    });
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ ok: true, data: { id: "t1" } });
   });

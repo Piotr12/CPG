@@ -8,6 +8,8 @@ export const HELP_TOPIC_IDS = [
   "managing-users",
   "api-tokens",
   "test-and-prod",
+  "global-audit",
+  "tenant-audit",
   "language-and-theme",
   "using-help",
 ] as const;
@@ -25,6 +27,8 @@ export const HELP_TOPIC_ROUTES: Record<HelpTopicId, string> = {
   "managing-users": "/admin/users",
   "api-tokens": "/admin/tokens",
   "test-and-prod": "/admin/[tenant]",
+  "global-audit": "/admin/audit",
+  "tenant-audit": "/admin/[tenant]/audit",
   "language-and-theme": "/admin",
   "using-help": "/help",
 };
@@ -90,6 +94,23 @@ const en: Record<HelpTopicId, HelpText> = {
       "The secret is shown once. Copy it straight away: CPG stores only a fingerprint of it and can never show it again. If you lose it, revoke the token and create a new one.",
       "Send the secret in every API request as the Authorization: Bearer header. The token can do exactly what your account can, in Test and Prod, and it never expires.",
       "Revoke ends a token at once. A password reset or a deactivation ends all of an account's tokens. Tokens can be listed and revoked through the API too, but only created here.",
+    ],
+  },
+  "global-audit": {
+    title: "The Global audit",
+    body: [
+      "Global audit, in the header, opens it: every change to accounts, newest first. It lists users created, passwords reset, accounts deactivated or reactivated, language or theme changes, and API tokens created or revoked.",
+      "Each entry shows when it happened (in UTC), the account that made it, the session it came from, the channel (UI for CPG's screens, API for programs) and what changed, as before → after.",
+      "A password reset is listed without the password: CPG never records passwords or their hashes.",
+      "Every account can read the audit, and nobody can change or delete an entry, not even the administrator. Older entries shows the previous page.",
+    ],
+  },
+  "tenant-audit": {
+    title: "A tenant's audit",
+    body: [
+      "Audit — Test or Audit — Prod, on that tenant's page, opens its own audit: the changes to its business records, kept apart from the other tenant's.",
+      "It is empty until CPG holds records such as materials. Account changes are always in the Global audit.",
+      "Like the Global audit, it is read-only for everyone.",
     ],
   },
   "language-and-theme": {
@@ -161,6 +182,23 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Sekret jest pokazywany tylko raz. Skopiuj go od razu: CPG przechowuje wyłącznie jego odcisk i nigdy nie pokaże go ponownie. Jeśli go zgubisz, unieważnij token i utwórz nowy.",
       "Wysyłaj sekret w każdym żądaniu do API jako nagłówek Authorization: Bearer. Token może dokładnie to, co twoje konto, w środowiskach Test i Prod, i nigdy nie wygasa.",
       "Unieważnij natychmiast kończy działanie tokenu. Reset hasła lub dezaktywacja kończy działanie wszystkich tokenów konta. Tokeny można też wyświetlać i unieważniać przez API, ale tworzyć tylko tutaj.",
+    ],
+  },
+  "global-audit": {
+    title: "Audyt globalny",
+    body: [
+      "Audyt globalny w nagłówku otwiera ten audyt: każdą zmianę kont, od najnowszej. Znajdziesz tu utworzonych użytkowników, zresetowane hasła, dezaktywowane i ponownie aktywowane konta, zmiany języka lub motywu oraz utworzone i unieważnione tokeny API.",
+      "Każdy wpis pokazuje, kiedy nastąpiła zmiana (w UTC), które konto ją wprowadziło, z jakiej sesji, jakim kanałem (Ekran dla ekranów CPG, Interfejs API dla programów) i co się zmieniło, jako przed → po.",
+      "Reset hasła jest zapisany bez hasła: CPG nigdy nie zapisuje haseł ani ich skrótów.",
+      "Audyt może przeglądać każde konto, a nikt nie może zmienić ani usunąć wpisu, nawet administrator. Starsze wpisy pokazują poprzednią stronę.",
+    ],
+  },
+  "tenant-audit": {
+    title: "Audyt środowiska",
+    body: [
+      "Audyt — Test lub Audyt — Prod na stronie środowiska otwiera jego własny audyt: zmiany jego rekordów biznesowych, oddzielone od drugiego środowiska.",
+      "Jest pusty, dopóki CPG nie przechowuje rekordów, na przykład materiałów. Zmiany kont są zawsze w audycie globalnym.",
+      "Tak jak audyt globalny, jest tylko do odczytu dla wszystkich.",
     ],
   },
   "language-and-theme": {

@@ -1,6 +1,8 @@
 import { ApiToken, Session, Setting, UniqueConstraintViolationException, type EntityManager } from "@cpg/db";
 import type { AppConfig } from "../../config";
 import { ConflictError, NotFoundError, UnauthorizedError } from "../../http/errors";
+import { uiActor, type AuditActor } from "../audit/actor";
+import { recordGlobalAudit, type AuditEntry } from "../audit/audit-recorder";
 import type { Actor } from "../auth/actor";
 import { ADMIN_PASSWORD_SETTING, verifiedAdminPasswordStamp } from "../auth/admin-password-stamp";
 import { generateApiTokenSecret, hashApiTokenSecret } from "../auth/api-token-secret";
@@ -62,7 +64,8 @@ export class ApiTokenService {
    * while the actor's session still exists and its account is active: a reset or deactivation
    * deletes the sessions, so one that commits mid-request leaves no token behind (R06). For the
    * admin, the password the server runs with must also still be the stamped one (spec Q8).
-   * `ConflictError` when the account already has a token with that name.
+   * `ConflictError` when the account already has a token with that name. The Global audit records
+   * the creation in the same transaction (AUD-014).
    */
   async create(actor: SessionUser, name: string): Promise<CreatedApiToken> {
     // The argon2 check runs before the transaction (SQLite has one writer); the transaction then
@@ -78,6 +81,7 @@ export class ApiTokenService {
           throw new UnauthorizedError();
         }
         const created = em.create(ApiToken, { user: session.user, name, tokenHash: hashApiTokenSecret(secret) });
+        recordGlobalAudit(em, uiActor(actor), tokenEntry("tokens.api-token.created", created, null, { name }));
         await em.flush();
         return created;
       });
@@ -88,11 +92,19 @@ export class ApiTokenService {
     }
   }
 
-  /** Deletes one of the account's tokens. `TOKEN_NOT_FOUND` for anything else, without saying why. */
-  async revoke(userId: string, tokenId: string): Promise<{ id: string }> {
-    const deleted = await this.em.nativeDelete(ApiToken, { id: tokenId, user: userId });
-    if (!deleted) throw new NotFoundError("TOKEN_NOT_FOUND", TOKEN_NOT_FOUND);
-    return { id: tokenId };
+  /**
+   * Deletes one of the account's tokens and records it in the Global audit, attributed to `actor`
+   * (the session, or the token used for the call; AUD-007, AUD-014). `TOKEN_NOT_FOUND` for anything
+   * else, without saying why.
+   */
+  async revoke(userId: string, tokenId: string, actor: AuditActor): Promise<{ id: string }> {
+    return this.em.transactional(async (em) => {
+      const token = await em.findOne(ApiToken, { id: tokenId, user: userId });
+      if (!token) throw new NotFoundError("TOKEN_NOT_FOUND", TOKEN_NOT_FOUND);
+      await em.nativeDelete(ApiToken, { id: token.id });
+      recordGlobalAudit(em, actor, tokenEntry("tokens.api-token.revoked", token, { name: token.name }, null));
+      return { id: token.id };
+    });
   }
 
   /**
@@ -132,4 +144,8 @@ export class ApiTokenService {
 
 function toSummary({ id, name, createdAt, lastUsedAt }: ApiToken): ApiTokenSummary {
   return { id, name, createdAt, lastUsedAt: lastUsedAt ?? null };
+}
+
+function tokenEntry(action: string, token: ApiToken, before: AuditEntry["before"], after: AuditEntry["after"]): AuditEntry {
+  return { action, subject: { type: "ApiToken", id: token.id, label: token.name }, before, after };
 }

@@ -5,8 +5,9 @@ import {
   assertSignedIn,
   requestScope,
   serverAction,
-  type CreatedApiToken,
+  uiActor,
   type Cradle,
+  type CreatedApiToken,
   type Result,
   type SessionUser,
 } from "@cpg/core";
@@ -31,9 +32,10 @@ export async function createApiToken(values: unknown): Promise<Result<CreatedApi
 /** Revokes one of the signed-in account's own tokens (API-008). */
 export async function revokeApiToken(values: unknown): Promise<Result<{ id: string }>> {
   return asSignedIn((actor, { apiTokenService }) =>
-    serverAction(revokeApiTokenSchema, ({ tokenId }) => apiTokenService.revoke(assertSignedIn(actor).userId, tokenId))(
-      values,
-    ),
+    serverAction(revokeApiTokenSchema, ({ tokenId }) => {
+      const user = assertSignedIn(actor);
+      return apiTokenService.revoke(user.userId, tokenId, uiActor(user));
+    })(values),
   );
 }
 

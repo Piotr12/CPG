@@ -29,6 +29,8 @@ describe("HelpPage", () => {
       "Managing users",
       "API tokens",
       "Test and Prod",
+      "The Global audit",
+      "A tenant's audit",
       "Language and theme",
       "Using help",
     ]);

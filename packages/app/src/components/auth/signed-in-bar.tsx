@@ -6,8 +6,8 @@ import type { Messages } from "../../i18n/messages/en";
 import { PreferencesControls } from "../preferences/preferences-controls";
 
 /**
- * The admin pages' header: the API tokens link, who is signed in, the language and theme switches,
- * and sign-out. The admin also gets the link to the users screen.
+ * The admin pages' header: the API tokens and Global audit links (every account), who is signed
+ * in, the language and theme switches, and sign-out. The admin also gets the link to the users screen.
  */
 export function SignedInBar({
   user,
@@ -24,6 +24,9 @@ export function SignedInBar({
     <div className="flex flex-wrap items-center justify-end gap-3 text-sm text-muted-foreground">
       <Link href="/admin/tokens" className="font-medium text-foreground underline underline-offset-4">
         {messages.admin.tokens}
+      </Link>
+      <Link href="/admin/audit" className="font-medium text-foreground underline underline-offset-4">
+        {messages.audit.globalHeading}
       </Link>
       {user.role === "admin" && (
         <Link href="/admin/users" className="font-medium text-foreground underline underline-offset-4">

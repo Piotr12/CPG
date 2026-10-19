@@ -6,6 +6,7 @@ describe("@cpg/core", () => {
     expect(Object.keys(core).sort()).toEqual([
       "ApiTokenService",
       "AppError",
+      "AuditService",
       "AuthService",
       "BUILT_IN_ADMIN_USERNAME",
       "ConflictError",
@@ -40,10 +41,13 @@ describe("@cpg/core", () => {
       "UserPreferenceService",
       "UserService",
       "ValidationError",
+      "apiActor",
       "apiHandler",
       "assertAdmin",
       "assertServerConfig",
       "assertSignedIn",
+      "auditCursorNotFound",
+      "callerActor",
       "createAppContainer",
       "fail",
       "findWorkspaceRoot",
@@ -52,6 +56,7 @@ describe("@cpg/core", () => {
       "loadConfig",
       "migrateDatabase",
       "ok",
+      "parseInput",
       "requestScope",
       "revokeAdminTokensIfPasswordChanged",
       "revokeBuiltInAdminSessions",
@@ -62,6 +67,8 @@ describe("@cpg/core", () => {
       "tenantScope",
       "tenantServerAction",
       "toDbOptions",
+      "uiActor",
+      "validationError",
     ]);
   });
 });

@@ -59,6 +59,8 @@ describe("signOut", () => {
 
 describe("updatePreferences", () => {
   const user = { sessionId: "s1", userId: "u1", username: "admin", role: "admin" };
+  /** The audit actor: the caller's own account and session, on the UI channel. */
+  const actor = { userId: "u1", username: "admin", sessionId: "s1", channel: "ui", token: null };
 
   beforeEach(() => {
     mocks.config.env = "production";
@@ -72,7 +74,7 @@ describe("updatePreferences", () => {
 
     await expect(updatePreferences({}, form({ locale: "pl" }))).resolves.toEqual({});
 
-    expect(mocks.userPreferenceService.update).toHaveBeenCalledWith("u1", { locale: "pl" });
+    expect(mocks.userPreferenceService.update).toHaveBeenCalledWith("u1", { locale: "pl" }, actor);
     expect(mocks.writeThemeCookie).toHaveBeenCalledWith("dark", { secure: true });
     expect(mocks.refresh).toHaveBeenCalledOnce();
   });
@@ -82,7 +84,7 @@ describe("updatePreferences", () => {
 
     await updatePreferences({}, form({ theme: "dark", userId: "someone-else" }));
 
-    expect(mocks.userPreferenceService.update).toHaveBeenCalledWith("u1", { theme: "dark" });
+    expect(mocks.userPreferenceService.update).toHaveBeenCalledWith("u1", { theme: "dark" }, actor);
   });
 
   it("doesn't mark the cookie secure outside production", async () => {

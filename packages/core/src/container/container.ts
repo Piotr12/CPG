@@ -3,6 +3,7 @@ import { asClass, asFunction, asValue, createContainer, InjectionMode } from "aw
 import { loadConfig, type AppConfig } from "../config";
 import { toDbOptions } from "../database";
 import { ApiTokenService } from "../services/api-tokens/api-token.service";
+import { AuditService } from "../services/audit/audit.service";
 import { AuthService } from "../services/auth/auth.service";
 import { LoginThrottle } from "../services/auth/login-throttle";
 import { UserPreferenceService } from "../services/preferences/user-preference.service";
@@ -32,6 +33,7 @@ export function createAppContainer(config: AppConfig, orm: Orm): AppContainer {
     userPreferenceService: asClass(UserPreferenceService).scoped(),
     tenantService: asClass(TenantService).scoped(),
     apiTokenService: asClass(ApiTokenService).scoped(),
+    auditService: asClass(AuditService).scoped(),
     // `tenant` is registered only by tenantScope(): resolving it from a global scope fails (strict).
   });
   return container;

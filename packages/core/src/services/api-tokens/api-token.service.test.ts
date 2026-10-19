@@ -1,11 +1,12 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { ApiToken, initOrm, Session, Setting, User, type Orm, type UserRole } from "@cpg/db";
+import { ApiToken, GlobalAuditEvent, initOrm, Session, Setting, User, type Orm, type UserRole } from "@cpg/db";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadConfig, type AppConfig } from "../../config";
 import { migrateDatabase, toDbOptions } from "../../database";
 import { ConflictError, NotFoundError, UnauthorizedError } from "../../http/errors";
+import { apiActor, uiActor } from "../audit/actor";
 import { ADMIN_PASSWORD_SETTING } from "../auth/admin-password-stamp";
 import { hashApiTokenSecret } from "../auth/api-token-secret";
 import type { SessionUser } from "../auth/auth.service";
@@ -25,6 +26,11 @@ describe("ApiTokenService", () => {
   const service = (overrides: Partial<AppConfig> = {}) =>
     new ApiTokenService({ em: orm.em.fork(), config: { ...config, ...overrides } });
   const tokenRows = () => orm.em.fork().find(ApiToken, {}, { populate: ["user"], orderBy: { name: "asc" } });
+  /** One account's Global audit entries about API tokens, oldest first (the audit is never cleared). */
+  const tokenAudit = (actorUserId: string) =>
+    orm.em
+      .fork()
+      .find(GlobalAuditEvent, { subjectType: "ApiToken", actorUserId }, { orderBy: { occurredAt: "asc", id: "asc" } });
 
   /** An account with one open session, as a signed-in browser has. */
   async function signedIn(username: string, role: UserRole = "user"): Promise<SessionUser> {
@@ -210,10 +216,63 @@ describe("ApiTokenService", () => {
       const a = await service().create(alice, "a");
       const b = await service().create(alice, "b");
 
-      expect(await service().revoke(alice.userId, a.token.id)).toEqual({ id: a.token.id });
+      expect(await service().revoke(alice.userId, a.token.id, uiActor(alice))).toEqual({ id: a.token.id });
 
       expect(await service().authenticate(a.secret)).toBeNull();
       expect(await service().authenticate(b.secret)).toMatchObject({ tokenName: "b" });
+    });
+
+    it("records creation and revocation in the Global audit, never the secret (AUD-014, AUD-028)", async () => {
+      const alice = await signedIn("alice");
+      const { token, secret } = await service().create(alice, "ci-bot");
+
+      await service().revoke(alice.userId, token.id, uiActor(alice));
+
+      const entries = await tokenAudit(alice.userId);
+      expect(entries.map(({ action, subjectId, subjectLabel, before, after, channel, sessionId, actorUsername }) => ({
+        action,
+        subjectId,
+        subjectLabel,
+        before,
+        after,
+        channel,
+        sessionId,
+        actorUsername,
+      }))).toEqual([
+        {
+          action: "tokens.api-token.created",
+          subjectId: token.id,
+          subjectLabel: "ci-bot",
+          before: null,
+          after: { name: "ci-bot" },
+          channel: "ui",
+          sessionId: alice.sessionId,
+          actorUsername: "alice",
+        },
+        {
+          action: "tokens.api-token.revoked",
+          subjectId: token.id,
+          subjectLabel: "ci-bot",
+          before: { name: "ci-bot" },
+          after: null,
+          channel: "ui",
+          sessionId: alice.sessionId,
+          actorUsername: "alice",
+        },
+      ]);
+      expect(JSON.stringify(entries)).not.toContain(secret);
+      expect(JSON.stringify(entries)).not.toContain(hashApiTokenSecret(secret));
+    });
+
+    it("names the token that revoked itself through the API (AUD-007)", async () => {
+      const alice = await signedIn("alice");
+      const { token, secret } = await service().create(alice, "self");
+      const caller = (await service().authenticate(secret))!;
+
+      await service().revoke(alice.userId, token.id, apiActor(caller));
+
+      const revoked = (await tokenAudit(alice.userId)).find(({ action }) => action === "tokens.api-token.revoked")!;
+      expect(revoked).toMatchObject({ channel: "api", sessionId: null, tokenId: token.id, tokenName: "self" });
     });
 
     it("treats another account's token, an unknown id and a malformed id alike, deleting nothing", async () => {
@@ -222,10 +281,12 @@ describe("ApiTokenService", () => {
       const bobs = await service().create(bob, "b");
       const notFound = new NotFoundError("TOKEN_NOT_FOUND", TOKEN_NOT_FOUND);
 
-      await expect(service().revoke(alice.userId, bobs.token.id)).rejects.toEqual(notFound);
-      await expect(service().revoke(alice.userId, MISSING_ID)).rejects.toEqual(notFound);
-      await expect(service().revoke(alice.userId, "not-a-uuid")).rejects.toEqual(notFound);
+      await expect(service().revoke(alice.userId, bobs.token.id, uiActor(alice))).rejects.toEqual(notFound);
+      await expect(service().revoke(alice.userId, MISSING_ID, uiActor(alice))).rejects.toEqual(notFound);
+      await expect(service().revoke(alice.userId, "not-a-uuid", uiActor(alice))).rejects.toEqual(notFound);
       expect(await tokenRows()).toHaveLength(1);
+      expect((await tokenAudit(alice.userId)).map(({ action }) => action)).toEqual([]);
+      expect((await tokenAudit(bob.userId)).map(({ action }) => action)).toEqual(["tokens.api-token.created"]);
     });
   });
 

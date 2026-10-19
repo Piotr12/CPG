@@ -5,6 +5,7 @@ import {
   assertAdmin,
   requestScope,
   serverAction,
+  uiActor,
   type Cradle,
   type Result,
   type SessionUser,
@@ -22,8 +23,7 @@ const USERS_PATH = "/admin/users";
 export async function createUser(values: unknown): Promise<Result<UserSummary>> {
   return asAdmin((actor, { userService }) =>
     serverAction(createUserSchema, (input) => {
-      assertAdmin(actor);
-      return userService.create(input);
+      return userService.create(input, uiActor(assertAdmin(actor)));
     })(values),
   );
 }
@@ -32,8 +32,7 @@ export async function createUser(values: unknown): Promise<Result<UserSummary>> 
 export async function resetUserPassword(values: unknown): Promise<Result<UserSummary>> {
   return asAdmin((actor, { userService }) =>
     serverAction(resetPasswordSchema, ({ userId, password }) => {
-      assertAdmin(actor);
-      return userService.resetPassword(userId, password);
+      return userService.resetPassword(userId, password, uiActor(assertAdmin(actor)));
     })(values),
   );
 }
@@ -42,16 +41,15 @@ export async function resetUserPassword(values: unknown): Promise<Result<UserSum
 export async function setUserActive(values: unknown): Promise<Result<UserSummary>> {
   return asAdmin((actor, { userService }) =>
     serverAction(setUserActiveSchema, ({ userId, active }) => {
-      assertAdmin(actor);
-      return userService.setActive(userId, active);
+      return userService.setActive(userId, active, uiActor(assertAdmin(actor)));
     })(values),
   );
 }
 
 /**
  * Runs one admin write: hands `run` the signed-in account (checked with `assertAdmin` inside the
- * `serverAction` wrapper, after parsing) and the request's services, then refreshes the users
- * screen when it succeeded.
+ * `serverAction` wrapper, after parsing, and recorded as the audit's actor) and the request's
+ * services, then refreshes the users screen when it succeeded.
  */
 async function asAdmin<T>(run: (actor: SessionUser | null, cradle: Cradle) => Promise<Result<T>>): Promise<Result<T>> {
   const { cradle } = await requestScope();
