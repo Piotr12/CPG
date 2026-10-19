@@ -8,7 +8,7 @@ import {
 } from "@cpg/core/validators/materials/material-fields.schema";
 import { en } from "../../i18n/messages/en";
 import { pl } from "../../i18n/messages/pl";
-import { conversionText, errorFormatter, fieldErrorFormatter, fill, inverseText, materialsLabels } from "./labels";
+import { conversionText, errorFormatter, fieldErrorFormatter, inverseText, materialsLabels } from "./labels";
 
 const caseConversion = { unit: "case", numerator: "12", denominator: "1", inverse: "0.083333", version: 1 };
 
@@ -19,12 +19,6 @@ describe("materialsLabels", () => {
     expect(labels).not.toHaveProperty("heading");
     expect(labels.errors.VALIDATION_FAILED).toBe(en.errors.VALIDATION_FAILED);
     expect(labels.errors.FORBIDDEN).toBe("Only the administrator can change materials.");
-  });
-});
-
-describe("fill", () => {
-  it("fills known placeholders and leaves unknown ones", () => {
-    expect(fill("Edit {id} in {unit}", { id: "00000001" })).toBe("Edit 00000001 in {unit}");
   });
 });
 

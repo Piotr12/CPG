@@ -6,7 +6,7 @@ import {
   TYPE_MESSAGE,
   UNIT_FORMAT_MESSAGE,
 } from "@cpg/core/validators/materials/material-fields.schema";
-import { errorMessage } from "../../i18n/error-message";
+import { errorFormatter, fill, type TenantContext } from "../forms/form-labels";
 import type { Messages } from "../../i18n/messages/en";
 
 /**
@@ -15,12 +15,6 @@ import type { Messages } from "../../i18n/messages/en";
  */
 export type MaterialsLabels = Omit<Messages["materials"], "heading" | "errors"> & { errors: Record<string, string> };
 
-/** Which tenant and dataset generation a page rendered: every write it makes is bound to them. */
-export interface TenantContext {
-  tenant: string;
-  generation: number;
-}
-
 /** Builds the materials screens' labels from a dictionary (server side, where `messages` is available). */
 export function materialsLabels(messages: Messages): MaterialsLabels {
   const labels: Partial<Messages["materials"]> = { ...messages.materials };
@@ -28,15 +22,8 @@ export function materialsLabels(messages: Messages): MaterialsLabels {
   return { ...(labels as Omit<Messages["materials"], "heading">), errors: { ...messages.errors, ...messages.materials.errors } };
 }
 
-/** Fills `{name}` placeholders: `fill("Edit {id}", { id: "00000001" })`. */
-export function fill(template: string, values: Record<string, string>): string {
-  return template.replace(/\{(\w+)\}/g, (placeholder, name: string) => values[name] ?? placeholder);
-}
-
-/** An error envelope as the materials screens say it, through the shared `errorMessage`. */
-export function errorFormatter(labels: MaterialsLabels) {
-  return (error: { code: string; message: string }): string => errorMessage(labels.errors, error);
-}
+/** The shared form helpers, re-exported for the materials components (`components/forms/`). */
+export { errorFormatter, fill, type TenantContext };
 
 /** A field message from the shared schemas in the reader's language; unknown messages pass through. */
 export function fieldErrorFormatter(labels: MaterialsLabels) {
