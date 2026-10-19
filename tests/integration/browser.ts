@@ -31,6 +31,8 @@ export function openBrowser() {
     /** Clears an input and types `value` into it. */
     fill: (selector: string, value: string) => command("fill", selector, value),
     click: (selector: string) => command("click", selector),
+    /** Chooses the option with this value (or visible label) in the select matching the CSS selector. */
+    select: (selector: string, value: string) => command("select", selector, value),
     /** Clicks the element with this ARIA role and exact accessible name, e.g. a button or menu item. */
     clickRole: (role: string, name: string) => command("find", "role", role, "click", "--name", name, "--exact"),
     /** Presses a key in the focused element, e.g. `Escape`. */

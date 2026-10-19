@@ -9,6 +9,8 @@ import {
   TooManyRequestsError,
   UnauthorizedError,
   ValidationError,
+  VERSION_CONFLICT,
+  versionConflict,
 } from "./errors";
 
 describe("AppError hierarchy", () => {
@@ -72,6 +74,10 @@ describe("AppError hierarchy", () => {
       name: "ConflictError",
       status: 409,
     });
+  });
+
+  it("has one stale-version error for every versioned record", () => {
+    expect(versionConflict()).toMatchObject({ code: "VERSION_CONFLICT", message: VERSION_CONFLICT, status: 409 });
   });
 
   it("names the kind of clash when one is given", () => {

@@ -2,7 +2,9 @@
 // admin password, apply pending migrations (so a broken config or data volume fails the deploy
 // instead of the first request), then sign the admin out everywhere: the admin password can only
 // change with a restart, and sessions opened with the old one must not survive it. The admin's API
-// tokens end too, but only when the password actually changed: tokens never expire.
+// tokens end too, but only when the password actually changed: tokens never expire. Last, an empty
+// Test tenant gets its demonstration records; a failure there is logged, not fatal, because the app
+// works without them and the next start tries again.
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     const {
@@ -11,6 +13,7 @@ export async function register() {
       migrateDatabase,
       revokeAdminTokensIfPasswordChanged,
       revokeBuiltInAdminSessions,
+      seedDemoData,
     } = await import("@cpg/core");
     const config = loadConfig();
     try {
@@ -27,5 +30,11 @@ export async function register() {
     if (revoked) console.info(`Signed the admin out of ${revoked} session(s)`);
     const revokedTokens = await revokeAdminTokensIfPasswordChanged(config);
     if (revokedTokens) console.info(`The admin password changed: revoked ${revokedTokens} admin API token(s)`);
+    try {
+      const seeded = await seedDemoData(config);
+      if (seeded) console.info(`Seeded the Test tenant with ${seeded} demonstration material(s)`);
+    } catch (error) {
+      console.error("Seeding the Test demonstration data failed:", error);
+    }
   }
 }

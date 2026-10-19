@@ -7,5 +7,6 @@ import { Migration20261019103355_users_password_active } from "./Migration202610
 import { Migration20261019110502_audit_events } from "./Migration20261019110502_audit_events";
 import { Migration20261019115945_api_tokens } from "./Migration20261019115945_api_tokens";
 import { Migration20261019155802_api_idempotency } from "./Migration20261019155802_api_idempotency";
+import { Migration20261019191302_materials } from "./Migration20261019191302_materials";
 
-export const migrations = [Migration20261017091007_initial, Migration20261019080354_auth_users_sessions, Migration20261019090456_user_preferences, Migration20261019092708_tenants, Migration20261019103355_users_password_active, Migration20261019110502_audit_events, Migration20261019115945_api_tokens, Migration20261019155802_api_idempotency];
+export const migrations = [Migration20261017091007_initial, Migration20261019080354_auth_users_sessions, Migration20261019090456_user_preferences, Migration20261019092708_tenants, Migration20261019103355_users_password_active, Migration20261019110502_audit_events, Migration20261019115945_api_tokens, Migration20261019155802_api_idempotency, Migration20261019191302_materials];

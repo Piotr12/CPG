@@ -5,9 +5,9 @@ import { ApiToken, GlobalAuditEvent, initOrm, OptimisticLockError, Session, User
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadConfig } from "../../config";
 import { migrateDatabase, toDbOptions } from "../../database";
-import { ConflictError, NotFoundError } from "../../http/errors";
+import { ConflictError, NotFoundError, VERSION_CONFLICT } from "../../http/errors";
 import { verifyPassword } from "../auth/password-hash";
-import { USER_NOT_FOUND, USERNAME_TAKEN, UserService, VERSION_CONFLICT } from "./user.service";
+import { USER_NOT_FOUND, USERNAME_TAKEN, UserService } from "./user.service";
 import type { AuditActor } from "../audit/actor";
 
 const PASSWORD = "initial password 1";

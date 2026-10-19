@@ -60,7 +60,7 @@ Source: `packages/app/src/app/up/route.ts`, `Dockerfile`, `config/deploy.yml`.
 Source: `packages/app/src/app/`. Today that is:
 
 - `/`, `/login` and `/help`, which are public. `/help` accepts `?q=` and anchors topics as `#<topic-id>`.
-- `/admin` (the Global tenant chooser), `/admin/test` and `/admin/prod` (the tenant homes). Every tenant page lives under `/admin/{tenant}/`. All of them require an admin session and redirect to `/login` otherwise.
+- `/admin` (the Global tenant chooser), `/admin/test` and `/admin/prod` (the tenant homes). Every tenant page lives under `/admin/{tenant}/`, such as `/admin/{tenant}/materials` and `/admin/{tenant}/materials/{id}` (an eight-digit material ID). All of them require a signed-in session and redirect to `/login` otherwise; tenant pages are readable by every account.
 
 **Breaking:** removing or renaming a page URL users can bookmark, a help topic id, or the `q` parameter. **Required path:** a redirect from the old URL in the same PR, or a topic kept under its old id.
 
@@ -83,9 +83,17 @@ Route handlers under `app/api/` are protected the same way: their paths, methods
 - `POST /api/users` (`{ username, password }`, admin only; 409 `CONFLICT` for a taken name);
 - `PATCH /api/users/{id}` (`{ active, version }`, admin only);
 - `PUT /api/users/{id}/password` (`{ password, version }`, admin only);
-- `GET /api/preferences` and `PATCH /api/preferences` (`{ locale?, theme? }`, the caller's own).
+- `GET /api/preferences` and `PATCH /api/preferences` (`{ locale?, theme? }`, the caller's own);
+- the materials of one tenant (spec `2026-10-19--1858UTC-materials`). Reads are open to any signed-in account; writes are admin only (403 `FORBIDDEN` otherwise). A material is addressed by its eight-digit ID, and quantities and factors are JSON **strings**, never numbers:
+  - `GET /api/tenants/{tenant}/materials`;
+  - `POST /api/tenants/{tenant}/materials` (`{ type, description, baseUnit }`);
+  - `GET /api/tenants/{tenant}/materials/{id}` (with its `conversions`; 404 `MATERIAL_NOT_FOUND`);
+  - `PATCH /api/tenants/{tenant}/materials/{id}` (`{ version, description?, type?, baseUnit?, active? }`; an `id` in the body is 400; 409 `BASE_UNIT_HAS_CONVERSIONS`);
+  - `POST /api/tenants/{tenant}/materials/{id}/conversions` (`{ unit, numerator, denominator }`; 400 `UNIT_IS_BASE_UNIT`, 409 `CONVERSION_EXISTS`);
+  - `PATCH /api/tenants/{tenant}/materials/{id}/conversions/{unit}` (`{ numerator, denominator, version }`; 404 `CONVERSION_NOT_FOUND`);
+  - `DELETE /api/tenants/{tenant}/materials/{id}/conversions/{unit}`, the first `DELETE` with a JSON body: `{ version }`.
 
-**Versions.** An edit of a versioned record (today: a user) carries the `version` it loaded. A stale one is 409 `VERSION_CONFLICT`, and the newer change is kept. The user routes answer 404 `NOT_FOUND` for the built-in admin, an unknown id or a malformed one.
+**Versions.** An edit of a versioned record (today: a user, a material and a material's conversion) carries the `version` it loaded. A stale one is 409 `VERSION_CONFLICT`, and the newer change is kept. The user routes answer 404 `NOT_FOUND` for the built-in admin, an unknown id or a malformed one.
 
 Every tenant-scoped endpoint lives under `/api/tenants/{tenant}/`.
 

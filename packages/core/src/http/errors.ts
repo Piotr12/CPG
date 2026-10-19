@@ -63,6 +63,14 @@ export class ConflictError extends AppError {
   }
 }
 
+/** What a stale edit says, whatever the record (AUD-024, AUD-025, API-029). */
+export const VERSION_CONFLICT = "This record was changed since you loaded it. Reload and try again.";
+
+/** An edit carried a version older than the record's: the newer change is kept. */
+export function versionConflict(): ConflictError {
+  return new ConflictError(VERSION_CONFLICT, "VERSION_CONFLICT");
+}
+
 /** A state-changing API request came without a usable `Idempotency-Key` header (API-019). */
 export class IdempotencyKeyRequiredError extends AppError {
   constructor() {

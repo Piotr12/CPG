@@ -108,6 +108,8 @@ No action or route writes its own `try/catch` + response mapping.
 - **Check-then-write on shared state** (stock on hand, work-order status, planned-order release) runs inside one `em.transactional()` in the service, backed by a unique constraint where one applies. SQLite has a single writer: keep transactions short and never await a network call inside one.
   - **Never hold SQLite's write lock across slow async work** (an argon2 hash, a file read). Each Next.js bundle has its own connection, and better-sqlite3 waits for a lock synchronously, so a second connection blocks the whole event loop until `busy_timeout`. Do the slow work first, then the writes.
   - **A transaction around services** opens on the request's own `em` with `inRequestTransaction` (`core/src/http/request-transaction.ts`), so their `flush()` and `transactional()` join it. `em.transactional()` on a request fork would put the transaction on a child fork the services never see.
+- **Exact quantities (R03).** Quantities and conversion factors are decimal strings, stored as text columns (SQLite's numeric affinity would make `0.333333` a binary REAL) and exchanged as JSON strings. All arithmetic goes through `core/src/domain/quantities/decimal.ts` (`bigint` micro-units, one half-up rounding to six decimals). Never `Number(quantity)`, a `float` column or a JSON number.
+- **A business ID assigned in sequence** (the eight-digit material ID) is the tenant's highest + 1, read in the write's transaction, behind a tenant-local unique index. Two such writes racing on two connections meet SQLite's stale-snapshot refusal, which `tenantServerAction` and `IdempotencyService` retry once, so both succeed.
 - **Everything persisted** lives under `config.dataDir`. **Schema changes** go through migrations only (see `AGENTS.md`).
 - **Tenant isolation (R05).** Business data belongs to Test or Prod (spec `2026-10-19--0913UTC-test-prod-tenants`). Every entity is either declared with `tenantOwned()` (`db/src/entities/tenants/tenant-owned.ts`) or listed in `GLOBAL_ENTITIES` (accounts, sessions, settings, tenants, the Global audit); `tests/tenant-ownership.test.ts` enforces it.
   - **The tenant comes from the request, explicitly.** Pages under `app/admin/[tenant]/`, route handlers under `app/api/tenants/[tenant]/`, and server actions bound to the page's tenant through `tenantServerAction`. All of them resolve `tenantScope(code)` from `@cpg/core` (`tests/tenant-entry-points.test.ts`). There is no tenant cookie and no tenant on the session.
@@ -319,6 +321,12 @@ Done when these standards were adopted:
   - `/admin/audit` and `/admin/[tenant]/audit` (`app/src/components/audit/`), and `GET /api/audit` and `GET /api/tenants/{tenant}/audit`.
 
   `UserService` and `UserPreferenceService` are the first producers, then `ApiTokenService` (token create and revoke, with `apiActor`/`callerActor` naming the token behind an API call).
+- Materials (2026-10-19, spec `2026-10-19--1858UTC-materials`), the first tenant business concept:
+  - `Material` and `MaterialConversion` (`db/src/entities/materials/`, tenant-owned), `MaterialService` (`core/src/services/materials/`), and the Test demo seed at startup (`core/src/demo-data.ts`);
+  - exact decimals in `core/src/domain/quantities/`, material IDs in `core/src/domain/materials/`;
+  - the stale-snapshot retry in `tenantServerAction` (`retryingStaleSnapshot`), and `versionConflict()`/`versionSchema` shared by every versioned record;
+  - `ui/src/backend/dialogs/confirm-dialog.tsx`, `CrudForm` select fields (shadcn `native-select`) and initial values, and `app/src/routing/or-not-found.ts`;
+  - `/admin/[tenant]/materials` and `/admin/[tenant]/materials/[id]` (the reference for a tenant list and detail screen), and `/api/tenants/{tenant}/materials/…`.
 - Idempotency and versions (2026-10-19, spec `2026-10-19--1548UTC-api-idempotency`): the global and tenant-owned idempotency key stores (`db/src/entities/idempotency/`), `IdempotencyService` (`core/src/services/idempotency/`), `inRequestTransaction`, `apiWrite`/`tenantApiWrite`, `User.version`, and the generation check in `tenantServerAction`.
 - API tokens (2026-10-19, spec `2026-10-19--1053UTC-api-tokens`): the global `ApiToken` entity, `ApiTokenService` (`core/src/services/api-tokens/`), bearer authentication in `requireApiUser(request)`, the `Actor` type, and `/admin/tokens`. It is the reference for a self-service screen (every account, own records only).
 - Test infrastructure: Vitest unit tests next to every source file at 100% coverage, integration tests (Testcontainers runs the production image, agent-browser drives it), and a CI workflow for pull requests.
@@ -329,7 +337,6 @@ Deliberately **not built yet** (YAGNI). Each arrives with the first concept that
 - `core/src/http/make-crud-route.ts`
 - `ui/src/backend/api/api-call.ts`
 - `core/src/events/*`
-- `core/src/domain/*`
 - a shared logger
 
 Known `npm audit` state: 10 high advisories, all from `braces` (GHSA-vfj7-8cjw-p6xm, no patched version) via `fast-glob`. That reaches the app only through `awilix` (`loadModules`, which this project never calls). Otherwise it is dev tooling (`eslint-config-next`, `shadcn`). `npm audit fix --force` would downgrade `awilix` to 6.0.0: don't. Re-check when `braces` ships a fix.

@@ -31,6 +31,8 @@ describe("HelpPage", () => {
       "Test and Prod",
       "The Global audit",
       "A tenant's audit",
+      "Materials",
+      "A material and its unit conversions",
       "Language and theme",
       "Using help",
     ]);

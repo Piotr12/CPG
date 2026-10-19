@@ -7,7 +7,7 @@ import {
   type EntityManager,
   type UserRole,
 } from "@cpg/db";
-import { ConflictError, NotFoundError } from "../../http/errors";
+import { ConflictError, NotFoundError, versionConflict } from "../../http/errors";
 import type { AuditActor } from "../audit/actor";
 import { recordGlobalAudit, type AuditEntry } from "../audit/audit-recorder";
 import { BUILT_IN_ADMIN_USERNAME } from "../auth/auth.service";
@@ -16,7 +16,6 @@ import { hashPassword } from "../auth/password-hash";
 /** One message for a taken name and the reserved `admin`: neither says more than "pick another". */
 export const USERNAME_TAKEN = "That username is taken.";
 export const USER_NOT_FOUND = "No such user.";
-export const VERSION_CONFLICT = "This record was changed since you loaded it. Reload and try again.";
 
 /** What the users screen shows about an account. Never carries the password hash. */
 export interface UserSummary {
@@ -136,8 +135,6 @@ export class UserService {
     }
   }
 }
-
-const versionConflict = () => new ConflictError(VERSION_CONFLICT, "VERSION_CONFLICT");
 
 /** What a change to a normal user did: whether it ends their sessions, and its audit entry, if any. */
 interface Change {

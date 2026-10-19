@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { versionSchema } from "./version.schema";
+import { versionSchema } from "../version.schema";
 
 /** Deactivate (`active: false`) or reactivate a normal user, at the version the caller loaded. */
 export const setUserActiveSchema = z.object({

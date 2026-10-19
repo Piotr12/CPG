@@ -13,6 +13,14 @@ import { GlobalIdempotencyKey } from "./idempotency/global-idempotency-key.entit
 import { IDEMPOTENCY_KEY_MAX } from "./idempotency/idempotency-key";
 import { TenantIdempotencyKey } from "./idempotency/tenant-idempotency-key.entity";
 import { User, USER_ROLES, type UserRole } from "./auth/user.entity";
+import { MaterialConversion } from "./materials/material-conversion.entity";
+import {
+  Material,
+  MATERIAL_DESCRIPTION_MAX,
+  MATERIAL_TYPES,
+  MATERIAL_UNIT_MAX,
+  type MaterialType,
+} from "./materials/material.entity";
 import { LOCALES, THEMES, UserPreference, type Locale, type Theme } from "./preferences/user-preference.entity";
 import { Setting } from "./settings/setting.entity";
 import { Tenant, TENANT_CODES, type TenantCode } from "./tenants/tenant.entity";
@@ -28,6 +36,8 @@ import {
 export { API_TOKEN_NAME_MAX, ApiToken, LOCALES, Session, Setting, Tenant, TENANT_CODES, THEMES, User, USER_ROLES, UserPreference };
 export { AUDIT_APPEND_ONLY, AUDIT_CHANNELS, GlobalAuditEvent, TenantAuditEvent };
 export { GlobalIdempotencyKey, IDEMPOTENCY_KEY_MAX, TenantIdempotencyKey };
+export { Material, MATERIAL_DESCRIPTION_MAX, MATERIAL_TYPES, MATERIAL_UNIT_MAX, MaterialConversion };
+export type { MaterialType };
 export type { AuditChannel, AuditSnapshot, AuditValue, Locale, TenantCode, Theme, UserRole };
 export { currentTenant, isTenantOwned, TENANT_FILTER, tenantOwned, TenantViolationError, selectTenant };
 
@@ -43,6 +53,8 @@ export const entities = [
   TenantAuditEvent,
   GlobalIdempotencyKey,
   TenantIdempotencyKey,
+  Material,
+  MaterialConversion,
 ];
 
 /**

@@ -10,6 +10,8 @@ export const HELP_TOPIC_IDS = [
   "test-and-prod",
   "global-audit",
   "tenant-audit",
+  "materials",
+  "material-conversions",
   "language-and-theme",
   "using-help",
 ] as const;
@@ -29,6 +31,8 @@ export const HELP_TOPIC_ROUTES: Record<HelpTopicId, string> = {
   "test-and-prod": "/admin/[tenant]",
   "global-audit": "/admin/audit",
   "tenant-audit": "/admin/[tenant]/audit",
+  materials: "/admin/[tenant]/materials",
+  "material-conversions": "/admin/[tenant]/materials/[id]",
   "language-and-theme": "/admin",
   "using-help": "/help",
 };
@@ -111,8 +115,26 @@ const en: Record<HelpTopicId, HelpText> = {
     title: "A tenant's audit",
     body: [
       "Audit — Test or Audit — Prod, on that tenant's page, opens its own audit: the changes to its business records, kept apart from the other tenant's.",
-      "It is empty until CPG holds records such as materials. Account changes are always in the Global audit.",
+      "It lists every material created, changed, deactivated or reactivated, and every unit conversion added, changed or removed, with the values before and after. Account changes are always in the Global audit.",
       "Like the Global audit, it is read-only for everyone.",
+    ],
+  },
+  materials: {
+    title: "Materials",
+    body: [
+      "Materials, on a tenant's page, lists that tenant's materials by ID. Test and Prod each have their own: material 00000001 in Test and 00000001 in Prod are different records.",
+      "Every material has an eight-digit ID that CPG assigns in order when it is created (00000001, 00000002, …) and that never changes, a type, a description and a base unit.",
+      "The type is raw (bought), intermediate (made and used to make other materials) or finished (made and sold). The base unit is the unit every quantity of the material is stored in, exactly to six decimals.",
+      "Every account can read materials. Only the administrator creates and changes them, with Create material here and Edit on a material's page; through the API too, with the same rules.",
+    ],
+  },
+  "material-conversions": {
+    title: "A material and its unit conversions",
+    body: [
+      "Choose a material's ID to open its page: its type, base unit and status, and its unit conversions.",
+      "A conversion lets people enter quantities in another unit, such as a case of 12. It reads 1 case = 12 each: the alternate quantity and unit, then the base quantity and the base unit. A quantity entered in that unit is converted into the base unit once, rounded half-up to six decimals, and the unit and factor it was entered with are kept. The inverse is shown for orientation only.",
+      "Changing or removing a conversion never changes quantities already stored. The base unit can change only while the material has no conversions.",
+      "Deactivate keeps the material and its history, but it can't be picked for new entries; Reactivate undoes that. Every change appears in the tenant's audit.",
     ],
   },
   "language-and-theme": {
@@ -201,8 +223,26 @@ const pl: Record<HelpTopicId, HelpText> = {
     title: "Audyt środowiska",
     body: [
       "Audyt — Test lub Audyt — Prod na stronie środowiska otwiera jego własny audyt: zmiany jego rekordów biznesowych, oddzielone od drugiego środowiska.",
-      "Jest pusty, dopóki CPG nie przechowuje rekordów, na przykład materiałów. Zmiany kont są zawsze w audycie globalnym.",
+      "Pokazuje każdy utworzony, zmieniony, dezaktywowany lub ponownie aktywowany materiał oraz każdy dodany, zmieniony lub usunięty przelicznik jednostek, z wartościami przed i po. Zmiany kont są zawsze w audycie globalnym.",
       "Tak jak audyt globalny, jest tylko do odczytu dla wszystkich.",
+    ],
+  },
+  materials: {
+    title: "Materiały",
+    body: [
+      "Materiały, na stronie środowiska, wyświetlają materiały tego środowiska według ID. Test i Prod mają własne: materiał 00000001 w Test i 00000001 w Prod to różne rekordy.",
+      "Każdy materiał ma ośmiocyfrowe ID, które CPG nadaje po kolei przy utworzeniu (00000001, 00000002, …) i które nigdy się nie zmienia, a także typ, opis i jednostkę bazową.",
+      "Typ to surowiec (kupowany), półprodukt (wytwarzany i zużywany do innych materiałów) albo wyrób gotowy (wytwarzany i sprzedawany). Jednostka bazowa to jednostka, w której zapisywana jest każda ilość materiału, dokładnie do sześciu miejsc po przecinku.",
+      "Materiały może przeglądać każde konto. Tworzy je i zmienia tylko administrator, przyciskiem Utwórz materiał tutaj i Edytuj na stronie materiału; także przez API, na tych samych zasadach.",
+    ],
+  },
+  "material-conversions": {
+    title: "Materiał i jego przeliczniki jednostek",
+    body: [
+      "Wybierz ID materiału, aby otworzyć jego stronę: typ, jednostkę bazową, status i przeliczniki jednostek.",
+      "Przelicznik pozwala wpisywać ilości w innej jednostce, na przykład w kartonach po 12 sztuk. Czyta się go jako 1 karton = 12 szt.: ilość i jednostka alternatywna, potem ilość i jednostka bazowa. Ilość wpisana w tej jednostce jest przeliczana na jednostkę bazową raz, z zaokrągleniem połówek w górę do sześciu miejsc po przecinku, a jednostka i przelicznik, z którymi ją wpisano, zostają zapisane. Odwrotność jest tylko orientacyjna.",
+      "Zmiana lub usunięcie przelicznika nigdy nie zmienia ilości już zapisanych. Jednostkę bazową można zmienić tylko wtedy, gdy materiał nie ma przeliczników.",
+      "Dezaktywuj zachowuje materiał i jego historię, ale nie można go wybrać w nowych wpisach; Aktywuj ponownie to cofa. Każda zmiana pojawia się w audycie środowiska.",
     ],
   },
   "language-and-theme": {

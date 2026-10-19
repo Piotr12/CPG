@@ -22,11 +22,13 @@ describe("@cpg/core", () => {
       "LAST_USED_RESOLUTION_MS",
       "LOCALES",
       "LoginThrottle",
+      "MATERIAL_ID_RACE",
       "MAX_BUCKETS",
       "MAX_FAILURES_PER_ACCOUNT",
       "MAX_FAILURES_PER_CLIENT",
       "MAX_FAILURES_PER_IP",
       "MIN_ADMIN_PASSWORD_LENGTH",
+      "MaterialService",
       "NotFoundError",
       "PRUNE_INTERVAL_MS",
       "PreconditionRequiredError",
@@ -66,6 +68,7 @@ describe("@cpg/core", () => {
       "getContainer",
       "globalSingleton",
       "loadConfig",
+      "materialNotFound",
       "migrateDatabase",
       "ok",
       "operationOf",
@@ -76,6 +79,7 @@ describe("@cpg/core", () => {
       "revokeAdminTokensIfPasswordChanged",
       "revokeBuiltInAdminSessions",
       "scopeForTenant",
+      "seedDemoData",
       "serverAction",
       "tenantCodeSchema",
       "tenantNotFound",
@@ -84,6 +88,7 @@ describe("@cpg/core", () => {
       "toDbOptions",
       "uiActor",
       "validationError",
+      "versionConflict",
     ]);
   });
 });

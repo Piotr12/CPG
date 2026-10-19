@@ -189,4 +189,75 @@ describe("CrudForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Zapisz" }));
     expect((await screen.findByRole("alert")).textContent).toBe("błąd CONFLICT");
   });
+
+  describe("select fields and initial values", () => {
+    const typeField: CrudField = {
+      name: "type",
+      label: "Type",
+      type: "select",
+      placeholder: "Choose a type",
+      options: [
+        { value: "raw", label: "Raw" },
+        { value: "finished", label: "Finished" },
+      ],
+      description: "What the material is.",
+    };
+
+    it("offers the options after an unselectable placeholder and submits the chosen value", async () => {
+      const action = vi.fn(async (): Promise<ApiResult<string>> => ({ ok: true, data: "ok" }));
+      render(<CrudForm fields={[typeField]} action={action} submitLabel="Create" />);
+
+      const select = screen.getByLabelText("Type") as HTMLSelectElement;
+      expect(select.tagName).toBe("SELECT");
+      expect(select.value).toBe("");
+      expect(screen.getByRole("option", { name: "Choose a type" })).toHaveProperty("disabled", true);
+      expect(document.getElementById(select.getAttribute("aria-describedby")!)!.textContent).toBe("What the material is.");
+
+      fireEvent.change(select, { target: { value: "finished" } });
+      await act(async () => fireEvent.click(screen.getByRole("button", { name: "Create" })));
+
+      expect(action).toHaveBeenCalledWith({ type: "finished" });
+    });
+
+    it("shows a field error on a select too", () => {
+      const required: FormSchema = {
+        safeParse: (data) =>
+          (data as { type: string }).type
+            ? { success: true }
+            : { success: false, error: { issues: [{ path: ["type"], message: "Choose one." }] } },
+      };
+      render(<CrudForm fields={[{ ...typeField, placeholder: undefined }]} schema={required} action={vi.fn()} submitLabel="Create" />);
+
+      expect(screen.queryByRole("option", { name: "Choose a type" })).toBeNull();
+      fireEvent.change(screen.getByLabelText("Type"), { target: { value: "" } });
+      fireEvent.click(screen.getByRole("button", { name: "Create" }));
+
+      expect(screen.getByLabelText("Type").getAttribute("aria-invalid")).toBe("true");
+      expect(screen.getByText("Choose one.")).toBeTruthy();
+    });
+
+    it("renders a select without options as empty", () => {
+      render(<CrudForm fields={[{ name: "unit", label: "Unit", type: "select" }]} action={vi.fn()} submitLabel="Save" />);
+
+      expect(screen.queryAllByRole("option")).toEqual([]);
+    });
+
+    it("starts from the given values, such as the record an edit form changes", async () => {
+      const action = vi.fn(async (): Promise<ApiResult<string>> => ({ ok: true, data: "ok" }));
+      render(
+        <CrudForm
+          fields={[typeField, { name: "description", label: "Description" }]}
+          initialValues={{ type: "raw", description: "Bolt M8" }}
+          action={action}
+          submitLabel="Save"
+        />,
+      );
+
+      expect((screen.getByLabelText("Type") as HTMLSelectElement).value).toBe("raw");
+      expect((screen.getByLabelText("Description") as HTMLInputElement).value).toBe("Bolt M8");
+      await act(async () => fireEvent.click(screen.getByRole("button", { name: "Save" })));
+
+      expect(action).toHaveBeenCalledWith({ type: "raw", description: "Bolt M8" });
+    });
+  });
 });
