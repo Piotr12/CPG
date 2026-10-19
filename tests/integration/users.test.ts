@@ -22,6 +22,13 @@ async function aliceMenu(admin: Browser, item: string) {
   await admin.clickRole("menuitem", item);
 }
 
+/**
+ * A JavaScript condition on alice's row of the users table. Other files share this database and
+ * leave their own users behind, so assertions look at alice's row only.
+ */
+const aliceRow = (condition: string) =>
+  `[...document.querySelectorAll("tbody tr")].some((row) => row.innerText.startsWith("alice\\t") && ${condition})`;
+
 /** Whether a signed-in page still opens /admin, or is sent to /login. */
 async function landsOn(browser: Browser, url: string) {
   await browser.open(url);
@@ -50,7 +57,7 @@ describe("the admin manages normal users", () => {
     expect(await admin.text("main p")).toBe(
       "Users are never deleted. Deactivate an account to end its access; its history keeps its name.",
     );
-    expect(await admin.texts("tbody tr")).toEqual([expect.stringMatching(/^admin\tadmin\tActive\t\d{4}-\d{2}-\d{2}/)]);
+    expect((await admin.texts("tbody tr"))[0]).toMatch(/^admin\tadmin\tActive\t\d{4}-\d{2}-\d{2}/);
     const controls = await admin.texts("button, a, [role=menuitem]");
     expect(controls.filter((text) => /delete|remove/i.test(text))).toEqual([]);
   });
@@ -63,7 +70,9 @@ describe("the admin manages normal users", () => {
     await admin.waitUntil(`!document.querySelector("[role=dialog]")`);
     await admin.waitForText("alice");
 
-    expect(await admin.texts("tbody td:first-child")).toEqual(["admin", "alice"]);
+    const names = await admin.texts("tbody td:first-child");
+    expect(names[0]).toBe("admin");
+    expect(names).toContain("alice");
   });
 
   it("refuses a second alice", async () => {
@@ -120,7 +129,7 @@ describe("the admin manages normal users", () => {
     await admin.waitFor("[role=alertdialog]");
     expect(await admin.text("[role=alertdialog] p")).toContain("can't sign in until reactivated");
     await admin.clickRole("button", "Deactivate");
-    await admin.waitForText("Inactive");
+    await admin.waitUntil(aliceRow(`row.innerText.includes("Inactive")`));
 
     expect(await landsOn(aliceA, `${baseUrl}/admin`)).toBe("/login");
     expect(await landsOn(aliceB, `${baseUrl}/admin`)).toBe("/login");
@@ -134,7 +143,7 @@ describe("the admin manages normal users", () => {
     await admin.waitFor("[role=alertdialog]");
     expect(await admin.text("[role=alertdialog] p")).toContain("Reset it too if the account may have been compromised");
     await admin.clickRole("button", "Reactivate");
-    await admin.waitUntil(`!document.body.innerText.includes("Inactive")`);
+    await admin.waitUntil(aliceRow(`!row.innerText.includes("Inactive")`));
 
     await signInAsAlice(aliceB, ALICE_NEW_PASSWORD);
     expect(await pathname(aliceB)).toBe("/admin");
