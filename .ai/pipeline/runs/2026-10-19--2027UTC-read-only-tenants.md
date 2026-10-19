@@ -57,6 +57,7 @@ See the spec's Implementation Plan. Its Steps 1–10 map onto the Progress below
 - A fresh-context code review approved, with six Low findings, all fixed in 7a9ea73.
 - UI evidence from the production image is on the PR.
 - `npm audit`: not re-run, because no dependency changed (`package.json`/`package-lock.json` untouched).
+- After merging `main` (`om-auto-fix-pr`): the migration was regenerated as `…211303`, the gate now covers the new masters screens and seeds, and the re-review approved. At 232aae0: coverage 100% (1314 tests), integration 139/139.
 
 ## Progress
 
