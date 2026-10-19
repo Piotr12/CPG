@@ -1,13 +1,13 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { AppError, tenantScope } from "@cpg/core";
+import { tenantScope } from "@cpg/core";
 import { requireUser } from "../../../../auth/require-admin";
 import { AuditView } from "../../../../components/audit/audit-view";
 import { readAuditPage } from "../../../../components/audit/read-audit-page";
 import { getMessages } from "../../../../i18n/get-messages";
+import { orNotFound } from "../../../../routing/or-not-found";
 
 /** The tenant layout's title template puts the tenant first: "Test · Audit". */
 export const metadata: Metadata = { title: "Audit" };
@@ -32,7 +32,10 @@ async function TenantAudit({
 }) {
   await connection();
   await requireUser();
-  const [{ cradle }, { locale, messages }] = await Promise.all([openTenant((await params).tenant), getMessages()]);
+  const [{ cradle }, { locale, messages }] = await Promise.all([
+    orNotFound(tenantScope((await params).tenant), ["TENANT_NOT_FOUND"]),
+    getMessages(),
+  ]);
   const { page, isFirstPage } = await readAuditPage(searchParams, (query) => cradle.auditService.listTenant(query));
   const { tenant } = cradle;
   const t = messages.audit;
@@ -57,14 +60,4 @@ async function TenantAudit({
       />
     </div>
   );
-}
-
-/** The tenant's scope; a tenant missing from the database renders the not-found state. */
-async function openTenant(code: string) {
-  try {
-    return await tenantScope(code);
-  } catch (error) {
-    if (error instanceof AppError && error.code === "TENANT_NOT_FOUND") notFound();
-    throw error;
-  }
 }

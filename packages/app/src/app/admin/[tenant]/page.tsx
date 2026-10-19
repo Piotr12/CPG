@@ -1,11 +1,11 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@cpg/ui/components/card";
-import { AppError, tenantScope } from "@cpg/core";
+import { tenantScope } from "@cpg/core";
 import { requireUser } from "../../../auth/require-admin";
 import { getMessages } from "../../../i18n/get-messages";
+import { orNotFound } from "../../../routing/or-not-found";
 
 export default function TenantHomePage({ params }: PageProps<"/admin/[tenant]">) {
   return (
@@ -21,7 +21,10 @@ export default function TenantHomePage({ params }: PageProps<"/admin/[tenant]">)
 async function TenantHome({ params }: { params: Promise<{ tenant: string }> }) {
   await connection();
   await requireUser();
-  const [{ cradle }, { locale, messages }] = await Promise.all([openTenant((await params).tenant), getMessages()]);
+  const [{ cradle }, { locale, messages }] = await Promise.all([
+    orNotFound(tenantScope((await params).tenant), ["TENANT_NOT_FOUND"]),
+    getMessages(),
+  ]);
   const { tenant } = cradle;
 
   return (
@@ -35,27 +38,16 @@ async function TenantHome({ params }: { params: Promise<{ tenant: string }> }) {
           <CardDescription>{messages.tenants.generation(tenant.generation)}</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
-            {messages.tenants.noRecords}
-          </p>
-          <Link
-            href={`/admin/${tenant.code}/audit`}
-            className="mt-4 inline-block text-sm font-medium underline underline-offset-4"
-          >
-            {messages.audit.tenantHeading(tenant.name)}
-          </Link>
+          <nav aria-label={tenant.name} className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium">
+            <Link href={`/admin/${tenant.code}/materials`} className="underline underline-offset-4">
+              {messages.materials.link}
+            </Link>
+            <Link href={`/admin/${tenant.code}/audit`} className="underline underline-offset-4">
+              {messages.audit.tenantHeading(tenant.name)}
+            </Link>
+          </nav>
         </CardContent>
       </Card>
     </div>
   );
-}
-
-/** The tenant's scope; a tenant missing from the database renders the not-found state. */
-async function openTenant(code: string) {
-  try {
-    return await tenantScope(code);
-  } catch (error) {
-    if (error instanceof AppError && error.code === "TENANT_NOT_FOUND") notFound();
-    throw error;
-  }
 }

@@ -62,7 +62,7 @@ describe("tenants in the admin", () => {
     expect(await browser.text(STRIP)).toContain("Test tenant — demonstration data, safe to experiment");
     expect(await browser.title()).toBe("Test · Admin · Caveman Planning Good");
     expect(await browser.text("[data-slot=card-description]")).toBe("Dataset generation 1");
-    expect(await browser.text("main")).toContain("No business records yet");
+    expect(await browser.text("main")).toContain("Materials");
   });
 
   it("switches to Prod and back without any other step (TEN-010)", async () => {

@@ -50,7 +50,7 @@ describe("TenantHomePage", () => {
     expect(screen.getByRole("heading", { name: "Cave control — Prod" })).toBeTruthy();
     expect(screen.getByText("Prod")).toBeTruthy();
     expect(screen.getByText("Dataset generation 1")).toBeTruthy();
-    expect(screen.getByText("No business records yet")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Materials" }).getAttribute("href")).toBe("/admin/prod/materials");
     expect(screen.getByRole("link", { name: "Audit — Prod" }).getAttribute("href")).toBe("/admin/prod/audit");
   });
 
@@ -72,7 +72,7 @@ describe("TenantHomePage", () => {
 
     expect(screen.getByRole("heading", { name: "Kontrola jaskini — Prod" }).closest("[lang]")?.getAttribute("lang")).toBe("pl");
     expect(screen.getByText("Generacja zbioru danych: 1")).toBeTruthy();
-    expect(screen.getByText("Brak rekordów biznesowych")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Materiały" })).toBeTruthy();
   });
 
   it("opens no tenant for a visitor the gate refuses", async () => {
