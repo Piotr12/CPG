@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { openBrowser, type Browser } from "./browser";
 import { signIn, signInAsAdmin } from "./sign-in";
 import { createToken, openTokens as openTokensAt, submitToken } from "./tokens";
+import { createUser } from "./users";
 
 const baseUrl = inject("baseUrl");
 const adminPassword = inject("adminPassword");
@@ -25,18 +26,6 @@ interface TokenRow {
   lastUsedAt: string | null;
 }
 
-/** Creates a normal user on /admin/users. */
-async function createUser(admin: Browser, username: string, password: string) {
-  await admin.open(`${baseUrl}/admin/users`);
-  await admin.waitFor("table");
-  await admin.clickRole("button", "Create user");
-  await admin.fillLabel("Username", username);
-  await admin.fillLabel("Initial password", password);
-  await admin.click("[role=dialog] button[type=submit]");
-  await admin.waitUntil(`!document.querySelector("[role=dialog]")`);
-  await admin.waitForText(username);
-}
-
 const openTokens = (browser: Browser) => openTokensAt(browser, baseUrl);
 
 describe("named API tokens", () => {
@@ -48,8 +37,8 @@ describe("named API tokens", () => {
   beforeAll(async () => {
     [admin, tara, omar] = [openBrowser(), openBrowser(), openBrowser()];
     await signInAsAdmin(admin, baseUrl, adminPassword);
-    await createUser(admin, "tara", TARA_PASSWORD);
-    await createUser(admin, "omar", OMAR_PASSWORD);
+    await createUser(admin, baseUrl, "tara", TARA_PASSWORD);
+    await createUser(admin, baseUrl, "omar", OMAR_PASSWORD);
     await signIn(tara, baseUrl, TARA_PASSWORD, "tara");
     await signIn(omar, baseUrl, OMAR_PASSWORD, "omar");
   });
@@ -170,11 +159,12 @@ describe("named API tokens", () => {
     expect(JSON.stringify(audit)).not.toContain(secrets.agent1);
   });
 
-  it("gives the admin's own token admin rights, and revokes it from the screen (API-002)", async () => {
+  it("gives the admin's own token admin rights but no way to mint, and revokes it from the screen (API-002, API-032)", async () => {
     await openTokens(admin);
     secrets.admin = await createToken(admin, "ops");
 
     expect((await api("/api/users", secrets.admin)).status).toBe(200);
+    expect((await api("/api/tokens", secrets.admin, "POST")).status).toBe(405);
 
     await admin.clickRole("button", "Revoke ops");
     await admin.waitFor("[role=alertdialog]");

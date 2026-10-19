@@ -13,7 +13,7 @@ The original export marked every scenario `Not executed`. Scenarios are updated 
 - **Partially verified**: only part of the scenario can be or is asserted today; the **Evidence** line says which part is missing and why.
 - **Not executed**: not yet built or not yet checked.
 
-Last updated 2026-10-19 for epic E01 (#9), against CI on `main` at `9ea5973`.
+Last updated 2026-10-19 for epic E01 (#9), against CI on `main` at `9ea5973`, and for its end-to-end follow-up (#52).
 
 This document contains the complete acceptance catalogue for the CPG MVP. Each test preserves its ID, title, priority, execution channel, and Given / When / Then criteria.
 
@@ -58,7 +58,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** UI: `tests/integration/users.test.ts` (a normal user has no password control). API: the only password route is admin-only, `packages/app/src/app/api/users/[id]/password/route.test.ts` (403 for a normal user's token; unit test only). E01-S02, PR #34.
+- **Evidence:** UI: `tests/integration/users.test.ts` (a normal user has no password control). API: the only password route is admin-only: `tests/integration/api-users.test.ts` (a normal user's token gets 403, for their own id too), `packages/app/src/app/api/users/[id]/password/route.test.ts`. E01-S02, PR #34; #52.
 - **Given:** Normal user signed in
 - **When:** Inspect profile and try an equivalent API mutation
 - **Then:** No self-service password-change action is available through UI or API.
@@ -67,7 +67,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/users.test.ts` (both sessions end; old password refused, new one works), `tests/integration/api-tokens.test.ts` (tokens end), `packages/core/src/services/users/user.service.test.ts`, `packages/core/src/services/auth/auth.service.test.ts` (a sign-in racing the reset keeps no session). E01-S02/S03, PRs #34, #41.
+- **Evidence:** `tests/integration/users.test.ts` (both sessions end; old password refused, new one works), `tests/integration/api-tokens.test.ts` (tokens end), `tests/integration/api-users.test.ts` (the same reset through `PUT /api/users/{id}/password`: session and token end, only the new password works), `packages/core/src/services/users/user.service.test.ts`, `packages/core/src/services/auth/auth.service.test.ts` (a sign-in racing the reset keeps no session). E01-S02/S03, PRs #34, #41; #52.
 - **Given:** Normal user has active sessions and API tokens
 - **When:** Admin resets that user's password
 - **Then:** Previous sessions and tokens are invalid immediately; new password permits fresh login.
@@ -85,7 +85,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/users.test.ts` (no Delete; the screen says accounts are never deleted), `packages/app/src/app/api/users/[id]/route.test.ts` (no DELETE handler), `tests/integration/audit.test.ts` (the audit keeps naming the account). E01-S02, PR #34.
+- **Evidence:** `tests/integration/users.test.ts` (no Delete; the screen says accounts are never deleted), `tests/integration/api-users.test.ts` (`DELETE /api/users/{id}` answers 405, even to the admin's token), `packages/app/src/app/api/users/[id]/route.test.ts` (no DELETE handler), `tests/integration/audit.test.ts` (the audit keeps naming the account). E01-S02, PR #34; #52.
 - **Given:** Existing normal account with history
 - **When:** Admin requests account removal
 - **Then:** Account is not hard-deleted; deactivation remains available and historical attribution persists.
@@ -3235,7 +3235,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/api-tokens.test.ts` (the admin creates and revokes a token on the screen); `tests/api-token-minting.test.ts` and `packages/app/src/app/api/tokens/route.test.ts` (no minting route for any role). The end-to-end 405 is asserted with a normal user's token only. E01-S03, PR #41.
+- **Evidence:** `tests/integration/api-tokens.test.ts` (the admin creates and revokes a token on the screen; `POST /api/tokens` answers 405 to the admin's token and to a normal user's); `tests/api-token-minting.test.ts` and `packages/app/src/app/api/tokens/route.test.ts` (no minting route for any role). E01-S03, PR #41; #52.
 - **Given:** Built-in admin signed in
 - **When:** Create own token through authenticated UI with explicit confirmation
 - **Then:** Token inherits admin rights but bearer API creation remains absent/forbidden, including for admin.
@@ -3307,7 +3307,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** API · **Status:** Partially verified
 
-- **Evidence:** A normal user's token is refused (403) on admin-only operations: `GET /api/users` end to end in `tests/integration/api-tokens.test.ts`; the user write routes in `packages/app/src/app/api/users/**/route.test.ts` and `packages/app/src/auth/api-write.test.ts`. "Change master material" waits for master data (#22). E01-S03, PRs #41, #48.
+- **Evidence:** A normal user's token is refused (403) on admin-only operations, end to end: `GET /api/users` in `tests/integration/api-tokens.test.ts`; `POST /api/users`, `PATCH /api/users/{id}` and `PUT /api/users/{id}/password` in `tests/integration/api-users.test.ts`, where the same token still changes its own preferences; unit tests in `packages/app/src/app/api/users/**/route.test.ts` and `packages/app/src/auth/api-write.test.ts`. "Change master material" waits for master data (#22). E01-S03, PRs #41, #48; #52.
 - **Given:** Normal user's bearer token valid
 - **When:** Try to change master material
 - **Then:** Rejected as forbidden; ordinary allowed transaction can still succeed.
@@ -3486,7 +3486,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/api-token-minting.test.ts` (only the server action creates tokens, and it never reads `Authorization`), `packages/app/src/app/api/tokens/route.test.ts`, `tests/integration/api-tokens.test.ts` (405). E01-S03, PR #41.
+- **Evidence:** `tests/api-token-minting.test.ts` (only the server action creates tokens, and it never reads `Authorization`), `packages/app/src/app/api/tokens/route.test.ts`, `tests/integration/api-tokens.test.ts` (405 for the admin's token and a normal user's). E01-S03, PR #41; #52.
 - **Given:** Existing valid bearer token belongs to admin or ordinary user
 - **When:** Attempt any API action that would create a new token
 - **Then:** Creation denied/not exposed regardless of role, idempotency key or tenant; interactive signed-in UI with explicit confirmation is the only issuance channel. List/revoke APIs remain.
@@ -3771,18 +3771,18 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### UX-003 — Language preference per account
 
-**Priority:** P1 · **Channel:** UI · **Status:** Partially verified
+**Priority:** P1 · **Channel:** UI · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/preferences/user-preference.service.test.ts` (one account's choice doesn't change another's). No browser test with two accounts yet. E01-S04, PR #32.
+- **Evidence:** `tests/integration/preferences.test.ts` (in one browser, the admin in Polish and a second account in English, each kept across two sign-ins in turn), `packages/core/src/services/preferences/user-preference.service.test.ts` (one account's choice doesn't change another's). E01-S04, PR #32; #52.
 - **Given:** User A chooses Polish, user B stays English
 - **When:** Sign in separately
 - **Then:** Both see their own chosen language; one does not alter the other.
 
 ### UX-004 — Language preference across tenants
 
-**Priority:** P1 · **Channel:** UI · **Status:** Partially verified
+**Priority:** P1 · **Channel:** UI · **Status:** Passed (automated)
 
-- **Evidence:** Holds by construction: preferences are a global table, outside tenant scope (`packages/db/src/entities/index.ts`). No test switches tenant and checks the language yet. E01-S04, PR #32.
+- **Evidence:** `tests/integration/preferences.test.ts` (Polish kept while switching Test → Prod → Test from the tenant strip). Preferences are a global table, outside tenant scope (`packages/db/src/entities/index.ts`); tenant data stays apart in `packages/db/src/tenants/tenant-isolation.test.ts`. E01-S04, PR #32; #52.
 - **Given:** User selects Polish while in Test
 - **When:** Switch to Prod
 - **Then:** Same user's selected language continues; business data still isolated.
@@ -3807,9 +3807,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### UX-007 — Theme preference persists in user settings
 
-**Priority:** P1 · **Channel:** UI · **Status:** Partially verified
+**Priority:** P1 · **Channel:** UI · **Status:** Passed (automated)
 
-- **Evidence:** Kept after signing out and in again: `tests/integration/preferences.test.ts`, `packages/app/src/app/login/actions.test.ts`. The "visit another tenant" part isn't asserted yet. E01-S04, PR #32.
+- **Evidence:** `tests/integration/preferences.test.ts` (dark kept after signing out and in again, and while switching Test → Prod → Test), `packages/app/src/app/login/actions.test.ts`. E01-S04, PR #32; #52.
 - **Given:** User selects dark theme and logs out
 - **When:** Sign in again and visit another tenant
 - **Then:** Account setting retains dark preference.
@@ -3835,7 +3835,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** UI · **Status:** Partially verified
 
-- **Evidence:** The root layout renders the footer on every page (`packages/app/src/app/layout.test.tsx`); `tests/integration/footer.test.ts` asserts it on `/`, `/login`, `/help` and `/admin`, not yet on `/admin/users`. The MRP report doesn't exist yet. E01-S04, PR #32.
+- **Evidence:** The root layout renders the footer on every page (`packages/app/src/app/layout.test.tsx`); `tests/integration/footer.test.ts` asserts it on `/`, `/login`, `/help`, `/admin`, `/admin/users`, `/admin/tokens`, `/admin/audit`, `/admin/test` and `/admin/test/audit`. The MRP report doesn't exist yet. E01-S04, PR #32; #52.
 - **Given:** Admin visits user administration, help and MRP report
 - **When:** Inspect footer on each
 - **Then:** Exact required text and links on all pages.
