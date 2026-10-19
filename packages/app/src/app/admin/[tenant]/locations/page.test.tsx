@@ -49,7 +49,7 @@ describe("LocationsPage", () => {
   beforeEach(() => {
     mocks.requireUser.mockResolvedValue({ username: "admin", role: "admin" });
     mocks.tenantScope.mockResolvedValue({
-      cradle: { tenant: { code: "test", name: "Test", generation: 2 }, locationService: { list: mocks.list } },
+      cradle: { tenant: { code: "test", name: "Test", generation: 2, readOnly: false }, locationService: { list: mocks.list } },
     });
     mocks.list.mockResolvedValue(records);
     mocks.getMessages.mockResolvedValue({ locale: "en", messages: en });
@@ -76,6 +76,17 @@ describe("LocationsPage", () => {
 
     expect(screen.getByRole("heading", { name: "Lokalizacje — Test" }).closest("[lang]")?.getAttribute("lang")).toBe("pl");
     expect(screen.getByText("First")).toBeTruthy();
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("offers the admin no control while the tenant is read-only (R05)", async () => {
+    mocks.tenantScope.mockResolvedValue({
+      cradle: { tenant: { code: "test", name: "Test", generation: 2, readOnly: true }, locationService: { list: mocks.list } },
+    });
+
+    render(await resolveServerComponents(page("test")));
+
+    expect(screen.getByText("Second")).toBeTruthy();
     expect(screen.queryByRole("button")).toBeNull();
   });
 

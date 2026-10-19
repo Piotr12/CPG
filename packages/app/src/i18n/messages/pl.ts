@@ -29,6 +29,28 @@ export const pl: Messages = {
     migrationsApplied: (count) => `Zastosowane migracje: ${count}`,
     migrationsPending: (count) => `Oczekujące: ${count}`,
     settings: (count) => `Ustawienia: ${count}`,
+    readOnly: {
+      heading: "Tylko do odczytu",
+      intro:
+        "Gdy środowisko jest tylko do odczytu, nikt nie może zmienić jego danych biznesowych, także administrator i API. Odczyt, audyt i ustawienia kont działają dalej.",
+      writable: "Zapisywalne",
+      readOnly: "Tylko do odczytu",
+      makeReadOnly: {
+        open: (name) => `Ustaw ${name} tylko do odczytu`,
+        title: (name) => `Ustawić ${name} tylko do odczytu?`,
+        description: (name) =>
+          `Nikt, także administrator, nie zmieni danych biznesowych środowiska ${name}, dopóki znów nie będzie zapisywalne. Odczyt, audyt i ustawienia kont działają dalej.`,
+        confirm: "Ustaw tylko do odczytu",
+      },
+      makeWritable: {
+        open: (name) => `Ustaw ${name} jako zapisywalne`,
+        title: (name) => `Ustawić ${name} jako zapisywalne?`,
+        description: (name) => `Dane biznesowe środowiska ${name} znów będzie można zmieniać, zgodnie z uprawnieniami.`,
+        confirm: "Ustaw jako zapisywalne",
+      },
+      cancel: "Anuluj",
+      errors: { FORBIDDEN: "Tylko administrator może zmieniać ustawienie tylko do odczytu." },
+    },
   },
   users: {
     heading: "Użytkownicy",
@@ -418,6 +440,7 @@ export const pl: Messages = {
       "suppliers.supplier.updated": "Zmieniono nazwę dostawcy",
       "suppliers.supplier.deactivated": "Dezaktywowano dostawcę",
       "suppliers.supplier.reactivated": "Aktywowano ponownie dostawcę",
+      "tenants.tenant.read-only-changed": "Zmieniono ustawienie tylko do odczytu",
     },
     passwordNotRecorded: "Hasło zmienione (niezapisane)",
     fields: {
@@ -435,10 +458,12 @@ export const pl: Messages = {
       unit: "jednostka",
       numerator: "ilość bazowa",
       denominator: "ilość alternatywna",
+      readOnly: "tylko do odczytu",
     },
     values: {
       role: { admin: "administrator", user: "użytkownik" },
       active: { true: "tak", false: "nie" },
+      readOnly: { true: "tak", false: "nie" },
       locale: { en: "angielski", pl: "polski" },
       theme: { light: "jasny", dark: "ciemny" },
       type: { raw: "surowiec", intermediate: "półprodukt", finished: "wyrób gotowy" },
@@ -454,6 +479,8 @@ export const pl: Messages = {
       global: "Globalnie — nie wybrano środowiska",
     },
     generation: (generation) => `Generacja zbioru danych: ${generation}`,
+    readOnly: "Tylko do odczytu",
+    readOnlyStrip: "Danych biznesowych nie można zmieniać.",
   },
   nav: {
     menu: "Menu",
@@ -488,5 +515,7 @@ export const pl: Messages = {
     TOO_MANY_ATTEMPTS: "Zbyt wiele prób. Spróbuj ponownie za kilka minut.",
     VALIDATION_FAILED: "Niektóre pola są nieprawidłowe.",
     INTERNAL: "Coś poszło nie tak. Spróbuj ponownie.",
+    TENANT_READ_ONLY:
+      "To środowisko jest tylko do odczytu, więc jego danych biznesowych nie można zmieniać. Administrator może je ustawić jako zapisywalne na stronie Kontrola jaskini.",
   },
 };

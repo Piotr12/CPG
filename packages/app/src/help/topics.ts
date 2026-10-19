@@ -77,6 +77,7 @@ const en: Record<HelpTopicId, HelpText> = {
       "Cave control is the home page of every account: choose the Test or Prod tenant there. Your name, language and theme, and Sign out are in the menu. There is no password change: only the administrator sets passwords.",
       "The administrator also sees Users in the menu and the Database card here. The card shows where CPG keeps its data, how many migrations are applied, whether any are still pending, and how many settings are stored.",
       "A pending migration normally means CPG is still starting. If it stays, tell whoever runs CPG.",
+      "The administrator's Read-only card makes Test or Prod read-only, and writable again, after a confirmation. Each tenant has its own flag, and every change is kept in the Global audit. A read-only tenant shows Read-only on the chooser and on its strip.",
       "Open Test or Open Prod takes you to that tenant's business data.",
     ],
   },
@@ -86,6 +87,7 @@ const en: Record<HelpTopicId, HelpText> = {
       "CPG keeps two separate sets of business data: Test, with demonstration data that is safe to experiment with, and Prod, the live data.",
       "The strip at the top of every page says which one you are working in: TEST in amber, PROD in dark with a red edge, or GLOBAL on pages that belong to neither.",
       "Switch with Test and Prod on the right of the strip. Nothing you do in one ever appears in the other, and the same number can mean a different record in each.",
+      "When the administrator makes a tenant read-only, its strip says Read-only. Nobody can change its business data then, the administrator and the API included, so the buttons that would change it are gone. You can still read everything, including the audit, and change your own language, theme and API tokens.",
     ],
   },
   "managing-users": {
@@ -212,6 +214,7 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Kontrola jaskini to strona startowa każdego konta: wybierz tu środowisko Test lub Prod. Twoja nazwa, język i motyw oraz przycisk Wyloguj są w menu. Nie ma tu zmiany hasła: hasła ustawia tylko administrator.",
       "Administrator widzi też Użytkowników w menu i tutaj kartę Baza danych. Karta pokazuje, gdzie CPG przechowuje dane, ile migracji zastosowano, czy jakieś jeszcze oczekują i ile ustawień zapisano.",
       "Oczekująca migracja zwykle oznacza, że CPG jeszcze się uruchamia. Jeśli nie znika, powiedz o tym osobie, która utrzymuje CPG.",
+      "Karta Tylko do odczytu administratora po potwierdzeniu ustawia Test lub Prod tylko do odczytu i z powrotem jako zapisywalne. Każde środowisko ma własne ustawienie, a każda zmiana trafia do audytu globalnego. Środowisko tylko do odczytu jest tak oznaczone przy wyborze środowiska i na swoim pasku.",
       "Przyciski Otwórz Test i Otwórz Prod prowadzą do danych biznesowych wybranego środowiska.",
     ],
   },
@@ -221,6 +224,7 @@ const pl: Record<HelpTopicId, HelpText> = {
       "CPG przechowuje dwa oddzielne zbiory danych biznesowych: Test z danymi demonstracyjnymi, na których można bezpiecznie eksperymentować, oraz Prod z danymi rzeczywistymi.",
       "Pasek u góry każdej strony pokazuje, w którym środowisku pracujesz: TEST na bursztynowo, PROD na ciemno z czerwoną krawędzią albo GLOBAL na stronach, które nie należą do żadnego z nich.",
       "Przełączaj się przyciskami Test i Prod po prawej stronie paska. Nic, co zrobisz w jednym środowisku, nie pojawi się w drugim, a ten sam numer może oznaczać w każdym z nich inny rekord.",
+      "Gdy administrator ustawi środowisko tylko do odczytu, jego pasek pokazuje Tylko do odczytu. Nikt nie może wtedy zmienić jego danych biznesowych, także administrator i API, więc przyciski, które by je zmieniały, znikają. Nadal możesz wszystko czytać, także audyt, i zmieniać własny język, motyw i tokeny API.",
     ],
   },
   "managing-users": {

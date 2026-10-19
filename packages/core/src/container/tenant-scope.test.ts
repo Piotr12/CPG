@@ -24,7 +24,7 @@ describe("scopeForTenant", () => {
   it("registers the tenant and scopes the request's EntityManager to it", async () => {
     const scope = await scopeForTenant(container, "prod");
 
-    expect(scope.cradle.tenant).toEqual({ code: "prod", name: "Prod", generation: 1 });
+    expect(scope.cradle.tenant).toEqual({ code: "prod", name: "Prod", generation: 1, readOnly: false });
     expect(scope.cradle.em.getFilterParams(TENANT_FILTER)).toEqual({ code: "prod" });
   });
 

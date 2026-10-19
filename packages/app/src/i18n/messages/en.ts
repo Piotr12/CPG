@@ -31,6 +31,29 @@ export const en = {
     migrationsApplied: (count: number) => `${count} migrations applied`,
     migrationsPending: (count: number) => `${count} pending`,
     settings: (count: number) => `${count} settings`,
+    /** The admin's Read-only card (R05). Filled in on the server: the dialog gets plain strings. */
+    readOnly: {
+      heading: "Read-only",
+      intro:
+        "While a tenant is read-only, nobody can change its business data, the administrator and the API included. Reading, the audit and account settings keep working.",
+      writable: "Writable",
+      readOnly: "Read-only",
+      makeReadOnly: {
+        open: (name: string) => `Make ${name} read-only`,
+        title: (name: string) => `Make ${name} read-only?`,
+        description: (name: string) =>
+          `Nobody, the administrator included, can change ${name}'s business data until it is made writable again. Reading, the audit and account settings keep working.`,
+        confirm: "Make read-only",
+      },
+      makeWritable: {
+        open: (name: string) => `Make ${name} writable`,
+        title: (name: string) => `Make ${name} writable?`,
+        description: (name: string) => `${name}'s business data can be changed again, by whoever may change it.`,
+        confirm: "Make writable",
+      },
+      cancel: "Cancel",
+      errors: { FORBIDDEN: "Only the administrator can change the read-only flags." },
+    },
   },
   /** The users screen. Its strings go to client components, so `{username}` is filled in there. */
   users: {
@@ -447,6 +470,7 @@ export const en = {
       "suppliers.supplier.updated": "Supplier renamed",
       "suppliers.supplier.deactivated": "Supplier deactivated",
       "suppliers.supplier.reactivated": "Supplier reactivated",
+      "tenants.tenant.read-only-changed": "Read-only flag changed",
     },
     passwordNotRecorded: "Password replaced (not recorded)",
     /** Snapshot field names in the Changes column; a field missing here is shown as stored. */
@@ -465,11 +489,13 @@ export const en = {
       unit: "unit",
       numerator: "base quantity",
       denominator: "alternate quantity",
+      readOnly: "read-only",
     },
     /** Snapshot values per field; a value missing here is shown as stored. */
     values: {
       role: { admin: "admin", user: "user" },
       active: { true: "yes", false: "no" },
+      readOnly: { true: "yes", false: "no" },
       locale: { en: "English", pl: "Polish" },
       theme: { light: "light", dark: "dark" },
       type: { raw: "raw", intermediate: "intermediate", finished: "finished" },
@@ -485,6 +511,9 @@ export const en = {
       global: "Global — no tenant selected",
     },
     generation: (generation: number) => `Dataset generation ${generation}`,
+    /** A read-only tenant, on its strip and on the chooser (R05). */
+    readOnly: "Read-only",
+    readOnlyStrip: "Business data can't be changed.",
   },
   /** The menu every page shares (components/layout). Test and Prod are tenant names, never translated. */
   nav: {
@@ -521,6 +550,8 @@ export const en = {
     TOO_MANY_ATTEMPTS: "Too many attempts. Try again in a few minutes.",
     VALIDATION_FAILED: "Some fields are invalid.",
     INTERNAL: "Something went wrong. Try again.",
+    TENANT_READ_ONLY:
+      "This tenant is read-only, so its business data can't be changed. The administrator can make it writable on the Cave control page.",
   },
 };
 

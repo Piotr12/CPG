@@ -31,6 +31,7 @@ describe("migrateDatabase", () => {
       "Migration20261019155802_api_idempotency",
       "Migration20261019191302_materials",
       "Migration20261019202843_locations_customers_suppliers",
+      "Migration20261019211303_tenant_read_only",
     ]);
     expect(await migrateDatabase(config)).toEqual([]);
   });

@@ -95,14 +95,14 @@ describe("the tenant API", () => {
   });
   afterAll(() => browser.close());
 
-  it("lists both tenants with their generation", async () => {
+  it("lists both tenants with their generation and read-only flag", async () => {
     expect(await api("/api/tenants")).toEqual({
       status: 200,
       body: {
         ok: true,
         data: [
-          { code: "test", name: "Test", generation: 1 },
-          { code: "prod", name: "Prod", generation: 1 },
+          { code: "test", name: "Test", generation: 1, readOnly: false },
+          { code: "prod", name: "Prod", generation: 1, readOnly: false },
         ],
       },
     });
@@ -111,7 +111,7 @@ describe("the tenant API", () => {
   it("reads one tenant by its path", async () => {
     expect(await api("/api/tenants/prod")).toEqual({
       status: 200,
-      body: { ok: true, data: { code: "prod", name: "Prod", generation: 1 } },
+      body: { ok: true, data: { code: "prod", name: "Prod", generation: 1, readOnly: false } },
     });
   });
 

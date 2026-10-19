@@ -6,9 +6,10 @@ import {
   type TenantCode,
 } from "@cpg/db";
 import { assertCurrentGeneration } from "../../domain/tenants/generation";
+import { assertWritable } from "../../domain/tenants/read-only";
 import { ConflictError } from "../../http/errors";
 import { inRequestTransaction, isStaleSnapshot } from "../../http/request-transaction";
-import type { TenantService } from "../tenants/tenant.service";
+import type { TenantService, TenantState } from "../tenants/tenant.service";
 import { fingerprintMatches, type Fingerprint } from "./fingerprint";
 
 /** How long a key keeps its result: R07's 24 hours, from the first successful use (API-026). */
@@ -78,7 +79,9 @@ export class IdempotencyService {
    * Runs `write` once per key. A repeat with the same fingerprint within 24 hours gets the first
    * result and writes nothing; a different request with the key is `IDEMPOTENCY_KEY_REUSED`. A
    * failed write stores nothing, so its retry runs again. For a tenant, the generation is checked
-   * first, inside the transaction: a stale one is refused before any lookup (API-033, TEN-030).
+   * first, inside the transaction: a stale one is refused before any lookup (API-033, TEN-030). A
+   * read-only tenant refuses the write after the lookup (R05, API-030): a repeat of a write stored
+   * before the flag was set still gets its result, because replaying it changes nothing.
    */
   async run<T>(request: IdempotentWrite, scope: IdempotencyScope, write: () => Promise<T>): Promise<IdempotentResult<T>> {
     const attempt = await this.attempt(request, scope, write).catch((error: unknown) => {
@@ -101,21 +104,25 @@ export class IdempotencyService {
     return inRequestTransaction(this.em, async () => {
       // Records at or before this instant are past their 24 hours (API-026).
       const expired = new Date(Date.now() - IDEMPOTENCY_TTL_MS);
-      const generation = scope.kind === "tenant" ? await this.checkGeneration(scope) : null;
+      const state = scope.kind === "tenant" ? await this.checkTenant(scope) : null;
       const stored = await this.find(request, scope, expired);
       if (stored) return { kind: "found", stored } as const;
+      if (state) assertWritable(state);
 
       const data = await write();
       await this.purgeExpired(scope, expired);
-      await this.store(request, generation, data);
+      await this.store(request, state?.generation ?? null, data);
       return { kind: "written", data } as const;
     });
   }
 
-  /** The tenant's current generation, read fresh inside the transaction, once the sent one matches it. */
-  private async checkGeneration(scope: Extract<IdempotencyScope, { kind: "tenant" }>): Promise<number> {
-    const current = await this.tenantService.currentGeneration(scope.tenant);
-    assertCurrentGeneration(current, scope.generation, scope.requireGeneration);
+  /**
+   * The tenant's current generation and read-only flag, read fresh inside the transaction, once the
+   * sent generation matches it. The flag is checked by the caller, after the key lookup.
+   */
+  private async checkTenant(scope: Extract<IdempotencyScope, { kind: "tenant" }>): Promise<TenantState> {
+    const current = await this.tenantService.currentState(scope.tenant);
+    assertCurrentGeneration(current.generation, scope.generation, scope.requireGeneration);
     return current;
   }
 

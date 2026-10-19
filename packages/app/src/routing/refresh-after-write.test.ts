@@ -23,8 +23,9 @@ describe("refreshAfterWrite", () => {
     expect(mocks.revalidatePath.mock.calls).toEqual([["/a"], ["/b"], ["/c"]]);
   });
 
-  it("refreshes nothing after any other failure", () => {
+  it("refreshes nothing after any other failure, a read-only refusal included (its dialog must stay)", () => {
     refreshAfterWrite({ ok: false, error: { code: "FORBIDDEN", message: "x" } }, "/a");
+    refreshAfterWrite({ ok: false, error: { code: "TENANT_READ_ONLY", message: "x" } }, "/a");
 
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });

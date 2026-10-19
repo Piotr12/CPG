@@ -18,6 +18,7 @@ import {
 import { AppError, ConflictError, NotFoundError, ValidationError, versionConflict } from "../../http/errors";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
+import { isScopeReadOnly } from "../tenants/tenant.service";
 
 /** What the screens and the API show about a material. `id` is its eight-digit business ID (R01). */
 export interface MaterialSummary {
@@ -252,11 +253,12 @@ export class MaterialService {
   /**
    * Creates the demonstration materials (D06) when the tenant has none, and returns how many. Not
    * audited (spec Q9): it is an installation step, like the tenants the migration inserts. Each
-   * material is flushed before the next reads the highest ID, so they get consecutive IDs.
+   * material is flushed before the next reads the highest ID, so they get consecutive IDs. Seeds
+   * nothing into a read-only tenant (R05): its flag is read in the seed's own transaction.
    */
   async seedDemo(): Promise<number> {
     return this.em.transactional(async (em) => {
-      if ((await em.count(Material, {})) > 0) return 0;
+      if ((await em.count(Material, {})) > 0 || (await isScopeReadOnly(em))) return 0;
       for (const { conversions, ...fields } of DEMO_MATERIALS) {
         const material = await this.insert(em, fields);
         for (const conversion of conversions) em.create(MaterialConversion, { material, ...conversion });

@@ -1,13 +1,14 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { LockWaitTimeoutException, migrate, Setting, Tenant } from "@cpg/db";
+import { initOrm, LockWaitTimeoutException, migrate, Setting, Tenant } from "@cpg/db";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { loadConfig } from "../config";
 import { getContainer } from "../container/container";
 import type { AppContainer } from "../container/cradle";
 import { toDbOptions } from "../database";
+import { assertAdmin } from "./auth";
 import { NotFoundError } from "./errors";
 import { INTERNAL_ERROR } from "./server-action";
 import { tenantServerAction } from "./tenant-server-action";
@@ -15,8 +16,8 @@ import { tenantServerAction } from "./tenant-server-action";
 const schema = z.object({ name: z.string().min(1, "Required.") });
 
 describe("tenantServerAction", () => {
+  const dataDir = mkdtempSync(path.join(tmpdir(), "cpg-tenant-action-"));
   beforeAll(async () => {
-    const dataDir = mkdtempSync(path.join(tmpdir(), "cpg-tenant-action-"));
     await migrate(toDbOptions(loadConfig({ DATA_DIR: dataDir })));
     vi.stubEnv("DATA_DIR", dataDir);
   });
@@ -117,6 +118,82 @@ describe("tenantServerAction", () => {
 
       await expect(action("prod", 1, { name: "rolled-back" })).resolves.toMatchObject({ ok: false });
       expect(await (await orm()).em.fork().count(Setting, { key: "tenant-action.rolled-back" })).toBe(0);
+    });
+  });
+
+  describe("the read-only flag (R05)", () => {
+    const orm = async () => (await getContainer()).cradle.orm;
+    const setReadOnly = async (code: "test" | "prod", readOnly: boolean) =>
+      (await orm()).em.fork().nativeUpdate(Tenant, { code }, { readOnly });
+    const readOnlyError = {
+      code: "TENANT_READ_ONLY",
+      message: "This tenant is read-only, so its business data can't be changed. The administrator can make it writable on the Cave control page (/admin).",
+    };
+    afterEach(async () => {
+      await (await orm()).em.fork().nativeUpdate(Tenant, {}, { readOnly: false, generation: 1 });
+    });
+
+    it("refuses every write to a read-only tenant before the handler runs, the admin's included (TEN-016)", async () => {
+      await setReadOnly("prod", true);
+      const handler = vi.fn();
+
+      await expect(tenantServerAction(schema, handler)("prod", 1, { name: "rock" })).resolves.toEqual({
+        ok: false,
+        error: readOnlyError,
+      });
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    it("refuses a normal user's write as read-only too: the flag is no permission (TEN-015)", async () => {
+      await setReadOnly("test", true);
+      const normalUser = { userId: "u1", username: "alice", sessionId: "s1", role: "user" as const };
+      const action = tenantServerAction(schema, async () => assertAdmin(normalUser));
+
+      await expect(action("test", 1, { name: "rock" })).resolves.toEqual({ ok: false, error: readOnlyError });
+      await setReadOnly("test", false);
+      await expect(action("test", 1, { name: "rock" })).resolves.toMatchObject({ ok: false, error: { code: "FORBIDDEN" } });
+    });
+
+    it("keeps the other tenant writable (TEN-021)", async () => {
+      await setReadOnly("test", true);
+
+      await expect(tenantServerAction(schema, async ({ name }) => name)("prod", 1, { name: "rock" })).resolves.toEqual({
+        ok: true,
+        data: "rock",
+      });
+    });
+
+    it("answers a stale generation first: the form must reload either way", async () => {
+      await (await orm()).em.fork().nativeUpdate(Tenant, { code: "test" }, { generation: 2, readOnly: true });
+
+      await expect(tenantServerAction(schema, vi.fn())("test", 1, { name: "rock" })).resolves.toMatchObject({
+        ok: false,
+        error: { code: "GENERATION_STALE" },
+      });
+    });
+
+    it("refuses a write whose transaction began before the flag was committed, and stores nothing", async () => {
+      // A second connection, like another Next.js bundle's, sets the flag after this write's
+      // transaction read the tenant: its first write then fails as a stale snapshot, and the retry
+      // reads the flag.
+      const other = await initOrm(toDbOptions(loadConfig({ DATA_DIR: dataDir })));
+      const handler = vi.fn(async (_input: { name: string }, scope: AppContainer) => {
+        if (handler.mock.calls.length === 1) await other.em.fork().nativeUpdate(Tenant, { code: "prod" }, { readOnly: true });
+        scope.cradle.em.create(Setting, { key: "tenant-action.raced", value: "1" });
+        await scope.cradle.em.flush();
+        return "written";
+      });
+
+      try {
+        await expect(tenantServerAction(schema, handler)("prod", 1, { name: "rock" })).resolves.toEqual({
+          ok: false,
+          error: readOnlyError,
+        });
+        expect(handler).toHaveBeenCalledTimes(1);
+        expect(await (await orm()).em.fork().count(Setting, { key: "tenant-action.raced" })).toBe(0);
+      } finally {
+        await other.close();
+      }
     });
   });
 });

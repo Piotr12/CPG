@@ -124,6 +124,7 @@ No action or route writes its own `try/catch` + response mapping.
       - a `nativeUpdate` that sets anything but plain fields.
   - **Writes go through `em.create`/`assign`/`remove` and a flush.** Services never set `tenant`, because it is filled on create.
   - **Client-supplied references are loaded with `findOneOrFail` in the scope.** A Prod ID used in Test is then "not found" (TEN-014).
+  - **A read-only tenant refuses every business write** (R05, spec `2026-10-19--2018UTC-read-only-tenants`). The flag is read fresh inside the write's transaction, by `tenantServerAction` and by `IdempotencyService` behind `tenantApiWrite`. A system write outside them, such as a demo seed, checks `isScopeReadOnly(em)` itself. Tenant pages hide their write controls while the tenant is read-only, and its strip says why.
   - **Tenant-local unique keys include `tenant`.**
   - **ESLint forbids, in `core` and `app`, what the runtime can't fully see:**
     - `filters` options;

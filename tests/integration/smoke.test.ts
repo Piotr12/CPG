@@ -33,11 +33,11 @@ describe("a fresh app instance", () => {
     ]);
   });
 
-  it("shows a migrated database on the admin page, holding only the admin-password stamp", async () => {
+  it("shows a migrated database on the admin page, holding only the admin-password stamp, and both tenants writable", async () => {
     await signInAsAdmin(browser, baseUrl, adminPassword);
 
     expect(await browser.title()).toBe("Admin · Caveman Planning Good");
     expect(await browser.text("h1")).toBe("Cave control");
-    expect(await browser.texts("[data-slot=badge]")).toEqual(["10 migrations applied", "0 pending", "1 settings"]);
+    expect(await browser.texts("[data-slot=badge]")).toEqual(["Writable", "Writable", "11 migrations applied", "0 pending", "1 settings"]);
   });
 });

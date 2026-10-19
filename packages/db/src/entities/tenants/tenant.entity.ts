@@ -14,6 +14,11 @@ export const Tenant = defineEntity({
     code: p.enum(TENANT_CODES).primary(),
     /** Dataset generation: changes only when the Test reset (slice 2) regenerates Test. */
     generation: p.integer().default(1),
+    /**
+     * Set by the admin: while true, nothing may change this tenant's business data, the admin's and
+     * the API's writes included (R05). Global work (accounts, tokens, preferences, this flag) goes on.
+     */
+    readOnly: p.boolean().default(false),
   },
 });
 
