@@ -1,11 +1,11 @@
 import type { Browser } from "./browser";
-import { signedInAs } from "./sign-in";
+import { openAccountMenu } from "./sign-in";
 
-/** Opens the tokens screen from the menu. */
+/** Opens the tokens screen from the account card's popover, where API tokens lives. */
 export async function openTokens(browser: Browser, baseUrl: string) {
   await browser.open(`${baseUrl}/admin`);
-  await browser.waitUntil(signedInAs());
-  await browser.clickRole("link", "API tokens");
+  const panel = await openAccountMenu(browser);
+  await browser.click(`${panel} a[href='/admin/tokens']`);
   await browser.waitFor("table");
 }
 

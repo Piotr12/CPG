@@ -196,7 +196,8 @@ export function SidebarNav({ model, labels, account, locale }: SidebarNavProps) 
 
           <SidebarFooter className="border-t">
             <SidebarGroup className="p-0">
-              <SidebarGroupLabel>
+              {/* Hidden in the rail: its words would spill out of the 3 rem column, if invisibly. */}
+              <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">
                 <GlobeIcon aria-hidden className="mr-2" />
                 {labels.shared}
               </SidebarGroupLabel>
@@ -217,13 +218,14 @@ export function SidebarNav({ model, labels, account, locale }: SidebarNavProps) 
                       <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sidebar-primary font-semibold text-sidebar-primary-foreground">
                         {account.name.charAt(0).toUpperCase()}
                       </span>
-                      <span className="grid min-w-0 flex-1 leading-tight">
+                      {/* In the rail the card shows only the avatar. */}
+                      <span className="grid min-w-0 flex-1 leading-tight group-data-[collapsible=icon]:hidden">
                         <span title={account.name} className="truncate font-medium">
                           {account.name}
                         </span>
                         <span className="truncate text-xs text-muted-foreground">{account.role}</span>
                       </span>
-                      <ChevronsUpDownIcon aria-hidden className="ml-auto" />
+                      <ChevronsUpDownIcon aria-hidden className="ml-auto group-data-[collapsible=icon]:hidden" />
                     </SidebarMenuButton>
                   </PopoverTrigger>
                   <PopoverContent
