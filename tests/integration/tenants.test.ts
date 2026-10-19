@@ -9,6 +9,17 @@ const STRIP = "[role=region][data-tenant]";
 const pathname = async (browser: Browser) => new URL(await browser.url()).pathname;
 const stripTenant = (browser: Browser) => browser.evaluate<string>(`document.querySelector("${STRIP}").dataset.tenant`);
 
+/**
+ * Clicks a link once React has hydrated it: a click on streamed HTML before that can be lost. Next.js
+ * keeps earlier pages mounted but hidden, so it waits for the first match that is shown.
+ */
+async function clickHydrated(browser: Browser, selector: string) {
+  await browser.waitUntil(
+    `[...document.querySelectorAll(${JSON.stringify(selector)})].some((link) => link.offsetParent && Object.keys(link).some((key) => key.startsWith("__reactFiber")))`,
+  );
+  await browser.click(selector);
+}
+
 // Spec .ai/specs/2026-10-19--0913UTC-test-prod-tenants.md: TEN-001, TEN-010, TEN-011.
 describe("tenants in the admin", () => {
   let browser: Browser;
@@ -38,7 +49,7 @@ describe("tenants in the admin", () => {
   });
 
   it("opens Test with its strip, title and generation (TEN-011)", async () => {
-    await browser.click("nav[aria-label='Choose a tenant'] a[href='/admin/test']");
+    await clickHydrated(browser, "nav[aria-label='Choose a tenant'] a[href='/admin/test']");
     await browser.waitFor("[data-slot=card-description]");
 
     expect(await pathname(browser)).toBe("/admin/test");
@@ -50,7 +61,7 @@ describe("tenants in the admin", () => {
   });
 
   it("switches to Prod and back without any other step (TEN-010)", async () => {
-    await browser.click(`${STRIP} a[href='/admin/prod']`);
+    await clickHydrated(browser, `${STRIP} a[href='/admin/prod']`);
     await browser.waitFor(`${STRIP}[data-tenant=prod]`);
 
     expect(await pathname(browser)).toBe("/admin/prod");
@@ -60,8 +71,8 @@ describe("tenants in the admin", () => {
       "Prod",
     );
 
-    await browser.click(`${STRIP} a[href='/admin/test']`);
-    await browser.waitFor(`${STRIP}[data-tenant=test]`);
+    await clickHydrated(browser, `${STRIP} a[href='/admin/test']`);
+    await browser.waitUntil(`location.pathname === "/admin/test"`);
     expect(await pathname(browser)).toBe("/admin/test");
   });
 

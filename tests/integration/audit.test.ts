@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { openBrowser, type Browser } from "./browser";
-import { choosePreference, signIn, signInAsAdmin } from "./sign-in";
+import { choosePreference, signedInAs, signIn, signInAsAdmin } from "./sign-in";
 
 const baseUrl = inject("baseUrl");
 const adminPassword = inject("adminPassword");
@@ -98,8 +98,8 @@ describe("every change is kept in an append-only audit", () => {
     await admin.waitUntil(ownRow(`!row.innerText.includes("Inactive")`));
 
     await signIn(alice, baseUrl, NEW_PASSWORD, USERNAME);
-    await alice.waitUntil(`document.querySelector("strong")?.innerText === ${JSON.stringify(USERNAME)}`);
-    await alice.clickRole("link", "Global audit");
+    await alice.waitUntil(signedInAs(USERNAME));
+    await alice.clickRole("link", "Audit");
     await alice.waitFor("table");
 
     expect(new URL(await alice.url()).pathname).toBe("/admin/audit");
