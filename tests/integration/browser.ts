@@ -28,8 +28,26 @@ export function openBrowser() {
     /** The visible text of every element matching a CSS selector. */
     texts: (selector: string) =>
       evaluate<string[]>(`[...document.querySelectorAll(${JSON.stringify(selector)})].map((e) => e.innerText)`),
+    /** Clears an input and types `value` into it. */
+    fill: (selector: string, value: string) => command("fill", selector, value),
+    click: (selector: string) => command("click", selector),
+    /** Waits until an element matching the CSS selector is on the page. */
+    waitFor: (selector: string) => command("wait", selector),
+    url: () => command("get", "url"),
+    /** The browser's cookies for the current page, including httpOnly ones. */
+    cookies: async () =>
+      (JSON.parse(await command("--json", "cookies", "get")) as { data: { cookies: Cookie[] } }).data.cookies,
     close: () => command("close"),
   };
+}
+
+export interface Cookie {
+  name: string;
+  value: string;
+  httpOnly: boolean;
+  secure: boolean;
+  sameSite: string;
+  path: string;
 }
 
 export type Browser = ReturnType<typeof openBrowser>;
