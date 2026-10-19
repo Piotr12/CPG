@@ -8,6 +8,7 @@ const core = vi.hoisted(() => ({
   migrateDatabase: vi.fn(),
   revokeBuiltInAdminSessions: vi.fn(),
   revokeAdminTokensIfPasswordChanged: vi.fn(),
+  seedDemoData: vi.fn(),
 }));
 vi.mock("@cpg/core", () => core);
 
@@ -17,6 +18,7 @@ describe("register", () => {
     core.assertServerConfig.mockReset();
     core.revokeBuiltInAdminSessions.mockResolvedValue(0);
     core.revokeAdminTokensIfPasswordChanged.mockResolvedValue(0);
+    core.seedDemoData.mockResolvedValue(0);
     vi.spyOn(console, "info").mockImplementation(() => {});
   });
   afterEach(() => {
@@ -64,6 +66,31 @@ describe("register", () => {
     expect(console.info).toHaveBeenCalledWith("The admin password changed: revoked 2 admin API token(s)");
   });
 
+  it("seeds the Test demonstration data last, and logs how much (D06)", async () => {
+    vi.stubEnv("NEXT_RUNTIME", "nodejs");
+    core.migrateDatabase.mockResolvedValue([]);
+    core.seedDemoData.mockResolvedValue(6);
+
+    await register();
+
+    expect(core.seedDemoData).toHaveBeenCalledWith(config);
+    expect(core.revokeAdminTokensIfPasswordChanged.mock.invocationCallOrder[0]).toBeLessThan(
+      core.seedDemoData.mock.invocationCallOrder[0],
+    );
+    expect(console.info).toHaveBeenCalledWith("Seeded the Test tenant with 6 demonstration material(s)");
+  });
+
+  it("logs a failed seed and keeps starting: the app works without demo data", async () => {
+    vi.stubEnv("NEXT_RUNTIME", "nodejs");
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    core.migrateDatabase.mockResolvedValue([]);
+    const failure = new Error("database is locked");
+    core.seedDemoData.mockRejectedValue(failure);
+
+    await expect(register()).resolves.toBeUndefined();
+    expect(console.error).toHaveBeenCalledWith("Seeding the Test demonstration data failed:", failure);
+  });
+
   it("logs why and exits, without migrating, when the config is not usable", async () => {
     vi.stubEnv("NEXT_RUNTIME", "nodejs");
     vi.spyOn(console, "error").mockImplementation(() => {});
@@ -80,6 +107,7 @@ describe("register", () => {
     expect(core.migrateDatabase).not.toHaveBeenCalled();
     expect(core.revokeBuiltInAdminSessions).not.toHaveBeenCalled();
     expect(core.revokeAdminTokensIfPasswordChanged).not.toHaveBeenCalled();
+    expect(core.seedDemoData).not.toHaveBeenCalled();
   });
 
   it("stays quiet when there was nothing to migrate or revoke", async () => {
