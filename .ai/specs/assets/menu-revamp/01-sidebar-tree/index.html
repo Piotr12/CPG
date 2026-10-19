@@ -1,0 +1,815 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CPG — Menu mockup 01 · Sidebar tree</title>
+<style>
+:root{
+  --sw:264px;
+  --bg:#fff;--fg:#252525;--fg2:#3f3f3f;--muted:#737373;--border:#e5e5e5;--line:#f0f0f0;
+  --hover:#f4f4f5;--active:#ebebeb;--side:#fafafa;--card:#fff;--subtle:#f5f5f5;
+  --primary:#252525;--primary-fg:#fff;--ring:#a3a3a3;--danger:#c0362c;
+  --test-bg:#fde68a;--test-fg:#92400e;--test-line:#f59e0b;
+  --prod-bg:#171717;--prod-fg:#fff;--prod-red:#dc2626;
+  --shadow:0 10px 30px rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.06);
+  color-scheme:light;
+}
+[data-theme=dark]{
+  --bg:#0b0b0b;--fg:#ededed;--fg2:#d4d4d4;--muted:#a1a1a1;--border:#2b2b2b;--line:#1f1f1f;
+  --hover:#1c1c1c;--active:#262626;--side:#111;--card:#141414;--subtle:#181818;
+  --primary:#ededed;--primary-fg:#111;--ring:#737373;
+  --shadow:0 10px 30px rgba(0,0,0,.6);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;background:var(--bg);color:var(--fg);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--fg);outline-offset:2px;border-radius:6px}
+[hidden]{display:none!important}
+.ic{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* tenant line across the very top */
+.topline{position:fixed;top:0;left:0;right:0;height:3px;z-index:80;background:var(--test-line);transition:background .2s}
+.topline.prod{background:var(--prod-red)}
+
+/* ---------- Sidebar ---------- */
+.side{position:fixed;top:0;bottom:0;left:0;width:var(--sw);display:flex;flex-direction:column;background:var(--side);border-right:1px solid var(--border);z-index:50;padding-top:3px;transition:width .15s}
+.side-head{display:flex;align-items:center;gap:8px;height:46px;padding:0 10px 0 16px;flex:none}
+.brand{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:15px;text-decoration:none;color:var(--fg);padding:4px 2px;border-radius:6px}
+.brand .mam{font-size:18px}
+.icon-btn{margin-left:auto;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border:1px solid transparent;border-radius:8px;background:none;cursor:pointer;color:var(--muted)}
+.icon-btn:hover{background:var(--hover);color:var(--fg)}
+.close-drawer{display:none}
+.tblock{padding:0 12px 10px;flex:none;border-bottom:1px solid var(--border)}
+.tcap{margin:6px 2px 0;font-size:12px;color:var(--muted);line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tcap b{color:var(--fg2);font-weight:600}
+
+/* segmented tenant switch */
+.tsw{display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:3px;border:1px solid var(--border);border-radius:10px;background:var(--card)}
+.seg{height:32px;border:0;border-radius:7px;background:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.seg:hover{background:var(--hover);color:var(--fg)}
+.seg.on::before{content:"";width:7px;height:7px;border-radius:50%;flex:none}
+.seg.test.on{background:var(--test-bg);color:var(--test-fg);box-shadow:inset 0 0 0 1px var(--test-line)}
+.seg.test.on::before{background:#d97706}
+.seg.prod.on{background:var(--prod-bg);color:var(--prod-fg);box-shadow:inset 0 0 0 1px var(--prod-red)}
+.seg.prod.on::before{background:var(--prod-red)}
+.lk{font-size:11px;letter-spacing:0}
+
+.side-nav{flex:1;min-height:0;overflow-y:auto;padding:6px 8px 4px;scrollbar-width:thin;background:linear-gradient(var(--side) 30%,transparent) center top/100% 24px no-repeat local,linear-gradient(transparent,var(--side) 70%) center bottom/100% 24px no-repeat local,linear-gradient(rgba(0,0,0,.09),transparent) center top/100% 8px no-repeat scroll,linear-gradient(transparent,rgba(0,0,0,.09)) center bottom/100% 8px no-repeat scroll;background-color:var(--side)}
+.side-foot{flex:none;border-top:1px solid var(--border);padding:6px 8px 8px}
+.zone-cap{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:3px 8px 2px;display:flex;align-items:center;gap:6px}
+.tree,.sub{list-style:none;margin:0;padding:0}
+.item{position:relative;display:flex;align-items:center;gap:10px;width:100%;height:30px;padding:0 8px;border:0;border-radius:8px;background:none;color:var(--fg2);text-decoration:none;cursor:pointer;text-align:left;font-size:14px}
+.item:hover{background:var(--hover);color:var(--fg)}
+.item:focus-visible{outline-offset:-2px}
+.item[aria-current=page]{background:var(--active);color:var(--fg);font-weight:600}
+.item .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .ic{color:var(--muted)}
+.item[aria-current=page] .ic,.item:hover .ic{color:var(--fg)}
+.chev{width:14px;height:14px;transition:transform .15s}
+.grp.open>.gbtn .chev{transform:rotate(90deg)}
+.grp.has:not(.open)>.gbtn{color:var(--fg);font-weight:600}
+.grp.has:not(.open)>.gbtn::after{content:"";position:absolute;left:2px;top:8px;bottom:8px;width:3px;border-radius:2px;background:var(--fg)}
+.sub{position:relative;margin:1px 0 4px}
+.sub::before{content:"";position:absolute;left:16px;top:3px;bottom:3px;width:1px;background:var(--border)}
+.sub .item{height:27px;padding-left:34px;font-size:13.5px}
+.sub .item[aria-current=page]::before{content:"";position:absolute;left:15px;top:6px;bottom:6px;width:3px;border-radius:2px;background:var(--fg)}
+.later>.gbtn,.item.dim{color:var(--muted)}
+.later>.gbtn .ic{opacity:.7}
+.bl{font-size:10.5px;font-weight:500;line-height:16px;padding:0 6px;border:1px solid var(--border);border-radius:999px;color:var(--muted);background:var(--card);letter-spacing:0;text-transform:none;white-space:nowrap}
+.acct{display:flex;align-items:center;gap:10px;width:100%;margin-top:5px;padding:5px 8px;border:1px solid var(--border);border-radius:10px;background:var(--card);cursor:pointer;text-align:left}
+.acct:hover{background:var(--hover)}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--primary);color:var(--primary-fg);display:inline-flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex:none}
+.who{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2}
+.who b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.who small{font-size:12px;color:var(--muted)}
+
+/* ---------- Icon rail (collapsed) ---------- */
+@media (min-width:768px){
+  body.rail{--sw:56px}
+  body.rail .side .lbl,body.rail .side .chev,body.rail .side .bl,body.rail .side .sub,body.rail .side .zone-cap,body.rail .side .tcap,body.rail .side .who,body.rail .side .acct>.ic,body.rail .brand .bname{display:none!important}
+  body.rail .side-head{flex-direction:column;height:auto;padding:8px 0 6px;gap:4px}
+  body.rail .icon-btn{margin:0}
+  body.rail .tblock{padding:0 6px 8px}
+  body.rail .tsw{grid-template-columns:1fr;padding:2px}
+  body.rail .seg{height:26px;font-size:9.5px;letter-spacing:.02em;gap:2px}
+  body.rail .seg.on::before{display:none}
+  body.rail .seg .lk{display:none}
+  body.rail .seg{position:relative}
+  body.rail .seg.ro::after{content:"🔒";position:absolute;top:-5px;right:-4px;font-size:10px}
+  body.rail .side-nav,body.rail .side-foot{padding-left:6px;padding-right:6px}
+  body.rail .item{justify-content:center;padding:0;height:34px}
+  body.rail .item .ic{width:18px;height:18px}
+  body.rail .acct{justify-content:center;padding:6px 0;border-color:transparent;background:none}
+  body.rail .grp.has>.gbtn{background:var(--active)}
+  body.rail .grp.has>.gbtn .ic{color:var(--fg)}
+  body.rail .grp.has>.gbtn::after{display:none}
+}
+
+/* ---------- Main ---------- */
+.main{margin-left:var(--sw);min-height:100vh;display:flex;flex-direction:column;padding-top:3px;transition:margin .15s}
+.mtop{display:none}
+#content{flex:1}
+.robanner{display:flex;align-items:flex-start;gap:10px;padding:10px 32px;font-size:14px;border-bottom:2px solid}
+.robanner.prod{background:var(--prod-bg);color:#fff;border-color:var(--prod-red)}
+.robanner.test{background:var(--test-bg);color:var(--test-fg);border-color:var(--test-line)}
+.robanner a{font-weight:600;white-space:nowrap}
+.page{max-width:1080px;padding:22px 32px 40px}
+.crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:13px;color:var(--muted);margin:0 0 10px;padding:0;list-style:none}
+.crumbs li{display:inline-flex;align-items:center;gap:6px}
+.crumbs li+li::before{content:"›";color:var(--ring)}
+.crumbs a{text-decoration:none}
+.crumbs a:hover{text-decoration:underline;text-underline-offset:3px}
+.crumbs [aria-current]{color:var(--fg)}
+.ttag{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:5px;text-decoration:none!important}
+.ttag.test{background:var(--test-bg);color:var(--test-fg)}
+.ttag.prod{background:var(--prod-bg);color:#fff;box-shadow:inset 0 0 0 1px var(--prod-red)}
+.gtag{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:5px;border:1px solid var(--border);color:var(--fg2)}
+.titlerow{display:flex;align-items:center;justify-content:space-between;gap:12px 16px;flex-wrap:wrap}
+h1{font-size:24px;line-height:1.25;margin:0;letter-spacing:-.01em}
+h1:focus{outline:none}
+h2{font-size:17px;margin:0}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.desc{color:var(--muted);margin:6px 0 18px;max-width:70ch}
+.gnote{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--border);background:var(--subtle);border-radius:10px;padding:10px 12px;font-size:13.5px;margin:0 0 18px;color:var(--fg2)}
+.btn{height:32px;padding:0 12px;border:1px solid var(--border);border-radius:8px;display:inline-flex;align-items:center;gap:6px;font-weight:500;font-size:14px;background:var(--card);white-space:nowrap;cursor:pointer;text-decoration:none;color:var(--fg)}
+.btn:hover{background:var(--hover)}
+.btn.primary{background:var(--primary);color:var(--primary-fg);border-color:var(--primary)}
+.btn.primary:hover{opacity:.9}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.sm{height:28px;padding:0 9px;font-size:13px}
+.muted{color:var(--muted)}
+.small{font-size:12.5px}
+.tw{overflow-x:auto;border:1px solid var(--border);border-radius:12px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;color:var(--muted);font-weight:500;padding:9px 12px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--subtle)}
+td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+td.r,th.r{text-align:right}
+.nw{white-space:nowrap}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px}
+.link{text-decoration:underline;text-underline-offset:3px}
+.badge{display:inline-block;border:1px solid var(--border);border-radius:999px;padding:1px 8px;font-size:12px;white-space:nowrap}
+.badge.ok{background:var(--subtle)}
+.badge.bad{background:var(--danger);color:#fff;border-color:var(--danger)}
+.card{border:1px solid var(--border);border-radius:14px;padding:16px 18px;background:var(--card)}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:0}
+.kv dt{color:var(--muted);font-size:12.5px}
+.kv dd{margin:3px 0 0}
+.sect{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:26px 0 8px;flex-wrap:wrap}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.stat{display:flex;flex-direction:column;gap:2px;border:1px solid var(--border);border-radius:12px;padding:12px 14px;text-decoration:none;background:var(--card)}
+.stat:hover{background:var(--hover)}
+.stat b{font-size:22px;font-weight:600}
+.stat span{color:var(--muted);font-size:13px}
+.two{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-top:20px}
+.feed{list-style:none;margin:0;padding:0}
+.feed li{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.feed li:last-child{border-bottom:0}
+.feed time{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;font-size:12.5px;padding-top:1px}
+.qa{display:flex;flex-direction:column;gap:8px;align-items:stretch}
+.qa .btn{justify-content:flex-start}
+.stepper{display:flex;gap:8px;list-style:none;margin:0 0 16px;padding:0;flex-wrap:wrap}
+.stepper li{display:flex;align-items:center;gap:8px;padding:6px 12px 6px 6px;border:1px solid var(--border);border-radius:999px;font-size:13.5px;color:var(--muted)}
+.stepper .sn{width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:var(--subtle);border:1px solid var(--border);font-size:12px;font-weight:600}
+.stepper .cur{color:var(--fg);border-color:var(--fg)}
+.stepper .cur .sn{background:var(--primary);color:var(--primary-fg);border-color:var(--primary)}
+.stepper .done{color:var(--fg2)}
+.drop{border:1.5px dashed var(--ring);border-radius:12px;padding:22px;text-align:center;color:var(--muted);margin:12px 0}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.tcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.tcard header{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.rorow{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;border-top:1px solid var(--line);margin-top:14px;padding-top:12px}
+.rorow p{margin:2px 0 0}
+.toggle{flex:none;width:42px;height:24px;border-radius:999px;border:0;background:#d4d4d4;position:relative;cursor:pointer;transition:background .15s}
+.toggle span{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:left .15s}
+.toggle[aria-checked=true]{background:var(--prod-red)}
+.toggle[aria-checked=true] span{left:21px}
+.placeholder{border:1.5px dashed var(--border);border-radius:14px;padding:36px 24px;text-align:center;max-width:620px}
+.placeholder .big{font-size:40px}
+.placeholder h2{margin:6px 0 6px}
+.placeholder p{color:var(--muted);margin:0 auto 16px;max-width:52ch}
+.prose{max-width:68ch}
+.prose h2{margin:22px 0 6px}
+.prose p,.prose li{color:var(--fg2)}
+kbd{font-family:ui-monospace,monospace;font-size:12px;border:1px solid var(--border);border-bottom-width:2px;border-radius:5px;padding:0 5px;background:var(--subtle)}
+.site-foot{padding:20px 32px 26px;text-align:center;color:var(--muted);font-size:13px}
+.site-foot a{text-underline-offset:3px}
+
+/* ---------- Floating layers ---------- */
+.pop{position:fixed;z-index:90;min-width:248px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);padding:6px}
+.pop-h{padding:8px 10px 10px;border-bottom:1px solid var(--line);margin-bottom:4px;display:flex;flex-direction:column}
+.pop-h small{color:var(--muted)}
+.pop-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 10px;font-size:13.5px}
+.pill{display:flex;gap:3px;border:1px solid var(--border);border-radius:9px;padding:3px}
+.pill button{border:0;background:none;border-radius:6px;padding:3px 10px;font-size:13px;cursor:pointer;color:var(--muted)}
+.pill button[aria-pressed=true]{background:var(--active);color:var(--fg);font-weight:600}
+.pop-item{display:flex;align-items:center;gap:10px;width:100%;padding:7px 10px;border:0;border-radius:8px;background:none;font-size:14px;text-decoration:none;cursor:pointer;text-align:left;color:var(--fg)}
+.pop-item:hover{background:var(--hover)}
+.pop-sep{height:1px;background:var(--line);margin:4px 0}
+.fly{position:fixed;z-index:90;width:236px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);padding:6px}
+.fly-h{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:6px 8px 8px;font-weight:600;font-size:13px}
+.fly .item{padding-left:10px;height:30px}
+.tip{position:fixed;z-index:95;background:var(--primary);color:var(--primary-fg);font-size:12.5px;padding:4px 8px;border-radius:6px;pointer-events:none;white-space:nowrap}
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:45}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:100;background:var(--primary);color:var(--primary-fg);padding:9px 14px;border-radius:10px;font-size:13.5px;box-shadow:var(--shadow);max-width:calc(100vw - 32px)}
+
+/* mockup controls */
+.mc{position:fixed;right:12px;bottom:12px;z-index:40;width:284px;border:1.5px dashed #a3a3a3;border-radius:10px;background:var(--card);font-size:12.5px;box-shadow:0 4px 14px rgba(0,0,0,.08)}
+.mc-h{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;border:0;background:none;padding:8px 10px;cursor:pointer;text-align:left;font-size:12px;font-weight:600}
+.mc-h small{font-weight:400;color:var(--muted)}
+.mc-b{padding:0 10px 10px;display:flex;flex-direction:column;gap:8px}
+.mc .mrow{display:flex;gap:10px;align-items:center}
+.mc .mlab{width:62px;flex:none;color:var(--muted);white-space:nowrap}
+.mc label{display:inline-flex;align-items:center;gap:4px;cursor:pointer}
+.mc-actions{display:flex;gap:6px}
+.mc-actions button{flex:1;min-height:28px;padding:4px 6px;line-height:1.2;border:1px solid var(--border);border-radius:7px;background:var(--card);cursor:pointer;font-size:12.5px}
+.mc-actions button:first-child{background:var(--primary);color:var(--primary-fg);border-color:var(--primary)}
+.about-wrap{position:fixed;inset:0;z-index:110;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px}
+.about{width:min(680px,100%);max-height:calc(100vh - 32px);overflow:auto;background:var(--card);border-radius:14px;padding:22px 24px;box-shadow:var(--shadow)}
+.about h2{font-size:19px}
+.about h3{font-size:14px;margin:16px 0 4px}
+.about p,.about li{color:var(--fg2);font-size:13.5px;margin:4px 0}
+.about ul{padding-left:18px;margin:4px 0}
+.about table{font-size:13px;margin-top:6px}
+.about td,.about th{padding:6px 8px}
+
+/* ---------- Mobile ---------- */
+@media (max-width:767px){
+  .side{width:min(304px,86vw);transform:translateX(-102%);transition:transform .2s ease;box-shadow:none}
+  .side.open{transform:none;box-shadow:var(--shadow)}
+  .close-drawer{display:inline-flex}
+  .collapse{display:none}
+  .main{margin-left:0}
+  .mtop{display:flex;position:sticky;top:3px;z-index:30;height:52px;align-items:center;gap:8px;padding:0 10px;background:var(--bg);border-bottom:1px solid var(--border)}
+  .mtop .menu-btn{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);cursor:pointer;font-weight:500}
+  .mtop .brand{font-size:15px}
+  .mtop .tsw{margin-left:auto;grid-template-columns:auto auto;padding:2px;border-radius:9px}
+  .mtop .seg{height:30px;padding:0 9px;font-size:11px;letter-spacing:.05em;gap:5px}
+  .robanner{padding:10px 16px;font-size:13px}
+  .page{padding:16px 16px 32px}
+  h1{font-size:21px}
+  .two{grid-template-columns:1fr}
+  .site-foot{padding:16px 16px 72px}
+  .mc{width:auto;max-width:236px;right:8px;bottom:8px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="topline" id="topline" aria-hidden="true"></div>
+<aside class="side" id="side" aria-label="Sidebar"></aside>
+<div class="scrim" id="scrim" hidden></div>
+<div class="main">
+  <header class="mtop" id="mtop"></header>
+  <div id="content"></div>
+  <footer class="site-foot">Caveman Planning Good! Made in Jozefoslaw with Tokens, Coffee and <a href="https://github.com/open-mercato/skills" target="_blank" rel="noopener noreferrer">OpenMercato Skills</a> during <a href="https://www.aitechleaders.pl/" target="_blank" rel="noopener noreferrer">AITechLeaders training</a>.</footer>
+</div>
+<div class="fly" id="fly" hidden></div>
+<div class="pop" id="acctPop" role="dialog" aria-label="Account" hidden></div>
+<div class="tip" id="tip" role="tooltip" hidden></div>
+<div id="mc"></div>
+<div id="about" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+"use strict";
+window.__errors = [];
+window.addEventListener("error", e => window.__errors.push(String(e.message)));
+
+/* ---------------- icons ---------------- */
+const P = {
+  home:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/>',
+  db:'<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
+  cart:'<circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h3l2.6 12.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 1.9-1.5L21 8H6"/>',
+  truck:'<path d="M2 6h12v10H2z"/><path d="M14 9h4l3 3.5V16h-7"/><circle cx="6.5" cy="18" r="2"/><circle cx="17.5" cy="18" r="2"/>',
+  factory:'<path d="M2 20V9l6 4V9l6 4V4h6v16z"/><path d="M2 20h20"/>',
+  box:'<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5"/><path d="M12 13v8"/>',
+  cal:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/><path d="m9 15 2 2 4-4"/>',
+  chart:'<path d="M3 3v18h18"/><path d="M8 16v-5M13 16V8M18 16v-9"/>',
+  clock:'<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/>',
+  shield:'<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/>',
+  globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18"/>',
+  help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7"/><path d="M12 17h.01"/>',
+  chev:'<path d="m9 6 6 6-6 6"/>',
+  updown:'<path d="m7 9 5-5 5 5"/><path d="m7 15 5 5 5-5"/>',
+  panel:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/>',
+  menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',
+  x:'<path d="M6 6l12 12M18 6 6 18"/>',
+  key:'<circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 9.2-9.2M17 6l3 3M14.5 8.5l2 2"/>',
+  out:'<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17-5-5 5-5"/><path d="M5 12h12"/>'
+};
+const ic = (n, cls = "") => `<svg class="ic ${cls}" viewBox="0 0 24 24" aria-hidden="true">${P[n]}</svg>`;
+
+/* ---------------- menu model ---------------- */
+const later = (group, rows) => rows.map(([slug, en, pl]) => ({ k: group + "-" + slug, l: [en, pl], r: group + "/" + slug }));
+const TREE = [
+  { k:"overview", ic:"home", l:["Overview","Przegląd"], r:"overview" },
+  { k:"md", ic:"db", l:["Master data","Dane podstawowe"], kids:[
+    { k:"materials", l:["Materials","Materiały"], r:"materials" },
+    { k:"locations", l:["Locations","Lokalizacje"], r:"locations" },
+    { k:"customers", l:["Customers","Klienci"], r:"customers" },
+    { k:"suppliers", l:["Suppliers","Dostawcy"], r:"suppliers" },
+    { k:"planning-parameters", l:["Planning parameters","Parametry planowania"], r:"planning-parameters" },
+    { k:"safety-stock", l:["Safety stock","Zapas bezpieczeństwa"], r:"safety-stock" },
+    { k:"boms", l:["BOMs","Struktury wyrobów (BOM)"], r:"boms" },
+    { k:"import", l:["Import","Import z arkusza"], r:"import", admin:true, title:["Import from spreadsheet","Import z arkusza kalkulacyjnego"] }
+  ]},
+  { k:"sales", ic:"cart", l:["Sales","Sprzedaż"], later:2, kids: later("sales", [["customer-orders","Customer orders","Zamówienia klientów"],["forecasts","Forecasts","Prognozy sprzedaży"],["shipments","Shipments","Wydania do klientów"]]),
+    about:"Customer orders and forecasts become the demand MRP plans against; shipments are the goods issues that close them." },
+  { k:"purchasing", ic:"truck", l:["Purchasing","Zakupy"], later:2, kids: later("purchasing", [["requisitions","Purchase requisitions","Zapotrzebowania zakupowe"],["purchase-orders","Purchase orders","Zamówienia zakupu"],["goods-receipts","Goods receipts","Przyjęcia towaru"]]),
+    about:"MRP proposes purchase requisitions, you turn them into purchase orders, and goods receipts put the stock on the shelf." },
+  { k:"production", ic:"factory", l:["Production","Produkcja"], later:2, kids: later("production", [["production-orders","Production orders","Zlecenia produkcyjne"],["completions","Completions","Potwierdzenia wykonania"]]),
+    about:"Production orders consume components from the BOM; completions report what was made." },
+  { k:"inventory", ic:"box", l:["Inventory","Magazyn"], later:2, kids: later("inventory", [["stock","Stock (ledger)","Stany (kartoteka)"],["corrections","Corrections","Korekty stanów"],["transfers","Transfers","Przesunięcia"],["stock-import","Stock import","Import stanów"]]),
+    about:"The stock ledger per material and location, with corrections, transfers between caves and an opening-stock import." },
+  { k:"planning", ic:"cal", l:["Planning","Planowanie"], later:3, kids: later("planning", [["mrp-run","MRP run","Uruchomienie MRP"],["mrp-report","Last MRP report","Ostatni raport MRP"]]),
+    about:"Run MRP over demand, stock, BOMs and planning parameters, then read what it proposes." },
+  { k:"reports", ic:"chart", l:["Reports","Raporty"], later:2, kids: later("reports", [["stock","Stock","Stany magazynowe"],["variance","Variance","Odchylenia"],["audit-reports","Audit reports","Raporty audytowe"]]),
+    about:"Printable stock, variance and audit reports." },
+  { k:"audit", ic:"clock", l:["Audit","Audyt"], r:"audit", title:["Audit","Audyt"] }
+];
+const GLOBAL = [
+  { k:"admin", ic:"shield", l:["Administration","Administracja"], admin:true, scope:"g", kids:[
+    { k:"users", l:["Users","Użytkownicy"], r:"users", admin:true },
+    { k:"tenants", l:["Tenants & read-only","Środowiska i tylko do odczytu"], r:"tenants", admin:true },
+    { k:"status", l:["System status","Stan systemu"], r:"status", admin:true }
+  ]},
+  { k:"gaudit", ic:"globe", l:["Global audit","Audyt globalny"], r:"audit" },
+  { k:"help", ic:"help", l:["Help","Pomoc"], r:"help" }
+];
+const GLOBAL_EXTRA = { tokens:{ l:["API tokens","Tokeny API"], r:"tokens" } };
+const LATER_GROUPS = new Set(TREE.filter(n => n.later).map(n => n.k));
+const TN = { test:"Test", prod:"Prod" };
+
+/* ---------------- sample data ---------------- */
+const MATS = [
+  { id:"00000001", d:"Granite slab", t:"Raw", u:"kg", s:"Active", c:"2026-10-02", conv:[["t","1 t = 1000 kg","1 kg = 0.001 t"],["block","1 block = 250 kg","1 kg = 0.004 block"]] },
+  { id:"00000002", d:"Mammoth hide", t:"Raw", u:"m²", s:"Active", c:"2026-10-02", conv:[["hide","1 hide = 2.5 m²","1 m² = 0.4 hide"]] },
+  { id:"00000003", d:"Wheel (stone)", t:"Intermediate", u:"pcs", s:"Active", c:"2026-10-05", conv:[["pair","1 pair = 2 pcs","1 pcs = 0.5 pair"]] },
+  { id:"00000004", d:"Axle", t:"Intermediate", u:"pcs", s:"Active", c:"2026-10-05", conv:[] },
+  { id:"00000005", d:"Cave cart", t:"Finished", u:"pcs", s:"Active", c:"2026-10-07", conv:[["pallet","1 pallet = 4 pcs","1 pcs = 0.25 pallet"]] },
+  { id:"00000006", d:"Flint knife", t:"Finished", u:"pcs", s:"Active", c:"2026-10-19", conv:[["box","1 box = 12 pcs","1 pcs = 0.083333 box"],["crate","1 crate = 144 pcs","1 pcs = 0.006944 crate"]] }
+];
+const LOCS = [["L001","Main cave","Active"],["L002","River warehouse","Active"],["L003","Old quarry","Inactive"]];
+const CUST = [["C001","Flintstone Ltd","Active"],["C002","Rubble & Co","Active"],["C003","Slate Rock and Gravel","Active"]];
+const SUPP = [["S001","Bedrock Quarry","Active"],["S002","Woolly Hides Co","Active"],["S003","Sabre Tooth Tools","Inactive"]];
+const AUDIT = [
+  ["2026-10-19 14:02","admin","UI","Created material","00000006 Flint knife"],
+  ["2026-10-19 13:47","admin","UI","Added unit conversion","00000006 · 1 box = 12 pcs"],
+  ["2026-10-19 11:20","fred (token “sheet-sync”)","API","Deactivated location","L003 Old quarry"],
+  ["2026-10-18 16:05","admin","UI","Created customer","C003 Slate Rock and Gravel"],
+  ["2026-10-18 09:12","admin","UI","Created BOM revision","Cave cart · Alt A · rev 3"]
+];
+const GAUDIT = [
+  ["2026-10-19 15:10","admin","UI","—","Set read-only","Prod"],
+  ["2026-10-19 14:02","admin","UI","Test","Created material","00000006 Flint knife"],
+  ["2026-10-19 10:41","fred","UI","—","Created API token","sheet-sync"],
+  ["2026-10-18 17:30","admin","UI","—","Reset password","barney"],
+  ["2026-10-18 08:55","admin","UI","—","Created user","wilma"]
+];
+
+/* ---------------- state ---------------- */
+const KEY = "cpg-menu-01";
+const DEF = { role:"admin", slices:true, ro:{ test:false, prod:false }, tenant:"test", lang:"en", theme:"light", rail:false, open:{ md:true, admin:false }, mc:null };
+function load(){
+  try { const v = JSON.parse(localStorage.getItem(KEY) || "{}");
+    return Object.assign(JSON.parse(JSON.stringify(DEF)), v, { ro:Object.assign({}, DEF.ro, v.ro), open:Object.assign({}, DEF.open, v.open) });
+  } catch (e) { return JSON.parse(JSON.stringify(DEF)); }
+}
+let S = load();
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+const U = { drawer:false, acct:false, fly:null, about:false, step:1, dry:false };
+const mq = window.matchMedia("(max-width: 767px)");
+const mobile = () => mq.matches;
+if (S.mc === null) S.mc = !mobile();
+
+const pl = () => S.lang === "pl";
+const L = n => n.l[pl() ? 1 : 0];
+const T = n => (n.title || n.l)[pl() ? 1 : 0];
+const isAdmin = () => S.role === "admin";
+const $ = s => document.querySelector(s);
+
+/* ---------------- routing ---------------- */
+let R = null;
+function parse(){
+  const p = location.hash.replace(/^#\/?/, "").split("/").filter(Boolean).map(decodeURIComponent);
+  if (p[0] === "test" || p[0] === "prod") return { scope:"t", t:p[0], page:p[1] || "overview", rest:p.slice(2) };
+  if (p[0] === "global") return { scope:"g", page:p[1] || "help", rest:p.slice(2) };
+  return null;
+}
+const tenant = () => (R && R.scope === "t") ? R.t : S.tenant;
+const activeR = () => !R ? "" : (R.scope === "t" && LATER_GROUPS.has(R.page) && R.rest[0]) ? R.page + "/" + R.rest[0] : R.page;
+const isActive = (n, scope) => R && R.scope === scope && n.r === activeR();
+const nodeScope = n => n.scope || (GLOBAL.includes(n) ? "g" : "t");
+function findNode(scope, r){
+  const list = scope === "g" ? GLOBAL : TREE;
+  for (const n of list) {
+    if (n.r === r) return { n, parent:null };
+    for (const k of (n.kids || [])) if (k.r === r) return { n:k, parent:n };
+  }
+  if (scope === "g" && GLOBAL_EXTRA[r]) return { n:GLOBAL_EXTRA[r], parent:null };
+  return null;
+}
+
+/* ---------------- sidebar ---------------- */
+function vis(n){ return !(n.admin && !isAdmin()) && !(n.later && !S.slices); }
+function href(n, scope){ return scope === "g" ? `#/global/${n.r}` : `#/${tenant()}/${n.r}`; }
+function leaf(n, scope, dim){
+  const cur = isActive(n, scope);
+  const lock = n.k === "import" && S.ro[tenant()] ? ` <span class="lk" title="${TN[tenant()]} is read-only">🔒</span>` : "";
+  return `<a class="item${dim ? " dim" : ""}" href="${href(n, scope)}"${cur ? ' aria-current="page"' : ""} data-tip="${L(n)}" data-fid="n-${scope}-${n.k}">${n.ic ? ic(n.ic) : ""}<span class="lbl">${L(n)}</span>${lock}</a>`;
+}
+function laterBadge(n){ return n.later ? `<span class="bl" title="Coming in slice ${n.later}">${pl() ? "później" : "later"}</span>` : ""; }
+function group(n, scope){
+  const kids = n.kids.filter(vis);
+  const has = kids.some(k => isActive(k, scope));
+  const open = !!S.open[n.k];
+  return `<li class="grp${open ? " open" : ""}${has ? " has" : ""}${n.later ? " later" : ""}">
+    <button type="button" class="item gbtn" data-act="grp" data-k="${n.k}" aria-expanded="${open}" aria-controls="g-${n.k}" data-tip="${L(n)}${n.later ? " · later" : ""}" data-fid="g-${n.k}">${ic(n.ic)}<span class="lbl">${L(n)}</span>${laterBadge(n)}${ic("chev", "chev")}</button>
+    <ul class="sub" id="g-${n.k}"${open ? "" : " hidden"}>${kids.map(k => `<li>${leaf(k, scope, !!n.later)}</li>`).join("")}</ul></li>`;
+}
+function tree(list, scope){ return list.filter(vis).map(n => n.kids ? group(n, scope) : `<li>${leaf(n, scope)}</li>`).join(""); }
+
+function tswitch(where){
+  const t = tenant();
+  return `<div class="tsw" role="group" aria-label="Tenant (current: ${TN[t]})">${["test","prod"].map(x =>
+    `<button type="button" class="seg ${x}${x === t ? " on" : ""}${S.ro[x] ? " ro" : ""}" data-act="tenant" data-t="${x}" aria-pressed="${x === t}" data-fid="sw-${where}-${x}" title="${x === t ? "You are in " + TN[x] : "Switch to " + TN[x] + " — stays on this screen"}${S.ro[x] ? " (read-only)" : ""}">${TN[x]}${S.ro[x] ? '<span class="lk" aria-label="read-only">🔒</span>' : ""}</button>`).join("")}</div>`;
+}
+function caption(){
+  const t = tenant();
+  if (S.ro[t]) return pl() ? "🔒 Tylko do odczytu — zmiany zablokowane" : "🔒 Read-only — business changes blocked";
+  if (t === "test") return pl() ? "Dane demo — można eksperymentować" : "Demonstration data, safe to experiment";
+  return pl() ? "Prawdziwe dane firmy — zmiany są na serio" : "Real business data — changes count";
+}
+function renderSide(){
+  const side = $("#side");
+  const sc = $("#sideNav") ? $("#sideNav").scrollTop : 0;
+  const t = tenant();
+  const me = isAdmin() ? { n:"admin", r:pl() ? "Administrator" : "Administrator", a:"A" } : { n:"Fred Flintstone", r:pl() ? "Użytkownik" : "User", a:"F" };
+  side.innerHTML = `
+    <div class="side-head">
+      <a class="brand" href="#/${t}/overview" data-tip="CPG · Overview" data-fid="brand"><span class="mam" aria-hidden="true">🦣</span><span class="bname">CPG</span></a>
+      <button type="button" class="icon-btn collapse" data-act="rail" data-fid="rail" aria-label="${S.rail ? "Expand sidebar" : "Collapse sidebar"}" title="${S.rail ? "Expand sidebar" : "Collapse sidebar"} ( [ )">${ic("panel")}</button>
+      <button type="button" class="icon-btn close-drawer" data-act="drawer-close" data-fid="dclose" aria-label="Close menu">${ic("x")}</button>
+    </div>
+    <div class="tblock">${tswitch("side")}<p class="tcap" title="${TN[tenant()]} — ${caption().replace(/🔒 /,"")}"><span class="sr">${TN[tenant()]} — </span>${caption()}</p></div>
+    <nav class="side-nav" id="sideNav" aria-label="${TN[t]} tenant"><ul class="tree">${tree(TREE, "t")}</ul></nav>
+    <div class="side-foot">
+      <div class="zone-cap">${ic("globe")}${pl() ? "Wspólne dla Test i Prod" : "Shared by Test and Prod"}</div>
+      <nav aria-label="Shared by Test and Prod"><ul class="tree">${tree(GLOBAL, "g")}</ul></nav>
+      <button type="button" class="acct" id="acctBtn" data-act="acct" data-fid="acct" aria-haspopup="dialog" aria-expanded="${U.acct}" data-tip="${me.n} · account" aria-label="Account: ${me.n}"><span class="avatar" aria-hidden="true">${me.a}</span><span class="who"><b>${me.n}</b><small>${me.r}</small></span>${ic("updown")}</button>
+    </div>`;
+  $("#sideNav").scrollTop = sc;
+  const cur = side.querySelector('#sideNav [aria-current="page"]');
+  if (cur && U.scrollIntoView) { cur.scrollIntoView({ block:"nearest" }); U.scrollIntoView = false; }
+  if (mobile() && !U.drawer) side.setAttribute("inert", ""); else side.removeAttribute("inert");
+  side.classList.toggle("open", mobile() && U.drawer);
+}
+function renderTop(){
+  const t = tenant();
+  $("#mtop").innerHTML = `<button type="button" class="menu-btn" data-act="drawer" data-fid="menu" aria-controls="side" aria-expanded="${U.drawer}">${ic("menu")}<span>${pl() ? "Menu" : "Menu"}</span></button>
+    <a class="brand" href="#/${t}/overview"><span class="mam" aria-hidden="true">🦣</span>CPG</a>${tswitch("top")}`;
+  $("#topline").className = "topline " + t;
+  $("#scrim").hidden = !(mobile() && U.drawer);
+  document.body.classList.toggle("rail", S.rail && !mobile());
+  document.documentElement.dataset.theme = S.theme;
+  document.documentElement.lang = S.lang;
+}
+
+/* ---------------- page helpers ---------------- */
+const ro = () => R.scope === "t" && S.ro[R.t];
+function eb(label, primary){ // business create/edit/import button: admin only, disabled when tenant is read-only
+  if (!isAdmin()) return "";
+  if (ro()) return `<button type="button" class="btn${primary ? " primary" : ""}" disabled title="${TN[R.t]} is read-only — business changes are blocked">🔒 ${label}</button>`;
+  return `<button type="button" class="btn${primary ? " primary" : ""}" data-act="fake" data-v="${label}">${label}</button>`;
+}
+const ab = (label, primary, sm) => isAdmin() ? `<button type="button" class="btn${primary ? " primary" : ""}${sm ? " sm" : ""}" data-act="fake" data-v="${label}">${label}</button>` : "";
+const badge = s => `<span class="badge ${s === "Active" ? "ok" : "bad"}">${s}</span>`;
+const tbl = (head, rows) => `<div class="tw"><table><thead><tr>${head.map(h => `<th${h.startsWith(">") ? ' class="r"' : ""}>${h.replace(/^>/, "")}</th>`).join("")}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+const mlink = m => `<a class="mono link" href="#/${R.t}/materials/${m.id}">${m.id}</a>`;
+const mby = name => MATS.find(m => m.d === name);
+
+function page(){
+  const t = R.scope === "t" ? R.t : null;
+  if (R.scope === "t"){
+    const hit = findNode("t", activeR());
+    if (!hit) return notFound();
+    const { n, parent } = hit;
+    const crumbs = [`<a class="ttag ${t}" href="#/${t}/overview">${TN[t]}${S.ro[t] ? " 🔒" : ""}</a>`];
+    if (parent) crumbs.push(`<span>${L(parent)}</span>`);
+    if (n.r !== "overview") crumbs.push(`<a href="#/${t}/${n.r}"${R.rest.length && !parent?.later ? "" : ' aria-current="page"'}>${L(n)}</a>`);
+    else crumbs.push(`<span aria-current="page">${L(n)}</span>`);
+    if (n.admin && !isAdmin()) return Object.assign(denied(n), { crumbs });
+    if (parent && parent.later) return Object.assign(placeholder(n, parent), { crumbs });
+    const P = (PAGES[n.r] || notFound)(n);
+    P.crumbs = crumbs.concat(P.extraCrumbs || []);
+    return P;
+  }
+  const hit = findNode("g", R.page);
+  if (!hit) return notFound();
+  const { n, parent } = hit;
+  const crumbs = [`<span class="gtag">${ic("globe")} Global</span>`];
+  if (parent) crumbs.push(`<span>${L(parent)}</span>`);
+  crumbs.push(`<span aria-current="page">${L(n)}</span>`);
+  if (n.admin && !isAdmin()) return Object.assign(denied(n), { crumbs, global:true });
+  const P = GPAGES[n.r](n);
+  P.crumbs = crumbs; P.global = true;
+  return P;
+}
+function notFound(){ return { title:"Page not found", crumbs:[], body:`<p class="muted">This address does not exist. <a href="#/${tenant()}/overview">Go to the Overview</a>.</p>` }; }
+function denied(n){ return { title:L(n), body:`<div class="placeholder"><div class="big">🔐</div><h2>Only the admin can open this page</h2><p>You are signed in as a normal user. ${L(n)} is not in your menu; ask the admin if you need a change here.</p><a class="btn" href="#/${tenant()}/overview">Back to the Overview</a></div>` }; }
+function placeholder(n, g){
+  return { title:L(n), desc:"", body:`<div class="placeholder"><div class="big" aria-hidden="true">🦣🛠️</div><h2>Coming in slice ${g.later}</h2><p><b>${L(n)}</b> lives under ${L(g)} once slice ${g.later} ships. ${g.about}</p><p class="small">The entry is in the menu now so you can see where it will go. Turn off “Show later slices” in the mockup controls to hide every future entry.</p><a class="btn" href="#/${R.t}/overview">Back to the Overview</a></div>` };
+}
+
+/* ---------------- tenant pages ---------------- */
+const PAGES = {
+  overview(){
+    const t = R.t;
+    const stats = [["materials",6,"Materials"],["locations",3,"Locations"],["customers",3,"Customers"],["suppliers",3,"Suppliers"],["planning-parameters",2,"Planning parameters"],["safety-stock",2,"Safety stock targets"],["boms",3,"BOM alternatives"]];
+    const qa = isAdmin()
+      ? [eb("Create material", true), eb("Add location"), ro() ? `<button type="button" class="btn" disabled title="${TN[t]} is read-only">🔒 Import from spreadsheet</button>` : `<a class="btn" href="#/${t}/import">Import from spreadsheet</a>`].join("")
+      : `<a class="btn" href="#/${t}/materials">Look up a material</a><a class="btn" href="#/${t}/boms">Browse BOMs</a><a class="btn" href="#/${t}/audit">See what changed</a>`;
+    return { title:`Overview — ${TN[t]}`, desc:`${t === "test" ? "Test tenant — demonstration data, safe to experiment." : "Prod tenant — the real business data."} Dataset generation 1.`,
+      body:`<div class="stats">${stats.map(([r, c, l]) => `<a class="stat" href="#/${t}/${r}"><b>${c}</b><span>${l}</span></a>`).join("")}</div>
+      <div class="two"><section class="card"><div class="sect" style="margin-top:0"><h2>Recent changes</h2><a class="small link" href="#/${t}/audit">Open the audit</a></div>
+      <ul class="feed">${AUDIT.slice(0, 4).map(a => `<li><time>${a[0].slice(5)}</time><span><b>${a[1].split(" ")[0]}</b> ${a[3].toLowerCase()} · ${a[4]}</span></li>`).join("")}</ul></section>
+      <section class="card"><h2 style="margin-bottom:10px">Quick actions</h2><div class="qa">${qa}</div></section></div>` };
+  },
+  materials(){
+    if (R.rest[0]) return materialDetail(R.rest[0]);
+    return { title:"Materials", actions:eb("Create material", true),
+      desc:"Every quantity of a material is stored in its base unit, exactly to six decimals. IDs are assigned in order and never change.",
+      body:tbl(["Material ID","Description","Type","Base unit","Status"], MATS.map(m => [mlink(m), m.d, `<span class="badge">${m.t}</span>`, m.u, badge(m.s)])) };
+  },
+  locations(){ return { title:"Locations", actions:eb("Add location", true), desc:"Where stock is kept and where planning parameters apply. An inactive location keeps its history but takes no new stock.",
+      body:tbl(["Code","Name","Status"].concat(isAdmin() ? [">"] : []), LOCS.map(r => [`<span class="mono">${r[0]}</span>`, r[1], badge(r[2])].concat(isAdmin() ? [rowCell()] : []))) }; },
+  customers(){ return { title:"Customers", actions:eb("Add customer", true), desc:"Who buys your finished goods. Customer orders and forecasts will reference these codes.",
+      body:tbl(["Code","Name","Status"].concat(isAdmin() ? [">"] : []), CUST.map(r => [`<span class="mono">${r[0]}</span>`, r[1], badge(r[2])].concat(isAdmin() ? [rowCell()] : []))) }; },
+  suppliers(){ return { title:"Suppliers", actions:eb("Add supplier", true), desc:"Who sells you raw materials. Purchase orders will reference these codes.",
+      body:tbl(["Code","Name","Status"].concat(isAdmin() ? [">"] : []), SUPP.map(r => [`<span class="mono">${r[0]}</span>`, r[1], badge(r[2])].concat(isAdmin() ? [rowCell()] : []))) }; },
+  "planning-parameters"(){
+    const rows = [["Cave cart","Main cave","Make","3","1","1"],["Granite slab","Main cave","Buy","10","50","10"]];
+    return { title:"Planning parameters", actions:eb("Add parameters", true), desc:"One row per material and location: whether MRP should make or buy it, the lead time in days, the minimum lot and the lot multiple.",
+      body:tbl(["Material","Location","Make / Buy",">Lead time (days)",">Minimum lot",">Lot multiple"].concat(isAdmin() ? [">"] : []),
+        rows.map(r => [`${mlink(mby(r[0]))} ${r[0]}`, r[1], `<span class="badge">${r[2]}</span>`, `<span style="float:right">${r[3]}</span>`, `<span style="float:right">${r[4]}</span>`, `<span style="float:right">${r[5]}</span>`].concat(isAdmin() ? [rowCell()] : []))) };
+  },
+  "safety-stock"(){
+    const rows = [["Cave cart","Main cave","5","2026-11-01"],["Cave cart","Main cave","8","2027-01-01"]];
+    return { title:"Safety stock", actions:eb("Add target", true), desc:"Effective-dated safety stock targets per material and location. A new target applies from its date until the next one; past targets stay as history.",
+      body:tbl(["Material","Location",">Target (pcs)","Effective from"].concat(isAdmin() ? [">"] : []),
+        rows.map(r => [`${mlink(mby(r[0]))} ${r[0]}`, r[1], `<span style="float:right">${r[2]}</span>`, r[3]].concat(isAdmin() ? [rowCell()] : []))) };
+  },
+  boms(){
+    const rows = [["Cave cart","Alt A","1","3","2026-10-01","—","4 × Wheel (stone), 2 × Axle, 1 × Mammoth hide"],["Cave cart","Alt B","2","1","2026-10-01","2026-12-31","4 × Wheel (stone), 2 × Axle"],["Wheel (stone)","Alt A","1","2","2026-10-05","—","25 kg Granite slab"]];
+    return { title:"BOMs", actions:eb("Create BOM", true), desc:"Bills of materials with alternatives, priority and validity. Revisions are immutable: changing a BOM creates a new revision.",
+      body:tbl(["Parent","Alternative",">Priority",">Revision","Valid from","Valid to","Components"], rows.map(r => [`<span class="nw">${mlink(mby(r[0]))} ${r[0]}</span>`, `<b class="nw">${r[1]}</b>`, `<span style="float:right">${r[2]}</span>`, `<span class="nw" style="float:right">rev ${r[3]}</span>`, `<span class="nw">${r[4]}</span>`, `<span class="nw">${r[5]}</span>`, `<span class="muted">${r[6]}</span>`])) };
+  },
+  import(n){
+    const s = U.step, steps = ["Download template","Upload & dry run","Commit"];
+    const blocked = ro();
+    let panel;
+    if (s === 1) panel = `<h2>1. Download the template</h2><p class="muted">One sheet per master — materials, locations, customers, suppliers, planning parameters, safety stock, BOMs. Keep the header row; IDs you leave empty are assigned on commit.</p>
+      <div class="row"><button type="button" class="btn" data-act="fake" data-v="Download template (.xlsx)">Download template (.xlsx)</button><button type="button" class="btn primary" data-act="step" data-v="2">Next: upload</button></div>`;
+    else if (s === 2) panel = `<h2>2. Upload and dry run</h2><p class="muted">Nothing is written during the dry run. You see what would be created, changed or rejected.</p>
+      <div class="drop">📄 <b>cpg-masterdata.xlsx</b> · 14 KB · uploaded</div>
+      ${U.dry ? tbl(["Sheet",">New",">Changed",">Errors"], [["Materials","2","1","0"],["Locations","0","1","0"],["Customers","1","0","0"]].map(r => [r[0], `<span style="float:right">${r[1]}</span>`, `<span style="float:right">${r[2]}</span>`, `<span style="float:right">${r[3]}</span>`])) : ""}
+      <div class="row"><button type="button" class="btn" data-act="step" data-v="1">Back</button>${blocked ? `<button type="button" class="btn" disabled>🔒 Run dry run</button>` : `<button type="button" class="btn" data-act="dry">${U.dry ? "Run again" : "Run dry run"}</button>`}<button type="button" class="btn primary" data-act="step" data-v="3"${U.dry ? "" : " disabled"}>Next: commit</button></div>`;
+    else panel = `<h2>3. Commit</h2><p class="muted">5 changes will be written to <b>${TN[R.t]}</b> in one transaction and recorded in the audit as channel “Import”.</p>
+      <div class="row"><button type="button" class="btn" data-act="step" data-v="2">Back</button>${eb("Commit 5 changes", true)}</div>`;
+    return { title:T(n), desc:"Load or update master data from a spreadsheet in three steps. Admin only.",
+      body:`<ol class="stepper">${steps.map((x, i) => `<li class="${i + 1 < s ? "done" : i + 1 === s ? "cur" : ""}"${i + 1 === s ? ' aria-current="step"' : ""}><span class="sn">${i + 1 < s ? "✓" : i + 1}</span>${x}</li>`).join("")}</ol><section class="card">${panel}</section>` };
+  },
+  audit(){
+    return { title:`Audit — ${TN[R.t]}`, desc:`The append-only change log of the ${TN[R.t]} tenant. Everyone can read it; nobody can edit it, even when the tenant is read-only.`,
+      actions:`<button type="button" class="btn" data-act="fake" data-v="Export CSV">Export CSV</button>`,
+      body:tbl(["Time","Account","Channel","Action","Record"], AUDIT.map(a => [`<span class="mono">${a[0]}</span>`, a[1], `<span class="badge">${a[2]}</span>`, a[3], a[4]])) };
+  }
+};
+function rowCell(){ return ro() ? `<span style="float:right"><button type="button" class="btn sm" disabled title="${TN[R.t]} is read-only">🔒 Edit</button></span>` : `<span style="float:right"><button type="button" class="btn sm" data-act="fake" data-v="Edit">Edit</button></span>`; }
+function materialDetail(id){
+  const m = MATS.find(x => x.id === id);
+  if (!m) return { title:"Material not found", body:`<p class="muted">No material ${id} in ${TN[R.t]}. <a class="link" href="#/${R.t}/materials">Back to Materials</a></p>` };
+  return { title:`<span class="mono" style="font-size:22px">${m.id}</span> — ${m.d}`, extraCrumbs:[`<span aria-current="page" class="mono">${m.id}</span>`],
+    actions:eb("Edit") + eb("Deactivate"),
+    body:`<dl class="card kv"><div><dt>Type</dt><dd>${m.t}</dd></div><div><dt>Base unit</dt><dd>${m.u}</dd></div><div><dt>Status</dt><dd>${badge(m.s)}</dd></div><div><dt>Created</dt><dd>${m.c}</dd></div></dl>
+    <div class="sect"><h2>Unit conversions</h2>${eb("Add conversion", true)}</div>
+    <p class="muted" style="margin:0 0 10px">Quantities entered in another unit are converted into ${m.u} once, rounded half-up to six decimals. Changing a factor never changes quantities already stored.</p>
+    ${m.conv.length ? tbl(["Unit","Conversion","Inverse (indicative)"].concat(isAdmin() ? [">"] : []), m.conv.map(c => [`<b>${c[0]}</b>`, c[1], `<span class="muted">${c[2]}</span>`].concat(isAdmin() ? [rowCell()] : []))) : `<div class="drop">No conversions yet — ${m.d} is only counted in ${m.u}.</div>`}
+    <div class="sect"><h2>Used in</h2></div>
+    <p class="muted" style="margin:0">${m.d === "Cave cart" ? `Parent of 2 BOM alternatives · planning parameters at Main cave · 2 safety stock targets. <a class="link" href="#/${R.t}/boms">Open BOMs</a>` : m.d === "Wheel (stone)" || m.d === "Axle" ? `Component of Cave cart (Alt A, Alt B). <a class="link" href="#/${R.t}/boms">Open BOMs</a>` : `Not used in any BOM yet.`}</p>` };
+}
+
+/* ---------------- global pages ---------------- */
+const GPAGES = {
+  users(){ const users = [["admin","Administrator","Admin","Active"],["fred","Fred Flintstone","User","Active"],["barney","Barney Rubble","User","Active"],["wilma","Wilma Flintstone","User","Inactive"]];
+    return { title:"Users", actions:ab("Create user", true), desc:"Accounts that can sign in to CPG. There is exactly one admin; everyone else is a normal user who reads master data in both tenants.",
+      body:tbl(["Login","Name","Role","Status",">"], users.map(u => [`<span class="mono">${u[0]}</span>`, u[1], `<span class="badge">${u[2]}</span>`, badge(u[3]), u[2] === "Admin" ? "" : `<span style="float:right;display:inline-flex;gap:6px">${ab("Reset password", false, true)}${ab(u[3] === "Active" ? "Deactivate" : "Reactivate", false, true)}</span>`])) }; },
+  tenants(){ const card = x => { const on = S.ro[x];
+      return `<section class="card tcard"><header><span class="ttag ${x}">${TN[x]}${on ? " 🔒" : ""}</span><span class="muted small">${x === "test" ? "Demonstration data, safe to experiment" : "Real business data"}</span></header>
+      <dl class="kv"><div><dt>Dataset generation</dt><dd>1</dd></div><div><dt>Business records</dt><dd>23</dd></div></dl>
+      <div class="rorow"><div><b id="rol-${x}">Read-only</b><p class="muted small">${on ? `On — create, edit and import are blocked in ${TN[x]}. Reading, audit, preferences and user management still work.` : `Off — business data in ${TN[x]} can be changed.`}</p></div>
+      <button type="button" role="switch" class="toggle" aria-checked="${on}" aria-label="${TN[x]} read-only" data-act="ro" data-t="${x}" data-fid="ro-${x}"><span></span></button></div>
+      ${x === "test" && S.slices ? `<div class="rorow"><div><b>Reset Test</b> <span class="bl">later</span><p class="muted small">Throw the demonstration data away and generate a fresh dataset (slice 2).</p></div><button type="button" class="btn sm" disabled>Reset…</button></div>` : ""}</section>`; };
+    return { title:"Tenants & read-only", desc:"Test and Prod hold separate business data. Each can be made read-only on its own — handy during a stock take or before a demo.", body:`<div class="tcards">${card("test")}${card("prod")}</div>` }; },
+  status(){ return { title:"System status", desc:"What the server is running on. Visible to the admin only.",
+      body:`<dl class="card kv"><div><dt>Database</dt><dd class="mono">/externaldata/cpg.sqlite</dd></div><div><dt>Journal mode</dt><dd>WAL</dd></div><div><dt>Size</dt><dd>1.4 MB</dd></div><div><dt>Version</dt><dd class="mono">0.7.0 · cc3cbd9</dd></div></dl>
+      <div class="sect"><h2>Migrations</h2><span class="badge ok">7 of 7 applied</span></div>
+      ${tbl(["Migration","Applied"], [["Migration20261002_init","2026-10-02 09:14"],["Migration20261008_audit","2026-10-08 12:03"],["Migration20261012_tenants","2026-10-12 10:40"],["Migration20261015_api_tokens","2026-10-15 16:22"],["Migration20261019_materials","2026-10-19 08:01"]].map(r => [`<span class="mono">${r[0]}</span>`, r[1]]))}` }; },
+  audit(){ return { title:"Global audit", desc:"Changes that belong to no tenant — users, tokens, read-only flags — plus a merged view of both tenants. Everyone can read it.",
+      body:tbl(["Time","Account","Channel","Tenant","Action","Record"], GAUDIT.map(a => [`<span class="mono">${a[0]}</span>`, a[1], `<span class="badge">${a[2]}</span>`, a[3] === "—" ? `<span class="muted">global</span>` : `<span class="ttag ${a[3].toLowerCase()}">${a[3]}</span>`, a[4], a[5]])) }; },
+  tokens(){ return { title:"API tokens", actions:`<button type="button" class="btn primary" data-act="fake" data-v="Create token">Create token</button>`, desc:"Your personal tokens. A token acts as you, in both tenants, with your role — so a read-only tenant blocks it too.",
+      body:tbl(["Name","Created","Last used",">"], [["sheet-sync","2026-10-19","today 11:20"],["laptop-cli","2026-10-12","never"]].map(r => [`<b>${r[0]}</b>`, r[1], r[2], `<span style="float:right"><button type="button" class="btn sm" data-act="fake" data-v="Revoke">Revoke</button></span>`])) }; },
+  help(){ return { title:"Help", desc:"How to find your way around CPG.",
+      body:`<div class="prose"><h2>The sidebar</h2><p>Everything you can open is in the sidebar on the left. The top part belongs to the tenant you are in; the part pinned to the bottom (“Shared by Test and Prod”) is the same whichever tenant is selected.</p>
+      <h2>Test and Prod</h2><p>The switch at the top of the sidebar flips between the two tenants and keeps you on the same screen. <b>Test</b> (amber) is for trying things out; <b>Prod</b> (black and red) is the real business. A 🔒 means that tenant is read-only.</p>
+      <h2>Master data</h2><p>Materials, locations, customers, suppliers, planning parameters, safety stock and BOMs all sit under <b>Master data</b>. The admin maintains them; everyone can read them.</p>
+      <h2>Shortcuts</h2><p><kbd>[</kbd> collapses the sidebar to icons and back.</p></div>` }; }
+};
+
+/* ---------------- main render ---------------- */
+function renderMain(){
+  const P = page();
+  const t = tenant();
+  const banner = (R.scope === "t" && S.ro[R.t]) ? `<div class="robanner ${R.t}" role="status"><span aria-hidden="true">🔒</span><span><b>${TN[R.t]} is read-only</b> — business changes are blocked. Reading, audit, preferences and user management still work.${isAdmin() ? ` <a href="#/global/tenants">Change on Tenants</a>` : ""}</span></div>` : "";
+  const gnote = P.global ? `<div class="gnote">${ic("globe")}<span><b>Shared by Test and Prod.</b> This page belongs to no tenant — the switch keeps its value (${TN[t]}) but does not change what you see here.</span></div>` : "";
+  $("#content").innerHTML = `${banner}<main class="page" id="main">
+    <nav aria-label="Breadcrumb"><ol class="crumbs">${(P.crumbs || []).map(c => `<li>${c}</li>`).join("")}</ol></nav>
+    <div class="titlerow"><h1>${P.title}</h1>${P.actions ? `<div class="actions">${P.actions}</div>` : ""}</div>
+    ${P.desc ? `<p class="desc">${P.desc}</p>` : `<div style="height:16px"></div>`}${gnote}${P.body}</main>`;
+  document.title = `${P.title.replace(/<[^>]+>/g, "")} · ${R.scope === "t" ? TN[R.t] : "Global"} · CPG`;
+}
+function renderControls(){
+  $("#mc").innerHTML = `<section class="mc" aria-label="Mockup controls">
+    <button type="button" class="mc-h" data-act="mc" data-fid="mc" aria-expanded="${S.mc}"><span>Mockup controls <small>(not part of the design)</small></span><span aria-hidden="true">${S.mc ? "▾" : "▴"}</span></button>
+    <div class="mc-b"${S.mc ? "" : " hidden"}>
+      <div class="mrow" role="radiogroup" aria-label="Role"><span class="mlab" aria-hidden="true">Role</span><label><input type="radio" name="role" value="admin" data-fid="c-ra"${isAdmin() ? " checked" : ""}> Admin</label><label><input type="radio" name="role" value="user" data-fid="c-ru"${isAdmin() ? "" : " checked"}> Normal user</label></div>
+      <div class="mrow" role="group" aria-label="Read-only"><span class="mlab" aria-hidden="true">Read-only</span><label><input type="checkbox" data-ctl="ro" data-t="test" data-fid="c-rt"${S.ro.test ? " checked" : ""}> Test</label><label><input type="checkbox" data-ctl="ro" data-t="prod" data-fid="c-rp"${S.ro.prod ? " checked" : ""}> Prod</label></div>
+      <label><input type="checkbox" data-ctl="slices" data-fid="c-sl"${S.slices ? " checked" : ""}> Show later slices (2 / 3)</label>
+      <div class="mc-actions"><button type="button" data-act="about" data-fid="c-ab">About this concept</button><button type="button" data-act="reset" data-fid="c-rs" title="Forget remembered menu state">Reset</button></div>
+    </div></section>`;
+}
+function renderAcct(){
+  const pop = $("#acctPop"), btn = $("#acctBtn");
+  pop.hidden = !U.acct;
+  if (!U.acct || !btn) return;
+  const me = isAdmin() ? ["admin","Administrator"] : ["Fred Flintstone","User · fred"];
+  pop.innerHTML = `<div class="pop-h"><b>${me[0]}</b><small>${me[1]}</small></div>
+    <div class="pop-row"><span>${pl() ? "Język" : "Language"}</span><div class="pill" role="group" aria-label="Language"><button type="button" data-act="lang" data-v="en" aria-pressed="${!pl()}" data-fid="p-en">EN</button><button type="button" data-act="lang" data-v="pl" aria-pressed="${pl()}" data-fid="p-pl">PL</button></div></div>
+    <div class="pop-row"><span>${pl() ? "Motyw" : "Theme"}</span><div class="pill" role="group" aria-label="Theme"><button type="button" data-act="theme" data-v="light" aria-pressed="${S.theme === "light"}" data-fid="p-li">Light</button><button type="button" data-act="theme" data-v="dark" aria-pressed="${S.theme === "dark"}" data-fid="p-da">Dark</button></div></div>
+    <div class="pop-sep"></div>
+    <a class="pop-item" href="#/global/tokens" data-fid="p-tok">${ic("key")}${pl() ? "Tokeny API" : "API tokens"}</a>
+    <button type="button" class="pop-item" data-act="signout" data-fid="p-out">${ic("out")}${pl() ? "Wyloguj" : "Sign out"}</button>`;
+  const r = btn.getBoundingClientRect();
+  const railed = document.body.classList.contains("rail");
+  pop.style.width = railed ? "248px" : Math.max(248, r.width) + "px";
+  pop.style.left = (railed ? 64 : r.left) + "px";
+  pop.style.bottom = (railed ? innerHeight - r.bottom : innerHeight - r.top + 6) + "px";
+  pop.style.top = "auto";
+}
+function renderAbout(){
+  const el = $("#about");
+  el.hidden = !U.about;
+  if (!U.about) return;
+  el.innerHTML = `<div class="about-wrap" data-act="about-close"><div class="about" role="dialog" aria-modal="true" aria-labelledby="ab-t" data-stop>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h2 id="ab-t">01 — Classic left sidebar tree</h2><button type="button" class="icon-btn" data-act="about-close" aria-label="Close" data-fid="ab-x">${ic("x")}</button></div>
+    <h3>The idea</h3><p>The familiar ERP pattern, done cleanly. One persistent sidebar holds every screen. Its top half is the <b>tenant</b>: a full-width TEST | PROD switch sets the scope of the whole tree beneath it, and a thin line across the top of the window repeats the colour. Master data is an expanded tree, future slices are collapsed and greyed, and everything that belongs to no tenant is pinned to the bottom under “Shared by Test and Prod”: Administration (admin only), Global audit and Help (for everyone, in the same place for both roles), then the account card with language, theme, API tokens and sign-out.</p>
+    <h3>Why it fits CPG</h3><ul><li>Planners know this layout from SAP, Odoo and ERPNext — nothing to learn.</li><li>Everything that exists today is visible at once; growing to slices 2–3 just adds groups, without reshuffling.</li><li>The sidebar's split mirrors the data model: tenant-scoped above, global below, so “why didn't the switch change Users?” answers itself.</li><li>264 px fits the Polish labels (try PL in the account menu); long ones truncate with a tooltip.</li></ul>
+    <h3>Trade-offs</h3><ul><li>Costs 264 px of width on every page (or 56 px as an icon rail, where child entries need a fly-out: one extra click).</li><li>With all six later groups shown, a 800 px tall screen is close to full; Administration starts collapsed to keep Audit above the fold.</li><li>On phones it hides behind a Menu button, so most screens are 2 taps away instead of 1.</li><li>Group headers only expand — there is no “Master data” landing page; the Overview does that job.</li></ul>
+    <h3>Click counts (from a tenant's Overview)</h3>
+    <div class="tw"><table><thead><tr><th>Task</th><th>Desktop</th><th>Mobile (390 px)</th></tr></thead><tbody>
+    <tr><td>Materials</td><td>1</td><td>2 (Menu → Materials)</td></tr>
+    <tr><td>Locations</td><td>1</td><td>2</td></tr>
+    <tr><td>Safety stock</td><td>1</td><td>2</td></tr>
+    <tr><td>Users (admin)</td><td>2 first time (Administration → Users), 1 once expanded — remembered</td><td>3 / 2</td></tr>
+    <tr><td>Switch Test → Prod, same screen</td><td>1</td><td>1 (switch in the top bar)</td></tr>
+    <tr><td>Change language</td><td>2 (account card → PL)</td><td>3</td></tr>
+    <tr><td>Reach the Import (admin)</td><td>1</td><td>2</td></tr>
+    <tr><td><i>Icon rail mode</i>: any Master data screen</td><td>2 (fly-out)</td><td>—</td></tr>
+    </tbody></table></div></div></div>`;
+  const x = el.querySelector("[data-fid=ab-x]"); if (x && !el.contains(document.activeElement)) x.focus();
+}
+
+let toastT;
+function toast(msg){ const el = $("#toast"); el.textContent = msg; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, 2600); }
+
+function renderAll(){
+  const fid = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.fid : null;
+  renderTop(); renderSide(); renderMain(); renderControls(); renderAcct(); renderAbout(); closeFly(true);
+  if (fid) { const el = document.querySelector(`[data-fid="${fid}"]`); if (el && !el.closest("[hidden]")) el.focus({ preventScroll:true }); }
+}
+
+/* ---------------- fly-out (rail mode groups) ---------------- */
+function openFly(btn, k){
+  const n = TREE.concat(GLOBAL).find(x => x.k === k);
+  const scope = nodeScope(n);
+  const fly = $("#fly");
+  fly.innerHTML = `<div class="fly-h"><span>${L(n)}</span>${laterBadge(n)}</div><ul class="tree">${n.kids.filter(vis).map(c => `<li>${leaf(c, scope, !!n.later)}</li>`).join("")}</ul>`;
+  fly.hidden = false; U.fly = k;
+  const r = btn.getBoundingClientRect();
+  const h = fly.offsetHeight;
+  fly.style.left = (Math.min(r.right, 56) + 6) + "px";
+  fly.style.top = Math.max(8, Math.min(r.top - 6, innerHeight - h - 8)) + "px";
+  btn.setAttribute("aria-expanded", "true");
+  const first = fly.querySelector("a"); if (first) first.focus();
+}
+function closeFly(silent){ $("#fly").hidden = true; if (U.fly && !silent) { const b = document.querySelector(`[data-k="${U.fly}"]`); if (b) b.focus(); } U.fly = null; }
+
+/* ---------------- tooltips (rail only) ---------------- */
+function showTip(el){
+  if (!document.body.classList.contains("rail")) return;
+  const tip = $("#tip"); tip.textContent = el.dataset.tip; tip.hidden = false;
+  const r = el.getBoundingClientRect();
+  tip.style.left = (Math.min(r.right, 56) + 8) + "px"; tip.style.top = (r.top + r.height / 2 - tip.offsetHeight / 2) + "px";
+}
+const hideTip = () => { $("#tip").hidden = true; };
+document.addEventListener("mouseover", e => { const el = e.target.closest(".side [data-tip]"); if (el) showTip(el); else hideTip(); });
+document.addEventListener("focusin", e => { const el = e.target.closest(".side [data-tip]"); if (el) showTip(el); else hideTip(); });
+document.addEventListener("mouseleave", hideTip);
+
+/* ---------------- events ---------------- */
+function setTenant(x){
+  if (R.scope === "t") {
+    if (R.t === x) return;
+    S.tenant = x; save();
+    location.hash = "#/" + [x, R.page].concat(R.rest).join("/");
+  } else {
+    if (S.tenant === x) return;
+    S.tenant = x; save(); renderAll();
+    toast(`Switched to ${TN[x]}. This page is shared by both tenants, so it stays the same.`);
+  }
+}
+document.addEventListener("click", e => {
+  const pop = $("#acctPop"), fly = $("#fly");
+  if (U.acct && !pop.contains(e.target) && !e.target.closest("#acctBtn")) { U.acct = false; renderAcct(); const b = $("#acctBtn"); if (b) b.setAttribute("aria-expanded", "false"); }
+  if (U.fly && !fly.contains(e.target) && !e.target.closest(`[data-k="${U.fly}"]`)) closeFly(true);
+  const a = e.target.closest("[data-act]");
+  if (!a) return;
+  if (a.dataset.act === "about-close" && e.target.closest("[data-stop]") && !e.target.closest("button")) return;
+  const act = a.dataset.act, v = a.dataset.v;
+  switch (act) {
+    case "tenant": setTenant(a.dataset.t); break;
+    case "grp":
+      if (document.body.classList.contains("rail")) { if (U.fly === a.dataset.k) closeFly(true); else openFly(a, a.dataset.k); hideTip(); break; }
+      S.open[a.dataset.k] = !S.open[a.dataset.k]; save(); renderSide(); { const b = document.querySelector(`[data-k="${a.dataset.k}"]`); if (b) b.focus(); } break;
+    case "rail": S.rail = !S.rail; save(); hideTip(); renderAll(); break;
+    case "drawer": U.drawer = true; renderTop(); renderSide(); { const f = $("#side .tsw .seg.on"); if (f) f.focus(); } break;
+    case "drawer-close": closeDrawer(true); break;
+    case "acct": U.acct = !U.acct; a.setAttribute("aria-expanded", String(U.acct)); renderAcct(); if (U.acct) { const f = $("#acctPop [aria-pressed=true]"); if (f) f.focus(); } break;
+    case "lang": S.lang = v; save(); renderAll(); toast(v === "pl" ? "PL: only the menu labels are translated in this mockup — to show ~30 % longer labels fit." : "Language: English"); break;
+    case "theme": S.theme = v; save(); renderAll(); break;
+    case "signout": U.acct = false; renderAcct(); toast("Signed out (mockup) — you would land on the sign-in page."); break;
+    case "ro": S.ro[a.dataset.t] = !S.ro[a.dataset.t]; save(); renderAll(); toast(`${TN[a.dataset.t]} is now ${S.ro[a.dataset.t] ? "read-only 🔒" : "writable"}.`); break;
+    case "fake": toast(`Mockup: “${v}” would open here.`); break;
+    case "step": U.step = +v; renderMain(); break;
+    case "dry": U.dry = true; renderMain(); toast("Dry run: 3 new, 2 changed, 0 errors. Nothing was written."); break;
+    case "mc": S.mc = !S.mc; save(); renderControls(); { const b = document.querySelector("[data-fid=mc]"); if (b) b.focus(); } break;
+    case "about": U.about = true; renderAbout(); break;
+    case "about-close": U.about = false; renderAbout(); { const b = document.querySelector("[data-fid=c-ab]"); if (b) b.focus(); } break;
+    case "reset": try { localStorage.removeItem(KEY); } catch (er) {} S = load(); S.mc = true; U.step = 1; U.dry = false; location.hash = "#/test/overview"; renderAll(); toast("Mockup state reset."); break;
+  }
+});
+document.addEventListener("change", e => {
+  const el = e.target;
+  if (el.name === "role") { S.role = el.value; save(); renderAll(); }
+  else if (el.dataset.ctl === "ro") { S.ro[el.dataset.t] = el.checked; save(); renderAll(); }
+  else if (el.dataset.ctl === "slices") { S.slices = el.checked; save(); renderAll(); }
+});
+function closeDrawer(focusMenu){ if (!U.drawer) return; U.drawer = false; renderTop(); renderSide(); if (focusMenu) { const m = document.querySelector("[data-fid=menu]"); if (m) m.focus(); } }
+$("#scrim").addEventListener("click", () => closeDrawer(true));
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") {
+    if (U.about) { U.about = false; renderAbout(); return; }
+    if (U.acct) { U.acct = false; renderAcct(); const b = $("#acctBtn"); if (b) { b.setAttribute("aria-expanded", "false"); b.focus(); } return; }
+    if (U.fly) { closeFly(false); return; }
+    if (U.drawer) { closeDrawer(true); return; }
+  }
+  if (e.key === "[" && !e.metaKey && !e.ctrlKey && !/INPUT|TEXTAREA|SELECT/.test(e.target.tagName) && !mobile()) { S.rail = !S.rail; save(); hideTip(); renderAll(); }
+});
+function onRoute(){
+  R = parse();
+  if (!R) { location.replace(`#/${S.tenant || "test"}/overview`); return; }
+  if (R.scope === "t") { S.tenant = R.t; }
+  if (!(R.scope === "t" && R.page === "import")) { U.step = 1; U.dry = false; }
+  // open the group that holds the current screen, so you always see where you are
+  const hit = findNode(R.scope, activeR());
+  if (hit && hit.parent && !S.open[hit.parent.k] && !document.body.classList.contains("rail")) S.open[hit.parent.k] = true;
+  save();
+  const fromDrawer = U.drawer;
+  U.drawer = false; U.acct = false; U.scrollIntoView = true;
+  renderAll();
+  window.scrollTo(0, 0);
+  if (fromDrawer) { const h = $("#main h1"); h.tabIndex = -1; h.focus({ preventScroll:true }); } // drawer closed on navigation: land on the new page's heading
+}
+window.addEventListener("hashchange", onRoute);
+mq.addEventListener("change", () => { U.drawer = false; renderAll(); });
+window.addEventListener("resize", () => { if (U.acct) renderAcct(); if (U.fly) closeFly(true); });
+onRoute();
+</script>
+</body>
+</html>
