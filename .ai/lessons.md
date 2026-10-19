@@ -13,6 +13,8 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 ## General
 
 - **2026-10-17 — Docker `npm ci` tries to compile better-sqlite3** — npm runs `node-gyp rebuild` because the package has a `binding.gyp`, which fails without Python/a compiler. better-sqlite3 ships prebuilt binaries (musl included), so the Dockerfile uses `npm ci --ignore-scripts`.
+- **2026-10-19 — Name a function `useX` only if it is a React hook** — `react-hooks/rules-of-hooks` treats every `useX()` call as a hook, even in a plain helper or a test, and fails lint ("called in function … that is neither a component nor a hook"). That is why `useTenant` became `selectTenant`.
+- **2026-10-19 — MikroORM filters and the flush don't see every write** — the `tenant` filter covers `find*`, `count`, populate, `nativeUpdate` and `nativeDelete`, and `TenantGuard` sees only flushes. These bypass both: `insert`/`upsert`/`clone`, the QueryBuilder (including `from()` and raw table names), `getDriver()`, `addFilter()`, and `nativeUpdate` data with a relation key or a raw column name (MikroORM passes unknown keys through as SQL). `TenantEntityManager` refuses them at runtime, and ESLint bans the rest in `core`/`app`. After a MikroORM upgrade, re-read the `EntityManager` write methods and run `packages/db/src/tenants/tenant-isolation.test.ts`.
 - **2026-10-17 — shadcn v4 imports `cn` from the `cn` npm package** — `import { cn } from "cn"` in generated components is correct, not a broken alias. The `new-york` style is legacy; this repo uses `radix-nova`.
 
 ## Testing
@@ -35,6 +37,11 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 - **2026-10-17 — One ORM per bundle, keyed by entity identity** — Next.js gives route handlers, pages and instrumentation separate copies of `@cpg/db`, and MikroORM matches entities by object identity. Never cache the container/ORM on `globalThis` under a string key; `getContainer()` (in `@cpg/core`) keys it by the `entities` array. [details](lessons/2026-10-17--0920UTC-mikroorm-entity-identity-next-bundles.md)
 - **2026-10-17 — Next.js 16 icon `<link>`s differ from its docs** — `app-icons.md` says `favicon.ico` gets `sizes="any"`, but the build emits the ICO's largest image (`sizes="48x48"`) and a content-hash query on every icon `href`. Before relying on documented metadata output, check `.next/server/app/index.html` after `npm run build`, and pin the observed tags in an integration test (`tests/integration/app-icons.test.ts`).
 - **2026-10-19 — The standalone server doesn't exit when `register()` throws** — `node server.js` (the Docker image) logs "Failed to prepare server" and answers every request with a 500. Only `next start` exits. A startup check that must stop the app calls `process.exit(1)` itself (`packages/app/src/instrumentation.ts`), and an integration test proves the container exits (`tests/integration/startup-guard.test.ts`).
+- **2026-10-19 — With Partial Prefetching, `notFound()` on an unlisted dynamic param answers HTTP 200** — since Next 16.3, a param missing from `generateStaticParams` gets the route's App Shell first, so the layout's `notFound()` streams the 404 UI with `<meta name="robots" content="noindex">` and can't change the status (`streaming.md`, "The HTTP contract").
+  - `dynamicParams` is unavailable under Cache Components.
+  - `ensureStatic = 'navigation'` forbids `connection()` and DB reads.
+  - Test the not-found UI and `noindex`, not the status code (`tests/integration/tenants.test.ts`). Route handlers still answer real 404s.
+- **2026-10-19 — Moving a page into a route group can trip `no-html-link-for-pages` elsewhere** — once `/admin` lived under `admin/(global)/`, the rule started flagging a `<a href="/admin">` in a `ui` package test. Use external URLs in tests of generic link components.
 - **2026-10-17 — Dynamic `fs` paths make Turbopack trace the whole project** — paths built from env/`process.cwd()` pull every source file into the standalone output. Mark them with `/* turbopackIgnore: true */` (see `packages/core/src/config.ts`).
 
 ## Agent pipeline (om-* skills)

@@ -41,8 +41,7 @@ Implement E02-S01 as the spec describes:
 - audit (#20);
 - bearer tokens (#17);
 - normal-user access (#16);
-- the Test reset (slice 2);
-- Polish strings (#18).
+- the Test reset (slice 2).
 
 ## Implementation Plan
 
@@ -80,6 +79,22 @@ Implement E02-S01 as the spec describes:
   - The user-visible behaviour (a 404 page with no strip and no data) holds and is integration-tested.
 - `tests/admin-pages-require-admin.test.ts` is unchanged and covers the new pages. `packages/ui/src/components/button.test.tsx` now links to an external URL: the Next lint rule `no-html-link-for-pages` started flagging its `<a href="/admin">` once `/admin` moved into a route group.
 - The sign-in header became `components/auth/signed-in-bar.tsx`, because two pages use it now.
+- **Merged `origin/main` after #32 (#18) landed** (f702b00):
+  - the migrations run in the order `user_preferences`, then `tenants`;
+  - `UserPreference` joined `GLOBAL_ENTITIES`;
+  - `SignedInBar` carries #18's preferences controls;
+  - the chooser, tenant home and strip description are translated (en/pl) and render at request time;
+  - a `test-and-prod` help topic covers `/admin/[tenant]`.
+
+  #18 keeps translatable text out of static shells, so the strip's shell holds only the TEST/PROD/GLOBAL label, the colour and the tenant names. Its accessible name is that label plus the streamed, translated description (spec: "Active tenant"), and the switcher nav is named "Test / Prod".
+- **Review autofix** (the `om-auto-review-pr` independent pass found 2 majors, 5 minors and 2 nits; all fixed):
+  - `nativeUpdate` on tenant-owned entities sets only plain fields;
+  - `QueryBuilder.from()` and `countBy` are refused for tenant-owned data;
+  - `TenantGuard` also checks to-one references from global records;
+  - ESLint additionally bans `addFilter`, `getDriver`, `createQueryBuilder`/`qb` and a quoted `"filters"` key;
+  - the lessons are recorded;
+  - the `refuseTenantOwned` typo is fixed;
+  - the tenant home's heading names the tenant.
 
 ## Verification
 
