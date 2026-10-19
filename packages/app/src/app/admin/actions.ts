@@ -2,7 +2,7 @@
 
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
-import { requestScope, serverAction, UnauthorizedError } from "@cpg/core";
+import { requestScope, serverAction, uiActor, UnauthorizedError } from "@cpg/core";
 import { userPreferenceUpdateSchema } from "@cpg/core/validators/preferences/user-preference-update.schema";
 import { currentUser, SIGN_IN_PATH } from "../../auth/require-admin";
 import { clearSessionCookie, readSessionToken } from "../../auth/session-cookie";
@@ -21,15 +21,15 @@ export async function signOut(): Promise<void> {
 }
 
 /**
- * The language/theme switches' action. Always changes the caller's own account; the payload can't
- * name another one. On success the theme cookie follows and the page re-renders in place.
+ * The language/theme switches' action. Always changes the caller's own account, and records the
+ * caller's session as the audit's actor; the payload can't name another account. On success the theme cookie follows and the page re-renders in place.
  */
 export async function updatePreferences(_previous: PreferencesState, formData: FormData): Promise<PreferencesState> {
   const { userPreferenceService, config } = (await requestScope()).cradle;
   const save = serverAction(userPreferenceUpdateSchema, async (change) => {
     const user = await currentUser();
     if (!user) throw new UnauthorizedError();
-    return userPreferenceService.update(user.userId, change);
+    return userPreferenceService.update(user.userId, change, uiActor(user));
   });
   const result = await save({ locale: formData.get("locale") ?? undefined, theme: formData.get("theme") ?? undefined });
 

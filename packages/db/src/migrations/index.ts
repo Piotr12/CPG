@@ -4,5 +4,6 @@ import { Migration20261019080354_auth_users_sessions } from "./Migration20261019
 import { Migration20261019090456_user_preferences } from "./Migration20261019090456_user_preferences";
 import { Migration20261019092708_tenants } from "./Migration20261019092708_tenants";
 import { Migration20261019103355_users_password_active } from "./Migration20261019103355_users_password_active";
+import { Migration20261019110502_audit_events } from "./Migration20261019110502_audit_events";
 
-export const migrations = [Migration20261017091007_initial, Migration20261019080354_auth_users_sessions, Migration20261019090456_user_preferences, Migration20261019092708_tenants, Migration20261019103355_users_password_active];
+export const migrations = [Migration20261017091007_initial, Migration20261019080354_auth_users_sessions, Migration20261019090456_user_preferences, Migration20261019092708_tenants, Migration20261019103355_users_password_active, Migration20261019110502_audit_events];

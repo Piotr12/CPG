@@ -28,6 +28,8 @@ describe("HelpPage", () => {
       "Cave control",
       "Managing users",
       "Test and Prod",
+      "The Global audit",
+      "A tenant's audit",
       "Language and theme",
       "Using help",
     ]);

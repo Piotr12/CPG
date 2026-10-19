@@ -41,6 +41,7 @@ describe("migrate", () => {
       "Migration20261019090456_user_preferences",
       "Migration20261019092708_tenants",
       "Migration20261019103355_users_password_active",
+      "Migration20261019110502_audit_events",
     ]);
     expect(await migrate({ databasePath })).toEqual([]);
   });
@@ -52,9 +53,9 @@ describe("getMigrationStatus", () => {
     const orm = await initOrm({ databasePath });
 
     try {
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 5 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 6 });
       await orm.migrator.up();
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 5, pending: 0 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 6, pending: 0 });
     } finally {
       await orm.close();
     }
@@ -71,7 +72,7 @@ describe("migrations", () => {
         await orm.em
           .getConnection()
           .execute<{ name: string }[]>(
-            "select name from sqlite_master where name in ('setting', 'user', 'session', 'user_preference', 'tenant')",
+            "select name from sqlite_master where name in ('setting', 'user', 'session', 'user_preference', 'tenant', 'global_audit_event', 'tenant_audit_event')",
           )
       )
         .map(({ name }) => name)
@@ -82,7 +83,29 @@ describe("migrations", () => {
         .map(({ name }) => name)
         .sort();
 
+    const triggers = async () =>
+      (await orm.em.getConnection().execute<{ name: string }[]>("select name from sqlite_master where type = 'trigger'"))
+        .map(({ name }) => name)
+        .sort();
+
     try {
+      expect(await tables()).toEqual([
+        "global_audit_event",
+        "session",
+        "setting",
+        "tenant",
+        "tenant_audit_event",
+        "user",
+        "user_preference",
+      ]);
+      expect(await triggers()).toEqual([
+        "global_audit_event_no_delete",
+        "global_audit_event_no_update",
+        "tenant_audit_event_no_delete",
+        "tenant_audit_event_no_update",
+      ]);
+      await orm.migrator.down();
+      expect(await triggers()).toEqual([]);
       expect(await tables()).toEqual(["session", "setting", "tenant", "user", "user_preference"]);
       expect(await userColumns()).toEqual(["active", "created_at", "id", "password_hash", "role", "username"]);
       await orm.migrator.down();

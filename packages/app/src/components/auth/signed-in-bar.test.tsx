@@ -27,9 +27,11 @@ describe("SignedInBar", () => {
   it("links only the admin to the users screen", () => {
     const { rerender } = render(<SignedInBar user={{ username: "admin", role: "admin" }} locale="en" theme="light" messages={en} />);
     expect(screen.getByRole("link", { name: "Users" }).getAttribute("href")).toBe("/admin/users");
+    expect(screen.getByRole("link", { name: "Global audit" }).getAttribute("href")).toBe("/admin/audit");
 
     rerender(<SignedInBar user={{ username: "alice", role: "user" }} locale="en" theme="light" messages={en} />);
     expect(screen.queryByRole("link", { name: "Users" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Global audit" }).getAttribute("href")).toBe("/admin/audit");
     expect(screen.getByText("alice").tagName).toBe("STRONG");
   });
 });

@@ -5,6 +5,7 @@ describe("@cpg/core", () => {
   it("exports the public API", () => {
     expect(Object.keys(core).sort()).toEqual([
       "AppError",
+      "AuditService",
       "AuthService",
       "BUILT_IN_ADMIN_USERNAME",
       "ConflictError",
@@ -40,6 +41,7 @@ describe("@cpg/core", () => {
       "assertAdmin",
       "assertServerConfig",
       "assertSignedIn",
+      "auditCursorNotFound",
       "createAppContainer",
       "fail",
       "findWorkspaceRoot",
@@ -48,6 +50,7 @@ describe("@cpg/core", () => {
       "loadConfig",
       "migrateDatabase",
       "ok",
+      "parseInput",
       "requestScope",
       "revokeBuiltInAdminSessions",
       "scopeForTenant",
@@ -57,6 +60,8 @@ describe("@cpg/core", () => {
       "tenantScope",
       "tenantServerAction",
       "toDbOptions",
+      "uiActor",
+      "validationError",
     ]);
   });
 });

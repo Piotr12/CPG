@@ -10,10 +10,14 @@ import { AuthService, BUILT_IN_ADMIN_USERNAME, INVALID_CREDENTIALS, SESSION_TTL_
 import { UserService } from "../users/user.service";
 import { LoginThrottle, MAX_FAILURES_PER_CLIENT, MAX_FAILURES_PER_IP } from "./login-throttle";
 import { hashSessionToken } from "./session-token";
+import type { AuditActor } from "../audit/actor";
 
 const PASSWORD = "correct horse battery staple";
 const IP = "203.0.113.7";
 const NOW = new Date("2026-10-19T08:00:00Z");
+
+/** Who the tests act as: the admin, on the UI. */
+const ACTOR: AuditActor = { userId: "admin-id", username: "admin", sessionId: "admin-session", channel: "ui", token: null };
 
 describe("AuthService", () => {
   const baseConfig = loadConfig({
@@ -119,7 +123,7 @@ describe("AuthService", () => {
     const sessionsOf = (username: string) => orm.em.fork().count(Session, { user: { username } });
 
     it("opens a session for an active user, whatever the case of the username", async () => {
-      await users().create({ username: "alice", password: USER_PASSWORD });
+      await users().create({ username: "alice", password: USER_PASSWORD }, ACTOR);
 
       const { token } = await signIn(USER_PASSWORD, "  Alice ");
 
@@ -130,24 +134,24 @@ describe("AuthService", () => {
       ["a wrong password", "alice", "wrong password!"],
       ["an unknown username", "nobody", USER_PASSWORD],
     ])("refuses %s with the same generic error", async (_case, username, password) => {
-      await users().create({ username: "alice", password: USER_PASSWORD });
+      await users().create({ username: "alice", password: USER_PASSWORD }, ACTOR);
 
       await expect(signIn(password, username)).rejects.toEqual(new UnauthorizedError(INVALID_CREDENTIALS));
       expect(await orm.em.fork().count(Session, {})).toBe(0);
     });
 
     it("refuses a deactivated user with the right password, and lets them back after reactivation", async () => {
-      const alice = await users().create({ username: "alice", password: USER_PASSWORD });
-      await users().setActive(alice.id, false);
+      const alice = await users().create({ username: "alice", password: USER_PASSWORD }, ACTOR);
+      await users().setActive(alice.id, false, ACTOR);
 
       await expect(signIn(USER_PASSWORD, "alice")).rejects.toEqual(new UnauthorizedError(INVALID_CREDENTIALS));
 
-      await users().setActive(alice.id, true);
+      await users().setActive(alice.id, true, ACTOR);
       await expect(signIn(USER_PASSWORD, "alice")).resolves.toMatchObject({ token: expect.any(String) });
     });
 
     it("blocks an unknown name after exactly as many failures as an existing one", async () => {
-      await users().create({ username: "alice", password: USER_PASSWORD });
+      await users().create({ username: "alice", password: USER_PASSWORD }, ACTOR);
       const blockedAfter = async (username: string) => {
         for (let attempt = 1; ; attempt++) {
           const error = await signIn("wrong password!", username).catch((caught: unknown) => caught);
@@ -160,13 +164,13 @@ describe("AuthService", () => {
     });
 
     it("keeps two sessions independent, and a reset ends both (TEN-006, TEN-009)", async () => {
-      const alice = await users().create({ username: "alice", password: USER_PASSWORD });
+      const alice = await users().create({ username: "alice", password: USER_PASSWORD }, ACTOR);
       const first = await signIn(USER_PASSWORD, "alice");
       const second = await signIn(USER_PASSWORD, "alice");
       expect(first.token).not.toBe(second.token);
       expect(await sessionsOf("alice")).toBe(2);
 
-      await users().resetPassword(alice.id, "a brand new password");
+      await users().resetPassword(alice.id, "a brand new password", ACTOR);
 
       await expect(service().validateSession(first.token)).resolves.toBeNull();
       await expect(service().validateSession(second.token)).resolves.toBeNull();
@@ -175,10 +179,10 @@ describe("AuthService", () => {
     });
 
     it.each([
-      ["a password reset", (id: string) => users().resetPassword(id, "a brand new password")],
-      ["a deactivation", (id: string) => users().setActive(id, false)],
+      ["a password reset", (id: string) => users().resetPassword(id, "a brand new password", ACTOR)],
+      ["a deactivation", (id: string) => users().setActive(id, false, ACTOR)],
     ])("leaves no session when %s commits during the sign-in", async (_case, change) => {
-      const alice = await users().create({ username: "alice", password: USER_PASSWORD });
+      const alice = await users().create({ username: "alice", password: USER_PASSWORD }, ACTOR);
       const auth = service();
       // The change commits after the password check, just before the session transaction opens.
       const em = (auth as unknown as { em: { transactional: (...args: unknown[]) => Promise<unknown> } }).em;
@@ -226,7 +230,7 @@ describe("AuthService", () => {
     });
 
     it("rejects and deletes the session of a user who is no longer active", async () => {
-      const alice = await new UserService({ em: orm.em.fork() }).create({ username: "alice", password: "alice's password" });
+      const alice = await new UserService({ em: orm.em.fork() }).create({ username: "alice", password: "alice's password" }, ACTOR);
       const { token } = await signIn("alice's password", "alice");
       // Deactivation deletes sessions itself; this simulates a leftover row.
       await orm.em.fork().nativeUpdate(User, { id: alice.id }, { active: false });

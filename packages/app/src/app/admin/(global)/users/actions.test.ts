@@ -5,6 +5,8 @@ import { createUser, resetUserPassword, setUserActive } from "./actions";
 const USER_ID = "3f0c1e2a-6b7d-4c8e-9f10-1a2b3c4d5e6f";
 const admin = { sessionId: "s1", userId: "u1", username: "admin", role: "admin" };
 const alice = { sessionId: "s2", userId: "u2", username: "alice", role: "user" };
+/** The audit actor the actions must pass: the signed-in admin's own session, on the UI channel. */
+const adminActor = { userId: "u1", username: "admin", sessionId: "s1", channel: "ui", token: null };
 const summary = { id: USER_ID, username: "alice", role: "user", active: true, createdAt: new Date("2026-10-19T09:00:00Z") };
 
 const mocks = vi.hoisted(() => ({
@@ -34,7 +36,7 @@ describe("users actions", () => {
       data: summary,
     });
 
-    expect(mocks.userService.create).toHaveBeenCalledWith({ username: "alice", password: "initial password" });
+    expect(mocks.userService.create).toHaveBeenCalledWith({ username: "alice", password: "initial password" }, adminActor);
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/users");
   });
 
@@ -43,7 +45,7 @@ describe("users actions", () => {
       ok: true,
     });
 
-    expect(mocks.userService.resetPassword).toHaveBeenCalledWith(USER_ID, "a brand new password");
+    expect(mocks.userService.resetPassword).toHaveBeenCalledWith(USER_ID, "a brand new password", adminActor);
   });
 
   it("deactivates and reactivates", async () => {
@@ -54,8 +56,8 @@ describe("users actions", () => {
     await setUserActive({ userId: USER_ID, active: true });
 
     expect(mocks.userService.setActive.mock.calls).toEqual([
-      [USER_ID, false],
-      [USER_ID, true],
+      [USER_ID, false, adminActor],
+      [USER_ID, true, adminActor],
     ]);
   });
 

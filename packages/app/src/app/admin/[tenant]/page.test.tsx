@@ -56,6 +56,7 @@ describe("TenantHomePage", () => {
     expect(screen.getByText("Dataset generation 1")).toBeTruthy();
     expect(screen.getByText("No business records yet")).toBeTruthy();
     expect(screen.getByText("admin").tagName).toBe("STRONG");
+    expect(screen.getByRole("link", { name: "Audit — Prod" }).getAttribute("href")).toBe("/admin/prod/audit");
   });
 
   it("opens a tenant to a normal user too (TEN-010)", async () => {
