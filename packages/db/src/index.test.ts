@@ -14,6 +14,11 @@ describe("@cpg/db", () => {
       "IDEMPOTENCY_KEY_MAX",
       "LOCALES",
       "LockWaitTimeoutException",
+      "MATERIAL_DESCRIPTION_MAX",
+      "MATERIAL_TYPES",
+      "MATERIAL_UNIT_MAX",
+      "Material",
+      "MaterialConversion",
       "OptimisticLockError",
       "Session",
       "Setting",
@@ -49,8 +54,10 @@ describe("@cpg/db", () => {
       db.TenantAuditEvent,
       db.GlobalIdempotencyKey,
       db.TenantIdempotencyKey,
+      db.Material,
+      db.MaterialConversion,
     ]);
-    const tenantOwned: unknown[] = [db.TenantAuditEvent, db.TenantIdempotencyKey];
+    const tenantOwned: unknown[] = [db.TenantAuditEvent, db.TenantIdempotencyKey, db.Material, db.MaterialConversion];
     expect(db.GLOBAL_ENTITIES).toEqual(db.entities.filter((entity) => !tenantOwned.includes(entity)));
   });
 });
