@@ -45,6 +45,7 @@ describe("migrate", () => {
       "Migration20261019115945_api_tokens",
       "Migration20261019155802_api_idempotency",
       "Migration20261019191302_materials",
+      "Migration20261019202804_tenant_read_only",
     ]);
     expect(await migrate({ databasePath })).toEqual([]);
   });
@@ -56,9 +57,9 @@ describe("getMigrationStatus", () => {
     const orm = await initOrm({ databasePath });
 
     try {
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 9 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 10 });
       await orm.migrator.up();
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 9, pending: 0 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 10, pending: 0 });
     } finally {
       await orm.close();
     }
@@ -86,6 +87,11 @@ describe("migrations", () => {
         .map(({ name }) => name)
         .sort();
 
+    const tenantColumns = async () =>
+      (await orm.em.getConnection().execute<{ name: string }[]>("select name from pragma_table_info('tenant')"))
+        .map(({ name }) => name)
+        .sort();
+
     const triggers = async () =>
       (await orm.em.getConnection().execute<{ name: string }[]>("select name from sqlite_master where type = 'trigger'"))
         .map(({ name }) => name)
@@ -106,6 +112,9 @@ describe("migrations", () => {
         "user",
         "user_preference",
       ]);
+      expect(await tenantColumns()).toEqual(["code", "generation", "read_only"]);
+      await orm.migrator.down();
+      expect(await tenantColumns()).toEqual(["code", "generation"]);
       await orm.migrator.down();
       expect(await tables()).toEqual([
         "api_token",
@@ -219,8 +228,33 @@ describe("materials migration", () => {
         { numerator: "1000", kind: "text" },
       ]);
 
-      await orm.migrator.down();
+      await orm.migrator.down({ to: "Migration20261019155802_api_idempotency" });
       expect(await execute(orm, "select name from sqlite_master where name like 'material%'")).toEqual([]);
+    } finally {
+      await orm.close();
+    }
+  });
+});
+
+describe("tenant-read-only migration", () => {
+  it("leaves both existing tenants writable, and drops the flag on the way down", async () => {
+    const databasePath = tempDatabase();
+    const orm = await initOrm({ databasePath });
+    const flags = () => orm.em.getConnection().execute("select code, read_only from tenant order by code desc");
+
+    try {
+      await orm.migrator.up({ to: "Migration20261019191302_materials" });
+      await orm.migrator.up();
+      expect(await flags()).toEqual([
+        { code: "test", read_only: 0 },
+        { code: "prod", read_only: 0 },
+      ]);
+
+      await orm.migrator.down();
+      expect(await orm.em.getConnection().execute("select * from tenant order by code desc")).toEqual([
+        { code: "test", generation: 1 },
+        { code: "prod", generation: 1 },
+      ]);
     } finally {
       await orm.close();
     }

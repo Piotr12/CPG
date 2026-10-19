@@ -1299,6 +1299,23 @@
           "collation": null,
           "enumItems": [],
           "mappedType": "integer"
+        },
+        "read_only": {
+          "name": "read_only",
+          "type": "integer",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "false",
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "integer"
         }
       },
       "indexes": [
