@@ -61,7 +61,7 @@ describe("IdempotencyService", () => {
     it("runs the write once and stores its result with the key, as JSON", async () => {
       const write = vi.fn(async () => ({ id: "u1", createdAt: new Date("2026-10-19T16:00:00Z") }));
 
-      await expect(scope().idempotency.execute(await keyed(), GLOBAL, write)).resolves.toEqual({
+      await expect(scope().idempotency.run(await keyed(), GLOBAL, write)).resolves.toEqual({
         data: { id: "u1", createdAt: new Date("2026-10-19T16:00:00Z") },
         replayed: false,
       });
@@ -78,7 +78,7 @@ describe("IdempotencyService", () => {
     });
 
     it("stores null for a write that returns nothing", async () => {
-      await scope().idempotency.execute(await keyed(), GLOBAL, async () => undefined);
+      await scope().idempotency.run(await keyed(), GLOBAL, async () => undefined);
 
       expect((await globalKeys())[0].response).toBeNull();
     });
@@ -86,10 +86,10 @@ describe("IdempotencyService", () => {
 
   describe("a repeat", () => {
     it("with the same request replays the stored JSON and writes nothing", async () => {
-      await scope().idempotency.execute(await keyed(), GLOBAL, async () => ({ createdAt: new Date("2026-10-19T16:00:00Z") }));
+      await scope().idempotency.run(await keyed(), GLOBAL, async () => ({ createdAt: new Date("2026-10-19T16:00:00Z") }));
       const write = vi.fn();
 
-      await expect(scope().idempotency.execute(await keyed(), GLOBAL, write)).resolves.toEqual({
+      await expect(scope().idempotency.run(await keyed(), GLOBAL, write)).resolves.toEqual({
         data: { createdAt: "2026-10-19T16:00:00.000Z" },
         replayed: true,
       });
@@ -98,20 +98,20 @@ describe("IdempotencyService", () => {
     });
 
     it("matches a body regardless of its key order", async () => {
-      await scope().idempotency.execute(await keyed({ body: { a: 1, b: 2 } }), GLOBAL, async () => "first");
+      await scope().idempotency.run(await keyed({ body: { a: 1, b: 2 } }), GLOBAL, async () => "first");
 
-      await expect(scope().idempotency.execute(await keyed({ body: { b: 2, a: 1 } }), GLOBAL, vi.fn())).resolves.toEqual({
+      await expect(scope().idempotency.run(await keyed({ body: { b: 2, a: 1 } }), GLOBAL, vi.fn())).resolves.toEqual({
         data: "first",
         replayed: true,
       });
     });
 
     it("with a different body is IDEMPOTENCY_KEY_REUSED and runs nothing (API-022)", async () => {
-      await scope().idempotency.execute(await keyed(), GLOBAL, async () => "first");
+      await scope().idempotency.run(await keyed(), GLOBAL, async () => "first");
       const write = vi.fn();
 
       const error = await scope()
-        .idempotency.execute(await keyed({ body: { username: "dave" } }), GLOBAL, write)
+        .idempotency.run(await keyed({ body: { username: "dave" } }), GLOBAL, write)
         .catch((e: unknown) => e);
       expect(error).toBeInstanceOf(ConflictError);
       expect(error).toMatchObject({
@@ -123,10 +123,10 @@ describe("IdempotencyService", () => {
     });
 
     it("for another operation is IDEMPOTENCY_KEY_REUSED naming the first one (API-023)", async () => {
-      await scope().idempotency.execute(await keyed(), GLOBAL, async () => "first");
+      await scope().idempotency.run(await keyed(), GLOBAL, async () => "first");
 
       await expect(
-        scope().idempotency.execute(await keyed({ method: "PATCH", path: "/api/users/u1" }), GLOBAL, vi.fn()),
+        scope().idempotency.run(await keyed({ method: "PATCH", path: "/api/users/u1" }), GLOBAL, vi.fn()),
       ).rejects.toMatchObject({
         code: "IDEMPOTENCY_KEY_REUSED",
         message: "This Idempotency-Key was already used for another request (POST /api/users). Use a new key for a new write.",
@@ -134,10 +134,10 @@ describe("IdempotencyService", () => {
     });
 
     it("from another account runs as a new write (API-025)", async () => {
-      await scope().idempotency.execute(await keyed(), GLOBAL, async () => "alice's");
+      await scope().idempotency.run(await keyed(), GLOBAL, async () => "alice's");
       const write = vi.fn(async () => "bob's");
 
-      await expect(scope().idempotency.execute(await keyed({ userId: BOB }), GLOBAL, write)).resolves.toEqual({
+      await expect(scope().idempotency.run(await keyed({ userId: BOB }), GLOBAL, write)).resolves.toEqual({
         data: "bob's",
         replayed: false,
       });
@@ -150,10 +150,10 @@ describe("IdempotencyService", () => {
       const failing = vi.fn(async () => {
         throw new ConflictError("Not now.");
       });
-      await expect(scope().idempotency.execute(await keyed(), GLOBAL, failing)).rejects.toThrow("Not now.");
+      await expect(scope().idempotency.run(await keyed(), GLOBAL, failing)).rejects.toThrow("Not now.");
       expect(await globalKeys()).toEqual([]);
 
-      await expect(scope().idempotency.execute(await keyed(), GLOBAL, async () => "second")).resolves.toEqual({
+      await expect(scope().idempotency.run(await keyed(), GLOBAL, async () => "second")).resolves.toEqual({
         data: "second",
         replayed: false,
       });
@@ -162,7 +162,7 @@ describe("IdempotencyService", () => {
     it("rolls back what the write changed through the scope's services", async () => {
       const { idempotency, users } = scope();
       await expect(
-        idempotency.execute(await keyed(), GLOBAL, async () => {
+        idempotency.run(await keyed(), GLOBAL, async () => {
           await users.create({ username: "rolled-back", password: "a password 123" }, ACTOR);
           throw new Error("after the write");
         }),
@@ -175,27 +175,27 @@ describe("IdempotencyService", () => {
   describe("the 24-hour window (API-026)", () => {
     it("replays until just before 24 hours, then lets the key run anew and purges the old record", async () => {
       vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-10-19T12:00:00Z") });
-      await scope().idempotency.execute(await keyed(), GLOBAL, async () => "first");
+      await scope().idempotency.run(await keyed(), GLOBAL, async () => "first");
 
       vi.setSystemTime(new Date("2026-10-19T12:00:00Z").getTime() + IDEMPOTENCY_TTL_MS - 1);
-      await expect(scope().idempotency.execute(await keyed(), GLOBAL, vi.fn())).resolves.toEqual({
+      await expect(scope().idempotency.run(await keyed(), GLOBAL, vi.fn())).resolves.toEqual({
         data: "first",
         replayed: true,
       });
 
       vi.setSystemTime(new Date("2026-10-19T12:00:00Z").getTime() + IDEMPOTENCY_TTL_MS);
       await expect(
-        scope().idempotency.execute(await keyed({ body: { username: "other" } }), GLOBAL, async () => "fresh"),
+        scope().idempotency.run(await keyed({ body: { username: "other" } }), GLOBAL, async () => "fresh"),
       ).resolves.toEqual({ data: "fresh", replayed: false });
       expect((await globalKeys()).map((k) => k.response)).toEqual(["fresh"]);
     });
 
     it("purges every account's expired records, not only the caller's", async () => {
       vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-10-19T12:00:00Z") });
-      await scope().idempotency.execute(await keyed({ userId: BOB, key: "old" }), GLOBAL, async () => "old");
+      await scope().idempotency.run(await keyed({ userId: BOB, key: "old" }), GLOBAL, async () => "old");
 
       vi.setSystemTime(new Date("2026-10-20T12:00:00Z"));
-      await scope().idempotency.execute(await keyed({ key: "new" }), GLOBAL, async () => "new");
+      await scope().idempotency.run(await keyed({ key: "new" }), GLOBAL, async () => "new");
 
       expect((await globalKeys()).map((k) => k.key)).toEqual(["new"]);
     });
@@ -204,17 +204,17 @@ describe("IdempotencyService", () => {
   describe("a body carrying a password (spec Q4)", () => {
     it("stores an argon2id fingerprint, replays the same body and refuses another", async () => {
       const password = { body: { username: "carol", password: "secret password 1" } };
-      await scope().idempotency.execute(await keyed(password, { secret: true }), GLOBAL, async () => "created");
+      await scope().idempotency.run(await keyed(password, { secret: true }), GLOBAL, async () => "created");
 
       const [stored] = await globalKeys();
       expect(stored.fingerprint).toMatch(/^\$argon2id\$/);
       expect(JSON.stringify(stored)).not.toContain("secret password 1");
-      await expect(scope().idempotency.execute(await keyed(password, { secret: true }), GLOBAL, vi.fn())).resolves.toEqual({
+      await expect(scope().idempotency.run(await keyed(password, { secret: true }), GLOBAL, vi.fn())).resolves.toEqual({
         data: "created",
         replayed: true,
       });
       await expect(
-        scope().idempotency.execute(
+        scope().idempotency.run(
           await keyed({ body: { username: "carol", password: "another password 2" } }, { secret: true }),
           GLOBAL,
           vi.fn(),
@@ -230,7 +230,7 @@ describe("IdempotencyService", () => {
         const { idempotency, users } = scope();
         const created = await users.create({ username: "target", password: "a password 123" }, ACTOR);
 
-        const result = await idempotency.execute(await keyed(), GLOBAL, () =>
+        const result = await idempotency.run(await keyed(), GLOBAL, () =>
           users.setActive(created.id, false, ACTOR).then(() =>
             users.create({ username: "also", password: "a password 123" }, ACTOR),
           ),
@@ -259,7 +259,7 @@ describe("IdempotencyService", () => {
           return user;
         };
 
-        await expect(idempotency.execute(await keyed(), GLOBAL, write)).resolves.toMatchObject({
+        await expect(idempotency.run(await keyed(), GLOBAL, write)).resolves.toMatchObject({
           data: { username: "raced" },
           replayed: false,
         });
@@ -282,7 +282,7 @@ describe("IdempotencyService", () => {
           return "never stored";
         };
 
-        await expect(idempotency.execute(await keyed(), GLOBAL, write)).rejects.toThrow("idempotency key stored concurrently");
+        await expect(idempotency.run(await keyed(), GLOBAL, write)).rejects.toThrow("idempotency key stored concurrently");
         expect(await globalKeys()).toEqual([]);
       },
       NO_HANG,
@@ -292,7 +292,7 @@ describe("IdempotencyService", () => {
       const { em, idempotency } = scope();
       vi.spyOn(em, "flush").mockRejectedValueOnce(new Error("disk full"));
 
-      await expect(idempotency.execute(await keyed(), GLOBAL, async () => "x")).rejects.toThrow("disk full");
+      await expect(idempotency.run(await keyed(), GLOBAL, async () => "x")).rejects.toThrow("disk full");
       expect(await globalKeys()).toEqual([]);
     });
 
@@ -304,8 +304,8 @@ describe("IdempotencyService", () => {
           s.users.create({ username: "once", password: "a password 123" }, ACTOR);
 
         const results = await Promise.all([
-          first.idempotency.execute(await keyed(), GLOBAL, create(first)),
-          second.idempotency.execute(await keyed(), GLOBAL, create(second)),
+          first.idempotency.run(await keyed(), GLOBAL, create(first)),
+          second.idempotency.run(await keyed(), GLOBAL, create(second)),
         ]);
 
         expect(results.map((r) => r.replayed).sort()).toEqual([false, true]);
@@ -327,8 +327,8 @@ describe("IdempotencyService", () => {
             s.users.create({ username: "across", password: "a password 123" }, ACTOR);
 
           const results = await Promise.all([
-            first.idempotency.execute(await keyed(), GLOBAL, create(first)),
-            second.idempotency.execute(await keyed(), GLOBAL, create(second)),
+            first.idempotency.run(await keyed(), GLOBAL, create(first)),
+            second.idempotency.run(await keyed(), GLOBAL, create(second)),
           ]);
 
           expect(results.map((r) => r.replayed).sort()).toEqual([false, true]);
@@ -342,15 +342,15 @@ describe("IdempotencyService", () => {
 
     it("replays a record another connection stored, ignoring this scope's identity map", async () => {
       const current = scope();
-      await current.idempotency.execute(await keyed({ key: "seen" }), GLOBAL, async () => "first");
+      await current.idempotency.run(await keyed({ key: "seen" }), GLOBAL, async () => "first");
       const other = await initOrm(toDbOptions(config));
       try {
-        await scope(other).idempotency.execute(await keyed(), GLOBAL, async () => "from the other connection");
+        await scope(other).idempotency.run(await keyed(), GLOBAL, async () => "from the other connection");
       } finally {
         await other.close();
       }
 
-      await expect(current.idempotency.execute(await keyed(), GLOBAL, vi.fn())).resolves.toEqual({
+      await expect(current.idempotency.run(await keyed(), GLOBAL, vi.fn())).resolves.toEqual({
         data: "from the other connection",
         replayed: true,
       });
@@ -376,7 +376,7 @@ describe("IdempotencyService", () => {
     });
 
     it("stores the key in the tenant's store with the generation it was written in", async () => {
-      await scope(orm, "test").idempotency.execute(await keyed(), tenantScope("test", 1), async () => "in test");
+      await scope(orm, "test").idempotency.run(await keyed(), tenantScope("test", 1), async () => "in test");
 
       expect(await tenantKeys("test")).toEqual([expect.objectContaining({ key: "k1", generation: 1, response: "in test" })]);
       expect(await tenantKeys("prod")).toEqual([]);
@@ -384,10 +384,10 @@ describe("IdempotencyService", () => {
     });
 
     it("keeps keys separate per tenant (API-024)", async () => {
-      await scope(orm, "test").idempotency.execute(await keyed(), tenantScope("test", 1), async () => "in test");
+      await scope(orm, "test").idempotency.run(await keyed(), tenantScope("test", 1), async () => "in test");
 
       await expect(
-        scope(orm, "prod").idempotency.execute(await keyed({ body: { other: true } }), tenantScope("prod", null), async () => "in prod"),
+        scope(orm, "prod").idempotency.run(await keyed({ body: { other: true } }), tenantScope("prod", null), async () => "in prod"),
       ).resolves.toEqual({ data: "in prod", replayed: false });
     });
 
@@ -395,17 +395,17 @@ describe("IdempotencyService", () => {
       const write = vi.fn();
 
       await expect(
-        scope(orm, "test").idempotency.execute(await keyed(), tenantScope("test", null), write),
+        scope(orm, "test").idempotency.run(await keyed(), tenantScope("test", null), write),
       ).rejects.toMatchObject({ code: "GENERATION_REQUIRED", status: 428 });
       expect(write).not.toHaveBeenCalled();
     });
 
     it("refuses a stale generation, even for a key whose result is stored (API-033, TEN-030)", async () => {
-      await scope(orm, "test").idempotency.execute(await keyed(), tenantScope("test", 1), async () => "in G1");
+      await scope(orm, "test").idempotency.run(await keyed(), tenantScope("test", 1), async () => "in G1");
       await orm.em.fork().nativeUpdate(Tenant, { code: "test" }, { generation: 2 });
 
       await expect(
-        scope(orm, "test").idempotency.execute(await keyed(), tenantScope("test", 1), vi.fn()),
+        scope(orm, "test").idempotency.run(await keyed(), tenantScope("test", 1), vi.fn()),
       ).rejects.toMatchObject({ code: "GENERATION_STALE", status: 409 });
     });
 
@@ -414,23 +414,23 @@ describe("IdempotencyService", () => {
       await current.em.findOneOrFail(Tenant, { code: "test" });
       await orm.em.fork().nativeUpdate(Tenant, { code: "test" }, { generation: 3 });
 
-      await expect(current.idempotency.execute(await keyed(), tenantScope("test", 1), vi.fn())).rejects.toMatchObject({
+      await expect(current.idempotency.run(await keyed(), tenantScope("test", 1), vi.fn())).rejects.toMatchObject({
         code: "GENERATION_STALE",
       });
     });
 
     it("lets a Prod write without a generation through, and stores Prod's current one", async () => {
-      await scope(orm, "prod").idempotency.execute(await keyed(), tenantScope("prod", null), async () => "ok");
+      await scope(orm, "prod").idempotency.run(await keyed(), tenantScope("prod", null), async () => "ok");
 
       expect(await tenantKeys("prod")).toEqual([expect.objectContaining({ generation: 1 })]);
     });
 
     it("purges the tenant's expired records", async () => {
       vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-10-19T12:00:00Z") });
-      await scope(orm, "test").idempotency.execute(await keyed({ key: "old" }), tenantScope("test", 1), async () => "old");
+      await scope(orm, "test").idempotency.run(await keyed({ key: "old" }), tenantScope("test", 1), async () => "old");
 
       vi.setSystemTime(new Date("2026-10-20T12:00:00Z"));
-      await scope(orm, "test").idempotency.execute(await keyed({ key: "new" }), tenantScope("test", 1), async () => "new");
+      await scope(orm, "test").idempotency.run(await keyed({ key: "new" }), tenantScope("test", 1), async () => "new");
 
       expect((await tenantKeys("test")).map((k) => k.key)).toEqual(["new"]);
     });

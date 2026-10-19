@@ -6,9 +6,9 @@ const TOKEN_CALLER = { userId: "u1", username: "alice", role: "user", tokenId: "
 const mocks = vi.hoisted(() => ({
   requireApiUser: vi.fn(),
   requestScope: vi.fn(),
-  /** A stand-in for IdempotencyService.execute: stores the first result as JSON, replays it after. */
+  /** A stand-in for IdempotencyService.run: stores the first result as JSON, replays it after. */
   stored: new Map<string, unknown>(),
-  execute: vi.fn(),
+  run: vi.fn(),
 }));
 vi.mock("./require-api-user", () => ({
   BEARER_REQUIRED: "Use a bearer token for this request.",
@@ -19,7 +19,7 @@ vi.mock("@cpg/core", async (importOriginal) => ({
   requestScope: mocks.requestScope,
 }));
 
-const cradle = { idempotencyService: { execute: mocks.execute } };
+const cradle = { idempotencyService: { run: mocks.run } };
 
 function post(body: string | undefined, headers: Record<string, string> = { "Idempotency-Key": "k1" }) {
   return new Request("http://cpg.test/api/things?ignored=1", { method: "POST", headers, body });
@@ -30,7 +30,7 @@ describe("apiWrite", () => {
     mocks.requireApiUser.mockResolvedValue(TOKEN_CALLER);
     mocks.requestScope.mockResolvedValue({ cradle });
     mocks.stored.clear();
-    mocks.execute.mockImplementation(async (request: { key: string }, _scope: unknown, write: () => Promise<unknown>) => {
+    mocks.run.mockImplementation(async (request: { key: string }, _scope: unknown, write: () => Promise<unknown>) => {
       if (mocks.stored.has(request.key)) return { data: mocks.stored.get(request.key), replayed: true };
       const data = await write();
       mocks.stored.set(request.key, JSON.parse(JSON.stringify(data)));
@@ -57,7 +57,7 @@ describe("apiWrite", () => {
     });
     const { fingerprintOf } = await vi.importActual<typeof import("@cpg/core")>("@cpg/core");
     const expected = await fingerprintOf({ method: "POST", path: "/api/things", body: { name: "widget" } });
-    expect(mocks.execute).toHaveBeenCalledWith(
+    expect(mocks.run).toHaveBeenCalledWith(
       { userId: "u1", key: "k1", operation: "POST /api/things", fingerprint: expected },
       { kind: "global" },
       expect.any(Function),
@@ -78,7 +78,7 @@ describe("apiWrite", () => {
   it("fingerprints a secret-bearing body with argon2id", async () => {
     await apiWrite(async () => "ok", { secretBody: true })(post('{"password":"a password 123"}'), {});
 
-    expect(mocks.execute.mock.calls[0][0].fingerprint.stored).toMatch(/^\$argon2id\$/);
+    expect(mocks.run.mock.calls[0][0].fingerprint.stored).toMatch(/^\$argon2id\$/);
   });
 
   it("passes a missing body as null", async () => {
@@ -94,7 +94,7 @@ describe("apiWrite", () => {
 
     expect(response.status).toBe(400);
     expect((await response.json()).error).toEqual({ code: "VALIDATION_FAILED", message: "The request body must be JSON." });
-    expect(mocks.execute).not.toHaveBeenCalled();
+    expect(mocks.run).not.toHaveBeenCalled();
   });
 
   it("refuses a write without an Idempotency-Key with 400, before opening a scope (API-019)", async () => {

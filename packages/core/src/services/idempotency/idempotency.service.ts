@@ -81,7 +81,7 @@ export class IdempotencyService {
    * failed write stores nothing, so its retry runs again. For a tenant, the generation is checked
    * first, inside the transaction: a stale one is refused before any lookup (API-033, TEN-030).
    */
-  async execute<T>(request: IdempotentWrite, scope: IdempotencyScope, write: () => Promise<T>): Promise<IdempotentResult<T>> {
+  async run<T>(request: IdempotentWrite, scope: IdempotencyScope, write: () => Promise<T>): Promise<IdempotentResult<T>> {
     const attempt = await this.attempt(request, scope, write).catch((error: unknown) => {
       // Another connection wrote between our lookup and our write: it stored the key first, or its
       // commit made our read snapshot stale ("database is locked"). Everything we wrote was rolled

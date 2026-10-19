@@ -70,7 +70,7 @@ export function keyedWrite<T, Context>(
       const write = { method: request.method, path: new URL(request.url).pathname, body };
       const fingerprint = await fingerprintOf(write, { secret: options.secretBody });
 
-      const result = await scope.cradle.idempotencyService.execute(
+      const result = await scope.cradle.idempotencyService.run(
         { userId: caller.userId, key, operation: operationOf(write), fingerprint },
         idempotency,
         () => handler({ request, context, caller, body, cradle: scope.cradle }),
