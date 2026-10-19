@@ -5,8 +5,10 @@ import { connection } from "next/server";
 import { Badge } from "@cpg/ui/components/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@cpg/ui/components/card";
 import { cn } from "@cpg/ui/lib/utils";
-import { requestScope, type TenantCode } from "@cpg/core";
+import { requestScope, type TenantCode, type TenantInfo } from "@cpg/core";
 import { requireUser } from "../../../auth/require-admin";
+import { ReadOnlyControls } from "../../../components/tenants/read-only-controls";
+import { readOnlyControlsLabels } from "../../../components/tenants/read-only-labels";
 import { getMessages } from "../../../i18n/get-messages";
 import type { Messages } from "../../../i18n/messages/en";
 
@@ -40,7 +42,7 @@ async function AdminContent() {
     <div lang={locale} className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold tracking-tight">{t.heading}</h1>
       <nav aria-label={messages.tenants.choose} className="grid gap-4 sm:grid-cols-2">
-        {tenants.map(({ code, name }) => (
+        {tenants.map(({ code, name, readOnly }) => (
           <Link
             key={code}
             href={`/admin/${code}`}
@@ -48,12 +50,41 @@ async function AdminContent() {
           >
             <span className="text-lg font-semibold">{name}</span>
             <span className="text-sm text-muted-foreground">{messages.tenants.description[code]}</span>
+            {readOnly && <Badge className="mt-1">{messages.tenants.readOnly}</Badge>}
             <span className="mt-2 text-sm font-semibold">{messages.tenants.open(name)}</span>
           </Link>
         ))}
       </nav>
+      {user.role === "admin" && <ReadOnlyCard tenants={tenants} messages={messages} />}
       {user.role === "admin" && <DatabaseStatus t={t} />}
     </div>
+  );
+}
+
+/** The admin's switches for each tenant's read-only flag (R05). */
+function ReadOnlyCard({ tenants, messages }: { tenants: TenantInfo[]; messages: Messages }) {
+  const t = messages.admin.readOnly;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t.heading}</CardTitle>
+        <CardDescription>{t.intro}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ul aria-label={t.heading} className="flex flex-col divide-y">
+          {tenants.map(({ code, name, readOnly }) => (
+            <li key={code} data-tenant={code} className="flex flex-wrap items-center justify-between gap-3 py-3">
+              <span className="flex items-center gap-3">
+                <span className="font-medium">{name}</span>
+                <Badge variant={readOnly ? "default" : "outline"}>{readOnly ? t.readOnly : t.writable}</Badge>
+              </span>
+              <ReadOnlyControls tenant={code} readOnly={readOnly} labels={readOnlyControlsLabels(messages, name)} />
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
   );
 }
 

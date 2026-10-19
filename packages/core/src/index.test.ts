@@ -76,6 +76,7 @@ describe("@cpg/core", () => {
       "readGeneration",
       "readIdempotencyKey",
       "requestScope",
+      "retryingStaleSnapshot",
       "revokeAdminTokensIfPasswordChanged",
       "revokeBuiltInAdminSessions",
       "scopeForTenant",

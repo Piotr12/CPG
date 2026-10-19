@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveServerComponents } from "../../../../../../tests/setup/server-components";
 import { en } from "../../../i18n/messages/en";
@@ -20,11 +20,12 @@ vi.mock("@cpg/core", () => ({
 }));
 vi.mock("../../../auth/require-admin", () => ({ requireUser: mocks.requireUser }));
 vi.mock("../../../i18n/get-messages", () => ({ getMessages: mocks.getMessages }));
+vi.mock("./actions", () => ({ setTenantReadOnly: vi.fn() }));
 
 const status = { databasePath: "/externaldata/cpg.sqlite", appliedMigrations: 3, pendingMigrations: 0, settings: 7 };
 const tenants = [
-  { code: "test", name: "Test", generation: 1 },
-  { code: "prod", name: "Prod", generation: 1 },
+  { code: "test", name: "Test", generation: 1, readOnly: false },
+  { code: "prod", name: "Prod", generation: 1, readOnly: false },
 ];
 /** The chooser's links as [href, text]. */
 const choices = (label: string) =>
@@ -85,6 +86,8 @@ describe("AdminPage", () => {
 
     expect(choices("Choose a tenant").map(([href]) => href)).toEqual(["/admin/test", "/admin/prod"]);
     expect(screen.queryByText("Database")).toBeNull();
+    expect(screen.queryByRole("list", { name: "Read-only" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /read-only|writable/ })).toBeNull();
     expect(screen.queryByRole("link", { name: /password/i })).toBeNull();
     expect(mocks.getStatus).not.toHaveBeenCalled();
   });
@@ -96,6 +99,31 @@ describe("AdminPage", () => {
       ["/admin/test", "TestDemonstration data, safe to experimentOpen Test →"],
       ["/admin/prod", "ProdLive dataOpen Prod →"],
     ]);
+  });
+
+  it("marks a read-only tenant on the chooser, for every account (R05)", async () => {
+    mocks.requireUser.mockResolvedValue(alice);
+    mocks.listTenants.mockResolvedValue([tenants[0], { ...tenants[1], readOnly: true }]);
+
+    render(await resolveServerComponents(AdminPage()));
+
+    expect(choices("Choose a tenant")).toEqual([
+      ["/admin/test", "TestDemonstration data, safe to experimentOpen Test →"],
+      ["/admin/prod", "ProdLive dataRead-onlyOpen Prod →"],
+    ]);
+  });
+
+  it("gives the admin a read-only switch per tenant, showing each one's state", async () => {
+    mocks.listTenants.mockResolvedValue([tenants[0], { ...tenants[1], readOnly: true }]);
+
+    render(await resolveServerComponents(AdminPage()));
+
+    const rows = within(screen.getByRole("list", { name: "Read-only" })).getAllByRole("listitem");
+    expect(rows.map((row) => [row.dataset.tenant, row.textContent])).toEqual([
+      ["test", "TestWritableMake Test read-only"],
+      ["prod", "ProdRead-onlyMake Prod writable"],
+    ]);
+    expect(screen.getByText(/nobody can change its business data, the administrator and the API included/)).toBeTruthy();
   });
 
   it("offers the tenants in Polish to a Polish account", async () => {

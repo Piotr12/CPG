@@ -9,6 +9,8 @@ export * from "./http/api-handler";
 export * from "./http/errors";
 export * from "./http/idempotency-key";
 export * from "./http/parse-input";
+// The admin page's read-only toggle retries like the tenant write wrappers do.
+export { retryingStaleSnapshot } from "./http/request-transaction";
 export * from "./http/result";
 export * from "./http/server-action";
 export * from "./http/tenant-server-action";
