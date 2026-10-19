@@ -92,6 +92,13 @@ PR: #34
   - The confirm dialog's mode is fixed when it opens.
   - Declined: moving `requestScope()` inside the action wrapper, which would diverge from the existing actions' pattern.
 - **Spec deviation:** the per-IP cap (`MAX_FAILURES_PER_IP = 50`) isn't in the spec; it was added with the name-keyed buckets, see the throttle note above. Noted on spec PR #33.
+- **Second merge of `main` (#19 tenants, spec #33), `e8a1d74`:**
+  - `/admin/users` moved to `admin/(global)/users` (accounts are Global and get the GLOBAL strip);
+  - the tenant chooser `/admin` and `/admin/[tenant]` now use `requireUser`, since every active account uses both tenants (TEN-010); the database card and Users link stay admin-only;
+  - `SignedInBar` takes the user and shows the Users link;
+  - #19's `NotFoundError(code, message)` replaces this branch's copy, and `ForbiddenError`/`ConflictError` got HTTP statuses 403/409;
+  - the users migration was regenerated on top of `tenants` (`Migration20261019103355`).
+- **Pre-existing build log** "Route handler failed … /api/tenants" during prerender: it is on `main` since #36 and was filed as #38.
 
 ## Verification
 
@@ -103,4 +110,5 @@ PR: #34
 - After merging `main` (#18): lint and typecheck clean; 415 unit tests at 100%; build OK; `test:integration` 8 files, 36 tests passed.
 - UI QA (`om-auto-qa-pr`, production image, agent-browser): 11-step scenario PASS, with screenshots on PR #34. CI green at `d2d2cdd`.
 - After the review fixes: lint and typecheck clean; 417 unit tests at 100%; build OK; `test:integration` 8 files, 36 tests passed.
+- After the second merge (#19): lint and typecheck clean; 532 unit tests at 100%; build OK; `test:integration` 9 files, 47 tests passed.
 - `npm audit`: only the known `braces` advisories (10 high); no dependency changes.
