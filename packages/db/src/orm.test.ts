@@ -40,6 +40,7 @@ describe("migrate", () => {
       "Migration20261019080354_auth_users_sessions",
       "Migration20261019090456_user_preferences",
       "Migration20261019092708_tenants",
+      "Migration20261019103355_users_password_active",
     ]);
     expect(await migrate({ databasePath })).toEqual([]);
   });
@@ -51,9 +52,9 @@ describe("getMigrationStatus", () => {
     const orm = await initOrm({ databasePath });
 
     try {
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 4 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 5 });
       await orm.migrator.up();
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 4, pending: 0 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 5, pending: 0 });
     } finally {
       await orm.close();
     }
@@ -76,7 +77,16 @@ describe("migrations", () => {
         .map(({ name }) => name)
         .sort();
 
+    const userColumns = async () =>
+      (await orm.em.getConnection().execute<{ name: string }[]>("select name from pragma_table_info('user')"))
+        .map(({ name }) => name)
+        .sort();
+
     try {
+      expect(await tables()).toEqual(["session", "setting", "tenant", "user", "user_preference"]);
+      expect(await userColumns()).toEqual(["active", "created_at", "id", "password_hash", "role", "username"]);
+      await orm.migrator.down();
+      expect(await userColumns()).toEqual(["created_at", "id", "role", "username"]);
       expect(await tables()).toEqual(["session", "setting", "tenant", "user", "user_preference"]);
       await orm.migrator.down();
       expect(await tables()).toEqual(["session", "setting", "user", "user_preference"]);
@@ -86,6 +96,27 @@ describe("migrations", () => {
       expect(await tables()).toEqual(["setting"]);
       await orm.migrator.down();
       expect(await tables()).toEqual([]);
+    } finally {
+      await orm.close();
+    }
+  });
+});
+
+describe("users-password-active migration", () => {
+  it("keeps the existing admin row active, with no password hash", async () => {
+    const databasePath = tempDatabase();
+    const orm = await initOrm({ databasePath });
+
+    try {
+      await orm.migrator.up({ to: "Migration20261019092708_tenants" });
+      await orm.em
+        .getConnection()
+        .execute("insert into user (id, username, role, created_at) values ('a1', 'admin', 'admin', 0)");
+      await orm.migrator.up();
+
+      expect(
+        await orm.em.getConnection().execute("select username, active, password_hash from user"),
+      ).toEqual([{ username: "admin", active: 1, password_hash: null }]);
     } finally {
       await orm.close();
     }

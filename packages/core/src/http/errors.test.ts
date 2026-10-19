@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { AppError, NotFoundError, TooManyRequestsError, UnauthorizedError, ValidationError } from "./errors";
+import {
+  AppError,
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+  TooManyRequestsError,
+  UnauthorizedError,
+  ValidationError,
+} from "./errors";
 
 describe("AppError hierarchy", () => {
   it("carries a code, a message and the subclass name", () => {
@@ -48,5 +56,19 @@ describe("AppError hierarchy", () => {
       name: "TooManyRequestsError",
     });
     expect(new TooManyRequestsError("Slow down.").message).toBe("Slow down.");
+  });
+
+  it("refuses a signed-in account that lacks the right", () => {
+    expect(new ForbiddenError()).toMatchObject({ code: "FORBIDDEN", message: "You don't have access to this.", status: 403 });
+    expect(new ForbiddenError("Admins only.").message).toBe("Admins only.");
+  });
+
+  it("reports a clash with existing data", () => {
+    expect(new ConflictError("That username is taken.")).toMatchObject({
+      code: "CONFLICT",
+      message: "That username is taken.",
+      name: "ConflictError",
+      status: 409,
+    });
   });
 });

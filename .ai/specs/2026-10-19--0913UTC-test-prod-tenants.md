@@ -336,3 +336,7 @@ Nothing is superseded.
      - `/api/tenants/staging` returns 404 `TENANT_NOT_FOUND`;
      - signed out, both return 401 (API-013).
    - Then run the full gate: lint, typecheck, `test:coverage` (100%), build, `test:integration`.
+
+## Implementation notes
+
+- **2026-10-19, E01-S02 (#16, PR #34):** as Q9 anticipated, normal users now exist. So `/admin` (the chooser) and every `admin/[tenant]` page call `requireUser()` instead of `requireAdmin()`, because every active account uses both tenants (TEN-010). Admin-only content stays behind `requireAdmin()` or a role check: the database card, the Users link, and `/admin/users` under `(global)`.

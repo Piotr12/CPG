@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   connection: vi.fn(),
   getStatus: vi.fn(),
   listTenants: vi.fn(),
-  requireAdmin: vi.fn(),
+  requireUser: vi.fn(),
   getMessages: vi.fn(),
   currentPreferences: vi.fn(),
   signOut: vi.fn(),
@@ -21,7 +21,7 @@ vi.mock("@cpg/core", () => ({
     cradle: { systemStatusService: { getStatus: mocks.getStatus }, tenantService: { list: mocks.listTenants } },
   }),
 }));
-vi.mock("../../../auth/require-admin", () => ({ requireAdmin: mocks.requireAdmin }));
+vi.mock("../../../auth/require-admin", () => ({ requireUser: mocks.requireUser }));
 vi.mock("../../../i18n/get-messages", () => ({ getMessages: mocks.getMessages }));
 vi.mock("../../../preferences/current-preferences", () => ({ currentPreferences: mocks.currentPreferences }));
 vi.mock("../actions", () => ({ signOut: mocks.signOut, updatePreferences: mocks.updatePreferences }));
@@ -38,6 +38,7 @@ const choices = (label: string) =>
     link.textContent,
   ]);
 const admin = { sessionId: "s1", userId: "u1", username: "admin", role: "admin" };
+const alice = { sessionId: "s2", userId: "u2", username: "alice", role: "user" };
 
 function as(locale: "en" | "pl", theme: "light" | "dark" = "light") {
   mocks.getMessages.mockResolvedValue({ locale, messages: locale === "en" ? en : pl });
@@ -46,7 +47,7 @@ function as(locale: "en" | "pl", theme: "light" | "dark" = "light") {
 
 describe("AdminPage", () => {
   beforeEach(() => {
-    mocks.requireAdmin.mockResolvedValue(admin);
+    mocks.requireUser.mockResolvedValue(admin);
     mocks.getStatus.mockResolvedValue(status);
     mocks.listTenants.mockResolvedValue(tenants);
     as("en");
@@ -57,7 +58,7 @@ describe("AdminPage", () => {
     render(await resolveServerComponents(AdminPage()));
 
     expect(mocks.connection).toHaveBeenCalledOnce();
-    expect(mocks.requireAdmin).toHaveBeenCalledOnce();
+    expect(mocks.requireUser).toHaveBeenCalledOnce();
     expect(screen.getByRole("heading", { name: "Cave control" })).toBeTruthy();
     expect(screen.getByText("/externaldata/cpg.sqlite")).toBeTruthy();
     expect(screen.getByText("3 migrations applied")).toBeTruthy();
@@ -91,6 +92,27 @@ describe("AdminPage", () => {
     expect(screen.getByRole("heading", { name: "Kontrola jaskini" }).closest("[lang]")?.getAttribute("lang")).toBe("pl");
     expect(screen.getByText("Zastosowane migracje: 3")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Wyloguj" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Użytkownicy" })).toBeTruthy();
+  });
+
+  it("links the admin to the users screen", async () => {
+    render(await resolveServerComponents(AdminPage()));
+
+    expect(screen.getByRole("link", { name: "Users" }).getAttribute("href")).toBe("/admin/users");
+  });
+
+  it("gives a normal user the tenant chooser and preferences, but no database detail or users link (TEN-010)", async () => {
+    mocks.requireUser.mockResolvedValue(alice);
+
+    render(await resolveServerComponents(AdminPage()));
+
+    expect(screen.getByText("alice").tagName).toBe("STRONG");
+    expect(choices("Choose a tenant").map(([href]) => href)).toEqual(["/admin/test", "/admin/prod"]);
+    expect(screen.getByRole("group", { name: "Language" })).toBeTruthy();
+    expect(screen.queryByText("Database")).toBeNull();
+    expect(screen.queryByRole("link", { name: "Users" })).toBeNull();
+    expect(screen.queryByRole("link", { name: /password/i })).toBeNull();
+    expect(mocks.getStatus).not.toHaveBeenCalled();
   });
 
   it("offers both tenants to choose from (TEN-001, TEN-010)", async () => {
@@ -114,7 +136,7 @@ describe("AdminPage", () => {
   });
 
   it("renders no data when the gate refuses the visitor", async () => {
-    mocks.requireAdmin.mockRejectedValue(new Error("NEXT_REDIRECT /login"));
+    mocks.requireUser.mockRejectedValue(new Error("NEXT_REDIRECT /login"));
 
     await expect(resolveServerComponents(AdminPage())).rejects.toThrow("NEXT_REDIRECT /login");
     expect(mocks.getStatus).not.toHaveBeenCalled();

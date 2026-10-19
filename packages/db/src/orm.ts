@@ -5,6 +5,8 @@ import { createOrmConfig } from "./config";
 
 export type Orm = MikroORM;
 export type { EntityManager };
+/** Thrown on a duplicate in a unique column; services map it to their own conflict error. */
+export { UniqueConstraintViolationException } from "@mikro-orm/sqlite";
 
 /** What `@cpg/db` needs to know; `@cpg/core` derives it from the app config. */
 export interface DbOptions {

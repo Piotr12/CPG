@@ -1,5 +1,4 @@
-/** What a request without a usable client address is counted as. */
-export const UNKNOWN_CLIENT = "unknown";
+import { UNKNOWN_CLIENT } from "@cpg/core";
 
 /**
  * The client's IP for throttling: the first `X-Forwarded-For` entry. In production kamal-proxy sets

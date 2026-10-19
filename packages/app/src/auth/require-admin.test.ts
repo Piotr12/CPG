@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { currentUser, requireAdmin } from "./require-admin";
+import { currentUser, requireAdmin, requireUser } from "./require-admin";
 
 const admin = { sessionId: "s1", userId: "u1", username: "admin", role: "admin" as const };
+const alice = { sessionId: "s2", userId: "u2", username: "alice", role: "user" as const };
 const mocks = vi.hoisted(() => ({
   validateSession: vi.fn(),
   requestScope: vi.fn(),
@@ -60,26 +61,49 @@ describe("currentUser", () => {
   });
 });
 
-describe("requireAdmin", () => {
+describe("gates", () => {
   beforeEach(() => {
     mocks.requestScope.mockResolvedValue({ cradle: { authService: { validateSession: mocks.validateSession } } });
     mocks.readSessionToken.mockResolvedValue("tok");
   });
   afterEach(() => vi.clearAllMocks());
 
-  it("returns the admin", async () => {
-    mocks.validateSession.mockResolvedValue(admin);
+  describe("requireUser", () => {
+    it.each([
+      ["the admin", admin],
+      ["a normal user", alice],
+    ])("returns %s", async (_case, user) => {
+      mocks.validateSession.mockResolvedValue(user);
 
-    await expect(requireAdmin()).resolves.toBe(admin);
-    expect(mocks.redirect).not.toHaveBeenCalled();
+      await expect(requireUser()).resolves.toBe(user);
+      expect(mocks.redirect).not.toHaveBeenCalled();
+    });
+
+    it("redirects to sign-in without a session", async () => {
+      mocks.validateSession.mockResolvedValue(null);
+
+      await expect(requireUser()).rejects.toThrow("NEXT_REDIRECT /login");
+    });
   });
 
-  it.each([
-    ["no session", null],
-    ["a non-admin session", { ...admin, role: "user" }],
-  ])("redirects to sign-in for %s", async (_case, user) => {
-    mocks.validateSession.mockResolvedValue(user);
+  describe("requireAdmin", () => {
+    it("returns the admin", async () => {
+      mocks.validateSession.mockResolvedValue(admin);
 
-    await expect(requireAdmin()).rejects.toThrow("NEXT_REDIRECT /login");
+      await expect(requireAdmin()).resolves.toBe(admin);
+      expect(mocks.redirect).not.toHaveBeenCalled();
+    });
+
+    it("sends a normal user back to /admin", async () => {
+      mocks.validateSession.mockResolvedValue(alice);
+
+      await expect(requireAdmin()).rejects.toThrow("NEXT_REDIRECT /admin");
+    });
+
+    it("redirects to sign-in without a session", async () => {
+      mocks.validateSession.mockResolvedValue(null);
+
+      await expect(requireAdmin()).rejects.toThrow("NEXT_REDIRECT /login");
+    });
   });
 });

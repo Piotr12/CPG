@@ -31,6 +31,59 @@ export const en = {
     migrationsApplied: (count: number) => `${count} migrations applied`,
     migrationsPending: (count: number) => `${count} pending`,
     settings: (count: number) => `${count} settings`,
+    users: "Users",
+  },
+  /** The users screen. Its strings go to client components, so `{username}` is filled in there. */
+  users: {
+    heading: "Users",
+    back: "Cave control",
+    neverDeleted: "Users are never deleted. Deactivate an account to end its access; its history keeps its name.",
+    empty: "No accounts yet.",
+    columns: { username: "Username", role: "Role", status: "Status", created: "Created", actions: "Actions" },
+    roles: { admin: "admin", user: "user" },
+    status: { active: "Active", inactive: "Inactive" },
+    menu: { label: "Actions for {username}", reset: "Reset password", deactivate: "Deactivate", reactivate: "Reactivate" },
+    cancel: "Cancel",
+    create: {
+      open: "Create user",
+      title: "Create user",
+      description: "They sign in at /login with this username and password. Only you can change the password later.",
+      username: "Username",
+      password: "Initial password",
+      passwordHint: "At least 12 characters.",
+      submit: "Create user",
+      submitting: "Creating…",
+    },
+    reset: {
+      title: "Reset password for {username}",
+      description: "This signs them out everywhere. Tell them the new password yourself.",
+      password: "New password",
+      passwordHint: "At least 12 characters.",
+      submit: "Reset password",
+      submitting: "Resetting…",
+    },
+    deactivate: {
+      title: "Deactivate {username}?",
+      description: "{username} is signed out everywhere and can't sign in until reactivated. The account and its history stay.",
+      confirm: "Deactivate",
+    },
+    reactivate: {
+      title: "Reactivate {username}?",
+      description:
+        "{username} can sign in again with their current password. Reset it too if the account may have been compromised.",
+      confirm: "Reactivate",
+    },
+    fieldErrors: {
+      usernameFormat: "Use 3–32 lowercase letters, digits, dots, dashes or underscores.",
+      passwordTooShort: "Use at least 12 characters.",
+      passwordTooLong: "Use at most 256 characters.",
+    },
+    /** What these error codes mean on the users screen, merged over the shared `errors` by `usersLabels`. */
+    errors: {
+      CONFLICT: "That username is taken.",
+      NOT_FOUND: "That user no longer exists.",
+      FORBIDDEN: "Only the administrator can manage users.",
+    },
   },
   tenants: {
     choose: "Choose a tenant",

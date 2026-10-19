@@ -44,3 +44,17 @@ export class NotFoundError extends AppError {
     super(code, message, 404);
   }
 }
+
+/** Signed in, but this account may not do this (a normal user calling an admin-only action). */
+export class ForbiddenError extends AppError {
+  constructor(message = "You don't have access to this.") {
+    super("FORBIDDEN", message, 403);
+  }
+}
+
+/** The write clashes with existing data, such as a taken unique name. */
+export class ConflictError extends AppError {
+  constructor(message: string) {
+    super("CONFLICT", message, 409);
+  }
+}

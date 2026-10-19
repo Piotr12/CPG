@@ -1,7 +1,7 @@
-import type { Messages } from "./messages/en";
-
-/** An error envelope in the reader's language: known codes are translated, others keep the server's text. */
-export function errorMessage(messages: Messages, error: { code: string; message: string }): string {
-  const { errors } = messages;
-  return Object.hasOwn(errors, error.code) ? errors[error.code as keyof typeof errors] : error.message;
+/**
+ * An error envelope in the reader's language: known codes are translated, others keep the server's text.
+ * Pass `messages.errors`, or a screen's own map merged over it when a code means something specific there.
+ */
+export function errorMessage(errors: Record<string, string>, error: { code: string; message: string }): string {
+  return Object.hasOwn(errors, error.code) ? errors[error.code] : error.message;
 }

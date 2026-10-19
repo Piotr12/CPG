@@ -1,5 +1,7 @@
+import * as nodeCrypto from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { MIN_PASSWORD_LENGTH } from "./validators/users/create-user.schema";
 
 export interface AppConfig {
   env: "development" | "production" | "test";
@@ -17,7 +19,7 @@ export interface AppConfig {
 }
 
 /** Shorter admin passwords stop the server: a floor against trivially guessable credentials. */
-export const MIN_ADMIN_PASSWORD_LENGTH = 12;
+export const MIN_ADMIN_PASSWORD_LENGTH = MIN_PASSWORD_LENGTH;
 
 /**
  * Reads the app configuration from environment variables.
@@ -47,9 +49,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
  * Throws unless the config can run the server: the admin password must be set, at least
  * `MIN_ADMIN_PASSWORD_LENGTH` characters once trimmed, and free of leading or trailing whitespace
  * (a secret pasted with a stray newline would otherwise start fine and never match at sign-in).
- * The message never contains the value.
+ * The message never contains the value. The runtime must also hash passwords with argon2id
+ * (`crypto.argon2`, Node 24.7+), or no normal user could ever sign in.
  */
-export function assertServerConfig(config: AppConfig): void {
+export function assertServerConfig(config: AppConfig, crypto: { argon2?: unknown } = nodeCrypto): void {
+  if (typeof crypto.argon2 !== "function") {
+    throw new Error("This Node.js has no crypto.argon2: run CPG on Node.js 24.7 or later.");
+  }
   const password = config.adminPassword ?? "";
   if (password.trim().length < MIN_ADMIN_PASSWORD_LENGTH) {
     throw new Error(

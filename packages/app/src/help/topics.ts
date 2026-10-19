@@ -5,6 +5,7 @@ export const HELP_TOPIC_IDS = [
   "getting-started",
   "signing-in",
   "admin-home",
+  "managing-users",
   "test-and-prod",
   "language-and-theme",
   "using-help",
@@ -20,6 +21,7 @@ export const HELP_TOPIC_ROUTES: Record<HelpTopicId, string> = {
   "getting-started": "/",
   "signing-in": "/login",
   "admin-home": "/admin",
+  "managing-users": "/admin/users",
   "test-and-prod": "/admin/[tenant]",
   "language-and-theme": "/admin",
   "using-help": "/help",
@@ -56,8 +58,8 @@ const en: Record<HelpTopicId, HelpText> = {
   "admin-home": {
     title: "Cave control",
     body: [
-      "Cave control is the administrator's home page.",
-      "The Database card shows where CPG keeps its data, how many migrations are applied, whether any are still pending, and how many settings are stored.",
+      "Cave control is the home page of every account. Normal users see their name, their language and theme, and Sign out. There is no password change: only the administrator sets passwords.",
+      "The administrator also sees the Users link and the Database card. The card shows where CPG keeps its data, how many migrations are applied, whether any are still pending, and how many settings are stored.",
       "A pending migration normally means CPG is still starting. If it stays, tell whoever runs CPG.",
       "Open Test or Open Prod takes you to that tenant's business data.",
     ],
@@ -68,6 +70,15 @@ const en: Record<HelpTopicId, HelpText> = {
       "CPG keeps two separate sets of business data: Test, with demonstration data that is safe to experiment with, and Prod, the live data.",
       "The strip at the top of every page says which one you are working in: TEST in amber, PROD in dark with a red edge, or GLOBAL on pages that belong to neither.",
       "Switch with Test and Prod on the right of the strip. Nothing you do in one ever appears in the other, and the same number can mean a different record in each.",
+    ],
+  },
+  "managing-users": {
+    title: "Managing users",
+    body: [
+      "Only the administrator opens Users. Create user adds a normal user with a username (3–32 lowercase letters, digits, dots, dashes or underscores) and an initial password of at least 12 characters. Tell them the password yourself.",
+      "Reset password, in a user's row menu, sets a new password and signs that user out everywhere at once.",
+      "Deactivate signs the user out everywhere and stops them signing in. Reactivate lets them back in with their current password, so reset it too if the account may have been compromised.",
+      "Users are never deleted: an account stays, so its history keeps its name. The built-in administrator can't be changed here.",
     ],
   },
   "language-and-theme": {
@@ -109,8 +120,8 @@ const pl: Record<HelpTopicId, HelpText> = {
   "admin-home": {
     title: "Kontrola jaskini",
     body: [
-      "Kontrola jaskini to strona startowa administratora.",
-      "Karta Baza danych pokazuje, gdzie CPG przechowuje dane, ile migracji zastosowano, czy jakieś jeszcze oczekują i ile ustawień zapisano.",
+      "Kontrola jaskini to strona startowa każdego konta. Zwykły użytkownik widzi swoją nazwę, język i motyw oraz przycisk Wyloguj. Nie ma tu zmiany hasła: hasła ustawia tylko administrator.",
+      "Administrator widzi też link Użytkownicy i kartę Baza danych. Karta pokazuje, gdzie CPG przechowuje dane, ile migracji zastosowano, czy jakieś jeszcze oczekują i ile ustawień zapisano.",
       "Oczekująca migracja zwykle oznacza, że CPG jeszcze się uruchamia. Jeśli nie znika, powiedz o tym osobie, która utrzymuje CPG.",
       "Przyciski Otwórz Test i Otwórz Prod prowadzą do danych biznesowych wybranego środowiska.",
     ],
@@ -121,6 +132,15 @@ const pl: Record<HelpTopicId, HelpText> = {
       "CPG przechowuje dwa oddzielne zbiory danych biznesowych: Test z danymi demonstracyjnymi, na których można bezpiecznie eksperymentować, oraz Prod z danymi rzeczywistymi.",
       "Pasek u góry każdej strony pokazuje, w którym środowisku pracujesz: TEST na bursztynowo, PROD na ciemno z czerwoną krawędzią albo GLOBAL na stronach, które nie należą do żadnego z nich.",
       "Przełączaj się przyciskami Test i Prod po prawej stronie paska. Nic, co zrobisz w jednym środowisku, nie pojawi się w drugim, a ten sam numer może oznaczać w każdym z nich inny rekord.",
+    ],
+  },
+  "managing-users": {
+    title: "Zarządzanie użytkownikami",
+    body: [
+      "Ekran Użytkownicy otwiera tylko administrator. Utwórz użytkownika dodaje zwykłego użytkownika z nazwą (3–32 małe litery, cyfry, kropki, myślniki lub podkreślenia) i hasłem początkowym o długości co najmniej 12 znaków. Przekaż mu hasło osobiście.",
+      "Resetuj hasło w menu wiersza ustawia nowe hasło i od razu wylogowuje tego użytkownika ze wszystkich sesji.",
+      "Dezaktywuj wylogowuje użytkownika ze wszystkich sesji i blokuje logowanie. Aktywuj ponownie wpuszcza go z obecnym hasłem, więc zresetuj je także wtedy, gdy konto mogło zostać przejęte.",
+      "Użytkownicy nigdy nie są usuwani: konto zostaje, więc historia zachowuje jego nazwę. Wbudowanego administratora nie można tu zmienić.",
     ],
   },
   "language-and-theme": {

@@ -14,6 +14,7 @@ describe("@cpg/db", () => {
       "Tenant",
       "TenantViolationError",
       "USER_ROLES",
+      "UniqueConstraintViolationException",
       "User",
       "UserPreference",
       "createOrmConfig",

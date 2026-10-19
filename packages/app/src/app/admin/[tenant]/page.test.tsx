@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => {
     connection: vi.fn(),
     getMessages: vi.fn(),
     currentPreferences: vi.fn(),
-    requireAdmin: vi.fn(),
+    requireUser: vi.fn(),
     tenantScope: vi.fn(),
     notFound: vi.fn(() => {
       throw new Error("NEXT_HTTP_ERROR_FALLBACK;404");
@@ -26,7 +26,7 @@ const mocks = vi.hoisted(() => {
 vi.mock("next/server", () => ({ connection: mocks.connection }));
 vi.mock("next/navigation", () => ({ notFound: mocks.notFound }));
 vi.mock("@cpg/core", () => ({ AppError: mocks.AppError, tenantScope: mocks.tenantScope }));
-vi.mock("../../../auth/require-admin", () => ({ requireAdmin: mocks.requireAdmin }));
+vi.mock("../../../auth/require-admin", () => ({ requireUser: mocks.requireUser }));
 vi.mock("../actions", () => ({ signOut: vi.fn(), updatePreferences: vi.fn() }));
 vi.mock("../../../i18n/get-messages", () => ({ getMessages: mocks.getMessages }));
 vi.mock("../../../preferences/current-preferences", () => ({ currentPreferences: mocks.currentPreferences }));
@@ -40,7 +40,7 @@ const page = (tenant: string) => TenantHomePage({ params: Promise.resolve({ tena
 
 describe("TenantHomePage", () => {
   beforeEach(() => {
-    mocks.requireAdmin.mockResolvedValue({ username: "admin", role: "admin" });
+    mocks.requireUser.mockResolvedValue({ username: "admin", role: "admin" });
     mocks.tenantScope.mockResolvedValue({ cradle: { tenant: { code: "prod", name: "Prod", generation: 1 } } });
     as("en");
   });
@@ -58,6 +58,16 @@ describe("TenantHomePage", () => {
     expect(screen.getByText("admin").tagName).toBe("STRONG");
   });
 
+  it("opens a tenant to a normal user too (TEN-010)", async () => {
+    mocks.requireUser.mockResolvedValue({ username: "alice", role: "user" });
+
+    render(await resolveServerComponents(page("prod")));
+
+    expect(screen.getByRole("heading", { name: "Cave control — Prod" })).toBeTruthy();
+    expect(screen.getByText("alice").tagName).toBe("STRONG");
+    expect(screen.queryByRole("link", { name: "Users" })).toBeNull();
+  });
+
   it("speaks Polish to a Polish account", async () => {
     as("pl");
 
@@ -69,7 +79,7 @@ describe("TenantHomePage", () => {
   });
 
   it("opens no tenant for a visitor the gate refuses", async () => {
-    mocks.requireAdmin.mockRejectedValue(new Error("NEXT_REDIRECT /login"));
+    mocks.requireUser.mockRejectedValue(new Error("NEXT_REDIRECT /login"));
 
     await expect(resolveServerComponents(page("prod"))).rejects.toThrow("NEXT_REDIRECT /login");
     expect(mocks.tenantScope).not.toHaveBeenCalled();

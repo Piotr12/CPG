@@ -73,6 +73,15 @@ describe("assertServerConfig", () => {
     expect(() => assertServerConfig(withPassword("x".repeat(MIN_ADMIN_PASSWORD_LENGTH)))).not.toThrow();
   });
 
+  it("refuses a runtime without crypto.argon2, which normal users' passwords need", () => {
+    const valid = withPassword("x".repeat(MIN_ADMIN_PASSWORD_LENGTH));
+
+    expect(() => assertServerConfig(valid, {})).toThrow(
+      "This Node.js has no crypto.argon2: run CPG on Node.js 24.7 or later.",
+    );
+    expect(() => assertServerConfig(valid, { argon2: () => undefined })).not.toThrow();
+  });
+
   it("never puts the password in the error message", () => {
     const secret = "s3cret-but-short";
 

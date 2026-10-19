@@ -26,6 +26,7 @@ describe("HelpPage", () => {
       "Getting started with CPG",
       "Signing in",
       "Cave control",
+      "Managing users",
       "Test and Prod",
       "Language and theme",
       "Using help",
@@ -37,13 +38,13 @@ describe("HelpPage", () => {
   });
 
   it("searches on the server with a plain GET form", async () => {
-    await renderHelp("password");
+    await renderHelp("minutes");
 
     const form = screen.getByRole("search") as HTMLFormElement;
     expect(form.getAttribute("action")).toBe("/help");
-    expect((screen.getByRole("searchbox", { name: "Search help" }) as HTMLInputElement).value).toBe("password");
+    expect((screen.getByRole("searchbox", { name: "Search help" }) as HTMLInputElement).value).toBe("minutes");
     expect(topicTitles()).toEqual(["Signing in"]);
-    expect(screen.getByText(/1 topic matches “password”\./)).toBeTruthy();
+    expect(screen.getByText(/1 topic matches “minutes”\./)).toBeTruthy();
     expect(screen.getByRole("link", { name: "Show all topics" }).getAttribute("href")).toBe("/help");
   });
 

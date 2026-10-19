@@ -6,9 +6,10 @@ import { Badge } from "@cpg/ui/components/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@cpg/ui/components/card";
 import { cn } from "@cpg/ui/lib/utils";
 import { requestScope, type TenantCode } from "@cpg/core";
-import { requireAdmin } from "../../../auth/require-admin";
+import { requireUser } from "../../../auth/require-admin";
 import { SignedInBar } from "../../../components/auth/signed-in-bar";
 import { getMessages } from "../../../i18n/get-messages";
+import type { Messages } from "../../../i18n/messages/en";
 import { currentPreferences } from "../../../preferences/current-preferences";
 
 export const metadata: Metadata = { title: "Admin · Caveman Planning Good" };
@@ -29,13 +30,12 @@ export default function AdminPage() {
   );
 }
 
-/** Everything behind the sign-in gate: nothing here renders without an admin session. */
+/** Everything behind the sign-in gate: nothing here renders without a session. */
 async function AdminContent() {
   await connection();
-  const user = await requireAdmin();
-  const { systemStatusService, tenantService } = (await requestScope()).cradle;
-  const [status, tenants, { locale, messages }, { theme }] = await Promise.all([
-    systemStatusService.getStatus(),
+  const user = await requireUser();
+  const { tenantService } = (await requestScope()).cradle;
+  const [tenants, { locale, messages }, { theme }] = await Promise.all([
     tenantService.list(),
     getMessages(),
     currentPreferences(),
@@ -44,7 +44,7 @@ async function AdminContent() {
 
   return (
     <div lang={locale} className="flex flex-col gap-6">
-      <SignedInBar username={user.username} locale={locale} theme={theme} messages={messages} />
+      <SignedInBar user={user} locale={locale} theme={theme} messages={messages} />
       <h1 className="text-2xl font-semibold tracking-tight">{t.heading}</h1>
       <nav aria-label={messages.tenants.choose} className="grid gap-4 sm:grid-cols-2">
         {tenants.map(({ code, name }) => (
@@ -59,19 +59,29 @@ async function AdminContent() {
           </Link>
         ))}
       </nav>
-      <Card>
-        <CardHeader>
-          <CardTitle>{t.database}</CardTitle>
-          <CardDescription className="font-mono">{status.databasePath}</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          <Badge variant="secondary">{t.migrationsApplied(status.appliedMigrations)}</Badge>
-          <Badge variant={status.pendingMigrations ? "destructive" : "outline"}>
-            {t.migrationsPending(status.pendingMigrations)}
-          </Badge>
-          <Badge variant="outline">{t.settings(status.settings)}</Badge>
-        </CardContent>
-      </Card>
+      {user.role === "admin" && <DatabaseStatus t={t} />}
     </div>
+  );
+}
+
+/** Where the database lives and its migration state: system detail for the admin only. */
+async function DatabaseStatus({ t }: { t: Messages["admin"] }) {
+  const { systemStatusService } = (await requestScope()).cradle;
+  const status = await systemStatusService.getStatus();
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t.database}</CardTitle>
+        <CardDescription className="font-mono">{status.databasePath}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-wrap gap-2">
+        <Badge variant="secondary">{t.migrationsApplied(status.appliedMigrations)}</Badge>
+        <Badge variant={status.pendingMigrations ? "destructive" : "outline"}>
+          {t.migrationsPending(status.pendingMigrations)}
+        </Badge>
+        <Badge variant="outline">{t.settings(status.settings)}</Badge>
+      </CardContent>
+    </Card>
   );
 }

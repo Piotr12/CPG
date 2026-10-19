@@ -25,12 +25,25 @@ export const currentUser = cache(async (): Promise<SessionUser | null> => {
   }
 });
 
+/** Where every signed-in account lands, and where a normal user is sent from an admin-only page. */
+export const HOME_PATH = "/admin";
+
 /**
- * Gate for every `/admin` page: call it inside the `<Suspense>` child that renders the page's data,
- * so nothing is rendered for a visitor without an admin session. Redirects to sign-in otherwise.
+ * Gate for every `/admin` page any active account may see: call it inside the `<Suspense>` child
+ * that renders the page's data, so nothing renders without a session. Redirects to sign-in otherwise.
+ */
+export async function requireUser(): Promise<SessionUser> {
+  const user = await currentUser();
+  if (!user) redirect(SIGN_IN_PATH);
+  return user;
+}
+
+/**
+ * Gate for admin-only `/admin` pages (listed in `tests/admin-pages-require-admin.test.ts`), used
+ * like `requireUser()`. A signed-in normal user goes back to `/admin`; anyone else to sign-in.
  */
 export async function requireAdmin(): Promise<SessionUser> {
-  const user = await currentUser();
-  if (user?.role !== "admin") redirect(SIGN_IN_PATH);
+  const user = await requireUser();
+  if (user.role !== "admin") redirect(HOME_PATH);
   return user;
 }

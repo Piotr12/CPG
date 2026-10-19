@@ -32,7 +32,8 @@ export async function choosePreference(browser: Browser, value: string) {
  */
 export async function restoreDefaultPreferences(browser: Browser, baseUrl: string, password: string) {
   await browser.open(`${baseUrl}/admin`);
-  await browser.waitUntil(`document.querySelector("[data-slot=badge], #username")`);
+  // A boolean: returning the element itself makes agent-browser fail with "Object reference chain is too long".
+  await browser.waitUntil(`!!document.querySelector("[data-slot=badge], #username")`);
   if (new URL(await browser.url()).pathname === "/login") await signInAsAdmin(browser, baseUrl, password);
   await choosePreference(browser, "en");
   await choosePreference(browser, "light");
