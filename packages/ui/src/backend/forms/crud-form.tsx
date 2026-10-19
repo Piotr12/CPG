@@ -1,19 +1,25 @@
 "use client";
 
-import { useId, useState, useTransition, type FormEvent, type KeyboardEvent } from "react";
+import { useId, useState, useTransition, type ChangeEvent, type FormEvent, type KeyboardEvent } from "react";
 import { Button } from "../../components/button";
 import { Input } from "../../components/input";
 import { Label } from "../../components/label";
+import { NativeSelect, NativeSelectOption } from "../../components/native-select";
 import type { ApiResult, FieldErrors } from "../api/result";
 import { ErrorMessage } from "../feedback/error-message";
 
 export interface CrudField {
   name: string;
   label: string;
-  type?: "text" | "password";
+  /** `select` offers `options` in a native select (its keyboard and screen-reader behaviour for free). */
+  type?: "text" | "password" | "select";
   autoComplete?: string;
   /** A hint under the field, such as a length rule. */
   description?: string;
+  /** A select's choices, in order. */
+  options?: { value: string; label: string }[];
+  /** A select's unselectable first entry, shown while nothing is chosen ("Choose a type"). */
+  placeholder?: string;
 }
 
 /**
@@ -28,6 +34,8 @@ export interface FormSchema {
 
 export interface CrudFormProps<T> {
   fields: CrudField[];
+  /** What the fields start with, such as the record an edit form changes; others start empty. */
+  initialValues?: Record<string, string>;
   schema?: FormSchema;
   /** Usually a server action bound to the record; receives the field values by name. */
   action: (values: Record<string, string>) => Promise<ApiResult<T>>;
@@ -50,6 +58,7 @@ export interface CrudFormProps<T> {
  */
 export function CrudForm<T>({
   fields,
+  initialValues = {},
   schema,
   action,
   submitLabel,
@@ -62,7 +71,7 @@ export function CrudForm<T>({
 }: CrudFormProps<T>) {
   const id = useId();
   const [values, setValues] = useState<Record<string, string>>(() =>
-    Object.fromEntries(fields.map((field) => [field.name, ""])),
+    Object.fromEntries(fields.map((field) => [field.name, initialValues[field.name] ?? ""])),
   );
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -111,19 +120,34 @@ export function CrudForm<T>({
         const inputId = `${id}-${field.name}`;
         const errors = fieldErrors[field.name];
         const hintId = `${inputId}-hint`;
+        const control = {
+          id: inputId,
+          name: field.name,
+          value: values[field.name],
+          onChange: (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+            setValues((current) => ({ ...current, [field.name]: event.target.value })),
+          "aria-invalid": errors ? true : undefined,
+          "aria-describedby": errors || field.description ? hintId : undefined,
+        };
         return (
           <div key={field.name} className="flex flex-col gap-2">
             <Label htmlFor={inputId}>{field.label}</Label>
-            <Input
-              id={inputId}
-              name={field.name}
-              type={field.type ?? "text"}
-              autoComplete={field.autoComplete}
-              value={values[field.name]}
-              onChange={(event) => setValues((current) => ({ ...current, [field.name]: event.target.value }))}
-              aria-invalid={errors ? true : undefined}
-              aria-describedby={errors || field.description ? hintId : undefined}
-            />
+            {field.type === "select" ? (
+              <NativeSelect className="w-full" {...control}>
+                {field.placeholder !== undefined && (
+                  <NativeSelectOption value="" disabled>
+                    {field.placeholder}
+                  </NativeSelectOption>
+                )}
+                {field.options?.map((option) => (
+                  <NativeSelectOption key={option.value} value={option.value}>
+                    {option.label}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+            ) : (
+              <Input {...control} type={field.type ?? "text"} autoComplete={field.autoComplete} />
+            )}
             {errors ? (
               <p id={hintId} className="text-sm text-destructive">
                 {formatFieldError(errors[0])}
