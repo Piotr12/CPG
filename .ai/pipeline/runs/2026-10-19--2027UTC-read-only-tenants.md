@@ -1,0 +1,67 @@
+# Read-only tenants (#25) — execution plan
+
+Source doc: .ai/specs/2026-10-19--2018UTC-read-only-tenants.md
+Spec PR: #55 (design-only; this branch doesn't carry the spec file)
+Issue: #25
+Engine: om-auto-create-pr (steps: 10, --loop: no)
+
+## Goal
+
+Implement the spec. An admin-set read-only flag per tenant. While it is set, the server refuses every business write to that tenant, from the screens, the API and the startup seed (409 `TENANT_READ_ONLY`). Reads, the audit, account work and the flag itself keep working. The toggle is in the Global audit.
+
+## Scope
+
+- `db`: `Tenant.readOnly` plus the migration.
+- `core`:
+  - `TenantService.currentState`/`setReadOnly`, and `TenantInfo.readOnly`;
+  - `assertWritable`;
+  - the gate in `tenantServerAction` and `IdempotencyService`;
+  - the seed gate;
+  - the validator.
+- `app`:
+  - `PATCH /api/tenants/{tenant}`;
+  - the `/admin` Read-only card and its action;
+  - the strip's label;
+  - the materials controls hidden, plus a refresh after a refusal;
+  - i18n and help.
+- Repo tests: `api-writes` (the named exception), `tenant-entry-points` (tightened).
+- Docs: `BACKWARD_COMPATIBILITY.md` §4 and the acceptance statuses.
+- Integration tests: `read-only-api.test.ts` and `read-only.test.ts`.
+
+## Non-goals
+
+- Blocking MRP runs (TEN-019, slice 3).
+- The Test reset's override (slice 2).
+- A write-locked db scope (spec Q2, deferred).
+
+## Implementation Plan
+
+See the spec's Implementation Plan. Its Steps 1–10 map onto the Progress below.
+
+## Risks
+
+- **Schema (risk-high):** `kamal rollback` ignores `read_only`, so flags are not enforced while rolled back.
+- **Concurrency:** the toggle against an in-flight write is covered by a two-ORM test.
+
+## Progress
+
+> Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
+
+### Phase 1: The flag and the gate in core
+
+- [ ] 1.1 Schema: Tenant.readOnly and its migration
+- [ ] 1.2 assertWritable and TENANT_READ_ONLY
+- [ ] 1.3 TenantService: currentState, setReadOnly, readOnly in TenantInfo, seed gate
+- [ ] 1.4 Validator: tenant read-only schema
+- [ ] 1.5 The gate in tenantServerAction and IdempotencyService, tightened entry-point test
+
+### Phase 2: The API
+
+- [ ] 2.1 PATCH /api/tenants/{tenant}, readOnly in GET, BACKWARD_COMPATIBILITY
+- [ ] 2.2 API integration tests
+
+### Phase 3: The screens
+
+- [ ] 3.1 setTenantReadOnly action and the /admin Read-only card
+- [ ] 3.2 Tenant pages: strip label, hidden controls, refresh, i18n, help
+- [ ] 3.3 Screen integration test
