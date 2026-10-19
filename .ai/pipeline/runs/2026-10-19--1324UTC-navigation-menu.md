@@ -34,15 +34,30 @@ Every page shows one menu with the screens the current account can open (Users f
 
 The spec's Implementation Plan, steps 1–6, one Step each.
 
+## Deviations from the spec
+
+- `isCurrentPath` lives in its own dependency-free `current-path.ts`. `nav-items.ts` imports `@cpg/core`, and importing from it in the client menu broke the build.
+- The account button's accessible name comes from an `aria-label` ("Account: *name*") rather than a visually hidden prefix (see lessons).
+- The popover and the sheet are controlled and close on every path change, besides `SheetClose` on the sheet links. The bar keeps its state across navigations, and a popover left open covered the next page.
+- `data-action="account-menu"` and `data-action="open-menu"` mark the two triggers for integration tests, like the existing `data-action="sign-out"`.
+- `tests/integration/tenants.test.ts` now waits for hydration before clicking; the heavier bar made its early clicks get lost.
+- `nav.menu` is "Menu" in both languages, so `messages.test.ts` lists it next to the product name as a deliberate copy.
+
+## Verification
+
+Docker isn't available to this macOS account (see lessons), so the integration suite ran against `next start` of this branch with `CPG_BASE_URL`. Two full runs on a fresh database each: 71 passed, 1 skipped (`startup-guard` needs the Docker image). Lint, typecheck, `test:coverage` (756 tests, 100%) and `build` are green.
+
 ## Progress
+
+PR: #46
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Menu, account panel, homepage button
 
-- [ ] 1.1 UI primitives
-- [ ] 1.2 Entries and copy
-- [ ] 1.3 Account panel and menu
-- [ ] 1.4 Retire the per-page headers
-- [ ] 1.5 Homepage
-- [ ] 1.6 Integration
+- [x] 1.1 UI primitives — 510a0b1
+- [x] 1.2 Entries and copy — 34120f8
+- [x] 1.3 Account panel and menu — 34120f8, 19ead93, 93272ec
+- [x] 1.4 Retire the per-page headers — 34120f8
+- [x] 1.5 Homepage — 1df199c
+- [x] 1.6 Integration — 365750b
