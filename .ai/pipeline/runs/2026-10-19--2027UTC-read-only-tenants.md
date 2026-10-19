@@ -51,12 +51,16 @@ See the spec's Implementation Plan. Its Steps 1–10 map onto the Progress below
 ## Verification
 
 - `npm run lint`, `npm run typecheck`: pass.
-- `npm run test:coverage`: 177 files, 1148 tests, 100% coverage.
+- `npm run test:coverage`: 177 files, 1149 tests, 100% coverage (at 7a9ea73).
 - `npm run build`: pass.
-- `npm run test:integration` (Docker, production image): 18 files, 115 tests pass.
+- `npm run test:integration` (Docker, production image): 18 files, 116 tests pass (at 7a9ea73).
+- A fresh-context code review approved, with six Low findings, all fixed in 7a9ea73.
+- UI evidence from the production image is on the PR.
 - `npm audit`: not re-run, because no dependency changed (`package.json`/`package-lock.json` untouched).
 
 ## Progress
+
+PR: #57
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
