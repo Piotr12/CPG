@@ -56,6 +56,8 @@ Follows the spec's Implementation Plan, Steps 1–9, unchanged.
 
 ## Progress
 
+PR: #29
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Startup guard
