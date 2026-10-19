@@ -4,6 +4,7 @@ import * as core from "./index";
 describe("@cpg/core", () => {
   it("exports the public API", () => {
     expect(Object.keys(core).sort()).toEqual([
+      "ApiTokenService",
       "AppError",
       "AuthService",
       "BUILT_IN_ADMIN_USERNAME",
@@ -12,6 +13,7 @@ describe("@cpg/core", () => {
       "ForbiddenError",
       "INTERNAL_ERROR",
       "INVALID_CREDENTIALS",
+      "LAST_USED_RESOLUTION_MS",
       "LOCALES",
       "LoginThrottle",
       "MAX_BUCKETS",
@@ -27,6 +29,8 @@ describe("@cpg/core", () => {
       "TENANT_NAMES",
       "THEMES",
       "THROTTLE_WINDOW_MS",
+      "TOKEN_NAME_TAKEN",
+      "TOKEN_NOT_FOUND",
       "TenantService",
       "TooManyRequestsError",
       "UNKNOWN_CLIENT",

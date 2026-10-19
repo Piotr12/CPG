@@ -9,6 +9,8 @@ export * from "./http/errors";
 export * from "./http/result";
 export * from "./http/server-action";
 export * from "./http/tenant-server-action";
+export * from "./services/api-tokens/api-token.service";
+export * from "./services/auth/actor";
 export * from "./services/auth/auth.service";
 export * from "./services/auth/login-throttle";
 export * from "./services/preferences/user-preference.service";

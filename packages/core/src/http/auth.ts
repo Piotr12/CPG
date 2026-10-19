@@ -1,14 +1,17 @@
-import type { SessionUser } from "../services/auth/auth.service";
+import type { Actor } from "../services/auth/actor";
 import { ForbiddenError, UnauthorizedError } from "./errors";
 
-/** The signed-in user, or `UnauthorizedError` when there is none. For actions and routes. */
-export function assertSignedIn(user: SessionUser | null): SessionUser {
+/**
+ * The signed-in actor (a session or an API token), or `UnauthorizedError` when there is none. For
+ * actions and routes.
+ */
+export function assertSignedIn<A extends Actor>(user: A | null): A {
   if (!user) throw new UnauthorizedError();
   return user;
 }
 
-/** The signed-in admin, `UnauthorizedError` without a session, `ForbiddenError` for anyone else. */
-export function assertAdmin(user: SessionUser | null): SessionUser {
+/** The admin, `UnauthorizedError` without a credential, `ForbiddenError` for anyone else. */
+export function assertAdmin<A extends Actor>(user: A | null): A {
   const signedIn = assertSignedIn(user);
   if (signedIn.role !== "admin") throw new ForbiddenError();
   return signedIn;

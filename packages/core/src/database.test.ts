@@ -24,6 +24,7 @@ describe("migrateDatabase", () => {
       "Migration20261019090456_user_preferences",
       "Migration20261019092708_tenants",
       "Migration20261019103355_users_password_active",
+      "Migration20261019110425_api_tokens",
     ]);
     expect(await migrateDatabase(config)).toEqual([]);
   });

@@ -1,6 +1,7 @@
 import type { EntityManager, Orm } from "@cpg/db";
 import type { AwilixContainer } from "awilix";
 import type { AppConfig } from "../config";
+import type { ApiTokenService } from "../services/api-tokens/api-token.service";
 import type { AuthService } from "../services/auth/auth.service";
 import type { LoginThrottle } from "../services/auth/login-throttle";
 import type { UserPreferenceService } from "../services/preferences/user-preference.service";
@@ -20,6 +21,7 @@ export interface Cradle {
   userService: UserService;
   userPreferenceService: UserPreferenceService;
   tenantService: TenantService;
+  apiTokenService: ApiTokenService;
   /** The active tenant. Only in scopes built by `tenantScope()`. */
   tenant: TenantInfo;
 }

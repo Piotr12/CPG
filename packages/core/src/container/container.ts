@@ -2,6 +2,7 @@ import { entities, initOrm, type Orm } from "@cpg/db";
 import { asClass, asFunction, asValue, createContainer, InjectionMode } from "awilix";
 import { loadConfig, type AppConfig } from "../config";
 import { toDbOptions } from "../database";
+import { ApiTokenService } from "../services/api-tokens/api-token.service";
 import { AuthService } from "../services/auth/auth.service";
 import { LoginThrottle } from "../services/auth/login-throttle";
 import { UserPreferenceService } from "../services/preferences/user-preference.service";
@@ -30,6 +31,7 @@ export function createAppContainer(config: AppConfig, orm: Orm): AppContainer {
     userService: asClass(UserService).scoped(),
     userPreferenceService: asClass(UserPreferenceService).scoped(),
     tenantService: asClass(TenantService).scoped(),
+    apiTokenService: asClass(ApiTokenService).scoped(),
     // `tenant` is registered only by tenantScope(): resolving it from a global scope fails (strict).
   });
   return container;
