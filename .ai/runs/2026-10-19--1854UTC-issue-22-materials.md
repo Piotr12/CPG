@@ -3,7 +3,7 @@
 **Date:** 2026-10-19 18:54 UTC
 **Agent:** Claude Code (Opus 5.5) via cezar, `om-auto-fix-issue 22` → `om-auto-write-spec 22` → `om-spec-writing --autonomous`
 **Spec:** `.ai/specs/2026-10-19--1858UTC-materials.md` (written in this run)
-**Status:** in progress
+**Status:** done (spec PR #49 draft; implementation on #50)
 
 ## Goal
 
@@ -23,8 +23,15 @@
   - Q9 (unaudited seed, against AUD-001) and the new Q13 (the `materials` naming fixes API paths; brief Q04 is open) carry ⚠.
   - `native-select` through the shadcn CLI; the seed through `scopeForTenant(createAppContainer(config, orm), "test")`; sequential seed IDs; the audit subject pinned; deactivation as its own audit action; "< 0.000001" for a zero inverse; API integration tests in Phase 2; the new routes go into `BACKWARD_COMPATIBILITY.md`.
 
+- 19:15 Opened the spec PR #49 as a draft (three ⚠ assumptions), with labels, the visual evidence, the defaults table (also posted on #22) and the summary. Handed the issue lock to the implementation.
+- 19:09–19:55 Implemented on `feat/materials` (#50); the plan and its deviations are in `.ai/pipeline/runs/2026-10-19--1909UTC-materials.md`. A fresh-context code review approved, and its six Low findings were fixed. Released the issue lock.
+
 ## Changes
+- `.ai/specs/2026-10-19--1858UTC-materials.md` (the spec) and `.ai/specs/assets/materials/` (one current screenshot, three mockups with their HTML).
 
 ## Verification
+- `npx vitest run tests/ai-filenames.test.ts` passes. This PR is docs only; the implementation PR #50 ran the full gate.
 
 ## Follow-ups
+- The owner confirms Q5, Q9 and Q13 on #49, then merges it. #50 then moves the spec to `implemented/`.
+- #26's spec must store the `toBaseQuantity` record (spec Q5), and #44 decides whether the demo seed gets a system actor (spec Q9).
