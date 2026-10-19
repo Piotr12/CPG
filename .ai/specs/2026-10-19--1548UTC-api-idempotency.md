@@ -379,3 +379,19 @@ Nothing is superseded.
     Use usernames unique to this file (`idem-*`), per `lessons.md`. Then run the full gate: lint, typecheck, `test:coverage` (100%), build, `test:integration`. There is no new dependency.
 
 API-024 (tenant isolation of keys) and API-033/API-034 (generation) are unit-tested in steps 2 and 4 against real SQLite. Their API-level integration tests arrive with the first tenant write route, materials in #22.
+
+## Implementation notes
+
+Implemented on PR #48. These deviations from the text above are deliberate:
+
+- **The key's writes come last (Q6).** The design above has the purge run first, to take SQLite's write lock before any read. That deadlocked: better-sqlite3 waits for a lock synchronously, which blocks Node's event loop, so a second connection in the same process (another Next.js bundle) stalls everything while the lock is held across the handler's argon2 await. So:
+  - `IdempotencyService.run` reads first, and does the purge and the key insert last.
+  - The lookup ignores expired records itself.
+  - A lost race rolls back and tries once more, and the second attempt replays. A lost race is either a unique violation on the key, or a stale snapshot (`SQLITE_BUSY_SNAPSHOT`, which fails at once).
+  - A real lock timeout is not retried and answers 500.
+- **`run`, not `execute`.** ESLint bans `.execute(` as the raw-SQL entry point.
+- **`apiWrite(handler, { authorize })`.** The admin routes check the role before the key, the body and any argon2 fingerprint, so a normal user's token can't make the server hash.
+- **The write's own changes are flushed before the key is inserted**, so a handler's unique violation stays its own error, not a lost key race.
+- **`tenantServerAction` checks the generation after parsing the input**, not before. It still runs before the handler, inside its transaction, and a malformed form keeps its field errors.
+- **API body schemas** are `resetPasswordBodySchema` and `setUserActiveBodySchema` next to the action schemas, not a separate `user-api.schema.ts`. `versionSchema` sits in `validators/users/` until #22 needs it elsewhere.
+- **A malformed `Dataset-Generation` is 428 in either tenant**, not only in Test.
