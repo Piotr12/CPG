@@ -117,6 +117,32 @@ describe("named API tokens", () => {
     expect((await api("/api/tenants", secrets.omar)).status).toBe(200);
   });
 
+  it("keeps every Revoke in view with the longest name, on a desktop and on a phone", async () => {
+    const longest = "Nightly-ERP-export-for-the-Jozefoslaw-plant-scheduler-bot-v2-oka";
+    expect(longest).toHaveLength(64);
+    const longSecret = await createToken(tara, longest);
+    /** Whether every row's Revoke sits inside the table's box and the window, with no sideways scroll. */
+    const revokeInView = () =>
+      tara.evaluate<boolean>(`(() => {
+        const box = document.querySelector("table").parentElement;
+        const edge = Math.min(box.getBoundingClientRect().right, window.innerWidth);
+        const buttons = [...document.querySelectorAll("tbody button")];
+        return buttons.length === 3 && box.scrollWidth <= box.clientWidth &&
+          buttons.every((button) => button.getBoundingClientRect().right <= edge);
+      })()`);
+
+    try {
+      await tara.setViewport(1100, 760);
+      expect(await revokeInView()).toBe(true);
+      await tara.setViewport(390, 844);
+      expect(await revokeInView()).toBe(true);
+    } finally {
+      await tara.setViewport(1280, 720);
+    }
+    const id = ((await api("/api/tokens", longSecret)).body.data as TokenRow[]).find((t) => t.name === longest)!.id;
+    expect((await api(`/api/tokens/${id}`, longSecret, "DELETE")).status).toBe(200);
+  });
+
   it("revokes only the caller's own token through the API, at once, leaving the other working (API-008, API-007)", async () => {
     const listed = (await api("/api/tokens", secrets.agent2)).body.data as TokenRow[];
     expect(listed.map((token) => token.name)).toEqual(["agent2", "agent1"]);

@@ -23,6 +23,17 @@ describe("TokensTable", () => {
     expect(screen.getByRole("button", { name: "Revoke build" })).toBeTruthy();
   });
 
+  it("lets names and dates wrap, and drops Created on narrow screens, so Revoke stays in view", () => {
+    render(<TokensTable tokens={tokens} labels={tokensLabels(en)} />);
+
+    const [name, created, lastUsed, actions] = within(screen.getAllByRole("row")[1]).getAllByRole("cell");
+    expect(name.className).toMatch(/\bwhitespace-normal\b.*\bwrap-anywhere\b/);
+    expect(created.className).toMatch(/\bhidden sm:table-cell\b/);
+    expect(screen.getByRole("columnheader", { name: "Created" }).className).toMatch(/\bhidden sm:table-cell\b/);
+    expect(lastUsed.className).toMatch(/\bwhitespace-normal\b/);
+    expect(actions.className).toMatch(/\bwhitespace-nowrap\b/);
+  });
+
   it("says when there are no tokens", () => {
     render(<TokensTable tokens={[]} labels={tokensLabels(en)} />);
 

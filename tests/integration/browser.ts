@@ -46,6 +46,8 @@ export function openBrowser() {
      */
     waitUntil: (expression: string) => command("wait", "--fn", `Boolean(${expression})`),
     url: () => command("get", "url"),
+    /** Resizes the page, e.g. to a phone's width. */
+    setViewport: (width: number, height: number) => command("set", "viewport", String(width), String(height)),
     /** The browser's cookies for the current page, including httpOnly ones. */
     cookies: async () =>
       (JSON.parse(await command("--json", "cookies", "get")) as { data: { cookies: Cookie[] } }).data.cookies,
