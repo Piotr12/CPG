@@ -69,6 +69,18 @@ Implement E01-S04 as the spec describes:
 - **The migration** is additive. The PR is `risk-high` and needs a rollback note.
 - **Polish copy** is agent-written and needs a native-speaker review on the PR.
 
+## Verification
+
+The full gate passed on 2026-10-19 at 295b9a6:
+
+- `npm run lint`: 0.
+- `npm run typecheck`: 0.
+- `npm run test:coverage`: 290 tests, 100% lines, branches, functions and statements.
+- `npm run build`: 0. `/`, `/login`, `/admin` and `/help` are all partial prerenders.
+- `npm run test:integration`: 7 files and 29 tests against the production image.
+
+A manual browser check of `/admin` in Polish and dark (against `next start`) matched mockup 02.
+
 ## Implementation notes
 
 - **Commits.** Steps 3.1–3.3 landed in one commit (838d9de), and so did 4.1–4.2 (92923ff). Their tests and wiring were interdependent, and each commit leaves the app working and fully covered.
@@ -78,6 +90,8 @@ Implement E01-S04 as the spec describes:
 - **Hydration race.** Clicking a switch before React hydrated it was lost. `choosePreference` waits for hydration first. Both points are recorded in `.ai/lessons.md`.
 
 ## Progress
+
+PR: #32
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
@@ -101,4 +115,4 @@ Implement E01-S04 as the spec describes:
 
 - [x] 4.1 Topics and search — 92923ff
 - [x] 4.2 /help page and the Help link — 92923ff
-- [ ] 4.3 Docs and the gate
+- [x] 4.3 Docs and the gate — 295b9a6
