@@ -81,3 +81,12 @@ PR: #60
 - [x] 2.1 Lock on the switch — 62a8850
 - [x] 2.2 Banner — 62a8850
 - [x] 2.3 Integration — 62a8850
+
+## Review
+
+`om-auto-review-pr 60 --autofix` (Claude Code / claude-opus-5-5), 2026-10-19:
+- Full gate on 2011a57: lint, typecheck, test:coverage (212 files, 1368 tests, 100 %), build, test:integration (20 files, 145 tests) all pass.
+- Minor, fixed: a Master data or Administration group that held the current page ignored a click to fold it, yet remembered the fold and collapsed on a later, unrelated navigation. `TreeGroup` now opens a group whenever it holds the current page and leaves it open afterwards; regression test in `sidebar-nav.test.tsx` (fails on 2011a57).
+- Nit, fixed: the `nav.readOnly` doc comment described a visually hidden span; the string is now in the locked side's `aria-label`.
+- Nit, accepted: sidebar entries carry no `title` (spec: "longer labels truncate with a `title`"). Every current label fits at 16 rem in Polish (`navigation.test.ts` overflow check), and in the rail the tooltip names each entry, so a `title` would only double it. Revisit when a label truncates.
+- After the fix: lint, typecheck, test:coverage (212 files, 1369 tests, 100 %) and build pass; the change is confined to one client component, so integration was not re-run.

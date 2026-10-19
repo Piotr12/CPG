@@ -288,6 +288,9 @@ function TreeGroup({ group, tenant, pathname, isRail, locale, onNavigate }: { gr
   const [isOpen, setOpen] = useState(true);
   const Icon = ICONS[group.id];
   const currentEntry = group.children.find((entry) => isCurrentLeaf(entry, tenant, pathname));
+  // A group that holds the current page is open, and stays open after the page changes: folding it
+  // then would be ignored now and only take effect on a later, unrelated navigation.
+  if (currentEntry !== undefined && !isOpen) setOpen(true);
 
   if (isRail) {
     return (
@@ -315,7 +318,7 @@ function TreeGroup({ group, tenant, pathname, isRail, locale, onNavigate }: { gr
   }
 
   return (
-    <Collapsible asChild open={currentEntry !== undefined || isOpen} onOpenChange={setOpen} className="group/collapsible">
+    <Collapsible asChild open={isOpen} onOpenChange={setOpen} className="group/collapsible">
       <SidebarMenuItem>
         <CollapsibleTrigger asChild>
           <SidebarMenuButton data-group={group.id}>

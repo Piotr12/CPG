@@ -149,6 +149,22 @@ describe("SidebarNav on a desktop", () => {
     expect(menu().queryByRole("link", { name: "Users" })).toBeNull();
   });
 
+  it("opens a folded group once it holds the current page, and doesn't fold it when the page moves on", () => {
+    const view = renderAt("/admin/test/audit");
+    const masterData = () => menu().getByRole("button", { name: /Master data/ });
+    fireEvent.click(masterData());
+    expect(masterData().getAttribute("aria-expanded")).toBe("false");
+
+    view.navigate("/admin/test/locations");
+    expect(masterData().getAttribute("aria-expanded")).toBe("true");
+    // Folding the group that holds the current page is ignored now, and not deferred to later.
+    fireEvent.click(masterData());
+    view.navigate("/admin/test/audit");
+
+    expect(masterData().getAttribute("aria-expanded")).toBe("true");
+    expect(menu().getByRole("link", { name: "Locations" })).toBeTruthy();
+  });
+
   it("on a shared page, says the page is shared and lets the switch re-target the tree without navigating (Q7)", () => {
     renderAt("/admin/users");
 

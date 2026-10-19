@@ -545,7 +545,7 @@ export const en = {
     menuShows: (name: string) => `Menu shows: ${name}`,
     sharedNote: "This page is shared by Test and Prod",
     trail: "You are here",
-    /** A read-only tenant (R05): visually hidden next to the switch's lock, its caption, and the banner on its pages. */
+    /** A read-only tenant (R05): the locked side's accessible name ("Prod (read-only)"), its caption, and the banner on its pages. */
     readOnly: "read-only",
     readOnlyCaption: "Read-only — business changes are blocked",
     readOnlyBanner: {
