@@ -34,11 +34,11 @@ describe("setTenantReadOnly", () => {
   });
   afterEach(() => vi.clearAllMocks());
 
-  it("sets the flag as the signed-in admin and refreshes every admin page", async () => {
+  it("sets the flag as the signed-in admin and refreshes Cave control only", async () => {
     await expect(setTenantReadOnly({ tenant: "prod", readOnly: true })).resolves.toEqual({ ok: true, data: prod });
 
     expect(mocks.tenantService.setReadOnly).toHaveBeenCalledWith("prod", true, adminActor);
-    expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin", "layout");
+    expect(mocks.revalidatePath.mock.calls).toEqual([["/admin"]]);
   });
 
   it("runs the write through the stale-snapshot retry the tenant writes use", async () => {
