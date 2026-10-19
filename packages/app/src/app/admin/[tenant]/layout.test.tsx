@@ -15,6 +15,9 @@ vi.mock("@cpg/core", () => ({
   tenantCodeSchema: z.enum(["test", "prod"]),
 }));
 vi.mock("next/navigation", () => ({ notFound: mocks.notFound }));
+vi.mock("../../../components/tenants/read-only-banner", () => ({
+  ReadOnlyBanner: ({ tenant }: { tenant: string }) => <div data-testid="read-only-banner" data-tenant={tenant} />,
+}));
 vi.mock("../../../components/tenants/tenant-header", () => ({
   TenantHeader: ({ scope }: { scope: string }) => {
     mocks.tenantHeader(scope);
@@ -31,12 +34,15 @@ describe("TenantLayout", () => {
     expect(generateStaticParams()).toEqual([{ tenant: "test" }, { tenant: "prod" }]);
   });
 
-  it("puts the tenant's header row above the page", async () => {
+  it("puts the tenant's header row, then its read-only banner slot, above the page", async () => {
     render(await TenantLayout({ children: <p>page</p>, params: params("prod") }));
 
     const header = screen.getByTestId("tenant-header");
+    const banner = screen.getByTestId("read-only-banner");
     expect(header.dataset.tenant).toBe("prod");
-    expect(header.compareDocumentPosition(screen.getByText("page")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(banner.dataset.tenant).toBe("prod");
+    expect(header.compareDocumentPosition(banner) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(banner.compareDocumentPosition(screen.getByText("page")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("prefixes every page title with the tenant", async () => {

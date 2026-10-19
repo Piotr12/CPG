@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { LockIcon } from "lucide-react";
 import { TENANT_CODES, type TenantCode } from "@cpg/core/validators/tenants/tenant-code.schema";
 import { cn } from "@cpg/ui/lib/utils";
 import { switchTenantPath } from "./switch-tenant-path";
@@ -25,6 +26,9 @@ interface TenantSwitchProps {
   /** The group's accessible name: "Tenant: Test" on a tenant page, "Menu shows: Test" elsewhere (Q7). */
   label: string;
   names: Record<TenantCode, string>;
+  /** Which tenants are read-only now (R05): their side shows a lock, with `readOnlyLabel` in their accessible name. */
+  readOnly: Record<TenantCode, boolean>;
+  readOnlyLabel: string;
   /** On a page outside any tenant, which tenant the menu should target from now on. */
   onChoose: (tenant: TenantCode) => void;
   /** Mobile top bar: a narrower switch. */
@@ -39,7 +43,18 @@ interface TenantSwitchProps {
  * than another tenant's record. On a page that belongs to no tenant the page stays put: each side is
  * an `aria-pressed` toggle that re-targets the menu.
  */
-export function TenantSwitch({ tenant, pathname, isTenantPage, label, names, onChoose, compact = false, onNavigate }: TenantSwitchProps) {
+export function TenantSwitch({
+  tenant,
+  pathname,
+  isTenantPage,
+  label,
+  names,
+  readOnly,
+  readOnlyLabel,
+  onChoose,
+  compact = false,
+  onNavigate,
+}: TenantSwitchProps) {
   return (
     <div
       role="group"
@@ -53,20 +68,29 @@ export function TenantSwitch({ tenant, pathname, isTenantPage, label, names, onC
     >
       {TENANT_CODES.map((code) => {
         const isCurrent = code === tenant;
-        const className = cn(OPTION, isCurrent ? PRESSED[code] : "text-muted-foreground");
+        const className = cn(OPTION, "gap-1", isCurrent ? PRESSED[code] : "text-muted-foreground");
+        const content = (
+          <>
+            {readOnly[code] && <LockIcon aria-hidden data-read-only className="size-3 shrink-0 group-data-[collapsible=icon]:hidden" />}
+            {names[code]}
+          </>
+        );
+        // The name keeps the visible tenant name first, so what a reader sees is what is announced (WCAG 2.5.3).
+        const name = readOnly[code] ? `${names[code]} (${readOnlyLabel})` : undefined;
         return isTenantPage ? (
           <Link
             key={code}
             href={switchTenantPath(pathname, code)}
             aria-current={isCurrent ? "page" : undefined}
+            aria-label={name}
             onClick={onNavigate}
             className={className}
           >
-            {names[code]}
+            {content}
           </Link>
         ) : (
-          <button key={code} type="button" aria-pressed={isCurrent} onClick={() => onChoose(code)} className={className}>
-            {names[code]}
+          <button key={code} type="button" aria-pressed={isCurrent} aria-label={name} onClick={() => onChoose(code)} className={className}>
+            {content}
           </button>
         );
       })}

@@ -12,6 +12,11 @@ const mocks = vi.hoisted(() => ({
   documentPreferences: vi.fn(),
   sidebarNav: vi.fn(),
   visitorBar: vi.fn(),
+  listTenants: vi.fn(),
+}));
+vi.mock("@cpg/core", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@cpg/core")>()),
+  requestScope: async () => ({ cradle: { tenantService: { list: mocks.listTenants } } }),
 }));
 vi.mock("next/server", () => ({ connection: mocks.connection }));
 vi.mock("../../app/admin/actions", () => ({ signOut: vi.fn(), updatePreferences: vi.fn() }));
@@ -39,6 +44,10 @@ vi.mock("./visitor-bar", () => ({
 }));
 
 function as(user: object | null, locale: "en" | "pl", theme: "light" | "dark") {
+  mocks.listTenants.mockResolvedValue([
+    { code: "test", name: "Test", generation: 1, readOnly: false },
+    { code: "prod", name: "Prod", generation: 1, readOnly: true },
+  ]);
   mocks.currentUser.mockResolvedValue(user);
   mocks.currentPreferences.mockResolvedValue({ locale, theme });
   mocks.getMessages.mockResolvedValue({ locale, messages: locale === "en" ? en : pl });
@@ -57,6 +66,7 @@ describe("AppSidebar", () => {
     expect(mocks.visitorBar).not.toHaveBeenCalled();
     const props = mocks.sidebarNav.mock.calls[0][0];
     expect(props.locale).toBe("pl");
+    expect(props.readOnly).toEqual({ test: false, prod: true });
     expect(props.model.shared.map((item: { id: string }) => item.id)).toEqual(["globalAudit", "help"]);
     expect(props.model.tenant[0].label).toBe("Przegląd");
     expect(props.account).toMatchObject({ name: "alice", role: "Użytkownik" });
@@ -71,6 +81,8 @@ describe("AppSidebar", () => {
       tenantSwitch: { test: "Środowisko: Test", prod: "Środowisko: Prod" },
       menuShows: { test: "Menu pokazuje: Test", prod: "Menu pokazuje: Prod" },
       captions: { test: "Dane demonstracyjne, można bezpiecznie eksperymentować", prod: "Dane rzeczywiste" },
+      readOnly: "tylko do odczytu",
+      readOnlyCaption: "Tylko do odczytu — zmiany biznesowe są zablokowane",
     });
     // The account card's popover holds the account's own controls.
     const panel = within(screen.getByTestId("sidebar"));
@@ -96,6 +108,8 @@ describe("AppSidebar", () => {
 
     expect(screen.getByTestId("visitor-bar")).toBeTruthy();
     expect(mocks.sidebarNav).not.toHaveBeenCalled();
+    // A visitor's bar needs no tenant metadata.
+    expect(mocks.listTenants).not.toHaveBeenCalled();
     expect(mocks.visitorBar).toHaveBeenCalledWith({ locale: "en", labels: { menu: "Menu", help: "Help", signIn: "Sign in" } });
     expect(mocks.documentPreferences).toHaveBeenCalledWith({ locale: "en", theme: "light", isSignedIn: false });
   });

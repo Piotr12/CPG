@@ -37,6 +37,8 @@ const labels: SidebarLabels = {
   tenantSwitch: { test: "Tenant: Test", prod: "Tenant: Prod" },
   menuShows: { test: "Menu shows: Test", prod: "Menu shows: Prod" },
   captions: { test: "Demonstration data, safe to experiment", prod: "Live data" },
+  readOnly: "read-only",
+  readOnlyCaption: "Read-only — business changes are blocked",
 };
 const account = { name: "alice", role: "Administrator", panel: <button type="button">Sign out</button> };
 
@@ -55,22 +57,24 @@ function viewport(width: number) {
   window.matchMedia = vi.fn().mockReturnValue({ addEventListener: vi.fn(), removeEventListener: vi.fn() });
 }
 
-const tree = (role: "admin" | "user") => (
+const WRITABLE = { test: false, prod: false };
+
+const tree = (role: "admin" | "user", readOnly = WRITABLE) => (
   <TooltipProvider>
     <SidebarProvider>
-      <SidebarNav model={navModel({ role }, en.nav)} labels={labels} account={account} locale="en" />
+      <SidebarNav model={navModel({ role }, en.nav)} labels={labels} readOnly={readOnly} account={account} locale="en" />
     </SidebarProvider>
   </TooltipProvider>
 );
 
-function renderAt(pathname: string, role: "admin" | "user" = "admin") {
+function renderAt(pathname: string, role: "admin" | "user" = "admin", readOnly = WRITABLE) {
   mocks.pathname = pathname;
-  const view = render(tree(role));
+  const view = render(tree(role, readOnly));
   return {
     ...view,
     navigate(to: string) {
       mocks.pathname = to;
-      view.rerender(tree(role));
+      view.rerender(tree(role, readOnly));
     },
   };
 }
@@ -170,6 +174,22 @@ describe("SidebarNav on a desktop", () => {
     expect(currentEntries()).toEqual(["Global audit"]);
     expect(tenantSwitch("Menu shows: Prod")).toBeTruthy();
     expect(hrefOf("Overview")).toBe("/admin/prod");
+  });
+
+  it("locks a read-only tenant's side of the switch and says so in the caption on its pages (R05)", () => {
+    const view = renderAt("/admin/prod/materials", "admin", { test: false, prod: true });
+
+    const group = tenantSwitch("Tenant: Prod");
+    expect(group.getByRole("link", { name: "Prod (read-only)" }).getAttribute("aria-current")).toBe("page");
+    expect(group.getByRole("link", { name: "Test" })).toBeTruthy();
+    expect(menu().getByText("Read-only — business changes are blocked")).toBeTruthy();
+    expect(menu().queryByText("Live data")).toBeNull();
+
+    // A writable tenant keeps its own caption; a shared page keeps the shared note.
+    view.navigate("/admin/test/materials");
+    expect(menu().getByText("Demonstration data, safe to experiment")).toBeTruthy();
+    view.navigate("/admin/users");
+    expect(menu().getByText("This page is shared by Test and Prod")).toBeTruthy();
   });
 
   it("marks only Tenants on /admin, which prefixes every page", () => {

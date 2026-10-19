@@ -1,5 +1,5 @@
 import { connection } from "next/server";
-import { TENANT_CODES, TENANT_NAMES, type TenantCode } from "@cpg/core";
+import { requestScope, TENANT_CODES, TENANT_NAMES, type TenantCode } from "@cpg/core";
 import { currentUser } from "../../auth/require-admin";
 import { getMessages } from "../../i18n/get-messages";
 import type { Messages } from "../../i18n/messages/en";
@@ -37,7 +37,18 @@ function sidebarLabels({ nav, tenants }: Messages): SidebarLabels {
     tenantSwitch: perTenant(nav.tenantSwitch),
     menuShows: perTenant(nav.menuShows),
     captions: tenants.description,
+    readOnly: nav.readOnly,
+    readOnlyCaption: nav.readOnlyCaption,
   };
+}
+
+/**
+ * Which tenants are read-only now (R05): one read of the global tenant metadata per render, through
+ * the service. The sidebar sits outside the tenant entry points, so it never opens a tenant itself.
+ */
+async function readOnlyTenants(): Promise<Record<TenantCode, boolean>> {
+  const tenants = await (await requestScope()).cradle.tenantService.list();
+  return Object.fromEntries(tenants.map(({ code, readOnly }) => [code, readOnly])) as Record<TenantCode, boolean>;
 }
 
 /**
@@ -65,6 +76,7 @@ export async function AppSidebar() {
       <SidebarNav
         model={navModel(user, messages.nav)}
         labels={sidebarLabels(messages)}
+        readOnly={await readOnlyTenants()}
         account={{
           name: user.username,
           role: messages.nav.roles[user.role],

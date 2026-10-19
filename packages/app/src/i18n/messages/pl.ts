@@ -479,7 +479,6 @@ export const pl: Messages = {
     },
     generation: (generation) => `Generacja zbioru danych: ${generation}`,
     readOnly: "Tylko do odczytu",
-    readOnlyStrip: "Danych biznesowych nie można zmieniać.",
   },
   nav: {
     menu: "Menu",
@@ -511,6 +510,13 @@ export const pl: Messages = {
     menuShows: (name) => `Menu pokazuje: ${name}`,
     sharedNote: "Ta strona jest wspólna dla Test i Prod",
     trail: "Jesteś tutaj",
+    readOnly: "tylko do odczytu",
+    readOnlyCaption: "Tylko do odczytu — zmiany biznesowe są zablokowane",
+    readOnlyBanner: {
+      title: (name) => `${name} jest tylko do odczytu`,
+      text: "zmiany biznesowe są zablokowane. Czytanie, audyt, preferencje i zarządzanie użytkownikami nadal działają.",
+      change: "Zmień w Środowiskach",
+    },
   },
   help: {
     heading: "Pomoc",

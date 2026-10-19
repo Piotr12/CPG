@@ -511,9 +511,8 @@ export const en = {
       global: "Shared by Test and Prod — switching tenant doesn't change this page",
     },
     generation: (generation: number) => `Dataset generation ${generation}`,
-    /** A read-only tenant, on its strip and on the chooser (R05). */
+    /** A read-only tenant on the chooser (R05). */
     readOnly: "Read-only",
-    readOnlyStrip: "Business data can't be changed.",
   },
   /** The sidebar every signed-in page shares, and the visitor bar (components/layout). Test and Prod are tenant names, never translated. */
   nav: {
@@ -546,6 +545,14 @@ export const en = {
     menuShows: (name: string) => `Menu shows: ${name}`,
     sharedNote: "This page is shared by Test and Prod",
     trail: "You are here",
+    /** A read-only tenant (R05): visually hidden next to the switch's lock, its caption, and the banner on its pages. */
+    readOnly: "read-only",
+    readOnlyCaption: "Read-only — business changes are blocked",
+    readOnlyBanner: {
+      title: (name: string) => `${name} is read-only`,
+      text: "business changes are blocked. Reading, the audit, preferences and user management still work.",
+      change: "Change on Tenants",
+    },
   },
   help: {
     heading: "Help",

@@ -12,6 +12,7 @@ import {
   GlobeIcon,
   HistoryIcon,
   HouseIcon,
+  LockIcon,
   MapPinIcon,
   MenuIcon,
   PackageIcon,
@@ -81,11 +82,15 @@ export interface SidebarLabels {
   tenantSwitch: Record<TenantCode, string>;
   menuShows: Record<TenantCode, string>;
   captions: Record<TenantCode, string>;
+  readOnly: string;
+  readOnlyCaption: string;
 }
 
 interface SidebarNavProps {
   model: NavModel;
   labels: SidebarLabels;
+  /** Which tenants are read-only now (R05), read once per render on the server. */
+  readOnly: Record<TenantCode, boolean>;
   /** The account card: name, role in words, and the popover's controls. */
   account: { name: string; role: string; panel: ReactNode };
   /** Popovers and the drawer render outside the sidebar, so they carry the language themselves. */
@@ -109,7 +114,7 @@ interface TreeContext {
  * current. It lives in the root layout, so it keeps its state across navigations: the remembered
  * tenant survives, and the drawer and the account popover close whenever the path changes.
  */
-export function SidebarNav({ model, labels, account, locale }: SidebarNavProps) {
+export function SidebarNav({ model, labels, readOnly, account, locale }: SidebarNavProps) {
   const pathname = usePathname();
   const pageTenant = tenantFromPath(pathname);
   const [remembered, setRemembered] = useState(pageTenant ?? DEFAULT_TENANT);
@@ -136,6 +141,16 @@ export function SidebarNav({ model, labels, account, locale }: SidebarNavProps) 
   const closeDrawer = () => setOpenMobile(false);
   const isRail = state === "collapsed" && !isMobile;
   const tree: TreeContext = { tenant, pathname, isRail, locale, onNavigate: closeDrawer };
+  const caption = !pageTenant ? (
+    labels.sharedNote
+  ) : readOnly[tenant] ? (
+    <>
+      <LockIcon aria-hidden className="mr-1 inline size-3 align-[-2px]" />
+      {labels.readOnlyCaption}
+    </>
+  ) : (
+    labels.captions[tenant]
+  );
   const brandHref = leafHref({ id: "overview", section: "", match: "exact" }, tenant);
 
   const tenantSwitch = (compact: boolean) => (
@@ -145,6 +160,8 @@ export function SidebarNav({ model, labels, account, locale }: SidebarNavProps) 
       isTenantPage={pageTenant !== null}
       label={(pageTenant ? labels.tenantSwitch : labels.menuShows)[tenant]}
       names={labels.tenantNames}
+      readOnly={readOnly}
+      readOnlyLabel={labels.readOnly}
       onChoose={setRemembered}
       compact={compact}
       onNavigate={closeDrawer}
@@ -184,7 +201,7 @@ export function SidebarNav({ model, labels, account, locale }: SidebarNavProps) 
             </div>
             {tenantSwitch(false)}
             <p className="px-1 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-              {pageTenant ? labels.captions[tenant] : labels.sharedNote}
+              {caption}
             </p>
           </SidebarHeader>
 
