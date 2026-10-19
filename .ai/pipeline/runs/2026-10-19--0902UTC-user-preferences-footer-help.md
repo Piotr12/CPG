@@ -75,7 +75,7 @@ Implement E01-S04 as the spec describes:
 
 ### Phase 1: Footer
 
-- [ ] 1.1 AppFooter on every page
+- [x] 1.1 AppFooter on every page — d123385
 
 ### Phase 2: Stored preferences
 
