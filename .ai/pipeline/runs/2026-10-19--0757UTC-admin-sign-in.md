@@ -91,13 +91,14 @@ Follows the spec's Implementation Plan, Steps 1–9, unchanged.
     - over-long credentials get the generic message;
     - the cookie uses `maxAge`;
     - `BACKWARD_COMPATIBILITY.md` and `CODE_REVIEW.md` are updated.
+- Re-review: every earlier finding was fixed, but there was one new major. The size cap could evict a blocked `account:admin` bucket under a many-IP flood. Fixed in 0e3b015: eviction drops only client buckets, unblocked ones first, and never the bucket just counted. Regression tests added.
 
 ## Verification
 
 - `npm run lint`, `npm run typecheck`: pass.
-- `npm run test:coverage`: 42 files, 179 tests, 100% coverage (after the review fixes).
+- `npm run test:coverage`: 42 files, 182 tests, 100% coverage (after the re-review fix).
 - `npm run build`: pass (`/admin` and `/login` partially prerendered).
-- `npm run test:integration` (Docker): 4 files and 15 tests pass:
+- `npm run test:integration` (Docker): 4 files and 15 tests pass. One run first failed with an agent-browser daemon error (`os error 35`) in unrelated tests and passed when rerun unchanged:
   - startup guard: the container exits without `CPG_ADMIN_PASSWORD`;
   - sign-in: redirect from `/admin`, generic error, `HttpOnly`, `Secure` and `Lax` cookie, `/login` → `/admin` once signed in, sign-out, throttling;
   - smoke test, signed in.
