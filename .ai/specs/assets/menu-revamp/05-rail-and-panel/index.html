@@ -1,0 +1,941 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CPG menu revamp — 05 Icon rail + contextual panel</title>
+<style>
+/* ---------- tokens (shadcn neutral, like the current app) ---------- */
+:root{
+  --bg:#fff;--fg:#252525;--muted:#737373;--border:#e5e5e5;--subtle:#fafafa;--card:#fff;--hover:#f4f4f5;
+  --primary:#252525;--primary-fg:#fff;--ring:#2563eb;--danger:#c0362c;--ok-bg:#f4f4f5;
+  --panel:#fafafa;--shadow:0 12px 32px rgba(0,0,0,.14),0 2px 6px rgba(0,0,0,.06);
+  --t-bg:#fde68a;--t-fg:#92400e;--t-edge:#f59e0b;--t-hover:rgba(146,64,14,.12);--t-on:rgba(146,64,14,.18);
+  --p-bg:#171717;--p-fg:#a3a3a3;--p-edge:#dc2626;--p-hover:rgba(255,255,255,.08);--p-on:rgba(255,255,255,.14);
+  --g-bg:#f4f4f5;--g-fg:#525252;
+  --ro-bg:#fef2f2;--ro-border:#fecaca;--ro-fg:#991b1b;
+}
+[data-theme=dark]{
+  --bg:#0a0a0a;--fg:#ededed;--muted:#a1a1a1;--border:#2a2a2a;--subtle:#141414;--card:#111;--hover:#1f1f1f;
+  --primary:#ededed;--primary-fg:#111;--ring:#60a5fa;--ok-bg:#1f1f1f;--panel:#111;--shadow:0 12px 32px rgba(0,0,0,.6);
+  --t-bg:#92400e;--t-fg:#fde68a;--t-edge:#f59e0b;--t-hover:rgba(253,230,138,.12);--t-on:rgba(253,230,138,.2);
+  --p-bg:#000;--p-fg:#a3a3a3;
+  --g-bg:#1a1a1a;--g-fg:#a3a3a3;
+  --ro-bg:#2a0e0e;--ro-border:#7f1d1d;--ro-fg:#fca5a5;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;background:var(--bg);color:var(--fg);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--ring);outline-offset:2px;border-radius:6px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:none}
+svg.s{width:16px;height:16px}
+
+/* ---------- shell ---------- */
+.app{display:flex;min-height:100vh}
+.maincol{flex:1;min-width:0;display:flex;flex-direction:column}
+
+/* ---------- rail ---------- */
+.rail{position:sticky;top:0;height:100vh;width:64px;flex:none;display:flex;flex-direction:column;align-items:center;padding:10px 0 10px;gap:2px;z-index:30}
+.app[data-ctx=test] .rail{background:var(--t-bg);color:var(--t-fg);box-shadow:inset -1px 0 0 var(--t-edge)}
+.app[data-ctx=prod] .rail{background:var(--p-bg);color:var(--p-fg);box-shadow:inset -3px 0 0 var(--p-edge)}
+.app[data-ctx=global] .rail{background:var(--g-bg);color:var(--g-fg);box-shadow:inset -1px 0 0 var(--border)}
+.tswitch{display:flex;flex-direction:column;align-items:center;gap:3px;margin-bottom:6px}
+.tchip{display:flex;padding:2px;gap:2px;border-radius:9px;background:rgba(0,0,0,.09)}
+.app[data-ctx=prod] .tchip{background:rgba(255,255,255,.1)}
+.tchip button{position:relative;width:24px;height:26px;border:0;border-radius:7px;background:transparent;font-weight:700;font-size:12px;cursor:pointer;color:inherit;opacity:.75}
+.tchip button:hover{opacity:1;background:rgba(127,127,127,.18)}
+.tchip button[aria-pressed=true]{opacity:1}
+.tchip button[data-t=test][aria-pressed=true]{background:#92400e;color:#fff}
+.tchip button[data-t=prod][aria-pressed=true]{background:#dc2626;color:#fff}
+.lk{position:absolute;bottom:-7px;right:-7px;font-size:10px;line-height:1;background:var(--bg);border-radius:6px;padding:1px;box-shadow:0 0 0 1px var(--border)}
+.tword{font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+[data-tip]{position:relative}
+[data-tip]:hover::after,[data-tip]:focus-visible::after{content:attr(data-tip);position:absolute;left:calc(100% + 12px);top:50%;transform:translateY(-50%);background:#171717;color:#fff;font-size:12px;font-weight:500;line-height:1.35;padding:6px 9px;border-radius:7px;white-space:nowrap;z-index:80;pointer-events:none;text-transform:none;letter-spacing:0}
+.rsep{width:32px;height:1px;background:currentColor;opacity:.2;margin:4px 0 6px}
+.rspacer{flex:1}
+.ritem{position:relative;width:60px;min-height:52px;border:0;border-radius:10px;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px 0;font-size:10.5px;line-height:1.15;text-align:center;cursor:pointer;color:inherit;text-decoration:none}
+.ritem .rl{max-width:60px;letter-spacing:-.01em}
+html[lang=pl] .ritem .rl{font-size:9.5px}
+.app[data-ctx=test] .ritem:hover{background:var(--t-hover)}
+.app[data-ctx=prod] .ritem:hover{background:var(--p-hover);color:#fff}
+.app[data-ctx=global] .ritem:hover{background:rgba(0,0,0,.06)}
+[data-theme=dark] .app[data-ctx=global] .ritem:hover{background:rgba(255,255,255,.08)}
+.ritem[aria-expanded=true],.ritem.here{font-weight:600}
+.app[data-ctx=test] .ritem[aria-expanded=true]{background:var(--t-on)}
+.app[data-ctx=prod] .ritem[aria-expanded=true]{background:var(--p-on);color:#fff}
+.app[data-ctx=global] .ritem[aria-expanded=true]{background:rgba(0,0,0,.08)}
+[data-theme=dark] .app[data-ctx=global] .ritem[aria-expanded=true]{background:rgba(255,255,255,.1)}
+.app[data-ctx=prod] .ritem.here{color:#fff}
+.ritem.here::before{content:"";position:absolute;left:-2px;top:12px;bottom:12px;width:3px;border-radius:0 3px 3px 0;background:currentColor}
+.av{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:12px;background:currentColor}
+.av b{color:var(--bg);font-weight:700}
+.app[data-ctx=test] .av b{color:var(--t-bg)}
+.app[data-ctx=prod] .av b{color:var(--p-bg)}
+
+/* ---------- contextual panel ---------- */
+.panel{position:sticky;top:0;height:100vh;width:240px;flex:none;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:25}
+.app:not(.pinned):not(.overlay) .panel{display:none}
+.app.overlay .panel{position:fixed;left:64px;top:0;bottom:0;height:auto;box-shadow:var(--shadow);animation:slide .12s ease-out}
+@keyframes slide{from{transform:translateX(-8px)}to{transform:none}}
+.ph{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:14px 12px 8px 16px}
+.ptitle{font-weight:600;font-size:15px}
+.psub{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;margin-top:1px}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
+.dot.test{background:#f59e0b}.dot.prod{background:#dc2626}.dot.global{background:#a3a3a3}
+.iconbtn{width:30px;height:30px;border:1px solid transparent;border-radius:8px;background:transparent;display:grid;place-items:center;cursor:pointer;color:var(--muted);flex:none}
+.iconbtn:hover{background:var(--hover);color:var(--fg)}
+.pfilter{margin:2px 12px 8px;position:relative}
+.pfilter svg{position:absolute;left:9px;top:8px;color:var(--muted)}
+.pfilter input{width:100%;height:32px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--fg);padding:0 30px 0 30px;font:inherit;font-size:13px}
+.pfilter input::-webkit-search-cancel-button{display:none}
+.pfilter kbd{position:absolute;right:8px;top:7px;font:11px ui-monospace,monospace;color:var(--muted);border:1px solid var(--border);border-radius:4px;padding:0 4px}
+.ptree{flex:1;overflow:auto;padding:0 8px 16px}
+.tgroup{margin-bottom:10px}
+.gtitle{font-size:11.5px;font-weight:600;color:var(--muted);padding:8px 8px 4px;display:flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:.04em}
+.ptree ul{list-style:none;margin:0;padding:0}
+.ptree li.sep{border-top:1px solid var(--border);margin-top:6px;padding-top:6px}
+.titem{display:flex;align-items:center;gap:8px;min-height:32px;padding:5px 8px;border-radius:8px;text-decoration:none;color:var(--fg);font-size:13.5px}
+.titem:hover{background:var(--hover)}
+.titem[aria-current]{background:var(--hover);font-weight:600}
+.titem[aria-current=page]{box-shadow:inset 2px 0 0 var(--fg)}
+.titem .tl{flex:1;min-width:0}
+.titem .cnt{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.titem.later{color:var(--muted)}
+.titem .chev{color:var(--muted)}
+.badge-later{font-size:10.5px;border:1px dashed var(--border);color:var(--muted);border-radius:999px;padding:0 6px;font-weight:500;white-space:nowrap}
+.badge-admin{font-size:10.5px;border:1px solid var(--border);color:var(--muted);border-radius:999px;padding:0 6px;white-space:nowrap}
+.pnote{font-size:12px;color:var(--muted);padding:6px 8px;line-height:1.45}
+.pnote a{text-underline-offset:2px}
+.empty{color:var(--muted);font-size:13px;padding:8px}
+.pfoot{border-top:1px solid var(--border);padding:8px 12px;font-size:11.5px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
+.pfoot kbd{font:11px ui-monospace,monospace;border:1px solid var(--border);border-radius:4px;padding:0 4px}
+
+/* ---------- top header ---------- */
+.topbar{position:sticky;top:0;z-index:20;height:52px;display:flex;align-items:center;gap:12px;padding:0 24px;background:var(--bg);border-bottom:1px solid var(--border)}
+.brand{font-weight:700;text-decoration:none;white-space:nowrap}
+.tpill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:6px;white-space:nowrap}
+.tpill.test{background:#92400e;color:#fff}
+.tpill.prod{background:#171717;color:#fff;box-shadow:inset 0 0 0 1px #dc2626}
+.tpill.global{background:var(--hover);color:var(--fg);box-shadow:inset 0 0 0 1px var(--border)}
+.crumbs{color:var(--muted);display:flex;align-items:center;gap:6px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crumbs b{color:var(--fg);font-weight:500}
+.tdesc{margin-left:auto;color:var(--muted);font-size:13px;white-space:nowrap}
+.mchip{display:none}
+
+/* ---------- banners & page ---------- */
+.robanner{display:flex;align-items:center;gap:10px;padding:10px 24px;background:var(--ro-bg);color:var(--ro-fg);border-bottom:1px solid var(--ro-border);font-size:13.5px}
+.robanner a{margin-left:auto;white-space:nowrap}
+main{width:100%;max-width:980px;margin:0 auto;padding:28px 32px 40px;display:flex;flex-direction:column;gap:16px;flex:1}
+.bc{font-size:13px;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap}
+.bc a{color:var(--muted);text-underline-offset:3px}
+.h1row{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+h1{font-size:24px;margin:0;line-height:1.25;outline:none}
+h2{font-size:17px;margin:8px 0 0}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.muted{color:var(--muted);margin:0}
+.btn{height:32px;padding:0 12px;border:1px solid var(--border);border-radius:8px;display:inline-flex;align-items:center;gap:6px;font-weight:500;font-size:14px;background:var(--bg);white-space:nowrap;cursor:pointer;text-decoration:none;color:var(--fg)}
+.btn:hover{background:var(--hover)}
+.btn.primary{background:var(--primary);color:var(--primary-fg);border-color:var(--primary)}
+.btn.primary:hover{opacity:.9}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.sm{height:28px;padding:0 9px;font-size:13px}
+.tw{overflow-x:auto;border:1px solid var(--border);border-radius:12px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;color:var(--muted);font-weight:500;padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--subtle)}
+td{padding:10px 12px;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:0}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.link{text-decoration:underline;text-underline-offset:3px}
+.badge{display:inline-block;border:1px solid var(--border);border-radius:999px;padding:1px 8px;font-size:12px;white-space:nowrap}
+.badge.ok{background:var(--ok-bg)}
+.badge.bad{background:var(--danger);color:#fff;border-color:var(--danger)}
+.card{border:1px solid var(--border);border-radius:14px;padding:18px;background:var(--card)}
+dl.facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0}
+dl.facts dt{color:var(--muted);font-size:13px}
+dl.facts dd{margin:4px 0 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.stat{display:block;border:1px solid var(--border);border-radius:12px;padding:12px 14px;text-decoration:none;background:var(--card)}
+.stat:hover{background:var(--hover)}
+.stat .n{font-size:22px;font-weight:650;font-variant-numeric:tabular-nums}
+.stat .l{color:var(--muted);font-size:13px}
+.note{border:1px dashed var(--border);border-radius:12px;padding:10px 14px;color:var(--muted);font-size:13.5px;display:flex;gap:10px;align-items:center}
+.ph-later{border:1px dashed var(--border);border-radius:14px;padding:36px 24px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center}
+.ph-later .big{font-size:40px}
+.steps{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.steps li{border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.steps .num{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;border:1px solid var(--border)}
+.steps li.on .num{background:var(--primary);color:var(--primary-fg);border-color:var(--primary)}
+.drop{border:1px dashed var(--border);border-radius:10px;padding:14px;text-align:center;color:var(--muted);font-size:13px}
+.switch{width:40px;height:22px;border-radius:999px;border:0;background:#d4d4d4;position:relative;cursor:pointer;flex:none}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .12s}
+.switch[aria-checked=true]{background:#dc2626}
+.switch[aria-checked=true]::after{left:21px}
+.trow{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0;border-top:1px solid var(--border)}
+.tenants{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.tcard-h{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.help h2{font-size:16px}
+.help p{margin:4px 0}
+footer.foot{text-align:center;color:var(--muted);font-size:13px;padding:20px 24px 24px}
+footer.foot a{color:var(--muted);text-underline-offset:3px}
+
+/* ---------- popovers / dialogs / toast ---------- */
+.popover{position:fixed;left:72px;bottom:12px;width:268px;background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);padding:12px;z-index:70;display:flex;flex-direction:column;gap:10px}
+.popover[hidden]{display:none}
+.who{display:flex;gap:10px;align-items:center}
+.who .av2{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--primary);color:var(--primary-fg);font-weight:700}
+.seg{display:flex;border:1px solid var(--border);border-radius:10px;padding:3px;gap:3px}
+.seg button{flex:1;border:0;background:transparent;border-radius:7px;padding:4px 8px;cursor:pointer;font-size:13px}
+.seg button[aria-pressed=true]{background:var(--hover);font-weight:600}
+.prow{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+.mitem{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;text-decoration:none;border:0;background:transparent;width:100%;text-align:left;cursor:pointer;font-size:14px}
+.mitem:hover{background:var(--hover)}
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:90;display:flex;align-items:center;justify-content:center;padding:16px}
+.scrim[hidden]{display:none}
+.dlg{width:min(680px,100%);max-height:calc(100vh - 32px);overflow:auto;background:var(--card);border-radius:14px;padding:22px 24px;display:flex;flex-direction:column;gap:10px}
+.dlg>*{flex-shrink:0}
+.dlg h2{margin:0;font-size:19px}
+.dlg h3{margin:10px 0 0;font-size:14.5px}
+.dlg p,.dlg ul{margin:0}
+.dlg ul{padding-left:18px}
+.dlg table{font-size:13px}
+.dlg td,.dlg th{padding:6px 8px}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#171717;color:#fff;padding:9px 14px;border-radius:10px;font-size:13px;z-index:95;box-shadow:var(--shadow);max-width:calc(100vw - 32px)}
+#toast[hidden]{display:none}
+
+/* ---------- mockup controls ---------- */
+.mc{position:fixed;right:12px;bottom:12px;z-index:85;width:236px;background:var(--card);border:1.5px dashed #a3a3a3;border-radius:12px;font-size:12.5px;box-shadow:0 4px 14px rgba(0,0,0,.08)}
+.mc.closed{width:auto}
+.mc-h{width:100%;border:0;background:transparent;padding:8px 10px;text-align:left;font-weight:600;font-size:12px;cursor:pointer;display:flex;justify-content:space-between;gap:6px;color:var(--muted)}
+.mc-b{padding:0 10px 10px;display:flex;flex-direction:column;gap:7px}
+.mc-b[hidden]{display:none}
+.mc fieldset{border:0;padding:0;margin:0;display:flex;gap:10px;flex-wrap:wrap}
+.mc legend{font-weight:600;padding:0;margin-bottom:3px}
+.mc label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.mc .btn{height:28px;font-size:12.5px;justify-content:center}
+
+/* ---------- mobile ---------- */
+.tabbar,.sheet{display:none}
+@media (max-width:767px){
+  .rail,.panel{display:none!important}
+  .topbar{height:52px;padding:0 12px;gap:10px;border-bottom:0}
+  .app[data-ctx=test] .topbar{background:var(--t-bg);color:var(--t-fg);box-shadow:inset 0 -1px 0 var(--t-edge)}
+  .app[data-ctx=prod] .topbar{background:var(--p-bg);color:#fff;box-shadow:inset 0 -3px 0 var(--p-edge)}
+  .app[data-ctx=global] .topbar{background:var(--g-bg);color:var(--fg);box-shadow:inset 0 -1px 0 var(--border)}
+  .topbar .tpill,.topbar .crumbs,.topbar .tdesc{display:none}
+  .mchip{display:flex;margin-left:auto;padding:2px;gap:2px;border-radius:10px;background:rgba(0,0,0,.09)}
+  .app[data-ctx=prod] .mchip{background:rgba(255,255,255,.12)}
+  .mchip button{position:relative;border:0;background:transparent;border-radius:8px;height:32px;padding:0 12px;font-weight:600;font-size:13px;cursor:pointer;color:inherit}
+  .mchip button[data-t=test][aria-pressed=true]{background:#92400e;color:#fff}
+  .mchip button[data-t=prod][aria-pressed=true]{background:#dc2626;color:#fff}
+  .mchip .lk{position:static;box-shadow:none;background:transparent;margin-left:3px}
+  .robanner{padding:9px 14px;font-size:13px;flex-wrap:wrap}
+  .robanner a{margin-left:0}
+  main{padding:18px 14px 24px}
+  h1{font-size:21px}
+  dl.facts{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .steps,.tenants{grid-template-columns:1fr}
+  footer.foot{padding-bottom:84px}
+  .tabbar{display:grid;position:fixed;left:0;right:0;bottom:0;z-index:50;height:62px;background:var(--bg);border-top:1px solid var(--border);grid-auto-flow:column;grid-auto-columns:1fr;padding-bottom:env(safe-area-inset-bottom)}
+  .tab{border:0;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;color:var(--muted);cursor:pointer;position:relative;min-width:0}
+  .tab{padding:0 3px}
+  .tab .rl{max-width:100%;text-align:center;line-height:1.1}
+  html[lang=pl] .tab .rl{font-size:10px}
+  td{white-space:nowrap}
+  .tab.here,.tab[aria-expanded=true]{color:var(--fg);font-weight:600}
+  .tab.here::before{content:"";position:absolute;top:0;left:30%;right:30%;height:3px;border-radius:0 0 3px 3px;background:var(--fg)}
+  .sheet{display:flex;flex-direction:column;position:fixed;left:0;right:0;top:52px;bottom:62px;z-index:45;background:var(--bg);overflow:auto}
+  .sheet[hidden]{display:none}
+  .sheet .ph{padding:14px 14px 6px 16px;border-bottom:0}
+  .sheet .ptitle{font-size:19px}
+  .sheet .pfilter{margin:4px 14px 10px}
+  .sheet .pfilter input{height:40px;font-size:15px}
+  .sheet .pfilter svg{top:12px}
+  .sheet .pfilter kbd{display:none}
+  .sheet .ptree{padding:0 10px 16px;overflow:visible}
+  .sheet .titem{min-height:48px;font-size:15.5px;padding:8px 10px}
+  .sheet .gtitle{font-size:12px}
+  .popover{left:12px;right:12px;width:auto;bottom:74px}
+  .mc{bottom:72px;right:8px;width:212px}
+  .mc.closed .mc-x{display:none}
+  #toast{bottom:76px}
+  [data-tip]::after{display:none!important}
+}
+</style>
+</head>
+<body>
+<div class="app pinned" id="app" data-ctx="test">
+
+  <!-- ================= Icon rail (desktop) ================= -->
+  <nav class="rail" id="rail" aria-label="Main navigation">
+    <div class="tswitch">
+      <div class="tchip" role="group" aria-label="Tenant switch">
+        <button type="button" data-act="tenant" data-t="test">T<span class="lk" hidden aria-hidden="true">🔒</span></button>
+        <button type="button" data-act="tenant" data-t="prod">P<span class="lk" hidden aria-hidden="true">🔒</span></button>
+      </div>
+      <span class="tword" id="tword">Test</span>
+    </div>
+    <div class="rsep" aria-hidden="true"></div>
+    <button type="button" class="ritem" data-act="home" data-area="home"><svg class="i" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/></svg><span class="rl" data-l="Home">Home</span></button>
+    <button type="button" class="ritem" data-act="area" data-area="master" aria-controls="panel" aria-expanded="false"><svg class="i" viewBox="0 0 24 24"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v13c0 1.7 3.6 3 8 3s8-1.3 8-3v-13"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg><span class="rl" data-l="Master data">Master data</span></button>
+    <button type="button" class="ritem" data-act="area" data-area="ops" data-later="1" aria-controls="panel" aria-expanded="false"><svg class="i" viewBox="0 0 24 24"><path d="M3 21V10l6 4v-4l6 4V5h6v16z"/><path d="M7 17.5h2M12 17.5h2M17 17.5h1"/></svg><span class="rl" data-l="Operations">Operations</span></button>
+    <button type="button" class="ritem" data-act="area" data-area="planning" data-later="1" aria-controls="panel" aria-expanded="false"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16.5" rx="2"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4M7 13.5h5M10 17h7"/></svg><span class="rl" data-l="Planning">Planning</span></button>
+    <button type="button" class="ritem" data-act="area" data-area="reports" data-later="1" aria-controls="panel" aria-expanded="false"><svg class="i" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M8 17v-5M13 17V8M18 17v-8"/></svg><span class="rl" data-l="Reports">Reports</span></button>
+    <button type="button" class="ritem" data-act="area" data-area="audit" aria-controls="panel" aria-expanded="false"><svg class="i" viewBox="0 0 24 24"><path d="M10 6h10M10 12h10M10 18h10"/><path d="m3.5 6 1.5 1.5L7.5 5M3.5 12l1.5 1.5L7.5 11M3.5 18l1.5 1.5L7.5 17"/></svg><span class="rl" data-l="Audit">Audit</span></button>
+    <button type="button" class="ritem" data-act="area" data-area="admin" data-admin="1" aria-controls="panel" aria-expanded="false"><svg class="i" viewBox="0 0 24 24"><path d="M12 3 4.5 6v6c0 4.4 3.2 8.2 7.5 9 4.3-.8 7.5-4.6 7.5-9V6z"/><path d="m9 12 2 2 4-4"/></svg><span class="rl" data-l="Admin">Admin</span></button>
+    <div class="rspacer"></div>
+    <button type="button" class="ritem" data-act="help" data-area="help"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.5 2.5 0 1 1 3.4 2.3c-.6.3-.9.8-.9 1.5v.6"/><path d="M12 17h.01"/></svg><span class="rl" data-l="Help">Help</span></button>
+    <button type="button" class="ritem" id="avatarBtn" data-act="acct" data-area="account" aria-haspopup="dialog" aria-expanded="false" aria-controls="acct"><span class="av" aria-hidden="true"><b id="avLetter">A</b></span><span class="rl" id="avName">admin</span></button>
+  </nav>
+
+  <!-- ================= Contextual panel (desktop) ================= -->
+  <aside class="panel" id="panel" aria-label="Section menu">
+    <div class="ph" id="ph"></div>
+    <div class="pfilter" id="pfw"><svg class="i s" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="pfilter" type="search" placeholder="Filter…" aria-label="Filter this menu" autocomplete="off"><kbd aria-hidden="true">/</kbd></div>
+    <nav class="ptree" id="ptree" aria-label="Section entries"></nav>
+    <div class="pfoot" aria-hidden="true"><span><kbd>/</kbd> filter</span><span><kbd>[</kbd> pin / collapse</span><span><kbd>Esc</kbd> close</span></div>
+  </aside>
+
+  <!-- ================= Page ================= -->
+  <div class="maincol">
+    <header class="topbar" id="topbar">
+      <a class="brand" id="brand" href="#/test/overview">🦣 CPG</a>
+      <span class="tpill test" id="tpill">Test</span>
+      <span class="crumbs" id="crumbs"></span>
+      <span class="tdesc" id="tdesc"></span>
+      <div class="mchip" role="group" aria-label="Tenant switch">
+        <button type="button" data-act="tenant" data-t="test">Test<span class="lk" hidden aria-hidden="true">🔒</span></button>
+        <button type="button" data-act="tenant" data-t="prod">Prod<span class="lk" hidden aria-hidden="true">🔒</span></button>
+      </div>
+    </header>
+    <div id="banner"></div>
+    <main id="page"></main>
+    <footer class="foot">Caveman Planning Good! Made in Jozefoslaw with Tokens, Coffee and <a href="https://github.com/open-mercato/skills" target="_blank" rel="noopener noreferrer">OpenMercato Skills</a> during <a href="https://www.aitechleaders.pl/" target="_blank" rel="noopener noreferrer">AITechLeaders training</a>.</footer>
+  </div>
+</div>
+
+<!-- ================= Mobile bottom tabs + full-screen list ================= -->
+<nav class="tabbar" id="tabbar" aria-label="Main navigation"></nav>
+<div class="sheet" id="sheet" role="dialog" aria-modal="false" aria-labelledby="shTitle" hidden>
+  <div class="ph" id="shHead"></div>
+  <div class="pfilter" id="shfw"><svg class="i s" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="shfilter" type="search" placeholder="Filter…" aria-label="Filter this menu" autocomplete="off"></div>
+  <nav class="ptree" id="shTree" aria-label="Section entries"></nav>
+</div>
+
+<!-- ================= Account popover ================= -->
+<div class="popover" id="acct" role="dialog" aria-label="Account" hidden></div>
+
+<!-- ================= Mockup controls ================= -->
+<aside class="mc" id="mc" aria-label="Mockup controls">
+  <button type="button" class="mc-h" data-act="mc" aria-expanded="true" aria-controls="mcb"><span>Mockup controls <span class="mc-x">(not part of the design)</span></span><span id="mcArrow">▾</span></button>
+  <div class="mc-b" id="mcb">
+    <fieldset><legend>Role</legend>
+      <label><input type="radio" name="role" value="admin" data-ctl="role"> Admin</label>
+      <label><input type="radio" name="role" value="user" data-ctl="role"> Normal user</label>
+    </fieldset>
+    <label><input type="checkbox" data-ctl="later"> Show later slices</label>
+    <label><input type="checkbox" data-ctl="ro-test"> Test read-only</label>
+    <label><input type="checkbox" data-ctl="ro-prod"> Prod read-only</label>
+    <label><input type="checkbox" data-ctl="pinned"> Panel pinned (desktop)</label>
+    <button type="button" class="btn" data-act="about">About this concept</button>
+    <button type="button" class="btn" data-act="reset">Reset mockup state</button>
+  </div>
+</aside>
+
+<div class="scrim" id="about" hidden><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="aboutTitle" id="aboutDlg" tabindex="-1"></div></div>
+<div id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+(function(){
+"use strict";
+/* ================= state ================= */
+var LS = "cpg05.";
+function lsGet(k, d){ try{ var v = localStorage.getItem(LS + k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } }
+function lsSet(k, v){ try{ localStorage.setItem(LS + k, JSON.stringify(v)); }catch(e){} }
+var S = {
+  role: lsGet("role", "admin"), later: lsGet("later", true), ro: lsGet("ro", {test:false, prod:false}),
+  theme: lsGet("theme", "light"), lang: lsGet("lang", "en"), pinned: lsGet("pinned", true), tenant: lsGet("tenant", "test"),
+  recent: lsGet("recent", []), mcOpen: lsGet("mcOpen", window.innerWidth > 767),
+  panelArea: "home", overlay: false, sheet: null, acct: false, filter: "", shFilter: ""
+};
+var TN = {test: "Test", prod: "Prod"};
+var $ = function(id){ return document.getElementById(id); };
+function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+
+/* ================= labels (EN + PL for the menu, to show the ~30 % longer labels) ================= */
+var PL = {"Home":"Start","Master data":"Dane podstawowe","Operations":"Operacje","Planning":"Planowanie","Reports":"Raporty","Audit":"Audyt","Admin":"Admin","Help":"Pomoc","More":"Więcej",
+  "Overview":"Przegląd","Materials":"Materiały","Locations":"Lokalizacje","Customers":"Klienci","Suppliers":"Dostawcy","Planning parameters":"Parametry planowania","Safety stock":"Zapas bezpieczeństwa","BOMs":"Struktury wyrobów (BOM)","Import":"Import z arkusza",
+  "Sales":"Sprzedaż","Purchasing":"Zakupy","Production":"Produkcja","Inventory":"Magazyn","Customer orders":"Zamówienia klientów","Forecasts":"Prognozy","Shipments (goods issues)":"Wydania (WZ)","Purchase requisitions":"Zapotrzebowania","Purchase orders":"Zamówienia zakupu","Goods receipts":"Przyjęcia (PZ)","Production orders":"Zlecenia produkcyjne","Completions":"Meldunki wykonania","Stock (ledger)":"Stany (kartoteka)","Corrections":"Korekty","Transfers":"Przesunięcia","Stock import":"Import stanów","MRP run":"Przebieg MRP","Last MRP report":"Ostatni raport MRP","Stock":"Stany","Variance":"Odchylenia","Audit reports":"Raporty audytu",
+  "Tenant audit":"Audyt tenanta","Global audit":"Audyt globalny","Users":"Użytkownicy","Tenants & read-only":"Tenanty i tylko-odczyt","System status":"Stan systemu","API tokens":"Tokeny API","Recent":"Ostatnio otwierane","Account":"Konto","Language":"Język","Theme":"Motyw","Sign out":"Wyloguj","Light":"Jasny","Dark":"Ciemny","Filter…":"Filtruj…","later":"później"};
+function t(s){ return S.lang === "pl" ? (PL[s] || s) : s; }
+
+/* ================= sample data ================= */
+var MATERIALS = [
+  {id:"00000001", name:"Granite slab", type:"Raw", unit:"kg", created:"2026-10-02", conv:[["t","1 t = 1,000 kg","1 kg = 0.001 t"],["slab","1 slab = 180 kg","1 kg = 0.005556 slab"]]},
+  {id:"00000002", name:"Mammoth hide", type:"Raw", unit:"m²", created:"2026-10-02", conv:[["hide","1 hide = 4.5 m²","1 m² = 0.222222 hide"]]},
+  {id:"00000003", name:"Wheel (stone)", type:"Intermediate", unit:"pcs", created:"2026-10-05", conv:[["pair","1 pair = 2 pcs","1 pcs = 0.5 pair"]]},
+  {id:"00000004", name:"Axle", type:"Intermediate", unit:"pcs", created:"2026-10-05", conv:[]},
+  {id:"00000005", name:"Cave cart", type:"Finished", unit:"pcs", created:"2026-10-07", conv:[["pallet","1 pallet = 4 pcs","1 pcs = 0.25 pallet"]]},
+  {id:"00000006", name:"Flint knife", type:"Finished", unit:"pcs", created:"2026-10-19", conv:[["box","1 box = 12 pcs","1 pcs = 0.083333 box"],["crate","1 crate = 144 pcs","1 pcs = 0.006944 crate"]]}
+];
+var LOCATIONS = [["L001","Main cave",true],["L002","River warehouse",true],["L003","Old quarry",false]];
+var CUSTOMERS = [["C001","Flintstone Ltd",true],["C002","Rubble & Co",true],["C003","Slate Rock and Gravel",true]];
+var SUPPLIERS = [["S001","Bedrock Quarry",true],["S002","Woolly Hides Co",true],["S003","Sabre Tooth Tools",false]];
+var AUDIT = [
+  ["2026-10-19 09:42","admin","UI","Created material","00000006 Flint knife"],
+  ["2026-10-19 09:40","admin","UI","Added unit conversion","00000006 Flint knife · box"],
+  ["2026-10-19 08:15","admin (token “erp-sync”)","API","Updated customer","C002 Rubble & Co"],
+  ["2026-10-18 16:03","admin","UI","Deactivated location","L003 Old quarry"],
+  ["2026-10-18 14:27","admin (token “erp-sync”)","API","Created supplier","S003 Sabre Tooth Tools"]
+];
+var GAUDIT = [
+  ["2026-10-19 10:05","admin","UI","Changed read-only flag","Tenant Prod"],
+  ["2026-10-19 09:58","admin","UI","Created user","wilma"],
+  ["2026-10-19 09:12","fred","UI","Created API token","fred · “laptop”"],
+  ["2026-10-18 17:30","admin","UI","Reset password","barney"],
+  ["2026-10-18 08:00","system","—","Applied migrations","7 of 7"]
+];
+
+/* ================= screens ================= */
+// Tenant-scoped (each exists once per tenant) — key is the path after #/<tenant>/
+var TS = {
+  "overview":            {area:"home",   label:"Overview"},
+  "materials":           {area:"master", label:"Materials", count:6},
+  "locations":           {area:"master", label:"Locations", count:3},
+  "customers":           {area:"master", label:"Customers", count:3},
+  "suppliers":           {area:"master", label:"Suppliers", count:3},
+  "planning-parameters": {area:"master", label:"Planning parameters", count:2},
+  "safety-stock":        {area:"master", label:"Safety stock", count:2},
+  "boms":                {area:"master", label:"BOMs", count:2},
+  "import":              {area:"master", label:"Import", adminOnly:true, sep:true},
+  "sales/customer-orders":      {area:"ops", group:"Sales", label:"Customer orders", later:2},
+  "sales/forecasts":            {area:"ops", group:"Sales", label:"Forecasts", later:2},
+  "sales/shipments":            {area:"ops", group:"Sales", label:"Shipments (goods issues)", later:2},
+  "purchasing/requisitions":    {area:"ops", group:"Purchasing", label:"Purchase requisitions", later:2},
+  "purchasing/orders":          {area:"ops", group:"Purchasing", label:"Purchase orders", later:2},
+  "purchasing/receipts":        {area:"ops", group:"Purchasing", label:"Goods receipts", later:2},
+  "production/orders":          {area:"ops", group:"Production", label:"Production orders", later:2},
+  "production/completions":     {area:"ops", group:"Production", label:"Completions", later:2},
+  "inventory/stock":            {area:"ops", group:"Inventory", label:"Stock (ledger)", later:2},
+  "inventory/corrections":      {area:"ops", group:"Inventory", label:"Corrections", later:2},
+  "inventory/transfers":        {area:"ops", group:"Inventory", label:"Transfers", later:2},
+  "inventory/stock-import":     {area:"ops", group:"Inventory", label:"Stock import", later:2},
+  "planning/mrp-run":           {area:"planning", label:"MRP run", later:3},
+  "planning/last-report":       {area:"planning", label:"Last MRP report", later:3},
+  "reports/stock":              {area:"reports", label:"Stock", later:2},
+  "reports/variance":           {area:"reports", label:"Variance", later:2},
+  "reports/audit":              {area:"reports", label:"Audit reports", later:2},
+  "audit":               {area:"audit", label:"Tenant audit"}
+};
+// Global (belong to no tenant) — key is the path after #/global/
+var GS = {
+  "users":      {area:"admin", label:"Users", adminOnly:true},
+  "tenants":    {area:"admin", label:"Tenants & read-only", adminOnly:true},
+  "system":     {area:"admin", label:"System status", adminOnly:true},
+  "audit":      {area:"audit", label:"Global audit"},
+  "api-tokens": {area:"account", label:"API tokens"},
+  "help":       {area:"help", label:"Help"}
+};
+var AREAS = {home:"Home", master:"Master data", ops:"Operations", planning:"Planning", reports:"Reports", audit:"Audit", admin:"Admin", help:"Help", account:"Account"};
+var PANEL_AREAS = ["home","master","ops","planning","reports","audit","admin"];
+
+/* ================= routing ================= */
+function parse(){
+  var parts = location.hash.replace(/^#\/?/, "").split("/").filter(Boolean);
+  if (parts[0] === "test" || parts[0] === "prod") return {scope:"tenant", tenant:parts[0], path: parts.slice(1).join("/") || "overview"};
+  if (parts[0] === "global" && parts[1]) return {scope:"global", path: parts.slice(1).join("/")};
+  return null;
+}
+function screenOf(r){
+  if (!r) return null;
+  if (r.scope === "tenant") {
+    if (/^materials\/\d+$/.test(r.path)) return {area:"master", label:"Materials", detail:r.path.split("/")[1], key:"materials"};
+    return TS[r.path] ? Object.assign({key:r.path}, TS[r.path]) : null;
+  }
+  return GS[r.path] ? Object.assign({key:r.path}, GS[r.path]) : null;
+}
+function areaOf(r, sc){
+  if (!sc || (sc.adminOnly && S.role !== "admin")) return "home";
+  if (r.scope === "global" && r.path === "audit") return S.role === "admin" ? "admin" : "audit";
+  return sc.area;
+}
+function tHref(key){ return "#/" + S.tenant + "/" + key; }
+function gHref(key){ return "#/global/" + key; }
+function go(h){ if (location.hash === h) render(); else location.hash = h; }
+
+/* ================= menu trees (one per rail area) ================= */
+function tItem(key, extra){ var sc = TS[key]; return Object.assign({label:sc.label, href:tHref(key), count:sc.count, later:sc.later, adminOnly:sc.adminOnly, sep:sc.sep, id:"t:"+key}, extra||{}); }
+function gItem(key, extra){ var sc = GS[key]; return Object.assign({label:sc.label, href:gHref(key), adminOnly:sc.adminOnly, id:"g:"+key, global:true}, extra||{}); }
+function keysOf(area, group){ return Object.keys(TS).filter(function(k){ return TS[k].area === area && (!group || TS[k].group === group); }); }
+function tree(area){
+  var admin = S.role === "admin";
+  switch (area) {
+    case "home":
+      var rec = S.recent.filter(function(x){ return x.href !== tHref("overview"); }).slice(0, 6).map(function(x){ return {label:x.label, href:x.href, id:"r:"+x.href, tag:x.tag, raw:true}; });
+      return [
+        {items:[tItem("overview", {label:"Overview"})]},
+        {title:"Recent", items:rec, emptyNote:"Screens you open appear here."}
+      ];
+    case "master":
+      return [{items: keysOf("master").map(function(k){ return tItem(k); })}];
+    case "ops":
+      return ["Sales","Purchasing","Production","Inventory"].map(function(g){ return {title:g, later:2, items: keysOf("ops", g).map(function(k){ return tItem(k); })}; });
+    case "planning": return [{items: keysOf("planning").map(function(k){ return tItem(k); })}];
+    case "reports":  return [{items: keysOf("reports").map(function(k){ return tItem(k); })}];
+    case "audit":
+      var items = [tItem("audit", {label:"Tenant audit", suffix:" — " + TN[S.tenant]})];
+      if (!admin) items.push(gItem("audit"));
+      return [{items:items, note: admin ? 'Global audit (users, tokens, tenants) is under <a href="' + gHref("audit") + '">Admin</a>.' : null}];
+    case "admin":
+      return [{items:[gItem("users"), gItem("tenants"), gItem("system"), gItem("audit")], note:"Shared by Test and Prod — these pages belong to no tenant."}];
+  }
+  return [];
+}
+function visible(it){ return (S.later || !it.later) && (S.role === "admin" || !it.adminOnly); }
+function currentId(){
+  var r = parse(), sc = screenOf(r); if (!r || !sc) return {};
+  return r.scope === "tenant" ? {id:"t:" + sc.key, exact: !sc.detail} : {id:"g:" + sc.key, exact:true};
+}
+function treeHTML(area, filter, mobile){
+  var groups = tree(area), f = filter.trim().toLowerCase(), cur = currentId(), out = "", any = false;
+  groups.forEach(function(g){
+    var items = g.items.filter(visible).filter(function(it){ return !f || it.label.toLowerCase().indexOf(f) > -1 || t(it.label).toLowerCase().indexOf(f) > -1; });
+    if (g.later && !S.later) return;
+    if (!items.length && !(g.emptyNote && !f)) return;
+    any = true;
+    out += '<div class="tgroup">';
+    if (g.title) out += '<div class="gtitle">' + esc(t(g.title)) + (g.later ? ' <span class="badge-later">' + t("later") + '</span>' : '') + '</div>';
+    if (!items.length) out += '<p class="pnote">' + esc(g.emptyNote) + '</p>';
+    else out += '<ul role="list">' + items.map(function(it){
+      var c = cur.id === it.id ? (cur.exact ? ' aria-current="page"' : ' aria-current="true"') : "";
+      var lbl = it.raw ? esc(it.label) : esc(t(it.label)) + (it.suffix ? esc(it.suffix) : "");
+      return '<li' + (it.sep && !f ? ' class="sep"' : '') + '><a class="titem' + (it.later ? ' later' : '') + '" href="' + it.href + '"' + c + '>' +
+        '<span class="tl">' + lbl + (it.tag ? ' <span class="badge-admin">' + esc(it.tag) + '</span>' : '') + '</span>' +
+        (it.later && !g.later ? '<span class="badge-later">' + t("later") + '</span>' : '') +
+        (it.adminOnly && it.sep ? '<span class="badge-admin">admin</span>' : '') +
+        (it.count != null ? '<span class="cnt">' + it.count + '</span>' : '') +
+        (mobile ? '<svg class="i s chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>' : '') + '</a></li>';
+    }).join("") + '</ul>';
+    if (g.note && !f) out += '<p class="pnote">' + g.note + '</p>';
+    out += '</div>';
+  });
+  if (!any) out = '<p class="empty">' + (f ? 'No entry matches “' + esc(filter) + '”. <br>Press Esc to clear.' : 'Nothing here yet.') + '</p>';
+  return out;
+}
+function scopeLine(area){
+  if (area === "admin") return '<span class="dot global"></span>Shared by Test and Prod';
+  if (area === "audit") return '<span class="dot ' + S.tenant + '"></span>' + TN[S.tenant] + ' + global';
+  return '<span class="dot ' + S.tenant + '"></span>in ' + TN[S.tenant] + (S.ro[S.tenant] ? ' · 🔒 read-only' : '');
+}
+
+/* ================= page helpers ================= */
+function isRO(r){ return r && r.scope === "tenant" && S.ro[r.tenant]; }
+var R; // current route during page render
+function editBtn(label, primary, what){
+  if (S.role !== "admin") return "";
+  if (isRO(R)) return '<button type="button" class="btn' + (primary ? ' primary' : '') + '" disabled title="' + TN[R.tenant] + ' is read-only — business changes are blocked">🔒 ' + esc(label) + '</button>';
+  return '<button type="button" class="btn' + (primary ? ' primary' : '') + '" data-act="toast" data-msg="' + esc(what || ("Would open “" + label + "” (mockup)")) + '">' + esc(label) + '</button>';
+}
+function crumbsHTML(list){ return '<nav class="bc" aria-label="Breadcrumb">' + list.map(function(c, i){ return (i ? '<span aria-hidden="true">›</span>' : '') + (c[1] ? '<a href="' + c[1] + '">' + esc(c[0]) + '</a>' : '<span>' + esc(c[0]) + '</span>'); }).join("") + '</nav>'; }
+function head(o){
+  return crumbsHTML(o.crumbs) + '<div class="h1row"><h1 tabindex="-1">' + o.title + '</h1><div class="acts">' + (o.actions || "") + '</div></div>' + (o.desc ? '<p class="muted">' + o.desc + '</p>' : '');
+}
+function table(cols, rows){ return '<div class="tw"><table><thead><tr>' + cols.map(function(c){ return '<th scope="col">' + c + '</th>'; }).join("") + '</tr></thead><tbody>' + rows.map(function(r){ return '<tr>' + r.map(function(c){ return '<td>' + c + '</td>'; }).join("") + '</tr>'; }).join("") + '</tbody></table></div>'; }
+function status(on){ return on ? '<span class="badge ok">Active</span>' : '<span class="badge bad">Inactive</span>'; }
+function tTitle(label){ return esc(label) + " — " + TN[R.tenant]; }
+function mdCrumbs(label){ return [[TN[R.tenant], tHref("overview")], ["Master data"], [label]]; }
+function globalNote(){ return '<div class="note"><span aria-hidden="true">🌐</span><span><b>Shared by Test and Prod.</b> This page belongs to no tenant; the switch keeps <b>' + TN[S.tenant] + '</b> for when you go back to tenant screens.</span></div>'; }
+
+/* ================= pages ================= */
+var P = {};
+P.overview = function(){
+  var stats = ["materials","locations","customers","suppliers","planning-parameters","safety-stock","boms"].map(function(k){
+    return '<a class="stat" href="' + tHref(k) + '"><div class="n">' + TS[k].count + '</div><div class="l">' + esc(TS[k].label) + '</div></a>'; }).join("");
+  return head({crumbs:[[TN[R.tenant]], ["Overview"]], title:"Cave control — " + TN[R.tenant],
+      desc: R.tenant === "test" ? "Dataset generation 1 · demonstration data, safe to experiment." : "Dataset generation 1 · live data — changes here are real.",
+      actions: editBtn("Create material", false) + (S.role === "admin" ? (isRO(R) ? editBtn("Import from spreadsheet", true) : '<a class="btn primary" href="' + tHref("import") + '">Import from spreadsheet</a>') : "")}) +
+    '<h2>Records</h2><div class="grid">' + stats + '</div>' +
+    '<div class="h1row"><h2>Recent changes</h2><a class="link" href="' + tHref("audit") + '">All changes in the tenant audit</a></div>' +
+    table(["Time","Account","Channel","Action","Record"], AUDIT.slice(0, 3).map(function(a){ return [a[0], esc(a[1]), '<span class="badge">' + a[2] + '</span>', a[3], esc(a[4])]; }));
+};
+P.materials = function(){
+  return head({crumbs:mdCrumbs("Materials"), title:tTitle("Materials"),
+      desc:"Every quantity of a material is stored in its base unit, exactly to six decimals. IDs are assigned in order and never change.",
+      actions: editBtn("Create material", true)}) +
+    table(["Material ID","Description","Type","Base unit","Status"], MATERIALS.map(function(m){
+      return ['<a class="mono link" href="' + tHref("materials/" + m.id) + '">' + m.id + '</a>', esc(m.name), '<span class="badge">' + m.type + '</span>', m.unit, status(true)]; }));
+};
+function materialDetail(id){
+  var m = MATERIALS.filter(function(x){ return x.id === id; })[0];
+  if (!m) return notFound();
+  return head({crumbs:[[TN[R.tenant], tHref("overview")], ["Master data"], ["Materials", tHref("materials")], [m.id]],
+      title:'<span class="mono">' + m.id + '</span> — ' + esc(m.name), actions: editBtn("Edit", false) + editBtn("Deactivate", false)}) +
+    '<div class="card"><dl class="facts"><div><dt>Type</dt><dd>' + m.type + '</dd></div><div><dt>Base unit</dt><dd>' + m.unit + '</dd></div><div><dt>Status</dt><dd>' + status(true) + '</dd></div><div><dt>Created</dt><dd>' + m.created + '</dd></div></dl></div>' +
+    '<div class="h1row"><h2>Unit conversions</h2><div class="acts">' + editBtn("Add conversion", true) + '</div></div>' +
+    '<p class="muted">Quantities entered in another unit are converted into ' + m.unit + ' once, rounded half-up to six decimals. Changing a factor never changes quantities already stored.</p>' +
+    (m.conv.length ? table(["Unit","Conversion","Inverse (indicative)",""], m.conv.map(function(c){ return ['<b>' + c[0] + '</b>', c[1], '<span class="muted">' + c[2] + '</span>', '<div style="text-align:right">' + (S.role === "admin" ? editBtn("Change factor", false).replace('class="btn', 'class="btn sm') : "") + '</div>']; }))
+      : '<div class="note">No conversions yet — quantities of ' + esc(m.name) + ' are entered in ' + m.unit + ' only.</div>');
+}
+P.locations = function(){
+  return head({crumbs:mdCrumbs("Locations"), title:tTitle("Locations"), desc:"Places where stock is kept. Inactive locations stay in history but take no new stock.", actions: editBtn("Create location", true)}) +
+    table(["Location ID","Name","Status"], LOCATIONS.map(function(l){ return ['<span class="mono">' + l[0] + '</span>', esc(l[1]), status(l[2])]; }));
+};
+P.customers = function(){
+  return head({crumbs:mdCrumbs("Customers"), title:tTitle("Customers"), desc:"Who we sell to. Customer orders and forecasts (slice 2) point at these records.", actions: editBtn("Create customer", true)}) +
+    table(["Customer ID","Name","Status"], CUSTOMERS.map(function(c){ return ['<span class="mono">' + c[0] + '</span>', esc(c[1]), status(c[2])]; }));
+};
+P.suppliers = function(){
+  return head({crumbs:mdCrumbs("Suppliers"), title:tTitle("Suppliers"), desc:"Who we buy from. Purchase orders (slice 2) point at these records.", actions: editBtn("Create supplier", true)}) +
+    table(["Supplier ID","Name","Status"], SUPPLIERS.map(function(s){ return ['<span class="mono">' + s[0] + '</span>', esc(s[1]), status(s[2])]; }));
+};
+P["planning-parameters"] = function(){
+  return head({crumbs:mdCrumbs("Planning parameters"), title:tTitle("Planning parameters"), desc:"One row per material and location: whether MRP makes or buys it, how long that takes, and how the quantity is rounded.", actions: editBtn("Add parameters", true)}) +
+    table(["Material","Location","Make / Buy","Lead time","Minimum lot","Lot multiple"], [
+      ['<span class="mono">00000005</span> Cave cart', "L001 Main cave", '<span class="badge">Make</span>', "3 d", "1", "1"],
+      ['<span class="mono">00000001</span> Granite slab', "L001 Main cave", '<span class="badge">Buy</span>', "10 d", "50", "10"]]);
+};
+P["safety-stock"] = function(){
+  return head({crumbs:mdCrumbs("Safety stock"), title:tTitle("Safety stock"), desc:"Effective-dated targets: each row applies from its date until the next one for the same material and location.", actions: editBtn("Add target", true)}) +
+    table(["Material","Location","Target","Effective from","State"], [
+      ['<span class="mono">00000005</span> Cave cart', "L001 Main cave", "5 pcs", "2026-11-01", '<span class="badge">Scheduled</span>'],
+      ['<span class="mono">00000005</span> Cave cart', "L001 Main cave", "8 pcs", "2027-01-01", '<span class="badge">Scheduled</span>']]);
+};
+P.boms = function(){
+  return head({crumbs:mdCrumbs("BOMs"), title:tTitle("BOMs"), desc:"Bills of materials with alternatives (priority, validity). Revisions are immutable — editing creates a new revision.", actions: editBtn("Create BOM", true)}) +
+    table(["Material","Alternative","Priority","Valid","Revision"], [
+      ['<span class="mono">00000005</span> Cave cart', "Alt A", "1", "from 2026-01-01", "rev 3"],
+      ['<span class="mono">00000005</span> Cave cart', "Alt B", "2", "from 2026-06-01", "rev 1"],
+      ['<span class="mono">00000003</span> Wheel (stone)', "Alt A", "1", "from 2026-01-01", "rev 2"]]);
+};
+P["import"] = function(){
+  var ro = isRO(R);
+  function b(l, p){ return ro ? '<button type="button" class="btn' + (p ? ' primary' : '') + '" disabled title="' + TN[R.tenant] + ' is read-only">🔒 ' + l + '</button>' : '<button type="button" class="btn' + (p ? ' primary' : '') + '" data-act="toast" data-msg="' + l + ' (mockup)">' + l + '</button>'; }
+  return head({crumbs:mdCrumbs("Import"), title:tTitle("Import from spreadsheet"), desc:"Load master data from one spreadsheet. Nothing is written until you commit the dry run."}) +
+    '<ol class="steps">' +
+      '<li class="on"><span class="num">1</span><b>Download the template</b><span class="muted">One sheet per master: materials, locations, customers, suppliers, planning parameters, safety stock, BOMs.</span><div><button type="button" class="btn" data-act="toast" data-msg="cpg-master-data-template.xlsx (mockup)">Download template</button></div></li>' +
+      '<li><span class="num">2</span><b>Upload the filled file</b><div class="drop">Drop an .xlsx here or ' + b("Choose file", false) + '</div></li>' +
+      '<li><span class="num">3</span><b>Dry run, then commit</b><span class="muted">See what would be created or changed, row by row, then commit it in one transaction.</span><div class="acts">' + b("Run dry run", false) + b("Commit", true) + '</div></li>' +
+    '</ol>';
+};
+P.audit = function(){
+  return head({crumbs:[[TN[R.tenant], tHref("overview")], ["Audit"], ["Tenant audit"]], title:tTitle("Tenant audit"), desc:"Append-only change log of the " + TN[R.tenant] + " tenant. Nobody can edit or delete it — read-only mode does not hide it."}) +
+    table(["Time","Account","Channel","Action","Record"], AUDIT.map(function(a){ return [a[0], esc(a[1]), '<span class="badge">' + a[2] + '</span>', a[3], esc(a[4])]; }));
+};
+function placeholder(sc){
+  var grp = sc.area === "ops" ? sc.group : AREAS[sc.area];
+  return head({crumbs:[[TN[R.tenant], tHref("overview")], [AREAS[sc.area]]].concat(sc.area === "ops" ? [[sc.group]] : []).concat([[sc.label]]), title:tTitle(sc.label)}) +
+    '<div class="ph-later"><div class="big" aria-hidden="true">🚧</div><h2 style="margin:0">Coming in slice ' + sc.later + '</h2><p class="muted">“' + esc(sc.label) + '” (' + esc(grp) + ') is planned for slice ' + sc.later + '. The menu shows it greyed so everyone can see where it will live.</p><a class="btn" href="' + tHref("overview") + '">Back to the overview</a></div>';
+}
+function forbidden(sc){
+  return head({crumbs:[[sc.label]], title:esc(sc.label)}) + '<div class="ph-later"><div class="big" aria-hidden="true">🔐</div><h2 style="margin:0">Only the admin can open this page</h2><p class="muted">Ask the admin if you need something changed here.</p><a class="btn" href="' + tHref("overview") + '">Back to the overview</a></div>';
+}
+function notFound(){ return head({crumbs:[["Not found"]], title:"Page not found"}) + '<p class="muted">This mockup has no such screen. <a href="' + tHref("overview") + '">Go to the overview</a>.</p>'; }
+
+var G = {};
+G.users = function(){
+  return head({crumbs:[["Admin"], ["Users"]], title:"Users", desc:"Accounts that can sign in. There is exactly one admin; everyone else reads master data and audits.", actions:'<button type="button" class="btn primary" data-act="toast" data-msg="Would open “Create user” (mockup)">Create user</button>'}) + globalNote() +
+    table(["Account","Role","Status",""], [["admin","Admin",true],["fred","User",true],["wilma","User",true],["barney","User",false]].map(function(u){
+      return ['<b>' + u[0] + '</b>', u[1], status(u[2]), '<div class="acts" style="justify-content:flex-end"><button type="button" class="btn sm" data-act="toast" data-msg="Password reset for ' + u[0] + ' (mockup)">Reset password</button>' + (u[0] !== "admin" ? '<button type="button" class="btn sm" data-act="toast" data-msg="' + (u[2] ? "Deactivated " : "Reactivated ") + u[0] + ' (mockup)">' + (u[2] ? "Deactivate" : "Reactivate") + '</button>' : '') + '</div>']; }));
+};
+G.tenants = function(){
+  function card(tn){
+    return '<div class="card"><div class="tcard-h"><span class="tpill ' + tn + '">' + TN[tn] + '</span><b>' + (tn === "test" ? "Test tenant — demonstration data" : "Prod tenant — live data") + '</b></div>' +
+      '<p class="muted">Dataset generation 1 · 6 materials · 3 locations</p>' +
+      '<div class="trow"><div><b id="lbl-ro-' + tn + '">Read-only</b><div class="muted" style="font-size:13px">Blocks business changes in ' + TN[tn] + '. Reading, audit, preferences and user management still work.</div></div>' +
+      '<button type="button" class="switch" role="switch" aria-checked="' + !!S.ro[tn] + '" aria-labelledby="lbl-ro-' + tn + '" data-act="ro" data-t="' + tn + '"></button></div>' +
+      (tn === "test" && S.later ? '<div class="trow"><div><b>Reset Test data</b> <span class="badge-later">later</span><div class="muted" style="font-size:13px">Copy Prod into Test as a new dataset generation (slice 2).</div></div><a class="btn sm" href="' + gHref("tenants") + '" data-act="toast" data-msg="Coming in slice 2">Reset…</a></div>' : '') +
+      '</div>';
+  }
+  return head({crumbs:[["Admin"], ["Tenants & read-only"]], title:"Tenants & read-only", desc:"The two tenants are fixed: Test and Prod. Each can be made read-only on its own."}) + globalNote() +
+    '<div class="tenants">' + card("test") + card("prod") + '</div>';
+};
+G.system = function(){
+  return head({crumbs:[["Admin"], ["System status"]], title:"System status", desc:"What the server runs on. Moved here from the old /admin home."}) + globalNote() +
+    '<div class="card"><dl class="facts"><div><dt>Database</dt><dd class="mono" style="font-size:13px;overflow-wrap:anywhere">/externaldata/cpg.sqlite</dd></div><div><dt>Journal mode</dt><dd>WAL</dd></div><div><dt>Migrations</dt><dd>7 of 7 applied</dd></div><div><dt>Version</dt><dd class="mono" style="font-size:13px">cc3cbd9</dd></div></dl></div>' +
+    '<h2>Migrations</h2>' + table(["Migration","Applied"], [["Migration20261001_init","2026-10-01 12:00"],["Migration20261004_tenants","2026-10-04 09:12"],["Migration20261006_users","2026-10-06 15:40"],["Migration20261009_audit","2026-10-09 10:03"],["Migration20261012_api_tokens","2026-10-12 11:21"],["Migration20261016_idempotency","2026-10-16 16:55"],["Migration20261018_materials","2026-10-18 08:00"]].map(function(m){ return ['<span class="mono" style="font-size:13px">' + m[0] + '</span>', m[1]]; }));
+};
+G.audit = function(){
+  return head({crumbs:[[S.role === "admin" ? "Admin" : "Audit"], ["Global audit"]], title:"Global audit", desc:"Changes that belong to no tenant: users, API tokens, tenant flags, migrations."}) + globalNote() +
+    table(["Time","Account","Channel","Action","Record"], GAUDIT.map(function(a){ return [a[0], esc(a[1]), '<span class="badge">' + a[2] + '</span>', a[3], esc(a[4])]; }));
+};
+G["api-tokens"] = function(){
+  var me = S.role === "admin" ? "admin" : "fred";
+  return head({crumbs:[["Account"], ["API tokens"]], title:"API tokens", desc:"Your own tokens for scripts and integrations. A token acts as you, in the tenant named in the API path.", actions:'<button type="button" class="btn primary" data-act="toast" data-msg="Would open “Create token” (mockup)">Create token</button>'}) + globalNote() +
+    table(["Name","Owner","Created","Last used",""], (me === "admin" ? [["erp-sync","2026-10-12","2026-10-19 08:15"],["backup-script","2026-10-14","never"]] : [["laptop","2026-10-19","2026-10-19 09:20"]]).map(function(k){
+      return ['<b>' + k[0] + '</b>', me, k[1], k[2], '<div style="text-align:right"><button type="button" class="btn sm" data-act="toast" data-msg="Revoked ' + k[0] + ' (mockup)">Revoke</button></div>']; }));
+};
+G.help = function(){
+  return head({crumbs:[["Help"]], title:"Help"}) + globalNote() + '<div class="help">' +
+    '<h2>Getting around</h2><p>The coloured strip on the left is the <b>rail</b>. Its colour tells you where you are: <b>amber = Test</b>, <b>black with a red edge = Prod</b>, grey = a page shared by both.</p>' +
+    '<p>At the top of the rail, <b>T / P</b> switches tenant and keeps you on the same screen. 🔒 next to a letter means that tenant is read-only.</p>' +
+    '<p>Each rail icon opens its <b>menu panel</b> next to it. Pin the panel to keep it open, or collapse it for more room — a rail click then shows it on top of the page.</p>' +
+    '<h2>Keyboard</h2><p><b>/</b> filters the menu (Enter opens the first match) · <b>[</b> pins or collapses the panel · <b>Esc</b> closes a panel or menu.</p>' +
+    '<h2>On a phone</h2><p>The tabs at the bottom open the same menus as full-screen lists. Planning, reports, admin, help and your account are under <b>More</b>.</p></div>';
+};
+
+/* ================= render ================= */
+function render(){
+  var r = parse(), sc = screenOf(r);
+  R = r;
+  var area = areaOf(r, sc);
+  var ctx = r.scope === "global" ? "global" : r.tenant;
+  var admin = S.role === "admin";
+  document.documentElement.setAttribute("data-theme", S.theme);
+  document.documentElement.lang = S.lang;
+  var app = $("app");
+  app.setAttribute("data-ctx", ctx);
+  app.classList.toggle("pinned", S.pinned);
+  app.classList.toggle("overlay", !S.pinned && S.overlay);
+
+  /* tenant switches (rail + mobile header) */
+  document.querySelectorAll('[data-act=tenant]').forEach(function(b){
+    var tn = b.getAttribute("data-t"), on = tn === S.tenant, lk = b.querySelector(".lk");
+    b.setAttribute("aria-pressed", on);
+    lk.hidden = !S.ro[tn];
+    b.setAttribute("aria-label", TN[tn] + " tenant" + (S.ro[tn] ? ", read-only" : "") + (on ? ", current" : ", switch to it"));
+    if (b.closest(".tchip")) b.setAttribute("data-tip", on ? "You are in " + TN[tn] + (S.ro[tn] ? " (read-only)" : "") : "Switch to " + TN[tn] + (S.ro[tn] ? " (read-only)" : "") + " — same screen");
+  });
+  $("tword").textContent = TN[S.tenant];
+
+  /* rail */
+  var panelShown = S.pinned || S.overlay;
+  document.querySelectorAll("#rail .ritem").forEach(function(b){
+    var a = b.getAttribute("data-area");
+    b.hidden = (b.hasAttribute("data-later") && !S.later) || (b.hasAttribute("data-admin") && !admin);
+    b.classList.toggle("here", a === area);
+    if (b.getAttribute("data-act") === "area") b.setAttribute("aria-expanded", panelShown && S.panelArea === a);
+    var rl = b.querySelector(".rl[data-l]"); if (rl) rl.textContent = t(rl.getAttribute("data-l"));
+    if (a === area && b.getAttribute("data-act") !== "acct") b.setAttribute("aria-current", "true"); else b.removeAttribute("aria-current");
+  });
+  $("avLetter").textContent = admin ? "A" : "F";
+  $("avName").textContent = admin ? "admin" : "fred";
+  $("avatarBtn").setAttribute("aria-label", "Account: " + (admin ? "admin" : "fred"));
+  $("avatarBtn").setAttribute("aria-expanded", S.acct);
+
+  /* panel */
+  var pa = S.panelArea;
+  $("ph").innerHTML = '<div><div class="ptitle">' + esc(t(AREAS[pa])) + '</div><div class="psub">' + scopeLine(pa) + '</div></div>' +
+    (S.pinned ? '<button type="button" class="iconbtn" data-act="pin" title="Collapse panel  [" aria-label="Collapse panel"><svg class="i s" viewBox="0 0 24 24"><path d="m11 17-5-5 5-5M18 17l-5-5 5-5"/></svg></button>'
+              : '<button type="button" class="iconbtn" data-act="pin" title="Pin panel open  [" aria-label="Pin panel open"><svg class="i s" viewBox="0 0 24 24"><path d="M12 17v5M9 3h6l-1 6 3 3v2H7v-2l3-3z"/></svg></button>');
+  $("pfw").hidden = !(pa === "master" || pa === "ops");
+  $("pfilter").placeholder = t("Filter…");
+  $("ptree").innerHTML = treeHTML(pa, S.filter, false);
+  $("ptree").setAttribute("aria-label", t(AREAS[pa]));
+
+  /* top header */
+  $("brand").setAttribute("href", "#/" + S.tenant + "/overview");
+  var tp = $("tpill");
+  tp.className = "tpill " + ctx;
+  tp.textContent = ctx === "global" ? "Global" : TN[ctx] + (S.ro[ctx] ? " · read-only" : "");
+  var crumbs = sc ? (sc.key === "overview" ? ["Overview"] : [AREAS[area === "admin" && r.scope === "global" ? "admin" : sc.area]].concat(sc.group ? [sc.group] : []).concat([sc.label]).concat(sc.detail ? [sc.detail] : [])) : ["Not found"];
+  if (sc && (sc.area === "help")) crumbs = ["Help"];
+  $("crumbs").innerHTML = crumbs.map(function(c, i){ return i === crumbs.length - 1 ? "<b>" + esc(c) + "</b>" : esc(c); }).join(' <span aria-hidden="true">›</span> ');
+  $("tdesc").textContent = ctx === "global" ? "Shared by Test and Prod" : ctx === "test" ? "Test tenant — demonstration data, safe to experiment" : "Prod tenant — live data";
+
+  /* read-only banner */
+  $("banner").innerHTML = (r.scope === "tenant" && S.ro[r.tenant]) ?
+    '<div class="robanner" role="status"><span aria-hidden="true">🔒</span><span><b>' + TN[r.tenant] + ' is read-only</b> — business changes are blocked. Reading, audit, preferences and user management still work.</span>' + (admin ? '<a href="' + gHref("tenants") + '">Change on Tenants</a>' : '') + '</div>' : "";
+
+  /* page */
+  var html;
+  if (!sc) html = notFound();
+  else if (sc.adminOnly && !admin) html = forbidden(sc);
+  else if (r.scope === "tenant") html = sc.detail ? materialDetail(sc.detail) : sc.later ? placeholder(sc) : P[sc.key]();
+  else html = G[sc.key]();
+  $("page").innerHTML = html;
+  document.title = (sc ? sc.label : "Not found") + (r.scope === "tenant" ? " — " + TN[r.tenant] : "") + " · CPG";
+
+  renderMobile(area);
+  renderAcct();
+  renderControls();
+}
+
+function tabDefs(){
+  var d = [{id:"home", label:"Home", icon:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/>'},
+           {id:"master", label:"Master data", icon:'<ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v13c0 1.7 3.6 3 8 3s8-1.3 8-3v-13"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>'}];
+  if (S.later) d.push({id:"ops", label:"Operations", icon:'<path d="M3 21V10l6 4v-4l6 4V5h6v16z"/><path d="M7 17.5h2M12 17.5h2M17 17.5h1"/>'});
+  d.push({id:"audit", label:"Audit", icon:'<path d="M10 6h10M10 12h10M10 18h10"/><path d="m3.5 6 1.5 1.5L7.5 5M3.5 12l1.5 1.5L7.5 11M3.5 18l1.5 1.5L7.5 17"/>'});
+  d.push({id:"more", label:"More", icon:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>'});
+  return d;
+}
+function tabOfArea(a){ return (a === "home" || a === "master" || a === "ops" || a === "audit") ? a : "more"; }
+function renderMobile(area){
+  var here = tabOfArea(area);
+  $("tabbar").innerHTML = tabDefs().map(function(d){
+    var isSheet = d.id !== "home";
+    return '<button type="button" class="tab' + (here === d.id ? ' here' : '') + '" data-act="tab" data-tab="' + d.id + '"' + (isSheet ? ' aria-haspopup="dialog" aria-expanded="' + (S.sheet === d.id) + '" aria-controls="sheet"' : '') + (here === d.id ? ' aria-current="true"' : '') + '><svg class="i" viewBox="0 0 24 24">' + d.icon + '</svg><span class="rl">' + esc(t(d.label)) + '</span></button>';
+  }).join("");
+  var sh = $("sheet");
+  sh.hidden = !S.sheet;
+  if (!S.sheet) return;
+  var a = S.sheet;
+  $("shHead").innerHTML = '<div><div class="ptitle" id="shTitle">' + esc(t(a === "more" ? "More" : AREAS[a])) + '</div><div class="psub">' + (a === "more" ? '<span class="dot global"></span>Planning, reports, admin, help, account' : scopeLine(a)) + '</div></div><button type="button" class="iconbtn" data-act="closesheet" aria-label="Close menu"><svg class="i" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>';
+  $("shfw").hidden = a !== "master" && a !== "ops";
+  $("shfilter").placeholder = t("Filter…");
+  $("shTree").innerHTML = a === "more" ? moreHTML() : treeHTML(a, S.shFilter, true);
+}
+function moreHTML(){
+  var admin = S.role === "admin", out = "";
+  function grp(title, area){ var h = treeHTML(area, "", true); return '<div class="tgroup"><div class="gtitle">' + esc(t(title)) + (area !== "admin" ? ' <span class="badge-later">' + t("later") + '</span>' : '') + '</div>' + h.replace(/<div class="tgroup">|<\/div>$/g, "") + '</div>'; }
+  if (S.later) { out += grp("Planning", "planning") + grp("Reports", "reports"); }
+  if (admin) out += grp("Admin", "admin");
+  var cur = currentId();
+  function li(label, href, id){ return '<li><a class="titem" href="' + href + '"' + (cur.id === id ? ' aria-current="page"' : '') + '><span class="tl">' + esc(t(label)) + '</span><svg class="i s chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></a></li>'; }
+  out += '<div class="tgroup"><div class="gtitle">' + t("Account") + ' · ' + (admin ? "admin" : "fred") + '</div><ul role="list">' + li("Help", gHref("help"), "g:help") + li("API tokens", gHref("api-tokens"), "g:api-tokens") + '</ul>' +
+    '<div class="prow" style="padding:8px 10px">' + t("Language") + segHTML("lang", [["en","English"],["pl","Polski"]], S.lang) + '</div>' +
+    '<div class="prow" style="padding:4px 10px 8px">' + t("Theme") + segHTML("theme", [["light",t("Light")],["dark",t("Dark")]], S.theme) + '</div>' +
+    '<ul role="list"><li><button type="button" class="titem mitem" data-act="signout"><span class="tl">' + t("Sign out") + '</span></button></li></ul></div>';
+  return out;
+}
+function segHTML(kind, opts, val){ return '<div class="seg" role="group">' + opts.map(function(o){ return '<button type="button" data-act="' + kind + '" data-v="' + o[0] + '" aria-pressed="' + (o[0] === val) + '">' + esc(o[1]) + '</button>'; }).join("") + '</div>'; }
+function renderAcct(){
+  var p = $("acct"), admin = S.role === "admin";
+  p.hidden = !S.acct;
+  if (!S.acct) return;
+  p.innerHTML = '<div class="who"><span class="av2">' + (admin ? "A" : "F") + '</span><div><b>' + (admin ? "admin" : "fred") + '</b><div class="muted" style="font-size:12px">' + (admin ? "Admin" : "User") + ' · signed in</div></div></div>' +
+    '<div class="prow">' + t("Language") + segHTML("lang", [["en","English"],["pl","Polski"]], S.lang) + '</div>' +
+    '<div class="prow">' + t("Theme") + segHTML("theme", [["light",t("Light")],["dark",t("Dark")]], S.theme) + '</div>' +
+    '<div style="border-top:1px solid var(--border);padding-top:6px"><a class="mitem" href="' + gHref("api-tokens") + '">🔑 ' + t("API tokens") + '</a><button type="button" class="mitem" data-act="signout">↪ ' + t("Sign out") + '</button></div>';
+}
+function renderControls(){
+  document.querySelectorAll('[data-ctl=role]').forEach(function(i){ i.checked = i.value === S.role; });
+  document.querySelector('[data-ctl=later]').checked = S.later;
+  document.querySelector('[data-ctl=ro-test]').checked = !!S.ro.test;
+  document.querySelector('[data-ctl=ro-prod]').checked = !!S.ro.prod;
+  document.querySelector('[data-ctl=pinned]').checked = S.pinned;
+  $("mcb").hidden = !S.mcOpen;
+  $("mc").classList.toggle("closed", !S.mcOpen);
+  document.querySelector('[data-act=mc]').setAttribute("aria-expanded", S.mcOpen);
+  $("mcArrow").textContent = S.mcOpen ? "▾" : "▸";
+}
+
+/* ================= behaviour ================= */
+var toastTimer;
+function toast(msg){ var el = $("toast"); el.textContent = msg; el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(function(){ el.hidden = true; }, 2600); }
+function switchTenant(tn){
+  if (tn === S.tenant) { toast("You are already in " + TN[tn]); return; }
+  S.tenant = tn; lsSet("tenant", tn);
+  var r = parse();
+  if (r && r.scope === "tenant") { location.hash = "#/" + tn + "/" + r.path; }
+  else { render(); toast(TN[tn] + " selected — this page is shared by Test and Prod, so it does not change."); }
+}
+function setRO(tn, v){
+  S.ro[tn] = v; lsSet("ro", S.ro); render();
+  toast(TN[tn] + (v ? " is now read-only" : " is writable again"));
+}
+function onRoute(){
+  var r = parse();
+  if (!r) { location.replace("#/" + S.tenant + "/overview"); return; }
+  var sc = screenOf(r);
+  if (sc && sc.later && !S.later) { location.replace("#/" + r.tenant + "/overview"); return; }
+  if (r.scope === "tenant" && r.tenant !== S.tenant) { S.tenant = r.tenant; lsSet("tenant", S.tenant); }
+  var area = areaOf(r, sc);
+  if (PANEL_AREAS.indexOf(area) > -1 && (S.panelArea !== area)) { S.panelArea = area; S.filter = ""; $("pfilter").value = ""; }
+  S.overlay = false; S.sheet = null; S.acct = false; S.shFilter = ""; $("shfilter").value = "";
+  if (sc && r.path !== "overview") {
+    var label = sc.detail ? sc.detail + " " + (MATERIALS.filter(function(m){ return m.id === sc.detail; })[0] || {name:""}).name : sc.label;
+    var href = location.hash;
+    S.recent = [{label:label, href:href, tag: r.scope === "global" ? "global" : TN[r.tenant]}].concat(S.recent.filter(function(x){ return x.href !== href; })).slice(0, 8);
+    lsSet("recent", S.recent);
+  }
+  render();
+  window.scrollTo(0, 0);
+  var h = document.querySelector("#page h1"); if (h && document.activeElement && document.activeElement.closest && document.activeElement.closest(".panel,.sheet,.tabbar,.popover,#page")) h.focus({preventScroll:true});
+}
+window.addEventListener("hashchange", onRoute);
+
+document.addEventListener("click", function(e){
+  var el = e.target.closest("[data-act]");
+  // click outside overlay / popover closes them
+  if (S.overlay && !e.target.closest("#panel") && !e.target.closest("#rail")) { S.overlay = false; render(); }
+  if (S.acct && !e.target.closest("#acct") && !e.target.closest("#avatarBtn")) { S.acct = false; render(); }
+  // following a link to the page you are already on still closes the overlay / sheet / popover
+  var link = e.target.closest("a[href^='#/']");
+  if (link && link.getAttribute("href") === location.hash && (S.overlay || S.sheet || S.acct)) { S.overlay = false; S.sheet = null; S.acct = false; render(); }
+  if (!el) return;
+  var act = el.getAttribute("data-act");
+  switch (act) {
+    case "tenant": switchTenant(el.getAttribute("data-t")); break;
+    case "home": S.panelArea = "home"; S.filter = ""; $("pfilter").value = ""; go("#/" + S.tenant + "/overview"); break;
+    case "help": go(gHref("help")); break;
+    case "area":
+      var a = el.getAttribute("data-area");
+      if (S.pinned) { if (S.panelArea !== a) { S.panelArea = a; S.filter = ""; $("pfilter").value = ""; } }
+      else { S.overlay = !(S.overlay && S.panelArea === a); if (S.panelArea !== a) { S.filter = ""; $("pfilter").value = ""; } S.panelArea = a; }
+      render();
+      if (S.pinned || S.overlay) { var first = $("pfw").hidden ? document.querySelector("#ptree a") : null; if (first && e.detail === 0) first.focus(); }
+      break;
+    case "pin": S.pinned = !S.pinned; S.overlay = false; lsSet("pinned", S.pinned); render(); toast(S.pinned ? "Panel pinned open" : "Panel collapsed — click a rail icon to show it on top"); break;
+    case "acct": S.acct = !S.acct; render(); break;
+    case "lang": S.lang = el.getAttribute("data-v"); lsSet("lang", S.lang); render(); if (S.lang === "pl") toast("Polski: menu labels switch to Polish (pages stay English in this mockup)."); break;
+    case "theme": S.theme = el.getAttribute("data-v"); lsSet("theme", S.theme); render(); break;
+    case "signout": S.acct = false; S.sheet = null; render(); toast("Signed out (mockup) — you would land on the sign-in page."); break;
+    case "toast": e.preventDefault(); toast(el.getAttribute("data-msg")); break;
+    case "ro": setRO(el.getAttribute("data-t"), !S.ro[el.getAttribute("data-t")]); break;
+    case "tab":
+      var tb = el.getAttribute("data-tab");
+      if (tb === "home") { S.sheet = null; go("#/" + S.tenant + "/overview"); }
+      else { S.sheet = S.sheet === tb ? null : tb; S.shFilter = ""; $("shfilter").value = ""; render(); }
+      break;
+    case "closesheet": S.sheet = null; render(); break;
+    case "mc": S.mcOpen = !S.mcOpen; lsSet("mcOpen", S.mcOpen); renderControls(); break;
+    case "about": openAbout(); break;
+    case "closeabout": $("about").hidden = true; break;
+    case "reset": Object.keys(localStorage).forEach(function(k){ if (k.indexOf(LS) === 0) localStorage.removeItem(k); }); location.hash = "#/test/overview"; location.reload(); break;
+  }
+});
+document.addEventListener("change", function(e){
+  var c = e.target.getAttribute("data-ctl"); if (!c) return;
+  if (c === "role") { S.role = e.target.value; lsSet("role", S.role); if (S.role !== "admin" && S.panelArea === "admin") S.panelArea = "home"; render(); toast(S.role === "admin" ? "Signed in as admin" : "Signed in as fred (normal user) — Admin and Import disappear"); }
+  if (c === "later") { S.later = e.target.checked; lsSet("later", S.later); if (!S.later && ["ops","planning","reports"].indexOf(S.panelArea) > -1) S.panelArea = "home"; var sc = screenOf(parse()); if (sc && sc.later && !S.later) location.hash = "#/" + S.tenant + "/overview"; else render(); }
+  if (c === "ro-test") setRO("test", e.target.checked);
+  if (c === "ro-prod") setRO("prod", e.target.checked);
+  if (c === "pinned") { S.pinned = e.target.checked; S.overlay = false; lsSet("pinned", S.pinned); render(); }
+});
+$("pfilter").addEventListener("input", function(e){ S.filter = e.target.value; $("ptree").innerHTML = treeHTML(S.panelArea, S.filter, false); });
+$("shfilter").addEventListener("input", function(e){ S.shFilter = e.target.value; $("shTree").innerHTML = treeHTML(S.sheet, S.shFilter, true); });
+// Enter in a filter box opens the first match
+["pfilter","shfilter"].forEach(function(id){ $(id).addEventListener("keydown", function(e){ if (e.key !== "Enter") return; var a = document.querySelector((id === "pfilter" ? "#ptree" : "#shTree") + " a.titem"); if (a) { e.preventDefault(); location.hash = a.getAttribute("href"); } }); });
+$("about").addEventListener("click", function(e){ if (e.target === $("about")) $("about").hidden = true; });
+document.addEventListener("keydown", function(e){
+  var typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+  if (e.key === "Escape") {
+    if (typing && document.activeElement.value) { document.activeElement.value = ""; document.activeElement.dispatchEvent(new Event("input")); return; }
+    if (!$("about").hidden) { $("about").hidden = true; return; }
+    if (S.acct || S.overlay || S.sheet) { var wasSheet = S.sheet; S.acct = false; S.overlay = false; S.sheet = null; render(); var b = wasSheet ? document.querySelector('.tab[data-tab="' + wasSheet + '"]') : document.querySelector('#rail [data-area="' + S.panelArea + '"]'); if (b) b.focus(); }
+    return;
+  }
+  if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === "[") { e.preventDefault(); S.pinned = !S.pinned; S.overlay = false; lsSet("pinned", S.pinned); render(); }
+  if (e.key === "/") { if (window.innerWidth <= 767) return; e.preventDefault(); if (!S.pinned) S.overlay = true; if (S.panelArea !== "master" && S.panelArea !== "ops") S.panelArea = "master"; render(); $("pfilter").focus(); }
+});
+
+/* ================= about ================= */
+function openAbout(){
+  $("aboutDlg").innerHTML = '<div class="h1row"><h2 id="aboutTitle">05 — Icon rail + contextual panel</h2><button type="button" class="iconbtn" data-act="closeabout" aria-label="Close"><svg class="i" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
+    '<h3>The idea</h3><p>Two levels, both visible — like Linear or VS Code. A slim labelled <b>icon rail</b> holds the seven areas; clicking one opens its tree in a 240 px <b>panel</b> next to it (with record counts and a filter). The tenant is not a banner but an <b>ambient colour</b>: the whole rail is amber in Test and black with a red edge in Prod, and the T / P chip at its top flips tenant on the same screen. On a phone the rail becomes <b>bottom tabs</b> whose menus open as full-screen lists.</p>' +
+    '<h3>Why it fits CPG</h3><ul><li>Master data — the part that exists today and that people use all day — is one tree with counts, so siblings are one click apart once the panel shows it.</li><li>The rail scales to slices 2–3 without growing a long top bar; later areas just add a panel, not new top-level links.</li><li>You cannot forget you are in Prod: the colour is in your peripheral vision on every screen, and grey on shared pages tells you the switch does not apply there.</li></ul>' +
+    '<h3>Trade-offs</h3><ul><li>Costs ~300 px of width when pinned; collapsing gives it back but makes the tree a two-step overlay.</li><li>Icons need their labels — 10–11 px labels are small, and Polish ones wrap to two lines (try Account → Polski).</li><li>Two places to look (rail + panel) is one more concept than a single sidebar; the admin\'s Global audit sits under Admin, not Audit.</li><li>Strong amber may feel loud for people who live in Test all day.</li></ul>' +
+    '<h3>Click counts (from a tenant’s Overview)</h3>' +
+    '<div class="tw"><table><thead><tr><th>Target</th><th>Desktop</th><th>Mobile (390 px)</th></tr></thead><tbody>' +
+    '<tr><td>Materials</td><td>2 — Master data → Materials</td><td>2 — Master data tab → Materials</td></tr>' +
+    '<tr><td>Locations</td><td>2 — Master data → Locations (1 if the Master data panel is already open)</td><td>2 — Master data tab → Locations</td></tr>' +
+    '<tr><td>Safety stock</td><td>2 — Master data → Safety stock</td><td>2 — Master data tab → Safety stock</td></tr>' +
+    '<tr><td>Users</td><td>2 — Admin → Users</td><td>2 — More → Users</td></tr>' +
+    '<tr><td>Switch Test → Prod, same screen</td><td>1 — P on the rail</td><td>1 — Prod in the header</td></tr>' +
+    '<tr><td>Change language</td><td>2 — avatar → Polski</td><td>2 — More → Polski</td></tr>' +
+    '<tr><td>Reach the Import</td><td>2 — Master data → Import</td><td>2 — Master data tab → Import</td></tr>' +
+    '</tbody></table></div><p class="muted" style="font-size:12.5px">Panel collapsed: same counts — the rail click opens the panel on top instead of beside the page.</p>';
+  $("about").hidden = false;
+  $("aboutDlg").focus();
+}
+
+/* ================= boot ================= */
+onRoute(); // syncs the tenant from the URL (a shared #/prod/… link opens in Prod), picks the panel, renders
+})();
+</script>
+</body>
+</html>

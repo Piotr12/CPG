@@ -1,0 +1,788 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CPG menu revamp — 04 Process flow (mockup)</title>
+<style>
+*{box-sizing:border-box}
+:root{
+  --bg:#fff;--fg:#252525;--muted:#737373;--border:#e5e5e5;--subtle:#fafafa;--card:#fff;--hover:#f4f4f5;
+  --primary:#252525;--primary-fg:#fff;--focus:#2563eb;--shadow:0 1px 2px rgba(0,0,0,.06),0 1px 3px rgba(0,0,0,.06);
+  --test-bg:#fde68a;--test-fg:#92400e;--test-line:#f59e0b;
+  --prod-bg:#171717;--prod-fg:#fff;--prod-red:#dc2626;
+  --ro-bg:#fef2f2;--ro-fg:#7f1d1d;--ro-line:#dc2626;
+  --note-bg:#eff6ff;--note-fg:#1e3a8a;--note-line:#93c5fd;
+}
+[data-theme=dark]{
+  --bg:#0a0a0a;--fg:#ededed;--muted:#a3a3a3;--border:#2a2a2a;--subtle:#121212;--card:#141414;--hover:#1f1f1f;
+  --primary:#ededed;--primary-fg:#111;--shadow:0 1px 2px rgba(0,0,0,.5);
+  --ro-bg:#2a1111;--ro-fg:#fecaca;--note-bg:#0f1b33;--note-fg:#bfdbfe;--note-line:#1e3a8a;
+}
+html,body{margin:0;background:var(--bg);color:var(--fg)}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;font-size:14px;line-height:1.45;min-height:100vh;display:flex;flex-direction:column}
+a{color:inherit}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:6px}
+h1[tabindex]:focus{outline:none}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.muted{color:var(--muted)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---------- top bar ---------- */
+.top{display:flex;align-items:center;gap:14px;padding:10px 20px;background:var(--bg);border-bottom:1px solid var(--border)}
+.brand{font-weight:700;text-decoration:none;font-size:15px;white-space:nowrap;display:inline-flex;gap:6px;align-items:center}
+.spacer{flex:1}
+.tswitch{display:inline-flex;align-items:center;gap:10px;background:none;border:0;padding:2px;cursor:pointer;border-radius:999px}
+.track{position:relative;display:inline-flex;background:var(--hover);border:1px solid var(--border);border-radius:999px;padding:2px;box-shadow:inset 0 1px 2px rgba(0,0,0,.12)}
+.side{position:relative;z-index:1;width:64px;text-align:center;font-size:11px;font-weight:700;letter-spacing:.08em;padding:4px 0;border-radius:999px;color:var(--muted);transition:color .2s}
+.knob{position:absolute;top:2px;bottom:2px;left:2px;width:64px;border-radius:999px;transition:transform .2s,background .2s;box-shadow:0 1px 3px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.35)}
+.t-test .knob{background:var(--test-bg);border:1px solid var(--test-line)}
+.t-test .s-test{color:var(--test-fg)}
+.t-prod .knob{transform:translateX(64px);background:var(--prod-bg);border:1px solid var(--prod-red)}
+.t-prod .s-prod{color:#fff}
+.tsay{font-size:13px;padding:4px 10px;border-radius:8px;white-space:nowrap}
+.t-test .tsay{background:var(--test-bg);color:var(--test-fg)}
+.t-prod .tsay{background:var(--prod-bg);color:#fff;box-shadow:inset 3px 0 0 var(--prod-red)}
+.tsay b{letter-spacing:.04em}
+.tswitch:hover .track{border-color:var(--muted)}
+.ibtn{width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:8px;background:var(--card);cursor:pointer;text-decoration:none;font-size:15px}
+.ibtn:hover,.acct:hover{background:var(--hover)}
+.acct{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 10px 0 4px;border:1px solid var(--border);border-radius:999px;background:var(--card);cursor:pointer}
+.avatar{width:26px;height:26px;border-radius:50%;background:var(--primary);color:var(--primary-fg);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px}
+.menu-wrap{position:relative}
+.menu{position:absolute;right:0;top:calc(100% + 6px);z-index:30;min-width:240px;max-width:calc(100vw - 24px);background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.15);padding:6px}
+.menu h3{margin:6px 8px 4px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.menu a,.menu .mi{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;text-decoration:none;width:100%;background:none;border:0;text-align:left;cursor:pointer}
+.menu a:hover,.menu .mi:hover{background:var(--hover)}
+.menu hr{border:0;border-top:1px solid var(--border);margin:6px 0}
+.menu .who{padding:8px}
+.menu .row{display:flex;align-items:center;justify-content:space-between;padding:6px 8px;gap:10px}
+.menu small{color:var(--muted)}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;padding:2px;gap:2px}
+.seg button{border:0;background:none;padding:3px 10px;border-radius:6px;cursor:pointer;font-size:13px}
+.seg button[aria-pressed=true]{background:var(--hover);font-weight:600}
+
+/* ---------- flow ribbon ---------- */
+.ribbon{background:var(--subtle);border-bottom:1px solid var(--border);position:relative}
+.ribbon::before{content:"";position:absolute;left:0;right:0;top:0;height:3px}
+.is-test .ribbon::before{background:var(--test-line)}
+.is-prod .ribbon::before{background:var(--prod-red)}
+.ribbon ol{list-style:none;margin:0;padding:12px 16px 10px;display:flex;align-items:stretch;gap:2px;position:relative}
+.ribbon li{display:flex;align-items:center}
+.ribbon li.st{flex:1 1 0;min-width:0;max-width:210px}
+.ribbon li.arrow{color:var(--muted);font-size:14px;padding:0 1px;flex:none}
+.ribbon li.gap{flex:none;width:1px;align-self:stretch;margin:2px 10px;background:repeating-linear-gradient(to bottom,var(--border) 0 4px,transparent 4px 8px)}
+.stage{display:flex;gap:8px;align-items:flex-start;width:100%;padding:7px 9px;border-radius:10px;text-decoration:none;border:1px solid transparent;min-height:54px}
+.stage:hover{background:var(--card);border-color:var(--border)}
+.stage .num{flex:none;width:22px;height:22px;border-radius:50%;border:1.5px solid var(--fg);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;margin-top:1px}
+.stage .txt{display:flex;flex-direction:column;min-width:0}
+.stage b{font-size:13.5px;line-height:1.25;overflow-wrap:anywhere}
+.stage small{font-size:11.5px;color:var(--muted);line-height:1.3}
+.stage[data-cur]{background:var(--card);border-color:var(--border);box-shadow:var(--shadow)}
+.stage[data-cur] .num{background:var(--fg);color:var(--bg)}
+.stage.later{opacity:.6}
+.stage.later .num{border-style:dashed}
+.stage.home .num{border:0;font-size:15px}
+li.st-home{flex:none!important;max-width:none!important}
+.stage{position:relative}
+.stage .later-tag{position:absolute;top:-7px;right:6px;margin:0;background:var(--subtle);font-weight:600}
+.stage[data-cur] .later-tag{background:var(--card)}
+.later-tag{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.03em;border:1px dashed var(--muted);color:var(--muted);border-radius:999px;padding:0 6px;margin-left:4px;vertical-align:1px;white-space:nowrap}
+
+/* ---------- banners ---------- */
+.banner{display:flex;gap:10px;align-items:center;padding:9px 20px;font-size:13.5px;border-bottom:1px solid var(--border)}
+.banner.ro{background:var(--ro-bg);color:var(--ro-fg);box-shadow:inset 4px 0 0 var(--ro-line)}
+.banner.ro a{font-weight:600}
+
+/* ---------- layout ---------- */
+.layout{flex:1;display:grid;grid-template-columns:248px minmax(0,1fr);width:100%;max-width:1280px;margin:0 auto}
+.layout.no-panel{grid-template-columns:minmax(0,1fr)}
+.panel{border-right:1px solid var(--border);padding:18px 12px 24px 16px}
+.no-panel .panel{display:none}
+.panel-head{display:flex;gap:8px;align-items:flex-start;padding:0 6px 10px;margin-bottom:6px;border-bottom:1px solid var(--border)}
+.panel-head .num{flex:none;width:22px;height:22px;border-radius:50%;background:var(--fg);color:var(--bg);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+.panel-head b{display:block}
+a.panel-head{text-decoration:none;border-radius:8px;padding-top:6px}
+a.panel-head:hover{background:var(--hover)}
+a.panel-head[aria-current=page]{background:var(--hover)}
+.panel-head small{color:var(--muted);font-size:12px}
+.tree{list-style:none;margin:0;padding:0}
+.tree .grp{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;padding:12px 8px 4px}
+.tree.branch{margin-left:10px;padding-left:8px;border-left:1px solid var(--border)}
+.tree a{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;text-decoration:none}
+.tree a:hover{background:var(--hover)}
+.tree a[aria-current=page]{background:var(--hover);font-weight:600;box-shadow:inset 3px 0 0 var(--fg)}
+.tree a.later{color:var(--muted)}
+.count{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;border:1px solid var(--border);border-radius:999px;padding:0 7px;min-width:22px;text-align:center}
+.count.zero{border-style:dashed}
+.panel-foot{margin-top:14px;padding:10px 8px 0;border-top:1px solid var(--border);font-size:12px;color:var(--muted)}
+
+main{padding:26px 32px 40px;min-width:0}
+.crumbs{font-size:13px;color:var(--muted);margin-bottom:6px;display:flex;flex-wrap:wrap;gap:4px}
+.crumbs a{text-decoration:none}.crumbs a:hover{text-decoration:underline}
+h1{font-size:24px;margin:0;letter-spacing:-.01em}
+h2{font-size:17px;margin:0}
+.hstage{display:flex;align-items:center;gap:10px}
+.hnum{width:30px;height:30px;border-radius:50%;background:var(--fg);color:var(--bg);display:inline-flex;align-items:center;justify-content:center;font-size:16px;flex:none}
+.hnum.later{background:transparent;color:var(--muted);border:2px dashed var(--muted)}
+.ph{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px}
+.ph p{margin:6px 0 0;color:var(--muted);max-width:640px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.btn{height:32px;padding:0 12px;border:1px solid var(--border);border-radius:8px;display:inline-flex;align-items:center;gap:6px;font-weight:500;font-size:14px;background:var(--card);white-space:nowrap;cursor:pointer;text-decoration:none}
+.btn:hover{background:var(--hover)}
+.btn.primary{background:var(--primary);color:var(--primary-fg);border-color:var(--primary)}
+.btn.primary:hover{opacity:.9}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.tw{overflow-x:auto;border:1px solid var(--border);border-radius:12px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;color:var(--muted);font-weight:500;padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--subtle)}
+td{padding:10px 12px;border-bottom:1px solid var(--border)}
+td .mono,td.mono{white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td a{text-underline-offset:3px}
+.badge{border:1px solid var(--border);border-radius:999px;padding:1px 8px;font-size:12px;white-space:nowrap;display:inline-block}
+.badge.ok{background:var(--hover)}
+.badge.off{background:#c0362c;color:#fff;border-color:#c0362c}
+.badge.make{border-color:#2563eb;color:#2563eb}
+.badge.buy{border-color:#16a34a;color:#16a34a}
+.card{border:1px solid var(--border);border-radius:14px;padding:18px;background:var(--card)}
+.dl{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0}
+.dl dt{color:var(--muted);font-size:13px}.dl dd{margin:4px 0 0}
+.empty{border:1px dashed var(--border);border-radius:12px;padding:28px;text-align:center;color:var(--muted);display:flex;flex-direction:column;gap:10px;align-items:center}
+.empty b{color:var(--fg)}
+.sec{margin-top:26px}
+.sec-h{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:10px}
+.sec-h p{margin:4px 0 0;color:var(--muted)}
+.note{display:flex;gap:10px;align-items:flex-start;background:var(--note-bg);color:var(--note-fg);border:1px solid var(--note-line);border-radius:10px;padding:10px 12px;margin-bottom:18px;font-size:13.5px}
+.ro-inline{font-size:12.5px;color:var(--ro-fg);background:var(--ro-bg);border-radius:8px;padding:6px 10px;margin-bottom:12px;display:inline-block}
+
+/* overview timeline */
+.loop{list-style:none;margin:0;padding:0;position:relative}
+.loop::before{content:"";position:absolute;left:17px;top:18px;bottom:18px;width:2px;background:var(--border)}
+.tl{position:relative;display:grid;grid-template-columns:36px minmax(0,1fr) 260px;gap:14px;align-items:start;padding:12px 0}
+.tl .bub{position:relative;z-index:1;width:36px;height:36px;border-radius:50%;background:var(--fg);color:var(--bg);display:inline-flex;align-items:center;justify-content:center;font-weight:700;text-decoration:none;font-size:15px}
+.tl.later .bub{background:var(--bg);color:var(--muted);border:2px dashed var(--muted)}
+.tl.back .bub{background:var(--bg);color:var(--fg);border:2px solid var(--fg)}
+.tl-h{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+.tl-h a{font-weight:700;font-size:15.5px;text-decoration:none}
+.tl-h a:hover{text-decoration:underline}
+.tl-s{margin-top:6px;display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--border);border-radius:999px;padding:2px 10px;font-size:13px;text-decoration:none;background:var(--card)}
+a.chip:hover{background:var(--hover)}
+.chip.zero{border-style:dashed;color:var(--muted)}
+.chip .count{border:0;padding:0;min-width:0}
+.tl-n{border:1px solid var(--border);border-radius:10px;padding:8px 10px;font-size:13px;background:var(--card)}
+.tl-n .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;display:block;margin-bottom:4px}
+.tl-n a,.tl-n button.lnk{font-weight:600}
+.tl.later .tl-n{background:transparent;border-style:dashed;color:var(--muted)}
+.lnk{background:none;border:0;padding:0;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.lnk:disabled{opacity:.5;cursor:not-allowed;text-decoration:none}
+
+/* stage landing */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.ecard{display:flex;flex-direction:column;gap:6px;border:1px solid var(--border);border-radius:12px;padding:14px;text-decoration:none;background:var(--card)}
+.ecard:hover{border-color:var(--muted)}
+.ecard .t{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:600}
+.ecard p{margin:0;color:var(--muted);font-size:13px}
+.ecard.later{border-style:dashed;opacity:.75}
+.stage-nav{display:flex;justify-content:space-between;gap:10px;margin-top:22px;flex-wrap:wrap}
+.flowline{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;color:var(--muted);margin-top:10px}
+.flowline .here{color:var(--fg);font-weight:700}
+
+/* import stepper */
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.step{border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;background:var(--card)}
+.step .sn{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--fg);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+.step.done .sn{background:var(--fg);color:var(--bg)}
+.step.todo{opacity:.55}
+.step p{margin:0;color:var(--muted);font-size:13px}
+.drop{border:1.5px dashed var(--border);border-radius:10px;padding:12px;text-align:center;color:var(--muted);font-size:13px}
+
+/* placeholder */
+.later-box{border:1px dashed var(--border);border-radius:16px;padding:34px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;background:var(--subtle)}
+.later-box .big{font-size:40px}
+.later-box p{margin:0;color:var(--muted);max-width:520px}
+
+footer{padding:22px 20px 26px;text-align:center;font-size:12.5px;color:var(--muted)}
+footer a{text-underline-offset:3px}
+
+/* ---------- mockup controls ---------- */
+.mock{position:fixed;right:12px;bottom:12px;z-index:50;width:250px;background:var(--card);border:1.5px dashed #8a8a8a;border-radius:12px;font-size:12.5px;box-shadow:0 6px 20px rgba(0,0,0,.12)}
+.mock>button{width:100%;display:flex;gap:8px;text-align:left;justify-content:space-between;align-items:center;background:none;border:0;padding:8px 10px;cursor:pointer;font-weight:600;font-size:12px;color:var(--muted)}
+.mock .body{padding:0 10px 10px;display:flex;flex-direction:column;gap:8px}
+.mock fieldset{border:0;margin:0;padding:0;display:flex;gap:10px;flex-wrap:wrap}
+.mock legend{font-weight:600;margin-bottom:3px;padding:0}
+.mock label{display:inline-flex;gap:5px;align-items:center;cursor:pointer}
+.mock.collapsed{width:auto}
+.mock.collapsed .body{display:none}
+
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:60;padding:16px}
+.dlg{width:min(720px,100%);max-height:calc(100vh - 32px);overflow:auto;background:var(--card);border-radius:14px;padding:22px 24px;display:flex;flex-direction:column;gap:12px}
+.dlg h2{font-size:19px}
+.dlg h3{margin:6px 0 0;font-size:14px}
+.dlg p,.dlg ul{margin:0}
+.dlg ul{padding-left:18px}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--primary);color:var(--primary-fg);padding:9px 14px;border-radius:10px;font-size:13px;z-index:70;max-width:calc(100vw - 32px);box-shadow:0 6px 20px rgba(0,0,0,.2)}
+
+/* ---------- mobile ---------- */
+@media (max-width:767px){
+  .top{padding:8px 12px;gap:8px}
+  .tsay{display:none}
+  .side{width:52px;font-size:10.5px}
+  .knob{width:52px}
+  .t-prod .knob{transform:translateX(52px)}
+  .acct .nm,.acct .car{display:none}
+  .acct{padding:0 3px}
+  .ribbon ol{overflow-x:auto;scroll-snap-type:x proximity;padding:10px 12px 8px;scrollbar-width:none}
+  .ribbon ol::-webkit-scrollbar{display:none}
+  .ribbon li.st{flex:none;width:152px;max-width:none;scroll-snap-align:center}
+  li.st-home{width:auto!important}
+  .stage{min-height:50px}
+  .banner{padding:8px 12px;font-size:12.5px;align-items:flex-start}
+  .layout{grid-template-columns:minmax(0,1fr);grid-template-rows:auto 1fr}
+  .layout.stage-landing .panel{display:none}
+  .panel{border-right:0;border-bottom:1px solid var(--border);padding:8px 0 8px}
+  .panel-head,.panel-foot,.tree .grp{display:none}
+  .panel .tree,.panel .tree.branch{display:flex;overflow-x:auto;gap:6px;padding:0 12px;margin:0;border:0;scrollbar-width:none}
+  .panel .tree::-webkit-scrollbar{display:none}
+  .panel .tree li{flex:none}
+  .panel .tree a{border:1px solid var(--border);border-radius:999px;padding:5px 10px;white-space:nowrap}
+  .panel .tree a[aria-current=page]{box-shadow:none;background:var(--fg);color:var(--bg);border-color:var(--fg)}
+  .panel .tree a[aria-current=page] .count{color:var(--bg);border-color:var(--bg)}
+  main{padding:18px 14px 30px}
+  h1{font-size:21px}
+  .ph{flex-direction:column;gap:10px}
+  .actions{justify-content:flex-start}
+  .dl{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tl{grid-template-columns:36px minmax(0,1fr)}
+  .tl-n{grid-column:2}
+  .steps{grid-template-columns:minmax(0,1fr)}
+  .stage-landing .long,.stage-landing .flowline,.stage-landing .ph .actions{display:none}
+  .grid{grid-template-columns:minmax(0,1fr);gap:0;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  .ecard{border:0;border-radius:0;border-bottom:1px solid var(--border);padding:12px 14px}
+  .ecard:last-child{border-bottom:0}
+  .ecard.later{border-style:solid}
+  .ecard p{display:none}
+  .mock{width:auto;max-width:calc(100vw - 24px)}
+  .mock:not(.collapsed){width:240px}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="mock" class="mock"></div>
+<div id="about-host"></div>
+<div id="toast-host" aria-live="polite"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ===================== sample data ===================== */
+const MAT = {
+  test:[
+    {id:"00000001",d:"Granite slab",t:"Raw",u:"kg",on:true,conv:[["t","1000.000000"],["slab","240.000000"]]},
+    {id:"00000002",d:"Mammoth hide",t:"Raw",u:"m²",on:true,conv:[["hide","3.500000"]]},
+    {id:"00000003",d:"Wheel (stone)",t:"Intermediate",u:"pcs",on:true,conv:[["pair","2.000000"]]},
+    {id:"00000004",d:"Axle",t:"Intermediate",u:"pcs",on:true,conv:[]},
+    {id:"00000005",d:"Cave cart",t:"Finished",u:"pcs",on:true,conv:[["pallet","4.000000"],["dozen","12.000000"]]},
+    {id:"00000006",d:"Flint knife",t:"Finished",u:"pcs",on:true,conv:[["box","12.000000"]]}
+  ],
+  prod:[
+    {id:"00000001",d:"Granite slab",t:"Raw",u:"kg",on:true,conv:[["t","1000.000000"]]},
+    {id:"00000002",d:"Mammoth hide",t:"Raw",u:"m²",on:true,conv:[]},
+    {id:"00000003",d:"Wheel (stone)",t:"Intermediate",u:"pcs",on:true,conv:[]}
+  ]
+};
+const LOC = {test:[["L001","Main cave",true],["L002","River warehouse",true],["L003","Old quarry",false]],prod:[]};
+const CUS = {test:[["C001","Flintstone Ltd",true],["C002","Rubble & Co",true],["C003","Slate Rock and Gravel",true]],prod:[]};
+const SUP = {test:[["S001","Bedrock Quarry",true],["S002","Woolly Hides Co",true],["S003","Sabre Tooth Tools",false]],prod:[["S001","Bedrock Quarry",true]]};
+const PP  = {test:[["00000005","Cave cart","Main cave","Make",3,"1","1"],["00000001","Granite slab","Main cave","Buy",10,"50","10"]],prod:[]};
+const SS  = {test:[["00000005","Cave cart","Main cave","5","2026-11-01"],["00000005","Cave cart","Main cave","8","2027-01-01"]],prod:[]};
+const BOM = {test:[["00000005","Cave cart","Alt A",1,"2026-01-01 – open",3,true],["00000005","Cave cart","Alt B",2,"2026-01-01 – open",1,true],["00000003","Wheel (stone)","Alt A",1,"2026-01-01 – open",2,true]],prod:[]};
+const AUD = {
+  test:[
+    ["2026-10-19 09:14","admin","UI","Added unit conversion","00000006 Flint knife: 1 box = 12 pcs"],
+    ["2026-10-19 09:12","admin","UI","Created material","00000006 Flint knife"],
+    ["2026-10-18 16:41","admin","API","Deactivated location","L003 Old quarry"],
+    ["2026-10-18 16:40","admin","API","Created location","L003 Old quarry"],
+    ["2026-10-18 11:02","admin","UI","Created BOM revision","Cave cart · Alt A · rev 3"],
+    ["2026-10-17 08:30","admin","UI","Set safety stock","Cave cart @ Main cave: 8 from 2027-01-01"]
+  ],
+  prod:[
+    ["2026-10-16 10:05","admin","UI","Created supplier","S001 Bedrock Quarry"],
+    ["2026-10-16 10:01","admin","UI","Created material","00000003 Wheel (stone)"],
+    ["2026-10-15 14:20","admin","API","Created material","00000002 Mammoth hide"],
+    ["2026-10-15 14:18","admin","API","Created material","00000001 Granite slab"]
+  ]
+};
+const GAUD = [
+  ["2026-10-19 09:02","admin","UI","Signed in","—"],
+  ["2026-10-18 17:30","admin","UI","Created API token","token “cart-sync”"],
+  ["2026-10-18 09:10","wilma","UI","Signed in","—"],
+  ["2026-10-17 12:00","admin","UI","Deactivated user","barney"],
+  ["2026-10-17 11:58","admin","UI","Created user","wilma"]
+];
+
+/* ===================== information architecture ===================== */
+const STAGES = [
+  {id:"master",n:"1",name:"Master data",pl:"Dane podstawowe",cap:"Know what things are made of",capPl:"Wiedz, z czego co jest zrobione",
+   long:"Before CPG can plan anything it has to know the things (materials and what they are made of), the places (locations), the partners (customers and suppliers) and the planning rules (make or buy, lead times, how much to always keep)."},
+  {id:"demand",n:"2",name:"Demand",pl:"Popyt",cap:"Guess what people want",capPl:"Zgadnij, czego ludzie chcą",slice:2,
+   long:"Demand is what people want: real customer orders, and forecasts of what they will probably order. Planning starts here."},
+  {id:"plan",n:"3",name:"Plan",pl:"Plan",cap:"Count what is missing",capPl:"Policz, czego brakuje",slice:3,
+   long:"MRP compares demand and safety stock with what you have and what is already coming, and proposes what to buy or make. It runs only when you press the button and never rewrites existing documents."},
+  {id:"supply",n:"4",name:"Supply",pl:"Zaopatrzenie",cap:"Buy it or make it",capPl:"Kup albo zrób",slice:2,
+   long:"Turn MRP's proposals into real documents. Buy: requisition → purchase order → goods receipt. Make: production order → completion."},
+  {id:"stock",n:"5",name:"Stock",pl:"Magazyn",cap:"Know what is in the cave",capPl:"Wiedz, co jest w jaskini",slice:2,
+   long:"Every receipt, completion and issue lands in the stock ledger. Fix counts with corrections, move things with transfers. Stock never goes negative."},
+  {id:"ship",n:"6",name:"Ship",pl:"Wysyłka",cap:"Give it to the customer",capPl:"Oddaj to klientowi",slice:2,
+   long:"A shipment is a goods issue: stock leaves the cave and goes to the customer. New demand starts the loop again."},
+  {id:"lookback",n:"↺",name:"Look back",pl:"Spójrz wstecz",cap:"See what happened",capPl:"Zobacz, co się stało",
+   long:"Nothing is ever lost. The audit records every change with who, when and how (UI or API); reports sum up stock and variance."}
+];
+const STAGE = Object.fromEntries(STAGES.map(s=>[s.id,s]));
+
+/* each tenant screen: stage, group, label, status, slice, description, count fn */
+const SCR = {
+  "materials":{st:"master",g:"Things and places",l:"Materials",desc:"What things are: ID, description, type and base unit. Every quantity is kept in the base unit, exactly to six decimals. IDs are given in order and never change.",n:t=>MAT[t].length,create:"Create material",first:"Add your first material"},
+  "locations":{st:"master",g:"Things and places",l:"Locations",desc:"Where stock lives: caves, warehouses, quarries.",n:t=>LOC[t].length,create:"Create location",first:"Add your first location"},
+  "customers":{st:"master",g:"Partners",l:"Customers",desc:"Who we give things to.",n:t=>CUS[t].length,create:"Create customer",first:"Add your first customer"},
+  "suppliers":{st:"master",g:"Partners",l:"Suppliers",desc:"Who we buy from.",n:t=>SUP[t].length,create:"Create supplier",first:"Add your first supplier"},
+  "planning-parameters":{st:"master",g:"Planning rules",l:"Planning parameters",desc:"For each material at each location: do we make it or buy it, how many days it takes, the smallest lot and the lot multiple.",n:t=>PP[t].length,create:"Add parameters",first:"Add the first planning parameters"},
+  "safety-stock":{st:"master",g:"Planning rules",l:"Safety stock",desc:"How much to always keep, from a given date on. MRP plans so that stock never drops below it.",n:t=>SS[t].length,create:"Add target",first:"Set the first safety stock target"},
+  "boms":{st:"master",g:"Planning rules",l:"BOMs",desc:"What a thing is made of. Alternatives have a priority and a validity; every real change creates a new revision that never changes afterwards.",n:t=>BOM[t].length,create:"Create BOM",first:"Create the first BOM"},
+  "import":{st:"master",g:"Bring in",l:"Import from spreadsheet",short:"Import",admin:true,desc:"Fill the template, check it with a dry run, then commit. Nothing is saved before the commit."},
+  "customer-orders":{st:"demand",l:"Customer orders",slice:2,desc:"What customers asked for: which material, how many, by when."},
+  "forecasts":{st:"demand",l:"Forecasts",slice:2,desc:"What customers will probably ask for, per material and period."},
+  "mrp-run":{st:"plan",l:"MRP run",slice:3,desc:"Press the button: MRP counts what is missing and proposes requisitions and production orders."},
+  "mrp-report":{st:"plan",l:"Last MRP report",slice:3,desc:"What the last run proposed, and why (demand, safety stock, lead time, lot size)."},
+  "purchase-requisitions":{st:"supply",g:"Buy",l:"Purchase requisitions",slice:2,desc:"Proposals to buy, from MRP or by hand."},
+  "purchase-orders":{st:"supply",g:"Buy",l:"Purchase orders",slice:2,desc:"What we ordered from suppliers."},
+  "goods-receipts":{st:"supply",g:"Buy",l:"Goods receipts",slice:2,desc:"What arrived from suppliers, into stock."},
+  "production-orders":{st:"supply",g:"Make",l:"Production orders",slice:2,desc:"What we decided to make, with its BOM revision."},
+  "completions":{st:"supply",g:"Make",l:"Completions",slice:2,desc:"What production finished, into stock; components are consumed."},
+  "stock":{st:"stock",l:"Stock ledger",slice:2,desc:"Every movement, per material and location. The balance never goes negative."},
+  "corrections":{st:"stock",l:"Corrections",slice:2,desc:"Fix a count that is wrong, with a reason."},
+  "transfers":{st:"stock",l:"Transfers",slice:2,desc:"Move stock between locations; in transit until it arrives."},
+  "stock-import":{st:"stock",l:"Stock import",slice:2,desc:"Load opening stock from a spreadsheet."},
+  "shipments":{st:"ship",l:"Shipments (goods issues)",slice:2,desc:"Stock leaves for the customer against a customer order."},
+  "audit":{st:"lookback",g:"This tenant",l:"Tenant audit",desc:"Append-only list of every change in this tenant: when, who, through which channel (UI or API), what.",n:t=>AUD[t].length},
+  "report-stock":{st:"lookback",g:"Reports",l:"Stock report",slice:2,desc:"Stock per material and location on a date."},
+  "report-variance":{st:"lookback",g:"Reports",l:"Variance report",slice:2,desc:"Plan versus actual: what came late, what came short."},
+  "report-audit":{st:"lookback",g:"Reports",l:"Audit reports",slice:2,desc:"Filtered, exportable views of the audit."}
+};
+const GLOBAL = {
+  "users":{l:"Users",admin:true,ico:"👥",desc:"Create users, reset passwords, deactivate. Users are never deleted."},
+  "tenants":{l:"Tenants & read-only",admin:true,ico:"🗂",desc:"Lock a tenant against business changes, see its dataset generation, reset Test."},
+  "status":{l:"System status",admin:true,ico:"🩺",desc:"Database, migrations and version."},
+  "audit":{l:"Global audit",ico:"📜",desc:"Sign-ins, users, tokens and tenant flags — everything that belongs to no tenant."},
+  "tokens":{l:"API tokens",ico:"🔑",desc:"Your own tokens for the API. They act as you, in both tenants."},
+  "help":{l:"Help",ico:"?",desc:"How CPG works, in caveman words."}
+};
+
+/* ===================== state ===================== */
+const S = {tenant:"test",role:"admin",later:true,ro:{test:false,prod:false},lang:"en",theme:"light",menu:null,mockOpen:false,about:false,importStep:1};
+const isAdmin = ()=>S.role==="admin";
+const T = t=>t==="test"?"Test":"Prod";
+
+/* ===================== helpers ===================== */
+function parse(){
+  const parts = location.hash.replace(/^#\/?/,"").split("/").filter(Boolean);
+  if(!parts.length) return {scope:S.tenant,page:"overview"};
+  if(parts[0]==="global") return {scope:"global",page:parts[1]||"help"};
+  if(parts[0]!=="test"&&parts[0]!=="prod") return {scope:S.tenant,page:"overview"};
+  if(parts[1]==="stage") return {scope:parts[0],page:"stage",stage:parts[2]||"master"};
+  return {scope:parts[0],page:parts[1]||"overview",id:parts[2]};
+}
+const href = (t,p)=>`#/${t}/${p}`;
+function stageOf(r){
+  if(r.scope==="global") return null;
+  if(r.page==="stage") return r.stage;
+  return SCR[r.page]?SCR[r.page].st:null;
+}
+function visibleStage(s){return S.later || !s.slice}
+function visibleScr(k){const s=SCR[k]; if(s.admin&&!isAdmin()) return false; if(s.slice&&!S.later) return false; return true}
+function stageName(s){return S.lang==="pl"?s.pl:s.name}
+function stageCap(s){return S.lang==="pl"?s.capPl:s.cap}
+function laterTag(n){return n?`<span class="later-tag">slice ${n}</span>`:""}
+function act(label,opts={}){
+  /* create/edit/import buttons: hidden for normal users, disabled in a read-only tenant */
+  if(!isAdmin()) return "";
+  const t=opts.tenant;
+  const ro=t&&S.ro[t];
+  const cls = opts.primary===false?"btn":"btn primary";
+  return `<button class="${cls}" data-toast="${opts.toast||`Mockup: would open “${label}”.`}" ${ro?`disabled title="${T(t)} is read-only — business changes are blocked"`:""}>${ro?"🔒 ":""}${label}</button>`;
+}
+function badgeOn(on){return on?`<span class="badge ok">Active</span>`:`<span class="badge off">Inactive</span>`}
+function table(cols,rows){
+  return `<div class="tw"><table><thead><tr>${cols.map(c=>`<th scope="col">${c}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+}
+function crumbs(items){return `<nav class="crumbs" aria-label="Breadcrumb">${items.map((it,i)=>(i?`<span aria-hidden="true">›</span>`:"")+(it[1]?`<a href="${it[1]}">${it[0]}</a>`:`<span ${i===items.length-1?'aria-current="page"':""}>${it[0]}</span>`)).join("")}</nav>`}
+function stageCrumb(t,stId){const s=STAGE[stId];return [`${s.n==="↺"?"↺":stageNum(s)} ${stageName(s)}`,href(t,"stage/"+stId)]}
+function stageNum(s){return s.n==="↺"?"↺":"①②③④⑤⑥"[+s.n-1]}
+function pageHead(t,r,title,desc,actions,extraCrumbs){
+  const st=SCR[r.page]?SCR[r.page].st:null;
+  const c=[[T(t),href(t,"overview")]];
+  if(st) c.push(stageCrumb(t,st));
+  (extraCrumbs||[]).forEach(x=>c.push(x));
+  c.push([title,null]);
+  return `${crumbs(c)}<div class="ph"><div><h1 tabindex="-1">${title}</h1>${desc?`<p>${desc}</p>`:""}</div>${actions?`<div class="actions">${actions}</div>`:""}</div>`;
+}
+function empty(t,key){
+  const s=SCR[key];
+  return `<div class="empty"><span style="font-size:28px">🪨</span><b>No ${s.l.toLowerCase()} in ${T(t)} yet.</b><span>${s.desc}</span>${act(s.first,{tenant:t})}</div>`;
+}
+function toast(msg){
+  const h=document.getElementById("toast-host");
+  h.innerHTML=`<div class="toast" role="status">${msg}</div>`;
+  clearTimeout(toast._t); toast._t=setTimeout(()=>h.innerHTML="",2600);
+}
+
+/* ===================== top bar ===================== */
+function renderTop(r){
+  const t=S.tenant, lock=x=>S.ro[x]?" 🔒":"";
+  const say = S.lang==="pl"
+    ? (t==="test"?`Jesteś w <b>TEST</b> — piaskownica`:`Jesteś w <b>PROD</b> — prawdziwe dane`)
+    : (t==="test"?`You are in <b>TEST</b> — playground`:`You are in <b>PROD</b> — live data`);
+  const other=t==="test"?"Prod":"Test";
+  const gearItems = isAdmin()
+    ? `<h3>Admin · shared by Test and Prod</h3>
+       ${["users","tenants","status","audit"].map(k=>`<a href="#/global/${k}" data-k="g-${k}" ${r.scope==="global"&&r.page===k?'aria-current="page"':""}><span aria-hidden="true">${GLOBAL[k].ico}</span>${GLOBAL[k].l}</a>`).join("")}`
+    : `<h3>Shared by Test and Prod</h3>
+       <a href="#/global/audit" data-k="g-audit"><span aria-hidden="true">📜</span>Global audit</a>
+       <hr><div class="who"><small>Users, tenants and system status are managed by the admin.</small></div>`;
+  const name = isAdmin()?"admin":"wilma";
+  return `<header class="top">
+    <a class="brand" href="${href(t,"overview")}" data-k="brand"><span aria-hidden="true">🦣</span>CPG</a>
+    <button class="tswitch t-${t}" data-act="flip" data-k="flip" aria-label="Tenant switch. You are in ${T(t)}${S.ro[t]?", read-only":""}. Press to switch to ${other}${S.ro[t==="test"?"prod":"test"]?" (read-only)":""}." title="Switch to ${other} — stays on the same screen">
+      <span class="track" aria-hidden="true"><span class="knob"></span><span class="side s-test">TEST${lock("test")}</span><span class="side s-prod">PROD${lock("prod")}</span></span>
+      <span class="tsay">${say}${S.ro[t]?" · 🔒 read-only":""}</span>
+    </button>
+    <span class="spacer"></span>
+    <a class="ibtn" href="#/global/help" aria-label="Help" title="Help" data-k="help" ${r.scope==="global"&&r.page==="help"?'aria-current="page"':""}>?</a>
+    <div class="menu-wrap">
+      <button class="ibtn" data-act="menu:gear" data-k="gear" aria-haspopup="true" aria-expanded="${S.menu==="gear"}" aria-label="Settings shared by both tenants" title="Shared settings">⚙</button>
+      ${S.menu==="gear"?`<div class="menu">${gearItems}</div>`:""}
+    </div>
+    <div class="menu-wrap">
+      <button class="acct" data-act="menu:account" data-k="acct" aria-haspopup="true" aria-expanded="${S.menu==="account"}" aria-label="Account: ${name}"><span class="avatar">${name[0].toUpperCase()}</span><span class="nm">${name}</span><span class="car muted" aria-hidden="true">▾</span></button>
+      ${S.menu==="account"?`<div class="menu" style="width:270px">
+        <div class="who"><b>${name}</b><br><small>${isAdmin()?"Admin (built-in)":"User"} · signed in</small></div><hr>
+        <div class="row"><span>Language</span><span class="seg"><button data-act="lang:en" data-k="lang-en" aria-pressed="${S.lang==="en"}">EN</button><button data-act="lang:pl" data-k="lang-pl" aria-pressed="${S.lang==="pl"}">PL</button></span></div>
+        <div class="row"><span>Theme</span><span class="seg"><button data-act="theme:light" data-k="th-l" aria-pressed="${S.theme==="light"}">Light</button><button data-act="theme:dark" data-k="th-d" aria-pressed="${S.theme==="dark"}">Dark</button></span></div><hr>
+        <a href="#/global/tokens" data-k="tok"><span aria-hidden="true">🔑</span>API tokens</a>
+        <button class="mi" data-act="signout" data-k="out"><span aria-hidden="true">↩</span>Sign out</button>
+      </div>`:""}
+    </div>
+  </header>`;
+}
+
+/* ===================== ribbon ===================== */
+function renderRibbon(r){
+  const t=S.tenant, cur=stageOf(r);
+  const isStageLanding=r.page==="stage";
+  let items=[`<li class="st st-home"><a class="stage home" href="${href(t,"overview")}" ${r.scope!=="global"&&r.page==="overview"?'data-cur aria-current="page"':""}><span class="num" aria-hidden="true">⌂</span><span class="txt"><b>${S.lang==="pl"?"Przegląd":"Overview"}</b></span></a></li>`];
+  const flow=STAGES.filter(s=>s.id!=="lookback"&&visibleStage(s));
+  flow.forEach((s,i)=>{
+    items.push(`<li class="arrow" aria-hidden="true">→</li>`);
+    const c=cur===s.id;
+    items.push(`<li class="st"><a class="stage ${s.slice?"later":""}" href="${href(t,"stage/"+s.id)}" ${c?`data-cur aria-current="${isStageLanding?"page":"step"}"`:""} title="${stageName(s)} — ${stageCap(s)}${s.slice?` (comes in slice ${s.slice})`:""}"><span class="num" aria-hidden="true">${s.n}</span><span class="txt"><b>${stageName(s)}${laterTag(s.slice)}</b><small>${stageCap(s)}</small></span></a></li>`);
+  });
+  items.push(`<li class="gap" aria-hidden="true"></li>`);
+  const lb=STAGE.lookback, c=cur==="lookback";
+  items.push(`<li class="st"><a class="stage" href="${href(t,"stage/lookback")}" ${c?`data-cur aria-current="${isStageLanding?"page":"step"}"`:""}><span class="num" aria-hidden="true">↺</span><span class="txt"><b>${stageName(lb)}</b><small>${stageCap(lb)}</small></span></a></li>`);
+  return `<nav class="ribbon" aria-label="Planning loop — ${T(t)}"><ol>${items.join("")}</ol></nav>`;
+}
+
+/* ===================== banner ===================== */
+function renderBanner(r){
+  if(r.scope==="global") return "";
+  const t=r.scope;
+  if(!S.ro[t]) return "";
+  return `<div class="banner ro" role="status"><span aria-hidden="true">🔒</span><span><b>${T(t)} is read-only</b> — business changes are blocked. Reading, audit, preferences and user management still work.${isAdmin()?` <a href="#/global/tenants">Change on Tenants</a>`:""}</span></div>`;
+}
+
+/* ===================== side panel ===================== */
+function entryLink(t,k,curPage){
+  const s=SCR[k], n=s.n?s.n(t):null;
+  return `<li><a href="${href(t,k)}" class="${s.slice?"later":""}" ${curPage===k?'aria-current="page"':""}><span>${s.short||s.l}</span>${s.slice?laterTag(s.slice):(n!=null?`<span class="count ${n?"":"zero"}">${n}</span>`:"")}</a></li>`;
+}
+function renderPanel(r){
+  if(r.scope==="global"){
+    const ks=Object.keys(GLOBAL).filter(k=>!GLOBAL[k].admin||isAdmin());
+    return `<aside class="panel" aria-label="Shared pages"><div class="panel-head"><span class="num" aria-hidden="true">🌐</span><div><b>Shared</b><small>Belong to no tenant</small></div></div>
+      <ul class="tree">${ks.map(k=>`<li><a href="#/global/${k}" ${r.page===k?'aria-current="page"':""}><span>${GLOBAL[k].l}</span></a></li>`).join("")}</ul></aside>`;
+  }
+  const t=r.scope, st=stageOf(r);
+  if(!st) return `<aside class="panel"></aside>`;
+  const s=STAGE[st];
+  const keys=Object.keys(SCR).filter(k=>SCR[k].st===st&&visibleScr(k));
+  let body="", lastG=null;
+  keys.forEach(k=>{ const g=SCR[k].g; if(g&&g!==lastG){ body+=`<li class="grp">${g}</li>`; lastG=g;} body+=entryLink(t,k,r.page); });
+  if(st==="lookback") body+=`<li class="grp">Shared by Test and Prod</li><li><a href="#/global/audit"><span>Global audit</span><span class="count" title="Shared">🌐</span></a></li>`;
+  const root = `<ul class="tree ${st==="master"?"branch":""}">${body}</ul>`;
+  const foot = st==="master"
+    ? `Counts are for ${T(t)}.${S.later?` Next stage: <a href="${href(t,"stage/demand")}">② Demand</a>`:""}`
+    : (s.slice?`This stage arrives in slice ${s.slice}.`:"");
+  return `<aside class="panel" aria-label="${s.name}"><a class="panel-head" href="${href(t,"stage/"+st)}" ${r.page==="stage"?'aria-current="page"':""}><span class="num" aria-hidden="true">${s.n}</span><span><b>${stageName(s)}</b><small>${stageCap(s)}</small></span></a>${root}${foot?`<div class="panel-foot">${foot}</div>`:""}</aside>`;
+}
+
+/* ===================== pages ===================== */
+function pOverview(t){
+  const n=k=>SCR[k].n(t);
+  const masterKeys=Object.keys(SCR).filter(k=>SCR[k].st==="master"&&visibleScr(k));
+  const chips=masterKeys.map(k=>{const s=SCR[k]; if(!s.n) return `<a class="chip" href="${href(t,k)}">⇪ ${s.short||s.l}</a>`; const c=n(k); return `<a class="chip ${c?"":"zero"}" href="${href(t,k)}">${s.short||s.l} <span class="count">${c||"nothing yet"}</span></a>`}).join("");
+  const missingPP = MAT[t].filter(m=>!PP[t].some(p=>p[0]===m.id)).length;
+  let masterNext;
+  const ro=S.ro[t];
+  if(!isAdmin()) masterNext=`<span class="lbl">Next</span>Look something up: <a href="${href(t,"materials")}">materials</a> or <a href="${href(t,"boms")}">BOMs</a>.`;
+  else if(ro) masterNext=`<span class="lbl">Next</span>🔒 ${T(t)} is read-only. <a href="#/global/tenants">Unlock it on Tenants</a> to add data.`;
+  else if(!n("locations")) masterNext=`<span class="lbl">Next</span><a href="${href(t,"locations")}">Add your first location</a><br><span class="muted">Stock needs a place to live.</span>`;
+  else if(missingPP) masterNext=`<span class="lbl">Next</span><a href="${href(t,"planning-parameters")}">Add planning parameters</a><br><span class="muted">${missingPP} of ${n("materials")} materials have none yet.</span>`;
+  else masterNext=`<span class="lbl">Next</span>Master data is complete.`;
+  const rows=[];
+  rows.push(`<li class="tl"><a class="bub" href="${href(t,"stage/master")}" aria-label="Stage 1, Master data">1</a><div><div class="tl-h"><a href="${href(t,"stage/master")}">Master data</a><span class="muted">${STAGE.master.cap}</span></div><div class="tl-s">${chips}</div></div><div class="tl-n">${masterNext}</div></li>`);
+  const futureNext={demand:"Enter customer orders and forecasts.",plan:"Press “Run MRP” and read what is missing.",supply:"Turn proposals into purchase and production orders.",stock:"See and correct what is in each location.",ship:"Issue goods to the customer."};
+  STAGES.filter(s=>s.slice&&S.later).forEach(s=>{
+    const ents=Object.keys(SCR).filter(k=>SCR[k].st===s.id).map(k=>`<a class="chip zero" href="${href(t,k)}">${SCR[k].l}</a>`).join("");
+    rows.push(`<li class="tl later"><a class="bub" href="${href(t,"stage/"+s.id)}" aria-label="Stage ${s.n}, ${s.name}">${s.n}</a><div><div class="tl-h"><a href="${href(t,"stage/"+s.id)}">${s.name}</a><span class="muted">${s.cap}</span>${laterTag(s.slice)}</div><div class="tl-s">${ents}</div></div><div class="tl-n"><span class="lbl">Later · slice ${s.slice}</span>${futureNext[s.id]}</div></li>`);
+  });
+  rows.push(`<li class="tl back"><a class="bub" href="${href(t,"stage/lookback")}" aria-label="Look back">↺</a><div><div class="tl-h"><a href="${href(t,"stage/lookback")}">Look back</a><span class="muted">${STAGE.lookback.cap}</span></div><div class="tl-s"><a class="chip" href="${href(t,"audit")}">Tenant audit <span class="count">${AUD[t].length} changes</span></a><a class="chip" href="#/global/audit">Global audit <span class="count">🌐</span></a>${S.later?`<a class="chip zero" href="${href(t,"report-stock")}">Reports</a>`:""}</div></div><div class="tl-n"><span class="lbl">Next</span><a href="${href(t,"audit")}">See what changed</a><br><span class="muted">Last change ${AUD[t][0][0]}</span></div></li>`);
+  const recent=AUD[t].slice(0,3).map(a=>[`<span class="mono">${a[0]}</span>`,a[1],`<span class="badge">${a[2]}</span>`,a[3],a[4]]);
+  return `${crumbs([[T(t),null]])}
+  <div class="ph"><div><h1 tabindex="-1">Cave control — ${T(t)}</h1><p>CPG works as one loop. Each row below is a stage of the ribbon above: what ${T(t)} holds now, and the next sensible step.${S.later?"":" Later stages are hidden."}</p></div></div>
+  <ol class="loop">${rows.join("")}</ol>
+  <div class="sec"><div class="sec-h"><div><h2>Recent changes</h2><p>From the ${T(t)} audit.</p></div><a class="btn" href="${href(t,"audit")}">Whole audit</a></div>
+  ${table(["Time","Account","Channel","Action","Record"],recent)}</div>`;
+}
+
+function pStage(t,id){
+  const s=STAGE[id];
+  if(!s) return pNotFound(t);
+  const keys=Object.keys(SCR).filter(k=>SCR[k].st===id&&visibleScr(k));
+  const cards=keys.map(k=>{const e=SCR[k]; const c=e.n?e.n(t):null;
+    return `<a class="ecard ${e.slice?"later":""}" href="${href(t,k)}"><span class="t"><span>${e.l}</span>${e.slice?laterTag(e.slice):(c!=null?`<span class="count ${c?"":"zero"}">${c}</span>`:"")}</span><p>${e.desc}</p></a>`}).join("")
+    + (id==="lookback"?`<a class="ecard" href="#/global/audit"><span class="t"><span>Global audit</span><span class="count">🌐</span></span><p>${GLOBAL.audit.desc} Shared by Test and Prod.</p></a>`:"");
+  const flow=STAGES.filter(x=>x.id!=="lookback"&&visibleStage(x));
+  const idx=flow.findIndex(x=>x.id===id);
+  const prev=idx>0?flow[idx-1]:null, next=idx>=0&&idx<flow.length-1?flow[idx+1]:null;
+  const line=flow.map(x=>x.id===id?`<span class="here">${stageNum(x)} ${x.name}</span>`:`<a href="${href(t,"stage/"+x.id)}">${stageNum(x)} ${x.name}</a>`).join(` <span aria-hidden="true">→</span> `);
+  const actions = id==="master"&&isAdmin() ? `<a class="btn" href="${href(t,"import")}">⇪ Import from spreadsheet</a>` : "";
+  return `${crumbs([[T(t),href(t,"overview")],[`${stageNum(s)} ${stageName(s)}`,null]])}
+   <div class="ph"><div><h1 tabindex="-1" class="hstage"><span class="hnum ${s.slice?"later":""}" aria-hidden="true">${s.n}</span>${stageName(s)} ${laterTag(s.slice)}</h1><p><b style="color:var(--fg)">${stageCap(s)}.</b> <span class="long">${s.long}</span></p>${id!=="lookback"?`<div class="flowline">${line}</div>`:""}</div>${actions?`<div class="actions">${actions}</div>`:""}</div>
+   ${s.slice?`<p class="ro-inline" style="background:var(--subtle);color:var(--muted)">This whole stage arrives in slice ${s.slice}. Its screens are listed so you can see where they will be.</p>`:""}
+   <div class="grid">${cards}</div>
+   <div class="stage-nav">${prev?`<a class="btn" href="${href(t,"stage/"+prev.id)}">← ${stageNum(prev)} ${prev.name}</a>`:"<span></span>"}${next?`<a class="btn" href="${href(t,"stage/"+next.id)}">${stageNum(next)} ${next.name} →</a>`:(id!=="lookback"?`<a class="btn" href="${href(t,"stage/lookback")}">↺ Look back →</a>`:"")}</div>`;
+}
+
+function pMaterials(t,r){
+  const rows=MAT[t].map(m=>[`<a class="mono" href="${href(t,"materials/"+m.id)}">${m.id}</a>`,m.d,`<span class="badge">${m.t}</span>`,m.u,badgeOn(m.on)]);
+  return pageHead(t,r,"Materials",SCR.materials.desc,act("Create material",{tenant:t}))
+    + (rows.length?table(["Material ID","Description","Type","Base unit","Status"],rows):empty(t,"materials"));
+}
+function pMaterial(t,r){
+  const m=MAT[t].find(x=>x.id===r.id);
+  if(!m) return pageHead(t,{page:"materials"},`Material ${r.id}`,"",null,[["Materials",href(t,"materials")]])
+    + `<div class="empty"><span style="font-size:28px">🔍</span><b>There is no material ${r.id} in ${T(t)}.</b><span>Test and Prod share no data and no ID sequences, so the same ID can mean something else — or nothing — in the other tenant.</span><a class="btn" href="${href(t,"materials")}">All materials in ${T(t)}</a></div>`;
+  const pp=PP[t].filter(p=>p[0]===m.id), ss=SS[t].filter(p=>p[0]===m.id), bo=BOM[t].filter(p=>p[0]===m.id);
+  const conv=m.conv.map(c=>[`1 ${c[0]}`,`<span class="mono">${c[1]}</span> ${m.u}`,isAdmin()?`<button class="lnk" data-toast="Mockup: edit conversion" ${S.ro[t]?"disabled":""}>Edit</button>`:""]);
+  const loopRow=(stg,label,txt,link)=>`<li class="tl ${STAGE[stg].slice?"later":""}" style="grid-template-columns:36px minmax(0,1fr);padding:2px 0;align-items:center"><span class="bub" aria-hidden="true" style="width:28px;height:28px;font-size:13px;margin:4px">${STAGE[stg].n}</span><div><b>${label}</b> — ${link?`<a href="${link}">${txt}</a>`:`<span class="muted">${txt}</span>`}</div></li>`;
+  const loop=[
+    loopRow("master","Planning parameters",pp.length?pp.map(p=>`${p[3]} @ ${p[2]}, ${p[4]} d, lot ${p[5]}×${p[6]}`).join("; "):"none yet",href(t,"planning-parameters")),
+    loopRow("master","Safety stock",ss.length?ss.map(p=>`${p[3]} from ${p[4]}`).join(", "):"none yet",href(t,"safety-stock")),
+    loopRow("master","BOMs",bo.length?bo.map(b=>`${b[2]} (prio ${b[3]}, rev ${b[5]})`).join(", "):(m.t==="Raw"?"raw materials are bought, never made":"none yet"),href(t,"boms"))
+  ];
+  if(S.later) loop.push(loopRow("demand","Demand, supply, stock",`open orders and stock for this material — slice 2`,null));
+  return pageHead(t,{page:"materials"},`${m.id} · ${m.d}`,"",act("Edit material",{tenant:t,primary:false}),[["Materials",href(t,"materials")]])
+   + `<div class="card"><dl class="dl"><div><dt>Material ID</dt><dd class="mono">${m.id}</dd></div><div><dt>Type</dt><dd>${m.t}</dd></div><div><dt>Base unit</dt><dd>${m.u}</dd></div><div><dt>Status</dt><dd>${badgeOn(m.on)}</dd></div></dl></div>
+   <div class="sec"><div class="sec-h"><div><h2>Unit conversions</h2><p>How other units turn into the base unit (${m.u}). Kept exact to six decimals.</p></div>${act("Add conversion",{tenant:t,primary:false})}</div>
+   ${conv.length?table(["Unit","Equals","",],conv):`<div class="empty"><b>No conversions.</b><span>This material is only counted in ${m.u}.</span></div>`}</div>
+   <div class="sec"><div class="sec-h"><div><h2>This material in the loop</h2><p>Where ${m.d} shows up in the other master data.</p></div></div><ol class="loop" style="--x:0">${loop.join("")}</ol></div>`;
+}
+function simpleList(key,cols,rowsFn){
+  return (t,r)=>{const data=rowsFn(t); return pageHead(t,r,SCR[key].l,SCR[key].desc,data.length?act(SCR[key].create,{tenant:t}):"")+(data.length?table(cols,data):empty(t,key));};
+}
+const pLocations=simpleList("locations",["Code","Name","Status"],t=>LOC[t].map(x=>[`<span class="mono">${x[0]}</span>`,x[1],badgeOn(x[2])]));
+const pCustomers=simpleList("customers",["Code","Name","Status"],t=>CUS[t].map(x=>[`<span class="mono">${x[0]}</span>`,x[1],badgeOn(x[2])]));
+const pSuppliers=simpleList("suppliers",["Code","Name","Status"],t=>SUP[t].map(x=>[`<span class="mono">${x[0]}</span>`,x[1],badgeOn(x[2])]));
+const pPP=simpleList("planning-parameters",["Material","Location","Make / Buy","Lead time","Minimum lot","Lot multiple"],t=>PP[t].map(x=>[`<a class="mono" href="${href(t,"materials/"+x[0])}">${x[0]}</a> ${x[1]}`,x[2],`<span class="badge ${x[3].toLowerCase()}">${x[3]}</span>`,`${x[4]} d`,x[5],x[6]]));
+const pSS=simpleList("safety-stock",["Material","Location","Keep at least","Effective from"],t=>SS[t].map(x=>[`<a class="mono" href="${href(t,"materials/"+x[0])}">${x[0]}</a> ${x[1]}`,x[2],`${x[3]} pcs`,`<span class="mono">${x[4]}</span>`]));
+const pBOM=simpleList("boms",["Output material","Alternative","Priority","Validity","Revision","Status"],t=>BOM[t].map(x=>[`<a class="mono" href="${href(t,"materials/"+x[0])}">${x[0]}</a> ${x[1]}`,x[2],x[3],x[4],`rev ${x[5]}`,badgeOn(x[6])]));
+function pAudit(t,r){
+  return pageHead(t,r,`Tenant audit — ${T(t)}`,SCR.audit.desc+" Read by everyone, written by nobody.","")
+   + table(["Time","Account","Channel","Action","Record"],AUD[t].map(a=>[`<span class="mono">${a[0]}</span>`,a[1],`<span class="badge">${a[2]}</span>`,a[3],a[4]]))
+   + `<p class="muted" style="margin-top:12px">Looking for sign-ins, users or tokens? They are in the <a href="#/global/audit">Global audit</a> (shared by Test and Prod).</p>`;
+}
+function pImport(t,r){
+  if(!isAdmin()) return pAdminOnly();
+  const ro=S.ro[t], st=S.importStep, dis=ro?`disabled title="${T(t)} is read-only"`:"";
+  const step=(n,title,body)=>`<li class="step ${st>n?"done":st<n?"todo":""}"><span class="sn">${st>n?"✓":n}</span><b>${title}</b>${body}</li>`;
+  return pageHead(t,r,"Import from spreadsheet",SCR.import.desc,"")
+   + (ro?`<p class="ro-inline">🔒 ${T(t)} is read-only: you can download the template, but not upload or commit.</p>`:"")
+   + `<ol class="steps">
+      ${step(1,"Download the template","<p>One sheet per master: materials, locations, customers, suppliers, planning parameters, safety stock, BOMs.</p><button class=\"btn\" data-act=\"imp:2\">⬇ Download template.xlsx</button>")}
+      ${step(2,"Upload and dry run",`<div class="drop">Drop the filled file here<br>or <button class="lnk" data-act="imp:3" ${dis}>choose a file</button></div><p>The dry run shows what would change. Nothing is saved.</p>${st>=3?`<p><b style="color:var(--fg)">Dry run:</b> 3 new, 1 changed, 0 errors.</p>`:""}`)}
+      ${step(3,"Commit","<p>Writes everything in one go and records it in the audit.</p>"+`<button class="btn primary" data-act="imp:commit" ${st<3||ro?"disabled":""}>${ro?"🔒 ":""}Commit import</button>`)}
+     </ol>`;
+}
+function pLater(t,r){
+  const s=SCR[r.page], stg=STAGE[s.st];
+  return pageHead(t,r,s.l,"",null)
+   + `<div class="later-box"><span class="big" aria-hidden="true">🦴</span><h2>Coming in slice ${s.slice}</h2><p>${s.desc}</p><p>It sits in <b>${stageNum(stg)} ${stg.name}</b> — ${stg.cap.toLowerCase()}. ${stg.long}</p><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><a class="btn" href="${href(t,"stage/"+stg.id)}">See the whole stage</a><a class="btn" href="${href(t,"overview")}">Back to the loop</a></div></div>`;
+}
+function pNotFound(t){return `<h1 tabindex="-1">Not found</h1><p class="muted">This page does not exist. <a href="${href(t,"overview")}">Go to the overview</a>.</p>`}
+function pAdminOnly(){return `<div class="empty"><span style="font-size:28px">🔒</span><b>Only the admin can see this page.</b><span>Ask the admin if you need something changed.</span></div>`}
+
+/* ----- global pages ----- */
+function gHead(k,actions){
+  return `${crumbs([["🌐 Shared",null],[GLOBAL[k].l,null]])}<div class="ph"><div><h1 tabindex="-1">${GLOBAL[k].l}</h1><p>${GLOBAL[k].desc}</p></div>${actions?`<div class="actions">${actions}</div>`:""}</div>${gNote()}`;
+}
+function gNote(){
+  return `<div class="note" role="note"><span aria-hidden="true">🌐</span><span><b>Shared by Test and Prod.</b> This page belongs to no tenant, so the read-only lock does not apply here. The switch above still says <b>${T(S.tenant)}</b>: the stages of the ribbon lead there.</span></div>`;
+}
+const GP = {
+  users(){ if(!isAdmin()) return pAdminOnly();
+    return gHead("users",`<button class="btn primary" data-toast="Mockup: would open “Create user”.">Create user</button>`)
+     + table(["Login","Role","Status","Last sign-in",""],[
+        ["<b>admin</b>","Admin (built-in)",badgeOn(true),"2026-10-19 09:02","<span class='muted'>password from environment</span>"],
+        ["wilma","User",badgeOn(true),"2026-10-18 09:10",`<button class="lnk" data-toast="Mockup: password reset — wilma's sessions and tokens end now.">Reset password</button> · <button class="lnk" data-toast="Mockup: deactivate wilma">Deactivate</button>`],
+        ["barney","User",badgeOn(false),"2026-10-12 15:44",`<button class="lnk" data-toast="Mockup: reactivate barney">Reactivate</button>`]]); },
+  tenants(){ if(!isAdmin()) return pAdminOnly();
+    const row=t=>[`<b>${T(t)}</b><br><span class="muted">${t==="test"?"playground":"live data"}</span>`,
+      `<label style="display:inline-flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" role="switch" aria-label="${T(t)} read-only" data-ro="${t}" data-k="ro-page-${t}" ${S.ro[t]?"checked":""}> <span aria-hidden="true">${S.ro[t]?"🔒 Read-only":"Writable"}</span></label>`,
+      t==="test"?"generation 1":"—",
+      t==="test"?`<button class="btn" disabled title="Comes in slice 2">Reset Test</button> ${laterTag(2)}`:`<span class="muted">Prod is never reset</span>`];
+    return gHead("tenants","")
+     + table(["Tenant","Read-only","Dataset generation","Reset"],[row("test"),row("prod")])
+     + `<p class="muted" style="margin-top:12px">A read-only tenant blocks every business write and new MRP runs — even for the admin and the API. Reading, audit, preferences and user management keep working.</p>`; },
+  status(){ if(!isAdmin()) return pAdminOnly();
+    return gHead("status","")+`<div class="card"><dl class="dl"><div><dt>Database</dt><dd class="mono">/externaldata/cpg.sqlite</dd></div><div><dt>Journal mode</dt><dd>WAL</dd></div><div><dt>Migrations</dt><dd>14 applied, 0 pending</dd></div><div><dt>Version</dt><dd class="mono">cc3cbd9</dd></div></dl></div>
+     <div class="sec">${table(["Migration","Applied"],[["Migration20261018_materials","2026-10-18 21:40"],["Migration20261016_idempotency","2026-10-16 18:02"],["Migration20261012_tenant_flags","2026-10-12 10:15"]])}</div>`; },
+  audit(){ return gHead("audit","")+table(["Time","Account","Channel","Action","Record"],GAUD.map(a=>[`<span class="mono">${a[0]}</span>`,a[1],`<span class="badge">${a[2]}</span>`,a[3],a[4]]))
+     + `<p class="muted" style="margin-top:12px">Business changes are in each tenant's own audit: <a href="#/test/audit">Test</a> · <a href="#/prod/audit">Prod</a>.</p>`; },
+  tokens(){ return gHead("tokens",`<button class="btn primary" data-toast="Mockup: the token is shown once, then never again.">Create token</button>`)
+     + table(["Name","Created","Last used",""],[["cart-sync","2026-10-18 17:30","2026-10-19 08:00",`<button class="lnk" data-toast="Mockup: revoke cart-sync">Revoke</button>`],["laptop script","2026-10-02 11:12","never",`<button class="lnk" data-toast="Mockup: revoke laptop script">Revoke</button>`]])
+     + `<p class="muted" style="margin-top:12px">Tokens are created only here in the UI. Every API write needs an idempotency key.</p>`; },
+  help(){
+    const lst=STAGES.filter(visibleStage).map(s=>`<li><b>${stageNum(s)} ${s.name}</b> — ${s.cap.toLowerCase()}. ${s.slice?`<span class="muted">(slice ${s.slice})</span>`:""}</li>`).join("");
+    return gHead("help","")+`<div class="card"><h2>How CPG works, in one breath</h2><p class="muted">The ribbon at the top is the whole product. Read it left to right:</p><ol style="padding-left:20px;display:flex;flex-direction:column;gap:6px">${lst}</ol>
+     <p class="muted">The switch on the left of the top bar picks the tenant: <b>TEST</b> is a playground, <b>PROD</b> holds live data. Flipping it keeps you on the same screen. Things that belong to neither (users, tokens, global audit) are behind ⚙ and your account button.</p></div>`; }
+};
+
+/* ===================== render ===================== */
+function render(){
+  const r=parse();
+  if(r.scope!=="global") S.tenant=r.scope;
+  document.documentElement.dataset.theme=S.theme;
+  document.documentElement.lang=S.lang;
+  const t=S.tenant;
+  let main;
+  if(r.scope==="global") main=GP[r.page]?GP[r.page]():pNotFound(t);
+  else if(r.page==="overview") main=pOverview(t);
+  else if(r.page==="stage") main=pStage(t,r.stage);
+  else if(r.page==="materials"&&r.id) main=pMaterial(t,r);
+  else if(SCR[r.page]&&SCR[r.page].slice) main=pLater(t,r);
+  else main=({materials:pMaterials,locations:pLocations,customers:pCustomers,suppliers:pSuppliers,"planning-parameters":pPP,"safety-stock":pSS,boms:pBOM,audit:pAudit,import:pImport}[r.page]||(()=>pNotFound(t)))(t,r);
+  const noPanel = r.scope!=="global" && r.page==="overview";
+  const k=document.activeElement&&document.activeElement.dataset?document.activeElement.dataset.k:null;
+  const app=document.getElementById("app");
+  app.className = `is-${r.scope==="global"?"global is-"+t:t}`;
+  app.style.display="contents";
+  app.innerHTML = renderTop(r)+renderRibbon(r)+renderBanner(r)
+    + `<div class="layout ${noPanel?"no-panel":""} ${r.page==="stage"?"stage-landing":""}">${renderPanel(r)}<main id="main">${main}</main></div>`
+    + `<footer>Caveman Planning Good! Made in Jozefoslaw with Tokens, Coffee and <a href="https://github.com/open-mercato/skills" target="_blank" rel="noopener noreferrer">OpenMercato Skills</a> during <a href="https://www.aitechleaders.pl/" target="_blank" rel="noopener noreferrer">AITechLeaders training</a>.</footer>`;
+  /* the tenant class must sit on an element that wraps the ribbon */
+  document.body.classList.remove("is-test","is-prod"); document.body.classList.add("is-"+t);
+  if(k){const el=app.querySelector(`[data-k="${k}"]`); if(el) el.focus();}
+  centre(".ribbon ol","[data-cur]"); centre(".panel .tree.branch, .panel > .tree","[aria-current=page]");
+  renderMock();
+}
+function centre(listSel,curSel){
+  if(window.innerWidth>767) return;
+  document.querySelectorAll(listSel).forEach(list=>{
+    const cur=list.querySelector(curSel); if(!cur) return;
+    const li=cur.closest("li")||cur;
+    const lr=list.getBoundingClientRect(), cr=li.getBoundingClientRect();
+    list.scrollLeft += (cr.left-lr.left) - (lr.width-cr.width)/2;
+  });
+}
+
+/* ===================== mockup controls & about ===================== */
+function renderMock(){
+  const m=document.getElementById("mock");
+  m.className="mock"+(S.mockOpen?"":" collapsed");
+  m.setAttribute("aria-label","Mockup controls (not part of the design)");
+  m.innerHTML=`<button data-act="mock" aria-expanded="${S.mockOpen}" data-k="mock">Mockup controls (not part of the design) <span aria-hidden="true">${S.mockOpen?"▾":"▴"}</span></button>
+  <div class="body">
+    <fieldset><legend>Role</legend><label><input type="radio" name="role" value="admin" data-k="role-a" ${isAdmin()?"checked":""}> Admin</label><label><input type="radio" name="role" value="user" data-k="role-u" ${!isAdmin()?"checked":""}> Normal user</label></fieldset>
+    <label><input type="checkbox" id="m-later" data-k="m-later" ${S.later?"checked":""}> Show later slices (2–3)</label>
+    <fieldset><legend>Read-only</legend><label><input type="checkbox" data-ro="test" data-k="m-ro-test" ${S.ro.test?"checked":""}> Test</label><label><input type="checkbox" data-ro="prod" data-k="m-ro-prod" ${S.ro.prod?"checked":""}> Prod</label></fieldset>
+    <button class="btn" data-act="about" data-k="about-btn">About this concept</button>
+  </div>`;
+}
+function renderAbout(){
+  const h=document.getElementById("about-host");
+  if(!S.about){h.innerHTML="";return;}
+  h.innerHTML=`<div class="overlay" data-act="about-close-bg"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="about-h">
+   <div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><h2 id="about-h">04 — Navigation that follows the planning loop</h2><button class="btn" data-act="about-close" data-k="about-close">Close</button></div>
+   <h3>The idea</h3><p>The menu is the business process. A ribbon of numbered stages — ① Master data → ② Demand → ③ Plan → ④ Supply → ⑤ Stock → ⑥ Ship, then ↺ Look back — sits under the top bar. Each stage has a caveman-plain caption. Clicking a stage opens it and a left panel lists its screens; in ① Master data that panel is the one master-data tree with record counts. The Overview is the ribbon explained: per stage, what is there and the next sensible step.</p>
+   <h3>Why it fits CPG</h3><ul><li>CPG's promise is that a caveman can follow the planning logic. Here the navigation <i>is</i> that logic: you learn the order of MRP II just by looking at the menu.</li><li>Later slices already have their place, so the menu grows without being redesigned — slice 2 and 3 fill in stages that are visible today.</li><li>The tenant is a physical-looking toggle with words (“You are in TEST — playground”), never a page; global things live behind ⚙ and the account button.</li></ul>
+   <h3>Trade-offs</h3><ul><li>Two layers (ribbon + panel) take ~70 px of height more than a single bar; the ribbon is busy at 1280 px with all 7 stages.</li><li>Some screens are not purely one stage (stock import, audit reports); they get one home and a cross-link.</li><li>Experienced users who know what they want may find the stage step one more thing to scan than a flat list; the Overview chips and 2-click rule soften that.</li><li>In slice 1 only ① and ↺ are alive; the greyed stages promise a lot (hide them with “Show later slices”).</li></ul>
+   <h3>Click counts (from a tenant's Overview)</h3>
+   ${table(["Target","Desktop","Mobile (390 px)"],[
+     ["Materials","1 (Overview chip) · 2 from anywhere (① → Materials)","1 (Overview chip) · 2 from anywhere (stepper ① → chip)"],
+     ["Locations","1 · 2 from anywhere","1 · 2 from anywhere"],
+     ["Safety stock","1 · 2 from anywhere","1 · 2 from anywhere"],
+     ["Users","2 (⚙ → Users)","2 (⚙ → Users)"],
+     ["Switch Test → Prod, same screen","1 (the toggle)","1 (the toggle)"],
+     ["Change language","2 (account → PL)","2 (account → PL)"],
+     ["Reach the Import","1 (Overview chip) · 2 from anywhere (① → Import)","1 · 2 from anywhere"]])}
+  </div></div>`;
+  const b=h.querySelector("[data-k=about-close]"); if(b) b.focus();
+}
+
+/* ===================== events ===================== */
+document.addEventListener("click",e=>{
+  const a=e.target.closest("[data-act],[data-toast],a");
+  const inMenu=e.target.closest(".menu-wrap");
+  if(S.menu&&!inMenu){S.menu=null; if(!a||!a.closest(".menu-wrap")) {render();}}
+  if(!a) return;
+  if(a.matches("[data-toast]")&&!a.dataset.act){toast(a.dataset.toast);return;}
+  const v=a.dataset.act; if(!v) { if(a.tagName==="A"&&S.menu){S.menu=null;} return; }
+  if(v==="flip"){
+    const r=parse(), next=S.tenant==="test"?"prod":"test";
+    S.tenant=next;
+    if(r.scope==="global"){render(); toast(`Switched to ${T(next)}. This page is shared, so it stays the same.`);}
+    else{const rest=location.hash.replace(/^#\/(test|prod)/,""); location.hash=`#/${next}${rest||"/overview"}`;}
+    return;
+  }
+  if(v.startsWith("menu:")){const m=v.slice(5); S.menu=S.menu===m?null:m; render(); return;}
+  if(v.startsWith("lang:")){S.lang=v.slice(5); render(); toast(S.lang==="pl"?"Język: polski (makieta tłumaczy tylko wstążkę i przełącznik)":"Language: English"); return;}
+  if(v.startsWith("theme:")){S.theme=v.slice(6); render(); return;}
+  if(v==="signout"){S.menu=null; render(); toast("Mockup: signed out — back to the sign-in page."); return;}
+  if(v==="mock"){S.mockOpen=!S.mockOpen; renderMock(); document.querySelector("[data-k=mock]").focus(); return;}
+  if(v==="about"){S.about=true; renderAbout(); return;}
+  if(v==="about-close"||(v==="about-close-bg"&&e.target===a)){S.about=false; renderAbout(); document.querySelector("[data-k=about-btn]")?.focus(); return;}
+  if(v.startsWith("imp:")){const x=v.slice(4); if(x==="commit"){S.importStep=1; toast("Mockup: import committed — 3 new, 1 changed. Recorded in the audit.");} else {S.importStep=+x;} render(); return;}
+});
+document.addEventListener("change",e=>{
+  const el=e.target;
+  if(el.dataset.ro){const t=el.dataset.ro; S.ro[t]=el.checked; GAUD.unshift([new Date().toISOString().slice(0,16).replace("T"," "),"admin","UI",el.checked?"Set read-only":"Removed read-only",`Tenant ${T(t)}`]); render(); toast(`${T(t)} is now ${el.checked?"read-only 🔒":"writable"}.`); return;}
+  if(el.name==="role"){S.role=el.value; S.menu=null; render(); return;}
+  if(el.id==="m-later"){S.later=el.checked; render(); return;}
+});
+document.addEventListener("keydown",e=>{
+  if(e.key!=="Escape") return;
+  if(S.about){S.about=false; renderAbout(); return;}
+  if(S.menu){const k=S.menu==="gear"?"gear":"acct"; S.menu=null; render(); document.querySelector(`[data-k=${k}]`)?.focus();}
+});
+window.addEventListener("hashchange",()=>{S.menu=null; render(); window.scrollTo(0,0); const h=document.querySelector("main h1"); if(h) h.focus({preventScroll:true});});
+window.addEventListener("resize",()=>{centre(".ribbon ol","[data-cur]");});
+if(!location.hash) history.replaceState(null,"","#/test/overview");
+render();
+})();
+</script>
+</body>
+</html>
