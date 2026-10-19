@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-// The audit is append-only (spec .ai/specs/2026-10-19--1050UTC-audit-log.md, AUD-010). The real
+// The audit is append-only (spec .ai/specs/implemented/2026-10-19--1050UTC-audit-log.md, AUD-010). The real
 // guard is the database: triggers abort every UPDATE and DELETE on both audit tables
 // (packages/db/src/entities/audit/audit.entity.test.ts). This is a best-effort source scan on top,
 // so that a write path never gets as far as the database: it can't see every path.

@@ -66,9 +66,9 @@ describe("every change is kept in an append-only audit", () => {
     const rows = await auditRows(admin);
     expect(await admin.title()).toBe("Global audit · Caveman Planning Good");
     expect(rows.map(([, account, , channel, action, , changes]) => [account, channel, action, changes])).toEqual([
-      ["admin", "UI", "User deactivated", "active: true → false"],
+      ["admin", "UI", "User deactivated", "active: yes → no"],
       ["admin", "UI", "Password reset", "Password replaced (not recorded)"],
-      ["admin", "UI", "User created", `username: ${USERNAME}\nrole: user\nactive: true`],
+      ["admin", "UI", "User created", `username: ${USERNAME}\nrole: user\nactive: yes`],
     ]);
     for (const [time] of rows) expect(time).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
     adminSession = rows[0][2];
@@ -132,6 +132,22 @@ describe("every change is kept in an append-only audit", () => {
     expect(read.body).toMatchObject({ ok: true, data: { entries: expect.arrayContaining([expect.objectContaining({ actor: expect.objectContaining({ username: USERNAME }) })]) } });
     for (const method of ["PATCH", "PUT", "DELETE", "POST"]) expect((await call(method)).status).toBe(405);
     expect((await auditRows(alice)).length).toBe(5);
+  });
+
+  it("shows neither audit to a visitor who isn't signed in", async () => {
+    const visitor = openBrowser();
+    try {
+      await visitor.open(`${baseUrl}/admin/audit`);
+      await visitor.waitFor("#username");
+      expect(new URL(await visitor.url()).pathname).toBe("/login");
+
+      const statuses = await visitor.evaluate<number[]>(
+        `Promise.all(["/api/audit", "/api/tenants/test/audit"].map((path) => fetch(path).then((r) => r.status)))`,
+      );
+      expect(statuses).toEqual([401, 401]);
+    } finally {
+      await visitor.close();
+    }
   });
 
   it("keeps each tenant's audit to itself, empty until the tenant holds records", async () => {
