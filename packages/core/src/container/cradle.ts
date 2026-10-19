@@ -4,6 +4,7 @@ import type { AppConfig } from "../config";
 import type { AuthService } from "../services/auth/auth.service";
 import type { LoginThrottle } from "../services/auth/login-throttle";
 import type { SystemStatusService } from "../services/system/system-status.service";
+import type { TenantInfo, TenantService } from "../services/tenants/tenant.service";
 
 /** Everything the DI container can resolve — one entry per registration in `container.ts`. */
 export interface Cradle {
@@ -14,6 +15,9 @@ export interface Cradle {
   systemStatusService: SystemStatusService;
   loginThrottle: LoginThrottle;
   authService: AuthService;
+  tenantService: TenantService;
+  /** The active tenant. Only in scopes built by `tenantScope()`. */
+  tenant: TenantInfo;
 }
 
 export type AppContainer = AwilixContainer<Cradle>;

@@ -5,6 +5,7 @@ import { toDbOptions } from "../database";
 import { AuthService } from "../services/auth/auth.service";
 import { LoginThrottle } from "../services/auth/login-throttle";
 import { SystemStatusService } from "../services/system/system-status.service";
+import { TenantService } from "../services/tenants/tenant.service";
 import { globalSingleton } from "../singleton";
 import type { AppContainer, Cradle } from "./cradle";
 
@@ -24,6 +25,8 @@ export function createAppContainer(config: AppConfig, orm: Orm): AppContainer {
     // One per process (per bundle): its failure counters must outlive the request.
     loginThrottle: asClass(LoginThrottle).singleton(),
     authService: asClass(AuthService).scoped(),
+    tenantService: asClass(TenantService).scoped(),
+    // `tenant` is registered only by tenantScope(): resolving it from a global scope fails (strict).
   });
   return container;
 }
