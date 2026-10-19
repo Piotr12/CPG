@@ -69,6 +69,14 @@ Implement E01-S04 as the spec describes:
 - **The migration** is additive. The PR is `risk-high` and needs a rollback note.
 - **Polish copy** is agent-written and needs a native-speaker review on the PR.
 
+## Implementation notes
+
+- **Commits.** Steps 3.1–3.3 landed in one commit (838d9de), and so did 4.1–4.2 (92923ff). Their tests and wiring were interdependent, and each commit leaves the app working and fully covered.
+- **File names.** The spec's `preferences/theme-script.ts` became `preferences/theme.ts`. It holds the script, the cookie name and the client-side cookie helpers, which `DocumentPreferences` (client) shares with the head script. Server-only cookie writes stay in `theme-cookie.ts`, because `next/headers` can't be imported by a client component.
+- **Help link.** It lives in `AppBar` (`components/layout/app-bar.tsx`), the root layout's request-time slot, instead of a separate `help-link.tsx`. `AppBarPlaceholder` holds its height while it streams.
+- **Integration tests** now run one file at a time (`fileParallelism: false`): every file shares the single admin account, so preference changes would leak between parallel files. Files that change preferences restore them in `afterAll`.
+- **Hydration race.** Clicking a switch before React hydrated it was lost. `choosePreference` waits for hydration first. Both points are recorded in `.ai/lessons.md`.
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
@@ -91,6 +99,6 @@ Implement E01-S04 as the spec describes:
 
 ### Phase 4: Help
 
-- [ ] 4.1 Topics and search
-- [ ] 4.2 /help page and the Help link
+- [x] 4.1 Topics and search — 92923ff
+- [x] 4.2 /help page and the Help link — 92923ff
 - [ ] 4.3 Docs and the gate
