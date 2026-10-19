@@ -33,6 +33,8 @@ export function openBrowser() {
     click: (selector: string) => command("click", selector),
     /** Waits until an element matching the CSS selector is on the page. */
     waitFor: (selector: string) => command("wait", selector),
+    /** Waits until a JavaScript expression is truthy in the page. */
+    waitUntil: (expression: string) => command("wait", "--fn", expression),
     url: () => command("get", "url"),
     /** The browser's cookies for the current page, including httpOnly ones. */
     cookies: async () =>
