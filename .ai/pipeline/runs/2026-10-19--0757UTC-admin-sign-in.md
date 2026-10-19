@@ -82,13 +82,23 @@ Follows the spec's Implementation Plan, Steps 1–9, unchanged.
 - 2.5: adds the shadcn `input` and `label` components (`npx shadcn@latest add`). The `resolveServerComponents` test helper moved from `admin/page.test.tsx` to `tests/setup/server-components.ts` so the login page test can reuse it.
 - Pitfall: `beforeEach(() => mock.mockResolvedValue(x))` returns the mock, and Vitest runs a function returned from a hook as teardown. Recorded in `.ai/lessons.md`.
 
+- Review (`om-auto-review-pr`, independent reviewer): request changes, with 1 major, 4 minors and 2 nits. All were fixed in e177a59 and 11ea5c3.
+  - Major: `/login` opened SQLite during the build. `currentUser()` now reads the cookie first, and the redirect awaits `connection()`. Verified: a build with an empty `DATA_DIR` creates no database, and one with an unusable `DATA_DIR` keeps `/login` postponed.
+  - Minors and nits:
+    - `signOut` moved to `admin/actions.ts`;
+    - the throttle caps its map at 10,000 buckets and prunes once a minute;
+    - startup rejects a padded password;
+    - over-long credentials get the generic message;
+    - the cookie uses `maxAge`;
+    - `BACKWARD_COMPATIBILITY.md` and `CODE_REVIEW.md` are updated.
+
 ## Verification
 
 - `npm run lint`, `npm run typecheck`: pass.
-- `npm run test:coverage`: 41 files, 171 tests, 100% coverage.
+- `npm run test:coverage`: 42 files, 179 tests, 100% coverage (after the review fixes).
 - `npm run build`: pass (`/admin` and `/login` partially prerendered).
-- `npm run test:integration` (Docker): 4 files and 14 tests pass:
+- `npm run test:integration` (Docker): 4 files and 15 tests pass:
   - startup guard: the container exits without `CPG_ADMIN_PASSWORD`;
-  - sign-in: redirect from `/admin`, generic error, `HttpOnly`, `Secure` and `Lax` cookie, sign-out, throttling;
+  - sign-in: redirect from `/admin`, generic error, `HttpOnly`, `Secure` and `Lax` cookie, `/login` → `/admin` once signed in, sign-out, throttling;
   - smoke test, signed in.
 - `npm audit`: only the known `braces` → `fast-glob`/`micromatch` chain listed in the engineering standards; `zod` adds nothing.
