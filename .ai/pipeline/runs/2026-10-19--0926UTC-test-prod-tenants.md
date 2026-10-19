@@ -121,6 +121,8 @@ No dependency changed, so no `npm audit` triage was needed.
 
 ## Progress
 
+PR: #36
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Tenant data layer
