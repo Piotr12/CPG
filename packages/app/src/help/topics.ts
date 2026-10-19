@@ -59,23 +59,23 @@ const en: Record<HelpTopicId, HelpText> = {
     body: [
       "CPG is a small MRP II planning tool: it turns what customers want into plans for what to buy and what to make.",
       "Sign in on the sign-in page with the account the administrator gave you. The built-in administrator signs in as admin.",
-      "The menu at the top of every page lists the screens your account can open, Help included. On a phone, open it with the Menu button. Every new screen of CPG adds its own topic here.",
+      "The sidebar on the left of every page lists the screens your account can open: the TEST | PROD switch at the top, the tenant's own screens (Overview, Master data, Audit) under it, and the screens shared by both tenants, Help included, at the bottom. The button at the top of the sidebar, or Ctrl+B (⌘B on a Mac), shrinks it to icons and back. On a phone, open it with the Menu button. Every new screen of CPG adds its own topic here.",
     ],
   },
   "signing-in": {
     title: "Signing in",
     body: [
-      "Choose Sign in on the homepage or in the menu, enter your username and password, then choose Sign in.",
+      "Choose Sign in on the homepage or at the top of the page, enter your username and password, then choose Sign in.",
       "If either is wrong you see “Invalid username or password.” CPG never says which of the two was wrong.",
       "After several failed attempts, signing in pauses for 15 minutes. Wait, then try again.",
-      "A session lasts 12 hours. Sign out from the menu when you are done. On a medium-width screen it is behind the button with your name.",
+      "A session lasts 12 hours. Sign out from your account card, with your name, at the bottom of the sidebar when you are done.",
     ],
   },
   "admin-home": {
     title: "Cave control",
     body: [
-      "Cave control is the home page of every account: choose the Test or Prod tenant there. Your name, language and theme, and Sign out are in the menu. There is no password change: only the administrator sets passwords.",
-      "The administrator also sees Users in the menu and the Database card here. The card shows where CPG keeps its data, how many migrations are applied, whether any are still pending, and how many settings are stored.",
+      "Cave control is the page every account lands on after signing in: choose the Test or Prod tenant there. Your language and theme, your API tokens and Sign out are in your account card at the bottom of the sidebar. There is no password change: only the administrator sets passwords.",
+      "The administrator opens this page from Administration → Tenants in the sidebar, next to Users, and also sees the Database card here. The card shows where CPG keeps its data, how many migrations are applied, whether any are still pending, and how many settings are stored.",
       "A pending migration normally means CPG is still starting. If it stays, tell whoever runs CPG.",
       "Open Test or Open Prod takes you to that tenant's business data.",
     ],
@@ -84,14 +84,14 @@ const en: Record<HelpTopicId, HelpText> = {
     title: "Test and Prod",
     body: [
       "CPG keeps two separate sets of business data: Test, with demonstration data that is safe to experiment with, and Prod, the live data.",
-      "The strip at the top of every page says which one you are working in: TEST in amber, PROD in dark with a red edge, or GLOBAL on pages that belong to neither.",
-      "Switch with Test and Prod on the right of the strip. Nothing you do in one ever appears in the other, and the same number can mean a different record in each.",
+      "The row at the top of every page says which one you are working in: TEST in amber, PROD in dark with a red edge, or GLOBAL on pages shared by both, followed by where you are, such as Master data › Materials.",
+      "Switch with TEST | PROD at the top of the sidebar: you stay on the same screen in the other tenant, or land on its list when you were on one record. On a page shared by both, the switch only changes which tenant the sidebar's screens open. Nothing you do in one ever appears in the other, and the same number can mean a different record in each.",
     ],
   },
   "managing-users": {
     title: "Managing users",
     body: [
-      "Only the administrator opens Users. Create user adds a normal user with a username (3–32 lowercase letters, digits, dots, dashes or underscores) and an initial password of at least 12 characters. Tell them the password yourself.",
+      "Only the administrator opens Users, under Administration in the sidebar. Create user adds a normal user with a username (3–32 lowercase letters, digits, dots, dashes or underscores) and an initial password of at least 12 characters. Tell them the password yourself.",
       "Reset password, in a user's row menu, sets a new password and signs that user out everywhere at once.",
       "Deactivate signs the user out everywhere and stops them signing in. Reactivate lets them back in with their current password, so reset it too if the account may have been compromised.",
       "Users are never deleted: an account stays, so its history keeps its name. The built-in administrator can't be changed here.",
@@ -100,7 +100,7 @@ const en: Record<HelpTopicId, HelpText> = {
   "api-tokens": {
     title: "API tokens",
     body: [
-      "API tokens let a script or tool use the CPG API as you. Open API tokens in the menu, choose Create token, give it a name and create it.",
+      "API tokens let a script or tool use the CPG API as you. Open API tokens from your account card at the bottom of the sidebar, choose Create token, give it a name and create it.",
       "The secret is shown once. Copy it straight away: CPG stores only a fingerprint of it and can never show it again. If you lose it, revoke the token and create a new one.",
       "Send the secret in every API request as the Authorization: Bearer header. The token can do exactly what your account can, in Test and Prod, and it never expires.",
       "Revoke ends a token at once. A password reset or a deactivation ends all of an account's tokens. Tokens can be listed and revoked through the API too, but only created here.",
@@ -111,7 +111,7 @@ const en: Record<HelpTopicId, HelpText> = {
   "global-audit": {
     title: "The Global audit",
     body: [
-      "Audit, in the menu, opens the Global audit: every change to accounts, newest first. It lists users created, passwords reset, accounts deactivated or reactivated, language or theme changes, and API tokens created or revoked.",
+      "Global audit, at the bottom of the sidebar, opens every change to accounts, newest first. It lists users created, passwords reset, accounts deactivated or reactivated, language or theme changes, and API tokens created or revoked.",
       "Each entry shows when it happened (in UTC), the account that made it, the session it came from, the channel (UI for CPG's screens, API for programs) and what changed, as before → after.",
       "A password reset is listed without the password: CPG never records passwords or their hashes.",
       "Every account can read the audit, and nobody can change or delete an entry, not even the administrator. Older entries shows the previous page.",
@@ -120,7 +120,7 @@ const en: Record<HelpTopicId, HelpText> = {
   "tenant-audit": {
     title: "A tenant's audit",
     body: [
-      "Audit — Test or Audit — Prod, on that tenant's page, opens its own audit: the changes to its business records, kept apart from the other tenant's.",
+      "Audit, in the sidebar under the tenant's screens (or Audit — Test or Audit — Prod on the tenant's page), opens that tenant's own audit: the changes to its business records, kept apart from the other tenant's.",
       "It lists every material, location, customer and supplier created, changed, deactivated or reactivated, and every unit conversion added, changed or removed, with the values before and after. Account changes are always in the Global audit.",
       "Like the Global audit, it is read-only for everyone.",
     ],
@@ -128,7 +128,7 @@ const en: Record<HelpTopicId, HelpText> = {
   materials: {
     title: "Materials",
     body: [
-      "Materials, on a tenant's page, lists that tenant's materials by ID. Test and Prod each have their own: material 00000001 in Test and 00000001 in Prod are different records.",
+      "Materials, under Master data in the sidebar, lists that tenant's materials by ID. Test and Prod each have their own: material 00000001 in Test and 00000001 in Prod are different records.",
       "Every material has an eight-digit ID that CPG assigns in order when it is created (00000001, 00000002, …) and that never changes, a type, a description and a base unit.",
       "The type is raw (bought), intermediate (made and used to make other materials) or finished (made and sold). The base unit is the unit every quantity of the material is stored in, exactly to six decimals.",
       "Every account can read materials. Only the administrator creates and changes them, with Create material here and Edit on a material's page; through the API too, with the same rules.",
@@ -146,7 +146,7 @@ const en: Record<HelpTopicId, HelpText> = {
   locations: {
     title: "Locations",
     body: [
-      "Locations, on a tenant's page, lists the sites where that tenant's materials are made and stocked. Test and Prod each have their own: location 00000001 in Test and 00000001 in Prod are different records.",
+      "Locations, under Master data in the sidebar, lists the sites where that tenant's materials are made and stocked. Test and Prod each have their own: location 00000001 in Test and 00000001 in Prod are different records.",
       "Every location has an eight-digit ID that CPG assigns in order when it is created (00000001, 00000002, …) and that never changes, a name and a status. Names don't have to be unique.",
       "Every account can read the list. Only the administrator creates, renames, deactivates and reactivates locations, with Create location and each row's ⋯ menu; through the API too, with the same rules.",
       "Deactivate keeps the location and everything that already uses it, but it can't be picked for new entries; Reactivate undoes that. Every change appears in the tenant's audit.",
@@ -155,7 +155,7 @@ const en: Record<HelpTopicId, HelpText> = {
   customers: {
     title: "Customers",
     body: [
-      "Customers, on a tenant's page, lists who that tenant sells to. Test and Prod each have their own: customer 00000001 in Test and 00000001 in Prod are different records.",
+      "Customers, under Master data in the sidebar, lists who that tenant sells to. Test and Prod each have their own: customer 00000001 in Test and 00000001 in Prod are different records.",
       "Every customer has an eight-digit ID that CPG assigns in order when it is created (00000001, 00000002, …) and that never changes, a name and a status. Names don't have to be unique.",
       "Every account can read the list. Only the administrator creates, renames, deactivates and reactivates customers, with Create customer and each row's ⋯ menu; through the API too, with the same rules.",
       "Deactivate keeps the customer and everything that already uses it, but it can't be picked for new entries; Reactivate undoes that. Every change appears in the tenant's audit.",
@@ -164,7 +164,7 @@ const en: Record<HelpTopicId, HelpText> = {
   suppliers: {
     title: "Suppliers",
     body: [
-      "Suppliers, on a tenant's page, lists who that tenant buys from. Test and Prod each have their own: supplier 00000001 in Test and 00000001 in Prod are different records.",
+      "Suppliers, under Master data in the sidebar, lists who that tenant buys from. Test and Prod each have their own: supplier 00000001 in Test and 00000001 in Prod are different records.",
       "Every supplier has an eight-digit ID that CPG assigns in order when it is created (00000001, 00000002, …) and that never changes, a name and a status. Names don't have to be unique.",
       "Every account can read the list. Only the administrator creates, renames, deactivates and reactivates suppliers, with Create supplier and each row's ⋯ menu; through the API too, with the same rules.",
       "Deactivate keeps the supplier and everything that already uses it, but it can't be picked for new entries; Reactivate undoes that. Every change appears in the tenant's audit.",
@@ -173,7 +173,7 @@ const en: Record<HelpTopicId, HelpText> = {
   "language-and-theme": {
     title: "Language and theme",
     body: [
-      "Choose English or Polski, and Light or Dark, in the menu next to Sign out.",
+      "Choose English or Polski, and Light or Dark, in your account card at the bottom of the sidebar.",
       "The choice belongs to your account: it stays after you sign out, follows you to other browsers, and never changes anyone else's.",
       "Before you sign in, CPG shows English and the light theme.",
     ],
@@ -194,23 +194,23 @@ const pl: Record<HelpTopicId, HelpText> = {
     body: [
       "CPG to małe narzędzie do planowania MRP II: zamienia to, czego chcą klienci, w plany zakupów i produkcji.",
       "Zaloguj się na stronie logowania kontem, które dał ci administrator. Wbudowany administrator loguje się jako admin.",
-      "Menu u góry każdej strony pokazuje ekrany, które twoje konto może otworzyć, w tym Pomoc. Na telefonie otwórz je przyciskiem Menu. Każdy nowy ekran CPG dodaje tu własny temat.",
+      "Panel boczny po lewej stronie każdej strony pokazuje ekrany, które twoje konto może otworzyć: na górze przełącznik TEST | PROD, pod nim ekrany środowiska (Przegląd, Dane podstawowe, Audyt), a na dole ekrany wspólne dla obu środowisk, w tym Pomoc. Przycisk na górze panelu albo Ctrl+B (⌘B na Macu) zwija go do ikon i z powrotem. Na telefonie otwórz go przyciskiem Menu. Każdy nowy ekran CPG dodaje tu własny temat.",
     ],
   },
   "signing-in": {
     title: "Logowanie",
     body: [
-      "Wybierz Zaloguj się na stronie głównej lub w menu, wpisz nazwę użytkownika i hasło, a następnie wybierz Zaloguj.",
+      "Wybierz Zaloguj się na stronie głównej lub u góry strony, wpisz nazwę użytkownika i hasło, a następnie wybierz Zaloguj.",
       "Jeśli któreś z nich jest błędne, zobaczysz komunikat o nieprawidłowej nazwie użytkownika lub haśle. CPG nigdy nie mówi, które z nich było błędne.",
       "Po kilku nieudanych próbach logowanie zostaje wstrzymane na 15 minut. Odczekaj i spróbuj ponownie.",
-      "Sesja trwa 12 godzin. Gdy skończysz, wyloguj się w menu. Na ekranie średniej szerokości jest pod przyciskiem z twoją nazwą.",
+      "Sesja trwa 12 godzin. Gdy skończysz, wyloguj się na karcie konta z twoją nazwą, na dole panelu bocznego.",
     ],
   },
   "admin-home": {
     title: "Kontrola jaskini",
     body: [
-      "Kontrola jaskini to strona startowa każdego konta: wybierz tu środowisko Test lub Prod. Twoja nazwa, język i motyw oraz przycisk Wyloguj są w menu. Nie ma tu zmiany hasła: hasła ustawia tylko administrator.",
-      "Administrator widzi też Użytkowników w menu i tutaj kartę Baza danych. Karta pokazuje, gdzie CPG przechowuje dane, ile migracji zastosowano, czy jakieś jeszcze oczekują i ile ustawień zapisano.",
+      "Kontrola jaskini to strona, na którą trafia każde konto po zalogowaniu: wybierz tu środowisko Test lub Prod. Język i motyw, tokeny API oraz przycisk Wyloguj są na karcie konta na dole panelu bocznego. Nie ma tu zmiany hasła: hasła ustawia tylko administrator.",
+      "Administrator otwiera tę stronę pozycją Administracja → Środowiska w panelu bocznym, obok Użytkowników, i widzi tu też kartę Baza danych. Karta pokazuje, gdzie CPG przechowuje dane, ile migracji zastosowano, czy jakieś jeszcze oczekują i ile ustawień zapisano.",
       "Oczekująca migracja zwykle oznacza, że CPG jeszcze się uruchamia. Jeśli nie znika, powiedz o tym osobie, która utrzymuje CPG.",
       "Przyciski Otwórz Test i Otwórz Prod prowadzą do danych biznesowych wybranego środowiska.",
     ],
@@ -219,14 +219,14 @@ const pl: Record<HelpTopicId, HelpText> = {
     title: "Środowiska Test i Prod",
     body: [
       "CPG przechowuje dwa oddzielne zbiory danych biznesowych: Test z danymi demonstracyjnymi, na których można bezpiecznie eksperymentować, oraz Prod z danymi rzeczywistymi.",
-      "Pasek u góry każdej strony pokazuje, w którym środowisku pracujesz: TEST na bursztynowo, PROD na ciemno z czerwoną krawędzią albo GLOBAL na stronach, które nie należą do żadnego z nich.",
-      "Przełączaj się przyciskami Test i Prod po prawej stronie paska. Nic, co zrobisz w jednym środowisku, nie pojawi się w drugim, a ten sam numer może oznaczać w każdym z nich inny rekord.",
+      "Wiersz u góry każdej strony pokazuje, w którym środowisku pracujesz: TEST na bursztynowo, PROD na ciemno z czerwoną krawędzią albo GLOBAL na stronach wspólnych dla obu, a za nim miejsce, w którym jesteś, na przykład Dane podstawowe › Materiały.",
+      "Przełączaj się przełącznikiem TEST | PROD na górze panelu bocznego: zostajesz na tym samym ekranie w drugim środowisku albo trafiasz na jego listę, jeśli byłeś na jednym rekordzie. Na stronie wspólnej dla obu przełącznik zmienia tylko to, które środowisko otwierają ekrany panelu. Nic, co zrobisz w jednym środowisku, nie pojawi się w drugim, a ten sam numer może oznaczać w każdym z nich inny rekord.",
     ],
   },
   "managing-users": {
     title: "Zarządzanie użytkownikami",
     body: [
-      "Ekran Użytkownicy otwiera tylko administrator. Utwórz użytkownika dodaje zwykłego użytkownika z nazwą (3–32 małe litery, cyfry, kropki, myślniki lub podkreślenia) i hasłem początkowym o długości co najmniej 12 znaków. Przekaż mu hasło osobiście.",
+      "Ekran Użytkownicy, w sekcji Administracja panelu bocznego, otwiera tylko administrator. Utwórz użytkownika dodaje zwykłego użytkownika z nazwą (3–32 małe litery, cyfry, kropki, myślniki lub podkreślenia) i hasłem początkowym o długości co najmniej 12 znaków. Przekaż mu hasło osobiście.",
       "Resetuj hasło w menu wiersza ustawia nowe hasło i od razu wylogowuje tego użytkownika ze wszystkich sesji.",
       "Dezaktywuj wylogowuje użytkownika ze wszystkich sesji i blokuje logowanie. Aktywuj ponownie wpuszcza go z obecnym hasłem, więc zresetuj je także wtedy, gdy konto mogło zostać przejęte.",
       "Użytkownicy nigdy nie są usuwani: konto zostaje, więc historia zachowuje jego nazwę. Wbudowanego administratora nie można tu zmienić.",
@@ -235,7 +235,7 @@ const pl: Record<HelpTopicId, HelpText> = {
   "api-tokens": {
     title: "Tokeny API",
     body: [
-      "Tokeny API pozwalają skryptowi lub narzędziu korzystać z API CPG w twoim imieniu. Otwórz Tokeny API w menu, wybierz Utwórz token, nadaj mu nazwę i utwórz go.",
+      "Tokeny API pozwalają skryptowi lub narzędziu korzystać z API CPG w twoim imieniu. Otwórz Tokeny API z karty konta na dole panelu bocznego, wybierz Utwórz token, nadaj mu nazwę i utwórz go.",
       "Sekret jest pokazywany tylko raz. Skopiuj go od razu: CPG przechowuje wyłącznie jego odcisk i nigdy nie pokaże go ponownie. Jeśli go zgubisz, unieważnij token i utwórz nowy.",
       "Wysyłaj sekret w każdym żądaniu do API jako nagłówek Authorization: Bearer. Token może dokładnie to, co twoje konto, w środowiskach Test i Prod, i nigdy nie wygasa.",
       "Unieważnij natychmiast kończy działanie tokenu. Reset hasła lub dezaktywacja kończy działanie wszystkich tokenów konta. Tokeny można też wyświetlać i unieważniać przez API, ale tworzyć tylko tutaj.",
@@ -246,7 +246,7 @@ const pl: Record<HelpTopicId, HelpText> = {
   "global-audit": {
     title: "Audyt globalny",
     body: [
-      "Audyt w menu otwiera Audyt globalny: każdą zmianę kont, od najnowszej. Znajdziesz tu utworzonych użytkowników, zresetowane hasła, dezaktywowane i ponownie aktywowane konta, zmiany języka lub motywu oraz utworzone i unieważnione tokeny API.",
+      "Audyt globalny, na dole panelu bocznego, pokazuje każdą zmianę kont, od najnowszej. Znajdziesz tu utworzonych użytkowników, zresetowane hasła, dezaktywowane i ponownie aktywowane konta, zmiany języka lub motywu oraz utworzone i unieważnione tokeny API.",
       "Każdy wpis pokazuje, kiedy nastąpiła zmiana (w UTC), które konto ją wprowadziło, z jakiej sesji, jakim kanałem (Ekran dla ekranów CPG, Interfejs API dla programów) i co się zmieniło, jako przed → po.",
       "Reset hasła jest zapisany bez hasła: CPG nigdy nie zapisuje haseł ani ich skrótów.",
       "Audyt może przeglądać każde konto, a nikt nie może zmienić ani usunąć wpisu, nawet administrator. Starsze wpisy pokazują poprzednią stronę.",
@@ -255,7 +255,7 @@ const pl: Record<HelpTopicId, HelpText> = {
   "tenant-audit": {
     title: "Audyt środowiska",
     body: [
-      "Audyt — Test lub Audyt — Prod na stronie środowiska otwiera jego własny audyt: zmiany jego rekordów biznesowych, oddzielone od drugiego środowiska.",
+      "Audyt, w panelu bocznym pod ekranami środowiska (albo Audyt — Test lub Audyt — Prod na stronie środowiska), otwiera własny audyt tego środowiska: zmiany jego rekordów biznesowych, oddzielone od drugiego środowiska.",
       "Pokazuje każde utworzenie, zmianę, dezaktywację i ponowną aktywację materiału, lokalizacji, klienta lub dostawcy oraz każdy dodany, zmieniony lub usunięty przelicznik jednostek, z wartościami przed i po. Zmiany kont są zawsze w audycie globalnym.",
       "Tak jak audyt globalny, jest tylko do odczytu dla wszystkich.",
     ],
@@ -263,7 +263,7 @@ const pl: Record<HelpTopicId, HelpText> = {
   materials: {
     title: "Materiały",
     body: [
-      "Materiały, na stronie środowiska, wyświetlają materiały tego środowiska według ID. Test i Prod mają własne: materiał 00000001 w Test i 00000001 w Prod to różne rekordy.",
+      "Materiały, w sekcji Dane podstawowe panelu bocznego, wyświetlają materiały tego środowiska według ID. Test i Prod mają własne: materiał 00000001 w Test i 00000001 w Prod to różne rekordy.",
       "Każdy materiał ma ośmiocyfrowe ID, które CPG nadaje po kolei przy utworzeniu (00000001, 00000002, …) i które nigdy się nie zmienia, a także typ, opis i jednostkę bazową.",
       "Typ to surowiec (kupowany), półprodukt (wytwarzany i zużywany do innych materiałów) albo wyrób gotowy (wytwarzany i sprzedawany). Jednostka bazowa to jednostka, w której zapisywana jest każda ilość materiału, dokładnie do sześciu miejsc po przecinku.",
       "Materiały może przeglądać każde konto. Tworzy je i zmienia tylko administrator, przyciskiem Utwórz materiał tutaj i Edytuj na stronie materiału; także przez API, na tych samych zasadach.",
@@ -281,7 +281,7 @@ const pl: Record<HelpTopicId, HelpText> = {
   locations: {
     title: "Lokalizacje",
     body: [
-      "Lokalizacje, na stronie środowiska, wyświetlają miejsca, w których jego materiały są wytwarzane i składowane. Test i Prod mają własne: lokalizacja 00000001 w Test i 00000001 w Prod to różne rekordy.",
+      "Lokalizacje, w sekcji Dane podstawowe panelu bocznego, wyświetlają miejsca, w których jego materiały są wytwarzane i składowane. Test i Prod mają własne: lokalizacja 00000001 w Test i 00000001 w Prod to różne rekordy.",
       "Każda lokalizacja ma ośmiocyfrowe ID, które CPG nadaje po kolei przy utworzeniu (00000001, 00000002, …) i które nigdy się nie zmienia, a także nazwę i status. Nazwy nie muszą być unikalne.",
       "Lokalizacje może przeglądać każde konto. Tworzy je, zmienia ich nazwy, dezaktywuje i aktywuje ponownie tylko administrator, przyciskiem Utwórz lokalizację i menu ⋯ w każdym wierszu; także przez API, na tych samych zasadach.",
       "Dezaktywuj zachowuje lokalizację i wszystko, co już jej używa, ale nie można jej wybrać w nowych wpisach; Aktywuj ponownie to cofa. Każda zmiana pojawia się w audycie środowiska.",
@@ -290,7 +290,7 @@ const pl: Record<HelpTopicId, HelpText> = {
   customers: {
     title: "Klienci",
     body: [
-      "Klienci, na stronie środowiska, to ci, którym to środowisko sprzedaje. Test i Prod mają własne: klient 00000001 w Test i 00000001 w Prod to różne rekordy.",
+      "Klienci, w sekcji Dane podstawowe panelu bocznego, to ci, którym to środowisko sprzedaje. Test i Prod mają własne: klient 00000001 w Test i 00000001 w Prod to różne rekordy.",
       "Każdy klient ma ośmiocyfrowe ID, które CPG nadaje po kolei przy utworzeniu (00000001, 00000002, …) i które nigdy się nie zmienia, a także nazwę i status. Nazwy nie muszą być unikalne.",
       "Klientów może przeglądać każde konto. Tworzy ich, zmienia ich nazwy, dezaktywuje i aktywuje ponownie tylko administrator, przyciskiem Utwórz klienta i menu ⋯ w każdym wierszu; także przez API, na tych samych zasadach.",
       "Dezaktywuj zachowuje klienta i wszystko, co już go używa, ale nie można go wybrać w nowych wpisach; Aktywuj ponownie to cofa. Każda zmiana pojawia się w audycie środowiska.",
@@ -299,7 +299,7 @@ const pl: Record<HelpTopicId, HelpText> = {
   suppliers: {
     title: "Dostawcy",
     body: [
-      "Dostawcy, na stronie środowiska, to ci, od których to środowisko kupuje. Test i Prod mają własne: dostawca 00000001 w Test i 00000001 w Prod to różne rekordy.",
+      "Dostawcy, w sekcji Dane podstawowe panelu bocznego, to ci, od których to środowisko kupuje. Test i Prod mają własne: dostawca 00000001 w Test i 00000001 w Prod to różne rekordy.",
       "Każdy dostawca ma ośmiocyfrowe ID, które CPG nadaje po kolei przy utworzeniu (00000001, 00000002, …) i które nigdy się nie zmienia, a także nazwę i status. Nazwy nie muszą być unikalne.",
       "Dostawców może przeglądać każde konto. Tworzy ich, zmienia ich nazwy, dezaktywuje i aktywuje ponownie tylko administrator, przyciskiem Utwórz dostawcę i menu ⋯ w każdym wierszu; także przez API, na tych samych zasadach.",
       "Dezaktywuj zachowuje dostawcę i wszystko, co już go używa, ale nie można go wybrać w nowych wpisach; Aktywuj ponownie to cofa. Każda zmiana pojawia się w audycie środowiska.",
@@ -308,7 +308,7 @@ const pl: Record<HelpTopicId, HelpText> = {
   "language-and-theme": {
     title: "Język i motyw",
     body: [
-      "Wybierz English lub Polski oraz Jasny lub Ciemny w menu obok przycisku Wyloguj.",
+      "Wybierz English lub Polski oraz Jasny lub Ciemny na karcie konta na dole panelu bocznego.",
       "Wybór należy do twojego konta: zostaje po wylogowaniu, działa w innych przeglądarkach i nigdy nie zmienia ustawień innych osób.",
       "Przed zalogowaniem CPG wyświetla się po angielsku i w jasnym motywie.",
     ],

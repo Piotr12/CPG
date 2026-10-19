@@ -22,4 +22,13 @@ describe("help topics", () => {
       expect(topic.body).toHaveLength(english[i].body.length);
     });
   });
+
+  it.each(["en", "pl"] as const)("describes the sidebar, its TEST | PROD switch and the rail shortcut in %s, not the retired top menu or strip", (locale) => {
+    const text = (id: string) => helpTopics(locale).find((topic) => topic.id === id)!.body.join(" ");
+
+    expect(text("getting-started")).toContain("Ctrl+B");
+    expect(text("test-and-prod")).toContain("TEST | PROD");
+    const everything = helpTopics(locale).flatMap((topic) => topic.body).join(" ");
+    expect(everything).not.toMatch(/strip|menu at the top|Pasek u góry|Menu u góry/);
+  });
 });
