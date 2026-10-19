@@ -1,36 +1,27 @@
-import { TENANT_NAMES, type SessionUser, type TenantCode } from "@cpg/core";
+import type { SessionUser } from "@cpg/core";
 import type { Messages } from "../../i18n/messages/en";
+import { isGroup, SHARED_TREE, TENANT_TREE, type NavEntry, type NavItem, type NavModel, type NavNode } from "./nav-tree";
 
-/** The screens the menu can offer. Test and Prod are the tenant homes. */
-export type NavItemId = "tenants" | TenantCode | "audit" | "tokens" | "users" | "help" | "signIn";
-
-export interface NavItem {
-  id: NavItemId;
-  href: string;
+/** Keeps what the account may see, at every level, and labels it in the reader's language. */
+function visible(tree: NavNode[], isAdmin: boolean, nav: Messages["nav"]): NavItem[] {
+  return tree
+    .filter((node) => isAdmin || !node.adminOnly)
+    .map((node): NavItem =>
+      isGroup(node)
+        ? { ...node, label: nav[node.id], children: visible(node.children, isAdmin, nav) as NavEntry[] }
+        : { ...node, label: nav[node.id] },
+    );
 }
-
-/** Where every signed-in account may go: the tenant chooser, both tenant homes, the Global audit and its own tokens. */
-const ACCOUNT_ITEMS: NavItem[] = [
-  { id: "tenants", href: "/admin" },
-  { id: "test", href: "/admin/test" },
-  { id: "prod", href: "/admin/prod" },
-  { id: "audit", href: "/admin/audit" },
-  { id: "tokens", href: "/admin/tokens" },
-];
-const ADMIN_ITEMS: NavItem[] = [{ id: "users", href: "/admin/users" }];
-const HELP: NavItem = { id: "help", href: "/help" };
-const SIGN_IN: NavItem = { id: "signIn", href: "/login" };
 
 /**
- * The menu's entries for this account, in order: what it can open, then Help; signed out, Help and
- * Sign in. Hiding an entry is cosmetic: every page still gates itself with requireUser()/requireAdmin().
+ * The sidebar for this account, in the reader's language: the tenant zone, then the shared zone;
+ * null for a visitor, who gets the visitor bar. Hiding an entry is cosmetic: every page still gates
+ * itself with requireUser()/requireAdmin().
  */
-export function navItems(user: Pick<SessionUser, "role"> | null): NavItem[] {
-  if (!user) return [HELP, SIGN_IN];
-  return [...ACCOUNT_ITEMS, ...(user.role === "admin" ? ADMIN_ITEMS : []), HELP];
-}
-
-/** An entry's label in the reader's language; the tenants keep their names, as the tenant strip does. */
-export function navLabel(id: NavItemId, nav: Messages["nav"]): string {
-  return id === "test" || id === "prod" ? TENANT_NAMES[id] : nav[id];
+export function navModel(user: Pick<SessionUser, "role">, nav: Messages["nav"]): NavModel;
+export function navModel(user: Pick<SessionUser, "role"> | null, nav: Messages["nav"]): NavModel | null;
+export function navModel(user: Pick<SessionUser, "role"> | null, nav: Messages["nav"]): NavModel | null {
+  if (!user) return null;
+  const isAdmin = user.role === "admin";
+  return { tenant: visible(TENANT_TREE, isAdmin, nav), shared: visible(SHARED_TREE, isAdmin, nav) };
 }

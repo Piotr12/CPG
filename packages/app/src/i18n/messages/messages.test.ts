@@ -34,6 +34,7 @@ describe("dictionaries", () => {
       "suppliers/columns/status",
       "audit/fields/id",
       "nav/menu",
+      "nav/roles/admin",
     ]);
   });
 
@@ -44,6 +45,13 @@ describe("dictionaries", () => {
   ] as const)("formats %s counts in both languages", (key, english, polish) => {
     expect(en.admin[key](3)).toBe(english);
     expect(pl.admin[key](3)).toBe(polish);
+  });
+
+  it("names the tenant switch in both languages", () => {
+    expect(en.nav.tenantSwitch("Test")).toBe("Tenant: Test");
+    expect(pl.nav.tenantSwitch("Test")).toBe("Środowisko: Test");
+    expect(en.nav.menuShows("Prod")).toBe("Menu shows: Prod");
+    expect(pl.nav.menuShows("Prod")).toBe("Menu pokazuje: Prod");
   });
 
   it("names a tenant's audit in both languages", () => {

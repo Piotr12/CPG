@@ -1,10 +1,10 @@
-import { TenantStrip } from "../../../components/tenants/tenant-strip";
+import { TenantHeader } from "../../../components/tenants/tenant-header";
 
-/** Admin pages that belong to no tenant: they show the Global strip (TEN-011). */
+/** Admin pages that belong to no tenant: they show the Global header row (TEN-011). */
 export default function GlobalAdminLayout({ children }: LayoutProps<"/admin">) {
   return (
     <>
-      <TenantStrip scope="global" />
+      <TenantHeader scope="global" />
       {children}
     </>
   );

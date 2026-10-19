@@ -1,39 +1,29 @@
+import Link from "next/link";
+import { KeyRoundIcon } from "lucide-react";
 import { Button } from "@cpg/ui/components/button";
-import { cn } from "@cpg/ui/lib/utils";
 import type { Locale, Theme } from "@cpg/core";
 import { signOut, updatePreferences } from "../../app/admin/actions";
 import type { Messages } from "../../i18n/messages/en";
 import { PreferencesControls } from "../preferences/preferences-controls";
+import { TOKENS_PATH } from "./nav-tree";
 
 /**
- * The signed-in account's own controls in the menu: who is signed in, language and theme, and sign-out.
- * `stacked` fills the popover and the sheet; `inline` is one row in the bar from `xl`, where the name
- * is truncated and "Signed in as" is left to screen readers to save room.
+ * The signed-in account's own controls, in the account card's popover: who is signed in, language
+ * and theme, its API tokens, and sign-out.
  */
-export function AccountPanel({
-  username,
-  locale,
-  theme,
-  messages,
-  layout = "stacked",
-}: {
-  username: string;
-  locale: Locale;
-  theme: Theme;
-  messages: Messages;
-  layout?: "stacked" | "inline";
-}) {
-  const isInline = layout === "inline";
-
+export function AccountPanel({ username, locale, theme, messages }: { username: string; locale: Locale; theme: Theme; messages: Messages }) {
   return (
-    <div data-account-panel={layout} className={cn("flex gap-3", isInline ? "items-center" : "flex-col items-start")}>
-      <p className={cn("text-sm text-muted-foreground", isInline && "flex min-w-0")}>
-        <span className={cn(isInline && "sr-only")}>{messages.nav.signedInAs} </span>
-        <strong title={username} className={cn("text-foreground", isInline ? "max-w-32 truncate" : "break-all")}>
-          {username}
-        </strong>
+    <div data-account-panel className="flex flex-col items-start gap-3">
+      <p className="text-sm text-muted-foreground">
+        {messages.nav.signedInAs} <strong className="break-all text-foreground">{username}</strong>
       </p>
       <PreferencesControls locale={locale} theme={theme} labels={messages.preferences} action={updatePreferences} />
+      <Button asChild variant="ghost" size="sm" className="-ml-2">
+        <Link href={TOKENS_PATH}>
+          <KeyRoundIcon aria-hidden />
+          {messages.nav.tokens}
+        </Link>
+      </Button>
       <form action={signOut} data-action="sign-out">
         <Button type="submit" variant="outline" size="sm">
           {messages.nav.signOut}

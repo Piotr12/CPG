@@ -1,44 +1,39 @@
 import { describe, expect, it } from "vitest";
 import { en } from "../../i18n/messages/en";
 import { pl } from "../../i18n/messages/pl";
-import { navItems, navLabel } from "./nav-items";
+import { navModel } from "./nav-items";
+import type { NavItem } from "./nav-tree";
 
-const ids = (user: Parameters<typeof navItems>[0]) => navItems(user).map((item) => item.id);
+/** The tree as ids, groups as `[id, children]`. */
+const shape = (items: NavItem[]): unknown[] => items.map((item) => ("children" in item ? [item.id, shape(item.children)] : item.id));
 
-describe("navItems", () => {
-  it("offers a visitor Help and Sign in", () => {
-    expect(navItems(null)).toEqual([
-      { id: "help", href: "/help" },
-      { id: "signIn", href: "/login" },
-    ]);
+describe("navModel", () => {
+  it("gives a visitor no sidebar", () => {
+    expect(navModel(null, en.nav)).toBeNull();
   });
 
-  it("offers a normal user every screen it can open, without Users", () => {
-    expect(navItems({ role: "user" })).toEqual([
-      { id: "tenants", href: "/admin" },
-      { id: "test", href: "/admin/test" },
-      { id: "prod", href: "/admin/prod" },
-      { id: "audit", href: "/admin/audit" },
-      { id: "tokens", href: "/admin/tokens" },
-      { id: "help", href: "/help" },
-    ]);
+  it("gives a normal user the tenant tree and the shared screens, without Administration", () => {
+    const model = navModel({ role: "user" }, en.nav)!;
+    expect(shape(model.tenant)).toEqual(["overview", ["masterData", ["materials", "locations", "customers", "suppliers"]], "tenantAudit"]);
+    expect(shape(model.shared)).toEqual(["globalAudit", "help"]);
   });
 
-  it("adds Users for the admin, before Help", () => {
-    expect(ids({ role: "admin" })).toEqual(["tenants", "test", "prod", "audit", "tokens", "users", "help"]);
-    expect(navItems({ role: "admin" })).toContainEqual({ id: "users", href: "/admin/users" });
+  it("adds Administration (Users, Tenants) for the admin", () => {
+    const model = navModel({ role: "admin" }, en.nav)!;
+    expect(shape(model.shared)).toEqual([["administration", ["users", "tenantsPage"]], "globalAudit", "help"]);
+    expect(model.shared[0]).toMatchObject({
+      label: "Administration",
+      children: [
+        { id: "users", href: "/admin/users", match: "prefix", label: "Users" },
+        { id: "tenantsPage", href: "/admin", match: "exact", label: "Tenants" },
+      ],
+    });
   });
-});
 
-describe("navLabel", () => {
-  it("reads labels in the reader's language", () => {
-    expect(navLabel("users", en.nav)).toBe("Users");
-    expect(navLabel("users", pl.nav)).toBe("Użytkownicy");
-    expect(navLabel("signIn", pl.nav)).toBe("Zaloguj się");
-  });
-
-  it("keeps the tenant names in every language", () => {
-    expect(navLabel("test", pl.nav)).toBe("Test");
-    expect(navLabel("prod", en.nav)).toBe("Prod");
+  it("labels every entry in the reader's language and keeps where it leads", () => {
+    const model = navModel({ role: "user" }, pl.nav)!;
+    expect(model.tenant[0]).toEqual({ id: "overview", section: "", match: "exact", label: "Przegląd" });
+    expect(model.tenant[1]).toMatchObject({ label: "Dane podstawowe", children: [{ section: "materials", label: "Materiały" }, {}, {}, {}] });
+    expect(model.shared[0]).toEqual({ id: "globalAudit", href: "/admin/audit", match: "prefix", label: "Audyt globalny" });
   });
 });

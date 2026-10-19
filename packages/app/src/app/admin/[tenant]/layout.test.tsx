@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   notFound: vi.fn(() => {
     throw new Error("NEXT_HTTP_ERROR_FALLBACK;404");
   }),
+  tenantHeader: vi.fn(),
 }));
 vi.mock("@cpg/core", () => ({
   TENANT_CODES: ["test", "prod"],
@@ -14,8 +15,11 @@ vi.mock("@cpg/core", () => ({
   tenantCodeSchema: z.enum(["test", "prod"]),
 }));
 vi.mock("next/navigation", () => ({ notFound: mocks.notFound }));
-vi.mock("../../../components/tenants/tenant-strip", () => ({
-  TenantStrip: ({ scope }: { scope: string }) => <div data-testid="strip" data-tenant={scope} />,
+vi.mock("../../../components/tenants/tenant-header", () => ({
+  TenantHeader: ({ scope }: { scope: string }) => {
+    mocks.tenantHeader(scope);
+    return <div data-testid="tenant-header" data-tenant={scope} />;
+  },
 }));
 
 const params = (tenant: string) => Promise.resolve({ tenant });
@@ -27,11 +31,12 @@ describe("TenantLayout", () => {
     expect(generateStaticParams()).toEqual([{ tenant: "test" }, { tenant: "prod" }]);
   });
 
-  it("puts the tenant's strip above the page", async () => {
+  it("puts the tenant's header row above the page", async () => {
     render(await TenantLayout({ children: <p>page</p>, params: params("prod") }));
 
-    expect(screen.getByTestId("strip").dataset.tenant).toBe("prod");
-    expect(screen.getByText("page")).toBeTruthy();
+    const header = screen.getByTestId("tenant-header");
+    expect(header.dataset.tenant).toBe("prod");
+    expect(header.compareDocumentPosition(screen.getByText("page")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("prefixes every page title with the tenant", async () => {
@@ -44,5 +49,7 @@ describe("TenantLayout", () => {
     await expect(TenantLayout({ children: null, params: params(tenant) })).rejects.toThrow("404");
     await expect(generateMetadata({ children: null, params: params(tenant) })).rejects.toThrow("404");
     expect(mocks.notFound).toHaveBeenCalled();
+    // The 404 comes before the header row: no row for a tenant that doesn't exist.
+    expect(mocks.tenantHeader).not.toHaveBeenCalled();
   });
 });
