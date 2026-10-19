@@ -75,7 +75,7 @@ The full gate passed on 2026-10-19 at 295b9a6:
 
 - `npm run lint`: 0.
 - `npm run typecheck`: 0.
-- `npm run test:coverage`: 290 tests, 100% lines, branches, functions and statements.
+- `npm run test:coverage`: 285 tests, 100% lines, branches, functions and statements.
 - `npm run build`: 0. `/`, `/login`, `/admin` and `/help` are all partial prerenders.
 - `npm run test:integration`: 7 files and 29 tests against the production image.
 
