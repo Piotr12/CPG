@@ -19,6 +19,7 @@
     "./backend/api/*": "./src/backend/api/*.ts",
     "./backend/*": "./src/backend/*.tsx",
     "./components/*": "./src/components/*.tsx",
+    "./hooks/*": "./src/hooks/*.ts",
     "./lib/*": "./src/lib/*.ts",
     "./globals.css": "./src/styles/globals.css"
   },
