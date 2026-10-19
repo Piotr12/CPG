@@ -262,12 +262,17 @@ Done when these standards were adopted:
 - The first service, `SystemStatusService` (`core/src/services/system/`), is registered in `core/src/container/container.ts`. `/admin` and `/up` read through it instead of querying the ORM. It is the reference for service placement and registration.
 - ESLint boundaries added.
 - Authentication (2026-10-19, admin sign-in): `core/src/http/{errors,result,server-action}.ts`, `core/src/validators/` with `zod`, and `AuthService`/`LoginThrottle` (`core/src/services/auth/`), with `User` and `Session` in the cross-cutting `auth` entity folder (like `system`). They are the reference for the shared server layer.
+- Tenants (2026-10-19, spec `2026-10-19--0913UTC-test-prod-tenants`):
+  - `core/src/http/api-handler.ts` (each `AppError` carries its HTTP `status`) and `tenant-server-action.ts`;
+  - `core/src/container/tenant-scope.ts`;
+  - the first route handlers, `app/api/tenants/`, authenticated by `app/src/auth/require-api-user.ts`;
+  - the tenant enforcement in `db` (`tenantOwned`, `TenantGuard`, `TenantEntityManager`).
 - Test infrastructure: Vitest unit tests next to every source file at 100% coverage, integration tests (Testcontainers runs the production image, agent-browser drives it), and a CI workflow for pull requests.
 - Layering switched to DevMentor's `app → core → db` (the first version of this document kept CPG's original `db → core`). Config and DI moved fully into `core`, the composition root moved from `app/src/server/container.ts` into `core`, and the migration CLI entry point moved to `core/scripts/`. `db` now has no workspace dependencies.
 
 Deliberately **not built yet** (YAGNI). Each arrives with the first concept that needs it, and that concept's change is the reference implementation:
 
-- `core/src/http/api-handler.ts`, `make-crud-route.ts`
+- `core/src/http/make-crud-route.ts`
 - `ui/src/backend/*`
 - `core/src/events/*`
 - `core/src/domain/*`

@@ -3,6 +3,7 @@ export * from "./container/container";
 export * from "./container/tenant-scope";
 export * from "./container/cradle";
 export * from "./database";
+export * from "./http/api-handler";
 export * from "./http/errors";
 export * from "./http/result";
 export * from "./http/server-action";

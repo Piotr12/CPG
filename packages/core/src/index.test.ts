@@ -25,6 +25,7 @@ describe("@cpg/core", () => {
       "TooManyRequestsError",
       "UnauthorizedError",
       "ValidationError",
+      "apiHandler",
       "assertServerConfig",
       "createAppContainer",
       "fail",
