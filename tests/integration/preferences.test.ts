@@ -77,8 +77,9 @@ describe("language and theme", () => {
     expect(await documentState(browser)).toEqual({ lang: "pl", isDark: true, heading: "Kontrola jaskini" });
   });
 
-  it("paints dark before hydration on a full page load", async () => {
-    const html = await (await fetch(`${baseUrl}/`, { headers: { cookie: "cpg_theme=dark" } })).text();
+  // The script's behaviour is unit-tested in jsdom (preferences/theme.test.ts); here, that it ships.
+  it("serves the theme script in every page's static <head>", async () => {
+    const html = await (await fetch(`${baseUrl}/`)).text();
 
     expect(html).toContain(`document.cookie.split("; ").indexOf("cpg_theme=dark")`);
   });

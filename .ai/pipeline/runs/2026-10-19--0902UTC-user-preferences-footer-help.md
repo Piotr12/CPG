@@ -69,6 +69,18 @@ Implement E01-S04 as the spec describes:
 - **The migration** is additive. The PR is `risk-high` and needs a rollback note.
 - **Polish copy** is agent-written and needs a native-speaker review on the PR.
 
+## Review (om-auto-review-pr, independent reviewer)
+
+The verdict was APPROVE, with 2 minors and 4 nits. Fixed in the review-fix commit:
+
+- **Lost update between racing changes (minor).** `update` now merges only the fields a change names, on conflict.
+- **`updatedAt` never moved after the first write (minor).** `upsert` doesn't fire `onUpdate`, so the timestamp is now set explicitly. Both fixes have regression tests, and both tests fail on the old code.
+- **Head script in a sandboxed frame (nit):** `THEME_SCRIPT` is wrapped in `try/catch`.
+- **Help paragraph keys (nit):** they are now indexed.
+- **Head-script integration test (nit):** renamed to what it actually checks; the behaviour stays covered in jsdom.
+
+Accepted, not changed: after a session expires without sign-out, the theme stays until the next full load or action. `AppBar` sits in the root layout, which `<Link>` navigation doesn't re-render. Nothing leaks: it is a display hint on the visitor's own browser. The spec's Edge Cases wording ("DocumentPreferences applies light and deletes the cookie") holds on the next full load. Follow-up: tighten that wording on spec PR #31.
+
 ## Verification
 
 The full gate passed on 2026-10-19 at 295b9a6:

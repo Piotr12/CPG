@@ -2,7 +2,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { initOrm, User, UserPreference, type Orm } from "@cpg/db";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadConfig } from "../../config";
 import { migrateDatabase, toDbOptions } from "../../database";
 import { DEFAULT_PREFERENCES, UserPreferenceService } from "./user-preference.service";
@@ -59,6 +59,27 @@ describe("UserPreferenceService", () => {
     await service().update(alice, { locale: "pl" });
 
     expect(await rows()).toBe(1);
+  });
+
+  it("never loses one of two changes made at the same moment", async () => {
+    await Promise.all([service().update(alice, { locale: "pl" }), service().update(alice, { theme: "dark" })]);
+
+    expect(await service().get(alice)).toEqual({ locale: "pl", theme: "dark" });
+  });
+
+  it("stamps every change, not only the first", async () => {
+    const updatedAt = async () => (await orm.em.fork().findOneOrFail(UserPreference, { user: alice })).updatedAt;
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-10-19T09:00:00Z") });
+    try {
+      await service().update(alice, { locale: "pl" });
+      expect(await updatedAt()).toEqual(new Date("2026-10-19T09:00:00Z"));
+
+      vi.setSystemTime(new Date("2026-10-19T10:00:00Z"));
+      await service().update(alice, { theme: "dark" });
+      expect(await updatedAt()).toEqual(new Date("2026-10-19T10:00:00Z"));
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("does not hand out the shared defaults object", async () => {

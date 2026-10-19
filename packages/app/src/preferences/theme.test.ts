@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { readThemeCookie, THEME_COOKIE, THEME_COOKIE_MAX_AGE_S, THEME_SCRIPT, themeCookieAssignment } from "./theme";
 
 const runThemeScript = () => new Function(THEME_SCRIPT)();
@@ -30,6 +30,16 @@ describe("THEME_SCRIPT", () => {
     runThemeScript();
 
     expect(document.documentElement.classList.contains("dark")).toBe(false);
+  });
+
+  it("stays light, without throwing, where cookies can't be read (a sandboxed frame)", () => {
+    const getter = vi.spyOn(document, "cookie", "get").mockImplementation(() => {
+      throw new DOMException("The document is sandboxed", "SecurityError");
+    });
+
+    expect(runThemeScript).not.toThrow();
+    expect(document.documentElement.classList.contains("dark")).toBe(false);
+    getter.mockRestore();
   });
 
   it("leaves the page light without the cookie", () => {

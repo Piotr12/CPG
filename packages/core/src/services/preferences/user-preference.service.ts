@@ -29,12 +29,20 @@ export class UserPreferenceService {
 
   /**
    * Applies a parsed change; fields it leaves out keep their stored (or default) value. One upsert on
-   * the unique account column, so a double-click or two tabs can never create a second row.
+   * the unique account column that, on conflict, overwrites only the fields this change names: a
+   * double-click can't create a second row, and a language change and a theme change racing from two
+   * tabs can't undo each other.
    */
   async update(userId: string, change: UserPreferenceUpdate): Promise<Preferences> {
-    const next = { ...(await this.get(userId)), ...definedFields(change) };
-    await this.em.upsert(UserPreference, { user: userId, ...next }, { onConflictFields: ["user"] });
-    return next;
+    const changed = definedFields(change);
+    const mergeFields = [...(Object.keys(changed) as (keyof Preferences)[]), "updatedAt" as const];
+    await this.em.upsert(
+      UserPreference,
+      { user: userId, ...DEFAULT_PREFERENCES, ...changed, updatedAt: new Date() },
+      { onConflictFields: ["user"], onConflictMergeFields: mergeFields },
+    );
+    const row = await this.em.findOneOrFail(UserPreference, { user: userId }, { refresh: true });
+    return { locale: row.locale, theme: row.theme };
   }
 }
 

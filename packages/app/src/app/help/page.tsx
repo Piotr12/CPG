@@ -55,8 +55,8 @@ async function HelpContent({ searchParams }: Pick<PageProps<"/help">, "searchPar
         <section key={topic.id} id={topic.id} className="flex flex-col gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-800">
           <h2 className="font-medium">{topic.title}</h2>
           <p className="text-xs text-zinc-500">{t.screen(topic.route)}</p>
-          {topic.body.map((paragraph) => (
-            <p key={paragraph} className="text-sm leading-relaxed">
+          {topic.body.map((paragraph, i) => (
+            <p key={`${topic.id}-${i}`} className="text-sm leading-relaxed">
               {paragraph}
             </p>
           ))}

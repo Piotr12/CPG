@@ -12,8 +12,9 @@ export const THEME_COOKIE_MAX_AGE_S = 365 * 24 * 60 * 60;
 /**
  * Runs in <head> before first paint. A constant with nothing interpolated at request time, and it only
  * ever adds the `dark` class on an exact match. A future CSP must allow it by hash, not nonce.
+ * Reading `document.cookie` throws in a sandboxed frame; the page then simply stays light.
  */
-export const THEME_SCRIPT = `document.cookie.split("; ").indexOf("${THEME_COOKIE}=dark")!==-1&&document.documentElement.classList.add("dark")`;
+export const THEME_SCRIPT = `try{document.cookie.split("; ").indexOf("${THEME_COOKIE}=dark")!==-1&&document.documentElement.classList.add("dark")}catch(e){}`;
 
 /** The theme the cookie names; anything other than an exact `dark` or `light` counts as absent. */
 export function readThemeCookie(cookieHeader: string): Theme | null {
