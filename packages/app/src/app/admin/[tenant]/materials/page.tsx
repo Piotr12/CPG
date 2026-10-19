@@ -46,7 +46,7 @@ async function Materials({ params }: { params: Promise<{ tenant: string }> }) {
           <CreateMaterialDialog context={{ tenant: tenant.code, generation: tenant.generation }} labels={labels} />
         )}
       </div>
-      <MaterialsTable tenant={tenant.code} materials={materials} labels={labels} />
+      <MaterialsTable tenant={tenant} materials={materials} labels={labels} editable={user.role === "admin"} />
     </div>
   );
 }

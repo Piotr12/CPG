@@ -67,6 +67,23 @@ describe("MaterialControls", () => {
     expect(screen.queryByRole("alertdialog")).toBeNull();
   });
 
+  it("keeps the action it opened with when a stale version refreshes the material underneath", async () => {
+    mocks.updateMaterial.mockResolvedValue({ ok: false, error: { code: "VERSION_CONFLICT", message: "x" } });
+    const { rerender } = render(<MaterialControls material={bolt} context={context} labels={materialsLabels(en)} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Deactivate" }));
+    await act(async () => fireEvent.click(screen.getAllByRole("button", { name: "Deactivate" }).at(-1)!));
+    // The page re-renders with what another tab saved: already inactive, at a newer version.
+    rerender(<MaterialControls material={{ ...bolt, active: false, version: 4 }} context={context} labels={materialsLabels(en)} />);
+
+    expect(screen.getByRole("alertdialog", { name: "Deactivate 00000002?" })).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toBe("This material was changed since you loaded the page. Check it and try again.");
+    mocks.updateMaterial.mockResolvedValue({ ok: true, data: { ...bolt, active: false } });
+    await act(async () => fireEvent.click(screen.getAllByRole("button", { name: "Deactivate" }).at(-1)!));
+
+    expect(mocks.updateMaterial).toHaveBeenLastCalledWith("test", 1, "00000002", 4, { active: false });
+  });
+
   it("reactivates an inactive one", async () => {
     mocks.updateMaterial.mockResolvedValue({ ok: true, data: bolt });
     render(<MaterialControls material={{ ...bolt, active: false }} context={context} labels={materialsLabels(en)} />);

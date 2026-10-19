@@ -170,11 +170,15 @@ describe("every change is kept in an append-only audit", () => {
     await alice.waitUntil(
       `[...document.querySelectorAll("main table, main [data-slot=empty-state]")].some((e) => !e.closest("[hidden]")) || document.body.innerText.includes("Nothing has been recorded yet.")`,
     );
-    const actions = await alice.evaluate<string[]>(
-      `[...document.querySelectorAll("main tbody tr")].map((row) => row.cells[4]?.innerText.trim() ?? "")`,
-    );
+    // The Action column, found by its header so a reordered table can't make this pass on the wrong cells.
+    const actions = await alice.evaluate<string[] | null>(`(() => {
+      const column = [...document.querySelectorAll("main thead th")].findIndex((th) => th.innerText.trim() === "Action");
+      if (column < 0) return null;
+      return [...document.querySelectorAll("main tbody tr")].filter((row) => row.cells.length > column).map((row) => row.cells[column].innerText.trim());
+    })()`);
 
-    expect(actions.filter((action) => action.startsWith("User ") || action.startsWith("Password"))).toEqual([]);
+    expect(actions).not.toBeNull();
+    expect(actions!.filter((action) => action.startsWith("User ") || action.startsWith("Password"))).toEqual([]);
     expect(new URL(await alice.url()).pathname).toBe("/admin/test/audit");
     expect(await alice.title()).toBe("Test · Audit");
     expect(await alice.text("h1")).toBe("Audit — Test");

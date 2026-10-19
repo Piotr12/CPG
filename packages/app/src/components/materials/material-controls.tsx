@@ -31,11 +31,15 @@ interface MaterialControlsProps {
 export function MaterialControls({ material, context, labels }: MaterialControlsProps) {
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  // Fixed when the confirmation opens: a stale version refreshes the page under the open dialog,
+  // and it must not turn "Deactivate" into "Reactivate" (setting the same state again is a no-op).
+  const [target, setTarget] = useState(!material.active);
   const update = (values: unknown) =>
     updateMaterial(context.tenant, context.generation, material.id, material.version, values);
   const close = () => setEditing(false);
   const t = labels.edit;
-  const toggle = material.active ? labels.deactivate : labels.reactivate;
+  const toggle = (active: boolean) => (active ? labels.reactivate : labels.deactivate);
+  const confirm = toggle(target);
 
   return (
     <div className="flex shrink-0 gap-2">
@@ -65,14 +69,17 @@ export function MaterialControls({ material, context, labels }: MaterialControls
       </Dialog>
       <ConfirmDialog
         open={confirming}
-        onOpenChange={setConfirming}
-        trigger={<Button variant="outline">{toggle.open}</Button>}
-        title={fill(toggle.title, { id: material.id })}
-        description={toggle.description}
-        confirmLabel={toggle.confirm}
+        onOpenChange={(open) => {
+          if (open) setTarget(!material.active);
+          setConfirming(open);
+        }}
+        trigger={<Button variant="outline">{toggle(!material.active).open}</Button>}
+        title={fill(confirm.title, { id: material.id })}
+        description={confirm.description}
+        confirmLabel={confirm.confirm}
         cancelLabel={labels.cancel}
-        destructive={material.active}
-        action={() => update({ active: !material.active })}
+        destructive={!target}
+        action={() => update({ active: target })}
         formatError={errorFormatter(labels)}
       />
     </div>

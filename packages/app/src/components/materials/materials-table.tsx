@@ -2,17 +2,25 @@ import Link from "next/link";
 import type { MaterialSummary } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { Badge } from "@cpg/ui/components/badge";
-import type { MaterialsLabels } from "./labels";
+import { fill, type MaterialsLabels } from "./labels";
+
+interface MaterialsTableProps {
+  tenant: { code: string; name: string };
+  materials: MaterialSummary[];
+  labels: MaterialsLabels;
+  /** The admin's empty state also says how to start. */
+  editable: boolean;
+}
 
 /** A tenant's materials by ID; each ID opens the material's page. */
-export function MaterialsTable({ tenant, materials, labels }: { tenant: string; materials: MaterialSummary[]; labels: MaterialsLabels }) {
+export function MaterialsTable({ tenant, materials, labels, editable }: MaterialsTableProps) {
   const t = labels.columns;
   const columns: DataTableColumn<MaterialSummary>[] = [
     {
       id: "id",
       header: t.id,
       cell: (material) => (
-        <Link href={`/admin/${tenant}/materials/${material.id}`} className="font-mono underline underline-offset-4">
+        <Link href={`/admin/${tenant.code}/materials/${material.id}`} className="font-mono underline underline-offset-4">
           {material.id}
         </Link>
       ),
@@ -46,7 +54,7 @@ export function MaterialsTable({ tenant, materials, labels }: { tenant: string; 
       columns={columns}
       rows={materials}
       rowKey={(material) => material.id}
-      empty={labels.empty}
+      empty={[fill(labels.empty, { tenant: tenant.name }), ...(editable ? [labels.emptyHint] : [])].join(" ")}
     />
   );
 }

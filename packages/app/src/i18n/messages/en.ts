@@ -137,7 +137,8 @@ export const en = {
     heading: (tenant: string) => `Materials — ${tenant}`,
     intro:
       "Every quantity of a material is stored in its base unit, exactly to six decimals. IDs are assigned in order and never change.",
-    empty: "No materials in this tenant yet.",
+    empty: "No materials in {tenant} yet.",
+    emptyHint: "Create the first one with Create material.",
     allMaterials: "All materials",
     columns: {
       id: "Material ID",
@@ -234,6 +235,7 @@ export const en = {
       CONVERSION_EXISTS: "This material already has a conversion for that unit.",
       UNIT_IS_BASE_UNIT: "That is the material's base unit: it needs no conversion.",
       BASE_UNIT_HAS_CONVERSIONS: "Remove the unit conversions before changing the base unit: their factors are relative to it.",
+      MATERIAL_IDS_EXHAUSTED: "This tenant has used every eight-digit material ID.",
       GENERATION_STALE: "This tenant's data was reset since you loaded the page. Reload and try again.",
     },
   },

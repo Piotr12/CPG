@@ -60,7 +60,7 @@ Source: `packages/app/src/app/up/route.ts`, `Dockerfile`, `config/deploy.yml`.
 Source: `packages/app/src/app/`. Today that is:
 
 - `/`, `/login` and `/help`, which are public. `/help` accepts `?q=` and anchors topics as `#<topic-id>`.
-- `/admin` (the Global tenant chooser), `/admin/test` and `/admin/prod` (the tenant homes). Every tenant page lives under `/admin/{tenant}/`, such as `/admin/{tenant}/materials` and `/admin/{tenant}/materials/{id}` (an eight-digit material ID). All of them require an admin session and redirect to `/login` otherwise.
+- `/admin` (the Global tenant chooser), `/admin/test` and `/admin/prod` (the tenant homes). Every tenant page lives under `/admin/{tenant}/`, such as `/admin/{tenant}/materials` and `/admin/{tenant}/materials/{id}` (an eight-digit material ID). All of them require a signed-in session and redirect to `/login` otherwise; tenant pages are readable by every account.
 
 **Breaking:** removing or renaming a page URL users can bookmark, a help topic id, or the `q` parameter. **Required path:** a redirect from the old URL in the same PR, or a topic kept under its old id.
 

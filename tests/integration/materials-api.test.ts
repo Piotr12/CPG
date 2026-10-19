@@ -103,7 +103,7 @@ describe("materials through the API (R07)", () => {
 
     const edited = await write("PATCH", path, adminSecret, { version: created.version, description: "matapi plate 2 mm" });
     const stale = await write("PATCH", path, adminSecret, { version: created.version, description: "matapi older" });
-    const renamed = await write("PATCH", path, adminSecret, { version: created.version + 1, id: "00000999" });
+    const renamed = await write("PATCH", path, adminSecret, { version: created.version + 1, id: "00000999", description: "matapi renamed" });
 
     expect(json(edited).data).toMatchObject({ id: created.id, description: "matapi plate 2 mm", version: created.version + 1 });
     expect(stale.status).toBe(409);

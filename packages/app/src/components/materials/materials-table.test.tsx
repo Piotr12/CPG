@@ -19,7 +19,8 @@ describe("MaterialsTable", () => {
   it("lists ID, description, type, base unit and status, each ID opening the material", () => {
     render(
       <MaterialsTable
-        tenant="prod"
+        tenant={{ code: "prod", name: "Prod" }}
+        editable={false}
         materials={[material("00000001"), material("00000002", { type: "finished", active: false, description: "Old cabinet" })]}
         labels={materialsLabels(en)}
       />,
@@ -34,9 +35,12 @@ describe("MaterialsTable", () => {
     expect(screen.getByText("Old cabinet").className).toContain("text-muted-foreground");
   });
 
-  it("says when the tenant has none", () => {
-    render(<MaterialsTable tenant="prod" materials={[]} labels={materialsLabels(en)} />);
+  it("says when the tenant has none, and tells the admin how to start", () => {
+    const prod = { code: "prod", name: "Prod" };
+    const { rerender } = render(<MaterialsTable tenant={prod} materials={[]} labels={materialsLabels(en)} editable={false} />);
+    expect(screen.getByText("No materials in Prod yet.")).toBeTruthy();
 
-    expect(screen.getByText("No materials in this tenant yet.")).toBeTruthy();
+    rerender(<MaterialsTable tenant={prod} materials={[]} labels={materialsLabels(en)} editable />);
+    expect(screen.getByText("No materials in Prod yet. Create the first one with Create material.")).toBeTruthy();
   });
 });

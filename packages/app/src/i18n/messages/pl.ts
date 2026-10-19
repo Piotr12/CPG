@@ -128,7 +128,8 @@ export const pl: Messages = {
     heading: (tenant) => `Materiały — ${tenant}`,
     intro:
       "Każda ilość materiału jest zapisywana w jego jednostce bazowej, dokładnie do sześciu miejsc po przecinku. Identyfikatory są nadawane po kolei i nigdy się nie zmieniają.",
-    empty: "W tym środowisku nie ma jeszcze materiałów.",
+    empty: "W środowisku {tenant} nie ma jeszcze materiałów.",
+    emptyHint: "Utwórz pierwszy przyciskiem Utwórz materiał.",
     allMaterials: "Wszystkie materiały",
     columns: {
       id: "ID materiału",
@@ -225,6 +226,7 @@ export const pl: Messages = {
       CONVERSION_EXISTS: "Ten materiał ma już przelicznik dla tej jednostki.",
       UNIT_IS_BASE_UNIT: "To jednostka bazowa materiału: nie potrzebuje przelicznika.",
       BASE_UNIT_HAS_CONVERSIONS: "Usuń przeliczniki jednostek przed zmianą jednostki bazowej: ich wartości się do niej odnoszą.",
+      MATERIAL_IDS_EXHAUSTED: "To środowisko wykorzystało już wszystkie ośmiocyfrowe identyfikatory materiałów.",
       GENERATION_STALE: "Dane tego środowiska zostały zresetowane od załadowania strony. Odśwież ją i spróbuj ponownie.",
     },
   },
