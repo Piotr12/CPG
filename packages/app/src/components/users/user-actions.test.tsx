@@ -74,4 +74,14 @@ describe("UserActions", () => {
 
     expect(screen.getAllByRole("menuitem").map((item) => item.textContent)).toEqual(["Resetuj hasło", "Dezaktywuj"]);
   });
+
+  it("keeps the confirmation's mode when the refreshed list flips the user", () => {
+    const { rerender } = render(<UserActions labels={usersLabels(en)} user={alice} />);
+    openMenu("alice");
+    fireEvent.click(screen.getByRole("menuitem", { name: "Deactivate" }));
+
+    rerender(<UserActions labels={usersLabels(en)} user={{ ...alice, active: false }} />);
+
+    expect(screen.getByRole("button", { name: "close set-active deactivate" })).toBeTruthy();
+  });
 });

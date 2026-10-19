@@ -66,6 +66,8 @@ export class LoginThrottle {
   }
 
   private keys(clientIp: string, username: string): Keys {
+    // Without an address every client shares `client:unknown:<name>`: stricter than the account cap,
+    // and only possible when bypassing kamal-proxy, which always sets X-Forwarded-For.
     const keys: Keys = { client: `client:${clientIp}:${username}`, account: `account:${username}` };
     if (clientIp !== UNKNOWN_CLIENT) keys.ip = `ip:${clientIp}`;
     return keys;

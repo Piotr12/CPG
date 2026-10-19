@@ -68,7 +68,7 @@ No action or route writes its own `try/catch` + response mapping.
 - `api/api-call.ts` — the only place a client component calls `fetch()` on `/api/*`. It parses the envelope defensively and returns a typed `ApiResult<T>`, and `apiCallOrThrow` throws instead. `ui` declares its own `ApiResult` type with the same shape in `api/result.ts`, because `ui` must not import `core`.
 - `forms/crud-form.tsx` — a schema-driven form: fields, server `fieldErrors` next to the right field, submit/cancel/pending states, `Cmd/Ctrl+Enter` submits, `Escape` cancels. It is bound to a server action (or `apiCall`). Use it for every create/edit form, and write a bespoke form only when the UX isn't form-over-schema (e.g. a planning board).
 - `tables/data-table.tsx` — column-config-driven lists with loading/empty/error states, pagination and row actions. Use it for every list screen.
-- `feedback/{loading-message,error-message,empty-state}.tsx` — the only sanctioned loading/error/empty renderers, including `<Suspense>` fallbacks.
+- `feedback/{error-message,empty-state}.tsx` (and `loading-message.tsx`, not built until something needs it) — the only sanctioned loading/error/empty renderers, including `<Suspense>` fallbacks.
 
 **Language, theme and help** (spec `2026-10-19--0855UTC-user-preferences-footer-help`):
 
