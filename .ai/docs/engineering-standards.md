@@ -107,12 +107,21 @@ No action or route writes its own `try/catch` + response mapping.
   - **A plain `requestScope()` has no tenant.** Reading a tenant-owned entity there throws.
   - **`@cpg/db` enforces the rest at runtime.**
     - The default-on `tenant` filter scopes every read, `nativeUpdate` and `nativeDelete`.
-    - `TenantGuard` rejects a flush that touches another tenant's record, or a reference that wasn't loaded through the scope.
-    - `TenantEntityManager` refuses `insert`, `upsert`, `clone` and the QueryBuilder on tenant-owned entities.
+    - `TenantGuard` rejects a flush that touches another tenant's record, or a reference that wasn't loaded through the scope. That includes references held by global records.
+    - `TenantEntityManager` covers every entity that touches tenant data: tenant-owned ones, and global ones referencing them. For those it refuses:
+      - `insert`, `insertMany`, `upsert`, `upsertMany`, `clone` and `countBy`;
+      - the QueryBuilder as a root, and through `from()` (clones included, raw table names matched case-insensitively);
+      - a `nativeUpdate` that sets anything but plain fields.
   - **Writes go through `em.create`/`assign`/`remove` and a flush.** Services never set `tenant`, because it is filled on create.
   - **Client-supplied references are loaded with `findOneOrFail` in the scope.** A Prod ID used in Test is then "not found" (TEN-014).
   - **Tenant-local unique keys include `tenant`.**
-  - **ESLint forbids what the runtime can't see:** `filters` options, `setFilterParams`/`selectTenant` outside `tenantScope`, and raw SQL (`execute`, `getKysely`).
+  - **ESLint forbids, in `core` and `app`, what the runtime can't fully see:**
+    - `filters` options;
+    - `setFilterParams`/`selectTenant` outside `tenantScope`;
+    - `addFilter`, `getDriver` and the QueryBuilder (`createQueryBuilder`, `qb`);
+    - raw SQL (`execute`, `getKysely`).
+
+    `tests/tenant-lint.test.ts` proves each rule fires.
 
 ### Engineering principles
 

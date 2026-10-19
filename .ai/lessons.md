@@ -14,7 +14,13 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 - **2026-10-17 — Docker `npm ci` tries to compile better-sqlite3** — npm runs `node-gyp rebuild` because the package has a `binding.gyp`, which fails without Python/a compiler. better-sqlite3 ships prebuilt binaries (musl included), so the Dockerfile uses `npm ci --ignore-scripts`.
 - **2026-10-19 — Name a function `useX` only if it is a React hook** — `react-hooks/rules-of-hooks` treats every `useX()` call as a hook, even in a plain helper or a test, and fails lint ("called in function … that is neither a component nor a hook"). That is why `useTenant` became `selectTenant`.
-- **2026-10-19 — MikroORM filters and the flush don't see every write** — the `tenant` filter covers `find*`, `count`, populate, `nativeUpdate` and `nativeDelete`, and `TenantGuard` sees only flushes. These bypass both: `insert`/`upsert`/`clone`, the QueryBuilder (including `from()` and raw table names), `getDriver()`, `addFilter()`, and `nativeUpdate` data with a relation key or a raw column name (MikroORM passes unknown keys through as SQL). `TenantEntityManager` refuses them at runtime, and ESLint bans the rest in `core`/`app`. After a MikroORM upgrade, re-read the `EntityManager` write methods and run `packages/db/src/tenants/tenant-isolation.test.ts`.
+- **2026-10-19 — MikroORM filters and the flush don't see every write** — the `tenant` filter covers `find*`, `count`, populate, `nativeUpdate` and `nativeDelete`, and `TenantGuard` sees only flushes. These bypass both:
+  - `insert`/`upsert`/`clone`;
+  - the QueryBuilder: its root, `from()` with an entity or a raw table name (any case), `clone()`, and joins;
+  - `getDriver()` and `addFilter()`;
+  - `nativeUpdate` data with a relation key or a raw column name (MikroORM passes unknown keys through as SQL).
+
+  The same holds for a global entity that references tenant data. `TenantEntityManager` refuses these at runtime for every entity that touches tenant data, but joins and raw SQL can't be fully checked there, so ESLint bans the QueryBuilder, the driver, `addFilter` and raw SQL in `core`/`app`. After a MikroORM upgrade, re-read the `EntityManager` write methods and run `packages/db/src/tenants/tenant-isolation.test.ts`.
 - **2026-10-17 — shadcn v4 imports `cn` from the `cn` npm package** — `import { cn } from "cn"` in generated components is correct, not a broken alias. The `new-york` style is legacy; this repo uses `radix-nova`.
 
 ## Testing

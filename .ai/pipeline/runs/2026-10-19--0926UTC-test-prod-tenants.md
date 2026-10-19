@@ -98,14 +98,26 @@ Implement E02-S01 as the spec describes:
 
 ## Verification
 
-Full gate on 3c75235, all exit 0:
+Full gate on the final review fixes (e921aa0 plus the docs commit), all exit 0:
 - `npm run lint`;
 - `npm run typecheck`;
-- `npm run test:coverage`: 62 files, 281 tests, 100% coverage;
-- `npm run build`: `/admin/test` and `/admin/prod` partially prerendered, with the strip and the `Test · …`/`Prod · …` titles in the shell;
-- `npm run test:integration`: 5 files, 26 tests, including `tenants.test.ts` (11).
+- `npm run test:coverage`: 401 tests, 100% coverage;
+- `npm run build`;
+- `npm run test:integration`: 8 files, 40 tests, including `tenants.test.ts` (11) and #18's suites after the merge.
+
+The independent re-review approved: both majors and every minor and nit from round 1 are fixed. Its three remaining minors are fixed too:
+- refusals extended to global entities that reference tenant data;
+- the QueryBuilder `clone()` and case-insensitive table names;
+- the standards doc updated.
 
 No dependency changed, so no `npm audit` triage was needed.
+
+## Follow-ups
+
+- Once design PR #35 merges, `git mv` the spec to `.ai/specs/implemented/` (it isn't on `main` yet, so this PR can't move it).
+- #22 builds the demo seeder (spec Q4) and the first end-to-end record check, TEN-012 (Q6).
+- #16 opens tenant pages to normal users.
+- #17 adds bearer tokens in `requireApiUser`.
 
 ## Progress
 
