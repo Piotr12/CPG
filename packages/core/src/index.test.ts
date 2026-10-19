@@ -47,6 +47,7 @@ describe("@cpg/core", () => {
       "UnauthorizedError",
       "UserPreferenceService",
       "UserService",
+      "VERSION_CONFLICT",
       "ValidationError",
       "apiActor",
       "apiHandler",

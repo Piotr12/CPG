@@ -1,6 +1,8 @@
+import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { openBrowser, type Browser } from "./browser";
 import { signIn, signInAsAdmin } from "./sign-in";
+import { createToken, openTokens as openTokensAt, submitToken } from "./tokens";
 
 const baseUrl = inject("baseUrl");
 const adminPassword = inject("adminPassword");
@@ -8,9 +10,11 @@ const adminPassword = inject("adminPassword");
 const TARA_PASSWORD = "tara's first password";
 const OMAR_PASSWORD = "omar's first password";
 
-/** Calls the API the way an external tool does: no cookies, only the bearer token. */
+/** Calls the API the way an external tool does: no cookies, only the bearer token, and a fresh key on writes. */
 async function api(path: string, secret: string, method = "GET") {
-  const response = await fetch(`${baseUrl}${path}`, { method, headers: { authorization: `Bearer ${secret}` } });
+  const headers: Record<string, string> = { authorization: `Bearer ${secret}` };
+  if (method !== "GET") headers["idempotency-key"] = randomUUID();
+  const response = await fetch(`${baseUrl}${path}`, { method, headers });
   const body = response.headers.get("content-type")?.includes("json") ? await response.json() : null;
   return { status: response.status, body };
 }
@@ -33,31 +37,7 @@ async function createUser(admin: Browser, username: string, password: string) {
   await admin.waitForText(username);
 }
 
-/** Opens the tokens screen from the header link. */
-async function openTokens(browser: Browser) {
-  await browser.open(`${baseUrl}/admin`);
-  await browser.waitFor("main strong");
-  await browser.clickRole("link", "API tokens");
-  await browser.waitFor("table");
-}
-
-/** Submits the Create token dialog; resolves once the form answers with the secret or an error. */
-async function submitToken(browser: Browser, name: string) {
-  await browser.clickRole("button", "Create token");
-  await browser.fillLabel("Name", name);
-  await browser.click("[role=dialog] button[type=submit]");
-  await browser.waitUntil(`document.querySelector("#api-token-secret") || document.querySelector("[role=dialog] [role=alert]")`);
-}
-
-/** Creates a token on the tokens screen and returns its secret, read from the one-time panel. */
-async function createToken(browser: Browser, name: string): Promise<string> {
-  await submitToken(browser, name);
-  const secret = await browser.evaluate<string>(`document.querySelector("#api-token-secret").value`);
-  await browser.clickRole("button", "Done");
-  await browser.waitUntil(`!document.querySelector("[role=dialog]")`);
-  await browser.waitForText(name);
-  return secret;
-}
+const openTokens = (browser: Browser) => openTokensAt(browser, baseUrl);
 
 describe("named API tokens", () => {
   let admin: Browser;
