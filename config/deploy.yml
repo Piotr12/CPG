@@ -14,9 +14,17 @@ servers:
 volumes:
   - "/externaldata/cpg.baby:/externaldata"
 
+# Runtime secrets, resolved from .kamal/secrets. The app refuses to start without the admin password.
+env:
+  secret:
+    - CPG_ADMIN_PASSWORD
+
 # kamal-proxy terminates TLS with a Let's Encrypt certificate for these hosts.
 proxy:
   ssl: true
+  # Never pass client-supplied X-Forwarded-* headers through: the sign-in throttle keys on the
+  # client IP, which must come from kamal-proxy itself (already the default with ssl: true).
+  forward_headers: false
   hosts:
     - cpg.baby
     - www.cpg.baby
