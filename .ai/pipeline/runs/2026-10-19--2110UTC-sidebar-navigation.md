@@ -34,17 +34,29 @@ Replace the top bar and the tenant strip with the sidebar of mockup 01: a full-w
 
 The spec's Implementation Plan, one Step per numbered item. Phase 2 runs only if #57 merges before Phase 1 is done.
 
+## Deviations from the spec
+
+- `use-mobile.ts` is rewritten on `useSyncExternalStore`: the generated hook set state inside an effect, which `react-hooks/set-state-in-effect` rejects. Same contract (false on the server, then whether the viewport is under 768 px).
+- The root layout wraps the provider in shadcn's `TooltipProvider`: this `radix-nova` sidebar's tooltips need one and the generated provider doesn't add it.
+- `VisitorBar` is its own client file (`visitor-bar.tsx`), because it marks the open link with `usePathname()`.
+- The drawer closes on a path change through an effect, not by adjusting state while rendering: its state belongs to `SidebarProvider`, and setting another component's state during render is an error. Links also close it on click, so following one is immediate.
+- Menu isn't the sheet's own Radix trigger, so the sheet can't return focus to it. `SidebarNav` focuses Menu when the drawer closes.
+- New strings beyond the spec's list: `nav.roles` (the account card's role line), `nav.menuShows` (Q7's "Menu shows: Test"), `nav.trail` (the trail's accessible name), and `tenants.header` (the row's words). `nav.tenants`, `nav.audit` and `tenants.strip` are removed.
+- The account card's popover holds API tokens as a link in `AccountPanel`; `TOKENS_PATH` lives in the dependency-free `nav-tree.ts`.
+- `footer.test.ts` changes: the footer now ends the content column beside the sidebar, so "nothing comes after it" is checked against every shown element instead of `<body>`'s children.
+- `data-signed-in-as` on the mobile top bar tells integration helpers who is signed in at every width (the account card is only in the DOM once the drawer opens below 768 px).
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Sidebar, switch and tenant header
 
-- [ ] 1.1 UI primitives
-- [ ] 1.2 Nav model and paths
-- [ ] 1.3 Sidebar
-- [ ] 1.4 Tenant header replaces the strip
-- [ ] 1.5 Help, copy and standards
+- [x] 1.1 UI primitives — 77a760c
+- [x] 1.2 Nav model and paths — b6b49cc
+- [x] 1.3 Sidebar — b6b49cc
+- [x] 1.4 Tenant header replaces the strip — b6b49cc
+- [x] 1.5 Help, copy and standards — 95bf1c4
 - [ ] 1.6 Integration
 
 ### Phase 2: Read-only display (after #57)
