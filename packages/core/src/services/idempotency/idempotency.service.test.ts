@@ -231,7 +231,7 @@ describe("IdempotencyService", () => {
         const created = await users.create({ username: "target", password: "a password 123" }, ACTOR);
 
         const result = await idempotency.run(await keyed(), GLOBAL, () =>
-          users.setActive(created.id, false, ACTOR).then(() =>
+          users.setActive(created.id, false, created.version, ACTOR).then(() =>
             users.create({ username: "also", password: "a password 123" }, ACTOR),
           ),
         );

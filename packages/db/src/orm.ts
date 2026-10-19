@@ -12,6 +12,8 @@ export { UniqueConstraintViolationException } from "@mikro-orm/sqlite";
  * busy timeout, or this transaction's snapshot went stale before its first write.
  */
 export { LockWaitTimeoutException } from "@mikro-orm/sqlite";
+/** Thrown at flush when a versioned row changed since it was loaded; services map it to a 409. */
+export { OptimisticLockError } from "@mikro-orm/sqlite";
 
 /** What `@cpg/db` needs to know; `@cpg/core` derives it from the app config. */
 export interface DbOptions {

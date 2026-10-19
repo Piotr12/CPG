@@ -14,6 +14,7 @@ describe("@cpg/db", () => {
       "IDEMPOTENCY_KEY_MAX",
       "LOCALES",
       "LockWaitTimeoutException",
+      "OptimisticLockError",
       "Session",
       "Setting",
       "TENANT_CODES",

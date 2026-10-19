@@ -1,13 +1,13 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { ApiToken, GlobalAuditEvent, initOrm, Session, User, type Orm } from "@cpg/db";
+import { ApiToken, GlobalAuditEvent, initOrm, OptimisticLockError, Session, User, type Orm } from "@cpg/db";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadConfig } from "../../config";
 import { migrateDatabase, toDbOptions } from "../../database";
 import { ConflictError, NotFoundError } from "../../http/errors";
 import { verifyPassword } from "../auth/password-hash";
-import { USER_NOT_FOUND, USERNAME_TAKEN, UserService } from "./user.service";
+import { USER_NOT_FOUND, USERNAME_TAKEN, UserService, VERSION_CONFLICT } from "./user.service";
 import type { AuditActor } from "../audit/actor";
 
 const PASSWORD = "initial password 1";
@@ -21,6 +21,8 @@ describe("UserService", () => {
 
   const service = () => new UserService({ em: orm.em.fork() });
   const stored = (username: string) => orm.em.fork().findOneOrFail(User, { username });
+  /** The user's version as stored now: what a freshly loaded screen would send back. */
+  const versionOf = async (id: string) => (await orm.em.fork().findOneOrFail(User, { id })).version;
   const sessionCount = (username: string) => orm.em.fork().count(Session, { user: { username } });
   const tokenCount = (username: string) => orm.em.fork().count(ApiToken, { user: { username } });
   /** Gives the user `count` API tokens. */
@@ -70,6 +72,7 @@ describe("UserService", () => {
         role: "user",
         active: true,
         createdAt: expect.any(Date),
+        version: 1,
       });
       const row = await stored("alice");
       expect(row.passwordHash).toMatch(/^\$argon2id\$/);
@@ -128,7 +131,7 @@ describe("UserService", () => {
       await createTokens("alice", 2);
       await createTokens("bob", 1);
 
-      await service().resetPassword(alice.id, "brand new password", ACTOR);
+      await service().resetPassword(alice.id, "brand new password", await versionOf(alice.id), ACTOR);
 
       const row = await stored("alice");
       expect(await verifyPassword("brand new password", row.passwordHash!)).toBe(true);
@@ -144,10 +147,10 @@ describe("UserService", () => {
       const admin = em.create(User, { username: "admin", role: "admin" });
       await em.flush();
 
-      await expect(service().resetPassword(admin.id, "brand new password", ACTOR)).rejects.toEqual(
+      await expect(service().resetPassword(admin.id, "brand new password", await versionOf(admin.id), ACTOR)).rejects.toEqual(
         new NotFoundError("NOT_FOUND", USER_NOT_FOUND),
       );
-      await expect(service().resetPassword(MISSING_ID, "brand new password", ACTOR)).rejects.toBeInstanceOf(NotFoundError);
+      await expect(service().resetPassword(MISSING_ID, "brand new password", 1, ACTOR)).rejects.toBeInstanceOf(NotFoundError);
       expect((await stored("admin")).passwordHash).toBeNull();
     });
 
@@ -159,7 +162,7 @@ describe("UserService", () => {
       const users = service();
       vi.spyOn(Object.getPrototypeOf(orm.em), "flush").mockRejectedValueOnce(new Error("disk full"));
 
-      await expect(users.resetPassword(alice.id, "brand new password", ACTOR)).rejects.toThrow("disk full");
+      await expect(users.resetPassword(alice.id, "brand new password", await versionOf(alice.id), ACTOR)).rejects.toThrow("disk full");
 
       expect((await stored("alice")).passwordHash).toBe(before);
       expect(await sessionCount("alice")).toBe(2);
@@ -176,13 +179,13 @@ describe("UserService", () => {
       await createTokens("alice", 2);
       await createTokens("bob", 1);
 
-      expect(await service().setActive(alice.id, false, ACTOR)).toMatchObject({ username: "alice", active: false });
+      expect(await service().setActive(alice.id, false, await versionOf(alice.id), ACTOR)).toMatchObject({ username: "alice", active: false });
       expect(await sessionCount("alice")).toBe(0);
       expect(await tokenCount("alice")).toBe(0);
       expect(await tokenCount("bob")).toBe(1);
       expect((await stored("alice")).active).toBe(false);
 
-      expect(await service().setActive(alice.id, true, ACTOR)).toMatchObject({ active: true });
+      expect(await service().setActive(alice.id, true, await versionOf(alice.id), ACTOR)).toMatchObject({ active: true });
       const row = await stored("alice");
       expect(row.active).toBe(true);
       expect(await verifyPassword(PASSWORD, row.passwordHash!)).toBe(true);
@@ -192,10 +195,10 @@ describe("UserService", () => {
     it("is idempotent", async () => {
       const alice = await service().create({ username: "alice", password: PASSWORD }, ACTOR);
 
-      await service().setActive(alice.id, false, ACTOR);
-      await expect(service().setActive(alice.id, false, ACTOR)).resolves.toMatchObject({ active: false });
-      await service().setActive(alice.id, true, ACTOR);
-      await expect(service().setActive(alice.id, true, ACTOR)).resolves.toMatchObject({ active: true });
+      await service().setActive(alice.id, false, await versionOf(alice.id), ACTOR);
+      await expect(service().setActive(alice.id, false, await versionOf(alice.id), ACTOR)).resolves.toMatchObject({ active: false });
+      await service().setActive(alice.id, true, await versionOf(alice.id), ACTOR);
+      await expect(service().setActive(alice.id, true, await versionOf(alice.id), ACTOR)).resolves.toMatchObject({ active: true });
     });
 
     it("keeps sessions and tokens when reactivating", async () => {
@@ -203,7 +206,7 @@ describe("UserService", () => {
       await openSessions("alice", 1);
       await createTokens("alice", 1);
 
-      await service().setActive(alice.id, true, ACTOR);
+      await service().setActive(alice.id, true, await versionOf(alice.id), ACTOR);
 
       expect(await sessionCount("alice")).toBe(1);
       expect(await tokenCount("alice")).toBe(1);
@@ -214,8 +217,58 @@ describe("UserService", () => {
       const admin = em.create(User, { username: "admin", role: "admin" });
       await em.flush();
 
-      await expect(service().setActive(admin.id, false, ACTOR)).rejects.toBeInstanceOf(NotFoundError);
+      await expect(service().setActive(admin.id, false, await versionOf(admin.id), ACTOR)).rejects.toBeInstanceOf(NotFoundError);
       expect((await stored("admin")).active).toBe(true);
+    });
+  });
+
+  describe("versions (AUD-024, AUD-025, API-029)", () => {
+    const conflict = { code: "VERSION_CONFLICT", status: 409, message: VERSION_CONFLICT };
+
+    it("raises the version on each change, and accepts only the current one", async () => {
+      const alice = await service().create({ username: "alice", password: PASSWORD }, ACTOR);
+      expect(alice.version).toBe(1);
+
+      const deactivated = await service().setActive(alice.id, false, 1, ACTOR);
+      expect(deactivated.version).toBe(2);
+      await expect(service().resetPassword(alice.id, "brand new password", 2, ACTOR)).resolves.toMatchObject({ version: 3 });
+    });
+
+    it("refuses a stale edit and keeps the newer change and its audit", async () => {
+      const alice = await service().create({ username: "alice", password: PASSWORD }, ACTOR);
+      await service().setActive(alice.id, false, 1, ACTOR);
+      const entries = (await auditOf(alice.id)).length;
+
+      await expect(service().setActive(alice.id, true, 1, ACTOR)).rejects.toMatchObject(conflict);
+      await expect(service().resetPassword(alice.id, "brand new password", 1, ACTOR)).rejects.toMatchObject(conflict);
+      expect(await stored("alice")).toMatchObject({ active: false, version: 2 });
+      expect(await auditOf(alice.id)).toHaveLength(entries);
+    });
+
+    it("checks the version even when setting the current state, which keeps it", async () => {
+      const alice = await service().create({ username: "alice", password: PASSWORD }, ACTOR);
+
+      await expect(service().setActive(alice.id, true, 1, ACTOR)).resolves.toMatchObject({ active: true, version: 1 });
+      await service().resetPassword(alice.id, "brand new password", 1, ACTOR);
+      await expect(service().setActive(alice.id, true, 1, ACTOR)).rejects.toMatchObject(conflict);
+    });
+
+    it("compares with a fresh read, not a copy already in the identity map", async () => {
+      const alice = await service().create({ username: "alice", password: PASSWORD }, ACTOR);
+      const users = service();
+      await users.list();
+      await service().setActive(alice.id, false, 1, ACTOR);
+
+      await expect(users.setActive(alice.id, true, 1, ACTOR)).rejects.toMatchObject(conflict);
+      await expect(users.setActive(alice.id, true, 2, ACTOR)).resolves.toMatchObject({ active: true, version: 3 });
+    });
+
+    it("reports a change that lands between the read and the flush as VERSION_CONFLICT", async () => {
+      const alice = await service().create({ username: "alice", password: PASSWORD }, ACTOR);
+      vi.spyOn(Object.getPrototypeOf(orm.em), "flush").mockRejectedValueOnce(new OptimisticLockError("moved on"));
+
+      await expect(service().setActive(alice.id, false, 1, ACTOR)).rejects.toMatchObject(conflict);
+      expect(await stored("alice")).toMatchObject({ active: true, version: 1 });
     });
   });
 
@@ -233,11 +286,11 @@ describe("UserService", () => {
     it("records each change once, with before/after, actor, session and channel (AUD-001, AUD-003, AUD-015)", async () => {
       const alice = await service().create({ username: "alice", password: PASSWORD }, ACTOR);
       later();
-      await service().resetPassword(alice.id, "brand new password", ACTOR);
+      await service().resetPassword(alice.id, "brand new password", await versionOf(alice.id), ACTOR);
       later();
-      await service().setActive(alice.id, false, ACTOR);
+      await service().setActive(alice.id, false, await versionOf(alice.id), ACTOR);
       later();
-      await service().setActive(alice.id, true, ACTOR);
+      await service().setActive(alice.id, true, await versionOf(alice.id), ACTOR);
 
       const entries = await auditOf(alice.id);
       expect(entries.map(({ action, before, after }) => ({ action, before, after }))).toEqual([
@@ -260,7 +313,7 @@ describe("UserService", () => {
 
     it("never stores the password or its hash anywhere in an entry (AUD-028)", async () => {
       const alice = await service().create({ username: "alice", password: PASSWORD }, ACTOR);
-      await service().resetPassword(alice.id, "brand new password", ACTOR);
+      await service().resetPassword(alice.id, "brand new password", await versionOf(alice.id), ACTOR);
       const { passwordHash } = await stored("alice");
 
       const raw = JSON.stringify(await auditOf(alice.id));
@@ -273,9 +326,9 @@ describe("UserService", () => {
     it("records nothing for a change that changes nothing", async () => {
       const alice = await service().create({ username: "alice", password: PASSWORD }, ACTOR);
       later();
-      await service().setActive(alice.id, true, ACTOR);
-      await service().setActive(alice.id, false, ACTOR);
-      await service().setActive(alice.id, false, ACTOR);
+      await service().setActive(alice.id, true, await versionOf(alice.id), ACTOR);
+      await service().setActive(alice.id, false, await versionOf(alice.id), ACTOR);
+      await service().setActive(alice.id, false, await versionOf(alice.id), ACTOR);
 
       expect((await auditOf(alice.id)).map(({ action }) => action)).toEqual(["users.user.created", "users.user.deactivated"]);
     });
@@ -292,9 +345,9 @@ describe("UserService", () => {
     it("keeps two sessions of one account apart (AUD-008)", async () => {
       const alice = await service().create({ username: "alice", password: PASSWORD }, ACTOR);
       later();
-      await service().setActive(alice.id, false, { ...ACTOR, sessionId: "first-tab" });
+      await service().setActive(alice.id, false, await versionOf(alice.id), { ...ACTOR, sessionId: "first-tab" });
       later();
-      await service().setActive(alice.id, true, { ...ACTOR, sessionId: "second-tab" });
+      await service().setActive(alice.id, true, await versionOf(alice.id), { ...ACTOR, sessionId: "second-tab" });
 
       const entries = await auditOf(alice.id);
       expect(entries.slice(1).map(({ actorUserId, sessionId }) => [actorUserId, sessionId])).toEqual([

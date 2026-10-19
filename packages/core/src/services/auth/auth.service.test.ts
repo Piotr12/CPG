@@ -142,11 +142,11 @@ describe("AuthService", () => {
 
     it("refuses a deactivated user with the right password, and lets them back after reactivation", async () => {
       const alice = await users().create({ username: "alice", password: USER_PASSWORD }, ACTOR);
-      await users().setActive(alice.id, false, ACTOR);
+      const deactivated = await users().setActive(alice.id, false, alice.version, ACTOR);
 
       await expect(signIn(USER_PASSWORD, "alice")).rejects.toEqual(new UnauthorizedError(INVALID_CREDENTIALS));
 
-      await users().setActive(alice.id, true, ACTOR);
+      await users().setActive(alice.id, true, deactivated.version, ACTOR);
       await expect(signIn(USER_PASSWORD, "alice")).resolves.toMatchObject({ token: expect.any(String) });
     });
 
@@ -170,7 +170,7 @@ describe("AuthService", () => {
       expect(first.token).not.toBe(second.token);
       expect(await sessionsOf("alice")).toBe(2);
 
-      await users().resetPassword(alice.id, "a brand new password", ACTOR);
+      await users().resetPassword(alice.id, "a brand new password", alice.version, ACTOR);
 
       await expect(service().validateSession(first.token)).resolves.toBeNull();
       await expect(service().validateSession(second.token)).resolves.toBeNull();
@@ -179,8 +179,8 @@ describe("AuthService", () => {
     });
 
     it.each([
-      ["a password reset", (id: string) => users().resetPassword(id, "a brand new password", ACTOR)],
-      ["a deactivation", (id: string) => users().setActive(id, false, ACTOR)],
+      ["a password reset", (id: string) => users().resetPassword(id, "a brand new password", 1, ACTOR)],
+      ["a deactivation", (id: string) => users().setActive(id, false, 1, ACTOR)],
     ])("leaves no session when %s commits during the sign-in", async (_case, change) => {
       const alice = await users().create({ username: "alice", password: USER_PASSWORD }, ACTOR);
       const auth = service();
