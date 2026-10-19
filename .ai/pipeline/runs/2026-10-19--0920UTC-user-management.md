@@ -76,7 +76,13 @@ PR: #34
 
 - **React 19 transitions.** State set after an `await` inside `startTransition` leaves the transition, so an error could render while the button still said "Saving…". This showed up as a flaky unit test under the full parallel run. `CrudForm` and `SetActiveDialog` now wrap the post-await updates in `startTransition`; five consecutive full runs passed.
 - **Username conflicts.** "That username is taken." is a form-level alert, not a field error: `ConflictError` carries no field. The mockup's under-the-field placement is illustrative only.
-- **Help for `/admin/users`.** #18 isn't on `main`, so no help entry was added; a follow-up issue tracks it.
+- **Help for `/admin/users`.** While the PR was open, #18 merged and the PR started conflicting. The review loop merged `main` (`b48338c`):
+  - registrations kept from both sides;
+  - `/admin` rebuilt on #18's translated page;
+  - the users migration regenerated on top of `user_preferences` (now `Migration20261019094413`) rather than merging the snapshot.
+
+  Then `614e894` brought the users screen up to #18's conventions: en/pl messages, translated schema and server errors, a "Managing users" help topic (required by `tests/every-page-has-help.test.ts`) and an updated Cave control topic. Follow-up #37 is therefore done in this PR.
+- **Integration helper fix.** `wait --fn` must return a boolean: a DOM element fails with "Object reference chain is too long". Fixed in my test, and in `restoreDefaultPreferences` from #18.
 
 ## Verification
 
@@ -85,4 +91,5 @@ PR: #34
 - `npm run test:coverage`: 297 tests, 100% statements, branches, functions and lines.
 - `npm run build`: OK; `/admin/users` is partially prerendered.
 - `npm run test:integration`: 5 files, 22 tests passed, including the new `users.test.ts` (TEN-004…009 flows).
+- After merging `main` (#18): lint and typecheck clean; 415 unit tests at 100%; build OK; `test:integration` 8 files, 36 tests passed.
 - `npm audit`: only the known `braces` advisories (10 high); no dependency changes.
