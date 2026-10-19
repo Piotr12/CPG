@@ -112,6 +112,8 @@ The independent re-review approved: both majors and every minor and nit from rou
 
 No dependency changed, so no `npm audit` triage was needed.
 
+**CI follow-up:** the PR's `integration-tests` failed twice (599cc3d, a4ed7f4) in #18's suites. In `restoreDefaultPreferences`, `waitUntil` returned a DOM element, and serializing it over CDP failed intermittently with "Object reference chain is too long". The admin was then left in Polish, and the next file failed on English text. Fixed in `tests/integration/browser.ts` by coercing the predicate with `Boolean(…)`, and recorded as a lesson. 40/40 integration tests pass locally.
+
 ## Follow-ups
 
 - Once design PR #35 merges, `git mv` the spec to `.ai/specs/implemented/` (it isn't on `main` yet, so this PR can't move it).
