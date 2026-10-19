@@ -157,7 +157,7 @@ describe("every change is kept in an append-only audit", () => {
     }
   });
 
-  it("keeps each tenant's audit to itself, empty until the tenant holds records", async () => {
+  it("keeps each tenant's audit to itself: no account changes there", async () => {
     await alice.open(`${baseUrl}/admin/test`);
     // The page streams in after the static shell (strip, footer), first inside a hidden container:
     // wait until its link is really shown.
@@ -165,8 +165,16 @@ describe("every change is kept in an append-only audit", () => {
       `[...document.querySelectorAll("a")].some((a) => a.innerText === "Audit — Test" && !a.closest("[hidden]"))`,
     );
     await alice.clickRole("link", "Audit — Test");
-    await alice.waitForText("Nothing has been recorded yet.");
+    // Other files write Test records (materials), so the audit may hold entries: wait for its
+    // table or its empty state, shown, then check that none of them is an account change.
+    await alice.waitUntil(
+      `[...document.querySelectorAll("main table, main [data-slot=empty-state]")].some((e) => !e.closest("[hidden]")) || document.body.innerText.includes("Nothing has been recorded yet.")`,
+    );
+    const actions = await alice.evaluate<string[]>(
+      `[...document.querySelectorAll("main tbody tr")].map((row) => row.cells[4]?.innerText.trim() ?? "")`,
+    );
 
+    expect(actions.filter((action) => action.startsWith("User ") || action.startsWith("Password"))).toEqual([]);
     expect(new URL(await alice.url()).pathname).toBe("/admin/test/audit");
     expect(await alice.title()).toBe("Test · Audit");
     expect(await alice.text("h1")).toBe("Audit — Test");
