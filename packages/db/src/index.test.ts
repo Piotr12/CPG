@@ -4,6 +4,8 @@ import * as db from "./index";
 describe("@cpg/db", () => {
   it("exports the public API", () => {
     expect(Object.keys(db).sort()).toEqual([
+      "API_TOKEN_NAME_MAX",
+      "ApiToken",
       "GLOBAL_ENTITIES",
       "LOCALES",
       "Session",
@@ -27,7 +29,7 @@ describe("@cpg/db", () => {
       "selectTenant",
       "tenantOwned",
     ]);
-    expect(db.entities).toEqual([db.Setting, db.User, db.Session, db.UserPreference, db.Tenant]);
+    expect(db.entities).toEqual([db.Setting, db.User, db.Session, db.UserPreference, db.Tenant, db.ApiToken]);
     expect(db.GLOBAL_ENTITIES).toEqual(db.entities);
   });
 });
