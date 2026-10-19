@@ -5,5 +5,7 @@ export * from "./database";
 export * from "./http/errors";
 export * from "./http/result";
 export * from "./http/server-action";
+export * from "./services/auth/auth.service";
+export * from "./services/auth/login-throttle";
 export * from "./services/system/system-status.service";
 export * from "./singleton";
