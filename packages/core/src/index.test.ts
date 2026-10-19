@@ -50,6 +50,7 @@ describe("@cpg/core", () => {
       "loadConfig",
       "migrateDatabase",
       "ok",
+      "parseInput",
       "requestScope",
       "revokeBuiltInAdminSessions",
       "scopeForTenant",
@@ -60,6 +61,7 @@ describe("@cpg/core", () => {
       "tenantServerAction",
       "toDbOptions",
       "uiActor",
+      "validationError",
     ]);
   });
 });
