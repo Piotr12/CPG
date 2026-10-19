@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { connection } from "next/server";
 import { requestScope } from "@cpg/core";
 import { requireUser } from "../../../../auth/require-admin";
@@ -31,12 +30,7 @@ async function TokensContent() {
 
   return (
     <div lang={locale} className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight">{t.heading}</h1>
-        <Link href="/admin" className="text-sm font-medium underline underline-offset-4">
-          {t.back}
-        </Link>
-      </div>
+      <h1 className="text-2xl font-semibold tracking-tight">{t.heading}</h1>
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-muted-foreground">{t.intro}</p>
         <CreateTokenDialog labels={t} />

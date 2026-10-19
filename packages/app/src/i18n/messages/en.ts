@@ -14,6 +14,8 @@ export const en = {
       { name: "Production Execution", grunt: "Make things. Learn why plan wrong." },
     ],
     motto: "Demand come. Caveman plan. Caveman make.",
+    signIn: "Sign in",
+    open: "Open CPG",
   },
   login: {
     title: "🦣 Sign in to CPG",
@@ -25,19 +27,14 @@ export const en = {
   },
   admin: {
     heading: "Cave control",
-    signedInAs: "Signed in as",
-    signOut: "Sign out",
     database: "Database",
     migrationsApplied: (count: number) => `${count} migrations applied`,
     migrationsPending: (count: number) => `${count} pending`,
     settings: (count: number) => `${count} settings`,
-    users: "Users",
-    tokens: "API tokens",
   },
   /** The users screen. Its strings go to client components, so `{username}` is filled in there. */
   users: {
     heading: "Users",
-    back: "Cave control",
     neverDeleted: "Users are never deleted. Deactivate an account to end its access; its history keeps its name.",
     empty: "No accounts yet.",
     columns: { username: "Username", role: "Role", status: "Status", created: "Created", actions: "Actions" },
@@ -89,7 +86,6 @@ export const en = {
   /** The API tokens screen. Its strings go to client components, so `{name}` is filled in there. */
   tokens: {
     heading: "API tokens",
-    back: "Cave control",
     intro: "A token lets a script or tool use the CPG API as you, in Test and Prod, until you revoke it. Tokens never expire.",
     empty: "No tokens yet.",
     never: "Never",
@@ -135,7 +131,6 @@ export const en = {
   audit: {
     globalHeading: "Global audit",
     tenantHeading: (name: string) => `Audit — ${name}`,
-    back: "Cave control",
     globalIntro: "Every change to accounts is kept here. Nobody can edit or delete an entry, not even the administrator.",
     tenantIntro:
       "Changes to this tenant's records appear here. Nobody can edit or delete an entry. Account changes are in the Global audit.",
@@ -186,8 +181,19 @@ export const en = {
     generation: (generation: number) => `Dataset generation ${generation}`,
     noRecords: "No business records yet",
   },
+  /** The menu every page shares (components/layout). Test and Prod are tenant names, never translated. */
   nav: {
+    menu: "Menu",
+    close: "Close",
+    account: "Account",
+    tenants: "Tenants",
+    audit: "Audit",
+    tokens: "API tokens",
+    users: "Users",
     help: "Help",
+    signIn: "Sign in",
+    signedInAs: "Signed in as",
+    signOut: "Sign out",
   },
   help: {
     heading: "Help",

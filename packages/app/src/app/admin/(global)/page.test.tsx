@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveServerComponents } from "../../../../../../tests/setup/server-components";
 import { en } from "../../../i18n/messages/en";
@@ -11,9 +11,6 @@ const mocks = vi.hoisted(() => ({
   listTenants: vi.fn(),
   requireUser: vi.fn(),
   getMessages: vi.fn(),
-  currentPreferences: vi.fn(),
-  signOut: vi.fn(),
-  updatePreferences: vi.fn(),
 }));
 vi.mock("next/server", () => ({ connection: mocks.connection }));
 vi.mock("@cpg/core", () => ({
@@ -23,8 +20,6 @@ vi.mock("@cpg/core", () => ({
 }));
 vi.mock("../../../auth/require-admin", () => ({ requireUser: mocks.requireUser }));
 vi.mock("../../../i18n/get-messages", () => ({ getMessages: mocks.getMessages }));
-vi.mock("../../../preferences/current-preferences", () => ({ currentPreferences: mocks.currentPreferences }));
-vi.mock("../actions", () => ({ signOut: mocks.signOut, updatePreferences: mocks.updatePreferences }));
 
 const status = { databasePath: "/externaldata/cpg.sqlite", appliedMigrations: 3, pendingMigrations: 0, settings: 7 };
 const tenants = [
@@ -40,9 +35,8 @@ const choices = (label: string) =>
 const admin = { sessionId: "s1", userId: "u1", username: "admin", role: "admin" };
 const alice = { sessionId: "s2", userId: "u2", username: "alice", role: "user" };
 
-function as(locale: "en" | "pl", theme: "light" | "dark" = "light") {
+function as(locale: "en" | "pl") {
   mocks.getMessages.mockResolvedValue({ locale, messages: locale === "en" ? en : pl });
-  mocks.currentPreferences.mockResolvedValue({ locale, theme });
 }
 
 describe("AdminPage", () => {
@@ -66,22 +60,13 @@ describe("AdminPage", () => {
     expect(screen.getByText("0 pending").dataset.variant).toBe("outline");
   });
 
-  it("names the signed-in user and offers to sign out", async () => {
+  it("leaves the account, its switches and the links to other screens to the menu", async () => {
     render(await resolveServerComponents(AdminPage()));
 
-    expect(screen.getByText("admin").tagName).toBe("STRONG");
-    expect(screen.getByRole("button", { name: "Sign out" }).closest("form")?.dataset.action).toBe("sign-out");
-  });
-
-  it("offers the language and theme switches with the current choices pressed", async () => {
-    as("en", "dark");
-
-    render(await resolveServerComponents(AdminPage()));
-
-    const language = screen.getByRole("group", { name: "Language" });
-    expect(within(language).getByRole("button", { name: "English" }).getAttribute("aria-pressed")).toBe("true");
-    const theme = screen.getByRole("group", { name: "Theme" });
-    expect(within(theme).getByRole("button", { name: "Dark" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
+    expect(screen.queryByRole("group", { name: "Language" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Users" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "API tokens" })).toBeNull();
   });
 
   it("speaks Polish to a Polish account (UX-002)", async () => {
@@ -91,26 +76,15 @@ describe("AdminPage", () => {
 
     expect(screen.getByRole("heading", { name: "Kontrola jaskini" }).closest("[lang]")?.getAttribute("lang")).toBe("pl");
     expect(screen.getByText("Zastosowane migracje: 3")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Wyloguj" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Użytkownicy" })).toBeTruthy();
   });
 
-  it("links the admin to the users screen", async () => {
-    render(await resolveServerComponents(AdminPage()));
-
-    expect(screen.getByRole("link", { name: "Users" }).getAttribute("href")).toBe("/admin/users");
-  });
-
-  it("gives a normal user the tenant chooser and preferences, but no database detail or users link (TEN-010)", async () => {
+  it("gives a normal user the tenant chooser, but no database detail (TEN-010)", async () => {
     mocks.requireUser.mockResolvedValue(alice);
 
     render(await resolveServerComponents(AdminPage()));
 
-    expect(screen.getByText("alice").tagName).toBe("STRONG");
     expect(choices("Choose a tenant").map(([href]) => href)).toEqual(["/admin/test", "/admin/prod"]);
-    expect(screen.getByRole("group", { name: "Language" })).toBeTruthy();
     expect(screen.queryByText("Database")).toBeNull();
-    expect(screen.queryByRole("link", { name: "Users" })).toBeNull();
     expect(screen.queryByRole("link", { name: /password/i })).toBeNull();
     expect(mocks.getStatus).not.toHaveBeenCalled();
   });

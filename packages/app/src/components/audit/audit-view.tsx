@@ -5,8 +5,9 @@ import type { Messages } from "../../i18n/messages/en";
 import { AuditTable } from "./audit-table";
 
 /**
- * One audit screen: heading, back link, what this audit holds, the entries and the paging links.
- * Shared by the Global and the tenant audit; each page reads its own entries.
+ * One audit screen: heading, an optional back link, what this audit holds, the entries and the paging
+ * links. Shared by the Global and the tenant audit; each page reads its own entries. The Global audit is
+ * in the menu, so only the tenant audit links back (to its tenant home).
  */
 export function AuditView({
   heading,
@@ -18,7 +19,7 @@ export function AuditView({
   labels,
 }: {
   heading: string;
-  back: { href: string; label: string };
+  back?: { href: string; label: string };
   intro: ReactNode;
   page: AuditPage;
   /** This screen's path, for the paging links. */
@@ -30,9 +31,11 @@ export function AuditView({
     <>
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">{heading}</h1>
-        <Link href={back.href} className="text-sm font-medium underline underline-offset-4">
-          {back.label}
-        </Link>
+        {back && (
+          <Link href={back.href} className="text-sm font-medium underline underline-offset-4">
+            {back.label}
+          </Link>
+        )}
       </div>
       <div className="text-sm text-muted-foreground">{intro}</div>
       <AuditTable entries={page.entries} label={heading} labels={labels} />

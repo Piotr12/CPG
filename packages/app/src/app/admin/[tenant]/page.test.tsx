@@ -15,7 +15,6 @@ const mocks = vi.hoisted(() => {
     AppError,
     connection: vi.fn(),
     getMessages: vi.fn(),
-    currentPreferences: vi.fn(),
     requireUser: vi.fn(),
     tenantScope: vi.fn(),
     notFound: vi.fn(() => {
@@ -27,13 +26,10 @@ vi.mock("next/server", () => ({ connection: mocks.connection }));
 vi.mock("next/navigation", () => ({ notFound: mocks.notFound }));
 vi.mock("@cpg/core", () => ({ AppError: mocks.AppError, tenantScope: mocks.tenantScope }));
 vi.mock("../../../auth/require-admin", () => ({ requireUser: mocks.requireUser }));
-vi.mock("../actions", () => ({ signOut: vi.fn(), updatePreferences: vi.fn() }));
 vi.mock("../../../i18n/get-messages", () => ({ getMessages: mocks.getMessages }));
-vi.mock("../../../preferences/current-preferences", () => ({ currentPreferences: mocks.currentPreferences }));
 
 function as(locale: "en" | "pl") {
   mocks.getMessages.mockResolvedValue({ locale, messages: locale === "en" ? en : pl });
-  mocks.currentPreferences.mockResolvedValue({ locale, theme: "light" });
 }
 
 const page = (tenant: string) => TenantHomePage({ params: Promise.resolve({ tenant }), searchParams: Promise.resolve({}) });
@@ -55,7 +51,6 @@ describe("TenantHomePage", () => {
     expect(screen.getByText("Prod")).toBeTruthy();
     expect(screen.getByText("Dataset generation 1")).toBeTruthy();
     expect(screen.getByText("No business records yet")).toBeTruthy();
-    expect(screen.getByText("admin").tagName).toBe("STRONG");
     expect(screen.getByRole("link", { name: "Audit — Prod" }).getAttribute("href")).toBe("/admin/prod/audit");
   });
 
@@ -65,8 +60,9 @@ describe("TenantHomePage", () => {
     render(await resolveServerComponents(page("prod")));
 
     expect(screen.getByRole("heading", { name: "Cave control — Prod" })).toBeTruthy();
-    expect(screen.getByText("alice").tagName).toBe("STRONG");
-    expect(screen.queryByRole("link", { name: "Users" })).toBeNull();
+    // The account and its controls are in the menu, not on the page.
+    expect(screen.queryByText("alice")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
   });
 
   it("speaks Polish to a Polish account", async () => {

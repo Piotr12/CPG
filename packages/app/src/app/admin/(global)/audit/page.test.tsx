@@ -57,7 +57,8 @@ describe("GlobalAuditPage", () => {
     expect(screen.getByText(/Nobody can edit or delete an entry, not even the administrator/)).toBeTruthy();
     expect(screen.getByText("User created")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Older entries →" }).getAttribute("href")).toBe(`/admin/audit?before=${CURSOR}`);
-    expect(screen.getByRole("link", { name: "Cave control" }).getAttribute("href")).toBe("/admin");
+    // The Global audit is in the menu, so it carries no back link.
+    expect(screen.queryByRole("link", { name: "Cave control" })).toBeNull();
   });
 
   it("reads the page the URL asks for", async () => {

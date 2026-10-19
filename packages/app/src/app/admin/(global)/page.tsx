@@ -7,10 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@cpg/
 import { cn } from "@cpg/ui/lib/utils";
 import { requestScope, type TenantCode } from "@cpg/core";
 import { requireUser } from "../../../auth/require-admin";
-import { SignedInBar } from "../../../components/auth/signed-in-bar";
 import { getMessages } from "../../../i18n/get-messages";
 import type { Messages } from "../../../i18n/messages/en";
-import { currentPreferences } from "../../../preferences/current-preferences";
 
 export const metadata: Metadata = { title: "Admin · Caveman Planning Good" };
 
@@ -35,16 +33,11 @@ async function AdminContent() {
   await connection();
   const user = await requireUser();
   const { tenantService } = (await requestScope()).cradle;
-  const [tenants, { locale, messages }, { theme }] = await Promise.all([
-    tenantService.list(),
-    getMessages(),
-    currentPreferences(),
-  ]);
+  const [tenants, { locale, messages }] = await Promise.all([tenantService.list(), getMessages()]);
   const t = messages.admin;
 
   return (
     <div lang={locale} className="flex flex-col gap-6">
-      <SignedInBar user={user} locale={locale} theme={theme} messages={messages} />
       <h1 className="text-2xl font-semibold tracking-tight">{t.heading}</h1>
       <nav aria-label={messages.tenants.choose} className="grid gap-4 sm:grid-cols-2">
         {tenants.map(({ code, name }) => (
