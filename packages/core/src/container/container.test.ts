@@ -7,6 +7,7 @@ import { loadConfig } from "../config";
 import { toDbOptions } from "../database";
 import { AuthService } from "../services/auth/auth.service";
 import { LoginThrottle } from "../services/auth/login-throttle";
+import { UserPreferenceService } from "../services/preferences/user-preference.service";
 import { SystemStatusService } from "../services/system/system-status.service";
 import { createAppContainer, getContainer, requestScope } from "./container";
 
@@ -27,6 +28,7 @@ describe("createAppContainer", () => {
     expect(cradle.systemStatusService).toBeInstanceOf(SystemStatusService);
     expect(cradle.authService).toBeInstanceOf(AuthService);
     expect(cradle.loginThrottle).toBeInstanceOf(LoginThrottle);
+    expect(cradle.userPreferenceService).toBeInstanceOf(UserPreferenceService);
   });
 
   it("shares one login throttle across request scopes", () => {

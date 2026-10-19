@@ -4,6 +4,7 @@ import { loadConfig, type AppConfig } from "../config";
 import { toDbOptions } from "../database";
 import { AuthService } from "../services/auth/auth.service";
 import { LoginThrottle } from "../services/auth/login-throttle";
+import { UserPreferenceService } from "../services/preferences/user-preference.service";
 import { SystemStatusService } from "../services/system/system-status.service";
 import { globalSingleton } from "../singleton";
 import type { AppContainer, Cradle } from "./cradle";
@@ -24,6 +25,7 @@ export function createAppContainer(config: AppConfig, orm: Orm): AppContainer {
     // One per process (per bundle): its failure counters must outlive the request.
     loginThrottle: asClass(LoginThrottle).singleton(),
     authService: asClass(AuthService).scoped(),
+    userPreferenceService: asClass(UserPreferenceService).scoped(),
   });
   return container;
 }
