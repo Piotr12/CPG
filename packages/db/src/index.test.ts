@@ -8,20 +8,24 @@ describe("@cpg/db", () => {
       "AUDIT_APPEND_ONLY",
       "AUDIT_CHANNELS",
       "ApiToken",
+      "Customer",
       "GLOBAL_ENTITIES",
       "GlobalAuditEvent",
       "GlobalIdempotencyKey",
       "IDEMPOTENCY_KEY_MAX",
       "LOCALES",
+      "Location",
       "LockWaitTimeoutException",
       "MATERIAL_DESCRIPTION_MAX",
       "MATERIAL_TYPES",
       "MATERIAL_UNIT_MAX",
       "Material",
       "MaterialConversion",
+      "NAMED_RECORD_NAME_MAX",
       "OptimisticLockError",
       "Session",
       "Setting",
+      "Supplier",
       "TENANT_CODES",
       "TENANT_FILTER",
       "THEMES",
@@ -56,8 +60,19 @@ describe("@cpg/db", () => {
       db.TenantIdempotencyKey,
       db.Material,
       db.MaterialConversion,
+      db.Location,
+      db.Customer,
+      db.Supplier,
     ]);
-    const tenantOwned: unknown[] = [db.TenantAuditEvent, db.TenantIdempotencyKey, db.Material, db.MaterialConversion];
+    const tenantOwned: unknown[] = [
+      db.TenantAuditEvent,
+      db.TenantIdempotencyKey,
+      db.Material,
+      db.MaterialConversion,
+      db.Location,
+      db.Customer,
+      db.Supplier,
+    ];
     expect(db.GLOBAL_ENTITIES).toEqual(db.entities.filter((entity) => !tenantOwned.includes(entity)));
   });
 });
