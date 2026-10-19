@@ -38,6 +38,7 @@ describe("migrate", () => {
     expect(await migrate({ databasePath })).toEqual([
       "Migration20261017091007_initial",
       "Migration20261019080354_auth_users_sessions",
+      "Migration20261019092708_tenants",
     ]);
     expect(await migrate({ databasePath })).toEqual([]);
   });
@@ -49,9 +50,9 @@ describe("getMigrationStatus", () => {
     const orm = await initOrm({ databasePath });
 
     try {
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 2 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 3 });
       await orm.migrator.up();
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 2, pending: 0 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 3, pending: 0 });
     } finally {
       await orm.close();
     }
@@ -67,12 +68,14 @@ describe("migrations", () => {
       (
         await orm.em
           .getConnection()
-          .execute<{ name: string }[]>("select name from sqlite_master where name in ('setting', 'user', 'session')")
+          .execute<{ name: string }[]>("select name from sqlite_master where name in ('setting', 'user', 'session', 'tenant')")
       )
         .map(({ name }) => name)
         .sort();
 
     try {
+      expect(await tables()).toEqual(["session", "setting", "tenant", "user"]);
+      await orm.migrator.down();
       expect(await tables()).toEqual(["session", "setting", "user"]);
       await orm.migrator.down();
       expect(await tables()).toEqual(["setting"]);

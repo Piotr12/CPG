@@ -6,6 +6,8 @@ describe("@cpg/db", () => {
     expect(Object.keys(db).sort()).toEqual([
       "Session",
       "Setting",
+      "TENANT_CODES",
+      "Tenant",
       "USER_ROLES",
       "User",
       "createOrmConfig",
@@ -14,6 +16,6 @@ describe("@cpg/db", () => {
       "initOrm",
       "migrate",
     ]);
-    expect(db.entities).toEqual([db.Setting, db.User, db.Session]);
+    expect(db.entities).toEqual([db.Setting, db.User, db.Session, db.Tenant]);
   });
 });
