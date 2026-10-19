@@ -6,7 +6,10 @@ import type { AuditService } from "../services/audit/audit.service";
 import type { AuthService } from "../services/auth/auth.service";
 import type { LoginThrottle } from "../services/auth/login-throttle";
 import type { IdempotencyService } from "../services/idempotency/idempotency.service";
+import type { CustomerService } from "../services/customers/customer.service";
+import type { LocationService } from "../services/locations/location.service";
 import type { MaterialService } from "../services/materials/material.service";
+import type { SupplierService } from "../services/suppliers/supplier.service";
 import type { UserPreferenceService } from "../services/preferences/user-preference.service";
 import type { SystemStatusService } from "../services/system/system-status.service";
 import type { UserService } from "../services/users/user.service";
@@ -28,6 +31,9 @@ export interface Cradle {
   auditService: AuditService;
   idempotencyService: IdempotencyService;
   materialService: MaterialService;
+  locationService: LocationService;
+  customerService: CustomerService;
+  supplierService: SupplierService;
   /** The active tenant. Only in scopes built by `tenantScope()`. */
   tenant: TenantInfo;
 }

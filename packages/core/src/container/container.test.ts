@@ -9,7 +9,10 @@ import { ApiTokenService } from "../services/api-tokens/api-token.service";
 import { AuditService } from "../services/audit/audit.service";
 import { AuthService } from "../services/auth/auth.service";
 import { LoginThrottle } from "../services/auth/login-throttle";
+import { CustomerService } from "../services/customers/customer.service";
+import { LocationService } from "../services/locations/location.service";
 import { MaterialService } from "../services/materials/material.service";
+import { SupplierService } from "../services/suppliers/supplier.service";
 import { UserPreferenceService } from "../services/preferences/user-preference.service";
 import { SystemStatusService } from "../services/system/system-status.service";
 import { UserService } from "../services/users/user.service";
@@ -37,6 +40,9 @@ describe("createAppContainer", () => {
     expect(cradle.apiTokenService).toBeInstanceOf(ApiTokenService);
     expect(cradle.auditService).toBeInstanceOf(AuditService);
     expect(cradle.materialService).toBeInstanceOf(MaterialService);
+    expect(cradle.locationService).toBeInstanceOf(LocationService);
+    expect(cradle.customerService).toBeInstanceOf(CustomerService);
+    expect(cradle.supplierService).toBeInstanceOf(SupplierService);
   });
 
   it("shares one login throttle across request scopes", () => {
