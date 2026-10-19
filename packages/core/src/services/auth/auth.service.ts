@@ -3,6 +3,7 @@ import { Session, User, type EntityManager, type UserRole } from "@cpg/db";
 import type { AppConfig } from "../../config";
 import { TooManyRequestsError, UnauthorizedError } from "../../http/errors";
 import type { LoginThrottle } from "./login-throttle";
+import { verifyDummy, verifyPassword } from "./password-hash";
 import { generateSessionToken, hashSessionToken } from "./session-token";
 
 /** The built-in administrator's fixed username. */
@@ -38,7 +39,15 @@ interface Deps {
   loginThrottle: LoginThrottle;
 }
 
-/** Signs the built-in admin in and out, and turns a session token back into its user. */
+/** Who a password check proved: the built-in admin, or a normal user and the hash that matched. */
+type Verified = { kind: "admin" } | { kind: "user"; userId: string; passwordHash: string };
+
+/**
+ * Signs accounts in and out, and turns a session token back into its user. The built-in admin's
+ * password is `CPG_ADMIN_PASSWORD`; normal users' are argon2id hashes. Unknown, inactive and
+ * wrong-password attempts look the same: one message, a dummy hash for the time, and throttle
+ * buckets keyed by the submitted name whether or not it exists.
+ */
 export class AuthService {
   private readonly em: EntityManager;
   private readonly config: AppConfig;
@@ -52,20 +61,25 @@ export class AuthService {
 
   /** Checks the credentials and opens a session. Throws `UnauthorizedError` or `TooManyRequestsError`. */
   async signIn({ username, password, clientIp }: SignInRequest): Promise<SignedIn> {
-    const account = username === BUILT_IN_ADMIN_USERNAME ? username : null;
-    if (this.loginThrottle.isBlocked(clientIp, account)) throw new TooManyRequestsError();
+    const name = username.trim().toLowerCase();
+    if (this.loginThrottle.isBlocked(clientIp, name)) throw new TooManyRequestsError();
 
-    if (!account || !this.isAdminPassword(password)) {
-      this.loginThrottle.recordFailure(clientIp, account);
+    const verified = await this.verify(name, password);
+    if (!verified) {
+      this.loginThrottle.recordFailure(clientIp, name);
       throw new UnauthorizedError(INVALID_CREDENTIALS);
     }
-    this.loginThrottle.recordSuccess(clientIp, account);
+    this.loginThrottle.recordSuccess(clientIp, name);
 
-    const user = await this.ensureBuiltInAdmin();
     const token = generateSessionToken();
     const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
-    this.em.create(Session, { tokenHash: hashSessionToken(token), user, expiresAt });
-    await this.em.flush();
+    const tokenHash = hashSessionToken(token);
+    if (verified.kind === "admin") {
+      this.em.create(Session, { tokenHash, user: await this.ensureBuiltInAdmin(), expiresAt });
+      await this.em.flush();
+    } else {
+      await this.openUserSession(verified, tokenHash, expiresAt);
+    }
     return { token, expiresAt };
   }
 
@@ -79,12 +93,40 @@ export class AuthService {
       return null;
     }
     const { user } = session;
+    if (!user.active) {
+      // Deactivation already deleted it; a leftover is a bug or a manual edit, so fail closed.
+      await this.em.nativeDelete(Session, { id: session.id });
+      return null;
+    }
     return { sessionId: session.id, userId: user.id, username: user.username, role: user.role };
   }
 
   /** Ends the session behind `token`. Safe to call twice or with no token. */
   async signOut(token: string | undefined): Promise<void> {
     if (token) await this.em.nativeDelete(Session, { tokenHash: hashSessionToken(token) });
+  }
+
+  /** Checks the password against the admin's or the user's credential; null when it doesn't match. */
+  private async verify(name: string, password: string): Promise<Verified | null> {
+    if (name === BUILT_IN_ADMIN_USERNAME) return this.isAdminPassword(password) ? { kind: "admin" } : null;
+    const user = await this.em.findOne(User, { username: name, role: "user" });
+    if (!user?.active || !user.passwordHash) return verifyDummy(password).then(() => null);
+    return (await verifyPassword(password, user.passwordHash))
+      ? { kind: "user", userId: user.id, passwordHash: user.passwordHash }
+      : null;
+  }
+
+  /**
+   * Inserts the session only if the account is still active with the hash just verified. A reset
+   * or deactivation that commits during the hash check makes this fail rather than leave a
+   * session opened with the old credential behind (R06).
+   */
+  private async openUserSession(verified: { userId: string; passwordHash: string }, tokenHash: string, expiresAt: Date) {
+    await this.em.transactional(async (em) => {
+      const user = await em.findOne(User, { id: verified.userId, active: true, passwordHash: verified.passwordHash });
+      if (!user) throw new UnauthorizedError(INVALID_CREDENTIALS);
+      em.create(Session, { tokenHash, user, expiresAt });
+    });
   }
 
   /** Constant-time comparison of SHA-256 digests (equal length whatever the input). Fails closed. */
@@ -97,8 +139,8 @@ export class AuthService {
 
   /** The admin's row, created on the first successful sign-in; the unique username keeps it single. */
   private async ensureBuiltInAdmin(): Promise<User> {
-    const where = { username: BUILT_IN_ADMIN_USERNAME };
-    await this.em.upsert(User, { ...where, role: "admin" }, { onConflictFields: ["username"], onConflictAction: "ignore" });
+    const where = { username: BUILT_IN_ADMIN_USERNAME, role: "admin" } as const;
+    await this.em.upsert(User, where, { onConflictFields: ["username"], onConflictAction: "ignore" });
     return this.em.findOneOrFail(User, where);
   }
 }

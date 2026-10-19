@@ -15,6 +15,7 @@ describe("@cpg/core", () => {
       "MAX_BUCKETS",
       "MAX_FAILURES_PER_ACCOUNT",
       "MAX_FAILURES_PER_CLIENT",
+      "MAX_FAILURES_PER_IP",
       "MIN_ADMIN_PASSWORD_LENGTH",
       "NotFoundError",
       "PRUNE_INTERVAL_MS",
