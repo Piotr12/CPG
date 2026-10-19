@@ -48,6 +48,7 @@ Every state-changing bearer request needs an `Idempotency-Key`. A same-key repea
 
   Tested with two ORMs on one file.
 - **`tenantServerAction` checks the generation after parsing the input**, not before as the spec's step 5 says. The check still runs before the handler, inside its transaction. `serverAction` drops the field errors of a `ValidationError` thrown inside a handler, so parsing must stay outside, and a malformed form still shows its field errors.
+- **Fixed a flaky ApiTokenService audit test on the way** (5b3aab0). Create and revoke in the same millisecond sorted by their random id.
 - **`IdempotencyService.run`, not `execute`.** ESLint bans `.execute(` everywhere as the raw-SQL entry point.
 
 ## Implementation Plan
@@ -71,8 +72,8 @@ Follows the spec's Implementation Plan, Steps 1–10, unchanged.
 
 ### Phase 3: Versions
 
-- [ ] 3.1 UserService versions
-- [ ] 3.2 Users screen
+- [x] 3.1 UserService versions — 5b3aab0
+- [x] 3.2 Users screen — cfbed9d
 
 ### Phase 4: Parity routes
 
