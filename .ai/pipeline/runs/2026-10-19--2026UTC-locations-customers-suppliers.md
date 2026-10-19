@@ -46,6 +46,15 @@ In each tenant the admin creates, renames, deactivates and reactivates locations
 - **MikroORM generics over three entities** may refuse a union handle without casts. Step 1.2 includes a typecheck spike, with the spec's fallback: a generic descriptor.
 - **Integration test files share one database and one admin** (lessons). Assert only on records the file creates.
 
+## Deviations from the spec
+
+- **One `NamedRecordsScreen` server component** renders the heading, intro, Create and list for all three pages. Each page still resolves its tenant and reads its own service (the tenant entry-point rule), then hands the records and its own server actions to it. The client components receive the actions as props and never import a kind.
+- **`refreshAfterWrite` and `formValues` (`app/src/routing/refresh-after-write.ts`)** replace the materials actions' private `refreshed`/`fields` helpers. The six new actions would otherwise have copied them. The materials action tests pass unchanged.
+- **Row actions are a ⋯ menu** (Edit, Deactivate/Reactivate), like the users list and the conversions table, rather than two inline buttons as in the mockup. That keeps them in view at 390 px; an integration test checks it.
+- **The ID schema is `validators/business-ids/business-id.schema.ts`**, and a separate `named-record-fields.schema.ts` holds the name rule and the messages the screens translate.
+- **`seedDemoData` returns a per-kind result** (`{ seeded } | { error }`). `instrumentation.ts` logs each, and an outer `catch` still covers a failure to open the connection.
+- **The tenant-audit help topic** now names locations, customers and suppliers.
+
 ## Implementation Plan
 
 ### Phase 1: the masters in core
@@ -86,6 +95,6 @@ In each tenant the admin creates, renames, deactivates and reactivates locations
 
 ### Phase 3: the screens
 
-- [ ] 3.1 Shared form helpers and generic components
-- [ ] 3.2 Actions, pages, links, i18n and help
-- [ ] 3.3 Screen integration tests and the full gate
+- [x] 3.1 Shared form helpers and generic components — e55ebbc
+- [x] 3.2 Actions, pages, links, i18n and help — 17a3347
+- [x] 3.3 Screen integration tests and the full gate — 6244513
