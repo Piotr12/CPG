@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
+import { callApi, json, type UserRow } from "./api";
 import { openBrowser, type Browser } from "./browser";
 import { signIn, signInAsAdmin } from "./sign-in";
 import { createToken, openTokens } from "./tokens";
@@ -9,21 +10,9 @@ const adminPassword = inject("adminPassword");
 
 const PASSWORD = "idem first password";
 
-interface UserRow {
-  id: string;
-  username: string;
-  active: boolean;
-  version: number;
-}
-
 /** Calls the API as an external tool does: the bearer token, and the given headers only. */
-async function api(method: string, path: string, secret: string, { key, body }: { key?: string; body?: unknown } = {}) {
-  const headers: Record<string, string> = { authorization: `Bearer ${secret}`, "content-type": "application/json" };
-  if (key) headers["idempotency-key"] = key;
-  const response = await fetch(`${baseUrl}${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
-  return { status: response.status, replayed: response.headers.get("idempotent-replayed"), text: await response.text() };
-}
-const json = (response: { text: string }) => JSON.parse(response.text);
+const api = (method: string, path: string, secret: string, options?: { key?: string; body?: unknown }) =>
+  callApi(baseUrl, method, path, secret, options);
 
 describe("API writes are safe to retry, and stale edits are rejected", () => {
   let admin: Browser;

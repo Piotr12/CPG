@@ -59,6 +59,22 @@ export function openBrowser() {
   };
 }
 
+/**
+ * Clicks a link once React has hydrated it: a click on streamed HTML before that can be lost. Next.js
+ * keeps earlier pages mounted but hidden, so it waits for the first match that is shown.
+ */
+export async function clickHydrated(browser: Browser, selector: string) {
+  const shown = `[...document.querySelectorAll(${JSON.stringify(selector)})].find((link) => link.offsetParent && Object.keys(link).some((key) => key.startsWith("__reactFiber")))`;
+  await browser.waitUntil(shown);
+  // Mark the shown copy and click exactly it: the first match in the DOM may be a hidden earlier page's.
+  await browser.evaluate(`(() => {
+    document.querySelectorAll("[data-test-click]").forEach((element) => element.removeAttribute("data-test-click"));
+    ${shown}.setAttribute("data-test-click", "");
+    return true;
+  })()`);
+  await browser.click("[data-test-click]");
+}
+
 export interface Cookie {
   name: string;
   value: string;

@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import { openBrowser, type Browser } from "./browser";
+import { clickHydrated, openBrowser, type Browser } from "./browser";
 import { signInAsAdmin } from "./sign-in";
 
 const baseUrl = inject("baseUrl");
@@ -8,22 +8,6 @@ const adminPassword = inject("adminPassword");
 const STRIP = "[role=region][data-tenant]";
 const pathname = async (browser: Browser) => new URL(await browser.url()).pathname;
 const stripTenant = (browser: Browser) => browser.evaluate<string>(`document.querySelector("${STRIP}").dataset.tenant`);
-
-/**
- * Clicks a link once React has hydrated it: a click on streamed HTML before that can be lost. Next.js
- * keeps earlier pages mounted but hidden, so it waits for the first match that is shown.
- */
-async function clickHydrated(browser: Browser, selector: string) {
-  const shown = `[...document.querySelectorAll(${JSON.stringify(selector)})].find((link) => link.offsetParent && Object.keys(link).some((key) => key.startsWith("__reactFiber")))`;
-  await browser.waitUntil(shown);
-  // Mark the shown copy and click exactly it: the first match in the DOM may be a hidden earlier page's.
-  await browser.evaluate(`(() => {
-    document.querySelectorAll("[data-test-click]").forEach((element) => element.removeAttribute("data-test-click"));
-    ${shown}.setAttribute("data-test-click", "");
-    return true;
-  })()`);
-  await browser.click("[data-test-click]");
-}
 
 // Spec .ai/specs/2026-10-19--0913UTC-test-prod-tenants.md: TEN-001, TEN-010, TEN-011.
 describe("tenants in the admin", () => {

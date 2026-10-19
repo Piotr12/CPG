@@ -9,6 +9,7 @@ import {
   signIn,
   signInAsAdmin,
 } from "./sign-in";
+import { createUser } from "./users";
 
 const baseUrl = inject("baseUrl");
 const adminPassword = inject("adminPassword");
@@ -61,18 +62,6 @@ async function openPage(browser: Browser, path: string) {
 
 const pathname = async (browser: Browser) => new URL(await browser.url()).pathname;
 
-/** Creates a normal user on /admin/users. */
-async function createUser(admin: Browser, username: string, password: string) {
-  await admin.open(`${baseUrl}/admin/users`);
-  await admin.waitFor("table");
-  await admin.clickRole("button", "Create user");
-  await admin.fillLabel("Username", username);
-  await admin.fillLabel("Initial password", password);
-  await admin.click("[role=dialog] button[type=submit]");
-  await admin.waitUntil(`!document.querySelector("[role=dialog]")`);
-  await admin.waitForText(username);
-}
-
 // Issue #43: one menu on every page, by role, usable on a phone; a way in from the homepage.
 describe("navigation menu", () => {
   let visitor: Browser;
@@ -83,7 +72,7 @@ describe("navigation menu", () => {
     [visitor, admin, ursula] = [openBrowser(), openBrowser(), openBrowser()];
     await Promise.all([visitor, admin, ursula].map((browser) => browser.setViewport(1280, 800)));
     await signInAsAdmin(admin, baseUrl, adminPassword);
-    await createUser(admin, NAV_USER, NAV_PASSWORD);
+    await createUser(admin, baseUrl, NAV_USER, NAV_PASSWORD);
     await signIn(ursula, baseUrl, NAV_PASSWORD, NAV_USER);
     await ursula.waitUntil(signedInAs(NAV_USER));
   });

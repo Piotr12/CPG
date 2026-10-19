@@ -19,7 +19,7 @@ export async function signInAsAdmin(browser: Browser, baseUrl: string, password:
 const ACCOUNT_BUTTON = "header [data-action=account-menu]";
 const accountButton = `document.querySelector(${JSON.stringify(ACCOUNT_BUTTON)})`;
 /** True once React has hydrated an element, so a click on it isn't lost. */
-const hydrated = (element: string) => `Object.keys(${element} ?? {}).some((key) => key.startsWith("__reactFiber"))`;
+export const hydrated = (element: string) => `Object.keys(${element} ?? {}).some((key) => key.startsWith("__reactFiber"))`;
 
 /**
  * A page condition: the menu has streamed in (outside Next.js's hidden staging container) and names
@@ -28,6 +28,18 @@ const hydrated = (element: string) => `Object.keys(${element} ?? {}).some((key) 
 export const signedInAs = (username?: string) =>
   `!!${accountButton} && !${accountButton}.closest("[hidden]")` +
   (username === undefined ? "" : ` && ${accountButton}.textContent === ${JSON.stringify(username)}`);
+
+/**
+ * A page condition: `username` is signed in and React has hydrated the bar, which also sets the
+ * account's language and theme on <html>.
+ */
+export const signedInAndHydrated = (username: string) => `${signedInAs(username)} && ${hydrated(accountButton)}`;
+
+/** Signs `username` in and waits until the hydrated bar names them. */
+export async function signInAs(browser: Browser, baseUrl: string, username: string, password: string) {
+  await signIn(browser, baseUrl, password, username);
+  await browser.waitUntil(signedInAndHydrated(username));
+}
 
 /** The account controls in the bar itself (from 1280 px), and in the popover (768–1279 px). */
 const INLINE_PANEL = "header [data-account-panel=inline]";
