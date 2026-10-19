@@ -70,16 +70,21 @@ Implement E02-S01 as the spec describes:
 - Moving `/admin` into `(global)` must keep the URL. The existing integration tests cover it.
 - PR #32 (#18) touches the same admin area, so whichever merges second rebases.
 
+## Implementation notes
+
+- `useTenant` was renamed `selectTenant`: the React hooks lint rule treats any `use*` call as a hook.
+- `tenantServerAction` resolves the tenant through `serverAction` itself, so both share one error mapping.
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Tenant data layer
 
-- [ ] 1.1 Tenant entity and migration
-- [ ] 1.2 tenantOwned, filter, TenantEntityManager, TenantGuard
-- [ ] 1.3 Lint and repo-wide guards
-- [ ] 1.4 TenantService, tenantScope, tenantServerAction, errors
+- [x] 1.1 Tenant entity and migration — bdea989
+- [x] 1.2 tenantOwned, filter, TenantEntityManager, TenantGuard — 039cf30
+- [x] 1.3 Lint and repo-wide guards — 777d62c
+- [x] 1.4 TenantService, tenantScope, tenantServerAction, errors — f8b30e0
 
 ### Phase 2: Tenant UI
 
