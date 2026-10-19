@@ -3,7 +3,7 @@
 **Date:** 2026-10-19 20:14 UTC
 **Agent:** Claude Code (Opus 5.5) via cezar: `om-auto-fix-issue 23` → `om-auto-write-spec 23` → `om-spec-writing --autonomous`
 **Spec:** `.ai/specs/2026-10-19--2014UTC-locations-customers-suppliers.md` (written in this run)
-**Status:** in progress
+**Status:** done (spec PR #54 draft; implementation PR #56 draft; both gated on ⚠ Q2 and Q5)
 
 ## Goal
 
@@ -35,11 +35,20 @@
   - `businessIdSchema` moves to `validators/business-ids/`;
   - BACKWARD_COMPATIBILITY: §4 pages, help topic IDs and Versions; the migration's up/down test; a `risk-high` rollback note;
   - shared `fill`/`errorFormatter` instead of a copy; the 12 audit action labels; users-table row actions as the reference; no not-found test against a mock.
+- 20:31 Opened the spec PR #54 as a draft (⚠ Q2, Q5), with labels, the visual evidence, the defaults table (also posted on #23) and the summary. Handed the issue lock to the implementation.
+- 20:26–21:00 Implemented on `feat/locations-customers-suppliers` (#56); the plan and its deviations are in `.ai/pipeline/runs/2026-10-19--2026UTC-locations-customers-suppliers.md`.
+  - The full local gate is green. The Docker integration run failed only on the smoke migration count, which was fixed and re-run.
+  - A fresh-context code review approved. Its Low findings were fixed, except a test-deduplication follow-up.
+  - UI evidence is posted on #56. Released the issue lock.
 
 ## Changes
 
 - `.ai/specs/2026-10-19--2014UTC-locations-customers-suppliers.md` (the spec) and `.ai/specs/assets/locations-customers-suppliers/` (one current screenshot, three mockups with their HTML).
 
 ## Verification
+- `npx vitest run tests/ai-filenames.test.ts` passes. This PR is docs only; the implementation PR #56 ran the full gate (lint, typecheck, test:coverage 100%, build, test:integration).
 
 ## Follow-ups
+- The owner confirms Q2 (server-assigned eight-digit IDs) and Q5 (the deferred "can't be picked" check) on #54, then merges it. #56 then moves the spec to `implemented/` and can be marked ready after QA.
+- #24's spec must refuse inactive locations and materials in new entries (Q5).
+- The near-identical per-kind page, action and route tests in #56 could share `describe.each` suites.
