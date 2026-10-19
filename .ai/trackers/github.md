@@ -268,17 +268,24 @@ gh pr comment {prNumber} --body-file <path-or-process-substitution>
 #### attach-image-evidence
 `{prNumber}`, a markdown comment body (without the images), a `{slug}` (e.g. `pr-{prNumber}`), and a list of local PNG paths → post one comment with the images embedded **inline**, and return the comment URL.
 
-GitHub does not accept image bytes through the comment API, so make the images referenceable first. For a **public** repo, upload them to a dedicated **slash-free** evidence branch (never the change's own branch) via the Contents API and reference `raw.githubusercontent.com` URLs — those render inline in comments:
+GitHub does not accept image bytes through the comment API, so make the images referenceable first. For a **public** repo, upload them to the repository's single, long-lived **`qa-evidence`** branch (never the change's own branch), one folder per `{slug}`, via the Contents API, and reference `raw.githubusercontent.com` URLs. Those render inline in comments.
+
+`qa-evidence` is an **orphan** branch: it shares no history with the default branch, so it holds only images. It is **never deleted, and its folders are never removed**, because every PR comment that ever embedded evidence links into it. (This CPG change replaces the vendored per-slug `qa-evidence-{slug}` branches, which piled up and broke old comments when they were cleaned up.)
 
 ```bash
 OWNER_REPO=$(gh repo view --json nameWithOwner --jq .nameWithOwner)
-EVIDENCE_BRANCH="qa-evidence-{slug}"                 # slash-free: some raw URLs 404 on slashed refs
-DEFAULT_BRANCH=$(gh repo view --json defaultBranchRef --jq .defaultBranchRef.name)
+EVIDENCE_BRANCH="qa-evidence"                        # one branch for all evidence; slash-free: some raw URLs 404 on slashed refs
 
-# create the evidence branch if missing (branched from the default branch head)
+# create the evidence branch if missing, as an orphan (no parent, only a README), so it never
+# carries the code. It normally exists already: never delete it.
 gh api "repos/${OWNER_REPO}/git/refs/heads/${EVIDENCE_BRANCH}" >/dev/null 2>&1 || {
-  SHA=$(gh api "repos/${OWNER_REPO}/git/refs/heads/${DEFAULT_BRANCH}" --jq .object.sha)
-  gh api -X POST "repos/${OWNER_REPO}/git/refs" -f ref="refs/heads/${EVIDENCE_BRANCH}" -f sha="$SHA" >/dev/null
+  printf '# qa-evidence\n\nPR evidence images, one folder per slug. Keep this branch: PR comments link here.\n' > /tmp/ev-readme.md
+  README_SHA=$(gh api -X POST "repos/${OWNER_REPO}/git/blobs" -F content=@/tmp/ev-readme.md -f encoding=utf-8 --jq .sha)
+  TREE_SHA=$(jq -n --arg s "$README_SHA" '{tree:[{path:"README.md",mode:"100644",type:"blob",sha:$s}]}' \
+    | gh api -X POST "repos/${OWNER_REPO}/git/trees" --input - --jq .sha)
+  COMMIT_SHA=$(jq -n --arg t "$TREE_SHA" '{message:"qa evidence: start the evidence branch",tree:$t,parents:[]}' \
+    | gh api -X POST "repos/${OWNER_REPO}/git/commits" --input - --jq .sha)
+  gh api -X POST "repos/${OWNER_REPO}/git/refs" -f ref="refs/heads/${EVIDENCE_BRANCH}" -f sha="$COMMIT_SHA" >/dev/null
 }
 
 # upload each image. An image-sized base64 string blows the shell arg limit, so it

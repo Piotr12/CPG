@@ -37,6 +37,8 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 ## Agent pipeline (om-* skills)
 
+- **2026-10-19 — Never delete the `qa-evidence` branch** — PR comments embed screenshots and mockups from `raw.githubusercontent.com/<repo>/qa-evidence/<slug>/…`. Deleting the branch, or a folder in it, silently breaks the images in every old comment. Cleaning up the old per-PR `qa-evidence-*` branches did exactly that, so evidence now lives in one long-lived orphan branch (`attach-image-evidence` in `.ai/trackers/github.md`).
+
 - **2026-10-17 — zsh doesn't word-split `$cmd`** — `for c in "npm run lint" …; do $c; done` runs `"npm run lint"` as one command name under zsh, so every step exits 127 and the gate looks broken. Run such loops under `bash -c`, or use `eval "$c"`.
 - **2026-10-17 — Load `PIPELINE_LABELS` before `set_pipeline_label`** — the GitHub descriptor's guard removes the competing pipeline labels listed in `$PIPELINE_LABELS`. Unset, it silently only adds the new label, leaving two pipeline labels on the PR. Set `PIPELINE_LABELS="$(jq -r '.labels.pipeline | join(" ")' .ai/agentic.config.json)"` (and `LABELS_ENABLED`) before sourcing the guards.
 - **2026-10-17 — The pipeline can't approve its own PRs** — the om-* skills run as the human's GitHub account (Piotr12), so GitHub rejects approve/request-changes on PRs they opened, and self-approval must not be worked around. Post the review as a PR comment, keep the PR in `review` (never `merge-queue`), and leave approval to a human. A bot account or GitHub App token would remove the limit.
