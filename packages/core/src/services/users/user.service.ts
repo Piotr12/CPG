@@ -1,4 +1,4 @@
-import { Session, UniqueConstraintViolationException, User, type EntityManager, type UserRole } from "@cpg/db";
+import { ApiToken, Session, UniqueConstraintViolationException, User, type EntityManager, type UserRole } from "@cpg/db";
 import { ConflictError, NotFoundError } from "../../http/errors";
 import type { AuditActor } from "../audit/actor";
 import { recordGlobalAudit, type AuditEntry } from "../audit/audit-recorder";
@@ -31,9 +31,9 @@ interface Deps {
  * The admin's account management: create normal users, reset their passwords, deactivate and
  * reactivate them. Only `role = user` rows are ever written here, so no path creates a second
  * admin or touches the built-in one, and nothing deletes an account. A reset or deactivation ends
- * every session of that user in the same transaction (R06). Every change records its Global audit
- * entry in that same flush (R08). Callers check that the actor is the admin (`assertAdmin`) before
- * calling.
+ * every session of that user and deletes every API token of theirs in the same transaction (R06).
+ * Every change records its Global audit entry in that same flush (R08). Callers check that the
+ * actor is the admin (`assertAdmin`) before calling.
  */
 export class UserService {
   private readonly em: EntityManager;
@@ -92,15 +92,19 @@ export class UserService {
   }
 
   /**
-   * Applies `change` to a normal user in one transaction: ends their sessions and records the audit
-   * entry it returns, together with the change itself.
+   * Applies `change` to a normal user in one transaction: when it says so, ends their sessions and
+   * deletes their API tokens (API-011, API-012), and records the audit entry it returns, together
+   * with the change itself.
    */
   private async changeNormalUser(userId: string, actor: AuditActor, change: (user: User) => Change): Promise<UserSummary> {
     return this.em.transactional(async (em) => {
       const user = await em.findOne(User, { id: userId, role: "user" });
       if (!user) throw new NotFoundError("NOT_FOUND", USER_NOT_FOUND);
       const { endSessions, audit } = change(user);
-      if (endSessions) await em.nativeDelete(Session, { user: user.id });
+      if (endSessions) {
+        await em.nativeDelete(Session, { user: user.id });
+        await em.nativeDelete(ApiToken, { user: user.id });
+      }
       if (audit) recordGlobalAudit(em, actor, audit);
       await em.flush();
       return toSummary(user);

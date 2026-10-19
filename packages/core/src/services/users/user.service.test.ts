@@ -1,7 +1,7 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { GlobalAuditEvent, initOrm, Session, User, type Orm } from "@cpg/db";
+import { ApiToken, GlobalAuditEvent, initOrm, Session, User, type Orm } from "@cpg/db";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadConfig } from "../../config";
 import { migrateDatabase, toDbOptions } from "../../database";
@@ -22,6 +22,16 @@ describe("UserService", () => {
   const service = () => new UserService({ em: orm.em.fork() });
   const stored = (username: string) => orm.em.fork().findOneOrFail(User, { username });
   const sessionCount = (username: string) => orm.em.fork().count(Session, { user: { username } });
+  const tokenCount = (username: string) => orm.em.fork().count(ApiToken, { user: { username } });
+  /** Gives the user `count` API tokens. */
+  async function createTokens(username: string, count: number): Promise<void> {
+    const em = orm.em.fork();
+    const user = await em.findOneOrFail(User, { username });
+    for (let i = 0; i < count; i++) {
+      em.create(ApiToken, { user, name: `token-${i}`, tokenHash: `${username}-token-${i}`.padEnd(64, "0") });
+    }
+    await em.flush();
+  }
   /** The Global audit entries about one account, oldest first (the audit is never cleared). */
   const auditOf = (userId: string) =>
     orm.em.fork().find(GlobalAuditEvent, { subjectId: userId }, { orderBy: { occurredAt: "asc", id: "asc" } });
@@ -110,11 +120,13 @@ describe("UserService", () => {
   });
 
   describe("resetPassword", () => {
-    it("replaces the hash and ends all of that user's sessions, nobody else's", async () => {
+    it("replaces the hash and ends all of that user's sessions and tokens, nobody else's (API-012)", async () => {
       const alice = await service().create({ username: "alice", password: PASSWORD }, ACTOR);
       await service().create({ username: "bob", password: PASSWORD }, ACTOR);
       await openSessions("alice", 2);
       await openSessions("bob", 1);
+      await createTokens("alice", 2);
+      await createTokens("bob", 1);
 
       await service().resetPassword(alice.id, "brand new password", ACTOR);
 
@@ -123,6 +135,8 @@ describe("UserService", () => {
       expect(await verifyPassword(PASSWORD, row.passwordHash!)).toBe(false);
       expect(await sessionCount("alice")).toBe(0);
       expect(await sessionCount("bob")).toBe(1);
+      expect(await tokenCount("alice")).toBe(0);
+      expect(await tokenCount("bob")).toBe(1);
     });
 
     it("can't touch the built-in admin or an unknown id", async () => {
@@ -140,6 +154,7 @@ describe("UserService", () => {
     it("changes nothing when the transaction fails", async () => {
       const alice = await service().create({ username: "alice", password: PASSWORD }, ACTOR);
       await openSessions("alice", 2);
+      await createTokens("alice", 2);
       const before = (await stored("alice")).passwordHash;
       const users = service();
       vi.spyOn(Object.getPrototypeOf(orm.em), "flush").mockRejectedValueOnce(new Error("disk full"));
@@ -148,23 +163,30 @@ describe("UserService", () => {
 
       expect((await stored("alice")).passwordHash).toBe(before);
       expect(await sessionCount("alice")).toBe(2);
+      expect(await tokenCount("alice")).toBe(2);
       expect((await auditOf(alice.id)).map(({ action }) => action)).toEqual(["users.user.created"]);
     });
   });
 
   describe("setActive", () => {
-    it("deactivates, ending every session, and reactivates with the same password", async () => {
+    it("deactivates, ending every session and token, and reactivates with the same password and no token", async () => {
       const alice = await service().create({ username: "alice", password: PASSWORD }, ACTOR);
+      await service().create({ username: "bob", password: PASSWORD }, ACTOR);
       await openSessions("alice", 2);
+      await createTokens("alice", 2);
+      await createTokens("bob", 1);
 
       expect(await service().setActive(alice.id, false, ACTOR)).toMatchObject({ username: "alice", active: false });
       expect(await sessionCount("alice")).toBe(0);
+      expect(await tokenCount("alice")).toBe(0);
+      expect(await tokenCount("bob")).toBe(1);
       expect((await stored("alice")).active).toBe(false);
 
       expect(await service().setActive(alice.id, true, ACTOR)).toMatchObject({ active: true });
       const row = await stored("alice");
       expect(row.active).toBe(true);
       expect(await verifyPassword(PASSWORD, row.passwordHash!)).toBe(true);
+      expect(await tokenCount("alice")).toBe(0); // API-011: deleted tokens don't come back
     });
 
     it("is idempotent", async () => {
@@ -176,13 +198,15 @@ describe("UserService", () => {
       await expect(service().setActive(alice.id, true, ACTOR)).resolves.toMatchObject({ active: true });
     });
 
-    it("keeps sessions when reactivating", async () => {
+    it("keeps sessions and tokens when reactivating", async () => {
       const alice = await service().create({ username: "alice", password: PASSWORD }, ACTOR);
       await openSessions("alice", 1);
+      await createTokens("alice", 1);
 
       await service().setActive(alice.id, true, ACTOR);
 
       expect(await sessionCount("alice")).toBe(1);
+      expect(await tokenCount("alice")).toBe(1);
     });
 
     it("can't deactivate the built-in admin", async () => {

@@ -23,6 +23,13 @@ async function auditRows(browser: Browser): Promise<Row[]> {
   return rows.filter((cells) => cells[5] === USERNAME) as Row[];
 }
 
+/**
+ * A page condition on this file's own row of /admin/users: other files' accounts share the list (one
+ * of them may well be inactive), so a page-wide check would wait on the wrong row.
+ */
+const ownRow = (condition: string) =>
+  `[...document.querySelectorAll("tbody tr")].some((row) => row.innerText.startsWith(${JSON.stringify(`${USERNAME}	`)}) && ${condition})`;
+
 /** Opens the account's row menu on /admin/users and picks an item, then confirms if asked. */
 async function rowAction(admin: Browser, item: string, confirm?: string) {
   await admin.clickRole("button", `Actions for ${USERNAME}`);
@@ -61,7 +68,7 @@ describe("every change is kept in an append-only audit", () => {
     await admin.waitUntil(`!document.querySelector("[role=dialog]")`);
 
     await rowAction(admin, "Deactivate", "Deactivate");
-    await admin.waitForText("Inactive");
+    await admin.waitUntil(ownRow(`row.innerText.includes("Inactive")`));
 
     const rows = await auditRows(admin);
     expect(await admin.title()).toBe("Global audit · Caveman Planning Good");
@@ -88,7 +95,7 @@ describe("every change is kept in an append-only audit", () => {
     await admin.open(`${baseUrl}/admin/users`);
     await admin.waitFor("table");
     await rowAction(admin, "Reactivate", "Reactivate");
-    await admin.waitUntil(`!document.body.innerText.includes("Inactive")`);
+    await admin.waitUntil(ownRow(`!row.innerText.includes("Inactive")`));
 
     await signIn(alice, baseUrl, NEW_PASSWORD, USERNAME);
     await alice.waitUntil(`document.querySelector("strong")?.innerText === ${JSON.stringify(USERNAME)}`);

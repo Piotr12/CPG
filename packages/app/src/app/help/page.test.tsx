@@ -27,6 +27,7 @@ describe("HelpPage", () => {
       "Signing in",
       "Cave control",
       "Managing users",
+      "API tokens",
       "Test and Prod",
       "The Global audit",
       "A tenant's audit",

@@ -6,6 +6,7 @@ export const HELP_TOPIC_IDS = [
   "signing-in",
   "admin-home",
   "managing-users",
+  "api-tokens",
   "test-and-prod",
   "global-audit",
   "tenant-audit",
@@ -24,6 +25,7 @@ export const HELP_TOPIC_ROUTES: Record<HelpTopicId, string> = {
   "signing-in": "/login",
   "admin-home": "/admin",
   "managing-users": "/admin/users",
+  "api-tokens": "/admin/tokens",
   "test-and-prod": "/admin/[tenant]",
   "global-audit": "/admin/audit",
   "tenant-audit": "/admin/[tenant]/audit",
@@ -85,10 +87,19 @@ const en: Record<HelpTopicId, HelpText> = {
       "Users are never deleted: an account stays, so its history keeps its name. The built-in administrator can't be changed here.",
     ],
   },
+  "api-tokens": {
+    title: "API tokens",
+    body: [
+      "API tokens let a script or tool use the CPG API as you. Open API tokens in the header, choose Create token, give it a name and create it.",
+      "The secret is shown once. Copy it straight away: CPG stores only a fingerprint of it and can never show it again. If you lose it, revoke the token and create a new one.",
+      "Send the secret in every API request as the Authorization: Bearer header. The token can do exactly what your account can, in Test and Prod, and it never expires.",
+      "Revoke ends a token at once. A password reset or a deactivation ends all of an account's tokens. Tokens can be listed and revoked through the API too, but only created here.",
+    ],
+  },
   "global-audit": {
     title: "The Global audit",
     body: [
-      "Global audit, in the header, opens it: every change to accounts, newest first. It lists users created, passwords reset, accounts deactivated or reactivated, and language or theme changes.",
+      "Global audit, in the header, opens it: every change to accounts, newest first. It lists users created, passwords reset, accounts deactivated or reactivated, language or theme changes, and API tokens created or revoked.",
       "Each entry shows when it happened (in UTC), the account that made it, the session it came from, the channel (UI for CPG's screens, API for programs) and what changed, as before → after.",
       "A password reset is listed without the password: CPG never records passwords or their hashes.",
       "Every account can read the audit, and nobody can change or delete an entry, not even the administrator. Older entries shows the previous page.",
@@ -164,10 +175,19 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Użytkownicy nigdy nie są usuwani: konto zostaje, więc historia zachowuje jego nazwę. Wbudowanego administratora nie można tu zmienić.",
     ],
   },
+  "api-tokens": {
+    title: "Tokeny API",
+    body: [
+      "Tokeny API pozwalają skryptowi lub narzędziu korzystać z API CPG w twoim imieniu. Otwórz Tokeny API w nagłówku, wybierz Utwórz token, nadaj mu nazwę i utwórz go.",
+      "Sekret jest pokazywany tylko raz. Skopiuj go od razu: CPG przechowuje wyłącznie jego odcisk i nigdy nie pokaże go ponownie. Jeśli go zgubisz, unieważnij token i utwórz nowy.",
+      "Wysyłaj sekret w każdym żądaniu do API jako nagłówek Authorization: Bearer. Token może dokładnie to, co twoje konto, w środowiskach Test i Prod, i nigdy nie wygasa.",
+      "Unieważnij natychmiast kończy działanie tokenu. Reset hasła lub dezaktywacja kończy działanie wszystkich tokenów konta. Tokeny można też wyświetlać i unieważniać przez API, ale tworzyć tylko tutaj.",
+    ],
+  },
   "global-audit": {
     title: "Audyt globalny",
     body: [
-      "Audyt globalny w nagłówku otwiera ten audyt: każdą zmianę kont, od najnowszej. Znajdziesz tu utworzonych użytkowników, zresetowane hasła, dezaktywowane i ponownie aktywowane konta oraz zmiany języka lub motywu.",
+      "Audyt globalny w nagłówku otwiera ten audyt: każdą zmianę kont, od najnowszej. Znajdziesz tu utworzonych użytkowników, zresetowane hasła, dezaktywowane i ponownie aktywowane konta, zmiany języka lub motywu oraz utworzone i unieważnione tokeny API.",
       "Każdy wpis pokazuje, kiedy nastąpiła zmiana (w UTC), które konto ją wprowadziło, z jakiej sesji, jakim kanałem (Ekran dla ekranów CPG, Interfejs API dla programów) i co się zmieniło, jako przed → po.",
       "Reset hasła jest zapisany bez hasła: CPG nigdy nie zapisuje haseł ani ich skrótów.",
       "Audyt może przeglądać każde konto, a nikt nie może zmienić ani usunąć wpisu, nawet administrator. Starsze wpisy pokazują poprzednią stronę.",

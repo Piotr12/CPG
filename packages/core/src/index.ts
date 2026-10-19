@@ -10,6 +10,8 @@ export * from "./http/parse-input";
 export * from "./http/result";
 export * from "./http/server-action";
 export * from "./http/tenant-server-action";
+export * from "./services/api-tokens/api-token.service";
+export * from "./services/auth/actor";
 export * from "./services/audit/actor";
 export * from "./services/audit/audit.service";
 export * from "./services/auth/auth.service";

@@ -7,6 +7,7 @@ const core = vi.hoisted(() => ({
   assertServerConfig: vi.fn(),
   migrateDatabase: vi.fn(),
   revokeBuiltInAdminSessions: vi.fn(),
+  revokeAdminTokensIfPasswordChanged: vi.fn(),
 }));
 vi.mock("@cpg/core", () => core);
 
@@ -15,6 +16,7 @@ describe("register", () => {
     core.loadConfig.mockReturnValue(config);
     core.assertServerConfig.mockReset();
     core.revokeBuiltInAdminSessions.mockResolvedValue(0);
+    core.revokeAdminTokensIfPasswordChanged.mockResolvedValue(0);
     vi.spyOn(console, "info").mockImplementation(() => {});
   });
   afterEach(() => {
@@ -48,6 +50,20 @@ describe("register", () => {
     expect(console.info).toHaveBeenCalledWith("Signed the admin out of 3 session(s)");
   });
 
+  it("revokes the admin's API tokens after migrating when the admin password changed", async () => {
+    vi.stubEnv("NEXT_RUNTIME", "nodejs");
+    core.migrateDatabase.mockResolvedValue([]);
+    core.revokeAdminTokensIfPasswordChanged.mockResolvedValue(2);
+
+    await register();
+
+    expect(core.revokeAdminTokensIfPasswordChanged).toHaveBeenCalledWith(config);
+    expect(core.migrateDatabase.mock.invocationCallOrder[0]).toBeLessThan(
+      core.revokeAdminTokensIfPasswordChanged.mock.invocationCallOrder[0],
+    );
+    expect(console.info).toHaveBeenCalledWith("The admin password changed: revoked 2 admin API token(s)");
+  });
+
   it("logs why and exits, without migrating, when the config is not usable", async () => {
     vi.stubEnv("NEXT_RUNTIME", "nodejs");
     vi.spyOn(console, "error").mockImplementation(() => {});
@@ -63,6 +79,7 @@ describe("register", () => {
     expect(exit).toHaveBeenCalledWith(1);
     expect(core.migrateDatabase).not.toHaveBeenCalled();
     expect(core.revokeBuiltInAdminSessions).not.toHaveBeenCalled();
+    expect(core.revokeAdminTokensIfPasswordChanged).not.toHaveBeenCalled();
   });
 
   it("stays quiet when there was nothing to migrate or revoke", async () => {

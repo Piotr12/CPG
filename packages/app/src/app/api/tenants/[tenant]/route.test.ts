@@ -22,6 +22,7 @@ describe("GET /api/tenants/{tenant}", () => {
     const response = await get("prod");
 
     expect(mocks.tenantScope).toHaveBeenCalledWith("prod");
+    expect(mocks.requireApiUser).toHaveBeenCalledWith(expect.any(Request));
     expect(await response.json()).toEqual({ ok: true, data: { code: "prod", name: "Prod", generation: 1 } });
   });
 

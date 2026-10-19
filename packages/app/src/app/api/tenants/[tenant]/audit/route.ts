@@ -8,7 +8,7 @@ import { requireApiUser } from "../../../../../auth/require-api-user";
  */
 export const GET = apiHandler(
   async (request: Request, { params }: RouteContext<"/api/tenants/[tenant]/audit">) => {
-    await requireApiUser();
+    await requireApiUser(request);
     const { cradle } = await tenantScope((await params).tenant);
     const query = parseInput(auditListSchema, Object.fromEntries(new URL(request.url).searchParams));
     return cradle.auditService.listTenant(query);

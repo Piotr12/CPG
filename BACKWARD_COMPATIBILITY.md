@@ -76,9 +76,20 @@ Rename either one only by reading the old name for one release.
 Route handlers under `app/api/` are protected the same way: their paths, methods, request schemas, the result envelope (`{ ok, data }` / `{ ok: false, error: { code, message, fieldErrors? } }`), error codes and HTTP statuses. Changes are additive (new optional fields, new routes), and removals go through a deprecation release. Today's routes:
 
 - `GET /api/tenants`;
-- `GET /api/tenants/{tenant}` (404 `TENANT_NOT_FOUND`).
+- `GET /api/tenants/{tenant}` (404 `TENANT_NOT_FOUND`);
+- `GET /api/tokens` (the caller's own tokens);
+- `DELETE /api/tokens/{id}` (404 `TOKEN_NOT_FOUND`);
+- `GET /api/users` (403 `FORBIDDEN` for a normal user).
 
 Every tenant-scoped endpoint lives under `/api/tenants/{tenant}/`.
+
+**Authentication** is part of the contract:
+- `Authorization: Bearer <token>` works on every route. A bad token is 401 "Invalid or revoked token.", never a fallback to the cookie.
+- The `cpg_session` cookie works on `GET`/`HEAD` only.
+- Tokens are `cpg_`-prefixed and never expire.
+- No route creates a token (R07). Adding one is a product change, not an API addition.
+
+**Announced, not yet enforced:** once E02-S03 (#21) lands, every state-changing bearer request must carry an `Idempotency-Key` header (R07), including `DELETE /api/tokens/{id}`. Until then the header is optional.
 
 ### 5. Commands used by CI, deploy and the docs
 

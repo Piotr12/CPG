@@ -42,6 +42,7 @@ describe("migrate", () => {
       "Migration20261019092708_tenants",
       "Migration20261019103355_users_password_active",
       "Migration20261019110502_audit_events",
+      "Migration20261019115945_api_tokens",
     ]);
     expect(await migrate({ databasePath })).toEqual([]);
   });
@@ -53,9 +54,9 @@ describe("getMigrationStatus", () => {
     const orm = await initOrm({ databasePath });
 
     try {
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 6 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 7 });
       await orm.migrator.up();
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 6, pending: 0 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 7, pending: 0 });
     } finally {
       await orm.close();
     }
@@ -72,7 +73,7 @@ describe("migrations", () => {
         await orm.em
           .getConnection()
           .execute<{ name: string }[]>(
-            "select name from sqlite_master where name in ('setting', 'user', 'session', 'user_preference', 'tenant', 'global_audit_event', 'tenant_audit_event')",
+            "select name from sqlite_master where name in ('setting', 'user', 'session', 'user_preference', 'tenant', 'api_token', 'global_audit_event', 'tenant_audit_event')",
           )
       )
         .map(({ name }) => name)
@@ -89,6 +90,17 @@ describe("migrations", () => {
         .sort();
 
     try {
+      expect(await tables()).toEqual([
+        "api_token",
+        "global_audit_event",
+        "session",
+        "setting",
+        "tenant",
+        "tenant_audit_event",
+        "user",
+        "user_preference",
+      ]);
+      await orm.migrator.down();
       expect(await tables()).toEqual([
         "global_audit_event",
         "session",

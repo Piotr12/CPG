@@ -5,6 +5,7 @@ import { entities, initOrm, type Orm } from "@cpg/db";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { loadConfig } from "../config";
 import { toDbOptions } from "../database";
+import { ApiTokenService } from "../services/api-tokens/api-token.service";
 import { AuditService } from "../services/audit/audit.service";
 import { AuthService } from "../services/auth/auth.service";
 import { LoginThrottle } from "../services/auth/login-throttle";
@@ -32,6 +33,7 @@ describe("createAppContainer", () => {
     expect(cradle.loginThrottle).toBeInstanceOf(LoginThrottle);
     expect(cradle.userService).toBeInstanceOf(UserService);
     expect(cradle.userPreferenceService).toBeInstanceOf(UserPreferenceService);
+    expect(cradle.apiTokenService).toBeInstanceOf(ApiTokenService);
     expect(cradle.auditService).toBeInstanceOf(AuditService);
   });
 

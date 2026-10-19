@@ -1,7 +1,8 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import { Session, User, type EntityManager, type UserRole } from "@cpg/db";
+import { Session, User, type EntityManager } from "@cpg/db";
 import type { AppConfig } from "../../config";
 import { TooManyRequestsError, UnauthorizedError } from "../../http/errors";
+import type { Actor } from "./actor";
 import type { LoginThrottle } from "./login-throttle";
 import { verifyDummy, verifyPassword } from "./password-hash";
 import { generateSessionToken, hashSessionToken } from "./session-token";
@@ -28,11 +29,9 @@ export interface SignedIn {
   userId: string;
 }
 
-export interface SessionUser {
+/** An account signed in through a browser session. */
+export interface SessionUser extends Actor {
   sessionId: string;
-  userId: string;
-  username: string;
-  role: UserRole;
 }
 
 interface Deps {

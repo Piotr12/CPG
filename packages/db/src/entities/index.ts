@@ -1,3 +1,4 @@
+import { API_TOKEN_NAME_MAX, ApiToken } from "./api-tokens/api-token.entity";
 import {
   AUDIT_APPEND_ONLY,
   AUDIT_CHANNELS,
@@ -21,17 +22,17 @@ import {
   selectTenant,
 } from "./tenants/tenant-owned";
 
-export { LOCALES, Session, Setting, Tenant, TENANT_CODES, THEMES, User, USER_ROLES, UserPreference };
+export { API_TOKEN_NAME_MAX, ApiToken, LOCALES, Session, Setting, Tenant, TENANT_CODES, THEMES, User, USER_ROLES, UserPreference };
 export { AUDIT_APPEND_ONLY, AUDIT_CHANNELS, GlobalAuditEvent, TenantAuditEvent };
 export type { AuditChannel, AuditSnapshot, AuditValue, Locale, TenantCode, Theme, UserRole };
 export { currentTenant, isTenantOwned, TENANT_FILTER, tenantOwned, TenantViolationError, selectTenant };
 
 /** Every entity the ORM knows about — add new ones here. */
-export const entities = [Setting, User, Session, UserPreference, Tenant, GlobalAuditEvent, TenantAuditEvent];
+export const entities = [Setting, User, Session, UserPreference, Tenant, ApiToken, GlobalAuditEvent, TenantAuditEvent];
 
 /**
- * Entities that belong to no tenant: accounts, sessions, preferences, settings, the tenants
- * themselves and the Global audit. Every other entity must be declared with `tenantOwned()` (enforced by
- * tests/tenant-ownership.test.ts).
+ * Entities that belong to no tenant: accounts, sessions, API tokens, preferences, settings, the
+ * tenants themselves and the Global audit. Every other entity must be declared with `tenantOwned()`
+ * (enforced by tests/tenant-ownership.test.ts).
  */
-export const GLOBAL_ENTITIES = [Setting, User, Session, UserPreference, Tenant, GlobalAuditEvent];
+export const GLOBAL_ENTITIES = [Setting, User, Session, UserPreference, Tenant, ApiToken, GlobalAuditEvent];

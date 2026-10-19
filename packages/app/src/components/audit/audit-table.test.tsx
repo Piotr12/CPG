@@ -76,9 +76,9 @@ describe("AuditTable", () => {
   });
 
   it("shows an action it has no name for as its ID", () => {
-    render(<AuditTable entries={[entry({ action: "tokens.api-token.created" })]} label="Global audit" labels={en.audit} />);
+    render(<AuditTable entries={[entry({ action: "tenants.tenant.read-only-changed" })]} label="Global audit" labels={en.audit} />);
 
-    expect(screen.getByText("tokens.api-token.created")).toBeTruthy();
+    expect(screen.getByText("tenants.tenant.read-only-changed")).toBeTruthy();
   });
 
   it("offers no way to change an entry (AUD-009)", () => {

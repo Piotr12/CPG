@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { Actor } from "../services/auth/actor";
 import type { SessionUser } from "../services/auth/auth.service";
 import { assertAdmin, assertSignedIn } from "./auth";
 import { ForbiddenError, UnauthorizedError } from "./errors";
@@ -28,5 +29,16 @@ describe("assertAdmin", () => {
 
   it("rejects a missing session as unauthorized, not forbidden", () => {
     expect(() => assertAdmin(null)).toThrow(UnauthorizedError);
+  });
+});
+
+describe("with an API token", () => {
+  const adminToken: Actor = { userId: "u1", username: "admin", role: "admin" };
+  const aliceToken: Actor = { userId: "u2", username: "alice", role: "user" };
+
+  it("applies the token owner's role, exactly as for a session (API-002, API-010)", () => {
+    expect(assertSignedIn(aliceToken)).toBe(aliceToken);
+    expect(assertAdmin(adminToken)).toBe(adminToken);
+    expect(() => assertAdmin(aliceToken)).toThrow(ForbiddenError);
   });
 });

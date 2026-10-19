@@ -22,8 +22,10 @@ describe("GET /api/tenants", () => {
   it("lists both tenants' metadata for a signed-in account (API-034)", async () => {
     mocks.requireApiUser.mockResolvedValue({ username: "admin" });
 
-    const response = await GET(new Request("http://cpg.test/api/tenants"), undefined);
+    const request = new Request("http://cpg.test/api/tenants");
+    const response = await GET(request, undefined);
 
+    expect(mocks.requireApiUser).toHaveBeenCalledWith(request);
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ ok: true, data: TENANTS });
   });

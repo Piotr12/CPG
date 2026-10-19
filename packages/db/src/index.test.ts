@@ -4,8 +4,10 @@ import * as db from "./index";
 describe("@cpg/db", () => {
   it("exports the public API", () => {
     expect(Object.keys(db).sort()).toEqual([
+      "API_TOKEN_NAME_MAX",
       "AUDIT_APPEND_ONLY",
       "AUDIT_CHANNELS",
+      "ApiToken",
       "GLOBAL_ENTITIES",
       "GlobalAuditEvent",
       "LOCALES",
@@ -37,6 +39,7 @@ describe("@cpg/db", () => {
       db.Session,
       db.UserPreference,
       db.Tenant,
+      db.ApiToken,
       db.GlobalAuditEvent,
       db.TenantAuditEvent,
     ]);

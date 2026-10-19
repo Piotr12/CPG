@@ -7,7 +7,7 @@ import { requireApiUser } from "../../../auth/require-api-user";
  * account (AUD-009). Read-only: no other method is exported, so Next.js answers 405 (AUD-010).
  */
 export const GET = apiHandler(async (request: Request) => {
-  await requireApiUser();
+  await requireApiUser(request);
   const query = parseInput(auditListSchema, Object.fromEntries(new URL(request.url).searchParams));
   return (await requestScope()).cradle.auditService.listGlobal(query);
 });

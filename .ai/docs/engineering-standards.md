@@ -59,7 +59,7 @@ There will be many concepts, and the main risk is that each route, action and pa
 - `server-action.ts` — wraps a server action. It parses the input with a Zod schema, maps thrown `AppError`s to the envelope, and logs anything else without leaking a stack trace. It is the default for mutations made from CPG's own pages.
 - `api-handler.ts` — the same wrapper for route handlers (`Response.json` + status code). Use it for endpoints called from outside the app or fetched by client components.
 - `make-crud-route.ts` — only once a plain-CRUD JSON API is genuinely needed. It takes a schema and service methods and returns `{ GET, POST, PUT, DELETE }`.
-- `auth.ts` — `assertSignedIn(user)` and `assertAdmin(user)` on a validated session, for actions and routes: they throw `UnauthorizedError` or `ForbiddenError` inside the wrapper, after parsing. Reading the session cookie can't live in `core` (it needs `next/headers`): `app/src/auth/` holds the cookie helpers and the `requireUser()`/`requireAdmin()` page gates, which validate through `AuthService`.
+- `auth.ts` — `assertSignedIn(user)` and `assertAdmin(user)` on a validated `Actor` (a session's `SessionUser` or an API token's `ApiActor`), for actions and routes: they throw `UnauthorizedError` or `ForbiddenError` inside the wrapper, after parsing. Reading the session cookie can't live in `core` (it needs `next/headers`): `app/src/auth/` holds the cookie helpers and the `requireUser()`/`requireAdmin()` page gates, which validate through `AuthService`.
 
 No action or route writes its own `try/catch` + response mapping.
 
@@ -150,6 +150,12 @@ When two principles pull in different directions, prefer the one that keeps the 
 Authentication is server-side sessions (specs `2026-10-19--0746UTC-admin-sign-in` and `2026-10-19--0912UTC-user-management`): the built-in admin and normal users sign in at `/login`, a random token goes into the `httpOnly` `cpg_session` cookie, and only its SHA-256 is stored. Every `/admin` page calls `requireUser()`, or `requireAdmin()` when it is admin-only, inside the `<Suspense>` child that renders its data. `tests/admin-pages-require-admin.test.ts` enforces both and keeps the list of admin-only pages. Nothing renders outside the gate. The following hold:
 
 - **Passwords** (if stored): `argon2id` (memory ≥ 19 MiB, iterations ≥ 2, parallelism 1) or `bcrypt` with cost ≥ 12. Don't pick a third option. CPG uses argon2id through Node's built-in `crypto.argon2` (`core/src/services/auth/password-hash.ts`, PHC strings), which is why `engines.node` is `>=24.7` and `assertServerConfig` refuses older runtimes.
+- **API tokens** (spec `2026-10-19--1053UTC-api-tokens`): every route handler starts with `requireApiUser(request)` (`app/src/auth/require-api-user.ts`).
+  - An `Authorization: Bearer` header authenticates through `ApiTokenService` only, never falling back to the cookie.
+  - Without one, the session cookie is accepted for `GET`/`HEAD` only, so no cookie-authenticated route changes state and none needs a CSRF header.
+  - Tokens are `cpg_` + 32 random bytes, stored as their SHA-256. They carry the owner's current role and never expire.
+  - Tokens are created only by the tokens screen's server action, from a cookie session: `ApiTokenService.create` takes a `SessionUser`, and `tests/api-token-minting.test.ts` pins the single caller (R07).
+  - A password reset or deactivation deletes the user's tokens with their sessions. A changed `CPG_ADMIN_PASSWORD` deletes the admin's at startup.
 - **Sessions:** a server-side session or a signed token (HS256+, secret ≥ 32 random bytes) in an `httpOnly`, `secure` (production), `sameSite=lax` cookie with a scoped `path` and a short expiry. Never use `localStorage` or a non-httpOnly cookie. (The non-sensitive `cpg_theme` display hint is the only script-readable cookie.) Document missing refresh/rotation as a known limitation rather than silently lengthening the expiry.
 - **Server-side enforcement:** every non-public page, action and route checks the session itself. Hiding a button is not enforcement.
 - **Record-level authorization:** check access to *this* record (no insecure direct object references). A missing ownership/permission check is as serious as a missing auth check.
@@ -305,7 +311,8 @@ Done when these standards were adopted:
   - `core/src/http/parse-input.ts` (`parseInput` for query strings and route parameters, shared with `serverAction`);
   - `/admin/audit` and `/admin/[tenant]/audit` (`app/src/components/audit/`), and `GET /api/audit` and `GET /api/tenants/{tenant}/audit`.
 
-  `UserService` and `UserPreferenceService` are the first producers.
+  `UserService` and `UserPreferenceService` are the first producers, then `ApiTokenService` (token create and revoke, with `apiActor`/`callerActor` naming the token behind an API call).
+- API tokens (2026-10-19, spec `2026-10-19--1053UTC-api-tokens`): the global `ApiToken` entity, `ApiTokenService` (`core/src/services/api-tokens/`), bearer authentication in `requireApiUser(request)`, the `Actor` type, and `/admin/tokens`. It is the reference for a self-service screen (every account, own records only).
 - Test infrastructure: Vitest unit tests next to every source file at 100% coverage, integration tests (Testcontainers runs the production image, agent-browser drives it), and a CI workflow for pull requests.
 - Layering switched to DevMentor's `app → core → db` (the first version of this document kept CPG's original `db → core`). Config and DI moved fully into `core`, the composition root moved from `app/src/server/container.ts` into `core`, and the migration CLI entry point moved to `core/scripts/`. `db` now has no workspace dependencies.
 
