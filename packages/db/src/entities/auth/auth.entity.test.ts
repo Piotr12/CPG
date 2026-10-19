@@ -36,6 +36,16 @@ describe("User and Session", () => {
     }
   });
 
+  it("defaults new accounts to active, with no password hash", async () => {
+    const em = orm.em.fork();
+    const user = em.create(User, { username: "fresh", role: "user" });
+    await em.flush();
+
+    const stored = await orm.em.fork().findOneOrFail(User, { id: user.id });
+    expect(stored.active).toBe(true);
+    expect(stored.passwordHash).toBeNull();
+  });
+
   it("keeps usernames and token hashes unique", async () => {
     const em = orm.em.fork();
     em.create(User, { username: "admin", role: "user" });
