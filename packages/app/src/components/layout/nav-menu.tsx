@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDownIcon, MenuIcon, UserRoundIcon, XIcon } from "lucide-react";
@@ -28,11 +28,21 @@ interface NavMenuProps {
 /**
  * The menu every page shares. From `md` the entries are inline and the account controls open from a
  * popover; below that one Menu button opens a sheet holding both. The entry for the open screen is
- * marked `aria-current="page"`.
+ * marked `aria-current="page"`. The bar lives in the root layout and keeps its state across
+ * navigations, so the popover and the sheet close whenever the path changes.
  */
 export function NavMenu({ items, account, locale, labels }: NavMenuProps) {
   const pathname = usePathname();
   const current = (href: string) => isCurrentPath(href, pathname);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  // Any navigation closes both (adjusting state while rendering, as React's docs recommend over an effect).
+  const [openedOn, setOpenedOn] = useState(pathname);
+  if (openedOn !== pathname) {
+    setOpenedOn(pathname);
+    setAccountOpen(false);
+    setSheetOpen(false);
+  }
 
   return (
     <div className="flex flex-1 items-center gap-4">
@@ -56,13 +66,14 @@ export function NavMenu({ items, account, locale, labels }: NavMenuProps) {
       </nav>
 
       {account && (
-        <Popover>
+        <Popover open={accountOpen} onOpenChange={setAccountOpen}>
           <PopoverTrigger asChild>
             {/* The name stays in the accessible name, so what a reader sees is what is announced (WCAG 2.5.3). */}
             <Button
               variant="outline"
               size="sm"
               aria-label={`${labels.account}: ${account.name}`}
+              data-action="account-menu"
               className="ml-auto hidden max-w-40 md:inline-flex"
             >
               <UserRoundIcon aria-hidden />
@@ -76,9 +87,9 @@ export function NavMenu({ items, account, locale, labels }: NavMenuProps) {
         </Popover>
       )}
 
-      <Sheet>
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetTrigger asChild>
-          <Button variant="outline" size="sm" className="ml-auto md:hidden">
+          <Button variant="outline" size="sm" data-action="open-menu" className="ml-auto md:hidden">
             <MenuIcon aria-hidden />
             {labels.menu}
           </Button>

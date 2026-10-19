@@ -109,6 +109,24 @@ describe("NavMenu", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
+  it("closes the account popover and the sheet when the page changes", () => {
+    const { rerender } = renderMenu();
+    const rerenderOn = (path: string) => {
+      mocks.pathname = path;
+      rerender(<NavMenu items={items} account={account} locale="en" labels={labels} />);
+    };
+
+    fireEvent.click(screen.getByRole("button", { name: "Account: alice" }));
+    expect(screen.getByRole("dialog", { name: "Account" })).toBeTruthy();
+    rerenderOn("/help");
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Menu" }));
+    expect(screen.getByRole("dialog", { name: "Menu" })).toBeTruthy();
+    rerenderOn("/admin/tokens");
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
   it("closes the sheet from its close button", () => {
     renderMenu();
 
