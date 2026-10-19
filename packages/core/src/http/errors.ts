@@ -35,3 +35,24 @@ export class TooManyRequestsError extends AppError {
     super("TOO_MANY_ATTEMPTS", message);
   }
 }
+
+/** Signed in, but this account may not do this (a normal user calling an admin-only action). */
+export class ForbiddenError extends AppError {
+  constructor(message = "You don't have access to this.") {
+    super("FORBIDDEN", message);
+  }
+}
+
+/** The record doesn't exist, or the caller may not know it exists. */
+export class NotFoundError extends AppError {
+  constructor(message = "Not found.") {
+    super("NOT_FOUND", message);
+  }
+}
+
+/** The write clashes with existing data, such as a taken unique name. */
+export class ConflictError extends AppError {
+  constructor(message: string) {
+    super("CONFLICT", message);
+  }
+}
