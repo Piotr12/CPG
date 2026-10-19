@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { passwordSchema } from "./create-user.schema";
-import { versionSchema } from "./version.schema";
+import { versionSchema } from "../version.schema";
 
 /** The admin's Reset password form and the `resetUserPassword` action share this schema. */
 export const resetPasswordSchema = z.object({
