@@ -1,6 +1,6 @@
 # Admin sign-in and the startup password guard
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-19 07:46 UTC
 **Issue:** #15 (E01-S01), epic #9 · **Design authority:** `.ai/specs/product-brief.md`, `.ai/specs/research/CPG-prd001.pdf` §05
 
@@ -254,3 +254,18 @@ Nothing is superseded.
    - sign out returns to `/login`, and `/admin` redirects again.
    - Update `smoke.test.ts` to sign in first and expect 2 migrations.
    - Then run the full gate: lint, typecheck, `test:coverage` (100%), build, `test:integration`, and `npm audit` triage for `zod`.
+
+## Implementation notes
+
+Implemented on PR #29. These deviations from the text above are deliberate:
+
+- **The startup guard exits the process itself.** The design says `register()` throws and Next.js stops. That holds for `next start`, but the standalone server in the Docker image (`node server.js`) only logs a failing `register()` and then answers every request with a 500. `instrumentation.ts` logs the message and calls `process.exit(1)`, and `tests/integration/startup-guard.test.ts` proves the container exits.
+- **The throttle keys every attempt by the submitted username, and adds an IP-wide cap.** Q6 puts all unknown usernames from one IP into one shared bucket. The code counts failures per client and username (5), per username across clients (20), and per client across all usernames (50, `MAX_FAILURES_PER_IP` in `services/auth/login-throttle.ts`). A block then looks the same for a real and an unknown username, so it never reveals which accounts exist, and name spraying from one address is still capped. A request with no usable client address gets no IP-wide bucket.
+
+Changed by later stories, without weakening this spec's criteria:
+- **E01-S02 (#16, PR #34):** `/admin` admits any active account through `requireUser()`; `requireAdmin()` guards only admin-only pages. `tests/admin-pages-require-admin.test.ts` keeps the list.
+- **E01-S03 (#17, PR #41):** a restart with a changed `CPG_ADMIN_PASSWORD` also revokes the admin's API tokens (`revokeAdminTokensIfPasswordChanged` in `core/src/database.ts`).
+- **#43 (PR #46):** the "Signed in as" header and the sign-out control moved into the account panel of the role-based menu (`components/layout/account-panel.tsx`).
+- `smoke.test.ts` now expects one migration per schema change made since, not the two named in step 9.
+
+Brief Q03 is closed in the brief as Q5 above decided, with `/help` added to the public frontend by `2026-10-19--0855UTC-user-preferences-footer-help`.
