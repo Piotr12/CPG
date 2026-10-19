@@ -69,7 +69,7 @@ flowchart LR
 Every tenant business write already passes through one of the two wrappers. Adding the check there covers today's materials and every later tenant write (documents, postings, imports, manual MRP runs) without touching their code.
 
 - **Reused:** `apiWrite`, `serverAction`, `assertAdmin`, `uiActor`/`apiActor`, `recordGlobalAudit`, `ConfirmDialog`, `Badge`, the strip and the error translation (`errorMessage`).
-- **Current consumers:** the materials actions and routes, which change only to hide their controls and refresh after a refusal.
+- **Current consumers:** the materials actions and routes, which change only to hide their controls while the tenant is read-only.
 - **Future work this depends on:**
   - A scheduled ("automatic") MRP run, if it is ever started outside a request, must call `assertWritable` itself (TEN-019, slice 3).
   - The Test reset must serialize against flag changes and restore the previous flag (TEN-022…027, slice 2).
