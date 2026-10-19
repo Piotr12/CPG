@@ -5,11 +5,11 @@ import { GlobalAuditEvent, initOrm, User, UserPreference, type Orm } from "@cpg/
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadConfig } from "../../config";
 import { migrateDatabase, toDbOptions } from "../../database";
-import type { Actor } from "../audit/actor";
+import type { AuditActor } from "../audit/actor";
 import { DEFAULT_PREFERENCES, UserPreferenceService } from "./user-preference.service";
 
 /** The account changes its own preferences, on the UI. */
-const ACTOR: Actor = { userId: "alice-id", username: "alice", sessionId: "alice-session", channel: "ui", token: null };
+const ACTOR: AuditActor = { userId: "alice-id", username: "alice", sessionId: "alice-session", channel: "ui", token: null };
 
 describe("UserPreferenceService", () => {
   const config = loadConfig({ DATA_DIR: mkdtempSync(path.join(tmpdir(), "cpg-preference-service-")) });

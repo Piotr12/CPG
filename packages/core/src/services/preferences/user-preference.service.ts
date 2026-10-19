@@ -1,6 +1,6 @@
 import { User, UserPreference, type EntityManager, type Locale, type Theme } from "@cpg/db";
 import type { UserPreferenceUpdate } from "../../validators/preferences/user-preference-update.schema";
-import type { Actor } from "../audit/actor";
+import type { AuditActor } from "../audit/actor";
 import { recordGlobalAudit } from "../audit/audit-recorder";
 
 export interface Preferences {
@@ -35,7 +35,7 @@ export class UserPreferenceService {
    * tabs can't undo each other. A real change is recorded in the Global audit, in the same short
    * transaction as the upsert; choosing what is already stored records nothing.
    */
-  async update(userId: string, change: UserPreferenceUpdate, actor: Actor): Promise<Preferences> {
+  async update(userId: string, change: UserPreferenceUpdate, actor: AuditActor): Promise<Preferences> {
     const changed = definedFields(change);
     const mergeFields = [...(Object.keys(changed) as (keyof Preferences)[]), "updatedAt" as const];
     return this.em.transactional(async (em) => {

@@ -6,7 +6,7 @@ import {
   type AuditSnapshot,
   type EntityManager,
 } from "@cpg/db";
-import type { Actor } from "./actor";
+import type { AuditActor } from "./actor";
 
 /** One change, as the service that made it describes it. */
 export interface AuditEntry {
@@ -30,17 +30,17 @@ const SECRET_KEY = /password|hash|secret/i;
  * created here: the caller's own flush (or transaction) commits it together with the change, so a
  * change is never stored without its entry, nor an entry without its change.
  */
-export function recordGlobalAudit(em: EntityManager, actor: Actor, entry: AuditEntry): void {
+export function recordGlobalAudit(em: EntityManager, actor: AuditActor, entry: AuditEntry): void {
   em.create(GlobalAuditEvent, toEvent(actor, entry));
 }
 
 /** `recordGlobalAudit` for the tenant audit; `em` must be scoped to the tenant that changed. */
-export function recordTenantAudit(em: EntityManager, actor: Actor, entry: AuditEntry): void {
+export function recordTenantAudit(em: EntityManager, actor: AuditActor, entry: AuditEntry): void {
   if (!currentTenant(em)) throw new TenantViolationError("audit tenant-owned data without a tenant scope");
   em.create(TenantAuditEvent, toEvent(actor, entry));
 }
 
-function toEvent(actor: Actor, { action, subject, before, after }: AuditEntry) {
+function toEvent(actor: AuditActor, { action, subject, before, after }: AuditEntry) {
   assertNoSecrets(before);
   assertNoSecrets(after);
   return {

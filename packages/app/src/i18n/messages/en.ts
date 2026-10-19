@@ -116,6 +116,15 @@ export const en = {
       "preferences.user-preference.updated": "Language or theme changed",
     },
     passwordNotRecorded: "Password replaced (not recorded)",
+    /** Snapshot field names in the Changes column; a field missing here is shown as stored. */
+    fields: { username: "username", role: "role", active: "active", locale: "language", theme: "theme" },
+    /** Snapshot values per field; a value missing here is shown as stored. */
+    values: {
+      role: { admin: "admin", user: "user" },
+      active: { true: "yes", false: "no" },
+      locale: { en: "English", pl: "Polish" },
+      theme: { light: "light", dark: "dark" },
+    },
   },
   tenants: {
     choose: "Choose a tenant",

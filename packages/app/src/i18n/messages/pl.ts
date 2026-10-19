@@ -110,6 +110,13 @@ export const pl: Messages = {
       "preferences.user-preference.updated": "Zmieniono język lub motyw",
     },
     passwordNotRecorded: "Hasło zmienione (niezapisane)",
+    fields: { username: "nazwa użytkownika", role: "rola", active: "aktywne", locale: "język", theme: "motyw" },
+    values: {
+      role: { admin: "administrator", user: "użytkownik" },
+      active: { true: "tak", false: "nie" },
+      locale: { en: "angielski", pl: "polski" },
+      theme: { light: "jasny", dark: "ciemny" },
+    },
   },
   tenants: {
     choose: "Wybierz środowisko",

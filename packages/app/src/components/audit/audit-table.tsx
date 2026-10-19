@@ -2,7 +2,7 @@ import type { AuditEntryView } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { Badge } from "@cpg/ui/components/badge";
 import type { Messages } from "../../i18n/messages/en";
-import { auditChanges, formatAuditValue } from "./audit-changes";
+import { auditChanges, formatAuditValue, type AuditChangeValue } from "./audit-changes";
 
 /** How many characters of a session id the table shows; the full id is in the cell's title. */
 const SESSION_PREFIX_LENGTH = 8;
@@ -63,18 +63,19 @@ function Changes({ entry, labels }: { entry: AuditEntryView; labels: Messages["a
   if (entry.action === "users.user.password-reset") {
     return <span className="text-muted-foreground">{labels.passwordNotRecorded}</span>;
   }
+  const fields: Record<string, string> = labels.fields;
+  const values: Record<string, Record<string, string>> = labels.values;
+  /** A value in the reader's language when the dictionary knows it, else as stored. */
+  const show = (field: string, value: AuditChangeValue) =>
+    values[field]?.[String(value)] ?? formatAuditValue(value);
   return (
     <ul className="flex flex-col gap-0.5">
       {auditChanges(entry.before, entry.after).map((change) => (
         <li key={change.field} className="whitespace-nowrap">
-          {change.field}:{" "}
-          {change.kind === "set" ? (
-            formatAuditValue(change.value)
-          ) : (
-            <>
-              {formatAuditValue(change.before)} → {formatAuditValue(change.after)}
-            </>
-          )}
+          {fields[change.field] ?? change.field}:{" "}
+          {change.kind === "set"
+            ? show(change.field, change.value)
+            : `${show(change.field, change.before)} → ${show(change.field, change.after)}`}
         </li>
       ))}
     </ul>

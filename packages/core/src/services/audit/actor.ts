@@ -6,7 +6,7 @@ import type { SessionUser } from "../auth/auth.service";
  * the channel. Two people sharing one account in two browsers are two sessions (AUD-008). A
  * bearer-token write (E01-S03) names its token; never its secret.
  */
-export interface Actor {
+export interface AuditActor {
   userId: string;
   username: string;
   sessionId: string | null;
@@ -15,6 +15,6 @@ export interface Actor {
 }
 
 /** The actor for a change made on CPG's own screens, from the validated session. */
-export function uiActor({ userId, username, sessionId }: SessionUser): Actor {
+export function uiActor({ userId, username, sessionId }: SessionUser): AuditActor {
   return { userId, username, sessionId, channel: "ui", token: null };
 }

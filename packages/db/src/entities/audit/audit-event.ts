@@ -14,7 +14,7 @@ export type AuditSnapshot = Record<string, AuditValue>;
 export const AUDIT_APPEND_ONLY = "audit is append-only";
 
 /**
- * The columns both audit stores share. Actor, session and subject are copied values, not foreign
+ * The columns both audit stores share. The actor, session and subject are copied values, not foreign
  * keys: an entry describes the world as it was and never depends on the rows it mentions.
  */
 export function auditEventProperties() {

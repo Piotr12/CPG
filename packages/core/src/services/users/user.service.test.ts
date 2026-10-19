@@ -8,11 +8,11 @@ import { migrateDatabase, toDbOptions } from "../../database";
 import { ConflictError, NotFoundError } from "../../http/errors";
 import { verifyPassword } from "../auth/password-hash";
 import { USER_NOT_FOUND, USERNAME_TAKEN, UserService } from "./user.service";
-import type { Actor } from "../audit/actor";
+import type { AuditActor } from "../audit/actor";
 
 const PASSWORD = "initial password 1";
 /** Who the tests act as: the admin, on the UI. */
-const ACTOR: Actor = { userId: "admin-id", username: "admin", sessionId: "admin-session", channel: "ui", token: null };
+const ACTOR: AuditActor = { userId: "admin-id", username: "admin", sessionId: "admin-session", channel: "ui", token: null };
 const MISSING_ID = "3f0c1e2a-6b7d-4c8e-9f10-1a2b3c4d5e6f";
 
 describe("UserService", () => {

@@ -10,14 +10,14 @@ import { AuthService, BUILT_IN_ADMIN_USERNAME, INVALID_CREDENTIALS, SESSION_TTL_
 import { UserService } from "../users/user.service";
 import { LoginThrottle, MAX_FAILURES_PER_CLIENT, MAX_FAILURES_PER_IP } from "./login-throttle";
 import { hashSessionToken } from "./session-token";
-import type { Actor } from "../audit/actor";
+import type { AuditActor } from "../audit/actor";
 
 const PASSWORD = "correct horse battery staple";
 const IP = "203.0.113.7";
 const NOW = new Date("2026-10-19T08:00:00Z");
 
 /** Who the tests act as: the admin, on the UI. */
-const ACTOR: Actor = { userId: "admin-id", username: "admin", sessionId: "admin-session", channel: "ui", token: null };
+const ACTOR: AuditActor = { userId: "admin-id", username: "admin", sessionId: "admin-session", channel: "ui", token: null };
 
 describe("AuthService", () => {
   const baseConfig = loadConfig({

@@ -5,11 +5,11 @@ import { GlobalAuditEvent, initOrm, selectTenant, TenantAuditEvent, TenantViolat
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { loadConfig } from "../../config";
 import { migrateDatabase, toDbOptions } from "../../database";
-import type { Actor } from "./actor";
+import type { AuditActor } from "./actor";
 import { recordGlobalAudit, recordTenantAudit, type AuditEntry } from "./audit-recorder";
 
-const actor: Actor = { userId: "u-1", username: "admin", sessionId: "s-1", channel: "ui", token: null };
-const apiActor: Actor = {
+const actor: AuditActor = { userId: "u-1", username: "admin", sessionId: "s-1", channel: "ui", token: null };
+const apiActor: AuditActor = {
   userId: "u-2",
   username: "robot",
   sessionId: null,

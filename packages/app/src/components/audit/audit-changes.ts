@@ -1,7 +1,9 @@
 import type { AuditEntryView } from "@cpg/core";
 
 type Snapshot = AuditEntryView["before"];
-type Value = NonNullable<Snapshot>[string];
+/** One snapshot field's value. */
+export type AuditChangeValue = NonNullable<Snapshot>[string];
+type Value = AuditChangeValue;
 
 /** One line of an entry's Changes column. */
 export type AuditChange =

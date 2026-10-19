@@ -34,7 +34,7 @@ describe("AuditTable", () => {
       "UI",
       "User deactivated",
       "alice",
-      "active: true → false",
+      "active: yes → no",
     ]);
     expect(screen.getByTitle("c41e08b6-1111-4222-8333-444455556666")).toBeTruthy();
   });
@@ -48,7 +48,7 @@ describe("AuditTable", () => {
       />,
     );
 
-    expect(screen.getAllByRole("listitem").map((item) => item.textContent)).toEqual(["username: alice", "active: true"]);
+    expect(screen.getAllByRole("listitem").map((item) => item.textContent)).toEqual(["username: alice", "active: yes"]);
   });
 
   it("says a password reset was not recorded, and never shows a value for it (AUD-015)", () => {
@@ -87,6 +87,28 @@ describe("AuditTable", () => {
     expect(screen.queryAllByRole("button")).toEqual([]);
     expect(screen.queryAllByRole("link")).toEqual([]);
     expect(screen.queryAllByRole("textbox")).toEqual([]);
+  });
+
+  it("names fields and known values in the reader's language, and others as stored", () => {
+    render(
+      <AuditTable
+        entries={[
+          entry({
+            action: "preferences.user-preference.updated",
+            before: { locale: "en", theme: "light", note: "x" },
+            after: { locale: "pl", theme: "dark", note: "y" },
+          }),
+        ]}
+        label="Audyt globalny"
+        labels={pl.audit}
+      />,
+    );
+
+    expect(screen.getAllByRole("listitem").map((item) => item.textContent)).toEqual([
+      "język: angielski → polski",
+      "motyw: jasny → ciemny",
+      "note: x → y",
+    ]);
   });
 
   it("says when nothing has been recorded, in the reader's language", () => {

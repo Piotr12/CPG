@@ -1,6 +1,6 @@
 import { Session, UniqueConstraintViolationException, User, type EntityManager, type UserRole } from "@cpg/db";
 import { ConflictError, NotFoundError } from "../../http/errors";
-import type { Actor } from "../audit/actor";
+import type { AuditActor } from "../audit/actor";
 import { recordGlobalAudit, type AuditEntry } from "../audit/audit-recorder";
 import { BUILT_IN_ADMIN_USERNAME } from "../auth/auth.service";
 import { hashPassword } from "../auth/password-hash";
@@ -49,7 +49,7 @@ export class UserService {
   }
 
   /** A new, active normal user. `ConflictError` when the name is taken or reserved. */
-  async create({ username, password }: NewUser, actor: Actor): Promise<UserSummary> {
+  async create({ username, password }: NewUser, actor: AuditActor): Promise<UserSummary> {
     const name = username.trim().toLowerCase();
     if (name === BUILT_IN_ADMIN_USERNAME) throw new ConflictError(USERNAME_TAKEN);
     const passwordHash = await hashPassword(password);
@@ -68,7 +68,7 @@ export class UserService {
    * Replaces the password and signs the user out everywhere, atomically. The audit records that it
    * happened and to whom, never the password or its hash (AUD-015, AUD-028).
    */
-  async resetPassword(userId: string, password: string, actor: Actor): Promise<UserSummary> {
+  async resetPassword(userId: string, password: string, actor: AuditActor): Promise<UserSummary> {
     // Hash before the transaction: SQLite has one writer, so keep the write lock short.
     const passwordHash = await hashPassword(password);
     return this.changeNormalUser(userId, actor, (user) => {
@@ -81,7 +81,7 @@ export class UserService {
    * Deactivates (signing the user out everywhere) or reactivates. Idempotent: setting the current
    * state again succeeds, changes nothing and records nothing.
    */
-  async setActive(userId: string, active: boolean, actor: Actor): Promise<UserSummary> {
+  async setActive(userId: string, active: boolean, actor: AuditActor): Promise<UserSummary> {
     return this.changeNormalUser(userId, actor, (user) => {
       if (user.active === active) return { endSessions: false, audit: null };
       const before = snapshot(user);
@@ -95,7 +95,7 @@ export class UserService {
    * Applies `change` to a normal user in one transaction: ends their sessions and records the audit
    * entry it returns, together with the change itself.
    */
-  private async changeNormalUser(userId: string, actor: Actor, change: (user: User) => Change): Promise<UserSummary> {
+  private async changeNormalUser(userId: string, actor: AuditActor, change: (user: User) => Change): Promise<UserSummary> {
     return this.em.transactional(async (em) => {
       const user = await em.findOne(User, { id: userId, role: "user" });
       if (!user) throw new NotFoundError("NOT_FOUND", USER_NOT_FOUND);
