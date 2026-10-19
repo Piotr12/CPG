@@ -1,0 +1,28 @@
+<!doctype html><html lang="en" class=""><head><meta charset="utf-8"><title>mockup</title><style>
+*{box-sizing:border-box}html,body{margin:0;height:100%}
+:root{--bg:oklch(1 0 0);--fg:oklch(.145 0 0);--card:oklch(1 0 0);--muted:oklch(.556 0 0);--border:oklch(.922 0 0);--sec:oklch(.97 0 0);--pri:oklch(.205 0 0);--prifg:oklch(.985 0 0)}
+.dark{--bg:oklch(.145 0 0);--fg:oklch(.985 0 0);--card:oklch(.205 0 0);--muted:oklch(.708 0 0);--border:oklch(1 0 0/10%);--sec:oklch(.269 0 0);--pri:oklch(.922 0 0);--prifg:oklch(.205 0 0);color-scheme:dark}
+body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--fg);display:flex;flex-direction:column;min-height:100%;font-size:14px}
+.topbar{display:flex;justify-content:flex-end;padding:12px 24px}.topbar a{color:var(--muted);text-decoration:underline;text-underline-offset:3px}
+main{width:100%;max-width:768px;margin:0 auto;padding:24px;flex:1;display:flex;flex-direction:column;gap:24px}
+h1{font-size:24px;font-weight:600;letter-spacing:-.02em;margin:0}h2{font-size:16px;margin:0 0 6px}
+.acct{display:flex;align-items:center;justify-content:flex-end;gap:10px;color:var(--muted);flex-wrap:wrap}.acct strong{color:var(--fg)}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}.seg button{border:0;background:transparent;color:var(--fg);padding:4px 10px;font:inherit;font-size:13px}
+.seg button[aria-pressed=true]{background:var(--sec);font-weight:600}.seg button+button{border-left:1px solid var(--border)}
+.btn{border:1px solid var(--border);background:var(--bg);color:var(--fg);border-radius:8px;padding:4px 10px;font:inherit;font-size:13px}
+.btn.pri{background:var(--pri);color:var(--prifg);border-color:var(--pri)}
+.card{background:var(--card);border-radius:12px;box-shadow:0 0 0 1px color-mix(in oklch,var(--fg) 10%,transparent);padding:16px;display:flex;flex-direction:column;gap:12px}
+.mono{font-family:ui-monospace,Menlo,monospace;color:var(--muted)}.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{border:1px solid var(--border);border-radius:999px;padding:2px 8px;font-size:12px}.badge.s{background:var(--sec);border-color:transparent}
+.search{display:flex;gap:8px}.search input{flex:1;border:1px solid var(--border);background:transparent;color:var(--fg);border-radius:8px;padding:6px 10px;font:inherit}
+.topic{border-top:1px solid var(--border);padding-top:16px}.topic p{margin:0 0 8px;line-height:1.5}.meta{color:var(--muted);font-size:12px}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:16px 24px 24px}footer a{color:inherit;text-decoration:underline;text-underline-offset:3px}
+.note{position:fixed;left:8px;bottom:8px;font-size:11px;color:var(--muted);opacity:.7}
+</style></head><body><div class="topbar"><a href="#">Help</a></div><main><h1>Help</h1>
+<form class="search"><input value="sign" aria-label="Search help"><button class="btn pri">Search</button></form>
+<div class="meta">2 topics match “sign”. <a href="#" style="color:inherit">Show all topics</a></div>
+<section class="topic" id="signing-in"><h2>Signing in</h2><div class="meta">Screen: Sign in (/login)</div>
+<p>Enter your username and password. The built-in administrator signs in as <b>admin</b> with the password set when CPG was installed.</p>
+<p>If the details are wrong you see “Invalid username or password.” — CPG never says which part was wrong. After several failed attempts sign-in is paused for 15 minutes.</p></section>
+<section class="topic" id="admin-home"><h2>Cave control</h2><div class="meta">Screen: Cave control (/admin)</div>
+<p>The Database card shows where CPG keeps its data and whether every migration has been applied. Use <b>Sign out</b> in the header when you are done.</p></section></main><footer>Caveman Planning Good! Made in Jozefoslaw with Tokens, Coffee and <a href="https://github.com/open-mercato/skills">OpenMercato Skills</a> during <a href="https://www.aitechleaders.pl/">AITechLeaders training</a>.</footer><div class="note">Mockup — /help with a search, English, light (illustrative)</div></body></html>
