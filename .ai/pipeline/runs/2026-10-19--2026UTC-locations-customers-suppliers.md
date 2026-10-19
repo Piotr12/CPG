@@ -73,11 +73,11 @@ In each tenant the admin creates, renames, deactivates and reactivates locations
 
 ### Phase 1: the masters in core
 
-- [ ] 1.1 Shared sequential IDs
-- [ ] 1.2 Schema: entities and migration
-- [ ] 1.3 Validators
-- [ ] 1.4 NamedRecords helper and the three services
-- [ ] 1.5 Startup seed per kind
+- [x] 1.1 Shared sequential IDs — d95f924
+- [x] 1.2 Schema: entities and migration — 4e5a102
+- [x] 1.3 Validators — 704a346
+- [x] 1.4 NamedRecords helper and the three services — b01425e
+- [x] 1.5 Startup seed per kind — a96489d
 
 ### Phase 2: the API
 
