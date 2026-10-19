@@ -12,6 +12,7 @@ describe("@cpg/core", () => {
       "ConflictError",
       "CustomerService",
       "DEFAULT_PREFERENCES",
+      "DEMO_KINDS",
       "ForbiddenError",
       "GENERATION_HEADER",
       "IDEMPOTENCY_KEY_HEADER",

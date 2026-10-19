@@ -18,7 +18,7 @@ describe("register", () => {
     core.assertServerConfig.mockReset();
     core.revokeBuiltInAdminSessions.mockResolvedValue(0);
     core.revokeAdminTokensIfPasswordChanged.mockResolvedValue(0);
-    core.seedDemoData.mockResolvedValue(0);
+    core.seedDemoData.mockResolvedValue({});
     vi.spyOn(console, "info").mockImplementation(() => {});
   });
   afterEach(() => {
@@ -66,10 +66,10 @@ describe("register", () => {
     expect(console.info).toHaveBeenCalledWith("The admin password changed: revoked 2 admin API token(s)");
   });
 
-  it("seeds the Test demonstration data last, and logs how much (D06)", async () => {
+  it("seeds the Test demonstration data last, and logs how much of each kind (D06)", async () => {
     vi.stubEnv("NEXT_RUNTIME", "nodejs");
     core.migrateDatabase.mockResolvedValue([]);
-    core.seedDemoData.mockResolvedValue(6);
+    core.seedDemoData.mockResolvedValue({ materials: { seeded: 0 }, locations: { seeded: 3 }, customers: { seeded: 4 } });
 
     await register();
 
@@ -77,7 +77,21 @@ describe("register", () => {
     expect(core.revokeAdminTokensIfPasswordChanged.mock.invocationCallOrder[0]).toBeLessThan(
       core.seedDemoData.mock.invocationCallOrder[0],
     );
-    expect(console.info).toHaveBeenCalledWith("Seeded the Test tenant with 6 demonstration material(s)");
+    expect(console.info).toHaveBeenCalledWith("Seeded the Test tenant with 3 demonstration locations");
+    expect(console.info).toHaveBeenCalledWith("Seeded the Test tenant with 4 demonstration customers");
+    expect(console.info).not.toHaveBeenCalledWith(expect.stringContaining("materials"));
+  });
+
+  it("logs a kind whose seed failed and keeps starting (spec Q8)", async () => {
+    vi.stubEnv("NEXT_RUNTIME", "nodejs");
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    core.migrateDatabase.mockResolvedValue([]);
+    const failure = new Error("disk full");
+    core.seedDemoData.mockResolvedValue({ locations: { error: failure }, suppliers: { seeded: 3 } });
+
+    await expect(register()).resolves.toBeUndefined();
+    expect(console.error).toHaveBeenCalledWith("Seeding the Test demonstration locations failed:", failure);
+    expect(console.info).toHaveBeenCalledWith("Seeded the Test tenant with 3 demonstration suppliers");
   });
 
   it("logs a failed seed and keeps starting: the app works without demo data", async () => {
