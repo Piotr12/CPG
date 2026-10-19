@@ -5,12 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@cpg/
 import { AppError, tenantScope } from "@cpg/core";
 import { requireAdmin } from "../../../auth/require-admin";
 import { SignedInBar } from "../../../components/auth/signed-in-bar";
+import { getMessages } from "../../../i18n/get-messages";
+import { currentPreferences } from "../../../preferences/current-preferences";
 
 export default function TenantHomePage({ params }: PageProps<"/admin/[tenant]">) {
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-6 py-12">
-      <h1 className="text-2xl font-semibold tracking-tight">Cave control</h1>
-      <Suspense fallback={<p className="text-sm text-muted-foreground">Caveman count rocks…</p>}>
+      <Suspense fallback={<div aria-busy="true" className="min-h-40" />}>
         <TenantHome params={params} />
       </Suspense>
     </main>
@@ -21,23 +22,29 @@ export default function TenantHomePage({ params }: PageProps<"/admin/[tenant]">)
 async function TenantHome({ params }: { params: Promise<{ tenant: string }> }) {
   await connection();
   const user = await requireAdmin();
-  const { tenant } = (await openTenant((await params).tenant)).cradle;
+  const [{ cradle }, { locale, messages }, { theme }] = await Promise.all([
+    openTenant((await params).tenant),
+    getMessages(),
+    currentPreferences(),
+  ]);
+  const { tenant } = cradle;
 
   return (
-    <>
-      <SignedInBar username={user.username} />
+    <div lang={locale} className="flex flex-col gap-6">
+      <SignedInBar username={user.username} locale={locale} theme={theme} messages={messages} />
+      <h1 className="text-2xl font-semibold tracking-tight">{messages.admin.heading}</h1>
       <Card>
         <CardHeader>
           <CardTitle>{tenant.name}</CardTitle>
-          <CardDescription>Dataset generation {tenant.generation}</CardDescription>
+          <CardDescription>{messages.tenants.generation(tenant.generation)}</CardDescription>
         </CardHeader>
         <CardContent>
           <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
-            No business records yet
+            {messages.tenants.noRecords}
           </p>
         </CardContent>
       </Card>
-    </>
+    </div>
   );
 }
 

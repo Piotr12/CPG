@@ -4,20 +4,25 @@ import { signIn } from "./actions";
 const expiresAt = new Date("2026-10-19T20:00:00Z");
 const mocks = vi.hoisted(() => ({
   authService: { signIn: vi.fn(), signOut: vi.fn() },
+  userPreferenceService: { get: vi.fn() },
   config: { env: "production" },
   headers: vi.fn(),
   redirect: vi.fn((path: string) => {
     throw new Error(`NEXT_REDIRECT ${path}`);
   }),
   writeSessionCookie: vi.fn(),
+  writeThemeCookie: vi.fn(),
 }));
 vi.mock("@cpg/core", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@cpg/core")>()),
-  requestScope: async () => ({ cradle: { authService: mocks.authService, config: mocks.config } }),
+  requestScope: async () => ({
+    cradle: { authService: mocks.authService, userPreferenceService: mocks.userPreferenceService, config: mocks.config },
+  }),
 }));
 vi.mock("next/headers", () => ({ headers: mocks.headers }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("../../auth/session-cookie", () => ({ writeSessionCookie: mocks.writeSessionCookie }));
+vi.mock("../../preferences/theme-cookie", () => ({ writeThemeCookie: mocks.writeThemeCookie }));
 
 function form(fields: Record<string, string>) {
   const data = new FormData();
@@ -29,11 +34,12 @@ describe("signIn", () => {
   beforeEach(() => {
     mocks.headers.mockResolvedValue(new Headers({ "x-forwarded-for": "203.0.113.7" }));
     mocks.config.env = "production";
+    mocks.userPreferenceService.get.mockResolvedValue({ locale: "en", theme: "light" });
   });
   afterEach(() => vi.clearAllMocks());
 
   it("signs in with the client's IP, sets a secure cookie and goes to /admin", async () => {
-    mocks.authService.signIn.mockResolvedValue({ token: "tok", expiresAt });
+    mocks.authService.signIn.mockResolvedValue({ token: "tok", expiresAt, userId: "u1" });
 
     await expect(signIn({}, form({ username: " admin ", password: "pw" }))).rejects.toThrow("NEXT_REDIRECT /admin");
 
@@ -41,13 +47,38 @@ describe("signIn", () => {
     expect(mocks.writeSessionCookie).toHaveBeenCalledWith("tok", expiresAt, { secure: true });
   });
 
+  it("sets the theme cookie from the account's stored theme, for the first paint (UX-007)", async () => {
+    mocks.authService.signIn.mockResolvedValue({ token: "tok", expiresAt, userId: "u1" });
+    mocks.userPreferenceService.get.mockResolvedValue({ locale: "pl", theme: "dark" });
+
+    await expect(signIn({}, form({ username: "admin", password: "pw" }))).rejects.toThrow("NEXT_REDIRECT /admin");
+
+    expect(mocks.userPreferenceService.get).toHaveBeenCalledWith("u1");
+    expect(mocks.writeThemeCookie).toHaveBeenCalledWith("dark", { secure: true });
+  });
+
+  it("still signs in, with the light theme, when the preference read fails", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const failure = new Error("database is locked");
+    mocks.authService.signIn.mockResolvedValue({ token: "tok", expiresAt, userId: "u1" });
+    mocks.userPreferenceService.get.mockRejectedValue(failure);
+
+    await expect(signIn({}, form({ username: "admin", password: "pw" }))).rejects.toThrow("NEXT_REDIRECT /admin");
+
+    expect(mocks.writeSessionCookie).toHaveBeenCalledOnce();
+    expect(mocks.writeThemeCookie).toHaveBeenCalledWith("light", { secure: true });
+    expect(log).toHaveBeenCalledWith("Preference lookup at sign-in failed:", failure);
+    log.mockRestore();
+  });
+
   it("doesn't mark the cookie secure outside production", async () => {
     mocks.config.env = "development";
-    mocks.authService.signIn.mockResolvedValue({ token: "tok", expiresAt });
+    mocks.authService.signIn.mockResolvedValue({ token: "tok", expiresAt, userId: "u1" });
 
     await expect(signIn({}, form({ username: "admin", password: "pw" }))).rejects.toThrow("NEXT_REDIRECT /admin");
 
     expect(mocks.writeSessionCookie).toHaveBeenCalledWith("tok", expiresAt, { secure: false });
+    expect(mocks.writeThemeCookie).toHaveBeenCalledWith("light", { secure: false });
   });
 
   it("shows the service's message when the credentials are refused", async () => {
@@ -58,6 +89,7 @@ describe("signIn", () => {
       error: "Invalid username or password.",
     });
     expect(mocks.writeSessionCookie).not.toHaveBeenCalled();
+    expect(mocks.writeThemeCookie).not.toHaveBeenCalled();
     expect(mocks.redirect).not.toHaveBeenCalled();
   });
 

@@ -4,27 +4,29 @@ import { useActionState } from "react";
 import { Button } from "@cpg/ui/components/button";
 import { Input } from "@cpg/ui/components/input";
 import { Label } from "@cpg/ui/components/label";
+import type { Messages } from "../../i18n/messages/en";
 import type { SignInState } from "./actions";
 
 interface SignInFormProps {
   action: (state: SignInState, formData: FormData) => Promise<SignInState>;
+  labels: Messages["login"];
 }
 
 /**
  * Credentials form. Bespoke rather than `CrudForm`: there is no record to edit, no cancel and one
  * generic error instead of per-field messages, so it isn't form-over-schema.
  */
-export function SignInForm({ action }: SignInFormProps) {
+export function SignInForm({ action, labels }: SignInFormProps) {
   const [state, formAction, isPending] = useActionState(action, {});
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <Label htmlFor="username">Username</Label>
+        <Label htmlFor="username">{labels.username}</Label>
         <Input id="username" name="username" autoComplete="username" required autoFocus />
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="password">Password</Label>
+        <Label htmlFor="password">{labels.password}</Label>
         <Input id="password" name="password" type="password" autoComplete="current-password" required />
       </div>
       {state.error && (
@@ -33,7 +35,7 @@ export function SignInForm({ action }: SignInFormProps) {
         </p>
       )}
       <Button type="submit" disabled={isPending}>
-        {isPending ? "Signing in…" : "Sign in"}
+        {isPending ? labels.submitting : labels.submit}
       </Button>
     </form>
   );

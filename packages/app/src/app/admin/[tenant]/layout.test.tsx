@@ -13,7 +13,10 @@ vi.mock("@cpg/core", () => ({
   TENANT_NAMES: { test: "Test", prod: "Prod" },
   tenantCodeSchema: z.enum(["test", "prod"]),
 }));
-vi.mock("next/navigation", () => ({ notFound: mocks.notFound, usePathname: () => "/admin/prod" }));
+vi.mock("next/navigation", () => ({ notFound: mocks.notFound }));
+vi.mock("../../../components/tenants/tenant-strip", () => ({
+  TenantStrip: ({ scope }: { scope: string }) => <div data-testid="strip" data-tenant={scope} />,
+}));
 
 const params = (tenant: string) => Promise.resolve({ tenant });
 
@@ -27,7 +30,7 @@ describe("TenantLayout", () => {
   it("puts the tenant's strip above the page", async () => {
     render(await TenantLayout({ children: <p>page</p>, params: params("prod") }));
 
-    expect(screen.getByRole("region", { name: "Active tenant" }).dataset.tenant).toBe("prod");
+    expect(screen.getByTestId("strip").dataset.tenant).toBe("prod");
     expect(screen.getByText("page")).toBeTruthy();
   });
 

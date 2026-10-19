@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { en } from "../../i18n/messages/en";
 import { SignInForm } from "./sign-in-form";
 
 function fillAndSubmit() {
@@ -10,7 +11,7 @@ function fillAndSubmit() {
 
 describe("SignInForm", () => {
   it("renders the credential fields with the right autocomplete hints", () => {
-    render(<SignInForm action={vi.fn()} />);
+    render(<SignInForm action={vi.fn()} labels={en.login} />);
 
     expect(screen.getByLabelText("Username").getAttribute("autocomplete")).toBe("username");
     const password = screen.getByLabelText("Password") as HTMLInputElement;
@@ -21,7 +22,7 @@ describe("SignInForm", () => {
 
   it("submits the form data and shows the action's error", async () => {
     const action = vi.fn(async () => ({ error: "Invalid username or password." }));
-    render(<SignInForm action={action} />);
+    render(<SignInForm action={action} labels={en.login} />);
 
     await act(async () => fillAndSubmit());
 
@@ -34,7 +35,7 @@ describe("SignInForm", () => {
   it("disables the button while signing in", async () => {
     let finish: (state: object) => void = () => {};
     const action = vi.fn(() => new Promise<object>((resolve) => (finish = resolve)));
-    render(<SignInForm action={action} />);
+    render(<SignInForm action={action} labels={en.login} />);
 
     await act(async () => fillAndSubmit());
     const button = screen.getByRole("button", { name: "Signing in…" }) as HTMLButtonElement;

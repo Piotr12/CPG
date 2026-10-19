@@ -22,7 +22,7 @@ export function TenantSwitchLinks({
   hrefFor: (code: TenantCode) => string;
 }) {
   return (
-    <nav aria-label="Switch tenant" className="flex overflow-hidden rounded-md border border-current/30 text-sm">
+    <nav className="flex overflow-hidden rounded-md border border-current/30 text-sm">
       {tenants.map(({ code, name }) => (
         <Link
           key={code}

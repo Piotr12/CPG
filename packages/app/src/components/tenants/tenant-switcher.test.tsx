@@ -39,7 +39,6 @@ describe("TenantSwitcher", () => {
 
     const test = screen.getByRole("link", { name: "Test" });
     const prod = screen.getByRole("link", { name: "Prod" });
-    expect(screen.getByRole("navigation", { name: "Switch tenant" })).toBeTruthy();
     expect(test.getAttribute("href")).toBe("/admin/test/materials");
     expect(test.getAttribute("aria-current")).toBe("page");
     expect(prod.getAttribute("href")).toBe("/admin/prod/materials");

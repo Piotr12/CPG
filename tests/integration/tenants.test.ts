@@ -5,7 +5,7 @@ import { signInAsAdmin } from "./sign-in";
 const baseUrl = inject("baseUrl");
 const adminPassword = inject("adminPassword");
 
-const STRIP = "[role=region][aria-label='Active tenant']";
+const STRIP = "[role=region][data-tenant]";
 const pathname = async (browser: Browser) => new URL(await browser.url()).pathname;
 const stripTenant = (browser: Browser) => browser.evaluate<string>(`document.querySelector("${STRIP}").dataset.tenant`);
 

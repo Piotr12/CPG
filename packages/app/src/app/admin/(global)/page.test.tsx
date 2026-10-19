@@ -1,6 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveServerComponents } from "../../../../../../tests/setup/server-components";
+import { en } from "../../../i18n/messages/en";
+import { pl } from "../../../i18n/messages/pl";
 import AdminPage, { metadata } from "./page";
 
 const mocks = vi.hoisted(() => ({
@@ -8,7 +10,10 @@ const mocks = vi.hoisted(() => ({
   getStatus: vi.fn(),
   listTenants: vi.fn(),
   requireAdmin: vi.fn(),
+  getMessages: vi.fn(),
+  currentPreferences: vi.fn(),
   signOut: vi.fn(),
+  updatePreferences: vi.fn(),
 }));
 vi.mock("next/server", () => ({ connection: mocks.connection }));
 vi.mock("@cpg/core", () => ({
@@ -17,24 +22,38 @@ vi.mock("@cpg/core", () => ({
   }),
 }));
 vi.mock("../../../auth/require-admin", () => ({ requireAdmin: mocks.requireAdmin }));
-vi.mock("../actions", () => ({ signOut: mocks.signOut }));
+vi.mock("../../../i18n/get-messages", () => ({ getMessages: mocks.getMessages }));
+vi.mock("../../../preferences/current-preferences", () => ({ currentPreferences: mocks.currentPreferences }));
+vi.mock("../actions", () => ({ signOut: mocks.signOut, updatePreferences: mocks.updatePreferences }));
 
 const status = { databasePath: "/externaldata/cpg.sqlite", appliedMigrations: 3, pendingMigrations: 0, settings: 7 };
+const tenants = [
+  { code: "test", name: "Test", generation: 1 },
+  { code: "prod", name: "Prod", generation: 1 },
+];
+/** The chooser's links as [href, text]. */
+const choices = (label: string) =>
+  [...screen.getByRole("navigation", { name: label }).querySelectorAll("a")].map((link) => [
+    link.getAttribute("href"),
+    link.textContent,
+  ]);
 const admin = { sessionId: "s1", userId: "u1", username: "admin", role: "admin" };
+
+function as(locale: "en" | "pl", theme: "light" | "dark" = "light") {
+  mocks.getMessages.mockResolvedValue({ locale, messages: locale === "en" ? en : pl });
+  mocks.currentPreferences.mockResolvedValue({ locale, theme });
+}
 
 describe("AdminPage", () => {
   beforeEach(() => {
     mocks.requireAdmin.mockResolvedValue(admin);
-    mocks.listTenants.mockResolvedValue([
-      { code: "test", name: "Test", generation: 1 },
-      { code: "prod", name: "Prod", generation: 1 },
-    ]);
+    mocks.getStatus.mockResolvedValue(status);
+    mocks.listTenants.mockResolvedValue(tenants);
+    as("en");
   });
   afterEach(() => vi.clearAllMocks());
 
   it("shows the database status to the signed-in admin", async () => {
-    mocks.getStatus.mockResolvedValue(status);
-
     render(await resolveServerComponents(AdminPage()));
 
     expect(mocks.connection).toHaveBeenCalledOnce();
@@ -47,12 +66,51 @@ describe("AdminPage", () => {
   });
 
   it("names the signed-in user and offers to sign out", async () => {
-    mocks.getStatus.mockResolvedValue(status);
-
     render(await resolveServerComponents(AdminPage()));
 
     expect(screen.getByText("admin").tagName).toBe("STRONG");
-    expect(screen.getByRole("button", { name: "Sign out" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Sign out" }).closest("form")?.dataset.action).toBe("sign-out");
+  });
+
+  it("offers the language and theme switches with the current choices pressed", async () => {
+    as("en", "dark");
+
+    render(await resolveServerComponents(AdminPage()));
+
+    const language = screen.getByRole("group", { name: "Language" });
+    expect(within(language).getByRole("button", { name: "English" }).getAttribute("aria-pressed")).toBe("true");
+    const theme = screen.getByRole("group", { name: "Theme" });
+    expect(within(theme).getByRole("button", { name: "Dark" }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("speaks Polish to a Polish account (UX-002)", async () => {
+    as("pl");
+
+    render(await resolveServerComponents(AdminPage()));
+
+    expect(screen.getByRole("heading", { name: "Kontrola jaskini" }).closest("[lang]")?.getAttribute("lang")).toBe("pl");
+    expect(screen.getByText("Zastosowane migracje: 3")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Wyloguj" })).toBeTruthy();
+  });
+
+  it("offers both tenants to choose from (TEN-001, TEN-010)", async () => {
+    render(await resolveServerComponents(AdminPage()));
+
+    expect(choices("Choose a tenant")).toEqual([
+      ["/admin/test", "TestDemonstration data, safe to experimentOpen Test →"],
+      ["/admin/prod", "ProdLive dataOpen Prod →"],
+    ]);
+  });
+
+  it("offers the tenants in Polish to a Polish account", async () => {
+    as("pl");
+
+    render(await resolveServerComponents(AdminPage()));
+
+    expect(choices("Wybierz środowisko")).toEqual([
+      ["/admin/test", "TestDane demonstracyjne, można bezpiecznie eksperymentowaćOtwórz Test →"],
+      ["/admin/prod", "ProdDane rzeczywisteOtwórz Prod →"],
+    ]);
   });
 
   it("renders no data when the gate refuses the visitor", async () => {
@@ -60,20 +118,7 @@ describe("AdminPage", () => {
 
     await expect(resolveServerComponents(AdminPage())).rejects.toThrow("NEXT_REDIRECT /login");
     expect(mocks.getStatus).not.toHaveBeenCalled();
-  });
-
-  it("offers both tenants to choose from (TEN-001, TEN-010)", async () => {
-    mocks.getStatus.mockResolvedValue(status);
-
-    render(await resolveServerComponents(AdminPage()));
-
-    const chooser = screen.getByRole("navigation", { name: "Choose a tenant" });
-    expect(
-      [...chooser.querySelectorAll("a")].map((link) => [link.getAttribute("href"), link.textContent]),
-    ).toEqual([
-      ["/admin/test", "TestDemonstration data, safe to experimentOpen Test →"],
-      ["/admin/prod", "ProdLive dataOpen Prod →"],
-    ]);
+    expect(mocks.listTenants).not.toHaveBeenCalled();
   });
 
   it("flags pending migrations", async () => {

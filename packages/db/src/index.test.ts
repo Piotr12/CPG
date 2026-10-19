@@ -5,14 +5,17 @@ describe("@cpg/db", () => {
   it("exports the public API", () => {
     expect(Object.keys(db).sort()).toEqual([
       "GLOBAL_ENTITIES",
+      "LOCALES",
       "Session",
       "Setting",
       "TENANT_CODES",
       "TENANT_FILTER",
+      "THEMES",
       "Tenant",
       "TenantViolationError",
       "USER_ROLES",
       "User",
+      "UserPreference",
       "createOrmConfig",
       "currentTenant",
       "entities",
@@ -23,7 +26,7 @@ describe("@cpg/db", () => {
       "selectTenant",
       "tenantOwned",
     ]);
-    expect(db.entities).toEqual([db.Setting, db.User, db.Session, db.Tenant]);
+    expect(db.entities).toEqual([db.Setting, db.User, db.Session, db.UserPreference, db.Tenant]);
     expect(db.GLOBAL_ENTITIES).toEqual(db.entities);
   });
 });

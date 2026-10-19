@@ -38,6 +38,6 @@ describe("a fresh app instance", () => {
 
     expect(await browser.title()).toBe("Admin · Caveman Planning Good");
     expect(await browser.text("h1")).toBe("Cave control");
-    expect(await browser.texts("[data-slot=badge]")).toEqual(["3 migrations applied", "0 pending", "0 settings"]);
+    expect(await browser.texts("[data-slot=badge]")).toEqual(["4 migrations applied", "0 pending", "0 settings"]);
   });
 });

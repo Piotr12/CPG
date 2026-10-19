@@ -1,6 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveServerComponents } from "../../../../../../tests/setup/server-components";
+import { en } from "../../../i18n/messages/en";
+import { pl } from "../../../i18n/messages/pl";
 import TenantHomePage from "./page";
 
 const mocks = vi.hoisted(() => {
@@ -12,6 +14,8 @@ const mocks = vi.hoisted(() => {
   return {
     AppError,
     connection: vi.fn(),
+    getMessages: vi.fn(),
+    currentPreferences: vi.fn(),
     requireAdmin: vi.fn(),
     tenantScope: vi.fn(),
     notFound: vi.fn(() => {
@@ -23,7 +27,14 @@ vi.mock("next/server", () => ({ connection: mocks.connection }));
 vi.mock("next/navigation", () => ({ notFound: mocks.notFound }));
 vi.mock("@cpg/core", () => ({ AppError: mocks.AppError, tenantScope: mocks.tenantScope }));
 vi.mock("../../../auth/require-admin", () => ({ requireAdmin: mocks.requireAdmin }));
-vi.mock("../actions", () => ({ signOut: vi.fn() }));
+vi.mock("../actions", () => ({ signOut: vi.fn(), updatePreferences: vi.fn() }));
+vi.mock("../../../i18n/get-messages", () => ({ getMessages: mocks.getMessages }));
+vi.mock("../../../preferences/current-preferences", () => ({ currentPreferences: mocks.currentPreferences }));
+
+function as(locale: "en" | "pl") {
+  mocks.getMessages.mockResolvedValue({ locale, messages: locale === "en" ? en : pl });
+  mocks.currentPreferences.mockResolvedValue({ locale, theme: "light" });
+}
 
 const page = (tenant: string) => TenantHomePage({ params: Promise.resolve({ tenant }), searchParams: Promise.resolve({}) });
 
@@ -31,6 +42,7 @@ describe("TenantHomePage", () => {
   beforeEach(() => {
     mocks.requireAdmin.mockResolvedValue({ username: "admin", role: "admin" });
     mocks.tenantScope.mockResolvedValue({ cradle: { tenant: { code: "prod", name: "Prod", generation: 1 } } });
+    as("en");
   });
   afterEach(() => vi.clearAllMocks());
 
@@ -44,6 +56,16 @@ describe("TenantHomePage", () => {
     expect(screen.getByText("Dataset generation 1")).toBeTruthy();
     expect(screen.getByText("No business records yet")).toBeTruthy();
     expect(screen.getByText("admin").tagName).toBe("STRONG");
+  });
+
+  it("speaks Polish to a Polish account", async () => {
+    as("pl");
+
+    render(await resolveServerComponents(page("prod")));
+
+    expect(screen.getByRole("heading", { name: "Kontrola jaskini" }).closest("[lang]")?.getAttribute("lang")).toBe("pl");
+    expect(screen.getByText("Generacja zbioru danych: 1")).toBeTruthy();
+    expect(screen.getByText("Brak rekordów biznesowych")).toBeTruthy();
   });
 
   it("opens no tenant for a visitor the gate refuses", async () => {
