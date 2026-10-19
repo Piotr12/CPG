@@ -1,7 +1,9 @@
 import {
+  currentTenant,
   Material,
   MaterialConversion,
   OptimisticLockError,
+  Tenant,
   UniqueConstraintViolationException,
   type EntityManager,
   type MaterialType,
@@ -252,11 +254,12 @@ export class MaterialService {
   /**
    * Creates the demonstration materials (D06) when the tenant has none, and returns how many. Not
    * audited (spec Q9): it is an installation step, like the tenants the migration inserts. Each
-   * material is flushed before the next reads the highest ID, so they get consecutive IDs.
+   * material is flushed before the next reads the highest ID, so they get consecutive IDs. Seeds
+   * nothing into a read-only tenant (R05): its flag is read in the seed's own transaction.
    */
   async seedDemo(): Promise<number> {
     return this.em.transactional(async (em) => {
-      if ((await em.count(Material, {})) > 0) return 0;
+      if ((await em.count(Material, {})) > 0 || (await isReadOnly(em))) return 0;
       for (const { conversions, ...fields } of DEMO_MATERIALS) {
         const material = await this.insert(em, fields);
         for (const conversion of conversions) em.create(MaterialConversion, { material, ...conversion });
@@ -339,6 +342,11 @@ function pick(values: Record<string, string | boolean>, keys: string[]) {
 function materialEntry(action: string, material: Material, before: AuditEntry["before"], after: AuditEntry["after"]): AuditEntry {
   const label = `${material.code} — ${material.description}`;
   return { action, subject: { type: "Material", id: material.code, label }, before, after };
+}
+
+/** The scope's tenant is read-only, as stored now (the seed's own gate; requests go through the wrappers). */
+async function isReadOnly(em: EntityManager): Promise<boolean> {
+  return (await em.findOneOrFail(Tenant, { code: currentTenant(em)! }, { refresh: true })).readOnly;
 }
 
 function conversionEntry(

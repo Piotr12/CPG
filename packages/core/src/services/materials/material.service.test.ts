@@ -7,6 +7,7 @@ import {
   MaterialConversion,
   OptimisticLockError,
   selectTenant,
+  Tenant,
   TenantAuditEvent,
   type Orm,
   type TenantCode,
@@ -478,6 +479,18 @@ describe("MaterialService", () => {
       expect((await service("test").get("00000002")).conversions.map(({ unit }) => unit)).toEqual(["box", "case"]);
       expect(await audit("test")).toEqual([]);
       expect(await service("prod").list()).toEqual([]);
+    });
+
+    it("seeds nothing into a read-only tenant, read past the identity map (R05)", async () => {
+      const em = scopedEm("test");
+      await em.findOneOrFail(Tenant, { code: "test" });
+      await orm.em.fork().nativeUpdate(Tenant, { code: "test" }, { readOnly: true });
+
+      expect(await service("test", em).seedDemo()).toBe(0);
+      expect(await service("test").list()).toEqual([]);
+
+      await orm.em.fork().nativeUpdate(Tenant, { code: "test" }, { readOnly: false });
+      expect(await service("test").seedDemo()).toBe(DEMO_MATERIALS.length);
     });
   });
 });

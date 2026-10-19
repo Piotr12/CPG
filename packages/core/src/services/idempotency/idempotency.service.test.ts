@@ -419,7 +419,7 @@ describe("IdempotencyService", () => {
         selectTenant(em, tenant);
         await em.nativeDelete(TenantIdempotencyKey, {});
       }
-      await orm.em.fork().nativeUpdate(Tenant, {}, { generation: 1 });
+      await orm.em.fork().nativeUpdate(Tenant, {}, { generation: 1, readOnly: false });
     });
 
     it("stores the key in the tenant's store with the generation it was written in", async () => {
@@ -470,6 +470,72 @@ describe("IdempotencyService", () => {
       await scope(orm, "prod").idempotency.run(await keyed(), tenantScope("prod", null), async () => "ok");
 
       expect(await tenantKeys("prod")).toEqual([expect.objectContaining({ generation: 1 })]);
+    });
+
+    describe("on a read-only tenant (R05)", () => {
+      const setReadOnly = (tenant: "test" | "prod") => orm.em.fork().nativeUpdate(Tenant, { code: tenant }, { readOnly: true });
+
+      it("refuses a new write with TENANT_READ_ONLY and stores no key (TEN-017, API-030)", async () => {
+        await setReadOnly("prod");
+        const write = vi.fn();
+
+        await expect(
+          scope(orm, "prod").idempotency.run(await keyed(), tenantScope("prod", null), write),
+        ).rejects.toMatchObject({ code: "TENANT_READ_ONLY", status: 409 });
+        expect(write).not.toHaveBeenCalled();
+        expect(await tenantKeys("prod")).toEqual([]);
+      });
+
+      it("still replays a write stored before the flag was set, which changes nothing (spec Q4)", async () => {
+        await scope(orm, "prod").idempotency.run(await keyed(), tenantScope("prod", null), async () => "before the flag");
+        await setReadOnly("prod");
+        const write = vi.fn();
+
+        await expect(scope(orm, "prod").idempotency.run(await keyed(), tenantScope("prod", null), write)).resolves.toEqual({
+          data: "before the flag",
+          replayed: true,
+        });
+        expect(write).not.toHaveBeenCalled();
+      });
+
+      it("answers a stale generation first", async () => {
+        await orm.em.fork().nativeUpdate(Tenant, { code: "test" }, { generation: 2, readOnly: true });
+
+        await expect(
+          scope(orm, "test").idempotency.run(await keyed(), tenantScope("test", 1), vi.fn()),
+        ).rejects.toMatchObject({ code: "GENERATION_STALE" });
+      });
+
+      it("keeps the other tenant writable (TEN-021)", async () => {
+        await setReadOnly("test");
+
+        await expect(
+          scope(orm, "prod").idempotency.run(await keyed(), tenantScope("prod", null), async () => "in prod"),
+        ).resolves.toEqual({ data: "in prod", replayed: false });
+      });
+
+      it(
+        "refuses a write whose transaction began before another connection committed the flag",
+        async () => {
+          // The write read the tenant (and so took its snapshot) before the flag committed: its
+          // first write fails as a stale snapshot, and the one retry reads the flag.
+          const other = await initOrm(toDbOptions(config));
+          const write = vi.fn(async () => {
+            if (write.mock.calls.length === 1) await other.em.fork().nativeUpdate(Tenant, { code: "prod" }, { readOnly: true });
+            return "written";
+          });
+          try {
+            await expect(
+              scope(orm, "prod").idempotency.run(await keyed(), tenantScope("prod", null), write),
+            ).rejects.toMatchObject({ code: "TENANT_READ_ONLY" });
+            expect(write).toHaveBeenCalledTimes(1);
+            expect(await tenantKeys("prod")).toEqual([]);
+          } finally {
+            await other.close();
+          }
+        },
+        NO_HANG,
+      );
     });
 
     it("purges the tenant's expired records", async () => {

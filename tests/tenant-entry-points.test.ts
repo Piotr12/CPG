@@ -23,6 +23,19 @@ const named = (name: string) => all.filter((file) => inTenant(file) && path.base
 const rel = (file: string) => path.relative(appDir, file);
 const read = (file: string) => readFileSync(file, "utf8");
 
+/**
+ * What in a tenant `actions.ts` could write around the gate: each export that doesn't call
+ * `tenantServerAction` (from its `export` to the next top-level `export`), plus any `tenantScope`
+ * call in the file, which would open the tenant without the gate.
+ */
+function ungated(source: string): string[] {
+  const exports = source.split(/^(?=export\s)/m).filter((chunk) => /^export\s/.test(chunk));
+  const names = exports
+    .filter((chunk) => !/\btenantServerAction\(/.test(chunk))
+    .map((chunk) => /^export\s+(?:async\s+)?(?:function|const|let|var)\s+(\w+)/.exec(chunk)?.[1] ?? chunk.split("\n")[0]);
+  return /\btenantScope\(/.test(source) ? [...names, "tenantScope()"] : names;
+}
+
 describe("tenant entry points", () => {
   it("include the tenant home page and the tenant metadata route", () => {
     expect(named("page.tsx").map(rel)).toContain(path.join("app", "admin", "[tenant]", "page.tsx"));
@@ -36,9 +49,21 @@ describe("tenant entry points", () => {
     expect(missing.map(rel)).toEqual([]);
   });
 
-  it("wrap tenant server actions in tenantServerAction()", () => {
-    const missing = named("actions.ts").filter((file) => !/\btenantServerAction\(/.test(read(file)));
-    expect(missing.map(rel)).toEqual([]);
+  it("wrap every exported tenant server action in tenantServerAction(), the read-only gate (R05)", () => {
+    const offenders = named("actions.ts").flatMap((file) => ungated(read(file)).map((name) => `${rel(file)}: ${name}`));
+    expect(named("actions.ts").length).toBeGreaterThan(0);
+    expect(offenders).toEqual([]);
+  });
+
+  it("would notice a tenant action that skips the gate", () => {
+    const gated = "export async function create(t: string) {\n  return tenantServerAction(schema, run)(t, 1, {});\n}\n";
+    expect(ungated(gated)).toEqual([]);
+    expect(ungated(`${gated}export async function sneak(t: string) {\n  return (await tenantScope(t)).cradle.x.write();\n}\n`)).toEqual([
+      "sneak",
+      "tenantScope()",
+    ]);
+    expect(ungated(`${gated}export const quick = async () => run();\n`)).toEqual(["quick"]);
+    expect(ungated(`const helper = () => tenantScope("test");\n${gated}`)).toEqual(["tenantScope()"]);
   });
 
   it("are the only places that open a tenant, besides the tenant write wrapper", () => {
