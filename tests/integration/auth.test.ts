@@ -59,7 +59,7 @@ describe("signing in", () => {
   });
 
   it("slows down repeated guessing", async () => {
-    // Unknown usernames share one bucket per client, so this doesn't lock out the admin.
+    // Counted per client and username, so this doesn't lock out the admin.
     for (let attempt = 0; attempt < 6; attempt++) {
       await signIn(browser, baseUrl, "guess", "not-a-user");
       await browser.waitFor("[role=alert]");

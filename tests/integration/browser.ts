@@ -31,6 +31,14 @@ export function openBrowser() {
     /** Clears an input and types `value` into it. */
     fill: (selector: string, value: string) => command("fill", selector, value),
     click: (selector: string) => command("click", selector),
+    /** Clicks the element with this ARIA role and exact accessible name, e.g. a button or menu item. */
+    clickRole: (role: string, name: string) => command("find", "role", role, "click", "--name", name, "--exact"),
+    /** Clears the input labelled exactly `label` and types `value` into it. */
+    fillLabel: (label: string, value: string) => command("find", "label", label, "fill", value, "--exact"),
+    /** Waits until `text` appears anywhere on the page. */
+    waitForText: (text: string) => command("wait", "--text", text),
+    /** Waits until a JavaScript expression in the page is truthy. */
+    waitUntil: (expression: string) => command("wait", "--fn", expression),
     /** Waits until an element matching the CSS selector is on the page. */
     waitFor: (selector: string) => command("wait", selector),
     url: () => command("get", "url"),
