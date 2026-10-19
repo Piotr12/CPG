@@ -66,14 +66,29 @@ Follows the spec's Implementation Plan, Steps 1–9, unchanged.
 
 ### Phase 2: Sign-in
 
-- [ ] 2.1 Shared HTTP layer and sign-in schema
-- [ ] 2.2 User and Session entities and migration
-- [ ] 2.3 LoginThrottle, AuthService and startup purge
-- [ ] 2.4 App auth helpers and standards update
-- [ ] 2.5 Login page, actions and gated admin
-- [ ] 2.6 Integration tests and full gate
+- [x] 2.1 Shared HTTP layer and sign-in schema — e2bc3d6
+- [x] 2.2 User and Session entities and migration — 7461152
+- [x] 2.3 LoginThrottle, AuthService and startup purge — 0c69dbb
+- [x] 2.4 App auth helpers and standards update — 9145ece
+- [x] 2.5 Login page, actions and gated admin — 10d43d4
+- [x] 2.6 Integration tests and full gate — b8e954e
 
 ## Notes
 
 - 1.2 deviation from the spec: in the standalone server (`node server.js`, the Docker image), a throwing `register()` doesn't exit. Next.js logs "Failed to prepare server" and answers every request with a 500 (verified with `docker run` and no password). The spec's claim, taken from `next start`'s `start-server.js`, doesn't hold for standalone. So `register()` logs the guard's message and calls `process.exit(1)` itself. `tests/integration/startup-guard.test.ts` proves the container exits non-zero.
 - 1.3 also updates `.ai/scripts/test-env-up.sh` (QA env): it passes a test admin password and records it as the admin credential, because otherwise the QA container wouldn't start.
+- 2.2: the generated migration's `down()` dropped `user` before `session`. I swapped the order before the migration was ever pushed, because `session` references `user`.
+- 2.3: the built-in admin row is created with `em.upsert(… onConflictAction: "ignore")` on the unique username. A test runs two first sign-ins at once and checks that only one admin row results.
+- 2.5: adds the shadcn `input` and `label` components (`npx shadcn@latest add`). The `resolveServerComponents` test helper moved from `admin/page.test.tsx` to `tests/setup/server-components.ts` so the login page test can reuse it.
+- Pitfall: `beforeEach(() => mock.mockResolvedValue(x))` returns the mock, and Vitest runs a function returned from a hook as teardown. Recorded in `.ai/lessons.md`.
+
+## Verification
+
+- `npm run lint`, `npm run typecheck`: pass.
+- `npm run test:coverage`: 41 files, 171 tests, 100% coverage.
+- `npm run build`: pass (`/admin` and `/login` partially prerendered).
+- `npm run test:integration` (Docker): 4 files and 14 tests pass:
+  - startup guard: the container exits without `CPG_ADMIN_PASSWORD`;
+  - sign-in: redirect from `/admin`, generic error, `HttpOnly`, `Secure` and `Lax` cookie, sign-out, throttling;
+  - smoke test, signed in.
+- `npm audit`: only the known `braces` → `fast-glob`/`micromatch` chain listed in the engineering standards; `zod` adds nothing.
