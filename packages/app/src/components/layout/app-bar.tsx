@@ -28,6 +28,7 @@ export async function AppBar() {
   const account = user && {
     name: user.username,
     panel: <AccountPanel username={user.username} locale={locale} theme={theme} messages={messages} />,
+    inline: <AccountPanel username={user.username} locale={locale} theme={theme} messages={messages} layout="inline" />,
   };
 
   return (

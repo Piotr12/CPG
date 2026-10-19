@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { openBrowser, type Browser } from "./browser";
-import { choosePreference, restoreDefaultPreferences, signInAsAdmin, signOut } from "./sign-in";
+import { choosePreference, openAccountMenu, restoreDefaultPreferences, signInAsAdmin, signOut } from "./sign-in";
 
 const baseUrl = inject("baseUrl");
 const adminPassword = inject("adminPassword");
@@ -47,7 +47,7 @@ describe("language and theme", () => {
     await waitForHeading(browser, "Kontrola jaskini");
 
     expect(await documentState(browser)).toMatchObject({ lang: "pl", isDark: false });
-    expect(await browser.text("[data-slot=popover-content] form[data-action=sign-out] button")).toBe("Wyloguj");
+    expect(await browser.text(`${await openAccountMenu(browser)} form[data-action=sign-out] button`)).toBe("Wyloguj");
   });
 
   it("switches to dark, and back to light (UX-006, UX-005)", async () => {

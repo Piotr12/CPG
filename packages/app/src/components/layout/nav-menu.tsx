@@ -19,8 +19,8 @@ export interface NavLink {
 
 interface NavMenuProps {
   items: NavLink[];
-  /** The signed-in account's name and controls; null for a visitor. */
-  account: { name: string; panel: ReactNode } | null;
+  /** The signed-in account's name and controls (stacked for the popover and the sheet, one row for the bar); null for a visitor. */
+  account: { name: string; panel: ReactNode; inline: ReactNode } | null;
   /** The popover and the sheet render outside the bar, so they carry the language themselves. */
   locale: Locale;
   labels: { menu: string; close: string; account: string };
@@ -28,7 +28,8 @@ interface NavMenuProps {
 
 /**
  * The menu every page shares. From `md` the entries are inline and the account controls open from a
- * popover; below that one Menu button opens a sheet holding both. The entry for the open screen is
+ * popover; from `xl` the account controls sit in the bar too. Below `md` one Menu button opens a
+ * sheet holding both. The entry for the open screen is
  * marked `aria-current="page"`. The bar lives in the root layout and keeps its state across
  * navigations, so the popover and the sheet close whenever the path changes.
  */
@@ -76,7 +77,7 @@ export function NavMenu({ items, account, locale, labels }: NavMenuProps) {
               size="sm"
               aria-label={`${labels.account}: ${account.name}`}
               data-action="account-menu"
-              className="ml-auto hidden max-w-40 md:inline-flex"
+              className="ml-auto hidden max-w-40 md:inline-flex xl:hidden"
             >
               <UserRoundIcon aria-hidden />
               <span className="truncate">{account.name}</span>
@@ -88,6 +89,8 @@ export function NavMenu({ items, account, locale, labels }: NavMenuProps) {
           </PopoverContent>
         </Popover>
       )}
+
+      {account && <div className="ml-auto hidden xl:block">{account.inline}</div>}
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetTrigger asChild>

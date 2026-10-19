@@ -61,9 +61,17 @@ Accepted, not changed: the overlays don't close when the window crosses `md`.
 
 After the round: lint, typecheck, `test:coverage` (756 tests), build and integration (72 passed, 1 skipped) are green. CI was green on ebcbc3d.
 
+## Human decisions (2026-10-19)
+
+Piotr12 confirmed Q1 (top bar) and Q3 (Open CPG). He changed Q4: from 1280 px (`xl`) the account controls sit in the bar itself, in one row, and the popover covers 768–1279 px. That landed as `AccountPanel`'s `inline` layout:
+- `nav-menu.tsx` shows the row from `xl` and hides the account button there;
+- the integration helpers use whichever controls are showing;
+- the bar is checked at 1280 px in Polish for the admin and for the 32-character user.
+
+Local integration now runs on the standalone `server.js` (see lessons): two full runs, 72 passed, 1 skipped.
+
 ## Follow-ups
 
-- Confirm Q1, Q3 and Q4 on spec PR #45. That gates both drafts.
 - Once #45 merges, move the spec to `.ai/specs/implemented/`. It isn't on `main` yet, so this branch can't move it.
 
 ## Progress

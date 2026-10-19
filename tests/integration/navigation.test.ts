@@ -45,6 +45,12 @@ const footerBox = (browser: Browser) =>
     return { top: box.top + scrollY, bottom: box.bottom + scrollY, height: innerHeight };
   })()`);
 
+/** Whether the account controls show in the bar itself, with the popover button out of the way (from 1280 px). */
+const accountInBar = (browser: Browser) =>
+  browser.evaluate<boolean>(
+    `!!document.querySelector("header [data-account-panel=inline]")?.offsetParent && !document.querySelector("header [data-action=account-menu]").offsetParent`,
+  );
+
 /** Opens a page and waits until the bar has streamed in and React has hydrated it. */
 async function openPage(browser: Browser, path: string) {
   await browser.open(`${baseUrl}${path}`);
@@ -196,12 +202,17 @@ describe("navigation menu", () => {
     expect(await overflows(ursula)).toBe(false);
   });
 
-  it("fits the bar at 768 px in Polish and dark, with the longest username", async () => {
+  it("fits the bar at 1280 and 768 px in Polish and dark, with the longest username", async () => {
     await ursula.setViewport(1280, 800);
     await openPage(ursula, "/admin");
     await choosePreference(ursula, "pl");
     await choosePreference(ursula, "dark");
     await closeAccountMenu(ursula);
+
+    // From 1280 px the account controls sit in the bar itself, the long name truncated.
+    await openPage(ursula, "/admin");
+    expect(await accountInBar(ursula)).toBe(true);
+    expect(await overflows(ursula)).toBe(false);
 
     await ursula.setViewport(768, 800);
     await openPage(ursula, "/admin");
@@ -217,10 +228,15 @@ describe("navigation menu", () => {
     expect(await overflows(ursula)).toBe(false);
   });
 
-  it("fits the admin's bar, the widest one with Users, at 768 px in Polish", async () => {
+  it("fits the admin's bar, the widest one with Users, at 1280 and 768 px in Polish", async () => {
     await openPage(admin, "/admin");
     await choosePreference(admin, "pl");
     await closeAccountMenu(admin);
+
+    // At 1280 px the bar holds seven entries and the account controls in one row.
+    await openPage(admin, "/admin");
+    expect(await accountInBar(admin)).toBe(true);
+    expect(await overflows(admin)).toBe(false);
 
     await admin.setViewport(768, 800);
     await openPage(admin, "/admin");

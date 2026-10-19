@@ -54,6 +54,10 @@ describe("AppBar", () => {
     expect(mocks.documentPreferences).toHaveBeenCalledWith({ locale: "pl", theme: "dark", isSignedIn: true });
     expect(mocks.connection).toHaveBeenCalledOnce();
 
+    // The account controls, in one row in the bar (shown from xl) and in the popover (768–1279 px).
+    const inline = bar.querySelector<HTMLElement>("[data-account-panel=inline]")!;
+    expect(within(inline).getByRole("button", { name: "Wyloguj" })).toBeTruthy();
+
     fireEvent.click(screen.getByRole("button", { name: "Konto: alice" }));
     const account = screen.getByRole("dialog", { name: "Konto" });
     expect(within(account).getByText("alice").tagName).toBe("STRONG");

@@ -14,10 +14,15 @@ const stripTenant = (browser: Browser) => browser.evaluate<string>(`document.que
  * keeps earlier pages mounted but hidden, so it waits for the first match that is shown.
  */
 async function clickHydrated(browser: Browser, selector: string) {
-  await browser.waitUntil(
-    `[...document.querySelectorAll(${JSON.stringify(selector)})].some((link) => link.offsetParent && Object.keys(link).some((key) => key.startsWith("__reactFiber")))`,
-  );
-  await browser.click(selector);
+  const shown = `[...document.querySelectorAll(${JSON.stringify(selector)})].find((link) => link.offsetParent && Object.keys(link).some((key) => key.startsWith("__reactFiber")))`;
+  await browser.waitUntil(shown);
+  // Mark the shown copy and click exactly it: the first match in the DOM may be a hidden earlier page's.
+  await browser.evaluate(`(() => {
+    document.querySelectorAll("[data-test-click]").forEach((element) => element.removeAttribute("data-test-click"));
+    ${shown}.setAttribute("data-test-click", "");
+    return true;
+  })()`);
+  await browser.click("[data-test-click]");
 }
 
 // Spec .ai/specs/2026-10-19--0913UTC-test-prod-tenants.md: TEN-001, TEN-010, TEN-011.

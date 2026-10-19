@@ -26,7 +26,11 @@ const items = [
   { id: "help", href: "/help", label: "Help" },
 ];
 const labels = { menu: "Menu", close: "Close", account: "Account" };
-const account = { name: "alice", panel: <button type="button">Sign out</button> };
+const account = {
+  name: "alice",
+  panel: <button type="button">Sign out</button>,
+  inline: <p data-testid="inline-account">alice, inline</p>,
+};
 
 function renderMenu(props: Partial<ComponentProps<typeof NavMenu>> = {}) {
   return render(<NavMenu items={items} account={account} locale="en" labels={labels} {...props} />);
@@ -60,6 +64,12 @@ describe("NavMenu", () => {
     renderMenu();
 
     expect(current(inline())).toEqual(["Test"]);
+  });
+
+  it("puts the account controls in the bar itself too (CSS shows them from xl)", () => {
+    renderMenu();
+
+    expect(screen.getByTestId("inline-account").textContent).toBe("alice, inline");
   });
 
   it("opens the account controls from a button that names the account", async () => {
@@ -140,6 +150,7 @@ describe("NavMenu", () => {
     renderMenu({ items: [items[3], { id: "signIn", href: "/login", label: "Sign in" }], account: null });
 
     expect(screen.queryByRole("button", { name: /Account/ })).toBeNull();
+    expect(screen.queryByTestId("inline-account")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Menu" }));
     const sheet = screen.getByRole("dialog", { name: "Menu" });
     expect(within(sheet).getAllByRole("link").map((link) => link.textContent)).toEqual(["Help", "Sign in"]);
