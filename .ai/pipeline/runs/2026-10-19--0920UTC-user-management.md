@@ -52,12 +52,12 @@ Follows the spec's Implementation Plan, Steps 1–10, unchanged.
 
 ### Phase 1: Accounts and sign-in
 
-- [ ] 1.1 Errors and authorization helpers
-- [ ] 1.2 Password hashing
-- [ ] 1.3 Schema
-- [ ] 1.4 UserService
-- [ ] 1.5 Sign-in for normal users
-- [ ] 1.6 Gates and /admin
+- [x] 1.1 Errors and authorization helpers — 29dfd8d
+- [x] 1.2 Password hashing — d04982d
+- [x] 1.3 Schema — 973e0cf
+- [x] 1.4 UserService — 5226b62
+- [x] 1.5 Sign-in for normal users — efea17a
+- [x] 1.6 Gates and /admin — db987a0
 
 ### Phase 2: The users screen
 
@@ -67,5 +67,9 @@ Follows the spec's Implementation Plan, Steps 1–10, unchanged.
 - [ ] 2.4 Integration tests and full gate
 
 ## Notes
+
+- **The throttle got one addition the spec didn't name: `MAX_FAILURES_PER_IP = 50`.** Keying buckets by the submitted name (the spec's enumeration fix) removed the old shared unknown-name bucket, which had capped one IP at 5 guesses across unknown names. The IP-wide cap restores a bound on name spraying without telling an existing account from an unknown one.
+- **Race test.** It hooks the service's `em.transactional` so the reset or deactivation commits just before the session transaction opens. Reverting the compare-and-set makes both race tests fail, which is checked.
+- **Lockfile.** `npm install --package-lock-only` added unrelated wasm bundle entries. Only the `engines` hunk was kept, and `npm ci --dry-run` passes.
 
 ## Verification
