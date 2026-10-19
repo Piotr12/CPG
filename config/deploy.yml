@@ -28,6 +28,7 @@ proxy:
   hosts:
     - cpg.baby
     - www.cpg.baby
+    - its.cpg.baby
   app_port: 3000
   healthcheck:
     path: /up
