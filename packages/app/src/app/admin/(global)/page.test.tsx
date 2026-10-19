@@ -1,20 +1,23 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { resolveServerComponents } from "../../../../../tests/setup/server-components";
+import { resolveServerComponents } from "../../../../../../tests/setup/server-components";
 import AdminPage, { metadata } from "./page";
 
 const mocks = vi.hoisted(() => ({
   connection: vi.fn(),
   getStatus: vi.fn(),
+  listTenants: vi.fn(),
   requireAdmin: vi.fn(),
   signOut: vi.fn(),
 }));
 vi.mock("next/server", () => ({ connection: mocks.connection }));
 vi.mock("@cpg/core", () => ({
-  requestScope: async () => ({ cradle: { systemStatusService: { getStatus: mocks.getStatus } } }),
+  requestScope: async () => ({
+    cradle: { systemStatusService: { getStatus: mocks.getStatus }, tenantService: { list: mocks.listTenants } },
+  }),
 }));
-vi.mock("../../auth/require-admin", () => ({ requireAdmin: mocks.requireAdmin }));
-vi.mock("./actions", () => ({ signOut: mocks.signOut }));
+vi.mock("../../../auth/require-admin", () => ({ requireAdmin: mocks.requireAdmin }));
+vi.mock("../actions", () => ({ signOut: mocks.signOut }));
 
 const status = { databasePath: "/externaldata/cpg.sqlite", appliedMigrations: 3, pendingMigrations: 0, settings: 7 };
 const admin = { sessionId: "s1", userId: "u1", username: "admin", role: "admin" };
@@ -22,6 +25,10 @@ const admin = { sessionId: "s1", userId: "u1", username: "admin", role: "admin" 
 describe("AdminPage", () => {
   beforeEach(() => {
     mocks.requireAdmin.mockResolvedValue(admin);
+    mocks.listTenants.mockResolvedValue([
+      { code: "test", name: "Test", generation: 1 },
+      { code: "prod", name: "Prod", generation: 1 },
+    ]);
   });
   afterEach(() => vi.clearAllMocks());
 
@@ -53,6 +60,20 @@ describe("AdminPage", () => {
 
     await expect(resolveServerComponents(AdminPage())).rejects.toThrow("NEXT_REDIRECT /login");
     expect(mocks.getStatus).not.toHaveBeenCalled();
+  });
+
+  it("offers both tenants to choose from (TEN-001, TEN-010)", async () => {
+    mocks.getStatus.mockResolvedValue(status);
+
+    render(await resolveServerComponents(AdminPage()));
+
+    const chooser = screen.getByRole("navigation", { name: "Choose a tenant" });
+    expect(
+      [...chooser.querySelectorAll("a")].map((link) => [link.getAttribute("href"), link.textContent]),
+    ).toEqual([
+      ["/admin/test", "TestDemonstration data, safe to experimentOpen Test →"],
+      ["/admin/prod", "ProdLive dataOpen Prod →"],
+    ]);
   });
 
   it("flags pending migrations", async () => {

@@ -1,14 +1,21 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { connection } from "next/server";
 import { Badge } from "@cpg/ui/components/badge";
-import { Button } from "@cpg/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@cpg/ui/components/card";
-import { requestScope } from "@cpg/core";
-import { requireAdmin } from "../../auth/require-admin";
-import { signOut } from "./actions";
+import { requestScope, type TenantCode } from "@cpg/core";
+import { cn } from "@cpg/ui/lib/utils";
+import { requireAdmin } from "../../../auth/require-admin";
+import { SignedInBar } from "../../../components/auth/signed-in-bar";
 
 export const metadata: Metadata = { title: "Admin · Caveman Planning Good" };
+
+/** How the chooser presents each tenant: Test is the safe playground, Prod is live. */
+const CHOICES: Record<TenantCode, { description: string; className: string }> = {
+  test: { description: "Demonstration data, safe to experiment", className: "border-amber-500 bg-amber-50" },
+  prod: { description: "Live data", className: "border-red-600" },
+};
 
 export default function AdminPage() {
   return (
@@ -25,21 +32,25 @@ export default function AdminPage() {
 async function AdminContent() {
   await connection();
   const user = await requireAdmin();
-  const { systemStatusService } = (await requestScope()).cradle;
-  const status = await systemStatusService.getStatus();
+  const { systemStatusService, tenantService } = (await requestScope()).cradle;
+  const [status, tenants] = await Promise.all([systemStatusService.getStatus(), tenantService.list()]);
 
   return (
     <>
-      <div className="flex items-center justify-end gap-3 text-sm text-muted-foreground">
-        <span>
-          Signed in as <strong className="text-foreground">{user.username}</strong>
-        </span>
-        <form action={signOut}>
-          <Button type="submit" variant="outline" size="sm">
-            Sign out
-          </Button>
-        </form>
-      </div>
+      <SignedInBar username={user.username} />
+      <nav aria-label="Choose a tenant" className="grid gap-4 sm:grid-cols-2">
+        {tenants.map(({ code, name }) => (
+          <Link
+            key={code}
+            href={`/admin/${code}`}
+            className={cn("flex flex-col gap-1 rounded-xl border p-5 transition-shadow hover:shadow-md", CHOICES[code].className)}
+          >
+            <span className="text-lg font-semibold">{name}</span>
+            <span className="text-sm text-muted-foreground">{CHOICES[code].description}</span>
+            <span className="mt-2 text-sm font-semibold">Open {name} →</span>
+          </Link>
+        ))}
+      </nav>
       <Card>
         <CardHeader>
           <CardTitle>Database</CardTitle>
