@@ -262,6 +262,165 @@ export const en = {
       GENERATION_STALE: "This tenant's data was reset since you loaded the page. Reload and try again.",
     },
   },
+  /**
+   * The locations screen (E03-S02), the same shape as the other named-record screens so the shared
+   * components can show any of them. Client components get plain strings; only the heading is a function.
+   */
+  locations: {
+    link: "Locations",
+    heading: (tenant: string) => `Locations — ${tenant}`,
+    intro: "Sites where materials are made and stocked. IDs are assigned in order and never change.",
+    empty: "No locations in {tenant} yet.",
+    emptyHint: "Create the first one with Create location.",
+    columns: { id: "ID", name: "Name", status: "Status", actions: "Actions" },
+    status: { active: "Active", inactive: "Inactive" },
+    cancel: "Cancel",
+    menu: { label: "Actions for {id}", edit: "Edit", deactivate: "Deactivate", reactivate: "Reactivate" },
+    form: {
+      name: "Name",
+      nameHint: "Up to 100 characters. Names don't have to be unique: the ID tells locations apart.",
+    },
+    create: {
+      open: "Create location",
+      title: "Create location",
+      description: "The ID is assigned when you create it.",
+      submit: "Create location",
+      submitting: "Creating…",
+    },
+    edit: {
+      title: "Edit location {id}",
+      description: "The ID never changes. Renaming changes nothing that already uses this location.",
+      submit: "Save",
+      submitting: "Saving…",
+    },
+    deactivate: {
+      title: "Deactivate location {id}?",
+      description:
+        "An inactive location stays readable, and nothing that already uses it changes, but it can't be picked for new entries.",
+      confirm: "Deactivate",
+    },
+    reactivate: {
+      title: "Reactivate location {id}?",
+      description: "It can be picked for new entries again.",
+      confirm: "Reactivate",
+    },
+    fieldErrors: { nameRequired: "Enter a name.", nameTooLong: "Use at most 100 characters." },
+    /** What these error codes mean on this screen, merged over the shared `errors` by `namedRecordsLabels`. */
+    errors: {
+      CONFLICT: "Another location was created at the same moment. Try again.",
+      FORBIDDEN: "Only the administrator can change locations.",
+      VERSION_CONFLICT: "This location was changed since you loaded the page. Check it and try again.",
+      LOCATION_NOT_FOUND: "That location doesn't exist in this tenant.",
+      LOCATION_IDS_EXHAUSTED: "This tenant has used every eight-digit location ID.",
+      GENERATION_STALE: "This tenant's data was reset since you loaded the page. Reload and try again.",
+    },
+  },
+  /**
+   * The customers screen (E03-S02), the same shape as the other named-record screens so the shared
+   * components can show any of them. Client components get plain strings; only the heading is a function.
+   */
+  customers: {
+    link: "Customers",
+    heading: (tenant: string) => `Customers — ${tenant}`,
+    intro: "Who you sell to. IDs are assigned in order and never change.",
+    empty: "No customers in {tenant} yet.",
+    emptyHint: "Create the first one with Create customer.",
+    columns: { id: "ID", name: "Name", status: "Status", actions: "Actions" },
+    status: { active: "Active", inactive: "Inactive" },
+    cancel: "Cancel",
+    menu: { label: "Actions for {id}", edit: "Edit", deactivate: "Deactivate", reactivate: "Reactivate" },
+    form: {
+      name: "Name",
+      nameHint: "Up to 100 characters. Names don't have to be unique: the ID tells customers apart.",
+    },
+    create: {
+      open: "Create customer",
+      title: "Create customer",
+      description: "The ID is assigned when you create it.",
+      submit: "Create customer",
+      submitting: "Creating…",
+    },
+    edit: {
+      title: "Edit customer {id}",
+      description: "The ID never changes. Renaming changes nothing that already uses this customer.",
+      submit: "Save",
+      submitting: "Saving…",
+    },
+    deactivate: {
+      title: "Deactivate customer {id}?",
+      description:
+        "An inactive customer stays readable, and nothing that already uses it changes, but it can't be picked for new entries.",
+      confirm: "Deactivate",
+    },
+    reactivate: {
+      title: "Reactivate customer {id}?",
+      description: "It can be picked for new entries again.",
+      confirm: "Reactivate",
+    },
+    fieldErrors: { nameRequired: "Enter a name.", nameTooLong: "Use at most 100 characters." },
+    /** What these error codes mean on this screen, merged over the shared `errors` by `namedRecordsLabels`. */
+    errors: {
+      CONFLICT: "Another customer was created at the same moment. Try again.",
+      FORBIDDEN: "Only the administrator can change customers.",
+      VERSION_CONFLICT: "This customer was changed since you loaded the page. Check it and try again.",
+      CUSTOMER_NOT_FOUND: "That customer doesn't exist in this tenant.",
+      CUSTOMER_IDS_EXHAUSTED: "This tenant has used every eight-digit customer ID.",
+      GENERATION_STALE: "This tenant's data was reset since you loaded the page. Reload and try again.",
+    },
+  },
+  /**
+   * The suppliers screen (E03-S02), the same shape as the other named-record screens so the shared
+   * components can show any of them. Client components get plain strings; only the heading is a function.
+   */
+  suppliers: {
+    link: "Suppliers",
+    heading: (tenant: string) => `Suppliers — ${tenant}`,
+    intro: "Who you buy from. IDs are assigned in order and never change.",
+    empty: "No suppliers in {tenant} yet.",
+    emptyHint: "Create the first one with Create supplier.",
+    columns: { id: "ID", name: "Name", status: "Status", actions: "Actions" },
+    status: { active: "Active", inactive: "Inactive" },
+    cancel: "Cancel",
+    menu: { label: "Actions for {id}", edit: "Edit", deactivate: "Deactivate", reactivate: "Reactivate" },
+    form: {
+      name: "Name",
+      nameHint: "Up to 100 characters. Names don't have to be unique: the ID tells suppliers apart.",
+    },
+    create: {
+      open: "Create supplier",
+      title: "Create supplier",
+      description: "The ID is assigned when you create it.",
+      submit: "Create supplier",
+      submitting: "Creating…",
+    },
+    edit: {
+      title: "Edit supplier {id}",
+      description: "The ID never changes. Renaming changes nothing that already uses this supplier.",
+      submit: "Save",
+      submitting: "Saving…",
+    },
+    deactivate: {
+      title: "Deactivate supplier {id}?",
+      description:
+        "An inactive supplier stays readable, and nothing that already uses it changes, but it can't be picked for new entries.",
+      confirm: "Deactivate",
+    },
+    reactivate: {
+      title: "Reactivate supplier {id}?",
+      description: "It can be picked for new entries again.",
+      confirm: "Reactivate",
+    },
+    fieldErrors: { nameRequired: "Enter a name.", nameTooLong: "Use at most 100 characters." },
+    /** What these error codes mean on this screen, merged over the shared `errors` by `namedRecordsLabels`. */
+    errors: {
+      CONFLICT: "Another supplier was created at the same moment. Try again.",
+      FORBIDDEN: "Only the administrator can change suppliers.",
+      VERSION_CONFLICT: "This supplier was changed since you loaded the page. Check it and try again.",
+      SUPPLIER_NOT_FOUND: "That supplier doesn't exist in this tenant.",
+      SUPPLIER_IDS_EXHAUSTED: "This tenant has used every eight-digit supplier ID.",
+      GENERATION_STALE: "This tenant's data was reset since you loaded the page. Reload and try again.",
+    },
+  },
   /** The Global and tenant audit screens: read-only for every account (AUD-009, AUD-010). */
   audit: {
     globalHeading: "Global audit",
@@ -299,6 +458,18 @@ export const en = {
       "materials.material-conversion.created": "Unit conversion added",
       "materials.material-conversion.updated": "Unit conversion changed",
       "materials.material-conversion.removed": "Unit conversion removed",
+      "locations.location.created": "Location created",
+      "locations.location.updated": "Location renamed",
+      "locations.location.deactivated": "Location deactivated",
+      "locations.location.reactivated": "Location reactivated",
+      "customers.customer.created": "Customer created",
+      "customers.customer.updated": "Customer renamed",
+      "customers.customer.deactivated": "Customer deactivated",
+      "customers.customer.reactivated": "Customer reactivated",
+      "suppliers.supplier.created": "Supplier created",
+      "suppliers.supplier.updated": "Supplier renamed",
+      "suppliers.supplier.deactivated": "Supplier deactivated",
+      "suppliers.supplier.reactivated": "Supplier reactivated",
       "tenants.tenant.read-only-changed": "Read-only flag changed",
     },
     passwordNotRecorded: "Password replaced (not recorded)",

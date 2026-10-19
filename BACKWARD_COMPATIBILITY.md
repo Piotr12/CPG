@@ -60,7 +60,7 @@ Source: `packages/app/src/app/up/route.ts`, `Dockerfile`, `config/deploy.yml`.
 Source: `packages/app/src/app/`. Today that is:
 
 - `/`, `/login` and `/help`, which are public. `/help` accepts `?q=` and anchors topics as `#<topic-id>`.
-- `/admin` (the Global tenant chooser), `/admin/test` and `/admin/prod` (the tenant homes). Every tenant page lives under `/admin/{tenant}/`, such as `/admin/{tenant}/materials` and `/admin/{tenant}/materials/{id}` (an eight-digit material ID). All of them require a signed-in session and redirect to `/login` otherwise; tenant pages are readable by every account.
+- `/admin` (the Global tenant chooser), `/admin/test` and `/admin/prod` (the tenant homes). Every tenant page lives under `/admin/{tenant}/`, such as `/admin/{tenant}/materials` and `/admin/{tenant}/materials/{id}` (an eight-digit material ID), and `/admin/{tenant}/locations`, `/admin/{tenant}/customers` and `/admin/{tenant}/suppliers` (help topics `locations`, `customers`, `suppliers`). All of them require a signed-in session and redirect to `/login` otherwise; tenant pages are readable by every account.
 
 **Breaking:** removing or renaming a page URL users can bookmark, a help topic id, or the `q` parameter. **Required path:** a redirect from the old URL in the same PR, or a topic kept under its old id.
 
@@ -92,8 +92,13 @@ Route handlers under `app/api/` are protected the same way: their paths, methods
   - `POST /api/tenants/{tenant}/materials/{id}/conversions` (`{ unit, numerator, denominator }`; 400 `UNIT_IS_BASE_UNIT`, 409 `CONVERSION_EXISTS`);
   - `PATCH /api/tenants/{tenant}/materials/{id}/conversions/{unit}` (`{ numerator, denominator, version }`; 404 `CONVERSION_NOT_FOUND`);
   - `DELETE /api/tenants/{tenant}/materials/{id}/conversions/{unit}`, the first `DELETE` with a JSON body: `{ version }`.
+- the locations, customers and suppliers of one tenant (spec `2026-10-19--2014UTC-locations-customers-suppliers`), with the same read and write rules. `{kind}` is `locations`, `customers` or `suppliers`, and each record is addressed by its eight-digit ID, numbered per tenant and per kind:
+  - `GET /api/tenants/{tenant}/{kind}` (inactive records included);
+  - `POST /api/tenants/{tenant}/{kind}` (`{ name }`; 409 `CONFLICT` for a create racing past the retry, 409 `LOCATION_IDS_EXHAUSTED`, `CUSTOMER_IDS_EXHAUSTED` or `SUPPLIER_IDS_EXHAUSTED` past 99999999);
+  - `GET /api/tenants/{tenant}/{kind}/{id}` (404 `LOCATION_NOT_FOUND`, `CUSTOMER_NOT_FOUND` or `SUPPLIER_NOT_FOUND`);
+  - `PATCH /api/tenants/{tenant}/{kind}/{id}` (`{ version, name?, active? }`, at least one of them; an `id` in the body is 400).
 
-**Versions.** An edit of a versioned record (today: a user, a material and a material's conversion) carries the `version` it loaded. A stale one is 409 `VERSION_CONFLICT`, and the newer change is kept. The user routes answer 404 `NOT_FOUND` for the built-in admin, an unknown id or a malformed one.
+**Versions.** An edit of a versioned record (today: a user, a material, a material's conversion, a location, a customer and a supplier) carries the `version` it loaded. A stale one is 409 `VERSION_CONFLICT`, and the newer change is kept. The user routes answer 404 `NOT_FOUND` for the built-in admin, an unknown id or a malformed one.
 
 Every tenant-scoped endpoint lives under `/api/tenants/{tenant}/`.
 

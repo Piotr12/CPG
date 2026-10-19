@@ -1,0 +1,920 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CPG — Menu revamp 02: top bar with mega-menu and section tabs</title>
+<style>
+/* ---------- tokens (shadcn neutral, as in the current app) ---------- */
+:root{
+  --bg:#fff;--fg:#252525;--strong:#111;--muted:#737373;--border:#e5e5e5;--line:#f0f0f0;
+  --soft:#f4f4f5;--soft2:#fafafa;--primary:#252525;--primary-fg:#fff;
+  --shadow:0 16px 40px rgba(0,0,0,.12);--focus:#2563eb;--scrim:rgba(0,0,0,.18);
+  --bad:#c0362c;
+  --t-bg:#fde68a;--t-fg:#92400e;--t-line:#f59e0b;
+  --p-bg:#171717;--p-fg:#fff;--p-red:#dc2626;
+  --tenant:var(--t-line);
+  color-scheme:light;
+}
+[data-theme=dark]{
+  --bg:#0b0b0b;--fg:#ededed;--strong:#fff;--muted:#a3a3a3;--border:#2c2c2c;--line:#1f1f1f;
+  --soft:#1c1c1c;--soft2:#141414;--primary:#ededed;--primary-fg:#111;
+  --shadow:0 16px 40px rgba(0,0,0,.6);--focus:#60a5fa;--scrim:rgba(0,0,0,.5);--bad:#ef4444;
+  color-scheme:dark;
+}
+[data-tenant=prod]{--tenant:var(--p-red)}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;font-size:14px;line-height:1.45;background:var(--bg);color:var(--fg);min-height:100vh;display:flex;flex-direction:column}
+a{color:inherit}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:6px}
+h1:focus{outline:none}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.muted{color:var(--muted)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---------- top bar ---------- */
+.top{position:sticky;top:0;z-index:40;background:var(--bg)}
+.bar{height:56px;display:flex;align-items:center;gap:12px;padding:0 24px;max-width:1440px;margin:0 auto}
+.brand{display:inline-flex;align-items:center;gap:6px;font-weight:700;color:var(--strong);text-decoration:none;white-space:nowrap;padding:4px 6px;margin-left:-6px;border-radius:8px}
+.brand:hover{background:var(--soft)}
+.topnav{display:flex;align-items:center;gap:2px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none;padding:4px 2px}
+.topnav::-webkit-scrollbar{display:none}
+.topnav.ovf{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 32px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 32px),transparent)}
+.tn{height:34px;padding:0 10px;border:0;background:none;border-radius:8px;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.tn:hover{background:var(--soft);color:var(--fg)}
+.tn[aria-expanded=true]{background:var(--soft);color:var(--strong)}
+.tn .lbl{padding:2px 0}
+.tn.cur{color:var(--strong)}
+.tn.cur .lbl{box-shadow:inset 0 -1px 0 currentColor}
+.chev{opacity:.75;transition:transform .15s;flex:none}
+.tn[aria-expanded=true] .chev{transform:rotate(180deg)}
+.right{display:flex;align-items:center;gap:8px;flex:none}
+.iconbtn{width:34px;height:34px;border:1px solid var(--border);border-radius:999px;display:inline-grid;place-items:center;background:var(--bg);text-decoration:none;font-weight:600;cursor:pointer}
+.iconbtn:hover{background:var(--soft)}
+.iconbtn[aria-current=page]{background:var(--soft);border-color:var(--fg)}
+.acct{height:34px;border:1px solid var(--border);border-radius:999px;background:var(--bg);display:inline-flex;align-items:center;gap:8px;padding:0 10px 0 3px;cursor:pointer}
+.acct:hover,.acct[aria-expanded=true]{background:var(--soft)}
+.av{width:28px;height:28px;border-radius:50%;background:var(--primary);color:var(--primary-fg);display:inline-grid;place-items:center;font-size:12px;font-weight:700;flex:none}
+.menu-btn{display:none}
+/* tenant edge: ambient colour, not a second bar */
+.edge{height:4px}
+.edge.test{background:linear-gradient(var(--t-bg) 0 3px,var(--t-line) 3px)}
+.edge.prod{background:linear-gradient(var(--p-bg) 0 3px,var(--p-red) 3px)}
+.edge.global{background:linear-gradient(90deg,var(--t-bg) 0 50%,var(--p-bg) 50%)}
+[data-theme=dark] .edge.prod{background:linear-gradient(#3a3a3a 0 1px,var(--p-red) 1px)}
+
+/* ---------- tenant switch: TEST ◐ PROD ---------- */
+.tsw{display:inline-flex;align-items:center;gap:4px;padding:3px;border-radius:999px;border:1px solid var(--border);background:var(--soft2);cursor:pointer;white-space:nowrap}
+.tsw:hover{border-color:var(--muted)}
+.tsw-s{padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.07em;color:var(--muted);display:inline-flex;align-items:center;gap:5px;transition:background .15s,color .15s}
+.tsw.test .t{background:var(--t-bg);color:var(--t-fg);box-shadow:inset 0 0 0 1px var(--t-line)}
+.tsw.prod .p{background:var(--p-bg);color:var(--p-fg);box-shadow:inset 0 0 0 1px var(--p-red)}
+.tsw.prod .p::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--p-red)}
+.tsw-k{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--t-fg);background:linear-gradient(90deg,var(--t-line) 50%,transparent 50%);transition:transform .2s;flex:none}
+.tsw.prod .tsw-k{border-color:var(--p-red);background:linear-gradient(90deg,var(--p-red) 50%,transparent 50%);transform:rotate(180deg)}
+.tsw.onglobal{border-style:dashed}
+.tsw .lock{font-size:11px}
+.tsw.compact{padding:2px;gap:2px}
+.tsw.compact .tsw-s{padding:3px 7px;font-size:11px;letter-spacing:.04em}
+.tsw.compact .tsw-k{width:11px;height:11px}
+
+/* ---------- mega panel ---------- */
+.mega{position:absolute;left:0;right:0;top:100%;background:var(--bg);border-top:1px solid var(--border);border-bottom:1px solid var(--border);box-shadow:var(--shadow);max-height:calc(100vh - 70px);overflow:auto}
+.mega-in{max-width:1440px;margin:0 auto;padding:20px 24px 14px;display:grid;grid-template-columns:230px repeat(var(--cols),minmax(0,300px));gap:28px}
+.mega-intro h2{margin:0 0 6px;font-size:16px;display:flex;align-items:center;gap:8px}
+.mega-intro p{margin:0 0 10px;color:var(--muted);font-size:13px}
+.mega-intro .tip{font-size:12px;color:var(--muted);border:1px dashed var(--border);border-radius:10px;padding:8px 10px}
+.mega-col h3{margin:2px 0 6px 10px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.mega-col ul,.sheet ul{list-style:none;margin:0;padding:0}
+.mi{display:flex;gap:10px;padding:8px 10px;border-radius:10px;text-decoration:none;color:var(--fg);align-items:flex-start}
+.mi:hover,.mi:focus-visible{background:var(--soft)}
+.mi[aria-current]{background:var(--soft);box-shadow:inset 3px 0 0 var(--tenant)}
+.mi-ico{width:32px;height:32px;border-radius:9px;border:1px solid var(--border);background:var(--bg);display:grid;place-items:center;font-size:16px;flex:none}
+.mi-t{font-weight:600;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.mi-d{display:block;color:var(--muted);font-size:12.5px;margin-top:1px}
+.mi.later .mi-t,.mi.later .mi-ico{opacity:.55}
+.mi.later .mi-d{opacity:.75}
+.mega-foot{max-width:1440px;margin:0 auto;padding:0 24px 14px;display:flex;justify-content:space-between;color:var(--muted);font-size:12px;gap:12px}
+kbd{font-family:inherit;border:1px solid var(--border);border-bottom-width:2px;border-radius:5px;padding:0 5px;font-size:11px}
+.scrim{position:fixed;inset:0;background:var(--scrim);z-index:30}
+
+/* ---------- account popover ---------- */
+.pop{position:absolute;right:24px;top:52px;width:280px;background:var(--bg);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);padding:12px;display:flex;flex-direction:column;gap:12px;z-index:45}
+.pop-who{display:flex;gap:10px;align-items:center}
+.pop-who .av{width:36px;height:36px;font-size:14px}
+.pop-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.pop-row>span{color:var(--muted);font-size:13px}
+.pop hr{border:0;border-top:1px solid var(--border);margin:0}
+.pop-link{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;text-decoration:none;border:0;background:none;width:100%;text-align:left;cursor:pointer}
+.pop-link:hover{background:var(--soft)}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:10px;padding:3px;gap:3px}
+.seg button{border:0;background:none;padding:3px 10px;border-radius:7px;cursor:pointer;font-size:13px}
+.seg button[aria-pressed=true]{background:var(--soft);font-weight:600}
+
+/* ---------- page ---------- */
+main{flex:1;width:100%;max-width:1440px;margin:0 auto;padding:22px 24px 48px;display:flex;flex-direction:column;gap:16px}
+.banner{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-radius:10px;font-size:13.5px}
+.banner.ro-test{background:#fffbeb;border:1px solid var(--t-line);color:var(--t-fg)}
+.banner.ro-prod{background:var(--p-bg);border:1px solid var(--p-red);color:#fff}
+.banner.shared{background:var(--soft2);border:1px dashed var(--border);color:var(--fg)}
+[data-theme=dark] .banner.ro-test{background:#2a1f05;color:#fcd34d}
+.crumbs{font-size:13px;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.crumbs a{text-decoration:none}
+.crumbs a:hover{text-decoration:underline;color:var(--fg)}
+.crumbs .sep{opacity:.6}
+.ph{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.ph-t{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}
+h1{font-size:24px;margin:0;color:var(--strong);letter-spacing:-.01em}
+h2{font-size:18px;margin:0}
+.tchip{font-size:11px;font-weight:700;letter-spacing:.08em;padding:3px 8px;border-radius:5px;white-space:nowrap}
+.tchip.test{background:var(--t-fg);color:#fff}
+.tchip.prod{background:var(--p-bg);color:#fff;box-shadow:inset 0 0 0 1px var(--p-red)}
+.tchip.global{background:var(--soft);color:var(--fg);border:1px dashed var(--muted)}
+.tabs-wrap{position:relative;margin-top:-4px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs-wrap.fade::after{content:"";position:absolute;right:0;top:0;bottom:1px;width:36px;background:linear-gradient(90deg,transparent,var(--bg));pointer-events:none}
+.tabs a,.tabs .grp{padding:9px 12px 10px;white-space:nowrap;color:var(--muted);text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-1px;display:inline-flex;align-items:center;gap:6px}
+.tabs .grp{font-size:11px;text-transform:uppercase;letter-spacing:.08em;padding-left:2px;font-weight:600}
+.tabs a:hover{color:var(--fg)}
+.tabs a.on{color:var(--strong);border-bottom-color:var(--strong);font-weight:500}
+.tabs a.later{opacity:.6}
+.lead{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.lead p{margin:0;color:var(--muted);max-width:760px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{height:32px;padding:0 12px;border:1px solid var(--border);border-radius:8px;display:inline-flex;align-items:center;gap:6px;font-weight:500;font-size:14px;background:var(--bg);white-space:nowrap;cursor:pointer;text-decoration:none;color:var(--fg)}
+.btn:hover{background:var(--soft)}
+.btn.primary{background:var(--primary);color:var(--primary-fg);border-color:var(--primary)}
+.btn.primary:hover{opacity:.9}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sm{height:28px;font-size:13px;padding:0 9px}
+.tbl{overflow-x:auto;border:1px solid var(--border);border-radius:12px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;color:var(--muted);font-weight:500;padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--soft2)}
+td{padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td a{text-underline-offset:3px}
+.badge{border:1px solid var(--border);border-radius:999px;padding:1px 8px;font-size:12px;white-space:nowrap;font-weight:500}
+.badge.ok{background:var(--soft)}
+.badge.off{background:var(--bad);color:#fff;border-color:var(--bad)}
+.badge.later{font-size:10.5px;padding:0 6px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--soft);font-weight:600}
+.badge.api{background:#eef2ff;color:#3730a3;border-color:#c7d2fe}
+[data-theme=dark] .badge.api{background:#1e1b4b;color:#c7d2fe;border-color:#3730a3}
+.card{border:1px solid var(--border);border-radius:14px;padding:18px}
+.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:0}
+.facts dt{color:var(--muted);font-size:13px}
+.facts dd{margin:4px 0 0}
+.grid{display:grid;gap:12px}
+.stats{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.stat{border:1px solid var(--border);border-radius:12px;padding:14px;text-decoration:none;display:flex;flex-direction:column;gap:2px}
+.stat:hover{background:var(--soft2);border-color:var(--muted)}
+.stat b{font-size:24px;color:var(--strong)}
+.stat span{color:var(--muted);font-size:13px}
+.two{display:grid;grid-template-columns:2fr 1fr;gap:16px;align-items:start}
+.empty{border:1px dashed var(--border);border-radius:12px;padding:22px;text-align:center;color:var(--muted)}
+.soon{border:1px dashed var(--border);border-radius:16px;padding:40px 24px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center}
+.soon .big{font-size:40px}
+.soon p{max-width:560px;margin:0;color:var(--muted)}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.step{padding:12px 14px;display:flex;gap:10px;align-items:center;border-right:1px solid var(--border);background:var(--soft2);color:var(--muted);text-align:left;border-top:0;border-bottom:0;border-left:0;cursor:pointer}
+.step:last-child{border-right:0}
+.step .n{width:24px;height:24px;border-radius:50%;border:1px solid currentColor;display:grid;place-items:center;font-size:12px;font-weight:700;flex:none}
+.step.on{background:var(--bg);color:var(--strong);box-shadow:inset 0 -2px 0 var(--strong)}
+.step.done .n{background:var(--strong);color:var(--bg);border-color:var(--strong)}
+.drop{border:2px dashed var(--border);border-radius:12px;padding:26px;text-align:center;color:var(--muted)}
+.result{border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-size:13.5px}
+.tcards{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.tcard{border:1px solid var(--border);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:12px;border-top-width:4px}
+.tcard.test{border-top-color:var(--t-line)}
+.tcard.prod{border-top-color:var(--p-red)}
+.sw{display:inline-flex;align-items:center;gap:10px;border:0;background:none;padding:0;cursor:pointer;text-align:left}
+.sw .track{width:40px;height:22px;border-radius:999px;background:var(--border);position:relative;transition:background .15s;flex:none}
+.sw .track::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:left .15s}
+.sw[aria-checked=true] .track{background:var(--bad)}
+.sw[aria-checked=true] .track::after{left:21px}
+.help h2{margin-top:6px}
+.help li{margin:4px 0}
+footer{padding:20px 24px 28px;text-align:center;font-size:13px;color:var(--muted)}
+footer a{text-underline-offset:3px}
+
+/* ---------- mobile sheet ---------- */
+.sheet{position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;overflow:auto}
+.sheet[hidden]{display:none}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;padding:0 12px;height:56px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:1}
+.sheet-tenant{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:8px}
+.sheet-tenant .muted{font-size:13px}
+.sheet-body{padding:8px 8px 0;flex:1}
+.acc-h{width:100%;display:flex;justify-content:space-between;align-items:center;padding:12px 10px;border:0;background:none;font-weight:600;font-size:15px;cursor:pointer;border-radius:10px}
+.acc-h:hover{background:var(--soft)}
+.acc-h .chev{font-size:12px}
+.acc-h[aria-expanded=true] .chev{transform:rotate(180deg)}
+.acc-sec{border-bottom:1px solid var(--line)}
+.acc-sec ul{padding:0 0 8px}
+.acc-grp{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:8px 12px 2px;font-weight:600}
+.sheet .mi{padding:9px 10px}
+.sheet .mi-d{font-size:12px}
+.sheet-acct{padding:14px 16px 20px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:12px;background:var(--soft2)}
+
+/* ---------- mockup controls (not part of the design) ---------- */
+.mc{position:fixed;right:12px;bottom:12px;z-index:50;width:262px;border:1.5px dashed #9ca3af;border-radius:12px;background:var(--bg);font-size:12.5px;box-shadow:0 6px 18px rgba(0,0,0,.08)}
+.mc-head{width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;border:0;background:none;cursor:pointer;font-weight:600;font-size:12px;color:var(--muted);text-align:left}
+.mc-body{padding:0 10px 10px;display:flex;flex-direction:column;gap:9px}
+.mc-body fieldset{border:0;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:4px 12px}
+.mc-body legend{font-weight:600;padding:0;margin-bottom:3px;width:100%}
+.mc-body label{display:inline-flex;align-items:center;gap:5px;cursor:pointer}
+.mc[data-collapsed=true] .mc-body{display:none}
+.mc[data-collapsed=true]{width:auto}
+
+/* ---------- about dialog + toast ---------- */
+.dlg-wrap{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.45);display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto}
+.dlg{width:min(760px,100%);background:var(--bg);border-radius:14px;padding:22px 24px;display:flex;flex-direction:column;gap:12px;box-shadow:var(--shadow)}
+.dlg h2{font-size:19px}
+.dlg h3{margin:6px 0 0;font-size:14px}
+.dlg p,.dlg ul{margin:0}
+.dlg ul{padding-left:18px}
+.dlg li{margin:3px 0}
+.dlg td,.dlg th{white-space:normal}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%) translateY(20px);opacity:0;z-index:80;background:var(--primary);color:var(--primary-fg);padding:9px 14px;border-radius:10px;font-size:13.5px;transition:all .2s;pointer-events:none;max-width:min(560px,calc(100vw - 32px));text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ---------- responsive ---------- */
+@media (max-width:1180px){.acct-name{display:none}.acct{padding-right:8px}.mega-in{grid-template-columns:repeat(var(--cols),minmax(0,260px));gap:12px 24px}.mega-intro{grid-column:1/-1;display:flex;gap:6px 16px;align-items:center;flex-wrap:wrap}.mega-intro h2,.mega-intro p{margin:0}.mega-intro .tip{margin:0!important;padding:4px 10px}}
+@media (max-width:1023px){.bar{padding:0 16px;gap:8px}.mega-in{grid-template-columns:repeat(var(--cols),minmax(0,1fr))}.pop{right:16px}}
+@media (max-width:1040px){.bar .help-btn{display:none}.tn{padding:0 6px}.bar .tsw{padding:2px;gap:2px}.bar .tsw .tsw-s{padding:3px 7px;font-size:11px;letter-spacing:.04em}.bar .tsw .tsw-k{width:11px;height:11px}}
+@media (max-width:767px){
+  .topnav,.help-btn,.acct,.pop,.mega,.scrim{display:none!important}
+  .bar{padding:0 12px;justify-content:space-between}
+  .menu-btn{display:inline-flex;height:34px;padding:0 12px;border:1px solid var(--border);border-radius:999px;background:var(--bg);align-items:center;gap:6px;cursor:pointer;font-weight:500}
+  main{padding:16px 16px 40px;gap:14px}
+  h1{font-size:21px}
+  .facts{grid-template-columns:1fr 1fr}
+  .two,.tcards{grid-template-columns:1fr}
+  .steps{grid-template-columns:1fr}
+  .step{border-right:0;border-bottom:1px solid var(--border)}
+  .mc{width:auto;max-width:calc(100vw - 24px)}
+  .mc:not([data-collapsed=true]){width:250px}
+  .lead .actions{width:100%}
+  footer{padding-bottom:64px}
+}
+@media (min-width:768px){.sheet{display:none!important}}
+</style>
+</head>
+<body>
+<a class="sr" href="#main">Skip to content</a>
+<header class="top" id="top"></header>
+<div class="scrim" id="scrim" hidden></div>
+<main id="main"></main>
+<footer>Caveman Planning Good! Made in Jozefoslaw with Tokens, Coffee and <a href="https://github.com/open-mercato/skills" target="_blank" rel="noopener noreferrer">OpenMercato Skills</a> during <a href="https://www.aitechleaders.pl/" target="_blank" rel="noopener noreferrer">AITechLeaders training</a>.</footer>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Menu" hidden></div>
+
+<aside class="mc" id="mc" aria-label="Mockup controls">
+  <button class="mc-head" type="button" data-act="mc" aria-expanded="true" aria-controls="mc-body">Mockup controls (not part of the design) <span aria-hidden="true">±</span></button>
+  <div class="mc-body" id="mc-body">
+    <fieldset><legend>Role</legend>
+      <label><input type="radio" name="mc-role" value="admin" checked> Admin</label>
+      <label><input type="radio" name="mc-role" value="user"> Normal user</label>
+    </fieldset>
+    <label><input type="checkbox" id="mc-later" checked> Show later slices (2 and 3)</label>
+    <fieldset><legend>Read-only (same flags as the Tenants page)</legend>
+      <label><input type="checkbox" data-mc-ro="test"> Test</label>
+      <label><input type="checkbox" data-mc-ro="prod"> Prod</label>
+    </fieldset>
+    <button class="btn sm" type="button" data-act="about">About this concept</button>
+  </div>
+</aside>
+<div id="about" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+/* ======================= state ======================= */
+const S = {
+  role: "admin", later: true, ro: { test: false, prod: false },
+  theme: "light", lang: "en", lastTenant: "test",
+  open: null,          // open mega-panel section key
+  acct: false,         // account popover
+  sheet: false,        // mobile sheet
+  sheetSecs: new Set(["master"]),
+  importStep: 1,
+  about: false,
+};
+
+/* ======================= information architecture ======================= */
+// slice: 0 = exists now / being built / slice 1 (real page); 2 or 3 = later (placeholder)
+const P = (en, pl, icon, desc, extra) => Object.assign({ label: { en, pl }, icon, desc, scope: "tenant", slice: 0 }, extra || {});
+const PAGES = {
+  overview: P("Overview", "Przegląd", "🏠", "Record counts, recent changes and quick actions"),
+  materials: P("Materials", "Materiały", "🪨", "Raw, intermediate and finished goods, with unit conversions", { section: "master" }),
+  locations: P("Locations", "Lokalizacje", "📍", "Sites where stock lives", { section: "master" }),
+  customers: P("Customers", "Klienci", "🤝", "Who you sell to", { section: "master" }),
+  suppliers: P("Suppliers", "Dostawcy", "🚚", "Who you buy from", { section: "master" }),
+  "planning-parameters": P("Planning parameters", "Parametry planowania", "🎛️", "Make or buy, lead time and lot sizes per material and location", { section: "master" }),
+  "safety-stock": P("Safety stock", "Zapas bezpieczeństwa", "🛟", "Minimum stock targets, effective from a date", { section: "master" }),
+  boms: P("BOMs", "Struktury wyrobów", "🧩", "What a product is made of — alternatives and revisions", { section: "master" }),
+  import: P("Import", "Import z arkusza", "📥", "Load master data from a spreadsheet: template, dry run, commit", { section: "master", adminOnly: true }),
+  "customer-orders": P("Customer orders", "Zamówienia klientów", "🧾", "What customers asked for, and when", { section: "ops", slice: 2 }),
+  forecasts: P("Forecasts", "Prognozy", "🔮", "Demand you expect but nobody has ordered yet", { section: "ops", slice: 2 }),
+  shipments: P("Shipments", "Wydania", "📦", "Goods issued to customers", { section: "ops", slice: 2 }),
+  "purchase-requisitions": P("Purchase requisitions", "Zapotrzebowania", "📝", "Requests to buy, waiting for an order", { section: "ops", slice: 2 }),
+  "purchase-orders": P("Purchase orders", "Zamówienia zakupu", "🛒", "What you ordered from suppliers", { section: "ops", slice: 2 }),
+  "goods-receipts": P("Goods receipts", "Przyjęcia", "📬", "Goods received into a location", { section: "ops", slice: 2 }),
+  "production-orders": P("Production orders", "Zlecenia produkcyjne", "🏭", "What to make, how many, by when", { section: "ops", slice: 2 }),
+  completions: P("Completions", "Raporty wykonania", "✅", "Finished quantities reported back", { section: "ops", slice: 2 }),
+  stock: P("Stock", "Stany", "📊", "Stock on hand per material and location (the ledger)", { section: "ops", slice: 2 }),
+  corrections: P("Corrections", "Korekty", "✏️", "Fix a count after a stocktake", { section: "ops", slice: 2 }),
+  transfers: P("Transfers", "Przesunięcia", "🔁", "Move stock between locations", { section: "ops", slice: 2 }),
+  "stock-import": P("Stock import", "Import stanów", "📥", "Load opening stock from a spreadsheet", { section: "ops", slice: 2 }),
+  "mrp-run": P("MRP run", "Przebieg MRP", "⚙️", "Work out what to make and buy, and when", { section: "planning", slice: 3 }),
+  "mrp-report": P("Last MRP report", "Ostatni raport MRP", "📋", "Suggestions and warnings from the latest run", { section: "planning", slice: 3 }),
+  "report-stock": P("Stock report", "Raport stanów", "📈", "Quantity and value on a chosen date", { section: "reports", slice: 2 }),
+  "report-variance": P("Variance", "Odchyłki", "📉", "Planned versus actual, per order", { section: "reports", slice: 2 }),
+  "report-audit": P("Audit reports", "Raporty audytu", "🗂️", "Filtered extracts of the change log", { section: "reports", slice: 2 }),
+  audit: P("Tenant audit", "Audyt środowiska", "📜", "Every change in this tenant, append-only", { section: "audit" }),
+  "global-audit": P("Global audit", "Audyt globalny", "🌐", "Users, tokens, tenant flags — shared by Test and Prod", { section: "audit", scope: "global" }),
+  users: P("Users", "Użytkownicy", "👥", "Create accounts, reset passwords, deactivate", { section: "admin", scope: "global", adminOnly: true }),
+  tenants: P("Tenants", "Środowiska", "🏷️", "Read-only lock per tenant, dataset generation, Test reset", { section: "admin", scope: "global", adminOnly: true }),
+  status: P("System status", "Stan systemu", "🩺", "Database path and migrations", { section: "admin", scope: "global", adminOnly: true }),
+  tokens: P("API tokens", "Tokeny API", "🔑", "Your personal keys for the API", { scope: "global" }),
+  help: P("Help", "Pomoc", "❓", "How CPG works and where things are", { scope: "global" }),
+};
+const NAV = [
+  { key: "master", label: { en: "Master data", pl: "Dane podstawowe" }, intro: "Everything planning relies on. The admin edits; everyone reads.",
+    tip: "Inside Master data, the tab row under each page title moves between these in one click.",
+    cols: [{ t: "Things we track", items: ["materials", "locations", "customers", "suppliers"] },
+           { t: "Planning rules", items: ["planning-parameters", "safety-stock", "boms"] },
+           { t: "Bring data in", items: ["import"] }] },
+  { key: "ops", label: { en: "Operations", pl: "Operacje" }, intro: "The day-to-day flow of goods: sell, buy, make, store. Arrives in slice 2.",
+    tip: "Each column becomes its own tab row once you are inside it.",
+    cols: [{ t: "Sales", pl: "Sprzedaż", items: ["customer-orders", "forecasts", "shipments"] },
+           { t: "Purchasing", pl: "Zakupy", items: ["purchase-requisitions", "purchase-orders", "goods-receipts"] },
+           { t: "Production", pl: "Produkcja", items: ["production-orders", "completions"] },
+           { t: "Inventory", pl: "Magazyn", items: ["stock", "corrections", "transfers", "stock-import"] }] },
+  { key: "planning", label: { en: "Planning", pl: "Planowanie" }, intro: "MRP turns demand and master data into make-and-buy suggestions. Arrives in slice 3.",
+    cols: [{ t: "MRP", items: ["mrp-run", "mrp-report"] }] },
+  { key: "reports", label: { en: "Reports", pl: "Raporty" }, intro: "Read-only views across the tenant. Arrive in slice 2.",
+    cols: [{ t: "Reports", items: ["report-stock", "report-variance", "report-audit"] }] },
+  { key: "audit", label: { en: "Audit", pl: "Audyt" }, intro: "Who changed what, when, and through which channel (UI or API). Append-only.",
+    cols: [{ t: "This tenant", items: ["audit"] }, { t: "Shared by Test and Prod", items: ["global-audit"] }] },
+  { key: "admin", label: { en: "Admin", pl: "Administracja" }, adminOnly: true, intro: "Settings that belong to no tenant — shared by Test and Prod.",
+    cols: [{ t: "People", items: ["users"] }, { t: "Tenants", items: ["tenants"] }, { t: "System", items: ["status"] }] },
+];
+const UI = {
+  en: { menu: "Menu", close: "Close", signout: "Sign out", lang: "Language", theme: "Theme", light: "Light", dark: "Dark", later: "later", youarein: "You are working in" },
+  pl: { menu: "Menu", close: "Zamknij", signout: "Wyloguj", lang: "Język", theme: "Motyw", light: "Jasny", dark: "Ciemny", later: "później", youarein: "Pracujesz w" },
+};
+
+/* ======================= sample data ======================= */
+const MATERIALS = [
+  { id: "00000001", name: "Granite slab", type: "Raw", unit: "kg", created: "2026-10-12", conv: [["slab", "1 slab = 240 kg", "1 kg = 0.004167 slab"], ["t", "1 t = 1000 kg", "1 kg = 0.001 t"]] },
+  { id: "00000002", name: "Mammoth hide", type: "Raw", unit: "m²", created: "2026-10-12", conv: [["hide", "1 hide = 3.5 m²", "1 m² = 0.285714 hide"]] },
+  { id: "00000003", name: "Wheel (stone)", type: "Intermediate", unit: "pcs", created: "2026-10-13", conv: [["pair", "1 pair = 2 pcs", "1 pcs = 0.5 pair"]] },
+  { id: "00000004", name: "Axle", type: "Intermediate", unit: "pcs", created: "2026-10-13", conv: [["bundle", "1 bundle = 10 pcs", "1 pcs = 0.1 bundle"]] },
+  { id: "00000005", name: "Cave cart", type: "Finished", unit: "pcs", created: "2026-10-14", conv: [] },
+  { id: "00000006", name: "Flint knife", type: "Finished", unit: "pcs", created: "2026-10-19", conv: [["box", "1 box = 12 pcs", "1 pcs = 0.083333 box"]] },
+];
+const LOCATIONS = [["L001", "Main cave", true], ["L002", "River warehouse", true], ["L003", "Old quarry", false]];
+const CUSTOMERS = [["C001", "Flintstone Ltd", true], ["C002", "Rubble & Co", true], ["C003", "Slate Rock and Gravel", true]];
+const SUPPLIERS = [["S001", "Bedrock Quarry", true], ["S002", "Woolly Hides Co", true], ["S003", "Sabre Tooth Tools", false]];
+const PARAMS = [["00000005", "Cave cart", "Main cave", "Make", 3, 1, 1], ["00000001", "Granite slab", "Main cave", "Buy", 10, 50, 10]];
+const SAFETY = [["00000005", "Cave cart", "Main cave", 5, "2026-11-01"], ["00000005", "Cave cart", "Main cave", 8, "2027-01-01"]];
+const BOMS = [
+  ["00000005", "Cave cart", "Alt A", 1, 3, "from 2026-09-01", "4 × Wheel (stone), 2 × Axle, 3 m² Mammoth hide"],
+  ["00000005", "Cave cart", "Alt B", 2, 1, "from 2026-10-01", "4 × Wheel (stone), 2 × Axle"],
+  ["00000003", "Wheel (stone)", "Alt A", 1, 2, "from 2026-08-15", "40 kg Granite slab"],
+];
+const AUDIT = [
+  ["2026-10-19 14:02", "admin", "UI", "Create material", "00000006 Flint knife"],
+  ["2026-10-19 13:40", "admin", "UI", "Add unit conversion", "00000002 Mammoth hide · 1 hide = 3.5 m²"],
+  ["2026-10-19 11:15", "admin", "API", "Create location", "L003 Old quarry"],
+  ["2026-10-18 16:30", "admin", "UI", "Deactivate location", "L003 Old quarry"],
+  ["2026-10-18 10:05", "admin", "API", "Create customer", "C003 Slate Rock and Gravel"],
+];
+const GAUDIT = [
+  ["2026-10-19 09:12", "admin", "UI", "Set read-only", "Tenant Prod"],
+  ["2026-10-18 17:44", "marta", "UI", "Create API token", "laptop script"],
+  ["2026-10-18 08:30", "admin", "UI", "Create user", "marta"],
+  ["2026-10-17 15:02", "admin", "UI", "Reset password", "jan"],
+];
+
+/* ======================= helpers ======================= */
+const CHEV = `<svg class="chev" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const N = (t) => (t === "prod" ? "Prod" : "Test");
+const other = (t) => (t === "prod" ? "test" : "prod");
+const L = (o) => (o.label[S.lang] || o.label.en);
+const U = (k) => UI[S.lang][k];
+const isAdmin = () => S.role === "admin";
+const visible = (k) => !(PAGES[k].adminOnly && !isAdmin()) && !(PAGES[k].slice && !S.later);
+const secVisible = (sec) => !(sec.adminOnly && !isAdmin()) && sec.cols.some((c) => c.items.some(visible));
+const href = (k, T) => (PAGES[k].scope === "global" ? `#/global/${k}` : `#/${T}/${k}`);
+const laterBadge = (k) => (PAGES[k].slice ? `<span class="badge later" title="Coming in slice ${PAGES[k].slice}">${U("later")}</span>` : "");
+const colLabel = (c) => (S.lang === "pl" && c.pl ? c.pl : c.t);
+const tenantName = () => (isAdmin() ? "admin" : "marta");
+
+function parse() {
+  const [a, b, c] = location.hash.replace(/^#\/?/, "").split("/");
+  if (a === "global") return { tenant: null, page: b || "help" };
+  if (a !== "test" && a !== "prod") return { tenant: "test", page: "overview", bad: !!a };
+  if (b === "materials" && c) return { tenant: a, page: "material", id: c };
+  return { tenant: a, page: b || "overview" };
+}
+const pageKey = (R) => (R.page === "material" ? "materials" : R.page);
+
+/* ======================= components ======================= */
+function tswitch(T, opts = {}) {
+  const prod = T === "prod";
+  const ro = (t) => (S.ro[t] ? `<span class="lock" aria-hidden="true">🔒</span>` : "");
+  return `<button type="button" class="tsw ${T}${opts.compact ? " compact" : ""}${opts.global ? " onglobal" : ""}" role="switch" aria-checked="${prod}" data-act="tenant"
+    aria-label="Tenant: ${N(T)}${S.ro[T] ? ", read-only" : ""}. Switch to ${N(other(T))}${S.ro[other(T)] ? " (read-only)" : ""}"
+    title="${opts.global ? "Shared page — the switch sets where tenant pages open" : `Switch to ${N(other(T))} — you stay on this screen`}">
+    <span class="tsw-s t">${ro("test")}TEST</span><span class="tsw-k" aria-hidden="true"></span><span class="tsw-s p">PROD${ro("prod")}</span></button>`;
+}
+
+function miHTML(k, T, curKey) {
+  const p = PAGES[k];
+  return `<li><a class="mi${p.slice ? " later" : ""}" href="${href(k, T)}" ${k === curKey ? 'aria-current="page"' : ""}>
+    <span class="mi-ico" aria-hidden="true">${p.icon}</span>
+    <span><span class="mi-t">${L(p)} ${laterBadge(k)}</span><span class="mi-d">${p.desc}</span></span></a></li>`;
+}
+
+function megaHTML(T, curKey, isGlobal) {
+  const sec = NAV.find((s) => s.key === S.open);
+  if (!sec) return "";
+  const cols = sec.cols.map((c) => ({ ...c, items: c.items.filter(visible) })).filter((c) => c.items.length);
+  const scopeChip = sec.key === "admin" ? `<span class="tchip global">SHARED</span>` : `<span class="tchip ${T}">${N(T).toUpperCase()}</span>`;
+  const ro = sec.key !== "admin" && S.ro[T] ? `<div class="tip" style="margin-top:8px">🔒 ${N(T)} is read-only — you can open everything, but not change it.</div>` : "";
+  return `<div class="mega" id="mega" role="region" aria-label="${L(sec)}">
+    <div class="mega-in" style="--cols:${cols.length}">
+      <div class="mega-intro"><h2>${L(sec)} ${scopeChip}</h2><p>${sec.intro}</p>${sec.tip ? `<div class="tip">💡 ${sec.tip}</div>` : ""}${ro}</div>
+      ${cols.map((c) => `<div class="mega-col"><h3>${colLabel(c)}</h3><ul>${c.items.map((k) => miHTML(k, T, curKey)).join("")}</ul></div>`).join("")}
+    </div>
+    <div class="mega-foot"><span><kbd>Esc</kbd> closes · <kbd>↓</kbd> <kbd>↑</kbd> move · <kbd>←</kbd> <kbd>→</kbd> next section</span><span>${isGlobal ? "Tenant pages open in " + N(T) : "Opens in " + N(T) + " — flip the switch to change"}</span></div>
+  </div>`;
+}
+
+function acctHTML() {
+  if (!S.acct) return "";
+  return `<div class="pop" id="acct-pop" role="dialog" aria-label="Account">
+    <div class="pop-who"><span class="av" aria-hidden="true">${tenantName()[0].toUpperCase()}</span><div><b>${tenantName()}</b><div class="muted" style="font-size:12px">${isAdmin() ? "Administrator" : "User"} · ${tenantName()}@cpg.baby</div></div></div>
+    <hr>
+    ${prefsHTML()}
+    <hr>
+    <div><a class="pop-link" href="#/global/tokens">🔑 ${L(PAGES.tokens)}</a><a class="pop-link" href="#/global/help">❓ ${L(PAGES.help)}</a>
+    <button type="button" class="pop-link" data-act="signout">↪ ${U("signout")}</button></div>
+  </div>`;
+}
+function prefsHTML() {
+  const b = (act, v, label, on) => `<button type="button" data-act="${act}" data-v="${v}" aria-pressed="${on}">${label}</button>`;
+  return `<div class="pop-row"><span>${U("lang")}</span><div class="seg" role="group" aria-label="${U("lang")}">${b("lang", "en", "English", S.lang === "en")}${b("lang", "pl", "Polski", S.lang === "pl")}</div></div>
+    <div class="pop-row"><span>${U("theme")}</span><div class="seg" role="group" aria-label="${U("theme")}">${b("theme", "light", U("light"), S.theme === "light")}${b("theme", "dark", U("dark"), S.theme === "dark")}</div></div>`;
+}
+
+function barHTML(R, T) {
+  const curKey = pageKey(R);
+  const curSec = PAGES[curKey] && PAGES[curKey].section;
+  const isGlobal = !R.tenant;
+  const secs = NAV.filter(secVisible).map((s) => `<button type="button" class="tn${s.key === curSec ? " cur" : ""}" data-act="sec" data-sec="${s.key}" aria-expanded="${S.open === s.key}" aria-controls="mega"><span class="lbl">${L(s)}</span>${CHEV}</button>`).join("");
+  return `<div class="bar">
+      <a class="brand" href="#/${T}/overview" aria-label="CPG — ${N(T)} overview">🦣 CPG</a>
+      <nav class="topnav" aria-label="Main">${secs}</nav>
+      <div class="right">
+        ${tswitch(T, { global: isGlobal })}
+        <a class="iconbtn help-btn" href="#/global/help" aria-label="Help" title="Help" ${R.page === "help" ? 'aria-current="page"' : ""}>?</a>
+        <button type="button" class="acct" data-act="acct" aria-expanded="${S.acct}" aria-haspopup="dialog" aria-label="Account: ${tenantName()}"><span class="av" aria-hidden="true">${tenantName()[0].toUpperCase()}</span><span class="acct-name">${tenantName()}</span>${CHEV}</button>
+        <button type="button" class="menu-btn" data-act="sheet" aria-expanded="${S.sheet}" aria-controls="sheet"><span aria-hidden="true">☰</span> ${U("menu")}</button>
+      </div>
+    </div>
+    <div class="edge ${isGlobal ? "global" : T}" role="presentation" title="${isGlobal ? "Shared page" : N(T) + " tenant"}"></div>
+    ${megaHTML(T, curKey, isGlobal)}
+    ${acctHTML()}`;
+}
+
+function sheetHTML(R, T) {
+  const curKey = pageKey(R);
+  const isGlobal = !R.tenant;
+  const secs = NAV.filter(secVisible).map((s) => {
+    const open = S.sheetSecs.has(s.key);
+    const cols = s.cols.map((c) => ({ ...c, items: c.items.filter(visible) })).filter((c) => c.items.length);
+    const multi = s.key === "ops";
+    return `<div class="acc-sec"><button type="button" class="acc-h" data-act="acc" data-sec="${s.key}" aria-expanded="${open}" aria-controls="acc-${s.key}">${L(s)}${CHEV}</button>
+      <div id="acc-${s.key}" ${open ? "" : "hidden"}>${cols.map((c) => `${multi ? `<div class="acc-grp">${colLabel(c)}</div>` : ""}<ul>${c.items.map((k) => miHTML(k, T, curKey)).join("")}</ul>`).join("")}</div></div>`;
+  }).join("");
+  return `<div class="sheet-head"><a class="brand" href="#/${T}/overview">🦣 CPG</a><button type="button" class="menu-btn" style="display:inline-flex" data-act="sheet-close" aria-label="${U("close")} menu">✕ ${U("close")}</button></div>
+    <div class="sheet-tenant"><span class="muted">${U("youarein")}</span><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">${tswitch(T, { global: isGlobal })}<span class="muted">${isGlobal ? "This page is shared by Test and Prod" : N(T) === "Test" ? "Demonstration data, safe to experiment" : "Real business data"}${S.ro[T] && !isGlobal ? " · 🔒 read-only" : ""}</span></div></div>
+    <nav class="sheet-body" aria-label="Main">
+      <ul>${miHTML("overview", T, curKey)}</ul>
+      ${secs}
+    </nav>
+    <div class="sheet-acct">
+      <div class="pop-who"><span class="av" aria-hidden="true">${tenantName()[0].toUpperCase()}</span><div><b>${tenantName()}</b><div class="muted" style="font-size:12px">${isAdmin() ? "Administrator" : "User"}</div></div></div>
+      ${prefsHTML()}
+      <div><a class="pop-link" href="#/global/tokens">🔑 ${L(PAGES.tokens)}</a><a class="pop-link" href="#/global/help">❓ ${L(PAGES.help)}</a><button type="button" class="pop-link" data-act="signout">↪ ${U("signout")}</button></div>
+    </div>`;
+}
+
+/* ---------- page scaffolding ---------- */
+function wbtn(label, T, primary, act) {
+  if (!isAdmin()) return "";
+  if (T && S.ro[T]) return `<button type="button" class="btn${primary ? " primary" : ""}" disabled title="${N(T)} is read-only — business changes are blocked">🔒 ${label}</button>`;
+  return `<button type="button" class="btn${primary ? " primary" : ""}" data-act="${act || "fake"}" data-what="${label}">${label}</button>`;
+}
+
+function tabsHTML(key, T) {
+  const p = PAGES[key];
+  const sec = NAV.find((s) => s.key === p.section);
+  if (!sec) return "";
+  let items, grp = "";
+  if (sec.key === "ops") {
+    const col = sec.cols.find((c) => c.items.includes(key));
+    items = col.items; grp = `<span class="grp" aria-hidden="true">${colLabel(col)}</span>`;
+  } else items = sec.cols.flatMap((c) => c.items);
+  items = items.filter(visible);
+  if (items.length < 2) return "";
+  return `<div class="tabs-wrap"><nav class="tabs" aria-label="${L(sec)}">${grp}${items.map((k) => {
+    const on = k === key;
+    return `<a href="${href(k, T)}" class="${on ? "on" : ""}${PAGES[k].slice ? " later" : ""}" ${on ? 'aria-current="page"' : ""}>${L(PAGES[k])}${PAGES[k].slice ? ` <span class="badge later">${U("later")}</span>` : ""}</a>`;
+  }).join("")}</nav></div>`;
+}
+
+function head(R, T, key, o = {}) {
+  const p = PAGES[key];
+  const global = p.scope === "global";
+  const sec = NAV.find((s) => s.key === p.section);
+  const crumbs = [];
+  crumbs.push(global ? `<span>Shared</span>` : `<a href="#/${T}/overview">${N(T)}</a>`);
+  if (sec) crumbs.push(`<span>${L(sec)}</span>`);
+  if (o.detail) crumbs.push(`<a href="${href(key, T)}">${L(p)}</a>`, `<span aria-current="page">${o.detail}</span>`);
+  else if (key !== "overview") crumbs.push(`<span aria-current="page">${L(p)}</span>`);
+  const chip = global ? `<span class="tchip global" title="This page belongs to no tenant">SHARED</span>` : `<span class="tchip ${T}" title="${N(T)} tenant">${N(T).toUpperCase()}</span>`;
+  const banner = !global && S.ro[T]
+    ? `<div class="banner ro-${T}" role="status"><span aria-hidden="true">🔒</span><div><b>${N(T)} is read-only</b> — business changes are blocked. Reading, audit, preferences and user management still work.</div></div>` : "";
+  const shared = global
+    ? `<div class="banner shared"><span aria-hidden="true">🌐</span><div><b>Shared by Test and Prod.</b> This page belongs to no tenant, so the switch above doesn't change it — it keeps <b>${N(T)}</b> for when you go back to tenant pages.${S.ro.test || S.ro.prod ? " Read-only flags don't apply here." : ""}</div></div>` : "";
+  return `${banner}${shared}
+    <div class="crumbs">${crumbs.join('<span class="sep" aria-hidden="true">›</span>')}</div>
+    <div class="ph"><div class="ph-t"><h1 tabindex="-1">${o.title || L(p)}</h1>${chip}</div>${o.headActions ? `<div class="actions">${o.headActions}</div>` : ""}</div>
+    ${tabsHTML(key, T)}
+    ${o.lead || o.actions ? `<div class="lead"><p>${o.lead || ""}</p><div class="actions">${o.actions || ""}</div></div>` : ""}`;
+}
+const statusBadge = (on) => (on ? `<span class="badge ok">Active</span>` : `<span class="badge off">Inactive</span>`);
+const table = (cols, rows) => `<div class="tbl"><table><thead><tr>${cols.map((c) => `<th scope="col">${c}</th>`).join("")}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+const matLink = (T, id) => `<a class="mono" href="#/${T}/materials/${id}">${id}</a>`;
+const channel = (c) => `<span class="badge${c === "API" ? " api" : ""}">${c}</span>`;
+
+/* ---------- pages ---------- */
+const VIEWS = {
+  overview(R, T) {
+    const stat = (k, n, unit) => `<a class="stat" href="${href(k, T)}"><b>${n}</b><span>${PAGES[k].icon} ${L(PAGES[k])}${unit ? " · " + unit : ""}</span></a>`;
+    return head(R, T, "overview", {
+      title: "Cave control",
+      lead: `${T === "test" ? "Test tenant — demonstration data, safe to experiment. Dataset generation 1." : "Prod tenant — the real business data."} Flip the switch in the top bar to see the same screen in ${N(other(T))}.`,
+      actions: [wbtn("Create material", T, true), isAdmin() ? (S.ro[T] ? `<button class="btn" disabled>🔒 Import from spreadsheet</button>` : `<a class="btn" href="#/${T}/import">📥 Import from spreadsheet</a>`) : "", `<a class="btn" href="#/${T}/audit">📜 Tenant audit</a>`].join(""),
+    }) + `<section aria-labelledby="h-md"><h2 id="h-md" style="margin-bottom:10px">Master data</h2><div class="grid stats">
+      ${stat("materials", 6)}${stat("locations", 3, "1 inactive")}${stat("customers", 3)}${stat("suppliers", 3, "1 inactive")}${stat("planning-parameters", 2)}${stat("safety-stock", 2, "targets")}${stat("boms", 3, "alternatives")}</div></section>
+      <section aria-labelledby="h-rc"><div class="lead" style="margin-bottom:10px"><h2 id="h-rc">Recent changes</h2><a href="#/${T}/audit">All changes in ${N(T)} →</a></div>
+      ${table(["Time", "Account", "Channel", "Action", "Record"], AUDIT.slice(0, 4).map((a) => [a[0], a[1], channel(a[2]), a[3], a[4]]))}</section>`;
+  },
+  materials(R, T) {
+    return head(R, T, "materials", {
+      lead: "Every quantity of a material is stored in its base unit, exactly to six decimals. IDs are assigned in order and never change.",
+      actions: wbtn("Create material", T, true),
+    }) + table(["Material ID", "Description", "Type", "Base unit", "Conversions", "Status"], MATERIALS.map((m) => [matLink(T, m.id), m.name, `<span class="badge">${m.type}</span>`, m.unit, m.conv.length || "—", statusBadge(true)]));
+  },
+  material(R, T) {
+    const m = MATERIALS.find((x) => x.id === R.id);
+    if (!m) return head(R, T, "materials", { detail: R.id, title: "Material not found" }) + `<div class="empty">No material ${R.id} in ${N(T)}. <a href="#/${T}/materials">Back to Materials</a></div>`;
+    const usedIn = [];
+    BOMS.forEach((b) => { if (b[0] === m.id) usedIn.push(`<a href="#/${T}/boms">BOM ${b[2]} (rev ${b[4]})</a>`); else if (b[6].includes(m.name)) usedIn.push(`<a href="#/${T}/boms">Component of ${b[1]} ${b[2]}</a>`); });
+    PARAMS.forEach((p) => { if (p[0] === m.id) usedIn.push(`<a href="#/${T}/planning-parameters">Planning parameters @ ${p[2]}</a>`); });
+    SAFETY.forEach((s) => { if (s[0] === m.id) usedIn.push(`<a href="#/${T}/safety-stock">Safety stock ${s[3]} from ${s[4]}</a>`); });
+    return head(R, T, "materials", {
+      detail: m.id, title: `<span class="mono">${m.id}</span> — ${m.name}`,
+      headActions: wbtn("Edit", T) + wbtn("Deactivate", T),
+    }) + `<dl class="card facts"><div><dt>Type</dt><dd>${m.type}</dd></div><div><dt>Base unit</dt><dd>${m.unit}</dd></div><div><dt>Status</dt><dd>${statusBadge(true)}</dd></div><div><dt>Created</dt><dd>${m.created}</dd></div></dl>
+      <div class="lead" style="margin-top:6px"><h2>Unit conversions</h2><div class="actions">${wbtn("Add conversion", T, true)}</div></div>
+      <p class="muted" style="margin:-6px 0 0">Quantities entered in another unit are converted into ${m.unit} once, rounded half-up to six decimals. Changing a factor never changes quantities already stored.</p>
+      ${m.conv.length ? table(["Unit", "Conversion", "Inverse (indicative)", ""], m.conv.map((c) => [`<b>${c[0]}</b>`, c[1], `<span class="muted">${c[2]}</span>`, isAdmin() ? `<div style="text-align:right">${S.ro[T] ? `<button class="btn sm" disabled aria-label="Actions (read-only)">⋯</button>` : `<button class="btn sm" data-act="fake" data-what="Conversion actions" aria-label="Actions for ${c[0]}">⋯</button>`}</div>` : ""]))
+        : `<div class="empty">No conversions yet — ${m.name} is only counted in ${m.unit}.</div>`}
+      <h2 style="margin-top:6px">Used in</h2>
+      ${usedIn.length ? `<ul style="margin:0;padding-left:18px">${usedIn.map((u) => `<li>${u}</li>`).join("")}</ul>` : `<p class="muted" style="margin:0">Not used in any BOM, planning parameter or safety stock yet.</p>`}`;
+  },
+  locations(R, T) {
+    return head(R, T, "locations", { lead: "Sites where stock lives. Inactive locations stay in history but take no new stock.", actions: wbtn("Create location", T, true) })
+      + table(["Code", "Name", "Status", ""], LOCATIONS.map((l) => [`<span class="mono">${l[0]}</span>`, l[1], statusBadge(l[2]), isAdmin() ? `<div style="text-align:right">${wbtn("Edit", T)}</div>` : ""]));
+  },
+  customers(R, T) {
+    return head(R, T, "customers", { lead: "Who you sell to. Customer orders (slice 2) will point at these.", actions: wbtn("Create customer", T, true) })
+      + table(["Code", "Name", "Status"], CUSTOMERS.map((c) => [`<span class="mono">${c[0]}</span>`, c[1], statusBadge(c[2])]));
+  },
+  suppliers(R, T) {
+    return head(R, T, "suppliers", { lead: "Who you buy from. Purchase orders (slice 2) will point at these.", actions: wbtn("Create supplier", T, true) })
+      + table(["Code", "Name", "Status"], SUPPLIERS.map((c) => [`<span class="mono">${c[0]}</span>`, c[1], statusBadge(c[2])]));
+  },
+  "planning-parameters"(R, T) {
+    return head(R, T, "planning-parameters", { lead: "One row per material and location: whether MRP makes or buys it, how long it takes and how lots are sized.", actions: wbtn("Add parameters", T, true) })
+      + table(["Material", "Location", "Make / Buy", "Lead time", "Minimum lot", "Lot multiple"], PARAMS.map((p) => [`${matLink(T, p[0])} ${p[1]}`, p[2], `<span class="badge">${p[3]}</span>`, `${p[4]} d`, p[5], p[6]]));
+  },
+  "safety-stock"(R, T) {
+    return head(R, T, "safety-stock", { lead: "Effective-dated targets: each row holds from its date until the next one for the same material and location.", actions: wbtn("Add target", T, true) })
+      + table(["Material", "Location", "Target", "Effective from"], SAFETY.map((s) => [`${matLink(T, s[0])} ${s[1]}`, s[2], `${s[3]} pcs`, s[4]]));
+  },
+  boms(R, T) {
+    return head(R, T, "boms", { lead: "A material can have several alternatives, chosen by priority and validity. Each change creates a new immutable revision.", actions: wbtn("Create BOM", T, true) })
+      + table(["Material", "Alternative", "Priority", "Revision", "Validity", "Components"], BOMS.map((b) => [`${matLink(T, b[0])} ${b[1]}`, b[2], b[3], `rev ${b[4]}`, b[5], `<span class="muted">${b[6]}</span>`]));
+  },
+  import(R, T) {
+    if (!isAdmin()) return VIEWS.denied(R, T, "import");
+    const st = S.importStep;
+    const step = (n, t) => `<button type="button" class="step${st === n ? " on" : ""}${st > n ? " done" : ""}" data-act="istep" data-v="${n}" ${st === n ? 'aria-current="step"' : ""}><span class="n">${st > n ? "✓" : n}</span><span>${t}</span></button>`;
+    const body = st === 1
+      ? `<div class="card"><h2>1. Download the template</h2><p class="muted">One sheet per master: materials, locations, customers, suppliers, planning parameters, safety stock, BOMs. Keep the header row.</p><div class="actions"><button class="btn" data-act="fake" data-what="Download template">⬇ cpg-master-data-template.xlsx</button><button class="btn primary" data-act="istep" data-v="2">Next: upload</button></div></div>`
+      : st === 2
+      ? `<div class="card" style="display:flex;flex-direction:column;gap:12px"><h2>2. Upload and dry run</h2><div class="drop">📄 cave-master-data.xlsx · 42 KB<br><span style="font-size:12px">Drop another file here or choose one</span></div>
+         <div class="result">✅ <b>Dry run:</b> 14 rows valid · 1 warning — row 7 (materials): unit <span class="mono">pc</span> unknown, did you mean <span class="mono">pcs</span>? Nothing has been saved yet.</div>
+         <div class="actions"><button class="btn" data-act="istep" data-v="1">Back</button><button class="btn primary" data-act="istep" data-v="3">Next: commit</button></div></div>`
+      : `<div class="card" style="display:flex;flex-direction:column;gap:12px"><h2>3. Commit</h2><p class="muted" style="margin:0">Writes 14 rows to <b>${N(T)}</b> in one transaction and records them in the tenant audit.</p>
+         <div class="actions"><button class="btn" data-act="istep" data-v="2">Back</button>${wbtn(`Commit 14 rows to ${N(T)}`, T, true, "commit")}</div></div>`;
+    return head(R, T, "import", { lead: "Download the template, upload your file, check the dry run, then commit. Admin only." })
+      + `<div class="steps" role="list">${step(1, "Download template")}${step(2, "Upload and dry run")}${step(3, "Commit")}</div>${body}`;
+  },
+  audit(R, T) {
+    return head(R, T, "audit", { lead: `Append-only change log of ${N(T)}. Nothing here can be edited or deleted — not even by the admin.`, actions: `<button class="btn" data-act="fake" data-what="Export CSV">Export CSV</button>` })
+      + table(["Time", "Account", "Channel", "Action", "Record"], AUDIT.map((a) => [a[0], a[1], channel(a[2]), a[3], a[4]]));
+  },
+  "global-audit"(R, T) {
+    return head(R, T, "global-audit", { lead: "Changes that belong to no tenant: users, API tokens and tenant settings." })
+      + table(["Time", "Account", "Channel", "Action", "Record"], GAUDIT.map((a) => [a[0], a[1], channel(a[2]), a[3], a[4]]));
+  },
+  users(R, T) {
+    if (!isAdmin()) return VIEWS.denied(R, T, "users");
+    const act = `<div class="actions" style="justify-content:flex-end;flex-wrap:nowrap">${wbtn("Reset password", null)}${wbtn("Deactivate", null)}</div>`;
+    return head(R, T, "users", { lead: "Exactly one admin; everyone else is a normal user who reads master data.", actions: wbtn("Create user", null, true) })
+      + table(["Name", "Role", "Status", "Last sign-in", ""], [["admin", "Administrator", statusBadge(true), "2026-10-19 08:58", ""], ["marta", "User", statusBadge(true), "2026-10-18 17:40", act], ["jan", "User", statusBadge(false), "2026-09-30 12:11", act]]);
+  },
+  tenants(R, T) {
+    if (!isAdmin()) return VIEWS.denied(R, T, "tenants");
+    const card = (t, desc) => `<section class="tcard ${t}" aria-labelledby="tc-${t}">
+      <div class="lead"><h2 id="tc-${t}">${N(t)} <span class="tchip ${t}">${N(t).toUpperCase()}</span></h2><a href="#/${t}/overview">Open ${N(t)} →</a></div>
+      <p class="muted" style="margin:0">${desc}</p>
+      <button type="button" class="sw" role="switch" aria-checked="${S.ro[t]}" data-act="ro" data-t="${t}"><span class="track" aria-hidden="true"></span><span><b>${S.ro[t] ? "🔒 Read-only: on" : "Read-only: off"}</b><br><span class="muted" style="font-size:13px">${S.ro[t] ? "Business changes in " + N(t) + " are blocked." : "Business changes in " + N(t) + " are allowed."}</span></span></button>
+      <dl class="facts" style="grid-template-columns:1fr 1fr"><div><dt>Dataset generation</dt><dd>${t === "test" ? 1 : "—"}</dd></div><div><dt>Records</dt><dd>${t === "test" ? "26" : "26"}</dd></div></dl>
+      ${t === "test" && S.later ? `<div class="actions"><button class="btn" disabled>↺ Reset Test</button><span class="badge later">${U("later")} · slice 2</span></div>` : ""}
+    </section>`;
+    return head(R, T, "tenants", { lead: "Each tenant can be made read-only on its own. The lock shows on the switch in the top bar and blocks every create, edit and import in that tenant." })
+      + `<div class="tcards">${card("test", "Demonstration data, safe to experiment.")}${card("prod", "Real business data.")}</div>`;
+  },
+  status(R, T) {
+    if (!isAdmin()) return VIEWS.denied(R, T, "status");
+    return head(R, T, "status", { lead: "What the server is running on. Read-only." })
+      + `<dl class="card facts"><div><dt>Database</dt><dd class="mono">/externaldata/cpg.sqlite</dd></div><div><dt>Journal mode</dt><dd>WAL</dd></div><div><dt>Migrations</dt><dd>9 applied · 0 pending</dd></div><div><dt>Version</dt><dd class="mono">cc3cbd9</dd></div></dl>`
+      + table(["Migration", "Applied"], [["Migration20261019_materials", "2026-10-19 07:02"], ["Migration20261017_idempotency_keys", "2026-10-17 18:20"], ["Migration20261015_tenant_audit", "2026-10-15 09:41"]].map((r) => [`<span class="mono">${r[0]}</span>`, r[1]]));
+  },
+  tokens(R, T) {
+    return head(R, T, "tokens", { lead: "Your personal API tokens. They act as you, in whichever tenant the request names. Shown once when created.", actions: `<button class="btn primary" data-act="fake" data-what="Create token">Create token</button>` })
+      + table(["Name", "Created", "Last used", ""], [["laptop script", "2026-10-01", "2026-10-18", `<div style="text-align:right"><button class="btn sm" data-act="fake" data-what="Revoke">Revoke</button></div>`], ["spreadsheet sync", "2026-09-20", "never", `<div style="text-align:right"><button class="btn sm" data-act="fake" data-what="Revoke">Revoke</button></div>`]]);
+  },
+  help(R, T) {
+    return head(R, T, "help", { lead: "CPG plans what to make and buy. Here is how to find your way around." })
+      + `<div class="card help"><h2>How the menu works</h2><ul>
+        <li><b>Six words in the top bar</b> — Master data, Operations, Planning, Reports, Audit${isAdmin() ? ", Admin" : ""}. Click one to see every screen in it, each with a one-line description.</li>
+        <li><b>The tab row</b> under a page title lists that section's other screens — one click to move sideways.</li>
+        <li><b>The TEST ◐ PROD switch</b> on the right flips tenant and keeps you on the same screen. The thin line under the bar is amber in Test and black-and-red in Prod.</li>
+        <li><b>🔒 on a side of the switch</b> means that tenant is read-only: you can look, not change.</li>
+        <li><b>Greyed entries marked “later”</b> are coming in a future slice.</li>
+        <li>Keyboard: <kbd>Tab</kbd> to a word, <kbd>Enter</kbd> opens, <kbd>↓</kbd> moves into the panel, <kbd>Esc</kbd> closes.</li></ul></div>`;
+  },
+  denied(R, T, k) {
+    return head(R, T, k) + `<div class="soon"><div class="big">🔒</div><h2>Only the admin can open ${L(PAGES[k])}</h2><p>You are signed in as a normal user. Ask the admin if you need something changed here.</p><a class="btn" href="#/${T}/overview">Back to Overview</a></div>`;
+  },
+  later(R, T, k) {
+    const p = PAGES[k];
+    return head(R, T, k) + `<div class="soon"><div class="big">${p.icon}</div><span class="badge later">${U("later")} · slice ${p.slice}</span><h2>${L(p)} is coming in slice ${p.slice}</h2><p>${p.desc}. The menu shows it already, so the map of CPG doesn't move when it lands.</p><a class="btn" href="#/${T}/overview">Back to Overview</a></div>`;
+  },
+};
+
+function mainHTML(R, T) {
+  const k = R.page;
+  if (k === "material") return VIEWS.material(R, T);
+  const p = PAGES[k];
+  if (!p || (p.scope === "global") !== !R.tenant || R.bad) {
+    return `<div class="crumbs"><a href="#/${T}/overview">${N(T)}</a></div><div class="soon"><div class="big">🦴</div><h1 tabindex="-1">Nothing here</h1><p>This address does not lead anywhere in CPG.</p><a class="btn" href="#/${T}/overview">Back to Overview</a></div>`;
+  }
+  if (p.slice) return VIEWS.later(R, T, k);
+  return VIEWS[k](R, T);
+}
+
+/* ======================= render ======================= */
+let prevHash = null;
+function render(focusSel) {
+  const R = parse();
+  if (R.tenant) S.lastTenant = R.tenant;
+  const T = R.tenant || S.lastTenant;
+  const root = document.documentElement;
+  root.dataset.theme = S.theme;
+  root.dataset.tenant = T;
+  root.lang = S.lang;
+  $("#top").innerHTML = barHTML(R, T);
+  $("#scrim").hidden = !S.open;
+  $("#main").innerHTML = mainHTML(R, T);
+  const sh = $("#sheet");
+  sh.hidden = !S.sheet;
+  sh.innerHTML = S.sheet ? sheetHTML(R, T) : "";
+  document.body.style.overflow = S.sheet ? "hidden" : "";
+  document.title = `${($("#main h1") || {}).textContent || "CPG"} — ${R.tenant ? N(T) : "Shared"} · CPG mockup 02`;
+  // controls
+  $$('input[name="mc-role"]').forEach((i) => (i.checked = i.value === S.role));
+  $("#mc-later").checked = S.later;
+  $$("[data-mc-ro]").forEach((i) => (i.checked = S.ro[i.dataset.mcRo]));
+  // tab row: fade + scroll the active tab into view
+  const tabs = $(".tabs");
+  if (tabs) {
+    const on = $(".tabs a.on");
+    if (on) tabs.scrollLeft = Math.max(0, on.offsetLeft - tabs.clientWidth / 2 + on.clientWidth / 2);
+    tabs.parentElement.classList.toggle("fade", tabs.scrollWidth > tabs.clientWidth + 2 && tabs.scrollLeft + tabs.clientWidth < tabs.scrollWidth - 2);
+    tabs.addEventListener("scroll", () => tabs.parentElement.classList.toggle("fade", tabs.scrollLeft + tabs.clientWidth < tabs.scrollWidth - 2), { passive: true });
+  }
+  // top word row: fade the right edge when Polish (or a narrow window) makes it scroll
+  const tnav = $(".topnav");
+  const ovf = () => tnav.classList.toggle("ovf", tnav.scrollLeft + tnav.clientWidth < tnav.scrollWidth - 2);
+  const curTn = $(".tn[aria-expanded=true]") || $(".tn.cur");
+  if (curTn && curTn.offsetLeft + curTn.offsetWidth > tnav.clientWidth) tnav.scrollLeft = curTn.offsetLeft + curTn.offsetWidth - tnav.clientWidth + 24;
+  ovf(); tnav.addEventListener("scroll", ovf, { passive: true });
+  if (focusSel) { const el = $(focusSel); if (el) el.focus(); }
+}
+
+function toast(msg) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toast.h);
+  toast.h = setTimeout(() => t.classList.remove("show"), 2800);
+}
+
+/* ======================= behaviour ======================= */
+function openSec(key, focusFirst) {
+  S.open = key; S.acct = false;
+  render(`.tn[data-sec="${key}"]`);
+  if (focusFirst) { const f = $("#mega .mi"); if (f) f.focus(); }
+}
+function closeAll(focusSel) {
+  const was = S.open || S.acct;
+  S.open = null; S.acct = false;
+  if (was) render(focusSel);
+}
+function flipTenant() {
+  const R = parse();
+  const cur = R.tenant || S.lastTenant;
+  const next = other(cur);
+  S.open = null;
+  if (R.tenant) {
+    location.hash = location.hash.replace(/^#\/(test|prod)/, "#/" + next);
+    toast(`Now in ${N(next)} — same screen${S.ro[next] ? " (🔒 read-only)" : ""}`);
+  } else {
+    S.lastTenant = next;
+    render(S.sheet ? "#sheet .tsw" : ".bar .tsw");
+    toast(`Switch set to ${N(next)}. This page is shared, so it stays as it is.`);
+  }
+}
+
+document.addEventListener("click", (e) => {
+  const a = e.target.closest("[data-act]");
+  const link = e.target.closest('a[href^="#/"]');
+  if (link) {
+    // navigating from a panel, the sheet or the account menu closes it
+    const same = link.getAttribute("href") === location.hash;
+    S.open = null; S.acct = false; S.sheet = false;
+    if (same) { e.preventDefault(); render("#main h1"); }
+    return;
+  }
+  if (!a) {
+    if ((S.open || S.acct) && !e.target.closest("#top")) closeAll();
+    return;
+  }
+  const act = a.dataset.act;
+  switch (act) {
+    case "sec": S.open === a.dataset.sec ? closeAll(`.tn[data-sec="${a.dataset.sec}"]`) : openSec(a.dataset.sec); break;
+    case "acct": S.open = null; S.acct = !S.acct; render(".acct"); break;
+    case "tenant": flipTenant(); break;
+    case "lang": S.lang = a.dataset.v; render(S.sheet ? `#sheet [data-act=lang][data-v=${S.lang}]` : `.pop [data-act=lang][data-v=${S.lang}]`); toast(S.lang === "pl" ? "Polski — menu labels only in this mockup (copy is out of scope)" : "English"); break;
+    case "theme": S.theme = a.dataset.v; render(S.sheet ? `#sheet [data-act=theme][data-v=${S.theme}]` : `.pop [data-act=theme][data-v=${S.theme}]`); break;
+    case "signout": S.acct = false; S.sheet = false; render(); toast("Signed out (mockup) — you would land on the sign-in page."); break;
+    case "sheet": S.sheet = true; S.open = null; S.acct = false; render("#sheet [data-act=sheet-close]"); break;
+    case "sheet-close": S.sheet = false; render(".menu-btn"); break;
+    case "acc": { const k = a.dataset.sec; S.sheetSecs.has(k) ? S.sheetSecs.delete(k) : S.sheetSecs.add(k); render(`#sheet .acc-h[data-sec="${k}"]`); break; }
+    case "ro": S.ro[a.dataset.t] = !S.ro[a.dataset.t]; render(`[data-act=ro][data-t=${a.dataset.t}]`); toast(`${N(a.dataset.t)} is now ${S.ro[a.dataset.t] ? "read-only 🔒" : "editable"}`); break;
+    case "istep": S.importStep = +a.dataset.v; render(".step.on"); break;
+    case "commit": toast(`Committed 14 rows to ${N(parse().tenant)} (mockup)`); S.importStep = 1; render(); break;
+    case "fake": toast(`Mockup: “${a.dataset.what}” would open a form here.`); break;
+    case "mc": { const mc = $("#mc"); const c = mc.dataset.collapsed !== "true"; mc.dataset.collapsed = c; a.setAttribute("aria-expanded", !c); break; }
+    case "about": openAbout(); break;
+    case "about-close": if (a.classList.contains("dlg-wrap") && e.target.closest(".dlg")) break; closeAbout(); break;
+  }
+});
+$("#scrim").addEventListener("click", () => closeAll());
+
+document.addEventListener("keydown", (e) => {
+  const t = e.target;
+  if (e.key === "Escape") {
+    if (!$("#about").hidden) return closeAbout();
+    if (S.acct) { S.acct = false; return render(".acct"); }
+    if (S.open) { const k = S.open; return closeAll(`.tn[data-sec="${k}"]`); }
+    if (S.sheet) { S.sheet = false; return render(".menu-btn"); }
+    return;
+  }
+  // top-level words: ←/→ move, ↓ opens and enters the panel
+  if (t.classList && t.classList.contains("tn")) {
+    const tns = $$(".tn");
+    const i = tns.indexOf(t);
+    if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+      e.preventDefault();
+      const n = tns[(i + (e.key === "ArrowRight" ? 1 : -1) + tns.length) % tns.length];
+      if (S.open) openSec(n.dataset.sec); else n.focus();
+    } else if (e.key === "ArrowDown") { e.preventDefault(); openSec(t.dataset.sec, true); }
+    return;
+  }
+  // inside the panel: ↑/↓ move between entries, ←/→ switch section
+  if (t.closest && t.closest("#mega")) {
+    const items = $$("#mega .mi");
+    const i = items.indexOf(t);
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (e.key === "ArrowUp" && i <= 0) return $(`.tn[data-sec="${S.open}"]`).focus();
+      items[Math.min(items.length - 1, i + (e.key === "ArrowDown" ? 1 : -1))].focus();
+    } else if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+      const tns = $$(".tn"); const j = tns.findIndex((x) => x.dataset.sec === S.open);
+      e.preventDefault();
+      openSec(tns[(j + (e.key === "ArrowRight" ? 1 : -1) + tns.length) % tns.length].dataset.sec, true);
+    }
+  }
+});
+// focus leaving the header closes the panel / popover (keyboard users tabbing out)
+document.addEventListener("focusin", (e) => {
+  if ((S.open || S.acct) && !e.target.closest("#top")) { S.open = null; S.acct = false; const keep = e.target; render(); if (document.contains(keep)) keep.focus(); }
+});
+
+addEventListener("hashchange", () => {
+  S.open = null; S.acct = false; S.sheet = false;
+  const R = parse();
+  if (R.page !== "import") S.importStep = 1;
+  render();
+  scrollTo(0, 0);
+  const h = $("#main h1"); if (h) h.focus({ preventScroll: true });
+});
+addEventListener("resize", () => {
+  const tnav = $(".topnav"); if (tnav) tnav.classList.toggle("ovf", tnav.scrollLeft + tnav.clientWidth < tnav.scrollWidth - 2);
+  if (innerWidth > 767 && S.sheet) { S.sheet = false; render(); }
+  if (innerWidth <= 767 && (S.open || S.acct)) { S.open = null; S.acct = false; render(); }
+});
+
+/* mockup controls */
+$$('input[name="mc-role"]').forEach((i) => i.addEventListener("change", () => {
+  S.role = i.value; S.open = null; S.acct = false; render();
+  toast(S.role === "admin" ? "Role: admin — Admin menu, create/edit buttons and Import are back" : "Role: normal user (marta) — no Admin menu, no create/edit, no Import");
+}));
+$("#mc-later").addEventListener("change", (e) => { S.later = e.target.checked; S.open = null; render(); toast(S.later ? "Later slices shown (greyed)" : "Later slices hidden — Operations, Planning and Reports disappear"); });
+$$("[data-mc-ro]").forEach((i) => i.addEventListener("change", () => { S.ro[i.dataset.mcRo] = i.checked; render(); toast(`${N(i.dataset.mcRo)} is now ${i.checked ? "read-only 🔒" : "editable"}`); }));
+
+/* about panel */
+function openAbout() {
+  const w = $("#about");
+  w.hidden = false;
+  w.innerHTML = `<div class="dlg-wrap" data-act="about-close"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="about-h">
+    <div class="lead"><h2 id="about-h">02 — Top bar with mega-menu and section tabs</h2><button class="btn sm" data-act="about-close" id="about-x">✕ Close</button></div>
+    <h3>The idea</h3>
+    <p>Keep the top bar CPG already has, and let it grow up. Six plain words — <b>Master data · Operations · Planning · Reports · Audit · Admin</b> — each open a full-width panel that lists every screen in that section with an icon and one line saying what it is for. Once you are inside a section, a <b>tab row</b> under the page title moves sideways in one click. The tenant is a <b>TEST ◐ PROD</b> pill on the right; its colour runs along the bar's bottom edge, so you always know where you are without a second bar eating space.</p>
+    <h3>Why it fits CPG</h3>
+    <ul><li>It is an evolution of today's header, not a rewrite: same place, same habits, smaller diff.</li>
+    <li>CPG's work is wide tables (planning parameters, BOMs, MRP output). No sidebar means the full width goes to the data.</li>
+    <li>The one-line descriptions teach MRP words (BOM, lot multiple, safety stock) to people who are new to them — the menu doubles as a map of the product.</li>
+    <li>Sections are small (2–8 screens), which is exactly what a mega-panel shows well; the tab row covers the most common move: sideways inside master data.</li></ul>
+    <h3>Trade-offs</h3>
+    <ul><li>Most destinations are 2 clicks from anywhere; nothing outside the current section is 1 click (a sidebar would make some of them 1).</li>
+    <li>The map is hidden until you open a panel — you don't see "where else could I go" at a glance.</li>
+    <li>Polish labels are ~30 % longer: in English the six words fit down to ~800 px, in Polish down to ~880 px (below 1040 px the switch goes compact and Help moves into the account menu). Narrower than that, the word row scrolls sideways under a fade — try account → Polski and resize.</li>
+    <li>Operations will be the busiest panel (12 entries in 4 columns) once slice 2 lands; still one glance, but dense.</li>
+    <li>Click-to-open (not hover) is deliberate for touch and keyboard, but mouse users used to hover menus pay one click.</li></ul>
+    <h3>Click counts (from a tenant's Overview)</h3>
+    <div class="tbl"><table><thead><tr><th>Destination</th><th>Desktop</th><th>Mobile (390 px)</th></tr></thead><tbody>
+    <tr><td>Materials</td><td><b>2</b> — Master data → Materials (1 via the Overview count card)</td><td><b>2</b> — Menu → Materials (Master data is open by default)</td></tr>
+    <tr><td>Locations</td><td><b>2</b> — Master data → Locations (<b>1</b> from any master data page, via the tab row)</td><td><b>2</b> — Menu → Locations (1 from a master data page via the tab row)</td></tr>
+    <tr><td>Safety stock</td><td><b>2</b> — Master data → Safety stock</td><td><b>2</b> — Menu → Safety stock</td></tr>
+    <tr><td>Users</td><td><b>2</b> — Admin → Users</td><td>3 — Menu → Admin → Users</td></tr>
+    <tr><td>Switch Test → Prod, same screen</td><td><b>1</b> — the switch</td><td><b>1</b> — the compact switch in the bar</td></tr>
+    <tr><td>Change language</td><td><b>2</b> — account → Polski</td><td>2 — Menu → Polski (bottom of the sheet, after a scroll)</td></tr>
+    <tr><td>Reach the Import</td><td><b>2</b> — Master data → Import (1 via the Overview quick action)</td><td>2 — Menu → Import</td></tr>
+    </tbody></table></div>
+  </div></div>`;
+  $("#about-x").focus();
+}
+function closeAbout() { $("#about").hidden = true; $("#about").innerHTML = ""; const b = $('[data-act="about"]'); if (b) b.focus(); }
+
+/* boot */
+if (innerWidth <= 767) { $("#mc").dataset.collapsed = "true"; $(".mc-head").setAttribute("aria-expanded", "false"); }
+if (!/^#\/(test|prod|global)(\/|$)/.test(location.hash)) history.replaceState(null, "", "#/test/overview");
+render();
+</script>
+</body>
+</html>

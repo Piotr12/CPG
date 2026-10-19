@@ -12,6 +12,9 @@ export const HELP_TOPIC_IDS = [
   "tenant-audit",
   "materials",
   "material-conversions",
+  "locations",
+  "customers",
+  "suppliers",
   "language-and-theme",
   "using-help",
 ] as const;
@@ -33,6 +36,9 @@ export const HELP_TOPIC_ROUTES: Record<HelpTopicId, string> = {
   "tenant-audit": "/admin/[tenant]/audit",
   materials: "/admin/[tenant]/materials",
   "material-conversions": "/admin/[tenant]/materials/[id]",
+  locations: "/admin/[tenant]/locations",
+  customers: "/admin/[tenant]/customers",
+  suppliers: "/admin/[tenant]/suppliers",
   "language-and-theme": "/admin",
   "using-help": "/help",
 };
@@ -117,7 +123,7 @@ const en: Record<HelpTopicId, HelpText> = {
     title: "A tenant's audit",
     body: [
       "Audit — Test or Audit — Prod, on that tenant's page, opens its own audit: the changes to its business records, kept apart from the other tenant's.",
-      "It lists every material created, changed, deactivated or reactivated, and every unit conversion added, changed or removed, with the values before and after. Account changes are always in the Global audit.",
+      "It lists every material, location, customer and supplier created, changed, deactivated or reactivated, and every unit conversion added, changed or removed, with the values before and after. Account changes are always in the Global audit.",
       "Like the Global audit, it is read-only for everyone.",
     ],
   },
@@ -137,6 +143,33 @@ const en: Record<HelpTopicId, HelpText> = {
       "A conversion lets people enter quantities in another unit, such as a case of 12. It reads 1 case = 12 each: the alternate quantity and unit, then the base quantity and the base unit. A quantity entered in that unit is converted into the base unit once, rounded half-up to six decimals, and the unit and factor it was entered with are kept. The inverse is shown for orientation only.",
       "Changing or removing a conversion never changes quantities already stored. The base unit can change only while the material has no conversions.",
       "Deactivate keeps the material and its history, but it can't be picked for new entries; Reactivate undoes that. Every change appears in the tenant's audit.",
+    ],
+  },
+  locations: {
+    title: "Locations",
+    body: [
+      "Locations, on a tenant's page, lists the sites where that tenant's materials are made and stocked. Test and Prod each have their own: location 00000001 in Test and 00000001 in Prod are different records.",
+      "Every location has an eight-digit ID that CPG assigns in order when it is created (00000001, 00000002, …) and that never changes, a name and a status. Names don't have to be unique.",
+      "Every account can read the list. Only the administrator creates, renames, deactivates and reactivates locations, with Create location and each row's ⋯ menu; through the API too, with the same rules.",
+      "Deactivate keeps the location and everything that already uses it, but it can't be picked for new entries; Reactivate undoes that. Every change appears in the tenant's audit.",
+    ],
+  },
+  customers: {
+    title: "Customers",
+    body: [
+      "Customers, on a tenant's page, lists who that tenant sells to. Test and Prod each have their own: customer 00000001 in Test and 00000001 in Prod are different records.",
+      "Every customer has an eight-digit ID that CPG assigns in order when it is created (00000001, 00000002, …) and that never changes, a name and a status. Names don't have to be unique.",
+      "Every account can read the list. Only the administrator creates, renames, deactivates and reactivates customers, with Create customer and each row's ⋯ menu; through the API too, with the same rules.",
+      "Deactivate keeps the customer and everything that already uses it, but it can't be picked for new entries; Reactivate undoes that. Every change appears in the tenant's audit.",
+    ],
+  },
+  suppliers: {
+    title: "Suppliers",
+    body: [
+      "Suppliers, on a tenant's page, lists who that tenant buys from. Test and Prod each have their own: supplier 00000001 in Test and 00000001 in Prod are different records.",
+      "Every supplier has an eight-digit ID that CPG assigns in order when it is created (00000001, 00000002, …) and that never changes, a name and a status. Names don't have to be unique.",
+      "Every account can read the list. Only the administrator creates, renames, deactivates and reactivates suppliers, with Create supplier and each row's ⋯ menu; through the API too, with the same rules.",
+      "Deactivate keeps the supplier and everything that already uses it, but it can't be picked for new entries; Reactivate undoes that. Every change appears in the tenant's audit.",
     ],
   },
   "language-and-theme": {
@@ -227,7 +260,7 @@ const pl: Record<HelpTopicId, HelpText> = {
     title: "Audyt środowiska",
     body: [
       "Audyt — Test lub Audyt — Prod na stronie środowiska otwiera jego własny audyt: zmiany jego rekordów biznesowych, oddzielone od drugiego środowiska.",
-      "Pokazuje każdy utworzony, zmieniony, dezaktywowany lub ponownie aktywowany materiał oraz każdy dodany, zmieniony lub usunięty przelicznik jednostek, z wartościami przed i po. Zmiany kont są zawsze w audycie globalnym.",
+      "Pokazuje każde utworzenie, zmianę, dezaktywację i ponowną aktywację materiału, lokalizacji, klienta lub dostawcy oraz każdy dodany, zmieniony lub usunięty przelicznik jednostek, z wartościami przed i po. Zmiany kont są zawsze w audycie globalnym.",
       "Tak jak audyt globalny, jest tylko do odczytu dla wszystkich.",
     ],
   },
@@ -247,6 +280,33 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Przelicznik pozwala wpisywać ilości w innej jednostce, na przykład w kartonach po 12 sztuk. Czyta się go jako 1 karton = 12 szt.: ilość i jednostka alternatywna, potem ilość i jednostka bazowa. Ilość wpisana w tej jednostce jest przeliczana na jednostkę bazową raz, z zaokrągleniem połówek w górę do sześciu miejsc po przecinku, a jednostka i przelicznik, z którymi ją wpisano, zostają zapisane. Odwrotność jest tylko orientacyjna.",
       "Zmiana lub usunięcie przelicznika nigdy nie zmienia ilości już zapisanych. Jednostkę bazową można zmienić tylko wtedy, gdy materiał nie ma przeliczników.",
       "Dezaktywuj zachowuje materiał i jego historię, ale nie można go wybrać w nowych wpisach; Aktywuj ponownie to cofa. Każda zmiana pojawia się w audycie środowiska.",
+    ],
+  },
+  locations: {
+    title: "Lokalizacje",
+    body: [
+      "Lokalizacje, na stronie środowiska, wyświetlają miejsca, w których jego materiały są wytwarzane i składowane. Test i Prod mają własne: lokalizacja 00000001 w Test i 00000001 w Prod to różne rekordy.",
+      "Każda lokalizacja ma ośmiocyfrowe ID, które CPG nadaje po kolei przy utworzeniu (00000001, 00000002, …) i które nigdy się nie zmienia, a także nazwę i status. Nazwy nie muszą być unikalne.",
+      "Lokalizacje może przeglądać każde konto. Tworzy je, zmienia ich nazwy, dezaktywuje i aktywuje ponownie tylko administrator, przyciskiem Utwórz lokalizację i menu ⋯ w każdym wierszu; także przez API, na tych samych zasadach.",
+      "Dezaktywuj zachowuje lokalizację i wszystko, co już jej używa, ale nie można jej wybrać w nowych wpisach; Aktywuj ponownie to cofa. Każda zmiana pojawia się w audycie środowiska.",
+    ],
+  },
+  customers: {
+    title: "Klienci",
+    body: [
+      "Klienci, na stronie środowiska, to ci, którym to środowisko sprzedaje. Test i Prod mają własne: klient 00000001 w Test i 00000001 w Prod to różne rekordy.",
+      "Każdy klient ma ośmiocyfrowe ID, które CPG nadaje po kolei przy utworzeniu (00000001, 00000002, …) i które nigdy się nie zmienia, a także nazwę i status. Nazwy nie muszą być unikalne.",
+      "Klientów może przeglądać każde konto. Tworzy ich, zmienia ich nazwy, dezaktywuje i aktywuje ponownie tylko administrator, przyciskiem Utwórz klienta i menu ⋯ w każdym wierszu; także przez API, na tych samych zasadach.",
+      "Dezaktywuj zachowuje klienta i wszystko, co już go używa, ale nie można go wybrać w nowych wpisach; Aktywuj ponownie to cofa. Każda zmiana pojawia się w audycie środowiska.",
+    ],
+  },
+  suppliers: {
+    title: "Dostawcy",
+    body: [
+      "Dostawcy, na stronie środowiska, to ci, od których to środowisko kupuje. Test i Prod mają własne: dostawca 00000001 w Test i 00000001 w Prod to różne rekordy.",
+      "Każdy dostawca ma ośmiocyfrowe ID, które CPG nadaje po kolei przy utworzeniu (00000001, 00000002, …) i które nigdy się nie zmienia, a także nazwę i status. Nazwy nie muszą być unikalne.",
+      "Dostawców może przeglądać każde konto. Tworzy ich, zmienia ich nazwy, dezaktywuje i aktywuje ponownie tylko administrator, przyciskiem Utwórz dostawcę i menu ⋯ w każdym wierszu; także przez API, na tych samych zasadach.",
+      "Dezaktywuj zachowuje dostawcę i wszystko, co już go używa, ale nie można go wybrać w nowych wpisach; Aktywuj ponownie to cofa. Każda zmiana pojawia się w audycie środowiska.",
     ],
   },
   "language-and-theme": {

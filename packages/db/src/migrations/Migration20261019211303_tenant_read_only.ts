@@ -1,8 +1,8 @@
 import { Migration } from '@mikro-orm/migrations';
 
-export class Migration20261019202804_tenant_read_only extends Migration {
+export class Migration20261019211303_tenant_read_only extends Migration {
 
-  override name = 'Migration20261019202804_tenant_read_only';
+  override name = 'Migration20261019211303_tenant_read_only';
 
   override up(): void | Promise<void> {
     this.addSql(`alter table \`tenant\` add column \`read_only\` integer not null default false;`);

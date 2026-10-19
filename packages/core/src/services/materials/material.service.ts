@@ -1,9 +1,7 @@
 import {
-  currentTenant,
   Material,
   MaterialConversion,
   OptimisticLockError,
-  Tenant,
   UniqueConstraintViolationException,
   type EntityManager,
   type MaterialType,
@@ -20,6 +18,7 @@ import {
 import { AppError, ConflictError, NotFoundError, ValidationError, versionConflict } from "../../http/errors";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
+import { isScopeReadOnly } from "../tenants/tenant.service";
 
 /** What the screens and the API show about a material. `id` is its eight-digit business ID (R01). */
 export interface MaterialSummary {
@@ -259,7 +258,7 @@ export class MaterialService {
    */
   async seedDemo(): Promise<number> {
     return this.em.transactional(async (em) => {
-      if ((await em.count(Material, {})) > 0 || (await isReadOnly(em))) return 0;
+      if ((await em.count(Material, {})) > 0 || (await isScopeReadOnly(em))) return 0;
       for (const { conversions, ...fields } of DEMO_MATERIALS) {
         const material = await this.insert(em, fields);
         for (const conversion of conversions) em.create(MaterialConversion, { material, ...conversion });
@@ -342,11 +341,6 @@ function pick(values: Record<string, string | boolean>, keys: string[]) {
 function materialEntry(action: string, material: Material, before: AuditEntry["before"], after: AuditEntry["after"]): AuditEntry {
   const label = `${material.code} — ${material.description}`;
   return { action, subject: { type: "Material", id: material.code, label }, before, after };
-}
-
-/** The scope's tenant is read-only, as stored now (the seed's own gate; requests go through the wrappers). */
-async function isReadOnly(em: EntityManager): Promise<boolean> {
-  return (await em.findOneOrFail(Tenant, { code: currentTenant(em)! }, { refresh: true })).readOnly;
 }
 
 function conversionEntry(

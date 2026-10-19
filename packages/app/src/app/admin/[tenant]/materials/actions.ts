@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import {
   assertAdmin,
   tenantServerAction,
@@ -17,6 +16,7 @@ import {
 import { materialCreateSchema } from "@cpg/core/validators/materials/material-create.schema";
 import { materialUpdateSchema } from "@cpg/core/validators/materials/material-update.schema";
 import { currentUser } from "../../../../auth/require-admin";
+import { formValues as fields, refreshAfterWrite } from "../../../../routing/refresh-after-write";
 
 /*
  * The materials screens' writes. Each is bound by its page to the tenant and dataset generation it
@@ -95,21 +95,8 @@ export async function removeConversion(
   return refreshed(result, tenant, materialId);
 }
 
-/** A form's values as an object to add the bound fields to; anything else counts as no values. */
-function fields(values: unknown): object {
-  return typeof values === "object" && values !== null ? values : {};
-}
-
-/**
- * Refreshes the list, and the material's page when there is one, after a success or a stale
- * version (so the page shows what changed and a retry carries the new version). Only then: a
- * failed write may carry a tenant or ID that names no page. A read-only refusal doesn't refresh:
- * the refreshed page would drop the dialog that explains it, as its controls are hidden then.
- */
+/** Refreshes the list, and the material's page when there is one, after a success or a stale version. */
 function refreshed<T>(result: Result<T>, tenant: string, materialId?: string): Result<T> {
-  if (result.ok || result.error.code === "VERSION_CONFLICT") {
-    revalidatePath(`/admin/${tenant}/materials`);
-    if (materialId) revalidatePath(`/admin/${tenant}/materials/${materialId}`);
-  }
-  return result;
+  const list = `/admin/${tenant}/materials`;
+  return materialId ? refreshAfterWrite(result, list, `${list}/${materialId}`) : refreshAfterWrite(result, list);
 }

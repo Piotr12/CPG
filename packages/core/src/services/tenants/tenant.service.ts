@@ -1,4 +1,4 @@
-import { Tenant, type EntityManager } from "@cpg/db";
+import { currentTenant, Tenant, type EntityManager } from "@cpg/db";
 import { NotFoundError } from "../../http/errors";
 import { TENANT_CODES, type TenantCode } from "../../validators/tenants/tenant-code.schema";
 import type { AuditActor } from "../audit/actor";
@@ -76,6 +76,14 @@ export class TenantService {
       return toInfo(tenant);
     });
   }
+}
+
+/**
+ * Whether `em`'s own tenant scope is read-only as stored now. For the system writes that don't go
+ * through the request wrappers (the demo seeds), inside their own transaction.
+ */
+export async function isScopeReadOnly(em: EntityManager): Promise<boolean> {
+  return (await fresh(em, currentTenant(em)!)).readOnly;
 }
 
 /** The tenant row read past the identity map, or `TENANT_NOT_FOUND`. */
