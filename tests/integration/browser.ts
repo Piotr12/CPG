@@ -37,10 +37,10 @@ export function openBrowser() {
     fillLabel: (label: string, value: string) => command("find", "label", label, "fill", value, "--exact"),
     /** Waits until `text` appears anywhere on the page. */
     waitForText: (text: string) => command("wait", "--text", text),
-    /** Waits until a JavaScript expression in the page is truthy. */
-    waitUntil: (expression: string) => command("wait", "--fn", expression),
     /** Waits until an element matching the CSS selector is on the page. */
     waitFor: (selector: string) => command("wait", selector),
+    /** Waits until a JavaScript expression is truthy in the page. */
+    waitUntil: (expression: string) => command("wait", "--fn", expression),
     url: () => command("get", "url"),
     /** The browser's cookies for the current page, including httpOnly ones. */
     cookies: async () =>

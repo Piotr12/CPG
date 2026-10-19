@@ -24,6 +24,8 @@ export interface SignedIn {
   /** The raw session token: goes into the cookie and nowhere else. */
   token: string;
   expiresAt: Date;
+  /** The signed-in account, so the caller can apply its preferences. */
+  userId: string;
 }
 
 export interface SessionUser {
@@ -75,12 +77,13 @@ export class AuthService {
     const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
     const tokenHash = hashSessionToken(token);
     if (verified.kind === "admin") {
-      this.em.create(Session, { tokenHash, user: await this.ensureBuiltInAdmin(), expiresAt });
+      const admin = await this.ensureBuiltInAdmin();
+      this.em.create(Session, { tokenHash, user: admin, expiresAt });
       await this.em.flush();
-    } else {
-      await this.openUserSession(verified, tokenHash, expiresAt);
+      return { token, expiresAt, userId: admin.id };
     }
-    return { token, expiresAt };
+    await this.openUserSession(verified, tokenHash, expiresAt);
+    return { token, expiresAt, userId: verified.userId };
   }
 
   /** The signed-in user for a session token, or null when it is missing, unknown or expired. */

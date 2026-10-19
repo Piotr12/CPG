@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { requestScope, type SessionUser } from "@cpg/core";
 import { readSessionToken } from "./session-cookie";
@@ -8,9 +9,9 @@ export const SIGN_IN_PATH = "/login";
 /**
  * The signed-in user for this request, or null. Any error counts as signed out (fail closed).
  * The cookie is read first: it makes the caller request-time, and without one there is no reason
- * to open the database.
+ * to open the database. Cached per request, so the layout, the page and its gate share one lookup.
  */
-export async function currentUser(): Promise<SessionUser | null> {
+export const currentUser = cache(async (): Promise<SessionUser | null> => {
   try {
     const token = await readSessionToken();
     if (!token) return null;
@@ -22,7 +23,7 @@ export async function currentUser(): Promise<SessionUser | null> {
     console.error("Session check failed:", error);
     return null;
   }
-}
+});
 
 /** Where every signed-in account lands, and where a normal user is sent from an admin-only page. */
 export const HOME_PATH = "/admin";

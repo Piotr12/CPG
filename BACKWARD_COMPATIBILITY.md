@@ -57,9 +57,21 @@ Source: `packages/app/src/app/up/route.ts`, `Dockerfile`, `config/deploy.yml`.
 
 ### 4. Public URLs
 
-Source: `packages/app/src/app/` (today `/`, `/login` and `/admin`, which requires an admin session and redirects to `/login` otherwise).
+Source: `packages/app/src/app/`. Today that is:
 
-**Breaking:** removing or renaming a page URL users can bookmark. **Required path:** a redirect from the old URL in the same PR.
+- `/`, `/login` and `/help`, which are public. `/help` accepts `?q=` and anchors topics as `#<topic-id>`.
+- `/admin`, which requires an admin session and redirects to `/login` otherwise.
+
+**Breaking:** removing or renaming a page URL users can bookmark, a help topic id, or the `q` parameter. **Required path:** a redirect from the old URL in the same PR, or a topic kept under its old id.
+
+**Cookies** (`packages/app/src/auth/session-cookie.ts`, `packages/app/src/preferences/theme.ts`):
+
+| Cookie | What it does | What renaming it would do |
+| --- | --- | --- |
+| `cpg_session` | the `httpOnly` session token | signs everyone out |
+| `cpg_theme` | `light`/`dark`; read by the inline head script before first paint, deliberately not `httpOnly`, never trusted by the server | gives every user one flash of the light theme until they sign in again |
+
+Rename either one only by reading the old name for one release.
 
 Once `app/api/<concept>/` route handlers exist, their paths, methods, request schemas and the result envelope (`{ ok, data }` / `{ ok: false, error: { code, message, fieldErrors? } }`) become protected the same way: changes are additive (new optional fields, new routes), and removals go through a deprecation release.
 

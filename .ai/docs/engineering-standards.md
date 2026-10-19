@@ -70,6 +70,19 @@ No action or route writes its own `try/catch` + response mapping.
 - `tables/data-table.tsx` — column-config-driven lists with loading/empty/error states, pagination and row actions. Use it for every list screen.
 - `feedback/{loading-message,error-message,empty-state}.tsx` — the only sanctioned loading/error/empty renderers, including `<Suspense>` fallbacks.
 
+**Language, theme and help** (spec `2026-10-19--0855UTC-user-preferences-footer-help`):
+
+- **Strings.** Every user-visible string lives in `app/src/i18n/messages/en.ts`. `pl.ts` is typed against it, so a missing Polish string fails `typecheck`.
+- **Where translated text renders.** Server components read the dictionary with `getMessages()`, inside the request-time `<Suspense>` child that already gates the page's data, and wrap their output in `lang={locale}`.
+  - Static shells and `<Suspense>` fallbacks hold no translatable text: use a text-free `aria-busy` placeholder.
+  - Client components get their strings as props.
+- **Errors** are translated by envelope `code` through `errorMessage()`.
+- **Theme.** The theme is the `dark` class on `<html>`. The inline head script sets it before first paint from the `cpg_theme` cookie, and `DocumentPreferences` keeps it in line with the account.
+  - The account's `user_preference` row is the source of truth.
+  - `cpg_theme` is the one deliberately script-readable cookie: a display hint, never read for a server decision.
+- **Footer.** The root layout ends every page with the R11 footer. Never add a second `<footer>`.
+- **Help.** Every new `page.tsx` adds a help topic for its route in both languages (`app/src/help/topics.ts`). `tests/every-page-has-help.test.ts` enforces it.
+
 **Data flow in the App Router.** A server component reads through a service, `(await requestScope()).cradle.workOrderService.list()`. It never calls its own `/api` route (Next.js explicitly advises against that: it costs an extra request). Mutations from CPG pages go through server actions. Route handlers + `apiCall` are for client-side fetching and for external callers.
 
 **Where a new component goes:**
@@ -110,7 +123,7 @@ When two principles pull in different directions, prefer the one that keeps the 
 Authentication is server-side sessions (specs `2026-10-19--0746UTC-admin-sign-in` and `2026-10-19--0912UTC-user-management`): the built-in admin and normal users sign in at `/login`, a random token goes into the `httpOnly` `cpg_session` cookie, and only its SHA-256 is stored. Every `/admin` page calls `requireUser()`, or `requireAdmin()` when it is admin-only, inside the `<Suspense>` child that renders its data. `tests/admin-pages-require-admin.test.ts` enforces both and keeps the list of admin-only pages. Nothing renders outside the gate. The following hold:
 
 - **Passwords** (if stored): `argon2id` (memory ≥ 19 MiB, iterations ≥ 2, parallelism 1) or `bcrypt` with cost ≥ 12. Don't pick a third option. CPG uses argon2id through Node's built-in `crypto.argon2` (`core/src/services/auth/password-hash.ts`, PHC strings), which is why `engines.node` is `>=24.7` and `assertServerConfig` refuses older runtimes.
-- **Sessions:** a server-side session or a signed token (HS256+, secret ≥ 32 random bytes) in an `httpOnly`, `secure` (production), `sameSite=lax` cookie with a scoped `path` and a short expiry. Never use `localStorage` or a non-httpOnly cookie. Document missing refresh/rotation as a known limitation rather than silently lengthening the expiry.
+- **Sessions:** a server-side session or a signed token (HS256+, secret ≥ 32 random bytes) in an `httpOnly`, `secure` (production), `sameSite=lax` cookie with a scoped `path` and a short expiry. Never use `localStorage` or a non-httpOnly cookie. (The non-sensitive `cpg_theme` display hint is the only script-readable cookie.) Document missing refresh/rotation as a known limitation rather than silently lengthening the expiry.
 - **Server-side enforcement:** every non-public page, action and route checks the session itself. Hiding a button is not enforcement.
 - **Record-level authorization:** check access to *this* record (no insecure direct object references). A missing ownership/permission check is as serious as a missing auth check.
 - **CSRF:** server actions get Next.js's built-in Origin check. Cookie-authenticated route handlers that change state also require a custom header, which `apiCall` always sets and a plain HTML form post can't.
@@ -250,6 +263,7 @@ Done when these standards were adopted:
 - The first service, `SystemStatusService` (`core/src/services/system/`), is registered in `core/src/container/container.ts`. `/admin` and `/up` read through it instead of querying the ORM. It is the reference for service placement and registration.
 - ESLint boundaries added.
 - Authentication (2026-10-19, admin sign-in): `core/src/http/{errors,result,server-action}.ts`, `core/src/validators/` with `zod`, and `AuthService`/`LoginThrottle` (`core/src/services/auth/`), with `User` and `Session` in the cross-cutting `auth` entity folder (like `system`). They are the reference for the shared server layer.
+- Language, theme, footer and help (2026-10-19, E01-S04): the `UserPreference` entity and `UserPreferenceService` (`preferences` concept), `app/src/i18n/`, `app/src/preferences/` and `app/src/help/`. They are the reference for translated screens.
 - Users (2026-10-19, user management): `core/src/http/auth.ts`, `UserService` (`core/src/services/users/`), and the first client layers: `ui/src/backend/tables/data-table.tsx` (columns, empty state, row actions; pagination, sorting and filtering wait for the first list that needs them), `forms/crud-form.tsx`, `feedback/{loading-message,error-message,empty-state}.tsx` and `api/result.ts`. `/admin/users` is the reference for a list screen with create and row actions.
 - Test infrastructure: Vitest unit tests next to every source file at 100% coverage, integration tests (Testcontainers runs the production image, agent-browser drives it), and a CI workflow for pull requests.
 - Layering switched to DevMentor's `app → core → db` (the first version of this document kept CPG's original `db → core`). Config and DI moved fully into `core`, the composition root moved from `app/src/server/container.ts` into `core`, and the migration CLI entry point moved to `core/scripts/`. `db` now has no workspace dependencies.

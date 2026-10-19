@@ -21,7 +21,8 @@ describe("migrateDatabase", () => {
     expect(await migrateDatabase(config)).toEqual([
       "Migration20261017091007_initial",
       "Migration20261019080354_auth_users_sessions",
-      "Migration20261019092305_users_password_active",
+      "Migration20261019090456_user_preferences",
+      "Migration20261019094413_users_password_active",
     ]);
     expect(await migrateDatabase(config)).toEqual([]);
   });

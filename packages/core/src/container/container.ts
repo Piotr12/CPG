@@ -4,6 +4,7 @@ import { loadConfig, type AppConfig } from "../config";
 import { toDbOptions } from "../database";
 import { AuthService } from "../services/auth/auth.service";
 import { LoginThrottle } from "../services/auth/login-throttle";
+import { UserPreferenceService } from "../services/preferences/user-preference.service";
 import { SystemStatusService } from "../services/system/system-status.service";
 import { UserService } from "../services/users/user.service";
 import { globalSingleton } from "../singleton";
@@ -26,6 +27,7 @@ export function createAppContainer(config: AppConfig, orm: Orm): AppContainer {
     loginThrottle: asClass(LoginThrottle).singleton(),
     authService: asClass(AuthService).scoped(),
     userService: asClass(UserService).scoped(),
+    userPreferenceService: asClass(UserPreferenceService).scoped(),
   });
   return container;
 }
