@@ -23,7 +23,7 @@ beforeAll(() => {
   };
 });
 
-const alice = { id: "b", username: "alice", role: "user" as const, active: true, createdAt: new Date() };
+const alice = { id: "b", username: "alice", role: "user" as const, active: true, createdAt: new Date(), version: 1 };
 
 function openMenu(username: string) {
   fireEvent.keyDown(screen.getByRole("button", { name: `Actions for ${username}` }), { key: "Enter" });

@@ -31,8 +31,8 @@ export async function createUser(values: unknown): Promise<Result<UserSummary>> 
 /** Replaces a normal user's password and signs them out everywhere (TEN-006). Admin only. */
 export async function resetUserPassword(values: unknown): Promise<Result<UserSummary>> {
   return asAdmin((actor, { userService }) =>
-    serverAction(resetPasswordSchema, ({ userId, password }) => {
-      return userService.resetPassword(userId, password, uiActor(assertAdmin(actor)));
+    serverAction(resetPasswordSchema, ({ userId, password, version }) => {
+      return userService.resetPassword(userId, password, version, uiActor(assertAdmin(actor)));
     })(values),
   );
 }
@@ -40,8 +40,8 @@ export async function resetUserPassword(values: unknown): Promise<Result<UserSum
 /** Deactivates (signing out everywhere, TEN-007) or reactivates a normal user. Admin only. */
 export async function setUserActive(values: unknown): Promise<Result<UserSummary>> {
   return asAdmin((actor, { userService }) =>
-    serverAction(setUserActiveSchema, ({ userId, active }) => {
-      return userService.setActive(userId, active, uiActor(assertAdmin(actor)));
+    serverAction(setUserActiveSchema, ({ userId, active, version }) => {
+      return userService.setActive(userId, active, version, uiActor(assertAdmin(actor)));
     })(values),
   );
 }
@@ -49,11 +49,12 @@ export async function setUserActive(values: unknown): Promise<Result<UserSummary
 /**
  * Runs one admin write: hands `run` the signed-in account (checked with `assertAdmin` inside the
  * `serverAction` wrapper, after parsing, and recorded as the audit's actor) and the request's
- * services, then refreshes the users screen when it succeeded.
+ * services, then refreshes the users screen when it succeeded, or when the row was stale
+ * (`VERSION_CONFLICT`), so the admin sees what changed and a retry carries the new version.
  */
 async function asAdmin<T>(run: (actor: SessionUser | null, cradle: Cradle) => Promise<Result<T>>): Promise<Result<T>> {
   const { cradle } = await requestScope();
   const result = await run(await currentUser(), cradle);
-  if (result.ok) revalidatePath(USERS_PATH);
+  if (result.ok || result.error.code === "VERSION_CONFLICT") revalidatePath(USERS_PATH);
   return result;
 }

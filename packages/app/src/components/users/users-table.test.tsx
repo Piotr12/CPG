@@ -10,9 +10,9 @@ vi.mock("./user-actions", () => ({
 }));
 
 const users = [
-  { id: "a", username: "admin", role: "admin" as const, active: true, createdAt: new Date("2026-10-19T08:00:00Z") },
-  { id: "b", username: "alice", role: "user" as const, active: true, createdAt: new Date("2026-10-19T09:00:00Z") },
-  { id: "c", username: "carol", role: "user" as const, active: false, createdAt: new Date("2026-10-18T09:00:00Z") },
+  { id: "a", username: "admin", role: "admin" as const, active: true, createdAt: new Date("2026-10-19T08:00:00Z"), version: 1 },
+  { id: "b", username: "alice", role: "user" as const, active: true, createdAt: new Date("2026-10-19T09:00:00Z"), version: 1 },
+  { id: "c", username: "carol", role: "user" as const, active: false, createdAt: new Date("2026-10-18T09:00:00Z"), version: 1 },
 ];
 
 describe("UsersTable", () => {

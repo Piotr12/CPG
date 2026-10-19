@@ -1,4 +1,12 @@
-import { ApiToken, Session, UniqueConstraintViolationException, User, type EntityManager, type UserRole } from "@cpg/db";
+import {
+  ApiToken,
+  OptimisticLockError,
+  Session,
+  UniqueConstraintViolationException,
+  User,
+  type EntityManager,
+  type UserRole,
+} from "@cpg/db";
 import { ConflictError, NotFoundError } from "../../http/errors";
 import type { AuditActor } from "../audit/actor";
 import { recordGlobalAudit, type AuditEntry } from "../audit/audit-recorder";
@@ -8,6 +16,7 @@ import { hashPassword } from "../auth/password-hash";
 /** One message for a taken name and the reserved `admin`: neither says more than "pick another". */
 export const USERNAME_TAKEN = "That username is taken.";
 export const USER_NOT_FOUND = "No such user.";
+export const VERSION_CONFLICT = "This record was changed since you loaded it. Reload and try again.";
 
 /** What the users screen shows about an account. Never carries the password hash. */
 export interface UserSummary {
@@ -16,6 +25,8 @@ export interface UserSummary {
   role: UserRole;
   active: boolean;
   createdAt: Date;
+  /** The optimistic-lock version an edit must carry back (AUD-024, AUD-025). */
+  version: number;
 }
 
 export interface NewUser {
@@ -32,8 +43,9 @@ interface Deps {
  * reactivate them. Only `role = user` rows are ever written here, so no path creates a second
  * admin or touches the built-in one, and nothing deletes an account. A reset or deactivation ends
  * every session of that user and deletes every API token of theirs in the same transaction (R06).
- * Every change records its Global audit entry in that same flush (R08). Callers check that the
- * actor is the admin (`assertAdmin`) before calling.
+ * Every change records its Global audit entry in that same flush (R08). An edit carries the version
+ * the caller loaded, and a stale one is `VERSION_CONFLICT`: the newer change is kept (AUD-024,
+ * AUD-025, API-029). Callers check that the actor is the admin (`assertAdmin`) before calling.
  */
 export class UserService {
   private readonly em: EntityManager;
@@ -68,10 +80,10 @@ export class UserService {
    * Replaces the password and signs the user out everywhere, atomically. The audit records that it
    * happened and to whom, never the password or its hash (AUD-015, AUD-028).
    */
-  async resetPassword(userId: string, password: string, actor: AuditActor): Promise<UserSummary> {
+  async resetPassword(userId: string, password: string, version: number, actor: AuditActor): Promise<UserSummary> {
     // Hash before the transaction: SQLite has one writer, so keep the write lock short.
     const passwordHash = await hashPassword(password);
-    return this.changeNormalUser(userId, actor, (user) => {
+    return this.changeNormalUser(userId, version, actor, (user) => {
       user.passwordHash = passwordHash;
       return { endSessions: true, audit: userEntry("users.user.password-reset", user, null, null) };
     });
@@ -79,10 +91,10 @@ export class UserService {
 
   /**
    * Deactivates (signing the user out everywhere) or reactivates. Idempotent: setting the current
-   * state again succeeds, changes nothing and records nothing.
+   * state again succeeds, changes nothing and records nothing, but the version is still checked.
    */
-  async setActive(userId: string, active: boolean, actor: AuditActor): Promise<UserSummary> {
-    return this.changeNormalUser(userId, actor, (user) => {
+  async setActive(userId: string, active: boolean, version: number, actor: AuditActor): Promise<UserSummary> {
+    return this.changeNormalUser(userId, version, actor, (user) => {
       if (user.active === active) return { endSessions: false, audit: null };
       const before = snapshot(user);
       user.active = active;
@@ -92,25 +104,40 @@ export class UserService {
   }
 
   /**
-   * Applies `change` to a normal user in one transaction: when it says so, ends their sessions and
-   * deletes their API tokens (API-011, API-012), and records the audit entry it returns, together
-   * with the change itself.
+   * Applies `change` to a normal user in one transaction, if the user is still at `version`: when
+   * it says so, ends their sessions and deletes their API tokens (API-011, API-012), and records the
+   * audit entry it returns, together with the change itself. The version is compared with a fresh
+   * read, never a copy already in the identity map; a write that lands between that read and the
+   * flush fails the flush's own version check. Both are `VERSION_CONFLICT`.
    */
-  private async changeNormalUser(userId: string, actor: AuditActor, change: (user: User) => Change): Promise<UserSummary> {
-    return this.em.transactional(async (em) => {
-      const user = await em.findOne(User, { id: userId, role: "user" });
-      if (!user) throw new NotFoundError("NOT_FOUND", USER_NOT_FOUND);
-      const { endSessions, audit } = change(user);
-      if (endSessions) {
-        await em.nativeDelete(Session, { user: user.id });
-        await em.nativeDelete(ApiToken, { user: user.id });
-      }
-      if (audit) recordGlobalAudit(em, actor, audit);
-      await em.flush();
-      return toSummary(user);
-    });
+  private async changeNormalUser(
+    userId: string,
+    version: number,
+    actor: AuditActor,
+    change: (user: User) => Change,
+  ): Promise<UserSummary> {
+    try {
+      return await this.em.transactional(async (em) => {
+        const user = await em.findOne(User, { id: userId, role: "user" }, { refresh: true });
+        if (!user) throw new NotFoundError("NOT_FOUND", USER_NOT_FOUND);
+        if (user.version !== version) throw versionConflict();
+        const { endSessions, audit } = change(user);
+        if (endSessions) {
+          await em.nativeDelete(Session, { user: user.id });
+          await em.nativeDelete(ApiToken, { user: user.id });
+        }
+        if (audit) recordGlobalAudit(em, actor, audit);
+        await em.flush();
+        return toSummary(user);
+      });
+    } catch (error) {
+      if (error instanceof OptimisticLockError) throw versionConflict();
+      throw error;
+    }
   }
 }
+
+const versionConflict = () => new ConflictError(VERSION_CONFLICT, "VERSION_CONFLICT");
 
 /** What a change to a normal user did: whether it ends their sessions, and its audit entry, if any. */
 interface Change {
@@ -127,6 +154,6 @@ function userEntry(action: string, user: User, before: AuditEntry["before"], aft
   return { action, subject: { type: "User", id: user.id, label: user.username }, before, after };
 }
 
-function toSummary({ id, username, role, active, createdAt }: User): UserSummary {
-  return { id, username, role, active, createdAt };
+function toSummary({ id, username, role, active, createdAt, version }: User): UserSummary {
+  return { id, username, role, active, createdAt, version };
 }

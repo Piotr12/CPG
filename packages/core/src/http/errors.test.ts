@@ -3,7 +3,9 @@ import {
   AppError,
   ConflictError,
   ForbiddenError,
+  IdempotencyKeyRequiredError,
   NotFoundError,
+  PreconditionRequiredError,
   TooManyRequestsError,
   UnauthorizedError,
   ValidationError,
@@ -69,6 +71,31 @@ describe("AppError hierarchy", () => {
       message: "That username is taken.",
       name: "ConflictError",
       status: 409,
+    });
+  });
+
+  it("names the kind of clash when one is given", () => {
+    expect(new ConflictError("Reload and try again.", "VERSION_CONFLICT")).toMatchObject({
+      code: "VERSION_CONFLICT",
+      status: 409,
+    });
+  });
+
+  it("asks for an idempotency key with a 400", () => {
+    expect(new IdempotencyKeyRequiredError()).toMatchObject({
+      code: "IDEMPOTENCY_KEY_REQUIRED",
+      message: "Send an Idempotency-Key header: 1–255 visible ASCII characters, unique per write.",
+      name: "IdempotencyKeyRequiredError",
+      status: 400,
+    });
+  });
+
+  it("asks for a missing precondition with a 428", () => {
+    expect(new PreconditionRequiredError("GENERATION_REQUIRED", "Send it.")).toMatchObject({
+      code: "GENERATION_REQUIRED",
+      message: "Send it.",
+      name: "PreconditionRequiredError",
+      status: 428,
     });
   });
 });

@@ -37,7 +37,7 @@ export function SetActiveDialog({ user, mode, labels, open, onClose }: SetActive
 
   function confirm() {
     startTransition(async () => {
-      const result = await setUserActive({ userId: user.id, active: !deactivating });
+      const result = await setUserActive({ userId: user.id, active: !deactivating, version: user.version });
       // Wrapped again so the outcome and the end of the pending state render together.
       startTransition(() => {
         if (result.ok) {

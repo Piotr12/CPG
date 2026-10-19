@@ -29,8 +29,10 @@ describe("tenant entry points", () => {
     expect(named("route.ts").map(rel)).toContain(path.join("app", "api", "tenants", "[tenant]", "route.ts"));
   });
 
-  it("read tenant pages and route handlers through tenantScope()", () => {
-    const missing = [...named("page.tsx"), ...named("route.ts")].filter((file) => !/\btenantScope\(/.test(read(file)));
+  it("read tenant pages and route handlers through tenantScope(), or write through tenantApiWrite()", () => {
+    const missing = [...named("page.tsx"), ...named("route.ts")].filter(
+      (file) => !/\b(tenantScope|tenantApiWrite)\(/.test(read(file)),
+    );
     expect(missing.map(rel)).toEqual([]);
   });
 
@@ -39,8 +41,9 @@ describe("tenant entry points", () => {
     expect(missing.map(rel)).toEqual([]);
   });
 
-  it("are the only places that open a tenant", () => {
+  it("are the only places that open a tenant, besides the tenant write wrapper", () => {
     const outside = all.filter((file) => !inTenant(file) && /\b(tenantScope|tenantServerAction)\(/.test(read(file)));
-    expect(outside.map(rel)).toEqual([]);
+    // tenantApiWrite opens the path's tenant for the tenant routes that use it.
+    expect(outside.map(rel)).toEqual([path.join("auth", "api-write.ts")]);
   });
 });

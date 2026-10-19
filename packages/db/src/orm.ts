@@ -7,6 +7,13 @@ export type Orm = MikroORM;
 export type { EntityManager };
 /** Thrown on a duplicate in a unique column; services map it to their own conflict error. */
 export { UniqueConstraintViolationException } from "@mikro-orm/sqlite";
+/**
+ * Thrown when SQLite reports "database is locked": another connection held the write lock past the
+ * busy timeout, or this transaction's snapshot went stale before its first write.
+ */
+export { LockWaitTimeoutException } from "@mikro-orm/sqlite";
+/** Thrown at flush when a versioned row changed since it was loaded; services map it to a 409. */
+export { OptimisticLockError } from "@mikro-orm/sqlite";
 
 /** What `@cpg/db` needs to know; `@cpg/core` derives it from the app config. */
 export interface DbOptions {

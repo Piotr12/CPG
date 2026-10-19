@@ -6,6 +6,7 @@ import { ApiTokenService } from "../services/api-tokens/api-token.service";
 import { AuditService } from "../services/audit/audit.service";
 import { AuthService } from "../services/auth/auth.service";
 import { LoginThrottle } from "../services/auth/login-throttle";
+import { IdempotencyService } from "../services/idempotency/idempotency.service";
 import { UserPreferenceService } from "../services/preferences/user-preference.service";
 import { SystemStatusService } from "../services/system/system-status.service";
 import { UserService } from "../services/users/user.service";
@@ -34,6 +35,7 @@ export function createAppContainer(config: AppConfig, orm: Orm): AppContainer {
     tenantService: asClass(TenantService).scoped(),
     apiTokenService: asClass(ApiTokenService).scoped(),
     auditService: asClass(AuditService).scoped(),
+    idempotencyService: asClass(IdempotencyService).scoped(),
     // `tenant` is registered only by tenantScope(): resolving it from a global scope fails (strict).
   });
   return container;

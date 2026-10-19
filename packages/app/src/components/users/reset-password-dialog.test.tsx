@@ -8,7 +8,7 @@ import { ResetPasswordDialog } from "./reset-password-dialog";
 const mocks = vi.hoisted(() => ({ resetUserPassword: vi.fn() }));
 vi.mock("../../app/admin/(global)/users/actions", () => ({ resetUserPassword: mocks.resetUserPassword }));
 
-const alice = { id: "b", username: "alice", role: "user" as const, active: true, createdAt: new Date() };
+const alice = { id: "b", username: "alice", role: "user" as const, active: true, createdAt: new Date(), version: 1 };
 
 describe("ResetPasswordDialog", () => {
   afterEach(() => vi.clearAllMocks());
@@ -35,7 +35,22 @@ describe("ResetPasswordDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Reset password" }));
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
-    expect(mocks.resetUserPassword).toHaveBeenCalledWith({ userId: "b", password: "a brand new password" });
+    expect(mocks.resetUserPassword).toHaveBeenCalledWith({ userId: "b", password: "a brand new password", version: 1 });
+  });
+
+  it("shows a stale-version conflict in Polish and stays open (AUD-024)", async () => {
+    mocks.resetUserPassword.mockResolvedValue({ ok: false, error: { code: "VERSION_CONFLICT", message: "Reload and try again." } });
+    const onClose = vi.fn();
+    render(<ResetPasswordDialog labels={usersLabels(pl)} user={{ ...alice, version: 4 }} open onClose={onClose} />);
+
+    fireEvent.change(screen.getByLabelText("Nowe hasło"), { target: { value: "a brand new password" } });
+    fireEvent.click(screen.getByRole("button", { name: "Resetuj hasło" }));
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "Ten użytkownik zmienił się od załadowania strony. Sprawdź listę i spróbuj ponownie.",
+    );
+    expect(mocks.resetUserPassword).toHaveBeenCalledWith({ userId: "b", password: "a brand new password", version: 4 });
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it("closes on cancel and on Escape", () => {

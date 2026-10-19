@@ -1,6 +1,6 @@
 # API writes are safe to retry and stale edits are rejected
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-19 15:48 UTC
 **Issue:** #21 (E02-S03), epic #10 · **Builds on:** `implemented/2026-10-19--1053UTC-api-tokens.md` (#17, merged), `implemented/2026-10-19--1050UTC-audit-log.md` (#20, merged), `2026-10-19--0913UTC-test-prod-tenants.md` (#19, merged) · **Design authority:** `.ai/specs/product-brief.md` (R05, R07, D03), `.ai/specs/research/CPG-prd001.pdf` §06, `.ai/specs/research/CPG-acceptance.md` API-018…API-026, API-029, API-033, API-034, AUD-024, AUD-025, TEN-030
 

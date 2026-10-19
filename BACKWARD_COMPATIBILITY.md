@@ -79,7 +79,13 @@ Route handlers under `app/api/` are protected the same way: their paths, methods
 - `GET /api/tenants/{tenant}` (404 `TENANT_NOT_FOUND`);
 - `GET /api/tokens` (the caller's own tokens);
 - `DELETE /api/tokens/{id}` (404 `TOKEN_NOT_FOUND`);
-- `GET /api/users` (403 `FORBIDDEN` for a normal user).
+- `GET /api/users` (403 `FORBIDDEN` for a normal user). Each row carries `version`;
+- `POST /api/users` (`{ username, password }`, admin only; 409 `CONFLICT` for a taken name);
+- `PATCH /api/users/{id}` (`{ active, version }`, admin only);
+- `PUT /api/users/{id}/password` (`{ password, version }`, admin only);
+- `GET /api/preferences` and `PATCH /api/preferences` (`{ locale?, theme? }`, the caller's own).
+
+**Versions.** An edit of a versioned record (today: a user) carries the `version` it loaded. A stale one is 409 `VERSION_CONFLICT`, and the newer change is kept. The user routes answer 404 `NOT_FOUND` for the built-in admin, an unknown id or a malformed one.
 
 Every tenant-scoped endpoint lives under `/api/tenants/{tenant}/`.
 
@@ -89,7 +95,20 @@ Every tenant-scoped endpoint lives under `/api/tenants/{tenant}/`.
 - Tokens are `cpg_`-prefixed and never expire.
 - No route creates a token (R07). Adding one is a product change, not an API addition.
 
-**Announced, not yet enforced:** once E02-S03 (#21) lands, every state-changing bearer request must carry an `Idempotency-Key` header (R07), including `DELETE /api/tokens/{id}`. Until then the header is optional.
+**Writes are keyed** (R07, spec `2026-10-19--1548UTC-api-idempotency`). Every state-changing request (`POST`, `PUT`, `PATCH`, `DELETE`) must carry an `Idempotency-Key` header: 1–255 visible ASCII characters, compared case-sensitively.
+- **Missing or malformed key:** 400 `IDEMPOTENCY_KEY_REQUIRED`.
+- **Scope:** a key belongs to the account (all its tokens) and to the global scope or one tenant.
+- **Repeats within 24 hours:**
+  - the same method, path and body replays the first successful response, with the header `Idempotent-Replayed: true`, and changes nothing;
+  - anything else is 409 `IDEMPOTENCY_KEY_REUSED`.
+- **Failed requests** store nothing, so their key stays unused.
+- **Tenant writes** under `/api/tenants/{tenant}/` also take a `Dataset-Generation` header carrying the tenant's current generation, from tenant metadata:
+  - required for Test: missing is 428 `GENERATION_REQUIRED`;
+  - optional for Prod;
+  - a malformed value is 428 `GENERATION_REQUIRED` in either tenant;
+  - a stale value is 409 `GENERATION_STALE`.
+
+These header names, codes and statuses are part of the contract. `tests/api-writes.test.ts` keeps every write route on the keyed wrapper.
 
 ### 5. Commands used by CI, deploy and the docs
 

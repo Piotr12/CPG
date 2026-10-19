@@ -225,6 +225,9 @@ describe("ApiTokenService", () => {
     it("records creation and revocation in the Global audit, never the secret (AUD-014, AUD-028)", async () => {
       const alice = await signedIn("alice");
       const { token, secret } = await service().create(alice, "ci-bot");
+      // A later millisecond: entries of the same instant sort by their random id, so a revoke in the
+      // creation's millisecond could list first.
+      await new Promise((resolve) => setTimeout(resolve, 2));
 
       await service().revoke(alice.userId, token.id, uiActor(alice));
 

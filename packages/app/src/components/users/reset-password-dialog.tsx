@@ -30,7 +30,7 @@ export function ResetPasswordDialog({ user, labels, open, onClose }: ResetPasswo
             { name: "password", label: t.password, type: "password", autoComplete: "new-password", description: t.passwordHint },
           ]}
           schema={newPasswordSchema}
-          action={({ password }) => resetUserPassword({ userId: user.id, password })}
+          action={({ password }) => resetUserPassword({ userId: user.id, password, version: user.version })}
           submitLabel={t.submit}
           pendingLabel={t.submitting}
           cancelLabel={labels.cancel}

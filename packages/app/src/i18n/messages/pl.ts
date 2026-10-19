@@ -77,6 +77,7 @@ export const pl: Messages = {
       CONFLICT: "Ta nazwa użytkownika jest zajęta.",
       NOT_FOUND: "Ten użytkownik już nie istnieje.",
       FORBIDDEN: "Tylko administrator może zarządzać użytkownikami.",
+      VERSION_CONFLICT: "Ten użytkownik zmienił się od załadowania strony. Sprawdź listę i spróbuj ponownie.",
     },
   },
   tokens: {

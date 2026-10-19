@@ -22,6 +22,11 @@ export const User = defineEntity({
     passwordHash: p.string().nullable(),
     active: p.boolean().default(true),
     createdAt: p.datetime().onCreate(() => new Date()),
+    /**
+     * Optimistic-lock version: 1 on create, raised by every update through the unit of work. An edit
+     * carries the version it was loaded with; a stale one is rejected (AUD-024, AUD-025).
+     */
+    version: p.integer().version(),
   },
 });
 

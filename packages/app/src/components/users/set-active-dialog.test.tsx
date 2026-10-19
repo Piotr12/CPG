@@ -8,7 +8,7 @@ import { SetActiveDialog } from "./set-active-dialog";
 const mocks = vi.hoisted(() => ({ setUserActive: vi.fn() }));
 vi.mock("../../app/admin/(global)/users/actions", () => ({ setUserActive: mocks.setUserActive }));
 
-const alice = { id: "b", username: "alice", role: "user" as const, active: true, createdAt: new Date() };
+const alice = { id: "b", username: "alice", role: "user" as const, active: true, createdAt: new Date(), version: 1 };
 
 describe("SetActiveDialog", () => {
   afterEach(() => vi.clearAllMocks());
@@ -25,7 +25,7 @@ describe("SetActiveDialog", () => {
     fireEvent.click(confirm);
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
-    expect(mocks.setUserActive).toHaveBeenCalledWith({ userId: "b", active: false });
+    expect(mocks.setUserActive).toHaveBeenCalledWith({ userId: "b", active: false, version: 1 });
   });
 
   it("reactivates, suggesting a reset for a compromised account", async () => {
@@ -36,7 +36,7 @@ describe("SetActiveDialog", () => {
     expect(screen.getByText(/current password\. Reset it too if the account may have been compromised/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Reactivate" }));
 
-    await waitFor(() => expect(mocks.setUserActive).toHaveBeenCalledWith({ userId: "b", active: true }));
+    await waitFor(() => expect(mocks.setUserActive).toHaveBeenCalledWith({ userId: "b", active: true, version: 1 }));
   });
 
   it("shows a failure and stays open; cancelling clears it", async () => {
@@ -65,6 +65,26 @@ describe("SetActiveDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Deactivate" }));
 
     await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+  });
+
+  it("shows a stale-version conflict, stays open, and retries with the refreshed version (AUD-024)", async () => {
+    mocks.setUserActive
+      .mockResolvedValueOnce({ ok: false, error: { code: "VERSION_CONFLICT", message: "Reload and try again." } })
+      .mockResolvedValueOnce({ ok: true, data: { ...alice, active: false, version: 3 } });
+    const onClose = vi.fn();
+    const { rerender } = render(<SetActiveDialog labels={usersLabels(en)} mode="deactivate" user={alice} open onClose={onClose} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Deactivate" }));
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "This user was changed since you loaded the page. Check the list and try again.",
+    );
+    expect(onClose).not.toHaveBeenCalled();
+
+    // The action refreshed the list: the row now carries the newer version.
+    rerender(<SetActiveDialog labels={usersLabels(en)} mode="deactivate" user={{ ...alice, version: 2 }} open onClose={onClose} />);
+    fireEvent.click(screen.getByRole("button", { name: "Deactivate" }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(mocks.setUserActive).toHaveBeenLastCalledWith({ userId: "b", active: false, version: 2 });
   });
 
   it("speaks Polish, server errors included", async () => {
