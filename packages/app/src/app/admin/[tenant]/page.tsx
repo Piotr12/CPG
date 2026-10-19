@@ -32,7 +32,9 @@ async function TenantHome({ params }: { params: Promise<{ tenant: string }> }) {
   return (
     <div lang={locale} className="flex flex-col gap-6">
       <SignedInBar username={user.username} locale={locale} theme={theme} messages={messages} />
-      <h1 className="text-2xl font-semibold tracking-tight">{messages.admin.heading}</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">
+        {messages.admin.heading} — {tenant.name}
+      </h1>
       <Card>
         <CardHeader>
           <CardTitle>{tenant.name}</CardTitle>

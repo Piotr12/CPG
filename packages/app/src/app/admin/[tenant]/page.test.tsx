@@ -51,7 +51,7 @@ describe("TenantHomePage", () => {
 
     expect(mocks.connection).toHaveBeenCalledOnce();
     expect(mocks.tenantScope).toHaveBeenCalledWith("prod");
-    expect(screen.getByRole("heading", { name: "Cave control" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Cave control — Prod" })).toBeTruthy();
     expect(screen.getByText("Prod")).toBeTruthy();
     expect(screen.getByText("Dataset generation 1")).toBeTruthy();
     expect(screen.getByText("No business records yet")).toBeTruthy();
@@ -63,7 +63,7 @@ describe("TenantHomePage", () => {
 
     render(await resolveServerComponents(page("prod")));
 
-    expect(screen.getByRole("heading", { name: "Kontrola jaskini" }).closest("[lang]")?.getAttribute("lang")).toBe("pl");
+    expect(screen.getByRole("heading", { name: "Kontrola jaskini — Prod" }).closest("[lang]")?.getAttribute("lang")).toBe("pl");
     expect(screen.getByText("Generacja zbioru danych: 1")).toBeTruthy();
     expect(screen.getByText("Brak rekordów biznesowych")).toBeTruthy();
   });

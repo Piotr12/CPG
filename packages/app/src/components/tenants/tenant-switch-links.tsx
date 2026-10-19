@@ -22,7 +22,8 @@ export function TenantSwitchLinks({
   hrefFor: (code: TenantCode) => string;
 }) {
   return (
-    <nav className="flex overflow-hidden rounded-md border border-current/30 text-sm">
+    // Named by the tenant names themselves: the switcher sits in the static shell, before the language is known.
+    <nav aria-label={tenants.map(({ name }) => name).join(" / ")} className="flex overflow-hidden rounded-md border border-current/30 text-sm">
       {tenants.map(({ code, name }) => (
         <Link
           key={code}

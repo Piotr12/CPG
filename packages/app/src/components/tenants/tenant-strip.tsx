@@ -10,6 +10,7 @@ import { TenantSwitcher } from "./tenant-switcher";
 export type TenantStripScope = TenantCode | "global";
 
 const LABEL_ID = "tenant-strip-label";
+const TEXT_ID = "tenant-strip-text";
 
 const STRIPS: Record<TenantStripScope, { label: string; className: string }> = {
   test: {
@@ -32,7 +33,8 @@ const TENANTS = TENANT_CODES.map((code) => ({ code, name: TENANT_NAMES[code] }))
  * The always-visible scope indicator (TEN-011): which tenant this page reads and writes, plus the
  * switcher. Rendered by the admin layouts, so no page can leave it out. The static shell carries
  * only language-neutral parts (the TEST/PROD/GLOBAL label, the colour and the tenant names); the
- * sentence describing the scope streams in, in the reader's language.
+ * sentence describing the scope streams in, in the reader's language, and completes the strip's
+ * accessible name ("TEST Test tenant — …").
  */
 export function TenantStrip({ scope }: { scope: TenantStripScope }) {
   const { label, className } = STRIPS[scope];
@@ -41,7 +43,7 @@ export function TenantStrip({ scope }: { scope: TenantStripScope }) {
   return (
     <div
       role="region"
-      aria-labelledby={LABEL_ID}
+      aria-labelledby={`${LABEL_ID} ${TEXT_ID}`}
       data-tenant={scope}
       className={cn("flex flex-wrap items-center justify-between gap-3 px-6 py-2 text-sm", className)}
     >
@@ -65,5 +67,9 @@ export function TenantStrip({ scope }: { scope: TenantStripScope }) {
 export async function TenantStripText({ scope }: { scope: TenantStripScope }) {
   await connection();
   const { locale, messages } = await getMessages();
-  return <span lang={locale}>{messages.tenants.strip[scope]}</span>;
+  return (
+    <span id={TEXT_ID} lang={locale}>
+      {messages.tenants.strip[scope]}
+    </span>
+  );
 }

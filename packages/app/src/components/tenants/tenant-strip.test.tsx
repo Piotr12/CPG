@@ -24,7 +24,7 @@ describe("TenantStrip", () => {
 
     render(await resolveServerComponents(TenantStrip({ scope })));
 
-    const strip = screen.getByRole("region", { name: label });
+    const strip = screen.getByRole("region", { name: `${label} ${text}` });
     expect(strip.dataset.tenant).toBe(scope);
     expect(strip.className).toContain(colour);
     expect(within(strip).getByText(text).getAttribute("lang")).toBe("en");
@@ -36,7 +36,7 @@ describe("TenantStrip", () => {
 
     render(await resolveServerComponents(TenantStrip({ scope: "global" })));
 
-    const strip = screen.getByRole("region", { name: "GLOBAL" });
+    const strip = screen.getByRole("region", { name: "GLOBAL Global — no tenant selected" });
     expect(within(strip).getByText("Global — no tenant selected")).toBeTruthy();
     expect(within(strip).getAllByRole("link").map((link) => [link.textContent, link.getAttribute("aria-current")])).toEqual([
       ["Test", null],
