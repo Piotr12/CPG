@@ -1,4 +1,4 @@
-import { Session, UniqueConstraintViolationException, User, type EntityManager, type UserRole } from "@cpg/db";
+import { ApiToken, Session, UniqueConstraintViolationException, User, type EntityManager, type UserRole } from "@cpg/db";
 import { ConflictError, NotFoundError } from "../../http/errors";
 import { BUILT_IN_ADMIN_USERNAME } from "../auth/auth.service";
 import { hashPassword } from "../auth/password-hash";
@@ -29,7 +29,7 @@ interface Deps {
  * The admin's account management: create normal users, reset their passwords, deactivate and
  * reactivate them. Only `role = user` rows are ever written here, so no path creates a second
  * admin or touches the built-in one, and nothing deletes an account. A reset or deactivation ends
- * every session of that user in the same transaction (R06). Callers check that the actor is the
+ * every session of that user and deletes every API token of theirs in the same transaction (R06). Callers check that the actor is the
  * admin (`assertAdmin`) before calling.
  */
 export class UserService {
@@ -81,12 +81,18 @@ export class UserService {
     });
   }
 
-  /** Applies `change` to a normal user in one transaction; ends their sessions when it returns true. */
+  /**
+   * Applies `change` to a normal user in one transaction; when it returns true, also ends their
+   * sessions and deletes their API tokens (API-011, API-012).
+   */
   private async changeNormalUser(userId: string, change: (user: User) => boolean): Promise<UserSummary> {
     return this.em.transactional(async (em) => {
       const user = await em.findOne(User, { id: userId, role: "user" });
       if (!user) throw new NotFoundError("NOT_FOUND", USER_NOT_FOUND);
-      if (change(user)) await em.nativeDelete(Session, { user: user.id });
+      if (change(user)) {
+        await em.nativeDelete(Session, { user: user.id });
+        await em.nativeDelete(ApiToken, { user: user.id });
+      }
       await em.flush();
       return toSummary(user);
     });

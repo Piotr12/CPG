@@ -53,6 +53,7 @@ describe("@cpg/core", () => {
       "migrateDatabase",
       "ok",
       "requestScope",
+      "revokeAdminTokensIfPasswordChanged",
       "revokeBuiltInAdminSessions",
       "scopeForTenant",
       "serverAction",

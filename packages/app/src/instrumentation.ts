@@ -1,10 +1,17 @@
 // Runs once when the server starts, before it accepts requests: refuse to start without a usable
 // admin password, apply pending migrations (so a broken config or data volume fails the deploy
 // instead of the first request), then sign the admin out everywhere: the admin password can only
-// change with a restart, and sessions opened with the old one must not survive it.
+// change with a restart, and sessions opened with the old one must not survive it. The admin's API
+// tokens end too, but only when the password actually changed: tokens never expire.
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
-    const { assertServerConfig, loadConfig, migrateDatabase, revokeBuiltInAdminSessions } = await import("@cpg/core");
+    const {
+      assertServerConfig,
+      loadConfig,
+      migrateDatabase,
+      revokeAdminTokensIfPasswordChanged,
+      revokeBuiltInAdminSessions,
+    } = await import("@cpg/core");
     const config = loadConfig();
     try {
       assertServerConfig(config);
@@ -18,5 +25,7 @@ export async function register() {
     if (applied.length) console.info(`Applied migrations: ${applied.join(", ")}`);
     const revoked = await revokeBuiltInAdminSessions(config);
     if (revoked) console.info(`Signed the admin out of ${revoked} session(s)`);
+    const revokedTokens = await revokeAdminTokensIfPasswordChanged(config);
+    if (revokedTokens) console.info(`The admin password changed: revoked ${revokedTokens} admin API token(s)`);
   }
 }
