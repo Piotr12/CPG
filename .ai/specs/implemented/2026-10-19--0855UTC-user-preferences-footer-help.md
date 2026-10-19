@@ -1,6 +1,6 @@
 # Language and theme preferences, the exact footer and in-app help
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-19 08:55 UTC
 **Issue:** #18 (E01-S04), epic #9 · **Depends on:** E01-S01 (#15, shipped in #29) · **Design authority:** `.ai/specs/product-brief.md`, `.ai/specs/research/CPG-prd001.pdf` §05–§06, `.ai/specs/research/CPG-acceptance.md` UX-001…UX-013
 
@@ -284,3 +284,18 @@ Nothing is superseded.
 10. **Docs and the gate.**
     - Update `.ai/docs/engineering-standards.md` and `BACKWARD_COMPATIBILITY.md` as described in Architecture.
     - Run lint, typecheck, `test:coverage` (100%), build and `test:integration`, and check `/admin` and `/help` in both themes and languages with `npm run dev`. No dependency is added, so no `npm audit` triage is needed.
+
+## Implementation notes
+
+Implemented on PR #32. Differences from the text above:
+
+- **File names.** The theme script lives in `app/src/preferences/theme.ts`, not `theme-script.ts`. There is no `components/layout/help-link.tsx`: #43 (PR #46) folded the Help link into the role-based menu (`components/layout/nav-items.ts`), which the root layout's app bar renders on every page.
+- **Bearer-token API and audit (Q9, and "There are no route handlers" under API Contracts).** Both were deferred and have since landed. E02-S02 (#20, PR #42) audits `UserPreferenceService.update`. E02-S03 (#21, PR #48) added `GET /api/preferences` and `PATCH /api/preferences`. They change only the caller's own row and require an `Idempotency-Key`. They need no version, because only the fields sent change.
+- **Help covers every screen built since.** `tests/every-page-has-help.test.ts` fails the build for any `page.tsx` without a topic. The topic texts are typed per locale, so a topic missing in Polish is a type error.
+
+Some scenarios are unit-tested or true by construction, but not yet asserted end to end:
+- the two-account half of UX-003;
+- UX-004, the language kept across a tenant switch;
+- the footer on the admin screens added after this story: `/admin/users`, `/admin/tokens`, `/admin/audit`, `/admin/[tenant]` and `/admin/[tenant]/audit`. The footer itself is in the root layout, so every page renders it.
+
+See `.ai/specs/research/CPG-acceptance.md` for the status of each scenario.

@@ -3,7 +3,17 @@
 **Source:** AgntPad Notes / CPG  
 **Original:** https://s-d3aa472a035945a58dddbd80d87d9328.agntpad.page/CPG/acceptance.html  
 **Exported:** 2026-10-19  
-**Status:** Not executed
+**Status:** Partially executed (see Execution status)
+
+## Execution status
+
+The original export marked every scenario `Not executed`. Scenarios are updated as the stories that implement them ship:
+
+- **Passed (automated)**: unit and/or integration tests assert the scenario, and they passed in CI on `main`. The **Evidence** line names them.
+- **Partially verified**: only part of the scenario can be or is asserted today; the **Evidence** line says which part is missing and why.
+- **Not executed**: not yet built or not yet checked.
+
+Last updated 2026-10-19 for epic E01 (#9), against CI on `main` at `9ea5973`.
 
 This document contains the complete acceptance catalogue for the CPG MVP. Each test preserves its ID, title, priority, execution channel, and Given / When / Then criteria.
 
@@ -19,56 +29,63 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### TEN-002 — No administrator password prevents startup
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/startup-guard.test.ts` (the production image exits non-zero without `CPG_ADMIN_PASSWORD`); `packages/core/src/config.test.ts`, `packages/app/src/instrumentation.test.ts`, `packages/core/src/services/auth/auth.service.test.ts` (no session without a configured password). E01-S01, PR #29.
 - **Given:** Admin password runtime value absent
 - **When:** Start application
 - **Then:** App refuses to start; no usable authentication session is established.
 
 ### TEN-003 — Single administrator exists
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/auth/auth.service.test.ts` (one admin row, even when two first sign-ins race) and `packages/core/src/services/users/user.service.test.ts` (`admin` is reserved; only `role: user` accounts are created); `tests/integration/auth.test.ts`, `tests/integration/users.test.ts`. No end-to-end test tries to create a second admin. E01-S01, PR #29.
 - **Given:** Running app with built-in admin
 - **When:** Inspect/manage account roles
 - **Then:** Exactly one administrator account exists; no action creates another admin.
 
 ### TEN-004 — Normal user creation
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** Creation and sign-in: `tests/integration/users.test.ts`, `packages/core/src/services/users/user.service.test.ts`. The normal user is refused every admin-only operation (`tests/integration/api-tokens.test.ts`, `packages/core/src/http/auth.test.ts`); the master-data part waits for master data (#22). E01-S02, PR #34.
 - **Given:** Administrator logged in
 - **When:** Create normal user with initial password
 - **Then:** New active normal user can sign in with specified password and has no master-data edit permission.
 
 ### TEN-005 — Users cannot change passwords
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** UI: `tests/integration/users.test.ts` (a normal user has no password control). API: the only password route is admin-only, `packages/app/src/app/api/users/[id]/password/route.test.ts` (403 for a normal user's token; unit test only). E01-S02, PR #34.
 - **Given:** Normal user signed in
 - **When:** Inspect profile and try an equivalent API mutation
 - **Then:** No self-service password-change action is available through UI or API.
 
 ### TEN-006 — Admin resets user password
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/users.test.ts` (both sessions end; old password refused, new one works), `tests/integration/api-tokens.test.ts` (tokens end), `packages/core/src/services/users/user.service.test.ts`, `packages/core/src/services/auth/auth.service.test.ts` (a sign-in racing the reset keeps no session). E01-S02/S03, PRs #34, #41.
 - **Given:** Normal user has active sessions and API tokens
 - **When:** Admin resets that user's password
 - **Then:** Previous sessions and tokens are invalid immediately; new password permits fresh login.
 
 ### TEN-007 — Admin deactivates user
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/users.test.ts` (two sessions end, sign-in refused), `tests/integration/api-tokens.test.ts` (tokens end), `tests/integration/api-idempotency.test.ts` (deactivation through the API), `packages/core/src/services/users/user.service.test.ts`. E01-S02/S03, PRs #34, #41.
 - **Given:** Normal user has two active sessions and three tokens
 - **When:** Admin marks account inactive
 - **Then:** Every session and token loses access immediately; new login is rejected.
 
 ### TEN-008 — Users never hard-deleted
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/users.test.ts` (no Delete; the screen says accounts are never deleted), `packages/app/src/app/api/users/[id]/route.test.ts` (no DELETE handler), `tests/integration/audit.test.ts` (the audit keeps naming the account). E01-S02, PR #34.
 - **Given:** Existing normal account with history
 - **When:** Admin requests account removal
 - **Then:** Account is not hard-deleted; deactivation remains available and historical attribution persists.
@@ -3207,96 +3224,108 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### API-001 — Normal user issues token only in interactive UI
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/api-tokens.test.ts`, `packages/app/src/components/api-tokens/create-token-dialog.test.tsx`, `packages/core/src/services/api-tokens/api-token.service.test.ts`, `tests/api-token-minting.test.ts`. E01-S03, PR #41.
 - **Given:** Normal active account signed in
 - **When:** Create bearer token named agent1 through authenticated UI with explicit confirmation
 - **Then:** Secret shown once, token inherits user's normal rights; bearer API cannot create additional tokens.
 
 ### API-002 — Administrator issues token only in interactive UI
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/api-tokens.test.ts` (the admin creates and revokes a token on the screen); `tests/api-token-minting.test.ts` and `packages/app/src/app/api/tokens/route.test.ts` (no minting route for any role). The end-to-end 405 is asserted with a normal user's token only. E01-S03, PR #41.
 - **Given:** Built-in admin signed in
 - **When:** Create own token through authenticated UI with explicit confirmation
 - **Then:** Token inherits admin rights but bearer API creation remains absent/forbidden, including for admin.
 
 ### API-003 — Unique token names per account
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/api-tokens/api-token.service.test.ts`, `tests/integration/api-tokens.test.ts`. E01-S03, PR #41.
 - **Given:** User already has token named 'build'
 - **When:** Create another own token named 'build'
 - **Then:** Duplicate name rejected, existing token remains valid.
 
 ### API-004 — Same token name in different accounts
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/api-tokens/api-token.service.test.ts`, `tests/integration/api-tokens.test.ts`. E01-S03, PR #41.
 - **Given:** User A has token 'build', user B has none
 - **When:** User B creates token 'build'
 - **Then:** Allowed because uniqueness is per account, not system-wide.
 
 ### API-005 — Many tokens permitted
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/api-tokens/api-token.service.test.ts`. E01-S03, PR #41.
 - **Given:** User has several active named tokens
 - **When:** Create one more unique token
 - **Then:** New token succeeds; existing tokens continue independently.
 
 ### API-006 — Token secret only shown once
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/api-tokens.test.ts` (the reloaded list no longer contains the secret), `packages/app/src/components/api-tokens/create-token-dialog.test.tsx`. E01-S03, PR #41.
 - **Given:** User creates token and leaves creation view
 - **When:** Reopen token listing
 - **Then:** Token metadata visible but secret cannot be retrieved.
 
 ### API-007 — Token last used time recorded
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/api-tokens/api-token.service.test.ts`, `tests/integration/api-tokens.test.ts`. E01-S03, PR #41.
 - **Given:** Valid token never used
 - **When:** Make successful authorized API request
 - **Then:** Token's last-used timestamp updated.
 
 ### API-008 — Token revocation effective immediately
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/api-tokens.test.ts` (revoked from the API and from the screen), `packages/app/src/app/api/tokens/[id]/route.test.ts`, `packages/core/src/services/api-tokens/api-token.service.test.ts`. E01-S03, PR #41.
 - **Given:** Two active tokens for same user
 - **When:** Revoke token A, then call API with A and B
 - **Then:** A rejected, B remains usable.
 
 ### API-009 — Never-expiring token without explicit revocation
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/api-tokens/api-token.service.test.ts`, `packages/core/src/database.test.ts` (tokens have no expiry; only a revoke, reset, deactivation or admin-password change ends them). E01-S03, PR #41.
 - **Given:** Token created long ago, owner still active
 - **When:** Use token after 24h and after idempotency records expiry
 - **Then:** Token remains valid; token lifetime is not tied to idempotency TTL.
 
 ### API-010 — Token inherits role restrictions
 
-**Priority:** P0 · **Channel:** API · **Status:** Not executed
+**Priority:** P0 · **Channel:** API · **Status:** Partially verified
 
+- **Evidence:** A normal user's token is refused (403) on admin-only operations: `GET /api/users` end to end in `tests/integration/api-tokens.test.ts`; the user write routes in `packages/app/src/app/api/users/**/route.test.ts` and `packages/app/src/auth/api-write.test.ts`. "Change master material" waits for master data (#22). E01-S03, PRs #41, #48.
 - **Given:** Normal user's bearer token valid
 - **When:** Try to change master material
 - **Then:** Rejected as forbidden; ordinary allowed transaction can still succeed.
 
 ### API-011 — Token reflects user deactivation
 
-**Priority:** P0 · **Channel:** API · **Status:** Not executed
+**Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/api-tokens.test.ts` (a read and a write both get 401 after deactivation), `packages/core/src/services/users/user.service.test.ts`, `packages/core/src/services/api-tokens/api-token.service.test.ts`. E01-S03, PR #41.
 - **Given:** Token valid then account deactivated
 - **When:** Attempt read and write API calls
 - **Then:** Both rejected as invalid credentials immediately.
 
 ### API-012 — Token invalid after password reset
 
-**Priority:** P0 · **Channel:** API · **Status:** Not executed
+**Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/api-tokens.test.ts`, `packages/core/src/services/users/user.service.test.ts`. E01-S03, PR #41.
 - **Given:** User issued token, admin resets password
 - **When:** Try API call with old token
 - **Then:** Rejected; user must create a new token after login.
@@ -3455,8 +3484,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### API-032 — Token minting is not available through bearer API
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/api-token-minting.test.ts` (only the server action creates tokens, and it never reads `Authorization`), `packages/app/src/app/api/tokens/route.test.ts`, `tests/integration/api-tokens.test.ts` (405). E01-S03, PR #41.
 - **Given:** Existing valid bearer token belongs to admin or ordinary user
 - **When:** Attempt any API action that would create a new token
 - **Then:** Creation denied/not exposed regardless of role, idempotency key or tenant; interactive signed-in UI with explicit confirmation is the only issuance channel. List/revoke APIs remain.
@@ -3723,64 +3753,72 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### UX-001 — English by default
 
-**Priority:** P2 · **Channel:** UI · **Status:** Not executed
+**Priority:** P2 · **Channel:** UI · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/preferences.test.ts`, `packages/core/src/services/preferences/user-preference.service.test.ts`. E01-S04, PR #32.
 - **Given:** Fresh user with no preference
 - **When:** Sign in
 - **Then:** UI defaults to English.
 
 ### UX-002 — Polish language selection
 
-**Priority:** P1 · **Channel:** UI · **Status:** Not executed
+**Priority:** P1 · **Channel:** UI · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/preferences.test.ts`, `tests/integration/help.test.ts` (Polish help), `packages/app/src/i18n/messages/messages.test.ts` (every English string has a Polish one). Tooltips don't exist yet. E01-S04, PR #32.
 - **Given:** Active user on English UI
 - **When:** Change user language to Polish
 - **Then:** Navigation, help, tooltips and error messages available in Polish.
 
 ### UX-003 — Language preference per account
 
-**Priority:** P1 · **Channel:** UI · **Status:** Not executed
+**Priority:** P1 · **Channel:** UI · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/services/preferences/user-preference.service.test.ts` (one account's choice doesn't change another's). No browser test with two accounts yet. E01-S04, PR #32.
 - **Given:** User A chooses Polish, user B stays English
 - **When:** Sign in separately
 - **Then:** Both see their own chosen language; one does not alter the other.
 
 ### UX-004 — Language preference across tenants
 
-**Priority:** P1 · **Channel:** UI · **Status:** Not executed
+**Priority:** P1 · **Channel:** UI · **Status:** Partially verified
 
+- **Evidence:** Holds by construction: preferences are a global table, outside tenant scope (`packages/db/src/entities/index.ts`). No test switches tenant and checks the language yet. E01-S04, PR #32.
 - **Given:** User selects Polish while in Test
 - **When:** Switch to Prod
 - **Then:** Same user's selected language continues; business data still isolated.
 
 ### UX-005 — Light mode selectable
 
-**Priority:** P2 · **Channel:** UI · **Status:** Not executed
+**Priority:** P2 · **Channel:** UI · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/preferences.test.ts`, `packages/app/src/preferences/theme.test.ts`. E01-S04, PR #32.
 - **Given:** User currently viewing dark UI
 - **When:** Choose light mode
 - **Then:** Pages display light theme under current user preference.
 
 ### UX-006 — Dark mode selectable
 
-**Priority:** P2 · **Channel:** UI · **Status:** Not executed
+**Priority:** P2 · **Channel:** UI · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/preferences.test.ts`, `packages/app/src/preferences/theme.test.ts`. E01-S04, PR #32.
 - **Given:** User currently viewing light UI
 - **When:** Choose dark mode
 - **Then:** Pages display dark theme without changing business records.
 
 ### UX-007 — Theme preference persists in user settings
 
-**Priority:** P1 · **Channel:** UI · **Status:** Not executed
+**Priority:** P1 · **Channel:** UI · **Status:** Partially verified
 
+- **Evidence:** Kept after signing out and in again: `tests/integration/preferences.test.ts`, `packages/app/src/app/login/actions.test.ts`. The "visit another tenant" part isn't asserted yet. E01-S04, PR #32.
 - **Given:** User selects dark theme and logs out
 - **When:** Sign in again and visit another tenant
 - **Then:** Account setting retains dark preference.
 
 ### UX-008 — Footer present on login page
 
-**Priority:** P1 · **Channel:** UI · **Status:** Not executed
+**Priority:** P1 · **Channel:** UI · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/footer.test.ts`, `packages/app/src/components/layout/app-footer.test.tsx`. E01-S04, PR #32.
 - **Given:** Unauthenticated visitor opens login
 - **When:** Inspect footer
 - **Then:** Exact footnote sentence and both named links present.
@@ -3795,32 +3833,36 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### UX-010 — Footer present on admin/help/report page
 
-**Priority:** P1 · **Channel:** UI · **Status:** Not executed
+**Priority:** P1 · **Channel:** UI · **Status:** Partially verified
 
+- **Evidence:** The root layout renders the footer on every page (`packages/app/src/app/layout.test.tsx`); `tests/integration/footer.test.ts` asserts it on `/`, `/login`, `/help` and `/admin`, not yet on `/admin/users`. The MRP report doesn't exist yet. E01-S04, PR #32.
 - **Given:** Admin visits user administration, help and MRP report
 - **When:** Inspect footer on each
 - **Then:** Exact required text and links on all pages.
 
 ### UX-011 — OpenMercato Skills link correct
 
-**Priority:** P2 · **Channel:** UI · **Status:** Not executed
+**Priority:** P2 · **Channel:** UI · **Status:** Passed (automated)
 
+- **Evidence:** `packages/app/src/components/layout/app-footer.test.tsx`, `tests/integration/footer.test.ts`. E01-S04, PR #32.
 - **Given:** Any page with app footer
 - **When:** Activate OpenMercato Skills link
 - **Then:** Link target is https://github.com/open-mercato/skills.
 
 ### UX-012 — AITechLeaders link correct
 
-**Priority:** P2 · **Channel:** UI · **Status:** Not executed
+**Priority:** P2 · **Channel:** UI · **Status:** Passed (automated)
 
+- **Evidence:** `packages/app/src/components/layout/app-footer.test.tsx`, `tests/integration/footer.test.ts`. E01-S04, PR #32.
 - **Given:** Any page with app footer
 - **When:** Activate AITechLeaders training link
 - **Then:** Link target is https://www.aitechleaders.pl/.
 
 ### UX-013 — Searchable in-app documentation available
 
-**Priority:** P1 · **Channel:** UI · **Status:** Not executed
+**Priority:** P1 · **Channel:** UI · **Status:** Partially verified
 
+- **Evidence:** Searchable help in both languages: `tests/integration/help.test.ts`, `packages/app/src/help/search-help.test.ts`; `tests/every-page-has-help.test.ts` fails the build for a page without a topic. The production completion screen doesn't exist yet. E01-S04, PR #32.
 - **Given:** Normal user on production completion screen
 - **When:** Open Help and search for 'completion'
 - **Then:** Relevant operational help and examples found without leaving app.
