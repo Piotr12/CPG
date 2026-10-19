@@ -20,7 +20,7 @@ Today nothing stops a write to Prod: the admin and any admin token can change it
 | Q6 | API parity (R07)? | Yes, in this story. `PATCH /api/tenants/{tenant}` with `{ readOnly: boolean }`, admin only (403 otherwise). It is keyed through `apiWrite` in the **global** key store and takes no `Dataset-Generation`. `readOnly` is added to `GET /api/tenants` and `GET /api/tenants/{tenant}`, and the new route goes into `BACKWARD_COMPATIBILITY.md`. | Every UI operation gets its API equivalent. The flag is global, so the key goes in the global store, and no generation precondition applies, because it isn't a Test data write. `tests/api-writes.test.ts` gets one named exception: the tenant's metadata route uses `apiWrite`. |
 | Q7 | Does the flag carry a version (optimistic locking)? | No. The request **sets** the flag, it doesn't toggle it: `{ readOnly: true }` sent twice stays true. Setting the current value succeeds, returns the tenant and records nothing. | A set is idempotent and there is a single admin, so a stale copy can't do harm: the worst case is setting the value that is already stored. The confirmation fixes the target value when it opens, as the material Deactivate does. A `version` would add a protected field for no case it prevents. |
 | Q8 | How is the change audited (AUD-016)? | `tenants.tenant.read-only-changed` in the Global audit, subject `{ type: "tenant", id: "prod", label: "Prod" }`, before and after `{ readOnly }`, recorded with the change in one transaction. The action ID is the one the #42 hand-off on #25 named. | The PRD puts tenant-flag administration in the Global audit. The standards: one allowlisted snapshot, and a write that changes nothing records nothing. |
-| Q9 | What does a read-only tenant's screen show? | Every tenant page's strip adds a **Read-only** label and the sentence "Business data can't be changed." The Global chooser shows a Read-only badge on that tenant. The admin's write controls (Create material, Edit, Deactivate, conversion Add/Change/Remove) are hidden while the tenant is read-only. A page loaded before the flag was set still has them: its write is refused with the translated message, and the page refreshes, so the controls disappear. | TEN-015 asks for a "clear read-only explanation". Hiding controls is not enforcement, the server is; it just doesn't offer what will fail. One message on the strip explains it on every tenant page, so there is no per-screen copy. |
+| Q9 | What does a read-only tenant's screen show? | Every tenant page's strip adds a **Read-only** label and the sentence "Business data can't be changed." The Global chooser shows a Read-only badge on that tenant. The admin's write controls (Create material, Edit, Deactivate, conversion Add/Change/Remove) are hidden while the tenant is read-only. A page loaded before the flag was set still has them: its write is refused with the translated message, which stays in the open form or dialog. The controls disappear on the next page load. | TEN-015 asks for a "clear read-only explanation". Hiding controls is not enforcement, the server is; it just doesn't offer what will fail. One message on the strip explains it on every tenant page, so there is no per-screen copy. |
 | Q10 | Is the startup demo seed gated? | Yes. `seedDemo` reads the flag fresh in its transaction and seeds nothing while Test is read-only. It runs at every start and seeds whenever Test has no materials, and a seed that failed once is retried at the next start, so it can meet a read-only, empty Test. | "Every business write" includes the system's. The slice-2 Test reset defines the one sanctioned override (PRD: "reset temporarily overrides Test data writes internally with exclusive operation lock"). |
 | Q11 | TEN-015 asks for a normal user's write. Which one? | None exists yet: every tenant business write today (materials) is admin-only. The gate doesn't look at the role, so a unit test runs the wrapper with a normal user's handler and expects `TENANT_READ_ONLY`. The scenario is **partially verified** until slice 2 brings documents that normal users write. | Building a normal-user write just for this test would be scope creep (D04). |
 
@@ -99,7 +99,7 @@ Every tenant business write already passes through one of the two wrappers. Addi
   - **Make writable** asks the reverse.
   - A failure shows the translated error in the dialog.
 - **Tenant pages:** the strip's streamed sentence is followed by a **Read-only** label and "Business data can't be changed." Both sit inside the `#tenant-strip-text` span, so they are part of the strip's accessible name. `TenantStripText` reads the flag with `(await requestScope()).cradle.tenantService.get(code)`, only for a tenant scope: `components/tenants/` is outside the tenant roots, so it must not open `tenantScope`. The admin's write controls on the materials list and detail pages are hidden.
-- **A stale page:** a write refused with `TENANT_READ_ONLY` shows its translated message in the form or dialog. The page then refreshes (the same revalidation as `VERSION_CONFLICT`), so the strip and the hidden controls catch up.
+- **A stale page:** a write refused with `TENANT_READ_ONLY` shows its translated message in the form or dialog. The page is not refreshed: the refresh would hide the controls and drop the dialog with its message. The next page load shows the strip's label and hides the controls.
 - **Help:** the `/admin` topic explains the read-only card, and the tenant-home topic explains what a read-only tenant allows. English and Polish.
 - All strings in `en.ts`/`pl.ts`.
 - **Accessibility:**
@@ -117,7 +117,7 @@ Prototype: `.ai/specs/assets/read-only-tenants/` (static mockups; see the PR's e
   - Either way no write lands after the flag is committed. A two-ORM unit test proves the first case.
 - **A write commits while the toggle is in flight.** `setReadOnly` reads the tenant fresh (`refresh: true`) and then writes, so it can meet the same stale snapshot. The screen action wraps it in `retryingStaleSnapshot`, and the API route already gets the retry from `IdempotencyService`.
 - **A tenant action that only reads.** `tenantServerAction` becomes write-only: on a read-only tenant it refuses before its handler runs. No tenant action only reads today (pages read in server components). A future read action (search, preview) needs a non-gated variant, and the wrapper's doc comment says so.
-- **Flag cleared while a refused page is open.** The next write succeeds. The page was refreshed after the refusal, so it shows the controls again.
+- **Flag cleared while a refused page is open.** The next write from that page succeeds.
 - **Both tenants read-only (TEN-020).** Users, tokens, preferences, sign-in and sign-out are global writes and never reach the gate.
 - **Unknown tenant on the toggle.** 404 `TENANT_NOT_FOUND`, the same as every tenant route.
 - **Normal user calls the toggle.** 403 `FORBIDDEN` through the API, `FORBIDDEN` through the action. Nothing changes and nothing is audited.
@@ -202,7 +202,7 @@ One phase per layer. Each phase leaves the app working: the flag exists and defa
 9. **Tenant pages.**
    - The strip's read-only label (`TenantStripText` reads the tenant).
    - The materials pages hide their controls when read-only.
-   - The materials actions refresh after `TENANT_READ_ONLY`.
+   - The materials actions don't refresh after `TENANT_READ_ONLY`, so the message stays visible.
    - The audit action label, the error text, and both help topics, in English and Polish.
    - Unit tests for each state.
 10. **Screen integration test** (`tests/integration/read-only.test.ts`). The file restores the flags in `afterAll`.
@@ -212,3 +212,7 @@ One phase per layer. Each phase leaves the app working: the flag exists and defa
     - Making Prod writable restores the button.
 
 Then the full gate: lint, typecheck, `test:coverage` (100%), build, `test:integration`, and `npm audit`. No new dependency is expected. Update the acceptance catalogue's status for the scenarios this story verifies.
+
+## Implementation notes
+
+- 2026-10-19, implementation PR: a read-only refusal doesn't refresh the page. The integration test showed that the refresh hid the Create material dialog together with its explanation, so the spec now keeps the message in the open form instead (Q9, UI/UX). The toggle revalidates `/admin` only: revalidating the whole `/admin` layout made Next.js re-prerender the tenant pages' static shells at runtime, which failed.
