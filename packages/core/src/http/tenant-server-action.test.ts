@@ -1,7 +1,7 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { migrate, Setting, Tenant } from "@cpg/db";
+import { LockWaitTimeoutException, migrate, Setting, Tenant } from "@cpg/db";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { loadConfig } from "../config";
@@ -95,6 +95,17 @@ describe("tenantServerAction", () => {
         tenantServerAction(schema, handler)("prod", generation as unknown as number, { name: "rock" }),
       ).resolves.toMatchObject({ ok: false, error: { code: "GENERATION_REQUIRED" } });
       expect(handler).not.toHaveBeenCalled();
+    });
+
+    it("runs the whole transaction once more when SQLite refuses it as a stale snapshot", async () => {
+      const stale = new LockWaitTimeoutException(Object.assign(new Error("database is locked"), { code: "SQLITE_BUSY_SNAPSHOT" }));
+      const handler = vi.fn().mockRejectedValueOnce(stale).mockResolvedValueOnce("second try");
+
+      await expect(tenantServerAction(schema, handler)("prod", 1, { name: "rock" })).resolves.toEqual({
+        ok: true,
+        data: "second try",
+      });
+      expect(handler).toHaveBeenCalledTimes(2);
     });
 
     it("runs the handler in one transaction, rolled back when it fails", async () => {

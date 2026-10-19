@@ -1,6 +1,5 @@
 import {
   GlobalIdempotencyKey,
-  LockWaitTimeoutException,
   TenantIdempotencyKey,
   UniqueConstraintViolationException,
   type EntityManager,
@@ -8,7 +7,7 @@ import {
 } from "@cpg/db";
 import { assertCurrentGeneration } from "../../domain/tenants/generation";
 import { ConflictError } from "../../http/errors";
-import { inRequestTransaction } from "../../http/request-transaction";
+import { inRequestTransaction, isStaleSnapshot } from "../../http/request-transaction";
 import type { TenantService } from "../tenants/tenant.service";
 import { fingerprintMatches, type Fingerprint } from "./fingerprint";
 
@@ -161,14 +160,6 @@ export class IdempotencyService {
       throw error;
     }
   }
-}
-
-/**
- * SQLite refused this transaction's first write because another connection committed after its first
- * read (`SQLITE_BUSY_SNAPSHOT`). It fails at once, without waiting, and a new transaction succeeds.
- */
-function isStaleSnapshot(error: unknown): boolean {
-  return error instanceof LockWaitTimeoutException && error.code === "SQLITE_BUSY_SNAPSHOT";
 }
 
 /**
