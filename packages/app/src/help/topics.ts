@@ -55,7 +55,7 @@ const en: Record<HelpTopicId, HelpText> = {
   "signing-in": {
     title: "Signing in",
     body: [
-      "Enter your username and password, then choose Sign in.",
+      "Choose Sign in on the homepage or in the menu, enter your username and password, then choose Sign in.",
       "If either is wrong you see “Invalid username or password.” CPG never says which of the two was wrong.",
       "After several failed attempts, signing in pauses for 15 minutes. Wait, then try again.",
       "A session lasts 12 hours. Sign out from the menu when you are done: on a wide screen it is behind the button with your name.",
@@ -143,7 +143,7 @@ const pl: Record<HelpTopicId, HelpText> = {
   "signing-in": {
     title: "Logowanie",
     body: [
-      "Wpisz nazwę użytkownika i hasło, a następnie wybierz Zaloguj.",
+      "Wybierz Zaloguj się na stronie głównej lub w menu, wpisz nazwę użytkownika i hasło, a następnie wybierz Zaloguj.",
       "Jeśli któreś z nich jest błędne, zobaczysz komunikat o nieprawidłowej nazwie użytkownika lub haśle. CPG nigdy nie mówi, które z nich było błędne.",
       "Po kilku nieudanych próbach logowanie zostaje wstrzymane na 15 minut. Odczekaj i spróbuj ponownie.",
       "Sesja trwa 12 godzin. Gdy skończysz, wyloguj się w menu: na szerokim ekranie jest pod przyciskiem z twoją nazwą.",

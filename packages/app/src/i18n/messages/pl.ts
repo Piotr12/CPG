@@ -181,7 +181,7 @@ export const pl: Messages = {
     tokens: "Tokeny API",
     users: "Użytkownicy",
     help: "Pomoc",
-    signIn: "Zaloguj",
+    signIn: "Zaloguj się",
     signedInAs: "Zalogowano jako",
     signOut: "Wyloguj",
   },

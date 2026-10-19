@@ -72,7 +72,8 @@ describe("tenants in the admin", () => {
     );
 
     await clickHydrated(browser, `${STRIP} a[href='/admin/test']`);
-    await browser.waitUntil(`location.pathname === "/admin/test"`);
+    // The shown strip: Next.js keeps the earlier pages' strips mounted but hidden.
+    await browser.waitUntil(`[...document.querySelectorAll("${STRIP}")].find((strip) => strip.offsetParent)?.dataset.tenant === "test"`);
     expect(await pathname(browser)).toBe("/admin/test");
   });
 

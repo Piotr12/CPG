@@ -34,7 +34,7 @@ describe("navLabel", () => {
   it("reads labels in the reader's language", () => {
     expect(navLabel("users", en.nav)).toBe("Users");
     expect(navLabel("users", pl.nav)).toBe("Użytkownicy");
-    expect(navLabel("signIn", pl.nav)).toBe("Zaloguj");
+    expect(navLabel("signIn", pl.nav)).toBe("Zaloguj się");
   });
 
   it("keeps the tenant names in every language", () => {

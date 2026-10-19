@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import type { Locale } from "@cpg/core";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDownIcon, MenuIcon, UserRoundIcon, XIcon } from "lucide-react";
@@ -21,7 +22,7 @@ interface NavMenuProps {
   /** The signed-in account's name and controls; null for a visitor. */
   account: { name: string; panel: ReactNode } | null;
   /** The popover and the sheet render outside the bar, so they carry the language themselves. */
-  locale: string;
+  locale: Locale;
   labels: { menu: string; close: string; account: string };
 }
 
@@ -66,7 +67,8 @@ export function NavMenu({ items, account, locale, labels }: NavMenuProps) {
       </nav>
 
       {account && (
-        <Popover open={accountOpen} onOpenChange={setAccountOpen}>
+        // Modal, so Tab stays inside until Escape or a click outside returns to the bar.
+        <Popover modal open={accountOpen} onOpenChange={setAccountOpen}>
           <PopoverTrigger asChild>
             {/* The name stays in the accessible name, so what a reader sees is what is announced (WCAG 2.5.3). */}
             <Button

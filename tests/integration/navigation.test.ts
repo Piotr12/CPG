@@ -1,6 +1,14 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { openBrowser, type Browser } from "./browser";
-import { choosePreference, closeAccountMenu, openAccountMenu, signedInAs, signIn, signInAsAdmin } from "./sign-in";
+import {
+  choosePreference,
+  closeAccountMenu,
+  openAccountMenu,
+  restoreDefaultPreferences,
+  signedInAs,
+  signIn,
+  signInAsAdmin,
+} from "./sign-in";
 
 const baseUrl = inject("baseUrl");
 const adminPassword = inject("adminPassword");
@@ -73,7 +81,12 @@ describe("navigation menu", () => {
     await signIn(ursula, baseUrl, NAV_PASSWORD, NAV_USER);
     await ursula.waitUntil(signedInAs(NAV_USER));
   });
-  afterAll(() => Promise.all([visitor, admin, ursula].map((browser) => browser.close())));
+  afterAll(async () => {
+    // The admin is shared with every other file; ursula is this file's own account and keeps hers.
+    await admin.setViewport(1280, 800);
+    await restoreDefaultPreferences(admin, baseUrl, adminPassword);
+    await Promise.all([visitor, admin, ursula].map((browser) => browser.close()));
+  });
 
   it("shows a visitor Sign in on the homepage, with the footer in view at 1280×800", async () => {
     await openPage(visitor, "/");
@@ -202,5 +215,17 @@ describe("navigation menu", () => {
     expect(await ursula.text("[data-slot=popover-content] form[data-action=sign-out] button")).toBe("Wyloguj");
     expect(await ursula.text("[data-slot=popover-content] strong")).toBe(NAV_USER);
     expect(await overflows(ursula)).toBe(false);
+  });
+
+  it("fits the admin's bar, the widest one with Users, at 768 px in Polish", async () => {
+    await openPage(admin, "/admin");
+    await choosePreference(admin, "pl");
+    await closeAccountMenu(admin);
+
+    await admin.setViewport(768, 800);
+    await openPage(admin, "/admin");
+
+    expect(await labels(admin)).toEqual(["Środowiska", "Test", "Prod", "Audyt", "Tokeny API", "Użytkownicy", "Pomoc"]);
+    expect(await overflows(admin)).toBe(false);
   });
 });
