@@ -1,4 +1,4 @@
-import { ForbiddenError } from "@cpg/core";
+import { ConflictError, ForbiddenError } from "@cpg/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createUser, resetUserPassword, setUserActive } from "./actions";
 
@@ -7,7 +7,7 @@ const admin = { sessionId: "s1", userId: "u1", username: "admin", role: "admin" 
 const alice = { sessionId: "s2", userId: "u2", username: "alice", role: "user" };
 /** The audit actor the actions must pass: the signed-in admin's own session, on the UI channel. */
 const adminActor = { userId: "u1", username: "admin", sessionId: "s1", channel: "ui", token: null };
-const summary = { id: USER_ID, username: "alice", role: "user", active: true, createdAt: new Date("2026-10-19T09:00:00Z") };
+const summary = { id: USER_ID, username: "alice", role: "user", active: true, createdAt: new Date("2026-10-19T09:00:00Z"), version: 1 };
 
 const mocks = vi.hoisted(() => ({
   userService: { create: vi.fn(), resetPassword: vi.fn(), setActive: vi.fn() },
@@ -41,23 +41,23 @@ describe("users actions", () => {
   });
 
   it("resets a password", async () => {
-    await expect(resetUserPassword({ userId: USER_ID, password: "a brand new password" })).resolves.toMatchObject({
+    await expect(resetUserPassword({ userId: USER_ID, password: "a brand new password", version: 1 })).resolves.toMatchObject({
       ok: true,
     });
 
-    expect(mocks.userService.resetPassword).toHaveBeenCalledWith(USER_ID, "a brand new password", adminActor);
+    expect(mocks.userService.resetPassword).toHaveBeenCalledWith(USER_ID, "a brand new password", 1, adminActor);
   });
 
   it("deactivates and reactivates", async () => {
-    await expect(setUserActive({ userId: USER_ID, active: false })).resolves.toMatchObject({
+    await expect(setUserActive({ userId: USER_ID, active: false, version: 1 })).resolves.toMatchObject({
       ok: true,
       data: { active: false },
     });
-    await setUserActive({ userId: USER_ID, active: true });
+    await setUserActive({ userId: USER_ID, active: true, version: 2 });
 
     expect(mocks.userService.setActive.mock.calls).toEqual([
-      [USER_ID, false, adminActor],
-      [USER_ID, true, adminActor],
+      [USER_ID, false, 1, adminActor],
+      [USER_ID, true, 2, adminActor],
     ]);
   });
 
@@ -68,16 +68,34 @@ describe("users actions", () => {
     mocks.currentUser.mockResolvedValue(actor);
 
     await expect(createUser({ username: "mallory", password: "initial password" })).resolves.toEqual({ ok: false, error });
-    await expect(resetUserPassword({ userId: USER_ID, password: "a brand new password" })).resolves.toEqual({
+    await expect(resetUserPassword({ userId: USER_ID, password: "a brand new password", version: 1 })).resolves.toEqual({
       ok: false,
       error,
     });
-    await expect(setUserActive({ userId: USER_ID, active: false })).resolves.toEqual({ ok: false, error });
+    await expect(setUserActive({ userId: USER_ID, active: false, version: 1 })).resolves.toEqual({ ok: false, error });
 
     expect(mocks.userService.create).not.toHaveBeenCalled();
     expect(mocks.userService.resetPassword).not.toHaveBeenCalled();
     expect(mocks.userService.setActive).not.toHaveBeenCalled();
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("refuses an edit without the loaded version, without calling the service", async () => {
+    await expect(setUserActive({ userId: USER_ID, active: false })).resolves.toMatchObject({
+      ok: false,
+      error: { code: "VALIDATION_FAILED", fieldErrors: { version: expect.any(Array) } },
+    });
+    expect(mocks.userService.setActive).not.toHaveBeenCalled();
+  });
+
+  it("refreshes the list on a stale version, so the admin sees what changed (AUD-024)", async () => {
+    mocks.userService.resetPassword.mockRejectedValue(new ConflictError("Reload and try again.", "VERSION_CONFLICT"));
+
+    await expect(resetUserPassword({ userId: USER_ID, password: "a brand new password", version: 1 })).resolves.toEqual({
+      ok: false,
+      error: { code: "VERSION_CONFLICT", message: "Reload and try again." },
+    });
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/users");
   });
 
   it("returns field errors for bad input without calling the service", async () => {
@@ -91,10 +109,11 @@ describe("users actions", () => {
   it("passes the service's own errors through, and never returns a password hash", async () => {
     mocks.userService.setActive.mockRejectedValue(new ForbiddenError("Nope."));
 
-    await expect(setUserActive({ userId: USER_ID, active: false })).resolves.toEqual({
+    await expect(setUserActive({ userId: USER_ID, active: false, version: 1 })).resolves.toEqual({
       ok: false,
       error: { code: "FORBIDDEN", message: "Nope." },
     });
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
     const created = await createUser({ username: "alice", password: "initial password" });
     expect(JSON.stringify(created)).not.toMatch(/passwordHash|argon2/);
   });

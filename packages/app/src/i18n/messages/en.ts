@@ -84,6 +84,7 @@ export const en = {
       CONFLICT: "That username is taken.",
       NOT_FOUND: "That user no longer exists.",
       FORBIDDEN: "Only the administrator can manage users.",
+      VERSION_CONFLICT: "This user was changed since you loaded the page. Check the list and try again.",
     },
   },
   /** The API tokens screen. Its strings go to client components, so `{name}` is filled in there. */
