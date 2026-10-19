@@ -8,7 +8,7 @@ import { Button } from "@cpg/ui/components/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@cpg/ui/components/popover";
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@cpg/ui/components/sheet";
 import { cn } from "@cpg/ui/lib/utils";
-import { isCurrentPath } from "./nav-items";
+import { isCurrentPath } from "./current-path";
 
 export interface NavLink {
   id: string;
