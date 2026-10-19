@@ -21,4 +21,11 @@ describe("HomePage", () => {
     ]);
     expect(steps.map((step) => step.querySelector("p")?.textContent)).toEqual(["01", "02", "03", "04"]);
   });
+
+  it("leaves the footer to the layout: its tagline is a plain paragraph", () => {
+    render(<HomePage />);
+
+    expect(screen.getByText("Demand come. Caveman plan. Caveman make.").tagName).toBe("P");
+    expect(screen.queryByRole("contentinfo")).toBeNull();
+  });
 });

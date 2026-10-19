@@ -28,7 +28,7 @@ export default function HomePage() {
         ))}
       </ol>
 
-      <footer className="text-sm text-zinc-500">Demand come. Caveman plan. Caveman make.</footer>
+      <p className="text-sm text-zinc-500">Demand come. Caveman plan. Caveman make.</p>
     </main>
   );
 }
