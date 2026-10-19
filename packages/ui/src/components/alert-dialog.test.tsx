@@ -22,7 +22,7 @@ describe("AlertDialog", () => {
           <AlertDialogHeader className="hd">
             <AlertDialogMedia className="md">!</AlertDialogMedia>
             <AlertDialogTitle className="tt">Sure?</AlertDialogTitle>
-            <AlertDialogDescription className="ds">It can't be undone.</AlertDialogDescription>
+            <AlertDialogDescription className="ds">{"It can't be undone."}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="ft">
             <AlertDialogCancel>No</AlertDialogCancel>
