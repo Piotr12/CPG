@@ -10,6 +10,7 @@ export * from "./http/result";
 export * from "./http/server-action";
 export * from "./http/tenant-server-action";
 export * from "./services/audit/actor";
+export * from "./services/audit/audit.service";
 export * from "./services/auth/auth.service";
 export * from "./services/auth/login-throttle";
 export * from "./services/preferences/user-preference.service";

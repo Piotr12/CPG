@@ -70,6 +70,16 @@ describe("audit recorder", () => {
       });
     });
 
+    it("stores an entry with no snapshots (a password reset)", async () => {
+      const em = orm.em.fork();
+      const recorded = entry({ action: "users.user.password-reset", before: null, after: null });
+      recordGlobalAudit(em, actor, recorded);
+      await em.flush();
+
+      const stored = await orm.em.fork().findOneOrFail(GlobalAuditEvent, { subjectId: recorded.subject.id });
+      expect(stored).toMatchObject({ action: "users.user.password-reset", before: null, after: null });
+    });
+
     it("names the token of an API change, and has no session for it (AUD-007)", async () => {
       const em = orm.em.fork();
       const recorded = entry();

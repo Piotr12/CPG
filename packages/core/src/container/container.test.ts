@@ -5,6 +5,7 @@ import { entities, initOrm, type Orm } from "@cpg/db";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { loadConfig } from "../config";
 import { toDbOptions } from "../database";
+import { AuditService } from "../services/audit/audit.service";
 import { AuthService } from "../services/auth/auth.service";
 import { LoginThrottle } from "../services/auth/login-throttle";
 import { UserPreferenceService } from "../services/preferences/user-preference.service";
@@ -31,6 +32,7 @@ describe("createAppContainer", () => {
     expect(cradle.loginThrottle).toBeInstanceOf(LoginThrottle);
     expect(cradle.userService).toBeInstanceOf(UserService);
     expect(cradle.userPreferenceService).toBeInstanceOf(UserPreferenceService);
+    expect(cradle.auditService).toBeInstanceOf(AuditService);
   });
 
   it("shares one login throttle across request scopes", () => {
