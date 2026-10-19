@@ -1,0 +1,20 @@
+import type { AuditChannel } from "@cpg/db";
+import type { SessionUser } from "../auth/auth.service";
+
+/**
+ * Who made a change, as the audit records it (R08): the account, the session it came through, and
+ * the channel. Two people sharing one account in two browsers are two sessions (AUD-008). A
+ * bearer-token write (E01-S03) names its token; never its secret.
+ */
+export interface Actor {
+  userId: string;
+  username: string;
+  sessionId: string | null;
+  channel: AuditChannel;
+  token: { id: string; name: string } | null;
+}
+
+/** The actor for a change made on CPG's own screens, from the validated session. */
+export function uiActor({ userId, username, sessionId }: SessionUser): Actor {
+  return { userId, username, sessionId, channel: "ui", token: null };
+}

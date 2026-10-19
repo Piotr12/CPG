@@ -57,6 +57,7 @@ describe("@cpg/core", () => {
       "tenantScope",
       "tenantServerAction",
       "toDbOptions",
+      "uiActor",
     ]);
   });
 });
