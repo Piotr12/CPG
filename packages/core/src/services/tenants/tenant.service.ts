@@ -1,6 +1,8 @@
 import { Tenant, type EntityManager } from "@cpg/db";
 import { NotFoundError } from "../../http/errors";
 import { TENANT_CODES, type TenantCode } from "../../validators/tenants/tenant-code.schema";
+import type { AuditActor } from "../audit/actor";
+import { recordGlobalAudit } from "../audit/audit-recorder";
 
 /** How a tenant is named on screen; the codes are fixed (N05), so the names live in code. */
 export const TENANT_NAMES: Record<TenantCode, string> = { test: "Test", prod: "Prod" };
@@ -10,12 +12,20 @@ export interface TenantInfo {
   code: TenantCode;
   name: string;
   generation: number;
+  /** Set by the admin: no business data of this tenant may change (R05). */
+  readOnly: boolean;
+}
+
+/** What a tenant write checks before it runs: the dataset generation and the read-only flag. */
+export interface TenantState {
+  generation: number;
+  readOnly: boolean;
 }
 
 /** The error for an unknown tenant, whether it came from a URL, an action or the API. */
 export const tenantNotFound = () => new NotFoundError("TENANT_NOT_FOUND", "Unknown tenant.");
 
-/** Reads the Test and Prod tenants. They are global records: no tenant scope is needed. */
+/** Reads the Test and Prod tenants, and sets their read-only flags. They are global records: no tenant scope is needed. */
 export class TenantService {
   private readonly em: EntityManager;
 
@@ -37,16 +47,44 @@ export class TenantService {
   }
 
   /**
-   * The tenant's dataset generation as stored now, bypassing the identity map: a write checks it
-   * inside its transaction, and a copy loaded earlier in the request could predate a reset.
+   * The tenant's generation and read-only flag as stored now, bypassing the identity map: a write
+   * checks them inside its transaction, and a copy loaded earlier in the request could predate a
+   * reset or a flag change.
    */
-  async currentGeneration(code: TenantCode): Promise<number> {
-    const tenant = await this.em.findOne(Tenant, { code }, { refresh: true });
-    if (!tenant) throw tenantNotFound();
-    return tenant.generation;
+  async currentState(code: TenantCode): Promise<TenantState> {
+    const { generation, readOnly } = await fresh(this.em, code);
+    return { generation, readOnly };
+  }
+
+  /**
+   * Makes a tenant read-only or writable again (R05) and records the change in the Global audit
+   * with its before and after value (AUD-016), in one transaction. Sets, never toggles: setting
+   * the current value changes and records nothing. Admin only, which the caller checks.
+   */
+  async setReadOnly(code: TenantCode, readOnly: boolean, actor: AuditActor): Promise<TenantInfo> {
+    return this.em.transactional(async (em) => {
+      const tenant = await fresh(em, code);
+      if (tenant.readOnly === readOnly) return toInfo(tenant);
+      const before = { readOnly: tenant.readOnly };
+      tenant.readOnly = readOnly;
+      recordGlobalAudit(em, actor, {
+        action: "tenants.tenant.read-only-changed",
+        subject: { type: "tenant", id: code, label: TENANT_NAMES[code] },
+        before,
+        after: { readOnly },
+      });
+      return toInfo(tenant);
+    });
   }
 }
 
-function toInfo({ code, generation }: Tenant): TenantInfo {
-  return { code, name: TENANT_NAMES[code], generation };
+/** The tenant row read past the identity map, or `TENANT_NOT_FOUND`. */
+async function fresh(em: EntityManager, code: TenantCode): Promise<Tenant> {
+  const tenant = await em.findOne(Tenant, { code }, { refresh: true });
+  if (!tenant) throw tenantNotFound();
+  return tenant;
+}
+
+function toInfo({ code, generation, readOnly }: Tenant): TenantInfo {
+  return { code, name: TENANT_NAMES[code], generation, readOnly };
 }
