@@ -101,5 +101,6 @@ PR: #34
 - `npm run build`: OK; `/admin/users` is partially prerendered.
 - `npm run test:integration`: 5 files, 22 tests passed, including the new `users.test.ts` (TEN-004…009 flows).
 - After merging `main` (#18): lint and typecheck clean; 415 unit tests at 100%; build OK; `test:integration` 8 files, 36 tests passed.
+- UI QA (`om-auto-qa-pr`, production image, agent-browser): 11-step scenario PASS, with screenshots on PR #34. CI green at `d2d2cdd`.
 - After the review fixes: lint and typecheck clean; 417 unit tests at 100%; build OK; `test:integration` 8 files, 36 tests passed.
 - `npm audit`: only the known `braces` advisories (10 high); no dependency changes.
