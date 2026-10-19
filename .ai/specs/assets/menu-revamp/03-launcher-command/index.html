@@ -1,0 +1,894 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CPG — menu mockup 03 · Launcher + command palette</title>
+<style>
+:root{--bg:#fff;--fg:#252525;--muted:#737373;--border:#e5e5e5;--soft:#f5f5f5;--card:#fff;--hover:#f4f4f5;--pri:#252525;--prifg:#fff;--focus:#2563eb;--overlay:rgba(0,0,0,.45);--mark:#fde68a;--shadow:0 16px 48px rgba(0,0,0,.18)}
+body.dark{--bg:#121212;--fg:#ededed;--muted:#a3a3a3;--border:#2f2f2f;--soft:#1b1b1b;--card:#171717;--hover:#262626;--pri:#ededed;--prifg:#121212;--focus:#60a5fa;--overlay:rgba(0,0,0,.65);--mark:#7c5a10;--shadow:0 16px 48px rgba(0,0,0,.6)}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;font-size:14px;line-height:1.45;color:var(--fg);background:var(--bg);min-height:100vh;display:flex;flex-direction:column}
+a{color:inherit}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.muted{color:var(--muted);margin:0}
+.mob{display:none}
+.sr{position:absolute;left:0;top:0;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+kbd,.kbd{font-family:ui-monospace,monospace;font-size:11px;border:1px solid var(--border);border-bottom-width:2px;border-radius:5px;padding:0 5px;color:var(--muted);background:var(--bg);line-height:18px;display:inline-block}
+
+/* ---------- top bar ---------- */
+.bar{position:sticky;top:0;z-index:30;background:var(--bg);border-bottom:1px solid var(--border);height:56px;display:flex;align-items:center;gap:14px;padding:0 20px}
+.brand{font-weight:700;text-decoration:none;display:flex;gap:6px;align-items:center;white-space:nowrap;padding:5px 8px;border-radius:8px;font-size:15px}
+.brand:hover{background:var(--hover)}
+.search{flex:1;max-width:560px;margin:0 auto;height:36px;border:1px solid var(--border);border-radius:10px;background:var(--soft);display:flex;align-items:center;gap:8px;padding:0 8px 0 12px;color:var(--muted);cursor:text;text-align:left;min-width:0}
+.search:hover{border-color:#a3a3a3}
+.search .ph{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-r{display:flex;align-items:center;gap:8px;margin-left:auto}
+.tsw{display:flex;border:1px solid var(--border);border-radius:10px;padding:3px;gap:2px;background:var(--bg)}
+.tsw button{border:0;background:transparent;border-radius:7px;height:28px;padding:0 12px;cursor:pointer;font-weight:500;color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.tsw button:hover{background:var(--hover)}
+.tsw button.on.test{background:#fde68a;color:#92400e;font-weight:650}
+.tsw button.on.prod{background:#171717;color:#fff;font-weight:650;box-shadow:inset 0 -2px 0 #dc2626}
+body.dark .tsw button.on.prod{background:#000;box-shadow:inset 0 0 0 1px #3a3a3a,inset 0 -2px 0 #dc2626}
+.tsw .dot{width:7px;height:7px;border-radius:50%;background:#dc2626;flex:none}
+.tsw .lk{font-size:12px}
+.ibtn{width:36px;height:36px;border:1px solid var(--border);border-radius:10px;background:var(--bg);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;text-decoration:none;font-weight:600;flex:none}
+.ibtn:hover{background:var(--hover)}
+.ibtn[aria-current]{border-color:var(--fg)}
+.msearch,.mmenu{display:none}
+.acct-w{position:relative}
+.acct{display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:10px;height:36px;padding:0 10px 0 4px;background:var(--bg);cursor:pointer}
+.acct:hover{background:var(--hover)}
+.av{width:28px;height:28px;border-radius:50%;background:var(--soft);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;text-transform:uppercase}
+.caret{color:var(--muted);font-size:11px}
+.pop{position:absolute;right:0;top:44px;width:250px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);padding:6px;z-index:40}
+.pop-h{padding:8px 10px 10px;border-bottom:1px solid var(--border);margin-bottom:6px;display:flex;flex-direction:column}
+.pop-row{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;gap:8px}
+.pop-a{display:flex;gap:10px;align-items:center;width:100%;padding:8px 10px;border-radius:8px;border:0;background:transparent;text-decoration:none;cursor:pointer;text-align:left}
+.pop-a:hover{background:var(--hover)}
+.pop hr{border:0;border-top:1px solid var(--border);margin:6px 0}
+.seg2{display:flex;border:1px solid var(--border);border-radius:9px;padding:2px;gap:2px}
+.seg2 button{border:0;background:transparent;border-radius:6px;padding:3px 10px;cursor:pointer;color:var(--muted)}
+.seg2 button[aria-pressed=true]{background:var(--hover);color:var(--fg);font-weight:600}
+
+/* ---------- context row: tenant + recent & pinned ---------- */
+.ctx{display:flex;align-items:center;gap:8px;padding:6px 20px;border-bottom:2px solid;font-size:13px;overflow-x:auto;scrollbar-width:none;white-space:nowrap;min-height:40px}
+.ctx::-webkit-scrollbar{display:none}
+.ctx.test{background:#fde68a;border-color:#f59e0b;color:#3b2606}
+.ctx.prod{background:#171717;border-color:#dc2626;color:#f5f5f5}
+.ctx.global{background:var(--soft);border-color:var(--border)}
+.ttag{font-weight:700;font-size:11px;letter-spacing:.08em;padding:3px 8px;border-radius:5px;flex:none}
+.ctx.test .ttag{background:#92400e;color:#fff}
+.ctx.prod .ttag{background:#dc2626;color:#fff}
+.ctx.global .ttag{background:var(--fg);color:var(--bg)}
+.ctx .cn{flex:none}
+.ctx .sep{width:1px;height:18px;background:currentColor;opacity:.25;margin:0 4px;flex:none}
+.ctx .lbl{opacity:.7;flex:none}
+.ctx .hint{margin-left:auto;opacity:.75;flex:none;padding-left:12px}
+.ctx.prod kbd{background:#262626;border-color:#404040;color:#d4d4d4}
+.chip{display:inline-flex;align-items:center;border-radius:999px;border:1px solid rgba(0,0,0,.16);background:rgba(255,255,255,.55);flex:none}
+.ctx.prod .chip{border-color:#3d3d3d;background:#262626}
+.ctx.global .chip{background:var(--bg);border-color:var(--border)}
+.chip a{padding:2px 2px 2px 10px;text-decoration:none;display:flex;gap:6px;align-items:center;border-radius:999px}
+.chip a:hover{text-decoration:underline}
+.chip a[aria-current]{font-weight:650}
+.chip.cur{border-color:currentColor}
+.chip .mono{font-size:12px;opacity:.75}
+.chip button{border:0;background:transparent;cursor:pointer;padding:2px 9px 2px 5px;border-radius:999px;font-size:13px;line-height:20px;opacity:.65}
+.chip button:hover,.chip button[aria-pressed=true]{opacity:1}
+.chip button[aria-pressed=true]{color:#b45309}
+.ctx.prod .chip button[aria-pressed=true]{color:#fbbf24}
+.chips-empty{opacity:.7;font-style:italic}
+
+.robar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 20px;background:#fef2f2;color:#7f1d1d;border-bottom:1px solid #fecaca;font-size:14px}
+body.dark .robar{background:#2a1313;color:#fecaca;border-color:#5b1d1d}
+.robar a{font-weight:600}
+
+/* ---------- layout ---------- */
+main{flex:1;width:100%;max-width:1180px;margin:0 auto;padding:26px 24px 40px}
+.withtree{display:grid;grid-template-columns:210px minmax(0,1fr);gap:36px}
+.content{min-width:0;max-width:900px;display:flex;flex-direction:column;gap:16px}
+.tree{position:sticky;top:120px;align-self:start;font-size:14px}
+.tree-up{display:inline-flex;gap:6px;color:var(--muted);text-decoration:none;padding:4px 8px;border-radius:8px;margin:0 0 10px -8px}
+.tree-up:hover{background:var(--hover);color:var(--fg)}
+.tree-h{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;margin:0 0 6px}
+.tree ul{list-style:none;margin:0;padding:0 0 0 10px;border-left:1px solid var(--border);display:flex;flex-direction:column;gap:1px}
+.tree a{display:flex;gap:8px;align-items:center;padding:6px 8px;border-radius:8px;text-decoration:none;color:var(--muted)}
+.tree a:hover{background:var(--hover);color:var(--fg)}
+.tree a[aria-current]{background:var(--hover);color:var(--fg);font-weight:600;box-shadow:inset 2px 0 0 var(--fg)}
+.tree .tl{flex:1}
+.tree .tc{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.mtree{display:none;gap:6px;overflow-x:auto;scrollbar-width:none;margin:-6px -14px 4px;padding:0 14px 4px}
+.mtree::-webkit-scrollbar{display:none}
+.mtree a{flex:none;border:1px solid var(--border);border-radius:999px;padding:5px 11px;text-decoration:none;white-space:nowrap;font-size:13px;color:var(--muted)}
+.mtree a[aria-current]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+
+.crumbs{font-size:13px;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.crumbs a{text-decoration:none}
+.crumbs a:hover{text-decoration:underline;color:var(--fg)}
+.ph{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.ph h1{font-size:24px;margin:0 0 4px;line-height:1.25}
+.ph .pa{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ph-t{flex:1;min-width:260px}
+.btn{height:32px;padding:0 12px;border:1px solid var(--border);border-radius:8px;display:inline-flex;gap:6px;align-items:center;font-weight:500;font-size:14px;background:var(--bg);white-space:nowrap;cursor:pointer;text-decoration:none}
+.btn:hover{background:var(--hover)}
+.btn.primary{background:var(--pri);color:var(--prifg);border-color:var(--pri)}
+.btn.primary:hover{opacity:.9}
+.btn.ghost{border-color:transparent;color:var(--muted)}
+.btn.ghost:hover{color:var(--fg)}
+.btn.ghost[aria-pressed=true]{color:#b45309}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.note{border:1px solid var(--border);background:var(--soft);border-radius:10px;padding:9px 12px;font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:flex-start}
+.tw{overflow-x:auto;border:1px solid var(--border);border-radius:12px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;color:var(--muted);font-weight:500;padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:10px 12px;border-top:1px solid var(--border)}
+tr:first-child td{border-top:0}
+tr.hl td{background:#fef9c3}
+body.dark tr.hl td{background:#3a300c}
+.link{text-decoration:underline;text-underline-offset:3px}
+.badge{border:1px solid var(--border);border-radius:999px;padding:1px 8px;font-size:12px;white-space:nowrap;display:inline-block}
+.ok{background:var(--soft)}
+.bad{background:#c0362c;color:#fff;border-color:#c0362c}
+.dl4{border:1px solid var(--border);border-radius:14px;padding:18px;display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:0}
+.dl4 dt{color:var(--muted);font-size:13px}
+.dl4 dd{margin:3px 0 0}
+h2.h{font-size:17px;margin:10px 0 0}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.rel{display:flex;gap:8px;flex-wrap:wrap}
+.rel a{border:1px solid var(--border);border-radius:999px;padding:4px 10px;text-decoration:none;font-size:13px}
+.rel a:hover{background:var(--hover)}
+
+/* ---------- launcher ---------- */
+.lhead{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.lhead h1{font-size:26px;margin:0 0 4px}
+.qa{display:flex;gap:8px;flex-wrap:wrap}
+.lgrid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:32px;margin-top:6px}
+.sec{margin-top:24px}
+.sec h2{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:0 0 10px;font-weight:650;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sec h2 .sh{text-transform:none;letter-spacing:0;font-weight:400}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.tile{position:relative;display:flex;flex-direction:column;gap:3px;min-height:100px;padding:14px 16px;border:1px solid var(--border);border-radius:14px;background:var(--card);text-decoration:none;transition:border-color .12s,box-shadow .12s,transform .12s}
+.tile:hover{border-color:#a3a3a3;box-shadow:0 3px 12px rgba(0,0,0,.07);transform:translateY(-1px)}
+.tile .ti{font-size:22px;line-height:1;margin-bottom:6px}
+.tile .tl{font-weight:650;font-size:15px}
+.tile .cnt{color:var(--muted);font-weight:500}
+.tile .td{color:var(--muted);font-size:13px}
+.tile .tg{position:absolute;top:12px;right:12px;font-size:11px;color:var(--muted);border:1px solid var(--border);border-radius:999px;padding:0 7px}
+.areas{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.area{border:1px dashed var(--border);border-radius:14px;padding:12px 14px;background:var(--soft)}
+.area h3{margin:0 0 6px;font-size:14px;display:flex;gap:8px;align-items:center;color:var(--muted);font-weight:650}
+.area{position:relative}.area a{display:block;padding:4px 0;color:var(--muted);text-decoration:none;font-size:13px}
+.area a:hover{color:var(--fg);text-decoration:underline}
+.later{font-size:11px;border:1px solid var(--border);border-radius:999px;padding:0 7px;color:var(--muted);font-weight:500;background:var(--bg);white-space:nowrap;text-transform:none;letter-spacing:0}
+.feed{border:1px solid var(--border);border-radius:14px;padding:14px 16px;align-self:start;margin-top:24px;position:sticky;top:120px}
+.feed h2{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:0 0 8px;font-weight:650}
+.feed ol{list-style:none;margin:0;padding:0}
+.feed li{padding:8px 0;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:1px}
+.feed li:first-child{border-top:0}
+.feed .fm{font-size:12px;color:var(--muted)}
+.feed a.fa{display:inline-block;margin-top:8px;font-size:13px}
+.bigsearch{display:none;width:100%;margin-top:14px;height:44px;border:1px solid var(--border);border-radius:12px;background:var(--soft);align-items:center;gap:10px;padding:0 14px;color:var(--muted);font-size:15px;cursor:text;text-align:left}
+.hintcard{display:flex;gap:10px;align-items:center;margin-top:12px;font-size:13px;color:var(--muted)}
+
+/* ---------- placeholder & misc pages ---------- */
+.ph-big{border:1px dashed var(--border);border-radius:16px;padding:40px 24px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center;background:var(--soft)}
+.ph-big .e{font-size:40px}
+.steps{display:flex;gap:8px;list-style:none;padding:0;margin:0;flex-wrap:wrap}
+.steps li{display:flex;gap:8px;align-items:center;border:1px solid var(--border);border-radius:999px;padding:5px 12px 5px 5px;color:var(--muted)}
+.steps .num{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--soft);font-size:12px;font-weight:600}
+.steps li.cur{color:var(--fg);border-color:var(--fg);font-weight:600}
+.steps li.cur .num{background:var(--fg);color:var(--bg)}
+.steps li.done .num{background:#16a34a;color:#fff}
+.panel{border:1px solid var(--border);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:12px}
+.drop{border:2px dashed var(--border);border-radius:12px;padding:26px;text-align:center;color:var(--muted)}
+.tcards{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.tcard{border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.tcard .tch{padding:10px 14px;display:flex;gap:10px;align-items:center;font-weight:600}
+.tcard.test .tch{background:#fde68a;color:#3b2606;border-bottom:2px solid #f59e0b}
+.tcard.prod .tch{background:#171717;color:#fff;border-bottom:2px solid #dc2626}
+.tcard.test .ttag{background:#92400e;color:#fff}
+.tcard.prod .ttag{background:#dc2626;color:#fff}
+.tcb{padding:14px;display:flex;flex-direction:column;gap:12px}
+.rorow{display:flex;gap:14px;justify-content:space-between;align-items:flex-start}
+.sw{flex:none;display:inline-flex;align-items:center;gap:8px;border:0;background:transparent;cursor:pointer;padding:2px;border-radius:999px}
+.sw .tr{width:42px;height:24px;border-radius:999px;background:#d4d4d4;position:relative;transition:background .15s}
+body.dark .sw .tr{background:#404040}
+.sw .tr::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.sw[aria-checked=true] .tr{background:#dc2626}
+.sw[aria-checked=true] .tr::after{left:21px}
+.sw .swl{font-weight:600;min-width:28px;text-align:left}
+.globalnote{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--border);background:var(--soft);border-radius:999px;padding:4px 12px;font-size:13px;color:var(--muted);align-self:flex-start}
+.kbdtable td:first-child{white-space:nowrap}
+
+/* ---------- command palette ---------- */
+.pal-ov{position:fixed;inset:0;background:var(--overlay);z-index:60;display:flex;justify-content:center;align-items:flex-start;padding:11vh 16px 16px}
+.pal{width:100%;max-width:660px;background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;max-height:74vh}
+.pal-in{display:flex;align-items:center;gap:10px;padding:0 10px 0 16px;border-bottom:1px solid var(--border);min-height:54px}
+.pal-in input{flex:1;min-width:0;border:0;outline:0;background:transparent;font-size:16px;color:var(--fg);height:52px}
+.pal-in input::placeholder{color:var(--muted)}
+.pal-ctx{font-size:11px;font-weight:700;letter-spacing:.06em;padding:3px 8px;border-radius:5px;flex:none}
+.pal-ctx.test{background:#fde68a;color:#92400e}
+.pal-ctx.prod{background:#171717;color:#fff;box-shadow:inset 0 -2px 0 #dc2626}
+.pal-x{border:1px solid var(--border);background:var(--bg);border-radius:8px;padding:3px 8px;cursor:pointer;color:var(--muted);font-size:12px;flex:none}
+.pal-list{overflow:auto;padding:6px;flex:1}
+.pg{font-size:12px;color:var(--muted);padding:9px 10px 4px;font-weight:600}
+.po{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:9px;cursor:pointer;min-height:44px}
+.po[aria-selected=true]{background:var(--hover);box-shadow:inset 2px 0 0 var(--fg)}
+.po .pi{width:26px;height:26px;border-radius:7px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex:none;font-size:14px;background:var(--bg)}
+.po .pt{flex:1;min-width:0;display:flex;flex-direction:column}
+.po .pl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.po .ps{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.po .pk{color:var(--muted);font-size:12px;flex:none;visibility:hidden}
+.po[aria-selected=true] .pk{visibility:visible}
+.po[aria-disabled=true] .pl,.po[aria-disabled=true] .pi{opacity:.5}
+.po .later{margin-left:6px}
+mark{background:var(--mark);color:inherit;border-radius:3px;padding:0 1px}
+.pal-empty{padding:28px 16px;text-align:center;color:var(--muted)}
+.pal-ft{border-top:1px solid var(--border);padding:8px 14px;font-size:12px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap}
+
+/* ---------- dialogs, toast, footer, mockup controls ---------- */
+.ov{position:fixed;inset:0;background:var(--overlay);z-index:70;display:flex;align-items:center;justify-content:center;padding:16px}
+.dlg{width:100%;max-width:470px;max-height:calc(100vh - 32px);overflow:auto;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:14px}
+.dlg.wide{max-width:760px}
+.dlg>*{flex-shrink:0}
+.dlg h2{margin:0;font-size:18px}
+.dlg h3{margin:6px 0 0;font-size:14px}
+.dlg p,.dlg ul{margin:0}
+.dlg ul{padding-left:18px}
+.f{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500}
+.in{height:36px;border:1px solid var(--border);border-radius:8px;padding:0 10px;font:inherit;font-weight:400;background:var(--bg);color:var(--fg)}
+.hint{font-size:12px;color:var(--muted);font-weight:400}
+.acts{display:flex;justify-content:flex-end;gap:8px}
+.cc th,.cc td{padding:7px 8px;font-size:13px;vertical-align:top}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--pri);color:var(--prifg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:90;max-width:calc(100vw - 32px);box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .15s}
+#toast.show{opacity:1}
+footer{text-align:center;font-size:13px;color:var(--muted);padding:22px 16px 26px}
+footer a{text-underline-offset:3px}
+.mc{position:fixed;right:12px;bottom:12px;z-index:50;background:var(--card);border:1.5px dashed #a3a3a3;border-radius:12px;font-size:12px;box-shadow:0 6px 24px rgba(0,0,0,.12);width:236px}
+.mc summary{cursor:pointer;padding:8px 12px;font-weight:600;list-style:none;display:flex;justify-content:space-between;gap:8px}
+.mc summary::-webkit-details-marker{display:none}
+.mc summary::after{content:"▾";color:var(--muted)}
+.mc:not([open]) summary::after{content:"▸"}
+.mc:not([open]){width:auto}
+.mc .mcb{padding:0 12px 12px;display:flex;flex-direction:column;gap:8px}
+.mc fieldset{border:0;padding:0;margin:0;display:flex;gap:10px;flex-wrap:wrap}
+.mc legend{font-weight:600;margin-bottom:4px;color:var(--muted)}
+.mc label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.mc .btn{height:28px;font-size:12px;justify-content:center}
+
+/* ---------- responsive ---------- */
+@media (max-width:1099px){.lgrid{grid-template-columns:minmax(0,1fr)}.feed{position:static}}
+@media (max-width:767px){
+  .bar{padding:0 10px;gap:6px}
+  .brand{padding:5px 4px;font-size:14px}
+  .search,.help-btn,.ctx .hint,.ctx .lbl,.ctx .cn,.acct .nm,.acct .caret{display:none}
+  .msearch,.mmenu{display:inline-flex}
+  .bigsearch{display:flex}
+  .dsk{display:none}
+  .mob{display:inline}
+  .bar-r{gap:6px}
+  .tsw button{padding:0 8px}
+  .acct{padding:0 3px;width:36px;justify-content:center}
+  .ctx{padding:6px 10px}
+  main{padding:18px 14px 32px}
+  .withtree{display:block}
+  .tree{display:none}
+  .mtree{display:flex}
+  .tiles,.areas{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .area h3{flex-wrap:wrap;gap:4px 8px}
+  .tile{min-height:92px;padding:12px}
+  .tile .ti{font-size:20px;margin-bottom:4px}
+  .tile .tl{font-size:14px}
+  .tile .td{font-size:12px}
+  .lhead h1{font-size:22px}
+  .dl4{grid-template-columns:1fr 1fr}
+  .tcards{grid-template-columns:1fr}
+  .tw table.wide{min-width:600px}
+  .pal-ov{padding:0}
+  .pal{max-width:none;height:100%;max-height:none;border-radius:0;border:0}
+  .pal-ft{display:none}
+  .po{min-height:52px}
+  footer{padding-bottom:70px}
+  .mc{width:220px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<a class="sr" href="#main">Skip to content</a>
+<header class="bar" id="bar"></header>
+<div id="ctx"></div>
+<div id="banner"></div>
+<main id="main" tabindex="-1"></main>
+<footer>Caveman Planning Good! Made in Jozefoslaw with Tokens, Coffee and <a href="https://github.com/open-mercato/skills" target="_blank" rel="noopener noreferrer">OpenMercato Skills</a> during <a href="https://www.aitechleaders.pl/" target="_blank" rel="noopener noreferrer">AITechLeaders training</a>.</footer>
+<div id="pal"></div>
+<div id="dlg"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<details class="mc" id="mc" open>
+  <summary>Mockup controls (not part of the design)</summary>
+  <div class="mcb">
+    <fieldset><legend>Role</legend>
+      <label><input type="radio" name="mc-role" value="admin" checked> Admin</label>
+      <label><input type="radio" name="mc-role" value="user"> Normal user</label>
+    </fieldset>
+    <label><input type="checkbox" id="mc-later" checked> Show later slices (2 / 3)</label>
+    <label><input type="checkbox" id="mc-ro-test"> Test is read-only</label>
+    <label><input type="checkbox" id="mc-ro-prod"> Prod is read-only</label>
+    <button type="button" class="btn" data-act="clear-recent">Reset recent &amp; pinned</button>
+    <button type="button" class="btn primary" data-act="about">About this concept</button>
+  </div>
+</details>
+
+<script>
+"use strict";
+/* ================= data ================= */
+const TN={test:'Test',prod:'Prod'};
+const MAT=[
+  {id:'00000001',name:'Granite slab',type:'Raw',unit:'kg',active:true,created:'2026-10-12',conv:[['t','1 t = 1000 kg','1 kg = 0.001 t'],['bag','1 bag = 25 kg','1 kg = 0.04 bag']]},
+  {id:'00000002',name:'Mammoth hide',type:'Raw',unit:'m²',active:true,created:'2026-10-12',conv:[['hide','1 hide = 4.5 m²','1 m² = 0.222222 hide']]},
+  {id:'00000003',name:'Wheel (stone)',type:'Intermediate',unit:'pcs',active:true,created:'2026-10-14',conv:[['pair','1 pair = 2 pcs','1 pcs = 0.5 pair'],['crate','1 crate = 8 pcs','1 pcs = 0.125 crate']]},
+  {id:'00000004',name:'Axle',type:'Intermediate',unit:'pcs',active:true,created:'2026-10-14',conv:[['bundle','1 bundle = 10 pcs','1 pcs = 0.1 bundle']]},
+  {id:'00000005',name:'Cave cart',type:'Finished',unit:'pcs',active:true,created:'2026-10-15',conv:[]},
+  {id:'00000006',name:'Flint knife',type:'Finished',unit:'pcs',active:true,created:'2026-10-19',conv:[['box','1 box = 12 pcs','1 pcs = 0.083333 box']]}
+];
+const LOC=[{id:'L001',name:'Main cave',active:true,extra:'Stock, production'},{id:'L002',name:'River warehouse',active:true,extra:'Stock'},{id:'L003',name:'Old quarry',active:false,extra:'Closed for the season'}];
+const CUS=[{id:'C001',name:'Flintstone Ltd',active:true,extra:'Bedrock'},{id:'C002',name:'Rubble & Co',active:true,extra:'Bedrock'},{id:'C003',name:'Slate Rock and Gravel',active:true,extra:'Rock Vegas'}];
+const SUP=[{id:'S001',name:'Bedrock Quarry',active:true,extra:'Granite slab'},{id:'S002',name:'Woolly Hides Co',active:true,extra:'Mammoth hide'},{id:'S003',name:'Sabre Tooth Tools',active:false,extra:'—'}];
+const PP=[{m:'00000005',loc:'L001',mb:'Make',lt:3,min:1,mult:1},{m:'00000001',loc:'L001',mb:'Buy',lt:10,min:50,mult:10}];
+const SS=[{m:'00000005',loc:'L001',q:5,from:'2026-11-01'},{m:'00000005',loc:'L001',q:8,from:'2027-01-01'}];
+const BOM=[
+  {p:'00000005',alt:'Alt A',prio:1,rev:3,valid:'2026-10-01 → open',comp:'4 × Wheel (stone), 2 × Axle, 1.5 m² Mammoth hide',uses:['00000003','00000004','00000002']},
+  {p:'00000005',alt:'Alt B',prio:2,rev:1,valid:'2026-10-01 → 2027-06-30',comp:'4 × Wheel (stone), 2 × Axle',uses:['00000003','00000004']},
+  {p:'00000003',alt:'Alt A',prio:1,rev:2,valid:'2026-09-15 → open',comp:'12 kg Granite slab',uses:['00000001']}
+];
+const AUD=[
+  ['2026-10-19 10:42','admin','UI','Created material','00000006 Flint knife','materials/00000006'],
+  ['2026-10-19 10:31','admin','UI','Added unit conversion','00000006 · 1 box = 12 pcs','materials/00000006'],
+  ['2026-10-19 09:58','excel-sync (token)','API','Updated material','00000002 Mammoth hide','materials/00000002'],
+  ['2026-10-19 09:15','admin','UI','Created location','L003 Old quarry','locations/L003'],
+  ['2026-10-18 17:03','admin','UI','Deactivated supplier','S003 Sabre Tooth Tools','suppliers/S003'],
+  ['2026-10-18 16:20','admin','UI','Created customer','C003 Slate Rock and Gravel','customers/C003']
+];
+const GAUD=[
+  ['2026-10-19 10:05','admin','UI','Signed in','—'],
+  ['2026-10-19 09:50','admin','UI','Created API token','excel-sync'],
+  ['2026-10-19 09:12','admin','UI','Created user','bartek'],
+  ['2026-10-18 16:40','admin','UI','Prod read-only switched off','Prod'],
+  ['2026-10-18 08:01','anna','UI','Signed in','—']
+];
+const USERS=[['admin','Administrator','Admin',true,'2026-10-19 10:05'],['anna','Anna Kowalska','User',true,'2026-10-18 08:01'],['bartek','Bartek Nowak','User',true,'never'],['dino','Dino','User',false,'2026-08-02 12:40']];
+const TOKENS={admin:[['excel-sync','2026-10-19','2026-10-19 09:58'],['backup-script','2026-09-30','2026-10-19 03:00']],anna:[['my-sheet','2026-10-02','2026-10-17 15:22']]};
+
+const G={home:'Overview',md:'Master data',sales:'Sales',purch:'Purchasing',prod:'Production',inv:'Inventory',plan:'Planning',rep:'Reports',audit:'Audit',admin:'Administration',you:'Your account'};
+const GI={sales:'🧾',purch:'🛒',prod:'🏭',inv:'📦',plan:'🧮',rep:'📊'};
+const SC=[
+  {k:'overview',l:'Overview',d:'The launcher: every screen of this tenant',i:'🦣',g:'home'},
+  {k:'materials',l:'Materials',d:'What you buy, make and sell',i:'🧱',g:'md',n:()=>MAT.length,noun:'material'},
+  {k:'locations',l:'Locations',d:'Where stock lives',i:'📍',g:'md',n:()=>LOC.length,noun:'location'},
+  {k:'customers',l:'Customers',d:'Who you sell to',i:'🤝',g:'md',n:()=>CUS.length,noun:'customer'},
+  {k:'suppliers',l:'Suppliers',d:'Who you buy from',i:'🚚',g:'md',n:()=>SUP.length,noun:'supplier'},
+  {k:'planning-parameters',l:'Planning parameters',d:'Make or buy, lead times, lot sizes',i:'⚙️',g:'md',n:()=>PP.length,noun:'planning parameter'},
+  {k:'safety-stock',l:'Safety stock',d:'How much to keep in reserve',i:'🛟',g:'md',n:()=>SS.length,noun:'safety stock target'},
+  {k:'boms',l:'BOMs',d:'What goes into each product',i:'🧩',g:'md',n:()=>BOM.length,noun:'BOM alternative'},
+  {k:'import',l:'Import from spreadsheet',d:'Load master data in bulk',i:'📥',g:'md',admin:1},
+  {k:'customer-orders',l:'Customer orders',d:'What customers ordered',g:'sales',s:2},
+  {k:'forecasts',l:'Forecasts',d:'What you expect to sell',g:'sales',s:2},
+  {k:'shipments',l:'Shipments',d:'Goods leaving for customers',g:'sales',s:2},
+  {k:'purchase-requisitions',l:'Purchase requisitions',d:'What you need to buy',g:'purch',s:2},
+  {k:'purchase-orders',l:'Purchase orders',d:'What you ordered from suppliers',g:'purch',s:2},
+  {k:'goods-receipts',l:'Goods receipts',d:'Goods arriving from suppliers',g:'purch',s:2},
+  {k:'production-orders',l:'Production orders',d:'What to make',g:'prod',s:2},
+  {k:'completions',l:'Completions',d:'What got made',g:'prod',s:2},
+  {k:'stock',l:'Stock',d:'What is where: the stock ledger',g:'inv',s:2},
+  {k:'corrections',l:'Corrections',d:'Fix a stock count',g:'inv',s:2},
+  {k:'transfers',l:'Transfers',d:'Move stock between locations',g:'inv',s:2},
+  {k:'stock-import',l:'Stock import',d:'Load opening stock',g:'inv',s:2},
+  {k:'mrp-run',l:'MRP run',d:'Work out what to make and buy',g:'plan',s:3},
+  {k:'mrp-report',l:'Last MRP report',d:'The latest plan and its warnings',g:'plan',s:3},
+  {k:'stock-report',l:'Stock report',d:'Stock by material and location',g:'rep',s:2},
+  {k:'variance-report',l:'Variance report',d:'Plan versus reality',g:'rep',s:2},
+  {k:'audit-reports',l:'Audit reports',d:'Summaries of the change log',g:'rep',s:2},
+  {k:'audit',l:'Tenant audit',d:'Who changed what in this tenant',i:'📜',g:'audit'},
+  {k:'audit',gl:1,l:'Global audit',d:'Sign-ins, users, tokens, tenant settings',i:'🌐',g:'audit'},
+  {k:'users',gl:1,l:'Users',d:'Who can sign in',i:'👥',g:'admin',admin:1},
+  {k:'tenants',gl:1,l:'Tenants & read-only',d:'Lock Prod, see dataset generations',i:'🏷️',g:'admin',admin:1},
+  {k:'status',gl:1,l:'System status',d:'Database and migrations',i:'🩺',g:'admin',admin:1},
+  {k:'api-tokens',gl:1,l:'API tokens',d:'Your keys for scripts and spreadsheets',i:'🔑',g:'you'},
+  {k:'help',gl:1,l:'Help',d:'How to get around CPG',i:'❓',g:'you'},
+  {k:'account',gl:1,l:'Account',d:'Name, language, theme, sign out',i:'👤',g:'you'}
+];
+SC.forEach(s=>{if(!s.i&&GI[s.g])s.i=GI[s.g]});
+
+/* ================= state ================= */
+const store={get(k,d){try{const v=localStorage.getItem('cpg-menu03.'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem('cpg-menu03.'+k,JSON.stringify(v))}catch(e){}}};
+const DEF_RECENT=['materials/00000005','locations','safety-stock'],DEF_PIN=['materials'];
+const S={tenant:'test',role:'admin',later:true,ro:{test:false,prod:false},theme:store.get('theme','light'),lang:'EN',
+  recent:store.get('recent',DEF_RECENT),pinned:store.get('pinned',DEF_PIN),acct:false,pal:null,dlg:null,imp:1,route:null,hl:null};
+
+/* ================= helpers ================= */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const tn=()=>TN[S.tenant];
+const admin=()=>S.role==='admin';
+const me=()=>admin()?'admin':'anna';
+const visible=s=>!(s.admin&&!admin())&&!(s.s&&!S.later);
+const scr=(gl,k)=>SC.find(s=>!!s.gl===!!gl&&s.k===k);
+const href=s=>s.gl?`#/global/${s.k}`:s.k==='overview'?`#/${S.tenant}`:`#/${S.tenant}/${s.k}`;
+const matName=id=>(MAT.find(m=>m.id===id)||{}).name||id;
+const locName=id=>(LOC.find(l=>l.id===id)||{}).name||id;
+const st=a=>a?'<span class="badge ok">Active</span>':'<span class="badge bad">Inactive</span>';
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('show'),2600)}
+function go(h){if(location.hash===h)render();else location.hash=h}
+
+function parse(){
+  const parts=location.hash.replace(/^#\/?/,'').split('/').filter(Boolean).map(decodeURIComponent);
+  if(!parts.length)return{scope:S.tenant,key:'overview'};
+  if(parts[0]==='global')return{scope:'global',key:parts[1]||'help',id:parts[2]||null};
+  if(parts[0]==='test'||parts[0]==='prod')return{scope:parts[0],key:parts[1]||'overview',id:parts[2]||null};
+  return{scope:S.tenant,key:'?'};
+}
+// recent/pinned keys: "materials", "materials/00000003", "global/users"
+const recKey=r=>!r||r.key==='overview'||r.key==='?'?null:r.scope==='global'?'global/'+r.key:r.key+(r.id?'/'+r.id:'');
+const keyHref=k=>k.startsWith('global/')?'#/'+k:'#/'+S.tenant+'/'+k;
+function keyInfo(k){
+  const gl=k.startsWith('global/'),p=(gl?k.slice(7):k).split('/'),s=scr(gl,p[0]);
+  if(!s)return null;
+  const rec=p[1]?findRec(p[0],p[1]):null;
+  if(p[1]&&!rec)return null;
+  return{s,label:rec?rec.name:s.l,id:rec?rec.id:null,icon:s.i};
+}
+function findRec(k,id){const L={materials:MAT,locations:LOC,customers:CUS,suppliers:SUP}[k];return L?L.find(x=>x.id===id):null}
+const keyVisible=k=>{const i=keyInfo(k);return i&&visible(i.s)};
+const isPinned=k=>S.pinned.includes(k);
+function pushRecent(k){if(!k)return;S.recent=[k,...S.recent.filter(x=>x!==k)].slice(0,10);store.set('recent',S.recent)}
+function togglePin(k){if(!k)return;const p=isPinned(k);S.pinned=p?S.pinned.filter(x=>x!==k):[...S.pinned,k];store.set('pinned',S.pinned);const i=keyInfo(k);toast(`${p?'Unpinned':'Pinned'} ${i?i.label:k}`);renderCtx();renderMain(false)}
+
+/* ================= actions ================= */
+function switchTenant(t){
+  if(t===S.tenant&&S.route.scope!=='global')return;
+  const r=S.route;
+  if(r.scope==='global'){S.tenant=t;render();toast(`Tenant set to ${TN[t]}. This page is shared by Test and Prod, so it stays the same.`);return}
+  const rest=location.hash.replace(/^#\/(test|prod)/,'');
+  go('#/'+t+rest);
+  toast(`Now in ${TN[t]}${r.key!=='overview'?' — same screen':''}`);
+}
+function setRO(t,v){
+  S.ro[t]=v;
+  GAUD.unshift(['2026-10-19 '+new Date().toTimeString().slice(0,5),me(),'UI',`${TN[t]} read-only switched ${v?'on':'off'}`,TN[t]]);
+  render();toast(`${TN[t]} is ${v?'read-only now 🔒':'writable again'}`);
+}
+function toggleLang(v){S.lang=v||(S.lang==='EN'?'PL':'EN');document.documentElement.lang=S.lang.toLowerCase();renderBar();toast(S.lang==='PL'?'Język: Polski (Polish copy is out of scope for this mockup)':'Language: English')}
+function setTheme(v){S.theme=v||(S.theme==='dark'?'light':'dark');store.set('theme',S.theme);document.body.classList.toggle('dark',S.theme==='dark');renderBar()}
+function signOut(){S.acct=false;renderBar();toast('Signed out (mockup) — you would land on the sign-in page')}
+
+/* ================= top bar ================= */
+const IC={
+  search:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+  grid:'<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="5" r="2"/><circle cx="12" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="12" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></svg>'
+};
+function renderBar(){
+  const r=S.route,t=S.tenant,home=r.scope!=='global'&&r.key==='overview';
+  const sw=['test','prod'].map(x=>`<button type="button" class="${x}${x===t?' on':''}" aria-pressed="${x===t}" data-act="tenant" data-t="${x}" title="${x===t?'You are in '+TN[x]:'Switch to '+TN[x]+(r.scope==='global'?'':' — stays on this screen')}">${x==='prod'?'<span class="dot" aria-hidden="true"></span>':''}${TN[x]}${S.ro[x]?'<span class="lk" role="img" aria-label="read-only">🔒</span>':''}</button>`).join('');
+  $('#bar').innerHTML=`
+    <a class="brand" href="#/${t}" ${home?'aria-current="page"':''} title="All screens (${TN[t]} overview)"><span aria-hidden="true">🦣</span>CPG</a>
+    <button type="button" class="search" data-act="pal" aria-label="Search screens, records and actions (Ctrl+K)">${IC.search}<span class="ph">Search screens, records and actions…</span><span class="kbd">⌘K</span></button>
+    <div class="bar-r">
+      <div class="tsw" role="group" aria-label="Tenant (now ${TN[t]})">${sw}</div>
+      <button type="button" class="ibtn msearch" data-act="pal" aria-label="Search screens, records and actions">${IC.search}</button>
+      <a class="ibtn mmenu" href="#/${t}" aria-label="All screens (launcher)" ${home?'aria-current="page"':''}>${IC.grid}</a>
+      <a class="ibtn help-btn" href="#/global/help" aria-label="Help" title="Help" ${r.scope==='global'&&r.key==='help'?'aria-current="page"':''}>?</a>
+      <div class="acct-w">
+        <button type="button" class="acct" id="acctbtn" data-act="acct" aria-haspopup="true" aria-expanded="${S.acct}" aria-label="Account: ${me()}"><span class="av" aria-hidden="true">${me()[0]}</span><span class="nm">${me()}</span><span class="caret" aria-hidden="true">▾</span></button>
+        ${S.acct?`<div class="pop" role="menu" aria-label="Account">
+          <div class="pop-h"><b>${me()}</b><span class="muted">${admin()?'Administrator':'User'} · signed in</span></div>
+          <div class="pop-row"><span>Language</span><div class="seg2"><button type="button" data-act="lang" data-v="EN" aria-pressed="${S.lang==='EN'}">EN</button><button type="button" data-act="lang" data-v="PL" aria-pressed="${S.lang==='PL'}">PL</button></div></div>
+          <div class="pop-row"><span>Theme</span><div class="seg2"><button type="button" data-act="theme" data-v="light" aria-pressed="${S.theme==='light'}">Light</button><button type="button" data-act="theme" data-v="dark" aria-pressed="${S.theme==='dark'}">Dark</button></div></div>
+          <hr><a class="pop-a" role="menuitem" href="#/global/api-tokens"><span aria-hidden="true">🔑</span>API tokens</a>
+          <a class="pop-a" role="menuitem" href="#/global/help"><span aria-hidden="true">❓</span>Help &amp; shortcuts</a>
+          <button type="button" class="pop-a" role="menuitem" data-act="signout"><span aria-hidden="true">↪</span>Sign out</button>
+        </div>`:''}
+      </div>
+    </div>`;
+}
+
+/* ================= context row ================= */
+function renderCtx(){
+  const r=S.route,gl=r.scope==='global',t=S.tenant,cur=recKey(r);
+  const pins=S.pinned.filter(keyVisible);
+  const rec=S.recent.filter(k=>!pins.includes(k)&&keyVisible(k)).slice(0,4);
+  const chip=k=>{const i=keyInfo(k),p=isPinned(k);return `<span class="chip${k===cur?' cur':''}"><a href="${keyHref(k)}" ${k===cur?'aria-current="page"':''}><span aria-hidden="true">${i.icon}</span>${i.id?`<span class="mono">${i.id}</span>`:''}${esc(i.label)}</a><button type="button" data-act="pin" data-k="${k}" aria-pressed="${p}" aria-label="${p?'Unpin':'Pin'} ${esc(i.label)}" title="${p?'Unpin':'Pin'}">${p?'★':'☆'}</button></span>`};
+  const tag=gl?`<span class="ttag">SHARED</span><span class="cn">Shared by Test and Prod</span>`
+    :`<span class="ttag">${t.toUpperCase()}${S.ro[t]?' 🔒':''}</span><span class="cn">${t==='test'?'Test · demo data, safe to experiment':'Prod · live data'}</span>`;
+  $('#ctx').innerHTML=`<div class="ctx ${gl?'global':t}" role="navigation" aria-label="Recent and pinned screens">${tag}<span class="sep" aria-hidden="true"></span><span class="lbl">Recent &amp; pinned</span>${pins.concat(rec).map(chip).join('')||'<span class="chips-empty">Screens you visit show up here</span>'}</div>`;
+}
+function renderBanner(){
+  const r=S.route,t=S.tenant;
+  $('#banner').innerHTML=r.scope!=='global'&&S.ro[t]?`<div class="robar" role="status"><span aria-hidden="true">🔒</span><span><b>${TN[t]} is read-only</b> — business changes are blocked. Reading, audit, preferences and user management still work.</span>${admin()?`<a href="#/global/tenants">Change on Tenants page</a>`:''}</div>`:'';
+}
+
+/* ================= page building blocks ================= */
+function crumbs(list){return `<nav class="crumbs" aria-label="Breadcrumb">${list.map((c,i)=>i<list.length-1?`<a href="${c[1]}">${esc(c[0])}</a><span aria-hidden="true">/</span>`:`<span aria-current="page">${esc(c[0])}</span>`).join('')}</nav>`}
+function pinBtn(){const k=recKey(S.route);if(!k)return'';const p=isPinned(k);return `<button type="button" class="btn ghost" data-act="pin" data-k="${k}" aria-pressed="${p}" title="${p?'Unpin from':'Pin to'} the Recent &amp; pinned row">${p?'★ Pinned':'☆ Pin'}</button>`}
+function head(o){return `${o.c?crumbs(o.c):''}<div class="ph"><div class="ph-t"><h1>${o.t}</h1>${o.d?`<p class="muted">${o.d}</p>`:''}</div><div class="pa">${pinBtn()}${o.a||''}</div></div>`}
+// edit buttons: admin only; disabled in a read-only tenant (global pages ignore the lock)
+function eb(label,act,primary,extra){
+  if(!admin())return'';
+  const ro=S.route.scope!=='global'&&S.ro[S.tenant];
+  return `<button type="button" class="btn${primary?' primary':''}" data-act="${act}" ${extra||''} ${ro?`disabled title="${tn()} is read-only"`:''}>${ro?'🔒 ':''}${label}</button>`;
+}
+function tbl(h,rows,wide){return `<div class="tw"><table class="${wide?'wide':''}"><thead><tr>${h.map(x=>`<th scope="col">${x}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr${r.hl?' class="hl"':''}>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`}
+const readerNote=()=>admin()?'':`<p class="note"><span aria-hidden="true">👀</span>You can read master data. The admin maintains it.</p>`;
+function mdCrumbs(...rest){return [[TN[S.tenant],'#/'+S.tenant],['Master data','#/'+S.tenant],...rest]}
+function tree(cur){
+  const items=SC.filter(s=>s.g==='md'&&!s.gl&&visible(s));
+  const li=s=>`<li><a href="${href(s)}" ${s.k===cur?'aria-current="page"':''}><span aria-hidden="true">${s.i}</span><span class="tl">${s.k==='import'?'Import':s.l}</span>${s.n?`<span class="tc">${s.n()}</span>`:''}</a></li>`;
+  return `<aside class="tree" aria-label="Master data"><a class="tree-up" href="#/${S.tenant}"><span aria-hidden="true">←</span> All screens</a><div class="tree-h">Master data · ${tn()}</div><ul>${items.map(li).join('')}</ul></aside>`;
+}
+function mtree(cur){return `<nav class="mtree" aria-label="Master data">${SC.filter(s=>s.g==='md'&&!s.gl&&visible(s)).map(s=>`<a href="${href(s)}" ${s.k===cur?'aria-current="page"':''}>${s.k==='import'?'Import':s.l}${s.n?' · '+s.n():''}</a>`).join('')}</nav>`}
+
+/* ================= pages ================= */
+function pOverview(){
+  const t=S.tenant,ro=S.ro[t];
+  const tile=(s,label,desc)=>visible(s)?`<a class="tile" href="${href(s)}"><span class="ti" aria-hidden="true">${s.i}</span><span class="tl">${label||s.l}${s.n?` <span class="cnt">· ${s.n()}</span>`:''}</span><span class="td">${desc||s.d}</span>${s.admin?'<span class="tg">admin</span>':''}</a>`:'';
+  const area=g=>{const items=SC.filter(s=>s.g===g&&visible(s));if(!items.length)return'';const sl=items[0].s;return `<div class="area"><h3><span aria-hidden="true">${GI[g]}</span>${G[g]} <span class="later">later · slice ${sl}</span></h3>${items.map(s=>`<a href="${href(s)}">${s.l} <span class="sr">(coming in slice ${s.s})</span></a>`).join('')}</div>`};
+  const md=SC.filter(s=>s.g==='md'&&!s.gl);
+  const feed=AUD.slice(0,5).map(a=>`<li><span>${a[3]} <a class="link" href="#/${t}/${a[5]}">${esc(a[4])}</a></span><span class="fm">${a[0].slice(5)} · ${esc(a[1])} · ${a[2]}</span></li>`).join('');
+  const qa=[admin()?eb('＋ New material','new',true,'data-noun="material"'):'',admin()?`<a class="btn" href="#/${t}/import">📥 Import</a>`:'',`<button type="button" class="btn dsk" data-act="pal">${IC.search} Find anything <kbd>⌘K</kbd></button>`].join('');
+  return `<div class="lhead"><div><h1>Cave control — ${tn()}</h1><p class="muted">${t==='test'?'Test tenant — demonstration data, safe to experiment.':'Prod tenant — the real thing.'} Pick a screen, or type what you need.</p></div><div class="qa">${qa}</div></div>
+  <button type="button" class="bigsearch" data-act="pal">${IC.search}<span>Search screens, records, actions…</span></button>
+  <div class="lgrid"><div>
+    <section class="sec" id="md" aria-labelledby="h-md"><h2 id="h-md">Master data <span class="sh">· what CPG plans with</span></h2><div class="tiles">${md.map(s=>tile(s)).join('')}</div></section>
+    ${S.later?`<section class="sec" aria-labelledby="h-ops"><h2 id="h-ops">Operations</h2><div class="areas">${['sales','purch','prod','inv'].map(area).join('')}</div></section>
+    <section class="sec" aria-labelledby="h-plan"><h2 id="h-plan">Planning &amp; reports</h2><div class="areas">${['plan','rep'].map(area).join('')}</div></section>`:''}
+    <section class="sec" aria-labelledby="h-aud"><h2 id="h-aud">Audit</h2><div class="tiles">${tile(scr(0,'audit'),'Tenant audit · '+tn(),'Who changed what in '+tn())}${tile(scr(1,'audit'),'Global audit','Sign-ins, users, tokens, tenant settings — shared')}</div></section>
+    ${admin()?`<section class="sec" aria-labelledby="h-adm"><h2 id="h-adm">Administration <span class="sh">· shared by Test and Prod</span></h2><div class="tiles">${['users','tenants','status'].map(k=>tile(scr(1,k))).join('')}</div></section>`:''}
+    <section class="sec" aria-labelledby="h-you"><h2 id="h-you">You</h2><div class="tiles">${['api-tokens','account','help'].map(k=>tile(scr(1,k))).join('')}</div></section>
+  </div>
+  <aside class="feed" aria-labelledby="h-feed"><h2 id="h-feed">Recent changes · ${tn()}</h2><ol>${feed}</ol><a class="fa link" href="#/${t}/audit">Open the tenant audit →</a>
+    <p class="hintcard"><kbd>⌘K</kbd><span>Type a screen, an ID like <span class="mono">00000003</span>, or an action like “switch to prod”.</span></p></aside>
+  </div>`;
+}
+function pMaterials(){
+  return head({c:mdCrumbs(['Materials']),t:`Materials — ${tn()}`,d:'Every quantity of a material is stored in its base unit, exactly to six decimals. IDs are assigned in order and never change.',a:eb('Create material','new',true,'data-noun="material"')})+readerNote()
+   +tbl(['Material ID','Description','Type','Base unit','Status'],MAT.map(m=>[`<a class="mono link" href="#/${S.tenant}/materials/${m.id}">${m.id}</a>`,esc(m.name),`<span class="badge">${m.type}</span>`,m.unit,st(m.active)]));
+}
+function pMaterial(id){
+  const m=MAT.find(x=>x.id===id);if(!m)return pNotFound();
+  const boms=BOM.filter(b=>b.uses.includes(id)),own=BOM.filter(b=>b.p===id),pp=PP.filter(p=>p.m===id),ss=SS.filter(s=>s.m===id),t=S.tenant;
+  const rel=[own.length?`<a href="#/${t}/boms">🧩 Its BOM · ${own.length} alternative${own.length>1?'s':''}</a>`:'',boms.length?`<a href="#/${t}/boms">🧩 Used in ${boms.map(b=>matName(b.p)+' '+b.alt).join(', ')}</a>`:'',pp.length?`<a href="#/${t}/planning-parameters">⚙️ Planning parameters · ${pp.length}</a>`:'',ss.length?`<a href="#/${t}/safety-stock">🛟 Safety stock · ${ss.length} targets</a>`:''].join('')||'<span class="muted">Not used in BOMs or planning yet.</span>';
+  return head({c:mdCrumbs(['Materials','#/'+t+'/materials'],[m.id]),t:`<span class="mono">${m.id}</span> — ${esc(m.name)}`,d:'',a:eb('Edit','mock','',`data-msg="Would open Edit material ${m.id}"`)+eb('Deactivate','mock','',`data-msg="Would ask to confirm deactivating ${m.id}"`)})
+   +`<dl class="dl4"><div><dt>Type</dt><dd>${m.type}</dd></div><div><dt>Base unit</dt><dd>${m.unit}</dd></div><div><dt>Status</dt><dd>${st(m.active)}</dd></div><div><dt>Created</dt><dd>${m.created}</dd></div></dl>
+   <div class="row"><h2 class="h">Unit conversions</h2>${eb('Add conversion','new',true,`data-noun="unit conversion"`)}</div>
+   <p class="muted">Quantities entered in another unit are converted into ${m.unit} once, rounded half-up to six decimals. Changing a factor never changes quantities already stored.</p>
+   ${m.conv.length?tbl(['Unit','Conversion','Inverse (indicative)'],m.conv.map(c=>[`<b>${c[0]}</b>`,c[1],`<span class="muted">${c[2]}</span>`])):`<p class="note">No conversions yet — quantities of ${esc(m.name)} are entered in ${m.unit}.</p>`}
+   <h2 class="h">Where it is used</h2><div class="rel">${rel}</div>`;
+}
+function pSimpleList(k,cols,list,noun,desc,extraHead){
+  const s=scr(0,k);
+  return head({c:mdCrumbs([s.l]),t:`${s.l} — ${tn()}`,d:desc,a:eb('Create '+noun,'new',true,`data-noun="${noun}"`)})+readerNote()
+   +tbl(cols,list.map(x=>{const r=[`<a class="mono link" href="#/${S.tenant}/${k}/${x.id}">${x.id}</a>`,esc(x.name),esc(x.extra),st(x.active)];if(S.hl===x.id)r.hl=1;return r}));
+}
+function pRecord(k,id){
+  const rec=findRec(k,id);if(!rec)return pNotFound();
+  const s=scr(0,k),noun=s.noun,lab={locations:'Used for',customers:'City',suppliers:'Supplies'}[k];
+  return head({c:mdCrumbs([s.l,'#/'+S.tenant+'/'+k],[id]),t:`<span class="mono">${id}</span> — ${esc(rec.name)}`,a:eb('Edit','mock','',`data-msg="Would open Edit ${noun} ${id}"`)+eb(rec.active?'Deactivate':'Reactivate','mock','',`data-msg="Would ask to confirm (${id})"`)})
+   +`<dl class="dl4"><div><dt>Code</dt><dd class="mono">${id}</dd></div><div><dt>Name</dt><dd>${esc(rec.name)}</dd></div><div><dt>${lab}</dt><dd>${esc(rec.extra)}</dd></div><div><dt>Status</dt><dd>${st(rec.active)}</dd></div></dl>
+   <p class="muted">Codes never change. A deactivated ${noun} stays in history and the audit but cannot be picked for new records.</p>`;
+}
+function pPlanning(){
+  return head({c:mdCrumbs(['Planning parameters']),t:`Planning parameters — ${tn()}`,d:'One row per material and location: do we make it or buy it, how long it takes, and in what lot sizes. MRP reads these.',a:eb('Add parameters','new',true,'data-noun="planning parameter"')})+readerNote()
+   +tbl(['Material','Location','Make / Buy','Lead time','Minimum lot','Lot multiple'],PP.map(p=>[`<a class="link" href="#/${S.tenant}/materials/${p.m}">${matName(p.m)}</a>`,locName(p.loc),`<span class="badge">${p.mb}</span>`,p.lt+' days',p.min,p.mult]),1);
+}
+function pSafety(){
+  return head({c:mdCrumbs(['Safety stock']),t:`Safety stock — ${tn()}`,d:'How much of a material to keep in reserve at a location. Each target applies from its date until the next one starts.',a:eb('Add target','new',true,'data-noun="safety stock target"')})+readerNote()
+   +tbl(['Material','Location','Target','Effective from'],SS.map(s=>[`<a class="link" href="#/${S.tenant}/materials/${s.m}">${matName(s.m)}</a>`,locName(s.loc),s.q+' pcs',s.from]));
+}
+function pBoms(){
+  return head({c:mdCrumbs(['BOMs']),t:`BOMs — ${tn()}`,d:'What goes into each product. A material can have several alternatives, picked by priority and validity; every change makes a new, immutable revision.',a:eb('Create BOM','new',true,'data-noun="BOM"')})+readerNote()
+   +tbl(['Product','Alternative','Priority','Valid','Revision','Components'],BOM.map(b=>[`<a class="link" href="#/${S.tenant}/materials/${b.p}">${matName(b.p)}</a>`,b.alt,b.prio,b.valid,'rev '+b.rev,`<span class="muted">${b.comp}</span>`]),1);
+}
+function pImport(){
+  if(!admin())return pAdminOnly('Import from spreadsheet');
+  const ro=S.ro[S.tenant],n=S.imp,steps=['Download the template','Upload and dry run','Commit'];
+  const dis=ro?`disabled title="${tn()} is read-only"`:'';
+  let body='';
+  if(n===1)body=`<p>The template has one sheet per master: Materials, Locations, Customers, Suppliers, Planning parameters, Safety stock and BOMs. Fill it in, then come back for step 2.</p><div class="acts" style="justify-content:flex-start"><button type="button" class="btn" data-act="mock" data-msg="Downloaded cpg-import-template.xlsx (mockup)">⬇ Download template.xlsx</button><button type="button" class="btn primary" data-act="imp" data-v="2">Next: upload →</button></div>`;
+  if(n===2)body=`<div class="drop">Drop the filled template here<br><br><button type="button" class="btn primary" data-act="imp" data-v="2.5" ${dis}>${ro?'🔒 ':''}Choose file…</button></div><div class="acts" style="justify-content:flex-start"><button type="button" class="btn" data-act="imp" data-v="1">← Back</button></div>`;
+  if(n===2.5)body=`<p><b>Dry run of cpg-import.xlsx</b> — nothing has been saved yet.</p>${tbl(['Sheet','New','Changed','Unchanged'],[['Materials',2,0,6],['Locations',0,0,3],['Customers',0,1,2]])}<p class="note"><span aria-hidden="true">⚠️</span>Row 7 of Materials: unit “pc” is unknown — did you mean “pcs”? The row will be skipped.</p><div class="acts" style="justify-content:flex-start"><button type="button" class="btn" data-act="imp" data-v="2">← Upload again</button><button type="button" class="btn primary" data-act="imp" data-v="3">Next: commit →</button></div>`;
+  if(n===3)body=`<p>Commit <b>3 changes</b> to <b>${tn()}</b>. They are written in one transaction and show up in the tenant audit.</p><div class="acts" style="justify-content:flex-start"><button type="button" class="btn" data-act="imp" data-v="2.5">← Back</button><button type="button" class="btn primary" data-act="imp" data-v="4" ${dis}>${ro?'🔒 ':''}Commit 3 changes to ${tn()}</button></div>`;
+  if(n===4)body=`<p>✅ Imported 3 changes into ${tn()}.</p><div class="acts" style="justify-content:flex-start"><a class="btn" href="#/${S.tenant}/audit">Open tenant audit</a><button type="button" class="btn" data-act="imp" data-v="1">Start over</button></div>`;
+  const cur=Math.floor(n);
+  return head({c:mdCrumbs(['Import']),t:`Import from spreadsheet — ${tn()}`,d:'Load master data in bulk: download the template, upload it for a dry run, then commit.'})
+   +`<ol class="steps" aria-label="Import steps">${steps.map((l,i)=>`<li class="${i+1<cur||n===4?'done':i+1===cur?'cur':''}" ${i+1===cur&&n!==4?'aria-current="step"':''}><span class="num">${i+1<cur||n===4?'✓':i+1}</span>${l}</li>`).join('')}</ol><div class="panel">${body}</div>`;
+}
+function pAudit(){
+  return head({c:[[TN[S.tenant],'#/'+S.tenant],['Tenant audit']],t:`Tenant audit — ${tn()}`,d:`Append-only log of every change in ${tn()}, from the screens (UI) and the API. Nobody can edit or delete it.`})
+   +tbl(['Time','Account','Channel','Action','Record'],AUD.map(a=>[`<span class="mono">${a[0]}</span>`,esc(a[1]),`<span class="badge">${a[2]}</span>`,a[3],`<a class="link" href="#/${S.tenant}/${a[5]}">${esc(a[4])}</a>`]),1);
+}
+function pLater(s){
+  return head({c:[[TN[S.tenant],'#/'+S.tenant],[G[s.g]],[s.l]],t:`${s.l} — ${tn()}`})
+   +`<div class="ph-big"><span class="e" aria-hidden="true">${s.i}</span><h2 style="margin:0;font-size:18px">Coming in slice ${s.s}</h2><p class="muted">${s.d}. This screen arrives with slice ${s.s}; its place in the launcher and the palette is already reserved.</p><div class="acts"><a class="btn" href="#/${S.tenant}">← All screens</a><button type="button" class="btn" data-act="pal">Find something else <kbd>⌘K</kbd></button></div></div>`;
+}
+const gnote=()=>`<span class="globalnote"><span aria-hidden="true">🌐</span>Shared by Test and Prod — the tenant switch does not change this page.</span>`;
+function gcrumbs(l){return [['Shared pages','#/'+S.tenant],[l]]}
+function pAdminOnly(l){return `<div class="ph"><div class="ph-t"><h1>${l}</h1></div></div>`+`<div class="ph-big"><span class="e" aria-hidden="true">🔒</span><h2 style="margin:0;font-size:18px">This page is for the admin</h2><p class="muted">Normal users don’t see it in the launcher or the palette.</p><a class="btn" href="#/${S.tenant}">← All screens</a></div>`}
+function pUsers(){
+  if(!admin())return pAdminOnly('Users');
+  return head({c:gcrumbs('Users'),t:'Users',d:'People who can sign in. There is exactly one admin; everybody else is a user.',a:eb('Create user','new',true,'data-noun="user"')})+gnote()
+   +tbl(['Login','Name','Role','Status','Last sign-in',''],USERS.map(u=>[`<span class="mono">${u[0]}</span>`,u[1],`<span class="badge">${u[2]}</span>`,st(u[3]),`<span class="muted">${u[4]}</span>`,u[2]==='Admin'?'':`<button type="button" class="btn" data-act="mock" data-msg="Would reset the password of ${u[0]}">Reset password</button>`]),1);
+}
+function pTenants(){
+  if(!admin())return pAdminOnly('Tenants & read-only');
+  const card=x=>`<section class="tcard ${x}" aria-labelledby="tc-${x}"><div class="tch"><span class="ttag">${x.toUpperCase()}</span><span id="tc-${x}">${TN[x]} tenant</span></div><div class="tcb">
+    <dl class="dl4" style="grid-template-columns:1fr 1fr;border:0;padding:0"><div><dt>Dataset generation</dt><dd>1</dd></div><div><dt>Business records</dt><dd>${MAT.length+LOC.length+CUS.length+SUP.length+PP.length+SS.length+BOM.length}</dd></div></dl>
+    <div class="rorow"><div><b id="rl-${x}">Read-only</b><p class="muted">Blocks every business change in ${TN[x]}: create, edit, import. Reading, audit, preferences and user management keep working.</p></div>
+    <button type="button" class="sw" role="switch" aria-checked="${S.ro[x]}" aria-labelledby="rl-${x}" data-act="ro" data-t="${x}"><span class="tr" aria-hidden="true"></span><span class="swl">${S.ro[x]?'On 🔒':'Off'}</span></button></div>
+    ${x==='test'&&S.later?`<div class="row"><button type="button" class="btn" disabled>Reset Test to a fresh dataset</button><span class="later">later · slice 2</span></div>`:''}
+  </div></section>`;
+  return head({c:gcrumbs('Tenants & read-only'),t:'Tenants & read-only',d:'CPG keeps two tenants with the same screens. Lock one to stop business changes, for example Prod while you rehearse in Test.'})+gnote()+`<div class="tcards">${card('test')}${card('prod')}</div>`;
+}
+function pStatus(){
+  if(!admin())return pAdminOnly('System status');
+  return head({c:gcrumbs('System status'),t:'System status',d:'What the server runs on. Read-only.'})+gnote()
+   +`<dl class="dl4"><div><dt>Database</dt><dd class="mono">/externaldata/cpg.sqlite</dd></div><div><dt>Journal mode</dt><dd>WAL</dd></div><div><dt>Migrations</dt><dd>9 applied · 0 pending</dd></div><div><dt>Health</dt><dd><span class="badge ok">/up OK</span></dd></div></dl>`
+   +tbl(['Migration','Applied'],[['Migration20261019_materials','2026-10-19 08:12'],['Migration20261017_api_idempotency','2026-10-17 18:40'],['Migration20261016_tenant_read_only','2026-10-16 11:02']].map(r=>[`<span class="mono">${r[0]}</span>`,r[1]]));
+}
+function pGAudit(){
+  return head({c:gcrumbs('Global audit'),t:'Global audit',d:'Changes that belong to no tenant: sign-ins, users, API tokens and tenant settings.'})+gnote()
+   +tbl(['Time','Account','Channel','Action','Subject'],GAUD.map(a=>[`<span class="mono">${a[0]}</span>`,a[1],`<span class="badge">${a[2]}</span>`,a[3],a[4]]),1);
+}
+function pTokens(){
+  const list=TOKENS[me()]||[];
+  return head({c:gcrumbs('API tokens'),t:'API tokens',d:`Your own keys for scripts and spreadsheets. A token acts as ${me()} and follows the same rules, including read-only tenants.`,a:`<button type="button" class="btn primary" data-act="new" data-noun="API token">Create token</button>`})+gnote()
+   +tbl(['Name','Created','Last used',''],list.map(t=>[`<b>${t[0]}</b>`,t[1],`<span class="muted">${t[2]}</span>`,`<button type="button" class="btn" data-act="mock" data-msg="Would ask to confirm revoking ${t[0]}">Revoke</button>`]));
+}
+function pAccount(){
+  return head({c:gcrumbs('Account'),t:'Account',d:'Your preferences. They follow you in both tenants.'})
+   +`<div class="panel"><div class="row"><span><b>${me()}</b> · ${admin()?'Administrator':'User'}</span></div>
+     <div class="row"><span>Language</span><div class="seg2"><button type="button" data-act="lang" data-v="EN" aria-pressed="${S.lang==='EN'}">English</button><button type="button" data-act="lang" data-v="PL" aria-pressed="${S.lang==='PL'}">Polski</button></div></div>
+     <div class="row"><span>Theme</span><div class="seg2"><button type="button" data-act="theme" data-v="light" aria-pressed="${S.theme==='light'}">Light</button><button type="button" data-act="theme" data-v="dark" aria-pressed="${S.theme==='dark'}">Dark</button></div></div>
+     <div class="row"><a class="link" href="#/global/api-tokens">Manage API tokens</a><button type="button" class="btn" data-act="signout">Sign out</button></div></div>`;
+}
+function pHelp(){
+  const rows=[['<kbd>⌘K</kbd> / <kbd>Ctrl K</kbd> / <kbd>/</kbd>','Open the search palette from anywhere'],['<kbd>↑</kbd> <kbd>↓</kbd> <kbd>Enter</kbd>','Move through results and open one'],['<kbd>Esc</kbd>','Close the palette, a dialog or the account menu'],['Type <kbd>&gt;</kbd> first','Show actions only (switch tenant, language, theme, create…)']];
+  return head({c:gcrumbs('Help'),t:'Help',d:'Getting around CPG.'})
+   +`<div class="panel"><p><b>🦣 CPG</b> (top left) always takes you to the <b>launcher</b>: every screen of the current tenant as a tile, with record counts and recent changes.</p>
+   <p><b>The search field</b> finds screens, records (type a material ID like <span class="mono">00000003</span> or a name like “flint”) and actions (“switch to prod”, “new material”, “dark mode”).</p>
+   <p><b>Recent &amp; pinned</b> (the coloured row) remembers your last four screens. ☆ pins a screen there for good.</p>
+   <p><b>Test | Prod</b> switches tenant and keeps you on the same screen. The coloured row tells you where you are: amber is Test, black with a red line is Prod. 🔒 means read-only.</p></div>`
+   +tbl(['Keys','What it does'],rows);
+}
+function pNotFound(){return head({t:'Nothing here'})+`<div class="ph-big"><span class="e" aria-hidden="true">🦴</span><p class="muted">This page does not exist.</p><a class="btn" href="#/${S.tenant}">← All screens</a></div>`}
+
+function renderMain(focus){
+  const r=S.route,gl=r.scope==='global';
+  const s=r.key==='?'?null:scr(gl,r.key);
+  let html;
+  if(!s)html=pNotFound();
+  else if(gl)html=({audit:pGAudit,users:pUsers,tenants:pTenants,status:pStatus,'api-tokens':pTokens,help:pHelp,account:pAccount})[s.k]();
+  else if(s.s)html=pLater(s);
+  else if(s.k==='overview')html=pOverview();
+  else if(s.k==='materials')html=r.id?pMaterial(r.id):pMaterials();
+  else if(['locations','customers','suppliers'].includes(s.k))html=r.id?pRecord(s.k,r.id):pSimpleList(s.k,['Code','Name',{locations:'Used for',customers:'City',suppliers:'Supplies'}[s.k],'Status'],{locations:LOC,customers:CUS,suppliers:SUP}[s.k],s.noun,{locations:'Places where stock is kept. Codes are assigned in order and never change.',customers:'Who you sell to. Customer orders and forecasts will point here.',suppliers:'Who you buy from. Purchase orders will point here.'}[s.k]);
+  else html=({'planning-parameters':pPlanning,'safety-stock':pSafety,boms:pBoms,import:pImport,audit:pAudit})[s.k]();
+  const isMd=s&&!gl&&s.g==='md';
+  $('#main').innerHTML=isMd?`<div class="withtree">${tree(s.k)}<div class="content">${mtree(s.k)}${html}</div></div>`:`<div class="content" style="${s&&s.k==='overview'&&!gl?'max-width:none':''}">${html}</div>`;
+  document.title=`${s?(s.k==='overview'&&!gl?'Overview':s.l):'Not found'} — ${gl?'Shared':tn()} — CPG`;
+  if(focus){const h=$('#main h1');if(h){h.setAttribute('tabindex','-1');h.focus({preventScroll:true})}}
+}
+function syncControls(){
+  document.querySelectorAll('input[name=mc-role]').forEach(i=>i.checked=i.value===S.role);
+  $('#mc-later').checked=S.later;$('#mc-ro-test').checked=S.ro.test;$('#mc-ro-prod').checked=S.ro.prod;
+}
+function render(focus){
+  const r=parse();S.route=r;
+  if(r.scope!=='global')S.tenant=r.scope;
+  pushRecent(recKey(r));
+  document.body.classList.toggle('dark',S.theme==='dark');
+  renderBar();renderCtx();renderBanner();renderMain(focus);syncControls();
+}
+
+/* ================= command palette ================= */
+function score(q,it){
+  q=q.trim().toLowerCase();if(!q)return 1;
+  const L=it.l.toLowerCase(),kw=(it.kw||[]).map(x=>x.toLowerCase());
+  const words=L.split(/[\s()·—\-&,]+/).filter(Boolean);
+  const toks=q.split(/\s+/);
+  if(toks.length>1)return toks.every(t=>words.some(w=>w.startsWith(t))||kw.some(k=>k.split(/\s+/).some(w=>w.startsWith(t))))?620-L.length/100:0;
+  if(L===q)return 1000;
+  if(kw.includes(q))return 900;
+  if(L.startsWith(q))return 800-L.length/100;
+  if(words.includes(q))return 750;
+  if(words.some(w=>w.startsWith(q)))return 650-L.length/100;
+  if(L.includes(q))return 500;
+  if(q.length>=3&&kw.some(k=>k.split(/\s+/).some(w=>w.startsWith(q))))return 450;
+  if(q.length>=3&&it.d&&it.d.toLowerCase().split(/[^a-z0-9²]+/).some(w=>w.startsWith(q)))return 300;
+  // loose subsequence ("plpa" → Planning parameters): must start at a word start and stay tight
+  if(q.length<3)return 0;
+  for(let st=0;st<L.length;st++){
+    if(L[st]!==q[0]||(st>0&&!/[\s(·—&-]/.test(L[st-1])))continue;
+    let j=1,gaps=0,last=st;
+    for(let i=st+1;i<L.length&&j<q.length;i++){if(L[i]===q[j]){gaps+=i-last-1;last=i;j++}}
+    if(j===q.length&&gaps<=10)return Math.max(20,200-gaps*10);
+  }
+  return 0;
+}
+function hl(label,q){
+  q=q.trim().toLowerCase().split(/\s+/)[0];if(!q)return esc(label);
+  const L=label.toLowerCase();
+  const re=new RegExp('(^|[\\s(·—&-])'+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));
+  const m=re.exec(L);let i=m?m.index+m[1].length:L.indexOf(q);
+  if(i>=0)return esc(label.slice(0,i))+'<mark>'+esc(label.slice(i,i+q.length))+'</mark>'+esc(label.slice(i+q.length));
+  let out='',j=0;for(const c of label){if(j<q.length&&c.toLowerCase()===q[j]){out+='<mark>'+esc(c)+'</mark>';j++}else out+=esc(c)}
+  return j===q.length?out:esc(label);
+}
+function screenItems(){
+  return SC.filter(visible).map(s=>({grp:'Screens',i:s.i,l:s.k==='overview'&&!s.gl?'Overview (launcher)':s.l,d:s.d,
+    sub:`${s.gl?'Shared':G[s.g]+' · '+tn()} — ${s.d}`,later:s.s,kw:[G[s.g],s.k.replace(/-/g,' ')],run:()=>go(href(s))}));
+}
+function recordItems(){
+  const t=S.tenant,R=[];
+  MAT.forEach(m=>R.push({i:'🧱',l:`${m.id} ${m.name}`,sub:`Material · ${m.type} · ${m.unit}`,kw:['material'],run:()=>go(`#/${t}/materials/${m.id}`)}));
+  LOC.forEach(x=>R.push({i:'📍',l:`${x.id} ${x.name}`,sub:'Location'+(x.active?'':' · inactive'),kw:['location'],run:()=>go(`#/${t}/locations/${x.id}`)}));
+  CUS.forEach(x=>R.push({i:'🤝',l:`${x.id} ${x.name}`,sub:'Customer · '+x.extra,kw:['customer'],run:()=>go(`#/${t}/customers/${x.id}`)}));
+  SUP.forEach(x=>R.push({i:'🚚',l:`${x.id} ${x.name}`,sub:'Supplier'+(x.active?'':' · inactive'),kw:['supplier'],run:()=>go(`#/${t}/suppliers/${x.id}`)}));
+  BOM.forEach(b=>R.push({i:'🧩',l:`BOM ${matName(b.p)} · ${b.alt}`,sub:`Priority ${b.prio} · rev ${b.rev}`,kw:['bom'],run:()=>go(`#/${t}/boms`)}));
+  return R.map(x=>({...x,grp:'Records',sub:x.sub+' · '+tn()}));
+}
+function actionItems(){
+  const t=S.tenant,o=t==='test'?'prod':'test',A=[],ro=S.ro[t],cur=recKey(S.route);
+  if(admin()){
+    [['material','materials','🧱'],['location','locations','📍'],['customer','customers','🤝'],['supplier','suppliers','🚚']].forEach(([n,k,i])=>A.push({i:'＋',l:`New ${n}`,sub:`Create a ${n} in ${tn()}`,kw:['create','add',n],dis:ro?`${tn()} is read-only`:'',run:()=>{go(`#/${t}/${k}`);setTimeout(()=>openCreate(n),30)}}));
+  }
+  A.push({i:'⇄',l:`Switch to ${TN[o]}`,sub:S.route.scope==='global'?'This page is shared; tenant pages will open in '+TN[o]:`Stay on this screen, in ${TN[o]}`,kw:[o,'tenant','switch'],run:()=>switchTenant(o)});
+  if(admin())['test','prod'].forEach(x=>A.push({i:S.ro[x]?'🔓':'🔒',l:S.ro[x]?`Make ${TN[x]} writable again`:`Make ${TN[x]} read-only`,sub:'Tenants & read-only · admin',kw:['lock','read only','readonly','unlock'],run:()=>setRO(x,!S.ro[x])}));
+  A.push({i:'🌐',l:`Change language to ${S.lang==='EN'?'Polski':'English'}`,sub:`Now ${S.lang==='EN'?'English':'Polski'}`,kw:['language','lang','polski','english','pl','en'],run:()=>toggleLang()});
+  A.push({i:'🌓',l:S.theme==='dark'?'Switch to light mode':'Switch to dark mode',sub:'Theme',kw:['theme','dark','light','toggle dark mode'],run:()=>setTheme()});
+  if(cur)A.push({i:'☆',l:isPinned(cur)?'Unpin this page':'Pin this page',sub:'Keep it in the Recent & pinned row',kw:['pin','star','favourite'],run:()=>togglePin(cur)});
+  A.push({i:'↪',l:'Sign out',sub:me(),kw:['logout','log out'],run:signOut});
+  return A.map(a=>({...a,grp:'Actions'}));
+}
+function buildResults(raw){
+  let q=raw.trim(),onlyActions=false;
+  if(q.startsWith('>')){onlyActions=true;q=q.slice(1).trim()}
+  const all=onlyActions?actionItems():[...screenItems(),...recordItems(),...actionItems()];
+  if(!q){
+    if(onlyActions)return [{name:'Actions',items:all}];
+    const pins=S.pinned.filter(keyVisible),rec=S.recent.filter(k=>!pins.includes(k)&&keyVisible(k)).slice(0,4);
+    const rp=pins.concat(rec).map(k=>{const i=keyInfo(k);return{grp:'Recent & pinned',i:i.icon,l:(i.id?i.id+' ':'')+i.label,sub:(isPinned(k)?'★ Pinned · ':'')+(i.s.gl?'Shared':tn()),run:()=>go(keyHref(k))}});
+    const md=screenItems().filter((x,ix)=>SC.filter(visible)[ix].g==='md').map(x=>({...x,grp:'Master data'}));
+    return [{name:'Recent & pinned',items:rp},{name:'Master data',items:md},{name:'Actions',items:actionItems().filter(a=>!/^New (location|customer|supplier)/.test(a.l)).slice(0,5)}].filter(g=>g.items.length);
+  }
+  const scored=all.map(it=>({...it,sc:score(q,it)})).filter(x=>x.sc>0);
+  const groups={};
+  scored.forEach(x=>{(groups[x.grp]=groups[x.grp]||[]).push(x)});
+  return Object.entries(groups).map(([name,items])=>{items.sort((a,b)=>b.sc-a.sc);return{name,items:items.slice(0,name==='Records'?6:7),best:items[0].sc}}).sort((a,b)=>b.best-a.best);
+}
+function openPal(prefill){
+  if(S.pal)return;
+  S.acct=false;renderBar();
+  S.pal={q:prefill||'',active:0,flat:[],prev:document.activeElement};
+  $('#pal').innerHTML=`<div class="pal-ov"><div class="pal" role="dialog" aria-modal="true" aria-label="Search screens, records and actions">
+    <div class="pal-in">${IC.search}<input id="pal-q" type="text" role="combobox" aria-expanded="true" aria-controls="pal-list" aria-autocomplete="list" autocomplete="off" spellcheck="false" placeholder="Search screens, records and actions…" value="${esc(S.pal.q)}"><span class="pal-ctx ${S.tenant}" title="Records and actions apply to ${tn()}">${tn().toUpperCase()}${S.ro[S.tenant]?' 🔒':''}</span><button type="button" class="pal-x" data-act="pal-close" aria-label="Close search"><span class="dsk">Esc</span><span class="mob">Cancel</span></button></div>
+    <div class="pal-list" id="pal-list" role="listbox" aria-label="Results"></div>
+    <div class="pal-ft"><span><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>Enter</kbd> open</span><span><kbd>Esc</kbd> close</span><span>Type <kbd>&gt;</kbd> for actions only</span><span style="margin-left:auto">Searching in ${tn()}</span></div>
+  </div></div>`;
+  const inp=$('#pal-q');
+  inp.addEventListener('input',()=>{S.pal.q=inp.value;S.pal.active=0;renderPal()});
+  inp.addEventListener('keydown',e=>{
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();const n=S.pal.flat.length;if(n){S.pal.active=(S.pal.active+(e.key==='ArrowDown'?1:-1)+n)%n;renderPal(true)}}
+    else if(e.key==='Enter'){e.preventDefault();execPal(S.pal.active)}
+    else if(e.key==='Escape'){e.preventDefault();closePal()}
+    else if(e.key==='Tab'){e.preventDefault()}
+  });
+  renderPal();inp.focus();inp.setSelectionRange(inp.value.length,inp.value.length);
+}
+function renderPal(keepScroll){
+  const groups=buildResults(S.pal.q),list=$('#pal-list');let idx=0;S.pal.flat=[];
+  if(!groups.length){list.innerHTML=`<div class="pal-empty">Nothing matches “${esc(S.pal.q)}”.<br>Try a screen (“stock”), an ID (“00000003”) or an action (“&gt;new”).</div>`;$('#pal-q').removeAttribute('aria-activedescendant');return}
+  const q=S.pal.q.replace(/^>/,'');
+  list.innerHTML=groups.map((g,gi)=>`<div role="group" aria-labelledby="pg-${gi}"><div class="pg" id="pg-${gi}">${esc(g.name)}</div>${g.items.map(it=>{const i=idx++;S.pal.flat.push(it);
+    return `<div class="po" role="option" id="po-${i}" data-i="${i}" aria-selected="${i===S.pal.active}" ${it.dis?'aria-disabled="true"':''}><span class="pi" aria-hidden="true">${it.i}</span><span class="pt"><span class="pl">${hl(it.l,q)}${it.later?`<span class="later">later · slice ${it.later}</span>`:''}</span><span class="ps">${it.dis?'🔒 '+esc(it.dis):esc(it.sub||'')}</span></span><span class="pk" aria-hidden="true">${it.dis?'':'↵'}</span></div>`}).join('')}</div>`).join('');
+  $('#pal-q').setAttribute('aria-activedescendant','po-'+S.pal.active);
+  const a=$('#po-'+S.pal.active);if(a&&keepScroll)a.scrollIntoView({block:'nearest'});
+}
+function execPal(i){
+  const it=S.pal&&S.pal.flat[i];if(!it)return;
+  if(it.dis){toast('Blocked: '+it.dis);return}
+  closePal(true);it.run();
+}
+function closePal(noRestore){
+  if(!S.pal)return;const prev=S.pal.prev;S.pal=null;$('#pal').innerHTML='';
+  if(!noRestore&&prev&&document.contains(prev))prev.focus();
+}
+
+/* ================= dialogs ================= */
+const FORMS={
+  material:[['Description','Mammoth tusk'],['Type','sel:Raw|Intermediate|Finished'],['Base unit','sel:kg|m²|pcs|l|m']],
+  location:[['Name','Cliff storage']],customer:[['Name','Bedrock Diner'],['City','Bedrock']],supplier:[['Name','Pterodactyl Express']],
+  'unit conversion':[['Unit','box'],['How many base units in one?','12']],'planning parameter':[['Material','sel:Cave cart|Wheel (stone)|Axle'],['Location','sel:Main cave|River warehouse'],['Make or buy','sel:Make|Buy'],['Lead time (days)','3']],
+  'safety stock target':[['Material','sel:Cave cart|Axle'],['Location','sel:Main cave|River warehouse'],['Target','5'],['Effective from','2027-03-01']],
+  BOM:[['Product','sel:Cave cart|Wheel (stone)'],['Alternative','Alt C'],['Priority','3']],user:[['Login','fred'],['Name','Fred Flintstone']],'API token':[['Token name','my-script']]
+};
+function openDlg(html,wide){
+  S.dlg={prev:document.activeElement};
+  $('#dlg').innerHTML=`<div class="ov"><div class="dlg${wide?' wide':''}" role="dialog" aria-modal="true" aria-labelledby="dlg-t">${html}</div></div>`;
+  const f=$('#dlg .dlg input, #dlg .dlg select, #dlg .dlg button');if(f)f.focus();
+}
+function closeDlg(){if(!S.dlg)return;const p=S.dlg.prev;S.dlg=null;$('#dlg').innerHTML='';if(p&&document.contains(p))p.focus()}
+function openCreate(noun){
+  const gl=['user','API token'].includes(noun);
+  if(!gl&&S.ro[S.tenant]){toast(`Blocked: ${tn()} is read-only`);return}
+  const fields=(FORMS[noun]||[['Name','']]).map(([l,v],i)=>`<label class="f" for="cf${i}">${l}${v.startsWith('sel:')?`<select class="in" id="cf${i}">${v.slice(4).split('|').map(o=>`<option>${o}</option>`).join('')}</select>`:`<input class="in" id="cf${i}" value="" placeholder="${esc(v)}">`}</label>`).join('');
+  openDlg(`<h2 id="dlg-t">Create ${noun}${gl?'':' — '+tn()}</h2>${noun==='material'?'<p class="hint">The ID is assigned automatically: <span class="mono">00000007</span>.</p>':''}${fields}<div class="acts"><button type="button" class="btn" data-act="dlg-close">Cancel</button><button type="button" class="btn primary" data-act="dlg-ok" data-msg="Created ${noun}${gl?'':' in '+tn()} (mockup — nothing saved)">Create</button></div>`);
+}
+function openAbout(){
+  openDlg(`<h2 id="dlg-t">03 · Launcher home + command palette (“Cave map”)</h2>
+  <h3>The idea</h3><p>The menu is a <b>place</b>, not a bar. The top bar only holds what is always true — brand, search, the Test | Prod switch, help and you. Every screen lives on one <b>launcher</b> (the tenant Overview) as a big tile with a plain-verb label and its record count, and in a <b>command palette</b> (⌘K, Ctrl K, / or the search field) that finds screens, records and actions as you type. A slim <b>Recent &amp; pinned</b> row makes returning to working screens one click, and master-data pages keep a mini-tree of their siblings so “Master data” is still one visible tree while you work in it.</p>
+  <h3>Why it fits CPG</h3><ul><li>The Overview the PRD asks for (counts, recent changes, quick actions) <i>is</i> the menu — one page instead of two.</li><li>Planners think in IDs: typing <span class="mono">00000003</span> or “flint” jumps straight to the record.</li><li>It scales from today’s ~10 screens to ~35 after slices 2–3 without a mega-menu; later screens already have a reserved tile.</li><li>The tenant is unmissable: the switch is always in the bar and the whole context row is amber (Test) or black-and-red (Prod).</li><li>Mobile is search-first, which suits a phone better than a deep drawer.</li></ul>
+  <h3>Trade-offs</h3><ul><li>The full menu is not on screen while you work: an unpinned screen outside master data costs 2 clicks (🦣, then the tile).</li><li>The palette is invisible to people who never press ⌘K — the wide search field and launcher hints must carry discovery.</li><li>Recent &amp; pinned is per browser (localStorage), not per account.</li><li>The tinted context row costs ~40 px of height on every page.</li></ul>
+  <h3>Click counts (from a tenant’s Overview)</h3>
+  <div class="tw"><table class="cc"><thead><tr><th>Task</th><th>Desktop — mouse</th><th>Desktop — palette</th><th>Mobile (390 px)</th></tr></thead><tbody>
+  <tr><td>Materials</td><td>1 (tile)</td><td>⌘K + “ma” + Enter = 2 keys + 1 Enter</td><td>1 tap (tile) · or 🔍 + “ma” + Go</td></tr>
+  <tr><td>Locations</td><td>1 (tile)</td><td>⌘K + “loc” + Enter = 3 + 1</td><td>1 tap (tile) · or 🔍 + “loc” + Go</td></tr>
+  <tr><td>Safety stock</td><td>1 (tile)</td><td>⌘K + “saf” + Enter = 3 + 1</td><td>1 tap (tile, after a scroll) · or 🔍 + “saf” + Go</td></tr>
+  <tr><td>Users (admin)</td><td>1 (Administration tile)</td><td>⌘K + “use” + Enter = 3 + 1</td><td>1 tap (tile, after a scroll)</td></tr>
+  <tr><td>Switch Test → Prod, same screen</td><td>1 (switch)</td><td>⌘K + “prod” + Enter = 4 + 1</td><td>1 tap (switch)</td></tr>
+  <tr><td>Change language</td><td>2 (account → PL)</td><td>⌘K + “lang” + Enter = 4 + 1</td><td>2 taps (avatar → PL)</td></tr>
+  <tr><td>Reach the Import (admin)</td><td>1 (tile or “📥 Import”)</td><td>⌘K + “imp” + Enter = 3 + 1</td><td>1 tap (tile)</td></tr>
+  </tbody></table></div>
+  <p class="hint">From any other screen: +1 click (🦣 or ☷ back to the launcher), so every screen is at most 2 clicks away; anything in Recent &amp; pinned is 1 click, and siblings in master data are 1 click via the mini-tree.</p>
+  <div class="acts"><button type="button" class="btn primary" data-act="dlg-close">Close</button></div>`,true);
+}
+
+/* ================= events ================= */
+document.addEventListener('click',e=>{
+  if(e.target.classList&&e.target.classList.contains('pal-ov')){closePal();return}
+  if(e.target.classList&&e.target.classList.contains('ov')){closeDlg();return}
+  const po=e.target.closest('.po');if(po){execPal(+po.dataset.i);return}
+  if(S.acct&&!e.target.closest('.acct-w')){S.acct=false;renderBar()}
+  const b=e.target.closest('[data-act]');if(!b)return;
+  const a=b.dataset.act;
+  switch(a){
+    case 'pal':openPal();break;
+    case 'pal-close':closePal();break;
+    case 'tenant':switchTenant(b.dataset.t);break;
+    case 'acct':S.acct=!S.acct;renderBar();if(S.acct){const f=$('.pop button');f&&f.focus()}else $('#acctbtn').focus();break;
+    case 'lang':toggleLang(b.dataset.v);if(S.route.key==='account')renderMain();break;
+    case 'theme':setTheme(b.dataset.v);if(S.route.key==='account')renderMain();break;
+    case 'signout':signOut();break;
+    case 'pin':togglePin(b.dataset.k);break;
+    case 'ro':setRO(b.dataset.t,!S.ro[b.dataset.t]);{const n=$(`[data-act=ro][data-t=${b.dataset.t}]`);n&&n.focus()}break;
+    case 'new':openCreate(b.dataset.noun);break;
+    case 'mock':toast(b.dataset.msg);break;
+    case 'imp':S.imp=+b.dataset.v;renderMain();break;
+    case 'about':openAbout();break;
+    case 'dlg-close':closeDlg();break;
+    case 'dlg-ok':closeDlg();toast(b.dataset.msg);break;
+    case 'clear-recent':S.recent=[];S.pinned=[];store.set('recent',[]);store.set('pinned',[]);pushRecent(recKey(S.route));renderCtx();renderMain();toast('Recent & pinned cleared');break;
+  }
+});
+document.addEventListener('mousemove',e=>{const po=e.target.closest&&e.target.closest('.po');if(po&&S.pal&&+po.dataset.i!==S.pal.active){S.pal.active=+po.dataset.i;document.querySelectorAll('.po').forEach(x=>x.setAttribute('aria-selected',x===po));$('#pal-q').setAttribute('aria-activedescendant',po.id)}});
+document.addEventListener('keydown',e=>{
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();S.pal?closePal():(closeDlg(),openPal());return}
+  if(S.pal)return;
+  if(e.key==='Escape'){if(S.dlg)closeDlg();else if(S.acct){S.acct=false;renderBar();$('#acctbtn').focus()}return}
+  const tg=e.target.tagName||'';
+  if(e.key==='/'&&!S.dlg&&!/INPUT|TEXTAREA|SELECT/.test(tg)&&!e.target.isContentEditable){e.preventDefault();openPal()}
+});
+document.querySelectorAll('input[name=mc-role]').forEach(i=>i.addEventListener('change',()=>{S.role=i.value;S.acct=false;render();toast(`Role: ${S.role==='admin'?'Admin':'Normal user (anna)'}`)}));
+$('#mc-later').addEventListener('change',e=>{S.later=e.target.checked;render()});
+$('#mc-ro-test').addEventListener('change',e=>setRO('test',e.target.checked));
+$('#mc-ro-prod').addEventListener('change',e=>setRO('prod',e.target.checked));
+window.addEventListener('hashchange',()=>{S.acct=false;closePal(true);if(parse().key!=='import')S.imp=1;render(true);window.scrollTo(0,0)});
+if(window.matchMedia('(max-width:767px)').matches)$('#mc').removeAttribute('open');
+if(!/^#\/(test|prod|global)/.test(location.hash))history.replaceState(null,'','#/test');
+render();
+</script>
+</body>
+</html>
