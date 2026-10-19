@@ -14,9 +14,11 @@ import {
 } from "@cpg/ui/components/alert-dialog";
 import { Button } from "@cpg/ui/components/button";
 import { setUserActive } from "../../app/admin/users/actions";
+import { errorFormatter, withUsername, type UsersLabels } from "./labels";
 
 interface SetActiveDialogProps {
   user: UserSummary;
+  labels: UsersLabels;
   open: boolean;
   onClose: () => void;
 }
@@ -25,10 +27,11 @@ interface SetActiveDialogProps {
  * Confirms deactivating an active user (signed out everywhere, TEN-007) or reactivating an
  * inactive one (back with their old password, so the dialog suggests a reset).
  */
-export function SetActiveDialog({ user, open, onClose }: SetActiveDialogProps) {
+export function SetActiveDialog({ user, labels, open, onClose }: SetActiveDialogProps) {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const deactivating = user.active;
+  const t = deactivating ? labels.deactivate : labels.reactivate;
 
   function confirm() {
     startTransition(async () => {
@@ -39,7 +42,7 @@ export function SetActiveDialog({ user, open, onClose }: SetActiveDialogProps) {
           setError(null);
           onClose();
         } else {
-          setError(result.error.message);
+          setError(errorFormatter(labels)(result.error));
         }
       });
     });
@@ -56,20 +59,14 @@ export function SetActiveDialog({ user, open, onClose }: SetActiveDialogProps) {
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>
-            {deactivating ? `Deactivate ${user.username}?` : `Reactivate ${user.username}?`}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {deactivating
-              ? `${user.username} is signed out everywhere and can't sign in until reactivated. The account and its history stay.`
-              : `${user.username} can sign in again with their current password. Reset it too if the account may have been compromised.`}
-          </AlertDialogDescription>
+          <AlertDialogTitle>{withUsername(t.title, user.username)}</AlertDialogTitle>
+          <AlertDialogDescription>{withUsername(t.description, user.username)}</AlertDialogDescription>
         </AlertDialogHeader>
         {error && <ErrorMessage>{error}</ErrorMessage>}
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{labels.cancel}</AlertDialogCancel>
           <Button variant={deactivating ? "destructive" : "default"} disabled={isPending} onClick={confirm}>
-            {deactivating ? "Deactivate" : "Reactivate"}
+            {t.confirm}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

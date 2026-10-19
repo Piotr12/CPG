@@ -1,5 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en } from "../../i18n/messages/en";
+import { pl } from "../../i18n/messages/pl";
 import { CreateUserDialog } from "./create-user-dialog";
 
 const mocks = vi.hoisted(() => ({ createUser: vi.fn() }));
@@ -14,7 +16,7 @@ describe("CreateUserDialog", () => {
 
   it("opens from its button, creates the user and closes", async () => {
     mocks.createUser.mockResolvedValue({ ok: true, data: { id: "b", username: "alice" } });
-    render(<CreateUserDialog />);
+    render(<CreateUserDialog labels={en.users} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Create user" }));
     expect(screen.getByRole("dialog", { name: "Create user" })).toBeTruthy();
@@ -28,7 +30,7 @@ describe("CreateUserDialog", () => {
 
   it("says when a name is taken and stays open", async () => {
     mocks.createUser.mockResolvedValue({ ok: false, error: { code: "CONFLICT", message: "That username is taken." } });
-    render(<CreateUserDialog />);
+    render(<CreateUserDialog labels={en.users} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Create user" }));
     fill("Username", "alice");
@@ -40,12 +42,25 @@ describe("CreateUserDialog", () => {
   });
 
   it("closes on cancel without creating anything", () => {
-    render(<CreateUserDialog />);
+    render(<CreateUserDialog labels={en.users} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Create user" }));
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(mocks.createUser).not.toHaveBeenCalled();
+  });
+
+  it("speaks Polish, a taken name included", async () => {
+    mocks.createUser.mockResolvedValue({ ok: false, error: { code: "CONFLICT", message: "That username is taken." } });
+    render(<CreateUserDialog labels={pl.users} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Utwórz użytkownika" }));
+    expect(screen.getByRole("dialog", { name: "Nowy użytkownik" })).toBeTruthy();
+    fill("Nazwa użytkownika", "alice");
+    fill("Hasło początkowe", "initial password");
+    fireEvent.click(screen.getAllByRole("button", { name: "Utwórz użytkownika" }).at(-1)!);
+
+    expect((await screen.findByRole("alert")).textContent).toBe("Ta nazwa użytkownika jest zajęta.");
   });
 });

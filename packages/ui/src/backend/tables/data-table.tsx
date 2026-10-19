@@ -19,13 +19,23 @@ export interface DataTableProps<Row> {
   empty: ReactNode;
   /** Accessible name of the table. */
   label: string;
+  /** Screen-reader name of the row-actions column. */
+  actionsLabel?: string;
 }
 
 /**
  * Every list screen's table: columns from config, an empty state, and a row-actions slot.
  * Pagination, sorting and filtering are added with the first list that needs them.
  */
-export function DataTable<Row>({ columns, rows, rowKey, rowActions, empty, label }: DataTableProps<Row>) {
+export function DataTable<Row>({
+  columns,
+  rows,
+  rowKey,
+  rowActions,
+  empty,
+  label,
+  actionsLabel = "Actions",
+}: DataTableProps<Row>) {
   const width = columns.length + (rowActions ? 1 : 0);
   return (
     <Table aria-label={label}>
@@ -38,7 +48,7 @@ export function DataTable<Row>({ columns, rows, rowKey, rowActions, empty, label
           ))}
           {rowActions && (
             <TableHead className="w-0">
-              <span className="sr-only">Actions</span>
+              <span className="sr-only">{actionsLabel}</span>
             </TableHead>
           )}
         </TableRow>

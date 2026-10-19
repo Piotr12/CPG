@@ -164,4 +164,29 @@ describe("CrudForm", () => {
 
     expect(fireEvent.keyDown(screen.getByLabelText("Username"), { key: "Escape" })).toBe(true);
   });
+
+  it("speaks the caller's language: cancel, form errors and field errors", async () => {
+    const action = vi.fn().mockResolvedValue({ ok: false, error: { code: "CONFLICT", message: "Taken." } });
+    render(
+      <CrudForm
+        fields={fields}
+        schema={schema}
+        action={action}
+        submitLabel="Zapisz"
+        cancelLabel="Anuluj"
+        onCancel={vi.fn()}
+        formatError={({ code }) => `błąd ${code}`}
+        formatFieldError={(message) => `pole: ${message}`}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Anuluj" })).toBeTruthy();
+    fill("Password", "short");
+    fireEvent.click(screen.getByRole("button", { name: "Zapisz" }));
+    expect(screen.getByText("pole: Use at least 12 characters.")).toBeTruthy();
+
+    fill("Password", "a long password");
+    fireEvent.click(screen.getByRole("button", { name: "Zapisz" }));
+    expect((await screen.findByRole("alert")).textContent).toBe("błąd CONFLICT");
+  });
 });

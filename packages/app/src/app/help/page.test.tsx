@@ -22,7 +22,14 @@ describe("HelpPage", () => {
     await renderHelp(undefined);
 
     expect(screen.getByRole("heading", { level: 1, name: "Help" })).toBeTruthy();
-    expect(topicTitles()).toEqual(["Getting started with CPG", "Signing in", "Cave control", "Language and theme", "Using help"]);
+    expect(topicTitles()).toEqual([
+      "Getting started with CPG",
+      "Signing in",
+      "Cave control",
+      "Managing users",
+      "Language and theme",
+      "Using help",
+    ]);
     expect(screen.getByRole("heading", { name: "Signing in" }).closest("section")?.id).toBe("signing-in");
     expect(screen.getByText("Screen: /login")).toBeTruthy();
     expect(screen.queryByRole("link", { name: "Show all topics" })).toBeNull();
@@ -30,13 +37,13 @@ describe("HelpPage", () => {
   });
 
   it("searches on the server with a plain GET form", async () => {
-    await renderHelp("password");
+    await renderHelp("minutes");
 
     const form = screen.getByRole("search") as HTMLFormElement;
     expect(form.getAttribute("action")).toBe("/help");
-    expect((screen.getByRole("searchbox", { name: "Search help" }) as HTMLInputElement).value).toBe("password");
+    expect((screen.getByRole("searchbox", { name: "Search help" }) as HTMLInputElement).value).toBe("minutes");
     expect(topicTitles()).toEqual(["Signing in"]);
-    expect(screen.getByText(/1 topic matches “password”\./)).toBeTruthy();
+    expect(screen.getByText(/1 topic matches “minutes”\./)).toBeTruthy();
     expect(screen.getByRole("link", { name: "Show all topics" }).getAttribute("href")).toBe("/help");
   });
 

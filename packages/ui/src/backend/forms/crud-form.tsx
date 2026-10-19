@@ -36,6 +36,11 @@ export interface CrudFormProps<T> {
   onSuccess?: (data: T) => void;
   /** Shows a Cancel button; `Escape` calls it too. */
   onCancel?: () => void;
+  cancelLabel?: string;
+  /** Turns an error the form shows above its buttons into the reader's language. */
+  formatError?: (error: { code: string; message: string }) => string;
+  /** Turns a field message (from the schema or the server) into the reader's language. */
+  formatFieldError?: (message: string) => string;
 }
 
 /**
@@ -51,6 +56,9 @@ export function CrudForm<T>({
   pendingLabel = "Saving…",
   onSuccess,
   onCancel,
+  cancelLabel = "Cancel",
+  formatError = ({ message }) => message,
+  formatFieldError = (message) => message,
 }: CrudFormProps<T>) {
   const id = useId();
   const [values, setValues] = useState<Record<string, string>>(() =>
@@ -79,10 +87,10 @@ export function CrudForm<T>({
           onSuccess?.(result.data);
           return;
         }
-        const { fieldErrors: serverFieldErrors, message } = result.error;
+        const { fieldErrors: serverFieldErrors } = result.error;
         const named = Object.keys(serverFieldErrors ?? {}).some((name) => fields.some((field) => field.name === name));
         setFieldErrors(serverFieldErrors ?? {});
-        setFormError(named ? null : message);
+        setFormError(named ? null : formatError(result.error));
       });
     });
   }
@@ -118,7 +126,7 @@ export function CrudForm<T>({
             />
             {errors ? (
               <p id={hintId} className="text-sm text-destructive">
-                {errors[0]}
+                {formatFieldError(errors[0])}
               </p>
             ) : (
               field.description && (
@@ -134,7 +142,7 @@ export function CrudForm<T>({
       <div className="flex justify-end gap-2">
         {onCancel && (
           <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
+            {cancelLabel}
           </Button>
         )}
         <Button type="submit" disabled={isPending}>

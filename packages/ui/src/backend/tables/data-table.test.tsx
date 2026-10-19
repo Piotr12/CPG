@@ -55,4 +55,20 @@ describe("DataTable", () => {
     const cell = screen.getByText("No pets").closest("td")!;
     expect(cell.colSpan).toBe(span);
   });
+
+  it("names the actions column in the reader's language", () => {
+    render(
+      <DataTable
+        label="Pets"
+        actionsLabel="Akcje"
+        columns={columns}
+        rows={pets}
+        rowKey={(pet) => pet.id}
+        rowActions={() => null}
+        empty="No pets"
+      />,
+    );
+
+    expect(screen.getByRole("columnheader", { name: "Akcje" })).toBeTruthy();
+  });
 });

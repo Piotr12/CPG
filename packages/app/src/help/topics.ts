@@ -1,7 +1,14 @@
 import type { Locale } from "@cpg/core";
 
 /** Every help topic, in display order. A new screen adds its topic here, in both languages. */
-export const HELP_TOPIC_IDS = ["getting-started", "signing-in", "admin-home", "language-and-theme", "using-help"] as const;
+export const HELP_TOPIC_IDS = [
+  "getting-started",
+  "signing-in",
+  "admin-home",
+  "managing-users",
+  "language-and-theme",
+  "using-help",
+] as const;
 export type HelpTopicId = (typeof HELP_TOPIC_IDS)[number];
 
 /**
@@ -13,6 +20,7 @@ export const HELP_TOPIC_ROUTES: Record<HelpTopicId, string> = {
   "getting-started": "/",
   "signing-in": "/login",
   "admin-home": "/admin",
+  "managing-users": "/admin/users",
   "language-and-theme": "/admin",
   "using-help": "/help",
 };
@@ -48,9 +56,18 @@ const en: Record<HelpTopicId, HelpText> = {
   "admin-home": {
     title: "Cave control",
     body: [
-      "Cave control is the administrator's home page.",
-      "The Database card shows where CPG keeps its data, how many migrations are applied, whether any are still pending, and how many settings are stored.",
+      "Cave control is the home page of every account. Normal users see their name, their language and theme, and Sign out. There is no password change: only the administrator sets passwords.",
+      "The administrator also sees the Users link and the Database card. The card shows where CPG keeps its data, how many migrations are applied, whether any are still pending, and how many settings are stored.",
       "A pending migration normally means CPG is still starting. If it stays, tell whoever runs CPG.",
+    ],
+  },
+  "managing-users": {
+    title: "Managing users",
+    body: [
+      "Only the administrator opens Users. Create user adds a normal user with a username (3–32 lowercase letters, digits, dots, dashes or underscores) and an initial password of at least 12 characters. Tell them the password yourself.",
+      "Reset password, in a user's row menu, sets a new password and signs that user out everywhere at once.",
+      "Deactivate signs the user out everywhere and stops them signing in. Reactivate lets them back in with their current password, so reset it too if the account may have been compromised.",
+      "Users are never deleted: an account stays, so its history keeps its name. The built-in administrator can't be changed here.",
     ],
   },
   "language-and-theme": {
@@ -92,9 +109,18 @@ const pl: Record<HelpTopicId, HelpText> = {
   "admin-home": {
     title: "Kontrola jaskini",
     body: [
-      "Kontrola jaskini to strona startowa administratora.",
-      "Karta Baza danych pokazuje, gdzie CPG przechowuje dane, ile migracji zastosowano, czy jakieś jeszcze oczekują i ile ustawień zapisano.",
+      "Kontrola jaskini to strona startowa każdego konta. Zwykły użytkownik widzi swoją nazwę, język i motyw oraz przycisk Wyloguj. Nie ma tu zmiany hasła: hasła ustawia tylko administrator.",
+      "Administrator widzi też link Użytkownicy i kartę Baza danych. Karta pokazuje, gdzie CPG przechowuje dane, ile migracji zastosowano, czy jakieś jeszcze oczekują i ile ustawień zapisano.",
       "Oczekująca migracja zwykle oznacza, że CPG jeszcze się uruchamia. Jeśli nie znika, powiedz o tym osobie, która utrzymuje CPG.",
+    ],
+  },
+  "managing-users": {
+    title: "Zarządzanie użytkownikami",
+    body: [
+      "Ekran Użytkownicy otwiera tylko administrator. Utwórz użytkownika dodaje zwykłego użytkownika z nazwą (3–32 małe litery, cyfry, kropki, myślniki lub podkreślenia) i hasłem początkowym o długości co najmniej 12 znaków. Przekaż mu hasło osobiście.",
+      "Resetuj hasło w menu wiersza ustawia nowe hasło i od razu wylogowuje tego użytkownika ze wszystkich sesji.",
+      "Dezaktywuj wylogowuje użytkownika ze wszystkich sesji i blokuje logowanie. Aktywuj ponownie wpuszcza go z obecnym hasłem, więc zresetuj je także wtedy, gdy konto mogło zostać przejęte.",
+      "Użytkownicy nigdy nie są usuwani: konto zostaje, więc historia zachowuje jego nazwę. Wbudowanego administratora nie można tu zmienić.",
     ],
   },
   "language-and-theme": {

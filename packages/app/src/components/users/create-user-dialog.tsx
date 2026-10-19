@@ -13,39 +13,36 @@ import {
   DialogTrigger,
 } from "@cpg/ui/components/dialog";
 import { createUser } from "../../app/admin/users/actions";
+import { errorFormatter, fieldErrorFormatter, type UsersLabels } from "./labels";
 
 /** The Create user button and its form (TEN-004). */
-export function CreateUserDialog() {
+export function CreateUserDialog({ labels }: { labels: UsersLabels }) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
+  const t = labels.create;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>Create user</Button>
+        <Button>{t.open}</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create user</DialogTitle>
-          <DialogDescription>
-            They sign in at /login with this username and password. Only you can change the password later.
-          </DialogDescription>
+          <DialogTitle>{t.title}</DialogTitle>
+          <DialogDescription>{t.description}</DialogDescription>
         </DialogHeader>
         <CrudForm
           fields={[
-            { name: "username", label: "Username", autoComplete: "off" },
-            {
-              name: "password",
-              label: "Initial password",
-              type: "password",
-              autoComplete: "new-password",
-              description: "At least 12 characters.",
-            },
+            { name: "username", label: t.username, autoComplete: "off" },
+            { name: "password", label: t.password, type: "password", autoComplete: "new-password", description: t.passwordHint },
           ]}
           schema={createUserSchema}
           action={createUser}
-          submitLabel="Create user"
-          pendingLabel="Creating…"
+          submitLabel={t.submit}
+          pendingLabel={t.submitting}
+          cancelLabel={labels.cancel}
+          formatError={errorFormatter(labels)}
+          formatFieldError={fieldErrorFormatter(labels)}
           onSuccess={close}
           onCancel={close}
         />

@@ -1,5 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import { en } from "../../i18n/messages/en";
+import { pl } from "../../i18n/messages/pl";
 import { UserActions } from "./user-actions";
 
 vi.mock("./reset-password-dialog", () => ({
@@ -28,7 +30,7 @@ function openMenu(username: string) {
 
 describe("UserActions", () => {
   it("offers reset and deactivate for an active user, and never delete", () => {
-    render(<UserActions user={alice} />);
+    render(<UserActions labels={en.users} user={alice} />);
     openMenu("alice");
 
     expect(screen.getAllByRole("menuitem").map((item) => item.textContent)).toEqual(["Reset password", "Deactivate"]);
@@ -36,14 +38,14 @@ describe("UserActions", () => {
   });
 
   it("offers reactivate for an inactive user", () => {
-    render(<UserActions user={{ ...alice, active: false }} />);
+    render(<UserActions labels={en.users} user={{ ...alice, active: false }} />);
     openMenu("alice");
 
     expect(screen.getAllByRole("menuitem").map((item) => item.textContent)).toEqual(["Reset password", "Reactivate"]);
   });
 
   it("opens the matching dialog and closes it again", () => {
-    render(<UserActions user={alice} />);
+    render(<UserActions labels={en.users} user={alice} />);
 
     openMenu("alice");
     fireEvent.click(screen.getByRole("menuitem", { name: "Reset password" }));
@@ -57,11 +59,18 @@ describe("UserActions", () => {
   });
 
   it("opens the reactivate dialog for an inactive user", () => {
-    render(<UserActions user={{ ...alice, active: false }} />);
+    render(<UserActions labels={en.users} user={{ ...alice, active: false }} />);
 
     openMenu("alice");
     fireEvent.click(screen.getByRole("menuitem", { name: "Reactivate" }));
 
     expect(screen.getByRole("button", { name: "close set-active" })).toBeTruthy();
+  });
+
+  it("speaks Polish", () => {
+    render(<UserActions labels={pl.users} user={alice} />);
+    fireEvent.keyDown(screen.getByRole("button", { name: "Akcje dla alice" }), { key: "Enter" });
+
+    expect(screen.getAllByRole("menuitem").map((item) => item.textContent)).toEqual(["Resetuj hasło", "Dezaktywuj"]);
   });
 });
