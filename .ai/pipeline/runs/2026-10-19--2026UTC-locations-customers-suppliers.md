@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-19 20:26 UTC
 **Agent:** Claude Code / claude-opus-5-5. Chain: cezar → `om-auto-fix-issue 23` → feature route → `om-auto-write-spec 23` (spec PR #54) → `om-auto-implement-spec` → `om-auto-create-pr`
-Source doc: .ai/specs/2026-10-19--2014UTC-locations-customers-suppliers.md (spec PR #54; ⚠ Q2 and Q5 await the owner's confirmation)
+Source doc: .ai/specs/implemented/2026-10-19--2014UTC-locations-customers-suppliers.md (spec PR #54, merged; Q2 and Q5 accepted as defaults on the owner's instruction)
 Issue: #23
 
 ## Goal
@@ -41,7 +41,7 @@ In each tenant the admin creates, renames, deactivates and reactivates locations
 
 ## Risks
 
-- **The spec is not on `main` while this is built.** It comes from spec PR #54 and is kept as an untracked file in the worktree. It moves to `implemented/` once #54 merges.
+- **The spec was not on `main` while this was built.** It came from spec PR #54 and was kept as an untracked file in the worktree. Once #54 merged, `main` was merged into this branch and the spec moved to `implemented/`.
 - **⚠ Q2 (the ID format) and ⚠ Q5 await the owner.** This PR stays a draft until they are confirmed. If Q2 changes to admin-typed codes, the services, schemas, routes and seed change. The generic helper keeps that change in one place.
 - **MikroORM generics over three entities** may refuse a union handle without casts. Step 1.2 includes a typecheck spike, with the spec's fallback: a generic descriptor.
 - **Integration test files share one database and one admin** (lessons). Assert only on records the file creates.

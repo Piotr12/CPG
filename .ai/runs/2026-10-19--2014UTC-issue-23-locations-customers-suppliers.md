@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-19 20:14 UTC
 **Agent:** Claude Code (Opus 5.5) via cezar: `om-auto-fix-issue 23` → `om-auto-write-spec 23` → `om-spec-writing --autonomous`
-**Spec:** `.ai/specs/2026-10-19--2014UTC-locations-customers-suppliers.md` (written in this run)
+**Spec:** `.ai/specs/implemented/2026-10-19--2014UTC-locations-customers-suppliers.md` (written in this run; moved to `implemented/` on #56 once #54 merged)
 **Status:** done (spec PR #54 and implementation PR #56 ready for review; Q2 and Q5 accepted as defaults)
 
 ## Goal
@@ -51,6 +51,6 @@
 - `npx vitest run tests/ai-filenames.test.ts` passes. This PR is docs only; the implementation PR #56 ran the full gate (lint, typecheck, test:coverage 100%, build, test:integration).
 
 ## Follow-ups
-- Q2 and Q5 can still be overridden before merge. Merge #54 first; #56 then moves the spec to `implemented/` (merge `main`, `git mv`) and goes through human QA (`needs-qa`).
+- #54 is merged, and #56 moved the spec to `implemented/`. #56 awaits the owner's review and human QA (`needs-qa`).
 - #24's spec must refuse inactive locations and materials in new entries (Q5).
 - The near-identical per-kind page, action and route tests in #56 could share `describe.each` suites.

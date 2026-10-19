@@ -1,6 +1,6 @@
 # The admin maintains locations, customers and suppliers, and every user can view them
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-19 20:14 UTC
 **Issue:** #23 (E03-S02), epic #11 · **Builds on:** `2026-10-19--1858UTC-materials.md` (#22: the sequential ID rule, the tenant list-page pattern, `ConfirmDialog`, `CrudForm` initial values, the startup seed), `2026-10-19--0913UTC-test-prod-tenants.md` (#19), `implemented/2026-10-19--1050UTC-audit-log.md` (#20), `implemented/2026-10-19--1548UTC-api-idempotency.md` (#21) · **Design authority:** `.ai/specs/product-brief.md` (R05, R07, R08, D04–D06), `.ai/specs/research/CPG-prd001.pdf` §02 and §05, `CPG-prd-datamodel.pdf` (Location; Customer / supplier), `CPG-prd-decisions.pdf` §01 (Material/location deactivation; Supplier/customer deactivation), `CPG-acceptance.md` (TEN-001, TEN-004, TEN-012, TEN-014, LFC-019…021, LFC-023, MAT-029, AUD-001…003, API-010, API-029)
 
@@ -180,9 +180,9 @@ Prototype: `.ai/specs/assets/locations-customers-suppliers/` holds static mockup
 - `mockup-02-edit-customer.png`: the Edit customer dialog with a field error.
 - `mockup-03-suppliers-normal-user.png`: the suppliers list as a normal user, with no controls.
 
-![Locations list mockup](assets/locations-customers-suppliers/mockup-01-locations-list.png)
-![Edit customer mockup](assets/locations-customers-suppliers/mockup-02-edit-customer.png)
-![Suppliers as a normal user mockup](assets/locations-customers-suppliers/mockup-03-suppliers-normal-user.png)
+![Locations list mockup](../assets/locations-customers-suppliers/mockup-01-locations-list.png)
+![Edit customer mockup](../assets/locations-customers-suppliers/mockup-02-edit-customer.png)
+![Suppliers as a normal user mockup](../assets/locations-customers-suppliers/mockup-03-suppliers-normal-user.png)
 
 ## 📝 Edge Cases & Failure Scenarios
 
