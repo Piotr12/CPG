@@ -47,8 +47,9 @@ describe("the users API", () => {
       if (adminSecret) {
         const own = (json(await api("GET", "/api/tokens", adminSecret)).data as { id: string; name: string }[]).find(
           (token) => token.name === ADMIN_TOKEN,
-        )!;
-        expect((await write("DELETE", `/api/tokens/${own.id}`, adminSecret)).status).toBe(200);
+        );
+        expect(own).toBeDefined();
+        expect((await write("DELETE", `/api/tokens/${own!.id}`, adminSecret)).status).toBe(200);
       }
     } finally {
       await Promise.all([admin, una].map((browser) => browser.close()));

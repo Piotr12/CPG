@@ -137,6 +137,7 @@ describe("language and theme", () => {
     // afresh without the theme cookie: the account alone must bring back Polish and dark, and the
     // bar writes the account's theme back into the cookie once it has applied it.
     await browser.evaluate(`(() => { document.cookie = "cpg_theme=; Max-Age=0; Path=/"; return true; })()`);
+    expect(await browser.evaluate<boolean>(`document.cookie.includes("cpg_theme=")`)).toBe(false);
     await browser.open(`${baseUrl}/admin/prod`);
     await browser.waitUntil(
       `${shownStrip}?.dataset.tenant === "prod" && ${shownStrip}.innerText.includes("Środowisko Prod") && document.cookie.includes("cpg_theme=")`,

@@ -28,6 +28,7 @@ Add the end-to-end tests issue #52 lists (UX-003, UX-004, UX-007, R11/UX-010, TE
 - 20:45 Opened PR #53 (labels: refactor, skip-qa, priority-low, risk-low); lock handed from the issue to the PR. CI green on `1c6e2a6`.
 - 21:00 Review (separate agent): changes requested, 1 major, 3 minor, 3 nits. Major: the tenant switch couldn't catch a lost theme, because a soft navigation keeps the root layout, whose effect (`DocumentPreferences`) alone sets `<html lang>`/`dark`. Fixed by loading Prod afresh without the `cpg_theme` cookie and asserting the account brings back Polish and dark (and rewrites `cpg_theme=dark`). Also fixed: guarded `afterAll` with an asserted revoke, a hydration-aware `signInAs`/`signedInAndHydrated` in `sign-in.ts`, the shown `h1` in `documentState`, a real allowed write (`theme: dark`) for API-010, and catalogue wording (statuses hold once merged). Declined nit 7 (helper naming follows `sign-in.ts`/`tokens.ts`; `audit.test.ts` walks the create flow on purpose).
 - 21:15 Integration suite re-run after the fixes: 14 files, 91 tests passed.
+- 21:30 Re-review: APPROVE. One new minor (assert the `cpg_theme` cookie really cleared, so a refused delete can't weaken the fresh-load check) and one nit (`expect(own).toBeDefined()` in `afterAll`), both applied. `preferences` + `api-users` integration files re-run: 2 files, 12 tests passed.
 
 ## Changes
 
@@ -45,7 +46,8 @@ Add the end-to-end tests issue #52 lists (UX-003, UX-004, UX-007, R11/UX-010, TE
 - `npm run typecheck` — clean.
 - `npm run test:coverage` — 146 files, 888 tests passed, thresholds met (no product code changed).
 - `npm run build` — succeeded.
-- `npm run test:integration` (Docker image via Testcontainers) — 14 files, 91 tests passed in 111 s.
+- `npm run test:integration` (Docker image via Testcontainers) — 14 files, 91 tests passed in 111 s; again after the review fixes (91 passed); the last two assertion-only changes re-run on the two affected files (12 passed).
+- PR CI on `1c6e2a6`: all five jobs green.
 
 ## Follow-ups
 
