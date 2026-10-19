@@ -1,6 +1,7 @@
 import * as nodeCrypto from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { MIN_PASSWORD_LENGTH } from "./validators/users/create-user.schema";
 
 export interface AppConfig {
   env: "development" | "production" | "test";
@@ -18,7 +19,7 @@ export interface AppConfig {
 }
 
 /** Shorter admin passwords stop the server: a floor against trivially guessable credentials. */
-export const MIN_ADMIN_PASSWORD_LENGTH = 12;
+export const MIN_ADMIN_PASSWORD_LENGTH = MIN_PASSWORD_LENGTH;
 
 /**
  * Reads the app configuration from environment variables.

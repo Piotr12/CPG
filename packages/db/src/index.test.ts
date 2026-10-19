@@ -7,6 +7,7 @@ describe("@cpg/db", () => {
       "Session",
       "Setting",
       "USER_ROLES",
+      "UniqueConstraintViolationException",
       "User",
       "createOrmConfig",
       "entities",

@@ -9,4 +9,5 @@ export * from "./http/server-action";
 export * from "./services/auth/auth.service";
 export * from "./services/auth/login-throttle";
 export * from "./services/system/system-status.service";
+export * from "./services/users/user.service";
 export * from "./singleton";

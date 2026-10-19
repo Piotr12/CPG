@@ -4,6 +4,7 @@ import type { AppConfig } from "../config";
 import type { AuthService } from "../services/auth/auth.service";
 import type { LoginThrottle } from "../services/auth/login-throttle";
 import type { SystemStatusService } from "../services/system/system-status.service";
+import type { UserService } from "../services/users/user.service";
 
 /** Everything the DI container can resolve — one entry per registration in `container.ts`. */
 export interface Cradle {
@@ -14,6 +15,7 @@ export interface Cradle {
   systemStatusService: SystemStatusService;
   loginThrottle: LoginThrottle;
   authService: AuthService;
+  userService: UserService;
 }
 
 export type AppContainer = AwilixContainer<Cradle>;

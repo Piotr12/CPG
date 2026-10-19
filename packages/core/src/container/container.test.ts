@@ -8,6 +8,7 @@ import { toDbOptions } from "../database";
 import { AuthService } from "../services/auth/auth.service";
 import { LoginThrottle } from "../services/auth/login-throttle";
 import { SystemStatusService } from "../services/system/system-status.service";
+import { UserService } from "../services/users/user.service";
 import { createAppContainer, getContainer, requestScope } from "./container";
 
 describe("createAppContainer", () => {
@@ -27,6 +28,7 @@ describe("createAppContainer", () => {
     expect(cradle.systemStatusService).toBeInstanceOf(SystemStatusService);
     expect(cradle.authService).toBeInstanceOf(AuthService);
     expect(cradle.loginThrottle).toBeInstanceOf(LoginThrottle);
+    expect(cradle.userService).toBeInstanceOf(UserService);
   });
 
   it("shares one login throttle across request scopes", () => {
