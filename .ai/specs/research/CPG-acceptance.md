@@ -13,7 +13,7 @@ The original export marked every scenario `Not executed`. Scenarios are updated 
 - **Partially verified**: only part of the scenario can be or is asserted today; the **Evidence** line says which part is missing and why.
 - **Not executed**: not yet built or not yet checked.
 
-Last updated 2026-10-19 for epic E01 (#9), against CI on `main` at `9ea5973`, and for its end-to-end follow-up (#52).
+Last updated 2026-10-19 for epic E01 (#9), against CI on `main` at `9ea5973`, and for its end-to-end follow-up (#52), whose statuses hold once that PR passes CI and merges.
 
 This document contains the complete acceptance catalogue for the CPG MVP. Each test preserves its ID, title, priority, execution channel, and Given / When / Then criteria.
 
@@ -3782,7 +3782,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** UI · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/preferences.test.ts` (Polish kept while switching Test → Prod → Test from the tenant strip). Preferences are a global table, outside tenant scope (`packages/db/src/entities/index.ts`); tenant data stays apart in `packages/db/src/tenants/tenant-isolation.test.ts`. E01-S04, PR #32; #52.
+- **Evidence:** `tests/integration/preferences.test.ts` (Polish kept while switching Test → Prod → Test from the tenant strip, and on Prod opened afresh). Preferences are a global table, outside tenant scope (`packages/db/src/entities/index.ts`); tenant data stays apart in `packages/db/src/tenants/tenant-isolation.test.ts`. E01-S04, PR #32; #52.
 - **Given:** User selects Polish while in Test
 - **When:** Switch to Prod
 - **Then:** Same user's selected language continues; business data still isolated.
@@ -3809,7 +3809,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** UI · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/preferences.test.ts` (dark kept after signing out and in again, and while switching Test → Prod → Test), `packages/app/src/app/login/actions.test.ts`. E01-S04, PR #32; #52.
+- **Evidence:** `tests/integration/preferences.test.ts` (dark kept after signing out and in again, while switching Test → Prod → Test, and on Prod opened afresh without the theme cookie), `packages/app/src/app/login/actions.test.ts`. E01-S04, PR #32; #52.
 - **Given:** User selects dark theme and logs out
 - **When:** Sign in again and visit another tenant
 - **Then:** Account setting retains dark preference.

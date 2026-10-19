@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { callApi, json, type UserRow } from "./api";
 import { openBrowser, type Browser } from "./browser";
-import { signedInAs, signIn, signInAsAdmin } from "./sign-in";
+import { signIn, signInAs, signInAsAdmin } from "./sign-in";
 import { createToken, openTokens } from "./tokens";
 
 const baseUrl = inject("baseUrl");
@@ -20,12 +20,6 @@ const api = (method: string, path: string, secret: string, options?: { key?: str
 const write = (method: string, path: string, secret: string, body?: unknown) =>
   api(method, path, secret, { key: randomUUID(), body });
 
-/** Signs a user in and waits until the menu names them. */
-async function signInAs(browser: Browser, username: string, password: string) {
-  await signIn(browser, baseUrl, password, username);
-  await browser.waitUntil(signedInAs(username));
-}
-
 // The user routes end to end with real bearer tokens: TEN-005, TEN-006, TEN-008, API-010.
 describe("the users API", () => {
   let admin: Browser;
@@ -42,17 +36,23 @@ describe("the users API", () => {
     adminSecret = await createToken(admin, ADMIN_TOKEN);
     expect((await write("POST", "/api/users", adminSecret, { username: UNA, password: UNA_PASSWORD })).status).toBe(200);
 
-    await signInAs(una, UNA, UNA_PASSWORD);
+    await signInAs(una, baseUrl, UNA, UNA_PASSWORD);
     await openTokens(una, baseUrl);
     unaSecret = await createToken(una, "apiu-una-cli");
   });
   afterAll(async () => {
-    // Other files expect the admin to hold no tokens: revoke this file's with itself.
-    const own = (json(await api("GET", "/api/tokens", adminSecret)).data as { id: string; name: string }[]).find(
-      (token) => token.name === ADMIN_TOKEN,
-    )!;
-    await write("DELETE", `/api/tokens/${own.id}`, adminSecret);
-    await Promise.all([admin, una].map((browser) => browser.close()));
+    try {
+      // Other files expect the admin to hold no tokens: revoke this file's with itself. Without one,
+      // beforeAll failed first: leave its error to explain the run.
+      if (adminSecret) {
+        const own = (json(await api("GET", "/api/tokens", adminSecret)).data as { id: string; name: string }[]).find(
+          (token) => token.name === ADMIN_TOKEN,
+        )!;
+        expect((await write("DELETE", `/api/tokens/${own.id}`, adminSecret)).status).toBe(200);
+      }
+    } finally {
+      await Promise.all([admin, una].map((browser) => browser.close()));
+    }
   });
 
   it("refuses a normal user's token on the password route, for their own id too (TEN-005)", async () => {
@@ -82,7 +82,9 @@ describe("the users API", () => {
     }
     expect(await userRow("apiu-mallory")).toBeUndefined();
     expect(await userRow(UNA)).toEqual(before);
-    expect((await write("PATCH", "/api/preferences", unaSecret, { theme: "light" })).status).toBe(200);
+    const own = await write("PATCH", "/api/preferences", unaSecret, { theme: "dark" });
+    expect(own.status).toBe(200);
+    expect(json(own).data).toEqual({ locale: "en", theme: "dark" });
   });
 
   it("offers no way to delete a user, even to the admin (TEN-008)", async () => {
@@ -111,7 +113,7 @@ describe("the users API", () => {
     await una.waitFor("[role=alert]");
     expect(await una.text("[role=alert]")).toBe("Invalid username or password.");
 
-    await signInAs(una, UNA, UNA_NEW_PASSWORD);
+    await signInAs(una, baseUrl, UNA, UNA_NEW_PASSWORD);
     expect(new URL(await una.url()).pathname).toBe("/admin");
   });
 });

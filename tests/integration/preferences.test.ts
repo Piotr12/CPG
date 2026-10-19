@@ -4,8 +4,7 @@ import {
   choosePreference,
   openAccountMenu,
   restoreDefaultPreferences,
-  signedInAs,
-  signIn,
+  signInAs,
   signInAsAdmin,
   signOut,
 } from "./sign-in";
@@ -24,12 +23,12 @@ interface DocumentState {
   heading: string | undefined;
 }
 
-/** What the reader sees: <html lang>, the theme class and the page heading. */
+/** What the reader sees: <html lang>, the theme class and the shown page's heading. */
 const documentState = (browser: Browser) =>
   browser.evaluate<DocumentState>(`({
     lang: document.documentElement.lang,
     isDark: document.documentElement.classList.contains("dark"),
-    heading: document.querySelector("h1")?.textContent,
+    heading: [...document.querySelectorAll("h1")].find((heading) => !heading.closest("[hidden]"))?.textContent,
   })`);
 
 /** Waits until the page shows `heading` in place, without a reload. */
@@ -111,10 +110,8 @@ describe("language and theme", () => {
       ["admin", adminPassword, admin],
     ] as const) {
       await signOut(browser);
-      await signIn(browser, baseUrl, password, username);
-      await browser.waitUntil(
-        `${signedInAs(username)} && [...document.querySelectorAll("h1")].some((heading) => !heading.closest("[hidden]"))`,
-      );
+      await signInAs(browser, baseUrl, username, password);
+      await browser.waitUntil(`[...document.querySelectorAll("h1")].some((heading) => !heading.closest("[hidden]"))`);
 
       expect({ username, ...(await documentState(browser)) }).toEqual({ username, ...expected });
     }
@@ -135,6 +132,18 @@ describe("language and theme", () => {
       expect(new URL(await browser.url()).pathname).toBe(`/admin/${tenant}`);
       expect(await documentState(browser)).toMatchObject({ lang: "pl", isDark: true });
     }
+
+    // A soft navigation keeps the root layout, so <html> still holds what signing in set. Open Prod
+    // afresh without the theme cookie: the account alone must bring back Polish and dark, and the
+    // bar writes the account's theme back into the cookie once it has applied it.
+    await browser.evaluate(`(() => { document.cookie = "cpg_theme=; Max-Age=0; Path=/"; return true; })()`);
+    await browser.open(`${baseUrl}/admin/prod`);
+    await browser.waitUntil(
+      `${shownStrip}?.dataset.tenant === "prod" && ${shownStrip}.innerText.includes("Środowisko Prod") && document.cookie.includes("cpg_theme=")`,
+    );
+
+    expect(await documentState(browser)).toMatchObject({ lang: "pl", isDark: true });
+    expect(await browser.evaluate<string>(`document.cookie`)).toContain("cpg_theme=dark");
   });
 
   // The script's behaviour is unit-tested in jsdom (preferences/theme.test.ts); here, that it ships.
