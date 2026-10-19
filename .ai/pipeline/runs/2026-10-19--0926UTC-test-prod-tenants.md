@@ -81,6 +81,17 @@ Implement E02-S01 as the spec describes:
 - `tests/admin-pages-require-admin.test.ts` is unchanged and covers the new pages. `packages/ui/src/components/button.test.tsx` now links to an external URL: the Next lint rule `no-html-link-for-pages` started flagging its `<a href="/admin">` once `/admin` moved into a route group.
 - The sign-in header became `components/auth/signed-in-bar.tsx`, because two pages use it now.
 
+## Verification
+
+Full gate on 3c75235, all exit 0:
+- `npm run lint`;
+- `npm run typecheck`;
+- `npm run test:coverage`: 62 files, 281 tests, 100% coverage;
+- `npm run build`: `/admin/test` and `/admin/prod` partially prerendered, with the strip and the `Test · …`/`Prod · …` titles in the shell;
+- `npm run test:integration`: 5 files, 26 tests, including `tenants.test.ts` (11).
+
+No dependency changed, so no `npm audit` triage was needed.
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
@@ -100,5 +111,5 @@ Implement E02-S01 as the spec describes:
 
 ### Phase 3: Tenant API
 
-- [ ] 3.1 apiHandler and requireApiUser
-- [ ] 3.2 Metadata routes and full gate
+- [x] 3.1 apiHandler and requireApiUser — 2f9b96b
+- [x] 3.2 Metadata routes and full gate — 3c75235
