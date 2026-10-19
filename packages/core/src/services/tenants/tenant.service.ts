@@ -1,4 +1,4 @@
-import { currentTenant, Tenant, type EntityManager } from "@cpg/db";
+import { currentTenant, Tenant, TenantViolationError, type EntityManager } from "@cpg/db";
 import { NotFoundError } from "../../http/errors";
 import { TENANT_CODES, type TenantCode } from "../../validators/tenants/tenant-code.schema";
 import type { AuditActor } from "../audit/actor";
@@ -83,7 +83,9 @@ export class TenantService {
  * through the request wrappers (the demo seeds), inside their own transaction.
  */
 export async function isScopeReadOnly(em: EntityManager): Promise<boolean> {
-  return (await fresh(em, currentTenant(em)!)).readOnly;
+  const code = currentTenant(em);
+  if (!code) throw new TenantViolationError("check the read-only flag without a tenant scope");
+  return (await fresh(em, code)).readOnly;
 }
 
 /** The tenant row read past the identity map, or `TENANT_NOT_FOUND`. */

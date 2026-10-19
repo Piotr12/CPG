@@ -102,6 +102,15 @@ describe("read-only tenants through the API (R05)", () => {
     });
   });
 
+  it("refuses a master-data write of every kind, a location included", async () => {
+    const created = await write("POST", "/api/tenants/prod/locations", adminSecret, { name: "roapi refused depot" });
+
+    expect(created.status).toBe(409);
+    expect(json(created).error.code).toBe("TENANT_READ_ONLY");
+    const locations = json(await api("GET", "/api/tenants/prod/locations", adminSecret)).data as { name: string }[];
+    expect(locations.map(({ name }) => name)).not.toContain("roapi refused depot");
+  });
+
   it("still reads Prod's data and audit, for every account (TEN-018)", async () => {
     for (const secret of [adminSecret, unaSecret]) {
       expect((await api("GET", "/api/tenants/prod/materials", secret)).status).toBe(200);

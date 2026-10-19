@@ -1,13 +1,13 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { GlobalAuditEvent, initOrm, migrate, Tenant, type Orm } from "@cpg/db";
+import { GlobalAuditEvent, initOrm, migrate, selectTenant, Tenant, TenantViolationError, type Orm } from "@cpg/db";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { loadConfig } from "../../config";
 import { toDbOptions } from "../../database";
 import { NotFoundError } from "../../http/errors";
 import type { AuditActor } from "../audit/actor";
-import { TENANT_NAMES, TenantService } from "./tenant.service";
+import { isScopeReadOnly, TENANT_NAMES, TenantService } from "./tenant.service";
 
 describe("TenantService", () => {
   let orm: Orm;
@@ -129,6 +129,23 @@ describe("TenantService", () => {
 
       await expect(service().setReadOnly("prod", true, admin)).rejects.toMatchObject({ code: "TENANT_NOT_FOUND" });
       expect(await audit()).toEqual([]);
+    });
+  });
+
+  describe("isScopeReadOnly", () => {
+    it("reads the scope's own tenant flag, fresh", async () => {
+      const em = orm.em.fork();
+      selectTenant(em, "test");
+      await em.findOneOrFail(Tenant, { code: "test" });
+      await orm.em.fork().nativeUpdate(Tenant, { code: "prod" }, { readOnly: true });
+
+      await expect(isScopeReadOnly(em)).resolves.toBe(false);
+      await orm.em.fork().nativeUpdate(Tenant, { code: "test" }, { readOnly: true });
+      await expect(isScopeReadOnly(em)).resolves.toBe(true);
+    });
+
+    it("refuses an EntityManager with no tenant scope", async () => {
+      await expect(isScopeReadOnly(orm.em.fork())).rejects.toBeInstanceOf(TenantViolationError);
     });
   });
 });
