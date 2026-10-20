@@ -28,4 +28,15 @@ describe("importLabels", () => {
     expect(labels.errors.TENANT_READ_ONLY).toBe(en.errors.TENANT_READ_ONLY);
     expect("heading" in labels).toBe(false);
   });
+
+  it("holds only plain data, as a client component's props must (functions would fail the page)", () => {
+    const functions = (value: unknown, at: string): string[] => {
+      if (typeof value === "function") return [at];
+      if (value && typeof value === "object") return Object.entries(value).flatMap(([key, child]) => functions(child, `${at}.${key}`));
+      return [];
+    };
+
+    expect(functions(importLabels(en), "en")).toEqual([]);
+    expect(functions(importLabels(pl), "pl")).toEqual([]);
+  });
 });

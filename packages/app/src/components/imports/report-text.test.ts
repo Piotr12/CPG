@@ -3,7 +3,7 @@ import { ID_FORMAT_MESSAGE } from "@cpg/core/validators/imports/import-rows.sche
 import { en } from "../../i18n/messages/en";
 import { pl } from "../../i18n/messages/pl";
 import { importLabels } from "./labels";
-import { changeText, createdText, problemText } from "./report-text";
+import { changeText, counted, createdText, problemText } from "./report-text";
 
 const issue = (code: string, message: string, params?: Record<string, string | number>) => ({ sheet: "Materials", row: 2, column: "ID", code, message, params });
 
@@ -54,5 +54,14 @@ describe("changeText and createdText", () => {
         labels,
       ),
     ).toBe("raw · yes · 00000001 4.500000 kg");
+  });
+});
+
+describe("counted", () => {
+  it("picks the form for the count in each language", () => {
+    expect([1, 2].map((count) => counted(en.imports.commit.button, count))).toEqual(["Commit 1 change", "Commit 2 changes"]);
+    expect([1, 3].map((count) => counted(pl.imports.preview.showUnchanged, count))).toEqual(["Pokaż 1 wiersz bez zmian", "Pokaż wiersze bez zmian (3)"]);
+    expect(counted(en.imports.commit.text, 1, { tenant: "Test" })).toMatch(/^The change is written to Test in one transaction/);
+    expect(counted(pl.imports.upload.problems, 4)).toMatch(/^Znalezione problemy: 4\./);
   });
 });

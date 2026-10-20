@@ -15,7 +15,7 @@ import { errorMessage } from "../../i18n/error-message";
 import { fill } from "../forms/form-labels";
 import { fileToBase64 } from "./base64";
 import type { ImportLabels } from "./labels";
-import { changeText, createdText, problemText } from "./report-text";
+import { changeText, counted, createdText, problemText } from "./report-text";
 
 interface ImportScreenProps {
   tenant: { code: string; name: string; generation: number; readOnly: boolean };
@@ -208,7 +208,7 @@ export function ImportScreen({ tenant, labels }: ImportScreenProps) {
             />
             {report.errors.length > 0 ? (
               <>
-                <ErrorMessage>{t.upload.problems(report.errors.length)}</ErrorMessage>
+                <ErrorMessage>{counted(t.upload.problems, report.errors.length)}</ErrorMessage>
                 <DataTable
                   label={t.problems.problem}
                   rows={report.errors.map((issue, index) => ({ issue, index }))}
@@ -240,7 +240,7 @@ export function ImportScreen({ tenant, labels }: ImportScreenProps) {
                 {unchanged > 0 && !showUnchanged && (
                   <div>
                     <Button type="button" variant="ghost" size="sm" onClick={() => setShowUnchanged(true)}>
-                      {t.preview.showUnchanged(unchanged)}
+                      {counted(t.preview.showUnchanged, unchanged)}
                     </Button>
                   </div>
                 )}
@@ -289,12 +289,12 @@ export function ImportScreen({ tenant, labels }: ImportScreenProps) {
         ) : (
           <>
             {report?.previewToken && changed.length > 0 && (
-              <p className="text-sm text-muted-foreground">{t.commit.text(changed.length, tenant.name)}</p>
+              <p className="text-sm text-muted-foreground">{counted(t.commit.text, changed.length, { tenant: tenant.name })}</p>
             )}
             {report?.previewToken && changed.length === 0 && <p className="text-sm text-muted-foreground">{t.commit.nothing}</p>}
             <div>
               <Button type="button" onClick={() => run("commit")} disabled={blocked || busy || !report?.previewToken || changed.length === 0}>
-                {running === "commit" ? t.commit.committing : t.commit.button(changed.length)}
+                {running === "commit" ? t.commit.committing : counted(t.commit.button, changed.length)}
               </Button>
             </div>
           </>

@@ -35,6 +35,17 @@ The admin downloads one documented `.xlsx` template (a sheet per master plus BOM
 - **The lock window** of the apply pass: measured in step 2.3.
 - **Integration test files share one database and one admin** (lessons): assert only on records this file creates; use Prod.
 
+## Deviations from the spec
+
+- **The identity map is cleared after every row, not only after a refused one.** The first API integration run measured the 2,000-row dry run at 17.9 s. The map grew with every applied row, and each flush walked all of it. Every row now starts from an empty map: 0.4 s locally for 2,000 rows (`runRow`, with a regression test).
+- **An import reference needs at least one letter** (the spec said "never eight digits"). In a BOM line's BOM column, digits are always read as a BOM ID, so a digits-only reference could never be named.
+- **Issues carry language-neutral params for the screen:** `record` (the record kind) on unknown-ID and missing-reference errors, `rows` as a plain list (`2, 4, 6`), and `bom` on a line without a header. The screen translates every import code and every field message the import can carry; a service code without a translation shows the server's English message.
+- **The template doesn't format the ID columns as text.** A column with no cells can't carry a format in `write-excel-file`. The importer zero-pads numeric IDs instead (spec Q9), so a typed `1` still reads as `00000001`.
+- **The sidebar's Import entry has no lock icon while the tenant is read-only.** The sidebar renders its entries generically; the page shows the read-only message and disables the upload and the commit (spec Q11). The read-only text points to the Tenants page, as the sidebar labels it.
+- **`canonicalJson` moved to `core/src/domain/json/`** (re-exported from the fingerprint module, unchanged), so the domain's preview token doesn't import a service.
+- **`errorFormatter` in `components/boms/labels.ts` takes `Pick<BomsLabels, "errors">`**, so the import screen reuses the cycle and priority-clash details. No behaviour change.
+- **The screen's count strings are functions** (`Commit 1 change`, `Show 2 unchanged rows`), and Polish keeps counts in parentheses.
+
 ## Implementation Plan
 
 ### Phase 1 — Engine
@@ -74,13 +85,13 @@ The admin downloads one documented `.xlsx` template (a sheet per master plus BOM
 
 ### Phase 2: Workbook and API
 
-- [ ] 2.1 Adapter and dependencies
-- [ ] 2.2 Routes and BACKWARD_COMPATIBILITY.md
-- [ ] 2.3 API integration tests and the 2,000-row measurement
+- [x] 2.1 Adapter and dependencies — 9607bd5
+- [x] 2.2 Routes and BACKWARD_COMPATIBILITY.md — b87263d
+- [x] 2.3 API integration tests and the 2,000-row measurement — ed1aaf9
 
 ### Phase 3: Screen
 
-- [ ] 3.1 Actions
-- [ ] 3.2 Screen components
-- [ ] 3.3 Page, navigation, i18n, help
+- [x] 3.1 Actions — c746f19
+- [x] 3.2 Screen components — c746f19
+- [x] 3.3 Page, navigation, i18n, help — c746f19
 - [ ] 3.4 Screen integration tests and the full gate

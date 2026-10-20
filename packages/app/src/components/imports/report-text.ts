@@ -45,3 +45,8 @@ export function createdText(changes: ImportChange[], labels: ImportLabels): stri
     .map(({ field, after }) => (field.startsWith("Component ") ? `${field.slice("Component ".length)} ${String(after)}` : shown(after, labels)))
     .join(" · ");
 }
+
+/** A count's sentence: its `one` form for 1, its `other` form otherwise, with `{count}` and `values` filled. */
+export function counted(forms: { one: string; other: string }, count: number, values: Record<string, string> = {}): string {
+  return fill(count === 1 ? forms.one : forms.other, { ...values, count: String(count) });
+}

@@ -67,13 +67,15 @@ describe("the Import screen", () => {
 
   beforeAll(async () => {
     admin = openBrowser();
+    // The sidebar shows every entry at this size, as in navigation.test.ts.
+    await admin.setViewport(1280, 800);
     await signInAsAdmin(admin, baseUrl, adminPassword);
   });
   afterAll(() => admin.close());
 
   it("opens from the sidebar for the admin, and serves the template", async () => {
     await admin.open(`${baseUrl}/admin/prod/materials`);
-    await clickHydrated(admin, "a[href='/admin/prod/import']");
+    await clickHydrated(admin, "[data-slot=sidebar] [data-slot=sidebar-menu] a[href='/admin/prod/import']");
     await admin.waitForText("Import from spreadsheet — Prod");
 
     expect(await admin.evaluate<string>(`document.querySelector('main a[download]').getAttribute("href")`)).toBe("/api/import/template");
@@ -173,6 +175,8 @@ describe("the Import screen", () => {
     const una = openBrowser();
     try {
       await signIn(una, baseUrl, PASSWORD, USERNAME);
+      // signIn doesn't wait for the page it lands on: open nothing before the session exists.
+      await una.waitForText(USERNAME);
       await una.open(`${baseUrl}/admin/prod/materials`);
       await una.waitForText("Materials — Prod");
       expect(await una.evaluate<number>(`document.querySelectorAll("a[href='/admin/prod/import']").length`)).toBe(0);

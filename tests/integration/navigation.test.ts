@@ -99,6 +99,7 @@ const ADMIN_TREE = [
   { label: "Planning parameters", href: "/admin/test/planning-parameters" },
   { label: "Safety stock", href: "/admin/test/safety-stock" },
   { label: "BOMs", href: "/admin/test/boms" },
+  { label: "Import", href: "/admin/test/import" },
   { label: "Audit", href: "/admin/test/audit" },
   { label: "Users", href: "/admin/users" },
   { label: "Tenants", href: "/admin" },

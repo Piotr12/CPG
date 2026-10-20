@@ -707,20 +707,24 @@ export const en = {
       file: "Workbook (.xlsx, at most 512 KB)",
       run: "Run dry run",
       running: "Running the dry run…",
-      problems: (count: number) =>
-        `${count} ${count === 1 ? "problem" : "problems"} found. Fix these rows and run the dry run again: nothing can be committed while any row fails.`,
+      problems: {
+        one: "1 problem found. Fix this row and run the dry run again: nothing can be committed while any row fails.",
+        other: "{count} problems found. Fix these rows and run the dry run again: nothing can be committed while any row fails.",
+      },
     },
     summary: { sheet: "Sheet", created: "Created", updated: "Updated", unchanged: "Unchanged", errors: "Errors" },
     problems: { sheet: "Sheet", row: "Row", column: "Column", problem: "Problem" },
-    preview: { sheet: "Sheet", row: "Row", action: "Action", record: "Record", changes: "Changes", showUnchanged: (count: number) => `Show ${count} unchanged ${count === 1 ? "row" : "rows"}` },
+    preview: { sheet: "Sheet", row: "Row", action: "Action", record: "Record", changes: "Changes", showUnchanged: { one: "Show 1 unchanged row", other: "Show {count} unchanged rows" } },
     actions: { create: "Create", update: "Update", unchanged: "Unchanged" },
     results: { create: "Created", update: "Updated", unchanged: "Unchanged" },
     change: { added: "added", removed: "removed", empty: "—", yes: "yes", no: "no" },
     commit: {
       title: "3. Commit",
-      text: (count: number, tenant: string) =>
-        `${count === 1 ? "The change is" : `All ${count} changes are`} written to ${tenant} in one transaction, or none is. If anything they use was edited since this dry run, the commit is refused and you run the dry run again.`,
-      button: (count: number) => `Commit ${count} ${count === 1 ? "change" : "changes"}`,
+      text: {
+        one: "The change is written to {tenant} in one transaction, or not at all. If anything it uses was edited since this dry run, the commit is refused and you run the dry run again.",
+        other: "All {count} changes are written to {tenant} in one transaction, or none is. If anything they use was edited since this dry run, the commit is refused and you run the dry run again.",
+      },
+      button: { one: "Commit 1 change", other: "Commit {count} changes" },
       committing: "Committing…",
       nothing: "Nothing to change.",
       done: "Imported into {tenant}: {created} created, {updated} updated, {unchanged} unchanged.",
