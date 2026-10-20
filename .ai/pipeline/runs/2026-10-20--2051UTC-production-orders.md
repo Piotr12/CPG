@@ -26,17 +26,18 @@ Revision drift, historical revaluation and tenant isolation. Retain stored revis
 - Spec-stage lint passed with one pre-existing BOM unused-import warning; 6 metadata tests passed. npm ci used unchanged lockfile (913 packages; 10 known advisories).
 
 ## Verification
-Pending implementation.
+- Phase 1: 12 targeted files, 68 tests passed; scoped ESLint passed (unused snapshot aliases subsequently replaced by explicit allowlist); typecheck passed. Initial full-unit pass exposed three migration count expectations, now corrected and passing.
+- Generated migration is additive only; tested up/down and existing-schema adoption. No persisted production database touched.
 
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Domain and persistence
-- [ ] 1.1 Entity, migration and isolation
-- [ ] 1.2 Strict schemas and exact scheduling/requirements
-- [ ] 1.3 Service and SQLite behaviour
-- [ ] 1.4 Usage guards and shared demo/reset seed
+- [x] 1.1 Entity, migration and isolation — 33241f3
+- [x] 1.2 Strict schemas and exact scheduling/requirements — 33241f3
+- [x] 1.3 Service and SQLite behaviour — 33241f3
+- [x] 1.4 Usage guards and shared demo/reset seed — 33241f3
 
 ### Phase 2: Delivery surfaces
 - [ ] 2.1 API/actions and contract
