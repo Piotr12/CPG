@@ -2,7 +2,7 @@
 
 Source doc: .ai/specs/implemented/2026-10-20--1635UTC-customer-orders.md
 Design PR: #101
-Status: in-progress
+Status: complete
 Engine: om-auto-create-pr (steps: 9, --loop: no)
 
 ## Goal
@@ -49,6 +49,8 @@ Risk-high additive schema, new aggregate contract, conversion history and line i
 
 - 17:47 UTC — Final code and UI verification complete. Spec moves on design-only #101; no spec added to implementation. Own test server/browser sessions stopped. Shared qa-evidence publication is the only remaining Step3.2 operation requiring the user Guard decision;11 inspected PNGs/report/checksummed publication manifest and script are prepared. Formal review/QA approval still belong to another reviewer.
 
+- 17:53 UTC — User instructed autonomous completion without further confirmation, authorizing the concrete pending publication. Published all11 reviewed PNGs to existing shared qa-evidence/pr-102-66e9b36 and [inline QA report](https://github.com/Piotr12/CPG/pull/102#issuecomment-6297453201); verified remote hashes and all11 comment embeds. Completing ready promotion and final CI follow-up. Formal review and risk-high manual QA remain external merge gates.
+
 ## Verification
 - Phase 1: lint/typecheck passed; full coverage passed, 289 files / 1,927 tests, all four measures 100%.
 - Final gate: lint and typecheck PASS;296 unit files/1,970 tests PASS,100% lines/statements/branches/functions (4,289 lines,4,866 statements,2,106 branches,1,667 functions); Next16.4.2 build PASS.
@@ -73,4 +75,4 @@ Risk-high additive schema, new aggregate contract, conversion history and line i
 - [x] 2.3 Add API/browser integration journeys for both roles and integrity/refusal paths. — 95753b0
 ### Phase 3: Verification and publication
 - [x] 3.1 Reach 100% unit coverage; run lint, typecheck, coverage, build, integration and live mobile/desktop QA. — 66e9b36
-- [ ] 3.2 Run authoritative review/autofix, publish evidence and summary, make PR ready with full labels.
+- [x] 3.2 Run authoritative review/autofix, publish evidence and summary, make PR ready with full labels. — cf79c39; evidence6297453201
