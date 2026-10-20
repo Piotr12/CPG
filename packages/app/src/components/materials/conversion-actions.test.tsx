@@ -35,7 +35,7 @@ describe("ConversionActions", () => {
     expect(screen.getAllByRole("menuitem").map((item) => item.textContent)).toEqual(["Change factor", "Remove"]);
   });
 
-  it("changes the factor from a prefilled form, at the conversion's version (MAT-027)", async () => {
+  it("changes the factor from a prefilled form, at the conversion's version", async () => {
     mocks.changeConversion.mockResolvedValue({ ok: true, data: {} });
     render(<ConversionActions material={bolt} conversion={caseConversion} context={context} labels={materialsLabels(en)} />);
 
