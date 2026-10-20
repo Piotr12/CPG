@@ -15,6 +15,13 @@ export const IMPORT_ROWS_MAX = 2000;
 /** The most bytes a workbook may inflate to, counted while inflating (Q10). */
 export const IMPORT_INFLATED_MAX_BYTES = 20 * 1024 * 1024;
 
+/**
+ * The most cells a workbook's sheets may span, all sheets together: each sheet's last row times its
+ * last filled column. The reader pads every row out to that column and fills every gap row, so a
+ * tiny file with one cell far away would otherwise exhaust the server's memory (Q10).
+ */
+export const IMPORT_CELLS_MAX = 200_000;
+
 /** The longest import reference of a new BOM (Q8). */
 export const IMPORT_REFERENCE_MAX = 40;
 

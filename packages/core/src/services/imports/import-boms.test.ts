@@ -1,10 +1,15 @@
-import type { MaterialType } from "@cpg/db";
+import { TenantAuditEvent, type MaterialType } from "@cpg/db";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { scopeForTenant } from "../../container/tenant-scope";
 import { prepareImport } from "../../domain/imports/prepare-import";
 import { inRequestTransaction } from "../../http/request-transaction";
 import type { Cell } from "../../domain/imports/cells";
-import { BOM_OUTPUT_IMMUTABLE_MESSAGE, RAW_OUTPUT_MESSAGE, UNIT_NOT_CONVERTIBLE_MESSAGE } from "../../validators/boms/bom-fields.schema";
+import {
+  BOM_OUTPUT_IMMUTABLE_MESSAGE,
+  DUPLICATE_COMPONENT_MESSAGE,
+  RAW_OUTPUT_MESSAGE,
+  UNIT_NOT_CONVERTIBLE_MESSAGE,
+} from "../../validators/boms/bom-fields.schema";
 import type { ComponentLine } from "../boms/bom.service";
 import { ACTOR, importKit, sheet, type ImportKit } from "./import-test-kit";
 
@@ -154,7 +159,7 @@ describe("new BOMs", () => {
     ]);
   });
 
-  it("uses materials an earlier sheet creates, whatever the tab order (XLS-008)", async () => {
+  it("uses materials an earlier sheet creates, whatever the tab order", async () => {
     const workbook = [
       sheet("bomLines", line("R1", 7, 3)),
       sheet("bomHeaders", header(null, "R1", 6)),
@@ -166,6 +171,23 @@ describe("new BOMs", () => {
       ["Materials", "00000007"],
       ["BOM headers", "00000001"],
     ]);
+  });
+
+  it("applies no sheet of a workbook whose BOM lines name an unknown material (XLS-026)", async () => {
+    const workbook = [
+      sheet("materials", [null, "raw", "Glue", "kg", null]),
+      sheet("bomHeaders", header(null, "R1", 4)),
+      sheet("bomLines", line("R1", 1, 2, "kg"), line("R1", 41, 1)),
+    ];
+    const report = await kit.dryRun(workbook);
+    expect(report.errors.map((error) => [error.sheet, error.row, error.column, error.code])).toEqual([
+      ["BOM lines", 3, "Component material ID", "IMPORT_MISSING_REFERENCE"],
+    ]);
+    expect(report.previewToken).toBeNull();
+
+    await expect(kit.commit(workbook, "d".repeat(64))).rejects.toMatchObject({ code: "IMPORT_STALE" });
+    expect((await kit.write(({ materialService }) => materialService.list())).length).toBe(6);
+    expect(await kit.write(({ bomService }) => bomService.list())).toEqual([]);
   });
 
   it("lets a fatal failure loading the output or a line's material through", async () => {
@@ -225,7 +247,11 @@ describe("existing BOMs", () => {
       ],
       { priority: 2 },
     );
+    const audits = await kit.auditCount();
     const dryRun = await kit.dryRun(workbook);
+    // The dry run revises nothing (XLS-010).
+    expect((await bom("00000001")).revision).toBe(2);
+    expect(await kit.auditCount()).toBe(audits);
     expect(dryRun.rows[0].changes).toEqual([
       { field: "Revision", before: 2, after: 3 },
       { field: "Component 00000001", before: "2.000000 kg", after: "2.500000 kg" },
@@ -241,12 +267,46 @@ describe("existing BOMs", () => {
     expect((await revision("00000001", 1)).priority).toBe(1);
   });
 
-  it("toggles the active flag of an unchanged recipe without a revision (XLS-028)", async () => {
+  it("toggles the active flag of an unchanged recipe without a revision, audited (XLS-028)", async () => {
+    const audits = await kit.auditCount();
     const workbook = panel(SAME, { active: "no" });
     const dryRun = await kit.dryRun(workbook);
     expect(dryRun.rows[0]).toMatchObject({ action: "update", changes: [{ field: "Active", before: true, after: false }] });
     await kit.commit(workbook, dryRun.previewToken!);
     expect([(await bom("00000001")).active, (await bom("00000001")).revision]).toEqual([false, 1]);
+    expect(await kit.auditCount()).toBe(audits + 1);
+    const entries = await kit.write(({ em }) => em.find(TenantAuditEvent, { action: { $like: "boms.bom.%" } }, { orderBy: { occurredAt: "desc", id: "desc" } }));
+    expect(entries[0]).toMatchObject({ action: "boms.bom.deactivated", subjectId: "00000001", before: { active: true }, after: { active: false } });
+  });
+
+  it("refuses to reactivate a BOM whose priority an active alternative now holds (XLS-028)", async () => {
+    await kit.write(async ({ bomService }) => {
+      await bomService.update("00000001", { active: false }, (await bomService.get("00000001")).version, ACTOR);
+      await bomService.create({ output: "00000004", priority: 1, validFrom: "2027-01-01", validThrough: null, components: [recipe("00000001", "3", "kg")] }, ACTOR);
+    });
+    const report = await kit.dryRun(panel(SAME, { active: "yes" }));
+    expect(report.errors).toEqual([
+      expect.objectContaining({ sheet: "BOM headers", row: 2, column: "Priority", code: "BOM_PRIORITY_CONFLICT" }),
+    ]);
+    expect(report.previewToken).toBeNull();
+    expect([(await bom("00000001")).active, (await bom("00000001")).revision]).toEqual([false, 1]);
+  });
+
+  it("refuses a new alternative at the priority an existing BOM holds over the same dates (XLS-023)", async () => {
+    const workbook = [sheet("bomHeaders", header(null, "R1", 4)), sheet("bomLines", line("R1", 1, 3, "kg"))];
+    const report = await kit.dryRun(workbook);
+    expect(report.errors).toEqual([
+      expect.objectContaining({ sheet: "BOM headers", row: 2, column: "Priority", code: "BOM_PRIORITY_CONFLICT" }),
+    ]);
+    await expect(kit.commit(workbook, "e".repeat(64))).rejects.toMatchObject({ code: "IMPORT_STALE" });
+    expect((await kit.write(({ bomService }) => bomService.list())).map(({ id }) => id)).toEqual(["00000001"]);
+  });
+
+  it("places a component repeated in one recipe on its later line (spec Q5)", async () => {
+    const report = await kit.dryRun(panel([[1, 2, "kg"], [2, 1], [1, 1, "kg"]]));
+    expect(report.errors).toEqual([
+      { sheet: "BOM lines", row: 4, column: "Component material ID", code: "VALIDATION_FAILED", message: DUPLICATE_COMPONENT_MESSAGE },
+    ]);
   });
 
   it("names a header's import reference in its outcome, and refuses a changed output or an unknown ID", async () => {
@@ -270,7 +330,7 @@ describe("existing BOMs", () => {
     ]);
   });
 
-  it("refuses a recipe that closes a cycle, with its path, and applies nothing (XLS-024, XLS-026)", async () => {
+  it("refuses a recipe that closes a cycle, with its full path, and applies no sheet (XLS-024)", async () => {
     await kit.write(({ bomService }) =>
       bomService.create({ output: "00000006", priority: 1, validFrom: "2027-01-01", validThrough: null, components: [recipe("00000004", "1", "each")] }, ACTOR),
     );
@@ -281,7 +341,13 @@ describe("existing BOMs", () => {
     ];
     const report = await kit.dryRun(workbook);
     expect(report.errors).toEqual([
-      expect.objectContaining({ sheet: "BOM headers", row: 2, column: null, code: "BOM_CYCLE", message: expect.stringContaining("→(BOM 00000002)") }),
+      expect.objectContaining({
+        sheet: "BOM headers",
+        row: 2,
+        column: null,
+        code: "BOM_CYCLE",
+        message: "This recipe would make a cycle: 00000004 Panel →(BOM 00000001) 00000006 Frame →(BOM 00000002) 00000004 Panel.",
+      }),
     ]);
     await expect(kit.commit(workbook, "c".repeat(64))).rejects.toMatchObject({ code: "IMPORT_STALE" });
     expect((await kit.write(({ materialService }) => materialService.list())).length).toBe(6);

@@ -78,7 +78,7 @@ describe("prepareImport — layout", () => {
     ]);
   });
 
-  it("applies the template's order whatever the tab order (XLS-008)", () => {
+  it("applies the template's order whatever the tab order", () => {
     const result = prepareImport([sheet("locations", [null, "Cave"]), sheet("materials", [null, "raw", "Steel", "kg", null])]);
     expect(result.sheets).toEqual(["materials", "locations"]);
     expect(result.cells.map((cell) => cell.sheet)).toEqual(["Materials", "Locations"]);
@@ -163,7 +163,7 @@ describe("prepareImport — duplicate keys (XLS-005)", () => {
 describe("prepareImport — BOMs (spec Q8)", () => {
   const header = (id: Cell, reference: Cell, output: Cell = 5, active: Cell = null): Cell[] => [id, reference, output, 1, "2027-01-01", null, active];
 
-  it("groups each header's lines, by import reference or BOM ID, in sheet order (XLS-018, XLS-019)", () => {
+  it("groups each header's lines, by import reference or BOM ID, in sheet order", () => {
     const result = prepareImport([
       sheet("bomHeaders", header(null, "RECIPE-A"), header(null, "RECIPE-B"), header(2, null, null)),
       sheet("bomLines", ["RECIPE-A", 1, 4.5, null], ["RECIPE-B", 3, "250", "ml"], [2, 4, 2, "each"], ["RECIPE-A", 3, "0.25", "l"]),

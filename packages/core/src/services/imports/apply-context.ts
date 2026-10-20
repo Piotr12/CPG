@@ -116,7 +116,7 @@ export async function runRow(
   } finally {
     // Every row starts from an empty identity map. After a refusal, nothing the refused call loaded or
     // changed can be flushed later; after a success, everything is already flushed, and a map grown by
-    // every earlier row would make each flush slower: a 2,000-row dry run took 14 s instead of 0.4 s.
+    // every earlier row would make each flush slower: a 2,000-row dry run took 17.9 s instead of 0.4 s.
     context.em.clear();
   }
 }

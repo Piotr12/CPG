@@ -19,6 +19,7 @@ describe("@cpg/core", () => {
       "GENERATION_HEADER",
       "IDEMPOTENCY_KEY_HEADER",
       "IDEMPOTENCY_TTL_MS",
+      "IMPORT_CELLS_MAX",
       "IMPORT_FILE_MAX_BYTES",
       "IMPORT_INFLATED_MAX_BYTES",
       "IMPORT_REFERENCE_MAX",

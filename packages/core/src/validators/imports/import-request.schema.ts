@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  IMPORT_CELLS_MAX,
   IMPORT_FILE_MAX_BYTES,
   IMPORT_INFLATED_MAX_BYTES,
   IMPORT_ROWS_MAX,
@@ -15,6 +16,7 @@ export const WORKBOOK_UNREADABLE_MESSAGE =
   "This file isn't a readable .xlsx workbook.";
 export const WORKBOOK_TOO_MANY_ROWS_MESSAGE = `This workbook has more than ${IMPORT_ROWS_MAX} rows. Split it into several imports.`;
 export const WORKBOOK_INFLATES_TOO_MUCH_MESSAGE = `This workbook unpacks to more than ${IMPORT_INFLATED_MAX_BYTES / 1024 / 1024} MB.`;
+export const WORKBOOK_TOO_MANY_CELLS_MESSAGE = `This workbook's sheets span more than ${IMPORT_CELLS_MAX} cells. Delete anything outside the rows and columns you import.`;
 export const PREVIEW_TOKEN_MESSAGE =
   "Run a dry run first, then commit with its previewToken.";
 

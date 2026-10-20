@@ -13,7 +13,7 @@ The original export marked every scenario `Not executed`. Scenarios are updated 
 - **Partially verified**: only part of the scenario can be or is asserted today; the **Evidence** line says which part is missing and why.
 - **Not executed**: not yet built or not yet checked.
 
-Last updated 2026-10-20 for epic E04 (#12), against `main` at `082f2d5` (PR #70 for E04-S01), plus the tests added with that update. Earlier: epic E03 (#11) against `3f553a5`, and the E02 end-to-end follow-up (#67); epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
+Last updated 2026-10-20 for epic E05 (#13), against `main` at `2a2976a` (PR #99 for E05-S01), plus the tests and the workbook cell limit added with that update. Earlier: epic E04 (#12) against `082f2d5`; epic E03 (#11) against `3f553a5`, and the E02 end-to-end follow-up (#67); epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
 
 This document contains the complete acceptance catalogue for the CPG MVP. Each test preserves its ID, title, priority, execution channel, and Given / When / Then criteria.
 
@@ -50,7 +50,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** Creation and sign-in: `tests/integration/users.test.ts`, `packages/core/src/services/users/user.service.test.ts`. The normal user is refused every admin-only operation (`tests/integration/api-tokens.test.ts`, `packages/core/src/http/auth.test.ts`) and every master-data write: through the UI (`tests/integration/materials.test.ts`, `named-records.test.ts`, `planning-parameters.test.ts` and `boms.test.ts` show no controls; every master's `actions.test.ts`, BOMs included, refuses all its writes), and through the API, end to end for a write of each master (`tests/integration/materials-api.test.ts`, `named-records-api.test.ts`, `planning-parameters-api.test.ts`, `boms-api.test.ts`) and for every write in the routes' `route.test.ts` files, while still reading. E01-S02, PR #34, with #22, #23, #24 and #26.
+- **Evidence:** Creation and sign-in: `tests/integration/users.test.ts`, `packages/core/src/services/users/user.service.test.ts`. The normal user is refused every admin-only operation (`tests/integration/api-tokens.test.ts`, `packages/core/src/http/auth.test.ts`) and every master-data write: through the UI (`tests/integration/materials.test.ts`, `named-records.test.ts`, `planning-parameters.test.ts` and `boms.test.ts` show no controls; every master's `actions.test.ts`, BOMs included, refuses all its writes), and through the API, end to end for a write of each master (`tests/integration/materials-api.test.ts`, `named-records-api.test.ts`, `planning-parameters-api.test.ts`, `boms-api.test.ts`) and for every write in the routes' `route.test.ts` files, while still reading. The import too: `tests/integration/import.test.ts` (no Import entry; the screen sends a normal user away) and `tests/integration/import-api.test.ts` (their token's dry run is 403). E01-S02, PR #34, with #22, #23, #24, #26 and #27.
 - **Given:** Administrator logged in
 - **When:** Create normal user with initial password
 - **Then:** New active normal user can sign in with specified password and has no master-data edit permission.
@@ -138,7 +138,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** Data layer: `packages/db/src/tenants/tenant-isolation.test.ts` (a reference to another tenant's record is rejected and nothing is written). Services: the material and named-record service tests, `packages/core/src/services/planning-parameters/planning-parameter.service.test.ts` and `packages/core/src/services/safety-stock/safety-stock-target.service.test.ts` (a set or target naming a material or location that exists only in the other tenant is refused, writing nothing in either), and `packages/core/src/services/boms/bom.service.test.ts` (a Test BOM naming a Prod-only material as output or component is `MATERIAL_NOT_FOUND` while Test has materials of its own, writing nothing in either tenant; a Prod BOM is `BOM_NOT_FOUND` from Test). End to end: `tests/integration/named-records-api.test.ts` (a Prod-only location, customer or supplier is not found from Test, to read or change), `tests/integration/planning-parameters-api.test.ts` (a Test set or target naming a Prod-only material or location is 404 and stores nothing) and `tests/integration/boms-api.test.ts` (a Test BOM naming a Prod-only material is 404 and Test's BOMs are unchanged; a Prod-only BOM is not found from Test, to read or change). Business documents (orders) wait for slice 2. E02-S01, #19, with #23, #24 and #26.
+- **Evidence:** Data layer: `packages/db/src/tenants/tenant-isolation.test.ts` (a reference to another tenant's record is rejected and nothing is written). Services: the material and named-record service tests, `packages/core/src/services/planning-parameters/planning-parameter.service.test.ts` and `packages/core/src/services/safety-stock/safety-stock-target.service.test.ts` (a set or target naming a material or location that exists only in the other tenant is refused, writing nothing in either), and `packages/core/src/services/boms/bom.service.test.ts` (a Test BOM naming a Prod-only material as output or component is `MATERIAL_NOT_FOUND` while Test has materials of its own, writing nothing in either tenant; a Prod BOM is `BOM_NOT_FOUND` from Test). End to end: `tests/integration/named-records-api.test.ts` (a Prod-only location, customer or supplier is not found from Test, to read or change), `tests/integration/planning-parameters-api.test.ts` (a Test set or target naming a Prod-only material or location is 404 and stores nothing) and `tests/integration/boms-api.test.ts` (a Test BOM naming a Prod-only material is 404 and Test's BOMs are unchanged; a Prod-only BOM is not found from Test, to read or change). Business documents (orders) wait for slice 2. The import: `packages/core/src/services/imports/import.service.test.ts` (a Test planning row naming a location or material that exists only in Prod is `IMPORT_MISSING_REFERENCE`, and neither tenant's audit changes). E02-S01, #19, with #23, #24, #26 and #27.
 - **Given:** A Test document tries to reference a Prod material ID with no Test equivalent
 - **When:** Validate/create record
 - **Then:** Reference is not resolved across tenants and the operation fails without writes.
@@ -165,7 +165,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** API · **Status:** Partially verified
 
-- **Evidence:** `tests/integration/read-only-api.test.ts` (an admin token's material create, edit and deactivation in read-only Prod, a location create, rename and deactivation, a customer and a supplier create, a conversion add, change and remove, and a BOM create, recipe change and deactivation all answer 409 `TENANT_READ_ONLY` with nothing changed), `packages/core/src/services/idempotency/idempotency.service.test.ts` (no key is stored). The gate covers every tenant write route (`tests/api-writes.test.ts`), but the scenario's goods issue comes in slice 2, so its half waits, as for TEN-015. E02-S04, #25, with #26.
+- **Evidence:** `tests/integration/read-only-api.test.ts` (an admin token's material create, edit and deactivation in read-only Prod, a location create, rename and deactivation, a customer and a supplier create, a conversion add, change and remove, and a BOM create, recipe change and deactivation all answer 409 `TENANT_READ_ONLY` with nothing changed), `packages/core/src/services/idempotency/idempotency.service.test.ts` (no key is stored). The gate covers every tenant write route (`tests/api-writes.test.ts`), but the scenario's goods issue comes in slice 2, so its half waits, as for TEN-015. `tests/integration/import-api.test.ts` (an import dry run and commit in read-only Prod are 409 `TENANT_READ_ONLY`, creating nothing). E02-S04, #25, with #26 and #27.
 - **Given:** Prod read-only
 - **When:** API attempts goods issue with otherwise valid token and idempotency key
 - **Then:** Request is rejected; no inventory movement or order change is created.
@@ -758,9 +758,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### BOM-023 — Unchanged content no new revision
 
-**Priority:** P1 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** Saving through the screens or the API: `packages/core/src/services/boms/bom.service.test.ts` (an identical save, a reordered save and a save with the same base quantity keep revision 1 and version 1, and record no revision entry), `packages/core/src/domain/boms/recipe-equality.test.ts`, `tests/integration/boms-api.test.ts` (a `PATCH` resending the same recipe returns the same revision and version), `packages/app/src/components/boms/bom-controls.test.tsx` (the screen says "No change: revision 2 is still current."). The import path and its Unchanged result wait for the BOM import (#27). E04-S01, #26.
+- **Evidence:** Saving through the screens or the API: `packages/core/src/services/boms/bom.service.test.ts` (an identical save, a reordered save and a save with the same base quantity keep revision 1 and version 1, and record no revision entry), `packages/core/src/domain/boms/recipe-equality.test.ts`, `tests/integration/boms-api.test.ts` (a `PATCH` resending the same recipe returns the same revision and version), `packages/app/src/components/boms/bom-controls.test.tsx` (the screen says "No change: revision 2 is still current."). The import: `packages/core/src/services/imports/import-boms.test.ts` (an identical recipe in another line order and unit previews Unchanged; after the commit the BOM is still revision 1 and no audit entry was added). E04-S01, #26, with #27.
 - **Given:** Existing logical BOM revision; uploaded complete recipe identical
 - **When:** Perform BOM import
 - **Then:** No new revision, result marked Unchanged.
@@ -829,224 +829,252 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### XLS-001 — Documented material template
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/app/src/components/imports/workbook-file.test.ts` (the downloaded template has every data sheet with only its header row, then the Instructions and Instrukcja sheets: blank creates, an existing ID updates, an unknown ID is an error, which columns are required, and an Example column), `packages/core/src/domain/imports/workbook-layout.test.ts` (every column explained in both languages), `tests/integration/import-api.test.ts` (the template is served as `.xlsx` to a token and to the signed-in browser), `tests/integration/import.test.ts` (the Import screen links it). E05-S01, #27.
 - **Given:** Admin viewing material imports
 - **When:** Download XLS template
 - **Then:** Template documents ID blank=create, existing=update, unknown explicit ID=error, required fields and examples.
 
 ### XLS-002 — Material import auto-generates ID
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/imports/import.service.test.ts` (with 00000001 and 00000002 in the tenant, a blank-ID row previews 00000003 and nothing is written until the commit, which creates it and reports it), `tests/integration/import-api.test.ts` (the committed IDs are the ones the dry run showed), `tests/integration/import.test.ts` (the screen previews each new eight-digit ID, and the records show on their pages after the commit). E05-S01, #27.
 - **Given:** Tenant has material IDs 00000001 and 00000002
 - **When:** Dry run then import valid row with blank ID
 - **Then:** Third material created with generated ID 00000003; import result shows assignment.
 
 ### XLS-003 — Known material ID updates record
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/imports/import.service.test.ts` (ID 00000001 previews Description before → after; the commit updates that record, creates no second one and adds its audit entry; an identical row is Unchanged and records nothing). The audit entry is counted, not read. E05-S01, #27.
 - **Given:** Existing material 00000001
 - **When:** Import changed description with ID 00000001
 - **Then:** Same record updated, no second material created; edit audited.
 
 ### XLS-004 — Unknown explicit material ID errors
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/imports/import.service.test.ts` (`IMPORT_UNKNOWN_ID` on Materials, row 2, column ID: "Material 00009876 doesn't exist in Prod. Leave the ID blank to create a new material.", and no preview token), `packages/core/src/services/imports/import-boms.test.ts` (the same for a BOM ID), `tests/integration/import.test.ts` (the screen lists the sheet, row, column and advice, and the commit stays closed). E05-S01, #27.
 - **Given:** Import material row with ID 00009876 absent from tenant
 - **When:** Run dry run
 - **Then:** Error includes worksheet, row, ID and advice to leave ID blank to create.
 
 ### XLS-005 — Duplicate material IDs in workbook
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/domain/imports/prepare-import.test.ts` (every row sharing an ID gets `IMPORT_DUPLICATE_KEY` naming the others, and none is applied), `packages/core/src/services/imports/import.service.test.ts` (rows 2 and 4 both flagged, no preview token), `tests/integration/import.test.ts` (both rows listed on the screen, "Commit 0 changes" disabled). E05-S01, #27.
 - **Given:** Workbook has two material rows for 00000001
 - **When:** Run dry run
 - **Then:** Both relevant rows identified as conflicting; import cannot commit.
 
 ### XLS-006 — Missing required material type
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/domain/imports/prepare-import.test.ts` (a row without a type is `VALIDATION_FAILED` on Type, once, and the row is dropped), `packages/core/src/services/imports/import.service.test.ts` (the error sits on its row's Type cell with the screens' message, and no material is created). E05-S01, #27.
 - **Given:** Import row without type
 - **When:** Run dry run
 - **Then:** Reports row/field validation failure; no partially created material.
 
 ### XLS-007 — Missing referenced location
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/imports/import.service.test.ts` (a planning row for location 00000099 is `IMPORT_MISSING_REFERENCE` on Location ID with "Create or import it first: …"; there is no preview token and the materials are unchanged). E05-S01, #27.
 - **Given:** Planning-parameter import refers to nonexisting site
 - **When:** Run dry run
 - **Then:** Reference rejected with import dependency guidance; no write.
 
 ### XLS-008 — Wrong template order
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/imports/import-boms.test.ts` (each BOM line whose material doesn't exist is `IMPORT_MISSING_REFERENCE` on its own row, naming the material, and so is an unknown output; a BOM may use a material the Materials sheet creates, whatever the tab order), `packages/core/src/services/imports/import.service.test.ts` (the dependency guidance: "Create or import it first: a row can only use records that exist, or that an earlier sheet of this workbook creates.", asserted for a location). E05-S01, #27.
 - **Given:** BOM workbook references material not imported yet
 - **When:** Run dry run
 - **Then:** Import fails with missing-material and master dependency explanation.
 
 ### XLS-009 — Dry run reports multiple errors
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/imports/import.service.test.ts` (a duplicate ID, an invalid type, an unknown location and an unknown sheet, all reported in sheet and row order), `packages/core/src/services/imports/import-boms.test.ts` (a BOM header's own error is reported together with its lines'), `tests/integration/import.test.ts` (a workbook's unknown ID and duplicate pair all listed on the screen). E05-S01, #27.
 - **Given:** One workbook has duplicate ID, invalid type and unknown reference
 - **When:** Run dry run
 - **Then:** All detectable errors listed, not just first error.
 
 ### XLS-010 — Dry run does not modify data
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/imports/import.service.test.ts` (after a clean dry run the materials and the audit entry count are unchanged), `packages/core/src/services/imports/import-boms.test.ts` (a dry run that would revise a BOM leaves it at its revision and adds no audit entry), `packages/core/src/http/request-savepoint.test.ts` (the dry run's savepoint rolls back every row's write and audit entry, a refused row's too), `tests/integration/import-api.test.ts` (none of a dry run's new materials and location exist before the commit; a failing dry run writes none of its rows). E05-S01, #27.
 - **Given:** Workbook contains valid create/update rows
 - **When:** Run dry run only
 - **Then:** All masters, BOM revisions and audit business records unchanged.
 
 ### XLS-011 — Dry run summarizes effect
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/imports/import.service.test.ts` (a create, an update and an unchanged row labelled so, each with its record ID, the update's changes and the sheet's counts), `tests/integration/import.test.ts` (the screen previews Create rows with their new IDs), `packages/app/src/components/imports/import-screen.test.tsx` (unchanged rows behind "Show 1 unchanged row"). E05-S01, #27.
 - **Given:** Workbook has one new, one modified, one unchanged record
 - **When:** Run dry run
 - **Then:** Preview labels create/update/unchanged and shows affected identifiers.
 
 ### XLS-012 — Commit requires successful dry run
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/imports/import.service.test.ts` (a commit for a workbook with errors, which got no token, or with a token that isn't its dry run's, is `IMPORT_STALE` and writes nothing), `packages/core/src/validators/imports/import-request.schema.test.ts` and the Import `actions.test.ts` (a commit without a token is `VALIDATION_FAILED` on `previewToken` and runs nothing), `tests/integration/import.test.ts` (with problems, "Commit 0 changes" is disabled). E05-S01, #27.
 - **Given:** Workbook never validated or validation failed
 - **When:** Try commit
 - **Then:** Commit is rejected; no rows written.
 
 ### XLS-013 — Import is atomic across valid rows
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/imports/import.service.test.ts` (committing a workbook with one valid row and one unknown ID is refused, and the valid row isn't created), `packages/core/src/http/request-savepoint.test.ts` (rows written through the real services all roll back when the commit throws). E05-S01, #27.
 - **Given:** Workbook includes several valid data rows and one invalid
 - **When:** Attempt import
 - **Then:** Entire workbook rejected; valid rows not applied either.
 
 ### XLS-014 — Conflict after dry run
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/imports/import.service.test.ts` (a material edited after the dry run makes the commit `IMPORT_STALE`: the edit stays and the workbook's new row isn't created; a renamed referenced location, or a record created elsewhere, does the same), `tests/integration/import-api.test.ts` (409 `IMPORT_STALE` through the API, and the other edit stays), `packages/core/src/domain/imports/preview-token.test.ts` (the token changes with a version or a created ID), `packages/app/src/components/imports/import-screen.test.tsx` (a stale commit goes back to the dry run with its explanation). E05-S01, #27.
 - **Given:** Dry run valid for updating material 00000001
 - **When:** Another session edits that material then commit import
 - **Then:** Commit fails with concurrency explanation; other session's changes preserved.
 
 ### XLS-015 — Tenant read-only forbids import
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/import-api.test.ts` (in read-only Prod, a dry run and a commit with a clean dry run's token are both 409 `TENANT_READ_ONLY`, and the location isn't created), `tests/integration/import.test.ts` (Prod turned read-only while a clean dry run is on screen: the commit is refused with the read-only message and writes nothing, and the reopened screen says imports are blocked and disables the upload), `packages/app/src/components/imports/import-screen.test.tsx` (the template stays offered). No inspection-only dry run is offered: the scenario allows one, and the spec (Q11) leaves it out. E05-S01, #27.
 - **Given:** Test tenant read-only
 - **When:** Admin tries master import
 - **Then:** Neither dry-run commit nor master changes posted; inspection-only validation may be offered without committing.
 
 ### XLS-016 — Tenant isolation during import
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/imports/import.service.test.ts` (with 00000001 in both tenants, an update imported in Test changes only Test's record; a Test row naming a location or material that exists only in Prod is `IMPORT_MISSING_REFERENCE` "… doesn't exist in Test"; TEN-014). E05-S01, #27.
 - **Given:** Test and Prod have same master business ID but different contents
 - **When:** Import update in Test
 - **Then:** Only Test's matching business record updated.
 
 ### XLS-017 — BOM workbook structure
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/app/src/components/imports/workbook-file.test.ts` (separate BOM headers and BOM lines sheets with their header rows; Instructions say Import reference is required for a new record and the lines are the complete recipe, and Instrukcja that a blank BOM ID creates a new BOM with the next ID), `packages/core/src/domain/imports/workbook-layout.test.ts` (the BOM ID, Import reference and line columns). E05-S01, #27.
 - **Given:** Admin downloads BOM template
 - **When:** Open workbook
 - **Then:** Separate header and component-line sheets with permanent BOM ID and Import Reference guidance.
 
 ### XLS-018 — New BOM temp reference
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/imports/import-boms.test.ts` (a blank-ID header RECIPE-X and three lines naming it preview and create one BOM 00000001 with all three lines), `packages/core/src/domain/imports/prepare-import.test.ts` (a line naming no header is `IMPORT_LINE_WITHOUT_HEADER`, a header without lines `IMPORT_BOM_WITHOUT_LINES`), `tests/integration/import-api.test.ts` (created through the API at revision 1, with its reference in the report), `tests/integration/import.test.ts` (the screen previews it with its reference, and the BOM's page shows its line). E05-S01, #27.
 - **Given:** BOM header has blank ID and Import Reference RECIPE-X; component lines use RECIPE-X
 - **When:** Dry run and import
 - **Then:** Header and lines bind one new generated logical BOM ID; no orphan components.
 
 ### XLS-019 — Two new BOMs same upload
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/imports/import-boms.test.ts` (RECIPE-A and RECIPE-B at different priorities become BOMs 00000001 and 00000002, each with its own lines at revision 1). E05-S01, #27.
 - **Given:** Workbook creates RECIPE-A and RECIPE-B for different alternatives
 - **When:** Import
 - **Then:** Each component set linked to its own newly generated logical BOM; independent revisions.
 
 ### XLS-020 — Update existing logical BOM by ID
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/imports/import-boms.test.ts` (a changed recipe for a BOM at revision 2 previews Revision 2 → 3; after the commit the BOM keeps its ID at revision 3, revision 2 keeps its lines and revision 1 its priority), `tests/integration/import-api.test.ts` (revision 1 → 2 through the API, and revision 1 keeps both lines). E05-S01, #27.
 - **Given:** Existing BOM ID with revision 2
 - **When:** Import changed complete recipe for same BOM ID
 - **Then:** New immutable revision 3 created and older versions retained.
 
 ### XLS-021 — Omitted component removed in new revision
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/domain/imports/recipe-diff.test.ts` (a component left out is reported removed), `packages/core/src/services/imports/import-boms.test.ts` (the preview lists the left-out components as removed; the new revision lacks them and the previous one still has them), `tests/integration/import-api.test.ts` (the preview lists the left-out line as removed; afterwards revision 2 has one component and revision 1 still has two). E05-S01, #27.
 - **Given:** BOM revision lists components A/B/C; incoming recipe lists A/B
 - **When:** Dry run and commit
 - **Then:** Preview reports C removed; new revision contains A/B while old revision still contains A/B/C.
 
 ### XLS-022 — Identical BOM is no-op
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/imports/import-boms.test.ts` (the same recipe in another line order and unit previews Unchanged with no changes; after the commit the BOM is still revision 1 and no audit entry was added), `packages/core/src/domain/imports/recipe-diff.test.ts` (order alone is no change), `packages/app/src/components/imports/import-screen.test.tsx` ("Nothing to change.", the commit closed). E05-S01, #27.
 - **Given:** Imported header, dates, priority and all component data identical to current version
 - **When:** Dry run and commit
 - **Then:** Result marked Unchanged; no new revision or history rewrite.
 
 ### XLS-023 — BOM import priority conflict
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/imports/import-boms.test.ts` (a new alternative at the priority an existing BOM holds over the same dates is `BOM_PRIORITY_CONFLICT` on its Priority cell, the commit is refused and the tenant keeps its one BOM; the same for two new alternatives in one workbook, after which a clean import gets IDs 00000001 and 00000002). E05-S01, #27.
 - **Given:** Uploaded BOM overlaps active same-priority alternative
 - **When:** Dry run
 - **Then:** BOM import rejected with conflict; no new versions created.
 
 ### XLS-024 — BOM import cycle
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/imports/import-boms.test.ts` (lines that make Panel use Frame, whose BOM uses Panel, are `BOM_CYCLE` on the header row with the full path "00000004 Panel →(BOM 00000001) 00000006 Frame →(BOM 00000002) 00000004 Panel"; the commit is refused, the workbook's new material isn't created and the BOM stays at revision 1). E05-S01, #27.
 - **Given:** Imported components form indirect cycle
 - **When:** Dry run
 - **Then:** Import rejected with full dependency path; none of workbook applied.
 
 ### XLS-025 — BOM import identifies specific changes
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/domain/imports/recipe-diff.test.ts` (the scenario's own example: A 1 → 1.5 kg changed, B removed, C added), `packages/core/src/services/imports/import-boms.test.ts` (a real BOM's preview lists changed, added and removed components with quantity and unit), `packages/app/src/components/imports/report-text.test.ts` (the screen writes them as added and removed). E05-S01, #27.
 - **Given:** Existing A 1 kg/B 2 kg, imported A 1.5 kg/C 1 kg
 - **When:** Dry run
 - **Then:** Preview identifies A changed, B removed and C added.
 
 ### XLS-026 — Atomic multi-sheet BOM import
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/imports/import-boms.test.ts` (a Materials row, a valid new header and a line naming an unknown material: the dry run reports the line and gives no token; the commit is refused, no material and no BOM are created; a workbook refused for a cycle applies no sheet either), `packages/core/src/services/imports/import.service.test.ts` (a refused commit leaves a valid row unapplied). E05-S01, #27.
 - **Given:** Header valid but one component row refers to invalid material
 - **When:** Commit after dry run
 - **Then:** Entire workbook remains unapplied; no partial header or revision.
 
 ### XLS-027 — Stable BOM ID never overwritten
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/imports/import-boms.test.ts` (a changed recipe keeps BOM ID 00000001 at revision 3; an identical recipe and an Active-only change keep revision 1), `tests/integration/import-api.test.ts` (a BOM revised through the API keeps its ID). E05-S01, #27.
 - **Given:** Import existing BOM ID to update content
 - **When:** Commit
 - **Then:** Logical BOM ID unchanged; revision changes only when content changes.
 
 ### XLS-028 — BOM import status-only change does not version recipe
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/imports/import-boms.test.ts` (an unchanged recipe with Active "no" previews only Active yes → no; after the commit the BOM is inactive at revision 1, with one `boms.bom.deactivated` audit entry; reactivating it while an active alternative holds its priority is `BOM_PRIORITY_CONFLICT` on its Priority cell, and it stays inactive at the same revision). E05-S01, #27.
 - **Given:** Existing BOM workbook supplies complete unchanged header recipe and component lines but toggles logical BOM active status
 - **When:** Dry run then commit
 - **Then:** Update audited logical active flag (subject to priority-overlap validation), report status-only change, create no new immutable recipe revision.
@@ -3370,7 +3398,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
 
-- **Evidence:** A normal user's token is refused (403) on admin-only operations, end to end: `GET /api/users` in `tests/integration/api-tokens.test.ts`; `POST /api/users`, `PATCH /api/users/{id}` and `PUT /api/users/{id}/password` in `tests/integration/api-users.test.ts`, where the same token still changes its own preferences; a master-data write of each kind in `tests/integration/materials-api.test.ts` (create and change a material), `named-records-api.test.ts` (create), `planning-parameters-api.test.ts` (create a safety-stock target) and `boms-api.test.ts` (create a BOM), where the token still reads. Unit tests in the routes' `route.test.ts` files and `packages/app/src/auth/api-write.test.ts`. E01-S03, PRs #41, #48; #52; with #22, #23, #24 and #26.
+- **Evidence:** A normal user's token is refused (403) on admin-only operations, end to end: `GET /api/users` in `tests/integration/api-tokens.test.ts`; `POST /api/users`, `PATCH /api/users/{id}` and `PUT /api/users/{id}/password` in `tests/integration/api-users.test.ts`, where the same token still changes its own preferences; a master-data write of each kind in `tests/integration/materials-api.test.ts` (create and change a material), `named-records-api.test.ts` (create), `planning-parameters-api.test.ts` (create a safety-stock target) and `boms-api.test.ts` (create a BOM), where the token still reads. Unit tests in the routes' `route.test.ts` files and `packages/app/src/auth/api-write.test.ts`. `tests/integration/import-api.test.ts` (a normal user's token's import dry run is 403 `FORBIDDEN`). E01-S03, PRs #41, #48; #52; with #22, #23, #24, #26 and #27.
 - **Given:** Normal user's bearer token valid
 - **When:** Try to change master material
 - **Then:** Rejected as forbidden; ordinary allowed transaction can still succeed.
@@ -3412,8 +3440,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### API-015 — API/UI parity for dry run
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/import.test.ts` (one workbook through the screen and through `POST /api/tenants/prod/import/dry-run` gives the same problems at the same sheet, row and column; a normal user has no Import entry and is sent away from the screen), `tests/integration/import-api.test.ts` (the API previews and commits like the screen; a normal user's token is 403 and a read-only tenant 409), the dry-run `route.test.ts` and the Import `actions.test.ts` (both hand the prepared workbook to the same `ImportService.dryRun`). The preview rows are asserted per channel, not compared side by side. E05-S01, #27.
 - **Given:** Admin can run master XLS dry run in UI
 - **When:** Run equivalent via API
 - **Then:** Same validation and preview behavior, same authorization; no API-only skip.
@@ -3465,7 +3494,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/api-idempotency.test.ts` (the replay answers byte for byte and creates nothing; a token revoke replays), `tests/integration/materials-api.test.ts` and `named-records-api.test.ts` (once per key). E02-S03, #21.
+- **Evidence:** `tests/integration/api-idempotency.test.ts` (the replay answers byte for byte and creates nothing; a token revoke replays), `tests/integration/materials-api.test.ts` and `named-records-api.test.ts` (once per key). `tests/integration/import-api.test.ts` (an import commit replayed with its key answers the same body, marked replayed, and its material exists once). E02-S03, #21, with #27.
 - **Given:** Original keyed request succeeded and response lost
 - **When:** Repeat identical key/method/payload within 24h
 - **Then:** Original result returned for same account/action/tenant generation; no duplicated document, receipt, import, MRP or token revocation. Token issuance is UI-only; no API replay can mint a token.
@@ -3525,8 +3554,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### API-028 — Excel import idempotency
 
-**Priority:** P0 · **Channel:** API · **Status:** Not executed
+**Priority:** P0 · **Channel:** API · **Status:** Partially verified
 
+- **Evidence:** `tests/integration/import-api.test.ts` (a master-data import commit retried with its key replays the first answer, marked replayed, and its material exists once). The scenario's inventory correction workbook comes in slice 2. E05-S01, #27.
 - **Given:** Inventory correction XLS committed with key K
 - **When:** Retry same API mutation
 - **Then:** Same outcome returned; no second adjustment generated.
@@ -3544,7 +3574,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/read-only-api.test.ts` (an admin token's update of a Prod material is 409 `TENANT_READ_ONLY` and changes nothing). E02-S04, #25.
+- **Evidence:** `tests/integration/read-only-api.test.ts` (an admin token's update of a Prod material is 409 `TENANT_READ_ONLY` and changes nothing). `tests/integration/import-api.test.ts` (an admin token's import dry run and commit in read-only Prod are 409 `TENANT_READ_ONLY`, and nothing is created). E02-S04, #25, with #27.
 - **Given:** Prod read-only and admin token provided
 - **When:** Try admin-originated business record update via API
 - **Then:** Blocked regardless of token privilege; no write.
@@ -3579,7 +3609,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `tests/integration/tenants.test.ts` (tenant metadata gives the generation), `tests/integration/materials-api.test.ts` and `named-records-api.test.ts` (a Test write without it is 428, with the current one it succeeds), `tests/integration/boms-api.test.ts` (a Test BOM write without it is 428 `GENERATION_REQUIRED`), `tests/integration/tenant-isolation-api.test.ts` (a generation above the current one is 409 `GENERATION_STALE`, in Test and in Prod, and nothing is created), `packages/core/src/domain/tenants/generation.test.ts` and `packages/app/src/auth/api-write.test.ts`. The stale case after a real reset waits for slice 2 (D06). E02-S03, #21, with #26.
+- **Evidence:** `tests/integration/tenants.test.ts` (tenant metadata gives the generation), `tests/integration/materials-api.test.ts` and `named-records-api.test.ts` (a Test write without it is 428, with the current one it succeeds), `tests/integration/boms-api.test.ts` (a Test BOM write without it is 428 `GENERATION_REQUIRED`), `tests/integration/tenant-isolation-api.test.ts` (a generation above the current one is 409 `GENERATION_STALE`, in Test and in Prod, and nothing is created), `packages/core/src/domain/tenants/generation.test.ts` and `packages/app/src/auth/api-write.test.ts`. The stale case after a real reset waits for slice 2 (D06). `tests/integration/import-api.test.ts` (a Test import dry run without the generation is 428 `GENERATION_REQUIRED`, and with a stale one 409 `GENERATION_STALE`). E02-S03, #21, with #26 and #27.
 - **Given:** User bearer token can read Test and Prod tenant metadata; Test dataset generation is G1
 - **When:** Make Test mutation without precondition, with G1, and after reset with old G1
 - **Then:** Missing generation rejected (HTTP 428), current G1 mutation may succeed subject to ordinary rules, stale G1 after reset G2 rejected (HTTP 409). Current generation is available from tenant metadata.
@@ -3766,8 +3796,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### AUD-022 — Atomic XLS import
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/services/imports/import.service.test.ts` (a commit with a valid row and an invalid one writes neither), `packages/core/src/services/imports/import-boms.test.ts` (a refused BOM workbook applies none of its sheets), `packages/core/src/http/request-savepoint.test.ts` (every row written through the real services rolls back when the commit throws). Tested with small workbooks, not hundreds of rows. A refused commit answers `IMPORT_STALE`; the full list of problems comes from the dry run (XLS-009). Inventory comes in slice 2. E05-S01, #27.
 - **Given:** Hundreds of rows with one invalid
 - **When:** Try commit
 - **Then:** No subset of masters/inventory changes; failed operation surfaces all detected validation issues.
@@ -3968,16 +3999,18 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### UX-015 — Guided how-to in Polish
 
-**Priority:** P1 · **Channel:** UI · **Status:** Not executed
+**Priority:** P1 · **Channel:** UI · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/help.test.ts` (a Polish account finds the "Import z arkusza" topic by searching "skoroszyt", with its steps: Pobierz szablon … wykonaj próbę), `packages/app/src/help/topics.test.ts` (the topic exists in Polish, written apart from the English), `packages/app/src/components/imports/workbook-file.test.ts` (the template's Instrukcja sheet explains the columns and BOM IDs in Polish, with an Example column), `packages/app/src/components/imports/report-text.test.ts` and `packages/app/src/components/imports/import-screen.test.tsx` (problems and refusals in Polish, e.g. "Zostaw ID puste, aby utworzyć nowy rekord."). E05-S01, #27.
 - **Given:** User selects Polish then opens import Help
 - **When:** Follow step-by-step XLS dry-run guide
 - **Then:** Instruction steps, examples and error guidance accessible in Polish.
 
 ### UX-016 — Material XLS error helpful for newcomer
 
-**Priority:** P1 · **Channel:** UI · **Status:** Not executed
+**Priority:** P1 · **Channel:** UI · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/import.test.ts` (an unknown explicit ID is listed on the screen with its sheet, row 2, column ID and "Leave the ID blank to create a new record."), `packages/app/src/components/imports/report-text.test.ts` (the same in Polish), `packages/core/src/services/imports/import.service.test.ts` (XLS-004). E05-S01, #27.
 - **Given:** Uploaded row with unknown explicit ID
 - **When:** Run dry run and view UI feedback
 - **Then:** Shows offending row/key and specific action e.g. leave ID blank to create.
@@ -4405,8 +4438,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### E2E-015 — Import full BOM into production planning
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `tests/integration/import-api.test.ts` (a new BOM imported through its import reference gets a permanent ID at revision 1, and a later import makes revision 2 while revision 1 stays), `tests/integration/import.test.ts` (the same on the screen). MRP and the production order that pins the recipe come in slices 2 and 3. E05-S01, #27.
 - **Given:** New logical BOM import references existing materials via temporary Import Reference
 - **When:** Dry run+commit, run MRP for feasible Make, create production order
 - **Then:** Permanent BOM ID and immutable revision created, MRP picks valid recipe and order pins it.
