@@ -17,6 +17,8 @@ export const HELP_TOPIC_IDS = [
   "suppliers",
   "planning-parameters",
   "safety-stock",
+  "boms",
+  "bom-revisions",
   "language-and-theme",
   "using-help",
 ] as const;
@@ -43,6 +45,8 @@ export const HELP_TOPIC_ROUTES: Record<HelpTopicId, string> = {
   suppliers: "/admin/[tenant]/suppliers",
   "planning-parameters": "/admin/[tenant]/planning-parameters",
   "safety-stock": "/admin/[tenant]/safety-stock",
+  boms: "/admin/[tenant]/boms",
+  "bom-revisions": "/admin/[tenant]/boms/[id]",
   "language-and-theme": "/admin",
   "using-help": "/help",
 };
@@ -127,7 +131,7 @@ const en: Record<HelpTopicId, HelpText> = {
     title: "A tenant's audit",
     body: [
       "Audit, in the sidebar under the tenant's screens (or Audit — Test or Audit — Prod on the tenant's page), opens that tenant's own audit: the changes to its business records, kept apart from the other tenant's.",
-      "It lists every material, location, customer and supplier created, changed, deactivated or reactivated, and every unit conversion, planning parameter set and safety-stock target added, changed or removed, with the values before and after. Account changes are always in the Global audit.",
+      "It lists every material, location, customer and supplier created, changed, deactivated or reactivated, every unit conversion, planning parameter set and safety-stock target added, changed or removed, and every BOM created, revised, deactivated or reactivated, with the values before and after. Account changes are always in the Global audit.",
       "Like the Global audit, it is read-only for everyone.",
     ],
   },
@@ -145,7 +149,7 @@ const en: Record<HelpTopicId, HelpText> = {
     body: [
       "Choose a material's ID to open its page: its type, base unit and status, and its unit conversions.",
       "A conversion lets people enter quantities in another unit, such as a case of 12. It reads 1 case = 12 each: the alternate quantity and unit, then the base quantity and the base unit. A quantity entered in that unit is converted into the base unit once, rounded half-up to six decimals, and the unit and factor it was entered with are kept. The inverse is shown for orientation only.",
-      "Changing or removing a conversion never changes quantities already stored. The base unit can change only while the material has no conversions, planning parameters or safety-stock targets, since their values are in it.",
+      "Changing or removing a conversion never changes quantities already stored. The base unit can change only while the material has no conversions, planning parameters or safety-stock targets, since their values are in it. Once any BOM uses the material, as its output or as a component, neither its type nor its base unit can change again.",
       "Deactivate keeps the material and its history, but it can't be picked for new entries; Reactivate undoes that. Every change appears in the tenant's audit.",
     ],
   },
@@ -192,6 +196,24 @@ const en: Record<HelpTopicId, HelpText> = {
       "Two targets can't share a date. To change a target's quantity, use Change target; to move it, remove it and add one on the new date. A target of 0 ends a buffer from its date.",
       "The status says which target is in effect today (UTC), which ones are scheduled for later, and which earlier ones a later target has replaced.",
       "Every account can read the list. Only the administrator adds, changes and removes targets, with Add target and each row's ⋯ menu; through the API too. Every change appears in the tenant's audit.",
+    ],
+  },
+  boms: {
+    title: "BOMs",
+    body: [
+      "BOMs (bills of materials), under Master data in the sidebar, list that tenant's recipes. A BOM makes one intermediate or finished material, its output, from raw and intermediate components; the quantities are for one base unit of the output. Each BOM has an eight-digit ID that CPG assigns in order and that never changes.",
+      "One output can have several BOMs, its alternatives. Each has a priority (1 is the highest) and a validity: from a date, through a date or with no end, both days included. Two active alternatives for the same output can't have the same priority on any shared day.",
+      "A component can be entered in any unit the material converts, such as 2 cases; CPG stores it in the material's base unit (24 each) and keeps what was entered. A recipe can't use its own output, directly or through other BOMs: CPG shows the cycle it would make.",
+      "Every account can read BOMs. Only the administrator creates and changes them, with Create BOM here and Edit recipe on a BOM's page; through the API too, with the same rules. Only active materials can be picked.",
+    ],
+  },
+  "bom-revisions": {
+    title: "A BOM and its revisions",
+    body: [
+      "Choose a BOM's ID to open its page: its output, status, priority and validity, the recipe of its current revision, and every revision.",
+      "A recipe never changes in place. Saving a real change to the priority, the dates or the components creates a new revision; the old ones stay readable from Revisions, unchanged, for the orders that will use them. Saving the same recipe, or entering the same quantity in another unit, creates nothing.",
+      "Changing a unit conversion later doesn't change a saved recipe: the line keeps its quantity and the factor it was entered with. To use a new factor, enter the line again.",
+      "Deactivate keeps the BOM and its revisions, but it can't be chosen for new orders; Reactivate undoes that after checking its priority again. Neither creates a revision. Every change appears in the tenant's audit.",
     ],
   },
   "language-and-theme": {
@@ -282,7 +304,7 @@ const pl: Record<HelpTopicId, HelpText> = {
     title: "Audyt środowiska",
     body: [
       "Audyt, w panelu bocznym pod ekranami środowiska (albo Audyt — Test lub Audyt — Prod na stronie środowiska), otwiera własny audyt tego środowiska: zmiany jego rekordów biznesowych, oddzielone od drugiego środowiska.",
-      "Pokazuje każde utworzenie, zmianę, dezaktywację i ponowną aktywację materiału, lokalizacji, klienta lub dostawcy oraz każde dodanie, zmianę lub usunięcie przelicznika jednostek, parametrów planowania lub celu zapasu bezpieczeństwa, z wartościami przed i po. Zmiany kont są zawsze w audycie globalnym.",
+      "Pokazuje każde utworzenie, zmianę, dezaktywację i ponowną aktywację materiału, lokalizacji, klienta lub dostawcy oraz każde dodanie, zmianę lub usunięcie przelicznika jednostek, parametrów planowania lub celu zapasu bezpieczeństwa, a także każde utworzenie, zmianę receptury, dezaktywację i ponowną aktywację BOM-u, z wartościami przed i po. Zmiany kont są zawsze w audycie globalnym.",
       "Tak jak audyt globalny, jest tylko do odczytu dla wszystkich.",
     ],
   },
@@ -300,7 +322,7 @@ const pl: Record<HelpTopicId, HelpText> = {
     body: [
       "Wybierz ID materiału, aby otworzyć jego stronę: typ, jednostkę bazową, status i przeliczniki jednostek.",
       "Przelicznik pozwala wpisywać ilości w innej jednostce, na przykład w kartonach po 12 sztuk. Czyta się go jako 1 karton = 12 szt.: ilość i jednostka alternatywna, potem ilość i jednostka bazowa. Ilość wpisana w tej jednostce jest przeliczana na jednostkę bazową raz, z zaokrągleniem połówek w górę do sześciu miejsc po przecinku, a jednostka i przelicznik, z którymi ją wpisano, zostają zapisane. Odwrotność jest tylko orientacyjna.",
-      "Zmiana lub usunięcie przelicznika nigdy nie zmienia ilości już zapisanych. Jednostkę bazową można zmienić tylko wtedy, gdy materiał nie ma przeliczników, parametrów planowania ani celów zapasu bezpieczeństwa, bo ich wartości są w niej zapisane.",
+      "Zmiana lub usunięcie przelicznika nigdy nie zmienia ilości już zapisanych. Jednostkę bazową można zmienić tylko wtedy, gdy materiał nie ma przeliczników, parametrów planowania ani celów zapasu bezpieczeństwa, bo ich wartości są w niej zapisane. Gdy materiał trafi do jakiegokolwiek BOM-u, jako wyrób lub składnik, nie można już zmienić ani jego typu, ani jednostki bazowej.",
       "Dezaktywuj zachowuje materiał i jego historię, ale nie można go wybrać w nowych wpisach; Aktywuj ponownie to cofa. Każda zmiana pojawia się w audycie środowiska.",
     ],
   },
@@ -347,6 +369,24 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Dwa cele nie mogą mieć tej samej daty. Aby zmienić ilość, użyj Zmień cel; aby przesunąć datę, usuń cel i dodaj nowy. Cel 0 kończy zapas od swojej daty.",
       "Status mówi, który cel obowiązuje dziś (UTC), które są zaplanowane na później, a które wcześniejsze zastąpił późniejszy cel.",
       "Listę może przeglądać każde konto. Cele dodaje, zmienia i usuwa tylko administrator, przyciskiem Dodaj cel i menu ⋯ w wierszu; także przez API. Każda zmiana pojawia się w audycie środowiska.",
+    ],
+  },
+  boms: {
+    title: "BOM-y",
+    body: [
+      "BOM-y (struktury wyrobów), w sekcji Dane podstawowe w menu bocznym, to receptury tego środowiska. BOM wytwarza jeden półprodukt lub wyrób gotowy, swój wyrób, z surowców i półproduktów; ilości dotyczą jednej jednostki bazowej wyrobu. Każdy BOM ma ośmiocyfrowe ID, które CPG nadaje po kolei i które nigdy się nie zmienia.",
+      "Jeden wyrób może mieć kilka BOM-ów, swoich alternatyw. Każda ma priorytet (1 to najwyższy) i okres ważności: od daty, do daty lub bez końca, oba dni się liczą. Dwie aktywne alternatywy tego samego wyrobu nie mogą mieć tego samego priorytetu w żadnym wspólnym dniu.",
+      "Składnik można wpisać w każdej jednostce, którą materiał przelicza, na przykład 2 kartony; CPG zapisuje go w jednostce bazowej materiału (24 szt.) i zachowuje to, co wpisano. Receptura nie może używać własnego wyrobu, ani bezpośrednio, ani przez inne BOM-y: CPG pokazuje cykl, który by powstał.",
+      "BOM-y może przeglądać każde konto. Tworzy je i zmienia tylko administrator, przyciskiem Utwórz BOM tutaj i Edytuj recepturę na stronie BOM-u; także przez API, na tych samych zasadach. Wybrać można tylko aktywne materiały.",
+    ],
+  },
+  "bom-revisions": {
+    title: "BOM i jego rewizje",
+    body: [
+      "Wybierz ID BOM-u, aby otworzyć jego stronę: wyrób, status, priorytet i ważność, recepturę bieżącej rewizji oraz wszystkie rewizje.",
+      "Receptura nigdy nie zmienia się w miejscu. Zapisanie prawdziwej zmiany priorytetu, dat lub składników tworzy nową rewizję; stare pozostają do wglądu w sekcji Rewizje, bez zmian, dla zleceń, które będą ich używać. Zapisanie tej samej receptury albo wpisanie tej samej ilości w innej jednostce niczego nie tworzy.",
+      "Późniejsza zmiana przelicznika jednostek nie zmienia zapisanej receptury: wiersz zachowuje swoją ilość i przelicznik, z którym go wpisano. Aby użyć nowego przelicznika, wpisz wiersz ponownie.",
+      "Dezaktywuj zachowuje BOM i jego rewizje, ale nie można go wybrać dla nowych zleceń; Aktywuj ponownie to cofa po ponownym sprawdzeniu priorytetu. Żadne z nich nie tworzy rewizji. Każda zmiana pojawia się w audycie środowiska.",
     ],
   },
   "language-and-theme": {
