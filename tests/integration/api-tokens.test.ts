@@ -203,7 +203,7 @@ describe("named API tokens", () => {
 
     // Every token the reset and the deactivation deleted is revoked in the Global audit, by the admin.
     await openTokens(admin);
-    const auditor = await createToken(admin, "auditor");
+    const auditor = await createToken(admin, "tokens-auditor");
     const audit = (await api("/api/audit?limit=100", auditor)).body.data.entries as {
       action: string;
       subject: { type: string; id: string; label: string };

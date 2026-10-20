@@ -250,9 +250,9 @@ const pl: Record<HelpTopicId, HelpText> = {
   "global-audit": {
     title: "Audyt globalny",
     body: [
-      "Audyt globalny, na dole panelu bocznego, pokazuje każdą zmianę kont, od najnowszej. Znajdziesz tu utworzonych użytkowników, zresetowane hasła, dezaktywowane i ponownie aktywowane konta, zmiany języka lub motywu oraz utworzone i unieważnione tokeny API. Token zakończony przez reset hasła lub dezaktywację też jest tu zapisany jako unieważniony.",
+      "Audyt globalny, na dole panelu bocznego, pokazuje każdą zmianę kont, od najnowszej. Znajdziesz tu utworzonych użytkowników, zresetowane hasła, dezaktywowane i ponownie aktywowane konta, zmiany języka lub motywu oraz utworzone i unieważnione tokeny API. Token usunięty przy resecie hasła lub dezaktywacji konta też jest tu zapisany jako unieważniony.",
       "Każdy wpis pokazuje, kiedy nastąpiła zmiana (w UTC), które konto ją wprowadziło, z jakiej sesji, jakim kanałem (Ekran dla ekranów CPG, Interfejs API dla programów) i co się zmieniło, jako przed → po.",
-      "Reset hasła jest zapisany bez hasła: CPG nigdy nie zapisuje haseł ani ich skrótów. Gdy hasło administratora zmieni się w ustawieniach serwera, jego tokeny API przestają działać przy następnym uruchomieniu, bez wpisu w tym audycie.",
+      "Reset hasła jest zapisany bez hasła: CPG nigdy nie zapisuje haseł ani ich skrótów. Gdy hasło administratora zmieni się w ustawieniach serwera, jego tokeny API przestają działać przy następnym uruchomieniu serwera, bez wpisu w tym audycie.",
       "Audyt może przeglądać każde konto, a nikt nie może zmienić ani usunąć wpisu, nawet administrator. Starsze wpisy pokazują poprzednią stronę.",
     ],
   },
