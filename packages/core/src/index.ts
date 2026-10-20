@@ -32,6 +32,7 @@ export * from "./services/safety-stock/safety-stock-target.service";
 export * from "./services/purchase-requisitions/purchase-requisition.service";
 export * from "./services/purchase-orders/purchase-order.service";
 export * from "./services/goods-receipts/goods-receipt.service";
+export * from "./services/transfers/transfer.service";
 export * from "./services/shipments/shipment.service";
 export * from "./services/goods-issues/goods-issue.service";
 export { isNothing, outstandingOf } from "./domain/goods-issues/issue-quantity";

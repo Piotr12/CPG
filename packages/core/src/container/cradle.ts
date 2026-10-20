@@ -17,6 +17,7 @@ import type { PlanningParameterService } from "../services/planning-parameters/p
 import type { SafetyStockTargetService } from "../services/safety-stock/safety-stock-target.service";
 import type { PurchaseOrderService } from "../services/purchase-orders/purchase-order.service";
 import type { GoodsReceiptService } from "../services/goods-receipts/goods-receipt.service";
+import type { TransferService } from "../services/transfers/transfer.service";
 import type { GoodsIssueService } from "../services/goods-issues/goods-issue.service";
 import type { ShipmentService } from "../services/shipments/shipment.service";
 import type { PurchaseRequisitionService } from "../services/purchase-requisitions/purchase-requisition.service";
@@ -56,6 +57,7 @@ export interface Cradle {
   purchaseRequisitionService: PurchaseRequisitionService;
   purchaseOrderService: PurchaseOrderService;
   goodsReceiptService: GoodsReceiptService;
+  transferService: TransferService;
   shipmentService: ShipmentService;
   goodsIssueService: GoodsIssueService;
   customerOrderService: CustomerOrderService;

@@ -353,6 +353,11 @@ Done when these standards were adopted:
   - the movement's `postingId` is the document's UUID (generated before the posting), `type` names the document kind, and `reason` names its business ID;
   - lookups both services need live in a leaf records module (`services/purchase-orders/order-records.ts`), as `requisition-records.ts` does for requisitions;
   - `GoodsReceiptService` (`core/src/services/goods-receipts/`), `GoodsReceipt`/`GoodsReceiptLine` (immutable through update-abort triggers), `/api/tenants/{tenant}/goods-receipts/…`, and the Post goods receipt dialog on the purchase order's page (`app/src/components/goods-receipts/`).
+- Transfers (2026-10-20, spec `2026-10-20--2046UTC-transfers`), the first stock that belongs to no location:
+  - in-transit stock is the transfer's progress (`dispatched − received − writtenOff`, derived in `domain/transfers/transfer-quantity.ts`), never a location's balance, so no physical posting can reach it. Each dispatch, receipt and write-off is an immutable `TransferPosting`, the transit leg; the physical leg is an ordinary movement through `postStockMovements`, whose `postingId` is the posting's `id`. A write-off has no physical leg;
+  - `services/transfers/transfer-usage.ts` is the leaf the masters (deactivation, base unit) and the stock page (transit from/to a pair) ask, as `stock-usage.ts` is for stock;
+  - `TransferService`, `/api/tenants/{tenant}/transfers/…`, `/admin/[tenant]/transfers` and `/admin/[tenant]/transfers/[id]` (`app/src/components/transfers/`: the create form, `CrudForm` posting and dates dialogs, the ledger of legs).
+  - To prove a posting's legs roll back together, fail it after the physical leg's flush: a spy on `em` doesn't see the transaction's fork, so the service test mocks `recordTenantAudit` to throw for the posting's action.
 - Shipments and goods issues (2026-10-20, spec `2026-10-20--2045UTC-shipments-goods-issues`), the second document that posts stock and the first that lowers it:
   - `GoodsIssueService` posts negative movements through `postStockMovements`, as receipts post positive ones. The ledger's own check refuses an overdraw with `INSUFFICIENT_STOCK`.
   - `ShipmentService` plans dispatches and moves no stock.

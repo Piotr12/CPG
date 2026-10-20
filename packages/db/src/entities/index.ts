@@ -3,6 +3,13 @@ import { CustomerOrderLine } from "./customer-orders/customer-order-line.entity"
 import { StockBalance } from "./stock/stock-balance.entity";
 import { GoodsReceipt, GOODS_RECEIPT_IMMUTABLE } from "./goods-receipts/goods-receipt.entity";
 import { GoodsReceiptLine } from "./goods-receipts/goods-receipt-line.entity";
+import { Transfer, TRANSFER_STATUSES, type TransferStatus } from "./transfers/transfer.entity";
+import {
+  TRANSFER_POSTING_IMMUTABLE,
+  TRANSFER_POSTING_KINDS,
+  TransferPosting,
+  type TransferPostingKind,
+} from "./transfers/transfer-posting.entity";
 import { Shipment, SHIPMENT_STATUSES, type ShipmentStatus } from "./shipments/shipment.entity";
 import { ShipmentLine } from "./shipments/shipment-line.entity";
 import { GoodsIssue, GOODS_ISSUE_IMMUTABLE } from "./goods-issues/goods-issue.entity";
@@ -79,6 +86,8 @@ export { PlanningParameterSet, PROCUREMENT_MODES, SafetyStockTarget };
 export { Forecast };
 export { StockBalance, StockMovement, STOCK_MOVEMENT_IMMUTABLE };
 export { GoodsReceipt, GOODS_RECEIPT_IMMUTABLE, GoodsReceiptLine };
+export { Transfer, TRANSFER_POSTING_IMMUTABLE, TRANSFER_POSTING_KINDS, TRANSFER_STATUSES, TransferPosting };
+export type { TransferPostingKind, TransferStatus };
 export { Shipment, ShipmentLine, SHIPMENT_STATUSES, GoodsIssue, GOODS_ISSUE_IMMUTABLE, GoodsIssueLine };
 export type { ShipmentStatus };
 export { Bom, BomComponent, BOM_REVISION_IMMUTABLE, BomRevision };
@@ -119,6 +128,8 @@ export const entities = [
   StockMovement,
   GoodsReceipt,
   GoodsReceiptLine,
+  Transfer,
+  TransferPosting,
   Shipment,
   ShipmentLine,
   GoodsIssue,

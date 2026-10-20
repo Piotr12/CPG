@@ -16,7 +16,7 @@ describe("dictionaries", () => {
     expect(keyPaths(pl)).toEqual(keyPaths(en));
   });
 
-  it("translate every string rather than copy it (aside from words Polish shares: the product name, Menu, Status, ID, BOM, Import, Problem, API, a dash, and a number)", () => {
+  it("translate every string rather than copy it (aside from words Polish shares: the product name, Menu, Status, ID, BOM, Import, Problem, API, a dash, a number, and templates that are only placeholders)", () => {
     const copied = keyPaths(en).filter((path) => {
       const read = (dictionary: object) => path.split("/").reduce<unknown>((node, key) => (node as Record<string, unknown>)[key], dictionary);
       return typeof read(en) === "string" && read(en) === read(pl);
@@ -43,6 +43,12 @@ describe("dictionaries", () => {
       "purchaseOrders/details/status",
       "purchaseOrders/lines/columns/status",
       "purchaseOrders/lines/noRequisition",
+      "transfers/columns/status",
+      "transfers/route",
+      "transfers/plannedDates",
+      "transfers/details/status",
+      "transfers/ledger/by",
+      "transfers/ledger/channels/api",
       "shipments/columns/status",
       "shipments/details/status",
       "imports/problems/problem",

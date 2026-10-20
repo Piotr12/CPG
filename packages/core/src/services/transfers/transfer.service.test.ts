@@ -1,0 +1,682 @@
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import {
+  initOrm,
+  Location,
+  Material,
+  MaterialConversion,
+  OptimisticLockError,
+  selectTenant,
+  StockMovement,
+  TenantAuditEvent,
+  Transfer,
+  TransferPosting,
+  TRANSFER_POSTING_IMMUTABLE,
+  UniqueConstraintViolationException,
+  type Orm,
+  type TenantCode,
+} from "@cpg/db";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { loadConfig } from "../../config";
+import { migrateDatabase, toDbOptions } from "../../database";
+import { inRequestTransaction, retryingStaleSnapshot } from "../../http/request-transaction";
+import { UNIT_NOT_CONVERTIBLE_MESSAGE } from "../../validators/boms/bom-fields.schema";
+import { CORRECTION_TRANSIT_MESSAGE, stockCorrectionSchema } from "../../validators/stock/stock-correction.schema";
+import { TRANSFER_PAGE_SIZE, type TransferCreateInput } from "../../validators/transfers/transfer.schema";
+import { parseInput } from "../../http/parse-input";
+import type { AuditActor } from "../audit/actor";
+import { LocationService } from "../locations/location.service";
+import { MaterialService } from "../materials/material.service";
+import { StockService } from "../stock/stock.service";
+import {
+  TRANSFER_DISPATCH_MOVEMENT,
+  TRANSFER_ID_RACE,
+  TRANSFER_POSTINGS_SHOWN,
+  TRANSFER_RECEIPT_MOVEMENT,
+  TransferService,
+} from "./transfer.service";
+
+/** The audit action whose recording crashes, to fail a posting between its legs; null when none does. */
+const crash = vi.hoisted(() => ({ action: null as string | null }));
+vi.mock("../audit/audit-recorder", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../audit/audit-recorder")>();
+  return {
+    ...actual,
+    recordTenantAudit: (...args: Parameters<typeof actual.recordTenantAudit>) => {
+      if (args[2].action === crash.action) throw new Error(`crash while recording ${crash.action}`);
+      actual.recordTenantAudit(...args);
+    },
+  };
+});
+
+const ACTOR: AuditActor = { userId: "user-id", username: "alice", sessionId: "user-session", channel: "ui", token: null };
+const API_ACTOR: AuditActor = { userId: "user-id", username: "alice", sessionId: null, channel: "api", token: { id: "t", name: "ci" } };
+
+/** 100 kg of steel from the main plant (A) to the warehouse (B), planned yesterday → in two days. */
+const TRANSFER: TransferCreateInput = {
+  material: "00000001",
+  source: "00000001",
+  destination: "00000002",
+  quantity: "100",
+  unit: "kg",
+  plannedDispatch: "2026-10-19",
+  plannedArrival: "2026-10-22",
+};
+const A = "00000001";
+const B = "00000002";
+const kg = (quantity: string) => ({ quantity, unit: "kg" });
+const today = () => new Date().toISOString().slice(0, 10);
+
+describe("TransferService", () => {
+  let orm: Orm;
+  let directory: string;
+  const scoped = (tenant: TenantCode = "prod", from: Orm = orm) => {
+    const em = from.em.fork();
+    selectTenant(em, tenant);
+    return em;
+  };
+  const service = (tenant: TenantCode = "prod") => new TransferService({ em: scoped(tenant) });
+  const stock = (location: string, material = "00000001", tenant: TenantCode = "prod") => new StockService({ em: scoped(tenant) }).get({ material, location });
+  const physical = async (location: string, tenant: TenantCode = "prod") => (await stock(location, "00000001", tenant)).quantity;
+  const correct = (location: string, quantity: string, tenant: TenantCode = "prod") =>
+    new StockService({ em: scoped(tenant) }).correct({ material: "00000001", location, quantity, unit: "kg", reason: "Count" }, ACTOR);
+  const entries = async (action: string) =>
+    (await scoped().find(TenantAuditEvent, { action }, { orderBy: { occurredAt: "asc", id: "asc" } })).map(({ subjectId, subjectLabel, before, after }) => ({
+      subjectId,
+      subjectLabel,
+      before,
+      after,
+    }));
+  /** Creates the standard transfer with `stocked` kg at A. */
+  const created = async (stocked = "100", input: TransferCreateInput = TRANSFER) => {
+    if (stocked !== "0") await correct(A, stocked);
+    return service().create(input, ACTOR);
+  };
+
+  beforeEach(async () => {
+    directory = mkdtempSync(path.join(tmpdir(), "cpg-transfer-service-"));
+    const config = loadConfig({ DATA_DIR: directory });
+    await migrateDatabase(config);
+    orm = await initOrm(toDbOptions(config));
+    for (const tenant of ["prod", "test"] as const) {
+      const em = scoped(tenant);
+      const steel = em.create(Material, { code: "00000001", type: "raw", description: "Steel sheet", baseUnit: "kg" });
+      em.create(MaterialConversion, { material: steel, unit: "t", numerator: "1000", denominator: "1" });
+      em.create(Material, { code: "00000002", type: "raw", description: "Bolt M8", baseUnit: "each" });
+      em.create(Location, { code: "00000001", name: "Main plant" });
+      em.create(Location, { code: "00000002", name: "Warehouse" });
+      if (tenant === "prod") em.create(Location, { code: "00000003", name: "Prod-only depot" });
+      await em.flush();
+    }
+  });
+  afterEach(async () => {
+    crash.action = null;
+    vi.restoreAllMocks();
+    await orm.close();
+  });
+
+  describe("create", () => {
+    it("saves an Open single-material transfer with its locations and dates, and changes no balance (TRF-001, TRF-003, LFC-001)", async () => {
+      await correct(A, "100");
+
+      const transfer = await service().create({ ...TRANSFER, quantity: "0.05", unit: "t" }, ACTOR);
+
+      expect(transfer).toEqual({
+        id: "00000001",
+        material: "00000001",
+        source: A,
+        destination: B,
+        quantity: "50.000000",
+        enteredQuantity: "0.05",
+        enteredUnit: "t",
+        numerator: "1000",
+        denominator: "1",
+        plannedDispatch: "2026-10-19",
+        plannedArrival: "2026-10-22",
+        dispatched: "0.000000",
+        received: "0.000000",
+        writtenOff: "0.000000",
+        inTransit: "0.000000",
+        undispatched: "50.000000",
+        status: "open",
+        createdAt: expect.any(Date),
+        updatedAt: expect.any(Date),
+        version: 1,
+      });
+      expect(await physical(A)).toBe("100.000000");
+      expect(await physical(B)).toBe("0.000000");
+      expect(await scoped().count(StockMovement, { type: { $ne: "correction" } })).toBe(0);
+      expect((await service().create(TRANSFER, ACTOR)).id).toBe("00000002");
+      expect(await entries("transfers.transfer.created")).toContainEqual({
+        subjectId: "00000001",
+        subjectLabel: "00000001 — 00000001 Steel sheet: 00000001 → 00000002",
+        before: null,
+        after: {
+          id: "00000001", material: "00000001", source: A, destination: B, quantity: "50.000000", unit: "kg",
+          plannedDispatch: "2026-10-19", plannedArrival: "2026-10-22", status: "open",
+        },
+      });
+    });
+
+    it("refuses inactive or unknown masters and a unit the material doesn't convert, writing nothing", async () => {
+      const em = scoped();
+      (await em.findOneOrFail(Location, { code: B })).active = false;
+      await em.flush();
+
+      await expect(service().create(TRANSFER, ACTOR)).rejects.toMatchObject({ code: "LOCATION_INACTIVE" });
+      await expect(service().create({ ...TRANSFER, destination: "00000009" }, ACTOR)).rejects.toMatchObject({ code: "LOCATION_NOT_FOUND" });
+      await expect(service().create({ ...TRANSFER, destination: "00000003", unit: "box" }, ACTOR)).rejects.toMatchObject({
+        code: "VALIDATION_FAILED",
+        fieldErrors: { unit: [UNIT_NOT_CONVERTIBLE_MESSAGE] },
+      });
+      expect(await scoped().count(Transfer, {})).toBe(0);
+      expect(await entries("transfers.transfer.created")).toEqual([]);
+    });
+
+    it("refuses a location of another tenant, and neither tenant changes (TRF-022, R05)", async () => {
+      await correct(A, "100");
+
+      // Location 00000003 exists in Prod only: from Test it is not found.
+      await expect(service("test").create({ ...TRANSFER, destination: "00000003" }, ACTOR)).rejects.toMatchObject({ code: "LOCATION_NOT_FOUND" });
+
+      expect(await scoped("test").count(Transfer, {})).toBe(0);
+      expect(await scoped("prod").count(Transfer, {})).toBe(0);
+      expect(await physical(A)).toBe("100.000000");
+      expect(await physical(A, "test")).toBe("0.000000");
+    });
+
+    it("maps a transfer ID taken at the same moment to a conflict, and rethrows anything else", async () => {
+      const em = scoped();
+      vi.spyOn(em, "transactional").mockRejectedValueOnce(new UniqueConstraintViolationException(new Error("UNIQUE")));
+      await expect(new TransferService({ em }).create(TRANSFER, ACTOR)).rejects.toMatchObject({ code: "TRANSFER_ID_RACE", message: TRANSFER_ID_RACE });
+      vi.spyOn(em, "transactional").mockRejectedValueOnce(new Error("disk full"));
+      await expect(new TransferService({ em }).create(TRANSFER, ACTOR)).rejects.toThrow("disk full");
+    });
+  });
+
+  describe("dispatch", () => {
+    it("lowers the source and raises transit, leaving the destination, then dispatches the rest (TRF-004, TRF-005, INV-009)", async () => {
+      const transfer = await created();
+
+      const first = await service().dispatch(transfer.id, kg("60"), ACTOR);
+
+      expect(first.transfer).toMatchObject({ dispatched: "60.000000", inTransit: "60.000000", undispatched: "40.000000", status: "open" });
+      expect(first.posting).toEqual({
+        id: expect.any(String),
+        kind: "dispatch",
+        businessDate: today(),
+        occurredAt: expect.any(Date),
+        quantity: "60.000000",
+        enteredQuantity: "60",
+        enteredUnit: "kg",
+        numerator: "1",
+        denominator: "1",
+        reason: "Transfer 00000001 dispatch from 00000001 to 00000002",
+        actorUsername: "alice",
+        channel: "ui",
+        legs: [
+          { place: "source", location: A, quantity: "-60.000000", before: "100.000000", after: "40.000000" },
+          { place: "transit", location: null, quantity: "60.000000", before: "0.000000", after: "60.000000" },
+        ],
+      });
+      expect(await physical(A)).toBe("40.000000");
+      expect(await physical(B)).toBe("0.000000");
+
+      const second = await service().dispatch(transfer.id, kg("40"), ACTOR);
+      expect(second.transfer).toMatchObject({ dispatched: "100.000000", inTransit: "100.000000", undispatched: "0.000000", status: "open" });
+      expect(await physical(A)).toBe("0.000000");
+      expect(await physical(B)).toBe("0.000000");
+      const [movement] = await scoped().find(StockMovement, { postingId: first.posting.id });
+      expect(movement).toMatchObject({ type: TRANSFER_DISPATCH_MOVEMENT, quantity: "-60.000000", businessDate: today() });
+    });
+
+    it("converts the entered unit and keeps what was entered (R03, MAT-019)", async () => {
+      const transfer = await created();
+
+      const { posting } = await service().dispatch(transfer.id, { quantity: "0.025", unit: "t" }, ACTOR);
+
+      expect(posting).toMatchObject({ quantity: "25.000000", enteredQuantity: "0.025", enteredUnit: "t", numerator: "1000" });
+      expect(await physical(A)).toBe("75.000000");
+    });
+
+    it("allows a partial dispatch of all the source holds and keeps the rest undispatched (TRF-009)", async () => {
+      const transfer = await created("60");
+
+      const { transfer: after } = await service().dispatch(transfer.id, kg("60"), ACTOR);
+
+      expect(after).toMatchObject({ undispatched: "40.000000", inTransit: "60.000000", status: "open" });
+    });
+
+    it("refuses more than the source physically holds, leaving source and transit unchanged (TRF-008, R09)", async () => {
+      const transfer = await created("75");
+      await service().dispatch(transfer.id, kg("60"), ACTOR);
+
+      await expect(service().dispatch(transfer.id, kg("20"), ACTOR)).rejects.toMatchObject({
+        code: "INSUFFICIENT_STOCK",
+        messageParams: { material: "00000001", location: A, available: "15.000000", requested: "20.000000", unit: "kg" },
+      });
+
+      expect(await physical(A)).toBe("15.000000");
+      expect((await service().get(transfer.id))).toMatchObject({ dispatched: "60.000000", inTransit: "60.000000" });
+      expect(await scoped().count(TransferPosting, {})).toBe(1);
+    });
+
+    it("refuses more than is left to dispatch (spec Q4)", async () => {
+      const transfer = await created("200");
+      await service().dispatch(transfer.id, kg("60"), ACTOR);
+
+      await expect(service().dispatch(transfer.id, kg("40.000001"), ACTOR)).rejects.toMatchObject({
+        code: "TRANSFER_OVER_DISPATCH",
+        message: "Transfer 00000001: only 40.000000 kg is left to dispatch.",
+        messageParams: { transfer: "00000001", available: "40.000000", requested: "40.000001", unit: "kg" },
+      });
+      expect(await physical(A)).toBe("140.000000");
+    });
+
+    it("dates the movement today and keeps the planned dates (TRF-023, INV-010)", async () => {
+      const transfer = await created();
+
+      const { posting, transfer: after } = await service().dispatch(transfer.id, kg("10"), ACTOR);
+
+      expect(posting.businessDate).toBe(today());
+      expect([after.plannedDispatch, after.plannedArrival]).toEqual(["2026-10-19", "2026-10-22"]);
+    });
+
+    it("refuses a unit the material doesn't convert as a field error, and an unknown transfer", async () => {
+      const transfer = await created();
+
+      await expect(service().dispatch(transfer.id, { quantity: "1", unit: "box" }, ACTOR)).rejects.toMatchObject({
+        code: "VALIDATION_FAILED",
+        fieldErrors: { unit: [UNIT_NOT_CONVERTIBLE_MESSAGE] },
+      });
+      await expect(service().dispatch("00000009", kg("1"), ACTOR)).rejects.toMatchObject({ code: "TRANSFER_NOT_FOUND" });
+      await expect(service("test").dispatch(transfer.id, kg("1"), ACTOR)).rejects.toMatchObject({ code: "TRANSFER_NOT_FOUND" });
+    });
+
+    it("rolls both legs back when the posting fails after the source leg was flushed (AUD-019)", async () => {
+      const transfer = await created();
+      crash.action = "transfers.transfer.dispatched";
+
+      await expect(service().dispatch(transfer.id, kg("60"), ACTOR)).rejects.toThrow("crash while recording");
+
+      expect(await physical(A)).toBe("100.000000");
+      expect(await scoped().count(StockMovement, { type: TRANSFER_DISPATCH_MOVEMENT })).toBe(0);
+      expect(await scoped().count(TransferPosting, {})).toBe(0);
+      expect((await service().get(transfer.id)).inTransit).toBe("0.000000");
+      expect(await entries("stock.movement.posted")).toHaveLength(1); // The opening correction only.
+    });
+
+    it("dispatches both of two racing postings, the second retried on what the first committed", async () => {
+      const transfer = await created();
+      const other = await initOrm(toDbOptions(loadConfig({ DATA_DIR: directory })));
+      let raced = false;
+      try {
+        const em = scoped();
+        const posted = await retryingStaleSnapshot(() =>
+          inRequestTransaction(em, async () => {
+            await new TransferService({ em }).get(transfer.id);
+            if (!raced) {
+              raced = true;
+              await new TransferService({ em: scoped("prod", other) }).dispatch(transfer.id, kg("60"), ACTOR);
+            }
+            return new TransferService({ em }).dispatch(transfer.id, kg("40"), ACTOR);
+          }),
+        );
+        expect(posted.transfer).toMatchObject({ dispatched: "100.000000", inTransit: "100.000000" });
+        expect(await physical(A)).toBe("0.000000");
+      } finally {
+        await other.close();
+      }
+    });
+
+    it("refuses the second of two racing postings that together would overdraw the source", async () => {
+      const transfer = await created("70");
+      const other = await initOrm(toDbOptions(loadConfig({ DATA_DIR: directory })));
+      let raced = false;
+      try {
+        const em = scoped();
+        await expect(
+          retryingStaleSnapshot(() =>
+            inRequestTransaction(em, async () => {
+              await new TransferService({ em }).get(transfer.id);
+              if (!raced) {
+                raced = true;
+                await new TransferService({ em: scoped("prod", other) }).dispatch(transfer.id, kg("60"), ACTOR);
+              }
+              return new TransferService({ em }).dispatch(transfer.id, kg("40"), ACTOR);
+            }),
+          ),
+        ).rejects.toMatchObject({ code: "INSUFFICIENT_STOCK" });
+        expect(await physical(A)).toBe("10.000000");
+        expect((await service().get(transfer.id)).inTransit).toBe("60.000000");
+      } finally {
+        await other.close();
+      }
+    });
+  });
+
+  describe("receive", () => {
+    it("lowers transit and raises the destination, leaving the source, and refuses more than is in transit (TRF-006, TRF-007)", async () => {
+      const transfer = await created();
+      await service().dispatch(transfer.id, kg("60"), ACTOR);
+
+      const { transfer: after, posting } = await service().receive(transfer.id, kg("50"), ACTOR);
+
+      expect(after).toMatchObject({ received: "50.000000", inTransit: "10.000000", status: "open" });
+      expect(posting.legs).toEqual([
+        { place: "transit", location: null, quantity: "-50.000000", before: "60.000000", after: "10.000000" },
+        { place: "destination", location: B, quantity: "50.000000", before: "0.000000", after: "50.000000" },
+      ]);
+      expect(posting.reason).toBe("Transfer 00000001 receipt at 00000002 from 00000001");
+      expect(await physical(A)).toBe("40.000000");
+      expect(await physical(B)).toBe("50.000000");
+
+      await expect(service().receive(transfer.id, kg("11"), ACTOR)).rejects.toMatchObject({
+        code: "TRANSFER_OVER_RECEIPT",
+        message: "Transfer 00000001: only 10.000000 kg is in transit.",
+        messageParams: { available: "10.000000", requested: "11.000000" },
+      });
+      expect(await physical(B)).toBe("50.000000");
+      expect((await service().get(transfer.id)).inTransit).toBe("10.000000");
+      const [movement] = await scoped().find(StockMovement, { postingId: posting.id });
+      expect(movement.type).toBe(TRANSFER_RECEIPT_MOVEMENT);
+    });
+
+    it("completes the transfer when the last receipt lands the planned quantity with no write-off (spec Q7)", async () => {
+      const transfer = await created();
+      await service().dispatch(transfer.id, kg("100"), ACTOR);
+      await service().receive(transfer.id, kg("70"), ACTOR);
+      expect((await service().get(transfer.id)).status).toBe("open");
+
+      const { transfer: after } = await service().receive(transfer.id, kg("30"), ACTOR);
+
+      expect(after).toMatchObject({ status: "completed", received: "100.000000", inTransit: "0.000000", writtenOff: "0.000000" });
+      await expect(service().dispatch(transfer.id, kg("1"), ACTOR)).rejects.toMatchObject({
+        code: "TRANSFER_NOT_OPEN",
+        message: "Transfer 00000001 is completed, so it can't change.",
+      });
+      await expect(service().setPlannedDates(transfer.id, { plannedDispatch: "2026-11-01", plannedArrival: "2026-11-02" }, after.version, ACTOR)).rejects.toMatchObject({
+        code: "TRANSFER_NOT_OPEN",
+      });
+    });
+
+    it("rolls both legs back when the receipt fails while writing the destination (AUD-020)", async () => {
+      const transfer = await created();
+      await service().dispatch(transfer.id, kg("60"), ACTOR);
+      crash.action = "transfers.transfer.received";
+
+      await expect(service().receive(transfer.id, kg("50"), ACTOR)).rejects.toThrow("crash while recording");
+
+      expect(await physical(B)).toBe("0.000000");
+      expect((await service().get(transfer.id))).toMatchObject({ inTransit: "60.000000", received: "0.000000" });
+      expect(await scoped().count(StockMovement, { type: TRANSFER_RECEIPT_MOVEMENT })).toBe(0);
+      expect(await scoped().count(TransferPosting, { kind: "receipt" })).toBe(0);
+    });
+  });
+
+  describe("writeOff", () => {
+    it("clears lost transit with its reason, in the ledger and the audit, and changes no location (TRF-013)", async () => {
+      const transfer = await created();
+      await service().dispatch(transfer.id, kg("60"), ACTOR);
+      await service().receive(transfer.id, kg("50"), ACTOR);
+
+      const { transfer: after, posting } = await service().writeOff(transfer.id, { ...kg("10"), reason: "Pallet lost in transit" }, API_ACTOR);
+
+      expect(after).toMatchObject({ inTransit: "0.000000", writtenOff: "10.000000", status: "open" });
+      expect(posting).toMatchObject({
+        kind: "write-off",
+        reason: "Pallet lost in transit",
+        channel: "api",
+        businessDate: today(),
+        legs: [{ place: "transit", location: null, quantity: "-10.000000", before: "10.000000", after: "0.000000" }],
+      });
+      expect(await physical(A)).toBe("40.000000");
+      expect(await physical(B)).toBe("50.000000");
+      expect(await entries("transfers.transfer.written-off")).toEqual([
+        {
+          subjectId: "00000001",
+          subjectLabel: "00000001 — 00000001 Steel sheet: 00000001 → 00000002",
+          before: { dispatched: "60.000000", received: "50.000000", writtenOff: "0.000000", inTransit: "10.000000", status: "open" },
+          after: {
+            dispatched: "60.000000", received: "50.000000", writtenOff: "10.000000", inTransit: "0.000000", status: "open",
+            moved: "10.000000", businessDate: today(), reason: "Pallet lost in transit",
+          },
+        },
+      ]);
+      // A written-off transfer never becomes Completed; Close Early (E11-S01) resolves it.
+      await service().dispatch(transfer.id, kg("40"), ACTOR);
+      const { transfer: last } = await service().receive(transfer.id, kg("40"), ACTOR);
+      expect(last).toMatchObject({ received: "90.000000", inTransit: "0.000000", undispatched: "0.000000", status: "open" });
+    });
+
+    it("refuses more than is in transit (TRF-013)", async () => {
+      const transfer = await created();
+      await service().dispatch(transfer.id, kg("10"), ACTOR);
+
+      await expect(service().writeOff(transfer.id, { ...kg("10.5"), reason: "Lost" }, ACTOR)).rejects.toMatchObject({
+        code: "TRANSFER_OVER_WRITE_OFF",
+        message: "Transfer 00000001: only 10.000000 kg is in transit.",
+      });
+      expect((await service().get(transfer.id)).inTransit).toBe("10.000000");
+    });
+  });
+
+  describe("transit and physical stock", () => {
+    it("keeps transit usable at neither site: corrections are limited to physical stock (TRF-010, TRF-011)", async () => {
+      const transfer = await created();
+      await service().dispatch(transfer.id, kg("60"), ACTOR);
+
+      await expect(correct(A, "-41")).rejects.toMatchObject({ code: "INSUFFICIENT_STOCK", messageParams: { available: "40.000000" } });
+      await expect(correct(B, "-5")).rejects.toMatchObject({ code: "INSUFFICIENT_STOCK", messageParams: { available: "0.000000" } });
+      expect((await service().get(transfer.id)).inTransit).toBe("60.000000");
+    });
+
+    it("refuses a correction that names a transfer: transit is written off on its transfer (TRF-014)", async () => {
+      expect(() => parseInput(stockCorrectionSchema, { material: "00000001", location: A, quantity: "-10", unit: "kg", reason: "Lost", transfer: "00000001" })).toThrow(
+        expect.objectContaining({ code: "VALIDATION_FAILED", fieldErrors: { transfer: [CORRECTION_TRANSIT_MESSAGE] } }),
+      );
+    });
+
+    it("shows what is in transit from and to a location next to its physical stock (UX-017, INV-009)", async () => {
+      const first = await created();
+      await correct(B, "30");
+      const back = await service().create({ ...TRANSFER, source: B, destination: A, quantity: "30" }, ACTOR);
+      await service().dispatch(first.id, kg("60"), ACTOR);
+      await service().dispatch(back.id, kg("20"), ACTOR);
+      // A completed transfer has nothing in transit; a write-off takes its part out.
+      await service().writeOff(first.id, { ...kg("5"), reason: "Lost" }, ACTOR);
+
+      // A transfer with nothing in transit is no holder of it.
+      const idle = await service().create({ ...TRANSFER, quantity: "1" }, ACTOR);
+      expect(await stock(A)).toMatchObject({ quantity: "40.000000", inTransitFrom: "55.000000", inTransitTo: "20.000000", transitTransfers: [first.id, back.id] });
+      expect(await stock(B)).toMatchObject({ quantity: "10.000000", inTransitFrom: "20.000000", inTransitTo: "55.000000", transitTransfers: [first.id, back.id] });
+      expect(await stock(A, "00000002")).toMatchObject({ quantity: "0.000000", inTransitFrom: "0.000000", inTransitTo: "0.000000", transitTransfers: [] });
+      expect((await stock(A)).transitTransfers).not.toContain(idle.id);
+    });
+
+    it("adds up transit over more transfers than one read holds", async () => {
+      const em = scoped();
+      const material = await em.findOneOrFail(Material, { code: "00000001" });
+      const [source, destination] = await em.find(Location, { code: { $in: [A, B] } }, { orderBy: { code: "asc" } });
+      for (let index = 1; index <= 101; index += 1) {
+        em.create(Transfer, {
+          code: String(index).padStart(8, "0"), material, source, destination, quantity: "2.000000", enteredQuantity: "2", enteredUnit: "kg",
+          numerator: "1", denominator: "1", plannedDispatch: "2026-10-19", plannedArrival: "2026-10-22", dispatched: "1.000000",
+        });
+      }
+      await em.flush();
+
+      expect((await stock(A)).inTransitFrom).toBe("101.000000");
+    });
+  });
+
+  describe("setPlannedDates", () => {
+    it("changes both dates at the loaded version, audits them, and records nothing for the same dates (TRF-026, spec Q3)", async () => {
+      const transfer = await created("0");
+
+      const after = await service().setPlannedDates(transfer.id, { plannedDispatch: "2026-10-25", plannedArrival: "2026-10-27" }, transfer.version, ACTOR);
+
+      expect(after).toMatchObject({ plannedDispatch: "2026-10-25", plannedArrival: "2026-10-27", version: 2 });
+      expect(await entries("transfers.transfer.updated")).toEqual([
+        {
+          subjectId: "00000001",
+          subjectLabel: "00000001 — 00000001 Steel sheet: 00000001 → 00000002",
+          before: { plannedDispatch: "2026-10-19", plannedArrival: "2026-10-22" },
+          after: { plannedDispatch: "2026-10-25", plannedArrival: "2026-10-27" },
+        },
+      ]);
+      const same = await service().setPlannedDates(transfer.id, { plannedDispatch: "2026-10-25", plannedArrival: "2026-10-27" }, after.version, ACTOR);
+      expect(same.version).toBe(2);
+      expect(await entries("transfers.transfer.updated")).toHaveLength(1);
+    });
+
+    it("says a Completed transfer is completed even to a stale version, so the refused dialog isn't refreshed away", async () => {
+      const transfer = await created();
+      await service().dispatch(transfer.id, kg("100"), ACTOR);
+      await service().receive(transfer.id, kg("100"), ACTOR);
+
+      await expect(service().setPlannedDates(transfer.id, { plannedDispatch: "2026-10-25", plannedArrival: "2026-10-27" }, transfer.version, ACTOR)).rejects.toMatchObject({
+        code: "TRANSFER_NOT_OPEN",
+      });
+    });
+
+    it("refuses a stale version, including one a posting advanced (AUD-025)", async () => {
+      const transfer = await created();
+      await service().dispatch(transfer.id, kg("10"), ACTOR);
+
+      await expect(service().setPlannedDates(transfer.id, { plannedDispatch: "2026-10-25", plannedArrival: "2026-10-27" }, transfer.version, ACTOR)).rejects.toMatchObject({
+        code: "VERSION_CONFLICT",
+      });
+      expect((await service().get(transfer.id)).plannedDispatch).toBe("2026-10-19");
+    });
+
+    it("maps a version a racing write advanced at flush to a conflict", async () => {
+      const transfer = await created("0");
+      const em = scoped();
+      vi.spyOn(em, "transactional").mockRejectedValueOnce(new OptimisticLockError("stale"));
+
+      await expect(new TransferService({ em }).setPlannedDates(transfer.id, { plannedDispatch: "2026-10-25", plannedArrival: "2026-10-27" }, 1, ACTOR)).rejects.toMatchObject({
+        code: "VERSION_CONFLICT",
+      });
+    });
+  });
+
+  describe("audit", () => {
+    it("audits each posting with the transfer's progress, and each physical leg in the ledger's own entry (R08, TRF-024)", async () => {
+      const transfer = await created();
+      await service().dispatch(transfer.id, kg("60"), ACTOR);
+      await service().receive(transfer.id, kg("50"), ACTOR);
+
+      expect(await entries("transfers.transfer.dispatched")).toEqual([
+        {
+          subjectId: "00000001",
+          subjectLabel: "00000001 — 00000001 Steel sheet: 00000001 → 00000002",
+          before: { dispatched: "0.000000", received: "0.000000", writtenOff: "0.000000", inTransit: "0.000000", status: "open" },
+          after: { dispatched: "60.000000", received: "0.000000", writtenOff: "0.000000", inTransit: "60.000000", status: "open", moved: "60.000000", businessDate: today() },
+        },
+      ]);
+      expect((await entries("transfers.transfer.received"))[0].after).toMatchObject({ received: "50.000000", inTransit: "10.000000", moved: "50.000000" });
+      const ledger = await entries("stock.movement.posted");
+      expect(ledger.map(({ after }) => [after!.location, after!.movement, after!.type])).toEqual([
+        [A, "100.000000", "correction"],
+        [A, "-60.000000", TRANSFER_DISPATCH_MOVEMENT],
+        [B, "50.000000", TRANSFER_RECEIPT_MOVEMENT],
+      ]);
+    });
+
+    it("keeps postings immutable in the database", async () => {
+      const transfer = await created();
+      await service().dispatch(transfer.id, kg("10"), ACTOR);
+
+      await expect(scoped().getConnection().execute("update transfer_posting set quantity = '1.000000'")).rejects.toThrow(TRANSFER_POSTING_IMMUTABLE);
+    });
+  });
+
+  describe("list and get", () => {
+    it("pages the tenant's transfers by ID, counts them, and reads one with its newest postings first (TEN-014)", async () => {
+      const first = await created();
+      await service().create(TRANSFER, ACTOR);
+      await service().dispatch(first.id, kg("60"), ACTOR);
+      await service().receive(first.id, kg("50"), ACTOR);
+
+      expect((await service().list()).map(({ id }) => id)).toEqual(["00000001", "00000002"]);
+      expect(await service().list(2)).toEqual([]);
+      expect(await service().count()).toBe(2);
+      expect(await service("test").list()).toEqual([]);
+      const detail = await service().get(first.id);
+      expect(detail.postings.map(({ kind }) => kind)).toEqual(["receipt", "dispatch"]);
+      expect(detail.postings.flatMap(({ legs }) => legs.map(({ place, quantity }) => `${place} ${quantity}`)).reverse()).toEqual([
+        "transit 60.000000",
+        "source -60.000000",
+        "destination 50.000000",
+        "transit -50.000000",
+      ]);
+      expect((await service().get("00000002")).postings).toEqual([]);
+      await expect(service("test").get(first.id)).rejects.toMatchObject({ code: "TRANSFER_NOT_FOUND" });
+    });
+
+    it("shows at most the newest postings, and pages past the first page", async () => {
+      expect(TRANSFER_POSTINGS_SHOWN).toBe(100);
+      expect(TRANSFER_PAGE_SIZE).toBe(100);
+      const transfer = await created("0", { ...TRANSFER, quantity: "200" });
+      await correct(A, "200");
+      for (let index = 0; index < 101; index += 1) await service().dispatch(transfer.id, kg("1"), ACTOR);
+
+      const detail = await service().get(transfer.id);
+
+      expect(detail.postings).toHaveLength(100);
+      expect(detail.dispatched).toBe("101.000000");
+    });
+  });
+
+  describe("deactivating masters (LFC-017, LFC-018)", () => {
+    const locations = () => new LocationService({ em: scoped() });
+    const materials = () => new MaterialService({ em: scoped() });
+
+    it("refuses deactivating a location with in-transit stock from or to it, even at zero physical stock", async () => {
+      const transfer = await created("60");
+      await service().dispatch(transfer.id, kg("60"), ACTOR);
+      expect(await physical(A)).toBe("0.000000");
+
+      for (const location of [A, B]) {
+        const { version } = await locations().get(location);
+        await expect(locations().update(location, { active: false }, version, ACTOR)).rejects.toMatchObject({
+          code: "LOCATION_HAS_OPEN_TRANSFERS",
+          message: "Transfer 00000001 is still Open from or to this location.",
+          messageParams: { transfer: "00000001" },
+        });
+      }
+    });
+
+    it("refuses deactivating a location of an unfinished transfer, naming the lowest one, and allows it once completed", async () => {
+      await created("0");
+      await correct("00000003", "10");
+      const back = await service().create({ ...TRANSFER, source: "00000003", destination: B, quantity: "10" }, ACTOR);
+
+      const { version } = await locations().get(B);
+      await expect(locations().update(B, { active: false }, version, ACTOR)).rejects.toMatchObject({ messageParams: { transfer: "00000001" } });
+      await service().dispatch(back.id, kg("10"), ACTOR);
+      const depot = await locations().get("00000003");
+      await expect(locations().update("00000003", { active: false }, depot.version, ACTOR)).rejects.toMatchObject({ messageParams: { transfer: back.id } });
+
+      await service().receive(back.id, kg("10"), ACTOR);
+      expect((await locations().update("00000003", { active: false }, depot.version, ACTOR)).active).toBe(false);
+    });
+
+    it("refuses deactivating a material with an Open transfer, and changing its base unit once any transfer holds it", async () => {
+      const transfer = await created("0");
+
+      const material = await materials().get("00000001");
+      await expect(materials().update("00000001", { active: false }, material.version, ACTOR)).rejects.toMatchObject({
+        code: "MATERIAL_IN_OPEN_TRANSFER",
+        messageParams: { transfer: transfer.id },
+      });
+      await materials().removeConversion("00000001", "t", 1, ACTOR);
+      await expect(materials().update("00000001", { baseUnit: "g" }, material.version, ACTOR)).rejects.toMatchObject({
+        code: "BASE_UNIT_IN_USE",
+        message: "Transfers use this material, so its base unit can't change: their quantities are stored in it.",
+      });
+    });
+  });
+});

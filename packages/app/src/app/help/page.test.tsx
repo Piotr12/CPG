@@ -44,6 +44,8 @@ describe("HelpPage", () => {
       "Purchase requisitions",
       "Purchase orders",
       "A purchase order and its lines",
+      "Transfers",
+      "A transfer: dispatch, receive, write off",
       "Customer orders",
       "Maintaining a customer order",
       "Shipments and goods issues",
