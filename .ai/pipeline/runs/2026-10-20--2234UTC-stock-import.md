@@ -62,6 +62,20 @@ The spec's Implementation Plan, steps 1–11 (Phase 1: steps 1–4, Phase 2: ste
   - a 4-row count previews −15 kg, a 12 box to 1200 each (+200), +40 and one No change;
   - "Stock count 2027-01" posted 3 corrections, and the Stock page shows 1200 each with the reason and the actor.
 
+## Review
+
+- **Verdict.** A fresh-context code review approved with no Critical or High findings: 1 Medium and 8 Low.
+- **Fixed in 5074f00:**
+  - the reason now resets with "Start another import";
+  - a test covers a rollback across chunks, and another the stale return to step 2;
+  - the outcome reads "Corrections: N", with no pluralisation;
+  - duplicate positions are keyed `material/location`;
+  - Entered shows the quantity as typed (2 case);
+  - the Stock help points to Stock import;
+  - the JSDoc says both methods clear the `em`;
+  - the API's stale message is stock-specific.
+- **After the fixes:** lint, typecheck and coverage pass (2,681 tests, 100%), and so does the build. On a fresh standalone build, `stock-import-api`, `stock-import`, `import` and `help` pass: 21 tests.
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
