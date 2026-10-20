@@ -12,6 +12,8 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 ## General
 
+- **2026-10-20 — Leave the full integration suite to CI** — The #87 run ran the 15-minute suite locally twice, then CI ran it again on the PR. CI is the gate that counts (a clean checkout, merged with `main`, and deploys depend on it), so a local full run only doubles the wait. Run the integration files the change touches locally, plus `smoke.test.ts` when a migration is added, and check the PR's CI result before calling the work done (AGENTS.md, Testing).
+
 - **2026-10-20 — Bind an aggregate edit to the version it opened with** — Revalidating after a conflict can replace a dialog’s order prop while its form still holds old values. Capture the order when opening the dialog and keep that version until it closes; otherwise a second Save can overwrite the concurrent change with stale fields under the newly loaded version.
 
 - **2026-10-20 — Preserve references when replacing an operational line** — Keeping omitted customer-order lines as hidden history did not preserve a material replaced on an existing line: assigning the new material erased the old FK and unlocked its type/base unit. Archive the old allowlisted line before replacement, retain the visible stable ID, and test both removal and replacement.
