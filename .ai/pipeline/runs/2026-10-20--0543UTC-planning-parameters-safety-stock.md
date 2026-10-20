@@ -45,6 +45,10 @@ In each tenant the admin keeps, per material and location, a planning parameter 
 - **`PATCH`/`DELETE` with an unknown or malformed material or location in the path** answer `MATERIAL_NOT_FOUND` / `LOCATION_NOT_FOUND` (404), as the materials routes do for an ID; a date matching no target is the target's not-found. All are 404; only the code differs from the spec's "the row's not-found".
 - **The "can't be picked once inactive" checks** are `findActiveMaterial` and `findActiveLocation`, next to the lookups they extend (one check per referenced kind, as locations Q5 asked).
 - **The seed guard** (`isUntouchedKind`) and the reference lookup for demo rows are shared in `services/demo/demo-references.ts`, rather than copied into both services.
+- **The tenant home links to both screens**, as it does to every other master-data screen (the spec named only the sidebar entries).
+- **`serverAction` now keeps a thrown `ValidationError`'s field errors** (`core/src/http/server-action.ts`). Without it the raw-material refusal reached the form as "Some fields are invalid." instead of next to Make/Buy. It is a fix to a shared wrapper, with a regression test.
+- **Tall dialogs scroll** (`TALL_DIALOG`): the Add parameters form is taller than a 720 px window, and shadcn's dialog doesn't scroll.
+- **`fillDate` in `tests/integration/browser.ts`**, because agent-browser's `fill` leaves a native date input empty.
 - **The demo-data kinds** are named `planning parameter sets` and `safety-stock targets`, which the startup log prints as they are.
 
 ## Implementation Plan
@@ -94,7 +98,7 @@ In each tenant the admin keeps, per material and location, a planning parameter 
 
 ### Phase 3: Screens
 
-- [ ] 3.1 CrudForm date field
-- [ ] 3.2 Server actions
-- [ ] 3.3 Pages, components, sidebar, i18n, help, audit labels
+- [x] 3.1 CrudForm date field — 2cfe135
+- [x] 3.2 Server actions — 1b30371
+- [x] 3.3 Pages, components, sidebar, i18n, help, audit labels — b104403
 - [ ] 3.4 Screen integration tests and the full gate
