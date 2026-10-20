@@ -1,6 +1,6 @@
 # A user posts goods receipts against one purchase order, partially, repeatedly or in excess, and stock rises atomically with the order's progress
 
-**Status:** in progress
+**Status:** implemented
 **Created:** 2026-10-20 19:33 UTC
 **Issue:** #87 (E09-S02), epic #75 · **Builds on:** `implemented/2026-10-20--1636UTC-purchase-requisitions-orders.md` (#86: purchase orders and their lines), `implemented/2026-10-20--1634UTC-stock-ledger-corrections.md` (#80: the ledger, the balance and the atomic posting primitive), `implemented/2026-10-19--2018UTC-read-only-tenants.md`, `implemented/2026-10-19--1548UTC-api-idempotency.md`, `implemented/2026-10-19--1050UTC-audit-log.md` · **Design authority:** `.ai/specs/product-brief.md` (R03, R05, R07, R08, R09, D02), `.ai/specs/research/CPG-prd001.pdf` §03 "Receipt and issue" and "Operational edits", `CPG-prd-datamodel.pdf` (goods receipt header and line), `CPG-acceptance.md` (BUY-010…016, BUY-020…024, INV-002, INV-010, INV-012, INV-024, AUD-018, AUD-030, LFC-002, LFC-003, LFC-009, MAT-031, API-021)
 
@@ -52,12 +52,12 @@ flowchart LR
 
 ## Requirements
 
-- [ ] A receipt posts against one Open PO, raises stock at the PO's location by the base quantity of each line, adds to each PO line's received, and completes the PO when every line is received in full, atomically (BUY-010, BUY-011, BUY-012, BUY-016, INV-002, INV-024, LFC-002, LFC-003, LFC-009, AUD-018).
-- [ ] A line from another PO is refused (BUY-013); a short delivery leaves the PO Open with the remainder outstanding (BUY-014); an excess is accepted with a warning and no negative outstanding (BUY-015).
-- [ ] Movements are dated today's business date; the PO keeps its planned dates; the audit keeps its own timestamp (INV-010, AUD-030, INV-012).
-- [ ] On a received PO the supplier, location, line material, unit and quantity are refused; an Open PO's planned dates stay editable and audited (BUY-020…024). MAT-031 holds before any posting.
-- [ ] Read-only tenants refuse receipts with no movement; API writes need a key, and a replay returns the original receipt (R05, R07, API-021).
-- [ ] The PO page shows received, outstanding and status per line, the receipts, and the Post goods receipt dialog.
+- [x] A receipt posts against one Open PO, raises stock at the PO's location by the base quantity of each line, adds to each PO line's received, and completes the PO when every line is received in full, atomically (BUY-010, BUY-011, BUY-012, BUY-016, INV-002, INV-024, LFC-002, LFC-003, LFC-009, AUD-018).
+- [x] A line from another PO is refused (BUY-013); a short delivery leaves the PO Open with the remainder outstanding (BUY-014); an excess is accepted with a warning and no negative outstanding (BUY-015).
+- [x] Movements are dated today's business date; the PO keeps its planned dates; the audit keeps its own timestamp (INV-010, AUD-030, INV-012).
+- [x] On a received PO the supplier, location, line material, unit and quantity are refused; an Open PO's planned dates stay editable and audited (BUY-020…024). MAT-031 holds before any posting.
+- [x] Read-only tenants refuse receipts with no movement; API writes need a key, and a replay returns the original receipt (R05, R07, API-021).
+- [x] The PO page shows received, outstanding and status per line, the receipts, and the Post goods receipt dialog.
 
 ## Out of scope
 
@@ -73,3 +73,11 @@ The issue's eight criteria (#87), each covered by a unit test and, for the scree
 2. core: the posting leaf, receipt rules, schema, `GoodsReceiptService`, PO view and date rule, registration; unit tests against real SQLite.
 3. app: routes, action, components, PO screen, messages, help; unit tests.
 4. Integration tests (API and UI), `BACKWARD_COMPATIBILITY.md`, full gate.
+
+## Implementation notes
+
+- One branch and one PR carry the spec and the implementation (the cezar task owns one branch), as for #86.
+- Q8 tightened the PO `PATCH`: a line's `material`, `unit` or `quantity` is now 400 instead of silently dropped, so BUY-022/023's "refused" is observable. Other view-only line fields are still dropped.
+- A received total that would not fit is the field error `lines.N.quantity` (collected with the other line errors), not a bare `QUANTITY_OUT_OF_RANGE`.
+- Known gap, outside this story: a location can be deactivated while an Open PO delivers to it (no rule from E09-S01 blocks it). Every receipt on that PO is then refused with `LOCATION_INACTIVE` until the location is reactivated. Follow-up: block location deactivation with an Open PO, alongside LFC-018.
+
