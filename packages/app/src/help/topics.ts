@@ -113,9 +113,9 @@ const en: Record<HelpTopicId, HelpText> = {
   "global-audit": {
     title: "The Global audit",
     body: [
-      "Global audit, at the bottom of the sidebar, opens every change to accounts, newest first. It lists users created, passwords reset, accounts deactivated or reactivated, language or theme changes, and API tokens created or revoked.",
+      "Global audit, at the bottom of the sidebar, opens every change to accounts, newest first. It lists users created, passwords reset, accounts deactivated or reactivated, language or theme changes, and API tokens created or revoked. A token ended by a password reset or a deactivation is listed as revoked too.",
       "Each entry shows when it happened (in UTC), the account that made it, the session it came from, the channel (UI for CPG's screens, API for programs) and what changed, as before → after.",
-      "A password reset is listed without the password: CPG never records passwords or their hashes.",
+      "A password reset is listed without the password: CPG never records passwords or their hashes. When the administrator's password is changed in the server's settings, the administrator's API tokens end at the next restart without an entry here.",
       "Every account can read the audit, and nobody can change or delete an entry, not even the administrator. Older entries shows the previous page.",
     ],
   },
@@ -250,9 +250,9 @@ const pl: Record<HelpTopicId, HelpText> = {
   "global-audit": {
     title: "Audyt globalny",
     body: [
-      "Audyt globalny, na dole panelu bocznego, pokazuje każdą zmianę kont, od najnowszej. Znajdziesz tu utworzonych użytkowników, zresetowane hasła, dezaktywowane i ponownie aktywowane konta, zmiany języka lub motywu oraz utworzone i unieważnione tokeny API.",
+      "Audyt globalny, na dole panelu bocznego, pokazuje każdą zmianę kont, od najnowszej. Znajdziesz tu utworzonych użytkowników, zresetowane hasła, dezaktywowane i ponownie aktywowane konta, zmiany języka lub motywu oraz utworzone i unieważnione tokeny API. Token zakończony przez reset hasła lub dezaktywację też jest tu zapisany jako unieważniony.",
       "Każdy wpis pokazuje, kiedy nastąpiła zmiana (w UTC), które konto ją wprowadziło, z jakiej sesji, jakim kanałem (Ekran dla ekranów CPG, Interfejs API dla programów) i co się zmieniło, jako przed → po.",
-      "Reset hasła jest zapisany bez hasła: CPG nigdy nie zapisuje haseł ani ich skrótów.",
+      "Reset hasła jest zapisany bez hasła: CPG nigdy nie zapisuje haseł ani ich skrótów. Gdy hasło administratora zmieni się w ustawieniach serwera, jego tokeny API przestają działać przy następnym uruchomieniu, bez wpisu w tym audycie.",
       "Audyt może przeglądać każde konto, a nikt nie może zmienić ani usunąć wpisu, nawet administrator. Starsze wpisy pokazują poprzednią stronę.",
     ],
   },
