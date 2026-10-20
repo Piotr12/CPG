@@ -18,6 +18,7 @@ import { SupplierService } from "../services/suppliers/supplier.service";
 import { UserPreferenceService } from "../services/preferences/user-preference.service";
 import { SystemStatusService } from "../services/system/system-status.service";
 import { UserService } from "../services/users/user.service";
+import { TestResetService } from "../services/tenants/test-reset.service";
 import { TenantService } from "../services/tenants/tenant.service";
 import { globalSingleton } from "../singleton";
 import type { AppContainer, Cradle } from "./cradle";
@@ -41,6 +42,7 @@ export function createAppContainer(config: AppConfig, orm: Orm): AppContainer {
     userService: asClass(UserService).scoped(),
     userPreferenceService: asClass(UserPreferenceService).scoped(),
     tenantService: asClass(TenantService).scoped(),
+    testResetService: asClass(TestResetService).scoped(),
     apiTokenService: asClass(ApiTokenService).scoped(),
     auditService: asClass(AuditService).scoped(),
     idempotencyService: asClass(IdempotencyService).scoped(),

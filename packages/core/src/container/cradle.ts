@@ -1,3 +1,4 @@
+import type { TestResetService } from "../services/tenants/test-reset.service";
 import type { EntityManager, Orm } from "@cpg/db";
 import type { AwilixContainer } from "awilix";
 import type { AppConfig } from "../config";
@@ -31,6 +32,7 @@ export interface Cradle {
   userService: UserService;
   userPreferenceService: UserPreferenceService;
   tenantService: TenantService;
+  testResetService: TestResetService;
   apiTokenService: ApiTokenService;
   auditService: AuditService;
   idempotencyService: IdempotencyService;
