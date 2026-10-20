@@ -6,11 +6,13 @@ import {
   requestScope,
   retryingStaleSnapshot,
   serverAction,
+  tenantScope,
   uiActor,
   type Result,
   type TenantInfo,
 } from "@cpg/core";
 import { tenantReadOnlySchema } from "@cpg/core/validators/tenants/tenant-read-only.schema";
+import { testResetSchema } from "@cpg/core/validators/tenants/test-reset.schema";
 import { currentUser } from "../../../auth/require-admin";
 
 /**
@@ -28,5 +30,18 @@ export async function setTenantReadOnly(values: unknown): Promise<Result<TenantI
     retryingStaleSnapshot(() => tenantService.setReadOnly(tenant, readOnly, uiActor(assertAdmin(actor)))),
   )(values);
   if (result.ok) revalidatePath("/admin");
+  return result;
+}
+
+
+/** Test reset is a global admin control; its service owns the atomic write even when Test is read-only. */
+export async function resetTest(values: unknown): Promise<Result<TenantInfo>> {
+  const user = await currentUser();
+  const result = await serverAction(testResetSchema, async ({ generation }) => {
+    const actor = uiActor(assertAdmin(user));
+    return (await tenantScope("test")).cradle.testResetService.reset(generation, actor);
+  })(values);
+  // The control survives this refresh and keeps its confirmed generation/error until closed.
+  if (result.ok || result.error.code === "GENERATION_STALE") revalidatePath("/admin");
   return result;
 }

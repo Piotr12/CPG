@@ -20,7 +20,10 @@ export const HELP_TOPIC_IDS = [
   "forecasts",
   "boms",
   "bom-revisions",
+  "customer-orders",
+  "customer-order-detail",
   "import",
+  "stock",
   "language-and-theme",
   "using-help",
 ] as const;
@@ -50,7 +53,10 @@ export const HELP_TOPIC_ROUTES: Record<HelpTopicId, string> = {
   forecasts: "/admin/[tenant]/forecasts",
   boms: "/admin/[tenant]/boms",
   "bom-revisions": "/admin/[tenant]/boms/[id]",
+  "customer-orders": "/admin/[tenant]/customer-orders",
+  "customer-order-detail": "/admin/[tenant]/customer-orders/[id]",
   import: "/admin/[tenant]/import",
+  stock: "/admin/[tenant]/stock",
   "language-and-theme": "/admin",
   "using-help": "/help",
 };
@@ -66,6 +72,8 @@ export interface HelpTopic extends HelpText {
 }
 
 const en: Record<HelpTopicId, HelpText> = {
+  "customer-orders": { title: "Customer orders", body: ["Both roles can create and edit customer orders under Transactions. Choose one active customer and one location for the header; each line has its own material, positive quantity, unit and required date. Orders start Open with zero fulfilled. Entering an order moves no stock. Stored quantities use the material’s base unit; the entered amount and factor stay in history. A customer may be deactivated while existing orders continue. A stale version refuses an overwrite; reload before retrying. A read-only tenant hides write controls and refuses writes."] },
+  "customer-order-detail": { title: "Maintaining a customer order", body: ["Both roles can create and edit customer orders under Transactions. Choose one active customer and one location for the header; each line has its own material, positive quantity, unit and required date. Orders start Open with zero fulfilled. Entering an order moves no stock. Stored quantities use the material’s base unit; the entered amount and factor stay in history. A customer may be deactivated while existing orders continue. A stale version refuses an overwrite; reload before retrying. A read-only tenant hides write controls and refuses writes."] },
   "getting-started": {
     title: "Getting started with CPG",
     body: [
@@ -90,6 +98,7 @@ const en: Record<HelpTopicId, HelpText> = {
       "The administrator opens this page from Administration → Tenants in the sidebar, next to Users, and also sees the Database card here. The card shows where CPG keeps its data, how many migrations are applied, whether any are still pending, and how many settings are stored.",
       "A pending migration normally means CPG is still starting. If it stays, tell whoever runs CPG.",
       "The administrator's Read-only card makes Test or Prod read-only, and writable again, after a confirmation. Each tenant has its own flag, and every change is kept in the Global audit. A read-only tenant shows Read-only on the chooser, a lock on its side of the TEST | PROD switch, and a banner on its pages.",
+      "Reset Test, on this page for the administrator, permanently replaces Test business data and its audit with fresh demonstration data and a new generation. It restores the previous read-only flag. Prod, users, sessions, tokens, preferences and Global audit survive. Old Test forms must reload. The API is POST /api/tenants/test/reset with an empty object, an admin bearer token, Idempotency-Key and the current Dataset-Generation. After a lost response, fetch the new generation and retry the same key, never a new one.",
       "Open Test or Open Prod takes you to that tenant's business data.",
     ],
   },
@@ -238,6 +247,15 @@ const en: Record<HelpTopicId, HelpText> = {
       "Upload the workbook and run the dry run: it checks every row with the same rules as the screens, writes nothing, and lists every problem by sheet, row and column, or shows what would be created, changed or left unchanged. Only a dry run without problems can be committed, and the commit writes everything in one go or nothing. If anything the workbook uses changed since the dry run, the commit is refused: run the dry run again. At most 2000 rows and 512 KB per workbook. The API offers the same: GET /api/import/template, and POST /api/tenants/{tenant}/import/dry-run and /commit with the workbook as base64.",
     ],
   },
+  stock: {
+    title: "Physical stock and corrections",
+    body: [
+      "Stock in the tenant menu shows the exact physical balance and recent movements for a selected material and location. A pair without movements has zero stock. Test and Prod are separate; fresh Test includes demonstration opening movements.",
+      "Either role can post a reasoned correction while the tenant and masters are writable and active. Enter a signed change: 5 adds five and -5 removes five. Pick the base unit or a defined conversion; it converts once, half-up to six decimals, and keeps the entered quantity, unit and factor. The server uses today's UTC business date; backdating and future dating are unavailable. A correction that would make stock negative is refused with the available quantity.",
+      "Opening balances and physical customer returns are ordinary positive corrections with a reason; there is no return document. Every user correction creates an immutable stock movement and a separate before/after audit entry. Source, actor and unit/factor appear in movement details. Installation openings are explicitly labelled Installation. The screen shows up to 100 recent movements, while its balance includes all movements.",
+      "A material with any movement keeps its type and base unit forever, even after returning to zero. Nonzero stock prevents material or location deactivation. The API reads GET /api/tenants/{tenant}/stock?material=00000001&location=00000001 and posts POST /api/tenants/{tenant}/stock/corrections with a bearer token, idempotency key, current Test generation and material, location, signed quantity, unit and reason.",
+    ],
+  },
   "language-and-theme": {
     title: "Language and theme",
     body: [
@@ -257,6 +275,8 @@ const en: Record<HelpTopicId, HelpText> = {
 };
 
 const pl: Record<HelpTopicId, HelpText> = {
+  "customer-orders": { title: "Zamówienia klientów", body: ["Obie role mogą tworzyć i edytować zamówienia klientów w sekcji Transakcje. Wybierz aktywnego klienta i jedną lokalizację nagłówka; każda pozycja ma własny materiał, dodatnią ilość, jednostkę i wymagany termin. Nowe zamówienie jest Otwarte, z ilością zrealizowaną równą zero. Zapis nie zmienia zapasu. Ilości zapisuje się w jednostce bazowej, zachowując wprowadzoną ilość i przelicznik. Klienta można dezaktywować, a istniejące zamówienia nadal obsługiwać. Nieaktualna wersja nie nadpisze zmian: odśwież dane. Środowisko tylko do odczytu ukrywa przyciski zapisu i odmawia zmian."] },
+  "customer-order-detail": { title: "Edycja zamówienia klienta", body: ["Obie role mogą tworzyć i edytować zamówienia klientów w sekcji Transakcje. Wybierz aktywnego klienta i jedną lokalizację nagłówka; każda pozycja ma własny materiał, dodatnią ilość, jednostkę i wymagany termin. Nowe zamówienie jest Otwarte, z ilością zrealizowaną równą zero. Zapis nie zmienia zapasu. Ilości zapisuje się w jednostce bazowej, zachowując wprowadzoną ilość i przelicznik. Klienta można dezaktywować, a istniejące zamówienia nadal obsługiwać. Nieaktualna wersja nie nadpisze zmian: odśwież dane. Środowisko tylko do odczytu ukrywa przyciski zapisu i odmawia zmian."] },
   "getting-started": {
     title: "Pierwsze kroki z CPG",
     body: [
@@ -277,6 +297,7 @@ const pl: Record<HelpTopicId, HelpText> = {
   "admin-home": {
     title: "Kontrola jaskini",
     body: [
+      "Reset środowiska Test jest dostępny tu tylko dla administratora. Trwale zastępuje dane biznesowe i audyt środowiska Test danymi demonstracyjnymi w nowej generacji. Przywraca poprzednią flagę tylko do odczytu. Prod, użytkownicy, sesje, tokeny, preferencje i audyt globalny pozostają bez zmian. Stare formularze Test trzeba odświeżyć. API: POST /api/tenants/test/reset z pustym obiektem, tokenem administratora, Idempotency-Key i aktualnym Dataset-Generation. Po utracie odpowiedzi pobierz nową generację i ponów ten sam klucz, nigdy nowy.",
       "Kontrola jaskini to strona, na którą trafia każde konto po zalogowaniu: wybierz tu środowisko Test lub Prod. Język i motyw, tokeny API oraz przycisk Wyloguj są na karcie konta na dole panelu bocznego. Nie ma tu zmiany hasła: hasła ustawia tylko administrator.",
       "Administrator otwiera tę stronę pozycją Administracja → Środowiska w panelu bocznym, obok Użytkowników, i widzi tu też kartę Baza danych. Karta pokazuje, gdzie CPG przechowuje dane, ile migracji zastosowano, czy jakieś jeszcze oczekują i ile ustawień zapisano.",
       "Oczekująca migracja zwykle oznacza, że CPG jeszcze się uruchamia. Jeśli nie znika, powiedz o tym osobie, która utrzymuje CPG.",
@@ -427,6 +448,15 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Pobierz szablon: ma arkusz na materiały, przeliczniki jednostek, lokalizacje, klientów, dostawców, parametry planowania i zapas bezpieczeństwa oraz dwa na BOM-y, a do tego instrukcję po angielsku i po polsku. Wypełnij tylko potrzebne arkusze i zachowaj wiersz nagłówka każdego z nich. Puste ID tworzy rekord, istniejące ID go aktualizuje, a ID, które nie istnieje, jest błędem. Import nigdy niczego nie usuwa.",
       "Arkusze są stosowane w kolejności szablonu, więc wiersz parametrów planowania może użyć materiału tworzonego przez arkusz Materials: próba pokazuje ID, które dostanie. Wiersze BOM-u to jego pełna receptura: pominięty składnik jest usuwany w nowej rewizji, identyczna receptura nie tworzy rewizji, a wiersze nowego BOM-u wskazują jego nagłówek przez wybraną przez ciebie referencję importu.",
       "Wyślij skoroszyt i wykonaj próbę: sprawdza każdy wiersz tymi samymi zasadami co ekrany, niczego nie zapisuje i wymienia każdy problem z arkuszem, wierszem i kolumną albo pokazuje, co zostanie utworzone, zmienione lub pozostanie bez zmian. Zatwierdzić można tylko próbę bez problemów, a zatwierdzenie zapisuje wszystko naraz albo nic. Jeśli coś, czego używa skoroszyt, zmieniło się od czasu próby, zatwierdzenie jest odrzucane: wykonaj próbę ponownie. Najwyżej 2000 wierszy i 512 KB na skoroszyt. API oferuje to samo: GET /api/import/template oraz POST /api/tenants/{tenant}/import/dry-run i /commit ze skoroszytem w base64.",
+    ],
+  },
+  stock: {
+    title: "Zapas fizyczny i korekty",
+    body: [
+      "Zapas w menu środowiska pokazuje dokładny stan fizyczny i ostatnie ruchy wybranego materiału w lokalizacji. Para bez ruchów ma stan zero. Test i Prod są oddzielne; świeży Test zawiera demonstracyjne ruchy otwarcia.",
+      "Obie role mogą zaksięgować korektę z powodem, gdy środowisko pozwala na zapis, a materiał i lokalizacja są aktywne. Wpisz zmianę ze znakiem: 5 dodaje pięć, -5 odejmuje pięć. Wybierz jednostkę podstawową lub zdefiniowany przelicznik; ilość jest przeliczana raz, z zaokrągleniem połówkowym w górę do sześciu miejsc, i zachowuje wpisaną ilość, jednostkę oraz przelicznik. Serwer używa dzisiejszej daty UTC; nie można księgować w przeszłość ani przyszłość. Korekta prowadząca do ujemnego zapasu jest odrzucana z dostępną ilością.",
+      "Stany otwarcia i fizyczny zwrot od klienta to zwykłe dodatnie korekty z powodem; nie powstaje dokument zwrotu. Każda korekta użytkownika tworzy niezmienny ruch magazynowy i oddzielny wpis audytu ze stanem przed i po. Źródło, użytkownik i przelicznik są w szczegółach ruchu. Otwarcia demonstracyjne są oznaczone jako Instalacja. Ekran pokazuje do 100 ostatnich ruchów, a saldo uwzględnia wszystkie ruchy.",
+      "Materiał po dowolnym ruchu zachowuje na zawsze typ i jednostkę podstawową, nawet po wyzerowaniu zapasu. Niezerowy zapas blokuje dezaktywację materiału i lokalizacji. API odczytuje GET /api/tenants/{tenant}/stock?material=00000001&location=00000001 i księguje POST /api/tenants/{tenant}/stock/corrections z tokenem, kluczem idempotencji, bieżącą generacją Test oraz materiałem, lokalizacją, ilością ze znakiem, jednostką i powodem.",
     ],
   },
   "language-and-theme": {

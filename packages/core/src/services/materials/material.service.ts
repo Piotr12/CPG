@@ -1,3 +1,5 @@
+import { assertNoCustomerDemand, orderUsingMaterial } from "../customer-orders/customer-order-usage";
+import { assertNoPhysicalStock, hasStockMovements } from "../stock/stock-usage";
 import {
   Material,
   MaterialConversion,
@@ -131,7 +133,18 @@ export class MaterialService {
       const material = await findMaterial(em, materialId, { refresh: true });
       if (material.version !== version) throw versionConflict();
       const { active, ...fields } = changedFields(material, changes);
-      if (fields.type !== undefined || fields.baseUnit !== undefined) await assertNotInBoms(em, material, fields);
+      if (fields.type !== undefined || fields.baseUnit !== undefined) {
+        if (await hasStockMovements(em, material)) {
+          throw new ConflictError("This material has stock movements, so its type and base unit are locked permanently.", "MATERIAL_HAS_MOVEMENTS");
+        }
+        await assertNotInBoms(em, material, fields);
+        const order = await orderUsingMaterial(em, material);
+        if (order !== null) throw new ConflictError(`Customer order ${order} uses this material, so its type and base unit cannot change.`, fields.type !== undefined ? "MATERIAL_TYPE_IN_USE" : "BASE_UNIT_IN_USE");
+      }
+      if (active === false) {
+        await assertNoPhysicalStock(em, { material });
+        await assertNoCustomerDemand(em, material);
+      }
       if (fields.baseUnit !== undefined) await assertBaseUnitFree(em, material);
       if (fields.type === "raw" && (await isMadeAnywhere(em, material))) {
         throw new ConflictError(

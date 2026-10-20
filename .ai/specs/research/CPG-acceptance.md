@@ -207,73 +207,81 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### TEN-022 — Test reset when previously writable
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/test-reset.test.ts` and `test-reset-api.test.ts` reset writable Test; `packages/core/src/services/tenants/test-reset.service.test.ts` verifies every current demo kind, an empty Test audit, the new generation and preservation of global/Prod values. #93.
 - **Given:** Admin with Test writable and populated
 - **When:** Reset Test dataset
 - **Then:** Old Test business records and Test audit vanish; freshly seeded Test has a new dataset generation, all Test-local business ID sequences restart at 00000001, prior read-only state restored and Prod unchanged.
 
 ### TEN-023 — Test reset when previously read-only
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** The Polish/dark narrow-screen UI reset in `tests/integration/test-reset.test.ts`, the read-only case in `test-reset-api.test.ts`, and the real SQLite service tests restore the original read-only flag. #93.
 - **Given:** Test was manually marked read-only
 - **When:** Admin resets Test
 - **Then:** Test regenerated with fresh dataset generation and restarted ID sequences; prior read-only remains enabled and Prod untouched.
 
 ### TEN-024 — Test reset preserves global identities
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/test-reset-api.test.ts` retains two accounts, live browser sessions, usable tokens and preferences. `packages/core/src/services/tenants/test-reset.service.test.ts` compares every stored column of those global rows before/after. #93.
 - **Given:** Two user accounts and API tokens with sessions exist
 - **When:** Admin resets Test
 - **Then:** Users, active sessions, tokens, preferences and Global audit survive unchanged.
 
 ### TEN-025 — Test reset excludes Prod
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `tests/integration/test-reset-api.test.ts` compares all currently available Prod lists, audit and metadata; the reset service tests preserve Prod values. Customer orders and stock do not exist yet, so that part of this Given awaits those stories. The deletion footprint is generic and excludes global/Prod data (`tests/test-reset-coverage.test.ts`). #93.
 - **Given:** Prod contains customer orders, stock and immutable audit
 - **When:** Admin resets Test
 - **Then:** All Prod records, balances, audit and read-only state remain identical.
 
 ### TEN-026 — Reset concurrent write safety
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/tenants/test-reset.service.test.ts` interleaves two real SQLite connections in both orders: a write commits before reset and is removed, or its old snapshot is refused after reset and its generation retry is stale. No partial write enters the new generation. #93.
 - **Given:** One session preparing Test update and admin resets Test
 - **When:** Attempt write during reset while read-only gate active
 - **Then:** Update is blocked or safely completed before reset; no partial demo data leaks into regenerated dataset.
 
 ### TEN-027 — Reset failure atomicity
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/tenants/test-reset.service.test.ts` injects middle-seed failures, a partial seed and a receipt-insert failure, then compares the complete database snapshot, including both tenant flags and audits. #93.
 - **Given:** Test has valid pre-reset data; reset fails mid-work
 - **When:** Trigger Test regeneration fault
 - **Then:** Old consistent dataset remains, original read-only setting restored and Prod not affected.
 
 ### TEN-028 — Global audit reset survival
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** Repeated API resets in `tests/integration/test-reset-api.test.ts` retain prior Global events and add the admin reset event. Real SQLite service tests preserve every prior Global event and check the new actor/session event. #93.
 - **Given:** Global admin actions already audited
 - **When:** Reset Test repeatedly
 - **Then:** Global audit retains old admin events and contains a new reset event.
 
 ### TEN-029 — Test reset restarts all business ID counters
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `tests/integration/test-reset-api.test.ts` and reset service tests restart materials, locations, customers, suppliers and BOMs at 00000001 and create the next material after the demo rows. Document sequences are not built yet; their part awaits those stories. All current tenant-owned tables participate automatically. #93.
 - **Given:** Test had material 00000047 and several documents before reset
 - **When:** Administrator performs full Test reset
 - **Then:** New Test generation starts all auto-generated business sequences afresh. Seeded demonstration materials receive initial IDs beginning 00000001, followed by subsequent IDs; Prod and global identities do not restart.
 
 ### TEN-030 — Old Test generation mutation is rejected
 
-**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** As API-033: a stale generation is refused before any key lookup or write (`packages/core/src/services/idempotency/idempotency.service.test.ts`, `packages/core/src/http/tenant-server-action.test.ts`). The reset itself comes in slice 2 (D06). E02-S03, #21.
+- **Evidence:** `tests/integration/test-reset-api.test.ts` retries an old-generation edit with its used key and a new key after a real reset; `test-reset.test.ts` refuses a stale UI form against a reused ID. The reset/idempotency unit tests also cover an expired key and missing/stale generation precedence. #93, with the foundation tests of #21.
 - **Given:** Client prepared an API write with dataset-generation G1 and material 00000001; reset created G2 with same ID assigned to another material
 - **When:** Client retries stale G1 API mutation
 - **Then:** HTTP 409/428 precondition failure, no G2 record touched, even with previously used or expired idempotency key.
@@ -3458,8 +3466,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### API-017 — API/UI parity for admin reset
 
-**Priority:** P0 · **Channel:** API · **Status:** Not executed
+**Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/test-reset.test.ts` and `test-reset-api.test.ts` exercise the same admin reset from both surfaces, including previously read-only Test. Normal-token and cookie-only reset requests are denied; action tests reject normal and signed-out callers. #93.
 - **Given:** Admin can trigger Test reset in UI
 - **When:** Execute through admin bearer API
 - **Then:** Same authorization, read-only safeguards and full atomic reset; normal token forbidden.
@@ -3599,9 +3608,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### API-033 — Old Test idempotency request cannot mutate reused ID
 
-**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** The precondition is built: `packages/core/src/services/idempotency/idempotency.service.test.ts` (a stale generation is refused even for a key whose result is stored), `packages/core/src/domain/tenants/generation.test.ts` (409). The Test reset that makes a generation stale comes in slice 2 (D06), which must also delete Test's key records (spec `implemented/2026-10-19--1548UTC-api-idempotency`, Q8). E02-S03, #21.
+- **Evidence:** `tests/integration/test-reset-api.test.ts` demonstrates the old generation being refused after a real reset, including its previously used key. Reset and IdempotencyService tests cover the expired-key case and enforce generation checking before lookup. #93, with #21.
 - **Given:** Test generation G1 processed keyed stock operation; Test reset seeded G2 with same material ID
 - **When:** Replay G1 payload with same key inside or outside 24 hours
 - **Then:** Request rejected as stale generation and never returns a success affecting G2 or writes G2 stock. Global credentials remain valid for new correctly scoped requests.
@@ -3610,7 +3619,8 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `tests/integration/tenants.test.ts` (tenant metadata gives the generation), `tests/integration/materials-api.test.ts` and `named-records-api.test.ts` (a Test write without it is 428, with the current one it succeeds), `tests/integration/boms-api.test.ts` (a Test BOM write without it is 428 `GENERATION_REQUIRED`), `tests/integration/tenant-isolation-api.test.ts` (a generation above the current one is 409 `GENERATION_STALE`, in Test and in Prod, and nothing is created), `packages/core/src/domain/tenants/generation.test.ts` and `packages/app/src/auth/api-write.test.ts`. The stale case after a real reset waits for slice 2 (D06). `tests/integration/import-api.test.ts` (a Test import dry run without the generation is 428 `GENERATION_REQUIRED`, and with a stale one 409 `GENERATION_STALE`). E02-S03, #21, with #26 and #27.
+- **Evidence:** `tests/integration/tenants.test.ts` (tenant metadata gives the generation), `tests/integration/materials-api.test.ts` and `named-records-api.test.ts` (a Test write without it is 428, with the current one it succeeds), `tests/integration/boms-api.test.ts` (a Test BOM write without it is 428 `GENERATION_REQUIRED`), `tests/integration/tenant-isolation-api.test.ts` (a generation above the current one is 409 `GENERATION_STALE`, in Test and in Prod, and nothing is created), `packages/core/src/domain/tenants/generation.test.ts` and `packages/app/src/auth/api-write.test.ts`. The real reset and its stale-generation case are verified by #93 (see the additional evidence below). `tests/integration/import-api.test.ts` (a Test import dry run without the generation is 428 `GENERATION_REQUIRED`, and with a stale one 409 `GENERATION_STALE`). E02-S03, #21, with #26 and #27.
+- **Evidence (#93):** `tests/integration/test-reset-api.test.ts` fetches the incremented generation after a real reset and refuses the old precondition; the same key with the current precondition replays exactly once.
 - **Given:** User bearer token can read Test and Prod tenant metadata; Test dataset generation is G1
 - **When:** Make Test mutation without precondition, with G1, and after reset with old G1
 - **Then:** Missing generation rejected (HTTP 428), current G1 mutation may succeed subject to ordinary rules, stale G1 after reset G2 rejected (HTTP 409). Current generation is available from tenant metadata.
@@ -3706,24 +3716,27 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### AUD-011 — Prod retention through Test reset
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/test-reset-api.test.ts` compares Prod audit before/after both reset modes; real SQLite service and db reset tests retain Prod audit rows. #93.
 - **Given:** Prod has historical audit entries
 - **When:** Admin resets Test
 - **Then:** Prod audit remains intact.
 
 ### AUD-012 — Test audit cleared on reset
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/test-reset-api.test.ts` begins with audited Test mutations and observes an empty Test audit after reset. Db and service tests prove deletion, rollback and fresh demo seeding. #93.
 - **Given:** Test has prior audit events
 - **When:** Admin regenerates Test
 - **Then:** Old Test-specific audit removed with old Test business data.
 
 ### AUD-013 — Global audit retained across resets
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** API/UI reset tests observe the acting admin, UI session or API token, and retained prior Global history. The real SQLite audit tests still abort Global updates/deletes. #93.
 - **Given:** Global account/reset events recorded
 - **When:** Reset Test
 - **Then:** Global history still readable and append-only.

@@ -23,6 +23,7 @@ export interface ConfirmDialogProps<T> {
   title: string;
   description: string;
   confirmLabel: string;
+  pendingLabel?: string;
   cancelLabel: string;
   /** A red confirm button, for what can't simply be undone. */
   destructive?: boolean;
@@ -44,6 +45,7 @@ export function ConfirmDialog<T>({
   title,
   description,
   confirmLabel,
+  pendingLabel,
   cancelLabel,
   destructive = false,
   action,
@@ -80,7 +82,7 @@ export function ConfirmDialog<T>({
         <AlertDialogFooter>
           <AlertDialogCancel>{cancelLabel}</AlertDialogCancel>
           <Button variant={destructive ? "destructive" : "default"} disabled={isPending} onClick={confirm}>
-            {confirmLabel}
+            {isPending ? (pendingLabel ?? confirmLabel) : confirmLabel}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

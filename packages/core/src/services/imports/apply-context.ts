@@ -128,7 +128,7 @@ function issuesOf(error: AppError, sheet: string, row: number, key: SheetKey, pl
     const place = placement.field ?? ((field: string) => ({ sheet, row, column: columnHeader(key, field) }));
     return Object.entries(error.fieldErrors).map(([field, [message]]) => ({ ...place(field), code: "VALIDATION_FAILED", message }));
   }
-  return [{ sheet, row, column: placement.codes?.[error.code] ?? null, code: error.code, message: error.message }];
+  return [{ sheet, row, column: placement.codes?.[error.code] ?? null, code: error.code, message: error.message, ...(error.messageParams && { params: error.messageParams }) }];
 }
 
 /**

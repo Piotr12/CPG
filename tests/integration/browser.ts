@@ -83,6 +83,7 @@ export async function clickHydrated(browser: Browser, selector: string) {
   // Mark the shown copy and click exactly it: the first match in the DOM may be a hidden earlier page's.
   await browser.evaluate(`(() => {
     document.querySelectorAll("[data-test-click]").forEach((element) => element.removeAttribute("data-test-click"));
+    ${shown}.scrollIntoView({ block: "center", inline: "nearest" });
     ${shown}.setAttribute("data-test-click", "");
     return true;
   })()`);

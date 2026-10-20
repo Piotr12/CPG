@@ -1,0 +1,92 @@
+# Customer orders — implementation of #83
+
+Source doc: .ai/specs/implemented/2026-10-20--1635UTC-customer-orders.md
+Design PR: #101
+Status: complete
+Engine: om-auto-create-pr (steps: 9, --loop: no)
+
+## Goal
+Both roles create and maintain tenant-local customer orders with one location and dated exact-quantity lines, Open state, audited UI/API parity and demo data.
+
+## Scope
+New customer-orders entities/service/validators/API/actions/screens, necessary material/location integrity guards, Test seed, translations/navigation/help and tests. No shipment, GI, stock posting, terminal command, forecast or MRP implementation. Reuse this cockpit linked worktree; spec was merged independently through #101 and is now inherited from main.
+
+## Implementation Plan
+### Phase 1: Aggregate and integrity
+1.1 Add tenant-owned entities and generated additive migration with rollback/isolation tests.
+1.2 Add strict quantity/date/line-identity input validators and tests.
+1.3 Build transactional audited/versioned service and SQLite behaviour tests.
+1.4 Add material/location usage guards and Test seed with regression tests.
+### Phase 2: API and screens
+2.1 Add keyed collection/item API and tenant actions, contract docs and tests.
+2.2 Add translated list/detail/edit screens, aggregate form, help/navigation and unit tests.
+2.3 Add API/browser integration journeys for both roles and integrity/refusal paths.
+### Phase 3: Verification and publication
+3.1 Reach 100% unit coverage; run lint, typecheck, coverage, build, integration and live mobile/desktop QA.
+3.2 Run authoritative review/autofix, publish evidence and summary, make PR ready with full labels.
+
+## Risks
+Risk-high additive schema, new aggregate contract, conversion history and line identity. Real SQLite and HTTP tests must verify atomicity, tenant isolation, no-op behaviour and version increments from line-only edits. Docker may be unavailable for this macOS account; then run production standalone against a disposable DATA_DIR, disclose Docker-only startup test skip. No production action or base-branch push/merge.
+
+## Log
+- 16:39 UTC — Feature triage and PRD analysis complete. Design PR #101 is ready, scope review approved. Spec defaults posted on issue/PR. Local npm ci installed 913 packages (no lockfile change; 10 known high advisories). No runtime code written before plan. New implementation slot is free.
+
+- 16:49 UTC — Phase 1 complete: tenant-owned header/line entities, generated migration, strict validators, service, material/location guards and Test seed. Removed unposted lines stay hidden historical references so material type/base-unit locks survive. Audit keeps allowlisted lines as JSON text because existing AuditSnapshot values are scalar.
+
+- 17:06 UTC — Phase 2 API/actions/screens and integration journeys written. First targeted browser run: 5/5 passed against production standalone. Fixed a test using audit.subjectId instead of the API’s audit.subject.id. Full unit gate passed 1,963 tests at 100%; fresh unit regression (4 dialog tests) protects the opening version across a conflict refresh. Rebuilding to run this sixth browser scenario and full integration. Docker script failed (no socket); browser doctor passed; disposable standalone descriptor in .ai/qa/test-env.json. Independent aggregate review finding fixed in d4f3394 and re-review approved.
+
+- 17:14 UTC — Re-plan after full integration: 214 passed, 6 failed, 1 Docker-only skip. Three nav expectations omitted the new entry, one BOM expectation used old copy, and the standalone launcher omitted public icons (environment repaired). New conflict-UI test timed out; manual production two-browser reproduction confirms the error stays and the original version prevents a second overwrite. Changed test wait to expose closed-dialog state and will rerun focused tests on fresh data before the full suite. `npm run dev` also reproduces Next instant-shell validation/hydration failure on unchanged Materials; kept existing page pattern and did not expand into a global Next fix.
+
+- 17:20 UTC — Root cause of stale UI rerun: overlay copy retained Next route-cache/APP_PAGE for Prod pointing to old chunk 1z49_qrah8k56; current standalone manifests and Test used fixed chunk 0yluc70m-nw2e. Prepared a new empty standalone directory with static/public and fresh data. No additional dialog patch needed. Focused customer-order/navigation/icons/BOM browser suite now running before full re-run. Added wrong-tenant order GET assertion to the new API journey.
+
+- 2026-10-20 17:25 UTC — Phase 2 committed. Clean standalone environment: all 6 customer-order integration journeys pass, including repeated version conflict and reopen. Full final integration suite runs on a fresh database; independent final code review started.
+
+- 17:31 UTC — Full integration passed 220 tests (one Docker-only skip). Final performance checklist found unbounded customer-order collection/response and quadratic grouping despite prior approval. Re-planned publication: fixed 100-order pages, validated page query, shared DataTable pagination slot and linear grouping, preserving collection array shape. Added real SQLite boundary tests and browser/API query checks; rerun full gate after this change.
+
+- 17:35 UTC — Re-review found the same unbounded-read pattern in the cross-order material-demand guard. Replaced it with parent-status-filtered 100-line keyset batches using detached identity maps in the same tenant transaction. Real SQLite 101-order regression passes both blocker-after-first-batch and all-resolved paths. Re-running the gate; no API or business-rule change.
+
+- 17:37 UTC — Query-plan re-review found detached batches still sorted material matches without a composite index. Added an entity-declared (tenant, material, removed, status, id) index via a NEW generated migration (published migration unchanged). Added SQLite EXPLAIN and down/up regression evidence; migration count becomes 15. The pagination browser fixture had an overlong customer name and was corrected before final rerun.
+
+- 17:47 UTC — Final code and UI verification complete. Spec moves on design-only #101; no spec added to implementation. Own test server/browser sessions stopped. Shared qa-evidence publication is the only remaining Step3.2 operation requiring the user Guard decision;11 inspected PNGs/report/checksummed publication manifest and script are prepared. Formal review/QA approval still belong to another reviewer.
+
+- 17:53 UTC — User instructed autonomous completion without further confirmation, authorizing the concrete pending publication. Published all11 reviewed PNGs to existing shared qa-evidence/pr-102-66e9b36 and [inline QA report](https://github.com/Piotr12/CPG/pull/102#issuecomment-6297453201); verified remote hashes and all11 comment embeds. Completing ready promotion and final CI follow-up. Formal review and risk-high manual QA remain external merge gates.
+
+- 2026-10-20 18:13 UTC — Reopened Step 3.2 after final-head CI passed all five jobs (222 Docker integration tests), because main advanced and PR became conflicting. Merging main including stock ledger, preserving both integrity guards, migrations, seeds and structured error parameters. Combined unit gate: 2,048 tests and all coverage measures 100%; typecheck PASS. Adding upgrade/no-stock-side-effect and audit localization regressions before full merged-head validation.
+
+- 18:16 UTC — Merged-source lint, typecheck, build and 2,051 unit tests PASS; all four coverage measures remain 100%. Real SQLite regression applies both pending order migrations after main stock schema and preserves tenant state, without order/stock schema drift. Starting full integration on a fresh standalone copy.
+
+- 18:20 UTC — Re-plan: merged-source integration225PASS/1Docker skip/1navigation failure (link covered by sidebar footer after scroll). Helper now centers the target within its scroll container before clicking. Main advanced again to d8d6093 (atomic Test reset); merged its shared seed registry, adding order seeding to startup/reset and rollback/preservation regressions. Full gate must rerun on this final composition.
+
+- 18:27 UTC — Final composed gate PASS: lint,typecheck,production build,313 unit files/2083 tests with100% coverage; full fresh standalone integration30 files/233 tests PASS,1Docker-only skip,275.42s. Both independent merge reviews APPROVE (83+35 focused tests). Final UI evidence refreshed on another pristine standalone copy before publication.
+
+- 18:28 UTC — Step3.2 complete: final independent review approved,15 inspected UI PNGs/report published to qa-evidence/pr-102-09bbbce; all15remotehashes and15inlineembeds verified. Own production process and named QA browser closed. Ready PR102 stays review+needs-qa; following final pushed-head CI to its bounded result before session completion.
+
+- 2026-10-20 18:30 UTC — Push encountered concurrent remote merge1b39c00. Reconciled its history without force-push; retained stronger structured-error assertions. Runtime source/migrations/integration tests remain byte-identical to verified09bbbce. Rejected remote rename of the already published customer-order migration, restoring its original164223identity per AGENTS; existing-main upgrade regression already proves out-of-order adoption. Re-run unit/lint/typecheck PASS:2083tests,100%all4coverage measures. Production build/full integration/live QA remain valid for the identical runtime tree.
+
+## Verification
+- Final composed source09bbbce with maind8d6093: lint/typecheck/build PASS;2,083 unit tests,100% all4measures (4,508 lines/5,110 statements/2,228 branches/1,742 functions);233 integration PASS/1Docker-only startup skip. Reset replacement/rollback and Prod preservation covered.
+
+- Phase 1: lint/typecheck passed; full coverage passed, 289 files / 1,927 tests, all four measures 100%.
+- Before main merges: lint and typecheck PASS;296 unit files/1,970 tests PASS,100% lines/statements/branches/functions (4,289 lines,4,866 statements,2,106 branches,1,667 functions); Next16.4.2 build PASS.
+- Before main merges, production standalone integration:27 files passed/1 skipped,221 tests passed/1 Docker-only startup skip,236.14s. Docker unavailable for this account.
+- Live QA:11 checkpoints PASS with inspected PNGs (desktop/mobile390px,form/error/keyboard/scroll,empty,read-only,anonymous,PL/dark/long names/pagination). Artifacts: .ai/qa/artifacts_customer-orders/report.md and report.json (ignored).
+- Independent final code review APPROVE at d68869b after fixing all findings;21 migration tests and46 independent focused tests passed. Root reviewed complete diff against engineering/compatibility/product contracts.
+- npm audit:10 known high braces advisories documented in standards; no dependencies changed.
+- Dev was attempted; instant-shell hydration failed on unchanged Materials too. Production build supplied live verification.
+
+## Progress
+
+> Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
+
+### Phase 1: Aggregate and integrity
+- [x] 1.1 Add tenant-owned entities and generated additive migration with rollback/isolation tests. — d9c84c4
+- [x] 1.2 Add strict quantity/date/line-identity input validators and tests. — d9c84c4
+- [x] 1.3 Build transactional audited/versioned service and SQLite behaviour tests. — d9c84c4
+- [x] 1.4 Add material/location usage guards and Test seed with regression tests. — d9c84c4
+### Phase 2: API and screens
+- [x] 2.1 Add keyed collection/item API and tenant actions, contract docs and tests. — fb5ff58
+- [x] 2.2 Add translated list/detail/edit screens, aggregate form, help/navigation and unit tests. — 95753b0
+- [x] 2.3 Add API/browser integration journeys for both roles and integrity/refusal paths. — 95753b0
+### Phase 3: Verification and publication
+- [x] 3.1 Reach 100% unit coverage; run lint, typecheck, coverage, build, integration and live mobile/desktop QA. — 66e9b36
+- [x] 3.2 Run authoritative review/autofix, publish evidence and summary, make PR ready with full labels. — cf79c39; evidence6297453201

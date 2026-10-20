@@ -31,7 +31,7 @@ describe("isCurrentLeaf", () => {
 
 describe("the trees", () => {
   it("hold groups with their entries", () => {
-    expect(TENANT_TREE.filter(isGroup).map((group) => group.id)).toEqual(["masterData", "sales"]);
+    expect(TENANT_TREE.filter(isGroup).map((group) => group.id)).toEqual(["masterData", "sales", "transactions"]);
     expect(SHARED_TREE.filter(isGroup).map((group) => [group.id, group.adminOnly])).toEqual([["administration", true]]);
   });
 });
@@ -41,7 +41,9 @@ describe("trailOf", () => {
   const user = navModel({ role: "user" }, en.nav)!;
 
   it.each([
+    ["/admin/test/customer-orders/00000001", ["Transactions", "Customer orders"]],
     ["/admin/test/materials", ["Master data", "Materials"]],
+    ["/admin/test/forecasts", ["Sales", "Forecasts"]],
     ["/admin/test/forecasts", ["Sales", "Forecasts"]],
     ["/admin/test/materials/00000005", ["Master data", "Materials"]],
     ["/admin/test", ["Overview"]],
