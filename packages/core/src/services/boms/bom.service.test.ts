@@ -275,21 +275,20 @@ describe("BomService", () => {
 
       await expect(service().create({ ...CABINET, validFrom: "2027-03-01", validThrough: "2027-05-31" }, ACTOR)).rejects.toMatchObject({
         code: "BOM_PRIORITY_CONFLICT",
-        message:
-          "BOM 00000001 already has priority 1 for 00000005 Cabinet, red from 2027-03-01 through 2027-03-31. Choose another priority or other dates.",
+        message: "Another active BOM for this output has the same priority on some of these days: BOM 00000001 (2027-03-01 – 2027-03-31).",
       });
       await expect(service().create({ ...CABINET, validThrough: "2027-03-31" }, ACTOR)).rejects.toMatchObject({
         code: "BOM_PRIORITY_CONFLICT",
       });
       await expect(service().create({ ...CABINET, validFrom: "2027-03-31" }, ACTOR)).rejects.toMatchObject({
-        message: expect.stringContaining("on 2027-03-31."),
+        message: expect.stringContaining("BOM 00000001 (2027-03-31)."),
       });
     });
 
     it("names an open-ended overlap", async () => {
       await service().create(CABINET, ACTOR);
       await expect(service().create({ ...CABINET, validFrom: "2028-01-01" }, ACTOR)).rejects.toMatchObject({
-        message: expect.stringContaining("from 2028-01-01 with no end."),
+        message: expect.stringContaining("BOM 00000001 (2028-01-01 – …)."),
       });
     });
 
@@ -318,7 +317,7 @@ describe("BomService", () => {
 
       await expect(service().update(first.id, { active: true }, off.version, ACTOR)).rejects.toMatchObject({
         code: "BOM_PRIORITY_CONFLICT",
-        message: expect.stringContaining("BOM 00000002 already has priority 1"),
+        message: expect.stringContaining(": BOM 00000002 (2027-01-01 – …)."),
       });
       const still = await service().get(first.id);
       expect(still).toMatchObject({ active: false, revision: 1 });
@@ -349,7 +348,7 @@ describe("BomService", () => {
     it("refuses an output listed as its own component (BOM-024)", async () => {
       await expect(service().create(simple("00000008", "00000008"), ACTOR)).rejects.toMatchObject({
         code: "BOM_CYCLE",
-        message: "This recipe would make a cycle: 00000008 Sub A →(this BOM) 00000008 Sub A.",
+        message: "This recipe would make a cycle: 00000008 Sub A → 00000008 Sub A.",
       });
     });
 

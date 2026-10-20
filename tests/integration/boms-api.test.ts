@@ -97,12 +97,12 @@ describe("BOMs through the API (R07)", () => {
       recipe(ids.panel, 1, [{ material: ids.steel, quantity: "5", unit: "kg" }], { validFrom: "2027-03-01" }),
     );
     expect(overlap.status).toBe(409);
-    expect(json(overlap).error).toMatchObject({ code: "BOM_PRIORITY_CONFLICT", message: expect.stringContaining(`BOM ${first.id}`) });
+    expect(json(overlap).error).toMatchObject({ code: "BOM_PRIORITY_CONFLICT", message: expect.stringContaining(`: BOM ${first.id} (2027-03-01 – 2027-03-31).`) });
 
     await write("POST", "/api/tenants/prod/boms", recipe(ids.subA, 1, [{ material: ids.subB, quantity: "1", unit: "each" }]));
     const cycle = await write("POST", "/api/tenants/prod/boms", recipe(ids.subB, 1, [{ material: ids.subA, quantity: "1", unit: "each" }]));
     expect(cycle.status).toBe(409);
-    expect(json(cycle).error).toMatchObject({ code: "BOM_CYCLE", message: expect.stringContaining(`${ids.subB} bomapi sub B →(this BOM) ${ids.subA}`) });
+    expect(json(cycle).error).toMatchObject({ code: "BOM_CYCLE", message: expect.stringContaining(`${ids.subB} bomapi sub B → ${ids.subA} bomapi sub A →(BOM `) });
   });
 
   it("puts a line's error on its path, and locks the output's type once used (MAT-023, MAT-011)", async () => {

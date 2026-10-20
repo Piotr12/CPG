@@ -373,12 +373,16 @@ async function assertNoCycle(em: EntityManager, bomCode: string | null, output: 
   if (cycle) throw new ConflictError(`This recipe would make a cycle: ${await cyclePath(em, cycle)}.`, "BOM_CYCLE");
 }
 
-/** `00000003 C →(this BOM) 00000001 A →(BOM 00000007) 00000003 C`: each material with its BOM step. */
+/**
+ * `00000003 C →(BOM 00000009) 00000001 A →(BOM 00000007) 00000003 C`: each material with the BOM of
+ * its step; the step of a BOM that has no ID yet is a bare arrow. Language-neutral, so a screen can
+ * append it to the sentence it translates.
+ */
 async function cyclePath(em: EntityManager, cycle: CycleStep[]): Promise<string> {
   const codes = [cycle[0].from, ...cycle.map(({ to }) => to)];
   const materials = await em.find(Material, { code: { $in: codes } });
   const label = (code: string) => `${code} ${materials.find((material) => material.code === code)!.description}`;
-  return [label(cycle[0].from), ...cycle.map(({ to, bom }) => `→(${bom ? `BOM ${bom}` : "this BOM"}) ${label(to)}`)].join(" ");
+  return [label(cycle[0].from), ...cycle.map(({ to, bom }) => `${bom ? `→(BOM ${bom})` : "→"} ${label(to)}`)].join(" ");
 }
 
 /**
@@ -393,14 +397,16 @@ async function assertNoPriorityConflict(em: EntityManager, bomCode: string | nul
     { bom: bomCode ?? "", ...pickHeader(candidate) },
     alternatives.map((bom) => ({ bom: bom.code, ...header(current.get(bom.id)!.revision) })),
   );
-  if (conflict) {
-    throw new ConflictError(conflictMessage(conflict, candidate.priority, output), "BOM_PRIORITY_CONFLICT");
-  }
+  if (conflict) throw new ConflictError(conflictMessage(conflict), "BOM_PRIORITY_CONFLICT");
 }
 
-function conflictMessage({ bom, days }: PriorityConflict, priority: number, output: Material): string {
-  const span = days.through === null ? `from ${days.from} with no end` : days.from === days.through ? `on ${days.from}` : `from ${days.from} through ${days.through}`;
-  return `BOM ${bom} already has priority ${priority} for ${output.code} ${output.description} ${span}. Choose another priority or other dates.`;
+/**
+ * Names the clashing BOM and the days both would be chosen on, after the colon in a language-neutral
+ * form (`BOM 00000001 (2027-03-01 – 2027-03-31)`, `– …` for no end), so a screen can append it.
+ */
+function conflictMessage({ bom, days }: PriorityConflict): string {
+  const span = days.from === days.through ? days.from : `${days.from} – ${days.through ?? "…"}`;
+  return `Another active BOM for this output has the same priority on some of these days: BOM ${bom} (${span}).`;
 }
 
 /** The current revision of each of `boms`, with its lines, by the BOM's internal ID. */
