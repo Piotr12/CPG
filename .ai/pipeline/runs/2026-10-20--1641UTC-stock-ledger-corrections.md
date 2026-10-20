@@ -1,7 +1,7 @@
 # Stock ledger and corrections — #80
 Source doc: .ai/specs/implemented/2026-10-20--1634UTC-stock-ledger-corrections.md
 Spec PR: #103
-Status: in-progress
+Status: complete
 Engine: om-auto-create-pr (steps: 6, --loop: no)
 
 ## Goal
@@ -24,6 +24,7 @@ Stock entities/migration, core stock posting/usage/seeding, stock UI/API, EN/PL/
 - Full gate: lint, typecheck, test:coverage (100%), build, test:integration. No dependency changes expected.
 
 ## Log
+- 2026-10-20 17:29 UTC — Fresh import-fix re-review APPROVE at836e902; independently validated with116targetedtests and real SQLite/JSON/EN/PL probes, rerun successfully by parent. Final full standalone suite219passed/oneDocker-onlyskip(255.02s). Full lint/typecheck/build and1969unit100%pass. Publishing readyPR104, QA report and lock release; final-headCI monitored separately. No runtime changes after reviewed/tested836e902.
 - 2026-10-20 17:23 UTC — Narrow review6cb2b64b requested changes: import row-error adapter discarded messageParams, so STOCK_NOT_EMPTY showed placeholders. Fixed public-context propagation, normalized existing string/number ImportIssue params at report boundary, and fallback to server text for incomplete translation context. Real migrated SQLite material/location dry-run regressions retain exact2.000001kg and leave masters/stock/audit unchanged; EN/PL report tests preserve it. Re-running full gate; no stock posting behavior changes.
 - 2026-10-20 17:18 UTC — Final built standalone full suite passed: 27 files/219 tests, one Docker-only startup skip,247.66s. Final unit suite297files/1964tests at100%; lint/typecheck/build pass. Actual dev and isolated production browser smoke verified conversion, Polish refusal/audit, mobile fit; seven inspected PNGs published on qa-evidence/pr-104-stock. Independent narrow localization review6cb2b64b queued; full review approved. Spec moved on design branch only (f68730e).
 - 2026-10-20 17:12 UTC — Localization refinement: lint, typecheck, full coverage (100% all metrics) and build passed. New error context is explicitly public messageParams, avoiding collision with existing import RowIssueError.params. Final standalone rerun starts from this build.
@@ -44,5 +45,13 @@ Stock entities/migration, core stock posting/usage/seeding, stock UI/API, EN/PL/
 - [x] 2.1 Stock API and actions — d2b1451
 - [x] 2.2 Stock screen, help and translations — d2b1451
 ### Phase 3: verification and publication
-- [x] 3.1 Integration and full validation — 901e8a8
-- [ ] 3.2 Review, UI evidence and ready PR
+- [x] 3.1 Integration and full validation — 836e902
+- [x] 3.2 Review, UI evidence and ready PR — 836e902; publication metadata in final commit
+
+## Final verification and handoff
+- `npm run lint`, `npm run typecheck`, `npm run test:coverage`, `npm run build`: PASS at 836e902; 297 files / 1,969 unit tests, 100% statements/branches/functions/lines. Logs: `/tmp/cpg-80-import-fix-{lint,typecheck,coverage,build}.log`.
+- `CPG_BASE_URL=… npm run test:integration`: PASS on fresh production standalone copy including static/public, 27 files/219 tests; one Docker-only startup test skipped, 255.02 s. Log `/tmp/cpg-80-import-fix-integration.log`. Default Docker provisioning attempted; account has no runtime socket. GitHub CI for preceding source901e8a8 passed all jobs including Docker startup; final publication-head CI monitored without retaining the work lock.
+- Review: full ledger APPROVE at910072b; localization delta CHANGES at901e8a8; import-context fix APPROVE at836e902. Parent reran the116test subset/probe; `git diff --check` PASS. No dependencies changed.
+- Actual dev smoke and isolated production QA: exact -0.25t conversion, Polish no-negative refusal with exact context, preserved250kg, mobile390fit and translated audit. Seven inspected screenshots posted in PR104 comment6296800710 and permanent qa-evidence/pr-104-stock. See `.ai/qa/stock-80/REPORT.md`.
+- Design-only PR103 owns the source spec moved to implemented/ (f68730e); implementation PR104 closes80 when merged. Source conflict resolved explicitly by delegated D07 erratum. No base merge or deployment performed.
+- Follow-ups owned by pipeline: external approving review (author cannot self-approve), risk-high manual QA approval, and green final-head CI before merge. No pending implementation work.
