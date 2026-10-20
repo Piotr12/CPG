@@ -329,6 +329,12 @@ Done when these standards were adopted:
   - the stale-snapshot retry in `tenantServerAction` (`retryingStaleSnapshot`), and `versionConflict()`/`versionSchema` shared by every versioned record;
   - `ui/src/backend/dialogs/confirm-dialog.tsx`, `CrudForm` select fields (shadcn `native-select`) and initial values, and `app/src/routing/or-not-found.ts`;
   - `/admin/[tenant]/materials` and `/admin/[tenant]/materials/[id]` (the reference for a tenant list and detail screen), and `/api/tenants/{tenant}/materials/…`.
+- BOMs (2026-10-20, spec `2026-10-20--0757UTC-boms`):
+  - `Bom`, `BomRevision` and `BomComponent` (`db/src/entities/boms/`, tenant-owned), with update-abort triggers that make revisions and their lines immutable (`noUpdateTriggers`);
+  - `BomService` (`core/src/services/boms/`), the pure recipe rules in `core/src/domain/boms/` (equality, priority overlap, cycle search), and the leaf files `services/materials/base-quantity.ts` (`convertToBaseQuantity`, shared by every stored entered quantity) and `services/boms/bom-usage.ts`;
+  - field errors keyed by their full path (`components.2.unit`) in `validationError`, so a list item's error reaches its row;
+  - the first form outside `CrudForm`, `components/boms/recipe-form.tsx`: a variable list of lines whose unit choices follow each line's material. It keeps `CrudForm`'s conventions; promote it to `ui/backend/` when order lines (slice 2) need the same;
+  - `/admin/[tenant]/boms` and `/admin/[tenant]/boms/[id]` (`?revision=N` for history), and `/api/tenants/{tenant}/boms/…`.
 - Idempotency and versions (2026-10-19, spec `2026-10-19--1548UTC-api-idempotency`): the global and tenant-owned idempotency key stores (`db/src/entities/idempotency/`), `IdempotencyService` (`core/src/services/idempotency/`), `inRequestTransaction`, `apiWrite`/`tenantApiWrite`, `User.version`, and the generation check in `tenantServerAction`.
 - API tokens (2026-10-19, spec `2026-10-19--1053UTC-api-tokens`): the global `ApiToken` entity, `ApiTokenService` (`core/src/services/api-tokens/`), bearer authentication in `requireApiUser(request)`, the `Actor` type, and `/admin/tokens`. It is the reference for a self-service screen (every account, own records only).
 - Test infrastructure: Vitest unit tests next to every source file at 100% coverage, integration tests (Testcontainers runs the production image, agent-browser drives it), and a CI workflow for pull requests.

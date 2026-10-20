@@ -166,7 +166,7 @@ export function RecipeForm<T>({
   };
   const control = (name: string, hint?: string) => {
     const { node, describedBy } = note(name, hint);
-    return { node, props: { id: `${id}-${name}`, "aria-invalid": fieldErrors[name] ? true : undefined, "aria-describedby": describedBy } };
+    return { node, props: { id: `${id}-${name}`, name, "aria-invalid": fieldErrors[name] ? true : undefined, "aria-describedby": describedBy } };
   };
 
   const priority = control("priority", t.priorityHint);
