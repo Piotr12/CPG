@@ -13,6 +13,8 @@ import { BomService } from "../services/boms/bom.service";
 import { ImportService } from "../services/imports/import.service";
 import { PlanningParameterService } from "../services/planning-parameters/planning-parameter.service";
 import { SafetyStockTargetService } from "../services/safety-stock/safety-stock-target.service";
+import { PurchaseOrderService } from "../services/purchase-orders/purchase-order.service";
+import { PurchaseRequisitionService } from "../services/purchase-requisitions/purchase-requisition.service";
 import { MaterialService } from "../services/materials/material.service";
 import { SupplierService } from "../services/suppliers/supplier.service";
 import { UserPreferenceService } from "../services/preferences/user-preference.service";
@@ -52,6 +54,8 @@ export function createAppContainer(config: AppConfig, orm: Orm): AppContainer {
     planningParameterService: asClass(PlanningParameterService).scoped(),
     safetyStockTargetService: asClass(SafetyStockTargetService).scoped(),
     bomService: asClass(BomService).scoped(),
+    purchaseRequisitionService: asClass(PurchaseRequisitionService).scoped(),
+    purchaseOrderService: asClass(PurchaseOrderService).scoped(),
     importService: asClass(ImportService).scoped(),
     // `tenant` is registered only by tenantScope(): resolving it from a global scope fails (strict).
   });

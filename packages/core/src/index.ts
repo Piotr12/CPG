@@ -29,6 +29,8 @@ export * from "./services/suppliers/supplier.service";
 export * from "./services/planning-parameters/planning-parameter.service";
 export * from "./services/boms/bom.service";
 export * from "./services/safety-stock/safety-stock-target.service";
+export * from "./services/purchase-requisitions/purchase-requisition.service";
+export * from "./services/purchase-orders/purchase-order.service";
 export * from "./services/imports/import.service";
 // The import's workbook: the app's adapter reads it into cells, and the template is written from its layout.
 export { prepareImport, type ImportIssue, type PreparedImport } from "./domain/imports/prepare-import";

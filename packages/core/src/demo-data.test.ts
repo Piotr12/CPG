@@ -8,6 +8,8 @@ import {
   Location,
   Material,
   PlanningParameterSet,
+  PurchaseOrder,
+  PurchaseRequisition,
   SafetyStockTarget,
   selectTenant,
   Supplier,
@@ -18,6 +20,7 @@ import { loadConfig } from "./config";
 import { migrateDatabase, toDbOptions } from "./database";
 import { seedDemoData } from "./demo-data";
 import { DEMO_BOMS } from "./domain/boms/demo-boms";
+import { DEMO_ORDERS, DEMO_REQUISITIONS } from "./domain/purchasing/demo-purchasing";
 import { DEMO_CUSTOMERS } from "./domain/customers/demo-customers";
 import { DEMO_LOCATIONS } from "./domain/locations/demo-locations";
 import { DEMO_MATERIALS } from "./domain/materials/demo-materials";
@@ -63,6 +66,8 @@ describe("seedDemoData", () => {
       "planning parameter sets": { seeded: DEMO_PLANNING_PARAMETERS.length },
       "safety-stock targets": { seeded: DEMO_SAFETY_STOCK_TARGETS.length },
       BOMs: { seeded: DEMO_BOMS.length },
+      "purchase requisitions": { seeded: DEMO_REQUISITIONS.length },
+      "purchase orders": { seeded: DEMO_ORDERS.length },
     });
     expect(await seedDemoData(config)).toEqual({
       materials: { seeded: 0 },
@@ -72,6 +77,8 @@ describe("seedDemoData", () => {
       "planning parameter sets": { seeded: 0 },
       "safety-stock targets": { seeded: 0 },
       BOMs: { seeded: 0 },
+      "purchase requisitions": { seeded: 0 },
+      "purchase orders": { seeded: 0 },
     });
 
     expect(await counts(config, (em) => em.count(Material, {}))).toEqual({ test: DEMO_MATERIALS.length, prod: 0 });
@@ -81,6 +88,8 @@ describe("seedDemoData", () => {
     expect(await counts(config, (em) => em.count(PlanningParameterSet, {}))).toEqual({ test: DEMO_PLANNING_PARAMETERS.length, prod: 0 });
     expect(await counts(config, (em) => em.count(SafetyStockTarget, {}))).toEqual({ test: DEMO_SAFETY_STOCK_TARGETS.length, prod: 0 });
     expect(await counts(config, (em) => em.count(Bom, {}))).toEqual({ test: DEMO_BOMS.length, prod: 0 });
+    expect(await counts(config, (em) => em.count(PurchaseRequisition, {}))).toEqual({ test: DEMO_REQUISITIONS.length, prod: 0 });
+    expect(await counts(config, (em) => em.count(PurchaseOrder, {}))).toEqual({ test: DEMO_ORDERS.length, prod: 0 });
   });
 
   it("reports a kind that fails and still seeds the others; the next run seeds only what is still empty", async () => {
@@ -97,6 +106,8 @@ describe("seedDemoData", () => {
       "planning parameter sets": { seeded: 0 },
       "safety-stock targets": { seeded: 0 },
       BOMs: { seeded: DEMO_BOMS.length },
+      "purchase requisitions": { seeded: 0 },
+      "purchase orders": { seeded: 0 },
     });
     expect(await seedDemoData(config)).toEqual({
       materials: { seeded: 0 },
@@ -106,6 +117,8 @@ describe("seedDemoData", () => {
       "planning parameter sets": { seeded: DEMO_PLANNING_PARAMETERS.length },
       "safety-stock targets": { seeded: DEMO_SAFETY_STOCK_TARGETS.length },
       BOMs: { seeded: 0 },
+      "purchase requisitions": { seeded: DEMO_REQUISITIONS.length },
+      "purchase orders": { seeded: DEMO_ORDERS.length },
     });
   });
 });

@@ -35,6 +35,13 @@ import {
   PROCUREMENT_MODES,
   type ProcurementMode,
 } from "./planning-parameters/planning-parameter-set.entity";
+import { PurchaseOrderLine } from "./purchase-orders/purchase-order-line.entity";
+import { PURCHASE_ORDER_STATUSES, PurchaseOrder, type PurchaseOrderStatus } from "./purchase-orders/purchase-order.entity";
+import {
+  PurchaseRequisition,
+  REQUISITION_STATUSES,
+  type RequisitionStatus,
+} from "./purchase-requisitions/purchase-requisition.entity";
 import { SafetyStockTarget } from "./safety-stock/safety-stock-target.entity";
 import { LOCALES, THEMES, UserPreference, type Locale, type Theme } from "./preferences/user-preference.entity";
 import { Setting } from "./settings/setting.entity";
@@ -57,7 +64,8 @@ export { Customer, Location, NAMED_RECORD_NAME_MAX, Supplier };
 export type { NamedRecord, NamedRecordEntity };
 export { PlanningParameterSet, PROCUREMENT_MODES, SafetyStockTarget };
 export { Bom, BomComponent, BOM_REVISION_IMMUTABLE, BomRevision };
-export type { ProcurementMode };
+export { PURCHASE_ORDER_STATUSES, PurchaseOrder, PurchaseOrderLine, PurchaseRequisition, REQUISITION_STATUSES };
+export type { ProcurementMode, PurchaseOrderStatus, RequisitionStatus };
 export type { AuditChannel, AuditSnapshot, AuditValue, Locale, TenantCode, Theme, UserRole };
 export { currentTenant, isTenantOwned, TENANT_FILTER, tenantOwned, TenantViolationError, selectTenant };
 
@@ -83,6 +91,9 @@ export const entities = [
   Bom,
   BomRevision,
   BomComponent,
+  PurchaseRequisition,
+  PurchaseOrder,
+  PurchaseOrderLine,
 ];
 
 /**

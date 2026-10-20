@@ -6,7 +6,7 @@ import { toDbOptions } from "./database";
 
 /**
  * The kinds of demonstration record the Test tenant is seeded with, in seeding order: the planning
- * rows come after the materials and locations they reference, and the BOMs after the materials.
+ * rows come after the materials and locations they reference, the BOMs after the materials, and the purchase documents after the suppliers, locations and materials they name (the orders after the requisitions they convert).
  */
 export const DEMO_KINDS = [
   "materials",
@@ -16,6 +16,8 @@ export const DEMO_KINDS = [
   "planning parameter sets",
   "safety-stock targets",
   "BOMs",
+  "purchase requisitions",
+  "purchase orders",
 ] as const;
 export type DemoKind = (typeof DEMO_KINDS)[number];
 
@@ -41,6 +43,8 @@ export async function seedDemoData(config: AppConfig): Promise<Record<DemoKind, 
       "planning parameter sets": () => cradle.planningParameterService.seedDemo(),
       "safety-stock targets": () => cradle.safetyStockTargetService.seedDemo(),
       BOMs: () => cradle.bomService.seedDemo(),
+      "purchase requisitions": () => cradle.purchaseRequisitionService.seedDemo(),
+      "purchase orders": () => cradle.purchaseOrderService.seedDemo(),
     };
     const results = {} as Record<DemoKind, DemoSeedResult>;
     for (const kind of DEMO_KINDS) {

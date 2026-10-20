@@ -50,6 +50,7 @@ describe("migrate", () => {
       "Migration20261019211303_tenant_read_only",
       "Migration20261020054509_planning_parameters_safety_stock",
       "Migration20261020080940_boms",
+      "Migration20261020163722_purchasing",
     ]);
     expect(await migrate({ databasePath })).toEqual([]);
   });
@@ -61,9 +62,9 @@ describe("getMigrationStatus", () => {
     const orm = await initOrm({ databasePath });
 
     try {
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 13 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 14 });
       await orm.migrator.up();
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 13, pending: 0 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 14, pending: 0 });
     } finally {
       await orm.close();
     }
@@ -80,7 +81,7 @@ describe("migrations", () => {
         await orm.em
           .getConnection()
           .execute<{ name: string }[]>(
-            "select name from sqlite_master where name in ('setting', 'user', 'session', 'user_preference', 'tenant', 'api_token', 'global_audit_event', 'tenant_audit_event', 'global_idempotency_key', 'tenant_idempotency_key', 'material', 'material_conversion', 'location', 'customer', 'supplier', 'planning_parameter_set', 'safety_stock_target', 'bom', 'bom_revision', 'bom_component')",
+            "select name from sqlite_master where name in ('setting', 'user', 'session', 'user_preference', 'tenant', 'api_token', 'global_audit_event', 'tenant_audit_event', 'global_idempotency_key', 'tenant_idempotency_key', 'material', 'material_conversion', 'location', 'customer', 'supplier', 'planning_parameter_set', 'safety_stock_target', 'bom', 'bom_revision', 'bom_component', 'purchase_requisition', 'purchase_order', 'purchase_order_line')",
           )
       )
         .map(({ name }) => name)
@@ -114,6 +115,9 @@ describe("migrations", () => {
         "material",
         "material_conversion",
         "planning_parameter_set",
+        "purchase_order",
+        "purchase_order_line",
+        "purchase_requisition",
         "safety_stock_target",
         "session",
         "setting",
@@ -124,6 +128,9 @@ describe("migrations", () => {
         "user",
         "user_preference",
       ]);
+      expect(await triggers()).toContain("bom_revision_no_update");
+      await orm.migrator.down();
+      expect((await tables()).filter((name) => name.startsWith("purchase"))).toEqual([]);
       expect(await triggers()).toContain("bom_revision_no_update");
       await orm.migrator.down();
       expect(await triggers()).not.toContain("bom_revision_no_update");
@@ -446,8 +453,68 @@ describe("boms migration", () => {
       await execute(orm, "delete from bom_revision");
       await execute(orm, "delete from bom");
       await orm.migrator.down();
+      await orm.migrator.down();
       expect(await execute(orm, "select name from sqlite_master where name like 'bom%'")).toEqual([]);
       expect(await execute(orm, "select count(*) as n from material")).toEqual([{ n: 2 }]);
+    } finally {
+      await orm.close();
+    }
+  });
+});
+
+describe("purchasing migration", () => {
+  const execute = (orm: Awaited<ReturnType<typeof initOrm>>, sql: string) => orm.em.getConnection().execute(sql);
+
+  it("keeps document IDs unique per tenant and line numbers unique per order, and rolls back", async () => {
+    const databasePath = tempDatabase();
+    await migrate({ databasePath });
+    const orm = await initOrm({ databasePath });
+    const requisition = (id: string, tenant: string, code: string) =>
+      execute(
+        orm,
+        `insert into purchase_requisition (id, tenant_code, code, material_id, location_id, quantity, entered_quantity, entered_unit, numerator, denominator, required_date, converted, created_at) values ('${id}', '${tenant}', '${code}', 'm1', 'l1', '100.000000', '100', 'each', '1', '1', '2026-11-02', '0.000000', 0)`,
+      );
+    const order = (id: string, tenant: string, code: string) =>
+      execute(
+        orm,
+        `insert into purchase_order (id, tenant_code, code, supplier_id, location_id, created_at, updated_at) values ('${id}', '${tenant}', '${code}', 's1', 'l1', 0, 0)`,
+      );
+    const line = (id: string, position: number) =>
+      execute(
+        orm,
+        `insert into purchase_order_line (id, tenant_code, order_id, position, material_id, quantity, entered_quantity, entered_unit, numerator, denominator, planned_date, requisition_id) values ('${id}', 'test', 'o1', ${position}, 'm1', '60.000000', '60', 'each', '1', '1', '2026-11-04', null)`,
+      );
+
+    try {
+      await execute(orm, "insert into material (id, tenant_code, code, type, description, base_unit, created_at) values ('m1', 'test', '00000001', 'raw', 'x', 'each', 0)");
+      await execute(orm, "insert into location (id, tenant_code, code, name, created_at) values ('l1', 'test', '00000001', 'Plant', 0)");
+      await execute(orm, "insert into supplier (id, tenant_code, code, name, created_at) values ('s1', 'test', '00000001', 'Acme', 0)");
+
+      await requisition("r1", "test", "00000001");
+      await requisition("r2", "prod", "00000001");
+      await expect(requisition("r3", "test", "00000001")).rejects.toThrow(/UNIQUE/);
+      expect(await execute(orm, "select status, version, converted from purchase_requisition where id = 'r1'")).toEqual([
+        { status: "open", version: 1, converted: "0.000000" },
+      ]);
+
+      await order("o1", "test", "00000001");
+      await order("o2", "prod", "00000001");
+      await expect(order("o3", "test", "00000001")).rejects.toThrow(/UNIQUE/);
+      expect(await execute(orm, "select status, version from purchase_order where id = 'o1'")).toEqual([{ status: "open", version: 1 }]);
+
+      await line("l1", 1);
+      await line("l2", 2);
+      await expect(line("l3", 2)).rejects.toThrow(/UNIQUE/);
+      expect(await execute(orm, "select quantity, typeof(quantity) as kind from purchase_order_line where id = 'l1'")).toEqual([
+        { quantity: "60.000000", kind: "text" },
+      ]);
+
+      await execute(orm, "delete from purchase_order_line");
+      await execute(orm, "delete from purchase_order");
+      await execute(orm, "delete from purchase_requisition");
+      await orm.migrator.down();
+      expect(await execute(orm, "select name from sqlite_master where name like 'purchase%'")).toEqual([]);
+      expect(await execute(orm, "select count(*) as n from material")).toEqual([{ n: 1 }]);
     } finally {
       await orm.close();
     }

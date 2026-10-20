@@ -28,7 +28,12 @@ describe("@cpg/db", () => {
       "NAMED_RECORD_NAME_MAX",
       "OptimisticLockError",
       "PROCUREMENT_MODES",
+      "PURCHASE_ORDER_STATUSES",
       "PlanningParameterSet",
+      "PurchaseOrder",
+      "PurchaseOrderLine",
+      "PurchaseRequisition",
+      "REQUISITION_STATUSES",
       "SafetyStockTarget",
       "Session",
       "Setting",
@@ -75,6 +80,9 @@ describe("@cpg/db", () => {
       db.Bom,
       db.BomRevision,
       db.BomComponent,
+      db.PurchaseRequisition,
+      db.PurchaseOrder,
+      db.PurchaseOrderLine,
     ]);
     const tenantOwned: unknown[] = [
       db.TenantAuditEvent,
@@ -89,6 +97,9 @@ describe("@cpg/db", () => {
       db.Bom,
       db.BomRevision,
       db.BomComponent,
+      db.PurchaseRequisition,
+      db.PurchaseOrder,
+      db.PurchaseOrderLine,
     ];
     expect(db.GLOBAL_ENTITIES).toEqual(db.entities.filter((entity) => !tenantOwned.includes(entity)));
   });
