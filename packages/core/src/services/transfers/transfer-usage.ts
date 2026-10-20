@@ -45,16 +45,19 @@ export async function hasTransfers(em: EntityManager, material: Material): Promi
   return (await em.count(Transfer, { material })) > 0;
 }
 
-/** What is in transit of `material` on Open transfers from `location` (`from`) and to it (`to`), six decimals (UX-017). */
-export async function transitAt(em: EntityManager, material: Material, location: NamedRecord): Promise<{ from: string; to: string }> {
-  return {
-    from: await transitSum(em, { material, source: location.id }),
-    to: await transitSum(em, { material, destination: location.id }),
-  };
+/**
+ * What is in transit of `material` on Open transfers from `location` (`from`) and to it (`to`), six
+ * decimals, and the IDs of the transfers holding it, ascending (UX-017).
+ */
+export async function transitAt(em: EntityManager, material: Material, location: NamedRecord): Promise<{ from: string; to: string; transfers: string[] }> {
+  const from = await transitSum(em, { material, source: location.id });
+  const to = await transitSum(em, { material, destination: location.id });
+  return { from: from.total, to: to.total, transfers: [...from.transfers, ...to.transfers].sort() };
 }
 
-async function transitSum(em: EntityManager, where: { material: Material; source?: string; destination?: string }): Promise<string> {
+async function transitSum(em: EntityManager, where: { material: Material; source?: string; destination?: string }): Promise<{ total: string; transfers: string[] }> {
   let total = 0n;
+  const transfers: string[] = [];
   let after: string | undefined;
   for (;;) {
     const batch = await em.find(
@@ -62,8 +65,12 @@ async function transitSum(em: EntityManager, where: { material: Material; source
       { ...where, status: "open", ...(after === undefined ? {} : { code: { $gt: after } }) },
       { orderBy: { code: "asc" }, limit: BATCH, disableIdentityMap: true },
     );
-    for (const transfer of batch) total += parseDecimal(inTransitOf(transfer))!;
-    if (batch.length < BATCH) return formatDecimal(total, { fixed: true });
+    for (const transfer of batch) {
+      const transit = parseDecimal(inTransitOf(transfer))!;
+      total += transit;
+      if (transit > 0n) transfers.push(transfer.code);
+    }
+    if (batch.length < BATCH) return { total: formatDecimal(total, { fixed: true }), transfers };
     after = batch.at(-1)!.code;
   }
 }

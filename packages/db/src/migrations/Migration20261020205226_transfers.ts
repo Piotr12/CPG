@@ -21,9 +21,10 @@ export class Migration20261020205226_transfers extends Migration {
 
   override down(): void | Promise<void> {
 
-    this.addSql(`drop table if exists \`transfer\`;`);
+    // The postings first: they reference their transfers.
     this.addSql(`drop trigger if exists \`transfer_posting_no_update\`;`);
     this.addSql(`drop table if exists \`transfer_posting\`;`);
+    this.addSql(`drop table if exists \`transfer\`;`);
   }
 
 }

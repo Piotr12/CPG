@@ -19,6 +19,8 @@ export interface StockView extends StockPair {
   materialActive: boolean; locationActive: boolean; quantity: string;
   /** In transit on Open transfers from and to this location: the transfers', usable at neither site (UX-017, INV-009). */
   inTransitFrom: string; inTransitTo: string;
+  /** The IDs of the Open transfers holding that transit, ascending. */
+  transitTransfers: string[];
   movements: StockMovementView[];
 }
 
@@ -39,7 +41,7 @@ export class StockService {
     return {
       ...key, materialDescription: material.description, locationName: location.name, baseUnit: material.baseUnit,
       materialActive: material.active, locationActive: location.active, quantity: balance?.quantity ?? "0.000000",
-      inTransitFrom: transit.from, inTransitTo: transit.to,
+      inTransitFrom: transit.from, inTransitTo: transit.to, transitTransfers: transit.transfers,
       movements: movements.map(toMovementView),
     };
   }

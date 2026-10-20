@@ -673,7 +673,7 @@ describe("goods-receipts migration", () => {
 describe("transfers migration", () => {
   const execute = (orm: Awaited<ReturnType<typeof initOrm>>, sql: string) => orm.em.getConnection().execute(sql);
 
-  it("starts a transfer open with nothing moved, keeps transfer IDs unique per tenant and postings immutable, and rolls back", async () => {
+  it("starts a transfer open with nothing moved, keeps transfer IDs unique per tenant and postings immutable, and rolls back with postings", async () => {
     const databasePath = tempDatabase();
     await migrate({ databasePath });
     const orm = await initOrm({ databasePath });
@@ -706,8 +706,7 @@ describe("transfers migration", () => {
         ),
       ).rejects.toThrow(/CHECK/);
 
-      await execute(orm, "delete from transfer_posting");
-      await execute(orm, "delete from transfer");
+      // Rolls back with postings still in place: they are dropped before the transfers they reference.
       await orm.migrator.down();
       expect(await execute(orm, "select name from sqlite_master where name like 'transfer%'")).toEqual([]);
       expect(await execute(orm, "select count(*) as n from location")).toEqual([{ n: 2 }]);

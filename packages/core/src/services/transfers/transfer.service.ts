@@ -194,8 +194,9 @@ export class TransferService {
   async setPlannedDates(id: string, dates: TransferDates, version: number, actor: AuditActor): Promise<TransferView> {
     return this.versioned(async (em) => {
       const transfer = await findTransfer(em, id, { refresh: true });
-      if (transfer.version !== version) throw versionConflict();
+      // A Completed transfer is said as such before any version check: a conflict would refresh the page and hide its dialog.
       assertOpen(transfer);
+      if (transfer.version !== version) throw versionConflict();
       const { plannedDispatch, plannedArrival } = transfer;
       if (plannedDispatch === dates.plannedDispatch && plannedArrival === dates.plannedArrival) return toView(transfer);
       Object.assign(transfer, dates, { updatedAt: new Date() });

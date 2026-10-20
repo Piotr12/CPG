@@ -54,7 +54,8 @@ export function StockScreen({ tenant, view, materials, locations, units, locale,
           <div><h2 className="text-sm text-muted-foreground">{t.quantity}</h2><p className="font-mono text-2xl" data-stock-balance>{shownQuantity(view.quantity)} {view.baseUnit}</p></div>
           <div><h2 className="text-sm text-muted-foreground">{t.inTransitFrom}</h2><p className="font-mono text-lg" data-stock-transit-from>{shownQuantity(view.inTransitFrom)} {view.baseUnit}</p></div>
           <div><h2 className="text-sm text-muted-foreground">{t.inTransitTo}</h2><p className="font-mono text-lg" data-stock-transit-to>{shownQuantity(view.inTransitTo)} {view.baseUnit}</p></div>
-          <p className="basis-full text-xs text-muted-foreground">{t.transitNote} <Link href={`/admin/${tenant.code}/transfers`} className="underline underline-offset-4">{t.transfers}</Link></p>
+          <p className="basis-full text-xs text-muted-foreground">{t.transitNote} <Link href={`/admin/${tenant.code}/transfers`} className="underline underline-offset-4">{t.transfers}</Link>
+            {view.transitTransfers.map((id) => <span key={id}> · <Link href={`/admin/${tenant.code}/transfers/${id}`} className="font-mono underline underline-offset-4">{id}</Link></span>)}</p>
         </div>
         {editable ? <CorrectionDialog context={{ tenant: tenant.code, generation: tenant.generation }} pair={{ material: view.material, location: view.location }} units={units} labels={t} /> : <p className="text-sm text-muted-foreground">{t.unavailable}</p>}
       </div>

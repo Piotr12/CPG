@@ -487,9 +487,12 @@ describe("TransferService", () => {
       // A completed transfer has nothing in transit; a write-off takes its part out.
       await service().writeOff(first.id, { ...kg("5"), reason: "Lost" }, ACTOR);
 
-      expect(await stock(A)).toMatchObject({ quantity: "40.000000", inTransitFrom: "55.000000", inTransitTo: "20.000000" });
-      expect(await stock(B)).toMatchObject({ quantity: "10.000000", inTransitFrom: "20.000000", inTransitTo: "55.000000" });
-      expect(await stock(A, "00000002")).toMatchObject({ quantity: "0.000000", inTransitFrom: "0.000000", inTransitTo: "0.000000" });
+      // A transfer with nothing in transit is no holder of it.
+      const idle = await service().create({ ...TRANSFER, quantity: "1" }, ACTOR);
+      expect(await stock(A)).toMatchObject({ quantity: "40.000000", inTransitFrom: "55.000000", inTransitTo: "20.000000", transitTransfers: [first.id, back.id] });
+      expect(await stock(B)).toMatchObject({ quantity: "10.000000", inTransitFrom: "20.000000", inTransitTo: "55.000000", transitTransfers: [first.id, back.id] });
+      expect(await stock(A, "00000002")).toMatchObject({ quantity: "0.000000", inTransitFrom: "0.000000", inTransitTo: "0.000000", transitTransfers: [] });
+      expect((await stock(A)).transitTransfers).not.toContain(idle.id);
     });
 
     it("adds up transit over more transfers than one read holds", async () => {
@@ -526,6 +529,16 @@ describe("TransferService", () => {
       const same = await service().setPlannedDates(transfer.id, { plannedDispatch: "2026-10-25", plannedArrival: "2026-10-27" }, after.version, ACTOR);
       expect(same.version).toBe(2);
       expect(await entries("transfers.transfer.updated")).toHaveLength(1);
+    });
+
+    it("says a Completed transfer is completed even to a stale version, so the refused dialog isn't refreshed away", async () => {
+      const transfer = await created();
+      await service().dispatch(transfer.id, kg("100"), ACTOR);
+      await service().receive(transfer.id, kg("100"), ACTOR);
+
+      await expect(service().setPlannedDates(transfer.id, { plannedDispatch: "2026-10-25", plannedArrival: "2026-10-27" }, transfer.version, ACTOR)).rejects.toMatchObject({
+        code: "TRANSFER_NOT_OPEN",
+      });
     });
 
     it("refuses a stale version, including one a posting advanced (AUD-025)", async () => {

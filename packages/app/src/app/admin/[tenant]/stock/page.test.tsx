@@ -16,7 +16,7 @@ const material = { id: "00000001", type: "raw", description: "Bolts", baseUnit: 
 const location = { id: "00000001", name: "Warehouse", active: true, createdAt: new Date(), version: 1 };
 const pair = { material: "00000001", location: "00000001" };
 const movement = { ...pair, id: "m1", postingId: "p1", position: 0, type: "correction", businessDate: "2027-01-01", occurredAt: new Date(), quantity: "2.000000", baseUnit: "each", enteredQuantity: "2.000000", enteredUnit: "case", numerator: "12", denominator: "1", balanceBefore: "0.000000", balanceAfter: "2.000000", reason: "Opening balance", actorUserId: null, actorUsername: "Demo seed", channel: "seed" as const };
-const view: StockView = { ...pair, quantity: "0.000000", baseUnit: "each", materialDescription: "Bolts", locationName: "Warehouse", materialActive: true, locationActive: true, inTransitFrom: "0.000000", inTransitTo: "0.000000", movements: [] };
+const view: StockView = { ...pair, quantity: "0.000000", baseUnit: "each", materialDescription: "Bolts", locationName: "Warehouse", materialActive: true, locationActive: true, inTransitFrom: "0.000000", inTransitTo: "0.000000", transitTransfers: [], movements: [] };
 const scope = (readOnly = false) => ({ cradle: { tenant: { ...tenant, readOnly }, stockService: { get: mocks.get }, materialService: { list: mocks.materials, get: mocks.material }, locationService: { list: mocks.locations } } });
 const page = (search: Record<string, string | string[]> = {}) => StockPage({ params: Promise.resolve({ tenant: "test" }), searchParams: Promise.resolve(search) });
 beforeEach(() => {
@@ -45,7 +45,7 @@ describe("StockPage", () => {
   });
   it("shows what is in transit from and to the location apart from its physical balance, and names transfer movements (UX-017, TRF-024)", async () => {
     mocks.get.mockResolvedValue({
-      ...view, quantity: "40.000000", inTransitFrom: "60.000000", inTransitTo: "12.500000",
+      ...view, quantity: "40.000000", inTransitFrom: "60.000000", inTransitTo: "12.500000", transitTransfers: ["00000003", "00000007"],
       movements: [{ ...movement, id: "m4", postingId: "d1", type: "transfer-dispatch", quantity: "-60.000000" }, { ...movement, id: "m5", postingId: "r1", type: "transfer-receipt" }],
     });
     render(await resolveServerComponents(page()));
@@ -54,6 +54,9 @@ describe("StockPage", () => {
     expect(document.querySelector("[data-stock-transit-to]")!.textContent).toBe("12.5 each");
     expect(screen.getByText(en.stock.inTransitFrom)).toBeTruthy();
     expect(screen.getByRole("link", { name: en.stock.transfers }).getAttribute("href")).toBe("/admin/test/transfers");
+    // Each transfer holding the transit is one click away.
+    expect(screen.getByRole("link", { name: "00000007" }).getAttribute("href")).toBe("/admin/test/transfers/00000007");
+    expect(screen.getByRole("link", { name: "00000003" })).toBeTruthy();
     const table = within(screen.getByRole("table", { name: en.stock.ledger }));
     expect(table.getByText(/Source: Transfer dispatch · d1/)).toBeTruthy();
     expect(table.getByText(/Source: Transfer receipt · r1/)).toBeTruthy();
