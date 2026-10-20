@@ -36,16 +36,26 @@ The spec's Implementation Plan, steps 1–11 (Phase 1: steps 1–4, Phase 2: ste
 - **The commit's write lock at 2,000 lines.** It is measured in step 4, with the chunked-posting fallback (spec Q11).
 - **The sidebar must still fit 1280×800** (lesson). Run `navigation.test.ts` after the nav change.
 
+## Measurements and deviations
+
+- **2,000 rows (50 materials × 40 locations), local Vitest on SQLite.**
+  - Dry run: 370 ms.
+  - Commit of 2,000 new positions in one `postStockMovements` call: 23.5 s. Every query auto-flushed a growing identity map, as the reviewer predicted.
+  - The spec's Q11 remedy, applied: one posting ID, flushed in chunks with `em.clear()` between them and a `firstPosition` offset on `postStockMovements`. Chunks of 100 took 2.0 s, of 50 1.4 s, and of 25 1.2 s, the size chosen. Over existing balances, chunks of 100 took 0.9 s.
+  - The cap stays at 2,000 rows. A write lock of about 1.2 s stays under better-sqlite3's 5 s `busy_timeout`, so a concurrent writer waits, then succeeds.
+- **`dryRun(prepared)` takes no actor.** It reads only and audits nothing; the spec's signature had one.
+- **`CORRECTION_MOVEMENT` constant.** The `"correction"` movement type is now a constant in `stock-posting.ts`, used by `StockService` and the import.
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Engine
 
-- [ ] 1.1 Layouts: ImportLayout, MASTER_DATA_LAYOUT, read-sheets extraction
-- [ ] 1.2 Stock layout and schemas
-- [ ] 1.3 prepareStockImport
-- [ ] 1.4 StockImportService with measurements
+- [x] 1.1 Layouts: ImportLayout, MASTER_DATA_LAYOUT, read-sheets extraction — ea34c91
+- [x] 1.2 Stock layout and schemas — c781507
+- [x] 1.3 prepareStockImport — 72a1caa
+- [x] 1.4 StockImportService with measurements — 6f5e5da
 
 ### Phase 2: Workbook and API
 
