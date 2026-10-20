@@ -18,6 +18,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadConfig } from "./config";
 import { migrateDatabase, toDbOptions } from "./database";
 import { seedDemoData } from "./demo-data";
+import { DEMO_STOCK } from "./domain/stock/demo-stock";
 import { DEMO_BOMS } from "./domain/boms/demo-boms";
 import { DEMO_CUSTOMERS } from "./domain/customers/demo-customers";
 import { DEMO_LOCATIONS } from "./domain/locations/demo-locations";
@@ -64,6 +65,7 @@ describe("seedDemoData", () => {
       "planning parameter sets": { seeded: DEMO_PLANNING_PARAMETERS.length },
       "safety-stock targets": { seeded: DEMO_SAFETY_STOCK_TARGETS.length },
       BOMs: { seeded: DEMO_BOMS.length },
+      "stock openings": { seeded: DEMO_STOCK.length },
       "customer orders": { seeded: 1 },
     });
     expect(await seedDemoData(config)).toEqual({
@@ -74,6 +76,7 @@ describe("seedDemoData", () => {
       "planning parameter sets": { seeded: 0 },
       "safety-stock targets": { seeded: 0 },
       BOMs: { seeded: 0 },
+      "stock openings": { seeded: 0 },
       "customer orders": { seeded: 0 },
     });
 
@@ -101,6 +104,7 @@ describe("seedDemoData", () => {
       "planning parameter sets": { seeded: 0 },
       "safety-stock targets": { seeded: 0 },
       BOMs: { seeded: DEMO_BOMS.length },
+      "stock openings": { seeded: 0 },
       "customer orders": { seeded: 0 },
     });
     expect(await seedDemoData(config)).toEqual({
@@ -111,6 +115,7 @@ describe("seedDemoData", () => {
       "planning parameter sets": { seeded: DEMO_PLANNING_PARAMETERS.length },
       "safety-stock targets": { seeded: DEMO_SAFETY_STOCK_TARGETS.length },
       BOMs: { seeded: 0 },
+      "stock openings": { seeded: DEMO_STOCK.length },
       "customer orders": { seeded: 1 },
     });
   });

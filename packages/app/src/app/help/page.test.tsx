@@ -43,6 +43,7 @@ describe("HelpPage", () => {
       "Customer orders",
       "Maintaining a customer order",
       "Import from spreadsheet",
+      "Physical stock and corrections",
       "Language and theme",
       "Using help",
     ]);

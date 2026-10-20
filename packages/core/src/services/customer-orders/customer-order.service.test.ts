@@ -180,11 +180,11 @@ describe("CustomerOrderService", () => {
 
   it("blocks material deactivation with outstanding demand and locks referenced type/base unit permanently (LFC-014)", async () => {
     const order = await service().create(input(), actor); const materials = () => new MaterialService({ em: em() });
-    await expect(materials().update("00000005", { active: false }, 1, actor)).rejects.toMatchObject({ code: "MATERIAL_HAS_CUSTOMER_DEMAND", message: expect.stringContaining(order.id) });
+    await expect(materials().update("00000005", { active: false }, 1, actor)).rejects.toMatchObject({ code: "MATERIAL_HAS_CUSTOMER_DEMAND", message: expect.stringContaining(order.id), messageParams: { order: order.id } });
     await expect(materials().update("00000005", { type: "raw" }, 1, actor)).rejects.toMatchObject({ code: "MATERIAL_TYPE_IN_USE" });
     await expect(materials().update("00000005", { baseUnit: "kg" }, 1, actor)).rejects.toMatchObject({ code: "BASE_UNIT_IN_USE" });
     const locations = new LocationService({ em: em() });
-    await expect(locations.update("00000001", { active: false }, 1, actor)).rejects.toMatchObject({ code: "LOCATION_HAS_CUSTOMER_ORDERS" });
+    await expect(locations.update("00000001", { active: false }, 1, actor)).rejects.toMatchObject({ code: "LOCATION_HAS_CUSTOMER_ORDERS", messageParams: { order: expect.stringMatching(/^\d{8}$/) } });
     const changes = edit(order); changes.lines.shift(); await service().update(order.id, changes, 1, actor);
     await expect(materials().update("00000005", { baseUnit: "kg" }, 1, actor)).rejects.toMatchObject({ code: "BASE_UNIT_IN_USE" });
     expect(await materials().update("00000005", { active: false }, 1, actor)).toMatchObject({ active: false });

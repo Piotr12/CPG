@@ -1,4 +1,5 @@
 import { CustomerOrderService } from "../services/customer-orders/customer-order.service";
+import { StockService } from "../services/stock/stock.service";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -19,6 +20,7 @@ import { MaterialService } from "../services/materials/material.service";
 import { SupplierService } from "../services/suppliers/supplier.service";
 import { UserPreferenceService } from "../services/preferences/user-preference.service";
 import { SystemStatusService } from "../services/system/system-status.service";
+import { TestResetService } from "../services/tenants/test-reset.service";
 import { UserService } from "../services/users/user.service";
 import { createAppContainer, getContainer, requestScope } from "./container";
 
@@ -43,6 +45,7 @@ describe("createAppContainer", () => {
     expect(cradle.userPreferenceService).toBeInstanceOf(UserPreferenceService);
     expect(cradle.apiTokenService).toBeInstanceOf(ApiTokenService);
     expect(cradle.auditService).toBeInstanceOf(AuditService);
+    expect(cradle.stockService).toBeInstanceOf(StockService);
     expect(cradle.materialService).toBeInstanceOf(MaterialService);
     expect(cradle.locationService).toBeInstanceOf(LocationService);
     expect(cradle.planningParameterService).toBeInstanceOf(PlanningParameterService);
@@ -51,6 +54,7 @@ describe("createAppContainer", () => {
     expect(cradle.customerOrderService).toBeInstanceOf(CustomerOrderService);
     expect(cradle.customerService).toBeInstanceOf(CustomerService);
     expect(cradle.supplierService).toBeInstanceOf(SupplierService);
+    expect(cradle.testResetService).toBeInstanceOf(TestResetService);
   });
 
   it("shares one login throttle across request scopes", () => {

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { apiWrite, tenantApiWrite } from "./api-write";
+import { apiWrite, tenantApiWrite, testResetApiWrite } from "./api-write";
 
 const TOKEN_CALLER = { userId: "u1", username: "alice", role: "user", tokenId: "t1", tokenName: "ci" } as const;
 
@@ -209,5 +209,22 @@ describe("tenantApiWrite", () => {
 
     expect(response.status).toBe(404);
     expect((await response.json()).error.code).toBe("TENANT_NOT_FOUND");
+  });
+});
+
+
+describe("testResetApiWrite", () => {
+  afterEach(() => vi.clearAllMocks());
+  it("requires an admin and fixes both tenant scope and reset key mode", async () => {
+    mocks.requireApiUser.mockResolvedValue({ ...TOKEN_CALLER, role: "admin" });
+    mocks.tenantScope.mockResolvedValue({ cradle });
+    mocks.run.mockImplementation(async (_request: unknown, _scope: unknown, run: () => Promise<unknown>) => ({ data: await run(), replayed: false }));
+    const response = await testResetApiWrite(async () => "reset")(post("{}", { "Idempotency-Key": "reset", "Dataset-Generation": "7" }), {});
+    expect(await response.json()).toEqual({ ok: true, data: "reset" });
+    expect(mocks.tenantScope).toHaveBeenCalledWith("test");
+    expect(mocks.run).toHaveBeenCalledWith(expect.anything(), { kind: "test-reset", tenant: "test", generation: 7, requireGeneration: true }, expect.any(Function));
+    mocks.requireApiUser.mockResolvedValue(TOKEN_CALLER);
+    const denied = await testResetApiWrite(async () => "must not run")(post("{}"), {});
+    expect(denied.status).toBe(403);
   });
 });

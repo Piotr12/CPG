@@ -4,6 +4,8 @@ import type { Browser } from "./browser";
 export async function signIn(browser: Browser, baseUrl: string, password: string, username = "admin") {
   await browser.open(`${baseUrl}/login`);
   await browser.waitFor("#username");
+  // The login form may still be static HTML; an early submit can be lost before hydration.
+  await browser.waitUntil(hydrated('document.querySelector("#username")'));
   await browser.fill("#username", username);
   await browser.fill("#password", password);
   await browser.click("button[type=submit]");

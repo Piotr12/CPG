@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { UnauthorizedError, ValidationError } from "./errors";
+import { ConflictError, UnauthorizedError, ValidationError } from "./errors";
 import { INTERNAL_ERROR, serverAction } from "./server-action";
 
 const schema = z.object({ name: z.string().min(1, "Required.") });
@@ -63,5 +63,9 @@ describe("serverAction", () => {
 
     await expect(action({ name: "x" })).resolves.toEqual({ ok: false, error: INTERNAL_ERROR });
     expect(log).toHaveBeenCalledWith("Server action failed:", boom);
+  });
+  it("preserves public interpolation context without exposing other error properties", async () => {
+    const action = serverAction(schema, async () => { throw new ConflictError("Not enough.", "INSUFFICIENT_STOCK", { available: "2.000000" }); });
+    expect(await action({ name: "x" })).toEqual({ ok: false, error: { code: "INSUFFICIENT_STOCK", message: "Not enough.", params: { available: "2.000000" } } });
   });
 });

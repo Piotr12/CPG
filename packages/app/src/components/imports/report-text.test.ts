@@ -29,6 +29,15 @@ describe("problemText", () => {
     expect(problemText(cycle, importLabels(en), "Prod")).toBe(`${en.boms.errors.BOM_CYCLE} 00000004 Panel →(BOM 00000001) 00000004 Panel.`);
     expect(problemText(issue("SOMETHING_NEW", "As the server says."), importLabels(en), "Prod")).toBe("As the server says.");
   });
+  it.each([en, pl])("keeps exact stock context in a localized service refusal", (messages) => {
+    const text = problemText(issue("STOCK_NOT_EMPTY", "English server context.", { material: "00000001", location: "00000002", quantity: "2.000001", unit: "kg", count: 2 }), importLabels(messages), "Prod");
+    expect(text).toBe(messages === en
+      ? "Material 00000001 at location 00000002 holds 2.000001 kg. Clear its stock before deactivation."
+      : "Materiał 00000001 w lokalizacji 00000002 ma zapas 2.000001 kg. Wyzeruj zapas przed dezaktywacją.");
+    expect(problemText(issue("STOCK_NOT_EMPTY", "English.", { material: "00000001", location: "00000002", quantity: 2, unit: "kg" }), importLabels(messages), "Prod")).toContain("2 kg");
+    expect(problemText(issue("STOCK_NOT_EMPTY", "Original exact context."), importLabels(messages), "Prod")).toBe("Original exact context.");
+  });
+
 });
 
 describe("changeText and createdText", () => {

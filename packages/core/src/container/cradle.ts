@@ -1,4 +1,6 @@
 import type { CustomerOrderService } from "../services/customer-orders/customer-order.service";
+import type { TestResetService } from "../services/tenants/test-reset.service";
+import type { StockService } from "../services/stock/stock.service";
 import type { EntityManager, Orm } from "@cpg/db";
 import type { AwilixContainer } from "awilix";
 import type { AppConfig } from "../config";
@@ -32,9 +34,11 @@ export interface Cradle {
   userService: UserService;
   userPreferenceService: UserPreferenceService;
   tenantService: TenantService;
+  testResetService: TestResetService;
   apiTokenService: ApiTokenService;
   auditService: AuditService;
   idempotencyService: IdempotencyService;
+  stockService: StockService;
   materialService: MaterialService;
   locationService: LocationService;
   customerService: CustomerService;

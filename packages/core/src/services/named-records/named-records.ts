@@ -35,7 +35,7 @@ export interface NamedRecordKind extends NamedRecordLookup {
   actionPrefix: string;
   /** The names a fresh Test tenant starts with (D06). */
   demoNames: readonly string[];
-  assertDeactivationAllowed?: (em: EntityManager, record: NamedRecord) => Promise<void>;
+  beforeDeactivate?: (em: EntityManager, record: NamedRecord) => Promise<void>;
 }
 
 /**
@@ -99,7 +99,7 @@ export class NamedRecords {
           recordTenantAudit(em, actor, this.entry("updated", record, { name: before }, { name: record.name }));
         }
         if (changes.active !== undefined && changes.active !== record.active) {
-          if (!changes.active) await this.kind.assertDeactivationAllowed?.(em, record);
+          if (!changes.active) await this.kind.beforeDeactivate?.(em, record);
           record.active = changes.active;
           const action = changes.active ? "reactivated" : "deactivated";
           recordTenantAudit(em, actor, this.entry(action, record, { active: !changes.active }, { active: changes.active }));

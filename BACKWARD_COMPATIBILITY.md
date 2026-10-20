@@ -77,6 +77,7 @@ Route handlers under `app/api/` are protected the same way: their paths, methods
 
 - `GET /api/tenants` and `GET /api/tenants/{tenant}` (404 `TENANT_NOT_FOUND`). Each tenant is `{ code, name, generation, readOnly }`;
 - `PATCH /api/tenants/{tenant}` (`{ readOnly }` and nothing else, admin only; spec `2026-10-19--2018UTC-read-only-tenants`). It sets the tenant's read-only flag and answers the tenant. It is global metadata, not tenant data, so it is the stated exception to the tenant-write rules below: its key goes in the global store, it takes no `Dataset-Generation`, and it works while the tenant is read-only;
+- `POST /api/tenants/test/reset` (`{}` only, bearer admin only): atomically replaces Test business data/audit with demonstration data, increments its generation and restores its original read-only flag. Prod and global identities/audit survive. Requires both `Idempotency-Key` and current `Dataset-Generation` even when Test is read-only. Response: the new `{ code, name, generation, readOnly }`. No Prod reset route exists. Missing generation is 428 `GENERATION_REQUIRED`, stale is 409 `GENERATION_STALE` **before key lookup**; 409 `GENERATION_EXHAUSTED` at 999999999. The reset deletes old Test keys and stores its own receipt in the new generation. After a lost response, fetch current metadata and retry the **same** key with the current generation to replay; do not automatically use a new key, which requests another reset. A later reset removes that receipt too. This is the sole tenant-data operation allowed while Test is read-only; ordinary writes retain the existing refusal. A failed reset stores no key and rolls back data, generation, flags and audit. A successful reset cannot be undone by rolling back application code.
 - `GET /api/tokens` (the caller's own tokens);
 - `DELETE /api/tokens/{id}` (404 `TOKEN_NOT_FOUND`);
 - `GET /api/users` (403 `FORBIDDEN` for a normal user). Each row carries `version`;
@@ -112,6 +113,11 @@ Route handlers under `app/api/` are protected the same way: their paths, methods
   - `GET /api/tenants/{tenant}/boms/{id}` (with its `revisions`, newest first; 404 `BOM_NOT_FOUND`);
   - `PATCH /api/tenants/{tenant}/boms/{id}` (`{ version, priority?, validFrom?, validThrough?, components?, active? }`, at least one besides `version`; `components` is the complete list; a real recipe change adds a revision, an identical one or a toggle doesn't; an `id` or `output` in the body is 400; 409 `BOM_PRIORITY_CONFLICT` or `BOM_CYCLE` as for `POST`, and `VERSION_CONFLICT` for a stale version or a revision saved at the same moment);
   - `GET /api/tenants/{tenant}/boms/{id}/revisions/{revision}` (404 `BOM_REVISION_NOT_FOUND`). Revisions never change.
+- physical stock (spec `2026-10-20--1634UTC-stock-ledger-corrections`, D07): both roles can read and correct one tenant; decimal quantities are strings. UI `/admin/{tenant}/stock` accepts `?material={id}&location={id}`, help topic `stock`:
+  - `GET /api/tenants/{tenant}/stock?material={id}&location={id}` returns a physical quantity in BUoM (zero for a missing pair) and up to 100 recent movements, with source, entered unit/factor, date and actor;
+  - `POST /api/tenants/{tenant}/stock/corrections` takes `{ material, location, quantity, unit, reason }`, where `quantity` is a nonzero signed **change**, never a target balance; the date/source/actor/factor are server-owned. Returns the immutable movement with its before/after balance. Shared bearer/key/generation/read-only requirements apply;
+  - 409 `INSUFFICIENT_STOCK` includes available/required quantities; 400 `QUANTITY_OUT_OF_RANGE` or `QUANTITY_ROUNDS_TO_ZERO`; 409 `MATERIAL_INACTIVE` / `LOCATION_INACTIVE`, 404 missing references;
+  - any movement permanently locks both material type and BUoM (`MATERIAL_HAS_MOVEMENTS`, 409), even at zero stock. Nonzero stock blocks material/location deactivation (`STOCK_NOT_EMPTY`, 409 with the affected pair and quantity). Movements remain immutable; future reversals append history.
 - the master-data and BOM import (spec `2026-10-20--0908UTC-master-data-bom-import`). The workbook travels as **base64** in a JSON body, at most 512 KB once decoded:
   - `GET /api/import/template` (any signed-in account, bearer or session cookie): the `.xlsx` template, as an attachment;
   - `POST /api/tenants/{tenant}/import/dry-run` (`{ workbook }`, admin only): the `ImportReport` (`{ committed: false, previewToken, summary, rows, errors }`). Errors in the workbook are in `errors`, each `{ sheet, row, column, code, message, params? }`, not an error status; `previewToken` is set only when there are none. 400 `VALIDATION_FAILED` on `workbook` for a file that isn't base64, is over 512 KB, isn't a readable `.xlsx`, has more than 2,000 rows, unpacks past 20 MB or has sheets spanning more than 200,000 cells;
@@ -150,6 +156,8 @@ Every tenant-scoped endpoint lives under `/api/tenants/{tenant}/`.
 - **Read-only tenants** (R05): every tenant write to a read-only tenant is 409 `TENANT_READ_ONLY`, whoever the caller is. It is checked after the generation and after the key lookup, so a repeat of a write stored before the flag was set still replays. Nothing is written, and the key stays unused.
 
 These header names, codes and statuses are part of the contract. `tests/api-writes.test.ts` keeps every write route on the keyed wrapper.
+
+Stock conflict envelopes may include additive `error.params` (string-valued public context for translations). `INSUFFICIENT_STOCK` supplies material, location, available, requested and unit; `STOCK_NOT_EMPTY` supplies material, location, quantity and unit. The existing English `message`, status and code remain stable.
 
 ### 5. Commands used by CI, deploy and the docs
 

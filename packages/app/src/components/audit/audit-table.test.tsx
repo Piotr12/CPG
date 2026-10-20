@@ -76,9 +76,9 @@ describe("AuditTable", () => {
   });
 
   it("shows an action it has no name for as its ID", () => {
-    render(<AuditTable entries={[entry({ action: "tenants.tenant.reset" })]} label="Global audit" labels={en.audit} />);
+    render(<AuditTable entries={[entry({ action: "future.entity.changed" })]} label="Global audit" labels={en.audit} />);
 
-    expect(screen.getByText("tenants.tenant.reset")).toBeTruthy();
+    expect(screen.getByText("future.entity.changed")).toBeTruthy();
   });
 
   it("names a read-only flag change, with its before and after (AUD-016)", () => {
@@ -129,5 +129,12 @@ describe("AuditTable", () => {
 
     expect(screen.getByText("Nic jeszcze nie zapisano.")).toBeTruthy();
     expect(screen.getByRole("columnheader", { name: "Czas (UTC)" })).toBeTruthy();
+  });
+  it("names stock movements and their stored context in Polish", () => {
+    render(<AuditTable entries={[entry({ action: "stock.movement.posted", before: { quantity: "2.000000" }, after: { quantity: "1.000000", movement: "-1.000000", postingId: "posting-1", type: "correction", businessDate: "2026-10-20", reason: "Spis", enteredQuantity: "-1.000000", enteredUnit: "each" } })]} label="Audyt" labels={pl.audit} />);
+    expect(screen.getByText("Zaksięgowano ruch zapasu")).toBeTruthy();
+    expect(screen.getAllByRole("listitem").map((item) => item.textContent)).toEqual([
+      "ilość: 2.000000 → 1.000000", "ruch: — → -1.000000", "ID księgowania: — → posting-1", "typ: — → korekta", "data księgowania: — → 2026-10-20", "powód: — → Spis", "wprowadzona ilość: — → -1.000000", "wprowadzona jednostka: — → each",
+    ]);
   });
 });

@@ -98,13 +98,13 @@ describe("GlobalAuditEvent and TenantAuditEvent", () => {
     {
       table: "tenant_audit_event",
       create: async () => {
-        const em = scope("test");
+        const em = scope("prod");
         const { id } = em.create(TenantAuditEvent, entry());
         await em.flush();
         return id;
       },
-      update: (id: string) => scope("test").nativeUpdate(TenantAuditEvent, { id }, { subjectLabel: "mallory" }),
-      remove: (id: string) => scope("test").nativeDelete(TenantAuditEvent, { id }),
+      update: (id: string) => scope("prod").nativeUpdate(TenantAuditEvent, { id }, { subjectLabel: "mallory" }),
+      remove: (id: string) => scope("prod").nativeDelete(TenantAuditEvent, { id }),
     },
   ];
 

@@ -31,6 +31,25 @@ export const en = {
     migrationsApplied: (count: number) => `${count} migrations applied`,
     migrationsPending: (count: number) => `${count} pending`,
     settings: (count: number) => `${count} settings`,
+    reset: {
+      heading: "Reset Test",
+      description: "Replace all Test business data and its audit with fresh demonstration data. Prod, accounts, sessions, tokens, preferences and Global audit are kept.",
+      generation: "Generation {generation}",
+      open: "Reset Test…",
+      title: "Reset Test data?",
+      confirmation: "Permanently delete Test generation {generation}, including all its business records and audit, and reseed demonstration data. Business IDs restart from 00000001. Prod, accounts, sessions, tokens, preferences and Global audit are kept. This cannot be undone.",
+      readOnly: "Test will remain read-only.",
+      writable: "Test will remain writable.",
+      confirm: "Reset Test",
+      pending: "Resetting…",
+      cancel: "Cancel",
+      success: "Test reset to generation {generation}. {state}",
+      errors: {
+        FORBIDDEN: "Only the administrator can reset Test.",
+        GENERATION_STALE: "Test was reset since this page loaded. Close this dialog and reload before resetting it again.",
+        GENERATION_EXHAUSTED: "Test has reached its last dataset generation.",
+      },
+    },
     /** The admin's Read-only card (R05). Filled in on the server: the dialog gets plain strings. */
     readOnly: {
       heading: "Read-only",
@@ -817,6 +836,7 @@ export const en = {
     channels: { ui: "UI", api: "API" },
     /** Keyed by the entry's action ID; an action missing here is shown as its ID. */
     actions: {
+      "stock.movement.posted": "Stock movement posted",
       "users.user.created": "User created",
       "users.user.password-reset": "Password reset",
       "users.user.deactivated": "User deactivated",
@@ -853,11 +873,19 @@ export const en = {
       "boms.bom.revised": "BOM revised",
       "boms.bom.deactivated": "BOM deactivated",
       "boms.bom.reactivated": "BOM reactivated",
+      "tenants.tenant.reset": "Test reset",
       "tenants.tenant.read-only-changed": "Read-only flag changed",
     },
     passwordNotRecorded: "Password replaced (not recorded)",
     /** Snapshot field names in the Changes column; a field missing here is shown as stored. */
     fields: {
+      generation: "generation",
+      movement: "movement",
+      postingId: "posting ID",
+      businessDate: "business date",
+      reason: "reason",
+      enteredQuantity: "entered quantity",
+      enteredUnit: "entered unit",
       username: "username",
       role: "role",
       active: "active",
@@ -894,7 +922,7 @@ export const en = {
       readOnly: { true: "yes", false: "no" },
       locale: { en: "English", pl: "Polish" },
       theme: { light: "light", dark: "dark" },
-      type: { raw: "raw", intermediate: "intermediate", finished: "finished" },
+      type: { raw: "raw", intermediate: "intermediate", finished: "finished", correction: "correction" },
       procurement: { make: "make", buy: "buy" },
     },
   },
@@ -912,6 +940,16 @@ export const en = {
     readOnly: "Read-only",
   },
   /** The sidebar every signed-in page shares, and the visitor bar (components/layout). Test and Prod are tenant names, never translated. */
+  stock: {
+    heading: "Stock — {tenant}", intro: "Physical stock is in the material's base unit. Corrections post today (UTC); stock cannot go below zero.",
+    material: "Material", location: "Location", show: "Show stock", quantity: "Physical balance", ledger: "Recent stock movements", empty: "No movements for this material and location.",
+    noMasters: "Create materials and locations before reading stock. Ask the administrator to add them.", inactive: "Inactive", unavailable: "New corrections require an active material and location in a writable tenant.",
+    date: "Business date", movement: "Movement", reason: "Reason", details: "Source and entry details", source: "Source", actor: "Actor", channel: "Channel", entered: "Entered", factor: "Factor", after: "Balance after", correction: "Correction", recent: "Showing up to 100 recent movements. The physical balance includes all movements.",
+    channels: { ui: "UI", api: "API", seed: "Installation" },
+    form: { open: "Post correction", title: "Post stock correction", description: "Enter a signed change: 5 adds five; -5 removes five. This records a permanent movement today.", quantity: "Signed quantity", quantityHint: "Use up to six decimals. Negative quantities remove stock.", unit: "Unit", reason: "Reason", submit: "Post", pending: "Posting…", cancel: "Cancel" },
+    fieldErrors: { quantity: "Enter a nonzero signed quantity, with at most 12 integer digits and 6 decimals.", reason: "Enter a reason, up to 500 characters.", unit: "Choose a valid unit." },
+    errors: { QUANTITY_OUT_OF_RANGE: "That quantity or resulting balance is too large.", QUANTITY_ROUNDS_TO_ZERO: "That quantity rounds to zero in the base unit.", MATERIAL_INACTIVE: "This material is inactive. New corrections are blocked.", LOCATION_INACTIVE: "This location is inactive. New corrections are blocked.", UNIT_NOT_CONVERTIBLE: "The unit has no conversion to this material's base unit." },
+  },
   nav: {
     menu: "Menu",
     close: "Close",
@@ -925,6 +963,7 @@ export const en = {
     customers: "Customers",
     suppliers: "Suppliers",
     planningParameters: "Planning parameters",
+    stock: "Stock",
     safetyStock: "Safety stock",
     boms: "BOMs",
     import: "Import",
@@ -976,6 +1015,10 @@ export const en = {
   errors: {
     MATERIAL_HAS_CUSTOMER_DEMAND: "Customer order {order} has outstanding demand for this material.",
     LOCATION_HAS_CUSTOMER_ORDERS: "Customer order {order} is still Open at this location.",
+    INSUFFICIENT_STOCK: "Material {material} at location {location}: available {available} {unit}; requested {requested} {unit}.",
+    STOCK_NOT_EMPTY: "Material {material} at location {location} holds {quantity} {unit}. Clear its stock before deactivation.",
+    MATERIAL_HAS_MOVEMENTS: "This material has stock history, so its type and base unit cannot change.",
+
     UNAUTHORIZED: "You need to sign in.",
     TOO_MANY_ATTEMPTS: "Too many attempts. Try again in a few minutes.",
     VALIDATION_FAILED: "Some fields are invalid.",
