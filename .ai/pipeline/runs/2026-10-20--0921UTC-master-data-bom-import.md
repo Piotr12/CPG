@@ -46,6 +46,16 @@ The admin downloads one documented `.xlsx` template (a sheet per master plus BOM
 - **`errorFormatter` in `components/boms/labels.ts` takes `Pick<BomsLabels, "errors">`**, so the import screen reuses the cycle and priority-clash details. No behaviour change.
 - **The screen's count strings are functions** (`Commit 1 change`, `Show 2 unchanged rows`), and Polish keeps counts in parentheses.
 
+## Verification
+
+- `npm run lint`, `npm run typecheck`: clean.
+- `npm run test:coverage`: 286 files, 1860 tests, 100% statements, branches, functions and lines.
+- `npm run build`: passes.
+- `npm run test:integration` (Docker, production image, fresh database): 27 files, 209 tests passed, including `import-api.test.ts` (8) and `import.test.ts` (6).
+- The 2,000-row dry run through the API, in Docker: 844 ms, HTTP and parsing included (it was 17.9 s before the identity map was cleared between rows).
+- `npm audit`: the 10 known `braces` advisories only; `read-excel-file`, `write-excel-file` and `fflate` add none.
+- The integration suite caught one bug the unit tests couldn't: plural count strings as functions can't cross into the client component (lesson recorded, regression test added).
+
 ## Implementation Plan
 
 ### Phase 1 — Engine
@@ -72,6 +82,8 @@ The admin downloads one documented `.xlsx` template (a sheet per master plus BOM
 
 ## Progress
 
+PR: #99
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Engine
@@ -94,4 +106,4 @@ The admin downloads one documented `.xlsx` template (a sheet per master plus BOM
 - [x] 3.1 Actions — c746f19
 - [x] 3.2 Screen components — c746f19
 - [x] 3.3 Page, navigation, i18n, help — c746f19
-- [ ] 3.4 Screen integration tests and the full gate
+- [x] 3.4 Screen integration tests and the full gate — 4854975
