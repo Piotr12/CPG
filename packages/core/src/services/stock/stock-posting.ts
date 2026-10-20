@@ -18,6 +18,9 @@ import { findActiveMaterial } from "../materials/find-material";
 
 export type StockPosting = z.infer<typeof stockPostingSchema>;
 
+/** The movement type of a reasoned correction: a manual one, a demo opening, or a stock import's (INV-016). */
+export const CORRECTION_MOVEMENT = "correction";
+
 export interface StockMovementView {
   id: string; postingId: string; position: number; type: string;
   material: string; location: string; businessDate: string; occurredAt: Date;
@@ -40,13 +43,17 @@ export interface PostingSource {
  * line's movement, its pair's balance and (for a user) its audit entry. Every cumulative pair balance
  * is checked before the one flush, so a later positive line never legitimizes an earlier overdraw
  * and a failed line leaves the whole group unwritten (R09). Dated today, the server's UTC date
- * (INV-010). The caller has parsed `input` with `stockPostingSchema`.
+ * (INV-010). The caller has parsed `input` with `stockPostingSchema` (the public `post`, at most 100
+ * lines), or built lines valid by construction: the stock import's nonzero base-unit differences, at
+ * most `IMPORT_ROWS_MAX` (stock-import spec Q11). A caller posting one group in several calls on the
+ * same transaction (the stock import, in chunks) numbers each call's lines from `firstPosition`.
  */
 export async function postStockMovements(
   em: EntityManager,
   input: StockPosting,
   source: PostingSource,
   context: PostingContext,
+  { firstPosition = 0 }: { firstPosition?: number } = {},
 ): Promise<StockMovementView[]> {
   const businessDate = new Date().toISOString().slice(0, 10);
   const pairs = new Map<string, { balance: StockBalance; quantity: bigint }>();
@@ -78,7 +85,7 @@ export async function postStockMovements(
     pair.balance.quantity = formatDecimal(after, { fixed: true });
     const actor = context.kind === "user" ? context.actor : null;
     const movement = em.create(StockMovement, {
-      postingId: source.id, position, type: source.type, material, location, businessDate,
+      postingId: source.id, position: firstPosition + position, type: source.type, material, location, businessDate,
       quantity: formatSignedQuantity(delta), baseUnit: material.baseUnit,
       enteredQuantity: formatSignedQuantity(signed), enteredUnit: converted.enteredUnit,
       numerator: converted.numerator, denominator: converted.denominator,
