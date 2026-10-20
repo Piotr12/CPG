@@ -2,7 +2,7 @@
 
 Source doc: .ai/specs/implemented/2026-10-20--1635UTC-customer-orders.md
 Design PR: #101
-Status: in progress
+Status: complete
 Engine: om-auto-create-pr (steps: 9, --loop: no)
 
 ## Goal
@@ -57,10 +57,16 @@ Risk-high additive schema, new aggregate contract, conversion history and line i
 
 - 18:20 UTC — Re-plan: merged-source integration225PASS/1Docker skip/1navigation failure (link covered by sidebar footer after scroll). Helper now centers the target within its scroll container before clicking. Main advanced again to d8d6093 (atomic Test reset); merged its shared seed registry, adding order seeding to startup/reset and rollback/preservation regressions. Full gate must rerun on this final composition.
 
+- 18:27 UTC — Final composed gate PASS: lint,typecheck,production build,313 unit files/2083 tests with100% coverage; full fresh standalone integration30 files/233 tests PASS,1Docker-only skip,275.42s. Both independent merge reviews APPROVE (83+35 focused tests). Final UI evidence refreshed on another pristine standalone copy before publication.
+
+- 18:28 UTC — Step3.2 complete: final independent review approved,15 inspected UI PNGs/report published to qa-evidence/pr-102-09bbbce; all15remotehashes and15inlineembeds verified. Own production process and named QA browser closed. Ready PR102 stays review+needs-qa; following final pushed-head CI to its bounded result before session completion.
+
 ## Verification
+- Final composed source09bbbce with maind8d6093: lint/typecheck/build PASS;2,083 unit tests,100% all4measures (4,508 lines/5,110 statements/2,228 branches/1,742 functions);233 integration PASS/1Docker-only startup skip. Reset replacement/rollback and Prod preservation covered.
+
 - Phase 1: lint/typecheck passed; full coverage passed, 289 files / 1,927 tests, all four measures 100%.
-- Final gate: lint and typecheck PASS;296 unit files/1,970 tests PASS,100% lines/statements/branches/functions (4,289 lines,4,866 statements,2,106 branches,1,667 functions); Next16.4.2 build PASS.
-- Final production standalone integration:27 files passed/1 skipped,221 tests passed/1 Docker-only startup skip,236.14s. Docker unavailable for this account.
+- Before main merges: lint and typecheck PASS;296 unit files/1,970 tests PASS,100% lines/statements/branches/functions (4,289 lines,4,866 statements,2,106 branches,1,667 functions); Next16.4.2 build PASS.
+- Before main merges, production standalone integration:27 files passed/1 skipped,221 tests passed/1 Docker-only startup skip,236.14s. Docker unavailable for this account.
 - Live QA:11 checkpoints PASS with inspected PNGs (desktop/mobile390px,form/error/keyboard/scroll,empty,read-only,anonymous,PL/dark/long names/pagination). Artifacts: .ai/qa/artifacts_customer-orders/report.md and report.json (ignored).
 - Independent final code review APPROVE at d68869b after fixing all findings;21 migration tests and46 independent focused tests passed. Root reviewed complete diff against engineering/compatibility/product contracts.
 - npm audit:10 known high braces advisories documented in standards; no dependencies changed.
@@ -81,4 +87,4 @@ Risk-high additive schema, new aggregate contract, conversion history and line i
 - [x] 2.3 Add API/browser integration journeys for both roles and integrity/refusal paths. — 95753b0
 ### Phase 3: Verification and publication
 - [x] 3.1 Reach 100% unit coverage; run lint, typecheck, coverage, build, integration and live mobile/desktop QA. — 66e9b36
-- [ ] 3.2 Run authoritative review/autofix, publish evidence and summary, make PR ready with full labels. — cf79c39; evidence6297453201
+- [x] 3.2 Run authoritative review/autofix, publish evidence and summary, make PR ready with full labels. — cf79c39; evidence6297453201
