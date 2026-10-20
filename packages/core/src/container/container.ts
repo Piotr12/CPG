@@ -17,6 +17,7 @@ import { PlanningParameterService } from "../services/planning-parameters/planni
 import { SafetyStockTargetService } from "../services/safety-stock/safety-stock-target.service";
 import { PurchaseOrderService } from "../services/purchase-orders/purchase-order.service";
 import { GoodsReceiptService } from "../services/goods-receipts/goods-receipt.service";
+import { TransferService } from "../services/transfers/transfer.service";
 import { PurchaseRequisitionService } from "../services/purchase-requisitions/purchase-requisition.service";
 import { ForecastService } from "../services/forecasts/forecast.service";
 import { MaterialService } from "../services/materials/material.service";
@@ -65,6 +66,7 @@ export function createAppContainer(config: AppConfig, orm: Orm): AppContainer {
     purchaseRequisitionService: asClass(PurchaseRequisitionService).scoped(),
     purchaseOrderService: asClass(PurchaseOrderService).scoped(),
     goodsReceiptService: asClass(GoodsReceiptService).scoped(),
+    transferService: asClass(TransferService).scoped(),
     customerOrderService: asClass(CustomerOrderService).scoped(),
     importService: asClass(ImportService).scoped(),
     // `tenant` is registered only by tenantScope(): resolving it from a global scope fails (strict).

@@ -17,6 +17,7 @@ import type { PlanningParameterService } from "../services/planning-parameters/p
 import type { SafetyStockTargetService } from "../services/safety-stock/safety-stock-target.service";
 import type { PurchaseOrderService } from "../services/purchase-orders/purchase-order.service";
 import type { GoodsReceiptService } from "../services/goods-receipts/goods-receipt.service";
+import type { TransferService } from "../services/transfers/transfer.service";
 import type { PurchaseRequisitionService } from "../services/purchase-requisitions/purchase-requisition.service";
 import type { ForecastService } from "../services/forecasts/forecast.service";
 import type { MaterialService } from "../services/materials/material.service";
@@ -54,6 +55,7 @@ export interface Cradle {
   purchaseRequisitionService: PurchaseRequisitionService;
   purchaseOrderService: PurchaseOrderService;
   goodsReceiptService: GoodsReceiptService;
+  transferService: TransferService;
   customerOrderService: CustomerOrderService;
   importService: ImportService;
   /** The active tenant. Only in scopes built by `tenantScope()`. */
