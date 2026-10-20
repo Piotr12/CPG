@@ -24,6 +24,7 @@ Stock entities/migration, core stock posting/usage/seeding, stock UI/API, EN/PL/
 - Full gate: lint, typecheck, test:coverage (100%), build, test:integration. No dependency changes expected.
 
 ## Log
+- 2026-10-20 16:46 UTC — Persistence/posting phase: targeted 7 files / 62 tests passed; lint/typecheck passed. Includes two-ORM competing withdrawal, rollback, negative fractional conversion, master guards and migration up/down. Edited demo references with a different base unit are skipped instead of breaking startup.
 - 2026-10-20 16:41 UTC — Design published as #103. Reusing isolated cezar worktree; dependencies installed. Source investigation and previous pause preserved in design run log. Claim inherited from issue #80.
 
 ## Progress
@@ -31,8 +32,8 @@ Stock entities/migration, core stock posting/usage/seeding, stock UI/API, EN/PL/
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: persistence and posting
-- [ ] 1.1 Stock persistence and exact quantities
-- [ ] 1.2 Atomic posting, usage guards and demo openings
+- [x] 1.1 Stock persistence and exact quantities — 9996321
+- [x] 1.2 Atomic posting, usage guards and demo openings — 9996321
 ### Phase 2: user surfaces
 - [ ] 2.1 Stock API and actions
 - [ ] 2.2 Stock screen, help and translations
