@@ -65,7 +65,7 @@ The migration adds tables/indexes/FKs only. The old application continues to run
 ## 📝 API Contracts
 Paths are `/api/tenants/{tenant}/customer-orders` and `/{id}`; `id` is the eight-digit code. Reads allow signed-in session or bearer token. Writes require bearer, Idempotency-Key, Test Dataset-Generation and a writable tenant, for both roles. Shared envelope and existing statuses remain unchanged.
 
-- GET collection → order views by ID; GET item → one view, 404 `CUSTOMER_ORDER_NOT_FOUND` (malformed/other-tenant IDs included).
+- GET collection → order views by ID in fixed pages of 100 (`?page=1`, integer 1–1000000, default 1); the data stays an array and API consumers stop at a page shorter than 100. Invalid/unknown query fields are 400. UI shows translated previous/next controls, clamps a stale out-of-range page to the last page and uses 404 for malformed page values. Header query and corresponding line payload are bounded; lines are grouped once per page. GET item → one view, 404 `CUSTOMER_ORDER_NOT_FOUND` (malformed/other-tenant IDs included).
 - POST → `{ customer, location, lines: [{ material, quantity, unit, requiredDate }] }`, returns view (200 through the existing shared wrapper).
 - PATCH item → `{ version, customer, location, lines: [{ id?, material, quantity, unit, requiredDate }] }`, full aggregate, returns view. Existing IDs belong to this order; unknown/repeated IDs are 400 field errors.
 - View: `{ id, customer, location, status, version, createdAt, updatedAt, lines: [{ id, material, quantity, enteredQuantity, enteredUnit, numerator, denominator, requiredDate, fulfilled, abandoned, status }] }`. All quantities JSON strings, authoritative values fixed six places. No internal master UUIDs or actor secrets.
@@ -116,3 +116,6 @@ R02 material locks; R03 exact quantities; R05 tenant isolation/read-only; R07 UI
 - 2026-10-20 — Code review proved that preserving only omitted lines loses a replaced material’s FK. Hidden historical line copies preserve that reference too, keeping R02’s permanent type/BUoM lock without exposing history as active demand.
 - 2026-10-20 — POST uses the shared API wrapper’s existing HTTP 200, correcting the proposal’s 201 wording. Audit lines are allowlisted view records serialized as JSON text, preserving the scalar snapshot contract rather than widening shared audit infrastructure.
 - 2026-10-20 — Edit dialogs capture their opening aggregate/version until closed. A conflict refresh cannot silently pair old form values with a new version; reopening loads the latest saved order.
+
+## Implementation notes
+- Final performance review made the collection bound explicit before its first release: 100-order pages, shared DataTable pagination slot, and linear line grouping. The array envelope and create/edit behaviour are unchanged.
