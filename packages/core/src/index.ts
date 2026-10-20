@@ -45,3 +45,5 @@ export * from "./validators/tenants/tenant-code.schema";
 export * from "./singleton";
 // The preference vocabulary: `app` may not import `@cpg/db`, but its dictionaries are keyed by it.
 export { LOCALES, THEMES, type Locale, type Theme } from "@cpg/db";
+
+export * from "./services/stock/stock.service";

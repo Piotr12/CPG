@@ -1,3 +1,5 @@
+import { StockBalance } from "./stock/stock-balance.entity";
+import { StockMovement, STOCK_MOVEMENT_IMMUTABLE } from "./stock/stock-movement.entity";
 import { API_TOKEN_NAME_MAX, ApiToken } from "./api-tokens/api-token.entity";
 import {
   AUDIT_APPEND_ONLY,
@@ -56,6 +58,7 @@ export type { MaterialType };
 export { Customer, Location, NAMED_RECORD_NAME_MAX, Supplier };
 export type { NamedRecord, NamedRecordEntity };
 export { PlanningParameterSet, PROCUREMENT_MODES, SafetyStockTarget };
+export { StockBalance, StockMovement, STOCK_MOVEMENT_IMMUTABLE };
 export { Bom, BomComponent, BOM_REVISION_IMMUTABLE, BomRevision };
 export type { ProcurementMode };
 export type { AuditChannel, AuditSnapshot, AuditValue, Locale, TenantCode, Theme, UserRole };
@@ -83,6 +86,8 @@ export const entities = [
   Bom,
   BomRevision,
   BomComponent,
+  StockBalance,
+  StockMovement,
 ];
 
 /**
