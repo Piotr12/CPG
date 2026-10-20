@@ -29,6 +29,39 @@ export async function inRequestTransaction<T>(em: EntityManager, fn: () => Promi
 }
 
 /**
+ * Runs `fn` in a savepoint of the request's transaction, opened on the request's own `em`, then keeps
+ * it (`keep: true`) or rolls back to it (`keep: false`); a throw from `fn` always rolls back to it and
+ * propagates. The import's apply pass runs in one (spec `2026-10-20--0908UTC-master-data-bom-import`,
+ * Q6). Opening it on `em` itself is what makes it hold: services' own `em.transactional()` then nests
+ * its savepoints under this one, and rolling back to this one undoes them all. (`em.transactional()`
+ * here would open the savepoint on a fork the services never see: their savepoints would take the same
+ * name, and a rollback would land on the wrong one.) Afterwards the request transaction is `em`'s
+ * again, so the caller's commit and the idempotency key's store still run in it, and the identity map
+ * is cleared, so nothing rolled back can be flushed later. Call it only inside `inRequestTransaction`.
+ */
+export async function inRequestSavepoint<T>(em: EntityManager, fn: () => Promise<T>, { keep }: { keep: boolean }): Promise<T> {
+  const parent = em.getTransactionContext();
+  if (!parent) throw new Error("inRequestSavepoint must run inside the request transaction.");
+  await em.begin({ ctx: parent });
+  try {
+    const result = await fn();
+    if (keep) await em.commit();
+    else await em.rollback();
+    return result;
+  } catch (error) {
+    try {
+      await em.rollback();
+    } catch (rollbackError) {
+      console.error("Savepoint rollback failed:", rollbackError);
+    }
+    throw error;
+  } finally {
+    em.setTransactionContext(parent);
+    em.clear();
+  }
+}
+
+/**
  * SQLite refused this transaction's first write because another connection committed after its first
  * read (`SQLITE_BUSY_SNAPSHOT`). It fails at once, without waiting, and a new transaction succeeds.
  */

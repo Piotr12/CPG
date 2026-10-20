@@ -1,5 +1,6 @@
 import type { BomView, Locale, MaterialSummary } from "@cpg/core";
 import type { Messages } from "../../i18n/messages/en";
+import { ImportLink } from "../imports/import-link";
 import { BomsTable } from "./boms-table";
 import { componentChoices, outputChoices } from "./choices";
 import { CreateBomDialog } from "./create-bom-dialog";
@@ -28,12 +29,15 @@ export function BomsScreen({ tenant, boms, materials, units, locale, messages, a
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">{labels.intro}</p>
         {editable && (
-          <CreateBomDialog
-            context={{ tenant: tenant.code, generation: tenant.generation }}
-            labels={labels}
-            outputs={outputChoices(materials)}
-            choices={componentChoices(materials, units)}
-          />
+          <div className="flex shrink-0 gap-2">
+            <ImportLink tenant={tenant.code} label={messages.imports.link} />
+            <CreateBomDialog
+              context={{ tenant: tenant.code, generation: tenant.generation }}
+              labels={labels}
+              outputs={outputChoices(materials)}
+              choices={componentChoices(materials, units)}
+            />
+          </div>
         )}
       </div>
       <BomsTable tenant={tenant} boms={boms} materials={materialsById(materials)} labels={labels} editable={editable} />

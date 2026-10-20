@@ -43,7 +43,7 @@ export { fill, shownQuantity, type TenantContext };
 const DETAILED_CODES = new Set(["BOM_PRIORITY_CONFLICT", "BOM_CYCLE"]);
 
 /** An error envelope as the BOM screens say it: translated by code, plus the details of a clash or a cycle. */
-export function errorFormatter(labels: BomsLabels) {
+export function errorFormatter(labels: Pick<BomsLabels, "errors">) {
   return (error: { code: string; message: string }): string => {
     const text = errorMessage(labels.errors, error);
     const colon = error.message.indexOf(": ");

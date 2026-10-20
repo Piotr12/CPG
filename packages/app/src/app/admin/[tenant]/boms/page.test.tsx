@@ -101,6 +101,7 @@ describe("BomsPage", () => {
     expect(screen.getByRole("link", { name: "00000002" }).getAttribute("href")).toBe("/admin/test/boms/00000002");
     expect(screen.getAllByRole("link", { name: "00000005" })[0].getAttribute("href")).toBe("/admin/test/materials/00000005");
     expect(screen.getByRole("button", { name: "Create BOM" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Import from spreadsheet" }).getAttribute("href")).toBe("/admin/test/import");
   });
 
   it("shows a normal user the list without Create BOM, in Polish, and the empty state (TEN-004)", async () => {
@@ -113,6 +114,7 @@ describe("BomsPage", () => {
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("BOM-y — Test");
     expect(screen.getByText("Brak BOM-ów w Test.")).toBeTruthy();
     expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByRole("link", { name: "Import z arkusza" })).toBeNull();
   });
 
   it("gives the admin no Create BOM while the tenant is read-only, and says how to start only when it can (R05)", async () => {

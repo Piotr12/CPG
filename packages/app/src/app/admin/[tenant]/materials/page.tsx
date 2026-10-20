@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { connection } from "next/server";
 import { tenantScope } from "@cpg/core";
 import { requireUser } from "../../../../auth/require-admin";
+import { ImportLink } from "../../../../components/imports/import-link";
 import { CreateMaterialDialog } from "../../../../components/materials/create-material-dialog";
 import { materialsLabels } from "../../../../components/materials/labels";
 import { MaterialsTable } from "../../../../components/materials/materials-table";
@@ -45,7 +46,10 @@ async function Materials({ params }: { params: Promise<{ tenant: string }> }) {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">{labels.intro}</p>
         {editable && (
-          <CreateMaterialDialog context={{ tenant: tenant.code, generation: tenant.generation }} labels={labels} />
+          <div className="flex shrink-0 gap-2">
+            <ImportLink tenant={tenant.code} label={messages.imports.link} />
+            <CreateMaterialDialog context={{ tenant: tenant.code, generation: tenant.generation }} labels={labels} />
+          </div>
         )}
       </div>
       <MaterialsTable tenant={tenant} materials={materials} labels={labels} editable={editable} />

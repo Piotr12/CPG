@@ -9,6 +9,7 @@ import type { IdempotencyService } from "../services/idempotency/idempotency.ser
 import type { CustomerService } from "../services/customers/customer.service";
 import type { LocationService } from "../services/locations/location.service";
 import type { BomService } from "../services/boms/bom.service";
+import type { ImportService } from "../services/imports/import.service";
 import type { PlanningParameterService } from "../services/planning-parameters/planning-parameter.service";
 import type { SafetyStockTargetService } from "../services/safety-stock/safety-stock-target.service";
 import type { MaterialService } from "../services/materials/material.service";
@@ -40,6 +41,7 @@ export interface Cradle {
   planningParameterService: PlanningParameterService;
   safetyStockTargetService: SafetyStockTargetService;
   bomService: BomService;
+  importService: ImportService;
   /** The active tenant. Only in scopes built by `tenantScope()`. */
   tenant: TenantInfo;
 }

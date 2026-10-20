@@ -56,6 +56,7 @@ describe("MaterialsPage", () => {
     expect(screen.getByRole("heading", { name: "Materials — Test" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "00000001" }).getAttribute("href")).toBe("/admin/test/materials/00000001");
     expect(screen.getByRole("button", { name: "create in test generation 2" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Import from spreadsheet" }).getAttribute("href")).toBe("/admin/test/import");
   });
 
   it("shows a normal user the list without Create (TEN-004), in Polish when chosen", async () => {
@@ -78,6 +79,7 @@ describe("MaterialsPage", () => {
     render(await resolveServerComponents(page("test")));
 
     expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByRole("link", { name: "Import from spreadsheet" })).toBeNull();
     expect(screen.getByText("No materials in Test yet.")).toBeTruthy();
   });
 
