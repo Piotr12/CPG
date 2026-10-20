@@ -2,30 +2,45 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { receiptFormSchema, RECEIPT_LINE_COUNT_MESSAGE } from "@cpg/core/validators/goods-receipts/goods-receipt.schema";
 import { UNIT_NOT_CONVERTIBLE_MESSAGE } from "@cpg/core/validators/boms/bom-fields.schema";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { shipmentFormSchema } from "@cpg/core/validators/shipments/shipment.schema";
+import { CALENDAR_DATE_MESSAGE } from "@cpg/core/validators/dates/calendar-date.schema";
 import { en } from "../../i18n/messages/en";
 import { pl } from "../../i18n/messages/pl";
-import { receiptsLabels } from "./labels";
-import { ReceiptForm, type ReceiptFormProps } from "./receipt-form";
+import { errorFormatter, fieldErrorFormatter, receiptsLabels } from "../goods-receipts/labels";
+import { LineQuantitiesForm, type LineQuantitiesFormProps } from "./line-quantities-form";
 
 const LINES = [
-  { line: 1, label: "Line 1: 00000001 Steel sheet", outstanding: "70 kg outstanding", units: ["kg", "t"] },
-  { line: 2, label: "Line 2: 00000002 Bolt M8", outstanding: "10 each outstanding", units: ["each"] },
+  { key: 1, label: "Line 1: 00000001 Steel sheet", hint: "70 kg outstanding", units: ["kg", "t"] },
+  { key: 2, label: "Line 2: 00000002 Bolt M8", hint: "10 each outstanding", units: ["each"] },
 ];
 
 const action = vi.fn();
 const onSuccess = vi.fn();
 const onCancel = vi.fn();
 
-function renderForm(props: Partial<ReceiptFormProps<{ id: string }>> = {}) {
+/** The form as the Post goods receipt dialog uses it, in `messages`' language. */
+function renderForm(props: Partial<LineQuantitiesFormProps<{ id: string }>> = {}, messages = en) {
+  const labels = receiptsLabels(messages);
   return render(
-    <ReceiptForm labels={receiptsLabels(en)} lines={LINES} schema={receiptFormSchema} action={action} onSuccess={onSuccess} onCancel={onCancel} {...props} />,
+    <LineQuantitiesForm
+      labels={labels.post}
+      keyName="line"
+      lines={LINES}
+      schema={receiptFormSchema}
+      formatError={errorFormatter(labels)}
+      formatFieldError={fieldErrorFormatter(labels)}
+      action={action}
+      onSuccess={onSuccess}
+      onCancel={onCancel}
+      {...props}
+    />,
   );
 }
 const quantity = (line: number) => screen.getByLabelText(`Quantity received, ${LINES[line - 1].label}`);
 const unit = (line: number) => screen.getByLabelText(`Unit, ${LINES[line - 1].label}`);
 const submit = () => fireEvent.click(screen.getByRole("button", { name: "Post goods receipt" }));
 
-describe("ReceiptForm", () => {
+describe("LineQuantitiesForm", () => {
   afterEach(() => vi.clearAllMocks());
 
   it("shows each line's outstanding, and sends only the lines with a quantity, in the unit chosen (BUY-012)", async () => {
@@ -69,7 +84,7 @@ describe("ReceiptForm", () => {
       ok: false,
       error: { code: "VALIDATION_FAILED", message: "Invalid.", fieldErrors: { "lines.0.unit": [UNIT_NOT_CONVERTIBLE_MESSAGE] } },
     });
-    renderForm({ labels: receiptsLabels(pl) });
+    renderForm({}, pl);
 
     fireEvent.change(screen.getByLabelText(`Przyjęta ilość, ${LINES[1].label}`), { target: { value: "5" } });
     fireEvent.click(screen.getByRole("button", { name: "Zaksięguj przyjęcie towaru" }));
@@ -112,5 +127,35 @@ describe("ReceiptForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(onCancel).toHaveBeenCalledTimes(2);
     expect(action).toHaveBeenCalledTimes(1);
+  });
+
+  it("names each sent row by an ID when asked, and sends a date above the rows, whose error shows under it", async () => {
+    const A = "7f0c8a8e-3b7b-4a52-9a39-1f2a0e6b2c11";
+    const labels = receiptsLabels(en);
+    action.mockResolvedValue({ ok: false, error: { code: "VALIDATION_FAILED", message: "Invalid.", fieldErrors: { plannedDate: [CALENDAR_DATE_MESSAGE] } } });
+    render(
+      <LineQuantitiesForm
+        labels={labels.post}
+        keyName="orderLine"
+        lines={[{ key: A, label: "Line 1: 00000005 Widget", hint: "60 each outstanding", units: ["each"] }]}
+        date={{ label: "Planned date", initial: "2026-11-03" }}
+        schema={shipmentFormSchema}
+        formatError={errorFormatter(labels)}
+        formatFieldError={(message) => `translated: ${message}`}
+        action={action}
+        onSuccess={onSuccess}
+        onCancel={onCancel}
+      />,
+    );
+
+    const date = screen.getByLabelText("Planned date") as HTMLInputElement;
+    expect(date.value).toBe("2026-11-03");
+    fireEvent.change(date, { target: { value: "2026-11-05" } });
+    fireEvent.change(screen.getByLabelText("Quantity received, Line 1: 00000005 Widget"), { target: { value: "20" } });
+    submit();
+
+    expect(await screen.findByText(`translated: ${CALENDAR_DATE_MESSAGE}`)).toBeTruthy();
+    expect(action).toHaveBeenCalledWith({ plannedDate: "2026-11-05", lines: [{ orderLine: A, quantity: "20", unit: "each" }] });
+    expect(date.getAttribute("aria-invalid")).toBe("true");
   });
 });

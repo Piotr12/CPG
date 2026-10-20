@@ -103,6 +103,7 @@ describe("@cpg/core", () => {
       "getContainer",
       "globalSingleton",
       "isInstructionSheet",
+      "isNothing",
       "isScopeReadOnly",
       "loadConfig",
       "materialNotFound",

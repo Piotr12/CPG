@@ -194,7 +194,8 @@ describe("GoodsIssueService", () => {
         [all.id, "completed"],
         [fifteen.id, "completed"],
       ]);
-      expect(await entries("shipments.shipment.completed")).toEqual([
+      // Both complete in one transaction, possibly in one millisecond: compare them in ID order.
+      expect((await entries("shipments.shipment.completed")).sort((a, b) => a.subjectId.localeCompare(b.subjectId))).toEqual([
         { subjectId: fifteen.id, subjectLabel: `${fifteen.id} — customer order ${order.id}`, before: { status: "open" }, after: { status: "completed" } },
         { subjectId: all.id, subjectLabel: `${all.id} — customer order ${order.id}`, before: { status: "open" }, after: { status: "completed" } },
       ].sort((a, b) => a.subjectId.localeCompare(b.subjectId)));

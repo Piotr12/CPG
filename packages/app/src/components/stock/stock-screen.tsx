@@ -22,7 +22,7 @@ export function StockScreen({ tenant, view, materials, locations, units, locale,
       <span>{row.reason}</span>
       <span className="text-xs text-muted-foreground">{row.actorUsername} · {t.channels[row.channel]}</span>
       <details className="text-xs"><summary className="cursor-pointer">{t.details}</summary>
-        <p>{t.source}: {({ correction: t.correction, "goods-receipt": t.goodsReceipt } as Record<string, string>)[row.type] ?? row.type} · {row.postingId}</p>
+        <p>{t.source}: {({ correction: t.correction, "goods-receipt": t.goodsReceipt, "goods-issue": t.goodsIssue } as Record<string, string>)[row.type] ?? row.type} · {row.postingId}</p>
         <p>{t.entered}: {shownQuantity(row.enteredQuantity)} {row.enteredUnit} · {t.factor}: {row.numerator}/{row.denominator}</p>
         <p>{t.after}: {shownQuantity(row.balanceAfter)} {row.baseUnit}</p>
       </details>

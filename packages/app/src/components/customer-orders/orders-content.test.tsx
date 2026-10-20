@@ -11,23 +11,27 @@ import { OrdersScreen } from "./order-screen";
 const mocks = vi.hoisted(() => {
   class AppError extends Error { constructor(readonly code: string) { super(code); } }
   return { AppError, connection: vi.fn(), requireUser: vi.fn(), getMessages: vi.fn(), tenantScope: vi.fn(),
-    list: vi.fn(), count: vi.fn(), get: vi.fn(), materials: vi.fn(), units: vi.fn(), customers: vi.fn(), locations: vi.fn(),
+    list: vi.fn(), count: vi.fn(), get: vi.fn(), shipments: vi.fn(), materials: vi.fn(), units: vi.fn(), customers: vi.fn(), locations: vi.fn(),
     notFound: vi.fn(() => { throw new Error("404"); }) };
 });
 vi.mock("next/server", () => ({ connection: mocks.connection }));
 vi.mock("next/navigation", () => ({ notFound: mocks.notFound }));
-vi.mock("@cpg/core", () => ({ AppError: mocks.AppError, tenantScope: mocks.tenantScope }));
+vi.mock("@cpg/core", async (importOriginal) => {
+  const { isNothing, outstandingOf } = await importOriginal<typeof import("@cpg/core")>();
+  return { AppError: mocks.AppError, tenantScope: mocks.tenantScope, isNothing, outstandingOf };
+});
 vi.mock("../../auth/require-admin", () => ({ requireUser: mocks.requireUser }));
 vi.mock("../../i18n/get-messages", () => ({ getMessages: mocks.getMessages }));
 vi.mock("../../app/admin/[tenant]/customer-orders/actions", () => ({ createCustomerOrder: vi.fn(), updateCustomerOrder: vi.fn() }));
-const scope = (readOnly = false) => ({ cradle: { tenant: { ...tenant, readOnly }, customerOrderService: { list: mocks.list, count: mocks.count, get: mocks.get },
+vi.mock("../../app/admin/[tenant]/customer-orders/[id]/actions", () => ({ createShipment: vi.fn() }));
+const scope = (readOnly = false) => ({ cradle: { tenant: { ...tenant, readOnly }, customerOrderService: { list: mocks.list, count: mocks.count, get: mocks.get }, shipmentService: { list: mocks.shipments },
   materialService: { list: mocks.materials, listUnits: mocks.units }, customerService: { list: mocks.customers }, locationService: { list: mocks.locations } } });
 const page = (detail = false) => detail ? CustomerOrderPage({ params: Promise.resolve({ tenant: "test", id: order.id }), searchParams: Promise.resolve({}) }) :
   CustomerOrdersPage({ params: Promise.resolve({ tenant: "test" }), searchParams: Promise.resolve({}) });
 describe("customer order pages", () => {
   beforeEach(() => {
     mocks.tenantScope.mockResolvedValue(scope()); mocks.getMessages.mockResolvedValue({ locale: "en", messages: en }); mocks.requireUser.mockResolvedValue({ role: "user" });
-    mocks.count.mockResolvedValue(1); mocks.list.mockResolvedValue([order]); mocks.get.mockResolvedValue(order); mocks.materials.mockResolvedValue(materials);
+    mocks.count.mockResolvedValue(1); mocks.shipments.mockResolvedValue([]); mocks.list.mockResolvedValue([order]); mocks.get.mockResolvedValue(order); mocks.materials.mockResolvedValue(materials);
     mocks.units.mockResolvedValue({ "00000005": ["each", "case"] }); mocks.customers.mockResolvedValue(customers); mocks.locations.mockResolvedValue(locations);
   });
   afterEach(() => vi.clearAllMocks());
@@ -62,8 +66,11 @@ describe("customer order pages", () => {
     expect(screen.getByRole("link", { name: "All customer orders" }).getAttribute("href")).toBe("/admin/test/customer-orders");
     expect(screen.getByRole("link", { name: "00000005 Cabinet" }).getAttribute("href")).toBe("/admin/test/materials/00000005");
     const cells = within(screen.getByRole("table", { name: "Lines" })).getAllByRole("cell");
-    expect(cells.map((cell) => cell.textContent)).toEqual(["00000005 Cabinet", "24 each", "2 case (1 case = 12 each)", "2027-01-04", "0", "Open"]);
+    expect(cells.map((cell) => cell.textContent)).toEqual(["00000005 Cabinet", "24 each", "2 case (1 case = 12 each)", "2027-01-04", "0", "24", "Open"]);
     expect(screen.getByRole("button", { name: "Edit order" })).toBeTruthy();
+    expect(mocks.shipments).toHaveBeenCalledWith({ customerOrder: order.id });
+    expect(screen.getByRole("button", { name: "Create shipment" })).toBeTruthy();
+    expect(screen.getByText("No shipments yet.")).toBeTruthy();
   });
   it("shows a translated empty state and hides controls in a read-only tenant", async () => {
     mocks.tenantScope.mockResolvedValue(scope(true)); mocks.list.mockResolvedValue([]); mocks.getMessages.mockResolvedValue({ locale: "pl", messages: pl });
@@ -78,6 +85,26 @@ describe("customer order pages", () => {
       locations={locations.map((record) => ({ ...record, active: false }))} materials={materials.map((record) => ({ ...record, active: false }))} units={{}}
       locale="en" messages={en} />);
     expect(screen.queryByRole("button")).toBeNull(); expect(screen.getAllByText("Completed").length).toBeGreaterThan(0);
+  });
+  it("lists the order's shipments and offers Create shipment only while a writable order has anything outstanding (SAL-006)", () => {
+    const shipment = { id: "00000002", customerOrder: order.id, customer: "00000001", location: "00000001", plannedDate: "2027-01-02", status: "open" as const, createdAt: order.createdAt,
+      lines: [{ line: 1, orderLine: order.lines[0].id, material: "00000005", quantity: "24.000000", enteredQuantity: "24", enteredUnit: "each", numerator: "1", denominator: "1", issued: "4.000000", toIssue: "20.000000" }] };
+    const screenOf = (props: Partial<Parameters<typeof OrdersScreen>[0]>) =>
+      render(<OrdersScreen tenant={tenant} orders={[]} order={order} shipments={[shipment]} customers={customers} locations={locations} materials={materials} units={{}} locale="en" messages={en} {...props} />);
+
+    screenOf({});
+    const cells = within(screen.getByRole("table", { name: "Shipments" })).getAllByRole("cell");
+    expect(cells.map((cell) => cell.textContent)).toEqual(["00000002", "2027-01-02", "Open", "Line 1: 4 of 24 each"]);
+    expect(screen.getByRole("link", { name: "00000002" }).getAttribute("href")).toBe("/admin/test/shipments/00000002");
+    expect(screen.getByRole("button", { name: "Create shipment" })).toBeTruthy();
+
+    cleanup(); screenOf({ order: { ...order, lines: [{ ...order.lines[0], fulfilled: "24.000000", status: "completed" }] } });
+    expect(within(screen.getByRole("table", { name: "Lines" })).getAllByRole("cell")[5].textContent).toBe("0");
+    expect(screen.queryByRole("button", { name: "Create shipment" })).toBeNull();
+    cleanup(); screenOf({ tenant: { ...tenant, readOnly: true } });
+    expect(screen.queryByRole("button", { name: "Create shipment" })).toBeNull();
+    cleanup(); screenOf({ order: { ...order, status: "closed-early" } });
+    expect(screen.queryByRole("button", { name: "Create shipment" })).toBeNull();
   });
   it("returns not-found for an unknown tenant or order", async () => {
     mocks.tenantScope.mockRejectedValueOnce(new mocks.AppError("TENANT_NOT_FOUND"));

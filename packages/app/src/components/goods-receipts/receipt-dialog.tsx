@@ -7,8 +7,8 @@ import { Button } from "@cpg/ui/components/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@cpg/ui/components/dialog";
 import { postReceipt } from "../../app/admin/[tenant]/purchase-orders/[id]/actions";
 import { TALL_DIALOG, type TenantContext } from "../forms/form-labels";
-import { fill, shownQuantity, type ReceiptLineChoice, type ReceiptsLabels } from "./labels";
-import { ReceiptForm } from "./receipt-form";
+import { LineQuantitiesForm } from "../forms/line-quantities-form";
+import { errorFormatter, fieldErrorFormatter, fill, shownQuantity, type ReceiptLineChoice, type ReceiptsLabels } from "./labels";
 
 interface ReceiptDialogProps {
   context: TenantContext;
@@ -47,10 +47,13 @@ export function ReceiptDialog({ context, purchaseOrder, location, labels, lines,
               <DialogTitle>{t.title}</DialogTitle>
               <DialogDescription>{fill(t.description, { location })}</DialogDescription>
             </DialogHeader>
-            <ReceiptForm
-              labels={labels}
-              lines={lines}
+            <LineQuantitiesForm
+              labels={t}
+              keyName="line"
+              lines={lines.map(({ line, label, outstanding, units }) => ({ key: line, label, hint: outstanding, units }))}
               schema={receiptFormSchema}
+              formatError={errorFormatter(labels)}
+              formatFieldError={fieldErrorFormatter(labels)}
               action={(values) => postReceipt(context.tenant, context.generation, purchaseOrder, values)}
               onSuccess={(receipt) => {
                 setPosted(receipt);
