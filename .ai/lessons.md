@@ -58,6 +58,10 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 ## Testing
 
+- **2026-10-21 — agent-browser writes a relative screenshot path under its daemon's directory** — the #89 QA run's `screenshot .ai/qa/…/01.png` reported success but nothing appeared in the worktree. Always pass an absolute path to `agent-browser screenshot`, and `ls` the folder afterwards.
+- **2026-10-21 — The shadcn checkbox needs `ResizeObserver`, which jsdom lacks** — inside a form, Radix's checkbox measures its hidden input, and the first component test with one failed with "ResizeObserver is not defined". `tests/setup/dom.ts` now stubs a no-op one; don't add another stub per test.
+- **2026-10-21 — Stop a standalone test server by its port** — `pkill -f "<copy>/packages/app/server.js"` matched nothing, because the server runs as `node packages/app/server.js` from its copy's directory, so the old build kept answering. Kill `lsof -t -iTCP:<port> -sTCP:LISTEN` and check the port is free before starting the next copy.
+
 - **2026-10-20 — Wait for client-applied `<html>` state after a soft navigation** — `preferences.test.ts` read `lang` and the `dark` class right after signing in; the Polish heading was already rendered but `DocumentPreferences` had not yet updated the root `<html>`, which a soft navigation keeps. It failed once in CI (#110) after passing elsewhere. `waitUntil` the document attributes before asserting them.
 
 - **2026-10-20 — Wait for a dialog’s overlay before clicking behind it** — A cancelled shadcn dialog leaves its fading overlay for 100 ms. Wait until both `[role=dialog]` and `[data-slot=dialog-overlay]` are gone before clicking the page’s Edit button; checking hydration alone can still click the overlay.
