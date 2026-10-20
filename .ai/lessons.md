@@ -42,6 +42,8 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 ## Testing
 
+- **2026-10-20 — Copy public assets before starting standalone QA** — The documented Docker fallback needs both `.next/static` and `packages/app/public` in the standalone app directory. Copy them before startup: Next.js caches the public-file inventory, so copying them into an already running server still returns 404 until it restarts.
+
 - **2026-10-17 — Root-level config files are `.mts`** — the root `package.json` has no `"type"`, so Vite loads `vitest.config.ts` as CommonJS and warns. Name root-level ESM files `.mts` (`vitest.config.mts`, `vitest.integration.config.mts`). Root tests (`tests/*.test.ts`) run through Vitest, so `.ts` is fine there.
 - **2026-10-17 — `tmpdir()` can be inside the repo** — cezar points `TMPDIR` at `.ai/cezar/tmp/…`, so a temp dir has the monorepo as an ancestor. Don't assume a temp dir is outside the workspace; use the filesystem root when a test needs "no workspace above me".
 - **2026-10-19 — `migrator.down({ to })` keeps `to` applied** — it rolls back only the migrations after the named one. A test that meant "roll back the materials migration" with `down({ to: "…_materials" })` left the materials tables in place once a newer migration existed. Call `down()` once per migration, newest first (`packages/db/src/orm.test.ts`), and a new migration has to update the older migrations' rollback tests.
