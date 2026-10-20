@@ -25,6 +25,13 @@ beforeEach(() => {
   mocks.count.mockResolvedValue(1); mocks.get.mockResolvedValue(production); mocks.materials.mockResolvedValue(materials); mocks.locations.mockResolvedValue(locations);
 });
 afterEach(() => vi.clearAllMocks());
+it("gives both request-time routes a visible shared loading shell", () => {
+  for (const route of [page(), detail()]) {
+    const { container, unmount } = render(route.props.children.props.fallback);
+    expect(container.querySelector('[aria-busy="true"] [data-slot="skeleton"]')).toBeTruthy();
+    unmount();
+  }
+});
 it("lists targets with recipe links behind request-time authentication", async () => {
   render(await resolveServerComponents(page()));
   expect(mocks.connection).toHaveBeenCalledOnce(); expect(mocks.requireUser).toHaveBeenCalledOnce(); expect(mocks.tenantScope).toHaveBeenCalledWith("test");

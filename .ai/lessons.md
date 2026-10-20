@@ -155,6 +155,8 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 - **2026-10-20 — Keep advisory reads outside tenant write actions** — Every exported tenant server action is a gated write in this repository. Production recipe previews use an authenticated GET and the shared UI `apiCall`, so read-only tenants can inspect them without weakening the write gate; preserve error parameters and field errors through that client boundary.
 
+- **2026-10-20 — Check copied page shells against the current review rules** — Existing pages still use blank Suspense fallbacks, but CODE_REVIEW.md requires shared feedback fallbacks. New database pages use the visible, language-neutral LoadingMessage skeleton rather than perpetuating that precedent.
+
 - **2026-10-20 — Select current recipes before loading immutable history** — Production preview originally loaded all date-valid BOM revisions and discarded old ones in memory. Query explicit current BOM/revision pairs in bounded batches and group component/stock lookups; preview work must not grow with historical revision count.
 - **2026-10-20 — Keep a create draft when returning from its preview** — Remounting CrudForm after Back clears its local state unless the parent retains entered values. Store the draft separately from the disposable preview and test the restored fields.
 - **2026-10-20 — A closed dialog can remain in an inactive Next page** — After create-and-navigate, React/Next retained a closed portal with display:none. Wait for no open/visible dialogs and overlays, and scope subsequent interaction to data-state=open; DOM presence alone is not evidence that a dialog is still open.

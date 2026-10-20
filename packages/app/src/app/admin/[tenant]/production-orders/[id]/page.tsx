@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { tenantScope } from "@cpg/core";
+import { LoadingMessage } from "@cpg/ui/backend/feedback/loading-message";
 import { requireUser } from "../../../../../auth/require-admin";
 import { ProductionContent } from "../../../../../components/production-orders/production-content";
 import { getMessages } from "../../../../../i18n/get-messages";
@@ -11,7 +12,7 @@ export const metadata: Metadata = { title: "Production orders" };
 
 export default function ProductionOrderPage({ params }: PageProps<"/admin/[tenant]/production-orders/[id]">) {
   return <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-12">
-    <Suspense fallback={<div aria-busy="true" className="min-h-40" />}><Content params={params} /></Suspense>
+    <Suspense fallback={<LoadingMessage />}><Content params={params} /></Suspense>
   </main>;
 }
 

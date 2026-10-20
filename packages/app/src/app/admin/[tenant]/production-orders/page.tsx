@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { productionOrderListSchema } from "@cpg/core/validators/production-orders/production-order.schema";
 import { connection } from "next/server";
 import { tenantScope } from "@cpg/core";
+import { LoadingMessage } from "@cpg/ui/backend/feedback/loading-message";
 import { requireUser } from "../../../../auth/require-admin";
 import { ProductionContent } from "../../../../components/production-orders/production-content";
 import { getMessages } from "../../../../i18n/get-messages";
@@ -13,7 +14,7 @@ export const metadata: Metadata = { title: "Production orders" };
 
 export default function ProductionOrdersPage({ params, searchParams }: PageProps<"/admin/[tenant]/production-orders">) {
   return <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-12">
-    <Suspense fallback={<div aria-busy="true" className="min-h-40" />}><Content params={params} searchParams={searchParams} /></Suspense>
+    <Suspense fallback={<LoadingMessage />}><Content params={params} searchParams={searchParams} /></Suspense>
   </main>;
 }
 
