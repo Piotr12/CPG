@@ -3,7 +3,7 @@
 **Date:** 2026-10-20 16:34 UTC
 **Agent:** Codex
 **Spec:** .ai/specs/2026-10-20--1634UTC-stock-ledger-corrections.md
-**Status:** blocked
+**Status:** in progress
 
 ## Goal
 Implement E07-S01: tenant physical stock balances, a signed ledger and reasoned manual corrections in the UI/API, including stock-dependent master guards and demo balances.
@@ -14,6 +14,8 @@ Implement E07-S01: tenant physical stock balances, a signed ledger and reasoned 
 
 - 16:37 UTC — Found and independently verified conflicting correction semantics in the functional baseline: issue #80 / INV-006 request signed changes; decision register §03 p6 requires target physical balances. Conceptual model p6 supports signed manual input. AGENTS.md conflict gate prevents choosing silently; draft skeleton records a concrete current-2/input-5 example and recommends signed input, pending owner decision.
 - 16:37 UTC — npm ci completed; known audit summary remains 10 high advisories, consistent with engineering standards. No dependency manifest/lockfile or product-source changes. Shared QA descriptor absent; no UI work or captures attempted.
+
+- 16:38 UTC — User explicitly delegated reasonable assumptions and autonomous completion. Signed manual input chosen per #80 and INV-006; this replaces the earlier clarification gate. Design records the discrepancy and authorizes only the current manual path, leaving XLS absolute.
 
 ## Changes
 - Draft spec skeleton with the blocking source conflict and both alternatives; no implementation or PR yet.
