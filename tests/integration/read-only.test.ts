@@ -49,7 +49,7 @@ async function setReadOnly(admin: Browser, name: string, readOnly: boolean) {
   await admin.waitUntil(`!document.querySelector("[role=alertdialog]") && ${ready(button(done))}`);
 }
 
-// Read-only tenants on the screens (spec .ai/specs/2026-10-19--2018UTC-read-only-tenants.md):
+// Read-only tenants on the screens (spec .ai/specs/implemented/2026-10-19--2018UTC-read-only-tenants.md):
 // TEN-016, TEN-018, TEN-021, AUD-016.
 describe("read-only tenants on the screens (R05)", () => {
   let admin: Browser;

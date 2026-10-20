@@ -12,7 +12,7 @@ interface NamedRecordsScreenProps {
   messages: Messages;
   /**
    * Only the admin gets Create and the row menus (TEN-004), and only while the tenant isn't
-   * read-only (R05; the strip says why); every action checks both again.
+   * read-only (R05; the read-only banner says why); every action checks both again.
    */
   admin: boolean;
   create: CreateNamedRecord;

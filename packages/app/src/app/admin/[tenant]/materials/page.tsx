@@ -24,8 +24,8 @@ export default function MaterialsPage({ params }: PageProps<"/admin/[tenant]/mat
 
 /**
  * One tenant's materials, read through that tenant's own scope (R05), by any signed-in account; only
- * the admin gets Create material (TEN-004), and only while the tenant isn't read-only (the strip
- * says why). The form is bound to the tenant and generation shown.
+ * the admin gets Create material (TEN-004), and only while the tenant isn't read-only (the read-only
+ * banner says why). The form is bound to the tenant and generation shown.
  */
 async function Materials({ params }: { params: Promise<{ tenant: string }> }) {
   await connection();

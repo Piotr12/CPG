@@ -395,3 +395,9 @@ Implemented on PR #48. These deviations from the text above are deliberate:
 - **`tenantServerAction` checks the generation after parsing the input**, not before. It still runs before the handler, inside its transaction, and a malformed form keeps its field errors.
 - **API body schemas** are `resetPasswordBodySchema` and `setUserActiveBodySchema` next to the action schemas, not a separate `user-api.schema.ts`. `versionSchema` sits in `validators/users/` until #22 needs it elsewhere.
 - **A malformed `Dataset-Generation` is 428 in either tenant**, not only in Test.
+
+What later stories changed (recorded on 2026-10-20, when epic E02 (#10) closed):
+- **`versionSchema` moved.** It lives in `core/src/validators/version.schema.ts`, shared by users, materials, conversions and the masters.
+- **The tenant store is in use.** Lines 28 and 255 say it stays empty until #22. Every tenant write route of #22 and #23 now stores into it, and `tests/api-writes.test.ts` requires every mutating route under `app/api` to use `apiWrite` or `tenantApiWrite`. The only global write in the tenant tree, the read-only `PATCH /api/tenants/{tenant}` (#25), is named as an exception there. It has no version: it is a single flag.
+- **Read-only (#25).** `IdempotencyService` checks the flag after the key lookup, so a stored answer still replays on a read-only tenant. `tenantServerAction` retries once on a stale snapshot, like the API.
+- **Carry into the Test reset (D06).** The key lookup matches the account and the key, not the generation. A replay after a reset is refused only because the reset deletes Test's key rows (Q8). The reset must do that, with a test, or the lookup must also match the generation.

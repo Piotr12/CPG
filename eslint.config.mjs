@@ -22,7 +22,7 @@ const framework = forbid(["next", "next/*", "react", "react-dom", "react/*"], "K
 const app = forbid(["@cpg/app", "@cpg/app/*"], "Nothing depends on @cpg/app.");
 const ui = forbid(["@cpg/ui", "@cpg/ui/*"], "Only @cpg/app uses @cpg/ui.");
 
-// Tenant isolation (R05; spec .ai/specs/2026-10-19--0913UTC-test-prod-tenants.md). @cpg/db enforces
+// Tenant isolation (R05; spec .ai/specs/implemented/2026-10-19--0913UTC-test-prod-tenants.md). @cpg/db enforces
 // it at runtime; these rules close what it can't see: switching the filter off, picking the tenant
 // anywhere but tenantScope, adding filters, the QueryBuilder and the driver, and raw SQL. Tests may
 // do all of it, to prove the runtime checks.
