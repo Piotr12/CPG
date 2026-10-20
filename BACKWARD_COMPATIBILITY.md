@@ -182,6 +182,7 @@ Route handlers under `app/api/` are protected the same way: their paths, methods
     - 409 `SHIPMENT_NOT_OPEN`, `CUSTOMER_ORDER_NOT_OPEN`, `ISSUE_ID_RACE`, `ISSUE_IDS_EXHAUSTED` or `VERSION_CONFLICT`;
     - 409 `INSUFFICIENT_STOCK`, with `params` `{ material, location, available, requested, unit }`.
   - `GET /api/tenants/{tenant}/goods-issues/{id}` returns one goods issue (404 `GOODS_ISSUE_NOT_FOUND`).
+  - Each goods-issue line's stock movement has `type` `goods-issue`, a negative quantity, and the issue's internal UUID as its `postingId`.
 
 **Versions.** An edit of a versioned record (today: a user, a material, a material's conversion, a location, a customer, a supplier, a planning parameter set, a safety-stock target, a forecast, a BOM, a purchase requisition, a purchase order and a transfer) carries the `version` it loaded. A stale one is 409 `VERSION_CONFLICT`, and the newer change is kept. The user routes answer 404 `NOT_FOUND` for the built-in admin, an unknown id or a malformed one.
 

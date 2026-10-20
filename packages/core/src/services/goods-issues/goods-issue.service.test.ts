@@ -29,6 +29,7 @@ import type { AuditActor } from "../audit/actor";
 import { CustomerOrderService, type CustomerOrderView } from "../customer-orders/customer-order.service";
 import { ShipmentService, type ShipmentView } from "../shipments/shipment.service";
 import { StockService } from "../stock/stock.service";
+import { TransferService } from "../transfers/transfer.service";
 import { GOODS_ISSUE_MOVEMENT, GoodsIssueService, ISSUE_ID_RACE } from "./goods-issue.service";
 
 const ACTOR: AuditActor = { userId: "user-id", username: "alice", sessionId: "user-session", channel: "ui", token: null };
@@ -215,6 +216,24 @@ describe("GoodsIssueService", () => {
       expect(await written(order.id)).toEqual(before);
       expect(await entries("goods-issues.goods-issue.posted")).toEqual([]);
       expect(await entries("customer-orders.customer-order.fulfilled")).toEqual([]);
+    });
+
+    it("can't issue stock that a transfer has dispatched into transit: only physical stock at the location counts (R09)", async () => {
+      await count("00000001", "10");
+      const order = await orders().create(SIXTY, ACTOR);
+      const shipment = await shipAll(order);
+      const transfers = new TransferService({ em: scoped() });
+      const transfer = await transfers.create(
+        { material: "00000001", source: "00000001", destination: "00000002", quantity: "10", unit: "each", plannedDispatch: "2026-11-01", plannedArrival: "2026-11-02" },
+        ACTOR,
+      );
+      await new TransferService({ em: scoped() }).dispatch(transfer.id, { quantity: "10", unit: "each" }, ACTOR);
+
+      await expect(service().post(issueOf(shipment, each(1, "1")), ACTOR)).rejects.toMatchObject({
+        code: "INSUFFICIENT_STOCK",
+        messageParams: { available: "0.000000", requested: "1.000000" },
+      });
+      expect((await orders().get(order.id)).lines[0].fulfilled).toBe("0.000000");
     });
 
     it("lets at most one of two racing issues spend the same stock (INV-021, AUD-026)", async () => {
