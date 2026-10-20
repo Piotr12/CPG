@@ -39,6 +39,8 @@ Risk-high additive schema, new aggregate contract, conversion history and line i
 
 - 17:20 UTC — Root cause of stale UI rerun: overlay copy retained Next route-cache/APP_PAGE for Prod pointing to old chunk 1z49_qrah8k56; current standalone manifests and Test used fixed chunk 0yluc70m-nw2e. Prepared a new empty standalone directory with static/public and fresh data. No additional dialog patch needed. Focused customer-order/navigation/icons/BOM browser suite now running before full re-run. Added wrong-tenant order GET assertion to the new API journey.
 
+- 2026-10-20 17:25 UTC — Phase 2 committed. Clean standalone environment: all 6 customer-order integration journeys pass, including repeated version conflict and reopen. Full final integration suite runs on a fresh database; independent final code review started.
+
 ## Verification
 - Phase 1: lint/typecheck passed; full coverage passed, 289 files / 1,927 tests, all four measures 100%.
 - Design metadata checks: 2 test files, 6 tests passed. Full implementation gate pending.
@@ -53,9 +55,9 @@ Risk-high additive schema, new aggregate contract, conversion history and line i
 - [x] 1.3 Build transactional audited/versioned service and SQLite behaviour tests. — d9c84c4
 - [x] 1.4 Add material/location usage guards and Test seed with regression tests. — d9c84c4
 ### Phase 2: API and screens
-- [ ] 2.1 Add keyed collection/item API and tenant actions, contract docs and tests.
-- [ ] 2.2 Add translated list/detail/edit screens, aggregate form, help/navigation and unit tests.
-- [ ] 2.3 Add API/browser integration journeys for both roles and integrity/refusal paths.
+- [x] 2.1 Add keyed collection/item API and tenant actions, contract docs and tests. — fb5ff58
+- [x] 2.2 Add translated list/detail/edit screens, aggregate form, help/navigation and unit tests. — 95753b0
+- [x] 2.3 Add API/browser integration journeys for both roles and integrity/refusal paths. — 95753b0
 ### Phase 3: Verification and publication
 - [ ] 3.1 Reach 100% unit coverage; run lint, typecheck, coverage, build, integration and live mobile/desktop QA.
 - [ ] 3.2 Run authoritative review/autofix, publish evidence and summary, make PR ready with full labels.
