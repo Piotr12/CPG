@@ -46,6 +46,22 @@ The spec's Implementation Plan, steps 1–11 (Phase 1: steps 1–4, Phase 2: ste
 - **`dryRun(prepared)` takes no actor.** It reads only and audits nothing; the spec's signature had one.
 - **`CORRECTION_MOVEMENT` constant.** The `"correction"` movement type is now a constant in `stock-posting.ts`, used by `StockService` and the import.
 
+- **The template has no example rows.** It has the header row only, with examples in the Instructions sheets, as in the master template. An example row left in place would post stock.
+- **`ImportScreen` takes a `kind` (`masterData` | `stock`), not function props.** A server page can't pass functions to a client component.
+- **`ImportLink` takes a `section`.** The Stock page links to Stock import, for both roles, while the tenant is writable.
+
+## Verification
+
+- `npm run lint`: 0 errors. One existing warning, in `bom.service.ts`, untouched.
+- `npm run typecheck`: passes.
+- `npm run test:coverage`: 416 files and 2,680 tests pass, with 100% statements, branches, functions and lines.
+- `npm run build`: passes.
+- **Integration, without Docker.** Docker had no space left on the device, and shared Docker state was not pruned (lesson). The files ran against the standalone build on a fresh data directory (`CPG_BASE_URL`): `stock-import-api`, `stock-import`, `navigation`, `import`, `import-api` and `stock`. 6 files and 47 tests passed. CI runs the full suite on the image.
+- **The real app, in Test.** Driven by agent-browser:
+  - the transit column and the row errors are shown;
+  - a 4-row count previews −15 kg, a 12 box to 1200 each (+200), +40 and one No change;
+  - "Stock count 2027-01" posted 3 corrections, and the Stock page shows 1200 each with the reason and the actor.
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
@@ -59,13 +75,13 @@ The spec's Implementation Plan, steps 1–11 (Phase 1: steps 1–4, Phase 2: ste
 
 ### Phase 2: Workbook and API
 
-- [ ] 2.1 templateWorkbook(layout)
-- [ ] 2.2 Routes and BACKWARD_COMPATIBILITY
-- [ ] 2.3 API integration tests
+- [x] 2.1 templateWorkbook(layout) — 8d56333
+- [x] 2.2 Routes and BACKWARD_COMPATIBILITY — e85d6b6
+- [x] 2.3 API integration tests — d3a01e0
 
 ### Phase 3: Screen
 
-- [ ] 3.1 Actions
-- [ ] 3.2 Generalized ImportScreen and stock labels
-- [ ] 3.3 Page, navigation, strings, help
-- [ ] 3.4 Screen integration tests
+- [x] 3.1 Actions — 2425510
+- [x] 3.2 Generalized ImportScreen and stock labels — 1637d8c
+- [x] 3.3 Page, navigation, strings, help — 97272c4
+- [x] 3.4 Screen integration tests — 470a63c
