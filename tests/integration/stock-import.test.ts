@@ -99,8 +99,8 @@ describe("the Stock import screen", () => {
 
     expect(await table("Problem")).toEqual([
       ["Stock", "2", "Physical quantity", "Enter a number of at least 0, with at most 12 digits before the point and 6 after it."],
-      ["Stock", "3", "Location ID", `The position ${hide} at ${cave} appears on rows 3, 4: keep one row per material and location.`],
-      ["Stock", "4", "Location ID", `The position ${hide} at ${cave} appears on rows 3, 4: keep one row per material and location.`],
+      ["Stock", "3", "Location ID", `The position ${hide}/${cave} appears on rows 3, 4: keep one row per material and location.`],
+      ["Stock", "4", "Location ID", `The position ${hide}/${cave} appears on rows 3, 4: keep one row per material and location.`],
     ]);
     expect(await sam.evaluate<boolean>(`${button("Post")}.disabled`)).toBe(true);
   });
@@ -117,7 +117,7 @@ describe("the Stock import screen", () => {
     await sam.waitUntil(`!${button("Post 1 correction")}.disabled`);
     await sam.evaluate(`(${button("Post 1 correction")}).click(), true`);
     await sam.waitUntil(`document.querySelector("main [role=status]") || document.querySelector("main [role=alert]")`);
-    expect(await sam.text("main [role=status]")).toBe("✓ Posted to Prod: 1 corrections, 1 unchanged. Reason: stockimportui count.");
+    expect(await sam.text("main [role=status]")).toBe("✓ Posted to Prod. Corrections: 1, unchanged: 1. Reason: stockimportui count.");
 
     await sam.evaluate(`[...document.querySelectorAll("main a")].find((a) => a.textContent.startsWith(${JSON.stringify(flint)})).click(), true`);
     await sam.waitUntil(`document.querySelector("[data-stock-balance]")?.textContent === "85 each"`);

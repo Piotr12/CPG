@@ -1357,7 +1357,7 @@ export const pl: Messages = {
       },
       button: { one: "Zaksięguj 1 korektę", other: "Zaksięguj korekty ({count})" },
       committing: "Księgowanie…",
-      done: "Zaksięgowano w {tenant}: korekty {updated}, bez zmian {unchanged}. Powód: {reason}.",
+      done: "Zaksięgowano w {tenant}. Korekty: {updated}, bez zmian: {unchanged}. Powód: {reason}.",
     },
     readOnly: "{tenant} jest tylko do odczytu: importy stanów są zablokowane. Administrator może to zmienić na stronie Środowiska.",
     issues: {

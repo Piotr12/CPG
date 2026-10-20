@@ -49,8 +49,8 @@ describe("prepareStockImport", () => {
         row,
         column: "Location ID",
         code: "IMPORT_DUPLICATE_KEY",
-        message: "The position 00000001 at 00000002 appears on rows 2 and 4: keep one row per material and location.",
-        params: { key: "00000001 at 00000002", rows: "2, 4" },
+        message: "The position 00000001/00000002 appears on rows 2 and 4: keep one row per material and location.",
+        params: { key: "00000001/00000002", rows: "2, 4" },
       })),
     );
   });

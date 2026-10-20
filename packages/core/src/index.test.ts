@@ -66,6 +66,7 @@ describe("@cpg/core", () => {
       "SESSION_TTL_MS",
       "SHIPMENT_ID_RACE",
       "STOCK_IMPORT_RULES",
+      "STOCK_IMPORT_STALE_MESSAGE",
       "STOCK_LAYOUT",
       "STOCK_SHEET",
       "SafetyStockTargetService",

@@ -6,8 +6,8 @@ import { prepareStockImport } from "../../domain/imports/prepare-stock-import";
 import { AppError } from "../../http/errors";
 import { inRequestTransaction } from "../../http/request-transaction";
 import type { AuditActor } from "../audit/actor";
-import { IMPORT_STALE_MESSAGE } from "./import.service";
 import { ACTOR, importKit, type ImportKit } from "./import-test-kit";
+import { STOCK_IMPORT_STALE_MESSAGE } from "./stock-import.service";
 
 /*
  * The stock import on a real SQLite file (spec 2026-10-20--2225UTC-stock-import): STX-002…021. Each
@@ -94,7 +94,7 @@ describe("the stock import's dry run", () => {
     await correct("00000001", "00000001", "10");
     const report = await dryRun(stock([1, 1, 2, "case"]));
     expect(report.rows[0].changes).toEqual([
-      { field: "Entered", before: null, after: "2.000000 case" },
+      { field: "Entered", before: null, after: "2 case" },
       { field: "Physical quantity", before: "10.000000 each", after: "24.000000 each" },
       { field: "Movement", before: null, after: "+14.000000 each" },
     ]);
@@ -256,7 +256,7 @@ describe("the stock import's commit", () => {
     const { previewToken } = await dryRun(workbook);
     await correct("00000001", "00000001", "-10");
 
-    await expect(commit(workbook, previewToken!)).rejects.toMatchObject({ code: "IMPORT_STALE", message: IMPORT_STALE_MESSAGE });
+    await expect(commit(workbook, previewToken!)).rejects.toMatchObject({ code: "IMPORT_STALE", message: STOCK_IMPORT_STALE_MESSAGE });
     expect(await balance("00000001", "00000001")).toBe("90.000000");
   });
 
@@ -316,6 +316,33 @@ describe("the stock import's commit", () => {
     await apply(stock([1, 2, 60, null]));
     expect(await balance("00000001", "00000002")).toBe("60.000000");
     expect((await kit.write(({ transferService }) => transferService.get(transfer))).inTransit).toBe("10.000000");
+  });
+
+  it("rolls every chunk back when a later chunk fails: one posting, all or nothing", async () => {
+    await kit.write(async ({ em }) => {
+      for (let code = 3; code <= 20; code++) em.create(Location, { code: String(code).padStart(8, "0"), name: `Cave ${code}` });
+      await em.flush();
+    });
+    const rows: Cell[][] = [];
+    for (let location = 1; location <= 20; location++) rows.push([1, location, location, null], [2, location, location, null]);
+    const workbook = stock(...rows);
+    const { previewToken } = await dryRun(workbook);
+    const before = await counts();
+    const scope = await scopeForTenant(kit.container, "prod");
+    const flush = scope.cradle.em.flush.bind(scope.cradle.em);
+    let flushes = 0;
+    vi.spyOn(scope.cradle.em, "flush").mockImplementation(async () => {
+      flushes += 1;
+      if (flushes === 2) throw new Error("the second chunk failed");
+      return flush();
+    });
+
+    await expect(
+      inRequestTransaction(scope.cradle.em, () => scope.cradle.stockImportService.commit(prepareStockImport(workbook), previewToken!, "Count", ACTOR)),
+    ).rejects.toThrow("the second chunk failed");
+
+    expect(flushes).toBe(2);
+    expect(await counts()).toEqual(before);
   });
 
   it("joins the caller's transaction: a later failure rolls the posting back", async () => {

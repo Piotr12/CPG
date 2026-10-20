@@ -1398,7 +1398,7 @@ export const en = {
       },
       button: { one: "Post 1 correction", other: "Post {count} corrections" },
       committing: "Posting…",
-      done: "Posted to {tenant}: {updated} corrections, {unchanged} unchanged. Reason: {reason}.",
+      done: "Posted to {tenant}. Corrections: {updated}, unchanged: {unchanged}. Reason: {reason}.",
     },
     readOnly: "{tenant} is read-only: stock imports are blocked. The administrator can make it writable on the Tenants page.",
     issues: {

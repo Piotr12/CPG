@@ -16,7 +16,6 @@ import { CORRECTION_MOVEMENT, postStockMovements } from "../stock/stock-posting"
 import type { TenantInfo, TenantService } from "../tenants/tenant.service";
 import type { ImportChange, ImportRowOutcome } from "./apply-context";
 import type { ImportReport } from "./apply-import";
-import { IMPORT_STALE_MESSAGE } from "./import.service";
 
 interface Deps {
   em: EntityManager;
@@ -40,6 +39,9 @@ interface ReadPass {
 
 const SHEET = STOCK_SHEET.name;
 
+/** What a commit says when its re-run doesn't match the dry run it names (spec Q6). */
+export const STOCK_IMPORT_STALE_MESSAGE = "A balance this workbook lists changed since the dry run, or the workbook differs. Run the dry run again.";
+
 /**
  * How many lines one flush of a commit posts. Measured on 2,000 new positions: one flush of all of
  * them took 23.5 s, chunks of 100 took 2.0 s, of 50 1.4 s, of 25 1.2 s (spec Q11).
@@ -61,7 +63,8 @@ const COLUMNS: Record<string, string> = {
  * read. Both methods run the same read pass: each row's desired physical quantity, converted to the
  * base unit, against the position's current balance (Q2, Q3). The dry run writes nothing (Q7). The
  * commit posts every difference as one `correction` with one reason (Q4, Q5), only when its re-run
- * computes the dry run's token (Q6). Both roles may call it (Q9); the gates are the caller's.
+ * computes the dry run's token (Q6). Both roles may call it (Q9); the gates are the caller's. Both
+ * methods clear the request `em`'s identity map as they go, so the caller must have flushed first.
  */
 export class StockImportService {
   private readonly em: EntityManager;
@@ -86,7 +89,7 @@ export class StockImportService {
    */
   async commit(prepared: PreparedStockImport, token: string, reason: string, actor: AuditActor): Promise<ImportReport> {
     const { report, lines } = await this.read(prepared);
-    if (report.previewToken !== token) throw new ConflictError(IMPORT_STALE_MESSAGE, "IMPORT_STALE");
+    if (report.previewToken !== token) throw new ConflictError(STOCK_IMPORT_STALE_MESSAGE, "IMPORT_STALE");
     const source = { type: CORRECTION_MOVEMENT, id: randomUUID() };
     // One posting, flushed in chunks: an identity map grown by 2,000 lines made every query's
     // auto-flush walk it, and a 2,000-line commit took 23.5 s (spec Q11).
@@ -147,7 +150,7 @@ export class StockImportService {
       action: delta === 0n ? "unchanged" : "update",
       record,
       label: positionLabel(material, location),
-      changes: delta === 0n ? [] : changes(material.baseUnit, current, desired, delta, unit === material.baseUnit ? null : `${values.quantity} ${unit}`),
+      changes: delta === 0n ? [] : changes(material.baseUnit, current, desired, delta, unit === material.baseUnit ? null : `${formatDecimal(parseDecimal(values.quantity)!)} ${unit}`),
     };
     const version = `StockBalance:${record}@${balance?.version ?? "none"}`;
     const line = delta === 0n ? null : { material: values.material, location: values.location, quantity: formatSignedQuantity(delta), unit: material.baseUnit };

@@ -27,7 +27,7 @@ export function prepareStockImport(workbook: WorkbookSheets): PreparedStockImpor
     rows: unique(
       STOCK_SHEET,
       parsed,
-      ({ material, location }) => `${material} at ${location}`,
+      ({ material, location }) => `${material}/${location}`,
       {
         column: "Location ID",
         message: (key, numbers) => `The position ${key} appears on rows ${numbers}: keep one row per material and location.`,

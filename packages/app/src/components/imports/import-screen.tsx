@@ -140,6 +140,7 @@ export function ImportScreen({ tenant, labels, kind = "masterData" }: ImportScre
     setReport(null);
     setCommitted(null);
     setError(null);
+    setReason("");
   }
 
   const recordCell = (row: ImportRowOutcome, link: boolean) => {

@@ -291,11 +291,15 @@ describe("ImportScreen — the stock import", () => {
 
     await screen.findByRole("status");
     expect(stockMocks.commitStockImport).toHaveBeenCalledWith("test", 2, { workbook: "AAAA", previewToken: TOKEN, reason: " Stock count 2027-01 " });
-    expect(screen.getByRole("status").textContent).toBe("✓ Posted to Test: 1 corrections, 1 unchanged. Reason: Stock count 2027-01.");
+    expect(screen.getByRole("status").textContent).toBe("✓ Posted to Test. Corrections: 1, unchanged: 1. Reason: Stock count 2027-01.");
     expect(screen.getByText("Corrected")).toBeTruthy();
     expect(screen.getByRole("link", { name: "00000001 — Flint at 00000002 — River cave" }).getAttribute("href")).toBe(
       "/admin/test/stock?material=00000001&location=00000002",
     );
+
+    // Another workbook starts without the last import's reason.
+    fireEvent.click(button(en.imports.commit.again));
+    expect((screen.getByLabelText("Reason") as HTMLInputElement).value).toBe("");
   });
 
   it("explains a stale commit and a missing reason in the reader's language", async () => {
@@ -306,6 +310,8 @@ describe("ImportScreen — the stock import", () => {
     fireEvent.change(await screen.findByLabelText("Powód"), { target: { value: "Inwentaryzacja" } });
     fireEvent.click(button("Zaksięguj 1 korektę"));
     expect(await screen.findByText(pl.stockImport.errors.IMPORT_STALE)).toBeTruthy();
+    expect(screen.getAllByRole("listitem")[1].getAttribute("aria-current")).toBe("step");
+    expect(screen.queryByText("Ruch: +14.000000 each")).toBeNull();
 
     stockMocks.commitStockImport.mockResolvedValueOnce({
       ok: false,
