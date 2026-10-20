@@ -1368,6 +1368,48 @@ export const en = {
       GENERATION_STALE: "This tenant's data was reset since you loaded the page. Reload and try again.",
     },
   },
+  stockImport: {
+    link: "Import from spreadsheet",
+    heading: (tenant: string) => `Stock import — ${tenant}`,
+    intro: "Set physical stock from one spreadsheet: opening balances or a stock count. Write the quantity each position should have, not the change.",
+    template: {
+      title: "1. Download the template",
+      text: "One row per material and location, with the physical quantity it should have. Positions you leave out are untouched, and 0 empties a position. In-transit stock is corrected on its transfer.",
+      download: "Download template (.xlsx)",
+    },
+    upload: {
+      title: "2. Upload and dry run",
+      text: "Nothing is written during the dry run. You see each position's movement, or every problem.",
+    },
+    summary: { updated: "Corrections", unchanged: "No change" },
+    preview: { record: "Position" },
+    actions: { update: "Correct", unchanged: "No change" },
+    results: { update: "Corrected", unchanged: "No change" },
+    change: { Movement: "Movement", Entered: "Entered" },
+    reason: {
+      label: "Reason",
+      hint: "Every movement of this import gets this reason. Up to 500 characters.",
+      placeholder: "Opening balance",
+    },
+    commit: {
+      text: {
+        one: "The movement is posted to {tenant} with this reason. If this position's balance changed since the dry run, the commit is refused and you run the dry run again.",
+        other: "All {count} movements are posted to {tenant} in one go, or none is, with this reason. If any of these balances changed since the dry run, the commit is refused and you run the dry run again.",
+      },
+      button: { one: "Post 1 correction", other: "Post {count} corrections" },
+      committing: "Posting…",
+      done: "Posted to {tenant}: {updated} corrections, {unchanged} unchanged. Reason: {reason}.",
+    },
+    readOnly: "{tenant} is read-only: stock imports are blocked. The administrator can make it writable on the Tenants page.",
+    issues: {
+      IMPORT_MISSING_REFERENCE: "{record} {id} doesn't exist in {tenant}. Check the ID, or create it first.",
+      IMPORT_DUPLICATE_KEY: "The position {key} appears on rows {rows}: keep one row per material and location.",
+      IMPORT_TRANSIT_COLUMN: "A correction changes physical stock at a location: write off in-transit stock on its transfer.",
+    },
+    errors: {
+      IMPORT_STALE: "A balance this workbook lists changed since the dry run, or the file is different. Run the dry run again.",
+    },
+  },
   audit: {
     globalHeading: "Global audit",
     tenantHeading: (name: string) => `Audit — ${name}`,
@@ -1560,6 +1602,7 @@ export const en = {
     sales: "Sales",
     forecasts: "Forecasts",
     import: "Import",
+    stockImport: "Stock import",
     tenantAudit: "Audit",
     shared: "Shared by Test and Prod",
     administration: "Administration",

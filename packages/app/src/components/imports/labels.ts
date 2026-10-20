@@ -55,9 +55,13 @@ import { safetyStockLabels, fieldErrorFormatter as safetyStockFieldErrors } from
  * component. A row's cell error comes as the English message of a shared schema or service: every
  * screen's translation of it is gathered here, server side, as `fieldMessages`.
  */
-export type ImportLabels = Omit<Messages["imports"], "heading" | "errors"> & {
+export type ImportLabels = Omit<Messages["imports"], "heading" | "errors" | "change"> & {
+  /** `fields`: how a change's field is named when it isn't a workbook column (the stock import's Movement). */
+  change: Messages["imports"]["change"] & { fields?: Record<string, string> };
   errors: Record<string, string>;
   fieldMessages: Record<string, string>;
+  /** The commit's reason field, for an import that posts with one (the stock import). */
+  reason?: Messages["stockImport"]["reason"];
 };
 
 /** Every field message a row can carry: each screen translates its own. */

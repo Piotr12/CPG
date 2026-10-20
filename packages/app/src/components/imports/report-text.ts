@@ -30,8 +30,13 @@ function shown(value: ImportChange["before"], labels: ImportLabels): string {
   return String(value);
 }
 
-/** `Description: Steel sheet → Steel sheet 2 mm`; a component `added` or `removed` (XLS-021, XLS-025). */
+/**
+ * `Description: Steel sheet → Steel sheet 2 mm`; a component `added` or `removed` (XLS-021, XLS-025).
+ * A field the labels name (a stock row's Movement) is a value, not a change: `Movement: -15.000000 each`.
+ */
 export function changeText({ field, before, after }: ImportChange, labels: ImportLabels): string {
+  const named = labels.change.fields?.[field];
+  if (named !== undefined) return `${named}: ${shown(after, labels)}`;
   const component = field.startsWith("Component ");
   const was = component && before === null ? labels.change.added : shown(before, labels);
   const is = component && after === null ? labels.change.removed : shown(after, labels);

@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useId, useRef, useState, useTransition, type ChangeEvent } from "react";
-import type { ImportReport, ImportRowOutcome } from "@cpg/core";
+import type { ImportReport, ImportRowOutcome, ImportSheetSummary } from "@cpg/core";
 import { IMPORT_FILE_MAX_BYTES, WORKBOOK_TOO_LARGE_MESSAGE } from "@cpg/core/validators/imports/import-request.schema";
+import { STOCK_REASON_MAX } from "@cpg/core/validators/stock/stock-correction.schema";
 import { ErrorMessage } from "@cpg/ui/backend/feedback/error-message";
 import { DataTable } from "@cpg/ui/backend/tables/data-table";
 import { Badge } from "@cpg/ui/components/badge";
@@ -11,18 +12,23 @@ import { Button } from "@cpg/ui/components/button";
 import { Input } from "@cpg/ui/components/input";
 import { Label } from "@cpg/ui/components/label";
 import { commitImport, dryRunImport } from "../../app/admin/[tenant]/import/actions";
+import { commitStockImport, dryRunStockImport } from "../../app/admin/[tenant]/stock-import/actions";
 import { errorMessage } from "../../i18n/error-message";
 import { fill } from "../forms/form-labels";
 import { fileToBase64 } from "./base64";
 import type { ImportLabels } from "./labels";
 import { changeText, counted, createdText, problemText } from "./report-text";
 
+/** Which import the screen runs: the admin's master data and BOMs, or physical stock (both roles). */
+export type ImportKind = "masterData" | "stock";
+
 interface ImportScreenProps {
   tenant: { code: string; name: string; generation: number; readOnly: boolean };
   labels: ImportLabels;
+  kind?: ImportKind;
 }
 
-/** Where a row's record is shown, when it has a page of its own or a list to find it in. */
+/** Where a master-data row's record is shown, when it has a page of its own or a list to find it in. */
 const PAGES: Record<string, (record: string) => string> = {
   Materials: (record) => `materials/${record}`,
   "Unit conversions": (record) => `materials/${record.split("/")[0]}`,
@@ -34,13 +40,34 @@ const PAGES: Record<string, (record: string) => string> = {
   "BOM headers": (record) => `boms/${record}`,
 };
 
+/** What differs between the two imports: their actions, their template, their record links, and whether a commit takes a reason. */
+const KINDS = {
+  masterData: { dryRun: dryRunImport, commit: commitImport, template: "/api/import/template", pages: PAGES, withReason: false },
+  stock: {
+    dryRun: dryRunStockImport,
+    commit: commitStockImport,
+    template: "/api/stock-import/template",
+    pages: {
+      Stock: (record: string) => {
+        const [material, location] = record.split("/");
+        return `stock?material=${material}&location=${location}`;
+      },
+    } as Record<string, (record: string) => string>,
+    withReason: true,
+  },
+} as const;
+
 /**
  * The Import screen (spec 2026-10-20--0908UTC-master-data-bom-import, mockup 01): download the
  * template, upload a workbook for a dry run that lists every problem or what each row would do, then
  * commit an error-free dry run in one go. A read-only tenant blocks the upload and the commit (Q11).
+ * The stock import (spec 2026-10-20--2225UTC-stock-import) runs on the same screen, with a reason
+ * its commit needs and no Created column: a stock row never creates a record.
  */
-export function ImportScreen({ tenant, labels }: ImportScreenProps) {
+export function ImportScreen({ tenant, labels, kind = "masterData" }: ImportScreenProps) {
   const id = useId();
+  const config = KINDS[kind];
+  const [reason, setReason] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [workbook, setWorkbook] = useState<string | null>(null);
   const [report, setReport] = useState<ImportReport | null>(null);
@@ -57,6 +84,7 @@ export function ImportScreen({ tenant, labels }: ImportScreenProps) {
   const changed = report ? report.rows.filter((row) => row.action !== "unchanged") : [];
   const unchanged = report ? report.rows.length - changed.length : 0;
   const step = committed || report?.previewToken ? 3 : file ? 2 : 1;
+  const reasonMissing = config.withReason && reason.trim() === "";
 
   const failure = (error: { code: string; message: string; fieldErrors?: Record<string, string[]> }) => {
     const field = Object.values(error.fieldErrors ?? {})[0]?.[0];
@@ -81,14 +109,15 @@ export function ImportScreen({ tenant, labels }: ImportScreenProps) {
     if (latest.current === chosen) setWorkbook(read);
   }
 
-  function run(kind: "dryRun" | "commit") {
-    setRunning(kind);
+  function run(action: "dryRun" | "commit") {
+    setRunning(action);
     setError(null);
     startTransition(async () => {
+      const commitValues = { workbook, previewToken: report?.previewToken, ...(config.withReason && { reason }) };
       const result =
-        kind === "dryRun"
-          ? await dryRunImport(tenant.code, tenant.generation, { workbook })
-          : await commitImport(tenant.code, tenant.generation, { workbook, previewToken: report?.previewToken });
+        action === "dryRun"
+          ? await config.dryRun(tenant.code, tenant.generation, { workbook })
+          : await config.commit(tenant.code, tenant.generation, commitValues);
       // Updates after an await leave the transition unless wrapped again (see CrudForm).
       startTransition(() => {
         setRunning(null);
@@ -98,7 +127,7 @@ export function ImportScreen({ tenant, labels }: ImportScreenProps) {
           if (result.error.code === "IMPORT_STALE") setReport(null);
           return;
         }
-        if (kind === "dryRun") setReport(result.data);
+        if (action === "dryRun") setReport(result.data);
         else setCommitted(result.data);
         setShowUnchanged(false);
       });
@@ -115,7 +144,7 @@ export function ImportScreen({ tenant, labels }: ImportScreenProps) {
 
   const recordCell = (row: ImportRowOutcome, link: boolean) => {
     const text = row.reference ? `${row.label} (${row.reference})` : row.label;
-    const page = PAGES[row.sheet]?.(row.record);
+    const page = config.pages[row.sheet]?.(row.record);
     return link && page ? (
       <Link href={`/admin/${tenant.code}/${page}`} className="underline underline-offset-4">
         {text}
@@ -161,7 +190,7 @@ export function ImportScreen({ tenant, labels }: ImportScreenProps) {
         <p className="text-sm text-muted-foreground">{t.template.text}</p>
         <div>
           <Button asChild variant="outline">
-            <a href="/api/import/template" download>
+            <a href={config.template} download>
               {t.template.download}
             </a>
           </Button>
@@ -199,7 +228,7 @@ export function ImportScreen({ tenant, labels }: ImportScreenProps) {
               empty="—"
               columns={[
                 { id: "sheet", header: t.summary.sheet, cell: (row) => row.sheet },
-                { id: "created", header: t.summary.created, cell: (row) => row.created, className: "text-right" },
+                ...(kind === "stock" ? [] : [{ id: "created", header: t.summary.created, cell: (row: ImportSheetSummary) => row.created, className: "text-right" }]),
                 { id: "updated", header: t.summary.updated, cell: (row) => row.updated, className: "text-right" },
                 { id: "unchanged", header: t.summary.unchanged, cell: (row) => row.unchanged, className: "text-right" },
                 {
@@ -264,6 +293,7 @@ export function ImportScreen({ tenant, labels }: ImportScreenProps) {
               ✓{" "}
               {fill(t.commit.done, {
                 tenant: tenant.name,
+                reason: reason.trim(),
                 ...Object.fromEntries(
                   (["create", "update", "unchanged"] as const).map((action) => [
                     { create: "created", update: "updated", unchanged: "unchanged" }[action],
@@ -296,8 +326,25 @@ export function ImportScreen({ tenant, labels }: ImportScreenProps) {
               <p className="text-sm text-muted-foreground">{counted(t.commit.text, changed.length, { tenant: tenant.name })}</p>
             )}
             {report?.previewToken && changed.length === 0 && <p className="text-sm text-muted-foreground">{t.commit.nothing}</p>}
+            {t.reason && (
+              <div className="flex flex-col gap-2">
+                <Label htmlFor={`${id}-reason`}>{t.reason.label}</Label>
+                <Input
+                  id={`${id}-reason`}
+                  value={reason}
+                  maxLength={STOCK_REASON_MAX}
+                  placeholder={t.reason.placeholder}
+                  aria-describedby={`${id}-reason-hint`}
+                  onChange={(event) => setReason(event.target.value)}
+                  disabled={blocked || busy}
+                />
+                <p id={`${id}-reason-hint`} className="text-xs text-muted-foreground">
+                  {t.reason.hint}
+                </p>
+              </div>
+            )}
             <div>
-              <Button type="button" onClick={() => run("commit")} disabled={blocked || busy || !report?.previewToken || changed.length === 0}>
+              <Button type="button" onClick={() => run("commit")} disabled={blocked || busy || !report?.previewToken || changed.length === 0 || reasonMissing}>
                 {running === "commit" ? t.commit.committing : counted(t.commit.button, changed.length)}
               </Button>
             </div>

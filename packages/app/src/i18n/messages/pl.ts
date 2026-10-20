@@ -1327,6 +1327,48 @@ export const pl: Messages = {
       GENERATION_STALE: "Dane tego środowiska zostały zresetowane od załadowania strony. Odśwież ją i spróbuj ponownie.",
     },
   },
+  stockImport: {
+    link: "Import z arkusza",
+    heading: (tenant) => `Import stanów — ${tenant}`,
+    intro: "Ustaw stany fizyczne z jednego arkusza: bilans otwarcia lub inwentaryzację. Wpisz ilość, jaka ma być w każdej pozycji, a nie zmianę.",
+    template: {
+      title: "1. Pobierz szablon",
+      text: "Jeden wiersz na materiał i lokalizację, z ilością fizyczną, jaka ma tam być. Pominięte pozycje pozostają bez zmian, a 0 opróżnia pozycję. Towar w drodze koryguje się na przesunięciu.",
+      download: "Pobierz szablon (.xlsx)",
+    },
+    upload: {
+      title: "2. Wyślij i wykonaj próbę",
+      text: "Próba niczego nie zapisuje. Pokazuje ruch każdej pozycji albo każdy problem.",
+    },
+    summary: { updated: "Korekty", unchanged: "Bez zmian" },
+    preview: { record: "Pozycja" },
+    actions: { update: "Skoryguj", unchanged: "Bez zmian" },
+    results: { update: "Skorygowano", unchanged: "Bez zmian" },
+    change: { Movement: "Ruch", Entered: "Wpisano" },
+    reason: {
+      label: "Powód",
+      hint: "Każdy ruch tego importu dostaje ten powód. Najwyżej 500 znaków.",
+      placeholder: "Bilans otwarcia",
+    },
+    commit: {
+      text: {
+        one: "Ruch zostanie zaksięgowany w {tenant} z tym powodem. Jeśli stan tej pozycji zmienił się od czasu próby, zatwierdzenie zostanie odrzucone i trzeba wykonać próbę ponownie.",
+        other: "Wszystkie ruchy ({count}) zostaną zaksięgowane w {tenant} naraz albo żaden, z tym powodem. Jeśli któryś z tych stanów zmienił się od czasu próby, zatwierdzenie zostanie odrzucone i trzeba wykonać próbę ponownie.",
+      },
+      button: { one: "Zaksięguj 1 korektę", other: "Zaksięguj korekty ({count})" },
+      committing: "Księgowanie…",
+      done: "Zaksięgowano w {tenant}: korekty {updated}, bez zmian {unchanged}. Powód: {reason}.",
+    },
+    readOnly: "{tenant} jest tylko do odczytu: importy stanów są zablokowane. Administrator może to zmienić na stronie Środowiska.",
+    issues: {
+      IMPORT_MISSING_REFERENCE: "{record} {id} nie istnieje w {tenant}. Sprawdź ID albo najpierw utwórz rekord.",
+      IMPORT_DUPLICATE_KEY: "Pozycja {key} występuje w wierszach {rows}: zostaw jeden wiersz na materiał i lokalizację.",
+      IMPORT_TRANSIT_COLUMN: "Korekta zmienia stan fizyczny w lokalizacji: towar w drodze odpisz na jego przesunięciu.",
+    },
+    errors: {
+      IMPORT_STALE: "Stan wymieniony w tym skoroszycie zmienił się od czasu próby albo plik jest inny. Wykonaj próbę ponownie.",
+    },
+  },
   audit: {
     globalHeading: "Audyt globalny",
     tenantHeading: (name) => `Audyt — ${name}`,
@@ -1513,6 +1555,7 @@ export const pl: Messages = {
     sales: "Sprzedaż",
     forecasts: "Prognozy",
     import: "Import",
+    stockImport: "Import stanów",
     tenantAudit: "Audyt",
     shared: "Wspólne dla Test i Prod",
     administration: "Administracja",
