@@ -15,3 +15,17 @@ export function fill(template: string, values: Record<string, string>): string {
 export function errorFormatter(labels: { errors: Record<string, string> }) {
   return (error: { code: string; message: string }): string => errorMessage(labels.errors, error);
 }
+
+/**
+ * A stored six-decimal quantity as screens show it and forms prefill it: without trailing zeros
+ * (`"50.000000"` → `"50"`, `"0.500000"` → `"0.5"`). Text only, so no binary float enters (R03).
+ */
+export function shownQuantity(quantity: string): string {
+  return quantity.includes(".") ? quantity.replace(/\.?0+$/, "") : quantity;
+}
+
+/** One choice of a form's select, such as a material or a location. */
+export interface FormOption {
+  value: string;
+  label: string;
+}

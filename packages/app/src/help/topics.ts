@@ -15,6 +15,8 @@ export const HELP_TOPIC_IDS = [
   "locations",
   "customers",
   "suppliers",
+  "planning-parameters",
+  "safety-stock",
   "language-and-theme",
   "using-help",
 ] as const;
@@ -39,6 +41,8 @@ export const HELP_TOPIC_ROUTES: Record<HelpTopicId, string> = {
   locations: "/admin/[tenant]/locations",
   customers: "/admin/[tenant]/customers",
   suppliers: "/admin/[tenant]/suppliers",
+  "planning-parameters": "/admin/[tenant]/planning-parameters",
+  "safety-stock": "/admin/[tenant]/safety-stock",
   "language-and-theme": "/admin",
   "using-help": "/help",
 };
@@ -123,7 +127,7 @@ const en: Record<HelpTopicId, HelpText> = {
     title: "A tenant's audit",
     body: [
       "Audit, in the sidebar under the tenant's screens (or Audit — Test or Audit — Prod on the tenant's page), opens that tenant's own audit: the changes to its business records, kept apart from the other tenant's.",
-      "It lists every material, location, customer and supplier created, changed, deactivated or reactivated, and every unit conversion added, changed or removed, with the values before and after. Account changes are always in the Global audit.",
+      "It lists every material, location, customer and supplier created, changed, deactivated or reactivated, and every unit conversion, planning parameter set and safety-stock target added, changed or removed, with the values before and after. Account changes are always in the Global audit.",
       "Like the Global audit, it is read-only for everyone.",
     ],
   },
@@ -141,7 +145,7 @@ const en: Record<HelpTopicId, HelpText> = {
     body: [
       "Choose a material's ID to open its page: its type, base unit and status, and its unit conversions.",
       "A conversion lets people enter quantities in another unit, such as a case of 12. It reads 1 case = 12 each: the alternate quantity and unit, then the base quantity and the base unit. A quantity entered in that unit is converted into the base unit once, rounded half-up to six decimals, and the unit and factor it was entered with are kept. The inverse is shown for orientation only.",
-      "Changing or removing a conversion never changes quantities already stored. The base unit can change only while the material has no conversions.",
+      "Changing or removing a conversion never changes quantities already stored. The base unit can change only while the material has no conversions, planning parameters or safety-stock targets, since their values are in it.",
       "Deactivate keeps the material and its history, but it can't be picked for new entries; Reactivate undoes that. Every change appears in the tenant's audit.",
     ],
   },
@@ -170,6 +174,24 @@ const en: Record<HelpTopicId, HelpText> = {
       "Every supplier has an eight-digit ID that CPG assigns in order when it is created (00000001, 00000002, …) and that never changes, a name and a status. Names don't have to be unique.",
       "Every account can read the list. Only the administrator creates, renames, deactivates and reactivates suppliers, with Create supplier and each row's ⋯ menu; through the API too, with the same rules.",
       "Deactivate keeps the supplier and everything that already uses it, but it can't be picked for new entries; Reactivate undoes that. Every change appears in the tenant's audit.",
+    ],
+  },
+  "planning-parameters": {
+    title: "Planning parameters",
+    body: [
+      "Planning parameters, under Master data in the sidebar, tell MRP how each material is supplied at each location: Make (production) or Buy (purchasing), the lead time in whole calendar days, and the minimum lot and lot multiple a proposal must respect, in the material's base unit.",
+      "A raw material is always bought. An intermediate or finished material can be made at one location and bought at another. Without a set, MRP reports the material's parameters at that location as missing.",
+      "Every account can read the list. Only the administrator adds, changes and removes sets, with Add parameters and each row's ⋯ menu; through the API too, with the same rules. Only active materials and locations can get a new set; existing sets stay when either is deactivated.",
+      "Every change appears in the tenant's audit. A material's base unit can't change while it has planning parameters.",
+    ],
+  },
+  "safety-stock": {
+    title: "Safety stock",
+    body: [
+      "Safety stock, under Master data in the sidebar, lists the minimum stock to keep of a material at a location. Each target applies from its date until the next target for the same material and location; with no target in force, the target is 0.",
+      "Two targets can't share a date. To change a target's quantity, use Change target; to move it, remove it and add one on the new date. A target of 0 ends a buffer from its date.",
+      "The status says which target is in effect today (UTC), which ones are scheduled for later, and which earlier ones a later target has replaced.",
+      "Every account can read the list. Only the administrator adds, changes and removes targets, with Add target and each row's ⋯ menu; through the API too. Every change appears in the tenant's audit.",
     ],
   },
   "language-and-theme": {
@@ -260,7 +282,7 @@ const pl: Record<HelpTopicId, HelpText> = {
     title: "Audyt środowiska",
     body: [
       "Audyt, w panelu bocznym pod ekranami środowiska (albo Audyt — Test lub Audyt — Prod na stronie środowiska), otwiera własny audyt tego środowiska: zmiany jego rekordów biznesowych, oddzielone od drugiego środowiska.",
-      "Pokazuje każde utworzenie, zmianę, dezaktywację i ponowną aktywację materiału, lokalizacji, klienta lub dostawcy oraz każdy dodany, zmieniony lub usunięty przelicznik jednostek, z wartościami przed i po. Zmiany kont są zawsze w audycie globalnym.",
+      "Pokazuje każde utworzenie, zmianę, dezaktywację i ponowną aktywację materiału, lokalizacji, klienta lub dostawcy oraz każde dodanie, zmianę lub usunięcie przelicznika jednostek, parametrów planowania lub celu zapasu bezpieczeństwa, z wartościami przed i po. Zmiany kont są zawsze w audycie globalnym.",
       "Tak jak audyt globalny, jest tylko do odczytu dla wszystkich.",
     ],
   },
@@ -278,7 +300,7 @@ const pl: Record<HelpTopicId, HelpText> = {
     body: [
       "Wybierz ID materiału, aby otworzyć jego stronę: typ, jednostkę bazową, status i przeliczniki jednostek.",
       "Przelicznik pozwala wpisywać ilości w innej jednostce, na przykład w kartonach po 12 sztuk. Czyta się go jako 1 karton = 12 szt.: ilość i jednostka alternatywna, potem ilość i jednostka bazowa. Ilość wpisana w tej jednostce jest przeliczana na jednostkę bazową raz, z zaokrągleniem połówek w górę do sześciu miejsc po przecinku, a jednostka i przelicznik, z którymi ją wpisano, zostają zapisane. Odwrotność jest tylko orientacyjna.",
-      "Zmiana lub usunięcie przelicznika nigdy nie zmienia ilości już zapisanych. Jednostkę bazową można zmienić tylko wtedy, gdy materiał nie ma przeliczników.",
+      "Zmiana lub usunięcie przelicznika nigdy nie zmienia ilości już zapisanych. Jednostkę bazową można zmienić tylko wtedy, gdy materiał nie ma przeliczników, parametrów planowania ani celów zapasu bezpieczeństwa, bo ich wartości są w niej zapisane.",
       "Dezaktywuj zachowuje materiał i jego historię, ale nie można go wybrać w nowych wpisach; Aktywuj ponownie to cofa. Każda zmiana pojawia się w audycie środowiska.",
     ],
   },
@@ -307,6 +329,24 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Każdy dostawca ma ośmiocyfrowe ID, które CPG nadaje po kolei przy utworzeniu (00000001, 00000002, …) i które nigdy się nie zmienia, a także nazwę i status. Nazwy nie muszą być unikalne.",
       "Dostawców może przeglądać każde konto. Tworzy ich, zmienia ich nazwy, dezaktywuje i aktywuje ponownie tylko administrator, przyciskiem Utwórz dostawcę i menu ⋯ w każdym wierszu; także przez API, na tych samych zasadach.",
       "Dezaktywuj zachowuje dostawcę i wszystko, co już go używa, ale nie można go wybrać w nowych wpisach; Aktywuj ponownie to cofa. Każda zmiana pojawia się w audycie środowiska.",
+    ],
+  },
+  "planning-parameters": {
+    title: "Parametry planowania",
+    body: [
+      "Parametry planowania, w sekcji Dane podstawowe w menu bocznym, mówią MRP, jak każdy materiał jest zaopatrywany w każdej lokalizacji: Produkcja albo Zakup, czas realizacji w pełnych dniach kalendarzowych oraz minimalna partia i wielokrotność partii, których propozycja musi przestrzegać, w jednostce bazowej materiału.",
+      "Surowiec jest zawsze kupowany. Półprodukt lub wyrób gotowy może być produkowany w jednej lokalizacji i kupowany w innej. Bez zestawu MRP zgłasza brak parametrów materiału w tej lokalizacji.",
+      "Listę może przeglądać każde konto. Zestawy dodaje, zmienia i usuwa tylko administrator, przyciskiem Dodaj parametry i menu ⋯ w wierszu; także przez API, na tych samych zasadach. Nowy zestaw może dostać tylko aktywny materiał i aktywna lokalizacja; istniejące zestawy zostają po dezaktywacji.",
+      "Każda zmiana pojawia się w audycie środowiska. Jednostki bazowej materiału nie można zmienić, dopóki ma on parametry planowania.",
+    ],
+  },
+  "safety-stock": {
+    title: "Zapas bezpieczeństwa",
+    body: [
+      "Zapas bezpieczeństwa, w sekcji Dane podstawowe w menu bocznym, to minimalny zapas materiału w lokalizacji. Każdy cel obowiązuje od swojej daty do następnego celu dla tego samego materiału i lokalizacji; gdy żaden cel nie obowiązuje, wynosi 0.",
+      "Dwa cele nie mogą mieć tej samej daty. Aby zmienić ilość, użyj Zmień cel; aby przesunąć datę, usuń cel i dodaj nowy. Cel 0 kończy zapas od swojej daty.",
+      "Status mówi, który cel obowiązuje dziś (UTC), które są zaplanowane na później, a które wcześniejsze zastąpił późniejszy cel.",
+      "Listę może przeglądać każde konto. Cele dodaje, zmienia i usuwa tylko administrator, przyciskiem Dodaj cel i menu ⋯ w wierszu; także przez API. Każda zmiana pojawia się w audycie środowiska.",
     ],
   },
   "language-and-theme": {
