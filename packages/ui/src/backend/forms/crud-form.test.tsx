@@ -260,4 +260,18 @@ describe("CrudForm", () => {
       expect(action).toHaveBeenCalledWith({ type: "raw", description: "Bolt M8" });
     });
   });
+
+  describe("date fields", () => {
+    it("render the browser's date input and submit its ISO value", async () => {
+      const action = vi.fn(async (): Promise<ApiResult<string>> => ({ ok: true, data: "ok" }));
+      render(<CrudForm fields={[{ name: "effectiveFrom", label: "Effective from", type: "date" }]} action={action} submitLabel="Add" />);
+
+      const input = screen.getByLabelText("Effective from") as HTMLInputElement;
+      expect(input.type).toBe("date");
+      fill("Effective from", "2027-01-01");
+      await act(async () => fireEvent.click(screen.getByRole("button", { name: "Add" })));
+
+      expect(action).toHaveBeenCalledWith({ effectiveFrom: "2027-01-01" });
+    });
+  });
 });

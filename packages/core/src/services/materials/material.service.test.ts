@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import {
   initOrm,
+  Location,
   Material,
   MaterialConversion,
   OptimisticLockError,
@@ -21,6 +22,8 @@ import { DEMO_MATERIALS } from "../../domain/materials/demo-materials";
 import { VERSION_CONFLICT } from "../../http/errors";
 import { tenantServerAction } from "../../http/tenant-server-action";
 import type { AuditActor } from "../audit/actor";
+import { PlanningParameterService } from "../planning-parameters/planning-parameter.service";
+import { SafetyStockTargetService } from "../safety-stock/safety-stock-target.service";
 import { MATERIAL_ID_RACE, MaterialService } from "./material.service";
 
 /** Who the tests act as: the admin, on the UI. */
@@ -249,6 +252,67 @@ describe("MaterialService", () => {
 
       const edited = await service().update(bolt.id, { description: "Bolt", baseUnit: "each" }, bolt.version, ACTOR);
       expect(edited).toMatchObject({ description: "Bolt", baseUnit: "each" });
+    });
+
+    describe("with planning data (planning spec Q5, Q6)", () => {
+      const PANEL = { type: "intermediate", description: "Painted side panel", baseUnit: "each" } as const;
+      const SET = { location: "00000001", procurement: "make", leadTimeDays: 2, minimumQuantity: "50.000000", lotMultiple: "10.000000" } as const;
+
+      beforeEach(async () => {
+        const em = scopedEm("prod");
+        em.create(Location, { code: "00000001", name: "Main plant" });
+        await em.flush();
+      });
+
+      it("locks the base unit while a planning parameter set holds quantities in it", async () => {
+        const panel = await service().create(PANEL, ACTOR);
+        await new PlanningParameterService({ em: scopedEm("prod") }).create({ ...SET, material: panel.id, procurement: "buy" }, ACTOR);
+
+        await expect(service().update(panel.id, { baseUnit: "pcs" }, panel.version, ACTOR)).rejects.toMatchObject({
+          code: "BASE_UNIT_IN_USE",
+          status: 409,
+        });
+        await expect(service().update(panel.id, { baseUnit: "each", description: "Panel" }, panel.version, ACTOR)).resolves.toMatchObject({
+          description: "Panel",
+        });
+      });
+
+      it("locks the base unit while a safety target holds a quantity in it", async () => {
+        const panel = await service().create(PANEL, ACTOR);
+        await new SafetyStockTargetService({ em: scopedEm("prod") }).create(
+          { material: panel.id, location: "00000001", effectiveFrom: "2027-01-01", quantity: "20.000000" },
+          ACTOR,
+        );
+
+        await expect(service().update(panel.id, { baseUnit: "pcs" }, panel.version, ACTOR)).rejects.toMatchObject({
+          code: "BASE_UNIT_IN_USE",
+        });
+      });
+
+      it("names conversions first when they and planning data both hold the base unit", async () => {
+        const panel = await service().create(PANEL, ACTOR);
+        await service().addConversion(panel.id, CASE, ACTOR);
+        await new PlanningParameterService({ em: scopedEm("prod") }).create({ ...SET, material: panel.id }, ACTOR);
+
+        await expect(service().update(panel.id, { baseUnit: "pcs" }, panel.version, ACTOR)).rejects.toMatchObject({
+          code: "BASE_UNIT_HAS_CONVERSIONS",
+        });
+      });
+
+      it("refuses to make a material raw while it is made at a location, until every set is Buy (R02)", async () => {
+        const panel = await service().create(PANEL, ACTOR);
+        const planning = new PlanningParameterService({ em: scopedEm("prod") });
+        await planning.create({ ...SET, material: panel.id }, ACTOR);
+
+        await expect(service().update(panel.id, { type: "raw" }, panel.version, ACTOR)).rejects.toMatchObject({
+          code: "MATERIAL_MADE_AT_LOCATIONS",
+          status: 409,
+        });
+        expect((await service().get(panel.id)).type).toBe("intermediate");
+
+        await planning.update(panel.id, "00000001", { procurement: "buy" }, 1, ACTOR);
+        await expect(service().update(panel.id, { type: "raw" }, panel.version, ACTOR)).resolves.toMatchObject({ type: "raw" });
+      });
     });
 
     it("refuses a stale version and keeps the newer change (AUD-024, API-029)", async () => {

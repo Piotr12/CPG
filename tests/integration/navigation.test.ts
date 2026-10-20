@@ -93,6 +93,8 @@ const ADMIN_TREE = [
   { label: "Locations", href: "/admin/test/locations" },
   { label: "Customers", href: "/admin/test/customers" },
   { label: "Suppliers", href: "/admin/test/suppliers" },
+  { label: "Planning parameters", href: "/admin/test/planning-parameters" },
+  { label: "Safety stock", href: "/admin/test/safety-stock" },
   { label: "Audit", href: "/admin/test/audit" },
   { label: "Users", href: "/admin/users" },
   { label: "Tenants", href: "/admin" },
@@ -202,7 +204,18 @@ describe("sidebar navigation", () => {
   it("gives a normal user no Administration, and /admin/users still sends them back (regression)", async () => {
     await openPage(ursula, "/admin/tokens");
 
-    expect(await labels(ursula)).toEqual(["Overview", "Materials", "Locations", "Customers", "Suppliers", "Audit", "Global audit", "Help"]);
+    expect(await labels(ursula)).toEqual([
+      "Overview",
+      "Materials",
+      "Locations",
+      "Customers",
+      "Suppliers",
+      "Planning parameters",
+      "Safety stock",
+      "Audit",
+      "Global audit",
+      "Help",
+    ]);
     expect(await currentEntry(ursula)).toEqual([]);
     expect(await ursula.evaluate<string>(`document.querySelector("[data-slot=sidebar] [data-action=account-menu]").dataset.active`)).toBe("true");
 
@@ -294,7 +307,18 @@ describe("sidebar navigation", () => {
     await closeAccountMenu(ursula);
 
     await openPage(ursula, "/admin/test/materials");
-    expect(await labels(ursula)).toEqual(["Przegląd", "Materiały", "Lokalizacje", "Klienci", "Dostawcy", "Audyt", "Audyt globalny", "Pomoc"]);
+    expect(await labels(ursula)).toEqual([
+      "Przegląd",
+      "Materiały",
+      "Lokalizacje",
+      "Klienci",
+      "Dostawcy",
+      "Parametry planowania",
+      "Zapas bezpieczeństwa",
+      "Audyt",
+      "Audyt globalny",
+      "Pomoc",
+    ]);
     expect(await ursula.evaluate<boolean>(`document.documentElement.classList.contains("dark")`)).toBe(true);
     expect(await overflows(ursula)).toBe(false);
     // The long name truncates inside the card instead of widening the sidebar.

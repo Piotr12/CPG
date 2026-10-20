@@ -4,8 +4,18 @@ import { createAppContainer } from "./container/container";
 import { scopeForTenant } from "./container/tenant-scope";
 import { toDbOptions } from "./database";
 
-/** The kinds of demonstration record the Test tenant is seeded with, in seeding order. */
-export const DEMO_KINDS = ["materials", "locations", "customers", "suppliers"] as const;
+/**
+ * The kinds of demonstration record the Test tenant is seeded with, in seeding order: the planning
+ * rows come after the materials and locations they reference.
+ */
+export const DEMO_KINDS = [
+  "materials",
+  "locations",
+  "customers",
+  "suppliers",
+  "planning parameter sets",
+  "safety-stock targets",
+] as const;
 export type DemoKind = (typeof DEMO_KINDS)[number];
 
 /** How one kind's seed went: how many records it created (0 when Test had some), or why it failed. */
@@ -27,6 +37,8 @@ export async function seedDemoData(config: AppConfig): Promise<Record<DemoKind, 
       locations: () => cradle.locationService.seedDemo(),
       customers: () => cradle.customerService.seedDemo(),
       suppliers: () => cradle.supplierService.seedDemo(),
+      "planning parameter sets": () => cradle.planningParameterService.seedDemo(),
+      "safety-stock targets": () => cradle.safetyStockTargetService.seedDemo(),
     };
     const results = {} as Record<DemoKind, DemoSeedResult>;
     for (const kind of DEMO_KINDS) {

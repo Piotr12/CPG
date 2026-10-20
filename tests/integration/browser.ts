@@ -30,6 +30,18 @@ export function openBrowser() {
       evaluate<string[]>(`[...document.querySelectorAll(${JSON.stringify(selector)})].map((e) => e.innerText)`),
     /** Clears an input and types `value` into it. */
     fill: (selector: string, value: string) => command("fill", selector, value),
+    /**
+     * Sets a date input to an ISO `YYYY-MM-DD` value. agent-browser's `fill` leaves a native date
+     * input empty, so this sets the value through the input's own setter and fires the `input` event
+     * React's `onChange` listens to, as picking a day in the browser's date picker does.
+     */
+    fillDate: (selector: string, value: string) =>
+      evaluate<string>(`(() => {
+        const input = document.querySelector(${JSON.stringify(selector)});
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(input, ${JSON.stringify(value)});
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        return input.value;
+      })()`),
     click: (selector: string) => command("click", selector),
     /** Chooses the option with this value (or visible label) in the select matching the CSS selector. */
     select: (selector: string, value: string) => command("select", selector, value),

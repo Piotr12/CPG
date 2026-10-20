@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { UnauthorizedError } from "./errors";
+import { UnauthorizedError, ValidationError } from "./errors";
 import { INTERNAL_ERROR, serverAction } from "./server-action";
 
 const schema = z.object({ name: z.string().min(1, "Required.") });
@@ -36,6 +36,21 @@ describe("serverAction", () => {
     await expect(action({ name: "x" })).resolves.toEqual({
       ok: false,
       error: { code: "UNAUTHORIZED", message: "Invalid username or password." },
+    });
+  });
+
+  it("keeps the field errors of a ValidationError the handler throws, for the form to show by its field", async () => {
+    const action = serverAction(z.object({}), async () => {
+      throw new ValidationError({ procurement: ["A raw material is always bought: choose Buy."] });
+    });
+
+    expect(await action({})).toEqual({
+      ok: false,
+      error: {
+        code: "VALIDATION_FAILED",
+        message: expect.any(String),
+        fieldErrors: { procurement: ["A raw material is always bought: choose Buy."] },
+      },
     });
   });
 

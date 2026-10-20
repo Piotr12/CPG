@@ -70,6 +70,9 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 - **2026-10-19 — The sidebar's icon rail hides text without removing it** — `SidebarGroupLabel` fades to `opacity-0`, and a menu button only clips its children, so their text still widens `scrollWidth` in the 3 rem column. Hide what the rail doesn't show with `group-data-[collapsible=icon]:hidden`, and check overflow in the rail in a real browser (`navigation.test.ts`).
 - **2026-10-19 — jsdom's accessible name drops a space inside a visually hidden span** — `<span class="sr-only">Account: </span><span>alice</span>` computes as "Account:alice" in Testing Library. Use an explicit `aria-label` that contains the visible text (WCAG 2.5.3) instead.
 
+- **2026-10-20 — agent-browser's `fill` leaves a native date input empty** — `fill "input[type=date]" 2027-01-01` reports success, but the value stays `""`, so the form submits without the date. Use `fillDate` in `tests/integration/browser.ts`: it sets the value through the input's own setter and fires the `input` event React listens to, and it returns the value so the test can assert it landed.
+- **2026-10-20 — A shadcn dialog doesn't scroll** — `DialogContent` is centred with no height limit, so a form taller than the window (six fields with hints at 1280×720) hides its title and buttons where nobody can reach them. A test's click on the hidden submit button landed on the overlay and closed the dialog without a request: only the integration suite showed it. Give tall dialogs `TALL_DIALOG` (`components/forms/form-labels.ts`).
+
 ## Next.js
 
 - **2026-10-17 — Kill the whole server before runtime checks** — `pkill -f "next start"` misses the `next-server` child it spawns, which keeps the port, so later curl checks silently hit the old build. Check `lsof -nP -iTCP:<port> -sTCP:LISTEN` is empty before starting a server and after stopping it.
@@ -87,6 +90,8 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 - **2026-10-19 — Revalidate the exact page, never a layout over dynamic tenant pages** — `revalidatePath("/admin", "layout")` after the read-only toggle made Next.js regenerate every static shell under `/admin` at runtime. The `/admin/[tenant]` shells (`generateStaticParams`, data behind `connection()` in `<Suspense>`) then failed with "encountered uncached or runtime data during prerendering" (`NEXT_STATIC_GEN_BAILOUT`), and every later request to them hung. Lint, unit tests and the build all passed; only the integration suite caught it. Revalidate the page that shows the change (`revalidatePath("/admin")`). Pages that read at request time need no revalidation.
 - **2026-10-19 — A refresh after a refused write can hide its explanation** — revalidating the materials page after `TENANT_READ_ONLY` re-rendered it without the controls, which unmounted the dialog and its error, so the user saw the dialog vanish without a reason. Refresh after a refusal only when the controls that showed the error survive it (`VERSION_CONFLICT` does, a read-only refusal doesn't).
+
+- **2026-10-20 — A server action must pass on the field errors a service throws** — `serverAction` kept `fieldErrors` only for its own parse errors, so a `ValidationError` from a service (Make on a raw material, a rule only the service can check) reached the form as "Some fields are invalid." with nothing beside the field. The API path already kept them. It now keeps them too (`core/src/http/server-action.ts`); a rule that belongs beside a field throws `ValidationError({ field: [message] })`.
 
 ## Agent pipeline (om-* skills)
 

@@ -1,6 +1,7 @@
-import { Location, type EntityManager } from "@cpg/db";
+import type { EntityManager } from "@cpg/db";
 import { DEMO_LOCATIONS } from "../../domain/locations/demo-locations";
 import type { AuditActor } from "../audit/actor";
+import { LOCATION_LOOKUP } from "./find-location";
 import { NamedRecords, type NamedRecordChanges, type NamedRecordView } from "../named-records/named-records";
 
 interface Deps {
@@ -17,11 +18,9 @@ export class LocationService {
 
   constructor({ em }: Deps) {
     this.records = new NamedRecords(em, {
-      entity: Location,
+      ...LOCATION_LOOKUP,
       subjectType: "Location",
-      noun: "location",
       actionPrefix: "locations.location",
-      codePrefix: "LOCATION",
       demoNames: DEMO_LOCATIONS,
     });
   }

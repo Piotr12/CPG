@@ -32,6 +32,7 @@ describe("migrateDatabase", () => {
       "Migration20261019191302_materials",
       "Migration20261019202843_locations_customers_suppliers",
       "Migration20261019211303_tenant_read_only",
+      "Migration20261020054509_planning_parameters_safety_stock",
     ]);
     expect(await migrateDatabase(config)).toEqual([]);
   });

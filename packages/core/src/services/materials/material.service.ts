@@ -18,7 +18,12 @@ import {
 import { AppError, ConflictError, NotFoundError, ValidationError, versionConflict } from "../../http/errors";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
+import { hasPlanningParameters, isMadeAnywhere } from "../planning-parameters/planning-parameter-usage";
+import { hasSafetyStockTargets } from "../safety-stock/safety-stock-target-usage";
 import { isScopeReadOnly } from "../tenants/tenant.service";
+import { findMaterial } from "./find-material";
+
+export { materialNotFound } from "./find-material";
 
 /** What the screens and the API show about a material. `id` is its eight-digit business ID (R01). */
 export interface MaterialSummary {
@@ -106,7 +111,7 @@ export class MaterialService {
 
   /** One material with its conversions, by unit; `MATERIAL_NOT_FOUND` when this tenant has no such ID. */
   async get(materialId: string): Promise<MaterialDetail> {
-    const material = await this.findMaterial(this.em, materialId);
+    const material = await findMaterial(this.em, materialId);
     const conversions = await this.em.find(MaterialConversion, { material }, { orderBy: { unit: "asc" } });
     return { ...toSummary(material), conversions: conversions.map(toConversionView) };
   }
@@ -131,17 +136,19 @@ export class MaterialService {
   /**
    * Applies the given fields at `version`. A field counts only when it differs from the stored value
    * (spec Q8), so resending the base unit is no change; with nothing changed, nothing is written or
-   * recorded. The base unit can't change while conversions exist: their factors are relative to it.
+   * recorded. The base unit can't change while conversions, planning parameters or safety targets
+   * hold values in it, and a material made at some location can't become raw (R02).
    */
   async update(materialId: string, changes: MaterialChanges, version: number, actor: AuditActor): Promise<MaterialSummary> {
     return this.versioned(async (em) => {
-      const material = await this.findMaterial(em, materialId, { refresh: true });
+      const material = await findMaterial(em, materialId, { refresh: true });
       if (material.version !== version) throw versionConflict();
       const { active, ...fields } = changedFields(material, changes);
-      if (fields.baseUnit !== undefined && (await em.count(MaterialConversion, { material })) > 0) {
+      if (fields.baseUnit !== undefined) await assertBaseUnitFree(em, material);
+      if (fields.type === "raw" && (await isMadeAnywhere(em, material))) {
         throw new ConflictError(
-          "Remove this material's unit conversions before changing its base unit: their factors are relative to it.",
-          "BASE_UNIT_HAS_CONVERSIONS",
+          "Set this material to Buy at every location before making it raw: a raw material is always bought.",
+          "MATERIAL_MADE_AT_LOCATIONS",
         );
       }
       if (Object.keys(fields).length > 0) {
@@ -167,7 +174,7 @@ export class MaterialService {
   ): Promise<ConversionView> {
     try {
       return await this.em.transactional(async (em) => {
-        const material = await this.findMaterial(em, materialId);
+        const material = await findMaterial(em, materialId);
         if (unit === material.baseUnit) {
           throw new AppError("UNIT_IS_BASE_UNIT", `${unit} is this material's base unit: it needs no conversion.`);
         }
@@ -223,7 +230,7 @@ export class MaterialService {
     if (entered === null) {
       throw new ValidationError({ quantity: ["Enter a number of at least 0, with at most 6 decimals."] });
     }
-    const material = await this.findMaterial(this.em, materialId);
+    const material = await findMaterial(this.em, materialId);
     const factor =
       unit === material.baseUnit
         ? { numerator: "1", denominator: "1" }
@@ -288,14 +295,8 @@ export class MaterialService {
     }
   }
 
-  private async findMaterial(em: EntityManager, materialId: string, options: { refresh?: boolean } = {}): Promise<Material> {
-    const material = await em.findOne(Material, { code: materialId }, options);
-    if (!material) throw materialNotFound(materialId);
-    return material;
-  }
-
   private async findConversion(em: EntityManager, materialId: string, unit: string, version: number) {
-    const material = await this.findMaterial(em, materialId);
+    const material = await findMaterial(em, materialId);
     const conversion = await em.findOne(MaterialConversion, { material, unit }, { refresh: true });
     if (!conversion) {
       throw new NotFoundError("CONVERSION_NOT_FOUND", `Material ${materialId} has no conversion for ${unit}.`);
@@ -305,13 +306,28 @@ export class MaterialService {
   }
 }
 
-/** A material this tenant doesn't have: an unknown ID, or another tenant's (TEN-014). */
-export function materialNotFound(materialId: string): NotFoundError {
-  return new NotFoundError("MATERIAL_NOT_FOUND", `There is no material ${materialId} in this tenant.`);
-}
-
 const conversionExists = (unit: string) =>
   new ConflictError(`This material already has a conversion for ${unit}.`, "CONVERSION_EXISTS");
+
+/**
+ * Refuses a base-unit change while anything holds a value in the base unit: conversion factors are
+ * relative to it (spec Q8), and planning parameters and safety targets store quantities in it
+ * (planning spec Q6). Conversions are checked first, so their more specific error wins.
+ */
+async function assertBaseUnitFree(em: EntityManager, material: Material): Promise<void> {
+  if ((await em.count(MaterialConversion, { material })) > 0) {
+    throw new ConflictError(
+      "Remove this material's unit conversions before changing its base unit: their factors are relative to it.",
+      "BASE_UNIT_HAS_CONVERSIONS",
+    );
+  }
+  if ((await hasPlanningParameters(em, material)) || (await hasSafetyStockTargets(em, material))) {
+    throw new ConflictError(
+      "Remove this material's planning parameters and safety-stock targets before changing its base unit: their quantities are in it.",
+      "BASE_UNIT_IN_USE",
+    );
+  }
+}
 
 /** The changes that differ from the stored values; equal values are no change (spec Q8). */
 function changedFields(material: Material, changes: MaterialChanges): MaterialChanges {
