@@ -16,6 +16,7 @@ export type NavId =
   | "planningParameters"
   | "safetyStock"
   | "boms"
+  | "import"
   | "tenantAudit"
   | "administration"
   | "users"
@@ -51,6 +52,7 @@ export const TENANT_TREE: NavNode[] = [
       { id: "planningParameters", section: "planning-parameters", match: "prefix" },
       { id: "safetyStock", section: "safety-stock", match: "prefix" },
       { id: "boms", section: "boms", match: "prefix" },
+      { id: "import", section: "import", match: "prefix", adminOnly: true },
     ],
   },
   { id: "tenantAudit", section: "audit", match: "prefix" },

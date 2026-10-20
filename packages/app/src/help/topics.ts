@@ -19,6 +19,7 @@ export const HELP_TOPIC_IDS = [
   "safety-stock",
   "boms",
   "bom-revisions",
+  "import",
   "language-and-theme",
   "using-help",
 ] as const;
@@ -47,6 +48,7 @@ export const HELP_TOPIC_ROUTES: Record<HelpTopicId, string> = {
   "safety-stock": "/admin/[tenant]/safety-stock",
   boms: "/admin/[tenant]/boms",
   "bom-revisions": "/admin/[tenant]/boms/[id]",
+  import: "/admin/[tenant]/import",
   "language-and-theme": "/admin",
   "using-help": "/help",
 };
@@ -214,6 +216,15 @@ const en: Record<HelpTopicId, HelpText> = {
       "A recipe never changes in place. Saving a real change to the priority, the dates or the components creates a new revision; the old ones stay readable from Revisions, unchanged, for the orders that will use them. Saving the same recipe, or entering the same quantity in another unit, creates nothing.",
       "Changing a unit conversion later doesn't change a saved recipe: the line keeps its quantity and the factor it was entered with. To use a new factor, enter the line again.",
       "Deactivate keeps the BOM and its revisions, but it can't be chosen for new orders; Reactivate undoes that after checking its priority again. Neither creates a revision. Every change appears in the tenant's audit.",
+    ],
+  },
+  import: {
+    title: "Import from spreadsheet",
+    body: [
+      "Import, under Master data in the sidebar, loads or updates the tenant's master data and BOMs from one .xlsx workbook. Only the administrator sees it, and it is blocked while the tenant is read-only. Run it when nobody else is changing data: while it runs, other changes wait.",
+      "Download the template: it has a sheet for materials, unit conversions, locations, customers, suppliers, planning parameters and safety stock, and two for BOMs, plus instructions in English and Polish. Fill only the sheets you need and keep each sheet's header row. A blank ID creates a record, an existing ID updates it, and an ID that doesn't exist is an error. Nothing is ever deleted by an import.",
+      "Sheets are applied in the template's order, so a planning row can use a material the Materials sheet creates: the dry run shows the ID it will get. A BOM's lines are its complete recipe: a component left out is removed in a new revision, an identical recipe creates no revision, and a new BOM's lines name its header by an import reference you choose.",
+      "Upload the workbook and run the dry run: it checks every row with the same rules as the screens, writes nothing, and lists every problem by sheet, row and column, or shows what would be created, changed or left unchanged. Only a dry run without problems can be committed, and the commit writes everything in one go or nothing. If anything the workbook uses changed since the dry run, the commit is refused: run the dry run again. At most 2000 rows and 512 KB per workbook. The API offers the same: GET /api/import/template, and POST /api/tenants/{tenant}/import/dry-run and /commit with the workbook as base64.",
     ],
   },
   "language-and-theme": {
@@ -387,6 +398,15 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Receptura nigdy nie zmienia się w miejscu. Zapisanie prawdziwej zmiany priorytetu, dat lub składników tworzy nową rewizję; stare pozostają do wglądu w sekcji Rewizje, bez zmian, dla zleceń, które będą ich używać. Zapisanie tej samej receptury albo wpisanie tej samej ilości w innej jednostce niczego nie tworzy.",
       "Późniejsza zmiana przelicznika jednostek nie zmienia zapisanej receptury: wiersz zachowuje swoją ilość i przelicznik, z którym go wpisano. Aby użyć nowego przelicznika, wpisz wiersz ponownie.",
       "Dezaktywuj zachowuje BOM i jego rewizje, ale nie można go wybrać dla nowych zleceń; Aktywuj ponownie to cofa po ponownym sprawdzeniu priorytetu. Żadne z nich nie tworzy rewizji. Każda zmiana pojawia się w audycie środowiska.",
+    ],
+  },
+  import: {
+    title: "Import z arkusza",
+    body: [
+      "Import, w sekcji Dane podstawowe w menu bocznym, wczytuje lub aktualizuje dane podstawowe i BOM-y środowiska z jednego skoroszytu .xlsx. Widzi go tylko administrator i jest zablokowany, gdy środowisko jest tylko do odczytu. Uruchamiaj go, gdy nikt inny nie zmienia danych: w trakcie importu inne zmiany czekają.",
+      "Pobierz szablon: ma arkusz na materiały, przeliczniki jednostek, lokalizacje, klientów, dostawców, parametry planowania i zapas bezpieczeństwa oraz dwa na BOM-y, a do tego instrukcję po angielsku i po polsku. Wypełnij tylko potrzebne arkusze i zachowaj wiersz nagłówka każdego z nich. Puste ID tworzy rekord, istniejące ID go aktualizuje, a ID, które nie istnieje, jest błędem. Import nigdy niczego nie usuwa.",
+      "Arkusze są stosowane w kolejności szablonu, więc wiersz parametrów planowania może użyć materiału tworzonego przez arkusz Materials: próba pokazuje ID, które dostanie. Wiersze BOM-u to jego pełna receptura: pominięty składnik jest usuwany w nowej rewizji, identyczna receptura nie tworzy rewizji, a wiersze nowego BOM-u wskazują jego nagłówek przez wybraną przez ciebie referencję importu.",
+      "Wyślij skoroszyt i wykonaj próbę: sprawdza każdy wiersz tymi samymi zasadami co ekrany, niczego nie zapisuje i wymienia każdy problem z arkuszem, wierszem i kolumną albo pokazuje, co zostanie utworzone, zmienione lub pozostanie bez zmian. Zatwierdzić można tylko próbę bez problemów, a zatwierdzenie zapisuje wszystko naraz albo nic. Jeśli coś, czego używa skoroszyt, zmieniło się od czasu próby, zatwierdzenie jest odrzucane: wykonaj próbę ponownie. Najwyżej 2000 wierszy i 512 KB na skoroszyt. API oferuje to samo: GET /api/import/template oraz POST /api/tenants/{tenant}/import/dry-run i /commit ze skoroszytem w base64.",
     ],
   },
   "language-and-theme": {

@@ -5,6 +5,9 @@ import {
   IMPORT_ROWS_MAX,
 } from "../../domain/imports/workbook-layout";
 
+/** The file limit, for the screen's own check before it uploads (client code can't import the `@cpg/core` barrel). */
+export { IMPORT_FILE_MAX_BYTES };
+
 /** The English messages; screens translate them by matching these constants. */
 export const WORKBOOK_REQUIRED_MESSAGE = "Choose an .xlsx workbook to upload.";
 export const WORKBOOK_TOO_LARGE_MESSAGE = `Upload a workbook of at most ${IMPORT_FILE_MAX_BYTES / 1024} KB.`;
