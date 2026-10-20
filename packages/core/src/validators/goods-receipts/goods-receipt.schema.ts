@@ -52,5 +52,8 @@ export const receiptCreateSchema = z.object({
 
 export type ReceiptCreateInput = z.infer<typeof receiptCreateSchema>;
 
+/** The Post goods receipt form's own check: the lines only, since the page binds the order. */
+export const receiptFormSchema = receiptCreateSchema.omit({ purchaseOrder: true });
+
 /** `GET /api/tenants/{tenant}/goods-receipts`: every receipt, or one purchase order's. */
 export const receiptListQuerySchema = z.object({ purchaseOrder: orderReferenceSchema.optional() });

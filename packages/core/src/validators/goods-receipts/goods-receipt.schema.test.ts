@@ -6,6 +6,7 @@ import {
   RECEIPT_LINE_COUNT_MESSAGE,
   RECEIPT_LINES_MAX,
   receiptCreateSchema,
+  receiptFormSchema,
   receiptListQuerySchema,
 } from "./goods-receipt.schema";
 
@@ -59,6 +60,13 @@ describe("receiptCreateSchema", () => {
     const many = Array.from({ length: RECEIPT_LINES_MAX + 1 }, (_, index) => line(index + 1));
     expect(issues({ purchaseOrder: "00000001", lines: many })).toEqual([["lines", RECEIPT_LINE_COUNT_MESSAGE]]);
     expect(receiptCreateSchema.safeParse({ purchaseOrder: "00000001", lines: many.slice(1) }).success).toBe(true);
+  });
+});
+
+describe("receiptFormSchema", () => {
+  it("checks the lines without an order, which the page binds", () => {
+    expect(receiptFormSchema.parse({ lines: [{ line: 1, quantity: "2", unit: "each" }] })).toEqual({ lines: [{ line: 1, quantity: "2", unit: "each" }] });
+    expect(receiptFormSchema.safeParse({ lines: [] }).success).toBe(false);
   });
 });
 
