@@ -42,7 +42,7 @@ In each tenant the admin keeps, per material and location, a planning parameter 
 ## Deviations from the spec
 
 - **`safetyTargetOn` returns `"0.000000"`** with no target in force, not `"0"`, so every base-unit quantity has the one six-decimal form (spec Q4).
-- **`PATCH`/`DELETE` with a well-formed but unknown material or location** answer `MATERIAL_NOT_FOUND` / `LOCATION_NOT_FOUND` (404), not the row's not-found. A malformed path segment is still the row's not-found (route-level parse).
+- **`PATCH`/`DELETE` with an unknown or malformed material or location in the path** answer `MATERIAL_NOT_FOUND` / `LOCATION_NOT_FOUND` (404), as the materials routes do for an ID; a date matching no target is the target's not-found. All are 404; only the code differs from the spec's "the row's not-found".
 - **The "can't be picked once inactive" checks** are `findActiveMaterial` and `findActiveLocation`, next to the lookups they extend (one check per referenced kind, as locations Q5 asked).
 - **The seed guard** (`isUntouchedKind`) and the reference lookup for demo rows are shared in `services/demo/demo-references.ts`, rather than copied into both services.
 - **The demo-data kinds** are named `planning parameter sets` and `safety-stock targets`, which the startup log prints as they are.
@@ -89,8 +89,8 @@ In each tenant the admin keeps, per material and location, a planning parameter 
 
 ### Phase 2: API
 
-- [ ] 2.1 Route handlers and BACKWARD_COMPATIBILITY.md
-- [ ] 2.2 API integration tests
+- [x] 2.1 Route handlers and BACKWARD_COMPATIBILITY.md — d0b6a2a
+- [x] 2.2 API integration tests — 070ca35
 
 ### Phase 3: Screens
 
