@@ -3,17 +3,24 @@ import { StockBalance, StockMovement, type EntityManager } from "@cpg/db";
 import type { z } from "zod";
 import { DEMO_STOCK } from "../../domain/stock/demo-stock";
 import { parseInput } from "../../http/parse-input";
-import { stockCorrectionSchema, stockPairSchema, stockPostingSchema } from "../../validators/stock/stock-correction.schema";
+import { STOCK_LEDGER_PAGE_SIZE, stockCorrectionSchema, stockLedgerQuerySchema, stockPairSchema, stockPostingSchema } from "../../validators/stock/stock-correction.schema";
 import type { AuditActor } from "../audit/actor";
 import { activeDemoReferences, isUntouchedKind } from "../demo/demo-references";
 import { findLocation } from "../locations/find-location";
 import { findMaterial } from "../materials/find-material";
 import { transitAt } from "../transfers/transfer-usage";
+import { movementSources, NO_SOURCE, type MovementSource } from "./movement-sources";
 import { postStockMovements, toMovementView, type PostingSource, type StockMovementView } from "./stock-posting";
 
-export type { StockMovementView };
+export type { MovementSource, StockMovementView };
+export type { SourceDocument } from "./movement-sources";
 export type StockLine = z.infer<typeof stockCorrectionSchema>;
 export type StockPair = z.infer<typeof stockPairSchema>;
+export type StockLedgerQuery = z.input<typeof stockLedgerQuerySchema>;
+/** A ledger movement with the document it came from (INV-012). */
+export interface LedgerMovementView extends StockMovementView {
+  source: MovementSource;
+}
 export interface StockView extends StockPair {
   materialDescription: string; locationName: string; baseUnit: string;
   materialActive: boolean; locationActive: boolean; quantity: string;
@@ -21,7 +28,9 @@ export interface StockView extends StockPair {
   inTransitFrom: string; inTransitTo: string;
   /** The IDs of the Open transfers holding that transit, ascending. */
   transitTransfers: string[];
-  movements: StockMovementView[];
+  /** One page of the pair's ledger, newest first, and how many movements it has in all. */
+  page: number; movementCount: number;
+  movements: LedgerMovementView[];
 }
 
 /** Physical stock for one tenant. All writes, snapshots and audit share one transaction (R03/R05/R08/R09). */
@@ -29,20 +38,28 @@ export class StockService {
   private readonly em: EntityManager;
   constructor({ em }: { em: EntityManager }) { this.em = em; }
 
-  /** A missing pair means exact zero; inactive masters and their immutable history stay readable. */
-  async get(input: StockPair): Promise<StockView> {
+  /**
+   * A missing pair means exact zero; inactive masters and their immutable history stay readable. The
+   * ledger is paged, newest first, each movement with its source document (INV-012).
+   */
+  async get(input: StockLedgerQuery): Promise<StockView> {
     const em = this.em;
-    const key = parseInput(stockPairSchema, input);
+    const { page, ...key } = parseInput(stockLedgerQuerySchema, input);
     const material = await findMaterial(em, key.material);
     const location = await findLocation(em, key.location);
     const balance = await em.findOne(StockBalance, { material, location }, { refresh: true });
-    const movements = await em.find(StockMovement, { material, location }, { orderBy: { occurredAt: "desc", id: "desc" }, limit: 100 });
+    const movementCount = await em.count(StockMovement, { material, location });
+    const movements = await em.find(StockMovement, { material, location }, {
+      orderBy: { occurredAt: "desc", id: "desc" }, limit: STOCK_LEDGER_PAGE_SIZE, offset: (page - 1) * STOCK_LEDGER_PAGE_SIZE,
+    });
+    const sources = await movementSources(em, movements);
     const transit = await transitAt(em, material, location);
     return {
       ...key, materialDescription: material.description, locationName: location.name, baseUnit: material.baseUnit,
       materialActive: material.active, locationActive: location.active, quantity: balance?.quantity ?? "0.000000",
       inTransitFrom: transit.from, inTransitTo: transit.to, transitTransfers: transit.transfers,
-      movements: movements.map(toMovementView),
+      page, movementCount,
+      movements: movements.map((movement) => ({ ...toMovementView(movement), source: sources.get(movement.postingId) ?? NO_SOURCE })),
     };
   }
 

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   ArrowLeftRightIcon,
   BlocksIcon,
+  ChartColumnIcon,
   Building2Icon,
   ChevronDownIcon,
   ChevronsUpDownIcon,
@@ -63,6 +64,7 @@ const DEFAULT_TENANT: TenantCode = "test";
 
 const ICONS: Record<NavId, LucideIcon> = {
   stock: PackageIcon,
+  stockReport: ChartColumnIcon,
   overview: HouseIcon,
   transactions: TruckIcon,
   productionOrders: BlocksIcon,

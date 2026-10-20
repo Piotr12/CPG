@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { parseInput, tenantScope } from "@cpg/core";
-import { stockPairSchema } from "@cpg/core/validators/stock/stock-correction.schema";
+import { STOCK_LEDGER_PAGE_SIZE, stockLedgerQuerySchema } from "@cpg/core/validators/stock/stock-correction.schema";
 import { requireUser } from "../../../../auth/require-admin";
 import { getMessages } from "../../../../i18n/get-messages";
 import { orNotFound } from "../../../../routing/or-not-found";
@@ -25,10 +25,13 @@ async function Stock({ params, searchParams }: Pick<PageProps<"/admin/[tenant]/s
   let units: string[] = [];
   if (materials.length > 0 && locations.length > 0) {
     const search = await searchParams;
-    const pair = await orNotFound(Promise.resolve().then(() => parseInput(stockPairSchema, {
-      material: search.material ?? materials[0].id, location: search.location ?? locations[0].id,
+    const pair = await orNotFound(Promise.resolve().then(() => parseInput(stockLedgerQuerySchema, {
+      material: search.material ?? materials[0].id, location: search.location ?? locations[0].id, page: search.page,
     })), ["VALIDATION_FAILED"]);
     view = await orNotFound(cradle.stockService.get(pair), ["MATERIAL_NOT_FOUND", "LOCATION_NOT_FOUND"]);
+    // A ledger page past the last shows the last, as the other lists do.
+    const last = Math.max(1, Math.ceil(view.movementCount / STOCK_LEDGER_PAGE_SIZE));
+    if (view.page > last) view = await cradle.stockService.get({ ...pair, page: last });
     const detail = await cradle.materialService.get(pair.material);
     units = [detail.baseUnit, ...detail.conversions.map(({ unit }) => unit)];
   }

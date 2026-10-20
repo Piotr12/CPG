@@ -47,9 +47,22 @@ describe("StockService", () => {
       const posted = await service().correct(line("+2", { unit: "case", reason: " Opening balance ", date: "1900-01-01", actorUserId: "fake" }), ACTOR);
       expect(posted).toMatchObject({ ...PAIR, type: "correction", position: 0, quantity: "24.000000", businessDate: "2027-01-05", enteredQuantity: "2.000000", enteredUnit: "case", numerator: "12", denominator: "1", balanceBefore: "0.000000", balanceAfter: "24.000000", reason: "Opening balance", actorUserId: "u1", actorUsername: "alice", channel: "ui" });
       expect(posted.postingId).toMatch(/^[a-f0-9-]{36}$/);
-      expect((await service().get(PAIR)).movements).toEqual([posted]);
+      expect((await service().get(PAIR)).movements).toEqual([{ ...posted, source: { id: null, document: null } }]);
       expect(await entries()).toEqual([expect.objectContaining({ action: "stock.movement.posted", actorUsername: "alice", sessionId: "session1", before: { quantity: "0.000000" }, after: expect.objectContaining({ quantity: "24.000000", movement: "24.000000", reason: "Opening balance", postingId: posted.postingId }) })]);
     } finally { vi.useRealTimers(); }
+  });
+  it("pages the pair's whole ledger, newest first, with its movement count (stock report spec Q6)", async () => {
+    await service().post({ lines: Array.from({ length: 100 }, () => ({ ...PAIR, quantity: "1", unit: "each" })), reason: "Count" }, { type: "correction", id: randomUUID() }, ACTOR);
+    await service().post({ lines: [{ ...PAIR, quantity: "1", unit: "each" }], reason: "Count" }, { type: "correction", id: randomUUID() }, ACTOR);
+    const first = await service().get(PAIR);
+    const second = await service().get({ ...PAIR, page: 2 });
+    expect(first).toMatchObject({ page: 1, movementCount: 101, quantity: "101.000000" });
+    expect(first.movements).toHaveLength(100);
+    expect(second).toMatchObject({ page: 2, movementCount: 101 });
+    expect(new Set([...first.movements, ...second.movements].map(({ id }) => id)).size).toBe(101);
+    expect(first.movements[0].occurredAt.getTime()).toBeGreaterThanOrEqual(second.movements[0].occurredAt.getTime());
+    expect((await service().get({ ...PAIR, page: "3" })).movements).toEqual([]);
+    await expect(service().get({ ...PAIR, page: 0 })).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
   });
   it("preserves a negative fraction and original factors after a conversion edit", async () => {
     await service().correct(line("2"), ACTOR);

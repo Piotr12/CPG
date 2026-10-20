@@ -32,6 +32,7 @@ export const HELP_TOPIC_IDS = [
   "shipment",
   "import",
   "stock",
+  "stock-report",
   "language-and-theme",
   "using-help",
 ] as const;
@@ -73,6 +74,7 @@ export const HELP_TOPIC_ROUTES: Record<HelpTopicId, string> = {
   shipment: "/admin/[tenant]/shipments/[id]",
   import: "/admin/[tenant]/import",
   stock: "/admin/[tenant]/stock",
+  "stock-report": "/admin/[tenant]/reports/stock",
   "language-and-theme": "/admin",
   "using-help": "/help",
 };
@@ -323,8 +325,17 @@ const en: Record<HelpTopicId, HelpText> = {
     body: [
       "Stock in the tenant menu shows the exact physical balance and recent movements for a selected material and location. A pair without movements has zero stock. Test and Prod are separate; fresh Test includes demonstration opening movements.",
       "Either role can post a reasoned correction while the tenant and masters are writable and active. Enter a signed change: 5 adds five and -5 removes five. Pick the base unit or a defined conversion; it converts once, half-up to six decimals, and keeps the entered quantity, unit and factor. The server uses today's UTC business date; backdating and future dating are unavailable. A correction that would make stock negative is refused with the available quantity.",
-      "Opening balances and physical customer returns are ordinary positive corrections with a reason; there is no return document. Every user correction creates an immutable stock movement and a separate before/after audit entry. Source, actor and unit/factor appear in movement details. Installation openings are explicitly labelled Installation. The screen shows up to 100 recent movements, while its balance includes all movements.",
-      "A material with any movement keeps its type and base unit forever, even after returning to zero. Nonzero stock prevents material or location deactivation. The API reads GET /api/tenants/{tenant}/stock?material=00000001&location=00000001 and posts POST /api/tenants/{tenant}/stock/corrections with a bearer token, idempotency key, current Test generation and material, location, signed quantity, unit and reason.",
+      "Opening balances and physical customer returns are ordinary positive corrections with a reason; there is no return document. Every user correction creates an immutable stock movement and a separate before/after audit entry. Each movement shows its type and its source document: a goods receipt links to its purchase order, a goods issue to its shipment, a transfer dispatch or receipt to its transfer; a correction is its own source. The actor, the posting ID and the unit/factor appear in movement details. Installation openings are explicitly labelled Installation. The ledger shows 100 movements per page, newest first, while the balance includes all movements.",
+      "A material with any movement keeps its type and base unit forever, even after returning to zero. Nonzero stock prevents material or location deactivation. The API reads GET /api/tenants/{tenant}/stock?material=00000001&location=00000001&page=1 and posts POST /api/tenants/{tenant}/stock/corrections with a bearer token, idempotency key, current Test generation and material, location, signed quantity, unit and reason.",
+    ],
+  },
+  "stock-report": {
+    title: "Stock report",
+    body: [
+      "Stock report in the tenant menu lists, for every material and location, the physical stock on hand now and the stock in transit: out (dispatched from this location and not yet received or written off) and in (dispatched to this location). All are in the material's base unit. Stock in transit belongs to its transfer, so neither location can use it: it is never added to on hand.",
+      "A material and location appear once anything was posted there or an Open transfer has stock on the road from or to it. Filter by material and location; rows that are all zero are hidden unless you tick Show rows that are all zero. Rows are ordered by material, then location, 100 per page.",
+      "Ledger opens the Stock page for that material and location: its balance, its transit with links to the transfers, and every movement with its date, type, signed quantity, reason and source document, linked. Both roles can read the report, also in a read-only tenant, and Test and Prod each show only their own stock.",
+      "The API returns the same report: GET /api/tenants/{tenant}/reports/stock?material=00000001&location=00000001&includeZero=true&page=1 (every parameter optional), with a bearer token or a signed-in session. A material or location the tenant doesn't have is not found.",
     ],
   },
   "language-and-theme": {
@@ -581,8 +592,17 @@ const pl: Record<HelpTopicId, HelpText> = {
     body: [
       "Zapas w menu środowiska pokazuje dokładny stan fizyczny i ostatnie ruchy wybranego materiału w lokalizacji. Para bez ruchów ma stan zero. Test i Prod są oddzielne; świeży Test zawiera demonstracyjne ruchy otwarcia.",
       "Obie role mogą zaksięgować korektę z powodem, gdy środowisko pozwala na zapis, a materiał i lokalizacja są aktywne. Wpisz zmianę ze znakiem: 5 dodaje pięć, -5 odejmuje pięć. Wybierz jednostkę podstawową lub zdefiniowany przelicznik; ilość jest przeliczana raz, z zaokrągleniem połówkowym w górę do sześciu miejsc, i zachowuje wpisaną ilość, jednostkę oraz przelicznik. Serwer używa dzisiejszej daty UTC; nie można księgować w przeszłość ani przyszłość. Korekta prowadząca do ujemnego zapasu jest odrzucana z dostępną ilością.",
-      "Stany otwarcia i fizyczny zwrot od klienta to zwykłe dodatnie korekty z powodem; nie powstaje dokument zwrotu. Każda korekta użytkownika tworzy niezmienny ruch magazynowy i oddzielny wpis audytu ze stanem przed i po. Źródło, użytkownik i przelicznik są w szczegółach ruchu. Otwarcia demonstracyjne są oznaczone jako Instalacja. Ekran pokazuje do 100 ostatnich ruchów, a saldo uwzględnia wszystkie ruchy.",
-      "Materiał po dowolnym ruchu zachowuje na zawsze typ i jednostkę podstawową, nawet po wyzerowaniu zapasu. Niezerowy zapas blokuje dezaktywację materiału i lokalizacji. API odczytuje GET /api/tenants/{tenant}/stock?material=00000001&location=00000001 i księguje POST /api/tenants/{tenant}/stock/corrections z tokenem, kluczem idempotencji, bieżącą generacją Test oraz materiałem, lokalizacją, ilością ze znakiem, jednostką i powodem.",
+      "Stany otwarcia i fizyczny zwrot od klienta to zwykłe dodatnie korekty z powodem; nie powstaje dokument zwrotu. Każda korekta użytkownika tworzy niezmienny ruch magazynowy i oddzielny wpis audytu ze stanem przed i po. Każdy ruch pokazuje rodzaj i dokument źródłowy: przyjęcie towaru prowadzi do zamówienia zakupu, wydanie towaru do wysyłki, wydanie lub przyjęcie przesunięcia do przesunięcia; korekta jest swoim własnym źródłem. Użytkownik, identyfikator księgowania i przelicznik są w szczegółach ruchu. Otwarcia demonstracyjne są oznaczone jako Instalacja. Ruchy są pokazywane po 100 na stronę, od najnowszych, a saldo uwzględnia wszystkie ruchy.",
+      "Materiał po dowolnym ruchu zachowuje na zawsze typ i jednostkę podstawową, nawet po wyzerowaniu zapasu. Niezerowy zapas blokuje dezaktywację materiału i lokalizacji. API odczytuje GET /api/tenants/{tenant}/stock?material=00000001&location=00000001&page=1 i księguje POST /api/tenants/{tenant}/stock/corrections z tokenem, kluczem idempotencji, bieżącą generacją Test oraz materiałem, lokalizacją, ilością ze znakiem, jednostką i powodem.",
+    ],
+  },
+  "stock-report": {
+    title: "Raport zapasu",
+    body: [
+      "Raport zapasu w menu środowiska wymienia dla każdego materiału i lokalizacji bieżący zapas fizyczny na stanie oraz zapas w tranzycie: stąd (wydany z tej lokalizacji i jeszcze nieprzyjęty ani niespisany) i tutaj (wydany do tej lokalizacji). Wszystko w jednostce podstawowej materiału. Zapas w tranzycie należy do swojego przesunięcia, więc żadna z lokalizacji nie może go użyć: nigdy nie jest doliczany do stanu.",
+      "Materiał i lokalizacja pojawiają się, gdy cokolwiek tam zaksięgowano albo otwarte przesunięcie ma zapas w drodze stąd lub tutaj. Filtruj po materiale i lokalizacji; wiersze z samymi zerami są ukryte, chyba że zaznaczysz Pokaż wiersze z samymi zerami. Wiersze są uporządkowane według materiału, potem lokalizacji, po 100 na stronę.",
+      "Ruchy otwiera stronę Zapas dla tego materiału i lokalizacji: saldo, tranzyt z odnośnikami do przesunięć i każdy ruch z datą, rodzajem, ilością ze znakiem, powodem i odnośnikiem do dokumentu źródłowego. Obie role mogą czytać raport, także w środowisku tylko do odczytu, a Test i Prod pokazują wyłącznie własny zapas.",
+      "API zwraca ten sam raport: GET /api/tenants/{tenant}/reports/stock?material=00000001&location=00000001&includeZero=true&page=1 (każdy parametr opcjonalny), z tokenem albo zalogowaną sesją. Materiał lub lokalizacja, których środowisko nie ma, nie zostaną znalezione.",
     ],
   },
   "language-and-theme": {
