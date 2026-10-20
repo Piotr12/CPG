@@ -29,6 +29,8 @@ Revision drift, historical revaluation and tenant isolation. Retain stored revis
 - Spec-stage lint passed with one pre-existing BOM unused-import warning; 6 metadata tests passed. npm ci used unchanged lockfile (913 packages; 10 known advisories).
 
 ## Verification
+- Post-review local gate: lint/typecheck/build pass; 2,429 tests in 372 files, 100% coverage on all four metrics. Targeted production-image integration: 4 files / 29 tests pass. Review fixes committed aeeabfe; constant/named-option cleanup subsequently passed the same local gate.
+- Independent source audit re-review: prior findings resolved, no remaining production-code finding. Formal PR review/CI remains pending publication.
 - Phase 2 local gate: lint passed (existing BOM unused import warning), typecheck passed, 372 unit files / 2,426 tests passed at 100% statements/branches/functions/lines, build passed with both production-order pages and all three API paths.
 - Live dev Chrome: seeded detail read, target edit 10→12 recalculated direct requirements, 390px page width exactly 390 with edit button in bounds. Desktop/mobile screenshots under .ai/qa/artifacts_production-orders-88/. No browser errors.
 - Targeted Docker integration run started: production-orders, migration smoke, navigation, atomic Test reset. Full suite reserved for PR CI.
@@ -48,7 +50,7 @@ Revision drift, historical revaluation and tenant isolation. Retain stored revis
 ### Phase 2: Delivery surfaces
 - [x] 2.1 API/actions and contract — 0f0c290
 - [x] 2.2 Translated screens, navigation and help — 0f0c290
-- [ ] 2.3 Focused integration journeys
+- [x] 2.3 Focused integration journeys — aeeabfe
 
 ### Phase 3: Verification and publication
 - [ ] 3.1 Full local gate and live UI evidence
