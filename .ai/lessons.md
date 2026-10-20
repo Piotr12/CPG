@@ -48,6 +48,7 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 ## Testing
 
+- **2026-10-20 — Copy public assets before starting standalone QA** — The documented Docker fallback needs both `.next/static` and `packages/app/public` in the standalone app directory. Copy them before startup: Next.js caches the public-file inventory, so copying them into an already running server still returns 404 until it restarts.
 - **2026-10-20 — Standalone test copies need public assets, and login needs hydration** — Copy `packages/app/public` as well as `.next/static` into the standalone runtime; otherwise manifest icons return 404. Wait for the login input's React fiber before filling/submitting, as for other hydrated controls: under the full suite a post-reset sign-in timed out when the helper clicked static HTML.
 
 - **2026-10-17 — Root-level config files are `.mts`** — the root `package.json` has no `"type"`, so Vite loads `vitest.config.ts` as CommonJS and warns. Name root-level ESM files `.mts` (`vitest.config.mts`, `vitest.integration.config.mts`). Root tests (`tests/*.test.ts`) run through Vitest, so `.ts` is fine there.
