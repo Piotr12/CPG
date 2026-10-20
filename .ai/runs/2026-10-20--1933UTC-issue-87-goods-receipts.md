@@ -29,7 +29,7 @@ Goods receipts against one purchase order (partial, repeated, excess) that raise
 - `npm run typecheck`: clean.
 - `npm run test:coverage`: 362 files, 2377 tests passed, 100% on all four metrics.
 - `npm run build`: succeeded.
-- `npm run test:integration` (Docker, production image): first run 274/277, 3 test bugs (see Log); re-run: see the PR.
+- `npm run test:integration` (Docker, production image): first run 274/277, 3 test bugs (see Log); re-run: 37 files, 277 tests passed.
 
 ## Follow-ups
 - Block deactivating a location that an Open purchase order delivers to (otherwise the PO can't receive until reactivation).
