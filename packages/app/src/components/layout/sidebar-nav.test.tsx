@@ -109,6 +109,7 @@ describe("SidebarNav on a desktop", () => {
       ["Import", "/admin/test/import"],
       ["Forecasts", "/admin/test/forecasts"],
       ["Stock", "/admin/test/stock"],
+      ["Stock import", "/admin/test/stock-import"],
       ["Production orders", "/admin/test/production-orders"],
       ["Customer orders", "/admin/test/customer-orders"],
       ["Purchase requisitions", "/admin/test/purchase-requisitions"],

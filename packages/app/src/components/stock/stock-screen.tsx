@@ -7,6 +7,7 @@ import { Label } from "@cpg/ui/components/label";
 import { NativeSelect, NativeSelectOption } from "@cpg/ui/components/native-select";
 import type { Messages } from "../../i18n/messages/en";
 import { fill, shownQuantity } from "../forms/form-labels";
+import { ImportLink } from "../imports/import-link";
 import { CorrectionDialog } from "./correction-dialog";
 import { stockLabels } from "./labels";
 
@@ -35,7 +36,10 @@ export function StockScreen({ tenant, view, materials, locations, units, locale,
   const editable = view !== null && !tenant.readOnly && view.materialActive && view.locationActive;
   return <div lang={locale} className="flex min-w-0 flex-col gap-6">
     <h1 className="text-2xl font-semibold tracking-tight">{fill(t.heading, { tenant: tenant.name })}</h1>
-    <p className="text-sm text-muted-foreground">{t.intro}</p>
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-sm text-muted-foreground">{t.intro}</p>
+      {!tenant.readOnly && <ImportLink tenant={tenant.code} label={messages.stockImport.link} section="stock-import" />}
+    </div>
     {view === null ? <EmptyState title={t.noMasters} /> : <>
       <form action={`/admin/${tenant.code}/stock`} className="grid min-w-0 gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
         <div className="grid min-w-0 gap-2"><Label htmlFor="stock-material">{t.material}</Label>

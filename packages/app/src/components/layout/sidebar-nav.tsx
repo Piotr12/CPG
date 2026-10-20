@@ -14,6 +14,7 @@ import {
   DatabaseIcon,
   FileSpreadsheetIcon,
   FileTextIcon,
+  FileUpIcon,
   GlobeIcon,
   HistoryIcon,
   HouseIcon,
@@ -63,6 +64,7 @@ const DEFAULT_TENANT: TenantCode = "test";
 
 const ICONS: Record<NavId, LucideIcon> = {
   stock: PackageIcon,
+  stockImport: FileUpIcon,
   overview: HouseIcon,
   transactions: TruckIcon,
   productionOrders: BlocksIcon,

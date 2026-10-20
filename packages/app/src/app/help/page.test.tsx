@@ -53,6 +53,7 @@ describe("HelpPage", () => {
       "Shipments and goods issues",
       "Import from spreadsheet",
       "Physical stock and corrections",
+      "Stock import",
       "Language and theme",
       "Using help",
     ]);
