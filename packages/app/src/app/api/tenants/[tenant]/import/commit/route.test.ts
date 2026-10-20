@@ -25,7 +25,7 @@ const workbook = async () =>
 describe("POST /api/tenants/{tenant}/import/commit", () => {
   afterEach(() => vi.clearAllMocks());
 
-  it("commits the prepared rows with the dry run's token (XLS-012)", async () => {
+  it("commits the prepared rows with the dry run's token", async () => {
     mocks.state.caller = ADMIN_TOKEN;
     mocks.state.cradle = { importService: { commit: mocks.commit } };
     mocks.commit.mockResolvedValue({ committed: true });

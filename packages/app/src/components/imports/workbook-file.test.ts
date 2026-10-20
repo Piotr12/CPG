@@ -1,16 +1,25 @@
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 import writeXlsxFile from "write-excel-file/node";
 import { describe, expect, it } from "vitest";
-import { IMPORT_FILE_MAX_BYTES, IMPORT_INFLATED_MAX_BYTES, IMPORT_ROWS_MAX, prepareImport } from "@cpg/core";
+import { IMPORT_CELLS_MAX, IMPORT_FILE_MAX_BYTES, IMPORT_INFLATED_MAX_BYTES, IMPORT_ROWS_MAX, prepareImport } from "@cpg/core";
 import {
   WORKBOOK_INFLATES_TOO_MUCH_MESSAGE,
   WORKBOOK_TOO_LARGE_MESSAGE,
+  WORKBOOK_TOO_MANY_CELLS_MESSAGE,
   WORKBOOK_TOO_MANY_ROWS_MESSAGE,
   WORKBOOK_UNREADABLE_MESSAGE,
 } from "@cpg/core/validators/imports/import-request.schema";
-import { inflatesWithin, readWorkbook, templateWorkbook } from "./workbook-file";
+import { cellsSpanned, inflateWithin, readWorkbook, templateWorkbook } from "./workbook-file";
 
 const base64 = (bytes: Uint8Array) => Buffer.from(bytes).toString("base64");
+
+/** A one-sheet Locations workbook whose sheet XML is rewritten by `edit`. */
+async function craftedWorkbook(edit: (xml: string) => string): Promise<Uint8Array> {
+  const file = unzipSync(await writeXlsxFile([{ sheet: "Locations", data: [["ID", "Name", "Active"], [null, "Cave", null]] }]).toBuffer());
+  const sheetPath = Object.keys(file).find((name) => /^xl\/worksheets\/sheet\d+\.xml$/.test(name))!;
+  file[sheetPath] = strToU8(edit(strFromU8(file[sheetPath])));
+  return zipSync(file);
+}
 
 /** The refusal `readWorkbook` gives, as its field message. */
 async function refusal(promise: Promise<unknown>): Promise<string> {
@@ -109,7 +118,51 @@ describe("readWorkbook", () => {
       if (signature === 0x04034b50) forged.writeUInt32LE(1, at + 22);
       if (signature === 0x02014b50) forged.writeUInt32LE(1, at + 24);
     }
-    expect(inflatesWithin(forged, IMPORT_INFLATED_MAX_BYTES)).not.toBe("ok");
+    expect(inflateWithin(forged, IMPORT_INFLATED_MAX_BYTES)).toBe("too-large");
+  });
+
+  it("refuses a tiny workbook with one cell far away before the reader pads every row out to it", async () => {
+    // Without the check, read-excel-file pads 10,000 rows to 16,384 cells each for this file of a
+    // few KB: a 1.4 KB workbook like it ran the server out of memory.
+    const farAway = await craftedWorkbook((xml) => xml.replace("</sheetData>", '<row r="10000"><c r="XFD10000" t="inlineStr"><is><t>x</t></is></c></row></sheetData>'));
+    expect(farAway.length).toBeLessThan(4_000);
+    expect(await refusal(readWorkbook(base64(farAway)))).toBe(WORKBOOK_TOO_MANY_CELLS_MESSAGE);
+  });
+
+  it("reads a workbook spanning exactly 200,000 cells, and refuses one more row", async () => {
+    const reaching = (row: number) =>
+      craftedWorkbook((xml) => xml.replace("</sheetData>", `<row r="${row}"><c r="E${row}" t="inlineStr"><is><t>x</t></is></c></row></sheetData>`));
+    const [locations] = await readWorkbook(base64(await reaching(IMPORT_CELLS_MAX / 5)));
+    expect(locations.rows).toHaveLength(IMPORT_CELLS_MAX / 5);
+    expect(await refusal(readWorkbook(base64(await reaching(IMPORT_CELLS_MAX / 5 + 1))))).toBe(WORKBOOK_TOO_MANY_CELLS_MESSAGE);
+  });
+
+  it("refuses the far-away cell however its address is disguised, and a million empty rows", async () => {
+    const appended = (fragment: string) => (xml: string) => xml.replace("</sheetData>", `${fragment}</sheetData>`);
+    const disguised = [
+      // A namespace prefix on the tags and the attribute, which the reader drops.
+      '<x:row x:r="9000"><x:c x:r="AAA9000" t="inlineStr"><is><t>x</t></is></x:c></x:row>',
+      // Character references, which the reader decodes.
+      '<row r="&#57;000"><c r="&#x41;&#65;A9000" t="inlineStr"><is><t>x</t></is></c></row>',
+      // A `>` and a decoy `r` inside another attribute's value.
+      `<row r="9000"><c t="inlineStr" s='> r="A1"' r="AAA9000"><is><t>x</t></is></c></row>`,
+      // Number() reads exponents.
+      '<row r="9e3"><c r="AAA9e3" t="inlineStr"><is><t>x</t></is></c></row>',
+      // No content at all: while reading, the reader still adds an empty row for every row up to it.
+      '<row r="1000000"/>',
+    ];
+    for (const fragment of disguised) {
+      expect(await refusal(readWorkbook(base64(await craftedWorkbook(appended(fragment)))))).toBe(WORKBOOK_TOO_MANY_CELLS_MESSAGE);
+    }
+  });
+
+  it("counts up to an unclosed tag or value, where the reader stops too, so an image doesn't refuse its workbook", async () => {
+    const farThenUnclosed = await craftedWorkbook((xml) => xml.replace("</sheetData>", '<row r="9000"><c r="AAA9000"><v>1</v></c></row><row r="9001"><c r="A9001" t="inlineStr></sheetData>'));
+    expect(await refusal(readWorkbook(base64(farThenUnclosed)))).toBe(WORKBOOK_TOO_MANY_CELLS_MESSAGE);
+
+    const file = unzipSync(await writeXlsxFile([{ sheet: "Locations", data: [["ID", "Name", "Active"], [null, "Cave", null]] }]).toBuffer());
+    file["xl/media/image1.png"] = strToU8("\x89PNG\r\n<\x1a<'\x00>\"<<x \"unclosed");
+    expect((await readWorkbook(base64(zipSync(file))))[0].rows).toEqual([["ID", "Name", "Active"], [null, "Cave", null]]);
   });
 
   it("doesn't expand an XML entity a sheet declares", async () => {
@@ -130,18 +183,33 @@ describe("readWorkbook", () => {
   });
 });
 
-describe("inflatesWithin", () => {
-  it("passes an archive within the limit and refuses corrupt data", () => {
+describe("cellsSpanned", () => {
+  it("counts the last row times the last filled column, as the reader holds them", () => {
+    expect(cellsSpanned('<sheetData><row r="1"><c r="A1"><v>1</v></c><c r="C1"><v>2</v></c></row><row r="5"><c r="B5"><v>3</v></c></row></sheetData>')).toBe(15);
+    // Rows without a number follow on; an empty cell isn't padded to; a closing tag counts nothing.
+    expect(cellsSpanned('<row><c r="B1"><v>1</v></c></row><row/><row><c r="Z3"/></row>')).toBe(6);
+    // A cell's own address moves the row on, as it does in the reader.
+    expect(cellsSpanned('<row><c r="C7"><v>1</v></c></row>')).toBe(21);
+    // Anything else spans one cell at most, and so does an address without a row.
+    expect(cellsSpanned('<?xml version="1.0"?><sst count="2"><si><t>Cave</t></si></sst>')).toBe(0);
+    expect(cellsSpanned('<c r="AB"><v>1</v></c>')).toBe(0);
+    expect(cellsSpanned('<row r="seven"/>')).toBe(1);
+    expect(cellsSpanned('<row r="4"><c r="B4"><v>1</v></c></row><c r="A1"')).toBe(8);
+  });
+});
+
+describe("inflateWithin", () => {
+  it("passes an archive within the limit, with its entries' text, and refuses corrupt data", () => {
     const archive = zipSync({ "a.xml": strToU8("<a/>".repeat(100)) }, { level: 9 });
-    expect(inflatesWithin(archive, 1_000)).toBe("ok");
-    expect(inflatesWithin(archive, 10)).toBe("too-large");
+    expect(inflateWithin(archive, 1_000)).toEqual(["<a/>".repeat(100)]);
+    expect(inflateWithin(archive, 10)).toBe("too-large");
     // Past the limit, later entries aren't inflated at all: the answer is already known.
     const several = zipSync({ "a.xml": strToU8("<a/>".repeat(100)), "b.xml": strToU8("<b/>".repeat(100)) }, { level: 9 });
-    expect(inflatesWithin(several, 10)).toBe("too-large");
+    expect(inflateWithin(several, 10)).toBe("too-large");
 
     const corrupt = Buffer.from(archive);
     const dataStart = 30 + "a.xml".length;
     corrupt.fill(0xff, dataStart, dataStart + 4);
-    expect(inflatesWithin(corrupt, 1_000)).toBe("unreadable");
+    expect(inflateWithin(corrupt, 1_000)).toBe("unreadable");
   });
 });

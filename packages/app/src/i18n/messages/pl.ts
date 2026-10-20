@@ -724,6 +724,7 @@ export const pl: Messages = {
       workbookUnreadable: "Ten plik nie jest czytelnym skoroszytem .xlsx.",
       workbookTooManyRows: "Ten skoroszyt ma więcej niż 2000 wierszy. Podziel go na kilka importów.",
       workbookInflatesTooMuch: "Ten skoroszyt po rozpakowaniu ma więcej niż 20 MB.",
+      workbookTooManyCells: "Arkusze tego skoroszytu obejmują więcej niż 200000 komórek. Usuń wszystko poza importowanymi wierszami i kolumnami.",
       previewToken: "Najpierw wykonaj próbę, a potem zatwierdź z jej previewToken.",
     },
     errors: {

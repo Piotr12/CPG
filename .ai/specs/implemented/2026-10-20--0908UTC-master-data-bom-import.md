@@ -375,3 +375,10 @@ Implemented on #99; the execution plan is `.ai/pipeline/runs/2026-10-20--0921UTC
 - A BOM header's own error and its lines' missing materials are reported together.
 - The template doesn't format its empty ID columns as text (numeric IDs are zero-padded instead), and the sidebar entry has no read-only lock icon (the page shows the lock).
 
+Closure notes (epic E05, #13; run log `.ai/runs/2026-10-20--1043UTC-close-epic-e05.md`):
+- **Q10 gained a fourth limit: at most 200,000 cells across the sheets.** That is each sheet's last row times its last filled column. `read-excel-file` pads every row out to the last filled column and adds an empty row for every gap. Because of that, a workbook of about 1.4 KB, with one cell at `XFD10000`, or one empty `<row r="30000000"/>`, ran the server out of memory. The 20 MB inflate guard didn't catch it, because the XML is tiny. The adapter now reads every `<row>` and `<c>` address the way the reader does, before the reader runs, and refuses with `VALIDATION_FAILED` on `workbook` (`cellsSpanned` in `components/imports/workbook-file.ts`). The count stops at an unclosed tag or value, where the reader stops too, so an embedded image's stray `<` and quotes don't refuse its workbook.
+- Smaller differences from this text:
+  - A `0` in an ID column reads as `00000000` and is reported as an unknown ID, not as a format error (step 1).
+  - The instruction sheets are skipped by `prepareImport`, not by the adapter (step 7).
+  - A commit revalidates the master and BOM pages, as every other write does.
+- Still owed by later work, as Out of scope says: an inspection-only dry run in a read-only tenant, an "Import" audit channel, exporting current data, and the stock and inventory imports (slice 2). The acceptance catalogue's XLS, API-028, AUD-022 and E2E-015 entries say which part of each scenario waits.

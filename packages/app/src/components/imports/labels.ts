@@ -23,6 +23,7 @@ import {
   WORKBOOK_INFLATES_TOO_MUCH_MESSAGE,
   WORKBOOK_REQUIRED_MESSAGE,
   WORKBOOK_TOO_LARGE_MESSAGE,
+  WORKBOOK_TOO_MANY_CELLS_MESSAGE,
   WORKBOOK_TOO_MANY_ROWS_MESSAGE,
   WORKBOOK_UNREADABLE_MESSAGE,
 } from "@cpg/core/validators/imports/import-request.schema";
@@ -111,6 +112,7 @@ export function importLabels(messages: Messages): ImportLabels {
     [WORKBOOK_UNREADABLE_MESSAGE]: own.workbookUnreadable,
     [WORKBOOK_TOO_MANY_ROWS_MESSAGE]: own.workbookTooManyRows,
     [WORKBOOK_INFLATES_TOO_MUCH_MESSAGE]: own.workbookInflatesTooMuch,
+    [WORKBOOK_TOO_MANY_CELLS_MESSAGE]: own.workbookTooManyCells,
     [PREVIEW_TOKEN_MESSAGE]: own.previewToken,
   };
   const labels: Partial<Messages["imports"]> = { ...messages.imports };

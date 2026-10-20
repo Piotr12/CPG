@@ -101,7 +101,7 @@ describe("the Import screen", () => {
     expect(await admin.evaluate<boolean>(`${button("Commit 0 changes")}.disabled`)).toBe(true);
   });
 
-  it("previews new records with their IDs, commits them, and shows them on their pages (XLS-002, XLS-011)", async () => {
+  it("previews new records with their IDs, commits them, and shows them on their pages (XLS-002)", async () => {
     await dryRun(
       await workbook({
         Materials: [
@@ -149,7 +149,7 @@ describe("the Import screen", () => {
     await admin.waitForText("importui steel");
   });
 
-  it("gives the API the same report as the screen for the same workbook (API-015)", async () => {
+  it("finds the same problems at the same cells through the API as on the screen (API-015)", async () => {
     const file = await workbook({ Materials: [[null, "raw", "importui parity", "kg", null], ["99999995", "raw", "importui parity unknown", "kg", null]] });
     await dryRun(file);
     const screenProblems = await table("Problem");
@@ -166,6 +166,30 @@ describe("the Import screen", () => {
       expect(report.errors.map(({ sheet, row, column }) => [sheet, String(row), column])).toEqual(screenProblems.map(([sheet, row, column]) => [sheet, row, column]));
     } finally {
       const own = (json(await callApi(baseUrl, "GET", "/api/tokens", secret)).data as { id: string; name: string }[]).find((token) => token.name === "importui-parity")!;
+      await callApi(baseUrl, "DELETE", `/api/tokens/${own.id}`, secret, { key: randomUUID() });
+    }
+  });
+
+  it("refuses the commit once the tenant turns read-only, then locks the screen, writing nothing (XLS-015)", async () => {
+    await openTokens(admin, baseUrl);
+    const secret = await createToken(admin, "importui-read-only");
+    const tenant = (readOnly: boolean) => callApi(baseUrl, "PATCH", "/api/tenants/prod", secret, { key: randomUUID(), body: { readOnly } });
+    try {
+      await dryRun(await workbook({ Locations: [[null, "importui read-only", null]] }));
+      expect((await table("Changes")).map(([sheet, , action]) => [sheet, action])).toEqual([["Locations", "Create"]]);
+      // Prod turns read-only while the clean dry run is on screen.
+      expect((await tenant(true)).status).toBe(200);
+      await commit("Commit 1 change");
+      expect(await admin.text("main [role=alert]")).toContain("read-only");
+
+      await admin.open(`${baseUrl}/admin/prod/import`);
+      await admin.waitForText("Prod is read-only: imports are blocked");
+      expect(await admin.evaluate<boolean>(`${FILE_INPUT}.disabled`)).toBe(true);
+      const locations = json(await callApi(baseUrl, "GET", "/api/tenants/prod/locations", secret)).data as { name: string }[];
+      expect(locations.map(({ name }) => name)).not.toContain("importui read-only");
+    } finally {
+      await tenant(false);
+      const own = (json(await callApi(baseUrl, "GET", "/api/tokens", secret)).data as { id: string; name: string }[]).find((token) => token.name === "importui-read-only")!;
       await callApi(baseUrl, "DELETE", `/api/tokens/${own.id}`, secret, { key: randomUUID() });
     }
   });

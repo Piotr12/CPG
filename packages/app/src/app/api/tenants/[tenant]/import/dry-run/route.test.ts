@@ -25,7 +25,7 @@ const workbook = async () =>
 describe("POST /api/tenants/{tenant}/import/dry-run", () => {
   afterEach(() => vi.clearAllMocks());
 
-  it("reads the workbook and dry-runs its prepared rows, audited as the token (API-015)", async () => {
+  it("reads the workbook and dry-runs its prepared rows, audited as the token", async () => {
     mocks.state.caller = ADMIN_TOKEN;
     mocks.state.cradle = { importService: { dryRun: mocks.dryRun } };
     mocks.dryRun.mockResolvedValue({ committed: false, previewToken: "t" });

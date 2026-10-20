@@ -28,7 +28,7 @@ async function workbook(sheets: Record<string, Cell[][]>): Promise<string> {
 interface Report {
   committed: boolean;
   previewToken: string | null;
-  rows: { sheet: string; row: number; action: string; record: string; reference?: string }[];
+  rows: { sheet: string; row: number; action: string; record: string; reference?: string; changes: { field: string; before: unknown; after: unknown }[] }[];
   errors: { sheet: string; row: number; column: string | null; code: string }[];
 }
 
@@ -89,6 +89,9 @@ describe("the master-data and BOM import through the API", () => {
       ["Locations", "create"],
     ]);
     expect(await material("importapi steel")).toBeUndefined();
+    expect(await material("importapi panel")).toBeUndefined();
+    const locations = json(await api("GET", "/api/tenants/prod/locations")).data as { name: string }[];
+    expect(locations.map(({ name }) => name)).not.toContain("importapi cave");
 
     const key = randomUUID();
     const first = await commit(base64, preview.previewToken!, key);
@@ -141,13 +144,14 @@ describe("the master-data and BOM import through the API", () => {
     });
     const preview = await dryRun(revise);
     expect(preview.rows[0]).toMatchObject({ action: "update", record: bomId });
+    expect(preview.rows[0].changes).toContainEqual({ field: `Component ${bolt}`, before: "4.000000 each", after: null });
     await commit(revise, preview.previewToken!);
     const bom = json(await api("GET", `/api/tenants/prod/boms/${bomId}`)).data;
     expect(bom).toMatchObject({ revision: 2, components: [{ material: steel }] });
     expect(json(await api("GET", `/api/tenants/prod/boms/${bomId}/revisions/1`)).data.components).toHaveLength(2);
   });
 
-  it("keeps the key of a dry run whose middle row fails, and writes nothing (XLS-009, XLS-010)", async () => {
+  it("keeps the key of a dry run whose middle row fails, and writes nothing (XLS-010)", async () => {
     const base64 = await workbook({
       Materials: [
         [null, "raw", "importapi first", "kg", null],
@@ -165,20 +169,38 @@ describe("the master-data and BOM import through the API", () => {
     expect(await material("importapi third")).toBeUndefined();
   });
 
-  it("asks Test for its generation, and refuses a read-only tenant", async () => {
+  it("asks Test for its current generation (API-034)", async () => {
     const base64 = await workbook({ Locations: [[null, "importapi gated", null]] });
     const missing = await write("POST", "/api/tenants/test/import/dry-run", { workbook: base64 });
     expect(missing.status).toBe(428);
     expect(json(missing).error.code).toBe("GENERATION_REQUIRED");
 
+    const generation = (json(await api("GET", "/api/tenants/test")).data as { generation: number }).generation;
+    const stale = await api("POST", "/api/tenants/test/import/dry-run", { key: randomUUID(), body: { workbook: base64 }, generation: generation + 1 });
+    expect(stale.status).toBe(409);
+    expect(json(stale).error.code).toBe("GENERATION_STALE");
+  });
+
+  it("refuses a dry run and a commit in a read-only tenant, and writes nothing (XLS-015)", async () => {
+    const base64 = await workbook({ Locations: [[null, "importapi read-only", null]] });
+    const preview = await dryRun(base64);
+    expect(preview.errors).toEqual([]);
+
     await write("PATCH", "/api/tenants/prod", { readOnly: true });
     try {
-      const refused = await write("POST", "/api/tenants/prod/import/dry-run", { workbook: base64 });
-      expect(refused.status).toBe(409);
-      expect(json(refused).error.code).toBe("TENANT_READ_ONLY");
+      const refused = [
+        await write("POST", "/api/tenants/prod/import/dry-run", { workbook: base64 }),
+        await commit(base64, preview.previewToken!),
+      ];
+      for (const response of refused) {
+        expect(response.status).toBe(409);
+        expect(json(response).error.code).toBe("TENANT_READ_ONLY");
+      }
     } finally {
       await write("PATCH", "/api/tenants/prod", { readOnly: false });
     }
+    const locations = json(await api("GET", "/api/tenants/prod/locations")).data as { name: string }[];
+    expect(locations.map(({ name }) => name)).not.toContain("importapi read-only");
   });
 
   it("refuses a normal user's token", async () => {

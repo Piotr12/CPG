@@ -184,6 +184,21 @@ describe("the dry run and the commit", () => {
     expect(await descriptions("prod")).toEqual(["00000001 Steel sheet", "00000002 Bolt M8"]);
   });
 
+  it("never resolves a reference in the other tenant (TEN-014)", async () => {
+    // Prod has materials 00000001 and 00000002 and location 00000001; Test only material 00000001.
+    await seedMasters("prod");
+    await kit.write(({ materialService }) => materialService.create({ type: "raw", description: "Test's steel", baseUnit: "kg" }, ACTOR), "test");
+    const testAudits = await kit.auditCount("test");
+    const prodAudits = await kit.auditCount("prod");
+    const report = await kit.dryRun([sheet("planningParameters", [1, 1, "buy", 1, 0, 1], [2, 1, "buy", 1, 0, 1])], "test");
+    expect(report.errors.map((error) => [error.row, error.column, error.code, error.message])).toEqual([
+      [2, "Location ID", "IMPORT_MISSING_REFERENCE", expect.stringContaining("Location 00000001 doesn't exist in Test.")],
+      [3, "Material ID", "IMPORT_MISSING_REFERENCE", expect.stringContaining("Material 00000002 doesn't exist in Test.")],
+    ]);
+    expect(report.previewToken).toBeNull();
+    expect([await kit.auditCount("test"), await kit.auditCount("prod")]).toEqual([testAudits, prodAudits]);
+  });
+
   it("lets a later sheet use what an earlier sheet creates, by the ID the dry run shows (spec Q4)", async () => {
     await seedMasters();
     const workbook = [

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ID_FORMAT_MESSAGE } from "@cpg/core/validators/imports/import-rows.schema";
-import { WORKBOOK_TOO_LARGE_MESSAGE } from "@cpg/core/validators/imports/import-request.schema";
+import { WORKBOOK_TOO_LARGE_MESSAGE, WORKBOOK_TOO_MANY_CELLS_MESSAGE } from "@cpg/core/validators/imports/import-request.schema";
 import { NAME_REQUIRED_MESSAGE } from "@cpg/core/validators/named-records/named-record-fields.schema";
 import { TYPE_MESSAGE } from "@cpg/core/validators/materials/material-fields.schema";
 import { PRIORITY_MESSAGE } from "@cpg/core/validators/boms/bom-fields.schema";
@@ -17,6 +17,9 @@ describe("importLabels", () => {
     expect(labels.fieldMessages[PRIORITY_MESSAGE]).toBe(pl.boms.fieldErrors.priority);
     expect(labels.fieldMessages[ID_FORMAT_MESSAGE]).toBe(pl.imports.fieldErrors.id);
     expect(labels.fieldMessages[WORKBOOK_TOO_LARGE_MESSAGE]).toBe(pl.imports.fieldErrors.workbookTooLarge);
+    expect(labels.fieldMessages[WORKBOOK_TOO_MANY_CELLS_MESSAGE]).toBe(pl.imports.fieldErrors.workbookTooManyCells);
+    // The English copy is the server's own message.
+    expect(importLabels(en).fieldMessages[WORKBOOK_TOO_MANY_CELLS_MESSAGE]).toBe(WORKBOOK_TOO_MANY_CELLS_MESSAGE);
   });
 
   it("merges the codes of every screen the import writes through, its own last", () => {

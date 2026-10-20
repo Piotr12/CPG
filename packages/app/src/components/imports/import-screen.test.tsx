@@ -56,7 +56,7 @@ describe("ImportScreen", () => {
     expect(screen.getAllByRole("listitem")[1].getAttribute("aria-current")).toBe("step");
   });
 
-  it("previews a clean dry run, then commits it in the bound tenant (XLS-011, XLS-012)", async () => {
+  it("previews a clean dry run, then commits it in the bound tenant", async () => {
     renderScreen();
     await choose();
     fireEvent.click(button("Run dry run"));
@@ -113,7 +113,7 @@ describe("ImportScreen", () => {
     ]);
   });
 
-  it("lists every problem and keeps the commit closed (XLS-009)", async () => {
+  it("lists every problem and keeps the commit closed", async () => {
     mocks.dryRunImport.mockResolvedValue({
       ok: true,
       data: {
@@ -217,7 +217,7 @@ describe("ImportScreen", () => {
     expect(screen.queryByText(en.imports.fieldErrors.workbookTooLarge)).toBeNull();
   });
 
-  it("blocks the upload and the commit while the tenant is read-only (XLS-015)", () => {
+  it("blocks the upload and the commit while the tenant is read-only", () => {
     renderScreen({ ...TENANT, readOnly: true });
 
     expect(screen.getByText(/Test is read-only: imports are blocked/)).toBeTruthy();

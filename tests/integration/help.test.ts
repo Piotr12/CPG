@@ -44,7 +44,7 @@ describe("help", () => {
     expect(await browser.text("main h1")).toBe("Help");
   });
 
-  it("speaks Polish to a Polish account, linked from /admin, and finds “logowanie”", async () => {
+  it("speaks Polish to a Polish account, linked from /admin, and finds “logowanie” and the import guide (UX-015)", async () => {
     await signInAsAdmin(browser, baseUrl, adminPassword);
     await choosePreference(browser, "pl");
     await closeAccountMenu(browser);
@@ -58,5 +58,11 @@ describe("help", () => {
     expect(await browser.text("main h1")).toBe("Pomoc");
     expect(await topicIds(browser)).toContain("signing-in");
     expect(await browser.text("section#signing-in h2")).toBe("Logowanie");
+
+    await search(browser, "skoroszyt");
+    expect(await topicIds(browser)).toContain("import");
+    expect(await browser.text("section#import h2")).toBe("Import z arkusza");
+    expect(await browser.text("section#import")).toContain("Pobierz szablon");
+    expect(await browser.text("section#import")).toContain("wykonaj próbę");
   });
 });

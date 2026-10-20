@@ -44,7 +44,7 @@ The admin downloads one documented `.xlsx` template (a sheet per master plus BOM
 - **The sidebar's Import entry has no lock icon while the tenant is read-only.** The sidebar renders its entries generically; the page shows the read-only message and disables the upload and the commit (spec Q11). The read-only text points to the Tenants page, as the sidebar labels it.
 - **`canonicalJson` moved to `core/src/domain/json/`** (re-exported from the fingerprint module, unchanged), so the domain's preview token doesn't import a service.
 - **`errorFormatter` in `components/boms/labels.ts` takes `Pick<BomsLabels, "errors">`**, so the import screen reuses the cycle and priority-clash details. No behaviour change.
-- **The screen's count strings are functions** (`Commit 1 change`, `Show 2 unchanged rows`), and Polish keeps counts in parentheses.
+- **The screen's count strings have `{ one, other }` forms** (`Commit 1 change`, `Show 2 unchanged rows`), and Polish keeps counts in parentheses. They were functions at first, which a client component can't receive (lessons); corrected in the E05 closure.
 
 ## Verification
 

@@ -759,6 +759,7 @@ export const en = {
       workbookUnreadable: "This file isn't a readable .xlsx workbook.",
       workbookTooManyRows: "This workbook has more than 2000 rows. Split it into several imports.",
       workbookInflatesTooMuch: "This workbook unpacks to more than 20 MB.",
+      workbookTooManyCells: "This workbook's sheets span more than 200000 cells. Delete anything outside the rows and columns you import.",
       previewToken: "Run a dry run first, then commit with its previewToken.",
     },
     /** What these error codes mean on the Import screen, merged over the other screens' and the shared `errors`. */
