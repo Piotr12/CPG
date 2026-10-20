@@ -9,6 +9,7 @@ import {
 } from "@cpg/db";
 import { ConflictError, NotFoundError, versionConflict } from "../../http/errors";
 import type { AuditActor } from "../audit/actor";
+import { tokenRevokedEntry } from "../api-tokens/api-token-audit";
 import { recordGlobalAudit, type AuditEntry } from "../audit/audit-recorder";
 import { BUILT_IN_ADMIN_USERNAME } from "../auth/auth.service";
 import { hashPassword } from "../auth/password-hash";
@@ -42,9 +43,10 @@ interface Deps {
  * reactivate them. Only `role = user` rows are ever written here, so no path creates a second
  * admin or touches the built-in one, and nothing deletes an account. A reset or deactivation ends
  * every session of that user and deletes every API token of theirs in the same transaction (R06).
- * Every change records its Global audit entry in that same flush (R08). An edit carries the version
- * the caller loaded, and a stale one is `VERSION_CONFLICT`: the newer change is kept (AUD-024,
- * AUD-025, API-029). Callers check that the actor is the admin (`assertAdmin`) before calling.
+ * Every change records its Global audit entry in that same flush (R08), and so does every token it
+ * deletes (AUD-014). An edit carries the version the caller loaded, and a stale one is
+ * `VERSION_CONFLICT`: the newer change is kept (AUD-024, AUD-025, API-029). Callers check that the
+ * actor is the admin (`assertAdmin`) before calling.
  */
 export class UserService {
   private readonly em: EntityManager;
@@ -104,10 +106,13 @@ export class UserService {
 
   /**
    * Applies `change` to a normal user in one transaction, if the user is still at `version`: when
-   * it says so, ends their sessions and deletes their API tokens (API-011, API-012), and records the
-   * audit entry it returns, together with the change itself. The version is compared with a fresh
-   * read, never a copy already in the identity map; a write that lands between that read and the
-   * flush fails the flush's own version check. Both are `VERSION_CONFLICT`.
+   * it says so, ends their sessions and deletes their API tokens (API-011, API-012), each with a
+   * `tokens.api-token.revoked` entry by `actor`, and records the audit entry it returns, together
+   * with the change itself. The tokens are read before the delete, in the same transaction, so the
+   * entries name exactly the tokens it deleted; a failure anywhere rolls the delete back too. The
+   * version is compared with a fresh read, never a copy already in the identity map; a write that
+   * lands between that read and the flush fails the flush's own version check. Both are
+   * `VERSION_CONFLICT`.
    */
   private async changeNormalUser(
     userId: string,
@@ -122,8 +127,10 @@ export class UserService {
         if (user.version !== version) throw versionConflict();
         const { endSessions, audit } = change(user);
         if (endSessions) {
+          const tokens = await em.find(ApiToken, { user: user.id }, { fields: ["id", "name"] });
           await em.nativeDelete(Session, { user: user.id });
           await em.nativeDelete(ApiToken, { user: user.id });
+          for (const token of tokens) recordGlobalAudit(em, actor, tokenRevokedEntry(token));
         }
         if (audit) recordGlobalAudit(em, actor, audit);
         await em.flush();

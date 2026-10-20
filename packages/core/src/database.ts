@@ -36,6 +36,11 @@ export async function revokeBuiltInAdminSessions(config: AppConfig): Promise<num
  * against the argon2id stamp in `setting`; a missing stamp counts as a change (fail closed). The
  * deletion and the new stamp commit together. Run at every server start, with a short-lived
  * connection. Returns how many tokens ended.
+ *
+ * Unaudited by decision: unlike a reset or deactivation in `UserService`, this deletion writes no
+ * `tokens.api-token.revoked` entry. It runs with no request, account or session to attribute it to,
+ * and the audit has no system actor (spec `audit-implicit-token-revocations`, Q1). The Global audit
+ * help topic says so.
  */
 export async function revokeAdminTokensIfPasswordChanged(config: AppConfig): Promise<number> {
   const { adminPassword } = config;
