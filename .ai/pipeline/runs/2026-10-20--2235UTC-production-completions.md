@@ -4,7 +4,7 @@ Source doc: .ai/specs/2026-10-20--2221UTC-production-completions.md
 Issue: #89
 Spec PR: #117
 Engine: om-auto-create-pr (steps: 10, --loop: no)
-Status: in-progress
+Status: complete
 
 ## Goal
 Post partial production completions against Open orders. Each completion pre-fills expected consumption from the pinned revision, records actual consumption (with extra inputs and zero-output waste), and posts output and inputs atomically as one ledger group, with the variance recorded. It works in both the UI and the API.
@@ -68,6 +68,8 @@ Post partial production completions against Open orders. Each completion pre-fil
 
 ## Progress
 
+PR: #119
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Domain and persistence
@@ -90,4 +92,4 @@ Post partial production completions against Open orders. Each completion pre-fil
 ### Phase 4: Verification and publication
 
 - [x] 4.1 Full local gate and live UI evidence — 2150288
-- [ ] 4.2 Review, publication and final CI
+- [x] 4.2 Review, publication and final CI — 7300123
