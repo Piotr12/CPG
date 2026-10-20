@@ -40,7 +40,7 @@ describe("BOM actions", () => {
   });
   afterEach(() => vi.clearAllMocks());
 
-  it("creates a BOM in the bound tenant and generation from the form's text, and refreshes the list (BOM-001)", async () => {
+  it("creates a BOM in the bound tenant and generation from the form's text, and refreshes the list", async () => {
     await expect(createBom("prod", 1, { ...RECIPE, output: "00000005" })).resolves.toEqual({ ok: true, data: bom });
 
     expect(mocks.bound).toHaveBeenCalledWith("prod", 1);
@@ -63,7 +63,7 @@ describe("BOM actions", () => {
     expect(mocks.revalidatePath.mock.calls).toEqual([["/admin/test/boms"], ["/admin/test/boms/00000002"]]);
   });
 
-  it("deactivates and reactivates without a recipe (BOM-022)", async () => {
+  it("sends only the active flag, at the bound version, to deactivate and reactivate", async () => {
     await setBomActive("test", 1, "00000002", 3, false);
     await setBomActive("test", 1, "00000002", 4, true);
 
@@ -73,11 +73,19 @@ describe("BOM actions", () => {
     ]);
   });
 
-  it("refuses a normal user and a signed-out caller, writing and refreshing nothing (TEN-004)", async () => {
-    mocks.currentUser.mockResolvedValue(alice);
-    await expect(createBom("prod", 1, { ...RECIPE, output: "00000005" })).resolves.toMatchObject({ error: { code: "FORBIDDEN" } });
-    mocks.currentUser.mockResolvedValue(null);
-    await expect(setBomActive("prod", 1, "00000002", 1, false)).resolves.toMatchObject({ error: { code: "UNAUTHORIZED" } });
+  it("refuses every write to a normal user and to a signed-out caller, writing and refreshing nothing (TEN-004)", async () => {
+    const writes = [
+      () => createBom("prod", 1, { ...RECIPE, output: "00000005" }),
+      () => updateBomRecipe("prod", 1, "00000002", 1, RECIPE),
+      () => setBomActive("prod", 1, "00000002", 1, false),
+    ];
+    for (const [user, code] of [
+      [alice, "FORBIDDEN"],
+      [null, "UNAUTHORIZED"],
+    ] as const) {
+      mocks.currentUser.mockResolvedValue(user);
+      for (const write of writes) await expect(write()).resolves.toMatchObject({ ok: false, error: { code } });
+    }
 
     expect(mocks.bomService.create).not.toHaveBeenCalled();
     expect(mocks.bomService.update).not.toHaveBeenCalled();

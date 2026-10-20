@@ -169,7 +169,7 @@ describe("BomPage", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
-  it("renders not-found for an ID this tenant doesn't have (TEN-014)", async () => {
+  it("renders not-found when the service has no such BOM", async () => {
     mocks.get.mockRejectedValueOnce(new mocks.AppError("BOM_NOT_FOUND"));
     await expect(resolveServerComponents(page())).rejects.toThrow("404");
   });

@@ -13,6 +13,7 @@ import {
   Tenant,
   TenantAuditEvent,
   UniqueConstraintViolationException,
+  type EntityManager,
   type MaterialType,
   type Orm,
   type TenantCode,
@@ -234,11 +235,30 @@ describe("BomService", () => {
       await expect(service("prod", em).create(CABINET, ACTOR)).rejects.toThrow("disk on fire");
     });
 
-    it("refuses an unknown material, and an inactive output or component (TEN-014, MAT-029)", async () => {
+    it("refuses an unknown material, and an inactive output or component (MAT-029)", async () => {
       await expect(service().create(simple("00000005", "00000099"), ACTOR)).rejects.toMatchObject({ code: "MATERIAL_NOT_FOUND" });
-      await expect(service("test").create(CABINET, ACTOR)).rejects.toMatchObject({ code: "MATERIAL_NOT_FOUND" });
       await expect(service().create(simple("00000011", "00000006"), ACTOR)).rejects.toMatchObject({ code: "MATERIAL_INACTIVE" });
       await expect(service().create(simple("00000005", "00000007"), ACTOR)).rejects.toMatchObject({ code: "MATERIAL_INACTIVE" });
+      expect(await scopedEm().count(Bom, {})).toBe(0);
+    });
+
+    it("doesn't find a Prod-only material ID in Test, which has materials of its own, as output or component, writing nothing (TEN-014)", async () => {
+      await seedMaterials(orm, "test");
+      const prod = scopedEm();
+      prod.create(Material, { code: "00000012", type: "intermediate", description: "Prod-only panel", baseUnit: "each" });
+      await prod.flush();
+      const [highestInTest] = await scopedEm("test").find(Material, {}, { orderBy: { code: "desc" }, limit: 1 });
+      expect(highestInTest.code < "00000012").toBe(true);
+
+      await expect(service("test").create(simple("00000012", "00000006"), ACTOR)).rejects.toMatchObject({
+        code: "MATERIAL_NOT_FOUND",
+        message: "There is no material 00000012 in this tenant.",
+      });
+      await expect(service("test").create(simple("00000004", "00000012"), ACTOR)).rejects.toMatchObject({ code: "MATERIAL_NOT_FOUND" });
+      for (const tenant of ["test", "prod"] as const) {
+        const em = scopedEm(tenant);
+        expect([await em.count(Bom, {}), await em.count(BomRevision, {}), await em.count(TenantAuditEvent, {})]).toEqual([0, 0, 0]);
+      }
     });
 
     it("keeps two alternatives for one output, each with its own ID and revision (BOM-008)", async () => {
@@ -301,7 +321,7 @@ describe("BomService", () => {
       expect(await scopedEm().count(Bom, {})).toBe(3);
     });
 
-    it("refuses a validity edit that makes an overlap while the priority stays, writing nothing (BOM-018, BOM-019)", async () => {
+    it("refuses a validity edit that makes an overlap while the priority stays, writing nothing (BOM-018)", async () => {
       await service().create({ ...CABINET, validThrough: "2027-01-31" }, ACTOR);
       const second = await service().create({ ...CABINET, validFrom: "2027-02-01" }, ACTOR);
 
@@ -309,6 +329,18 @@ describe("BomService", () => {
         code: "BOM_PRIORITY_CONFLICT",
       });
       expect((await service().get(second.id)).revisions).toHaveLength(1);
+    });
+
+    it("refuses a priority edit onto an overlapping active alternative's priority, writing nothing (BOM-019)", async () => {
+      await service().create(CABINET, ACTOR);
+      const second = await service().create({ ...CABINET, priority: 2, validFrom: "2027-06-01" }, ACTOR);
+
+      await expect(service().update(second.id, { priority: 1 }, second.version, ACTOR)).rejects.toMatchObject({
+        code: "BOM_PRIORITY_CONFLICT",
+        message: expect.stringContaining(": BOM 00000001 (2027-06-01 – …)."),
+      });
+      expect(await service().get(second.id)).toMatchObject({ priority: 2, revision: 1, version: second.version, revisions: [expect.objectContaining({ number: 1 })] });
+      expect(await entries("boms.bom.revised")).toEqual([]);
     });
 
     it("ignores inactive alternatives, and re-checks on reactivation, leaving the BOM inactive when it clashes (BOM-030)", async () => {
@@ -409,6 +441,7 @@ describe("BomService", () => {
 
       const dated = await service().update(bom.id, { validThrough: "2027-12-31" }, bom.version, ACTOR);
       expect(dated).toMatchObject({ revision: 2, validThrough: "2027-12-31" });
+      expect(await service().getRevision(bom.id, 1)).toMatchObject({ current: false, validFrom: "2027-01-01", validThrough: null });
       const open = await service().update(bom.id, { validThrough: null }, dated.version, ACTOR);
       expect(open).toMatchObject({ revision: 3, validThrough: null });
     });
@@ -531,6 +564,19 @@ describe("BomService", () => {
       await expect(service("prod", em).update(bom.id, { priority: 3 }, 2, ACTOR)).rejects.toThrow("other");
     });
 
+    it("maps a racing revision with the same number to VERSION_CONFLICT, writing nothing of its own", async () => {
+      const bom = await service().create(CABINET, ACTOR);
+      // Another edit's revision 2 lands after this edit read the BOM at revision 1, as a racing save would.
+      const racer = scopedEm();
+      racer.create(BomRevision, { bom: await racer.findOneOrFail(Bom, { code: bom.id }), number: 2, priority: 9, validFrom: "2027-01-01", validThrough: null });
+      await racer.flush();
+
+      await expect(service().update(bom.id, { priority: 3 }, bom.version, ACTOR)).rejects.toMatchObject({ code: "VERSION_CONFLICT" });
+      expect(await service().get(bom.id)).toMatchObject({ revision: 1, priority: 1, version: bom.version });
+      expect(await scopedEm().count(BomRevision, { priority: 3 })).toBe(0);
+      expect(await entries("boms.bom.revised")).toEqual([]);
+    });
+
     it("finds no BOM by an unknown ID or from the other tenant, and no unknown revision (TEN-014)", async () => {
       const bom = await service().create(CABINET, ACTOR);
 
@@ -594,15 +640,58 @@ describe("BomService", () => {
       expect(await service().list()).toEqual([]);
     });
 
-    it("skips a demo BOM that breaks a rule in an edited Test tenant, giving the next one the next ID", async () => {
-      const em = scopedEm("test");
-      await em.nativeDelete(MaterialConversion, { unit: "ml" });
+    // The demo BOMs, as [output, priority]: 00000004 (side panel) at 1, 00000005 (cabinet) at 1 and at 2 (bolts in cases).
+    it.each<[string, (em: EntityManager) => Promise<unknown>, [string, string, number][]]>([
+      [
+        "the paint's ml conversion removed: skips the side panel's BOM",
+        (em) => em.nativeDelete(MaterialConversion, { unit: "ml" }),
+        [
+          ["00000001", "00000005", 1],
+          ["00000002", "00000005", 2],
+        ],
+      ],
+      [
+        "the bolt's case conversion removed: skips the second cabinet BOM only",
+        (em) => em.nativeDelete(MaterialConversion, { unit: "case" }),
+        [
+          ["00000001", "00000004", 1],
+          ["00000002", "00000005", 1],
+        ],
+      ],
+      [
+        "the side panel retyped raw: skips its own BOM, a raw output",
+        (em) => em.nativeUpdate(Material, { code: "00000004" }, { type: "raw" }),
+        [
+          ["00000001", "00000005", 1],
+          ["00000002", "00000005", 2],
+        ],
+      ],
+      [
+        "the side panel retyped finished: skips both cabinet BOMs, which use it as a component",
+        (em) => em.nativeUpdate(Material, { code: "00000004" }, { type: "finished" }),
+        [["00000001", "00000004", 1]],
+      ],
+      [
+        "the cardboard box inactive: skips both cabinet BOMs",
+        (em) => em.nativeUpdate(Material, { code: "00000006" }, { active: false }),
+        [["00000001", "00000004", 1]],
+      ],
+      [
+        "the steel sheet missing: skips the side panel's BOM",
+        async (em) => {
+          await em.nativeDelete(MaterialConversion, { unit: "t" });
+          await em.nativeDelete(Material, { code: "00000001" });
+        },
+        [
+          ["00000001", "00000005", 1],
+          ["00000002", "00000005", 2],
+        ],
+      ],
+    ])("skips a demo BOM that breaks a rule in an edited Test tenant, the next taking the next ID: %s", async (_case, edit, expected) => {
+      await edit(scopedEm("test"));
 
-      expect(await service("test").seedDemo()).toBe(2);
-      expect((await service("test").list()).map(({ id, priority }) => [id, priority])).toEqual([
-        ["00000001", 1],
-        ["00000002", 2],
-      ]);
+      expect(await service("test").seedDemo()).toBe(expected.length);
+      expect((await service("test").list()).map(({ id, output, priority }) => [id, output, priority])).toEqual(expected);
     });
 
     it("lets a failure that isn't a rule through", async () => {

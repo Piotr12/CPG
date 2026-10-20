@@ -11,7 +11,7 @@ describe("validityOverlap", () => {
     });
   });
 
-  it("counts a single shared day: one period ends the day the other starts (BOM-013)", () => {
+  it("counts a single shared day: one period ends the day the other starts", () => {
     expect(validityOverlap(period("2027-01-01", "2027-03-31"), period("2027-03-31", null))).toEqual({
       from: "2027-03-31",
       through: "2027-03-31",

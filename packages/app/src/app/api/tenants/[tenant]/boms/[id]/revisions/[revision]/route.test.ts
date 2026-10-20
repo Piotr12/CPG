@@ -20,7 +20,7 @@ const get = (revision: string) =>
 describe("/api/tenants/{tenant}/boms/{id}/revisions/{revision}", () => {
   afterEach(() => vi.clearAllMocks());
 
-  it("reads one revision of the BOM in the path's tenant (BOM-020)", async () => {
+  it("reads one revision of the BOM in the path's tenant", async () => {
     mocks.requireApiUser.mockResolvedValue({ username: "alice", role: "user" });
     mocks.tenantScope.mockResolvedValue({ cradle: { bomService: { getRevision: mocks.getRevision } } });
     mocks.getRevision.mockResolvedValue({ bom: "00000002", number: 1, current: false });
