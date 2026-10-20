@@ -20,6 +20,7 @@ Phase 3: integration/race evidence, contracts/acceptance, full gate and independ
 Tenant scoping, deletion and public write contract: risk-high. Same request em throughout. All four coverage measures stay 100%. Docker unavailable locally; use standalone production output with copied static and public assets before startup; CI must cover the image and startup-guard. Shared qa-evidence upload is guarded; link artifacts unless separately authorized.
 
 ## Log
+- 17:01 UTC: Phase 2 implemented. API/race/import tests: 49 passed; UI tests: 34 passed. Regression without fresh-generation fix accepts the old preview (confirmed failing test); fixed code rejects it. Full unit suite: 1,922 passed, all four coverage measures 100%; lint/typecheck/build pass. New integration scenarios are running against a fresh standalone production server.
 - 16:51 UTC: Phase 1 implemented. Targeted db tests: 28 passed. Core reset/demo/schema tests: 12 passed; typecheck passed. Generic deletion uses deferred FK checks for every owned table rather than duplicating dependency sorting; this also handles cycles, keeps FK enforcement on and rejects global references before deletion. Migration rollback tests updated for the new migration.
 - Design PR #105 published after fresh scope/architecture review. Three design findings addressed: nine-digit generation cap, fresh import-preview generation and service-owned direct-call transactions. Baseline lint/typecheck/coverage/build passed; standalone baseline integration 213 passed and one Docker-only skip; static asset setup corrected and icons retested.
 
@@ -35,8 +36,8 @@ Tenant scoping, deletion and public write contract: risk-high. Same request em t
 
 ### Phase 2: API and UI
 
-- [ ] 2.1 Keyed reset API and fresh import-preview generation
-- [ ] 2.2 Cave control, translations and help
+- [x] 2.1 Keyed reset API and fresh import-preview generation — 5f7c819
+- [x] 2.2 Cave control, translations and help — 5f7c819
 
 ### Phase 3: Verification and publication
 
