@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-20 05:27 UTC
 **Agent:** Claude Code (Opus 5.5) via cezar: `om-auto-fix-issue 24` → `om-auto-write-spec 24` → `om-spec-writing --autonomous`
-**Spec:** `.ai/specs/2026-10-20--0532UTC-planning-parameters-safety-stock.md` (written in this run; it moves to `implemented/` once #64 merges)
+**Spec:** `.ai/specs/implemented/2026-10-20--0532UTC-planning-parameters-safety-stock.md` (written in this run on #64; moved to `implemented/` on #65 once #64 merged)
 **Status:** done (spec PR #64 and implementation PR #65 ready for review; no assumption needs confirmation)
 
 ## Goal
@@ -55,7 +55,7 @@
 
 ## Changes
 
-- `.ai/specs/2026-10-20--0532UTC-planning-parameters-safety-stock.md` and `.ai/specs/assets/planning-parameters-safety-stock/` (one current screenshot, three mockups with their HTML), on #64.
+- `.ai/specs/2026-10-20--0532UTC-planning-parameters-safety-stock.md` (now in `implemented/`) and `.ai/specs/assets/planning-parameters-safety-stock/` (one current screenshot, three mockups with their HTML), on #64.
 - The implementation, on #65 (see its tracking plan).
 
 ## Verification
@@ -67,7 +67,7 @@
   - Docker integration: 22 files, 156 tests.
 
 ## Follow-ups
-- Merge #64, then merge `main` into #65 and `git mv` the spec to `implemented/`, then merge #65.
+- #64 is merged; #65 merged `main` and moved the spec to `implemented/`. Merge #65 after its review and QA.
 - #65 needs human QA (`needs-qa`) and a human approval: the pipeline account can't approve its own PR.
 - Only the status label depends on "today" being the UTC date (spec Q10). MRP (slice 3) must decide its business date.
 - #27 (import) must reuse `create`/`update` and the error codes of both services.

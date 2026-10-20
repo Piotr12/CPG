@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-20 05:43 UTC
 **Agent:** Claude Code / claude-opus-5-5. Chain: cezar → `om-auto-fix-issue 24` → feature route → `om-auto-write-spec 24` (spec PR #64) → `om-auto-implement-spec` → `om-auto-create-pr`
-Source doc: .ai/specs/2026-10-20--0532UTC-planning-parameters-safety-stock.md (spec PR #64, open; kept as an untracked file in this worktree until #64 merges)
+Source doc: .ai/specs/implemented/2026-10-20--0532UTC-planning-parameters-safety-stock.md (spec PR #64, merged; moved to `implemented/` on #65)
 Issue: #24
 
 ## Goal
@@ -35,7 +35,7 @@ In each tenant the admin keeps, per material and location, a planning parameter 
 
 ## Risks
 
-- **The spec is not on `main` while this is built.** It comes from spec PR #64. Once #64 merges, merge `main` into this branch and move the spec to `implemented/`.
+- **The spec was not on `main` while this was built.** It came from spec PR #64, kept untracked in the worktree. Once #64 merged, `main` was merged into this branch and the spec moved to `implemented/`.
 - **Migration ordering** against other open stories (#26, #27): whichever merges later regenerates its migration.
 - **Integration test files share one database and one admin** (lessons): assert only on rows this file creates, and create the file's own materials and locations in Prod.
 

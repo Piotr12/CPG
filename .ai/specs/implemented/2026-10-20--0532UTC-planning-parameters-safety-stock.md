@@ -1,8 +1,8 @@
 # The admin sets each material's planning parameters per location and its effective-dated safety-stock targets
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-20 05:32 UTC
-**Issue:** #24 (E03-S03), epic #11 · **Builds on:** `2026-10-19--1858UTC-materials.md` (#22: exact decimals, the material rules, the tenant list-page pattern, the startup seed), `implemented/2026-10-19--2014UTC-locations-customers-suppliers.md` (#23: locations, and its Q5, the "can't be picked once inactive" rule this story ships), `implemented/2026-10-19--2048UTC-sidebar-navigation.md` (#58: the Master data tree), `2026-10-19--2018UTC-read-only-tenants.md` (#25), `implemented/2026-10-19--1548UTC-api-idempotency.md` (#21), `implemented/2026-10-19--1050UTC-audit-log.md` (#20) · **Design authority:** `.ai/specs/product-brief.md` (R02, R03, R05, R07, R08, D05, D06), `.ai/specs/research/CPG-prd001.pdf` §02 ("Locations and planning", "Parameters/precision", "Projection and safety stock"), `CPG-prd-datamodel.pdf` (Material-location parameters; Safety stock target), `CPG-prd-decisions.pdf` §02 (Material-location parameters; Safety targets), `CPG-acceptance.md` (MAT-014…018, MAT-029, DEM-014…017, LFC-019…021, AUD-001…003, API-010, API-029), [mockup 01, the sidebar tree](assets/menu-revamp/01-sidebar-tree/index.html) (its Planning parameters and Safety stock screens, owner-chosen in #58)
+**Issue:** #24 (E03-S03), epic #11 · **Builds on:** `2026-10-19--1858UTC-materials.md` (#22: exact decimals, the material rules, the tenant list-page pattern, the startup seed), `implemented/2026-10-19--2014UTC-locations-customers-suppliers.md` (#23: locations, and its Q5, the "can't be picked once inactive" rule this story ships), `implemented/2026-10-19--2048UTC-sidebar-navigation.md` (#58: the Master data tree), `implemented/2026-10-19--2018UTC-read-only-tenants.md` (#25), `implemented/2026-10-19--1548UTC-api-idempotency.md` (#21), `implemented/2026-10-19--1050UTC-audit-log.md` (#20) · **Design authority:** `.ai/specs/product-brief.md` (R02, R03, R05, R07, R08, D05, D06), `.ai/specs/research/CPG-prd001.pdf` §02 ("Locations and planning", "Parameters/precision", "Projection and safety stock"), `CPG-prd-datamodel.pdf` (Material-location parameters; Safety stock target), `CPG-prd-decisions.pdf` §02 (Material-location parameters; Safety targets), `CPG-acceptance.md` (MAT-014…018, MAT-029, DEM-014…017, LFC-019…021, AUD-001…003, API-010, API-029), [mockup 01, the sidebar tree](../assets/menu-revamp/01-sidebar-tree/index.html) (its Planning parameters and Safety stock screens, owner-chosen in #58)
 
 ## 📝 TLDR
 
@@ -183,9 +183,9 @@ Prototype: `.ai/specs/assets/planning-parameters-safety-stock/` (static, illustr
 - `mockup-02-add-parameters.png`: the add dialog with the raw-material error.
 - `mockup-03-safety-stock.png`: targets with their status.
 
-![Planning parameters mockup](assets/planning-parameters-safety-stock/mockup-01-planning-parameters.png)
-![Add parameters mockup](assets/planning-parameters-safety-stock/mockup-02-add-parameters.png)
-![Safety stock mockup](assets/planning-parameters-safety-stock/mockup-03-safety-stock.png)
+![Planning parameters mockup](../assets/planning-parameters-safety-stock/mockup-01-planning-parameters.png)
+![Add parameters mockup](../assets/planning-parameters-safety-stock/mockup-02-add-parameters.png)
+![Safety stock mockup](../assets/planning-parameters-safety-stock/mockup-03-safety-stock.png)
 
 ## 📝 Edge Cases & Failure Scenarios
 
@@ -283,3 +283,12 @@ One PR, built in this order (Q1). The phases are review checkpoints, not separat
     - a normal user sees both lists without any control (TEN-004).
 
     Then the full gate: lint, typecheck, `test:coverage` (100%), build, `test:integration`, and `npm audit` (no new dependency expected).
+
+## Implementation notes
+
+Implemented on #65; the execution plan is `.ai/pipeline/runs/2026-10-20--0543UTC-planning-parameters-safety-stock.md`, which records each deviation in full. In short:
+- `safetyTargetOn` returns `"0.000000"` with no target in force, the one six-decimal form (Q4), rather than `"0"`.
+- An unknown or malformed material or location in a `PATCH`/`DELETE` path answers 404 `MATERIAL_NOT_FOUND` / `LOCATION_NOT_FOUND`, as the materials routes do for an ID; a date matching no target is the target's own not-found.
+- The tenant home links to both screens, as it does to every other master-data screen.
+- `serverAction` now keeps the field errors of a `ValidationError` a service throws, so the raw-material refusal shows next to Make/Buy; tall dialogs scroll (`TALL_DIALOG`).
+
