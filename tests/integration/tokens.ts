@@ -1,11 +1,14 @@
 import type { Browser } from "./browser";
-import { signedInAs } from "./sign-in";
+import { openAccountMenu } from "./sign-in";
 
-/** Opens the tokens screen from the menu. */
+/** Opens the tokens screen from the account card's popover, where API tokens lives. */
 export async function openTokens(browser: Browser, baseUrl: string) {
   await browser.open(`${baseUrl}/admin`);
-  await browser.waitUntil(signedInAs());
-  await browser.clickRole("link", "API tokens");
+  const panel = await openAccountMenu(browser);
+  await browser.click(`${panel} a[href='/admin/tokens']`);
+  // The popover closes on arrival, but while it fades out it is still modal and hides the page from
+  // role queries: wait until it has gone.
+  await browser.waitUntil(`location.pathname === "/admin/tokens" && !document.querySelector("[data-slot=popover-content]")`);
   await browser.waitFor("table");
 }
 

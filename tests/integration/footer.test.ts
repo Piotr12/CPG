@@ -18,11 +18,14 @@ interface Footer {
 const readFooter = (browser: Browser) =>
   browser.evaluate<Footer>(`(() => {
     const footer = [...document.querySelectorAll("footer")].at(-1);
-    // Next.js appends <script>s and its own <next-route-announcer> custom element; neither is content.
-    const visible = [...document.body.children].filter((e) => e.tagName !== "SCRIPT" && !e.tagName.includes("-") && e.offsetParent !== null);
+    // The footer ends the content column beside the sidebar, so it is checked against every shown
+    // element, not only <body>'s children: nothing shown may come after it. Next.js appends <script>s
+    // and its own <next-route-announcer> custom element; neither is content.
+    const shown = [...document.body.querySelectorAll("*")].filter((e) => e.tagName !== "SCRIPT" && !e.tagName.includes("-") && e.offsetParent !== null);
+    const after = shown.filter((e) => !footer.contains(e) && footer.compareDocumentPosition(e) & Node.DOCUMENT_POSITION_FOLLOWING);
     return {
       text: footer.textContent,
-      isLast: visible.at(-1) === footer,
+      isLast: after.length === 0,
       links: [...footer.querySelectorAll("a")].map((a) => ({ text: a.textContent, href: a.href, target: a.target })),
     };
   })()`);

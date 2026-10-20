@@ -1,6 +1,8 @@
 import { Suspense, type ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { AppBar, AppBarPlaceholder } from "../components/layout/app-bar";
+import { SidebarProvider } from "@cpg/ui/components/sidebar";
+import { TooltipProvider } from "@cpg/ui/components/tooltip";
+import { AppSidebar, SidebarSkeleton } from "../components/layout/app-sidebar";
 import { AppFooter } from "../components/layout/app-footer";
 import { THEME_SCRIPT } from "../preferences/theme";
 import RootLayout, { metadata } from "./layout";
@@ -9,7 +11,7 @@ vi.mock("next/font/google", () => ({
   Geist: () => ({ variable: "font-geist-sans" }),
   Geist_Mono: () => ({ variable: "font-geist-mono" }),
 }));
-vi.mock("../components/layout/app-bar", () => ({ AppBar: () => null, AppBarPlaceholder: () => null }));
+vi.mock("../components/layout/app-sidebar", () => ({ AppSidebar: () => null, SidebarSkeleton: () => null }));
 
 type Element = ReactElement<{ children: Element[]; [prop: string]: unknown }>;
 const layout = () => RootLayout({ children: <p>page</p>, params: Promise.resolve({}) }) as Element;
@@ -32,14 +34,22 @@ describe("RootLayout", () => {
     expect(head.props.children).toEqual(<script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />);
   });
 
-  it("renders the request-time app bar, then the page, then the footer", () => {
+  it("renders the request-time sidebar beside a content column holding the page, then the footer", () => {
     const [, body] = layout().props.children;
 
     expect(body.type).toBe("body");
-    const [slot, page, footer] = body.props.children;
+    const tooltips = body.props.children as unknown as Element;
+    expect(tooltips.type).toBe(TooltipProvider);
+    const provider = tooltips.props.children as unknown as Element;
+    expect(provider.type).toBe(SidebarProvider);
+    // A column below md, a row from md, and a column again when the visitor bar stands in for the sidebar.
+    expect(provider.props.className).toBe("flex-col md:flex-row md:has-[[data-visitor-bar]]:flex-col");
+    const [slot, column] = provider.props.children;
     expect(slot.type).toBe(Suspense);
-    expect(slot.props.fallback).toEqual(<AppBarPlaceholder />);
-    expect((slot.props.children as unknown as Element).type).toBe(AppBar);
+    expect(slot.props.fallback).toEqual(<SidebarSkeleton />);
+    expect((slot.props.children as unknown as Element).type).toBe(AppSidebar);
+    const [page, footer] = column.props.children;
+    expect(column.props["data-content-column"]).toBe(true);
     expect(page).toEqual(<p>page</p>);
     expect(footer.type).toBe(AppFooter);
   });

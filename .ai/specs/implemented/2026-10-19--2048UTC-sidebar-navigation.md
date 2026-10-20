@@ -1,8 +1,8 @@
 # A left sidebar with a Test | Prod switch and one master-data tree
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-19 20:48 UTC
-**Issue:** #58 · **Supersedes (layout only):** `2026-10-19--1312UTC-navigation-menu.md` (#43) · **Builds on:** `2026-10-19--0913UTC-test-prod-tenants.md` (TEN-011, switcher Q8), `2026-10-19--1858UTC-materials.md` (#22) · **Holds:** #23 (spec PR #54, implementation PR #56), #25 (spec PR #55, implementation PR #57) · **Design authority:** [mockup 01, the left sidebar tree](assets/menu-revamp/01-sidebar-tree/index.html), chosen by Piotr12 from the five concepts in [`assets/menu-revamp/`](assets/menu-revamp/README.md) ([shared brief](assets/menu-revamp/BRIEF.md))
+**Issue:** #58 · **Supersedes (layout only):** `2026-10-19--1312UTC-navigation-menu.md` (#43) · **Builds on:** `2026-10-19--0913UTC-test-prod-tenants.md` (TEN-011, switcher Q8), `2026-10-19--1858UTC-materials.md` (#22) · **Holds:** #23 (spec PR #54, implementation PR #56), #25 (spec PR #55, implementation PR #57) · **Design authority:** [mockup 01, the left sidebar tree](../assets/menu-revamp/01-sidebar-tree/index.html), chosen by Piotr12 from the five concepts in [`assets/menu-revamp/`](../assets/menu-revamp/README.md) ([shared brief](../assets/menu-revamp/BRIEF.md))
 
 ## 📝 TLDR
 
@@ -285,3 +285,7 @@ Prototype: `.ai/specs/assets/menu-revamp/01-sidebar-tree/index.html` (the visual
    - 🔒 shows on Prod's side of the switch at 1280 and 390 px;
    - the banner shows on `/admin/prod/materials` and not on Test;
    - lifting the lock removes both.
+
+## Implementation notes
+
+Implemented in PR #60, both phases (#57 merged while Phase 1 was finishing). The deviations from this spec (the rewritten `use-mobile` hook, `TooltipProvider` in the root layout, extra strings, the read-only side's `aria-label`) are listed in the run plan `.ai/pipeline/runs/2026-10-19--2110UTC-sidebar-navigation.md`.

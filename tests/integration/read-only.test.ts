@@ -14,8 +14,18 @@ const ready = (element: string) =>
 /** The page's button with exactly this text, if any. */
 const button = (name: string) =>
   `[...document.querySelectorAll("main button")].find((b) => b.textContent.trim() === ${JSON.stringify(name)})`;
-/** The tenant strip that is shown: Next.js keeps earlier pages' strips mounted but hidden. */
-const shownStrip = `[...document.querySelectorAll("[role=region][data-tenant]")].find((strip) => strip.offsetParent)`;
+/** The read-only banner that is shown, if any: Next.js keeps earlier pages mounted but hidden. */
+const shownBanner = `[...document.querySelectorAll("[data-read-only-banner]")].find((banner) => banner.offsetParent)`;
+/** The tenant header row that is shown: the banner streams in under it. */
+const shownHeader = `[...document.querySelectorAll("[role=region][data-tenant]")].find((row) => row.offsetParent)`;
+/** Whether a side of the switch in `bar` (the sidebar, or the top bar below 768 px) shows the lock and says read-only. */
+const lockedSide = (bar: string, name: string) =>
+  `(() => {
+    const side = document.querySelector(${JSON.stringify(`${bar} [data-tenant-switch] [aria-label="${name} (read-only)"]`)});
+    const lock = side?.querySelector("[data-read-only]");
+    return Boolean(lock && lock.getBoundingClientRect().width > 0);
+  })()`;
+const anyLock = `Boolean(document.querySelector("[data-tenant-switch] [data-read-only]"))`;
 
 /** Opens a tenant's materials list and waits until it is shown. */
 async function openMaterials(browser: Browser, tenant: string) {
@@ -88,16 +98,38 @@ describe("read-only tenants on the screens (R05)", () => {
 
   it("labels Prod read-only on its pages and offers no write control, while Test stays writable (TEN-018, TEN-021)", async () => {
     await openMaterials(admin, "prod");
-    await admin.waitUntil(`${shownStrip}?.innerText.includes("Business data can't be changed.")`);
+    await admin.waitUntil(`Boolean(${shownBanner}) && ${shownHeader}?.dataset.tenant === "prod"`);
 
-    expect(await admin.evaluate<string>(`${shownStrip}.innerText.replace(/\\s+/g, " ")`)).toContain(
-      "Prod tenant — live data READ-ONLY Business data can't be changed.",
+    expect(await admin.evaluate<string>(`${shownBanner}.innerText.replace(/\\s+/g, " ").trim()`)).toBe(
+      "Prod is read-only — business changes are blocked. Reading, the audit, preferences and user management still work. Change on Tenants",
+    );
+    expect(await admin.evaluate<string>(`${shownBanner}.getAttribute("role")`)).toBe("status");
+    expect(await admin.evaluate<string>(`${shownBanner}.querySelector("a").getAttribute("href")`)).toBe("/admin");
+    expect(await admin.evaluate<boolean>(lockedSide("[data-slot=sidebar]", "Prod"))).toBe(true);
+    expect(await admin.evaluate<string>(`document.querySelector("[data-slot=sidebar] nav").innerText`)).toContain(
+      "Read-only — business changes are blocked",
     );
     expect(await admin.evaluate<boolean>(`Boolean(${button("Create material")})`)).toBe(false);
 
     await openMaterials(admin, "test");
     await admin.waitUntil(ready(button("Create material")));
-    expect(await admin.evaluate<string>(`${shownStrip}.innerText`)).not.toContain("Business data can't be changed.");
+    expect(await admin.evaluate<boolean>(`Boolean(${shownBanner})`)).toBe(false);
+    // Test's side stays unlocked; Prod's keeps its lock from any page.
+    expect(await admin.evaluate<boolean>(lockedSide("[data-slot=sidebar]", "Test"))).toBe(false);
+    expect(await admin.evaluate<boolean>(lockedSide("[data-slot=sidebar]", "Prod"))).toBe(true);
+  });
+
+  it("shows the lock on the top bar's switch at 390 px, with nothing sticking out", async () => {
+    try {
+      await admin.setViewport(390, 844);
+      await openMaterials(admin, "prod");
+      await admin.waitUntil(`Boolean(${shownBanner})`);
+
+      expect(await admin.evaluate<boolean>(lockedSide("[data-mobile-bar]", "Prod"))).toBe(true);
+      expect(await admin.evaluate<boolean>(`document.documentElement.scrollWidth <= innerWidth`)).toBe(true);
+    } finally {
+      await admin.setViewport(1280, 720);
+    }
   });
 
   it("keeps the change in the Global audit (AUD-016)", async () => {
@@ -115,6 +147,7 @@ describe("read-only tenants on the screens (R05)", () => {
 
     await openMaterials(admin, "prod");
     await admin.waitUntil(ready(button("Create material")));
-    expect(await admin.evaluate<string>(`${shownStrip}.innerText`)).not.toContain("Business data can't be changed.");
+    expect(await admin.evaluate<boolean>(`Boolean(${shownBanner})`)).toBe(false);
+    expect(await admin.evaluate<boolean>(anyLock)).toBe(false);
   });
 });

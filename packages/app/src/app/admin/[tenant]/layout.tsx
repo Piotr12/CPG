@@ -1,9 +1,11 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { TENANT_CODES, TENANT_NAMES, tenantCodeSchema, type TenantCode } from "@cpg/core";
-import { TenantStrip } from "../../../components/tenants/tenant-strip";
+import { ReadOnlyBanner } from "../../../components/tenants/read-only-banner";
+import { TenantHeader } from "../../../components/tenants/tenant-header";
 
-/** Both tenants are known at build time, so their strips are part of the static shell. */
+/** Both tenants are known at build time, so their header rows are part of the static shell. */
 export function generateStaticParams() {
   return TENANT_CODES.map((tenant) => ({ tenant }));
 }
@@ -21,11 +23,18 @@ export async function generateMetadata({ params }: LayoutProps<"/admin/[tenant]"
   return { title: { template: `${name} · %s`, default: `${name} · Admin · Caveman Planning Good` } };
 }
 
-/** Pages that read and write one tenant's data: they show its strip (TEN-011) and switcher. */
+/**
+ * Pages that read and write one tenant's data: they show its header row (TEN-011) and, while the
+ * tenant is read-only, the banner under it (R05), streamed at request time.
+ */
 export default async function TenantLayout({ children, params }: LayoutProps<"/admin/[tenant]">) {
+  const tenant = await tenantFrom(params);
   return (
     <>
-      <TenantStrip scope={await tenantFrom(params)} />
+      <TenantHeader scope={tenant} />
+      <Suspense fallback={null}>
+        <ReadOnlyBanner tenant={tenant} />
+      </Suspense>
       {children}
     </>
   );
