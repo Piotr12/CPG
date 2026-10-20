@@ -132,9 +132,9 @@ describe("new BOMs", () => {
       sheet("bomLines", line("R1", 1, 1), line("R2", 41, 1), line("R2", 1, 1), line("R2", 42, 1)),
     ]);
     expect(report.errors.map((error) => [error.sheet, error.row, error.column, error.code, error.params])).toEqual([
-      ["BOM headers", 2, "Output material ID", "IMPORT_MISSING_REFERENCE", { id: "00000099" }],
-      ["BOM lines", 3, "Component material ID", "IMPORT_MISSING_REFERENCE", { id: "00000041" }],
-      ["BOM lines", 5, "Component material ID", "IMPORT_MISSING_REFERENCE", { id: "00000042" }],
+      ["BOM headers", 2, "Output material ID", "IMPORT_MISSING_REFERENCE", { id: "00000099", record: "material" }],
+      ["BOM lines", 3, "Component material ID", "IMPORT_MISSING_REFERENCE", { id: "00000041", record: "material" }],
+      ["BOM lines", 5, "Component material ID", "IMPORT_MISSING_REFERENCE", { id: "00000042", record: "material" }],
     ]);
   });
 
@@ -245,7 +245,7 @@ describe("existing BOMs", () => {
         column: "BOM ID",
         code: "IMPORT_UNKNOWN_ID",
         message: "BOM 00000009 doesn't exist in Prod. Leave the ID blank to create a new BOM.",
-        params: { id: "00000009" },
+        params: { id: "00000009", record: "BOM" },
       },
     ]);
   });

@@ -34,6 +34,18 @@ describe("runRow", () => {
     expect(ctx.errors).toEqual([{ sheet: "Materials", row: 2, column: null, code: "REFUSED", message: "Refused." }]);
     expect((await kit.write(({ materialService }) => materialService.get("00000001"))).description).toBe("Steel sheet");
   });
+
+  it("starts every row from an empty identity map, so flushes don't slow down as rows pile up", async () => {
+    const ctx = await context();
+    await inRequestTransaction(ctx.em, async () => {
+      await runRow(ctx, "locations", 2, async () => {
+        const created = await ctx.services.locationService.create({ name: "Cave" }, ACTOR);
+        return { sheet: "Locations", row: 2, action: "create", record: created.id, label: created.name, changes: [] };
+      });
+      expect(ctx.em.getUnitOfWork().getIdentityMap().keys()).toEqual([]);
+    });
+    expect(ctx.outcomes).toHaveLength(1);
+  });
 });
 
 describe("existing and referenced", () => {

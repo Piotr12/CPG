@@ -106,7 +106,7 @@ describe("the dry run and the commit", () => {
         column: "ID",
         code: "IMPORT_UNKNOWN_ID",
         message: "Material 00009876 doesn't exist in Prod. Leave the ID blank to create a new material.",
-        params: { id: "00009876" },
+        params: { id: "00009876", record: "material" },
       },
     ]);
     expect(report.previewToken).toBeNull();

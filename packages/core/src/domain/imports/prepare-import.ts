@@ -269,7 +269,8 @@ function unique<T>(
     const list = `${numbers.slice(0, -1).join(", ")} and ${numbers.at(-1)}`;
     for (const row of numbers) {
       duplicated.add(row);
-      errors.push(issue(name, row, report.column, "IMPORT_DUPLICATE_KEY", report.message(value, list), { key: value, rows: list }));
+      // `rows` is language-neutral for a screen's own sentence: "2, 4, 6".
+      errors.push(issue(name, row, report.column, "IMPORT_DUPLICATE_KEY", report.message(value, list), { key: value, rows: numbers.join(", ") }));
     }
   }
   return rows.filter(({ row }) => !duplicated.has(row));
@@ -366,7 +367,8 @@ function prepareBoms(headerRows: SheetRow<Values>[], lineRows: SheetRow<Values>[
       line.values.bom.kind === "id"
         ? `BOM ${line.values.bom.id} has no row on the BOM headers sheet. Add its header: a BOM's lines are its complete recipe.`
         : `No row on the BOM headers sheet has the import reference ${line.values.bom.reference}.`;
-    errors.push(issue(LINES, row, "BOM", "IMPORT_LINE_WITHOUT_HEADER", message));
+    const missing = line.values.bom.kind === "id" ? line.values.bom.id : line.values.bom.reference;
+    errors.push(issue(LINES, row, "BOM", "IMPORT_LINE_WITHOUT_HEADER", message, { bom: missing }));
   }
 
   return prepared.filter((bom) => {

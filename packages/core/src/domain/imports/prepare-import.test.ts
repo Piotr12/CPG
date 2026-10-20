@@ -126,7 +126,7 @@ describe("prepareImport — duplicate keys (XLS-005)", () => {
     ]);
     const message = "Material 00000001 appears on rows 2, 4 and 6: keep one row per material.";
     expect(result.errors).toEqual(
-      [2, 4, 6].map((row) => ({ sheet: "Materials", row, column: "ID", code: "IMPORT_DUPLICATE_KEY", message, params: { key: "00000001", rows: "2, 4 and 6" } })),
+      [2, 4, 6].map((row) => ({ sheet: "Materials", row, column: "ID", code: "IMPORT_DUPLICATE_KEY", message, params: { key: "00000001", rows: "2, 4, 6" } })),
     );
     expect(result.materials.map((row) => row.values.description)).toEqual(["B", "D"]);
   });
@@ -226,6 +226,7 @@ describe("prepareImport — BOMs (spec Q8)", () => {
       ["BOM lines", 3, "BOM", "IMPORT_LINE_WITHOUT_HEADER", "No row on the BOM headers sheet has the import reference R9."],
       ["BOM headers", 2, null, "IMPORT_BOM_WITHOUT_LINES", "This BOM has no rows on the BOM lines sheet: list its complete recipe there."],
     ]);
+    expect(result.errors.slice(0, 2).map((error) => error.params)).toEqual([{ bom: "00000004" }, { bom: "R9" }]);
     expect(result.boms.map((bom) => bom.values.id)).toEqual(["00000003"]);
   });
 
