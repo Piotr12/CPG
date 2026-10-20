@@ -1,3 +1,4 @@
+import { assertNoProductionOrders, productionUsingMaterial } from "../production-orders/production-order-usage";
 import { assertNoCustomerDemand, orderUsingMaterial } from "../customer-orders/customer-order-usage";
 import { assertNoPhysicalStock, hasStockMovements } from "../stock/stock-usage";
 import {
@@ -138,11 +139,14 @@ export class MaterialService {
         if (await hasStockMovements(em, material)) {
           throw new ConflictError("This material has stock movements, so its type and base unit are locked permanently.", "MATERIAL_HAS_MOVEMENTS");
         }
+        const production = await productionUsingMaterial(em, material);
+        if (production !== null) throw new ConflictError(`Production order ${production} uses this material, so its type and base unit cannot change.`, fields.type !== undefined ? "MATERIAL_TYPE_IN_USE" : "BASE_UNIT_IN_USE");
         await assertNotInBoms(em, material, fields);
         const order = await orderUsingMaterial(em, material);
         if (order !== null) throw new ConflictError(`Customer order ${order} uses this material, so its type and base unit cannot change.`, fields.type !== undefined ? "MATERIAL_TYPE_IN_USE" : "BASE_UNIT_IN_USE");
       }
       if (active === false) {
+        await assertNoProductionOrders(em, { output: material });
         await assertNoPhysicalStock(em, { material });
         await assertNoCustomerDemand(em, material);
       }

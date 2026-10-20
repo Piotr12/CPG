@@ -11,9 +11,9 @@ import { DEMO_STOCK } from "../../domain/stock/demo-stock";
 import { DEMO_SUPPLIERS } from "../../domain/suppliers/demo-suppliers";
 
 /** One definition of seed order: references follow their materials and locations. */
-export const DEMO_KINDS = ["materials", "locations", "customers", "suppliers", "planning parameter sets", "safety-stock targets", "BOMs", "forecasts", "customer orders", "stock openings", "purchase requisitions", "purchase orders"] as const;
+export const DEMO_KINDS = ["materials", "locations", "customers", "suppliers", "planning parameter sets", "safety-stock targets", "BOMs", "forecasts", "customer orders", "stock openings", "purchase requisitions", "purchase orders", "production orders"] as const;
 export type DemoKind = (typeof DEMO_KINDS)[number];
-export type DemoServices = Pick<Cradle, "materialService" | "locationService" | "customerService" | "supplierService" | "planningParameterService" | "safetyStockTargetService" | "bomService" | "forecastService" | "customerOrderService" | "stockService" | "purchaseRequisitionService" | "purchaseOrderService">;
+export type DemoServices = Pick<Cradle, "materialService" | "locationService" | "customerService" | "supplierService" | "planningParameterService" | "safetyStockTargetService" | "bomService" | "forecastService" | "customerOrderService" | "stockService" | "purchaseRequisitionService" | "purchaseOrderService" | "productionOrderService">;
 
 /** Shared by startup's best-effort runner and reset's atomic fail-fast runner. */
 export function demoSeeders(services: DemoServices): Record<DemoKind, { expected: number; run: () => Promise<number> }> {
@@ -30,6 +30,7 @@ export function demoSeeders(services: DemoServices): Record<DemoKind, { expected
     "stock openings": { expected: DEMO_STOCK.length, run: () => services.stockService.seedDemo() },
     "purchase requisitions": { expected: DEMO_REQUISITIONS.length, run: () => services.purchaseRequisitionService.seedDemo() },
     "purchase orders": { expected: DEMO_ORDERS.length, run: () => services.purchaseOrderService.seedDemo() },
+    "production orders": { expected: 1, run: () => services.productionOrderService.seedDemo() },
   };
 }
 

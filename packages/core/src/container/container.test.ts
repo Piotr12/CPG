@@ -1,3 +1,4 @@
+import { ProductionOrderService } from "../services/production-orders/production-order.service";
 import { CustomerOrderService } from "../services/customer-orders/customer-order.service";
 import { StockService } from "../services/stock/stock.service";
 import { mkdtempSync } from "node:fs";
@@ -57,6 +58,7 @@ describe("createAppContainer", () => {
     expect(cradle.forecastService).toBeInstanceOf(ForecastService);
     expect(cradle.bomService).toBeInstanceOf(BomService);
     expect(cradle.purchaseRequisitionService).toBeInstanceOf(PurchaseRequisitionService);
+    expect(cradle.productionOrderService).toBeInstanceOf(ProductionOrderService);
     expect(cradle.purchaseOrderService).toBeInstanceOf(PurchaseOrderService);
     expect(cradle.goodsReceiptService).toBeInstanceOf(GoodsReceiptService);
     expect(cradle.customerOrderService).toBeInstanceOf(CustomerOrderService);

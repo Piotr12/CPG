@@ -1,3 +1,4 @@
+import { ProductionOrderService } from "../services/production-orders/production-order.service";
 import { CustomerOrderService } from "../services/customer-orders/customer-order.service";
 import { StockService } from "../services/stock/stock.service";
 import { entities, initOrm, type Orm } from "@cpg/db";
@@ -65,6 +66,7 @@ export function createAppContainer(config: AppConfig, orm: Orm): AppContainer {
     purchaseRequisitionService: asClass(PurchaseRequisitionService).scoped(),
     purchaseOrderService: asClass(PurchaseOrderService).scoped(),
     goodsReceiptService: asClass(GoodsReceiptService).scoped(),
+    productionOrderService: asClass(ProductionOrderService).scoped(),
     customerOrderService: asClass(CustomerOrderService).scoped(),
     importService: asClass(ImportService).scoped(),
     // `tenant` is registered only by tenantScope(): resolving it from a global scope fails (strict).
