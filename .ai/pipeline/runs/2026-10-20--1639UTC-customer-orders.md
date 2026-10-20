@@ -55,6 +55,8 @@ Risk-high additive schema, new aggregate contract, conversion history and line i
 
 - 18:16 UTC — Merged-source lint, typecheck, build and 2,051 unit tests PASS; all four coverage measures remain 100%. Real SQLite regression applies both pending order migrations after main stock schema and preserves tenant state, without order/stock schema drift. Starting full integration on a fresh standalone copy.
 
+- 18:20 UTC — Re-plan: merged-source integration225PASS/1Docker skip/1navigation failure (link covered by sidebar footer after scroll). Helper now centers the target within its scroll container before clicking. Main advanced again to d8d6093 (atomic Test reset); merged its shared seed registry, adding order seeding to startup/reset and rollback/preservation regressions. Full gate must rerun on this final composition.
+
 ## Verification
 - Phase 1: lint/typecheck passed; full coverage passed, 289 files / 1,927 tests, all four measures 100%.
 - Final gate: lint and typecheck PASS;296 unit files/1,970 tests PASS,100% lines/statements/branches/functions (4,289 lines,4,866 statements,2,106 branches,1,667 functions); Next16.4.2 build PASS.

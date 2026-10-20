@@ -53,6 +53,7 @@ describe("migrate", () => {
       "Migration20261020080940_boms",
       "Migration20261020164223_customer_orders",
       "Migration20261020164229_stock_ledger",
+      "Migration20261020164640_test_reset",
       "Migration20261020173715_customer_order_demand_index",
     ]);
     expect(await migrate({ databasePath })).toEqual([]);
@@ -62,10 +63,10 @@ describe("migrate", () => {
     try {
       const previous = migrations.map((migration) => migration.name).filter((name) => !name.includes("customer_order"));
       await orm.migrator.up({ migrations: previous });
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 14, pending: 2 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 15, pending: 2 });
       await orm.em.getConnection().execute("update tenant set generation = 23 where code = 'prod'");
       await orm.migrator.up();
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 16, pending: 0 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 17, pending: 0 });
       expect(await orm.em.getConnection().execute("select generation from tenant where code = 'prod'")).toEqual([{ generation: 23 }]);
       expect(await orm.em.getConnection().execute("select count(*) as count from stock_movement")).toEqual([{ count: 0 }]);
       expect(await orm.em.getConnection().execute("select count(*) as count from customer_order")).toEqual([{ count: 0 }]);
@@ -84,9 +85,9 @@ describe("getMigrationStatus", () => {
     const orm = await initOrm({ databasePath });
 
     try {
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 16 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 17 });
       await orm.migrator.up();
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 16, pending: 0 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 17, pending: 0 });
     } finally {
       await orm.close();
     }
@@ -160,6 +161,7 @@ describe("migrations", () => {
       await orm.migrator.down();
       expect(await orm.em.getConnection().execute("select name from sqlite_master where type = 'index' and name = 'customer_order_line_tenant_code_material_id_removed_status_id_index'")).toEqual([]);
       expect(await tables()).toContain("customer_order_line");
+      await orm.migrator.down(); // Test reset audit exception.
       await orm.migrator.down();
       expect(await triggers()).not.toContain("stock_movement_no_update");
       expect(await tables()).not.toContain("stock_balance");

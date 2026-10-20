@@ -4668,7 +4668,8 @@
             "delete"
           ],
           "forEach": "row",
-          "body": "select raise(abort, 'audit is append-only');"
+          "body": "select raise(abort, 'audit is append-only');",
+          "when": "old.tenant_code <> 'test'"
         },
         {
           "name": "tenant_audit_event_no_update",

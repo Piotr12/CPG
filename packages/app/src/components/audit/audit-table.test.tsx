@@ -76,9 +76,9 @@ describe("AuditTable", () => {
   });
 
   it("shows an action it has no name for as its ID", () => {
-    render(<AuditTable entries={[entry({ action: "tenants.tenant.reset" })]} label="Global audit" labels={en.audit} />);
+    render(<AuditTable entries={[entry({ action: "future.entity.changed" })]} label="Global audit" labels={en.audit} />);
 
-    expect(screen.getByText("tenants.tenant.reset")).toBeTruthy();
+    expect(screen.getByText("future.entity.changed")).toBeTruthy();
   });
 
   it("names a read-only flag change, with its before and after (AUD-016)", () => {
