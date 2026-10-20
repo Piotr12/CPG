@@ -1,3 +1,4 @@
+import type { StockService } from "../services/stock/stock.service";
 import type { EntityManager, Orm } from "@cpg/db";
 import type { AwilixContainer } from "awilix";
 import type { AppConfig } from "../config";
@@ -34,6 +35,7 @@ export interface Cradle {
   apiTokenService: ApiTokenService;
   auditService: AuditService;
   idempotencyService: IdempotencyService;
+  stockService: StockService;
   materialService: MaterialService;
   locationService: LocationService;
   customerService: CustomerService;

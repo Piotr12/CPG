@@ -1,3 +1,4 @@
+import { assertNoPhysicalStock } from "../stock/stock-usage";
 import type { EntityManager } from "@cpg/db";
 import { DEMO_LOCATIONS } from "../../domain/locations/demo-locations";
 import type { AuditActor } from "../audit/actor";
@@ -22,6 +23,7 @@ export class LocationService {
       subjectType: "Location",
       actionPrefix: "locations.location",
       demoNames: DEMO_LOCATIONS,
+      beforeDeactivate: (em, location) => assertNoPhysicalStock(em, { location }),
     });
   }
 
