@@ -31,7 +31,10 @@ Risk-high additive schema, new aggregate contract, conversion history and line i
 ## Log
 - 16:39 UTC — Feature triage and PRD analysis complete. Design PR #101 is ready, scope review approved. Spec defaults posted on issue/PR. Local npm ci installed 913 packages (no lockfile change; 10 known high advisories). No runtime code written before plan. New implementation slot is free.
 
+- 16:49 UTC — Phase 1 complete: tenant-owned header/line entities, generated migration, strict validators, service, material/location guards and Test seed. Removed unposted lines stay hidden historical references so material type/base-unit locks survive. Audit keeps allowlisted lines as JSON text because existing AuditSnapshot values are scalar.
+
 ## Verification
+- Phase 1: lint/typecheck passed; full coverage passed, 289 files / 1,927 tests, all four measures 100%.
 - Design metadata checks: 2 test files, 6 tests passed. Full implementation gate pending.
 
 ## Progress
@@ -39,10 +42,10 @@ Risk-high additive schema, new aggregate contract, conversion history and line i
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Aggregate and integrity
-- [ ] 1.1 Add tenant-owned entities and generated additive migration with rollback/isolation tests.
-- [ ] 1.2 Add strict quantity/date/line-identity input validators and tests.
-- [ ] 1.3 Build transactional audited/versioned service and SQLite behaviour tests.
-- [ ] 1.4 Add material/location usage guards and Test seed with regression tests.
+- [x] 1.1 Add tenant-owned entities and generated additive migration with rollback/isolation tests. — d9c84c4
+- [x] 1.2 Add strict quantity/date/line-identity input validators and tests. — d9c84c4
+- [x] 1.3 Build transactional audited/versioned service and SQLite behaviour tests. — d9c84c4
+- [x] 1.4 Add material/location usage guards and Test seed with regression tests. — d9c84c4
 ### Phase 2: API and screens
 - [ ] 2.1 Add keyed collection/item API and tenant actions, contract docs and tests.
 - [ ] 2.2 Add translated list/detail/edit screens, aggregate form, help/navigation and unit tests.
