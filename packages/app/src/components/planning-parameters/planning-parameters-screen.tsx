@@ -3,7 +3,7 @@ import type { Messages } from "../../i18n/messages/en";
 import { AddPlanningParametersDialog } from "./add-planning-parameters-dialog";
 import { planningParametersLabels } from "./labels";
 import { PlanningParametersTable } from "./planning-parameters-table";
-import { locationOptions, materialOptions, withReferences } from "./references";
+import { locationOptions, materialOptions, withReferences } from "../master-data/references";
 
 interface PlanningParametersScreenProps {
   tenant: { code: string; name: string; generation: number; readOnly: boolean };

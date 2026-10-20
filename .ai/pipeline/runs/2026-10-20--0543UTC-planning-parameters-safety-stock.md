@@ -101,4 +101,4 @@ In each tenant the admin keeps, per material and location, a planning parameter 
 - [x] 3.1 CrudForm date field — 2cfe135
 - [x] 3.2 Server actions — 1b30371
 - [x] 3.3 Pages, components, sidebar, i18n, help, audit labels — b104403
-- [ ] 3.4 Screen integration tests and the full gate
+- [x] 3.4 Screen integration tests and the full gate — 64025d0, 2bfaf08

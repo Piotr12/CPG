@@ -1,7 +1,7 @@
 import { targetStatus, type Locale, type MaterialSummary, type NamedRecordView, type SafetyStockTargetView } from "@cpg/core";
 import type { Messages } from "../../i18n/messages/en";
 import { fill } from "../forms/form-labels";
-import { locationOptions, materialOptions, withReferences } from "../planning-parameters/references";
+import { locationOptions, materialOptions, withReferences } from "../master-data/references";
 import { AddSafetyStockTargetDialog } from "./add-safety-stock-target-dialog";
 import { safetyStockLabels } from "./labels";
 import { SafetyStockTable, type SafetyStockRow } from "./safety-stock-table";

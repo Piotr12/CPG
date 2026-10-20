@@ -70,6 +70,31 @@ async function addTarget(admin: Browser, material: string, location: string, dat
 
 const closed = `!document.querySelector("[role=dialog]")`;
 
+/** Opens a row's ⋯ menu on a screen, once hydrated, and picks an item. */
+async function rowMenu(admin: Browser, path: string, menu: string, item: string) {
+  await listRows(admin, path);
+  await admin.waitUntil(ready(button(menu)));
+  await admin.clickRole("button", menu);
+  await admin.clickRole("menuitem", item);
+}
+
+/** Confirms the open destructive confirmation and waits for it to close. */
+async function confirmRemoval(admin: Browser) {
+  await admin.waitFor("[role=alertdialog]");
+  await admin.click("[role=alertdialog] button[data-variant=destructive]");
+  await admin.waitUntil(`!document.querySelector("[role=alertdialog]")`);
+}
+
+/** The Prod audit's `[action, changes]` rows whose subject starts with `label`. */
+async function auditOf(admin: Browser, label: string): Promise<string[][]> {
+  await admin.open(`${baseUrl}/admin/prod/audit`);
+  await admin.waitFor("table");
+  const rows = await admin.evaluate<string[][]>(
+    `[...document.querySelectorAll("tbody tr")].map((row) => [...row.cells].map((cell) => cell.innerText.trim()))`,
+  );
+  return rows.filter((cells) => cells[5].startsWith(label)).map(([, , , , action, , changes]) => [action, changes]);
+}
+
 describe("planning parameters and safety stock (E03-S03)", () => {
   let admin: Browser;
   let una: Browser;
@@ -129,24 +154,22 @@ describe("planning parameters and safety stock (E03-S03)", () => {
     ]);
   });
 
-  it("changes a lead time, with the value before and after in the Prod audit (AUD-002)", async () => {
-    await listRows(admin, "/admin/prod/planning-parameters");
-    const menu = `Actions for ${panel} at ${plant}`;
-    await admin.waitUntil(ready(button(menu)));
-    await admin.clickRole("button", menu);
-    await admin.clickRole("menuitem", "Change");
+  it("changes a lead time and removes a set, both in the Prod audit (AUD-002)", async () => {
+    await rowMenu(admin, "/admin/prod/planning-parameters", `Actions for ${panel} at ${plant}`, "Change");
     await admin.fill("[role=dialog] input[name=leadTimeDays]", "3");
     await admin.click("[role=dialog] button[type=submit]");
     await admin.waitUntil(closed);
 
-    await admin.open(`${baseUrl}/admin/prod/audit`);
-    await admin.waitFor("table");
-    const rows = await admin.evaluate<string[][]>(
-      `[...document.querySelectorAll("tbody tr")].map((row) => [...row.cells].map((cell) => cell.innerText.trim()))`,
-    );
-    expect(rows.filter((cells) => cells[5].startsWith(`${panel} — pp-ui panel at ${plant}`)).map(([, , , , action, , changes]) => [action, changes])).toEqual(
+    await rowMenu(admin, "/admin/prod/planning-parameters", `Actions for ${steel} at ${plant}`, "Remove");
+    await confirmRemoval(admin);
+    const sets = await listRows(admin, "/admin/prod/planning-parameters");
+    expect(sets.some(([material]) => material.startsWith(steel))).toBe(false);
+    expect(sets.find(([material, location]) => material.startsWith(panel) && location.startsWith(plant))?.[3]).toBe("3");
+
+    expect(await auditOf(admin, `${panel} — pp-ui panel at ${plant}`)).toEqual(
       expect.arrayContaining([["Planning parameters changed", "lead time (days): 2 → 3"]]),
     );
+    expect((await auditOf(admin, `${steel} — pp-ui steel at ${plant}`)).map(([action]) => action)).toContain("Planning parameters removed");
   });
 
   it("keeps targets per date with their status today, and refuses a second one on the same date (DEM-015…017)", async () => {
@@ -164,6 +187,26 @@ describe("planning parameters and safety stock (E03-S03)", () => {
       ["2026-01-01", "100 kg", "In effect"],
       ["2099-01-01", "150 kg", "Scheduled"],
     ]);
+  });
+
+  it("changes a target's quantity and removes a target, from each row's menu", async () => {
+    await rowMenu(admin, "/admin/prod/safety-stock", `Actions for ${steel} at ${plant} from 2099-01-01`, "Change target");
+    await admin.fill("[role=dialog] input[name=quantity]", "175.5");
+    await admin.click("[role=dialog] button[type=submit]");
+    await admin.waitUntil(closed);
+    const mine = async () =>
+      (await listRows(admin, "/admin/prod/safety-stock")).filter(([material]) => material.endsWith("pp-ui steel")).map((row) => row.slice(2, 5));
+    expect(await mine()).toEqual([
+      ["2026-01-01", "100 kg", "In effect"],
+      ["2099-01-01", "175.5 kg", "Scheduled"],
+    ]);
+
+    await rowMenu(admin, "/admin/prod/safety-stock", `Actions for ${steel} at ${plant} from 2026-01-01`, "Remove");
+    await confirmRemoval(admin);
+    expect(await mine()).toEqual([["2099-01-01", "175.5 kg", "Scheduled"]]);
+    expect((await auditOf(admin, `${steel} — pp-ui steel at ${plant}`)).map(([action]) => action)).toEqual(
+      expect.arrayContaining(["Safety-stock target changed", "Safety-stock target removed"]),
+    );
   });
 
   it("stops offering a deactivated location for new rows, and keeps its existing set (LFC-019)", async () => {

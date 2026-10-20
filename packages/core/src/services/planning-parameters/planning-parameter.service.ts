@@ -72,7 +72,8 @@ export class PlanningParameterService {
   /** Every set of the tenant, by material ID, then location ID. */
   async list(): Promise<PlanningParameterView[]> {
     const sets = await this.em.find(PlanningParameterSet, {}, { populate: ["material", "location"] });
-    // Sorted here rather than by an `orderBy` on the relations, which would join.
+    // Sorted here by business IDs: the populated material and location carry them, and an
+    // `orderBy` on relation fields would add query joins the tenant lint rules don't vet.
     return sets.map(toView).sort((a, b) => a.material.localeCompare(b.material) || a.location.localeCompare(b.location));
   }
 

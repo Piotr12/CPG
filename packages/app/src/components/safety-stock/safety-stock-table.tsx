@@ -2,7 +2,7 @@ import type { SafetyStockTargetView, TargetStatus } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { Badge } from "@cpg/ui/components/badge";
 import { fill, shownQuantity, type TenantContext } from "../forms/form-labels";
-import { LocationCell, MaterialCell, type ReferenceDetails } from "../planning-parameters/references";
+import { LocationCell, MaterialCell, type ReferenceDetails } from "../master-data/references";
 import type { SafetyStockLabels } from "./labels";
 import { SafetyStockTargetActions } from "./safety-stock-target-actions";
 

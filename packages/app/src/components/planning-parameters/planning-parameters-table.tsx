@@ -4,7 +4,7 @@ import { Badge } from "@cpg/ui/components/badge";
 import { fill, shownQuantity, type TenantContext } from "../forms/form-labels";
 import type { PlanningParametersLabels } from "./labels";
 import { PlanningParameterActions } from "./planning-parameter-actions";
-import { LocationCell, MaterialCell, type ReferenceDetails } from "./references";
+import { LocationCell, MaterialCell, type ReferenceDetails } from "../master-data/references";
 
 /** A set as the screen shows it: with its material's and location's details. */
 export type PlanningParameterRow = PlanningParameterView & ReferenceDetails;

@@ -61,7 +61,8 @@ export class SafetyStockTargetService {
   /** Every target of the tenant, by material ID, location ID, then date. */
   async list(): Promise<SafetyStockTargetView[]> {
     const targets = await this.em.find(SafetyStockTarget, {}, { populate: ["material", "location"] });
-    // Sorted here rather than by an `orderBy` on the relations, which would join.
+    // Sorted here by business IDs: the populated material and location carry them, and an
+    // `orderBy` on relation fields would add query joins the tenant lint rules don't vet.
     return targets
       .map(toView)
       .sort(

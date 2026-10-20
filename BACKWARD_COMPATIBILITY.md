@@ -100,12 +100,12 @@ Route handlers under `app/api/` are protected the same way: their paths, methods
 - the planning parameters and safety-stock targets of one tenant (spec `2026-10-20--0532UTC-planning-parameters-safety-stock`), with the same read and write rules. `{material}` and `{location}` are eight-digit IDs; quantities are base-unit JSON **strings**, returned with six decimals; `leadTimeDays` is a JSON integer. A new row is 409 `MATERIAL_INACTIVE` or `LOCATION_INACTIVE` for an inactive reference, and 404 `MATERIAL_NOT_FOUND` or `LOCATION_NOT_FOUND` for an unknown one:
   - `GET /api/tenants/{tenant}/planning-parameters` (by material, then location);
   - `POST /api/tenants/{tenant}/planning-parameters` (`{ material, location, procurement, leadTimeDays, minimumQuantity, lotMultiple }`; 400 with a `procurement` field error for Make on a raw material; 409 `PLANNING_PARAMETERS_EXIST`);
-  - `PATCH /api/tenants/{tenant}/planning-parameters/{material}/{location}` (`{ version, procurement?, leadTimeDays?, minimumQuantity?, lotMultiple? }`, at least one of them; 404 `PLANNING_PARAMETERS_NOT_FOUND`);
-  - `DELETE /api/tenants/{tenant}/planning-parameters/{material}/{location}` (`{ version }`);
+  - `PATCH /api/tenants/{tenant}/planning-parameters/{material}/{location}` (`{ version, procurement?, leadTimeDays?, minimumQuantity?, lotMultiple? }`, at least one of them; 404 `PLANNING_PARAMETERS_NOT_FOUND`, or `MATERIAL_NOT_FOUND` / `LOCATION_NOT_FOUND` for an unknown or malformed ID in the path);
+  - `DELETE /api/tenants/{tenant}/planning-parameters/{material}/{location}` (`{ version }`; the same 404 codes as `PATCH`);
   - `GET /api/tenants/{tenant}/safety-stock-targets` (by material, location, then date);
   - `POST /api/tenants/{tenant}/safety-stock-targets` (`{ material, location, effectiveFrom, quantity }`, the date as `YYYY-MM-DD`; 409 `SAFETY_STOCK_TARGET_EXISTS` for a second target on one date);
-  - `PATCH /api/tenants/{tenant}/safety-stock-targets/{material}/{location}/{effectiveFrom}` (`{ quantity, version }`; 404 `SAFETY_STOCK_TARGET_NOT_FOUND`);
-  - `DELETE /api/tenants/{tenant}/safety-stock-targets/{material}/{location}/{effectiveFrom}` (`{ version }`).
+  - `PATCH /api/tenants/{tenant}/safety-stock-targets/{material}/{location}/{effectiveFrom}` (`{ quantity, version }`; 404 `SAFETY_STOCK_TARGET_NOT_FOUND`, or `MATERIAL_NOT_FOUND` / `LOCATION_NOT_FOUND` for an unknown or malformed ID in the path);
+  - `DELETE /api/tenants/{tenant}/safety-stock-targets/{material}/{location}/{effectiveFrom}` (`{ version }`; the same 404 codes as `PATCH`).
 
 **Versions.** An edit of a versioned record (today: a user, a material, a material's conversion, a location, a customer, a supplier, a planning parameter set and a safety-stock target) carries the `version` it loaded. A stale one is 409 `VERSION_CONFLICT`, and the newer change is kept. The user routes answer 404 `NOT_FOUND` for the built-in admin, an unknown id or a malformed one.
 
