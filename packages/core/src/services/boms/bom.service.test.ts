@@ -25,6 +25,7 @@ import { migrateDatabase, toDbOptions } from "../../database";
 import { DEMO_BOMS } from "../../domain/boms/demo-boms";
 import { tenantServerAction } from "../../http/tenant-server-action";
 import {
+  DUPLICATE_COMPONENT_MESSAGE,
   FINISHED_COMPONENT_MESSAGE,
   QUANTITY_OUT_OF_RANGE_MESSAGE,
   QUANTITY_ROUNDS_TO_ZERO_MESSAGE,
@@ -448,6 +449,27 @@ describe("BomService", () => {
         ACTOR,
       );
       expect(reentered.components[1]).toMatchObject({ quantity: "30.000000", enteredQuantity: "3", numerator: "10" });
+    });
+
+    it("treats a resent line's entered quantity as a number, so 2.0 case is still the stored 2 case (MAT-027)", async () => {
+      const bom = await service().create(CABINET, ACTOR);
+      await materials().changeConversion("00000002", "case", { numerator: "10", denominator: "1" }, 1, ACTOR);
+
+      const [panel, , box] = CABINET.components;
+      const same = await service().update(bom.id, { components: [panel, line("00000002", "2.0", "case"), box] }, bom.version, ACTOR);
+      expect(same).toMatchObject({ revision: 1, components: expect.arrayContaining([expect.objectContaining({ quantity: "24.000000" })]) });
+    });
+
+    it("refuses a material repeated in the lines on its later line, for callers that skip the schemas (spec Q5)", async () => {
+      const lines = [line("00000004", "4"), line("00000006", "1"), line("00000004", "2")];
+      await expect(service().create({ ...CABINET, components: lines }, ACTOR)).rejects.toMatchObject({
+        code: "VALIDATION_FAILED",
+        fieldErrors: { "components.2.material": [DUPLICATE_COMPONENT_MESSAGE] },
+      });
+      const bom = await service().create(CABINET, ACTOR);
+      await expect(service().update(bom.id, { components: lines }, bom.version, ACTOR)).rejects.toMatchObject({
+        fieldErrors: { "components.2.material": [DUPLICATE_COMPONENT_MESSAGE] },
+      });
     });
 
     it("keeps an inactive component already in the recipe, but refuses adding one (spec Q10)", async () => {

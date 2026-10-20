@@ -146,7 +146,7 @@ describe("BOMs (E04-S01)", () => {
     expect((await rows(admin, `/admin/prod/boms/${bom}`, RECIPE))[0][1]).toBe("5 kg");
     const old = await rows(admin, `/admin/prod/boms/${bom}?revision=1`, RECIPE);
     expect(old[0][1]).toBe("4.5 kg");
-    expect(await admin.text("[role=note]")).toContain("Revision 1 of 2: history, kept unchanged.");
+    expect(await admin.text("[role=note]")).toContain("Revision 1 of 2: history, kept unchanged, with priority 1, valid 2027-01-01 – no end.");
   });
 
   it("refuses a second alternative with the same priority on overlapping days, naming the other BOM (BOM-015)", async () => {

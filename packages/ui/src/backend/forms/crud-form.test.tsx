@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { ApiResult } from "../api/result";
-import { CrudForm, type CrudField, type FormSchema } from "./crud-form";
+import { CrudForm, toFieldErrors, type CrudField, type FormSchema } from "./crud-form";
 
 const fields: CrudField[] = [
   { name: "username", label: "Username", autoComplete: "off" },
@@ -273,5 +273,18 @@ describe("CrudForm", () => {
 
       expect(action).toHaveBeenCalledWith({ effectiveFrom: "2027-01-01" });
     });
+  });
+});
+
+describe("toFieldErrors", () => {
+  it("keeps the first message per field, keyed by its full path, and drops whole-input issues", () => {
+    expect(
+      toFieldErrors([
+        { path: ["description"], message: "Enter a description." },
+        { path: ["description"], message: "Too long." },
+        { path: ["components", 2, "unit"], message: "No conversion." },
+        { path: [], message: "Whole input." },
+      ]),
+    ).toEqual({ description: ["Enter a description."], "components.2.unit": ["No conversion."] });
   });
 });

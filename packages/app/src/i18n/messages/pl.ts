@@ -578,7 +578,7 @@ export const pl: Messages = {
       intro: "Każda zapisana zmiana to nowa rewizja. Wcześniejsze rewizje są historią i nigdy się nie zmieniają.",
       columns: { number: "Rewizja", created: "Utworzono (UTC)", priority: "Priorytet", valid: "Ważna" },
       current: "Bieżąca",
-      history: "Rewizja {number} z {count}: historia, zachowana bez zmian. Bieżąca jest rewizja {current}.",
+      history: "Rewizja {number} z {count}: historia, zachowana bez zmian, z priorytetem {priority}, ważna {valid}. Bieżąca jest rewizja {current}.",
       showCurrent: "Pokaż bieżącą rewizję",
     },
     form: {

@@ -3,7 +3,7 @@
 import { useId, useState, useTransition, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import type { ApiResult, FieldErrors } from "@cpg/ui/backend/api/result";
 import { ErrorMessage } from "@cpg/ui/backend/feedback/error-message";
-import type { FormSchema } from "@cpg/ui/backend/forms/crud-form";
+import { toFieldErrors, type FormSchema } from "@cpg/ui/backend/forms/crud-form";
 import { Button } from "@cpg/ui/components/button";
 import { Input } from "@cpg/ui/components/input";
 import { Label } from "@cpg/ui/components/label";
@@ -124,8 +124,9 @@ export function RecipeForm<T>({
           return;
         }
         const errors = result.error.fieldErrors ?? {};
+        const shown = new Set(["output", "priority", "validFrom", "validThrough", "components", ...lineFields(values.components.length)]);
         setFieldErrors(errors);
-        setFormError(Object.keys(errors).some(isShownField) ? null : formatError(result.error));
+        setFormError(Object.keys(errors).some((name) => shown.has(name)) ? null : formatError(result.error));
       });
     });
   }
@@ -269,9 +270,12 @@ export function RecipeForm<T>({
                 type="button"
                 variant="outline"
                 aria-label={chosen ? fill(t.removeComponent, { material: chosen.label }) : t.removeEmpty}
+                disabled={isPending}
                 onClick={() => {
                   set({ components: values.components.filter((_, at) => at !== index) });
                   setKeys(keys.filter((_, at) => at !== index));
+                  // Line errors are keyed by position: after a removal they would name the wrong rows.
+                  setFieldErrors({});
                 }}
               >
                 ✕
@@ -284,6 +288,7 @@ export function RecipeForm<T>({
           <Button
             type="button"
             variant="outline"
+            disabled={isPending}
             onClick={() => {
               set({ components: [...values.components, EMPTY_LINE] });
               setKeys([...keys, Math.max(-1, ...keys) + 1]);
@@ -306,17 +311,7 @@ export function RecipeForm<T>({
   );
 }
 
-/** Whether the form shows a field error under `name`: its own fields, any line's fields, or the list. */
-function isShownField(name: string): boolean {
-  return /^(output|priority|validFrom|validThrough|components)$|^components\.\d+\.(material|quantity|unit)$/.test(name);
-}
-
-/** The first message per field, keyed by its full path (`components.0.unit`), as the server keys them. */
-function toFieldErrors(issues: { path: PropertyKey[]; message: string }[]): FieldErrors {
-  const errors: FieldErrors = {};
-  for (const { path, message } of issues) {
-    const name = path.map(String).join(".");
-    if (name) errors[name] ??= [message];
-  }
-  return errors;
+/** The field names of `count` lines, as the form shows their errors: `components.0.material`, … */
+function lineFields(count: number): string[] {
+  return Array.from({ length: count }, (_, index) => ["material", "quantity", "unit"].map((field) => `components.${index}.${field}`)).flat();
 }

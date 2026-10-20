@@ -13,8 +13,10 @@ import { findCycle, type CycleStep, type RecipeEdge } from "../../domain/boms/fi
 import { findPriorityConflict, type PriorityConflict } from "../../domain/boms/priority-conflict";
 import { isSameRecipe } from "../../domain/boms/recipe-equality";
 import { canBeBomComponent, canBeBomOutput } from "../../domain/boms/recipe-rules";
+import { parseDecimal } from "../../domain/quantities/decimal";
 import { AppError, ConflictError, NotFoundError, ValidationError, versionConflict, type FieldErrors } from "../../http/errors";
 import {
+  DUPLICATE_COMPONENT_MESSAGE,
   FINISHED_COMPONENT_MESSAGE,
   QUANTITY_OUT_OF_RANGE_MESSAGE,
   QUANTITY_ROUNDS_TO_ZERO_MESSAGE,
@@ -313,21 +315,29 @@ async function revisedRecipe(em: EntityManager, current: CurrentRecipe, changes:
  * Loads each line's material and converts its quantity, collecting every line's field errors into
  * one `VALIDATION_FAILED` keyed `components.N.<field>`. An unknown material is `MATERIAL_NOT_FOUND`.
  * An inactive material can't be added (MAT-029) but may stay when `kept` (the current revision's
- * lines) already has it (spec Q10). A kept line resent with the same entered quantity and unit keeps
- * its stored record, so a changed conversion never revalues it (spec Q6, MAT-027).
+ * lines) already has it (spec Q10). A material repeated in `lines` is an error on its later line
+ * (spec Q5), so a caller that skips the schemas (the import) gets the same answer. A kept line resent
+ * with the same entered quantity (compared as a number) and unit keeps its stored record, so a
+ * changed conversion never revalues it (spec Q6, MAT-027).
  */
 async function resolveLines(em: EntityManager, lines: readonly ComponentLine[], kept: readonly BomComponent[]): Promise<ResolvedLine[]> {
   const keptByMaterial = new Map(kept.map((line) => [line.material.code, line]));
   const errors: FieldErrors = {};
   const resolved: ResolvedLine[] = [];
+  const seen = new Set<string>();
   for (const [index, line] of lines.entries()) {
+    if (seen.has(line.material)) {
+      errors[`components.${index}.material`] = [DUPLICATE_COMPONENT_MESSAGE];
+      continue;
+    }
+    seen.add(line.material);
     const keptLine = keptByMaterial.get(line.material);
     const material = keptLine ? await findMaterial(em, line.material) : await findActiveMaterial(em, line.material);
     if (!canBeBomComponent(material.type)) {
       errors[`components.${index}.material`] = [FINISHED_COMPONENT_MESSAGE];
       continue;
     }
-    if (keptLine && keptLine.enteredQuantity === line.quantity && keptLine.enteredUnit === line.unit) {
+    if (keptLine && keptLine.enteredUnit === line.unit && parseDecimal(keptLine.enteredQuantity) === parseDecimal(line.quantity)) {
       resolved.push({ material, record: toRecord(keptLine) });
       continue;
     }

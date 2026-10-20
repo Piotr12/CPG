@@ -610,7 +610,7 @@ export const en = {
       intro: "Every saved change is a new revision. Earlier revisions are history and never change.",
       columns: { number: "Revision", created: "Created (UTC)", priority: "Priority", valid: "Valid" },
       current: "Current",
-      history: "Revision {number} of {count}: history, kept unchanged. Revision {current} is current.",
+      history: "Revision {number} of {count}: history, kept unchanged, with priority {priority}, valid {valid}. Revision {current} is current.",
       showCurrent: "Show the current revision",
     },
     form: {

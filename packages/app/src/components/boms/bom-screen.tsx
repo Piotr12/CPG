@@ -113,7 +113,13 @@ export function BomScreen({ tenant, bom, historic, materials, units, locale, mes
         </h2>
         {historic && (
           <p role="note" className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-50">
-            {fill(labels.revisions.history, { number: String(historic.number), count: String(bom.revision), current: String(bom.revision) })}{" "}
+            {fill(labels.revisions.history, {
+              number: String(historic.number),
+              count: String(bom.revision),
+              current: String(bom.revision),
+              priority: String(historic.priority),
+              valid: validityText(historic, t.noEnd),
+            })}{" "}
             <Link href={path} className="font-medium underline underline-offset-4">
               {labels.revisions.showCurrent}
             </Link>

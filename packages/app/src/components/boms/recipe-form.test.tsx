@@ -177,6 +177,22 @@ describe("RecipeForm", () => {
     expect(screen.queryByText("The whole form.")).toBeNull();
   });
 
+  it("clears line errors when lines are removed or added, so none lands on the wrong row", async () => {
+    action.mockResolvedValueOnce({
+      ok: false,
+      error: { code: "VALIDATION_FAILED", message: "Some fields are invalid.", fieldErrors: { "components.1.unit": ["This material has no conversion from this unit to its base unit."] } },
+    });
+    renderForm({ schema: { safeParse: () => ({ success: true }) } });
+    fireEvent.click(screen.getByRole("button", { name: "+ Add component" }));
+    setLine(1, "00000002", "1");
+    setLine(2, "00000003", "2");
+    fireEvent.click(screen.getByRole("button", { name: "Create BOM" }));
+    expect(await screen.findByText("This material has no conversion from this unit to its base unit.")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove 00000002 — Bolt M8 (each)" }));
+    expect(screen.queryByText("This material has no conversion from this unit to its base unit.")).toBeNull();
+  });
+
   it("starts an edit from the current revision as entered, keeping a unit whose conversion was removed (spec Q12)", async () => {
     action.mockResolvedValue({ ok: true, data: { id: "00000002" } });
     renderForm({
