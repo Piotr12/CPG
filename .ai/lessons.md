@@ -42,6 +42,8 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 ## Testing
 
+- **2026-10-20 — Use an untouched standalone copy for each macOS integration run** — Next stores route caches by pathname. The negative `/admin/TEST` test writes a 404 to the same cache file as `/admin/test` on case-insensitive APFS, so reusing that standalone directory can break later valid soft navigation even with a fresh `DATA_DIR`. Copy the complete pristine build into a new runtime directory for each run; retain the uppercase rejection test, and use Linux/Docker for image validation.
+
 - **2026-10-20 — Hash preview generations inside the write transaction** — A tenant scope captures metadata before the transaction. A request scoped before a reset could accept a new generation header but hash the old captured generation, allowing a pre-reset import preview to commit against reseeded IDs. Read `TenantService.currentState` inside the apply transaction; test equal fixtures across a real reset and prove the test fails with the captured generation.
 - **2026-10-20 — Copy public assets before starting standalone QA** — Copy both `.next/static` and `packages/app/public` into the standalone app directory before startup. Next.js caches the public-file inventory, so adding public assets to an already running server still returns 404 until restart.
 
