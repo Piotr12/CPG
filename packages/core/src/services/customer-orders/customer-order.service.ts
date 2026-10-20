@@ -6,7 +6,7 @@ import { nextSequentialId } from "../../domain/business-ids/sequential-id";
 import { parseDecimal } from "../../domain/quantities/decimal";
 import { AppError, ConflictError, NotFoundError, ValidationError, versionConflict } from "../../http/errors";
 import {
-  customerOrderCreateSchema, customerOrderUpdateSchema, ORDER_LINE_ID_MESSAGE, ORDER_QUANTITY_MIN_MESSAGE, ORDER_UNIT_CONVERSION_MESSAGE, ORDER_QUANTITY_CONVERSION_MESSAGE,
+  customerOrderCreateSchema, customerOrderUpdateSchema, customerOrderListSchema, ORDER_PAGE_SIZE, ORDER_LINE_ID_MESSAGE, ORDER_QUANTITY_MIN_MESSAGE, ORDER_UNIT_CONVERSION_MESSAGE, ORDER_QUANTITY_CONVERSION_MESSAGE,
   type CustomerOrderInput, type CustomerOrderChanges,
 } from "../../validators/customer-orders/customer-order.schema";
 import { validationError } from "../../http/parse-input";
@@ -51,12 +51,23 @@ export class CustomerOrderService {
   private readonly em: EntityManager;
   constructor({ em }: { em: EntityManager }) { this.em = em; }
 
-  async list(): Promise<CustomerOrderView[]> {
+  /** Fixed-size pages bound both the query and its full line payload; codes remain ascending. */
+  async list(page = 1): Promise<CustomerOrderView[]> {
+    const parsed = customerOrderListSchema.safeParse({ page });
+    if (!parsed.success) throw validationError(parsed.error);
     const em = this.em;
-    const orders = await em.find(CustomerOrder, {}, { populate: [...POPULATE], orderBy: { code: "asc" } });
+    const orders = await em.find(CustomerOrder, {}, { populate: [...POPULATE], orderBy: { code: "asc" }, limit: ORDER_PAGE_SIZE, offset: (parsed.data.page - 1) * ORDER_PAGE_SIZE });
+    if (orders.length === 0) return [];
     const lines = await em.find(CustomerOrderLine, { order: { $in: orders }, removed: false }, { populate: ["material"], orderBy: { position: "asc" } });
-    return orders.map((order) => view(order, lines.filter((line) => line.order.id === order.id)));
+    const grouped = new Map<string, CustomerOrderLine[]>();
+    for (const line of lines) {
+      const group = grouped.get(line.order.id) ?? [];
+      group.push(line); grouped.set(line.order.id, group);
+    }
+    return orders.map((order) => view(order, grouped.get(order.id)!));
   }
+
+  async count(): Promise<number> { return this.em.count(CustomerOrder, {}); }
 
   async get(id: string): Promise<CustomerOrderView> {
     return detail(this.em, await findOrder(this.em, id));

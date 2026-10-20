@@ -11,7 +11,7 @@ import { OrdersScreen } from "./order-screen";
 const mocks = vi.hoisted(() => {
   class AppError extends Error { constructor(readonly code: string) { super(code); } }
   return { AppError, connection: vi.fn(), requireUser: vi.fn(), getMessages: vi.fn(), tenantScope: vi.fn(),
-    list: vi.fn(), get: vi.fn(), materials: vi.fn(), units: vi.fn(), customers: vi.fn(), locations: vi.fn(),
+    list: vi.fn(), count: vi.fn(), get: vi.fn(), materials: vi.fn(), units: vi.fn(), customers: vi.fn(), locations: vi.fn(),
     notFound: vi.fn(() => { throw new Error("404"); }) };
 });
 vi.mock("next/server", () => ({ connection: mocks.connection }));
@@ -20,14 +20,14 @@ vi.mock("@cpg/core", () => ({ AppError: mocks.AppError, tenantScope: mocks.tenan
 vi.mock("../../auth/require-admin", () => ({ requireUser: mocks.requireUser }));
 vi.mock("../../i18n/get-messages", () => ({ getMessages: mocks.getMessages }));
 vi.mock("../../app/admin/[tenant]/customer-orders/actions", () => ({ createCustomerOrder: vi.fn(), updateCustomerOrder: vi.fn() }));
-const scope = (readOnly = false) => ({ cradle: { tenant: { ...tenant, readOnly }, customerOrderService: { list: mocks.list, get: mocks.get },
+const scope = (readOnly = false) => ({ cradle: { tenant: { ...tenant, readOnly }, customerOrderService: { list: mocks.list, count: mocks.count, get: mocks.get },
   materialService: { list: mocks.materials, listUnits: mocks.units }, customerService: { list: mocks.customers }, locationService: { list: mocks.locations } } });
 const page = (detail = false) => detail ? CustomerOrderPage({ params: Promise.resolve({ tenant: "test", id: order.id }), searchParams: Promise.resolve({}) }) :
   CustomerOrdersPage({ params: Promise.resolve({ tenant: "test" }), searchParams: Promise.resolve({}) });
 describe("customer order pages", () => {
   beforeEach(() => {
     mocks.tenantScope.mockResolvedValue(scope()); mocks.getMessages.mockResolvedValue({ locale: "en", messages: en }); mocks.requireUser.mockResolvedValue({ role: "user" });
-    mocks.list.mockResolvedValue([order]); mocks.get.mockResolvedValue(order); mocks.materials.mockResolvedValue(materials);
+    mocks.count.mockResolvedValue(1); mocks.list.mockResolvedValue([order]); mocks.get.mockResolvedValue(order); mocks.materials.mockResolvedValue(materials);
     mocks.units.mockResolvedValue({ "00000005": ["each", "case"] }); mocks.customers.mockResolvedValue(customers); mocks.locations.mockResolvedValue(locations);
   });
   afterEach(() => vi.clearAllMocks());
@@ -39,6 +39,21 @@ describe("customer order pages", () => {
     const cells = within(screen.getByRole("table", { name: "Customer orders" })).getAllByRole("cell");
     expect(cells.map((cell) => cell.textContent)).toEqual(["00000001", "00000001 Customer A", "00000001 Warehouse", "1", "Open"]);
     expect(screen.getByRole("button", { name: "Create order" })).toBeTruthy();
+  });
+  it("renders bounded page navigation and rejects an invalid page", async () => {
+    mocks.count.mockResolvedValue(201);
+    const paged = (page: string) => CustomerOrdersPage({ params: Promise.resolve({ tenant: "test" }), searchParams: Promise.resolve({ page }) });
+    render(await resolveServerComponents(paged("1")));
+    expect(mocks.list).toHaveBeenLastCalledWith(1);
+    expect(screen.queryByRole("link", { name: "Previous page" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Next page" }).getAttribute("href")).toBe("/admin/test/customer-orders?page=2");
+    cleanup(); render(await resolveServerComponents(paged("2")));
+    expect(screen.getByRole("link", { name: "Previous page" }).getAttribute("href")).toBe("/admin/test/customer-orders?page=1");
+    expect(screen.getByText("Page 2 of 3")).toBeTruthy();
+    cleanup(); render(await resolveServerComponents(paged("99")));
+    expect(mocks.list).toHaveBeenLastCalledWith(3);
+    expect(screen.queryByRole("link", { name: "Next page" })).toBeNull();
+    await expect(resolveServerComponents(paged("0"))).rejects.toThrow("404");
   });
   it("shows original entries, exact base quantities, dates and progress on the detail", async () => {
     render(await resolveServerComponents(page(true)));

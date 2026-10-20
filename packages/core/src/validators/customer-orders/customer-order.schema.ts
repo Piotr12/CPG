@@ -8,6 +8,8 @@ import { versionSchema } from "../version.schema";
 export const ORDER_UNIT_CONVERSION_MESSAGE = "Choose a unit this material converts to its base unit.";
 export const ORDER_QUANTITY_CONVERSION_MESSAGE = "This quantity cannot be stored in the base unit: check its size and conversion.";
 export const ORDER_LINES_MAX = 100;
+export const ORDER_PAGE_SIZE = 100;
+export const customerOrderListSchema = z.strictObject({ page: z.coerce.number().int().min(1).max(1_000_000).default(1) });
 export const ORDER_LINE_COUNT_MESSAGE = `Add at least 1 and at most ${ORDER_LINES_MAX} lines.`;
 export const ORDER_REFERENCE_MESSAGE = "Choose a record from this tenant.";
 export const ORDER_LINE_ID_MESSAGE = "Each existing line must belong to this order and appear once.";

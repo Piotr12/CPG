@@ -15,7 +15,17 @@ describe("customer orders collection route", () => {
     mocks.tenantScope.mockResolvedValue({ cradle: { customerOrderService: { list: mocks.list } } });
     mocks.list.mockResolvedValue({ id: "00000001" });
     expect(await (await route.GET(new Request("http://cpg.test/api/tenants/test/customer-orders"), context())).json()).toEqual({ ok: true, data: { id: "00000001" } });
-    expect(mocks.tenantScope).toHaveBeenCalledWith("test"); expect(mocks.list).toHaveBeenCalledWith();
+    expect(mocks.tenantScope).toHaveBeenCalledWith("test"); expect(mocks.list).toHaveBeenCalledWith(1);
+  });
+  it("validates and forwards collection pages", async () => {
+    mocks.requireApiUser.mockResolvedValue({ role: "user" });
+    mocks.tenantScope.mockResolvedValue({ cradle: { customerOrderService: { list: mocks.list } } });
+    mocks.list.mockResolvedValue([]);
+    expect((await route.GET(new Request("http://cpg.test/api/tenants/test/customer-orders?page=2"), context())).status).toBe(200);
+    expect(mocks.list).toHaveBeenCalledWith(2); mocks.list.mockClear();
+    for (const query of ["page=0", "surprise=1"])
+      expect((await route.GET(new Request(`http://cpg.test/api/tenants/test/customer-orders?${query}`), context())).status).toBe(400);
+    expect(mocks.list).not.toHaveBeenCalled();
   });
   it("does not resolve a tenant for an unauthenticated read", async () => {
     const { UnauthorizedError } = await vi.importActual<typeof import("@cpg/core")>("@cpg/core");

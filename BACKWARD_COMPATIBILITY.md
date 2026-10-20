@@ -166,3 +166,5 @@ Source: root `package.json` scripts, `.github/workflows/ci.yml`, `.github/workfl
 ## Changing this document
 
 Add a surface here in the same PR that creates it, for example the first `/api` route, the first webhook or the first exported file format.
+
+Customer-order collection reads use optional `?page=1` (integer 1–1000000), fixed pages of 100 orders in ascending ID order. The data remains an array; request successive pages until fewer than 100 records are returned. Unknown query keys and invalid page values are validation errors.

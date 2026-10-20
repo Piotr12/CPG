@@ -114,6 +114,12 @@ describe("customer orders through the UI and API", () => {
     expect(json(await api("POST", ROOT, { body: input() }, userSecret)).error.code).toBe("IDEMPOTENCY_KEY_REQUIRED");
     const cross = await write("POST", ROOT, { ...input(), lines: [{ ...input().lines[0], location: location.id }] }, userSecret);
     expect(cross.status).toBe(400);
+    expect((await api("GET", `${ROOT}?page=2`)).status).toBe(200);
+    expect(json(await api("GET", `${ROOT}?page=2`)).data).toEqual([]);
+    expect((await api("GET", `${ROOT}?page=0`)).status).toBe(400);
+    await user.open(`${baseUrl}/admin/prod/customer-orders?page=2`);
+    await user.waitForText("Customer orders — Prod");
+    expect(await user.text("main")).toContain(uiOrder.id);
     const before = (await orders()).length;
     for (const body of [{ ...input(), customer: "99999999" }, { ...input(), lines: [{ ...input().lines[0], material: "99999999" }] }])
       expect((await write("POST", ROOT, body, userSecret)).status).toBe(404);
@@ -153,4 +159,19 @@ describe("customer orders through the UI and API", () => {
     expect(await user.evaluate<string>(`document.querySelector(${JSON.stringify(field("customer"))}).selectedOptions[0].textContent`)).toContain("Inactive");
     await user.press("Escape");
   });
+  it("keeps API pages bounded and lets a user navigate a collection beyond 100 orders", async () => {
+    const customer = json(await write("POST", "/api/tenants/prod/customers", { name: "orders pagination " + "long customer name ".repeat(5) })).data;
+    for (let index = 0; index < 101; index++) expect((await write("POST", ROOT, { ...input(), customer: customer.id })).status).toBe(200);
+    const first = await orders(); const second = json(await api("GET", `${ROOT}?page=2`)).data as CustomerOrderView[];
+    expect(first).toHaveLength(100); expect(second.length).toBeGreaterThan(0); expect(second.length).toBeLessThan(100);
+    expect(first.at(-1)!.id < second[0].id).toBe(true);
+    await user.open(`${baseUrl}/admin/prod/customer-orders`);
+    await user.waitForText("Page 1 of 2"); await clickHydrated(user, "main a[href$='page=2']");
+    await user.waitForText("Page 2 of 2"); expect(await user.text("main")).toContain(second[0].id);
+    await user.setViewport(390, 844);
+    expect(await user.evaluate<number>("document.documentElement.scrollWidth")).toBe(390);
+    await clickHydrated(user, "main a[href$='page=1']"); await user.waitForText("Page 1 of 2");
+    await user.setViewport(1280, 900);
+  });
+
 });

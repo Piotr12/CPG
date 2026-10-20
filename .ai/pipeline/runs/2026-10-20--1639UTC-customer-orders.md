@@ -41,6 +41,8 @@ Risk-high additive schema, new aggregate contract, conversion history and line i
 
 - 2026-10-20 17:25 UTC — Phase 2 committed. Clean standalone environment: all 6 customer-order integration journeys pass, including repeated version conflict and reopen. Full final integration suite runs on a fresh database; independent final code review started.
 
+- 17:31 UTC — Full integration passed 220 tests (one Docker-only skip). Final performance checklist found unbounded customer-order collection/response and quadratic grouping despite prior approval. Re-planned publication: fixed 100-order pages, validated page query, shared DataTable pagination slot and linear grouping, preserving collection array shape. Added real SQLite boundary tests and browser/API query checks; rerun full gate after this change.
+
 ## Verification
 - Phase 1: lint/typecheck passed; full coverage passed, 289 files / 1,927 tests, all four measures 100%.
 - Design metadata checks: 2 test files, 6 tests passed. Full implementation gate pending.

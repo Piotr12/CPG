@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { CustomerOrderView, Locale, MaterialSummary, NamedRecordView, TenantInfo } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
+import { ORDER_PAGE_SIZE } from "@cpg/core/validators/customer-orders/customer-order.schema";
+import { Button } from "@cpg/ui/components/button";
 import { Badge } from "@cpg/ui/components/badge";
 import type { Messages } from "../../i18n/messages/en";
 import { fill, shownQuantity } from "../forms/form-labels";
@@ -10,6 +12,8 @@ import type { OrderChoice } from "./order-form";
 
 export interface OrdersScreenProps {
   tenant: TenantInfo;
+  page?: number;
+  total?: number;
   orders: CustomerOrderView[];
   order?: CustomerOrderView;
   materials: MaterialSummary[];
@@ -20,9 +24,10 @@ export interface OrdersScreenProps {
   locale: Locale;
 }
 /** List and detail use the same master labels and choice policy; both roles may maintain demand. */
-export function OrdersScreen({ tenant, orders, order, materials, customers, locations, units, messages, locale }: OrdersScreenProps) {
+export function OrdersScreen({ tenant, orders, order, page = 1, total = 0, materials, customers, locations, units, messages, locale }: OrdersScreenProps) {
   const t = orderLabels(messages);
   const path = `/admin/${tenant.code}/customer-orders`;
+  const pages = Math.ceil(total / ORDER_PAGE_SIZE);
   const byMaterial = new Map(materials.map((material) => [material.id, material]));
   const named = (records: NamedRecordView[], code: string) => `${code} ${records.find(({ id }) => id === code)!.name}`;
   const choice = ({ id, name, active }: NamedRecordView): OrderChoice => ({ value: id, label: `${id} ${name}${active ? "" : ` (${t.inactive})`}`, active, units: [] });
@@ -57,6 +62,10 @@ export function OrdersScreen({ tenant, orders, order, materials, customers, loca
         {[{ label: t.customer, value: named(customers, order.customer) }, { label: t.location, value: named(locations, order.location) }, { label: t.status, value: t.states[order.status] }].map(({ label, value }) => <div key={label}><dt className="text-muted-foreground">{label}</dt><dd className="mt-1 wrap-anywhere">{value}</dd></div>)}
       </dl>
       <DataTable label={t.lines} columns={lineColumns} rows={order.lines} rowKey={(line) => line.id} empty={t.empty} />
-    </> : <DataTable label={t.link} columns={columns} rows={orders} rowKey={(row) => row.id} empty={`${t.empty}${tenant.readOnly ? "" : ` ${t.emptyHint}`}`} />}
+    </> : <DataTable label={t.link} columns={columns} rows={orders} rowKey={(row) => row.id} pagination={pages > 1 && <nav aria-label={t.pagination} className="flex flex-wrap items-center justify-end gap-3">
+      {page > 1 && <Button asChild variant="outline"><Link href={`${path}?page=${page - 1}`}>{t.previous}</Link></Button>}
+      <span className="text-sm">{fill(t.page, { page: String(page), pages: String(pages) })}</span>
+      {page < pages && <Button asChild variant="outline"><Link href={`${path}?page=${page + 1}`}>{t.next}</Link></Button>}
+    </nav>} empty={`${t.empty}${tenant.readOnly ? "" : ` ${t.emptyHint}`}`} />}
   </div>;
 }

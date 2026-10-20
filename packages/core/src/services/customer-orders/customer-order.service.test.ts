@@ -65,6 +65,24 @@ describe("CustomerOrderService", () => {
     expect(stored.every(({ quantity }) => typeof quantity === "string")).toBe(true);
   });
 
+  it("bounds collection pages and groups each document's ordered lines without losing the boundary", async () => {
+    const scope = em();
+    const customer = await scope.findOneOrFail(Customer, { code: "00000001" });
+    const location = await scope.findOneOrFail(Location, { code: "00000001" });
+    const material = await scope.findOneOrFail(Material, { code: "00000005" });
+    for (let index = 1; index <= 101; index++) {
+      const order = scope.create(CustomerOrder, { code: String(index).padStart(8, "0"), customer, location });
+      for (const position of [1, 0]) scope.create(CustomerOrderLine, { order, position, material, quantity: "1.000000", enteredQuantity: "1", enteredUnit: "each", numerator: "1", denominator: "1", requiredDate: `2027-01-0${position + 1}` });
+    }
+    await scope.flush();
+    const first = await service().list(); const last = await service().list(2);
+    expect(first).toHaveLength(100); expect(first[0].id).toBe("00000001"); expect(first.at(-1)!.id).toBe("00000100");
+    expect(last).toHaveLength(1); expect(last[0].id).toBe("00000101");
+    expect([...first, ...last].every(({ lines }) => lines.map(({ requiredDate }) => requiredDate).join() === "2027-01-01,2027-01-02")).toBe(true);
+    expect(await service().list(3)).toEqual([]); expect(await service().count()).toBe(101); expect(await service(em("prod")).count()).toBe(0);
+    await expect(service().list(0)).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+  });
+
   it("allows repeated materials on different dates and keeps stable identities across reordering and line-only edits", async () => {
     const order = await service().create({ ...input(), lines: [line(), line("00000005", "20", "each", "2027-01-08")] }, actor);
     const changes = edit(order); changes.lines.reverse(); changes.lines[0].quantity = "80";

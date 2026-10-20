@@ -535,6 +535,7 @@ export const pl: Messages = {
     },
   },
   customerOrders: {
+    pagination: "Strony zamówień klientów", page: "Strona {page} z {pages}", previous: "Poprzednia strona", next: "Następna strona",
     link: "Zamówienia klientów", heading: "Zamówienia klientów — {tenant}", detailHeading: "Zamówienie klienta {id}",
     intro: "Zapisz popyt klienta w jednej lokalizacji, z terminem dla każdej pozycji. Zapis zamówienia nie zmienia zapasu.",
     empty: "Brak zamówień klientów.", emptyHint: "Utwórz zamówienie, aby zapisać popyt z terminami.",

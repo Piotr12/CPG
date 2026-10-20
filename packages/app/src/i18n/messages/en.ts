@@ -567,6 +567,7 @@ export const en = {
   },
   /** The BOM screens (E04-S01). Client components get plain strings; only the headings are functions. */
   customerOrders: {
+    pagination: "Customer order pages", page: "Page {page} of {pages}", previous: "Previous page", next: "Next page",
     link: "Customer orders", heading: "Customer orders — {tenant}", detailHeading: "Customer order {id}",
     intro: "Record customer demand at one location, with a required date on each line. Entering an order moves no stock.",
     empty: "No customer orders yet.", emptyHint: "Create an order to record dated demand.",
