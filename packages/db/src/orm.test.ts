@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { BOM_REVISION_IMMUTABLE, GOODS_RECEIPT_IMMUTABLE } from "./entities";
+import { BOM_REVISION_IMMUTABLE, GOODS_ISSUE_IMMUTABLE, GOODS_RECEIPT_IMMUTABLE } from "./entities";
 import { migrations } from "./migrations";
 import { getMigrationStatus, initOrm, migrate } from "./orm";
 
@@ -58,18 +58,19 @@ describe("migrate", () => {
       "Migration20261020173715_customer_order_demand_index",
       "Migration20261020180000_purchasing",
       "Migration20261020193728_goods_receipts",
+      "Migration20261020205106_shipments_goods_issues",
     ]);
     expect(await migrate({ databasePath })).toEqual([]);
   });
   it("adopts the customer-order migrations after a database already running the main-branch stock ledger", async () => {
     const orm = await initOrm({ databasePath: tempDatabase() });
     try {
-      const previous = migrations.map((migration) => migration.name).filter((name) => !name.includes("customer_order"));
+      const previous = migrations.map((migration) => migration.name).filter((name) => !name.includes("customer_order") && !name.includes("shipments_goods_issues"));
       await orm.migrator.up({ migrations: previous });
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 18, pending: 2 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 18, pending: 3 });
       await orm.em.getConnection().execute("update tenant set generation = 23 where code = 'prod'");
       await orm.migrator.up();
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 20, pending: 0 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 21, pending: 0 });
       expect(await orm.em.getConnection().execute("select generation from tenant where code = 'prod'")).toEqual([{ generation: 23 }]);
       expect(await orm.em.getConnection().execute("select count(*) as count from stock_movement")).toEqual([{ count: 0 }]);
       expect(await orm.em.getConnection().execute("select count(*) as count from customer_order")).toEqual([{ count: 0 }]);
@@ -88,9 +89,9 @@ describe("getMigrationStatus", () => {
     const orm = await initOrm({ databasePath });
 
     try {
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 20 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 21 });
       await orm.migrator.up();
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 20, pending: 0 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 21, pending: 0 });
     } finally {
       await orm.close();
     }
@@ -107,7 +108,7 @@ describe("migrations", () => {
         await orm.em
           .getConnection()
           .execute<{ name: string }[]>(
-            "select name from sqlite_master where name in ('setting', 'user', 'session', 'user_preference', 'tenant', 'api_token', 'global_audit_event', 'tenant_audit_event', 'global_idempotency_key', 'tenant_idempotency_key', 'material', 'material_conversion', 'location', 'customer', 'supplier', 'planning_parameter_set', 'safety_stock_target', 'bom', 'bom_revision', 'bom_component', 'customer_order', 'customer_order_line', 'stock_balance', 'stock_movement', 'forecast', 'purchase_requisition', 'purchase_order', 'purchase_order_line', 'goods_receipt', 'goods_receipt_line')",
+            "select name from sqlite_master where name in ('setting', 'user', 'session', 'user_preference', 'tenant', 'api_token', 'global_audit_event', 'tenant_audit_event', 'global_idempotency_key', 'tenant_idempotency_key', 'material', 'material_conversion', 'location', 'customer', 'supplier', 'planning_parameter_set', 'safety_stock_target', 'bom', 'bom_revision', 'bom_component', 'customer_order', 'customer_order_line', 'stock_balance', 'stock_movement', 'forecast', 'purchase_requisition', 'purchase_order', 'purchase_order_line', 'goods_receipt', 'goods_receipt_line', 'shipment', 'shipment_line', 'goods_issue', 'goods_issue_line')",
           )
       )
         .map(({ name }) => name)
@@ -140,6 +141,8 @@ describe("migrations", () => {
         "forecast",
         "global_audit_event",
         "global_idempotency_key",
+        "goods_issue",
+        "goods_issue_line",
         "goods_receipt",
         "goods_receipt_line",
         "location",
@@ -152,6 +155,8 @@ describe("migrations", () => {
         "safety_stock_target",
         "session",
         "setting",
+        "shipment",
+        "shipment_line",
         "stock_balance",
         "stock_movement",
         "supplier",
@@ -163,11 +168,18 @@ describe("migrations", () => {
       ]);
       expect(await triggers()).toContain("stock_movement_no_update");
       expect(await triggers()).toContain("goods_receipt_no_update");
+      expect(await triggers()).toContain("goods_issue_no_update");
+      expect(await triggers()).toContain("goods_issue_line_no_update");
       const plan = await orm.em.getConnection().execute<{ detail: string }[]>(`explain query plan select l.id from customer_order_line l join customer_order o on l.order_id = o.id
         where l.tenant_code = ? and l.material_id = ? and l.removed = 0 and l.status = 'open' and l.id > ?
         and o.tenant_code = ? and o.status = 'open' order by l.id limit 100`, ["test", "material", "cursor", "test"]);
       expect(plan.map(({ detail }) => detail).join(" ")).toContain("customer_order_line_tenant_code_material_id_removed_status_id_index");
       expect(plan.map(({ detail }) => detail).join(" ")).not.toContain("TEMP B-TREE");
+      await orm.migrator.down();
+      expect((await tables()).filter((name) => name.startsWith("goods_issue") || name.startsWith("shipment"))).toEqual([]);
+      expect(await triggers()).not.toContain("goods_issue_no_update");
+      expect(await triggers()).not.toContain("goods_issue_line_no_update");
+      expect(await tables()).toContain("customer_order_line");
       await orm.migrator.down();
       expect((await tables()).filter((name) => name.startsWith("goods_receipt"))).toEqual([]);
       expect(await triggers()).not.toContain("goods_receipt_no_update");
@@ -492,7 +504,7 @@ describe("forecasts migration", () => {
       ]);
 
       // The migrations that landed after the forecasts come off first.
-      for (let later = 0; later < 6; later += 1) await orm.migrator.down();
+      for (let later = 0; later < 7; later += 1) await orm.migrator.down();
       expect(await execute(orm, "select name from sqlite_master where name = 'forecast'")).toEqual([{ name: "forecast" }]);
       await orm.migrator.down();
       expect(await execute(orm, "select name from sqlite_master where name = 'forecast'")).toEqual([]);
@@ -606,7 +618,8 @@ describe("purchasing migration", () => {
       await execute(orm, "delete from purchase_order_line");
       await execute(orm, "delete from purchase_order");
       await execute(orm, "delete from purchase_requisition");
-      await orm.migrator.down(); // Goods receipts, which landed after purchasing.
+      await orm.migrator.down(); // Shipments and goods issues, then goods receipts, which landed after purchasing.
+      await orm.migrator.down();
       await orm.migrator.down();
       expect(await execute(orm, "select name from sqlite_master where name like 'purchase%'")).toEqual([]);
       expect(await execute(orm, "select count(*) as n from material")).toEqual([{ n: 1 }]);
@@ -650,10 +663,63 @@ describe("goods-receipts migration", () => {
       await expect(execute(orm, "update goods_receipt set business_date = '2026-10-01'")).rejects.toThrow(GOODS_RECEIPT_IMMUTABLE);
       await expect(execute(orm, "update goods_receipt_line set quantity = '1.000000'")).rejects.toThrow(GOODS_RECEIPT_IMMUTABLE);
 
+      await orm.migrator.down(); // Shipments and goods issues, which landed after goods receipts.
       await orm.migrator.down();
       expect(await execute(orm, "select name from sqlite_master where name like 'goods_receipt%'")).toEqual([]);
       expect(await execute(orm, "select name from pragma_table_info('purchase_order_line') where name = 'received'")).toEqual([]);
       expect(await execute(orm, "select count(*) as n from purchase_order_line")).toEqual([{ n: 1 }]);
+    } finally {
+      await orm.close();
+    }
+  });
+});
+
+describe("shipments and goods-issues migration", () => {
+  const execute = (orm: Awaited<ReturnType<typeof initOrm>>, sql: string) => orm.em.getConnection().execute(sql);
+
+  it("starts every shipment Open and every shipment line at nothing issued, keeps IDs unique per tenant and issues immutable, and rolls back", async () => {
+    const databasePath = tempDatabase();
+    await migrate({ databasePath });
+    const orm = await initOrm({ databasePath });
+    const shipment = (id: string, tenant: string, code: string) =>
+      execute(orm, `insert into shipment (id, tenant_code, code, order_id, planned_date, created_at) values ('${id}', '${tenant}', '${code}', 'o1', '2026-10-25', 0)`);
+    const issue = (id: string, tenant: string, code: string) =>
+      execute(orm, `insert into goods_issue (id, tenant_code, code, shipment_id, business_date, created_at) values ('${id}', '${tenant}', '${code}', 's1', '2026-10-20', 0)`);
+
+    try {
+      await execute(orm, "insert into material (id, tenant_code, code, type, description, base_unit, created_at) values ('m1', 'test', '00000001', 'raw', 'x', 'each', 0)");
+      await execute(orm, "insert into location (id, tenant_code, code, name, created_at) values ('l1', 'test', '00000001', 'Plant', 0)");
+      await execute(orm, "insert into customer (id, tenant_code, code, name, created_at) values ('c1', 'test', '00000001', 'Acme', 0)");
+      await execute(orm, "insert into customer_order (id, tenant_code, code, customer_id, location_id, created_at, updated_at, version) values ('o1', 'test', '00000001', 'c1', 'l1', 0, 0, 1)");
+      await execute(
+        orm,
+        "insert into customer_order_line (id, tenant_code, order_id, position, material_id, quantity, entered_quantity, entered_unit, numerator, denominator, required_date) values ('ol1', 'test', 'o1', 0, 'm1', '60.000000', '60', 'each', '1', '1', '2026-11-04')",
+      );
+      await shipment("s1", "test", "00000001");
+      await shipment("s2", "prod", "00000001");
+      await expect(shipment("s3", "test", "00000001")).rejects.toThrow(/UNIQUE/);
+      expect(await execute(orm, "select status from shipment where id = 's1'")).toEqual([{ status: "open" }]);
+      await execute(
+        orm,
+        "insert into shipment_line (id, tenant_code, shipment_id, position, order_line_id, quantity, entered_quantity, entered_unit, numerator, denominator) values ('sl1', 'test', 's1', 0, 'ol1', '60.000000', '60', 'each', '1', '1')",
+      );
+      expect(await execute(orm, "select issued, typeof(issued) as kind from shipment_line")).toEqual([{ issued: "0.000000", kind: "text" }]);
+
+      await issue("g1", "test", "00000001");
+      await issue("g2", "prod", "00000001");
+      await expect(issue("g3", "test", "00000001")).rejects.toThrow(/UNIQUE/);
+      await execute(
+        orm,
+        "insert into goods_issue_line (id, tenant_code, issue_id, position, shipment_line_id, quantity, entered_quantity, entered_unit, numerator, denominator) values ('gl1', 'test', 'g1', 0, 'sl1', '20.000000', '20', 'each', '1', '1')",
+      );
+      await expect(execute(orm, "update goods_issue set business_date = '2026-10-01'")).rejects.toThrow(GOODS_ISSUE_IMMUTABLE);
+      await expect(execute(orm, "update goods_issue_line set quantity = '1.000000'")).rejects.toThrow(GOODS_ISSUE_IMMUTABLE);
+      await execute(orm, "update shipment_line set issued = '20.000000'");
+      await execute(orm, "update shipment set status = 'completed'");
+
+      await orm.migrator.down();
+      expect(await execute(orm, "select name from sqlite_master where name like 'shipment%' or name like 'goods_issue%'")).toEqual([]);
+      expect(await execute(orm, "select count(*) as n from customer_order_line")).toEqual([{ n: 1 }]);
     } finally {
       await orm.close();
     }

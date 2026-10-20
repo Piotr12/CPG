@@ -2352,6 +2352,469 @@
       "comment": null
     },
     {
+      "name": "goods_issue",
+      "columns": {
+        "business_date": {
+          "name": "business_date",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "datetime",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
+        "id": {
+          "name": "id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": true,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "shipment_id": {
+          "name": "shipment_id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "tenant_code": {
+          "name": "tenant_code",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": true,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        }
+      },
+      "indexes": [
+        {
+          "columnNames": [
+            "shipment_id"
+          ],
+          "composite": false,
+          "constraint": false,
+          "keyName": "goods_issue_shipment_id_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "tenant_code",
+            "code"
+          ],
+          "composite": true,
+          "constraint": true,
+          "keyName": "goods_issue_tenant_code_code_unique",
+          "primary": false,
+          "unique": true
+        },
+        {
+          "columnNames": [
+            "tenant_code"
+          ],
+          "composite": false,
+          "constraint": false,
+          "keyName": "goods_issue_tenant_code_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "id"
+          ],
+          "composite": false,
+          "constraint": true,
+          "keyName": "primary",
+          "primary": true,
+          "unique": true
+        }
+      ],
+      "checks": [],
+      "triggers": [
+        {
+          "name": "goods_issue_no_update",
+          "timing": "before",
+          "events": [
+            "update"
+          ],
+          "forEach": "row",
+          "body": "select raise(abort, 'Goods issues are immutable');"
+        }
+      ],
+      "foreignKeys": {
+        "goods_issue_shipment_id_foreign": {
+          "columnNames": [
+            "shipment_id"
+          ],
+          "constraintName": "goods_issue_shipment_id_foreign",
+          "localTableName": "goods_issue",
+          "referencedColumnNames": [
+            "id"
+          ],
+          "referencedTableName": "shipment"
+        },
+        "goods_issue_tenant_code_foreign": {
+          "columnNames": [
+            "tenant_code"
+          ],
+          "constraintName": "goods_issue_tenant_code_foreign",
+          "localTableName": "goods_issue",
+          "referencedColumnNames": [
+            "code"
+          ],
+          "referencedTableName": "tenant"
+        }
+      },
+      "comment": null
+    },
+    {
+      "name": "goods_issue_line",
+      "columns": {
+        "denominator": {
+          "name": "denominator",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "entered_quantity": {
+          "name": "entered_quantity",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "entered_unit": {
+          "name": "entered_unit",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "id": {
+          "name": "id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": true,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "issue_id": {
+          "name": "issue_id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": true,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "numerator": {
+          "name": "numerator",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "shipment_line_id": {
+          "name": "shipment_line_id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "tenant_code": {
+          "name": "tenant_code",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        }
+      },
+      "indexes": [
+        {
+          "columnNames": [
+            "issue_id"
+          ],
+          "composite": false,
+          "constraint": false,
+          "keyName": "goods_issue_line_issue_id_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "issue_id",
+            "position"
+          ],
+          "composite": true,
+          "constraint": true,
+          "keyName": "goods_issue_line_issue_id_position_unique",
+          "primary": false,
+          "unique": true
+        },
+        {
+          "columnNames": [
+            "shipment_line_id"
+          ],
+          "composite": false,
+          "constraint": false,
+          "keyName": "goods_issue_line_shipment_line_id_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "tenant_code"
+          ],
+          "composite": false,
+          "constraint": false,
+          "keyName": "goods_issue_line_tenant_code_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "id"
+          ],
+          "composite": false,
+          "constraint": true,
+          "keyName": "primary",
+          "primary": true,
+          "unique": true
+        }
+      ],
+      "checks": [],
+      "triggers": [
+        {
+          "name": "goods_issue_line_no_update",
+          "timing": "before",
+          "events": [
+            "update"
+          ],
+          "forEach": "row",
+          "body": "select raise(abort, 'Goods issues are immutable');"
+        }
+      ],
+      "foreignKeys": {
+        "goods_issue_line_issue_id_foreign": {
+          "columnNames": [
+            "issue_id"
+          ],
+          "constraintName": "goods_issue_line_issue_id_foreign",
+          "localTableName": "goods_issue_line",
+          "referencedColumnNames": [
+            "id"
+          ],
+          "referencedTableName": "goods_issue"
+        },
+        "goods_issue_line_shipment_line_id_foreign": {
+          "columnNames": [
+            "shipment_line_id"
+          ],
+          "constraintName": "goods_issue_line_shipment_line_id_foreign",
+          "localTableName": "goods_issue_line",
+          "referencedColumnNames": [
+            "id"
+          ],
+          "referencedTableName": "shipment_line"
+        },
+        "goods_issue_line_tenant_code_foreign": {
+          "columnNames": [
+            "tenant_code"
+          ],
+          "constraintName": "goods_issue_line_tenant_code_foreign",
+          "localTableName": "goods_issue_line",
+          "referencedColumnNames": [
+            "code"
+          ],
+          "referencedTableName": "tenant"
+        }
+      },
+      "comment": null
+    },
+    {
       "name": "goods_receipt",
       "columns": {
         "business_date": {
@@ -5032,6 +5495,493 @@
       "checks": [],
       "triggers": [],
       "foreignKeys": {},
+      "comment": null
+    },
+    {
+      "name": "shipment",
+      "columns": {
+        "code": {
+          "name": "code",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "datetime",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
+        "id": {
+          "name": "id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": true,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "order_id": {
+          "name": "order_id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "planned_date": {
+          "name": "planned_date",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "'open'",
+          "comment": null,
+          "collation": null,
+          "enumItems": [
+            "open",
+            "completed"
+          ],
+          "mappedType": "enum"
+        },
+        "tenant_code": {
+          "name": "tenant_code",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": true,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        }
+      },
+      "indexes": [
+        {
+          "columnNames": [
+            "id"
+          ],
+          "composite": false,
+          "constraint": true,
+          "keyName": "primary",
+          "primary": true,
+          "unique": true
+        },
+        {
+          "columnNames": [
+            "order_id"
+          ],
+          "composite": false,
+          "constraint": false,
+          "keyName": "shipment_order_id_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "tenant_code",
+            "code"
+          ],
+          "composite": true,
+          "constraint": true,
+          "keyName": "shipment_tenant_code_code_unique",
+          "primary": false,
+          "unique": true
+        },
+        {
+          "columnNames": [
+            "tenant_code"
+          ],
+          "composite": false,
+          "constraint": false,
+          "keyName": "shipment_tenant_code_index",
+          "primary": false,
+          "unique": false
+        }
+      ],
+      "checks": [
+        {
+          "name": "shipment_status_check",
+          "expression": "`status` in ('open', 'completed')",
+          "definition": "check (`status` in ('open', 'completed'))",
+          "columnName": "status"
+        }
+      ],
+      "triggers": [],
+      "foreignKeys": {
+        "shipment_order_id_foreign": {
+          "columnNames": [
+            "order_id"
+          ],
+          "constraintName": "shipment_order_id_foreign",
+          "localTableName": "shipment",
+          "referencedColumnNames": [
+            "id"
+          ],
+          "referencedTableName": "customer_order"
+        },
+        "shipment_tenant_code_foreign": {
+          "columnNames": [
+            "tenant_code"
+          ],
+          "constraintName": "shipment_tenant_code_foreign",
+          "localTableName": "shipment",
+          "referencedColumnNames": [
+            "code"
+          ],
+          "referencedTableName": "tenant"
+        }
+      },
+      "comment": null
+    },
+    {
+      "name": "shipment_line",
+      "columns": {
+        "denominator": {
+          "name": "denominator",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "entered_quantity": {
+          "name": "entered_quantity",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "entered_unit": {
+          "name": "entered_unit",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "id": {
+          "name": "id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": true,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "issued": {
+          "name": "issued",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "'0.000000'",
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "numerator": {
+          "name": "numerator",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "order_line_id": {
+          "name": "order_line_id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "shipment_id": {
+          "name": "shipment_id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": true,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "tenant_code": {
+          "name": "tenant_code",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        }
+      },
+      "indexes": [
+        {
+          "columnNames": [
+            "id"
+          ],
+          "composite": false,
+          "constraint": true,
+          "keyName": "primary",
+          "primary": true,
+          "unique": true
+        },
+        {
+          "columnNames": [
+            "order_line_id"
+          ],
+          "composite": false,
+          "constraint": false,
+          "keyName": "shipment_line_order_line_id_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "shipment_id"
+          ],
+          "composite": false,
+          "constraint": false,
+          "keyName": "shipment_line_shipment_id_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "shipment_id",
+            "position"
+          ],
+          "composite": true,
+          "constraint": true,
+          "keyName": "shipment_line_shipment_id_position_unique",
+          "primary": false,
+          "unique": true
+        },
+        {
+          "columnNames": [
+            "tenant_code"
+          ],
+          "composite": false,
+          "constraint": false,
+          "keyName": "shipment_line_tenant_code_index",
+          "primary": false,
+          "unique": false
+        }
+      ],
+      "checks": [],
+      "triggers": [],
+      "foreignKeys": {
+        "shipment_line_order_line_id_foreign": {
+          "columnNames": [
+            "order_line_id"
+          ],
+          "constraintName": "shipment_line_order_line_id_foreign",
+          "localTableName": "shipment_line",
+          "referencedColumnNames": [
+            "id"
+          ],
+          "referencedTableName": "customer_order_line"
+        },
+        "shipment_line_shipment_id_foreign": {
+          "columnNames": [
+            "shipment_id"
+          ],
+          "constraintName": "shipment_line_shipment_id_foreign",
+          "localTableName": "shipment_line",
+          "referencedColumnNames": [
+            "id"
+          ],
+          "referencedTableName": "shipment"
+        },
+        "shipment_line_tenant_code_foreign": {
+          "columnNames": [
+            "tenant_code"
+          ],
+          "constraintName": "shipment_line_tenant_code_foreign",
+          "localTableName": "shipment_line",
+          "referencedColumnNames": [
+            "code"
+          ],
+          "referencedTableName": "tenant"
+        }
+      },
       "comment": null
     },
     {
