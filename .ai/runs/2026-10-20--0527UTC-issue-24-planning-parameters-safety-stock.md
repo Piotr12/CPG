@@ -2,8 +2,8 @@
 
 **Date:** 2026-10-20 05:27 UTC
 **Agent:** Claude Code (Opus 5.5) via cezar: `om-auto-fix-issue 24` → `om-auto-write-spec 24` → `om-spec-writing --autonomous`
-**Spec:** to be written in this run
-**Status:** in progress
+**Spec:** `.ai/specs/2026-10-20--0532UTC-planning-parameters-safety-stock.md` (written in this run; it moves to `implemented/` once #64 merges)
+**Status:** done (spec PR #64 and implementation PR #65 ready for review; no assumption needs confirmation)
 
 ## Goal
 
@@ -40,8 +40,34 @@
   - a `kamal rollback` note, and `risk-high`;
   - the material option shows its base unit.
 
+- 05:45 Opened the spec PR #64 as ready, with:
+  - its labels;
+  - the defaults table (also posted on #24);
+  - the visual evidence;
+  - the run summary.
+- 05:43–06:40 Implemented on `feat/planning-parameters-safety-stock` (#65). The plan, its deviations and the verification are in `.ai/pipeline/runs/2026-10-20--0543UTC-planning-parameters-safety-stock.md`.
+  - The integration suite found two shared-layer bugs, both fixed with tests and recorded in `.ai/lessons.md`:
+    - `serverAction` dropped a service's field errors;
+    - the shadcn dialog doesn't scroll.
+  - agent-browser can't fill date inputs, so the tests use a new `fillDate` helper.
+  - A fresh-context code review asked for more browser tests, the 404 codes in the contract doc, and a neutral home for the shared references. All are done.
+- 06:45 Marked #65 ready with its full labels, the review, the UI evidence and the summary. Released the issue lock.
+
 ## Changes
 
+- `.ai/specs/2026-10-20--0532UTC-planning-parameters-safety-stock.md` and `.ai/specs/assets/planning-parameters-safety-stock/` (one current screenshot, three mockups with their HTML), on #64.
+- The implementation, on #65 (see its tracking plan).
+
 ## Verification
+- On #64: `npx vitest run tests/ai-filenames.test.ts` passes.
+- On #65, the full gate:
+  - lint and typecheck are clean;
+  - unit tests: 1556, at 100% coverage;
+  - the build passes;
+  - Docker integration: 22 files, 156 tests.
 
 ## Follow-ups
+- Merge #64, then merge `main` into #65 and `git mv` the spec to `implemented/`, then merge #65.
+- #65 needs human QA (`needs-qa`) and a human approval: the pipeline account can't approve its own PR.
+- Only the status label depends on "today" being the UTC date (spec Q10). MRP (slice 3) must decide its business date.
+- #27 (import) must reuse `create`/`update` and the error codes of both services.
