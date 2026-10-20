@@ -18,8 +18,11 @@ describe("@cpg/db", () => {
       "DOCUMENT_STATES",
       "Forecast",
       "GLOBAL_ENTITIES",
+      "GOODS_RECEIPT_IMMUTABLE",
       "GlobalAuditEvent",
       "GlobalIdempotencyKey",
+      "GoodsReceipt",
+      "GoodsReceiptLine",
       "IDEMPOTENCY_KEY_MAX",
       "LOCALES",
       "Location",
@@ -97,6 +100,8 @@ describe("@cpg/db", () => {
       db.CustomerOrderLine,
       db.StockBalance,
       db.StockMovement,
+      db.GoodsReceipt,
+      db.GoodsReceiptLine,
     ]);
     const tenantOwned: unknown[] = [
       db.TenantAuditEvent,
@@ -119,6 +124,8 @@ describe("@cpg/db", () => {
       db.CustomerOrderLine,
       db.StockBalance,
       db.StockMovement,
+      db.GoodsReceipt,
+      db.GoodsReceiptLine,
     ];
     expect(db.GLOBAL_ENTITIES).toEqual(db.entities.filter((entity) => !tenantOwned.includes(entity)));
   });

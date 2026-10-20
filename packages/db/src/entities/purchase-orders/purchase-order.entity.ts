@@ -4,8 +4,8 @@ import { Location } from "../locations/location.entity";
 import { Supplier } from "../suppliers/supplier.entity";
 import { tenantOwned } from "../tenants/tenant-owned";
 
-/** What a purchase order can be so far: open (E09-S02 and E11 add the rest). */
-export const PURCHASE_ORDER_STATUSES = ["open"] as const;
+/** What a purchase order can be so far: open, or completed once every line is received in full (E11 adds the rest). */
+export const PURCHASE_ORDER_STATUSES = ["open", "completed"] as const;
 export type PurchaseOrderStatus = (typeof PURCHASE_ORDER_STATUSES)[number];
 
 const owned = tenantOwned();

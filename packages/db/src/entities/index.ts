@@ -1,6 +1,8 @@
 import { CustomerOrder, DOCUMENT_STATES, type DocumentState } from "./customer-orders/customer-order.entity";
 import { CustomerOrderLine } from "./customer-orders/customer-order-line.entity";
 import { StockBalance } from "./stock/stock-balance.entity";
+import { GoodsReceipt, GOODS_RECEIPT_IMMUTABLE } from "./goods-receipts/goods-receipt.entity";
+import { GoodsReceiptLine } from "./goods-receipts/goods-receipt-line.entity";
 import { StockMovement, STOCK_MOVEMENT_IMMUTABLE } from "./stock/stock-movement.entity";
 import { API_TOKEN_NAME_MAX, ApiToken } from "./api-tokens/api-token.entity";
 import {
@@ -72,6 +74,7 @@ export type { NamedRecord, NamedRecordEntity };
 export { PlanningParameterSet, PROCUREMENT_MODES, SafetyStockTarget };
 export { Forecast };
 export { StockBalance, StockMovement, STOCK_MOVEMENT_IMMUTABLE };
+export { GoodsReceipt, GOODS_RECEIPT_IMMUTABLE, GoodsReceiptLine };
 export { Bom, BomComponent, BOM_REVISION_IMMUTABLE, BomRevision };
 export { PURCHASE_ORDER_STATUSES, PurchaseOrder, PurchaseOrderLine, PurchaseRequisition, REQUISITION_STATUSES };
 export type { ProcurementMode, PurchaseOrderStatus, RequisitionStatus };
@@ -108,6 +111,8 @@ export const entities = [
   CustomerOrderLine,
   StockBalance,
   StockMovement,
+  GoodsReceipt,
+  GoodsReceiptLine,
 ];
 
 /**
