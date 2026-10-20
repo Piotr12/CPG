@@ -23,6 +23,8 @@ export const HELP_TOPIC_IDS = [
   "purchase-requisitions",
   "purchase-orders",
   "purchase-order",
+  "transfers",
+  "transfer",
   "customer-orders",
   "customer-order-detail",
   "import",
@@ -59,6 +61,8 @@ export const HELP_TOPIC_ROUTES: Record<HelpTopicId, string> = {
   "purchase-requisitions": "/admin/[tenant]/purchase-requisitions",
   "purchase-orders": "/admin/[tenant]/purchase-orders",
   "purchase-order": "/admin/[tenant]/purchase-orders/[id]",
+  transfers: "/admin/[tenant]/transfers",
+  transfer: "/admin/[tenant]/transfers/[id]",
   "customer-orders": "/admin/[tenant]/customer-orders",
   "customer-order-detail": "/admin/[tenant]/customer-orders/[id]",
   import: "/admin/[tenant]/import",
@@ -269,6 +273,23 @@ const en: Record<HelpTopicId, HelpText> = {
       "Each line shows what has been received and what is still outstanding. Post goods receipt records what arrived: a quantity per line, in any unit the material converts, leaving the other lines empty. Stock rises at the order's location with today's date, and the lines and the order update in the same step, or nothing is posted.",
       "A receipt may be partial, repeated or larger than what is outstanding: an excess is accepted and named in a warning. Once every line has received its quantity the order is Completed and takes no more receipts. Receipts can't be changed; they are listed under Goods receipts, newest first.",
       "Planned dates can be changed through the API with PATCH, at the version you loaded, while the order is Open; each change appears in the tenant's audit. The supplier, the location and a line's material, unit and quantity never change.",
+    ],
+  },
+  transfers: {
+    title: "Transfers",
+    body: [
+      "Transfers, under Transactions in the sidebar, move one material from one location to another. A transfer has a planned quantity, in any unit the material converts, and a planned dispatch and arrival date: the arrival can't be before the dispatch, and the two locations must differ. Each transfer gets an eight-digit ID; a new one is Open.",
+      "Creating a transfer changes no stock. Its page dispatches it (stock leaves the source into transit), receives it (stock leaves transit onto the destination) and writes off what was lost on the way. A transfer moves one material: create one transfer per material.",
+      "Every account can create and read transfers, here and through the API; only active materials and locations can be picked, and a read-only tenant refuses new ones. A location with an Open transfer from or to it, and a material with an Open transfer, can't be deactivated. The API lists GET /api/tenants/{tenant}/transfers?page=1 and creates with POST to the same path.",
+    ],
+  },
+  transfer: {
+    title: "A transfer: dispatch, receive, write off",
+    body: [
+      "A transfer's page shows its route, its planned dates and quantities: planned, dispatched, still to dispatch, in transit, received and written off. Stock in transit belongs to the transfer: neither location can use it, and the Stock page shows it apart from the physical balance.",
+      "Dispatch takes stock off the source into transit, up to what is left to dispatch and never more than the source holds. Receive lands part or all of what is in transit at the destination, never more. Write off takes a quantity lost on the way out of transit, with a reason; no location changes, and a stock correction can't touch transit. Each posting is dated today and writes both of its sides in one step, or nothing.",
+      "Once the whole planned quantity is received the transfer is Completed and takes no more postings. A transfer with a write-off stays Open: closing it early comes with a later release. Postings can't be changed; the ledger lists each with what it moved, newest first.",
+      "Change dates edits the planned dates while the transfer is Open, at the version you loaded. The API offers PATCH /api/tenants/{tenant}/transfers/{id} for dates, and POST …/dispatches, …/receipts and …/write-offs for postings, each with a bearer token, an idempotency key and, in Test, the dataset generation.",
     ],
   },
   import: {
@@ -499,6 +520,23 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Każda pozycja pokazuje, ile przyjęto i ile jeszcze pozostało. Zaksięguj przyjęcie towaru zapisuje, co dotarło: ilość dla pozycji, w dowolnej jednostce, którą materiał przelicza, pozostałe pozycje zostają puste. Zapas w lokalizacji zamówienia rośnie z dzisiejszą datą, a pozycje i zamówienie zmieniają się w tym samym kroku albo nic nie zostaje zaksięgowane.",
       "Przyjęcie może być częściowe, powtórzone albo większe niż to, co pozostało: nadwyżka zostaje przyjęta i wskazana w ostrzeżeniu. Gdy każda pozycja przyjmie swoją ilość, zamówienie jest Zrealizowane i nie przyjmuje kolejnych dostaw. Przyjęć nie można zmieniać; są wymienione w sekcji Przyjęcia towaru, od najnowszego.",
       "Planowane daty można zmienić przez API poleceniem PATCH, w wersji, którą wczytano, dopóki zamówienie jest Otwarte; każda zmiana pojawia się w audycie środowiska. Dostawca, lokalizacja oraz materiał, jednostka i ilość pozycji nigdy się nie zmieniają.",
+    ],
+  },
+  transfers: {
+    title: "Przesunięcia",
+    body: [
+      "Przesunięcia, w sekcji Transakcje w menu bocznym, przenoszą jeden materiał z jednej lokalizacji do innej. Przesunięcie ma planowaną ilość, w dowolnej jednostce, którą materiał przelicza, oraz planowaną datę wydania i przybycia: przybycie nie może być przed wydaniem, a obie lokalizacje muszą być różne. Każde przesunięcie dostaje ośmiocyfrowe ID; nowe jest Otwarte.",
+      "Utworzenie przesunięcia nie zmienia zapasu. Na jego stronie można je wydać (zapas opuszcza lokalizację źródłową i trafia do tranzytu), przyjąć (zapas opuszcza tranzyt i trafia do lokalizacji docelowej) oraz odpisać to, co zginęło po drodze. Przesunięcie przenosi jeden materiał: utwórz osobne przesunięcie dla każdego materiału.",
+      "Przesunięcia może tworzyć i przeglądać każde konto, tutaj i przez API; wybrać można tylko aktywne materiały i lokalizacje, a środowisko tylko do odczytu odrzuca nowe. Lokalizacji z otwartym przesunięciem z niej lub do niej ani materiału z otwartym przesunięciem nie można dezaktywować. API wyświetla listę przez GET /api/tenants/{tenant}/transfers?page=1 i tworzy przez POST na tę samą ścieżkę.",
+    ],
+  },
+  transfer: {
+    title: "Przesunięcie: wydanie, przyjęcie, odpis",
+    body: [
+      "Strona przesunięcia pokazuje jego trasę, planowane daty i ilości: planowaną, wydaną, pozostałą do wydania, w tranzycie, przyjętą i odpisaną. Zapas w tranzycie należy do przesunięcia: żadna z lokalizacji nie może go użyć, a strona Zapas pokazuje go osobno od zapasu fizycznego.",
+      "Wydaj zdejmuje zapas z lokalizacji źródłowej do tranzytu, do ilości pozostałej do wydania i nigdy więcej, niż jest w lokalizacji. Przyjmij umieszcza część lub całość zapasu z tranzytu w lokalizacji docelowej, nigdy więcej. Odpisz zdejmuje z tranzytu ilość utraconą po drodze, z powodem; żadna lokalizacja się nie zmienia, a korekta zapasu nie może dotknąć tranzytu. Każde księgowanie ma dzisiejszą datę i zapisuje obie strony w jednym kroku albo nic.",
+      "Gdy przyjęto całą planowaną ilość, przesunięcie jest Zrealizowane i nie przyjmuje kolejnych księgowań. Przesunięcie z odpisem pozostaje Otwarte: wcześniejsze zamknięcie pojawi się w późniejszej wersji. Księgowań nie można zmieniać; rejestr pokazuje każde z tym, co przesunęło, od najnowszego.",
+      "Zmień daty zmienia planowane daty, dopóki przesunięcie jest Otwarte, w wersji, którą wczytano. API udostępnia PATCH /api/tenants/{tenant}/transfers/{id} dla dat oraz POST …/dispatches, …/receipts i …/write-offs dla księgowań, każde z tokenem, kluczem idempotencji i, w środowisku Test, generacją danych.",
     ],
   },
   import: {

@@ -27,6 +27,8 @@ import { findActiveMaterial } from "../materials/find-material";
 import { lineError } from "../materials/line-error";
 import { postStockMovements } from "../stock/stock-posting";
 
+export type { TransferPostingKind };
+
 /** The stock movement types a transfer posts (INV-012: every movement names its source). */
 export const TRANSFER_DISPATCH_MOVEMENT = "transfer-dispatch";
 export const TRANSFER_RECEIPT_MOVEMENT = "transfer-receipt";

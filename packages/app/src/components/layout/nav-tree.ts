@@ -21,6 +21,7 @@ export type NavId =
   | "boms"
   | "purchaseRequisitions"
   | "purchaseOrders"
+  | "transfers"
   | "sales"
   | "forecasts"
   | "import"
@@ -70,6 +71,7 @@ export const TENANT_TREE: NavNode[] = [
       { id: "customerOrders", section: "customer-orders", match: "prefix" },
       { id: "purchaseRequisitions", section: "purchase-requisitions", match: "prefix" },
       { id: "purchaseOrders", section: "purchase-orders", match: "prefix" },
+      { id: "transfers", section: "transfers", match: "prefix" },
     ],
   },
   { id: "tenantAudit", section: "audit", match: "prefix" },
