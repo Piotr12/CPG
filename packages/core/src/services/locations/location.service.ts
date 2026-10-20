@@ -1,6 +1,7 @@
 import { assertNoProductionOrders } from "../production-orders/production-order-usage";
 import { assertNoCustomerOrdersAtLocation } from "../customer-orders/customer-order-usage";
 import { assertNoPhysicalStock } from "../stock/stock-usage";
+import { assertNoOpenTransfersAt } from "../transfers/transfer-usage";
 import type { EntityManager } from "@cpg/db";
 import { DEMO_LOCATIONS } from "../../domain/locations/demo-locations";
 import type { AuditActor } from "../audit/actor";
@@ -29,6 +30,7 @@ export class LocationService {
         await assertNoProductionOrders(em, { location });
         await assertNoPhysicalStock(em, { location });
         await assertNoCustomerOrdersAtLocation(em, location);
+        await assertNoOpenTransfersAt(em, location);
       },
     });
   }

@@ -8,6 +8,7 @@ import type { AuditActor } from "../audit/actor";
 import { activeDemoReferences, isUntouchedKind } from "../demo/demo-references";
 import { findLocation } from "../locations/find-location";
 import { findMaterial } from "../materials/find-material";
+import { transitAt } from "../transfers/transfer-usage";
 import { postStockMovements, toMovementView, type PostingSource, type StockMovementView } from "./stock-posting";
 
 export type { StockMovementView };
@@ -15,7 +16,12 @@ export type StockLine = z.infer<typeof stockCorrectionSchema>;
 export type StockPair = z.infer<typeof stockPairSchema>;
 export interface StockView extends StockPair {
   materialDescription: string; locationName: string; baseUnit: string;
-  materialActive: boolean; locationActive: boolean; quantity: string; movements: StockMovementView[];
+  materialActive: boolean; locationActive: boolean; quantity: string;
+  /** In transit on Open transfers from and to this location: the transfers', usable at neither site (UX-017, INV-009). */
+  inTransitFrom: string; inTransitTo: string;
+  /** The IDs of the Open transfers holding that transit, ascending. */
+  transitTransfers: string[];
+  movements: StockMovementView[];
 }
 
 /** Physical stock for one tenant. All writes, snapshots and audit share one transaction (R03/R05/R08/R09). */
@@ -31,9 +37,11 @@ export class StockService {
     const location = await findLocation(em, key.location);
     const balance = await em.findOne(StockBalance, { material, location }, { refresh: true });
     const movements = await em.find(StockMovement, { material, location }, { orderBy: { occurredAt: "desc", id: "desc" }, limit: 100 });
+    const transit = await transitAt(em, material, location);
     return {
       ...key, materialDescription: material.description, locationName: location.name, baseUnit: material.baseUnit,
       materialActive: material.active, locationActive: location.active, quantity: balance?.quantity ?? "0.000000",
+      inTransitFrom: transit.from, inTransitTo: transit.to, transitTransfers: transit.transfers,
       movements: movements.map(toMovementView),
     };
   }

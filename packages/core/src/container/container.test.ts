@@ -14,6 +14,7 @@ import { AuthService } from "../services/auth/auth.service";
 import { LoginThrottle } from "../services/auth/login-throttle";
 import { PurchaseOrderService } from "../services/purchase-orders/purchase-order.service";
 import { GoodsReceiptService } from "../services/goods-receipts/goods-receipt.service";
+import { TransferService } from "../services/transfers/transfer.service";
 import { PurchaseRequisitionService } from "../services/purchase-requisitions/purchase-requisition.service";
 import { BomService } from "../services/boms/bom.service";
 import { CustomerService } from "../services/customers/customer.service";
@@ -61,6 +62,7 @@ describe("createAppContainer", () => {
     expect(cradle.productionOrderService).toBeInstanceOf(ProductionOrderService);
     expect(cradle.purchaseOrderService).toBeInstanceOf(PurchaseOrderService);
     expect(cradle.goodsReceiptService).toBeInstanceOf(GoodsReceiptService);
+    expect(cradle.transferService).toBeInstanceOf(TransferService);
     expect(cradle.customerOrderService).toBeInstanceOf(CustomerOrderService);
     expect(cradle.customerService).toBeInstanceOf(CustomerService);
     expect(cradle.supplierService).toBeInstanceOf(SupplierService);
