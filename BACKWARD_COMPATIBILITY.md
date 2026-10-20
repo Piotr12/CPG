@@ -60,7 +60,7 @@ Source: `packages/app/src/app/up/route.ts`, `Dockerfile`, `config/deploy.yml`.
 Source: `packages/app/src/app/`. Today that is:
 
 - `/`, `/login` and `/help`, which are public. `/help` accepts `?q=` and anchors topics as `#<topic-id>`.
-- `/admin` (the Global tenant chooser), `/admin/test` and `/admin/prod` (the tenant homes). Every tenant page lives under `/admin/{tenant}/`, such as `/admin/{tenant}/materials` and `/admin/{tenant}/materials/{id}` (an eight-digit material ID), `/admin/{tenant}/locations`, `/admin/{tenant}/customers` and `/admin/{tenant}/suppliers` (help topics `locations`, `customers`, `suppliers`), and `/admin/{tenant}/planning-parameters` and `/admin/{tenant}/safety-stock` (help topics `planning-parameters`, `safety-stock`). All of them require a signed-in session and redirect to `/login` otherwise; tenant pages are readable by every account.
+- `/admin` (the Global tenant chooser), `/admin/test` and `/admin/prod` (the tenant homes). Every tenant page lives under `/admin/{tenant}/`, such as `/admin/{tenant}/materials` and `/admin/{tenant}/materials/{id}` (an eight-digit material ID), `/admin/{tenant}/locations`, `/admin/{tenant}/customers` and `/admin/{tenant}/suppliers` (help topics `locations`, `customers`, `suppliers`), `/admin/{tenant}/planning-parameters` and `/admin/{tenant}/safety-stock` (help topics `planning-parameters`, `safety-stock`), and `/admin/{tenant}/boms` and `/admin/{tenant}/boms/{id}` (an eight-digit BOM ID, with `?revision=N` for an older revision; help topics `boms`, `bom`). All of them require a signed-in session and redirect to `/login` otherwise; tenant pages are readable by every account.
 
 **Breaking:** removing or renaming a page URL users can bookmark, a help topic id, or the `q` parameter. **Required path:** a redirect from the old URL in the same PR, or a topic kept under its old id.
 
@@ -88,7 +88,7 @@ Route handlers under `app/api/` are protected the same way: their paths, methods
   - `GET /api/tenants/{tenant}/materials`;
   - `POST /api/tenants/{tenant}/materials` (`{ type, description, baseUnit }`);
   - `GET /api/tenants/{tenant}/materials/{id}` (with its `conversions`; 404 `MATERIAL_NOT_FOUND`);
-  - `PATCH /api/tenants/{tenant}/materials/{id}` (`{ version, description?, type?, baseUnit?, active? }`; an `id` in the body is 400; 409 `BASE_UNIT_HAS_CONVERSIONS`, `BASE_UNIT_IN_USE` while planning parameters or safety targets hold quantities in it, and `MATERIAL_MADE_AT_LOCATIONS` for a change to raw while it is Make somewhere);
+  - `PATCH /api/tenants/{tenant}/materials/{id}` (`{ version, description?, type?, baseUnit?, active? }`; an `id` in the body is 400; 409 `BASE_UNIT_HAS_CONVERSIONS`, `BASE_UNIT_IN_USE` once a BOM references the material or while planning parameters or safety targets hold quantities in it, `MATERIAL_TYPE_IN_USE` for a type change once a BOM references it, and `MATERIAL_MADE_AT_LOCATIONS` for a change to raw while it is Make somewhere);
   - `POST /api/tenants/{tenant}/materials/{id}/conversions` (`{ unit, numerator, denominator }`; 400 `UNIT_IS_BASE_UNIT`, 409 `CONVERSION_EXISTS`);
   - `PATCH /api/tenants/{tenant}/materials/{id}/conversions/{unit}` (`{ numerator, denominator, version }`; 404 `CONVERSION_NOT_FOUND`);
   - `DELETE /api/tenants/{tenant}/materials/{id}/conversions/{unit}`, the first `DELETE` with a JSON body: `{ version }`.
@@ -106,8 +106,14 @@ Route handlers under `app/api/` are protected the same way: their paths, methods
   - `POST /api/tenants/{tenant}/safety-stock-targets` (`{ material, location, effectiveFrom, quantity }`, the date as `YYYY-MM-DD`; 409 `SAFETY_STOCK_TARGET_EXISTS` for a second target on one date);
   - `PATCH /api/tenants/{tenant}/safety-stock-targets/{material}/{location}/{effectiveFrom}` (`{ quantity, version }`; 404 `SAFETY_STOCK_TARGET_NOT_FOUND`, or `MATERIAL_NOT_FOUND` / `LOCATION_NOT_FOUND` for an unknown or malformed ID in the path);
   - `DELETE /api/tenants/{tenant}/safety-stock-targets/{material}/{location}/{effectiveFrom}` (`{ version }`; the same 404 codes as `PATCH`).
+- the BOMs of one tenant (spec `2026-10-20--0757UTC-boms`), with the same read and write rules. A BOM is addressed by its eight-digit ID, numbered per tenant; `priority` is a JSON integer (1 is the highest, up to 999); dates are `YYYY-MM-DD`, both included, and `validThrough` null means no end; each component line is `{ material, quantity, unit }` on input, its quantity a JSON **string** per one base unit of the output, and is returned as `{ material, quantity, enteredQuantity, enteredUnit, numerator, denominator }`, `quantity` in the component's base unit with six decimals. Field errors of a line are keyed by its path, `components.N.<field>`. A new BOM or line is 409 `MATERIAL_INACTIVE` for an inactive material and 404 `MATERIAL_NOT_FOUND` for an unknown one:
+  - `GET /api/tenants/{tenant}/boms` (each with its current recipe; by output, priority, then ID);
+  - `POST /api/tenants/{tenant}/boms` (`{ output, priority, validFrom, validThrough?, components }`; 400 with field errors for a raw output, a finished component, a repeated material or a line its conversion refuses; 409 `BOM_PRIORITY_CONFLICT`, `BOM_CYCLE`, `BOM_ID_RACE` or `BOM_IDS_EXHAUSTED`);
+  - `GET /api/tenants/{tenant}/boms/{id}` (with its `revisions`, newest first; 404 `BOM_NOT_FOUND`);
+  - `PATCH /api/tenants/{tenant}/boms/{id}` (`{ version, priority?, validFrom?, validThrough?, components?, active? }`, at least one besides `version`; `components` is the complete list; a real recipe change adds a revision, an identical one or a toggle doesn't; an `id` or `output` in the body is 400; the same 409 codes as `POST`);
+  - `GET /api/tenants/{tenant}/boms/{id}/revisions/{revision}` (404 `BOM_REVISION_NOT_FOUND`). Revisions never change.
 
-**Versions.** An edit of a versioned record (today: a user, a material, a material's conversion, a location, a customer, a supplier, a planning parameter set and a safety-stock target) carries the `version` it loaded. A stale one is 409 `VERSION_CONFLICT`, and the newer change is kept. The user routes answer 404 `NOT_FOUND` for the built-in admin, an unknown id or a malformed one.
+**Versions.** An edit of a versioned record (today: a user, a material, a material's conversion, a location, a customer, a supplier, a planning parameter set, a safety-stock target and a BOM) carries the `version` it loaded. A stale one is 409 `VERSION_CONFLICT`, and the newer change is kept. The user routes answer 404 `NOT_FOUND` for the built-in admin, an unknown id or a malformed one.
 
 Every tenant-scoped endpoint lives under `/api/tenants/{tenant}/`.
 

@@ -28,4 +28,13 @@ describe("validationError", () => {
     expect(parsed.success).toBe(false);
     expect(validationError(parsed.error!).fieldErrors).toEqual({ limit: [expect.any(String)] });
   });
+
+  it("keys a list item's errors by their full path, keeps every message of a field, and skips whole-input issues", () => {
+    const lines = z.object({ lines: z.array(z.object({ unit: z.string().min(2, "short").regex(/^[a-z]+$/, "letters") })) });
+
+    expect(validationError(lines.safeParse({ lines: [{ unit: "kg" }, { unit: "1" }] }).error!).fieldErrors).toEqual({
+      "lines.1.unit": ["short", "letters"],
+    });
+    expect(validationError(lines.safeParse(null).error!).fieldErrors).toEqual({});
+  });
 });
