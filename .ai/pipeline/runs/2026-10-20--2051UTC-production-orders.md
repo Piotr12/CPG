@@ -20,6 +20,7 @@ Phase 3: verification/review and publication.
 Revision drift, historical revaluation and tenant isolation. Retain stored revision/conversion/lead-time; recheck create in one transaction; real SQLite and API/browser tests.
 
 ## Decisions and log
+- User explicitly instructed autonomous completion without further confirmation after the concrete publication question; this authorizes the prepared branch/PR/evidence publication. Continue the skill through green CI; no merge is part of this assignment.
 - Clean dev server reproduces the URL-data Insight on unchanged customer-orders/[id] as well as the new pages, despite the documented Suspense-child pattern. Reordering parameter reads only moved the diagnostic into shared preferences and was reverted; final source remains 8115321. Production image, local build and browser checks pass. Log /tmp/cpg-88-dev-final.log; treat shared dev-prefetch diagnostics as separate follow-up.
 - Issue claim released while publication awaits Guard approval: https://github.com/Piotr12/CPG/issues/88#issuecomment-6301991887. No shared branch push or PR was attempted.
 - Final browser state matrix found the copied blank fallback conflicts with CODE_REVIEW.md's feedback fallback rule. Added the first shared, language-neutral LoadingMessage skeleton and used it on both new pages; regression tests inspect both route fallbacks. Re-running the gate and final production image after this scoped correction.
