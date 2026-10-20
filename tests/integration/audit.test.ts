@@ -153,11 +153,12 @@ describe("every change is kept in an append-only audit", () => {
         `fetch("/api/audit", { method: ${JSON.stringify(method)} }).then(async (r) => ({ status: r.status, body: r.headers.get("content-type")?.includes("json") ? await r.json() : null }))`,
       );
 
+    const before = (await auditRows(alice)).length;
     const read = await call("GET");
     expect(read.status).toBe(200);
     expect(read.body).toMatchObject({ ok: true, data: { entries: expect.arrayContaining([expect.objectContaining({ actor: expect.objectContaining({ username: USERNAME }) })]) } });
     for (const method of ["PATCH", "PUT", "DELETE", "POST"]) expect((await call(method)).status).toBe(405);
-    expect((await auditRows(alice)).length).toBe(5);
+    expect((await auditRows(alice)).length).toBe(before);
   });
 
   it("shows neither audit to a visitor who isn't signed in", async () => {
