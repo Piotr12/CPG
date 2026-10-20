@@ -96,6 +96,7 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 ## Agent pipeline (om-* skills)
 
+- **2026-10-20 — Moving a spec breaks its relative image links** — specs embed mockups as `](assets/<slug>/…)`, and after `git mv` into `implemented/` or `archive/` they must read `](../assets/<slug>/…)`. Six moved specs showed no images until the E03 closure fixed them; `tests/spec-images.test.ts` now fails on any missing image a spec embeds.
 - **2026-10-19 — Never delete the `qa-evidence` branch** — PR comments embed screenshots and mockups from `raw.githubusercontent.com/<repo>/qa-evidence/<slug>/…`. Deleting the branch, or a folder in it, silently breaks the images in every old comment. Cleaning up the old per-PR `qa-evidence-*` branches did exactly that, so evidence now lives in one long-lived orphan branch (`attach-image-evidence` in `.ai/trackers/github.md`).
 
 - **2026-10-19 — Never name a zsh variable `path`** — zsh ties the lowercase `path` array to `PATH`, so `path="x/y.png"` inside a loop (as in the descriptor's `attach-image-evidence` snippet) wipes `PATH`, and every later command fails with "command not found". Run such snippets under `bash -c` or use another name.

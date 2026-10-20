@@ -132,7 +132,7 @@ describe("planning parameters and safety stock (E03-S03)", () => {
     expect(targets.map((row) => row.slice(2, 4))).toEqual(expect.arrayContaining([["2026-01-01", "20 each"], ["2027-01-01", "40 each"]]));
   });
 
-  it("refuses Make for a raw material next to the field, and keeps Make and Buy per location (MAT-014…016, MAT-018)", async () => {
+  it("refuses Make for a raw material next to the field, and keeps Make and Buy per location with the values entered (MAT-014, MAT-015)", async () => {
     await addSet(admin, { material: steel, location: plant, procurement: "make", days: "14", min: "500", multiple: "100" });
     await admin.waitForText("A raw material is always bought: choose Buy.");
     await admin.select("[role=dialog] select[name=procurement]", "buy");
@@ -172,7 +172,7 @@ describe("planning parameters and safety stock (E03-S03)", () => {
     expect((await auditOf(admin, `${steel} — pp-ui steel at ${plant}`)).map(([action]) => action)).toContain("Planning parameters removed");
   });
 
-  it("keeps targets per date with their status today, and refuses a second one on the same date (DEM-015…017)", async () => {
+  it("keeps targets per date with their status today, and refuses a second one on the same date (DEM-017)", async () => {
     await addTarget(admin, steel, plant, "2026-01-01", "100");
     await admin.waitUntil(closed);
     await addTarget(admin, steel, plant, "2099-01-01", "150");
@@ -227,6 +227,31 @@ describe("planning parameters and safety stock (E03-S03)", () => {
 
     const packerRow = (await listRows(admin, "/admin/prod/planning-parameters")).find(([, location]) => location.startsWith(packer));
     expect(packerRow?.[1]).toBe(`${packer} pp-ui packer Inactive`);
+  });
+
+  it("stops offering a deactivated material for new sets and targets, and keeps its existing target (MAT-029)", async () => {
+    await admin.open(`${baseUrl}/admin/prod/materials/${steel}`);
+    await admin.waitUntil(ready(button("Deactivate")));
+    await admin.clickRole("button", "Deactivate");
+    await admin.waitFor("[role=alertdialog]");
+    await admin.click("[role=alertdialog] button[data-variant=destructive]");
+    await admin.waitUntil(`!document.querySelector("[role=alertdialog]")`);
+    await admin.waitUntil(ready(button("Reactivate")));
+
+    for (const [path, add] of [
+      ["/admin/prod/planning-parameters", "Add parameters"],
+      ["/admin/prod/safety-stock", "Add target"],
+    ]) {
+      await openAdd(admin, path, add);
+      const offered = await admin.evaluate<string[]>(`[...document.querySelectorAll("[role=dialog] select[name=material] option")].map((o) => o.value)`);
+      expect(offered).toContain(panel);
+      expect(offered).not.toContain(steel);
+      await admin.clickRole("button", "Cancel");
+      await admin.waitUntil(closed);
+    }
+
+    const steelTarget = (await listRows(admin, "/admin/prod/safety-stock")).find(([material]) => material.startsWith(steel));
+    expect(steelTarget?.slice(0, 3)).toEqual([`${steel} pp-ui steel Inactive`, `${plant} pp-ui plant`, "2099-01-01"]);
   });
 
   it("shows a normal user both lists without any control (TEN-004)", async () => {

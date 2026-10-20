@@ -152,10 +152,10 @@ Prototype: `.ai/specs/assets/user-management/`. These are static mockups and onl
 - `mockup-04-admin-as-user.png`: `/admin` for a normal user.
 - `current-01-admin-signed-in.png`: today's `/admin`.
 
-![Users list mockup](assets/user-management/mockup-01-users-list.png)
-![Create user mockup](assets/user-management/mockup-02-create-user.png)
-![Deactivate confirmation mockup](assets/user-management/mockup-03-deactivate-confirm.png)
-![/admin as a normal user mockup](assets/user-management/mockup-04-admin-as-user.png)
+![Users list mockup](../assets/user-management/mockup-01-users-list.png)
+![Create user mockup](../assets/user-management/mockup-02-create-user.png)
+![Deactivate confirmation mockup](../assets/user-management/mockup-03-deactivate-confirm.png)
+![/admin as a normal user mockup](../assets/user-management/mockup-04-admin-as-user.png)
 
 ## 📝 Edge Cases & Failure Scenarios
 

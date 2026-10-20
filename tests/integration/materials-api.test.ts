@@ -113,30 +113,39 @@ describe("materials through the API (R07)", () => {
     expect(json(await api("GET", path, adminSecret)).data).toMatchObject({ id: created.id, description: "matapi plate 2 mm" });
   });
 
-  it("adds, changes and removes a conversion, also for a unit with a Polish letter in the path", async () => {
+  it("adds, changes and removes a conversion, refusing a zero denominator on both, also for a unit with a Polish letter in the path (MAT-022)", async () => {
     const created = json(
       await write("POST", "/api/tenants/prod/materials", adminSecret, { type: "raw", description: "matapi panel", baseUnit: "szt." }),
     ).data as MaterialRow;
     const conversions = `/api/tenants/prod/materials/${created.id}/conversions`;
+    const material = `/api/tenants/prod/materials/${created.id}`;
 
     const zero = await write("POST", conversions, adminSecret, { unit: "płyta", numerator: "4", denominator: "0" });
     const added = await write("POST", conversions, adminSecret, { unit: "płyta", numerator: "4", denominator: "1" });
     const one = `${conversions}/${encodeURIComponent("płyta")}`;
+    const zeroChange = await write("PATCH", one, adminSecret, { numerator: "6", denominator: "0", version: 1 });
+    const kept = json(await api("GET", material, adminSecret)).data;
     const changed = await write("PATCH", one, adminSecret, { numerator: "6", denominator: "1", version: 1 });
-    const read = json(await api("GET", `/api/tenants/prod/materials/${created.id}`, adminSecret)).data;
+    const read = json(await api("GET", material, adminSecret)).data;
     const removed = await write("DELETE", one, adminSecret, { version: 2 });
 
     expect(zero.status).toBe(400);
     expect(json(zero).error.fieldErrors).toHaveProperty("denominator");
     expect(json(added).data).toEqual({ unit: "płyta", numerator: "4", denominator: "1", inverse: "0.25", version: 1 });
+    expect(zeroChange.status).toBe(400);
+    expect(json(zeroChange).error.fieldErrors).toHaveProperty("denominator");
+    expect(kept.conversions).toEqual([{ unit: "płyta", numerator: "4", denominator: "1", inverse: "0.25", version: 1 }]);
     expect(json(changed).data).toMatchObject({ unit: "płyta", numerator: "6", version: 2 });
     expect(read.conversions).toEqual([{ unit: "płyta", numerator: "6", denominator: "1", inverse: "0.166667", version: 2 }]);
     expect(json(removed).data).toEqual({ unit: "płyta" });
-    expect(json(await api("GET", `/api/tenants/prod/materials/${created.id}`, adminSecret)).data.conversions).toEqual([]);
+    expect(json(await api("GET", material, adminSecret)).data.conversions).toEqual([]);
   });
 
-  it("lets a normal user's token read materials but not change them (TEN-004, API-010)", async () => {
+  it("lets a normal user's token read materials but not create or change them (TEN-004, API-010)", async () => {
     await write("POST", "/api/users", adminSecret, { username: "matapi-una", password: PASSWORD });
+    const existing = json(
+      await write("POST", "/api/tenants/prod/materials", adminSecret, { type: "raw", description: "matapi washer", baseUnit: "each" }),
+    ).data as MaterialRow;
     const una = openBrowser();
     try {
       await signIn(una, baseUrl, PASSWORD, "matapi-una");
@@ -149,12 +158,19 @@ describe("materials through the API (R07)", () => {
         description: "matapi forbidden",
         baseUnit: "kg",
       });
+      const edit = await write("PATCH", `/api/tenants/prod/materials/${existing.id}`, unaSecret, {
+        version: existing.version,
+        description: "matapi forbidden edit",
+      });
 
       expect(list.status).toBe(200);
-      expect(create.status).toBe(403);
-      expect(json(create).error.code).toBe("FORBIDDEN");
+      for (const response of [create, edit]) {
+        expect(response.status).toBe(403);
+        expect(json(response).error.code).toBe("FORBIDDEN");
+      }
       const prod = json(await api("GET", "/api/tenants/prod/materials", adminSecret)).data as MaterialRow[];
       expect(prod.map(({ description }) => description)).not.toContain("matapi forbidden");
+      expect(prod.find(({ id }) => id === existing.id)).toMatchObject({ description: "matapi washer", version: existing.version });
     } finally {
       await una.close();
     }

@@ -41,6 +41,20 @@ describe("/api/tenants/{tenant}/materials/{id}/conversions/{unit}", () => {
     );
   });
 
+  it("PATCH refuses a zero denominator with 400 next to the field, changing nothing (MAT-022)", async () => {
+    mocks.state.caller = ADMIN_TOKEN;
+    mocks.state.cradle = { materialService: { changeConversion: mocks.changeConversion } };
+
+    const response = await call("PATCH", "case", { numerator: "12", denominator: "0", version: 1 });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      ok: false,
+      error: { code: "VALIDATION_FAILED", fieldErrors: { denominator: [expect.any(String)] } },
+    });
+    expect(mocks.changeConversion).not.toHaveBeenCalled();
+  });
+
   it("DELETE removes it at the version in the JSON body", async () => {
     mocks.state.caller = ADMIN_TOKEN;
     mocks.state.cradle = { materialService: { removeConversion: mocks.removeConversion } };

@@ -97,15 +97,29 @@ describe("materials actions", () => {
     expect(mocks.revalidatePath).toHaveBeenCalledTimes(6);
   });
 
-  it("refuses a normal user, writing and refreshing nothing (TEN-004)", async () => {
+  it("refuses a normal user every write, writing and refreshing nothing (TEN-004)", async () => {
     mocks.currentUser.mockResolvedValue(alice);
+    const forbidden = { ok: false, error: { code: "FORBIDDEN" } };
 
-    await expect(createMaterial("prod", 1, { type: "raw", description: "x", baseUnit: "kg" })).resolves.toMatchObject({
-      ok: false,
-      error: { code: "FORBIDDEN" },
-    });
-    await expect(removeConversion("prod", 1, "00000002", "case", 1)).resolves.toMatchObject({ error: { code: "FORBIDDEN" } });
-    expect(mocks.materialService.create).not.toHaveBeenCalled();
+    await expect(createMaterial("prod", 1, { type: "raw", description: "x", baseUnit: "kg" })).resolves.toMatchObject(forbidden);
+    await expect(updateMaterial("prod", 1, "00000002", 1, { description: "x", active: false })).resolves.toMatchObject(forbidden);
+    await expect(addConversion("prod", 1, "00000002", { unit: "case", numerator: "12", denominator: "1" })).resolves.toMatchObject(
+      forbidden,
+    );
+    await expect(changeConversion("prod", 1, "00000002", "case", 1, { numerator: "10", denominator: "1" })).resolves.toMatchObject(
+      forbidden,
+    );
+    await expect(removeConversion("prod", 1, "00000002", "case", 1)).resolves.toMatchObject(forbidden);
+    for (const method of Object.values(mocks.materialService)) expect(method).not.toHaveBeenCalled();
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("refuses changing a factor to a zero denominator next to the field, writing and refreshing nothing (MAT-022)", async () => {
+    const result = await changeConversion("prod", 1, "00000002", "case", 1, { numerator: "12", denominator: "0" });
+
+    expect(result).toMatchObject({ ok: false, error: { code: "VALIDATION_FAILED" } });
+    expect(Object.keys((result as { error: { fieldErrors: object } }).error.fieldErrors)).toEqual(["denominator"]);
+    expect(mocks.materialService.changeConversion).not.toHaveBeenCalled();
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 

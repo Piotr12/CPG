@@ -136,7 +136,7 @@ const en: Record<HelpTopicId, HelpText> = {
     body: [
       "Materials, under Master data in the sidebar, lists that tenant's materials by ID. Test and Prod each have their own: material 00000001 in Test and 00000001 in Prod are different records.",
       "Every material has an eight-digit ID that CPG assigns in order when it is created (00000001, 00000002, …) and that never changes, a type, a description and a base unit.",
-      "The type is raw (bought), intermediate (made and used to make other materials) or finished (made and sold). The base unit is the unit every quantity of the material is stored in, exactly to six decimals.",
+      "The type is raw (bought), intermediate (made and used to make other materials) or finished (made and sold). The base unit is the unit every quantity of the material is stored in, exactly to six decimals. A material can't become raw while a location makes it (planning parameters set to Make).",
       "Every account can read materials. Only the administrator creates and changes them, with Create material here and Edit on a material's page; through the API too, with the same rules.",
     ],
   },
@@ -180,7 +180,7 @@ const en: Record<HelpTopicId, HelpText> = {
     title: "Planning parameters",
     body: [
       "Planning parameters, under Master data in the sidebar, tell MRP how each material is supplied at each location: Make (production) or Buy (purchasing), the lead time in whole calendar days, and the minimum lot and lot multiple a proposal must respect, in the material's base unit.",
-      "A raw material is always bought. An intermediate or finished material can be made at one location and bought at another. Without a set, MRP reports the material's parameters at that location as missing.",
+      "A raw material is always bought. An intermediate or finished material can be made at one location and bought at another. Without a set, MRP will report the material's parameters at that location as missing.",
       "Every account can read the list. Only the administrator adds, changes and removes sets, with Add parameters and each row's ⋯ menu; through the API too, with the same rules. Only active materials and locations can get a new set; existing sets stay when either is deactivated.",
       "Every change appears in the tenant's audit. A material's base unit can't change while it has planning parameters.",
     ],
@@ -291,7 +291,7 @@ const pl: Record<HelpTopicId, HelpText> = {
     body: [
       "Materiały, w sekcji Dane podstawowe panelu bocznego, wyświetlają materiały tego środowiska według ID. Test i Prod mają własne: materiał 00000001 w Test i 00000001 w Prod to różne rekordy.",
       "Każdy materiał ma ośmiocyfrowe ID, które CPG nadaje po kolei przy utworzeniu (00000001, 00000002, …) i które nigdy się nie zmienia, a także typ, opis i jednostkę bazową.",
-      "Typ to surowiec (kupowany), półprodukt (wytwarzany i zużywany do innych materiałów) albo wyrób gotowy (wytwarzany i sprzedawany). Jednostka bazowa to jednostka, w której zapisywana jest każda ilość materiału, dokładnie do sześciu miejsc po przecinku.",
+      "Typ to surowiec (kupowany), półprodukt (wytwarzany i zużywany do innych materiałów) albo wyrób gotowy (wytwarzany i sprzedawany). Jednostka bazowa to jednostka, w której zapisywana jest każda ilość materiału, dokładnie do sześciu miejsc po przecinku. Materiał nie może stać się surowcem, dopóki jakaś lokalizacja go produkuje (parametry planowania ustawione na Produkcja).",
       "Materiały może przeglądać każde konto. Tworzy je i zmienia tylko administrator, przyciskiem Utwórz materiał tutaj i Edytuj na stronie materiału; także przez API, na tych samych zasadach.",
     ],
   },
@@ -335,7 +335,7 @@ const pl: Record<HelpTopicId, HelpText> = {
     title: "Parametry planowania",
     body: [
       "Parametry planowania, w sekcji Dane podstawowe w menu bocznym, mówią MRP, jak każdy materiał jest zaopatrywany w każdej lokalizacji: Produkcja albo Zakup, czas realizacji w pełnych dniach kalendarzowych oraz minimalna partia i wielokrotność partii, których propozycja musi przestrzegać, w jednostce bazowej materiału.",
-      "Surowiec jest zawsze kupowany. Półprodukt lub wyrób gotowy może być produkowany w jednej lokalizacji i kupowany w innej. Bez zestawu MRP zgłasza brak parametrów materiału w tej lokalizacji.",
+      "Surowiec jest zawsze kupowany. Półprodukt lub wyrób gotowy może być produkowany w jednej lokalizacji i kupowany w innej. Bez zestawu MRP zgłosi brak parametrów materiału w tej lokalizacji.",
       "Listę może przeglądać każde konto. Zestawy dodaje, zmienia i usuwa tylko administrator, przyciskiem Dodaj parametry i menu ⋯ w wierszu; także przez API, na tych samych zasadach. Nowy zestaw może dostać tylko aktywny materiał i aktywna lokalizacja; istniejące zestawy zostają po dezaktywacji.",
       "Każda zmiana pojawia się w audycie środowiska. Jednostki bazowej materiału nie można zmienić, dopóki ma on parametry planowania.",
     ],

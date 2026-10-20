@@ -7,6 +7,6 @@ Specifications for spec-driven development (SDD). Each spec describes a feature 
   - `specs/` — active specs, not yet fully implemented.
   - [`implemented/`](implemented/) — specs that have been fully implemented and verified.
   - [`archive/`](archive/) — specs that were superseded, abandoned or rejected.
-- Specs are moved with `git mv` and keep their original file name.
+- Specs are moved with `git mv` and keep their original file name. A moved spec's image links change from `](assets/…)` to `](../assets/…)` (`tests/spec-images.test.ts` checks them).
 
 See [`AGENTS.md`](../../AGENTS.md) for the spec template and the rules agents follow.

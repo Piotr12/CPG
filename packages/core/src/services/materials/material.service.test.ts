@@ -21,6 +21,8 @@ import { migrateDatabase, toDbOptions } from "../../database";
 import { DEMO_MATERIALS } from "../../domain/materials/demo-materials";
 import { VERSION_CONFLICT } from "../../http/errors";
 import { tenantServerAction } from "../../http/tenant-server-action";
+import { conversionChangeSchema } from "../../validators/materials/conversion.schema";
+import { FACTOR_MESSAGE } from "../../validators/materials/material-fields.schema";
 import type { AuditActor } from "../audit/actor";
 import { PlanningParameterService } from "../planning-parameters/planning-parameter.service";
 import { SafetyStockTargetService } from "../safety-stock/safety-stock-target.service";
@@ -203,11 +205,16 @@ describe("MaterialService", () => {
       });
     });
 
-    it("never changes the ID (MAT-004)", async () => {
+    it("never changes the ID, even when the changes carry one (MAT-004)", async () => {
       const bolt = await service().create(BOLT, ACTOR);
-      const changes = { description: "x", id: "00000009" } as Parameters<MaterialService["update"]>[1];
+      const changes = { description: "x", id: "00000009", code: "00000009" } as Parameters<MaterialService["update"]>[1];
 
       expect((await service().update(bolt.id, changes, 1, ACTOR)).id).toBe("00000001");
+      expect((await service().list()).map(({ id, description }) => `${id} ${description}`)).toEqual(["00000001 x"]);
+      await expect(service().get("00000009")).rejects.toMatchObject({ code: "MATERIAL_NOT_FOUND" });
+      const updated = await entry("materials.material.updated");
+      expect(updated).toMatchObject({ subjectId: "00000001" });
+      expect([updated?.before, updated?.after]).toEqual([{ description: "Bolt M8" }, { description: "x" }]);
     });
 
     it("deactivates and reactivates as their own audited actions (AUD-003)", async () => {
@@ -392,7 +399,7 @@ describe("MaterialService", () => {
       await expect(service().addConversion("00000001", CASE, ACTOR)).rejects.toMatchObject({ code: "MATERIAL_NOT_FOUND" });
     });
 
-    it("changes a factor at the loaded version, for new entries only (MAT-027)", async () => {
+    it("changes a factor at the loaded version, audits it, and converts with the new factor from then on", async () => {
       const bolt = await boltWithCase();
 
       const changed = await service().changeConversion(bolt.id, "case", { numerator: "10", denominator: "1" }, 1, ACTOR);
@@ -418,7 +425,7 @@ describe("MaterialService", () => {
       expect(await audit()).toHaveLength(entries);
     });
 
-    it("refuses a stale version or an unknown unit, keeping the old factor (MAT-022)", async () => {
+    it("refuses a stale version or an unknown unit, keeping the old factor", async () => {
       const bolt = await boltWithCase();
       await service().changeConversion(bolt.id, "case", { numerator: "10", denominator: "1" }, 1, ACTOR);
 
@@ -559,7 +566,7 @@ describe("MaterialService", () => {
   });
 });
 
-describe("MaterialService under racing writes", () => {
+describe("MaterialService behind tenantServerAction, as the pages call it", () => {
   const dataDir = mkdtempSync(path.join(tmpdir(), "cpg-material-race-"));
   const config = loadConfig({ DATA_DIR: dataDir });
   let other: Orm;
@@ -599,5 +606,30 @@ describe("MaterialService under racing writes", () => {
       "00000002 From the page",
     ]);
     expect(await em.count(MaterialConversion, {})).toBe(0);
+  });
+
+  it("refuses changing an existing factor to a zero denominator, keeping the old factor and writing no audit (MAT-022)", async () => {
+    const em = other.em.fork();
+    selectTenant(em, "prod");
+    const materials = new MaterialService({ em });
+    const ore = await materials.create({ type: "raw", description: "Ore", baseUnit: "kg" }, ACTOR);
+    await materials.addConversion(ore.id, { unit: "t", numerator: "1000", denominator: "1" }, ACTOR);
+    const entries = await em.count(TenantAuditEvent, {});
+    // The Change factor action's own composition: the schema parses before the service runs.
+    const change = tenantServerAction(conversionChangeSchema, ({ materialId, unit, version, ...factor }, scope) =>
+      scope.cradle.materialService.changeConversion(materialId, unit, factor, version, ACTOR),
+    );
+
+    await expect(change("prod", 1, { materialId: ore.id, unit: "t", numerator: "1000", denominator: "0", version: 1 })).resolves.toMatchObject({
+      ok: false,
+      error: { code: "VALIDATION_FAILED", fieldErrors: { denominator: [FACTOR_MESSAGE] } },
+    });
+
+    const check = other.em.fork();
+    selectTenant(check, "prod");
+    expect((await new MaterialService({ em: check }).get(ore.id)).conversions).toEqual([
+      { unit: "t", numerator: "1000", denominator: "1", inverse: "0.001", version: 1 },
+    ]);
+    expect(await check.count(TenantAuditEvent, {})).toBe(entries);
   });
 });

@@ -210,9 +210,9 @@ Prototype: `.ai/specs/assets/test-prod-tenants/`. Static mockups, illustrative o
 
 Today, for comparison: `current-01-admin.png` (`/admin` after sign-in, with no tenant anywhere).
 
-![Global chooser mockup](assets/test-prod-tenants/mockup-01-global-chooser.png)
-![Test home mockup](assets/test-prod-tenants/mockup-02-test-home.png)
-![Prod home mockup](assets/test-prod-tenants/mockup-03-prod-home.png)
+![Global chooser mockup](../assets/test-prod-tenants/mockup-01-global-chooser.png)
+![Test home mockup](../assets/test-prod-tenants/mockup-02-test-home.png)
+![Prod home mockup](../assets/test-prod-tenants/mockup-03-prod-home.png)
 
 ## 📝 Edge Cases & Failure Scenarios
 

@@ -151,9 +151,19 @@ describe("PlanningParameterService", () => {
       expect(await service().list()).toEqual([]);
     });
 
-    it("doesn't find another tenant's material or location (TEN-014)", async () => {
+    it("doesn't find another tenant's material or location, writing nothing in either tenant (TEN-014)", async () => {
       await expect(service("test").create(SET, ACTOR)).rejects.toMatchObject({ code: "MATERIAL_NOT_FOUND", status: 404 });
+      // Test has the material but not the location: Prod's 00000001 stays out of reach.
+      const test = scopedEm("test");
+      test.create(Material, { code: "00000002", type: "intermediate", description: "Test panel", baseUnit: "each" });
+      await test.flush();
+      await expect(service("test").create(SET, ACTOR)).rejects.toMatchObject({ code: "LOCATION_NOT_FOUND", status: 404 });
       await expect(service().create({ ...SET, location: "00000009" }, ACTOR)).rejects.toMatchObject({ code: "LOCATION_NOT_FOUND" });
+
+      expect(await service("test").list()).toEqual([]);
+      expect(await service().list()).toEqual([]);
+      expect(await scopedEm("test").count(TenantAuditEvent, {})).toBe(0);
+      expect(await audit()).toEqual([]);
     });
   });
 

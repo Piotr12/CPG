@@ -167,9 +167,9 @@ Prototype: `.ai/specs/assets/user-preferences-footer-help/`. These are illustrat
 
 | Image | Shows |
 |---|---|
-| ![/admin, English, light](assets/user-preferences-footer-help/mockup-01-admin-en-light.png) | `/admin`, English, light: the switches, the Help link and the footer |
-| ![/admin, Polish, dark](assets/user-preferences-footer-help/mockup-02-admin-pl-dark.png) | the same account after choosing Polski and Ciemny |
-| ![/help search](assets/user-preferences-footer-help/mockup-03-help-en-light.png) | `/help` searched for "sign" |
+| ![/admin, English, light](../assets/user-preferences-footer-help/mockup-01-admin-en-light.png) | `/admin`, English, light: the switches, the Help link and the footer |
+| ![/admin, Polish, dark](../assets/user-preferences-footer-help/mockup-02-admin-pl-dark.png) | the same account after choosing Polski and Ciemny |
+| ![/help search](../assets/user-preferences-footer-help/mockup-03-help-en-light.png) | `/help` searched for "sign" |
 
 Today's `/`, `/login` and `/admin` are in `current-01-landing.png`, `current-02-login.png` and `current-03-admin.png` in the same folder.
 
