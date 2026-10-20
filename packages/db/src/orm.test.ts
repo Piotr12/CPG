@@ -51,6 +51,7 @@ describe("migrate", () => {
       "Migration20261020054509_planning_parameters_safety_stock",
       "Migration20261020080940_boms",
       "Migration20261020164223_customer_orders",
+      "Migration20261020173715_customer_order_demand_index",
     ]);
     expect(await migrate({ databasePath })).toEqual([]);
   });
@@ -62,9 +63,9 @@ describe("getMigrationStatus", () => {
     const orm = await initOrm({ databasePath });
 
     try {
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 14 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 15 });
       await orm.migrator.up();
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 14, pending: 0 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 15, pending: 0 });
     } finally {
       await orm.close();
     }
@@ -127,6 +128,14 @@ describe("migrations", () => {
         "user",
         "user_preference",
       ]);
+      const plan = await orm.em.getConnection().execute<{ detail: string }[]>(`explain query plan select l.id from customer_order_line l join customer_order o on l.order_id = o.id
+        where l.tenant_code = ? and l.material_id = ? and l.removed = 0 and l.status = 'open' and l.id > ?
+        and o.tenant_code = ? and o.status = 'open' order by l.id limit 100`, ["test", "material", "cursor", "test"]);
+      expect(plan.map(({ detail }) => detail).join(" ")).toContain("customer_order_line_tenant_code_material_id_removed_status_id_index");
+      expect(plan.map(({ detail }) => detail).join(" ")).not.toContain("TEMP B-TREE");
+      await orm.migrator.down();
+      expect(await orm.em.getConnection().execute("select name from sqlite_master where type = 'index' and name = 'customer_order_line_tenant_code_material_id_removed_status_id_index'")).toEqual([]);
+      expect(await tables()).toContain("customer_order_line");
       await orm.migrator.down();
       expect(await tables()).not.toContain("customer_order");
       expect(await tables()).not.toContain("customer_order_line");
@@ -451,8 +460,7 @@ describe("boms migration", () => {
       await execute(orm, "delete from bom_component");
       await execute(orm, "delete from bom_revision");
       await execute(orm, "delete from bom");
-      await orm.migrator.down();
-      await orm.migrator.down();
+      await orm.migrator.down({ to: "Migration20261020054509_planning_parameters_safety_stock" });
       expect(await execute(orm, "select name from sqlite_master where name like 'bom%'")).toEqual([]);
       expect(await execute(orm, "select count(*) as n from material")).toEqual([{ n: 2 }]);
     } finally {

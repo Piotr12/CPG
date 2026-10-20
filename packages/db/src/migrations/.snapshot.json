@@ -1607,6 +1607,20 @@
         },
         {
           "columnNames": [
+            "tenant_code",
+            "material_id",
+            "removed",
+            "status",
+            "id"
+          ],
+          "composite": true,
+          "constraint": false,
+          "keyName": "customer_order_line_tenant_code_material_id_removed_status_id_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
             "id"
           ],
           "composite": false,

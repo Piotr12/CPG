@@ -45,6 +45,8 @@ Risk-high additive schema, new aggregate contract, conversion history and line i
 
 - 17:35 UTC — Re-review found the same unbounded-read pattern in the cross-order material-demand guard. Replaced it with parent-status-filtered 100-line keyset batches using detached identity maps in the same tenant transaction. Real SQLite 101-order regression passes both blocker-after-first-batch and all-resolved paths. Re-running the gate; no API or business-rule change.
 
+- 17:37 UTC — Query-plan re-review found detached batches still sorted material matches without a composite index. Added an entity-declared (tenant, material, removed, status, id) index via a NEW generated migration (published migration unchanged). Added SQLite EXPLAIN and down/up regression evidence; migration count becomes 15. The pagination browser fixture had an overlong customer name and was corrected before final rerun.
+
 ## Verification
 - Phase 1: lint/typecheck passed; full coverage passed, 289 files / 1,927 tests, all four measures 100%.
 - Design metadata checks: 2 test files, 6 tests passed. Full implementation gate pending.

@@ -10,6 +10,7 @@ const owned = tenantOwned();
 export const CustomerOrderLine = defineEntity({
   name: "CustomerOrderLine",
   filters: owned.filters,
+  indexes: [{ properties: ["tenant", "material", "removed", "status", "id"] }],
   properties: {
     id: p.uuid().primary().onCreate(() => randomUUID()),
     tenant: owned.tenant,
