@@ -115,6 +115,7 @@ describe("read-only tenants through the API (R05)", () => {
     const material = `/api/tenants/prod/materials/${plate.id}`;
     const conversions = `${material}/conversions`;
     const before = json(await api("GET", material, adminSecret)).data;
+    const [box] = before.conversions as { unit: string; version: number }[];
 
     const refused = {
       "location create": await write("POST", "/api/tenants/prod/locations", adminSecret, { name: "roapi refused depot" }),
@@ -130,8 +131,8 @@ describe("read-only tenants through the API (R05)", () => {
       "customer create": await write("POST", "/api/tenants/prod/customers", adminSecret, { name: "roapi refused customer" }),
       "supplier create": await write("POST", "/api/tenants/prod/suppliers", adminSecret, { name: "roapi refused supplier" }),
       "conversion add": await write("POST", conversions, adminSecret, { unit: "pallet", numerator: "1", denominator: "400" }),
-      "conversion change": await write("PATCH", `${conversions}/box`, adminSecret, { numerator: "1", denominator: "12", version: 1 }),
-      "conversion remove": await write("DELETE", `${conversions}/box`, adminSecret, { version: 1 }),
+      "conversion change": await write("PATCH", `${conversions}/box`, adminSecret, { numerator: "1", denominator: "12", version: box.version }),
+      "conversion remove": await write("DELETE", `${conversions}/box`, adminSecret, { version: box.version }),
     };
 
     for (const [attempt, response] of Object.entries(refused)) {
@@ -230,6 +231,23 @@ describe("read-only tenants through the API (R05)", () => {
 
     expect(edited.status).toBe(200);
     expect(json(edited).data).toMatchObject({ description: "roapi plate edited" });
+  });
+
+  it("lets the refused master-data writes through too once Prod is writable again", async () => {
+    // The same requests that were refused: they were valid, and only the flag stopped them.
+    const conversion = (json(await api("GET", `/api/tenants/prod/materials/${plate.id}`, adminSecret)).data.conversions as { version: number }[])[0];
+    const responses = [
+      await write("PATCH", `/api/tenants/prod/locations/${yard.id}`, adminSecret, { version: yard.version, name: "roapi yard renamed" }),
+      await write("PATCH", `/api/tenants/prod/materials/${plate.id}/conversions/box`, adminSecret, {
+        numerator: "1",
+        denominator: "12",
+        version: conversion.version,
+      }),
+      await write("POST", "/api/tenants/prod/customers", adminSecret, { name: "roapi later customer" }),
+    ];
+
+    expect(responses.map(({ status }) => status)).toEqual([200, 200, 200]);
+    expect(json(responses[0]).data).toMatchObject({ name: "roapi yard renamed" });
   });
 
   it("records making Prod writable again in the Global audit, before and after (AUD-016)", async () => {

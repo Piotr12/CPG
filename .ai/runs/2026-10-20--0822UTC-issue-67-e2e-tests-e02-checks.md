@@ -3,7 +3,7 @@
 **Date:** 2026-10-20 08:22 UTC
 **Agent:** Claude Code / Opus 5.5 (`om-auto-fix-issue 67`, cezar headless)
 **Spec:** none (issue #67 is the scope; follow-up of epic E02 #10, PR #66)
-**Status:** in progress
+**Status:** done
 
 ## Goal
 
@@ -35,6 +35,16 @@ Add the end-to-end tests issue #67 lists for E02 (isolation, audit, API contract
 - 08:55 Lint, typecheck, `test:coverage` (100%) and build green. Integration run 1: 181 of 182 passed. The new Session check in `named-records.test.ts` read a "—" session from another file's API-created **location** with the supplier's ID (each kind numbers on its own, and `auditOf` filtered by ID prefix only). Fixed in the test by filtering on the supplier's own label; the product is right (API entries have no session).
 
 - 09:00 The same ID-prefix filter in `materials.test.ts` (Session check) could match another kind's record: filtered by `${boltId} — ${BOLT}` too. Lesson recorded. Integration run 3, all files: 23 files, 182 tests passed.
+- 09:15 Opened PR #71 (labels: review, refactor, skip-qa, priority-low, risk-low); lock handed from the issue to the PR. CI green on `b817a99`.
+- 09:25 Review (separate agent): approve, 5 minor and 8 nits. Applied:
+  - TEN-010's wait now needs Test's own shown row (`offsetParent`), so a hidden Prod page can't satisfy it.
+  - The conversion change and remove use the loaded version, and a positive control shows the refused master-data writes pass once Prod is writable.
+  - AUD-007 asserts every one of the test's writes with `toEqual`, not `arrayContaining`.
+  - API-034's Evidence now says "above the current one".
+  - API-013 checks that nothing landed in either tenant.
+  - Smaller fixes: a doc comment corrected, a redundant Prod lookup dropped, `switchLink` moved to module scope, and the deactivation audit filtered by label.
+
+  Declined: moving the copied `api`/`write` wrappers and the `ready`/`button` helpers into shared modules, which every file already copies (follow-up), and renaming the commit type (`refactor(tests)` follows #52). Integration re-run: 23 files, 183 tests passed.
 
 ## Changes
 
@@ -53,8 +63,10 @@ Add the end-to-end tests issue #67 lists for E02 (isolation, audit, API contract
 - `npm run lint`: clean. `npm run typecheck`: clean.
 - `npm run test:coverage`: 244 files, 1584 tests passed; 100% statements and branches (no product code changed).
 - `npm run build`: succeeded.
-- `npm run test:integration` (Docker image via Testcontainers): run 1, 181/182 (the test's own filter, fixed); run 3 on the final code, 23 files, 182 tests passed in 215 s.
+- `npm run test:integration` (Docker image via Testcontainers): run 1, 181/182 (the test's own filter, fixed); run 3, 23 files, 182 tests passed in 215 s; run 4 after the review fixes, 23 files, 183 tests passed in 215 s.
+- PR CI on `b817a99`: all five jobs green.
 
 ## Follow-ups
 
+- Move the per-file `api`/`write` wrappers and `ready`/`button` predicates into `tests/integration/api.ts` and `browser.ts`.
 - API-034's stale-after-reset half, AUD-001's customer order and TEN-017's goods issue wait for slice 2 (the Test reset, orders, stock).

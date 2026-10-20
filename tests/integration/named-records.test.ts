@@ -142,7 +142,7 @@ describe("locations, customers and suppliers (E03-S02)", () => {
     await admin.waitUntil(`!document.querySelector("[role=alertdialog]")`);
     expect((await listRows(admin, "prod", "locations")).find(([rowId]) => rowId === id)?.[2]).toBe("Active");
 
-    expect(await auditOf(admin, id)).toEqual(
+    expect(await auditOf(admin, `${id} — nr-ui old warehouse`)).toEqual(
       expect.arrayContaining([
         ["Location deactivated", "active: yes → no"],
         ["Location reactivated", "active: no → yes"],

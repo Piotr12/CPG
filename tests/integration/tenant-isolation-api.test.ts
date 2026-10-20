@@ -37,7 +37,7 @@ const api = (method: string, path: string, secret: string, options?: { key?: str
 const write = (method: string, path: string, secret: string, body?: unknown, generation?: number) =>
   api(method, path, secret, { key: randomUUID(), body, generation });
 
-/** One audit row's cells, read from the screen: time, account, session, channel, action, subject, changes. */
+/** A tenant audit's rows on the screen, as cells: time, account, session, channel, action, subject, changes. */
 async function screenAudit(browser: Browser, tenant: string): Promise<string[][]> {
   await browser.open(`${baseUrl}/admin/${tenant}/audit`);
   await browser.waitUntil(`document.querySelector("main table") && !document.querySelector("main table").closest("[hidden]")`);
@@ -104,17 +104,11 @@ describe("tenant isolation through the API", () => {
     expect(json(await api("GET", `/api/tenants/test/locations/${locationId}`, adminSecret)).data).toMatchObject({
       name: "isoapi test-only depot",
     });
-    // Prod has neither, in its lists or under the same IDs (which Prod numbers on its own, so they may name other records).
+    // Prod has neither (Prod numbers on its own, so the same IDs may name other records there).
     const prodMaterials = json(await api("GET", "/api/tenants/prod/materials", adminSecret)).data as MaterialRow[];
     const prodLocations = json(await api("GET", "/api/tenants/prod/locations", adminSecret)).data as LocationRow[];
     expect(prodMaterials.map(({ description }) => description)).not.toContain("isoapi test-only sheet");
     expect(prodLocations.map(({ name }) => name)).not.toContain("isoapi test-only depot");
-    const sameMaterialId = await api("GET", `/api/tenants/prod/materials/${materialId}`, adminSecret);
-    const sameLocationId = await api("GET", `/api/tenants/prod/locations/${locationId}`, adminSecret);
-    if (sameMaterialId.status === 200) expect(json(sameMaterialId).data.description).not.toBe("isoapi test-only sheet");
-    else expect(json(sameMaterialId).error.code).toBe("MATERIAL_NOT_FOUND");
-    if (sameLocationId.status === 200) expect(json(sameLocationId).data.name).not.toBe("isoapi test-only depot");
-    else expect(json(sameLocationId).error.code).toBe("LOCATION_NOT_FOUND");
   });
 
   it("reads material 00000001 in each tenant as that tenant's own record, through the API and on the screens (TEN-012)", async () => {
@@ -146,6 +140,13 @@ describe("tenant isolation through the API", () => {
 
       expect(read.status).toBe(404);
       expect(created.status).toBe(404);
+      // Nothing landed in either tenant instead.
+      for (const tenant of ["test", "prod"]) {
+        for (const kind of ["materials", "locations"]) {
+          const records = json(await api("GET", `/api/tenants/${tenant}/${kind}`, adminSecret)).data as { description?: string; name?: string }[];
+          expect(records.map((record) => record.description ?? record.name)).not.toContain("isoapi no tenant");
+        }
+      }
     },
   );
 
@@ -206,27 +207,30 @@ describe("tenant isolation through the API", () => {
     expect([edited.status, renamed.status]).toEqual([200, 200]);
 
     const audit = json(await api("GET", "/api/tenants/prod/audit?limit=100", adminSecret));
+    // Every one of this test's writes, each naming the token; sorted, as entries of one millisecond come in any order.
     const changes = (audit.data.entries as AuditEntry[])
       .filter(({ subject }) => [material.id, location.id].includes(subject.id) && subject.label.includes("isoapi audited"))
-      .map(({ action, actor, channel, token }) => [action, actor.username, channel, token?.name ?? null]);
-    expect(changes).toEqual(
-      expect.arrayContaining([
-        ["materials.material.updated", "admin", "api", ADMIN_TOKEN],
-        ["locations.location.updated", "admin", "api", ADMIN_TOKEN],
-      ]),
-    );
+      .map(({ action, actor, channel, token }) => [action, actor.username, channel, token?.name ?? null])
+      .sort();
+    expect(changes).toEqual([
+      ["locations.location.created", "admin", "api", ADMIN_TOKEN],
+      ["locations.location.updated", "admin", "api", ADMIN_TOKEN],
+      ["materials.material.created", "admin", "api", ADMIN_TOKEN],
+      ["materials.material.updated", "admin", "api", ADMIN_TOKEN],
+    ]);
     expect(JSON.stringify(audit)).not.toContain(adminSecret);
 
     const rows = await screenAudit(admin, "prod");
     const own = rows
       .filter((cells) => cells[5].startsWith(`${material.id} — isoapi audited rod`) || cells[5].startsWith(`${location.id} — isoapi audited yard`))
-      .map(([, account, , channel, action]) => [account, channel.replace(/\s+/g, " "), action]);
-    expect(own).toEqual(
-      expect.arrayContaining([
-        ["admin", `API ${ADMIN_TOKEN}`, "Material changed"],
-        ["admin", `API ${ADMIN_TOKEN}`, "Location renamed"],
-      ]),
-    );
+      .map(([, account, , channel, action]) => [account, channel.replace(/\s+/g, " "), action])
+      .sort();
+    expect(own).toEqual([
+      ["admin", `API ${ADMIN_TOKEN}`, "Location created"],
+      ["admin", `API ${ADMIN_TOKEN}`, "Location renamed"],
+      ["admin", `API ${ADMIN_TOKEN}`, "Material changed"],
+      ["admin", `API ${ADMIN_TOKEN}`, "Material created"],
+    ]);
     expect(await admin.evaluate<string>("document.body.innerText")).not.toContain(adminSecret);
   });
 });
