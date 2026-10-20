@@ -96,6 +96,7 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 ## Agent pipeline (om-* skills)
 
+- **2026-10-20 — Check the PR is still open before pushing to its branch** — the owner can merge while a run is still fixing. A later push lands on a dead branch: the PR head doesn't move and no CI starts, which looks like a GitHub sync failure. Run `gh pr view <n> --json state` before every push, and ship late fixes as a new PR off `main`.
 - **2026-10-20 — Moving a spec breaks its relative image links** — specs embed mockups as `](assets/<slug>/…)`, and after `git mv` into `implemented/` or `archive/` they must read `](../assets/<slug>/…)`. Six moved specs showed no images until the E03 closure fixed them; `tests/spec-images.test.ts` now fails on any missing image a spec embeds.
 - **2026-10-19 — Never delete the `qa-evidence` branch** — PR comments embed screenshots and mockups from `raw.githubusercontent.com/<repo>/qa-evidence/<slug>/…`. Deleting the branch, or a folder in it, silently breaks the images in every old comment. Cleaning up the old per-PR `qa-evidence-*` branches did exactly that, so evidence now lives in one long-lived orphan branch (`attach-image-evidence` in `.ai/trackers/github.md`).
 
