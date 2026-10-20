@@ -6,7 +6,7 @@ import { nextSequentialId } from "../../domain/business-ids/sequential-id";
 import { parseDecimal } from "../../domain/quantities/decimal";
 import { AppError, ConflictError, NotFoundError, ValidationError, versionConflict } from "../../http/errors";
 import {
-  customerOrderCreateSchema, customerOrderUpdateSchema, ORDER_LINE_ID_MESSAGE, ORDER_QUANTITY_MIN_MESSAGE,
+  customerOrderCreateSchema, customerOrderUpdateSchema, ORDER_LINE_ID_MESSAGE, ORDER_QUANTITY_MIN_MESSAGE, ORDER_UNIT_CONVERSION_MESSAGE, ORDER_QUANTITY_CONVERSION_MESSAGE,
   type CustomerOrderInput, type CustomerOrderChanges,
 } from "../../validators/customer-orders/customer-order.schema";
 import { validationError } from "../../http/parse-input";
@@ -177,7 +177,7 @@ async function resolveLines(em: EntityManager, inputs: (CustomerOrderInput["line
       catch (error) {
         if (!(error instanceof AppError)) throw error;
         const field = error.code === "UNIT_NOT_CONVERTIBLE" ? "unit" : "quantity";
-        throw new ValidationError({ [`lines.${index}.${field}`]: [error.message] });
+        throw new ValidationError({ [`lines.${index}.${field}`]: [field === "unit" ? ORDER_UNIT_CONVERSION_MESSAGE : ORDER_QUANTITY_CONVERSION_MESSAGE] });
       }
     }
     if (existing) {

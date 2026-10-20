@@ -12,6 +12,8 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 ## General
 
+- **2026-10-20 — Bind an aggregate edit to the version it opened with** — Revalidating after a conflict can replace a dialog’s order prop while its form still holds old values. Capture the order when opening the dialog and keep that version until it closes; otherwise a second Save can overwrite the concurrent change with stale fields under the newly loaded version.
+
 - **2026-10-20 — Preserve references when replacing an operational line** — Keeping omitted customer-order lines as hidden history did not preserve a material replaced on an existing line: assigning the new material erased the old FK and unlocked its type/base unit. Archive the old allowlisted line before replacement, retain the visible stable ID, and test both removal and replacement.
 
 - **2026-10-17 — Docker `npm ci` tries to compile better-sqlite3** — npm runs `node-gyp rebuild` because the package has a `binding.gyp`, which fails without Python/a compiler. better-sqlite3 ships prebuilt binaries (musl included), so the Dockerfile uses `npm ci --ignore-scripts`.
@@ -30,7 +32,7 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 - **2026-10-20 — A label passed to a client component must be plain data** — making four Import strings plural-aware functions (`button: (count) => …`) passed every unit test, which render the client component directly, but the server refused the page ("Functions cannot be passed directly to Client Components"); only the integration suite showed it. Give count-dependent strings `{ one, other }` forms (`counted` in `components/imports/report-text.ts`), and test that a screen's labels hold no function (`components/imports/labels.test.ts`).
 - **2026-10-19 — A client component must not import a module that imports `@cpg/core`** — `nav-menu.tsx` (`"use client"`) imported one helper from `nav-items.ts`, which imports `TENANT_NAMES` from `@cpg/core`, and the browser bundle pulled in the ORM. Lint, typecheck and unit tests all passed; only `npm run build` failed ("Module not found … [Client Component Browser]"). Keep what client code needs in dependency-free modules (`components/layout/current-path.ts`), or import a `@cpg/core/validators/*` subpath, and build before pushing.
 - **2026-10-19 — Docker Desktop can belong to another macOS user** — Docker Desktop was running as `piotrekhl`, so this account had no `~/.docker/run/docker.sock`, and `open -a Docker` doesn't help. Don't touch the other session. Run the image's server without Docker instead, then `CPG_BASE_URL=… npm run test:integration`:
-  - copy `.next/standalone`, add `.next/static` under `packages/app/.next/`, and start `node packages/app/server.js` with a temp `DATA_DIR` and `CPG_ADMIN_PASSWORD`;
+  - copy `.next/standalone`, add `.next/static` under `packages/app/.next/` and `packages/app/public` beside `server.js` (otherwise manifest icons 404), and start `node packages/app/server.js` with a temp `DATA_DIR` and `CPG_ADMIN_PASSWORD`;
   - not `next start`, which warns it doesn't support `output: standalone`. Under it, a soft navigation to `/admin/test` after a signed-out visit intermittently rendered a 404 that the standalone server never showed in two full runs.
 
   The Docker-only test (`startup-guard`) is skipped, and CI covers the image.
@@ -43,6 +45,10 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 - **2026-10-20 — `z.flattenError` keys a field error by the first path segment only** — a list item's error (`components.2.unit`) came back as `components`, so a form couldn't put it on its row. `validationError` (`core/src/http/parse-input.ts`) now keys by the full dotted path; top-level fields keep their plain names.
 
 ## Testing
+
+- **2026-10-20 — Wait for a dialog’s overlay before clicking behind it** — A cancelled shadcn dialog leaves its fading overlay for 100 ms. Wait until both `[role=dialog]` and `[data-slot=dialog-overlay]` are gone before clicking the page’s Edit button; checking hydration alone can still click the overlay.
+
+- **2026-10-20 — Start each standalone build from a fresh copy** — Overlaying a new `.next/standalone` onto a running test copy retained `.next/server/route-cache` from the previous build. Prod then loaded an old dialog chunk while Test loaded the fix. Copy standalone, static and public into a new empty directory on every rebuild; a fresh database alone does not clear Next’s runtime route cache.
 
 - **2026-10-17 — Root-level config files are `.mts`** — the root `package.json` has no `"type"`, so Vite loads `vitest.config.ts` as CommonJS and warns. Name root-level ESM files `.mts` (`vitest.config.mts`, `vitest.integration.config.mts`). Root tests (`tests/*.test.ts`) run through Vitest, so `.ts` is fine there.
 - **2026-10-17 — `tmpdir()` can be inside the repo** — cezar points `TMPDIR` at `.ai/cezar/tmp/…`, so a temp dir has the monorepo as an ancestor. Don't assume a temp dir is outside the workspace; use the filesystem root when a test needs "no workspace above me".

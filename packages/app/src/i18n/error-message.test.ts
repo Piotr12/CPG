@@ -17,4 +17,9 @@ describe("errorMessage", () => {
   it("doesn't mistake inherited object keys for translations", () => {
     expect(errorMessage(en.errors, { code: "toString", message: "Odd code." })).toBe("Odd code.");
   });
+  it("keeps the blocking order ID in a translated demand refusal", () => {
+    expect(errorMessage(pl.errors, { code: "MATERIAL_HAS_CUSTOMER_DEMAND", message: "Customer order 00000017 has outstanding demand for this material." })).toBe("Zamówienie klienta 00000017 ma niezrealizowany popyt na ten materiał.");
+    expect(errorMessage(pl.errors, { code: "LOCATION_HAS_CUSTOMER_ORDERS", message: "unexpected detail" })).toBe("unexpected detail");
+  });
+
 });

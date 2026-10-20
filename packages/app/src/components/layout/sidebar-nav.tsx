@@ -58,6 +58,8 @@ const DEFAULT_TENANT: TenantCode = "test";
 
 const ICONS: Record<NavId, LucideIcon> = {
   overview: HouseIcon,
+  transactions: TruckIcon,
+  customerOrders: FileSpreadsheetIcon,
   masterData: DatabaseIcon,
   materials: PackageIcon,
   locations: MapPinIcon,

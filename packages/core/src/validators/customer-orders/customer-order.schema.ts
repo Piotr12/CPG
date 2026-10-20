@@ -5,6 +5,8 @@ import { unitSchema } from "../materials/material-fields.schema";
 import { positiveQuantitySchema } from "../quantities/quantity.schema";
 import { versionSchema } from "../version.schema";
 
+export const ORDER_UNIT_CONVERSION_MESSAGE = "Choose a unit this material converts to its base unit.";
+export const ORDER_QUANTITY_CONVERSION_MESSAGE = "This quantity cannot be stored in the base unit: check its size and conversion.";
 export const ORDER_LINES_MAX = 100;
 export const ORDER_LINE_COUNT_MESSAGE = `Add at least 1 and at most ${ORDER_LINES_MAX} lines.`;
 export const ORDER_REFERENCE_MESSAGE = "Choose a record from this tenant.";

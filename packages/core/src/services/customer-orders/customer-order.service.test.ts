@@ -65,7 +65,7 @@ describe("CustomerOrderService", () => {
     expect(stored.every(({ quantity }) => typeof quantity === "string")).toBe(true);
   });
 
-  it("allows repeated materials on different dates and keeps stable identities across reordering and line-only edits (SAL-019)", async () => {
+  it("allows repeated materials on different dates and keeps stable identities across reordering and line-only edits", async () => {
     const order = await service().create({ ...input(), lines: [line(), line("00000005", "20", "each", "2027-01-08")] }, actor);
     const changes = edit(order); changes.lines.reverse(); changes.lines[0].quantity = "80";
     const updated = await service().update(order.id, changes, order.version, { ...actor, sessionId: null, channel: "api", token: { id: "token", name: "client" } });
@@ -129,7 +129,7 @@ describe("CustomerOrderService", () => {
     await expect(service().get("bogus")).rejects.toMatchObject({ code: "CUSTOMER_ORDER_NOT_FOUND" });
   });
 
-  it("permits customer deactivation and continued order edits, refuses an inactive customer on new orders (SAL-025, LFC-020)", async () => {
+  it("permits customer deactivation and continued order edits, refuses an inactive customer on new orders", async () => {
     const order = await service().create(input(), actor); const customers = new CustomerService({ em: em() });
     await customers.update(order.customer, { active: false }, 1, actor);
     const changes = edit(order); changes.lines[0].quantity = "80";
