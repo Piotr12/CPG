@@ -24,6 +24,7 @@ import {
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
 import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quantity";
+import { conversionFieldError } from "../materials/conversion-field-error";
 import { findActiveMaterial, findMaterial } from "../materials/find-material";
 import { lineError } from "../materials/line-error";
 import { isScopeReadOnly } from "../tenants/tenant.service";
@@ -343,7 +344,7 @@ async function resolveLines(em: EntityManager, lines: readonly ComponentLine[], 
     try {
       resolved.push({ material, record: await convertToBaseQuantity(em, material, line) });
     } catch (error) {
-      const [field, message] = lineError(error);
+      const [field, message] = conversionFieldError(error);
       errors[`components.${index}.${field}`] = [message];
     }
   }

@@ -72,7 +72,9 @@ describe("API write routes", () => {
 
   it("are all keyed through apiWrite, or tenantApiWrite in a tenant", () => {
     const offenders = writers
-      .map((file) => ({ route: rel(file), unkeyed: unkeyed(read(file), isTenantWrite(file)) }))
+      .map((file) => ({ route: rel(file), unkeyed: rel(file) === path.join("tenants", "test", "reset", "route.ts")
+        ? methods(read(file), MUTATING_EXPORT).filter((method) => !methods(read(file), keyedExport("testResetApiWrite")).includes(method))
+        : unkeyed(read(file), isTenantWrite(file)) }))
       .filter(({ unkeyed }) => unkeyed.length > 0);
     expect(offenders).toEqual([]);
   });

@@ -11,6 +11,8 @@ export interface DataTableColumn<Row> {
 
 export interface DataTableProps<Row> {
   columns: DataTableColumn<Row>[];
+  /** Server-rendered pagination controls, when this list spans multiple pages. */
+  pagination?: ReactNode;
   rows: Row[];
   rowKey: (row: Row) => string;
   /** Per-row controls in a last, unlabelled column; return null for a row without any. */
@@ -29,6 +31,7 @@ export interface DataTableProps<Row> {
  */
 export function DataTable<Row>({
   columns,
+  pagination,
   rows,
   rowKey,
   rowActions,
@@ -38,6 +41,7 @@ export function DataTable<Row>({
 }: DataTableProps<Row>) {
   const width = columns.length + (rowActions ? 1 : 0);
   return (
+    <>
     <Table aria-label={label}>
       <TableHeader>
         <TableRow>
@@ -74,5 +78,7 @@ export function DataTable<Row>({
         )}
       </TableBody>
     </Table>
+    {pagination}
+    </>
   );
 }

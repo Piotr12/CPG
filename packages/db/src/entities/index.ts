@@ -1,3 +1,7 @@
+import { CustomerOrder, DOCUMENT_STATES, type DocumentState } from "./customer-orders/customer-order.entity";
+import { CustomerOrderLine } from "./customer-orders/customer-order-line.entity";
+import { StockBalance } from "./stock/stock-balance.entity";
+import { StockMovement, STOCK_MOVEMENT_IMMUTABLE } from "./stock/stock-movement.entity";
 import { API_TOKEN_NAME_MAX, ApiToken } from "./api-tokens/api-token.entity";
 import {
   AUDIT_APPEND_ONLY,
@@ -43,6 +47,7 @@ import {
   type RequisitionStatus,
 } from "./purchase-requisitions/purchase-requisition.entity";
 import { SafetyStockTarget } from "./safety-stock/safety-stock-target.entity";
+import { Forecast } from "./forecasts/forecast.entity";
 import { LOCALES, THEMES, UserPreference, type Locale, type Theme } from "./preferences/user-preference.entity";
 import { Setting } from "./settings/setting.entity";
 import { Tenant, TENANT_CODES, type TenantCode } from "./tenants/tenant.entity";
@@ -60,9 +65,13 @@ export { AUDIT_APPEND_ONLY, AUDIT_CHANNELS, GlobalAuditEvent, TenantAuditEvent }
 export { GlobalIdempotencyKey, IDEMPOTENCY_KEY_MAX, TenantIdempotencyKey };
 export { Material, MATERIAL_DESCRIPTION_MAX, MATERIAL_TYPES, MATERIAL_UNIT_MAX, MaterialConversion };
 export type { MaterialType };
+export { CustomerOrder, CustomerOrderLine, DOCUMENT_STATES };
+export type { DocumentState };
 export { Customer, Location, NAMED_RECORD_NAME_MAX, Supplier };
 export type { NamedRecord, NamedRecordEntity };
 export { PlanningParameterSet, PROCUREMENT_MODES, SafetyStockTarget };
+export { Forecast };
+export { StockBalance, StockMovement, STOCK_MOVEMENT_IMMUTABLE };
 export { Bom, BomComponent, BOM_REVISION_IMMUTABLE, BomRevision };
 export { PURCHASE_ORDER_STATUSES, PurchaseOrder, PurchaseOrderLine, PurchaseRequisition, REQUISITION_STATUSES };
 export type { ProcurementMode, PurchaseOrderStatus, RequisitionStatus };
@@ -94,6 +103,11 @@ export const entities = [
   PurchaseRequisition,
   PurchaseOrder,
   PurchaseOrderLine,
+  Forecast,
+  CustomerOrder,
+  CustomerOrderLine,
+  StockBalance,
+  StockMovement,
 ];
 
 /**

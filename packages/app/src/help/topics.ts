@@ -17,12 +17,16 @@ export const HELP_TOPIC_IDS = [
   "suppliers",
   "planning-parameters",
   "safety-stock",
+  "forecasts",
   "boms",
   "bom-revisions",
   "purchase-requisitions",
   "purchase-orders",
   "purchase-order",
+  "customer-orders",
+  "customer-order-detail",
   "import",
+  "stock",
   "language-and-theme",
   "using-help",
 ] as const;
@@ -49,12 +53,16 @@ export const HELP_TOPIC_ROUTES: Record<HelpTopicId, string> = {
   suppliers: "/admin/[tenant]/suppliers",
   "planning-parameters": "/admin/[tenant]/planning-parameters",
   "safety-stock": "/admin/[tenant]/safety-stock",
+  forecasts: "/admin/[tenant]/forecasts",
   boms: "/admin/[tenant]/boms",
   "bom-revisions": "/admin/[tenant]/boms/[id]",
   "purchase-requisitions": "/admin/[tenant]/purchase-requisitions",
   "purchase-orders": "/admin/[tenant]/purchase-orders",
   "purchase-order": "/admin/[tenant]/purchase-orders/[id]",
+  "customer-orders": "/admin/[tenant]/customer-orders",
+  "customer-order-detail": "/admin/[tenant]/customer-orders/[id]",
   import: "/admin/[tenant]/import",
+  stock: "/admin/[tenant]/stock",
   "language-and-theme": "/admin",
   "using-help": "/help",
 };
@@ -70,6 +78,8 @@ export interface HelpTopic extends HelpText {
 }
 
 const en: Record<HelpTopicId, HelpText> = {
+  "customer-orders": { title: "Customer orders", body: ["Both roles can create and edit customer orders under Transactions. Choose one active customer and one location for the header; each line has its own material, positive quantity, unit and required date. Orders start Open with zero fulfilled. Entering an order moves no stock. Stored quantities use the material’s base unit; the entered amount and factor stay in history. A customer may be deactivated while existing orders continue. A stale version refuses an overwrite; reload before retrying. A read-only tenant hides write controls and refuses writes."] },
+  "customer-order-detail": { title: "Maintaining a customer order", body: ["Both roles can create and edit customer orders under Transactions. Choose one active customer and one location for the header; each line has its own material, positive quantity, unit and required date. Orders start Open with zero fulfilled. Entering an order moves no stock. Stored quantities use the material’s base unit; the entered amount and factor stay in history. A customer may be deactivated while existing orders continue. A stale version refuses an overwrite; reload before retrying. A read-only tenant hides write controls and refuses writes."] },
   "getting-started": {
     title: "Getting started with CPG",
     body: [
@@ -94,6 +104,7 @@ const en: Record<HelpTopicId, HelpText> = {
       "The administrator opens this page from Administration → Tenants in the sidebar, next to Users, and also sees the Database card here. The card shows where CPG keeps its data, how many migrations are applied, whether any are still pending, and how many settings are stored.",
       "A pending migration normally means CPG is still starting. If it stays, tell whoever runs CPG.",
       "The administrator's Read-only card makes Test or Prod read-only, and writable again, after a confirmation. Each tenant has its own flag, and every change is kept in the Global audit. A read-only tenant shows Read-only on the chooser, a lock on its side of the TEST | PROD switch, and a banner on its pages.",
+      "Reset Test, on this page for the administrator, permanently replaces Test business data and its audit with fresh demonstration data and a new generation. It restores the previous read-only flag. Prod, users, sessions, tokens, preferences and Global audit survive. Old Test forms must reload. The API is POST /api/tenants/test/reset with an empty object, an admin bearer token, Idempotency-Key and the current Dataset-Generation. After a lost response, fetch the new generation and retry the same key, never a new one.",
       "Open Test or Open Prod takes you to that tenant's business data.",
     ],
   },
@@ -139,7 +150,7 @@ const en: Record<HelpTopicId, HelpText> = {
     title: "A tenant's audit",
     body: [
       "Audit, in the sidebar under the tenant's screens (or Audit — Test or Audit — Prod on the tenant's page), opens that tenant's own audit: the changes to its business records, kept apart from the other tenant's.",
-      "It lists every material, location, customer and supplier created, changed, deactivated or reactivated, every unit conversion, planning parameter set and safety-stock target added, changed or removed, and every BOM created, revised, deactivated or reactivated, with the values before and after. Account changes are always in the Global audit.",
+      "It lists every material, location, customer and supplier created, changed, deactivated or reactivated, every unit conversion, planning parameter set, safety-stock target and forecast added, changed or removed, and every BOM created, revised, deactivated or reactivated, with the values before and after. Account changes are always in the Global audit.",
       "Like the Global audit, it is read-only for everyone.",
     ],
   },
@@ -157,7 +168,7 @@ const en: Record<HelpTopicId, HelpText> = {
     body: [
       "Choose a material's ID to open its page: its type, base unit and status, and its unit conversions.",
       "A conversion lets people enter quantities in another unit, such as a case of 12. It reads 1 case = 12 each: the alternate quantity and unit, then the base quantity and the base unit. A quantity entered in that unit is converted into the base unit once, rounded half-up to six decimals, and the unit and factor it was entered with are kept. The inverse is shown for orientation only.",
-      "Changing or removing a conversion never changes quantities already stored. The base unit can change only while the material has no conversions, planning parameters or safety-stock targets, since their values are in it. Once any BOM uses the material, as its output or as a component, neither its type nor its base unit can change again.",
+      "Changing or removing a conversion never changes quantities already stored. The base unit can change only while the material has no conversions, planning parameters, safety-stock targets or forecasts, since their values are in it. Once any BOM uses the material, as its output or as a component, neither its type nor its base unit can change again.",
       "Deactivate keeps the material and its history, but it can't be picked for new entries; Reactivate undoes that. Every change appears in the tenant's audit.",
     ],
   },
@@ -204,6 +215,15 @@ const en: Record<HelpTopicId, HelpText> = {
       "Two targets can't share a date. To change a target's quantity, use Change target; to move it, remove it and add one on the new date. A target of 0 ends a buffer from its date.",
       "The status says which target is in effect today (UTC), which ones are scheduled for later, and which earlier ones a later target has replaced.",
       "Every account can read the list. Only the administrator adds, changes and removes targets, with Add target and each row's ⋯ menu; through the API too. Every change appears in the tenant's audit.",
+    ],
+  },
+  forecasts: {
+    title: "Forecasts",
+    body: [
+      "Forecasts, under Sales in the sidebar, list the demand you expect per material, location and day. A forecast names no customer. The MRP run nets customer orders against it, so a forecast is the demand beyond the firm orders.",
+      "Enter the quantity in the material's base unit, or in any unit the material converts, such as 2 cases; CPG stores it in the base unit. A material, location and day can have only one forecast. To change the quantity, use Change forecast; to move the day, remove the forecast and add one on the new day.",
+      "Choose a material and/or a location above the list and select Filter to see their quantities day by day. Clear filter shows everything again.",
+      "Every account can read the list. Only the administrator adds, changes and removes forecasts, with Add forecast and each row's ⋯ menu; through the API too. Only active materials and locations can get a new forecast. Every change appears in the tenant's audit, and a removal keeps the quantity it held.",
     ],
   },
   boms: {
@@ -258,6 +278,15 @@ const en: Record<HelpTopicId, HelpText> = {
       "Upload the workbook and run the dry run: it checks every row with the same rules as the screens, writes nothing, and lists every problem by sheet, row and column, or shows what would be created, changed or left unchanged. Only a dry run without problems can be committed, and the commit writes everything in one go or nothing. If anything the workbook uses changed since the dry run, the commit is refused: run the dry run again. At most 2000 rows and 512 KB per workbook. The API offers the same: GET /api/import/template, and POST /api/tenants/{tenant}/import/dry-run and /commit with the workbook as base64.",
     ],
   },
+  stock: {
+    title: "Physical stock and corrections",
+    body: [
+      "Stock in the tenant menu shows the exact physical balance and recent movements for a selected material and location. A pair without movements has zero stock. Test and Prod are separate; fresh Test includes demonstration opening movements.",
+      "Either role can post a reasoned correction while the tenant and masters are writable and active. Enter a signed change: 5 adds five and -5 removes five. Pick the base unit or a defined conversion; it converts once, half-up to six decimals, and keeps the entered quantity, unit and factor. The server uses today's UTC business date; backdating and future dating are unavailable. A correction that would make stock negative is refused with the available quantity.",
+      "Opening balances and physical customer returns are ordinary positive corrections with a reason; there is no return document. Every user correction creates an immutable stock movement and a separate before/after audit entry. Source, actor and unit/factor appear in movement details. Installation openings are explicitly labelled Installation. The screen shows up to 100 recent movements, while its balance includes all movements.",
+      "A material with any movement keeps its type and base unit forever, even after returning to zero. Nonzero stock prevents material or location deactivation. The API reads GET /api/tenants/{tenant}/stock?material=00000001&location=00000001 and posts POST /api/tenants/{tenant}/stock/corrections with a bearer token, idempotency key, current Test generation and material, location, signed quantity, unit and reason.",
+    ],
+  },
   "language-and-theme": {
     title: "Language and theme",
     body: [
@@ -277,6 +306,8 @@ const en: Record<HelpTopicId, HelpText> = {
 };
 
 const pl: Record<HelpTopicId, HelpText> = {
+  "customer-orders": { title: "Zamówienia klientów", body: ["Obie role mogą tworzyć i edytować zamówienia klientów w sekcji Transakcje. Wybierz aktywnego klienta i jedną lokalizację nagłówka; każda pozycja ma własny materiał, dodatnią ilość, jednostkę i wymagany termin. Nowe zamówienie jest Otwarte, z ilością zrealizowaną równą zero. Zapis nie zmienia zapasu. Ilości zapisuje się w jednostce bazowej, zachowując wprowadzoną ilość i przelicznik. Klienta można dezaktywować, a istniejące zamówienia nadal obsługiwać. Nieaktualna wersja nie nadpisze zmian: odśwież dane. Środowisko tylko do odczytu ukrywa przyciski zapisu i odmawia zmian."] },
+  "customer-order-detail": { title: "Edycja zamówienia klienta", body: ["Obie role mogą tworzyć i edytować zamówienia klientów w sekcji Transakcje. Wybierz aktywnego klienta i jedną lokalizację nagłówka; każda pozycja ma własny materiał, dodatnią ilość, jednostkę i wymagany termin. Nowe zamówienie jest Otwarte, z ilością zrealizowaną równą zero. Zapis nie zmienia zapasu. Ilości zapisuje się w jednostce bazowej, zachowując wprowadzoną ilość i przelicznik. Klienta można dezaktywować, a istniejące zamówienia nadal obsługiwać. Nieaktualna wersja nie nadpisze zmian: odśwież dane. Środowisko tylko do odczytu ukrywa przyciski zapisu i odmawia zmian."] },
   "getting-started": {
     title: "Pierwsze kroki z CPG",
     body: [
@@ -297,6 +328,7 @@ const pl: Record<HelpTopicId, HelpText> = {
   "admin-home": {
     title: "Kontrola jaskini",
     body: [
+      "Reset środowiska Test jest dostępny tu tylko dla administratora. Trwale zastępuje dane biznesowe i audyt środowiska Test danymi demonstracyjnymi w nowej generacji. Przywraca poprzednią flagę tylko do odczytu. Prod, użytkownicy, sesje, tokeny, preferencje i audyt globalny pozostają bez zmian. Stare formularze Test trzeba odświeżyć. API: POST /api/tenants/test/reset z pustym obiektem, tokenem administratora, Idempotency-Key i aktualnym Dataset-Generation. Po utracie odpowiedzi pobierz nową generację i ponów ten sam klucz, nigdy nowy.",
       "Kontrola jaskini to strona, na którą trafia każde konto po zalogowaniu: wybierz tu środowisko Test lub Prod. Język i motyw, tokeny API oraz przycisk Wyloguj są na karcie konta na dole panelu bocznego. Nie ma tu zmiany hasła: hasła ustawia tylko administrator.",
       "Administrator otwiera tę stronę pozycją Administracja → Środowiska w panelu bocznym, obok Użytkowników, i widzi tu też kartę Baza danych. Karta pokazuje, gdzie CPG przechowuje dane, ile migracji zastosowano, czy jakieś jeszcze oczekują i ile ustawień zapisano.",
       "Oczekująca migracja zwykle oznacza, że CPG jeszcze się uruchamia. Jeśli nie znika, powiedz o tym osobie, która utrzymuje CPG.",
@@ -364,7 +396,7 @@ const pl: Record<HelpTopicId, HelpText> = {
     body: [
       "Wybierz ID materiału, aby otworzyć jego stronę: typ, jednostkę bazową, status i przeliczniki jednostek.",
       "Przelicznik pozwala wpisywać ilości w innej jednostce, na przykład w kartonach po 12 sztuk. Czyta się go jako 1 karton = 12 szt.: ilość i jednostka alternatywna, potem ilość i jednostka bazowa. Ilość wpisana w tej jednostce jest przeliczana na jednostkę bazową raz, z zaokrągleniem połówek w górę do sześciu miejsc po przecinku, a jednostka i przelicznik, z którymi ją wpisano, zostają zapisane. Odwrotność jest tylko orientacyjna.",
-      "Zmiana lub usunięcie przelicznika nigdy nie zmienia ilości już zapisanych. Jednostkę bazową można zmienić tylko wtedy, gdy materiał nie ma przeliczników, parametrów planowania ani celów zapasu bezpieczeństwa, bo ich wartości są w niej zapisane. Gdy materiał trafi do jakiegokolwiek BOM-u, jako wyrób lub składnik, nie można już zmienić ani jego typu, ani jednostki bazowej.",
+      "Zmiana lub usunięcie przelicznika nigdy nie zmienia ilości już zapisanych. Jednostkę bazową można zmienić tylko wtedy, gdy materiał nie ma przeliczników, parametrów planowania ani celów zapasu bezpieczeństwa, ani prognoz, bo ich wartości są w niej zapisane. Gdy materiał trafi do jakiegokolwiek BOM-u, jako wyrób lub składnik, nie można już zmienić ani jego typu, ani jednostki bazowej.",
       "Dezaktywuj zachowuje materiał i jego historię, ale nie można go wybrać w nowych wpisach; Aktywuj ponownie to cofa. Każda zmiana pojawia się w audycie środowiska.",
     ],
   },
@@ -411,6 +443,15 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Dwa cele nie mogą mieć tej samej daty. Aby zmienić ilość, użyj Zmień cel; aby przesunąć datę, usuń cel i dodaj nowy. Cel 0 kończy zapas od swojej daty.",
       "Status mówi, który cel obowiązuje dziś (UTC), które są zaplanowane na później, a które wcześniejsze zastąpił późniejszy cel.",
       "Listę może przeglądać każde konto. Cele dodaje, zmienia i usuwa tylko administrator, przyciskiem Dodaj cel i menu ⋯ w wierszu; także przez API. Każda zmiana pojawia się w audycie środowiska.",
+    ],
+  },
+  forecasts: {
+    title: "Prognozy",
+    body: [
+      "Prognozy, w sekcji Sprzedaż w menu bocznym, to popyt, którego się spodziewasz, dla materiału, lokalizacji i dnia. Prognoza nie wskazuje klienta. Przebieg MRP bilansuje z nią zamówienia klientów, więc prognoza to popyt ponad twarde zamówienia.",
+      "Ilość wpisz w jednostce bazowej materiału albo w każdej jednostce, którą materiał przelicza, na przykład 2 kartony; CPG zapisuje ją w jednostce bazowej. Materiał, lokalizacja i dzień mogą mieć tylko jedną prognozę. Aby zmienić ilość, użyj Zmień prognozę; aby przesunąć dzień, usuń prognozę i dodaj nową.",
+      "Wybierz materiał i/lub lokalizację nad listą i naciśnij Filtruj, aby zobaczyć ich ilości dzień po dniu. Wyczyść filtr pokazuje znów wszystko.",
+      "Listę może przeglądać każde konto. Prognozy dodaje, zmienia i usuwa tylko administrator, przyciskiem Dodaj prognozę i menu ⋯ w wierszu; także przez API. Nową prognozę mogą dostać tylko aktywne materiały i lokalizacje. Każda zmiana pojawia się w audycie środowiska, a usunięcie zachowuje ilość, którą prognoza miała.",
     ],
   },
   boms: {
@@ -463,6 +504,15 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Pobierz szablon: ma arkusz na materiały, przeliczniki jednostek, lokalizacje, klientów, dostawców, parametry planowania i zapas bezpieczeństwa oraz dwa na BOM-y, a do tego instrukcję po angielsku i po polsku. Wypełnij tylko potrzebne arkusze i zachowaj wiersz nagłówka każdego z nich. Puste ID tworzy rekord, istniejące ID go aktualizuje, a ID, które nie istnieje, jest błędem. Import nigdy niczego nie usuwa.",
       "Arkusze są stosowane w kolejności szablonu, więc wiersz parametrów planowania może użyć materiału tworzonego przez arkusz Materials: próba pokazuje ID, które dostanie. Wiersze BOM-u to jego pełna receptura: pominięty składnik jest usuwany w nowej rewizji, identyczna receptura nie tworzy rewizji, a wiersze nowego BOM-u wskazują jego nagłówek przez wybraną przez ciebie referencję importu.",
       "Wyślij skoroszyt i wykonaj próbę: sprawdza każdy wiersz tymi samymi zasadami co ekrany, niczego nie zapisuje i wymienia każdy problem z arkuszem, wierszem i kolumną albo pokazuje, co zostanie utworzone, zmienione lub pozostanie bez zmian. Zatwierdzić można tylko próbę bez problemów, a zatwierdzenie zapisuje wszystko naraz albo nic. Jeśli coś, czego używa skoroszyt, zmieniło się od czasu próby, zatwierdzenie jest odrzucane: wykonaj próbę ponownie. Najwyżej 2000 wierszy i 512 KB na skoroszyt. API oferuje to samo: GET /api/import/template oraz POST /api/tenants/{tenant}/import/dry-run i /commit ze skoroszytem w base64.",
+    ],
+  },
+  stock: {
+    title: "Zapas fizyczny i korekty",
+    body: [
+      "Zapas w menu środowiska pokazuje dokładny stan fizyczny i ostatnie ruchy wybranego materiału w lokalizacji. Para bez ruchów ma stan zero. Test i Prod są oddzielne; świeży Test zawiera demonstracyjne ruchy otwarcia.",
+      "Obie role mogą zaksięgować korektę z powodem, gdy środowisko pozwala na zapis, a materiał i lokalizacja są aktywne. Wpisz zmianę ze znakiem: 5 dodaje pięć, -5 odejmuje pięć. Wybierz jednostkę podstawową lub zdefiniowany przelicznik; ilość jest przeliczana raz, z zaokrągleniem połówkowym w górę do sześciu miejsc, i zachowuje wpisaną ilość, jednostkę oraz przelicznik. Serwer używa dzisiejszej daty UTC; nie można księgować w przeszłość ani przyszłość. Korekta prowadząca do ujemnego zapasu jest odrzucana z dostępną ilością.",
+      "Stany otwarcia i fizyczny zwrot od klienta to zwykłe dodatnie korekty z powodem; nie powstaje dokument zwrotu. Każda korekta użytkownika tworzy niezmienny ruch magazynowy i oddzielny wpis audytu ze stanem przed i po. Źródło, użytkownik i przelicznik są w szczegółach ruchu. Otwarcia demonstracyjne są oznaczone jako Instalacja. Ekran pokazuje do 100 ostatnich ruchów, a saldo uwzględnia wszystkie ruchy.",
+      "Materiał po dowolnym ruchu zachowuje na zawsze typ i jednostkę podstawową, nawet po wyzerowaniu zapasu. Niezerowy zapas blokuje dezaktywację materiału i lokalizacji. API odczytuje GET /api/tenants/{tenant}/stock?material=00000001&location=00000001 i księguje POST /api/tenants/{tenant}/stock/corrections z tokenem, kluczem idempotencji, bieżącą generacją Test oraz materiałem, lokalizacją, ilością ze znakiem, jednostką i powodem.",
     ],
   },
   "language-and-theme": {

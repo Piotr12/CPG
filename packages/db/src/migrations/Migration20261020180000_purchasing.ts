@@ -1,8 +1,8 @@
 import { Migration } from '@mikro-orm/migrations';
 
-export class Migration20261020163722_purchasing extends Migration {
+export class Migration20261020180000_purchasing extends Migration {
 
-  override name = 'Migration20261020163722_purchasing';
+  override name = 'Migration20261020180000_purchasing';
 
   override up(): void | Promise<void> {
     this.addSql(`create table \`purchase_requisition\` (\`id\` text not null primary key, \`tenant_code\` text not null, \`code\` text not null, \`material_id\` text not null, \`location_id\` text not null, \`quantity\` text not null, \`entered_quantity\` text not null, \`entered_unit\` text not null, \`numerator\` text not null, \`denominator\` text not null, \`required_date\` text not null, \`converted\` text not null, \`status\` text not null default 'open', \`created_at\` datetime not null, \`version\` integer not null default 1, constraint \`purchase_requisition_tenant_code_foreign\` foreign key (\`tenant_code\`) references \`tenant\` (\`code\`), constraint \`purchase_requisition_material_id_foreign\` foreign key (\`material_id\`) references \`material\` (\`id\`), constraint \`purchase_requisition_location_id_foreign\` foreign key (\`location_id\`) references \`location\` (\`id\`));`);

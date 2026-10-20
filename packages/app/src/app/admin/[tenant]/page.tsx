@@ -57,6 +57,9 @@ async function TenantHome({ params }: { params: Promise<{ tenant: string }> }) {
             <Link href={`/admin/${tenant.code}/safety-stock`} className="underline underline-offset-4">
               {messages.safetyStock.link}
             </Link>
+            <Link href={`/admin/${tenant.code}/forecasts`} className="underline underline-offset-4">
+              {messages.forecasts.link}
+            </Link>
             <Link href={`/admin/${tenant.code}/boms`} className="underline underline-offset-4">
               {messages.boms.link}
             </Link>

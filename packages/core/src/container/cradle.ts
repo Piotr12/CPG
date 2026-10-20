@@ -1,3 +1,6 @@
+import type { CustomerOrderService } from "../services/customer-orders/customer-order.service";
+import type { TestResetService } from "../services/tenants/test-reset.service";
+import type { StockService } from "../services/stock/stock.service";
 import type { EntityManager, Orm } from "@cpg/db";
 import type { AwilixContainer } from "awilix";
 import type { AppConfig } from "../config";
@@ -14,6 +17,7 @@ import type { PlanningParameterService } from "../services/planning-parameters/p
 import type { SafetyStockTargetService } from "../services/safety-stock/safety-stock-target.service";
 import type { PurchaseOrderService } from "../services/purchase-orders/purchase-order.service";
 import type { PurchaseRequisitionService } from "../services/purchase-requisitions/purchase-requisition.service";
+import type { ForecastService } from "../services/forecasts/forecast.service";
 import type { MaterialService } from "../services/materials/material.service";
 import type { SupplierService } from "../services/suppliers/supplier.service";
 import type { UserPreferenceService } from "../services/preferences/user-preference.service";
@@ -33,18 +37,22 @@ export interface Cradle {
   userService: UserService;
   userPreferenceService: UserPreferenceService;
   tenantService: TenantService;
+  testResetService: TestResetService;
   apiTokenService: ApiTokenService;
   auditService: AuditService;
   idempotencyService: IdempotencyService;
+  stockService: StockService;
   materialService: MaterialService;
   locationService: LocationService;
   customerService: CustomerService;
   supplierService: SupplierService;
   planningParameterService: PlanningParameterService;
   safetyStockTargetService: SafetyStockTargetService;
+  forecastService: ForecastService;
   bomService: BomService;
   purchaseRequisitionService: PurchaseRequisitionService;
   purchaseOrderService: PurchaseOrderService;
+  customerOrderService: CustomerOrderService;
   importService: ImportService;
   /** The active tenant. Only in scopes built by `tenantScope()`. */
   tenant: TenantInfo;

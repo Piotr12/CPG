@@ -22,7 +22,9 @@ import {
   MenuIcon,
   PackageIcon,
   ShieldIcon,
+  ShoppingCartIcon,
   SlidersHorizontalIcon,
+  TrendingUpIcon,
   TruckIcon,
   UsersIcon,
   UserRoundIcon,
@@ -59,7 +61,10 @@ import { isCurrentLeaf, isGroup, leafHref, TOKENS_PATH, type NavEntry, type NavI
 const DEFAULT_TENANT: TenantCode = "test";
 
 const ICONS: Record<NavId, LucideIcon> = {
+  stock: PackageIcon,
   overview: HouseIcon,
+  transactions: TruckIcon,
+  customerOrders: FileSpreadsheetIcon,
   masterData: DatabaseIcon,
   materials: PackageIcon,
   locations: MapPinIcon,
@@ -70,6 +75,8 @@ const ICONS: Record<NavId, LucideIcon> = {
   boms: BlocksIcon,
   purchaseRequisitions: ClipboardListIcon,
   purchaseOrders: FileTextIcon,
+  sales: ShoppingCartIcon,
+  forecasts: TrendingUpIcon,
   import: FileSpreadsheetIcon,
   tenantAudit: HistoryIcon,
   administration: ShieldIcon,

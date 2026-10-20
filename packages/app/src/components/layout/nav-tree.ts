@@ -7,7 +7,10 @@ import { isCurrentPath, type NavMatch } from "./current-path";
 
 /** Every entry and group the sidebar can show. A new screen adds its id here and one line below. */
 export type NavId =
+  | "stock"
   | "overview"
+  | "transactions"
+  | "customerOrders"
   | "masterData"
   | "materials"
   | "locations"
@@ -18,6 +21,8 @@ export type NavId =
   | "boms"
   | "purchaseRequisitions"
   | "purchaseOrders"
+  | "sales"
+  | "forecasts"
   | "import"
   | "tenantAudit"
   | "administration"
@@ -57,8 +62,16 @@ export const TENANT_TREE: NavNode[] = [
       { id: "import", section: "import", match: "prefix", adminOnly: true },
     ],
   },
-  { id: "purchaseRequisitions", section: "purchase-requisitions", match: "prefix" },
-  { id: "purchaseOrders", section: "purchase-orders", match: "prefix" },
+  { id: "sales", children: [{ id: "forecasts", section: "forecasts", match: "prefix" }] },
+  { id: "stock", section: "stock", match: "prefix" },
+  {
+    id: "transactions",
+    children: [
+      { id: "customerOrders", section: "customer-orders", match: "prefix" },
+      { id: "purchaseRequisitions", section: "purchase-requisitions", match: "prefix" },
+      { id: "purchaseOrders", section: "purchase-orders", match: "prefix" },
+    ],
+  },
   { id: "tenantAudit", section: "audit", match: "prefix" },
 ];
 

@@ -1,3 +1,5 @@
+import { assertNoCustomerDemand, orderUsingMaterial } from "../customer-orders/customer-order-usage";
+import { assertNoPhysicalStock, hasStockMovements } from "../stock/stock-usage";
 import {
   Material,
   MaterialConversion,
@@ -15,6 +17,7 @@ import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
 import { bomUsingMaterial } from "../boms/bom-usage";
 import { hasProcurementDocuments, openOrderUsingMaterial } from "../purchase-orders/purchasing-usage";
 import { hasPlanningParameters, isMadeAnywhere } from "../planning-parameters/planning-parameter-usage";
+import { hasForecasts } from "../forecasts/forecast-usage";
 import { hasSafetyStockTargets } from "../safety-stock/safety-stock-target-usage";
 import { isScopeReadOnly } from "../tenants/tenant.service";
 import { convertToBaseQuantity, type BaseQuantity } from "./base-quantity";
@@ -131,7 +134,18 @@ export class MaterialService {
       const material = await findMaterial(em, materialId, { refresh: true });
       if (material.version !== version) throw versionConflict();
       const { active, ...fields } = changedFields(material, changes);
-      if (fields.type !== undefined || fields.baseUnit !== undefined) await assertNotInBoms(em, material, fields);
+      if (fields.type !== undefined || fields.baseUnit !== undefined) {
+        if (await hasStockMovements(em, material)) {
+          throw new ConflictError("This material has stock movements, so its type and base unit are locked permanently.", "MATERIAL_HAS_MOVEMENTS");
+        }
+        await assertNotInBoms(em, material, fields);
+        const order = await orderUsingMaterial(em, material);
+        if (order !== null) throw new ConflictError(`Customer order ${order} uses this material, so its type and base unit cannot change.`, fields.type !== undefined ? "MATERIAL_TYPE_IN_USE" : "BASE_UNIT_IN_USE");
+      }
+      if (active === false) {
+        await assertNoPhysicalStock(em, { material });
+        await assertNoCustomerDemand(em, material);
+      }
       if (fields.baseUnit !== undefined) await assertBaseUnitFree(em, material);
       if (active === false) await assertNoOpenOrder(em, material);
       if (fields.type === "raw" && (await isMadeAnywhere(em, material))) {
@@ -301,8 +315,8 @@ async function assertNotInBoms(em: EntityManager, material: Material, fields: Ma
 
 /**
  * Refuses a base-unit change while anything holds a value in the base unit: conversion factors are
- * relative to it (spec Q8), and planning parameters and safety targets store quantities in it
- * (planning spec Q6). Conversions are checked first, so their more specific error wins.
+ * relative to it (spec Q8), and planning parameters, safety targets and forecasts store quantities
+ * in it (planning spec Q6). Conversions are checked first, so their more specific error wins.
  */
 async function assertBaseUnitFree(em: EntityManager, material: Material): Promise<void> {
   if ((await em.count(MaterialConversion, { material })) > 0) {
@@ -311,9 +325,9 @@ async function assertBaseUnitFree(em: EntityManager, material: Material): Promis
       "BASE_UNIT_HAS_CONVERSIONS",
     );
   }
-  if ((await hasPlanningParameters(em, material)) || (await hasSafetyStockTargets(em, material))) {
+  if ((await hasPlanningParameters(em, material)) || (await hasSafetyStockTargets(em, material)) || (await hasForecasts(em, material))) {
     throw new ConflictError(
-      "Remove this material's planning parameters and safety-stock targets before changing its base unit: their quantities are in it.",
+      "Remove this material's planning parameters, safety-stock targets and forecasts before changing its base unit: their quantities are in it.",
       "BASE_UNIT_IN_USE",
     );
   }

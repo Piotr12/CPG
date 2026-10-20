@@ -26,6 +26,7 @@ import { FACTOR_MESSAGE } from "../../validators/materials/material-fields.schem
 import type { AuditActor } from "../audit/actor";
 import { BomService } from "../boms/bom.service";
 import { PlanningParameterService } from "../planning-parameters/planning-parameter.service";
+import { ForecastService } from "../forecasts/forecast.service";
 import { SafetyStockTargetService } from "../safety-stock/safety-stock-target.service";
 import { MATERIAL_ID_RACE, MaterialService } from "./material.service";
 
@@ -289,6 +290,18 @@ describe("MaterialService", () => {
         const panel = await service().create(PANEL, ACTOR);
         await new SafetyStockTargetService({ em: scopedEm("prod") }).create(
           { material: panel.id, location: "00000001", effectiveFrom: "2027-01-01", quantity: "20.000000" },
+          ACTOR,
+        );
+
+        await expect(service().update(panel.id, { baseUnit: "pcs" }, panel.version, ACTOR)).rejects.toMatchObject({
+          code: "BASE_UNIT_IN_USE",
+        });
+      });
+
+      it("locks the base unit while a forecast holds a quantity in it", async () => {
+        const panel = await service().create(PANEL, ACTOR);
+        await new ForecastService({ em: scopedEm("prod") }).create(
+          { material: panel.id, location: "00000001", date: "2027-01-01", quantity: "20.000000" },
           ACTOR,
         );
 

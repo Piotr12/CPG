@@ -1,3 +1,5 @@
+import { CustomerOrderService } from "../services/customer-orders/customer-order.service";
+import { StockService } from "../services/stock/stock.service";
 import { entities, initOrm, type Orm } from "@cpg/db";
 import { asClass, asFunction, asValue, createContainer, InjectionMode } from "awilix";
 import { loadConfig, type AppConfig } from "../config";
@@ -15,11 +17,13 @@ import { PlanningParameterService } from "../services/planning-parameters/planni
 import { SafetyStockTargetService } from "../services/safety-stock/safety-stock-target.service";
 import { PurchaseOrderService } from "../services/purchase-orders/purchase-order.service";
 import { PurchaseRequisitionService } from "../services/purchase-requisitions/purchase-requisition.service";
+import { ForecastService } from "../services/forecasts/forecast.service";
 import { MaterialService } from "../services/materials/material.service";
 import { SupplierService } from "../services/suppliers/supplier.service";
 import { UserPreferenceService } from "../services/preferences/user-preference.service";
 import { SystemStatusService } from "../services/system/system-status.service";
 import { UserService } from "../services/users/user.service";
+import { TestResetService } from "../services/tenants/test-reset.service";
 import { TenantService } from "../services/tenants/tenant.service";
 import { globalSingleton } from "../singleton";
 import type { AppContainer, Cradle } from "./cradle";
@@ -43,19 +47,23 @@ export function createAppContainer(config: AppConfig, orm: Orm): AppContainer {
     userService: asClass(UserService).scoped(),
     userPreferenceService: asClass(UserPreferenceService).scoped(),
     tenantService: asClass(TenantService).scoped(),
+    testResetService: asClass(TestResetService).scoped(),
     apiTokenService: asClass(ApiTokenService).scoped(),
     auditService: asClass(AuditService).scoped(),
     idempotencyService: asClass(IdempotencyService).scoped(),
     // Tenant data: resolve it from a tenantScope(), whose `em` reads and writes one tenant only.
+    stockService: asClass(StockService).scoped(),
     materialService: asClass(MaterialService).scoped(),
     locationService: asClass(LocationService).scoped(),
     customerService: asClass(CustomerService).scoped(),
     supplierService: asClass(SupplierService).scoped(),
     planningParameterService: asClass(PlanningParameterService).scoped(),
     safetyStockTargetService: asClass(SafetyStockTargetService).scoped(),
+    forecastService: asClass(ForecastService).scoped(),
     bomService: asClass(BomService).scoped(),
     purchaseRequisitionService: asClass(PurchaseRequisitionService).scoped(),
     purchaseOrderService: asClass(PurchaseOrderService).scoped(),
+    customerOrderService: asClass(CustomerOrderService).scoped(),
     importService: asClass(ImportService).scoped(),
     // `tenant` is registered only by tenantScope(): resolving it from a global scope fails (strict).
   });

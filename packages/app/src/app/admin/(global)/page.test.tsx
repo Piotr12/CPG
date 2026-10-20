@@ -20,7 +20,7 @@ vi.mock("@cpg/core", () => ({
 }));
 vi.mock("../../../auth/require-admin", () => ({ requireUser: mocks.requireUser }));
 vi.mock("../../../i18n/get-messages", () => ({ getMessages: mocks.getMessages }));
-vi.mock("./actions", () => ({ setTenantReadOnly: vi.fn() }));
+vi.mock("./actions", () => ({ setTenantReadOnly: vi.fn(), resetTest: vi.fn() }));
 
 const status = { databasePath: "/externaldata/cpg.sqlite", appliedMigrations: 3, pendingMigrations: 0, settings: 7 };
 const tenants = [
@@ -58,6 +58,8 @@ describe("AdminPage", () => {
     expect(screen.getByText("/externaldata/cpg.sqlite")).toBeTruthy();
     expect(screen.getByText("3 migrations applied")).toBeTruthy();
     expect(screen.getByText("7 settings")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Reset Test…" })).toBeTruthy();
+    expect(screen.getByText("Generation 1")).toBeTruthy();
     expect(screen.getByText("0 pending").dataset.variant).toBe("outline");
   });
 
@@ -86,6 +88,7 @@ describe("AdminPage", () => {
 
     expect(choices("Choose a tenant").map(([href]) => href)).toEqual(["/admin/test", "/admin/prod"]);
     expect(screen.queryByText("Database")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Reset Test…" })).toBeNull();
     expect(screen.queryByRole("list", { name: "Read-only" })).toBeNull();
     expect(screen.queryByRole("button", { name: /read-only|writable/ })).toBeNull();
     expect(screen.queryByRole("link", { name: /password/i })).toBeNull();

@@ -31,6 +31,7 @@ export * from "./services/boms/bom.service";
 export * from "./services/safety-stock/safety-stock-target.service";
 export * from "./services/purchase-requisitions/purchase-requisition.service";
 export * from "./services/purchase-orders/purchase-order.service";
+export * from "./services/forecasts/forecast.service";
 export * from "./services/imports/import.service";
 // The import's workbook: the app's adapter reads it into cells, and the template is written from its layout.
 export { prepareImport, type ImportIssue, type PreparedImport } from "./domain/imports/prepare-import";
@@ -47,3 +48,7 @@ export * from "./validators/tenants/tenant-code.schema";
 export * from "./singleton";
 // The preference vocabulary: `app` may not import `@cpg/db`, but its dictionaries are keyed by it.
 export { LOCALES, THEMES, type Locale, type Theme } from "@cpg/db";
+export { TestResetService } from "./services/tenants/test-reset.service";
+
+export * from "./services/customer-orders/customer-order.service";
+export * from "./services/stock/stock.service";

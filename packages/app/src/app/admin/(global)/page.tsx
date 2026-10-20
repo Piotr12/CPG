@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@cpg/
 import { cn } from "@cpg/ui/lib/utils";
 import { requestScope, type TenantCode, type TenantInfo } from "@cpg/core";
 import { requireUser } from "../../../auth/require-admin";
+import { ResetTestCard } from "../../../components/tenants/reset-test-card";
 import { ReadOnlyControls } from "../../../components/tenants/read-only-controls";
 import { readOnlyControlsLabels } from "../../../components/tenants/read-only-labels";
 import { getMessages } from "../../../i18n/get-messages";
@@ -56,6 +57,9 @@ async function AdminContent() {
         ))}
       </nav>
       {user.role === "admin" && <ReadOnlyCard tenants={tenants} messages={messages} />}
+      {user.role === "admin" && tenants.filter(({ code }) => code === "test").map((tenant) => (
+        <ResetTestCard key={tenant.code} generation={tenant.generation} readOnly={tenant.readOnly} labels={t.reset} errors={messages.errors} />
+      ))}
       {user.role === "admin" && <DatabaseStatus t={t} />}
     </div>
   );

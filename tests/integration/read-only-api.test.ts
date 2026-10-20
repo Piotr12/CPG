@@ -36,6 +36,7 @@ describe("read-only tenants through the API (R05)", () => {
   let yard: { id: string; name: string; active: boolean; version: number };
   let bracket: { id: string; output: string; version: number };
   let rod: string;
+  let forecast: { material: string; location: string; date: string; quantity: string; version: number };
   const tenants = async () => json(await api("GET", "/api/tenants", adminSecret)).data as TenantRow[];
   const setReadOnly = (tenant: string, readOnly: boolean, secret = adminSecret) =>
     write("PATCH", `/api/tenants/${tenant}`, secret, { readOnly });
@@ -70,6 +71,14 @@ describe("read-only tenants through the API (R05)", () => {
     });
     expect(bom.status).toBe(200);
     bracket = json(bom).data;
+    const demand = await write("POST", "/api/tenants/prod/forecasts", adminSecret, {
+      material: output,
+      location: yard.id,
+      date: "2027-02-01",
+      quantity: "10",
+    });
+    expect(demand.status).toBe(200);
+    forecast = json(demand).data;
   });
   afterAll(async () => {
     try {
@@ -188,6 +197,22 @@ describe("read-only tenants through the API (R05)", () => {
     expect(prod.filter(({ output }) => output === bracket.output).map(({ id }) => id)).toEqual([bracket.id]);
     expect(json(await api("GET", path, adminSecret)).data).toEqual(before);
     expect(before).toMatchObject({ active: true, revision: 1, version: bracket.version, components: [expect.objectContaining({ material: rod, quantity: "2.000000" })] });
+  });
+
+  it("refuses a forecast create, change and removal in read-only Prod, changing nothing (R05)", async () => {
+    const path = `/api/tenants/prod/forecasts/${forecast.material}/${forecast.location}/${forecast.date}`;
+
+    const refused = {
+      "forecast create": await write("POST", "/api/tenants/prod/forecasts", adminSecret, { ...forecast, date: "2027-02-02" }),
+      "forecast change": await write("PATCH", path, adminSecret, { quantity: "99", version: forecast.version }),
+      "forecast removal": await write("DELETE", path, adminSecret, { version: forecast.version }),
+    };
+
+    for (const [attempt, response] of Object.entries(refused)) {
+      expect({ attempt, status: response.status, code: json(response).error?.code }).toEqual({ attempt, status: 409, code: "TENANT_READ_ONLY" });
+    }
+    const rows = json(await api("GET", `/api/tenants/prod/forecasts?material=${forecast.material}`, adminSecret)).data;
+    expect(rows).toEqual([forecast]);
   });
 
   it("still reads Prod's data and audit, for every account (TEN-018)", async () => {
