@@ -73,4 +73,8 @@ describe("createApiHandler", () => {
     ).rejects.toBe(control);
     expect(log).not.toHaveBeenCalled();
   });
+  it("preserves public interpolation context in an API error", async () => {
+    const result = await call(async () => { throw new AppError("INSUFFICIENT_STOCK", "Not enough.", 409, { available: "2.000000" }); });
+    expect(result).toEqual({ status: 409, cacheControl: "no-store", body: { ok: false, error: { code: "INSUFFICIENT_STOCK", message: "Not enough.", params: { available: "2.000000" } } } });
+  });
 });

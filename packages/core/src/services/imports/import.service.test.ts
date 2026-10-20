@@ -35,6 +35,20 @@ const materials = (tenant: "test" | "prod" = "prod") => kit.write(({ materialSer
 const descriptions = async (tenant: "test" | "prod" = "prod") => (await materials(tenant)).map((material) => `${material.id} ${material.description}`);
 
 describe("the dry run and the commit", () => {
+  it.each(["materials", "locations"] as const)("preserves exact refusal context when %s import tries to deactivate stocked masters", async (kind) => {
+    await seedMasters();
+    const pair = { material: "00000001", location: "00000001" };
+    await kit.write(({ stockService }) => stockService.correct({ ...pair, quantity: "2.000001", unit: "kg", reason: "Opening count" }, ACTOR));
+    const audits = await kit.auditCount();
+    const workbook = kind === "materials"
+      ? [sheet("materials", [1, "raw", "Steel sheet", "kg", "no"])]
+      : [sheet("locations", [1, "Main cave", "no"])];
+    const report = await kit.dryRun(workbook);
+    expect(report.errors).toEqual([expect.objectContaining({ code: "STOCK_NOT_EMPTY", params: { ...pair, quantity: "2.000001", unit: "kg" }, message: expect.stringContaining("holds 2.000001 kg") })]);
+    expect(report.previewToken).toBeNull();
+    expect(await kit.write(({ stockService }) => stockService.get(pair))).toMatchObject({ quantity: "2.000001", materialActive: true, locationActive: true, movements: [expect.objectContaining({ quantity: "2.000001" })] });
+    expect(await kit.auditCount()).toBe(audits);
+  });
   it("assigns the next material ID to a blank ID, shows it, and writes nothing until the commit (XLS-002, XLS-010)", async () => {
     await seedMasters();
     const audits = await kit.auditCount();
