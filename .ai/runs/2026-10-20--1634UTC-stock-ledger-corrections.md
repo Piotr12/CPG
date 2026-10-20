@@ -3,7 +3,7 @@
 **Date:** 2026-10-20 16:34 UTC
 **Agent:** Codex
 **Spec:** .ai/specs/2026-10-20--1634UTC-stock-ledger-corrections.md
-**Status:** in progress
+**Status:** done
 
 ## Goal
 Implement E07-S01: tenant physical stock balances, a signed ledger and reasoned manual corrections in the UI/API, including stock-dependent master guards and demo balances.
@@ -38,3 +38,7 @@ Implement E07-S01: tenant physical stock balances, a signed ledger and reasoned 
 ## Follow-ups
 - Owner must select signed-change or target-balance manual input; then reconcile baseline, complete spec, publish design and implementation PRs, run full gate/review/UI evidence.
 - Release issue claim while waiting; resume on cez/44843974 without duplicate investigation.
+
+## Final outcome
+Design reviewed and implemented separately in PR #104. Spec moved to implemented/ after the full local gate passed (1,964 unit tests at100%; 219 browser tests); no runtime code is carried by this design PR. Owner autonomous delegation resolved signed-manual-input assumption; D07 records the normative erratum. Implementation plan and detailed verification live on PR #104. Manual QA and merge remain outside this design run.
+

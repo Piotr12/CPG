@@ -1,6 +1,6 @@
 # Physical stock ledger and reasoned corrections
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-20 16:34 UTC
 **Issue:** #80 (E07-S01)
 
@@ -94,3 +94,7 @@ R02/R03/R05/R07/R08/R09, N01/N02/N03/N04/N05/N06, D02/D03/D04/D06. Manual signed
 ### Phase 3: verification and publication
 5. Exercise UI/API parity, negatives, read-only, roles, idempotency and tenants in integration tests; full lint/typecheck/coverage/build/integration gate.
 6. Review diff against engineering standards, fix findings, capture browser evidence, publish reviewed ready implementation PR referencing the separate design PR.
+
+## Implementation notes
+Implemented in PR #104 (runtime head 901e8a8): exact atomic signed postings, immutable history, scoped UI/API, stock usage guards, demo openings, EN/PL/help. Final parent lint/typecheck/build passed; 1,964 unit tests with 100% all metrics; full standalone integration 219 passed/one Docker startup skipped. Independent ledger review approved 910072b; localization refinement has a separate narrow review. Docker image/startup and manual risk-high QA remain pipeline gates before merge. D07 in the implementation PR records the signed-input erratum.
+
