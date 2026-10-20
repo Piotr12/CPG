@@ -5,11 +5,13 @@ import {
   initOrm,
   Location,
   Material,
+  MaterialConversion,
   OptimisticLockError,
   PlanningParameterSet,
   selectTenant,
   TenantAuditEvent,
   type MaterialType,
+  Tenant,
   type Orm,
   type TenantCode,
 } from "@cpg/db";
@@ -19,8 +21,11 @@ import { loadConfig } from "../../config";
 import { getContainer } from "../../container/container";
 import { migrateDatabase, toDbOptions } from "../../database";
 import { tenantServerAction } from "../../http/tenant-server-action";
+import { DEMO_PLANNING_PARAMETERS } from "../../domain/planning-parameters/demo-planning-parameters";
 import { RAW_MATERIAL_BUY_ONLY_MESSAGE } from "../../validators/planning-parameters/planning-parameter-fields.schema";
 import type { AuditActor } from "../audit/actor";
+import { LocationService } from "../locations/location.service";
+import { MaterialService } from "../materials/material.service";
 import { hasPlanningParameters, isMadeAnywhere } from "./planning-parameter-usage";
 import { PlanningParameterService, type NewPlanningParameters } from "./planning-parameter.service";
 
@@ -251,6 +256,64 @@ describe("PlanningParameterService", () => {
         before: { material: "00000002", location: "00000001", procurement: "make" },
         after: null,
       });
+    });
+  });
+
+  describe("seedDemo (spec Q12)", () => {
+    /** Test with the demo materials and locations, as the earlier seeds leave it. */
+    const seedTestMasters = async () => {
+      await new MaterialService({ em: scopedEm("test") }).seedDemo();
+      await new LocationService({ em: scopedEm("test") }).seedDemo();
+    };
+    const testAudit = () => scopedEm("test").find(TenantAuditEvent, {});
+
+    it("creates the demo sets in a fresh Test, unaudited, never in Prod, and nothing the second time", async () => {
+      await seedTestMasters();
+
+      expect(await service("test").seedDemo()).toBe(DEMO_PLANNING_PARAMETERS.length);
+      expect(await service("test").seedDemo()).toBe(0);
+      expect(await service("test").list()).toEqual(DEMO_PLANNING_PARAMETERS.map((set) => ({ ...set, version: 1 })));
+      expect(await testAudit()).toEqual([]);
+      expect(await service("prod").list()).toEqual([]);
+    });
+
+    it("never brings back sets the admin removed: the audit remembers them", async () => {
+      await seedTestMasters();
+      await service("test").seedDemo();
+      for (const { material, location } of await service("test").list()) {
+        await service("test").remove(material, location, 1, ACTOR);
+      }
+
+      expect(await service("test").seedDemo()).toBe(0);
+      expect(await service("test").list()).toEqual([]);
+    });
+
+    it("skips sets an edited Test can't hold: a missing or inactive reference, or Make on a raw material", async () => {
+      await seedTestMasters();
+      const em = scopedEm("test");
+      (await em.findOneOrFail(Material, { code: "00000005" })).type = "raw";
+      (await em.findOneOrFail(Location, { code: "00000003" })).active = false;
+      const box = await em.findOneOrFail(Material, { code: "00000006" });
+      em.remove(await em.find(MaterialConversion, { material: box }));
+      em.remove(box);
+      await em.flush();
+
+      expect(await service("test").seedDemo()).toBe(DEMO_PLANNING_PARAMETERS.length - 3);
+      expect((await service("test").list()).map(({ material, location }) => `${material}@${location}`)).toEqual([
+        "00000001@00000001",
+        "00000002@00000001",
+        "00000003@00000001",
+        "00000004@00000001",
+      ]);
+    });
+
+    it("seeds nothing into a tenant without masters, or a read-only one (R05)", async () => {
+      expect(await service("test").seedDemo()).toBe(0);
+      await seedTestMasters();
+      await orm.em.fork().nativeUpdate(Tenant, { code: "test" }, { readOnly: true });
+
+      expect(await service("test").seedDemo()).toBe(0);
+      expect(await service("test").list()).toEqual([]);
     });
   });
 

@@ -14,7 +14,10 @@ import {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { loadConfig } from "../../config";
 import { migrateDatabase, toDbOptions } from "../../database";
+import { DEMO_SAFETY_STOCK_TARGETS } from "../../domain/safety-stock/demo-safety-stock-targets";
 import { safetyTargetOn } from "../../domain/safety-stock/target-on";
+import { LocationService } from "../locations/location.service";
+import { MaterialService } from "../materials/material.service";
 import type { AuditActor } from "../audit/actor";
 import { hasSafetyStockTargets } from "./safety-stock-target-usage";
 import { SafetyStockTargetService, type NewSafetyStockTarget } from "./safety-stock-target.service";
@@ -180,5 +183,32 @@ describe("SafetyStockTargetService", () => {
       "00000003 2027-01-01",
     ]);
     expect(await service("test").list()).toEqual([]);
+  });
+
+  describe("seedDemo (spec Q12)", () => {
+    const seedTestMasters = async () => {
+      await new MaterialService({ em: scopedEm("test") }).seedDemo();
+      await new LocationService({ em: scopedEm("test") }).seedDemo();
+    };
+
+    it("creates the demo targets in a fresh Test, unaudited, and nothing the second time", async () => {
+      await seedTestMasters();
+
+      expect(await service("test").seedDemo()).toBe(DEMO_SAFETY_STOCK_TARGETS.length);
+      expect(await service("test").seedDemo()).toBe(0);
+      expect(await service("test").list()).toEqual(DEMO_SAFETY_STOCK_TARGETS.map((target) => ({ ...target, version: 1 })));
+      expect(await scopedEm("test").find(TenantAuditEvent, {})).toEqual([]);
+    });
+
+    it("never brings back removed targets, and skips an inactive material", async () => {
+      await seedTestMasters();
+      const em = scopedEm("test");
+      (await em.findOneOrFail(Material, { code: "00000002" })).active = false;
+      await em.flush();
+      expect(await service("test").seedDemo()).toBe(DEMO_SAFETY_STOCK_TARGETS.length - 1);
+
+      for (const target of await service("test").list()) await service("test").remove(target, 1, ACTOR);
+      expect(await service("test").seedDemo()).toBe(0);
+    });
   });
 });

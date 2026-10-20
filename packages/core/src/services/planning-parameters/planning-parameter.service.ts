@@ -7,11 +7,13 @@ import {
   type Material,
   type ProcurementMode,
 } from "@cpg/db";
+import { DEMO_PLANNING_PARAMETERS } from "../../domain/planning-parameters/demo-planning-parameters";
 import { isProcurementAllowed } from "../../domain/planning-parameters/procurement";
 import { ConflictError, NotFoundError, ValidationError, versionConflict } from "../../http/errors";
 import { RAW_MATERIAL_BUY_ONLY_MESSAGE } from "../../validators/planning-parameters/planning-parameter-fields.schema";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
+import { activeDemoReferences, isUntouchedKind } from "../demo/demo-references";
 import { findActiveLocation, findLocation } from "../locations/find-location";
 import { findActiveMaterial, findMaterial } from "../materials/find-material";
 
@@ -127,6 +129,29 @@ export class PlanningParameterService {
       em.remove(set);
       await em.flush();
       return { material: materialId, location: locationId };
+    });
+  }
+
+  /**
+   * Creates the demonstration sets (D06) while the tenant's sets are untouched (none, and none ever
+   * audited), and returns how many. A set whose material or location is missing or inactive, or that
+   * would make a raw material, is skipped: production's Test tenant may have been edited since its
+   * masters were seeded. Not audited, like the other demo records.
+   */
+  async seedDemo(): Promise<number> {
+    return this.em.transactional(async (em) => {
+      if (!(await isUntouchedKind(em, await em.count(PlanningParameterSet, {}), "planning-parameters"))) return 0;
+      const references = await activeDemoReferences(em, DEMO_PLANNING_PARAMETERS);
+      let created = 0;
+      for (const demo of DEMO_PLANNING_PARAMETERS) {
+        const material = references.material.get(demo.material);
+        const location = references.location.get(demo.location);
+        if (!material || !location || !isProcurementAllowed(material.type, demo.procurement)) continue;
+        em.create(PlanningParameterSet, { material, location, ...pickValues(demo) });
+        created += 1;
+      }
+      await em.flush();
+      return created;
     });
   }
 

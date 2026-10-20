@@ -4,9 +4,11 @@ import {
   UniqueConstraintViolationException,
   type EntityManager,
 } from "@cpg/db";
+import { DEMO_SAFETY_STOCK_TARGETS } from "../../domain/safety-stock/demo-safety-stock-targets";
 import { ConflictError, NotFoundError, versionConflict } from "../../http/errors";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
+import { activeDemoReferences, isUntouchedKind } from "../demo/demo-references";
 import { findActiveLocation, findLocation } from "../locations/find-location";
 import { findActiveMaterial, findMaterial } from "../materials/find-material";
 
@@ -112,6 +114,28 @@ export class SafetyStockTargetService {
       em.remove(target);
       await em.flush();
       return { material: key.material, location: key.location, effectiveFrom: key.effectiveFrom };
+    });
+  }
+
+  /**
+   * Creates the demonstration targets (D06) while the tenant's targets are untouched (none, and none
+   * ever audited), and returns how many. A target whose material or location is missing or inactive
+   * is skipped. Not audited, like the other demo records.
+   */
+  async seedDemo(): Promise<number> {
+    return this.em.transactional(async (em) => {
+      if (!(await isUntouchedKind(em, await em.count(SafetyStockTarget, {}), "safety-stock"))) return 0;
+      const references = await activeDemoReferences(em, DEMO_SAFETY_STOCK_TARGETS);
+      let created = 0;
+      for (const { effectiveFrom, quantity, ...demo } of DEMO_SAFETY_STOCK_TARGETS) {
+        const material = references.material.get(demo.material);
+        const location = references.location.get(demo.location);
+        if (!material || !location) continue;
+        em.create(SafetyStockTarget, { material, location, effectiveFrom, quantity });
+        created += 1;
+      }
+      await em.flush();
+      return created;
     });
   }
 
