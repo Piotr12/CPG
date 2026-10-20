@@ -51,6 +51,7 @@ describe("migrate", () => {
       "Migration20261019211303_tenant_read_only",
       "Migration20261020054509_planning_parameters_safety_stock",
       "Migration20261020080940_boms",
+      "Migration20261020164210_forecasts",
       "Migration20261020164223_customer_orders",
       "Migration20261020164229_stock_ledger",
       "Migration20261020164640_test_reset",
@@ -63,10 +64,10 @@ describe("migrate", () => {
     try {
       const previous = migrations.map((migration) => migration.name).filter((name) => !name.includes("customer_order"));
       await orm.migrator.up({ migrations: previous });
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 15, pending: 2 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 16, pending: 2 });
       await orm.em.getConnection().execute("update tenant set generation = 23 where code = 'prod'");
       await orm.migrator.up();
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 17, pending: 0 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 18, pending: 0 });
       expect(await orm.em.getConnection().execute("select generation from tenant where code = 'prod'")).toEqual([{ generation: 23 }]);
       expect(await orm.em.getConnection().execute("select count(*) as count from stock_movement")).toEqual([{ count: 0 }]);
       expect(await orm.em.getConnection().execute("select count(*) as count from customer_order")).toEqual([{ count: 0 }]);
@@ -85,9 +86,9 @@ describe("getMigrationStatus", () => {
     const orm = await initOrm({ databasePath });
 
     try {
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 17 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 18 });
       await orm.migrator.up();
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 17, pending: 0 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 18, pending: 0 });
     } finally {
       await orm.close();
     }
@@ -104,7 +105,7 @@ describe("migrations", () => {
         await orm.em
           .getConnection()
           .execute<{ name: string }[]>(
-            "select name from sqlite_master where name in ('setting', 'user', 'session', 'user_preference', 'tenant', 'api_token', 'global_audit_event', 'tenant_audit_event', 'global_idempotency_key', 'tenant_idempotency_key', 'material', 'material_conversion', 'location', 'customer', 'supplier', 'planning_parameter_set', 'safety_stock_target', 'bom', 'bom_revision', 'bom_component', 'customer_order', 'customer_order_line', 'stock_balance', 'stock_movement')",
+            "select name from sqlite_master where name in ('setting', 'user', 'session', 'user_preference', 'tenant', 'api_token', 'global_audit_event', 'tenant_audit_event', 'global_idempotency_key', 'tenant_idempotency_key', 'material', 'material_conversion', 'location', 'customer', 'supplier', 'planning_parameter_set', 'safety_stock_target', 'bom', 'bom_revision', 'bom_component', 'customer_order', 'customer_order_line', 'stock_balance', 'stock_movement', 'forecast')",
           )
       )
         .map(({ name }) => name)
@@ -134,6 +135,7 @@ describe("migrations", () => {
         "customer",
         "customer_order",
         "customer_order_line",
+        "forecast",
         "global_audit_event",
         "global_idempotency_key",
         "location",
@@ -170,6 +172,9 @@ describe("migrations", () => {
       expect(await tables()).not.toContain("customer_order");
       expect(await tables()).not.toContain("customer_order_line");
       expect(await triggers()).toContain("bom_revision_no_update");
+      await orm.migrator.down();
+      expect(await tables()).not.toContain("forecast");
+      expect(await tables()).toContain("bom");
       await orm.migrator.down();
       expect(await triggers()).not.toContain("bom_revision_no_update");
       expect(await triggers()).not.toContain("bom_component_no_update");
@@ -439,6 +444,44 @@ describe("planning-parameters and safety-stock migration", () => {
 
       await orm.migrator.down({ to: "Migration20261019211303_tenant_read_only" });
       expect(await execute(orm, "select name from sqlite_master where name in ('planning_parameter_set', 'safety_stock_target')")).toEqual([]);
+      expect(await execute(orm, "select count(*) as n from material")).toEqual([{ n: 1 }]);
+    } finally {
+      await orm.close();
+    }
+  });
+});
+
+describe("forecasts migration", () => {
+  const execute = (orm: Awaited<ReturnType<typeof initOrm>>, sql: string) => orm.em.getConnection().execute(sql);
+
+  it("keeps one forecast per material, location and day, and rolls back with rows", async () => {
+    const databasePath = tempDatabase();
+    await migrate({ databasePath });
+    const orm = await initOrm({ databasePath });
+    const forecast = (id: string, date: string, location = "l1") =>
+      execute(
+        orm,
+        `insert into forecast (id, tenant_code, material_id, location_id, date, quantity) values ('${id}', 'test', 'm1', '${location}', '${date}', '100.000000')`,
+      );
+
+    try {
+      await execute(orm, "insert into material (id, tenant_code, code, type, description, base_unit, created_at) values ('m1', 'test', 'm1', 'finished', 'x', 'each', 0)");
+      await execute(orm, "insert into location (id, tenant_code, code, name, created_at) values ('l1', 'test', 'l1', 'x', 0)");
+      await execute(orm, "insert into location (id, tenant_code, code, name, created_at) values ('l2', 'test', 'l2', 'x', 0)");
+
+      await forecast("f1", "2027-01-01");
+      await forecast("f2", "2027-01-02");
+      await forecast("f3", "2027-01-01", "l2");
+      await expect(forecast("f4", "2027-01-01")).rejects.toThrow(/UNIQUE/);
+      expect(await execute(orm, "select quantity, typeof(quantity) as kind, version from forecast where id = 'f1'")).toEqual([
+        { quantity: "100.000000", kind: "text", version: 1 },
+      ]);
+
+      // The four migrations that landed on main after the forecasts come off first.
+      for (let later = 0; later < 4; later += 1) await orm.migrator.down();
+      expect(await execute(orm, "select name from sqlite_master where name = 'forecast'")).toEqual([{ name: "forecast" }]);
+      await orm.migrator.down();
+      expect(await execute(orm, "select name from sqlite_master where name = 'forecast'")).toEqual([]);
       expect(await execute(orm, "select count(*) as n from material")).toEqual([{ n: 1 }]);
     } finally {
       await orm.close();

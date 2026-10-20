@@ -15,6 +15,7 @@ import type { BomService } from "../services/boms/bom.service";
 import type { ImportService } from "../services/imports/import.service";
 import type { PlanningParameterService } from "../services/planning-parameters/planning-parameter.service";
 import type { SafetyStockTargetService } from "../services/safety-stock/safety-stock-target.service";
+import type { ForecastService } from "../services/forecasts/forecast.service";
 import type { MaterialService } from "../services/materials/material.service";
 import type { SupplierService } from "../services/suppliers/supplier.service";
 import type { UserPreferenceService } from "../services/preferences/user-preference.service";
@@ -45,6 +46,7 @@ export interface Cradle {
   supplierService: SupplierService;
   planningParameterService: PlanningParameterService;
   safetyStockTargetService: SafetyStockTargetService;
+  forecastService: ForecastService;
   bomService: BomService;
   customerOrderService: CustomerOrderService;
   importService: ImportService;
