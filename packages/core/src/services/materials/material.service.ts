@@ -14,6 +14,7 @@ import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
 import { bomUsingMaterial } from "../boms/bom-usage";
 import { hasPlanningParameters, isMadeAnywhere } from "../planning-parameters/planning-parameter-usage";
+import { hasForecasts } from "../forecasts/forecast-usage";
 import { hasSafetyStockTargets } from "../safety-stock/safety-stock-target-usage";
 import { isScopeReadOnly } from "../tenants/tenant.service";
 import { convertToBaseQuantity, type BaseQuantity } from "./base-quantity";
@@ -299,8 +300,8 @@ async function assertNotInBoms(em: EntityManager, material: Material, fields: Ma
 
 /**
  * Refuses a base-unit change while anything holds a value in the base unit: conversion factors are
- * relative to it (spec Q8), and planning parameters and safety targets store quantities in it
- * (planning spec Q6). Conversions are checked first, so their more specific error wins.
+ * relative to it (spec Q8), and planning parameters, safety targets and forecasts store quantities
+ * in it (planning spec Q6). Conversions are checked first, so their more specific error wins.
  */
 async function assertBaseUnitFree(em: EntityManager, material: Material): Promise<void> {
   if ((await em.count(MaterialConversion, { material })) > 0) {
@@ -309,9 +310,9 @@ async function assertBaseUnitFree(em: EntityManager, material: Material): Promis
       "BASE_UNIT_HAS_CONVERSIONS",
     );
   }
-  if ((await hasPlanningParameters(em, material)) || (await hasSafetyStockTargets(em, material))) {
+  if ((await hasPlanningParameters(em, material)) || (await hasSafetyStockTargets(em, material)) || (await hasForecasts(em, material))) {
     throw new ConflictError(
-      "Remove this material's planning parameters and safety-stock targets before changing its base unit: their quantities are in it.",
+      "Remove this material's planning parameters, safety-stock targets and forecasts before changing its base unit: their quantities are in it.",
       "BASE_UNIT_IN_USE",
     );
   }

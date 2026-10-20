@@ -17,6 +17,7 @@ export const HELP_TOPIC_IDS = [
   "suppliers",
   "planning-parameters",
   "safety-stock",
+  "forecasts",
   "boms",
   "bom-revisions",
   "import",
@@ -46,6 +47,7 @@ export const HELP_TOPIC_ROUTES: Record<HelpTopicId, string> = {
   suppliers: "/admin/[tenant]/suppliers",
   "planning-parameters": "/admin/[tenant]/planning-parameters",
   "safety-stock": "/admin/[tenant]/safety-stock",
+  forecasts: "/admin/[tenant]/forecasts",
   boms: "/admin/[tenant]/boms",
   "bom-revisions": "/admin/[tenant]/boms/[id]",
   import: "/admin/[tenant]/import",
@@ -133,7 +135,7 @@ const en: Record<HelpTopicId, HelpText> = {
     title: "A tenant's audit",
     body: [
       "Audit, in the sidebar under the tenant's screens (or Audit — Test or Audit — Prod on the tenant's page), opens that tenant's own audit: the changes to its business records, kept apart from the other tenant's.",
-      "It lists every material, location, customer and supplier created, changed, deactivated or reactivated, every unit conversion, planning parameter set and safety-stock target added, changed or removed, and every BOM created, revised, deactivated or reactivated, with the values before and after. Account changes are always in the Global audit.",
+      "It lists every material, location, customer and supplier created, changed, deactivated or reactivated, every unit conversion, planning parameter set, safety-stock target and forecast added, changed or removed, and every BOM created, revised, deactivated or reactivated, with the values before and after. Account changes are always in the Global audit.",
       "Like the Global audit, it is read-only for everyone.",
     ],
   },
@@ -151,7 +153,7 @@ const en: Record<HelpTopicId, HelpText> = {
     body: [
       "Choose a material's ID to open its page: its type, base unit and status, and its unit conversions.",
       "A conversion lets people enter quantities in another unit, such as a case of 12. It reads 1 case = 12 each: the alternate quantity and unit, then the base quantity and the base unit. A quantity entered in that unit is converted into the base unit once, rounded half-up to six decimals, and the unit and factor it was entered with are kept. The inverse is shown for orientation only.",
-      "Changing or removing a conversion never changes quantities already stored. The base unit can change only while the material has no conversions, planning parameters or safety-stock targets, since their values are in it. Once any BOM uses the material, as its output or as a component, neither its type nor its base unit can change again.",
+      "Changing or removing a conversion never changes quantities already stored. The base unit can change only while the material has no conversions, planning parameters, safety-stock targets or forecasts, since their values are in it. Once any BOM uses the material, as its output or as a component, neither its type nor its base unit can change again.",
       "Deactivate keeps the material and its history, but it can't be picked for new entries; Reactivate undoes that. Every change appears in the tenant's audit.",
     ],
   },
@@ -198,6 +200,15 @@ const en: Record<HelpTopicId, HelpText> = {
       "Two targets can't share a date. To change a target's quantity, use Change target; to move it, remove it and add one on the new date. A target of 0 ends a buffer from its date.",
       "The status says which target is in effect today (UTC), which ones are scheduled for later, and which earlier ones a later target has replaced.",
       "Every account can read the list. Only the administrator adds, changes and removes targets, with Add target and each row's ⋯ menu; through the API too. Every change appears in the tenant's audit.",
+    ],
+  },
+  forecasts: {
+    title: "Forecasts",
+    body: [
+      "Forecasts, under Sales in the sidebar, list the demand you expect per material, location and day. A forecast names no customer. The MRP run nets customer orders against it, so a forecast is the demand beyond the firm orders.",
+      "Enter the quantity in the material's base unit, or in any unit the material converts, such as 2 cases; CPG stores it in the base unit. A material, location and day can have only one forecast. To change the quantity, use Change forecast; to move the day, remove the forecast and add one on the new day.",
+      "Choose a material and/or a location above the list and select Filter to see their quantities day by day. Clear filter shows everything again.",
+      "Every account can read the list. Only the administrator adds, changes and removes forecasts, with Add forecast and each row's ⋯ menu; through the API too. Only active materials and locations can get a new forecast. Every change appears in the tenant's audit, and a removal keeps the quantity it held.",
     ],
   },
   boms: {
@@ -333,7 +344,7 @@ const pl: Record<HelpTopicId, HelpText> = {
     body: [
       "Wybierz ID materiału, aby otworzyć jego stronę: typ, jednostkę bazową, status i przeliczniki jednostek.",
       "Przelicznik pozwala wpisywać ilości w innej jednostce, na przykład w kartonach po 12 sztuk. Czyta się go jako 1 karton = 12 szt.: ilość i jednostka alternatywna, potem ilość i jednostka bazowa. Ilość wpisana w tej jednostce jest przeliczana na jednostkę bazową raz, z zaokrągleniem połówek w górę do sześciu miejsc po przecinku, a jednostka i przelicznik, z którymi ją wpisano, zostają zapisane. Odwrotność jest tylko orientacyjna.",
-      "Zmiana lub usunięcie przelicznika nigdy nie zmienia ilości już zapisanych. Jednostkę bazową można zmienić tylko wtedy, gdy materiał nie ma przeliczników, parametrów planowania ani celów zapasu bezpieczeństwa, bo ich wartości są w niej zapisane. Gdy materiał trafi do jakiegokolwiek BOM-u, jako wyrób lub składnik, nie można już zmienić ani jego typu, ani jednostki bazowej.",
+      "Zmiana lub usunięcie przelicznika nigdy nie zmienia ilości już zapisanych. Jednostkę bazową można zmienić tylko wtedy, gdy materiał nie ma przeliczników, parametrów planowania ani celów zapasu bezpieczeństwa, ani prognoz, bo ich wartości są w niej zapisane. Gdy materiał trafi do jakiegokolwiek BOM-u, jako wyrób lub składnik, nie można już zmienić ani jego typu, ani jednostki bazowej.",
       "Dezaktywuj zachowuje materiał i jego historię, ale nie można go wybrać w nowych wpisach; Aktywuj ponownie to cofa. Każda zmiana pojawia się w audycie środowiska.",
     ],
   },
@@ -380,6 +391,15 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Dwa cele nie mogą mieć tej samej daty. Aby zmienić ilość, użyj Zmień cel; aby przesunąć datę, usuń cel i dodaj nowy. Cel 0 kończy zapas od swojej daty.",
       "Status mówi, który cel obowiązuje dziś (UTC), które są zaplanowane na później, a które wcześniejsze zastąpił późniejszy cel.",
       "Listę może przeglądać każde konto. Cele dodaje, zmienia i usuwa tylko administrator, przyciskiem Dodaj cel i menu ⋯ w wierszu; także przez API. Każda zmiana pojawia się w audycie środowiska.",
+    ],
+  },
+  forecasts: {
+    title: "Prognozy",
+    body: [
+      "Prognozy, w sekcji Sprzedaż w menu bocznym, to popyt, którego się spodziewasz, dla materiału, lokalizacji i dnia. Prognoza nie wskazuje klienta. Przebieg MRP bilansuje z nią zamówienia klientów, więc prognoza to popyt ponad twarde zamówienia.",
+      "Ilość wpisz w jednostce bazowej materiału albo w każdej jednostce, którą materiał przelicza, na przykład 2 kartony; CPG zapisuje ją w jednostce bazowej. Materiał, lokalizacja i dzień mogą mieć tylko jedną prognozę. Aby zmienić ilość, użyj Zmień prognozę; aby przesunąć dzień, usuń prognozę i dodaj nową.",
+      "Wybierz materiał i/lub lokalizację nad listą i naciśnij Filtruj, aby zobaczyć ich ilości dzień po dniu. Wyczyść filtr pokazuje znów wszystko.",
+      "Listę może przeglądać każde konto. Prognozy dodaje, zmienia i usuwa tylko administrator, przyciskiem Dodaj prognozę i menu ⋯ w wierszu; także przez API. Nową prognozę mogą dostać tylko aktywne materiały i lokalizacje. Każda zmiana pojawia się w audycie środowiska, a usunięcie zachowuje ilość, którą prognoza miała.",
     ],
   },
   boms: {

@@ -13,6 +13,7 @@ describe("@cpg/db", () => {
       "BomComponent",
       "BomRevision",
       "Customer",
+      "Forecast",
       "GLOBAL_ENTITIES",
       "GlobalAuditEvent",
       "GlobalIdempotencyKey",
@@ -75,6 +76,7 @@ describe("@cpg/db", () => {
       db.Bom,
       db.BomRevision,
       db.BomComponent,
+      db.Forecast,
     ]);
     const tenantOwned: unknown[] = [
       db.TenantAuditEvent,
@@ -89,6 +91,7 @@ describe("@cpg/db", () => {
       db.Bom,
       db.BomRevision,
       db.BomComponent,
+      db.Forecast,
     ];
     expect(db.GLOBAL_ENTITIES).toEqual(db.entities.filter((entity) => !tenantOwned.includes(entity)));
   });

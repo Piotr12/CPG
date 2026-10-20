@@ -38,6 +38,7 @@ describe("HelpPage", () => {
       "Suppliers",
       "Planning parameters",
       "Safety stock",
+      "Forecasts",
       "BOMs",
       "A BOM and its revisions",
       "Import from spreadsheet",

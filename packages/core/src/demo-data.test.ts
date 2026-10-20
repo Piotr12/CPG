@@ -9,6 +9,7 @@ import {
   Material,
   PlanningParameterSet,
   SafetyStockTarget,
+  Forecast,
   selectTenant,
   Supplier,
   type EntityManager,
@@ -22,6 +23,7 @@ import { DEMO_CUSTOMERS } from "./domain/customers/demo-customers";
 import { DEMO_LOCATIONS } from "./domain/locations/demo-locations";
 import { DEMO_MATERIALS } from "./domain/materials/demo-materials";
 import { DEMO_PLANNING_PARAMETERS } from "./domain/planning-parameters/demo-planning-parameters";
+import { DEMO_FORECASTS } from "./domain/forecasts/demo-forecasts";
 import { DEMO_SAFETY_STOCK_TARGETS } from "./domain/safety-stock/demo-safety-stock-targets";
 import { DEMO_SUPPLIERS } from "./domain/suppliers/demo-suppliers";
 import { LocationService } from "./services/locations/location.service";
@@ -63,6 +65,7 @@ describe("seedDemoData", () => {
       "planning parameter sets": { seeded: DEMO_PLANNING_PARAMETERS.length },
       "safety-stock targets": { seeded: DEMO_SAFETY_STOCK_TARGETS.length },
       BOMs: { seeded: DEMO_BOMS.length },
+      forecasts: { seeded: DEMO_FORECASTS.length },
     });
     expect(await seedDemoData(config)).toEqual({
       materials: { seeded: 0 },
@@ -72,6 +75,7 @@ describe("seedDemoData", () => {
       "planning parameter sets": { seeded: 0 },
       "safety-stock targets": { seeded: 0 },
       BOMs: { seeded: 0 },
+      forecasts: { seeded: 0 },
     });
 
     expect(await counts(config, (em) => em.count(Material, {}))).toEqual({ test: DEMO_MATERIALS.length, prod: 0 });
@@ -81,6 +85,7 @@ describe("seedDemoData", () => {
     expect(await counts(config, (em) => em.count(PlanningParameterSet, {}))).toEqual({ test: DEMO_PLANNING_PARAMETERS.length, prod: 0 });
     expect(await counts(config, (em) => em.count(SafetyStockTarget, {}))).toEqual({ test: DEMO_SAFETY_STOCK_TARGETS.length, prod: 0 });
     expect(await counts(config, (em) => em.count(Bom, {}))).toEqual({ test: DEMO_BOMS.length, prod: 0 });
+    expect(await counts(config, (em) => em.count(Forecast, {}))).toEqual({ test: DEMO_FORECASTS.length, prod: 0 });
   });
 
   it("reports a kind that fails and still seeds the others; the next run seeds only what is still empty", async () => {
@@ -97,6 +102,8 @@ describe("seedDemoData", () => {
       "planning parameter sets": { seeded: 0 },
       "safety-stock targets": { seeded: 0 },
       BOMs: { seeded: DEMO_BOMS.length },
+      // Without locations the demo forecasts are skipped too.
+      forecasts: { seeded: 0 },
     });
     expect(await seedDemoData(config)).toEqual({
       materials: { seeded: 0 },
@@ -106,6 +113,7 @@ describe("seedDemoData", () => {
       "planning parameter sets": { seeded: DEMO_PLANNING_PARAMETERS.length },
       "safety-stock targets": { seeded: DEMO_SAFETY_STOCK_TARGETS.length },
       BOMs: { seeded: 0 },
+      forecasts: { seeded: DEMO_FORECASTS.length },
     });
   });
 });

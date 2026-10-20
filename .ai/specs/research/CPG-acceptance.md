@@ -2327,8 +2327,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### DEM-001 — Forecast no customer dimension
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/forecasts/forecast.service.test.ts` (a forecast stores material, location, day and the base-unit quantity, converted from the unit it was entered in, and takes no customer), `packages/core/src/validators/forecasts/forecast.schema.test.ts`, `tests/integration/forecasts-api.test.ts` (the API stores the day's quantity with no customer field; a duplicate day is refused) and `tests/integration/forecasts.test.ts` (the Add forecast form has no customer field and the list shows the quantity per day). E08-S03, #85.
 - **Given:** Forecast for material M, site L, date D
 - **When:** Create forecast record
 - **Then:** Material/site/day/qty/UoM retained; customer not needed.

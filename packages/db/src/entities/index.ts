@@ -36,6 +36,7 @@ import {
   type ProcurementMode,
 } from "./planning-parameters/planning-parameter-set.entity";
 import { SafetyStockTarget } from "./safety-stock/safety-stock-target.entity";
+import { Forecast } from "./forecasts/forecast.entity";
 import { LOCALES, THEMES, UserPreference, type Locale, type Theme } from "./preferences/user-preference.entity";
 import { Setting } from "./settings/setting.entity";
 import { Tenant, TENANT_CODES, type TenantCode } from "./tenants/tenant.entity";
@@ -56,6 +57,7 @@ export type { MaterialType };
 export { Customer, Location, NAMED_RECORD_NAME_MAX, Supplier };
 export type { NamedRecord, NamedRecordEntity };
 export { PlanningParameterSet, PROCUREMENT_MODES, SafetyStockTarget };
+export { Forecast };
 export { Bom, BomComponent, BOM_REVISION_IMMUTABLE, BomRevision };
 export type { ProcurementMode };
 export type { AuditChannel, AuditSnapshot, AuditValue, Locale, TenantCode, Theme, UserRole };
@@ -83,6 +85,7 @@ export const entities = [
   Bom,
   BomRevision,
   BomComponent,
+  Forecast,
 ];
 
 /**

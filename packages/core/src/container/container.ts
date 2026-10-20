@@ -13,6 +13,7 @@ import { BomService } from "../services/boms/bom.service";
 import { ImportService } from "../services/imports/import.service";
 import { PlanningParameterService } from "../services/planning-parameters/planning-parameter.service";
 import { SafetyStockTargetService } from "../services/safety-stock/safety-stock-target.service";
+import { ForecastService } from "../services/forecasts/forecast.service";
 import { MaterialService } from "../services/materials/material.service";
 import { SupplierService } from "../services/suppliers/supplier.service";
 import { UserPreferenceService } from "../services/preferences/user-preference.service";
@@ -51,6 +52,7 @@ export function createAppContainer(config: AppConfig, orm: Orm): AppContainer {
     supplierService: asClass(SupplierService).scoped(),
     planningParameterService: asClass(PlanningParameterService).scoped(),
     safetyStockTargetService: asClass(SafetyStockTargetService).scoped(),
+    forecastService: asClass(ForecastService).scoped(),
     bomService: asClass(BomService).scoped(),
     importService: asClass(ImportService).scoped(),
     // `tenant` is registered only by tenantScope(): resolving it from a global scope fails (strict).

@@ -16,6 +16,7 @@ describe("@cpg/core", () => {
       "DEFAULT_PREFERENCES",
       "DEMO_KINDS",
       "ForbiddenError",
+      "ForecastService",
       "GENERATION_HEADER",
       "IDEMPOTENCY_KEY_HEADER",
       "IDEMPOTENCY_TTL_MS",

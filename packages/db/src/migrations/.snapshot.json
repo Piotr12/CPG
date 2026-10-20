@@ -1050,6 +1050,222 @@
       "comment": null
     },
     {
+      "name": "forecast",
+      "columns": {
+        "date": {
+          "name": "date",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "id": {
+          "name": "id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": true,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "location_id": {
+          "name": "location_id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "material_id": {
+          "name": "material_id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": true,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "tenant_code": {
+          "name": "tenant_code",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "1",
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        }
+      },
+      "indexes": [
+        {
+          "columnNames": [
+            "location_id"
+          ],
+          "composite": false,
+          "constraint": false,
+          "keyName": "forecast_location_id_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "material_id"
+          ],
+          "composite": false,
+          "constraint": false,
+          "keyName": "forecast_material_id_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "material_id",
+            "location_id",
+            "date"
+          ],
+          "composite": true,
+          "constraint": true,
+          "keyName": "forecast_material_id_location_id_date_unique",
+          "primary": false,
+          "unique": true
+        },
+        {
+          "columnNames": [
+            "tenant_code"
+          ],
+          "composite": false,
+          "constraint": false,
+          "keyName": "forecast_tenant_code_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "id"
+          ],
+          "composite": false,
+          "constraint": true,
+          "keyName": "primary",
+          "primary": true,
+          "unique": true
+        }
+      ],
+      "checks": [],
+      "triggers": [],
+      "foreignKeys": {
+        "forecast_location_id_foreign": {
+          "columnNames": [
+            "location_id"
+          ],
+          "constraintName": "forecast_location_id_foreign",
+          "localTableName": "forecast",
+          "referencedColumnNames": [
+            "id"
+          ],
+          "referencedTableName": "location"
+        },
+        "forecast_material_id_foreign": {
+          "columnNames": [
+            "material_id"
+          ],
+          "constraintName": "forecast_material_id_foreign",
+          "localTableName": "forecast",
+          "referencedColumnNames": [
+            "id"
+          ],
+          "referencedTableName": "material"
+        },
+        "forecast_tenant_code_foreign": {
+          "columnNames": [
+            "tenant_code"
+          ],
+          "constraintName": "forecast_tenant_code_foreign",
+          "localTableName": "forecast",
+          "referencedColumnNames": [
+            "code"
+          ],
+          "referencedTableName": "tenant"
+        }
+      },
+      "comment": null
+    },
+    {
       "name": "global_audit_event",
       "columns": {
         "action": {
