@@ -26,6 +26,7 @@ import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
 import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quantity";
 import { conversionFieldError } from "../materials/conversion-field-error";
 import { findActiveMaterial, findMaterial } from "../materials/find-material";
+import { lineError } from "../materials/line-error";
 import { isScopeReadOnly } from "../tenants/tenant.service";
 
 /** One line as the screens and the API show it: the component's ID and the stored record (materials spec Q5). */

@@ -39,6 +39,7 @@ describe("migrateDatabase", () => {
       "Migration20261020164229_stock_ledger",
       "Migration20261020164640_test_reset",
       "Migration20261020173715_customer_order_demand_index",
+      "Migration20261020180000_purchasing",
     ]);
     expect(await migrateDatabase(config)).toEqual([]);
   });

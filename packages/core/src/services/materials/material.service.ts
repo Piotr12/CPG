@@ -15,6 +15,7 @@ import { AppError, ConflictError, NotFoundError, versionConflict } from "../../h
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
 import { bomUsingMaterial } from "../boms/bom-usage";
+import { hasProcurementDocuments, openOrderUsingMaterial } from "../purchase-orders/purchasing-usage";
 import { hasPlanningParameters, isMadeAnywhere } from "../planning-parameters/planning-parameter-usage";
 import { hasForecasts } from "../forecasts/forecast-usage";
 import { hasSafetyStockTargets } from "../safety-stock/safety-stock-target-usage";
@@ -146,6 +147,7 @@ export class MaterialService {
         await assertNoCustomerDemand(em, material);
       }
       if (fields.baseUnit !== undefined) await assertBaseUnitFree(em, material);
+      if (active === false) await assertNoOpenOrder(em, material);
       if (fields.type === "raw" && (await isMadeAnywhere(em, material))) {
         throw new ConflictError(
           "Set this material to Buy at every location before making it raw: a raw material is always bought.",
@@ -327,6 +329,23 @@ async function assertBaseUnitFree(em: EntityManager, material: Material): Promis
     throw new ConflictError(
       "Remove this material's planning parameters, safety-stock targets and forecasts before changing its base unit: their quantities are in it.",
       "BASE_UNIT_IN_USE",
+    );
+  }
+  if (await hasProcurementDocuments(em, material)) {
+    throw new ConflictError(
+      "Purchase requisitions or purchase orders use this material, so its base unit can't change: their quantities are stored in it.",
+      "BASE_UNIT_IN_USE",
+    );
+  }
+}
+
+/** Refuses deactivating a material while an Open purchase order has a line for it, naming the order (LFC-013). */
+async function assertNoOpenOrder(em: EntityManager, material: Material): Promise<void> {
+  const order = await openOrderUsingMaterial(em, material);
+  if (order !== null) {
+    throw new ConflictError(
+      `Purchase order ${order} has an open line for this material, so it can't be deactivated.`,
+      "MATERIAL_IN_OPEN_ORDER",
     );
   }
 }

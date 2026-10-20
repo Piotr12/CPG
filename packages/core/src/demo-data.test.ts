@@ -9,6 +9,8 @@ import {
   Location,
   Material,
   PlanningParameterSet,
+  PurchaseOrder,
+  PurchaseRequisition,
   SafetyStockTarget,
   Forecast,
   selectTenant,
@@ -21,6 +23,7 @@ import { migrateDatabase, toDbOptions } from "./database";
 import { seedDemoData } from "./demo-data";
 import { DEMO_STOCK } from "./domain/stock/demo-stock";
 import { DEMO_BOMS } from "./domain/boms/demo-boms";
+import { DEMO_ORDERS, DEMO_REQUISITIONS } from "./domain/purchasing/demo-purchasing";
 import { DEMO_CUSTOMERS } from "./domain/customers/demo-customers";
 import { DEMO_LOCATIONS } from "./domain/locations/demo-locations";
 import { DEMO_MATERIALS } from "./domain/materials/demo-materials";
@@ -67,6 +70,8 @@ describe("seedDemoData", () => {
       "planning parameter sets": { seeded: DEMO_PLANNING_PARAMETERS.length },
       "safety-stock targets": { seeded: DEMO_SAFETY_STOCK_TARGETS.length },
       BOMs: { seeded: DEMO_BOMS.length },
+      "purchase requisitions": { seeded: DEMO_REQUISITIONS.length },
+      "purchase orders": { seeded: DEMO_ORDERS.length },
       forecasts: { seeded: DEMO_FORECASTS.length },
       "customer orders": { seeded: 1 },
       "stock openings": { seeded: DEMO_STOCK.length },
@@ -79,6 +84,8 @@ describe("seedDemoData", () => {
       "planning parameter sets": { seeded: 0 },
       "safety-stock targets": { seeded: 0 },
       BOMs: { seeded: 0 },
+      "purchase requisitions": { seeded: 0 },
+      "purchase orders": { seeded: 0 },
       forecasts: { seeded: 0 },
       "customer orders": { seeded: 0 },
       "stock openings": { seeded: 0 },
@@ -92,6 +99,8 @@ describe("seedDemoData", () => {
     expect(await counts(config, (em) => em.count(SafetyStockTarget, {}))).toEqual({ test: DEMO_SAFETY_STOCK_TARGETS.length, prod: 0 });
     expect(await counts(config, (em) => em.count(CustomerOrder, {}))).toEqual({ test: 1, prod: 0 });
     expect(await counts(config, (em) => em.count(Bom, {}))).toEqual({ test: DEMO_BOMS.length, prod: 0 });
+    expect(await counts(config, (em) => em.count(PurchaseRequisition, {}))).toEqual({ test: DEMO_REQUISITIONS.length, prod: 0 });
+    expect(await counts(config, (em) => em.count(PurchaseOrder, {}))).toEqual({ test: DEMO_ORDERS.length, prod: 0 });
     expect(await counts(config, (em) => em.count(Forecast, {}))).toEqual({ test: DEMO_FORECASTS.length, prod: 0 });
   });
 
@@ -109,6 +118,8 @@ describe("seedDemoData", () => {
       "planning parameter sets": { seeded: 0 },
       "safety-stock targets": { seeded: 0 },
       BOMs: { seeded: DEMO_BOMS.length },
+      "purchase requisitions": { seeded: 0 },
+      "purchase orders": { seeded: 0 },
       // Without locations the demo forecasts are skipped too.
       forecasts: { seeded: 0 },
       "customer orders": { seeded: 0 },
@@ -122,6 +133,8 @@ describe("seedDemoData", () => {
       "planning parameter sets": { seeded: DEMO_PLANNING_PARAMETERS.length },
       "safety-stock targets": { seeded: DEMO_SAFETY_STOCK_TARGETS.length },
       BOMs: { seeded: 0 },
+      "purchase requisitions": { seeded: DEMO_REQUISITIONS.length },
+      "purchase orders": { seeded: DEMO_ORDERS.length },
       forecasts: { seeded: DEMO_FORECASTS.length },
       "customer orders": { seeded: 1 },
       "stock openings": { seeded: DEMO_STOCK.length },
