@@ -94,6 +94,9 @@ describe("language and theme", () => {
 
   it("keeps Polish and dark after signing in again (UX-007)", async () => {
     await signInAsAdmin(browser, baseUrl, adminPassword);
+    // The soft navigation from /login keeps the root <html>: the account's language and theme reach
+    // it on the client a moment after the Polish page has rendered, so wait for them, then compare.
+    await browser.waitUntil(`document.documentElement.lang === "pl" && document.documentElement.classList.contains("dark")`);
 
     expect(await documentState(browser)).toEqual({ lang: "pl", isDark: true, heading: "Kontrola jaskini" });
   });

@@ -56,4 +56,4 @@ Any blocker means **request changes**. Majors request changes unless they are ex
 
 ## Validation gate
 
-A PR is not approvable until these commands pass (the same list as `.ai/agentic.config.json` and CI): `npm run lint`, `npm run typecheck`, `npm run test:coverage`, `npm run build`, `npm run test:integration`.
+A PR is not approvable until its CI run is green: `npm run lint`, `npm run typecheck`, `npm run test:coverage`, `npm run build`, `npm run test:integration`. The local gate in `.ai/agentic.config.json` is the first four; the full integration suite runs only in CI (SDLC.md, "Validation gate").

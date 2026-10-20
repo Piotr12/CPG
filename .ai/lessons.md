@@ -12,6 +12,7 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 ## General
 
+- **2026-10-20 — Leave the full integration suite to CI** — The #87 run ran the 15-minute suite locally twice, then CI ran it again on the PR. CI is the gate that counts (a clean checkout, merged with `main`, and deploys depend on it), so a local full run only doubles the wait. Run the integration files the change touches locally, plus `smoke.test.ts` when a migration is added, and check the PR's CI result before calling the work done (AGENTS.md, Testing).
 - **2026-10-20 — A Zod object drops unknown keys: refuse a locked field with `z.never()`** — The PO `PATCH` line schema took `{ line, plannedDate }`, so a client sending a received line's `quantity: "79"` got 200 with the field silently ignored, which is not the "refused" BUY-022/023 ask for. Declare every field an edit must refuse as `z.never({ error: … }).optional()` (as `supplier`/`location` already were), and test the 400 per field.
 - **2026-10-20 — This repo has no Prettier config** — `npx prettier --write` fetches Prettier and formats at 80 columns, unlike the code around it (about 140). Don't run it with defaults; if a file needs reflowing, pass `--print-width 140` and check the diff.
 
@@ -55,6 +56,8 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 - **2026-10-20 — Standalone integration runs need `static` and `public` copied** — besides `.next/static` into `packages/app/.next/`, copy `packages/app/public` next to `server.js`, or `app-icons.test.ts` gets 404s. Run each full pass on a fresh `DATA_DIR`: files leave users and tokens behind, and a rerun on the old data fails in `beforeAll`.
 
 ## Testing
+
+- **2026-10-20 — Wait for client-applied `<html>` state after a soft navigation** — `preferences.test.ts` read `lang` and the `dark` class right after signing in; the Polish heading was already rendered but `DocumentPreferences` had not yet updated the root `<html>`, which a soft navigation keeps. It failed once in CI (#110) after passing elsewhere. `waitUntil` the document attributes before asserting them.
 
 - **2026-10-20 — Wait for a dialog’s overlay before clicking behind it** — A cancelled shadcn dialog leaves its fading overlay for 100 ms. Wait until both `[role=dialog]` and `[data-slot=dialog-overlay]` are gone before clicking the page’s Edit button; checking hydration alone can still click the overlay.
 

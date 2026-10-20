@@ -200,7 +200,7 @@ Authentication is server-side sessions (specs `2026-10-19--0746UTC-admin-sign-in
 - [ ] No import breaks the package layering (ESLint passes), and no code reaches into another concept's internals instead of its service.
 - [ ] Pages/actions/routes go through services, never `em`/`orm`.
 - [ ] Actions/routes use the shared wrappers, forms use `CrudForm`, lists use `DataTable` and states use the `feedback/` components. A bespoke alternative needs a stated reason.
-- [ ] `npm run lint`, `npm run typecheck`, `npm run test:coverage`, `npm run build` and `npm run test:integration` pass (CI runs them all on the pull request).
+- [ ] `npm run lint`, `npm run typecheck`, `npm run test:coverage`, `npm run build` and `npm run test:integration` pass in CI, which runs them all on the pull request. Locally the author runs the first four and only the integration files the change touches.
 
 **Security** (apply in full once authentication exists)
 
@@ -298,7 +298,7 @@ tests/
 - `eslint.config.mjs` enforces the package layering, the ban on relative imports across packages and `@mikro-orm/*` outside `db`, `no-explicit-any` and `no-console` (except `info`/`warn`/`error`).
 - `vitest.config.mts` sets 100% coverage thresholds (lines, branches, functions, statements) over `packages/*/src` and `packages/*/scripts`, so `npm run test:coverage` fails on any uncovered code.
 - `.github/workflows/ci.yml` runs lint, typecheck, unit tests with coverage, build and integration tests on every pull request, and `deploy.yml` runs the same workflow before deploying.
-- `AGENTS.md` makes reading this document part of the workflow, and its verification step runs lint, typecheck, tests with coverage, build, integration tests and `npm audit` triage.
+- `AGENTS.md` makes reading this document part of the workflow, and its verification step runs lint, typecheck, tests with coverage, build, the touched integration files and `npm audit` triage, then checks the pull request's CI run (which runs the full integration suite).
 - Review uses the checklist in Section 1.
 
 ## 5. Adoption status (2026-10-17)

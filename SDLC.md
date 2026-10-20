@@ -119,15 +119,16 @@ The `om-auto-*` skills run this process unattended and are chainable: each accep
 
 ## Validation gate
 
-Every PR passes the full validation gate before review sign-off, in this order:
+Every PR passes the full validation gate before review sign-off. The local gate, in this order:
 
 - `npm run lint`
 - `npm run typecheck`
 - `npm run test:coverage`
 - `npm run build`
-- `npm run test:integration`
 
-Any non-zero exit fails the gate and blocks the PR. The implementing skills run the gate before opening a PR, and `om-check-and-commit` runs it before pushing a hand-worked branch. The command list lives in `.ai/agentic.config.json`; when it changes, update it there and in this section together.
+plus the integration files the change adds or touches (`npm run test:integration -- tests/integration/<name>.test.ts`; a new migration adds `smoke.test.ts`). The full integration suite (`npm run test:integration`, about 15 minutes) runs only in CI, on every pull request: running it locally as well would double it.
+
+Any non-zero exit, locally or in CI, fails the gate and blocks the PR. The implementing skills run the local gate before opening a PR, and `om-check-and-commit` runs it before pushing a hand-worked branch; review sign-off waits for the PR's CI run to be green. The local command list lives in `.ai/agentic.config.json`; when it changes, update it there and in this section together.
 
 ## Amending this process
 
