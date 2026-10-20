@@ -34,6 +34,8 @@ describe("read-only tenants through the API (R05)", () => {
   let unaSecret: string;
   let plate: { id: string; version: number };
   let yard: { id: string; name: string; active: boolean; version: number };
+  let bracket: { id: string; output: string; version: number };
+  let rod: string;
   const tenants = async () => json(await api("GET", "/api/tenants", adminSecret)).data as TenantRow[];
   const setReadOnly = (tenant: string, readOnly: boolean, secret = adminSecret) =>
     write("PATCH", `/api/tenants/${tenant}`, secret, { readOnly });
@@ -55,6 +57,19 @@ describe("read-only tenants through the API (R05)", () => {
     expect(box.status).toBe(200);
     plate = json(await api("GET", `/api/tenants/prod/materials/${created.id}`, adminSecret)).data;
     yard = json(await write("POST", "/api/tenants/prod/locations", adminSecret, { name: "roapi yard" })).data;
+    // A BOM of this file's own materials, so the BOM writes below leave the plate's conversions alone.
+    rod = json(await write("POST", "/api/tenants/prod/materials", adminSecret, { type: "raw", description: "roapi rod", baseUnit: "kg" })).data.id;
+    const output = json(
+      await write("POST", "/api/tenants/prod/materials", adminSecret, { type: "intermediate", description: "roapi bracket", baseUnit: "each" }),
+    ).data.id as string;
+    const bom = await write("POST", "/api/tenants/prod/boms", adminSecret, {
+      output,
+      priority: 1,
+      validFrom: "2027-01-01",
+      components: [{ material: rod, quantity: "2", unit: "kg" }],
+    });
+    expect(bom.status).toBe(200);
+    bracket = json(bom).data;
   });
   afterAll(async () => {
     try {
@@ -146,6 +161,33 @@ describe("read-only tenants through the API (R05)", () => {
     expect(json(await api("GET", `/api/tenants/prod/locations/${yard.id}`, adminSecret)).data).toEqual(yard);
     expect(json(await api("GET", material, adminSecret)).data).toEqual(before);
     expect(before).toMatchObject({ active: true, version: plate.version, conversions: [expect.objectContaining({ unit: "box", denominator: "10" })] });
+  });
+
+  it("refuses a BOM create, recipe change and deactivation in read-only Prod, changing nothing (TEN-016, TEN-017)", async () => {
+    const path = `/api/tenants/prod/boms/${bracket.id}`;
+    const before = json(await api("GET", path, adminSecret)).data;
+
+    const refused = {
+      "BOM create": await write("POST", "/api/tenants/prod/boms", adminSecret, {
+        output: bracket.output,
+        priority: 2,
+        validFrom: "2027-01-01",
+        components: [{ material: rod, quantity: "3", unit: "kg" }],
+      }),
+      "BOM recipe change": await write("PATCH", path, adminSecret, {
+        version: bracket.version,
+        components: [{ material: rod, quantity: "3", unit: "kg" }],
+      }),
+      "BOM deactivation": await write("PATCH", path, adminSecret, { version: bracket.version, active: false }),
+    };
+
+    for (const [attempt, response] of Object.entries(refused)) {
+      expect({ attempt, status: response.status, code: json(response).error?.code }).toEqual({ attempt, status: 409, code: "TENANT_READ_ONLY" });
+    }
+    const prod = json(await api("GET", "/api/tenants/prod/boms", adminSecret)).data as { id: string; output: string }[];
+    expect(prod.filter(({ output }) => output === bracket.output).map(({ id }) => id)).toEqual([bracket.id]);
+    expect(json(await api("GET", path, adminSecret)).data).toEqual(before);
+    expect(before).toMatchObject({ active: true, revision: 1, version: bracket.version, components: [expect.objectContaining({ material: rod, quantity: "2.000000" })] });
   });
 
   it("still reads Prod's data and audit, for every account (TEN-018)", async () => {

@@ -110,7 +110,7 @@ Route handlers under `app/api/` are protected the same way: their paths, methods
   - `GET /api/tenants/{tenant}/boms` (each with its current recipe; by output, priority, then ID);
   - `POST /api/tenants/{tenant}/boms` (`{ output, priority, validFrom, validThrough?, components }`; 400 with field errors for a raw output, a finished component, a repeated material or a line its conversion refuses; 409 `BOM_PRIORITY_CONFLICT`, `BOM_CYCLE`, `BOM_ID_RACE` or `BOM_IDS_EXHAUSTED`);
   - `GET /api/tenants/{tenant}/boms/{id}` (with its `revisions`, newest first; 404 `BOM_NOT_FOUND`);
-  - `PATCH /api/tenants/{tenant}/boms/{id}` (`{ version, priority?, validFrom?, validThrough?, components?, active? }`, at least one besides `version`; `components` is the complete list; a real recipe change adds a revision, an identical one or a toggle doesn't; an `id` or `output` in the body is 400; the same 409 codes as `POST`);
+  - `PATCH /api/tenants/{tenant}/boms/{id}` (`{ version, priority?, validFrom?, validThrough?, components?, active? }`, at least one besides `version`; `components` is the complete list; a real recipe change adds a revision, an identical one or a toggle doesn't; an `id` or `output` in the body is 400; 409 `BOM_PRIORITY_CONFLICT` or `BOM_CYCLE` as for `POST`, and `VERSION_CONFLICT` for a stale version or a revision saved at the same moment);
   - `GET /api/tenants/{tenant}/boms/{id}/revisions/{revision}` (404 `BOM_REVISION_NOT_FOUND`). Revisions never change.
 - the master-data and BOM import (spec `2026-10-20--0908UTC-master-data-bom-import`). The workbook travels as **base64** in a JSON body, at most 512 KB once decoded:
   - `GET /api/import/template` (any signed-in account, bearer or session cookie): the `.xlsx` template, as an attachment;

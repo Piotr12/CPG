@@ -157,24 +157,31 @@ describe("BOMs (E04-S01)", () => {
     await admin.waitUntil(closed);
   });
 
-  it("refuses an edit that would make A → B → C → A, showing the path (BOM-025)", async () => {
-    await createBom(admin, ids.subA, "1", "2027-01-01", [[ids.subB, "1"]]);
-    await createBom(admin, ids.subB, "1", "2027-01-01", [[ids.subC, "1"]]);
+  it("refuses an edit that would make A → B → C → A, showing the full path and writing nothing (BOM-025)", async () => {
+    const a = await createBom(admin, ids.subA, "1", "2027-01-01", [[ids.subB, "1"]]);
+    const b = await createBom(admin, ids.subB, "1", "2027-01-01", [[ids.subC, "1"]]);
     const c = await createBom(admin, ids.subC, "1", "2027-01-01", [[ids.steel, "1"]]);
 
     await openEdit(admin, c!);
     await admin.select(field("components.0.material"), ids.subA);
     await admin.click("[role=dialog] button[type=submit]");
     await admin.waitFor("[role=dialog] [role=alert]");
-    const message = await admin.text("[role=dialog] [role=alert]");
-    expect(message).toContain("This recipe would make a cycle");
-    expect(message).toContain(`${ids.subC} boms-ui sub C →(BOM ${c}) ${ids.subA} boms-ui sub A →(BOM `);
+    expect(await admin.text("[role=dialog] [role=alert]")).toBe(
+      `This recipe would make a cycle, so it can't be saved: ${ids.subC} boms-ui sub C →(BOM ${c}) ${ids.subA} boms-ui sub A →(BOM ${a}) ` +
+        `${ids.subB} boms-ui sub B →(BOM ${b}) ${ids.subC} boms-ui sub C.`,
+    );
     await admin.clickRole("button", "Cancel");
     await admin.waitUntil(closed);
+
+    expect(await rows(admin, `/admin/prod/boms/${c}`, RECIPE)).toEqual([[`${ids.steel} boms-ui steel`, "1 kg", ""]]);
+    await admin.waitForText("Recipe (revision 1)");
+    expect((await rows(admin, "/admin/prod/boms")).find(([id]) => id === c)![3]).toBe("rev 1");
   });
 
   it("deactivates a BOM without a new revision (BOM-022), and then locks its output's type (MAT-011)", async () => {
-    const bom = (await rows(admin, "/admin/prod/boms")).find(([, output]) => output === `${ids.cabinet} boms-ui cabinet`)![0];
+    const before = (await rows(admin, "/admin/prod/boms")).find(([, output]) => output === `${ids.cabinet} boms-ui cabinet`)!;
+    const bom = before[0];
+    expect(before.at(-1)).toBe("Active");
     await rows(admin, `/admin/prod/boms/${bom}`);
     await admin.waitUntil(ready(button("Deactivate")));
     await admin.clickRole("button", "Deactivate");
@@ -183,7 +190,7 @@ describe("BOMs (E04-S01)", () => {
     await admin.waitUntil(`!document.querySelector("[role=alertdialog]")`);
     await admin.waitUntil(ready(button("Reactivate")));
     const row = (await rows(admin, "/admin/prod/boms")).find(([id]) => id === bom)!;
-    expect([row[3], row.at(-1)]).toEqual(["rev 2", "Inactive"]);
+    expect([row[3], row.at(-1)]).toEqual([before[3], "Inactive"]);
 
     await rows(admin, `/admin/prod/materials/${ids.cabinet}`);
     await admin.waitUntil(ready(button("Edit")));

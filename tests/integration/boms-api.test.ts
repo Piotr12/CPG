@@ -17,11 +17,20 @@ interface Line {
   enteredUnit?: string;
 }
 
+interface BomRow {
+  id: string;
+  output: string;
+  priority: number;
+  revision: number;
+  version: number;
+  components: Line[];
+}
+
 describe("BOMs through the API (R07)", () => {
   let admin: Browser;
   let adminSecret: string;
   /** This file's own Prod materials, by role. */
-  const ids: Record<"steel" | "bolt" | "panel" | "cabinet" | "subA" | "subB", string> = {} as never;
+  const ids: Record<"steel" | "bolt" | "panel" | "cabinet" | "subA" | "subB" | "subC" | "frame", string> = {} as never;
 
   const api = (method: string, path: string, options: Parameters<typeof callApi>[4] = {}, secret = adminSecret) =>
     callApi(baseUrl, method, path, secret, options);
@@ -29,6 +38,8 @@ describe("BOMs through the API (R07)", () => {
   const write = (method: string, path: string, body: unknown, secret = adminSecret) => api(method, path, { key: randomUUID(), body }, secret);
   const material = async (type: string, description: string, baseUnit: string) =>
     json(await write("POST", "/api/tenants/prod/materials", { type, description, baseUnit })).data.id as string;
+  const boms = async (tenant: string) => json(await api("GET", `/api/tenants/${tenant}/boms`)).data as BomRow[];
+  const testGeneration = async () => (json(await api("GET", "/api/tenants/test")).data as { generation: number }).generation;
   const recipe = (output: string, priority: number, components: { material: string; quantity: string; unit: string }[], dates = {}) => ({
     output,
     priority,
@@ -49,6 +60,8 @@ describe("BOMs through the API (R07)", () => {
     ids.cabinet = await material("finished", "bomapi cabinet", "each");
     ids.subA = await material("intermediate", "bomapi sub A", "each");
     ids.subB = await material("intermediate", "bomapi sub B", "each");
+    ids.subC = await material("intermediate", "bomapi sub C", "each");
+    ids.frame = await material("intermediate", "bomapi frame", "each");
   });
   afterAll(async () => {
     // Other files expect the admin to hold no tokens: revoke this file's with itself.
@@ -69,6 +82,8 @@ describe("BOMs through the API (R07)", () => {
     expect(first.status).toBe(200);
     expect(replay.replayed).toBe("true");
     const bom = json(first).data;
+    expect(json(replay).data).toMatchObject({ id: bom.id, version: bom.version, revision: 1 });
+    expect((await boms("prod")).filter(({ output }) => output === ids.cabinet).map(({ id }) => id)).toEqual([bom.id]);
     expect(bom).toMatchObject({ output: ids.cabinet, revision: 1, validThrough: null, active: true });
     expect((bom.components as Line[])[1]).toMatchObject({ material: ids.bolt, quantity: "24.000000", enteredQuantity: "2", enteredUnit: "case" });
 
@@ -89,7 +104,7 @@ describe("BOMs through the API (R07)", () => {
     expect(json(stale).error.code).toBe("VERSION_CONFLICT");
   });
 
-  it("refuses an equal-priority overlap and a cycle, naming the other BOM and the path (BOM-015, BOM-025)", async () => {
+  it("refuses an equal-priority overlap, naming the other BOM and the shared days (BOM-015)", async () => {
     const first = json(await write("POST", "/api/tenants/prod/boms", recipe(ids.panel, 1, [{ material: ids.steel, quantity: "4.5", unit: "kg" }], { validThrough: "2027-03-31" }))).data;
     const overlap = await write(
       "POST",
@@ -98,11 +113,64 @@ describe("BOMs through the API (R07)", () => {
     );
     expect(overlap.status).toBe(409);
     expect(json(overlap).error).toMatchObject({ code: "BOM_PRIORITY_CONFLICT", message: expect.stringContaining(`: BOM ${first.id} (2027-03-01 – 2027-03-31).`) });
+  });
 
-    await write("POST", "/api/tenants/prod/boms", recipe(ids.subA, 1, [{ material: ids.subB, quantity: "1", unit: "each" }]));
-    const cycle = await write("POST", "/api/tenants/prod/boms", recipe(ids.subB, 1, [{ material: ids.subA, quantity: "1", unit: "each" }]));
+  it("refuses a PATCH that would make A → B → C → A with the full path, writing nothing (BOM-025)", async () => {
+    const create = async (output: string, component: string) =>
+      json(await write("POST", "/api/tenants/prod/boms", recipe(output, 1, [{ material: component, quantity: "1", unit: "each" }]))).data as BomRow;
+    const a = await create(ids.subA, ids.subB);
+    const b = await create(ids.subB, ids.subC);
+    const c = json(await write("POST", "/api/tenants/prod/boms", recipe(ids.subC, 1, [{ material: ids.steel, quantity: "1", unit: "kg" }]))).data as BomRow;
+
+    const cycle = await write("PATCH", `/api/tenants/prod/boms/${c.id}`, { version: c.version, components: [{ material: ids.subA, quantity: "1", unit: "each" }] });
+
     expect(cycle.status).toBe(409);
-    expect(json(cycle).error).toMatchObject({ code: "BOM_CYCLE", message: expect.stringContaining(`${ids.subB} bomapi sub B → ${ids.subA} bomapi sub A →(BOM `) });
+    expect(json(cycle).error).toMatchObject({
+      code: "BOM_CYCLE",
+      message:
+        `This recipe would make a cycle: ${ids.subC} bomapi sub C →(BOM ${c.id}) ${ids.subA} bomapi sub A →(BOM ${a.id}) ` +
+        `${ids.subB} bomapi sub B →(BOM ${b.id}) ${ids.subC} bomapi sub C.`,
+    });
+    const after = json(await api("GET", `/api/tenants/prod/boms/${c.id}`)).data;
+    expect(after).toMatchObject({ revision: 1, version: c.version, revisions: [{ number: 1 }] });
+    expect((after.components as Line[]).map(({ material }) => material)).toEqual([ids.steel]);
+  });
+
+  it("keeps the revision and version when a PATCH resends the same recipe reordered or in another unit (BOM-023)", async () => {
+    const created = json(
+      await write(
+        "POST",
+        "/api/tenants/prod/boms",
+        recipe(ids.frame, 1, [
+          { material: ids.steel, quantity: "4", unit: "kg" },
+          { material: ids.bolt, quantity: "2", unit: "case" },
+        ]),
+      ),
+    ).data as BomRow;
+    const path = `/api/tenants/prod/boms/${created.id}`;
+
+    const reordered = await write("PATCH", path, {
+      version: created.version,
+      components: [
+        { material: ids.bolt, quantity: "2", unit: "case" },
+        { material: ids.steel, quantity: "4", unit: "kg" },
+      ],
+    });
+    const otherUnit = await write("PATCH", path, {
+      version: created.version,
+      components: [
+        { material: ids.steel, quantity: "4", unit: "kg" },
+        { material: ids.bolt, quantity: "24", unit: "each" },
+      ],
+    });
+
+    for (const response of [reordered, otherUnit]) {
+      expect(response.status).toBe(200);
+      expect(json(response).data).toMatchObject({ id: created.id, revision: 1, version: created.version, revisions: [{ number: 1 }] });
+    }
+    const stored = json(await api("GET", path)).data;
+    expect(stored).toMatchObject({ revision: 1, version: created.version, revisions: [{ number: 1 }] });
+    expect((stored.components as Line[])[1]).toMatchObject({ material: ids.bolt, quantity: "24.000000", enteredQuantity: "2", enteredUnit: "case" });
   });
 
   it("puts a line's error on its path, and locks the output's type once used (MAT-023, MAT-011)", async () => {
@@ -123,6 +191,56 @@ describe("BOMs through the API (R07)", () => {
     const missing = await write("POST", "/api/tenants/test/boms", recipe("00000004", 9, [{ material: "00000001", quantity: "1", unit: "kg" }]));
     expect(missing.status).toBe(428);
     expect(json(missing).error.code).toBe("GENERATION_REQUIRED");
+  });
+
+  it("doesn't resolve a Prod-only material in a Test BOM, and doesn't find a Prod-only BOM from Test (TEN-014)", async () => {
+    // Both tenants number from 00000001 and other files create records in both, so a Prod ID is
+    // only "Prod-only" once it passes Test's highest.
+    const testMaterials = new Set((json(await api("GET", "/api/tenants/test/materials")).data as { id: string }[]).map(({ id }) => id));
+    let prodOnlyMaterial = "";
+    for (let attempt = 0; attempt <= testMaterials.size && !prodOnlyMaterial; attempt += 1) {
+      const id = await material("intermediate", `bomapi prod-only ${attempt}`, "each");
+      if (!testMaterials.has(id)) prodOnlyMaterial = id;
+    }
+    const testBoms = new Set((await boms("test")).map(({ id }) => id));
+    let prodOnlyBom: BomRow | undefined;
+    for (let attempt = 0; attempt <= testBoms.size && !prodOnlyBom; attempt += 1) {
+      const created = json(await write("POST", "/api/tenants/prod/boms", recipe(prodOnlyMaterial, attempt + 1, [{ material: ids.steel, quantity: "1", unit: "kg" }])))
+        .data as BomRow;
+      if (!testBoms.has(created.id)) prodOnlyBom = created;
+    }
+    expect(prodOnlyMaterial).not.toBe("");
+    expect(prodOnlyBom).toBeDefined();
+    const generation = await testGeneration();
+    const before = await boms("test");
+
+    const asOutput = await api("POST", "/api/tenants/test/boms", {
+      key: randomUUID(),
+      generation,
+      body: recipe(prodOnlyMaterial, 9, [{ material: "00000001", quantity: "1", unit: "kg" }]),
+    });
+    const asComponent = await api("POST", "/api/tenants/test/boms", {
+      key: randomUUID(),
+      generation,
+      body: recipe("00000004", 9, [{ material: prodOnlyMaterial, quantity: "1", unit: "each" }]),
+    });
+    for (const response of [asOutput, asComponent]) {
+      expect(response.status).toBe(404);
+      expect(json(response).error.code).toBe("MATERIAL_NOT_FOUND");
+    }
+    expect(await boms("test")).toEqual(before);
+
+    const read = await api("GET", `/api/tenants/test/boms/${prodOnlyBom!.id}`);
+    const change = await api("PATCH", `/api/tenants/test/boms/${prodOnlyBom!.id}`, { key: randomUUID(), generation, body: { version: prodOnlyBom!.version, priority: 999 } });
+    for (const response of [read, change]) {
+      expect(response.status).toBe(404);
+      expect(json(response).error.code).toBe("BOM_NOT_FOUND");
+    }
+    expect(json(await api("GET", `/api/tenants/prod/boms/${prodOnlyBom!.id}`)).data).toMatchObject({
+      priority: prodOnlyBom!.priority,
+      revision: 1,
+      version: prodOnlyBom!.version,
+    });
   });
 
   it("lets a normal user's token read BOMs but not change them (TEN-004, API-010)", async () => {

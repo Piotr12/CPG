@@ -321,6 +321,23 @@ describe("MaterialService", () => {
         await planning.update(panel.id, "00000001", { procurement: "buy" }, 1, ACTOR);
         await expect(service().update(panel.id, { type: "raw" }, panel.version, ACTOR)).resolves.toMatchObject({ type: "raw" });
       });
+
+      it("names the BOM, not the Make sets, when a material made at a location and used by a BOM is made raw", async () => {
+        const panel = await service().create(PANEL, ACTOR);
+        const cabinet = await service().create({ type: "finished", description: "Cabinet", baseUnit: "each" }, ACTOR);
+        await new PlanningParameterService({ em: scopedEm("prod") }).create({ ...SET, material: panel.id }, ACTOR);
+        await new BomService({ em: scopedEm("prod") }).create(
+          { output: cabinet.id, priority: 1, validFrom: "2027-01-01", validThrough: null, components: [{ material: panel.id, quantity: "4", unit: "each" }] },
+          ACTOR,
+        );
+
+        // Setting every location to Buy wouldn't help: the BOM's lock is permanent.
+        await expect(service().update(panel.id, { type: "raw" }, panel.version, ACTOR)).rejects.toMatchObject({
+          code: "MATERIAL_TYPE_IN_USE",
+          message: "BOM 00000001 uses this material, so its type can't change.",
+        });
+        expect((await service().get(panel.id)).type).toBe("intermediate");
+      });
     });
 
     it("refuses a stale version and keeps the newer change (AUD-024, API-029)", async () => {
@@ -564,16 +581,51 @@ describe("MaterialService", () => {
       });
     });
 
-    it("refuses a base-unit change before the conversions check, which wouldn't help (MAT-030)", async () => {
+    it("refuses a component's base-unit change before the conversions check, which wouldn't help (MAT-030)", async () => {
       const { bolt } = await cabinetFromBolts();
 
       await expect(service().update(bolt.id, { baseUnit: "pcs" }, bolt.version, ACTOR)).rejects.toMatchObject({
         code: "BASE_UNIT_IN_USE",
         message: "BOM 00000001 uses this material, so its base unit can't change: BOM quantities are stored in it.",
       });
+      expect((await service().get(bolt.id)).baseUnit).toBe("each");
     });
 
-    it("still takes resent values, a description and a deactivation (MAT-009, MAT-013)", async () => {
+    it("refuses an output's base-unit change, though nothing else holds that unit (MAT-030)", async () => {
+      const { cabinet } = await cabinetFromBolts();
+      expect(cabinet.conversions).toEqual([]);
+
+      await expect(service().update(cabinet.id, { baseUnit: "pcs" }, cabinet.version, ACTOR)).rejects.toMatchObject({
+        code: "BASE_UNIT_IN_USE",
+        message: "BOM 00000001 uses this material, so its base unit can't change: BOM quantities are stored in it.",
+      });
+      expect((await service().get(cabinet.id)).baseUnit).toBe("each");
+    });
+
+    it("locks a material used only in an old revision of an inactive BOM (MAT-011, MAT-030)", async () => {
+      const { bom } = await cabinetFromBolts();
+      const nut = await service().create({ type: "raw", description: "Nut M8", baseUnit: "each" }, ACTOR);
+      const boms = () => new BomService({ em: scopedEm("prod") });
+      const bolts = [{ material: "00000001", quantity: "1", unit: "case" }];
+      // Revision 2 swaps the bolts for nuts, revision 3 swaps them back, then the BOM is deactivated.
+      const withNuts = await boms().update(bom.id, { components: [{ material: nut.id, quantity: "8", unit: "each" }] }, bom.version, ACTOR);
+      const withBolts = await boms().update(bom.id, { components: bolts }, withNuts.version, ACTOR);
+      await boms().update(bom.id, { active: false }, withBolts.version, ACTOR);
+      expect(await boms().get(bom.id)).toMatchObject({ active: false, revision: 3, components: [expect.objectContaining({ material: "00000001" })] });
+      expect((await boms().getRevision(bom.id, 2)).components).toEqual([expect.objectContaining({ material: nut.id })]);
+
+      await expect(service().update(nut.id, { type: "intermediate" }, nut.version, ACTOR)).rejects.toMatchObject({
+        code: "MATERIAL_TYPE_IN_USE",
+        message: "BOM 00000001 uses this material, so its type can't change.",
+      });
+      await expect(service().update(nut.id, { baseUnit: "pcs" }, nut.version, ACTOR)).rejects.toMatchObject({
+        code: "BASE_UNIT_IN_USE",
+        message: "BOM 00000001 uses this material, so its base unit can't change: BOM quantities are stored in it.",
+      });
+      expect(await service().get(nut.id)).toMatchObject({ type: "raw", baseUnit: "each", version: 1 });
+    });
+
+    it("still takes resent type and base unit values, a description and a deactivation", async () => {
       const { bolt } = await cabinetFromBolts();
 
       const updated = await service().update(bolt.id, { type: "raw", baseUnit: "each", description: "Bolt M8 zinc", active: false }, bolt.version, ACTOR);
