@@ -1042,6 +1042,7 @@ export const en = {
       "What is planned to leave against this customer order, and what has left. Post a goods issue as goods leave: stock falls at the order's location with today's date, and the order's lines are fulfilled.",
     back: "Customer order {order}",
     details: { customerOrder: "Customer order", customer: "Customer", location: "Location", plannedDate: "Planned date", status: "Status" },
+    lines: "Lines",
     lineColumns: { line: "Line", material: "Material", quantity: "Planned", issued: "Issued", toIssue: "To issue" },
     fieldErrors: {
       quantity: "Enter a number greater than 0, with at most 12 digits before the point and 6 after it.",

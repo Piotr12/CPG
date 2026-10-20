@@ -353,6 +353,12 @@ Done when these standards were adopted:
   - the movement's `postingId` is the document's UUID (generated before the posting), `type` names the document kind, and `reason` names its business ID;
   - lookups both services need live in a leaf records module (`services/purchase-orders/order-records.ts`), as `requisition-records.ts` does for requisitions;
   - `GoodsReceiptService` (`core/src/services/goods-receipts/`), `GoodsReceipt`/`GoodsReceiptLine` (immutable through update-abort triggers), `/api/tenants/{tenant}/goods-receipts/…`, and the Post goods receipt dialog on the purchase order's page (`app/src/components/goods-receipts/`).
+- Shipments and goods issues (2026-10-20, spec `2026-10-20--2045UTC-shipments-goods-issues`), the second document that posts stock and the first that lowers it:
+  - `GoodsIssueService` posts negative movements through `postStockMovements`, as receipts post positive ones. The ledger's own check refuses an overdraw with `INSUFFICIENT_STOCK`.
+  - `ShipmentService` plans dispatches and moves no stock.
+  - The leaves `services/customer-orders/order-records.ts`, `services/shipments/shipment-records.ts` and `services/shipments/shipment-usage.ts` hold what several services need. The last one completes finished shipments, after a goods issue or an order edit.
+  - The quantity-per-line form of every document posted against another is `components/forms/line-quantities-form.tsx`, used by goods receipts, shipments and goods issues.
+  - The shipment page is `/admin/[tenant]/shipments/[id]`. The API is `/api/tenants/{tenant}/shipments/…` and `/goods-issues/…`.
 - Idempotency and versions (2026-10-19, spec `2026-10-19--1548UTC-api-idempotency`): the global and tenant-owned idempotency key stores (`db/src/entities/idempotency/`), `IdempotencyService` (`core/src/services/idempotency/`), `inRequestTransaction`, `apiWrite`/`tenantApiWrite`, `User.version`, and the generation check in `tenantServerAction`.
 - API tokens (2026-10-19, spec `2026-10-19--1053UTC-api-tokens`): the global `ApiToken` entity, `ApiTokenService` (`core/src/services/api-tokens/`), bearer authentication in `requireApiUser(request)`, the `Actor` type, and `/admin/tokens`. It is the reference for a self-service screen (every account, own records only).
 - Test infrastructure: Vitest unit tests next to every source file at 100% coverage, integration tests (Testcontainers runs the production image, agent-browser drives it), and a CI workflow for pull requests.

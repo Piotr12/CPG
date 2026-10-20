@@ -154,6 +154,26 @@ Route handlers under `app/api/` are protected the same way: their paths, methods
   - `POST /api/tenants/{tenant}/customer-orders` (`{ customer, location, lines: [{ material, quantity, unit, requiredDate }] }`), returns HTTP 200 through the shared envelope. Header/lines start Open, progress zero. Unknown references use existing 404 codes, inactive newly selected masters 409 `{KIND}_INACTIVE`, exhausted/racing IDs 409 `CUSTOMER_ORDER_IDS_EXHAUSTED` / `CUSTOMER_ORDER_ID_RACE`;
   - `PATCH /api/tenants/{tenant}/customer-orders/{id}` (`{ version, customer, location, lines: [{ id?, material, quantity, unit, requiredDate }] }`), replaces the visible aggregate; existing IDs must belong to this order and appear once. Omitted unposted lines become hidden historical references, preserving material type/BUoM locks. New lines have no ID. A no-op writes no audit and preserves version; a real line-only edit advances header version. An unchanged entered quantity/unit/material preserves its historical factor;
   - all request objects are strict: no client-written status/progress/ID or line location override; line errors use `lines.N.field`. Non-Open orders and posted-field edits are 409 `CUSTOMER_ORDER_LOCKED`; quantity cannot fall below fulfilled plus abandoned. Outstanding demand blocks material/location deactivation (`MATERIAL_HAS_CUSTOMER_DEMAND`, `LOCATION_HAS_CUSTOMER_ORDERS`); customer deactivation remains allowed.
+  - a goods issue advances the order's `version`, and fulfils lines: a line whose `fulfilled` reaches its quantity becomes `completed`, and the order once every line is. A `PATCH` that lowers a delivered line to exactly its fulfilled quantity completes it the same way. A line that a shipment names can't be removed or change its material (409 `CUSTOMER_ORDER_LOCKED`).
+- shipments and goods issues of one tenant (spec `2026-10-20--2045UTC-shipments-goods-issues`). Any token may write them. Both have eight-digit IDs numbered per tenant.
+  - A shipment plans a dispatch against one Open customer order and never moves stock. It is `open` until nothing is left to issue on it, then `completed`.
+  - A goods issue is posted against one Open shipment and never changes. Posting it, in one transaction or not at all:
+    - lowers stock at the order's location, dated the server's UTC day;
+    - adds to each order line's `fulfilled` and to each shipment line's `issued`;
+    - completes the lines, the order and the shipments that have nothing left.
+  - `GET /api/tenants/{tenant}/shipments` returns the shipments newest first; `?customerOrder=00000001` keeps one order's (404 `CUSTOMER_ORDER_NOT_FOUND`). Each is `{ id, customerOrder, customer, location, plannedDate, status, createdAt, lines: [{ line, orderLine, material, quantity, enteredQuantity, enteredUnit, numerator, denominator, issued, toIssue }] }`. `line` numbers the shipment's lines from 1, `orderLine` is the order line's stable ID, and `toIssue` is the smaller of the plan's remainder and the order line's outstanding.
+  - `POST /api/tenants/{tenant}/shipments` takes `{ customerOrder, plannedDate, lines: [{ orderLine, quantity, unit, customerOrder? }] }`, with 1 to 100 lines, each for a different order line. Refusals:
+    - 400 on a line field: `lines.N.customerOrder` for a line naming another order; `lines.N.orderLine` for an ID that isn't a visible line of the order; `lines.N.quantity` for more than the line's outstanding;
+    - 404 `CUSTOMER_ORDER_NOT_FOUND`;
+    - 409 `CUSTOMER_ORDER_NOT_OPEN`, `SHIPMENT_ID_RACE` or `SHIPMENT_IDS_EXHAUSTED`.
+  - `GET /api/tenants/{tenant}/shipments/{id}` returns one shipment (404 `SHIPMENT_NOT_FOUND`).
+  - `GET /api/tenants/{tenant}/goods-issues` returns the goods issues newest first; `?shipment=00000001` keeps one shipment's (404 `SHIPMENT_NOT_FOUND`). Each is `{ id, shipment, customerOrder, location, businessDate, createdAt, lines: [{ line, orderLine, material, quantity, enteredQuantity, enteredUnit, numerator, denominator }] }`.
+  - `POST /api/tenants/{tenant}/goods-issues` takes `{ shipment, lines: [{ line, quantity, unit, shipment? }] }`, with 1 to 100 lines, each for a different shipment line. It takes no date: a sent date is dropped. Refusals:
+    - 400 on a line field: `lines.N.shipment` for a line naming another shipment; `lines.N.line` for a line number the shipment doesn't have; `lines.N.quantity` for more than the line's `toIssue`, whatever the stock;
+    - 404 `SHIPMENT_NOT_FOUND`;
+    - 409 `SHIPMENT_NOT_OPEN`, `CUSTOMER_ORDER_NOT_OPEN`, `ISSUE_ID_RACE`, `ISSUE_IDS_EXHAUSTED` or `VERSION_CONFLICT`;
+    - 409 `INSUFFICIENT_STOCK`, with `params` `{ material, location, available, requested, unit }`.
+  - `GET /api/tenants/{tenant}/goods-issues/{id}` returns one goods issue (404 `GOODS_ISSUE_NOT_FOUND`).
 
 **Versions.** An edit of a versioned record (today: a user, a material, a material's conversion, a location, a customer, a supplier, a planning parameter set, a safety-stock target, a forecast, a BOM, a purchase requisition and a purchase order) carries the `version` it loaded. A stale one is 409 `VERSION_CONFLICT`, and the newer change is kept. The user routes answer 404 `NOT_FOUND` for the built-in admin, an unknown id or a malformed one.
 

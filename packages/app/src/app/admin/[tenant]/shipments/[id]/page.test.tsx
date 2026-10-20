@@ -107,7 +107,7 @@ describe("ShipmentPage", () => {
     expect(screen.getByText("00000001 Retail")).toBeTruthy();
     expect(screen.getByText("00000001 Main plant")).toBeTruthy();
     expect(screen.getByText("2027-01-02")).toBeTruthy();
-    expect(cells("Shipments")).toEqual([
+    expect(cells("Lines")).toEqual([
       ["1", "00000005 Cabinet", "50 each", "50 each", "0 each"],
       ["2", "00000004 Panel", "30 each", "10 each", "20 each"],
     ]);

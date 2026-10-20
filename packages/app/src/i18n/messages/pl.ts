@@ -1007,6 +1007,7 @@ export const pl: Messages = {
       "Co ma wyjechać w ramach tego zamówienia klienta i co już wyjechało. Księguj wydanie towaru, gdy towar wyjeżdża: zapas w lokalizacji zamówienia spada z dzisiejszą datą, a pozycje zamówienia są realizowane.",
     back: "Zamówienie klienta {order}",
     details: { customerOrder: "Zamówienie klienta", customer: "Klient", location: "Lokalizacja", plannedDate: "Planowana data", status: "Status" },
+    lines: "Pozycje",
     lineColumns: { line: "Pozycja", material: "Materiał", quantity: "Zaplanowano", issued: "Wydano", toIssue: "Do wydania" },
     fieldErrors: {
       quantity: "Podaj liczbę większą od 0, najwyżej z 12 cyframi przed przecinkiem i 6 po nim.",

@@ -89,7 +89,7 @@ export function ShipmentScreen({ tenant, shipment, issues, materials, units, cus
           </div>
         ))}
       </dl>
-      <DataTable label={labels.heading} columns={columns} rows={shipment.lines} rowKey={(line) => String(line.line)} empty={labels.empty} />
+      <DataTable label={labels.lines} columns={columns} rows={shipment.lines} rowKey={(line) => String(line.line)} empty={labels.empty} />
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold">{issueLabels.heading}</h2>
         <p className="text-sm text-muted-foreground">{issueLabels.intro}</p>
