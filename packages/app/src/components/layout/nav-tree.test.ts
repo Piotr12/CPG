@@ -31,7 +31,7 @@ describe("isCurrentLeaf", () => {
 
 describe("the trees", () => {
   it("hold groups with their entries", () => {
-    expect(TENANT_TREE.filter(isGroup).map((group) => group.id)).toEqual(["masterData"]);
+    expect(TENANT_TREE.filter(isGroup).map((group) => group.id)).toEqual(["masterData", "procurement"]);
     expect(SHARED_TREE.filter(isGroup).map((group) => [group.id, group.adminOnly])).toEqual([["administration", true]]);
   });
 });

@@ -14,7 +14,7 @@ describe("navModel", () => {
 
   it("gives a normal user the tenant tree and the shared screens, without Administration", () => {
     const model = navModel({ role: "user" }, en.nav)!;
-    expect(shape(model.tenant)).toEqual(["overview", ["masterData", ["materials", "locations", "customers", "suppliers", "planningParameters", "safetyStock", "boms"]], "tenantAudit"]);
+    expect(shape(model.tenant)).toEqual(["overview", ["masterData", ["materials", "locations", "customers", "suppliers", "planningParameters", "safetyStock", "boms"]], ["procurement", ["purchaseRequisitions", "purchaseOrders"]], "tenantAudit"]);
     expect(shape(model.shared)).toEqual(["globalAudit", "help"]);
   });
 
@@ -43,6 +43,13 @@ describe("navModel", () => {
         { section: "planning-parameters", label: "Parametry planowania" },
         { section: "safety-stock", label: "Zapas bezpieczeństwa" },
         { section: "boms", label: "BOM-y" },
+      ],
+    });
+    expect(model.tenant[2]).toMatchObject({
+      label: "Zakupy",
+      children: [
+        { section: "purchase-requisitions", label: "Zapotrzebowania zakupu" },
+        { section: "purchase-orders", label: "Zamówienia zakupu" },
       ],
     });
     expect(model.shared[0]).toEqual({ id: "globalAudit", href: "/admin/audit", match: "prefix", label: "Audyt globalny" });
