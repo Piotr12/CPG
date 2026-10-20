@@ -61,7 +61,7 @@ describe("ImportScreen", () => {
     expect(screen.getByText("00000002 — 00000004 Panel (PANEL)")).toBeTruthy();
     expect(screen.getByText("Component 00000002: 16.000000 each → removed")).toBeTruthy();
     expect(screen.queryByText("00000001 — Cave")).toBeNull();
-    fireEvent.click(button("Show 1 unchanged rows"));
+    fireEvent.click(button("Show 1 unchanged row"));
     expect(screen.getByText("00000001 — Cave")).toBeTruthy();
     expect(screen.getByText(/All 2 changes are written to Test in one transaction/)).toBeTruthy();
     expect(screen.getAllByRole("listitem")[2].getAttribute("aria-current")).toBe("step");

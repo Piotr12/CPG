@@ -43,6 +43,8 @@ export function openBrowser() {
         return input.value;
       })()`),
     click: (selector: string) => command("click", selector),
+    /** Sets the files of the file input matching the CSS selector, as choosing them in the dialog does. */
+    upload: (selector: string, ...files: string[]) => command("upload", selector, ...files),
     /** Chooses the option with this value (or visible label) in the select matching the CSS selector. */
     select: (selector: string, value: string) => command("select", selector, value),
     /** Clicks the element with this ARIA role and exact accessible name, e.g. a button or menu item. */

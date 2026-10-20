@@ -208,7 +208,7 @@ export function ImportScreen({ tenant, labels }: ImportScreenProps) {
             />
             {report.errors.length > 0 ? (
               <>
-                <ErrorMessage>{fill(t.upload.problems, { count: String(report.errors.length) })}</ErrorMessage>
+                <ErrorMessage>{t.upload.problems(report.errors.length)}</ErrorMessage>
                 <DataTable
                   label={t.problems.problem}
                   rows={report.errors.map((issue, index) => ({ issue, index }))}
@@ -240,7 +240,7 @@ export function ImportScreen({ tenant, labels }: ImportScreenProps) {
                 {unchanged > 0 && !showUnchanged && (
                   <div>
                     <Button type="button" variant="ghost" size="sm" onClick={() => setShowUnchanged(true)}>
-                      {fill(t.preview.showUnchanged, { count: String(unchanged) })}
+                      {t.preview.showUnchanged(unchanged)}
                     </Button>
                   </div>
                 )}
@@ -289,12 +289,12 @@ export function ImportScreen({ tenant, labels }: ImportScreenProps) {
         ) : (
           <>
             {report?.previewToken && changed.length > 0 && (
-              <p className="text-sm text-muted-foreground">{fill(t.commit.text, { count: String(changed.length), tenant: tenant.name })}</p>
+              <p className="text-sm text-muted-foreground">{t.commit.text(changed.length, tenant.name)}</p>
             )}
             {report?.previewToken && changed.length === 0 && <p className="text-sm text-muted-foreground">{t.commit.nothing}</p>}
             <div>
               <Button type="button" onClick={() => run("commit")} disabled={blocked || busy || !report?.previewToken || changed.length === 0}>
-                {running === "commit" ? t.commit.committing : fill(t.commit.button, { count: String(changed.length) })}
+                {running === "commit" ? t.commit.committing : t.commit.button(changed.length)}
               </Button>
             </div>
           </>

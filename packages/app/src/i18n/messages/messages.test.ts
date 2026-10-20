@@ -82,4 +82,34 @@ describe("dictionaries", () => {
     expect(en.help.screen("/login")).toBe("Screen: /login");
     expect(pl.help.screen("/login")).toBe("Ekran: /login");
   });
+
+  it("count the Import screen's rows and changes in each language's grammar", () => {
+    const counted = (messages: typeof en) => [1, 2].flatMap((count) => [
+      messages.imports.upload.problems(count),
+      messages.imports.preview.showUnchanged(count),
+      messages.imports.commit.text(count, "Test"),
+      messages.imports.commit.button(count),
+    ]);
+
+    expect(counted(en).map((text) => text.split(". ")[0].split(" in one")[0])).toEqual([
+      "1 problem found",
+      "Show 1 unchanged row",
+      "The change is written to Test",
+      "Commit 1 change",
+      "2 problems found",
+      "Show 2 unchanged rows",
+      "All 2 changes are written to Test",
+      "Commit 2 changes",
+    ]);
+    expect(counted(pl).map((text) => text.split(". ")[0].split(" w jednej")[0])).toEqual([
+      "Znalezione problemy: 1",
+      "Pokaż wiersze bez zmian (1)",
+      "Wszystkie zmiany (1) zostaną zapisane w Test",
+      "Zatwierdź zmiany (1)",
+      "Znalezione problemy: 2",
+      "Pokaż wiersze bez zmian (2)",
+      "Wszystkie zmiany (2) zostaną zapisane w Test",
+      "Zatwierdź zmiany (2)",
+    ]);
+  });
 });
