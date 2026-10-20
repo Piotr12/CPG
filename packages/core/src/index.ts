@@ -27,6 +27,7 @@ export * from "./services/locations/location.service";
 export * from "./services/customers/customer.service";
 export * from "./services/suppliers/supplier.service";
 export * from "./services/planning-parameters/planning-parameter.service";
+export * from "./services/boms/bom.service";
 export * from "./services/safety-stock/safety-stock-target.service";
 // The Safety stock screen labels each target as of today.
 export { targetStatus, type TargetStatus } from "./domain/safety-stock/target-on";

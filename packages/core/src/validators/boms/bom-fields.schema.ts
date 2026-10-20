@@ -89,3 +89,11 @@ export function throughNotBeforeFrom(value: { validFrom?: string; validThrough?:
     ctx.addIssue({ code: "custom", path: ["validThrough"], message: VALID_THROUGH_BEFORE_FROM_MESSAGE });
   }
 }
+
+/** What the service says, next to the field, about a material that can't play its part (R02). */
+export const RAW_OUTPUT_MESSAGE = "A raw material can't be a BOM's output: it is always bought.";
+export const FINISHED_COMPONENT_MESSAGE = "A finished material can't be a component.";
+/** What the service says about a line its conversion refuses (MAT-023, MAT-032). */
+export const UNIT_NOT_CONVERTIBLE_MESSAGE = "This material has no conversion from this unit to its base unit.";
+export const QUANTITY_ROUNDS_TO_ZERO_MESSAGE = "This quantity is less than 0.000001 of the material's base unit.";
+export const QUANTITY_OUT_OF_RANGE_MESSAGE = "This quantity is too large to store in the material's base unit.";

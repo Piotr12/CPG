@@ -9,6 +9,7 @@ import { ApiTokenService } from "../services/api-tokens/api-token.service";
 import { AuditService } from "../services/audit/audit.service";
 import { AuthService } from "../services/auth/auth.service";
 import { LoginThrottle } from "../services/auth/login-throttle";
+import { BomService } from "../services/boms/bom.service";
 import { CustomerService } from "../services/customers/customer.service";
 import { LocationService } from "../services/locations/location.service";
 import { PlanningParameterService } from "../services/planning-parameters/planning-parameter.service";
@@ -45,6 +46,7 @@ describe("createAppContainer", () => {
     expect(cradle.locationService).toBeInstanceOf(LocationService);
     expect(cradle.planningParameterService).toBeInstanceOf(PlanningParameterService);
     expect(cradle.safetyStockTargetService).toBeInstanceOf(SafetyStockTargetService);
+    expect(cradle.bomService).toBeInstanceOf(BomService);
     expect(cradle.customerService).toBeInstanceOf(CustomerService);
     expect(cradle.supplierService).toBeInstanceOf(SupplierService);
   });
