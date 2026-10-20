@@ -20,6 +20,7 @@ Phase 3: integration/race evidence, contracts/acceptance, full gate and independ
 Tenant scoping, deletion and public write contract: risk-high. Same request em throughout. All four coverage measures stay 100%. Docker unavailable locally; use standalone production output with copied static and public assets before startup; CI must cover the image and startup-guard. Shared qa-evidence upload is guarded; link artifacts unless separately authorized.
 
 ## Log
+- 17:14 UTC: Contracts and acceptance evidence updated. Independent static review: no blocker/major; its one stale acceptance-note finding is corrected. First full standalone run: 219 passed, two obsolete generation/migration assertions failed, one Docker-only skip. Corrected consumers: 14 tests pass on the current generation. Final full run uses a fresh database. Manual dev-browser checks pass for English success, two-browser stale rejection and Polish/dark 390px read-only reset.
 - 17:06 UTC: Seven new real browser/API scenarios pass. Initial integration assertions were corrected to the public audit view (nested actor/token) and the document preference effect is awaited after hydration. Existing tenant metadata integration test now accepts the current Test generation in the shared app. Full fresh standalone suite running; independent static review running.
 - 17:01 UTC: Phase 2 implemented. API/race/import tests: 49 passed; UI tests: 34 passed. Regression without fresh-generation fix accepts the old preview (confirmed failing test); fixed code rejects it. Full unit suite: 1,922 passed, all four coverage measures 100%; lint/typecheck/build pass. New integration scenarios are running against a fresh standalone production server.
 - 16:51 UTC: Phase 1 implemented. Targeted db tests: 28 passed. Core reset/demo/schema tests: 12 passed; typecheck passed. Generic deletion uses deferred FK checks for every owned table rather than duplicating dependency sorting; this also handles cycles, keeps FK enforcement on and rejects global references before deletion. Migration rollback tests updated for the new migration.
@@ -43,5 +44,5 @@ Tenant scoping, deletion and public write contract: risk-high. Same request em t
 ### Phase 3: Verification and publication
 
 - [x] 3.1 Integration and race evidence — b6dd87e
-- [ ] 3.2 Contract documents and acceptance evidence
+- [x] 3.2 Contract documents and acceptance evidence
 - [ ] 3.3 Full gate, review and UI evidence
