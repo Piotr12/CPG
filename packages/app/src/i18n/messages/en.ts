@@ -670,6 +670,8 @@ export const en = {
     id: "ID", output: "Output material", location: "Location", quantity: "Planned quantity", unit: "Unit", finish: "Planned finish", start: "Planned start", recipe: "BOM / revision", status: "Status", entered: "Entered quantity / conversion",
     choose: "Choose…", unitHint: "Enter the output's base unit (shown beside its name) or a configured alternate unit.",
     previewDates: "Indicative start: {start} ({days} calendar days before finish). Dates are checked again when saving.",
+    leadTime: "Captured lead time", leadTimeDays: "{days} calendar days",
+    finishHint: "The planned start is recalculated from the captured lead time of {days} calendar days.",
     previewNotice: "Review the direct component requirements and current stock. Shortages allow manual planning; no stock is reserved or consumed.",
     recipeLabel: "BOM {bom} / revision {revision} · priority {priority}",
     warning: "Component shortage: you can still create this plan. Current physical stock is shown below; stock is checked when a completion is posted.",

@@ -24,7 +24,9 @@ beforeEach(() => {
 });
 afterEach(() => { vi.clearAllMocks(); vi.unstubAllGlobals(); });
 it("preselects the suggested recipe, shows shortages and keeps a manual lower-priority choice on creation", async () => {
-  render(<ProductionDialog {...props} />); open(); await preview();
+  render(<ProductionDialog {...props} />); open();
+  expect(screen.queryByText(/captured lead time/)).toBeNull();
+  await preview();
   await waitFor(() => expect(screen.getByLabelText(en.productionOrders.recipe)).toBeTruthy());
   expect((screen.getByLabelText(en.productionOrders.recipe) as HTMLSelectElement).value).toBe(production.bom);
   expect(screen.getAllByText("18 kg")).toHaveLength(2);
@@ -63,6 +65,8 @@ it("holds the opening edit version through a conflict refresh; reopening capture
   const view = render(<ProductionDialog {...props} order={production} />); open(true);
   expect((screen.getByLabelText(en.productionOrders.unit) as HTMLInputElement).value).toBe("case");
   expect(screen.queryByLabelText(en.productionOrders.output)).toBeNull();
+  expect(screen.getByLabelText(en.productionOrders.finish).getAttribute("aria-describedby")).toBeTruthy();
+  expect(screen.getByText("The planned start is recalculated from the captured lead time of 5 calendar days.")).toBeTruthy();
   fireEvent.change(screen.getByLabelText(en.productionOrders.quantity), { target: { value: "3" } });
   fireEvent.click(screen.getByRole("button", { name: en.productionOrders.save }));
   await waitFor(() => expect(mocks.update).toHaveBeenCalledWith("test", 7, production.id, 1, expect.objectContaining({ quantity: "3" })));

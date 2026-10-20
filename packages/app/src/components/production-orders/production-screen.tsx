@@ -42,7 +42,8 @@ export function ProductionScreen({ tenant, orders, order, materials, locations, 
       <dl className="grid gap-4 rounded-md border p-4 text-sm sm:grid-cols-3">
         {[{ label: t.output, value: output(order) }, { label: t.location, value: location(order.location) }, { label: t.quantity, value: quantity(order) },
           { label: t.entered, value: `${order.enteredQuantity} ${order.enteredUnit} (${order.denominator} ${order.enteredUnit} = ${order.numerator} ${byMaterial.get(order.output)!.baseUnit})` },
-          { label: t.finish, value: order.plannedFinish }, { label: t.start, value: order.plannedStart }, { label: t.recipe, value: recipe(order) },
+          { label: t.finish, value: order.plannedFinish }, { label: t.start, value: order.plannedStart },
+          { label: t.leadTime, value: fill(t.leadTimeDays, { days: String(order.leadTimeDays) }) }, { label: t.recipe, value: recipe(order) },
           { label: t.status, value: t.states[order.status] }].map(({ label, value }) => <div key={label}><dt className="text-muted-foreground">{label}</dt><dd className="mt-1 wrap-anywhere">{value}</dd></div>)}
       </dl>
       <p className="rounded-md border p-3 text-sm" role="status">{order.shortages.length ? t.warning : t.sufficient}</p>

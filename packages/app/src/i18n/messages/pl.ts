@@ -637,6 +637,8 @@ export const pl: Messages = {
     id: "ID", output: "Materiał wyjściowy", location: "Lokalizacja", quantity: "Planowana ilość", unit: "Jednostka", finish: "Planowany koniec", start: "Planowany początek", recipe: "BOM / rewizja", status: "Status", entered: "Wprowadzona ilość / przelicznik",
     choose: "Wybierz…", unitHint: "Wpisz jednostkę bazową wyrobu (obok jego nazwy) lub skonfigurowaną jednostkę alternatywną.",
     previewDates: "Orientacyjny początek: {start} ({days} dni kalendarzowych przed końcem). Daty są sprawdzane ponownie przy zapisie.",
+    leadTime: "Zapisany czas realizacji", leadTimeDays: "{days} dni kalendarzowych",
+    finishHint: "Planowany początek jest przeliczany z zapisanego czasu realizacji: {days} dni kalendarzowych.",
     previewNotice: "Sprawdź bezpośrednie potrzeby składników i aktualny zapas. Niedobory nie blokują ręcznego planowania; zapas nie jest rezerwowany ani zużywany.",
     recipeLabel: "BOM {bom} / rewizja {revision} · priorytet {priority}",
     warning: "Niedobór składników: nadal możesz utworzyć plan. Poniżej aktualny zapas fizyczny; zapas jest sprawdzany przy księgowaniu wykonania.",

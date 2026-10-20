@@ -48,6 +48,7 @@ it("shows pinned revision, stored conversion and current shortage detail", async
   expect(screen.getByRole("link", { name: "00000002 / 3" }).getAttribute("href")).toBe("/admin/test/boms/00000002?revision=3");
   expect(screen.getByText("2 case (1 case = 12 each)")).toBeTruthy(); expect(screen.getByRole("status").textContent).toBe(en.productionOrders.warning);
   expect(screen.getByText("18 kg")).toBeTruthy();
+  expect(screen.getByText(en.productionOrders.leadTime).nextElementSibling?.textContent).toBe("5 calendar days");
 });
 it("bounds pages, clamps stale pages and rejects invalid parameters", async () => {
   mocks.count.mockResolvedValue(201); render(await resolveServerComponents(page("1")));

@@ -37,7 +37,7 @@ function ProductionForm({ context, labels: t, materials, locations, order, close
     ] : []),
     { name: "quantity", label: t.quantity },
     { name: "unit", label: t.unit, description: t.unitHint },
-    { name: "plannedFinish", label: t.finish, type: "date" },
+    { name: "plannedFinish", label: t.finish, type: "date", ...(order && { description: fill(t.finishHint, { days: String(order.leadTimeDays) }) }) },
   ];
   const formatting = { formatError: errorFormatter(t), formatFieldError: productionFieldError(t), pendingLabel: t.pending, cancelLabel: t.cancel };
   if (preview) return <div className="flex flex-col gap-4">
