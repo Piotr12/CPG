@@ -51,6 +51,15 @@ In each tenant the admin keeps, per material and location, a planning parameter 
 - **`fillDate` in `tests/integration/browser.ts`**, because agent-browser's `fill` leaves a native date input empty.
 - **The demo-data kinds** are named `planning parameter sets` and `safety-stock targets`, which the startup log prints as they are.
 
+## Verification
+
+- `npm run lint` and `npm run typecheck`: clean.
+- `npm run test:coverage`: 241 files, 1556 tests, 100% lines, branches, functions and statements.
+- `npm run build`: passes.
+- `npm run test:integration` (Docker): 22 files, 156 tests passed. After the review fixes, the two planning files (12 tests) were re-run against a fresh standalone build.
+- Fresh-context code review: request-changes, with no correctness bug. Every fix landed in 47d03ff; moving the spec waits for #64 to merge.
+- `npm audit`: not run, because no dependency changed.
+
 ## Implementation Plan
 
 ### Phase 1: Core
@@ -77,6 +86,8 @@ In each tenant the admin keeps, per material and location, a planning parameter 
 4. Screen integration tests, then the full gate.
 
 ## Progress
+
+PR: #65
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
