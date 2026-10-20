@@ -1,4 +1,9 @@
 import { ProductionOrder } from "./production-orders/production-order.entity";
+import {
+  PRODUCTION_COMPLETION_IMMUTABLE,
+  ProductionCompletion,
+  ProductionCompletionLine,
+} from "./production-orders/production-completion.entity";
 import { CustomerOrder, DOCUMENT_STATES, type DocumentState } from "./customer-orders/customer-order.entity";
 import { CustomerOrderLine } from "./customer-orders/customer-order-line.entity";
 import { StockBalance } from "./stock/stock-balance.entity";
@@ -79,7 +84,7 @@ export { AUDIT_APPEND_ONLY, AUDIT_CHANNELS, GlobalAuditEvent, TenantAuditEvent }
 export { GlobalIdempotencyKey, IDEMPOTENCY_KEY_MAX, TenantIdempotencyKey };
 export { Material, MATERIAL_DESCRIPTION_MAX, MATERIAL_TYPES, MATERIAL_UNIT_MAX, MaterialConversion };
 export type { MaterialType };
-export { ProductionOrder };
+export { PRODUCTION_COMPLETION_IMMUTABLE, ProductionCompletion, ProductionCompletionLine, ProductionOrder };
 export { CustomerOrder, CustomerOrderLine, DOCUMENT_STATES };
 export type { DocumentState };
 export { Customer, Location, NAMED_RECORD_NAME_MAX, Supplier };
@@ -137,6 +142,8 @@ export const entities = [
   ShipmentLine,
   GoodsIssue,
   GoodsIssueLine,
+  ProductionCompletion,
+  ProductionCompletionLine,
 ];
 
 /**
