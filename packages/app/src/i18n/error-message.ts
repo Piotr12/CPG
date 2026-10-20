@@ -6,5 +6,8 @@ import { fill } from "./fill";
  */
 export function errorMessage(errors: Record<string, string>, error: { code: string; message: string; params?: Record<string, string> }): string {
   const template = Object.hasOwn(errors, error.code) ? errors[error.code] : error.message;
-  return error.params ? fill(template, error.params) : template;
+  // A context-free adapter or an older server must retain actionable server text, never placeholders.
+  const params = error.params ?? {};
+  if ([...template.matchAll(/\{(\w+)\}/g)].some(([, key]) => !Object.hasOwn(params, key))) return error.message;
+  return fill(template, params);
 }

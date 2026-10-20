@@ -1,5 +1,5 @@
 # Stock ledger and corrections — #80
-Source doc: .ai/specs/2026-10-20--1634UTC-stock-ledger-corrections.md
+Source doc: .ai/specs/implemented/2026-10-20--1634UTC-stock-ledger-corrections.md
 Spec PR: #103
 Status: in-progress
 Engine: om-auto-create-pr (steps: 6, --loop: no)
@@ -24,6 +24,8 @@ Stock entities/migration, core stock posting/usage/seeding, stock UI/API, EN/PL/
 - Full gate: lint, typecheck, test:coverage (100%), build, test:integration. No dependency changes expected.
 
 ## Log
+- 2026-10-20 17:23 UTC — Narrow review6cb2b64b requested changes: import row-error adapter discarded messageParams, so STOCK_NOT_EMPTY showed placeholders. Fixed public-context propagation, normalized existing string/number ImportIssue params at report boundary, and fallback to server text for incomplete translation context. Real migrated SQLite material/location dry-run regressions retain exact2.000001kg and leave masters/stock/audit unchanged; EN/PL report tests preserve it. Re-running full gate; no stock posting behavior changes.
+- 2026-10-20 17:18 UTC — Final built standalone full suite passed: 27 files/219 tests, one Docker-only startup skip,247.66s. Final unit suite297files/1964tests at100%; lint/typecheck/build pass. Actual dev and isolated production browser smoke verified conversion, Polish refusal/audit, mobile fit; seven inspected PNGs published on qa-evidence/pr-104-stock. Independent narrow localization review6cb2b64b queued; full review approved. Spec moved on design branch only (f68730e).
 - 2026-10-20 17:12 UTC — Localization refinement: lint, typecheck, full coverage (100% all metrics) and build passed. New error context is explicitly public messageParams, avoiding collision with existing import RowIssueError.params. Final standalone rerun starts from this build.
 - 2026-10-20 17:12 UTC — Independent review approved 910072b; own 1,957 unit tests at 100%, own 219 standalone integration tests passed. Addressing two nonblocking refinements: contracts already registered; now public error params preserve quantity/pair context in Polish stock refusals, with translated audit actions/fields and regression assertions. Parent fresh full rerun had four intermittent tenant soft-navigation timeouts in existing tests; independent isolated full run passed. Rebuild latest source and rerun fresh without concurrent dev server.
 - 2026-10-20 17:03 UTC — Full standalone integration: 217 passed, 2 failed, 1 Docker-only skipped. Stock scenarios passed. Failures: runtime copy omitted public icons (environment packaging; add public/), and api-users post-reset sign-in timed out before hydration. Re-plan: add login readiness wait using the existing hydrated helper, package public assets, rerun affected files then full suite on fresh data. No stock runtime change needed. Final ordered lint/typecheck/coverage/build passed (1,957 unit tests, 100% all metrics).
@@ -42,5 +44,5 @@ Stock entities/migration, core stock posting/usage/seeding, stock UI/API, EN/PL/
 - [x] 2.1 Stock API and actions — d2b1451
 - [x] 2.2 Stock screen, help and translations — d2b1451
 ### Phase 3: verification and publication
-- [ ] 3.1 Integration and full validation
+- [x] 3.1 Integration and full validation — 901e8a8
 - [ ] 3.2 Review, UI evidence and ready PR

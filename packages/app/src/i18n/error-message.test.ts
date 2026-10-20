@@ -24,4 +24,10 @@ describe("errorMessage", () => {
     expect(errorMessage(pl.errors, { code: "MATERIAL_HAS_MOVEMENTS", message: "Locked." })).toBe("Materiał ma historię zapasu, więc nie można zmienić jego typu ani jednostki podstawowej.");
     expect(errorMessage({}, { code: "OTHER", message: "Available {available}.", params })).toBe("Available 2.000000.");
   });
+  it("keeps the actionable server message when translation context is missing or incomplete", () => {
+    const message = "Material 00000001 holds 2.000001 kg at location 00000002.";
+    expect(errorMessage(pl.errors, { code: "STOCK_NOT_EMPTY", message })).toBe(message);
+    expect(errorMessage(en.errors, { code: "STOCK_NOT_EMPTY", message, params: { material: "00000001" } })).toBe(message);
+  });
+
 });
