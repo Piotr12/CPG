@@ -1,3 +1,4 @@
+import type { ProductionOrderService } from "../services/production-orders/production-order.service";
 import type { CustomerOrderService } from "../services/customer-orders/customer-order.service";
 import type { TestResetService } from "../services/tenants/test-reset.service";
 import type { StockService } from "../services/stock/stock.service";
@@ -57,6 +58,7 @@ export interface Cradle {
   purchaseRequisitionService: PurchaseRequisitionService;
   purchaseOrderService: PurchaseOrderService;
   goodsReceiptService: GoodsReceiptService;
+  productionOrderService: ProductionOrderService;
   transferService: TransferService;
   shipmentService: ShipmentService;
   goodsIssueService: GoodsIssueService;

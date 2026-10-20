@@ -2,8 +2,15 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { EmptyState } from "./empty-state";
 import { ErrorMessage } from "./error-message";
+import { LoadingMessage } from "./loading-message";
 
 describe("feedback", () => {
+  it("reserves a visible page shell and exposes its busy state while content loads", () => {
+    const { container } = render(<LoadingMessage />);
+    expect(container.firstElementChild!.getAttribute("aria-busy")).toBe("true");
+    expect(container.querySelectorAll('[data-slot="skeleton"][aria-hidden="true"]')).toHaveLength(3);
+  });
+
   it("announces an error at once", () => {
     render(<ErrorMessage>{"That didn't work."}</ErrorMessage>);
 

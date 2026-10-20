@@ -16,10 +16,10 @@ export class TestResetService {
   private readonly tenantService: TenantService;
   private readonly seeds: DemoServices;
 
-  constructor({ em, tenantService, materialService, locationService, customerService, supplierService, planningParameterService, safetyStockTargetService, bomService, forecastService, customerOrderService, stockService, purchaseRequisitionService, purchaseOrderService }: Deps) {
+  constructor({ em, tenantService, materialService, locationService, customerService, supplierService, planningParameterService, safetyStockTargetService, bomService, forecastService, customerOrderService, stockService, purchaseRequisitionService, purchaseOrderService, productionOrderService }: Deps) {
     this.em = em;
     this.tenantService = tenantService;
-    this.seeds = { materialService, locationService, customerService, supplierService, planningParameterService, safetyStockTargetService, bomService, forecastService, customerOrderService, stockService, purchaseRequisitionService, purchaseOrderService };
+    this.seeds = { materialService, locationService, customerService, supplierService, planningParameterService, safetyStockTargetService, bomService, forecastService, customerOrderService, stockService, purchaseRequisitionService, purchaseOrderService, productionOrderService };
   }
 
   async reset(expectedGeneration: number, actor: AuditActor): Promise<TenantInfo> {

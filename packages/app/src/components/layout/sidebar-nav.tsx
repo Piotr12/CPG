@@ -65,6 +65,7 @@ const ICONS: Record<NavId, LucideIcon> = {
   stock: PackageIcon,
   overview: HouseIcon,
   transactions: TruckIcon,
+  productionOrders: BlocksIcon,
   customerOrders: FileSpreadsheetIcon,
   masterData: DatabaseIcon,
   materials: PackageIcon,

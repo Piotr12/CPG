@@ -1,5 +1,7 @@
 "use client";
 
+import { productionBlockerError } from "../production-orders/production-blocker-error";
+
 import { useState } from "react";
 import type { NamedRecordView } from "@cpg/core";
 import { namedRecordCreateSchema } from "@cpg/core/validators/named-records/named-record-create.schema";
@@ -13,7 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@cpg/ui/components/dropdown-menu";
-import { errorFormatter, fill, type TenantContext } from "../forms/form-labels";
+import { fill, type TenantContext } from "../forms/form-labels";
 import { nameField } from "./create-named-record-dialog";
 import { fieldErrorFormatter, type NamedRecordsLabels, type UpdateNamedRecord } from "./labels";
 
@@ -76,7 +78,7 @@ export function NamedRecordActions({ record, context, labels, update }: NamedRec
             submitLabel={labels.edit.submit}
             pendingLabel={labels.edit.submitting}
             cancelLabel={labels.cancel}
-            formatError={errorFormatter(labels)}
+            formatError={productionBlockerError(labels, context.tenant)}
             formatFieldError={fieldErrorFormatter(labels)}
             onSuccess={close}
             onCancel={close}
@@ -92,7 +94,7 @@ export function NamedRecordActions({ record, context, labels, update }: NamedRec
         cancelLabel={labels.cancel}
         destructive={!target}
         action={() => write({ active: target })}
-        formatError={errorFormatter(labels)}
+        formatError={productionBlockerError(labels, context.tenant)}
       />
     </>
   );

@@ -58,6 +58,7 @@ describe("migrate", () => {
       "Migration20261020173715_customer_order_demand_index",
       "Migration20261020180000_purchasing",
       "Migration20261020193728_goods_receipts",
+      "Migration20261020205207_production_orders",
       "Migration20261020205226_transfers",
       "Migration20261020214038_shipments_goods_issues",
     ]);
@@ -68,10 +69,10 @@ describe("migrate", () => {
     try {
       const previous = migrations.map((migration) => migration.name).filter((name) => !name.includes("customer_order") && !name.includes("shipments_goods_issues"));
       await orm.migrator.up({ migrations: previous });
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 19, pending: 3 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 20, pending: 3 });
       await orm.em.getConnection().execute("update tenant set generation = 23 where code = 'prod'");
       await orm.migrator.up();
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 22, pending: 0 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 23, pending: 0 });
       expect(await orm.em.getConnection().execute("select generation from tenant where code = 'prod'")).toEqual([{ generation: 23 }]);
       expect(await orm.em.getConnection().execute("select count(*) as count from stock_movement")).toEqual([{ count: 0 }]);
       expect(await orm.em.getConnection().execute("select count(*) as count from customer_order")).toEqual([{ count: 0 }]);
@@ -81,7 +82,22 @@ describe("migrate", () => {
       await orm.close();
     }
   });
-
+  it("adopts the production-order migration after a database already running the main-branch transfers", async () => {
+    const orm = await initOrm({ databasePath: tempDatabase() });
+    try {
+      // Production applied transfers first, although production orders carry the earlier timestamp.
+      const previous = migrations.map((migration) => migration.name).filter((name) => !name.includes("production_orders"));
+      await orm.migrator.up({ migrations: previous });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 22, pending: 1 });
+      await orm.migrator.up();
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 23, pending: 0 });
+      expect(await orm.em.getConnection().execute("select count(*) as count from production_order")).toEqual([{ count: 0 }]);
+      expect(await orm.em.getConnection().execute("select count(*) as count from transfer")).toEqual([{ count: 0 }]);
+      expect(await orm.schema.getUpdateSchemaSQL()).not.toMatch(/production_order|transfer/);
+    } finally {
+      await orm.close();
+    }
+  });
 });
 
 describe("getMigrationStatus", () => {
@@ -90,9 +106,9 @@ describe("getMigrationStatus", () => {
     const orm = await initOrm({ databasePath });
 
     try {
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 22 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 23 });
       await orm.migrator.up();
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 22, pending: 0 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 23, pending: 0 });
     } finally {
       await orm.close();
     }
@@ -109,7 +125,7 @@ describe("migrations", () => {
         await orm.em
           .getConnection()
           .execute<{ name: string }[]>(
-            "select name from sqlite_master where name in ('setting', 'user', 'session', 'user_preference', 'tenant', 'api_token', 'global_audit_event', 'tenant_audit_event', 'global_idempotency_key', 'tenant_idempotency_key', 'material', 'material_conversion', 'location', 'customer', 'supplier', 'planning_parameter_set', 'safety_stock_target', 'bom', 'bom_revision', 'bom_component', 'customer_order', 'customer_order_line', 'stock_balance', 'stock_movement', 'forecast', 'purchase_requisition', 'purchase_order', 'purchase_order_line', 'goods_receipt', 'goods_receipt_line', 'transfer', 'transfer_posting', 'shipment', 'shipment_line', 'goods_issue', 'goods_issue_line')",
+            "select name from sqlite_master where name in ('setting', 'user', 'session', 'user_preference', 'tenant', 'api_token', 'global_audit_event', 'tenant_audit_event', 'global_idempotency_key', 'tenant_idempotency_key', 'material', 'material_conversion', 'location', 'customer', 'supplier', 'planning_parameter_set', 'safety_stock_target', 'bom', 'bom_revision', 'bom_component', 'customer_order', 'customer_order_line', 'stock_balance', 'stock_movement', 'forecast', 'purchase_requisition', 'purchase_order', 'purchase_order_line', 'goods_receipt', 'goods_receipt_line', 'production_order', 'transfer', 'transfer_posting', 'shipment', 'shipment_line', 'goods_issue', 'goods_issue_line')",
           )
       )
         .map(({ name }) => name)
@@ -150,6 +166,7 @@ describe("migrations", () => {
         "material",
         "material_conversion",
         "planning_parameter_set",
+        "production_order",
         "purchase_order",
         "purchase_order_line",
         "purchase_requisition",
@@ -187,6 +204,9 @@ describe("migrations", () => {
       await orm.migrator.down();
       expect((await tables()).filter((name) => name.startsWith("transfer"))).toEqual([]);
       expect(await triggers()).not.toContain("transfer_posting_no_update");
+      expect(await tables()).toContain("production_order");
+      await orm.migrator.down();
+      expect(await tables()).not.toContain("production_order");
       expect(await tables()).toContain("goods_receipt");
       await orm.migrator.down();
       expect((await tables()).filter((name) => name.startsWith("goods_receipt"))).toEqual([]);
@@ -512,7 +532,7 @@ describe("forecasts migration", () => {
       ]);
 
       // The migrations that landed after the forecasts come off first.
-      for (let later = 0; later < 8; later += 1) await orm.migrator.down();
+      for (let later = 0; later < 9; later += 1) await orm.migrator.down();
       expect(await execute(orm, "select name from sqlite_master where name = 'forecast'")).toEqual([{ name: "forecast" }]);
       await orm.migrator.down();
       expect(await execute(orm, "select name from sqlite_master where name = 'forecast'")).toEqual([]);
@@ -628,6 +648,7 @@ describe("purchasing migration", () => {
       await execute(orm, "delete from purchase_requisition");
       await orm.migrator.down(); // Shipments and goods issues, which landed after purchasing.
       await orm.migrator.down(); // Transfers, which landed after purchasing.
+      await orm.migrator.down(); // Production orders.
       await orm.migrator.down(); // Goods receipts, which landed after purchasing.
       await orm.migrator.down();
       expect(await execute(orm, "select name from sqlite_master where name like 'purchase%'")).toEqual([]);
@@ -674,6 +695,7 @@ describe("goods-receipts migration", () => {
 
       await orm.migrator.down(); // Shipments and goods issues, which landed after goods receipts.
       await orm.migrator.down(); // Transfers, which landed after goods receipts.
+      await orm.migrator.down(); // Production orders.
       await orm.migrator.down();
       expect(await execute(orm, "select name from sqlite_master where name like 'goods_receipt%'")).toEqual([]);
       expect(await execute(orm, "select name from pragma_table_info('purchase_order_line') where name = 'received'")).toEqual([]);

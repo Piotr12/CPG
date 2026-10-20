@@ -23,6 +23,8 @@ export const HELP_TOPIC_IDS = [
   "purchase-requisitions",
   "purchase-orders",
   "purchase-order",
+  "production-orders",
+  "production-order-detail",
   "transfers",
   "transfer",
   "customer-orders",
@@ -62,6 +64,8 @@ export const HELP_TOPIC_ROUTES: Record<HelpTopicId, string> = {
   "purchase-requisitions": "/admin/[tenant]/purchase-requisitions",
   "purchase-orders": "/admin/[tenant]/purchase-orders",
   "purchase-order": "/admin/[tenant]/purchase-orders/[id]",
+  "production-orders": "/admin/[tenant]/production-orders",
+  "production-order-detail": "/admin/[tenant]/production-orders/[id]",
   transfers: "/admin/[tenant]/transfers",
   transfer: "/admin/[tenant]/transfers/[id]",
   "customer-orders": "/admin/[tenant]/customer-orders",
@@ -84,6 +88,8 @@ export interface HelpTopic extends HelpText {
 }
 
 const en: Record<HelpTopicId, HelpText> = {
+  "production-orders": { title: "Production orders", body: ["Create one Make output at one location. Preview active date-valid recipes, pick an alternative and review current component shortages. Shortages allow planning; creating or editing an order moves no stock. The exact BOM revision, unit conversion and calendar-day lead time are kept. Edit target and finish on the detail screen; read-only datasets allow reading only."] },
+  "production-order-detail": { title: "A production order", body: ["The detail screen shows the pinned BOM revision, the stored unit conversion, the captured calendar-day lead time and current component shortages. On an Open order, edit the target or the planned finish: the start is recalculated from the captured lead time and the recipe stays pinned. Planning moves no stock; read-only datasets allow reading only."] },
   "customer-orders": { title: "Customer orders", body: ["Both roles can create and edit customer orders under Transactions. Choose one active customer and one location for the header; each line has its own material, positive quantity, unit and required date. Orders start Open with zero fulfilled. Entering an order moves no stock. Stored quantities use the material’s base unit; the entered amount and factor stay in history. A customer may be deactivated while existing orders continue. A stale version refuses an overwrite; reload before retrying. A read-only tenant hides write controls and refuses writes."] },
   "customer-order-detail": { title: "Maintaining a customer order", body: ["Both roles can create and edit customer orders under Transactions. Choose one active customer and one location for the header; each line has its own material, positive quantity, unit and required date. Orders start Open with zero fulfilled. Entering an order moves no stock. Stored quantities use the material’s base unit; the entered amount and factor stay in history. A customer may be deactivated while existing orders continue. A stale version refuses an overwrite; reload before retrying. A read-only tenant hides write controls and refuses writes.", "The order's page shows each line's outstanding quantity and the order's shipments, and Create shipment plans a dispatch: see Shipments and goods issues. Goods issues fulfil the lines; a line delivered in full is Completed, and so is the order once every line is. Lowering a delivered line to exactly what was delivered completes it too."] },
   "getting-started": {
@@ -340,6 +346,8 @@ const en: Record<HelpTopicId, HelpText> = {
 };
 
 const pl: Record<HelpTopicId, HelpText> = {
+  "production-orders": { title: "Zlecenia produkcyjne", body: ["Utwórz zlecenie na jeden wytwarzany materiał w jednej lokalizacji. Sprawdź aktywne receptury ważne na wybraną datę, wybierz wariant i przejrzyj aktualne niedobory. Niedobór nie blokuje planowania; utworzenie ani edycja nie zmienia zapasu. Rewizja BOM, przelicznik i czas realizacji w dniach kalendarzowych są zachowane. Na stronie szczegółów edytujesz ilość i datę końca. Zbiory tylko do odczytu pozwalają jedynie przeglądać."] },
+  "production-order-detail": { title: "Zlecenie produkcyjne", body: ["Strona szczegółów pokazuje przypiętą rewizję BOM, zapisany przelicznik jednostek, zapisany czas realizacji w dniach kalendarzowych i aktualne niedobory składników. W otwartym zleceniu edytujesz ilość lub planowany koniec: początek jest przeliczany z zapisanego czasu realizacji, a receptura pozostaje przypięta. Planowanie nie zmienia zapasu; zbiory tylko do odczytu pozwalają jedynie przeglądać."] },
   "customer-orders": { title: "Zamówienia klientów", body: ["Obie role mogą tworzyć i edytować zamówienia klientów w sekcji Transakcje. Wybierz aktywnego klienta i jedną lokalizację nagłówka; każda pozycja ma własny materiał, dodatnią ilość, jednostkę i wymagany termin. Nowe zamówienie jest Otwarte, z ilością zrealizowaną równą zero. Zapis nie zmienia zapasu. Ilości zapisuje się w jednostce bazowej, zachowując wprowadzoną ilość i przelicznik. Klienta można dezaktywować, a istniejące zamówienia nadal obsługiwać. Nieaktualna wersja nie nadpisze zmian: odśwież dane. Środowisko tylko do odczytu ukrywa przyciski zapisu i odmawia zmian."] },
   "customer-order-detail": { title: "Edycja zamówienia klienta", body: ["Obie role mogą tworzyć i edytować zamówienia klientów w sekcji Transakcje. Wybierz aktywnego klienta i jedną lokalizację nagłówka; każda pozycja ma własny materiał, dodatnią ilość, jednostkę i wymagany termin. Nowe zamówienie jest Otwarte, z ilością zrealizowaną równą zero. Zapis nie zmienia zapasu. Ilości zapisuje się w jednostce bazowej, zachowując wprowadzoną ilość i przelicznik. Klienta można dezaktywować, a istniejące zamówienia nadal obsługiwać. Nieaktualna wersja nie nadpisze zmian: odśwież dane. Środowisko tylko do odczytu ukrywa przyciski zapisu i odmawia zmian.", "Strona zamówienia pokazuje, ile pozostało w każdej pozycji, oraz wysyłki zamówienia, a przycisk Utwórz wysyłkę planuje wysyłkę: zobacz Wysyłki i wydania towaru. Wydania towaru realizują pozycje; pozycja dostarczona w całości jest Zakończona, a zamówienie, gdy wszystkie pozycje są zakończone. Obniżenie dostarczonej pozycji dokładnie do dostarczonej ilości również ją kończy."] },
   "getting-started": {

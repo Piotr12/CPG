@@ -56,6 +56,7 @@ describe("@cpg/core", () => {
       "PRUNE_INTERVAL_MS",
       "PlanningParameterService",
       "PreconditionRequiredError",
+      "ProductionOrderService",
       "PurchaseOrderService",
       "PurchaseRequisitionService",
       "RECEIPT_ID_RACE",

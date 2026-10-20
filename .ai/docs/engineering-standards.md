@@ -5,7 +5,7 @@
 
 These rules apply to every change in this repository, by humans and agents. `AGENTS.md` holds the non-negotiable stack decisions and the `.ai/` workflow; this document covers how code is named, placed, layered, secured and reviewed. If the two disagree, `AGENTS.md` wins. Fix the disagreement in the same change.
 
-CPG is an MRP II application. Its domain concepts are things like materials, bills of materials, demand forecasts, production plans and production orders, served as a public frontend and an `/admin` backend. Code names follow the PRD's terms (brief Q04): `materials`, not items; `production-orders`, not work orders. The examples below use production orders, which don't exist yet; section 5 lists the concepts that do. A concept's folders are created only when its first file is written.
+CPG is an MRP II application. Its domain concepts are things like materials, bills of materials, demand forecasts, production plans and production orders, served as a public frontend and an `/admin` backend. Code names follow the PRD's terms (brief Q04): `materials`, not items; `production-orders`, not work orders. Section 5 lists the implemented concepts. A concept's folders are created only when its first file is written.
 
 Section 6 lists every place where these standards deliberately differ from the DevMentor original.
 
@@ -73,7 +73,7 @@ No action or route writes its own `try/catch` + response mapping.
 - `api/api-call.ts` — the only place a client component calls `fetch()` on `/api/*`. It parses the envelope defensively and returns a typed `ApiResult<T>`, and `apiCallOrThrow` throws instead. `ui` declares its own `ApiResult` type with the same shape in `api/result.ts`, because `ui` must not import `core`.
 - `forms/crud-form.tsx` — a schema-driven form: fields, server `fieldErrors` next to the right field, submit/cancel/pending states, `Cmd/Ctrl+Enter` submits, `Escape` cancels. It is bound to a server action (or `apiCall`). Use it for every create/edit form, and write a bespoke form only when the UX isn't form-over-schema (e.g. a planning board).
 - `tables/data-table.tsx` — column-config-driven lists with loading/empty/error states, pagination and row actions. Use it for every list screen.
-- `feedback/{error-message,empty-state}.tsx` (and `loading-message.tsx`, not built until something needs it) — the only sanctioned loading/error/empty renderers, including `<Suspense>` fallbacks.
+- `feedback/{error-message,empty-state,loading-message}.tsx` — the only sanctioned loading/error/empty renderers, including `<Suspense>` fallbacks. `LoadingMessage` is a language-neutral skeleton for request-time page content.
 
 **Language, theme and help** (spec `2026-10-19--0855UTC-user-preferences-footer-help`):
 
@@ -315,7 +315,7 @@ Done when these standards were adopted:
   - `core/src/container/tenant-scope.ts`;
   - the first route handlers, `app/api/tenants/`, authenticated by `app/src/auth/require-api-user.ts`;
   - the tenant enforcement in `db` (`tenantOwned`, `TenantGuard`, `TenantEntityManager`).
-- Users (2026-10-19, user management): `core/src/http/auth.ts`, `UserService` (`core/src/services/users/`), and the first client layers: `ui/src/backend/tables/data-table.tsx` (columns, empty state, row actions; pagination, sorting and filtering wait for the first list that needs them), `forms/crud-form.tsx`, `feedback/{error-message,empty-state}.tsx` and `api/result.ts` (`loading-message.tsx` waits for its first consumer: pages use an `aria-busy` placeholder as their `<Suspense>` fallback). `/admin/users` is the reference for a list screen with create and row actions.
+- Users (2026-10-19, user management): `core/src/http/auth.ts`, `UserService` (`core/src/services/users/`), and the first client layers: `ui/src/backend/tables/data-table.tsx` (columns, empty state, row actions; pagination, sorting and filtering wait for the first list that needs them), `forms/crud-form.tsx`, `feedback/{error-message,empty-state}.tsx` and `api/result.ts`. `/admin/users` is the reference for a list screen with create and row actions.
 - Audit (2026-10-19, spec `2026-10-19--1050UTC-audit-log`):
   - `GlobalAuditEvent` and `TenantAuditEvent` (`db/src/entities/audit/`), with append-only triggers declared on the entities;
   - `core/src/services/audit/` (`AuditActor`/`uiActor`, `audit-recorder.ts`, `AuditService` with keyset paging);
@@ -373,7 +373,6 @@ Done when these standards were adopted:
 Deliberately **not built yet** (YAGNI). Each arrives with the first concept that needs it, and that concept's change is the reference implementation:
 
 - `core/src/http/make-crud-route.ts`
-- `ui/src/backend/api/api-call.ts`
 - `core/src/events/*`
 - a shared logger
 
@@ -398,3 +397,9 @@ Known `npm audit` state: 10 high advisories, all from `braces` (GHSA-vfj7-8cjw-p
 ### Atomic Test reset (2026-10-20, issue #93)
 
 `TestResetService` (`core/src/services/tenants/`) owns direct-call transactions and joins the keyed API transaction through `inRequestSavepoint`. It reuses the seed registry in `services/demo/seed-demo-data.ts` with failure propagation. `resetTestData` in db derives every owned table from ORM metadata, rejects global references and defers (never disables) foreign-key checks until commit. `testResetApiWrite` is a fixed-Test, admin-only mode of the shared keyed pipeline; its receipt is saved in the new generation. Ordinary tenant writes keep their read-only gate and check the generation before replay. Preview tokens read generation fresh inside their transaction, because scope metadata can predate a reset.
+
+### Manual production orders (2026-10-20, issue #88)
+
+`ProductionOrderService` stores the selected immutable revision, entered conversion and lead time; date edits retain those captured values. Options are an authenticated GET read. The first client API consumer adds `ui/src/backend/api/api-call.ts`, preserving public error parameters and field errors while refusing malformed envelopes. Tenant server actions remain writes through `tenantServerAction`. Master deactivation errors can render a linked document through shared form/dialog error formatting.
+
+Both production pages use `ui/src/backend/feedback/loading-message.tsx`: a visible, language-neutral skeleton for their request-time Suspense boundary. Existing blank fallbacks can adopt this shared renderer when their routes change.

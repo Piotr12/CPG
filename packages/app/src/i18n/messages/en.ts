@@ -663,6 +663,40 @@ export const en = {
     },
   },
   /** The BOM screens (E04-S01). Client components get plain strings; only the headings are functions. */
+  productionOrders: {
+    title: "Production orders", heading: "{tenant} · Production orders", detailHeading: "Production order {id}",
+    intro: "Plan one Make output at one location and keep its chosen BOM revision. Planning never changes physical stock.",
+    create: "Create production order", edit: "Edit production order", save: "Save changes", preview: "Preview recipes", pending: "Working…", cancel: "Cancel", back: "Back", backList: "Back to production orders",
+    id: "ID", output: "Output material", location: "Location", quantity: "Planned quantity", unit: "Unit", finish: "Planned finish", start: "Planned start", recipe: "BOM / revision", status: "Status", entered: "Entered quantity / conversion",
+    choose: "Choose…", unitHint: "Enter the output's base unit (shown beside its name) or a configured alternate unit.",
+    previewDates: "Indicative start: {start} ({days} calendar days before finish). Dates are checked again when saving.",
+    leadTime: "Captured lead time", leadTimeDays: "{days} calendar days",
+    finishHint: "The planned start is recalculated from the captured lead time of {days} calendar days.",
+    previewNotice: "Review the direct component requirements and current stock. Shortages allow manual planning; no stock is reserved or consumed.",
+    recipeLabel: "BOM {bom} / revision {revision} · priority {priority}",
+    warning: "Component shortage: you can still create this plan. Current physical stock is shown below; stock is checked when a completion is posted.",
+    sufficient: "Current physical stock covers these direct requirements. Planning does not reserve or consume it.",
+    components: "Pinned component requirements and current stock", component: "Component", required: "Required", available: "Available now", shortage: "Shortage",
+    empty: "No production orders yet. Configure a Make output, location and active recipe, then create an order.",
+    pagination: "Production order pages", previous: "Previous", next: "Next", page: "Page {page} of {pages}",
+    invalidDate: "Enter a real date written YYYY-MM-DD.", invalidUnit: "Enter a valid unit.", invalidQuantity: "Enter a positive quantity with at most 6 decimals.",
+    invalidStart: "The derived start must fit a four-digit calendar year.", requirementOverflow: "The component requirement is too large. Reduce the target.", belowProduced: "The target cannot be less than the quantity already produced.",
+    states: { open: "Open", completed: "Completed", "closed-early": "Closed Early", cancelled: "Cancelled" },
+    errors: {
+      UNIT_NOT_CONVERTIBLE: "Choose the output base unit or one of its configured conversions.",
+      QUANTITY_OUT_OF_RANGE: "That converted quantity is too large to store.",
+      QUANTITY_ROUNDS_TO_ZERO: "That quantity rounds to zero in the output base unit.",
+      NETWORK_ERROR: "The request failed. Try again.",
+      INVALID_RESPONSE: "The server returned an invalid response. Try again.",
+      PRODUCTION_REQUIRES_MAKE: "Choose an active intermediate or finished material set to Make at this location.",
+      PRODUCTION_NO_USABLE_BOM: "No active, date-valid recipe with active components is available. Ask the administrator to configure one.",
+      PRODUCTION_BOM_CHANGED: "The selected recipe changed or is no longer usable. Go back and preview recipes again.",
+      PRODUCTION_ORDER_NOT_FOUND: "This production order does not exist in this tenant.",
+      PRODUCTION_ORDER_LOCKED: "This production order is no longer Open.",
+      PRODUCTION_ORDER_IDS_EXHAUSTED: "This tenant has used every production order ID.",
+      PRODUCTION_ORDER_ID_RACE: "Another production order was created at the same moment. Try again.",
+    },
+  },
   customerOrders: {
     pagination: "Customer order pages", page: "Page {page} of {pages}", previous: "Previous page", next: "Next page",
     link: "Customer orders", heading: "Customer orders — {tenant}", detailHeading: "Customer order {id}",
@@ -1356,6 +1390,8 @@ export const en = {
     channels: { ui: "UI", api: "API" },
     /** Keyed by the entry's action ID; an action missing here is shown as its ID. */
     actions: {
+      "production-orders.production-order.created": "Production order created",
+      "production-orders.production-order.updated": "Production order changed",
       "customer-orders.customer-order.created": "Customer order created",
       "customer-orders.customer-order.updated": "Customer order changed",
       "stock.movement.posted": "Stock movement posted",
@@ -1416,6 +1452,11 @@ export const en = {
     passwordNotRecorded: "Password replaced (not recorded)",
     /** Snapshot field names in the Changes column; a field missing here is shown as stored. */
     fields: {
+      bom: "BOM",
+      plannedFinish: "planned finish",
+      plannedStart: "planned start",
+      produced: "produced quantity",
+      abandoned: "abandoned quantity",
       customer: "customer",
       lines: "lines",
       status: "status",
@@ -1502,6 +1543,7 @@ export const en = {
     account: "Account",
     overview: "Overview",
     transactions: "Transactions",
+    productionOrders: "Production orders",
     customerOrders: "Customer orders",
     masterData: "Master data",
     materials: "Materials",
@@ -1564,6 +1606,8 @@ export const en = {
   },
   /** Keyed by the result envelope's error `code`; unknown codes fall back to the server's message. */
   errors: {
+    MATERIAL_HAS_PRODUCTION_ORDERS: "Production order {order} is still Open. Open it from Transactions → Production orders.",
+    LOCATION_HAS_PRODUCTION_ORDERS: "Production order {order} is still Open at this location. Open it from Transactions → Production orders.",
     MATERIAL_HAS_CUSTOMER_DEMAND: "Customer order {order} has outstanding demand for this material.",
     LOCATION_HAS_CUSTOMER_ORDERS: "Customer order {order} is still Open at this location.",
     LOCATION_HAS_OPEN_TRANSFERS: "Transfer {transfer} is still Open from or to this location.",

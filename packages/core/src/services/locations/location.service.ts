@@ -1,3 +1,4 @@
+import { assertNoProductionOrders } from "../production-orders/production-order-usage";
 import { assertNoCustomerOrdersAtLocation } from "../customer-orders/customer-order-usage";
 import { assertNoPhysicalStock } from "../stock/stock-usage";
 import { assertNoOpenTransfersAt } from "../transfers/transfer-usage";
@@ -26,6 +27,7 @@ export class LocationService {
       actionPrefix: "locations.location",
       demoNames: DEMO_LOCATIONS,
       beforeDeactivate: async (em, location) => {
+        await assertNoProductionOrders(em, { location });
         await assertNoPhysicalStock(em, { location });
         await assertNoCustomerOrdersAtLocation(em, location);
         await assertNoOpenTransfersAt(em, location);
