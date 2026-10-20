@@ -44,6 +44,8 @@ describe("HelpPage", () => {
       "Purchase requisitions",
       "Purchase orders",
       "A purchase order and its lines",
+      "Production orders",
+      "Production orders",
       "Customer orders",
       "Maintaining a customer order",
       "Import from spreadsheet",

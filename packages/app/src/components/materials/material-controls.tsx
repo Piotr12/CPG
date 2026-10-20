@@ -1,5 +1,7 @@
 "use client";
 
+import { productionBlockerError } from "../production-orders/production-blocker-error";
+
 import { useState } from "react";
 import type { MaterialSummary } from "@cpg/core";
 import { materialCreateSchema } from "@cpg/core/validators/materials/material-create.schema";
@@ -15,7 +17,7 @@ import {
   DialogTrigger,
 } from "@cpg/ui/components/dialog";
 import { updateMaterial } from "../../app/admin/[tenant]/materials/actions";
-import { errorFormatter, fieldErrorFormatter, fill, type MaterialsLabels, type TenantContext } from "./labels";
+import { fieldErrorFormatter, fill, type MaterialsLabels, type TenantContext } from "./labels";
 import { materialFormFields } from "./material-form-fields";
 
 interface MaterialControlsProps {
@@ -60,7 +62,7 @@ export function MaterialControls({ material, context, labels }: MaterialControls
             submitLabel={t.submit}
             pendingLabel={t.submitting}
             cancelLabel={labels.cancel}
-            formatError={errorFormatter(labels)}
+            formatError={productionBlockerError(labels, context.tenant)}
             formatFieldError={fieldErrorFormatter(labels)}
             onSuccess={close}
             onCancel={close}
@@ -80,7 +82,7 @@ export function MaterialControls({ material, context, labels }: MaterialControls
         cancelLabel={labels.cancel}
         destructive={!target}
         action={() => update({ active: target })}
-        formatError={errorFormatter(labels)}
+        formatError={productionBlockerError(labels, context.tenant)}
       />
     </div>
   );

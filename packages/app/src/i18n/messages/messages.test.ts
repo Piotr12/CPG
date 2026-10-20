@@ -33,6 +33,8 @@ describe("dictionaries", () => {
       "suppliers/columns/id",
       "suppliers/columns/status",
       "safetyStock/columns/status",
+      "productionOrders/id",
+      "productionOrders/status",
       "customerOrders/status",
       "boms/columns/id",
       "boms/columns/status",

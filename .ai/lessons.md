@@ -152,3 +152,5 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 - **2026-10-20 — Validate a late base merge against an already migrated database** — Independent migrations can arrive in a different timestamp order than production applied them. Test pending-migration adoption on the current base schema, retain both integrity guards, and re-run the complete gate after resolving conflicts.
 
 - **2026-10-20 — Center sidebar targets before automated clicks** — A longer navigation tree can leave a link under the fixed shared-menu area even when it has an offset parent. Scroll the target to the center of its scroll container before clicking, then assert the destination and active entry.
+
+- **2026-10-20 — Keep advisory reads outside tenant write actions** — Every exported tenant server action is a gated write in this repository. Production recipe previews use an authenticated GET and the shared UI `apiCall`, so read-only tenants can inspect them without weakening the write gate; preserve error parameters and field errors through that client boundary.

@@ -361,7 +361,6 @@ Done when these standards were adopted:
 Deliberately **not built yet** (YAGNI). Each arrives with the first concept that needs it, and that concept's change is the reference implementation:
 
 - `core/src/http/make-crud-route.ts`
-- `ui/src/backend/api/api-call.ts`
 - `core/src/events/*`
 - a shared logger
 
@@ -386,3 +385,7 @@ Known `npm audit` state: 10 high advisories, all from `braces` (GHSA-vfj7-8cjw-p
 ### Atomic Test reset (2026-10-20, issue #93)
 
 `TestResetService` (`core/src/services/tenants/`) owns direct-call transactions and joins the keyed API transaction through `inRequestSavepoint`. It reuses the seed registry in `services/demo/seed-demo-data.ts` with failure propagation. `resetTestData` in db derives every owned table from ORM metadata, rejects global references and defers (never disables) foreign-key checks until commit. `testResetApiWrite` is a fixed-Test, admin-only mode of the shared keyed pipeline; its receipt is saved in the new generation. Ordinary tenant writes keep their read-only gate and check the generation before replay. Preview tokens read generation fresh inside their transaction, because scope metadata can predate a reset.
+
+### Manual production orders (2026-10-20, issue #88)
+
+`ProductionOrderService` stores the selected immutable revision, entered conversion and lead time; date edits retain those captured values. Options are an authenticated GET read. The first client API consumer adds `ui/src/backend/api/api-call.ts`, preserving public error parameters and field errors while refusing malformed envelopes. Tenant server actions remain writes through `tenantServerAction`. Master deactivation errors can render a linked document through shared form/dialog error formatting.

@@ -1,4 +1,4 @@
-import { ProductionOrder, type EntityManager } from "@cpg/db";
+import { ProductionOrder, type DocumentState, type EntityManager } from "@cpg/db";
 import { NotFoundError } from "../../http/errors";
 
 export const PRODUCTION_POPULATE = ["output", "location", "recipe.bom"] as const;
@@ -13,7 +13,7 @@ export function productionOrderView(order: ProductionOrder) {
     plannedFinish, plannedStart, leadTimeDays, produced, abandoned, status, createdAt, updatedAt, version } = order;
   return { id: code, output: output.code, location: location.code, bom: recipe.bom.code, revision: recipe.number,
     quantity, enteredQuantity, enteredUnit, numerator, denominator, plannedFinish, plannedStart, leadTimeDays,
-    produced, abandoned, status, createdAt, updatedAt, version };
+    produced, abandoned, status: status as DocumentState, createdAt, updatedAt, version };
 }
 export type ProductionOrderView = ReturnType<typeof productionOrderView>;
 export function productionSnapshot(order: ProductionOrder) {

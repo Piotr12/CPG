@@ -30,7 +30,7 @@ export interface ConfirmDialogProps<T> {
   /** Usually a server action bound to the record. */
   action: () => Promise<ApiResult<T>>;
   /** Turns an error into the reader's language. */
-  formatError?: (error: { code: string; message: string }) => string;
+  formatError?: (error: { code: string; message: string; params?: Record<string, string> }) => ReactNode;
 }
 
 /**
@@ -51,7 +51,7 @@ export function ConfirmDialog<T>({
   action,
   formatError = ({ message }) => message,
 }: ConfirmDialogProps<T>) {
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ReactNode>(null);
   const [isPending, startTransition] = useTransition();
 
   function change(next: boolean) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, useTransition, type ChangeEvent, type FormEvent, type KeyboardEvent } from "react";
+import { useId, useState, useTransition, type ChangeEvent, type FormEvent, type ReactNode, type KeyboardEvent } from "react";
 import { Button } from "../../components/button";
 import { Input } from "../../components/input";
 import { Label } from "../../components/label";
@@ -49,7 +49,7 @@ export interface CrudFormProps<T> {
   onCancel?: () => void;
   cancelLabel?: string;
   /** Turns an error the form shows above its buttons into the reader's language. */
-  formatError?: (error: { code: string; message: string }) => string;
+  formatError?: (error: { code: string; message: string; params?: Record<string, string> }) => ReactNode;
   /** Turns a field message (from the schema or the server) into the reader's language. */
   formatFieldError?: (message: string) => string;
 }
@@ -77,7 +77,7 @@ export function CrudForm<T>({
     Object.fromEntries(fields.map((field) => [field.name, initialValues[field.name] ?? ""])),
   );
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<ReactNode>(null);
   const [isPending, startTransition] = useTransition();
 
   function submit(event: FormEvent<HTMLFormElement>) {

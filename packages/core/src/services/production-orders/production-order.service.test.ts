@@ -208,8 +208,7 @@ describe("demo", () => {
     await masters("test"); const global = orm.em.fork(); await global.nativeUpdate(Tenant, { code: "test" }, { readOnly: true });
     expect(await service(em("test")).seedDemo()).toBe(0);
     const manager = em("test"); await global.nativeUpdate(Tenant, { code: "test" }, { readOnly: false });
-    const spy = vi.spyOn(manager, "transactional").mockImplementation(async (callback) => callback(manager));
-    vi.spyOn(manager, "findOne").mockRejectedValueOnce(new Error("broken seed"));
+    const spy = vi.spyOn(manager, "transactional").mockImplementationOnce(async (callback) => callback(manager)).mockRejectedValueOnce(new Error("broken seed"));
     await expect(service(manager).seedDemo()).rejects.toThrow("broken seed"); expect(spy).toHaveBeenCalled();
   });
 });
