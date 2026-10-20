@@ -10,7 +10,8 @@ import {
 } from "@cpg/db";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
 import { afterReceipt, isLineReceived, type LineReceipt } from "../../domain/goods-receipts/receipt-quantity";
-import { AppError, ConflictError, NotFoundError, ValidationError, versionConflict, type FieldErrors } from "../../http/errors";
+import { ConflictError, NotFoundError, ValidationError, versionConflict, type FieldErrors } from "../../http/errors";
+import { QUANTITY_OUT_OF_RANGE_MESSAGE } from "../../validators/boms/bom-fields.schema";
 import type { ReceiptCreateInput } from "../../validators/goods-receipts/goods-receipt.schema";
 import { RECEIPT_LINE_ORDER_MESSAGE } from "../../validators/goods-receipts/goods-receipt.schema";
 import { LINE_NO_SUCH_LINE_MESSAGE } from "../../validators/purchasing/purchasing-fields.schema";
@@ -166,7 +167,7 @@ export class GoodsReceiptService {
 
 /**
  * Matches each input line to its order line and converts its quantity, collecting every field error
- * before refusing (AUD-018). A new received total no stored quantity holds is `QUANTITY_OUT_OF_RANGE`.
+ * before refusing (AUD-018). A new received total no stored quantity holds is an error on the line's quantity.
  */
 async function resolveLines(
   em: EntityManager,
@@ -196,7 +197,10 @@ async function resolveLines(
       continue;
     }
     const after = afterReceipt(orderLine.quantity, orderLine.received, record.baseQuantity);
-    if (!after) throw new AppError("QUANTITY_OUT_OF_RANGE", `Line ${orderLine.position} would receive more than a quantity can hold.`);
+    if (!after) {
+      errors[field("quantity")] = [QUANTITY_OUT_OF_RANGE_MESSAGE];
+      continue;
+    }
     resolved.push({ orderLine, record, after });
   }
   if (Object.keys(errors).length > 0) throw new ValidationError(errors);

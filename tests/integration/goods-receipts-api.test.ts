@@ -115,7 +115,7 @@ describe("goods receipts through the API", () => {
     await freshMaterials();
     const [first, second] = [await placeOrder(), await placeOrder()];
 
-    const mixed = await receive(first.id, [{ line: 1, quantity: "1", unit: "kg" }, { line: 1, quantity: "1", unit: "kg", purchaseOrder: second.id }]);
+    const mixed = await receive(first.id, [{ line: 1, quantity: "1", unit: "kg" }, { line: 2, quantity: "1", unit: "each", purchaseOrder: second.id }]);
 
     expect(mixed.status).toBe(400);
     expect(json(mixed).error.fieldErrors).toMatchObject({ "lines.1.purchaseOrder": ["A goods receipt covers one purchase order: this line is from another."] });
@@ -171,9 +171,9 @@ describe("goods receipts through the API", () => {
   it("refuses supplier, location and a received line's material, unit or quantity, and keeps planned dates editable (BUY-020…024, MAT-031)", async () => {
     await freshMaterials();
     const unposted = await placeOrder();
-    // MAT-031: a material on an order line, with no posting yet, keeps its base unit.
-    const steel = json(await api("GET", `/api/tenants/prod/materials/${ids.steel}`)).data as { version: number };
-    const unit = await write("PATCH", `/api/tenants/prod/materials/${ids.steel}`, { version: steel.version, baseUnit: "g" });
+    // MAT-031: a material on an order line, with no posting yet, keeps its base unit (the bolt has no conversion to remove first).
+    const bolt = json(await api("GET", `/api/tenants/prod/materials/${ids.bolt}`)).data as { version: number };
+    const unit = await write("PATCH", `/api/tenants/prod/materials/${ids.bolt}`, { version: bolt.version, baseUnit: "pcs" });
     expect(unit.status).toBe(409);
     expect(json(unit).error.code).toBe("BASE_UNIT_IN_USE");
 

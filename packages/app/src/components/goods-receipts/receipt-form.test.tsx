@@ -83,7 +83,7 @@ describe("ReceiptForm", () => {
   it("shows a field error that names no row, and a refusal without fields, above the buttons", async () => {
     action.mockResolvedValueOnce({
       ok: false,
-      error: { code: "VALIDATION_FAILED", message: "Invalid.", fieldErrors: { lines: [RECEIPT_LINE_COUNT_MESSAGE], "lines.5.unit": ["x"] } },
+      error: { code: "VALIDATION_FAILED", message: "Invalid.", fieldErrors: { lines: [RECEIPT_LINE_COUNT_MESSAGE], "lines.5.unit": ["x"], "lines.0.purchaseOrder": ["y"] } },
     });
     renderForm();
     fireEvent.change(quantity(1), { target: { value: "5" } });

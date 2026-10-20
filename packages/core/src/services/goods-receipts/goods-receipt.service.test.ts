@@ -24,7 +24,7 @@ import { loadConfig } from "../../config";
 import { migrateDatabase, toDbOptions } from "../../database";
 import { formatDecimal, MAX_QUANTITY } from "../../domain/quantities/decimal";
 import { inRequestTransaction, retryingStaleSnapshot } from "../../http/request-transaction";
-import { UNIT_NOT_CONVERTIBLE_MESSAGE } from "../../validators/boms/bom-fields.schema";
+import { QUANTITY_OUT_OF_RANGE_MESSAGE, UNIT_NOT_CONVERTIBLE_MESSAGE } from "../../validators/boms/bom-fields.schema";
 import { RECEIPT_LINE_ORDER_MESSAGE, type ReceiptCreateInput } from "../../validators/goods-receipts/goods-receipt.schema";
 import { LINE_NO_SUCH_LINE_MESSAGE } from "../../validators/purchasing/purchasing-fields.schema";
 import type { AuditActor } from "../audit/actor";
@@ -314,8 +314,8 @@ describe("GoodsReceiptService", () => {
       await em.flush();
 
       await expect(service().post(receiptOf(order.id, { line: 1, quantity: "0.000001", unit: "kg" }), ACTOR)).rejects.toMatchObject({
-        code: "QUANTITY_OUT_OF_RANGE",
-        message: "Line 1 would receive more than a quantity can hold.",
+        code: "VALIDATION_FAILED",
+        fieldErrors: { "lines.0.quantity": [QUANTITY_OUT_OF_RANGE_MESSAGE] },
       });
       expect(await scoped().count(StockMovement, {})).toBe(0);
     });

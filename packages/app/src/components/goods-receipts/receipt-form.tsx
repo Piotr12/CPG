@@ -32,12 +32,15 @@ export interface ReceiptFormProps<T> {
   onCancel: () => void;
 }
 
-/** The field errors of what was sent (`lines.N.<field>`, N its index in the receipt) under the form's rows (`line.<number>.<field>`). */
+/**
+ * The field errors of what was sent (`lines.N.<field>`, N its index in the receipt) under the form's
+ * rows (`line.<number>.<field>`), for the fields a row has a control for; any other is the form's.
+ */
 function byRow(errors: FieldErrors, sent: readonly number[]): { rows: FieldErrors; other: string[] } {
   const rows: FieldErrors = {};
   const other: string[] = [];
   for (const [name, messages] of Object.entries(errors)) {
-    const match = /^lines\.(\d+)\.(\w+)$/.exec(name);
+    const match = /^lines\.(\d+)\.(quantity|unit)$/.exec(name);
     const line = match ? sent[Number(match[1])] : undefined;
     if (match && line !== undefined) rows[`line.${line}.${match[2]}`] = messages;
     else other.push(...messages);
