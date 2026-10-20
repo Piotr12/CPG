@@ -41,6 +41,7 @@ describe("dictionaries", () => {
       "purchaseRequisitions/columns/status",
       "purchaseOrders/columns/status",
       "purchaseOrders/details/status",
+      "purchaseOrders/lines/columns/status",
       "purchaseOrders/lines/noRequisition",
       "imports/problems/problem",
       "imports/change/empty",

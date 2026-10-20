@@ -1,0 +1,34 @@
+import type { ReceiptView } from "@cpg/core";
+import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
+import type { MaterialsById } from "../purchase-orders/labels";
+import { fill, shownQuantity, type ReceiptsLabels } from "./labels";
+
+interface ReceiptsTableProps {
+  receipts: ReceiptView[];
+  materials: MaterialsById;
+  labels: ReceiptsLabels;
+}
+
+/** One order's goods receipts, newest first: ID, business date and what each line received, in the base unit. */
+export function ReceiptsTable({ receipts, materials, labels }: ReceiptsTableProps) {
+  const c = labels.columns;
+  const columns: DataTableColumn<ReceiptView>[] = [
+    { id: "id", header: c.id, cell: (receipt) => <span className="font-mono">{receipt.id}</span> },
+    { id: "date", header: c.date, cell: (receipt) => receipt.businessDate },
+    {
+      id: "lines",
+      header: c.lines,
+      className: "whitespace-normal wrap-anywhere",
+      cell: (receipt) => (
+        <ul className="flex flex-col gap-1">
+          {receipt.lines.map(({ line, material, quantity }) => (
+            <li key={line}>
+              {fill(labels.lineSummary, { line: String(line), quantity: shownQuantity(quantity), baseUnit: materials.get(material)!.baseUnit })}
+            </li>
+          ))}
+        </ul>
+      ),
+    },
+  ];
+  return <DataTable label={labels.heading} columns={columns} rows={receipts} rowKey={(receipt) => receipt.id} empty={labels.empty} />;
+}

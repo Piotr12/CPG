@@ -40,6 +40,7 @@ describe("migrateDatabase", () => {
       "Migration20261020164640_test_reset",
       "Migration20261020173715_customer_order_demand_index",
       "Migration20261020180000_purchasing",
+      "Migration20261020193728_goods_receipts",
     ]);
     expect(await migrateDatabase(config)).toEqual([]);
   });

@@ -8,9 +8,10 @@ import {
   type Material,
 } from "@cpg/db";
 import { nextSequentialId, formatSequentialId } from "../../domain/business-ids/sequential-id";
+import { isLineReceived, outstandingOf } from "../../domain/goods-receipts/receipt-quantity";
 import { DEMO_ORDERS } from "../../domain/purchasing/demo-purchasing";
 import { addQuantities, afterConversion, fitsOutstanding, outstandingQuantity } from "../../domain/purchasing/requisition-quantity";
-import { AppError, ConflictError, NotFoundError, ValidationError, versionConflict, type FieldErrors } from "../../http/errors";
+import { AppError, ConflictError, ValidationError, versionConflict, type FieldErrors } from "../../http/errors";
 import {
   LINE_NO_SUCH_LINE_MESSAGE,
   LINE_LOCATION_MESSAGE,
@@ -23,6 +24,7 @@ import { findActiveLocation } from "../locations/find-location";
 import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quantity";
 import { findActiveMaterial } from "../materials/find-material";
 import { lineError } from "../materials/line-error";
+import { assertOrderOpen, findOrder } from "./order-records";
 import { findRequisition, requisitionEntry, requisitionSnapshot } from "../purchase-requisitions/requisition-records";
 import { findActiveSupplier } from "../suppliers/find-supplier";
 import { isScopeReadOnly } from "../tenants/tenant.service";
@@ -40,6 +42,12 @@ export interface OrderLineView {
   plannedDate: string;
   /** The requisition this line converted, or null (BUY-002, BUY-003). */
   requisition: string | null;
+  /** What goods receipts have brought in, six decimals; it may exceed `quantity` (BUY-015). */
+  received: string;
+  /** What is still awaited, six decimals, never negative. */
+  outstanding: string;
+  /** `completed` once the line has received at least its quantity (BUY-016). */
+  status: "open" | "completed";
 }
 
 /** An order with its lines. `id` is its eight-digit business ID; `supplier` and `location` are theirs. */
@@ -143,13 +151,14 @@ export class PurchaseOrderService {
   /**
    * New planned dates for some lines at `version` (BUY-024, spec Q8). A date equal to the stored one
    * is no change; with nothing changed, nothing is written or recorded. A line number the order
-   * doesn't have is a field error on that entry.
+   * doesn't have is a field error on that entry. A Completed order refuses (goods-receipts spec Q8).
    */
   async setPlannedDates(id: string, changes: readonly LineDateChange[], version: number, actor: AuditActor): Promise<OrderView> {
     try {
       return await this.em.transactional(async (em) => {
         const order = await findOrder(em, id, { refresh: true });
         if (order.version !== version) throw versionConflict();
+        assertOrderOpen(order);
         const lines = await em.find(PurchaseOrderLine, { order }, { populate: ["material"] });
         const errors: FieldErrors = {};
         const before: Record<string, string> = {};
@@ -207,13 +216,6 @@ export class PurchaseOrderService {
       return created;
     });
   }
-}
-
-/** The order with business ID `id` in `em`'s tenant, with its supplier and location, or `PURCHASE_ORDER_NOT_FOUND`. */
-async function findOrder(em: EntityManager, id: string, options: { refresh?: boolean } = {}): Promise<PurchaseOrder> {
-  const order = await em.findOne(PurchaseOrder, { code: id }, { ...options, populate: ["supplier", "location"] });
-  if (!order) throw new NotFoundError("PURCHASE_ORDER_NOT_FOUND", `There is no purchase order ${id} in this tenant.`);
-  return order;
 }
 
 /**
@@ -334,7 +336,7 @@ async function viewsOf(em: EntityManager, orders: readonly PurchaseOrder[]): Pro
 }
 
 function toLineView(line: PurchaseOrderLine): OrderLineView {
-  const { position, material, quantity, enteredQuantity, enteredUnit, numerator, denominator, plannedDate, requisition } = line;
+  const { position, material, quantity, enteredQuantity, enteredUnit, numerator, denominator, plannedDate, requisition, received } = line;
   return {
     line: position,
     material: material.code,
@@ -345,6 +347,9 @@ function toLineView(line: PurchaseOrderLine): OrderLineView {
     denominator,
     plannedDate,
     requisition: requisition?.code ?? null,
+    received,
+    outstanding: outstandingOf(quantity, received),
+    status: isLineReceived(quantity, received) ? "completed" : "open",
   };
 }
 
