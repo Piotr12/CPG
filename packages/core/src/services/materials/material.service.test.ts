@@ -22,6 +22,7 @@ import { DEMO_MATERIALS } from "../../domain/materials/demo-materials";
 import { VERSION_CONFLICT } from "../../http/errors";
 import { tenantServerAction } from "../../http/tenant-server-action";
 import type { AuditActor } from "../audit/actor";
+import { BomService } from "../boms/bom.service";
 import { PlanningParameterService } from "../planning-parameters/planning-parameter.service";
 import { SafetyStockTargetService } from "../safety-stock/safety-stock-target.service";
 import { MATERIAL_ID_RACE, MaterialService } from "./material.service";
@@ -527,6 +528,58 @@ describe("MaterialService", () => {
       await expect(service().toBaseQuantity(id, { quantity: "-1", unit: "g" })).rejects.toMatchObject({
         code: "VALIDATION_FAILED",
         fieldErrors: { quantity: [expect.any(String)] },
+      });
+    });
+  });
+
+  describe("locks once a BOM references the material (BOMs spec Q9)", () => {
+    /** Prod: a raw bolt with a case conversion, a finished cabinet, and BOM 00000001 making the cabinet from bolts. */
+    async function cabinetFromBolts() {
+      await boltWithCase();
+      const cabinet = await service().create({ type: "finished", description: "Cabinet", baseUnit: "each" }, ACTOR);
+      const bom = await new BomService({ em: scopedEm("prod") }).create(
+        { output: cabinet.id, priority: 1, validFrom: "2027-01-01", validThrough: null, components: [{ material: "00000001", quantity: "1", unit: "case" }] },
+        ACTOR,
+      );
+      return { cabinet: await service().get(cabinet.id), bolt: await service().get("00000001"), bom };
+    }
+
+    it("refuses a type change of an output or a component, even of an inactive BOM (MAT-011)", async () => {
+      const { cabinet, bolt, bom } = await cabinetFromBolts();
+      await new BomService({ em: scopedEm("prod") }).update(bom.id, { active: false }, bom.version, ACTOR);
+
+      await expect(service().update(cabinet.id, { type: "intermediate" }, cabinet.version, ACTOR)).rejects.toMatchObject({
+        code: "MATERIAL_TYPE_IN_USE",
+        message: "BOM 00000001 uses this material, so its type can't change.",
+      });
+      await expect(service().update(bolt.id, { type: "intermediate" }, bolt.version, ACTOR)).rejects.toMatchObject({
+        code: "MATERIAL_TYPE_IN_USE",
+      });
+    });
+
+    it("refuses a base-unit change before the conversions check, which wouldn't help (MAT-030)", async () => {
+      const { bolt } = await cabinetFromBolts();
+
+      await expect(service().update(bolt.id, { baseUnit: "pcs" }, bolt.version, ACTOR)).rejects.toMatchObject({
+        code: "BASE_UNIT_IN_USE",
+        message: "BOM 00000001 uses this material, so its base unit can't change: BOM quantities are stored in it.",
+      });
+    });
+
+    it("still takes resent values, a description and a deactivation (MAT-009, MAT-013)", async () => {
+      const { bolt } = await cabinetFromBolts();
+
+      const updated = await service().update(bolt.id, { type: "raw", baseUnit: "each", description: "Bolt M8 zinc", active: false }, bolt.version, ACTOR);
+      expect(updated).toMatchObject({ description: "Bolt M8 zinc", active: false });
+    });
+
+    it("lets an unused material change type and base unit (MAT-009, MAT-013)", async () => {
+      await cabinetFromBolts();
+      const spare = await service().create({ type: "raw", description: "Spare", baseUnit: "each" }, ACTOR);
+
+      expect(await service().update(spare.id, { type: "intermediate", baseUnit: "kg" }, spare.version, ACTOR)).toMatchObject({
+        type: "intermediate",
+        baseUnit: "kg",
       });
     });
   });

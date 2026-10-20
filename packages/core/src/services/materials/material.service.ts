@@ -12,6 +12,7 @@ import { formatDecimal, inverseFactor, parseDecimal } from "../../domain/quantit
 import { AppError, ConflictError, NotFoundError, versionConflict } from "../../http/errors";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
+import { bomUsingMaterial } from "../boms/bom-usage";
 import { hasPlanningParameters, isMadeAnywhere } from "../planning-parameters/planning-parameter-usage";
 import { hasSafetyStockTargets } from "../safety-stock/safety-stock-target-usage";
 import { isScopeReadOnly } from "../tenants/tenant.service";
@@ -120,14 +121,16 @@ export class MaterialService {
   /**
    * Applies the given fields at `version`. A field counts only when it differs from the stored value
    * (spec Q8), so resending the base unit is no change; with nothing changed, nothing is written or
-   * recorded. The base unit can't change while conversions, planning parameters or safety targets
-   * hold values in it, and a material made at some location can't become raw (R02).
+   * recorded. Once any BOM revision references the material, its type and base unit never change
+   * again (R02, MAT-011, MAT-030). The base unit can't change while conversions, planning parameters
+   * or safety targets hold values in it, and a material made at some location can't become raw.
    */
   async update(materialId: string, changes: MaterialChanges, version: number, actor: AuditActor): Promise<MaterialSummary> {
     return this.versioned(async (em) => {
       const material = await findMaterial(em, materialId, { refresh: true });
       if (material.version !== version) throw versionConflict();
       const { active, ...fields } = changedFields(material, changes);
+      if (fields.type !== undefined || fields.baseUnit !== undefined) await assertNotInBoms(em, material, fields);
       if (fields.baseUnit !== undefined) await assertBaseUnitFree(em, material);
       if (fields.type === "raw" && (await isMadeAnywhere(em, material))) {
         throw new ConflictError(
@@ -276,6 +279,23 @@ export class MaterialService {
 
 const conversionExists = (unit: string) =>
   new ConflictError(`This material already has a conversion for ${unit}.`, "CONVERSION_EXISTS");
+
+/**
+ * Refuses a type or base-unit change once a BOM references the material (BOMs spec Q9): revisions
+ * are never removed, so this lock is permanent, and it is checked before the removable reasons so
+ * the admin isn't told to remove conversions or Make sets that wouldn't help.
+ */
+async function assertNotInBoms(em: EntityManager, material: Material, fields: MaterialChanges): Promise<void> {
+  const bom = await bomUsingMaterial(em, material);
+  if (bom === null) return;
+  if (fields.type !== undefined) {
+    throw new ConflictError(`BOM ${bom} uses this material, so its type can't change.`, "MATERIAL_TYPE_IN_USE");
+  }
+  throw new ConflictError(
+    `BOM ${bom} uses this material, so its base unit can't change: BOM quantities are stored in it.`,
+    "BASE_UNIT_IN_USE",
+  );
+}
 
 /**
  * Refuses a base-unit change while anything holds a value in the base unit: conversion factors are
