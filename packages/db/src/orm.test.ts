@@ -133,9 +133,9 @@ describe("migrations", () => {
         "bom_component",
         "bom_revision",
         "customer",
-        "forecast",
         "customer_order",
         "customer_order_line",
+        "forecast",
         "global_audit_event",
         "global_idempotency_key",
         "location",
@@ -477,6 +477,9 @@ describe("forecasts migration", () => {
         { quantity: "100.000000", kind: "text", version: 1 },
       ]);
 
+      // The four migrations that landed on main after the forecasts come off first.
+      for (let later = 0; later < 4; later += 1) await orm.migrator.down();
+      expect(await execute(orm, "select name from sqlite_master where name = 'forecast'")).toEqual([{ name: "forecast" }]);
       await orm.migrator.down();
       expect(await execute(orm, "select name from sqlite_master where name = 'forecast'")).toEqual([]);
       expect(await execute(orm, "select count(*) as n from material")).toEqual([{ n: 1 }]);
