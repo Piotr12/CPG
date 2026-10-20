@@ -52,6 +52,9 @@ const footerBox = (browser: Browser) =>
     return { top: box.top + scrollY, bottom: box.bottom + scrollY, height: innerHeight };
   })()`);
 
+/** A side of the TEST | PROD switch in the sidebar. */
+const switchLink = (href: string) => `[data-slot=sidebar] [data-tenant-switch] a[href='${href}']`;
+
 /** The tenant header row the page shows: Next.js keeps earlier pages' rows mounted but hidden. */
 const shownHeader = `[...document.querySelectorAll("[role=region][data-tenant]")].find((row) => row.offsetParent)`;
 const header = (browser: Browser) =>
@@ -163,7 +166,6 @@ describe("sidebar navigation", () => {
 
   it("switches tenant on the same screen and back, and from a record to the other tenant's list (TEN-010, TEN-012)", async () => {
     await openPage(admin, "/admin/test/materials");
-    const switchLink = (href: string) => `[data-slot=sidebar] [data-tenant-switch] a[href='${href}']`;
 
     await clickHydrated(admin, switchLink("/admin/prod/materials"));
     await admin.waitUntil(`location.pathname === "/admin/prod/materials" && ${shownHeader}?.dataset.tenant === "prod"`);
@@ -176,6 +178,27 @@ describe("sidebar navigation", () => {
     await openPage(admin, "/admin/test/materials/00000001");
     await clickHydrated(admin, switchLink("/admin/prod/materials"));
     await admin.waitUntil(`location.pathname === "/admin/prod/materials"`);
+  });
+
+  it("lets a normal user switch from Prod to Test and back in the sidebar at 1280 px, with no other step (TEN-010)", async () => {
+    await openPage(ursula, "/admin/prod/materials");
+    const current = () =>
+      ursula.evaluate<string>(`document.querySelector("[data-slot=sidebar] [data-tenant-switch] [aria-current=page]").textContent`);
+    await ursula.waitUntil(`${shownHeader}?.dataset.tenant === "prod"`);
+    expect(await current()).toBe("Prod");
+
+    await clickHydrated(ursula, switchLink("/admin/test/materials"));
+    await ursula.waitUntil(`location.pathname === "/admin/test/materials" && ${shownHeader}?.dataset.tenant === "test"`);
+    expect(await current()).toBe("Test");
+    expect(await currentEntry(ursula)).toEqual(["Materials"]);
+    // Test's own first material, shown: the Prod page stays mounted but hidden (display: none), and may have a 00000001 too.
+    await ursula.waitUntil(
+      `[...document.querySelectorAll("main tbody tr")].some((row) => row.offsetParent && row.innerText.startsWith("00000001\\tSteel sheet 2 mm"))`,
+    );
+
+    await clickHydrated(ursula, switchLink("/admin/prod/materials"));
+    await ursula.waitUntil(`location.pathname === "/admin/prod/materials" && ${shownHeader}?.dataset.tenant === "prod"`);
+    expect(await current()).toBe("Prod");
   });
 
   it("names the scope in the header row: TEST or PROD on tenant pages, GLOBAL and shared elsewhere (TEN-011)", async () => {

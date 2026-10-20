@@ -45,25 +45,31 @@ async function rowMenu(admin: Browser, id: string, item: string) {
   await admin.clickRole("menuitem", item);
 }
 
-/** The Prod audit's rows about `id` of `subject` as `[action, changes]`. */
-async function auditOf(admin: Browser, label: string): Promise<string[][]> {
+/** The Prod audit's rows whose subject starts with `label`, as cells: time, account, session, channel, action, subject, changes. */
+async function auditRows(admin: Browser, label: string): Promise<string[][]> {
   await admin.open(`${baseUrl}/admin/prod/audit`);
   await admin.waitFor("table");
   const rows = await admin.evaluate<string[][]>(
     `[...document.querySelectorAll("tbody tr")].map((row) => [...row.cells].map((cell) => cell.innerText.trim()))`,
   );
-  return rows.filter((cells) => cells[5].startsWith(label)).map(([, , , , action, , changes]) => [action, changes]);
+  return rows.filter((cells) => cells[5].startsWith(label));
 }
+
+/** The Prod audit's rows whose subject starts with `label`, as `[action, changes]`. */
+const auditOf = async (admin: Browser, label: string) =>
+  (await auditRows(admin, label)).map(([, , , , action, , changes]) => [action, changes]);
 
 describe("locations, customers and suppliers (E03-S02)", () => {
   let admin: Browser;
   let una: Browser;
+  /** A second admin session, for two people working on one record (AUD-024). */
+  let other: Browser;
 
   beforeAll(async () => {
-    [admin, una] = [openBrowser(), openBrowser()];
-    await signInAsAdmin(admin, baseUrl, adminPassword);
+    [admin, una, other] = [openBrowser(), openBrowser(), openBrowser()];
+    await Promise.all([signInAsAdmin(admin, baseUrl, adminPassword), signInAsAdmin(other, baseUrl, adminPassword)]);
   });
-  afterAll(() => Promise.all([admin, una].map((browser) => browser.close())));
+  afterAll(() => Promise.all([admin, una, other].map((browser) => browser.close())));
 
   it("starts Test with demonstration records of each kind, reached from the tenant home (TEN-001, D06)", async () => {
     for (const [kind, title, first] of [
@@ -109,12 +115,16 @@ describe("locations, customers and suppliers (E03-S02)", () => {
     await admin.waitUntil(`!document.querySelector("[role=dialog]")`);
     await admin.waitForText("nr-ui fasteners and bolts");
 
-    expect(await auditOf(admin, id)).toEqual(
+    // By label, not ID alone: each kind numbers on its own, so another file's location may share the ID.
+    const rows = await auditRows(admin, `${id} — nr-ui fasteners`);
+    expect(rows.map(([, account, , channel, action, , changes]) => [account, channel, action, changes])).toEqual(
       expect.arrayContaining([
-        ["Supplier renamed", "name: nr-ui fasteners → nr-ui fasteners and bolts"],
-        ["Supplier created", `ID: ${id}\nname: nr-ui fasteners\nactive: yes`],
+        ["admin", "UI", "Supplier renamed", "name: nr-ui fasteners → nr-ui fasteners and bolts"],
+        ["admin", "UI", "Supplier created", `ID: ${id}\nname: nr-ui fasteners\nactive: yes`],
       ]),
     );
+    // One admin session made both changes: its short id is on each row (AUD-001).
+    expect([...new Set(rows.map(([, , session]) => session))]).toEqual([expect.stringMatching(/^[0-9a-f]{8}$/)]);
   });
 
   it("deactivates a location, which stays listed as Inactive, and reactivates it, both audited (AUD-003, LFC-019)", async () => {
@@ -132,12 +142,40 @@ describe("locations, customers and suppliers (E03-S02)", () => {
     await admin.waitUntil(`!document.querySelector("[role=alertdialog]")`);
     expect((await listRows(admin, "prod", "locations")).find(([rowId]) => rowId === id)?.[2]).toBe("Active");
 
-    expect(await auditOf(admin, id)).toEqual(
+    expect(await auditOf(admin, `${id} — nr-ui old warehouse`)).toEqual(
       expect.arrayContaining([
         ["Location deactivated", "active: yes → no"],
         ["Location reactivated", "active: no → yes"],
       ]),
     );
+  });
+
+  it("shows the conflict when another session renamed the location first, and keeps that name (AUD-024)", async () => {
+    const id = await createInProd(admin, "locations", "Create location", "nr-ui dock");
+    // Both sessions load the same version and open the rename.
+    for (const browser of [admin, other]) {
+      await listRows(browser, "prod", "locations");
+      await rowMenu(browser, id, "Edit");
+      await browser.waitFor("[role=dialog]");
+    }
+    await admin.fillLabel("Name", "nr-ui dock stale");
+
+    await other.fillLabel("Name", "nr-ui dock first");
+    await other.click("[role=dialog] button[type=submit]");
+    await other.waitUntil(`!document.querySelector("[role=dialog]")`);
+    await other.waitForText("nr-ui dock first");
+
+    await admin.click("[role=dialog] button[type=submit]");
+    await admin.waitFor("[role=dialog] [role=alert]");
+    expect(await admin.text("[role=dialog] [role=alert]")).toBe("This location was changed since you loaded the page. Check it and try again.");
+    // The list behind the dialog refreshed to the other session's name.
+    await admin.waitUntil(
+      `[...document.querySelectorAll("main tbody tr")].some((row) => row.cells[0].innerText.trim() === ${JSON.stringify(id)} && row.cells[1].innerText.trim() === "nr-ui dock first")`,
+    );
+    await admin.clickRole("button", "Cancel");
+    await admin.waitUntil(`!document.querySelector("[role=dialog]")`);
+
+    expect((await listRows(admin, "prod", "locations")).find(([rowId]) => rowId === id)).toEqual([id, "nr-ui dock first", "Active"]);
   });
 
   it("keeps each row's menu in view on a phone", async () => {

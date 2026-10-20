@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { openBrowser, type Browser } from "./browser";
-import { choosePreference, signedInAs, signIn, signInAsAdmin } from "./sign-in";
+import { choosePreference, hydrated, signedInAs, signIn, signInAsAdmin } from "./sign-in";
 
 const baseUrl = inject("baseUrl");
 const adminPassword = inject("adminPassword");
@@ -9,6 +9,7 @@ const adminPassword = inject("adminPassword");
 const USERNAME = "audit-alice";
 const PASSWORD = "audit alice's first password";
 const NEW_PASSWORD = "audit alice's second password";
+const LOCATION = "audit-ui depot";
 
 /** One audit row's cells: time, account, session, channel, action, subject, changes. */
 type Row = [string, string, string, string, string, string, string];
@@ -202,5 +203,24 @@ describe("every change is kept in an append-only audit", () => {
     expect(new URL(await alice.url()).pathname).toBe("/admin/test/audit");
     expect(await alice.title()).toBe("Test · Audit");
     expect(await alice.text("h1")).toBe("Audit — Test");
+  });
+
+  it("shows a normal user the tenant audit's entries with nothing to change (AUD-009)", async () => {
+    // An entry of this file's own in the Test audit: the admin creates a location.
+    await admin.open(`${baseUrl}/admin/test/locations`);
+    const create = `[...document.querySelectorAll("main button")].find((b) => b.textContent.trim() === "Create location")`;
+    await admin.waitUntil(`(${create}) && !(${create}).closest("[hidden]") && ${hydrated(create)}`);
+    await admin.clickRole("button", "Create location");
+    await admin.fillLabel("Name", LOCATION);
+    await admin.click("[role=dialog] button[type=submit]");
+    await admin.waitUntil(`!document.querySelector("[role=dialog]")`);
+    await admin.waitForText(LOCATION);
+
+    await alice.open(`${baseUrl}/admin/test/audit`);
+    const own = `[...document.querySelectorAll("main tbody tr")].find((row) => !row.closest("[hidden]") && row.innerText.includes(${JSON.stringify(LOCATION)}))`;
+    await alice.waitUntil(own);
+
+    expect(await alice.evaluate<string>(`${own}.cells[4].innerText.trim()`)).toBe("Location created");
+    expect(await alice.evaluate<number>(`document.querySelectorAll("main button, main input, main select, main textarea").length`)).toBe(0);
   });
 });

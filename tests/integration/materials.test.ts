@@ -10,6 +10,8 @@ const USERNAME = "mat-una";
 const PASSWORD = "mat una's first password";
 const BOLT = "mat-ui bolt";
 const NUT = "mat-ui nut";
+const GAUGE = "mat-ui test-only gauge";
+const CLAMP = "mat-ui clamp";
 
 /** True once `element` is hydrated, shown, and outside Next.js's hidden staging container. */
 const ready = (element: string) =>
@@ -27,9 +29,9 @@ async function listRows(browser: Browser, tenant: string): Promise<string[][]> {
   );
 }
 
-/** Creates a material in Prod through the dialog and returns its new ID, read from the list. */
-async function createInProd(admin: Browser, type: string, description: string, baseUnit: string): Promise<string> {
-  const before = new Set((await listRows(admin, "prod")).map(([id]) => id));
+/** Creates a material in a tenant through the dialog and returns its new ID, read from the list. */
+async function create(admin: Browser, tenant: string, type: string, description: string, baseUnit: string): Promise<string> {
+  const before = new Set((await listRows(admin, tenant)).map(([id]) => id));
   await admin.waitUntil(ready(button("Create material")));
   await admin.clickRole("button", "Create material");
   await admin.select("[role=dialog] select[name=type]", type);
@@ -38,9 +40,11 @@ async function createInProd(admin: Browser, type: string, description: string, b
   await admin.click("[role=dialog] button[type=submit]");
   await admin.waitUntil(`!document.querySelector("[role=dialog]")`);
   await admin.waitForText(description);
-  // The new row is the one that wasn't there: other files create Prod materials too.
-  return (await listRows(admin, "prod")).find(([id, text]) => !before.has(id) && text === description)![0];
+  // The new row is the one that wasn't there: other files create materials too.
+  return (await listRows(admin, tenant)).find(([id, text]) => !before.has(id) && text === description)![0];
 }
+const createInProd = (admin: Browser, type: string, description: string, baseUnit: string) =>
+  create(admin, "prod", type, description, baseUnit);
 
 /** Opens a Prod material's page and waits until its controls can be used. */
 async function openMaterial(browser: Browser, id: string, controls: boolean) {
@@ -52,13 +56,15 @@ async function openMaterial(browser: Browser, id: string, controls: boolean) {
 describe("materials and their unit conversions (E03-S01)", () => {
   let admin: Browser;
   let una: Browser;
+  /** A second admin session, for two people working on one material (AUD-024). */
+  let other: Browser;
   let boltId: string;
 
   beforeAll(async () => {
-    [admin, una] = [openBrowser(), openBrowser()];
-    await signInAsAdmin(admin, baseUrl, adminPassword);
+    [admin, una, other] = [openBrowser(), openBrowser(), openBrowser()];
+    await Promise.all([signInAsAdmin(admin, baseUrl, adminPassword), signInAsAdmin(other, baseUrl, adminPassword)]);
   });
-  afterAll(() => Promise.all([admin, una].map((browser) => browser.close())));
+  afterAll(() => Promise.all([admin, una, other].map((browser) => browser.close())));
 
   it("starts Test with demonstration materials, reached from the tenant home (TEN-001, D06)", async () => {
     await admin.open(`${baseUrl}/admin/test`);
@@ -85,6 +91,18 @@ describe("materials and their unit conversions (E03-S01)", () => {
     expect(nutId).toBe(String(Number(boltId) + 1).padStart(8, "0"));
     expect((await listRows(admin, "prod")).find((cells) => cells[0] === nutId)).toEqual([nutId, NUT, "Intermediate", "each", "Active"]);
     expect(await listRows(admin, "test")).toEqual(testBefore);
+  });
+
+  it("keeps a material created in Test out of Prod (R05)", async () => {
+    const prodBefore = await listRows(admin, "prod");
+
+    const id = await create(admin, "test", "raw", GAUGE, "kg");
+
+    expect((await listRows(admin, "test")).find((cells) => cells[0] === id)).toEqual([id, GAUGE, "Raw", "kg", "Active"]);
+    const prod = await listRows(admin, "prod");
+    expect(prod.map(([, description]) => description)).not.toContain(GAUGE);
+    // Prod's own rows are unchanged, whatever IDs they share with Test.
+    expect(prod.filter(([rowId]) => prodBefore.some(([before]) => before === rowId))).toEqual(prodBefore);
   });
 
   it("names a missing description before creating anything (MAT-008)", async () => {
@@ -140,7 +158,12 @@ describe("materials and their unit conversions (E03-S01)", () => {
     const rows = await admin.evaluate<string[][]>(
       `[...document.querySelectorAll("tbody tr")].map((row) => [...row.cells].map((cell) => cell.innerText.trim()))`,
     );
-    const own = rows.filter((cells) => cells[5].startsWith(boltId)).map(([, account, , channel, action, , changes]) => [account, channel, action, changes]);
+    // By label, not ID alone: locations, customers and suppliers number from 00000001 too.
+    const ownRows = rows.filter((cells) => cells[5].startsWith(`${boltId} — ${BOLT}`));
+    const own = ownRows.map(([, account, , channel, action, , changes]) => [account, channel, action, changes]);
+    // One admin session made every change: its short id is on each row (AUD-001).
+    const sessions = new Set(ownRows.map(([, , session]) => session));
+    expect([...sessions]).toEqual([expect.stringMatching(/^[0-9a-f]{8}$/)]);
     expect(own).toEqual(
       expect.arrayContaining([
         ["admin", "UI", "Material deactivated", "active: yes → no"],
@@ -148,6 +171,34 @@ describe("materials and their unit conversions (E03-S01)", () => {
         ["admin", "UI", "Material created", `ID: ${boltId}\ntype: raw\ndescription: ${BOLT}\nbase unit: each\nactive: yes`],
       ]),
     );
+  });
+
+  it("shows the conflict when another session changed the material first, and keeps that change (AUD-024)", async () => {
+    const id = await createInProd(admin, "raw", CLAMP, "each");
+    // Both sessions load the same version and start an edit.
+    for (const browser of [admin, other]) {
+      await openMaterial(browser, id, true);
+      await browser.waitUntil(ready(button("Edit")));
+      await browser.clickRole("button", "Edit");
+      await browser.waitFor("[role=dialog]");
+    }
+    await admin.fillLabel("Description", `${CLAMP} stale`);
+
+    await other.fillLabel("Description", `${CLAMP} first`);
+    await other.click("[role=dialog] button[type=submit]");
+    await other.waitUntil(`!document.querySelector("[role=dialog]")`);
+    await other.waitForText(`${id} — ${CLAMP} first`);
+
+    await admin.click("[role=dialog] button[type=submit]");
+    await admin.waitFor("[role=dialog] [role=alert]");
+    expect(await admin.text("[role=dialog] [role=alert]")).toBe("This material was changed since you loaded the page. Check it and try again.");
+    // The page behind the dialog refreshed to the other session's change.
+    await admin.waitUntil(`document.querySelector("main h1")?.textContent === ${JSON.stringify(`${id} — ${CLAMP} first`)}`);
+    await admin.clickRole("button", "Cancel");
+    await admin.waitUntil(`!document.querySelector("[role=dialog]")`);
+
+    await openMaterial(admin, id, true);
+    expect(await admin.text("main h1")).toBe(`${id} — ${CLAMP} first`);
   });
 
   it("shows a normal user materials and conversions without any control (TEN-004)", async () => {
