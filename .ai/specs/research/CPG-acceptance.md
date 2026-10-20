@@ -50,7 +50,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** Creation and sign-in: `tests/integration/users.test.ts`, `packages/core/src/services/users/user.service.test.ts`. The normal user is refused every admin-only operation (`tests/integration/api-tokens.test.ts`, `packages/core/src/http/auth.test.ts`) and every master-data write: through the UI (`tests/integration/materials.test.ts`, `named-records.test.ts` and `planning-parameters.test.ts` show no controls; every master's `actions.test.ts` refuses all its writes) and the API (`tests/integration/materials-api.test.ts`, `named-records-api.test.ts`, `planning-parameters-api.test.ts`), while still reading. E01-S02, PR #34, with #22, #23 and #24.
+- **Evidence:** Creation and sign-in: `tests/integration/users.test.ts`, `packages/core/src/services/users/user.service.test.ts`. The normal user is refused every admin-only operation (`tests/integration/api-tokens.test.ts`, `packages/core/src/http/auth.test.ts`) and every master-data write: through the UI (`tests/integration/materials.test.ts`, `named-records.test.ts` and `planning-parameters.test.ts` show no controls; every master's `actions.test.ts` refuses all its writes), and through the API, end to end for a write of each master (`tests/integration/materials-api.test.ts`, `named-records-api.test.ts`, `planning-parameters-api.test.ts`) and for every write in the routes' `route.test.ts` files, while still reading. E01-S02, PR #34, with #22, #23 and #24.
 - **Given:** Administrator logged in
 - **When:** Create normal user with initial password
 - **Then:** New active normal user can sign in with specified password and has no master-data edit permission.
@@ -320,7 +320,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/validators/materials/material-fields.schema.test.ts` and `material-create.schema.test.ts`, the materials `route.test.ts`, `create-material-dialog.test.tsx`, `tests/integration/materials-api.test.ts` (a material without a type is refused and nothing is created). E03-S01, #22.
+- **Evidence:** `packages/core/src/validators/materials/material-fields.schema.test.ts` and `material-create.schema.test.ts`, the materials `route.test.ts`, `create-material-dialog.test.tsx` (a material without a type is refused). E03-S01, #22.
 - **Given:** Create material without type
 - **When:** Submit through UI or API
 - **Then:** Validation identifies material type as mandatory; no material created.
@@ -338,7 +338,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `material-fields.schema.test.ts` (any other type is refused with a stable code), the create route and dialog tests. E03-S01, #22.
+- **Evidence:** `material-fields.schema.test.ts` (any other type is refused with one fixed message; the route answers `VALIDATION_FAILED`), the create route and dialog tests, `tests/integration/materials-api.test.ts` (an unknown type is refused through the API). E03-S01, #22.
 - **Given:** New material with unrecognized type
 - **When:** Validate creation
 - **Then:** Rejected with descriptive type validation; no record created.
@@ -528,7 +528,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/services/materials/find-material.test.ts`, `packages/core/src/services/planning-parameters/planning-parameter.service.test.ts` and `packages/core/src/services/safety-stock/safety-stock-target.service.test.ts` (a new set or target refuses an inactive material, `MATERIAL_INACTIVE`, while existing rows stay readable and editable), `packages/app/src/components/master-data/references.test.tsx` and `tests/integration/planning-parameters.test.ts` (a deactivated material isn't offered and its target stays), `tests/integration/planning-parameters-api.test.ts` (409 and nothing stored). PO lines are slice 2. E03-S03, #24.
+- **Evidence:** `packages/core/src/services/materials/find-material.test.ts`, `packages/core/src/services/planning-parameters/planning-parameter.service.test.ts` and `packages/core/src/services/safety-stock/safety-stock-target.service.test.ts` (a new set or target refuses an inactive material, `MATERIAL_INACTIVE`; an existing target stays readable and editable), `packages/app/src/components/master-data/references.test.tsx` and `tests/integration/planning-parameters.test.ts` (a deactivated material isn't offered and its target stays), `tests/integration/planning-parameters-api.test.ts` (409 and nothing stored). PO lines are slice 2. E03-S03, #24.
 - **Given:** Material inactive, historical PO remains
 - **When:** Create new PO line using inactive material
 - **Then:** New selection rejected; historical PO remains readable and eligible for completion.
@@ -3345,7 +3345,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
 
-- **Evidence:** A normal user's token is refused (403) on admin-only operations, end to end: `GET /api/users` in `tests/integration/api-tokens.test.ts`; `POST /api/users`, `PATCH /api/users/{id}` and `PUT /api/users/{id}/password` in `tests/integration/api-users.test.ts`, where the same token still changes its own preferences; every master-data write in `tests/integration/materials-api.test.ts`, `named-records-api.test.ts` and `planning-parameters-api.test.ts`, where the token still reads. Unit tests in the routes' `route.test.ts` files and `packages/app/src/auth/api-write.test.ts`. E01-S03, PRs #41, #48; #52; with #22, #23 and #24.
+- **Evidence:** A normal user's token is refused (403) on admin-only operations, end to end: `GET /api/users` in `tests/integration/api-tokens.test.ts`; `POST /api/users`, `PATCH /api/users/{id}` and `PUT /api/users/{id}/password` in `tests/integration/api-users.test.ts`, where the same token still changes its own preferences; a master-data write of each kind in `tests/integration/materials-api.test.ts` (create and change a material), `named-records-api.test.ts` (create) and `planning-parameters-api.test.ts` (create a safety-stock target), where the token still reads. Unit tests in the routes' `route.test.ts` files and `packages/app/src/auth/api-write.test.ts`. E01-S03, PRs #41, #48; #52; with #22, #23 and #24.
 - **Given:** Normal user's bearer token valid
 - **When:** Try to change master material
 - **Then:** Rejected as forbidden; ordinary allowed transaction can still succeed.
@@ -4195,7 +4195,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** Deactivation stores Inactive and keeps the record and its history (`packages/core/src/services/named-records/named-records.test.ts`, `tests/integration/named-records.test.ts` and `named-records-api.test.ts`); new planning parameter sets and safety-stock targets refuse it and its pickers drop it (`packages/core/src/services/locations/find-location.test.ts`, `packages/core/src/services/planning-parameters/planning-parameter.service.test.ts`, `packages/core/src/services/safety-stock/safety-stock-target.service.test.ts`, `references.test.tsx`, `tests/integration/planning-parameters.test.ts`), while its existing rows stay. Stock, transfers and documents don't exist yet, so the clearing preconditions (LFC-016…018) are slice 2. E03-S02, #23., with #24.
+- **Evidence:** Deactivation stores Inactive and keeps the record and its history (`packages/core/src/services/named-records/named-records.test.ts`, `tests/integration/named-records.test.ts` and `named-records-api.test.ts`); new planning parameter sets and safety-stock targets refuse it and its pickers drop it (`packages/core/src/services/locations/find-location.test.ts`, `packages/core/src/services/planning-parameters/planning-parameter.service.test.ts`, `packages/core/src/services/safety-stock/safety-stock-target.service.test.ts`, `references.test.tsx`, `tests/integration/planning-parameters.test.ts`), while its existing rows stay. Stock, transfers and documents don't exist yet, so the clearing preconditions (LFC-016…018) are slice 2. E03-S02, #23, with #24.
 - **Given:** Location empty, transfers complete, no open operational documents
 - **When:** Admin deactivates location
 - **Then:** Inactive status stored and future selection blocked; history readable.
