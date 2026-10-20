@@ -531,6 +531,17 @@ describe("MaterialService", () => {
     });
   });
 
+  describe("listUnits", () => {
+    it("lists each material's base unit, then its conversions' units in order, for this tenant only", async () => {
+      await boltWithCase();
+      const box = await service().create({ type: "raw", description: "Cardboard box", baseUnit: "each" }, ACTOR);
+      await service().addConversion("00000001", { unit: "box", numerator: "100", denominator: "1" }, ACTOR);
+      await service("test").create({ type: "raw", description: "Elsewhere", baseUnit: "kg" }, ACTOR);
+
+      expect(await service().listUnits()).toEqual({ "00000001": ["each", "box", "case"], [box.id]: ["each"] });
+    });
+  });
+
   describe("seedDemo", () => {
     it("creates the demo materials with consecutive IDs in an empty tenant, unaudited, and nothing the second time", async () => {
       expect(await service("test").seedDemo()).toBe(DEMO_MATERIALS.length);
