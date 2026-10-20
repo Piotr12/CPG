@@ -32,6 +32,9 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
   The Docker-only test (`startup-guard`) is skipped, and CI covers the image.
 
+- **2026-10-20 — Never name a zsh variable `path`** — in zsh, `path` is tied to `PATH`, so `path="spec-boms/x.png"` in a loop wiped the command path and every later command failed with "command not found" (the evidence upload of #69). Use another name (`rel`, `file`).
+- **2026-10-20 — `z.flattenError` keys a field error by the first path segment only** — a list item's error (`components.2.unit`) came back as `components`, so a form couldn't put it on its row. `validationError` (`core/src/http/parse-input.ts`) now keys by the full dotted path; top-level fields keep their plain names.
+
 ## Testing
 
 - **2026-10-17 — Root-level config files are `.mts`** — the root `package.json` has no `"type"`, so Vite loads `vitest.config.ts` as CommonJS and warns. Name root-level ESM files `.mts` (`vitest.config.mts`, `vitest.integration.config.mts`). Root tests (`tests/*.test.ts`) run through Vitest, so `.ts` is fine there.
