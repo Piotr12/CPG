@@ -127,8 +127,7 @@ export class UserService {
         if (user.version !== version) throw versionConflict();
         const { endSessions, audit } = change(user);
         if (endSessions) {
-          // Outside the identity map: the rows are deleted next, so no stale copy may outlive them.
-          const tokens = await em.find(ApiToken, { user: user.id }, { fields: ["id", "name"], disableIdentityMap: true });
+          const tokens = await em.find(ApiToken, { user: user.id }, { fields: ["id", "name"] });
           await em.nativeDelete(Session, { user: user.id });
           await em.nativeDelete(ApiToken, { user: user.id });
           for (const token of tokens) recordGlobalAudit(em, actor, tokenRevokedEntry(token));
