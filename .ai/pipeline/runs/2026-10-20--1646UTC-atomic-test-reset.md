@@ -20,6 +20,7 @@ Phase 3: integration/race evidence, contracts/acceptance, full gate and independ
 Tenant scoping, deletion and public write contract: risk-high. Same request em throughout. All four coverage measures stay 100%. Docker unavailable locally; use standalone production output with copied static and public assets before startup; CI must cover the image and startup-guard. Shared qa-evidence upload is guarded; link artifacts unless separately authorized.
 
 ## Log
+- 16:51 UTC: Phase 1 implemented. Targeted db tests: 28 passed. Core reset/demo/schema tests: 12 passed; typecheck passed. Generic deletion uses deferred FK checks for every owned table rather than duplicating dependency sorting; this also handles cycles, keeps FK enforcement on and rejects global references before deletion. Migration rollback tests updated for the new migration.
 - Design PR #105 published after fresh scope/architecture review. Three design findings addressed: nine-digit generation cap, fresh import-preview generation and service-owned direct-call transactions. Baseline lint/typecheck/coverage/build passed; standalone baseline integration 213 passed and one Docker-only skip; static asset setup corrected and icons retested.
 
 ## Progress
@@ -28,9 +29,9 @@ Tenant scoping, deletion and public write contract: risk-high. Same request em t
 
 ### Phase 1: Persistence and atomic service
 
-- [ ] 1.1 Test-audit deletion migration and generic db helper
-- [ ] 1.2 Shared ordered demo seed invocation
-- [ ] 1.3 Atomic Test reset service and generation schema
+- [x] 1.1 Test-audit deletion migration and generic db helper — 0c0ce42
+- [x] 1.2 Shared ordered demo seed invocation — 0c0ce42
+- [x] 1.3 Atomic Test reset service and generation schema — 0c0ce42
 
 ### Phase 2: API and UI
 
