@@ -18,6 +18,8 @@ import {
 import { AppError, ConflictError, NotFoundError, ValidationError, versionConflict } from "../../http/errors";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
+import { hasPlanningParameters, isMadeAnywhere } from "../planning-parameters/planning-parameter-usage";
+import { hasSafetyStockTargets } from "../safety-stock/safety-stock-target-usage";
 import { isScopeReadOnly } from "../tenants/tenant.service";
 import { findMaterial } from "./find-material";
 
@@ -134,17 +136,19 @@ export class MaterialService {
   /**
    * Applies the given fields at `version`. A field counts only when it differs from the stored value
    * (spec Q8), so resending the base unit is no change; with nothing changed, nothing is written or
-   * recorded. The base unit can't change while conversions exist: their factors are relative to it.
+   * recorded. The base unit can't change while conversions, planning parameters or safety targets
+   * hold values in it, and a material made at some location can't become raw (R02).
    */
   async update(materialId: string, changes: MaterialChanges, version: number, actor: AuditActor): Promise<MaterialSummary> {
     return this.versioned(async (em) => {
       const material = await findMaterial(em, materialId, { refresh: true });
       if (material.version !== version) throw versionConflict();
       const { active, ...fields } = changedFields(material, changes);
-      if (fields.baseUnit !== undefined && (await em.count(MaterialConversion, { material })) > 0) {
+      if (fields.baseUnit !== undefined) await assertBaseUnitFree(em, material);
+      if (fields.type === "raw" && (await isMadeAnywhere(em, material))) {
         throw new ConflictError(
-          "Remove this material's unit conversions before changing its base unit: their factors are relative to it.",
-          "BASE_UNIT_HAS_CONVERSIONS",
+          "Set this material to Buy at every location before making it raw: a raw material is always bought.",
+          "MATERIAL_MADE_AT_LOCATIONS",
         );
       }
       if (Object.keys(fields).length > 0) {
@@ -304,6 +308,26 @@ export class MaterialService {
 
 const conversionExists = (unit: string) =>
   new ConflictError(`This material already has a conversion for ${unit}.`, "CONVERSION_EXISTS");
+
+/**
+ * Refuses a base-unit change while anything holds a value in the base unit: conversion factors are
+ * relative to it (spec Q8), and planning parameters and safety targets store quantities in it
+ * (planning spec Q6). Conversions are checked first, so their more specific error wins.
+ */
+async function assertBaseUnitFree(em: EntityManager, material: Material): Promise<void> {
+  if ((await em.count(MaterialConversion, { material })) > 0) {
+    throw new ConflictError(
+      "Remove this material's unit conversions before changing its base unit: their factors are relative to it.",
+      "BASE_UNIT_HAS_CONVERSIONS",
+    );
+  }
+  if ((await hasPlanningParameters(em, material)) || (await hasSafetyStockTargets(em, material))) {
+    throw new ConflictError(
+      "Remove this material's planning parameters and safety-stock targets before changing its base unit: their quantities are in it.",
+      "BASE_UNIT_IN_USE",
+    );
+  }
+}
 
 /** The changes that differ from the stored values; equal values are no change (spec Q8). */
 function changedFields(material: Material, changes: MaterialChanges): MaterialChanges {
