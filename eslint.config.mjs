@@ -21,6 +21,11 @@ const core = forbid(["@cpg/core", "@cpg/core/*"], "@cpg/core depends on this pac
 const framework = forbid(["next", "next/*", "react", "react-dom", "react/*"], "Keep this package framework-agnostic.");
 const app = forbid(["@cpg/app", "@cpg/app/*"], "Nothing depends on @cpg/app.");
 const ui = forbid(["@cpg/ui", "@cpg/ui/*"], "Only @cpg/app uses @cpg/ui.");
+// Routes use app/src/routing/api-handler.ts: it lets Next.js's control-flow errors through (#38).
+const unwiredApiHandler = {
+  ...forbid(["@cpg/core"], "Use apiHandler from app/src/routing/api-handler.ts, which passes unstable_rethrow."),
+  importNames: ["createApiHandler"],
+};
 
 // Tenant isolation (R05; spec .ai/specs/2026-10-19--0913UTC-test-prod-tenants.md). @cpg/db enforces
 // it at runtime; these rules close what it can't see: switching the filter off, picking the tenant
@@ -67,7 +72,8 @@ const eslintConfig = defineConfig([
   ...nextTs,
   // The Next.js app lives in a workspace package, not at the repo root.
   { settings: { next: { rootDir: "packages/app/" } } },
-  restrictImports(["packages/app/**"], orm, db),
+  restrictImports(["packages/app/**"], orm, db, unwiredApiHandler),
+  restrictImports(["packages/app/src/routing/api-handler.ts"], orm, db),
   restrictImports(["packages/core/**"], orm, framework, app, ui),
   restrictImports(["packages/db/**"], framework, app, ui, core),
   restrictImports(

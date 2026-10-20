@@ -19,6 +19,9 @@
   - Rejected `await connection()`, the issue's other suggestion: it also stops the prerender by rejecting, so the wrapper would still log it.
 - 05:32 Claimed #38 (assignee, `in-progress`, claim comment).
 - 05:40 Implemented. The new regression test fails 4/6 with a no-op `rethrow` and passes with `unstable_rethrow`.
+- 05:55 Opened #63 and moved the lock to the PR. An independent review approved it with 1 minor and 1 nit, both fixed:
+  - an ESLint `no-restricted-imports` rule keeps `createApiHandler` inside `app/src/routing/api-handler.ts`;
+  - the lesson is narrowed to route handlers and request-time code.
 
 ## Changes
 
@@ -26,6 +29,7 @@
 - `packages/app/src/routing/api-handler.ts` (new): `apiHandler = createApiHandler(unstable_rethrow)`, with its test.
 - The 15 `route.ts` files and `auth/api-write.ts` import `apiHandler` from `routing/api-handler`.
 - Route tests and `tests/setup/api-write.ts`: mocks pass `createApiHandler` through, and the stand-ins use the app wrapper.
+- `eslint.config.mjs`: `app` code may not import `createApiHandler` except in the wrapper.
 - `.ai/docs/engineering-standards.md`, `.ai/lessons.md`.
 
 ## Verification
@@ -35,6 +39,7 @@
 - `npm run test:coverage`: 213 files, 1376 tests passed; the 100% thresholds hold.
 - `npm run build`: exit 0, with 0 "Route handler failed" lines (6 before the fix). Every `/api` route is still dynamic (`ƒ`).
 - `npm run test:integration` (Docker): 20 files, 145 tests passed.
+- After the review fix, `npm run lint` passes, and a probe file that imports `createApiHandler` in `app` fails it.
 - Regression proof: with a no-op `rethrow`, `routing/api-handler.test.ts` fails 4 of 6 tests.
 
 ## Follow-ups
