@@ -8,20 +8,18 @@ import {
 } from "@cpg/db";
 import { DEMO_MATERIALS } from "../../domain/materials/demo-materials";
 import { nextMaterialCode } from "../../domain/materials/material-code";
-import {
-  convertToBase,
-  formatDecimal,
-  inverseFactor,
-  MAX_QUANTITY,
-  parseDecimal,
-} from "../../domain/quantities/decimal";
-import { AppError, ConflictError, NotFoundError, ValidationError, versionConflict } from "../../http/errors";
+import { formatDecimal, inverseFactor, parseDecimal } from "../../domain/quantities/decimal";
+import { AppError, ConflictError, NotFoundError, versionConflict } from "../../http/errors";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
+import { bomUsingMaterial } from "../boms/bom-usage";
 import { hasPlanningParameters, isMadeAnywhere } from "../planning-parameters/planning-parameter-usage";
 import { hasSafetyStockTargets } from "../safety-stock/safety-stock-target-usage";
 import { isScopeReadOnly } from "../tenants/tenant.service";
+import { convertToBaseQuantity, type BaseQuantity } from "./base-quantity";
 import { findMaterial } from "./find-material";
+
+export type { BaseQuantity } from "./base-quantity";
 
 export { materialNotFound } from "./find-material";
 
@@ -66,19 +64,6 @@ export interface MaterialChanges {
 }
 
 export interface ConversionFactor {
-  numerator: string;
-  denominator: string;
-}
-
-/**
- * An entered quantity converted into the material's base unit (spec Q5): the six-decimal base
- * quantity that is authoritative, and the entered quantity, unit and factor that history keeps
- * (MAT-019). The BOM and document stories store this record as it is.
- */
-export interface BaseQuantity {
-  baseQuantity: string;
-  enteredQuantity: string;
-  enteredUnit: string;
   numerator: string;
   denominator: string;
 }
@@ -136,14 +121,16 @@ export class MaterialService {
   /**
    * Applies the given fields at `version`. A field counts only when it differs from the stored value
    * (spec Q8), so resending the base unit is no change; with nothing changed, nothing is written or
-   * recorded. The base unit can't change while conversions, planning parameters or safety targets
-   * hold values in it, and a material made at some location can't become raw (R02).
+   * recorded. Once any BOM revision references the material, its type and base unit never change
+   * again (R02, MAT-011, MAT-030). The base unit can't change while conversions, planning parameters
+   * or safety targets hold values in it, and a material made at some location can't become raw.
    */
   async update(materialId: string, changes: MaterialChanges, version: number, actor: AuditActor): Promise<MaterialSummary> {
     return this.versioned(async (em) => {
       const material = await findMaterial(em, materialId, { refresh: true });
       if (material.version !== version) throw versionConflict();
       const { active, ...fields } = changedFields(material, changes);
+      if (fields.type !== undefined || fields.baseUnit !== undefined) await assertNotInBoms(em, material, fields);
       if (fields.baseUnit !== undefined) await assertBaseUnitFree(em, material);
       if (fields.type === "raw" && (await isMadeAnywhere(em, material))) {
         throw new ConflictError(
@@ -225,36 +212,20 @@ export class MaterialService {
    * another unit through its conversion, rounded half-up once to six decimals (MAT-019…024, MAT-032).
    * A unit without a conversion is never assumed 1:1 (MAT-023).
    */
-  async toBaseQuantity(materialId: string, { quantity, unit }: { quantity: string; unit: string }): Promise<BaseQuantity> {
-    const entered = parseDecimal(quantity);
-    if (entered === null) {
-      throw new ValidationError({ quantity: ["Enter a number of at least 0, with at most 6 decimals."] });
-    }
-    const material = await findMaterial(this.em, materialId);
-    const factor =
-      unit === material.baseUnit
-        ? { numerator: "1", denominator: "1" }
-        : await this.em.findOne(MaterialConversion, { material, unit });
-    if (!factor) {
-      throw new AppError(
-        "UNIT_NOT_CONVERTIBLE",
-        `Material ${material.code} has no conversion from ${unit} to its base unit ${material.baseUnit}.`,
-      );
-    }
-    const base = convertToBase(entered, parseDecimal(factor.numerator)!, parseDecimal(factor.denominator)!);
-    if (base > MAX_QUANTITY) {
-      throw new AppError("QUANTITY_OUT_OF_RANGE", "That quantity is too large to store in the base unit.");
-    }
-    if (entered > 0n && base === 0n) {
-      throw new AppError("QUANTITY_ROUNDS_TO_ZERO", `That quantity is less than 0.000001 ${material.baseUnit}.`);
-    }
-    return {
-      baseQuantity: formatDecimal(base, { fixed: true }),
-      enteredQuantity: formatDecimal(entered),
-      enteredUnit: unit,
-      numerator: factor.numerator,
-      denominator: factor.denominator,
-    };
+  async toBaseQuantity(materialId: string, entered: { quantity: string; unit: string }): Promise<BaseQuantity> {
+    return convertToBaseQuantity(this.em, await findMaterial(this.em, materialId), entered);
+  }
+
+  /**
+   * Every material's units an entered quantity may use, by material ID: its base unit first, then
+   * its conversions' units in order. The recipe form offers them per line.
+   */
+  async listUnits(): Promise<Record<string, string[]>> {
+    const units: Record<string, string[]> = {};
+    for (const material of await this.list()) units[material.id] = [material.baseUnit];
+    const conversions = await this.em.find(MaterialConversion, {}, { populate: ["material"], orderBy: { unit: "asc" } });
+    for (const { material, unit } of conversions) units[material.code].push(unit);
+    return units;
   }
 
   /**
@@ -308,6 +279,23 @@ export class MaterialService {
 
 const conversionExists = (unit: string) =>
   new ConflictError(`This material already has a conversion for ${unit}.`, "CONVERSION_EXISTS");
+
+/**
+ * Refuses a type or base-unit change once a BOM references the material (BOMs spec Q9): revisions
+ * are never removed, so this lock is permanent, and it is checked before the removable reasons so
+ * the admin isn't told to remove conversions or Make sets that wouldn't help.
+ */
+async function assertNotInBoms(em: EntityManager, material: Material, fields: MaterialChanges): Promise<void> {
+  const bom = await bomUsingMaterial(em, material);
+  if (bom === null) return;
+  if (fields.type !== undefined) {
+    throw new ConflictError(`BOM ${bom} uses this material, so its type can't change.`, "MATERIAL_TYPE_IN_USE");
+  }
+  throw new ConflictError(
+    `BOM ${bom} uses this material, so its base unit can't change: BOM quantities are stored in it.`,
+    "BASE_UNIT_IN_USE",
+  );
+}
 
 /**
  * Refuses a base-unit change while anything holds a value in the base unit: conversion factors are

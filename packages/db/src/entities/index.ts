@@ -9,6 +9,10 @@ import {
 import { GlobalAuditEvent } from "./audit/global-audit-event.entity";
 import { TenantAuditEvent } from "./audit/tenant-audit-event.entity";
 import { Session } from "./auth/session.entity";
+import { BomComponent } from "./boms/bom-component.entity";
+import { BomRevision } from "./boms/bom-revision.entity";
+import { Bom } from "./boms/bom.entity";
+import { BOM_REVISION_IMMUTABLE } from "./boms/immutable-triggers";
 import { GlobalIdempotencyKey } from "./idempotency/global-idempotency-key.entity";
 import { IDEMPOTENCY_KEY_MAX } from "./idempotency/idempotency-key";
 import { TenantIdempotencyKey } from "./idempotency/tenant-idempotency-key.entity";
@@ -52,6 +56,7 @@ export type { MaterialType };
 export { Customer, Location, NAMED_RECORD_NAME_MAX, Supplier };
 export type { NamedRecord, NamedRecordEntity };
 export { PlanningParameterSet, PROCUREMENT_MODES, SafetyStockTarget };
+export { Bom, BomComponent, BOM_REVISION_IMMUTABLE, BomRevision };
 export type { ProcurementMode };
 export type { AuditChannel, AuditSnapshot, AuditValue, Locale, TenantCode, Theme, UserRole };
 export { currentTenant, isTenantOwned, TENANT_FILTER, tenantOwned, TenantViolationError, selectTenant };
@@ -75,6 +80,9 @@ export const entities = [
   Supplier,
   PlanningParameterSet,
   SafetyStockTarget,
+  Bom,
+  BomRevision,
+  BomComponent,
 ];
 
 /**

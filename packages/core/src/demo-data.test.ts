@@ -2,6 +2,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import {
+  Bom,
   Customer,
   initOrm,
   Location,
@@ -16,6 +17,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadConfig } from "./config";
 import { migrateDatabase, toDbOptions } from "./database";
 import { seedDemoData } from "./demo-data";
+import { DEMO_BOMS } from "./domain/boms/demo-boms";
 import { DEMO_CUSTOMERS } from "./domain/customers/demo-customers";
 import { DEMO_LOCATIONS } from "./domain/locations/demo-locations";
 import { DEMO_MATERIALS } from "./domain/materials/demo-materials";
@@ -60,6 +62,7 @@ describe("seedDemoData", () => {
       suppliers: { seeded: DEMO_SUPPLIERS.length },
       "planning parameter sets": { seeded: DEMO_PLANNING_PARAMETERS.length },
       "safety-stock targets": { seeded: DEMO_SAFETY_STOCK_TARGETS.length },
+      BOMs: { seeded: DEMO_BOMS.length },
     });
     expect(await seedDemoData(config)).toEqual({
       materials: { seeded: 0 },
@@ -68,6 +71,7 @@ describe("seedDemoData", () => {
       suppliers: { seeded: 0 },
       "planning parameter sets": { seeded: 0 },
       "safety-stock targets": { seeded: 0 },
+      BOMs: { seeded: 0 },
     });
 
     expect(await counts(config, (em) => em.count(Material, {}))).toEqual({ test: DEMO_MATERIALS.length, prod: 0 });
@@ -76,6 +80,7 @@ describe("seedDemoData", () => {
     expect(await counts(config, (em) => em.count(Supplier, {}))).toEqual({ test: DEMO_SUPPLIERS.length, prod: 0 });
     expect(await counts(config, (em) => em.count(PlanningParameterSet, {}))).toEqual({ test: DEMO_PLANNING_PARAMETERS.length, prod: 0 });
     expect(await counts(config, (em) => em.count(SafetyStockTarget, {}))).toEqual({ test: DEMO_SAFETY_STOCK_TARGETS.length, prod: 0 });
+    expect(await counts(config, (em) => em.count(Bom, {}))).toEqual({ test: DEMO_BOMS.length, prod: 0 });
   });
 
   it("reports a kind that fails and still seeds the others; the next run seeds only what is still empty", async () => {
@@ -91,6 +96,7 @@ describe("seedDemoData", () => {
       // Without locations every demo row is skipped, so the kinds stay untouched for the next run.
       "planning parameter sets": { seeded: 0 },
       "safety-stock targets": { seeded: 0 },
+      BOMs: { seeded: DEMO_BOMS.length },
     });
     expect(await seedDemoData(config)).toEqual({
       materials: { seeded: 0 },
@@ -99,6 +105,7 @@ describe("seedDemoData", () => {
       suppliers: { seeded: 0 },
       "planning parameter sets": { seeded: DEMO_PLANNING_PARAMETERS.length },
       "safety-stock targets": { seeded: DEMO_SAFETY_STOCK_TARGETS.length },
+      BOMs: { seeded: 0 },
     });
   });
 });

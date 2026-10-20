@@ -2,6 +2,7 @@ import { existsSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { BOM_REVISION_IMMUTABLE } from "./entities";
 import { getMigrationStatus, initOrm, migrate } from "./orm";
 
 const tempDatabase = () => path.join(mkdtempSync(path.join(tmpdir(), "cpg-db-")), "nested", "cpg.sqlite");
@@ -48,6 +49,7 @@ describe("migrate", () => {
       "Migration20261019202843_locations_customers_suppliers",
       "Migration20261019211303_tenant_read_only",
       "Migration20261020054509_planning_parameters_safety_stock",
+      "Migration20261020080940_boms",
     ]);
     expect(await migrate({ databasePath })).toEqual([]);
   });
@@ -59,9 +61,9 @@ describe("getMigrationStatus", () => {
     const orm = await initOrm({ databasePath });
 
     try {
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 12 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 13 });
       await orm.migrator.up();
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 12, pending: 0 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 13, pending: 0 });
     } finally {
       await orm.close();
     }
@@ -78,7 +80,7 @@ describe("migrations", () => {
         await orm.em
           .getConnection()
           .execute<{ name: string }[]>(
-            "select name from sqlite_master where name in ('setting', 'user', 'session', 'user_preference', 'tenant', 'api_token', 'global_audit_event', 'tenant_audit_event', 'global_idempotency_key', 'tenant_idempotency_key', 'material', 'material_conversion', 'location', 'customer', 'supplier', 'planning_parameter_set', 'safety_stock_target')",
+            "select name from sqlite_master where name in ('setting', 'user', 'session', 'user_preference', 'tenant', 'api_token', 'global_audit_event', 'tenant_audit_event', 'global_idempotency_key', 'tenant_idempotency_key', 'material', 'material_conversion', 'location', 'customer', 'supplier', 'planning_parameter_set', 'safety_stock_target', 'bom', 'bom_revision', 'bom_component')",
           )
       )
         .map(({ name }) => name)
@@ -100,6 +102,32 @@ describe("migrations", () => {
         .sort();
 
     try {
+      expect(await tables()).toEqual([
+        "api_token",
+        "bom",
+        "bom_component",
+        "bom_revision",
+        "customer",
+        "global_audit_event",
+        "global_idempotency_key",
+        "location",
+        "material",
+        "material_conversion",
+        "planning_parameter_set",
+        "safety_stock_target",
+        "session",
+        "setting",
+        "supplier",
+        "tenant",
+        "tenant_audit_event",
+        "tenant_idempotency_key",
+        "user",
+        "user_preference",
+      ]);
+      expect(await triggers()).toContain("bom_revision_no_update");
+      await orm.migrator.down();
+      expect(await triggers()).not.toContain("bom_revision_no_update");
+      expect(await triggers()).not.toContain("bom_component_no_update");
       expect(await tables()).toEqual([
         "api_token",
         "customer",
@@ -364,9 +392,62 @@ describe("planning-parameters and safety-stock migration", () => {
       await target("t2", "2027-02-01");
       await expect(target("t3", "2027-01-01")).rejects.toThrow(/UNIQUE/);
 
-      await orm.migrator.down();
+      await orm.migrator.down({ to: "Migration20261019211303_tenant_read_only" });
       expect(await execute(orm, "select name from sqlite_master where name in ('planning_parameter_set', 'safety_stock_target')")).toEqual([]);
       expect(await execute(orm, "select count(*) as n from material")).toEqual([{ n: 1 }]);
+    } finally {
+      await orm.close();
+    }
+  });
+});
+
+describe("boms migration", () => {
+  const execute = (orm: Awaited<ReturnType<typeof initOrm>>, sql: string) => orm.em.getConnection().execute(sql);
+
+  it("keeps BOM IDs unique per tenant, revisions and lines unique and unchangeable, and rolls back", async () => {
+    const databasePath = tempDatabase();
+    await migrate({ databasePath });
+    const orm = await initOrm({ databasePath });
+    const bom = (id: string, tenant: string, code: string) =>
+      execute(
+        orm,
+        `insert into bom (id, tenant_code, code, output_id, revision, created_at) values ('${id}', '${tenant}', '${code}', 'm1', 1, 0)`,
+      );
+    const revision = (id: string, number: number) =>
+      execute(
+        orm,
+        `insert into bom_revision (id, tenant_code, bom_id, number, priority, valid_from, valid_through, created_at) values ('${id}', 'test', 'b1', ${number}, 1, '2026-01-01', null, 0)`,
+      );
+    const line = (id: string, material: string) =>
+      execute(
+        orm,
+        `insert into bom_component (id, tenant_code, revision_id, position, material_id, quantity, entered_quantity, entered_unit, numerator, denominator) values ('${id}', 'test', 'r1', 0, '${material}', '24.000000', '2', 'case', '12', '1')`,
+      );
+
+    try {
+      await execute(orm, "insert into material (id, tenant_code, code, type, description, base_unit, created_at) values ('m1', 'test', '00000001', 'finished', 'x', 'each', 0)");
+      await execute(orm, "insert into material (id, tenant_code, code, type, description, base_unit, created_at) values ('m2', 'test', '00000002', 'raw', 'y', 'each', 0)");
+      await bom("b1", "test", "00000001");
+      await bom("b2", "prod", "00000001");
+      await expect(bom("b3", "test", "00000001")).rejects.toThrow(/UNIQUE/);
+      expect(await execute(orm, "select active, version from bom where id = 'b1'")).toEqual([{ active: 1, version: 1 }]);
+
+      await revision("r1", 1);
+      await expect(revision("r2", 1)).rejects.toThrow(/UNIQUE/);
+      await line("l1", "m2");
+      await expect(line("l2", "m2")).rejects.toThrow(/UNIQUE/);
+      expect(await execute(orm, "select quantity, typeof(quantity) as kind from bom_component")).toEqual([{ quantity: "24.000000", kind: "text" }]);
+
+      await expect(execute(orm, "update bom_revision set priority = 2")).rejects.toThrow(BOM_REVISION_IMMUTABLE);
+      await expect(execute(orm, "update bom_component set quantity = '1'")).rejects.toThrow(BOM_REVISION_IMMUTABLE);
+      await execute(orm, "update bom set active = 0 where id = 'b1'");
+
+      await execute(orm, "delete from bom_component");
+      await execute(orm, "delete from bom_revision");
+      await execute(orm, "delete from bom");
+      await orm.migrator.down();
+      expect(await execute(orm, "select name from sqlite_master where name like 'bom%'")).toEqual([]);
+      expect(await execute(orm, "select count(*) as n from material")).toEqual([{ n: 2 }]);
     } finally {
       await orm.close();
     }

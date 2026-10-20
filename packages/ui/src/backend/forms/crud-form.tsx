@@ -180,11 +180,15 @@ export function CrudForm<T>({
   );
 }
 
-/** The first message per top-level field; issues without a field are dropped (the server reports them). */
-function toFieldErrors(issues: { path: PropertyKey[]; message: string }[]): FieldErrors {
+/**
+ * A schema's issues as the field errors a form shows: the first message per field, keyed by its full
+ * path (`components.0.unit`, `description`), as the server keys them. An issue about the whole input
+ * has no field and is dropped: the server reports it.
+ */
+export function toFieldErrors(issues: { path: PropertyKey[]; message: string }[]): FieldErrors {
   const errors: FieldErrors = {};
   for (const { path, message } of issues) {
-    const name = String(path[0] ?? "");
+    const name = path.map(String).join(".");
     if (name) errors[name] ??= [message];
   }
   return errors;

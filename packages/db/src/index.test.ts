@@ -8,6 +8,10 @@ describe("@cpg/db", () => {
       "AUDIT_APPEND_ONLY",
       "AUDIT_CHANNELS",
       "ApiToken",
+      "BOM_REVISION_IMMUTABLE",
+      "Bom",
+      "BomComponent",
+      "BomRevision",
       "Customer",
       "GLOBAL_ENTITIES",
       "GlobalAuditEvent",
@@ -68,6 +72,9 @@ describe("@cpg/db", () => {
       db.Supplier,
       db.PlanningParameterSet,
       db.SafetyStockTarget,
+      db.Bom,
+      db.BomRevision,
+      db.BomComponent,
     ]);
     const tenantOwned: unknown[] = [
       db.TenantAuditEvent,
@@ -79,6 +86,9 @@ describe("@cpg/db", () => {
       db.Supplier,
       db.PlanningParameterSet,
       db.SafetyStockTarget,
+      db.Bom,
+      db.BomRevision,
+      db.BomComponent,
     ];
     expect(db.GLOBAL_ENTITIES).toEqual(db.entities.filter((entity) => !tenantOwned.includes(entity)));
   });

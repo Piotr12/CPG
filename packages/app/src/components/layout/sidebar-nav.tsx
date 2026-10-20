@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BlocksIcon,
   Building2Icon,
   ChevronDownIcon,
   ChevronsUpDownIcon,
@@ -63,6 +64,7 @@ const ICONS: Record<NavId, LucideIcon> = {
   suppliers: TruckIcon,
   planningParameters: SlidersHorizontalIcon,
   safetyStock: LifeBuoyIcon,
+  boms: BlocksIcon,
   tenantAudit: HistoryIcon,
   administration: ShieldIcon,
   users: UserRoundIcon,
