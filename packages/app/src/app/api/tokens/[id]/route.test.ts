@@ -5,7 +5,7 @@ import * as route from "./route";
 const mocks = vi.hoisted(() => ({ revoke: vi.fn() }));
 // apiWrite has its own tests; here it hands the handler a fixed caller and cradle, in the envelope.
 vi.mock("../../../../auth/api-write", async () => {
-  const { apiHandler } = await vi.importActual<typeof import("@cpg/core")>("@cpg/core");
+  const { apiHandler } = await vi.importActual<typeof import("../../../../routing/api-handler")>("../../../../routing/api-handler");
   return {
     apiWrite: (handler: (write: WriteContext<unknown>) => Promise<unknown>) =>
       apiHandler(async (request: Request, context: unknown) =>

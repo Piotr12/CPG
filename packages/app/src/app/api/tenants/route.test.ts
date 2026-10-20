@@ -3,7 +3,7 @@ import { GET } from "./route";
 
 const mocks = vi.hoisted(() => ({ list: vi.fn(), requireApiUser: vi.fn() }));
 vi.mock("@cpg/core", async (importOriginal) => ({
-  apiHandler: (await importOriginal<typeof import("@cpg/core")>()).apiHandler,
+  createApiHandler: (await importOriginal<typeof import("@cpg/core")>()).createApiHandler,
   requestScope: async () => ({ cradle: { tenantService: { list: mocks.list } } }),
 }));
 vi.mock("../../../auth/require-api-user", () => ({ requireApiUser: mocks.requireApiUser }));

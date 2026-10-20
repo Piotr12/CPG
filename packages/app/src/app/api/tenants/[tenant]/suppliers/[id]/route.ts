@@ -1,7 +1,8 @@
-import { apiActor, apiHandler, assertAdmin, parseInput, tenantScope } from "@cpg/core";
+import { apiActor, assertAdmin, parseInput, tenantScope } from "@cpg/core";
 import { namedRecordUpdateBodySchema } from "@cpg/core/validators/named-records/named-record-update.schema";
 import { tenantApiWrite, type WriteContext } from "../../../../../../auth/api-write";
 import { requireApiUser } from "../../../../../../auth/require-api-user";
+import { apiHandler } from "../../../../../../routing/api-handler";
 
 type Context = RouteContext<"/api/tenants/[tenant]/suppliers/[id]">;
 

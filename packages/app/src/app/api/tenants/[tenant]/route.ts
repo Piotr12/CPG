@@ -1,7 +1,8 @@
-import { apiActor, apiHandler, assertAdmin, parseInput, tenantCodeSchema, tenantNotFound, tenantScope } from "@cpg/core";
+import { apiActor, assertAdmin, parseInput, tenantCodeSchema, tenantNotFound, tenantScope } from "@cpg/core";
 import { tenantReadOnlyBodySchema } from "@cpg/core/validators/tenants/tenant-read-only.schema";
 import { apiWrite, type WriteContext } from "../../../../auth/api-write";
 import { requireApiUser } from "../../../../auth/require-api-user";
+import { apiHandler } from "../../../../routing/api-handler";
 
 type Context = RouteContext<"/api/tenants/[tenant]">;
 

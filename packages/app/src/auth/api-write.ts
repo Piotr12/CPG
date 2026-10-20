@@ -1,5 +1,4 @@
 import {
-  apiHandler,
   AppError,
   fingerprintOf,
   operationOf,
@@ -14,6 +13,7 @@ import {
   type IdempotencyScope,
 } from "@cpg/core";
 import { BEARER_REQUIRED, requireApiUser } from "./require-api-user";
+import { apiHandler } from "../routing/api-handler";
 
 /** What a write handler gets: the token's account, the parsed body, and the services to write with. */
 export interface WriteContext<Context> {

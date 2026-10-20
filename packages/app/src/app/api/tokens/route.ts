@@ -1,5 +1,6 @@
-import { apiHandler, requestScope } from "@cpg/core";
+import { requestScope } from "@cpg/core";
 import { requireApiUser } from "../../../auth/require-api-user";
+import { apiHandler } from "../../../routing/api-handler";
 
 /**
  * The caller's own API tokens, newest first: id, name, created and last used, never a secret.
