@@ -44,11 +44,12 @@ A password reset or a deactivation writes one `tokens.api-token.revoked` Global 
 
 ### Phase 1: audit the tokens a reset or deactivation ends
 
-- [ ] 1.1 Extract the token audit entry builders
-- [ ] 1.2 Record revoked entries on reset and deactivation
-- [ ] 1.3 Document the startup purge as unaudited
-- [ ] 1.4 Integration test for the entries
+- [x] 1.1 Extract the token audit entry builders — 230d93c
+- [x] 1.2 Record revoked entries on reset and deactivation — ce46682
+- [x] 1.3 Document the startup purge as unaudited — 8245f31
+- [x] 1.4 Integration test for the entries — 45e5c7f
 
 ## Log
 
 - 05:36 UTC: the slot is free and the branch is `feat/audit-implicit-token-revocations`. 4 Steps, plain engine.
+- 05:45 UTC: Steps 1.1–1.4 landed. The new unit tests fail without the `UserService` change (2 failures with it reverted) and pass with it. Lint, typecheck, `test:coverage` (213 files, 1379 tests, 100% thresholds) and the build are green.
