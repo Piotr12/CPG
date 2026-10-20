@@ -1,6 +1,7 @@
-import { apiHandler, parseInput, requestScope } from "@cpg/core";
+import { parseInput, requestScope } from "@cpg/core";
 import { auditListSchema } from "@cpg/core/validators/audit/audit-list.schema";
 import { requireApiUser } from "../../../auth/require-api-user";
+import { apiHandler } from "../../../routing/api-handler";
 
 /**
  * A page of the Global audit, newest first (`?before=<entry id>&limit=`), for every signed-in

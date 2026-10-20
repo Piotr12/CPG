@@ -57,7 +57,7 @@ There will be many concepts, and the main risk is that each route, action and pa
 - `errors.ts` — the typed error hierarchy: `AppError` base; `NotFoundError`, `ValidationError` (carries `fieldErrors`), `ConflictError`, `UnauthorizedError`, `ForbiddenError`. Services throw these. A service never builds a `Response`.
 - `result.ts` — the one result envelope shared by route handlers and server actions: `{ ok: true, data }` / `{ ok: false, error: { code, message, fieldErrors? } }`.
 - `server-action.ts` — wraps a server action. It parses the input with a Zod schema, maps thrown `AppError`s to the envelope, and logs anything else without leaking a stack trace. It is the default for mutations made from CPG's own pages.
-- `api-handler.ts` — the same wrapper for route handlers (`Response.json` + status code). Use it for endpoints called from outside the app or fetched by client components.
+- `api-handler.ts` — the same wrapper for route handlers (`Response.json` + status code). Use it for endpoints called from outside the app or fetched by client components. Core builds it with `createApiHandler(rethrow)`; routes import `apiHandler` from `app/src/routing/api-handler.ts`, which passes Next.js's `unstable_rethrow` so `redirect()`, `notFound()` and the build-time prerender bail-out propagate instead of being logged as a 500. ESLint stops `app` code from importing `createApiHandler` anywhere else.
 - **Every state-changing route** (`POST`/`PUT`/`PATCH`/`DELETE`) is built with `apiWrite`, or `tenantApiWrite` under `api/tenants/[tenant]/` (`app/src/auth/api-write.ts`, spec `2026-10-19--1548UTC-api-idempotency`).
   - It requires the bearer token, an `Idempotency-Key` and a JSON body, and for tenant routes the `Dataset-Generation`.
   - It runs the handler through `IdempotencyService.run`, which stores the key in the same transaction as the write.
@@ -124,7 +124,7 @@ No action or route writes its own `try/catch` + response mapping.
       - a `nativeUpdate` that sets anything but plain fields.
   - **Writes go through `em.create`/`assign`/`remove` and a flush.** Services never set `tenant`, because it is filled on create.
   - **Client-supplied references are loaded with `findOneOrFail` in the scope.** A Prod ID used in Test is then "not found" (TEN-014).
-  - **A read-only tenant refuses every business write** (R05, spec `2026-10-19--2018UTC-read-only-tenants`). The flag is read fresh inside the write's transaction, by `tenantServerAction` and by `IdempotencyService` behind `tenantApiWrite`. A system write outside them, such as a demo seed, checks `isScopeReadOnly(em)` itself. Tenant pages hide their write controls while the tenant is read-only, and its strip says why.
+  - **A read-only tenant refuses every business write** (R05, spec `2026-10-19--2018UTC-read-only-tenants`). The flag is read fresh inside the write's transaction, by `tenantServerAction` and by `IdempotencyService` behind `tenantApiWrite`. A system write outside them, such as a demo seed, checks `isScopeReadOnly(em)` itself. Tenant pages hide their write controls while the tenant is read-only, and the read-only banner says why.
   - **Tenant-local unique keys include `tenant`.**
   - **ESLint forbids, in `core` and `app`, what the runtime can't fully see:**
     - `filters` options;
@@ -135,7 +135,7 @@ No action or route writes its own `try/catch` + response mapping.
     `tests/tenant-lint.test.ts` proves each rule fires.
 
 - **Audit (R08).** Every change is recorded in an append-only audit (spec `2026-10-19--1050UTC-audit-log`): account-level changes in the Global audit (`GlobalAuditEvent`), tenant records in that tenant's audit (`TenantAuditEvent`, tenant-owned).
-  - **Every mutating service method takes an `actor: AuditActor`.** Actions build it from the validated session with `uiActor(user)`; API writes will name their token.
+  - **Every mutating service method takes an `actor: AuditActor`.** Actions build it from the validated session with `uiActor(user)`; API routes build it with `apiActor(…)`, which names the token (never its secret).
   - **The service records the entry itself**, with `recordGlobalAudit(em, actor, entry)` or `recordTenantAudit(…)` on the EntityManager it writes with. The entry then commits or rolls back with the change. Never record from an event handler: events fire after the commit.
   - **Snapshots are explicit allowlists** of the entity's fields, never the whole entity. The recorder refuses keys that look like secrets (`password`, `hash`, `secret`), but the allowlist is the real protection.
   - **A write that changes nothing records nothing.** Action IDs follow the event naming (`concept.entity.action`).

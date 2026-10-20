@@ -1,7 +1,7 @@
 import { entities, GLOBAL_ENTITIES } from "@cpg/db";
 import { describe, expect, it } from "vitest";
 
-// Tenant isolation is the default (spec .ai/specs/2026-10-19--0913UTC-test-prod-tenants.md): an
+// Tenant isolation is the default (spec .ai/specs/implemented/2026-10-19--0913UTC-test-prod-tenants.md): an
 // entity is either declared with tenantOwned() or explicitly listed as global.
 describe("entity tenant ownership", () => {
   const global = new Set<unknown>(GLOBAL_ENTITIES);

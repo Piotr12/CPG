@@ -1,15 +1,20 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { apiHandler } from "./api-handler";
+import { createApiHandler } from "./api-handler";
 import { AppError, NotFoundError, TooManyRequestsError, UnauthorizedError, ValidationError } from "./errors";
 import { INTERNAL_ERROR } from "./server-action";
 
 const request = new Request("http://cpg.test/api/x");
+/** A framework error the wrapper must not handle, like Next.js's `redirect()`. */
+class ControlFlow extends Error {}
+const apiHandler = createApiHandler((error) => {
+  if (error instanceof ControlFlow) throw error;
+});
 const call = async (handler: () => Promise<unknown>) => {
   const response = await apiHandler(handler)(request, undefined);
   return { status: response.status, cacheControl: response.headers.get("Cache-Control"), body: await response.json() };
 };
 
-describe("apiHandler", () => {
+describe("createApiHandler", () => {
   afterEach(() => vi.restoreAllMocks());
 
   it("returns the handler's data in the envelope, uncached", async () => {
@@ -55,5 +60,17 @@ describe("apiHandler", () => {
 
     expect(result).toEqual({ status: 500, cacheControl: "no-store", body: { ok: false, error: INTERNAL_ERROR } });
     expect(log).toHaveBeenCalledWith("Route handler failed:", expect.any(Error));
+  });
+
+  it("lets the framework's control-flow errors through: no envelope, no log", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const control = new ControlFlow("redirect");
+
+    await expect(
+      apiHandler(async () => {
+        throw control;
+      })(request, undefined),
+    ).rejects.toBe(control);
+    expect(log).not.toHaveBeenCalled();
   });
 });

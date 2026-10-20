@@ -3,7 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 // Tenant data is reached only through tenantScope, and only from the tenant entry points (spec
-// .ai/specs/2026-10-19--0913UTC-test-prod-tenants.md): pages and actions under app/admin/[tenant]/,
+// .ai/specs/implemented/2026-10-19--0913UTC-test-prod-tenants.md): pages and actions under app/admin/[tenant]/,
 // route handlers under app/api/tenants/[tenant]/. Everywhere else is global.
 const appDir = path.resolve(import.meta.dirname, "../packages/app/src");
 const tenantRoots = ["app/admin/[tenant]", "app/api/tenants/[tenant]"].map((dir) => path.join(appDir, dir));
