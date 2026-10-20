@@ -48,6 +48,7 @@ describe("dictionaries", () => {
       "imports/problems/problem",
       "imports/change/empty",
       "imports/records/BOM",
+      "audit/fields/bom",
       "audit/fields/id",
       "stock/channels/api",
       "nav/menu",

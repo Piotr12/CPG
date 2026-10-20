@@ -20,6 +20,8 @@ Phase 3: verification/review and publication.
 Revision drift, historical revaluation and tenant isolation. Retain stored revision/conversion/lead-time; recheck create in one transaction; real SQLite and API/browser tests.
 
 ## Decisions and log
+- Independent code audit requested changes: Back dropped the create draft; recipe selection hydrated historic revisions and repeated stock queries; production audit labels were missing. Retained draft, constrained current revision pairs in 100-alternative batches, grouped component reads and bounded stock lookups, and added audit translations/regressions.
+- First Docker run: 24/29 passed. Three nav inventory assertions needed the new entry; production create succeeded but Next kept a closed dialog in a hidden page, so the wait must check open/visible dialogs; the scope assertion used coinciding tenant-local IDs and now creates a truly Prod-only ID. No stock or auth defect found.
 - Repository gate requires every tenant server action to use the write wrapper. Replaced the read-only preview action with the options GET route and introduced the mandated shared ui/apiCall read boundary; did not weaken the gate. Full tests found expected nav/help/dictionary inventories, updated for the new routes.
 - Reuse cezar linked worktree; no nested worktree. Spec committed separately on spec/production-orders, materialized here untracked per om-auto-implement-spec. Spec-only branch stays design-only.
 - User Guard defers all remote branch publication/PR creation until concrete local work is reviewed and approved; continue authorized reversible local implementation first. No push attempted.

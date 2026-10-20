@@ -61,22 +61,22 @@ describe("manual production orders in the UI and API", () => {
   });
   it("lets a normal user preview, choose a lower-priority recipe and save/edit through the UI (PRD-003/025/027)", async () => {
     await user.setViewport(1280, 800); await user.open(`${baseUrl}/admin/prod/production-orders`);
-    await clickHydrated(user, "main button"); await user.waitFor("[role=dialog]");
-    await user.select("[role=dialog] [name=output]", output); await user.select("[role=dialog] [name=location]", plant);
-    await user.fill("[role=dialog] [name=quantity]", "60"); await user.fill("[role=dialog] [name=unit]", "each");
-    await user.fillDate("[role=dialog] [name=plannedFinish]", "2026-10-15"); await user.click("[role=dialog] button[type=submit]");
-    await user.waitFor("[role=dialog] [name=bom]");
-    expect(await user.evaluate<string>('document.querySelector("[role=dialog] [name=bom]").value')).toBe(top);
-    expect(await user.text("[role=dialog]")).toContain("30 kg");
-    await user.select("[role=dialog] [name=bom]", alternative); await user.click("[role=dialog] button[type=submit]");
-    await user.waitUntil('!document.querySelector("[role=dialog]") && !document.querySelector("[data-slot=dialog-overlay]")');
+    await clickHydrated(user, "main button"); await user.waitFor("[role=dialog][data-state=open]");
+    await user.select("[role=dialog][data-state=open] [name=output]", output); await user.select("[role=dialog][data-state=open] [name=location]", plant);
+    await user.fill("[role=dialog][data-state=open] [name=quantity]", "60"); await user.fill("[role=dialog][data-state=open] [name=unit]", "each");
+    await user.fillDate("[role=dialog][data-state=open] [name=plannedFinish]", "2026-10-15"); await user.click("[role=dialog][data-state=open] button[type=submit]");
+    await user.waitFor("[role=dialog][data-state=open] [name=bom]");
+    expect(await user.evaluate<string>('document.querySelector("[role=dialog][data-state=open] [name=bom]").value')).toBe(top);
+    expect(await user.text("[role=dialog][data-state=open]")).toContain("30 kg");
+    await user.select("[role=dialog][data-state=open] [name=bom]", alternative); await user.click("[role=dialog][data-state=open] button[type=submit]");
+    await user.waitUntil('![...document.querySelectorAll("[role=dialog], [data-slot=dialog-overlay]")].some((el) => el.getClientRects().length > 0)');
     await user.waitUntil('location.pathname.split("/").at(-2) === "production-orders" && /^[0-9]{8}$/.test(location.pathname.split("/").at(-1)) && !!document.querySelector("main [role=status]")');
     const id = (await user.url()).split("/").at(-1)!;
     expect(await detail(id)).toMatchObject({ bom: alternative, revision: 1, quantity: "60.000000" });
     expect(await user.text("main [role=status]")).toContain("Component shortage");
-    await clickHydrated(user, "main button"); await user.waitFor("[role=dialog]");
-    await user.fill("[role=dialog] [name=quantity]", "65"); await user.fillDate("[role=dialog] [name=plannedFinish]", "2026-10-16");
-    await user.click("[role=dialog] button[type=submit]"); await user.waitUntil('!document.querySelector("[role=dialog]")');
+    await clickHydrated(user, "main button"); await user.waitFor("[role=dialog][data-state=open]");
+    await user.fill("[role=dialog][data-state=open] [name=quantity]", "65"); await user.fillDate("[role=dialog][data-state=open] [name=plannedFinish]", "2026-10-16");
+    await user.click("[role=dialog][data-state=open] button[type=submit]"); await user.waitUntil('!document.querySelector("[role=dialog][data-state=open]")');
     await user.waitForText("2026-10-11");
     expect(await detail(id)).toMatchObject({ quantity: "65.000000", plannedFinish: "2026-10-16", plannedStart: "2026-10-11", bom: alternative, version: 2 });
     expect(await stock()).toBe("30.000000");
@@ -95,6 +95,10 @@ describe("manual production orders in the UI and API", () => {
     const edit = entries.find((entry) => entry.action === "production-orders.production-order.updated" && entry.subject.id === pinned.id);
     expect(edit).toMatchObject({ before: { quantity: "30.000000" }, after: { quantity: "40.000000", revision: 1 } });
     expect(await stock()).toBe("30.000000");
+    await user.open(`${baseUrl}/admin/prod/audit`); await user.waitForText("Production order changed");
+    const shownAudit = await user.text("main");
+    expect(shownAudit).not.toContain("production-orders.production-order.");
+    expect(shownAudit).toContain("planned finish");
   });
   it("refuses invalid selections, raw/Buy output, unknown tenant records, missing keys and locked fields (PRD-005, R02, R07)", async () => {
     for (const body of [{ ...input(), output: steel }, { ...input(), location: otherSite }, { ...input(), plannedFinish: "2025-01-01" }, { ...input(), bom: top, revision: 1 }, { ...input(), output: "99999999" }]) {
@@ -113,6 +117,13 @@ describe("manual production orders in the UI and API", () => {
       const response = await write("PATCH", `/api/tenants/prod/${kind}/${id}`, { version: record.version, active: false });
       expect(response.status).toBe(409); expect(json(response).error.params.order).toMatch(/^\d{8}$/);
     }
+    await admin.setViewport(1280, 800); await admin.open(`${baseUrl}/admin/prod/materials/${output}`);
+    await admin.waitUntil('[...document.querySelectorAll("main button")].some((button) => button.textContent.trim() === "Deactivate" && Object.keys(button).some((key) => key.startsWith("__reactFiber")))');
+    await admin.clickRole("button", "Deactivate"); await admin.waitFor("[role=alertdialog]");
+    await admin.click("[role=alertdialog] button[data-variant=destructive]");
+    await admin.waitUntil('!!document.querySelector("[role=alertdialog] [role=alert] a")');
+    expect(await admin.evaluate<string>('document.querySelector("[role=alertdialog] [role=alert] a").getAttribute("href")')).toBe(`/admin/prod/production-orders/${pinned.id}`);
+    await admin.clickRole("button", "Cancel");
   });
   it("enforces read-only, Test generation and isolation while keeping preview readable (R05, R07, D06)", async () => {
     expect(json(await api("GET", "/api/tenants/test/production-orders")).data[0]).toMatchObject({ id: "00000001", output: "00000004" });
@@ -120,7 +131,10 @@ describe("manual production orders in the UI and API", () => {
     expect((await write("POST", "/api/tenants/test/production-orders", demo)).status).toBe(428);
     const generation = json(await api("GET", "/api/tenants/test")).data.generation as number;
     expect((await api("POST", "/api/tenants/test/production-orders", { key: randomUUID(), generation: generation + 1, body: demo })).status).toBe(409);
-    expect((await api("POST", "/api/tenants/test/production-orders", { key: randomUUID(), generation, body: input() })).status).toBe(404);
+    const testMaterialIds = new Set<string>((json(await api("GET", "/api/tenants/test/materials")).data as { id: string }[]).map(({ id }) => id));
+    let prodOnly = output;
+    while (testMaterialIds.has(prodOnly)) prodOnly = await createMaster("materials", { type: "raw", description: "production Prod-only reference", baseUnit: "kg" });
+    expect((await api("POST", "/api/tenants/test/production-orders", { key: randomUUID(), generation, body: { ...input(), output: prodOnly } })).status).toBe(404);
     expect((await write("PATCH", "/api/tenants/prod", { readOnly: true })).status).toBe(200);
     try {
       expect((await write("POST", collection, input(), userSecret)).status).toBe(409);

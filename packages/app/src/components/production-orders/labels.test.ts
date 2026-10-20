@@ -11,3 +11,11 @@ it("keeps every label serializable and translates known field errors while prese
     expect(labels.errors.TENANT_READ_ONLY).toBe(messages.errors.TENANT_READ_ONLY);
   }
 });
+it("names every production audit action and snapshot field in both languages", () => {
+  for (const messages of [en, pl]) {
+    expect(messages.audit.actions["production-orders.production-order.created"]).not.toContain("production-orders.");
+    expect(messages.audit.actions["production-orders.production-order.updated"]).not.toContain("production-orders.");
+    for (const name of ["plannedFinish", "plannedStart", "produced", "abandoned"] as const) expect(messages.audit.fields[name]).not.toBe(name);
+    expect(messages.audit.fields.bom).toBe("BOM");
+  }
+});

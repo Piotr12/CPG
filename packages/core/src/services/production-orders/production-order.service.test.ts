@@ -212,3 +212,34 @@ describe("demo", () => {
     await expect(service(manager).seedDemo()).rejects.toThrow("broken seed"); expect(spy).toHaveBeenCalled();
   });
 });
+
+it("loads only current revisions and groups recipe components instead of hydrating immutable history", async () => {
+  const manager = em(); const bom = await manager.findOneOrFail(Bom, { code: "00000001" });
+  for (let number = 2; number <= 151; number += 1) {
+    const revision = manager.create(BomRevision, { bom, number, priority: 1, validFrom: "2026-01-01", validThrough: null });
+    if (number === 151) manager.create(BomComponent, { revision, position: 0, material: await manager.findOneOrFail(Material, { code: "00000002" }), quantity: "2", enteredQuantity: "2", enteredUnit: "kg", numerator: "1", denominator: "1" });
+  }
+  bom.revision = 151; await manager.flush(); manager.clear();
+  const reads = vi.spyOn(manager, "find");
+  const options = await service(manager).options(input);
+  expect(options.alternatives.map(({ revision }) => revision).sort((a, b) => a - b)).toEqual([1, 151]);
+  const revisionReads = reads.mock.calls.map(([entity], index) => entity === BomRevision ? reads.mock.results[index].value : null).filter((value) => value !== null);
+  expect(revisionReads).toHaveLength(1); expect(await revisionReads[0]).toHaveLength(2);
+  expect(reads.mock.calls.filter(([entity]) => entity === BomComponent)).toHaveLength(1);
+});
+
+it("keeps alternatives beyond the first 100 selectable while bounding current-revision query batches", async () => {
+  const manager = em();
+  const output = await manager.findOneOrFail(Material, { code: input.output });
+  const material = await manager.findOneOrFail(Material, { code: "00000002" });
+  for (let priority = 3; priority <= 104; priority += 1) {
+    const bom = manager.create(Bom, { code: String(priority).padStart(8, "0"), output, revision: 1 });
+    const revision = manager.create(BomRevision, { bom, number: 1, priority, validFrom: "2026-01-01", validThrough: null });
+    manager.create(BomComponent, { revision, position: 0, material, quantity: "1", enteredQuantity: "1", enteredUnit: "kg", numerator: "1", denominator: "1" });
+  }
+  await manager.flush(); manager.clear();
+  const reads = vi.spyOn(manager, "find");
+  expect((await service(manager).options(input)).alternatives).toHaveLength(104);
+  expect(reads.mock.calls.filter(([entity]) => entity === BomRevision)).toHaveLength(2);
+  expect((await service().create({ ...input, bom: "00000104", revision: 1 }, actor)).bom).toBe("00000104");
+});

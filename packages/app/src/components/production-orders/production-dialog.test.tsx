@@ -44,6 +44,9 @@ it("supports back, preview refusal, invalid input and cancellation without writi
   await preview(); await waitFor(() => expect(screen.getByLabelText(en.productionOrders.recipe)).toBeTruthy());
   fireEvent.click(screen.getByRole("button", { name: en.productionOrders.back }));
   expect(screen.queryByLabelText(en.productionOrders.recipe)).toBeNull();
+  expect((screen.getByLabelText(en.productionOrders.output) as HTMLSelectElement).value).toBe(production.output);
+  expect((screen.getByLabelText(en.productionOrders.quantity) as HTMLInputElement).value).toBe("2");
+  expect((screen.getByLabelText(en.productionOrders.finish) as HTMLInputElement).value).toBe(production.plannedFinish);
   fireEvent.click(screen.getByRole("button", { name: en.productionOrders.cancel }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull()); expect(mocks.create).not.toHaveBeenCalled();
 });

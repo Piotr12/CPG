@@ -1146,6 +1146,8 @@ export const en = {
     channels: { ui: "UI", api: "API" },
     /** Keyed by the entry's action ID; an action missing here is shown as its ID. */
     actions: {
+      "production-orders.production-order.created": "Production order created",
+      "production-orders.production-order.updated": "Production order changed",
       "customer-orders.customer-order.created": "Customer order created",
       "customer-orders.customer-order.updated": "Customer order changed",
       "stock.movement.posted": "Stock movement posted",
@@ -1201,6 +1203,11 @@ export const en = {
     passwordNotRecorded: "Password replaced (not recorded)",
     /** Snapshot field names in the Changes column; a field missing here is shown as stored. */
     fields: {
+      bom: "BOM",
+      plannedFinish: "planned finish",
+      plannedStart: "planned start",
+      produced: "produced quantity",
+      abandoned: "abandoned quantity",
       customer: "customer",
       lines: "lines",
       status: "status",

@@ -1107,6 +1107,8 @@ export const pl: Messages = {
     },
     channels: { ui: "Ekran", api: "Interfejs API" },
     actions: {
+      "production-orders.production-order.created": "Utworzono zlecenie produkcyjne",
+      "production-orders.production-order.updated": "Zmieniono zlecenie produkcyjne",
       "customer-orders.customer-order.created": "Utworzono zamówienie klienta",
       "customer-orders.customer-order.updated": "Zmieniono zamówienie klienta",
       "stock.movement.posted": "Zaksięgowano ruch zapasu",
@@ -1161,6 +1163,11 @@ export const pl: Messages = {
     },
     passwordNotRecorded: "Hasło zmienione (niezapisane)",
     fields: {
+      bom: "BOM",
+      plannedFinish: "planowany koniec",
+      plannedStart: "planowany początek",
+      produced: "ilość wyprodukowana",
+      abandoned: "ilość porzucona",
       customer: "klient",
       lines: "pozycje",
       status: "stan",

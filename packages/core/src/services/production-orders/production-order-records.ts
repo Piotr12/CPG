@@ -2,8 +2,8 @@ import { ProductionOrder, type DocumentState, type EntityManager } from "@cpg/db
 import { NotFoundError } from "../../http/errors";
 
 export const PRODUCTION_POPULATE = ["output", "location", "recipe.bom"] as const;
-export async function findProductionOrder(em: EntityManager, id: string, refresh = false) {
-  const order = await em.findOne(ProductionOrder, { code: id }, { populate: [...PRODUCTION_POPULATE], refresh });
+export async function findProductionOrder(em: EntityManager, id: string, options: { refresh?: boolean } = {}) {
+  const order = await em.findOne(ProductionOrder, { code: id }, { populate: [...PRODUCTION_POPULATE], ...options });
   if (!order) throw new NotFoundError("PRODUCTION_ORDER_NOT_FOUND", `There is no production order ${id} in this tenant.`);
   return order;
 }

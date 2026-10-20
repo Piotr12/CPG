@@ -51,7 +51,7 @@ export class ProductionOrderService {
     const input = parseInput(productionOrderUpdateSchema, { ...changes, version });
     try {
       return await this.em.transactional(async (em) => {
-        const order = await findProductionOrder(em, id, true);
+        const order = await findProductionOrder(em, id, { refresh: true });
         if (order.version !== version) throw versionConflict();
         if (order.status !== "open") throw new ConflictError("This production order is no longer Open.", "PRODUCTION_ORDER_LOCKED");
         const before = productionSnapshot(order);

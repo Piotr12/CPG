@@ -28,6 +28,7 @@ export function ProductionDialog({ context, labels: t, materials, locations, ord
 }
 function ProductionForm({ context, labels: t, materials, locations, order, close }: Props & { close: () => void }) {
   const router = useRouter();
+  const [draft, setDraft] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState<{ values: Record<string, string>; options: ProductionOptions } | null>(null);
   const fields: CrudField[] = [
     ...(!order ? [
@@ -55,12 +56,12 @@ function ProductionForm({ context, labels: t, materials, locations, order, close
       }} onSuccess={(created) => { close(); router.push(`/admin/${context.tenant}/production-orders/${created.id}`); }} onCancel={() => setPreview(null)} cancelLabel={t.back} />
   </div>;
   return <CrudForm<ProductionOrderDetail | ProductionOptions> fields={fields} schema={order ? undefined : productionOrderOptionsSchema}
-    initialValues={order ? { quantity: order.enteredQuantity, unit: order.enteredUnit, plannedFinish: order.plannedFinish } : undefined}
+    initialValues={order ? { quantity: order.enteredQuantity, unit: order.enteredUnit, plannedFinish: order.plannedFinish } : draft}
     {...formatting} submitLabel={order ? t.save : t.preview}
     action={async (values) => {
       if (order) return updateProductionOrder(context.tenant, context.generation, order.id, order.version, values);
       const result = await apiCall<ProductionOptions>(`/api/tenants/${context.tenant}/production-orders/options?${new URLSearchParams(values)}`);
-      if (result.ok) setPreview({ values, options: result.data });
+      if (result.ok) { setDraft(values); setPreview({ values, options: result.data }); }
       return result;
     }} onSuccess={() => { if (order) close(); }} onCancel={close} />;
 }
