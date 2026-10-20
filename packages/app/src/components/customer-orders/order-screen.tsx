@@ -1,11 +1,15 @@
 import Link from "next/link";
-import type { CustomerOrderView, Locale, MaterialSummary, NamedRecordView, TenantInfo } from "@cpg/core";
+import { outstandingOf, type CustomerOrderView, type Locale, type MaterialSummary, type NamedRecordView, type ShipmentView, type TenantInfo } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { ORDER_PAGE_SIZE } from "@cpg/core/validators/customer-orders/customer-order.schema";
 import { Button } from "@cpg/ui/components/button";
 import { Badge } from "@cpg/ui/components/badge";
 import type { Messages } from "../../i18n/messages/en";
 import { fill, shownQuantity } from "../forms/form-labels";
+import { shipmentsLabels } from "../shipments/labels";
+import { firstDueDate, shipmentLineChoices } from "../shipments/line-choices";
+import { ShipmentDialog } from "../shipments/shipment-dialog";
+import { ShipmentsTable } from "../shipments/shipments-table";
 import { orderLabels } from "./labels";
 import { OrderDialog } from "./order-dialog";
 import type { OrderChoice } from "./order-form";
@@ -16,6 +20,8 @@ export interface OrdersScreenProps {
   total?: number;
   orders: CustomerOrderView[];
   order?: CustomerOrderView;
+  /** The shown order's shipments, newest first. */
+  shipments?: ShipmentView[];
   materials: MaterialSummary[];
   customers: NamedRecordView[];
   locations: NamedRecordView[];
@@ -23,9 +29,13 @@ export interface OrdersScreenProps {
   messages: Messages;
   locale: Locale;
 }
-/** List and detail use the same master labels and choice policy; both roles may maintain demand. */
-export function OrdersScreen({ tenant, orders, order, page = 1, total = 0, materials, customers, locations, units, messages, locale }: OrdersScreenProps) {
+/**
+ * List and detail use the same master labels and choice policy; both roles may maintain demand. The
+ * detail adds each line's outstanding quantity, the order's shipments and Create shipment (E08-S02).
+ */
+export function OrdersScreen({ tenant, orders, order, shipments = [], page = 1, total = 0, materials, customers, locations, units, messages, locale }: OrdersScreenProps) {
   const t = orderLabels(messages);
+  const shipmentLabels = shipmentsLabels(messages);
   const path = `/admin/${tenant.code}/customer-orders`;
   const pages = Math.ceil(total / ORDER_PAGE_SIZE);
   const byMaterial = new Map(materials.map((material) => [material.id, material]));
@@ -35,6 +45,7 @@ export function OrdersScreen({ tenant, orders, order, page = 1, total = 0, mater
     customers: customers.map(choice), locations: locations.map(choice),
     materials: materials.map(({ id, description, active, baseUnit }) => ({ value: id, label: `${id} ${description}${active ? "" : ` (${t.inactive})`}`, active, units: units[id] ?? [baseUnit] })),
   };
+  const shipmentChoices = order ? shipmentLineChoices(order, byMaterial, units, shipmentLabels) : [];
   const columns: DataTableColumn<CustomerOrderView>[] = [
     { id: "id", header: t.id, cell: (row) => <Link className="font-mono underline underline-offset-4" href={`${path}/${row.id}`}>{row.id}</Link> },
     { id: "customer", header: t.customer, cell: (row) => named(customers, row.customer), className: "whitespace-normal wrap-anywhere" },
@@ -48,6 +59,7 @@ export function OrdersScreen({ tenant, orders, order, page = 1, total = 0, mater
     { id: "entered", header: t.entered, cell: (line) => `${line.enteredQuantity} ${line.enteredUnit} (${line.denominator} ${line.enteredUnit} = ${line.numerator} ${byMaterial.get(line.material)!.baseUnit})`, className: "hidden whitespace-normal md:table-cell" },
     { id: "date", header: t.requiredDate, cell: (line) => line.requiredDate },
     { id: "fulfilled", header: t.fulfilled, cell: (line) => shownQuantity(line.fulfilled), className: "hidden sm:table-cell" },
+    { id: "outstanding", header: t.outstanding, cell: (line) => shownQuantity(outstandingOf(line)), className: "hidden sm:table-cell" },
     { id: "status", header: t.status, cell: (line) => t.states[line.status], className: "hidden sm:table-cell" },
   ];
   return <div lang={locale} className="flex flex-col gap-6">
@@ -62,6 +74,21 @@ export function OrdersScreen({ tenant, orders, order, page = 1, total = 0, mater
         {[{ label: t.customer, value: named(customers, order.customer) }, { label: t.location, value: named(locations, order.location) }, { label: t.status, value: t.states[order.status] }].map(({ label, value }) => <div key={label}><dt className="text-muted-foreground">{label}</dt><dd className="mt-1 wrap-anywhere">{value}</dd></div>)}
       </dl>
       <DataTable label={t.lines} columns={lineColumns} rows={order.lines} rowKey={(line) => line.id} empty={t.empty} />
+      <section className="flex flex-col gap-3">
+        <h2 className="text-lg font-semibold">{shipmentLabels.heading}</h2>
+        <p className="text-sm text-muted-foreground">{shipmentLabels.intro}</p>
+        {!tenant.readOnly && order.status === "open" && shipmentChoices.length > 0 && (
+          <ShipmentDialog
+            context={{ tenant: tenant.code, generation: tenant.generation }}
+            customerOrder={order.id}
+            location={named(locations, order.location)}
+            labels={shipmentLabels}
+            lines={shipmentChoices}
+            plannedDate={firstDueDate(order)}
+          />
+        )}
+        <ShipmentsTable tenant={tenant.code} shipments={shipments} materials={byMaterial} labels={shipmentLabels} />
+      </section>
     </> : <DataTable label={t.link} columns={columns} rows={orders} rowKey={(row) => row.id} pagination={pages > 1 && <nav aria-label={t.pagination} className="flex flex-wrap items-center justify-end gap-3">
       {page > 1 && <Button asChild variant="outline"><Link href={`${path}?page=${page - 1}`}>{t.previous}</Link></Button>}
       <span className="text-sm">{fill(t.page, { page: String(page), pages: String(pages) })}</span>

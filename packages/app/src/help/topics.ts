@@ -29,6 +29,7 @@ export const HELP_TOPIC_IDS = [
   "transfer",
   "customer-orders",
   "customer-order-detail",
+  "shipment",
   "import",
   "stock",
   "language-and-theme",
@@ -69,6 +70,7 @@ export const HELP_TOPIC_ROUTES: Record<HelpTopicId, string> = {
   transfer: "/admin/[tenant]/transfers/[id]",
   "customer-orders": "/admin/[tenant]/customer-orders",
   "customer-order-detail": "/admin/[tenant]/customer-orders/[id]",
+  shipment: "/admin/[tenant]/shipments/[id]",
   import: "/admin/[tenant]/import",
   stock: "/admin/[tenant]/stock",
   "language-and-theme": "/admin",
@@ -89,7 +91,7 @@ const en: Record<HelpTopicId, HelpText> = {
   "production-orders": { title: "Production orders", body: ["Create one Make output at one location. Preview active date-valid recipes, pick an alternative and review current component shortages. Shortages allow planning; creating or editing an order moves no stock. The exact BOM revision, unit conversion and calendar-day lead time are kept. Edit target and finish on the detail screen; read-only datasets allow reading only."] },
   "production-order-detail": { title: "A production order", body: ["The detail screen shows the pinned BOM revision, the stored unit conversion, the captured calendar-day lead time and current component shortages. On an Open order, edit the target or the planned finish: the start is recalculated from the captured lead time and the recipe stays pinned. Planning moves no stock; read-only datasets allow reading only."] },
   "customer-orders": { title: "Customer orders", body: ["Both roles can create and edit customer orders under Transactions. Choose one active customer and one location for the header; each line has its own material, positive quantity, unit and required date. Orders start Open with zero fulfilled. Entering an order moves no stock. Stored quantities use the material’s base unit; the entered amount and factor stay in history. A customer may be deactivated while existing orders continue. A stale version refuses an overwrite; reload before retrying. A read-only tenant hides write controls and refuses writes."] },
-  "customer-order-detail": { title: "Maintaining a customer order", body: ["Both roles can create and edit customer orders under Transactions. Choose one active customer and one location for the header; each line has its own material, positive quantity, unit and required date. Orders start Open with zero fulfilled. Entering an order moves no stock. Stored quantities use the material’s base unit; the entered amount and factor stay in history. A customer may be deactivated while existing orders continue. A stale version refuses an overwrite; reload before retrying. A read-only tenant hides write controls and refuses writes."] },
+  "customer-order-detail": { title: "Maintaining a customer order", body: ["Both roles can create and edit customer orders under Transactions. Choose one active customer and one location for the header; each line has its own material, positive quantity, unit and required date. Orders start Open with zero fulfilled. Entering an order moves no stock. Stored quantities use the material’s base unit; the entered amount and factor stay in history. A customer may be deactivated while existing orders continue. A stale version refuses an overwrite; reload before retrying. A read-only tenant hides write controls and refuses writes.", "The order's page shows each line's outstanding quantity and the order's shipments, and Create shipment plans a dispatch: see Shipments and goods issues. Goods issues fulfil the lines; a line delivered in full is Completed, and so is the order once every line is. Lowering a delivered line to exactly what was delivered completes it too."] },
   "getting-started": {
     title: "Getting started with CPG",
     body: [
@@ -298,6 +300,15 @@ const en: Record<HelpTopicId, HelpText> = {
       "Change dates edits the planned dates while the transfer is Open, at the version you loaded. The API offers PATCH /api/tenants/{tenant}/transfers/{id} for dates, and POST …/dispatches, …/receipts and …/write-offs for postings, each with a bearer token, an idempotency key and, in Test, the dataset generation.",
     ],
   },
+  shipment: {
+    title: "Shipments and goods issues",
+    body: [
+      "A shipment plans what leaves against one customer order. On the order's page, Create shipment asks for the planned date and a quantity per line, in any unit the material converts, leaving the other lines empty. A line can't plan more than it still has outstanding. Creating a shipment moves no stock and fulfils nothing.",
+      "Choose a shipment's ID to open its page: its order, customer, location, planned date and status, and per line what is planned, what has been issued and what is still to issue.",
+      "Post goods issue records what actually left: a quantity per line. Stock falls at the order's location with today's date, and the order's lines are fulfilled, in the same step, or nothing is posted. A line can't issue more than it has to issue (the smaller of what the shipment still plans and what the order line still has outstanding), or more than is in stock: the refusal says how much is available.",
+      "The issue that delivers a line in full completes it, and the order is Completed once every line is. A shipment is Completed once nothing is left to issue on it. Goods issues can't be changed; they are listed under Goods issues, newest first. Once a line has been issued, its material, unit and required date, the order's customer and location, and a quantity below what was delivered can't be changed.",
+    ],
+  },
   import: {
     title: "Import from spreadsheet",
     body: [
@@ -338,7 +349,7 @@ const pl: Record<HelpTopicId, HelpText> = {
   "production-orders": { title: "Zlecenia produkcyjne", body: ["Utwórz zlecenie na jeden wytwarzany materiał w jednej lokalizacji. Sprawdź aktywne receptury ważne na wybraną datę, wybierz wariant i przejrzyj aktualne niedobory. Niedobór nie blokuje planowania; utworzenie ani edycja nie zmienia zapasu. Rewizja BOM, przelicznik i czas realizacji w dniach kalendarzowych są zachowane. Na stronie szczegółów edytujesz ilość i datę końca. Zbiory tylko do odczytu pozwalają jedynie przeglądać."] },
   "production-order-detail": { title: "Zlecenie produkcyjne", body: ["Strona szczegółów pokazuje przypiętą rewizję BOM, zapisany przelicznik jednostek, zapisany czas realizacji w dniach kalendarzowych i aktualne niedobory składników. W otwartym zleceniu edytujesz ilość lub planowany koniec: początek jest przeliczany z zapisanego czasu realizacji, a receptura pozostaje przypięta. Planowanie nie zmienia zapasu; zbiory tylko do odczytu pozwalają jedynie przeglądać."] },
   "customer-orders": { title: "Zamówienia klientów", body: ["Obie role mogą tworzyć i edytować zamówienia klientów w sekcji Transakcje. Wybierz aktywnego klienta i jedną lokalizację nagłówka; każda pozycja ma własny materiał, dodatnią ilość, jednostkę i wymagany termin. Nowe zamówienie jest Otwarte, z ilością zrealizowaną równą zero. Zapis nie zmienia zapasu. Ilości zapisuje się w jednostce bazowej, zachowując wprowadzoną ilość i przelicznik. Klienta można dezaktywować, a istniejące zamówienia nadal obsługiwać. Nieaktualna wersja nie nadpisze zmian: odśwież dane. Środowisko tylko do odczytu ukrywa przyciski zapisu i odmawia zmian."] },
-  "customer-order-detail": { title: "Edycja zamówienia klienta", body: ["Obie role mogą tworzyć i edytować zamówienia klientów w sekcji Transakcje. Wybierz aktywnego klienta i jedną lokalizację nagłówka; każda pozycja ma własny materiał, dodatnią ilość, jednostkę i wymagany termin. Nowe zamówienie jest Otwarte, z ilością zrealizowaną równą zero. Zapis nie zmienia zapasu. Ilości zapisuje się w jednostce bazowej, zachowując wprowadzoną ilość i przelicznik. Klienta można dezaktywować, a istniejące zamówienia nadal obsługiwać. Nieaktualna wersja nie nadpisze zmian: odśwież dane. Środowisko tylko do odczytu ukrywa przyciski zapisu i odmawia zmian."] },
+  "customer-order-detail": { title: "Edycja zamówienia klienta", body: ["Obie role mogą tworzyć i edytować zamówienia klientów w sekcji Transakcje. Wybierz aktywnego klienta i jedną lokalizację nagłówka; każda pozycja ma własny materiał, dodatnią ilość, jednostkę i wymagany termin. Nowe zamówienie jest Otwarte, z ilością zrealizowaną równą zero. Zapis nie zmienia zapasu. Ilości zapisuje się w jednostce bazowej, zachowując wprowadzoną ilość i przelicznik. Klienta można dezaktywować, a istniejące zamówienia nadal obsługiwać. Nieaktualna wersja nie nadpisze zmian: odśwież dane. Środowisko tylko do odczytu ukrywa przyciski zapisu i odmawia zmian.", "Strona zamówienia pokazuje, ile pozostało w każdej pozycji, oraz wysyłki zamówienia, a przycisk Utwórz wysyłkę planuje wysyłkę: zobacz Wysyłki i wydania towaru. Wydania towaru realizują pozycje; pozycja dostarczona w całości jest Zakończona, a zamówienie, gdy wszystkie pozycje są zakończone. Obniżenie dostarczonej pozycji dokładnie do dostarczonej ilości również ją kończy."] },
   "getting-started": {
     title: "Pierwsze kroki z CPG",
     body: [
@@ -545,6 +556,15 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Wydaj zdejmuje zapas z lokalizacji źródłowej do tranzytu, do ilości pozostałej do wydania i nigdy więcej, niż jest w lokalizacji. Przyjmij umieszcza część lub całość zapasu z tranzytu w lokalizacji docelowej, nigdy więcej. Odpisz zdejmuje z tranzytu ilość utraconą po drodze, z powodem; żadna lokalizacja się nie zmienia, a korekta zapasu nie może dotknąć tranzytu. Każde księgowanie ma dzisiejszą datę i zapisuje obie strony w jednym kroku albo nic.",
       "Gdy przyjęto całą planowaną ilość, przesunięcie jest Zrealizowane i nie przyjmuje kolejnych księgowań. Przesunięcie z odpisem pozostaje Otwarte: wcześniejsze zamknięcie pojawi się w późniejszej wersji. Księgowań nie można zmieniać; rejestr pokazuje każde z tym, co przesunęło, od najnowszego.",
       "Zmień daty zmienia planowane daty, dopóki przesunięcie jest Otwarte, w wersji, którą wczytano. API udostępnia PATCH /api/tenants/{tenant}/transfers/{id} dla dat oraz POST …/dispatches, …/receipts i …/write-offs dla księgowań, każde z tokenem, kluczem idempotencji i, w środowisku Test, generacją danych.",
+    ],
+  },
+  shipment: {
+    title: "Wysyłki i wydania towaru",
+    body: [
+      "Wysyłka planuje, co wyjedzie w ramach jednego zamówienia klienta. Na stronie zamówienia przycisk Utwórz wysyłkę prosi o planowaną datę i ilość w każdej pozycji, w dowolnej jednostce, którą materiał przelicza; pozostałe pozycje zostaw puste. Pozycja nie zaplanuje więcej, niż w niej pozostało. Utworzenie wysyłki nie zmienia zapasu i niczego nie realizuje.",
+      "Wybierz identyfikator wysyłki, aby otworzyć jej stronę: zamówienie, klienta, lokalizację, planowaną datę i status, a w każdej pozycji to, co zaplanowano, co już wydano i co zostało do wydania.",
+      "Zaksięguj wydanie towaru zapisuje, co naprawdę wyjechało: ilość w każdej pozycji. Zapas w lokalizacji zamówienia spada z dzisiejszą datą, a pozycje zamówienia są realizowane w tym samym kroku albo nic nie zostaje zaksięgowane. Pozycja nie wyda więcej, niż ma do wydania (mniej z tego, co wysyłka jeszcze planuje, i tego, co pozostało w pozycji zamówienia), ani więcej, niż jest na stanie: odmowa podaje dostępną ilość.",
+      "Wydanie, które dostarcza pozycję w całości, kończy ją, a zamówienie jest Zakończone, gdy wszystkie pozycje są zakończone. Wysyłka jest Zakończona, gdy nie zostało w niej nic do wydania. Wydań towaru nie można zmieniać; są wymienione w sekcji Wydania towaru, od najnowszego. Po wydaniu z pozycji nie można zmienić jej materiału, jednostki ani wymaganego terminu, klienta ani lokalizacji zamówienia, ani obniżyć ilości poniżej dostarczonej.",
     ],
   },
   import: {

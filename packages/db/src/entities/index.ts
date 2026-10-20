@@ -11,6 +11,10 @@ import {
   TransferPosting,
   type TransferPostingKind,
 } from "./transfers/transfer-posting.entity";
+import { Shipment, SHIPMENT_STATUSES, type ShipmentStatus } from "./shipments/shipment.entity";
+import { ShipmentLine } from "./shipments/shipment-line.entity";
+import { GoodsIssue, GOODS_ISSUE_IMMUTABLE } from "./goods-issues/goods-issue.entity";
+import { GoodsIssueLine } from "./goods-issues/goods-issue-line.entity";
 import { StockMovement, STOCK_MOVEMENT_IMMUTABLE } from "./stock/stock-movement.entity";
 import { API_TOKEN_NAME_MAX, ApiToken } from "./api-tokens/api-token.entity";
 import {
@@ -86,6 +90,8 @@ export { StockBalance, StockMovement, STOCK_MOVEMENT_IMMUTABLE };
 export { GoodsReceipt, GOODS_RECEIPT_IMMUTABLE, GoodsReceiptLine };
 export { Transfer, TRANSFER_POSTING_IMMUTABLE, TRANSFER_POSTING_KINDS, TRANSFER_STATUSES, TransferPosting };
 export type { TransferPostingKind, TransferStatus };
+export { Shipment, ShipmentLine, SHIPMENT_STATUSES, GoodsIssue, GOODS_ISSUE_IMMUTABLE, GoodsIssueLine };
+export type { ShipmentStatus };
 export { Bom, BomComponent, BOM_REVISION_IMMUTABLE, BomRevision };
 export { PURCHASE_ORDER_STATUSES, PurchaseOrder, PurchaseOrderLine, PurchaseRequisition, REQUISITION_STATUSES };
 export type { ProcurementMode, PurchaseOrderStatus, RequisitionStatus };
@@ -127,6 +133,10 @@ export const entities = [
   GoodsReceiptLine,
   Transfer,
   TransferPosting,
+  Shipment,
+  ShipmentLine,
+  GoodsIssue,
+  GoodsIssueLine,
 ];
 
 /**

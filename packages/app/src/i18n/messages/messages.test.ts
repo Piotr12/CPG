@@ -51,6 +51,8 @@ describe("dictionaries", () => {
       "transfers/details/status",
       "transfers/ledger/by",
       "transfers/ledger/channels/api",
+      "shipments/columns/status",
+      "shipments/details/status",
       "imports/problems/problem",
       "imports/change/empty",
       "imports/records/BOM",
