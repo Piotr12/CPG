@@ -15,6 +15,8 @@ export const HELP_TOPIC_IDS = [
   "locations",
   "customers",
   "suppliers",
+  "planning-parameters",
+  "safety-stock",
   "language-and-theme",
   "using-help",
 ] as const;
@@ -39,6 +41,8 @@ export const HELP_TOPIC_ROUTES: Record<HelpTopicId, string> = {
   locations: "/admin/[tenant]/locations",
   customers: "/admin/[tenant]/customers",
   suppliers: "/admin/[tenant]/suppliers",
+  "planning-parameters": "/admin/[tenant]/planning-parameters",
+  "safety-stock": "/admin/[tenant]/safety-stock",
   "language-and-theme": "/admin",
   "using-help": "/help",
 };
@@ -107,13 +111,13 @@ const en: Record<HelpTopicId, HelpText> = {
       "Send the secret in every API request as the Authorization: Bearer header. The token can do exactly what your account can, in Test and Prod, and it never expires.",
       "Revoke ends a token at once. A password reset or a deactivation ends all of an account's tokens. Tokens can be listed and revoked through the API too, but only created here.",
       "Every API request that changes something needs an Idempotency-Key header: a fresh value, such as a UUID, for each change. If the answer is lost, send the same request with the same key again within 24 hours: CPG returns the first answer and changes nothing twice. A key reused for a different request is refused.",
-      "To change a user, send the version you read with it (GET /api/users). If someone changed the user since, CPG refuses with a version conflict and keeps their change: read it again and retry. For writes to the Test tenant, also send the Dataset-Generation header with the generation from GET /api/tenants/test.",
+      "To change a record (a user, a material or one of its unit conversions, a location, a customer or a supplier), send the version you read with it, from GET /api/users or the tenant's GET routes. If someone changed the record since, CPG refuses with a version conflict and keeps their change: read it again and retry. For writes to the Test tenant, also send the Dataset-Generation header with the generation from GET /api/tenants/test.",
     ],
   },
   "global-audit": {
     title: "The Global audit",
     body: [
-      "Global audit, at the bottom of the sidebar, opens every change to accounts, newest first. It lists users created, passwords reset, accounts deactivated or reactivated, language or theme changes, and API tokens created or revoked. A token ended by a password reset or a deactivation is listed as revoked too.",
+      "Global audit, at the bottom of the sidebar, opens every change to accounts and to the tenants' settings, newest first. It lists users created, passwords reset, accounts deactivated or reactivated, language or theme changes, API tokens created or revoked, and a tenant made read-only or writable again. A token ended by a password reset or a deactivation is listed as revoked too.",
       "Each entry shows when it happened (in UTC), the account that made it, the session it came from, the channel (UI for CPG's screens, API for programs) and what changed, as before → after.",
       "A password reset is listed without the password: CPG never records passwords or their hashes. When the administrator's password is changed in the server's settings, the administrator's API tokens end at the next restart without an entry here.",
       "Every account can read the audit, and nobody can change or delete an entry, not even the administrator. Older entries shows the previous page.",
@@ -123,7 +127,7 @@ const en: Record<HelpTopicId, HelpText> = {
     title: "A tenant's audit",
     body: [
       "Audit, in the sidebar under the tenant's screens (or Audit — Test or Audit — Prod on the tenant's page), opens that tenant's own audit: the changes to its business records, kept apart from the other tenant's.",
-      "It lists every material, location, customer and supplier created, changed, deactivated or reactivated, and every unit conversion added, changed or removed, with the values before and after. Account changes are always in the Global audit.",
+      "It lists every material, location, customer and supplier created, changed, deactivated or reactivated, and every unit conversion, planning parameter set and safety-stock target added, changed or removed, with the values before and after. Account changes are always in the Global audit.",
       "Like the Global audit, it is read-only for everyone.",
     ],
   },
@@ -141,7 +145,7 @@ const en: Record<HelpTopicId, HelpText> = {
     body: [
       "Choose a material's ID to open its page: its type, base unit and status, and its unit conversions.",
       "A conversion lets people enter quantities in another unit, such as a case of 12. It reads 1 case = 12 each: the alternate quantity and unit, then the base quantity and the base unit. A quantity entered in that unit is converted into the base unit once, rounded half-up to six decimals, and the unit and factor it was entered with are kept. The inverse is shown for orientation only.",
-      "Changing or removing a conversion never changes quantities already stored. The base unit can change only while the material has no conversions.",
+      "Changing or removing a conversion never changes quantities already stored. The base unit can change only while the material has no conversions, planning parameters or safety-stock targets, since their values are in it.",
       "Deactivate keeps the material and its history, but it can't be picked for new entries; Reactivate undoes that. Every change appears in the tenant's audit.",
     ],
   },
@@ -170,6 +174,24 @@ const en: Record<HelpTopicId, HelpText> = {
       "Every supplier has an eight-digit ID that CPG assigns in order when it is created (00000001, 00000002, …) and that never changes, a name and a status. Names don't have to be unique.",
       "Every account can read the list. Only the administrator creates, renames, deactivates and reactivates suppliers, with Create supplier and each row's ⋯ menu; through the API too, with the same rules.",
       "Deactivate keeps the supplier and everything that already uses it, but it can't be picked for new entries; Reactivate undoes that. Every change appears in the tenant's audit.",
+    ],
+  },
+  "planning-parameters": {
+    title: "Planning parameters",
+    body: [
+      "Planning parameters, under Master data in the sidebar, tell MRP how each material is supplied at each location: Make (production) or Buy (purchasing), the lead time in whole calendar days, and the minimum lot and lot multiple a proposal must respect, in the material's base unit.",
+      "A raw material is always bought. An intermediate or finished material can be made at one location and bought at another. Without a set, MRP reports the material's parameters at that location as missing.",
+      "Every account can read the list. Only the administrator adds, changes and removes sets, with Add parameters and each row's ⋯ menu; through the API too, with the same rules. Only active materials and locations can get a new set; existing sets stay when either is deactivated.",
+      "Every change appears in the tenant's audit. A material's base unit can't change while it has planning parameters.",
+    ],
+  },
+  "safety-stock": {
+    title: "Safety stock",
+    body: [
+      "Safety stock, under Master data in the sidebar, lists the minimum stock to keep of a material at a location. Each target applies from its date until the next target for the same material and location; with no target in force, the target is 0.",
+      "Two targets can't share a date. To change a target's quantity, use Change target; to move it, remove it and add one on the new date. A target of 0 ends a buffer from its date.",
+      "The status says which target is in effect today (UTC), which ones are scheduled for later, and which earlier ones a later target has replaced.",
+      "Every account can read the list. Only the administrator adds, changes and removes targets, with Add target and each row's ⋯ menu; through the API too. Every change appears in the tenant's audit.",
     ],
   },
   "language-and-theme": {
@@ -244,13 +266,13 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Wysyłaj sekret w każdym żądaniu do API jako nagłówek Authorization: Bearer. Token może dokładnie to, co twoje konto, w środowiskach Test i Prod, i nigdy nie wygasa.",
       "Unieważnij natychmiast kończy działanie tokenu. Reset hasła lub dezaktywacja kończy działanie wszystkich tokenów konta. Tokeny można też wyświetlać i unieważniać przez API, ale tworzyć tylko tutaj.",
       "Każde żądanie do API, które coś zmienia, wymaga nagłówka Idempotency-Key: nowej wartości, na przykład UUID, dla każdej zmiany. Jeśli odpowiedź zginie, wyślij to samo żądanie z tym samym kluczem ponownie w ciągu 24 godzin: CPG zwróci pierwszą odpowiedź i niczego nie zmieni dwa razy. Klucz użyty ponownie do innego żądania zostanie odrzucony.",
-      "Aby zmienić użytkownika, wyślij wersję, którą odczytałeś (GET /api/users). Jeśli ktoś w międzyczasie go zmienił, CPG odmówi z konfliktem wersji i zachowa tamtą zmianę: odczytaj go ponownie i spróbuj jeszcze raz. Przy zapisach w środowisku Test wyślij też nagłówek Dataset-Generation z generacją z GET /api/tenants/test.",
+      "Aby zmienić rekord (użytkownika, materiał lub jeden z jego przeliczników jednostek, lokalizację, klienta lub dostawcę), wyślij wersję, którą odczytałeś z GET /api/users lub z tras GET środowiska. Jeśli ktoś w międzyczasie go zmienił, CPG odmówi z konfliktem wersji i zachowa tamtą zmianę: odczytaj go ponownie i spróbuj jeszcze raz. Przy zapisach w środowisku Test wyślij też nagłówek Dataset-Generation z generacją z GET /api/tenants/test.",
     ],
   },
   "global-audit": {
     title: "Audyt globalny",
     body: [
-      "Audyt globalny, na dole panelu bocznego, pokazuje każdą zmianę kont, od najnowszej. Znajdziesz tu utworzonych użytkowników, zresetowane hasła, dezaktywowane i ponownie aktywowane konta, zmiany języka lub motywu oraz utworzone i unieważnione tokeny API. Token usunięty przy resecie hasła lub dezaktywacji konta też jest tu zapisany jako unieważniony.",
+      "Audyt globalny, na dole panelu bocznego, pokazuje każdą zmianę kont i ustawień środowisk, od najnowszej. Znajdziesz tu utworzonych użytkowników, zresetowane hasła, dezaktywowane i ponownie aktywowane konta, zmiany języka lub motywu, utworzone i unieważnione tokeny API oraz środowiska ustawione jako tylko do odczytu lub ponownie zapisywalne. Token usunięty przy resecie hasła lub dezaktywacji konta też jest tu zapisany jako unieważniony.",
       "Każdy wpis pokazuje, kiedy nastąpiła zmiana (w UTC), które konto ją wprowadziło, z jakiej sesji, jakim kanałem (Ekran dla ekranów CPG, Interfejs API dla programów) i co się zmieniło, jako przed → po.",
       "Reset hasła jest zapisany bez hasła: CPG nigdy nie zapisuje haseł ani ich skrótów. Gdy hasło administratora zmieni się w ustawieniach serwera, jego tokeny API przestają działać przy następnym uruchomieniu serwera, bez wpisu w tym audycie.",
       "Audyt może przeglądać każde konto, a nikt nie może zmienić ani usunąć wpisu, nawet administrator. Starsze wpisy pokazują poprzednią stronę.",
@@ -260,7 +282,7 @@ const pl: Record<HelpTopicId, HelpText> = {
     title: "Audyt środowiska",
     body: [
       "Audyt, w panelu bocznym pod ekranami środowiska (albo Audyt — Test lub Audyt — Prod na stronie środowiska), otwiera własny audyt tego środowiska: zmiany jego rekordów biznesowych, oddzielone od drugiego środowiska.",
-      "Pokazuje każde utworzenie, zmianę, dezaktywację i ponowną aktywację materiału, lokalizacji, klienta lub dostawcy oraz każdy dodany, zmieniony lub usunięty przelicznik jednostek, z wartościami przed i po. Zmiany kont są zawsze w audycie globalnym.",
+      "Pokazuje każde utworzenie, zmianę, dezaktywację i ponowną aktywację materiału, lokalizacji, klienta lub dostawcy oraz każde dodanie, zmianę lub usunięcie przelicznika jednostek, parametrów planowania lub celu zapasu bezpieczeństwa, z wartościami przed i po. Zmiany kont są zawsze w audycie globalnym.",
       "Tak jak audyt globalny, jest tylko do odczytu dla wszystkich.",
     ],
   },
@@ -278,7 +300,7 @@ const pl: Record<HelpTopicId, HelpText> = {
     body: [
       "Wybierz ID materiału, aby otworzyć jego stronę: typ, jednostkę bazową, status i przeliczniki jednostek.",
       "Przelicznik pozwala wpisywać ilości w innej jednostce, na przykład w kartonach po 12 sztuk. Czyta się go jako 1 karton = 12 szt.: ilość i jednostka alternatywna, potem ilość i jednostka bazowa. Ilość wpisana w tej jednostce jest przeliczana na jednostkę bazową raz, z zaokrągleniem połówek w górę do sześciu miejsc po przecinku, a jednostka i przelicznik, z którymi ją wpisano, zostają zapisane. Odwrotność jest tylko orientacyjna.",
-      "Zmiana lub usunięcie przelicznika nigdy nie zmienia ilości już zapisanych. Jednostkę bazową można zmienić tylko wtedy, gdy materiał nie ma przeliczników.",
+      "Zmiana lub usunięcie przelicznika nigdy nie zmienia ilości już zapisanych. Jednostkę bazową można zmienić tylko wtedy, gdy materiał nie ma przeliczników, parametrów planowania ani celów zapasu bezpieczeństwa, bo ich wartości są w niej zapisane.",
       "Dezaktywuj zachowuje materiał i jego historię, ale nie można go wybrać w nowych wpisach; Aktywuj ponownie to cofa. Każda zmiana pojawia się w audycie środowiska.",
     ],
   },
@@ -307,6 +329,24 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Każdy dostawca ma ośmiocyfrowe ID, które CPG nadaje po kolei przy utworzeniu (00000001, 00000002, …) i które nigdy się nie zmienia, a także nazwę i status. Nazwy nie muszą być unikalne.",
       "Dostawców może przeglądać każde konto. Tworzy ich, zmienia ich nazwy, dezaktywuje i aktywuje ponownie tylko administrator, przyciskiem Utwórz dostawcę i menu ⋯ w każdym wierszu; także przez API, na tych samych zasadach.",
       "Dezaktywuj zachowuje dostawcę i wszystko, co już go używa, ale nie można go wybrać w nowych wpisach; Aktywuj ponownie to cofa. Każda zmiana pojawia się w audycie środowiska.",
+    ],
+  },
+  "planning-parameters": {
+    title: "Parametry planowania",
+    body: [
+      "Parametry planowania, w sekcji Dane podstawowe w menu bocznym, mówią MRP, jak każdy materiał jest zaopatrywany w każdej lokalizacji: Produkcja albo Zakup, czas realizacji w pełnych dniach kalendarzowych oraz minimalna partia i wielokrotność partii, których propozycja musi przestrzegać, w jednostce bazowej materiału.",
+      "Surowiec jest zawsze kupowany. Półprodukt lub wyrób gotowy może być produkowany w jednej lokalizacji i kupowany w innej. Bez zestawu MRP zgłasza brak parametrów materiału w tej lokalizacji.",
+      "Listę może przeglądać każde konto. Zestawy dodaje, zmienia i usuwa tylko administrator, przyciskiem Dodaj parametry i menu ⋯ w wierszu; także przez API, na tych samych zasadach. Nowy zestaw może dostać tylko aktywny materiał i aktywna lokalizacja; istniejące zestawy zostają po dezaktywacji.",
+      "Każda zmiana pojawia się w audycie środowiska. Jednostki bazowej materiału nie można zmienić, dopóki ma on parametry planowania.",
+    ],
+  },
+  "safety-stock": {
+    title: "Zapas bezpieczeństwa",
+    body: [
+      "Zapas bezpieczeństwa, w sekcji Dane podstawowe w menu bocznym, to minimalny zapas materiału w lokalizacji. Każdy cel obowiązuje od swojej daty do następnego celu dla tego samego materiału i lokalizacji; gdy żaden cel nie obowiązuje, wynosi 0.",
+      "Dwa cele nie mogą mieć tej samej daty. Aby zmienić ilość, użyj Zmień cel; aby przesunąć datę, usuń cel i dodaj nowy. Cel 0 kończy zapas od swojej daty.",
+      "Status mówi, który cel obowiązuje dziś (UTC), które są zaplanowane na później, a które wcześniejsze zastąpił późniejszy cel.",
+      "Listę może przeglądać każde konto. Cele dodaje, zmienia i usuwa tylko administrator, przyciskiem Dodaj cel i menu ⋯ w wierszu; także przez API. Każda zmiana pojawia się w audycie środowiska.",
     ],
   },
   "language-and-theme": {

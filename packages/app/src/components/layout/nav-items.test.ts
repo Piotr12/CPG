@@ -14,7 +14,7 @@ describe("navModel", () => {
 
   it("gives a normal user the tenant tree and the shared screens, without Administration", () => {
     const model = navModel({ role: "user" }, en.nav)!;
-    expect(shape(model.tenant)).toEqual(["overview", ["masterData", ["materials", "locations", "customers", "suppliers"]], "tenantAudit"]);
+    expect(shape(model.tenant)).toEqual(["overview", ["masterData", ["materials", "locations", "customers", "suppliers", "planningParameters", "safetyStock"]], "tenantAudit"]);
     expect(shape(model.shared)).toEqual(["globalAudit", "help"]);
   });
 
@@ -33,7 +33,17 @@ describe("navModel", () => {
   it("labels every entry in the reader's language and keeps where it leads", () => {
     const model = navModel({ role: "user" }, pl.nav)!;
     expect(model.tenant[0]).toEqual({ id: "overview", section: "", match: "exact", label: "Przegląd" });
-    expect(model.tenant[1]).toMatchObject({ label: "Dane podstawowe", children: [{ section: "materials", label: "Materiały" }, {}, {}, {}] });
+    expect(model.tenant[1]).toMatchObject({
+      label: "Dane podstawowe",
+      children: [
+        { section: "materials", label: "Materiały" },
+        {},
+        {},
+        {},
+        { section: "planning-parameters", label: "Parametry planowania" },
+        { section: "safety-stock", label: "Zapas bezpieczeństwa" },
+      ],
+    });
     expect(model.shared[0]).toEqual({ id: "globalAudit", href: "/admin/audit", match: "prefix", label: "Audyt globalny" });
   });
 });

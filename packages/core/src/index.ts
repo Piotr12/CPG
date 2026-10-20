@@ -26,6 +26,10 @@ export * from "./services/materials/material.service";
 export * from "./services/locations/location.service";
 export * from "./services/customers/customer.service";
 export * from "./services/suppliers/supplier.service";
+export * from "./services/planning-parameters/planning-parameter.service";
+export * from "./services/safety-stock/safety-stock-target.service";
+// The Safety stock screen labels each target as of today.
+export { targetStatus, type TargetStatus } from "./domain/safety-stock/target-on";
 export type { NamedRecordChanges, NamedRecordView } from "./services/named-records/named-records";
 export * from "./services/preferences/user-preference.service";
 export * from "./services/system/system-status.service";

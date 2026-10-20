@@ -1,6 +1,6 @@
 # Test and Prod tenants: selection, a visible indicator and strict isolation
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-19 09:13 UTC
 **Issue:** #19 (E02-S01), epic #10 · **Depends on:** E01-S01 (#15, shipped in #29) · **Design authority:** `.ai/specs/product-brief.md` (R05, D03, D06, N05), `.ai/specs/research/CPG-prd001.pdf` §05–§06, `.ai/specs/research/CPG-prd-datamodel.pdf` (Tenant; "Tenant generation → all business objects"), `.ai/specs/research/CPG-acceptance.md` TEN-001, TEN-010, TEN-011, TEN-014, API-013
 
@@ -340,3 +340,18 @@ Nothing is superseded.
 ## Implementation notes
 
 - **2026-10-19, E01-S02 (#16, PR #34):** as Q9 anticipated, normal users now exist. So `/admin` (the chooser) and every `admin/[tenant]` page call `requireUser()` instead of `requireAdmin()`, because every active account uses both tenants (TEN-010). Admin-only content stays behind `requireAdmin()` or a role check: the database card, the Users link, and `/admin/users` under `(global)`.
+
+Implemented in PR #36. Recorded on 2026-10-20 when epic E02 (#10) closed. These are the deliberate deviations and what later stories changed:
+
+- **Unknown tenant.** `/admin/staging` and `/admin/TEST` render the not-found UI with `noindex`, but answer HTTP 200. With Partial Prefetching, Next.js 16 streams the route's shell before the layout's `notFound()` runs (`streaming.md`, "The HTTP contract"). `tests/integration/tenants.test.ts` asserts the UI and `noindex`. The API still answers a real 404.
+- **The tenant strip is gone (#58, PR #60).** The strip and its switcher were replaced by three things:
+  - a `TenantHeader` row: a TEST, PROD or GLOBAL tag, a coloured top edge and the breadcrumb trail;
+  - a TEST | PROD switch in the sidebar and the mobile top bar (`components/tenants/tenant-switch.tsx`);
+  - the read-only banner from #25.
+
+  The Global text is now "Shared by Test and Prod — switching tenant doesn't change this page". On tenant pages, "Active tenant" is for screen readers only. The switch is a server-rendered link, so it keeps the section even without JavaScript; this supersedes Q8. Q7 is partly reversed: a global page remembers the last tenant per tab (default Test), and the switch there re-targets the menu instead of navigating. `/`, `/login` and `/help` show no header row, only the sidebar's switch.
+- **Demo data (#22, #23).** Test's demonstration records are materials, locations, customers and suppliers. As Q4 required, the startup seeder (`core/src/demo-data.ts`, run from `instrumentation.ts`) writes them through `scopeForTenant`, not through migrations. On every start it fills each kind that Test has no records of. The tenant home links to the sections instead of saying "No business records yet".
+- **Tenant writes carry the generation (#21).** `tenantServerAction` takes `(tenantCode, generation, raw)`, and tenant API writes go through `tenantApiWrite` (`app/src/auth/api-write.ts`). `tests/tenant-entry-points.test.ts` and `tests/api-writes.test.ts` enforce both.
+- **Read-only flag (#25).** `TenantInfo` gains `readOnly`, and `PATCH /api/tenants/{tenant}` is new. `/admin` is now "Cave control", with the admin's Read-only card.
+- **Audit (#20).** `TenantAuditEvent` is tenant-owned, and the global entities list in `db/src/entities/index.ts` gained the audit and idempotency tables. `setFilterParams` is reached only through `selectTenant` (`tenant-owned.ts`), which ESLint enforces.
+- **TEN-013 and the document half of TEN-014 are open.** No stock or business document exists yet. The data-layer half (an unresolvable cross-tenant ID) is tested in `db/src/tenants/tenant-isolation.test.ts` and the services' tests.

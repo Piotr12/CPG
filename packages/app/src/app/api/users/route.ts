@@ -1,7 +1,8 @@
-import { apiActor, apiHandler, assertAdmin, parseInput, requestScope } from "@cpg/core";
+import { apiActor, assertAdmin, parseInput, requestScope } from "@cpg/core";
 import { createUserSchema } from "@cpg/core/validators/users/create-user.schema";
 import { apiWrite } from "../../../auth/api-write";
 import { requireApiUser } from "../../../auth/require-api-user";
+import { apiHandler } from "../../../routing/api-handler";
 
 /** Every account, as the users screen lists them. Admin only: a normal user gets 403 (API-010). */
 export const GET = apiHandler(async (request: Request) => {

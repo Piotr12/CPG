@@ -1,7 +1,8 @@
-import { apiActor, apiHandler, parseInput, requestScope } from "@cpg/core";
+import { apiActor, parseInput, requestScope } from "@cpg/core";
 import { userPreferenceUpdateSchema } from "@cpg/core/validators/preferences/user-preference-update.schema";
 import { apiWrite } from "../../../auth/api-write";
 import { requireApiUser } from "../../../auth/require-api-user";
+import { apiHandler } from "../../../routing/api-handler";
 
 /** The caller's own language and theme, or the defaults when they never chose. */
 export const GET = apiHandler(async (request: Request) => {

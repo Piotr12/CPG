@@ -6,7 +6,7 @@ const ADMIN_TOKEN = { userId: "u1", username: "admin", role: "admin", tokenId: "
 
 const mocks = vi.hoisted(() => ({ resetPassword: vi.fn(), options: [] as unknown[], caller: { current: null as unknown } }));
 vi.mock("../../../../../auth/api-write", async () => {
-  const { apiHandler } = await vi.importActual<typeof import("@cpg/core")>("@cpg/core");
+  const { apiHandler } = await vi.importActual<typeof import("../../../../../routing/api-handler")>("../../../../../routing/api-handler");
   return {
     apiWrite: (handler: (write: WriteContext<unknown>) => Promise<unknown>, options?: unknown) => {
       mocks.options.push(options);

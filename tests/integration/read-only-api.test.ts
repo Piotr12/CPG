@@ -25,7 +25,7 @@ const api = (method: string, path: string, secret: string, options?: { key?: str
 const write = (method: string, path: string, secret: string, body?: unknown, generation?: number) =>
   api(method, path, secret, { key: randomUUID(), body, generation });
 
-// Read-only tenants through the API (spec .ai/specs/2026-10-19--2018UTC-read-only-tenants.md):
+// Read-only tenants through the API (spec .ai/specs/implemented/2026-10-19--2018UTC-read-only-tenants.md):
 // TEN-016, TEN-017, TEN-018, TEN-020, TEN-021, API-030, AUD-016.
 describe("read-only tenants through the API (R05)", () => {
   let admin: Browser;

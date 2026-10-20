@@ -13,7 +13,7 @@ The original export marked every scenario `Not executed`. Scenarios are updated 
 - **Partially verified**: only part of the scenario can be or is asserted today; the **Evidence** line says which part is missing and why.
 - **Not executed**: not yet built or not yet checked.
 
-Last updated 2026-10-19 for epic E01 (#9), against CI on `main` at `9ea5973`, for its end-to-end follow-up (#52), and for E02-S04 read-only tenants (#25), whose statuses hold once that PR passes CI and merges.
+Last updated 2026-10-20 for epic E02 (#10), against CI on `main` at `3e46bf8` (PR #57 for E02-S04 merged with green CI), plus the AUD-008 end-to-end test added with that update. Earlier: epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
 
 This document contains the complete acceptance catalogue for the CPG MVP. Each test preserves its ID, title, priority, execution channel, and Given / When / Then criteria.
 
@@ -21,8 +21,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### TEN-001 — Two tenants at initialization
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/tenants.test.ts` (the chooser offers Test and Prod), `tests/integration/materials.test.ts`, `named-records.test.ts`, `materials-api.test.ts` and `named-records-api.test.ts` (Test starts with the demo records), `packages/core/src/demo-data.test.ts` (the startup seed fills Test, never Prod). Prod being empty on a fresh install is asserted by that unit test only: the integration files share one app. E02-S01, #19.
 - **Given:** Fresh CPG runtime with valid administrator password
 - **When:** Inspect tenant selection and data
 - **Then:** Test contains demonstration business records; Prod contains none; both tenants selectable.
@@ -100,24 +101,27 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### TEN-010 — All active users access both tenants
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/tenants.test.ts` (Test to Prod and back, no other step), `tests/integration/navigation.test.ts` (the switch on the same screen and back, and a normal user switching from the mobile top bar), `tests/integration/users.test.ts` (a normal user opens both tenants), `packages/app/src/app/admin/[tenant]/page.test.tsx` (`requireUser`, not `requireAdmin`). E02-S01, #19.
 - **Given:** Normal user signed in
 - **When:** Switch from Test to Prod and back
 - **Then:** Each tenant can be selected; no extra role assignment is required.
 
 ### TEN-011 — Tenant clearly identified
 
-**Priority:** P1 · **Channel:** UI · **Status:** Not executed
+**Priority:** P1 · **Channel:** UI · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/navigation.test.ts` (the header row names TEST or PROD on tenant pages and GLOBAL elsewhere), `tests/integration/tenants.test.ts` (Test's header, title and generation), `packages/app/src/components/tenants/tenant-header.test.tsx`. E02-S01, #19; the indicator is the #58 header row and switch.
 - **Given:** Normal user viewing any business-data screen
 - **When:** Inspect selected tenant indicator
 - **Then:** Test/Prod indicator makes current data scope unambiguous before entry or posting.
 
 ### TEN-012 — Same material ID across tenants
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/materials/material.service.test.ts` and `packages/core/src/services/named-records/named-records.test.ts` (the same ID in both tenants, each read and changed in its own), `tests/integration/navigation.test.ts` (a record's page switches to the other tenant's list, never to a record of the same ID). E02-S01, #19, with #22 and #23.
 - **Given:** Material 00000001 exists in both tenants with different descriptions
 - **When:** Read material in each tenant
 - **Then:** Correct tenant-local record is returned in each; no cross-tenant matching or update.
@@ -132,8 +136,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### TEN-014 — Cross-tenant reference rejected
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** Data layer only: `packages/db/src/tenants/tenant-isolation.test.ts` (a reference to another tenant's record is rejected and nothing is written), the material and named-record service tests, and `tests/integration/named-records-api.test.ts` (an ID the tenant doesn't have answers 404). No business document references a material yet; the document half waits for BOMs (#26) and orders. E02-S01, #19.
 - **Given:** A Test document tries to reference a Prod material ID with no Test equivalent
 - **When:** Validate/create record
 - **Then:** Reference is not resolved across tenants and the operation fails without writes.
@@ -158,9 +163,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### TEN-017 — Read-only covers API writes
 
-**Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
+**Priority:** P0 · **Channel:** API · **Status:** Partially verified
 
-- **Evidence:** `tests/integration/read-only-api.test.ts` (an admin token's material create and edit in read-only Prod answer 409 `TENANT_READ_ONLY`, with nothing changed), `packages/core/src/services/idempotency/idempotency.service.test.ts` (no key is stored). Goods issues come in slice 2; the gate covers every tenant write route. E02-S04, #25.
+- **Evidence:** `tests/integration/read-only-api.test.ts` (an admin token's material create and edit in read-only Prod, and a master-data write of every kind, answer 409 `TENANT_READ_ONLY` with nothing changed), `packages/core/src/services/idempotency/idempotency.service.test.ts` (no key is stored). The gate covers every tenant write route (`tests/api-writes.test.ts`), but the scenario's goods issue comes in slice 2, so its half waits, as for TEN-015. E02-S04, #25.
 - **Given:** Prod read-only
 - **When:** API attempts goods issue with otherwise valid token and idempotency key
 - **Then:** Request is rejected; no inventory movement or order change is created.
@@ -266,8 +271,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### TEN-030 — Old Test generation mutation is rejected
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** As API-033: a stale generation is refused before any key lookup or write (`packages/core/src/services/idempotency/idempotency.service.test.ts`, `packages/core/src/http/tenant-server-action.test.ts`). The reset itself comes in slice 2 (D06). E02-S03, #21.
 - **Given:** Client prepared an API write with dataset-generation G1 and material 00000001; reset created G2 with same ID assigned to another material
 - **When:** Client retries stale G1 API mutation
 - **Then:** HTTP 409/428 precondition failure, no G2 record touched, even with previously used or expired idempotency key.
@@ -3338,8 +3344,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### API-013 — API explicitly scopes tenant
 
-**Priority:** P0 · **Channel:** API · **Status:** Not executed
+**Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/tenants.test.ts` (one tenant read by its path; an unknown tenant is 404), `tests/integration/materials-api.test.ts` and `named-records-api.test.ts` (one token writes Prod and Test separately, each through `/api/tenants/{tenant}/…`), `tests/tenant-entry-points.test.ts` (every tenant route sits under `api/tenants/[tenant]/`), `packages/app/src/app/api/tenants/[tenant]/route.test.ts`. E02-S01, #19.
 - **Given:** One account accesses Test and Prod
 - **When:** Use authorized API call selecting Test then Prod
 - **Then:** Each request affects only specified tenant; no implicit cross-tenant data read/write.
@@ -3378,72 +3385,81 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### API-018 — API error has stable code and message
 
-**Priority:** P1 · **Channel:** API · **Status:** Not executed
+**Priority:** P1 · **Channel:** API · **Status:** Partially verified
 
+- **Evidence:** `tests/integration/materials-api.test.ts` (an incomplete material is refused with a stable code and every missing field named, and nothing is created). No mutating call references another material yet, so the unknown-reference case waits for BOMs (#26). E02-S03, #21, with #22.
 - **Given:** Unknown referenced material on a mutating API call
 - **When:** Submit validly authenticated request
 - **Then:** Returns documented stable code plus human-readable actionable explanation, no silent partial success.
 
 ### API-019 — Missing API idempotency key
 
-**Priority:** P0 · **Channel:** API · **Status:** Not executed
+**Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/api-idempotency.test.ts` (a write without an `Idempotency-Key` is refused and nothing is created), `packages/core/src/http/idempotency-key.test.ts`, `packages/app/src/auth/api-write.test.ts`. Token minting has no API route (API-002, API-032). E02-S03, #21.
 - **Given:** Authenticated valid POST for a document creation but no key
 - **When:** Send mutation
 - **Then:** Bearer API mutation rejected without key. Issuing a token is deliberately unavailable in bearer API and must occur through interactive UI.
 
 ### API-020 — First keyed API write
 
-**Priority:** P0 · **Channel:** API · **Status:** Not executed
+**Priority:** P0 · **Channel:** API · **Status:** Partially verified
 
+- **Evidence:** `tests/integration/api-idempotency.test.ts` (a keyed create makes exactly one record and answers it). Goods issues and the ledger come in slice 2. E02-S03, #21.
 - **Given:** Valid token and key K in Test
 - **When:** Post GI of 10
 - **Then:** Exactly one GI and ledger movement created with successful response.
 
 ### API-021 — Same key same body returns cached result
 
-**Priority:** P0 · **Channel:** API · **Status:** Not executed
+**Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/api-idempotency.test.ts` (the replay answers byte for byte and creates nothing; a token revoke replays), `tests/integration/materials-api.test.ts` and `named-records-api.test.ts` (once per key). E02-S03, #21.
 - **Given:** Original keyed request succeeded and response lost
 - **When:** Repeat identical key/method/payload within 24h
 - **Then:** Original result returned for same account/action/tenant generation; no duplicated document, receipt, import, MRP or token revocation. Token issuance is UI-only; no API replay can mint a token.
 
 ### API-022 — Same key different body rejected
 
-**Priority:** P0 · **Channel:** API · **Status:** Not executed
+**Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/api-idempotency.test.ts` (the key with another body is refused), `packages/core/src/services/idempotency/idempotency.service.test.ts` (`IDEMPOTENCY_KEY_REUSED`, nothing runs). E02-S03, #21.
 - **Given:** Key K already used for GI 10
 - **When:** Retry K but GI 11
 - **Then:** Conflict error; neither replay nor second movement created.
 
 ### API-023 — Same key another operation rejected
 
-**Priority:** P0 · **Channel:** API · **Status:** Not executed
+**Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/api-idempotency.test.ts` (the key for another operation is refused), `packages/core/src/services/idempotency/idempotency.service.test.ts` (the error names the first operation, nothing runs). E02-S03, #21.
 - **Given:** Key K already used for operation A
 - **When:** Reuse K in same account/tenant for operation B
 - **Then:** Conflict or nonmatching-operation error; B not accidentally executed as A.
 
 ### API-024 — Keys isolated per tenant
 
-**Priority:** P0 · **Channel:** API · **Status:** Not executed
+**Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/idempotency/idempotency.service.test.ts` ("keeps keys separate per tenant": each tenant has its own key store). Unit level; no integration test sends one key to both tenants yet. E02-S03, #21.
 - **Given:** User used key K in Test
 - **When:** Use K for different valid Prod mutation
 - **Then:** Prod key scope independent; data correct in each tenant.
 
 ### API-025 — Keys isolated per user
 
-**Priority:** P0 · **Channel:** API · **Status:** Not executed
+**Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/api-idempotency.test.ts` (one account's key is apart from another's), `packages/core/src/services/idempotency/idempotency.service.test.ts`. E02-S03, #21.
 - **Given:** User A used key K in Prod
 - **When:** User B uses K for own authorized Prod mutation
 - **Then:** Account scoping keeps identity separate; no mistaken replay of A response.
 
 ### API-026 — 24-hour retention boundary
 
-**Priority:** P0 · **Channel:** API · **Status:** Not executed
+**Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/idempotency/idempotency.service.test.ts` (a fake clock: the key replays until just before 24 hours, then runs anew; a stale generation is refused even for a stored key). Unit level. E02-S03, #21.
 - **Given:** Key K used for a valid write and cached
 - **When:** Repeat just before 24h and again after expiry
 - **Then:** Within same tenant generation, original response before TTL and after TTL key may be reused subject to validation. Any payload from obsolete Test generation is rejected regardless of TTL.
@@ -3466,8 +3482,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### API-029 — Optimistic API version conflict
 
-**Priority:** P0 · **Channel:** API · **Status:** Not executed
+**Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/api-idempotency.test.ts` (users), `tests/integration/materials-api.test.ts` and `named-records-api.test.ts` (a stale version is 409 `VERSION_CONFLICT` and the newer change stays), the services' and routes' unit tests. E02-S03, #21, with #22 and #23.
 - **Given:** Object version 2 loaded by client A, edited to v3 by B
 - **When:** Client A attempts update expecting v2
 - **Then:** HTTP 409 and clear version conflict; v3 preserved.
@@ -3500,16 +3517,18 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### API-033 — Old Test idempotency request cannot mutate reused ID
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** The precondition is built: `packages/core/src/services/idempotency/idempotency.service.test.ts` (a stale generation is refused even for a key whose result is stored), `packages/core/src/domain/tenants/generation.test.ts` (409). The Test reset that makes a generation stale comes in slice 2 (D06), which must also delete Test's key records (spec `implemented/2026-10-19--1548UTC-api-idempotency`, Q8). E02-S03, #21.
 - **Given:** Test generation G1 processed keyed stock operation; Test reset seeded G2 with same material ID
 - **When:** Replay G1 payload with same key inside or outside 24 hours
 - **Then:** Request rejected as stale generation and never returns a success affecting G2 or writes G2 stock. Global credentials remain valid for new correctly scoped requests.
 
 ### API-034 — Tenant metadata supplies current Test-generation precondition
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `tests/integration/tenants.test.ts` (tenant metadata gives the generation), `tests/integration/materials-api.test.ts` and `named-records-api.test.ts` (a Test write without it is 428, with the current one it succeeds), `packages/core/src/domain/tenants/generation.test.ts` and `packages/app/src/auth/api-write.test.ts` (a stale one is 409). The stale case after a real reset waits for slice 2 (D06). E02-S03, #21.
 - **Given:** User bearer token can read Test and Prod tenant metadata; Test dataset generation is G1
 - **When:** Make Test mutation without precondition, with G1, and after reset with old G1
 - **Then:** Missing generation rejected (HTTP 428), current G1 mutation may succeed subject to ordinary rules, stale G1 after reset G2 rejected (HTTP 409). Current generation is available from tenant metadata.
@@ -3518,24 +3537,27 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### AUD-001 — All creates audited
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `tests/integration/audit.test.ts` (user creation with account, session and channel), `tests/integration/materials.test.ts` and `named-records.test.ts` (creates in the tenant audit), the user, material and named-record service tests. Customer orders come in slice 2. E02-S02, #20.
 - **Given:** Normal user creates customer order
 - **When:** Read tenant audit
 - **Then:** Create event with actor, tenant, session, channel, new values exists.
 
 ### AUD-002 — All edits audited
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/materials.test.ts` (an edit shows before → after in the tenant audit), `tests/integration/named-records.test.ts`, the material and named-record service tests. E02-S02, #20, with #22 and #23.
 - **Given:** Admin edits material description
 - **When:** Read audit
 - **Then:** Before/after values of changed master record visible.
 
 ### AUD-003 — Deactivation audited not hard deletion
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/materials.test.ts` and `named-records.test.ts` (the deactivated record stays, shown Inactive, and the audit records active: yes → no), `tests/integration/audit.test.ts` (users). E02-S02, #20.
 - **Given:** Admin deactivates material
 - **When:** Inspect business record and audit
 - **Then:** Inactive record persists and audit captures state change.
@@ -3566,32 +3588,36 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### AUD-007 — API edits show named token
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/api-tokens.test.ts` (a revoke through the API shows channel API and the token's name, never the secret), `packages/core/src/services/audit/audit-recorder.test.ts`, the tenant routes' unit tests (`apiActor`). E02-S02, #20.
 - **Given:** Agent changes record using token 'robot-a'
 - **When:** Read audit
 - **Then:** Channel API and token name/ID shown, not token secret.
 
 ### AUD-008 — Share account attribution is session-level
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/audit.test.ts` (one account signed in twice: each change carries its own session, same account), `packages/core/src/services/users/user.service.test.ts`. E02-S02, #20.
 - **Given:** Two humans logged into same account with distinct sessions
 - **When:** Each posts different edit
 - **Then:** Audit separates session IDs while retaining same account ID; no invented human attribution.
 
 ### AUD-009 — Audit read available to normal users
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/audit.test.ts` (a normal user reads the Global audit with no controls, and opens the tenant audit), `tests/integration/read-only-api.test.ts` (a normal user's token reads Prod's audit), the audit page and route unit tests. E02-S02, #20.
 - **Given:** Normal account in selected tenant
 - **When:** Open tenant audit via UI and API
 - **Then:** Read-only access permitted, no edit/delete controls exposed.
 
 ### AUD-010 — Audit cannot be edited by admin
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/audit.test.ts` (the audit routes answer 405 to PATCH, PUT, DELETE and POST), `packages/db/src/entities/audit/audit.entity.test.ts` (triggers abort an update or delete in SQLite), `tests/audit-append-only.test.ts` (nothing in the source writes to it). E02-S02, #20.
 - **Given:** Admin attempts to amend an old audit event
 - **When:** Use UI or API
 - **Then:** Operation refused; previous audit unchanged.
@@ -3622,16 +3648,18 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### AUD-014 — Global audit covers token changes
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/api-tokens.test.ts` (token creation and revocation in the Global audit, no secret), `packages/core/src/services/api-tokens/api-token.service.test.ts`. Tokens deleted by a reset or a deactivation are not audited yet (#44). E02-S02, #20, with #17.
 - **Given:** User creates then revokes API token
 - **When:** Read Global audit
 - **Then:** Token create/revoke events with account/time recorded, no token secret.
 
 ### AUD-015 — Global audit covers password reset
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/audit.test.ts` ("Password reset", actor and subject, "Password replaced (not recorded)"), `packages/core/src/services/users/user.service.test.ts`. E02-S02, #20.
 - **Given:** Admin resets normal user password
 - **When:** Read Global audit
 - **Then:** Actor, subject account and reset action recorded without password or hash.
@@ -3703,16 +3731,18 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### AUD-024 — Optimistic locking in UI
 
-**Priority:** P0 · **Channel:** UI · **Status:** Not executed
+**Priority:** P0 · **Channel:** UI · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/api-idempotency.test.ts` (a stale edit in the UI shows the conflict and keeps the other change; users), `packages/app/src/components/materials/material-controls.test.tsx` and `named-record-actions.test.tsx` (materials and master data), the services' tests. E02-S03, #21.
 - **Given:** Two sessions load same material version
 - **When:** A saves edit then B saves stale edit
 - **Then:** B conflict message; A modification preserved.
 
 ### AUD-025 — Optimistic locking in API
 
-**Priority:** P0 · **Channel:** API · **Status:** Not executed
+**Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/api-idempotency.test.ts`, `materials-api.test.ts` and `named-records-api.test.ts` (the second, stale update is 409; no last write wins). Orders come in slice 2; the version check is shared. E02-S03, #21.
 - **Given:** Two API clients use same version number
 - **When:** First changes order, second submits stale update
 - **Then:** Second HTTP 409; no last-write-wins.
@@ -3735,16 +3765,18 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### AUD-028 — No password in audit snapshots
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/audit.test.ts` (no password or hash on the audit page), `packages/core/src/services/users/user.service.test.ts`, `packages/core/src/services/audit/audit-recorder.test.ts` (secret-looking keys are refused). E02-S02, #20.
 - **Given:** Admin resets password
 - **When:** Inspect all audit before/after payloads
 - **Then:** No raw password or stored credential hash exposed.
 
 ### AUD-029 — No bearer secret in audit snapshots
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/api-tokens/api-token.service.test.ts` (creation is recorded by name, never the secret), `tests/integration/api-tokens.test.ts`. E02-S02, #20, with #17.
 - **Given:** User creates token
 - **When:** Inspect audit
 - **Then:** Named token reference present, bearer secret absent.

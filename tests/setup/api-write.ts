@@ -15,7 +15,9 @@ type WriteHandler = (write: { request: Request; context: unknown; caller: unknow
  * `api-write.test.ts` covers). The body is the request's JSON, or null when empty.
  */
 export async function fakeApiWrite(state: FakeWriteState) {
-  const { apiHandler } = await vi.importActual<typeof import("@cpg/core")>("@cpg/core");
+  const { apiHandler } = await vi.importActual<typeof import("../../packages/app/src/routing/api-handler")>(
+    "../../packages/app/src/routing/api-handler",
+  );
   const write = (handler: WriteHandler, options?: { authorize?: (caller: unknown) => unknown }) =>
     apiHandler(async (request: Request, context: unknown) => {
       options?.authorize?.(state.caller);

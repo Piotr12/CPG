@@ -1,6 +1,6 @@
 # The admin can make a tenant read-only, which stops every business write, the admin's and the API's included
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-19 20:18 UTC
 **Issue:** #25 (E02-S04), epic #10 · **Builds on:** `2026-10-19--0913UTC-test-prod-tenants.md` (#19), `implemented/2026-10-19--1050UTC-audit-log.md` (#20), `implemented/2026-10-19--1548UTC-api-idempotency.md` (#21), `2026-10-19--1858UTC-materials.md` (#22) · **Design authority:** `.ai/specs/product-brief.md` (R05, R07, R08, D05), `.ai/specs/research/CPG-prd001.pdf` §05 ("Tenant read-only control", "Read-only gate and global exceptions"), `CPG-prd-decisions.pdf` (A-01), `CPG-acceptance.md` (TEN-015…018, TEN-020, TEN-021, API-030, AUD-016)
 
@@ -216,3 +216,16 @@ Then the full gate: lint, typecheck, `test:coverage` (100%), build, `test:integr
 ## Implementation notes
 
 - 2026-10-19, implementation PR: a read-only refusal doesn't refresh the page. The integration test showed that the refresh hid the Create material dialog together with its explanation, so the spec now keeps the message in the open form instead (Q9, UI/UX). The toggle revalidates `/admin` only: revalidating the whole `/admin` layout made Next.js re-prerender the tenant pages' static shells at runtime, which failed.
+
+Implemented in PR #57. Recorded on 2026-10-20 when epic E02 (#10) closed:
+
+- **The indicator moved (#58, PR #60).** PR #60 removed `tenant-strip.tsx`, so the strip label of Q9 and the UI/UX section ("Read-only. Business data can't be changed." in `#tenant-strip-text`) is gone. In its place:
+  - `ReadOnlyBanner` (`role="status"`) on the tenant's pages, with a "Change on Tenants" link for the admin;
+  - a lock on that tenant's side of the TEST | PROD switch, and a sidebar caption.
+
+  `/admin` keeps the chooser badge and the Read-only card. `tests/integration/read-only.test.ts` asserts all of them.
+- **Masters (#23, PR #56).** That PR merged in parallel with this one. Locations, customers and suppliers inherit the gate through `tenantServerAction` and `tenantApiWrite`, so no extra code was needed. `named-records-screen.tsx` hides their controls, and `refreshAfterWrite` keeps a refusal's message visible. `tests/integration/read-only-api.test.ts` refuses a master-data write of every kind.
+- **Seeds.** The startup demo seed is gated for every kind in any tenant (`isScopeReadOnly`), not only materials into Test (Q10).
+- **Order of checks.** On the API, `IdempotencyService` checks the flag after the key lookup, so the replay of a write that succeeded before the flag still returns its stored answer. A request with a stale generation is refused before either check. `assertWritable(state)` takes no tenant name.
+- **Naming.** The sidebar and the banner link call `/admin` "Tenants" (sidebar spec Q3), while its heading and the `TENANT_READ_ONLY` message still say "Cave control". The message is a protected contract (`BACKWARD_COMPATIBILITY.md` §4), so any rename is a separate decision.
+- **Left for later.** TEN-019 (blocking MRP) is slice 3. Normal users can't write business data yet, so TEN-015's normal-user half is unit-tested only.

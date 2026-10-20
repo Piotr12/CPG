@@ -3,13 +3,13 @@ import {
   UniqueConstraintViolationException,
   type EntityManager,
   type NamedRecord,
-  type NamedRecordEntity,
 } from "@cpg/db";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
-import { ConflictError, NotFoundError, versionConflict } from "../../http/errors";
+import { ConflictError, versionConflict } from "../../http/errors";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
 import { isScopeReadOnly } from "../tenants/tenant.service";
+import { findNamedRecord, type NamedRecordLookup } from "./find-named-record";
 
 /** What the screens and the API show about a location, customer or supplier. `id` is its business ID. */
 export interface NamedRecordView {
@@ -28,16 +28,11 @@ export interface NamedRecordChanges {
 }
 
 /** One kind of named record: everything that differs between locations, customers and suppliers. */
-export interface NamedRecordKind {
-  entity: NamedRecordEntity;
+export interface NamedRecordKind extends NamedRecordLookup {
   /** The audit subject type: `"Location"`. */
   subjectType: string;
-  /** The word in messages: `"location"`. */
-  noun: string;
   /** The audit action prefix, `concept.entity`: `"locations.location"`. */
   actionPrefix: string;
-  /** The error-code prefix: `"LOCATION"` → `LOCATION_NOT_FOUND`, `LOCATION_IDS_EXHAUSTED`. */
-  codePrefix: string;
   /** The names a fresh Test tenant starts with (D06). */
   demoNames: readonly string[];
 }
@@ -63,7 +58,7 @@ export class NamedRecords {
 
   /** One record; `{KIND}_NOT_FOUND` when this tenant has no such ID, another tenant's included (TEN-014). */
   async get(id: string): Promise<NamedRecordView> {
-    return toView(await this.find(this.em, id));
+    return toView(await findNamedRecord(this.em, this.kind, id));
   }
 
   /** A new active record with the kind's next ID in this tenant. */
@@ -94,7 +89,7 @@ export class NamedRecords {
   async update(id: string, changes: NamedRecordChanges, version: number, actor: AuditActor): Promise<NamedRecordView> {
     try {
       return await this.em.transactional(async (em) => {
-        const record = await this.find(em, id, { refresh: true });
+        const record = await findNamedRecord(em, this.kind, id, { refresh: true });
         if (record.version !== version) throw versionConflict();
         const name = changes.name?.trim();
         if (name !== undefined && name !== record.name) {
@@ -142,14 +137,6 @@ export class NamedRecords {
       message: `This tenant has used every eight-digit ${this.kind.noun} ID.`,
     });
     return em.create(this.kind.entity, { code, name });
-  }
-
-  private async find(em: EntityManager, id: string, options: { refresh?: boolean } = {}): Promise<NamedRecord> {
-    const record = await em.findOne(this.kind.entity, { code: id }, options);
-    if (!record) {
-      throw new NotFoundError(`${this.kind.codePrefix}_NOT_FOUND`, `There is no ${this.kind.noun} ${id} in this tenant.`);
-    }
-    return record;
   }
 
   private entry(action: string, record: NamedRecord, before: AuditEntry["before"], after: AuditEntry["after"]): AuditEntry {

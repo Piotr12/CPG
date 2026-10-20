@@ -1,7 +1,17 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { Customer, initOrm, Location, Material, selectTenant, Supplier, type EntityManager } from "@cpg/db";
+import {
+  Customer,
+  initOrm,
+  Location,
+  Material,
+  PlanningParameterSet,
+  SafetyStockTarget,
+  selectTenant,
+  Supplier,
+  type EntityManager,
+} from "@cpg/db";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadConfig } from "./config";
 import { migrateDatabase, toDbOptions } from "./database";
@@ -9,6 +19,8 @@ import { seedDemoData } from "./demo-data";
 import { DEMO_CUSTOMERS } from "./domain/customers/demo-customers";
 import { DEMO_LOCATIONS } from "./domain/locations/demo-locations";
 import { DEMO_MATERIALS } from "./domain/materials/demo-materials";
+import { DEMO_PLANNING_PARAMETERS } from "./domain/planning-parameters/demo-planning-parameters";
+import { DEMO_SAFETY_STOCK_TARGETS } from "./domain/safety-stock/demo-safety-stock-targets";
 import { DEMO_SUPPLIERS } from "./domain/suppliers/demo-suppliers";
 import { LocationService } from "./services/locations/location.service";
 
@@ -46,18 +58,24 @@ describe("seedDemoData", () => {
       locations: { seeded: DEMO_LOCATIONS.length },
       customers: { seeded: DEMO_CUSTOMERS.length },
       suppliers: { seeded: DEMO_SUPPLIERS.length },
+      "planning parameter sets": { seeded: DEMO_PLANNING_PARAMETERS.length },
+      "safety-stock targets": { seeded: DEMO_SAFETY_STOCK_TARGETS.length },
     });
     expect(await seedDemoData(config)).toEqual({
       materials: { seeded: 0 },
       locations: { seeded: 0 },
       customers: { seeded: 0 },
       suppliers: { seeded: 0 },
+      "planning parameter sets": { seeded: 0 },
+      "safety-stock targets": { seeded: 0 },
     });
 
     expect(await counts(config, (em) => em.count(Material, {}))).toEqual({ test: DEMO_MATERIALS.length, prod: 0 });
     expect(await counts(config, (em) => em.count(Location, {}))).toEqual({ test: DEMO_LOCATIONS.length, prod: 0 });
     expect(await counts(config, (em) => em.count(Customer, {}))).toEqual({ test: DEMO_CUSTOMERS.length, prod: 0 });
     expect(await counts(config, (em) => em.count(Supplier, {}))).toEqual({ test: DEMO_SUPPLIERS.length, prod: 0 });
+    expect(await counts(config, (em) => em.count(PlanningParameterSet, {}))).toEqual({ test: DEMO_PLANNING_PARAMETERS.length, prod: 0 });
+    expect(await counts(config, (em) => em.count(SafetyStockTarget, {}))).toEqual({ test: DEMO_SAFETY_STOCK_TARGETS.length, prod: 0 });
   });
 
   it("reports a kind that fails and still seeds the others; the next run seeds only what is still empty", async () => {
@@ -70,12 +88,17 @@ describe("seedDemoData", () => {
       locations: { error: failure },
       customers: { seeded: DEMO_CUSTOMERS.length },
       suppliers: { seeded: DEMO_SUPPLIERS.length },
+      // Without locations every demo row is skipped, so the kinds stay untouched for the next run.
+      "planning parameter sets": { seeded: 0 },
+      "safety-stock targets": { seeded: 0 },
     });
     expect(await seedDemoData(config)).toEqual({
       materials: { seeded: 0 },
       locations: { seeded: DEMO_LOCATIONS.length },
       customers: { seeded: 0 },
       suppliers: { seeded: 0 },
+      "planning parameter sets": { seeded: DEMO_PLANNING_PARAMETERS.length },
+      "safety-stock targets": { seeded: DEMO_SAFETY_STOCK_TARGETS.length },
     });
   });
 });
