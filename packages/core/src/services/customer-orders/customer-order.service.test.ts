@@ -262,6 +262,22 @@ describe("CustomerOrderService", () => {
     expect(await new MaterialService({ em: em() }).update("00000004", { active: false }, 1, actor)).toMatchObject({ active: false });
   });
 
+  it("finds outstanding material demand beyond a detached 100-line batch and permits deactivation once all batches resolve", async () => {
+    const scope = em(); const customer = await scope.findOneOrFail(Customer, { code: "00000001" });
+    const location = await scope.findOneOrFail(Location, { code: "00000001" });
+    const material = await scope.findOneOrFail(Material, { code: "00000005" });
+    let lastId = "";
+    for (let index = 1; index <= 101; index++) {
+      const order = scope.create(CustomerOrder, { code: String(index).padStart(8, "0"), customer, location });
+      lastId = `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`;
+      scope.create(CustomerOrderLine, { id: lastId, order, position: 0, material, quantity: "1.000000", enteredQuantity: "1", enteredUnit: "each", numerator: "1", denominator: "1", requiredDate: "2027-01-01", fulfilled: index < 101 ? "1.000000" : "0.000000" });
+    }
+    await scope.flush();
+    await expect(new MaterialService({ em: em() }).update(material.code, { active: false }, 1, actor)).rejects.toMatchObject({ code: "MATERIAL_HAS_CUSTOMER_DEMAND", message: expect.stringContaining("00000101") });
+    await changeLine(lastId, { abandoned: "1.000000" });
+    expect(await new MaterialService({ em: em() }).update(material.code, { active: false }, 1, actor)).toMatchObject({ active: false });
+  });
+
   it("retains the original material lock when a stable line is changed to another material", async () => {
     const order = await service().create({ ...input(), lines: [line()] }, actor);
     const changes = edit(order); changes.lines[0].material = "00000004";

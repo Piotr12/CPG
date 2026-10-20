@@ -10,10 +10,17 @@ export async function orderUsingMaterial(em: EntityManager, material: Material):
 
 /** An Open order with outstanding demand blocks deactivation of its material (LFC-014). */
 export async function assertNoCustomerDemand(em: EntityManager, material: Material): Promise<void> {
-  const lines = await em.find(CustomerOrderLine, { material, removed: false, status: "open" }, { populate: ["order"] });
-  const demand = lines.find((line) => line.order.status === "open" &&
-    parseDecimal(line.quantity)! > parseDecimal(line.fulfilled)! + parseDecimal(line.abandoned)!);
-  if (demand) throw new ConflictError(`Customer order ${demand.order.code} has outstanding demand for this material.`, "MATERIAL_HAS_CUSTOMER_DEMAND");
+  let after: string | undefined;
+  for (;;) {
+    // A detached batch bounds identity-map memory while preserving the caller's transaction and tenant filter.
+    const lines = await em.find(CustomerOrderLine, { material, removed: false, status: "open", order: { status: "open" },
+      ...(after === undefined ? {} : { id: { $gt: after } }) },
+    { populate: ["order"], orderBy: { id: "asc" }, limit: 100, disableIdentityMap: true });
+    if (lines.length === 0) return;
+    const demand = lines.find((line) => parseDecimal(line.quantity)! > parseDecimal(line.fulfilled)! + parseDecimal(line.abandoned)!);
+    if (demand) throw new ConflictError(`Customer order ${demand.order.code} has outstanding demand for this material.`, "MATERIAL_HAS_CUSTOMER_DEMAND");
+    after = lines.at(-1)!.id;
+  }
 }
 
 /** An unfinished direct order reference blocks location deactivation; customers remain independent. */
