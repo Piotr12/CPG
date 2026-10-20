@@ -38,9 +38,23 @@ Post partial production completions against Open orders. Each completion pre-fil
 ## Deviations from the spec
 - **The form shows no live per-row variance.** The standards route all quantity arithmetic through core's `decimal.ts`, which client code cannot import (only `@cpg/core/validators/*`). The form shows *Expected* beside *Actual*; the server records the variance, and the history shows it right after posting.
 - **An inactive or unknown added input is a field error on its row** (`components.N.material`), as the spec's field-message list says. BOM lines instead raise `MATERIAL_INACTIVE`/`MATERIAL_NOT_FOUND` for the whole request.
+- **A missing pinned component is reported generically on `components`, without naming the material.** Field messages are translated by matching constant texts, so they carry no parameters. The form always sends every pinned row, so only API callers can trigger it.
+- **The preview names a component's `description`, not `name`,** matching every other material view; `BACKWARD_COMPATIBILITY.md` documents `description`.
+- **The ledger receives each line's entered quantity and unit, not its base-unit quantity,** as goods issues do. The conversion is deterministic, and the movement keeps what was entered.
+- **The dialog's submission token comes from `crypto.randomUUID()`,** so the dialog needs a secure context: cpg.baby is HTTPS, and localhost qualifies.
 - **The completion's UUID has no `onCreate` default:** the service always generates it before posting, because the movements carry it.
 
 ## Verification
+- Review pass (`om-auto-review-pr --autofix`, fresh-context `om-code-review`): approve, with no blockers or majors. Minors fixed:
+  - row errors are cleared when an added row is removed;
+  - expected, available and inactive are tied to the Actual field with `aria-describedby`;
+  - added inputs reuse `materialChoices`;
+  - the shadcn `checkbox` is added through the CLI (with a test, and a no-op `ResizeObserver` in the jsdom setup);
+  - `COMPLETION_MOVEMENTS_MAX` moved to the schema and is used in its message;
+  - a page past the end of the history reads "No older completions";
+  - a regression test covers the replay of the submission that completed the order.
+
+  The remaining nits are recorded as deviations above. Rerun gate: lint (1 pre-existing warning), typecheck and build pass; 416 files / 2,703 tests at 100%; `production-completions` and `production-orders` integration 10/10 on a fresh standalone build.
 - Full local gate at 4.1: `npm run lint` passes (one pre-existing warning: unused `lineError` import in `bom.service.ts`); `npm run typecheck` passes; `npm run test:coverage`: 415 files / 2,700 tests, 100% statements, branches, functions and lines; `npm run build` passes and lists both completion routes.
 - Integration tests, run against the standalone production build (Docker Desktop has no disk space; shared state not pruned, per the lessons). Each run used a fresh copy and a fresh `DATA_DIR`:
   - `production-completions.test.ts`: 4/4, on both builds;

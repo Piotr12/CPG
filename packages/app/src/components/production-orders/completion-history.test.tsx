@@ -41,6 +41,9 @@ it("pages newest first: older while a page is full, newer after the first", () =
   expect(screen.getByRole("link", { name: t.previous }).getAttribute("href")).toBe("/admin/test/production-orders/00000001?completions=1");
   expect(screen.queryByRole("link", { name: t.next })).toBeNull();
   expect(screen.getByText("Page 2")).toBeTruthy();
+  rerender(<CompletionHistory {...props} completions={[]} page={3} />);
+  expect(screen.getByText(t.historyPastEnd)).toBeTruthy();
+  expect(screen.queryByText(t.historyEmpty)).toBeNull();
 });
 
 it("says when nothing was posted yet", () => {

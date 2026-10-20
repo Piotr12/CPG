@@ -474,6 +474,17 @@ describe("ProductionCompletionService", () => {
       expect(other.completion.id).toBe("00000002");
     });
 
+    it("replays the submission that completed the order instead of refusing it as no longer Open (spec Q7)", async () => {
+      await order("10");
+      await correct(COCOA, "100");
+      await correct(WRAPPER, "300");
+      const first = await service().post("00000001", completion("10", "5", "20"), ACTOR, { submission: SUBMISSION });
+      expect(first.order.status).toBe("completed");
+      const again = await service().post("00000001", completion("10", "5", "20"), ACTOR, { submission: SUBMISSION });
+      expect(again).toEqual(first);
+      expect(await physical(BAR)).toBe("10.000000");
+    });
+
     it("refuses a completion that would post more stock movements than the ledger takes", async () => {
       const em = scoped();
       const output = await em.findOneOrFail(Material, { code: BAR });

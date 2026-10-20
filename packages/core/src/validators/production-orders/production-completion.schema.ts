@@ -22,8 +22,10 @@ export const OUTPUT_AS_INPUT_MESSAGE = "The order's output can't also be one of 
 export const EXTRA_INPUT_QUANTITY_MESSAGE = "Enter how much of an added input was used: more than 0.";
 /** What the service says, on `submission`, about a dialog token already spent on another order (spec Q7). */
 export const SUBMISSION_REUSED_MESSAGE = "This form was already used to post a completion for another order.";
+/** The most stock movements one completion may post: the ledger's limit for one posting (`stockPostingSchema`). */
+export const COMPLETION_MOVEMENTS_MAX = 100;
 /** What the service says, on `components`, when a completion would post more movements than the ledger takes. */
-export const COMPLETION_MOVEMENTS_MESSAGE = "A completion posts at most 100 stock movements: the output and every material used.";
+export const COMPLETION_MOVEMENTS_MESSAGE = `A completion posts at most ${COMPLETION_MOVEMENTS_MAX} stock movements: the output and every material used.`;
 
 /** The most materials one completion lists: a recipe's components at most, and the ledger's limit. */
 export const COMPLETION_LINES_MAX = BOM_COMPONENTS_MAX;

@@ -694,7 +694,7 @@ export const en = {
       overTitle: "More than planned.", over: "Target {target} {unit}, produced {produced} {unit}: this completion adds {output} {unit} and completes the order.",
       accept: "Post more than planned", acceptRequired: "Tick “Post more than planned” to post this completion.",
       posted: "Completion {id} posted.",
-      history: "Completions", historyEmpty: "No completions yet. Post one when production makes or uses something.",
+      history: "Completions", historyEmpty: "No completions yet. Post one when production makes or uses something.", historyPastEnd: "No older completions.",
       id: "Completion", date: "Posted", lines: "Materials used", waste: "Waste",
       line: "{material} — expected {expected}, actual {actual} {unit}, variance {variance}",
       pagination: "Completion pages", previous: "Newer", next: "Older", page: "Page {page}",

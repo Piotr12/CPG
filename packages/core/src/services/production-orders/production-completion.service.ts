@@ -24,6 +24,7 @@ import { AppError, ConflictError, ValidationError, type FieldErrors } from "../.
 import { parseInput } from "../../http/parse-input";
 import { FINISHED_COMPONENT_MESSAGE } from "../../validators/boms/bom-fields.schema";
 import {
+  COMPLETION_MOVEMENTS_MAX,
   COMPLETION_MOVEMENTS_MESSAGE,
   COMPLETION_PAGE_SIZE,
   EXTRA_INPUT_QUANTITY_MESSAGE,
@@ -47,8 +48,6 @@ import { findProductionOrder, productionOrderView, productionSubject, type Produ
 
 /** The stock movement type a completion posts (INV-012: every movement names its source). */
 export const PRODUCTION_COMPLETION_MOVEMENT = "production-completion";
-/** The most stock movements one completion may post: the ledger's limit for one posting (`stockPostingSchema`). */
-export const COMPLETION_MOVEMENTS_MAX = 100;
 export const COMPLETION_ID_RACE = "Another production completion was posted at the same moment. Try again.";
 
 /** One material of a completion as the screens and the API show it: expected, actual and variance in its base unit. */

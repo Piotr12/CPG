@@ -661,7 +661,7 @@ export const pl: Messages = {
       overTitle: "Więcej niż planowano.", over: "Cel {target} {unit}, wyprodukowano {produced} {unit}: to wykonanie dodaje {output} {unit} i kończy zlecenie.",
       accept: "Zaksięguj ponad plan", acceptRequired: "Zaznacz „Zaksięguj ponad plan”, aby zaksięgować to wykonanie.",
       posted: "Zaksięgowano wykonanie {id}.",
-      history: "Wykonania", historyEmpty: "Brak wykonań. Zaksięguj je, gdy produkcja coś wytworzy lub zużyje.",
+      history: "Wykonania", historyEmpty: "Brak wykonań. Zaksięguj je, gdy produkcja coś wytworzy lub zużyje.", historyPastEnd: "Brak starszych wykonań.",
       id: "Wykonanie", date: "Zaksięgowano", lines: "Zużyte materiały", waste: "Odpad",
       line: "{material} — oczekiwane {expected}, rzeczywiste {actual} {unit}, odchylenie {variance}",
       pagination: "Strony wykonań", previous: "Nowsze", next: "Starsze", page: "Strona {page}",

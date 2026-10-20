@@ -75,7 +75,7 @@ export function CompletionHistory({ completions, page, materials, labels, path }
         columns={columns}
         rows={completions}
         rowKey={(row) => row.id}
-        empty={t.historyEmpty}
+        empty={page > 1 ? t.historyPastEnd : t.historyEmpty}
         pagination={
           (page > 1 || older) && (
             <nav aria-label={t.pagination} className="flex flex-wrap items-center justify-end gap-3">

@@ -11,8 +11,8 @@ import { completionFieldError, productionLabels } from "./labels";
 const labels = productionLabels(en);
 const t = labels.completion;
 const inputs = [
-  { id: "00000008", label: "00000008 Milk (kg)", units: ["kg", "g"] },
-  { id: "00000009", label: "00000009 Filling (kg)", units: ["kg"] },
+  { value: "00000008", label: "00000008 — Milk (kg)", units: ["kg", "g"] },
+  { value: "00000009", label: "00000009 — Filling (kg)", units: ["kg"] },
 ];
 const mocks = { action: vi.fn(), onSuccess: vi.fn(), onBack: vi.fn(), onCancel: vi.fn() };
 const props = (overrides: Partial<CompletionFormProps> = {}): CompletionFormProps => ({
@@ -43,6 +43,9 @@ describe("CompletionForm", () => {
     expect([...(screen.getByLabelText(`${t.unit}, 00000006 Cocoa`) as HTMLSelectElement).options].map(({ value }) => value)).toEqual(["kg", "g"]);
     expect(screen.getByText(`${t.expected}: 2 kg · ${t.available}: 40 kg`)).toBeTruthy();
     expect(screen.getByText(t.inactive)).toBeTruthy();
+    // Screen readers hear the expected and available figures, and the inactive flag, with the Actual field.
+    const wrapperHint = document.getElementById(actual("00000007 Wrapper").getAttribute("aria-describedby")!)!;
+    expect(wrapperHint.textContent).toBe(`${t.inactive}${t.expected}: 8 each · ${t.available}: 0 each`);
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
@@ -81,6 +84,21 @@ describe("CompletionForm", () => {
     fireEvent.click(screen.getByRole("button", { name: fill(t.removeInput, "1") }));
     expect(screen.queryByLabelText(`${t.material}, ${second}`)).toBeNull();
     expect(screen.getByLabelText(`${t.material}, ${fill(t.inputLine, "1")}`)).toBeTruthy();
+  });
+
+  it("clears row errors when a row is removed, since the rows after it move up", async () => {
+    mocks.action.mockResolvedValueOnce({ ok: false, error: { code: "VALIDATION_FAILED", message: "bad", fieldErrors: { "components.2.material": [UNKNOWN_INPUT_MESSAGE] } } });
+    render(<CompletionForm {...props()} />);
+    for (const number of ["1", "2"]) {
+      fireEvent.click(screen.getByRole("button", { name: t.addInput }));
+      fireEvent.change(screen.getByLabelText(`${t.material}, ${fill(t.inputLine, number)}`), { target: { value: number === "1" ? "00000008" : "00000009" } });
+      fireEvent.change(actual(fill(t.inputLine, number)), { target: { value: "1" } });
+    }
+    post();
+    await waitFor(() => expect(screen.getByText(t.fieldErrors.unknownInput)).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: fill(t.removeInput, "1") }));
+    expect(screen.queryByText(t.fieldErrors.unknownInput)).toBeNull();
+    expect(screen.getByLabelText(`${t.material}, ${fill(t.inputLine, "1")}`).getAttribute("aria-invalid")).toBeNull();
   });
 
   it("checks with the shared schema first and shows each problem under its row", async () => {

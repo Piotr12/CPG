@@ -8,19 +8,16 @@ import { ErrorMessage } from "@cpg/ui/backend/feedback/error-message";
 import { toFieldErrors } from "@cpg/ui/backend/forms/crud-form";
 import { Badge } from "@cpg/ui/components/badge";
 import { Button } from "@cpg/ui/components/button";
+import { Checkbox } from "@cpg/ui/components/checkbox";
 import { Input } from "@cpg/ui/components/input";
 import { NativeSelect, NativeSelectOption } from "@cpg/ui/components/native-select";
 import { fill, shownQuantity } from "../forms/form-labels";
 import { fieldControls } from "../purchasing/field-controls";
+import type { MaterialChoice } from "../purchase-requisitions/requisition-form";
 import type { ProductionLabels } from "./labels";
 
-/** A material the form offers as an added input: an active raw or intermediate one outside the recipe. */
-export interface CompletionInputChoice {
-  id: string;
-  label: string;
-  /** The units its quantity may be entered in, its base unit first. */
-  units: string[];
-}
+/** A material the form offers as an added input: an active raw or intermediate one outside the recipe, with its units. */
+export type CompletionInputChoice = MaterialChoice;
 
 /** What the form sends: the output it was opened for, every material used and, past the target, the acknowledgement. */
 export interface CompletionValues {
@@ -84,6 +81,12 @@ export function CompletionForm({ labels, preview, unit, inputs, formatError, for
     setNextKey((key) => key + 1);
   };
 
+  /** Removing a row shifts the rows after it, so row errors keyed by position no longer fit: they are cleared. */
+  const removeRow = (key: number) => {
+    setAdded((rows) => rows.filter((row) => row.key !== key));
+    setFieldErrors({});
+  };
+
   function show(errors: FieldErrors, fallback: string | null) {
     const rows = Object.fromEntries(Object.entries(errors).filter(([name]) => /^components\.\d+\.(material|quantity|unit)$/.test(name)));
     const other = Object.entries(errors).filter(([name]) => !Object.hasOwn(rows, name)).flatMap(([, messages]) => messages);
@@ -138,7 +141,7 @@ export function CompletionForm({ labels, preview, unit, inputs, formatError, for
     }
   }
 
-  const unitsOf = (material: string) => inputs.find((choice) => choice.id === material)?.units ?? [];
+  const unitsOf = (material: string) => inputs.find((choice) => choice.value === material)?.units ?? [];
   return (
     <form onSubmit={submit} onKeyDown={onKeyDown} noValidate className="flex flex-col gap-4">
       <p className="text-sm text-muted-foreground">{t.prefilled}</p>
@@ -149,7 +152,7 @@ export function CompletionForm({ labels, preview, unit, inputs, formatError, for
             {fill(t.over, { produced: shownQuantity(over.produced), target: shownQuantity(over.target), output: shownQuantity(over.output), unit: over.unit })}
           </p>
           <label className="flex items-center gap-2">
-            <input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} />
+            <Checkbox checked={accepted} onCheckedChange={(checked) => setAccepted(checked === true)} />
             {t.accept}
           </label>
         </div>
@@ -159,19 +162,21 @@ export function CompletionForm({ labels, preview, unit, inputs, formatError, for
         const quantity = control(`components.${index}.quantity`);
         const units = control(`components.${index}.unit`);
         const name = `${component.material} ${component.description}`;
+        const hint = `${id}-components-${index}-hint`;
+        // The expected and available figures (and the inactive flag) describe the Actual field to screen readers.
+        const described = [hint, quantity.props["aria-describedby"]].filter(Boolean).join(" ");
         return (
           <fieldset key={component.material} className="grid grid-cols-2 gap-2 rounded-md border p-3 sm:grid-cols-[2fr_1fr_1fr] sm:items-start" data-component={component.material}>
             <legend className="sr-only">{name}</legend>
             <div className="col-span-2 flex flex-col gap-1 text-sm sm:col-span-1" aria-hidden="true">
-              <span className="wrap-anywhere">
-                {name} {!component.active && <Badge variant="outline">{t.inactive}</Badge>}
-              </span>
-              <span className="text-xs text-muted-foreground">
+              <span className="wrap-anywhere">{name}</span>
+              <span id={hint} className="text-xs text-muted-foreground">
+                {!component.active && <Badge variant="outline" className="mr-2">{t.inactive}</Badge>}
                 {t.expected}: {shownQuantity(component.expected)} {component.baseUnit} · {t.available}: {shownQuantity(component.available)} {component.baseUnit}
               </span>
             </div>
             <div className="flex flex-col gap-1">
-              <Input aria-label={`${t.actual}, ${name}`} inputMode="decimal" value={row.quantity} onChange={(event) => setPinnedRow(index, { quantity: event.target.value })} {...quantity.props} />
+              <Input aria-label={`${t.actual}, ${name}`} inputMode="decimal" value={row.quantity} onChange={(event) => setPinnedRow(index, { quantity: event.target.value })} {...quantity.props} aria-describedby={described} />
               {quantity.node}
             </div>
             <div className="flex flex-col gap-1">
@@ -206,7 +211,7 @@ export function CompletionForm({ labels, preview, unit, inputs, formatError, for
               >
                 <NativeSelectOption value="">{t.choose}</NativeSelectOption>
                 {inputs.map((choice) => (
-                  <NativeSelectOption key={choice.id} value={choice.id}>
+                  <NativeSelectOption key={choice.value} value={choice.value}>
                     {choice.label}
                   </NativeSelectOption>
                 ))}
@@ -227,7 +232,7 @@ export function CompletionForm({ labels, preview, unit, inputs, formatError, for
               </NativeSelect>
               {units.node}
             </div>
-            <Button type="button" variant="outline" onClick={() => setAdded((rows) => rows.filter(({ key }) => key !== row.key))}>
+            <Button type="button" variant="outline" onClick={() => removeRow(row.key)}>
               {fill(t.removeInput, { number: String(position + 1) })}
             </Button>
           </fieldset>

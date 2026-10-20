@@ -14,7 +14,7 @@ const props = {
   order: production,
   outputUnits: ["each", "case"],
   locationLabel: "00000001 Warehouse",
-  inputs: [{ id: "00000008", label: "00000008 Milk (kg)", units: ["kg"] }],
+  inputs: [{ value: "00000008", label: "00000008 — Milk (kg)", units: ["kg"] }],
   canPost: true,
 };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
