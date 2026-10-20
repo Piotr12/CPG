@@ -5,7 +5,7 @@
 
 These rules apply to every change in this repository, by humans and agents. `AGENTS.md` holds the non-negotiable stack decisions and the `.ai/` workflow; this document covers how code is named, placed, layered, secured and reviewed. If the two disagree, `AGENTS.md` wins. Fix the disagreement in the same change.
 
-CPG is an MRP II application. Its domain concepts are things like items, bills of materials, demand forecasts, production plans and work orders, served as a public frontend and an `/admin` backend. The examples below use those concepts. None of them exist yet, and a concept's folders are created only when its first file is written.
+CPG is an MRP II application. Its domain concepts are things like materials, bills of materials, demand forecasts, production plans and production orders, served as a public frontend and an `/admin` backend. Code names follow the PRD's terms (brief Q04): `materials`, not items; `production-orders`, not work orders. The examples below use production orders, which don't exist yet; section 5 lists the concepts that do. A concept's folders are created only when its first file is written.
 
 Section 6 lists every place where these standards deliberately differ from the DevMentor original.
 
@@ -18,20 +18,20 @@ Section 6 lists every place where these standards deliberately differ from the D
 | Element | Convention | Example |
 | --- | --- | --- |
 | Package | `packages/<name>`, named `@cpg/<name>` | `@cpg/core` |
-| Domain concept folder | plural, kebab-case, the same name in every layer and in the event namespace | `items`, `boms`, `work-orders` |
+| Domain concept folder | plural, kebab-case, the same name in every layer and in the event namespace | `materials`, `boms`, `production-orders` |
 | File | kebab-case everywhere, including components (as shadcn generates them); the export inside is PascalCase/camelCase | `data-table.tsx` exports `DataTable` |
-| Entity | `defineEntity` const + `InferEntity` type, both PascalCase singular, in `<name>.entity.ts` inside its concept folder | `WorkOrder` → `db/src/entities/work-orders/work-order.entity.ts` |
-| DB table / column | snake_case, produced by MikroORM's default naming strategy (singular table from the entity name). Don't set `tableName` | `WorkOrder.dueDate` → `work_order.due_date` |
-| Service | PascalCase class + `Service` suffix, `<name>.service.ts` | `WorkOrderService` → `core/src/services/work-orders/work-order.service.ts` |
+| Entity | `defineEntity` const + `InferEntity` type, both PascalCase singular, in `<name>.entity.ts` inside its concept folder | `ProductionOrder` → `db/src/entities/production-orders/production-order.entity.ts` |
+| DB table / column | snake_case, produced by MikroORM's default naming strategy (singular table from the entity name). Don't set `tableName` | `ProductionOrder.dueDate` → `production_order.due_date` |
+| Service | PascalCase class + `Service` suffix, `<name>.service.ts` | `ProductionOrderService` → `core/src/services/production-orders/production-order.service.ts` |
 | Domain logic (pure, no database) | camelCase functions, `<name>.ts` | `explodeBom()` → `core/src/domain/boms/explode-bom.ts` |
 | Port (external integration interface) | PascalCase + `Port`/`Gateway` suffix, `<name>.port.ts` next to its service | `ErpExportPort` → `core/src/services/exports/erp-export.port.ts` |
 | Adapter (port implementation) | PascalCase, adapter name first, under the service's `adapters/` | `CsvErpExport` → `core/src/services/exports/adapters/csv-erp-export.ts` |
-| DI cradle key | camelCase of the class/value, one per dependency | `workOrderService: WorkOrderService` |
-| Zod schema | camelCase + `Schema`, `<name>-<action>.schema.ts`, shared by client and server | `workOrderCreateSchema` → `core/src/validators/work-orders/work-order-create.schema.ts` |
-| Event ID | `concept.entity.action`, past tense | `work-orders.work-order.released` |
-| Server action | camelCase verb, in `actions.ts` next to the page that uses it | `releaseWorkOrder` |
-| API route | one `route.ts` per resource under `app/api/<concept>/…` | `api/work-orders/[id]/release/route.ts` |
-| Page | `<segment>/page.tsx`, default export `<Segment>Page` | `admin/work-orders/page.tsx` → `WorkOrdersPage` |
+| DI cradle key | camelCase of the class/value, one per dependency | `productionOrderService: ProductionOrderService` |
+| Zod schema | camelCase + `Schema`, `<name>-<action>.schema.ts`, shared by client and server | `productionOrderCreateSchema` → `core/src/validators/production-orders/production-order-create.schema.ts` |
+| Event ID | `concept.entity.action`, past tense | `production-orders.production-order.released` |
+| Server action | camelCase verb, in `actions.ts` next to the page that uses it | `releaseProductionOrder` |
+| API route | one `route.ts` per resource under `app/api/<concept>/…` | `api/production-orders/[id]/release/route.ts` |
+| Page | `<segment>/page.tsx`, default export `<Segment>Page` | `admin/production-orders/page.tsx` → `ProductionOrdersPage` |
 | Domain error | PascalCase + `Error`, extends `AppError`, in `core/src/http/errors.ts` | `NotFoundError`, `ConflictError` |
 
 ### Package layering
@@ -88,13 +88,13 @@ No action or route writes its own `try/catch` + response mapping.
 - **Footer.** The root layout ends every page with the R11 footer. Never add a second `<footer>`.
 - **Help.** Every new `page.tsx` adds a help topic for its route in both languages (`app/src/help/topics.ts`). `tests/every-page-has-help.test.ts` enforces it.
 
-**Data flow in the App Router.** A server component reads through a service, `(await requestScope()).cradle.workOrderService.list()`. It never calls its own `/api` route (Next.js explicitly advises against that: it costs an extra request). Mutations from CPG pages go through server actions. Route handlers + `apiCall` are for client-side fetching and for external callers.
+**Data flow in the App Router.** A server component reads through a service, `(await requestScope()).cradle.productionOrderService.list()`. It never calls its own `/api` route (Next.js explicitly advises against that: it costs an extra request). Mutations from CPG pages go through server actions. Route handlers + `apiCall` are for client-side fetching and for external callers.
 
 **Where a new component goes:**
 
 1. shadcn primitive → `packages/ui/src/components/`, only via `npx shadcn@latest add <name>` in `packages/ui`, never hand-written.
 2. A generic, concept-agnostic panel pattern (a new field type, table cell renderer or feedback state) → `packages/ui/src/backend/<category>/`.
-3. A component tied to one concept's domain shape (renders a `WorkOrder`, a BOM tree) → `packages/app/src/components/<concept>/`, under the same concept name used in `db`/`core`.
+3. A component tied to one concept's domain shape (renders a `ProductionOrder`, a BOM tree) → `packages/app/src/components/<concept>/`, under the same concept name used in `db`/`core`.
 4. A component used by exactly one page → colocated next to that `page.tsx`. Promote it to `components/<concept>/` when a second page needs it.
 
 ### Architecture
@@ -105,7 +105,7 @@ No action or route writes its own `try/catch` + response mapping.
 - **Domain events** use a lightweight typed emitter in `core/src/events/` (`event-bus.ts`, `event-map.ts`), registered as a singleton in the cradle and emitted by services after a successful mutation. They are in-process only: no queue or worker. Add it with the first concept that needs a side effect.
 - **Shared Zod schemas** live in `core/src/validators/<concept>/`. The server action/route and the form both import the same schema. Client components import them through the `@cpg/core/validators/*` subpath export, never the `@cpg/core` barrel, which pulls in `node:fs`. Add `zod` and that export with the first schema.
 - **Database reads in server components** call `await connection()` and sit inside `<Suspense>`. Never use `export const dynamic = "force-dynamic"` or other route-segment config: it doesn't exist under Cache Components. The app must build with no database present.
-- **Check-then-write on shared state** (stock on hand, work-order status, planned-order release) runs inside one `em.transactional()` in the service, backed by a unique constraint where one applies. SQLite has a single writer: keep transactions short and never await a network call inside one.
+- **Check-then-write on shared state** (stock on hand, production-order status, planned-order release) runs inside one `em.transactional()` in the service, backed by a unique constraint where one applies. SQLite has a single writer: keep transactions short and never await a network call inside one.
   - **Never hold SQLite's write lock across slow async work** (an argon2 hash, a file read). Each Next.js bundle has its own connection, and better-sqlite3 waits for a lock synchronously, so a second connection blocks the whole event loop until `busy_timeout`. Do the slow work first, then the writes.
   - **A transaction around services** opens on the request's own `em` with `inRequestTransaction` (`core/src/http/request-transaction.ts`), so their `flush()` and `transactional()` join it. `em.transactional()` on a request fork would put the transaction on a child fork the services never see.
 - **Exact quantities (R03).** Quantities and conversion factors are decimal strings, stored as text columns (SQLite's numeric affinity would make `0.333333` a binary REAL) and exchanged as JSON strings. All arithmetic goes through `core/src/domain/quantities/decimal.ts` (`bigint` micro-units, one half-up rounding to six decimals). Never `Number(quantity)`, a `float` column or a JSON number.
@@ -145,7 +145,7 @@ No action or route writes its own `try/catch` + response mapping.
 
 When two principles pull in different directions, prefer the one that keeps the change **smaller and more explicit**.
 
-- **SRP — one file, one reason to change.** An entity file owns the schema, a service owns one concept's persistence workflow, a domain function owns one calculation, and an action/route owns the HTTP wiring (parse → authorize → service → envelope). `work-order.service.ts` decides whether a work order can be released. It never builds a response, and the action never contains that check inline.
+- **SRP — one file, one reason to change.** An entity file owns the schema, a service owns one concept's persistence workflow, a domain function owns one calculation, and an action/route owns the HTTP wiring (parse → authorize → service → envelope). `production-order.service.ts` decides whether a production order can be released. It never builds a response, and the action never contains that check inline.
 - **DRY — one definition, every call site imports it.** One Zod schema per input, one error/envelope mapping, one feedback component per state. If you are about to copy a `try/catch` or a validation block, extract it.
 - **Separation of concerns — layers don't leak.** Persistence stays in `db`, business rules in `core` (services + pure domain functions), HTTP/rendering in `app`, generic presentation in `ui`.
 - **Dependency inversion — depend on a port, not a vendor SDK.** Awilix wires the chosen adapter at startup. Only `db` is coupled to MikroORM.
@@ -154,7 +154,7 @@ When two principles pull in different directions, prefer the one that keeps the 
 - **YAGNI.** Don't build a layer, folder, dependency or option before the change that uses it.
 - **Composition over inheritance.** Prefer small services and functions composed together over base classes with template methods.
 - **Fail closed.** An error inside an authorization or validation decision means deny, never allow.
-- **Idempotency where retries can happen.** Releasing a work order, posting a stock movement or importing a forecast must tolerate being submitted twice (a double-click, a retried request) without doing the work twice. Use a transaction plus a unique constraint, not only an application-level check.
+- **Idempotency where retries can happen.** Releasing a production order, posting a stock movement or importing a forecast must tolerate being submitted twice (a double-click, a retried request) without doing the work twice. Use a transaction plus a unique constraint, not only an application-level check.
 
 ### Security & validation — minimum requirements
 
@@ -176,7 +176,7 @@ Authentication is server-side sessions (specs `2026-10-19--0746UTC-admin-sign-in
 - **No mass assignment:** writes use the Zod-parsed, explicitly typed output, never the raw request body spread into `em.create()`/`em.assign()`, so a client can't set `id`, `status` or another record's foreign key.
 - **No injection:** persistence goes through MikroORM's entity/query APIs. Raw SQL only with bound parameters, never with interpolated input. User input never reaches a shell command or a file path without canonicalization (stay inside `config.dataDir`).
 - **Server-side recomputation:** quantities, costs and dates derived from master data (BOM cost roll-up, MRP net requirements, scheduled dates) are always recomputed on the server. A client-supplied total is never trusted or persisted as-is.
-- **IDs:** new entities use a UUID primary key. Human-facing business keys (item code, work-order number) are separate unique columns. Small configuration tables keyed by a stable natural key (like `Setting.key`) are the exception.
+- **IDs:** new entities use a UUID primary key. Human-facing business keys (material ID, production-order number) are separate unique columns. Small configuration tables keyed by a stable natural key (like `Setting.key`) are the exception.
 - **Secrets:** secrets come only from the environment, are read in `loadConfig` and are validated for the server in `assertServerConfig` (called first in `instrumentation.ts`, which exits the process on failure). They live in `.kamal/secrets` (which only references env vars, never values) and GitHub Actions secrets, and `.env*` stays git-ignored. Nothing logs or returns a password, token, session ID or secret.
 - **Dependency hygiene:** run `npm audit` before finishing and triage every new advisory (see `AGENTS.md`). Don't add a dependency for something ~20 lines of local code covers.
 
@@ -230,22 +230,22 @@ Authentication is server-side sessions (specs `2026-10-19--0746UTC-admin-sign-in
 
 ## 2. Adding a new domain concept
 
-Example: "add work orders". Create each file only when the change needs it.
+Example: "add production orders". Create each file only when the change needs it.
 
-1. **Entity:** `packages/db/src/entities/work-orders/work-order.entity.ts`, declared with `tenantOwned()` unless it is genuinely global (then add it to `GLOBAL_ENTITIES`). Add it to `entities/index.ts`, then `npm run db:migration:create -- <name>` and commit the migration, snapshot and index together.
-2. **Pure rules** (if any): `packages/core/src/domain/work-orders/*.ts`, with tests.
-3. **Validation:** `packages/core/src/validators/work-orders/work-order-<action>.schema.ts`. This is required once there is any create/update input.
-4. **Service:** `packages/core/src/services/work-orders/work-order.service.ts`. Register it in `core/src/container/container.ts` (`workOrderService: asClass(WorkOrderService).scoped()`) and add it to `Cradle` in `core/src/container/cradle.ts`. Export it from `core/src/index.ts`. It throws `AppError`s and runs check-then-write in `em.transactional()`. Entity types and `EntityManager` come from `@cpg/db`, never from `@mikro-orm/*`.
-5. **Events** (if a side effect is needed): add `work-orders.work-order.<action>` to `core/src/events/event-map.ts` and emit it from the service after the mutation succeeds.
+1. **Entity:** `packages/db/src/entities/production-orders/production-order.entity.ts`, declared with `tenantOwned()` unless it is genuinely global (then add it to `GLOBAL_ENTITIES`). Add it to `entities/index.ts`, then `npm run db:migration:create -- <name>` and commit the migration, snapshot and index together.
+2. **Pure rules** (if any): `packages/core/src/domain/production-orders/*.ts`, with tests.
+3. **Validation:** `packages/core/src/validators/production-orders/production-order-<action>.schema.ts`. This is required once there is any create/update input.
+4. **Service:** `packages/core/src/services/production-orders/production-order.service.ts`. Register it in `core/src/container/container.ts` (`productionOrderService: asClass(ProductionOrderService).scoped()`) and add it to `Cradle` in `core/src/container/cradle.ts`. Export it from `core/src/index.ts`. It throws `AppError`s and runs check-then-write in `em.transactional()`. Entity types and `EntityManager` come from `@cpg/db`, never from `@mikro-orm/*`.
+5. **Events** (if a side effect is needed): add `production-orders.production-order.<action>` to `core/src/events/event-map.ts` and emit it from the service after the mutation succeeds.
 6. **HTTP surface:**
    - From CPG's own pages, a server action in `actions.ts` next to the page, wrapped in the shared `server-action` helper. For tenant data, it uses `tenantServerAction`, and the page binds its tenant with `action.bind(null, tenant)`.
-   - For external callers or client fetching, `app/src/app/api/work-orders/…/route.ts` via `apiHandler` (or `makeCrudRoute` for plain CRUD).
+   - For external callers or client fetching, `app/src/app/api/production-orders/…/route.ts` via `apiHandler` (or `makeCrudRoute` for plain CRUD).
    - Authentication checks come first, once auth exists.
-7. **Pages:** tenant screens under `app/src/app/admin/[tenant]/work-orders/`, read through `tenantScope(tenant)`; global backend screens under `app/src/app/admin/(global)/`. Both use shadcn via `@cpg/ui`. Public pages go under `app/src/app/` (plain Tailwind). The one exception is the navigation the root layout renders on every page (`app/src/components/layout/`): the sidebar a signed-in account sees, and the visitor bar a visitor sees, are built from `@cpg/ui` (`Sidebar`, `Collapsible`, `Popover`, `Button`) on public pages too.
+7. **Pages:** tenant screens under `app/src/app/admin/[tenant]/production-orders/`, read through `tenantScope(tenant)`; global backend screens under `app/src/app/admin/(global)/`. Both use shadcn via `@cpg/ui`. Public pages go under `app/src/app/` (plain Tailwind). The one exception is the navigation the root layout renders on every page (`app/src/components/layout/`): the sidebar a signed-in account sees, and the visitor bar a visitor sees, are built from `@cpg/ui` (`Sidebar`, `Collapsible`, `Popover`, `Button`) on public pages too.
    - Read in a server component through the service, with `await connection()` inside `<Suspense>` and a `feedback/` fallback.
-   - Forms use `CrudForm` bound to the schema from step 3, through a small client component in `app/src/components/work-orders/` (a Zod schema can't be passed as a prop from a server component).
+   - Forms use `CrudForm` bound to the schema from step 3, through a small client component in `app/src/components/production-orders/` (a Zod schema can't be passed as a prop from a server component).
    - Lists use `DataTable`.
-   - Before writing a component, check `ui/src/backend/` and `app/src/components/work-orders/`.
+   - Before writing a component, check `ui/src/backend/` and `app/src/components/production-orders/`.
 8. **Tests:** a `<name>.test.ts(x)` next to every file from steps 1–7, keeping coverage at 100% (`npm run test:coverage`). Service tests run against a real SQLite file in a temp directory, and page tests mock `@cpg/core`. Add an integration test in `tests/integration/` for each new page or flow.
 
 ---
@@ -261,7 +261,7 @@ packages/
       page.tsx                                   # public frontend (plain Tailwind)
       admin/
         page.tsx                                 # backend (shadcn)
-        work-orders/{page.tsx,actions.ts}
+        production-orders/{page.tsx,actions.ts}
       api/<concept>/…/route.ts                   # only for external callers / client fetching
       up/route.ts                                # kamal-proxy health check
     components/<concept>/                        # domain-specific components
@@ -329,6 +329,14 @@ Done when these standards were adopted:
   - the stale-snapshot retry in `tenantServerAction` (`retryingStaleSnapshot`), and `versionConflict()`/`versionSchema` shared by every versioned record;
   - `ui/src/backend/dialogs/confirm-dialog.tsx`, `CrudForm` select fields (shadcn `native-select`) and initial values, and `app/src/routing/or-not-found.ts`;
   - `/admin/[tenant]/materials` and `/admin/[tenant]/materials/[id]` (the reference for a tenant list and detail screen), and `/api/tenants/{tenant}/materials/…`.
+- Locations, customers and suppliers (2026-10-19, spec `2026-10-19--2014UTC-locations-customers-suppliers`):
+  - three tenant-owned entities with shared properties (`db/src/entities/named-records/`) and one service each, composed over the `NamedRecords` helper (`core/src/services/named-records/`);
+  - sequential business IDs for any kind in `core/src/domain/business-ids/sequential-id.ts`, which material IDs now use too;
+  - `app/src/components/named-records/` (table with row actions, create dialog, the shared screen), the reference for a small master with no detail page.
+- Planning parameters and safety stock (2026-10-20, spec `2026-10-20--0532UTC-planning-parameters-safety-stock`), the first records that reference other masters:
+  - leaf lookup modules for references across concepts: `services/materials/find-material.ts`, `services/locations/find-location.ts` and `services/named-records/find-named-record.ts` (`findActive…` refuses an inactive record for new entries). A service that references another concept's record imports these, never the other service. The reverse questions (is a material made somewhere? is its base unit in use?) are leaf modules too: `services/planning-parameters/planning-parameter-usage.ts` and `services/safety-stock/safety-stock-target-usage.ts`;
+  - shared field schemas `validators/quantities/quantity.schema.ts` (six-decimal strings, JSON numbers refused) and `validators/dates/calendar-date.schema.ts`;
+  - `CrudForm` date fields, `TALL_DIALOG` (`app/src/components/forms/form-labels.ts`) for dialogs that scroll, the active-only pickers in `app/src/components/master-data/references.tsx`, and the demo seed helpers for referencing rows (`core/src/services/demo/demo-references.ts`).
 - BOMs (2026-10-20, spec `2026-10-20--0757UTC-boms`):
   - `Bom`, `BomRevision` and `BomComponent` (`db/src/entities/boms/`, tenant-owned), with update-abort triggers that make revisions and their lines immutable (`noUpdateTriggers`);
   - `BomService` (`core/src/services/boms/`), the pure recipe rules in `core/src/domain/boms/` (equality, priority overlap, cycle search), and the leaf files `services/materials/base-quantity.ts` (`convertToBaseQuantity`, shared by every stored entered quantity) and `services/boms/bom-usage.ts`;

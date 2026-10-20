@@ -57,6 +57,36 @@ describe("safety stock actions", () => {
     expect(mocks.service.remove).toHaveBeenCalledWith(KEY, 2, adminActor);
   });
 
+  it("refreshes after a stale version, so a retry carries the new one", async () => {
+    const { ConflictError, VERSION_CONFLICT } = await vi.importActual<typeof import("@cpg/core")>("@cpg/core");
+    mocks.service.update.mockRejectedValue(new ConflictError(VERSION_CONFLICT, "VERSION_CONFLICT"));
+
+    expect(await changeSafetyStockTarget("prod", 1, KEY, 1, { quantity: "40" })).toMatchObject({
+      ok: false,
+      error: { code: "VERSION_CONFLICT" },
+    });
+    expect(mocks.revalidatePath.mock.calls).toEqual([["/admin/prod/safety-stock"]]);
+  });
+
+  it("doesn't refresh after a read-only refusal, so the dialog keeps explaining it (R05)", async () => {
+    const { ConflictError } = await vi.importActual<typeof import("@cpg/core")>("@cpg/core");
+    mocks.service.create.mockRejectedValue(new ConflictError("Read-only.", "TENANT_READ_ONLY"));
+
+    expect(await addSafetyStockTarget("prod", 1, { ...KEY, quantity: "20" })).toMatchObject({
+      ok: false,
+      error: { code: "TENANT_READ_ONLY" },
+    });
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("doesn't refresh after a stale generation, a page rendered before a Test reset (TEN-030)", async () => {
+    const { ConflictError } = await vi.importActual<typeof import("@cpg/core")>("@cpg/core");
+    mocks.service.remove.mockRejectedValue(new ConflictError("This tenant's data was reset since you read it.", "GENERATION_STALE"));
+
+    expect(await removeSafetyStockTarget("test", 1, KEY, 1)).toMatchObject({ ok: false, error: { code: "GENERATION_STALE" } });
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
   it("forbids a normal user and writes nothing (TEN-004)", async () => {
     mocks.currentUser.mockResolvedValue(alice);
 
@@ -64,6 +94,8 @@ describe("safety stock actions", () => {
     expect(await changeSafetyStockTarget("prod", 1, KEY, 1, { quantity: "1" })).toMatchObject({ error: { code: "FORBIDDEN" } });
     expect(await removeSafetyStockTarget("prod", 1, KEY, 1)).toMatchObject({ error: { code: "FORBIDDEN" } });
     expect(mocks.service.create).not.toHaveBeenCalled();
+    expect(mocks.service.update).not.toHaveBeenCalled();
+    expect(mocks.service.remove).not.toHaveBeenCalled();
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 

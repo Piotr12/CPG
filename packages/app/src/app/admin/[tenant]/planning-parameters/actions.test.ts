@@ -75,6 +75,25 @@ describe("planning parameters actions", () => {
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/prod/planning-parameters");
   });
 
+  it("doesn't refresh after a read-only refusal, so the dialog keeps explaining it (R05)", async () => {
+    const { ConflictError } = await vi.importActual<typeof import("@cpg/core")>("@cpg/core");
+    mocks.service.create.mockRejectedValue(new ConflictError("Read-only.", "TENANT_READ_ONLY"));
+
+    expect(await addPlanningParameters("prod", 1, FORM)).toMatchObject({ ok: false, error: { code: "TENANT_READ_ONLY" } });
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("doesn't refresh after a stale generation, a page rendered before a Test reset (TEN-030)", async () => {
+    const { ConflictError } = await vi.importActual<typeof import("@cpg/core")>("@cpg/core");
+    mocks.service.update.mockRejectedValue(new ConflictError("This tenant's data was reset since you read it.", "GENERATION_STALE"));
+
+    expect(await changePlanningParameters("test", 1, "00000004", "00000001", 1, FORM)).toMatchObject({
+      ok: false,
+      error: { code: "GENERATION_STALE" },
+    });
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
   it("forbids a normal user and a signed-out visitor, writing nothing (TEN-004)", async () => {
     mocks.currentUser.mockResolvedValue(alice);
     expect(await addPlanningParameters("prod", 1, FORM)).toMatchObject({ ok: false, error: { code: "FORBIDDEN" } });

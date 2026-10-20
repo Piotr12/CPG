@@ -292,3 +292,8 @@ Implemented on #65; the execution plan is `.ai/pipeline/runs/2026-10-20--0543UTC
 - The tenant home links to both screens, as it does to every other master-data screen.
 - `serverAction` now keeps the field errors of a `ValidationError` a service throws, so the raw-material refusal shows next to Make/Buy; tall dialogs scroll (`TALL_DIALOG`).
 
+Recorded on 2026-10-20 when epic E03 (#11) closed:
+- `DEMO_KINDS` names the new kinds `"planning parameter sets"` and `"safety-stock targets"`, the words the startup log prints, rather than `planningParameters`/`safetyStockTargets`.
+- Two shared helpers the plan doesn't list: `core/src/services/demo/demo-references.ts` (whether a kind may be seeded, and the active materials and locations a demo row may use; a row with a missing or inactive one is skipped) and `app/src/components/master-data/references.tsx` (the active-only material and location pickers both add forms use).
+- `safetyTargetOn` has no caller outside its tests until MRP (slice 3); the screens use `targetStatus`. DEM-014…016 are therefore asserted on the domain function, and MRP's use of it is slice 3's to test.
+

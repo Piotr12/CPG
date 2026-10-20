@@ -34,6 +34,20 @@ const json = (response: { text: string }) => JSON.parse(response.text);
 const write = (method: string, path: string, secret: string, body: unknown, generation?: number) =>
   api(method, path, secret, { key: randomUUID(), body, generation });
 
+/**
+ * Creates `kind` records in Prod until one gets an ID Test doesn't have, and returns it. Both
+ * tenants number from 00000001 and other files create records in both, so which IDs overlap
+ * depends on what ran before: a Prod ID is only "Prod-only" once it passes Test's.
+ */
+async function createOnlyInProd(secret: string, kind: string, name: string): Promise<NamedRecordRow> {
+  const inTest = new Set((json(await api("GET", `/api/tenants/test/${kind}`, secret)).data as NamedRecordRow[]).map(({ id }) => id));
+  for (let attempt = 0; attempt <= inTest.size; attempt += 1) {
+    const created = json(await write("POST", `/api/tenants/prod/${kind}`, secret, { name })).data as NamedRecordRow;
+    if (!inTest.has(created.id)) return created;
+  }
+  throw new Error(`Prod never got a ${kind} ID that Test doesn't have.`);
+}
+
 /** Each kind, with its error-code prefix and the first demo record Test starts with. */
 const KINDS = [
   { kind: "locations", code: "LOCATION", firstDemo: "00000001 Main plant, Wrocław" },
@@ -119,12 +133,32 @@ describe("locations, customers and suppliers through the API (R07)", () => {
       expect(json(await api("GET", path, adminSecret)).data).toMatchObject({ name: `nrapi ${kind} renamed`, active: false });
     });
 
-    it("answers an ID the tenant doesn't have, or a malformed one, with 404 (TEN-014)", async () => {
+    it("answers an ID the tenant doesn't have, or a malformed one, with 404", async () => {
       for (const id of ["99999999", "abc"]) {
         const response = await api("GET", `${collection("prod")}/${id}`, adminSecret);
         expect(response.status).toBe(404);
         expect(json(response).error.code).toBe(`${code}_NOT_FOUND`);
       }
+    });
+
+    it("doesn't find a Prod record from Test, to read or change it (TEN-014)", async () => {
+      const prodOnly = await createOnlyInProd(adminSecret, kind, `nrapi ${kind} prod only`);
+      const { generation } = json(await api("GET", "/api/tenants/test", adminSecret)).data as { generation: number };
+      const testPath = `${collection("test")}/${prodOnly.id}`;
+
+      const read = await api("GET", testPath, adminSecret);
+      const change = await write("PATCH", testPath, adminSecret, { version: prodOnly.version, name: `nrapi ${kind} from test` }, generation);
+
+      for (const response of [read, change]) {
+        expect(response.status).toBe(404);
+        expect(json(response).error.code).toBe(`${code}_NOT_FOUND`);
+      }
+      expect(json(await api("GET", `${collection("prod")}/${prodOnly.id}`, adminSecret)).data).toMatchObject({
+        name: `nrapi ${kind} prod only`,
+        version: prodOnly.version,
+      });
+      const test = json(await api("GET", collection("test"), adminSecret)).data as NamedRecordRow[];
+      expect(test.map(({ id }) => id)).not.toContain(prodOnly.id);
     });
 
     it("lets a normal user's token read but not change them (TEN-004, API-010)", async () => {
