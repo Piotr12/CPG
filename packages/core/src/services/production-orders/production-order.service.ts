@@ -1,6 +1,7 @@
 import { ProductionOrder, OptimisticLockError, UniqueConstraintViolationException, type EntityManager } from "@cpg/db";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
 import { DEMO_PRODUCTION_ORDER } from "../../domain/production-orders/demo-production-orders";
+import { productionStatus } from "../../domain/production-orders/production-completion";
 import { plannedStart } from "../../domain/production-orders/production-planning";
 import { parseDecimal } from "../../domain/quantities/decimal";
 import { AppError, ConflictError, ValidationError, versionConflict } from "../../http/errors";
@@ -18,7 +19,7 @@ export type { ProductionOrderView } from "./production-order-records";
 export type { ProductionOptions, ProductionComponent, ProductionRecipe } from "./production-recipes";
 export type ProductionOrderDetail = Awaited<ReturnType<ProductionOrderService["get"]>>;
 
-/** Manual planned production. All writes and their audit share the caller's tenant transaction; stock never changes. */
+/** Manual planned production. All writes and their audit share the caller's tenant transaction; stock changes only through completions. */
 export class ProductionOrderService {
   private readonly em: EntityManager;
   constructor({ em }: { em: EntityManager }) { this.em = em; }
@@ -61,6 +62,8 @@ export class ProductionOrderService {
           const record = await convertToBaseQuantity(em, order.output, { quantity, unit });
           if (parseDecimal(record.baseQuantity)! < parseDecimal(order.produced)!) throw new ValidationError({ quantity: ["The target cannot be less than the quantity already produced."] });
           order.quantity = record.baseQuantity;
+          // A target lowered to exactly what was produced completes the order (spec Q8).
+          order.status = productionStatus(order.produced, order.quantity);
           em.assign(order, { enteredQuantity: record.enteredQuantity, enteredUnit: record.enteredUnit, numerator: record.numerator, denominator: record.denominator });
         }
         if (input.plannedFinish !== undefined) {

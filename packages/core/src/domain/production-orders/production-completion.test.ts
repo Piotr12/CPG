@@ -3,7 +3,7 @@ import {
   consumptionVariance,
   exceedsTarget,
   expectedConsumption,
-  outstandingOf,
+  productionOutstanding,
   producedAfter,
   productionStatus,
 } from "./production-completion";
@@ -45,8 +45,8 @@ describe("production completion arithmetic", () => {
     expect(productionStatus("0.000000", "100.000000")).toBe("open");
   });
   it("reports what is still to produce, never below zero", () => {
-    expect(outstandingOf("100.000000", "40.000000")).toBe("60.000000");
-    expect(outstandingOf("100.000000", "100.000000")).toBe("0.000000");
-    expect(outstandingOf("100.000000", "105.000000")).toBe("0.000000");
+    expect(productionOutstanding("100.000000", "40.000000")).toBe("60.000000");
+    expect(productionOutstanding("100.000000", "100.000000")).toBe("0.000000");
+    expect(productionOutstanding("100.000000", "105.000000")).toBe("0.000000");
   });
 });

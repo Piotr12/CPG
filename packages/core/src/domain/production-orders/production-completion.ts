@@ -34,7 +34,7 @@ export function productionStatus(produced: string, target: string): "open" | "co
 }
 
 /** What an order has still to produce, never below zero once it is overproduced. */
-export function outstandingOf(target: string, produced: string): string {
+export function productionOutstanding(target: string, produced: string): string {
   const left = parseDecimal(target)! - parseDecimal(produced)!;
   return formatDecimal(left > 0n ? left : 0n, { fixed: true });
 }
