@@ -44,7 +44,7 @@ const DETAILED_CODES = new Set(["BOM_PRIORITY_CONFLICT", "BOM_CYCLE"]);
 
 /** An error envelope as the BOM screens say it: translated by code, plus the details of a clash or a cycle. */
 export function errorFormatter(labels: Pick<BomsLabels, "errors">) {
-  return (error: { code: string; message: string }): string => {
+  return (error: Parameters<typeof errorMessage>[1]): string => {
     const text = errorMessage(labels.errors, error);
     const colon = error.message.indexOf(": ");
     if (!DETAILED_CODES.has(error.code) || colon < 0 || text === error.message) return text;

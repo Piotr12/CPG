@@ -1,4 +1,5 @@
 import { CustomerOrderService } from "../services/customer-orders/customer-order.service";
+import { StockService } from "../services/stock/stock.service";
 import { entities, initOrm, type Orm } from "@cpg/db";
 import { asClass, asFunction, asValue, createContainer, InjectionMode } from "awilix";
 import { loadConfig, type AppConfig } from "../config";
@@ -46,6 +47,7 @@ export function createAppContainer(config: AppConfig, orm: Orm): AppContainer {
     auditService: asClass(AuditService).scoped(),
     idempotencyService: asClass(IdempotencyService).scoped(),
     // Tenant data: resolve it from a tenantScope(), whose `em` reads and writes one tenant only.
+    stockService: asClass(StockService).scoped(),
     materialService: asClass(MaterialService).scoped(),
     locationService: asClass(LocationService).scoped(),
     customerService: asClass(CustomerService).scoped(),

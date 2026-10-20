@@ -1,4 +1,5 @@
 import { assertNoCustomerOrdersAtLocation } from "../customer-orders/customer-order-usage";
+import { assertNoPhysicalStock } from "../stock/stock-usage";
 import type { EntityManager } from "@cpg/db";
 import { DEMO_LOCATIONS } from "../../domain/locations/demo-locations";
 import type { AuditActor } from "../audit/actor";
@@ -23,7 +24,10 @@ export class LocationService {
       subjectType: "Location",
       actionPrefix: "locations.location",
       demoNames: DEMO_LOCATIONS,
-      assertDeactivationAllowed: assertNoCustomerOrdersAtLocation,
+      beforeDeactivate: async (em, location) => {
+        await assertNoPhysicalStock(em, { location });
+        await assertNoCustomerOrdersAtLocation(em, location);
+      },
     });
   }
 

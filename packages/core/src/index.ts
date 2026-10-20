@@ -47,3 +47,4 @@ export * from "./singleton";
 export { LOCALES, THEMES, type Locale, type Theme } from "@cpg/db";
 
 export * from "./services/customer-orders/customer-order.service";
+export * from "./services/stock/stock.service";

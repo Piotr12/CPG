@@ -53,6 +53,9 @@ describe("customer orders through the UI and API", () => {
   });
 
   it("lets a normal user create two dated material lines with one header location, Open and fulfilled zero (SAL-002, SAL-003, SAL-005, LFC-001)", async () => {
+    const stock = async () => json(await api("GET", `/api/tenants/prod/stock?material=${material}&location=${location.id}`)).data;
+    const beforeStock = await stock();
+    expect(beforeStock).toMatchObject({ quantity: "0.000000", movements: [] });
     await openCreate(); await user.clickRole("button", "Add line");
     await user.select(field("lines.1.material"), steel); await user.fill(field("lines.1.quantity"), "2");
     expect(await user.fillDate(field("lines.1.requiredDate"), "2027-01-08")).toBe("2027-01-08");
@@ -62,6 +65,7 @@ describe("customer orders through the UI and API", () => {
       { material, quantity: "60.000000", requiredDate: "2027-01-04", status: "open", fulfilled: "0.000000" },
       { material: steel, quantity: "2.000000", requiredDate: "2027-01-08", status: "open", fulfilled: "0.000000" },
     ] });
+    expect(await stock()).toEqual(beforeStock);
     await user.open(`${baseUrl}/admin/prod/customer-orders/${uiOrder.id}`); await user.waitForText("60 each"); await user.waitForText("2027-01-08");
     await user.setViewport(390, 844);
     expect(await user.evaluate<boolean>(`(() => { const button = [...document.querySelectorAll("main button")].find((el) => el.textContent === "Edit order"); const r = button.getBoundingClientRect(); return r.width > 0 && r.left >= 0 && r.right <= innerWidth; })()`)).toBe(true);

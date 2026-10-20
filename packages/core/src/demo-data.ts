@@ -17,6 +17,7 @@ export const DEMO_KINDS = [
   "safety-stock targets",
   "BOMs",
   "customer orders",
+  "stock openings",
 ] as const;
 export type DemoKind = (typeof DEMO_KINDS)[number];
 
@@ -43,6 +44,7 @@ export async function seedDemoData(config: AppConfig): Promise<Record<DemoKind, 
       "safety-stock targets": () => cradle.safetyStockTargetService.seedDemo(),
       BOMs: () => cradle.bomService.seedDemo(),
       "customer orders": () => cradle.customerOrderService.seedDemo(),
+      "stock openings": () => cradle.stockService.seedDemo(),
     };
     const results = {} as Record<DemoKind, DemoSeedResult>;
     for (const kind of DEMO_KINDS) {

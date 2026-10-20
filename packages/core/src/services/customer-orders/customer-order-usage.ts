@@ -18,7 +18,7 @@ export async function assertNoCustomerDemand(em: EntityManager, material: Materi
     { populate: ["order"], orderBy: { id: "asc" }, limit: 100, disableIdentityMap: true });
     if (lines.length === 0) return;
     const demand = lines.find((line) => parseDecimal(line.quantity)! > parseDecimal(line.fulfilled)! + parseDecimal(line.abandoned)!);
-    if (demand) throw new ConflictError(`Customer order ${demand.order.code} has outstanding demand for this material.`, "MATERIAL_HAS_CUSTOMER_DEMAND");
+    if (demand) throw new ConflictError(`Customer order ${demand.order.code} has outstanding demand for this material.`, "MATERIAL_HAS_CUSTOMER_DEMAND", { order: demand.order.code });
     after = lines.at(-1)!.id;
   }
 }
@@ -26,5 +26,5 @@ export async function assertNoCustomerDemand(em: EntityManager, material: Materi
 /** An unfinished direct order reference blocks location deactivation; customers remain independent. */
 export async function assertNoCustomerOrdersAtLocation(em: EntityManager, location: NamedRecord): Promise<void> {
   const order = await em.findOne(CustomerOrder, { location: location.id, status: "open" }, { orderBy: { code: "asc" } });
-  if (order) throw new ConflictError(`Customer order ${order.code} is still Open at this location.`, "LOCATION_HAS_CUSTOMER_ORDERS");
+  if (order) throw new ConflictError(`Customer order ${order.code} is still Open at this location.`, "LOCATION_HAS_CUSTOMER_ORDERS", { order: order.code });
 }

@@ -2,14 +2,14 @@
 
 Source doc: .ai/specs/implemented/2026-10-20--1635UTC-customer-orders.md
 Design PR: #101
-Status: complete
+Status: in progress
 Engine: om-auto-create-pr (steps: 9, --loop: no)
 
 ## Goal
 Both roles create and maintain tenant-local customer orders with one location and dated exact-quantity lines, Open state, audited UI/API parity and demo data.
 
 ## Scope
-New customer-orders entities/service/validators/API/actions/screens, necessary material/location integrity guards, Test seed, translations/navigation/help and tests. No shipment, GI, stock posting, terminal command, forecast or MRP implementation. Reuse this cockpit linked worktree; spec is materialized locally from #101 and must not be committed to this implementation branch.
+New customer-orders entities/service/validators/API/actions/screens, necessary material/location integrity guards, Test seed, translations/navigation/help and tests. No shipment, GI, stock posting, terminal command, forecast or MRP implementation. Reuse this cockpit linked worktree; spec was merged independently through #101 and is now inherited from main.
 
 ## Implementation Plan
 ### Phase 1: Aggregate and integrity
@@ -51,6 +51,10 @@ Risk-high additive schema, new aggregate contract, conversion history and line i
 
 - 17:53 UTC — User instructed autonomous completion without further confirmation, authorizing the concrete pending publication. Published all11 reviewed PNGs to existing shared qa-evidence/pr-102-66e9b36 and [inline QA report](https://github.com/Piotr12/CPG/pull/102#issuecomment-6297453201); verified remote hashes and all11 comment embeds. Completing ready promotion and final CI follow-up. Formal review and risk-high manual QA remain external merge gates.
 
+- 2026-10-20 18:13 UTC — Reopened Step 3.2 after final-head CI passed all five jobs (222 Docker integration tests), because main advanced and PR became conflicting. Merging main including stock ledger, preserving both integrity guards, migrations, seeds and structured error parameters. Combined unit gate: 2,048 tests and all coverage measures 100%; typecheck PASS. Adding upgrade/no-stock-side-effect and audit localization regressions before full merged-head validation.
+
+- 18:16 UTC — Merged-source lint, typecheck, build and 2,051 unit tests PASS; all four coverage measures remain 100%. Real SQLite regression applies both pending order migrations after main stock schema and preserves tenant state, without order/stock schema drift. Starting full integration on a fresh standalone copy.
+
 ## Verification
 - Phase 1: lint/typecheck passed; full coverage passed, 289 files / 1,927 tests, all four measures 100%.
 - Final gate: lint and typecheck PASS;296 unit files/1,970 tests PASS,100% lines/statements/branches/functions (4,289 lines,4,866 statements,2,106 branches,1,667 functions); Next16.4.2 build PASS.
@@ -75,4 +79,4 @@ Risk-high additive schema, new aggregate contract, conversion history and line i
 - [x] 2.3 Add API/browser integration journeys for both roles and integrity/refusal paths. — 95753b0
 ### Phase 3: Verification and publication
 - [x] 3.1 Reach 100% unit coverage; run lint, typecheck, coverage, build, integration and live mobile/desktop QA. — 66e9b36
-- [x] 3.2 Run authoritative review/autofix, publish evidence and summary, make PR ready with full labels. — cf79c39; evidence6297453201
+- [ ] 3.2 Run authoritative review/autofix, publish evidence and summary, make PR ready with full labels. — cf79c39; evidence6297453201

@@ -52,6 +52,7 @@ describe("@cpg/core", () => {
       "REPLAYED_HEADER",
       "SESSION_TTL_MS",
       "SafetyStockTargetService",
+      "StockService",
       "SupplierService",
       "SystemStatusService",
       "TENANT_CODES",

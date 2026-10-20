@@ -57,6 +57,7 @@ import { isCurrentLeaf, isGroup, leafHref, TOKENS_PATH, type NavEntry, type NavI
 const DEFAULT_TENANT: TenantCode = "test";
 
 const ICONS: Record<NavId, LucideIcon> = {
+  stock: PackageIcon,
   overview: HouseIcon,
   transactions: TruckIcon,
   customerOrders: FileSpreadsheetIcon,

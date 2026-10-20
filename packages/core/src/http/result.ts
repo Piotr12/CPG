@@ -1,9 +1,10 @@
-import type { FieldErrors } from "./errors";
+import type { ErrorParams, FieldErrors } from "./errors";
 
 export interface ErrorBody {
   code: string;
   message: string;
   fieldErrors?: FieldErrors;
+  params?: ErrorParams;
 }
 
 /** The one envelope server actions and route handlers return. */

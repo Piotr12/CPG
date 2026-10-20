@@ -13,14 +13,14 @@ import type { ImportLabels } from "./labels";
  * field message, and a service's refusal by its code (with a BOM clash's or cycle's details).
  */
 export function problemText(issue: ImportIssue, labels: ImportLabels, tenant: string): string {
+  const params = Object.fromEntries(Object.entries(issue.params ?? {}).map(([key, value]) => [key, String(value)]));
   const template = (labels.issues as Record<string, string>)[issue.code];
   if (template) {
-    const params = Object.fromEntries(Object.entries(issue.params ?? {}).map(([key, value]) => [key, String(value)]));
     const record = (labels.records as Record<string, string>)[params.record] ?? params.record;
     return fill(template, { ...params, record, tenant });
   }
   if (issue.code === "VALIDATION_FAILED") return labels.fieldMessages[issue.message] ?? issue.message;
-  return errorFormatter(labels)(issue);
+  return errorFormatter(labels)({ ...issue, params });
 }
 
 /** One value in a change: `—` for none, yes/no for a flag. */
