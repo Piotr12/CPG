@@ -13,7 +13,7 @@ The original export marked every scenario `Not executed`. Scenarios are updated 
 - **Partially verified**: only part of the scenario can be or is asserted today; the **Evidence** line says which part is missing and why.
 - **Not executed**: not yet built or not yet checked.
 
-Last updated 2026-10-20 for epic E02 (#10), against CI on `main` at `3e46bf8` (PR #57 for E02-S04 merged with green CI), plus the AUD-008 end-to-end test added with that update. Earlier: epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
+Last updated 2026-10-20 for epic E03 (#11), against `main` at `3f553a5` (PR #65 for E03-S03), plus the tests added with that update. Earlier: epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
 
 This document contains the complete acceptance catalogue for the CPG MVP. Each test preserves its ID, title, priority, execution channel, and Given / When / Then criteria.
 
@@ -23,7 +23,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/tenants.test.ts` (the chooser offers Test and Prod), `tests/integration/materials.test.ts`, `named-records.test.ts`, `materials-api.test.ts` and `named-records-api.test.ts` (Test starts with the demo records), `packages/core/src/demo-data.test.ts` (the startup seed fills Test, never Prod). Prod being empty on a fresh install is asserted by that unit test only: the integration files share one app. E02-S01, #19.
+- **Evidence:** `tests/integration/tenants.test.ts` (the chooser offers Test and Prod), `tests/integration/materials.test.ts`, `named-records.test.ts`, `materials-api.test.ts` and `named-records-api.test.ts`, `planning-parameters.test.ts` and `planning-parameters-api.test.ts` (Test starts with the demo records), `packages/core/src/demo-data.test.ts` (the startup seed fills Test, never Prod). Prod being empty on a fresh install is asserted by that unit test only: the integration files share one app. E02-S01, #19.
 - **Given:** Fresh CPG runtime with valid administrator password
 - **When:** Inspect tenant selection and data
 - **Then:** Test contains demonstration business records; Prod contains none; both tenants selectable.
@@ -48,9 +48,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### TEN-004 — Normal user creation
 
-**Priority:** P1 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** Creation and sign-in: `tests/integration/users.test.ts`, `packages/core/src/services/users/user.service.test.ts`. The normal user is refused every admin-only operation (`tests/integration/api-tokens.test.ts`, `packages/core/src/http/auth.test.ts`); the master-data part waits for master data (#22). E01-S02, PR #34.
+- **Evidence:** Creation and sign-in: `tests/integration/users.test.ts`, `packages/core/src/services/users/user.service.test.ts`. The normal user is refused every admin-only operation (`tests/integration/api-tokens.test.ts`, `packages/core/src/http/auth.test.ts`) and every master-data write: through the UI (`tests/integration/materials.test.ts`, `named-records.test.ts` and `planning-parameters.test.ts` show no controls; every master's `actions.test.ts` refuses all its writes) and the API (`tests/integration/materials-api.test.ts`, `named-records-api.test.ts`, `planning-parameters-api.test.ts`), while still reading. E01-S02, PR #34, with #22, #23 and #24.
 - **Given:** Administrator logged in
 - **When:** Create normal user with initial password
 - **Then:** New active normal user can sign in with specified password and has no master-data edit permission.
@@ -138,7 +138,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** Data layer only: `packages/db/src/tenants/tenant-isolation.test.ts` (a reference to another tenant's record is rejected and nothing is written), the material and named-record service tests, and `tests/integration/named-records-api.test.ts` (an ID the tenant doesn't have answers 404). No business document references a material yet; the document half waits for BOMs (#26) and orders. E02-S01, #19.
+- **Evidence:** Data layer: `packages/db/src/tenants/tenant-isolation.test.ts` (a reference to another tenant's record is rejected and nothing is written). Services: the material and named-record service tests, and `packages/core/src/services/planning-parameters/planning-parameter.service.test.ts` and `packages/core/src/services/safety-stock/safety-stock-target.service.test.ts` (a set or target naming a material or location that exists only in the other tenant is refused, writing nothing in either). End to end: `tests/integration/named-records-api.test.ts` (a Prod-only location, customer or supplier is not found from Test, to read or change) and `tests/integration/planning-parameters-api.test.ts` (a Test set or target naming a Prod-only material or location is 404 and stores nothing). No business document references a material yet; the document half waits for BOMs (#26) and orders. E02-S01, #19, with #23 and #24.
 - **Given:** A Test document tries to reference a Prod material ID with no Test equivalent
 - **When:** Validate/create record
 - **Then:** Reference is not resolved across tenants and the operation fails without writes.
@@ -282,72 +282,81 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MAT-001 — Sequential first material ID
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/materials/material.service.test.ts` (the first create in an empty tenant is 00000001), `packages/core/src/domain/materials/material-code.test.ts`, `tests/integration/materials.test.ts`, `tests/integration/materials-api.test.ts`. E03-S01, #22.
 - **Given:** Empty Prod tenant
 - **When:** Admin creates first material
 - **Then:** Material ID is 00000001.
 
 ### MAT-002 — Sequential next IDs
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/materials/material.service.test.ts` (00000001, 00000002, … and never reused), `material-code.test.ts`, `tests/integration/materials.test.ts` and `materials-api.test.ts` (consecutive IDs). E03-S01, #22.
 - **Given:** Two materials already created
 - **When:** Admin creates third material
 - **Then:** New ID has eight digits and follows prior sequence without reuse.
 
 ### MAT-003 — Tenant-local sequence
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/materials/material.service.test.ts` (Prod numbers independently of Test), `tests/integration/materials.test.ts`. E03-S01, #22.
 - **Given:** Prod has assigned 00000001; Test contains independent materials
 - **When:** Create next material in Prod
 - **Then:** Numbering follows Prod only, independent of Test numbering.
 
 ### MAT-004 — ID cannot be edited
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/validators/materials/material-update.schema.test.ts` (an `id` in the changes is refused), `packages/core/src/services/materials/material.service.test.ts` (the ID never changes), the materials `[id]/route.test.ts` and `actions.test.ts`, `tests/integration/materials-api.test.ts` (a `PATCH` with an `id` is 400 and the ID stays). E03-S01, #22.
 - **Given:** Existing material has stock or no stock
 - **When:** Attempt change material ID
 - **Then:** Edit not allowed; original immutable ID remains.
 
 ### MAT-005 — Type required
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/validators/materials/material-fields.schema.test.ts` and `material-create.schema.test.ts`, the materials `route.test.ts`, `create-material-dialog.test.tsx`, `tests/integration/materials-api.test.ts` (a material without a type is refused and nothing is created). E03-S01, #22.
 - **Given:** Create material without type
 - **When:** Submit through UI or API
 - **Then:** Validation identifies material type as mandatory; no material created.
 
 ### MAT-006 — Three allowed types
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `material-fields.schema.test.ts` (raw, intermediate and finished are accepted), `packages/core/src/domain/materials/demo-materials.test.ts` (the demo set holds all three), `packages/core/src/services/materials/material.service.test.ts`. E03-S01, #22.
 - **Given:** Create raw, intermediate and finished materials
 - **When:** Save and inspect
 - **Then:** All three documented types accepted and retained accurately.
 
 ### MAT-007 — Invalid material type
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `material-fields.schema.test.ts` (any other type is refused with a stable code), the create route and dialog tests. E03-S01, #22.
 - **Given:** New material with unrecognized type
 - **When:** Validate creation
 - **Then:** Rejected with descriptive type validation; no record created.
 
 ### MAT-008 — Description and BUoM mandatory
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `material-fields.schema.test.ts`, `material-create.schema.test.ts`, the materials `route.test.ts`, `create-material-dialog.test.tsx`, `tests/integration/materials.test.ts` (the field error) and `materials-api.test.ts` (every missing field named). E03-S01, #22.
 - **Given:** New material missing description or BUoM
 - **When:** Attempt save
 - **Then:** Missing required fields are identified; no partial record inserted.
 
 ### MAT-009 — BUoM can change before transactional use
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/services/materials/material.service.test.ts`: the base unit changes on an unreferenced material, and is refused while it has conversions (`BASE_UNIT_HAS_CONVERSIONS`) or planning parameters or safety-stock targets (`BASE_UNIT_IN_USE`, #24). The BOM, document and stock-movement locks come with BOMs (#26) and slice 2. E03-S01, #22.
 - **Given:** Material has no BOM revision reference, operational document reference or inventory movement
 - **When:** Admin changes base UoM
 - **Then:** BUoM can change, with conversion consistency verified; after any listed reference the same change is rejected.
@@ -378,32 +387,36 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MAT-013 — Type editable while unused
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/materials/material.service.test.ts` (type and base unit edits on an unused material, audited with before and after). Nothing can reference a material's type yet except Make planning parameters, which lock a change to raw (MAT-014). E03-S01, #22.
 - **Given:** Material has no BOM references or transactions
 - **When:** Admin changes type within supported set
 - **Then:** Updated type stored and audited.
 
 ### MAT-014 — Raw material Buy-only
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/domain/planning-parameters/procurement.test.ts`, `packages/core/src/services/planning-parameters/planning-parameter.service.test.ts` (Make refused for raw at any location), `packages/core/src/services/materials/material.service.test.ts` (a material made somewhere can't become raw, `MATERIAL_MADE_AT_LOCATIONS`), `add-planning-parameters-dialog.test.tsx`, `tests/integration/planning-parameters.test.ts` and `planning-parameters-api.test.ts`. E03-S03, #24.
 - **Given:** Raw material assigned at one location
 - **When:** Admin tries to set procurement mode Make
 - **Then:** Rule rejects Make for raw material.
 
 ### MAT-015 — Intermediate Make or Buy
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `procurement.test.ts`, `packages/core/src/services/planning-parameters/planning-parameter.service.test.ts` (Make at one location and Buy at another), the planning-parameters `page.test.tsx`, `tests/integration/planning-parameters.test.ts` and `planning-parameters-api.test.ts`. E03-S03, #24.
 - **Given:** Intermediate material defined at two locations
 - **When:** Set one Make and another Buy
 - **Then:** Both site-specific modes saved independently.
 
 ### MAT-016 — Site planning parameters present
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** Stored and read back per material and location: `packages/core/src/services/planning-parameters/planning-parameter.service.test.ts`, the planning-parameters route, schema and page tests, `tests/integration/planning-parameters.test.ts` and `planning-parameters-api.test.ts`. MRP reading them is slice 3. E03-S03, #24.
 - **Given:** Material-location pair with valid Make/Buy, days, minimum, lot multiple
 - **When:** Save and use in MRP
 - **Then:** MRP reads the parameters for that exact site/material combination.
@@ -418,56 +431,63 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MAT-018 — Calendar-day lead time
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** The lead time is stored in whole calendar days, 0–999 (`planning-parameter-fields.schema.test.ts`, the planning-parameters `route.test.ts`). Back-scheduling is MRP's, slice 3. E03-S03, #24.
 - **Given:** Planning lead time 7 whole days
 - **When:** MRP computes need on October 15
 - **Then:** Back-scheduled start uses October 8, not seven business days earlier.
 
 ### MAT-019 — Convert case to each at input
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/quantities/decimal.test.ts` (2 × 12/1 = 24) and `packages/core/src/services/materials/material.service.test.ts` (`toBaseQuantity` returns 24 each with the entered 2 case and its factor), `conversions-table`, `add-conversion-dialog` and `labels` tests, `tests/integration/materials.test.ts` (1 case = 12 each shown). Nothing stores an entered quantity yet: BOM lines (#26) are the first (materials spec Q5). E03-S01, #22.
 - **Given:** BUoM each, factor 1 case = 12 each
 - **When:** Enter 2 cases in transaction or BOM
 - **Then:** Stored authority is 24 each; original 2 cases and factor retained for display/audit.
 
 ### MAT-020 — Convert tonne to kg
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/quantities/decimal.test.ts` and `packages/core/src/services/materials/material.service.test.ts` (0.25 t = 250 kg through `toBaseQuantity`), `conversions-table.test.tsx`. Storing the entered quantity waits for #26 (materials spec Q5). E03-S01, #22.
 - **Given:** Material BUoM kg and a tonne conversion defined
 - **When:** Enter 0.25 tonne
 - **Then:** Stored amount is 250 kg, not 0.25 kg.
 
 ### MAT-021 — Numerator/denominator inverse
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/domain/quantities/decimal.test.ts` (4 × 3/2 = 6, inverse 0.666667), `packages/core/src/services/materials/material.service.test.ts`, `conversions-table.test.tsx` and `labels.test.ts` (the inverse shown), `tests/integration/materials.test.ts`. E03-S01, #22.
 - **Given:** Conversion factor 3/2 relative to BUoM
 - **When:** Convert 4 alternative units and display inverse
 - **Then:** BUoM calculation equals 6 and reverse representation is consistent at allowed precision.
 
 ### MAT-022 — Invalid zero denominator
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/validators/materials/conversion.schema.test.ts` (a zero denominator refused on add and on a factor change), `packages/core/src/services/materials/material.service.test.ts` (a refused change keeps the old factor and writes no audit), the conversions route and action tests, `tests/integration/materials.test.ts` and `materials-api.test.ts`. E03-S01, #22.
 - **Given:** New conversion has denominator 0
 - **When:** Submit master change
 - **Then:** Validation rejects conversion; prior factor, if any, stays unchanged.
 
 ### MAT-023 — Missing alternative conversion
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/services/materials/material.service.test.ts`: `toBaseQuantity` refuses a unit with no conversion (`UNIT_NOT_CONVERTIBLE`) instead of assuming 1:1. No entry saves a quantity yet (#26), and MRP is slice 3. E03-S01, #22.
 - **Given:** Quantity entered in UoM not convertible for material
 - **When:** Attempt save or run dependent MRP
 - **Then:** Transaction cannot silently assume 1:1; actionable invalid conversion error/exception.
 
 ### MAT-024 — Exact six-decimal quantity
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/quantities/decimal.test.ts` and `packages/core/src/services/materials/material.service.test.ts` (0.123456 kept exactly, every quantity a six-decimal string, never a binary float). Stored quantities exist only in planning parameters and safety-stock targets so far (`packages/core/src/validators/quantities/quantity.schema.test.ts`, JSON numbers refused); entered-unit storage waits for #26. E03-S01, #22.
 - **Given:** BUoM quantity entered as 0.123456
 - **When:** Post valid quantity
 - **Then:** Exact six-place value preserved in calculations and ledger.
@@ -506,8 +526,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MAT-029 — Inactive material excluded from new entries
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/services/materials/find-material.test.ts`, `packages/core/src/services/planning-parameters/planning-parameter.service.test.ts` and `packages/core/src/services/safety-stock/safety-stock-target.service.test.ts` (a new set or target refuses an inactive material, `MATERIAL_INACTIVE`, while existing rows stay readable and editable), `packages/app/src/components/master-data/references.test.tsx` and `tests/integration/planning-parameters.test.ts` (a deactivated material isn't offered and its target stays), `tests/integration/planning-parameters-api.test.ts` (409 and nothing stored). PO lines are slice 2. E03-S03, #24.
 - **Given:** Material inactive, historical PO remains
 - **When:** Create new PO line using inactive material
 - **Then:** New selection rejected; historical PO remains readable and eligible for completion.
@@ -530,8 +551,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MAT-032 — Non-terminating UoM conversion rounds once
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/quantities/decimal.test.ts` and `packages/core/src/services/materials/material.service.test.ts` (1 × 1/3 = 0.333333, 2 × 1/3 = 0.666667, rounded half-up once). Storing it waits for #26 (materials spec Q5). E03-S01, #22.
 - **Given:** Material BUoM each, alternate UoM conversion factor 1/3, user enters 1 alternate unit
 - **When:** Save valid business quantity
 - **Then:** Store authoritative 0.333333 each by decimal half-up rounding; preserve entered value and exact factor; reject positive input that rounds to zero.
@@ -2356,32 +2378,36 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### DEM-014 — Safety target default zero
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/safety-stock/target-on.test.ts` (no target in force reads 0.000000). MRP's safety gap is slice 3. E03-S03, #24.
 - **Given:** Material/site has no safety-stock record
 - **When:** Run MRP
 - **Then:** Safety gap uses target zero; no fictitious safety stock created.
 
 ### DEM-015 — Safety target becomes valid from date
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `target-on.test.ts` (a target applies from its date until the next one), `packages/core/src/services/safety-stock/safety-stock-target.service.test.ts`, the safety-stock `page.test.tsx` (the target in force today). MRP's daily calculation is slice 3. E03-S03, #24.
 - **Given:** Safety target M/L 100 effective January 1
 - **When:** Calculate January 1 through January 15
 - **Then:** Target 100 each day unless superseded.
 
 ### DEM-016 — Safety target changes over time
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `target-on.test.ts` (100 from January 1, 150 from February 1, across the boundary), `packages/core/src/services/safety-stock/safety-stock-target.service.test.ts`, `demo-safety-stock-targets.test.ts`. The MRP run is slice 3. E03-S03, #24.
 - **Given:** Target 100 from January 1 and 150 from February 1
 - **When:** Run MRP across boundary
 - **Then:** January uses 100; February uses 150.
 
 ### DEM-017 — Same-day duplicate safety target forbidden
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/safety-stock/safety-stock-target.service.test.ts` (a second target on the same date is refused, also when two creates race), `add-safety-stock-target-dialog.test.tsx`, `tests/integration/planning-parameters.test.ts` and `planning-parameters-api.test.ts` (409 and nothing written). E03-S03, #24.
 - **Given:** Safety target already exists at M/L for Feb 1
 - **When:** Try create second target at exact same key/date
 - **Then:** Reject duplicate effective-from key rather than ambiguous competing targets.
@@ -3317,9 +3343,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### API-010 — Token inherits role restrictions
 
-**Priority:** P0 · **Channel:** API · **Status:** Partially verified
+**Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
 
-- **Evidence:** A normal user's token is refused (403) on admin-only operations, end to end: `GET /api/users` in `tests/integration/api-tokens.test.ts`; `POST /api/users`, `PATCH /api/users/{id}` and `PUT /api/users/{id}/password` in `tests/integration/api-users.test.ts`, where the same token still changes its own preferences; unit tests in `packages/app/src/app/api/users/**/route.test.ts` and `packages/app/src/auth/api-write.test.ts`. "Change master material" waits for master data (#22). E01-S03, PRs #41, #48; #52.
+- **Evidence:** A normal user's token is refused (403) on admin-only operations, end to end: `GET /api/users` in `tests/integration/api-tokens.test.ts`; `POST /api/users`, `PATCH /api/users/{id}` and `PUT /api/users/{id}/password` in `tests/integration/api-users.test.ts`, where the same token still changes its own preferences; every master-data write in `tests/integration/materials-api.test.ts`, `named-records-api.test.ts` and `planning-parameters-api.test.ts`, where the token still reads. Unit tests in the routes' `route.test.ts` files and `packages/app/src/auth/api-write.test.ts`. E01-S03, PRs #41, #48; #52; with #22, #23 and #24.
 - **Given:** Normal user's bearer token valid
 - **When:** Try to change master material
 - **Then:** Rejected as forbidden; ordinary allowed transaction can still succeed.
@@ -3539,7 +3565,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `tests/integration/audit.test.ts` (user creation with account, session and channel), `tests/integration/materials.test.ts` and `named-records.test.ts` (creates in the tenant audit), the user, material and named-record service tests. Customer orders come in slice 2. E02-S02, #20.
+- **Evidence:** `tests/integration/audit.test.ts` (user creation with account, session and channel), `tests/integration/materials.test.ts` and `named-records.test.ts` (creates in the tenant audit), `tests/integration/planning-parameters.test.ts`, the user, material, named-record, planning-parameter and safety-stock service tests. Customer orders come in slice 2. E02-S02, #20.
 - **Given:** Normal user creates customer order
 - **When:** Read tenant audit
 - **Then:** Create event with actor, tenant, session, channel, new values exists.
@@ -3548,7 +3574,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/materials.test.ts` (an edit shows before → after in the tenant audit), `tests/integration/named-records.test.ts`, the material and named-record service tests. E02-S02, #20, with #22 and #23.
+- **Evidence:** `tests/integration/materials.test.ts` (an edit shows before → after in the tenant audit), `tests/integration/named-records.test.ts`, the material, named-record, planning-parameter and safety-stock service tests. E02-S02, #20, with #22, #23 and #24.
 - **Given:** Admin edits material description
 - **When:** Read audit
 - **Then:** Before/after values of changed master record visible.
@@ -4167,8 +4193,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### LFC-019 — Location can deactivate after clearing
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** Deactivation stores Inactive and keeps the record and its history (`packages/core/src/services/named-records/named-records.test.ts`, `tests/integration/named-records.test.ts` and `named-records-api.test.ts`); new planning parameter sets and safety-stock targets refuse it and its pickers drop it (`packages/core/src/services/locations/find-location.test.ts`, `packages/core/src/services/planning-parameters/planning-parameter.service.test.ts`, `packages/core/src/services/safety-stock/safety-stock-target.service.test.ts`, `references.test.tsx`, `tests/integration/planning-parameters.test.ts`), while its existing rows stay. Stock, transfers and documents don't exist yet, so the clearing preconditions (LFC-016…018) are slice 2. E03-S02, #23., with #24.
 - **Given:** Location empty, transfers complete, no open operational documents
 - **When:** Admin deactivates location
 - **Then:** Inactive status stored and future selection blocked; history readable.

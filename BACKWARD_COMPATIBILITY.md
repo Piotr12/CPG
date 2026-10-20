@@ -86,7 +86,7 @@ Route handlers under `app/api/` are protected the same way: their paths, methods
 - `GET /api/preferences` and `PATCH /api/preferences` (`{ locale?, theme? }`, the caller's own);
 - the materials of one tenant (spec `2026-10-19--1858UTC-materials`). Reads are open to any signed-in account; writes are admin only (403 `FORBIDDEN` otherwise). A material is addressed by its eight-digit ID, and quantities and factors are JSON **strings**, never numbers:
   - `GET /api/tenants/{tenant}/materials`;
-  - `POST /api/tenants/{tenant}/materials` (`{ type, description, baseUnit }`);
+  - `POST /api/tenants/{tenant}/materials` (`{ type, description, baseUnit }`; 409 `CONFLICT` for a create racing past the retry, 409 `MATERIAL_IDS_EXHAUSTED` past 99999999);
   - `GET /api/tenants/{tenant}/materials/{id}` (with its `conversions`; 404 `MATERIAL_NOT_FOUND`);
   - `PATCH /api/tenants/{tenant}/materials/{id}` (`{ version, description?, type?, baseUnit?, active? }`; an `id` in the body is 400; 409 `BASE_UNIT_HAS_CONVERSIONS`, `BASE_UNIT_IN_USE` while planning parameters or safety targets hold quantities in it, and `MATERIAL_MADE_AT_LOCATIONS` for a change to raw while it is Make somewhere);
   - `POST /api/tenants/{tenant}/materials/{id}/conversions` (`{ unit, numerator, denominator }`; 400 `UNIT_IS_BASE_UNIT`, 409 `CONVERSION_EXISTS`);

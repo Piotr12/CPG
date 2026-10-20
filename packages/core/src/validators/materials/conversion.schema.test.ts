@@ -35,6 +35,17 @@ describe("conversion change and remove", () => {
     expect(conversionRemoveBodySchema.safeParse({}).success).toBe(false);
   });
 
+  it("refuse changing a factor to a zero denominator, on every path that changes one (MAT-022)", () => {
+    const zero = { numerator: "12", denominator: "0.000", version: 1 };
+
+    for (const schema of [conversionChangeBodySchema, conversionFactorFormSchema]) {
+      expect(schema.safeParse(zero).error?.issues.map((issue) => issue.path[0])).toEqual(["denominator"]);
+    }
+    expect(
+      conversionChangeSchema.safeParse({ ...zero, materialId: "00000002", unit: "case" }).error?.issues.map((issue) => issue.path[0]),
+    ).toEqual(["denominator"]);
+  });
+
   it("let the form check only the factor", () => {
     expect(conversionFactorFormSchema.safeParse({ numerator: "10", denominator: "1" }).success).toBe(true);
   });

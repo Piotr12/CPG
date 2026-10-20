@@ -149,8 +149,8 @@ There are no route handlers. Bearer-token API access arrives with E01-S03.
 
 Prototype: `.ai/specs/assets/admin-sign-in/` (static mockups: `mockup-01-login.png`, the login card in its error state; `mockup-02-admin-signed-in.png`, the `/admin` header once signed in). Illustrative only; the shadcn components decide the final look.
 
-![Login mockup](assets/admin-sign-in/mockup-01-login.png)
-![Signed-in admin mockup](assets/admin-sign-in/mockup-02-admin-signed-in.png)
+![Login mockup](../assets/admin-sign-in/mockup-01-login.png)
+![Signed-in admin mockup](../assets/admin-sign-in/mockup-02-admin-signed-in.png)
 
 ## 📝 Edge Cases & Failure Scenarios
 

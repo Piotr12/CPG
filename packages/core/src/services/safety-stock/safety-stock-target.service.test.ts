@@ -104,10 +104,20 @@ describe("SafetyStockTargetService", () => {
       expect(await audit()).toHaveLength(1);
     });
 
-    it("refuses an inactive material or location (MAT-029, LFC-019), and another tenant's (TEN-014)", async () => {
+    it("refuses an inactive material or location (MAT-029, LFC-019), and another tenant's (TEN-014), writing nothing", async () => {
       await expect(service().create({ ...JANUARY, material: "00000002" }, ACTOR)).rejects.toMatchObject({ code: "MATERIAL_INACTIVE" });
       await expect(service().create({ ...JANUARY, location: "00000002" }, ACTOR)).rejects.toMatchObject({ code: "LOCATION_INACTIVE" });
-      await expect(service("test").create(JANUARY, ACTOR)).rejects.toMatchObject({ code: "MATERIAL_NOT_FOUND" });
+      await expect(service("test").create(JANUARY, ACTOR)).rejects.toMatchObject({ code: "MATERIAL_NOT_FOUND", status: 404 });
+      // Test has the material but not the location: Prod's 00000001 stays out of reach.
+      const test = scopedEm("test");
+      test.create(Material, { code: "00000001", type: "finished", description: "Test cabinet", baseUnit: "each" });
+      await test.flush();
+      await expect(service("test").create(JANUARY, ACTOR)).rejects.toMatchObject({ code: "LOCATION_NOT_FOUND", status: 404 });
+
+      expect(await service().list()).toEqual([]);
+      expect(await service("test").list()).toEqual([]);
+      expect(await audit()).toEqual([]);
+      expect(await scopedEm("test").count(TenantAuditEvent, {})).toBe(0);
     });
   });
 
