@@ -54,6 +54,8 @@ describe("TenantHomePage", () => {
     expect(screen.getByRole("link", { name: "Locations" }).getAttribute("href")).toBe("/admin/prod/locations");
     expect(screen.getByRole("link", { name: "Customers" }).getAttribute("href")).toBe("/admin/prod/customers");
     expect(screen.getByRole("link", { name: "Suppliers" }).getAttribute("href")).toBe("/admin/prod/suppliers");
+    expect(screen.getByRole("link", { name: "Planning parameters" }).getAttribute("href")).toBe("/admin/prod/planning-parameters");
+    expect(screen.getByRole("link", { name: "Safety stock" }).getAttribute("href")).toBe("/admin/prod/safety-stock");
     expect(screen.getByRole("link", { name: "Audit — Prod" }).getAttribute("href")).toBe("/admin/prod/audit");
   });
 
