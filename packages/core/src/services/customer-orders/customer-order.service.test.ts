@@ -274,6 +274,7 @@ describe("CustomerOrderService", () => {
     }
     await scope.flush();
     await expect(new MaterialService({ em: em() }).update(material.code, { active: false }, 1, actor)).rejects.toMatchObject({ code: "MATERIAL_HAS_CUSTOMER_DEMAND", message: expect.stringContaining("00000101") });
+    expect(await new MaterialService({ em: em("prod") }).update(material.code, { active: false }, 1, actor)).toMatchObject({ active: false });
     await changeLine(lastId, { abandoned: "1.000000" });
     expect(await new MaterialService({ em: em() }).update(material.code, { active: false }, 1, actor)).toMatchObject({ active: false });
   });
