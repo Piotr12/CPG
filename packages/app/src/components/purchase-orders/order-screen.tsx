@@ -1,24 +1,36 @@
 import Link from "next/link";
-import type { Locale, MaterialSummary, NamedRecordView, OrderLineView, OrderView } from "@cpg/core";
+import type { Locale, MaterialSummary, NamedRecordView, OrderLineView, OrderView, ReceiptView } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { Badge } from "@cpg/ui/components/badge";
 import { Card, CardContent } from "@cpg/ui/components/card";
 import type { Messages } from "../../i18n/messages/en";
+import { receiptLineChoices, receiptsLabels } from "../goods-receipts/labels";
+import { ReceiptDialog } from "../goods-receipts/receipt-dialog";
+import { ReceiptsTable } from "../goods-receipts/receipts-table";
 import { byId, enteredAs, ordersLabels, shownQuantity } from "./labels";
 
 interface OrderScreenProps {
-  tenant: { code: string; name: string };
+  tenant: { code: string; name: string; generation: number; readOnly: boolean };
   order: OrderView;
+  /** The order's goods receipts, newest first. */
+  receipts: ReceiptView[];
   materials: MaterialSummary[];
+  /** The units each material's quantities may be entered in, its base unit first. */
+  units: Record<string, string[]>;
   suppliers: NamedRecordView[];
   locations: NamedRecordView[];
   locale: Locale;
   messages: Messages;
 }
 
-/** The body of a purchase order's page: its supplier, location and status, and every line with its planned date and requisition. */
-export function OrderScreen({ tenant, order, materials, suppliers, locations, locale, messages }: OrderScreenProps) {
+/**
+ * The body of a purchase order's page: its supplier, location and status, every line with its
+ * planned date, requisition and what it has received (E09-S02), the Post goods receipt dialog (any
+ * user, not while the tenant is read-only), and the order's receipts.
+ */
+export function OrderScreen({ tenant, order, receipts, materials, units, suppliers, locations, locale, messages }: OrderScreenProps) {
   const labels = ordersLabels(messages);
+  const receiptLabels = receiptsLabels(messages);
   const materialsById = byId(materials);
   const supplier = byId(suppliers).get(order.supplier)!;
   const location = byId(locations).get(order.location)!;
@@ -68,6 +80,23 @@ export function OrderScreen({ tenant, order, materials, suppliers, locations, lo
           </Link>
         ),
     },
+    {
+      id: "received",
+      header: c.received,
+      cell: (line) => `${shownQuantity(line.received)} ${materialsById.get(line.material)!.baseUnit}`,
+      className: "text-right",
+    },
+    {
+      id: "outstanding",
+      header: c.outstanding,
+      cell: (line) => `${shownQuantity(line.outstanding)} ${materialsById.get(line.material)!.baseUnit}`,
+      className: "text-right",
+    },
+    {
+      id: "status",
+      header: c.status,
+      cell: (line) => <Badge variant={line.status === "completed" ? "outline" : "secondary"}>{labels.lines.status[line.status]}</Badge>,
+    },
   ];
 
   return (
@@ -94,6 +123,22 @@ export function OrderScreen({ tenant, order, materials, suppliers, locations, lo
         <h2 className="text-lg font-semibold">{labels.lines.heading}</h2>
         <p className="text-sm text-muted-foreground">{labels.lines.intro}</p>
         <DataTable label={labels.lines.heading} columns={columns} rows={order.lines} rowKey={(line) => String(line.line)} empty={labels.lines.noRequisition} />
+      </section>
+      <section className="flex flex-col gap-3">
+        <h2 className="text-lg font-semibold">{receiptLabels.heading}</h2>
+        <p className="text-sm text-muted-foreground">{receiptLabels.intro}</p>
+        {!tenant.readOnly && (
+          <ReceiptDialog
+            context={{ tenant: tenant.code, generation: tenant.generation }}
+            purchaseOrder={order.id}
+            location={`${location.id} ${location.name}`}
+            labels={receiptLabels}
+            lines={receiptLineChoices(order, materialsById, units, receiptLabels)}
+            baseUnits={Object.fromEntries(order.lines.map(({ line, material }) => [line, materialsById.get(material)!.baseUnit]))}
+            canPost={order.status === "open"}
+          />
+        )}
+        <ReceiptsTable receipts={receipts} materials={materialsById} labels={receiptLabels} />
       </section>
     </div>
   );

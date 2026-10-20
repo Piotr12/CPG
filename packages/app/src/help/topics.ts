@@ -259,14 +259,16 @@ const en: Record<HelpTopicId, HelpText> = {
       "Purchase orders, under Procurement in the sidebar, list the tenant's orders to suppliers. An order has one supplier, one location and 1 to 100 lines, each with its own planned date. Each order gets an eight-digit ID; a new order is Open.",
       "Create an order directly, or give a line an open requisition of the same material and location: the line then converts that much of the requisition, up to what is outstanding, and the requisition is Completed once fully converted.",
       "A line can't be for another location than the order's. Only active suppliers, locations and materials can be picked; an order made earlier stays usable if its supplier is deactivated later.",
-      "An order is planned supply only: it never changes stock. Every account can create and read orders, here and through the API; a read-only tenant refuses new ones. A material with an open order line can't be deactivated.",
+      "An order is planned supply: only the goods receipts posted on its page raise stock. It is Completed once every line has received its quantity. Every account can create and read orders, here and through the API; a read-only tenant refuses new ones. A material with an open order line can't be deactivated.",
     ],
   },
   "purchase-order": {
     title: "A purchase order and its lines",
     body: [
       "Choose an order's ID to open its page: its supplier, location, status and every line, with the quantity in the material's base unit, the unit it was entered in, the planned date and the requisition it converted, if any.",
-      "Planned dates can be changed through the API with PATCH, at the version you loaded; each change appears in the tenant's audit.",
+      "Each line shows what has been received and what is still outstanding. Post goods receipt records what arrived: a quantity per line, in any unit the material converts, leaving the other lines empty. Stock rises at the order's location with today's date, and the lines and the order update in the same step, or nothing is posted.",
+      "A receipt may be partial, repeated or larger than what is outstanding: an excess is accepted and named in a warning. Once every line has received its quantity the order is Completed and takes no more receipts. Receipts can't be changed; they are listed under Goods receipts, newest first.",
+      "Planned dates can be changed through the API with PATCH, at the version you loaded, while the order is Open; each change appears in the tenant's audit. The supplier, the location and a line's material, unit and quantity never change.",
     ],
   },
   import: {
@@ -487,14 +489,16 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Zamówienia zakupu, w sekcji Zakupy w menu bocznym, to lista zamówień środowiska u dostawców. Zamówienie ma jednego dostawcę, jedną lokalizację i od 1 do 100 pozycji, każdą z własną planowaną datą. Każde zamówienie dostaje ośmiocyfrowe ID; nowe jest Otwarte.",
       "Utwórz zamówienie bezpośrednio albo wskaż w pozycji otwarte zapotrzebowanie tego samego materiału i lokalizacji: pozycja przekształca wtedy tyle zapotrzebowania, ile pozostało, a zapotrzebowanie jest Zrealizowane, gdy przekształcono je w całości.",
       "Pozycja nie może dotyczyć innej lokalizacji niż zamówienie. Wybrać można tylko aktywnych dostawców, lokalizacje i materiały; wcześniejsze zamówienie pozostaje używalne, jeśli jego dostawca zostanie później dezaktywowany.",
-      "Zamówienie to tylko planowana podaż: nigdy nie zmienia stanu magazynowego. Zamówienia może tworzyć i przeglądać każde konto, tutaj i przez API; środowisko tylko do odczytu odrzuca nowe. Materiału z otwartą pozycją zamówienia nie można dezaktywować.",
+      "Zamówienie to planowana podaż: stan magazynowy zwiększają tylko przyjęcia towaru księgowane na jego stronie. Jest Zrealizowane, gdy każda pozycja przyjęła swoją ilość. Zamówienia może tworzyć i przeglądać każde konto, tutaj i przez API; środowisko tylko do odczytu odrzuca nowe. Materiału z otwartą pozycją zamówienia nie można dezaktywować.",
     ],
   },
   "purchase-order": {
     title: "Zamówienie zakupu i jego pozycje",
     body: [
       "Wybierz ID zamówienia, aby otworzyć jego stronę: dostawca, lokalizacja, status i każda pozycja, z ilością w jednostce bazowej materiału, jednostką, w której ją wpisano, planowaną datą i zapotrzebowaniem, które przekształciła, jeśli jest.",
-      "Planowane daty można zmienić przez API poleceniem PATCH, w wersji, którą wczytano; każda zmiana pojawia się w audycie środowiska.",
+      "Każda pozycja pokazuje, ile przyjęto i ile jeszcze pozostało. Zaksięguj przyjęcie towaru zapisuje, co dotarło: ilość dla pozycji, w dowolnej jednostce, którą materiał przelicza, pozostałe pozycje zostają puste. Zapas w lokalizacji zamówienia rośnie z dzisiejszą datą, a pozycje i zamówienie zmieniają się w tym samym kroku albo nic nie zostaje zaksięgowane.",
+      "Przyjęcie może być częściowe, powtórzone albo większe niż to, co pozostało: nadwyżka zostaje przyjęta i wskazana w ostrzeżeniu. Gdy każda pozycja przyjmie swoją ilość, zamówienie jest Zrealizowane i nie przyjmuje kolejnych dostaw. Przyjęć nie można zmieniać; są wymienione w sekcji Przyjęcia towaru, od najnowszego.",
+      "Planowane daty można zmienić przez API poleceniem PATCH, w wersji, którą wczytano, dopóki zamówienie jest Otwarte; każda zmiana pojawia się w audycie środowiska. Dostawca, lokalizacja oraz materiał, jednostka i ilość pozycji nigdy się nie zmieniają.",
     ],
   },
   import: {

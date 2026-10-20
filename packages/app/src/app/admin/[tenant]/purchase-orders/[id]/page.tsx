@@ -21,8 +21,8 @@ export default function PurchaseOrderPage({ params }: PageProps<"/admin/[tenant]
 }
 
 /**
- * One purchase order, read through the tenant's own scope: an ID this tenant doesn't have, another
- * tenant's included, is the not-found state (TEN-014).
+ * One purchase order with its goods receipts, read through the tenant's own scope: an ID this tenant
+ * doesn't have, another tenant's included, is the not-found state (TEN-014).
  */
 async function PurchaseOrder({ params }: { params: Promise<{ tenant: string; id: string }> }) {
   await connection();
@@ -35,7 +35,9 @@ async function PurchaseOrder({ params }: { params: Promise<{ tenant: string; id:
     <OrderScreen
       tenant={cradle.tenant}
       order={order}
+      receipts={await cradle.goodsReceiptService.list({ purchaseOrder: id })}
       materials={await cradle.materialService.list()}
+      units={await cradle.materialService.listUnits()}
       suppliers={await cradle.supplierService.list()}
       locations={await cradle.locationService.list()}
       locale={locale}

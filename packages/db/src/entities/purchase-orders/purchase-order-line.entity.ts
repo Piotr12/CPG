@@ -14,7 +14,9 @@ const owned = tenantOwned();
  * One dated line of a purchase order (BUY-008): a `material` and a `quantity` (six-decimal base-unit
  * text, R03, with the entered quantity, unit and factor kept, MAT-019), planned for `plannedDate`.
  * `requisition` is the requisition this line converted, if any (BUY-003). `position` is the line's
- * 1-based number in the order. Only the planned date ever changes (BUY-024).
+ * 1-based number in the order. `received` is what goods receipts have brought in so far, in the same
+ * form (E09-S02); it may exceed `quantity` (BUY-015). Only the planned date and `received` ever change
+ * (BUY-022, BUY-024).
  */
 export const PurchaseOrderLine = defineEntity({
   name: "PurchaseOrderLine",
@@ -35,6 +37,7 @@ export const PurchaseOrderLine = defineEntity({
     denominator: p.string(),
     plannedDate: p.string().length(CALENDAR_DATE_LENGTH),
     requisition: () => p.manyToOne(PurchaseRequisition).nullable().index(),
+    received: p.string().default("0.000000"),
   },
   uniques: [{ properties: ["order", "position"] }],
 });

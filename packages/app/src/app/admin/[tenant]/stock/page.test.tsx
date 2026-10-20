@@ -33,13 +33,15 @@ describe("StockPage", () => {
     expect(screen.getByLabelText("Material").getAttribute("name")).toBe("material");
   });
   it("reads selected query references, renders signed history and source/actor/factor details", async () => {
-    mocks.get.mockResolvedValue({ ...view, quantity: "23.500000", movements: [movement, { ...movement, id: "m2", quantity: "-0.500000", channel: "api", actorUsername: "alice", type: "receipt" }] });
+    mocks.get.mockResolvedValue({ ...view, quantity: "23.500000", movements: [movement, { ...movement, id: "m2", quantity: "-0.500000", channel: "api", actorUsername: "alice", type: "receipt" }, { ...movement, id: "m3", postingId: "g1", type: "goods-receipt", quantity: "3.000000", actorUsername: "bob", channel: "ui" }] });
     render(await resolveServerComponents(page(pair)));
     expect(mocks.get).toHaveBeenCalledWith(pair);
     const table = within(screen.getByRole("table", { name: en.stock.ledger }));
     expect(table.getByText("+2 each")).toBeTruthy(); expect(table.getByText("-0.5 each")).toBeTruthy();
     expect(table.getByText("Demo seed · Installation")).toBeTruthy(); expect(table.getByText("alice · API")).toBeTruthy();
-    expect(table.getByText(/Source: Correction · p1/)).toBeTruthy(); expect(table.getByText(/Source: receipt · p1/)).toBeTruthy(); expect(table.getAllByText(/Factor: 12\/1/)).toHaveLength(2);
+    expect(table.getByText(/Source: Correction · p1/)).toBeTruthy(); expect(table.getByText(/Source: receipt · p1/)).toBeTruthy(); expect(table.getAllByText(/Factor: 12\/1/)).toHaveLength(3);
+    // A goods receipt's movement names its source document type (INV-012).
+    expect(table.getByText(/Source: Goods receipt · g1/)).toBeTruthy();
   });
   it.each(["tenant", "material", "location"])("keeps history but hides posting for read-only/inactive %s", async (kind) => {
     mocks.tenantScope.mockResolvedValue(scope(kind === "tenant"));

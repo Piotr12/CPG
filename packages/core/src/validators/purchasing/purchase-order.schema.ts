@@ -44,16 +44,22 @@ export const orderCreateSchema = z.object({
 
 export type OrderCreateInput = z.infer<typeof orderCreateSchema>;
 
-/** A line's new date, addressed by its 1-based number in the order. */
+/** What a line never changes, refused rather than ignored: a received line's quantities can't be reinterpreted (BUY-022, BUY-023). */
+const immutableLineField = z.never({ error: ORDER_IMMUTABLE_MESSAGE }).optional();
+
+/** A line's new date, addressed by its 1-based number in the order; its material, unit and quantity are refused. */
 const lineDateSchema = z.object({
   line: z.number({ error: LINE_NUMBER_MESSAGE }).int(LINE_NUMBER_MESSAGE).min(1, LINE_NUMBER_MESSAGE),
   plannedDate: calendarDateSchema,
+  material: immutableLineField,
+  unit: immutableLineField,
+  quantity: immutableLineField,
 });
 
 /**
  * `PATCH /api/tenants/{tenant}/purchase-orders/{id}` (spec Q8): new planned dates for some lines, at
- * the version the client loaded. The supplier, the location and the lines' content are refused
- * rather than ignored.
+ * the version the client loaded. The supplier, the location and a line's material, unit and quantity
+ * are refused rather than ignored.
  */
 export const orderUpdateBodySchema = z.object({
   version: versionSchema,

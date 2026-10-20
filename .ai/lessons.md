@@ -13,6 +13,8 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 ## General
 
 - **2026-10-20 — Leave the full integration suite to CI** — The #87 run ran the 15-minute suite locally twice, then CI ran it again on the PR. CI is the gate that counts (a clean checkout, merged with `main`, and deploys depend on it), so a local full run only doubles the wait. Run the integration files the change touches locally, plus `smoke.test.ts` when a migration is added, and check the PR's CI result before calling the work done (AGENTS.md, Testing).
+- **2026-10-20 — A Zod object drops unknown keys: refuse a locked field with `z.never()`** — The PO `PATCH` line schema took `{ line, plannedDate }`, so a client sending a received line's `quantity: "79"` got 200 with the field silently ignored, which is not the "refused" BUY-022/023 ask for. Declare every field an edit must refuse as `z.never({ error: … }).optional()` (as `supplier`/`location` already were), and test the 400 per field.
+- **2026-10-20 — This repo has no Prettier config** — `npx prettier --write` fetches Prettier and formats at 80 columns, unlike the code around it (about 140). Don't run it with defaults; if a file needs reflowing, pass `--print-width 140` and check the diff.
 
 - **2026-10-20 — Bind an aggregate edit to the version it opened with** — Revalidating after a conflict can replace a dialog’s order prop while its form still holds old values. Capture the order when opening the dialog and keep that version until it closes; otherwise a second Save can overwrite the concurrent change with stale fields under the newly loaded version.
 

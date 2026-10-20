@@ -5,7 +5,7 @@ import { pl } from "../../i18n/messages/pl";
 import { byId, enteredAs, errorFormatter, fieldErrorFormatter, ordersLabels } from "./labels";
 
 const materials = byId([{ id: "00000001", type: "raw" as const, description: "Steel", baseUnit: "kg", active: true, createdAt: new Date(), version: 1 }]);
-const line = { line: 1, material: "00000001", quantity: "500.000000", enteredQuantity: "0.5", enteredUnit: "t", numerator: "1000", denominator: "1", plannedDate: "2027-03-03", requisition: null };
+const line = { line: 1, material: "00000001", quantity: "500.000000", enteredQuantity: "0.5", enteredUnit: "t", numerator: "1000", denominator: "1", plannedDate: "2027-03-03", requisition: null, received: "0.000000", outstanding: "500.000000", status: "open" as const };
 
 describe("purchase-order labels", () => {
   it("leave the server-side headings out and merge the screens' errors over the shared ones", () => {
