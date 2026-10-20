@@ -65,12 +65,12 @@ The admin downloads one documented `.xlsx` template (a sheet per master plus BOM
 
 ### Phase 1: Engine
 
-- [ ] 1.1 Layout and cells
-- [ ] 1.2 Diff and token
-- [ ] 1.3 Request schemas
-- [ ] 1.4 Savepoint helper
-- [ ] 1.5 Prepare and engine with the master sheets
-- [ ] 1.6 BOM sheets
+- [x] 1.1 Layout and cells — ab78382
+- [x] 1.2 Diff and token — 2a1d48e
+- [x] 1.3 Request schemas — 963e5fd
+- [x] 1.4 Savepoint helper — 3d53b29
+- [x] 1.5 Prepare and engine with the master sheets — 0b4fc7e
+- [x] 1.6 BOM sheets — 0b4fc7e
 
 ### Phase 2: Workbook and API
 
