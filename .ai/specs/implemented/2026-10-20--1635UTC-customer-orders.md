@@ -1,6 +1,6 @@
 # Customer orders with one location and dated lines
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-20 16:35 UTC
 **Issue:** #83 (E08-S01), epic #74
 **Design authority:** `product-brief.md` (R02, R03, R05, R07, R08, D02, D04, D06, N01), `research/CPG-prd001.pdf` §02, §03 (Multi-line document model, Operational edits, Four-state lifecycle), §06; `research/CPG-prd-datamodel.pdf` (customer order header/line); `research/CPG-prd-decisions.pdf` §02–03; `research/CPG-acceptance.md` SAL-001…005, SAL-019, SAL-025, LFC-001, LFC-014, LFC-020. Builds on materials, named masters, tenants, audit and idempotency.
@@ -117,5 +117,6 @@ R02 material locks; R03 exact quantities; R05 tenant isolation/read-only; R07 UI
 - 2026-10-20 — POST uses the shared API wrapper’s existing HTTP 200, correcting the proposal’s 201 wording. Audit lines are allowlisted view records serialized as JSON text, preserving the scalar snapshot contract rather than widening shared audit infrastructure.
 - 2026-10-20 — Edit dialogs capture their opening aggregate/version until closed. A conflict refresh cannot silently pair old form values with a new version; reopening loads the latest saved order.
 
-## Implementation notes
 - Final performance review made the collection bound explicit before its first release: 100-order pages, shared DataTable pagination slot, and linear line grouping. The array envelope and create/edit behaviour are unchanged.
+- Material-demand checks scan fixed-size detached keyset batches under the current tenant transaction; a separate additive composite-index migration supports the equality filters and ID cursor without repeated temporary sorts. The first published table migration is not edited.
+- Implemented and verified in #102 on 2026-10-20: lint/typecheck/build pass,1,970 unit tests at100%,221 integration tests pass with one Docker-only startup skip. Manual production UI matrix passes; screenshot publication awaits the user Guard decision. Formal review and manual QA approval remain required before merge.
