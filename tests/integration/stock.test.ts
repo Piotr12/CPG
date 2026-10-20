@@ -66,6 +66,7 @@ describe("physical stock and reasoned corrections (#80)", () => {
   });
 
   it("reads zero, posts converted opening stock once per key with source/date/actor and separate audit (INV-001/013/015/016/023)", async () => {
+    expect((await fetch(`${baseUrl}/api/tenants/prod/stock?material=${material}&location=${location}`)).status).toBe(401);
     expect((await stock()).body.data).toMatchObject({ quantity: "0.000000", movements: [], baseUnit: "each" });
     const key = randomUUID();
     const first = await correction("2", { unit: "case", reason: "Opening balance", date: "1900-01-01" }, adminSecret, key);
@@ -121,8 +122,13 @@ describe("physical stock and reasoned corrections (#80)", () => {
       await admin.open(`${baseUrl}/help?q=korekty`); await admin.waitForText("Zapas fizyczny i korekty");
     } finally { await restoreDefaultPreferences(admin, baseUrl, inject("adminPassword")); }
     const before = (await stock()).body.data;
+    await openCorrection(operator);
+    await operator.fillLabel("Signed quantity", "1"); await operator.fillLabel("Reason", "Stale read-only form");
     await api("PATCH", "/api/tenants/prod", adminSecret, { readOnly: true });
     try {
+      await operator.click("[role=dialog] button[type=submit]"); await operator.waitFor("[role=dialog] [role=alert]");
+      expect(await operator.text("[role=alert]")).toContain("This tenant is read-only");
+      expect((await stock()).body.data).toEqual(before);
       for (const secret of [adminSecret, operatorSecret]) expect((await correction("1", {}, secret)).body.error.code).toBe("TENANT_READ_ONLY");
       await operator.open(`${baseUrl}${pairPath()}`); await operator.waitFor("[data-stock-balance]");
       expect(await operator.evaluate<boolean>(`[...document.querySelectorAll("main button")].some((b) => b.textContent === "Post correction")`)).toBe(false);
