@@ -62,12 +62,34 @@ export type SheetKey =
   | "bomHeaders"
   | "bomLines";
 
-export interface SheetSpec {
-  key: SheetKey;
+/**
+ * A column header a sheet refuses with its own explanation, rather than as an unknown column: the
+ * stock sheet's transit columns (stock-import spec Q8).
+ */
+export interface RefusedColumn {
+  /** The headers, matched case-insensitively. */
+  headers: readonly string[];
+  code: string;
+  message: string;
+}
+
+export interface SheetSpec<K extends string = SheetKey> {
+  key: K;
   /** The sheet's tab name, matched case-insensitively. */
   name: string;
   purpose: Bilingual;
   columns: ColumnSpec[];
+  refusedColumns?: readonly RefusedColumn[];
+}
+
+/**
+ * One kind of import workbook (stock-import spec Q1): its data sheets in the order they are applied,
+ * and the general rules its instruction sheets start with. The master-data import and the stock
+ * import share the engine that reads a workbook against its layout.
+ */
+export interface ImportLayout<K extends string = string> {
+  sheets: readonly SheetSpec<K>[];
+  rules: readonly Bilingual[];
 }
 
 const ACTIVE: ColumnSpec = {
@@ -413,10 +435,18 @@ export const IMPORT_RULES: readonly Bilingual[] = [
   },
 ];
 
-/** A data sheet by its tab name (case-insensitive, trimmed), or undefined. */
-export function sheetNamed(name: string): SheetSpec | undefined {
+/** The master-data and BOM workbook. */
+export const MASTER_DATA_LAYOUT: ImportLayout<SheetKey> = { sheets: IMPORT_SHEETS, rules: IMPORT_RULES };
+
+/** A data sheet of `layout` by its tab name (case-insensitive, trimmed), or undefined. */
+export function layoutSheetNamed<K extends string>(layout: ImportLayout<K>, name: string): SheetSpec<K> | undefined {
   const wanted = name.trim().toLowerCase();
-  return IMPORT_SHEETS.find((sheet) => sheet.name.toLowerCase() === wanted);
+  return layout.sheets.find((sheet) => sheet.name.toLowerCase() === wanted);
+}
+
+/** A master-data sheet by its tab name (case-insensitive, trimmed), or undefined. */
+export function sheetNamed(name: string): SheetSpec | undefined {
+  return layoutSheetNamed(MASTER_DATA_LAYOUT, name);
 }
 
 /** Whether a tab is one of the template's instruction sheets. */

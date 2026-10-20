@@ -4,6 +4,8 @@ import {
   IMPORT_RULES,
   IMPORT_SHEETS,
   isInstructionSheet,
+  layoutSheetNamed,
+  MASTER_DATA_LAYOUT,
   sheetNamed,
   sheetSpec,
 } from "./workbook-layout";
@@ -73,5 +75,13 @@ describe("the import workbook layout", () => {
     expect(columnHeader("materials", "baseUnit")).toBe("Base unit");
     expect(columnHeader("bomLines", "material")).toBe("Component material ID");
     expect(columnHeader("materials", "unknown")).toBeNull();
+  });
+
+  it("is the master-data layout, and finds a sheet of any layout by its tab name", () => {
+    expect(MASTER_DATA_LAYOUT).toEqual({ sheets: IMPORT_SHEETS, rules: IMPORT_RULES });
+    expect(layoutSheetNamed(MASTER_DATA_LAYOUT, " materials")?.key).toBe("materials");
+    const other = { sheets: [{ ...sheetSpec("materials"), key: "other", name: "Other" }], rules: [] };
+    expect(layoutSheetNamed(other, "OTHER")?.key).toBe("other");
+    expect(layoutSheetNamed(other, "Materials")).toBeUndefined();
   });
 });
