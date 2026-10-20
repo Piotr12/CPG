@@ -17,7 +17,7 @@ Implement issue #93 through the om-auto-fix-issue feature route: spec first, the
 
 ## Verification
 - `npm run lint`, `npm run typecheck`, `npm run test:coverage`, `npm run build`: passed. Unit tests: 287 files / 1,891 tests; all coverage measures 100%.
-- `npm run test:integration`: blocked by unavailable Docker. Standalone fallback: 213 passed, 1 Docker-only skip, one app-icons failure due to missing public assets at startup; restarting after copying those assets for a targeted rerun.
+- `npm run test:integration`: blocked by unavailable Docker. Standalone fallback: 213 passed, 1 Docker-only skip, one app-icons failure due to missing public assets at startup. After copying public assets before restart, all 5 targeted app-icon tests passed.
 - Metadata/image-reference tests: 2 files, 6 tests passed.
 - Fresh scope review passed. Static architectural findings addressed in spec; reset behavior is not implemented or verified.
 
@@ -28,3 +28,6 @@ Implement issue #93 through the om-auto-fix-issue feature route: spec first, the
 - Fresh scope review: exactly one capability; no scope bundles. Architectural review found the nine-digit generation header bound, a stale captured-generation risk in import previews and the app/service transaction boundary. Revised the design to preserve the bound, read preview generation inside the transaction, and let the reset service own direct-call transactions.
 - Baseline lint/typecheck/build passed; 287 unit-test files, 1,891 tests passed; statements/branches/functions/lines all 100%. Default integration run failed before tests because Docker is unavailable; standalone fallback is running.
 - Current Cave control screenshot and three proposed-UI screenshots captured with agent-browser; narrow confirmation visually inspected. These are illustrative and do not prove a reset implementation.
+
+## Implementation handoff completed
+- 2026-10-20 17:25 UTC: Implementation PR #106 passed the local full gate (1,922 unit tests, all coverage measures 100%; 221 production-standalone integration tests, one Docker-only skip). Source spec moved to implemented/ with its creation stamp unchanged and relative links fixed. This branch remains design-only; independent code review and high-risk QA remain required before merge.

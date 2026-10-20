@@ -1,6 +1,6 @@
 # Atomic Test reset
 
-**Status:** ready (proposal; implementation follows separately)
+**Status:** implemented (verified on implementation PR #106)
 **Created:** 2026-10-20 16:36 UTC
 **Issue:** [#93 — E12-S01](https://github.com/Piotr12/CPG/issues/93)
 
@@ -23,7 +23,7 @@ These defaults implement the issue's stated requirements and the existing genera
 
 Issue #93 records the admin's need to restart a demonstration dataset. Code search finds no reset service or reset route. `Tenant.generation` exists but stays at 1; `demo-data.ts` seeds missing kinds at startup, each in a separate transaction and with errors collected rather than propagated. That startup orchestration cannot provide an all-or-nothing reset.
 
-The source requirements are [product-brief.md](product-brief.md), D06, and [CPG-acceptance.md](research/CPG-acceptance.md): TEN-022…030, AUD-011…013, API-017, API-033 and API-034. End-to-end journeys E2E-010, E2E-018 and E2E-020 belong to slice 3, as the issue states.
+The source requirements are [product-brief.md](../product-brief.md), D06, and [CPG-acceptance.md](../research/CPG-acceptance.md): TEN-022…030, AUD-011…013, API-017, API-033 and API-034. End-to-end journeys E2E-010, E2E-018 and E2E-020 belong to slice 3, as the issue states.
 
 ## 📝 Proposed Solution
 
@@ -78,7 +78,7 @@ Reset never creates a new ORM, reconnects or reads/writes files. Existing determ
 
 No new entity, public metadata field or configuration variable is needed. Generation remains a positive integer within the existing nine-digit API header range; this change does not widen that public parser. Both tenant rows and all global records remain in place.
 
-The [existing audit spec](implemented/2026-10-19--1050UTC-audit-log.md), Q3, explicitly reserves a migration that allows **Test** audit deletion. Change the tenant audit entity's declared delete trigger to abort when `old.tenant_code <> 'test'`; keep its update trigger unconditional. Global audit keeps both unconditional triggers. Generate the migration, `.snapshot.json` and migrations index together. No deployed migration is edited.
+The [existing audit spec](2026-10-19--1050UTC-audit-log.md), Q3, explicitly reserves a migration that allows **Test** audit deletion. Change the tenant audit entity's declared delete trigger to abort when `old.tenant_code <> 'test'`; keep its update trigger unconditional. Global audit keeps both unconditional triggers. Generate the migration, `.snapshot.json` and migrations index together. No deployed migration is edited.
 
 This grants a narrow **database** exception for Test audit deletion, not an application audit-delete API. All normal services and audit routes remain append-only. The db reset helper is the sole production caller. Extend source invariants without exempting general core/app mutations. Update standards' append-only wording to name this existing planned Test-reset exception. Real SQLite tests must prove: Test deletion in the reset works; Test update, Prod update/delete and Global update/delete still abort.
 
@@ -128,17 +128,17 @@ The action binds the loaded generation and parses it with a shared positive inte
 
 Existing tenant pages are not forcibly navigated or bulk-revalidated. Their already-bound generation continues to protect stale forms, and the existing error message tells the user to reload. Add a short tenants-help paragraph on reset and its irreversible scope. Global audit labels translate `tenants.tenant.reset` as “Test reset” / “Reset środowiska Test”, with before/after generation and the original read-only state.
 
-Prototype: [static proposed UI](assets/atomic-test-reset/mockup-01-cave-control.html) (illustrative only).
+Prototype: [static proposed UI](../assets/atomic-test-reset/mockup-01-cave-control.html) (illustrative only).
 
 Current Cave control, without reset:
 
-![Current Cave control](assets/atomic-test-reset/current-01-cave-control.png)
+![Current Cave control](../assets/atomic-test-reset/current-01-cave-control.png)
 
 Proposed card and destructive confirmation:
 
-![Proposed Cave control](assets/atomic-test-reset/mockup-01-cave-control.png)
-![Proposed reset confirmation](assets/atomic-test-reset/mockup-02-confirm.png)
-![Proposed narrow confirmation](assets/atomic-test-reset/mockup-03-narrow-confirm.png)
+![Proposed Cave control](../assets/atomic-test-reset/mockup-01-cave-control.png)
+![Proposed reset confirmation](../assets/atomic-test-reset/mockup-02-confirm.png)
+![Proposed narrow confirmation](../assets/atomic-test-reset/mockup-03-narrow-confirm.png)
 
 ## 📝 Edge Cases & Failure Scenarios
 
@@ -202,3 +202,12 @@ One user capability and one implementation PR after this design-only proposal. T
 ## Verification notes
 
 This is a design proposal, not working reset code. Spec review, baseline checks and UI evidence are recorded in the run log. The configured Docker test environment is currently unavailable (`TEST_ENV_STATUS=failed (docker is not running)`); a production standalone server with a temporary data directory is the documented local fallback. No reset acceptance scenario may be marked passed from these design checks or mockups.
+
+## Implementation notes
+
+- Implemented and verified on [PR #106](https://github.com/Piotr12/CPG/pull/106), separately from this design-only PR. The implementation plan is `.ai/pipeline/runs/2026-10-20--1646UTC-atomic-test-reset.md` on that branch. The proposal and its verification notes above describe the design checkpoint; these notes record the delivered result.
+- The db helper defers FK checks for all owned tables instead of deriving child-first order and deferring only cycles. This simpler implementation preserves the same atomic integrity guarantee, handles cycles, rejects global references before deletion, and keeps FK enforcement enabled. Real SQLite tests cover its safety and rollback.
+- Lint, typecheck, 1,922 unit tests at 100% on all four measures, and production build pass. The pristine standalone production integration run passed 221 tests, with one Docker-only startup-guard skip. Real dev-browser evidence covers EN/light, stale confirmation across two sessions and PL/dark at 390px, including previously read-only Test.
+- Independent static review found no blocker/major; its minor acceptance-note finding was corrected. GitHub author self-approval is unavailable, so an independent review and high-risk QA sign-off still gate merge. Docker was unavailable locally; CI validates the production image.
+- A reused macOS standalone directory exposed a case-folded Next route-cache collision from the existing negative `/admin/TEST` test. A pristine final-build copy passed the full suite without changing navigation or weakening the negative test.
+- The full slice-3 customer-order/stock/document-sequence journeys remain outside this story. Acceptance evidence is partial where those entities do not yet exist.
