@@ -47,6 +47,7 @@ describe("migrate", () => {
       "Migration20261019191302_materials",
       "Migration20261019202843_locations_customers_suppliers",
       "Migration20261019211303_tenant_read_only",
+      "Migration20261020054509_planning_parameters_safety_stock",
     ]);
     expect(await migrate({ databasePath })).toEqual([]);
   });
@@ -58,9 +59,9 @@ describe("getMigrationStatus", () => {
     const orm = await initOrm({ databasePath });
 
     try {
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 11 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 12 });
       await orm.migrator.up();
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 11, pending: 0 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 12, pending: 0 });
     } finally {
       await orm.close();
     }
@@ -77,7 +78,7 @@ describe("migrations", () => {
         await orm.em
           .getConnection()
           .execute<{ name: string }[]>(
-            "select name from sqlite_master where name in ('setting', 'user', 'session', 'user_preference', 'tenant', 'api_token', 'global_audit_event', 'tenant_audit_event', 'global_idempotency_key', 'tenant_idempotency_key', 'material', 'material_conversion', 'location', 'customer', 'supplier')",
+            "select name from sqlite_master where name in ('setting', 'user', 'session', 'user_preference', 'tenant', 'api_token', 'global_audit_event', 'tenant_audit_event', 'global_idempotency_key', 'tenant_idempotency_key', 'material', 'material_conversion', 'location', 'customer', 'supplier', 'planning_parameter_set', 'safety_stock_target')",
           )
       )
         .map(({ name }) => name)
@@ -99,6 +100,26 @@ describe("migrations", () => {
         .sort();
 
     try {
+      expect(await tables()).toEqual([
+        "api_token",
+        "customer",
+        "global_audit_event",
+        "global_idempotency_key",
+        "location",
+        "material",
+        "material_conversion",
+        "planning_parameter_set",
+        "safety_stock_target",
+        "session",
+        "setting",
+        "supplier",
+        "tenant",
+        "tenant_audit_event",
+        "tenant_idempotency_key",
+        "user",
+        "user_preference",
+      ]);
+      await orm.migrator.down();
       expect(await tables()).toEqual([
         "api_token",
         "customer",
@@ -288,7 +309,7 @@ describe("tenant-read-only migration", () => {
 
     try {
       await orm.migrator.up({ to: "Migration20261019202843_locations_customers_suppliers" });
-      await orm.migrator.up();
+      await orm.migrator.up({ to: "Migration20261019211303_tenant_read_only" });
       expect(await flags()).toEqual([
         { code: "test", read_only: 0 },
         { code: "prod", read_only: 0 },
@@ -299,6 +320,53 @@ describe("tenant-read-only migration", () => {
         { code: "test", generation: 1 },
         { code: "prod", generation: 1 },
       ]);
+    } finally {
+      await orm.close();
+    }
+  });
+});
+
+describe("planning-parameters and safety-stock migration", () => {
+  const execute = (orm: Awaited<ReturnType<typeof initOrm>>, sql: string) => orm.em.getConnection().execute(sql);
+
+  it("keeps one set per material and location and one target per date, and rolls back with rows", async () => {
+    const databasePath = tempDatabase();
+    await migrate({ databasePath });
+    const orm = await initOrm({ databasePath });
+    const material = (id: string) =>
+      execute(orm, `insert into material (id, tenant_code, code, type, description, base_unit, created_at) values ('${id}', 'test', '${id}', 'raw', 'x', 'kg', 0)`);
+    const location = (id: string) =>
+      execute(orm, `insert into location (id, tenant_code, code, name, created_at) values ('${id}', 'test', '${id}', 'x', 0)`);
+    const set = (id: string, materialId: string, locationId: string, procurement = "buy") =>
+      execute(
+        orm,
+        `insert into planning_parameter_set (id, tenant_code, material_id, location_id, procurement, lead_time_days, minimum_quantity, lot_multiple) values ('${id}', 'test', '${materialId}', '${locationId}', '${procurement}', 7, '10.000000', '6.000000')`,
+      );
+    const target = (id: string, date: string) =>
+      execute(
+        orm,
+        `insert into safety_stock_target (id, tenant_code, material_id, location_id, effective_from, quantity) values ('${id}', 'test', 'm1', 'l1', '${date}', '100.000000')`,
+      );
+
+    try {
+      await material("m1");
+      await location("l1");
+      await location("l2");
+      await set("s1", "m1", "l1");
+      await set("s2", "m1", "l2");
+      await expect(set("s3", "m1", "l1")).rejects.toThrow(/UNIQUE/);
+      await expect(set("s4", "m1", "l2", "lease")).rejects.toThrow(/CHECK/);
+      expect(await execute(orm, "select lead_time_days, minimum_quantity, typeof(minimum_quantity) as kind, version from planning_parameter_set where id = 's1'")).toEqual([
+        { lead_time_days: 7, minimum_quantity: "10.000000", kind: "text", version: 1 },
+      ]);
+
+      await target("t1", "2027-01-01");
+      await target("t2", "2027-02-01");
+      await expect(target("t3", "2027-01-01")).rejects.toThrow(/UNIQUE/);
+
+      await orm.migrator.down();
+      expect(await execute(orm, "select name from sqlite_master where name in ('planning_parameter_set', 'safety_stock_target')")).toEqual([]);
+      expect(await execute(orm, "select count(*) as n from material")).toEqual([{ n: 1 }]);
     } finally {
       await orm.close();
     }

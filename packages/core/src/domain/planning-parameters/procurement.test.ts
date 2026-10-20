@@ -1,3 +1,4 @@
+import { PROCUREMENT_MODES as STORED_MODES } from "@cpg/db";
 import { describe, expect, it } from "vitest";
 import { isProcurementAllowed, LEAD_TIME_DAYS_MAX, PROCUREMENT_MODES } from "./procurement";
 
@@ -11,6 +12,12 @@ describe("isProcurementAllowed", () => {
     for (const type of ["intermediate", "finished"] as const) {
       for (const mode of PROCUREMENT_MODES) expect(isProcurementAllowed(type, mode)).toBe(true);
     }
+  });
+});
+
+describe("PROCUREMENT_MODES", () => {
+  it("equals the modes the database stores (re-declared so client code never imports the ORM)", () => {
+    expect(PROCUREMENT_MODES).toEqual(STORED_MODES);
   });
 });
 
