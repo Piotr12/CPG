@@ -1,5 +1,8 @@
 import { createHash } from "node:crypto";
+import { canonicalJson } from "../../domain/json/canonical-json";
 import { hashPassword, verifyPassword } from "../auth/password-hash";
+
+export { canonicalJson };
 
 /** What identifies a write: the method and path it was sent to, and its parsed JSON body. */
 export interface WriteRequest {
@@ -20,15 +23,6 @@ export function operationOf({ method, path }: Pick<WriteRequest, "method" | "pat
   return `${method.toUpperCase()} ${path}`;
 }
 
-/** JSON with object keys sorted at every level, so key order never changes a fingerprint. */
-export function canonicalJson(value: unknown): string {
-  return JSON.stringify(value, (_key, item: unknown) =>
-    item && typeof item === "object" && !Array.isArray(item)
-      ? // Code-unit order, never locale order. An object's keys are distinct, so none compare equal.
-        Object.fromEntries(Object.entries(item).sort(([a], [b]) => (a < b ? -1 : 1)))
-      : item,
-  );
-}
 
 /**
  * The fingerprint of a write. With `secret`, the stored form is an argon2id hash: a plain SHA-256 of
