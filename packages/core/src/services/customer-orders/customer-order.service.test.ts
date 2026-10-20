@@ -224,6 +224,9 @@ describe("CustomerOrderService", () => {
     await expect(service().update(order.id, remove, 1, actor)).rejects.toMatchObject({ code: "CUSTOMER_ORDER_LOCKED" });
     const replace = edit(order); replace.lines[0].material = "00000004";
     await expect(service().update(order.id, replace, 1, actor)).rejects.toMatchObject({ code: "CUSTOMER_ORDER_LOCKED" });
+    expect(await service().get(order.id)).toEqual(order);
+    expect(await em().count(CustomerOrderLine, { removed: true })).toBe(0);
+    expect(await em().count(TenantAuditEvent, { action: "customer-orders.customer-order.updated" })).toBe(0);
     const changes = edit(order); Object.assign(changes.lines[0], { quantity: "6", unit: "case", requiredDate: "2027-01-05" });
     // The unshipped line can still go.
     changes.lines.pop();

@@ -20,6 +20,12 @@ export const SHIPMENT_QUANTITY_OUTSTANDING_MESSAGE = "This is more than the orde
 /** The most lines one shipment carries, as many as a customer order. */
 export const SHIPMENT_LINES_MAX = 100;
 
+/** Shipments and goods issues are listed in fixed pages, so a list stays bounded as history grows (lesson 2026-10-20). */
+export const DOCUMENT_PAGE_SIZE = 100;
+
+/** A 1-based page of a document list: `?page=2`; the first page when absent. */
+export const pageSchema = z.coerce.number().int().min(1).max(1_000_000).default(1);
+
 /** A customer order referenced by its eight-digit business ID. */
 export const customerOrderReferenceSchema = z.string({ error: CUSTOMER_ORDER_CHOICE_MESSAGE }).regex(BUSINESS_ID_PATTERN, CUSTOMER_ORDER_CHOICE_MESSAGE);
 
@@ -63,5 +69,5 @@ export type ShipmentCreateInput = z.infer<typeof shipmentCreateSchema>;
 /** The Create shipment form's own check: the date and lines, since the page binds the order. */
 export const shipmentFormSchema = shipmentCreateSchema.omit({ customerOrder: true });
 
-/** `GET /api/tenants/{tenant}/shipments`: every shipment, or one customer order's. */
-export const shipmentListQuerySchema = z.object({ customerOrder: customerOrderReferenceSchema.optional() });
+/** `GET /api/tenants/{tenant}/shipments`: a page of every shipment, or of one customer order's. */
+export const shipmentListQuerySchema = z.object({ customerOrder: customerOrderReferenceSchema.optional(), page: pageSchema });

@@ -35,11 +35,15 @@ describe("/api/tenants/{tenant}/shipments", () => {
     mocks.list.mockResolvedValue([{ id: "00000001" }]);
 
     expect(await (await get()).json()).toEqual({ ok: true, data: [{ id: "00000001" }] });
-    expect(mocks.list).toHaveBeenLastCalledWith({});
+    expect(mocks.list).toHaveBeenLastCalledWith({ page: 1 });
     expect(mocks.tenantScope).toHaveBeenCalledWith("test");
 
     await get("?customerOrder=00000004");
-    expect(mocks.list).toHaveBeenLastCalledWith({ customerOrder: "00000004" });
+    expect(mocks.list).toHaveBeenLastCalledWith({ customerOrder: "00000004", page: 1 });
+    await get("?page=2");
+    expect(mocks.list).toHaveBeenLastCalledWith({ page: 2 });
+    await get("?customerOrder=00000004");
+    expect(mocks.list).toHaveBeenLastCalledWith({ customerOrder: "00000004", page: 1 });
   });
 
   it("GET refuses a malformed order filter, and checks the caller before opening the tenant", async () => {

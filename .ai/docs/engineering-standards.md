@@ -358,6 +358,7 @@ Done when these standards were adopted:
   - `ShipmentService` plans dispatches and moves no stock.
   - The leaves `services/customer-orders/order-records.ts`, `services/shipments/shipment-records.ts` and `services/shipments/shipment-usage.ts` hold what several services need. The last one completes finished shipments, after a goods issue or an order edit.
   - The quantity-per-line form of every document posted against another is `components/forms/line-quantities-form.tsx`, used by goods receipts, shipments and goods issues.
+  - Both lists page by 100 (`?page=`) from their first release, grouping lines once per page (`groupBy` in `shipment-records.ts`).
   - The shipment page is `/admin/[tenant]/shipments/[id]`. The API is `/api/tenants/{tenant}/shipments/…` and `/goods-issues/…`.
 - Idempotency and versions (2026-10-19, spec `2026-10-19--1548UTC-api-idempotency`): the global and tenant-owned idempotency key stores (`db/src/entities/idempotency/`), `IdempotencyService` (`core/src/services/idempotency/`), `inRequestTransaction`, `apiWrite`/`tenantApiWrite`, `User.version`, and the generation check in `tenantServerAction`.
 - API tokens (2026-10-19, spec `2026-10-19--1053UTC-api-tokens`): the global `ApiToken` entity, `ApiTokenService` (`core/src/services/api-tokens/`), bearer authentication in `requireApiUser(request)`, the `Actor` type, and `/admin/tokens`. It is the reference for a self-service screen (every account, own records only).

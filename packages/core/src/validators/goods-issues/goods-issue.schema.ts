@@ -2,7 +2,7 @@ import { z } from "zod";
 import { enteredQuantitySchema } from "../boms/bom-fields.schema";
 import { unitSchema } from "../materials/material-fields.schema";
 import { DUPLICATE_LINE_MESSAGE, LINE_NUMBER_MESSAGE } from "../purchasing/purchasing-fields.schema";
-import { shipmentReferenceSchema } from "../shipments/shipment.schema";
+import { pageSchema, shipmentReferenceSchema } from "../shipments/shipment.schema";
 
 /** The English messages; screens translate them by matching these constants. */
 export const ISSUE_LINE_COUNT_MESSAGE = "Issue at least 1 and at most 100 lines.";
@@ -49,5 +49,5 @@ export type IssueCreateInput = z.infer<typeof issueCreateSchema>;
 /** The Post goods issue form's own check: the lines only, since the page binds the shipment. */
 export const issueFormSchema = issueCreateSchema.omit({ shipment: true });
 
-/** `GET /api/tenants/{tenant}/goods-issues`: every goods issue, or one shipment's. */
-export const issueListQuerySchema = z.object({ shipment: shipmentReferenceSchema.optional() });
+/** `GET /api/tenants/{tenant}/goods-issues`: a page of every goods issue, or of one shipment's. */
+export const issueListQuerySchema = z.object({ shipment: shipmentReferenceSchema.optional(), page: pageSchema });

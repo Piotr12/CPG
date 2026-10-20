@@ -13,6 +13,17 @@ export async function findShipment(em: EntityManager, code: string, options: { r
   return shipment;
 }
 
+/** `items` grouped by `key`, each group in the items' order: one pass, however many headers a page has. */
+export function groupBy<T>(items: readonly T[], key: (item: T) => string): Map<string, T[]> {
+  const groups = new Map<string, T[]>();
+  for (const item of items) {
+    const group = groups.get(key(item));
+    if (group) group.push(item);
+    else groups.set(key(item), [item]);
+  }
+  return groups;
+}
+
 /** Refuses an issue against a Completed shipment: nothing is left to issue on it (shipments spec Q8). */
 export function assertShipmentOpen(shipment: Shipment): void {
   if (shipment.status !== "open") {

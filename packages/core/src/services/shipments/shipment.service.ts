@@ -13,6 +13,7 @@ import { ConflictError, ValidationError, type FieldErrors } from "../../http/err
 import {
   SHIPMENT_LINE_ORDER_MESSAGE,
   SHIPMENT_NO_SUCH_LINE_MESSAGE,
+  DOCUMENT_PAGE_SIZE,
   SHIPMENT_QUANTITY_OUTSTANDING_MESSAGE,
   type ShipmentCreateInput,
 } from "../../validators/shipments/shipment.schema";
@@ -21,7 +22,7 @@ import { recordTenantAudit } from "../audit/audit-recorder";
 import { assertCustomerOrderOpen, findCustomerOrder } from "../customer-orders/order-records";
 import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quantity";
 import { lineError } from "../materials/line-error";
-import { findShipment } from "./shipment-records";
+import { findShipment, groupBy } from "./shipment-records";
 
 export const SHIPMENT_ID_RACE = "Another shipment was created at the same moment. Try again.";
 
@@ -78,10 +79,18 @@ export class ShipmentService {
     this.em = em;
   }
 
-  /** Every shipment of the tenant, or of one customer order (404 when this tenant has no such order), newest first. */
-  async list(filter: { customerOrder?: string } = {}): Promise<ShipmentView[]> {
+  /**
+   * A page of the tenant's shipments, or of one customer order's (404 when this tenant has no such
+   * order), newest first, `DOCUMENT_PAGE_SIZE` to a page; a page past the last is empty.
+   */
+  async list(filter: { customerOrder?: string; page?: number } = {}): Promise<ShipmentView[]> {
     const where = filter.customerOrder === undefined ? {} : { order: await findCustomerOrder(this.em, filter.customerOrder) };
-    const shipments = await this.em.find(Shipment, where, { populate: ["order", "order.customer", "order.location"], orderBy: { code: "desc" } });
+    const shipments = await this.em.find(Shipment, where, {
+      populate: ["order", "order.customer", "order.location"],
+      orderBy: { code: "desc" },
+      limit: DOCUMENT_PAGE_SIZE,
+      offset: ((filter.page ?? 1) - 1) * DOCUMENT_PAGE_SIZE,
+    });
     return viewsOf(this.em, shipments);
   }
 
@@ -182,6 +191,7 @@ async function viewsOf(em: EntityManager, shipments: readonly Shipment[]): Promi
     { shipment: { $in: [...shipments] } },
     { populate: ["orderLine", "orderLine.material"], orderBy: { position: "asc" } },
   );
+  const byShipment = groupBy(lines, (line) => line.shipment.id);
   return shipments.map((shipment) => ({
     id: shipment.code,
     customerOrder: shipment.order.code,
@@ -190,8 +200,8 @@ async function viewsOf(em: EntityManager, shipments: readonly Shipment[]): Promi
     plannedDate: shipment.plannedDate,
     status: shipment.status,
     createdAt: shipment.createdAt,
-    lines: lines
-      .filter((line) => line.shipment.id === shipment.id)
+    lines: byShipment
+      .get(shipment.id)!
       .map(({ position, orderLine, quantity, enteredQuantity, enteredUnit, numerator, denominator, issued }) => ({
         line: position + 1,
         orderLine: orderLine.id,

@@ -19,12 +19,13 @@ import {
   ISSUE_QUANTITY_MESSAGE,
   type IssueCreateInput,
 } from "../../validators/goods-issues/goods-issue.schema";
+import { DOCUMENT_PAGE_SIZE } from "../../validators/shipments/shipment.schema";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit } from "../audit/audit-recorder";
 import { assertCustomerOrderOpen, findCustomerOrder } from "../customer-orders/order-records";
 import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quantity";
 import { lineError } from "../materials/line-error";
-import { assertShipmentOpen, findShipment } from "../shipments/shipment-records";
+import { assertShipmentOpen, findShipment, groupBy } from "../shipments/shipment-records";
 import { completeFinishedShipments } from "../shipments/shipment-usage";
 import { postStockMovements } from "../stock/stock-posting";
 
@@ -85,10 +86,18 @@ export class GoodsIssueService {
     this.em = em;
   }
 
-  /** Every goods issue of the tenant, or of one shipment (404 when this tenant has no such shipment), newest first. */
-  async list(filter: { shipment?: string } = {}): Promise<IssueView[]> {
+  /**
+   * A page of the tenant's goods issues, or of one shipment's (404 when this tenant has no such
+   * shipment), newest first, `DOCUMENT_PAGE_SIZE` to a page; a page past the last is empty.
+   */
+  async list(filter: { shipment?: string; page?: number } = {}): Promise<IssueView[]> {
     const where = filter.shipment === undefined ? {} : { shipment: await findShipment(this.em, filter.shipment) };
-    const issues = await this.em.find(GoodsIssue, where, { populate: ["shipment", "shipment.order", "shipment.order.location"], orderBy: { code: "desc" } });
+    const issues = await this.em.find(GoodsIssue, where, {
+      populate: ["shipment", "shipment.order", "shipment.order.location"],
+      orderBy: { code: "desc" },
+      limit: DOCUMENT_PAGE_SIZE,
+      offset: ((filter.page ?? 1) - 1) * DOCUMENT_PAGE_SIZE,
+    });
     return viewsOf(this.em, issues);
   }
 
@@ -262,6 +271,7 @@ async function viewsOf(em: EntityManager, issues: readonly GoodsIssue[]): Promis
     { issue: { $in: [...issues] } },
     { populate: ["shipmentLine", "shipmentLine.orderLine", "shipmentLine.orderLine.material"], orderBy: { position: "asc" } },
   );
+  const byIssue = groupBy(lines, (line) => line.issue.id);
   return issues.map((issue) => ({
     id: issue.code,
     shipment: issue.shipment.code,
@@ -269,8 +279,8 @@ async function viewsOf(em: EntityManager, issues: readonly GoodsIssue[]): Promis
     location: issue.shipment.order.location.code,
     businessDate: issue.businessDate,
     createdAt: issue.createdAt,
-    lines: lines
-      .filter((line) => line.issue.id === issue.id)
+    lines: byIssue
+      .get(issue.id)!
       .map(({ shipmentLine, quantity, enteredQuantity, enteredUnit, numerator, denominator }) => ({
         line: shipmentLine.position + 1,
         orderLine: shipmentLine.orderLine.id,

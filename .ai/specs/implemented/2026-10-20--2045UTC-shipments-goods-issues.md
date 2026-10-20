@@ -1,6 +1,6 @@
 # A user ships against one customer order and posts goods issues that lower stock and fulfil its lines, and the exact final issue completes the order
 
-**Status:** in progress
+**Status:** implemented
 **Created:** 2026-10-20 20:45 UTC
 **Issue:** #84 (E08-S02), epic #74 · **Builds on:** `implemented/2026-10-20--1635UTC-customer-orders.md` (#83: orders, stable line IDs, fulfilled quantities and the posted-line locks), `implemented/2026-10-20--1634UTC-stock-ledger-corrections.md` (#80: the ledger and its posting primitive), `implemented/2026-10-20--1933UTC-goods-receipts.md` (#87: the reference for "post a movement group and update the source document"), `implemented/2026-10-19--2018UTC-read-only-tenants.md`, `implemented/2026-10-19--1548UTC-api-idempotency.md`, `implemented/2026-10-19--1050UTC-audit-log.md` · **Design authority:** `.ai/specs/product-brief.md` (R03, R05, R07, R08, R09, D02, N02), `.ai/specs/research/CPG-prd001.pdf` §03 "Multi-line document model", "Receipt and issue", "Operational edits", `CPG-prd-datamodel.pdf` (outgoing shipment header, shipment line / goods issue line posting), `CPG-prd-decisions.pdf` ("Receipts vs shipments", "Customer no over-delivery", "Outgoing shipment composition"), `CPG-acceptance.md` (SAL-006…013, SAL-018, SAL-020…022, INV-003, INV-005, INV-010, INV-011, INV-021, AUD-026, AUD-030, LFC-002, LFC-003, LFC-010, TEN-017, API-020, API-021)
 
@@ -28,9 +28,9 @@ A GI never goes beyond what is outstanding on the order line or still to issue o
 | Q9 | Dates (INV-010, INV-011, AUD-030)? | A GI and its movements carry the server's UTC date at posting; the input has no date, and a client-sent date is ignored. The order's required dates and the shipment's planned date never change on issue. The audit entry keeps its own timestamp. | Same rule as receipts and corrections. |
 | Q10 | Order edits after an issue (SAL-020…022)? | #83's locks already hold: after a GI, the customer and the header location are locked, a delivered line keeps its material, unit and required date, and its quantity can't fall below fulfilled. This story adds one lock: a line that a shipment names can't be removed and can't change its material (`CUSTOMER_ORDER_LOCKED`), so a planned dispatch always means the material it was planned for. | The locks are now tested with real issues; the shipment lock keeps a plan's meaning without edit machinery. |
 | Q11 | Who may write, and API rules (R05, R07, TEN-017, API-020, API-021)? | Any signed-in account, both roles. A read-only tenant refuses shipments and issues with no movement or order change. API writes need a bearer token, an idempotency key and, in Test, the dataset generation. A retry with the same key and body returns the original document and posts nothing twice. | The shared write gates. |
-| Q12 | Audit (R08)? | Each change is audited in its own transaction:<br>• creating a shipment: `shipments.shipment.created`;<br>• posting a GI: `goods-issues.goods-issue.posted`, plus `customer-orders.customer-order.fulfilled` (each touched line's fulfilled and status before and after, and the order's status), plus `shipments.shipment.issued` (each touched line's issued, and the status), plus the ledger's own `stock.movement.posted` per line;<br>• an order edit that completes lines: its existing `customer-orders.customer-order.updated` entry. | Every change is audited, with an allowlisted snapshot. |
+| Q12 | Audit (R08)? | Each change is audited in its own transaction:<br>• creating a shipment: `shipments.shipment.created`;<br>• posting a GI: `goods-issues.goods-issue.posted`, plus `customer-orders.customer-order.fulfilled` (each touched line's fulfilled and status before and after, and the order's status), plus `shipments.shipment.issued` (each touched line's issued before and after), plus the ledger's own `stock.movement.posted` per line;<br>• each shipment that completes, after an issue or an order edit: `shipments.shipment.completed` (status before and after);<br>• an order edit that completes lines: its existing `customer-orders.customer-order.updated` entry. | Every change is audited, with an allowlisted snapshot. |
 | Q13 | Screens? | The customer order's page gains:<br>• an **Outstanding** column;<br>• a **Create shipment** button (any user; hidden while the tenant is read-only, the order isn't Open or nothing is outstanding), opening a dialog with a planned date and one row per outstanding line;<br>• a **Shipments** section listing the order's shipments.<br><br>A new shipment page `/admin/[tenant]/shipments/[id]` shows the header (order link, customer, location, planned date, status) and the lines (planned, issued, to issue). It has a **Post goods issue** button (hidden while read-only or the shipment is Completed), opening a dialog with one row per line that has anything to issue, and lists the shipment's goods issues. There is no list page and no sidebar entry: a shipment is reached through its order. The receipt dialog's row form becomes the shared `components/forms/line-quantities-form.tsx`, which all three dialogs use. | Mirrors the receipt flow; the sidebar must stay within 1280×800 (lesson). |
-| Q14 | API? | Shipments:<br>• `GET|POST /api/tenants/{tenant}/shipments` (`?customerOrder=00000001` filters);<br>• `GET …/shipments/{id}`.<br><br>Goods issues:<br>• `GET|POST /api/tenants/{tenant}/goods-issues` (`?shipment=00000001` filters);<br>• `GET …/goods-issues/{id}`.<br><br>The customer order view is unchanged. Added to `BACKWARD_COMPATIBILITY.md` §4. | R07. |
+| Q14 | API? | Shipments:<br>• `GET|POST /api/tenants/{tenant}/shipments` (`?customerOrder=00000001` filters, `?page=2` pages by 100);<br>• `GET …/shipments/{id}`.<br><br>Goods issues:<br>• `GET|POST /api/tenants/{tenant}/goods-issues` (`?shipment=00000001` filters, `?page=2` pages by 100);<br>• `GET …/goods-issues/{id}`.<br><br>The customer order view is unchanged. Added to `BACKWARD_COMPATIBILITY.md` §4. | R07. |
 | Q15 | Demo data? | None: D06 is met by the order demo, and a demo issue would post stock before the Test openings' "untouched stock" check. | As for receipts. |
 
 ## 📝 Architecture
@@ -73,14 +73,14 @@ Takeaway: the shipment is the plan, and only the goods issue reaches the ledger.
 
 ## Requirements
 
-- [ ] A shipment references exactly one Open order and its matching lines; a line of another order is refused; creating one moves no stock and fulfils nothing (SAL-006…009).
-- [ ] A GI lowers stock at the order's location for its lines only, adds to their fulfilled quantities, accumulates over repeated issues and leaves the order Open while anything is outstanding (SAL-010, SAL-011, INV-003, LFC-002).
-- [ ] A GI beyond the outstanding is refused with no stock or demand change. The exact final GI completes the line, and the order once every line is complete (SAL-012, SAL-013, SAL-018, LFC-003, LFC-010).
-- [ ] A GI beyond the stock is refused naming the available and required quantities. Two concurrent issues can't both commit, and stock never goes negative (INV-005, INV-021, AUD-026).
-- [ ] A GI's movement is dated today; the order's required date is untouched (INV-010, INV-011, AUD-030).
-- [ ] After a GI, an order edit of the line's material or date, of the header location, or of the quantity below the delivered quantity is refused (SAL-020…022).
-- [ ] A read-only tenant refuses a GI through the API, with no movement or order change (TEN-017). A keyed GI retried with the same key and body returns the original and posts once (API-020, API-021).
-- [ ] The order page shows the outstanding quantities and the order's shipments, and offers Create shipment. The shipment page shows its lines and goods issues, and offers Post goods issue.
+- [x] A shipment references exactly one Open order and its matching lines; a line of another order is refused; creating one moves no stock and fulfils nothing (SAL-006…009).
+- [x] A GI lowers stock at the order's location for its lines only, adds to their fulfilled quantities, accumulates over repeated issues and leaves the order Open while anything is outstanding (SAL-010, SAL-011, INV-003, LFC-002).
+- [x] A GI beyond the outstanding is refused with no stock or demand change. The exact final GI completes the line, and the order once every line is complete (SAL-012, SAL-013, SAL-018, LFC-003, LFC-010).
+- [x] A GI beyond the stock is refused naming the available and required quantities. Two concurrent issues can't both commit, and stock never goes negative (INV-005, INV-021, AUD-026).
+- [x] A GI's movement is dated today; the order's required date is untouched (INV-010, INV-011, AUD-030).
+- [x] After a GI, an order edit of the line's material or date, of the header location, or of the quantity below the delivered quantity is refused (SAL-020…022).
+- [x] A read-only tenant refuses a GI through the API, with no movement or order change (TEN-017). A keyed GI retried with the same key and body returns the original and posts once (API-020, API-021).
+- [x] The order page shows the outstanding quantities and the order's shipments, and offers Create shipment. The shipment page shows its lines and goods issues, and offers Post goods issue.
 
 ## Out of scope
 
@@ -96,3 +96,14 @@ The issue's nine criteria (#84). Each is covered by a service test against real 
 2. core: the pure issue rules, the two schemas, the order-records and shipment-usage leaves, `ShipmentService`, `GoodsIssueService`, the order-edit completion and shipment lock, and registration. Unit tests run against real SQLite, including the two-ORM race.
 3. app: the routes, the two actions, the shared line-quantities form (the receipt dialog moves onto it), the order page's additions, the shipment page, the messages and help. Unit tests.
 4. Integration tests (API and UI), `BACKWARD_COMPATIBILITY.md`, then the gate.
+
+## Implementation notes
+
+- One branch and one PR carry the spec and the implementation, as for #86 and #87.
+- An independent review found no blocker. Four of its points were changed:
+  - Both lists page by 100 (`?page=`), newest first, following the lesson "Bound a new document collection from its first release". The screens show the first page. The goods-receipt list predates that lesson and is still unbounded: follow-up.
+  - The shipment lock is one count over the lines an edit removes or replaces.
+  - Q12 now lists the `shipments.shipment.completed` entry.
+  - A two-connection race on the outstanding was added (two shipments, plenty of stock): the loser is refused with `SHIPMENT_NOT_OPEN`.
+- Known gap for E11-S01. A line completes on `fulfilled ≥ quantity`, while outstanding also subtracts `abandoned`. When Close Early starts setting `abandoned`, it must set the line and order statuses (`closed-early`) in the same step. Nothing sets `abandoned` today.
+

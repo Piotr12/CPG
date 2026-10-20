@@ -246,6 +246,34 @@ describe("GoodsIssueService", () => {
       }
     });
 
+    it("lets at most one of two racing issues spend the same outstanding, on two shipments, with stock to spare (INV-021, spec Q7)", async () => {
+      await count("00000001", "100");
+      const order = await orders().create(SIXTY, ACTOR);
+      const [first, second] = [await shipAll(order), await shipAll(order)];
+      const other = await initOrm(toDbOptions(loadConfig({ DATA_DIR: directory })));
+      let raced = false;
+      try {
+        const em = scoped();
+        await expect(
+          retryingStaleSnapshot(() =>
+            inRequestTransaction(em, async () => {
+              await new StockService({ em }).get({ material: "00000001", location: "00000001" });
+              if (!raced) {
+                raced = true;
+                await new GoodsIssueService({ em: scoped("prod", other) }).post(issueOf(first, each(1, "60")), ACTOR);
+              }
+              return new GoodsIssueService({ em }).post(issueOf(second, each(1, "60")), ACTOR);
+            }),
+          ),
+        ).rejects.toMatchObject({ code: "SHIPMENT_NOT_OPEN" });
+        expect((await stock("00000001")).quantity).toBe("40.000000");
+        expect((await orders().get(order.id)).lines[0]).toMatchObject({ fulfilled: "60.000000", status: "completed" });
+        expect(await scoped().count(GoodsIssue, {})).toBe(1);
+      } finally {
+        await other.close();
+      }
+    });
+
     it("issues in any unit the material converts, keeping what was entered (R03)", async () => {
       await count("00000001", "100");
       const order = await orders().create(SIXTY, ACTOR);
@@ -396,6 +424,26 @@ describe("GoodsIssueService", () => {
   });
 
   describe("list and get", () => {
+    it("lists in pages of 100, newest first, each with its own lines (lesson 2026-10-20)", async () => {
+      await count("00000001", "100");
+      const order = await orders().create(SIXTY, ACTOR);
+      const shipment = await shipAll(order);
+      const em = scoped();
+      const shipmentLine = await em.findOneOrFail(ShipmentLine, { position: 0 }, { populate: ["shipment"] });
+      for (let index = 1; index <= 101; index++) {
+        const issue = em.create(GoodsIssue, { code: String(index).padStart(8, "0"), shipment: shipmentLine.shipment, businessDate: "2026-10-20" });
+        em.create(GoodsIssueLine, { issue, position: 0, shipmentLine, quantity: `${index}.000000`, enteredQuantity: String(index), enteredUnit: "each", numerator: "1", denominator: "1" });
+      }
+      await em.flush();
+
+      const first = await service().list({ shipment: shipment.id });
+      expect(first).toHaveLength(100);
+      expect([first[0].id, first[99].id]).toEqual(["00000101", "00000002"]);
+      expect(first.every(({ id, lines }) => lines.length === 1 && lines[0].quantity === `${Number(id)}.000000`)).toBe(true);
+      expect((await service().list({ page: 2 })).map(({ id }) => id)).toEqual(["00000001"]);
+      expect(await service().list({ page: 3 })).toEqual([]);
+    });
+
     it("lists the tenant's issues newest first, or one shipment's, and reads one (TEN-014)", async () => {
       await count("00000001", "100");
       const order = await orders().create(SIXTY, ACTOR);

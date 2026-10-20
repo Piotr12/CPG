@@ -60,9 +60,10 @@ describe("issueCreateSchema", () => {
 });
 
 describe("the form and list schemas", () => {
-  it("leave the shipment to the page and filter by an optional shipment", () => {
+  it("leave the shipment to the page, and filter by an optional shipment and page", () => {
     expect(issueFormSchema.safeParse({ lines: [{ line: 1, quantity: "1", unit: "each" }] }).success).toBe(true);
-    expect(issueListQuerySchema.parse({ shipment: "00000003" })).toEqual({ shipment: "00000003" });
-    expect(issueListQuerySchema.parse({})).toEqual({});
+    expect(issueListQuerySchema.parse({ shipment: "00000003", page: "2" })).toEqual({ shipment: "00000003", page: 2 });
+    expect(issueListQuerySchema.parse({})).toEqual({ page: 1 });
+    expect(issueListQuerySchema.safeParse({ page: "0" }).success).toBe(false);
   });
 });

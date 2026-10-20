@@ -17,7 +17,7 @@ import { findActiveLocation } from "../locations/find-location";
 import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quantity";
 import { findActiveMaterial, findMaterial } from "../materials/find-material";
 import { findNamedRecord } from "../named-records/find-named-record";
-import { completeFinishedShipments, shippedOrderLineIds } from "../shipments/shipment-usage";
+import { completeFinishedShipments, isAnyShipped } from "../shipments/shipment-usage";
 import { isScopeReadOnly } from "../tenants/tenant.service";
 import { findCustomerOrder } from "./order-records";
 
@@ -114,8 +114,8 @@ export class CustomerOrderService {
         if (current.some((line) => !resolved.some(({ existing }) => existing?.id === line.id) &&
           (line.status !== "open" || parseDecimal(line.fulfilled)! > 0n || parseDecimal(line.abandoned)! > 0n))) throw locked();
         // A line a shipment names keeps its material and stays on the order (shipments spec Q10).
-        const shipped = await shippedOrderLineIds(em, current);
-        if (current.some((line) => shipped.has(line.id) && resolved.find(({ existing }) => existing?.id === line.id)?.material.id !== line.material.id)) throw locked();
+        const removedOrReplaced = current.filter((line) => resolved.find(({ existing }) => existing?.id === line.id)?.material.id !== line.material.id);
+        if (await isAnyShipped(em, removedOrReplaced)) throw locked();
         order.customer = customer;
         order.location = location;
         const kept = new Set(resolved.map(({ existing }) => existing?.id));

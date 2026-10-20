@@ -73,8 +73,9 @@ describe("shipmentCreateSchema", () => {
 describe("the form, list and reference schemas", () => {
   it("leave the order to the page, filter by an optional order, and reference a shipment by its ID", () => {
     expect(shipmentFormSchema.safeParse({ plannedDate: "2026-10-25", lines: [{ orderLine: A, quantity: "1", unit: "each" }] }).success).toBe(true);
-    expect(shipmentListQuerySchema.parse({})).toEqual({});
-    expect(shipmentListQuerySchema.parse({ customerOrder: "00000002" })).toEqual({ customerOrder: "00000002" });
+    expect(shipmentListQuerySchema.parse({})).toEqual({ page: 1 });
+    expect(shipmentListQuerySchema.parse({ customerOrder: "00000002", page: "3" })).toEqual({ customerOrder: "00000002", page: 3 });
+    expect(shipmentListQuerySchema.safeParse({ page: "1.5" }).success).toBe(false);
     expect(shipmentListQuerySchema.safeParse({ customerOrder: "2" }).success).toBe(false);
     expect(shipmentReferenceSchema.safeParse("x").error?.issues[0].message).toBe(SHIPMENT_CHOICE_MESSAGE);
   });

@@ -9,13 +9,12 @@ import { recordTenantAudit } from "../audit/audit-recorder";
  */
 
 /**
- * The IDs of those of `lines` that a shipment names (shipments spec Q10): such a line keeps its
- * material and stays on its order, so a planned dispatch always means what it was planned for.
- * `lines` are an order's visible lines, never none.
+ * Whether a shipment names any of `lines` (shipments spec Q10): such a line keeps its material and
+ * stays on its order, so a planned dispatch always means what it was planned for. One count, loading
+ * nothing, and no query at all when an edit removes or replaces no line.
  */
-export async function shippedOrderLineIds(em: EntityManager, lines: readonly CustomerOrderLine[]): Promise<Set<string>> {
-  const shipped = await em.find(ShipmentLine, { orderLine: { $in: [...lines] } });
-  return new Set(shipped.map(({ orderLine }) => orderLine.id));
+export async function isAnyShipped(em: EntityManager, lines: readonly CustomerOrderLine[]): Promise<boolean> {
+  return lines.length > 0 && (await em.count(ShipmentLine, { orderLine: { $in: [...lines] } })) > 0;
 }
 
 /**
