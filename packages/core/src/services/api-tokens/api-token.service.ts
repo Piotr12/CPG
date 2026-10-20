@@ -2,11 +2,12 @@ import { ApiToken, Session, Setting, UniqueConstraintViolationException, type En
 import type { AppConfig } from "../../config";
 import { ConflictError, NotFoundError, UnauthorizedError } from "../../http/errors";
 import { uiActor, type AuditActor } from "../audit/actor";
-import { recordGlobalAudit, type AuditEntry } from "../audit/audit-recorder";
+import { recordGlobalAudit } from "../audit/audit-recorder";
 import type { Actor } from "../auth/actor";
 import { ADMIN_PASSWORD_SETTING, verifiedAdminPasswordStamp } from "../auth/admin-password-stamp";
 import { generateApiTokenSecret, hashApiTokenSecret } from "../auth/api-token-secret";
 import type { SessionUser } from "../auth/auth.service";
+import { tokenCreatedEntry, tokenRevokedEntry } from "./api-token-audit";
 
 export const TOKEN_NAME_TAKEN = "You already have a token with that name.";
 export const TOKEN_NOT_FOUND = "No such token.";
@@ -81,7 +82,7 @@ export class ApiTokenService {
           throw new UnauthorizedError();
         }
         const created = em.create(ApiToken, { user: session.user, name, tokenHash: hashApiTokenSecret(secret) });
-        recordGlobalAudit(em, uiActor(actor), tokenEntry("tokens.api-token.created", created, null, { name }));
+        recordGlobalAudit(em, uiActor(actor), tokenCreatedEntry(created));
         await em.flush();
         return created;
       });
@@ -102,7 +103,7 @@ export class ApiTokenService {
       const token = await em.findOne(ApiToken, { id: tokenId, user: userId });
       if (!token) throw new NotFoundError("TOKEN_NOT_FOUND", TOKEN_NOT_FOUND);
       await em.nativeDelete(ApiToken, { id: token.id });
-      recordGlobalAudit(em, actor, tokenEntry("tokens.api-token.revoked", token, { name: token.name }, null));
+      recordGlobalAudit(em, actor, tokenRevokedEntry(token));
       return { id: token.id };
     });
   }
@@ -144,8 +145,4 @@ export class ApiTokenService {
 
 function toSummary({ id, name, createdAt, lastUsedAt }: ApiToken): ApiTokenSummary {
   return { id, name, createdAt, lastUsedAt: lastUsedAt ?? null };
-}
-
-function tokenEntry(action: string, token: ApiToken, before: AuditEntry["before"], after: AuditEntry["after"]): AuditEntry {
-  return { action, subject: { type: "ApiToken", id: token.id, label: token.name }, before, after };
 }

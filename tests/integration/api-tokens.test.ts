@@ -174,8 +174,10 @@ describe("named API tokens", () => {
     expect((await api("/api/users", secrets.admin)).status).toBe(401);
   });
 
-  it("ends every token of a user the admin resets or deactivates, for reads and writes (API-011, API-012)", async () => {
-    const tokenId = ((await api("/api/tokens", secrets.agent2)).body.data as TokenRow[])[0].id;
+  it("ends every token of a user the admin resets or deactivates, for reads and writes, and audits each (API-011, API-012, AUD-014)", async () => {
+    const taraTokens = (await api("/api/tokens", secrets.agent2)).body.data as TokenRow[];
+    const omarTokens = (await api("/api/tokens", secrets.omar)).body.data as TokenRow[];
+    const tokenId = taraTokens[0].id;
 
     await admin.open(`${baseUrl}/admin/users`);
     await admin.waitFor("table");
@@ -198,5 +200,21 @@ describe("named API tokens", () => {
       expect((await api("/api/tenants", secret)).status).toBe(401);
       expect((await api(`/api/tokens/${tokenId}`, secret, "DELETE")).status).toBe(401);
     }
+
+    // Every token the reset and the deactivation deleted is revoked in the Global audit, by the admin.
+    await openTokens(admin);
+    const auditor = await createToken(admin, "tokens-auditor");
+    const audit = (await api("/api/audit?limit=100", auditor)).body.data.entries as {
+      action: string;
+      subject: { type: string; id: string; label: string };
+      actor: { username: string };
+      channel: string;
+    }[];
+    const ended = [...taraTokens, ...omarTokens];
+    expect(ended.length).toBeGreaterThanOrEqual(2);
+    const revocations = audit
+      .filter(({ action, subject }) => action === "tokens.api-token.revoked" && ended.some(({ id }) => id === subject.id))
+      .map(({ action, subject, actor, channel }) => [action, subject.label, actor.username, channel]);
+    expect(revocations.sort()).toEqual(ended.map(({ name }) => ["tokens.api-token.revoked", name, "admin", "ui"]).sort());
   });
 });

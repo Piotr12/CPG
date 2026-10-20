@@ -3676,7 +3676,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/api-tokens.test.ts` (token creation and revocation in the Global audit, no secret), `packages/core/src/services/api-tokens/api-token.service.test.ts`. Tokens deleted by a reset or a deactivation are not audited yet (#44). E02-S02, #20, with #17.
+- **Evidence:** `tests/integration/api-tokens.test.ts` (token creation and revocation in the Global audit, no secret; every token a reset or a deactivation ends is revoked by the admin), `packages/core/src/services/api-tokens/api-token.service.test.ts`, `packages/core/src/services/users/user.service.test.ts` ("tokens a reset or deactivation ends"). The admin's tokens ended at startup after `CPG_ADMIN_PASSWORD` changes stay unaudited by decision (#44, spec Q1). E02-S02, #20, with #17, #44.
 - **Given:** User creates then revokes API token
 - **When:** Read Global audit
 - **Then:** Token create/revoke events with account/time recorded, no token secret.
