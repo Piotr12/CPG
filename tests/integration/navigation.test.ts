@@ -360,6 +360,7 @@ describe("sidebar navigation", () => {
       "BOM-y",
       "Prognozy",
       "Zapas",
+      "Raport zapasu",
       "Zlecenia produkcyjne",
       "Zamówienia klientów",
       "Zapotrzebowania zakupu",

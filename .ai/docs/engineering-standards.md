@@ -365,6 +365,11 @@ Done when these standards were adopted:
   - The quantity-per-line form of every document posted against another is `components/forms/line-quantities-form.tsx`, used by goods receipts, shipments and goods issues.
   - Both lists page by 100 (`?page=`) from their first release, grouping lines once per page (`groupBy` in `shipment-records.ts`).
   - The shipment page is `/admin/[tenant]/shipments/[id]`. The API is `/api/tenants/{tenant}/shipments/…` and `/goods-issues/…`.
+- The current stock report (2026-10-20, spec `2026-10-20--2221UTC-stock-report`), the first report:
+  - `StockReportService` (`core/src/services/reports/`) is a read-only service with no entity of its own, like `system`. It reads balances and Open transfers in bounded batches without the identity map, and the pure `domain/reports/stock-report-rows.ts` merges, filters and pages the rows.
+  - `services/stock/movement-sources.ts` is the leaf that resolves a page of movements' `postingId`s to their documents, with one query per document kind.
+  - `app/src/components/layout/page-links.tsx` (`PageLinks`) renders the Previous/Next links of a paged table and keeps its query. New paged lists use it; the older lists still render theirs inline.
+  - The shadcn `checkbox` submits with a plain `GET` form, which is how the report's zero toggle works.
 - Idempotency and versions (2026-10-19, spec `2026-10-19--1548UTC-api-idempotency`): the global and tenant-owned idempotency key stores (`db/src/entities/idempotency/`), `IdempotencyService` (`core/src/services/idempotency/`), `inRequestTransaction`, `apiWrite`/`tenantApiWrite`, `User.version`, and the generation check in `tenantServerAction`.
 - API tokens (2026-10-19, spec `2026-10-19--1053UTC-api-tokens`): the global `ApiToken` entity, `ApiTokenService` (`core/src/services/api-tokens/`), bearer authentication in `requireApiUser(request)`, the `Actor` type, and `/admin/tokens`. It is the reference for a self-service screen (every account, own records only).
 - Test infrastructure: Vitest unit tests next to every source file at 100% coverage, integration tests (Testcontainers runs the production image, agent-browser drives it), and a CI workflow for pull requests.

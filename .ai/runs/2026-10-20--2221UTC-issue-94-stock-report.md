@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-20 22:21 UTC
 **Agent:** Claude Code (Opus 5.5), via cezar `/om-auto-fix-issue 94`
-**Spec:** `.ai/specs/2026-10-20--2221UTC-stock-report.md`
+**Spec:** `.ai/specs/implemented/2026-10-20--2221UTC-stock-report.md`
 **Status:** in progress
 
 ## Goal
