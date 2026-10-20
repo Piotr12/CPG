@@ -1,6 +1,6 @@
 # A user creates purchase requisitions and purchase orders, directly or by converting a requisition into one or more orders
 
-**Status:** in progress
+**Status:** implemented
 **Created:** 2026-10-20 16:36 UTC
 **Issue:** #86 (E09-S01), epic #75 · **Builds on:** `implemented/2026-10-20--0757UTC-boms.md` (header-plus-lines, `convertToBaseQuantity`, leaf usage files), `implemented/2026-10-19--2014UTC-locations-customers-suppliers.md` (#23: locations and suppliers, "an inactive master can't be picked for new entries"), `implemented/2026-10-19--1858UTC-materials.md` (#22), `implemented/2026-10-19--2018UTC-read-only-tenants.md` (#25), `implemented/2026-10-19--1548UTC-api-idempotency.md` (#21), `implemented/2026-10-19--1050UTC-audit-log.md` (#20) · **Design authority:** `.ai/specs/product-brief.md` (R03, R05, R07, R08, D02, D06, N06), `.ai/specs/research/CPG-prd001.pdf` §03 "Procurement chain", `CPG-acceptance.md` (BUY-001…009, BUY-025, BUY-026, LFC-001, LFC-013, LFC-021, LFC-023, INV-024, AUD-025, AUD-027, TEN-014)
 
@@ -24,7 +24,7 @@ Nothing can be bought yet. This spec adds the two planned-supply documents of th
 | Q10 | Material deactivation (LFC-013)? | Deactivating a material with an open PO line is refused, 409 `MATERIAL_IN_OPEN_PO`, naming the PO ID. Open requisitions don't block it (only POs are named by LFC-013). Once any requisition or PO line references a material, its **base unit** can't change (409 `BASE_UNIT_IN_USE`: quantities are stored in it); its type may. | The issue; the BOM story's base-unit lock. |
 | Q11 | Audit (R08)? | `purchase-requisitions.purchase-requisition.created|updated|converted` and `purchase-orders.purchase-order.created|updated`, in the creating transaction. `converted` records `converted` and `status` before and after. | Every change is audited. |
 | Q12 | Demo data (D06)? | A fresh Test tenant gets two requisitions and one PO that converts part of the first, built through the same rules, each skipped when a demo reference is missing or inactive. | The issue's last criterion. |
-| Q13 | Screens? | `/admin/[tenant]/purchase-requisitions` and `/admin/[tenant]/purchase-orders`, each a list with a **Create** dialog (any user, hidden while the tenant is read-only), and a PO detail page `/admin/[tenant]/purchase-orders/[id]` with its lines. A **Procurement** group in the tenant sidebar holds both entries. The PO form is a bespoke component, like the BOM recipe form. | Mockup-free: it follows the BOM screens. |
+| Q13 | Screens? | `/admin/[tenant]/purchase-requisitions` and `/admin/[tenant]/purchase-orders`, each a list with a **Create** dialog (any user, hidden while the tenant is read-only), and a PO detail page `/admin/[tenant]/purchase-orders/[id]` with its lines. Two flat sidebar entries, **Purchase requisitions** and **Purchase orders**, follow Master data (a group header made the sidebar overflow 1280×800). The PO form is a bespoke component, like the BOM recipe form. | Mockup-free: it follows the BOM screens. |
 | Q14 | API? | `GET|POST /api/tenants/{tenant}/purchase-requisitions`, `GET|PATCH …/purchase-requisitions/{id}`, `GET|POST …/purchase-orders`, `GET|PATCH …/purchase-orders/{id}`. Added to `BACKWARD_COMPATIBILITY.md` §4. | R07. |
 
 ## 📝 Architecture
@@ -35,13 +35,13 @@ Nothing can be bought yet. This spec adds the two planned-supply documents of th
 
 ## Requirements
 
-- [ ] Requisitions and POs are created, listed and read in the UI and the API, Open on creation with no stock effect (LFC-001, BUY-009, INV-024).
-- [ ] A PO saves without a requisition (BUY-002) with per-line dates (BUY-008) and one location (BUY-006, BUY-007).
-- [ ] Conversion links a PO line to its requisition, accumulates `converted`, and completes the requisition when fully converted, across suppliers (BUY-003, BUY-004).
-- [ ] Inactive and other-tenant suppliers are refused for new POs and not selectable; saved POs stay usable; an open PO doesn't block supplier deactivation (BUY-025, LFC-021, LFC-023, AUD-027, TEN-014).
-- [ ] An open PO line blocks material deactivation, naming the PO (LFC-013).
-- [ ] Read-only tenants refuse writes; API writes need an idempotency key and, in Test, the generation; stale versions are 409 (R05, R07, AUD-025).
-- [ ] Test is seeded with a demonstration requisition and PO (D06).
+- [x] Requisitions and POs are created, listed and read in the UI and the API, Open on creation with no stock effect (LFC-001, BUY-009, INV-024).
+- [x] A PO saves without a requisition (BUY-002) with per-line dates (BUY-008) and one location (BUY-006, BUY-007).
+- [x] Conversion links a PO line to its requisition, accumulates `converted`, and completes the requisition when fully converted, across suppliers (BUY-003, BUY-004).
+- [x] Inactive and other-tenant suppliers are refused for new POs and not selectable; saved POs stay usable; an open PO doesn't block supplier deactivation (BUY-025, LFC-021, LFC-023, AUD-027, TEN-014).
+- [x] An open PO line blocks material deactivation, naming the PO (LFC-013).
+- [x] Read-only tenants refuse writes; API writes need an idempotency key and, in Test, the generation; stale versions are 409 (R05, R07, AUD-025).
+- [x] Test is seeded with a demonstration requisition and PO (D06).
 
 ## Out of scope
 
@@ -50,3 +50,10 @@ Goods receipts (E09-S02); cancel and close early (E11-S01); MRP creation of requ
 ## Acceptance criteria
 
 The issue's nine criteria (#86), each covered by a unit test and, for the screens and the API, an integration test.
+
+## Implementation notes
+
+- One branch and one PR carry the spec and the implementation (the cezar task owns one branch); no separate design-only spec PR.
+- The UI offers create and view only; the required-date and planned-date edits (Q8) are API-only (`PATCH`).
+- BUY-009 / INV-024 ("no stock effect") hold by construction: no stock ledger exists yet, and neither document writes to any quantity-on-hand record. An end-to-end check belongs to E07, once stock exists.
+- Linking the two screens from the tenant home page made the Tenants/navigation integration tests' soft navigation 404 on the standalone server; the sidebar is the way in, so the home page is unchanged.

@@ -1046,7 +1046,6 @@ export const en = {
     planningParameters: "Planning parameters",
     safetyStock: "Safety stock",
     boms: "BOMs",
-    procurement: "Procurement",
     purchaseRequisitions: "Purchase requisitions",
     purchaseOrders: "Purchase orders",
     import: "Import",

@@ -1004,7 +1004,6 @@ export const pl: Messages = {
     planningParameters: "Parametry planowania",
     safetyStock: "Zapas bezpieczeństwa",
     boms: "BOM-y",
-    procurement: "Zakupy",
     purchaseRequisitions: "Zapotrzebowania zakupu",
     purchaseOrders: "Zamówienia zakupu",
     import: "Import",

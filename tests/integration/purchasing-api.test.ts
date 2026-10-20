@@ -86,6 +86,8 @@ describe("purchase requisitions and orders through the API", () => {
     await write("POST", `/api/tenants/prod/materials/${ids.steel}/conversions`, { unit: "t", numerator: "1000", denominator: "1" });
     ids.plant = await create("/api/tenants/prod/locations", { name: "buyapi plant" });
     ids.depot = await create("/api/tenants/prod/locations", { name: "buyapi depot" });
+    // Test holds the three demo suppliers: pad Prod past them so `gone` is Prod's alone (TEN-014).
+    while (Number(await create("/api/tenants/prod/suppliers", { name: "buyapi pad" })) < 3);
     ids.acme = await create("/api/tenants/prod/suppliers", { name: "buyapi acme" });
     ids.gone = await create("/api/tenants/prod/suppliers", { name: "buyapi gone" });
     await write("POST", "/api/users", { username: "buyapi-una", password: PASSWORD });

@@ -19,6 +19,9 @@ export const HELP_TOPIC_IDS = [
   "safety-stock",
   "boms",
   "bom-revisions",
+  "purchase-requisitions",
+  "purchase-orders",
+  "purchase-order",
   "import",
   "language-and-theme",
   "using-help",
@@ -48,6 +51,9 @@ export const HELP_TOPIC_ROUTES: Record<HelpTopicId, string> = {
   "safety-stock": "/admin/[tenant]/safety-stock",
   boms: "/admin/[tenant]/boms",
   "bom-revisions": "/admin/[tenant]/boms/[id]",
+  "purchase-requisitions": "/admin/[tenant]/purchase-requisitions",
+  "purchase-orders": "/admin/[tenant]/purchase-orders",
+  "purchase-order": "/admin/[tenant]/purchase-orders/[id]",
   import: "/admin/[tenant]/import",
   "language-and-theme": "/admin",
   "using-help": "/help",
@@ -216,6 +222,31 @@ const en: Record<HelpTopicId, HelpText> = {
       "A recipe never changes in place. Saving a real change to the priority, the dates or the components creates a new revision; the old ones stay readable from Revisions, unchanged, for the orders that will use them. Saving the same recipe, or entering the same quantity in another unit, creates nothing.",
       "Changing a unit conversion later doesn't change a saved recipe: the line keeps its quantity and the factor it was entered with. To use a new factor, enter the line again.",
       "Deactivate keeps the BOM and its revisions, but it can't be chosen for new orders; Reactivate undoes that after checking its priority again. Neither creates a revision. Every change appears in the tenant's audit.",
+    ],
+  },
+  "purchase-requisitions": {
+    title: "Purchase requisitions",
+    body: [
+      "Purchase requisitions, under Procurement in the sidebar, list what the tenant needs to buy: one material at one location, a quantity and the date it is needed. CPG gives each an eight-digit ID, in order. A new requisition is Open with nothing converted.",
+      "A purchase order converts a requisition, wholly or in parts, possibly to different suppliers. Converted shows how much orders have taken so far and Outstanding what is left; when everything is converted the requisition becomes Completed.",
+      "A requisition is planned supply only: it never changes stock. The quantity can be entered in any unit the material converts; CPG stores it in the base unit and keeps what was entered.",
+      "Every account can create and read requisitions, with Create requisition here and through the API; only active materials and locations can be picked. A read-only tenant refuses new ones. Every change appears in the tenant's audit.",
+    ],
+  },
+  "purchase-orders": {
+    title: "Purchase orders",
+    body: [
+      "Purchase orders, under Procurement in the sidebar, list the tenant's orders to suppliers. An order has one supplier, one location and 1 to 100 lines, each with its own planned date. Each order gets an eight-digit ID; a new order is Open.",
+      "Create an order directly, or give a line an open requisition of the same material and location: the line then converts that much of the requisition, up to what is outstanding, and the requisition is Completed once fully converted.",
+      "A line can't be for another location than the order's. Only active suppliers, locations and materials can be picked; an order made earlier stays usable if its supplier is deactivated later.",
+      "An order is planned supply only: it never changes stock. Every account can create and read orders, here and through the API; a read-only tenant refuses new ones. A material with an open order line can't be deactivated.",
+    ],
+  },
+  "purchase-order": {
+    title: "A purchase order and its lines",
+    body: [
+      "Choose an order's ID to open its page: its supplier, location, status and every line, with the quantity in the material's base unit, the unit it was entered in, the planned date and the requisition it converted, if any.",
+      "Planned dates can be changed through the API with PATCH, at the version you loaded; each change appears in the tenant's audit.",
     ],
   },
   import: {
@@ -398,6 +429,31 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Receptura nigdy nie zmienia się w miejscu. Zapisanie prawdziwej zmiany priorytetu, dat lub składników tworzy nową rewizję; stare pozostają do wglądu w sekcji Rewizje, bez zmian, dla zleceń, które będą ich używać. Zapisanie tej samej receptury albo wpisanie tej samej ilości w innej jednostce niczego nie tworzy.",
       "Późniejsza zmiana przelicznika jednostek nie zmienia zapisanej receptury: wiersz zachowuje swoją ilość i przelicznik, z którym go wpisano. Aby użyć nowego przelicznika, wpisz wiersz ponownie.",
       "Dezaktywuj zachowuje BOM i jego rewizje, ale nie można go wybrać dla nowych zleceń; Aktywuj ponownie to cofa po ponownym sprawdzeniu priorytetu. Żadne z nich nie tworzy rewizji. Każda zmiana pojawia się w audycie środowiska.",
+    ],
+  },
+  "purchase-requisitions": {
+    title: "Zapotrzebowania zakupu",
+    body: [
+      "Zapotrzebowania zakupu, w sekcji Zakupy w menu bocznym, to lista tego, co środowisko ma kupić: jeden materiał w jednej lokalizacji, ilość i data, na którą jest potrzebny. CPG nadaje każdemu ośmiocyfrowe ID, po kolei. Nowe zapotrzebowanie jest Otwarte i nic z niego nie przekształcono.",
+      "Zamówienie zakupu przekształca zapotrzebowanie w całości lub w częściach, także do różnych dostawców. Przekształcono pokazuje, ile zabrały dotąd zamówienia, a Pozostało to, co zostało; gdy wszystko przekształcono, zapotrzebowanie staje się Zrealizowane.",
+      "Zapotrzebowanie to tylko planowana podaż: nigdy nie zmienia stanu magazynowego. Ilość można wpisać w każdej jednostce, którą materiał przelicza; CPG zapisuje ją w jednostce bazowej i zachowuje to, co wpisano.",
+      "Zapotrzebowania może tworzyć i przeglądać każde konto, przyciskiem Utwórz zapotrzebowanie tutaj i przez API; wybrać można tylko aktywne materiały i lokalizacje. Środowisko tylko do odczytu odrzuca nowe. Każda zmiana pojawia się w audycie środowiska.",
+    ],
+  },
+  "purchase-orders": {
+    title: "Zamówienia zakupu",
+    body: [
+      "Zamówienia zakupu, w sekcji Zakupy w menu bocznym, to lista zamówień środowiska u dostawców. Zamówienie ma jednego dostawcę, jedną lokalizację i od 1 do 100 pozycji, każdą z własną planowaną datą. Każde zamówienie dostaje ośmiocyfrowe ID; nowe jest Otwarte.",
+      "Utwórz zamówienie bezpośrednio albo wskaż w pozycji otwarte zapotrzebowanie tego samego materiału i lokalizacji: pozycja przekształca wtedy tyle zapotrzebowania, ile pozostało, a zapotrzebowanie jest Zrealizowane, gdy przekształcono je w całości.",
+      "Pozycja nie może dotyczyć innej lokalizacji niż zamówienie. Wybrać można tylko aktywnych dostawców, lokalizacje i materiały; wcześniejsze zamówienie pozostaje używalne, jeśli jego dostawca zostanie później dezaktywowany.",
+      "Zamówienie to tylko planowana podaż: nigdy nie zmienia stanu magazynowego. Zamówienia może tworzyć i przeglądać każde konto, tutaj i przez API; środowisko tylko do odczytu odrzuca nowe. Materiału z otwartą pozycją zamówienia nie można dezaktywować.",
+    ],
+  },
+  "purchase-order": {
+    title: "Zamówienie zakupu i jego pozycje",
+    body: [
+      "Wybierz ID zamówienia, aby otworzyć jego stronę: dostawca, lokalizacja, status i każda pozycja, z ilością w jednostce bazowej materiału, jednostką, w której ją wpisano, planowaną datą i zapotrzebowaniem, które przekształciła, jeśli jest.",
+      "Planowane daty można zmienić przez API poleceniem PATCH, w wersji, którą wczytano; każda zmiana pojawia się w audycie środowiska.",
     ],
   },
   import: {

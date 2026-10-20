@@ -1,0 +1,45 @@
+import { Suspense } from "react";
+import type { Metadata } from "next";
+import { connection } from "next/server";
+import { tenantScope } from "@cpg/core";
+import { requireUser } from "../../../../../auth/require-admin";
+import { OrderScreen } from "../../../../../components/purchase-orders/order-screen";
+import { getMessages } from "../../../../../i18n/get-messages";
+import { orNotFound } from "../../../../../routing/or-not-found";
+
+/** The tenant layout's title template puts the tenant first: "Test · Purchase order". */
+export const metadata: Metadata = { title: "Purchase order" };
+
+export default function PurchaseOrderPage({ params }: PageProps<"/admin/[tenant]/purchase-orders/[id]">) {
+  return (
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-12">
+      <Suspense fallback={<div aria-busy="true" className="min-h-40" />}>
+        <PurchaseOrder params={params} />
+      </Suspense>
+    </main>
+  );
+}
+
+/**
+ * One purchase order, read through the tenant's own scope: an ID this tenant doesn't have, another
+ * tenant's included, is the not-found state (TEN-014).
+ */
+async function PurchaseOrder({ params }: { params: Promise<{ tenant: string; id: string }> }) {
+  await connection();
+  await requireUser();
+  const { tenant: code, id } = await params;
+  const [{ cradle }, { locale, messages }] = await Promise.all([orNotFound(tenantScope(code), ["TENANT_NOT_FOUND"]), getMessages()]);
+  const order = await orNotFound(cradle.purchaseOrderService.get(id), ["PURCHASE_ORDER_NOT_FOUND"]);
+
+  return (
+    <OrderScreen
+      tenant={cradle.tenant}
+      order={order}
+      materials={await cradle.materialService.list()}
+      suppliers={await cradle.supplierService.list()}
+      locations={await cradle.locationService.list()}
+      locale={locale}
+      messages={messages}
+    />
+  );
+}

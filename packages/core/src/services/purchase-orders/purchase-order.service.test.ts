@@ -307,6 +307,15 @@ describe("PurchaseOrderService", () => {
       });
     });
 
+    it("reports a refused conversion on a converting line without also counting it against the requisition", async () => {
+      const source = await requisition();
+
+      await expect(
+        service().create({ ...DIRECT, lines: [line("00000001", "5", "case", "2027-03-04", { requisition: source.id })] }, ACTOR),
+      ).rejects.toMatchObject({ code: "VALIDATION_FAILED", fieldErrors: { "lines.0.unit": [UNIT_NOT_CONVERTIBLE_MESSAGE] } });
+      expect(await requisitions().get(source.id)).toMatchObject({ converted: "0.000000" });
+    });
+
     it("records the conversion with its before and after, and the order's own entry (R08)", async () => {
       const source = await requisition();
       await service().create(converting(source.id, "100"), ACTOR);
