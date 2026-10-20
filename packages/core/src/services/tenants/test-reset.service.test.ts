@@ -60,7 +60,7 @@ async function populate() {
 }
 
 describe("atomic Test reset", () => {
-  it.each([false, true])("reseeds every kind and restores readOnly=%s, preserving globals and Prod (TEN-022…025, TEN-028, TEN-029, AUD-011…013)", async (readOnly) => {
+  it.each([false, true])("reseeds every kind and restores readOnly=%s, preserving globals and Prod (TEN-022, TEN-023, TEN-024, TEN-028, AUD-011…013)", async (readOnly) => {
     await populate();
     await container.createScope().cradle.tenantService.setReadOnly("test", readOnly, actor);
     const before = await snapshot();

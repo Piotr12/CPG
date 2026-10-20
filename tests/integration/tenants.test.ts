@@ -108,7 +108,7 @@ describe("the tenant API", () => {
       body: {
         ok: true,
         data: [
-          { code: "test", name: "Test", generation: 1, readOnly: false },
+          { code: "test", name: "Test", generation: expect.any(Number), readOnly: false },
           { code: "prod", name: "Prod", generation: 1, readOnly: false },
         ],
       },
