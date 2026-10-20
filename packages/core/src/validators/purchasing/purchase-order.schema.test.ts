@@ -48,6 +48,12 @@ describe("order schemas", () => {
       ["supplier", ORDER_IMMUTABLE_MESSAGE],
       ["location", ORDER_IMMUTABLE_MESSAGE],
     ]);
+    // A line's material, unit and quantity are refused too, not silently dropped (BUY-022, BUY-023).
+    expect(issues(orderUpdateBodySchema.safeParse({ version: 3, lines: [{ line: 1, plannedDate: "2027-04-01", material: "00000002", unit: "t", quantity: "79" }] }))).toEqual([
+      ["lines.0.material", ORDER_IMMUTABLE_MESSAGE],
+      ["lines.0.unit", ORDER_IMMUTABLE_MESSAGE],
+      ["lines.0.quantity", ORDER_IMMUTABLE_MESSAGE],
+    ]);
   });
 
   it("refuses a line number below 1 or not whole, a repeated line, and no or too many lines", () => {
