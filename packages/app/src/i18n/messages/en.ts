@@ -742,6 +742,7 @@ export const en = {
       IMPORT_UNKNOWN_ID: "{record} {id} doesn't exist in {tenant}. Leave the ID blank to create a new record.",
       IMPORT_MISSING_REFERENCE: "{record} {id} doesn't exist in {tenant}. Create or import it first: a row can only use records that exist, or that an earlier sheet of this workbook creates.",
       IMPORT_DUPLICATE_KEY: "{key} appears on rows {rows}: keep one row for it.",
+      IMPORT_DUPLICATE_SHEET: "The workbook has another sheet named like “{sheet}”. Keep one.",
       IMPORT_NEW_RECORD_INACTIVE: "A new record starts active. Deactivate it after the import.",
       IMPORT_REFERENCE_REQUIRED: "A new BOM needs an import reference, which its BOM lines name.",
       IMPORT_BOM_WITHOUT_LINES: "This BOM has no rows on the BOM lines sheet: list its complete recipe there.",
@@ -764,6 +765,8 @@ export const en = {
     errors: {
       FORBIDDEN: "Only the administrator can import.",
       IMPORT_STALE: "Something this workbook uses was edited since the dry run, or the file is different. Run the dry run again.",
+      CONFLICT: "Another record was created at the same moment. Run the dry run again.",
+      VERSION_CONFLICT: "A record was changed while the import ran. Run the dry run again.",
       GENERATION_STALE: "This tenant's data was reset since you loaded the page. Reload and try again.",
     },
   },

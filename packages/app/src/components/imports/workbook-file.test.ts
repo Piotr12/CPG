@@ -135,6 +135,9 @@ describe("inflatesWithin", () => {
     const archive = zipSync({ "a.xml": strToU8("<a/>".repeat(100)) }, { level: 9 });
     expect(inflatesWithin(archive, 1_000)).toBe("ok");
     expect(inflatesWithin(archive, 10)).toBe("too-large");
+    // Past the limit, later entries aren't inflated at all: the answer is already known.
+    const several = zipSync({ "a.xml": strToU8("<a/>".repeat(100)), "b.xml": strToU8("<b/>".repeat(100)) }, { level: 9 });
+    expect(inflatesWithin(several, 10)).toBe("too-large");
 
     const corrupt = Buffer.from(archive);
     const dataStart = 30 + "a.xml".length;

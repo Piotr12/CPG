@@ -79,6 +79,7 @@ type Values = Record<string, CellValue>;
 export function prepareImport(workbook: WorkbookSheets): PreparedImport {
   const errors: ImportIssue[] = [];
   const found = new Map<SheetKey, SheetRow<Values>[]>();
+  const seen = new Set<SheetKey>();
   for (const sheet of workbook) {
     if (isInstructionSheet(sheet.name)) continue;
     const spec = sheetNamed(sheet.name);
@@ -91,6 +92,13 @@ export function prepareImport(workbook: WorkbookSheets): PreparedImport {
       );
       continue;
     }
+    if (seen.has(spec.key)) {
+      // Two tabs whose names differ only in case or spaces: neither may silently replace the other.
+      const name = sheet.name.trim();
+      errors.push(issue(name, 1, null, "IMPORT_DUPLICATE_SHEET", `The workbook has another "${spec.name}" sheet. Keep one.`, { sheet: name }));
+      continue;
+    }
+    seen.add(spec.key);
     const rows = readRows(spec, sheet, errors);
     if (rows) found.set(spec.key, rows);
   }

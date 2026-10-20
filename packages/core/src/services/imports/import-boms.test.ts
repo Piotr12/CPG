@@ -138,6 +138,22 @@ describe("new BOMs", () => {
     ]);
   });
 
+  it("reports a header's own error together with its lines' errors, for new and existing BOMs (XLS-009)", async () => {
+    await seedPanelBom();
+    const report = await kit.dryRun([
+      sheet("bomHeaders", header(null, "R1", 99), header(9, null, null), header(1, null, 5)),
+      sheet("bomLines", line("R1", 41, 1), line(9, 42, 1), line(1, 43, 1)),
+    ]);
+    expect(report.errors.map((error) => [error.sheet, error.row, error.column, error.code])).toEqual([
+      ["BOM headers", 2, "Output material ID", "IMPORT_MISSING_REFERENCE"],
+      ["BOM headers", 3, "BOM ID", "IMPORT_UNKNOWN_ID"],
+      ["BOM headers", 4, "Output material ID", "VALIDATION_FAILED"],
+      ["BOM lines", 2, "Component material ID", "IMPORT_MISSING_REFERENCE"],
+      ["BOM lines", 3, "Component material ID", "IMPORT_MISSING_REFERENCE"],
+      ["BOM lines", 4, "Component material ID", "IMPORT_MISSING_REFERENCE"],
+    ]);
+  });
+
   it("uses materials an earlier sheet creates, whatever the tab order (XLS-008)", async () => {
     const workbook = [
       sheet("bomLines", line("R1", 7, 3)),
@@ -152,12 +168,16 @@ describe("new BOMs", () => {
     ]);
   });
 
-  it("lets a fatal failure loading a line's material through", async () => {
+  it("lets a fatal failure loading the output or a line's material through", async () => {
+    await seedPanelBom();
     const scope = await scopeForTenant(kit.container, "prod");
     vi.spyOn(scope.cradle.materialService, "get").mockRejectedValue(new Error("database gone"));
-    const workbook = prepareImport([sheet("bomHeaders", header(null, "R1", 4)), sheet("bomLines", line("R1", 1, 1))]);
+    const dryRun = (workbook: Parameters<typeof prepareImport>[0]) =>
+      inRequestTransaction(scope.cradle.em, () => scope.cradle.importService.dryRun(prepareImport(workbook), ACTOR));
 
-    await expect(inRequestTransaction(scope.cradle.em, () => scope.cradle.importService.dryRun(workbook, ACTOR))).rejects.toThrow("database gone");
+    // A new BOM fails on its output, an existing one on its first line.
+    await expect(dryRun([sheet("bomHeaders", header(null, "R1", 4)), sheet("bomLines", line("R1", 1, 1))])).rejects.toThrow("database gone");
+    await expect(dryRun([sheet("bomHeaders", header(1, null, null)), sheet("bomLines", line(1, 1, 1))])).rejects.toThrow("database gone");
   });
 
   it("places the service's field errors on their header or line cell", async () => {

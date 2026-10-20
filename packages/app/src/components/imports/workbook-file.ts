@@ -44,6 +44,8 @@ export function inflatesWithin(bytes: Uint8Array, limit: number): "ok" | "too-la
   let tooLarge = false;
   const unzip = new Unzip((file) => {
     entries += 1;
+    // Past the limit, nothing more is inflated: the answer is known.
+    if (tooLarge) return;
     file.ondata = (error, chunk) => {
       if (error) throw error;
       total += chunk.length;

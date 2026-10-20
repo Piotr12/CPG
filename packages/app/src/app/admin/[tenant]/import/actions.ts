@@ -7,7 +7,6 @@ import {
   tenantServerAction,
   uiActor,
   type ImportReport,
-  type PreparedImport,
   type Result,
   type SessionUser,
 } from "@cpg/core";
@@ -45,7 +44,7 @@ export async function commitImport(tenant: string, generation: number, values: u
   if (!read.ok) return read;
   const { admin, prepared: workbook } = read.data;
   const result = await tenantServerAction(importCommitSchema, ({ previewToken }, { cradle }) =>
-    cradle.importService.commit(workbook as PreparedImport, previewToken, uiActor(admin)),
+    cradle.importService.commit(workbook, previewToken, uiActor(admin)),
   )(tenant, generation, values);
   const pages = ["materials", "locations", "customers", "suppliers", "planning-parameters", "safety-stock", "boms"];
   return result.ok ? refreshAfterWrite(result, ...pages.map((page) => `/admin/${tenant}/${page}`)) : result;

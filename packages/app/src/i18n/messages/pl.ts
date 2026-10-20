@@ -707,6 +707,7 @@ export const pl: Messages = {
       IMPORT_UNKNOWN_ID: "{record} {id} nie istnieje w {tenant}. Zostaw ID puste, aby utworzyć nowy rekord.",
       IMPORT_MISSING_REFERENCE: "{record} {id} nie istnieje w {tenant}. Najpierw go utwórz lub zaimportuj: wiersz może używać tylko istniejących rekordów albo tworzonych przez wcześniejszy arkusz tego skoroszytu.",
       IMPORT_DUPLICATE_KEY: "{key} występuje w wierszach {rows}: zostaw jeden wiersz.",
+      IMPORT_DUPLICATE_SHEET: "Skoroszyt ma inny arkusz o nazwie podobnej do „{sheet}”. Zostaw jeden.",
       IMPORT_NEW_RECORD_INACTIVE: "Nowy rekord jest zawsze aktywny. Dezaktywuj go po imporcie.",
       IMPORT_REFERENCE_REQUIRED: "Nowy BOM potrzebuje referencji importu, którą podają jego wiersze.",
       IMPORT_BOM_WITHOUT_LINES: "Ten BOM nie ma wierszy w arkuszu BOM lines: wpisz tam jego pełną recepturę.",
@@ -728,6 +729,8 @@ export const pl: Messages = {
     errors: {
       FORBIDDEN: "Tylko administrator może importować.",
       IMPORT_STALE: "Coś, czego używa ten skoroszyt, zmieniono od czasu próby, albo plik jest inny. Wykonaj próbę ponownie.",
+      CONFLICT: "W tej samej chwili utworzono inny rekord. Wykonaj próbę ponownie.",
+      VERSION_CONFLICT: "Rekord zmienił się w trakcie importu. Wykonaj próbę ponownie.",
       GENERATION_STALE: "Dane tego środowiska zostały zresetowane od załadowania strony. Odśwież ją i spróbuj ponownie.",
     },
   },

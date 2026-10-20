@@ -23,7 +23,6 @@ export function operationOf({ method, path }: Pick<WriteRequest, "method" | "pat
   return `${method.toUpperCase()} ${path}`;
 }
 
-
 /**
  * The fingerprint of a write. With `secret`, the stored form is an argon2id hash: a plain SHA-256 of
  * a body holding a password would be a fast-hash copy of it, weaker than the account's own hash.

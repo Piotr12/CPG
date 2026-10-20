@@ -8,6 +8,11 @@ import { importLabels } from "./labels";
 
 const mocks = vi.hoisted(() => ({ dryRunImport: vi.fn(), commitImport: vi.fn() }));
 vi.mock("../../app/admin/[tenant]/import/actions", () => mocks);
+const reads = vi.hoisted(() => ({ fileToBase64: vi.fn() }));
+vi.mock("./base64", async (importOriginal) => {
+  reads.fileToBase64.mockImplementation((await importOriginal<typeof import("./base64")>()).fileToBase64);
+  return reads;
+});
 vi.mock("next/link", () => ({ default: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => <a href={href} {...props}>{children}</a> }));
 
 const TENANT = { code: "test", name: "Test", generation: 2, readOnly: false };
@@ -185,6 +190,19 @@ describe("ImportScreen", () => {
     expect((screen.getByLabelText(en.imports.upload.file) as HTMLInputElement).disabled).toBe(true);
     await act(async () => finish({ ok: true, data: clean }));
     expect(button("Run dry run").disabled).toBe(false);
+  });
+
+  it("dry-runs the file chosen last, even when an earlier choice is read later", async () => {
+    let finishFirst: (value: string) => void = () => {};
+    reads.fileToBase64.mockReturnValueOnce(new Promise((resolve) => (finishFirst = resolve))).mockResolvedValueOnce("U0VDT05E");
+    renderScreen();
+    await choose();
+    await choose();
+    await act(async () => finishFirst("RklSU1Q="));
+    fireEvent.click(button("Run dry run"));
+
+    await screen.findByText("raw");
+    expect(mocks.dryRunImport).toHaveBeenCalledWith("test", 2, { workbook: "U0VDT05E" });
   });
 
   it("refuses a file over 512 KB before uploading it, and clears the choice", async () => {

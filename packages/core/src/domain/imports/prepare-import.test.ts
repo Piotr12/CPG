@@ -39,6 +39,14 @@ describe("prepareImport — layout", () => {
     ]);
   });
 
+  it("refuses a second tab named like a template sheet instead of letting it replace the first", () => {
+    const result = prepareImport([sheet("materials", [null, "raw", "Steel", "kg", null]), { ...sheet("materials", [null, "raw", "Bolt", "each", null]), name: "materials " }]);
+    expect(result.errors).toEqual([
+      { sheet: "materials", row: 1, column: null, code: "IMPORT_DUPLICATE_SHEET", message: 'The workbook has another "Materials" sheet. Keep one.', params: { sheet: "materials" } },
+    ]);
+    expect(result.materials.map((row) => row.values.description)).toEqual(["Steel"]);
+  });
+
   it("reports missing and unknown columns and skips that sheet's rows", () => {
     const result = prepareImport([
       { name: "Materials", rows: [["id", "TYPE", "Description", "Colour"], [null, "nope", "", ""]] },

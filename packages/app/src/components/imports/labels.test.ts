@@ -25,6 +25,9 @@ describe("importLabels", () => {
     expect(labels.errors.IMPORT_STALE).toBe(en.imports.errors.IMPORT_STALE);
     expect(labels.errors.FORBIDDEN).toBe(en.imports.errors.FORBIDDEN);
     expect(labels.errors.BOM_CYCLE).toBe(en.boms.errors.BOM_CYCLE);
+    // A race on any sheet is named neutrally, not as another screen's record.
+    expect(labels.errors.CONFLICT).toBe(en.imports.errors.CONFLICT);
+    expect(labels.errors.VERSION_CONFLICT).toBe(en.imports.errors.VERSION_CONFLICT);
     expect(labels.errors.TENANT_READ_ONLY).toBe(en.errors.TENANT_READ_ONLY);
     expect("heading" in labels).toBe(false);
   });

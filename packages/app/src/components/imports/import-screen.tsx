@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useId, useState, useTransition, type ChangeEvent } from "react";
+import { useId, useRef, useState, useTransition, type ChangeEvent } from "react";
 import type { ImportReport, ImportRowOutcome } from "@cpg/core";
 import { IMPORT_FILE_MAX_BYTES, WORKBOOK_TOO_LARGE_MESSAGE } from "@cpg/core/validators/imports/import-request.schema";
 import { ErrorMessage } from "@cpg/ui/backend/feedback/error-message";
@@ -49,6 +49,8 @@ export function ImportScreen({ tenant, labels }: ImportScreenProps) {
   const [showUnchanged, setShowUnchanged] = useState(false);
   const [running, setRunning] = useState<"dryRun" | "commit" | null>(null);
   const [, startTransition] = useTransition();
+  /** The file chosen last: a slower read of an earlier choice must not replace its bytes. */
+  const latest = useRef<File | null>(null);
 
   const blocked = tenant.readOnly;
   const busy = running !== null;
@@ -63,6 +65,7 @@ export function ImportScreen({ tenant, labels }: ImportScreenProps) {
 
   async function choose(event: ChangeEvent<HTMLInputElement>) {
     const chosen = event.target.files?.[0] ?? null;
+    latest.current = chosen;
     setFile(null);
     setWorkbook(null);
     setReport(null);
@@ -74,7 +77,8 @@ export function ImportScreen({ tenant, labels }: ImportScreenProps) {
       return;
     }
     setFile(chosen);
-    setWorkbook(await fileToBase64(chosen));
+    const read = await fileToBase64(chosen);
+    if (latest.current === chosen) setWorkbook(read);
   }
 
   function run(kind: "dryRun" | "commit") {

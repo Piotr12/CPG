@@ -1,4 +1,4 @@
-import type { PreparedBom } from "../../../domain/imports/prepare-import";
+import type { ImportIssue, PreparedBom } from "../../../domain/imports/prepare-import";
 import { recipeDiff, type DiffLine } from "../../../domain/imports/recipe-diff";
 import { columnHeader } from "../../../domain/imports/workbook-layout";
 import { BOM_OUTPUT_IMMUTABLE_MESSAGE } from "../../../validators/boms/bom-fields.schema";
@@ -51,35 +51,58 @@ async function importBom(context: ApplyContext, bom: PreparedBom) {
   const { bomService } = context.services;
   const { id, reference, output, active, ...header } = bom.values;
   const materials = new Map<string, MaterialSummary>();
-  const components = await componentsOf(context, bom, materials);
+  // The header's own checks and every line's are all reported together (XLS-009), not the first to fail.
+  const issues: ImportIssue[] = [];
+  const checked = async <T>(check: () => Promise<T>): Promise<T | null> => {
+    try {
+      return await check();
+    } catch (error) {
+      if (!(error instanceof RowIssueError)) throw error;
+      issues.push(issueOf(error, "BOM headers", bom.row));
+      return null;
+    }
+  };
+  const product =
+    id === null
+      ? await checked(() => referenced(context, () => loadMaterial(context, output!, materials), "MATERIAL_NOT_FOUND", "material", output!, "Output material ID"))
+      : null;
+  const before =
+    id === null
+      ? null
+      : await checked(async () => {
+          const found = await existing(context, () => bomService.get(id), "BOM_NOT_FOUND", "BOM", id, "BOM ID");
+          if (output !== null && output !== found.output) throw new RowIssueError("VALIDATION_FAILED", BOM_OUTPUT_IMMUTABLE_MESSAGE, "Output material ID");
+          return found;
+        });
+  const components = await componentsOf(context, bom, materials, issues);
+  if (issues.length > 0) throw new RowIssuesError(issues);
+
   if (id === null) {
-    const product = await referenced(context, () => loadMaterial(context, output!, materials), "MATERIAL_NOT_FOUND", "material", output!, "Output material ID");
-    noteVersion(context, "Material", output!, product.version);
+    noteVersion(context, "Material", output!, product!.version);
     const created = await bomService.create({ output: output!, ...header, components }, context.actor);
     const changes: ImportChange[] = [
       { field: "Output material ID", before: null, after: output },
       ...HEADER_FIELDS.slice(1, 4).map(([field, column]) => ({ field: column, before: null, after: created[field] })),
       ...(await lineChanges(context, materials, [], created.components)),
     ];
-    return { sheet: "BOM headers", row: bom.row, action: "create" as const, record: created.id, reference: reference!, label: label(created, product), changes };
+    return { sheet: "BOM headers", row: bom.row, action: "create" as const, record: created.id, reference: reference!, label: label(created, product!), changes };
   }
-  const before = await existing(context, () => bomService.get(id), "BOM_NOT_FOUND", "BOM", id, "BOM ID");
-  noteVersion(context, "Bom", id, before.version);
-  if (output !== null && output !== before.output) throw new RowIssueError("VALIDATION_FAILED", BOM_OUTPUT_IMMUTABLE_MESSAGE, "Output material ID");
-  const after = await bomService.update(id, active === null ? { ...header, components } : { ...header, components, active }, before.version, context.actor);
+  noteVersion(context, "Bom", id, before!.version);
+  const after = await bomService.update(id, active === null ? { ...header, components } : { ...header, components, active }, before!.version, context.actor);
   const changes = [
-    ...changesBetween(before, after, HEADER_FIELDS),
-    ...(await lineChanges(context, materials, before.components, after.components)),
+    ...changesBetween(before!, after, HEADER_FIELDS),
+    ...(await lineChanges(context, materials, before!.components, after.components)),
   ];
-  const action = after.version === before.version ? ("unchanged" as const) : ("update" as const);
-  const product = await loadMaterial(context, after.output, materials);
-  const result = { sheet: "BOM headers", row: bom.row, action, record: id, label: label(after, product), changes };
+  const action = after.version === before!.version ? ("unchanged" as const) : ("update" as const);
+  const result = { sheet: "BOM headers", row: bom.row, action, record: id, label: label(after, await loadMaterial(context, after.output, materials)), changes };
   return reference === null ? result : { ...result, reference };
 }
 
-/** The header's lines as the service takes them, each component loaded (a blank unit is its base unit). */
-async function componentsOf(context: ApplyContext, bom: PreparedBom, materials: Map<string, MaterialSummary>): Promise<ComponentLine[]> {
-  const issues = [];
+/**
+ * The header's lines as the service takes them, each component loaded (a blank unit is its base
+ * unit). A line naming a missing material adds its issue, on its own row, to `issues`.
+ */
+async function componentsOf(context: ApplyContext, bom: PreparedBom, materials: Map<string, MaterialSummary>, issues: ImportIssue[]): Promise<ComponentLine[]> {
   const components: ComponentLine[] = [];
   for (const { row, values } of bom.lines) {
     try {
@@ -92,7 +115,6 @@ async function componentsOf(context: ApplyContext, bom: PreparedBom, materials: 
       issues.push(issueOf(error, "BOM lines", row));
     }
   }
-  if (issues.length > 0) throw new RowIssuesError(issues);
   return components;
 }
 
