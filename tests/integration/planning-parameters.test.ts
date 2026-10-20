@@ -63,7 +63,7 @@ async function addTarget(admin: Browser, material: string, location: string, dat
   await openAdd(admin, "/admin/prod/safety-stock", "Add target");
   await admin.select("[role=dialog] select[name=material]", material);
   await admin.select("[role=dialog] select[name=location]", location);
-  await admin.fill("[role=dialog] input[name=effectiveFrom]", date);
+  expect(await admin.fillDate("[role=dialog] input[name=effectiveFrom]", date)).toBe(date);
   await admin.fill("[role=dialog] input[name=quantity]", quantity);
   await admin.click("[role=dialog] button[type=submit]");
 }

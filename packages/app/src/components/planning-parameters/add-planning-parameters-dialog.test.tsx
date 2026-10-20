@@ -20,7 +20,8 @@ describe("AddPlanningParametersDialog", () => {
     render(<AddPlanningParametersDialog context={{ tenant: "prod", generation: 1 }} labels={labels} materials={materials} locations={locations} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Add parameters" }));
-    expect(screen.getByRole("dialog", { name: "Add planning parameters" })).toBeTruthy();
+    // Six fields with hints are taller than a laptop window: the dialog scrolls instead of hiding its buttons.
+    expect(screen.getByRole("dialog", { name: "Add planning parameters" }).className).toContain("overflow-y-auto");
     fill("Material", "00000001");
     fill("Location", "00000001");
     fill("Make / Buy", "buy");

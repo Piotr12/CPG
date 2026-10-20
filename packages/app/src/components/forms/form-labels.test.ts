@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { errorFormatter, fill, shownQuantity } from "./form-labels";
+import { errorFormatter, fill, shownQuantity, TALL_DIALOG } from "./form-labels";
 
 describe("fill", () => {
   it("fills known placeholders and leaves unknown ones", () => {
@@ -24,5 +24,11 @@ describe("shownQuantity", () => {
     expect(shownQuantity("0.000001")).toBe("0.000001");
     expect(shownQuantity("0.000000")).toBe("0");
     expect(shownQuantity("120")).toBe("120");
+  });
+});
+
+describe("TALL_DIALOG", () => {
+  it("keeps a dialog within the window and scrolls its content", () => {
+    expect(TALL_DIALOG).toBe("max-h-[calc(100dvh-2rem)] overflow-y-auto");
   });
 });

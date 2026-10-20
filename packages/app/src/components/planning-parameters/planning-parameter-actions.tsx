@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@cpg/ui/components/dropdown-menu";
 import { changePlanningParameters, removePlanningParameters } from "../../app/admin/[tenant]/planning-parameters/actions";
-import { errorFormatter, fill, shownQuantity, type TenantContext } from "../forms/form-labels";
+import { errorFormatter, TALL_DIALOG, fill, shownQuantity, type TenantContext } from "../forms/form-labels";
 import { fieldErrorFormatter, type PlanningParametersLabels } from "./labels";
 import { valueFields } from "./planning-parameter-fields";
 import type { PlanningParameterRow } from "./planning-parameters-table";
@@ -53,7 +53,7 @@ export function PlanningParameterActions({ row, context, labels }: PlanningParam
       </DropdownMenu>
       {/* No triggers: the row menu opens them, so Radix only ever calls onOpenChange to close. */}
       <Dialog open={open === "change"} onOpenChange={close}>
-        <DialogContent>
+        <DialogContent className={TALL_DIALOG}>
           <DialogHeader>
             <DialogTitle>{fill(labels.change.title, pair)}</DialogTitle>
             <DialogDescription>{fill(labels.change.description, { baseUnit: row.baseUnit })}</DialogDescription>

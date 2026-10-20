@@ -29,3 +29,9 @@ export interface FormOption {
   value: string;
   label: string;
 }
+
+/**
+ * For a dialog whose form can be taller than the window (six fields with hints): it scrolls inside
+ * the window instead of hiding its title and buttons above and below it, where nobody can reach them.
+ */
+export const TALL_DIALOG = "max-h-[calc(100dvh-2rem)] overflow-y-auto";

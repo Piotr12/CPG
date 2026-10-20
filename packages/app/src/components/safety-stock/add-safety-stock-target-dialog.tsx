@@ -13,7 +13,7 @@ import {
   DialogTrigger,
 } from "@cpg/ui/components/dialog";
 import { addSafetyStockTarget } from "../../app/admin/[tenant]/safety-stock/actions";
-import { errorFormatter, type FormOption, type TenantContext } from "../forms/form-labels";
+import { errorFormatter, TALL_DIALOG, type FormOption, type TenantContext } from "../forms/form-labels";
 import { fieldErrorFormatter, type SafetyStockLabels } from "./labels";
 
 interface AddSafetyStockTargetDialogProps {
@@ -41,7 +41,7 @@ export function AddSafetyStockTargetDialog({ context, labels, materials, locatio
       <DialogTrigger asChild>
         <Button className="shrink-0">{labels.add.open}</Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className={TALL_DIALOG}>
         <DialogHeader>
           <DialogTitle>{labels.add.title}</DialogTitle>
           <DialogDescription>{labels.add.description}</DialogDescription>

@@ -13,7 +13,7 @@ import {
   DialogTrigger,
 } from "@cpg/ui/components/dialog";
 import { addPlanningParameters } from "../../app/admin/[tenant]/planning-parameters/actions";
-import { errorFormatter, type FormOption, type TenantContext } from "../forms/form-labels";
+import { errorFormatter, TALL_DIALOG, type FormOption, type TenantContext } from "../forms/form-labels";
 import { fieldErrorFormatter, type PlanningParametersLabels } from "./labels";
 import { addFields } from "./planning-parameter-fields";
 
@@ -36,7 +36,7 @@ export function AddPlanningParametersDialog({ context, labels, materials, locati
       <DialogTrigger asChild>
         <Button className="shrink-0">{t.open}</Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className={TALL_DIALOG}>
         <DialogHeader>
           <DialogTitle>{t.title}</DialogTitle>
           <DialogDescription>{t.description}</DialogDescription>
