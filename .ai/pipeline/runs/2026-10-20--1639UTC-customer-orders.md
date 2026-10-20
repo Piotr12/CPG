@@ -1,6 +1,6 @@
 # Customer orders — implementation of #83
 
-Source doc: .ai/specs/2026-10-20--1635UTC-customer-orders.md
+Source doc: .ai/specs/implemented/2026-10-20--1635UTC-customer-orders.md
 Design PR: #101
 Status: in-progress
 Engine: om-auto-create-pr (steps: 9, --loop: no)
@@ -47,9 +47,16 @@ Risk-high additive schema, new aggregate contract, conversion history and line i
 
 - 17:37 UTC — Query-plan re-review found detached batches still sorted material matches without a composite index. Added an entity-declared (tenant, material, removed, status, id) index via a NEW generated migration (published migration unchanged). Added SQLite EXPLAIN and down/up regression evidence; migration count becomes 15. The pagination browser fixture had an overlong customer name and was corrected before final rerun.
 
+- 17:47 UTC — Final code and UI verification complete. Spec moves on design-only #101; no spec added to implementation. Own test server/browser sessions stopped. Shared qa-evidence publication is the only remaining Step3.2 operation requiring the user Guard decision;11 inspected PNGs/report/checksummed publication manifest and script are prepared. Formal review/QA approval still belong to another reviewer.
+
 ## Verification
 - Phase 1: lint/typecheck passed; full coverage passed, 289 files / 1,927 tests, all four measures 100%.
-- Design metadata checks: 2 test files, 6 tests passed. Full implementation gate pending.
+- Final gate: lint and typecheck PASS;296 unit files/1,970 tests PASS,100% lines/statements/branches/functions (4,289 lines,4,866 statements,2,106 branches,1,667 functions); Next16.4.2 build PASS.
+- Final production standalone integration:27 files passed/1 skipped,221 tests passed/1 Docker-only startup skip,236.14s. Docker unavailable for this account.
+- Live QA:11 checkpoints PASS with inspected PNGs (desktop/mobile390px,form/error/keyboard/scroll,empty,read-only,anonymous,PL/dark/long names/pagination). Artifacts: .ai/qa/artifacts_customer-orders/report.md and report.json (ignored).
+- Independent final code review APPROVE at d68869b after fixing all findings;21 migration tests and46 independent focused tests passed. Root reviewed complete diff against engineering/compatibility/product contracts.
+- npm audit:10 known high braces advisories documented in standards; no dependencies changed.
+- Dev was attempted; instant-shell hydration failed on unchanged Materials too. Production build supplied live verification.
 
 ## Progress
 
@@ -65,5 +72,5 @@ Risk-high additive schema, new aggregate contract, conversion history and line i
 - [x] 2.2 Add translated list/detail/edit screens, aggregate form, help/navigation and unit tests. — 95753b0
 - [x] 2.3 Add API/browser integration journeys for both roles and integrity/refusal paths. — 95753b0
 ### Phase 3: Verification and publication
-- [ ] 3.1 Reach 100% unit coverage; run lint, typecheck, coverage, build, integration and live mobile/desktop QA.
+- [x] 3.1 Reach 100% unit coverage; run lint, typecheck, coverage, build, integration and live mobile/desktop QA. — 66e9b36
 - [ ] 3.2 Run authoritative review/autofix, publish evidence and summary, make PR ready with full labels.
