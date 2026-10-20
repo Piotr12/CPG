@@ -19,7 +19,7 @@ Shipments against one customer order, and goods issues that lower physical stock
 - One unit-test flake was found and fixed: two `shipments.shipment.completed` entries written in the same millisecond sort by their random ID (known lesson), so the test compares them in ID order.
 
 ## Changes
-- db: `Shipment`, `ShipmentLine`, `GoodsIssue`, `GoodsIssueLine` (issues immutable through triggers), migration `Migration20261020205106_shipments_goods_issues` (+ snapshot, index), migration and rollback tests.
+- db: `Shipment`, `ShipmentLine`, `GoodsIssue`, `GoodsIssueLine` (issues immutable through triggers), migration `Migration20261020214038_shipments_goods_issues` (+ snapshot, index), migration and rollback tests.
 - core: `domain/goods-issues/issue-quantity.ts`; `validators/shipments/`, `validators/goods-issues/`; the leaves `customer-orders/order-records.ts`, `shipments/shipment-records.ts` and `shipments/shipment-usage.ts`; `ShipmentService`; `GoodsIssueService`; the order-edit completion and the shipment lock in `CustomerOrderService`; DI registration and exports.
 - app: `/api/tenants/{tenant}/shipments` and `/goods-issues` (GET/POST, GET by ID); the `createShipment` and `postIssue` actions; the order page's Outstanding column, Shipments section and Create shipment dialog; the shipment page `/admin/[tenant]/shipments/[id]`; the shared line-quantities form; EN/PL strings; help topic; audit labels; the stock ledger's "Goods issue" label.
 - Docs: `BACKWARD_COMPATIBILITY.md` §4, engineering standards §5.
