@@ -40,6 +40,8 @@ A password reset or a deactivation writes one `tokens.api-token.revoked` Global 
 
 ## Progress
 
+PR: #62
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: audit the tokens a reset or deactivation ends
@@ -53,3 +55,8 @@ A password reset or a deactivation writes one `tokens.api-token.revoked` Global 
 
 - 05:36 UTC: the slot is free and the branch is `feat/audit-implicit-token-revocations`. 4 Steps, plain engine.
 - 05:45 UTC: Steps 1.1–1.4 landed. The new unit tests fail without the `UserService` change (2 failures with it reverted) and pass with it. Lint, typecheck, `test:coverage` (213 files, 1379 tests, 100% thresholds) and the build are green.
+- 05:50 UTC: the draft PR #62 is open, with labels. The full integration suite passed on 45e5c7f (20 files, 145 tests).
+- 06:00 UTC: the review (`om-auto-review-pr --autofix`, an independent reviewer) found no blockers or majors. I applied the fixes in 1d422fc: Polish copy, the test token name `tokens-auditor`, rewrapped doc comments, and `disableIdentityMap` on the token read. The `occurredAt` minor was a false alarm, because that describe fakes `Date`.
+- 06:10 UTC: with `disableIdentityMap`, one full integration run failed: the reset deleted the tokens but recorded no revoked entry. The isolated file and a second full run passed. I reverted to the plain transactional read in 809f2c3, and two more full runs passed (145/145 each). This is recorded as a lesson.
+- Final gate on 809f2c3: lint ✅, typecheck ✅, test:coverage ✅ (1379 tests, 100%, run on 1d422fc, which differs only by that option), build ✅, test:integration ✅ ×2.
+- Follow-up: once spec PR #61 merges, `git mv` the spec to `.ai/specs/implemented/`. It isn't on base yet.
