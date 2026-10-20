@@ -19,6 +19,9 @@ import { AppError, ConflictError, NotFoundError, ValidationError, versionConflic
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
 import { isScopeReadOnly } from "../tenants/tenant.service";
+import { findMaterial } from "./find-material";
+
+export { materialNotFound } from "./find-material";
 
 /** What the screens and the API show about a material. `id` is its eight-digit business ID (R01). */
 export interface MaterialSummary {
@@ -106,7 +109,7 @@ export class MaterialService {
 
   /** One material with its conversions, by unit; `MATERIAL_NOT_FOUND` when this tenant has no such ID. */
   async get(materialId: string): Promise<MaterialDetail> {
-    const material = await this.findMaterial(this.em, materialId);
+    const material = await findMaterial(this.em, materialId);
     const conversions = await this.em.find(MaterialConversion, { material }, { orderBy: { unit: "asc" } });
     return { ...toSummary(material), conversions: conversions.map(toConversionView) };
   }
@@ -135,7 +138,7 @@ export class MaterialService {
    */
   async update(materialId: string, changes: MaterialChanges, version: number, actor: AuditActor): Promise<MaterialSummary> {
     return this.versioned(async (em) => {
-      const material = await this.findMaterial(em, materialId, { refresh: true });
+      const material = await findMaterial(em, materialId, { refresh: true });
       if (material.version !== version) throw versionConflict();
       const { active, ...fields } = changedFields(material, changes);
       if (fields.baseUnit !== undefined && (await em.count(MaterialConversion, { material })) > 0) {
@@ -167,7 +170,7 @@ export class MaterialService {
   ): Promise<ConversionView> {
     try {
       return await this.em.transactional(async (em) => {
-        const material = await this.findMaterial(em, materialId);
+        const material = await findMaterial(em, materialId);
         if (unit === material.baseUnit) {
           throw new AppError("UNIT_IS_BASE_UNIT", `${unit} is this material's base unit: it needs no conversion.`);
         }
@@ -223,7 +226,7 @@ export class MaterialService {
     if (entered === null) {
       throw new ValidationError({ quantity: ["Enter a number of at least 0, with at most 6 decimals."] });
     }
-    const material = await this.findMaterial(this.em, materialId);
+    const material = await findMaterial(this.em, materialId);
     const factor =
       unit === material.baseUnit
         ? { numerator: "1", denominator: "1" }
@@ -288,14 +291,8 @@ export class MaterialService {
     }
   }
 
-  private async findMaterial(em: EntityManager, materialId: string, options: { refresh?: boolean } = {}): Promise<Material> {
-    const material = await em.findOne(Material, { code: materialId }, options);
-    if (!material) throw materialNotFound(materialId);
-    return material;
-  }
-
   private async findConversion(em: EntityManager, materialId: string, unit: string, version: number) {
-    const material = await this.findMaterial(em, materialId);
+    const material = await findMaterial(em, materialId);
     const conversion = await em.findOne(MaterialConversion, { material, unit }, { refresh: true });
     if (!conversion) {
       throw new NotFoundError("CONVERSION_NOT_FOUND", `Material ${materialId} has no conversion for ${unit}.`);
@@ -303,11 +300,6 @@ export class MaterialService {
     if (conversion.version !== version) throw versionConflict();
     return conversion;
   }
-}
-
-/** A material this tenant doesn't have: an unknown ID, or another tenant's (TEN-014). */
-export function materialNotFound(materialId: string): NotFoundError {
-  return new NotFoundError("MATERIAL_NOT_FOUND", `There is no material ${materialId} in this tenant.`);
 }
 
 const conversionExists = (unit: string) =>
