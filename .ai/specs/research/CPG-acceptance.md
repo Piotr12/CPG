@@ -13,7 +13,7 @@ The original export marked every scenario `Not executed`. Scenarios are updated 
 - **Partially verified**: only part of the scenario can be or is asserted today; the **Evidence** line says which part is missing and why.
 - **Not executed**: not yet built or not yet checked.
 
-Last updated 2026-10-20 for epic E03 (#11), against `main` at `3f553a5` (PR #65 for E03-S03), plus the tests added with that update. Earlier: epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
+Last updated 2026-10-20 for epic E03 (#11), against `main` at `3f553a5` (PR #65 for E03-S03), plus the tests added with that update, and since then for the E02 end-to-end follow-up (#67). Earlier: epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
 
 This document contains the complete acceptance catalogue for the CPG MVP. Each test preserves its ID, title, priority, execution channel, and Given / When / Then criteria.
 
@@ -103,7 +103,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/tenants.test.ts` (Test to Prod and back, no other step), `tests/integration/navigation.test.ts` (the switch on the same screen and back, and a normal user switching from the mobile top bar), `tests/integration/users.test.ts` (a normal user opens both tenants), `packages/app/src/app/admin/[tenant]/page.test.tsx` (`requireUser`, not `requireAdmin`). E02-S01, #19.
+- **Evidence:** `tests/integration/tenants.test.ts` (Test to Prod and back, no other step), `tests/integration/navigation.test.ts` (the switch on the same screen and back, and a normal user switching Prod to Test and back in the sidebar at 1280 px and from the mobile top bar), `tests/integration/users.test.ts` (a normal user opens both tenants), `packages/app/src/app/admin/[tenant]/page.test.tsx` (`requireUser`, not `requireAdmin`). E02-S01, #19.
 - **Given:** Normal user signed in
 - **When:** Switch from Test to Prod and back
 - **Then:** Each tenant can be selected; no extra role assignment is required.
@@ -121,7 +121,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/materials/material.service.test.ts` and `packages/core/src/services/named-records/named-records.test.ts` (the same ID in both tenants, each read and changed in its own), `tests/integration/navigation.test.ts` (a record's page switches to the other tenant's list, never to a record of the same ID). E02-S01, #19, with #22 and #23.
+- **Evidence:** `tests/integration/tenant-isolation-api.test.ts` (00000001 in both tenants with different descriptions, each read as its own record through the API and on its material page; a material and a location created in Test are absent from Prod), `tests/integration/materials.test.ts` (a material created in Test is absent from Prod on the screens, and one created in Prod from Test), `packages/core/src/services/materials/material.service.test.ts` and `packages/core/src/services/named-records/named-records.test.ts` (the same ID in both tenants, each read and changed in its own), `tests/integration/navigation.test.ts` (a record's page switches to the other tenant's list, never to a record of the same ID). E02-S01, #19, with #22 and #23.
 - **Given:** Material 00000001 exists in both tenants with different descriptions
 - **When:** Read material in each tenant
 - **Then:** Correct tenant-local record is returned in each; no cross-tenant matching or update.
@@ -156,7 +156,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/read-only-api.test.ts` (the admin token's update of a Test material while Test is read-only is 409 `TENANT_READ_ONLY`, and the stored description and version remain), `tests/integration/read-only.test.ts` (on the screens, the admin's Create material from a page loaded before the flag is refused with the explanation, and nothing is stored), `packages/core/src/http/tenant-server-action.test.ts`. E02-S04, #25.
+- **Evidence:** `tests/integration/read-only-api.test.ts` (the admin token's update of a Test material while Test is read-only is 409 `TENANT_READ_ONLY`, and the stored description and version remain; in read-only Prod, a location rename and deactivation, a material deactivation and a conversion change are refused too, and the stored values remain), `tests/integration/read-only.test.ts` (on the screens, the admin's Create material from a page loaded before the flag is refused with the explanation, and nothing is stored), `packages/core/src/http/tenant-server-action.test.ts`. E02-S04, #25.
 - **Given:** Test set read-only
 - **When:** Admin attempts master-data update
 - **Then:** Update is blocked despite admin role; previously stored values remain.
@@ -165,7 +165,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** API · **Status:** Partially verified
 
-- **Evidence:** `tests/integration/read-only-api.test.ts` (an admin token's material create and edit in read-only Prod, and a master-data write of every kind, answer 409 `TENANT_READ_ONLY` with nothing changed), `packages/core/src/services/idempotency/idempotency.service.test.ts` (no key is stored). The gate covers every tenant write route (`tests/api-writes.test.ts`), but the scenario's goods issue comes in slice 2, so its half waits, as for TEN-015. E02-S04, #25.
+- **Evidence:** `tests/integration/read-only-api.test.ts` (an admin token's material create, edit and deactivation in read-only Prod, a location create, rename and deactivation, a customer and a supplier create, and a conversion add, change and remove all answer 409 `TENANT_READ_ONLY` with nothing changed), `packages/core/src/services/idempotency/idempotency.service.test.ts` (no key is stored). The gate covers every tenant write route (`tests/api-writes.test.ts`), but the scenario's goods issue comes in slice 2, so its half waits, as for TEN-015. E02-S04, #25.
 - **Given:** Prod read-only
 - **When:** API attempts goods issue with otherwise valid token and idempotency key
 - **Then:** Request is rejected; no inventory movement or order change is created.
@@ -3372,7 +3372,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/tenants.test.ts` (one tenant read by its path; an unknown tenant is 404), `tests/integration/materials-api.test.ts` and `named-records-api.test.ts` (one token writes Prod and Test separately, each through `/api/tenants/{tenant}/…`), `tests/tenant-entry-points.test.ts` (every tenant route sits under `api/tenants/[tenant]/`), `packages/app/src/app/api/tenants/[tenant]/route.test.ts`. E02-S01, #19.
+- **Evidence:** `tests/integration/tenant-isolation-api.test.ts` (a tenant-less path such as `/api/materials` or `/api/locations` is 404 for a read and a write; a material and a location created in Test through the API are absent from Prod), `tests/integration/tenants.test.ts` (one tenant read by its path; an unknown tenant is 404), `tests/integration/materials-api.test.ts` and `named-records-api.test.ts` (one token writes Prod and Test separately, each through `/api/tenants/{tenant}/…`), `tests/tenant-entry-points.test.ts` (every tenant route sits under `api/tenants/[tenant]/`), `packages/app/src/app/api/tenants/[tenant]/route.test.ts`. E02-S01, #19.
 - **Given:** One account accesses Test and Prod
 - **When:** Use authorized API call selecting Test then Prod
 - **Then:** Each request affects only specified tenant; no implicit cross-tenant data read/write.
@@ -3467,7 +3467,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/idempotency/idempotency.service.test.ts` ("keeps keys separate per tenant": each tenant has its own key store). Unit level; no integration test sends one key to both tenants yet. E02-S03, #21.
+- **Evidence:** `tests/integration/tenant-isolation-api.test.ts` (one key sent to Test, then to Prod with another body, runs as two writes, neither replayed, each record only in its own tenant), `packages/core/src/services/idempotency/idempotency.service.test.ts` ("keeps keys separate per tenant": each tenant has its own key store). E02-S03, #21.
 - **Given:** User used key K in Test
 - **When:** Use K for different valid Prod mutation
 - **Then:** Prod key scope independent; data correct in each tenant.
@@ -3554,7 +3554,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `tests/integration/tenants.test.ts` (tenant metadata gives the generation), `tests/integration/materials-api.test.ts` and `named-records-api.test.ts` (a Test write without it is 428, with the current one it succeeds), `packages/core/src/domain/tenants/generation.test.ts` and `packages/app/src/auth/api-write.test.ts` (a stale one is 409). The stale case after a real reset waits for slice 2 (D06). E02-S03, #21.
+- **Evidence:** `tests/integration/tenants.test.ts` (tenant metadata gives the generation), `tests/integration/materials-api.test.ts` and `named-records-api.test.ts` (a Test write without it is 428, with the current one it succeeds), `tests/integration/tenant-isolation-api.test.ts` (any other well-formed generation is 409 `GENERATION_STALE`, in Test and in Prod, and nothing is created), `packages/core/src/domain/tenants/generation.test.ts` and `packages/app/src/auth/api-write.test.ts`. The stale case after a real reset waits for slice 2 (D06). E02-S03, #21.
 - **Given:** User bearer token can read Test and Prod tenant metadata; Test dataset generation is G1
 - **When:** Make Test mutation without precondition, with G1, and after reset with old G1
 - **Then:** Missing generation rejected (HTTP 428), current G1 mutation may succeed subject to ordinary rules, stale G1 after reset G2 rejected (HTTP 409). Current generation is available from tenant metadata.
@@ -3565,7 +3565,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `tests/integration/audit.test.ts` (user creation with account, session and channel), `tests/integration/materials.test.ts` and `named-records.test.ts` (creates in the tenant audit), `tests/integration/planning-parameters.test.ts`, the user, material, named-record, planning-parameter and safety-stock service tests. Customer orders come in slice 2. E02-S02, #20.
+- **Evidence:** `tests/integration/audit.test.ts` (user creation with account, session and channel), `tests/integration/materials.test.ts` and `named-records.test.ts` (creates in the tenant audit, with account, session and channel), `tests/integration/planning-parameters.test.ts`, the user, material, named-record, planning-parameter and safety-stock service tests. Customer orders come in slice 2. E02-S02, #20.
 - **Given:** Normal user creates customer order
 - **When:** Read tenant audit
 - **Then:** Create event with actor, tenant, session, channel, new values exists.
@@ -3616,7 +3616,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/api-tokens.test.ts` (a revoke through the API shows channel API and the token's name, never the secret), `packages/core/src/services/audit/audit-recorder.test.ts`, the tenant routes' unit tests (`apiActor`). E02-S02, #20.
+- **Evidence:** `tests/integration/tenant-isolation-api.test.ts` (a material and a location changed with a token show channel API and the token's name in the Prod audit, through the API and on the screen, never the secret), `tests/integration/api-tokens.test.ts` (a revoke through the API shows channel API and the token's name, never the secret), `packages/core/src/services/audit/audit-recorder.test.ts`, the tenant routes' unit tests (`apiActor`). E02-S02, #20.
 - **Given:** Agent changes record using token 'robot-a'
 - **When:** Read audit
 - **Then:** Channel API and token name/ID shown, not token secret.
@@ -3634,7 +3634,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/audit.test.ts` (a normal user reads the Global audit with no controls, and opens the tenant audit), `tests/integration/read-only-api.test.ts` (a normal user's token reads Prod's audit), the audit page and route unit tests. E02-S02, #20.
+- **Evidence:** `tests/integration/audit.test.ts` (a normal user reads the Global audit and the Test audit's entries, with no controls on either), `tests/integration/read-only-api.test.ts` (a normal user's token reads Prod's audit), the audit page and route unit tests. E02-S02, #20.
 - **Given:** Normal account in selected tenant
 - **When:** Open tenant audit via UI and API
 - **Then:** Read-only access permitted, no edit/delete controls exposed.
@@ -3694,7 +3694,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/read-only-api.test.ts` (both changes, with before and after, through `GET /api/audit`), `tests/integration/read-only.test.ts` (the Global audit screen), `packages/core/src/services/tenants/tenant.service.test.ts`. E02-S04, #25.
+- **Evidence:** `tests/integration/read-only-api.test.ts` (Test and Prod made read-only, then Prod writable again, each with before and after, through `GET /api/audit`), `tests/integration/read-only.test.ts` (Prod made read-only and writable again, on the Global audit screen), `packages/core/src/services/tenants/tenant.service.test.ts`. E02-S04, #25.
 - **Given:** Admin sets Prod read-only true then false
 - **When:** Read Global audit
 - **Then:** Both changes logged with before/after read-only flag values.
@@ -3759,7 +3759,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** UI · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/api-idempotency.test.ts` (a stale edit in the UI shows the conflict and keeps the other change; users), `packages/app/src/components/materials/material-controls.test.tsx` and `named-record-actions.test.tsx` (materials and master data), the services' tests. E02-S03, #21.
+- **Evidence:** `tests/integration/materials.test.ts` (two sessions edit one material: the second sees the conflict, and the first one's change stays), `tests/integration/named-records.test.ts` (the same for a location), `tests/integration/api-idempotency.test.ts` (users), `packages/app/src/components/materials/material-controls.test.tsx` and `named-record-actions.test.tsx`, the services' tests. E02-S03, #21.
 - **Given:** Two sessions load same material version
 - **When:** A saves edit then B saves stale edit
 - **Then:** B conflict message; A modification preserved.

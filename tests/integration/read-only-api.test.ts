@@ -33,6 +33,7 @@ describe("read-only tenants through the API (R05)", () => {
   let adminSecret: string;
   let unaSecret: string;
   let plate: { id: string; version: number };
+  let yard: { id: string; name: string; active: boolean; version: number };
   const tenants = async () => json(await api("GET", "/api/tenants", adminSecret)).data as TenantRow[];
   const setReadOnly = (tenant: string, readOnly: boolean, secret = adminSecret) =>
     write("PATCH", `/api/tenants/${tenant}`, secret, { readOnly });
@@ -43,9 +44,17 @@ describe("read-only tenants through the API (R05)", () => {
     await openTokens(admin, baseUrl);
     adminSecret = await createToken(admin, ADMIN_TOKEN);
     expect((await write("POST", "/api/users", adminSecret, { username: UNA, password: UNA_PASSWORD })).status).toBe(200);
-    plate = json(
+    const created = json(
       await write("POST", "/api/tenants/prod/materials", adminSecret, { type: "raw", description: "roapi plate", baseUnit: "kg" }),
-    ).data;
+    ).data as { id: string };
+    const box = await write("POST", `/api/tenants/prod/materials/${created.id}/conversions`, adminSecret, {
+      unit: "box",
+      numerator: "1",
+      denominator: "10",
+    });
+    expect(box.status).toBe(200);
+    plate = json(await api("GET", `/api/tenants/prod/materials/${created.id}`, adminSecret)).data;
+    yard = json(await write("POST", "/api/tenants/prod/locations", adminSecret, { name: "roapi yard" })).data;
   });
   afterAll(async () => {
     try {
@@ -102,13 +111,40 @@ describe("read-only tenants through the API (R05)", () => {
     });
   });
 
-  it("refuses a master-data write of every kind, a location included", async () => {
-    const created = await write("POST", "/api/tenants/prod/locations", adminSecret, { name: "roapi refused depot" });
+  it("refuses a master-data write of every kind, changing nothing (TEN-016, TEN-017)", async () => {
+    const material = `/api/tenants/prod/materials/${plate.id}`;
+    const conversions = `${material}/conversions`;
+    const before = json(await api("GET", material, adminSecret)).data;
 
-    expect(created.status).toBe(409);
-    expect(json(created).error.code).toBe("TENANT_READ_ONLY");
-    const locations = json(await api("GET", "/api/tenants/prod/locations", adminSecret)).data as { name: string }[];
-    expect(locations.map(({ name }) => name)).not.toContain("roapi refused depot");
+    const refused = {
+      "location create": await write("POST", "/api/tenants/prod/locations", adminSecret, { name: "roapi refused depot" }),
+      "location update": await write("PATCH", `/api/tenants/prod/locations/${yard.id}`, adminSecret, {
+        version: yard.version,
+        name: "roapi yard renamed",
+      }),
+      "location deactivation": await write("PATCH", `/api/tenants/prod/locations/${yard.id}`, adminSecret, {
+        version: yard.version,
+        active: false,
+      }),
+      "material deactivation": await write("PATCH", material, adminSecret, { version: plate.version, active: false }),
+      "customer create": await write("POST", "/api/tenants/prod/customers", adminSecret, { name: "roapi refused customer" }),
+      "supplier create": await write("POST", "/api/tenants/prod/suppliers", adminSecret, { name: "roapi refused supplier" }),
+      "conversion add": await write("POST", conversions, adminSecret, { unit: "pallet", numerator: "1", denominator: "400" }),
+      "conversion change": await write("PATCH", `${conversions}/box`, adminSecret, { numerator: "1", denominator: "12", version: 1 }),
+      "conversion remove": await write("DELETE", `${conversions}/box`, adminSecret, { version: 1 }),
+    };
+
+    for (const [attempt, response] of Object.entries(refused)) {
+      expect({ attempt, status: response.status, code: json(response).error?.code }).toEqual({ attempt, status: 409, code: "TENANT_READ_ONLY" });
+    }
+    const named = async (kind: string) =>
+      (json(await api("GET", `/api/tenants/prod/${kind}`, adminSecret)).data as { name: string }[]).map(({ name }) => name);
+    expect(await named("locations")).not.toContain("roapi refused depot");
+    expect(await named("customers")).not.toContain("roapi refused customer");
+    expect(await named("suppliers")).not.toContain("roapi refused supplier");
+    expect(json(await api("GET", `/api/tenants/prod/locations/${yard.id}`, adminSecret)).data).toEqual(yard);
+    expect(json(await api("GET", material, adminSecret)).data).toEqual(before);
+    expect(before).toMatchObject({ active: true, version: plate.version, conversions: [expect.objectContaining({ unit: "box", denominator: "10" })] });
   });
 
   it("still reads Prod's data and audit, for every account (TEN-018)", async () => {
@@ -194,5 +230,14 @@ describe("read-only tenants through the API (R05)", () => {
 
     expect(edited.status).toBe(200);
     expect(json(edited).data).toMatchObject({ description: "roapi plate edited" });
+  });
+
+  it("records making Prod writable again in the Global audit, before and after (AUD-016)", async () => {
+    const { entries } = json(await api("GET", "/api/audit?limit=50", adminSecret)).data as {
+      entries: { action: string; subject: { id: string }; before: unknown; after: unknown; token: { name: string } | null }[];
+    };
+    const [latest] = entries.filter(({ action, subject }) => action === "tenants.tenant.read-only-changed" && subject.id === "prod");
+
+    expect(latest).toMatchObject({ before: { readOnly: true }, after: { readOnly: false }, token: { name: ADMIN_TOKEN } });
   });
 });

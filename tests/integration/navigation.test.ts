@@ -178,6 +178,25 @@ describe("sidebar navigation", () => {
     await admin.waitUntil(`location.pathname === "/admin/prod/materials"`);
   });
 
+  it("lets a normal user switch from Prod to Test and back in the sidebar at 1280 px, with no other step (TEN-010)", async () => {
+    await openPage(ursula, "/admin/prod/materials");
+    const switchLink = (href: string) => `[data-slot=sidebar] [data-tenant-switch] a[href='${href}']`;
+    const current = () =>
+      ursula.evaluate<string>(`document.querySelector("[data-slot=sidebar] [data-tenant-switch] [aria-current=page]").textContent`);
+    await ursula.waitUntil(`${shownHeader}?.dataset.tenant === "prod"`);
+    expect(await current()).toBe("Prod");
+
+    await clickHydrated(ursula, switchLink("/admin/test/materials"));
+    await ursula.waitUntil(`location.pathname === "/admin/test/materials" && ${shownHeader}?.dataset.tenant === "test"`);
+    expect(await current()).toBe("Test");
+    expect(await currentEntry(ursula)).toEqual(["Materials"]);
+    await ursula.waitUntil(`[...document.querySelectorAll("main tbody tr")].some((row) => !row.closest("[hidden]") && row.innerText.startsWith("00000001"))`);
+
+    await clickHydrated(ursula, switchLink("/admin/prod/materials"));
+    await ursula.waitUntil(`location.pathname === "/admin/prod/materials" && ${shownHeader}?.dataset.tenant === "prod"`);
+    expect(await current()).toBe("Prod");
+  });
+
   it("names the scope in the header row: TEST or PROD on tenant pages, GLOBAL and shared elsewhere (TEN-011)", async () => {
     await openPage(admin, "/admin/prod/customers");
     await admin.waitUntil(`${shownHeader}?.textContent.includes("Customers")`);

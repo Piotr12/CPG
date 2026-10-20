@@ -150,4 +150,14 @@ describe("read-only tenants on the screens (R05)", () => {
     expect(await admin.evaluate<boolean>(`Boolean(${shownBanner})`)).toBe(false);
     expect(await admin.evaluate<boolean>(anyLock)).toBe(false);
   });
+
+  it("keeps making Prod writable again in the Global audit (AUD-016)", async () => {
+    await admin.open(`${baseUrl}/admin/audit`);
+    await admin.waitUntil(`[...document.querySelectorAll("main tbody tr")].some((row) => !row.closest("[hidden]"))`);
+
+    const newest = await admin.evaluate<string>(`document.querySelector("main tbody tr").innerText.replace(/\\s+/g, " ")`);
+    expect(newest).toContain("Read-only flag changed");
+    expect(newest).toContain("Prod");
+    expect(newest).toContain("read-only: yes → no");
+  });
 });
