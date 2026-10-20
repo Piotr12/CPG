@@ -88,6 +88,8 @@ export interface SheetSpec<K extends string = SheetKey> {
  * import share the engine that reads a workbook against its layout.
  */
 export interface ImportLayout<K extends string = string> {
+  /** The template's title, first on its instruction sheets. */
+  title: Bilingual;
   sheets: readonly SheetSpec<K>[];
   rules: readonly Bilingual[];
 }
@@ -436,7 +438,11 @@ export const IMPORT_RULES: readonly Bilingual[] = [
 ];
 
 /** The master-data and BOM workbook. */
-export const MASTER_DATA_LAYOUT: ImportLayout<SheetKey> = { sheets: IMPORT_SHEETS, rules: IMPORT_RULES };
+export const MASTER_DATA_LAYOUT: ImportLayout<SheetKey> = {
+  title: { en: "CPG import template", pl: "Szablon importu CPG" },
+  sheets: IMPORT_SHEETS,
+  rules: IMPORT_RULES,
+};
 
 /** A data sheet of `layout` by its tab name (case-insensitive, trimmed), or undefined. */
 export function layoutSheetNamed<K extends string>(layout: ImportLayout<K>, name: string): SheetSpec<K> | undefined {

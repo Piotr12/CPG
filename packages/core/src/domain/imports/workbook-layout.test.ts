@@ -78,9 +78,9 @@ describe("the import workbook layout", () => {
   });
 
   it("is the master-data layout, and finds a sheet of any layout by its tab name", () => {
-    expect(MASTER_DATA_LAYOUT).toEqual({ sheets: IMPORT_SHEETS, rules: IMPORT_RULES });
+    expect(MASTER_DATA_LAYOUT).toEqual({ title: { en: "CPG import template", pl: "Szablon importu CPG" }, sheets: IMPORT_SHEETS, rules: IMPORT_RULES });
     expect(layoutSheetNamed(MASTER_DATA_LAYOUT, " materials")?.key).toBe("materials");
-    const other = { sheets: [{ ...sheetSpec("materials"), key: "other", name: "Other" }], rules: [] };
+    const other = { title: { en: "", pl: "" }, sheets: [{ ...sheetSpec("materials"), key: "other", name: "Other" }], rules: [] };
     expect(layoutSheetNamed(other, "OTHER")?.key).toBe("other");
     expect(layoutSheetNamed(other, "Materials")).toBeUndefined();
   });

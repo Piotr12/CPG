@@ -88,4 +88,8 @@ export const STOCK_IMPORT_RULES: readonly Bilingual[] = [
 ];
 
 /** The stock workbook (stock-import spec Q1). */
-export const STOCK_LAYOUT: ImportLayout<StockSheetKey> = { sheets: [STOCK_SHEET], rules: STOCK_IMPORT_RULES };
+export const STOCK_LAYOUT: ImportLayout<StockSheetKey> = {
+  title: { en: "CPG stock import template", pl: "Szablon importu stanów CPG" },
+  sheets: [STOCK_SHEET],
+  rules: STOCK_IMPORT_RULES,
+};

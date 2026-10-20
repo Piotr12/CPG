@@ -34,5 +34,6 @@ describe("the stock workbook layout", () => {
     expect(english).toMatch(/2000 rows and 512 KB/);
     for (const rule of STOCK_IMPORT_RULES) expect(rule.pl).not.toBe("");
     expect(STOCK_LAYOUT.rules).toBe(STOCK_IMPORT_RULES);
+    expect(STOCK_LAYOUT.title).toEqual({ en: "CPG stock import template", pl: "Szablon importu stanów CPG" });
   });
 });
