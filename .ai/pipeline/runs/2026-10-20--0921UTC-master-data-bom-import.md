@@ -54,6 +54,15 @@ The admin downloads one documented `.xlsx` template (a sheet per master plus BOM
 - `npm run test:integration` (Docker, production image, fresh database): 27 files, 209 tests passed, including `import-api.test.ts` (8) and `import.test.ts` (6).
 - The 2,000-row dry run through the API, in Docker: 844 ms, HTTP and parsing included (it was 17.9 s before the identity map was cleared between rows).
 - `npm audit`: the 10 known `braces` advisories only; `read-excel-file`, `write-excel-file` and `fflate` add none.
+- Fresh-context code review: approve, no blocker or major. Its four minors and two nits were fixed in 8455412:
+  - a BOM row's header and line errors are reported together;
+  - a duplicate sheet name is now `IMPORT_DUPLICATE_SHEET`;
+  - the inflate guard stops at the limit;
+  - the screen keeps the latest file;
+  - neutral conflict texts.
+
+  After the fixes: lint, typecheck and build are clean, coverage is 100%, and the integration files `import-api`, `import` and `navigation` pass (30 tests).
+- UI verification (`om-auto-qa-pr`, production image, Test demo data): PASS, 8 of 8 steps, screenshots on the PR. Covered: the sidebar entry and the Materials link, the template, a dry run with errors, a clean preview, the commit, the revised BOM, 390 px, and read-only.
 - The integration suite caught one bug the unit tests couldn't: plural count strings as functions can't cross into the client component (lesson recorded, regression test added).
 
 ## Implementation Plan
