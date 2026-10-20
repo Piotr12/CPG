@@ -1,6 +1,6 @@
 # The admin imports master data and BOMs from a workbook, with a full dry run before an atomic commit
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-20 09:08 UTC
 **Issue:** #27 (E05-S01), epic #13 · **Builds on:** `implemented/2026-10-19--1858UTC-materials.md` (#22), `implemented/2026-10-19--2014UTC-locations-customers-suppliers.md` (#23), `implemented/2026-10-20--0532UTC-planning-parameters-safety-stock.md` (#24), `implemented/2026-10-20--0757UTC-boms.md` (#26: `BomService.create`/`update`, the full-recipe save, the no-op rule), `implemented/2026-10-19--2018UTC-read-only-tenants.md` (#25), `implemented/2026-10-19--1548UTC-api-idempotency.md` (#21), `implemented/2026-10-19--1050UTC-audit-log.md` (#20), `implemented/2026-10-19--2048UTC-sidebar-navigation.md` (#58) · **Design authority:** `.ai/specs/product-brief.md` (R01, R04, R05, R07, R08, D04, D05), `.ai/specs/research/CPG-prd001.pdf` §05 ("Business identifiers", "Master-data XLS workflow", "BOM workbook") and §06 ("Complete UI/API parity", "Idempotency", "Optimistic edits and freshness", "Atomic business operations"), `CPG-prd-datamodel.pdf` ("Import dry run"), `CPG-prd-decisions.pdf` §04 ("Master XLS", "BOM XLS", "Import no-change", "Import errors and freshness"), `CPG-acceptance.md` (XLS-001…028, API-015, API-028), [mockup 01, the sidebar tree](../assets/menu-revamp/01-sidebar-tree/index.html) (its admin-only **Import** screen under Master data, owner-chosen in #58)
 
@@ -180,9 +180,9 @@ Prototype: `.ai/specs/assets/master-data-bom-import/`, static mockups following 
 - `mockup-02-dry-run-preview.png`: step 2 with a clean preview (a new material with its ID, a description change, a new BOM by import reference, a revised BOM with a removed component).
 - `mockup-03-committed.png`: step 3 after a commit.
 
-![Dry run with errors](assets/master-data-bom-import/mockup-01-dry-run-errors.png)
-![Dry run preview](assets/master-data-bom-import/mockup-02-dry-run-preview.png)
-![Committed](assets/master-data-bom-import/mockup-03-committed.png)
+![Dry run with errors](../assets/master-data-bom-import/mockup-01-dry-run-errors.png)
+![Dry run preview](../assets/master-data-bom-import/mockup-02-dry-run-preview.png)
+![Committed](../assets/master-data-bom-import/mockup-03-committed.png)
 
 ## 📝 Edge Cases & Failure Scenarios
 
@@ -365,3 +365,13 @@ One PR, built in this order (Q1). The phases are review checkpoints, not separat
     - a normal user doesn't see the entry and is sent away from the URL.
 
     Then the full gate: lint, typecheck, `test:coverage` (100%), build, `test:integration`, and `npm audit` (three new dependencies, triaged).
+
+## Implementation notes
+
+Implemented on #99; the execution plan is `.ai/pipeline/runs/2026-10-20--0921UTC-master-data-bom-import.md`, which records each deviation in full. In short:
+- The identity map is cleared after every row, not only after a refused one. A 2,000-row dry run took 17.9 s before this and 844 ms after, in Docker.
+- An import reference needs at least one letter: a digits-only value in a BOM line's BOM column is always a BOM ID.
+- Issues carry language-neutral params (`record`, `rows`, `bom`), and a second tab named like a template sheet is `IMPORT_DUPLICATE_SHEET`.
+- A BOM header's own error and its lines' missing materials are reported together.
+- The template doesn't format its empty ID columns as text (numeric IDs are zero-padded instead), and the sidebar entry has no read-only lock icon (the page shows the lock).
+

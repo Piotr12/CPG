@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-20 09:21 UTC
 **Agent:** Claude Code / claude-opus-5-5. Chain: cezar → `om-auto-fix-issue 27` → feature route → `om-auto-write-spec 27` (spec PR #97) → `om-auto-implement-spec` → `om-auto-create-pr`
-Source doc: .ai/specs/2026-10-20--0908UTC-master-data-bom-import.md (spec PR #97)
+Source doc: .ai/specs/implemented/2026-10-20--0908UTC-master-data-bom-import.md (spec PR #97, merged; moved to `implemented/` on #99)
 Issue: #27
 
 ## Goal
