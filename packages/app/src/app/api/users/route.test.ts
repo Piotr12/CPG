@@ -19,7 +19,7 @@ vi.mock("@cpg/core", async (importOriginal) => ({
 vi.mock("../../../auth/require-api-user", () => ({ requireApiUser: mocks.requireApiUser }));
 // apiWrite has its own tests; here it hands the handler the parsed body, a caller and the services.
 vi.mock("../../../auth/api-write", async () => {
-  const { apiHandler } = await vi.importActual<typeof import("@cpg/core")>("@cpg/core");
+  const { apiHandler } = await vi.importActual<typeof import("../../../routing/api-handler")>("../../../routing/api-handler");
   return {
     apiWrite: (handler: (write: WriteContext<unknown>) => Promise<unknown>, options?: unknown) => {
       mocks.options.push(options);

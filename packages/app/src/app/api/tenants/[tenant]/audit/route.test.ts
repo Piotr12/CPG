@@ -4,7 +4,7 @@ import { GET } from "./route";
 const mocks = vi.hoisted(() => ({ tenantScope: vi.fn(), listTenant: vi.fn(), requireApiUser: vi.fn() }));
 vi.mock("@cpg/core", async (importOriginal) => {
   const core = await importOriginal<typeof import("@cpg/core")>();
-  return { apiHandler: core.apiHandler, parseInput: core.parseInput, tenantScope: mocks.tenantScope };
+  return { createApiHandler: core.createApiHandler, parseInput: core.parseInput, tenantScope: mocks.tenantScope };
 });
 vi.mock("../../../../../auth/require-api-user", () => ({ requireApiUser: mocks.requireApiUser }));
 

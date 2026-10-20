@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({ listGlobal: vi.fn(), requireApiUser: vi.fn() }
 vi.mock("@cpg/core", async (importOriginal) => {
   const core = await importOriginal<typeof import("@cpg/core")>();
   return {
-    apiHandler: core.apiHandler,
+    createApiHandler: core.createApiHandler,
     parseInput: core.parseInput,
     requestScope: async () => ({ cradle: { auditService: { listGlobal: mocks.listGlobal } } }),
   };
