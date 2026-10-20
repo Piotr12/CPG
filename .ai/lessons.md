@@ -12,6 +12,9 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 ## General
 
+- **2026-10-20 — Resolve a delegated source conflict explicitly** — When the owner directs autonomous completion after a baseline conflict is presented, record the chosen interpretation and its authority in a named decision; preserve the conflicting source as an erratum instead of silently treating it as consistent. #80 uses signed manual stock changes (D07); XLS targets remain absolute.
+- **2026-10-20 — Add a sidebar icon with every navigation ID** — A new leaf in `nav-tree.ts` also needs an entry in `sidebar-nav.tsx`'s exhaustive icon registry. Without it, the sidebar fails at runtime; typecheck and the full sidebar tests catch this before publication.
+
 - **2026-10-17 — Docker `npm ci` tries to compile better-sqlite3** — npm runs `node-gyp rebuild` because the package has a `binding.gyp`, which fails without Python/a compiler. better-sqlite3 ships prebuilt binaries (musl included), so the Dockerfile uses `npm ci --ignore-scripts`.
 - **2026-10-19 — Name a function `useX` only if it is a React hook** — `react-hooks/rules-of-hooks` treats every `useX()` call as a hook, even in a plain helper or a test, and fails lint ("called in function … that is neither a component nor a hook"). That is why `useTenant` became `selectTenant`.
 - **2026-10-19 — MikroORM filters and the flush don't see every write** — the `tenant` filter covers `find*`, `count`, populate, `nativeUpdate` and `nativeDelete`, and `TenantGuard` sees only flushes. These bypass both:
