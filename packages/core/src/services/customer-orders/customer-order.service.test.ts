@@ -13,6 +13,7 @@ import { MaterialService } from "../materials/material.service";
 import { CustomerService } from "../customers/customer.service";
 import { LocationService } from "../locations/location.service";
 import { CustomerOrderService, type CustomerOrderView } from "./customer-order.service";
+import { ShipmentService } from "../shipments/shipment.service";
 import type { CustomerOrderChanges, CustomerOrderInput } from "../../validators/customer-orders/customer-order.schema";
 
 const actor: AuditActor = { userId: "admin", username: "admin", sessionId: "browser-1", channel: "ui", token: null };
@@ -214,6 +215,38 @@ describe("CustomerOrderService", () => {
     await expect(service().update(order.id, edit(order), 2, actor)).rejects.toMatchObject({ code: "CUSTOMER_ORDER_LOCKED" });
     expect(await new MaterialService({ em: em() }).update("00000005", { active: false }, 1, actor)).toMatchObject({ active: false });
     expect(await new LocationService({ em: em() }).update("00000001", { active: false }, 1, actor)).toMatchObject({ active: false });
+  });
+
+  it("keeps a line a shipment names on the order with its material, while its quantity, unit and date stay editable (shipments spec Q10)", async () => {
+    const order = await service().create(input(), actor);
+    await new ShipmentService({ em: em() }).create({ customerOrder: order.id, plannedDate: "2027-01-02", lines: [{ orderLine: order.lines[0].id, quantity: "10", unit: "each" }] }, actor);
+    const remove = edit(order); remove.lines.shift();
+    await expect(service().update(order.id, remove, 1, actor)).rejects.toMatchObject({ code: "CUSTOMER_ORDER_LOCKED" });
+    const replace = edit(order); replace.lines[0].material = "00000004";
+    await expect(service().update(order.id, replace, 1, actor)).rejects.toMatchObject({ code: "CUSTOMER_ORDER_LOCKED" });
+    const changes = edit(order); Object.assign(changes.lines[0], { quantity: "6", unit: "case", requiredDate: "2027-01-05" });
+    // The unshipped line can still go.
+    changes.lines.pop();
+    expect(await service().update(order.id, changes, 1, actor)).toMatchObject({ version: 2, lines: [{ id: order.lines[0].id, quantity: "72.000000", requiredDate: "2027-01-05" }] });
+  });
+
+  it("completes a delivered line lowered to its fulfilled quantity, then the order and its shipments once nothing is left (shipments spec Q8)", async () => {
+    const order = await service().create(input(), actor);
+    const shipment = await new ShipmentService({ em: em() }).create({ customerOrder: order.id, plannedDate: "2027-01-02", lines: [{ orderLine: order.lines[0].id, quantity: "60", unit: "each" }] }, actor);
+    await changeLine(order.lines[0].id, { fulfilled: "40.000000" });
+    const lowered = edit(order); lowered.lines[0].quantity = "40";
+    const first = await service().update(order.id, lowered, 1, actor);
+    expect(first).toMatchObject({ status: "open", lines: [{ quantity: "40.000000", status: "completed" }, { status: "open" }] });
+    expect((await new ShipmentService({ em: em() }).get(shipment.id)).status).toBe("completed");
+    expect(await em().find(TenantAuditEvent, { action: "shipments.shipment.completed" })).toMatchObject([{ subjectId: shipment.id, before: { status: "open" }, after: { status: "completed" } }]);
+    await changeLine(order.lines[1].id, { fulfilled: "100.000000" });
+    const second = edit(first); second.lines[1].quantity = "100"; second.lines[1].unit = "each";
+    // A delivered line keeps its unit, so lower it in the unit it was entered in.
+    await expect(service().update(order.id, second, 2, actor)).rejects.toMatchObject({ code: "CUSTOMER_ORDER_LOCKED" });
+    await changeLine(order.lines[1].id, { fulfilled: "144.000000" });
+    const completed = await service().update(order.id, edit(first), 2, actor);
+    expect(completed).toMatchObject({ status: "completed", lines: [{ status: "completed" }, { status: "completed" }] });
+    expect(await audit()).toEqual(expect.arrayContaining([expect.objectContaining({ action: "customer-orders.customer-order.updated", after: expect.objectContaining({ status: "completed" }) })]));
   });
 
   it("seeds one Test example once, skips missing/inactive references and read-only scopes", async () => {

@@ -32,6 +32,9 @@ export * from "./services/safety-stock/safety-stock-target.service";
 export * from "./services/purchase-requisitions/purchase-requisition.service";
 export * from "./services/purchase-orders/purchase-order.service";
 export * from "./services/goods-receipts/goods-receipt.service";
+export * from "./services/shipments/shipment.service";
+export * from "./services/goods-issues/goods-issue.service";
+export { outstandingOf } from "./domain/goods-issues/issue-quantity";
 export * from "./services/forecasts/forecast.service";
 export * from "./services/imports/import.service";
 // The import's workbook: the app's adapter reads it into cells, and the template is written from its layout.
