@@ -11,8 +11,11 @@ import { ErrorMessage } from "../feedback/error-message";
 export interface CrudField {
   name: string;
   label: string;
-  /** `select` offers `options` in a native select (its keyboard and screen-reader behaviour for free). */
-  type?: "text" | "password" | "select";
+  /**
+   * `select` offers `options` in a native select (its keyboard and screen-reader behaviour for free);
+   * `date` is the browser's date input, whose value is an ISO `YYYY-MM-DD` date.
+   */
+  type?: "text" | "password" | "select" | "date";
   autoComplete?: string;
   /** A hint under the field, such as a length rule. */
   description?: string;
