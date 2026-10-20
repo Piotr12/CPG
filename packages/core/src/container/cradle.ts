@@ -1,3 +1,4 @@
+import type { CustomerOrderService } from "../services/customer-orders/customer-order.service";
 import type { TestResetService } from "../services/tenants/test-reset.service";
 import type { StockService } from "../services/stock/stock.service";
 import type { EntityManager, Orm } from "@cpg/db";
@@ -45,6 +46,7 @@ export interface Cradle {
   planningParameterService: PlanningParameterService;
   safetyStockTargetService: SafetyStockTargetService;
   bomService: BomService;
+  customerOrderService: CustomerOrderService;
   importService: ImportService;
   /** The active tenant. Only in scopes built by `tenantScope()`. */
   tenant: TenantInfo;

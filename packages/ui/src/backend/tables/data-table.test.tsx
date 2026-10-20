@@ -27,6 +27,12 @@ describe("DataTable", () => {
     expect(within(rows[1]).getAllByRole("cell")[1].classList).toContain("text-right");
   });
 
+  it("renders supplied pagination alongside the bounded table", () => {
+    render(<DataTable label="Pets" columns={columns} rows={pets} rowKey={(pet) => pet.id} empty="No pets" pagination={<nav aria-label="Pet pages"><a href="?page=2">Next</a></nav>} />);
+    expect(screen.getByRole("navigation", { name: "Pet pages" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Next" }).getAttribute("href")).toBe("?page=2");
+  });
+
   it("adds an actions column when asked", () => {
     render(
       <DataTable

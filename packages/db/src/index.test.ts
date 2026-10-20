@@ -13,6 +13,9 @@ describe("@cpg/db", () => {
       "BomComponent",
       "BomRevision",
       "Customer",
+      "CustomerOrder",
+      "CustomerOrderLine",
+      "DOCUMENT_STATES",
       "GLOBAL_ENTITIES",
       "GlobalAuditEvent",
       "GlobalIdempotencyKey",
@@ -80,6 +83,8 @@ describe("@cpg/db", () => {
       db.Bom,
       db.BomRevision,
       db.BomComponent,
+      db.CustomerOrder,
+      db.CustomerOrderLine,
       db.StockBalance,
       db.StockMovement,
     ]);
@@ -96,6 +101,8 @@ describe("@cpg/db", () => {
       db.Bom,
       db.BomRevision,
       db.BomComponent,
+      db.CustomerOrder,
+      db.CustomerOrderLine,
       db.StockBalance,
       db.StockMovement,
     ];

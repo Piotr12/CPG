@@ -43,8 +43,12 @@ async function populate() {
   await seedResetDemoData((await scope()).cradle);
   const test = (await scope()).cradle;
   await test.materialService.create({ type: "raw", description: "old generation only", baseUnit: "kg" }, actor);
+  await test.customerOrderService.create({ customer: "00000001", location: "00000001", lines: [{ material: "00000005", quantity: "1", unit: "each", requiredDate: "2027-01-01" }] }, actor);
   const prod = (await scope("prod")).cradle;
   await prod.materialService.create({ type: "raw", description: "keep Prod", baseUnit: "kg" }, actor);
+  await prod.customerService.create({ name: "keep Prod customer" }, actor);
+  await prod.locationService.create({ name: "keep Prod location" }, actor);
+  await prod.customerOrderService.create({ customer: "00000001", location: "00000001", lines: [{ material: "00000001", quantity: "3", unit: "kg", requiredDate: "2027-01-01" }] }, actor);
   const em = orm.em.fork();
   for (const [index, username] of ["admin", "alice"].entries()) {
     const user = em.create(User, { username, role: index === 0 ? "admin" : "user" });
@@ -85,6 +89,10 @@ describe("atomic Test reset", () => {
     expect((await current.customerService.list())[0].id).toBe("00000001");
     expect((await current.supplierService.list())[0].id).toBe("00000001");
     expect((await current.bomService.list())[0].id).toBe("00000001");
+    const orders = await current.customerOrderService.list();
+    expect(orders).toHaveLength(1);
+    expect(orders[0]).toMatchObject({ id: "00000001", lines: [{ quantity: "60.000000" }, { quantity: "12.000000" }] });
+    await expect(current.customerOrderService.get("00000002")).rejects.toMatchObject({ code: "CUSTOMER_ORDER_NOT_FOUND" });
     // Every seed would now skip because the complete demonstration kind already exists.
     const seeders = demoSeeders(current);
     for (const kind of DEMO_KINDS) expect(await seeders[kind].run()).toBe(0);
@@ -94,11 +102,11 @@ describe("atomic Test reset", () => {
     expect(await (await scope("prod")).cradle.tenantService.get("prod")).toEqual({ code: "prod", name: "Prod", generation: 1, readOnly: false });
   });
 
-  it.each(["locations", "BOMs"] as const)("rolls back deletion and partially seeded %s, including both flags and all audits (TEN-027)", async (kind) => {
+  it.each(["locations", "BOMs", "customer orders"] as const)("rolls back deletion and partially seeded %s, including both flags and all audits (TEN-027)", async (kind) => {
     await populate();
     await container.createScope().cradle.tenantService.setReadOnly("test", true, actor);
     const scoped = await scope();
-    const service = kind === "locations" ? scoped.cradle.locationService : scoped.cradle.bomService;
+    const service = { locations: scoped.cradle.locationService, BOMs: scoped.cradle.bomService, "customer orders": scoped.cradle.customerOrderService }[kind];
     vi.spyOn(service, "seedDemo").mockRejectedValueOnce(new Error("injected seed failure"));
     const before = await snapshot();
     await expect(scoped.cradle.testResetService.reset(1, actor)).rejects.toThrow("injected seed failure");

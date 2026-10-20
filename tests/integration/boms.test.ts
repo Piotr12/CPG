@@ -197,7 +197,7 @@ describe("BOMs (E04-S01)", () => {
     await admin.clickRole("button", "Edit");
     await admin.select("[role=dialog] select[name=type]", "intermediate");
     await admin.click("[role=dialog] button[type=submit]");
-    await admin.waitForText("A BOM uses this material, so its type can't change.");
+    await admin.waitForText("A BOM or customer order uses this material, so its type cannot change.");
     await admin.clickRole("button", "Cancel");
     await admin.waitUntil(closed);
   });

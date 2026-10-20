@@ -1050,6 +1050,633 @@
       "comment": null
     },
     {
+      "name": "customer_order",
+      "columns": {
+        "code": {
+          "name": "code",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "datetime",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
+        "customer_id": {
+          "name": "customer_id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "id": {
+          "name": "id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": true,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "location_id": {
+          "name": "location_id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "'open'",
+          "comment": null,
+          "collation": null,
+          "enumItems": [
+            "open",
+            "completed",
+            "closed-early",
+            "cancelled"
+          ],
+          "mappedType": "enum"
+        },
+        "tenant_code": {
+          "name": "tenant_code",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": true,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "datetime",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "1",
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        }
+      },
+      "indexes": [
+        {
+          "columnNames": [
+            "customer_id"
+          ],
+          "composite": false,
+          "constraint": false,
+          "keyName": "customer_order_customer_id_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "location_id"
+          ],
+          "composite": false,
+          "constraint": false,
+          "keyName": "customer_order_location_id_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "tenant_code",
+            "code"
+          ],
+          "composite": true,
+          "constraint": true,
+          "keyName": "customer_order_tenant_code_code_unique",
+          "primary": false,
+          "unique": true
+        },
+        {
+          "columnNames": [
+            "tenant_code"
+          ],
+          "composite": false,
+          "constraint": false,
+          "keyName": "customer_order_tenant_code_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "id"
+          ],
+          "composite": false,
+          "constraint": true,
+          "keyName": "primary",
+          "primary": true,
+          "unique": true
+        }
+      ],
+      "checks": [
+        {
+          "name": "customer_order_status_check",
+          "expression": "`status` in ('open', 'completed', 'closed-early', 'cancelled')",
+          "definition": "check (`status` in ('open', 'completed', 'closed-early', 'cancelled'))",
+          "columnName": "status"
+        }
+      ],
+      "triggers": [],
+      "foreignKeys": {
+        "customer_order_customer_id_foreign": {
+          "columnNames": [
+            "customer_id"
+          ],
+          "constraintName": "customer_order_customer_id_foreign",
+          "localTableName": "customer_order",
+          "referencedColumnNames": [
+            "id"
+          ],
+          "referencedTableName": "customer"
+        },
+        "customer_order_location_id_foreign": {
+          "columnNames": [
+            "location_id"
+          ],
+          "constraintName": "customer_order_location_id_foreign",
+          "localTableName": "customer_order",
+          "referencedColumnNames": [
+            "id"
+          ],
+          "referencedTableName": "location"
+        },
+        "customer_order_tenant_code_foreign": {
+          "columnNames": [
+            "tenant_code"
+          ],
+          "constraintName": "customer_order_tenant_code_foreign",
+          "localTableName": "customer_order",
+          "referencedColumnNames": [
+            "code"
+          ],
+          "referencedTableName": "tenant"
+        }
+      },
+      "comment": null
+    },
+    {
+      "name": "customer_order_line",
+      "columns": {
+        "abandoned": {
+          "name": "abandoned",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "'0.000000'",
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "denominator": {
+          "name": "denominator",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "entered_quantity": {
+          "name": "entered_quantity",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "entered_unit": {
+          "name": "entered_unit",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "fulfilled": {
+          "name": "fulfilled",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "'0.000000'",
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "id": {
+          "name": "id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": true,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "material_id": {
+          "name": "material_id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "numerator": {
+          "name": "numerator",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "order_id": {
+          "name": "order_id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "removed": {
+          "name": "removed",
+          "type": "integer",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "false",
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        },
+        "required_date": {
+          "name": "required_date",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "'open'",
+          "comment": null,
+          "collation": null,
+          "enumItems": [
+            "open",
+            "completed",
+            "closed-early",
+            "cancelled"
+          ],
+          "mappedType": "enum"
+        },
+        "tenant_code": {
+          "name": "tenant_code",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        }
+      },
+      "indexes": [
+        {
+          "columnNames": [
+            "material_id"
+          ],
+          "composite": false,
+          "constraint": false,
+          "keyName": "customer_order_line_material_id_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "order_id"
+          ],
+          "composite": false,
+          "constraint": false,
+          "keyName": "customer_order_line_order_id_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "tenant_code"
+          ],
+          "composite": false,
+          "constraint": false,
+          "keyName": "customer_order_line_tenant_code_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "tenant_code",
+            "material_id",
+            "removed",
+            "status",
+            "id"
+          ],
+          "composite": true,
+          "constraint": false,
+          "keyName": "customer_order_line_tenant_code_material_id_removed_status_id_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "id"
+          ],
+          "composite": false,
+          "constraint": true,
+          "keyName": "primary",
+          "primary": true,
+          "unique": true
+        }
+      ],
+      "checks": [
+        {
+          "name": "customer_order_line_status_check",
+          "expression": "`status` in ('open', 'completed', 'closed-early', 'cancelled')",
+          "definition": "check (`status` in ('open', 'completed', 'closed-early', 'cancelled'))",
+          "columnName": "status"
+        }
+      ],
+      "triggers": [],
+      "foreignKeys": {
+        "customer_order_line_material_id_foreign": {
+          "columnNames": [
+            "material_id"
+          ],
+          "constraintName": "customer_order_line_material_id_foreign",
+          "localTableName": "customer_order_line",
+          "referencedColumnNames": [
+            "id"
+          ],
+          "referencedTableName": "material"
+        },
+        "customer_order_line_order_id_foreign": {
+          "columnNames": [
+            "order_id"
+          ],
+          "constraintName": "customer_order_line_order_id_foreign",
+          "localTableName": "customer_order_line",
+          "referencedColumnNames": [
+            "id"
+          ],
+          "referencedTableName": "customer_order"
+        },
+        "customer_order_line_tenant_code_foreign": {
+          "columnNames": [
+            "tenant_code"
+          ],
+          "constraintName": "customer_order_line_tenant_code_foreign",
+          "localTableName": "customer_order_line",
+          "referencedColumnNames": [
+            "code"
+          ],
+          "referencedTableName": "tenant"
+        }
+      },
+      "comment": null
+    },
+    {
       "name": "global_audit_event",
       "columns": {
         "action": {

@@ -19,6 +19,8 @@ export const HELP_TOPIC_IDS = [
   "safety-stock",
   "boms",
   "bom-revisions",
+  "customer-orders",
+  "customer-order-detail",
   "import",
   "stock",
   "language-and-theme",
@@ -49,6 +51,8 @@ export const HELP_TOPIC_ROUTES: Record<HelpTopicId, string> = {
   "safety-stock": "/admin/[tenant]/safety-stock",
   boms: "/admin/[tenant]/boms",
   "bom-revisions": "/admin/[tenant]/boms/[id]",
+  "customer-orders": "/admin/[tenant]/customer-orders",
+  "customer-order-detail": "/admin/[tenant]/customer-orders/[id]",
   import: "/admin/[tenant]/import",
   stock: "/admin/[tenant]/stock",
   "language-and-theme": "/admin",
@@ -66,6 +70,8 @@ export interface HelpTopic extends HelpText {
 }
 
 const en: Record<HelpTopicId, HelpText> = {
+  "customer-orders": { title: "Customer orders", body: ["Both roles can create and edit customer orders under Transactions. Choose one active customer and one location for the header; each line has its own material, positive quantity, unit and required date. Orders start Open with zero fulfilled. Entering an order moves no stock. Stored quantities use the material’s base unit; the entered amount and factor stay in history. A customer may be deactivated while existing orders continue. A stale version refuses an overwrite; reload before retrying. A read-only tenant hides write controls and refuses writes."] },
+  "customer-order-detail": { title: "Maintaining a customer order", body: ["Both roles can create and edit customer orders under Transactions. Choose one active customer and one location for the header; each line has its own material, positive quantity, unit and required date. Orders start Open with zero fulfilled. Entering an order moves no stock. Stored quantities use the material’s base unit; the entered amount and factor stay in history. A customer may be deactivated while existing orders continue. A stale version refuses an overwrite; reload before retrying. A read-only tenant hides write controls and refuses writes."] },
   "getting-started": {
     title: "Getting started with CPG",
     body: [
@@ -258,6 +264,8 @@ const en: Record<HelpTopicId, HelpText> = {
 };
 
 const pl: Record<HelpTopicId, HelpText> = {
+  "customer-orders": { title: "Zamówienia klientów", body: ["Obie role mogą tworzyć i edytować zamówienia klientów w sekcji Transakcje. Wybierz aktywnego klienta i jedną lokalizację nagłówka; każda pozycja ma własny materiał, dodatnią ilość, jednostkę i wymagany termin. Nowe zamówienie jest Otwarte, z ilością zrealizowaną równą zero. Zapis nie zmienia zapasu. Ilości zapisuje się w jednostce bazowej, zachowując wprowadzoną ilość i przelicznik. Klienta można dezaktywować, a istniejące zamówienia nadal obsługiwać. Nieaktualna wersja nie nadpisze zmian: odśwież dane. Środowisko tylko do odczytu ukrywa przyciski zapisu i odmawia zmian."] },
+  "customer-order-detail": { title: "Edycja zamówienia klienta", body: ["Obie role mogą tworzyć i edytować zamówienia klientów w sekcji Transakcje. Wybierz aktywnego klienta i jedną lokalizację nagłówka; każda pozycja ma własny materiał, dodatnią ilość, jednostkę i wymagany termin. Nowe zamówienie jest Otwarte, z ilością zrealizowaną równą zero. Zapis nie zmienia zapasu. Ilości zapisuje się w jednostce bazowej, zachowując wprowadzoną ilość i przelicznik. Klienta można dezaktywować, a istniejące zamówienia nadal obsługiwać. Nieaktualna wersja nie nadpisze zmian: odśwież dane. Środowisko tylko do odczytu ukrywa przyciski zapisu i odmawia zmian."] },
   "getting-started": {
     title: "Pierwsze kroki z CPG",
     body: [

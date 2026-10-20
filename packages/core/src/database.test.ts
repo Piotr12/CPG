@@ -34,8 +34,10 @@ describe("migrateDatabase", () => {
       "Migration20261019211303_tenant_read_only",
       "Migration20261020054509_planning_parameters_safety_stock",
       "Migration20261020080940_boms",
+      "Migration20261020164223_customer_orders",
       "Migration20261020164229_stock_ledger",
       "Migration20261020164640_test_reset",
+      "Migration20261020173715_customer_order_demand_index",
     ]);
     expect(await migrateDatabase(config)).toEqual([]);
   });

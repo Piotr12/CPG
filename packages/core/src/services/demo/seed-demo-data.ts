@@ -9,9 +9,9 @@ import { DEMO_STOCK } from "../../domain/stock/demo-stock";
 import { DEMO_SUPPLIERS } from "../../domain/suppliers/demo-suppliers";
 
 /** One definition of seed order: references follow their materials and locations. */
-export const DEMO_KINDS = ["materials", "locations", "customers", "suppliers", "planning parameter sets", "safety-stock targets", "BOMs", "stock openings"] as const;
+export const DEMO_KINDS = ["materials", "locations", "customers", "suppliers", "planning parameter sets", "safety-stock targets", "BOMs", "customer orders", "stock openings"] as const;
 export type DemoKind = (typeof DEMO_KINDS)[number];
-export type DemoServices = Pick<Cradle, "materialService" | "locationService" | "customerService" | "supplierService" | "planningParameterService" | "safetyStockTargetService" | "bomService" | "stockService">;
+export type DemoServices = Pick<Cradle, "materialService" | "locationService" | "customerService" | "supplierService" | "planningParameterService" | "safetyStockTargetService" | "bomService" | "customerOrderService" | "stockService">;
 
 /** Shared by startup's best-effort runner and reset's atomic fail-fast runner. */
 export function demoSeeders(services: DemoServices): Record<DemoKind, { expected: number; run: () => Promise<number> }> {
@@ -23,6 +23,7 @@ export function demoSeeders(services: DemoServices): Record<DemoKind, { expected
     "planning parameter sets": { expected: DEMO_PLANNING_PARAMETERS.length, run: () => services.planningParameterService.seedDemo() },
     "safety-stock targets": { expected: DEMO_SAFETY_STOCK_TARGETS.length, run: () => services.safetyStockTargetService.seedDemo() },
     BOMs: { expected: DEMO_BOMS.length, run: () => services.bomService.seedDemo() },
+    "customer orders": { expected: 1, run: () => services.customerOrderService.seedDemo() },
     "stock openings": { expected: DEMO_STOCK.length, run: () => services.stockService.seedDemo() },
   };
 }

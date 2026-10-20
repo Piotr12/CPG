@@ -278,8 +278,8 @@ export const en = {
       UNIT_IS_BASE_UNIT: "That is the material's base unit: it needs no conversion.",
       BASE_UNIT_HAS_CONVERSIONS: "Remove the unit conversions before changing the base unit: their factors are relative to it.",
       BASE_UNIT_IN_USE:
-        "The base unit holds quantities, so it can't change: a BOM that uses this material keeps it for good, and planning parameters and safety-stock targets have to be removed first.",
-      MATERIAL_TYPE_IN_USE: "A BOM uses this material, so its type can't change.",
+        "The base unit holds quantities, so it can't change: a BOM or customer order that uses this material keeps it for good, and planning parameters and safety-stock targets have to be removed first.",
+      MATERIAL_TYPE_IN_USE: "A BOM or customer order uses this material, so its type cannot change.",
       MATERIAL_MADE_AT_LOCATIONS: "Set this material to Buy at every location before making it raw: a raw material is always bought.",
       MATERIAL_IDS_EXHAUSTED: "This tenant has used every eight-digit material ID.",
       GENERATION_STALE: "This tenant's data was reset since you loaded the page. Reload and try again.",
@@ -585,6 +585,30 @@ export const en = {
     },
   },
   /** The BOM screens (E04-S01). Client components get plain strings; only the headings are functions. */
+  customerOrders: {
+    pagination: "Customer order pages", page: "Page {page} of {pages}", previous: "Previous page", next: "Next page",
+    link: "Customer orders", heading: "Customer orders — {tenant}", detailHeading: "Customer order {id}",
+    intro: "Record customer demand at one location, with a required date on each line. Entering an order moves no stock.",
+    empty: "No customer orders yet.", emptyHint: "Create an order to record dated demand.",
+    create: "Create order", edit: "Edit order", createTitle: "Create customer order", editTitle: "Edit customer order {id}",
+    description: "Choose one customer and location. Add each material, quantity, unit and required date below.",
+    save: "Save order", saving: "Saving…", cancel: "Cancel", back: "All customer orders",
+    id: "Order", customer: "Customer", location: "Location", status: "Status", lines: "Lines", material: "Material",
+    quantity: "Ordered quantity", unit: "Unit", requiredDate: "Required date", fulfilled: "Fulfilled", entered: "Entered as",
+    choose: "Choose…", addLine: "Add line", removeLine: "Remove line {number}", line: "Line {number}", inactive: "Inactive",
+    states: { open: "Open", completed: "Completed", "closed-early": "Closed Early", cancelled: "Cancelled" },
+    fieldErrors: { reference: "Choose a record from this tenant.", quantity: "Enter a positive quantity, with up to 6 decimals.",
+      date: "Enter a real date written YYYY-MM-DD.", unit: "Choose a unit this material converts to its base unit.",
+      lines: "Add 1 to 100 lines.", id: "Each existing line must belong to this order and appear once.",
+      minimum: "Quantity cannot be less than the fulfilled and abandoned amount.", conversion: "This quantity cannot be stored in the base unit: check its size and conversion." },
+    errors: {
+      CUSTOMER_ORDER_NOT_FOUND: "This tenant has no such customer order.", CUSTOMER_ORDER_LOCKED: "This order or a posted line cannot be changed that way.",
+      CUSTOMER_ORDER_IDS_EXHAUSTED: "This tenant has used every customer order ID.", CUSTOMER_ORDER_ID_RACE: "Another order was created at the same time. Try again.",
+      CUSTOMER_NOT_FOUND: "Choose a customer from this tenant.", CUSTOMER_INACTIVE: "This customer is inactive. Choose an active customer for a new order.",
+      LOCATION_NOT_FOUND: "Choose a location from this tenant.", LOCATION_INACTIVE: "Choose an active location for a new order.",
+      MATERIAL_NOT_FOUND: "Choose a material from this tenant.", MATERIAL_INACTIVE: "Choose an active material for a new line.",
+    },
+  },
   boms: {
     link: "BOMs",
     heading: (tenant: string) => `BOMs — ${tenant}`,
@@ -812,6 +836,8 @@ export const en = {
     channels: { ui: "UI", api: "API" },
     /** Keyed by the entry's action ID; an action missing here is shown as its ID. */
     actions: {
+      "customer-orders.customer-order.created": "Customer order created",
+      "customer-orders.customer-order.updated": "Customer order changed",
       "stock.movement.posted": "Stock movement posted",
       "users.user.created": "User created",
       "users.user.password-reset": "Password reset",
@@ -855,6 +881,9 @@ export const en = {
     passwordNotRecorded: "Password replaced (not recorded)",
     /** Snapshot field names in the Changes column; a field missing here is shown as stored. */
     fields: {
+      customer: "customer",
+      lines: "lines",
+      status: "status",
       generation: "generation",
       movement: "movement",
       postingId: "posting ID",
@@ -893,6 +922,7 @@ export const en = {
     },
     /** Snapshot values per field; a value missing here is shown as stored. */
     values: {
+      status: { open: "open", completed: "completed", "closed-early": "closed early", cancelled: "cancelled" },
       role: { admin: "admin", user: "user" },
       active: { true: "yes", false: "no" },
       readOnly: { true: "yes", false: "no" },
@@ -931,6 +961,8 @@ export const en = {
     close: "Close",
     account: "Account",
     overview: "Overview",
+    transactions: "Transactions",
+    customerOrders: "Customer orders",
     masterData: "Master data",
     materials: "Materials",
     locations: "Locations",
@@ -987,6 +1019,8 @@ export const en = {
   },
   /** Keyed by the result envelope's error `code`; unknown codes fall back to the server's message. */
   errors: {
+    MATERIAL_HAS_CUSTOMER_DEMAND: "Customer order {order} has outstanding demand for this material.",
+    LOCATION_HAS_CUSTOMER_ORDERS: "Customer order {order} is still Open at this location.",
     INSUFFICIENT_STOCK: "Material {material} at location {location}: available {available} {unit}; requested {requested} {unit}.",
     STOCK_NOT_EMPTY: "Material {material} at location {location} holds {quantity} {unit}. Clear its stock before deactivation.",
     MATERIAL_HAS_MOVEMENTS: "This material has stock history, so its type and base unit cannot change.",

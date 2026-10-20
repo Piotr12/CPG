@@ -81,7 +81,7 @@ describe("Test reset persistence", () => {
     selectTenant(em, "test");
     const event = em.create(TenantAuditEvent, entry);
     await em.flush();
-    await orm.migrator.down();
+    await orm.migrator.down({ to: "Migration20261020164229_stock_ledger" });
     await expect(em.nativeDelete(TenantAuditEvent, { id: event.id })).rejects.toThrow("audit is append-only");
     await orm.migrator.up();
     await expect(em.nativeUpdate(TenantAuditEvent, { id: event.id }, { subjectLabel: "changed" })).rejects.toThrow("audit is append-only");

@@ -137,4 +137,18 @@ describe("AuditTable", () => {
       "ilość: 2.000000 → 1.000000", "ruch: — → -1.000000", "ID księgowania: — → posting-1", "typ: — → korekta", "data księgowania: — → 2026-10-20", "powód: — → Spis", "wprowadzona ilość: — → -1.000000", "wprowadzona jednostka: — → each",
     ]);
   });
+  it.each([
+    [en.audit, "Customer order created", "Customer order changed", ["customer: ACME", "lines: []", "status: open"]],
+    [pl.audit, "Utworzono zamówienie klienta", "Zmieniono zamówienie klienta", ["klient: ACME", "pozycje: []", "stan: otwarte"]],
+  ])("names customer-order actions, fields and status in the reader's language", (labels, created, updated, changes) => {
+    render(<AuditTable entries={[
+      entry({ action: "customer-orders.customer-order.created", before: null, after: { customer: "ACME", lines: "[]", status: "open" } }),
+      entry({ action: "customer-orders.customer-order.updated", before: { status: "open" }, after: { status: "completed" } }),
+    ]} label="Audit" labels={labels} />);
+    expect(screen.getByText(created)).toBeTruthy();
+    expect(screen.getByText(updated)).toBeTruthy();
+    expect(within(rows()[0]).getAllByRole("listitem").map((item) => item.textContent)).toEqual(changes);
+    expect(within(rows()[1]).getByRole("listitem").textContent).toBe(labels.fields.status + ": " + labels.values.status.open + " → " + labels.values.status.completed);
+  });
+
 });

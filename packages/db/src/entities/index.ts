@@ -1,3 +1,5 @@
+import { CustomerOrder, DOCUMENT_STATES, type DocumentState } from "./customer-orders/customer-order.entity";
+import { CustomerOrderLine } from "./customer-orders/customer-order-line.entity";
 import { StockBalance } from "./stock/stock-balance.entity";
 import { StockMovement, STOCK_MOVEMENT_IMMUTABLE } from "./stock/stock-movement.entity";
 import { API_TOKEN_NAME_MAX, ApiToken } from "./api-tokens/api-token.entity";
@@ -55,6 +57,8 @@ export { AUDIT_APPEND_ONLY, AUDIT_CHANNELS, GlobalAuditEvent, TenantAuditEvent }
 export { GlobalIdempotencyKey, IDEMPOTENCY_KEY_MAX, TenantIdempotencyKey };
 export { Material, MATERIAL_DESCRIPTION_MAX, MATERIAL_TYPES, MATERIAL_UNIT_MAX, MaterialConversion };
 export type { MaterialType };
+export { CustomerOrder, CustomerOrderLine, DOCUMENT_STATES };
+export type { DocumentState };
 export { Customer, Location, NAMED_RECORD_NAME_MAX, Supplier };
 export type { NamedRecord, NamedRecordEntity };
 export { PlanningParameterSet, PROCUREMENT_MODES, SafetyStockTarget };
@@ -86,6 +90,8 @@ export const entities = [
   Bom,
   BomRevision,
   BomComponent,
+  CustomerOrder,
+  CustomerOrderLine,
   StockBalance,
   StockMovement,
 ];

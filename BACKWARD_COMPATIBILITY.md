@@ -125,6 +125,12 @@ Route handlers under `app/api/` are protected the same way: their paths, methods
   - The report's own codes are `IMPORT_EMPTY`, `IMPORT_UNKNOWN_SHEET`, `IMPORT_DUPLICATE_SHEET`, `IMPORT_MISSING_COLUMN`, `IMPORT_UNKNOWN_COLUMN`, `IMPORT_UNKNOWN_ID`, `IMPORT_DUPLICATE_KEY`, `IMPORT_MISSING_REFERENCE`, `IMPORT_NEW_RECORD_INACTIVE`, `IMPORT_REFERENCE_REQUIRED`, `IMPORT_BOM_WITHOUT_LINES` and `IMPORT_LINE_WITHOUT_HEADER`, beside the services' own codes.
   - **The workbook layout is protected too** (`core/src/domain/imports/workbook-layout.ts`): admins keep filled templates, so the sheet names, column headers and what each column means change only by adding (a new optional sheet or column). Renaming one needs the old name accepted for one release.
 
+- customer orders of one tenant (spec `2026-10-20--1635UTC-customer-orders`, design #101), maintained by both roles with the same key/generation/read-only rules. IDs are eight digits; quantities are JSON strings; dates are ISO `YYYY-MM-DD`:
+  - `GET /api/tenants/{tenant}/customer-orders` and `/{id}` (404 `CUSTOMER_ORDER_NOT_FOUND`), returning header customer/location/status/version and ordered lines with stable UUID, material, stored BUoM quantity, entered quantity/unit/factor, requiredDate, fulfilled/abandoned quantities and status;
+  - `POST /api/tenants/{tenant}/customer-orders` (`{ customer, location, lines: [{ material, quantity, unit, requiredDate }] }`), returns HTTP 200 through the shared envelope. Header/lines start Open, progress zero. Unknown references use existing 404 codes, inactive newly selected masters 409 `{KIND}_INACTIVE`, exhausted/racing IDs 409 `CUSTOMER_ORDER_IDS_EXHAUSTED` / `CUSTOMER_ORDER_ID_RACE`;
+  - `PATCH /api/tenants/{tenant}/customer-orders/{id}` (`{ version, customer, location, lines: [{ id?, material, quantity, unit, requiredDate }] }`), replaces the visible aggregate; existing IDs must belong to this order and appear once. Omitted unposted lines become hidden historical references, preserving material type/BUoM locks. New lines have no ID. A no-op writes no audit and preserves version; a real line-only edit advances header version. An unchanged entered quantity/unit/material preserves its historical factor;
+  - all request objects are strict: no client-written status/progress/ID or line location override; line errors use `lines.N.field`. Non-Open orders and posted-field edits are 409 `CUSTOMER_ORDER_LOCKED`; quantity cannot fall below fulfilled plus abandoned. Outstanding demand blocks material/location deactivation (`MATERIAL_HAS_CUSTOMER_DEMAND`, `LOCATION_HAS_CUSTOMER_ORDERS`); customer deactivation remains allowed.
+
 **Versions.** An edit of a versioned record (today: a user, a material, a material's conversion, a location, a customer, a supplier, a planning parameter set, a safety-stock target and a BOM) carries the `version` it loaded. A stale one is 409 `VERSION_CONFLICT`, and the newer change is kept. The user routes answer 404 `NOT_FOUND` for the built-in admin, an unknown id or a malformed one.
 
 Every tenant-scoped endpoint lives under `/api/tenants/{tenant}/`.
@@ -168,3 +174,5 @@ Source: root `package.json` scripts, `.github/workflows/ci.yml`, `.github/workfl
 ## Changing this document
 
 Add a surface here in the same PR that creates it, for example the first `/api` route, the first webhook or the first exported file format.
+
+Customer-order collection reads use optional `?page=1` (integer 1–1000000), fixed pages of 100 orders in ascending ID order. The data remains an array; request successive pages until fewer than 100 records are returned. Unknown query keys and invalid page values are validation errors.

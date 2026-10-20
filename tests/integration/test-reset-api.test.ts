@@ -10,7 +10,7 @@ const baseUrl = inject("baseUrl");
 const password = inject("adminPassword");
 const userPassword = "reset integration password";
 const users = [`reset-a-${randomUUID().slice(0, 8)}`, `reset-b-${randomUUID().slice(0, 8)}`];
-const kinds = ["materials", "locations", "customers", "suppliers", "planning-parameters", "safety-stock-targets", "boms"];
+const kinds = ["materials", "locations", "customers", "suppliers", "planning-parameters", "safety-stock-targets", "boms", "customer-orders"];
 interface Tenant { code: string; generation: number; readOnly: boolean }
 interface Material { id: string; version: number; description: string }
 interface AuditPage { entries: { id: string; action: string; actor: { username: string }; channel: string; token: { name: string } | null }[] }
@@ -67,6 +67,11 @@ describe("atomic Test reset through the bearer API", () => {
   it.each([false, true])("resets with readOnly=%s, preserving Prod/accounts/sessions/tokens/preferences and the Global audit (TEN-022, TEN-023, TEN-024, TEN-028, AUD-011…013, API-017)", async (readOnly) => {
     await write("PATCH", "/api/tenants/test", { readOnly: false });
     const generation = (await test()).generation;
+    const demoOrder = json(await api("GET", "/api/tenants/test/customer-orders/00000001")).data;
+    const extraOrder = await write("POST", "/api/tenants/test/customer-orders", { customer: demoOrder.customer, location: demoOrder.location,
+      lines: [{ material: demoOrder.lines[0].material, quantity: "1", unit: "each", requiredDate: "2027-01-01" }] }, generation);
+    expect(extraOrder.status).toBe(200);
+    const extraId = json(extraOrder).data.id;
     const firstMaterial = (await materials())[0];
     const oldKey = randomUUID();
     const oldBody = { version: firstMaterial.version, description: "reset-api old dataset" };
@@ -89,6 +94,10 @@ describe("atomic Test reset through the bearer API", () => {
     const fresh = await materials();
     expect(fresh[0]).toMatchObject({ id: "00000001", description: "Steel sheet 2 mm" });
     expect(fresh).toHaveLength(6);
+    const orders = json(await api("GET", "/api/tenants/test/customer-orders")).data;
+    expect(orders).toHaveLength(1);
+    expect(orders[0]).toMatchObject({ id: "00000001", lines: [{ quantity: "60.000000" }, { quantity: "12.000000" }] });
+    expect((await api("GET", `/api/tenants/test/customer-orders/${extraId}`)).status).toBe(404);
     for (const kind of ["locations", "customers", "suppliers", "boms"]) {
       const rows = json(await api("GET", `/api/tenants/test/${kind}`)).data as { id: string }[];
       expect(rows[0].id, kind).toBe("00000001");

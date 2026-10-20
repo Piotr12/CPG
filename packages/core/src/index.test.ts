@@ -12,6 +12,7 @@ describe("@cpg/core", () => {
       "BUILT_IN_ADMIN_USERNAME",
       "BomService",
       "ConflictError",
+      "CustomerOrderService",
       "CustomerService",
       "DEFAULT_PREFERENCES",
       "DEMO_KINDS",

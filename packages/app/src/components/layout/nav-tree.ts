@@ -9,6 +9,8 @@ import { isCurrentPath, type NavMatch } from "./current-path";
 export type NavId =
   | "stock"
   | "overview"
+  | "transactions"
+  | "customerOrders"
   | "masterData"
   | "materials"
   | "locations"
@@ -57,6 +59,7 @@ export const TENANT_TREE: NavNode[] = [
     ],
   },
   { id: "stock", section: "stock", match: "prefix" },
+  { id: "transactions", children: [{ id: "customerOrders", section: "customer-orders", match: "prefix" }] },
   { id: "tenantAudit", section: "audit", match: "prefix" },
 ];
 

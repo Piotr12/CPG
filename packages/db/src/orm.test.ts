@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { BOM_REVISION_IMMUTABLE } from "./entities";
+import { migrations } from "./migrations";
 import { getMigrationStatus, initOrm, migrate } from "./orm";
 
 const tempDatabase = () => path.join(mkdtempSync(path.join(tmpdir(), "cpg-db-")), "nested", "cpg.sqlite");
@@ -50,11 +51,32 @@ describe("migrate", () => {
       "Migration20261019211303_tenant_read_only",
       "Migration20261020054509_planning_parameters_safety_stock",
       "Migration20261020080940_boms",
+      "Migration20261020164223_customer_orders",
       "Migration20261020164229_stock_ledger",
       "Migration20261020164640_test_reset",
+      "Migration20261020173715_customer_order_demand_index",
     ]);
     expect(await migrate({ databasePath })).toEqual([]);
   });
+  it("adopts the customer-order migrations after a database already running the main-branch stock ledger", async () => {
+    const orm = await initOrm({ databasePath: tempDatabase() });
+    try {
+      const previous = migrations.map((migration) => migration.name).filter((name) => !name.includes("customer_order"));
+      await orm.migrator.up({ migrations: previous });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 15, pending: 2 });
+      await orm.em.getConnection().execute("update tenant set generation = 23 where code = 'prod'");
+      await orm.migrator.up();
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 17, pending: 0 });
+      expect(await orm.em.getConnection().execute("select generation from tenant where code = 'prod'")).toEqual([{ generation: 23 }]);
+      expect(await orm.em.getConnection().execute("select count(*) as count from stock_movement")).toEqual([{ count: 0 }]);
+      expect(await orm.em.getConnection().execute("select count(*) as count from customer_order")).toEqual([{ count: 0 }]);
+      // Existing tenant defaults/audit triggers have baseline diff noise; neither aggregate needs schema changes.
+      expect(await orm.schema.getUpdateSchemaSQL()).not.toMatch(/customer_order|stock_balance|stock_movement/);
+    } finally {
+      await orm.close();
+    }
+  });
+
 });
 
 describe("getMigrationStatus", () => {
@@ -63,9 +85,9 @@ describe("getMigrationStatus", () => {
     const orm = await initOrm({ databasePath });
 
     try {
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 15 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 17 });
       await orm.migrator.up();
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 15, pending: 0 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 17, pending: 0 });
     } finally {
       await orm.close();
     }
@@ -82,7 +104,7 @@ describe("migrations", () => {
         await orm.em
           .getConnection()
           .execute<{ name: string }[]>(
-            "select name from sqlite_master where name in ('setting', 'user', 'session', 'user_preference', 'tenant', 'api_token', 'global_audit_event', 'tenant_audit_event', 'global_idempotency_key', 'tenant_idempotency_key', 'material', 'material_conversion', 'location', 'customer', 'supplier', 'planning_parameter_set', 'safety_stock_target', 'bom', 'bom_revision', 'bom_component')",
+            "select name from sqlite_master where name in ('setting', 'user', 'session', 'user_preference', 'tenant', 'api_token', 'global_audit_event', 'tenant_audit_event', 'global_idempotency_key', 'tenant_idempotency_key', 'material', 'material_conversion', 'location', 'customer', 'supplier', 'planning_parameter_set', 'safety_stock_target', 'bom', 'bom_revision', 'bom_component', 'customer_order', 'customer_order_line', 'stock_balance', 'stock_movement')",
           )
       )
         .map(({ name }) => name)
@@ -110,6 +132,8 @@ describe("migrations", () => {
         "bom_component",
         "bom_revision",
         "customer",
+        "customer_order",
+        "customer_order_line",
         "global_audit_event",
         "global_idempotency_key",
         "location",
@@ -119,6 +143,8 @@ describe("migrations", () => {
         "safety_stock_target",
         "session",
         "setting",
+        "stock_balance",
+        "stock_movement",
         "supplier",
         "tenant",
         "tenant_audit_event",
@@ -127,9 +153,22 @@ describe("migrations", () => {
         "user_preference",
       ]);
       expect(await triggers()).toContain("stock_movement_no_update");
+      const plan = await orm.em.getConnection().execute<{ detail: string }[]>(`explain query plan select l.id from customer_order_line l join customer_order o on l.order_id = o.id
+        where l.tenant_code = ? and l.material_id = ? and l.removed = 0 and l.status = 'open' and l.id > ?
+        and o.tenant_code = ? and o.status = 'open' order by l.id limit 100`, ["test", "material", "cursor", "test"]);
+      expect(plan.map(({ detail }) => detail).join(" ")).toContain("customer_order_line_tenant_code_material_id_removed_status_id_index");
+      expect(plan.map(({ detail }) => detail).join(" ")).not.toContain("TEMP B-TREE");
+      await orm.migrator.down();
+      expect(await orm.em.getConnection().execute("select name from sqlite_master where type = 'index' and name = 'customer_order_line_tenant_code_material_id_removed_status_id_index'")).toEqual([]);
+      expect(await tables()).toContain("customer_order_line");
       await orm.migrator.down(); // Test reset audit exception.
       await orm.migrator.down();
       expect(await triggers()).not.toContain("stock_movement_no_update");
+      expect(await tables()).not.toContain("stock_balance");
+      expect(await tables()).not.toContain("stock_movement");
+      await orm.migrator.down();
+      expect(await tables()).not.toContain("customer_order");
+      expect(await tables()).not.toContain("customer_order_line");
       expect(await triggers()).toContain("bom_revision_no_update");
       await orm.migrator.down();
       expect(await triggers()).not.toContain("bom_revision_no_update");
@@ -448,12 +487,10 @@ describe("boms migration", () => {
       await expect(execute(orm, "update bom_component set quantity = '1'")).rejects.toThrow(BOM_REVISION_IMMUTABLE);
       await execute(orm, "update bom set active = 0 where id = 'b1'");
 
-      await orm.migrator.down(); // Test reset audit exception is newest
-      await orm.migrator.down(); // stock migration is newer than BOMs
       await execute(orm, "delete from bom_component");
       await execute(orm, "delete from bom_revision");
       await execute(orm, "delete from bom");
-      await orm.migrator.down();
+      await orm.migrator.down({ to: "Migration20261020054509_planning_parameters_safety_stock" });
       expect(await execute(orm, "select name from sqlite_master where name like 'bom%'")).toEqual([]);
       expect(await execute(orm, "select count(*) as n from material")).toEqual([{ n: 2 }]);
     } finally {
