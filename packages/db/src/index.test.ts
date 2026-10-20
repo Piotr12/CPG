@@ -13,6 +13,9 @@ describe("@cpg/db", () => {
       "BomComponent",
       "BomRevision",
       "Customer",
+      "CustomerOrder",
+      "CustomerOrderLine",
+      "DOCUMENT_STATES",
       "GLOBAL_ENTITIES",
       "GlobalAuditEvent",
       "GlobalIdempotencyKey",
@@ -75,6 +78,8 @@ describe("@cpg/db", () => {
       db.Bom,
       db.BomRevision,
       db.BomComponent,
+      db.CustomerOrder,
+      db.CustomerOrderLine,
     ]);
     const tenantOwned: unknown[] = [
       db.TenantAuditEvent,
@@ -89,6 +94,8 @@ describe("@cpg/db", () => {
       db.Bom,
       db.BomRevision,
       db.BomComponent,
+      db.CustomerOrder,
+      db.CustomerOrderLine,
     ];
     expect(db.GLOBAL_ENTITIES).toEqual(db.entities.filter((entity) => !tenantOwned.includes(entity)));
   });

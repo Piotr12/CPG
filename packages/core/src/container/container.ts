@@ -1,3 +1,4 @@
+import { CustomerOrderService } from "../services/customer-orders/customer-order.service";
 import { entities, initOrm, type Orm } from "@cpg/db";
 import { asClass, asFunction, asValue, createContainer, InjectionMode } from "awilix";
 import { loadConfig, type AppConfig } from "../config";
@@ -52,6 +53,7 @@ export function createAppContainer(config: AppConfig, orm: Orm): AppContainer {
     planningParameterService: asClass(PlanningParameterService).scoped(),
     safetyStockTargetService: asClass(SafetyStockTargetService).scoped(),
     bomService: asClass(BomService).scoped(),
+    customerOrderService: asClass(CustomerOrderService).scoped(),
     importService: asClass(ImportService).scoped(),
     // `tenant` is registered only by tenantScope(): resolving it from a global scope fails (strict).
   });

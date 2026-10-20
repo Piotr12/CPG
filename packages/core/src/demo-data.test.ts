@@ -4,6 +4,7 @@ import path from "node:path";
 import {
   Bom,
   Customer,
+  CustomerOrder,
   initOrm,
   Location,
   Material,
@@ -63,6 +64,7 @@ describe("seedDemoData", () => {
       "planning parameter sets": { seeded: DEMO_PLANNING_PARAMETERS.length },
       "safety-stock targets": { seeded: DEMO_SAFETY_STOCK_TARGETS.length },
       BOMs: { seeded: DEMO_BOMS.length },
+      "customer orders": { seeded: 1 },
     });
     expect(await seedDemoData(config)).toEqual({
       materials: { seeded: 0 },
@@ -72,6 +74,7 @@ describe("seedDemoData", () => {
       "planning parameter sets": { seeded: 0 },
       "safety-stock targets": { seeded: 0 },
       BOMs: { seeded: 0 },
+      "customer orders": { seeded: 0 },
     });
 
     expect(await counts(config, (em) => em.count(Material, {}))).toEqual({ test: DEMO_MATERIALS.length, prod: 0 });
@@ -80,6 +83,7 @@ describe("seedDemoData", () => {
     expect(await counts(config, (em) => em.count(Supplier, {}))).toEqual({ test: DEMO_SUPPLIERS.length, prod: 0 });
     expect(await counts(config, (em) => em.count(PlanningParameterSet, {}))).toEqual({ test: DEMO_PLANNING_PARAMETERS.length, prod: 0 });
     expect(await counts(config, (em) => em.count(SafetyStockTarget, {}))).toEqual({ test: DEMO_SAFETY_STOCK_TARGETS.length, prod: 0 });
+    expect(await counts(config, (em) => em.count(CustomerOrder, {}))).toEqual({ test: 1, prod: 0 });
     expect(await counts(config, (em) => em.count(Bom, {}))).toEqual({ test: DEMO_BOMS.length, prod: 0 });
   });
 
@@ -97,6 +101,7 @@ describe("seedDemoData", () => {
       "planning parameter sets": { seeded: 0 },
       "safety-stock targets": { seeded: 0 },
       BOMs: { seeded: DEMO_BOMS.length },
+      "customer orders": { seeded: 0 },
     });
     expect(await seedDemoData(config)).toEqual({
       materials: { seeded: 0 },
@@ -106,6 +111,7 @@ describe("seedDemoData", () => {
       "planning parameter sets": { seeded: DEMO_PLANNING_PARAMETERS.length },
       "safety-stock targets": { seeded: DEMO_SAFETY_STOCK_TARGETS.length },
       BOMs: { seeded: 0 },
+      "customer orders": { seeded: 1 },
     });
   });
 });

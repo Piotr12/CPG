@@ -1,3 +1,4 @@
+import type { CustomerOrderService } from "../services/customer-orders/customer-order.service";
 import type { EntityManager, Orm } from "@cpg/db";
 import type { AwilixContainer } from "awilix";
 import type { AppConfig } from "../config";
@@ -41,6 +42,7 @@ export interface Cradle {
   planningParameterService: PlanningParameterService;
   safetyStockTargetService: SafetyStockTargetService;
   bomService: BomService;
+  customerOrderService: CustomerOrderService;
   importService: ImportService;
   /** The active tenant. Only in scopes built by `tenantScope()`. */
   tenant: TenantInfo;
