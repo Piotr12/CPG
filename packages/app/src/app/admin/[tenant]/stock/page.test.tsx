@@ -46,7 +46,9 @@ describe("StockPage", () => {
     const table = within(screen.getByRole("table", { name: en.stock.ledger }));
     expect(table.getByText("+2 each")).toBeTruthy(); expect(table.getByText("-0.5 each")).toBeTruthy();
     expect(table.getByText("Demo seed · Installation")).toBeTruthy(); expect(table.getByText("alice · API")).toBeTruthy();
-    expect(table.getByText("Correction")).toBeTruthy(); expect(table.getByText("receipt")).toBeTruthy(); expect(table.getAllByText(en.stock.ownSource)).toHaveLength(2);
+    expect(table.getByText("Correction")).toBeTruthy(); expect(table.getByText("receipt")).toBeTruthy();
+    // Only a correction is its own source; a movement whose document isn't known shows none.
+    expect(table.getAllByText(en.stock.ownSource)).toHaveLength(1); expect(table.getByText("—")).toBeTruthy();
     expect(table.getByText(/Posting: g1/)).toBeTruthy(); expect(table.getAllByText(/Factor: 12\/1/)).toHaveLength(4);
     // A receipt links to its purchase order and an issue to its shipment, each naming its own ID.
     expect(table.getByText("Goods receipt")).toBeTruthy();

@@ -32,12 +32,22 @@ export function StockReportScreen({ tenant, report, selected, materials, locatio
   const path = `/admin/${tenant.code}`;
   const amount = (quantity: string, row: StockReportRow) => `${shownQuantity(quantity)} ${row.baseUnit}`;
   const inactive = (active: boolean) => (active ? "" : ` (${t.inactive})`);
+  const material = (row: StockReportRow) => `${row.material} — ${row.materialDescription}${inactive(row.materialActive)}`;
+  const location = (row: StockReportRow) => `${row.location} — ${row.locationName}${inactive(row.locationActive)}`;
+  // Narrow screens: the location moves under the material, and the three figures stack in one cell.
   const columns: DataTableColumn<StockReportRow>[] = [
-    { id: "material", header: t.columns.material, className: "whitespace-normal wrap-anywhere", cell: (row) => `${row.material} — ${row.materialDescription}${inactive(row.materialActive)}` },
-    { id: "location", header: t.columns.location, className: "whitespace-normal wrap-anywhere", cell: (row) => `${row.location} — ${row.locationName}${inactive(row.locationActive)}` },
-    { id: "quantity", header: t.columns.quantity, className: "text-right font-mono", cell: (row) => <span data-report-on-hand>{amount(row.quantity, row)}</span> },
-    { id: "inTransitFrom", header: t.columns.inTransitFrom, className: "text-right font-mono", cell: (row) => <span data-report-transit-from>{amount(row.inTransitFrom, row)}</span> },
-    { id: "inTransitTo", header: t.columns.inTransitTo, className: "text-right font-mono", cell: (row) => <span data-report-transit-to>{amount(row.inTransitTo, row)}</span> },
+    { id: "material", header: t.columns.material, className: "min-w-28 whitespace-normal", cell: (row) => <div className="flex flex-col gap-1">
+      <span>{material(row)}</span><span className="text-xs text-muted-foreground sm:hidden">{location(row)}</span>
+    </div> },
+    { id: "location", header: t.columns.location, className: "hidden min-w-28 whitespace-normal sm:table-cell", cell: location },
+    { id: "quantity", header: t.columns.quantity, className: "hidden text-right font-mono md:table-cell", cell: (row) => <span data-report-on-hand>{amount(row.quantity, row)}</span> },
+    { id: "inTransitFrom", header: t.columns.inTransitFrom, className: "hidden text-right font-mono md:table-cell", cell: (row) => <span data-report-transit-from>{amount(row.inTransitFrom, row)}</span> },
+    { id: "inTransitTo", header: t.columns.inTransitTo, className: "hidden text-right font-mono md:table-cell", cell: (row) => <span data-report-transit-to>{amount(row.inTransitTo, row)}</span> },
+    { id: "figures", header: t.columns.figures, className: "md:hidden", cell: (row) => <dl className="grid grid-cols-[auto_auto] gap-x-2 text-xs">
+      {(["quantity", "inTransitFrom", "inTransitTo"] as const).map((figure) => <div key={figure} className="contents">
+        <dt className="text-muted-foreground">{t.columns[figure]}</dt><dd className="text-right font-mono">{amount(row[figure], row)}</dd>
+      </div>)}
+    </dl> },
   ];
   const query = (page: number) => {
     const params = new URLSearchParams();

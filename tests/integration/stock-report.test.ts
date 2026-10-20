@@ -84,6 +84,18 @@ describe("the stock report in the UI", () => {
       [`${ids.steel} — srui steel`, `${ids.depot} — srui depot`, "0 kg", "0 kg", "30 kg"],
     ]);
     expect(await una.text("main h1")).toBe("Stock report — Prod");
+
+    // On a phone the figures stack in one cell, and each row's Ledger button stays in view.
+    await una.setViewport(390, 844);
+    try {
+      await open(`?material=${ids.steel}`);
+      const rightEdges = await una.evaluate<number[]>(`[...${shown(report)}.querySelectorAll("tbody a")].map((a) => a.getBoundingClientRect().right)`);
+      expect(rightEdges).toHaveLength(2);
+      for (const right of rightEdges) expect(right).toBeLessThanOrEqual(390);
+      expect(await una.evaluate<string>(`${shown(report)}.querySelector("tbody dl").innerText.replace(/\\s+/g, " ").trim()`)).toBe("On hand 70 kg In transit out 30 kg In transit in 0 kg");
+    } finally {
+      await una.setViewport(1280, 800);
+    }
   });
 
   it("narrows by location with the filter form, and shows all-zero rows only with the toggle", async () => {

@@ -27,15 +27,16 @@ export function StockScreen({ tenant, view, materials, locations, units, locale,
   const path = `/admin/${tenant.code}`;
   const types: Record<string, string> = { correction: t.correction, "goods-receipt": t.goodsReceipt, "transfer-dispatch": t.transferDispatch, "transfer-receipt": t.transferReceipt, "goods-issue": t.goodsIssue };
   const records: Record<string, string> = t.records;
+  // A narrow screen scrolls the ledger sideways rather than squeezing a column to one character.
   const columns: DataTableColumn<LedgerMovementView>[] = [
     { id: "date", header: t.date, cell: (row) => row.businessDate },
-    { id: "type", header: t.type, cell: (row) => types[row.type] ?? row.type, className: "hidden sm:table-cell" },
-    { id: "quantity", header: t.movement, cell: (row) => `${row.quantity.startsWith("-") ? "" : "+"}${shownQuantity(row.quantity)} ${row.baseUnit}`, className: "whitespace-normal wrap-anywhere" },
-    { id: "source", header: t.source, className: "whitespace-normal wrap-anywhere", cell: ({ type, source }) => source.document === null ? <span className="text-muted-foreground">{t.ownSource}</span> : <div className="flex min-w-0 flex-col gap-1">
+    { id: "type", header: t.type, cell: (row) => types[row.type] ?? row.type },
+    { id: "quantity", header: t.movement, cell: (row) => `${row.quantity.startsWith("-") ? "" : "+"}${shownQuantity(row.quantity)} ${row.baseUnit}` },
+    { id: "source", header: t.source, className: "min-w-36 whitespace-normal", cell: ({ type, source }) => source.document === null ? <span className="text-muted-foreground">{type === "correction" ? t.ownSource : "—"}</span> : <div className="flex min-w-0 flex-col gap-1">
       <Link href={`${path}/${DOCUMENT_SECTIONS[source.document.type]}/${source.document.id}`} className="underline underline-offset-4">{fill(t.documents[source.document.type], { id: source.document.id })}</Link>
       {type in records && <span className="text-xs text-muted-foreground">{fill(records[type], { id: source.id! })}</span>}
     </div> },
-    { id: "reason", header: t.reason, className: "whitespace-normal wrap-anywhere", cell: (row) => <div className="flex min-w-0 flex-col gap-2">
+    { id: "reason", header: t.reason, className: "min-w-48 whitespace-normal wrap-anywhere", cell: (row) => <div className="flex min-w-0 flex-col gap-2">
       <span>{row.reason}</span>
       <span className="text-xs text-muted-foreground">{row.actorUsername} · {t.channels[row.channel]}</span>
       <details className="text-xs"><summary className="cursor-pointer">{t.details}</summary>

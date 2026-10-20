@@ -1497,7 +1497,7 @@ export const pl: Messages = {
     heading: "Raport zapasu — {tenant}",
     intro: "Zapas fizyczny na stanie i zapas w tranzycie dla każdego materiału i lokalizacji, w jednostce podstawowej materiału, na dzień {date} (UTC). Zapas w tranzycie należy do swojego przesunięcia: żadna z lokalizacji nie może go użyć, dopóki nie zostanie przyjęty.",
     material: "Materiał", location: "Lokalizacja", all: "Wszystkie", includeZero: "Pokaż wiersze z samymi zerami", apply: "Zastosuj",
-    columns: { material: "Materiał", location: "Lokalizacja", quantity: "Na stanie", inTransitFrom: "W tranzycie stąd", inTransitTo: "W tranzycie tutaj" },
+    columns: { material: "Materiał", location: "Lokalizacja", quantity: "Na stanie", inTransitFrom: "W tranzycie stąd", inTransitTo: "W tranzycie tutaj", figures: "Zapas" },
     inactive: "Nieaktywny", label: "Bieżący zapas", empty: "Żaden zapas nie pasuje do tych filtrów.", rows: "Wierszy: {count}",
     ledger: "Ruchy", ledgerOf: "Ruchy {material} w {location}", actions: "Ruchy",
     pagination: "Strony raportu zapasu", previous: "Poprzednia", next: "Następna", page: "Strona {page} z {pages}",

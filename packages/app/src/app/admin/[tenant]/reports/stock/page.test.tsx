@@ -59,15 +59,20 @@ describe("StockReportPage", () => {
     expect(mocks.read).toHaveBeenCalledWith({});
     expect(screen.getByRole("heading", { name: "Stock report — Test" })).toBeTruthy();
     expect(screen.getByText(/as of 2026-10-21 \(UTC\)/)).toBeTruthy();
-    expect(screen.getByText("2 rows")).toBeTruthy();
+    expect(screen.getByText("Rows: 2")).toBeTruthy();
     const [first, second] = table().getAllByRole("row").slice(1);
     expect(within(first).getByText("00000001 — Steel sheet")).toBeTruthy();
     expect(first.querySelector("[data-report-on-hand]")!.textContent).toBe("70 kg");
     expect(first.querySelector("[data-report-transit-from]")!.textContent).toBe("30 kg");
     expect(first.querySelector("[data-report-transit-to]")!.textContent).toBe("0 kg");
     expect(within(second).getByText("00000002 — Bolt M8 (Inactive)")).toBeTruthy();
-    expect(within(second).getByText("00000002 — Depot (Inactive)")).toBeTruthy();
+    // The location has its own column, and repeats under the material for narrow screens.
+    expect(within(second).getAllByText("00000002 — Depot (Inactive)")).toHaveLength(2);
     expect(second.querySelector("[data-report-transit-to]")!.textContent).toBe("12.5 each");
+    // Narrow screens stack the three figures, each named, in one cell.
+    expect([...second.querySelectorAll("dl dt, dl dd")].map((node) => node.textContent)).toEqual([
+      "On hand", "0 each", "In transit out", "0 each", "In transit in", "12.5 each",
+    ]);
     expect(table().getByRole("link", { name: "Ledger of 00000001 Steel sheet at 00000001 Main plant" }).getAttribute("href")).toBe(
       "/admin/test/stock?material=00000001&location=00000001",
     );

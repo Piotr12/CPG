@@ -30,6 +30,9 @@ export class PairTally {
   }
 }
 
+/** Business IDs are fixed-width digits, so plain comparison orders them. */
+const compare = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+
 const isZero = ({ quantity, inTransitFrom, inTransitTo }: PairFigures) => quantity === 0n && inTransitFrom === 0n && inTransitTo === 0n;
 
 /**
@@ -40,6 +43,6 @@ const isZero = ({ quantity, inTransitFrom, inTransitTo }: PairFigures) => quanti
 export function reportPage(pairs: PairFigures[], { includeZero, page, pageSize }: { includeZero: boolean; page: number; pageSize: number }): { total: number; rows: PairFigures[] } {
   const kept = pairs
     .filter((pair) => includeZero || !isZero(pair))
-    .sort((a, b) => a.material.localeCompare(b.material) || a.location.localeCompare(b.location));
+    .sort((a, b) => compare(a.material, b.material) || compare(a.location, b.location));
   return { total: kept.length, rows: kept.slice((page - 1) * pageSize, page * pageSize) };
 }
