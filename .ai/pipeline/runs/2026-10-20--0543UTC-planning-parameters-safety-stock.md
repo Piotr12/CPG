@@ -39,6 +39,14 @@ In each tenant the admin keeps, per material and location, a planning parameter 
 - **Migration ordering** against other open stories (#26, #27): whichever merges later regenerates its migration.
 - **Integration test files share one database and one admin** (lessons): assert only on rows this file creates, and create the file's own materials and locations in Prod.
 
+## Deviations from the spec
+
+- **`safetyTargetOn` returns `"0.000000"`** with no target in force, not `"0"`, so every base-unit quantity has the one six-decimal form (spec Q4).
+- **`PATCH`/`DELETE` with a well-formed but unknown material or location** answer `MATERIAL_NOT_FOUND` / `LOCATION_NOT_FOUND` (404), not the row's not-found. A malformed path segment is still the row's not-found (route-level parse).
+- **The "can't be picked once inactive" checks** are `findActiveMaterial` and `findActiveLocation`, next to the lookups they extend (one check per referenced kind, as locations Q5 asked).
+- **The seed guard** (`isUntouchedKind`) and the reference lookup for demo rows are shared in `services/demo/demo-references.ts`, rather than copied into both services.
+- **The demo-data kinds** are named `planning parameter sets` and `safety-stock targets`, which the startup log prints as they are.
+
 ## Implementation Plan
 
 ### Phase 1: Core
@@ -70,14 +78,14 @@ In each tenant the admin keeps, per material and location, a planning parameter 
 
 ### Phase 1: Core
 
-- [ ] 1.1 Domain rules: procurement and the safety-target rule
-- [ ] 1.2 Schema: both entities and the migration
-- [ ] 1.3 Validators: quantities, dates, planning parameters, safety targets
-- [ ] 1.4 Leaf lookups: findMaterial, findNamedRecord, findLocation
-- [ ] 1.5 PlanningParameterService
-- [ ] 1.6 SafetyStockTargetService
-- [ ] 1.7 Material guards
-- [ ] 1.8 Demo seed for both kinds
+- [x] 1.1 Domain rules: procurement and the safety-target rule — a3a693c
+- [x] 1.2 Schema: both entities and the migration — 5059a86
+- [x] 1.3 Validators: quantities, dates, planning parameters, safety targets — d9c45d2
+- [x] 1.4 Leaf lookups: findMaterial, findNamedRecord, findLocation — a7c3a72
+- [x] 1.5 PlanningParameterService — 4791f89
+- [x] 1.6 SafetyStockTargetService — 4791f89
+- [x] 1.7 Material guards — b7b4547
+- [x] 1.8 Demo seed for both kinds — a2e1412
 
 ### Phase 2: API
 
