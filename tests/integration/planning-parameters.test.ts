@@ -26,7 +26,7 @@ async function listRows(browser: Browser, path: string): Promise<string[][]> {
 }
 
 /** Creates a Prod record through a list's Create dialog and returns its new ID, read from the list. */
-async function createInProd(admin: Browser, kind: string, create: string, fill: () => Promise<void>, text: string): Promise<string> {
+async function createInProd(admin: Browser, kind: string, create: string, fill: () => Promise<unknown>, text: string): Promise<string> {
   const before = new Set((await listRows(admin, `/admin/prod/${kind}`)).map(([id]) => id));
   await admin.waitUntil(ready(button(create)));
   await admin.clickRole("button", create);
