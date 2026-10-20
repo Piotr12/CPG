@@ -160,7 +160,9 @@ describe("customer orders through the UI and API", () => {
     await user.press("Escape");
   });
   it("keeps API pages bounded and lets a user navigate a collection beyond 100 orders", async () => {
-    const customer = json(await write("POST", "/api/tenants/prod/customers", { name: "orders pagination " + "long customer name ".repeat(5) })).data;
+    const created = await write("POST", "/api/tenants/prod/customers", { name: "orders pagination " + "long customer name ".repeat(4) });
+    expect(created.status).toBe(200);
+    const customer = json(created).data;
     for (let index = 0; index < 101; index++) expect((await write("POST", ROOT, { ...input(), customer: customer.id })).status).toBe(200);
     const first = await orders(); const second = json(await api("GET", `${ROOT}?page=2`)).data as CustomerOrderView[];
     expect(first).toHaveLength(100); expect(second.length).toBeGreaterThan(0); expect(second.length).toBeLessThan(100);
