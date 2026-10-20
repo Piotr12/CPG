@@ -10,7 +10,7 @@ const apiDir = path.resolve(import.meta.dirname, "../packages/app/src/app/api");
 const tenantDir = path.join(apiDir, "tenants", "[tenant]");
 /**
  * The one global write under the tenant tree: the tenant's own metadata route, whose PATCH sets the
- * read-only flag (spec .ai/specs/2026-10-19--2018UTC-read-only-tenants.md, Q6). The flag is global
+ * read-only flag (spec .ai/specs/implemented/2026-10-19--2018UTC-read-only-tenants.md, Q6). The flag is global
  * data, so it is keyed in the global store, and it must keep working while the tenant is read-only,
  * which tenantApiWrite would refuse. Named exactly, so the exception can't widen.
  */

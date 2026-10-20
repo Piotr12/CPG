@@ -18,7 +18,7 @@ const headerName = (browser: Browser) =>
 /** The TEST | PROD switch at the top of the sidebar. */
 const SWITCH = "[data-slot=sidebar] [data-tenant-switch]";
 
-// Spec .ai/specs/2026-10-19--0913UTC-test-prod-tenants.md: TEN-001, TEN-010, TEN-011.
+// Spec .ai/specs/implemented/2026-10-19--0913UTC-test-prod-tenants.md: TEN-001, TEN-010, TEN-011.
 describe("tenants in the admin", () => {
   let browser: Browser;
 

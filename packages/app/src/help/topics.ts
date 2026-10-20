@@ -107,13 +107,13 @@ const en: Record<HelpTopicId, HelpText> = {
       "Send the secret in every API request as the Authorization: Bearer header. The token can do exactly what your account can, in Test and Prod, and it never expires.",
       "Revoke ends a token at once. A password reset or a deactivation ends all of an account's tokens. Tokens can be listed and revoked through the API too, but only created here.",
       "Every API request that changes something needs an Idempotency-Key header: a fresh value, such as a UUID, for each change. If the answer is lost, send the same request with the same key again within 24 hours: CPG returns the first answer and changes nothing twice. A key reused for a different request is refused.",
-      "To change a user, send the version you read with it (GET /api/users). If someone changed the user since, CPG refuses with a version conflict and keeps their change: read it again and retry. For writes to the Test tenant, also send the Dataset-Generation header with the generation from GET /api/tenants/test.",
+      "To change a record (a user, a material or one of its unit conversions, a location, a customer or a supplier), send the version you read with it, from GET /api/users or the tenant's GET routes. If someone changed the record since, CPG refuses with a version conflict and keeps their change: read it again and retry. For writes to the Test tenant, also send the Dataset-Generation header with the generation from GET /api/tenants/test.",
     ],
   },
   "global-audit": {
     title: "The Global audit",
     body: [
-      "Global audit, at the bottom of the sidebar, opens every change to accounts, newest first. It lists users created, passwords reset, accounts deactivated or reactivated, language or theme changes, and API tokens created or revoked.",
+      "Global audit, at the bottom of the sidebar, opens every change to accounts and to the tenants' settings, newest first. It lists users created, passwords reset, accounts deactivated or reactivated, language or theme changes, API tokens created or revoked, and a tenant made read-only or writable again.",
       "Each entry shows when it happened (in UTC), the account that made it, the session it came from, the channel (UI for CPG's screens, API for programs) and what changed, as before → after.",
       "A password reset is listed without the password: CPG never records passwords or their hashes.",
       "Every account can read the audit, and nobody can change or delete an entry, not even the administrator. Older entries shows the previous page.",
@@ -244,13 +244,13 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Wysyłaj sekret w każdym żądaniu do API jako nagłówek Authorization: Bearer. Token może dokładnie to, co twoje konto, w środowiskach Test i Prod, i nigdy nie wygasa.",
       "Unieważnij natychmiast kończy działanie tokenu. Reset hasła lub dezaktywacja kończy działanie wszystkich tokenów konta. Tokeny można też wyświetlać i unieważniać przez API, ale tworzyć tylko tutaj.",
       "Każde żądanie do API, które coś zmienia, wymaga nagłówka Idempotency-Key: nowej wartości, na przykład UUID, dla każdej zmiany. Jeśli odpowiedź zginie, wyślij to samo żądanie z tym samym kluczem ponownie w ciągu 24 godzin: CPG zwróci pierwszą odpowiedź i niczego nie zmieni dwa razy. Klucz użyty ponownie do innego żądania zostanie odrzucony.",
-      "Aby zmienić użytkownika, wyślij wersję, którą odczytałeś (GET /api/users). Jeśli ktoś w międzyczasie go zmienił, CPG odmówi z konfliktem wersji i zachowa tamtą zmianę: odczytaj go ponownie i spróbuj jeszcze raz. Przy zapisach w środowisku Test wyślij też nagłówek Dataset-Generation z generacją z GET /api/tenants/test.",
+      "Aby zmienić rekord (użytkownika, materiał lub jeden z jego przeliczników jednostek, lokalizację, klienta lub dostawcę), wyślij wersję, którą odczytałeś z GET /api/users lub z tras GET środowiska. Jeśli ktoś w międzyczasie go zmienił, CPG odmówi z konfliktem wersji i zachowa tamtą zmianę: odczytaj go ponownie i spróbuj jeszcze raz. Przy zapisach w środowisku Test wyślij też nagłówek Dataset-Generation z generacją z GET /api/tenants/test.",
     ],
   },
   "global-audit": {
     title: "Audyt globalny",
     body: [
-      "Audyt globalny, na dole panelu bocznego, pokazuje każdą zmianę kont, od najnowszej. Znajdziesz tu utworzonych użytkowników, zresetowane hasła, dezaktywowane i ponownie aktywowane konta, zmiany języka lub motywu oraz utworzone i unieważnione tokeny API.",
+      "Audyt globalny, na dole panelu bocznego, pokazuje każdą zmianę kont i ustawień środowisk, od najnowszej. Znajdziesz tu utworzonych użytkowników, zresetowane hasła, dezaktywowane i ponownie aktywowane konta, zmiany języka lub motywu, utworzone i unieważnione tokeny API oraz środowiska ustawione jako tylko do odczytu lub ponownie zapisywalne.",
       "Każdy wpis pokazuje, kiedy nastąpiła zmiana (w UTC), które konto ją wprowadziło, z jakiej sesji, jakim kanałem (Ekran dla ekranów CPG, Interfejs API dla programów) i co się zmieniło, jako przed → po.",
       "Reset hasła jest zapisany bez hasła: CPG nigdy nie zapisuje haseł ani ich skrótów.",
       "Audyt może przeglądać każde konto, a nikt nie może zmienić ani usunąć wpisu, nawet administrator. Starsze wpisy pokazują poprzednią stronę.",

@@ -112,7 +112,7 @@ describe("every change is kept in an append-only audit", () => {
     expect(await alice.evaluate<number>(`document.querySelectorAll("main button, main input, main select").length`)).toBe(0);
   });
 
-  it("records a user's own theme change under their own session (AUD-008)", async () => {
+  it("records a user's own theme change under their own session", async () => {
     await alice.open(`${baseUrl}/admin`);
     await choosePreference(alice, "dark");
 
@@ -126,6 +126,25 @@ describe("every change is kept in an append-only audit", () => {
       "theme: light → dark",
     ]);
     expect(latest[2]).not.toBe(adminSession);
+  });
+
+  it("keeps two sessions of one shared account apart (AUD-008)", async () => {
+    const aliceAgain = openBrowser();
+    try {
+      await signIn(aliceAgain, baseUrl, NEW_PASSWORD, USERNAME);
+      await aliceAgain.waitUntil(signedInAs(USERNAME));
+      await choosePreference(aliceAgain, "light");
+
+      const [second, first] = await auditRows(aliceAgain);
+      expect([first, second].map(([, account, , channel, action, , changes]) => [account, channel, action, changes])).toEqual([
+        [USERNAME, "UI", "Language or theme changed", "theme: light → dark"],
+        [USERNAME, "UI", "Language or theme changed", "theme: dark → light"],
+      ]);
+      expect(second[2]).toMatch(/^[0-9a-f]{8}$/);
+      expect(second[2]).not.toBe(first[2]);
+    } finally {
+      await aliceAgain.close();
+    }
   });
 
   it("serves the audit read-only through the API (AUD-010)", async () => {
