@@ -1,6 +1,6 @@
 # Tokens ended by a password reset or a deactivation are kept in the Global audit
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-20 05:32 UTC
 **Issue:** #44 · **Builds on:** `implemented/2026-10-19--1053UTC-api-tokens.md` (#17, #41), `implemented/2026-10-19--1050UTC-audit-log.md` (#20) · **Design authority:** `.ai/specs/product-brief.md` (R06, R08), AUD-014, AUD-028
 

@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-20 05:36 UTC
 **Agent:** Claude Code (claude-opus-5-5), `om-auto-fix-issue 44` → `om-auto-implement-spec` → `om-auto-create-pr`
-**Source doc:** .ai/specs/2026-10-20--0532UTC-audit-implicit-token-revocations.md (spec PR #61)
+**Source doc:** .ai/specs/implemented/2026-10-20--0532UTC-audit-implicit-token-revocations.md (spec PR #61)
 **Issue:** #44
 
 ## Goal
