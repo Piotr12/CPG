@@ -51,10 +51,15 @@ describe("@cpg/db", () => {
       "TENANT_CODES",
       "TENANT_FILTER",
       "THEMES",
+      "TRANSFER_POSTING_IMMUTABLE",
+      "TRANSFER_POSTING_KINDS",
+      "TRANSFER_STATUSES",
       "Tenant",
       "TenantAuditEvent",
       "TenantIdempotencyKey",
       "TenantViolationError",
+      "Transfer",
+      "TransferPosting",
       "USER_ROLES",
       "UniqueConstraintViolationException",
       "User",
@@ -102,6 +107,8 @@ describe("@cpg/db", () => {
       db.StockMovement,
       db.GoodsReceipt,
       db.GoodsReceiptLine,
+      db.Transfer,
+      db.TransferPosting,
     ]);
     const tenantOwned: unknown[] = [
       db.TenantAuditEvent,
@@ -126,6 +133,8 @@ describe("@cpg/db", () => {
       db.StockMovement,
       db.GoodsReceipt,
       db.GoodsReceiptLine,
+      db.Transfer,
+      db.TransferPosting,
     ];
     expect(db.GLOBAL_ENTITIES).toEqual(db.entities.filter((entity) => !tenantOwned.includes(entity)));
   });

@@ -3,6 +3,13 @@ import { CustomerOrderLine } from "./customer-orders/customer-order-line.entity"
 import { StockBalance } from "./stock/stock-balance.entity";
 import { GoodsReceipt, GOODS_RECEIPT_IMMUTABLE } from "./goods-receipts/goods-receipt.entity";
 import { GoodsReceiptLine } from "./goods-receipts/goods-receipt-line.entity";
+import { Transfer, TRANSFER_STATUSES, type TransferStatus } from "./transfers/transfer.entity";
+import {
+  TRANSFER_POSTING_IMMUTABLE,
+  TRANSFER_POSTING_KINDS,
+  TransferPosting,
+  type TransferPostingKind,
+} from "./transfers/transfer-posting.entity";
 import { StockMovement, STOCK_MOVEMENT_IMMUTABLE } from "./stock/stock-movement.entity";
 import { API_TOKEN_NAME_MAX, ApiToken } from "./api-tokens/api-token.entity";
 import {
@@ -75,6 +82,8 @@ export { PlanningParameterSet, PROCUREMENT_MODES, SafetyStockTarget };
 export { Forecast };
 export { StockBalance, StockMovement, STOCK_MOVEMENT_IMMUTABLE };
 export { GoodsReceipt, GOODS_RECEIPT_IMMUTABLE, GoodsReceiptLine };
+export { Transfer, TRANSFER_POSTING_IMMUTABLE, TRANSFER_POSTING_KINDS, TRANSFER_STATUSES, TransferPosting };
+export type { TransferPostingKind, TransferStatus };
 export { Bom, BomComponent, BOM_REVISION_IMMUTABLE, BomRevision };
 export { PURCHASE_ORDER_STATUSES, PurchaseOrder, PurchaseOrderLine, PurchaseRequisition, REQUISITION_STATUSES };
 export type { ProcurementMode, PurchaseOrderStatus, RequisitionStatus };
@@ -113,6 +122,8 @@ export const entities = [
   StockMovement,
   GoodsReceipt,
   GoodsReceiptLine,
+  Transfer,
+  TransferPosting,
 ];
 
 /**
