@@ -36,6 +36,7 @@ Post partial production completions against Open orders. Each completion pre-fil
 - Reuse the cezar linked worktree; no nested worktree. The spec is materialized untracked from `spec/production-completions` (PR #117) per `om-auto-implement-spec`; the spec branch stays design-only.
 
 ## Verification
+- Phases 1–2: db 17 files / 102 tests; core completion domain/schema/service/order tests (58 + 20) pass; targeted coverage of the new core files 100% on all four metrics; `npm run typecheck` passes; ESLint on core clean except the pre-existing `lineError` unused-import warning in `bom.service.ts`.
 
 ## Progress
 
@@ -43,14 +44,14 @@ Post partial production completions against Open orders. Each completion pre-fil
 
 ### Phase 1: Domain and persistence
 
-- [ ] 1.1 Completion entities, migration and isolation
-- [ ] 1.2 Completion arithmetic and strict schemas
+- [x] 1.1 Completion entities, migration and isolation — f31015c
+- [x] 1.2 Completion arithmetic and strict schemas — 5a56686
 
 ### Phase 2: Service
 
-- [ ] 2.1 Preview and history list
-- [ ] 2.2 Atomic completion posting
-- [ ] 2.3 Registration, outstanding and the order state rule
+- [x] 2.1 Preview and history list — 072436b
+- [x] 2.2 Atomic completion posting — 072436b
+- [x] 2.3 Registration, outstanding and the order state rule — 8ce558d
 
 ### Phase 3: Delivery surfaces
 
