@@ -1,7 +1,7 @@
 import { render, screen, within, cleanup } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { resolveServerComponents } from "../../../../../tests/setup/server-components";
-import { production, tenant, materials, locations } from "../../../../../tests/setup/production-orders";
+import { completionMaterials, completionView, production, tenant, materials, locations } from "../../../../../tests/setup/production-orders";
 import ProductionOrdersPage from "../../app/admin/[tenant]/production-orders/page";
 import ProductionOrderPage from "../../app/admin/[tenant]/production-orders/[id]/page";
 import { en } from "../../i18n/messages/en";
@@ -9,20 +9,22 @@ import { pl } from "../../i18n/messages/pl";
 import { ProductionScreen } from "./production-screen";
 const mocks = vi.hoisted(() => {
   class AppError extends Error { constructor(readonly code: string) { super(code); } }
-  return { AppError, connection: vi.fn(), requireUser: vi.fn(), getMessages: vi.fn(), tenantScope: vi.fn(), list: vi.fn(), count: vi.fn(), get: vi.fn(), materials: vi.fn(), locations: vi.fn(), notFound: vi.fn(() => { throw new Error("404"); }) };
+  return { AppError, connection: vi.fn(), requireUser: vi.fn(), getMessages: vi.fn(), tenantScope: vi.fn(), list: vi.fn(), count: vi.fn(), get: vi.fn(), materials: vi.fn(), units: vi.fn(), completions: vi.fn(), locations: vi.fn(), notFound: vi.fn(() => { throw new Error("404"); }) };
 });
 vi.mock("next/server", () => ({ connection: mocks.connection }));
 vi.mock("next/navigation", () => ({ notFound: mocks.notFound, useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@cpg/core", () => ({ AppError: mocks.AppError, tenantScope: mocks.tenantScope }));
 vi.mock("../../auth/require-admin", () => ({ requireUser: mocks.requireUser }));
 vi.mock("../../i18n/get-messages", () => ({ getMessages: mocks.getMessages }));
-vi.mock("../../app/admin/[tenant]/production-orders/actions", () => ({ createProductionOrder: vi.fn(), updateProductionOrder: vi.fn(), previewProductionOrder: vi.fn() }));
-const scope = () => ({ cradle: { tenant, productionOrderService: { list: mocks.list, count: mocks.count, get: mocks.get }, materialService: { list: mocks.materials }, locationService: { list: mocks.locations } } });
+vi.mock("../../app/admin/[tenant]/production-orders/actions", () => ({ createProductionOrder: vi.fn(), updateProductionOrder: vi.fn(), postProductionCompletion: vi.fn() }));
+const scope = () => ({ cradle: { tenant, productionOrderService: { list: mocks.list, count: mocks.count, get: mocks.get }, productionCompletionService: { list: mocks.completions },
+  materialService: { list: mocks.materials, listUnits: mocks.units }, locationService: { list: mocks.locations } } });
 const page = (value?: string) => ProductionOrdersPage({ params: Promise.resolve({ tenant: "test" }), searchParams: Promise.resolve(value === undefined ? {} : { page: value }) });
-const detail = () => ProductionOrderPage({ params: Promise.resolve({ tenant: "test", id: production.id }), searchParams: Promise.resolve({}) });
+const detail = (completions?: string) => ProductionOrderPage({ params: Promise.resolve({ tenant: "test", id: production.id }), searchParams: Promise.resolve(completions === undefined ? {} : { completions }) });
 beforeEach(() => {
   mocks.tenantScope.mockResolvedValue(scope()); mocks.getMessages.mockResolvedValue({ locale: "en", messages: en }); mocks.list.mockResolvedValue([production]);
   mocks.count.mockResolvedValue(1); mocks.get.mockResolvedValue(production); mocks.materials.mockResolvedValue(materials); mocks.locations.mockResolvedValue(locations);
+  mocks.completions.mockResolvedValue([]); mocks.units.mockResolvedValue({ "00000005": ["each", "case"] });
 });
 afterEach(() => vi.clearAllMocks());
 it("gives both request-time routes a visible shared loading shell", () => {
@@ -49,6 +51,24 @@ it("shows pinned revision, stored conversion and current shortage detail", async
   expect(screen.getByText("2 case (1 case = 12 each)")).toBeTruthy(); expect(screen.getByRole("status").textContent).toBe(en.productionOrders.warning);
   expect(screen.getByText("18 kg")).toBeTruthy();
   expect(screen.getByText(en.productionOrders.leadTime).nextElementSibling?.textContent).toBe("5 calendar days");
+  expect(screen.getByText(en.productionOrders.produced).nextElementSibling?.textContent).toBe("0 each");
+  expect(screen.getByText(en.productionOrders.outstanding).nextElementSibling?.textContent).toBe("24 each");
+  expect(mocks.completions).toHaveBeenCalledWith(production.id, 1);
+  expect(screen.getByText(en.productionOrders.completion.historyEmpty)).toBeTruthy();
+  expect(screen.getByRole("button", { name: en.productionOrders.completion.post })).toBeTruthy();
+});
+it("pages the completion history, rejects a malformed history page, and offers posting on an Open order", async () => {
+  mocks.materials.mockResolvedValue(completionMaterials); mocks.completions.mockResolvedValue([completionView]);
+  render(await resolveServerComponents(detail("2")));
+  expect(mocks.completions).toHaveBeenCalledWith(production.id, 2);
+  expect(screen.getByText(/00000006 Cocoa — expected 20, actual 18 kg, variance -2/)).toBeTruthy();
+  expect(screen.getByRole("link", { name: en.productionOrders.completion.previous }).getAttribute("href")).toBe("/admin/test/production-orders/00000001?completions=1");
+  await expect(resolveServerComponents(detail("0"))).rejects.toThrow("404");
+  await expect(resolveServerComponents(detail("x"))).rejects.toThrow("404");
+  cleanup();
+  const props = { tenant, orders: [], total: 0, page: 1, materials: completionMaterials, locations, messages: en, locale: "en" as const };
+  render(<ProductionScreen {...props} order={production} />);
+  expect(screen.getByRole("button", { name: en.productionOrders.completion.post })).toBeTruthy();
 });
 it("bounds pages, clamps stale pages and rejects invalid parameters", async () => {
   mocks.count.mockResolvedValue(201); render(await resolveServerComponents(page("1")));

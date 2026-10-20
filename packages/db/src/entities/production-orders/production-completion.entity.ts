@@ -29,10 +29,8 @@ export const ProductionCompletion = defineEntity({
   name: "ProductionCompletion",
   filters: owned.filters,
   properties: {
-    id: p
-      .uuid()
-      .primary()
-      .onCreate(() => randomUUID()),
+    // Always given: the posting generates it first, because its stock movements carry it.
+    id: p.uuid().primary(),
     tenant: owned.tenant,
     code: p.string().length(8),
     order: () => p.manyToOne(ProductionOrder),

@@ -30,6 +30,7 @@ import {
   INACTIVE_INPUT_MESSAGE,
   MISSING_COMPONENT_MESSAGE,
   OUTPUT_AS_INPUT_MESSAGE,
+  SUBMISSION_REUSED_MESSAGE,
   productionCompletionCreateSchema,
   productionCompletionListSchema,
   productionCompletionPreviewSchema,
@@ -49,8 +50,6 @@ export const PRODUCTION_COMPLETION_MOVEMENT = "production-completion";
 /** The most stock movements one completion may post: the ledger's limit for one posting (`stockPostingSchema`). */
 export const COMPLETION_MOVEMENTS_MAX = 100;
 export const COMPLETION_ID_RACE = "Another production completion was posted at the same moment. Try again.";
-/** What a submission token already spent on another order says, on `submission`. */
-export const SUBMISSION_REUSED_MESSAGE = "This form was already used to post a completion for another order.";
 
 /** One material of a completion as the screens and the API show it: expected, actual and variance in its base unit. */
 export interface CompletionLineView {

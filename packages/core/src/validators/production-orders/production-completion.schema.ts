@@ -20,6 +20,8 @@ export const INACTIVE_INPUT_MESSAGE = "This material is inactive: production can
 export const OUTPUT_AS_INPUT_MESSAGE = "The order's output can't also be one of its inputs.";
 /** What the service says about an added input with nothing used. */
 export const EXTRA_INPUT_QUANTITY_MESSAGE = "Enter how much of an added input was used: more than 0.";
+/** What the service says, on `submission`, about a dialog token already spent on another order (spec Q7). */
+export const SUBMISSION_REUSED_MESSAGE = "This form was already used to post a completion for another order.";
 /** What the service says, on `components`, when a completion would post more movements than the ledger takes. */
 export const COMPLETION_MOVEMENTS_MESSAGE = "A completion posts at most 100 stock movements: the output and every material used.";
 

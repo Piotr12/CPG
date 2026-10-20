@@ -32,13 +32,14 @@ import {
   INACTIVE_INPUT_MESSAGE,
   MISSING_COMPONENT_MESSAGE,
   OUTPUT_AS_INPUT_MESSAGE,
+  SUBMISSION_REUSED_MESSAGE,
   UNKNOWN_INPUT_MESSAGE,
   type ProductionCompletionInput,
 } from "../../validators/production-orders/production-completion.schema";
 import type { AuditActor } from "../audit/actor";
 import { StockService } from "../stock/stock.service";
 import { TransferService } from "../transfers/transfer.service";
-import { PRODUCTION_COMPLETION_MOVEMENT, ProductionCompletionService, SUBMISSION_REUSED_MESSAGE } from "./production-completion.service";
+import { PRODUCTION_COMPLETION_MOVEMENT, ProductionCompletionService } from "./production-completion.service";
 import { ProductionOrderService } from "./production-order.service";
 
 /** The audit action whose recording crashes, to fail a completion after its posting has flushed; null when none does. */
