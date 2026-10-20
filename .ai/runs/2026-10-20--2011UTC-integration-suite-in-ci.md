@@ -13,12 +13,15 @@ Stop running the ~15-minute integration suite both locally and in CI. The owner 
 - New rule: locally, run only the integration files a change adds or touches (plus `smoke.test.ts` for a new migration), and check the PR's CI result before calling the work done.
 - Removed `npm run test:integration` from the local gate in `.ai/agentic.config.json` and updated the documents that list the gate together.
 
+- CI on this PR, after `main` (with #109) was merged in, failed once in `preferences.test.ts` (UX-007): the test read `<html lang>`/`dark` before the client applied them after the soft navigation from /login. Fixed by waiting for them, as the file's other tests do; a lesson records it.
+
 ## Changes
-- `AGENTS.md` (Testing; Before finishing), `SDLC.md` (Validation gate), `CODE_REVIEW.md` (Validation gate), `.ai/docs/engineering-standards.md` (review checklist, §4), `.ai/agentic.config.json`, `.ai/lessons.md`.
+- `AGENTS.md` (Testing; Before finishing), `SDLC.md` (Validation gate), `CODE_REVIEW.md` (Validation gate), `.ai/docs/engineering-standards.md` (review checklist, §4), `.ai/agentic.config.json`, `.ai/lessons.md`, `tests/integration/preferences.test.ts` (race fix).
 
 ## Verification
 - `npx vitest run tests` (repo-wide checks, including the `.ai/` file-name rule): passed.
-- Docs and config only; no code changed.
+- `npm run test:integration -- tests/integration/preferences.test.ts` (Docker): 8 passed.
+- Otherwise docs and config only.
 
 ## Follow-ups
 - None.

@@ -57,6 +57,8 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 ## Testing
 
+- **2026-10-20 — Wait for client-applied `<html>` state after a soft navigation** — `preferences.test.ts` read `lang` and the `dark` class right after signing in; the Polish heading was already rendered but `DocumentPreferences` had not yet updated the root `<html>`, which a soft navigation keeps. It failed once in CI (#110) after passing elsewhere. `waitUntil` the document attributes before asserting them.
+
 - **2026-10-20 — Wait for a dialog’s overlay before clicking behind it** — A cancelled shadcn dialog leaves its fading overlay for 100 ms. Wait until both `[role=dialog]` and `[data-slot=dialog-overlay]` are gone before clicking the page’s Edit button; checking hydration alone can still click the overlay.
 
 - **2026-10-20 — Start each standalone build from a fresh copy** — Overlaying a new `.next/standalone` onto a running test copy retained `.next/server/route-cache` from the previous build. Prod then loaded an old dialog chunk while Test loaded the fix. Copy standalone, static and public into a new empty directory on every rebuild; a fresh database alone does not clear Next’s runtime route cache.
