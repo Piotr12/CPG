@@ -888,6 +888,16 @@ export const en = {
     readOnly: "Read-only",
   },
   /** The sidebar every signed-in page shares, and the visitor bar (components/layout). Test and Prod are tenant names, never translated. */
+  stock: {
+    heading: "Stock — {tenant}", intro: "Physical stock is in the material's base unit. Corrections post today (UTC); stock cannot go below zero.",
+    material: "Material", location: "Location", show: "Show stock", quantity: "Physical balance", ledger: "Recent stock movements", empty: "No movements for this material and location.",
+    noMasters: "Create materials and locations before reading stock. Ask the administrator to add them.", inactive: "Inactive", unavailable: "New corrections require an active material and location in a writable tenant.",
+    date: "Business date", movement: "Movement", reason: "Reason", details: "Source and entry details", source: "Source", actor: "Actor", channel: "Channel", entered: "Entered", factor: "Factor", after: "Balance after", correction: "Correction", recent: "Showing up to 100 recent movements. The physical balance includes all movements.",
+    channels: { ui: "UI", api: "API", seed: "Installation" },
+    form: { open: "Post correction", title: "Post stock correction", description: "Enter a signed change: 5 adds five; -5 removes five. This records a permanent movement today.", quantity: "Signed quantity", quantityHint: "Use up to six decimals. Negative quantities remove stock.", unit: "Unit", reason: "Reason", submit: "Post", pending: "Posting…", cancel: "Cancel" },
+    fieldErrors: { quantity: "Enter a nonzero signed quantity, with at most 12 integer digits and 6 decimals.", reason: "Enter a reason, up to 500 characters.", unit: "Choose a valid unit." },
+    errors: { QUANTITY_OUT_OF_RANGE: "That quantity or resulting balance is too large.", QUANTITY_ROUNDS_TO_ZERO: "That quantity rounds to zero in the base unit.", MATERIAL_INACTIVE: "This material is inactive. New corrections are blocked.", LOCATION_INACTIVE: "This location is inactive. New corrections are blocked.", UNIT_NOT_CONVERTIBLE: "The unit has no conversion to this material's base unit." },
+  },
   nav: {
     menu: "Menu",
     close: "Close",
@@ -899,6 +909,7 @@ export const en = {
     customers: "Customers",
     suppliers: "Suppliers",
     planningParameters: "Planning parameters",
+    stock: "Stock",
     safetyStock: "Safety stock",
     boms: "BOMs",
     import: "Import",

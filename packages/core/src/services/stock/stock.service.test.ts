@@ -134,6 +134,20 @@ describe("StockService", () => {
     const em = scoped("test"); const tenant = await em.findOneOrFail(Tenant, { code: "test" }); tenant.readOnly = true; await em.flush();
     expect(await service("test").seedDemo()).toBe(0);
   });
+  it("revalidates cached masters at posting time after another request deactivates them", async () => {
+    const em = scoped();
+    await em.findOneOrFail(Material, { code: PAIR.material });
+    await em.findOneOrFail(Location, { code: PAIR.location });
+    const other = scoped();
+    const material = await other.findOneOrFail(Material, { code: PAIR.material });
+    material.active = false; await other.flush();
+    await expect(new StockService({ em }).correct(line(), ACTOR)).rejects.toMatchObject({ code: "MATERIAL_INACTIVE" });
+    material.active = true;
+    const location = await other.findOneOrFail(Location, { code: PAIR.location }); location.active = false; await other.flush();
+    await expect(new StockService({ em }).correct(line(), ACTOR)).rejects.toMatchObject({ code: "LOCATION_INACTIVE" });
+    expect(await entries()).toEqual([]);
+    expect(await scoped().count(StockBalance, {})).toBe(0);
+  });
   it("prevents two competing withdrawals spending the same stock (INV-021)", async () => {
     await service().correct(line("2"), ACTOR);
     const other = await initOrm({ databasePath: path.join(directory, "db.sqlite") });
