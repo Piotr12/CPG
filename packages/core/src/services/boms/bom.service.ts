@@ -249,7 +249,8 @@ export class BomService {
     try {
       return await this.em.transactional(edit);
     } catch (error) {
-      if (error instanceof OptimisticLockError) throw versionConflict();
+      // A clash on (bom, number) is a racing revision with the same number: the BOM changed under the caller.
+      if (error instanceof OptimisticLockError || error instanceof UniqueConstraintViolationException) throw versionConflict();
       throw error;
     }
   }

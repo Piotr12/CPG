@@ -13,7 +13,7 @@ The original export marked every scenario `Not executed`. Scenarios are updated 
 - **Partially verified**: only part of the scenario can be or is asserted today; the **Evidence** line says which part is missing and why.
 - **Not executed**: not yet built or not yet checked.
 
-Last updated 2026-10-20 for epic E03 (#11), against `main` at `3f553a5` (PR #65 for E03-S03), plus the tests added with that update, and since then for the E02 end-to-end follow-up (#67). Earlier: epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
+Last updated 2026-10-20 for epic E04 (#12), against `main` at `082f2d5` (PR #70 for E04-S01), plus the tests added with that update. Earlier: epic E03 (#11) against `3f553a5`, and the E02 end-to-end follow-up (#67); epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
 
 This document contains the complete acceptance catalogue for the CPG MVP. Each test preserves its ID, title, priority, execution channel, and Given / When / Then criteria.
 
@@ -23,7 +23,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/tenants.test.ts` (the chooser offers Test and Prod), `tests/integration/materials.test.ts`, `named-records.test.ts`, `materials-api.test.ts` and `named-records-api.test.ts`, `planning-parameters.test.ts` and `planning-parameters-api.test.ts` (Test starts with the demo records), `packages/core/src/demo-data.test.ts` (the startup seed fills Test, never Prod). Prod being empty on a fresh install is asserted by that unit test only: the integration files share one app. E02-S01, #19.
+- **Evidence:** `tests/integration/tenants.test.ts` (the chooser offers Test and Prod), `tests/integration/materials.test.ts`, `named-records.test.ts`, `materials-api.test.ts` and `named-records-api.test.ts`, `planning-parameters.test.ts` and `planning-parameters-api.test.ts`, `boms.test.ts` and `boms-api.test.ts` (Test starts with the demo records, the three demo BOMs included), `packages/core/src/demo-data.test.ts` (the startup seed fills Test, never Prod, BOMs included). Prod being empty on a fresh install is asserted by that unit test only: the integration files share one app. E02-S01, #19, with #26.
 - **Given:** Fresh CPG runtime with valid administrator password
 - **When:** Inspect tenant selection and data
 - **Then:** Test contains demonstration business records; Prod contains none; both tenants selectable.
@@ -50,7 +50,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** Creation and sign-in: `tests/integration/users.test.ts`, `packages/core/src/services/users/user.service.test.ts`. The normal user is refused every admin-only operation (`tests/integration/api-tokens.test.ts`, `packages/core/src/http/auth.test.ts`) and every master-data write: through the UI (`tests/integration/materials.test.ts`, `named-records.test.ts` and `planning-parameters.test.ts` show no controls; every master's `actions.test.ts` refuses all its writes), and through the API, end to end for a write of each master (`tests/integration/materials-api.test.ts`, `named-records-api.test.ts`, `planning-parameters-api.test.ts`) and for every write in the routes' `route.test.ts` files, while still reading. E01-S02, PR #34, with #22, #23 and #24.
+- **Evidence:** Creation and sign-in: `tests/integration/users.test.ts`, `packages/core/src/services/users/user.service.test.ts`. The normal user is refused every admin-only operation (`tests/integration/api-tokens.test.ts`, `packages/core/src/http/auth.test.ts`) and every master-data write: through the UI (`tests/integration/materials.test.ts`, `named-records.test.ts`, `planning-parameters.test.ts` and `boms.test.ts` show no controls; every master's `actions.test.ts`, BOMs included, refuses all its writes), and through the API, end to end for a write of each master (`tests/integration/materials-api.test.ts`, `named-records-api.test.ts`, `planning-parameters-api.test.ts`, `boms-api.test.ts`) and for every write in the routes' `route.test.ts` files, while still reading. E01-S02, PR #34, with #22, #23, #24 and #26.
 - **Given:** Administrator logged in
 - **When:** Create normal user with initial password
 - **Then:** New active normal user can sign in with specified password and has no master-data edit permission.
@@ -138,7 +138,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** Data layer: `packages/db/src/tenants/tenant-isolation.test.ts` (a reference to another tenant's record is rejected and nothing is written). Services: the material and named-record service tests, and `packages/core/src/services/planning-parameters/planning-parameter.service.test.ts` and `packages/core/src/services/safety-stock/safety-stock-target.service.test.ts` (a set or target naming a material or location that exists only in the other tenant is refused, writing nothing in either). End to end: `tests/integration/named-records-api.test.ts` (a Prod-only location, customer or supplier is not found from Test, to read or change) and `tests/integration/planning-parameters-api.test.ts` (a Test set or target naming a Prod-only material or location is 404 and stores nothing). No business document references a material yet; the document half waits for BOMs (#26) and orders. E02-S01, #19, with #23 and #24.
+- **Evidence:** Data layer: `packages/db/src/tenants/tenant-isolation.test.ts` (a reference to another tenant's record is rejected and nothing is written). Services: the material and named-record service tests, `packages/core/src/services/planning-parameters/planning-parameter.service.test.ts` and `packages/core/src/services/safety-stock/safety-stock-target.service.test.ts` (a set or target naming a material or location that exists only in the other tenant is refused, writing nothing in either), and `packages/core/src/services/boms/bom.service.test.ts` (a Test BOM naming a Prod-only material as output or component is `MATERIAL_NOT_FOUND` while Test has materials of its own, writing nothing in either tenant; a Prod BOM is `BOM_NOT_FOUND` from Test). End to end: `tests/integration/named-records-api.test.ts` (a Prod-only location, customer or supplier is not found from Test, to read or change), `tests/integration/planning-parameters-api.test.ts` (a Test set or target naming a Prod-only material or location is 404 and stores nothing) and `tests/integration/boms-api.test.ts` (a Test BOM naming a Prod-only material is 404 and Test's BOMs are unchanged; a Prod-only BOM is not found from Test, to read or change). Business documents (orders) wait for slice 2. E02-S01, #19, with #23, #24 and #26.
 - **Given:** A Test document tries to reference a Prod material ID with no Test equivalent
 - **When:** Validate/create record
 - **Then:** Reference is not resolved across tenants and the operation fails without writes.
@@ -156,7 +156,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/read-only-api.test.ts` (the admin token's update of a Test material while Test is read-only is 409 `TENANT_READ_ONLY`, and the stored description and version remain; in read-only Prod, a location rename and deactivation, a material deactivation and a conversion change are refused too, and the stored values remain), `tests/integration/read-only.test.ts` (on the screens, the admin's Create material from a page loaded before the flag is refused with the explanation, and nothing is stored), `packages/core/src/http/tenant-server-action.test.ts`. E02-S04, #25.
+- **Evidence:** `tests/integration/read-only-api.test.ts` (the admin token's update of a Test material while Test is read-only is 409 `TENANT_READ_ONLY`, and the stored description and version remain; in read-only Prod, a location rename and deactivation, a material deactivation, a conversion change, and a BOM create, recipe change and deactivation are refused too, and the stored values remain), `tests/integration/read-only.test.ts` (on the screens, the admin's Create material from a page loaded before the flag is refused with the explanation, and nothing is stored), `packages/core/src/http/tenant-server-action.test.ts`. E02-S04, #25, with #26.
 - **Given:** Test set read-only
 - **When:** Admin attempts master-data update
 - **Then:** Update is blocked despite admin role; previously stored values remain.
@@ -165,7 +165,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** API · **Status:** Partially verified
 
-- **Evidence:** `tests/integration/read-only-api.test.ts` (an admin token's material create, edit and deactivation in read-only Prod, a location create, rename and deactivation, a customer and a supplier create, and a conversion add, change and remove all answer 409 `TENANT_READ_ONLY` with nothing changed), `packages/core/src/services/idempotency/idempotency.service.test.ts` (no key is stored). The gate covers every tenant write route (`tests/api-writes.test.ts`), but the scenario's goods issue comes in slice 2, so its half waits, as for TEN-015. E02-S04, #25.
+- **Evidence:** `tests/integration/read-only-api.test.ts` (an admin token's material create, edit and deactivation in read-only Prod, a location create, rename and deactivation, a customer and a supplier create, a conversion add, change and remove, and a BOM create, recipe change and deactivation all answer 409 `TENANT_READ_ONLY` with nothing changed), `packages/core/src/services/idempotency/idempotency.service.test.ts` (no key is stored). The gate covers every tenant write route (`tests/api-writes.test.ts`), but the scenario's goods issue comes in slice 2, so its half waits, as for TEN-015. E02-S04, #25, with #26.
 - **Given:** Prod read-only
 - **When:** API attempts goods issue with otherwise valid token and idempotency key
 - **Then:** Request is rejected; no inventory movement or order change is created.
@@ -356,7 +356,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/services/materials/material.service.test.ts`: the base unit changes on an unreferenced material, and is refused while it has conversions (`BASE_UNIT_HAS_CONVERSIONS`) or planning parameters or safety-stock targets (`BASE_UNIT_IN_USE`, #24). The BOM, document and stock-movement locks come with BOMs (#26) and slice 2. E03-S01, #22.
+- **Evidence:** `packages/core/src/services/materials/material.service.test.ts`: the base unit changes on an unreferenced material, also while a BOM exists in the tenant. It is refused while the material has conversions (`BASE_UNIT_HAS_CONVERSIONS`), planning parameters or safety-stock targets (`BASE_UNIT_IN_USE`, #24), or once a BOM uses it (`BASE_UNIT_IN_USE` naming the BOM, ahead of the conversions check, #26). The document and stock-movement locks come in slice 2. E03-S01, #22; E04-S01, #26.
 - **Given:** Material has no BOM revision reference, operational document reference or inventory movement
 - **When:** Admin changes base UoM
 - **Then:** BUoM can change, with conversion consistency verified; after any listed reference the same change is rejected.
@@ -371,8 +371,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MAT-011 — Type locked when BOM references
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/materials/material.service.test.ts` (a type change of a BOM's output or component is `MATERIAL_TYPE_IN_USE` naming the BOM, also when the only reference is an old revision of an inactive BOM, and ahead of `MATERIAL_MADE_AT_LOCATIONS`), `packages/core/src/services/boms/bom-usage.test.ts`, `tests/integration/boms-api.test.ts` (a used output's type change is 409 `MATERIAL_TYPE_IN_USE`), `tests/integration/boms.test.ts` (after its BOM is deactivated, the output's Edit refuses a type change with the lock message). E04-S01, #26.
 - **Given:** Material referenced by an active or historic BOM
 - **When:** Attempt material type change
 - **Then:** Reject edit, preserving historical component/output semantics.
@@ -389,7 +390,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/materials/material.service.test.ts` (type and base unit edits on an unused material, audited with before and after). Nothing can reference a material's type yet except Make planning parameters, which lock a change to raw (MAT-014). E03-S01, #22.
+- **Evidence:** `packages/core/src/services/materials/material.service.test.ts` (type and base-unit edits on an unused material, audited with before and after, also while a BOM exists in the tenant). A material that a BOM or a Make planning-parameter set uses is locked instead (MAT-011, MAT-014). E03-S01, #22; E04-S01, #26.
 - **Given:** Material has no BOM references or transactions
 - **When:** Admin changes type within supported set
 - **Then:** Updated type stored and audited.
@@ -440,18 +441,18 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MAT-019 — Convert case to each at input
 
-**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/domain/quantities/decimal.test.ts` (2 × 12/1 = 24) and `packages/core/src/services/materials/material.service.test.ts` (`toBaseQuantity` returns 24 each with the entered 2 case and its factor), `conversions-table`, `add-conversion-dialog` and `labels` tests, `tests/integration/materials.test.ts` (1 case = 12 each shown). Nothing stores an entered quantity yet: BOM lines (#26) are the first (materials spec Q5). E03-S01, #22.
+- **Evidence:** `packages/core/src/domain/quantities/decimal.test.ts` (2 × 12/1 = 24), `packages/core/src/services/materials/base-quantity.test.ts` and `packages/core/src/services/materials/material.service.test.ts` (24 each with the entered 2 case and its factor), the materials `conversions-table`, `add-conversion-dialog` and `labels` tests, `tests/integration/materials.test.ts` (1 case = 12 each shown). Stored on a BOM line: `packages/core/src/services/boms/bom.service.test.ts` (2 case is stored as 24.000000 each with entered quantity 2, unit case and factor 12/1, and the audit entry reads "24.000000 each (2 case)"), `tests/integration/boms-api.test.ts` (the same through `POST /boms`), `tests/integration/boms.test.ts` (demo BOM 00000003 shows 24 each, entered as "2 case at 1 case = 12 each"), `packages/app/src/app/admin/[tenant]/boms/[id]/page.test.tsx` and `packages/app/src/components/boms/labels.test.ts` (the Entered as text). E03-S01, #22; E04-S01, #26.
 - **Given:** BUoM each, factor 1 case = 12 each
 - **When:** Enter 2 cases in transaction or BOM
 - **Then:** Stored authority is 24 each; original 2 cases and factor retained for display/audit.
 
 ### MAT-020 — Convert tonne to kg
 
-**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/domain/quantities/decimal.test.ts` and `packages/core/src/services/materials/material.service.test.ts` (0.25 t = 250 kg through `toBaseQuantity`), `conversions-table.test.tsx`. Storing the entered quantity waits for #26 (materials spec Q5). E03-S01, #22.
+- **Evidence:** `packages/core/src/domain/quantities/decimal.test.ts` and `packages/core/src/services/materials/material.service.test.ts` (0.25 t = 250 kg through `toBaseQuantity`), `conversions-table.test.tsx`, `packages/core/src/services/boms/bom.service.test.ts` (a BOM line entered as 0.25 t is stored as 250.000000 kg). E03-S01, #22; E04-S01, #26.
 - **Given:** Material BUoM kg and a tonne conversion defined
 - **When:** Enter 0.25 tonne
 - **Then:** Stored amount is 250 kg, not 0.25 kg.
@@ -478,7 +479,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/services/materials/material.service.test.ts`: `toBaseQuantity` refuses a unit with no conversion (`UNIT_NOT_CONVERTIBLE`) instead of assuming 1:1. No entry saves a quantity yet (#26), and MRP is slice 3. E03-S01, #22.
+- **Evidence:** `packages/core/src/services/materials/base-quantity.test.ts` and `packages/core/src/services/materials/material.service.test.ts` (a unit with no conversion is `UNIT_NOT_CONVERTIBLE`, never assumed 1:1). Saving: `packages/core/src/services/boms/bom.service.test.ts` (a BOM line in a unit its material doesn't convert is refused with a field error on that line's unit, `components.N.unit`, next to other lines' errors), `tests/integration/boms-api.test.ts` (a `POST` with a `pallet` line is 400 with that field error), `packages/app/src/components/boms/recipe-form.test.tsx` (the server's line error shown, translated, on its line). MRP's exception waits for slice 3. E03-S01, #22; E04-S01, #26.
 - **Given:** Quantity entered in UoM not convertible for material
 - **When:** Attempt save or run dependent MRP
 - **Then:** Transaction cannot silently assume 1:1; actionable invalid conversion error/exception.
@@ -487,7 +488,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/domain/quantities/decimal.test.ts` and `packages/core/src/services/materials/material.service.test.ts` (0.123456 kept exactly, every quantity a six-decimal string, never a binary float). Stored quantities exist only in planning parameters and safety-stock targets so far (`packages/core/src/validators/quantities/quantity.schema.test.ts`, JSON numbers refused); entered-unit storage waits for #26. E03-S01, #22.
+- **Evidence:** `packages/core/src/domain/quantities/decimal.test.ts`, `packages/core/src/services/materials/base-quantity.test.ts` and `packages/core/src/services/materials/material.service.test.ts` (0.123456 kept exactly, every quantity a six-decimal string, never a binary float). Stored: `packages/core/src/services/boms/bom.service.test.ts` (a BOM line of 0.123456 is stored as 0.123456), `packages/db/src/orm.test.ts` (a BOM line's quantity is stored as text), and planning parameters and safety-stock targets (`packages/core/src/validators/quantities/quantity.schema.test.ts`, JSON numbers refused). Posting to the ledger waits for slice 2. E03-S01, #22; E04-S01, #26.
 - **Given:** BUoM quantity entered as 0.123456
 - **When:** Post valid quantity
 - **Then:** Exact six-place value preserved in calculations and ledger.
@@ -510,16 +511,18 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MAT-027 — Conversion update future only
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/services/boms/bom.service.test.ts`: after the bolt's case conversion changes from 12 to 10 each, the saved BOM still reads 24 each at revision 1. An edit resending the unchanged 2 case line (also sent as 2.0) keeps 24 each and adds no revision, and a newly entered 3 case is stored as 30 each. Transactions wait for slice 2. E04-S01, #26.
 - **Given:** Previously saved BOM uses 1 case = 12 each
 - **When:** Admin changes conversion to 1 case = 10 each
 - **Then:** Existing BOM/transactions remain 12 BUoM; new 1-case entries use 10 BUoM.
 
 ### MAT-028 — No retroactive BOM revision from conversion
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/boms/bom.service.test.ts` (after the component's own case conversion changes from 12 to 10 each, the BOM stays at revision 1 with its stored 24.000000 each line, a stronger case than an unrelated material's), `packages/core/src/domain/boms/recipe-equality.test.ts` (a line with the same base quantity is no change). E04-S01, #26.
 - **Given:** One BOM revision with stored component 12 each
 - **When:** Update unrelated material case conversion
 - **Then:** BOM revision number unchanged; stored BOM component quantity stays 12.
@@ -528,15 +531,16 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/services/materials/find-material.test.ts`, `packages/core/src/services/planning-parameters/planning-parameter.service.test.ts` and `packages/core/src/services/safety-stock/safety-stock-target.service.test.ts` (a new set or target refuses an inactive material, `MATERIAL_INACTIVE`; an existing target stays readable and editable), `packages/app/src/components/master-data/references.test.tsx` and `tests/integration/planning-parameters.test.ts` (a deactivated material isn't offered and its target stays), `tests/integration/planning-parameters-api.test.ts` (409 and nothing stored). PO lines are slice 2. E03-S03, #24.
+- **Evidence:** `packages/core/src/services/materials/find-material.test.ts`, `packages/core/src/services/planning-parameters/planning-parameter.service.test.ts` and `packages/core/src/services/safety-stock/safety-stock-target.service.test.ts` (a new set or target refuses an inactive material, `MATERIAL_INACTIVE`; an existing target stays readable and editable), `packages/app/src/components/master-data/references.test.tsx` and `tests/integration/planning-parameters.test.ts` (a deactivated material isn't offered and its target stays), `tests/integration/planning-parameters-api.test.ts` (409 and nothing stored). BOMs: `packages/core/src/services/boms/bom.service.test.ts` (a new BOM for an inactive output, or adding an inactive component, is `MATERIAL_INACTIVE`, while an edit keeps an inactive component already on the recipe), `packages/app/src/components/boms/choices.test.ts` (only active materials are offered, plus inactive ones the recipe already has). PO lines are slice 2. E03-S03, #24; E04-S01, #26.
 - **Given:** Material inactive, historical PO remains
 - **When:** Create new PO line using inactive material
 - **Then:** New selection rejected; historical PO remains readable and eligible for completion.
 
 ### MAT-030 — BUoM locked by any historic BOM reference
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/materials/material.service.test.ts` (a base-unit change of a BOM's output, of a component, and of a material used only in an old revision of an inactive BOM is `BASE_UNIT_IN_USE` naming the BOM, ahead of the conversions check), `packages/core/src/services/boms/bom-usage.test.ts` (the lookup finds outputs, current components and old-revision components), `packages/db/src/orm.test.ts` (revisions and lines can't be updated). E04-S01, #26.
 - **Given:** Material has never been posted or ordered but appears as output/input in an immutable BOM revision, active or archived
 - **When:** Admin attempts BUoM edit
 - **Then:** Reject change with BOM reference; preserve recipe interpretation across all historical versions.
@@ -551,9 +555,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MAT-032 — Non-terminating UoM conversion rounds once
 
-**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/domain/quantities/decimal.test.ts` and `packages/core/src/services/materials/material.service.test.ts` (1 × 1/3 = 0.333333, 2 × 1/3 = 0.666667, rounded half-up once). Storing it waits for #26 (materials spec Q5). E03-S01, #22.
+- **Evidence:** `packages/core/src/domain/quantities/decimal.test.ts`, `packages/core/src/services/materials/base-quantity.test.ts` and `packages/core/src/services/materials/material.service.test.ts` (1 × 1/3 = 0.333333, 2 × 1/3 = 0.666667, rounded half-up once). Stored: `packages/core/src/services/boms/bom.service.test.ts` (a BOM line of 2 at 1/3 is stored as 0.666667 with entered quantity 2 and factor 1/3; 0.000001 at 1/3 is refused on that line's quantity, `QUANTITY_ROUNDS_TO_ZERO`). E03-S01, #22; E04-S01, #26.
 - **Given:** Material BUoM each, alternate UoM conversion factor 1/3, user enters 1 alternate unit
 - **When:** Save valid business quantity
 - **Then:** Store authoritative 0.333333 each by decimal half-up rounding; preserve entered value and exact factor; reject positive input that rounds to zero.
@@ -562,48 +566,54 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### BOM-001 — Finished material may have BOM
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/boms/bom.service.test.ts` (a finished BOM is created at revision 1 with its priority, validity and each line's base quantity, entered quantity, unit and factor, and its create is audited with the recipe), `tests/integration/boms-api.test.ts` (created through `POST /boms`, once per idempotency key, with no end when valid-through is left out), `tests/integration/boms.test.ts` (the admin creates a BOM for a finished output on the screen, and its page lists both lines with their quantities). E04-S01, #26.
 - **Given:** Finished material with raw component
 - **When:** Create recipe
 - **Then:** BOM created with required component quantities and validity.
 
 ### BOM-002 — Intermediate material may have BOM
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/boms/bom.service.test.ts` (an intermediate BOM is created from raw inputs; in the BOM-025 test, intermediates with BOMs of their own are components of other BOMs), `packages/core/src/domain/boms/recipe-rules.test.ts` (an intermediate may be an output), `tests/integration/boms.test.ts` (intermediate BOMs chained on the screen, sub A using sub B using sub C). E04-S01, #26.
 - **Given:** Intermediate output with raw input
 - **When:** Create recipe
 - **Then:** Intermediate BOM accepted and can feed parent recipe.
 
 ### BOM-003 — Raw material cannot be BOM output
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/boms/bom.service.test.ts` (a raw output is `VALIDATION_FAILED` on `output`, and no BOM or revision is stored), `packages/core/src/domain/boms/recipe-rules.test.ts`, `packages/app/src/components/boms/choices.test.ts` (the form offers only active intermediate and finished outputs), `tests/integration/boms.test.ts` (a raw material isn't offered as the output). E04-S01, #26.
 - **Given:** Raw material selected as recipe output
 - **When:** Save BOM
 - **Then:** Validation rejects recipe; no BOM revision added.
 
 ### BOM-004 — Finished material not permitted as component
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/boms/bom.service.test.ts` (a finished component is refused on its line, `components.N.material`, on create and on edit, and nothing is stored), `packages/core/src/domain/boms/recipe-rules.test.ts`, `packages/app/src/components/boms/choices.test.ts`, `tests/integration/boms.test.ts` (a finished material isn't offered as a component). E04-S01, #26.
 - **Given:** Recipe for finished output references finished component
 - **When:** Save revision
 - **Then:** Invalid component type error, no revision created.
 
 ### BOM-005 — Raw and intermediate components allowed
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/boms/bom.service.test.ts` (a finished recipe with raw and intermediate components, each stored in its own base unit), `packages/core/src/domain/boms/recipe-rules.test.ts`, `tests/integration/boms.test.ts` (a raw and an intermediate component, shown as 4.5 kg and 2 each). E04-S01, #26.
 - **Given:** Finished recipe refers to one raw and one intermediate
 - **When:** Validate and save
 - **Then:** Recipe accepted, with each component material and required BUoM.
 
 ### BOM-006 — Recipe per one output BUoM
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** A recipe is stored per one base unit of the output, with each component in its own base unit: `packages/core/src/services/boms/bom.service.test.ts` (0.25 t stored as 250 kg, 250 ml as 0.25 l), `packages/app/src/components/boms/recipe-form.test.tsx` (the lines are headed "Per 1 each of Cabinet, red"). Scaling it to a planned quantity waits for production orders (slice 2) and MRP (slice 3). E04-S01, #26.
 - **Given:** Recipe needs 0.5 kg A and 0.2 litre B per finished each
 - **When:** Plan 10 finished units
 - **Then:** Expected component quantities are 5 kg A and 2 litres B (normalized in each material's BUoM).
@@ -618,8 +628,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### BOM-008 — BOM alternative count
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/boms/bom.service.test.ts` (two alternatives for one output are listed with their own IDs, priorities and revision 1), `packages/app/src/app/admin/[tenant]/boms/page.test.tsx` (the list shows each BOM with its output, priority and current revision), `tests/integration/boms.test.ts` (Test's demo cabinet has BOMs 00000002 and 00000003, at priorities 1 and 2). E04-S01, #26.
 - **Given:** One finished material has two valid alternatives with different priorities
 - **When:** Read BOM master
 - **Then:** Both independent logical BOM IDs and their versions remain available.
@@ -658,8 +669,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### BOM-013 — Validity end inclusive
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** The valid-through day is part of the period: `packages/core/src/domain/boms/priority-conflict.test.ts` (a period ending on the day another starts shares that day), `packages/core/src/services/boms/bom.service.test.ts` (an equal-priority BOM starting on another's valid-through day is refused, naming that single day). A BOM being eligible for an order on that date waits for production orders (slice 2). E04-S01, #26.
 - **Given:** BOM valid through October 31
 - **When:** Create order with planned completion October 31
 - **Then:** BOM eligible on through date.
@@ -674,88 +686,99 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### BOM-015 — Partially overlapping equal priority
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/boms/bom.service.test.ts` (Jan–Mar against Mar–May at the same priority is `BOM_PRIORITY_CONFLICT`, naming BOM 00000001 and the shared days, 2027-03-01 – 2027-03-31), `packages/core/src/domain/boms/priority-conflict.test.ts`, `tests/integration/boms-api.test.ts` (409 naming the other BOM and the days), `tests/integration/boms.test.ts` (the dialog shows the clash with the other BOM). E04-S01, #26.
 - **Given:** Two alternatives for same output priority 1, periods Jan–Mar and Mar–May
 - **When:** Admin creates/edits second BOM
 - **Then:** Rejected due to overlapping March; identifies conflicting alternative.
 
 ### BOM-016 — Fully overlapping equal priority
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/boms/bom.service.test.ts` (a second alternative with the same priority and identical dates is `BOM_PRIORITY_CONFLICT`), `packages/core/src/domain/boms/priority-conflict.test.ts` (identical periods name the other BOM). E04-S01, #26.
 - **Given:** Two alternatives same output priority with identical validity dates
 - **When:** Save second alternative
 - **Then:** Validation rejects duplicate priority/overlap.
 
 ### BOM-017 — Different periods same priority
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/boms/bom.service.test.ts` (January and February at the same priority, and a third at another priority, are all stored), `packages/core/src/domain/boms/priority-conflict.test.ts` (adjacent periods share no day; other priorities are ignored). E04-S01, #26.
 - **Given:** Alternative A active Jan and B active Feb with no overlap
 - **When:** Save both at same priority
 - **Then:** Accepted because validity never overlaps.
 
 ### BOM-018 — Priority checks on validity edit
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/boms/bom.service.test.ts` (a valid-from edit that creates an equal-priority overlap, with the priority unchanged, is `BOM_PRIORITY_CONFLICT`, and the BOM keeps its single revision). E04-S01, #26.
 - **Given:** Two different-priority or non-overlapping alternatives
 - **When:** Edit date interval to create equal-priority overlap
 - **Then:** Edit rejected even though priority field was not changed.
 
 ### BOM-019 — Priority checks on any BOM update
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** The check runs on the end state of every save: `packages/core/src/services/boms/bom.service.test.ts` refuses a priority edit onto an overlapping active alternative's priority, a validity edit (BOM-018) and a reactivation (BOM-030) that would create an equal-priority overlap, writing nothing, and accepts a reactivation whose priority change in the same request avoids the clash. E04-S01, #26.
 - **Given:** Equal-priority overlap would result from a change to BOM definition
 - **When:** Change relevant BOM fields
 - **Then:** Same active-alternative uniqueness validation runs; inconsistent current selection cannot be saved.
 
 ### BOM-020 — First revision immutable after change
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/services/boms/bom.service.test.ts` (a changed amount adds revision 2, revision 1 reads back with its old quantities, and the revision is audited with the old and new recipe), `tests/integration/boms-api.test.ts` (a `PATCH` returns revision 2 and `GET …/revisions/1` still shows 24.000000), `tests/integration/boms.test.ts` (the page shows 5 kg at revision 2 and 4.5 kg at `?revision=1`, under the history notice), `packages/db/src/orm.test.ts` (triggers abort any update of a revision or a line). Production orders referencing revision 1 come in slice 2. E04-S01, #26.
 - **Given:** BOM revision 1 in use
 - **When:** Change a component amount
 - **Then:** Revision 2 created with new amount; revision 1 and referencing production orders unchanged.
 
 ### BOM-021 — Validity edit creates revision
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/boms/bom.service.test.ts` (a valid-through change adds revision 2, and removing the end adds revision 3, while revision 1 still reads back with its old dates; adding a revision issues no update to the existing revisions or lines), `packages/core/src/domain/boms/recipe-equality.test.ts` (either date counts as a change), `packages/db/src/orm.test.ts` (triggers abort an update of a revision or a line). E04-S01, #26.
 - **Given:** Current BOM revision has from/to dates
 - **When:** Admin changes valid-through
 - **Then:** New immutable revision created, old revision remains intact.
 
 ### BOM-022 — Logical BOM deactivation does not create recipe revision
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/services/boms/bom.service.test.ts` (deactivation and reactivation are audited as `active` yes → no and no → yes, and the revisions stay 2 and 1), `tests/integration/boms.test.ts` (after Deactivate, the list shows the BOM Inactive at the revision it had). Pinned production orders and "new orders can't select it" come in slice 2. E04-S01, #26.
 - **Given:** Active BOM revision used by completed order
 - **When:** Deactivate logical BOM via its audited active flag
 - **Then:** Historical production order retains pinned original recipe, new orders cannot select inactive BOM, and status toggle creates no new immutable recipe revision.
 
 ### BOM-023 — Unchanged content no new revision
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** Saving through the screens or the API: `packages/core/src/services/boms/bom.service.test.ts` (an identical save, a reordered save and a save with the same base quantity keep revision 1 and version 1, and record no revision entry), `packages/core/src/domain/boms/recipe-equality.test.ts`, `tests/integration/boms-api.test.ts` (a `PATCH` resending the same recipe returns the same revision and version), `packages/app/src/components/boms/bom-controls.test.tsx` (the screen says "No change: revision 2 is still current."). The import path and its Unchanged result wait for the BOM import (#27). E04-S01, #26.
 - **Given:** Existing logical BOM revision; uploaded complete recipe identical
 - **When:** Perform BOM import
 - **Then:** No new revision, result marked Unchanged.
 
 ### BOM-024 — Cyclic direct ingredient blocked
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/boms/bom.service.test.ts` (an output listed as its own component is `BOM_CYCLE` with the path "00000008 Sub A → 00000008 Sub A"), `packages/core/src/domain/boms/find-cycle.test.ts`. E04-S01, #26.
 - **Given:** BOM for intermediate A contains A
 - **When:** Validate recipe
 - **Then:** BOM rejected and offending self-cycle shown.
 
 ### BOM-025 — Cyclic indirect dependency blocked
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/boms/bom.service.test.ts` (editing C to use A, where A uses B and B uses C, is `BOM_CYCLE` with the full path naming each step's BOM, and C keeps revision 1 and its old component), `packages/core/src/domain/boms/find-cycle.test.ts`, `tests/integration/boms-api.test.ts` (the same edit through `PATCH` is 409 `BOM_CYCLE` with the full path, and C's revision and version stay), `tests/integration/boms.test.ts` (the same edit on the screen shows the full path from C, and the BOM keeps its revision). E04-S01, #26.
 - **Given:** Recipes A needs B; B needs C
 - **When:** Edit C recipe to use A
 - **Then:** Entire change rejected and path A → B → C → A reported.
@@ -786,16 +809,18 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### BOM-029 — Logical status toggle preserves revision count
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/services/boms/bom.service.test.ts` (deactivating and reactivating a BOM with revisions 1 and 2 records both entries, and its revisions stay 2 and 1, with no revision 3), `packages/db/src/orm.test.ts` (revisions and lines can't be updated). The order pinning revision 1 comes in slice 2. E04-S01, #26.
 - **Given:** Logical BOM has immutable revisions 1 and 2 and an existing production order pins revision 1
 - **When:** Admin deactivates and later reactivates logical BOM
 - **Then:** Active flag/audit changes, revision 1 and 2 snapshots unchanged, no artificial revision 3; pinned order still references revision 1.
 
 ### BOM-030 — Reactivation validates competing BOM priorities
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/boms/bom.service.test.ts` (reactivating B while the active A has the same priority over overlapping days is `BOM_PRIORITY_CONFLICT`, naming A; B stays inactive at revision 1, and A stays at revision 1), `packages/app/src/components/boms/bom-controls.test.tsx` (Reactivate shows the clash with its details). E04-S01, #26.
 - **Given:** Logical BOM alternative A active with priority 1 and overlapping validity; alternative B inactive at priority 1
 - **When:** Administrator reactivates B without changing recipe
 - **Then:** Activation rejected due to overlapping equal-priority selectable alternatives; B remains inactive and neither alternative gets a new immutable recipe revision.
@@ -3345,7 +3370,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
 
-- **Evidence:** A normal user's token is refused (403) on admin-only operations, end to end: `GET /api/users` in `tests/integration/api-tokens.test.ts`; `POST /api/users`, `PATCH /api/users/{id}` and `PUT /api/users/{id}/password` in `tests/integration/api-users.test.ts`, where the same token still changes its own preferences; a master-data write of each kind in `tests/integration/materials-api.test.ts` (create and change a material), `named-records-api.test.ts` (create) and `planning-parameters-api.test.ts` (create a safety-stock target), where the token still reads. Unit tests in the routes' `route.test.ts` files and `packages/app/src/auth/api-write.test.ts`. E01-S03, PRs #41, #48; #52; with #22, #23 and #24.
+- **Evidence:** A normal user's token is refused (403) on admin-only operations, end to end: `GET /api/users` in `tests/integration/api-tokens.test.ts`; `POST /api/users`, `PATCH /api/users/{id}` and `PUT /api/users/{id}/password` in `tests/integration/api-users.test.ts`, where the same token still changes its own preferences; a master-data write of each kind in `tests/integration/materials-api.test.ts` (create and change a material), `named-records-api.test.ts` (create), `planning-parameters-api.test.ts` (create a safety-stock target) and `boms-api.test.ts` (create a BOM), where the token still reads. Unit tests in the routes' `route.test.ts` files and `packages/app/src/auth/api-write.test.ts`. E01-S03, PRs #41, #48; #52; with #22, #23, #24 and #26.
 - **Given:** Normal user's bearer token valid
 - **When:** Try to change master material
 - **Then:** Rejected as forbidden; ordinary allowed transaction can still succeed.
@@ -3411,9 +3436,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### API-018 — API error has stable code and message
 
-**Priority:** P1 · **Channel:** API · **Status:** Partially verified
+**Priority:** P1 · **Channel:** API · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/materials-api.test.ts` (an incomplete material is refused with a stable code and every missing field named, and nothing is created). No mutating call references another material yet, so the unknown-reference case waits for BOMs (#26). E02-S03, #21, with #22.
+- **Evidence:** `tests/integration/materials-api.test.ts` (an incomplete material is refused with a stable code and every missing field named, and nothing is created). Unknown references: `tests/integration/planning-parameters-api.test.ts` and `tests/integration/boms-api.test.ts` (a Test set, target or BOM naming a material that exists only in Prod is 404 `MATERIAL_NOT_FOUND` and stores nothing), with the message asserted in `packages/core/src/services/materials/find-material.test.ts` ("There is no material 00000001 in this tenant."). E02-S03, #21, with #22, #24 and #26.
 - **Given:** Unknown referenced material on a mutating API call
 - **When:** Submit validly authenticated request
 - **Then:** Returns documented stable code plus human-readable actionable explanation, no silent partial success.
@@ -3510,7 +3535,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/api-idempotency.test.ts` (users), `tests/integration/materials-api.test.ts` and `named-records-api.test.ts` (a stale version is 409 `VERSION_CONFLICT` and the newer change stays), the services' and routes' unit tests. E02-S03, #21, with #22 and #23.
+- **Evidence:** `tests/integration/api-idempotency.test.ts` (users), `tests/integration/materials-api.test.ts` and `named-records-api.test.ts` (a stale version is 409 `VERSION_CONFLICT` and the newer change stays), `tests/integration/boms-api.test.ts` (a stale BOM `PATCH` is 409 `VERSION_CONFLICT`), the services' and routes' unit tests. E02-S03, #21, with #22, #23 and #26.
 - **Given:** Object version 2 loaded by client A, edited to v3 by B
 - **When:** Client A attempts update expecting v2
 - **Then:** HTTP 409 and clear version conflict; v3 preserved.
@@ -3554,7 +3579,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `tests/integration/tenants.test.ts` (tenant metadata gives the generation), `tests/integration/materials-api.test.ts` and `named-records-api.test.ts` (a Test write without it is 428, with the current one it succeeds), `tests/integration/tenant-isolation-api.test.ts` (a generation above the current one is 409 `GENERATION_STALE`, in Test and in Prod, and nothing is created), `packages/core/src/domain/tenants/generation.test.ts` and `packages/app/src/auth/api-write.test.ts`. The stale case after a real reset waits for slice 2 (D06). E02-S03, #21.
+- **Evidence:** `tests/integration/tenants.test.ts` (tenant metadata gives the generation), `tests/integration/materials-api.test.ts` and `named-records-api.test.ts` (a Test write without it is 428, with the current one it succeeds), `tests/integration/boms-api.test.ts` (a Test BOM write without it is 428 `GENERATION_REQUIRED`), `tests/integration/tenant-isolation-api.test.ts` (a generation above the current one is 409 `GENERATION_STALE`, in Test and in Prod, and nothing is created), `packages/core/src/domain/tenants/generation.test.ts` and `packages/app/src/auth/api-write.test.ts`. The stale case after a real reset waits for slice 2 (D06). E02-S03, #21, with #26.
 - **Given:** User bearer token can read Test and Prod tenant metadata; Test dataset generation is G1
 - **When:** Make Test mutation without precondition, with G1, and after reset with old G1
 - **Then:** Missing generation rejected (HTTP 428), current G1 mutation may succeed subject to ordinary rules, stale G1 after reset G2 rejected (HTTP 409). Current generation is available from tenant metadata.
@@ -3565,7 +3590,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `tests/integration/audit.test.ts` (user creation with account, session and channel), `tests/integration/materials.test.ts` and `named-records.test.ts` (creates in the tenant audit, with account, session and channel), `tests/integration/planning-parameters.test.ts`, the user, material, named-record, planning-parameter and safety-stock service tests. Customer orders come in slice 2. E02-S02, #20.
+- **Evidence:** `tests/integration/audit.test.ts` (user creation with account, session and channel), `tests/integration/materials.test.ts` and `named-records.test.ts` (creates in the tenant audit, with account, session and channel), `tests/integration/planning-parameters.test.ts`, the user, material, named-record, planning-parameter and safety-stock service tests, and `packages/core/src/services/boms/bom.service.test.ts` (a BOM create's entry with its new values and recipe). Customer orders come in slice 2. E02-S02, #20, with #26.
 - **Given:** Normal user creates customer order
 - **When:** Read tenant audit
 - **Then:** Create event with actor, tenant, session, channel, new values exists.
@@ -3574,7 +3599,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/materials.test.ts` (an edit shows before → after in the tenant audit), `tests/integration/named-records.test.ts`, the material, named-record, planning-parameter and safety-stock service tests. E02-S02, #20, with #22, #23 and #24.
+- **Evidence:** `tests/integration/materials.test.ts` (an edit shows before → after in the tenant audit), `tests/integration/named-records.test.ts`, the material, named-record, planning-parameter and safety-stock service tests, and `packages/core/src/services/boms/bom.service.test.ts` (a revision's entry with the old and new recipe). E02-S02, #20, with #22, #23, #24 and #26.
 - **Given:** Admin edits material description
 - **When:** Read audit
 - **Then:** Before/after values of changed master record visible.
@@ -3583,7 +3608,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/materials.test.ts` and `named-records.test.ts` (the deactivated record stays, shown Inactive, and the audit records active: yes → no), `tests/integration/audit.test.ts` (users). E02-S02, #20.
+- **Evidence:** `tests/integration/materials.test.ts` and `named-records.test.ts` (the deactivated record stays, shown Inactive, and the audit records active: yes → no), `tests/integration/audit.test.ts` (users), `packages/core/src/services/boms/bom.service.test.ts` (a BOM's deactivation and reactivation entries, active yes → no → yes). E02-S02, #20, with #26.
 - **Given:** Admin deactivates material
 - **When:** Inspect business record and audit
 - **Then:** Inactive record persists and audit captures state change.

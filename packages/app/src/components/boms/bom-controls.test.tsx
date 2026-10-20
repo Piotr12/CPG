@@ -29,7 +29,7 @@ const controls = (overrides: Partial<BomView> = {}) => (
 describe("BomControls", () => {
   afterEach(() => vi.clearAllMocks());
 
-  it("edits the recipe from a form prefilled as entered, at the loaded version (BOM-020)", async () => {
+  it("edits the recipe from a form prefilled as entered, at the loaded version", async () => {
     mocks.updateBomRecipe.mockResolvedValue({ ok: true, data: { ...bom, revision: 3 } });
     render(controls());
 
@@ -66,7 +66,7 @@ describe("BomControls", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("deactivates an active BOM after a destructive confirmation (BOM-022)", async () => {
+  it("deactivates an active BOM after a destructive confirmation", async () => {
     mocks.setBomActive.mockResolvedValue({ ok: true, data: { ...bom, active: false } });
     render(controls());
 
@@ -77,7 +77,7 @@ describe("BomControls", () => {
     await waitFor(() => expect(mocks.setBomActive).toHaveBeenCalledWith("test", 1, "00000003", 5, false));
   });
 
-  it("reactivates an inactive BOM, showing a priority clash with its details (BOM-030)", async () => {
+  it("reactivates an inactive BOM, showing a priority clash with its details", async () => {
     mocks.setBomActive.mockResolvedValue({
       ok: false,
       error: { code: "BOM_PRIORITY_CONFLICT", message: "Another active BOM for this output has the same priority on some of these days: BOM 00000002 (2026-01-01 – …)." },

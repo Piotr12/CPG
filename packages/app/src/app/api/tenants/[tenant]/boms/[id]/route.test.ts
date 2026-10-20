@@ -51,7 +51,7 @@ describe("/api/tenants/{tenant}/boms/{id}", () => {
     expect((await response.json()).error.code).toBe("BOM_NOT_FOUND");
   });
 
-  it("PATCH passes only the fields sent, null to remove the end, at the version sent, as the token (API-029)", async () => {
+  it("PATCH passes only the fields sent, null to remove the end, at the version sent, as the token", async () => {
     mocks.state.caller = ADMIN_TOKEN;
     mocks.state.cradle = { bomService: { update: mocks.update } };
     mocks.update.mockResolvedValue({ id: "00000002", version: 3 });
