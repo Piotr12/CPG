@@ -12,6 +12,8 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 ## General
 
+- **2026-10-20 — Resolve inventory correction input semantics before defining its contract** — The #80 backlog and INV-006 describe signed manual changes, while the decision register §03 describes target balances. Compare the issue, decision register and conceptual model, and obtain the owner’s resolution before fixing either interpretation into the form or API.
+
 - **2026-10-17 — Docker `npm ci` tries to compile better-sqlite3** — npm runs `node-gyp rebuild` because the package has a `binding.gyp`, which fails without Python/a compiler. better-sqlite3 ships prebuilt binaries (musl included), so the Dockerfile uses `npm ci --ignore-scripts`.
 - **2026-10-19 — Name a function `useX` only if it is a React hook** — `react-hooks/rules-of-hooks` treats every `useX()` call as a hook, even in a plain helper or a test, and fails lint ("called in function … that is neither a component nor a hook"). That is why `useTenant` became `selectTenant`.
 - **2026-10-19 — MikroORM filters and the flush don't see every write** — the `tenant` filter covers `find*`, `count`, populate, `nativeUpdate` and `nativeDelete`, and `TenantGuard` sees only flushes. These bypass both:
