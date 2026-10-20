@@ -24,6 +24,7 @@ Stock entities/migration, core stock posting/usage/seeding, stock UI/API, EN/PL/
 - Full gate: lint, typecheck, test:coverage (100%), build, test:integration. No dependency changes expected.
 
 ## Log
+- 2026-10-20 16:56 UTC — HTTP/UI committed: all 1,956 unit tests passed with 100% lines/branches/functions/statements; production build passed. Five new standalone-browser integration scenarios passed. Docker socket unavailable, so full integration now runs against the same built standalone server with a fresh dataset; Docker startup check remains CI-owned. Added cached-master deactivation regression (passes without further code changes).
 - 2026-10-20 16:46 UTC — Persistence/posting phase: targeted 7 files / 62 tests passed; lint/typecheck passed. Includes two-ORM competing withdrawal, rollback, negative fractional conversion, master guards and migration up/down. Edited demo references with a different base unit are skipped instead of breaking startup.
 - 2026-10-20 16:41 UTC — Design published as #103. Reusing isolated cezar worktree; dependencies installed. Source investigation and previous pause preserved in design run log. Claim inherited from issue #80.
 
@@ -35,8 +36,8 @@ Stock entities/migration, core stock posting/usage/seeding, stock UI/API, EN/PL/
 - [x] 1.1 Stock persistence and exact quantities — 9996321
 - [x] 1.2 Atomic posting, usage guards and demo openings — 9996321
 ### Phase 2: user surfaces
-- [ ] 2.1 Stock API and actions
-- [ ] 2.2 Stock screen, help and translations
+- [x] 2.1 Stock API and actions — d2b1451
+- [x] 2.2 Stock screen, help and translations — d2b1451
 ### Phase 3: verification and publication
 - [ ] 3.1 Integration and full validation
 - [ ] 3.2 Review, UI evidence and ready PR
