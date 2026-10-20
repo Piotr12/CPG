@@ -342,6 +342,111 @@ describe("UserService", () => {
       expect(await orm.em.fork().count(GlobalAuditEvent, {})).toBe(before);
     });
 
+    describe("tokens a reset or deactivation ends (AUD-014)", () => {
+      /** The user's API tokens as stored now: id and name. */
+      const tokensOf = async (username: string) =>
+        (await orm.em.fork().find(ApiToken, { user: { username } }, { orderBy: { name: "asc" } })).map(({ id, name }) => ({ id, name }));
+      /** The Global audit entries about these tokens, by token name. */
+      const tokenAuditOf = async (tokens: { id: string }[]) =>
+        (
+          await orm.em.fork().find(GlobalAuditEvent, { subjectType: "ApiToken", subjectId: { $in: tokens.map(({ id }) => id) } })
+        ).sort((a, b) => a.subjectLabel.localeCompare(b.subjectLabel));
+      const revokedEntry = ({ id, name }: { id: string; name: string }) => ({
+        action: "tokens.api-token.revoked",
+        subjectType: "ApiToken",
+        subjectId: id,
+        subjectLabel: name,
+        before: { name },
+        after: null,
+      });
+
+      it("records one revoked entry per token a password reset deletes, by the admin, beside the reset", async () => {
+        const alice = await service().create({ username: "alice", password: PASSWORD }, ACTOR);
+        await service().create({ username: "bob", password: PASSWORD }, ACTOR);
+        await createTokens("alice", 2);
+        await createTokens("bob", 1);
+        const [alicesTokens, bobsTokens] = [await tokensOf("alice"), await tokensOf("bob")];
+        later();
+
+        await service().resetPassword(alice.id, "brand new password", await versionOf(alice.id), ACTOR);
+
+        const entries = await tokenAuditOf(alicesTokens);
+        expect(entries).toEqual(alicesTokens.map((token) => expect.objectContaining(revokedEntry(token))));
+        const [reset] = (await auditOf(alice.id)).filter(({ action }) => action === "users.user.password-reset");
+        for (const entry of entries) {
+          expect(entry).toMatchObject({
+            actorUserId: "admin-id",
+            actorUsername: "admin",
+            sessionId: "admin-session",
+            channel: "ui",
+            tokenId: null,
+            occurredAt: reset.occurredAt,
+          });
+        }
+        expect(await tokenAuditOf(bobsTokens)).toEqual([]);
+        expect(await tokensOf("bob")).toEqual(bobsTokens);
+      });
+
+      it("records them for a deactivation too, naming the admin's token when it came through the API (AUD-007)", async () => {
+        const alice = await service().create({ username: "alice", password: PASSWORD }, ACTOR);
+        await createTokens("alice", 2);
+        const tokens = await tokensOf("alice");
+        const apiActor: AuditActor = { ...ACTOR, sessionId: null, channel: "api", token: { id: "admin-token-id", name: "ops" } };
+
+        await service().setActive(alice.id, false, await versionOf(alice.id), apiActor);
+
+        const entries = await tokenAuditOf(tokens);
+        expect(entries).toEqual(tokens.map((token) => expect.objectContaining(revokedEntry(token))));
+        for (const entry of entries) {
+          expect(entry).toMatchObject({ sessionId: null, channel: "api", tokenId: "admin-token-id", tokenName: "ops" });
+        }
+        expect(await tokenCount("alice")).toBe(0);
+      });
+
+      it("records no token entry when the user has no tokens, or when nothing is deleted", async () => {
+        const alice = await service().create({ username: "alice", password: PASSWORD }, ACTOR);
+        const tokenEntries = () => orm.em.fork().count(GlobalAuditEvent, { subjectType: "ApiToken" });
+        const before = await tokenEntries();
+
+        await service().resetPassword(alice.id, "brand new password", await versionOf(alice.id), ACTOR);
+        await service().setActive(alice.id, false, await versionOf(alice.id), ACTOR);
+        await createTokens("alice", 1);
+        await service().setActive(alice.id, false, await versionOf(alice.id), ACTOR);
+        await service().setActive(alice.id, true, await versionOf(alice.id), ACTOR);
+
+        expect(await tokenEntries()).toBe(before);
+        expect(await tokenCount("alice")).toBe(1);
+      });
+
+      it("records nothing and keeps the tokens when the version is stale", async () => {
+        const alice = await service().create({ username: "alice", password: PASSWORD }, ACTOR);
+        await createTokens("alice", 1);
+        const tokens = await tokensOf("alice");
+
+        await expect(service().resetPassword(alice.id, "brand new password", alice.version + 1, ACTOR)).rejects.toMatchObject({
+          code: "VERSION_CONFLICT",
+        });
+
+        expect(await tokensOf("alice")).toEqual(tokens);
+        expect(await tokenAuditOf(tokens)).toEqual([]);
+      });
+
+      it("rolls the delete back with the entries when the flush fails after it", async () => {
+        const alice = await service().create({ username: "alice", password: PASSWORD }, ACTOR);
+        await createTokens("alice", 2);
+        const tokens = await tokensOf("alice");
+        const users = service();
+        vi.spyOn(Object.getPrototypeOf(orm.em), "flush").mockRejectedValueOnce(new OptimisticLockError("moved on"));
+
+        await expect(users.setActive(alice.id, false, await versionOf(alice.id), ACTOR)).rejects.toMatchObject({
+          code: "VERSION_CONFLICT",
+        });
+
+        expect(await tokensOf("alice")).toEqual(tokens);
+        expect(await tokenAuditOf(tokens)).toEqual([]);
+      });
+    });
+
     it("keeps two sessions of one account apart (AUD-008)", async () => {
       const alice = await service().create({ username: "alice", password: PASSWORD }, ACTOR);
       later();
