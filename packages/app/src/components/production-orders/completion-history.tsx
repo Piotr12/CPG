@@ -28,7 +28,7 @@ export function CompletionHistory({ completions, page, materials, labels, path }
   const name = (code: string) => `${code} ${materials.find(({ id }) => id === code)!.description}`;
   const columns: DataTableColumn<CompletionView>[] = [
     { id: "id", header: t.id, cell: (row) => <span className="font-mono">{row.id}</span> },
-    { id: "date", header: t.date, cell: (row) => row.businessDate },
+    { id: "date", header: t.date, cell: (row) => row.businessDate, className: "hidden sm:table-cell" },
     {
       id: "output",
       header: labels.output,
@@ -46,7 +46,7 @@ export function CompletionHistory({ completions, page, materials, labels, path }
       cell: (row) => (
         <ul className="flex flex-col gap-1">
           {row.lines.map((line) => (
-            <li key={line.material} className="wrap-anywhere">
+            <li key={line.material} className="break-words">
               {fill(t.line, {
                 material: name(line.material),
                 expected: shownQuantity(line.expected),
@@ -63,7 +63,7 @@ export function CompletionHistory({ completions, page, materials, labels, path }
           ))}
         </ul>
       ),
-      className: "whitespace-normal",
+      className: "min-w-48 whitespace-normal",
     },
   ];
   const older = completions.length === COMPLETION_PAGE_SIZE;
