@@ -2,8 +2,8 @@
 
 **Date:** 2026-10-20 09:01 UTC
 **Agent:** Claude Code (Opus 5.5) via cezar: `om-auto-fix-issue 27` → `om-auto-write-spec 27` → `om-auto-implement-spec`
-**Spec:** to be written in this run
-**Status:** in progress
+**Spec:** `.ai/specs/2026-10-20--0908UTC-master-data-bom-import.md` (written in this run on #97)
+**Status:** done (spec PR #97 and implementation PR #99 ready for review; no assumption needs confirmation)
 
 ## Goal
 
@@ -39,8 +39,42 @@
   - Tests added for the instructions text, tab order, API-015 parity and XLS-010 through the keyed path. API-028 is marked partial (its scenario is slice 2's inventory import).
   - The size of stored replays is noted.
 
+- 09:21 Opened the spec PR #97 as ready, with:
+  - its labels;
+  - the defaults table (also posted on #27);
+  - the visual evidence;
+  - the run summary.
+- 09:21–10:30 Implemented on `feat/master-data-bom-import` (#99). The plan, its deviations and the verification are in `.ai/pipeline/runs/2026-10-20--0921UTC-master-data-bom-import.md`.
+  - The first API integration run measured the 2,000-row dry run at 17.9 s. The identity map now clears after every row: 844 ms in Docker.
+  - The integration suite also found count strings passed as functions to the client screen, which made the page fail on the server. They are plain `{ one, other }` pairs now, with a test.
+  - Both issues are recorded in `.ai/lessons.md`, with the savepoint and Awilix pitfalls.
+  - The fresh-context code review approved with four minors and two nits, all fixed (8455412).
+  - UI verification passed, 8 of 8, with screenshots.
+- 10:35 Marked #99 ready with its full labels, the review, the UI evidence and the summary. Released the issue lock.
+
 ## Changes
+
+- `.ai/specs/2026-10-20--0908UTC-master-data-bom-import.md` and `.ai/specs/assets/master-data-bom-import/` (one current screenshot, three mockups with their HTML), on #97.
+- The implementation, on #99 (see its tracking plan).
 
 ## Verification
 
+- On #97: `npx vitest run tests/ai-filenames.test.ts tests/spec-images.test.ts` passes.
+- On #99, the full gate:
+  - lint and typecheck: clean;
+  - unit tests: 1860, at 100% coverage;
+  - build: passes;
+  - Docker integration: 27 files, 209 tests;
+  - after the review fixes, the import and navigation integration files again (30 tests).
+- UI verification: PASS, 8 of 8 steps.
+
 ## Follow-ups
+
+- Merge #97 first. Then #99 merges `main` and moves the spec to `implemented/` (the spec was untracked on #99, as on #70).
+- #99 needs human QA (`needs-qa`) and a human approval: the pipeline account can't approve its own PR.
+- Acceptance-catalogue statuses (XLS-001…028, API-015, API-028 partly) are left for the E05 epic closure, as for E02 and E03.
+- Possible later work, out of scope here:
+  - an inspection-only dry run in a read-only tenant;
+  - an "Import" audit channel;
+  - exporting current data into the template;
+  - the stock import (slice 2) on the same engine.
