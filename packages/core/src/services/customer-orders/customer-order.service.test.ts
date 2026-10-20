@@ -100,7 +100,7 @@ describe("CustomerOrderService", () => {
     const updated = await service().update(order.id, changes, 1, actor);
     expect(updated).toMatchObject({ customer: "00000002", location: "00000002", version: 2, lines: [{ id: order.lines[0].id, quantity: "24.000000" }, { quantity: "60.000000" }] });
     expect(updated.lines[1].id).not.toBe(order.lines[1].id);
-    expect(await em().count(CustomerOrderLine, { removed: true })).toBe(1);
+    expect(await em().count(CustomerOrderLine, { removed: true })).toBe(2);
     expect((await service().get(order.id)).lines).toEqual(updated.lines);
   });
 
@@ -242,6 +242,19 @@ describe("CustomerOrderService", () => {
     expect(await new MaterialService({ em: em() }).update("00000005", { active: false }, 1, actor)).toMatchObject({ active: false });
     const scope = em(); (await scope.findOneOrFail(CustomerOrder, { code: order.id })).status = "closed-early"; await scope.flush();
     expect(await new MaterialService({ em: em() }).update("00000004", { active: false }, 1, actor)).toMatchObject({ active: false });
+  });
+
+  it("retains the original material lock when a stable line is changed to another material", async () => {
+    const order = await service().create({ ...input(), lines: [line()] }, actor);
+    const changes = edit(order); changes.lines[0].material = "00000004";
+    const updated = await service().update(order.id, changes, 1, actor);
+    expect(updated.lines).toHaveLength(1); expect(updated.lines[0]).toMatchObject({ id: order.lines[0].id, material: "00000004" });
+    expect(await service().get(order.id)).toEqual(updated);
+    expect(await em().count(CustomerOrderLine, { material: { code: "00000005" }, removed: true })).toBe(1);
+    const materials = () => new MaterialService({ em: em() });
+    await expect(materials().update("00000005", { type: "raw" }, 1, actor)).rejects.toMatchObject({ code: "MATERIAL_TYPE_IN_USE" });
+    await expect(materials().update("00000005", { baseUnit: "kg" }, 1, actor)).rejects.toMatchObject({ code: "BASE_UNIT_IN_USE" });
+    expect(await materials().update("00000005", { active: false }, 1, actor)).toMatchObject({ active: false });
   });
 
 });

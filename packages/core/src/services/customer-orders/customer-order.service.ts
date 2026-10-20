@@ -106,6 +106,7 @@ export class CustomerOrderService {
         const saved = resolved.map(({ existing, material, record, requiredDate }, position) => {
           const fields = { material, position, quantity: record.baseQuantity, enteredQuantity: record.enteredQuantity, enteredUnit: record.enteredUnit,
             numerator: record.numerator, denominator: record.denominator, requiredDate };
+          if (existing && existing.material.id !== material.id) archiveLine(em, existing);
           return existing ? em.assign(existing, fields) : em.create(CustomerOrderLine, { order, ...fields });
         });
         // New UUIDs are assigned on create; comparing allowlisted snapshots also detects reordering.
@@ -210,3 +211,10 @@ function view(order: CustomerOrder, lines: CustomerOrderLine[]): CustomerOrderVi
 }
 function subject(order: CustomerOrder) { return { type: "CustomerOrder", id: order.code, label: `Customer order ${order.code}` }; }
 function snapshot({ id, customer, location, status, lines }: CustomerOrderView) { return { id, customer, location, status, lines: JSON.stringify(lines) }; }
+
+/** A replacement must retain the old operational reference even though the visible line keeps its ID. */
+function archiveLine(em: EntityManager, line: CustomerOrderLine): void {
+  const { order, position, material, quantity, enteredQuantity, enteredUnit, numerator, denominator, requiredDate, fulfilled, abandoned, status } = line;
+  em.create(CustomerOrderLine, { order, position, material, quantity, enteredQuantity, enteredUnit, numerator, denominator,
+    requiredDate, fulfilled, abandoned, status, removed: true });
+}

@@ -12,6 +12,8 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 ## General
 
+- **2026-10-20 — Preserve references when replacing an operational line** — Keeping omitted customer-order lines as hidden history did not preserve a material replaced on an existing line: assigning the new material erased the old FK and unlocked its type/base unit. Archive the old allowlisted line before replacement, retain the visible stable ID, and test both removal and replacement.
+
 - **2026-10-17 — Docker `npm ci` tries to compile better-sqlite3** — npm runs `node-gyp rebuild` because the package has a `binding.gyp`, which fails without Python/a compiler. better-sqlite3 ships prebuilt binaries (musl included), so the Dockerfile uses `npm ci --ignore-scripts`.
 - **2026-10-19 — Name a function `useX` only if it is a React hook** — `react-hooks/rules-of-hooks` treats every `useX()` call as a hook, even in a plain helper or a test, and fails lint ("called in function … that is neither a component nor a hook"). That is why `useTenant` became `selectTenant`.
 - **2026-10-19 — MikroORM filters and the flush don't see every write** — the `tenant` filter covers `find*`, `count`, populate, `nativeUpdate` and `nativeDelete`, and `TenantGuard` sees only flushes. These bypass both:
