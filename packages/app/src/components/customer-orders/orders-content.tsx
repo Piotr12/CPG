@@ -9,7 +9,8 @@ export async function OrdersContent({ cradle, locale, messages, id, page = 1 }: 
   const order = id === undefined ? undefined : await orNotFound(cradle.customerOrderService.get(id), ["CUSTOMER_ORDER_NOT_FOUND"]);
   const total = id === undefined ? await cradle.customerOrderService.count() : 0;
   const currentPage = Math.min(page, Math.max(1, Math.ceil(total / ORDER_PAGE_SIZE)));
-  return <OrdersScreen page={currentPage} total={total} tenant={cradle.tenant} order={order} orders={id === undefined ? await cradle.customerOrderService.list(currentPage) : []}
+  const shipments = id === undefined ? [] : await cradle.shipmentService.list({ customerOrder: id });
+  return <OrdersScreen page={currentPage} total={total} tenant={cradle.tenant} order={order} shipments={shipments} orders={id === undefined ? await cradle.customerOrderService.list(currentPage) : []}
     materials={await cradle.materialService.list()} units={await cradle.materialService.listUnits()}
     customers={await cradle.customerService.list()} locations={await cradle.locationService.list()} locale={locale} messages={messages} />;
 }

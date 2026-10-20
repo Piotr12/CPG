@@ -3,8 +3,9 @@ import {
   type EntityManager, type Material, type DocumentState,
 } from "@cpg/db";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
+import { isLineFulfilled } from "../../domain/goods-issues/issue-quantity";
 import { parseDecimal } from "../../domain/quantities/decimal";
-import { AppError, ConflictError, NotFoundError, ValidationError, versionConflict } from "../../http/errors";
+import { AppError, ConflictError, ValidationError, versionConflict } from "../../http/errors";
 import {
   customerOrderCreateSchema, customerOrderUpdateSchema, customerOrderListSchema, ORDER_PAGE_SIZE, ORDER_LINE_ID_MESSAGE, ORDER_QUANTITY_MIN_MESSAGE, ORDER_UNIT_CONVERSION_MESSAGE, ORDER_QUANTITY_CONVERSION_MESSAGE,
   type CustomerOrderInput, type CustomerOrderChanges,
@@ -16,7 +17,9 @@ import { findActiveLocation } from "../locations/find-location";
 import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quantity";
 import { findActiveMaterial, findMaterial } from "../materials/find-material";
 import { findNamedRecord } from "../named-records/find-named-record";
+import { completeFinishedShipments, isAnyShipped } from "../shipments/shipment-usage";
 import { isScopeReadOnly } from "../tenants/tenant.service";
+import { findCustomerOrder } from "./order-records";
 
 export interface CustomerOrderLineView {
   id: string;
@@ -70,7 +73,7 @@ export class CustomerOrderService {
   async count(): Promise<number> { return this.em.count(CustomerOrder, {}); }
 
   async get(id: string): Promise<CustomerOrderView> {
-    return detail(this.em, await findOrder(this.em, id));
+    return detail(this.em, await findCustomerOrder(this.em, id));
   }
 
   async create(input: CustomerOrderInput, actor: AuditActor): Promise<CustomerOrderView> {
@@ -97,7 +100,7 @@ export class CustomerOrderService {
     if (!parsed.success) throw validationError(parsed.error);
     try {
       return await this.em.transactional(async (em) => {
-        const order = await findOrder(em, id, true);
+        const order = await findCustomerOrder(em, id, { refresh: true });
         if (order.version !== version) throw versionConflict();
         if (order.status !== "open") throw locked();
         const current = await orderLines(em, order);
@@ -110,6 +113,9 @@ export class CustomerOrderService {
         const resolved = await resolveLines(em, changes.lines, current);
         if (current.some((line) => !resolved.some(({ existing }) => existing?.id === line.id) &&
           (line.status !== "open" || parseDecimal(line.fulfilled)! > 0n || parseDecimal(line.abandoned)! > 0n))) throw locked();
+        // A line a shipment names keeps its material and stays on the order (shipments spec Q10).
+        const removedOrReplaced = current.filter((line) => resolved.find(({ existing }) => existing?.id === line.id)?.material.id !== line.material.id);
+        if (await isAnyShipped(em, removedOrReplaced)) throw locked();
         order.customer = customer;
         order.location = location;
         const kept = new Set(resolved.map(({ existing }) => existing?.id));
@@ -120,6 +126,8 @@ export class CustomerOrderService {
           if (existing && existing.material.id !== material.id) archiveLine(em, existing);
           return existing ? em.assign(existing, fields) : em.create(CustomerOrderLine, { order, ...fields });
         });
+        completeDelivered(order, saved);
+        await completeFinishedShipments(em, order, actor);
         // New UUIDs are assigned on create; comparing allowlisted snapshots also detects reordering.
         if (JSON.stringify(snapshot(before)) !== JSON.stringify(snapshot(view(order, saved)))) {
           order.updatedAt = new Date(Math.max(Date.now(), order.updatedAt.getTime() + 1));
@@ -203,10 +211,13 @@ async function resolveLines(em: EntityManager, inputs: (CustomerOrderInput["line
   }
   return resolved;
 }
-async function findOrder(em: EntityManager, code: string, refresh = false): Promise<CustomerOrder> {
-  const order = await em.findOne(CustomerOrder, { code }, { populate: [...POPULATE], refresh });
-  if (!order) throw new NotFoundError("CUSTOMER_ORDER_NOT_FOUND", `There is no customer order ${code} in this tenant.`);
-  return order;
+/**
+ * A delivered line whose quantity was lowered to exactly its fulfilled quantity is complete, and so is
+ * the order once every line is (shipments spec Q8): nothing is left to issue, so it can't stay Open.
+ */
+function completeDelivered(order: CustomerOrder, lines: readonly CustomerOrderLine[]): void {
+  for (const line of lines) if (line.status === "open" && parseDecimal(line.fulfilled)! > 0n && isLineFulfilled(line)) line.status = "completed";
+  if (lines.every(({ status }) => status === "completed")) order.status = "completed";
 }
 async function orderLines(em: EntityManager, order: CustomerOrder) {
   return em.find(CustomerOrderLine, { order, removed: false }, { populate: ["material"], orderBy: { position: "asc" } });

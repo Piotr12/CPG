@@ -48,6 +48,7 @@ describe("HelpPage", () => {
       "A transfer: dispatch, receive, write off",
       "Customer orders",
       "Maintaining a customer order",
+      "Shipments and goods issues",
       "Import from spreadsheet",
       "Physical stock and corrections",
       "Language and theme",

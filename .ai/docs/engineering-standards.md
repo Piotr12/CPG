@@ -358,6 +358,13 @@ Done when these standards were adopted:
   - `services/transfers/transfer-usage.ts` is the leaf the masters (deactivation, base unit) and the stock page (transit from/to a pair) ask, as `stock-usage.ts` is for stock;
   - `TransferService`, `/api/tenants/{tenant}/transfers/…`, `/admin/[tenant]/transfers` and `/admin/[tenant]/transfers/[id]` (`app/src/components/transfers/`: the create form, `CrudForm` posting and dates dialogs, the ledger of legs).
   - To prove a posting's legs roll back together, fail it after the physical leg's flush: a spy on `em` doesn't see the transaction's fork, so the service test mocks `recordTenantAudit` to throw for the posting's action.
+- Shipments and goods issues (2026-10-20, spec `2026-10-20--2045UTC-shipments-goods-issues`), the second document that posts stock and the first that lowers it:
+  - `GoodsIssueService` posts negative movements through `postStockMovements`, as receipts post positive ones. The ledger's own check refuses an overdraw with `INSUFFICIENT_STOCK`.
+  - `ShipmentService` plans dispatches and moves no stock.
+  - The leaves `services/customer-orders/order-records.ts`, `services/shipments/shipment-records.ts` and `services/shipments/shipment-usage.ts` hold what several services need. The last one completes finished shipments, after a goods issue or an order edit.
+  - The quantity-per-line form of every document posted against another is `components/forms/line-quantities-form.tsx`, used by goods receipts, shipments and goods issues.
+  - Both lists page by 100 (`?page=`) from their first release, grouping lines once per page (`groupBy` in `shipment-records.ts`).
+  - The shipment page is `/admin/[tenant]/shipments/[id]`. The API is `/api/tenants/{tenant}/shipments/…` and `/goods-issues/…`.
 - Idempotency and versions (2026-10-19, spec `2026-10-19--1548UTC-api-idempotency`): the global and tenant-owned idempotency key stores (`db/src/entities/idempotency/`), `IdempotencyService` (`core/src/services/idempotency/`), `inRequestTransaction`, `apiWrite`/`tenantApiWrite`, `User.version`, and the generation check in `tenantServerAction`.
 - API tokens (2026-10-19, spec `2026-10-19--1053UTC-api-tokens`): the global `ApiToken` entity, `ApiTokenService` (`core/src/services/api-tokens/`), bearer authentication in `requireApiUser(request)`, the `Actor` type, and `/admin/tokens`. It is the reference for a self-service screen (every account, own records only).
 - Test infrastructure: Vitest unit tests next to every source file at 100% coverage, integration tests (Testcontainers runs the production image, agent-browser drives it), and a CI workflow for pull requests.
