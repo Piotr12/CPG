@@ -139,7 +139,7 @@ No action or route writes its own `try/catch` + response mapping.
   - **The service records the entry itself**, with `recordGlobalAudit(em, actor, entry)` or `recordTenantAudit(…)` on the EntityManager it writes with. The entry then commits or rolls back with the change. Never record from an event handler: events fire after the commit.
   - **Snapshots are explicit allowlists** of the entity's fields, never the whole entity. The recorder refuses keys that look like secrets (`password`, `hash`, `secret`), but the allowlist is the real protection.
   - **A write that changes nothing records nothing.** Action IDs follow the event naming (`concept.entity.action`).
-  - **Nothing updates or deletes an entry.** Entity-level triggers abort it in SQLite, the audit routes export only `GET`, and `tests/audit-append-only.test.ts` scans the source.
+  - **Nothing updates an entry; Global and Prod entries are never deleted.** Entity-level triggers enforce it in SQLite, audit routes export only `GET`, and `tests/audit-append-only.test.ts` scans core/app. The sole planned exception is now implemented: `db/src/tenants/reset-test-data.ts` clears Test audit with all Test-owned data during the atomic admin reset. That helper requires Test scope and an active transaction; it cannot clear Prod or Global audit.
 
 ### Engineering principles
 
@@ -377,3 +377,7 @@ Known `npm audit` state: 10 high advisories, all from `braces` (GHSA-vfj7-8cjw-p
 | Persona route groups `(student)`, `(mentor)`, …; bookings, payments, slot races, money | Public frontend vs `/admin` backend; MRP concepts; stock/release races, recomputed quantities/costs | Different product. The underlying rules carry over unchanged. |
 | `npm audit` as a gate | `npm audit` triage | It currently reports 10 unfixable dev-tooling/unused-path advisories, so a hard gate would block every deploy. |
 | `docs/product-scope.md` "no DI container" fix | Not applicable | CPG has no such document. Awilix is already a stack decision in `AGENTS.md`. |
+
+### Atomic Test reset (2026-10-20, issue #93)
+
+`TestResetService` (`core/src/services/tenants/`) owns direct-call transactions and joins the keyed API transaction through `inRequestSavepoint`. It reuses the seed registry in `services/demo/seed-demo-data.ts` with failure propagation. `resetTestData` in db derives every owned table from ORM metadata, rejects global references and defers (never disables) foreign-key checks until commit. `testResetApiWrite` is a fixed-Test, admin-only mode of the shared keyed pipeline; its receipt is saved in the new generation. Ordinary tenant writes keep their read-only gate and check the generation before replay. Preview tokens read generation fresh inside their transaction, because scope metadata can predate a reset.

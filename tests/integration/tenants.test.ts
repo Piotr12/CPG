@@ -55,7 +55,8 @@ describe("tenants in the admin", () => {
     await browser.waitUntil(`${shownHeader}?.dataset.tenant === "test" && ${shownHeader}.textContent.includes("Active tenant")`);
     expect(await headerName(browser)).toBe("TEST Active tenant");
     expect(await browser.title()).toBe("Test · Admin · Caveman Planning Good");
-    expect(await browser.text("[data-slot=card-description]")).toBe("Dataset generation 1");
+    const generation = await browser.evaluate<number>(`fetch("/api/tenants/test").then(r=>r.json()).then(result=>result.data.generation)`);
+    expect(await browser.text("[data-slot=card-description]")).toBe(`Dataset generation ${generation}`);
     expect(await browser.text("main")).toContain("Materials");
   });
 
@@ -108,7 +109,7 @@ describe("the tenant API", () => {
       body: {
         ok: true,
         data: [
-          { code: "test", name: "Test", generation: 1, readOnly: false },
+          { code: "test", name: "Test", generation: expect.any(Number), readOnly: false },
           { code: "prod", name: "Prod", generation: 1, readOnly: false },
         ],
       },

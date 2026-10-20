@@ -54,8 +54,10 @@ describe("@cpg/db", () => {
       "initOrm",
       "isTenantOwned",
       "migrate",
+      "resetTestData",
       "selectTenant",
       "tenantOwned",
+      "testResetEntities",
     ]);
     expect(db.entities).toEqual([
       db.Setting,

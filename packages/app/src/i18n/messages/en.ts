@@ -31,6 +31,25 @@ export const en = {
     migrationsApplied: (count: number) => `${count} migrations applied`,
     migrationsPending: (count: number) => `${count} pending`,
     settings: (count: number) => `${count} settings`,
+    reset: {
+      heading: "Reset Test",
+      description: "Replace all Test business data and its audit with fresh demonstration data. Prod, accounts, sessions, tokens, preferences and Global audit are kept.",
+      generation: "Generation {generation}",
+      open: "Reset Test…",
+      title: "Reset Test data?",
+      confirmation: "Permanently delete Test generation {generation}, including all its business records and audit, and reseed demonstration data. Business IDs restart from 00000001. Prod, accounts, sessions, tokens, preferences and Global audit are kept. This cannot be undone.",
+      readOnly: "Test will remain read-only.",
+      writable: "Test will remain writable.",
+      confirm: "Reset Test",
+      pending: "Resetting…",
+      cancel: "Cancel",
+      success: "Test reset to generation {generation}. {state}",
+      errors: {
+        FORBIDDEN: "Only the administrator can reset Test.",
+        GENERATION_STALE: "Test was reset since this page loaded. Close this dialog and reload before resetting it again.",
+        GENERATION_EXHAUSTED: "Test has reached its last dataset generation.",
+      },
+    },
     /** The admin's Read-only card (R05). Filled in on the server: the dialog gets plain strings. */
     readOnly: {
       heading: "Read-only",
@@ -830,11 +849,13 @@ export const en = {
       "boms.bom.revised": "BOM revised",
       "boms.bom.deactivated": "BOM deactivated",
       "boms.bom.reactivated": "BOM reactivated",
+      "tenants.tenant.reset": "Test reset",
       "tenants.tenant.read-only-changed": "Read-only flag changed",
     },
     passwordNotRecorded: "Password replaced (not recorded)",
     /** Snapshot field names in the Changes column; a field missing here is shown as stored. */
     fields: {
+      generation: "generation",
       movement: "movement",
       postingId: "posting ID",
       businessDate: "business date",

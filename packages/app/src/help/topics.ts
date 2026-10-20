@@ -90,6 +90,7 @@ const en: Record<HelpTopicId, HelpText> = {
       "The administrator opens this page from Administration → Tenants in the sidebar, next to Users, and also sees the Database card here. The card shows where CPG keeps its data, how many migrations are applied, whether any are still pending, and how many settings are stored.",
       "A pending migration normally means CPG is still starting. If it stays, tell whoever runs CPG.",
       "The administrator's Read-only card makes Test or Prod read-only, and writable again, after a confirmation. Each tenant has its own flag, and every change is kept in the Global audit. A read-only tenant shows Read-only on the chooser, a lock on its side of the TEST | PROD switch, and a banner on its pages.",
+      "Reset Test, on this page for the administrator, permanently replaces Test business data and its audit with fresh demonstration data and a new generation. It restores the previous read-only flag. Prod, users, sessions, tokens, preferences and Global audit survive. Old Test forms must reload. The API is POST /api/tenants/test/reset with an empty object, an admin bearer token, Idempotency-Key and the current Dataset-Generation. After a lost response, fetch the new generation and retry the same key, never a new one.",
       "Open Test or Open Prod takes you to that tenant's business data.",
     ],
   },
@@ -277,6 +278,7 @@ const pl: Record<HelpTopicId, HelpText> = {
   "admin-home": {
     title: "Kontrola jaskini",
     body: [
+      "Reset środowiska Test jest dostępny tu tylko dla administratora. Trwale zastępuje dane biznesowe i audyt środowiska Test danymi demonstracyjnymi w nowej generacji. Przywraca poprzednią flagę tylko do odczytu. Prod, użytkownicy, sesje, tokeny, preferencje i audyt globalny pozostają bez zmian. Stare formularze Test trzeba odświeżyć. API: POST /api/tenants/test/reset z pustym obiektem, tokenem administratora, Idempotency-Key i aktualnym Dataset-Generation. Po utracie odpowiedzi pobierz nową generację i ponów ten sam klucz, nigdy nowy.",
       "Kontrola jaskini to strona, na którą trafia każde konto po zalogowaniu: wybierz tu środowisko Test lub Prod. Język i motyw, tokeny API oraz przycisk Wyloguj są na karcie konta na dole panelu bocznego. Nie ma tu zmiany hasła: hasła ustawia tylko administrator.",
       "Administrator otwiera tę stronę pozycją Administracja → Środowiska w panelu bocznym, obok Użytkowników, i widzi tu też kartę Baza danych. Karta pokazuje, gdzie CPG przechowuje dane, ile migracji zastosowano, czy jakieś jeszcze oczekują i ile ustawień zapisano.",
       "Oczekująca migracja zwykle oznacza, że CPG jeszcze się uruchamia. Jeśli nie znika, powiedz o tym osobie, która utrzymuje CPG.",

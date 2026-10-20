@@ -61,6 +61,7 @@ describe("@cpg/core", () => {
       "TOKEN_NAME_TAKEN",
       "TOKEN_NOT_FOUND",
       "TenantService",
+      "TestResetService",
       "TooManyRequestsError",
       "UNKNOWN_CLIENT",
       "USERNAME_TAKEN",

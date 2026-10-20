@@ -51,6 +51,7 @@ describe("migrate", () => {
       "Migration20261020054509_planning_parameters_safety_stock",
       "Migration20261020080940_boms",
       "Migration20261020164229_stock_ledger",
+      "Migration20261020164640_test_reset",
     ]);
     expect(await migrate({ databasePath })).toEqual([]);
   });
@@ -62,9 +63,9 @@ describe("getMigrationStatus", () => {
     const orm = await initOrm({ databasePath });
 
     try {
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 14 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 15 });
       await orm.migrator.up();
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 14, pending: 0 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 15, pending: 0 });
     } finally {
       await orm.close();
     }
@@ -126,6 +127,7 @@ describe("migrations", () => {
         "user_preference",
       ]);
       expect(await triggers()).toContain("stock_movement_no_update");
+      await orm.migrator.down(); // Test reset audit exception.
       await orm.migrator.down();
       expect(await triggers()).not.toContain("stock_movement_no_update");
       expect(await triggers()).toContain("bom_revision_no_update");
@@ -446,6 +448,7 @@ describe("boms migration", () => {
       await expect(execute(orm, "update bom_component set quantity = '1'")).rejects.toThrow(BOM_REVISION_IMMUTABLE);
       await execute(orm, "update bom set active = 0 where id = 'b1'");
 
+      await orm.migrator.down(); // Test reset audit exception is newest
       await orm.migrator.down(); // stock migration is newer than BOMs
       await execute(orm, "delete from bom_component");
       await execute(orm, "delete from bom_revision");

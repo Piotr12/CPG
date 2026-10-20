@@ -3,7 +3,7 @@ import type { PreparedImport } from "../../domain/imports/prepare-import";
 import { ConflictError } from "../../http/errors";
 import { inRequestSavepoint } from "../../http/request-transaction";
 import type { AuditActor } from "../audit/actor";
-import type { TenantInfo } from "../tenants/tenant.service";
+import type { TenantInfo, TenantService } from "../tenants/tenant.service";
 import type { ApplyContext, ImportServices } from "./apply-context";
 import { applyImport, type ImportReport } from "./apply-import";
 
@@ -17,6 +17,7 @@ export const IMPORT_STALE_MESSAGE =
 interface Deps extends ImportServices {
   em: EntityManager;
   tenant: TenantInfo;
+  tenantService: TenantService;
 }
 
 /**
@@ -30,12 +31,14 @@ interface Deps extends ImportServices {
 export class ImportService {
   private readonly em: EntityManager;
   private readonly tenant: TenantInfo;
+  private readonly tenantService: TenantService;
   private readonly services: ImportServices;
 
   // Each dependency by name: a rest spread would enumerate the whole PROXY cradle, this service included.
   constructor({
     em,
     tenant,
+    tenantService,
     materialService,
     locationService,
     customerService,
@@ -46,6 +49,7 @@ export class ImportService {
   }: Deps) {
     this.em = em;
     this.tenant = tenant;
+    this.tenantService = tenantService;
     this.services = {
       materialService,
       locationService,
@@ -78,7 +82,7 @@ export class ImportService {
     );
   }
 
-  private apply(prepared: PreparedImport, actor: AuditActor) {
+  private async apply(prepared: PreparedImport, actor: AuditActor) {
     const context: ApplyContext = {
       em: this.em,
       services: this.services,
@@ -88,6 +92,7 @@ export class ImportService {
       outcomes: [],
       versions: [],
     };
-    return applyImport(context, prepared, this.tenant.generation);
+    const { generation } = await this.tenantService.currentState(this.tenant.code);
+    return applyImport(context, prepared, generation);
   }
 }

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { setTenantReadOnly } from "./actions";
+import { resetTest, setTenantReadOnly } from "./actions";
 
 const admin = { sessionId: "s1", userId: "u1", username: "admin", role: "admin" };
 const alice = { sessionId: "s2", userId: "u2", username: "alice", role: "user" };
@@ -12,11 +12,14 @@ const mocks = vi.hoisted(() => ({
   currentUser: vi.fn(),
   revalidatePath: vi.fn(),
   retries: 0,
+  tenantScope: vi.fn(),
+  reset: vi.fn(),
 }));
 vi.mock("@cpg/core", async (importOriginal) => {
   const core = await importOriginal<typeof import("@cpg/core")>();
   return {
     ...core,
+    tenantScope: mocks.tenantScope,
     requestScope: async () => ({ cradle: { tenantService: mocks.tenantService } }),
     retryingStaleSnapshot: <T>(attempt: () => Promise<T>) => {
       mocks.retries += 1;
@@ -75,5 +78,41 @@ describe("setTenantReadOnly", () => {
       await expect(setTenantReadOnly(values)).resolves.toMatchObject({ ok: false, error: { code: "VALIDATION_FAILED" } });
     }
     expect(mocks.tenantService.setReadOnly).not.toHaveBeenCalled();
+  });
+});
+
+
+describe("resetTest", () => {
+  beforeEach(() => {
+    mocks.currentUser.mockResolvedValue(admin);
+    mocks.tenantScope.mockResolvedValue({ cradle: { testResetService: { reset: mocks.reset } } });
+    mocks.reset.mockResolvedValue({ code: "test", generation: 4, readOnly: true });
+  });
+  afterEach(() => vi.clearAllMocks());
+  it("passes the admin session and loaded generation to the fixed Test service and refreshes only Cave control", async () => {
+    expect(await resetTest({ generation: 3 })).toEqual({ ok: true, data: { code: "test", generation: 4, readOnly: true } });
+    expect(mocks.tenantScope).toHaveBeenCalledWith("test");
+    expect(mocks.reset).toHaveBeenCalledWith(3, adminActor);
+    expect(mocks.revalidatePath.mock.calls).toEqual([["/admin"]]);
+  });
+  it("refreshes stale metadata while preserving the service error, and does not refresh other refusals", async () => {
+    const { ConflictError } = await vi.importActual<typeof import("@cpg/core")>("@cpg/core");
+    mocks.reset.mockRejectedValueOnce(new ConflictError("Reload", "GENERATION_STALE"));
+    expect(await resetTest({ generation: 3 })).toMatchObject({ ok: false, error: { code: "GENERATION_STALE" } });
+    expect(mocks.revalidatePath).toHaveBeenCalledOnce();
+    mocks.revalidatePath.mockClear();
+    mocks.reset.mockRejectedValueOnce(new ConflictError("Refused"));
+    expect(await resetTest({ generation: 3 })).toMatchObject({ ok: false, error: { code: "CONFLICT" } });
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+  it.each([alice, null])("refuses callers without the admin role before opening Test scope", async (caller) => {
+    mocks.currentUser.mockResolvedValue(caller);
+    expect(await resetTest({ generation: 3 })).toMatchObject({ ok: false, error: { code: caller ? "FORBIDDEN" : "UNAUTHORIZED" } });
+    expect(mocks.tenantScope).not.toHaveBeenCalled();
+  });
+  it("rejects malformed input without resetting or refreshing", async () => {
+    expect(await resetTest({ generation: 0 })).toMatchObject({ ok: false, error: { code: "VALIDATION_FAILED" } });
+    expect(mocks.reset).not.toHaveBeenCalled();
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 });

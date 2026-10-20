@@ -71,3 +71,15 @@ describe("ConfirmDialog", () => {
     expect(screen.queryByRole("button", { name: "Open" })).toBeNull();
   });
 });
+
+
+it.each([undefined, "Working…"])("disables confirmation while pending with label %s", async (pendingLabel) => {
+  let finish!: (result: ApiResult<string>) => void;
+  const action = () => new Promise<ApiResult<string>>((resolve) => { finish = resolve; });
+  render(<Harness {...base} pendingLabel={pendingLabel} action={action} />);
+  fireEvent.click(screen.getByRole("button", { name: "Open" }));
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Remove" })));
+  expect((screen.getByRole("button", { name: pendingLabel ?? "Remove" }) as HTMLButtonElement).disabled).toBe(true);
+  await act(async () => { finish({ ok: true, data: "done" }); });
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+});

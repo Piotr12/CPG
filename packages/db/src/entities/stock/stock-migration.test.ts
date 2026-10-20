@@ -25,6 +25,7 @@ describe("stock migration", () => {
       await expect(execute(`insert into stock_movement select 'duplicate', tenant_code, posting_id, position, type, material_id, location_id, business_date, occurred_at, quantity, base_unit, entered_quantity, entered_unit, numerator, denominator, balance_before, balance_after, reason, actor_user_id, actor_username, channel from stock_movement`)).rejects.toThrow(/UNIQUE/);
       expect(movement.id).toMatch(/^[a-f0-9-]{36}$/);
       expect(movement.occurredAt).toBeInstanceOf(Date);
+      await orm.migrator.down(); // Test reset audit exception.
       await orm.migrator.down();
       expect(await execute("select name from sqlite_master where name like 'stock_%'")).toEqual([]);
       expect(await execute("select count(*) as n from material")).toEqual([{ n: 1 }]);

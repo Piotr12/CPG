@@ -35,6 +35,7 @@ describe("migrateDatabase", () => {
       "Migration20261020054509_planning_parameters_safety_stock",
       "Migration20261020080940_boms",
       "Migration20261020164229_stock_ledger",
+      "Migration20261020164640_test_reset",
     ]);
     expect(await migrateDatabase(config)).toEqual([]);
   });
