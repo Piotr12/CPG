@@ -29,6 +29,11 @@ export * from "./services/suppliers/supplier.service";
 export * from "./services/planning-parameters/planning-parameter.service";
 export * from "./services/boms/bom.service";
 export * from "./services/safety-stock/safety-stock-target.service";
+export * from "./services/imports/import.service";
+// The import's workbook: the app's adapter reads it into cells, and the template is written from its layout.
+export { prepareImport, type ImportIssue, type PreparedImport } from "./domain/imports/prepare-import";
+export type { Cell, WorkbookSheet, WorkbookSheets } from "./domain/imports/cells";
+export * from "./domain/imports/workbook-layout";
 // The Safety stock screen labels each target as of today.
 export { targetStatus, type TargetStatus } from "./domain/safety-stock/target-on";
 export type { NamedRecordChanges, NamedRecordView } from "./services/named-records/named-records";

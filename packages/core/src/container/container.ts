@@ -10,6 +10,7 @@ import { IdempotencyService } from "../services/idempotency/idempotency.service"
 import { CustomerService } from "../services/customers/customer.service";
 import { LocationService } from "../services/locations/location.service";
 import { BomService } from "../services/boms/bom.service";
+import { ImportService } from "../services/imports/import.service";
 import { PlanningParameterService } from "../services/planning-parameters/planning-parameter.service";
 import { SafetyStockTargetService } from "../services/safety-stock/safety-stock-target.service";
 import { MaterialService } from "../services/materials/material.service";
@@ -51,6 +52,7 @@ export function createAppContainer(config: AppConfig, orm: Orm): AppContainer {
     planningParameterService: asClass(PlanningParameterService).scoped(),
     safetyStockTargetService: asClass(SafetyStockTargetService).scoped(),
     bomService: asClass(BomService).scoped(),
+    importService: asClass(ImportService).scoped(),
     // `tenant` is registered only by tenantScope(): resolving it from a global scope fails (strict).
   });
   return container;
