@@ -81,6 +81,10 @@ describe("tenant entry points", () => {
   it("are the only places that open a tenant, besides the tenant write wrapper", () => {
     const outside = all.filter((file) => !inTenant(file) && /\b(tenantScope|tenantServerAction)\(/.test(read(file)));
     // tenantApiWrite opens the path's tenant for the tenant routes that use it.
-    expect(outside.map(rel)).toEqual([path.join("auth", "api-write.ts")]);
+    expect(outside.map(rel).sort()).toEqual([path.join("app", "admin", "(global)", "actions.ts"), path.join("auth", "api-write.ts")].sort());
+    // Only the fixed Test reset opens a tenant in the global action module.
+    const resetActions = read(path.join(appDir, "app/admin/(global)/actions.ts"));
+    expect(resetActions.match(/tenantScope\(/g)).toHaveLength(1);
+    expect(resetActions).toContain('tenantScope("test")');
   });
 });

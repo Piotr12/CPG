@@ -28,7 +28,8 @@ export interface IdempotentWrite {
 /** Where the key lives: the global store, or one tenant's, with the generation the client sent. */
 export type IdempotencyScope =
   | { kind: "global" }
-  | { kind: "tenant"; tenant: TenantCode; generation: number | null; requireGeneration: boolean };
+  | { kind: "tenant"; tenant: TenantCode; generation: number | null; requireGeneration: boolean }
+  | { kind: "test-reset"; tenant: "test"; generation: number | null; requireGeneration: true };
 
 /**
  * The result to answer with: from this write, or replayed from the first one. A replayed result is
@@ -104,14 +105,15 @@ export class IdempotencyService {
     return inRequestTransaction(this.em, async () => {
       // Records at or before this instant are past their 24 hours (API-026).
       const expired = new Date(Date.now() - IDEMPOTENCY_TTL_MS);
-      const state = scope.kind === "tenant" ? await this.checkTenant(scope) : null;
+      const state = scope.kind !== "global" ? await this.checkTenant(scope) : null;
       const stored = await this.find(request, scope, expired);
       if (stored) return { kind: "found", stored } as const;
-      if (state) assertWritable(state);
+      if (state && scope.kind !== "test-reset") assertWritable(state);
 
       const data = await write();
       await this.purgeExpired(scope, expired);
-      await this.store(request, state?.generation ?? null, data);
+      const generation = scope.kind === "test-reset" ? (await this.tenantService.currentState("test")).generation : state?.generation ?? null;
+      await this.store(request, generation, data);
       return { kind: "written", data } as const;
     });
   }
@@ -120,7 +122,7 @@ export class IdempotencyService {
    * The tenant's current generation and read-only flag, read fresh inside the transaction, once the
    * sent generation matches it. The flag is checked by the caller, after the key lookup.
    */
-  private async checkTenant(scope: Extract<IdempotencyScope, { kind: "tenant" }>): Promise<TenantState> {
+  private async checkTenant(scope: Exclude<IdempotencyScope, { kind: "global" }>): Promise<TenantState> {
     const current = await this.tenantService.currentState(scope.tenant);
     assertCurrentGeneration(current.generation, scope.generation, scope.requireGeneration);
     return current;

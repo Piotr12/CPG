@@ -1,5 +1,6 @@
 import {
   AppError,
+  assertAdmin,
   fingerprintOf,
   operationOf,
   readGeneration,
@@ -77,6 +78,14 @@ export function tenantApiWrite<T, Context extends TenantRouteContext>(
     const generation = readGeneration(request);
     return { scope, idempotency: { kind: "tenant", tenant, generation, requireGeneration: tenant === "test" } };
   });
+}
+
+/** The fixed admin-only Test reset: same keyed pipeline, with its receipt in the new generation. */
+export function testResetApiWrite<T>(handler: Handler<T, unknown>): Route<unknown> {
+  return keyedWrite(handler, { authorize: assertAdmin }, async (request) => ({
+    scope: await tenantScope("test"),
+    idempotency: { kind: "test-reset", tenant: "test", generation: readGeneration(request), requireGeneration: true },
+  }));
 }
 
 /**

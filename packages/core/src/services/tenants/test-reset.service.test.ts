@@ -1,7 +1,7 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { ApiToken, GlobalAuditEvent, GlobalIdempotencyKey, initOrm, Session, Tenant, TenantAuditEvent, TenantIdempotencyKey, User, UserPreference, type Orm } from "@cpg/db";
+import { ApiToken, GlobalAuditEvent, GlobalIdempotencyKey, initOrm, Material, Session, Tenant, TenantAuditEvent, TenantIdempotencyKey, User, UserPreference, type Orm } from "@cpg/db";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadConfig } from "../../config";
 import { createAppContainer } from "../../container/container";
@@ -10,6 +10,10 @@ import { scopeForTenant } from "../../container/tenant-scope";
 import { migrateDatabase, toDbOptions } from "../../database";
 import type { AuditActor } from "../audit/actor";
 import { DEMO_KINDS, demoSeeders, seedResetDemoData } from "../demo/seed-demo-data";
+import { assertCurrentGeneration } from "../../domain/tenants/generation";
+import { inRequestTransaction, retryingStaleSnapshot } from "../../http/request-transaction";
+import { fingerprintOf } from "../idempotency/fingerprint";
+import { IDEMPOTENCY_TTL_MS } from "../idempotency/idempotency.service";
 import { MAX_DATASET_GENERATION } from "../../validators/tenants/test-reset.schema";
 
 const actor: AuditActor = { userId: "admin", username: "admin", sessionId: "session-admin", channel: "ui", token: null };
@@ -129,5 +133,92 @@ describe("atomic Test reset", () => {
     await expect(scoped.cradle.testResetService.reset(1, actor)).resolves.toMatchObject({ generation: 2 });
     await scoped.cradle.em.rollback();
     expect(await snapshot()).toEqual(before);
+  });
+});
+
+
+describe("keyed reset", () => {
+  async function request(generation: number | null, key = "reset", body: unknown = {}) {
+    const scoped = await scope();
+    const fingerprint = await fingerprintOf({ method: "POST", path: "/api/tenants/test/reset", body });
+    return scoped.cradle.idempotencyService.run(
+      { userId: "admin", key, operation: "POST /api/tenants/test/reset", fingerprint },
+      { kind: "test-reset", tenant: "test", generation, requireGeneration: true },
+      () => scoped.cradle.testResetService.reset(generation!, actor),
+    );
+  }
+
+  it("works while read-only, stores its receipt in the new generation, and replays only after a current precondition", async () => {
+    await populate();
+    await container.createScope().cradle.tenantService.setReadOnly("test", true, actor);
+    const first = await request(1);
+    expect(first).toMatchObject({ replayed: false, data: { generation: 2, readOnly: true } });
+    const em = (await scope()).cradle.em;
+    expect(await em.find(TenantIdempotencyKey, {})).toMatchObject([{ key: "reset", generation: 2 }]);
+    await expect(request(1)).rejects.toMatchObject({ code: "GENERATION_STALE" });
+    const before = await snapshot();
+    await expect(request(2)).resolves.toEqual({ ...first, replayed: true });
+    expect(await snapshot()).toEqual(before);
+    await expect(request(2, "reset", { changed: true })).rejects.toMatchObject({ code: "IDEMPOTENCY_KEY_REUSED" });
+    await expect(request(null)).rejects.toMatchObject({ code: "GENERATION_REQUIRED" });
+    // Expiration can free a key; it never frees an old-generation precondition.
+    await em.nativeUpdate(TenantIdempotencyKey, { key: "reset" }, { createdAt: new Date(Date.now() - IDEMPOTENCY_TTL_MS - 1) });
+    await expect(request(1)).rejects.toMatchObject({ code: "GENERATION_STALE" });
+    await expect(request(2)).resolves.toMatchObject({ replayed: false, data: { generation: 3, readOnly: true } });
+  });
+
+  it("rolls back the whole reset when receipt insertion fails", async () => {
+    await populate();
+    const scoped = await scope();
+    const before = await snapshot();
+    const create = scoped.cradle.em.create.bind(scoped.cradle.em);
+    vi.spyOn(scoped.cradle.em, "create").mockImplementation((...args: Parameters<typeof create>) => {
+      if (args[0] === TenantIdempotencyKey) throw new Error("receipt insert failed");
+      return create(...args);
+    });
+    const fingerprint = await fingerprintOf({ method: "POST", path: "/api/tenants/test/reset", body: {} });
+    await expect(scoped.cradle.idempotencyService.run(
+      { userId: "admin", key: "failed", operation: "POST /api/tenants/test/reset", fingerprint },
+      { kind: "test-reset", tenant: "test", generation: 1, requireGeneration: true },
+      () => scoped.cradle.testResetService.reset(1, actor),
+    )).rejects.toThrow("receipt insert failed");
+    expect(await snapshot()).toEqual(before);
+  });
+});
+
+describe("reset and an in-flight write on independent SQLite connections (TEN-026)", () => {
+  it("retries reset after another write commits first, removing that completed old-generation write", async () => {
+    await populate();
+    const other = await initOrm({ databasePath: orm.config.get("dbName") });
+    try {
+      const writer = await scopeForTenant(createAppContainer(container.cradle.config, other), "test");
+      const resetting = await scope();
+      const read = resetting.cradle.tenantService.currentState.bind(resetting.cradle.tenantService);
+      vi.spyOn(resetting.cradle.tenantService, "currentState").mockImplementationOnce(async (code) => {
+        const state = await read(code);
+        await writer.cradle.materialService.create({ type: "raw", description: "committed just before reset", baseUnit: "kg" }, actor);
+        return state;
+      });
+      await expect(resetting.cradle.testResetService.reset(1, actor)).resolves.toMatchObject({ generation: 2 });
+      expect(await (await scope()).cradle.em.count(Material, { description: "committed just before reset" })).toBe(0);
+      expect(await (await scope()).cradle.em.count(GlobalAuditEvent, { action: "tenants.tenant.reset" })).toBe(1);
+    } finally { await other.close(); }
+  });
+
+  it("refuses an old snapshot write after reset commits, then rejects its stale-generation retry", async () => {
+    await populate();
+    const other = await initOrm({ databasePath: orm.config.get("dbName") });
+    try {
+      const writer = (await scopeForTenant(createAppContainer(container.cradle.config, other), "test")).cradle;
+      let first = true;
+      await expect(retryingStaleSnapshot(() => inRequestTransaction(writer.em, async () => {
+        const state = await writer.tenantService.currentState("test");
+        if (first) { first = false; await reset(); }
+        assertCurrentGeneration(state.generation, 1, true);
+        await writer.materialService.create({ type: "raw", description: "must never leak", baseUnit: "kg" }, actor);
+      }))).rejects.toMatchObject({ code: "GENERATION_STALE" });
+      expect(await (await scope()).cradle.em.count(Material, { description: "must never leak" })).toBe(0);
+      expect(await (await scope()).cradle.tenantService.get("test")).toMatchObject({ generation: 2 });
+    } finally { await other.close(); }
   });
 });
