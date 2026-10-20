@@ -12,8 +12,11 @@
   "dependencies": {
     "@cpg/core": "^0.1.0",
     "@cpg/ui": "^0.1.0",
+    "fflate": "^0.8.3",
     "next": "^16.4.2",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "read-excel-file": "^9.3.12",
+    "write-excel-file": "^4.1.1"
   }
 }
