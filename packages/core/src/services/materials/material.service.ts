@@ -1,5 +1,6 @@
 import { assertNoCustomerDemand, orderUsingMaterial } from "../customer-orders/customer-order-usage";
 import { assertNoPhysicalStock, hasStockMovements } from "../stock/stock-usage";
+import { assertNoOpenTransfersOf, hasTransfers } from "../transfers/transfer-usage";
 import {
   Material,
   MaterialConversion,
@@ -147,7 +148,10 @@ export class MaterialService {
         await assertNoCustomerDemand(em, material);
       }
       if (fields.baseUnit !== undefined) await assertBaseUnitFree(em, material);
-      if (active === false) await assertNoOpenOrder(em, material);
+      if (active === false) {
+        await assertNoOpenOrder(em, material);
+        await assertNoOpenTransfersOf(em, material);
+      }
       if (fields.type === "raw" && (await isMadeAnywhere(em, material))) {
         throw new ConflictError(
           "Set this material to Buy at every location before making it raw: a raw material is always bought.",
@@ -336,6 +340,9 @@ async function assertBaseUnitFree(em: EntityManager, material: Material): Promis
       "Purchase requisitions or purchase orders use this material, so its base unit can't change: their quantities are stored in it.",
       "BASE_UNIT_IN_USE",
     );
+  }
+  if (await hasTransfers(em, material)) {
+    throw new ConflictError("Transfers use this material, so its base unit can't change: their quantities are stored in it.", "BASE_UNIT_IN_USE");
   }
 }
 

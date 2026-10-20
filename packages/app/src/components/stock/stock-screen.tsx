@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Locale, MaterialSummary, NamedRecordView, StockView } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { EmptyState } from "@cpg/ui/backend/feedback/empty-state";
@@ -9,7 +10,10 @@ import { fill, shownQuantity } from "../forms/form-labels";
 import { CorrectionDialog } from "./correction-dialog";
 import { stockLabels } from "./labels";
 
-/** Physical balance and ledger of a selected pair, including inactive historical masters. */
+/**
+ * Physical balance and ledger of a selected pair, including inactive historical masters, with what is
+ * in transit from and to the location shown apart: it belongs to its transfers, never to the pair (UX-017).
+ */
 export function StockScreen({ tenant, view, materials, locations, units, locale, messages }: {
   tenant: { code: string; name: string; generation: number; readOnly: boolean }; view: StockView | null;
   materials: MaterialSummary[]; locations: NamedRecordView[]; units: string[]; locale: Locale; messages: Messages;
@@ -22,7 +26,7 @@ export function StockScreen({ tenant, view, materials, locations, units, locale,
       <span>{row.reason}</span>
       <span className="text-xs text-muted-foreground">{row.actorUsername} · {t.channels[row.channel]}</span>
       <details className="text-xs"><summary className="cursor-pointer">{t.details}</summary>
-        <p>{t.source}: {({ correction: t.correction, "goods-receipt": t.goodsReceipt } as Record<string, string>)[row.type] ?? row.type} · {row.postingId}</p>
+        <p>{t.source}: {({ correction: t.correction, "goods-receipt": t.goodsReceipt, "transfer-dispatch": t.transferDispatch, "transfer-receipt": t.transferReceipt } as Record<string, string>)[row.type] ?? row.type} · {row.postingId}</p>
         <p>{t.entered}: {shownQuantity(row.enteredQuantity)} {row.enteredUnit} · {t.factor}: {row.numerator}/{row.denominator}</p>
         <p>{t.after}: {shownQuantity(row.balanceAfter)} {row.baseUnit}</p>
       </details>
@@ -46,7 +50,13 @@ export function StockScreen({ tenant, view, materials, locations, units, locale,
         </div><Button type="submit" variant="outline">{t.show}</Button>
       </form>
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border p-4">
-        <div><h2 className="text-sm text-muted-foreground">{t.quantity}</h2><p className="font-mono text-2xl" data-stock-balance>{shownQuantity(view.quantity)} {view.baseUnit}</p></div>
+        <div className="flex flex-wrap gap-x-8 gap-y-3">
+          <div><h2 className="text-sm text-muted-foreground">{t.quantity}</h2><p className="font-mono text-2xl" data-stock-balance>{shownQuantity(view.quantity)} {view.baseUnit}</p></div>
+          <div><h2 className="text-sm text-muted-foreground">{t.inTransitFrom}</h2><p className="font-mono text-lg" data-stock-transit-from>{shownQuantity(view.inTransitFrom)} {view.baseUnit}</p></div>
+          <div><h2 className="text-sm text-muted-foreground">{t.inTransitTo}</h2><p className="font-mono text-lg" data-stock-transit-to>{shownQuantity(view.inTransitTo)} {view.baseUnit}</p></div>
+          <p className="basis-full text-xs text-muted-foreground">{t.transitNote} <Link href={`/admin/${tenant.code}/transfers`} className="underline underline-offset-4">{t.transfers}</Link>
+            {view.transitTransfers.map((id) => <span key={id}> · <Link href={`/admin/${tenant.code}/transfers/${id}`} className="font-mono underline underline-offset-4">{id}</Link></span>)}</p>
+        </div>
         {editable ? <CorrectionDialog context={{ tenant: tenant.code, generation: tenant.generation }} pair={{ material: view.material, location: view.location }} units={units} labels={t} /> : <p className="text-sm text-muted-foreground">{t.unavailable}</p>}
       </div>
       <section className="flex min-w-0 flex-col gap-3"><h2 className="text-lg font-semibold">{t.ledger}</h2><p className="text-xs text-muted-foreground">{t.recent}</p>
