@@ -1,5 +1,5 @@
 import { Material, type EntityManager } from "@cpg/db";
-import { NotFoundError } from "../../http/errors";
+import { ConflictError, NotFoundError } from "../../http/errors";
 
 /** A material this tenant doesn't have: an unknown ID, or another tenant's (TEN-014). */
 export function materialNotFound(materialId: string): NotFoundError {
@@ -14,5 +14,17 @@ export function materialNotFound(materialId: string): NotFoundError {
 export async function findMaterial(em: EntityManager, materialId: string, options: { refresh?: boolean } = {}): Promise<Material> {
   const material = await em.findOne(Material, { code: materialId }, options);
   if (!material) throw materialNotFound(materialId);
+  return material;
+}
+
+/**
+ * `findMaterial` for a new entry that references the material: an inactive one can't be picked
+ * (MAT-029), so it is `MATERIAL_INACTIVE`. Entries made before the deactivation stay valid.
+ */
+export async function findActiveMaterial(em: EntityManager, materialId: string): Promise<Material> {
+  const material = await findMaterial(em, materialId);
+  if (!material.active) {
+    throw new ConflictError(`Material ${materialId} is inactive, so it can't be picked for new entries.`, "MATERIAL_INACTIVE");
+  }
   return material;
 }

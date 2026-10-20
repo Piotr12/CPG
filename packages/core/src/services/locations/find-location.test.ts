@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { loadConfig } from "../../config";
 import { migrateDatabase, toDbOptions } from "../../database";
 import { findNamedRecord } from "../named-records/find-named-record";
-import { findLocation, LOCATION_LOOKUP } from "./find-location";
+import { findActiveLocation, findLocation, LOCATION_LOOKUP } from "./find-location";
 
 describe("findLocation and findNamedRecord", () => {
   let orm: Orm;
@@ -22,6 +22,7 @@ describe("findLocation and findNamedRecord", () => {
     orm = await initOrm(toDbOptions(config));
     const em = scopedEm("prod");
     em.create(Location, { code: "00000001", name: "Main plant" });
+    em.create(Location, { code: "00000003", name: "Old quarry", active: false });
     em.create(Customer, { code: "00000002", name: "Acme" });
     await em.flush();
   });
@@ -47,5 +48,14 @@ describe("findLocation and findNamedRecord", () => {
     expect(await findNamedRecord(scopedEm("prod"), customers, "00000002")).toMatchObject({ name: "Acme" });
     await expect(findNamedRecord(scopedEm("prod"), customers, "00000001")).rejects.toMatchObject({ code: "CUSTOMER_NOT_FOUND" });
     expect(LOCATION_LOOKUP).toEqual({ entity: Location, noun: "location", codePrefix: "LOCATION" });
+  });
+
+  it("refuses an inactive location for a new entry (LFC-019)", async () => {
+    expect(await findActiveLocation(scopedEm("prod"), "00000001")).toMatchObject({ code: "00000001" });
+    await expect(findActiveLocation(scopedEm("prod"), "00000003")).rejects.toMatchObject({
+      code: "LOCATION_INACTIVE",
+      status: 409,
+      message: "Location 00000003 is inactive, so it can't be picked for new entries.",
+    });
   });
 });

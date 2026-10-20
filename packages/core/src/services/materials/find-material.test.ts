@@ -5,7 +5,7 @@ import { initOrm, Material, selectTenant, type Orm, type TenantCode } from "@cpg
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { loadConfig } from "../../config";
 import { migrateDatabase, toDbOptions } from "../../database";
-import { findMaterial, materialNotFound } from "./find-material";
+import { findActiveMaterial, findMaterial, materialNotFound } from "./find-material";
 
 describe("findMaterial", () => {
   let orm: Orm;
@@ -21,6 +21,7 @@ describe("findMaterial", () => {
     orm = await initOrm(toDbOptions(config));
     const em = scopedEm("prod");
     em.create(Material, { code: "00000001", type: "raw", description: "Prod steel", baseUnit: "kg" });
+    em.create(Material, { code: "00000002", type: "raw", description: "Old steel", baseUnit: "kg", active: false });
     await em.flush();
   });
 
@@ -53,5 +54,15 @@ describe("findMaterial", () => {
 
   it("names the ID in its not-found error", () => {
     expect(materialNotFound("abc").message).toBe("There is no material abc in this tenant.");
+  });
+
+  it("refuses an inactive material for a new entry (MAT-029)", async () => {
+    expect(await findActiveMaterial(scopedEm("prod"), "00000001")).toMatchObject({ code: "00000001" });
+    await expect(findActiveMaterial(scopedEm("prod"), "00000002")).rejects.toMatchObject({
+      code: "MATERIAL_INACTIVE",
+      status: 409,
+      message: "Material 00000002 is inactive, so it can't be picked for new entries.",
+    });
+    await expect(findActiveMaterial(scopedEm("test"), "00000001")).rejects.toMatchObject({ code: "MATERIAL_NOT_FOUND" });
   });
 });

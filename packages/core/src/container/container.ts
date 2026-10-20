@@ -9,6 +9,8 @@ import { LoginThrottle } from "../services/auth/login-throttle";
 import { IdempotencyService } from "../services/idempotency/idempotency.service";
 import { CustomerService } from "../services/customers/customer.service";
 import { LocationService } from "../services/locations/location.service";
+import { PlanningParameterService } from "../services/planning-parameters/planning-parameter.service";
+import { SafetyStockTargetService } from "../services/safety-stock/safety-stock-target.service";
 import { MaterialService } from "../services/materials/material.service";
 import { SupplierService } from "../services/suppliers/supplier.service";
 import { UserPreferenceService } from "../services/preferences/user-preference.service";
@@ -45,6 +47,8 @@ export function createAppContainer(config: AppConfig, orm: Orm): AppContainer {
     locationService: asClass(LocationService).scoped(),
     customerService: asClass(CustomerService).scoped(),
     supplierService: asClass(SupplierService).scoped(),
+    planningParameterService: asClass(PlanningParameterService).scoped(),
+    safetyStockTargetService: asClass(SafetyStockTargetService).scoped(),
     // `tenant` is registered only by tenantScope(): resolving it from a global scope fails (strict).
   });
   return container;
