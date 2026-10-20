@@ -1,6 +1,9 @@
 /** Field name → messages, as shown next to the matching form field. */
 export type FieldErrors = Record<string, string[]>;
 
+/** Public, non-sensitive context for translated error messages. */
+export type ErrorParams = Record<string, string>;
+
 /**
  * Base of every error a service throws on purpose. The server-action and route wrappers turn it
  * into the result envelope; anything that isn't an `AppError` becomes a generic internal error.
@@ -11,6 +14,7 @@ export class AppError extends Error {
     message: string,
     /** HTTP status for route handlers (`apiHandler`). Server actions only use the code. */
     readonly status = 400,
+    readonly messageParams?: ErrorParams,
   ) {
     super(message);
     this.name = new.target.name;
@@ -58,8 +62,8 @@ export class ForbiddenError extends AppError {
  * generation (`GENERATION_STALE`).
  */
 export class ConflictError extends AppError {
-  constructor(message: string, code = "CONFLICT") {
-    super(code, message, 409);
+  constructor(message: string, code = "CONFLICT", messageParams?: ErrorParams) {
+    super(code, message, 409, messageParams);
   }
 }
 

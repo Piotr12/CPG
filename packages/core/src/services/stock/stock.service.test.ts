@@ -61,7 +61,7 @@ describe("StockService", () => {
   });
   it("refuses an overdraw with available/required context and writes no movement or audit (INV-006)", async () => {
     await service().correct(line("2"), ACTOR);
-    await expect(service().correct(line("-3"), ACTOR)).rejects.toMatchObject({ code: "INSUFFICIENT_STOCK", message: expect.stringContaining("available 2.000000 each; requested 3.000000 each") });
+    await expect(service().correct(line("-3"), ACTOR)).rejects.toMatchObject({ code: "INSUFFICIENT_STOCK", messageParams: { ...PAIR, available: "2.000000", requested: "3.000000", unit: "each" }, message: expect.stringContaining("available 2.000000 each; requested 3.000000 each") });
     expect((await service().get(PAIR)).quantity).toBe("2.000000");
     expect(await entries()).toHaveLength(1);
     expect(await scoped().count(StockMovement, {})).toBe(1);
@@ -116,7 +116,7 @@ describe("StockService", () => {
     await service().correct(line("2"), ACTOR);
     const material = new MaterialService({ em: scoped() }); const location = new LocationService({ em: scoped() });
     for (const fields of [{ type: "finished" as const }, { baseUnit: "kg" }]) await expect(material.update(PAIR.material, fields, 1, ACTOR)).rejects.toMatchObject({ code: "MATERIAL_HAS_MOVEMENTS" });
-    await expect(material.update(PAIR.material, { active: false }, 1, ACTOR)).rejects.toMatchObject({ code: "STOCK_NOT_EMPTY", message: expect.stringContaining("00000001 holds 2.000000 each") });
+    await expect(material.update(PAIR.material, { active: false }, 1, ACTOR)).rejects.toMatchObject({ code: "STOCK_NOT_EMPTY", messageParams: { ...PAIR, quantity: "2.000000", unit: "each" }, message: expect.stringContaining("00000001 holds 2.000000 each") });
     await expect(location.update(PAIR.location, { active: false }, 1, ACTOR)).rejects.toMatchObject({ code: "STOCK_NOT_EMPTY" });
     await service().correct(line("-2"), ACTOR);
     await expect(material.update(PAIR.material, { baseUnit: "kg" }, 1, ACTOR)).rejects.toMatchObject({ code: "MATERIAL_HAS_MOVEMENTS" });

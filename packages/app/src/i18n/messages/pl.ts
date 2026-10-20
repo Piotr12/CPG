@@ -756,6 +756,7 @@ export const pl: Messages = {
     },
     channels: { ui: "Ekran", api: "Interfejs API" },
     actions: {
+      "stock.movement.posted": "Zaksięgowano ruch zapasu",
       "users.user.created": "Utworzono użytkownika",
       "users.user.password-reset": "Zresetowano hasło",
       "users.user.deactivated": "Dezaktywowano użytkownika",
@@ -796,6 +797,12 @@ export const pl: Messages = {
     },
     passwordNotRecorded: "Hasło zmienione (niezapisane)",
     fields: {
+      movement: "ruch",
+      postingId: "ID księgowania",
+      businessDate: "data księgowania",
+      reason: "powód",
+      enteredQuantity: "wprowadzona ilość",
+      enteredUnit: "wprowadzona jednostka",
       username: "nazwa użytkownika",
       role: "rola",
       active: "aktywne",
@@ -831,7 +838,7 @@ export const pl: Messages = {
       readOnly: { true: "tak", false: "nie" },
       locale: { en: "angielski", pl: "polski" },
       theme: { light: "jasny", dark: "ciemny" },
-      type: { raw: "surowiec", intermediate: "półprodukt", finished: "wyrób gotowy" },
+      type: { raw: "surowiec", intermediate: "półprodukt", finished: "wyrób gotowy", correction: "korekta" },
       procurement: { make: "produkcja", buy: "zakup" },
     },
   },
@@ -915,6 +922,10 @@ export const pl: Messages = {
     dark: "Ciemny",
   },
   errors: {
+    INSUFFICIENT_STOCK: "Materiał {material} w lokalizacji {location}: dostępne {available} {unit}; wymagane {requested} {unit}.",
+    STOCK_NOT_EMPTY: "Materiał {material} w lokalizacji {location} ma zapas {quantity} {unit}. Wyzeruj zapas przed dezaktywacją.",
+    MATERIAL_HAS_MOVEMENTS: "Materiał ma historię zapasu, więc nie można zmienić jego typu ani jednostki podstawowej.",
+
     UNAUTHORIZED: "Musisz się zalogować.",
     TOO_MANY_ATTEMPTS: "Zbyt wiele prób. Spróbuj ponownie za kilka minut.",
     VALIDATION_FAILED: "Niektóre pola są nieprawidłowe.",

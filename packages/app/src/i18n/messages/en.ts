@@ -793,6 +793,7 @@ export const en = {
     channels: { ui: "UI", api: "API" },
     /** Keyed by the entry's action ID; an action missing here is shown as its ID. */
     actions: {
+      "stock.movement.posted": "Stock movement posted",
       "users.user.created": "User created",
       "users.user.password-reset": "Password reset",
       "users.user.deactivated": "User deactivated",
@@ -834,6 +835,12 @@ export const en = {
     passwordNotRecorded: "Password replaced (not recorded)",
     /** Snapshot field names in the Changes column; a field missing here is shown as stored. */
     fields: {
+      movement: "movement",
+      postingId: "posting ID",
+      businessDate: "business date",
+      reason: "reason",
+      enteredQuantity: "entered quantity",
+      enteredUnit: "entered unit",
       username: "username",
       role: "role",
       active: "active",
@@ -870,7 +877,7 @@ export const en = {
       readOnly: { true: "yes", false: "no" },
       locale: { en: "English", pl: "Polish" },
       theme: { light: "light", dark: "dark" },
-      type: { raw: "raw", intermediate: "intermediate", finished: "finished" },
+      type: { raw: "raw", intermediate: "intermediate", finished: "finished", correction: "correction" },
       procurement: { make: "make", buy: "buy" },
     },
   },
@@ -959,6 +966,10 @@ export const en = {
   },
   /** Keyed by the result envelope's error `code`; unknown codes fall back to the server's message. */
   errors: {
+    INSUFFICIENT_STOCK: "Material {material} at location {location}: available {available} {unit}; requested {requested} {unit}.",
+    STOCK_NOT_EMPTY: "Material {material} at location {location} holds {quantity} {unit}. Clear its stock before deactivation.",
+    MATERIAL_HAS_MOVEMENTS: "This material has stock history, so its type and base unit cannot change.",
+
     UNAUTHORIZED: "You need to sign in.",
     TOO_MANY_ATTEMPTS: "Too many attempts. Try again in a few minutes.",
     VALIDATION_FAILED: "Some fields are invalid.",

@@ -12,7 +12,7 @@ async function api<T = Record<string, unknown>>(method: string, endpoint: string
     method, headers: { authorization: `Bearer ${secret}`, "content-type": "application/json", "idempotency-key": key, ...(generation === undefined ? {} : { "dataset-generation": String(generation) }) },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  return { status: response.status, replayed: response.headers.get("idempotent-replayed"), body: await response.json() as { ok: boolean; data: T; error: { code: string; message: string } } };
+  return { status: response.status, replayed: response.headers.get("idempotent-replayed"), body: await response.json() as { ok: boolean; data: T; error: { code: string; message: string; params?: Record<string, string> } } };
 }
 
 describe("physical stock and reasoned corrections (#80)", () => {
@@ -87,6 +87,7 @@ describe("physical stock and reasoned corrections (#80)", () => {
     const negative = await correction("-25");
     expect(negative.status).toBe(409); expect(negative.body.error.code).toBe("INSUFFICIENT_STOCK");
     expect(negative.body.error.message).toContain("available 24.500000 each");
+    expect(negative.body.error.params).toEqual({ material, location, available: "24.500000", requested: "25.000000", unit: "each" });
     expect((await correction("1", { reason: " " })).body.error.code).toBe("VALIDATION_FAILED");
     expect((await api("POST", "/api/tenants/test/stock/corrections", operatorSecret, { material, location, quantity: "1", unit: "each", reason: "Wrong scope" }, randomUUID(), 1)).body.error.code).toBe("MATERIAL_NOT_FOUND");
     expect((await api("GET", `/api/tenants/test/stock?material=${material}&location=${location}`, operatorSecret)).status).toBe(404);
@@ -119,6 +120,13 @@ describe("physical stock and reasoned corrections (#80)", () => {
       await choosePreference(admin, "pl");
       await admin.open(`${baseUrl}/admin/prod/stock?material=${material}&location=${location}`); await admin.waitForText("Zapas — Prod");
       expect(await admin.text("main")).toContain("Zaksięguj korektę");
+      await admin.waitUntil(hydrated(`document.querySelector("main button:not([type=submit])")`));
+      await admin.clickRole("button", "Zaksięguj korektę"); await admin.waitFor("[role=dialog]");
+      await admin.fillLabel("Ilość ze znakiem", "-25"); await admin.fillLabel("Powód", "Spis");
+      await admin.click("[role=dialog] button[type=submit]"); await admin.waitFor("[role=dialog] [role=alert]");
+      expect(await admin.text("[role=alert]")).toContain(`Materiał ${material} w lokalizacji ${location}: dostępne 24.000000 each; wymagane 25.000000 each.`);
+      await admin.open(`${baseUrl}/admin/prod/audit`); await admin.waitForText("Zaksięgowano ruch zapasu");
+      expect(await admin.text("main")).toContain("wprowadzona ilość");
       await admin.open(`${baseUrl}/help?q=korekty`); await admin.waitForText("Zapas fizyczny i korekty");
     } finally { await restoreDefaultPreferences(admin, baseUrl, inject("adminPassword")); }
     const before = (await stock()).body.data;

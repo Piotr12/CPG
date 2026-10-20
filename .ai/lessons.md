@@ -12,6 +12,8 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 ## General
 
+- **2026-10-20 — Translate dynamic refusals with structured context** — New error codes need EN/PL labels and audit IDs need display names. Send public string parameters through the shared error envelope so translations preserve exact quantities and record identifiers without parsing English messages.
+
 - **2026-10-20 — Resolve a delegated source conflict explicitly** — When the owner directs autonomous completion after a baseline conflict is presented, record the chosen interpretation and its authority in a named decision; preserve the conflicting source as an erratum instead of silently treating it as consistent. #80 uses signed manual stock changes (D07); XLS targets remain absolute.
 - **2026-10-20 — Add a sidebar icon with every navigation ID** — A new leaf in `nav-tree.ts` also needs an entry in `sidebar-nav.tsx`'s exhaustive icon registry. Without it, the sidebar fails at runtime; typecheck and the full sidebar tests catch this before publication.
 

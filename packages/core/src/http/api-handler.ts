@@ -34,7 +34,7 @@ export function createApiHandler(rethrow: Rethrow) {
         if (error instanceof ValidationError) {
           return respond(fail({ code: error.code, message: error.message, fieldErrors: error.fieldErrors }), error.status);
         }
-        if (error instanceof AppError) return respond(fail({ code: error.code, message: error.message }), error.status);
+        if (error instanceof AppError) return respond(fail({ code: error.code, message: error.message, ...(error.messageParams && { params: error.messageParams }) }), error.status);
         console.error("Route handler failed:", error);
         return respond(fail(INTERNAL_ERROR), 500);
       }

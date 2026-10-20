@@ -13,6 +13,7 @@ export async function assertNoPhysicalStock(em: EntityManager, reference: { mate
     throw new ConflictError(
       `Material ${balance.material.code} at location ${balance.location.code} holds ${balance.quantity} ${balance.material.baseUnit}. Clear its stock before deactivation.`,
       "STOCK_NOT_EMPTY",
+      { material: balance.material.code, location: balance.location.code, quantity: balance.quantity, unit: balance.material.baseUnit },
     );
   }
 }

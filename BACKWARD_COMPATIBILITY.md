@@ -150,6 +150,8 @@ Every tenant-scoped endpoint lives under `/api/tenants/{tenant}/`.
 
 These header names, codes and statuses are part of the contract. `tests/api-writes.test.ts` keeps every write route on the keyed wrapper.
 
+Stock conflict envelopes may include additive `error.params` (string-valued public context for translations). `INSUFFICIENT_STOCK` supplies material, location, available, requested and unit; `STOCK_NOT_EMPTY` supplies material, location, quantity and unit. The existing English `message`, status and code remain stable.
+
 ### 5. Commands used by CI, deploy and the docs
 
 Source: root `package.json` scripts, `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `.ai/agentic.config.json`, `AGENTS.md`, `SDLC.md`.

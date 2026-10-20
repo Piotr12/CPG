@@ -103,6 +103,7 @@ export class StockService {
         throw new ConflictError(
           `Material ${line.material} at location ${line.location}: available ${formatDecimal(before, { fixed: true })} ${material.baseUnit}; requested ${formatDecimal(-delta, { fixed: true })} ${material.baseUnit}.`,
           "INSUFFICIENT_STOCK",
+          { material: line.material, location: line.location, available: formatDecimal(before, { fixed: true }), requested: formatDecimal(-delta, { fixed: true }), unit: material.baseUnit },
         );
       }
       if (after > MAX_QUANTITY) throw new AppError("QUANTITY_OUT_OF_RANGE", "The resulting physical balance is too large to store.");
