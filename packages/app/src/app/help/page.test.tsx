@@ -41,6 +41,7 @@ describe("HelpPage", () => {
       "BOMs",
       "A BOM and its revisions",
       "Import from spreadsheet",
+      "Physical stock and corrections",
       "Language and theme",
       "Using help",
     ]);

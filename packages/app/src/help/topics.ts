@@ -20,6 +20,7 @@ export const HELP_TOPIC_IDS = [
   "boms",
   "bom-revisions",
   "import",
+  "stock",
   "language-and-theme",
   "using-help",
 ] as const;
@@ -49,6 +50,7 @@ export const HELP_TOPIC_ROUTES: Record<HelpTopicId, string> = {
   boms: "/admin/[tenant]/boms",
   "bom-revisions": "/admin/[tenant]/boms/[id]",
   import: "/admin/[tenant]/import",
+  stock: "/admin/[tenant]/stock",
   "language-and-theme": "/admin",
   "using-help": "/help",
 };
@@ -226,6 +228,15 @@ const en: Record<HelpTopicId, HelpText> = {
       "Download the template: it has a sheet for materials, unit conversions, locations, customers, suppliers, planning parameters and safety stock, and two for BOMs, plus instructions in English and Polish. Fill only the sheets you need and keep each sheet's header row. A blank ID creates a record, an existing ID updates it, and an ID that doesn't exist is an error. Nothing is ever deleted by an import.",
       "Sheets are applied in the template's order, so a planning row can use a material the Materials sheet creates: the dry run shows the ID it will get. A BOM's lines are its complete recipe: a component left out is removed in a new revision, an identical recipe creates no revision, and a new BOM's lines name its header by an import reference you choose.",
       "Upload the workbook and run the dry run: it checks every row with the same rules as the screens, writes nothing, and lists every problem by sheet, row and column, or shows what would be created, changed or left unchanged. Only a dry run without problems can be committed, and the commit writes everything in one go or nothing. If anything the workbook uses changed since the dry run, the commit is refused: run the dry run again. At most 2000 rows and 512 KB per workbook. The API offers the same: GET /api/import/template, and POST /api/tenants/{tenant}/import/dry-run and /commit with the workbook as base64.",
+    ],
+  },
+  stock: {
+    title: "Physical stock and corrections",
+    body: [
+      "Stock in the tenant menu shows the exact physical balance and recent movements for a selected material and location. A pair without movements has zero stock. Test and Prod are separate; fresh Test includes demonstration opening movements.",
+      "Either role can post a reasoned correction while the tenant and masters are writable and active. Enter a signed change: 5 adds five and -5 removes five. Pick the base unit or a defined conversion; it converts once, half-up to six decimals, and keeps the entered quantity, unit and factor. The server uses today's UTC business date; backdating and future dating are unavailable. A correction that would make stock negative is refused with the available quantity.",
+      "Opening balances and physical customer returns are ordinary positive corrections with a reason; there is no return document. Every user correction creates an immutable stock movement and a separate before/after audit entry. Source, actor and unit/factor appear in movement details. Installation openings are explicitly labelled Installation. The screen shows up to 100 recent movements, while its balance includes all movements.",
+      "A material with any movement keeps its type and base unit forever, even after returning to zero. Nonzero stock prevents material or location deactivation. The API reads GET /api/tenants/{tenant}/stock?material=00000001&location=00000001 and posts POST /api/tenants/{tenant}/stock/corrections with a bearer token, idempotency key, current Test generation and material, location, signed quantity, unit and reason.",
     ],
   },
   "language-and-theme": {
@@ -409,6 +420,15 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Pobierz szablon: ma arkusz na materiały, przeliczniki jednostek, lokalizacje, klientów, dostawców, parametry planowania i zapas bezpieczeństwa oraz dwa na BOM-y, a do tego instrukcję po angielsku i po polsku. Wypełnij tylko potrzebne arkusze i zachowaj wiersz nagłówka każdego z nich. Puste ID tworzy rekord, istniejące ID go aktualizuje, a ID, które nie istnieje, jest błędem. Import nigdy niczego nie usuwa.",
       "Arkusze są stosowane w kolejności szablonu, więc wiersz parametrów planowania może użyć materiału tworzonego przez arkusz Materials: próba pokazuje ID, które dostanie. Wiersze BOM-u to jego pełna receptura: pominięty składnik jest usuwany w nowej rewizji, identyczna receptura nie tworzy rewizji, a wiersze nowego BOM-u wskazują jego nagłówek przez wybraną przez ciebie referencję importu.",
       "Wyślij skoroszyt i wykonaj próbę: sprawdza każdy wiersz tymi samymi zasadami co ekrany, niczego nie zapisuje i wymienia każdy problem z arkuszem, wierszem i kolumną albo pokazuje, co zostanie utworzone, zmienione lub pozostanie bez zmian. Zatwierdzić można tylko próbę bez problemów, a zatwierdzenie zapisuje wszystko naraz albo nic. Jeśli coś, czego używa skoroszyt, zmieniło się od czasu próby, zatwierdzenie jest odrzucane: wykonaj próbę ponownie. Najwyżej 2000 wierszy i 512 KB na skoroszyt. API oferuje to samo: GET /api/import/template oraz POST /api/tenants/{tenant}/import/dry-run i /commit ze skoroszytem w base64.",
+    ],
+  },
+  stock: {
+    title: "Zapas fizyczny i korekty",
+    body: [
+      "Zapas w menu środowiska pokazuje dokładny stan fizyczny i ostatnie ruchy wybranego materiału w lokalizacji. Para bez ruchów ma stan zero. Test i Prod są oddzielne; świeży Test zawiera demonstracyjne ruchy otwarcia.",
+      "Obie role mogą zaksięgować korektę z powodem, gdy środowisko pozwala na zapis, a materiał i lokalizacja są aktywne. Wpisz zmianę ze znakiem: 5 dodaje pięć, -5 odejmuje pięć. Wybierz jednostkę podstawową lub zdefiniowany przelicznik; ilość jest przeliczana raz, z zaokrągleniem połówkowym w górę do sześciu miejsc, i zachowuje wpisaną ilość, jednostkę oraz przelicznik. Serwer używa dzisiejszej daty UTC; nie można księgować w przeszłość ani przyszłość. Korekta prowadząca do ujemnego zapasu jest odrzucana z dostępną ilością.",
+      "Stany otwarcia i fizyczny zwrot od klienta to zwykłe dodatnie korekty z powodem; nie powstaje dokument zwrotu. Każda korekta użytkownika tworzy niezmienny ruch magazynowy i oddzielny wpis audytu ze stanem przed i po. Źródło, użytkownik i przelicznik są w szczegółach ruchu. Otwarcia demonstracyjne są oznaczone jako Instalacja. Ekran pokazuje do 100 ostatnich ruchów, a saldo uwzględnia wszystkie ruchy.",
+      "Materiał po dowolnym ruchu zachowuje na zawsze typ i jednostkę podstawową, nawet po wyzerowaniu zapasu. Niezerowy zapas blokuje dezaktywację materiału i lokalizacji. API odczytuje GET /api/tenants/{tenant}/stock?material=00000001&location=00000001 i księguje POST /api/tenants/{tenant}/stock/corrections z tokenem, kluczem idempotencji, bieżącą generacją Test oraz materiałem, lokalizacją, ilością ze znakiem, jednostką i powodem.",
     ],
   },
   "language-and-theme": {

@@ -46,3 +46,5 @@ export * from "./singleton";
 // The preference vocabulary: `app` may not import `@cpg/db`, but its dictionaries are keyed by it.
 export { LOCALES, THEMES, type Locale, type Theme } from "@cpg/db";
 export { TestResetService } from "./services/tenants/test-reset.service";
+
+export * from "./services/stock/stock.service";

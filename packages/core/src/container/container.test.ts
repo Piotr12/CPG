@@ -1,3 +1,4 @@
+import { StockService } from "../services/stock/stock.service";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -43,6 +44,7 @@ describe("createAppContainer", () => {
     expect(cradle.userPreferenceService).toBeInstanceOf(UserPreferenceService);
     expect(cradle.apiTokenService).toBeInstanceOf(ApiTokenService);
     expect(cradle.auditService).toBeInstanceOf(AuditService);
+    expect(cradle.stockService).toBeInstanceOf(StockService);
     expect(cradle.materialService).toBeInstanceOf(MaterialService);
     expect(cradle.locationService).toBeInstanceOf(LocationService);
     expect(cradle.planningParameterService).toBeInstanceOf(PlanningParameterService);

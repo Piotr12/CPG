@@ -5,12 +5,13 @@ import { DEMO_LOCATIONS } from "../../domain/locations/demo-locations";
 import { DEMO_MATERIALS } from "../../domain/materials/demo-materials";
 import { DEMO_PLANNING_PARAMETERS } from "../../domain/planning-parameters/demo-planning-parameters";
 import { DEMO_SAFETY_STOCK_TARGETS } from "../../domain/safety-stock/demo-safety-stock-targets";
+import { DEMO_STOCK } from "../../domain/stock/demo-stock";
 import { DEMO_SUPPLIERS } from "../../domain/suppliers/demo-suppliers";
 
 /** One definition of seed order: references follow their materials and locations. */
-export const DEMO_KINDS = ["materials", "locations", "customers", "suppliers", "planning parameter sets", "safety-stock targets", "BOMs"] as const;
+export const DEMO_KINDS = ["materials", "locations", "customers", "suppliers", "planning parameter sets", "safety-stock targets", "BOMs", "stock openings"] as const;
 export type DemoKind = (typeof DEMO_KINDS)[number];
-export type DemoServices = Pick<Cradle, "materialService" | "locationService" | "customerService" | "supplierService" | "planningParameterService" | "safetyStockTargetService" | "bomService">;
+export type DemoServices = Pick<Cradle, "materialService" | "locationService" | "customerService" | "supplierService" | "planningParameterService" | "safetyStockTargetService" | "bomService" | "stockService">;
 
 /** Shared by startup's best-effort runner and reset's atomic fail-fast runner. */
 export function demoSeeders(services: DemoServices): Record<DemoKind, { expected: number; run: () => Promise<number> }> {
@@ -22,6 +23,7 @@ export function demoSeeders(services: DemoServices): Record<DemoKind, { expected
     "planning parameter sets": { expected: DEMO_PLANNING_PARAMETERS.length, run: () => services.planningParameterService.seedDemo() },
     "safety-stock targets": { expected: DEMO_SAFETY_STOCK_TARGETS.length, run: () => services.safetyStockTargetService.seedDemo() },
     BOMs: { expected: DEMO_BOMS.length, run: () => services.bomService.seedDemo() },
+    "stock openings": { expected: DEMO_STOCK.length, run: () => services.stockService.seedDemo() },
   };
 }
 

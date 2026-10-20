@@ -104,4 +104,9 @@ describe("AppError hierarchy", () => {
       status: 428,
     });
   });
+  it("carries public context for a translated conflict", () => {
+    expect(new ConflictError("Not enough.", "INSUFFICIENT_STOCK", { available: "2.000000" })).toMatchObject({
+      code: "INSUFFICIENT_STOCK", status: 409, messageParams: { available: "2.000000" },
+    });
+  });
 });

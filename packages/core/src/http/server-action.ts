@@ -29,7 +29,7 @@ export function serverAction<Schema extends z.ZodType, T>(
       if (error instanceof ValidationError) {
         return fail({ code: error.code, message: error.message, fieldErrors: error.fieldErrors });
       }
-      if (error instanceof AppError) return fail({ code: error.code, message: error.message });
+      if (error instanceof AppError) return fail({ code: error.code, message: error.message, ...(error.messageParams && { params: error.messageParams }) });
       console.error("Server action failed:", error);
       return fail(INTERNAL_ERROR);
     }
