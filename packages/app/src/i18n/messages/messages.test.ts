@@ -16,7 +16,7 @@ describe("dictionaries", () => {
     expect(keyPaths(pl)).toEqual(keyPaths(en));
   });
 
-  it("translate every string rather than copy it (aside from words Polish shares: the product name, Menu, Status, ID, and a number)", () => {
+  it("translate every string rather than copy it (aside from words Polish shares: the product name, Menu, Status, ID, BOM, a dash, and a number)", () => {
     const copied = keyPaths(en).filter((path) => {
       const read = (dictionary: object) => path.split("/").reduce<unknown>((node, key) => (node as Record<string, unknown>)[key], dictionary);
       return typeof read(en) === "string" && read(en) === read(pl);
@@ -33,10 +33,19 @@ describe("dictionaries", () => {
       "suppliers/columns/id",
       "suppliers/columns/status",
       "safetyStock/columns/status",
+      "boms/columns/id",
+      "boms/columns/status",
+      "boms/noEnd",
+      "boms/details/status",
       "audit/fields/id",
       "nav/menu",
       "nav/roles/admin",
     ]);
+  });
+
+  it("name a BOM's page in both languages", () => {
+    expect(en.boms.detailHeading("00000003", "Cabinet, red")).toBe("BOM 00000003 — Cabinet, red");
+    expect(pl.boms.detailHeading("00000003", "Szafka")).toBe("BOM 00000003 — Szafka");
   });
 
   it.each([
