@@ -35,7 +35,21 @@ Post partial production completions against Open orders. Each completion pre-fil
 ## Decisions and log
 - Reuse the cezar linked worktree; no nested worktree. The spec is materialized untracked from `spec/production-completions` (PR #117) per `om-auto-implement-spec`; the spec branch stays design-only.
 
+## Deviations from the spec
+- **The form shows no live per-row variance.** The standards route all quantity arithmetic through core's `decimal.ts`, which client code cannot import (only `@cpg/core/validators/*`). The form shows *Expected* beside *Actual*; the server records the variance, and the history shows it right after posting.
+- **An inactive or unknown added input is a field error on its row** (`components.N.material`), as the spec's field-message list says. BOM lines instead raise `MATERIAL_INACTIVE`/`MATERIAL_NOT_FOUND` for the whole request.
+- **The completion's UUID has no `onCreate` default:** the service always generates it before posting, because the movements carry it.
+
 ## Verification
+- Full local gate at 4.1: `npm run lint` passes (one pre-existing warning: unused `lineError` import in `bom.service.ts`); `npm run typecheck` passes; `npm run test:coverage`: 415 files / 2,700 tests, 100% statements, branches, functions and lines; `npm run build` passes and lists both completion routes.
+- Integration tests, run against the standalone production build (Docker Desktop has no disk space; shared state not pruned, per the lessons). Each run used a fresh copy and a fresh `DATA_DIR`:
+  - `production-completions.test.ts`: 4/4, on both builds;
+  - `production-orders.test.ts`, `smoke.test.ts` (24 migrations) and `stock.test.ts`: 3 files, 14/14.
+  - The full suite is left to PR CI.
+- Live UI on the standalone server:
+  - desktop: order detail with history, a completed order with a waste posting and an overproduction, both dialog steps, and the acceptance guard;
+  - mobile at 390 px: no horizontal scroll. The first capture squeezed the history column, so the date column is now hidden below `sm` and lines wrap at word boundaries.
+  - Screenshots in `.ai/qa/artifacts_production-completions-89/` (gitignored), posted to the PR.
 - Phases 1–2: db 17 files / 102 tests; core completion domain/schema/service/order tests (58 + 20) pass; targeted coverage of the new core files 100% on all four metrics; `npm run typecheck` passes; ESLint on core clean except the pre-existing `lineError` unused-import warning in `bom.service.ts`.
 
 ## Progress
@@ -55,11 +69,11 @@ Post partial production completions against Open orders. Each completion pre-fil
 
 ### Phase 3: Delivery surfaces
 
-- [ ] 3.1 API routes, server action and contract
-- [ ] 3.2 Completion dialog, history, strings and help
-- [ ] 3.3 Focused integration journey
+- [x] 3.1 API routes, server action and contract — 610aa42
+- [x] 3.2 Completion dialog, history, strings and help — 37f7c95
+- [x] 3.3 Focused integration journey — 2150288
 
 ### Phase 4: Verification and publication
 
-- [ ] 4.1 Full local gate and live UI evidence
+- [x] 4.1 Full local gate and live UI evidence — 2150288
 - [ ] 4.2 Review, publication and final CI
