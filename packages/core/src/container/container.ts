@@ -4,6 +4,7 @@ import { ProductionCompletionService } from "../services/production-orders/produ
 import { CustomerOrderService } from "../services/customer-orders/customer-order.service";
 import { StockService } from "../services/stock/stock.service";
 import { StockReportService } from "../services/reports/stock-report.service";
+import { VarianceReportService } from "../services/reports/variance-report.service";
 import { entities, initOrm, type Orm } from "@cpg/db";
 import { asClass, asFunction, asValue, createContainer, InjectionMode } from "awilix";
 import { loadConfig, type AppConfig } from "../config";
@@ -83,6 +84,7 @@ export function createAppContainer(config: AppConfig, orm: Orm): AppContainer {
     importService: asClass(ImportService).scoped(),
     stockImportService: asClass(StockImportService).scoped(),
     stockReportService: asClass(StockReportService).scoped(),
+    varianceReportService: asClass(VarianceReportService).scoped(),
     // `tenant` is registered only by tenantScope(): resolving it from a global scope fails (strict).
   });
   return container;

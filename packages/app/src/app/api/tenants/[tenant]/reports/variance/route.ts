@@ -1,0 +1,15 @@
+import { tenantScope } from "@cpg/core";
+import { requireApiUser } from "../../../../../../auth/require-api-user";
+import { apiHandler } from "../../../../../../routing/api-handler";
+
+/**
+ * One page of the tenant's production variance report (E13-S02, R07, API-014, UX-021): each order's
+ * target and pinned-recipe expectations against what its completions produced and used, with the
+ * Variance report page's filters (`material`, `location`, `status`, `from`, `to`, `page`). Any
+ * signed-in account, as on the page; it writes nothing, so a read-only tenant answers too (TEN-018).
+ */
+export const GET = apiHandler(async (request: Request, { params }: RouteContext<"/api/tenants/[tenant]/reports/variance">) => {
+  await requireApiUser(request);
+  const { cradle } = await tenantScope((await params).tenant);
+  return cradle.varianceReportService.read(Object.fromEntries(new URL(request.url).searchParams));
+});

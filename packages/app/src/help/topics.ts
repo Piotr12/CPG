@@ -34,6 +34,7 @@ export const HELP_TOPIC_IDS = [
   "stock",
   "stock-import",
   "stock-report",
+  "variance-report",
   "language-and-theme",
   "using-help",
 ] as const;
@@ -77,6 +78,7 @@ export const HELP_TOPIC_ROUTES: Record<HelpTopicId, string> = {
   stock: "/admin/[tenant]/stock",
   "stock-import": "/admin/[tenant]/stock-import",
   "stock-report": "/admin/[tenant]/reports/stock",
+  "variance-report": "/admin/[tenant]/reports/variance",
   "language-and-theme": "/admin",
   "using-help": "/help",
 };
@@ -338,6 +340,15 @@ const en: Record<HelpTopicId, HelpText> = {
       "Opening balances and physical customer returns are ordinary positive corrections with a reason; there is no return document. Every user correction creates an immutable stock movement and a separate before/after audit entry. Each movement shows its type and its source document: a goods receipt links to its purchase order, a goods issue to its shipment, a transfer dispatch or receipt to its transfer, a production completion to its production order; a correction (also from a stock import) is its own source. The actor, the posting ID and the unit/factor appear in movement details. Installation openings are explicitly labelled Installation. The ledger shows 100 movements per page, newest first, while the balance includes all movements.",
       "To set many positions at once, such as an opening balance or a stock count, use Stock import (Import from spreadsheet on this screen): you write the quantity each position should have, not the change.",
       "A material with any movement keeps its type and base unit forever, even after returning to zero. Nonzero stock prevents material or location deactivation. The API reads GET /api/tenants/{tenant}/stock?material=00000001&location=00000001&page=1 and posts POST /api/tenants/{tenant}/stock/corrections with a bearer token, idempotency key, current Test generation and material, location, signed quantity, unit and reason.",
+    ],
+  },
+  "variance-report": {
+    title: "Variance report",
+    body: [
+      "Variance report in the tenant menu compares what production recorded with what each production order planned. Each order with completions is one row: its target against what its completions produced (the output variance, produced − target), and for every component the expected quantity, the actual quantity, the variance (actual − expected) and the waste, all in the material's base unit. Expected is what the order's pinned BOM revision asks for the output actually produced, as stored when each completion was posted; it is never recalculated from a later recipe.",
+      "An input that isn't in the pinned recipe is marked Extra: it expected nothing, so its whole actual is variance. A completion with zero output is a waste posting: it produces nothing, is counted under Waste postings, and what it used shows in each component's Waste as well as in its actual. A reversed completion is counted nowhere and its ID is listed under Reversed. Open the order to see each completion on its own.",
+      "Filter by material (the order's output, or a component its completions expected or used), location, state, and a From–To range of posting dates. With a date range only the completions posted in it are counted, so no output variance is shown: the target belongs to the whole order. Orders are listed by ID, 50 per page. The report shows no cost, value or capacity figure.",
+      "Both roles can read the report, also in a read-only tenant, and Test and Prod each show only their own orders. The API returns the same report: GET /api/tenants/{tenant}/reports/variance?material=00000001&location=00000001&status=open&from=2026-10-01&to=2026-10-31&page=1 (every parameter optional), with a bearer token or a signed-in session. A material or location the tenant doesn't have is not found; an end date before the start date is refused.",
     ],
   },
   "stock-report": {
@@ -623,6 +634,15 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Stany otwarcia i fizyczny zwrot od klienta to zwykłe dodatnie korekty z powodem; nie powstaje dokument zwrotu. Każda korekta użytkownika tworzy niezmienny ruch magazynowy i oddzielny wpis audytu ze stanem przed i po. Każdy ruch pokazuje rodzaj i dokument źródłowy: przyjęcie towaru prowadzi do zamówienia zakupu, wydanie towaru do wysyłki, wydanie lub przyjęcie przesunięcia do przesunięcia, wykonanie produkcji do zlecenia produkcyjnego; korekta (także z importu stanów) jest swoim własnym źródłem. Użytkownik, identyfikator księgowania i przelicznik są w szczegółach ruchu. Otwarcia demonstracyjne są oznaczone jako Instalacja. Ruchy są pokazywane po 100 na stronę, od najnowszych, a saldo uwzględnia wszystkie ruchy.",
       "Aby ustawić wiele pozycji naraz, np. bilans otwarcia lub wynik inwentaryzacji, użyj Importu stanów (Import z arkusza na tym ekranie): wpisujesz ilość, jaka ma być w każdej pozycji, a nie zmianę.",
       "Materiał po dowolnym ruchu zachowuje na zawsze typ i jednostkę podstawową, nawet po wyzerowaniu zapasu. Niezerowy zapas blokuje dezaktywację materiału i lokalizacji. API odczytuje GET /api/tenants/{tenant}/stock?material=00000001&location=00000001&page=1 i księguje POST /api/tenants/{tenant}/stock/corrections z tokenem, kluczem idempotencji, bieżącą generacją Test oraz materiałem, lokalizacją, ilością ze znakiem, jednostką i powodem.",
+    ],
+  },
+  "variance-report": {
+    title: "Raport odchyleń",
+    body: [
+      "Raport odchyleń w menu środowiska porównuje to, co zaksięgowała produkcja, z planem każdego zlecenia produkcyjnego. Każde zlecenie z wykonaniami to jeden wiersz: ilość docelowa wobec tego, co wyprodukowały jego wykonania (odchylenie wyrobu, wyprodukowano − docelowo), a dla każdego składnika ilość oczekiwana, rzeczywista, odchylenie (rzeczywiste − oczekiwane) i odpad, wszystko w jednostce podstawowej materiału. Oczekiwane to ilość, której przypięta wersja BOM zlecenia wymaga dla faktycznie wyprodukowanej ilości, zapisana przy księgowaniu każdego wykonania; nigdy nie jest przeliczana z późniejszej receptury.",
+      "Surowiec spoza przypiętej receptury jest oznaczony jako Dodatkowy: nie był oczekiwany, więc całe jego zużycie jest odchyleniem. Wykonanie z zerową produkcją to księgowanie odpadu: niczego nie wytwarza, jest liczone w Księgowaniach odpadu, a jego zużycie widać w Odpadzie każdego składnika i w ilości rzeczywistej. Odwrócone wykonanie nie jest nigdzie liczone, a jego identyfikator jest wymieniony przy Odwrócone. Otwórz zlecenie, aby zobaczyć każde wykonanie osobno.",
+      "Filtruj po materiale (wyrób zlecenia albo składnik oczekiwany lub zużyty w wykonaniach), lokalizacji, stanie i zakresie dat księgowania Od–Do. Przy zakresie dat liczone są tylko wykonania zaksięgowane w tym zakresie, więc odchylenie wyrobu nie jest pokazywane: ilość docelowa dotyczy całego zlecenia. Zlecenia są uporządkowane według identyfikatora, po 50 na stronę. Raport nie pokazuje kosztów, wartości ani zdolności produkcyjnych.",
+      "Obie role mogą czytać raport, także w środowisku tylko do odczytu, a Test i Prod pokazują wyłącznie własne zlecenia. API zwraca ten sam raport: GET /api/tenants/{tenant}/reports/variance?material=00000001&location=00000001&status=open&from=2026-10-01&to=2026-10-31&page=1 (każdy parametr opcjonalny), z tokenem albo zalogowaną sesją. Materiał lub lokalizacja, których środowisko nie ma, nie zostaną znalezione; data końcowa wcześniejsza niż początkowa jest odrzucana.",
     ],
   },
   "stock-report": {
