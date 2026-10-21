@@ -29,6 +29,7 @@ import { lineError } from "../materials/line-error";
 import { assertOrderOpen, findOrder, orderLineState } from "./order-records";
 import { findRequisition, requisitionEntry, requisitionSnapshot } from "../purchase-requisitions/requisition-records";
 import { findActiveSupplier } from "../suppliers/find-supplier";
+import type { PostingContext } from "../stock/stock-posting";
 import { isScopeReadOnly } from "../tenants/tenant.service";
 
 /** One line of an order as the screens and the API show it. `line` is its 1-based number. */
@@ -134,10 +135,22 @@ export class PurchaseOrderService {
   }
 
   /** A new Open order with the next ID, converting the requisitions its lines name (LFC-001, BUY-003). */
-  async create(input: NewOrder, actor: AuditActor): Promise<OrderView> {
+  create(input: NewOrder, actor: AuditActor): Promise<OrderView> {
+    return this.createWith(input, { kind: "user", actor });
+  }
+
+  /**
+   * The demo seed's order, stamped at `at` and unaudited, converting the requisitions its lines name
+   * (by business ID) as `create` does; every business rule of `create` still applies.
+   */
+  seedDemo(input: NewOrder, at: Date): Promise<OrderView> {
+    return this.createWith(input, { kind: "seed", at });
+  }
+
+  private async createWith(input: NewOrder, context: PostingContext): Promise<OrderView> {
     try {
       return await this.em.transactional(async (em) => {
-        const order = await insertOrder(em, input, actor);
+        const order = await insertOrder(em, input, context);
         await em.flush();
         return (await viewsOf(em, [order]))[0];
       });
@@ -234,7 +247,7 @@ export class PurchaseOrderService {
    * already converted) is skipped. Their requisition is the demo requisition of that position. Not
    * audited, like the other demo records. Seeds nothing into a read-only tenant (R05).
    */
-  async seedDemo(): Promise<number> {
+  async seedFixtures(): Promise<number> {
     return this.em.transactional(async (em) => {
       if ((await em.count(PurchaseOrder, {})) > 0 || (await isScopeReadOnly(em))) return 0;
       let created = 0;
@@ -245,7 +258,7 @@ export class PurchaseOrderService {
         }));
         try {
           await em.transactional(async (savepoint) => {
-            await insertOrder(savepoint, { ...demo, lines }, null);
+            await insertOrder(savepoint, { ...demo, lines }, { kind: "seed", at: new Date() });
             await savepoint.flush();
           });
           created += 1;
@@ -260,11 +273,11 @@ export class PurchaseOrderService {
 
 /**
  * Checks and inserts (unflushed) a new order with its lines, converts the requisitions they name,
- * and records the audit entries (none when `actor` is null: the demo seed). The supplier and the
+ * and records the audit entries (none for the demo seed, which stamps the order at its `at`). The supplier and the
  * location must be active; each line is resolved and its field errors collected into one
  * `VALIDATION_FAILED` keyed `lines.N.<field>`.
  */
-async function insertOrder(em: EntityManager, input: NewOrder, actor: AuditActor | null): Promise<PurchaseOrder> {
+async function insertOrder(em: EntityManager, input: NewOrder, context: PostingContext): Promise<PurchaseOrder> {
   const supplier = await findActiveSupplier(em, input.supplier);
   const location = await findActiveLocation(em, input.location);
   const resolved = await resolveLines(em, input);
@@ -273,7 +286,7 @@ async function insertOrder(em: EntityManager, input: NewOrder, actor: AuditActor
     code: "ORDER_IDS_EXHAUSTED",
     message: "This tenant has used every eight-digit purchase order ID.",
   });
-  const order = em.create(PurchaseOrder, { code, supplier, location, status: "open" });
+  const order = em.create(PurchaseOrder, { code, supplier, location, status: "open", ...(context.kind === "seed" && { createdAt: context.at, updatedAt: context.at }) });
   resolved.forEach(({ material, record, plannedDate, requisition }, index) => {
     const { baseQuantity, enteredQuantity, enteredUnit, numerator, denominator } = record;
     em.create(PurchaseOrderLine, {
@@ -298,11 +311,11 @@ async function insertOrder(em: EntityManager, input: NewOrder, actor: AuditActor
     const before = requisitionSnapshot(requisition);
     const progress = afterConversion(requisition.quantity, requisition.converted, quantity);
     Object.assign(requisition, { ...progress, status: documentState([progress.status]) });
-    if (actor) recordTenantAudit(em, actor, requisitionEntry("converted", requisition, before, requisitionSnapshot(requisition)));
+    if (context.kind === "user") recordTenantAudit(em, context.actor, requisitionEntry("converted", requisition, before, requisitionSnapshot(requisition)));
   }
-  if (actor) {
+  if (context.kind === "user") {
     const snapshot = orderSnapshot(order, resolved);
-    recordTenantAudit(em, actor, orderEntry("created", order, null, snapshot));
+    recordTenantAudit(em, context.actor, orderEntry("created", order, null, snapshot));
   }
   return order;
 }

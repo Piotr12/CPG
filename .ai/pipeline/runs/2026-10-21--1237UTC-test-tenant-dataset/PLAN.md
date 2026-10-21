@@ -24,7 +24,7 @@
 | 2 | 2.3 | Shipment seed path | group:B | done | cc9a878 |
 | 2 | 2.4 | Goods-issue seed path | group:B | done | 2361f36 |
 | 2 | 2.5 | Requisition seed path | group:C | done | 99e7d6a |
-| 2 | 2.6 | Purchase-order seed path | group:C | todo | — |
+| 2 | 2.6 | Purchase-order seed path | group:C | done | 0ef5aab |
 | 2 | 2.7 | Goods-receipt seed path | group:C | todo | — |
 | 2 | 2.8 | Production-order seed path | group:D | todo | — |
 | 2 | 2.9 | Production-completion seed path | group:D | todo | — |

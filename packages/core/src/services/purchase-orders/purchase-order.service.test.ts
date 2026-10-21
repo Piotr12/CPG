@@ -9,6 +9,7 @@ import {
   OptimisticLockError,
   PurchaseOrder,
   PurchaseOrderLine,
+  PurchaseRequisition,
   selectTenant,
   Supplier,
   Tenant,
@@ -654,7 +655,7 @@ describe("PurchaseOrderService", () => {
     });
   });
 
-  describe("seedDemo", () => {
+  describe("seedFixtures", () => {
     /** The demo masters the demo documents name: the demo materials 1…3 with their conversions, a location and a supplier. */
     async function seedDemoMasters() {
       const em = scopedEm("test");
@@ -671,8 +672,8 @@ describe("PurchaseOrderService", () => {
       await seedDemoMasters();
       await new PurchaseRequisitionService({ em: scopedEm("test") }).seedFixtures();
 
-      expect(await service("test").seedDemo()).toBe(DEMO_ORDERS.length);
-      expect(await service("test").seedDemo()).toBe(0);
+      expect(await service("test").seedFixtures()).toBe(DEMO_ORDERS.length);
+      expect(await service("test").seedFixtures()).toBe(0);
 
       const [order] = await service("test").list();
       expect(order.lines.map(({ material, quantity, requisition }) => [material, quantity, requisition])).toEqual([
@@ -687,7 +688,7 @@ describe("PurchaseOrderService", () => {
     it("skips an order that breaks a rule here, such as a missing requisition", async () => {
       await seedDemoMasters();
 
-      expect(await service("test").seedDemo()).toBe(0);
+      expect(await service("test").seedFixtures()).toBe(0);
       expect(await service("test").list()).toEqual([]);
     });
 
@@ -697,14 +698,35 @@ describe("PurchaseOrderService", () => {
       vi.spyOn(em, "transactional")
         .mockImplementationOnce(async (callback) => callback(em))
         .mockRejectedValueOnce(new Error("disk full"));
-      await expect(service("test", em).seedDemo()).rejects.toThrow("disk full");
+      await expect(service("test", em).seedFixtures()).rejects.toThrow("disk full");
     });
 
     it("seeds nothing into a read-only Test (R05)", async () => {
       await seedDemoMasters();
       await orm.em.fork().nativeUpdate(Tenant, { code: "test" }, { readOnly: true });
 
-      expect(await service("test").seedDemo()).toBe(0);
+      expect(await service("test").seedFixtures()).toBe(0);
+    });
+  });
+
+  describe("seedDemo", () => {
+    const at = new Date("2025-06-15T23:30:00Z");
+
+    it("creates an order stamped at the seed's moment, converting a requisition fully, without any audit", async () => {
+      const source = await requisition();
+      const auditBefore = await scopedEm().count(TenantAuditEvent, {});
+      const view = await service().seedDemo(converting(source.id, "100"), at);
+      expect(view).toMatchObject({ id: "00000001", status: "open", createdAt: at, lines: [{ requisition: source.id, quantity: "100.000000" }] });
+      expect(await scopedEm().findOneOrFail(PurchaseOrder, { code: view.id })).toMatchObject({ createdAt: at, updatedAt: at });
+      expect(await requisitions().get(source.id)).toMatchObject({ converted: "100.000000", status: "completed" });
+      expect(await scopedEm().count(TenantAuditEvent, {})).toBe(auditBefore);
+    });
+
+    it("applies the same rules as create: an over-converting line is refused and nothing is written", async () => {
+      const source = await requisition();
+      await expect(service().seedDemo(converting(source.id, "101"), at)).rejects.toMatchObject({ code: "REQUISITION_OVER_CONVERTED" });
+      expect(await scopedEm().count(PurchaseOrder, {})).toBe(0);
+      expect(await scopedEm().findOneOrFail(PurchaseRequisition, { code: source.id })).toMatchObject({ converted: "0.000000", status: "open" });
     });
   });
 });
