@@ -3,7 +3,7 @@
 Source doc: .ai/specs/2026-10-21--0944UTC-audit-history-filters.md (design PR #129)
 Issue: #96
 Branch: feat/audit-history-filters
-Status: in-progress
+Status: complete
 
 ## Goal
 
@@ -38,6 +38,21 @@ A user can trace one record's history in the tenant and Global audit. Both audit
 - The migration generator could rebuild an audit table and drop its triggers. Inspect the generated SQL and test the triggers after migrating.
 - The `filters` key lint rule: name props and keys `query`/`selected`/`filterForm`.
 - Integration files share the admin and the database: scope assertions to this file's own records, and revoke its tokens.
+
+## Log
+
+- 10:00 UTC — Phase 1 (index migration, schema, service filters, `reversalLinks`, `usernames()`, route tests, compat note) committed and pushed.
+- 10:30 UTC — Phase 2 (filter form, query and paging URLs, business date, reversal and history links, cell wrapping, EN/PL labels for the five transfer actions and about 30 snapshot fields, help, `tests/audit-labels.test.ts`) committed.
+  - Snapshot keys were surveyed by temporarily instrumenting the audit recorder during the core test run, then reverting it.
+- 10:45 UTC — Integration: Docker failed with "no space left on device", so per the lessons nothing was pruned. The touched files ran against a fresh standalone production build via `CPG_BASE_URL`.
+- Deviation from the spec: the new journeys live in their own file, `tests/integration/audit-history.test.ts`, with their own accounts.
+- 11:10 UTC — Fresh-context review: changes requested (1 major, 4 minor, nits). All fixed in ad6f7ff:
+  - Major: a refused filter now renders its reason in the form instead of a not-found page. The spec's UI/UX said not-found; the form's own hint invited the invalid combination.
+  - The Global integration check now has a guaranteed row.
+  - Subject types are scanned against the Record type lists.
+  - The standards doc is updated.
+  - Polish transfer terms match the Transfers screen.
+- 11:20 UTC — QA evidence posted (7 screenshots); gate re-run green.
 
 ## Progress
 

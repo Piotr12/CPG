@@ -12,6 +12,7 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 ## General
 
+- **2026-10-21 — A filter form's validation errors are not a missing page** — The #96 audit screens first sent every `VALIDATION_FAILED` to `notFound()`, a precedent from the cursor-only E02-S02 viewer. The new form's own hint invited a record ID without its type, so a normal Apply led to a bare 404. Keep not-found for page positions and cursors, and render refused filters in the form with `role="alert"` and the values as sent.
 - **2026-10-21 — Reconcile net progress with immutable posting and closure history** — When lifecycle and reversal work land separately, test their combined boundary: a full inverse does not make a document unprocessed, explicitly closed lines stay non-issuable, and headers follow retained line states. During deployment overlap, include both stored Open and Completed PO lines before deriving their current progress.
 
 - **2026-10-21 — Verify generated SQLite additions on populated data** — The lifecycle migration generator rebuilt a referenced table and copied `NULL` into its new required columns despite declared defaults. Prefer additive `ALTER TABLE` columns when possible, retain enum checks explicitly, and test populated upgrades, exact backfills and receipt foreign keys before publishing.

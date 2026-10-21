@@ -329,7 +329,7 @@ Done when these standards were adopted:
   - `AuditService.reversalLinks` reads one page's stock-movement reversal links;
   - `UserService.usernames()` is the names-only read any signed-in account may use;
   - `app/src/components/audit/audit-query.ts` builds history and paging URLs and derives the business date from a snapshot;
-  - a refused filter is explained in the form, never a not-found page.
+  - a refused filter is explained in the form; only a bad page position (`before`, `limit` or a foreign cursor, alone or with a filter error) is a not-found page.
 
   A new producer's action IDs and subject types need EN/PL labels and a place in `components/audit/subject-types.ts`: `tests/audit-labels.test.ts` scans `core` and fails until they have both.
 - Materials (2026-10-19, spec `2026-10-19--1858UTC-materials`), the first tenant business concept:
