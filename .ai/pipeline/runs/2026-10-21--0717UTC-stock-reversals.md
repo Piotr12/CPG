@@ -19,6 +19,7 @@ Follow the spec's eight steps. Persistence/core, existing stock/PO/shipment/cust
 - User Guard prevents publishing to shared qa-evidence without approval. Prepare artifacts before any permission request; own feature/spec branch publication is authorized by the invoked workflow. Never merge into main.
 
 ## Log
+- 2026-10-21 07:28 UTC — Exact inverse and correction service committed; 65 targeted tests, core typecheck and stock lint pass. Real second-connection stale snapshot test proves once-only retry. Next GR/GI owning-document adapters.
 - 07:20 UTC — Persistence gate: 66 tests across ORM/migration/export/entity/isolation suites pass, db typecheck passes. New migration generated from entity; smoke expects 25 migrations.
 - Began from origin/main e8ceaae after design PR #124. Reused the cezar worktree, no nested worktree. npm ci installed. Baseline gate passed: lint (one pre-existing warning), typecheck, 431 files/2,789 tests with 100% coverage, build.
 
@@ -29,8 +30,8 @@ Follow the spec's eight steps. Persistence/core, existing stock/PO/shipment/cust
 ### Phase 1: immutable reversal engine
 
 - [x] 1.1 Add StockReversal entity, migration and persistence/reset/isolation tests. — 96f4e0b
-- [ ] 1.2 Share resolved-line posting and exact historical inverse logic.
-- [ ] 1.3 Implement correction reversal service, validation, audit and concurrency protection.
+- [x] 1.2 Share resolved-line posting and exact historical inverse logic. — 782ccdf
+- [x] 1.3 Implement correction reversal service, validation, audit and concurrency protection. — ddc9d10
 - [ ] 1.4 Implement GR/GI recalculation, sibling shipment states and historical edit locks.
 
 ### Phase 2: UI/API operation
