@@ -2,10 +2,11 @@ import { randomUUID } from "node:crypto";
 import { defineEntity, p, type InferEntity } from "@mikro-orm/core";
 import { Location } from "../locations/location.entity";
 import { Supplier } from "../suppliers/supplier.entity";
+import { DOCUMENT_STATES } from "../customer-orders/customer-order.entity";
 import { tenantOwned } from "../tenants/tenant-owned";
 
-/** What a purchase order can be so far: open, or completed once every line is received in full (E11 adds the rest). */
-export const PURCHASE_ORDER_STATUSES = ["open", "completed"] as const;
+/** The shared four-state lifecycle; header status follows the lines. */
+export const PURCHASE_ORDER_STATUSES = DOCUMENT_STATES;
 export type PurchaseOrderStatus = (typeof PURCHASE_ORDER_STATUSES)[number];
 
 const owned = tenantOwned();
@@ -28,7 +29,7 @@ export const PurchaseOrder = defineEntity({
     code: p.string().length(8),
     supplier: () => p.manyToOne(Supplier).index(),
     location: () => p.manyToOne(Location),
-    status: p.string().length(9).default("open"),
+    status: p.string().length(12).default("open"),
     createdAt: p.datetime().onCreate(() => new Date()),
     /** Set whenever a line's date changes, so the order's version advances with its lines. */
     updatedAt: p.datetime().onCreate(() => new Date()),

@@ -5516,6 +5516,23 @@
     {
       "name": "purchase_order_line",
       "columns": {
+        "abandoned": {
+          "name": "abandoned",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "'0.000000'",
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
         "denominator": {
           "name": "denominator",
           "type": "text",
@@ -5720,6 +5737,28 @@
           "enumItems": [],
           "mappedType": "text"
         },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "'open'",
+          "comment": null,
+          "collation": null,
+          "enumItems": [
+            "open",
+            "completed",
+            "closed-early",
+            "cancelled"
+          ],
+          "mappedType": "enum"
+        },
         "tenant_code": {
           "name": "tenant_code",
           "type": "text",
@@ -5801,7 +5840,14 @@
           "unique": false
         }
       ],
-      "checks": [],
+      "checks": [
+        {
+          "name": "purchase_order_line_status_check",
+          "expression": "`status` in ('open', 'completed', 'closed-early', 'cancelled')",
+          "definition": "check (`status` in ('open', 'completed', 'closed-early', 'cancelled'))",
+          "columnName": "status"
+        }
+      ],
       "triggers": [],
       "foreignKeys": {
         "purchase_order_line_material_id_foreign": {
@@ -5855,6 +5901,23 @@
     {
       "name": "purchase_requisition",
       "columns": {
+        "abandoned": {
+          "name": "abandoned",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "'0.000000'",
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
         "code": {
           "name": "code",
           "type": "text",
@@ -8629,6 +8692,23 @@
     {
       "name": "transfer",
       "columns": {
+        "abandoned": {
+          "name": "abandoned",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "'0.000000'",
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
         "code": {
           "name": "code",
           "type": "text",
