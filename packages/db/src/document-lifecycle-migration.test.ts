@@ -37,7 +37,7 @@ it("upgrades populated documents without losing receipt references and backfills
     expect(await orm.schema.getUpdateSchemaSQL()).not.toMatch(/purchase_order_line|purchase_requisition|transfer/);
 
     await orm.migrator.down();
-    expect((await sql("pragma table_info(purchase_order_line)")).map((column: { name: string }) => column.name)).not.toContain("abandoned");
+    expect((await orm.em.getConnection().execute<{ name: string }[]>("pragma table_info(purchase_order_line)")).map((column) => column.name)).not.toContain("abandoned");
     expect(await sql("select * from goods_receipt_line")).toEqual(history);
     expect(await sql("select quantity, received from purchase_order_line order by position")).toEqual(quantities.map(([quantity, received]) => ({ quantity, received })));
     expect(await sql("pragma foreign_key_check")).toEqual([]);

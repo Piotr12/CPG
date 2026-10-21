@@ -33,16 +33,19 @@ Run lint, typecheck, test:coverage (100%), build; locally affected integrations 
 - Spec remains on design PR #122; materialized locally but excluded from implementation commits until base contains it.
 
 ## Log
+- 2026-10-21 07:21 UTC — Phase 1: 28 tests pass, including populated migration upgrade/down and exact near-maximum decimal backfill. Scoped lint passed. Fixed a migration-test TypeScript result annotation. Generated migration initially failed with NOT NULL copied NULL; replaced with additive columns and enum CHECK. User reiterated autonomous completion.
 - 2026-10-21 07:15 UTC — Spec #122 published after independent approve review. Starting implementation from origin/main in this linked worktree. Original spec-phase log lives on #122; this plan is the implementation run log.
 
 ## Progress
+
+PR: #123
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Shared lifecycle and persistence
 
-- [ ] 1.1 Pure lifecycle rules and tests
-- [ ] 1.2 Entity additions and migration
+- [x] 1.1 Pure lifecycle rules and tests — 75a8590
+- [x] 1.2 Entity additions and migration — 07bbd83
 
 ### Phase 2: Transactional workflows
 
