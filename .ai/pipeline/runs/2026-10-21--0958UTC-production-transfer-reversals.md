@@ -22,6 +22,10 @@ Partial reversals, reversing a reversal, manual reopen, changes to receipt/issue
 ## Implementation Plan
 Phase 1 — production completion reversal (spec steps 1–4); Phase 2 — transfer posting reversal (spec steps 5–8); Phase 3 — verification and delivery (spec steps 9–10). Each step is listed in Progress.
 
+## Decisions during the run
+- The completion reversal server action lives in the existing `admin/[tenant]/production-orders/actions.ts` beside the other production actions; the spec's `[id]/` folder has no actions file.
+- The completion dialog's order effect is stated as "produced X drops by Y" plus the state rule, rather than computed before→after values, so the app does no decimal arithmetic. On `…_ALREADY_REVERSED` it offers a link that reloads the order page, where the history shows the existing reversal.
+
 ## Risks
 - Risk-high: a migration plus multi-leg stock and transit writes. Mitigations: rollback-after-flush tests, two-connection race tests, and populated-upgrade migration tests.
 - Docker storage on this machine is full (`no space left on device`), so local integration runs may need the standalone-server fallback from the lessons. CI remains the gate.
@@ -33,10 +37,10 @@ Phase 1 — production completion reversal (spec steps 1–4); Phase 2 — trans
 
 ### Phase 1: Production completion reversal
 
-- [ ] 1.1 Generalise the historical inverse into a group primitive with link helpers
-- [ ] 1.2 Add ProductionCompletionService.reverse with order recalculation and audit
-- [ ] 1.3 Add completion reversal read fields, API route, server action and compatibility entry
-- [ ] 1.4 Add shared confirmation dialog and completion-history reversal UI
+- [x] 1.1 Generalise the historical inverse into a group primitive with link helpers — 9096f46
+- [x] 1.2 Add ProductionCompletionService.reverse with order recalculation and audit — c0b5cc8
+- [x] 1.3 Add completion reversal read fields, API route, server action and compatibility entry — be5dacf, c7954da
+- [x] 1.4 Add shared confirmation dialog and completion-history reversal UI — 90a07f7
 
 ### Phase 2: Transfer posting reversal
 
