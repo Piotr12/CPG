@@ -1,4 +1,5 @@
 import { CustomerOrderLine, GoodsIssueLine, type EntityManager, type StockMovement } from "@cpg/db";
+import { documentState } from "../../domain/document-lifecycle/lifecycle";
 import { isLineFulfilled } from "../../domain/goods-issues/issue-quantity";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit } from "../audit/audit-recorder";
@@ -25,7 +26,7 @@ export async function prepareIssueReversal(em: EntityManager, original: StockMov
     line.shipmentLine.issued = issued;
     orderLine.fulfilled = fulfilled;
     if (orderLine.status === "open" || orderLine.status === "completed") orderLine.status = isLineFulfilled(orderLine) ? "completed" : "open";
-    if (order.status === "open" || order.status === "completed") order.status = lines.every(({ status }) => status === "completed") ? "completed" : "open";
+    order.status = documentState(lines.map(({ status }) => status));
     order.updatedAt = new Date(Math.max(Date.now(), order.updatedAt.getTime() + 1));
     recordTenantAudit(em, actor, {
       action: "customer-orders.customer-order.issue-reversed",

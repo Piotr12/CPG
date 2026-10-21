@@ -1,4 +1,5 @@
-import { ProductionOrder, OptimisticLockError, UniqueConstraintViolationException, type EntityManager } from "@cpg/db";
+import { ProductionCompletion, ProductionOrder, OptimisticLockError, UniqueConstraintViolationException, type EntityManager } from "@cpg/db";
+import { documentState, resolveLines as resolveLifecycle, type LifecycleAction } from "../../domain/document-lifecycle/lifecycle";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
 import { DEMO_PRODUCTION_ORDER } from "../../domain/production-orders/demo-production-orders";
 import { productionStatus } from "../../domain/production-orders/production-completion";
@@ -83,6 +84,37 @@ export class ProductionOrderService {
       throw error;
     }
   }
+  cancel(id: string, version: number, actor: AuditActor) {
+    return this.resolve(id, version, actor, "cancel");
+  }
+
+  closeEarly(id: string, version: number, actor: AuditActor) {
+    return this.resolve(id, version, actor, "close-early");
+  }
+
+  private async resolve(id: string, version: number, actor: AuditActor, action: LifecycleAction) {
+    try {
+      return await this.em.transactional(async (em) => {
+        const order = await findProductionOrder(em, id, { refresh: true });
+        if (order.version !== version) throw versionConflict();
+        const before = productionSnapshot(order);
+        const hasProcessing = (await em.count(ProductionCompletion, { order })) > 0;
+        const [resolved] = resolveLifecycle(action, [{ quantity: order.quantity, processed: order.produced,
+          abandoned: order.abandoned, status: order.status }], { hasProcessing });
+        order.abandoned = resolved.abandoned;
+        order.status = documentState([resolved.status]);
+        order.updatedAt = new Date(Math.max(Date.now(), order.updatedAt.getTime() + 1));
+        recordTenantAudit(em, actor, { action: `production-orders.production-order.${action === "cancel" ? "cancelled" : "closed-early"}`,
+          subject: productionSubject(order), before, after: productionSnapshot(order) });
+        await em.flush();
+        return detail(em, order);
+      });
+    } catch (error) {
+      if (error instanceof OptimisticLockError) throw versionConflict();
+      throw error;
+    }
+  }
+
   /** Startup tolerates an edited Test dataset; reset verifies the shared registry's expected count. */
   async seedDemo(): Promise<number> {
     return this.em.transactional(async (em) => {
@@ -110,5 +142,5 @@ async function insertOrder(em: EntityManager, input: ProductionOrderInput) {
 }
 async function detail(em: EntityManager, order: ProductionOrder) {
   const components = await recipeComponents(em, order.recipe, order.location, order.quantity);
-  return { ...productionOrderView(order), components, shortages: componentShortages(components) };
+  return { ...productionOrderView(order), hasProcessing: (await em.count(ProductionCompletion, { order })) > 0, components, shortages: componentShortages(components) };
 }

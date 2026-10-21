@@ -5,6 +5,7 @@ import {
   type EntityManager,
   type Material,
 } from "@cpg/db";
+import { documentState, resolveLines as resolveLifecycle, type LifecycleAction, type DocumentState } from "../../domain/document-lifecycle/lifecycle";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
 import { DEMO_REQUISITIONS } from "../../domain/purchasing/demo-purchasing";
 import { AppError, ConflictError, ValidationError, versionConflict } from "../../http/errors";
@@ -94,12 +95,41 @@ export class PurchaseRequisitionService {
       return await this.em.transactional(async (em) => {
         const requisition = await findRequisition(em, id, { refresh: true });
         if (requisition.version !== version) throw versionConflict();
+        if (requisition.status !== "open") throw new ConflictError("This requisition is no longer Open.", "REQUISITION_NOT_OPEN");
         if (requisition.requiredDate !== requiredDate) {
           const before = { requiredDate: requisition.requiredDate };
           requisition.requiredDate = requiredDate;
           recordTenantAudit(em, actor, requisitionEntry("updated", requisition, before, { requiredDate }));
           await em.flush();
         }
+        return toRequisitionView(requisition);
+      });
+    } catch (error) {
+      if (error instanceof OptimisticLockError) throw versionConflict();
+      throw error;
+    }
+  }
+
+  cancel(id: string, version: number, actor: AuditActor): Promise<RequisitionView> {
+    return this.resolve(id, version, actor, "cancel");
+  }
+
+  closeEarly(id: string, version: number, actor: AuditActor): Promise<RequisitionView> {
+    return this.resolve(id, version, actor, "close-early");
+  }
+
+  private async resolve(id: string, version: number, actor: AuditActor, action: LifecycleAction): Promise<RequisitionView> {
+    try {
+      return await this.em.transactional(async (em) => {
+        const requisition = await findRequisition(em, id, { refresh: true });
+        if (requisition.version !== version) throw versionConflict();
+        const before = requisitionSnapshot(requisition);
+        const [resolved] = resolveLifecycle(action, [{ quantity: requisition.quantity, processed: requisition.converted,
+          abandoned: requisition.abandoned, status: requisition.status as DocumentState }]);
+        requisition.abandoned = resolved.abandoned;
+        requisition.status = documentState([resolved.status]);
+        recordTenantAudit(em, actor, requisitionEntry(action === "cancel" ? "cancelled" : "closed-early", requisition, before, requisitionSnapshot(requisition)));
+        await em.flush();
         return toRequisitionView(requisition);
       });
     } catch (error) {

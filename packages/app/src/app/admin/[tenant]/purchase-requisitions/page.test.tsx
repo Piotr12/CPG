@@ -31,7 +31,7 @@ vi.mock("next/navigation", () => ({ notFound: mocks.notFound }));
 vi.mock("@cpg/core", () => ({ AppError: mocks.AppError, tenantScope: mocks.tenantScope }));
 vi.mock("../../../../auth/require-admin", () => ({ requireUser: mocks.requireUser }));
 vi.mock("../../../../i18n/get-messages", () => ({ getMessages: mocks.getMessages }));
-vi.mock("./actions", () => ({ createRequisition: vi.fn() }));
+vi.mock("./actions", () => ({ cancelRequisition: vi.fn(), closeEarlyRequisition: vi.fn(), createRequisition: vi.fn() }));
 
 const material = (id: string, description: string, baseUnit: string, active = true) => ({
   id,
@@ -58,6 +58,7 @@ const requisition = (id: string, materialId: string, quantity: string, converted
   denominator: "1",
   requiredDate: "2027-03-01",
   converted,
+  abandoned: "0.000000",
   outstanding: "40.000000",
   status,
   createdAt: new Date(),
@@ -97,8 +98,8 @@ describe("PurchaseRequisitionsPage", () => {
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Purchase requisitions — Test");
     const rows = within(screen.getByRole("table", { name: "Purchase requisitions" })).getAllByRole("row").slice(1);
     expect(rows.map((row) => within(row).getAllByRole("cell").map((cell) => cell.textContent))).toEqual([
-      ["00000001", "00000001Steel sheet", "00000001Main plant", "100 kg", "60 kg", "40 kg", "2027-03-01", "Open"],
-      ["00000002", "00000002Old rivetInactive", "00000001Main plant", "5 each", "5 each", "40 each", "2027-03-01", "Completed"],
+      ["00000001", "00000001Steel sheet", "00000001Main plant", "100 kg", "60 kg", "40 kg", "2027-03-01", "Open", "0 kg", "Close Early"],
+      ["00000002", "00000002Old rivetInactive", "00000001Main plant", "5 each", "5 each", "40 each", "2027-03-01", "Completed", "0 each", ""],
     ]);
     expect(screen.getAllByRole("link", { name: "00000001" })[0].getAttribute("href")).toBe("/admin/test/materials/00000001");
     expect(screen.getByRole("button", { name: "Create requisition" })).toBeTruthy();

@@ -1,3 +1,5 @@
+import { cancelProductionOrder, closeEarlyProductionOrder } from "../../app/admin/[tenant]/production-orders/actions";
+import { LifecycleControl } from "../document-lifecycle/lifecycle-control";
 import Link from "next/link";
 import type { CompletionView, Locale, MaterialSummary, NamedRecordView, ProductionOrderDetail, ProductionOrderView, TenantInfo } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
@@ -50,8 +52,13 @@ export function ProductionScreen({ tenant, orders, order, materials, locations, 
     </div>
     <p className="text-sm text-muted-foreground">{t.intro}</p>
     {order ? <>
+      <LifecycleControl available={!tenant.readOnly && order.status === "open"} processed={order.hasProcessing}
+        subject={`${t.title} ${order.id}`} version={order.version} quantities={[`${shownQuantity(order.outstanding)} ${byMaterial.get(order.output)!.baseUnit}`]}
+        labels={messages.lifecycle} errors={messages.errors}
+        cancel={cancelProductionOrder.bind(null, tenant.code, tenant.generation, order.id)} closeEarly={closeEarlyProductionOrder.bind(null, tenant.code, tenant.generation, order.id)} />
       <dl className="grid gap-4 rounded-md border p-4 text-sm sm:grid-cols-3">
         {[{ label: t.output, value: output(order) }, { label: t.location, value: location(order.location) }, { label: t.quantity, value: quantity(order) },
+          { label: messages.lifecycle.abandoned, value: `${shownQuantity(order.abandoned)} ${byMaterial.get(order.output)!.baseUnit}` },
           { label: t.produced, value: `${shownQuantity(order.produced)} ${byMaterial.get(order.output)!.baseUnit}` },
           { label: t.outstanding, value: `${shownQuantity(order.outstanding)} ${byMaterial.get(order.output)!.baseUnit}` },
           { label: t.entered, value: `${order.enteredQuantity} ${order.enteredUnit} (${order.denominator} ${order.enteredUnit} = ${order.numerator} ${byMaterial.get(order.output)!.baseUnit})` },

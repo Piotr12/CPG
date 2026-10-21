@@ -1,3 +1,6 @@
+import { cancelPurchaseOrder, closeEarlyPurchaseOrder } from "../../app/admin/[tenant]/purchase-orders/[id]/actions";
+import { LifecycleControl } from "../document-lifecycle/lifecycle-control";
+import { fill } from "../forms/form-labels";
 import Link from "next/link";
 import { stockLabels } from "../stock/labels";
 import type { Locale, MaterialSummary, NamedRecordView, OrderLineView, OrderView, ReceiptView } from "@cpg/core";
@@ -98,6 +101,13 @@ export function OrderScreen({ tenant, order, receipts, materials, units, supplie
       header: c.status,
       cell: (line) => <Badge variant={line.status === "completed" ? "outline" : "secondary"}>{labels.lines.status[line.status]}</Badge>,
     },
+    { id: "abandoned", header: messages.lifecycle.abandoned, cell: (line) => `${shownQuantity(line.abandoned)} ${materialsById.get(line.material)!.baseUnit}`, className: "text-right" },
+    { id: "actions", header: messages.lifecycle.actions, cell: (line) => <LifecycleControl
+      available={!tenant.readOnly && order.status === "open" && line.status === "open"} processed={line.received !== "0.000000" || receipts.some((receipt) => receipt.lines.some((entry) => entry.line === line.line))}
+      subject={`${labels.link} ${order.id} — ${fill(messages.lifecycle.line, { line: String(line.line) })}`}
+      version={order.version} lines={[line.line]} quantities={[`${shownQuantity(line.outstanding)} ${materialsById.get(line.material)!.baseUnit}`]}
+      labels={messages.lifecycle} errors={messages.errors}
+      cancel={cancelPurchaseOrder.bind(null, tenant.code, tenant.generation, order.id)} closeEarly={closeEarlyPurchaseOrder.bind(null, tenant.code, tenant.generation, order.id)} /> },
   ];
 
   return (
@@ -108,6 +118,11 @@ export function OrderScreen({ tenant, order, receipts, materials, units, supplie
           {labels.allOrders}
         </Link>
       </p>
+      <LifecycleControl available={!tenant.readOnly && order.status === "open"} processed={receipts.length > 0 || order.lines.some((line) => line.received !== "0.000000")}
+        subject={`${labels.link} ${order.id}`} version={order.version}
+        quantities={order.lines.filter((line) => line.status === "open").map((line) => `${materialsById.get(line.material)!.description}: ${shownQuantity(line.outstanding)} ${materialsById.get(line.material)!.baseUnit}`)}
+        labels={messages.lifecycle} errors={messages.errors}
+        cancel={cancelPurchaseOrder.bind(null, tenant.code, tenant.generation, order.id)} closeEarly={closeEarlyPurchaseOrder.bind(null, tenant.code, tenant.generation, order.id)} />
       <Card>
         <CardContent>
           <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">

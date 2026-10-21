@@ -23,7 +23,7 @@ vi.mock("@cpg/core", async (importOriginal) => {
 vi.mock("../../auth/require-admin", () => ({ requireUser: mocks.requireUser }));
 vi.mock("../../i18n/get-messages", () => ({ getMessages: mocks.getMessages }));
 vi.mock("../../app/admin/[tenant]/customer-orders/actions", () => ({ createCustomerOrder: vi.fn(), updateCustomerOrder: vi.fn() }));
-vi.mock("../../app/admin/[tenant]/customer-orders/[id]/actions", () => ({ createShipment: vi.fn() }));
+vi.mock("../../app/admin/[tenant]/customer-orders/[id]/actions", () => ({ cancelCustomerOrder: vi.fn(), closeEarlyCustomerOrder: vi.fn(), createShipment: vi.fn() }));
 const scope = (readOnly = false) => ({ cradle: { tenant: { ...tenant, readOnly }, customerOrderService: { list: mocks.list, count: mocks.count, get: mocks.get }, shipmentService: { list: mocks.shipments },
   materialService: { list: mocks.materials, listUnits: mocks.units }, customerService: { list: mocks.customers }, locationService: { list: mocks.locations } } });
 const page = (detail = false) => detail ? CustomerOrderPage({ params: Promise.resolve({ tenant: "test", id: order.id }), searchParams: Promise.resolve({}) }) :
@@ -66,7 +66,7 @@ describe("customer order pages", () => {
     expect(screen.getByRole("link", { name: "All customer orders" }).getAttribute("href")).toBe("/admin/test/customer-orders");
     expect(screen.getByRole("link", { name: "00000005 Cabinet" }).getAttribute("href")).toBe("/admin/test/materials/00000005");
     const cells = within(screen.getByRole("table", { name: "Lines" })).getAllByRole("cell");
-    expect(cells.map((cell) => cell.textContent)).toEqual(["00000005 Cabinet", "24 each", "2 case (1 case = 12 each)", "2027-01-04", "0", "24", "Open"]);
+    expect(cells.map((cell) => cell.textContent)).toEqual(["00000005 Cabinet", "24 each", "2 case (1 case = 12 each)", "2027-01-04", "0", "24", "Open", "0", "Cancel"]);
     expect(screen.getByRole("button", { name: "Edit order" })).toBeTruthy();
     expect(mocks.shipments).toHaveBeenCalledWith({ customerOrder: order.id });
     expect(screen.getByRole("button", { name: "Create shipment" })).toBeTruthy();

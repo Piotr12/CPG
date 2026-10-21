@@ -261,6 +261,15 @@ Tenant routes under `/api/tenants/{tenant}/production-orders/{id}/completions`, 
 - Audit actions: `production-orders.production-completion.posted` (flat per-line keys `line{n}Material/Expected/Actual/Variance/Extra`) and `production-orders.production-order.progressed`.
 - The additive `production_completion` and `production_completion_line` tables are tenant-owned and immutable. The completion's nullable `submission` is the UI's duplicate-submit token, unique per tenant and never exposed.
 
+### Document cancellation and early closure (E11-S01, #90)
+
+Each tenant document path `/{customer-orders,purchase-requisitions,purchase-orders,production-orders,transfers}/{id}` adds keyed `POST /cancel` and `POST /close-early`. Both roles may call them, with the existing bearer, tenant-generation and read-only guards. The strict body is `{ version }`; customer orders additionally accept `lines: UUID[]`, purchase orders `lines: number[]` using their existing 1-based positions. An omitted selection resolves the whole document; a selection must contain 1–100 unique lines belonging to it. No endpoint accepts arbitrary status or reopens a terminal document.
+
+- Cancellation requires an Open target without processing. Early closure requires processing and abandons only its remainder. Recorded quantities, conversions, source links, stock and postings remain unchanged. Production waste with zero output counts as processing. Transfer early closure requires zero transit; loss remains loss and is included in abandoned destination quantity.
+- Line/header states are `open`, `completed`, `cancelled`, `closed-early`. Headers are Open if any retained line is Open, Completed if all are Completed, Cancelled if all are Cancelled, and otherwise Closed Early. Removed historical customer-order lines are excluded. A cancelled or closed-early line rejects further fulfillment; Completed PO lines still permit overreceipt while their header is Open.
+- Requisition and transfer views add `abandoned`; transfer views also add `outstanding`. PO lines add `abandoned` and persist all four states. Production detail adds `hasProcessing`. Outstanding across these documents is `max(quantity − processed − abandoned, 0)`; a terminal transfer's `undispatched` is zero. Existing fields remain present.
+- New 409 codes are `DOCUMENT_NOT_OPEN`, `DOCUMENT_PROCESSED` (use Close Early), `DOCUMENT_UNPROCESSED` (use Cancel), and `TRANSFER_IN_TRANSIT` with public `quantity`/`unit` parameters. Existing document-specific terminal, not-found and version codes remain. Invalid selections return `VALIDATION_FAILED`; a refusal changes nothing.
+- Audit adds `.cancelled` / `.closed-early` under each existing document prefix, preserving before/after quantities and state. Same-key retries replay the original result without new audit. Customer-order closure completes affected shipment contexts in the same transaction.
 ### Stock reversals (#91)
 
 - `GET /api/tenants/{tenant}/stock/movements/{id}` reads one tenant-local movement with source and reversal links; invalid UUID is `400 VALIDATION_FAILED`, missing/foreign ID is `404 STOCK_MOVEMENT_NOT_FOUND`.
@@ -269,3 +278,9 @@ Tenant routes under `/api/tenants/{tenant}/production-orders/{id}/completions`, 
 - Ledger movements add `reverses`, `reversedBy` (nullable UUIDs) and `canReverse` (source eligibility). GR/GI lines add `movementId` and `reversedBy` (nullable UUIDs). Customer-order lines add `posted`, which remains true after full reversal. Receipt lists remain unpaged; ledger/GI pagination is unchanged.
 - Reversal links and original movements are immutable. Receipt/issue originals retain their quantities and dates. Reversals may reopen automatically completed orders/shipments; explicit closure and abandonment stay authoritative. Historical customer/location/material/unit/date locks survive net fulfilment returning to zero.
 - The additive link migration needs no ledger backfill. Its down migration only removes links: it does not undo inverses or document progress. After reversals are used, rolling back the application requires backup recovery or forward repair; down alone is not a business rollback.
+
+### Lifecycle and reversal integration (#90 / #91)
+
+- Immutable receipt/issue history counts as processing even when its net quantity returns to zero: Cancel refuses and Close Early remains available for the restored remainder.
+- Reversals preserve each Cancelled/Closed Early line and its recorded abandonment; these lines expose zero outstanding and cannot receive or issue more. Headers are recomputed from retained line states, so reversing an automatically Completed sibling may reopen a mixed header without reopening explicitly closed lines.
+- PO progress readers and material-use checks tolerate an older writer changing received quantities without knowing the added status column during deployment overlap.

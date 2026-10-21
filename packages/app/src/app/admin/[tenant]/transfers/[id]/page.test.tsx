@@ -31,7 +31,7 @@ vi.mock("next/navigation", () => ({ notFound: mocks.notFound }));
 vi.mock("@cpg/core", () => ({ AppError: mocks.AppError, tenantScope: mocks.tenantScope }));
 vi.mock("../../../../../auth/require-admin", () => ({ requireUser: mocks.requireUser }));
 vi.mock("../../../../../i18n/get-messages", () => ({ getMessages: mocks.getMessages }));
-vi.mock("./actions", () => ({ dispatchTransfer: vi.fn(), receiveTransfer: vi.fn(), writeOffTransfer: vi.fn(), setTransferDates: vi.fn() }));
+vi.mock("./actions", () => ({ cancelTransfer: vi.fn(), closeEarlyTransfer: vi.fn(), dispatchTransfer: vi.fn(), receiveTransfer: vi.fn(), writeOffTransfer: vi.fn(), setTransferDates: vi.fn() }));
 
 const location = (id: string, name: string) => ({ id, name, active: true, createdAt: new Date(), version: 1 });
 const posting = (id: string, kind: string, legs: unknown[], reason: string) => ({
@@ -41,7 +41,7 @@ const posting = (id: string, kind: string, legs: unknown[], reason: string) => (
 const TRANSFER = {
   id: "00000001", material: "00000001", source: "00000001", destination: "00000002", quantity: "100.000000", enteredQuantity: "100", enteredUnit: "kg",
   numerator: "1", denominator: "1", plannedDispatch: "2027-03-01", plannedArrival: "2027-03-03", dispatched: "60.000000", received: "50.000000",
-  writtenOff: "0.000000", inTransit: "10.000000", undispatched: "40.000000", status: "open", createdAt: new Date(), updatedAt: new Date(), version: 3,
+  abandoned: "0.000000", outstanding: "50.000000", writtenOff: "0.000000", inTransit: "10.000000", undispatched: "40.000000", status: "open", createdAt: new Date(), updatedAt: new Date(), version: 3,
   postings: [
     posting("r1", "receipt", [
       { place: "transit", location: null, quantity: "-50.000000", before: "60.000000", after: "10.000000" },

@@ -2,13 +2,14 @@ import { randomUUID } from "node:crypto";
 import { defineEntity, p, type InferEntity } from "@mikro-orm/core";
 import { Location } from "../locations/location.entity";
 import { Material, MATERIAL_UNIT_MAX } from "../materials/material.entity";
+import { DOCUMENT_STATES } from "../customer-orders/customer-order.entity";
 import { tenantOwned } from "../tenants/tenant-owned";
 
 /** Length of an ISO calendar date, `YYYY-MM-DD`. */
 const CALENDAR_DATE_LENGTH = 10;
 
-/** What a purchase requisition can be so far: converted in full, or not yet (E11 adds the rest). */
-export const REQUISITION_STATUSES = ["open", "completed"] as const;
+/** The shared four-state lifecycle; conversion is requisition processing. */
+export const REQUISITION_STATUSES = DOCUMENT_STATES;
 export type RequisitionStatus = (typeof REQUISITION_STATUSES)[number];
 
 const owned = tenantOwned();
@@ -40,7 +41,8 @@ export const PurchaseRequisition = defineEntity({
     denominator: p.string(),
     requiredDate: p.string().length(CALENDAR_DATE_LENGTH),
     converted: p.string(),
-    status: p.string().length(9).default("open"),
+    abandoned: p.string().default("0.000000"),
+    status: p.string().length(12).default("open"),
     createdAt: p.datetime().onCreate(() => new Date()),
     /** Optimistic-lock version (AUD-024, API-029): an edit and a conversion advance it. */
     version: p.integer().version(),

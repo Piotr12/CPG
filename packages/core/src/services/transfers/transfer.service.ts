@@ -1,3 +1,4 @@
+import { documentState, outstandingQuantity, resolveLines as resolveLifecycle, type DocumentState, type LifecycleAction } from "../../domain/document-lifecycle/lifecycle";
 import { randomUUID } from "node:crypto";
 import {
   OptimisticLockError,
@@ -57,7 +58,9 @@ export interface TransferView {
   inTransit: string;
   /** Still to dispatch. */
   undispatched: string;
-  status: "open" | "completed";
+  status: DocumentState;
+  abandoned: string;
+  outstanding: string;
   createdAt: Date;
   updatedAt: Date;
   /** The optimistic-lock version a date edit must carry back (AUD-024, API-029). */
@@ -221,6 +224,37 @@ export class TransferService {
     return this.post(id, "write-off", input, actor);
   }
 
+  cancel(id: string, version: number, actor: AuditActor): Promise<TransferView> {
+    return this.resolve(id, version, actor, "cancel");
+  }
+
+  closeEarly(id: string, version: number, actor: AuditActor): Promise<TransferView> {
+    return this.resolve(id, version, actor, "close-early");
+  }
+
+  private async resolve(id: string, version: number, actor: AuditActor, action: LifecycleAction): Promise<TransferView> {
+    return this.versioned(async (em) => {
+      const transfer = await findTransfer(em, id, { refresh: true });
+      if (transfer.version !== version) throw versionConflict();
+      assertOpen(transfer);
+      const inTransit = inTransitOf(transfer);
+      if (action === "close-early" && inTransit !== "0.000000") {
+        throw new ConflictError(`Receive or write off the ${inTransit} ${transfer.material.baseUnit} still in transit first.`, "TRANSFER_IN_TRANSIT",
+          { quantity: inTransit, unit: transfer.material.baseUnit });
+      }
+      const before = { ...progressSnapshot(transfer), abandoned: transfer.abandoned };
+      const [resolved] = resolveLifecycle(action, [{ quantity: transfer.quantity, processed: transfer.received,
+        abandoned: transfer.abandoned, status: transfer.status as DocumentState }], { hasProcessing: transfer.dispatched !== "0.000000" });
+      transfer.abandoned = resolved.abandoned;
+      transfer.status = documentState([resolved.status]);
+      transfer.updatedAt = new Date(Math.max(Date.now(), transfer.updatedAt.getTime() + 1));
+      recordTenantAudit(em, actor, entry(action === "cancel" ? "cancelled" : "closed-early", transfer, before,
+        { ...progressSnapshot(transfer), abandoned: transfer.abandoned }));
+      await em.flush();
+      return toView(transfer);
+    });
+  }
+
   /**
    * One posting of `kind` in one transaction: the transfer is read fresh, the quantity converted and
    * checked against the kind's limit, then the physical leg is posted through the ledger's primitive
@@ -263,7 +297,7 @@ export class TransferService {
         actorUserId: actor.userId, actorUsername: actor.username, channel: actor.channel,
       });
       Object.assign(transfer, outcome.progress, { updatedAt: new Date() });
-      if (isFullyReceived(transfer)) transfer.status = "completed";
+      transfer.status = documentState([isFullyReceived(transfer) ? "completed" : "open"]);
       recordTenantAudit(em, actor, entry(POSTED_ACTION[kind], transfer, before, {
         ...progressSnapshot(transfer), moved: record.baseQuantity, businessDate, ...(kind === "write-off" ? { reason } : {}),
       }));
@@ -317,11 +351,12 @@ function postingReason({ code, source, destination }: Transfer, kind: TransferPo
 
 function toView(transfer: Transfer): TransferView {
   const { code, material, source, destination, quantity, enteredQuantity, enteredUnit, numerator, denominator,
-    plannedDispatch, plannedArrival, dispatched, received, writtenOff, status, createdAt, updatedAt, version } = transfer;
+    plannedDispatch, plannedArrival, dispatched, received, writtenOff, abandoned, status, createdAt, updatedAt, version } = transfer;
   return {
     id: code, material: material.code, source: source.code, destination: destination.code, quantity, enteredQuantity, enteredUnit,
     numerator, denominator, plannedDispatch, plannedArrival, dispatched, received, writtenOff,
-    inTransit: inTransitOf(transfer), undispatched: undispatchedOf(transfer),
+    abandoned, outstanding: outstandingQuantity(quantity, received, abandoned),
+    inTransit: inTransitOf(transfer), undispatched: status === "open" ? undispatchedOf(transfer) : "0.000000",
     status: status as TransferView["status"], createdAt, updatedAt, version,
   };
 }

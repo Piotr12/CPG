@@ -1,3 +1,4 @@
+import { documentState } from "../../domain/document-lifecycle/lifecycle";
 import { randomUUID } from "node:crypto";
 import {
   CustomerOrderLine,
@@ -236,7 +237,7 @@ function fulfil(em: EntityManager, order: CustomerOrder, orderLines: readonly Cu
     after[`line${number}Fulfilled`] = line.fulfilled;
     after[`line${number}Status`] = line.status;
   }
-  if (orderLines.every(({ status }) => status === "completed")) order.status = "completed";
+  order.status = documentState(orderLines.map(({ status }) => status));
   after.status = order.status;
   order.updatedAt = new Date(Math.max(Date.now(), order.updatedAt.getTime() + 1));
   recordTenantAudit(em, actor, {

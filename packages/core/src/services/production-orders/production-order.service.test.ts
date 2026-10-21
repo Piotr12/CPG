@@ -45,6 +45,45 @@ beforeEach(async () => {
 });
 afterEach(async () => { vi.restoreAllMocks(); await orm.close(); });
 
+describe("production lifecycle", () => {
+  it("cancels untouched work, records before/after and rejects terminal or stale changes", async () => {
+    const order = await service().create(input, actor);
+    expect(order.hasProcessing).toBe(false);
+    await expect(service().closeEarly(order.id, order.version, actor)).rejects.toMatchObject({ code: "DOCUMENT_UNPROCESSED" });
+    const cached = service(); await cached.get(order.id);
+    const cancelled = await service().cancel(order.id, order.version, actor);
+    expect(cancelled).toMatchObject({ status: "cancelled", abandoned: "30.000000", produced: "0.000000", outstanding: "0.000000", version: 2 });
+    expect(await em().findOneOrFail(TenantAuditEvent, { action: "production-orders.production-order.cancelled" })).toMatchObject({
+      before: { status: "open", abandoned: "0.000000" }, after: { status: "cancelled", abandoned: "30.000000" },
+    });
+    await expect(cached.cancel(order.id, order.version, actor)).rejects.toMatchObject({ code: "VERSION_CONFLICT" });
+    await expect(service().cancel(order.id, cancelled.version, actor)).rejects.toMatchObject({ code: "DOCUMENT_NOT_OPEN" });
+    await expect(service().update(order.id, { quantity: "40" }, cancelled.version, actor)).rejects.toMatchObject({ code: "PRODUCTION_ORDER_LOCKED" });
+    await expect(service(em("test")).cancel(order.id, order.version, actor)).rejects.toMatchObject({ code: "PRODUCTION_ORDER_NOT_FOUND" });
+    const manager = em(); vi.spyOn(manager, "transactional").mockRejectedValueOnce(new OptimisticLockError("stale"));
+    await expect(service(manager).cancel(order.id, cancelled.version, actor)).rejects.toMatchObject({ code: "VERSION_CONFLICT" });
+    expect(await em().count(StockMovement, {})).toBe(0);
+  });
+
+  it.each(["10", "0"])("retains a %s-output completion and abandons only the remainder", async (quantity) => {
+    const order = await service().create({ ...input, bom: "00000001", revision: 1 }, actor);
+    await balance("100.000000");
+    const completion = new ProductionCompletionService({ em: em() });
+    const postInput = { quantity, unit: "each", components: [{ material: "00000002", quantity: "20", unit: "kg" }] };
+    await completion.post(order.id, postInput, actor);
+    const partial = await service().get(order.id);
+    expect(partial.hasProcessing).toBe(true);
+    await expect(service().cancel(order.id, partial.version, actor)).rejects.toMatchObject({ code: "DOCUMENT_PROCESSED" });
+    const movements = await em().count(StockMovement, {});
+    const closed = await service().closeEarly(order.id, partial.version, actor);
+    expect(closed).toMatchObject({ status: "closed-early", produced: `${quantity}.000000`, abandoned: quantity === "0" ? "30.000000" : "20.000000", outstanding: "0.000000" });
+    expect(await em().count(StockMovement, {})).toBe(movements);
+    expect((await em().findOneOrFail(StockBalance, { material: { code: "00000002" } })).quantity).toBe("80.000000");
+    expect(await em().count(TenantAuditEvent, { action: "production-orders.production-order.closed-early" })).toBe(1);
+    await expect(completion.post(order.id, postInput, actor)).rejects.toMatchObject({ code: "PRODUCTION_ORDER_LOCKED" });
+  });
+});
+
 describe("manual production", () => {
   it("pins the explicit lower-priority recipe, records audit, derives dates and creates no stock (PRD-001/003/007/008/009)", async () => {
     const first = await service().create({ ...input, bom: "00000002", revision: 1 }, actor);

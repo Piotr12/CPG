@@ -33,7 +33,7 @@ vi.mock("next/navigation", () => ({ notFound: mocks.notFound }));
 vi.mock("@cpg/core", () => ({ AppError: mocks.AppError, tenantScope: mocks.tenantScope }));
 vi.mock("../../../../../auth/require-admin", () => ({ requireUser: mocks.requireUser }));
 vi.mock("../../../../../i18n/get-messages", () => ({ getMessages: mocks.getMessages }));
-vi.mock("./actions", () => ({ postReceipt: vi.fn() }));
+vi.mock("./actions", () => ({ cancelPurchaseOrder: vi.fn(), closeEarlyPurchaseOrder: vi.fn(), postReceipt: vi.fn() }));
 
 const material = (id: string, description: string, baseUnit: string) => ({ id, type: "raw", description, baseUnit, active: true, createdAt: new Date(), version: 1 });
 const ORDER = {
@@ -42,8 +42,8 @@ const ORDER = {
   location: "00000001",
   status: "open",
   lines: [
-    { line: 1, material: "00000001", quantity: "500.000000", enteredQuantity: "0.5", enteredUnit: "t", numerator: "1000", denominator: "1", plannedDate: "2027-03-03", requisition: "00000007", received: "530.000000", outstanding: "0.000000", status: "completed" },
-    { line: 2, material: "00000002", quantity: "10.000000", enteredQuantity: "10", enteredUnit: "each", numerator: "1", denominator: "1", plannedDate: "2027-03-05", requisition: null, received: "4.000000", outstanding: "6.000000", status: "open" },
+    { line: 1, material: "00000001", quantity: "500.000000", enteredQuantity: "0.5", enteredUnit: "t", numerator: "1000", denominator: "1", plannedDate: "2027-03-03", requisition: "00000007", abandoned: "0.000000", received: "530.000000", outstanding: "0.000000", status: "completed" },
+    { line: 2, material: "00000002", quantity: "10.000000", enteredQuantity: "10", enteredUnit: "each", numerator: "1", denominator: "1", plannedDate: "2027-03-05", requisition: null, abandoned: "0.000000", received: "4.000000", outstanding: "6.000000", status: "open" },
   ],
   createdAt: new Date("2027-02-01T10:00:00Z"),
   version: 1,
@@ -87,8 +87,8 @@ describe("PurchaseOrderPage", () => {
     expect(screen.getByText("2027-02-01")).toBeTruthy();
     const rows = within(screen.getByRole("table", { name: "Lines" })).getAllByRole("row").slice(1);
     expect(rows.map((row) => within(row).getAllByRole("cell").map((cell) => cell.textContent))).toEqual([
-      ["1", "00000001Steel sheet", "500 kg", "0.5 t at 1 t = 1000 kg", "2027-03-03", "00000007", "530 kg", "0 kg", "Received"],
-      ["2", "00000002Bolt M8", "10 each", "", "2027-03-05", "—", "4 each", "6 each", "Open"],
+      ["1", "00000001Steel sheet", "500 kg", "0.5 t at 1 t = 1000 kg", "2027-03-03", "00000007", "530 kg", "0 kg", "Received", "0 kg", ""],
+      ["2", "00000002Bolt M8", "10 each", "", "2027-03-05", "—", "4 each", "6 each", "Open", "0 each", "Close Early"],
     ]);
     expect(screen.getByRole("link", { name: "00000007" }).getAttribute("href")).toBe("/admin/test/purchase-requisitions");
     expect(screen.getByRole("link", { name: "All purchase orders" }).getAttribute("href")).toBe("/admin/test/purchase-orders");
@@ -131,6 +131,17 @@ describe("PurchaseOrderPage", () => {
     render(await resolveServerComponents(page()));
     expect(screen.queryByRole("button", { name: "Post goods receipt" })).toBeNull();
     expect(screen.getByText(en.goodsReceipts.empty)).toBeTruthy();
+  });
+
+  it("uses retained receipt history after full reversal for header and per-line lifecycle actions", async () => {
+    mocks.get.mockResolvedValue({ ...ORDER, lines: ORDER.lines.map((line) => ({ ...line, status: "open", received: "0.000000", outstanding: line.quantity })) });
+    mocks.receipts.mockResolvedValue([{ id: "00000003", purchaseOrder: ORDER.id, location: ORDER.location, businessDate: "2027-03-02", createdAt: new Date(),
+      lines: [{ movementId: null, reversedBy: "inverse", line: 2, material: "00000002", quantity: "4.000000" }] }]);
+    render(await resolveServerComponents(page()));
+    expect(screen.getByRole("button", { name: `Close Early — Purchase orders ${ORDER.id}` })).toBeTruthy();
+    const rows = within(screen.getByRole("table", { name: "Lines" })).getAllByRole("row").slice(1);
+    expect(within(rows[0]).getByRole("button", { name: /Cancel/ })).toBeTruthy();
+    expect(within(rows[1]).getByRole("button", { name: /Close Early/ })).toBeTruthy();
   });
 
   it("shows the page in Polish", async () => {

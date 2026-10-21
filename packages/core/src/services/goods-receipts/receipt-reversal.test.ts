@@ -4,6 +4,7 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { initOrm, migrate, selectTenant, GoodsReceipt, GoodsReceiptLine, Location, Material, MaterialConversion, PurchaseOrder, PurchaseOrderLine, StockMovement, StockReversal, Supplier, TenantAuditEvent, type Orm } from "@cpg/db";
+import { MaterialService } from "../materials/material.service";
 import { PurchaseOrderService } from "../purchase-orders/purchase-order.service";
 import { StockService } from "../stock/stock.service";
 import { StockReversalService } from "../stock/stock-reversal.service";
@@ -54,10 +55,11 @@ it("can leave an over-received order completed and advances its timestamp even w
 it("keeps explicit closure and reverses captured rounded quantity after conversion removal", async () => {
   const order = await orders().create(orderInput, actor);
   const receipt = await receipts().post({ purchaseOrder: order.id, lines: [{ line: 1, quantity: "2", unit: "box" }] }, actor);
-  await scope().nativeUpdate(PurchaseOrder, { code: order.id }, { status: "closed" });
+  const current = await orders().get(order.id);
+  await orders().closeEarly(order.id, current.version, actor);
   await scope().nativeDelete(MaterialConversion, {});
   expect(await reverse((await movement(receipt.id)).id)).toMatchObject({ movement: { quantity: "-0.666667" } });
-  expect(await orders().get(order.id)).toMatchObject({ status: "closed", lines: [{ received: "0.000000" }] });
+  expect(await orders().get(order.id)).toMatchObject({ status: "closed-early", lines: [{ received: "0.000000", outstanding: "0.000000", abandoned: "9.333333", status: "closed-early" }] });
 });
 it("refuses insufficient stock with no receipt, progress or audit mutation", async () => {
   const order = await orders().create(orderInput, actor);
@@ -102,4 +104,28 @@ it("reads legacy receipt lines without inventing a reversible movement when thei
   const receipt = em.create(GoodsReceipt, { code: "00000001", order, businessDate: "2026-10-21" });
   em.create(GoodsReceiptLine, { receipt, orderLine, position: 0, quantity: "5.000000", enteredQuantity: "5", enteredUnit: "each", numerator: "1", denominator: "1" }); await em.flush();
   expect(await receipts().get(receipt.code)).toMatchObject({ lines: [{ movementId: null, reversedBy: null, quantity: "5.000000" }] });
+});
+
+it("reopens a completed sibling of a cancelled line, persists its state and protects restored supply", async () => {
+  const order = await orders().create({ ...orderInput, lines: [...orderInput.lines, ...orderInput.lines] }, actor);
+  const receipt = await receipts().post({ purchaseOrder: order.id, lines: [{ line: 1, quantity: "10", unit: "each" }] }, actor);
+  const current = await orders().get(order.id);
+  expect(await orders().cancel(order.id, current.version, actor, [2])).toMatchObject({ status: "closed-early" });
+  await reverse((await movement(receipt.id)).id);
+  expect(await orders().get(order.id)).toMatchObject({ status: "open", lines: [
+    { status: "open", received: "0.000000", outstanding: "10.000000" },
+    { status: "cancelled", abandoned: "10.000000", outstanding: "0.000000" },
+  ] });
+  expect(await scope().findOneOrFail(PurchaseOrderLine, { order: { code: order.id }, position: 1 })).toMatchObject({ status: "open" });
+  const materials = new MaterialService({ em: scope() });
+  const material = await materials.get("00000001");
+  await expect(materials.update("00000001", { active: false }, material.version, actor)).rejects.toMatchObject({ code: "MATERIAL_IN_OPEN_ORDER" });
+});
+it.each([undefined, [1]])("a reversed receipt still prevents cancellation and permits early closure (selection %j)", async (selection) => {
+  const order = await orders().create(orderInput, actor);
+  const receipt = await receipts().post({ purchaseOrder: order.id, lines: [{ line: 1, quantity: "4", unit: "each" }] }, actor);
+  await reverse((await movement(receipt.id)).id);
+  const current = await orders().get(order.id);
+  await expect(orders().cancel(order.id, current.version, actor, selection)).rejects.toMatchObject({ code: "DOCUMENT_PROCESSED" });
+  expect(await orders().closeEarly(order.id, current.version, actor, selection)).toMatchObject({ status: "closed-early", lines: [{ abandoned: "10.000000", outstanding: "0.000000" }] });
 });
