@@ -32,8 +32,11 @@ export interface StockMovementView {
   reason: string; actorUserId: string | null; actorUsername: string; channel: "ui" | "api" | "seed";
 }
 
-/** Who posts: a user, whose every movement is audited, or the server-only demo seed, which is not. */
-export type PostingContext = { kind: "user"; actor: AuditActor } | { kind: "seed" };
+/**
+ * Who posts: a user, whose every movement is audited and dated now, or the server-only demo seed,
+ * which is not audited and posts at the moment `at` it supplies.
+ */
+export type PostingContext = { kind: "user"; actor: AuditActor } | { kind: "seed"; at: Date };
 
 /** The source document of a posting: its type and the ID every movement of it carries. */
 export interface PostingSource {
@@ -46,7 +49,7 @@ export interface PostingSource {
  * line's movement, its pair's balance and (for a user) its audit entry. Every cumulative pair balance
  * is checked before the one flush, so a later positive line never legitimizes an earlier overdraw
  * and a failed line leaves the whole group unwritten (R09). Dated today, the server's UTC date
- * (INV-010). The caller has parsed `input` with `stockPostingSchema` (the public `post`, at most 100
+ * (INV-010) for a user; the seed supplies its own date and time. The caller has parsed `input` with `stockPostingSchema` (the public `post`, at most 100
  * lines), or built lines valid by construction: the stock import's nonzero base-unit differences, at
  * most `IMPORT_ROWS_MAX` (stock-import spec Q11). A caller posting one group in several calls on the
  * same transaction (the stock import, in chunks) numbers each call's lines from `firstPosition`.
@@ -112,7 +115,7 @@ export async function postHistoricalInverses(
 async function postResolvedStockMovements(
   em: EntityManager, lines: readonly ResolvedStockLine[], reason: string, source: PostingSource, context: PostingContext, firstPosition: number,
 ): Promise<StockMovementView[]> {
-  const businessDate = new Date().toISOString().slice(0, 10);
+  const businessDate = (context.kind === "seed" ? context.at : new Date()).toISOString().slice(0, 10);
   const pairs = new Map<string, { balance: StockBalance; quantity: bigint }>();
   const pending: StockMovement[] = [];
   for (const [position, { material, location, signed, delta, converted }] of lines.entries()) {
@@ -143,7 +146,7 @@ async function postResolvedStockMovements(
       enteredQuantity: formatSignedQuantity(signed), enteredUnit: converted.enteredUnit,
       numerator: converted.numerator, denominator: converted.denominator,
       balanceBefore: formatDecimal(before, { fixed: true }), balanceAfter: pair.balance.quantity,
-      reason, actorUserId: actor?.userId ?? null, actorUsername: actor?.username ?? "Demo seed", channel: actor?.channel ?? "seed",
+      reason, ...(context.kind === "seed" && { occurredAt: context.at }), actorUserId: actor?.userId ?? null, actorUsername: actor?.username ?? "Demo seed", channel: actor?.channel ?? "seed",
     });
     pending.push(movement);
     if (actor) recordTenantAudit(em, actor, {

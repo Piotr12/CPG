@@ -96,7 +96,7 @@ export class StockService {
       const references = await activeDemoReferences(em, DEMO_STOCK);
       const lines = DEMO_STOCK.filter((line) => references.material.get(line.material)?.baseUnit === line.unit && references.location.has(line.location));
       if (lines.length === 0) return 0;
-      return (await postStockMovements(em, { lines, reason: "Demonstration opening balance" }, { type: CORRECTION_MOVEMENT, id: randomUUID() }, { kind: "seed" })).length;
+      return (await postStockMovements(em, { lines, reason: "Demonstration opening balance" }, { type: CORRECTION_MOVEMENT, id: randomUUID() }, { kind: "seed", at: new Date() })).length;
     });
   }
 }

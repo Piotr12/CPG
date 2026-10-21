@@ -20,7 +20,7 @@ const owned = tenantOwned();
 
 /**
  * What production made and used for one `order` (E10-S02), posted on `businessDate` (the server's UTC
- * date, PRD-023) at `createdAt`. `code` is its business ID: eight digits, sequential per tenant. `quantity`
+ * date for a user, the seed's own date for the seed, PRD-023) at `createdAt`. `code` is its business ID: eight digits, sequential per tenant. `quantity`
  * is the output in the output's base unit, `0.000000` for a waste posting (PRD-018), with the entered
  * quantity, unit and factor kept. Its stock movements carry its `id` as their posting ID. `submission`
  * is the UI dialog's duplicate-submit token: a repeat of it returns this completion instead of posting again.
