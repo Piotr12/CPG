@@ -151,4 +151,41 @@ describe("transfers in the UI", () => {
     await una.waitForText("2026-10-25");
     expect((json(await api("GET", `/api/tenants/prod/transfers/${transfer}`)).data as TransferDetailView).plannedArrival).toBe("2026-10-25");
   });
+
+  it("links the Open transfer that refuses deactivating its location or its material (LFC-018)", async () => {
+    // Deactivation checks physical stock before transfers: this material and its locations are never stocked.
+    const copper = await create("/api/tenants/prod/materials", { type: "raw", description: "tr copper", baseUnit: "kg" });
+    const kiln = await create("/api/tenants/prod/locations", { name: "tr kiln" });
+    const lake = await create("/api/tenants/prod/locations", { name: "tr lake" });
+    const open = await create("/api/tenants/prod/transfers", { material: copper, source: kiln, destination: lake, quantity: "5", unit: "kg", plannedDispatch: "2026-11-02", plannedArrival: "2026-11-03" });
+    const alert = "[role=alertdialog] [role=alert]";
+    /** Confirms the open Deactivate dialog and returns its refusal's text and link. */
+    const refusal = async () => {
+      await admin.waitFor("[role=alertdialog]");
+      await admin.click("[role=alertdialog] button[data-variant=destructive]");
+      await admin.waitUntil(`!!document.querySelector("${alert} a")`);
+      return { text: await admin.text(alert), href: await admin.evaluate<string>(`document.querySelector("${alert} a").getAttribute("href")`) };
+    };
+    await admin.setViewport(1280, 800);
+
+    await admin.open(`${baseUrl}/admin/prod/locations`);
+    await admin.waitUntil(ready(`document.querySelector("main button[aria-label='Actions for ${kiln}']")`));
+    await admin.clickRole("button", `Actions for ${kiln}`);
+    await admin.clickRole("menuitem", "Deactivate");
+    expect(await refusal()).toEqual({ text: `Transfer ${open} is still Open from or to this location. ${open}`, href: `/admin/prod/transfers/${open}` });
+    await admin.clickRole("button", "Cancel");
+    await admin.waitUntil(`!document.querySelector("[role=alertdialog]")`);
+
+    await admin.open(`${baseUrl}/admin/prod/materials/${copper}`);
+    await admin.waitUntil(ready(button("Deactivate")));
+    await admin.clickRole("button", "Deactivate");
+    expect(await refusal()).toEqual({ text: `Transfer ${open} of this material is still Open, so it can't be deactivated. ${open}`, href: `/admin/prod/transfers/${open}` });
+    await admin.click(`${alert} a`);
+    // The material's page stays mounted but hidden (display: none), its dialog with it: wait for the transfer's shown heading.
+    await admin.waitUntil(
+      `location.pathname === "/admin/prod/transfers/${open}" && [...document.querySelectorAll("main h1")].some((h) => h.offsetParent && h.textContent.startsWith("Transfer ${open}"))`,
+    );
+    expect(json(await api("GET", `/api/tenants/prod/locations/${kiln}`)).data.active).toBe(true);
+    expect(json(await api("GET", `/api/tenants/prod/materials/${copper}`)).data.active).toBe(true);
+  });
 });
