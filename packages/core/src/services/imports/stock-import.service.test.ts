@@ -219,6 +219,7 @@ describe("the stock import's commit", () => {
   });
 
   it("leaves every position at a stocked site the workbook doesn't list exactly as it was, with no movement (STX-006)", async () => {
+    // Three stocked sites; the workbook lists two of them.
     await kit.write(({ locationService }) => locationService.create({ name: "Lake cave" }, ACTOR));
     const sites = ["00000001", "00000002", "00000003"];
     for (const location of sites) {
@@ -227,18 +228,16 @@ describe("the stock import's commit", () => {
     }
     const em = () => scopeForTenant(kit.container, "prod").then(({ cradle }) => cradle.em);
     const movementsAt = async (location: string) => (await em()).count(StockMovement, { location: { code: location } });
-    const before = { "00000002": await movementsAt("00000002"), "00000003": await movementsAt("00000003") };
+    const untouched = await movementsAt("00000003");
 
-    await apply(stock([1, 1, 45, null], [2, 1, 35, null]));
+    await apply(stock([1, 1, 45, null], [2, 1, 35, null], [1, 2, 40, null], [2, 2, 30, null]));
 
-    expect(await balance("00000001", "00000001")).toBe("45.000000");
-    expect(await balance("00000002", "00000001")).toBe("35.000000");
-    for (const location of ["00000002", "00000003"] as const) {
-      expect([await balance("00000001", location), await balance("00000002", location)]).toEqual(["50.000000", "30.000000"]);
-      expect(await movementsAt(location)).toBe(before[location]);
-    }
-    const posted = await (await em()).find(StockMovement, { reason: "Stock count 2027-01" }, { populate: ["location"] });
-    expect(posted.map((movement) => movement.location.code)).toEqual(["00000001", "00000001"]);
+    expect([await balance("00000001", "00000001"), await balance("00000002", "00000001")]).toEqual(["45.000000", "35.000000"]);
+    expect([await balance("00000001", "00000002"), await balance("00000002", "00000002")]).toEqual(["40.000000", "30.000000"]);
+    expect([await balance("00000001", "00000003"), await balance("00000002", "00000003")]).toEqual(["50.000000", "30.000000"]);
+    expect(await movementsAt("00000003")).toBe(untouched);
+    const posted = await (await em()).find(StockMovement, { reason: "Stock count 2027-01" }, { populate: ["location"], orderBy: { position: "asc" } });
+    expect(posted.map((movement) => movement.location.code)).toEqual(["00000001", "00000001", "00000002"]);
   });
 
   it("posts more than one flush's lines as one posting, numbered in row order", async () => {

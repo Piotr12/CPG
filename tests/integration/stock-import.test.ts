@@ -150,6 +150,7 @@ describe("the Stock import screen", () => {
     expect(mine).toMatchObject({ actor: { username: "admin" }, channel: "ui", sessionId: expect.any(String), token: null, after: { reason, material: ore } });
     // Its own session: not the normal user's, whose commit the previous test posted.
     const [sams] = await posted(sam, flint, "stockimportui count");
+    expect(sams).toBeDefined();
     expect(sams).toMatchObject({ actor: { username: USERNAME }, channel: "ui", sessionId: expect.any(String) });
     expect(mine.sessionId).not.toBe(sams.sessionId);
   });
