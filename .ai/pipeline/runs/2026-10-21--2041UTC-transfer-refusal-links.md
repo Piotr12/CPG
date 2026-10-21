@@ -1,6 +1,6 @@
 # Link the transfer that blocks a deactivation, and prove the stock import's remaining scenarios — #139
 
-Source doc: .ai/specs/2026-10-21--2035UTC-transfer-refusal-links.md
+Source doc: .ai/specs/implemented/2026-10-21--2035UTC-transfer-refusal-links.md
 Spec PR: #149
 Status: in-progress
 Engine: om-auto-create-pr (steps: 8, --loop: no)
@@ -17,6 +17,7 @@ The spec's two phases plus the paperwork: the generalised `deactivationBlockerEr
 - The implementation branch is based on the spec branch (as #135 was on #132), so it carries the spec commits; #149 merges first.
 
 ## Log
+- 21:10 UTC — Phase 3 done: LFC-018, STX-006 and STX-018 are `Passed (automated)`, and LFC-016's evidence names the location assertion. The spec moved to `implemented/` with `../assets` links, and two lessons were added. `tests/ai-filenames.test.ts` and `tests/spec-images.test.ts` pass.
 - 21:05 UTC — Phase 2 done. Gate on this source: lint (one existing warning in `bom.service.ts`), typecheck, 483 files / 3,266 tests with 100% statements, branches, functions and lines, build. On a fresh standalone copy (static + public, empty `DATA_DIR`): `transfers.test.ts`, `stock-import.test.ts`, `stock-import-api.test.ts`, 3 files / 16 tests pass. Under `next dev`, `stock-import-api.test.ts` fails in `beforeAll` (bob's sign-in wait) on main's copy too, so it was verified on the standalone build; Docker isn't running here, and CI runs the image suite.
 - 20:48 UTC — Phase 1 done. `transfers.test.ts` (5 tests) passes against a fresh `next dev` server (`CPG_BASE_URL`; Docker isn't running here). Following the link leaves the material page mounted but `display: none` (React Activity), its open dialog included; the transfer page stays interactive, so the test waits for the shown heading instead of the dialog to go.
 - 20:41 UTC — Began from `spec/transfer-refusal-links` (8a12eaa) on `feat/transfer-refusal-links` in the cezar worktree.
@@ -40,4 +41,4 @@ The spec's two phases plus the paperwork: the generalised `deactivationBlockerEr
 
 ### Phase 3: Paperwork
 
-- [ ] 3.1 Acceptance doc, spec to `implemented/`, lessons.
+- [x] 3.1 Acceptance doc, spec to `implemented/`, lessons. — 5db4ae3
