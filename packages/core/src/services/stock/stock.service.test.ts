@@ -47,7 +47,7 @@ describe("StockService", () => {
       const posted = await service().correct(line("+2", { unit: "case", reason: " Opening balance ", date: "1900-01-01", actorUserId: "fake" }), ACTOR);
       expect(posted).toMatchObject({ ...PAIR, type: "correction", position: 0, quantity: "24.000000", businessDate: "2027-01-05", enteredQuantity: "2.000000", enteredUnit: "case", numerator: "12", denominator: "1", balanceBefore: "0.000000", balanceAfter: "24.000000", reason: "Opening balance", actorUserId: "u1", actorUsername: "alice", channel: "ui" });
       expect(posted.postingId).toMatch(/^[a-f0-9-]{36}$/);
-      expect((await service().get(PAIR)).movements).toEqual([{ ...posted, source: { id: null, document: null } }]);
+      expect((await service().get(PAIR)).movements).toEqual([{ ...posted, source: { id: null, document: null }, reverses: null, reversedBy: null, canReverse: true }]);
       expect(await entries()).toEqual([expect.objectContaining({ action: "stock.movement.posted", actorUsername: "alice", sessionId: "session1", before: { quantity: "0.000000" }, after: expect.objectContaining({ quantity: "24.000000", movement: "24.000000", reason: "Opening balance", postingId: posted.postingId }) })]);
     } finally { vi.useRealTimers(); }
   });

@@ -6,6 +6,8 @@ import { stockMovementIdSchema, stockReversalSchema } from "../../validators/sto
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit } from "../audit/audit-recorder";
 import { isScopeReadOnly } from "../tenants/tenant.service";
+import { prepareReceiptReversal } from "../goods-receipts/receipt-reversal";
+import { prepareIssueReversal } from "../goods-issues/issue-reversal";
 import { CORRECTION_MOVEMENT, postHistoricalInverse, type StockMovementView } from "./stock-posting";
 
 export interface StockReversalView { original: string; movement: StockMovementView }
@@ -24,12 +26,16 @@ export class StockReversalService {
       if (!original) throw new NotFoundError("STOCK_MOVEMENT_NOT_FOUND", "This movement does not exist in this tenant.");
       const existing = await em.findOne(StockReversal, { original });
       if (existing) throw new ConflictError("This movement has already been reversed.", "STOCK_ALREADY_REVERSED", { reversal: existing.inverse.id });
-      if (original.type !== CORRECTION_MOVEMENT) {
+      let recalculate: (() => Promise<void>) | undefined;
+      if (original.type === "goods-receipt") recalculate = await prepareReceiptReversal(em, original, actor);
+      else if (original.type === "goods-issue") recalculate = await prepareIssueReversal(em, original, actor);
+      else if (original.type !== CORRECTION_MOVEMENT) {
         throw new ConflictError("This posting cannot be reversed with a stock line reversal.", "STOCK_REVERSAL_UNSUPPORTED");
       }
       const movement = await postHistoricalInverse(em, original, reason, randomUUID(), actor);
       const inverse = await em.findOneOrFail(StockMovement, movement.id);
       em.create(StockReversal, { original, inverse });
+      await recalculate?.();
       recordTenantAudit(em, actor, {
         action: "stock.movement.reversed",
         subject: { type: "StockMovement", id: original.id, label: `${original.material.code} — ${original.material.description} at ${original.location.code} — ${original.location.name}` },

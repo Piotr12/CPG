@@ -3,9 +3,12 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { initOrm, migrate, selectTenant, Location, Material, StockMovement, StockReversal, Tenant, TenantAuditEvent, type Orm } from "@cpg/db";
+import { initOrm, migrate, selectTenant, Location, Material, StockMovement, StockReversal, Tenant, TenantAuditEvent, TenantIdempotencyKey, type Orm } from "@cpg/db";
 import { inRequestTransaction, retryingStaleSnapshot } from "../../http/request-transaction";
 import * as audit from "../audit/audit-recorder";
+import { IdempotencyService } from "../idempotency/idempotency.service";
+import { TenantService } from "../tenants/tenant.service";
+import { fingerprintOf } from "../idempotency/fingerprint";
 import { StockService } from "./stock.service";
 import { StockReversalService } from "./stock-reversal.service";
 
@@ -94,4 +97,47 @@ describe("StockReversalService", () => {
       expect(await stock().get(pair)).toMatchObject({ quantity: "0.000000", movementCount: 2 });
     } finally { await other.close(); }
   });
+});
+
+it("reads both ends of a reversal across ledger pages and refuses foreign, malformed and mismatched selections", async () => {
+  const original = await correct("5");
+  expect(await stock().getMovement(original.id)).toMatchObject({ canReverse: true, reverses: null, reversedBy: null });
+  for (let count = 0; count < 101; count++) await correct("1");
+  const reversed = await reversals().reverse(original.id, input, actor);
+  expect((await stock().get(pair)).movements.some(({ id }) => id === original.id)).toBe(false);
+  expect(await stock().getMovement(original.id, pair)).toMatchObject({ canReverse: false, reversedBy: reversed.movement.id, reverses: null });
+  expect(await stock().getMovement(reversed.movement.id)).toMatchObject({ canReverse: false, reversedBy: null, reverses: original.id });
+  await expect(stock().getMovement(original.id, { ...pair, material: "00000002" })).rejects.toMatchObject({ code: "STOCK_MOVEMENT_NOT_FOUND" });
+  await expect(new StockService({ em: scope("test") }).getMovement(original.id)).rejects.toMatchObject({ code: "STOCK_MOVEMENT_NOT_FOUND" });
+  await expect(stock().getMovement("invalid")).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+});
+
+it("commits the API receipt with the inverse, replays it under read-only, and refuses stale generations and a new key", async () => {
+  const original = await correct("5"); const em = scope();
+  const keys = new IdempotencyService({ em, tenantService: new TenantService({ em }) });
+  const request = { userId: actor.userId, key: "reverse", operation: `POST /stock/movements/${original.id}/reverse`, fingerprint: await fingerprintOf({ method: "POST", path: "/reverse", body: input }) };
+  const tenant = { kind: "tenant" as const, tenant: "prod" as const, generation: 1, requireGeneration: false };
+  const write = () => new StockReversalService({ em }).reverse(original.id, input, actor);
+  const result = await keys.run(request, tenant, write);
+  expect(result.replayed).toBe(false);
+  await expect(keys.run({ ...request, key: "again" }, tenant, write)).rejects.toMatchObject({ code: "STOCK_ALREADY_REVERSED" });
+  await expect(keys.run(request, { ...tenant, generation: 0 }, write)).rejects.toMatchObject({ code: "GENERATION_STALE" });
+  await orm.em.fork().nativeUpdate(Tenant, { code: "prod" }, { readOnly: true });
+  const replay = await keys.run(request, tenant, write);
+  expect(replay.replayed).toBe(true); expect(JSON.stringify(replay.data)).toBe(JSON.stringify(result.data));
+  await expect(keys.run({ ...request, key: "read-only" }, tenant, write)).rejects.toMatchObject({ code: "TENANT_READ_ONLY" });
+  expect(await scope().count(TenantIdempotencyKey, {})).toBe(1); expect(await scope().count(StockReversal, {})).toBe(1);
+});
+it("stores no idempotency receipt or stock change when reversal fails after its balance flush", async () => {
+  const original = await correct("5"); const em = scope();
+  const keys = new IdempotencyService({ em, tenantService: new TenantService({ em }) });
+  const record = audit.recordTenantAudit;
+  vi.spyOn(audit, "recordTenantAudit").mockImplementation((em, who, event) => {
+    if (event.action === "stock.movement.reversed") throw new Error("Audit unavailable");
+    return record(em, who, event);
+  });
+  await expect(keys.run({ userId: actor.userId, key: "failed", operation: "POST reverse", fingerprint: await fingerprintOf({ method: "POST", path: "/reverse", body: input }) },
+    { kind: "tenant", tenant: "prod", generation: 1, requireGeneration: false }, () => new StockReversalService({ em }).reverse(original.id, input, actor))).rejects.toThrow("Audit unavailable");
+  expect(await scope().count(TenantIdempotencyKey, {})).toBe(0); expect(await scope().count(StockReversal, {})).toBe(0);
+  expect(await stock().get(pair)).toMatchObject({ quantity: "5.000000", movementCount: 1 });
 });

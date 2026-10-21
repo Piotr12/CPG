@@ -20,6 +20,7 @@ import { findNamedRecord } from "../named-records/find-named-record";
 import { completeFinishedShipments, isAnyShipped } from "../shipments/shipment-usage";
 import { isScopeReadOnly } from "../tenants/tenant.service";
 import { findCustomerOrder } from "./order-records";
+import { postedOrderLineIds } from "./posted-order-lines";
 
 export interface CustomerOrderLineView {
   id: string;
@@ -31,6 +32,8 @@ export interface CustomerOrderLineView {
   denominator: string;
   requiredDate: string;
   fulfilled: string;
+  /** A physical issue has ever referenced this line, even when all issues have been reversed. */
+  posted: boolean;
   abandoned: string;
   status: DocumentState;
 }
@@ -67,7 +70,8 @@ export class CustomerOrderService {
       const group = grouped.get(line.order.id) ?? [];
       group.push(line); grouped.set(line.order.id, group);
     }
-    return orders.map((order) => view(order, grouped.get(order.id)!));
+    const posted = await postedOrderLineIds(em, lines);
+    return orders.map((order) => view(order, grouped.get(order.id)!, posted));
   }
 
   async count(): Promise<number> { return this.em.count(CustomerOrder, {}); }
@@ -104,15 +108,16 @@ export class CustomerOrderService {
         if (order.version !== version) throw versionConflict();
         if (order.status !== "open") throw locked();
         const current = await orderLines(em, order);
-        const before = view(order, current);
+        const posted = await postedOrderLineIds(em, current);
+        const before = view(order, current, posted);
         const changes = parsed.data;
-        if (current.some((line) => parseDecimal(line.fulfilled)! > 0n) &&
+        if (current.some((line) => wasPosted(line, posted)) &&
           (changes.customer !== order.customer.code || changes.location !== order.location.code)) throw locked();
         const customer = changes.customer === order.customer.code ? order.customer : await activeCustomer(em, changes.customer);
         const location = changes.location === order.location.code ? order.location : await findActiveLocation(em, changes.location);
-        const resolved = await resolveLines(em, changes.lines, current);
+        const resolved = await resolveLines(em, changes.lines, current, posted);
         if (current.some((line) => !resolved.some(({ existing }) => existing?.id === line.id) &&
-          (line.status !== "open" || parseDecimal(line.fulfilled)! > 0n || parseDecimal(line.abandoned)! > 0n))) throw locked();
+          (line.status !== "open" || wasPosted(line, posted) || parseDecimal(line.abandoned)! > 0n))) throw locked();
         // A line a shipment names keeps its material and stays on the order (shipments spec Q10).
         const removedOrReplaced = current.filter((line) => resolved.find(({ existing }) => existing?.id === line.id)?.material.id !== line.material.id);
         if (await isAnyShipped(em, removedOrReplaced)) throw locked();
@@ -129,12 +134,12 @@ export class CustomerOrderService {
         completeDelivered(order, saved);
         await completeFinishedShipments(em, order, actor);
         // New UUIDs are assigned on create; comparing allowlisted snapshots also detects reordering.
-        if (JSON.stringify(snapshot(before)) !== JSON.stringify(snapshot(view(order, saved)))) {
+        if (JSON.stringify(snapshot(before)) !== JSON.stringify(snapshot(view(order, saved, posted)))) {
           order.updatedAt = new Date(Math.max(Date.now(), order.updatedAt.getTime() + 1));
-          recordTenantAudit(em, actor, { action: "customer-orders.customer-order.updated", subject: subject(order), before: snapshot(before), after: snapshot(view(order, saved)) });
+          recordTenantAudit(em, actor, { action: "customer-orders.customer-order.updated", subject: subject(order), before: snapshot(before), after: snapshot(view(order, saved, posted)) });
         }
         await em.flush();
-        return view(order, saved);
+        return view(order, saved, posted);
       });
     } catch (error) {
       if (error instanceof OptimisticLockError) throw versionConflict();
@@ -168,7 +173,7 @@ async function activeCustomer(em: EntityManager, code: string): Promise<Customer
 async function insertOrder(em: EntityManager, input: CustomerOrderInput): Promise<CustomerOrder> {
   const customer = await activeCustomer(em, input.customer);
   const location = await findActiveLocation(em, input.location);
-  const resolved = await resolveLines(em, input.lines, []);
+  const resolved = await resolveLines(em, input.lines, [], new Set());
   const [highest] = await em.find(CustomerOrder, {}, { orderBy: { code: "desc" }, limit: 1 });
   const code = nextSequentialId(highest?.code ?? null, { code: "CUSTOMER_ORDER_IDS_EXHAUSTED", message: "This tenant has used every eight-digit customer order ID." });
   const order = em.create(CustomerOrder, { code, customer, location });
@@ -179,7 +184,7 @@ async function insertOrder(em: EntityManager, input: CustomerOrderInput): Promis
   await em.flush();
   return order;
 }
-async function resolveLines(em: EntityManager, inputs: (CustomerOrderInput["lines"][number] & { id?: string })[], current: CustomerOrderLine[]): Promise<ResolvedLine[]> {
+async function resolveLines(em: EntityManager, inputs: (CustomerOrderInput["lines"][number] & { id?: string })[], current: CustomerOrderLine[], posted: ReadonlySet<string>): Promise<ResolvedLine[]> {
   const resolved: ResolvedLine[] = [];
   const seen = new Set<string>();
   for (const [index, input] of inputs.entries()) {
@@ -202,7 +207,7 @@ async function resolveLines(em: EntityManager, inputs: (CustomerOrderInput["line
     if (existing) {
       const same = unchangedEntry && existing.requiredDate === input.requiredDate;
       if (existing.status !== "open" && !same) throw locked();
-      if (parseDecimal(existing.fulfilled)! > 0n && (!sameMaterial || existing.enteredUnit !== input.unit || existing.requiredDate !== input.requiredDate)) throw locked();
+      if (wasPosted(existing, posted) && (!sameMaterial || existing.enteredUnit !== input.unit || existing.requiredDate !== input.requiredDate)) throw locked();
       if (parseDecimal(record.baseQuantity)! < parseDecimal(existing.fulfilled)! + parseDecimal(existing.abandoned)!) {
         throw new ValidationError({ [`lines.${index}.quantity`]: [ORDER_QUANTITY_MIN_MESSAGE] });
       }
@@ -222,13 +227,19 @@ function completeDelivered(order: CustomerOrder, lines: readonly CustomerOrderLi
 async function orderLines(em: EntityManager, order: CustomerOrder) {
   return em.find(CustomerOrderLine, { order, removed: false }, { populate: ["material"], orderBy: { position: "asc" } });
 }
-async function detail(em: EntityManager, order: CustomerOrder): Promise<CustomerOrderView> { return view(order, await orderLines(em, order)); }
-function view(order: CustomerOrder, lines: CustomerOrderLine[]): CustomerOrderView {
+async function detail(em: EntityManager, order: CustomerOrder): Promise<CustomerOrderView> {
+  const lines = await orderLines(em, order);
+  return view(order, lines, await postedOrderLineIds(em, lines));
+}
+function wasPosted(line: CustomerOrderLine, posted: ReadonlySet<string>): boolean { return posted.has(line.id) || parseDecimal(line.fulfilled)! > 0n; }
+function view(order: CustomerOrder, lines: CustomerOrderLine[], posted: ReadonlySet<string>): CustomerOrderView {
   return {
     id: order.code, customer: order.customer.code, location: order.location.code, status: order.status, version: order.version,
     createdAt: order.createdAt, updatedAt: order.updatedAt,
-    lines: lines.map(({ id, material, quantity, enteredQuantity, enteredUnit, numerator, denominator, requiredDate, fulfilled, abandoned, status }) =>
-      ({ id, material: material.code, quantity, enteredQuantity, enteredUnit, numerator, denominator, requiredDate, fulfilled, abandoned, status })),
+    lines: lines.map((line) => {
+      const { id, material, quantity, enteredQuantity, enteredUnit, numerator, denominator, requiredDate, fulfilled, abandoned, status } = line;
+      return { id, material: material.code, quantity, enteredQuantity, enteredUnit, numerator, denominator, requiredDate, fulfilled, abandoned, status, posted: wasPosted(line, posted) };
+    }),
   };
 }
 function subject(order: CustomerOrder) { return { type: "CustomerOrder", id: order.code, label: `Customer order ${order.code}` }; }

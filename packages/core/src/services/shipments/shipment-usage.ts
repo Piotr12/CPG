@@ -20,7 +20,7 @@ export async function isAnyShipped(em: EntityManager, lines: readonly CustomerOr
 /**
  * Completes, and audits, every Open shipment of `order` that has nothing left to issue (spec Q8): after
  * a goods issue, or an order edit that left its lines nothing outstanding. Reads the order lines through
- * `em`'s identity map, so the caller's unflushed changes count. Shipments never reopen.
+ * `em`'s identity map, so the caller's unflushed changes count. Ordinary postings never reopen shipments.
  */
 export async function completeFinishedShipments(em: EntityManager, order: CustomerOrder, actor: AuditActor): Promise<void> {
   const open = await em.find(Shipment, { order, status: "open" }, { refresh: true });
@@ -38,5 +38,32 @@ export async function completeFinishedShipments(em: EntityManager, order: Custom
       before: { status: "open" },
       after: { status: shipment.status },
     });
+  }
+}
+
+/** Reversal can restore demand to every sibling, including a shipment auto-completed by another's issue. */
+export async function recalculateReversedShipments(em: EntityManager, order: CustomerOrder, actor: AuditActor): Promise<void> {
+  // Persist the changed counters inside the caller's transaction before the bounded reads.
+  await em.flush();
+  let cursor = "";
+  while (true) {
+    const shipments = await em.find(Shipment, { order, status: { $in: ["open", "completed"] }, code: { $gt: cursor } }, { orderBy: { code: "asc" }, limit: 100 });
+    if (shipments.length === 0) return;
+    const lines = await em.find(ShipmentLine, { shipment: { $in: shipments } }, { populate: ["orderLine"] });
+    for (const shipment of shipments) {
+      const finished = lines.filter((line) => line.shipment.id === shipment.id)
+        .every(({ quantity, issued, orderLine }) => isNothing(toIssueOf(quantity, issued, outstandingOf(orderLine))));
+      const status = finished ? "completed" : "open";
+      if (shipment.status === status) continue;
+      const before = { status: shipment.status };
+      shipment.status = status;
+      recordTenantAudit(em, actor, {
+        action: "shipments.shipment.recalculated",
+        subject: { type: "Shipment", id: shipment.code, label: `${shipment.code} — customer order ${order.code}` },
+        before, after: { status },
+      });
+    }
+    await em.flush();
+    cursor = shipments[shipments.length - 1].code;
   }
 }
