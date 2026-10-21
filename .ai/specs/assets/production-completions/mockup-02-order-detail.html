@@ -1,0 +1,29 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Mockup — Production order with completions</title>
+<style>
+body{margin:0;font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:#18181b;background:#fff;padding:28px 36px;width:1100px}
+h1{font-size:22px;margin:0 0 12px}h2{font-size:16px;margin:24px 0 8px}
+dl{display:grid;grid-template-columns:repeat(4,auto);gap:6px 28px;margin:0}dt{color:#71717a;font-size:12px}dd{margin:0 0 6px}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:7px 6px;border-bottom:1px solid #e4e4e7}th{font-weight:500;color:#71717a;font-size:12px}
+.neg{color:#b91c1c}.pos{color:#15803d}.muted{color:#71717a}.badge{font-size:11px;border:1px solid #d4d4d8;border-radius:9px;padding:1px 7px}
+.waste{background:#fef2f2;border-color:#fca5a5}.btn{font:inherit;border-radius:6px;padding:7px 14px;border:1px solid #d4d4d8;background:#fff}.primary{background:#18181b;color:#fff;border-color:#18181b}
+.head{display:flex;justify-content:space-between;align-items:center}.sub td{padding-left:28px;font-size:13px;border-bottom:1px dashed #f4f4f5}
+</style></head><body>
+<div class="head"><h1>Production order 00000003</h1><span><button class="btn">Edit</button> <button class="btn primary">Post completion</button></span></div>
+<dl><dt>Output</dt><dt>Location</dt><dt>BOM</dt><dt>Status</dt>
+<dd>00000012 Chocolate bar 100 g</dd><dd>00000001 Main plant</dd><dd>00000002 rev. 1</dd><dd>Open</dd>
+<dt>Target</dt><dt>Produced</dt><dt>Outstanding</dt><dt>Planned finish / start</dt>
+<dd>100 each</dd><dd><b>65 each</b></dd><dd><b>35 each</b></dd><dd>2026-11-02 / 2026-10-30</dd></dl>
+<h2>Completions</h2>
+<table><thead><tr><th>ID</th><th>Posted</th><th>Output</th><th>Material</th><th>Expected</th><th>Actual</th><th>Variance</th></tr></thead><tbody>
+<tr><td><b>00000001</b></td><td>2026-10-20</td><td>40 each</td><td colspan="4" class="muted">3 lines</td></tr>
+<tr class="sub"><td></td><td></td><td></td><td>00000004 Cocoa mass</td><td>20.000000 kg</td><td>18.000000 kg</td><td class="neg">−2.000000 kg</td></tr>
+<tr class="sub"><td></td><td></td><td></td><td>00000005 Sugar</td><td>16.000000 kg</td><td>16.000000 kg</td><td class="muted">0</td></tr>
+<tr class="sub"><td></td><td></td><td></td><td>00000009 Wrapper</td><td>40.000000 each</td><td>40.000000 each</td><td class="muted">0</td></tr>
+<tr><td><b>00000002</b></td><td>2026-10-21</td><td><span class="badge waste">Waste</span> 0 each</td><td colspan="4" class="muted">1 line</td></tr>
+<tr class="sub"><td></td><td></td><td></td><td>00000004 Cocoa mass</td><td>0</td><td>10.000000 kg</td><td class="pos">+10.000000 kg</td></tr>
+<tr><td><b>00000003</b></td><td>2026-10-21</td><td>25 each</td><td colspan="4" class="muted">4 lines</td></tr>
+<tr class="sub"><td></td><td></td><td></td><td>00000004 Cocoa mass</td><td>12.500000 kg</td><td>15.500000 kg</td><td class="pos">+3.000000 kg</td></tr>
+<tr class="sub"><td></td><td></td><td></td><td>00000006 Milk powder <span class="badge">Extra</span></td><td>0</td><td>2.000000 kg</td><td class="pos">+2.000000 kg</td></tr>
+</tbody></table>
+<h2>Requirements for the target</h2><p class="muted">(existing pinned-component requirements and current-stock table — unchanged)</p>
+</body></html>

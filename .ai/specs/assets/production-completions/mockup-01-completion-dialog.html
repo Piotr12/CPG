@@ -1,0 +1,26 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Mockup — Post completion</title>
+<style>
+body{margin:0;font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:#18181b;background:rgba(24,24,27,.45);display:flex;justify-content:center;padding:32px}
+.dlg{background:#fff;border-radius:12px;width:760px;box-shadow:0 10px 40px rgba(0,0,0,.25);padding:24px}
+h2{margin:0 0 4px;font-size:18px}.sub{color:#71717a;margin:0 0 16px}
+table{width:100%;border-collapse:collapse;margin:8px 0 12px}th,td{text-align:left;padding:8px 6px;border-bottom:1px solid #e4e4e7}th{font-weight:500;color:#71717a;font-size:12px}
+input,select{font:inherit;border:1px solid #d4d4d8;border-radius:6px;padding:5px 8px}input{width:90px}
+.neg{color:#b91c1c}.pos{color:#15803d}.muted{color:#71717a}.badge{font-size:11px;border:1px solid #d4d4d8;border-radius:9px;padding:1px 7px;margin-left:6px}
+.warn{background:#fffbeb;border:1px solid #f59e0b;border-radius:8px;padding:10px 12px;margin:12px 0}
+.btn{font:inherit;border-radius:6px;padding:7px 14px;border:1px solid #d4d4d8;background:#fff}.primary{background:#18181b;color:#fff;border-color:#18181b}
+.row{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-top:16px}.note{font-size:12px;color:#71717a}
+</style></head><body><div class="dlg">
+<h2>Post completion — order 00000003</h2>
+<p class="sub">Step 2 of 2 · Output <b>10 each</b> of 00000012 Chocolate bar 100 g at 00000001 Main plant · BOM 00000002 rev. 1 (pinned)</p>
+<div class="warn"><b>More than planned.</b> Target 100 each, produced 95 each; this completion makes it 105 each and completes the order.<br>
+<label><input type="checkbox" style="width:auto"> Post more than planned</label></div>
+<table><thead><tr><th>Material</th><th>Expected</th><th>Available here</th><th>Actual</th><th>Unit</th><th>Variance</th><th></th></tr></thead><tbody>
+<tr><td>00000004 Cocoa mass</td><td>5.000000 kg</td><td class="muted">40 kg</td><td><input value="5.2"></td><td><select><option>kg</option><option>g</option></select></td><td class="pos">+0.200000 kg</td><td></td></tr>
+<tr><td>00000005 Sugar</td><td>4.000000 kg</td><td class="muted">120 kg</td><td><input value="4"></td><td><select><option>kg</option></select></td><td class="muted">0</td><td></td></tr>
+<tr><td>00000009 Wrapper</td><td>10.000000 each</td><td class="muted">300 each</td><td><input value="9"></td><td><select><option>each</option></select></td><td class="neg">−1.000000 each</td><td></td></tr>
+<tr><td><select><option>00000006 Milk powder</option></select><span class="badge">Extra</span></td><td>0</td><td class="muted">18 kg</td><td><input value="0.5"></td><td><select><option>kg</option></select></td><td class="pos">+0.500000 kg</td><td><button class="btn">Remove</button></td></tr>
+</tbody></table>
+<button class="btn">+ Add input</button>
+<p class="note">Actual quantities are pre-filled with what the pinned recipe expects for 10 each. Stock is checked when you post; nothing is posted unless every line fits.</p>
+<div class="row"><button class="btn">Back</button><span><button class="btn">Cancel</button> <button class="btn primary">Post completion</button></span></div>
+</div></body></html>
