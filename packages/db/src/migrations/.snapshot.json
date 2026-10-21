@@ -2150,6 +2150,19 @@
         },
         {
           "columnNames": [
+            "subject_type",
+            "subject_id",
+            "occurred_at",
+            "id"
+          ],
+          "composite": true,
+          "constraint": false,
+          "keyName": "global_audit_event_subject_type_subject_id_occurred_at_id_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
             "id"
           ],
           "composite": false,
@@ -8619,6 +8632,20 @@
           "composite": true,
           "constraint": false,
           "keyName": "tenant_audit_event_tenant_code_occurred_at_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "tenant_code",
+            "subject_type",
+            "subject_id",
+            "occurred_at",
+            "id"
+          ],
+          "composite": true,
+          "constraint": false,
+          "keyName": "tenant_audit_event_tenant_code_subject_type_subject_id_occurred_at_id_index",
           "primary": false,
           "unique": false
         }
