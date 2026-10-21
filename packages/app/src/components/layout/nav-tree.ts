@@ -10,6 +10,7 @@ export type NavId =
   | "stock"
   | "stockImport"
   | "stockReport"
+  | "varianceReport"
   | "overview"
   | "transactions"
   | "productionOrders"
@@ -70,6 +71,7 @@ export const TENANT_TREE: NavNode[] = [
   { id: "stock", section: "stock", match: "prefix" },
   { id: "stockImport", section: "stock-import", match: "prefix" },
   { id: "stockReport", section: "reports/stock", match: "prefix" },
+  { id: "varianceReport", section: "reports/variance", match: "prefix" },
   {
     id: "transactions",
     children: [

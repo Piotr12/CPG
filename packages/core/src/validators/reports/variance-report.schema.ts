@@ -17,22 +17,23 @@ export const VARIANCE_RANGE_MESSAGE = "The end date must not be before the start
 /** The report form's "All" choices and empty date fields send an empty value: no filter. */
 const optional = <T extends z.ZodType>(schema: T) => z.preprocess((value) => (value === "" ? undefined : value), schema.optional());
 
+/** Each of the report's query parameters on its own, before the range check: what the page's form shows again. */
+export const varianceReportFieldsSchema = z.strictObject({
+  material: optional(materialReferenceSchema),
+  location: optional(locationReferenceSchema),
+  status: optional(z.enum(ORDER_STATES)),
+  from: optional(calendarDateSchema),
+  to: optional(calendarDateSchema),
+  page: z.coerce.number().int().min(1).max(1_000_000).default(1),
+});
+
 /**
  * `GET /api/tenants/{tenant}/reports/variance` and the Variance report page (spec Q6, Q7): an optional
  * material, location, order state and inclusive posting-date range, and the page. Another parameter
  * is refused, so a misspelt filter never silently shows everything; so is a range that ends before it starts.
  */
-export const varianceReportQuerySchema = z
-  .strictObject({
-    material: optional(materialReferenceSchema),
-    location: optional(locationReferenceSchema),
-    status: optional(z.enum(ORDER_STATES)),
-    from: optional(calendarDateSchema),
-    to: optional(calendarDateSchema),
-    page: z.coerce.number().int().min(1).max(1_000_000).default(1),
-  })
-  .superRefine(({ from, to }, ctx) => {
-    if (from !== undefined && to !== undefined && to < from) ctx.addIssue({ code: "custom", path: ["to"], message: VARIANCE_RANGE_MESSAGE });
-  });
+export const varianceReportQuerySchema = varianceReportFieldsSchema.superRefine(({ from, to }, ctx) => {
+  if (from !== undefined && to !== undefined && to < from) ctx.addIssue({ code: "custom", path: ["to"], message: VARIANCE_RANGE_MESSAGE });
+});
 
 export type VarianceReportQuery = z.output<typeof varianceReportQuerySchema>;
