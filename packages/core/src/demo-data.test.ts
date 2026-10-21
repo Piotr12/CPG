@@ -70,7 +70,7 @@ describe("seedDemoData", () => {
 
     expect(await seedDemoData(config, { today: TODAY, dataset: DATASET })).toEqual({ outcome: "skipped", reason: "in use" });
     expect(await counts(config, (em) => em.count(CustomerOrder, {}))).toEqual({ test: summary.customerOrders, prod: 0 });
-  });
+  }, 60_000);
 
   it("leaves a Test someone has written to, even with no material: its audit remembers the change", async () => {
     const config = await migratedConfig();
@@ -100,7 +100,7 @@ describe("seedDemoData", () => {
 
     expect((await seedDemoData(config, { today: TODAY, dataset: DATASET })).outcome).toBe("seeded");
     expect(await counts(config, (em) => em.count(Material, {}))).toEqual({ test: DATASET.catalogue.materials.length, prod: 0 });
-  });
+  }, 60_000);
 
   it("generates for the server's clock and the committed configuration by default", async () => {
     const config = await migratedConfig();

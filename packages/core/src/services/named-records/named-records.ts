@@ -33,8 +33,6 @@ export interface NamedRecordKind extends NamedRecordLookup {
   subjectType: string;
   /** The audit action prefix, `concept.entity`: `"locations.location"`. */
   actionPrefix: string;
-  /** The names a fresh Test tenant starts with (D06). */
-  demoNames: readonly string[];
   beforeDeactivate?: (em: EntityManager, record: NamedRecord) => Promise<void>;
 }
 
@@ -115,12 +113,12 @@ export class NamedRecords {
   }
 
   /**
-   * Creates the kind's demonstration records (D06) when the tenant has none of the kind, and returns
-   * how many. Not audited, like the demo materials (spec Q8). Each is flushed before the next reads
-   * the highest ID, so they get consecutive IDs. Seeds nothing into a read-only tenant (R05): its
-   * flag is read in the seed's own transaction. `at`, when given, is each record's `createdAt`.
+   * Creates the generated dataset's records of the kind, named `rows`, when the tenant has none of
+   * the kind, and returns how many. Not audited, like the demo materials (spec Q8). Each is flushed
+   * before the next reads the highest ID, so they get consecutive IDs. Seeds nothing into a
+   * read-only tenant (R05): its flag is read in the seed's own transaction. `at`, when given, is each record's `createdAt`.
    */
-  async seedDemo(rows: readonly string[] = this.kind.demoNames, at?: Date): Promise<number> {
+  async seedDemo(rows: readonly string[], at?: Date): Promise<number> {
     return this.em.transactional(async (em) => {
       if ((await em.count(this.kind.entity, {})) > 0 || (await isScopeReadOnly(em))) return 0;
       for (const name of rows) {

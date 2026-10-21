@@ -21,7 +21,6 @@ import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quan
 import { findActiveMaterial, findMaterial } from "../materials/find-material";
 import { findNamedRecord } from "../named-records/find-named-record";
 import { completeFinishedShipments, isAnyShipped } from "../shipments/shipment-usage";
-import { isScopeReadOnly } from "../tenants/tenant.service";
 import { findCustomerOrder } from "./order-records";
 import { postedOrderLineIds } from "./posted-order-lines";
 
@@ -196,23 +195,6 @@ export class CustomerOrderService {
       if (error instanceof OptimisticLockError) throw versionConflict();
       throw error;
     }
-  }
-
-  /** Seed one demonstration order only in an untouched writable scope; startup selects Test. */
-  async seedFixtures(): Promise<number> {
-    return this.em.transactional(async (em) => {
-      if ((await em.count(CustomerOrder, {})) > 0 || (await isScopeReadOnly(em))) return 0;
-      try {
-        await insertOrder(em, { customer: "00000001", location: "00000001", lines: [
-          { material: "00000005", quantity: "60", unit: "each", requiredDate: "2027-01-04" },
-          { material: "00000004", quantity: "12", unit: "each", requiredDate: "2027-01-08" },
-        ] });
-        return 1;
-      } catch (error) {
-        if (error instanceof AppError) return 0;
-        throw error;
-      }
-    });
   }
 }
 

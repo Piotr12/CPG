@@ -7,8 +7,7 @@ import {
 } from "@cpg/db";
 import { documentState, resolveLines as resolveLifecycle, type LifecycleAction, type DocumentState } from "../../domain/document-lifecycle/lifecycle";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
-import { DEMO_REQUISITIONS } from "../../domain/purchasing/demo-purchasing";
-import { AppError, ConflictError, ValidationError, versionConflict } from "../../http/errors";
+import { ConflictError, ValidationError, versionConflict } from "../../http/errors";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit } from "../audit/audit-recorder";
 import { findActiveLocation } from "../locations/find-location";
@@ -16,7 +15,6 @@ import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quan
 import { findActiveMaterial } from "../materials/find-material";
 import { lineError } from "../materials/line-error";
 import type { PostingContext } from "../stock/stock-posting";
-import { isScopeReadOnly } from "../tenants/tenant.service";
 import {
   findRequisition,
   requisitionEntry,
@@ -148,31 +146,6 @@ export class PurchaseRequisitionService {
       if (error instanceof OptimisticLockError) throw versionConflict();
       throw error;
     }
-  }
-
-  /**
-   * Creates the demonstration requisitions (D06) when the tenant has none, and returns how many. Each
-   * is built through the same rules as a save, in its own savepoint: one that breaks a rule here (a
-   * demo material or location missing, inactive or without its conversion in an edited Test tenant)
-   * is skipped. Not audited, like the other demo records. Seeds nothing into a read-only tenant (R05).
-   */
-  async seedFixtures(): Promise<number> {
-    return this.em.transactional(async (em) => {
-      if ((await em.count(PurchaseRequisition, {})) > 0 || (await isScopeReadOnly(em))) return 0;
-      let created = 0;
-      for (const demo of DEMO_REQUISITIONS) {
-        try {
-          await em.transactional(async (savepoint) => {
-            await insertRequisition(savepoint, demo);
-            await savepoint.flush();
-          });
-          created += 1;
-        } catch (error) {
-          if (!(error instanceof AppError)) throw error;
-        }
-      }
-      return created;
-    });
   }
 }
 

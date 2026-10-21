@@ -1,7 +1,7 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { ApiToken, GlobalAuditEvent, GlobalIdempotencyKey, initOrm, Material, Session, Tenant, TenantAuditEvent, TenantIdempotencyKey, User, UserPreference, type Orm } from "@cpg/db";
+import { ApiToken, CustomerOrder, GlobalAuditEvent, GlobalIdempotencyKey, initOrm, Material, ProductionCompletion, Session, StockMovement, Tenant, TenantAuditEvent, TenantIdempotencyKey, User, UserPreference, type Orm } from "@cpg/db";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadConfig } from "../../config";
 import { createAppContainer } from "../../container/container";
@@ -9,12 +9,30 @@ import type { AppContainer } from "../../container/cradle";
 import { scopeForTenant } from "../../container/tenant-scope";
 import { migrateDatabase, toDbOptions } from "../../database";
 import type { AuditActor } from "../audit/actor";
-import { DEMO_KINDS, demoSeeders, seedResetDemoData } from "../demo/seed-demo-data";
+import { seedTestTenantDataset } from "../demo/seed-demo-data";
+import { ShipmentService } from "../shipments/shipment.service";
+import { generateTestTenantDataset } from "../../domain/demo/generate-dataset";
+import { TEST_TENANT_CONFIG } from "../../domain/demo/test-tenant-config.schema";
 import { assertCurrentGeneration } from "../../domain/tenants/generation";
 import { inRequestTransaction, retryingStaleSnapshot } from "../../http/request-transaction";
 import { fingerprintOf } from "../idempotency/fingerprint";
 import { IDEMPOTENCY_TTL_MS } from "../idempotency/idempotency.service";
 import { MAX_DATASET_GENERATION } from "../../validators/tenants/test-reset.schema";
+
+/*
+ * A reset generates the dataset for today from the committed configuration. The full two years take
+ * seconds to write, so these tests run on the committed catalogue over two history months, and only
+ * the one test that pins the committed configuration switches to it (`dataset.full`).
+ */
+const dataset = vi.hoisted(() => ({ full: false }));
+vi.mock("../../domain/demo/test-tenant-config.schema", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../domain/demo/test-tenant-config.schema")>();
+  const reduced = { ...actual.TEST_TENANT_CONFIG, horizon: { ...actual.TEST_TENANT_CONFIG.horizon, historyMonths: 2 } };
+  return { ...actual, get TEST_TENANT_CONFIG() { return dataset.full ? actual.TEST_TENANT_CONFIG : reduced; } };
+});
+/** The reset's clock: the dataset it writes is the one generated for this day. */
+const TODAY = new Date("2026-10-21T10:00:00.000Z");
+const generated = () => generateTestTenantDataset(TEST_TENANT_CONFIG, "2026-10-21");
 
 const actor: AuditActor = { userId: "admin", username: "admin", sessionId: "session-admin", channel: "ui", token: null };
 let orm: Orm;
@@ -24,12 +42,14 @@ const reset = async (generation = 1) => (await scope()).cradle.testResetService.
 const audit = { action: "test.record.created", subjectType: "Material", subjectId: "one", subjectLabel: "one", actorUserId: "admin", actorUsername: "admin", channel: "ui" as const };
 
 beforeEach(async () => {
+  vi.useFakeTimers({ now: TODAY, toFake: ["Date"] });
+  dataset.full = false;
   const config = loadConfig({ DATA_DIR: mkdtempSync(path.join(tmpdir(), "cpg-reset-service-")) });
   await migrateDatabase(config);
   orm = await initOrm(toDbOptions(config));
   container = createAppContainer(config, orm);
 });
-afterEach(async () => { vi.restoreAllMocks(); await orm.close(); });
+afterEach(async () => { vi.useRealTimers(); vi.restoreAllMocks(); await orm.close(); });
 
 /** Raw values let preservation assertions include every column, without ORM identity-map reuse. */
 async function snapshot() {
@@ -40,7 +60,7 @@ async function snapshot() {
 }
 
 async function populate() {
-  await seedResetDemoData((await scope()).cradle);
+  await seedTestTenantDataset((await scope()).cradle, TODAY);
   const test = (await scope()).cradle;
   await test.materialService.create({ type: "raw", description: "old generation only", baseUnit: "kg" }, actor);
   await test.customerOrderService.create({ customer: "00000001", location: "00000001", lines: [{ material: "00000005", quantity: "1", unit: "each", requiredDate: "2027-01-01" }] }, actor);
@@ -63,7 +83,7 @@ async function populate() {
   await test.em.flush();
 }
 
-describe("atomic Test reset", () => {
+describe("atomic Test reset", { timeout: 60_000 }, () => {
   it.each([false, true])("reseeds every kind and restores readOnly=%s, preserving globals and Prod (TEN-022, TEN-023, TEN-024, TEN-028, AUD-011…013)", async (readOnly) => {
     await populate();
     await container.createScope().cradle.tenantService.setReadOnly("test", readOnly, actor);
@@ -84,32 +104,51 @@ describe("atomic Test reset", () => {
     const current = (await scope()).cradle;
     expect(await current.em.count(TenantAuditEvent, {})).toBe(0);
     expect(await current.em.count(TenantIdempotencyKey, {})).toBe(0);
-    expect((await current.materialService.list())[0].id).toBe("00000001");
-    expect((await current.locationService.list())[0].id).toBe("00000001");
+    // Today's dataset again, from ID 00000001: the old generation's own records are gone.
+    const { masters, summary, timeline } = generated();
+    expect((await current.materialService.list()).map(({ id }) => id)).toEqual(masters.materials.map((_, index) => String(index + 1).padStart(8, "0")));
+    expect((await current.locationService.list()).map(({ name }) => name)).toEqual(masters.locations);
     expect((await current.customerService.list())[0].id).toBe("00000001");
     expect((await current.supplierService.list())[0].id).toBe("00000001");
     expect((await current.bomService.list())[0].id).toBe("00000001");
-    const orders = await current.customerOrderService.list();
-    expect(orders).toHaveLength(1);
-    expect(orders[0]).toMatchObject({ id: "00000001", lines: [{ quantity: "60.000000" }, { quantity: "12.000000" }] });
-    await expect(current.customerOrderService.get("00000002")).rejects.toMatchObject({ code: "CUSTOMER_ORDER_NOT_FOUND" });
-    // Every seed would now skip because the complete demonstration kind already exists.
-    const seeders = demoSeeders(current);
-    for (const kind of DEMO_KINDS) expect(await seeders[kind].run()).toBe(0);
+    expect(await current.em.count(CustomerOrder, {})).toBe(summary.customerOrders);
+    expect(await current.em.count(StockMovement, {})).toBe(summary.movements);
+    expect((await current.customerOrderService.get("00000001")).createdAt.toISOString()).toBe(timeline.find(({ kind }) => kind === "customerOrder")!.at);
+    const userOrder = String(summary.customerOrders + 1).padStart(8, "0");
+    await expect(current.customerOrderService.get(userOrder)).rejects.toMatchObject({ code: "CUSTOMER_ORDER_NOT_FOUND" });
+    // A second seed would refuse: the dataset is complete.
+    await expect(seedTestTenantDataset(current, TODAY)).rejects.toThrow("Incomplete demonstration seed: materials");
     const events = await current.em.find(GlobalAuditEvent, { action: "tenants.tenant.reset" });
     expect(events).toMatchObject([{ before: { generation: 1, readOnly }, after: { generation: 2, readOnly }, actorUsername: "admin", sessionId: "session-admin" }]);
     expect(await orm.em.getConnection().execute("pragma foreign_key_check")).toEqual([]);
     expect(await (await scope("prod")).cradle.tenantService.get("prod")).toEqual({ code: "prod", name: "Prod", generation: 1, readOnly: false });
   });
 
-  it.each(["locations", "BOMs", "customer orders"] as const)("rolls back deletion and partially seeded %s, including both flags and all audits (TEN-027)", async (kind) => {
+  it("writes the committed configuration's two years for today (TEN-001, TEN-022)", async () => {
+    dataset.full = true;
+    const { masters, summary, timeline } = generated();
+
+    expect(await reset()).toMatchObject({ generation: 2 });
+
+    const current = (await scope()).cradle;
+    expect(await current.em.count(Material, {})).toBe(masters.materials.length);
+    expect(await current.em.count(CustomerOrder, {})).toBe(summary.customerOrders);
+    expect(await current.em.count(ProductionCompletion, {})).toBe(summary.completions);
+    expect(await current.em.count(StockMovement, {})).toBe(summary.movements);
+    expect(await current.em.count(TenantAuditEvent, {})).toBe(0);
+    const first = await current.customerOrderService.get("00000001");
+    expect(first.createdAt.toISOString()).toBe(timeline.find(({ kind }) => kind === "customerOrder")!.at);
+  }, 300_000);
+
+  it.each(["locations", "BOMs", "shipments"] as const)("rolls back deletion and partially seeded %s, including both flags and all audits (TEN-027)", async (kind) => {
     await populate();
     await container.createScope().cradle.tenantService.setReadOnly("test", true, actor);
     const scoped = await scope();
     const spies = {
       locations: () => vi.spyOn(scoped.cradle.locationService, "seedDemo"),
       BOMs: () => vi.spyOn(scoped.cradle.bomService, "seedDemo"),
-      "customer orders": () => vi.spyOn(scoped.cradle.customerOrderService, "seedFixtures"),
+      // Mid-timeline: masters, openings and the first customer orders are already written.
+      shipments: () => vi.spyOn(ShipmentService.prototype, "seedDemo"),
     };
     spies[kind]().mockRejectedValueOnce(new Error("injected seed failure"));
     const before = await snapshot();
@@ -149,7 +188,7 @@ describe("atomic Test reset", () => {
 });
 
 
-describe("keyed reset", () => {
+describe("keyed reset", { timeout: 60_000 }, () => {
   async function request(generation: number | null, key = "reset", body: unknown = {}) {
     const scoped = await scope();
     const fingerprint = await fingerprintOf({ method: "POST", path: "/api/tenants/test/reset", body });
@@ -198,7 +237,7 @@ describe("keyed reset", () => {
   });
 });
 
-describe("reset and an in-flight write on independent SQLite connections (TEN-026)", () => {
+describe("reset and an in-flight write on independent SQLite connections (TEN-026)", { timeout: 60_000 }, () => {
   it("retries reset after another write commits first, removing that completed old-generation write", async () => {
     await populate();
     const other = await initOrm({ databasePath: orm.config.get("dbName") });

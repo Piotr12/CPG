@@ -7,24 +7,22 @@ import { z } from "zod";
 import { loadConfig } from "../../config";
 import { getContainer } from "../../container/container";
 import { migrateDatabase, toDbOptions } from "../../database";
-import { DEMO_CUSTOMERS } from "../../domain/customers/demo-customers";
-import { DEMO_LOCATIONS } from "../../domain/locations/demo-locations";
-import { DEMO_SUPPLIERS } from "../../domain/suppliers/demo-suppliers";
 import { VERSION_CONFLICT } from "../../http/errors";
 import { tenantServerAction } from "../../http/tenant-server-action";
 import type { AuditActor } from "../audit/actor";
 import { CustomerService } from "../customers/customer.service";
 import { LocationService } from "../locations/location.service";
 import { SupplierService } from "../suppliers/supplier.service";
+import { FIXTURE_CUSTOMERS, FIXTURE_LOCATIONS, FIXTURE_SUPPLIERS } from "../../../../../tests/setup/demo-fixtures";
 
 /** Who the tests act as: the admin, on the UI. */
 const ACTOR: AuditActor = { userId: "admin-id", username: "admin", sessionId: "admin-session", channel: "ui", token: null };
 
 /** Each kind, with what differs: its service, audit names, error-code prefix and demo list. */
 const KINDS = [
-  { Service: LocationService, subjectType: "Location", prefix: "locations.location", code: "LOCATION", noun: "location", demo: DEMO_LOCATIONS },
-  { Service: CustomerService, subjectType: "Customer", prefix: "customers.customer", code: "CUSTOMER", noun: "customer", demo: DEMO_CUSTOMERS },
-  { Service: SupplierService, subjectType: "Supplier", prefix: "suppliers.supplier", code: "SUPPLIER", noun: "supplier", demo: DEMO_SUPPLIERS },
+  { Service: LocationService, subjectType: "Location", prefix: "locations.location", code: "LOCATION", noun: "location", demo: FIXTURE_LOCATIONS },
+  { Service: CustomerService, subjectType: "Customer", prefix: "customers.customer", code: "CUSTOMER", noun: "customer", demo: FIXTURE_CUSTOMERS },
+  { Service: SupplierService, subjectType: "Supplier", prefix: "suppliers.supplier", code: "SUPPLIER", noun: "supplier", demo: FIXTURE_SUPPLIERS },
 ] as const;
 
 /** A fresh, migrated database: audit entries can't be deleted, so each test starts empty. */
@@ -237,8 +235,8 @@ describe.each(KINDS)("$Service.name", ({ Service, subjectType, prefix, code, nou
 
   describe("seedDemo", () => {
     it("creates the demo records with consecutive IDs in an empty tenant, unaudited, and nothing the second time", async () => {
-      expect(await service("test").seedDemo()).toBe(demo.length);
-      expect(await service("test").seedDemo()).toBe(0);
+      expect(await service("test").seedDemo(demo)).toBe(demo.length);
+      expect(await service("test").seedDemo(demo)).toBe(0);
 
       expect((await service("test").list()).map(({ id, name }) => `${id} ${name}`)).toEqual(
         demo.map((name, index) => `0000000${index + 1} ${name}`),
@@ -262,7 +260,7 @@ describe.each(KINDS)("$Service.name", ({ Service, subjectType, prefix, code, nou
       await em.findOneOrFail(Tenant, { code: "test" });
       await orm.em.fork().nativeUpdate(Tenant, { code: "test" }, { readOnly: true });
 
-      expect(await service("test", em).seedDemo()).toBe(0);
+      expect(await service("test", em).seedDemo(demo)).toBe(0);
       expect(await service("test").list()).toEqual([]);
     });
   });

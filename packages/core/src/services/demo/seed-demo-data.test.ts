@@ -11,7 +11,8 @@ import { generateTestTenantDataset } from "../../domain/demo/generate-dataset";
 import { Ledger } from "../../domain/demo/ledger";
 import { TEST_TENANT_CONFIG, type TestTenantConfig } from "../../domain/demo/test-tenant-config.schema";
 import { formatDecimal, parseDecimal } from "../../domain/quantities/decimal";
-import { DATASET_KINDS, DEMO_KINDS, demoSeeders, isUntouchedTest, seedResetDemoData, seedTestTenantDataset } from "./seed-demo-data";
+import { DATASET_KINDS, isUntouchedTest, seedTestTenantDataset } from "./seed-demo-data";
+import { FIXTURE_MATERIALS } from "../../../../../tests/setup/demo-fixtures";
 
 const TODAY = new Date("2026-10-21T10:00:00.000Z");
 /** The committed catalogue over two history months: every rule of the dataset, at a fraction of its size. */
@@ -29,14 +30,6 @@ async function testScope() {
   orm = await initOrm(toDbOptions(config));
   return (await scopeForTenant(createAppContainer(config, orm), "test")).cradle;
 }
-
-it("runs the complete ordered fixture set and refuses an incomplete second seed", async () => {
-  const cradle = await testScope();
-  expect(Object.keys(demoSeeders(cradle))).toEqual(DEMO_KINDS);
-  await seedResetDemoData(cradle);
-  expect((await cradle.bomService.list()).length).toBe(demoSeeders(cradle).BOMs.expected);
-  await expect(seedResetDemoData(cradle)).rejects.toThrow("Incomplete demonstration seed: materials");
-});
 
 describe("seedTestTenantDataset", () => {
   it("writes the generated dataset through the services: every kind's count, the replayed balances, no audit (TEN-001)", async () => {
@@ -106,7 +99,7 @@ describe("seedTestTenantDataset", () => {
 
   it("refuses a Test that already has a master kind, writing nothing more of it", async () => {
     const cradle = await testScope();
-    await cradle.materialService.seedDemo();
+    await cradle.materialService.seedDemo(FIXTURE_MATERIALS);
     cradle.em.clear();
 
     await expect(seedTestTenantDataset(cradle, TODAY, REDUCED)).rejects.toThrow("Incomplete demonstration seed: materials");

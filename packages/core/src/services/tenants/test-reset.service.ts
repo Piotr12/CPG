@@ -5,21 +5,34 @@ import { inRequestSavepoint, inRequestTransaction, retryingStaleSnapshot } from 
 import { MAX_DATASET_GENERATION } from "../../validators/tenants/test-reset.schema";
 import type { AuditActor } from "../audit/actor";
 import { recordGlobalAudit } from "../audit/audit-recorder";
-import { seedResetDemoData, type DemoServices } from "../demo/seed-demo-data";
+import { seedTestTenantDataset, type DatasetServices } from "../demo/seed-demo-data";
 import type { TenantInfo, TenantService } from "./tenant.service";
 
-interface Deps extends DemoServices { em: EntityManager; tenantService: TenantService }
+interface Deps extends DatasetServices { tenantService: TenantService }
 
-/** The admin's atomic Test reset. Callers authorize; the service owns transaction and scope safety. */
+/**
+ * The admin's atomic Test reset: deletes Test's data, then writes the dataset generated for today
+ * (spec `2026-10-21--0718UTC-test-tenant-dataset`), so IDs restart at 00000001. Callers authorize;
+ * the service owns transaction and scope safety.
+ */
 export class TestResetService {
   private readonly em: EntityManager;
   private readonly tenantService: TenantService;
-  private readonly seeds: DemoServices;
+  private readonly seeds: DatasetServices;
 
-  constructor({ em, tenantService, materialService, locationService, customerService, supplierService, planningParameterService, safetyStockTargetService, bomService, forecastService, customerOrderService, stockService, purchaseRequisitionService, purchaseOrderService, productionOrderService }: Deps) {
+  // Each dependency by name: taking the rest of a PROXY cradle would resolve every registration (lesson of 2026-10-20).
+  constructor({
+    em, tenantService, materialService, locationService, customerService, supplierService, planningParameterService, safetyStockTargetService,
+    bomService, forecastService, stockService, customerOrderService, shipmentService, goodsIssueService, purchaseRequisitionService,
+    purchaseOrderService, goodsReceiptService, productionOrderService, productionCompletionService,
+  }: Deps) {
     this.em = em;
     this.tenantService = tenantService;
-    this.seeds = { materialService, locationService, customerService, supplierService, planningParameterService, safetyStockTargetService, bomService, forecastService, customerOrderService, stockService, purchaseRequisitionService, purchaseOrderService, productionOrderService };
+    this.seeds = {
+      em, materialService, locationService, customerService, supplierService, planningParameterService, safetyStockTargetService, bomService,
+      forecastService, stockService, customerOrderService, shipmentService, goodsIssueService, purchaseRequisitionService, purchaseOrderService,
+      goodsReceiptService, productionOrderService, productionCompletionService,
+    };
   }
 
   async reset(expectedGeneration: number, actor: AuditActor): Promise<TenantInfo> {
@@ -37,7 +50,8 @@ export class TestResetService {
     await this.em.nativeUpdate(Tenant, { code: "test" }, { readOnly: true });
     await resetTestData(this.em);
     await this.em.nativeUpdate(Tenant, { code: "test" }, { generation: before.generation + 1, readOnly: false });
-    await seedResetDemoData(this.seeds);
+    // The dataset generated for today, through the services; any refusal or shortfall throws and the savepoint undoes it all.
+    await seedTestTenantDataset(this.seeds, new Date());
     await this.em.nativeUpdate(Tenant, { code: "test" }, { readOnly: before.readOnly });
     // Seed reads may have cached the temporary writable metadata; always return its fresh state.
     const after = await this.tenantService.currentState("test");

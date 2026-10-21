@@ -23,7 +23,6 @@ import { z } from "zod";
 import { loadConfig } from "../../config";
 import { getContainer } from "../../container/container";
 import { migrateDatabase, toDbOptions } from "../../database";
-import { DEMO_BOMS } from "../../domain/boms/demo-boms";
 import { tenantServerAction } from "../../http/tenant-server-action";
 import {
   DUPLICATE_COMPONENT_MESSAGE,
@@ -37,6 +36,7 @@ import {
 import type { AuditActor } from "../audit/actor";
 import { MaterialService } from "../materials/material.service";
 import { BOM_ID_RACE, BomService, type ComponentLine, type NewBom } from "./bom.service";
+import { FIXTURE_BOMS } from "../../../../../tests/setup/demo-fixtures";
 
 /** Who the tests act as: the admin, on the UI. */
 const ACTOR: AuditActor = { userId: "admin-id", username: "admin", sessionId: "admin-session", channel: "ui", token: null };
@@ -625,8 +625,8 @@ describe("BomService", () => {
     });
 
     it("creates the demo BOMs once in Test, unaudited, with the converted lines (TEN-001, MAT-019)", async () => {
-      expect(await service("test").seedDemo()).toBe(DEMO_BOMS.length);
-      expect(await service("test").seedDemo()).toBe(0);
+      expect(await service("test").seedDemo(FIXTURE_BOMS)).toBe(FIXTURE_BOMS.length);
+      expect(await service("test").seedDemo(FIXTURE_BOMS)).toBe(0);
 
       const boms = await service("test").list();
       expect(boms.map(({ id, output, priority }) => [id, output, priority])).toEqual([
@@ -690,7 +690,7 @@ describe("BomService", () => {
     ])("skips a demo BOM that breaks a rule in an edited Test tenant, the next taking the next ID: %s", async (_case, edit, expected) => {
       await edit(scopedEm("test"));
 
-      expect(await service("test").seedDemo()).toBe(expected.length);
+      expect(await service("test").seedDemo(FIXTURE_BOMS)).toBe(expected.length);
       expect((await service("test").list()).map(({ id, output, priority }) => [id, output, priority])).toEqual(expected);
     });
 
@@ -713,14 +713,14 @@ describe("BomService", () => {
       vi.spyOn(em, "transactional")
         .mockImplementationOnce(async (callback) => callback(em))
         .mockRejectedValueOnce(new Error("disk full"));
-      await expect(service("test", em).seedDemo()).rejects.toThrow("disk full");
+      await expect(service("test", em).seedDemo(FIXTURE_BOMS)).rejects.toThrow("disk full");
     });
 
     it("seeds nothing into a read-only Test", async () => {
       const em = orm.em.fork();
       await em.nativeUpdate(Tenant, { code: "test" }, { readOnly: true });
 
-      expect(await service("test").seedDemo()).toBe(0);
+      expect(await service("test").seedDemo(FIXTURE_BOMS)).toBe(0);
     });
   });
 });

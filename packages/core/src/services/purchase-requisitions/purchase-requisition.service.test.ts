@@ -10,7 +10,6 @@ import {
   PurchaseRequisition,
   Supplier,
   selectTenant,
-  Tenant,
   TenantAuditEvent,
   UniqueConstraintViolationException,
   type EntityManager,
@@ -20,7 +19,6 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadConfig } from "../../config";
 import { migrateDatabase, toDbOptions } from "../../database";
-import { DEMO_REQUISITIONS } from "../../domain/purchasing/demo-purchasing";
 import { VERSION_CONFLICT } from "../../http/errors";
 import {
   ENTERED_QUANTITY_MESSAGE,
@@ -300,56 +298,6 @@ describe("PurchaseRequisitionService", () => {
       await service().create(NEW, ACTOR);
 
       await expect(service("test").setRequiredDate("00000001", "2027-04-01", 1, ACTOR)).rejects.toMatchObject({ code: "REQUISITION_NOT_FOUND" });
-    });
-  });
-
-  describe("seedFixtures", () => {
-    async function seedDemoMasters() {
-      const em = scopedEm("test");
-      em.create(Material, { code: "00000001", type: "raw", description: "Steel sheet", baseUnit: "kg" });
-      const bolt = em.create(Material, { code: "00000002", type: "raw", description: "Bolt M8", baseUnit: "each" });
-      em.create(MaterialConversion, { material: bolt, unit: "case", numerator: "12", denominator: "1" });
-      em.create(Location, { code: "00000001", name: "Main plant" });
-      await em.flush();
-    }
-
-    it("creates the demo requisitions in an empty tenant, unaudited, and nothing the second time", async () => {
-      await seedDemoMasters();
-
-      expect(await service("test").seedFixtures()).toBe(DEMO_REQUISITIONS.length);
-      expect(await service("test").seedFixtures()).toBe(0);
-      expect((await service("test").list()).map(({ id, quantity }) => [id, quantity])).toEqual([
-        ["00000001", "100.000000"],
-        ["00000002", "60.000000"],
-      ]);
-      expect(await entries("purchase-requisitions.purchase-requisition.created", "test")).toEqual([]);
-    });
-
-    it("skips an entry whose material is missing and gives the next the next ID", async () => {
-      const em = scopedEm("test");
-      const bolt = em.create(Material, { code: "00000002", type: "raw", description: "Bolt M8", baseUnit: "each" });
-      em.create(MaterialConversion, { material: bolt, unit: "case", numerator: "12", denominator: "1" });
-      em.create(Location, { code: "00000001", name: "Main plant" });
-      await em.flush();
-
-      expect(await service("test").seedFixtures()).toBe(1);
-      expect((await service("test").list()).map(({ id, material }) => [id, material])).toEqual([["00000001", "00000002"]]);
-    });
-
-    it("lets a failure that isn't a rule through", async () => {
-      await seedDemoMasters();
-      const em = scopedEm("test");
-      vi.spyOn(em, "transactional")
-        .mockImplementationOnce(async (callback) => callback(em))
-        .mockRejectedValueOnce(new Error("disk full"));
-      await expect(service("test", em).seedFixtures()).rejects.toThrow("disk full");
-    });
-
-    it("seeds nothing into a read-only Test (R05)", async () => {
-      await seedDemoMasters();
-      await orm.em.fork().nativeUpdate(Tenant, { code: "test" }, { readOnly: true });
-
-      expect(await service("test").seedFixtures()).toBe(0);
     });
   });
 

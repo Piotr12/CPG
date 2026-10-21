@@ -8,12 +8,11 @@ import {
   type EntityManager,
   type Material,
 } from "@cpg/db";
-import { nextSequentialId, formatSequentialId } from "../../domain/business-ids/sequential-id";
+import { nextSequentialId } from "../../domain/business-ids/sequential-id";
 import { documentState, outstandingQuantity as unresolvedQuantity, resolveLines as resolveLifecycle, type DocumentState, type LifecycleAction } from "../../domain/document-lifecycle/lifecycle";
 import { selectLifecycleLines } from "../../domain/document-lifecycle/select-lines";
-import { DEMO_ORDERS } from "../../domain/purchasing/demo-purchasing";
 import { addQuantities, afterConversion, fitsOutstanding, outstandingQuantity } from "../../domain/purchasing/requisition-quantity";
-import { AppError, ConflictError, ValidationError, versionConflict, type FieldErrors } from "../../http/errors";
+import { ConflictError, ValidationError, versionConflict, type FieldErrors } from "../../http/errors";
 import {
   LINE_NO_SUCH_LINE_MESSAGE,
   LINE_LOCATION_MESSAGE,
@@ -30,7 +29,6 @@ import { assertOrderOpen, findOrder, orderLineState } from "./order-records";
 import { findRequisition, requisitionEntry, requisitionSnapshot } from "../purchase-requisitions/requisition-records";
 import { findActiveSupplier } from "../suppliers/find-supplier";
 import type { PostingContext } from "../stock/stock-posting";
-import { isScopeReadOnly } from "../tenants/tenant.service";
 
 /** One line of an order as the screens and the API show it. `line` is its 1-based number. */
 export interface OrderLineView {
@@ -238,36 +236,6 @@ export class PurchaseOrderService {
       if (error instanceof OptimisticLockError) throw versionConflict();
       throw error;
     }
-  }
-
-  /**
-   * Creates the demonstration orders (D06) when the tenant has none, and returns how many. Each is
-   * built through the same rules as a save, in its own savepoint: one that breaks a rule here (a
-   * demo supplier, location or material missing or inactive in an edited Test tenant, a requisition
-   * already converted) is skipped. Their requisition is the demo requisition of that position. Not
-   * audited, like the other demo records. Seeds nothing into a read-only tenant (R05).
-   */
-  async seedFixtures(): Promise<number> {
-    return this.em.transactional(async (em) => {
-      if ((await em.count(PurchaseOrder, {})) > 0 || (await isScopeReadOnly(em))) return 0;
-      let created = 0;
-      for (const demo of DEMO_ORDERS) {
-        const lines = demo.lines.map(({ requisition, ...line }) => ({
-          ...line,
-          requisition: requisition === undefined ? null : formatSequentialId(requisition),
-        }));
-        try {
-          await em.transactional(async (savepoint) => {
-            await insertOrder(savepoint, { ...demo, lines }, { kind: "seed", at: new Date() });
-            await savepoint.flush();
-          });
-          created += 1;
-        } catch (error) {
-          if (!(error instanceof AppError)) throw error;
-        }
-      }
-      return created;
-    });
   }
 }
 

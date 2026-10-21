@@ -4,13 +4,13 @@ import {
   UniqueConstraintViolationException,
   type EntityManager,
 } from "@cpg/db";
-import { DEMO_SAFETY_STOCK_TARGETS, type DemoSafetyStockTarget } from "../../domain/safety-stock/demo-safety-stock-targets";
+import type { DemoSafetyStockTarget } from "../../domain/demo/generate-dataset";
 import { ConflictError, NotFoundError, versionConflict } from "../../http/errors";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
-import { activeDemoReferences, isUntouchedKind } from "../demo/demo-references";
 import { findActiveLocation, findLocation } from "../locations/find-location";
 import { findActiveMaterial, findMaterial } from "../materials/find-material";
+import { isScopeReadOnly } from "../tenants/tenant.service";
 
 /**
  * One safety-stock target, as the screens and the API show it: material and location business IDs,
@@ -119,24 +119,20 @@ export class SafetyStockTargetService {
   }
 
   /**
-   * Creates the demonstration targets (D06) while the tenant's targets are untouched (none, and none
-   * ever audited), and returns how many. A target whose material or location is missing or inactive
-   * is skipped. Not audited, like the other demo records.
+   * Creates the generated dataset's targets `rows` when the tenant has none, and returns how many.
+   * Seeds nothing into a read-only tenant (R05). A row whose material or location is missing or
+   * inactive refuses the whole seed, as a save would. Not audited, like the other demo records.
    */
-  async seedDemo(rows: readonly DemoSafetyStockTarget[] = DEMO_SAFETY_STOCK_TARGETS): Promise<number> {
+  async seedDemo(rows: readonly DemoSafetyStockTarget[]): Promise<number> {
     return this.em.transactional(async (em) => {
-      if (!(await isUntouchedKind(em, await em.count(SafetyStockTarget, {}), "safety-stock"))) return 0;
-      const references = await activeDemoReferences(em, rows);
-      let created = 0;
+      if ((await em.count(SafetyStockTarget, {})) > 0 || (await isScopeReadOnly(em))) return 0;
       for (const { effectiveFrom, quantity, ...demo } of rows) {
-        const material = references.material.get(demo.material);
-        const location = references.location.get(demo.location);
-        if (!material || !location) continue;
+        const material = await findActiveMaterial(em, demo.material);
+        const location = await findActiveLocation(em, demo.location);
         em.create(SafetyStockTarget, { material, location, effectiveFrom, quantity });
-        created += 1;
       }
       await em.flush();
-      return created;
+      return rows.length;
     });
   }
 

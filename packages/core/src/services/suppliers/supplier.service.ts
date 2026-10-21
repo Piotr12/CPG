@@ -1,5 +1,4 @@
 import { Supplier, type EntityManager } from "@cpg/db";
-import { DEMO_SUPPLIERS } from "../../domain/suppliers/demo-suppliers";
 import type { AuditActor } from "../audit/actor";
 import { NamedRecords, type NamedRecordChanges, type NamedRecordView } from "../named-records/named-records";
 
@@ -22,7 +21,6 @@ export class SupplierService {
       noun: "supplier",
       actionPrefix: "suppliers.supplier",
       codePrefix: "SUPPLIER",
-      demoNames: DEMO_SUPPLIERS,
     });
   }
 
@@ -42,7 +40,7 @@ export class SupplierService {
     return this.records.update(id, changes, version, actor);
   }
 
-  seedDemo(rows?: readonly string[], at?: Date): Promise<number> {
+  seedDemo(rows: readonly string[], at?: Date): Promise<number> {
     return this.records.seedDemo(rows, at);
   }
 }

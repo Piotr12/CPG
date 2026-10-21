@@ -12,7 +12,6 @@ import {
   PurchaseRequisition,
   selectTenant,
   Supplier,
-  Tenant,
   TenantAuditEvent,
   UniqueConstraintViolationException,
   type EntityManager,
@@ -22,7 +21,6 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadConfig } from "../../config";
 import { migrateDatabase, toDbOptions } from "../../database";
-import { DEMO_ORDERS } from "../../domain/purchasing/demo-purchasing";
 import { UNIT_NOT_CONVERTIBLE_MESSAGE } from "../../validators/boms/bom-fields.schema";
 import {
   LINE_LOCATION_MESSAGE,
@@ -652,60 +650,6 @@ describe("PurchaseOrderService", () => {
       await em.flush();
 
       await expect(service().create(DIRECT, ACTOR)).rejects.toMatchObject({ code: "ORDER_IDS_EXHAUSTED", status: 409 });
-    });
-  });
-
-  describe("seedFixtures", () => {
-    /** The demo masters the demo documents name: the demo materials 1…3 with their conversions, a location and a supplier. */
-    async function seedDemoMasters() {
-      const em = scopedEm("test");
-      em.create(Material, { code: "00000001", type: "raw", description: "Steel sheet 2 mm", baseUnit: "kg" });
-      const bolt = em.create(Material, { code: "00000002", type: "raw", description: "Bolt M8", baseUnit: "each" });
-      em.create(MaterialConversion, { material: bolt, unit: "case", numerator: "12", denominator: "1" });
-      em.create(Material, { code: "00000003", type: "raw", description: "Paint, red", baseUnit: "l" });
-      em.create(Location, { code: "00000001", name: "Main plant" });
-      em.create(Supplier, { code: "00000001", name: "Steel Service" });
-      await em.flush();
-    }
-
-    it("creates the demo orders after the requisitions they convert, unaudited, and nothing the second time", async () => {
-      await seedDemoMasters();
-      await new PurchaseRequisitionService({ em: scopedEm("test") }).seedFixtures();
-
-      expect(await service("test").seedFixtures()).toBe(DEMO_ORDERS.length);
-      expect(await service("test").seedFixtures()).toBe(0);
-
-      const [order] = await service("test").list();
-      expect(order.lines.map(({ material, quantity, requisition }) => [material, quantity, requisition])).toEqual([
-        ["00000001", "60.000000", "00000001"],
-        ["00000003", "20.000000", null],
-      ]);
-      expect(await new PurchaseRequisitionService({ em: scopedEm("test") }).get("00000001")).toMatchObject({ converted: "60.000000", status: "open" });
-      expect(await entries("purchase-orders.purchase-order.created", "test")).toEqual([]);
-      expect(await entries("purchase-requisitions.purchase-requisition.converted", "test")).toEqual([]);
-    });
-
-    it("skips an order that breaks a rule here, such as a missing requisition", async () => {
-      await seedDemoMasters();
-
-      expect(await service("test").seedFixtures()).toBe(0);
-      expect(await service("test").list()).toEqual([]);
-    });
-
-    it("lets a failure that isn't a rule through", async () => {
-      await seedDemoMasters();
-      const em = scopedEm("test");
-      vi.spyOn(em, "transactional")
-        .mockImplementationOnce(async (callback) => callback(em))
-        .mockRejectedValueOnce(new Error("disk full"));
-      await expect(service("test", em).seedFixtures()).rejects.toThrow("disk full");
-    });
-
-    it("seeds nothing into a read-only Test (R05)", async () => {
-      await seedDemoMasters();
-      await orm.em.fork().nativeUpdate(Tenant, { code: "test" }, { readOnly: true });
-
-      expect(await service("test").seedFixtures()).toBe(0);
     });
   });
 

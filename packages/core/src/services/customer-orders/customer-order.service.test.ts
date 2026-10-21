@@ -2,7 +2,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import {
-  Customer, CustomerOrder, CustomerOrderLine, Location, Material, MaterialConversion, Tenant, TenantAuditEvent,
+  Customer, CustomerOrder, CustomerOrderLine, Location, Material, MaterialConversion, TenantAuditEvent,
   initOrm, selectTenant, OptimisticLockError, type Orm, type EntityManager, type TenantCode,
 } from "@cpg/db";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -308,15 +308,6 @@ describe("CustomerOrderService", () => {
     expect(await audit()).toEqual(expect.arrayContaining([expect.objectContaining({ action: "customer-orders.customer-order.updated", after: expect.objectContaining({ status: "completed" }) })]));
   });
 
-  it("seeds one Test example once, skips missing/inactive references and read-only scopes", async () => {
-    expect(await service().seedFixtures()).toBe(1); expect(await service().seedFixtures()).toBe(0); expect(await audit()).toEqual([]);
-    expect((await service().list())[0].lines).toHaveLength(2);
-    const scope = em("prod"); (await scope.findOneOrFail(Tenant, { code: "prod" })).readOnly = true; await scope.flush();
-    expect(await service(em("prod")).seedFixtures()).toBe(0);
-    const scope2 = em("prod"); (await scope2.findOneOrFail(Tenant, { code: "prod" })).readOnly = false;
-    (await scope2.findOneOrFail(Customer, { code: "00000001" })).active = false; await scope2.flush();
-    expect(await service(em("prod")).seedFixtures()).toBe(0);
-  });
   it("seeds a dated, unaudited order from the seed path under the same rules as create", async () => {
     const at = new Date("2025-06-15T08:30:00Z");
     const seeded = await service().seedDemo(input(), at);
@@ -350,7 +341,8 @@ describe("CustomerOrderService", () => {
     await expect(service().create(input(), actor)).rejects.toThrow("material_conversion");
     expect(await service().list()).toEqual([]);
     await orm.em.getConnection().execute("create trigger refuse_order before insert on customer_order begin select raise(abort, 'storage unavailable'); end");
-    await expect(service().seedFixtures()).rejects.toThrow("storage unavailable");
+    const baseUnitOnly = { customer: "00000001", location: "00000001", lines: [{ material: "00000005", quantity: "60", unit: "each", requiredDate: "2027-01-04" }] };
+    await expect(service().seedDemo(baseUnitOnly, new Date("2025-06-15T08:30:00Z"))).rejects.toThrow("storage unavailable");
     expect(await service().list()).toEqual([]); expect(await audit()).toEqual([]);
   });
 

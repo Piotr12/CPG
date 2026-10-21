@@ -8,7 +8,7 @@ import {
   type EntityManager,
 } from "@cpg/db";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
-import { DEMO_BOMS, type DemoBom } from "../../domain/boms/demo-boms";
+import type { DemoBom } from "../../domain/demo/generate-dataset";
 import { findCycle, type CycleStep, type RecipeEdge } from "../../domain/boms/find-cycle";
 import { findPriorityConflict, type PriorityConflict } from "../../domain/boms/priority-conflict";
 import { isSameRecipe } from "../../domain/boms/recipe-equality";
@@ -218,13 +218,13 @@ export class BomService {
   }
 
   /**
-   * Creates the demonstration BOMs (D06) when the tenant has none, and returns how many. Each is
-   * built through the same rules as a save, in its own savepoint: one that breaks a rule here (a
-   * demo material retyped, deactivated, or its conversion removed in an edited Test tenant) is
-   * skipped, and the next takes the next free ID. Not audited, like the other demo records. Seeds
-   * nothing into a read-only tenant (R05). `at`, when given, is the BOM's and its first revision's `createdAt`.
+   * Creates the generated dataset's BOMs `rows` when the tenant has none, and returns how many. Each
+   * is built through the same rules as a save, in its own savepoint: one that breaks a rule here (a
+   * material missing, inactive or without the row's unit) is skipped, and the next takes the next
+   * free ID, so the dataset seeder sees the shortfall in the count. Not audited, like the other demo
+   * records. Seeds nothing into a read-only tenant (R05). `at`, when given, is the BOM's and its first revision's `createdAt`.
    */
-  async seedDemo(rows: readonly DemoBom[] = DEMO_BOMS, at?: Date): Promise<number> {
+  async seedDemo(rows: readonly DemoBom[], at?: Date): Promise<number> {
     return this.em.transactional(async (em) => {
       if ((await em.count(Bom, {})) > 0 || (await isScopeReadOnly(em))) return 0;
       let created = 0;

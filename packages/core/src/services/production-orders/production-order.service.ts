@@ -1,18 +1,16 @@
 import { ProductionCompletion, ProductionOrder, OptimisticLockError, UniqueConstraintViolationException, type EntityManager } from "@cpg/db";
 import { documentState, resolveLines as resolveLifecycle, type LifecycleAction } from "../../domain/document-lifecycle/lifecycle";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
-import { DEMO_PRODUCTION_ORDER } from "../../domain/production-orders/demo-production-orders";
 import { productionStatus } from "../../domain/production-orders/production-completion";
 import { plannedStart } from "../../domain/production-orders/production-planning";
 import { parseDecimal } from "../../domain/quantities/decimal";
-import { AppError, ConflictError, ValidationError, versionConflict } from "../../http/errors";
+import { ConflictError, ValidationError, versionConflict } from "../../http/errors";
 import { parseInput } from "../../http/parse-input";
 import { productionOrderCreateSchema, productionOrderOptionsSchema, productionOrderListSchema, productionOrderUpdateSchema, PRODUCTION_PAGE_SIZE,
   type ProductionOrderInput, type ProductionOptionsInput, type ProductionOrderChanges } from "../../validators/production-orders/production-order.schema";
 import { recordTenantAudit } from "../audit/audit-recorder";
 import type { AuditActor } from "../audit/actor";
 import { convertToBaseQuantity } from "../materials/base-quantity";
-import { isScopeReadOnly } from "../tenants/tenant.service";
 import type { PostingContext } from "../stock/stock-posting";
 import { findProductionOrder, PRODUCTION_POPULATE, productionOrderView, productionSnapshot, productionSubject } from "./production-order-records";
 import { componentShortages, recipeComponents, resolveProductionOptions } from "./production-recipes";
@@ -127,20 +125,6 @@ export class ProductionOrderService {
       if (error instanceof OptimisticLockError) throw versionConflict();
       throw error;
     }
-  }
-
-  /** Startup tolerates an edited Test dataset; reset verifies the shared registry's expected count. */
-  async seedFixtures(): Promise<number> {
-    return this.em.transactional(async (em) => {
-      if ((await em.count(ProductionOrder, {})) > 0 || await isScopeReadOnly(em)) return 0;
-      try {
-        await em.transactional(async (savepoint) => { await insertOrder(savepoint, DEMO_PRODUCTION_ORDER); await savepoint.flush(); });
-        return 1;
-      } catch (error) {
-        if (error instanceof AppError) return 0;
-        throw error;
-      }
-    });
   }
 }
 async function insertOrder(em: EntityManager, input: ProductionOrderInput, at?: Date) {

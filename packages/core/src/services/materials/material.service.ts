@@ -10,7 +10,7 @@ import {
   type EntityManager,
   type MaterialType,
 } from "@cpg/db";
-import { DEMO_MATERIALS, type DemoMaterial } from "../../domain/materials/demo-materials";
+import type { DemoMaterial } from "../../domain/demo/generate-dataset";
 import { nextMaterialCode } from "../../domain/materials/material-code";
 import { formatDecimal, inverseFactor, parseDecimal } from "../../domain/quantities/decimal";
 import { AppError, ConflictError, NotFoundError, versionConflict } from "../../http/errors";
@@ -253,13 +253,13 @@ export class MaterialService {
   }
 
   /**
-   * Creates the demonstration materials (D06) when the tenant has none, and returns how many. Not
-   * audited (spec Q9): it is an installation step, like the tenants the migration inserts. Each
+   * Creates the generated dataset's materials `rows` when the tenant has none, and returns how many.
+   * Not audited (spec Q9): it is an installation step, like the tenants the migration inserts. Each
    * material is flushed before the next reads the highest ID, so they get consecutive IDs. Seeds
-   * nothing into a read-only tenant (R05): its flag is read in the seed's own transaction. The
-   * generated dataset passes its own `rows` and the seed's date `at`, which becomes each material's `createdAt`.
+   * nothing into a read-only tenant (R05): its flag is read in the seed's own transaction. `at`,
+   * when given, becomes each material's `createdAt`.
    */
-  async seedDemo(rows: readonly DemoMaterial[] = DEMO_MATERIALS, at?: Date): Promise<number> {
+  async seedDemo(rows: readonly DemoMaterial[], at?: Date): Promise<number> {
     return this.em.transactional(async (em) => {
       if ((await em.count(Material, {})) > 0 || (await isScopeReadOnly(em))) return 0;
       for (const { conversions, ...fields } of rows) {
