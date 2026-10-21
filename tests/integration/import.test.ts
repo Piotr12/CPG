@@ -31,7 +31,7 @@ const ready = (element: string) =>
 const button = (name: string) => `[...document.querySelectorAll("main button")].find((b) => b.textContent.trim() === ${JSON.stringify(name)})`;
 const FILE_INPUT = `document.querySelector("main input[type=file]")`;
 
-// The Import screen (spec .ai/specs/2026-10-20--0908UTC-master-data-bom-import.md), in Prod.
+// The Import screen (spec .ai/specs/implemented/2026-10-20--0908UTC-master-data-bom-import.md), in Prod.
 describe("the Import screen", () => {
   const dir = mkdtempSync(path.join(tmpdir(), "cpg-import-ui-"));
   let admin: Browser;

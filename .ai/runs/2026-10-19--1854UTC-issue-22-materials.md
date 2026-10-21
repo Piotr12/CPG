@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-19 18:54 UTC
 **Agent:** Claude Code (Opus 5.5) via cezar, `om-auto-fix-issue 22` → `om-auto-write-spec 22` → `om-spec-writing --autonomous`
-**Spec:** `.ai/specs/2026-10-19--1858UTC-materials.md` (written in this run)
+**Spec:** `.ai/specs/implemented/2026-10-19--1858UTC-materials.md` (written in this run)
 **Status:** done (spec PR #49 draft; implementation on #50)
 
 ## Goal
@@ -27,7 +27,7 @@
 - 19:09–19:55 Implemented on `feat/materials` (#50); the plan and its deviations are in `.ai/pipeline/runs/2026-10-19--1909UTC-materials.md`. A fresh-context code review approved, and its six Low findings were fixed. Released the issue lock.
 
 ## Changes
-- `.ai/specs/2026-10-19--1858UTC-materials.md` (the spec) and `.ai/specs/assets/materials/` (one current screenshot, three mockups with their HTML).
+- `.ai/specs/implemented/2026-10-19--1858UTC-materials.md` (the spec) and `.ai/specs/assets/materials/` (one current screenshot, three mockups with their HTML).
 
 ## Verification
 - `npx vitest run tests/ai-filenames.test.ts` passes. This PR is docs only; the implementation PR #50 ran the full gate.

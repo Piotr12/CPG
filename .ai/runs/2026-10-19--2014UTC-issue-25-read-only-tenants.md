@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-19 20:14 UTC
 **Agent:** Claude Code (Opus 5.5) via cezar, `om-auto-fix-issue 25` → `om-auto-write-spec 25` → `om-spec-writing --autonomous`
-**Spec:** `.ai/specs/2026-10-19--2018UTC-read-only-tenants.md` (written in this run)
+**Spec:** `.ai/specs/implemented/2026-10-19--2018UTC-read-only-tenants.md` (written in this run)
 **Status:** done (spec PR #55 ready; implementation on #57, ready)
 
 ## Goal
@@ -40,7 +40,7 @@
 
 ## Changes
 
-- Spec PR #55: `.ai/specs/2026-10-19--2018UTC-read-only-tenants.md`, `.ai/specs/assets/read-only-tenants/` (two current screenshots, three mockups), and this log.
+- Spec PR #55: `.ai/specs/implemented/2026-10-19--2018UTC-read-only-tenants.md`, `.ai/specs/assets/read-only-tenants/` (two current screenshots, three mockups), and this log.
 - Implementation PR #57:
   - `Tenant.readOnly` and its migration;
   - `TenantService.setReadOnly`/`currentState`, `assertWritable`, and the gate in `tenantServerAction`, `IdempotencyService` and the demo seed;

@@ -1,6 +1,6 @@
 # Read-only tenants (#25) — execution plan
 
-Source doc: .ai/specs/2026-10-19--2018UTC-read-only-tenants.md
+Source doc: .ai/specs/implemented/2026-10-19--2018UTC-read-only-tenants.md
 Spec PR: #55 (design-only; this branch doesn't carry the spec file)
 Issue: #25
 Engine: om-auto-create-pr (steps: 10, --loop: no)
