@@ -202,16 +202,17 @@ export function planDemand(config: TestTenantConfig, anchor: Month): DemandPlan 
 
 /**
  * The forecast for each finished product at its plant for the months after the anchor (spec
- * "Forecasts"): the mean of its last twelve history months' orders × the month's season × (1 +
- * growth per year), rounded half-up to a multiple of five, dated the month's first day (Q11).
+ * "Forecasts"): the mean of its last twelve history months' orders (all of them, in a shorter
+ * history) × the month's season × (1 + growth per year), rounded half-up to a multiple of five, dated
+ * the month's first day (Q11).
  */
 export function planForecasts(config: TestTenantConfig, plan: DemandPlan, anchor: Month): { material: string; location: string; date: string; quantity: string }[] {
   const { demand, horizon } = config;
-  const window = Number(MONTHS_PER_YEAR);
+  const window = Math.min(Number(MONTHS_PER_YEAR), horizon.historyMonths);
   return [...plan.ordered.entries()].flatMap(([product, byMonth]) => {
     let total = 0n;
     for (let month = anchor - window; month < anchor; month += 1) total += byMonth.get(month)!;
-    const mean = total / MONTHS_PER_YEAR;
+    const mean = total / BigInt(window);
     const profile = demand.seasonality[demand.products.find(({ material }) => material === product)!.profile];
     const growth = ONE + parseDecimal(demand.growthPerYear)!;
     return Array.from({ length: horizon.forecastMonths }, (_, index) => {

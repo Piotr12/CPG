@@ -183,4 +183,12 @@ describe("planForecasts", () => {
     expect(Number(august.quantity) % 5).toBe(0);
     expect(Math.abs(Number(august.quantity) - mean * 1.4 * 1.04)).toBeLessThanOrEqual(2.5);
   });
+
+  it("averages every history month when the history is shorter than a year", () => {
+    const short = changed((copy) => { copy.horizon.historyMonths = 2; });
+    const shortPlan = planDemand(short, anchor);
+    const history = [1, 2].map((back) => units(shortPlan.ordered.get("00000005")!.get(anchor - back)!));
+    const january = planForecasts(short, shortPlan, anchor).find(({ material, date }) => material === "00000005" && date === "2027-01-01")!;
+    expect(Math.abs(Number(january.quantity) - ((history[0] + history[1]) / 2) * 1.04)).toBeLessThanOrEqual(2.5);
+  });
 });

@@ -10,7 +10,7 @@
 - Phase 2 closed (Steps 2.1–2.11); checkpoint 3 green (full test:coverage 100 %, 3,253 tests).
 
 ## Next concrete action
-- Step 3.1 inline: \`seedTestTenantDataset\` + \`isUntouchedTest\` in \`core/src/services/demo/seed-demo-data.ts\`.
+- Step 3.1 inline: `seedTestTenantDataset` + `isUntouchedTest` in `core/src/services/demo/seed-demo-data.ts`.
 
 ## Blockers / open questions
 - none

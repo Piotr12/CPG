@@ -30,7 +30,7 @@
 | 2 | 2.9 | Production-completion seed path | group:D | done | 0e92102 |
 | 2 | 2.10 | Stock opening seed takes rows and a date | group:E:cheap | done | 3c5cb9d |
 | 2 | 2.11 | Master seeds take generated rows | group:E:cheap | done | 3aed882 |
-| 3 | 3.1 | Timeline seeder and untouched-Test check | inline | todo | — |
+| 3 | 3.1 | Timeline seeder and untouched-Test check | inline | done | 04e3152 |
 | 3 | 3.2 | Seed timing spike | inline | todo | — |
 | 3 | 3.3 | Startup seeds an untouched Test only | inline | todo | — |
 | 3 | 3.4 | Reset seeds the generated dataset; old fixtures removed | inline | todo | — |
