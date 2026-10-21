@@ -119,17 +119,27 @@ describe("planning parameters and safety stock (E03-S03)", () => {
   });
   afterAll(() => Promise.all([admin, una].map((browser) => browser.close())));
 
-  it("starts Test with the demonstration sets and targets, reached from the tenant home (TEN-001, D06)", async () => {
+  it("starts Test with the dataset's sets and targets, reached from the tenant home (TEN-001, D06)", async () => {
     await admin.open(`${baseUrl}/admin/test`);
     await admin.waitUntil(ready(`document.querySelector("main a[href='/admin/test/planning-parameters']")`));
     await admin.click("main a[href='/admin/test/planning-parameters']");
     await admin.waitForText("Planning parameters — Test");
     expect(await admin.title()).toBe("Test · Planning parameters");
 
+    // Other files may add Test rows for their own masters, whose IDs come after the dataset's 26 materials and 4 locations.
+    const dataset = (rows: string[][]) => rows.filter(([material, location]) => material.slice(0, 8) <= "00000026" && location.slice(0, 8) <= "00000004");
     const sets = await listRows(admin, "/admin/test/planning-parameters");
     expect(sets[0].slice(0, 6)).toEqual(["00000001 Steel sheet 2 mm", "00000001 Main plant, Wrocław", "Buy", "14", "500 kg", "100 kg"]);
-    const targets = await listRows(admin, "/admin/test/safety-stock");
-    expect(targets.map((row) => row.slice(2, 4))).toEqual(expect.arrayContaining([["2026-01-01", "20 each"], ["2027-01-01", "40 each"]]));
+    expect(dataset(sets)).toHaveLength(48);
+    const targets = dataset(await listRows(admin, "/admin/test/safety-stock"));
+    expect(targets).toHaveLength(50);
+    // Two targets rise later in the history, so each of those pairs shows a series of two.
+    for (const [material, location] of [["00000019 Locker, 2 compartments", "00000002 Lockers plant, Poznań"], ["00000023 Letterbox, galvanised", "00000003 Sheet-metal plant, Łódź"]]) {
+      const series = targets.filter((row) => row[0] === material && row[1] === location).sort((a, b) => a[2].localeCompare(b[2]));
+      expect(series).toHaveLength(2);
+      expect(series[0][2]).not.toBe(series[1][2]);
+      expect(Number.parseFloat(series[1][3])).toBeGreaterThan(Number.parseFloat(series[0][3]));
+    }
   });
 
   it("refuses Make for a raw material next to the field, and keeps Make and Buy per location with the values entered (MAT-014, MAT-015)", async () => {

@@ -26,8 +26,8 @@ async function rows(browser: Browser, path: string): Promise<string[][]> {
   );
 }
 
-// E09-S01: the purchasing screens in a real browser. The Test tenant is seeded with a demonstration
-// requisition and order (D06); a normal user creates a requisition in Prod, in the UI.
+// E09-S01: the purchasing screens in a real browser. The Test tenant is seeded with the generated
+// dataset's requisitions and orders (D06); a normal user creates a requisition in Prod, in the UI.
 describe("purchase requisitions and orders in the UI", () => {
   let admin: Browser;
   let una: Browser;
@@ -43,22 +43,42 @@ describe("purchase requisitions and orders in the UI", () => {
     await Promise.all([admin, una].map((browser) => browser.close()));
   });
 
-  it("lists the demonstration requisitions, with what is converted and what is outstanding", async () => {
-    const table = await rows(una, "/admin/test/purchase-requisitions");
+  it("lists the dataset's requisitions, with what is converted and what is outstanding", async () => {
+    const table = (await rows(una, "/admin/test/purchase-requisitions")).map((row) => row.slice(0, 8));
 
-    expect(table[0][0]).toBe("00000001");
-    expect(table[0].join(" ")).toContain("Open");
-    expect(table[0].join(" ")).toContain("60");
-    expect(table).toHaveLength(2);
+    expect(table).toHaveLength(5);
+    // Two are converted in full by next month's orders; the quantity follows the supply plan, so only its shape is fixed.
+    expect(table[0].slice(0, 3)).toEqual(["00000001", "00000001 Steel sheet 2 mm", "00000001 Main plant, Wrocław"]);
+    expect(table[0][4]).toBe(table[0][3]);
+    expect(table[0].slice(5)).toEqual(["0 kg", expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), "Completed"]);
+    expect(table[1].slice(0, 3)).toEqual(["00000002", "00000009 Powder coat, grey RAL 7035", "00000002 Lockers plant, Poznań"]);
+    expect(table[1][7]).toBe("Completed");
+    // Three are open, with nothing converted yet.
+    expect(table.slice(2).map((row) => [row[0], row[1], row[2], row[3], row[4], row[5], row[7]])).toEqual([
+      ["00000003", "00000007 Steel sheet 1.0 mm", "00000004 Small goods plant, Gdańsk", "1000 kg", "0 kg", "1000 kg", "Open"],
+      ["00000004", "00000013 Galvanised steel sheet 0.8 mm", "00000003 Sheet-metal plant, Łódź", "500 kg", "0 kg", "500 kg", "Open"],
+      ["00000005", "00000014 Welding wire 0.8 mm", "00000002 Lockers plant, Poznań", "30 kg", "0 kg", "30 kg", "Open"],
+    ]);
   });
 
-  it("lists the demonstration order and opens it with its dated lines and the requisition it converts", async () => {
+  it("lists the dataset's orders and opens the open one that converts a requisition, with its dated lines", async () => {
     const table = await rows(una, "/admin/test/purchase-orders");
     expect(table[0][0]).toBe("00000001");
+    expect(table[0].at(-1)).toBe("Completed");
 
-    await una.open(`${baseUrl}/admin/test/purchase-orders/00000001`);
-    await una.waitForText("2026-11-04");
-    await una.waitForText("2026-11-06");
+    // Next month's order of 2 mm sheet for Wrocław converts requisition 00000001: it is one of that pair's open orders.
+    const candidates = table
+      .filter((row) => row[1] === "00000001 Steel Service Centre Sp. z o.o." && row[2] === "00000001 Main plant, Wrocław" && row.at(-1) === "Open")
+      .map(([id]) => id)
+      .reverse();
+    expect(candidates.length).toBeGreaterThan(0);
+    let converting: string[] | undefined;
+    for (const id of candidates) {
+      converting = (await rows(una, `/admin/test/purchase-orders/${id}`)).find((line) => line[5] === "00000001");
+      if (converting) break;
+    }
+    expect(converting!.slice(0, 2)).toEqual(["1", "00000001 Steel sheet 2 mm"]);
+    expect(converting![4]).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
   it("lets a normal user create a requisition in Prod, which then appears Open and unconverted", async () => {

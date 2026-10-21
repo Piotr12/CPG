@@ -86,8 +86,9 @@ describe("purchase requisitions and orders through the API", () => {
     await write("POST", `/api/tenants/prod/materials/${ids.steel}/conversions`, { unit: "t", numerator: "1000", denominator: "1" });
     ids.plant = await create("/api/tenants/prod/locations", { name: "buyapi plant" });
     ids.depot = await create("/api/tenants/prod/locations", { name: "buyapi depot" });
-    // Test holds the three demo suppliers: pad Prod past them so `gone` is Prod's alone (TEN-014).
-    while (Number(await create("/api/tenants/prod/suppliers", { name: "buyapi pad" })) < 3);
+    // Pad Prod past Test's suppliers (its six, plus any another file added) so `gone` is Prod's alone (TEN-014).
+    const testSuppliers = (json(await api("GET", "/api/tenants/test/suppliers")).data as unknown[]).length;
+    while (Number(await create("/api/tenants/prod/suppliers", { name: "buyapi pad" })) < testSuppliers);
     ids.acme = await create("/api/tenants/prod/suppliers", { name: "buyapi acme" });
     ids.gone = await create("/api/tenants/prod/suppliers", { name: "buyapi gone" });
     await write("POST", "/api/users", { username: "buyapi-una", password: PASSWORD });
@@ -173,7 +174,7 @@ describe("purchase requisitions and orders through the API", () => {
     const refused = await placeOrder(order([line(ids.bolt, "1", "each", "2027-03-03")], { supplier: ids.gone }));
     expect(refused.status).toBe(409);
     expect(json(refused).error.code).toBe("SUPPLIER_INACTIVE");
-    // Test's suppliers are 00000001…: a Prod supplier past them is not Test's.
+    // Test's suppliers are 00000001…: the Prod supplier past them is not Test's.
     const testSuppliers = new Set((json(await api("GET", "/api/tenants/test/suppliers")).data as { id: string }[]).map(({ id }) => id));
     expect(testSuppliers.has(ids.gone)).toBe(false);
 
@@ -212,14 +213,23 @@ describe("purchase requisitions and orders through the API", () => {
     expect(json(staleOrder).error.code).toBe("VERSION_CONFLICT");
   });
 
-  it("starts Test with a demonstration requisition and PO, and needs the Test generation to write there (D06, API-034)", async () => {
-    const requisitions = json(await api("GET", "/api/tenants/test/purchase-requisitions")).data as Requisition[];
+  it("starts Test with the dataset's requisitions and POs, two requisitions converted in full by open POs, and needs the Test generation to write there (D06, BUY-003, API-034)", async () => {
+    const requisitions = (json(await api("GET", "/api/tenants/test/purchase-requisitions")).data as Requisition[]).slice(0, 5);
     const demo = await orders("test");
 
-    expect(requisitions.slice(0, 2).map(({ id }) => id)).toEqual(["00000001", "00000002"]);
-    expect(demo[0]).toMatchObject({ id: "00000001", status: "open" });
-    expect(demo[0].lines.map(({ requisition }) => requisition)).toEqual(["00000001", null]);
-    expect(requisitions[0]).toMatchObject({ converted: "60.000000", status: "open" });
+    expect(requisitions.map(({ id }) => id)).toEqual(["00000001", "00000002", "00000003", "00000004", "00000005"]);
+    for (const converted of requisitions.slice(0, 2)) {
+      expect(converted).toMatchObject({ status: "completed", converted: converted.quantity, outstanding: "0.000000" });
+      expect(demo.find(({ lines }) => lines.some(({ requisition }) => requisition === converted.id))).toMatchObject({ status: "open" });
+    }
+    expect(requisitions.slice(2).map(({ quantity, converted, status }) => [quantity, converted, status])).toEqual([
+      ["1000.000000", "0.000000", "open"],
+      ["500.000000", "0.000000", "open"],
+      ["30.000000", "0.000000", "open"],
+    ]);
+    // Two years of history are received; the latest orders are still open.
+    expect(demo[0]).toMatchObject({ id: "00000001", status: "completed" });
+    expect(demo.some(({ status }) => status === "open")).toBe(true);
 
     const missing = await write("POST", "/api/tenants/test/purchase-requisitions", { material: "00000001", location: "00000001", quantity: "1", unit: "kg", requiredDate: "2027-03-01" });
     expect(missing.status).toBe(428);
@@ -227,16 +237,16 @@ describe("purchase requisitions and orders through the API", () => {
   });
 
   it("doesn't find another tenant's requisition or order (TEN-014)", async () => {
-    const source = await requisition();
-    const placed = json(await placeOrder(order([line(ids.bolt, "1", "each", "2027-03-03")]))).data as Order;
+    // Test holds a handful of requisitions: create Prod ones until one gets an ID Test lacks.
     const testRequisitions = new Set((json(await api("GET", "/api/tenants/test/purchase-requisitions")).data as { id: string }[]).map(({ id }) => id));
-    const testOrders = new Set((await orders("test")).map(({ id }) => id));
-
-    // Test holds only its two demo requisitions and one order, so these Prod IDs are Prod's alone.
-    expect(testRequisitions.has(source.id)).toBe(false);
-    expect(testOrders.has(placed.id)).toBe(false);
+    let source = await requisition();
+    while (testRequisitions.has(source.id)) source = await requisition();
+    // Test holds two years of orders, more than Prod: its last order's ID is Test's alone.
+    const testOrder = (await orders("test")).at(-1)!;
+    const prodOrders = new Set((await orders("prod")).map(({ id }) => id));
+    expect(prodOrders.has(testOrder.id)).toBe(false);
     const requisitionRead = await api("GET", `/api/tenants/test/purchase-requisitions/${source.id}`);
-    const orderRead = await api("GET", `/api/tenants/test/purchase-orders/${placed.id}`);
+    const orderRead = await api("GET", `/api/tenants/prod/purchase-orders/${testOrder.id}`);
     expect(requisitionRead.status).toBe(404);
     expect(json(requisitionRead).error.code).toBe("REQUISITION_NOT_FOUND");
     expect(orderRead.status).toBe(404);

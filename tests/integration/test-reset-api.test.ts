@@ -93,10 +93,11 @@ describe("atomic Test reset through the bearer API", () => {
     expect(await test()).toMatchObject({ generation: generation + 1, readOnly });
     const fresh = await materials();
     expect(fresh[0]).toMatchObject({ id: "00000001", description: "Steel sheet 2 mm" });
-    expect(fresh).toHaveLength(6);
-    const orders = json(await api("GET", "/api/tenants/test/customer-orders")).data;
-    expect(orders).toHaveLength(1);
-    expect(orders[0]).toMatchObject({ id: "00000001", lines: [{ quantity: "60.000000" }, { quantity: "12.000000" }] });
+    expect(fresh).toHaveLength(26);
+    // The dataset's orders fill more than a page; the first is 00000001 again.
+    const orders = json(await api("GET", "/api/tenants/test/customer-orders")).data as { id: string }[];
+    expect(orders).toHaveLength(100);
+    expect(orders[0].id).toBe("00000001");
     expect((await api("GET", `/api/tenants/test/customer-orders/${extraId}`)).status).toBe(404);
     for (const kind of ["locations", "customers", "suppliers", "boms"]) {
       const rows = json(await api("GET", `/api/tenants/test/${kind}`)).data as { id: string }[];
@@ -127,6 +128,6 @@ describe("atomic Test reset through the bearer API", () => {
     const staleImport = await write("POST", "/api/tenants/test/import/commit", { workbook, previewToken: preview.previewToken }, generation + 1);
     expect(json(staleImport).error.code).toBe("IMPORT_STALE");
     const reused = await api("POST", "/api/tenants/test/materials", { key: oldKey, body: { type: "raw", description: "reset-api new generation", baseUnit: "kg" }, generation: generation + 1 });
-    expect(reused.status).toBe(200); expect(json(reused).data.id).toBe("00000007");
+    expect(reused.status).toBe(200); expect(json(reused).data.id).toBe("00000027");
   });
 });

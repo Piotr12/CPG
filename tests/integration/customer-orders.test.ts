@@ -128,12 +128,25 @@ describe("customer orders through the UI and API", () => {
     for (const body of [{ ...input(), customer: "99999999" }, { ...input(), lines: [{ ...input().lines[0], material: "99999999" }] }])
       expect((await write("POST", ROOT, body, userSecret)).status).toBe(404);
     expect(await orders()).toHaveLength(before);
-    const demo = json(await api("GET", "/api/tenants/test/customer-orders")).data as CustomerOrderView[];
-    expect(demo.some(({ customer, lines, status }) => customer === "00000001" && lines.length === 2 && status === "open")).toBe(true);
-    const testIds = new Set(demo.map(({ id }) => id));
-    const prodOnly = createdIds.find((id) => !testIds.has(id))!;
-    expect(prodOnly).toBeTruthy();
-    expect((await api("GET", `/api/tenants/test/customer-orders/${prodOnly}`, {}, userSecret)).status).toBe(404);
+    // Test starts with the dataset's two years of orders, many pages of them, the latest still open.
+    const allPages = async (tenant: string) => {
+      const all: CustomerOrderView[] = [];
+      for (let page = 1; ; page += 1) {
+        const rows = json(await api("GET", `/api/tenants/${tenant}/customer-orders?page=${page}`)).data as CustomerOrderView[];
+        all.push(...rows);
+        if (rows.length < 100) return all;
+      }
+    };
+    const demo = await allPages("test");
+    expect(demo[0].id).toBe("00000001");
+    expect(demo.length).toBeGreaterThan(100);
+    expect(demo.some(({ status }) => status === "open")).toBe(true);
+    // Test holds more orders than Prod, so its last order's ID is one Prod lacks: Prod must not find it.
+    const prodIds = new Set((await allPages("prod")).map(({ id }) => id));
+    expect(createdIds.every((id) => prodIds.has(id))).toBe(true);
+    const testOnly = demo.at(-1)!.id;
+    expect(prodIds.has(testOnly)).toBe(false);
+    expect((await api("GET", `${ROOT}/${testOnly}`, {}, userSecret)).status).toBe(404);
     const noGeneration = await write("POST", "/api/tenants/test/customer-orders", { customer: "00000001", location: "00000001", lines: [{ material: "00000005", quantity: "1", unit: "each", requiredDate: "2027-01-01" }] });
     expect(noGeneration.status).toBe(428); expect(json(noGeneration).error.code).toBe("GENERATION_REQUIRED");
   });

@@ -52,7 +52,9 @@ describe("full stock reversals (#91)", () => {
     const shortage = await api("POST", reversePath(original), { reason: "Wrong receipt" });
     expect(shortage.status).toBe(409); expect(shortage.body.error.code).toBe("INSUFFICIENT_STOCK");
     expect((await api("POST", reversePath(original), { reason: "Partial", quantity: "20" })).body.error.code).toBe("VALIDATION_FAILED");
-    expect((await api("POST", reversePath(original, "test"), { reason: "Wrong tenant" }, operatorSecret, randomUUID(), 1)).status).toBe(404);
+    // Test's current generation: a file that ran before may have reset Test.
+    const { generation } = (await api<{ generation: number }>("GET", "/api/tenants/test", undefined, operatorSecret)).body.data;
+    expect((await api("POST", reversePath(original, "test"), { reason: "Wrong tenant" }, operatorSecret, randomUUID(), generation)).status).toBe(404);
     expect((await api("GET", `/api/tenants/test/stock/movements/${original}`, undefined, operatorSecret)).status).toBe(404);
     expect((await fetch(`${baseUrl}/api/tenants/prod/stock/movements/${original}`)).status).toBe(401);
     expect(await stock()).toEqual(before);

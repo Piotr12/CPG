@@ -66,7 +66,7 @@ describe("materials and their unit conversions (E03-S01)", () => {
   });
   afterAll(() => Promise.all([admin, una, other].map((browser) => browser.close())));
 
-  it("starts Test with demonstration materials, reached from the tenant home (TEN-001, D06)", async () => {
+  it("starts Test with the dataset's materials, reached from the tenant home (TEN-001, D06)", async () => {
     await admin.open(`${baseUrl}/admin/test`);
     await admin.waitUntil(ready(`document.querySelector("main a[href='/admin/test/materials']")`));
     await admin.click("main a[href='/admin/test/materials']");
@@ -79,6 +79,10 @@ describe("materials and their unit conversions (E03-S01)", () => {
       ["00000002", "Bolt M8", "Raw", "each", "Active"],
       ["00000003", "Paint, red", "Raw", "l", "Active"],
     ]);
+    // The dataset's 26: 12 raw, 4 intermediate, 10 finished. Other files may add Test materials after them.
+    const types = rows.filter(([id]) => id <= "00000026").map(([, , type]) => type);
+    expect(types).toHaveLength(26);
+    expect(["Raw", "Intermediate", "Finished"].map((type) => types.filter((shown) => shown === type).length)).toEqual([12, 4, 10]);
   });
 
   it("gives materials created in Prod consecutive IDs, independent of Test (MAT-001, MAT-002, MAT-003)", async () => {

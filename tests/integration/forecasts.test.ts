@@ -92,7 +92,7 @@ describe("forecasts (E08-S03)", () => {
   });
   afterAll(() => Promise.all([admin, una].map((browser) => browser.close())));
 
-  it("starts Test with demonstration forecasts per day, reached from the tenant home and the Sales group (TEN-001, D06)", async () => {
+  it("starts Test with the dataset's forecasts, a year of months for each finished product, reached from the tenant home and the Sales group (TEN-001, D06)", async () => {
     await admin.open(`${baseUrl}/admin/test`);
     await admin.waitUntil(ready(`document.querySelector("main a[href='/admin/test/forecasts']")`));
     await admin.click("main a[href='/admin/test/forecasts']");
@@ -100,13 +100,13 @@ describe("forecasts (E08-S03)", () => {
     expect(await admin.title()).toBe("Test · Forecasts");
 
     const rows = await listRows(admin, "/admin/test/forecasts");
-    expect(rows.map((row) => row.slice(2, 4))).toEqual(
-      expect.arrayContaining([
-        ["2026-11-02", "40 each"],
-        ["2026-11-03", "55 each"],
-        ["2026-11-04", "60 each"],
-      ]),
-    );
+    expect(rows).toHaveLength(120);
+    expect(new Set(rows.map(([material]) => material)).size).toBe(10);
+    expect(new Set(rows.map(([, , date]) => date)).size).toBe(12);
+    for (const [, , date, quantity] of rows) {
+      expect(date).toMatch(/^\d{4}-\d{2}-01$/);
+      expect(quantity).toMatch(/^\d*[05] each$/);
+    }
   });
 
   it("adds forecasts without a customer, in any unit the material converts, and lists the quantity per day", async () => {

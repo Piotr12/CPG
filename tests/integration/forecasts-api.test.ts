@@ -148,9 +148,11 @@ describe("forecasts through the API (E08-S03, R07)", () => {
     expect((await forecasts()).filter((row) => row.material === retired || row.location === closed)).toEqual([]);
   });
 
-  it("starts Test with demonstration forecasts, and needs the Test generation to write there (TEN-001, D06, API-034)", async () => {
-    const demo = json(await api("GET", "/api/tenants/test/forecasts", adminSecret)).data as { material: string }[];
-    expect(demo.length).toBeGreaterThanOrEqual(4);
+  it("starts Test with the dataset's forecasts, and needs the Test generation to write there (TEN-001, D06, API-034)", async () => {
+    const demo = json(await api("GET", "/api/tenants/test/forecasts", adminSecret)).data as { material: string; location: string }[];
+    // A year of months for each of the ten finished products, at the plant that makes it.
+    expect(demo).toHaveLength(120);
+    expect(new Set(demo.map(({ material, location }) => `${material}@${location}`)).size).toBe(10);
 
     const missing = await write("POST", "/api/tenants/test/forecasts", { material: "00000005", location: "00000001", date: "2030-01-01", quantity: "1" });
     expect(missing.status).toBe(428);

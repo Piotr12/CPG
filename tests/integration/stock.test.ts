@@ -89,7 +89,9 @@ describe("physical stock and reasoned corrections (#80)", () => {
     expect(negative.body.error.message).toContain("available 24.500000 each");
     expect(negative.body.error.params).toEqual({ material, location, available: "24.500000", requested: "25.000000", unit: "each" });
     expect((await correction("1", { reason: " " })).body.error.code).toBe("VALIDATION_FAILED");
-    expect((await api("POST", "/api/tenants/test/stock/corrections", operatorSecret, { material, location, quantity: "1", unit: "each", reason: "Wrong scope" }, randomUUID(), 1)).body.error.code).toBe("MATERIAL_NOT_FOUND");
+    // Test's current generation: a file that ran before may have reset Test.
+    const { generation } = (await api<{ generation: number }>("GET", "/api/tenants/test", operatorSecret)).body.data;
+    expect((await api("POST", "/api/tenants/test/stock/corrections", operatorSecret, { material, location, quantity: "1", unit: "each", reason: "Wrong scope" }, randomUUID(), generation)).body.error.code).toBe("MATERIAL_NOT_FOUND");
     expect((await api("GET", `/api/tenants/test/stock?material=${material}&location=${location}`, operatorSecret)).status).toBe(404);
     expect((await stock()).body.data).toEqual(before); expect(await ownAudit()).toEqual(audit);
   });
@@ -115,7 +117,8 @@ describe("physical stock and reasoned corrections (#80)", () => {
   it("shows demo openings and Polish help, and blocks both roles when read-only (INV-022, D06)", async () => {
     await admin.open(`${baseUrl}/admin/test/stock`); await admin.waitFor("[data-stock-balance]");
     expect(await admin.text("main")).toContain("Demonstration opening balance");
-    expect(await admin.text("[data-stock-balance]")).toBe("500 kg");
+    // Two years of receipts and consumption follow the opening: the balance depends on the day, but stays positive.
+    expect(await admin.text("[data-stock-balance]")).toMatch(/^[1-9]\d*(\.\d+)? kg$/);
     try {
       await choosePreference(admin, "pl");
       await admin.open(`${baseUrl}/admin/prod/stock?material=${material}&location=${location}`); await admin.waitForText("Zapas — Prod");

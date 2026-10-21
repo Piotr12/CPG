@@ -94,20 +94,25 @@ describe("BOMs (E04-S01)", () => {
   });
   afterAll(() => Promise.all([admin, una].map((browser) => browser.close())));
 
-  it("starts Test with the demo BOMs, one with bolts entered as 2 cases and stored as 24 each (TEN-001, MAT-019)", async () => {
+  it("starts Test with the dataset's 16 BOMs, three alternates for one output, one with bolts entered as 2 cases and stored as 24 each (TEN-001, MAT-019)", async () => {
     await admin.open(`${baseUrl}/admin/test`);
     await admin.waitUntil(ready(`document.querySelector("main a[href='/admin/test/boms']")`));
     await admin.click("main a[href='/admin/test/boms']");
     await admin.waitForText("BOMs — Test");
     expect(await admin.title()).toBe("Test · BOMs");
 
-    const list = await rows(admin, "/admin/test/boms");
-    expect(list.slice(0, 3).map((row) => row.slice(0, 4))).toEqual([
+    const list = (await rows(admin, "/admin/test/boms")).map((row) => row.slice(0, 4));
+    expect(list).toHaveLength(16);
+    expect(list.slice(0, 2)).toEqual([
       ["00000001", "00000004 Painted side panel", "1", "rev 1"],
-      ["00000002", "00000005 Cabinet, red", "1", "rev 1"],
-      ["00000003", "00000005 Cabinet, red", "2", "rev 1"],
+      ["00000005", "00000005 Cabinet, red", "1", "rev 1"],
     ]);
-    const recipe = await rows(admin, "/admin/test/boms/00000003", RECIPE);
+    expect(list.filter(([, output]) => output === "00000026 Key cabinet, wall-mounted")).toEqual([
+      ["00000014", "00000026 Key cabinet, wall-mounted", "1", "rev 1"],
+      ["00000015", "00000026 Key cabinet, wall-mounted", "2", "rev 1"],
+      ["00000016", "00000026 Key cabinet, wall-mounted", "3", "rev 1"],
+    ]);
+    const recipe = await rows(admin, "/admin/test/boms/00000006", RECIPE);
     expect(recipe).toContainEqual(["00000002 Bolt M8", "24 each", "2 case at 1 case = 12 each"]);
   });
 

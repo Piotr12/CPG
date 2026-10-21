@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import type { TransferView } from "@cpg/core";
 import { callApi, json } from "./api";
-import { openBrowser, type Browser } from "./browser";
+import { clickHydrated, openBrowser, type Browser } from "./browser";
 import { signedInAndHydrated, signIn, signInAsAdmin } from "./sign-in";
 import { createToken, openTokens } from "./tokens";
 import { createUser } from "./users";
@@ -132,6 +132,50 @@ describe("the stock report in the UI", () => {
     ]);
     await una.clickRole("link", `Transfer ${transfer}`);
     await una.waitUntil(`location.pathname === "/admin/prod/transfers/${transfer}"`);
+  });
+
+  it("pages a Test pair's two-year ledger newest first, each receipt and completion linking its document (INV-012)", async () => {
+    const pair = "material=00000007&location=00000001";
+    const movementCount = async () => (json(await callApi(baseUrl, "GET", `/api/tenants/test/stock?${pair}`, secret)).data as { movementCount: number }).movementCount;
+    // Steel sheet 1.0 mm at the main plant gets a receipt and three completions a month, about 100 movements in two years.
+    // Early in a month this month's are still to come: top the pair up so its ledger always has a second page.
+    const { generation } = json(await callApi(baseUrl, "GET", "/api/tenants/test", secret)).data as { generation: number };
+    for (let count = await movementCount(); count <= 100; count += 1) {
+      const body = { material: "00000007", location: "00000001", quantity: "1", unit: "kg", reason: "srui second page" };
+      expect((await callApi(baseUrl, "POST", "/api/tenants/test/stock/corrections", secret, { key: randomUUID(), body, generation })).status).toBe(200);
+    }
+    const total = await movementCount();
+    const ledger = async () => (await tableRows(una, "Stock movements")).map(([date, type, , source, reason]) => ({ date, type, source, reason }));
+
+    await una.open(`${baseUrl}/admin/test/stock?${pair}`);
+    await una.waitUntil(shown("table[aria-label='Stock movements']"));
+    const first = await ledger();
+    expect(first).toHaveLength(100);
+    const newestFirst = (rows: { date: string }[]) => rows.every(({ date }, index) => index === 0 || rows[index - 1].date >= date);
+    expect(newestFirst(first)).toBe(true);
+    const receipts = first.filter(({ type }) => type === "Goods receipt");
+    const completions = first.filter(({ type }) => type === "Production completion");
+    expect(receipts.length).toBeGreaterThan(10);
+    expect(completions.length).toBeGreaterThan(30);
+    for (const { source } of receipts) expect(source).toMatch(/^Purchase order \d{8} Goods receipt \S+$/);
+    for (const { source } of completions) expect(source).toMatch(/^Production order \d{8} Production completion \S+$/);
+    await una.waitForText(`Page 1 of ${Math.ceil(total / 100)}`);
+
+    await clickHydrated(una, "main a[href$='page=2']");
+    await una.waitUntil(`location.search.includes("page=2")`);
+    await una.waitForText(`Page 2 of ${Math.ceil(total / 100)}`);
+    const second = await ledger();
+    expect(second.length).toBeGreaterThan(0);
+    expect(newestFirst([...first, ...second])).toBe(true);
+    // The oldest movement is the dataset's opening balance, a correction that is its own source.
+    expect(second.at(-1)).toMatchObject({ type: "Correction", source: "This correction", reason: expect.stringContaining("Demonstration opening balance") });
+
+    // A receipt's link opens the purchase order it was received against.
+    const order = receipts[0].source.split(" ")[2];
+    await una.open(`${baseUrl}/admin/test/stock?${pair}`);
+    await una.waitUntil(shown("table[aria-label='Stock movements']"));
+    await clickHydrated(una, `table[aria-label='Stock movements'] a[href='/admin/test/purchase-orders/${order}']`);
+    await una.waitUntil(`location.pathname === "/admin/test/purchase-orders/${order}"`);
   });
 
   it("is linked from the Stock page, and still opens while the tenant is read-only (TEN-018)", async () => {

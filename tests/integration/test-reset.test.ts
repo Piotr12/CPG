@@ -14,6 +14,8 @@ describe("Test reset in Cave control", () => {
   let stale: Browser;
   let normal: Browser;
   let secret: string;
+  /** The Test customer order this file adds before a reset. */
+  let extraOrder: string;
   const api = (method: string, path: string, body?: unknown, generation?: number) => callApi(baseUrl, method, path, secret, { key: randomUUID(), body, generation });
   const state = async () => json(await api("GET", "/api/tenants/test")).data as { generation: number; readOnly: boolean };
   async function openControl(browser: Browser) {
@@ -62,6 +64,14 @@ describe("Test reset in Cave control", () => {
 
   it("resets writable Test and records the acting UI session (TEN-022, AUD-013, API-017)", async () => {
     const before = await state();
+    // Records of this file's own, so the reset visibly replaces what Test held.
+    const extra = await api("POST", "/api/tenants/test/materials", { type: "raw", description: "reset-ui extra", baseUnit: "kg" }, before.generation);
+    expect(extra.status).toBe(200);
+    const order = await api("POST", "/api/tenants/test/customer-orders", {
+      customer: "00000001", location: "00000001", lines: [{ material: "00000005", quantity: "1", unit: "each", requiredDate: "2030-01-02" }],
+    }, before.generation);
+    expect(order.status).toBe(200);
+    extraOrder = json(order).data.id as string;
     await openControl(admin);
     await clickHydrated(admin, "[data-test-reset] button");
     await admin.waitFor("[role=alertdialog]");
@@ -69,6 +79,23 @@ describe("Test reset in Cave control", () => {
     expect(await state()).toEqual({ ...before, code: "test", name: "Test", generation: before.generation + 1, readOnly: false });
     const events = json(await api("GET", "/api/audit?limit=100")).data.entries as { action: string; channel: string; sessionId: string | null; actor: { username: string } }[];
     expect(events.find(({ action }) => action === "tenants.tenant.reset")).toMatchObject({ channel: "ui", actor: { username: "admin" }, sessionId: expect.any(String) });
+  });
+
+  it("leaves Test with the generated dataset after the reset: its 26 materials, and its customer orders from 00000001 again (TEN-022)", async () => {
+    await admin.open(`${baseUrl}/admin/test/materials`);
+    await admin.waitUntil(`!!document.querySelector("main table tbody tr") && !document.querySelector("main table").closest("[hidden]")`);
+    const materials = await admin.evaluate<string[][]>(
+      `[...document.querySelectorAll("main table tbody tr")].map((row) => [...row.cells].map((cell) => cell.innerText.trim()))`,
+    );
+    expect(materials).toHaveLength(26);
+    expect(materials.map(([id]) => id)).toEqual(Array.from({ length: 26 }, (_, index) => String(index + 1).padStart(8, "0")));
+    expect(materials.flat()).not.toContain("reset-ui extra");
+    expect(json(await api("GET", "/api/tenants/test/materials")).data).toHaveLength(26);
+    const orders = json(await api("GET", "/api/tenants/test/customer-orders")).data as { id: string }[];
+    expect(orders[0].id).toBe("00000001");
+    expect(orders).toHaveLength(100);
+    // The order added before the reset is gone: the regenerated orders stop before its ID.
+    expect((await api("GET", `/api/tenants/test/customer-orders/${extraOrder}`)).status).toBe(404);
   });
 
   it("refuses both an old business edit and an old reset confirmation after a real reset (TEN-030, API-034)", async () => {
