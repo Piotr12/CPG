@@ -45,7 +45,7 @@ import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit } from "../audit/audit-recorder";
 import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quantity";
 import { lineError } from "../materials/line-error";
-import { postHistoricalInverses, postStockMovements, type StockMovementView } from "../stock/stock-posting";
+import { postHistoricalInverses, postStockMovements, type PostingContext, type StockMovementView } from "../stock/stock-posting";
 import { existingReversal, linkReversals, subtractReversedQuantity } from "../stock/reversal-records";
 import { isScopeReadOnly } from "../tenants/tenant.service";
 import { businessIdSchema } from "../../validators/business-ids/business-id.schema";
@@ -218,12 +218,24 @@ export class ProductionCompletionService {
    * target without `acceptOverproduction` is `PRODUCTION_OVERPRODUCTION`. Any refusal writes nothing.
    * A repeated `submission` (the UI dialog's token, spec Q7) returns the completion it already posted.
    */
-  async post(orderId: string, input: ProductionCompletionInput, actor: AuditActor, options: { submission?: string } = {}): Promise<CompletionResult> {
+  post(orderId: string, input: ProductionCompletionInput, actor: AuditActor, options: { submission?: string } = {}): Promise<CompletionResult> {
+    return this.postWith(orderId, input, { kind: "user", actor }, options.submission);
+  }
+
+  /**
+   * The demo seed's completion, posted and stamped at `at`, unaudited and without a submission token.
+   * The same rules apply: stock, the Open order, the components and the overproduction acknowledgement.
+   */
+  seedDemo(orderId: string, input: ProductionCompletionInput, at: Date): Promise<CompletionResult> {
+    return this.postWith(orderId, input, { kind: "seed", at }, undefined);
+  }
+
+  private async postWith(orderId: string, input: ProductionCompletionInput, context: PostingContext, submission: string | undefined): Promise<CompletionResult> {
     const values = parseInput(productionCompletionCreateSchema, input);
     try {
       return await this.em.transactional(async (em) => {
-        if (options.submission !== undefined) {
-          const posted = await replayed(em, orderId, options.submission);
+        if (submission !== undefined) {
+          const posted = await replayed(em, orderId, submission);
           if (posted) return posted;
         }
         const order = await findProductionOrder(em, orderId, { refresh: true });
@@ -246,7 +258,7 @@ export class ProductionCompletionService {
           message: "This tenant has used every eight-digit production completion ID.",
         });
         const id = randomUUID();
-        const businessDate = await postMovements(em, order, code, id, output, lines, actor);
+        const businessDate = await postMovements(em, order, code, id, output, lines, context);
         const completion = em.create(ProductionCompletion, {
           id,
           code,
@@ -257,7 +269,8 @@ export class ProductionCompletionService {
           enteredUnit: output.enteredUnit,
           numerator: output.numerator,
           denominator: output.denominator,
-          submission: options.submission ?? null,
+          submission: submission ?? null,
+          ...(context.kind === "seed" && { createdAt: context.at }),
         });
         lines.forEach(({ material, record, expected, extra }, position) => {
           em.create(ProductionCompletionLine, {
@@ -274,8 +287,8 @@ export class ProductionCompletionService {
             extra,
           });
         });
-        progress(em, order, after, actor);
-        recordTenantAudit(em, actor, {
+        progress(em, order, after, context);
+        if (context.kind === "user") recordTenantAudit(em, context.actor, {
           action: "production-orders.production-completion.posted",
           subject: { type: "ProductionCompletion", id: code, label: `${code} — order ${order.code}, ${order.output.code} ${order.output.description}` },
           before: null,
@@ -456,7 +469,7 @@ function isUsed({ record }: ResolvedLine): boolean {
  * produced, then every material used out (INV-004). The ledger refuses an overdraw of any of them
  * (PRD-020, PRD-021), and nothing of the completion is written. Returns the posting's business date.
  */
-async function postMovements(em: EntityManager, order: ProductionOrder, code: string, id: string, output: BaseQuantity, lines: ResolvedLine[], actor: AuditActor): Promise<string> {
+async function postMovements(em: EntityManager, order: ProductionOrder, code: string, id: string, output: BaseQuantity, lines: ResolvedLine[], context: PostingContext): Promise<string> {
   const location = order.location.code;
   const produced = parseDecimal(output.baseQuantity)! > 0n ? [{ material: order.output.code, location, quantity: output.enteredQuantity, unit: output.enteredUnit }] : [];
   const used = lines.filter(isUsed).map(({ material, record }) => ({ material: material.code, location, quantity: `-${record.enteredQuantity}`, unit: record.enteredUnit }));
@@ -464,7 +477,7 @@ async function postMovements(em: EntityManager, order: ProductionOrder, code: st
     em,
     { lines: [...produced, ...used], reason: `Production completion ${code} for production order ${order.code}` },
     { type: PRODUCTION_COMPLETION_MOVEMENT, id },
-    { kind: "user", actor },
+    context,
   );
   return businessDate;
 }
@@ -473,13 +486,13 @@ async function postMovements(em: EntityManager, order: ProductionOrder, code: st
  * Advances the order's produced quantity and applies the state rule (spec Q8): Completed once it has
  * produced its target. A waste posting produces nothing, so it changes nothing and records nothing.
  */
-function progress(em: EntityManager, order: ProductionOrder, produced: string, actor: AuditActor): void {
+function progress(em: EntityManager, order: ProductionOrder, produced: string, context: PostingContext): void {
   if (produced === order.produced) return;
   const before = { produced: order.produced, status: order.status };
   order.produced = produced;
   order.status = documentState([productionStatus(produced, order.quantity)]);
-  order.updatedAt = new Date(Math.max(Date.now(), order.updatedAt.getTime() + 1));
-  recordTenantAudit(em, actor, {
+  order.updatedAt = context.kind === "seed" ? context.at : new Date(Math.max(Date.now(), order.updatedAt.getTime() + 1));
+  if (context.kind === "user") recordTenantAudit(em, context.actor, {
     action: "production-orders.production-order.progressed",
     subject: productionSubject(order),
     before,
