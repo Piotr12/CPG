@@ -23,11 +23,14 @@ The owner asked (through `/om-discover`, but explicitly without an intermediate 
 
 - `.ai/specs/2026-10-21--0718UTC-test-tenant-dataset.md` (new)
 - `.ai/runs/2026-10-21--0718UTC-test-tenant-dataset-spec.md` (this log)
+- GitHub issue #126 (E12-S02, labels `feature`, `priority-medium`, `risk-high`), linking the spec; the design-only PR is noted in the issue once opened.
 
 ## Verification
 
-- `npm test -- tests/ai-filenames.test.ts tests/spec-images.test.ts` on the new files (to run before commit).
+- `npx vitest run tests/ai-filenames.test.ts tests/spec-images.test.ts`: 2 files, 6 tests passed (after `npm ci` in the worktree, which had no `node_modules`).
+- Fresh-context skeptical review of the draft (a subagent given the spec, the rules, the lessons and the posting code): 1 critical, 4 high, 6 medium, 12 low findings, all folded into the spec or recorded as owner decisions (see the log). No code was written, so no lint, typecheck, coverage or build run applies.
 
 ## Follow-ups
 
-- Implementation issue filed in GitHub, linking the spec and the design PR (numbers recorded below once created).
+- The owner confirms Q2, Q4, Q6, Q15 and Q16 on the design PR; the spec is a proposal until it merges (SDLC.md).
+- Implementation: `om-auto-implement-spec .ai/specs/2026-10-21--0718UTC-test-tenant-dataset.md` after the design PR merges; existing deployments then adopt the dataset with one Test reset.

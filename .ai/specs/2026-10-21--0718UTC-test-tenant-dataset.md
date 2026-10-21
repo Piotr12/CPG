@@ -2,7 +2,7 @@
 
 **Status:** ready (a proposal until its design PR merges)
 **Created:** 2026-10-21 07:18 UTC
-**Issue:** filed with this spec's PR; see "Issue" below once numbered
+**Issue:** #126 (E12-S02), epic #78
 **Design authority:** `.ai/specs/product-brief.md` (D04, D06, R01–R05, R08, R09, N03, N04, N06), `.ai/specs/research/CPG-prd001.pdf` §05 (Test starts with demonstration records), `.ai/specs/research/CPG-acceptance.md` TEN-001, TEN-022…TEN-029, INV-010, INV-011, the seeder contract in `implemented/2026-10-19--0913UTC-test-prod-tenants.md` (Q4) and the atomic Test reset (#93). The owner's requirements for this dataset were given directly in the session that produced this spec (2026-10-21) and are recorded verbatim in "Owner's requirements".
 
 ## 📝 TLDR
