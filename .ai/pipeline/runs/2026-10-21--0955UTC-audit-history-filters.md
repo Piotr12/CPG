@@ -1,6 +1,6 @@
 # Execution plan — audit history filters (E13-S03, #96)
 
-Source doc: .ai/specs/2026-10-21--0944UTC-audit-history-filters.md (design PR #129)
+Source doc: .ai/specs/implemented/2026-10-21--0944UTC-audit-history-filters.md (design PR #129)
 Issue: #96
 Branch: feat/audit-history-filters
 Status: complete

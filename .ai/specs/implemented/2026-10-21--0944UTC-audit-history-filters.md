@@ -1,6 +1,6 @@
 # Trace one record's history in the tenant and Global audit
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-21 09:44 UTC
 **Issue:** #96 (E13-S03), epic #79 · **Builds on:** `implemented/2026-10-19--1050UTC-audit-log.md` (E02-S02, #20; its Q9 deferred filters to slice 2), `implemented/2026-10-21--0706UTC-stock-reversals.md` (E11-S02, #91) · **Design authority:** `.ai/specs/product-brief.md` (R07, R08), `.ai/specs/research/CPG-prd001.pdf` §06–§07, `.ai/specs/research/CPG-acceptance.md` (AUD-004, AUD-006, AUD-028…030, REV-020, API-014, UX-022)
 
@@ -171,9 +171,9 @@ Prototype: `.ai/specs/assets/audit-history-filters/`. The mockups are static and
 - `mockup-01-filtered-movement.png`: Test audit filtered to one stock movement, with its business date and a "Reversed by" link.
 - `mockup-02-filters-pl.png`: the same screen in Polish, filtered by account and channel.
 
-![Today's tenant audit](assets/audit-history-filters/current-01-tenant-audit.png)
-![Filtered to one stock movement](assets/audit-history-filters/mockup-01-filtered-movement.png)
-![Filters in Polish](assets/audit-history-filters/mockup-02-filters-pl.png)
+![Today's tenant audit](../assets/audit-history-filters/current-01-tenant-audit.png)
+![Filtered to one stock movement](../assets/audit-history-filters/mockup-01-filtered-movement.png)
+![Filters in Polish](../assets/audit-history-filters/mockup-02-filters-pl.png)
 
 ## 📝 Edge Cases & Failure Scenarios
 
@@ -268,3 +268,11 @@ Nothing is superseded.
    - at 1280 × 800 the Changes column is inside the viewport; at 390 px the form and the row links stay usable.
 
    Then run the gate: lint, typecheck, `test:coverage` (100%), build, `tests/integration/audit.test.ts`, plus `smoke.test.ts` for the migration count.
+
+## Implementation notes
+
+Implemented in #130.
+- **Refused filters on a screen.** The UI/UX bullet "Bad query on a screen" and the edge-case rows for `subjectId` without `subjectType` and for `from` after `to` say a malformed filter renders the not-found page. The implementation does not do that. The form's own hint invites typing an ID, so the review (#130) found that a normal Apply could end on a bare 404. Instead, a refused filter reads nothing and is explained in the form (`role="alert"`, `aria-invalid`), with the values as sent. Only a bad page position (`before`, `limit` or a foreign cursor) is still a not-found page. The API is unchanged: 400 `VALIDATION_FAILED`.
+- **Integration tests.** The journeys live in their own file, `tests/integration/audit-history.test.ts`, with their own accounts, not in `audit.test.ts`. They run in Prod.
+- **Reversal-link service test.** It reverses a stock correction rather than a receipt. Both go through the same `StockReversal` link, and `tests/integration/stock-reversals.test.ts` (#91) already covers a receipt reversal's links. The new integration file reverses a UI correction.
+- **Labels.** Besides the transfer actions and snapshot fields, per-line fields (`line2Status`) read "line 2: status", and their values use the line wording first (`lineStatus`). `tests/audit-labels.test.ts` also requires every recorded subject type in the Record type lists.
