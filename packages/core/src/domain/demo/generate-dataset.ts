@@ -2,7 +2,7 @@ import { isCalendarDate } from "../../validators/dates/calendar-date.schema";
 import { formatDecimal } from "../quantities/decimal";
 import { monthOf, monthStart, type Month } from "./calendar";
 import { planDemand, planForecasts } from "./demand-plan";
-import { Ledger } from "./ledger";
+import { replayTimeline, type DatasetSummary } from "./replay";
 import { planSupply } from "./supply-plan";
 import type { MaterialType } from "../../validators/materials/material-fields.schema";
 import type { TestTenantConfig } from "./test-tenant-config.schema";
@@ -36,24 +36,8 @@ export interface TestTenantDataset {
   forecasts: { material: string; location: string; date: string; quantity: string }[];
   /** Chronological by `at`, cut at today: the history and today's partial postings. */
   timeline: TimelineEvent[];
-  summary: Record<
-    "customerOrders" | "shipments" | "goodsIssues" | "requisitions" | "purchaseOrders" | "goodsReceipts" | "productionOrders" | "completions" | "openings" | "movements",
-    number
-  >;
+  summary: DatasetSummary;
 }
-
-/** The summary key counting each kind of timeline event. */
-const SUMMARY_KEY = {
-  opening: "openings",
-  customerOrder: "customerOrders",
-  shipment: "shipments",
-  goodsIssue: "goodsIssues",
-  requisition: "requisitions",
-  purchaseOrder: "purchaseOrders",
-  goodsReceipt: "goodsReceipts",
-  productionOrder: "productionOrders",
-  completion: "completions",
-} as const satisfies Record<TimelineEvent["kind"], keyof TestTenantDataset["summary"]>;
 
 /**
  * The plans of each anchor month already worked out, per configuration object: every day of a month
@@ -73,20 +57,10 @@ function anchorPlan(config: TestTenantConfig, anchor: Month): AnchorPlan {
   return plan;
 }
 
-/** The counts per kind, and the stock movements the timeline posts. */
-function summarize(config: TestTenantConfig, timeline: readonly TimelineEvent[]): TestTenantDataset["summary"] {
-  const summary = { customerOrders: 0, shipments: 0, goodsIssues: 0, requisitions: 0, purchaseOrders: 0, goodsReceipts: 0, productionOrders: 0, completions: 0, openings: 0, movements: 0 };
-  const ledger = new Ledger(config);
-  for (const event of timeline) {
-    summary[SUMMARY_KEY[event.kind]] += 1;
-    summary.movements += ledger.apply(event).length;
-  }
-  return summary;
-}
-
 /**
  * The dataset as of `today` (`YYYY-MM-DD`, UTC): the masters, the forecasts for the months after
- * this one, and the timeline of documents and postings up to today (spec "The dataset").
+ * this one, and the timeline of documents and postings up to today (spec "The dataset"). It refuses,
+ * by throwing, a configuration whose timeline would drive a balance negative or exceed its limits.
  */
 export function generateTestTenantDataset(config: TestTenantConfig, today: string): TestTenantDataset {
   if (!isCalendarDate(today)) throw new RangeError(`Today must be a calendar date written YYYY-MM-DD; got ${today}.`);
@@ -118,6 +92,6 @@ export function generateTestTenantDataset(config: TestTenantConfig, today: strin
     },
     forecasts: planForecasts(config, plan.demand, anchor),
     timeline,
-    summary: summarize(config, timeline),
+    summary: replayTimeline(config, timeline),
   };
 }
