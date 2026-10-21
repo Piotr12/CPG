@@ -145,6 +145,17 @@ describe("manual production", () => {
     await expect(service().create(input, actor)).rejects.toMatchObject({ code: "PRODUCTION_NO_USABLE_BOM" });
     expect(await auditCount()).toBe(0);
   });
+  it("refuses an explicit expired BOM/revision pair, writing nothing, and offers only date-valid alternatives (BOM-028)", async () => {
+    const manager = em(); const bom = await manager.findOneOrFail(Bom, { code: "00000001" });
+    const component = await manager.findOneOrFail(Material, { code: "00000002" });
+    const revision = manager.create(BomRevision, { bom, number: 2, priority: 1, validFrom: "2026-01-01", validThrough: "2026-09-30" });
+    manager.create(BomComponent, { revision, position: 0, material: component, quantity: "3", enteredQuantity: "3", enteredUnit: "kg", numerator: "1", denominator: "1" });
+    bom.revision = 2; await manager.flush();
+    expect((await service().options(input)).alternatives.map(({ bom, revision }) => [bom, revision])).toEqual([["00000002", 1]]);
+    await expect(service().create({ ...input, bom: "00000001", revision: 2 }, actor)).rejects.toMatchObject({ code: "PRODUCTION_BOM_CHANGED" });
+    expect([await service().count(), await auditCount(), await em().count(StockMovement, {})]).toEqual([0, 0, 0]);
+    expect(await service().create({ ...input, plannedFinish: "2026-09-30", bom: "00000001", revision: 2 }, actor)).toMatchObject({ bom: "00000001", revision: 2 });
+  });
   it("rejects new recipes with inactive components and includes the inclusive valid-through endpoint", async () => {
     const manager = em(); const bom = await manager.findOneOrFail(Bom, { code: "00000001" });
     const component = await manager.findOneOrFail(Material, { code: "00000002" });

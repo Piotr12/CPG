@@ -13,7 +13,7 @@ The original export marked every scenario `Not executed`. Scenarios are updated 
 - **Partially verified**: only part of the scenario can be or is asserted today; the **Evidence** line says which part is missing and why.
 - **Not executed**: not yet built or not yet checked.
 
-Last updated 2026-10-21 for epics E07 (#73), E08 (#74), E09 (#75), E10 (#76), E11 (#77) and E13 (#79), against `main` at `d2300ef` (PRs #102, #104, #107, #108, #109, #111, #112, #114, #118, #119, #120, #123, #125, #130, #133, #135); the gaps found are filed as #139–#145. Earlier: epic E05 (#13) against `2a2976a` (PR #99 for E05-S01), plus the tests and the workbook cell limit added with that update; epic E04 (#12) against `082f2d5`; epic E03 (#11) against `3f553a5`, and the E02 end-to-end follow-up (#67); epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
+Last updated 2026-10-21 for E10-S03 (#143), whose tests moved LFC-022, BOM-026, BOM-028, BOM-029, UX-013 and E2E-011 to Passed (automated). Before that, the same day: epics E07 (#73), E08 (#74), E09 (#75), E10 (#76), E11 (#77) and E13 (#79), against `main` at `d2300ef` (PRs #102, #104, #107, #108, #109, #111, #112, #114, #118, #119, #120, #123, #125, #130, #133, #135); the gaps found are filed as #139–#145. Earlier: epic E05 (#13) against `2a2976a` (PR #99 for E05-S01), plus the tests and the workbook cell limit added with that update; epic E04 (#12) against `082f2d5`; epic E03 (#11) against `3f553a5`, and the E02 end-to-end follow-up (#67); epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
 
 This document contains the complete acceptance catalogue for the CPG MVP. Each test preserves its ID, title, priority, execution channel, and Given / When / Then criteria.
 
@@ -800,9 +800,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### BOM-026 — Change can't modify existing order recipe
 
-**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/production-orders/production-completion.service.test.ts` (after revision 2 at 9 kg, the completion preview expects revision 1's 2 kg and 8 each). The expectation stored when a completion is posted is not asserted yet (#143). E10-S02, #89.
+- **Evidence:** `packages/core/src/services/production-orders/production-completion.service.test.ts` (after revision 2 at 9 kg, the completion preview expects revision 1's 2 kg and 8 each; after revision 2 and deactivation through `BomService`, a posted completion of 40 stores revision 1's expected 20 kg and 80 each, with zero variance). E10-S02, #89; E10-S03, #143.
 - **Given:** Production order pins recipe revision 1
 - **When:** Admin changes BOM to revision 2 then completes old order
 - **Then:** Completion expects revision 1 quantities, not revision 2.
@@ -817,18 +817,18 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### BOM-028 — Manual BOM override restricted by dates
 
-**Priority:** P1 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/production-orders/production-order.service.test.ts` (only date-valid alternatives are offered; an explicit superseded pair is `PRODUCTION_BOM_CHANGED`), `packages/app/src/components/production-orders/production-dialog.test.tsx`. An explicit expired pair is not asserted yet (#143). E10-S01, #88.
+- **Evidence:** `packages/core/src/services/production-orders/production-order.service.test.ts` (only date-valid alternatives are offered; an explicit superseded pair is `PRODUCTION_BOM_CHANGED`; an explicit pair whose current revision expired before the planned finish is `PRODUCTION_BOM_CHANGED` with no order, audit entry or movement written, while the date-valid alternative is offered and the same pair is accepted for a finish inside its dates), `packages/app/src/components/production-orders/production-dialog.test.tsx`. E10-S01, #88; E10-S03, #143.
 - **Given:** Several revisions/alternatives, one expired
 - **When:** User chooses an expired revision for new production order
 - **Then:** New order cannot reference expired BOM; date-valid alternatives offered.
 
 ### BOM-029 — Logical status toggle preserves revision count
 
-**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/boms/bom.service.test.ts` (deactivating and reactivating a BOM with revisions 1 and 2 records both entries, and its revisions stay 2 and 1, with no revision 3), `packages/db/src/orm.test.ts` (revisions and lines can't be updated). `packages/core/src/services/production-orders/production-order.service.test.ts` (an order still pins revision 1 after the BOM is deactivated). Reactivating the BOM with a pinned order is not asserted yet (#143). E04-S01, #26; E10-S01, #88.
+- **Evidence:** `packages/core/src/services/boms/bom.service.test.ts` (deactivating and reactivating a BOM with revisions 1 and 2 records both entries, and its revisions stay 2 and 1, with no revision 3), `packages/db/src/orm.test.ts` (revisions and lines can't be updated). `packages/core/src/services/production-orders/production-order.service.test.ts` (an order still pins revision 1 after the BOM is deactivated), `packages/core/src/services/production-orders/production-completion.service.test.ts` (after the BOM is revised, deactivated and reactivated, its revisions are 2 and 1 and the order still pins revision 1 for its history and preview). E04-S01, #26; E10-S01, #88; E10-S03, #143.
 - **Given:** Logical BOM has immutable revisions 1 and 2 and an existing production order pins revision 1
 - **When:** Admin deactivates and later reactivates logical BOM
 - **Then:** Active flag/audit changes, revision 1 and 2 snapshots unchanged, no artificial revision 3; pinned order still references revision 1.
@@ -4182,9 +4182,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### UX-013 — Searchable in-app documentation available
 
-**Priority:** P1 · **Channel:** UI · **Status:** Partially verified
+**Priority:** P1 · **Channel:** UI · **Status:** Passed (automated)
 
-- **Evidence:** Searchable help in both languages: `tests/integration/help.test.ts`, `packages/app/src/help/search-help.test.ts`; `tests/every-page-has-help.test.ts` fails the build for a page without a topic. The `production-order-detail` topic has a "Posting a completion" paragraph with an example (`packages/app/src/help/topics.ts`); a search for "completion" finding it is not asserted yet (#143). E01-S04, PR #32; E10-S02, #89.
+- **Evidence:** Searchable help in both languages: `tests/integration/help.test.ts`, `packages/app/src/help/search-help.test.ts` (a search for "completion" finds the `production-order-detail` topic with its "Posting a completion" paragraph and the 0.5 kg × 4 = 2 kg example, and "wykonanie" finds it in Polish); `tests/every-page-has-help.test.ts` fails the build for a page without a topic, and `HELP_TOPIC_ROUTES` maps the production order page to that topic. E01-S04, PR #32; E10-S02, #89; E10-S03, #143.
 - **Given:** Normal user on production completion screen
 - **When:** Open Help and search for 'completion'
 - **Then:** Relevant operational help and examples found without leaving app.
@@ -4499,9 +4499,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### LFC-022 — BOM deactivation doesn't strand production
 
-**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/production-orders/production-completion.service.test.ts` (after revision 2 and deactivation, the completion preview expects revision 1), `packages/core/src/services/production-orders/production-order.service.test.ts` and `tests/integration/production-orders.test.ts` (new orders refuse the deactivated BOM). Posting a completion after the BOM is revised or deactivated is not asserted yet (#143). E10-S02, #89.
+- **Evidence:** `packages/core/src/services/production-orders/production-completion.service.test.ts` (after revision 2 and deactivation, the completion preview expects revision 1, and a completion posts with revision 1's expected quantities), `packages/core/src/services/production-orders/production-order.service.test.ts` and `tests/integration/production-orders.test.ts` (new orders refuse the deactivated BOM). E10-S02, #89; E10-S03, #143.
 - **Given:** Order already pins BOM revision; admin deactivates logical BOM
 - **When:** Post valid production completion
 - **Then:** Existing order completes against pinned recipe, while new orders exclude deactivated alternative.
@@ -4631,9 +4631,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### E2E-011 — Read-only Prod protects production
 
-**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/production-completions.test.ts` (a read-only completion POST is 409, the preview and history stay readable, there is no Post button; once writable again a completion succeeds). That stock and the completion history are unchanged after the refusal is not asserted yet (#143). E10-S02, #89.
+- **Evidence:** `tests/integration/production-completions.test.ts` (a read-only completion POST is 409, and afterwards the output and both inputs keep the same balance and ledger, the history is empty and the order's produced, outstanding and version are unchanged; the preview and history stay readable, there is no Post button; once writable again a completion succeeds). E10-S02, #89; E10-S03, #143.
 - **Given:** Prod has valid stock and open production order; admin toggles Prod read-only
 - **When:** Try completion through UI and API; view latest results; switch flag off and retry
 - **Then:** Writes fail while read-only with no partial movement; reads work; after writable, valid completion succeeds.

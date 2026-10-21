@@ -52,4 +52,11 @@ describe("searchHelp", () => {
     expect(ids(searchHelp(helpTopics("en"), "sign"))).toContain("signing-in");
     expect(ids(searchHelp(helpTopics("pl"), "logowanie"))).toContain("signing-in");
   });
+
+  it("finds the production order topic, with its completion example, for “completion” in both languages (UX-013)", () => {
+    const topic = searchHelp(helpTopics("en"), "completion").find(({ id }) => id === "production-order-detail");
+    expect(topic?.body.join(" ")).toContain("Posting a completion: choose Post completion");
+    expect(topic?.body.join(" ")).toContain("0.5 kg per bar × 4 bars = 2 kg");
+    expect(ids(searchHelp(helpTopics("pl"), "wykonanie"))).toContain("production-order-detail");
+  });
 });
