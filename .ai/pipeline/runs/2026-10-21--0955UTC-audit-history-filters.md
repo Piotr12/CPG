@@ -53,6 +53,6 @@ A user can trace one record's history in the tenant and Global audit. Both audit
 
 ### Phase 2: Screens
 
-- [ ] 2.1 Filter form and URLs
-- [ ] 2.2 Table, labels and help
-- [ ] 2.3 Integration tests
+- [x] 2.1 Filter form and URLs — 9917fb2
+- [x] 2.2 Table, labels and help — 9057355
+- [x] 2.3 Integration tests — 4676298
