@@ -1,7 +1,7 @@
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 import writeXlsxFile from "write-excel-file/node";
 import { describe, expect, it } from "vitest";
-import { IMPORT_CELLS_MAX, IMPORT_FILE_MAX_BYTES, IMPORT_INFLATED_MAX_BYTES, IMPORT_ROWS_MAX, prepareImport } from "@cpg/core";
+import { IMPORT_CELLS_MAX, IMPORT_FILE_MAX_BYTES, IMPORT_INFLATED_MAX_BYTES, IMPORT_ROWS_MAX, prepareImport, prepareStockImport, STOCK_LAYOUT } from "@cpg/core";
 import {
   WORKBOOK_INFLATES_TOO_MUCH_MESSAGE,
   WORKBOOK_TOO_LARGE_MESSAGE,
@@ -60,6 +60,23 @@ describe("templateWorkbook", () => {
     expect(text("Instructions")).toMatch(/Example/);
     expect(text("Instrukcja")).toMatch(/Puste tworzy nowy BOM z kolejnym ID/);
     expect(text("Instrukcja")).toMatch(/Wymagana dla nowego rekordu/);
+  });
+
+  it("writes the stock template: one empty Stock sheet, then instructions on desired balances and the reason (STX-001)", async () => {
+    const sheets = await readWorkbook(base64(await templateWorkbook(STOCK_LAYOUT)));
+
+    expect(sheets.map((sheet) => sheet.name)).toEqual(["Stock", "Instructions", "Instrukcja"]);
+    expect(sheets[0].rows).toEqual([["Material ID", "Location ID", "Physical quantity", "Unit"]]);
+    expect(prepareStockImport(sheets).errors.map((error) => error.code)).toEqual(["IMPORT_EMPTY"]);
+
+    const text = (name: string) => sheets.find((sheet) => sheet.name === name)!.rows.flat().join(" ");
+    expect(text("Instructions")).toMatch(/^CPG stock import template/);
+    expect(text("Instructions")).toMatch(/physical quantity each position should have, not the change/);
+    expect(text("Instructions")).toMatch(/one reason for all the movements, such as "Opening balance"/);
+    expect(text("Instructions")).toMatch(/Physical quantity Required What should be physically at the location/);
+    expect(text("Instructions")).toMatch(/Unit Optional .* each/);
+    expect(text("Instrukcja")).toMatch(/^Szablon importu stanów CPG/);
+    expect(text("Instrukcja")).toMatch(/Bilans otwarcia/);
   });
 });
 

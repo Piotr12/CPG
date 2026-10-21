@@ -42,6 +42,10 @@ export * from "./services/imports/import.service";
 export { prepareImport, type ImportIssue, type PreparedImport } from "./domain/imports/prepare-import";
 export type { Cell, WorkbookSheet, WorkbookSheets } from "./domain/imports/cells";
 export * from "./domain/imports/workbook-layout";
+// The stock import (E07-S02): its own workbook on the same engine.
+export * from "./services/imports/stock-import.service";
+export { prepareStockImport, type PreparedStockImport } from "./domain/imports/prepare-stock-import";
+export * from "./domain/imports/stock-layout";
 // The Safety stock screen labels each target as of today.
 export { targetStatus, type TargetStatus } from "./domain/safety-stock/target-on";
 export type { NamedRecordChanges, NamedRecordView } from "./services/named-records/named-records";

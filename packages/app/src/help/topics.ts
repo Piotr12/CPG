@@ -32,6 +32,7 @@ export const HELP_TOPIC_IDS = [
   "shipment",
   "import",
   "stock",
+  "stock-import",
   "language-and-theme",
   "using-help",
 ] as const;
@@ -73,6 +74,7 @@ export const HELP_TOPIC_ROUTES: Record<HelpTopicId, string> = {
   shipment: "/admin/[tenant]/shipments/[id]",
   import: "/admin/[tenant]/import",
   stock: "/admin/[tenant]/stock",
+  "stock-import": "/admin/[tenant]/stock-import",
   "language-and-theme": "/admin",
   "using-help": "/help",
 };
@@ -324,7 +326,17 @@ const en: Record<HelpTopicId, HelpText> = {
       "Stock in the tenant menu shows the exact physical balance and recent movements for a selected material and location. A pair without movements has zero stock. Test and Prod are separate; fresh Test includes demonstration opening movements.",
       "Either role can post a reasoned correction while the tenant and masters are writable and active. Enter a signed change: 5 adds five and -5 removes five. Pick the base unit or a defined conversion; it converts once, half-up to six decimals, and keeps the entered quantity, unit and factor. The server uses today's UTC business date; backdating and future dating are unavailable. A correction that would make stock negative is refused with the available quantity.",
       "Opening balances and physical customer returns are ordinary positive corrections with a reason; there is no return document. Every user correction creates an immutable stock movement and a separate before/after audit entry. Source, actor and unit/factor appear in movement details. Installation openings are explicitly labelled Installation. The screen shows up to 100 recent movements, while its balance includes all movements.",
+      "To set many positions at once, such as an opening balance or a stock count, use Stock import (Import from spreadsheet on this screen): you write the quantity each position should have, not the change.",
       "A material with any movement keeps its type and base unit forever, even after returning to zero. Nonzero stock prevents material or location deactivation. The API reads GET /api/tenants/{tenant}/stock?material=00000001&location=00000001 and posts POST /api/tenants/{tenant}/stock/corrections with a bearer token, idempotency key, current Test generation and material, location, signed quantity, unit and reason.",
+    ],
+  },
+  "stock-import": {
+    title: "Stock import",
+    body: [
+      "Stock import, next to Stock in the sidebar, sets physical stock from one .xlsx workbook: an opening balance, or the result of a stock count. Both roles can use it while the tenant is writable. Download the template: one Stock sheet with Material ID, Location ID, Physical quantity and Unit, and instructions in English and Polish.",
+      "Write the quantity each position should have, not the change. The import computes each movement from the current physical balance: 85 where 100 is held posts -15, 130 posts +30, the same quantity is No change and posts nothing, and 0 empties the position. Positions you leave out are untouched, at every location. A quantity in another unit (2 case) is converted with the material's current conversion, so 2 cases of 12 mean 24 each in stock, not 24 more. In-transit stock belongs to its transfer and is never a location's balance: write it off on the transfer.",
+      "The dry run reads the balances, writes nothing, and lists each position's movement, or every problem by row and column: a negative quantity, an unknown or inactive material or location, a unit without a conversion, or the same position twice. Only a dry run without problems can be committed, with one reason for every movement, such as Opening balance or Stock count 2027-01. The commit posts all the movements as one ordinary correction, audited with your account, or nothing. If any listed balance changed since the dry run, the commit is refused: run the dry run again.",
+      "At most 2000 rows and 512 KB per workbook. The API offers the same: GET /api/stock-import/template, and POST /api/tenants/{tenant}/stock-import/dry-run with the workbook as base64, then /commit with the workbook, the dry run's previewToken and a reason.",
     ],
   },
   "language-and-theme": {
@@ -582,7 +594,17 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Zapas w menu środowiska pokazuje dokładny stan fizyczny i ostatnie ruchy wybranego materiału w lokalizacji. Para bez ruchów ma stan zero. Test i Prod są oddzielne; świeży Test zawiera demonstracyjne ruchy otwarcia.",
       "Obie role mogą zaksięgować korektę z powodem, gdy środowisko pozwala na zapis, a materiał i lokalizacja są aktywne. Wpisz zmianę ze znakiem: 5 dodaje pięć, -5 odejmuje pięć. Wybierz jednostkę podstawową lub zdefiniowany przelicznik; ilość jest przeliczana raz, z zaokrągleniem połówkowym w górę do sześciu miejsc, i zachowuje wpisaną ilość, jednostkę oraz przelicznik. Serwer używa dzisiejszej daty UTC; nie można księgować w przeszłość ani przyszłość. Korekta prowadząca do ujemnego zapasu jest odrzucana z dostępną ilością.",
       "Stany otwarcia i fizyczny zwrot od klienta to zwykłe dodatnie korekty z powodem; nie powstaje dokument zwrotu. Każda korekta użytkownika tworzy niezmienny ruch magazynowy i oddzielny wpis audytu ze stanem przed i po. Źródło, użytkownik i przelicznik są w szczegółach ruchu. Otwarcia demonstracyjne są oznaczone jako Instalacja. Ekran pokazuje do 100 ostatnich ruchów, a saldo uwzględnia wszystkie ruchy.",
+      "Aby ustawić wiele pozycji naraz, np. bilans otwarcia lub wynik inwentaryzacji, użyj Importu stanów (Import z arkusza na tym ekranie): wpisujesz ilość, jaka ma być w każdej pozycji, a nie zmianę.",
       "Materiał po dowolnym ruchu zachowuje na zawsze typ i jednostkę podstawową, nawet po wyzerowaniu zapasu. Niezerowy zapas blokuje dezaktywację materiału i lokalizacji. API odczytuje GET /api/tenants/{tenant}/stock?material=00000001&location=00000001 i księguje POST /api/tenants/{tenant}/stock/corrections z tokenem, kluczem idempotencji, bieżącą generacją Test oraz materiałem, lokalizacją, ilością ze znakiem, jednostką i powodem.",
+    ],
+  },
+  "stock-import": {
+    title: "Import stanów",
+    body: [
+      "Import stanów, obok Zapasu w menu bocznym, ustawia stany fizyczne z jednego skoroszytu .xlsx: bilans otwarcia albo wynik inwentaryzacji. Obie role mogą go używać, gdy środowisko pozwala na zapis. Pobierz szablon: jeden arkusz Stock z kolumnami Material ID, Location ID, Physical quantity i Unit oraz instrukcja po angielsku i po polsku.",
+      "Wpisz ilość, jaka ma być w każdej pozycji, a nie zmianę. Import wylicza każdy ruch z bieżącego stanu fizycznego: 85 przy stanie 100 księguje -15, 130 księguje +30, ta sama ilość to Bez zmian i niczego nie księguje, a 0 opróżnia pozycję. Pominięte pozycje pozostają bez zmian we wszystkich lokalizacjach. Ilość w innej jednostce (2 case) jest przeliczana bieżącym przelicznikiem materiału, więc 2 opakowania po 12 to stan 24 sztuk, a nie 24 więcej. Towar w drodze należy do przesunięcia i nie jest stanem lokalizacji: odpisz go na przesunięciu.",
+      "Próba odczytuje stany, niczego nie zapisuje i pokazuje ruch każdej pozycji albo każdy problem z wierszem i kolumną: ujemną ilość, nieznany lub nieaktywny materiał albo lokalizację, jednostkę bez przelicznika lub tę samą pozycję dwa razy. Zatwierdzić można tylko próbę bez problemów, z jednym powodem dla wszystkich ruchów, np. Bilans otwarcia lub Inwentaryzacja 2027-01. Zatwierdzenie księguje wszystkie ruchy jako jedną zwykłą korektę, z audytem na twoim koncie, albo nic. Jeśli któryś z wymienionych stanów zmienił się od czasu próby, zatwierdzenie jest odrzucane: wykonaj próbę ponownie.",
+      "Najwyżej 2000 wierszy i 512 KB na skoroszyt. API oferuje to samo: GET /api/stock-import/template oraz POST /api/tenants/{tenant}/stock-import/dry-run ze skoroszytem w base64, a potem /commit ze skoroszytem, previewToken z próby i powodem.",
     ],
   },
   "language-and-theme": {

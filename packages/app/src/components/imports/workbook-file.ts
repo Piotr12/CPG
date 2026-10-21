@@ -6,14 +6,14 @@ import {
   IMPORT_FILE_MAX_BYTES,
   IMPORT_INFLATED_MAX_BYTES,
   IMPORT_ROWS_MAX,
-  IMPORT_RULES,
-  IMPORT_SHEETS,
   INSTRUCTION_SHEETS,
+  MASTER_DATA_LAYOUT,
   isInstructionSheet,
   ValidationError,
   type Bilingual,
   type Cell,
   type ColumnSpec,
+  type ImportLayout,
   type WorkbookSheets,
 } from "@cpg/core";
 import {
@@ -204,18 +204,17 @@ const REQUIRED: Record<ColumnSpec["required"], Bilingual> = {
   never: { en: "Optional", pl: "Opcjonalna" },
 };
 
-const HEADINGS: Record<"title" | "column" | "required" | "meaning" | "example", Bilingual> = {
-  title: { en: "CPG import template", pl: "Szablon importu CPG" },
+const HEADINGS: Record<"column" | "required" | "meaning" | "example", Bilingual> = {
   column: { en: "Column", pl: "Kolumna" },
   required: { en: "Required", pl: "Wymagana" },
   meaning: { en: "Meaning", pl: "Znaczenie" },
   example: { en: "Example", pl: "Przykład" },
 };
 
-/** One instruction sheet: the rules, then each data sheet's purpose and columns, in one language. */
-function instructions(language: keyof Bilingual): TemplateSheet<Buffer> {
-  const data: TemplateCell[][] = [[bold(HEADINGS.title[language])], [], ...IMPORT_RULES.map((rule) => [rule[language]])];
-  for (const sheet of IMPORT_SHEETS) {
+/** One instruction sheet: the layout's rules, then each data sheet's purpose and columns, in one language. */
+function instructions(layout: ImportLayout, language: keyof Bilingual): TemplateSheet<Buffer> {
+  const data: TemplateCell[][] = [[bold(layout.title[language])], [], ...layout.rules.map((rule) => [rule[language]])];
+  for (const sheet of layout.sheets) {
     data.push([], [bold(sheet.name)], [sheet.purpose[language]]);
     data.push([HEADINGS.column, HEADINGS.required, HEADINGS.meaning, HEADINGS.example].map((heading) => bold(heading[language])));
     for (const column of sheet.columns) {
@@ -226,14 +225,15 @@ function instructions(language: keyof Bilingual): TemplateSheet<Buffer> {
 }
 
 /**
- * The import template (XLS-001, XLS-017): every data sheet with only its bold header row, in apply
- * order, then the Instructions (English) and Instrukcja (Polish) sheets explaining every column.
+ * An import template (XLS-001, XLS-017, STX-001): every data sheet of `layout` (default: the
+ * master-data workbook) with only its bold header row, in apply order, then the Instructions
+ * (English) and Instrukcja (Polish) sheets explaining every column with an example.
  */
-export async function templateWorkbook(): Promise<Buffer> {
-  const sheets: TemplateSheet<Buffer>[] = IMPORT_SHEETS.map((sheet) => ({
+export async function templateWorkbook(layout: ImportLayout = MASTER_DATA_LAYOUT): Promise<Buffer> {
+  const sheets: TemplateSheet<Buffer>[] = layout.sheets.map((sheet) => ({
     sheet: sheet.name,
     data: [sheet.columns.map((column) => bold(column.header))],
     columns: sheet.columns.map((column) => ({ width: Math.max(14, column.header.length + 4) })),
   }));
-  return writeXlsxFile([...sheets, instructions("en"), instructions("pl")]).toBuffer();
+  return writeXlsxFile([...sheets, instructions(layout, "en"), instructions(layout, "pl")]).toBuffer();
 }

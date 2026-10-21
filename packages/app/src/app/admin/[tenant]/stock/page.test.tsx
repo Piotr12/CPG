@@ -31,6 +31,8 @@ describe("StockPage", () => {
     expect(screen.getByRole("heading", { name: "Stock — Test" })).toBeTruthy(); expect(document.querySelector("[data-stock-balance]")!.textContent).toBe("0 each");
     expect(screen.getByText(en.stock.empty)).toBeTruthy(); expect(screen.getByRole("button", { name: "Post correction" })).toBeTruthy();
     expect(screen.getByLabelText("Material").getAttribute("name")).toBe("material");
+    // Either role reaches the stock import from here (stock-import spec, UI/UX).
+    expect(screen.getByRole("link", { name: en.stockImport.link }).getAttribute("href")).toBe("/admin/test/stock-import");
   });
   it("reads selected query references, renders signed history and source/actor/factor details", async () => {
     mocks.get.mockResolvedValue({ ...view, quantity: "23.500000", movements: [movement, { ...movement, id: "m2", quantity: "-0.500000", channel: "api", actorUsername: "alice", type: "receipt" }, { ...movement, id: "m3", postingId: "g1", type: "goods-receipt", quantity: "3.000000", actorUsername: "bob", channel: "ui" }] });
@@ -69,6 +71,7 @@ describe("StockPage", () => {
     mocks.getMessages.mockResolvedValue({ locale: "pl", messages: pl });
     render(await resolveServerComponents(page()));
     expect(screen.queryByRole("button", { name: pl.stock.form.open })).toBeNull();
+    expect(screen.queryByRole("link", { name: pl.stockImport.link }) === null).toBe(kind === "tenant");
     expect(screen.getByText(pl.stock.unavailable)).toBeTruthy(); expect(screen.getByText("Demo seed · Instalacja")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Zapas — Test" })).toBeTruthy(); expect(screen.getAllByText(/Nieaktywny/)).toHaveLength(2);
   });

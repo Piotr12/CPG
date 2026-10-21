@@ -15,6 +15,7 @@ import type { CustomerService } from "../services/customers/customer.service";
 import type { LocationService } from "../services/locations/location.service";
 import type { BomService } from "../services/boms/bom.service";
 import type { ImportService } from "../services/imports/import.service";
+import type { StockImportService } from "../services/imports/stock-import.service";
 import type { PlanningParameterService } from "../services/planning-parameters/planning-parameter.service";
 import type { SafetyStockTargetService } from "../services/safety-stock/safety-stock-target.service";
 import type { PurchaseOrderService } from "../services/purchase-orders/purchase-order.service";
@@ -66,6 +67,7 @@ export interface Cradle {
   goodsIssueService: GoodsIssueService;
   customerOrderService: CustomerOrderService;
   importService: ImportService;
+  stockImportService: StockImportService;
   /** The active tenant. Only in scopes built by `tenantScope()`. */
   tenant: TenantInfo;
 }

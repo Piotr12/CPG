@@ -5,9 +5,12 @@ import { en } from "../../i18n/messages/en";
 import { pl } from "../../i18n/messages/pl";
 import { ImportScreen } from "./import-screen";
 import { importLabels } from "./labels";
+import { stockImportLabels } from "./stock-labels";
 
 const mocks = vi.hoisted(() => ({ dryRunImport: vi.fn(), commitImport: vi.fn() }));
 vi.mock("../../app/admin/[tenant]/import/actions", () => mocks);
+const stockMocks = vi.hoisted(() => ({ dryRunStockImport: vi.fn(), commitStockImport: vi.fn() }));
+vi.mock("../../app/admin/[tenant]/stock-import/actions", () => stockMocks);
 const reads = vi.hoisted(() => ({ fileToBase64: vi.fn() }));
 vi.mock("./base64", async (importOriginal) => {
   reads.fileToBase64.mockImplementation((await importOriginal<typeof import("./base64")>()).fileToBase64);
@@ -224,5 +227,106 @@ describe("ImportScreen", () => {
     expect((screen.getByLabelText(en.imports.upload.file) as HTMLInputElement).disabled).toBe(true);
     expect(button("Commit 0 changes").disabled).toBe(true);
     expect(screen.getByRole("link", { name: "Download template (.xlsx)" })).toBeTruthy();
+  });
+});
+
+describe("ImportScreen — the stock import", () => {
+  const corrected = {
+    sheet: "Stock",
+    row: 2,
+    action: "update",
+    record: "00000001/00000002",
+    label: "00000001 — Flint at 00000002 — River cave",
+    changes: [
+      { field: "Entered", before: null, after: "2.000000 case" },
+      { field: "Physical quantity", before: "10.000000 each", after: "24.000000 each" },
+      { field: "Movement", before: null, after: "+14.000000 each" },
+    ],
+  };
+  const same = { sheet: "Stock", row: 3, action: "unchanged", record: "00000002/00000001", label: "00000002 — Hide at 00000001 — Main cave", changes: [] };
+  const report = { committed: false, previewToken: TOKEN, summary: [{ sheet: "Stock", created: 0, updated: 1, unchanged: 1, errors: 0 }], rows: [corrected, same], errors: [] };
+
+  const renderStock = (tenant = TENANT, messages = en) => render(<ImportScreen tenant={tenant} labels={stockImportLabels(messages)} kind="stock" />);
+
+  beforeEach(() => {
+    stockMocks.dryRunStockImport.mockResolvedValue({ ok: true, data: report });
+    stockMocks.commitStockImport.mockResolvedValue({ ok: true, data: { ...report, committed: true, previewToken: null } });
+  });
+  afterEach(() => vi.clearAllMocks());
+
+  it("previews each position's movement, with no Created column, through the stock actions", async () => {
+    renderStock();
+    expect(screen.getByRole("link", { name: "Download template (.xlsx)" }).getAttribute("href")).toBe("/api/stock-import/template");
+    await choose();
+    fireEvent.click(button("Run dry run"));
+
+    await screen.findByText("Movement: +14.000000 each");
+    expect(stockMocks.dryRunStockImport).toHaveBeenCalledWith("test", 2, { workbook: "AAAA" });
+    expect(mocks.dryRunImport).not.toHaveBeenCalled();
+    expect(screen.getByText("Entered: 2.000000 case")).toBeTruthy();
+    expect(screen.getByText("Physical quantity: 10.000000 each → 24.000000 each")).toBeTruthy();
+    expect(screen.getByText("Correct")).toBeTruthy();
+    const summary = within(screen.getAllByRole("table")[0]);
+    expect(summary.queryByText("Created")).toBeNull();
+    expect(summary.getByText("Corrections")).toBeTruthy();
+    expect(summary.getByText("No change")).toBeTruthy();
+  });
+
+  it("posts only once a reason is given, and sends it with the token (STX-014)", async () => {
+    renderStock();
+    await choose();
+    fireEvent.click(button("Run dry run"));
+    await screen.findByText("Movement: +14.000000 each");
+
+    expect(button("Post 1 correction").disabled).toBe(true);
+    const reason = screen.getByLabelText("Reason") as HTMLInputElement;
+    expect(reason.placeholder).toBe("Opening balance");
+    expect(reason.maxLength).toBe(500);
+    expect(screen.getByText(en.stockImport.reason.hint)).toBeTruthy();
+    fireEvent.change(reason, { target: { value: "   " } });
+    expect(button("Post 1 correction").disabled).toBe(true);
+    fireEvent.change(reason, { target: { value: " Stock count 2027-01 " } });
+    expect(screen.getByText(/The movement is posted to Test with this reason/)).toBeTruthy();
+    fireEvent.click(button("Post 1 correction"));
+
+    await screen.findByRole("status");
+    expect(stockMocks.commitStockImport).toHaveBeenCalledWith("test", 2, { workbook: "AAAA", previewToken: TOKEN, reason: " Stock count 2027-01 " });
+    expect(screen.getByRole("status").textContent).toBe("✓ Posted to Test. Corrections: 1, unchanged: 1. Reason: Stock count 2027-01.");
+    expect(screen.getByText("Corrected")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "00000001 — Flint at 00000002 — River cave" }).getAttribute("href")).toBe(
+      "/admin/test/stock?material=00000001&location=00000002",
+    );
+
+    // Another workbook starts without the last import's reason.
+    fireEvent.click(button(en.imports.commit.again));
+    expect((screen.getByLabelText("Reason") as HTMLInputElement).value).toBe("");
+  });
+
+  it("explains a stale commit and a missing reason in the reader's language", async () => {
+    stockMocks.commitStockImport.mockResolvedValueOnce({ ok: false, error: { code: "IMPORT_STALE", message: "Stale." } });
+    renderStock(TENANT, pl);
+    await choose(3, pl.imports.upload.file);
+    fireEvent.click(button(pl.imports.upload.run));
+    fireEvent.change(await screen.findByLabelText("Powód"), { target: { value: "Inwentaryzacja" } });
+    fireEvent.click(button("Zaksięguj 1 korektę"));
+    expect(await screen.findByText(pl.stockImport.errors.IMPORT_STALE)).toBeTruthy();
+    expect(screen.getAllByRole("listitem")[1].getAttribute("aria-current")).toBe("step");
+    expect(screen.queryByText("Ruch: +14.000000 each")).toBeNull();
+
+    stockMocks.commitStockImport.mockResolvedValueOnce({
+      ok: false,
+      error: { code: "VALIDATION_FAILED", message: "x", fieldErrors: { reason: ["Enter a reason, up to 500 characters."] } },
+    });
+    fireEvent.click(button(pl.imports.upload.run));
+    fireEvent.click(await screen.findByRole("button", { name: "Zaksięguj 1 korektę" }));
+    expect(await screen.findByText(pl.stock.fieldErrors.reason)).toBeTruthy();
+  });
+
+  it("blocks the upload, the reason and the commit while the tenant is read-only", () => {
+    renderStock({ ...TENANT, readOnly: true });
+
+    expect(screen.getByText(/Test is read-only: stock imports are blocked/)).toBeTruthy();
+    expect((screen.getByLabelText(en.imports.upload.file) as HTMLInputElement).disabled).toBe(true);
+    expect((screen.getByLabelText("Reason") as HTMLInputElement).disabled).toBe(true);
   });
 });
