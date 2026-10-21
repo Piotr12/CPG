@@ -1,13 +1,13 @@
 import { Forecast, OptimisticLockError, UniqueConstraintViolationException, type EntityManager, type Material } from "@cpg/db";
-import { DEMO_FORECASTS } from "../../domain/forecasts/demo-forecasts";
+import type { DemoForecast } from "../../domain/demo/generate-dataset";
 import { ConflictError, NotFoundError, ValidationError, versionConflict } from "../../http/errors";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
-import { activeDemoReferences, isUntouchedKind } from "../demo/demo-references";
 import { findActiveLocation, findLocation } from "../locations/find-location";
 import { convertToBaseQuantity } from "../materials/base-quantity";
 import { conversionFieldError } from "../materials/conversion-field-error";
 import { findActiveMaterial, findMaterial } from "../materials/find-material";
+import { isScopeReadOnly } from "../tenants/tenant.service";
 
 /**
  * One forecast, as the screens and the API show it: material and location business IDs, the ISO
@@ -132,24 +132,20 @@ export class ForecastService {
   }
 
   /**
-   * Creates the demonstration forecasts (D06) while the tenant's forecasts are untouched (none, and
-   * none ever audited), and returns how many. A forecast whose material or location is missing or
-   * inactive is skipped. Not audited, like the other demo records.
+   * Creates the generated dataset's forecasts `rows` when the tenant has none, and returns how many.
+   * Seeds nothing into a read-only tenant (R05). A row whose material or location is missing or
+   * inactive refuses the whole seed, as a save would. Not audited, like the other demo records.
    */
-  async seedDemo(): Promise<number> {
+  async seedDemo(rows: readonly DemoForecast[]): Promise<number> {
     return this.em.transactional(async (em) => {
-      if (!(await isUntouchedKind(em, await em.count(Forecast, {}), "forecasts"))) return 0;
-      const references = await activeDemoReferences(em, DEMO_FORECASTS);
-      let created = 0;
-      for (const { date, quantity, ...demo } of DEMO_FORECASTS) {
-        const material = references.material.get(demo.material);
-        const location = references.location.get(demo.location);
-        if (!material || !location) continue;
+      if ((await em.count(Forecast, {})) > 0 || (await isScopeReadOnly(em))) return 0;
+      for (const { date, quantity, ...demo } of rows) {
+        const material = await findActiveMaterial(em, demo.material);
+        const location = await findActiveLocation(em, demo.location);
         em.create(Forecast, { material, location, date, quantity });
-        created += 1;
       }
       await em.flush();
-      return created;
+      return rows.length;
     });
   }
 

@@ -1,18 +1,17 @@
 import { ProductionCompletion, ProductionOrder, OptimisticLockError, UniqueConstraintViolationException, type EntityManager } from "@cpg/db";
 import { documentState, resolveLines as resolveLifecycle, type LifecycleAction } from "../../domain/document-lifecycle/lifecycle";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
-import { DEMO_PRODUCTION_ORDER } from "../../domain/production-orders/demo-production-orders";
 import { productionStatus } from "../../domain/production-orders/production-completion";
 import { plannedStart } from "../../domain/production-orders/production-planning";
 import { parseDecimal } from "../../domain/quantities/decimal";
-import { AppError, ConflictError, ValidationError, versionConflict } from "../../http/errors";
+import { ConflictError, ValidationError, versionConflict } from "../../http/errors";
 import { parseInput } from "../../http/parse-input";
 import { productionOrderCreateSchema, productionOrderOptionsSchema, productionOrderListSchema, productionOrderUpdateSchema, PRODUCTION_PAGE_SIZE,
   type ProductionOrderInput, type ProductionOptionsInput, type ProductionOrderChanges } from "../../validators/production-orders/production-order.schema";
 import { recordTenantAudit } from "../audit/audit-recorder";
 import type { AuditActor } from "../audit/actor";
 import { convertToBaseQuantity } from "../materials/base-quantity";
-import { isScopeReadOnly } from "../tenants/tenant.service";
+import type { PostingContext } from "../stock/stock-posting";
 import { findProductionOrder, PRODUCTION_POPULATE, productionOrderView, productionSnapshot, productionSubject } from "./production-order-records";
 import { componentShortages, recipeComponents, resolveProductionOptions } from "./production-recipes";
 
@@ -35,12 +34,25 @@ export class ProductionOrderService {
   async options(input: ProductionOptionsInput) {
     return (await resolveProductionOptions(this.em, parseInput(productionOrderOptionsSchema, input))).options;
   }
-  async create(input: ProductionOrderInput, actor: AuditActor) {
+  create(input: ProductionOrderInput, actor: AuditActor) {
+    return this.createWith(input, { kind: "user", actor });
+  }
+
+  /**
+   * The demo seed's order, stamped at `at` and unaudited. The same checks apply, and the BOM revision's
+   * validity is judged at the order's own planned finish, as for a user (the planned start, the finish
+   * less the lead time, may precede the revision's start).
+   */
+  seedDemo(input: ProductionOrderInput, at: Date) {
+    return this.createWith(input, { kind: "seed", at });
+  }
+
+  private async createWith(input: ProductionOrderInput, context: PostingContext) {
     const values = parseInput(productionOrderCreateSchema, input);
     try {
       return await this.em.transactional(async (em) => {
-        const order = await insertOrder(em, values);
-        recordTenantAudit(em, actor, { action: "production-orders.production-order.created", subject: productionSubject(order), before: null, after: productionSnapshot(order) });
+        const order = await insertOrder(em, values, context.kind === "seed" ? context.at : undefined);
+        if (context.kind === "user") recordTenantAudit(em, context.actor, { action: "production-orders.production-order.created", subject: productionSubject(order), before: null, after: productionSnapshot(order) });
         await em.flush();
         return detail(em, order);
       });
@@ -114,22 +126,8 @@ export class ProductionOrderService {
       throw error;
     }
   }
-
-  /** Startup tolerates an edited Test dataset; reset verifies the shared registry's expected count. */
-  async seedDemo(): Promise<number> {
-    return this.em.transactional(async (em) => {
-      if ((await em.count(ProductionOrder, {})) > 0 || await isScopeReadOnly(em)) return 0;
-      try {
-        await em.transactional(async (savepoint) => { await insertOrder(savepoint, DEMO_PRODUCTION_ORDER); await savepoint.flush(); });
-        return 1;
-      } catch (error) {
-        if (error instanceof AppError) return 0;
-        throw error;
-      }
-    });
-  }
 }
-async function insertOrder(em: EntityManager, input: ProductionOrderInput) {
+async function insertOrder(em: EntityManager, input: ProductionOrderInput, at?: Date) {
   const { output, location, record, records, options } = await resolveProductionOptions(em, input);
   const selection = input.bom === undefined ? options.selected : { bom: input.bom, revision: input.revision };
   const recipe = records.get(selection.bom);
@@ -138,7 +136,8 @@ async function insertOrder(em: EntityManager, input: ProductionOrderInput) {
   const code = nextSequentialId(highest?.code ?? null, { code: "PRODUCTION_ORDER_IDS_EXHAUSTED", message: "This tenant has used every eight-digit production order ID." });
   const { baseQuantity, enteredQuantity, enteredUnit, numerator, denominator } = record;
   return em.create(ProductionOrder, { code, output, location, recipe, quantity: baseQuantity, enteredQuantity, enteredUnit, numerator, denominator,
-    plannedFinish: input.plannedFinish, plannedStart: options.plannedStart, leadTimeDays: options.leadTimeDays });
+    plannedFinish: input.plannedFinish, plannedStart: options.plannedStart, leadTimeDays: options.leadTimeDays,
+    ...(at && { createdAt: at, updatedAt: at }) });
 }
 async function detail(em: EntityManager, order: ProductionOrder) {
   const components = await recipeComponents(em, order.recipe, order.location, order.quantity);

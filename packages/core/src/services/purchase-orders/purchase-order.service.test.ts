@@ -9,9 +9,9 @@ import {
   OptimisticLockError,
   PurchaseOrder,
   PurchaseOrderLine,
+  PurchaseRequisition,
   selectTenant,
   Supplier,
-  Tenant,
   TenantAuditEvent,
   UniqueConstraintViolationException,
   type EntityManager,
@@ -21,7 +21,6 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadConfig } from "../../config";
 import { migrateDatabase, toDbOptions } from "../../database";
-import { DEMO_ORDERS } from "../../domain/purchasing/demo-purchasing";
 import { UNIT_NOT_CONVERTIBLE_MESSAGE } from "../../validators/boms/bom-fields.schema";
 import {
   LINE_LOCATION_MESSAGE,
@@ -108,6 +107,38 @@ describe("PurchaseOrderService", () => {
   afterEach(async () => {
     vi.restoreAllMocks();
     await orm.close();
+  });
+
+  it("lists in pages of 100 by ID, each with its own lines only, and counts the tenant's orders", async () => {
+    const em = scopedEm();
+    const supplier = await em.findOneOrFail(Supplier, { code: "00000001" });
+    const location = await em.findOneOrFail(Location, { code: "00000001" });
+    const material = await em.findOneOrFail(Material, { code: "00000001" });
+    for (let index = 1; index <= 101; index++) {
+      const order = em.create(PurchaseOrder, { code: String(index).padStart(8, "0"), supplier, location, status: "open" });
+      for (let position = 1; position <= 1 + (index % 2); position++) {
+        em.create(PurchaseOrderLine, {
+          order, position, material, quantity: `${index}.000000`, enteredQuantity: String(index), enteredUnit: "kg", numerator: "1", denominator: "1", plannedDate: "2027-03-03",
+        });
+      }
+    }
+    await em.flush();
+
+    const first = await service().list();
+    expect(first).toHaveLength(100);
+    expect([first[0].id, first[99].id]).toEqual(["00000001", "00000100"]);
+    expect(first.every(({ id, lines }) => lines.length === 1 + (Number(id) % 2) && lines.every(({ quantity }) => quantity === `${Number(id)}.000000`))).toBe(true);
+    expect((await service().list(1)).map(({ id }) => id)).toEqual(first.map(({ id }) => id));
+    expect((await service().list(2)).map(({ id }) => id)).toEqual(["00000101"]);
+    expect(await service().list(3)).toEqual([]);
+    expect(await service().count()).toBe(101);
+    expect(await service("test").count()).toBe(0);
+  });
+
+  it("refuses an invalid page as VALIDATION_FAILED", async () => {
+    for (const page of [0, -1, 1.5, Number.NaN]) {
+      await expect(service().list(page)).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+    }
   });
 
   it("recognizes old-release receipts written after migration on reads, closure, usage and new postings", async () => {
@@ -655,56 +686,23 @@ describe("PurchaseOrderService", () => {
   });
 
   describe("seedDemo", () => {
-    /** The demo masters the demo documents name: the demo materials 1…3 with their conversions, a location and a supplier. */
-    async function seedDemoMasters() {
-      const em = scopedEm("test");
-      em.create(Material, { code: "00000001", type: "raw", description: "Steel sheet 2 mm", baseUnit: "kg" });
-      const bolt = em.create(Material, { code: "00000002", type: "raw", description: "Bolt M8", baseUnit: "each" });
-      em.create(MaterialConversion, { material: bolt, unit: "case", numerator: "12", denominator: "1" });
-      em.create(Material, { code: "00000003", type: "raw", description: "Paint, red", baseUnit: "l" });
-      em.create(Location, { code: "00000001", name: "Main plant" });
-      em.create(Supplier, { code: "00000001", name: "Steel Service" });
-      await em.flush();
-    }
+    const at = new Date("2025-06-15T23:30:00Z");
 
-    it("creates the demo orders after the requisitions they convert, unaudited, and nothing the second time", async () => {
-      await seedDemoMasters();
-      await new PurchaseRequisitionService({ em: scopedEm("test") }).seedDemo();
-
-      expect(await service("test").seedDemo()).toBe(DEMO_ORDERS.length);
-      expect(await service("test").seedDemo()).toBe(0);
-
-      const [order] = await service("test").list();
-      expect(order.lines.map(({ material, quantity, requisition }) => [material, quantity, requisition])).toEqual([
-        ["00000001", "60.000000", "00000001"],
-        ["00000003", "20.000000", null],
-      ]);
-      expect(await new PurchaseRequisitionService({ em: scopedEm("test") }).get("00000001")).toMatchObject({ converted: "60.000000", status: "open" });
-      expect(await entries("purchase-orders.purchase-order.created", "test")).toEqual([]);
-      expect(await entries("purchase-requisitions.purchase-requisition.converted", "test")).toEqual([]);
+    it("creates an order stamped at the seed's moment, converting a requisition fully, without any audit", async () => {
+      const source = await requisition();
+      const auditBefore = await scopedEm().count(TenantAuditEvent, {});
+      const view = await service().seedDemo(converting(source.id, "100"), at);
+      expect(view).toMatchObject({ id: "00000001", status: "open", createdAt: at, lines: [{ requisition: source.id, quantity: "100.000000" }] });
+      expect(await scopedEm().findOneOrFail(PurchaseOrder, { code: view.id })).toMatchObject({ createdAt: at, updatedAt: at });
+      expect(await requisitions().get(source.id)).toMatchObject({ converted: "100.000000", status: "completed" });
+      expect(await scopedEm().count(TenantAuditEvent, {})).toBe(auditBefore);
     });
 
-    it("skips an order that breaks a rule here, such as a missing requisition", async () => {
-      await seedDemoMasters();
-
-      expect(await service("test").seedDemo()).toBe(0);
-      expect(await service("test").list()).toEqual([]);
-    });
-
-    it("lets a failure that isn't a rule through", async () => {
-      await seedDemoMasters();
-      const em = scopedEm("test");
-      vi.spyOn(em, "transactional")
-        .mockImplementationOnce(async (callback) => callback(em))
-        .mockRejectedValueOnce(new Error("disk full"));
-      await expect(service("test", em).seedDemo()).rejects.toThrow("disk full");
-    });
-
-    it("seeds nothing into a read-only Test (R05)", async () => {
-      await seedDemoMasters();
-      await orm.em.fork().nativeUpdate(Tenant, { code: "test" }, { readOnly: true });
-
-      expect(await service("test").seedDemo()).toBe(0);
+    it("applies the same rules as create: an over-converting line is refused and nothing is written", async () => {
+      const source = await requisition();
+      await expect(service().seedDemo(converting(source.id, "101"), at)).rejects.toMatchObject({ code: "REQUISITION_OVER_CONVERTED" });
+      expect(await scopedEm().count(PurchaseOrder, {})).toBe(0);
+      expect(await scopedEm().findOneOrFail(PurchaseRequisition, { code: source.id })).toMatchObject({ converted: "0.000000", status: "open" });
     });
   });
 });

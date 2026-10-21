@@ -7,15 +7,14 @@ import {
 } from "@cpg/db";
 import { documentState, resolveLines as resolveLifecycle, type LifecycleAction, type DocumentState } from "../../domain/document-lifecycle/lifecycle";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
-import { DEMO_REQUISITIONS } from "../../domain/purchasing/demo-purchasing";
-import { AppError, ConflictError, ValidationError, versionConflict } from "../../http/errors";
+import { ConflictError, ValidationError, versionConflict } from "../../http/errors";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit } from "../audit/audit-recorder";
 import { findActiveLocation } from "../locations/find-location";
 import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quantity";
 import { findActiveMaterial } from "../materials/find-material";
 import { lineError } from "../materials/line-error";
-import { isScopeReadOnly } from "../tenants/tenant.service";
+import type { PostingContext } from "../stock/stock-posting";
 import {
   findRequisition,
   requisitionEntry,
@@ -73,11 +72,22 @@ export class PurchaseRequisitionService {
   }
 
   /** A new Open requisition with the next ID and nothing converted (LFC-001). */
-  async create(input: NewRequisition, actor: AuditActor): Promise<RequisitionView> {
+  create(input: NewRequisition, actor: AuditActor): Promise<RequisitionView> {
+    return this.createWith(input, { kind: "user", actor });
+  }
+
+  /** The demo seed's requisition, stamped at `at` and unaudited; every business rule of `create` still applies. */
+  seedDemo(input: NewRequisition, at: Date): Promise<RequisitionView> {
+    return this.createWith(input, { kind: "seed", at });
+  }
+
+  private async createWith(input: NewRequisition, context: PostingContext): Promise<RequisitionView> {
     try {
       return await this.em.transactional(async (em) => {
-        const requisition = await insertRequisition(em, input);
-        recordTenantAudit(em, actor, requisitionEntry("created", requisition, null, requisitionSnapshot(requisition)));
+        const requisition = await insertRequisition(em, input, context.kind === "seed" ? context.at : undefined);
+        if (context.kind === "user") {
+          recordTenantAudit(em, context.actor, requisitionEntry("created", requisition, null, requisitionSnapshot(requisition)));
+        }
         await em.flush();
         return toRequisitionView(requisition);
       });
@@ -137,35 +147,10 @@ export class PurchaseRequisitionService {
       throw error;
     }
   }
-
-  /**
-   * Creates the demonstration requisitions (D06) when the tenant has none, and returns how many. Each
-   * is built through the same rules as a save, in its own savepoint: one that breaks a rule here (a
-   * demo material or location missing, inactive or without its conversion in an edited Test tenant)
-   * is skipped. Not audited, like the other demo records. Seeds nothing into a read-only tenant (R05).
-   */
-  async seedDemo(): Promise<number> {
-    return this.em.transactional(async (em) => {
-      if ((await em.count(PurchaseRequisition, {})) > 0 || (await isScopeReadOnly(em))) return 0;
-      let created = 0;
-      for (const demo of DEMO_REQUISITIONS) {
-        try {
-          await em.transactional(async (savepoint) => {
-            await insertRequisition(savepoint, demo);
-            await savepoint.flush();
-          });
-          created += 1;
-        } catch (error) {
-          if (!(error instanceof AppError)) throw error;
-        }
-      }
-      return created;
-    });
-  }
 }
 
-/** Checks and inserts (unflushed) a requisition with the tenant's next ID; shared by `create` and the demo seed. */
-async function insertRequisition(em: EntityManager, input: NewRequisition): Promise<PurchaseRequisition> {
+/** Checks and inserts (unflushed) a requisition with the tenant's next ID; shared by `create` and the demo seeds; `at` stamps the seed's `createdAt`. */
+async function insertRequisition(em: EntityManager, input: NewRequisition, at?: Date): Promise<PurchaseRequisition> {
   const material = await findActiveMaterial(em, input.material);
   const location = await findActiveLocation(em, input.location);
   const record = await convertEntered(em, material, input);
@@ -187,6 +172,7 @@ async function insertRequisition(em: EntityManager, input: NewRequisition): Prom
     requiredDate: input.requiredDate,
     converted: "0.000000",
     status: "open",
+    ...(at && { createdAt: at }),
   });
 }
 

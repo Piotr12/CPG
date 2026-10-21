@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { initOrm, migrate, selectTenant, Location, Material, MaterialConversion, StockBalance, StockMovement, Tenant, TenantAuditEvent, type Orm, type TenantCode } from "@cpg/db";
+import { initOrm, migrate, selectTenant, Location, Material, MaterialConversion, StockBalance, StockMovement, TenantAuditEvent, type Orm, type TenantCode } from "@cpg/db";
 import type { AuditActor } from "../audit/actor";
 import { StockService } from "./stock.service";
 import { MaterialService } from "../materials/material.service";
@@ -137,15 +137,20 @@ describe("StockService", () => {
     await location.update(PAIR.location, { active: false }, 1, ACTOR);
     expect(await service().get(PAIR)).toMatchObject({ quantity: "0.000000", materialActive: false, locationActive: false });
   });
-  it("seeds real openings once with explicit provenance; skips read-only/edited/missing-reference datasets", async () => {
-    const seed = scoped(); const steel = await seed.findOneOrFail(Material, { code: "00000001" }); steel.baseUnit = "kg"; await seed.flush();
-    expect(await service().seedDemo()).toBe(1);
-    expect((await service().get(PAIR)).movements[0]).toMatchObject({ actorUserId: null, actorUsername: "Demo seed", channel: "seed", reason: "Demonstration opening balance" });
+  it("seeds generated openings as one unaudited group dated from the seed time, with no guards", async () => {
+    const at = new Date("2026-03-01T06:00:00Z");
+    const seeded = await service().seedDemo([{ ...PAIR, quantity: "5", unit: "each" }, { ...PAIR, quantity: "2", unit: "case" }], at);
+    expect(seeded).toHaveLength(2);
+    expect(seeded.map(({ postingId }) => postingId)).toEqual([seeded[0].postingId, seeded[0].postingId]);
+    expect(seeded).toMatchObject([
+      { position: 0, type: "correction", businessDate: "2026-03-01", occurredAt: at, quantity: "5.000000", balanceAfter: "5.000000", channel: "seed", reason: "Demonstration opening balance", actorUserId: null, actorUsername: "Demo seed" },
+      { position: 1, businessDate: "2026-03-01", occurredAt: at, quantity: "24.000000", balanceAfter: "29.000000", channel: "seed" },
+    ]);
+    expect((await service().get(PAIR)).quantity).toBe("29.000000");
     expect(await entries()).toEqual([]);
-    expect(await service().seedDemo()).toBe(0);
-    expect(await service("test").seedDemo()).toBe(0);
-    const em = scoped("test"); const tenant = await em.findOneOrFail(Tenant, { code: "test" }); tenant.readOnly = true; await em.flush();
-    expect(await service("test").seedDemo()).toBe(0);
+    expect(await service().seedDemo([{ ...PAIR, quantity: "1", unit: "each" }], at)).toHaveLength(1);
+    expect((await service().get(PAIR)).quantity).toBe("30.000000");
+    expect(await service().seedDemo([], at)).toEqual([]);
   });
   it("revalidates cached masters at posting time after another request deactivates them", async () => {
     const em = scoped();

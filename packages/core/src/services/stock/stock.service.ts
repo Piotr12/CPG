@@ -1,13 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { StockBalance, StockMovement, type EntityManager } from "@cpg/db";
 import type { z } from "zod";
-import { DEMO_STOCK } from "../../domain/stock/demo-stock";
 import { parseInput } from "../../http/parse-input";
 import { NotFoundError } from "../../http/errors";
 import { stockMovementIdSchema } from "../../validators/stock/stock-reversal.schema";
 import { STOCK_LEDGER_PAGE_SIZE, stockCorrectionSchema, stockLedgerQuerySchema, stockPairSchema, stockPostingSchema } from "../../validators/stock/stock-correction.schema";
 import type { AuditActor } from "../audit/actor";
-import { activeDemoReferences, isUntouchedKind } from "../demo/demo-references";
 import { findLocation } from "../locations/find-location";
 import { findMaterial } from "../materials/find-material";
 import { transitAt } from "../transfers/transfer-usage";
@@ -89,15 +87,9 @@ export class StockService {
     return this.em.transactional((em) => postStockMovements(em, input, source, { kind: "user", actor }));
   }
 
-  /** Installation openings use the same ledger/balance primitive with explicit non-user provenance. */
-  async seedDemo(): Promise<number> {
-    return this.em.transactional(async (em) => {
-      if (!(await isUntouchedKind(em, await em.count(StockMovement, {}), "stock"))) return 0;
-      const references = await activeDemoReferences(em, DEMO_STOCK);
-      const lines = DEMO_STOCK.filter((line) => references.material.get(line.material)?.baseUnit === line.unit && references.location.has(line.location));
-      if (lines.length === 0) return 0;
-      return (await postStockMovements(em, { lines, reason: "Demonstration opening balance" }, { type: CORRECTION_MOVEMENT, id: randomUUID() }, { kind: "seed" })).length;
-    });
+  /** The generated dataset's opening balances: one correction group posted as the seed at `at`, unaudited and unguarded. */
+  async seedDemo(lines: readonly { material: string; location: string; quantity: string; unit: string }[], at: Date): Promise<StockMovementView[]> {
+    return this.em.transactional((em) => postStockMovements(em, { lines: [...lines], reason: "Demonstration opening balance" }, { type: CORRECTION_MOVEMENT, id: randomUUID() }, { kind: "seed", at }));
   }
 }
 

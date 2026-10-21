@@ -19,7 +19,7 @@ const owned = tenantOwned();
 
 /**
  * Goods that arrived against one purchase `order` (E09-S02, BUY-013), posted on `businessDate` (the
- * server's UTC date, INV-010) at `createdAt`. `code` is its business ID: eight digits, sequential per
+ * server's UTC date for a user, the seed's own date for the seed, INV-010) at `createdAt`. `code` is its business ID: eight digits, sequential per
  * tenant, never reused. Its lines are `GoodsReceiptLine`s, and its stock movements carry its `id` as
  * their posting ID.
  */

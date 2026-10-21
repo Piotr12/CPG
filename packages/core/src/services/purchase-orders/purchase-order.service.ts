@@ -8,12 +8,14 @@ import {
   type EntityManager,
   type Material,
 } from "@cpg/db";
-import { nextSequentialId, formatSequentialId } from "../../domain/business-ids/sequential-id";
+import { nextSequentialId } from "../../domain/business-ids/sequential-id";
 import { documentState, outstandingQuantity as unresolvedQuantity, resolveLines as resolveLifecycle, type DocumentState, type LifecycleAction } from "../../domain/document-lifecycle/lifecycle";
 import { selectLifecycleLines } from "../../domain/document-lifecycle/select-lines";
-import { DEMO_ORDERS } from "../../domain/purchasing/demo-purchasing";
 import { addQuantities, afterConversion, fitsOutstanding, outstandingQuantity } from "../../domain/purchasing/requisition-quantity";
-import { AppError, ConflictError, ValidationError, versionConflict, type FieldErrors } from "../../http/errors";
+import { ConflictError, ValidationError, versionConflict, type FieldErrors } from "../../http/errors";
+import { parseInput } from "../../http/parse-input";
+import { DOCUMENT_PAGE_SIZE } from "../../validators/shipments/shipment.schema";
+import { purchaseOrderListQuerySchema } from "../../validators/purchasing/purchase-order.schema";
 import {
   LINE_NO_SUCH_LINE_MESSAGE,
   LINE_LOCATION_MESSAGE,
@@ -28,8 +30,9 @@ import { findActiveMaterial } from "../materials/find-material";
 import { lineError } from "../materials/line-error";
 import { assertOrderOpen, findOrder, orderLineState } from "./order-records";
 import { findRequisition, requisitionEntry, requisitionSnapshot } from "../purchase-requisitions/requisition-records";
+import { groupBy } from "../shipments/shipment-records";
 import { findActiveSupplier } from "../suppliers/find-supplier";
-import { isScopeReadOnly } from "../tenants/tenant.service";
+import type { PostingContext } from "../stock/stock-posting";
 
 /** One line of an order as the screens and the API show it. `line` is its 1-based number. */
 export interface OrderLineView {
@@ -121,10 +124,24 @@ export class PurchaseOrderService {
     this.em = em;
   }
 
-  /** Every order of the tenant with its lines, by ID. */
-  async list(): Promise<OrderView[]> {
-    const orders = await this.em.find(PurchaseOrder, {}, { populate: ["supplier", "location"], orderBy: { code: "asc" } });
+  /**
+   * A page of the tenant's orders with their lines, by ID, `DOCUMENT_PAGE_SIZE` to a page (lines are
+   * read for that page's orders only); a page past the last is empty, an invalid `page` is `VALIDATION_FAILED`.
+   */
+  async list(page = 1): Promise<OrderView[]> {
+    const { page: valid } = parseInput(purchaseOrderListQuerySchema, { page });
+    const orders = await this.em.find(PurchaseOrder, {}, {
+      populate: ["supplier", "location"],
+      orderBy: { code: "asc" },
+      limit: DOCUMENT_PAGE_SIZE,
+      offset: (valid - 1) * DOCUMENT_PAGE_SIZE,
+    });
     return viewsOf(this.em, orders);
+  }
+
+  /** How many orders the tenant has, for the pages of `list`. */
+  count(): Promise<number> {
+    return this.em.count(PurchaseOrder, {});
   }
 
   /** One order; `PURCHASE_ORDER_NOT_FOUND` when this tenant has no such ID, another tenant's included (TEN-014). */
@@ -134,10 +151,22 @@ export class PurchaseOrderService {
   }
 
   /** A new Open order with the next ID, converting the requisitions its lines name (LFC-001, BUY-003). */
-  async create(input: NewOrder, actor: AuditActor): Promise<OrderView> {
+  create(input: NewOrder, actor: AuditActor): Promise<OrderView> {
+    return this.createWith(input, { kind: "user", actor });
+  }
+
+  /**
+   * The demo seed's order, stamped at `at` and unaudited, converting the requisitions its lines name
+   * (by business ID) as `create` does; every business rule of `create` still applies.
+   */
+  seedDemo(input: NewOrder, at: Date): Promise<OrderView> {
+    return this.createWith(input, { kind: "seed", at });
+  }
+
+  private async createWith(input: NewOrder, context: PostingContext): Promise<OrderView> {
     try {
       return await this.em.transactional(async (em) => {
-        const order = await insertOrder(em, input, actor);
+        const order = await insertOrder(em, input, context);
         await em.flush();
         return (await viewsOf(em, [order]))[0];
       });
@@ -226,45 +255,15 @@ export class PurchaseOrderService {
       throw error;
     }
   }
-
-  /**
-   * Creates the demonstration orders (D06) when the tenant has none, and returns how many. Each is
-   * built through the same rules as a save, in its own savepoint: one that breaks a rule here (a
-   * demo supplier, location or material missing or inactive in an edited Test tenant, a requisition
-   * already converted) is skipped. Their requisition is the demo requisition of that position. Not
-   * audited, like the other demo records. Seeds nothing into a read-only tenant (R05).
-   */
-  async seedDemo(): Promise<number> {
-    return this.em.transactional(async (em) => {
-      if ((await em.count(PurchaseOrder, {})) > 0 || (await isScopeReadOnly(em))) return 0;
-      let created = 0;
-      for (const demo of DEMO_ORDERS) {
-        const lines = demo.lines.map(({ requisition, ...line }) => ({
-          ...line,
-          requisition: requisition === undefined ? null : formatSequentialId(requisition),
-        }));
-        try {
-          await em.transactional(async (savepoint) => {
-            await insertOrder(savepoint, { ...demo, lines }, null);
-            await savepoint.flush();
-          });
-          created += 1;
-        } catch (error) {
-          if (!(error instanceof AppError)) throw error;
-        }
-      }
-      return created;
-    });
-  }
 }
 
 /**
  * Checks and inserts (unflushed) a new order with its lines, converts the requisitions they name,
- * and records the audit entries (none when `actor` is null: the demo seed). The supplier and the
+ * and records the audit entries (none for the demo seed, which stamps the order at its `at`). The supplier and the
  * location must be active; each line is resolved and its field errors collected into one
  * `VALIDATION_FAILED` keyed `lines.N.<field>`.
  */
-async function insertOrder(em: EntityManager, input: NewOrder, actor: AuditActor | null): Promise<PurchaseOrder> {
+async function insertOrder(em: EntityManager, input: NewOrder, context: PostingContext): Promise<PurchaseOrder> {
   const supplier = await findActiveSupplier(em, input.supplier);
   const location = await findActiveLocation(em, input.location);
   const resolved = await resolveLines(em, input);
@@ -273,7 +272,7 @@ async function insertOrder(em: EntityManager, input: NewOrder, actor: AuditActor
     code: "ORDER_IDS_EXHAUSTED",
     message: "This tenant has used every eight-digit purchase order ID.",
   });
-  const order = em.create(PurchaseOrder, { code, supplier, location, status: "open" });
+  const order = em.create(PurchaseOrder, { code, supplier, location, status: "open", ...(context.kind === "seed" && { createdAt: context.at, updatedAt: context.at }) });
   resolved.forEach(({ material, record, plannedDate, requisition }, index) => {
     const { baseQuantity, enteredQuantity, enteredUnit, numerator, denominator } = record;
     em.create(PurchaseOrderLine, {
@@ -298,11 +297,11 @@ async function insertOrder(em: EntityManager, input: NewOrder, actor: AuditActor
     const before = requisitionSnapshot(requisition);
     const progress = afterConversion(requisition.quantity, requisition.converted, quantity);
     Object.assign(requisition, { ...progress, status: documentState([progress.status]) });
-    if (actor) recordTenantAudit(em, actor, requisitionEntry("converted", requisition, before, requisitionSnapshot(requisition)));
+    if (context.kind === "user") recordTenantAudit(em, context.actor, requisitionEntry("converted", requisition, before, requisitionSnapshot(requisition)));
   }
-  if (actor) {
+  if (context.kind === "user") {
     const snapshot = orderSnapshot(order, resolved);
-    recordTenantAudit(em, actor, orderEntry("created", order, null, snapshot));
+    recordTenantAudit(em, context.actor, orderEntry("created", order, null, snapshot));
   }
   return order;
 }
@@ -365,12 +364,13 @@ async function viewsOf(em: EntityManager, orders: readonly PurchaseOrder[]): Pro
     { order: { $in: [...orders] } },
     { populate: ["material", "requisition"], orderBy: { position: "asc" } },
   );
+  const byOrder = groupBy(lines, (line) => line.order.id);
   return orders.map((order) => ({
     id: order.code,
     supplier: order.supplier.code,
     location: order.location.code,
     status: order.status as OrderView["status"],
-    lines: lines.filter((line) => line.order.id === order.id).map(toLineView),
+    lines: byOrder.get(order.id)!.map(toLineView),
     createdAt: order.createdAt,
     version: order.version,
   }));

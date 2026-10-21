@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { formatSignedQuantity, parseSignedQuantity } from "./signed-quantity";
-import { DEMO_STOCK } from "./demo-stock";
 
 describe("signed stock quantities", () => {
   it.each([["+12", 12000000n], ["-0.000001", -1n], ["-2.5", -2500000n], ["0", 0n], ["-0", 0n], ["12.345678", 12345678n]])("parses %s exactly", (text, expected) => {
@@ -12,7 +11,5 @@ describe("signed stock quantities", () => {
     expect(formatSignedQuantity(-1n)).toBe("-0.000001");
     expect(formatSignedQuantity(-2500000n)).toBe("-2.500000");
     expect(formatSignedQuantity(0n)).toBe("0.000000");
-    expect(DEMO_STOCK).toHaveLength(6);
-    expect(DEMO_STOCK.every((row) => parseSignedQuantity(row.quantity)! > 0n)).toBe(true);
   });
 });

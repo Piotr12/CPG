@@ -23,7 +23,7 @@ import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quan
 import { lineError } from "../materials/line-error";
 import { assertOrderOpen, findOrder, orderLineState } from "../purchase-orders/order-records";
 import { groupBy } from "../shipments/shipment-records";
-import { postStockMovements } from "../stock/stock-posting";
+import { postStockMovements, type PostingContext } from "../stock/stock-posting";
 import { documentMovements, NO_MOVEMENT, type DocumentMovement } from "../stock/movement-reversals";
 
 /** The stock movement type a receipt posts (INV-012: every movement names its source). */
@@ -122,7 +122,19 @@ export class GoodsReceiptService {
    * `lines.N.<field>`: a line of another order (BUY-013), a line number the order doesn't have, a
    * unit the material doesn't convert. Any refusal, here or in the posting, writes nothing.
    */
-  async post(input: ReceiptCreateInput, actor: AuditActor): Promise<PostedReceiptView> {
+  post(input: ReceiptCreateInput, actor: AuditActor): Promise<PostedReceiptView> {
+    return this.postWith(input, { kind: "user", actor });
+  }
+
+  /**
+   * The demo seed's receipt, posted and stamped at `at` and unaudited. The same checks apply: a line
+   * the order doesn't have or an order that is no longer Open is refused as `post` would.
+   */
+  seedDemo(input: ReceiptCreateInput, at: Date): Promise<PostedReceiptView> {
+    return this.postWith(input, { kind: "seed", at });
+  }
+
+  private async postWith(input: ReceiptCreateInput, context: PostingContext): Promise<PostedReceiptView> {
     try {
       return await this.em.transactional(async (em) => {
         const order = await findOrder(em, input.purchaseOrder, { refresh: true });
@@ -146,15 +158,15 @@ export class GoodsReceiptService {
             reason: `Goods receipt ${code} for purchase order ${order.code}`,
           },
           { type: GOODS_RECEIPT_MOVEMENT, id },
-          { kind: "user", actor },
+          context,
         );
-        const receipt = em.create(GoodsReceipt, { id, code, order, businessDate });
+        const receipt = em.create(GoodsReceipt, { id, code, order, businessDate, ...(context.kind === "seed" && { createdAt: context.at }) });
         resolved.forEach(({ orderLine, record }, position) => {
           const { baseQuantity, enteredQuantity, enteredUnit, numerator, denominator } = record;
           em.create(GoodsReceiptLine, { receipt, position, orderLine, quantity: baseQuantity, enteredQuantity, enteredUnit, numerator, denominator });
         });
-        receive(em, order, orderLines, resolved, actor);
-        recordTenantAudit(em, actor, {
+        receive(em, order, orderLines, resolved, context);
+        if (context.kind === "user") recordTenantAudit(em, context.actor, {
           action: "goods-receipts.goods-receipt.posted",
           subject: { type: "GoodsReceipt", id: code, label: `${code} — purchase order ${order.code}` },
           before: null,
@@ -224,9 +236,9 @@ async function resolveLines(
 
 /**
  * Adds each line's receipt to its order line, completes the order once every line is received in full
- * (BUY-016, LFC-009), advances its version (the order changed), and records the order's audit entry.
+ * (BUY-016, LFC-009), advances its version (the order changed), and records the order's audit entry (the demo seed's is unaudited and stamped at its `at`).
  */
-function receive(em: EntityManager, order: PurchaseOrder, orderLines: readonly PurchaseOrderLine[], resolved: readonly ResolvedLine[], actor: AuditActor): void {
+function receive(em: EntityManager, order: PurchaseOrder, orderLines: readonly PurchaseOrderLine[], resolved: readonly ResolvedLine[], context: PostingContext): void {
   const before: Record<string, string> = { status: order.status };
   const after: Record<string, string> = {};
   for (const { orderLine, after: line } of resolved) {
@@ -238,9 +250,9 @@ function receive(em: EntityManager, order: PurchaseOrder, orderLines: readonly P
   for (const line of orderLines) line.status = orderLineState(line);
   order.status = documentState(orderLines.map(({ status }) => status));
   after.status = order.status;
-  order.updatedAt = new Date();
+  order.updatedAt = context.kind === "seed" ? context.at : new Date();
   const { code, supplier } = order;
-  recordTenantAudit(em, actor, {
+  if (context.kind === "user") recordTenantAudit(em, context.actor, {
     action: "purchase-orders.purchase-order.received",
     subject: { type: "PurchaseOrder", id: code, label: `${code} — ${supplier.code} ${supplier.name}` },
     before,

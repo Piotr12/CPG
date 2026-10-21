@@ -2,6 +2,7 @@ import { Shipment, ShipmentLine, type CustomerOrder, type CustomerOrderLine, typ
 import { isNothing, outstandingOf, toIssueOf } from "../../domain/goods-issues/issue-quantity";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit } from "../audit/audit-recorder";
+import type { PostingContext } from "../stock/stock-posting";
 
 /*
  * What a customer order's writers need to know about its shipments. A leaf module, so the order and
@@ -21,8 +22,9 @@ export async function isAnyShipped(em: EntityManager, lines: readonly CustomerOr
  * Completes, and audits, every Open shipment of `order` that has nothing left to issue (spec Q8): after
  * a goods issue, or an order edit that left its lines nothing outstanding. Reads the order lines through
  * `em`'s identity map, so the caller's unflushed changes count. Ordinary postings never reopen shipments.
+ * The demo seed completes them too, unaudited.
  */
-export async function completeFinishedShipments(em: EntityManager, order: CustomerOrder, actor: AuditActor): Promise<void> {
+export async function completeFinishedShipments(em: EntityManager, order: CustomerOrder, context: PostingContext): Promise<void> {
   const open = await em.find(Shipment, { order, status: "open" }, { refresh: true });
   if (open.length === 0) return;
   const lines = await em.find(ShipmentLine, { shipment: { $in: open } }, { populate: ["orderLine"] });
@@ -32,7 +34,7 @@ export async function completeFinishedShipments(em: EntityManager, order: Custom
       .every(({ quantity, issued, orderLine }) => isNothing(toIssueOf(quantity, issued, outstandingOf(orderLine))));
     if (!finished) continue;
     shipment.status = "completed";
-    recordTenantAudit(em, actor, {
+    if (context.kind === "user") recordTenantAudit(em, context.actor, {
       action: "shipments.shipment.completed",
       subject: { type: "Shipment", id: shipment.code, label: `${shipment.code} — customer order ${order.code}` },
       before: { status: "open" },

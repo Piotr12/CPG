@@ -977,6 +977,7 @@ export const en = {
     empty: "No purchase orders in {tenant} yet.",
     emptyHint: "Create the first one with Create purchase order.",
     allOrders: "All purchase orders",
+    pagination: "Purchase order pages", previous: "Previous", next: "Next", page: "Page {page} of {pages}",
     columns: { id: "Order", supplier: "Supplier", location: "Location", lines: "Lines", status: "Status" },
     status: { open: "Open", completed: "Completed", "closed-early": "Closed Early", cancelled: "Cancelled" },
     inactive: "Inactive",

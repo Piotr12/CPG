@@ -28,7 +28,7 @@ import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quan
 import { lineError } from "../materials/line-error";
 import { assertShipmentOpen, findShipment, groupBy } from "../shipments/shipment-records";
 import { completeFinishedShipments } from "../shipments/shipment-usage";
-import { postStockMovements } from "../stock/stock-posting";
+import { postStockMovements, type PostingContext } from "../stock/stock-posting";
 import { documentMovements, NO_MOVEMENT, type DocumentMovement } from "../stock/movement-reversals";
 
 /** The stock movement type a goods issue posts (INV-012: every movement names its source). */
@@ -117,7 +117,19 @@ export class GoodsIssueService {
    * shipment doesn't have, a unit the material doesn't convert, a quantity above the line's to issue.
    * Too little stock is `INSUFFICIENT_STOCK`, from the posting. Any refusal writes nothing.
    */
-  async post(input: IssueCreateInput, actor: AuditActor): Promise<IssueView> {
+  post(input: IssueCreateInput, actor: AuditActor): Promise<IssueView> {
+    return this.postWith(input, { kind: "user", actor });
+  }
+
+  /**
+   * The demo seed's issue, posted and stamped at `at` and unaudited. The same checks apply: a seed
+   * issue beyond the shipment line's to-issue or the stock on hand is refused as `post` would.
+   */
+  seedDemo(input: IssueCreateInput, at: Date): Promise<IssueView> {
+    return this.postWith(input, { kind: "seed", at });
+  }
+
+  private async postWith(input: IssueCreateInput, context: PostingContext): Promise<IssueView> {
     try {
       return await this.em.transactional(async (em) => {
         const shipment = await findShipment(em, input.shipment, { refresh: true });
@@ -145,17 +157,17 @@ export class GoodsIssueService {
             reason: `Goods issue ${code} for shipment ${shipment.code}, customer order ${order.code}`,
           },
           { type: GOODS_ISSUE_MOVEMENT, id },
-          { kind: "user", actor },
+          context,
         );
-        const issue = em.create(GoodsIssue, { id, code, shipment, businessDate });
+        const issue = em.create(GoodsIssue, { id, code, shipment, businessDate, ...(context.kind === "seed" && { createdAt: context.at }) });
         resolved.forEach(({ shipmentLine, record }, position) => {
           const { baseQuantity, enteredQuantity, enteredUnit, numerator, denominator } = record;
           em.create(GoodsIssueLine, { issue, position, shipmentLine, quantity: baseQuantity, enteredQuantity, enteredUnit, numerator, denominator });
         });
-        fulfil(em, order, orderLines, resolved, actor);
-        issueShipment(em, shipment, order, resolved, actor);
-        await completeFinishedShipments(em, order, actor);
-        recordTenantAudit(em, actor, {
+        fulfil(em, order, orderLines, resolved, context);
+        issueShipment(em, shipment, order, resolved, context);
+        await completeFinishedShipments(em, order, context);
+        if (context.kind === "user") recordTenantAudit(em, context.actor, {
           action: "goods-issues.goods-issue.posted",
           subject: { type: "GoodsIssue", id: code, label: `${code} — shipment ${shipment.code}` },
           before: null,
@@ -224,7 +236,7 @@ async function resolveLines(em: EntityManager, shipment: Shipment, shipmentLines
  * every line is (SAL-013, LFC-003, LFC-010), advances the order's version (it changed), and records
  * the order's audit entry.
  */
-function fulfil(em: EntityManager, order: CustomerOrder, orderLines: readonly CustomerOrderLine[], resolved: readonly ResolvedLine[], actor: AuditActor): void {
+function fulfil(em: EntityManager, order: CustomerOrder, orderLines: readonly CustomerOrderLine[], resolved: readonly ResolvedLine[], context: PostingContext): void {
   const before: Record<string, string> = { status: order.status };
   const after: Record<string, string> = {};
   for (const { shipmentLine, record } of resolved) {
@@ -239,8 +251,9 @@ function fulfil(em: EntityManager, order: CustomerOrder, orderLines: readonly Cu
   }
   order.status = documentState(orderLines.map(({ status }) => status));
   after.status = order.status;
-  order.updatedAt = new Date(Math.max(Date.now(), order.updatedAt.getTime() + 1));
-  recordTenantAudit(em, actor, {
+  if (context.kind === "seed") order.updatedAt = context.at;
+  else order.updatedAt = new Date(Math.max(Date.now(), order.updatedAt.getTime() + 1));
+  if (context.kind === "user") recordTenantAudit(em, context.actor, {
     action: "customer-orders.customer-order.fulfilled",
     subject: { type: "CustomerOrder", id: order.code, label: `Customer order ${order.code}` },
     before,
@@ -249,7 +262,7 @@ function fulfil(em: EntityManager, order: CustomerOrder, orderLines: readonly Cu
 }
 
 /** Adds each line's issue to its shipment line and records that shipment's audit entry. */
-function issueShipment(em: EntityManager, shipment: Shipment, order: CustomerOrder, resolved: readonly ResolvedLine[], actor: AuditActor): void {
+function issueShipment(em: EntityManager, shipment: Shipment, order: CustomerOrder, resolved: readonly ResolvedLine[], context: PostingContext): void {
   const before: Record<string, string> = {};
   const after: Record<string, string> = {};
   for (const { shipmentLine, record } of resolved) {
@@ -257,7 +270,7 @@ function issueShipment(em: EntityManager, shipment: Shipment, order: CustomerOrd
     shipmentLine.issued = addQuantities(shipmentLine.issued, record.baseQuantity);
     after[`line${shipmentLine.position + 1}Issued`] = shipmentLine.issued;
   }
-  recordTenantAudit(em, actor, {
+  if (context.kind === "user") recordTenantAudit(em, context.actor, {
     action: "shipments.shipment.issued",
     subject: { type: "Shipment", id: shipment.code, label: `${shipment.code} — customer order ${order.code}` },
     before,

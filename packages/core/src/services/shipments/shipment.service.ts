@@ -22,6 +22,7 @@ import { recordTenantAudit } from "../audit/audit-recorder";
 import { assertCustomerOrderOpen, findCustomerOrder } from "../customer-orders/order-records";
 import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quantity";
 import { lineError } from "../materials/line-error";
+import type { PostingContext } from "../stock/stock-posting";
 import { findShipment, groupBy } from "./shipment-records";
 
 export const SHIPMENT_ID_RACE = "Another shipment was created at the same moment. Try again.";
@@ -105,7 +106,16 @@ export class ShipmentService {
    * `lines.N.<field>`: a line of another order (SAL-008), an ID that isn't a line of this order, a
    * unit the material doesn't convert, a quantity above the order line's outstanding.
    */
-  async create(input: ShipmentCreateInput, actor: AuditActor): Promise<ShipmentView> {
+  create(input: ShipmentCreateInput, actor: AuditActor): Promise<ShipmentView> {
+    return this.createWith(input, { kind: "user", actor });
+  }
+
+  /** The demo seed's shipment, stamped at `at` and unaudited; every business rule of `create` still applies. */
+  seedDemo(input: ShipmentCreateInput, at: Date): Promise<ShipmentView> {
+    return this.createWith(input, { kind: "seed", at });
+  }
+
+  private async createWith(input: ShipmentCreateInput, context: PostingContext): Promise<ShipmentView> {
     try {
       return await this.em.transactional(async (em) => {
         const order = await findCustomerOrder(em, input.customerOrder, { refresh: true });
@@ -116,12 +126,12 @@ export class ShipmentService {
           code: "SHIPMENT_IDS_EXHAUSTED",
           message: "This tenant has used every eight-digit shipment ID.",
         });
-        const shipment = em.create(Shipment, { code, order, plannedDate: input.plannedDate });
+        const shipment = em.create(Shipment, { code, order, plannedDate: input.plannedDate, ...(context.kind === "seed" && { createdAt: context.at }) });
         resolved.forEach(({ orderLine, record }, position) => {
           const { baseQuantity, enteredQuantity, enteredUnit, numerator, denominator } = record;
           em.create(ShipmentLine, { shipment, position, orderLine, quantity: baseQuantity, enteredQuantity, enteredUnit, numerator, denominator });
         });
-        recordTenantAudit(em, actor, {
+        if (context.kind === "user") recordTenantAudit(em, context.actor, {
           action: "shipments.shipment.created",
           subject: { type: "Shipment", id: code, label: `${code} — customer order ${order.code}` },
           before: null,

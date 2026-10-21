@@ -194,6 +194,25 @@ describe("ShipmentService", () => {
     });
   });
 
+  describe("seedDemo", () => {
+    it("creates a shipment stamped at the seed's moment with no audit, under the same rules as create", async () => {
+      const at = new Date("2025-06-15T08:30:00Z");
+      const order = await orders().create(ORDER, ACTOR);
+      const input = shipmentOf(order, { orderLine: order.lines[0].id, quantity: "50", unit: "each" });
+      const seeded = await service().seedDemo(input, at);
+      expect(seeded).toMatchObject({ id: "00000001", status: "open", createdAt: at, lines: [{ quantity: "50.000000", toIssue: "50.000000" }] });
+      expect((await scoped().findOneOrFail(Shipment, { code: "00000001" })).createdAt).toEqual(at);
+      expect(await scoped().count(TenantAuditEvent, { action: { $like: "shipments.%" } })).toBe(0);
+      const user = await service().create(shipmentOf(order, { orderLine: order.lines[1].id, quantity: "1", unit: "each" }), ACTOR);
+      expect(user.id).toBe("00000002");
+      expect(user.createdAt.getTime()).toBeGreaterThan(at.getTime());
+      expect(await scoped().count(TenantAuditEvent, { action: "shipments.shipment.created" })).toBe(1);
+      await expect(service().seedDemo(shipmentOf(order, { orderLine: order.lines[0].id, quantity: "51", unit: "each" }), at))
+        .rejects.toMatchObject({ code: "VALIDATION_FAILED", fieldErrors: { "lines.0.quantity": [SHIPMENT_QUANTITY_OUTSTANDING_MESSAGE] } });
+      expect(await scoped().count(Shipment, {})).toBe(2);
+    });
+  });
+
   describe("list and get", () => {
     it("lists in pages of 100, newest first, each with its own lines (lesson 2026-10-20)", async () => {
       const order = await orders().create(ORDER, ACTOR);

@@ -3,7 +3,6 @@ import { assertNoCustomerOrdersAtLocation } from "../customer-orders/customer-or
 import { assertNoPhysicalStock } from "../stock/stock-usage";
 import { assertNoOpenTransfersAt } from "../transfers/transfer-usage";
 import type { EntityManager } from "@cpg/db";
-import { DEMO_LOCATIONS } from "../../domain/locations/demo-locations";
 import type { AuditActor } from "../audit/actor";
 import { LOCATION_LOOKUP } from "./find-location";
 import { NamedRecords, type NamedRecordChanges, type NamedRecordView } from "../named-records/named-records";
@@ -25,7 +24,6 @@ export class LocationService {
       ...LOCATION_LOOKUP,
       subjectType: "Location",
       actionPrefix: "locations.location",
-      demoNames: DEMO_LOCATIONS,
       beforeDeactivate: async (em, location) => {
         await assertNoProductionOrders(em, { location });
         await assertNoPhysicalStock(em, { location });
@@ -51,7 +49,7 @@ export class LocationService {
     return this.records.update(id, changes, version, actor);
   }
 
-  seedDemo(): Promise<number> {
-    return this.records.seedDemo();
+  seedDemo(rows: readonly string[], at?: Date): Promise<number> {
+    return this.records.seedDemo(rows, at);
   }
 }

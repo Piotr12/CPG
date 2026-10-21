@@ -127,8 +127,16 @@ describe("production completion and transfer posting reversals (#92)", () => {
     expect(await physical(ids.bar)).toBe("0.000000");
     const history = await ok<CompletionView[]>("GET", `production-orders/${planned.id}/completions`);
     expect(history.map(({ id, reversal }) => [id, reversal?.reason ?? null])).toEqual([[second.id, "Entered twice"], [history[1].id, null]]);
-    const test = (await api<{ generation: number }>("GET", "/api/tenants/test")).body.data;
-    expect((await api("POST", `/api/tenants/test/production-orders/${planned.id}/completions/${second.id}/reverse`, { reason: "Wrong tenant" }, operatorSecret, randomUUID(), test.generation)).status).toBe(404);
+    // Test holds two years of production orders, more than Prod: its last completed one is Test's alone, and Prod must not reverse its completion.
+    const testOrders: { id: string; status: string }[] = [];
+    for (let page = 1; testOrders.length === (page - 1) * 100; page += 1) {
+      testOrders.push(...(await api<{ id: string; status: string }[]>("GET", `/api/tenants/test/production-orders?page=${page}`)).body.data);
+    }
+    const testOrder = testOrders.findLast(({ status }) => status === "completed")!.id;
+    const [testCompletion] = (await api<CompletionView[]>("GET", `/api/tenants/test/production-orders/${testOrder}/completions`)).body.data;
+    expect((await api("GET", `/api/tenants/prod/production-orders/${testOrder}`)).status).toBe(404);
+    expect((await api("POST", completionReverse(testOrder, testCompletion.id), { reason: "Wrong tenant" }, operatorSecret)).status).toBe(404);
+    expect((await api<CompletionView[]>("GET", `/api/tenants/test/production-orders/${testOrder}/completions`)).body.data[0]).toEqual(testCompletion);
   });
 
   it("unwinds a transfer receipts and write-offs first, reopening it from Closed Early, then its dispatch (TRF-019/020/021/025/027)", async () => {

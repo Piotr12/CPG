@@ -1,10 +1,12 @@
+import { asValue } from "awilix";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { REDUCED_TEST_TENANT_CONFIG } from "../../../../../tests/setup/demo-fixtures";
 import { scopeForTenant } from "../../container/tenant-scope";
+import { generateTestTenantDataset } from "../../domain/demo/generate-dataset";
 import { prepareImport } from "../../domain/imports/prepare-import";
 import { inRequestTransaction } from "../../http/request-transaction";
 import { TYPE_MESSAGE } from "../../validators/materials/material-fields.schema";
 import { RAW_MATERIAL_BUY_ONLY_MESSAGE } from "../../validators/planning-parameters/planning-parameter-fields.schema";
-import { seedResetDemoData } from "../demo/seed-demo-data";
 import { IMPORT_STALE_MESSAGE } from "./import.service";
 import { ACTOR, importKit, sheet, type ImportKit } from "./import-test-kit";
 
@@ -375,7 +377,10 @@ describe("each master sheet", () => {
 
 it("invalidates an old preview even when the request scope predates reset and the transaction uses the new generation", async () => {
   const workbook = [sheet("materials", [null, "raw", "same deterministic input", "kg", null])];
-  await seedResetDemoData((await scopeForTenant(kit.container, "test")).cradle);
+  // The reset writes the dataset's materials again, so the workbook's new material gets the same ID in both generations.
+  kit.container.register({ testTenantConfig: asValue(REDUCED_TEST_TENANT_CONFIG) });
+  const { masters } = generateTestTenantDataset(REDUCED_TEST_TENANT_CONFIG, new Date().toISOString().slice(0, 10));
+  await (await scopeForTenant(kit.container, "test")).cradle.materialService.seedDemo(masters.materials);
   const old = await kit.dryRun(workbook, "test");
   const captured = await scopeForTenant(kit.container, "test");
   expect(captured.cradle.tenant.generation).toBe(1);
@@ -383,4 +388,4 @@ it("invalidates an old preview even when the request scope predates reset and th
   // Reproduce equal business inputs/IDs across generations: a blank dry run has no read versions.
   await expect(inRequestTransaction(captured.cradle.em, () => captured.cradle.importService.commit(prepareImport(workbook), old.previewToken!, ACTOR)))
     .rejects.toMatchObject({ code: "IMPORT_STALE" });
-});
+}, 60_000);

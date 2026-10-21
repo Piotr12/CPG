@@ -2,9 +2,9 @@
 // admin password, apply pending migrations (so a broken config or data volume fails the deploy
 // instead of the first request), then sign the admin out everywhere: the admin password can only
 // change with a restart, and sessions opened with the old one must not survive it. The admin's API
-// tokens end too, but only when the password actually changed: tokens never expire. Last, the Test
-// tenant gets the demonstration records of each kind it has none of; a failure there is logged, per
-// kind, not fatal, because the app works without them and the next start tries again.
+// tokens end too, but only when the password actually changed: tokens never expire. Last, an
+// untouched Test tenant gets its generated demonstration dataset, all of it or nothing; a failure
+// there is logged, not fatal, because the app works without it and the next start tries again.
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     const {
@@ -31,9 +31,18 @@ export async function register() {
     const revokedTokens = await revokeAdminTokensIfPasswordChanged(config);
     if (revokedTokens) console.info(`The admin password changed: revoked ${revokedTokens} admin API token(s)`);
     try {
-      for (const [kind, result] of Object.entries(await seedDemoData(config))) {
-        if ("error" in result) console.error(`Seeding the Test demonstration ${kind} failed:`, result.error);
-        else if (result.seeded) console.info(`Seeded the Test tenant with ${result.seeded} demonstration ${kind}`);
+      const started = performance.now();
+      const seed = await seedDemoData(config);
+      const seconds = ((performance.now() - started) / 1000).toFixed(1);
+      if (seed.outcome === "seeded") {
+        const counts = Object.entries(seed.counts).map(([kind, count]) => `${count} ${kind}`).join(", ");
+        console.info(`Seeded the Test tenant with its demonstration dataset in ${seconds} s: ${counts}`);
+      } else if (seed.outcome === "skipped") {
+        console.info(seed.reason === "read-only"
+          ? "Test is read-only: its demonstration dataset was not seeded"
+          : "Test already has data: its demonstration dataset was not seeded (reset Test to replace it)");
+      } else {
+        console.error("Seeding the Test demonstration dataset failed, and nothing was written:", seed.error);
       }
     } catch (error) {
       console.error("Seeding the Test demonstration data failed:", error);

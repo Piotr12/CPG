@@ -18,7 +18,6 @@ import { z } from "zod";
 import { loadConfig } from "../../config";
 import { getContainer } from "../../container/container";
 import { migrateDatabase, toDbOptions } from "../../database";
-import { DEMO_MATERIALS } from "../../domain/materials/demo-materials";
 import { VERSION_CONFLICT } from "../../http/errors";
 import { tenantServerAction } from "../../http/tenant-server-action";
 import { conversionChangeSchema } from "../../validators/materials/conversion.schema";
@@ -29,6 +28,7 @@ import { PlanningParameterService } from "../planning-parameters/planning-parame
 import { ForecastService } from "../forecasts/forecast.service";
 import { SafetyStockTargetService } from "../safety-stock/safety-stock-target.service";
 import { MATERIAL_ID_RACE, MaterialService } from "./material.service";
+import { FIXTURE_MATERIALS } from "../../../../../tests/setup/demo-fixtures";
 
 /** Who the tests act as: the admin, on the UI. */
 const ACTOR: AuditActor = { userId: "admin-id", username: "admin", sessionId: "admin-session", channel: "ui", token: null };
@@ -669,16 +669,33 @@ describe("MaterialService", () => {
 
   describe("seedDemo", () => {
     it("creates the demo materials with consecutive IDs in an empty tenant, unaudited, and nothing the second time", async () => {
-      expect(await service("test").seedDemo()).toBe(DEMO_MATERIALS.length);
-      expect(await service("test").seedDemo()).toBe(0);
+      expect(await service("test").seedDemo(FIXTURE_MATERIALS)).toBe(FIXTURE_MATERIALS.length);
+      expect(await service("test").seedDemo(FIXTURE_MATERIALS)).toBe(0);
 
       const materials = await service("test").list();
       expect(materials.map(({ id, description }) => `${id} ${description}`)).toEqual(
-        DEMO_MATERIALS.map(({ description }, index) => `0000000${index + 1} ${description}`),
+        FIXTURE_MATERIALS.map(({ description }, index) => `0000000${index + 1} ${description}`),
       );
       expect((await service("test").get("00000002")).conversions.map(({ unit }) => unit)).toEqual(["box", "case"]);
       expect(await audit("test")).toEqual([]);
       expect(await service("prod").list()).toEqual([]);
+    });
+
+    it("seeds the given rows with their conversions, each material created at `at`", async () => {
+      const at = new Date("2026-10-01T06:00:00Z");
+      const rows = [
+        { type: "finished" as const, description: "Cabinet", baseUnit: "each", conversions: [CASE] },
+        { type: "raw" as const, description: "Screw", baseUnit: "kg", conversions: [] },
+      ];
+      expect(await service("test").seedDemo(rows, at)).toBe(2);
+
+      const materials = await scopedEm("test").find(Material, {}, { orderBy: { code: "asc" } });
+      expect(materials.map(({ code, description, type, createdAt }) => [code, description, type, createdAt])).toEqual([
+        ["00000001", "Cabinet", "finished", at],
+        ["00000002", "Screw", "raw", at],
+      ]);
+      expect((await service("test").get("00000001")).conversions.map(({ unit }) => unit)).toEqual(["case"]);
+      expect(await audit("test")).toEqual([]);
     });
 
     it("seeds nothing into a read-only tenant, read past the identity map (R05)", async () => {
@@ -686,11 +703,11 @@ describe("MaterialService", () => {
       await em.findOneOrFail(Tenant, { code: "test" });
       await orm.em.fork().nativeUpdate(Tenant, { code: "test" }, { readOnly: true });
 
-      expect(await service("test", em).seedDemo()).toBe(0);
+      expect(await service("test", em).seedDemo(FIXTURE_MATERIALS)).toBe(0);
       expect(await service("test").list()).toEqual([]);
 
       await orm.em.fork().nativeUpdate(Tenant, { code: "test" }, { readOnly: false });
-      expect(await service("test").seedDemo()).toBe(DEMO_MATERIALS.length);
+      expect(await service("test").seedDemo(FIXTURE_MATERIALS)).toBe(FIXTURE_MATERIALS.length);
     });
   });
 });

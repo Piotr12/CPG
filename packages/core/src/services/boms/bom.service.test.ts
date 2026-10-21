@@ -23,7 +23,6 @@ import { z } from "zod";
 import { loadConfig } from "../../config";
 import { getContainer } from "../../container/container";
 import { migrateDatabase, toDbOptions } from "../../database";
-import { DEMO_BOMS } from "../../domain/boms/demo-boms";
 import { tenantServerAction } from "../../http/tenant-server-action";
 import {
   DUPLICATE_COMPONENT_MESSAGE,
@@ -37,6 +36,7 @@ import {
 import type { AuditActor } from "../audit/actor";
 import { MaterialService } from "../materials/material.service";
 import { BOM_ID_RACE, BomService, type ComponentLine, type NewBom } from "./bom.service";
+import { FIXTURE_BOMS } from "../../../../../tests/setup/demo-fixtures";
 
 /** Who the tests act as: the admin, on the UI. */
 const ACTOR: AuditActor = { userId: "admin-id", username: "admin", sessionId: "admin-session", channel: "ui", token: null };
@@ -625,8 +625,8 @@ describe("BomService", () => {
     });
 
     it("creates the demo BOMs once in Test, unaudited, with the converted lines (TEN-001, MAT-019)", async () => {
-      expect(await service("test").seedDemo()).toBe(DEMO_BOMS.length);
-      expect(await service("test").seedDemo()).toBe(0);
+      expect(await service("test").seedDemo(FIXTURE_BOMS)).toBe(FIXTURE_BOMS.length);
+      expect(await service("test").seedDemo(FIXTURE_BOMS)).toBe(0);
 
       const boms = await service("test").list();
       expect(boms.map(({ id, output, priority }) => [id, output, priority])).toEqual([
@@ -690,8 +690,22 @@ describe("BomService", () => {
     ])("skips a demo BOM that breaks a rule in an edited Test tenant, the next taking the next ID: %s", async (_case, edit, expected) => {
       await edit(scopedEm("test"));
 
-      expect(await service("test").seedDemo()).toBe(expected.length);
+      expect(await service("test").seedDemo(FIXTURE_BOMS)).toBe(expected.length);
       expect((await service("test").list()).map(({ id, output, priority }) => [id, output, priority])).toEqual(expected);
+    });
+
+    it("seeds the given rows, each BOM and its first revision created at `at`", async () => {
+      const at = new Date("2026-10-01T06:00:00Z");
+      const row = {
+        output: "00000005", priority: 1, validFrom: "2026-02-01", validThrough: null,
+        components: [{ material: "00000002", quantity: "16", unit: "each" }],
+      };
+      expect(await service("test").seedDemo([row], at)).toBe(1);
+
+      const em = scopedEm("test");
+      expect((await em.find(Bom, {})).map(({ createdAt }) => createdAt)).toEqual([at]);
+      expect((await em.find(BomRevision, {})).map(({ createdAt }) => createdAt)).toEqual([at]);
+      expect((await service("test").list()).map(({ id, output, components }) => [id, output, components.length])).toEqual([["00000001", "00000005", 1]]);
     });
 
     it("lets a failure that isn't a rule through", async () => {
@@ -699,14 +713,14 @@ describe("BomService", () => {
       vi.spyOn(em, "transactional")
         .mockImplementationOnce(async (callback) => callback(em))
         .mockRejectedValueOnce(new Error("disk full"));
-      await expect(service("test", em).seedDemo()).rejects.toThrow("disk full");
+      await expect(service("test", em).seedDemo(FIXTURE_BOMS)).rejects.toThrow("disk full");
     });
 
     it("seeds nothing into a read-only Test", async () => {
       const em = orm.em.fork();
       await em.nativeUpdate(Tenant, { code: "test" }, { readOnly: true });
 
-      expect(await service("test").seedDemo()).toBe(0);
+      expect(await service("test").seedDemo(FIXTURE_BOMS)).toBe(0);
     });
   });
 });

@@ -8,6 +8,7 @@ import {
   MaterialConversion,
   OptimisticLockError,
   selectTenant,
+  Tenant,
   TenantAuditEvent,
   type Orm,
   type TenantCode,
@@ -15,13 +16,13 @@ import {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { loadConfig } from "../../config";
 import { migrateDatabase, toDbOptions } from "../../database";
-import { DEMO_FORECASTS } from "../../domain/forecasts/demo-forecasts";
 import { LocationService } from "../locations/location.service";
 import { MaterialService } from "../materials/material.service";
 import type { AuditActor } from "../audit/actor";
 import { hasForecasts } from "./forecast-usage";
 import { ForecastService, type ForecastFilter, type NewForecast } from "./forecast.service";
 import { QUANTITY_ROUNDS_TO_ZERO_MESSAGE, UNIT_NOT_CONVERTIBLE_MESSAGE } from "../../validators/boms/bom-fields.schema";
+import { FIXTURE_FORECASTS, FIXTURE_LOCATIONS, FIXTURE_MATERIALS } from "../../../../../tests/setup/demo-fixtures";
 
 const ACTOR: AuditActor = { userId: "admin-id", username: "admin", sessionId: "admin-session", channel: "ui", token: null };
 
@@ -249,30 +250,50 @@ describe("ForecastService", () => {
     expect(await days({ material: "00000009" })).toEqual([]);
   });
 
-  describe("seedDemo (spec Q12)", () => {
+  describe("seedDemo", () => {
     const seedTestMasters = async () => {
-      await new MaterialService({ em: scopedEm("test") }).seedDemo();
-      await new LocationService({ em: scopedEm("test") }).seedDemo();
+      await new MaterialService({ em: scopedEm("test") }).seedDemo(FIXTURE_MATERIALS);
+      await new LocationService({ em: scopedEm("test") }).seedDemo(FIXTURE_LOCATIONS);
     };
 
-    it("creates the demo forecasts in a fresh Test, unaudited, and nothing the second time", async () => {
+    it("creates the given forecasts in an empty Test, unaudited, and nothing once it has any", async () => {
       await seedTestMasters();
 
-      expect(await service("test").seedDemo()).toBe(DEMO_FORECASTS.length);
-      expect(await service("test").seedDemo()).toBe(0);
-      expect(await service("test").list()).toEqual(DEMO_FORECASTS.map((target) => ({ ...target, version: 1 })));
+      expect(await service("test").seedDemo(FIXTURE_FORECASTS)).toBe(FIXTURE_FORECASTS.length);
+      expect(await service("test").seedDemo(FIXTURE_FORECASTS)).toBe(0);
+      expect(await service("test").list()).toEqual(FIXTURE_FORECASTS.map((target) => ({ ...target, version: 1 })));
       expect(await scopedEm("test").find(TenantAuditEvent, {})).toEqual([]);
     });
 
-    it("never brings back removed forecasts, and skips an inactive material", async () => {
+    it("seeds exactly the given rows", async () => {
+      await seedTestMasters();
+      const rows = [{ material: "00000001", location: "00000001", date: "2026-03-01", quantity: "7.000000" }];
+
+      expect(await service("test").seedDemo(rows)).toBe(1);
+      expect(await service("test").list()).toEqual([{ ...rows[0], version: 1 }]);
+    });
+
+    it.each([
+      ["a missing material", "MATERIAL_NOT_FOUND", { material: "00000099" }],
+      ["an inactive material", "MATERIAL_INACTIVE", { material: "00000002" }],
+      ["a missing location", "LOCATION_NOT_FOUND", { location: "00000099" }],
+    ])("refuses the whole seed for a row with %s, writing nothing", async (_, code, change) => {
       await seedTestMasters();
       const em = scopedEm("test");
       (await em.findOneOrFail(Material, { code: "00000002" })).active = false;
       await em.flush();
-      expect(await service("test").seedDemo()).toBe(DEMO_FORECASTS.length - 1);
+      const rows = [FIXTURE_FORECASTS[1], { ...FIXTURE_FORECASTS[2], ...change }];
 
-      for (const target of await service("test").list()) await service("test").remove(target, 1, ACTOR);
-      expect(await service("test").seedDemo()).toBe(0);
+      await expect(service("test").seedDemo(rows)).rejects.toMatchObject({ code });
+      expect(await service("test").list()).toEqual([]);
+    });
+
+    it("seeds nothing into a read-only tenant (R05)", async () => {
+      await seedTestMasters();
+      await orm.em.fork().nativeUpdate(Tenant, { code: "test" }, { readOnly: true });
+
+      expect(await service("test").seedDemo(FIXTURE_FORECASTS)).toBe(0);
+      expect(await service("test").list()).toEqual([]);
     });
   });
 });

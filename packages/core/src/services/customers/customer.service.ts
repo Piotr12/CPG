@@ -1,5 +1,4 @@
 import { Customer, type EntityManager } from "@cpg/db";
-import { DEMO_CUSTOMERS } from "../../domain/customers/demo-customers";
 import type { AuditActor } from "../audit/actor";
 import { NamedRecords, type NamedRecordChanges, type NamedRecordView } from "../named-records/named-records";
 
@@ -22,7 +21,6 @@ export class CustomerService {
       noun: "customer",
       actionPrefix: "customers.customer",
       codePrefix: "CUSTOMER",
-      demoNames: DEMO_CUSTOMERS,
     });
   }
 
@@ -42,7 +40,7 @@ export class CustomerService {
     return this.records.update(id, changes, version, actor);
   }
 
-  seedDemo(): Promise<number> {
-    return this.records.seedDemo();
+  seedDemo(rows: readonly string[], at?: Date): Promise<number> {
+    return this.records.seedDemo(rows, at);
   }
 }

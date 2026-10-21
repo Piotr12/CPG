@@ -15,12 +15,12 @@ import {
 import { validationError } from "../../http/parse-input";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit } from "../audit/audit-recorder";
+import type { PostingContext } from "../stock/stock-posting";
 import { findActiveLocation } from "../locations/find-location";
 import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quantity";
 import { findActiveMaterial, findMaterial } from "../materials/find-material";
 import { findNamedRecord } from "../named-records/find-named-record";
 import { completeFinishedShipments, isAnyShipped } from "../shipments/shipment-usage";
-import { isScopeReadOnly } from "../tenants/tenant.service";
 import { findCustomerOrder } from "./order-records";
 import { postedOrderLineIds } from "./posted-order-lines";
 
@@ -82,14 +82,25 @@ export class CustomerOrderService {
     return detail(this.em, await findCustomerOrder(this.em, id));
   }
 
-  async create(input: CustomerOrderInput, actor: AuditActor): Promise<CustomerOrderView> {
+  create(input: CustomerOrderInput, actor: AuditActor): Promise<CustomerOrderView> {
+    return this.createWith(input, { kind: "user", actor });
+  }
+
+  /** The demo seed's order, stamped at `at` and unaudited; every business rule of `create` still applies. */
+  seedDemo(input: CustomerOrderInput, at: Date): Promise<CustomerOrderView> {
+    return this.createWith(input, { kind: "seed", at });
+  }
+
+  private async createWith(input: CustomerOrderInput, context: PostingContext): Promise<CustomerOrderView> {
     const parsed = customerOrderCreateSchema.safeParse(input);
     if (!parsed.success) throw validationError(parsed.error);
     try {
       return await this.em.transactional(async (em) => {
-        const order = await insertOrder(em, parsed.data);
+        const order = await insertOrder(em, parsed.data, context.kind === "seed" ? context.at : undefined);
         const result = await detail(em, order);
-        recordTenantAudit(em, actor, { action: "customer-orders.customer-order.created", subject: subject(order), before: null, after: snapshot(result) });
+        if (context.kind === "user") {
+          recordTenantAudit(em, context.actor, { action: "customer-orders.customer-order.created", subject: subject(order), before: null, after: snapshot(result) });
+        }
         await em.flush();
         return result;
       });
@@ -134,7 +145,7 @@ export class CustomerOrderService {
           return existing ? em.assign(existing, fields) : em.create(CustomerOrderLine, { order, ...fields });
         });
         completeDelivered(order, saved);
-        await completeFinishedShipments(em, order, actor);
+        await completeFinishedShipments(em, order, { kind: "user", actor });
         // New UUIDs are assigned on create; comparing allowlisted snapshots also detects reordering.
         if (JSON.stringify(snapshot(before)) !== JSON.stringify(snapshot(view(order, saved, posted)))) {
           order.updatedAt = new Date(Math.max(Date.now(), order.updatedAt.getTime() + 1));
@@ -174,7 +185,7 @@ export class CustomerOrderService {
         resolved.forEach(({ status, abandoned }, index) => { Object.assign(target[index], { status, abandoned }); });
         order.status = documentState(lines.map(({ status }) => status));
         order.updatedAt = new Date(Math.max(Date.now(), order.updatedAt.getTime() + 1));
-        await completeFinishedShipments(em, order, actor);
+        await completeFinishedShipments(em, order, { kind: "user", actor });
         recordTenantAudit(em, actor, { action: `customer-orders.customer-order.${action === "cancel" ? "cancelled" : "closed-early"}`,
           subject: subject(order), before, after: snapshot(view(order, lines, posted)) });
         await em.flush();
@@ -185,23 +196,6 @@ export class CustomerOrderService {
       throw error;
     }
   }
-
-  /** Seed one demonstration order only in an untouched writable scope; startup selects Test. */
-  async seedDemo(): Promise<number> {
-    return this.em.transactional(async (em) => {
-      if ((await em.count(CustomerOrder, {})) > 0 || (await isScopeReadOnly(em))) return 0;
-      try {
-        await insertOrder(em, { customer: "00000001", location: "00000001", lines: [
-          { material: "00000005", quantity: "60", unit: "each", requiredDate: "2027-01-04" },
-          { material: "00000004", quantity: "12", unit: "each", requiredDate: "2027-01-08" },
-        ] });
-        return 1;
-      } catch (error) {
-        if (error instanceof AppError) return 0;
-        throw error;
-      }
-    });
-  }
 }
 
 async function activeCustomer(em: EntityManager, code: string): Promise<Customer> {
@@ -209,13 +203,13 @@ async function activeCustomer(em: EntityManager, code: string): Promise<Customer
   if (!customer.active) throw new ConflictError(`Customer ${code} is inactive, so it can't be picked for new orders.`, "CUSTOMER_INACTIVE");
   return customer as Customer;
 }
-async function insertOrder(em: EntityManager, input: CustomerOrderInput): Promise<CustomerOrder> {
+async function insertOrder(em: EntityManager, input: CustomerOrderInput, at?: Date): Promise<CustomerOrder> {
   const customer = await activeCustomer(em, input.customer);
   const location = await findActiveLocation(em, input.location);
   const resolved = await resolveLines(em, input.lines, [], new Set());
   const [highest] = await em.find(CustomerOrder, {}, { orderBy: { code: "desc" }, limit: 1 });
   const code = nextSequentialId(highest?.code ?? null, { code: "CUSTOMER_ORDER_IDS_EXHAUSTED", message: "This tenant has used every eight-digit customer order ID." });
-  const order = em.create(CustomerOrder, { code, customer, location });
+  const order = em.create(CustomerOrder, { code, customer, location, ...(at && { createdAt: at, updatedAt: at }) });
   resolved.forEach(({ material, record, requiredDate }, position) => em.create(CustomerOrderLine, {
     order, material, position, quantity: record.baseQuantity, enteredQuantity: record.enteredQuantity, enteredUnit: record.enteredUnit,
     numerator: record.numerator, denominator: record.denominator, requiredDate,

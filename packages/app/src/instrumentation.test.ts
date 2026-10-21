@@ -18,7 +18,7 @@ describe("register", () => {
     core.assertServerConfig.mockReset();
     core.revokeBuiltInAdminSessions.mockResolvedValue(0);
     core.revokeAdminTokensIfPasswordChanged.mockResolvedValue(0);
-    core.seedDemoData.mockResolvedValue({});
+    core.seedDemoData.mockResolvedValue({ outcome: "skipped", reason: "in use" });
     vi.spyOn(console, "info").mockImplementation(() => {});
   });
   afterEach(() => {
@@ -66,10 +66,10 @@ describe("register", () => {
     expect(console.info).toHaveBeenCalledWith("The admin password changed: revoked 2 admin API token(s)");
   });
 
-  it("seeds the Test demonstration data last, and logs how much of each kind (D06)", async () => {
+  it("seeds the Test demonstration dataset last, and logs in one line how long it took and what it wrote (D06)", async () => {
     vi.stubEnv("NEXT_RUNTIME", "nodejs");
     core.migrateDatabase.mockResolvedValue([]);
-    core.seedDemoData.mockResolvedValue({ materials: { seeded: 0 }, locations: { seeded: 3 }, customers: { seeded: 4 } });
+    core.seedDemoData.mockResolvedValue({ outcome: "seeded", counts: { materials: 26, locations: 4, "customer orders": 589 } });
 
     await register();
 
@@ -77,21 +77,32 @@ describe("register", () => {
     expect(core.revokeAdminTokensIfPasswordChanged.mock.invocationCallOrder[0]).toBeLessThan(
       core.seedDemoData.mock.invocationCallOrder[0],
     );
-    expect(console.info).toHaveBeenCalledWith("Seeded the Test tenant with 3 demonstration locations");
-    expect(console.info).toHaveBeenCalledWith("Seeded the Test tenant with 4 demonstration customers");
-    expect(console.info).not.toHaveBeenCalledWith(expect.stringContaining("materials"));
+    expect(console.info).toHaveBeenCalledWith(
+      expect.stringMatching(/^Seeded the Test tenant with its demonstration dataset in \d+\.\d s: 26 materials, 4 locations, 589 customer orders$/),
+    );
   });
 
-  it("logs a kind whose seed failed and keeps starting (spec Q8)", async () => {
+  it("says why it seeded nothing: Test in use, or read-only", async () => {
+    vi.stubEnv("NEXT_RUNTIME", "nodejs");
+    core.migrateDatabase.mockResolvedValue([]);
+
+    await register();
+    expect(console.info).toHaveBeenCalledWith("Test already has data: its demonstration dataset was not seeded (reset Test to replace it)");
+
+    core.seedDemoData.mockResolvedValue({ outcome: "skipped", reason: "read-only" });
+    await register();
+    expect(console.info).toHaveBeenCalledWith("Test is read-only: its demonstration dataset was not seeded");
+  });
+
+  it("logs a seed that failed and rolled back, and keeps starting (spec Q4)", async () => {
     vi.stubEnv("NEXT_RUNTIME", "nodejs");
     vi.spyOn(console, "error").mockImplementation(() => {});
     core.migrateDatabase.mockResolvedValue([]);
     const failure = new Error("disk full");
-    core.seedDemoData.mockResolvedValue({ locations: { error: failure }, suppliers: { seeded: 3 } });
+    core.seedDemoData.mockResolvedValue({ outcome: "failed", error: failure });
 
     await expect(register()).resolves.toBeUndefined();
-    expect(console.error).toHaveBeenCalledWith("Seeding the Test demonstration locations failed:", failure);
-    expect(console.info).toHaveBeenCalledWith("Seeded the Test tenant with 3 demonstration suppliers");
+    expect(console.error).toHaveBeenCalledWith("Seeding the Test demonstration dataset failed, and nothing was written:", failure);
   });
 
   it("logs a failed seed and keeps starting: the app works without demo data", async () => {
@@ -124,14 +135,16 @@ describe("register", () => {
     expect(core.seedDemoData).not.toHaveBeenCalled();
   });
 
-  it("stays quiet when there was nothing to migrate or revoke", async () => {
+  it("says nothing about migrations or the admin when there was nothing to migrate or revoke", async () => {
     vi.stubEnv("NEXT_RUNTIME", "nodejs");
     core.migrateDatabase.mockResolvedValue([]);
 
     await register();
 
     expect(core.migrateDatabase).toHaveBeenCalledOnce();
-    expect(console.info).not.toHaveBeenCalled();
+    // Only the demonstration seed's own line.
+    expect(console.info).toHaveBeenCalledOnce();
+    expect(console.info).toHaveBeenCalledWith(expect.stringContaining("demonstration dataset"));
   });
 
   it("does nothing on the edge runtime", async () => {

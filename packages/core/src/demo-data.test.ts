@@ -1,37 +1,21 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import {
-  Bom,
-  Customer,
-  CustomerOrder,
-  initOrm,
-  Location,
-  Material,
-  PlanningParameterSet,
-  PurchaseOrder,
-  PurchaseRequisition,
-  SafetyStockTarget,
-  Forecast,
-  selectTenant,
-  Supplier,
-  type EntityManager,
-} from "@cpg/db";
+import { CustomerOrder, initOrm, Material, StockMovement, Tenant, TenantAuditEvent, selectTenant, type EntityManager } from "@cpg/db";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { loadConfig } from "./config";
+import { REDUCED_TEST_TENANT_CONFIG } from "../../../tests/setup/demo-fixtures";
+import { loadConfig, type AppConfig } from "./config";
+import { createAppContainer } from "./container/container";
+import { scopeForTenant } from "./container/tenant-scope";
 import { migrateDatabase, toDbOptions } from "./database";
-import { seedDemoData } from "./demo-data";
-import { DEMO_STOCK } from "./domain/stock/demo-stock";
-import { DEMO_BOMS } from "./domain/boms/demo-boms";
-import { DEMO_ORDERS, DEMO_REQUISITIONS } from "./domain/purchasing/demo-purchasing";
-import { DEMO_CUSTOMERS } from "./domain/customers/demo-customers";
-import { DEMO_LOCATIONS } from "./domain/locations/demo-locations";
-import { DEMO_MATERIALS } from "./domain/materials/demo-materials";
-import { DEMO_PLANNING_PARAMETERS } from "./domain/planning-parameters/demo-planning-parameters";
-import { DEMO_FORECASTS } from "./domain/forecasts/demo-forecasts";
-import { DEMO_SAFETY_STOCK_TARGETS } from "./domain/safety-stock/demo-safety-stock-targets";
-import { DEMO_SUPPLIERS } from "./domain/suppliers/demo-suppliers";
-import { LocationService } from "./services/locations/location.service";
+import { DATASET_KINDS, seedDemoData } from "./demo-data";
+import { generateTestTenantDataset } from "./domain/demo/generate-dataset";
+import { TEST_TENANT_CONFIG } from "./domain/demo/test-tenant-config.schema";
+import type { AuditActor } from "./services/audit/actor";
+import { ShipmentService } from "./services/shipments/shipment.service";
+
+const TODAY = new Date("2026-10-21T10:00:00.000Z");
+const ACTOR: AuditActor = { userId: "admin-id", username: "admin", sessionId: "admin-session", channel: "ui", token: null };
 
 async function migratedConfig() {
   const config = loadConfig({ DATA_DIR: mkdtempSync(path.join(tmpdir(), "cpg-demo-data-")) });
@@ -40,7 +24,7 @@ async function migratedConfig() {
 }
 
 /** What `count` finds in each tenant. */
-async function counts(config: Awaited<ReturnType<typeof migratedConfig>>, count: (em: EntityManager) => Promise<number>) {
+async function counts(config: AppConfig, count: (em: EntityManager) => Promise<number>) {
   const orm = await initOrm(toDbOptions(config));
   try {
     const inTenant = (tenant: "test" | "prod") => {
@@ -54,94 +38,77 @@ async function counts(config: Awaited<ReturnType<typeof migratedConfig>>, count:
   }
 }
 
+/** Runs `change` with the Test scope's services, then closes the connection. */
+async function inTest(config: AppConfig, change: (cradle: Awaited<ReturnType<typeof scopeForTenant>>["cradle"]) => Promise<unknown>) {
+  const orm = await initOrm(toDbOptions(config));
+  try {
+    await change((await scopeForTenant(createAppContainer(config, orm), "test")).cradle);
+  } finally {
+    await orm.close();
+  }
+}
+
 describe("seedDemoData", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("fills an empty Test with every demo kind once, never Prod, and closes its connection (TEN-001)", async () => {
+  it("fills an untouched Test with the generated dataset in one go, never Prod, and leaves a used Test alone (TEN-001, Q4)", async () => {
     const config = await migratedConfig();
+    const { masters, summary } = generateTestTenantDataset(REDUCED_TEST_TENANT_CONFIG, "2026-10-21");
 
-    expect(await seedDemoData(config)).toEqual({
-      materials: { seeded: DEMO_MATERIALS.length },
-      locations: { seeded: DEMO_LOCATIONS.length },
-      customers: { seeded: DEMO_CUSTOMERS.length },
-      suppliers: { seeded: DEMO_SUPPLIERS.length },
-      "planning parameter sets": { seeded: DEMO_PLANNING_PARAMETERS.length },
-      "safety-stock targets": { seeded: DEMO_SAFETY_STOCK_TARGETS.length },
-      BOMs: { seeded: DEMO_BOMS.length },
-      "purchase requisitions": { seeded: DEMO_REQUISITIONS.length },
-      "purchase orders": { seeded: DEMO_ORDERS.length },
-      "production orders": { seeded: 1 },
-      forecasts: { seeded: DEMO_FORECASTS.length },
-      "customer orders": { seeded: 1 },
-      "stock openings": { seeded: DEMO_STOCK.length },
-    });
-    expect(await seedDemoData(config)).toEqual({
-      materials: { seeded: 0 },
-      locations: { seeded: 0 },
-      customers: { seeded: 0 },
-      suppliers: { seeded: 0 },
-      "planning parameter sets": { seeded: 0 },
-      "safety-stock targets": { seeded: 0 },
-      BOMs: { seeded: 0 },
-      "purchase requisitions": { seeded: 0 },
-      "purchase orders": { seeded: 0 },
-      "production orders": { seeded: 0 },
-      forecasts: { seeded: 0 },
-      "customer orders": { seeded: 0 },
-      "stock openings": { seeded: 0 },
-    });
+    const result = await seedDemoData(config, { today: TODAY, dataset: REDUCED_TEST_TENANT_CONFIG });
 
-    expect(await counts(config, (em) => em.count(Material, {}))).toEqual({ test: DEMO_MATERIALS.length, prod: 0 });
-    expect(await counts(config, (em) => em.count(Location, {}))).toEqual({ test: DEMO_LOCATIONS.length, prod: 0 });
-    expect(await counts(config, (em) => em.count(Customer, {}))).toEqual({ test: DEMO_CUSTOMERS.length, prod: 0 });
-    expect(await counts(config, (em) => em.count(Supplier, {}))).toEqual({ test: DEMO_SUPPLIERS.length, prod: 0 });
-    expect(await counts(config, (em) => em.count(PlanningParameterSet, {}))).toEqual({ test: DEMO_PLANNING_PARAMETERS.length, prod: 0 });
-    expect(await counts(config, (em) => em.count(SafetyStockTarget, {}))).toEqual({ test: DEMO_SAFETY_STOCK_TARGETS.length, prod: 0 });
-    expect(await counts(config, (em) => em.count(CustomerOrder, {}))).toEqual({ test: 1, prod: 0 });
-    expect(await counts(config, (em) => em.count(Bom, {}))).toEqual({ test: DEMO_BOMS.length, prod: 0 });
-    expect(await counts(config, (em) => em.count(PurchaseRequisition, {}))).toEqual({ test: DEMO_REQUISITIONS.length, prod: 0 });
-    expect(await counts(config, (em) => em.count(PurchaseOrder, {}))).toEqual({ test: DEMO_ORDERS.length, prod: 0 });
-    expect(await counts(config, (em) => em.count(Forecast, {}))).toEqual({ test: DEMO_FORECASTS.length, prod: 0 });
+    expect(result.outcome).toBe("seeded");
+    const seeded = (result as Extract<typeof result, { outcome: "seeded" }>).counts;
+    expect(Object.keys(seeded)).toEqual(DATASET_KINDS);
+    expect(seeded).toMatchObject({ materials: masters.materials.length, BOMs: masters.boms.length, "customer orders": summary.customerOrders });
+    expect(await counts(config, (em) => em.count(Material, {}))).toEqual({ test: masters.materials.length, prod: 0 });
+    expect(await counts(config, (em) => em.count(CustomerOrder, {}))).toEqual({ test: summary.customerOrders, prod: 0 });
+    expect(await counts(config, (em) => em.count(StockMovement, {}))).toEqual({ test: summary.movements, prod: 0 });
+
+    expect(await seedDemoData(config, { today: TODAY, dataset: REDUCED_TEST_TENANT_CONFIG })).toEqual({ outcome: "skipped", reason: "in use" });
+    expect(await counts(config, (em) => em.count(CustomerOrder, {}))).toEqual({ test: summary.customerOrders, prod: 0 });
+  }, 60_000);
+
+  it("leaves a Test someone has written to, even with no material: its audit remembers the change", async () => {
+    const config = await migratedConfig();
+    await inTest(config, (cradle) => cradle.locationService.create({ name: "Admin's own plant" }, ACTOR));
+    expect(await counts(config, (em) => em.count(TenantAuditEvent, {}))).toEqual({ test: 1, prod: 0 });
+
+    expect(await seedDemoData(config, { today: TODAY, dataset: REDUCED_TEST_TENANT_CONFIG })).toEqual({ outcome: "skipped", reason: "in use" });
+    expect(await counts(config, (em) => em.count(Material, {}))).toEqual({ test: 0, prod: 0 });
   });
 
-  it("reports a kind that fails and still seeds the others; the next run seeds only what is still empty", async () => {
+  it("writes nothing into a read-only Test (R05)", async () => {
+    const config = await migratedConfig();
+    await inTest(config, (cradle) => cradle.em.nativeUpdate(Tenant, { code: "test" }, { readOnly: true }));
+
+    expect(await seedDemoData(config, { today: TODAY, dataset: REDUCED_TEST_TENANT_CONFIG })).toEqual({ outcome: "skipped", reason: "read-only" });
+    expect(await counts(config, (em) => em.count(Material, {}))).toEqual({ test: 0, prod: 0 });
+  });
+
+  it("rolls the whole dataset back on a failure midway and reports it; the next start seeds it all", async () => {
     const config = await migratedConfig();
     const failure = new Error("disk full");
-    vi.spyOn(LocationService.prototype, "seedDemo").mockRejectedValueOnce(failure);
+    vi.spyOn(ShipmentService.prototype, "seedDemo").mockRejectedValueOnce(failure);
 
-    expect(await seedDemoData(config)).toEqual({
-      materials: { seeded: DEMO_MATERIALS.length },
-      locations: { error: failure },
-      customers: { seeded: DEMO_CUSTOMERS.length },
-      suppliers: { seeded: DEMO_SUPPLIERS.length },
-      // Without locations every demo row is skipped, so the kinds stay untouched for the next run.
-      "planning parameter sets": { seeded: 0 },
-      "safety-stock targets": { seeded: 0 },
-      BOMs: { seeded: DEMO_BOMS.length },
-      "purchase requisitions": { seeded: 0 },
-      "purchase orders": { seeded: 0 },
-      "production orders": { seeded: 0 },
-      // Without locations the demo forecasts are skipped too.
-      forecasts: { seeded: 0 },
-      "customer orders": { seeded: 0 },
-      "stock openings": { seeded: 0 },
-    });
-    expect(await seedDemoData(config)).toEqual({
-      materials: { seeded: 0 },
-      locations: { seeded: DEMO_LOCATIONS.length },
-      customers: { seeded: 0 },
-      suppliers: { seeded: 0 },
-      "planning parameter sets": { seeded: DEMO_PLANNING_PARAMETERS.length },
-      "safety-stock targets": { seeded: DEMO_SAFETY_STOCK_TARGETS.length },
-      BOMs: { seeded: 0 },
-      "purchase requisitions": { seeded: DEMO_REQUISITIONS.length },
-      "purchase orders": { seeded: DEMO_ORDERS.length },
-      "production orders": { seeded: 1 },
-      forecasts: { seeded: DEMO_FORECASTS.length },
-      "customer orders": { seeded: 1 },
-      "stock openings": { seeded: DEMO_STOCK.length },
-    });
-  });
+    expect(await seedDemoData(config, { today: TODAY, dataset: REDUCED_TEST_TENANT_CONFIG })).toEqual({ outcome: "failed", error: failure });
+    expect(await counts(config, (em) => em.count(Material, {}))).toEqual({ test: 0, prod: 0 });
+    expect(await counts(config, (em) => em.count(CustomerOrder, {}))).toEqual({ test: 0, prod: 0 });
+
+    expect((await seedDemoData(config, { today: TODAY, dataset: REDUCED_TEST_TENANT_CONFIG })).outcome).toBe("seeded");
+    expect(await counts(config, (em) => em.count(Material, {}))).toEqual({ test: REDUCED_TEST_TENANT_CONFIG.catalogue.materials.length, prod: 0 });
+  }, 60_000);
+
+  it("generates for the server's clock and the committed configuration by default", async () => {
+    const config = await migratedConfig();
+    vi.useFakeTimers({ now: TODAY, toFake: ["Date"] });
+    try {
+      const result = await seedDemoData(config);
+      expect(result).toMatchObject({ outcome: "seeded", counts: { "customer orders": generateTestTenantDataset(TEST_TENANT_CONFIG, "2026-10-21").summary.customerOrders } });
+    } finally {
+      vi.useRealTimers();
+    }
+  }, 120_000);
 });

@@ -7,15 +7,15 @@ import {
   type Material,
   type ProcurementMode,
 } from "@cpg/db";
-import { DEMO_PLANNING_PARAMETERS } from "../../domain/planning-parameters/demo-planning-parameters";
+import type { DemoPlanningParameters } from "../../domain/demo/generate-dataset";
 import { isProcurementAllowed } from "../../domain/planning-parameters/procurement";
 import { ConflictError, NotFoundError, ValidationError, versionConflict } from "../../http/errors";
 import { RAW_MATERIAL_BUY_ONLY_MESSAGE } from "../../validators/planning-parameters/planning-parameter-fields.schema";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
-import { activeDemoReferences, isUntouchedKind } from "../demo/demo-references";
 import { findActiveLocation, findLocation } from "../locations/find-location";
 import { findActiveMaterial, findMaterial } from "../materials/find-material";
+import { isScopeReadOnly } from "../tenants/tenant.service";
 
 /**
  * How one material is planned at one location, as the screens and the API show it. `material` and
@@ -134,25 +134,22 @@ export class PlanningParameterService {
   }
 
   /**
-   * Creates the demonstration sets (D06) while the tenant's sets are untouched (none, and none ever
-   * audited), and returns how many. A set whose material or location is missing or inactive, or that
-   * would make a raw material, is skipped: production's Test tenant may have been edited since its
-   * masters were seeded. Not audited, like the other demo records.
+   * Creates the generated dataset's parameter sets `rows` when the tenant has none, and returns how
+   * many. Seeds nothing into a read-only tenant (R05). Each row's material and location must exist
+   * and be active, and a raw material can't be Make (R02): any other row refuses the whole seed, as
+   * a save would. Not audited, like the other demo records.
    */
-  async seedDemo(): Promise<number> {
+  async seedDemo(rows: readonly DemoPlanningParameters[]): Promise<number> {
     return this.em.transactional(async (em) => {
-      if (!(await isUntouchedKind(em, await em.count(PlanningParameterSet, {}), "planning-parameters"))) return 0;
-      const references = await activeDemoReferences(em, DEMO_PLANNING_PARAMETERS);
-      let created = 0;
-      for (const demo of DEMO_PLANNING_PARAMETERS) {
-        const material = references.material.get(demo.material);
-        const location = references.location.get(demo.location);
-        if (!material || !location || !isProcurementAllowed(material.type, demo.procurement)) continue;
+      if ((await em.count(PlanningParameterSet, {})) > 0 || (await isScopeReadOnly(em))) return 0;
+      for (const demo of rows) {
+        const material = await findActiveMaterial(em, demo.material);
+        const location = await findActiveLocation(em, demo.location);
+        assertProcurement(material, demo.procurement);
         em.create(PlanningParameterSet, { material, location, ...pickValues(demo) });
-        created += 1;
       }
       await em.flush();
-      return created;
+      return rows.length;
     });
   }
 

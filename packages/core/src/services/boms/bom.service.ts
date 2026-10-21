@@ -8,7 +8,7 @@ import {
   type EntityManager,
 } from "@cpg/db";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
-import { DEMO_BOMS } from "../../domain/boms/demo-boms";
+import type { DemoBom } from "../../domain/demo/generate-dataset";
 import { findCycle, type CycleStep, type RecipeEdge } from "../../domain/boms/find-cycle";
 import { findPriorityConflict, type PriorityConflict } from "../../domain/boms/priority-conflict";
 import { isSameRecipe } from "../../domain/boms/recipe-equality";
@@ -218,20 +218,20 @@ export class BomService {
   }
 
   /**
-   * Creates the demonstration BOMs (D06) when the tenant has none, and returns how many. Each is
-   * built through the same rules as a save, in its own savepoint: one that breaks a rule here (a
-   * demo material retyped, deactivated, or its conversion removed in an edited Test tenant) is
-   * skipped, and the next takes the next free ID. Not audited, like the other demo records. Seeds
-   * nothing into a read-only tenant (R05).
+   * Creates the generated dataset's BOMs `rows` when the tenant has none, and returns how many. Each
+   * is built through the same rules as a save, in its own savepoint: one that breaks a rule here (a
+   * material missing, inactive or without the row's unit) is skipped, and the next takes the next
+   * free ID, so the dataset seeder sees the shortfall in the count. Not audited, like the other demo
+   * records. Seeds nothing into a read-only tenant (R05). `at`, when given, is the BOM's and its first revision's `createdAt`.
    */
-  async seedDemo(): Promise<number> {
+  async seedDemo(rows: readonly DemoBom[], at?: Date): Promise<number> {
     return this.em.transactional(async (em) => {
       if ((await em.count(Bom, {})) > 0 || (await isScopeReadOnly(em))) return 0;
       let created = 0;
-      for (const demo of DEMO_BOMS) {
+      for (const demo of rows) {
         try {
           await em.transactional(async (savepoint) => {
-            await insertBom(savepoint, demo);
+            await insertBom(savepoint, demo, at);
             await savepoint.flush();
           });
           created += 1;
@@ -266,7 +266,7 @@ async function findBom(em: EntityManager, bomId: string, options: { refresh?: bo
  * Checks and inserts (unflushed) a new BOM with revision 1: the output, the lines, then the cycle
  * and priority rules, then the next ID. Shared by `create` and the demo seed.
  */
-async function insertBom(em: EntityManager, input: NewBom): Promise<{ bom: Bom; candidate: Candidate }> {
+async function insertBom(em: EntityManager, input: NewBom, at?: Date): Promise<{ bom: Bom; candidate: Candidate }> {
   const output = await findActiveMaterial(em, input.output);
   if (!canBeBomOutput(output.type)) throw new ValidationError({ output: [RAW_OUTPUT_MESSAGE] });
   const candidate: Candidate = { ...pickHeader(input), lines: await resolveLines(em, input.components, []) };
@@ -277,14 +277,14 @@ async function insertBom(em: EntityManager, input: NewBom): Promise<{ bom: Bom; 
     code: "BOM_IDS_EXHAUSTED",
     message: "This tenant has used every eight-digit BOM ID.",
   });
-  const bom = em.create(Bom, { code, output, revision: 1 });
-  insertRevision(em, bom, 1, candidate);
+  const bom = em.create(Bom, { code, output, revision: 1, ...(at && { createdAt: at }) });
+  insertRevision(em, bom, 1, candidate, at);
   return { bom, candidate };
 }
 
-/** Creates (unflushed) revision `number` of `bom` with its lines, in entered order. */
-function insertRevision(em: EntityManager, bom: Bom, number: number, candidate: Candidate): void {
-  const revision = em.create(BomRevision, { bom, number, ...pickHeader(candidate) });
+/** Creates (unflushed) revision `number` of `bom` with its lines, in entered order; `at`, when given, is its `createdAt`. */
+function insertRevision(em: EntityManager, bom: Bom, number: number, candidate: Candidate, at?: Date): void {
+  const revision = em.create(BomRevision, { bom, number, ...pickHeader(candidate), ...(at && { createdAt: at }) });
   candidate.lines.forEach(({ material, record }, position) => {
     const { baseQuantity, enteredQuantity, enteredUnit, numerator, denominator } = record;
     em.create(BomComponent, { revision, position, material, quantity: baseQuantity, enteredQuantity, enteredUnit, numerator, denominator });

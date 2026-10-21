@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveServerComponents } from "../../../../../../../tests/setup/server-components";
 import { en } from "../../../../i18n/messages/en";
@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => {
     requireUser: vi.fn(),
     tenantScope: vi.fn(),
     orders: vi.fn(),
+    count: vi.fn(),
     suppliers: vi.fn(),
     locations: vi.fn(),
     materials: vi.fn(),
@@ -60,11 +61,11 @@ const order = (id: string, supplier: string, lines: number) => ({
   version: 1,
 });
 const tenant = (readOnly = false) => ({ code: "test", name: "Test", generation: 1, readOnly });
-const page = () => PurchaseOrdersPage({ params: Promise.resolve({ tenant: "test" }), searchParams: Promise.resolve({}) });
+const page = (search: Record<string, string> = {}) => PurchaseOrdersPage({ params: Promise.resolve({ tenant: "test" }), searchParams: Promise.resolve(search) });
 const scope = (readOnly = false) => ({
   cradle: {
     tenant: tenant(readOnly),
-    purchaseOrderService: { list: mocks.orders },
+    purchaseOrderService: { list: mocks.orders, count: mocks.count },
     supplierService: { list: mocks.suppliers },
     locationService: { list: mocks.locations },
     materialService: { list: mocks.materials, listUnits: mocks.units },
@@ -76,6 +77,7 @@ describe("PurchaseOrdersPage", () => {
   beforeEach(() => {
     mocks.requireUser.mockResolvedValue({ username: "alice", role: "user" });
     mocks.tenantScope.mockResolvedValue(scope());
+    mocks.count.mockResolvedValue(2);
     mocks.orders.mockResolvedValue([order("00000001", "00000001", 2), order("00000002", "00000002", 1)]);
     mocks.suppliers.mockResolvedValue(SUPPLIERS);
     mocks.locations.mockResolvedValue(LOCATIONS);
@@ -119,6 +121,39 @@ describe("PurchaseOrdersPage", () => {
 
     expect(screen.getByText("No purchase orders in Test yet.")).toBeTruthy();
     expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("pages by 100: links to the neighbouring pages, reads the asked page, and shows no links for a single page", async () => {
+    const { unmount } = render(await resolveServerComponents(page()));
+    expect(screen.queryByRole("navigation", { name: "Purchase order pages" })).toBeNull();
+    unmount();
+
+    mocks.count.mockResolvedValue(250);
+    render(await resolveServerComponents(page({ page: "2" })));
+
+    expect(mocks.orders).toHaveBeenLastCalledWith(2);
+    const nav = screen.getByRole("navigation", { name: "Purchase order pages" });
+    expect(nav.textContent).toContain("Page 2 of 3");
+    expect(within(nav).getByRole("link", { name: "Previous" }).getAttribute("href")).toBe("/admin/test/purchase-orders?page=1");
+    expect(within(nav).getByRole("link", { name: "Next" }).getAttribute("href")).toBe("/admin/test/purchase-orders?page=3");
+  });
+
+  it("shows the last page for a page past it, and the first page of an empty tenant", async () => {
+    mocks.count.mockResolvedValue(250);
+    render(await resolveServerComponents(page({ page: "9" })));
+    expect(mocks.orders).toHaveBeenLastCalledWith(3);
+    expect(screen.getByRole("navigation", { name: "Purchase order pages" }).textContent).toContain("Page 3 of 3");
+    cleanup();
+
+    mocks.count.mockResolvedValue(0);
+    mocks.orders.mockResolvedValue([]);
+    render(await resolveServerComponents(page({ page: "4" })));
+    expect(mocks.orders).toHaveBeenLastCalledWith(1);
+  });
+
+  it("renders not-found for an invalid page", async () => {
+    for (const bad of ["0", "x", "1.5"]) await expect(resolveServerComponents(page({ page: bad }))).rejects.toThrow("404");
+    expect(mocks.orders).not.toHaveBeenCalled();
   });
 
   it("renders not-found for an unknown tenant", async () => {

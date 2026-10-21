@@ -5,7 +5,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { initOrm, migrate, selectTenant, Location, Material, MaterialConversion, StockMovement, TenantAuditEvent, type Orm } from "@cpg/db";
 import { StockService } from "./stock.service";
-import { postHistoricalInverse, postHistoricalInverses } from "./stock-posting";
+import { postHistoricalInverse, postHistoricalInverses, postStockMovements } from "./stock-posting";
 
 const actor = { userId: "u1", username: "Alice", sessionId: "s1", channel: "ui" as const, token: null };
 const pair = { material: "00000001", location: "00000001" };
@@ -96,5 +96,28 @@ describe("historical stock inverse", () => {
       { postingId, position: 0, type: "reversal", material: "00000002", quantity: "-10.000000", balanceAfter: "0.000000" },
       { postingId, position: 1, type: "reversal", material: "00000001", quantity: "25.000000", balanceAfter: "40.000000" },
     ]);
+  });
+});
+
+describe("posting context dates", () => {
+  const lines = [{ ...pair, quantity: "4", unit: "each" }];
+  const post = (context: Parameters<typeof postStockMovements>[3]) =>
+    scope().transactional((em) => postStockMovements(em, { lines, reason: "Count" }, { type: "correction", id: randomUUID() }, context));
+
+  it("dates a user posting today, occurred now, and audits it", async () => {
+    vi.useFakeTimers({ now: new Date("2026-03-04T05:06:07Z"), toFake: ["Date"] });
+    const [movement] = await post({ kind: "user", actor });
+    expect(movement).toMatchObject({ businessDate: "2026-03-04", channel: "ui" });
+    expect(movement.occurredAt.toISOString()).toBe("2026-03-04T05:06:07.000Z");
+    expect(await scope().count(TenantAuditEvent, { action: "stock.movement.posted" })).toBe(1);
+  });
+
+  it("dates a seed posting from its own moment and writes no audit", async () => {
+    const at = new Date("2025-11-30T23:59:58Z");
+    const [movement] = await post({ kind: "seed", at });
+    expect(movement).toMatchObject({ businessDate: "2025-11-30", channel: "seed", actorUsername: "Demo seed", balanceAfter: "4.000000" });
+    expect(movement.occurredAt.toISOString()).toBe(at.toISOString());
+    expect((await scope().findOneOrFail(StockMovement, movement.id)).occurredAt.toISOString()).toBe(at.toISOString());
+    expect(await scope().count(TenantAuditEvent, { action: "stock.movement.posted" })).toBe(0);
   });
 });

@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { OrderView } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { Badge } from "@cpg/ui/components/badge";
+import { PageLinks } from "../layout/page-links";
 import { fill, type OrdersLabels, type PartiesById } from "./labels";
 
 interface OrdersTableProps {
@@ -10,12 +11,15 @@ interface OrdersTableProps {
   suppliers: PartiesById;
   locations: PartiesById;
   labels: OrdersLabels;
+  /** The 1-based page shown and how many pages the tenant's orders make. */
+  page: number;
+  pages: number;
   /** Everyone who may write also gets a hint on how to start. */
   editable: boolean;
 }
 
 /** A tenant's purchase orders by ID; each ID opens the order and its lines. */
-export function OrdersTable({ tenant, orders, suppliers, locations, labels, editable }: OrdersTableProps) {
+export function OrdersTable({ tenant, orders, suppliers, locations, labels, page, pages, editable }: OrdersTableProps) {
   const t = labels.columns;
   const columns: DataTableColumn<OrderView>[] = [
     {
@@ -71,6 +75,7 @@ export function OrdersTable({ tenant, orders, suppliers, locations, labels, edit
       columns={columns}
       rows={orders}
       rowKey={(order) => order.id}
+      pagination={<PageLinks page={page} pages={pages} labels={labels} href={(target) => `/admin/${tenant.code}/purchase-orders?page=${target}`} />}
       empty={[fill(labels.empty, { tenant: tenant.name }), ...(editable ? [labels.emptyHint] : [])].join(" ")}
     />
   );

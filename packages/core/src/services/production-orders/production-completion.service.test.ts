@@ -610,6 +610,52 @@ describe("ProductionCompletionService", () => {
     });
   });
 
+  describe("seedDemo", () => {
+    const at = new Date("2025-06-15T23:30:00Z");
+
+    it("posts and stamps everything from the seed's moment without audit or a submission token, completing the order", async () => {
+      await order("40");
+      await correct(COCOA, "100");
+      await correct(WRAPPER, "300");
+      const auditBefore = await scoped().count(TenantAuditEvent, {});
+      const { completion: posted, order: progressed } = await service().seedDemo("00000001", completion("40", "21", "80"), at);
+
+      expect(posted).toMatchObject({ id: "00000001", businessDate: "2025-06-15", createdAt: at, quantity: "40.000000", waste: false });
+      expect(posted.lines.map(({ material, variance }) => [material, variance])).toEqual([[COCOA, "1.000000"], [WRAPPER, "0.000000"]]);
+      expect(progressed).toMatchObject({ produced: "40.000000", status: "completed" });
+      const record = await scoped().findOneOrFail(ProductionCompletion, { code: "00000001" });
+      expect(record.submission).toBeNull();
+      expect((await scoped().findOneOrFail(ProductionOrder, { code: "00000001" })).updatedAt).toEqual(at);
+      const movements = await scoped().find(StockMovement, { type: PRODUCTION_COMPLETION_MOVEMENT });
+      expect(movements).toHaveLength(3);
+      for (const movement of movements) expect(movement).toMatchObject({ businessDate: "2025-06-15", occurredAt: at, channel: "seed" });
+      expect(await scoped().count(TenantAuditEvent, {})).toBe(auditBefore);
+    });
+
+    it("posts a zero-output waste completion at its moment and leaves the order's dates alone", async () => {
+      await order();
+      await correct(COCOA, "100");
+      await correct(WRAPPER, "300");
+      const before = (await scoped().findOneOrFail(ProductionOrder, { code: "00000001" })).updatedAt;
+      const { completion: posted, order: progressed } = await service().seedDemo("00000001", completion("0", "3", "6"), at);
+      expect(posted).toMatchObject({ waste: true, createdAt: at, businessDate: "2025-06-15" });
+      expect(progressed).toMatchObject({ produced: "0.000000", status: "open" });
+      expect((await scoped().findOneOrFail(ProductionOrder, { code: "00000001" })).updatedAt).toEqual(before);
+    });
+
+    it("applies the user's rules: stock, the overproduction acknowledgement", async () => {
+      await order("40");
+      await correct(COCOA, "5");
+      await correct(WRAPPER, "300");
+      await expect(service().seedDemo("00000001", completion("40", "20", "80"), at)).rejects.toMatchObject({ code: "INSUFFICIENT_STOCK" });
+      await correct(COCOA, "100");
+      await expect(service().seedDemo("00000001", completion("50", "25", "100"), at)).rejects.toMatchObject({ code: "PRODUCTION_OVERPRODUCTION" });
+      expect(await scoped().count(ProductionCompletion, {})).toBe(0);
+      const accepted = await service().seedDemo("00000001", { ...completion("50", "25", "100"), acceptOverproduction: true }, at);
+      expect(accepted.order).toMatchObject({ produced: "50.000000", status: "completed" });
+    });
+  });
+
   describe("reverse", () => {
     const reason = { reason: "Posted against the wrong order" };
     const stockOf = async () => [await physical(BAR), await physical(COCOA), await physical(WRAPPER)];

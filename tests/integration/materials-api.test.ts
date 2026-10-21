@@ -70,12 +70,14 @@ describe("materials through the API (R07)", () => {
     expect(prod.filter(({ description }) => description === "matapi bolt")).toHaveLength(1);
   });
 
-  it("starts Test with the demo materials, and needs the Test generation to write there (TEN-001, API-034)", async () => {
+  it("starts Test with the dataset's materials, and needs the Test generation to write there (TEN-001, API-034)", async () => {
     const test = json(await api("GET", "/api/tenants/test/materials", adminSecret)).data as MaterialRow[];
     expect(test.slice(0, 2).map(({ id, description }) => `${id} ${description}`)).toEqual([
       "00000001 Steel sheet 2 mm",
       "00000002 Bolt M8",
     ]);
+    // The dataset's 26; other files may add Test materials after them.
+    expect(test.filter(({ id }) => id <= "00000026")).toHaveLength(26);
     const { generation } = json(await api("GET", "/api/tenants/test", adminSecret)).data as { generation: number };
     const body = { type: "finished", description: "matapi test cabinet", baseUnit: "each" };
 
