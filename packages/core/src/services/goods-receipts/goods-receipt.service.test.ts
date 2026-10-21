@@ -9,6 +9,7 @@ import {
   Material,
   MaterialConversion,
   OptimisticLockError,
+  PurchaseOrder,
   PurchaseOrderLine,
   selectTenant,
   StockBalance,
@@ -427,6 +428,31 @@ describe("GoodsReceiptService", () => {
 
       expect((await stock("00000001")).quantity).toBe("40.000000");
       expect(await scoped().count(StockMovement, {})).toBe(1);
+    });
+  });
+
+  describe("seedDemo", () => {
+    const at = new Date("2025-06-15T23:30:00Z");
+
+    it("posts and stamps everything from the seed's moment without audit, under the same rules as post", async () => {
+      const order = await orders().create({ ...ORDER, lines: [ORDER.lines[0]] }, ACTOR);
+      const auditBefore = await scoped().count(TenantAuditEvent, {});
+      const receipt = await service().seedDemo(receiptOf(order.id, { line: 1, quantity: "100", unit: "kg" }), at);
+      expect(receipt).toMatchObject({ id: "00000001", businessDate: "2025-06-15", createdAt: at, lines: [{ quantity: "100.000000" }], warnings: [] });
+      const [movement] = await scoped().find(StockMovement, { type: GOODS_RECEIPT_MOVEMENT });
+      expect(movement).toMatchObject({ businessDate: "2025-06-15", channel: "seed", actorUsername: "Demo seed", quantity: "100.000000", balanceAfter: "100.000000" });
+      expect(movement.occurredAt).toEqual(at);
+      expect(await orders().get(order.id)).toMatchObject({ status: "completed", lines: [{ received: "100.000000", status: "completed" }] });
+      expect((await scoped().findOneOrFail(PurchaseOrder, { code: order.id })).updatedAt).toEqual(at);
+      expect(await scoped().count(TenantAuditEvent, {})).toBe(auditBefore);
+    });
+
+    it("refuses a line the order doesn't have and writes nothing", async () => {
+      const order = await orders().create(ORDER, ACTOR);
+      await expect(service().seedDemo(receiptOf(order.id, { line: 3, quantity: "1", unit: "kg" }), at))
+        .rejects.toMatchObject({ code: "VALIDATION_FAILED", fieldErrors: { "lines.0.line": [LINE_NO_SUCH_LINE_MESSAGE] } });
+      expect(await scoped().count(GoodsReceipt, {})).toBe(0);
+      expect(await scoped().count(StockMovement, {})).toBe(0);
     });
   });
 });
