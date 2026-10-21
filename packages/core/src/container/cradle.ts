@@ -5,6 +5,7 @@ import type { CustomerOrderService } from "../services/customer-orders/customer-
 import type { TestResetService } from "../services/tenants/test-reset.service";
 import type { StockService } from "../services/stock/stock.service";
 import type { StockReportService } from "../services/reports/stock-report.service";
+import type { VarianceReportService } from "../services/reports/variance-report.service";
 import type { EntityManager, Orm } from "@cpg/db";
 import type { AwilixContainer } from "awilix";
 import type { AppConfig } from "../config";
@@ -72,6 +73,7 @@ export interface Cradle {
   importService: ImportService;
   stockImportService: StockImportService;
   stockReportService: StockReportService;
+  varianceReportService: VarianceReportService;
   /** The active tenant. Only in scopes built by `tenantScope()`. */
   tenant: TenantInfo;
 }
