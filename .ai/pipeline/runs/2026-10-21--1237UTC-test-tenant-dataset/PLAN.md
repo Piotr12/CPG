@@ -16,7 +16,7 @@
 | 1 | 1.1 | Config file and its schema | group:A:capable | done | cb3c320 |
 | 1 | 1.2 | Calendar and seeded random helpers | group:A:capable | done | 654094d |
 | 1 | 1.3 | Demand plan | group:A:capable | done | e719f11 |
-| 1 | 1.4 | Supply plan | group:A:capable | todo | — |
+| 1 | 1.4 | Supply plan | group:A:capable | done | 6a4d600 |
 | 1 | 1.5 | Timeline and generator | group:A:capable | todo | — |
 | 1 | 1.6 | Ledger replay and limits | group:A:capable | todo | — |
 | 2 | 2.1 | Seed posting context carries its date | group:B | todo | — |
