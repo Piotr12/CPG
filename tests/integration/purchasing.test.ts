@@ -117,6 +117,50 @@ describe("purchase requisitions and orders in the UI", () => {
     expect(mine!.join(" ")).toContain("Open");
     expect(mine!.join(" ")).toContain("100");
   });
+
+  it("lets a normal user change an Open requisition's required date on screen, which the audit records (#142)", async () => {
+    // At 1280 × 800 the Required column shows and the row's actions sit inside the table, unscrolled.
+    await una.setViewport(1280, 800);
+    const id = (await rows(una, "/admin/prod/purchase-requisitions")).find((row) => row.join(" ").includes("buy steel"))![0];
+    const label = `Change date — Purchase requisitions ${id}`;
+    const trigger = `document.querySelector(${JSON.stringify(`main button[aria-label="${label}"]`)})`;
+    await una.waitUntil(ready(trigger));
+    expect(await una.evaluate<boolean>(`(() => {
+      const box = ${trigger}.getBoundingClientRect();
+      const table = ${trigger}.closest("[data-slot=table-container]");
+      return box.right <= innerWidth && table.scrollWidth <= table.clientWidth;
+    })()`)).toBe(true);
+
+    await una.clickRole("button", label);
+    await una.waitFor("[role=dialog]");
+    expect(await una.text("[role=dialog] h2")).toBe(`Change required date — Purchase requisitions ${id}`);
+    expect(await una.fillDate("[role=dialog] [name=requiredDate]", "2027-04-15")).toBe("2027-04-15");
+    await una.click("[role=dialog] button[type=submit]");
+    await una.waitUntil(closed);
+
+    const mine = (await rows(una, "/admin/prod/purchase-requisitions")).find((row) => row[0] === id)!;
+    expect(mine[6]).toBe("2027-04-15");
+    expect(mine[7]).toBe("Open");
+
+    await una.open(`${baseUrl}/admin/prod/audit?subjectType=PurchaseRequisition&subjectId=${id}`);
+    await una.waitUntil(`document.querySelector("main table") && !document.querySelector("main table").closest("[hidden]")`);
+    const entries = await una.evaluate<string[]>(
+      `[...document.querySelectorAll("main tbody tr")].filter((row) => !row.closest("[hidden]")).map((row) => row.innerText.replace(/\\s+/g, " "))`,
+    );
+    expect(entries).toHaveLength(2);
+    expect(entries[0]).toContain("Purchase requisition changed");
+    expect(entries[0]).toContain(USERNAME);
+    expect(entries[0]).toContain("2027-03-01 → 2027-04-15");
+
+    // At phone width the page itself never scrolls sideways: the row's actions stay within the table's own scroll.
+    try {
+      await una.setViewport(390, 844);
+      await rows(una, "/admin/prod/purchase-requisitions");
+      expect(await una.evaluate<boolean>(`document.documentElement.scrollWidth <= innerWidth && !!${trigger}`)).toBe(true);
+    } finally {
+      await una.setViewport(1280, 800);
+    }
+  });
 });
 
 /** The value of the select option whose label contains `text`, in the open dialog's first matching select. */
