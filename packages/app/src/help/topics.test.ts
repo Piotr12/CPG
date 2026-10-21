@@ -41,4 +41,16 @@ describe("help topics", () => {
     expect(text).toContain(listed);
     expect(text).toContain(unlisted);
   });
+
+  it.each([
+    ["en", "filter by record type and ID", "business date under the audit time", "Reversed by"],
+    ["pl", "filtruj według rodzaju i ID rekordu", "datę księgowania", "Odwrócony przez"],
+  ] as const)("explains in %s how to trace a record's history (E13-S03)", (locale, filters, businessDate, reversal) => {
+    const text = (id: string) => helpTopics(locale).find((topic) => topic.id === id)!.body.join(" ");
+
+    expect(text("global-audit")).toContain(filters);
+    expect(text("tenant-audit")).toContain(filters);
+    expect(text("tenant-audit")).toContain(businessDate);
+    expect(text("tenant-audit")).toContain(reversal);
+  });
 });
