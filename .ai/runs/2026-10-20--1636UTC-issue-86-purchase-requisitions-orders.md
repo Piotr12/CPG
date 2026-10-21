@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-20 16:36 UTC
 **Agent:** Claude Code (Sonnet 5.5), via cezar `/om-auto-fix-issue 86`
-**Spec:** `.ai/specs/2026-10-20--1636UTC-purchase-requisitions-orders.md`
+**Spec:** `.ai/specs/implemented/2026-10-20--1636UTC-purchase-requisitions-orders.md`
 **Status:** done
 
 ## Goal

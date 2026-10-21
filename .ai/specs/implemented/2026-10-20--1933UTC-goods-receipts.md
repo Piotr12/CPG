@@ -79,5 +79,5 @@ The issue's eight criteria (#87), each covered by a unit test and, for the scree
 - One branch and one PR carry the spec and the implementation (the cezar task owns one branch), as for #86.
 - Q8 tightened the PO `PATCH`: a line's `material`, `unit` or `quantity` is now 400 instead of silently dropped, so BUY-022/023's "refused" is observable. Other view-only line fields are still dropped.
 - A received total that would not fit is the field error `lines.N.quantity` (collected with the other line errors), not a bare `QUANTITY_OUT_OF_RANGE`.
-- Known gap, outside this story: a location can be deactivated while an Open PO delivers to it (no rule from E09-S01 blocks it). Every receipt on that PO is then refused with `LOCATION_INACTIVE` until the location is reactivated. Follow-up: block location deactivation with an Open PO, alongside LFC-018.
+- Known gap, outside this story: a location can be deactivated while an Open PO delivers to it (no rule from E09-S01 blocks it). Every receipt on that PO is then refused with `LOCATION_INACTIVE` until the location is reactivated. Follow-up: block location deactivation with an Open PO, alongside LFC-018. Filed as E09-S03 (#141).
 

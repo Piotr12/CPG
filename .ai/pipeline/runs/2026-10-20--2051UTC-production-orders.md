@@ -63,3 +63,5 @@ Revision drift, historical revaluation and tenant isolation. Retain stored revis
 
 ## Publication handoff
 Spec branch spec/production-orders @ bfe1506 and implementation branch feat/production-orders are prepared locally. PR body drafts: /tmp/cpg-88-pr-spec.md and /tmp/cpg-88-pr-implementation.md. No shared push or PR exists. User Guard approval is required to publish both branches and QA screenshots. After approval: duplicate-check, publish design-only spec PR (Refs #88), publish implementation PR (Closes #88, Refs spec PR, Source doc, Tracking plan), apply labels, attach QA evidence, run the PR review loop and watch full CI. Move the source spec to implemented only after verification is complete, keeping the spec branch design-only. Release own issue claim while waiting.
+
+Superseded: published as design PR #113 and implementation PR #114, both merged on 2026-10-20.

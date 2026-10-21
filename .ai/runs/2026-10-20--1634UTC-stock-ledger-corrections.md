@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-20 16:34 UTC
 **Agent:** Codex
-**Spec:** .ai/specs/2026-10-20--1634UTC-stock-ledger-corrections.md
+**Spec:** .ai/specs/implemented/2026-10-20--1634UTC-stock-ledger-corrections.md
 **Status:** done
 
 ## Goal

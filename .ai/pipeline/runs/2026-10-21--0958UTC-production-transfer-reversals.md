@@ -2,9 +2,10 @@
 
 **Date:** 2026-10-21 09:58 UTC
 **Agent:** Claude Code / claude-opus-5-5 (`om-auto-fix-issue 92` → `om-auto-implement-spec` → `om-auto-create-pr`)
-Source doc: .ai/specs/2026-10-21--0946UTC-production-transfer-reversals.md
+Source doc: .ai/specs/implemented/2026-10-21--0946UTC-production-transfer-reversals.md
 Spec PR: #131 (design-only; merges on its own)
 Issue: #92 (E11-S03)
+Status: complete
 
 ## Goal
 Both roles can reverse a whole production completion, or one transfer dispatch, receipt or write-off, once and in full, today, with a reason. Every leg is inverted atomically, and the production order or transfer is recalculated, in the UI and the API.

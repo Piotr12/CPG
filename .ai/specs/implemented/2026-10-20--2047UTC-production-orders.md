@@ -120,3 +120,4 @@ R02 output/type/unit rules; R03 exact quantities; R04 pinned immutable revision;
 - Design PR #113 (`2c5a4cb`), implementation PR #114 (`ce24740`), both merged on 2026-10-20; #88 closed. Plan: `.ai/pipeline/runs/2026-10-20--2051UTC-production-orders.md`.
 - PR #114's review added the captured lead time to the detail and edit screens (§UI), plus its own detail help topic (`.ai/runs/2026-10-20--2153UTC-fix-pr-114.md`).
 - Completions (E10-S02, #89) build on this spec: `implemented/2026-10-20--2221UTC-production-completions.md`.
+- Browser QA evidence (the state matrix, then the captured-lead-time change) was posted on PR #114.
