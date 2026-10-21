@@ -1,13 +1,13 @@
 import { ConflictError } from "@cpg/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { dispatchTransfer, receiveTransfer, setTransferDates, writeOffTransfer } from "./actions";
+import { dispatchTransfer, receiveTransfer, reverseTransferPosting, setTransferDates, writeOffTransfer } from "./actions";
 
 const alice = { sessionId: "s2", userId: "u2", username: "alice", role: "user" };
 const aliceActor = { userId: "u2", username: "alice", sessionId: "s2", channel: "ui", token: null };
 const posted = { transfer: { id: "00000004" }, posting: { id: "p1" } };
 
 const mocks = vi.hoisted(() => ({
-  transferService: { dispatch: vi.fn(), receive: vi.fn(), writeOff: vi.fn(), setPlannedDates: vi.fn() },
+  transferService: { dispatch: vi.fn(), receive: vi.fn(), writeOff: vi.fn(), setPlannedDates: vi.fn(), reverse: vi.fn() },
   bound: vi.fn(),
   currentUser: vi.fn(),
   revalidatePath: vi.fn(),
@@ -88,6 +88,21 @@ describe("transfer page actions", () => {
 
     await expect(dispatchTransfer("prod", 4, "00000004", { quantity: "60", unit: "kg" })).resolves.toMatchObject({ error: { code: "TENANT_READ_ONLY" } });
 
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("reverses the bound posting with the UI actor and refreshes the transfer, the list and stock", async () => {
+    const posting = "11111111-1111-4111-8111-111111111111";
+    mocks.transferService.reverse.mockResolvedValue({ transfer: { id: "00000004" }, reversal: { id: "r1" } });
+    expect(await reverseTransferPosting("prod", 2, "00000004", posting, { reason: " Wrong transfer ", posting: "22222222-2222-4222-8222-222222222222" }))
+      .toEqual({ ok: true, data: { transfer: { id: "00000004" }, reversal: { id: "r1" } } });
+    expect(mocks.bound).toHaveBeenCalledWith("prod", 2);
+    expect(mocks.transferService.reverse).toHaveBeenCalledWith("00000004", posting, { reason: "Wrong transfer" }, aliceActor);
+    expect(mocks.revalidatePath.mock.calls).toEqual(POSTED_PATHS);
+    mocks.revalidatePath.mockClear();
+    expect(await reverseTransferPosting("prod", 2, "00000004", posting, { reason: "" })).toMatchObject({ error: { code: "VALIDATION_FAILED" } });
+    mocks.transferService.reverse.mockRejectedValueOnce(new ConflictError("Order", "TRANSFER_REVERSAL_ORDER"));
+    expect(await reverseTransferPosting("prod", 2, "00000004", posting, { reason: "Wrong" })).toMatchObject({ error: { code: "TRANSFER_REVERSAL_ORDER" } });
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 });

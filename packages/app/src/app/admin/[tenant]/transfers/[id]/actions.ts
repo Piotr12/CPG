@@ -1,10 +1,10 @@
 "use server";
 
-import { assertSignedIn, tenantServerAction, uiActor, type PostedTransferView, type Result, type TransferView } from "@cpg/core";
-import { transferDatesSchema, transferPostingSchema, transferWriteOffSchema } from "@cpg/core/validators/transfers/transfer.schema";
+import { assertSignedIn, tenantServerAction, uiActor, type PostedTransferView, type Result, type TransferReversalResult, type TransferView } from "@cpg/core";
+import { transferDatesSchema, transferPostingSchema, transferReversalActionSchema, transferWriteOffSchema } from "@cpg/core/validators/transfers/transfer.schema";
 import { documentLifecycleSchema } from "@cpg/core/validators/document-lifecycle/lifecycle.schema";
 import { currentUser } from "../../../../../auth/require-admin";
-import { refreshAfterWrite } from "../../../../../routing/refresh-after-write";
+import { formValues, refreshAfterWrite } from "../../../../../routing/refresh-after-write";
 
 /*
  * The transfer page's writes. Each is bound by its page to the tenant and dataset generation it
@@ -40,6 +40,18 @@ export async function writeOffTransfer(tenant: string, generation: number, id: s
   const result = await tenantServerAction(transferWriteOffSchema, (input, { cradle }) =>
     cradle.transferService.writeOff(id, input, uiActor(assertSignedIn(actor))),
   )(tenant, generation, values);
+  return refreshAfterWrite(result, ...postedPaths(tenant, id));
+}
+
+/**
+ * Reverses one posting of the page's transfer in full (E11-S03); the posting is bound when the dialog
+ * opens, and a repeated submit meets the once-only refusal.
+ */
+export async function reverseTransferPosting(tenant: string, generation: number, id: string, postingId: string, values: unknown): Promise<Result<TransferReversalResult>> {
+  const actor = await currentUser();
+  const result = await tenantServerAction(transferReversalActionSchema, ({ posting, ...input }, { cradle }) =>
+    cradle.transferService.reverse(id, posting, input, uiActor(assertSignedIn(actor))),
+  )(tenant, generation, { ...formValues(values), posting: postingId });
   return refreshAfterWrite(result, ...postedPaths(tenant, id));
 }
 

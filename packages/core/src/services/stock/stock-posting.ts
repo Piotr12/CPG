@@ -21,6 +21,9 @@ export type StockPosting = z.infer<typeof stockPostingSchema>;
 /** The movement type of a reasoned correction: a manual one, a demo opening, or a stock import's (INV-016). */
 export const CORRECTION_MOVEMENT = "correction";
 
+/** The movement type of an exact historical inverse, whatever its original's document. */
+export const REVERSAL_MOVEMENT = "reversal";
+
 export interface StockMovementView {
   id: string; postingId: string; position: number; type: string;
   material: string; location: string; businessDate: string; occurredAt: Date;
@@ -78,17 +81,31 @@ interface ResolvedStockLine {
 export async function postHistoricalInverse(
   em: EntityManager, original: StockMovement, reason: string, postingId: string, actor: AuditActor,
 ): Promise<StockMovementView> {
-  const quantity = parseSignedQuantity(original.quantity);
-  if (quantity === null || quantity === 0n || original.baseUnit !== original.material.baseUnit) {
-    throw new ConflictError("The original movement no longer matches its recorded base quantity and unit.", "STOCK_REVERSAL_INCONSISTENT");
-  }
-  const inverse = -quantity;
-  const [movement] = await postResolvedStockMovements(em, [{
-    material: original.material, location: original.location, signed: inverse, delta: inverse,
-    converted: { baseQuantity: formatDecimal(inverse < 0n ? -inverse : inverse), enteredQuantity: formatSignedQuantity(inverse),
-      enteredUnit: original.baseUnit, numerator: "1", denominator: "1" },
-  }], reason, { type: "reversal", id: postingId }, { kind: "user", actor }, 0);
+  const [movement] = await postHistoricalInverses(em, [original], reason, postingId, actor);
   return movement;
+}
+
+/**
+ * Inverts every original as one `reversal` group, position for position: a production completion's
+ * output and inputs together. Every balance is checked before the one flush, so a single short line
+ * (the finished output, REV-012) writes nothing at all. Caller owns the transaction.
+ */
+export async function postHistoricalInverses(
+  em: EntityManager, originals: readonly StockMovement[], reason: string, postingId: string, actor: AuditActor,
+): Promise<StockMovementView[]> {
+  const lines = originals.map((original): ResolvedStockLine => {
+    const quantity = parseSignedQuantity(original.quantity);
+    if (quantity === null || quantity === 0n || original.baseUnit !== original.material.baseUnit) {
+      throw new ConflictError("The original movement no longer matches its recorded base quantity and unit.", "STOCK_REVERSAL_INCONSISTENT");
+    }
+    const inverse = -quantity;
+    return {
+      material: original.material, location: original.location, signed: inverse, delta: inverse,
+      converted: { baseQuantity: formatDecimal(inverse < 0n ? -inverse : inverse), enteredQuantity: formatSignedQuantity(inverse),
+        enteredUnit: original.baseUnit, numerator: "1", denominator: "1" },
+    };
+  });
+  return postResolvedStockMovements(em, lines, reason, { type: REVERSAL_MOVEMENT, id: postingId }, { kind: "user", actor }, 0);
 }
 
 /** Both new postings and historical inverses use the same balance, range and audit rules. Caller owns the transaction. */

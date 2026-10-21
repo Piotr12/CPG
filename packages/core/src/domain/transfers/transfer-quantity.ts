@@ -60,3 +60,18 @@ export function afterPosting(progress: TransferProgress, kind: TransferPostingKi
 export function isFullyReceived({ quantity, received }: TransferProgress): boolean {
   return micro(received) >= micro(quantity);
 }
+
+/**
+ * The progress after fully reversing a posting of `kind` that moved `amount` (E11-S03): a dispatch's
+ * reversal takes it off `dispatched` (and transit), a receipt's or write-off's puts it back into transit.
+ * Null when any quantity, transit included, would go negative: the history no longer matches, and
+ * nothing may be written (R09).
+ */
+export function afterReversal(progress: TransferProgress, kind: TransferPostingKind, amount: string): PostingOutcome | null {
+  const field = kind === "dispatch" ? "dispatched" : kind === "receipt" ? "received" : "writtenOff";
+  const remaining = micro(progress[field]) - micro(amount);
+  if (remaining < 0n) return null;
+  const next = { ...progress, [field]: text(remaining) };
+  if (micro(next.dispatched) - micro(next.received) - micro(next.writtenOff) < 0n) return null;
+  return { progress: next, transitBefore: inTransitOf(progress), transitAfter: inTransitOf(next) };
+}

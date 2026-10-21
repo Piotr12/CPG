@@ -4,7 +4,8 @@ import { COMPLETION_PAGE_SIZE } from "@cpg/core/validators/production-orders/pro
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { Badge } from "@cpg/ui/components/badge";
 import { Button } from "@cpg/ui/components/button";
-import { fill, shownQuantity } from "../forms/form-labels";
+import { fill, shownQuantity, type TenantContext } from "../forms/form-labels";
+import { CompletionReversalDialog, type CompletionReversalTarget } from "./completion-reversal-dialog";
 import type { ProductionLabels } from "./labels";
 
 /** A signed variance as screens show it: `+3`, `-2`, or `0` for none. */
@@ -20,12 +21,26 @@ interface Props {
   labels: ProductionLabels;
   /** The order's page, which the history's pages link to (`?completions=N`). */
   path: string;
+  /** The order a writable tenant may reverse completions of (E11-S03); without it the history is read-only. */
+  reversible?: { context: TenantContext; order: { id: string; output: string; location: string; produced: string } };
 }
 
 /** The order's completions, newest first: output (or waste) and each material's expected, actual and variance (PRD-013/014/018). */
-export function CompletionHistory({ completions, page, materials, labels, path }: Props) {
+export function CompletionHistory({ completions, page, materials, labels, path, reversible }: Props) {
   const t = labels.completion;
   const name = (code: string) => `${code} ${materials.find(({ id }) => id === code)!.description}`;
+  const today = new Date().toISOString().slice(0, 10);
+  const target = (row: CompletionView, order: NonNullable<Props["reversible"]>["order"]): CompletionReversalTarget => {
+    const used = row.lines.filter(({ actual }) => shownQuantity(actual) !== "0");
+    return {
+      id: row.id, businessDate: row.businessDate, output: fill(t.reversal.output, { quantity: shownQuantity(row.quantity), unit: row.baseUnit }),
+      location: order.location, produced: shownQuantity(order.produced), quantity: shownQuantity(row.quantity), unit: row.baseUnit,
+      legs: [
+        ...(row.waste ? [] : [{ label: name(order.output), quantity: `-${shownQuantity(row.quantity)} ${row.baseUnit}` }]),
+        ...used.map((line) => ({ label: name(line.material), quantity: `+${shownQuantity(line.actual)} ${line.baseUnit}` })),
+      ],
+    };
+  };
   const columns: DataTableColumn<CompletionView>[] = [
     { id: "id", header: t.id, cell: (row) => <span className="font-mono">{row.id}</span> },
     { id: "date", header: t.date, cell: (row) => row.businessDate, className: "hidden sm:table-cell" },
@@ -36,6 +51,12 @@ export function CompletionHistory({ completions, page, materials, labels, path }
         <span className="flex flex-wrap items-center gap-2">
           {row.waste && <Badge variant="destructive">{t.waste}</Badge>}
           {shownQuantity(row.quantity)} {row.baseUnit}
+          {row.reversal && <>
+            <Badge variant="outline">{t.reversal.reversed}</Badge>
+            <span className="basis-full text-xs text-muted-foreground wrap-anywhere">
+              {fill(t.reversal.by, { date: row.reversal.businessDate, actor: row.reversal.actorUsername, reason: row.reversal.reason })}
+            </span>
+          </>}
         </span>
       ),
       className: "whitespace-normal",
@@ -65,6 +86,12 @@ export function CompletionHistory({ completions, page, materials, labels, path }
       ),
       className: "min-w-48 whitespace-normal",
     },
+    ...(reversible ? [{
+      id: "actions",
+      header: t.actions,
+      cell: (row: CompletionView) => row.reversal === null && <CompletionReversalDialog context={reversible.context} order={reversible.order.id}
+        completion={target(row, reversible.order)} today={today} existingHref={`${path}?completions=${page}`} labels={labels} />,
+    }] : []),
   ];
   const older = completions.length === COMPLETION_PAGE_SIZE;
   return (

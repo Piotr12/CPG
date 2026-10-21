@@ -68,7 +68,9 @@ export function ProductionScreen({ tenant, orders, order, materials, locations, 
       </dl>
       <p className="rounded-md border p-3 text-sm" role="status">{order.shortages.length ? t.warning : t.sufficient}</p>
       <ProductionRequirements labels={t} components={order.components} materials={materials} tenant={tenant.code} />
-      <CompletionHistory completions={completions} page={completionsPage} materials={materials} labels={t} path={`${path}/${order.id}`} />
+      <CompletionHistory completions={completions} page={completionsPage} materials={materials} labels={t} path={`${path}/${order.id}`}
+        reversible={tenant.readOnly ? undefined : { context: { tenant: tenant.code, generation: tenant.generation },
+          order: { id: order.id, output: order.output, location: location(order.location), produced: order.produced } }} />
     </> : <DataTable label={t.title} columns={columns} rows={orders} rowKey={(row) => row.id} empty={t.empty} pagination={pages > 1 && <nav aria-label={t.pagination} className="flex flex-wrap items-center justify-end gap-3">
       {page > 1 && <Button asChild variant="outline"><Link href={`${path}?page=${page - 1}`}>{t.previous}</Link></Button>}
       <span className="text-sm">{fill(t.page, { page: String(page), pages: String(pages) })}</span>

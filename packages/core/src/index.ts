@@ -70,6 +70,8 @@ export {
   type CompletionPreview,
   type CompletionPreviewComponent,
   type CompletionResult,
+  type CompletionReversalResult,
+  type CompletionReversalView,
   type CompletionView,
 } from "./services/production-orders/production-completion.service";
 export { ProductionOrderService, type ProductionOrderView, type ProductionOrderDetail, type ProductionOptions, type ProductionComponent, type ProductionRecipe } from "./services/production-orders/production-order.service";

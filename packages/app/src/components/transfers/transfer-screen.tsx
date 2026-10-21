@@ -80,7 +80,7 @@ export function TransferScreen({ tenant, transfer, materials, locations, units, 
           </dl>
         </CardContent>
       </Card>
-      <LifecycleControl available={writable} processed={transfer.dispatched !== "0.000000"}
+      <LifecycleControl available={writable} processed={transfer.postings.length > 0}
         subject={`${labels.link} ${transfer.id}`} version={transfer.version} quantities={[amount(transfer.outstanding)]}
         notice={isPositive(transfer.inTransit) ? fill(messages.errors.TRANSFER_IN_TRANSIT, { quantity: shownQuantity(transfer.inTransit), unit: baseUnit }) : undefined}
         labels={messages.lifecycle} errors={messages.errors}
@@ -111,7 +111,8 @@ export function TransferScreen({ tenant, transfer, materials, locations, units, 
       <section className="flex min-w-0 flex-col gap-3">
         <h2 className="text-lg font-semibold">{labels.ledger.heading}</h2>
         <p className="text-sm text-muted-foreground">{labels.ledger.intro}</p>
-        <LedgerTable postings={transfer.postings} locations={locationsById} baseUnit={baseUnit} labels={labels} />
+        <LedgerTable postings={transfer.postings} reversals={transfer.reversals} locations={locationsById} baseUnit={baseUnit} labels={labels}
+          reversible={tenant.readOnly ? undefined : { context, transfer: transfer.id, path: `/admin/${tenant.code}/transfers/${transfer.id}` }} />
       </section>
     </div>
   );

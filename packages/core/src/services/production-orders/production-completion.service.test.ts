@@ -14,6 +14,8 @@ import {
   ProductionCompletionLine,
   ProductionOrder,
   StockMovement,
+  StockReversal,
+  Tenant,
   TenantAuditEvent,
   UniqueConstraintViolationException,
   initOrm,
@@ -37,6 +39,7 @@ import {
   type ProductionCompletionInput,
 } from "../../validators/production-orders/production-completion.schema";
 import type { AuditActor } from "../audit/actor";
+import * as records from "../stock/reversal-records";
 import { StockService } from "../stock/stock.service";
 import { TransferService } from "../transfers/transfer.service";
 import { PRODUCTION_COMPLETION_MOVEMENT, ProductionCompletionService } from "./production-completion.service";
@@ -198,6 +201,7 @@ describe("ProductionCompletionService", () => {
           { material: COCOA, baseUnit: "kg", expected: "20.000000", actual: "20.000000", variance: "0.000000", enteredQuantity: "20", enteredUnit: "kg", extra: false },
           { material: WRAPPER, baseUnit: "each", expected: "80.000000", actual: "80.000000", variance: "0.000000", enteredQuantity: "80", enteredUnit: "each", extra: false },
         ],
+        reversal: null,
       });
       expect(progressed).toMatchObject({ id: "00000001", produced: "40.000000", status: "open", version: 2 });
       expect([await physical(BAR), await physical(COCOA), await physical(WRAPPER)]).toEqual(["40.000000", "80.000000", "220.000000"]);
@@ -603,6 +607,196 @@ describe("ProductionCompletionService", () => {
       } finally {
         await other.close();
       }
+    });
+  });
+
+  describe("reverse", () => {
+    const reason = { reason: "Posted against the wrong order" };
+    const stockOf = async () => [await physical(BAR), await physical(COCOA), await physical(WRAPPER)];
+    const untouched = async () => ({
+      stock: await stockOf(),
+      reversals: await scoped().count(StockMovement, { type: "reversal" }),
+      links: await scoped().count(StockReversal, {}),
+      audit: await scoped().count(TenantAuditEvent, {}),
+      order: await orders().get("00000001"),
+    });
+    const stocked = async (target = "100") => {
+      await order(target);
+      await correct(COCOA, "100");
+      await correct(WRAPPER, "300");
+    };
+
+    it("inverts the output and every input together, links each movement and lowers produced (REV-011, AUD-004)", async () => {
+      await stocked();
+      const posted = await service().post("00000001", completion("10", "25", "15"), ACTOR);
+      const originals = await scoped().find(StockMovement, { type: PRODUCTION_COMPLETION_MOVEMENT }, { orderBy: { position: "asc" } });
+      const reversed = await service().reverse("00000001", "00000001", { reason: " Posted against the wrong order " }, ACTOR);
+
+      expect(reversed.movements).toMatchObject([
+        { type: "reversal", material: BAR, quantity: "-10.000000", reason: reason.reason, businessDate: today() },
+        { type: "reversal", material: COCOA, quantity: "25.000000" },
+        { type: "reversal", material: WRAPPER, quantity: "15.000000" },
+      ]);
+      const postingId = reversed.movements[0].postingId;
+      expect(reversed.movements.every((movement) => movement.postingId === postingId)).toBe(true);
+      expect(reversed.completion).toEqual({ ...posted.completion, reversal: { id: postingId, businessDate: today(), occurredAt: expect.any(Date), reason: reason.reason, actorUsername: "alice", channel: "ui" } });
+      expect(reversed.order).toMatchObject({ produced: "0.000000", status: "open", outstanding: "100.000000", version: posted.order.version + 1 });
+      expect(await stockOf()).toEqual(["0.000000", "100.000000", "300.000000"]);
+      const links = await scoped().find(StockReversal, {}, { populate: ["original", "inverse"] });
+      expect(links.map(({ original, inverse }) => [original.id, inverse.position]).sort()).toEqual(originals.map(({ id, position }) => [id, position]).sort());
+      expect(await scoped().count(ProductionCompletion, { quantity: "10.000000" })).toBe(1);
+      expect(await audits("production-orders.production-completion.reversed")).toMatchObject([{
+        subjectId: "00000001", actorUsername: "alice", before: { reversed: false },
+        after: { reversed: true, reversal: postingId, reason: reason.reason, movements: 3, movement1Original: originals[0].id, movement1Inverse: reversed.movements[0].id },
+      }]);
+      expect(await audits("production-orders.production-order.completion-reversed")).toMatchObject([{
+        subjectId: "00000001", before: { produced: "10.000000", status: "open" }, after: { produced: "0.000000", status: "open", completion: "00000001" },
+      }]);
+      expect(await audits("stock.movement.posted")).toHaveLength(8);
+      expect((await service().list("00000001"))[0].reversal).toMatchObject({ id: postingId });
+
+      await expect(service().reverse("00000001", "00000001", reason, ACTOR)).rejects.toMatchObject({ code: "PRODUCTION_COMPLETION_ALREADY_REVERSED", status: 409, messageParams: { reversal: postingId } });
+      expect(await scoped().count(StockReversal, {})).toBe(3);
+    });
+
+    it("refuses before anything changes when the finished output is short (REV-012, REV-018)", async () => {
+      await stocked();
+      await service().post("00000001", completion("10", "25", "15"), ACTOR);
+      await correct(BAR, "-1");
+      const before = await untouched();
+      await expect(service().reverse("00000001", "00000001", reason, ACTOR)).rejects.toMatchObject({
+        code: "INSUFFICIENT_STOCK", messageParams: { material: BAR, available: "9.000000", requested: "10.000000" },
+      });
+      expect(await untouched()).toEqual(before);
+    });
+
+    it("rolls back every leg, link and the order when the last audit fails after the stock flush (AUD-021)", async () => {
+      await stocked();
+      await service().post("00000001", completion("10", "25", "15"), ACTOR);
+      const before = await untouched();
+      crash.action = "production-orders.production-order.completion-reversed";
+      await expect(service().reverse("00000001", "00000001", reason, ACTOR)).rejects.toThrow("crash while recording");
+      expect(await untouched()).toEqual(before);
+    });
+
+    it("returns a waste posting's inputs and leaves output and the posting itself unchanged (REV-013)", async () => {
+      await stocked();
+      const posted = await service().post("00000001", completion("0", "10", "0"), ACTOR);
+      const reversed = await service().reverse("00000001", "00000001", reason, ACTOR);
+      expect(reversed.movements).toMatchObject([{ material: COCOA, quantity: "10.000000" }]);
+      expect(reversed.completion).toMatchObject({ waste: true, quantity: "0.000000", lines: posted.completion.lines });
+      expect(reversed.order).toMatchObject({ produced: "0.000000", status: "open", version: posted.order.version + 1 });
+      expect(await physical(COCOA)).toBe("100.000000");
+    });
+
+    it("reverses only the chosen completion, reopening an automatically Completed order below target (REV-014, LFC-008)", async () => {
+      await stocked("50");
+      await service().post("00000001", completion("40", "20", "80"), ACTOR);
+      await service().post("00000001", { ...completion("25", "12.5", "50"), acceptOverproduction: true }, ACTOR);
+      expect((await orders().get("00000001")).status).toBe("completed");
+      const reversed = await service().reverse("00000001", "00000002", reason, ACTOR);
+      expect(reversed.order).toMatchObject({ produced: "40.000000", status: "open", outstanding: "10.000000" });
+      expect(await scoped().count(StockReversal, {})).toBe(3);
+      const first = await scoped().find(StockMovement, { type: PRODUCTION_COMPLETION_MOVEMENT, position: 0 }, { orderBy: { occurredAt: "asc", id: "asc" } });
+      expect(await records.existingReversal(scoped(), [first[0]])).toBeNull();
+      expect((await service().list("00000001")).map(({ id, reversal }) => [id, reversal === null])).toEqual([["00000002", false], ["00000001", true]]);
+    });
+
+    it("keeps an overproduced order Completed when what remains still meets its target", async () => {
+      await stocked("30");
+      await service().post("00000001", completion("25", "12.5", "50"), ACTOR);
+      await service().post("00000001", { ...completion("40", "20", "80"), acceptOverproduction: true }, ACTOR);
+      expect((await service().reverse("00000001", "00000001", reason, ACTOR)).order).toMatchObject({ produced: "40.000000", status: "completed" });
+    });
+
+    it("keeps an Open order processed once every completion is reversed: Cancel refuses, Close Early resolves it", async () => {
+      await stocked();
+      await service().post("00000001", completion("40", "20", "80"), ACTOR);
+      const { order: reversed } = await service().reverse("00000001", "00000001", reason, ACTOR);
+      expect(reversed).toMatchObject({ produced: "0.000000", status: "open" });
+      await expect(orders().cancel("00000001", reversed.version, ACTOR)).rejects.toMatchObject({ code: "DOCUMENT_PROCESSED" });
+      expect(await orders().closeEarly("00000001", reversed.version, ACTOR)).toMatchObject({ status: "closed-early", abandoned: "100.000000" });
+    });
+
+    it("keeps a Closed Early order closed with its abandonment and nothing outstanding", async () => {
+      await stocked();
+      await service().post("00000001", completion("40", "20", "80"), ACTOR);
+      const closed = await orders().closeEarly("00000001", (await orders().get("00000001")).version, ACTOR);
+      expect(closed).toMatchObject({ status: "closed-early", abandoned: "60.000000", outstanding: "0.000000" });
+      const reversed = await service().reverse("00000001", "00000001", reason, ACTOR);
+      expect(reversed.order).toMatchObject({ produced: "0.000000", status: "closed-early", abandoned: "60.000000", outstanding: "0.000000" });
+    });
+
+    it("refuses bad input, unknown, other-order and other-tenant completions, a read-only tenant and a damaged history", async () => {
+      await stocked();
+      await service().post("00000001", completion("10", "25", "15"), ACTOR);
+      await orders().create({ output: BAR, location: PLANT, quantity: "5", unit: "each", plannedFinish: "2026-11-02" }, ACTOR);
+      const before = await untouched();
+      await expect(service().reverse("00000001", "00000001", { reason: " " }, ACTOR)).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+      await expect(service().reverse("00000001", "00000001", { ...reason, quantity: "5" }, ACTOR)).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+      await expect(service().reverse("00000001", "1", reason, ACTOR)).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+      await expect(service().reverse("00000001", "00000009", reason, ACTOR)).rejects.toMatchObject({ code: "PRODUCTION_COMPLETION_NOT_FOUND", status: 404 });
+      await expect(service().reverse("00000002", "00000001", reason, ACTOR)).rejects.toMatchObject({ code: "PRODUCTION_COMPLETION_NOT_FOUND" });
+      await expect(service("test").reverse("00000001", "00000001", reason, ACTOR)).rejects.toMatchObject({ code: "PRODUCTION_ORDER_NOT_FOUND" });
+      const stale = service();
+      await orm.em.fork().nativeUpdate(Tenant, { code: "prod" }, { readOnly: true });
+      await expect(stale.reverse("00000001", "00000001", reason, ACTOR)).rejects.toMatchObject({ code: "TENANT_READ_ONLY" });
+      await orm.em.fork().nativeUpdate(Tenant, { code: "prod" }, { readOnly: false });
+      expect(await untouched()).toEqual(before);
+
+      const em = scoped();
+      const [original] = await em.find(StockMovement, { type: PRODUCTION_COMPLETION_MOVEMENT, position: 0 }, { populate: ["material", "location"] });
+      em.create(StockMovement, { ...original, id: undefined, position: 9 } as never);
+      await em.flush();
+      await expect(service().reverse("00000001", "00000001", reason, ACTOR)).rejects.toMatchObject({ code: "STOCK_REVERSAL_INCONSISTENT" });
+      expect(await scoped().count(StockReversal, {})).toBe(0);
+    });
+
+    it("lets only one of two racing reversals post, the other retried into the existing one", async () => {
+      await stocked();
+      await service().post("00000001", completion("10", "25", "15"), ACTOR);
+      const other = await initOrm(toDbOptions(loadConfig({ DATA_DIR: directory })));
+      let raced = false;
+      try {
+        const em = scoped();
+        await expect(retryingStaleSnapshot(() => inRequestTransaction(em, async () => {
+          await new ProductionCompletionService({ em }).list("00000001");
+          if (!raced) {
+            raced = true;
+            await new ProductionCompletionService({ em: scoped("prod", other) }).reverse("00000001", "00000001", reason, ACTOR);
+          }
+          return new ProductionCompletionService({ em }).reverse("00000001", "00000001", reason, ACTOR);
+        }))).rejects.toMatchObject({ code: "PRODUCTION_COMPLETION_ALREADY_REVERSED" });
+        expect(await scoped().count(StockReversal, {})).toBe(3);
+        expect(await stockOf()).toEqual(["0.000000", "100.000000", "300.000000"]);
+      } finally {
+        await other.close();
+      }
+    });
+
+    it("maps a link that slips past the check, an order race and other failures", async () => {
+      await stocked();
+      await service().post("00000001", completion("10", "25", "15"), ACTOR);
+      const first = await service().reverse("00000001", "00000001", reason, ACTOR);
+      // A second completion leaves produced and finished stock that a duplicate reversal could take.
+      await service().post("00000001", completion("10", "25", "15"), ACTOR);
+      const spy = vi.spyOn(records, "existingReversal").mockResolvedValueOnce(null);
+      await expect(service().reverse("00000001", "00000001", reason, ACTOR)).rejects.toMatchObject({
+        code: "PRODUCTION_COMPLETION_ALREADY_REVERSED", messageParams: { reversal: first.movements[0].postingId },
+      });
+      spy.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
+      const unnamed = await service().reverse("00000001", "00000001", reason, ACTOR).catch((error: unknown) => error);
+      expect(unnamed).toMatchObject({ code: "PRODUCTION_COMPLETION_ALREADY_REVERSED", messageParams: undefined });
+      expect(await scoped().count(StockReversal, {})).toBe(3);
+      expect(await physical(BAR)).toBe("10.000000");
+
+      const em = scoped();
+      const transactional = vi.spyOn(em, "transactional");
+      const completions = new ProductionCompletionService({ em });
+      transactional.mockRejectedValueOnce(new UniqueConstraintViolationException(new Error("UNIQUE")));
+      await expect(completions.reverse("00000001", "00000001", reason, ACTOR)).rejects.toBeInstanceOf(UniqueConstraintViolationException);
+      transactional.mockRejectedValueOnce(new OptimisticLockError("stale"));
+      await expect(completions.reverse("00000001", "00000001", reason, ACTOR)).rejects.toMatchObject({ code: "PRODUCTION_ORDER_CHANGED", status: 409 });
     });
   });
 });
