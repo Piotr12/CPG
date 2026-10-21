@@ -42,6 +42,7 @@ export const completionView: CompletionView = {
     { material: "00000007", baseUnit: "each", expected: "80.000000", actual: "80.000000", variance: "0.000000", enteredQuantity: "80", enteredUnit: "each", extra: false },
     { material: "00000008", baseUnit: "kg", expected: "0.000000", actual: "2.000000", variance: "2.000000", enteredQuantity: "2", enteredUnit: "kg", extra: true },
   ],
+  reversal: null,
 };
 /** A waste posting: nothing produced, 10 kg of cocoa used (PRD-018). */
 export const wasteView: CompletionView = {
