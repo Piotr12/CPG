@@ -50,3 +50,6 @@
 - 21 Steps have landed (18 of them dispatched). Every checkpoint so far is green on the full validation subset (coverage 100 %, build). The production standalone seed meets its budget.
 - The remaining Steps (3.5, 4.1–4.6) are tests, verification and docs, with no new production design. The main session continues autonomously rather than parking the run, and the user can interrupt at any time. Recorded here as the deviation from the dispatcher's safety stop.
 - Tasks-table SHAs for 3.1–3.3 and 3.4-review-fix corrected to the pushed commits.
+
+## 2026-10-21T14:00:18Z — Step 4.1 ran inline (cell said dispatch)
+- Nothing in the unit suite still depended on the old fixtures: Step 3.4 had already moved what the tests need to `tests/setup/demo-fixtures.ts`, and the app component tests mock their own data (their names, such as "Cabinet, red", are arbitrary strings). The only leftover description of the old fixtures was the Stock and Reset help (EN and PL), which this Step updates. Too small to dispatch.
