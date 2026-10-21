@@ -243,7 +243,7 @@ const en: Record<HelpTopicId, HelpText> = {
     body: [
       "Forecasts, under Sales in the sidebar, list the demand you expect per material, location and day. A forecast names no customer. The MRP run nets customer orders against it, so a forecast is the demand beyond the firm orders.",
       "Enter the quantity in the material's base unit, or in any unit the material converts, such as 2 cases; CPG stores it in the base unit. A material, location and day can have only one forecast. To change the quantity, use Change forecast; to move the day, remove the forecast and add one on the new day.",
-      "Choose a material and/or a location above the list and select Filter to see their quantities day by day. Clear filter shows everything again.",
+      "Choose a material and/or a location above the list and select Filter to see their quantities day by day. Clear filter shows everything again. The list is ordered by material, location and day, 100 per page; Previous and Next under it keep the filter.",
       "Every account can read the list. Only the administrator adds, changes and removes forecasts, with Add forecast and each row's ⋯ menu; through the API too. Only active materials and locations can get a new forecast. Every change appears in the tenant's audit, and a removal keeps the quantity it held.",
     ],
   },
@@ -537,7 +537,7 @@ const pl: Record<HelpTopicId, HelpText> = {
     body: [
       "Prognozy, w sekcji Sprzedaż w menu bocznym, to popyt, którego się spodziewasz, dla materiału, lokalizacji i dnia. Prognoza nie wskazuje klienta. Przebieg MRP bilansuje z nią zamówienia klientów, więc prognoza to popyt ponad twarde zamówienia.",
       "Ilość wpisz w jednostce bazowej materiału albo w każdej jednostce, którą materiał przelicza, na przykład 2 kartony; CPG zapisuje ją w jednostce bazowej. Materiał, lokalizacja i dzień mogą mieć tylko jedną prognozę. Aby zmienić ilość, użyj Zmień prognozę; aby przesunąć dzień, usuń prognozę i dodaj nową.",
-      "Wybierz materiał i/lub lokalizację nad listą i naciśnij Filtruj, aby zobaczyć ich ilości dzień po dniu. Wyczyść filtr pokazuje znów wszystko.",
+      "Wybierz materiał i/lub lokalizację nad listą i naciśnij Filtruj, aby zobaczyć ich ilości dzień po dniu. Wyczyść filtr pokazuje znów wszystko. Lista jest uporządkowana według materiału, lokalizacji i dnia, po 100 na stronę; Poprzednia i Następna pod nią zachowują filtr.",
       "Listę może przeglądać każde konto. Prognozy dodaje, zmienia i usuwa tylko administrator, przyciskiem Dodaj prognozę i menu ⋯ w wierszu; także przez API. Nową prognozę mogą dostać tylko aktywne materiały i lokalizacje. Każda zmiana pojawia się w audycie środowiska, a usunięcie zachowuje ilość, którą prognoza miała.",
     ],
   },
