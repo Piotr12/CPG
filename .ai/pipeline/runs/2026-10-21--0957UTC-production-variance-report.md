@@ -2,7 +2,7 @@
 
 Source doc: .ai/specs/implemented/2026-10-21--0947UTC-production-variance-report.md
 Spec PR: #132
-Status: in progress
+Status: complete
 Engine: om-auto-create-pr (steps: 4, --loop: no)
 
 ## Goal
@@ -20,6 +20,10 @@ The spec's four steps: core (schema, pure tally, `VarianceReportService`, DI), a
 - The implementation branch is based on the spec branch, so it carries the spec commits.
 
 ## Log
+- 10:58 UTC — Review approved with 2 minors, both fixed in c1c1712 (the Reversed line moved out of the figures list; the batching test now checks every row), plus 3 nits noted on the PR.
+  - CI on c1c1712: lint, typecheck, unit tests (2,989) and build pass. Both variance integration files passed in both runs.
+  - The integration job failed twice, each time on a different, unrelated sign-in wait: `users.test.ts` (alice's sign-in), then on the rerun `smoke.test.ts` (the admin sign-in helper's badge wait). This is the known flake of #128, whose fix is PR #134.
+  - The final CI result on this head is reported on PR #135.
 - 10:25 UTC — Gate green on the final source: lint (one existing warning in `bom.service.ts`), typecheck, 467 files / 2,989 tests with 100% statements, branches, functions and lines, build. Touched integration files on a fresh standalone copy and fresh data: `variance-report.test.ts`, `variance-report-api.test.ts`, `navigation.test.ts`, `help.test.ts`, 4 files / 31 tests. Docker has no space left, so CI runs the image suite.
 - 10:20 UTC — Browser QA on the standalone build: at 390 px the component sub-table was squeezed (IDs broke mid-number) and the range error pushed To out of line. Components now stack under the order below `md`, and the error has its own row; unit and integration tests assert both.
 - 10:12 UTC — The first integration run failed on the test's own row reader: `cell.querySelectorAll("tbody tr")` matched through the outer table (lesson added), and the Extra badge had no text space before it. Both fixed; `navigation.test.ts` needed the new entry in its expected lists.
@@ -41,4 +45,10 @@ The spec's four steps: core (schema, pure tally, `VarianceReportService`, DI), a
 ### Phase 3: verification and delivery
 
 - [x] 3.1 Integration files (`variance-report.test.ts`, `variance-report-api.test.ts`) and `navigation.test.ts`. — a916079
-- [ ] 3.2 Docs (`BACKWARD_COMPATIBILITY.md` §4), full gate, review, PR, QA evidence and CI.
+- [x] 3.2 Docs (`BACKWARD_COMPATIBILITY.md` §4), full gate, review, PR, QA evidence and CI.
+
+## Outcome and follow-ups
+
+- PR #135 implements the four-step plan. Design PR #132 is merged.
+- A human review and QA sign-off are still merge gates. This run adds no `qa-approved` and merges nothing.
+- #92 owns the end-to-end reversed-completion check. A nit is left for a follow-up: the "Extra" badge here versus "Added" on the completion form.
