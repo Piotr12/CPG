@@ -17,6 +17,7 @@ The spec's two phases plus the paperwork: the generalised `deactivationBlockerEr
 - The implementation branch is based on the spec branch (as #135 was on #132), so it carries the spec commits; #149 merges first.
 
 ## Log
+- 20:48 UTC — Phase 1 done. `transfers.test.ts` (5 tests) passes against a fresh `next dev` server (`CPG_BASE_URL`; Docker isn't running here). Following the link leaves the material page mounted but `display: none` (React Activity), its open dialog included; the transfer page stays interactive, so the test waits for the shown heading instead of the dialog to go.
 - 20:41 UTC — Began from `spec/transfer-refusal-links` (8a12eaa) on `feat/transfer-refusal-links` in the cezar worktree.
 
 ## Progress
@@ -25,8 +26,8 @@ The spec's two phases plus the paperwork: the generalised `deactivationBlockerEr
 
 ### Phase 1: Link transfer refusals (LFC-018)
 
-- [ ] 1.1 Generalise the blocker link into `deactivationBlockerError`, switch its two callers, unit tests at 100%.
-- [ ] 1.2 Integration: the location's and the material's Deactivate refusals link the Open transfer.
+- [x] 1.1 Generalise the blocker link into `deactivationBlockerError`, switch its two callers, unit tests at 100%. — 56a9911
+- [x] 1.2 Integration: the location's and the material's Deactivate refusals link the Open transfer. — 74c3cea
 
 ### Phase 2: Prove the stock import's remaining scenarios (STX-006, STX-018, LFC-016)
 
