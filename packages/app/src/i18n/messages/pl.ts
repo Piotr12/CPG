@@ -676,6 +676,17 @@ export const pl: Messages = {
       id: "Wykonanie", date: "Zaksięgowano", lines: "Zużyte materiały", waste: "Odpad",
       line: "{material} — oczekiwane {expected}, rzeczywiste {actual} {unit}, odchylenie {variance}",
       pagination: "Strony wykonań", previous: "Nowsze", next: "Starsze", page: "Strona {page}",
+      actions: "Działania",
+      reversal: {
+        open: "Odwróć", title: "Odwrócić wykonanie {id}?",
+        description: "Wszystkie ruchy tego wykonania zostaną w całości odwrócone z dzisiejszą datą. Wykonanie zostaje w historii, oznaczone jako odwrócone.",
+        original: "Pierwotne", date: "Data odwrócenia", today: "{date} (UTC)", changes: "Zmiany zapasu w lokalizacji {location}",
+        output: "Wytworzono {quantity} {unit}", effect: "Wytworzona ilość {produced} {unit} zmniejszy się o {output} {unit}. Zlecenie Zakończone poniżej celu wróci do stanu Otwarte; zlecenie Zamknięte wcześniej pozostanie zamknięte.",
+        stockRule: "Jeśli którejkolwiek z tych ilości nie ma już w zapasie, nic nie zostanie odwrócone.",
+        reason: "Powód", submit: "Odwróć wykonanie", pending: "Odwracanie…", cancel: "Anuluj",
+        reversed: "Odwrócone", by: "{date}, {actor}: {reason}", showExisting: "Pokaż istniejące odwrócenie",
+        reasonError: "Podaj powód, maksymalnie 500 znaków.",
+      },
       fieldErrors: {
         missingComponent: "Podaj zużycie każdego składnika receptury, 0 gdy nie był użyty.",
         unknownInput: "Wybierz materiał z tego zbioru.",
@@ -712,6 +723,9 @@ export const pl: Messages = {
       PRODUCTION_ORDER_CHANGED: "Zlecenie produkcyjne zmieniło się podczas księgowania. Spróbuj ponownie.",
       PRODUCTION_COMPLETION_IDS_EXHAUSTED: "Wykorzystano wszystkie identyfikatory wykonań w tym zbiorze.",
       PRODUCTION_COMPLETION_ID_RACE: "W tym samym momencie zaksięgowano inne wykonanie. Spróbuj ponownie.",
+      PRODUCTION_COMPLETION_NOT_FOUND: "To wykonanie nie istnieje w tym zleceniu.",
+      PRODUCTION_COMPLETION_ALREADY_REVERSED: "To wykonanie zostało już odwrócone. Zobacz istniejące odwrócenie, zanim zaksięgujesz ponownie.",
+      STOCK_REVERSAL_INCONSISTENT: "Pierwotne księgowanie nie zgadza się z dokumentem. Poproś administratora o sprawdzenie.",
     },
   },
   customerOrders: {

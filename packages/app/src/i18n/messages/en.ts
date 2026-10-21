@@ -709,6 +709,17 @@ export const en = {
       id: "Completion", date: "Posted", lines: "Materials used", waste: "Waste",
       line: "{material} — expected {expected}, actual {actual} {unit}, variance {variance}",
       pagination: "Completion pages", previous: "Newer", next: "Older", page: "Page {page}",
+      actions: "Actions",
+      reversal: {
+        open: "Reverse", title: "Reverse completion {id}?",
+        description: "Every movement of this completion is reversed in full, today. The completion stays in the history, marked as reversed.",
+        original: "Original", date: "Reversal date", today: "{date} (UTC)", changes: "Stock changes at {location}",
+        output: "{quantity} {unit} produced", effect: "Produced {produced} {unit} drops by {output} {unit}. A Completed order below its target becomes Open again; a Closed Early order stays closed.",
+        stockRule: "If any of these quantities is no longer in stock, nothing is reversed.",
+        reason: "Reason", submit: "Reverse completion", pending: "Reversing…", cancel: "Cancel",
+        reversed: "Reversed", by: "{date} by {actor}: {reason}", showExisting: "Show the existing reversal",
+        reasonError: "Enter a reason, up to 500 characters.",
+      },
       fieldErrors: {
         missingComponent: "Enter what was used of every recipe component, 0 when none was.",
         unknownInput: "Choose a material from this tenant.",
@@ -745,6 +756,9 @@ export const en = {
       PRODUCTION_ORDER_CHANGED: "The production order changed while posting. Try again.",
       PRODUCTION_COMPLETION_IDS_EXHAUSTED: "This tenant has used every production completion ID.",
       PRODUCTION_COMPLETION_ID_RACE: "Another completion was posted at the same moment. Try again.",
+      PRODUCTION_COMPLETION_NOT_FOUND: "This completion does not exist on this order.",
+      PRODUCTION_COMPLETION_ALREADY_REVERSED: "This completion was already reversed. Show the existing reversal before posting again.",
+      STOCK_REVERSAL_INCONSISTENT: "The original posting does not match its document. Ask an administrator to check it.",
     },
   },
   customerOrders: {
