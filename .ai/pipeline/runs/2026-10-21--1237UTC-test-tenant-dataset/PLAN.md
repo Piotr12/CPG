@@ -32,7 +32,7 @@
 | 2 | 2.11 | Master seeds take generated rows | group:E:cheap | done | 3aed882 |
 | 3 | 3.1 | Timeline seeder and untouched-Test check | inline | done | 04e3152 |
 | 3 | 3.2 | Seed timing spike | inline | done | 1fc5174 |
-| 3 | 3.3 | Startup seeds an untouched Test only | inline | todo | — |
+| 3 | 3.3 | Startup seeds an untouched Test only | inline | done | cb9a6ec |
 | 3 | 3.4 | Reset seeds the generated dataset; old fixtures removed | inline | todo | — |
 | 3 | 3.5 | Seed-context callers test | dispatch:cheap | todo | — |
 | 4 | 4.1 | Remaining unit tests pinned to old fixtures | dispatch | todo | — |
