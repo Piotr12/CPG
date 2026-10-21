@@ -14,7 +14,7 @@ export function productionOrderView(order: ProductionOrder) {
     plannedFinish, plannedStart, leadTimeDays, produced, abandoned, status, createdAt, updatedAt, version } = order;
   return { id: code, output: output.code, location: location.code, bom: recipe.bom.code, revision: recipe.number,
     quantity, enteredQuantity, enteredUnit, numerator, denominator, plannedFinish, plannedStart, leadTimeDays,
-    produced, outstanding: outstandingQuantity(quantity, produced, abandoned), abandoned, status: status as DocumentState, createdAt, updatedAt, version };
+    produced, outstanding: outstandingQuantity(quantity, produced, abandoned, status as DocumentState), abandoned, status: status as DocumentState, createdAt, updatedAt, version };
 }
 export type ProductionOrderView = ReturnType<typeof productionOrderView>;
 export function productionSnapshot(order: ProductionOrder) {

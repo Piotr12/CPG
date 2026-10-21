@@ -8,6 +8,7 @@ import {
   ProductionCompletion,
   ProductionCompletionLine,
   StockBalance,
+  StockMovement,
   UniqueConstraintViolationException,
   type EntityManager,
   type ProductionOrder,
@@ -21,7 +22,7 @@ import {
   productionStatus,
 } from "../../domain/production-orders/production-completion";
 import { parseDecimal } from "../../domain/quantities/decimal";
-import { AppError, ConflictError, ValidationError, type FieldErrors } from "../../http/errors";
+import { AppError, ConflictError, NotFoundError, ValidationError, type FieldErrors } from "../../http/errors";
 import { parseInput } from "../../http/parse-input";
 import { FINISHED_COMPONENT_MESSAGE } from "../../validators/boms/bom-fields.schema";
 import {
@@ -44,11 +45,23 @@ import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit } from "../audit/audit-recorder";
 import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quantity";
 import { lineError } from "../materials/line-error";
-import { postStockMovements } from "../stock/stock-posting";
+import { postHistoricalInverses, postStockMovements, type StockMovementView } from "../stock/stock-posting";
+import { existingReversal, linkReversals, subtractReversedQuantity } from "../stock/reversal-records";
+import { isScopeReadOnly } from "../tenants/tenant.service";
+import { businessIdSchema } from "../../validators/business-ids/business-id.schema";
+import { stockReversalSchema } from "../../validators/stock/stock-reversal.schema";
+import {
+  assertCompletionHistory,
+  completionAlreadyReversed,
+  completionReversals,
+  PRODUCTION_COMPLETION_MOVEMENT,
+  type CompletionReversalView,
+} from "./completion-reversal";
 import { findProductionOrder, productionOrderView, productionSubject, type ProductionOrderView } from "./production-order-records";
 
 /** The stock movement type a completion posts (INV-012: every movement names its source). */
-export const PRODUCTION_COMPLETION_MOVEMENT = "production-completion";
+export { PRODUCTION_COMPLETION_MOVEMENT };
+export type { CompletionReversalView };
 export const COMPLETION_ID_RACE = "Another production completion was posted at the same moment. Try again.";
 
 /** One material of a completion as the screens and the API show it: expected, actual and variance in its base unit. */
@@ -77,12 +90,19 @@ export interface CompletionView {
   waste: boolean;
   createdAt: Date;
   lines: CompletionLineView[];
+  /** Who reversed it as a whole, or null (E11-S03). Its quantities stay as posted. */
+  reversal: CompletionReversalView | null;
 }
 
 /** What a post returns: the completion, and the order's progress after it. */
 export interface CompletionResult {
   completion: CompletionView;
   order: ProductionOrderView;
+}
+
+/** What a reversal returns: the completion marked reversed, the order after it, and the inverse movements. */
+export interface CompletionReversalResult extends CompletionResult {
+  movements: StockMovementView[];
 }
 
 /** One pinned component as the Post completion form proposes it (PRD-010). */
@@ -274,6 +294,69 @@ export class ProductionCompletionService {
       throw error;
     }
   }
+
+  /**
+   * Reverses completion `completionId` of order `orderId` as a whole, once, today (E11-S03, spec Q4/Q5):
+   * every movement inverted as one group, each linked to its original, the order's produced quantity
+   * lowered and a Completed order reopened below its target; a Closed Early order stays closed. Too
+   * little finished output is `INSUFFICIENT_STOCK` and writes nothing (REV-012, REV-018, AUD-021).
+   */
+  async reverse(orderId: string, completionId: string, raw: unknown, actor: AuditActor): Promise<CompletionReversalResult> {
+    const code = parseInput(businessIdSchema, completionId);
+    const { reason } = parseInput(stockReversalSchema, raw);
+    let postingId: string | null = null;
+    try {
+      return await this.em.transactional(async (em) => {
+        if (await isScopeReadOnly(em)) throw new ConflictError("This tenant is read-only.", "TENANT_READ_ONLY");
+        const order = await findProductionOrder(em, orderId, { refresh: true });
+        const completion = await em.findOne(ProductionCompletion, { order, code });
+        if (!completion) throw new NotFoundError("PRODUCTION_COMPLETION_NOT_FOUND", `Production order ${order.code} has no completion ${code}.`);
+        postingId = completion.id;
+        const originals = await em.find(StockMovement, { postingId: completion.id }, { populate: ["material", "location"], orderBy: { position: "asc" }, refresh: true });
+        const existing = await existingReversal(em, originals);
+        if (existing) throw completionAlreadyReversed(existing.inverse.postingId);
+        const lines = await em.find(ProductionCompletionLine, { completion }, { orderBy: { position: "asc" } });
+        assertCompletionHistory(order, completion, lines, originals);
+        const movements = await postHistoricalInverses(em, originals, reason, randomUUID(), actor);
+        await linkReversals(em, originals, movements);
+        const before = { produced: order.produced, status: order.status };
+        order.produced = subtractReversedQuantity(order.produced, completion.quantity);
+        // Only an automatic completion reopens; an explicit Closed Early decision stays (spec Q5).
+        if (order.status === "completed") order.status = productionStatus(order.produced, order.quantity);
+        order.updatedAt = new Date(Math.max(Date.now(), order.updatedAt.getTime() + 1));
+        const subject = { type: "ProductionCompletion", id: completion.code, label: `${completion.code} — order ${order.code}, ${order.output.code} ${order.output.description}` };
+        const pairs: Record<string, string> = {};
+        originals.forEach(({ id }, index) => {
+          pairs[`movement${index + 1}Original`] = id;
+          pairs[`movement${index + 1}Inverse`] = movements[index].id;
+        });
+        recordTenantAudit(em, actor, {
+          action: "production-orders.production-completion.reversed",
+          subject,
+          before: { reversed: false },
+          after: { reversed: true, reversal: movements[0].postingId, reason, businessDate: movements[0].businessDate, movements: movements.length, ...pairs },
+        });
+        recordTenantAudit(em, actor, {
+          action: "production-orders.production-order.completion-reversed",
+          subject: productionSubject(order),
+          before,
+          after: { produced: order.produced, status: order.status, completion: completion.code },
+        });
+        await em.flush();
+        return { completion: (await viewsOf(em, order, [completion]))[0], order: productionOrderView(order), movements };
+      });
+    } catch (error) {
+      if (error instanceof UniqueConstraintViolationException && postingId !== null) {
+        // A racing reversal won past the in-transaction check: name the one that exists, read afresh.
+        const existing = await existingReversal(this.em, await this.em.find(StockMovement, { postingId }, { refresh: true }));
+        throw completionAlreadyReversed(existing?.inverse.postingId ?? null);
+      }
+      if (error instanceof OptimisticLockError) {
+        throw new ConflictError("The production order changed while the completion was reversed. Try again.", "PRODUCTION_ORDER_CHANGED");
+      }
+      throw error;
+    }
+  }
 }
 
 /** Only an Open order takes a completion (spec Q3): a Completed one has nothing left to produce. */
@@ -435,6 +518,7 @@ async function viewsOf(em: EntityManager, order: ProductionOrder, completions: r
   if (completions.length === 0) return [];
   const lines = await em.find(ProductionCompletionLine, { completion: { $in: [...completions] } }, { populate: ["material"], orderBy: { position: "asc" } });
   const byCompletion = new Map<string, ProductionCompletionLine[]>(completions.map(({ id }) => [id, []]));
+  const reversals = await completionReversals(em, completions);
   for (const line of lines) byCompletion.get(line.completion.id)!.push(line);
   return completions.map((completion) => ({
     id: completion.code,
@@ -458,5 +542,6 @@ async function viewsOf(em: EntityManager, order: ProductionOrder, completions: r
         enteredUnit,
         extra,
       })),
+    reversal: reversals.get(completion.id) ?? null,
   }));
 }
