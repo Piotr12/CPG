@@ -1,15 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { Checkbox } from "./checkbox";
-
-beforeAll(() => {
-  // Radix sizes the checkbox's hidden form input with ResizeObserver, which jsdom doesn't have.
-  globalThis.ResizeObserver ??= class {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  };
-});
 
 describe("Checkbox", () => {
   it("is a labelled checkbox that toggles and reports its state", () => {

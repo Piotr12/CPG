@@ -23,6 +23,11 @@ A report of physical on-hand and in-transit stock per material and location, wit
   - `BACKWARD_COMPATIBILITY.md` now says the Stock `GET` validates `page`;
   - spec notes on the Ledger button and on loading the masters whole.
 - 00:20 Screenshots showed both tables unreadable at 390 px. The report's location now moves under the material and its figures stack in one cell on phones, and the integration test asserts that each Ledger button stays in view. The Stock ledger's columns got minimum widths, so it scrolls sideways instead of collapsing to one character per line.
+- 2026-10-21 `/om-auto-fix-pr 120`: the PR conflicted with `main`, which had gained stock import (#81) and production completions (#89).
+  - Merged `main` in. Both new sidebar entries are kept, Stock import before Stock report, and so are the DI lines, help topics and strings. The checkbox tests are combined.
+  - The ledger's sources now cover production completions, linked to their production order. A stock import posts corrections, so its movements are their own source.
+  - Gate after the merge: 431 files, 2,789 tests, 100% coverage; lint, typecheck and build clean.
+  - Integration on the standalone build (Docker still out of space): `navigation`, `stock-report`, `stock-report-api`, `stock`, `stock-import`, `production-completions` and `transfers` all passed (43 tests). The sidebar still fits at 1280 × 800 with both new entries.
 
 ## Changes
 - core: `validators/reports/stock-report.schema.ts`, `domain/reports/stock-report-rows.ts`, `services/reports/stock-report.service.ts` (`stockReportService`), `services/stock/movement-sources.ts`. `StockService.get` now pages the ledger (`page`, `movementCount`) and adds each movement's `source`. Also `stockLedgerQuerySchema`, plus the DI and index lines.

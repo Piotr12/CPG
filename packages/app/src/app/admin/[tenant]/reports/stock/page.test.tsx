@@ -1,5 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppError, type StockReportRow, type StockReportView } from "@cpg/core";
 import { resolveServerComponents } from "../../../../../../../../tests/setup/server-components";
 import { en } from "../../../../../i18n/messages/en";
@@ -11,15 +11,6 @@ vi.mock("next/server", () => ({ connection: mocks.connection }));
 vi.mock("@cpg/core", async (original) => ({ ...(await original<typeof import("@cpg/core")>()), tenantScope: mocks.tenantScope }));
 vi.mock("../../../../../auth/require-admin", () => ({ requireUser: mocks.requireUser }));
 vi.mock("../../../../../i18n/get-messages", () => ({ getMessages: mocks.getMessages }));
-
-beforeAll(() => {
-  // Radix sizes the checkbox's hidden form input with ResizeObserver, which jsdom doesn't have.
-  globalThis.ResizeObserver ??= class {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  };
-});
 
 const tenant = { code: "test", name: "Test", generation: 1, readOnly: false };
 const steel = { id: "00000001", type: "raw", description: "Steel sheet", baseUnit: "kg", active: true, createdAt: new Date(), version: 1 };
