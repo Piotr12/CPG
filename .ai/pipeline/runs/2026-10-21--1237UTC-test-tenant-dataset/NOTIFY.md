@@ -65,3 +65,6 @@
 ## 2026-10-21T14:49:19Z — Step 4.5 timings and a finding about the lock window
 - Seed: the startup seed takes 9.0–9.3 s and a reset 9.4–10.2 s on the production standalone build (budget 15 s). The CI image could not be timed here (no Docker).
 - Finding: during a reset the whole server is unresponsive (~10 s). Every request (Prod writes via the API and the UI, reads, `/up`, static files) waits, then succeeds. Q16 expected writes from other bundles to fail after 5 s instead. Kept as is (safer than interleaving), and documented in timings.md, BACKWARD_COMPATIBILITY.md §4, the spec's Implementation notes and the PR.
+
+## 2026-10-21T14:55:00Z — final gate
+- lint, typecheck, test:coverage (100 %, 3,258 tests) and build are green on 43cd921; 10 key integration files are green on the final production build. The full integration suite is left to CI.
