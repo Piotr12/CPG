@@ -1,9 +1,9 @@
 # Production orders — execution plan
 
-Source doc: .ai/specs/2026-10-20--2047UTC-production-orders.md
+Source doc: .ai/specs/implemented/2026-10-20--2047UTC-production-orders.md
 Issue: #88
 Engine: om-auto-create-pr (steps: 9, --loop: no)
-Status: in-progress
+Status: complete
 
 ## Goal
 Record manual production orders with pinned recipes, derived dates and advisory shortages in both UI and API.
@@ -59,7 +59,7 @@ Revision drift, historical revaluation and tenant isolation. Retain stored revis
 
 ### Phase 3: Verification and publication
 - [x] 3.1 Full local gate and live UI evidence — 8115321
-- [ ] 3.2 Review, publication and final CI
+- [x] 3.2 Review, publication and final CI — ce24740 (PR #114)
 
 ## Publication handoff
 Spec branch spec/production-orders @ bfe1506 and implementation branch feat/production-orders are prepared locally. PR body drafts: /tmp/cpg-88-pr-spec.md and /tmp/cpg-88-pr-implementation.md. No shared push or PR exists. User Guard approval is required to publish both branches and QA screenshots. After approval: duplicate-check, publish design-only spec PR (Refs #88), publish implementation PR (Closes #88, Refs spec PR, Source doc, Tracking plan), apply labels, attach QA evidence, run the PR review loop and watch full CI. Move the source spec to implemented only after verification is complete, keeping the spec branch design-only. Release own issue claim while waiting.

@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-20 22:21 UTC
 **Agent:** Claude Code (Opus 5.5), `om-auto-fix-issue 81` via cezar
-**Spec:** .ai/specs/2026-10-20--2225UTC-stock-import.md
+**Spec:** .ai/specs/implemented/2026-10-20--2225UTC-stock-import.md
 **Status:** done
 
 ## Goal
@@ -25,7 +25,7 @@ Deliver E07-S02: a user imports desired physical stock from a workbook, with a d
 - 23:15 UTC: Implementation PR #118 is ready. Its plan, `.ai/pipeline/runs/2026-10-20--2234UTC-stock-import.md`, is the run log from here on. The issue lock is released.
 
 ## Changes
-- `.ai/specs/2026-10-20--2225UTC-stock-import.md`, `.ai/specs/assets/stock-import/*`, this log.
+- `.ai/specs/implemented/2026-10-20--2225UTC-stock-import.md`, `.ai/specs/assets/stock-import/*`, this log.
 
 ## Verification
 - `tests/ai-filenames.test.ts` (4) and `tests/spec-images.test.ts` (2) pass.
