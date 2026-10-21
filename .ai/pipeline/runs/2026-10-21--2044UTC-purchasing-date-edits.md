@@ -66,9 +66,9 @@ The spec ships on design PR #157 (`spec/purchasing-date-edits`), which is not me
 
 ### Phase 1: Validators, server actions, version guard
 
-- [ ] 1.1 Form schemas with tests
-- [ ] 1.2 setPlannedDates monotonic updatedAt guard
-- [ ] 1.3 Server actions with tests
+- [x] 1.1 Form schemas with tests — 9edbec4
+- [x] 1.2 setPlannedDates monotonic updatedAt guard — 5ccf1d2
+- [x] 1.3 Server actions with tests — 5d107c3
 
 ### Phase 2: Dialog and messages
 
@@ -88,3 +88,4 @@ The spec ships on design PR #157 (`spec/purchasing-date-edits`), which is not me
 ## Log
 
 - 20:44 UTC — Plan drafted with 10 Steps, under the loop threshold of 20, so the engine is `om-auto-create-pr`.
+- 20:47 UTC — Phase 1 is done. The new service test failed before the guard: version 1, where 2 was expected.
