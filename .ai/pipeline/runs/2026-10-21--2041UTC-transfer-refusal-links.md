@@ -17,6 +17,7 @@ The spec's two phases plus the paperwork: the generalised `deactivationBlockerEr
 - The implementation branch is based on the spec branch (as #135 was on #132), so it carries the spec commits; #149 merges first.
 
 ## Log
+- 21:05 UTC — Phase 2 done. Gate on this source: lint (one existing warning in `bom.service.ts`), typecheck, 483 files / 3,266 tests with 100% statements, branches, functions and lines, build. On a fresh standalone copy (static + public, empty `DATA_DIR`): `transfers.test.ts`, `stock-import.test.ts`, `stock-import-api.test.ts`, 3 files / 16 tests pass. Under `next dev`, `stock-import-api.test.ts` fails in `beforeAll` (bob's sign-in wait) on main's copy too, so it was verified on the standalone build; Docker isn't running here, and CI runs the image suite.
 - 20:48 UTC — Phase 1 done. `transfers.test.ts` (5 tests) passes against a fresh `next dev` server (`CPG_BASE_URL`; Docker isn't running here). Following the link leaves the material page mounted but `display: none` (React Activity), its open dialog included; the transfer page stays interactive, so the test waits for the shown heading instead of the dialog to go.
 - 20:41 UTC — Began from `spec/transfer-refusal-links` (8a12eaa) on `feat/transfer-refusal-links` in the cezar worktree.
 
@@ -31,11 +32,11 @@ The spec's two phases plus the paperwork: the generalised `deactivationBlockerEr
 
 ### Phase 2: Prove the stock import's remaining scenarios (STX-006, STX-018, LFC-016)
 
-- [ ] 2.1 Service test: a site the workbook leaves out keeps its balances and gets no movement (STX-006).
-- [ ] 2.2 Action test: an admin session commits with the admin's `uiActor` (STX-018).
-- [ ] 2.3 Integration: the admin's UI commit is audited with the admin's account, session and `ui` (STX-018).
-- [ ] 2.4 Integration: the admin's API commit names the admin and `api` (STX-018).
-- [ ] 2.5 Service test: the location `STOCK_NOT_EMPTY` refusal carries its parameters (LFC-016).
+- [x] 2.1 Service test: a site the workbook leaves out keeps its balances and gets no movement (STX-006). — 550429a
+- [x] 2.2 Action test: an admin session commits with the admin's `uiActor` (STX-018). — 8143afb
+- [x] 2.3 Integration: the admin's UI commit is audited with the admin's account, session and `ui` (STX-018). — 1786ade
+- [x] 2.4 Integration: the admin's API commit names the admin and `api` (STX-018). — 388b075
+- [x] 2.5 Service test: the location `STOCK_NOT_EMPTY` refusal carries its parameters (LFC-016). — 46efd0a
 
 ### Phase 3: Paperwork
 
