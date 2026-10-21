@@ -1531,7 +1531,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/services/goods-receipts/goods-receipt.service.test.ts` (the planned date of a received Open order is editable and audited), `tests/integration/goods-receipts-api.test.ts` (PATCH 200 and the `purchase-orders.purchase-order.updated` entry). Only the API edits dates; editing them on screen is not built yet (#142). "Next MRP uses it" is slice 3 (#14). E09-S02, #87.
+- **Evidence:** the non-MRP half is automated on both channels. API: `packages/core/src/services/goods-receipts/goods-receipt.service.test.ts` (the planned date of a received Open order is editable and audited), `tests/integration/goods-receipts-api.test.ts` (PATCH 200 and the `purchase-orders.purchase-order.updated` entry). UI: `tests/integration/goods-receipts.test.ts` (Change date on a partly received line: the new date, received 4 and outstanding 6 unchanged, version +1, and an audit entry on the UI channel with the line's before and after), `packages/core/src/services/purchase-orders/purchase-order.service.test.ts` (the version always advances). "Next MRP uses it" is slice 3 (#14). E09-S02, #87; E09-S04, #142.
 - **Given:** PO partially received, remaining supply open
 - **When:** Change planned delivery date of open amount
 - **Then:** Allowed and audited; next MRP uses revised planned date.
