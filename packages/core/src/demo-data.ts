@@ -3,7 +3,7 @@ import type { AppConfig } from "./config";
 import { createAppContainer } from "./container/container";
 import { scopeForTenant } from "./container/tenant-scope";
 import { toDbOptions } from "./database";
-import { TEST_TENANT_CONFIG, type TestTenantConfig } from "./domain/demo/test-tenant-config.schema";
+import type { TestTenantConfig } from "./domain/demo/test-tenant-config.schema";
 import { inRequestTransaction } from "./http/request-transaction";
 import { isUntouchedTest, seedTestTenantDataset, type DatasetKind } from "./services/demo/seed-demo-data";
 import { isScopeReadOnly } from "./services/tenants/tenant.service";
@@ -27,11 +27,11 @@ export type DemoSeedResult =
  * is written in one transaction, so a failure leaves Test empty and the next start tries again; a Test
  * in use keeps its data until the admin resets it, and a read-only Test is never written (R05). Prod
  * is never touched. `today` and `dataset` are the generator's inputs: the server's clock and the
- * committed configuration, unless a test passes others.
+ * container's committed configuration, unless a test passes others.
  */
 export async function seedDemoData(
   config: AppConfig,
-  { today = new Date(), dataset = TEST_TENANT_CONFIG }: { today?: Date; dataset?: TestTenantConfig } = {},
+  { today = new Date(), dataset }: { today?: Date; dataset?: TestTenantConfig } = {},
 ): Promise<DemoSeedResult> {
   const orm = await initOrm(toDbOptions(config));
   try {

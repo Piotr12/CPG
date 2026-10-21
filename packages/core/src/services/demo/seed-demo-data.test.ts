@@ -3,20 +3,19 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { CustomerOrder, CustomerOrderLine, GoodsIssueLine, initOrm, migrate, ProductionCompletion, StockBalance, StockMovement, TenantAuditEvent, type Orm } from "@cpg/db";
 import { afterEach, describe, expect, it } from "vitest";
+import { REDUCED_TEST_TENANT_CONFIG } from "../../../../../tests/setup/demo-fixtures";
 import { loadConfig } from "../../config";
 import { createAppContainer } from "../../container/container";
 import { scopeForTenant } from "../../container/tenant-scope";
 import { toDbOptions } from "../../database";
 import { generateTestTenantDataset } from "../../domain/demo/generate-dataset";
 import { Ledger } from "../../domain/demo/ledger";
-import { TEST_TENANT_CONFIG, type TestTenantConfig } from "../../domain/demo/test-tenant-config.schema";
+import { TEST_TENANT_CONFIG } from "../../domain/demo/test-tenant-config.schema";
 import { formatDecimal, parseDecimal } from "../../domain/quantities/decimal";
 import { DATASET_KINDS, isUntouchedTest, seedTestTenantDataset } from "./seed-demo-data";
 import { FIXTURE_MATERIALS } from "../../../../../tests/setup/demo-fixtures";
 
 const TODAY = new Date("2026-10-21T10:00:00.000Z");
-/** The committed catalogue over two history months: every rule of the dataset, at a fraction of its size. */
-const REDUCED: TestTenantConfig = { ...TEST_TENANT_CONFIG, horizon: { ...TEST_TENANT_CONFIG.horizon, historyMonths: 2 } };
 
 let orm: Orm | undefined;
 afterEach(async () => {
@@ -36,9 +35,9 @@ describe("seedTestTenantDataset", () => {
     const cradle = await testScope();
     const { em } = cradle;
     expect(await isUntouchedTest(em)).toBe(true);
-    const dataset = generateTestTenantDataset(REDUCED, "2026-10-21");
+    const dataset = generateTestTenantDataset(REDUCED_TEST_TENANT_CONFIG, "2026-10-21");
 
-    const counts = await seedTestTenantDataset(cradle, TODAY, REDUCED);
+    const counts = await seedTestTenantDataset(cradle, TODAY, REDUCED_TEST_TENANT_CONFIG);
 
     const { masters, summary } = dataset;
     expect(Object.keys(counts)).toEqual(DATASET_KINDS);
@@ -54,7 +53,7 @@ describe("seedTestTenantDataset", () => {
     expect(await isUntouchedTest(em)).toBe(false);
 
     // Every pair ends where the generator's own replay of the timeline ends (R09: none below zero).
-    const ledger = new Ledger(REDUCED);
+    const ledger = new Ledger(REDUCED_TEST_TENANT_CONFIG);
     for (const event of dataset.timeline) ledger.apply(event);
     const balances = await em.find(StockBalance, {}, { populate: ["material", "location"] });
     expect(balances.length).toBeGreaterThan(0);
@@ -67,9 +66,9 @@ describe("seedTestTenantDataset", () => {
   it("dates every record by its own event, never by the time the seed ran (spec Q10)", async () => {
     const cradle = await testScope();
     const { em } = cradle;
-    const dataset = generateTestTenantDataset(REDUCED, "2026-10-21");
+    const dataset = generateTestTenantDataset(REDUCED_TEST_TENANT_CONFIG, "2026-10-21");
 
-    await seedTestTenantDataset(cradle, TODAY, REDUCED);
+    await seedTestTenantDataset(cradle, TODAY, REDUCED_TEST_TENANT_CONFIG);
 
     const opening = dataset.timeline.find(({ kind }) => kind === "opening")!;
     const first = await em.find(StockMovement, {}, { orderBy: { occurredAt: "asc" }, limit: 1 });
@@ -85,7 +84,7 @@ describe("seedTestTenantDataset", () => {
   it("fulfils every history order line by exactly what its goods issues took (SAL-006…009, INV-012)", async () => {
     const cradle = await testScope();
     const { em } = cradle;
-    await seedTestTenantDataset(cradle, TODAY, REDUCED);
+    await seedTestTenantDataset(cradle, TODAY, REDUCED_TEST_TENANT_CONFIG);
 
     const issued = new Map<string, bigint>();
     for (const line of await em.find(GoodsIssueLine, {}, { populate: ["shipmentLine.orderLine"] })) {
@@ -102,7 +101,7 @@ describe("seedTestTenantDataset", () => {
     await cradle.materialService.seedDemo(FIXTURE_MATERIALS);
     cradle.em.clear();
 
-    await expect(seedTestTenantDataset(cradle, TODAY, REDUCED)).rejects.toThrow("Incomplete demonstration seed: materials");
+    await expect(seedTestTenantDataset(cradle, TODAY, REDUCED_TEST_TENANT_CONFIG)).rejects.toThrow("Incomplete demonstration seed: materials");
   });
 
   it("seeds the committed configuration's full two years", async () => {

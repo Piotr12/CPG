@@ -22,14 +22,14 @@ export class TestResetService {
 
   // Each dependency by name: taking the rest of a PROXY cradle would resolve every registration (lesson of 2026-10-20).
   constructor({
-    em, tenantService, materialService, locationService, customerService, supplierService, planningParameterService, safetyStockTargetService,
+    em, testTenantConfig, tenantService, materialService, locationService, customerService, supplierService, planningParameterService, safetyStockTargetService,
     bomService, forecastService, stockService, customerOrderService, shipmentService, goodsIssueService, purchaseRequisitionService,
     purchaseOrderService, goodsReceiptService, productionOrderService, productionCompletionService,
   }: Deps) {
     this.em = em;
     this.tenantService = tenantService;
     this.seeds = {
-      em, materialService, locationService, customerService, supplierService, planningParameterService, safetyStockTargetService, bomService,
+      em, testTenantConfig, materialService, locationService, customerService, supplierService, planningParameterService, safetyStockTargetService, bomService,
       forecastService, stockService, customerOrderService, shipmentService, goodsIssueService, purchaseRequisitionService, purchaseOrderService,
       goodsReceiptService, productionOrderService, productionCompletionService,
     };

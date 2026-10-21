@@ -2,7 +2,9 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { ApiToken, CustomerOrder, GlobalAuditEvent, GlobalIdempotencyKey, initOrm, Material, ProductionCompletion, Session, StockMovement, Tenant, TenantAuditEvent, TenantIdempotencyKey, User, UserPreference, type Orm } from "@cpg/db";
+import { asValue } from "awilix";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { REDUCED_TEST_TENANT_CONFIG } from "../../../../../tests/setup/demo-fixtures";
 import { loadConfig } from "../../config";
 import { createAppContainer } from "../../container/container";
 import type { AppContainer } from "../../container/cradle";
@@ -20,19 +22,13 @@ import { IDEMPOTENCY_TTL_MS } from "../idempotency/idempotency.service";
 import { MAX_DATASET_GENERATION } from "../../validators/tenants/test-reset.schema";
 
 /*
- * A reset generates the dataset for today from the committed configuration. The full two years take
- * seconds to write, so these tests run on the committed catalogue over two history months, and only
- * the one test that pins the committed configuration switches to it (`dataset.full`).
+ * A reset generates the dataset for today from the container's `testTenantConfig`. The full two years
+ * take seconds to write, so these tests register the committed catalogue over two history months, and
+ * only the one test that pins the committed configuration registers it instead.
  */
-const dataset = vi.hoisted(() => ({ full: false }));
-vi.mock("../../domain/demo/test-tenant-config.schema", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../domain/demo/test-tenant-config.schema")>();
-  const reduced = { ...actual.TEST_TENANT_CONFIG, horizon: { ...actual.TEST_TENANT_CONFIG.horizon, historyMonths: 2 } };
-  return { ...actual, get TEST_TENANT_CONFIG() { return dataset.full ? actual.TEST_TENANT_CONFIG : reduced; } };
-});
 /** The reset's clock: the dataset it writes is the one generated for this day. */
 const TODAY = new Date("2026-10-21T10:00:00.000Z");
-const generated = () => generateTestTenantDataset(TEST_TENANT_CONFIG, "2026-10-21");
+const generated = (config = REDUCED_TEST_TENANT_CONFIG) => generateTestTenantDataset(config, "2026-10-21");
 
 const actor: AuditActor = { userId: "admin", username: "admin", sessionId: "session-admin", channel: "ui", token: null };
 let orm: Orm;
@@ -43,11 +39,11 @@ const audit = { action: "test.record.created", subjectType: "Material", subjectI
 
 beforeEach(async () => {
   vi.useFakeTimers({ now: TODAY, toFake: ["Date"] });
-  dataset.full = false;
   const config = loadConfig({ DATA_DIR: mkdtempSync(path.join(tmpdir(), "cpg-reset-service-")) });
   await migrateDatabase(config);
   orm = await initOrm(toDbOptions(config));
   container = createAppContainer(config, orm);
+  container.register({ testTenantConfig: asValue(REDUCED_TEST_TENANT_CONFIG) });
 });
 afterEach(async () => { vi.useRealTimers(); vi.restoreAllMocks(); await orm.close(); });
 
@@ -125,8 +121,8 @@ describe("atomic Test reset", { timeout: 60_000 }, () => {
   });
 
   it("writes the committed configuration's two years for today (TEN-001, TEN-022)", async () => {
-    dataset.full = true;
-    const { masters, summary, timeline } = generated();
+    container.register({ testTenantConfig: asValue(TEST_TENANT_CONFIG) });
+    const { masters, summary, timeline } = generated(TEST_TENANT_CONFIG);
 
     expect(await reset()).toMatchObject({ generation: 2 });
 

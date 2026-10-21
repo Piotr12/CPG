@@ -1,7 +1,8 @@
 import type { DemoBom, DemoForecast, DemoMaterial, DemoPlanningParameters, DemoSafetyStockTarget } from "../../packages/core/src/domain/demo/generate-dataset";
+import { TEST_TENANT_CONFIG, type TestTenantConfig } from "../../packages/core/src/domain/demo/test-tenant-config.schema";
 
 /*
- * A small, fixed set of master and document rows for unit tests: a red cabinet and what it's made of,
+ * A small, fixed set of master rows for unit tests: a red cabinet and what it's made of,
  * at three locations. The services' `seedDemo(rows)` take them as the generated dataset's rows; the
  * Test tenant itself is seeded with the generated dataset (spec `2026-10-21--0718UTC-test-tenant-dataset`).
  * Materials, locations, customers and suppliers get IDs 00000001… in this order.
@@ -98,36 +99,9 @@ export const FIXTURE_FORECASTS: readonly DemoForecast[] = [
   { material: "00000005", location: "00000001", date: "2026-11-04", quantity: "60.000000" },
 ];
 
-/** Opening stock of every fixture material, in its base unit. */
-export const FIXTURE_STOCK = [
-  { material: "00000001", location: "00000001", quantity: "500", unit: "kg" },
-  { material: "00000002", location: "00000001", quantity: "1000", unit: "each" },
-  { material: "00000003", location: "00000001", quantity: "40", unit: "l" },
-  { material: "00000004", location: "00000001", quantity: "25", unit: "each" },
-  { material: "00000005", location: "00000002", quantity: "10", unit: "each" },
-  { material: "00000006", location: "00000001", quantity: "50", unit: "each" },
-] as const;
-
-/** 100 kg of steel sheet, and 5 cases of bolts (60 each). */
-export const FIXTURE_REQUISITIONS = [
-  { material: "00000001", location: "00000001", quantity: "100", unit: "kg", requiredDate: "2026-11-02" },
-  { material: "00000002", location: "00000001", quantity: "5", unit: "case", requiredDate: "2026-11-09" },
-] as const;
-
 /**
- * One order to the first supplier that converts 60 of the steel requisition's 100 kg and buys paint
- * directly, on two dates. `requisition` is the 1-based position in `FIXTURE_REQUISITIONS`.
+ * The committed dataset configuration over two history months instead of 24: every rule of the
+ * generated dataset at a fraction of its size, so a test that seeds or resets Test writes it in about
+ * a second. Register it as the container's `testTenantConfig`, or pass it to the seeder.
  */
-export const FIXTURE_ORDERS: readonly { supplier: string; location: string; lines: { material: string; quantity: string; unit: string; plannedDate: string; requisition?: number }[] }[] = [
-  {
-    supplier: "00000001",
-    location: "00000001",
-    lines: [
-      { material: "00000001", quantity: "60", unit: "kg", plannedDate: "2026-11-04", requisition: 1 },
-      { material: "00000003", quantity: "20", unit: "l", plannedDate: "2026-11-06" },
-    ],
-  },
-];
-
-/** One production order of 10 painted side panels at the main plant. */
-export const FIXTURE_PRODUCTION_ORDER = { output: "00000004", location: "00000001", quantity: "10", unit: "each", plannedFinish: "2026-11-15" };
+export const REDUCED_TEST_TENANT_CONFIG: TestTenantConfig = { ...TEST_TENANT_CONFIG, horizon: { ...TEST_TENANT_CONFIG.horizon, historyMonths: 2 } };

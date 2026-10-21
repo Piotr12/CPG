@@ -3,19 +3,18 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { CustomerOrder, initOrm, Material, StockMovement, Tenant, TenantAuditEvent, selectTenant, type EntityManager } from "@cpg/db";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { REDUCED_TEST_TENANT_CONFIG } from "../../../tests/setup/demo-fixtures";
 import { loadConfig, type AppConfig } from "./config";
 import { createAppContainer } from "./container/container";
 import { scopeForTenant } from "./container/tenant-scope";
 import { migrateDatabase, toDbOptions } from "./database";
 import { DATASET_KINDS, seedDemoData } from "./demo-data";
 import { generateTestTenantDataset } from "./domain/demo/generate-dataset";
-import { TEST_TENANT_CONFIG, type TestTenantConfig } from "./domain/demo/test-tenant-config.schema";
+import { TEST_TENANT_CONFIG } from "./domain/demo/test-tenant-config.schema";
 import type { AuditActor } from "./services/audit/actor";
 import { ShipmentService } from "./services/shipments/shipment.service";
 
 const TODAY = new Date("2026-10-21T10:00:00.000Z");
-/** The committed catalogue over two history months, so each test seeds in about a second. */
-const DATASET: TestTenantConfig = { ...TEST_TENANT_CONFIG, horizon: { ...TEST_TENANT_CONFIG.horizon, historyMonths: 2 } };
 const ACTOR: AuditActor = { userId: "admin-id", username: "admin", sessionId: "admin-session", channel: "ui", token: null };
 
 async function migratedConfig() {
@@ -56,9 +55,9 @@ describe("seedDemoData", () => {
 
   it("fills an untouched Test with the generated dataset in one go, never Prod, and leaves a used Test alone (TEN-001, Q4)", async () => {
     const config = await migratedConfig();
-    const { masters, summary } = generateTestTenantDataset(DATASET, "2026-10-21");
+    const { masters, summary } = generateTestTenantDataset(REDUCED_TEST_TENANT_CONFIG, "2026-10-21");
 
-    const result = await seedDemoData(config, { today: TODAY, dataset: DATASET });
+    const result = await seedDemoData(config, { today: TODAY, dataset: REDUCED_TEST_TENANT_CONFIG });
 
     expect(result.outcome).toBe("seeded");
     const seeded = (result as Extract<typeof result, { outcome: "seeded" }>).counts;
@@ -68,7 +67,7 @@ describe("seedDemoData", () => {
     expect(await counts(config, (em) => em.count(CustomerOrder, {}))).toEqual({ test: summary.customerOrders, prod: 0 });
     expect(await counts(config, (em) => em.count(StockMovement, {}))).toEqual({ test: summary.movements, prod: 0 });
 
-    expect(await seedDemoData(config, { today: TODAY, dataset: DATASET })).toEqual({ outcome: "skipped", reason: "in use" });
+    expect(await seedDemoData(config, { today: TODAY, dataset: REDUCED_TEST_TENANT_CONFIG })).toEqual({ outcome: "skipped", reason: "in use" });
     expect(await counts(config, (em) => em.count(CustomerOrder, {}))).toEqual({ test: summary.customerOrders, prod: 0 });
   }, 60_000);
 
@@ -77,7 +76,7 @@ describe("seedDemoData", () => {
     await inTest(config, (cradle) => cradle.locationService.create({ name: "Admin's own plant" }, ACTOR));
     expect(await counts(config, (em) => em.count(TenantAuditEvent, {}))).toEqual({ test: 1, prod: 0 });
 
-    expect(await seedDemoData(config, { today: TODAY, dataset: DATASET })).toEqual({ outcome: "skipped", reason: "in use" });
+    expect(await seedDemoData(config, { today: TODAY, dataset: REDUCED_TEST_TENANT_CONFIG })).toEqual({ outcome: "skipped", reason: "in use" });
     expect(await counts(config, (em) => em.count(Material, {}))).toEqual({ test: 0, prod: 0 });
   });
 
@@ -85,7 +84,7 @@ describe("seedDemoData", () => {
     const config = await migratedConfig();
     await inTest(config, (cradle) => cradle.em.nativeUpdate(Tenant, { code: "test" }, { readOnly: true }));
 
-    expect(await seedDemoData(config, { today: TODAY, dataset: DATASET })).toEqual({ outcome: "skipped", reason: "read-only" });
+    expect(await seedDemoData(config, { today: TODAY, dataset: REDUCED_TEST_TENANT_CONFIG })).toEqual({ outcome: "skipped", reason: "read-only" });
     expect(await counts(config, (em) => em.count(Material, {}))).toEqual({ test: 0, prod: 0 });
   });
 
@@ -94,12 +93,12 @@ describe("seedDemoData", () => {
     const failure = new Error("disk full");
     vi.spyOn(ShipmentService.prototype, "seedDemo").mockRejectedValueOnce(failure);
 
-    expect(await seedDemoData(config, { today: TODAY, dataset: DATASET })).toEqual({ outcome: "failed", error: failure });
+    expect(await seedDemoData(config, { today: TODAY, dataset: REDUCED_TEST_TENANT_CONFIG })).toEqual({ outcome: "failed", error: failure });
     expect(await counts(config, (em) => em.count(Material, {}))).toEqual({ test: 0, prod: 0 });
     expect(await counts(config, (em) => em.count(CustomerOrder, {}))).toEqual({ test: 0, prod: 0 });
 
-    expect((await seedDemoData(config, { today: TODAY, dataset: DATASET })).outcome).toBe("seeded");
-    expect(await counts(config, (em) => em.count(Material, {}))).toEqual({ test: DATASET.catalogue.materials.length, prod: 0 });
+    expect((await seedDemoData(config, { today: TODAY, dataset: REDUCED_TEST_TENANT_CONFIG })).outcome).toBe("seeded");
+    expect(await counts(config, (em) => em.count(Material, {}))).toEqual({ test: REDUCED_TEST_TENANT_CONFIG.catalogue.materials.length, prod: 0 });
   }, 60_000);
 
   it("generates for the server's clock and the committed configuration by default", async () => {

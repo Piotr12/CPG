@@ -1,7 +1,7 @@
 import { Material, TenantAuditEvent, type EntityManager } from "@cpg/db";
 import type { Cradle } from "../../container/cradle";
 import { generateTestTenantDataset, type TimelineEvent } from "../../domain/demo/generate-dataset";
-import { TEST_TENANT_CONFIG, type TestTenantConfig } from "../../domain/demo/test-tenant-config.schema";
+import type { TestTenantConfig } from "../../domain/demo/test-tenant-config.schema";
 
 /** What the generated dataset holds, in the order the seed writes it (spec `2026-10-21--0718UTC-test-tenant-dataset`). */
 export const DATASET_KINDS = [
@@ -12,7 +12,7 @@ export const DATASET_KINDS = [
 export type DatasetKind = (typeof DATASET_KINDS)[number];
 
 /** The services the dataset is written through, and the `em` they share, whose identity map the seed clears between documents. */
-export type DatasetServices = Pick<Cradle, "em" | "materialService" | "locationService" | "customerService" | "supplierService"
+export type DatasetServices = Pick<Cradle, "em" | "testTenantConfig" | "materialService" | "locationService" | "customerService" | "supplierService"
   | "planningParameterService" | "safetyStockTargetService" | "bomService" | "forecastService" | "stockService"
   | "customerOrderService" | "shipmentService" | "goodsIssueService" | "purchaseRequisitionService" | "purchaseOrderService"
   | "goodsReceiptService" | "productionOrderService" | "productionCompletionService">;
@@ -39,8 +39,9 @@ export async function isUntouchedTest(em: EntityManager): Promise<boolean> {
  * documents are referenced by the IDs and line IDs the services return, and the identity map is
  * cleared after each one, so no flush walks what earlier documents created (lesson of 2026-10-20). A
  * master kind the tenant already had, or any refusal, throws: the caller's rollback leaves nothing.
+ * `config` is the container's `testTenantConfig` unless the caller passes another.
  */
-export async function seedTestTenantDataset(services: DatasetServices, today: Date, config: TestTenantConfig = TEST_TENANT_CONFIG): Promise<Record<DatasetKind, number>> {
+export async function seedTestTenantDataset(services: DatasetServices, today: Date, config: TestTenantConfig = services.testTenantConfig): Promise<Record<DatasetKind, number>> {
   const dataset = generateTestTenantDataset(config, today.toISOString().slice(0, 10));
   const { em } = services;
   const { masters } = dataset;
