@@ -3,7 +3,7 @@
 **Date:** 2026-10-21 07:18 UTC
 **Agent:** Claude Code (Claude Fable 5.1) via cezar, headless
 **Spec:** `.ai/specs/2026-10-21--0718UTC-test-tenant-dataset.md` (written by this run)
-**Status:** in progress
+**Status:** done (spec and issue delivered; the spec is a proposal until design PR #127 merges)
 
 ## Goal
 
@@ -23,7 +23,8 @@ The owner asked (through `/om-discover`, but explicitly without an intermediate 
 
 - `.ai/specs/2026-10-21--0718UTC-test-tenant-dataset.md` (new)
 - `.ai/runs/2026-10-21--0718UTC-test-tenant-dataset-spec.md` (this log)
-- GitHub issue #126 (E12-S02, labels `feature`, `priority-medium`, `risk-high`), linking the spec; the design-only PR is noted in the issue once opened.
+- GitHub issue #126 (E12-S02, labels `feature`, `priority-medium`, `risk-high`), linking the spec and design PR #127.
+- Design-only PR #127 (`cez/a447fe6d` → `main`, labels `documentation`, `review`, `skip-qa`, `priority-medium`, `risk-low`), carrying the spec and this log.
 
 ## Verification
 
