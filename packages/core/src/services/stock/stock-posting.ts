@@ -1,4 +1,4 @@
-import { StockBalance, StockMovement, type EntityManager } from "@cpg/db";
+import { StockBalance, StockMovement, type EntityManager, type Material, type Location } from "@cpg/db";
 import type { z } from "zod";
 import { formatSignedQuantity, parseSignedQuantity } from "../../domain/stock/signed-quantity";
 import { formatDecimal, MAX_QUANTITY, parseDecimal } from "../../domain/quantities/decimal";
@@ -7,7 +7,7 @@ import type { stockPostingSchema } from "../../validators/stock/stock-correction
 import { recordTenantAudit } from "../audit/audit-recorder";
 import type { AuditActor } from "../audit/actor";
 import { findActiveLocation } from "../locations/find-location";
-import { convertToBaseQuantity } from "../materials/base-quantity";
+import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quantity";
 import { findActiveMaterial } from "../materials/find-material";
 
 /*
@@ -55,15 +55,51 @@ export async function postStockMovements(
   context: PostingContext,
   { firstPosition = 0 }: { firstPosition?: number } = {},
 ): Promise<StockMovementView[]> {
-  const businessDate = new Date().toISOString().slice(0, 10);
-  const pairs = new Map<string, { balance: StockBalance; quantity: bigint }>();
-  const pending: StockMovement[] = [];
-  for (const [position, line] of input.lines.entries()) {
+  const resolved: ResolvedStockLine[] = [];
+  for (const line of input.lines) {
     const material = await findActiveMaterial(em, line.material);
     const location = await findActiveLocation(em, line.location);
     const signed = parseSignedQuantity(line.quantity)!;
     const converted = await convertToBaseQuantity(em, material, { quantity: formatDecimal(signed < 0n ? -signed : signed), unit: line.unit });
-    const delta = parseDecimal(converted.baseQuantity)! * (signed < 0n ? -1n : 1n);
+    resolved.push({ material, location, signed, converted, delta: parseDecimal(converted.baseQuantity)! * (signed < 0n ? -1n : 1n) });
+  }
+  return postResolvedStockMovements(em, resolved, input.reason, source, context, firstPosition);
+}
+
+interface ResolvedStockLine {
+  material: Material;
+  location: Location;
+  signed: bigint;
+  delta: bigint;
+  converted: BaseQuantity;
+}
+
+/** Inverts immutable base quantity; historical masters need not be active and current conversions are irrelevant. */
+export async function postHistoricalInverse(
+  em: EntityManager, original: StockMovement, reason: string, postingId: string, actor: AuditActor,
+): Promise<StockMovementView> {
+  const quantity = parseSignedQuantity(original.quantity);
+  if (quantity === null || quantity === 0n || original.baseUnit !== original.material.baseUnit) {
+    throw new ConflictError("The original movement no longer matches its recorded base quantity and unit.", "STOCK_REVERSAL_INCONSISTENT");
+  }
+  const inverse = -quantity;
+  const [movement] = await postResolvedStockMovements(em, [{
+    material: original.material, location: original.location, signed: inverse, delta: inverse,
+    converted: { baseQuantity: formatDecimal(inverse < 0n ? -inverse : inverse), enteredQuantity: formatSignedQuantity(inverse),
+      enteredUnit: original.baseUnit, numerator: "1", denominator: "1" },
+  }], reason, { type: "reversal", id: postingId }, { kind: "user", actor }, 0);
+  return movement;
+}
+
+/** Both new postings and historical inverses use the same balance, range and audit rules. Caller owns the transaction. */
+async function postResolvedStockMovements(
+  em: EntityManager, lines: readonly ResolvedStockLine[], reason: string, source: PostingSource, context: PostingContext, firstPosition: number,
+): Promise<StockMovementView[]> {
+  const businessDate = new Date().toISOString().slice(0, 10);
+  const pairs = new Map<string, { balance: StockBalance; quantity: bigint }>();
+  const pending: StockMovement[] = [];
+  for (const [position, { material, location, signed, delta, converted }] of lines.entries()) {
+    const line = { material: material.code, location: location.code };
     const key = `${line.material}/${line.location}`;
     let pair = pairs.get(key);
     if (!pair) {
@@ -90,7 +126,7 @@ export async function postStockMovements(
       enteredQuantity: formatSignedQuantity(signed), enteredUnit: converted.enteredUnit,
       numerator: converted.numerator, denominator: converted.denominator,
       balanceBefore: formatDecimal(before, { fixed: true }), balanceAfter: pair.balance.quantity,
-      reason: input.reason, actorUserId: actor?.userId ?? null, actorUsername: actor?.username ?? "Demo seed", channel: actor?.channel ?? "seed",
+      reason, actorUserId: actor?.userId ?? null, actorUsername: actor?.username ?? "Demo seed", channel: actor?.channel ?? "seed",
     });
     pending.push(movement);
     if (actor) recordTenantAudit(em, actor, {
@@ -99,7 +135,7 @@ export async function postStockMovements(
       before: { quantity: movement.balanceBefore },
       after: {
         quantity: movement.balanceAfter, movement: movement.quantity, material: line.material, location: line.location,
-        postingId: source.id, type: source.type, businessDate, reason: input.reason,
+        postingId: source.id, type: source.type, businessDate, reason,
         enteredQuantity: movement.enteredQuantity, enteredUnit: movement.enteredUnit, numerator: movement.numerator, denominator: movement.denominator,
       },
     });
