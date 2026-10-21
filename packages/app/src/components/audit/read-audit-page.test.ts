@@ -18,18 +18,27 @@ describe("readAuditPage", () => {
   it("reads the first page by default", async () => {
     const list = vi.fn().mockResolvedValue(page);
 
-    await expect(readAuditPage(Promise.resolve({}), list)).resolves.toEqual({ page, isFirstPage: true });
+    await expect(readAuditPage(Promise.resolve({}), list)).resolves.toEqual({ page, isFirstPage: true, query: {} });
     expect(list).toHaveBeenCalledWith({ limit: 50 });
   });
 
   it("reads the page before a cursor", async () => {
     const list = vi.fn().mockResolvedValue(page);
 
-    await expect(readAuditPage(Promise.resolve({ before: CURSOR }), list)).resolves.toEqual({ page, isFirstPage: false });
+    await expect(readAuditPage(Promise.resolve({ before: CURSOR }), list)).resolves.toEqual({ page, isFirstPage: false, query: {} });
     expect(list).toHaveBeenCalledWith({ before: CURSOR, limit: 50 });
   });
 
-  it.each([{ before: "nope" }, { before: [CURSOR, CURSOR] }, { limit: "0" }])(
+  it("reads the filtered page and returns the filters, without the page position", async () => {
+    const list = vi.fn().mockResolvedValue(page);
+
+    await expect(readAuditPage(Promise.resolve({ before: CURSOR, subjectType: "PurchaseOrder", subjectId: "00000012", channel: "" }), list)).resolves.toEqual({
+      page, isFirstPage: false, query: { subjectType: "PurchaseOrder", subjectId: "00000012" },
+    });
+    expect(list).toHaveBeenCalledWith({ before: CURSOR, limit: 50, subjectType: "PurchaseOrder", subjectId: "00000012" });
+  });
+
+  it.each([{ before: "nope" }, { subjectId: "00000012" }, { from: "2026-10-21", to: "2026-10-01" }, { channel: "web" }, { before: [CURSOR, CURSOR] }, { limit: "0" }])(
     "renders not-found for a query that names no page: %j",
     async (query) => {
       const list = vi.fn();

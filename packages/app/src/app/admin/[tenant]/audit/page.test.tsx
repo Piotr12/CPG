@@ -8,6 +8,8 @@ import TenantAuditPage, { metadata } from "./page";
 const mocks = vi.hoisted(() => ({
   connection: vi.fn(),
   listTenant: vi.fn(),
+  reversalLinks: vi.fn(),
+  usernames: vi.fn(),
   tenantScope: vi.fn(),
   requireUser: vi.fn(),
   getMessages: vi.fn(),
@@ -32,9 +34,15 @@ describe("TenantAuditPage", () => {
   beforeEach(() => {
     mocks.requireUser.mockResolvedValue({ username: "alice", role: "user" });
     mocks.tenantScope.mockResolvedValue({
-      cradle: { tenant: { code: "test", name: "Test", generation: 1 }, auditService: { listTenant: mocks.listTenant } },
+      cradle: {
+        tenant: { code: "test", name: "Test", generation: 1 },
+        auditService: { listTenant: mocks.listTenant, reversalLinks: mocks.reversalLinks },
+        userService: { usernames: mocks.usernames },
+      },
     });
     mocks.listTenant.mockResolvedValue({ entries: [], nextBefore: null });
+    mocks.reversalLinks.mockResolvedValue([]);
+    mocks.usernames.mockResolvedValue(["admin"]);
     mocks.getMessages.mockResolvedValue({ locale: "en", messages: en });
   });
   afterEach(() => vi.clearAllMocks());
@@ -50,6 +58,28 @@ describe("TenantAuditPage", () => {
     expect(screen.getByRole("link", { name: "Open the Global audit" }).getAttribute("href")).toBe("/admin/audit");
     expect(screen.getByRole("link", { name: "Test" }).getAttribute("href")).toBe("/admin/test");
     expect(screen.queryByRole("navigation")).toBeNull();
+  });
+
+  it("traces one stock movement: filtered read, its reversal link, and the business date (AUD-004, AUD-030)", async () => {
+    const ORIGINAL = "04f49ff9-3cb6-4583-be90-b89287794b08";
+    const INVERSE = "264846a6-a50c-4ac8-9945-ee427f810aff";
+    const movement = {
+      id: "e-1", occurredAt: new Date("2026-10-21T09:48:41Z"), action: "stock.movement.posted",
+      subject: { type: "StockMovement", id: ORIGINAL, label: "00000001 — Bolts at 00000001 — Plant" },
+      before: { quantity: "500.000000" }, after: { quantity: "525.000000", businessDate: "2026-10-21", reason: "Count" },
+      actor: { userId: "u-1", username: "admin" }, sessionId: "c41e08b6-1111-4222-8333-444455556666", channel: "ui", token: null,
+    };
+    mocks.listTenant.mockResolvedValue({ entries: [movement, { ...movement, id: "e-0", subject: { type: "Material", id: "00000001", label: "Bolts" } }], nextBefore: null });
+    mocks.reversalLinks.mockResolvedValue([{ original: ORIGINAL, inverse: INVERSE }]);
+
+    render(await resolveServerComponents(page("test", { subjectType: "StockMovement", subjectId: ORIGINAL })));
+
+    expect(mocks.listTenant).toHaveBeenCalledWith({ limit: 50, subjectType: "StockMovement", subjectId: ORIGINAL });
+    expect(mocks.reversalLinks).toHaveBeenCalledWith([ORIGINAL]);
+    expect(screen.getByText(/Reversed by/).textContent).toBe("Reversed by 264846a6");
+    expect(screen.getByRole("link", { name: "264846a6" }).getAttribute("href")).toBe(`/admin/test/audit?subjectType=StockMovement&subjectId=${INVERSE}`);
+    expect(screen.getAllByText("Business date")).toHaveLength(2);
+    expect(Array.from((screen.getByLabelText("Record type") as HTMLSelectElement).options).map(({ value }) => value)).toContain("StockMovement");
   });
 
   it("speaks Polish to a Polish account", async () => {
