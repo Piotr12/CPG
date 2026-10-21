@@ -1,5 +1,5 @@
 import { PurchaseRequisition, type EntityManager } from "@cpg/db";
-import { outstandingQuantity } from "../../domain/purchasing/requisition-quantity";
+import { outstandingQuantity } from "../../domain/document-lifecycle/lifecycle";
 import { NotFoundError } from "../../http/errors";
 import type { AuditEntry } from "../audit/audit-recorder";
 
@@ -22,6 +22,7 @@ export interface RequisitionView {
   requiredDate: string;
   /** How much purchase-order lines have taken, six decimals. */
   converted: string;
+  abandoned: string;
   /** What no line has taken yet, six decimals. */
   outstanding: string;
   status: PurchaseRequisition["status"];
@@ -48,7 +49,7 @@ export async function findRequisition(
 
 export function toRequisitionView(requisition: PurchaseRequisition): RequisitionView {
   const { code, material, location, quantity, enteredQuantity, enteredUnit, numerator, denominator } = requisition;
-  const { requiredDate, converted, status, createdAt, version } = requisition;
+  const { requiredDate, converted, abandoned, status, createdAt, version } = requisition;
   return {
     id: code,
     material: material.code,
@@ -60,7 +61,8 @@ export function toRequisitionView(requisition: PurchaseRequisition): Requisition
     denominator,
     requiredDate,
     converted,
-    outstanding: outstandingQuantity(quantity, converted),
+    abandoned,
+    outstanding: outstandingQuantity(quantity, converted, abandoned),
     status: status as RequisitionView["status"],
     createdAt,
     version,
@@ -69,8 +71,8 @@ export function toRequisitionView(requisition: PurchaseRequisition): Requisition
 
 /** The fields of a requisition the audit may show: an allowlist (R08). */
 export function requisitionSnapshot(requisition: PurchaseRequisition) {
-  const { code, material, location, quantity, requiredDate, converted, status } = requisition;
-  return { id: code, material: material.code, location: location.code, quantity, requiredDate, converted, status };
+  const { code, material, location, quantity, requiredDate, converted, abandoned, status } = requisition;
+  return { id: code, material: material.code, location: location.code, quantity, requiredDate, converted, abandoned, status };
 }
 
 export function requisitionEntry(

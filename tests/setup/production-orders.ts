@@ -2,6 +2,7 @@ import type { CompletionPreview, CompletionView, MaterialSummary, ProductionOrde
 import { materials } from "./customer-orders";
 export { materials, locations, tenant } from "./customer-orders";
 export const production: ProductionOrderDetail = {
+  hasProcessing: false,
   id: "00000001", output: "00000005", location: "00000001", bom: "00000002", revision: 3,
   quantity: "24.000000", enteredQuantity: "2", enteredUnit: "case", numerator: "12", denominator: "1",
   plannedFinish: "2027-01-04", plannedStart: "2026-12-30", leadTimeDays: 5,

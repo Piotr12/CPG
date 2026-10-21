@@ -17,7 +17,7 @@ const line = (number: number, materialId: string, outstanding: string) => ({
   denominator: "1",
   plannedDate: "2027-03-03",
   requisition: null,
-  received: "0.000000",
+  received: "0.000000", abandoned: "0.000000",
   outstanding,
   status: "open" as const,
 });
@@ -45,6 +45,12 @@ describe("goods-receipt labels", () => {
     expect(format(RECEIPT_LINE_ORDER_MESSAGE)).toBe(pl.goodsReceipts.fieldErrors.lineOrder);
     expect(format(LINE_NO_SUCH_LINE_MESSAGE)).toBe(pl.goodsReceipts.fieldErrors.noSuchLine);
     expect(format("Something new.")).toBe("Something new.");
+  });
+
+  it("excludes abandoned lines while retaining completed lines for overreceipt", () => {
+    const materials = byId([material("00000001", "Steel", "kg")]);
+    const lines = (["open", "completed", "cancelled", "closed-early"] as const).map((status, index) => ({ ...line(index + 1, "00000001", "0.000000"), status }));
+    expect(receiptLineChoices({ ...ORDER, lines }, materials, {}, receiptsLabels(en)).map(({ line }) => line)).toEqual([1, 2]);
   });
 
   it("offer every line of the order with its material, outstanding and units, a received one too (BUY-015)", () => {

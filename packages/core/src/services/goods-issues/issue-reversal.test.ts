@@ -79,11 +79,11 @@ it("keeps a partial order open, leaves unaffected sibling quantities and statuse
 it("preserves explicit closure and abandoned quantity", async () => {
   const order = await orders().create(orderInput, actor); const shipment = await ship(order);
   const issue = await issues().post({ shipment: shipment.id, lines: [{ line: 1, quantity: "4", unit: "each" }] }, actor);
-  await scope().nativeUpdate(CustomerOrder, { code: order.id }, { status: "closed-early" });
-  await scope().nativeUpdate(CustomerOrderLine, { id: order.lines[0].id }, { status: "closed-early", abandoned: "6.000000" });
+  const current = await orders().get(order.id);
+  await orders().closeEarly(order.id, current.version, actor);
   await reverse((await movement(issue.id)).id);
   expect(await orders().get(order.id)).toMatchObject({ status: "closed-early", lines: [{ fulfilled: "0.000000", abandoned: "6.000000", status: "closed-early" }] });
-  expect(await shipments().get(shipment.id)).toMatchObject({ status: "open", lines: [{ issued: "0.000000" }] });
+  expect(await shipments().get(shipment.id)).toMatchObject({ status: "completed", lines: [{ issued: "0.000000", toIssue: "0.000000" }] });
 });
 it("rolls back counters, stock, links and earlier flushed batches after a later document audit failure", async () => {
   const order = await orders().create(orderInput, actor); const shipment = await ship(order);
@@ -137,4 +137,43 @@ it("keeps a still-fulfilled historical aggregate completed and completes a sibli
   await reverse((await movement(issue.id)).id);
   expect(await orders().get(order.id)).toMatchObject({ status: "completed", lines: [{ fulfilled: "15.000000", status: "completed" }] });
   expect(await shipments().get(shipment.id)).toMatchObject({ status: "completed", lines: [{ issued: "15.000000", toIssue: "0.000000" }] });
+});
+
+it("reopens a completed sibling of a cancelled line without reopening the cancelled line", async () => {
+  const order = await orders().create({ ...orderInput, lines: [...orderInput.lines, ...orderInput.lines] }, actor);
+  const shipment = await ship(order);
+  const issue = await issues().post({ shipment: shipment.id, lines: [{ line: 1, quantity: "10", unit: "each" }] }, actor);
+  const current = await orders().get(order.id);
+  expect(await orders().cancel(order.id, current.version, actor, [order.lines[1].id])).toMatchObject({ status: "closed-early" });
+  await reverse((await movement(issue.id)).id);
+  expect(await orders().get(order.id)).toMatchObject({ status: "open", lines: [
+    { status: "open", fulfilled: "0.000000", posted: true },
+    { status: "cancelled", abandoned: "10.000000" },
+  ] });
+  expect(await shipments().get(shipment.id)).toMatchObject({ status: "open", lines: [{ toIssue: "10.000000" }, { toIssue: "0.000000" }] });
+});
+it.each([false, true])("a reversed issue still prevents cancellation and permits early closure (selected %s)", async (selected) => {
+  const order = await orders().create(orderInput, actor); const shipment = await ship(order);
+  const issue = await issues().post({ shipment: shipment.id, lines: [{ line: 1, quantity: "4", unit: "each" }] }, actor);
+  await reverse((await movement(issue.id)).id);
+  const current = await orders().get(order.id); const selection = selected ? [order.lines[0].id] : undefined;
+  await expect(orders().cancel(order.id, current.version, actor, selection)).rejects.toMatchObject({ code: "DOCUMENT_PROCESSED" });
+  expect(await orders().closeEarly(order.id, current.version, actor, selection)).toMatchObject({ status: "closed-early", lines: [{ posted: true, abandoned: "10.000000" }] });
+  expect(await shipments().get(shipment.id)).toMatchObject({ status: "completed", lines: [{ toIssue: "0.000000" }] });
+});
+
+it("does not issue or plan again against a closed line after reversal while another line remains open", async () => {
+  const order = await orders().create({ ...orderInput, lines: [...orderInput.lines, ...orderInput.lines] }, actor);
+  const shipment = await shipments().create({ customerOrder: order.id, plannedDate: "2026-11-01", lines: [{ orderLine: order.lines[0].id, quantity: "10", unit: "each" }] }, actor);
+  const issue = await issues().post({ shipment: shipment.id, lines: [{ line: 1, quantity: "4", unit: "each" }] }, actor);
+  const current = await orders().get(order.id);
+  await orders().closeEarly(order.id, current.version, actor, [order.lines[0].id]);
+  await reverse((await movement(issue.id)).id);
+  expect(await orders().get(order.id)).toMatchObject({ status: "open", lines: [{ status: "closed-early", abandoned: "6.000000", fulfilled: "0.000000" }, { status: "open" }] });
+  expect(await shipments().get(shipment.id)).toMatchObject({ status: "completed", lines: [{ toIssue: "0.000000" }] });
+  await expect(issues().post({ shipment: shipment.id, lines: [{ line: 1, quantity: "1", unit: "each" }] }, actor)).rejects.toMatchObject({ code: "SHIPMENT_NOT_OPEN" });
+  await expect(shipments().create({ customerOrder: order.id, plannedDate: "2026-11-01", lines: [{ orderLine: order.lines[0].id, quantity: "1", unit: "each" }] }, actor)).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+  // Posting on one target does not prevent cancelling its never-posted sibling.
+  const latest = await orders().get(order.id);
+  expect(await orders().cancel(order.id, latest.version, actor, [order.lines[1].id])).toMatchObject({ status: "closed-early", lines: [{ status: "closed-early" }, { status: "cancelled" }] });
 });

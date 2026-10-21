@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { defineEntity, p, type InferEntity } from "@mikro-orm/core";
 import { Material, MATERIAL_UNIT_MAX } from "../materials/material.entity";
 import { PurchaseRequisition } from "../purchase-requisitions/purchase-requisition.entity";
+import { DOCUMENT_STATES } from "../customer-orders/customer-order.entity";
 import { tenantOwned } from "../tenants/tenant-owned";
 import { PurchaseOrder } from "./purchase-order.entity";
 
@@ -38,6 +39,8 @@ export const PurchaseOrderLine = defineEntity({
     plannedDate: p.string().length(CALENDAR_DATE_LENGTH),
     requisition: () => p.manyToOne(PurchaseRequisition).nullable().index(),
     received: p.string().default("0.000000"),
+    abandoned: p.string().default("0.000000"),
+    status: p.enum(DOCUMENT_STATES).default("open"),
   },
   uniques: [{ properties: ["order", "position"] }],
 });

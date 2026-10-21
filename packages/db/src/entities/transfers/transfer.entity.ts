@@ -2,13 +2,14 @@ import { randomUUID } from "node:crypto";
 import { defineEntity, p, type InferEntity } from "@mikro-orm/core";
 import { Location } from "../locations/location.entity";
 import { Material, MATERIAL_UNIT_MAX } from "../materials/material.entity";
+import { DOCUMENT_STATES } from "../customer-orders/customer-order.entity";
 import { tenantOwned } from "../tenants/tenant-owned";
 
 /** Length of an ISO calendar date, `YYYY-MM-DD`. */
 const CALENDAR_DATE_LENGTH = 10;
 
-/** What a transfer can be so far: open, or completed once its planned quantity is received (E11 adds the rest). */
-export const TRANSFER_STATUSES = ["open", "completed"] as const;
+/** The shared four-state lifecycle; losses resolve as Closed Early. */
+export const TRANSFER_STATUSES = DOCUMENT_STATES;
 export type TransferStatus = (typeof TRANSFER_STATUSES)[number];
 
 /** Room for the longest status E11 will add, `closed-early`. */
@@ -48,6 +49,7 @@ export const Transfer = defineEntity({
     dispatched: p.string().default("0.000000"),
     received: p.string().default("0.000000"),
     writtenOff: p.string().default("0.000000"),
+    abandoned: p.string().default("0.000000"),
     status: p.string().length(STATUS_LENGTH).default("open"),
     createdAt: p.datetime().onCreate(() => new Date()),
     /** Set on every change, so the version advances with the transfer's progress too. */

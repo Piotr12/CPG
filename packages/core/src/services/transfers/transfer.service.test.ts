@@ -116,6 +116,57 @@ describe("TransferService", () => {
     await orm.close();
   });
 
+  it("cancels before dispatch, audits abandonment and prevents all later writes", async () => {
+    const original = await created();
+    await expect(service().closeEarly(original.id, original.version, ACTOR)).rejects.toMatchObject({ code: "DOCUMENT_UNPROCESSED" });
+    const cancelled = await service().cancel(original.id, original.version, ACTOR);
+    expect(cancelled).toMatchObject({ status: "cancelled", abandoned: "100.000000", outstanding: "0.000000", undispatched: "0.000000", version: 2 });
+    expect(await physical(A)).toBe("100.000000"); expect(await physical(B)).toBe("0.000000");
+    expect(await entries("transfers.transfer.cancelled")).toEqual([expect.objectContaining({
+      before: expect.objectContaining({ status: "open", abandoned: "0.000000" }),
+      after: expect.objectContaining({ status: "cancelled", abandoned: "100.000000" }),
+    })]);
+    await expect(service().cancel(original.id, 1, ACTOR)).rejects.toMatchObject({ code: "VERSION_CONFLICT" });
+    await expect(service().cancel(original.id, 2, ACTOR)).rejects.toMatchObject({ code: "TRANSFER_NOT_OPEN" });
+    await expect(service().dispatch(original.id, kg("1"), ACTOR)).rejects.toMatchObject({ code: "TRANSFER_NOT_OPEN" });
+    await expect(service("test").cancel(original.id, 2, ACTOR)).rejects.toMatchObject({ code: "TRANSFER_NOT_FOUND" });
+  });
+
+  it("requires settled transit, preserves postings and includes loss plus undispatched quantity in abandonment", async () => {
+    const original = await created();
+    await service().dispatch(original.id, kg("60"), ACTOR);
+    const dispatched = await service().get(original.id);
+    await expect(service().cancel(original.id, dispatched.version, ACTOR)).rejects.toMatchObject({ code: "DOCUMENT_PROCESSED" });
+    await expect(service().closeEarly(original.id, dispatched.version, ACTOR)).rejects.toMatchObject({ code: "TRANSFER_IN_TRANSIT", messageParams: { quantity: "60.000000", unit: "kg" } });
+    await service().receive(original.id, kg("50"), ACTOR);
+    await service().writeOff(original.id, { ...kg("10"), reason: "Lost" }, ACTOR);
+    const settled = await service().get(original.id);
+    const movements = await scoped().count(StockMovement, {});
+    const closed = await service().closeEarly(original.id, settled.version, ACTOR);
+    expect(closed).toMatchObject({ status: "closed-early", dispatched: "60.000000", received: "50.000000", writtenOff: "10.000000",
+      abandoned: "50.000000", outstanding: "0.000000", undispatched: "0.000000", inTransit: "0.000000" });
+    expect((await service().get(original.id)).postings).toEqual(settled.postings);
+    expect(await scoped().count(StockMovement, {})).toBe(movements);
+    expect(await physical(A)).toBe("40.000000"); expect(await physical(B)).toBe("50.000000");
+    expect(await entries("transfers.transfer.closed-early")).toHaveLength(1);
+    await expect(service().receive(original.id, kg("1"), ACTOR)).rejects.toMatchObject({ code: "TRANSFER_NOT_OPEN" });
+  });
+
+  it("never calls a transfer with loss Completed and rolls back closure when audit fails", async () => {
+    const original = await created();
+    await service().dispatch(original.id, kg("100"), ACTOR);
+    await service().receive(original.id, kg("90"), ACTOR);
+    await service().writeOff(original.id, { ...kg("10"), reason: "Lost" }, ACTOR);
+    const settled = await service().get(original.id);
+    expect(settled.status).toBe("open");
+    crash.action = "transfers.transfer.closed-early";
+    await expect(service().closeEarly(original.id, settled.version, ACTOR)).rejects.toThrow("crash while recording");
+    expect(await service().get(original.id)).toEqual(settled);
+    expect(await entries(crash.action)).toEqual([]);
+    crash.action = null;
+    expect(await service().closeEarly(original.id, settled.version, ACTOR)).toMatchObject({ status: "closed-early", abandoned: "10.000000" });
+  });
+
   describe("create", () => {
     it("saves an Open single-material transfer with its locations and dates, and changes no balance (TRF-001, TRF-003, LFC-001)", async () => {
       await correct(A, "100");
@@ -139,6 +190,8 @@ describe("TransferService", () => {
         writtenOff: "0.000000",
         inTransit: "0.000000",
         undispatched: "50.000000",
+        abandoned: "0.000000",
+        outstanding: "50.000000",
         status: "open",
         createdAt: expect.any(Date),
         updatedAt: expect.any(Date),

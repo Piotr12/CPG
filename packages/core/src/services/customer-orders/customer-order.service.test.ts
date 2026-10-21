@@ -13,6 +13,8 @@ import { MaterialService } from "../materials/material.service";
 import { CustomerService } from "../customers/customer.service";
 import { LocationService } from "../locations/location.service";
 import { CustomerOrderService, type CustomerOrderView } from "./customer-order.service";
+import { GoodsIssueService } from "../goods-issues/goods-issue.service";
+import { StockService } from "../stock/stock.service";
 import { ShipmentService } from "../shipments/shipment.service";
 import type { CustomerOrderChanges, CustomerOrderInput } from "../../validators/customer-orders/customer-order.schema";
 
@@ -49,6 +51,60 @@ describe("CustomerOrderService", () => {
     }
   });
   afterEach(async () => { vi.restoreAllMocks(); await orm.close(); });
+
+  it("cancels a whole unprocessed order, completes its shipment context and retains audited lines", async () => {
+    const order = await service().create(input(), actor);
+    const shipments = new ShipmentService({ em: em() });
+    const shipment = await shipments.create({ customerOrder: order.id, plannedDate: "2027-01-01",
+      lines: [{ orderLine: order.lines[0].id, quantity: "10", unit: "each" }] }, actor);
+    const result = await service().cancel(order.id, order.version, actor);
+    expect(result).toMatchObject({ status: "cancelled", version: order.version + 1 });
+    expect(result.lines.map(({ quantity, fulfilled, abandoned, status }) => ({ quantity, fulfilled, abandoned, status }))).toEqual(
+      order.lines.map(({ quantity }) => ({ quantity, fulfilled: "0.000000", abandoned: quantity, status: "cancelled" })));
+    expect((await new ShipmentService({ em: em() }).get(shipment.id)).status).toBe("completed");
+    const [entry] = (await audit()).filter(({ action }) => action.endsWith(".cancelled"));
+    expect(entry.before).toMatchObject({ status: "open" }); expect(entry.after).toMatchObject({ status: "cancelled" });
+    expect(JSON.parse(entry.after!.lines as string)).toHaveLength(2);
+    await expect(service().cancel(order.id, result.version, actor)).rejects.toMatchObject({ code: "CUSTOMER_ORDER_LOCKED" });
+    await expect(service().update(order.id, edit(result), result.version, actor)).rejects.toMatchObject({ code: "CUSTOMER_ORDER_LOCKED" });
+    await expect(service(em("prod")).cancel(order.id, result.version, actor)).rejects.toMatchObject({ code: "CUSTOMER_ORDER_NOT_FOUND" });
+  });
+
+  it("closes partial demand after real issues, preserves stock and postings, and derives mixed header states", async () => {
+    const order = await service().create({ ...input(), lines: [line("00000005", "10"), line("00000004", "10")] }, actor);
+    const stock = new StockService({ em: em() });
+    for (const material of ["00000005", "00000004"]) await stock.correct({ material, location: "00000001", quantity: "20", unit: "each", reason: "Count" }, actor);
+    const shipment = await new ShipmentService({ em: em() }).create({ customerOrder: order.id, plannedDate: "2027-01-01",
+      lines: order.lines.map(({ id }) => ({ orderLine: id, quantity: "10", unit: "each" })) }, actor);
+    await new GoodsIssueService({ em: em() }).post({ shipment: shipment.id, lines: [{ line: 1, quantity: "10", unit: "each" }, { line: 2, quantity: "4", unit: "each" }] }, actor);
+    const partial = await service().get(order.id);
+    await expect(service().cancel(order.id, partial.version, actor)).rejects.toMatchObject({ code: "DOCUMENT_PROCESSED" });
+    const result = await service().closeEarly(order.id, partial.version, actor, [partial.lines[1].id]);
+    expect(result.status).toBe("closed-early");
+    expect(result.lines[0]).toMatchObject({ status: "completed", fulfilled: "10.000000", abandoned: "0.000000" });
+    expect(result.lines[1]).toMatchObject({ status: "closed-early", fulfilled: "4.000000", abandoned: "6.000000" });
+    expect(await stock.get({ material: "00000004", location: "00000001" })).toMatchObject({ quantity: "16.000000" });
+    expect((await new ShipmentService({ em: em() }).get(shipment.id)).status).toBe("completed");
+    expect((await audit()).filter(({ action }) => action.endsWith(".closed-early"))).toHaveLength(1);
+    await expect(service().closeEarly(order.id, partial.version, actor)).rejects.toMatchObject({ code: "VERSION_CONFLICT" });
+  });
+
+  it("keeps an aggregate Open until all selected lines resolve, and rejects foreign, removed or stale selections atomically", async () => {
+    const order = await service().create(input(), actor);
+    const cached = service(); await cached.get(order.id);
+    const partial = await service().cancel(order.id, order.version, actor, [order.lines[0].id]);
+    expect(partial.status).toBe("open");
+    await expect(cached.cancel(order.id, order.version, actor)).rejects.toMatchObject({ code: "VERSION_CONFLICT" });
+    await expect(service().cancel(order.id, partial.version, actor, [partial.lines[1].id, "foreign"])).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+    expect((await service().get(order.id)).lines[1].status).toBe("open");
+    expect((await service().cancel(order.id, partial.version, actor, [partial.lines[1].id])).status).toBe("cancelled");
+    const next = await service().create(input(), actor);
+    await changeLine(next.lines[0].id, { removed: true });
+    await expect(service().cancel(next.id, next.version, actor, [next.lines[0].id])).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+    await expect(service().closeEarly(next.id, next.version, actor)).rejects.toMatchObject({ code: "DOCUMENT_UNPROCESSED" });
+    const scope = em(); vi.spyOn(scope, "transactional").mockRejectedValueOnce(new OptimisticLockError("stale"));
+    await expect(service(scope).cancel(next.id, next.version, actor)).rejects.toMatchObject({ code: "VERSION_CONFLICT" });
+  });
 
   it("stores one location, separate dates and exact historical quantities, starts Open, and audits the UI session (SAL-002, SAL-003, SAL-005, LFC-001)", async () => {
     const orders = service(); expect(await orders.list()).toEqual([]);

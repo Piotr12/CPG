@@ -1,3 +1,4 @@
+import { outstandingQuantity, type DocumentState } from "../document-lifecycle/lifecycle";
 import { formatDecimal, parseDecimal } from "../quantities/decimal";
 
 /*
@@ -12,9 +13,8 @@ function remainder(quantity: string, taken: string): bigint {
 }
 
 /** What an order line still awaits: its quantity less what was fulfilled and abandoned, never negative. */
-export function outstandingOf(line: { quantity: string; fulfilled: string; abandoned: string }): string {
-  const resolved = parseDecimal(line.fulfilled)! + parseDecimal(line.abandoned)!;
-  return formatDecimal(remainder(line.quantity, formatDecimal(resolved)), { fixed: true });
+export function outstandingOf(line: { quantity: string; fulfilled: string; abandoned: string; status?: DocumentState }): string {
+  return outstandingQuantity(line.quantity, line.fulfilled, line.abandoned, line.status);
 }
 
 /**

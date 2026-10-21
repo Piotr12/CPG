@@ -16,7 +16,7 @@ vi.mock("next/navigation", () => ({ notFound: mocks.notFound, useRouter: () => (
 vi.mock("@cpg/core", () => ({ AppError: mocks.AppError, tenantScope: mocks.tenantScope }));
 vi.mock("../../auth/require-admin", () => ({ requireUser: mocks.requireUser }));
 vi.mock("../../i18n/get-messages", () => ({ getMessages: mocks.getMessages }));
-vi.mock("../../app/admin/[tenant]/production-orders/actions", () => ({ createProductionOrder: vi.fn(), updateProductionOrder: vi.fn(), postProductionCompletion: vi.fn() }));
+vi.mock("../../app/admin/[tenant]/production-orders/actions", () => ({ cancelProductionOrder: vi.fn(), closeEarlyProductionOrder: vi.fn(), createProductionOrder: vi.fn(), updateProductionOrder: vi.fn(), postProductionCompletion: vi.fn() }));
 const scope = () => ({ cradle: { tenant, productionOrderService: { list: mocks.list, count: mocks.count, get: mocks.get }, productionCompletionService: { list: mocks.completions },
   materialService: { list: mocks.materials, listUnits: mocks.units }, locationService: { list: mocks.locations } } });
 const page = (value?: string) => ProductionOrdersPage({ params: Promise.resolve({ tenant: "test" }), searchParams: Promise.resolve(value === undefined ? {} : { page: value }) });

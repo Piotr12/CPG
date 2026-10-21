@@ -2,6 +2,8 @@ import {
   Customer, CustomerOrder, CustomerOrderLine, OptimisticLockError, UniqueConstraintViolationException,
   type EntityManager, type Material, type DocumentState,
 } from "@cpg/db";
+import { documentState, resolveLines as resolveLifecycle, type LifecycleAction } from "../../domain/document-lifecycle/lifecycle";
+import { selectLifecycleLines } from "../../domain/document-lifecycle/select-lines";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
 import { isLineFulfilled } from "../../domain/goods-issues/issue-quantity";
 import { parseDecimal } from "../../domain/quantities/decimal";
@@ -147,6 +149,43 @@ export class CustomerOrderService {
     }
   }
 
+  /** Cancel unprocessed demand, retaining every historical line and shipment reference. */
+  cancel(id: string, version: number, actor: AuditActor, lines?: readonly string[]): Promise<CustomerOrderView> {
+    return this.resolve(id, version, actor, "cancel", lines);
+  }
+
+  /** Abandon an unfinished remainder, preserving deliveries and completing finished shipment contexts. */
+  closeEarly(id: string, version: number, actor: AuditActor, lines?: readonly string[]): Promise<CustomerOrderView> {
+    return this.resolve(id, version, actor, "close-early", lines);
+  }
+
+  private async resolve(id: string, version: number, actor: AuditActor, action: LifecycleAction, selection?: readonly string[]): Promise<CustomerOrderView> {
+    try {
+      return await this.em.transactional(async (em) => {
+        const order = await findCustomerOrder(em, id, { refresh: true });
+        if (order.version !== version) throw versionConflict();
+        if (order.status !== "open") throw locked();
+        const lines = await em.find(CustomerOrderLine, { order, removed: false }, { populate: ["material"], orderBy: { position: "asc" }, refresh: true });
+        const posted = await postedOrderLineIds(em, lines);
+        const before = snapshot(view(order, lines, posted));
+        const target = selectLifecycleLines(lines, selection, (line) => line.id);
+        const resolved = resolveLifecycle(action, target.map((line) => ({ quantity: line.quantity, processed: line.fulfilled, abandoned: line.abandoned, status: line.status })),
+          { hasProcessing: target.some((line) => wasPosted(line, posted)) });
+        resolved.forEach(({ status, abandoned }, index) => { Object.assign(target[index], { status, abandoned }); });
+        order.status = documentState(lines.map(({ status }) => status));
+        order.updatedAt = new Date(Math.max(Date.now(), order.updatedAt.getTime() + 1));
+        await completeFinishedShipments(em, order, actor);
+        recordTenantAudit(em, actor, { action: `customer-orders.customer-order.${action === "cancel" ? "cancelled" : "closed-early"}`,
+          subject: subject(order), before, after: snapshot(view(order, lines, posted)) });
+        await em.flush();
+        return view(order, lines, posted);
+      });
+    } catch (error) {
+      if (error instanceof OptimisticLockError) throw versionConflict();
+      throw error;
+    }
+  }
+
   /** Seed one demonstration order only in an untouched writable scope; startup selects Test. */
   async seedDemo(): Promise<number> {
     return this.em.transactional(async (em) => {
@@ -222,7 +261,7 @@ async function resolveLines(em: EntityManager, inputs: (CustomerOrderInput["line
  */
 function completeDelivered(order: CustomerOrder, lines: readonly CustomerOrderLine[]): void {
   for (const line of lines) if (line.status === "open" && parseDecimal(line.fulfilled)! > 0n && isLineFulfilled(line)) line.status = "completed";
-  if (lines.every(({ status }) => status === "completed")) order.status = "completed";
+  order.status = documentState(lines.map(({ status }) => status));
 }
 async function orderLines(em: EntityManager, order: CustomerOrder) {
   return em.find(CustomerOrderLine, { order, removed: false }, { populate: ["material"], orderBy: { position: "asc" } });

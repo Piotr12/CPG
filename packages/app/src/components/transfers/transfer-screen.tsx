@@ -1,3 +1,5 @@
+import { cancelTransfer, closeEarlyTransfer } from "../../app/admin/[tenant]/transfers/[id]/actions";
+import { LifecycleControl } from "../document-lifecycle/lifecycle-control";
 import Link from "next/link";
 import type { Locale, MaterialSummary, NamedRecordView, TransferDetailView, TransferPostingKind } from "@cpg/core";
 import { Badge } from "@cpg/ui/components/badge";
@@ -45,6 +47,7 @@ export function TransferScreen({ tenant, transfer, materials, locations, units, 
     { label: t.undispatched, value: amount(transfer.undispatched) },
     { label: t.inTransit, value: <span data-transfer-in-transit>{amount(transfer.inTransit)}</span> },
     { label: t.received, value: amount(transfer.received) },
+    { label: messages.lifecycle.abandoned, value: amount(transfer.abandoned) },
     { label: t.writtenOff, value: amount(transfer.writtenOff) },
   ];
   const writable = !tenant.readOnly && transfer.status === "open";
@@ -77,6 +80,11 @@ export function TransferScreen({ tenant, transfer, materials, locations, units, 
           </dl>
         </CardContent>
       </Card>
+      <LifecycleControl available={writable} processed={transfer.dispatched !== "0.000000"}
+        subject={`${labels.link} ${transfer.id}`} version={transfer.version} quantities={[amount(transfer.outstanding)]}
+        notice={isPositive(transfer.inTransit) ? fill(messages.errors.TRANSFER_IN_TRANSIT, { quantity: shownQuantity(transfer.inTransit), unit: baseUnit }) : undefined}
+        labels={messages.lifecycle} errors={messages.errors}
+        cancel={cancelTransfer.bind(null, tenant.code, tenant.generation, transfer.id)} closeEarly={closeEarlyTransfer.bind(null, tenant.code, tenant.generation, transfer.id)} />
       {writable && (
         <div className="flex flex-wrap gap-3">
           {postings

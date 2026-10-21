@@ -16,13 +16,13 @@ import { fill, shownQuantity, type TenantContext } from "../forms/form-labels";
  * The requisition screen's strings in the reader's language: plain strings, so they can reach client
  * components (the server-side heading stays behind). `errors` holds every code the screen can show.
  */
-export type RequisitionsLabels = Omit<Messages["purchaseRequisitions"], "heading" | "errors"> & { errors: Record<string, string> };
+export type RequisitionsLabels = Omit<Messages["purchaseRequisitions"], "heading" | "errors"> & { errors: Record<string, string>; lifecycle: Messages["lifecycle"] };
 
 /** Builds the requisition screen's labels from a dictionary (server side, where `messages` is available). */
 export function requisitionsLabels(messages: Messages): RequisitionsLabels {
   const labels: Partial<Messages["purchaseRequisitions"]> = { ...messages.purchaseRequisitions };
   delete labels.heading;
-  return { ...(labels as Omit<Messages["purchaseRequisitions"], "heading">), errors: { ...messages.errors, ...messages.purchaseRequisitions.errors } };
+  return { lifecycle: messages.lifecycle, ...(labels as Omit<Messages["purchaseRequisitions"], "heading">), errors: { ...messages.errors, ...messages.purchaseRequisitions.errors } };
 }
 
 export { fill, shownQuantity, type TenantContext };

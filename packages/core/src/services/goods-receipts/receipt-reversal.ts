@@ -1,5 +1,6 @@
 import { GoodsReceiptLine, PurchaseOrderLine, type EntityManager, type StockMovement } from "@cpg/db";
-import { isLineReceived } from "../../domain/goods-receipts/receipt-quantity";
+import { documentState } from "../../domain/document-lifecycle/lifecycle";
+import { orderLineState } from "../purchase-orders/order-records";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit } from "../audit/audit-recorder";
 import { assertReversalSource, inconsistentReversal, subtractReversedQuantity } from "../stock/reversal-records";
@@ -17,9 +18,8 @@ export async function prepareReceiptReversal(em: EntityManager, original: StockM
   return async () => {
     const before = { status: order.status, line: line.orderLine.position, received: line.orderLine.received };
     line.orderLine.received = received;
-    if (order.status === "open" || order.status === "completed") {
-      order.status = lines.every(({ quantity, received }) => isLineReceived(quantity, received)) ? "completed" : "open";
-    }
+    for (const current of lines) current.status = orderLineState(current);
+    order.status = documentState(lines.map(({ status }) => status));
     order.updatedAt = new Date(Math.max(Date.now(), order.updatedAt.getTime() + 1));
     recordTenantAudit(em, actor, {
       action: "purchase-orders.purchase-order.receipt-reversed",

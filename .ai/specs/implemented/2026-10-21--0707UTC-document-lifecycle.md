@@ -1,6 +1,6 @@
 # Document cancellation and early closure
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-21 07:07 UTC
 **Issue:** #90 (E11-S01)
 
@@ -143,3 +143,13 @@ The schema addition is readable by the previous release, but that release does n
 ## Design review
 
 Independent scope/architecture review: approve after preserving the existing PO overreceipt exception and using existing numeric PO line identifiers. Documentation checks: 2 files, 6 tests passed. Runtime verification belongs to implementation.
+
+## Implementation notes
+
+Implemented in PR #123 (`feat/document-lifecycle`), with the eight-step run recorded in `.ai/pipeline/runs/2026-10-21--0715UTC-document-lifecycle.md`. Both independent review findings have regression tests and an approving re-review. PO completion tolerates old-container receipts after migration; removed customer-order rows retain their conflict dialogs by deferring failed-action refresh.
+
+Validation: 452 unit files / 2871 tests with 100% coverage in all four dimensions; lint, typecheck and production build pass. Targeted lifecycle/receipt/token/migration-smoke integration: 4 files / 21 tests pass. Full CI at a710507 passed, including the production Docker integration suite: https://github.com/Piotr12/CPG/actions/runs/39567396281 . Final documentation-head checks remain visible on the PR.
+
+Browser evidence: https://github.com/Piotr12/CPG/pull/123#issuecomment-6311384777 . Production UI flows pass. The local Docker disk limitation was handled with a fresh standalone runtime; CI verified Docker. Development mode's nonhydrating controls also reproduce on unchanged forecasts; recorded as a separate baseline limitation. GitHub review approval and risk-high QA sign-off remain external review gates; this implementation does not self-approve or merge.
+
+- 2026-10-21 integration with merged #125: immutable receipt/issue references retain processing eligibility after full reversal; explicit terminal lines remain non-issuable with unchanged abandonment, and headers aggregate retained line states after reversal. Tests cover selected targets, restored sibling progress, older-writer reversal during deploy overlap and out-of-order application of the lifecycle migration after newer stock migrations.

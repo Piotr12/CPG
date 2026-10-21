@@ -8,6 +8,7 @@ import {
   MaterialConversion,
   OptimisticLockError,
   PurchaseOrder,
+  PurchaseOrderLine,
   selectTenant,
   Supplier,
   Tenant,
@@ -29,6 +30,7 @@ import {
   LINE_REQUISITION_MATERIAL_MESSAGE,
 } from "../../validators/purchasing/purchasing-fields.schema";
 import type { AuditActor } from "../audit/actor";
+import { GoodsReceiptService } from "../goods-receipts/goods-receipt.service";
 import { MaterialService } from "../materials/material.service";
 import { PurchaseRequisitionService } from "../purchase-requisitions/purchase-requisition.service";
 import { SupplierService } from "../suppliers/supplier.service";
@@ -108,6 +110,89 @@ describe("PurchaseOrderService", () => {
     await orm.close();
   });
 
+  it("recognizes old-release receipts written after migration on reads, closure, usage and new postings", async () => {
+    const order = await service().create(DIRECT, ACTOR);
+    // During deployment overlap the old container knows received, but not the new status column.
+    await scopedEm().nativeUpdate(PurchaseOrderLine, { order: { code: order.id }, position: 1 }, { received: "20.000000" });
+    const current = await service().get(order.id);
+    expect(current.lines[0]).toMatchObject({ status: "completed", outstanding: "0.000000" });
+    expect((await service().list())[0].lines[0].status).toBe("completed");
+    const materials = new MaterialService({ em: scopedEm() });
+    const inactive = await materials.update("00000001", { active: false }, (await materials.get("00000001")).version, ADMIN);
+    expect(inactive.active).toBe(false);
+    await expect(service().cancel(order.id, current.version, ACTOR, [1])).rejects.toMatchObject({ code: "DOCUMENT_NOT_OPEN" });
+    const closed = await service().closeEarly(order.id, current.version, ACTOR);
+    expect(closed.lines.map(({ status, abandoned }) => ({ status, abandoned }))).toEqual([
+      { status: "completed", abandoned: "0.000000" }, { status: "closed-early", abandoned: "10.000000" },
+    ]);
+    await materials.update("00000001", { active: true }, inactive.version, ADMIN);
+    const next = await service().create(DIRECT, ACTOR);
+    await scopedEm().nativeUpdate(PurchaseOrderLine, { order: { code: next.id }, position: 1 }, { received: "21.000000" });
+    await new GoodsReceiptService({ em: scopedEm() }).post({ purchaseOrder: next.id, lines: [{ line: 2, quantity: "10", unit: "each" }] }, ACTOR);
+    expect(await service().get(next.id)).toMatchObject({ status: "completed", lines: [{ status: "completed", received: "21.000000" }, { status: "completed" }] });
+    expect((await scopedEm().find(PurchaseOrderLine, { order: { code: next.id } })).map(({ status }) => status)).toEqual(["completed", "completed"]);
+  });
+
+  it("protects restored supply when an old release reverses a backfilled completed line", async () => {
+    const order = await service().create({ ...DIRECT, lines: [DIRECT.lines[0]] }, ACTOR);
+    await scopedEm().nativeUpdate(PurchaseOrderLine, { order: { code: order.id } }, { received: "20.000000", status: "completed" });
+    // The preceding release reverses the counter and header, without knowing the added status column.
+    await scopedEm().nativeUpdate(PurchaseOrderLine, { order: { code: order.id } }, { received: "0.000000" });
+    await scopedEm().nativeUpdate(PurchaseOrder, { code: order.id }, { status: "open" });
+    expect(await service().get(order.id)).toMatchObject({ status: "open", lines: [{ status: "open", outstanding: "20.000000" }] });
+    const materials = new MaterialService({ em: scopedEm() });
+    await expect(materials.update("00000001", { active: false }, (await materials.get("00000001")).version, ADMIN)).rejects.toMatchObject({ code: "MATERIAL_IN_OPEN_ORDER" });
+  });
+
+  it("cancels unreceived lines without restoring their requisition conversion", async () => {
+    const source = await requisition();
+    const order = await service().create(converting(source.id, "60"), ACTOR);
+    const result = await service().cancel(order.id, order.version, ACTOR);
+    expect(result).toMatchObject({ status: "cancelled", version: order.version + 1,
+      lines: [{ status: "cancelled", received: "0.000000", abandoned: "60.000000", outstanding: "0.000000", requisition: source.id }] });
+    expect(await requisitions().get(source.id)).toMatchObject({ status: "open", converted: "60.000000", outstanding: "40.000000" });
+    expect(await entries("purchase-orders.purchase-order.cancelled")).toEqual([expect.objectContaining({ before: expect.objectContaining({ status: "open" }), after: expect.objectContaining({ status: "cancelled" }) })]);
+    await expect(service().cancel(order.id, result.version, ACTOR)).rejects.toMatchObject({ code: "PURCHASE_ORDER_NOT_OPEN" });
+    await expect(service("test").cancel(order.id, result.version, ACTOR)).rejects.toMatchObject({ code: "PURCHASE_ORDER_NOT_FOUND" });
+  });
+
+  it("keeps selected-line closure Open until the rest resolves and refuses receipts on abandoned lines", async () => {
+    const order = await service().create(DIRECT, ACTOR);
+    const receipts = () => new GoodsReceiptService({ em: scopedEm() });
+    await receipts().post({ purchaseOrder: order.id, lines: [{ line: 1, quantity: "5", unit: "kg" }] }, ACTOR);
+    const partial = await service().get(order.id);
+    await expect(service().cancel(order.id, partial.version, ACTOR)).rejects.toMatchObject({ code: "DOCUMENT_PROCESSED" });
+    const closed = await service().closeEarly(order.id, partial.version, ACTOR, [1]);
+    expect(closed.status).toBe("open");
+    expect(closed.lines[0]).toMatchObject({ received: "5.000000", abandoned: "15.000000", outstanding: "0.000000", status: "closed-early" });
+    await expect(receipts().post({ purchaseOrder: order.id, lines: [{ line: 1, quantity: "1", unit: "kg" }] }, ACTOR)).rejects.toMatchObject({ code: "DOCUMENT_NOT_OPEN" });
+    await expect(service().setPlannedDates(order.id, [{ line: 1, plannedDate: "2027-04-01" }], closed.version, ACTOR)).rejects.toMatchObject({ code: "DOCUMENT_NOT_OPEN" });
+    await receipts().post({ purchaseOrder: order.id, lines: [{ line: 2, quantity: "12", unit: "each" }] }, ACTOR);
+    const result = await service().get(order.id);
+    expect(result.status).toBe("closed-early"); expect(result.lines[1]).toMatchObject({ status: "completed", received: "12.000000" });
+    expect(await entries("purchase-orders.purchase-order.closed-early")).toHaveLength(1);
+  });
+
+  it("supports whole-document early closure and numeric selection while preserving prior terminal lines", async () => {
+    const order = await service().create(DIRECT, ACTOR);
+    await expect(service().closeEarly(order.id, order.version, ACTOR)).rejects.toMatchObject({ code: "DOCUMENT_UNPROCESSED" });
+    const cached = service(); await cached.get(order.id);
+    const partial = await service().cancel(order.id, order.version, ACTOR, [2]);
+    expect(partial.status).toBe("open");
+    await expect(cached.cancel(order.id, order.version, ACTOR)).rejects.toMatchObject({ code: "VERSION_CONFLICT" });
+    await expect(service().cancel(order.id, partial.version, ACTOR, [1, 99])).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+    await expect(new GoodsReceiptService({ em: scopedEm() }).post({ purchaseOrder: order.id, lines: [{ line: 2, quantity: "1", unit: "each" }] }, ACTOR)).rejects.toMatchObject({ code: "DOCUMENT_NOT_OPEN" });
+    await expect(service().setPlannedDates(order.id, [{ line: 2, plannedDate: "2027-04-01" }], partial.version, ACTOR)).rejects.toMatchObject({ code: "DOCUMENT_NOT_OPEN" });
+    await new GoodsReceiptService({ em: scopedEm() }).post({ purchaseOrder: order.id, lines: [{ line: 1, quantity: "1", unit: "kg" }] }, ACTOR);
+    const current = await service().get(order.id);
+    const result = await service().closeEarly(order.id, current.version, ACTOR);
+    expect(result.status).toBe("closed-early");
+    expect(result.lines.map(({ status, outstanding }) => ({ status, outstanding }))).toEqual([
+      { status: "closed-early", outstanding: "0.000000" }, { status: "cancelled", outstanding: "0.000000" }]);
+    const scope = scopedEm(); vi.spyOn(scope, "transactional").mockRejectedValueOnce(new OptimisticLockError("stale"));
+    await expect(service("prod", scope).cancel(order.id, result.version, ACTOR)).rejects.toMatchObject({ code: "VERSION_CONFLICT" });
+  });
+
   describe("create without a requisition", () => {
     it("saves an Open order with the next ID, one location and per-line dates, no requisition reference (BUY-002, BUY-005, BUY-006, BUY-008, LFC-001)", async () => {
       const order = await service().create(DIRECT, ACTOR);
@@ -129,6 +214,7 @@ describe("PurchaseOrderService", () => {
             plannedDate: "2027-03-03",
             requisition: null,
             received: "0.000000",
+            abandoned: "0.000000",
             outstanding: "20.000000",
             status: "open",
           },
@@ -143,6 +229,7 @@ describe("PurchaseOrderService", () => {
             plannedDate: "2027-03-05",
             requisition: null,
             received: "0.000000",
+            abandoned: "0.000000",
             outstanding: "10.000000",
             status: "open",
           },
@@ -404,6 +491,16 @@ describe("PurchaseOrderService", () => {
       await expect(deactivate("00000002")).rejects.toMatchObject({
         message: "Purchase order 00000001 has an open line for this material, so it can't be deactivated.",
       });
+    });
+
+    it("ignores a cancelled line for deactivation but preserves its historical base-unit lock", async () => {
+      const order = await service().create(DIRECT, ACTOR);
+      expect((await service().cancel(order.id, order.version, ACTOR, [1])).status).toBe("open");
+      const cleanup = scopedEm(); await cleanup.nativeDelete(MaterialConversion, { material: { code: "00000001" } });
+      const material = await deactivate("00000001");
+      expect(material.active).toBe(false);
+      await expect(new MaterialService({ em: scopedEm() }).update("00000001", { baseUnit: "g" }, material.version, ADMIN))
+        .rejects.toMatchObject({ code: "BASE_UNIT_IN_USE" });
     });
 
     it("lets a material no open order uses be deactivated, an open requisition notwithstanding", async () => {

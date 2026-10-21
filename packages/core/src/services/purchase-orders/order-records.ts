@@ -1,4 +1,5 @@
-import { PurchaseOrder, type EntityManager } from "@cpg/db";
+import { PurchaseOrder, type PurchaseOrderLine, type EntityManager } from "@cpg/db";
+import { isLineReceived } from "../../domain/goods-receipts/receipt-quantity";
 import { ConflictError, NotFoundError } from "../../http/errors";
 
 /*
@@ -18,4 +19,10 @@ export function assertOrderOpen(order: PurchaseOrder): void {
   if (order.status !== "open") {
     throw new ConflictError(`Purchase order ${order.code} is ${order.status}, so it can't change.`, "PURCHASE_ORDER_NOT_OPEN");
   }
+}
+
+/** Old containers can still advance received after migration during deployment overlap. */
+export function orderLineState(line: Pick<PurchaseOrderLine, "status" | "quantity" | "received">): PurchaseOrderLine["status"] {
+  if (line.status === "cancelled" || line.status === "closed-early") return line.status;
+  return isLineReceived(line.quantity, line.received) ? "completed" : "open";
 }
