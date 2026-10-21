@@ -33,6 +33,7 @@ Run lint, typecheck, test:coverage (100%), build; locally affected integrations 
 - Spec remains on design PR #122; materialized locally but excluded from implementation commits until base contains it.
 
 ## Log
+- 2026-10-21 07:39 UTC — Phase 2: 226 service/domain tests pass, covering partial and zero-output production, transit refusal, closure rollback, line selection, retained conversions and shipment completion. Adding the historical base-unit regression found during review. App typecheck now identifies new view fixtures and state labels to update in Phase 3.
 - 2026-10-21 07:21 UTC — Phase 1: 28 tests pass, including populated migration upgrade/down and exact near-maximum decimal backfill. Scoped lint passed. Fixed a migration-test TypeScript result annotation. Generated migration initially failed with NOT NULL copied NULL; replaced with additive columns and enum CHECK. User reiterated autonomous completion.
 - 2026-10-21 07:15 UTC — Spec #122 published after independent approve review. Starting implementation from origin/main in this linked worktree. Original spec-phase log lives on #122; this plan is the implementation run log.
 
@@ -49,9 +50,9 @@ PR: #123
 
 ### Phase 2: Transactional workflows
 
-- [ ] 2.1 Customer-order and PO resolution
-- [ ] 2.2 Requisition and production resolution
-- [ ] 2.3 Transfer resolution
+- [x] 2.1 Customer-order and PO resolution
+- [x] 2.2 Requisition and production resolution
+- [x] 2.3 Transfer resolution
 
 ### Phase 3: API and UI
 

@@ -10,7 +10,7 @@ import { PurchaseOrderLine, PurchaseRequisition, type EntityManager, type Materi
  * (LFC-013). Such a material can't be deactivated.
  */
 export async function openOrderUsingMaterial(em: EntityManager, material: Material): Promise<string | null> {
-  const lines = await em.find(PurchaseOrderLine, { material }, { populate: ["order"] });
+  const lines = await em.find(PurchaseOrderLine, { material, status: "open" }, { populate: ["order"] });
   // Sorted and filtered here: an `orderBy` or filter on relation fields would add query joins the tenant lint rules don't vet.
   return (
     lines

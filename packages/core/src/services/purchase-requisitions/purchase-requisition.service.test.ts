@@ -8,6 +8,7 @@ import {
   MaterialConversion,
   OptimisticLockError,
   PurchaseRequisition,
+  Supplier,
   selectTenant,
   Tenant,
   TenantAuditEvent,
@@ -30,6 +31,7 @@ import {
   UNIT_NOT_CONVERTIBLE_MESSAGE,
 } from "../../validators/boms/bom-fields.schema";
 import type { AuditActor } from "../audit/actor";
+import { PurchaseOrderService } from "../purchase-orders/purchase-order.service";
 import { PurchaseRequisitionService, REQUISITION_ID_RACE } from "./purchase-requisition.service";
 
 /** Who the tests act as: a normal user, on the UI (any signed-in account may write). */
@@ -79,6 +81,41 @@ describe("PurchaseRequisitionService", () => {
     await orm.close();
   });
 
+  it("cancels an unconverted requisition atomically and refuses terminal edits", async () => {
+    const original = await service().create(NEW, ACTOR);
+    await expect(service().closeEarly(original.id, original.version, ACTOR)).rejects.toMatchObject({ code: "DOCUMENT_UNPROCESSED" });
+    const cached = service(); await cached.get(original.id);
+    const result = await service().cancel(original.id, original.version, ACTOR);
+    expect(result).toMatchObject({ status: "cancelled", converted: "0.000000", abandoned: "100.000000", outstanding: "0.000000", version: 2 });
+    expect(await entries("purchase-requisitions.purchase-requisition.cancelled")).toEqual([expect.objectContaining({
+      before: expect.objectContaining({ status: "open", abandoned: "0.000000" }),
+      after: expect.objectContaining({ status: "cancelled", abandoned: "100.000000" }),
+    })]);
+    await expect(cached.cancel(original.id, original.version, ACTOR)).rejects.toMatchObject({ code: "VERSION_CONFLICT" });
+    await expect(service().cancel(original.id, result.version, ACTOR)).rejects.toMatchObject({ code: "DOCUMENT_NOT_OPEN" });
+    await expect(service().setRequiredDate(original.id, "2027-04-01", result.version, ACTOR)).rejects.toMatchObject({ code: "REQUISITION_NOT_OPEN" });
+    await expect(service("test").cancel(original.id, result.version, ACTOR)).rejects.toMatchObject({ code: "REQUISITION_NOT_FOUND" });
+    const manager = scopedEm(); vi.spyOn(manager, "transactional").mockRejectedValueOnce(new OptimisticLockError("stale"));
+    await expect(service("prod", manager).cancel(original.id, result.version, ACTOR)).rejects.toMatchObject({ code: "VERSION_CONFLICT" });
+  });
+
+  it("abandons only unconverted quantity and retains the linked purchase order", async () => {
+    const original = await service().create(NEW, ACTOR);
+    const manager = scopedEm(); manager.create(Supplier, { code: "00000001", name: "Steelworks" }); await manager.flush();
+    const orders = () => new PurchaseOrderService({ em: scopedEm() });
+    const orderInput = { supplier: "00000001", location: NEW.location,
+      lines: [{ material: NEW.material, quantity: "40", unit: "kg", plannedDate: NEW.requiredDate, requisition: original.id }] };
+    const purchase = await orders().create(orderInput, ACTOR);
+    const partial = await service().get(original.id);
+    await expect(service().cancel(original.id, partial.version, ACTOR)).rejects.toMatchObject({ code: "DOCUMENT_PROCESSED" });
+    const result = await service().closeEarly(original.id, partial.version, ACTOR);
+    expect(result).toMatchObject({ status: "closed-early", converted: "40.000000", abandoned: "60.000000", outstanding: "0.000000" });
+    expect((await orders().get(purchase.id)).lines[0]).toMatchObject({ requisition: original.id, quantity: "40.000000", status: "open" });
+    await expect(orders().create(orderInput, ACTOR)).rejects.toMatchObject({ code: "REQUISITION_NOT_OPEN" });
+    expect(await entries("purchase-requisitions.purchase-requisition.closed-early")).toHaveLength(1);
+    expect((await service().get(original.id)).converted).toBe("40.000000");
+  });
+
   describe("create", () => {
     it("saves an Open requisition with nothing converted, the quantity in the base unit and the next ID (LFC-001)", async () => {
       const first = await service().create(NEW, ACTOR);
@@ -95,6 +132,7 @@ describe("PurchaseRequisitionService", () => {
         denominator: "1",
         requiredDate: "2027-03-01",
         converted: "0.000000",
+        abandoned: "0.000000",
         outstanding: "100.000000",
         status: "open",
         createdAt: expect.any(Date),
@@ -126,6 +164,7 @@ describe("PurchaseRequisitionService", () => {
             quantity: "100.000000",
             requiredDate: "2027-03-01",
             converted: "0.000000",
+            abandoned: "0.000000",
             status: "open",
           },
         },

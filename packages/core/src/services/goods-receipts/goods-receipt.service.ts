@@ -1,3 +1,4 @@
+import { documentState } from "../../domain/document-lifecycle/lifecycle";
 import { randomUUID } from "node:crypto";
 import {
   GoodsReceipt,
@@ -9,7 +10,7 @@ import {
   type PurchaseOrder,
 } from "@cpg/db";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
-import { afterReceipt, isLineReceived, type LineReceipt } from "../../domain/goods-receipts/receipt-quantity";
+import { afterReceipt, type LineReceipt } from "../../domain/goods-receipts/receipt-quantity";
 import { ConflictError, NotFoundError, ValidationError, versionConflict, type FieldErrors } from "../../http/errors";
 import { QUANTITY_OUT_OF_RANGE_MESSAGE } from "../../validators/boms/bom-fields.schema";
 import type { ReceiptCreateInput } from "../../validators/goods-receipts/goods-receipt.schema";
@@ -188,6 +189,9 @@ async function resolveLines(
       errors[field("line")] = [LINE_NO_SUCH_LINE_MESSAGE];
       continue;
     }
+    if (orderLine.status === "cancelled" || orderLine.status === "closed-early") {
+      throw new ConflictError("This purchase-order line is no longer open.", "DOCUMENT_NOT_OPEN");
+    }
     let record: BaseQuantity;
     try {
       record = await convertToBaseQuantity(em, orderLine.material, line);
@@ -218,8 +222,9 @@ function receive(em: EntityManager, order: PurchaseOrder, orderLines: readonly P
     before[`line${orderLine.position}Received`] = orderLine.received;
     after[`line${orderLine.position}Received`] = line.received;
     orderLine.received = line.received;
+    orderLine.status = line.completed ? "completed" : "open";
   }
-  if (orderLines.every(({ quantity, received }) => isLineReceived(quantity, received))) order.status = "completed";
+  order.status = documentState(orderLines.map(({ status }) => status));
   after.status = order.status;
   order.updatedAt = new Date();
   const { code, supplier } = order;

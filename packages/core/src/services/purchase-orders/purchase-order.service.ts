@@ -8,7 +8,8 @@ import {
   type Material,
 } from "@cpg/db";
 import { nextSequentialId, formatSequentialId } from "../../domain/business-ids/sequential-id";
-import { isLineReceived, outstandingOf } from "../../domain/goods-receipts/receipt-quantity";
+import { documentState, outstandingQuantity as unresolvedQuantity, resolveLines as resolveLifecycle, type DocumentState, type LifecycleAction } from "../../domain/document-lifecycle/lifecycle";
+import { selectLifecycleLines } from "../../domain/document-lifecycle/select-lines";
 import { DEMO_ORDERS } from "../../domain/purchasing/demo-purchasing";
 import { addQuantities, afterConversion, fitsOutstanding, outstandingQuantity } from "../../domain/purchasing/requisition-quantity";
 import { AppError, ConflictError, ValidationError, versionConflict, type FieldErrors } from "../../http/errors";
@@ -47,7 +48,8 @@ export interface OrderLineView {
   /** What is still awaited, six decimals, never negative. */
   outstanding: string;
   /** `completed` once the line has received at least its quantity (BUY-016). */
-  status: "open" | "completed";
+  status: DocumentState;
+  abandoned: string;
 }
 
 /** An order with its lines. `id` is its eight-digit business ID; `supplier` and `location` are theirs. */
@@ -168,6 +170,7 @@ export class PurchaseOrderService {
           if (!line) {
             errors[`lines.${index}.line`] = [LINE_NO_SUCH_LINE_MESSAGE];
           } else if (line.plannedDate !== plannedDate) {
+            if (line.status === "cancelled" || line.status === "closed-early") throw new ConflictError("This line is no longer open.", "DOCUMENT_NOT_OPEN");
             before[`line${number}PlannedDate`] = line.plannedDate;
             after[`line${number}PlannedDate`] = plannedDate;
             line.plannedDate = plannedDate;
@@ -179,6 +182,39 @@ export class PurchaseOrderService {
           recordTenantAudit(em, actor, orderEntry("updated", order, before, after));
           await em.flush();
         }
+        return (await viewsOf(em, [order]))[0];
+      });
+    } catch (error) {
+      if (error instanceof OptimisticLockError) throw versionConflict();
+      throw error;
+    }
+  }
+
+  /** Cancel unreceived lines without undoing their recorded requisition conversions. */
+  cancel(id: string, version: number, actor: AuditActor, lines?: readonly number[]): Promise<OrderView> {
+    return this.resolve(id, version, actor, "cancel", lines);
+  }
+
+  /** Abandon the selected remaining supply while preserving receipts and converted requisitions. */
+  closeEarly(id: string, version: number, actor: AuditActor, lines?: readonly number[]): Promise<OrderView> {
+    return this.resolve(id, version, actor, "close-early", lines);
+  }
+
+  private async resolve(id: string, version: number, actor: AuditActor, action: LifecycleAction, selection?: readonly number[]): Promise<OrderView> {
+    try {
+      return await this.em.transactional(async (em) => {
+        const order = await findOrder(em, id, { refresh: true });
+        if (order.version !== version) throw versionConflict();
+        assertOrderOpen(order);
+        const lines = await em.find(PurchaseOrderLine, { order }, { populate: ["material"], refresh: true });
+        const before = lifecycleSnapshot(order, lines);
+        const target = selectLifecycleLines(lines, selection, (line) => line.position);
+        const resolved = resolveLifecycle(action, target.map((line) => ({ quantity: line.quantity, processed: line.received, abandoned: line.abandoned, status: line.status })));
+        resolved.forEach(({ status, abandoned }, index) => { Object.assign(target[index], { status, abandoned }); });
+        order.status = documentState(lines.map(({ status }) => status));
+        order.updatedAt = new Date(Math.max(Date.now(), order.updatedAt.getTime() + 1));
+        recordTenantAudit(em, actor, orderEntry(action === "cancel" ? "cancelled" : "closed-early", order, before, lifecycleSnapshot(order, lines)));
+        await em.flush();
         return (await viewsOf(em, [order]))[0];
       });
     } catch (error) {
@@ -256,7 +292,8 @@ async function insertOrder(em: EntityManager, input: NewOrder, actor: AuditActor
   }
   for (const [requisition, quantity] of taken) {
     const before = requisitionSnapshot(requisition);
-    Object.assign(requisition, afterConversion(requisition.quantity, requisition.converted, quantity));
+    const progress = afterConversion(requisition.quantity, requisition.converted, quantity);
+    Object.assign(requisition, { ...progress, status: documentState([progress.status]) });
     if (actor) recordTenantAudit(em, actor, requisitionEntry("converted", requisition, before, requisitionSnapshot(requisition)));
   }
   if (actor) {
@@ -336,7 +373,7 @@ async function viewsOf(em: EntityManager, orders: readonly PurchaseOrder[]): Pro
 }
 
 function toLineView(line: PurchaseOrderLine): OrderLineView {
-  const { position, material, quantity, enteredQuantity, enteredUnit, numerator, denominator, plannedDate, requisition, received } = line;
+  const { position, material, quantity, enteredQuantity, enteredUnit, numerator, denominator, plannedDate, requisition, received, abandoned, status } = line;
   return {
     line: position,
     material: material.code,
@@ -348,8 +385,9 @@ function toLineView(line: PurchaseOrderLine): OrderLineView {
     plannedDate,
     requisition: requisition?.code ?? null,
     received,
-    outstanding: outstandingOf(quantity, received),
-    status: isLineReceived(quantity, received) ? "completed" : "open",
+    abandoned,
+    outstanding: unresolvedQuantity(quantity, received, abandoned),
+    status,
   };
 }
 
@@ -372,4 +410,10 @@ function orderEntry(action: string, order: PurchaseOrder, before: AuditEntry["be
     before,
     after,
   };
+}
+
+/** Closure changes only these progress fields; original quantities, links and receipts stay intact. */
+function lifecycleSnapshot(order: PurchaseOrder, lines: readonly PurchaseOrderLine[]) {
+  return { status: order.status, lines: JSON.stringify(lines.map(({ position, quantity, received, abandoned, status }) =>
+    ({ line: position, quantity, received, abandoned, status }))) };
 }

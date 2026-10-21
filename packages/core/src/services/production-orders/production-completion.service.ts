@@ -1,3 +1,4 @@
+import { documentState } from "../../domain/document-lifecycle/lifecycle";
 import { randomUUID } from "node:crypto";
 import {
   BomComponent,
@@ -393,7 +394,7 @@ function progress(em: EntityManager, order: ProductionOrder, produced: string, a
   if (produced === order.produced) return;
   const before = { produced: order.produced, status: order.status };
   order.produced = produced;
-  order.status = productionStatus(produced, order.quantity);
+  order.status = documentState([productionStatus(produced, order.quantity)]);
   order.updatedAt = new Date(Math.max(Date.now(), order.updatedAt.getTime() + 1));
   recordTenantAudit(em, actor, {
     action: "production-orders.production-order.progressed",
