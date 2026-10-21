@@ -3,6 +3,7 @@ import { BUSINESS_ID_PATTERN } from "../business-ids/business-id.schema";
 import { enteredQuantitySchema } from "../boms/bom-fields.schema";
 import { unitSchema } from "../materials/material-fields.schema";
 import { DUPLICATE_LINE_MESSAGE, LINE_NUMBER_MESSAGE } from "../purchasing/purchasing-fields.schema";
+import { pageSchema } from "../shipments/shipment.schema";
 
 /** The English messages; screens translate them by matching these constants. */
 export const ORDER_CHOICE_MESSAGE = "Choose a purchase order.";
@@ -55,5 +56,5 @@ export type ReceiptCreateInput = z.infer<typeof receiptCreateSchema>;
 /** The Post goods receipt form's own check: the lines only, since the page binds the order. */
 export const receiptFormSchema = receiptCreateSchema.omit({ purchaseOrder: true });
 
-/** `GET /api/tenants/{tenant}/goods-receipts`: every receipt, or one purchase order's. */
-export const receiptListQuerySchema = z.object({ purchaseOrder: orderReferenceSchema.optional() });
+/** `GET /api/tenants/{tenant}/goods-receipts`: a page of every receipt, or of one purchase order's. */
+export const receiptListQuerySchema = z.object({ purchaseOrder: orderReferenceSchema.optional(), page: pageSchema });
