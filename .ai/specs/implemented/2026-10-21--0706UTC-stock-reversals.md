@@ -1,6 +1,6 @@
 # Receipt, issue and correction reversals
 
-**Status:** draft
+**Status:** implemented
 **Created:** 2026-10-21 07:06 UTC
 **Issue:** #91 (E11-S02)
 
@@ -120,15 +120,15 @@ One shared `ReversalDialog` in `app/src/components/stock/` uses shadcn Dialog, `
 
 On success, refresh the current document and stock views and show the link. On refusal keep the dialog and reason visible with the actionable error; do not refresh away a read-only refusal. A stale already-reversed result identifies the existing reversal after refreshing explicitly. Show the standard loading/empty/error feedback; empty ledger has no reversal controls. Long reasons wrap, numeric quantities stay legible, tables scroll within their container at 360px. Keyboard-only operation and EN/PL text are required. Update contextual stock, purchase-order and shipment help: full reversal then corrected posting; no partial reversal; temporary-stock workaround is manual and must be balanced by reversing that temporary correction.
 
-Prototype assets: `assets/stock-reversals/` (illustrative examples).
+Prototype assets: `../assets/stock-reversals/` (illustrative examples).
 
-![Full-line confirmation](assets/stock-reversals/mockup-01-confirm.png)
+![Full-line confirmation](../assets/stock-reversals/mockup-01-confirm.png)
 
-![Insufficient-stock refusal at a narrow viewport](assets/stock-reversals/mockup-02-insufficient-stock.png)
+![Insufficient-stock refusal at a narrow viewport](../assets/stock-reversals/mockup-02-insufficient-stock.png)
 
-![Linked original and inverse history](assets/stock-reversals/mockup-03-linked-history.png)
+![Linked original and inverse history](../assets/stock-reversals/mockup-03-linked-history.png)
 
-Current-screen evidence: [stock](assets/stock-reversals/current-01-stock.png), [receipt](assets/stock-reversals/current-02-receipt.png), [issue](assets/stock-reversals/current-03-issue.png). Captured against this checkout in development mode with disposable fixtures; Docker image build was unavailable because Docker storage was full. UI changes are subject to real-browser QA in the implementation PR.
+Current-screen evidence: [stock](../assets/stock-reversals/current-01-stock.png), [receipt](../assets/stock-reversals/current-02-receipt.png), [issue](../assets/stock-reversals/current-03-issue.png). Captured against this checkout in development mode with disposable fixtures; Docker image build was unavailable because Docker storage was full. UI changes are subject to real-browser QA in the implementation PR.
 
 ## Edge cases and validation
 
@@ -171,3 +171,9 @@ R02/R03/R05/R07/R08/R09, D01/D02/D04/D06/D07 and N01–N06 stay in force. This i
 ## Design review
 
 Fresh-context scope/architecture review: cohesive capability; no split needed. Corrected two P2 contract gaps: overflow remains HTTP 400, and existing unpaged GR reads enrich in bounded batches without changing their response contract. This review did not execute an implementation.
+
+## Implementation notes
+
+Implemented on [PR #125](https://github.com/Piotr12/CPG/pull/125), source head `b3ec0eb`. This design PR remains documentation-only. The implementation adds a tenant/order/code cursor index and flushes/releases each sibling-shipment batch inside the same transaction; a late-batch failure test verifies rollback. Three touched data routes now use the shared loading skeleton.
+
+Verification: independent final review approved; lint, typecheck, build and 2,858 unit tests pass with 100% coverage in every measure. The four touched integration files pass locally (11 tests). [Full Docker CI](https://github.com/Piotr12/CPG/actions/runs/39567497535) passes all five jobs, including 339 integration tests. Real-browser checks cover both roles, linked history, refusal, read-only, long content, keyboard, English/Polish and 360px states. Eleven reviewed screenshots and the [PASS QA report](https://github.com/Piotr12/CPG/pull/125#issuecomment-6311632759) are published on the implementation PR. Human review and QA sign-off remain separate merge gates.
