@@ -118,7 +118,8 @@ describe("customer orders through the UI and API", () => {
     // The normal user's create entry names their account, with the API channel and their token (AUD-001).
     const created = json(await api("GET", `/api/tenants/prod/audit?subjectType=CustomerOrder&subjectId=${createdIds[1]}`)).data.entries as AuditEntryView[];
     expect(created.filter(({ action }) => action === "customer-orders.customer-order.created")).toEqual([
-      expect.objectContaining({ actor: expect.objectContaining({ username: USER }), channel: "api", sessionId: null, token: expect.objectContaining({ name: "orders-cli" }), before: null }),
+      expect.objectContaining({ actor: expect.objectContaining({ username: USER }), channel: "api", sessionId: null, token: expect.objectContaining({ name: "orders-cli" }), before: null,
+        after: expect.objectContaining({ customer: customer.id, location: location.id, lines: expect.stringContaining(material) }) }),
     ]);
     expect(json(await api("POST", ROOT, { body: input() }, userSecret)).error.code).toBe("IDEMPOTENCY_KEY_REQUIRED");
     const cross = await write("POST", ROOT, { ...input(), lines: [{ ...input().lines[0], location: location.id }] }, userSecret);

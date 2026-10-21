@@ -55,10 +55,10 @@ interface Deps {
 /** How many forecasts `list` reads per query, without the identity map. */
 const KEY_BATCH = 500;
 
-/** A filter's query, and the business ID of each material and location it can match, by UUID. */
-interface ForecastScope {
-  where: { material?: Material; location?: Location };
-  codes: { material: Map<string, string>; location: Map<string, string> };
+/** A filter's query: the material and/or location it narrows to. */
+interface ForecastWhere {
+  material?: Material;
+  location?: Location;
 }
 
 const codeById = (records: { id: string; code: string }[]) => new Map(records.map(({ id, code }) => [id, code]));
@@ -84,8 +84,12 @@ export class ForecastService {
    * date; `filter` narrows them before paging, and a page past the last is empty.
    */
   async list(filter: ForecastFilter = {}, page = 1): Promise<ForecastView[]> {
-    const scope = await this.scope(filter);
-    if (!scope) return [];
+    const where = await this.where(filter);
+    if (!where) return [];
+    const codes = {
+      material: codeById(await this.em.find(Material, where.material ? { id: where.material.id } : {})),
+      location: codeById(await this.em.find(Location, where.location ? { id: where.location.id } : {})),
+    };
     // Read as plain rows in batches and sorted here by business IDs: forecasts reference their material
     // and location by UUID, and a relation `orderBy` would add query joins the tenant lint rules don't vet.
     const views: ForecastView[] = [];
@@ -93,11 +97,11 @@ export class ForecastService {
     for (;;) {
       const batch = await this.em.find(
         Forecast,
-        { ...scope.where, ...(after !== undefined && { id: { $gt: after } }) },
+        { ...where, ...(after !== undefined && { id: { $gt: after } }) },
         { fields: ["material", "location", "date", "quantity", "version"], orderBy: { id: "asc" }, limit: KEY_BATCH, disableIdentityMap: true },
       );
       for (const { material, location, date, quantity, version } of batch) {
-        views.push({ material: scope.codes.material.get(material.id)!, location: scope.codes.location.get(location.id)!, date, quantity, version });
+        views.push({ material: codes.material.get(material.id)!, location: codes.location.get(location.id)!, date, quantity, version });
       }
       if (batch.length < KEY_BATCH) break;
       after = batch.at(-1)!.id;
@@ -108,8 +112,8 @@ export class ForecastService {
 
   /** How many forecasts `filter` matches, for the pages of `list`. */
   async count(filter: ForecastFilter = {}): Promise<number> {
-    const scope = await this.scope(filter);
-    return scope ? this.em.count(Forecast, scope.where) : 0;
+    const where = await this.where(filter);
+    return where ? this.em.count(Forecast, where) : 0;
   }
 
   /** A forecast for a day that has none yet for this material and location (DEM-001, DEM-007). */
@@ -178,19 +182,14 @@ export class ForecastService {
   }
 
   /**
-   * The query `filter` makes and the business IDs of the materials and locations it can match, or null
-   * when it names a material or location the tenant doesn't have: it matches nothing.
+   * The query `filter` makes, or null when it names a material or location the tenant doesn't have:
+   * it matches nothing.
    */
-  private async scope(filter: ForecastFilter): Promise<ForecastScope | null> {
+  private async where(filter: ForecastFilter): Promise<ForecastWhere | null> {
     const material = filter.material === undefined ? undefined : await this.em.findOne(Material, { code: filter.material });
     const location = filter.location === undefined ? undefined : await this.em.findOne(Location, { code: filter.location });
     if (material === null || location === null) return null;
-    const materials = await this.em.find(Material, material ? { id: material.id } : {});
-    const locations = await this.em.find(Location, location ? { id: location.id } : {});
-    return {
-      where: { ...(material && { material }), ...(location && { location }) },
-      codes: { material: codeById(materials), location: codeById(locations) },
-    };
+    return { ...(material && { material }), ...(location && { location }) };
   }
 
   /** Runs an edit in one transaction; a write landing before its flush is `VERSION_CONFLICT`. */

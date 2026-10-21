@@ -13,7 +13,7 @@ const PASSWORD = "shapi first password";
 const today = () => new Date().toISOString().slice(0, 10);
 
 // Shipments and goods issues through the API (R07, E08-S02): SAL-006…013, SAL-018, SAL-020…022,
-// SAL-024, SAL-025, INV-003, INV-017, INV-005, INV-010, INV-011, INV-021, AUD-026, AUD-030, LFC-002, LFC-003,
+// SAL-024, SAL-025, INV-003, INV-005, INV-010, INV-011, INV-017, INV-021, AUD-026, AUD-030, LFC-002, LFC-003,
 // LFC-010, LFC-020, TEN-017, API-020, API-021.
 describe("shipments and goods issues through the API", () => {
   let admin: Browser;
