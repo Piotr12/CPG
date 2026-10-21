@@ -90,6 +90,19 @@ describe("stock import actions", () => {
     expect(mocks.revalidatePath.mock.calls.map(([path]) => path)).toEqual(["/admin/test/stock"]);
   });
 
+  it("commits an admin's import as the admin's own account and session, on the UI channel (STX-018)", async () => {
+    mocks.currentUser.mockResolvedValue({ sessionId: "s1", userId: "u1", username: "admin", role: "admin" });
+
+    expect(await commitStockImport("prod", 1, { workbook: await workbook(), previewToken: TOKEN, reason: "Count" })).toMatchObject({ ok: true });
+    expect(mocks.stockImportService.commit).toHaveBeenCalledWith(expect.objectContaining({ hasStockSheet: true }), TOKEN, "Count", {
+      userId: "u1",
+      username: "admin",
+      sessionId: "s1",
+      channel: "ui",
+      token: null,
+    });
+  });
+
   it("needs the token and a reason, and passes a stale commit on without refreshing anything (STX-014, STX-016)", async () => {
     expect(await commitStockImport("test", 2, { workbook: await workbook() })).toMatchObject({
       ok: false,
