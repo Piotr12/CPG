@@ -69,10 +69,10 @@ it("pages the completion history, rejects a malformed history page, and offers p
   const props = { tenant, orders: [], total: 0, page: 1, materials: completionMaterials, locations, messages: en, locale: "en" as const };
   render(<ProductionScreen {...props} order={production} completions={[completionView]} />);
   expect(screen.getByRole("button", { name: en.productionOrders.completion.post })).toBeTruthy();
-  expect(screen.getByRole("button", { name: en.productionOrders.completion.reversal.open })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Reverse completion 00000002" })).toBeTruthy();
   cleanup();
   render(<ProductionScreen {...props} tenant={{ ...tenant, readOnly: true }} order={production} completions={[completionView]} />);
-  expect(screen.queryByRole("button", { name: en.productionOrders.completion.reversal.open })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Reverse completion/ })).toBeNull();
   expect(screen.getByRole("columnheader", { name: en.productionOrders.output })).toBeTruthy();
   expect(screen.queryByRole("columnheader", { name: en.productionOrders.completion.actions })).toBeNull();
 });

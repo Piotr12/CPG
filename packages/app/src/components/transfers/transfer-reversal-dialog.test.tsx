@@ -55,14 +55,14 @@ it("merges each reversal into the ledger by time, linked to the posting it rever
   expect(within(rows()[0]).getByText("bob · API · Reverses the posting of 2027-03-02")).toBeTruthy();
   expect(within(rows()[3]).getByText(en.transfers.ledger.reversed)).toBeTruthy();
   expect(within(rows()[5]).getByText(en.transfers.ledger.blocked)).toBeTruthy();
-  expect(within(rows()[2]).getByRole("button", { name: t.open })).toBeTruthy();
-  expect(screen.getAllByRole("button", { name: t.open })).toHaveLength(1);
+  expect(within(rows()[2]).getByRole("button", { name: "Reverse the write-off of 2027-03-02" }).textContent).toBe(t.open);
+  expect(screen.getAllByRole("button")).toHaveLength(1);
 });
 
 it("confirms each change running the other way, the reopening and today's date, then reverses with only a reason", async () => {
   mocks.reverseTransferPosting.mockResolvedValue({ ok: true, data: {} });
   render(ledger());
-  fireEvent.click(within(rows()[1]).getByRole("button", { name: t.open }));
+  fireEvent.click(within(rows()[1]).getByRole("button", { name: "Reverse the receipt of 2027-03-02" }));
   const dialog = within(screen.getByRole("dialog"));
   expect(dialog.getByRole("heading", { name: t.titles.receipt })).toBeTruthy();
   expect(dialog.getByText("Receipt · 2027-03-02")).toBeTruthy();
@@ -78,7 +78,7 @@ it("confirms each change running the other way, the reopening and today's date, 
 
 it("offers the existing reversal on a stale duplicate and explains other refusals, keeping the reason", async () => {
   render(ledger());
-  fireEvent.click(within(rows()[0]).getByRole("button", { name: t.open }));
+  fireEvent.click(within(rows()[0]).getByRole("button", { name: "Reverse the write-off of 2027-03-02" }));
   expect(within(screen.getByRole("dialog")).getAllByRole("listitem").map((item) => item.textContent)).toEqual(["In transit+5 kg"]);
   fireEvent.change(screen.getByLabelText(t.reason), { target: { value: "Found" } });
   mocks.reverseTransferPosting.mockResolvedValue({ ok: false, error: { code: "TRANSFER_POSTING_ALREADY_REVERSED", message: "Already" } });
@@ -93,7 +93,7 @@ it("offers the existing reversal on a stale duplicate and explains other refusal
 
 it("translates the reason refusal in Polish, passes other field messages through, and shows no actions when read-only", async () => {
   const { unmount } = render(ledger({ labels: transfersLabels(pl) }));
-  fireEvent.click(within(rows()[0]).getByRole("button", { name: pl.transfers.reversal.open }));
+  fireEvent.click(within(rows()[0]).getByRole("button", { name: "Odwróć odpis z 2027-03-02" }));
   fireEvent.click(screen.getByRole("button", { name: pl.transfers.reversal.submit }));
   expect(screen.getByText(pl.transfers.reversal.reasonError)).toBeTruthy();
   mocks.reverseTransferPosting.mockResolvedValue({ ok: false, error: { code: "VALIDATION_FAILED", message: "Invalid", fieldErrors: { reason: ["Server says no"] } } });

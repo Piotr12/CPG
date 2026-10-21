@@ -9,7 +9,8 @@ import { TALL_DIALOG } from "../forms/form-labels";
 type Refusal = Parameters<NonNullable<CrudFormProps<unknown>["formatError"]>>[0];
 
 export interface ReversalConfirmLabels {
-  open: string; title: string; description: string; reason: string; submit: string; pending: string; cancel: string;
+  /** The trigger's visible text; `openLabel`, when given, names it apart from every other row's trigger. */
+  open: string; openLabel?: string; title: string; description: string; reason: string; submit: string; pending: string; cancel: string;
 }
 
 /**
@@ -38,7 +39,7 @@ export function ReversalConfirmDialog<T>({ target, labels, summary, footnote, ac
     if (next) { setSnapshot(target); setHelp(null); }
     setOpen(next);
   }}>
-    <DialogTrigger asChild><Button variant="outline" size="sm">{labels.open}</Button></DialogTrigger>
+    <DialogTrigger asChild><Button variant="outline" size="sm" aria-label={labels.openLabel}>{labels.open}</Button></DialogTrigger>
     <DialogContent className={TALL_DIALOG}>
       <DialogHeader><DialogTitle className="pr-8">{labels.title}</DialogTitle><DialogDescription>{labels.description}</DialogDescription></DialogHeader>
       {summary(current)}

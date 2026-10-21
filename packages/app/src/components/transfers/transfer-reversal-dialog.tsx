@@ -19,7 +19,7 @@ export function TransferReversalDialog({ context, transfer, posting, today, exis
 }) {
   const t = labels.reversal;
   return <ReversalConfirmDialog target={posting}
-    labels={{ open: t.open, title: t.titles[posting.kind], description: t.description, reason: t.reason, submit: t.submit, pending: t.pending, cancel: t.cancel }}
+    labels={{ open: t.open, openLabel: fill(t.openLabels[posting.kind], { date: posting.businessDate }), title: t.titles[posting.kind], description: t.description, reason: t.reason, submit: t.submit, pending: t.pending, cancel: t.cancel }}
     summary={(target) => <>
       <dl className="grid min-w-0 gap-2 rounded-md border p-3 text-sm">
         <div><dt className="text-muted-foreground">{t.original}</dt><dd>{labels.ledger.kinds[target.kind]} · {target.businessDate}</dd></div>

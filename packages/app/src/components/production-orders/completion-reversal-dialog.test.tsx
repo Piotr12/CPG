@@ -13,7 +13,8 @@ const reversible = { context: { tenant: "test", generation: 3 }, order: { id: "0
 const history = (messages = en, completions = [completionView, wasteView]) =>
   <CompletionHistory completions={completions} page={2} materials={completionMaterials} labels={productionLabels(messages)} path={path} reversible={reversible} />;
 const t = en.productionOrders.completion.reversal;
-const openFirst = () => fireEvent.click(screen.getAllByRole("button", { name: t.open })[0]);
+const reverseButtons = () => screen.getAllByRole("button", { name: /^Reverse completion \d{8}$/ });
+const openFirst = () => fireEvent.click(reverseButtons()[0]);
 const reason = (value = "Entered twice") => fireEvent.change(screen.getByLabelText(t.reason), { target: { value } });
 const submit = () => act(async () => fireEvent.click(screen.getByRole("button", { name: t.submit })));
 afterEach(() => vi.clearAllMocks());
@@ -35,10 +36,10 @@ it("confirms every inverse leg, the order effect and today's date, then reverses
 
 it("lists only the inputs a waste completion used back, never an output", () => {
   render(history(en, [{ ...completionView, lines: [{ ...completionView.lines[0], actual: "0.000000" }, completionView.lines[1]] }, wasteView]));
-  fireEvent.click(screen.getAllByRole("button", { name: t.open })[1]);
+  fireEvent.click(screen.getByRole("button", { name: "Reverse completion 00000001" }));
   expect(within(screen.getByRole("dialog")).getAllByRole("listitem").map((item) => item.textContent)).toEqual(["00000006 Cocoa+10 kg"]);
   fireEvent.click(screen.getByRole("button", { name: t.cancel }));
-  fireEvent.click(screen.getAllByRole("button", { name: t.open })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Reverse completion 00000002" }));
   expect(within(screen.getByRole("dialog")).getAllByRole("listitem").map((item) => item.textContent)).toEqual(["00000006 Cocoa-40 each", "00000007 Wrapper+80 each"]);
 });
 
@@ -55,7 +56,7 @@ it("offers the existing reversal on a stale duplicate and keeps the reason and e
 });
 
 it("translates the reason refusal in Polish and passes other field messages through", async () => {
-  render(history(pl)); fireEvent.click(screen.getAllByRole("button", { name: pl.productionOrders.completion.reversal.open })[0]);
+  render(history(pl)); fireEvent.click(screen.getByRole("button", { name: "Odwróć wykonanie 00000002" }));
   fireEvent.click(screen.getByRole("button", { name: pl.productionOrders.completion.reversal.submit }));
   expect(screen.getByText(pl.productionOrders.completion.reversal.reasonError)).toBeTruthy();
   expect(mocks.reverseProductionCompletion).not.toHaveBeenCalled();
@@ -72,5 +73,5 @@ it("marks a reversed completion with who, when and why, and offers no second rev
   expect(within(rows[0]).getByText(t.reversed)).toBeTruthy();
   expect(within(rows[0]).getByText("2026-10-22 by bob: Wrong order")).toBeTruthy();
   expect(within(rows[0]).queryByRole("button")).toBeNull();
-  expect(within(rows[1]).getByRole("button", { name: t.open })).toBeTruthy();
+  expect(within(rows[1]).getByRole("button", { name: "Reverse completion 00000001" }).textContent).toBe(t.open);
 });

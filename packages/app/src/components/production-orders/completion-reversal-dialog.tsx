@@ -21,7 +21,7 @@ export function CompletionReversalDialog({ context, order, completion, today, ex
 }) {
   const t = labels.completion.reversal;
   return <ReversalConfirmDialog target={completion}
-    labels={{ open: t.open, title: fill(t.title, { id: completion.id }), description: t.description, reason: t.reason, submit: t.submit, pending: t.pending, cancel: t.cancel }}
+    labels={{ open: t.open, openLabel: fill(t.openLabel, { id: completion.id }), title: fill(t.title, { id: completion.id }), description: t.description, reason: t.reason, submit: t.submit, pending: t.pending, cancel: t.cancel }}
     summary={(target) => <>
       <dl className="grid min-w-0 gap-2 rounded-md border p-3 text-sm">
         <div><dt className="text-muted-foreground">{t.original}</dt><dd>{target.businessDate} · {target.output}</dd></div>

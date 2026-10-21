@@ -711,7 +711,7 @@ export const en = {
       pagination: "Completion pages", previous: "Newer", next: "Older", page: "Page {page}",
       actions: "Actions",
       reversal: {
-        open: "Reverse", title: "Reverse completion {id}?",
+        open: "Reverse", openLabel: "Reverse completion {id}", title: "Reverse completion {id}?",
         description: "Every movement of this completion is reversed in full, today. The completion stays in the history, marked as reversed.",
         original: "Original", date: "Reversal date", today: "{date} (UTC)", changes: "Stock changes at {location}",
         output: "{quantity} {unit} produced", effect: "Produced {produced} {unit} drops by {output} {unit}. A Completed order below its target becomes Open again; a Closed Early order stays closed.",
@@ -753,7 +753,7 @@ export const en = {
       PRODUCTION_ORDER_ID_RACE: "Another production order was created at the same moment. Try again.",
       PRODUCTION_OVERPRODUCTION: "This completion takes the order past its target of {target} {unit} (produced {produced} {unit}, adding {output} {unit}). Tick “Post more than planned” to post it.",
       PRODUCTION_COMPLETION_EMPTY: "Enter an output or a material used: a completion must produce or use something.",
-      PRODUCTION_ORDER_CHANGED: "The production order changed while posting. Try again.",
+      PRODUCTION_ORDER_CHANGED: "The production order changed at the same moment. Try again.",
       PRODUCTION_COMPLETION_IDS_EXHAUSTED: "This tenant has used every production completion ID.",
       PRODUCTION_COMPLETION_ID_RACE: "Another completion was posted at the same moment. Try again.",
       PRODUCTION_COMPLETION_NOT_FOUND: "This completion does not exist on this order.",
@@ -1224,6 +1224,7 @@ export const en = {
     },
     reversal: {
       open: "Reverse",
+      openLabels: { dispatch: "Reverse the dispatch of {date}", receipt: "Reverse the receipt of {date}", "write-off": "Reverse the write-off of {date}" },
       titles: { dispatch: "Reverse this dispatch?", receipt: "Reverse this receipt?", "write-off": "Reverse this write-off?" },
       description: "The whole posting is reversed today. The original stays in the ledger, marked as reversed.",
       original: "Original", date: "Reversal date", today: "{date} (UTC)", changes: "Changes",
@@ -1529,6 +1530,9 @@ export const en = {
       "transfers.transfer.closed-early": "Transfer closed early",
 
       "stock.movement.reversed": "Stock movement reversed",
+      "production-orders.production-completion.reversed": "Production completion reversed",
+      "production-orders.production-order.completion-reversed": "Production order completion reversed",
+      "transfers.transfer.reversed": "Transfer posting reversed",
       "purchase-orders.purchase-order.receipt-reversed": "Purchase order receipt reversed",
       "customer-orders.customer-order.issue-reversed": "Customer order issue reversed",
       "shipments.shipment.issue-reversed": "Shipment issue reversed",

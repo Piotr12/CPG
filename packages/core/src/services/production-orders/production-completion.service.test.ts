@@ -709,14 +709,22 @@ describe("ProductionCompletionService", () => {
       expect((await service().reverse("00000001", "00000001", reason, ACTOR)).order).toMatchObject({ produced: "40.000000", status: "completed" });
     });
 
-    it("keeps a Closed Early order closed with nothing outstanding, and its history still refuses Cancel", async () => {
+    it("keeps an Open order processed once every completion is reversed: Cancel refuses, Close Early resolves it", async () => {
+      await stocked();
+      await service().post("00000001", completion("40", "20", "80"), ACTOR);
+      const { order: reversed } = await service().reverse("00000001", "00000001", reason, ACTOR);
+      expect(reversed).toMatchObject({ produced: "0.000000", status: "open" });
+      await expect(orders().cancel("00000001", reversed.version, ACTOR)).rejects.toMatchObject({ code: "DOCUMENT_PROCESSED" });
+      expect(await orders().closeEarly("00000001", reversed.version, ACTOR)).toMatchObject({ status: "closed-early", abandoned: "100.000000" });
+    });
+
+    it("keeps a Closed Early order closed with its abandonment and nothing outstanding", async () => {
       await stocked();
       await service().post("00000001", completion("40", "20", "80"), ACTOR);
       const closed = await orders().closeEarly("00000001", (await orders().get("00000001")).version, ACTOR);
       expect(closed).toMatchObject({ status: "closed-early", abandoned: "60.000000", outstanding: "0.000000" });
       const reversed = await service().reverse("00000001", "00000001", reason, ACTOR);
       expect(reversed.order).toMatchObject({ produced: "0.000000", status: "closed-early", abandoned: "60.000000", outstanding: "0.000000" });
-      await expect(orders().cancel("00000001", reversed.order.version, ACTOR)).rejects.toMatchObject({ code: "DOCUMENT_NOT_OPEN" });
     });
 
     it("refuses bad input, unknown, other-order and other-tenant completions, a read-only tenant and a damaged history", async () => {

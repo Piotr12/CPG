@@ -27,6 +27,20 @@ Phase 1 — production completion reversal (spec steps 1–4); Phase 2 — trans
 - The completion dialog's order effect is stated as "produced X drops by Y" plus the state rule, rather than computed before→after values, so the app does no decimal arithmetic. On `…_ALREADY_REVERSED` it offers a link that reloads the order page, where the history shows the existing reversal.
 - Reversal is offered on Completed and Closed Early transfers too, not only Open ones, because reversing a receipt or write-off is how such a transfer reopens (TRF-027). Only a read-only tenant hides it. The transfer page's Cancel/Close Early control now reads processing as "any posting exists" (Q8).
 - The smoke integration test's migration count moved to 28 together with the migration (step 2.1).
+- The completion reversal audit names its movement pairs `movementNOriginal` / `movementNInverse`, plus `reversed`, `reversal` and `movements`, rather than the spec's `lineNOriginal` / `lineNInverse`. Position 1 is the output movement, not a completion line, so "line" would mislead. This is recorded for the spec's implementation notes.
+
+## Review pass (om-auto-review-pr, fresh-context reviewer)
+Verdict approve: no blockers or majors. Fixed in this pass:
+- audit labels for the three new actions (EN/PL);
+- the Open-order "Cancel refuses after full reversal" test, plus a corrected title on the Closed Early test;
+- distinct accessible names on every Reverse trigger ("Reverse completion 00000002", "Reverse the receipt of 2027-03-02");
+- reversal-neutral `PRODUCTION_ORDER_CHANGED` text;
+- the Polish "Akcje" column header.
+
+Declined with reason:
+- Computed before→after values in the completion dialog: the app does no decimal arithmetic, and the generic rule covers both outcomes.
+- Kind and quantity in the "Reverses the posting of {date}" line: the merged ledger already places the reversal beside its original, and the original carries the Reversed badge.
+- A link to the reversal itself: reloading the page shows it.
 
 ## Verification (local)
 - `npm run lint` → 0 errors (1 existing warning in `boms/bom.service.ts`, untouched).
