@@ -10,7 +10,8 @@ import { orderLineState } from "./order-records";
 
 /**
  * Refuses deactivating a location that an Open purchase order delivers to, or that an Open requisition
- * needs stock at (LFC-018): its receipts would be refused with `LOCATION_INACTIVE`. Names the lowest one.
+ * needs stock at (LFC-018), naming the lowest one: the order's receipts would be refused with
+ * `LOCATION_INACTIVE`, and the requisition could no longer be converted.
  */
 export async function assertNoPurchasingAtLocation(em: EntityManager, location: NamedRecord): Promise<void> {
   const order = await em.findOne(PurchaseOrder, { location: location.id, status: "open" }, { orderBy: { code: "asc" } });

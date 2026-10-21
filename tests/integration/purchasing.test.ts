@@ -129,11 +129,12 @@ describe("purchase requisitions and orders in the UI", () => {
     expect([direct[0][4], direct[0][5]]).toEqual(["2027-03-03", "—"]);
     expect(converting).toHaveLength(1);
     expect([converting[0][1], converting[0][4], converting[0][5]]).toEqual([expect.stringContaining("buypo steel"), "2027-03-04", requisition]);
-    // The requisition counts what the order converted; no stock moved (BUY-009).
+    // The requisition counts what the order converted.
     const converted = (await rows(una, "/admin/prod/purchase-requisitions")).find(([id]) => id === requisition)!;
     expect(converted.slice(3, 6)).toEqual(["100 kg", "60 kg", "40 kg"]);
   });
 
+  // Uses the orders and the location the test above creates.
   it("refuses the admin's deactivation of a location an Open PO delivers to, naming the order, and keeps it Active (LFC-018)", async () => {
     const [order] = (await ordersOf(admin, "buypo acme"))[0];
     const [location] = (await rows(admin, "/admin/prod/locations")).find((row) => row[1] === "buypo plant")!;

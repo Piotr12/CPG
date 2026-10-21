@@ -574,7 +574,7 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Zamówienia zakupu, w sekcji Transakcje w menu bocznym, to lista zamówień środowiska u dostawców. Zamówienie ma jednego dostawcę, jedną lokalizację i od 1 do 100 pozycji, każdą z własną planowaną datą. Każde zamówienie dostaje ośmiocyfrowe ID; nowe jest Otwarte.",
       "Utwórz zamówienie bezpośrednio albo wskaż w pozycji otwarte zapotrzebowanie tego samego materiału i lokalizacji: pozycja przekształca wtedy tyle zapotrzebowania, ile pozostało, a zapotrzebowanie jest Zrealizowane, gdy przekształcono je w całości.",
       "Pozycja nie może dotyczyć innej lokalizacji niż zamówienie. Wybrać można tylko aktywnych dostawców, lokalizacje i materiały; wcześniejsze zamówienie pozostaje używalne, jeśli jego dostawca zostanie później dezaktywowany.",
-      "Zamówienie to planowana podaż: stan magazynowy zwiększają tylko przyjęcia towaru księgowane na jego stronie. Jest Zrealizowane, gdy każda pozycja przyjęła swoją ilość. Zamówienia może tworzyć i przeglądać każde konto, tutaj i przez API; środowisko tylko do odczytu odrzuca nowe. Materiału z otwartą pozycją zamówienia nie można dezaktywować, podobnie jak lokalizacji, do której dostarcza otwarte zamówienie.",
+      "Zamówienie to planowana podaż: stan magazynowy zwiększają tylko przyjęcia towaru księgowane na jego stronie. Jest Zrealizowane, gdy każda pozycja przyjęła swoją ilość. Zamówienia może tworzyć i przeglądać każde konto, tutaj i przez API; środowisko tylko do odczytu odrzuca nowe. Materiału z otwartą pozycją zamówienia nie można dezaktywować, podobnie jak lokalizacji docelowej otwartego zamówienia.",
     ],
   },
   "purchase-order": {
