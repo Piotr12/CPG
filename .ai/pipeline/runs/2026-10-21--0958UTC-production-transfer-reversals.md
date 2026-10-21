@@ -56,6 +56,8 @@ Declined with reason:
 
 ## Progress
 
+PR: #133
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Production completion reversal
@@ -75,4 +77,4 @@ Declined with reason:
 ### Phase 3: Verification and delivery
 
 - [x] 3.1 Add the integration test and update smoke — dbf82c6 (smoke), 370eaf4
-- [ ] 3.2 Run the full gate, review and deliver
+- [x] 3.2 Run the full gate, review and deliver — 54d2bae
