@@ -130,7 +130,7 @@ describe("StockService", () => {
     const material = new MaterialService({ em: scoped() }); const location = new LocationService({ em: scoped() });
     for (const fields of [{ type: "finished" as const }, { baseUnit: "kg" }]) await expect(material.update(PAIR.material, fields, 1, ACTOR)).rejects.toMatchObject({ code: "MATERIAL_HAS_MOVEMENTS" });
     await expect(material.update(PAIR.material, { active: false }, 1, ACTOR)).rejects.toMatchObject({ code: "STOCK_NOT_EMPTY", messageParams: { ...PAIR, quantity: "2.000000", unit: "each" }, message: expect.stringContaining("00000001 holds 2.000000 each") });
-    await expect(location.update(PAIR.location, { active: false }, 1, ACTOR)).rejects.toMatchObject({ code: "STOCK_NOT_EMPTY" });
+    await expect(location.update(PAIR.location, { active: false }, 1, ACTOR)).rejects.toMatchObject({ code: "STOCK_NOT_EMPTY", messageParams: { ...PAIR, quantity: "2.000000", unit: "each" } });
     await service().correct(line("-2"), ACTOR);
     await expect(material.update(PAIR.material, { baseUnit: "kg" }, 1, ACTOR)).rejects.toMatchObject({ code: "MATERIAL_HAS_MOVEMENTS" });
     await material.update(PAIR.material, { active: false }, 1, ACTOR);
