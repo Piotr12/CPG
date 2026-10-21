@@ -323,6 +323,15 @@ Done when these standards were adopted:
   - `/admin/audit` and `/admin/[tenant]/audit` (`app/src/components/audit/`), and `GET /api/audit` and `GET /api/tenants/{tenant}/audit`.
 
   `UserService` and `UserPreferenceService` are the first producers, then `ApiTokenService` (token create and revoke, with `apiActor`/`callerActor` naming the token behind an API call).
+
+  History filters (E13-S03, spec `2026-10-21--0944UTC-audit-history-filters`):
+  - both lists take the same filters (record type and ID, account, channel, UTC days) through `auditListSchema` and `auditWhere`, keeping keyset paging;
+  - `AuditService.reversalLinks` reads one page's stock-movement reversal links;
+  - `UserService.usernames()` is the names-only read any signed-in account may use;
+  - `app/src/components/audit/audit-query.ts` builds history and paging URLs and derives the business date from a snapshot;
+  - a refused filter is explained in the form; only a bad page position (`before`, `limit` or a foreign cursor, alone or with a filter error) is a not-found page.
+
+  A new producer's action IDs and subject types need EN/PL labels and a place in `components/audit/subject-types.ts`: `tests/audit-labels.test.ts` scans `core` and fails until they have both.
 - Materials (2026-10-19, spec `2026-10-19--1858UTC-materials`), the first tenant business concept:
   - `Material` and `MaterialConversion` (`db/src/entities/materials/`, tenant-owned), `MaterialService` (`core/src/services/materials/`), and the Test demo seed at startup (`core/src/demo-data.ts`);
   - exact decimals in `core/src/domain/quantities/`, material IDs in `core/src/domain/materials/`;

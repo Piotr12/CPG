@@ -48,6 +48,7 @@ describe("migrateDatabase", () => {
       "Migration20261021071704_document_lifecycle",
       "Migration20261021071806_stock_reversals",
       "Migration20261021075527_shipment_order_cursor",
+      "Migration20261021095627_audit_record_index",
       "Migration20261021101252_transfer_reversals",
     ]);
     expect(await migrateDatabase(config)).toEqual([]);

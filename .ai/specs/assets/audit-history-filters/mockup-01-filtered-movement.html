@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mockup — Audit filtered to one stock movement</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; color: #111; background: #fff; display: flex; min-height: 100vh; }
+  aside { width: 256px; border-right: 1px solid #e5e5e5; background: #fafafa; padding: 14px 12px; flex: none; }
+  aside .brand { font-weight: 600; font-size: 17px; margin-bottom: 14px; }
+  aside .tenants { display: flex; border: 1px solid #e5e5e5; border-radius: 8px; overflow: hidden; margin-bottom: 18px; }
+  aside .tenants span { flex: 1; text-align: center; padding: 6px; font-size: 12px; font-weight: 600; letter-spacing: .08em; color: #666; }
+  aside .tenants .on { background: #fde68a; color: #111; }
+  aside .item { padding: 6px 8px; color: #333; }
+  aside .item.active { background: #efefef; border-radius: 6px; }
+  .page { flex: 1; min-width: 0; }
+  .crumb { height: 44px; border-bottom: 1px solid #e5e5e5; border-top: 3px solid #f59e0b; display: flex; align-items: center; gap: 10px; padding: 0 24px; font-size: 14px; }
+  .tag { background: #fde68a; font-size: 12px; font-weight: 700; letter-spacing: .08em; padding: 2px 8px; border-radius: 4px; }
+  main { max-width: 1024px; margin: 0 auto; padding: 40px 24px; display: flex; flex-direction: column; gap: 20px; }
+  h1 { font-size: 24px; margin: 0; font-weight: 600; letter-spacing: -.01em; }
+  .head { display: flex; justify-content: space-between; align-items: center; }
+  .head a, a { color: #111; text-decoration: underline; text-underline-offset: 4px; }
+  .muted { color: #6b6b6b; }
+  form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 16px; align-items: end; border: 1px solid #e5e5e5; border-radius: 10px; padding: 16px; }
+  label { display: grid; gap: 6px; font-size: 13px; font-weight: 500; }
+  input, select { font: inherit; height: 36px; border: 1px solid #d4d4d4; border-radius: 8px; padding: 0 10px; background: #fff; width: 100%; }
+  .actions { display: flex; gap: 14px; align-items: center; }
+  button { font: inherit; font-weight: 500; height: 36px; padding: 0 16px; border-radius: 8px; border: 0; background: #171717; color: #fff; }
+  .hint { font-size: 12px; color: #6b6b6b; font-weight: 400; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-weight: 500; padding: 10px 8px; border-bottom: 1px solid #e5e5e5; white-space: nowrap; }
+  td { padding: 10px 8px; border-bottom: 1px solid #eee; vertical-align: top; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  .badge { display: inline-block; background: #f1f1f1; border-radius: 6px; padding: 1px 8px; font-size: 12px; font-weight: 500; }
+  .bd { display: block; margin-top: 4px; font-size: 12px; color: #6b6b6b; white-space: nowrap; }
+  .bd b { color: #111; font-weight: 500; }
+  ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+  .subject a { overflow-wrap: anywhere; }
+  .link { margin-top: 6px; font-size: 13px; font-weight: 500; }
+  .note { font-size: 12px; color: #9a3412; background: #fff7ed; border: 1px dashed #fdba74; border-radius: 6px; padding: 6px 10px; }
+</style>
+</head>
+<body>
+<aside>
+  <div class="brand">🦣 CPG</div>
+  <div class="tenants"><span class="on">TEST</span><span>PROD</span></div>
+  <div class="item">Overview</div><div class="item">Master data</div><div class="item">Sales</div><div class="item">Stock</div><div class="item">Transactions</div><div class="item active">Audit</div><div class="item">Global audit</div><div class="item">Help</div>
+</aside>
+<div class="page">
+  <div class="crumb"><span class="tag">TEST</span> › Audit</div>
+  <main>
+    <div class="head"><h1>Audit — Test</h1><a href="#">Test</a></div>
+    <div class="muted">Showing entries that match the filters. Nobody can edit or delete an entry. <a href="#">Open the Global audit</a></div>
+    <form>
+      <label>Record type<select><option>Stock movement</option></select></label>
+      <label>Record ID<input value="04f49ff9-3cb6-4583-be90-b89287794b08"><span class="hint">Set by a Subject link, or type an ID such as 00000012</span></label>
+      <label>Account<select><option>All</option></select></label>
+      <label>Channel<select><option>All</option></select></label>
+      <label>From (UTC)<input value="dd.mm.yyyy" class="muted"></label>
+      <label>To (UTC)<input value="dd.mm.yyyy" class="muted"></label>
+      <div class="actions"><button type="button">Apply</button><a href="#">Clear filters</a></div>
+    </form>
+    <table>
+      <thead><tr><th>Time (UTC)</th><th>Account</th><th>Session</th><th>Channel</th><th>Action</th><th>Subject</th><th>Changes</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="mono">2026-10-21 09:48:59</span><span class="bd">Business date <b>2026-10-21</b></span></td>
+          <td>admin</td><td class="mono">d6af4ecb</td><td><span class="badge">UI</span></td>
+          <td>Stock movement reversed</td>
+          <td class="subject"><a href="#">00000001 — Steel sheet 2 mm at 00000001 — Main plant, Wrocław</a></td>
+          <td><ul><li>reversed: no → yes</li><li>quantity: 25.000000 → -25.000000</li><li>balance: 525.000000 → 500.000000</li><li>reason: Counted the wrong bin</li></ul>
+            <div class="link">Reversed by <a href="#" class="mono">264846a6</a></div></td>
+        </tr>
+        <tr>
+          <td><span class="mono">2026-10-21 09:48:41</span><span class="bd">Business date <b>2026-10-21</b></span></td>
+          <td>admin</td><td class="mono">d6af4ecb</td><td><span class="badge">UI</span></td>
+          <td>Stock movement posted</td>
+          <td class="subject"><a href="#">00000001 — Steel sheet 2 mm at 00000001 — Main plant, Wrocław</a></td>
+          <td><ul><li>quantity: 500.000000 → 525.000000</li><li>movement: 25.000000</li><li>type: correction</li><li>reason: Cycle count found 25 kg more</li><li>entered quantity: 25.000000 kg</li></ul>
+            <div class="link">Reversed by <a href="#" class="mono">264846a6</a></div></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="note">Illustrative mockup only. Following "Reversed by 264846a6" filters to the inverse movement, whose entry reads "Reverses 04f49ff9" with the same reason.</div>
+  </main>
+</div>
+</body>
+</html>
