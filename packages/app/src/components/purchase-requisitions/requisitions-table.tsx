@@ -51,7 +51,7 @@ export function RequisitionsTable({ tenant, requisitions, materials, locations, 
         const location = locations.get(requisition.location)!;
         return (
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="font-mono">{location.id}</span>
+            <span className="font-mono whitespace-nowrap">{location.id}</span>
             <span>{location.name}</span>
           </span>
         );
