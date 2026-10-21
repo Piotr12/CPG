@@ -593,6 +593,7 @@ export const en = {
     empty: "No forecasts in {tenant} yet.",
     emptyHint: "Add the first one with Add forecast.",
     emptyFiltered: "No forecasts match this filter.",
+    pagination: "Forecast pages", previous: "Previous", next: "Next", page: "Page {page} of {pages}",
     filter: {
       label: "Filter forecasts",
       material: "Material",

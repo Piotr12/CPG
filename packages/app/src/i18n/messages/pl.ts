@@ -561,6 +561,7 @@ export const pl: Messages = {
     empty: "Brak prognoz w {tenant}.",
     emptyHint: "Dodaj pierwszą przyciskiem Dodaj prognozę.",
     emptyFiltered: "Żadna prognoza nie pasuje do filtra.",
+    pagination: "Strony prognoz", previous: "Poprzednia", next: "Następna", page: "Strona {page} z {pages}",
     filter: {
       label: "Filtr prognoz",
       material: "Materiał",
