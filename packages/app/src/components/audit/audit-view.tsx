@@ -54,7 +54,8 @@ export function AuditView({
         )}
       </div>
       <div className="text-sm text-muted-foreground">{intro}</div>
-      <AuditFilters path={path} selected={selected} accounts={accounts} subjectTypes={subjectTypes} labels={labels} />
+      {/* Keyed by the query: following a history link on this screen remounts the form with its new values. */}
+      <AuditFilters key={auditUrl(path, selected)} path={path} selected={selected} accounts={accounts} subjectTypes={subjectTypes} labels={labels} />
       {filtered && <p className="text-sm font-medium">{labels.filterForm.showing}</p>}
       <AuditTable
         entries={page.entries}
