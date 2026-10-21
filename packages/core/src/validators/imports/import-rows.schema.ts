@@ -12,7 +12,8 @@ import { calendarDateSchema } from "../dates/calendar-date.schema";
 import { descriptionSchema, factorSchema, materialTypeSchema, unitSchema } from "../materials/material-fields.schema";
 import { nameSchema } from "../named-records/named-record-fields.schema";
 import { planningParameterCreateFormSchema } from "../planning-parameters/planning-parameter-create.schema";
-import { materialReferenceSchema } from "../planning-parameters/planning-parameter-fields.schema";
+import { locationReferenceSchema, materialReferenceSchema } from "../planning-parameters/planning-parameter-fields.schema";
+import { quantitySchema } from "../quantities/quantity.schema";
 import { safetyStockTargetCreateSchema } from "../safety-stock/safety-stock-target.schema";
 
 /*
@@ -90,6 +91,17 @@ export const bomLineRowSchema = z.object({
   unit: unitSchema.nullable(),
 });
 
+/**
+ * A Stock sheet row (stock-import spec Q2, Q10): the physical quantity a position should have, at
+ * least 0 (STX-010), in its unit or, when blank, the material's base unit.
+ */
+export const stockRowSchema = z.object({
+  material: materialReferenceSchema,
+  location: locationReferenceSchema,
+  quantity: quantitySchema,
+  unit: unitSchema.nullable(),
+});
+
 export type MaterialRow = z.infer<typeof materialRowSchema>;
 export type UnitConversionRow = z.infer<typeof unitConversionRowSchema>;
 export type NamedRecordRow = z.infer<typeof namedRecordRowSchema>;
@@ -97,3 +109,4 @@ export type PlanningParameterRow = z.infer<typeof planningParameterRowSchema>;
 export type SafetyStockRow = z.infer<typeof safetyStockRowSchema>;
 export type BomHeaderRow = z.infer<typeof bomHeaderRowSchema>;
 export type BomLineRow = z.infer<typeof bomLineRowSchema>;
+export type StockRow = z.infer<typeof stockRowSchema>;

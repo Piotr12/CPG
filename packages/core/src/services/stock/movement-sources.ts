@@ -1,14 +1,19 @@
-import { GoodsIssue, GoodsReceipt, TransferPosting, type EntityManager, type StockMovement } from "@cpg/db";
+import { GoodsIssue, GoodsReceipt, ProductionCompletion, TransferPosting, type EntityManager, type StockMovement } from "@cpg/db";
 import { GOODS_ISSUE_MOVEMENT } from "../goods-issues/goods-issue.service";
 import { GOODS_RECEIPT_MOVEMENT } from "../goods-receipts/goods-receipt.service";
+import { PRODUCTION_COMPLETION_MOVEMENT } from "../production-orders/production-completion.service";
 import { TRANSFER_DISPATCH_MOVEMENT, TRANSFER_RECEIPT_MOVEMENT } from "../transfers/transfer.service";
 
-/** The page that shows a movement's source document: the receipt's order, the issue's shipment, the transfer. */
-export type SourceDocument = { type: "purchase-order" | "shipment" | "transfer"; id: string };
+/**
+ * The page that shows a movement's source document: the receipt's order, the issue's shipment, the
+ * transfer, the completion's production order.
+ */
+export type SourceDocument = { type: "purchase-order" | "shipment" | "transfer" | "production-order"; id: string };
 
 /**
- * Where a movement came from (INV-012): `id` is its goods receipt's, goods issue's or transfer's
- * business ID, and `document` the page that lists it. A correction is its own document: both null.
+ * Where a movement came from (INV-012): `id` is its goods receipt's, goods issue's, transfer's or
+ * production completion's business ID, and `document` the page that lists it. A correction (a stock
+ * import posts corrections too) is its own document: both null.
  */
 export interface MovementSource {
   id: string | null;
@@ -19,8 +24,8 @@ export const NO_SOURCE: MovementSource = { id: null, document: null };
 
 /**
  * The source of each movement in `movements`, by `postingId`: one read per kind of document, so a
- * ledger page costs at most three queries. A movement is posted by its document's own transaction
- * and neither is ever deleted, so every non-correction movement finds one.
+ * ledger page costs at most four queries. A movement is posted by its document's own transaction and
+ * neither is ever deleted, so every non-correction movement finds one.
  */
 export async function movementSources(em: EntityManager, movements: StockMovement[]): Promise<Map<string, MovementSource>> {
   const ids = (...types: string[]) => [...new Set(movements.filter((movement) => types.includes(movement.type)).map((movement) => movement.postingId))];
@@ -41,6 +46,12 @@ export async function movementSources(em: EntityManager, movements: StockMovemen
   if (postings.length > 0) {
     for (const posting of await em.find(TransferPosting, { id: { $in: postings } }, { populate: ["transfer"] })) {
       sources.set(posting.id, { id: posting.transfer.code, document: { type: "transfer", id: posting.transfer.code } });
+    }
+  }
+  const completions = ids(PRODUCTION_COMPLETION_MOVEMENT);
+  if (completions.length > 0) {
+    for (const completion of await em.find(ProductionCompletion, { id: { $in: completions } }, { populate: ["order"] })) {
+      sources.set(completion.id, { id: completion.code, document: { type: "production-order", id: completion.order.code } });
     }
   }
   return sources;

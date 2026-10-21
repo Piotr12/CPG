@@ -1,6 +1,24 @@
+import {
+  FINISHED_COMPONENT_MESSAGE,
+  QUANTITY_OUT_OF_RANGE_MESSAGE,
+  QUANTITY_ROUNDS_TO_ZERO_MESSAGE,
+  UNIT_NOT_CONVERTIBLE_MESSAGE,
+} from "@cpg/core/validators/boms/bom-fields.schema";
 import { CALENDAR_DATE_MESSAGE } from "@cpg/core/validators/dates/calendar-date.schema";
 import { UNIT_FORMAT_MESSAGE } from "@cpg/core/validators/materials/material-fields.schema";
-import { POSITIVE_QUANTITY_MESSAGE } from "@cpg/core/validators/quantities/quantity.schema";
+import { MATERIAL_CHOICE_MESSAGE } from "@cpg/core/validators/planning-parameters/planning-parameter-fields.schema";
+import {
+  COMPLETION_LINE_COUNT_MESSAGE,
+  COMPLETION_MOVEMENTS_MESSAGE,
+  DUPLICATE_COMPLETION_MATERIAL_MESSAGE,
+  EXTRA_INPUT_QUANTITY_MESSAGE,
+  INACTIVE_INPUT_MESSAGE,
+  MISSING_COMPONENT_MESSAGE,
+  OUTPUT_AS_INPUT_MESSAGE,
+  SUBMISSION_REUSED_MESSAGE,
+  UNKNOWN_INPUT_MESSAGE,
+} from "@cpg/core/validators/production-orders/production-completion.schema";
+import { POSITIVE_QUANTITY_MESSAGE, QUANTITY_MESSAGE } from "@cpg/core/validators/quantities/quantity.schema";
 import type { Messages } from "../../i18n/messages/en";
 
 export type ProductionLabels = Messages["productionOrders"] & { errors: Record<string, string> };
@@ -17,4 +35,27 @@ export function productionFieldError(labels: ProductionLabels) {
     "The target cannot be less than the quantity already produced.": labels.belowProduced,
   };
   return (message: string) => known[message] ?? message;
+}
+/** The Post completion form's field messages, from its schema and the completion service, in the reader's language. */
+export function completionFieldError(labels: ProductionLabels) {
+  const t = labels.completion.fieldErrors;
+  const known: Record<string, string> = {
+    [MISSING_COMPONENT_MESSAGE]: t.missingComponent,
+    [UNKNOWN_INPUT_MESSAGE]: t.unknownInput,
+    [MATERIAL_CHOICE_MESSAGE]: t.unknownInput,
+    [INACTIVE_INPUT_MESSAGE]: t.inactiveInput,
+    [OUTPUT_AS_INPUT_MESSAGE]: t.outputAsInput,
+    [EXTRA_INPUT_QUANTITY_MESSAGE]: t.extraQuantity,
+    [COMPLETION_MOVEMENTS_MESSAGE]: t.movements,
+    [FINISHED_COMPONENT_MESSAGE]: t.finishedInput,
+    [DUPLICATE_COMPLETION_MATERIAL_MESSAGE]: t.duplicate,
+    [COMPLETION_LINE_COUNT_MESSAGE]: t.lineCount,
+    [QUANTITY_MESSAGE]: t.quantity,
+    [UNIT_NOT_CONVERTIBLE_MESSAGE]: t.unitNotConvertible,
+    [QUANTITY_ROUNDS_TO_ZERO_MESSAGE]: t.roundsToZero,
+    [QUANTITY_OUT_OF_RANGE_MESSAGE]: t.outOfRange,
+    [SUBMISSION_REUSED_MESSAGE]: t.submission,
+  };
+  const production = productionFieldError(labels);
+  return (message: string) => known[message] ?? production(message);
 }

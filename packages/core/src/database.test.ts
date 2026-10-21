@@ -44,6 +44,7 @@ describe("migrateDatabase", () => {
       "Migration20261020205207_production_orders",
       "Migration20261020205226_transfers",
       "Migration20261020214038_shipments_goods_issues",
+      "Migration20261020223625_production_completions",
     ]);
     expect(await migrateDatabase(config)).toEqual([]);
   });

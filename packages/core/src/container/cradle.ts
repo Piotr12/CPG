@@ -1,4 +1,5 @@
 import type { ProductionOrderService } from "../services/production-orders/production-order.service";
+import type { ProductionCompletionService } from "../services/production-orders/production-completion.service";
 import type { CustomerOrderService } from "../services/customer-orders/customer-order.service";
 import type { TestResetService } from "../services/tenants/test-reset.service";
 import type { StockService } from "../services/stock/stock.service";
@@ -15,6 +16,7 @@ import type { CustomerService } from "../services/customers/customer.service";
 import type { LocationService } from "../services/locations/location.service";
 import type { BomService } from "../services/boms/bom.service";
 import type { ImportService } from "../services/imports/import.service";
+import type { StockImportService } from "../services/imports/stock-import.service";
 import type { PlanningParameterService } from "../services/planning-parameters/planning-parameter.service";
 import type { SafetyStockTargetService } from "../services/safety-stock/safety-stock-target.service";
 import type { PurchaseOrderService } from "../services/purchase-orders/purchase-order.service";
@@ -60,11 +62,13 @@ export interface Cradle {
   purchaseOrderService: PurchaseOrderService;
   goodsReceiptService: GoodsReceiptService;
   productionOrderService: ProductionOrderService;
+  productionCompletionService: ProductionCompletionService;
   transferService: TransferService;
   shipmentService: ShipmentService;
   goodsIssueService: GoodsIssueService;
   customerOrderService: CustomerOrderService;
   importService: ImportService;
+  stockImportService: StockImportService;
   stockReportService: StockReportService;
   /** The active tenant. Only in scopes built by `tenantScope()`. */
   tenant: TenantInfo;

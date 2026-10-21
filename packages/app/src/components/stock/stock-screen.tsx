@@ -9,11 +9,12 @@ import { NativeSelect, NativeSelectOption } from "@cpg/ui/components/native-sele
 import type { Messages } from "../../i18n/messages/en";
 import { fill, shownQuantity } from "../forms/form-labels";
 import { PageLinks } from "../layout/page-links";
+import { ImportLink } from "../imports/import-link";
 import { CorrectionDialog } from "./correction-dialog";
 import { stockLabels } from "./labels";
 
-/** The screen that lists each kind of source document: a receipt is on its order, an issue on its shipment. */
-const DOCUMENT_SECTIONS: Record<SourceDocument["type"], string> = { "purchase-order": "purchase-orders", shipment: "shipments", transfer: "transfers" };
+/** The screen that lists each kind of source document: a receipt is on its order, an issue on its shipment, a completion on its production order. */
+const DOCUMENT_SECTIONS: Record<SourceDocument["type"], string> = { "purchase-order": "purchase-orders", shipment: "shipments", transfer: "transfers", "production-order": "production-orders" };
 
 /**
  * Physical balance and ledger of a selected pair, including inactive historical masters, with what is
@@ -25,7 +26,7 @@ export function StockScreen({ tenant, view, materials, locations, units, locale,
 }) {
   const t = stockLabels(messages);
   const path = `/admin/${tenant.code}`;
-  const types: Record<string, string> = { correction: t.correction, "goods-receipt": t.goodsReceipt, "transfer-dispatch": t.transferDispatch, "transfer-receipt": t.transferReceipt, "goods-issue": t.goodsIssue };
+  const types: Record<string, string> = { correction: t.correction, "goods-receipt": t.goodsReceipt, "transfer-dispatch": t.transferDispatch, "transfer-receipt": t.transferReceipt, "goods-issue": t.goodsIssue, "production-completion": t.productionCompletion };
   const records: Record<string, string> = t.records;
   // A narrow screen scrolls the ledger sideways rather than squeezing a column to one character.
   const columns: DataTableColumn<LedgerMovementView>[] = [
@@ -49,7 +50,10 @@ export function StockScreen({ tenant, view, materials, locations, units, locale,
   const editable = view !== null && !tenant.readOnly && view.materialActive && view.locationActive;
   return <div lang={locale} className="flex min-w-0 flex-col gap-6">
     <h1 className="text-2xl font-semibold tracking-tight">{fill(t.heading, { tenant: tenant.name })}</h1>
-    <p className="text-sm text-muted-foreground">{t.intro} <Link href={`${path}/reports/stock`} className="underline underline-offset-4">{t.report}</Link></p>
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-sm text-muted-foreground">{t.intro} <Link href={`${path}/reports/stock`} className="underline underline-offset-4">{t.report}</Link></p>
+      {!tenant.readOnly && <ImportLink tenant={tenant.code} label={messages.stockImport.link} section="stock-import" />}
+    </div>
     {view === null ? <EmptyState title={t.noMasters} /> : <>
       <form action={`${path}/stock`} className="grid min-w-0 gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
         <div className="grid min-w-0 gap-2"><Label htmlFor="stock-material">{t.material}</Label>

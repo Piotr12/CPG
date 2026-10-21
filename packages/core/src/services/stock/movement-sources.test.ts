@@ -2,7 +2,7 @@ import { mkdtempSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { initOrm, selectTenant, Customer, Location, Material, StockMovement, Supplier, type Orm } from "@cpg/db";
+import { initOrm, selectTenant, Bom, BomComponent, BomRevision, Customer, Location, Material, PlanningParameterSet, StockMovement, Supplier, type Orm } from "@cpg/db";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { loadConfig } from "../../config";
 import { migrateDatabase, toDbOptions } from "../../database";
@@ -10,6 +10,8 @@ import type { AuditActor } from "../audit/actor";
 import { CustomerOrderService } from "../customer-orders/customer-order.service";
 import { GOODS_RECEIPT_MOVEMENT, GoodsReceiptService } from "../goods-receipts/goods-receipt.service";
 import { GoodsIssueService } from "../goods-issues/goods-issue.service";
+import { ProductionCompletionService } from "../production-orders/production-completion.service";
+import { ProductionOrderService } from "../production-orders/production-order.service";
 import { PurchaseOrderService } from "../purchase-orders/purchase-order.service";
 import { ShipmentService } from "../shipments/shipment.service";
 import { TransferService } from "../transfers/transfer.service";
@@ -70,6 +72,25 @@ describe("movement sources", () => {
       "transfer-dispatch": { id: transfer.id, document: { type: "transfer", id: transfer.id } },
     });
     expect((await ledger(B)).map(({ type, source }) => [type, source])).toEqual([["transfer-receipt", { id: transfer.id, document: { type: "transfer", id: transfer.id } }]]);
+  });
+
+  it("links a production completion's movements to its production order (INV-012)", async () => {
+    const em = scoped();
+    const bar = em.create(Material, { code: "00000002", type: "finished", description: "Bar", baseUnit: "each" });
+    const widget = await em.findOneOrFail(Material, { code: WIDGET });
+    em.create(PlanningParameterSet, { material: bar, location: await em.findOneOrFail(Location, { code: A }), procurement: "make", leadTimeDays: 1, minimumQuantity: "1", lotMultiple: "1" });
+    const bom = em.create(Bom, { code: "00000001", output: bar, revision: 1 });
+    const revision = em.create(BomRevision, { bom, number: 1, priority: 1, validFrom: "2026-01-01", validThrough: null });
+    em.create(BomComponent, { revision, position: 0, material: widget, quantity: "2.000000", enteredQuantity: "2", enteredUnit: "each", numerator: "1", denominator: "1" });
+    await em.flush();
+    await new StockService({ em: scoped() }).correct({ material: WIDGET, location: A, quantity: "10", unit: "each", reason: "Count" }, ACTOR);
+    const order = await new ProductionOrderService({ em: scoped() }).create({ output: "00000002", location: A, quantity: "5", unit: "each", plannedFinish: "2026-11-02" }, ACTOR);
+    const { completion } = await new ProductionCompletionService({ em: scoped() }).post(
+      order.id, { quantity: "3", unit: "each", components: [{ material: WIDGET, quantity: "6", unit: "each" }] }, ACTOR,
+    );
+
+    const used = (await ledger()).find(({ type }) => type === "production-completion")!;
+    expect(used).toMatchObject({ quantity: "-6.000000", source: { id: completion.id, document: { type: "production-order", id: order.id } } });
   });
 
   it("asks nothing for corrections alone, and leaves out a movement whose document can't be found", async () => {

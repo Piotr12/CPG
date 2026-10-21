@@ -1,4 +1,5 @@
 import { ProductionOrderService } from "../services/production-orders/production-order.service";
+import { ProductionCompletionService } from "../services/production-orders/production-completion.service";
 import { CustomerOrderService } from "../services/customer-orders/customer-order.service";
 import { StockService } from "../services/stock/stock.service";
 import { StockReportService } from "../services/reports/stock-report.service";
@@ -15,6 +16,7 @@ import { CustomerService } from "../services/customers/customer.service";
 import { LocationService } from "../services/locations/location.service";
 import { BomService } from "../services/boms/bom.service";
 import { ImportService } from "../services/imports/import.service";
+import { StockImportService } from "../services/imports/stock-import.service";
 import { PlanningParameterService } from "../services/planning-parameters/planning-parameter.service";
 import { SafetyStockTargetService } from "../services/safety-stock/safety-stock-target.service";
 import { PurchaseOrderService } from "../services/purchase-orders/purchase-order.service";
@@ -71,11 +73,13 @@ export function createAppContainer(config: AppConfig, orm: Orm): AppContainer {
     purchaseOrderService: asClass(PurchaseOrderService).scoped(),
     goodsReceiptService: asClass(GoodsReceiptService).scoped(),
     productionOrderService: asClass(ProductionOrderService).scoped(),
+    productionCompletionService: asClass(ProductionCompletionService).scoped(),
     transferService: asClass(TransferService).scoped(),
     shipmentService: asClass(ShipmentService).scoped(),
     goodsIssueService: asClass(GoodsIssueService).scoped(),
     customerOrderService: asClass(CustomerOrderService).scoped(),
     importService: asClass(ImportService).scoped(),
+    stockImportService: asClass(StockImportService).scoped(),
     stockReportService: asClass(StockReportService).scoped(),
     // `tenant` is registered only by tenantScope(): resolving it from a global scope fails (strict).
   });

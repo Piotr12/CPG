@@ -5,6 +5,7 @@ import {
   IMPORT_INFLATED_MAX_BYTES,
   IMPORT_ROWS_MAX,
 } from "../../domain/imports/workbook-layout";
+import { stockReasonSchema } from "../stock/stock-correction.schema";
 
 /** The file limit, for the screen's own check before it uploads (client code can't import the `@cpg/core` barrel). */
 export { IMPORT_FILE_MAX_BYTES };
@@ -51,5 +52,15 @@ export const importCommitSchema = z.object({
   previewToken: previewTokenSchema,
 });
 
+/** `POST /api/tenants/{tenant}/stock-import/dry-run` and the Stock import screen's dry run (stock-import spec Q12). */
+export const stockImportDryRunSchema = importDryRunSchema;
+
+/**
+ * `POST /api/tenants/{tenant}/stock-import/commit` and the screen's commit: the dry run's workbook and
+ * token, and the one reason every movement gets (stock-import spec Q4, STX-014).
+ */
+export const stockImportCommitSchema = importCommitSchema.extend({ reason: stockReasonSchema });
+
 export type ImportDryRunInput = z.infer<typeof importDryRunSchema>;
 export type ImportCommitInput = z.infer<typeof importCommitSchema>;
+export type StockImportCommitInput = z.infer<typeof stockImportCommitSchema>;

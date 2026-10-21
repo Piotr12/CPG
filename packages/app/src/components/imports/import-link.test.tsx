@@ -10,4 +10,10 @@ describe("ImportLink", () => {
 
     expect(screen.getByRole("link", { name: "Import from spreadsheet" }).getAttribute("href")).toBe("/admin/prod/import");
   });
+
+  it("leads anyone from Stock to the tenant's Stock import screen", () => {
+    render(<ImportLink tenant="test" label="Import from spreadsheet" section="stock-import" />);
+
+    expect(screen.getByRole("link", { name: "Import from spreadsheet" }).getAttribute("href")).toBe("/admin/test/stock-import");
+  });
 });

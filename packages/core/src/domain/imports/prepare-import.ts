@@ -17,39 +17,15 @@ import {
   type SafetyStockRow,
   type UnitConversionRow,
 } from "../../validators/imports/import-rows.schema";
-import { cellText, isBlank, normalizeCell, type BomTarget, type CellValue, type WorkbookSheet, type WorkbookSheets } from "./cells";
-import { IMPORT_SHEETS, isInstructionSheet, sheetNamed, sheetSpec, type SheetKey, type SheetSpec } from "./workbook-layout";
+import type { BomTarget, WorkbookSheets } from "./cells";
+import { issue, parseRows as parseSheetRows, readSheets, unique as uniqueRows, type DuplicateReport, type ImportIssue, type NormalizedRow, type SheetRow, type Values } from "./read-sheets";
+import { MASTER_DATA_LAYOUT, sheetSpec, type SheetKey } from "./workbook-layout";
 
-/**
- * One problem the import found, placed by sheet, row (the sheet's own number, header = 1) and column
- * where it has them (spec `2026-10-20--0908UTC-master-data-bom-import`, API Contracts). `params`
- * carries language-neutral values a screen can put in its own translation.
- */
-export interface ImportIssue {
-  sheet: string | null;
-  row: number | null;
-  column: string | null;
-  code: string;
-  message: string;
-  params?: Record<string, string | number>;
-}
-
-/** A data row that passed the cell and key passes: its row number and its parsed values. */
-export interface SheetRow<T> {
-  row: number;
-  values: T;
-}
+export type { ImportIssue, NormalizedRow, SheetRow } from "./read-sheets";
 
 /** A BOM header with its complete recipe: the BOM lines that name it, in sheet order. */
 export interface PreparedBom extends SheetRow<BomHeaderRow> {
   lines: SheetRow<BomLineRow>[];
-}
-
-/** A normalized data row, kept for the preview token whether or not it passed. */
-export interface NormalizedRow {
-  sheet: string;
-  row: number;
-  values: Record<string, CellValue>;
 }
 
 /** What the database-free passes make of a workbook, ready for the apply pass. */
@@ -69,8 +45,6 @@ export interface PreparedImport {
   errors: ImportIssue[];
 }
 
-type Values = Record<string, CellValue>;
-
 /**
  * The layout check, the cell pass and the key pass (spec Q10): everything about an import that needs
  * no database, so it runs before the write transaction opens. Instruction sheets are skipped. The
@@ -78,36 +52,7 @@ type Values = Record<string, CellValue>;
  */
 export function prepareImport(workbook: WorkbookSheets): PreparedImport {
   const errors: ImportIssue[] = [];
-  const found = new Map<SheetKey, SheetRow<Values>[]>();
-  const seen = new Set<SheetKey>();
-  for (const sheet of workbook) {
-    if (isInstructionSheet(sheet.name)) continue;
-    const spec = sheetNamed(sheet.name);
-    if (!spec) {
-      const name = sheet.name.trim();
-      errors.push(
-        issue(name, 1, null, "IMPORT_UNKNOWN_SHEET", `The sheet "${name}" isn't part of the template. Rename or remove it.`, {
-          sheet: name,
-        }),
-      );
-      continue;
-    }
-    if (seen.has(spec.key)) {
-      // Two tabs whose names differ only in case or spaces: neither may silently replace the other.
-      const name = sheet.name.trim();
-      errors.push(issue(name, 1, null, "IMPORT_DUPLICATE_SHEET", `The workbook has another "${spec.name}" sheet. Keep one.`, { sheet: name }));
-      continue;
-    }
-    seen.add(spec.key);
-    const rows = readRows(spec, sheet, errors);
-    if (rows) found.set(spec.key, rows);
-  }
-
-  const sheets = IMPORT_SHEETS.map(({ key }) => key).filter((key) => found.has(key));
-  const cells = sheets.flatMap((key) => found.get(key)!.map(({ row, values }) => ({ sheet: sheetSpec(key).name, row, values })));
-  if (cells.length === 0 && errors.length === 0) {
-    errors.push(issue(null, null, null, "IMPORT_EMPTY", "The workbook has no rows to import."));
-  }
+  const { rows: found, sheets, cells } = readSheets(MASTER_DATA_LAYOUT, workbook, errors);
 
   const rowsOf = (key: SheetKey) => found.get(key) ?? [];
   const parse = <S extends z.ZodType>(key: SheetKey, schema: S, rows = rowsOf(key)) => parseRows(key, schema, rows, errors);
@@ -158,79 +103,7 @@ export function prepareImport(workbook: WorkbookSheets): PreparedImport {
   };
 }
 
-function issue(
-  sheet: string | null,
-  row: number | null,
-  column: string | null,
-  code: string,
-  message: string,
-  params?: ImportIssue["params"],
-): ImportIssue {
-  return params ? { sheet, row, column, code, message, params } : { sheet, row, column, code, message };
-}
-
 const capitalized = (text: string) => text[0].toUpperCase() + text.slice(1);
-
-/**
- * A sheet's data rows, normalized by column (Q9), or null when its header row doesn't match the
- * template: every column must be there, and no other. Blank rows are skipped; a sheet with no
- * non-blank row at all is simply empty.
- */
-function readRows(spec: SheetSpec, sheet: WorkbookSheet, errors: ImportIssue[]): SheetRow<Values>[] | null {
-  if (sheet.rows.every((row) => row.every(isBlank))) return [];
-  // Not every row is blank, so there is a first row.
-  const headers = sheet.rows[0].map((cell) => cellText(cell)?.toLowerCase() ?? null);
-  const indexes = spec.columns.map((column) => headers.indexOf(column.header.toLowerCase()));
-  let matches = true;
-  spec.columns.forEach((column, position) => {
-    if (indexes[position] >= 0) return;
-    matches = false;
-    const message = `The sheet has no "${column.header}" column. Keep the template's header row.`;
-    errors.push(
-      issue(spec.name, 1, column.header, "IMPORT_MISSING_COLUMN", message, {
-        column: column.header,
-      }),
-    );
-  });
-  headers.forEach((header, position) => {
-    if (header === null || indexes.includes(position)) return;
-    matches = false;
-    const name = cellText(sheet.rows[0][position])!;
-    const message = `The column "${name}" isn't part of this sheet. Rename or remove it.`;
-    errors.push(
-      issue(spec.name, 1, name, "IMPORT_UNKNOWN_COLUMN", message, {
-        column: name,
-      }),
-    );
-  });
-  if (!matches) return null;
-  return sheet.rows.slice(1).flatMap((row, index) => {
-    if (row.every(isBlank)) return [];
-    const values = Object.fromEntries(
-      spec.columns.map((column, position) => [column.field, normalizeCell(column.kind, row[indexes[position]])]),
-    );
-    return [{ row: index + 2, values }];
-  });
-}
-
-/** The rows that pass the sheet's schema; each failing field becomes an error on its column. */
-function parseRows<S extends z.ZodType>(key: SheetKey, schema: S, rows: SheetRow<Values>[], errors: ImportIssue[]): SheetRow<z.infer<S>>[] {
-  const spec = sheetSpec(key);
-  return rows.flatMap(({ row, values }) => {
-    const parsed = schema.safeParse(values);
-    if (parsed.success) return [{ row, values: parsed.data }];
-    const seen = new Set<string>();
-    for (const { path, message } of parsed.error.issues) {
-      // Every schema is an object of the sheet's fields, so every issue names one.
-      const field = String(path[0]);
-      if (seen.has(field)) continue;
-      seen.add(field);
-      const column = spec.columns.find((each) => each.field === field)!.header;
-      errors.push(issue(spec.name, row, column, "VALIDATION_FAILED", message));
-    }
-    return [];
-  });
-}
 
 const NEW_INACTIVE = "A new record starts active. Deactivate it after the import.";
 
@@ -248,40 +121,14 @@ function withoutNewInactive<T extends { id: string | null; active: boolean | nul
   });
 }
 
-/** How a duplicate key is reported: the column it is shown on, and the sentence naming the rows. */
-interface DuplicateReport {
-  column: string;
-  message: (key: string, rows: string) => string;
+/** The rows of the master sheet `key` that pass `schema`. */
+function parseRows<S extends z.ZodType>(key: SheetKey, schema: S, rows: SheetRow<Values>[], errors: ImportIssue[]): SheetRow<z.infer<S>>[] {
+  return parseSheetRows(sheetSpec(key), schema, rows, errors);
 }
 
-/**
- * Drops every row whose key another row of the sheet also has, with an error on each naming the
- * rows (XLS-005, spec Q5). Rows without a key (a blank ID: a new record) are never duplicates.
- */
-function unique<T>(
-  key: SheetKey,
-  rows: SheetRow<T>[],
-  keyOf: (values: T) => string | null,
-  report: DuplicateReport,
-  errors: ImportIssue[],
-): SheetRow<T>[] {
-  const name = sheetSpec(key).name;
-  const groups = new Map<string, number[]>();
-  for (const { row, values } of rows) {
-    const value = keyOf(values);
-    if (value !== null) groups.set(value, [...(groups.get(value) ?? []), row]);
-  }
-  const duplicated = new Set<number>();
-  for (const [value, numbers] of groups) {
-    if (numbers.length < 2) continue;
-    const list = `${numbers.slice(0, -1).join(", ")} and ${numbers.at(-1)}`;
-    for (const row of numbers) {
-      duplicated.add(row);
-      // `rows` is language-neutral for a screen's own sentence: "2, 4, 6".
-      errors.push(issue(name, row, report.column, "IMPORT_DUPLICATE_KEY", report.message(value, list), { key: value, rows: numbers.join(", ") }));
-    }
-  }
-  return rows.filter(({ row }) => !duplicated.has(row));
+/** `uniqueRows` on the master sheet `key`. */
+function unique<T>(key: SheetKey, rows: SheetRow<T>[], keyOf: (values: T) => string | null, report: DuplicateReport, errors: ImportIssue[]): SheetRow<T>[] {
+  return uniqueRows(sheetSpec(key), rows, keyOf, report, errors);
 }
 
 /** The duplicate report of a sheet keyed by its records' own ID. */

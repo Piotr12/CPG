@@ -19,7 +19,9 @@ export const stockLineSchema = stockPairSchema.extend({
   }, STOCK_QUANTITY_MESSAGE),
   unit: unitSchema,
 });
-export const stockReasonSchema = z.string({ error: STOCK_REASON_MESSAGE }).trim().min(1, STOCK_REASON_MESSAGE).max(500, STOCK_REASON_MESSAGE);
+/** The longest reason a movement keeps. */
+export const STOCK_REASON_MAX = 500;
+export const stockReasonSchema = z.string({ error: STOCK_REASON_MESSAGE }).trim().min(1, STOCK_REASON_MESSAGE).max(STOCK_REASON_MAX, STOCK_REASON_MESSAGE);
 /**
  * Extra client fields (date, actor, source, factor) are discarded; only these inputs are writable. A
  * correction that names a `transfer` is refused, not trimmed: it can never reach in-transit stock (TRF-014).

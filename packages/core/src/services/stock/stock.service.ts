@@ -10,7 +10,7 @@ import { findLocation } from "../locations/find-location";
 import { findMaterial } from "../materials/find-material";
 import { transitAt } from "../transfers/transfer-usage";
 import { movementSources, NO_SOURCE, type MovementSource } from "./movement-sources";
-import { postStockMovements, toMovementView, type PostingSource, type StockMovementView } from "./stock-posting";
+import { CORRECTION_MOVEMENT, postStockMovements, toMovementView, type PostingSource, type StockMovementView } from "./stock-posting";
 
 export type { MovementSource, StockMovementView };
 export type { SourceDocument } from "./movement-sources";
@@ -66,7 +66,7 @@ export class StockService {
   /** The public correction path accepts only the allowlisted user input, never source/date/actor. */
   async correct(raw: unknown, actor: AuditActor): Promise<StockMovementView> {
     const { reason, ...line } = parseInput(stockCorrectionSchema, raw);
-    return (await this.post({ lines: [line], reason }, { type: "correction", id: randomUUID() }, actor))[0];
+    return (await this.post({ lines: [line], reason }, { type: CORRECTION_MOVEMENT, id: randomUUID() }, actor))[0];
   }
 
   /** A trusted caller's group posted in its own transaction; a document posting in its own transaction calls `postStockMovements`. */
@@ -82,7 +82,7 @@ export class StockService {
       const references = await activeDemoReferences(em, DEMO_STOCK);
       const lines = DEMO_STOCK.filter((line) => references.material.get(line.material)?.baseUnit === line.unit && references.location.has(line.location));
       if (lines.length === 0) return 0;
-      return (await postStockMovements(em, { lines, reason: "Demonstration opening balance" }, { type: "correction", id: randomUUID() }, { kind: "seed" })).length;
+      return (await postStockMovements(em, { lines, reason: "Demonstration opening balance" }, { type: CORRECTION_MOVEMENT, id: randomUUID() }, { kind: "seed" })).length;
     });
   }
 }

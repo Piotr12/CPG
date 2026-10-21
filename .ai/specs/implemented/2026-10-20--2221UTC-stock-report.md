@@ -86,4 +86,5 @@ The six criteria of issue #94.
 - Each row opens its ledger through a **Ledger** button in the row-actions column, labelled "Ledger of {material} at {location}". It links where Q6 says, but the material and location text itself isn't a link.
 - The report loads the tenant's materials and locations whole, as every page with master pickers already does. Only balances and transfers are read in batches. A movement whose document isn't found, which can't happen for a non-correction today, shows "—" rather than "This correction".
 - The Stock `GET` used to ignore a `page` parameter. Now it validates it: a malformed one is 400, and `page=2` returns the second hundred.
+- Production completions (#89) and stock imports (#81) merged into `main` while this PR was open. A completion's movements link to their production order (`document.type` `"production-order"`). An import posts corrections, so its movements are their own source.
 - The Stock page's ledger table is now named "Stock movements" (it was "Recent stock movements"), since it pages through the whole history.

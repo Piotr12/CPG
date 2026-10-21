@@ -33,6 +33,8 @@ describe("StockPage", () => {
     expect(screen.getByLabelText("Material").getAttribute("name")).toBe("material");
     expect(screen.getByRole("link", { name: en.stock.report }).getAttribute("href")).toBe("/admin/test/reports/stock");
     expect(screen.queryByRole("navigation", { name: en.stock.pagination })).toBeNull();
+    // Either role reaches the stock import from here (stock-import spec, UI/UX).
+    expect(screen.getByRole("link", { name: en.stockImport.link }).getAttribute("href")).toBe("/admin/test/stock-import");
   });
   it("reads selected query references, renders signed history with its type, source document, actor and factor (INV-012)", async () => {
     mocks.get.mockResolvedValue({ ...view, quantity: "23.500000", movementCount: 4, movements: [
@@ -73,6 +75,7 @@ describe("StockPage", () => {
       movements: [
         { ...movement, id: "m4", postingId: "d1", type: "transfer-dispatch", quantity: "-60.000000", source: { id: "00000003", document: { type: "transfer", id: "00000003" } } },
         { ...movement, id: "m5", postingId: "r1", type: "transfer-receipt", source: { id: "00000007", document: { type: "transfer", id: "00000007" } } },
+        { ...movement, id: "m6", postingId: "p1", type: "production-completion", source: { id: "00000004", document: { type: "production-order", id: "00000002" } } },
       ],
     });
     render(await resolveServerComponents(page()));
@@ -88,6 +91,10 @@ describe("StockPage", () => {
     expect(table.getByText("Transfer dispatch")).toBeTruthy();
     expect(table.getByText("Transfer receipt")).toBeTruthy();
     expect(table.getByRole("link", { name: "Transfer 00000003" }).getAttribute("href")).toBe("/admin/test/transfers/00000003");
+    // A completion links to its production order (INV-012).
+    expect(table.getByText("Production completion")).toBeTruthy();
+    expect(table.getByRole("link", { name: "Production order 00000002" }).getAttribute("href")).toBe("/admin/test/production-orders/00000002");
+    expect(table.getByText("Production completion 00000004")).toBeTruthy();
   });
   it.each(["tenant", "material", "location"])("keeps history but hides posting for read-only/inactive %s", async (kind) => {
     mocks.tenantScope.mockResolvedValue(scope(kind === "tenant"));
@@ -96,6 +103,7 @@ describe("StockPage", () => {
     mocks.getMessages.mockResolvedValue({ locale: "pl", messages: pl });
     render(await resolveServerComponents(page()));
     expect(screen.queryByRole("button", { name: pl.stock.form.open })).toBeNull();
+    expect(screen.queryByRole("link", { name: pl.stockImport.link }) === null).toBe(kind === "tenant");
     expect(screen.getByText(pl.stock.unavailable)).toBeTruthy(); expect(screen.getByText("Demo seed · Instalacja")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Zapas — Test" })).toBeTruthy(); expect(screen.getAllByText(/Nieaktywny/)).toHaveLength(2);
   });
