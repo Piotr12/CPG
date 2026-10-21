@@ -7814,6 +7814,191 @@
       "comment": null
     },
     {
+      "name": "stock_reversal",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": true,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "inverse_id": {
+          "name": "inverse_id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "original_id": {
+          "name": "original_id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "tenant_code": {
+          "name": "tenant_code",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": true,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "text"
+        }
+      },
+      "indexes": [
+        {
+          "columnNames": [
+            "id"
+          ],
+          "composite": false,
+          "constraint": true,
+          "keyName": "primary",
+          "primary": true,
+          "unique": true
+        },
+        {
+          "columnNames": [
+            "inverse_id"
+          ],
+          "composite": false,
+          "constraint": false,
+          "keyName": "stock_reversal_inverse_id_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "original_id"
+          ],
+          "composite": false,
+          "constraint": false,
+          "keyName": "stock_reversal_original_id_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "tenant_code"
+          ],
+          "composite": false,
+          "constraint": false,
+          "keyName": "stock_reversal_tenant_code_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "tenant_code",
+            "inverse_id"
+          ],
+          "composite": true,
+          "constraint": true,
+          "keyName": "stock_reversal_tenant_code_inverse_id_unique",
+          "primary": false,
+          "unique": true
+        },
+        {
+          "columnNames": [
+            "tenant_code",
+            "original_id"
+          ],
+          "composite": true,
+          "constraint": true,
+          "keyName": "stock_reversal_tenant_code_original_id_unique",
+          "primary": false,
+          "unique": true
+        }
+      ],
+      "checks": [],
+      "triggers": [
+        {
+          "name": "stock_reversal_no_update",
+          "timing": "before",
+          "events": [
+            "update"
+          ],
+          "forEach": "row",
+          "body": "select raise(abort, 'Stock reversal links are immutable');"
+        }
+      ],
+      "foreignKeys": {
+        "stock_reversal_inverse_id_foreign": {
+          "columnNames": [
+            "inverse_id"
+          ],
+          "constraintName": "stock_reversal_inverse_id_foreign",
+          "localTableName": "stock_reversal",
+          "referencedColumnNames": [
+            "id"
+          ],
+          "referencedTableName": "stock_movement"
+        },
+        "stock_reversal_original_id_foreign": {
+          "columnNames": [
+            "original_id"
+          ],
+          "constraintName": "stock_reversal_original_id_foreign",
+          "localTableName": "stock_reversal",
+          "referencedColumnNames": [
+            "id"
+          ],
+          "referencedTableName": "stock_movement"
+        },
+        "stock_reversal_tenant_code_foreign": {
+          "columnNames": [
+            "tenant_code"
+          ],
+          "constraintName": "stock_reversal_tenant_code_foreign",
+          "localTableName": "stock_reversal",
+          "referencedColumnNames": [
+            "code"
+          ],
+          "referencedTableName": "tenant"
+        }
+      },
+      "comment": null
+    },
+    {
       "name": "supplier",
       "columns": {
         "active": {
