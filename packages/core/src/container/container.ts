@@ -1,3 +1,4 @@
+import { StockReversalService } from "../services/stock/stock-reversal.service";
 import { ProductionOrderService } from "../services/production-orders/production-order.service";
 import { ProductionCompletionService } from "../services/production-orders/production-completion.service";
 import { CustomerOrderService } from "../services/customer-orders/customer-order.service";
@@ -61,6 +62,7 @@ export function createAppContainer(config: AppConfig, orm: Orm): AppContainer {
     idempotencyService: asClass(IdempotencyService).scoped(),
     // Tenant data: resolve it from a tenantScope(), whose `em` reads and writes one tenant only.
     stockService: asClass(StockService).scoped(),
+    stockReversalService: asClass(StockReversalService).scoped(),
     materialService: asClass(MaterialService).scoped(),
     locationService: asClass(LocationService).scoped(),
     customerService: asClass(CustomerService).scoped(),

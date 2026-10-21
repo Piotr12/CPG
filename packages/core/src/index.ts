@@ -73,3 +73,5 @@ export {
   type CompletionView,
 } from "./services/production-orders/production-completion.service";
 export { ProductionOrderService, type ProductionOrderView, type ProductionOrderDetail, type ProductionOptions, type ProductionComponent, type ProductionRecipe } from "./services/production-orders/production-order.service";
+
+export { StockReversalService, type StockReversalView } from "./services/stock/stock-reversal.service";
