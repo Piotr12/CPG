@@ -8,6 +8,10 @@ export const STOCK_REASON_MESSAGE = "Enter a reason, up to 500 characters.";
 /** A correction changes a location's physical stock only; transit is written off on its transfer (TRF-014). */
 export const CORRECTION_TRANSIT_MESSAGE = "A correction changes physical stock at a location: write off in-transit stock on its transfer.";
 export const stockPairSchema = z.object({ material: materialReferenceSchema, location: locationReferenceSchema });
+/** How many movements one page of a pair's ledger holds, newest first. */
+export const STOCK_LEDGER_PAGE_SIZE = 100;
+/** A pair and a page of its ledger (stock report spec Q6); other parameters are ignored, as they always were. */
+export const stockLedgerQuerySchema = stockPairSchema.extend({ page: z.coerce.number().int().min(1).max(1_000_000).default(1) });
 export const stockLineSchema = stockPairSchema.extend({
   quantity: z.string({ error: STOCK_QUANTITY_MESSAGE }).trim().refine((text) => {
     const value = parseSignedQuantity(text);

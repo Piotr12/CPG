@@ -20,4 +20,18 @@ describe("Checkbox", () => {
     expect(box.getAttribute("aria-checked")).toBe("true");
     expect(box.querySelector("[data-slot=checkbox-indicator]")).toBeTruthy();
   });
+
+  it("submits its value with a plain form only while checked", () => {
+    render(
+      <form aria-label="filters">
+        <Checkbox id="zero" name="includeZero" value="true" />
+        <label htmlFor="zero">Show zero</label>
+      </form>,
+    );
+    const form = screen.getByRole("form", { name: "filters" }) as HTMLFormElement;
+    expect(new FormData(form).get("includeZero")).toBeNull();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Show zero" }));
+    expect(new FormData(form).get("includeZero")).toBe("true");
+  });
 });

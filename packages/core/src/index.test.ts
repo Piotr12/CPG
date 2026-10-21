@@ -74,6 +74,7 @@ describe("@cpg/core", () => {
       "SafetyStockTargetService",
       "ShipmentService",
       "StockImportService",
+      "StockReportService",
       "StockService",
       "SupplierService",
       "SystemStatusService",

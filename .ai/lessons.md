@@ -57,6 +57,9 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 - **2026-10-20 — The sidebar must fit 1280×800 without scrolling** — a Procurement group (header + two entries) pushed "Audit" below the scroll edge of `sidebar-content`, so `navigation.test.ts` ("every screen … one click away") couldn't click it ("covered by div.flex.h-8"). Unit tests passed. Add tenant entries flat, not as a new group, or shorten something else, and run `navigation.test.ts` after any nav change.
 - **2026-10-20 — Standalone integration runs need `static` and `public` copied** — besides `.next/static` into `packages/app/.next/`, copy `packages/app/public` next to `server.js`, or `app-icons.test.ts` gets 404s. Run each full pass on a fresh `DATA_DIR`: files leave users and tokens behind, and a rerun on the old data fails in `beforeAll`.
 
+- **2026-10-21 — Order report rows by business ID, never by the UUID a reference holds** — the stock report first tallied pairs by `balance.material.id`, the internal UUID, so its "by material, then location" order was random. Only a test with more pairs than a page caught it: the small fixtures happened to sort the same both ways. Map references to their `code` before sorting or paging, and test ordering with enough rows for UUID and code order to differ.
+- **2026-10-21 — The tenant-filter lint rule also fires on a React prop named `filters`** — `no-restricted-syntax` bans any `filters` property in `core`/`app`, to keep MikroORM's tenant filter on, and it can't tell a component prop from a find option. Name report or list filter props something else (`selected`), and don't disable the rule.
+
 ## Testing
 
 - **2026-10-21 — agent-browser writes a relative screenshot path under its daemon's directory** — the #89 QA run's `screenshot .ai/qa/…/01.png` reported success but nothing appeared in the worktree. Always pass an absolute path to `agent-browser screenshot`, and `ls` the folder afterwards.

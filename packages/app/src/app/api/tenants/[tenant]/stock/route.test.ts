@@ -15,7 +15,9 @@ describe("stock API wiring", () => {
     mocks.tenantScope.mockResolvedValue({ cradle: { stockService: { get: mocks.get } } }); mocks.get.mockResolvedValue({ quantity: "0.000000" });
     const result = await GET(new Request("http://cpg.test/api/tenants/test/stock?material=00000001&location=00000001"), context);
     expect(await result.json()).toEqual({ ok: true, data: { quantity: "0.000000" } });
-    expect(mocks.tenantScope).toHaveBeenCalledWith("test"); expect(mocks.get).toHaveBeenCalledWith({ material: line.material, location: line.location });
+    expect(mocks.tenantScope).toHaveBeenCalledWith("test"); expect(mocks.get).toHaveBeenCalledWith({ material: line.material, location: line.location, page: 1 });
+    await GET(new Request("http://cpg.test/api/tenants/test/stock?material=00000001&location=00000001&page=2"), context);
+    expect(mocks.get).toHaveBeenLastCalledWith({ material: line.material, location: line.location, page: 2 });
   });
   it("refuses unsigned reads and malformed queries", async () => {
     mocks.requireApiUser.mockRejectedValueOnce(new UnauthorizedError());

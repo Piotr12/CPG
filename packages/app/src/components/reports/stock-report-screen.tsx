@@ -1,0 +1,112 @@
+import Link from "next/link";
+import type { Locale, MaterialSummary, NamedRecordView, StockReportRow, StockReportView } from "@cpg/core";
+import type { StockReportQuery } from "@cpg/core/validators/reports/stock-report.schema";
+import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
+import { Button } from "@cpg/ui/components/button";
+import { Checkbox } from "@cpg/ui/components/checkbox";
+import { Label } from "@cpg/ui/components/label";
+import { NativeSelect, NativeSelectOption } from "@cpg/ui/components/native-select";
+import type { Messages } from "../../i18n/messages/en";
+import { fill, shownQuantity } from "../forms/form-labels";
+import { PageLinks } from "../layout/page-links";
+
+interface StockReportScreenProps {
+  tenant: { code: string; name: string };
+  /** One page of the report, and the filter choices it was read with. */
+  report: StockReportView;
+  selected: StockReportQuery;
+  /** The tenant's materials and locations, for the filters. */
+  materials: MaterialSummary[];
+  locations: NamedRecordView[];
+  locale: Locale;
+  messages: Messages;
+}
+
+/**
+ * The body of the Stock report page (E13-S01): filters, then physical on-hand and in transit out
+ * and in per material and location, apart, each row opening that pair's ledger on the Stock page
+ * (UX-017, INV-012). It writes nothing, so a read-only tenant shows it unchanged (TEN-018).
+ */
+export function StockReportScreen({ tenant, report, selected, materials, locations, locale, messages }: StockReportScreenProps) {
+  const t = messages.stockReport;
+  const path = `/admin/${tenant.code}`;
+  const amount = (quantity: string, row: StockReportRow) => `${shownQuantity(quantity)} ${row.baseUnit}`;
+  const inactive = (active: boolean) => (active ? "" : ` (${t.inactive})`);
+  const material = (row: StockReportRow) => `${row.material} — ${row.materialDescription}${inactive(row.materialActive)}`;
+  const location = (row: StockReportRow) => `${row.location} — ${row.locationName}${inactive(row.locationActive)}`;
+  // Narrow screens: the location moves under the material, and the three figures stack in one cell.
+  const columns: DataTableColumn<StockReportRow>[] = [
+    { id: "material", header: t.columns.material, className: "min-w-28 whitespace-normal", cell: (row) => <div className="flex flex-col gap-1">
+      <span>{material(row)}</span><span className="text-xs text-muted-foreground sm:hidden">{location(row)}</span>
+    </div> },
+    { id: "location", header: t.columns.location, className: "hidden min-w-28 whitespace-normal sm:table-cell", cell: location },
+    { id: "quantity", header: t.columns.quantity, className: "hidden text-right font-mono md:table-cell", cell: (row) => <span data-report-on-hand>{amount(row.quantity, row)}</span> },
+    { id: "inTransitFrom", header: t.columns.inTransitFrom, className: "hidden text-right font-mono md:table-cell", cell: (row) => <span data-report-transit-from>{amount(row.inTransitFrom, row)}</span> },
+    { id: "inTransitTo", header: t.columns.inTransitTo, className: "hidden text-right font-mono md:table-cell", cell: (row) => <span data-report-transit-to>{amount(row.inTransitTo, row)}</span> },
+    { id: "figures", header: t.columns.figures, className: "md:hidden", cell: (row) => <dl className="grid grid-cols-[auto_auto] gap-x-2 text-xs">
+      {(["quantity", "inTransitFrom", "inTransitTo"] as const).map((figure) => <div key={figure} className="contents">
+        <dt className="text-muted-foreground">{t.columns[figure]}</dt><dd className="text-right font-mono">{amount(row[figure], row)}</dd>
+      </div>)}
+    </dl> },
+  ];
+  const query = (page: number) => {
+    const params = new URLSearchParams();
+    if (selected.material) params.set("material", selected.material);
+    if (selected.location) params.set("location", selected.location);
+    if (selected.includeZero) params.set("includeZero", "true");
+    params.set("page", String(page));
+    return `${path}/reports/stock?${params}`;
+  };
+
+  return (
+    <div lang={locale} className="flex min-w-0 flex-col gap-6">
+      <h1 className="text-2xl font-semibold tracking-tight">{fill(t.heading, { tenant: tenant.name })}</h1>
+      <p className="text-sm text-muted-foreground">{fill(t.intro, { date: report.asOf })}</p>
+      <form action={`${path}/reports/stock`} className="grid min-w-0 gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+        <div className="grid min-w-0 gap-2">
+          <Label htmlFor="report-material">{t.material}</Label>
+          <NativeSelect id="report-material" name="material" defaultValue={selected.material ?? ""} className="w-full">
+            <NativeSelectOption value="">{t.all}</NativeSelectOption>
+            {materials.map((material) => (
+              <NativeSelectOption key={material.id} value={material.id}>{`${material.id} — ${material.description}${inactive(material.active)}`}</NativeSelectOption>
+            ))}
+          </NativeSelect>
+        </div>
+        <div className="grid min-w-0 gap-2">
+          <Label htmlFor="report-location">{t.location}</Label>
+          <NativeSelect id="report-location" name="location" defaultValue={selected.location ?? ""} className="w-full">
+            <NativeSelectOption value="">{t.all}</NativeSelectOption>
+            {locations.map((location) => (
+              <NativeSelectOption key={location.id} value={location.id}>{`${location.id} — ${location.name}${inactive(location.active)}`}</NativeSelectOption>
+            ))}
+          </NativeSelect>
+        </div>
+        <Button type="submit" variant="outline">{t.apply}</Button>
+        <div className="flex items-center gap-2 sm:col-span-3">
+          <Checkbox id="report-zero" name="includeZero" value="true" defaultChecked={selected.includeZero} />
+          <Label htmlFor="report-zero">{t.includeZero}</Label>
+        </div>
+      </form>
+      <p className="text-sm text-muted-foreground">{fill(t.rows, { count: String(report.total) })}</p>
+      <DataTable
+        label={t.label}
+        columns={columns}
+        rows={report.rows}
+        rowKey={(row) => `${row.material}/${row.location}`}
+        rowActions={(row) => (
+          <Button asChild variant="outline" size="sm">
+            <Link
+              href={`${path}/stock?${new URLSearchParams({ material: row.material, location: row.location })}`}
+              aria-label={fill(t.ledgerOf, { material: `${row.material} ${row.materialDescription}`, location: `${row.location} ${row.locationName}` })}
+            >
+              {t.ledger}
+            </Link>
+          </Button>
+        )}
+        actionsLabel={t.actions}
+        empty={t.empty}
+        pagination={<PageLinks page={report.page} pages={Math.ceil(report.total / report.pageSize)} href={query} labels={t} />}
+      />
+    </div>
+  );
+}

@@ -105,8 +105,7 @@ describe("transfers in the UI", () => {
     await una.open(`${baseUrl}/admin/prod/stock?material=${ids.steel}&location=${ids.plant}`);
     await una.waitUntil(`${shown("[data-stock-transit-from]")}?.textContent === "60 kg"`);
     expect(await una.evaluate<string>(`${shown("[data-stock-balance]")}.textContent`)).toBe("40 kg");
-    // The movement's source sits in its collapsed details: read the text, not what is shown.
-    await una.waitUntil(`${shown("table[aria-label='Recent stock movements']")}?.textContent.includes("Transfer dispatch")`);
+    await una.waitUntil(`${shown("table[aria-label='Stock movements']")}?.textContent.includes("Transfer dispatch")`);
   });
 
   it("receives part, writes off the lost rest with a reason, and lists every leg in the ledger (TRF-006, TRF-013, TRF-024)", async () => {
