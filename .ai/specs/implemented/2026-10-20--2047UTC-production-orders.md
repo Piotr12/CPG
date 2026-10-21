@@ -1,6 +1,6 @@
 # Production orders
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-20 20:47 UTC
 **Issue:** #88 (E10-S01)
 
@@ -114,3 +114,9 @@ R02 output/type/unit rules; R03 exact quantities; R04 pinned immutable revision;
 ### Phase 3 — Verification and publication
 - Step 3.1: Run lint, typecheck, unit coverage at 100%, build, touched integrations plus migration smoke; live desktop/mobile checks and screenshot evidence. Leave the full integration suite to PR CI.
 - Step 3.2: Review against standards and compatibility, fix findings, publish separate implementation PR closing #88 and referencing the design. Check complete CI at the final head; manual QA/approval stays required.
+
+## Implementation notes
+
+- Design PR #113 (`2c5a4cb`), implementation PR #114 (`ce24740`), both merged on 2026-10-20; #88 closed. Plan: `.ai/pipeline/runs/2026-10-20--2051UTC-production-orders.md`.
+- PR #114's review added the captured lead time to the detail and edit screens (§UI), plus its own detail help topic (`.ai/runs/2026-10-20--2153UTC-fix-pr-114.md`).
+- Completions (E10-S02, #89) build on this spec: `implemented/2026-10-20--2221UTC-production-completions.md`.

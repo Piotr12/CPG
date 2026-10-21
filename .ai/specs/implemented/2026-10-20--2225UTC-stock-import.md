@@ -1,8 +1,8 @@
 # A user imports desired physical stock from a workbook, as opening balances or corrections, with a dry run and an atomic commit
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-20 22:25 UTC
-**Issue:** #81 (E07-S02), epic #73 · **Builds on:** `implemented/2026-10-20--0908UTC-master-data-bom-import.md` (#27: the workbook adapter, the layout check, cell normalization, duplicate keys, the preview token, the import report and screen), `implemented/2026-10-20--1634UTC-stock-ledger-corrections.md` (#80: `postStockMovements`, the ledger, the balance row, the transit refusal of manual corrections), `implemented/2026-10-20--2046UTC-transfers.md` (#82: in-transit stock belongs to its transfer) · **Design authority:** `.ai/specs/product-brief.md` (R03, R05, R07, R08, R09, D02, D05), `.ai/specs/research/CPG-prd001.pdf` §05 ("Stock XLS, opening balances and corrections", "Stock movement and correction") and §06, `CPG-prd-decisions.pdf` ("Opening stock and XLS correction", I-02), `CPG-prd-datamodel.pdf` ("Inventory adjustment", "Import dry run"), `CPG-acceptance.md` (STX-001…021, INV-016, TRF-014, API-028, AUD-022), `research/decisions/D07-manual-stock-input.md` (XLS input stays absolute), [mockup 01, the sidebar tree](assets/menu-revamp/01-sidebar-tree/index.html) (Inventory → **Stock import**, for everyone)
+**Issue:** #81 (E07-S02), epic #73 · **Builds on:** `implemented/2026-10-20--0908UTC-master-data-bom-import.md` (#27: the workbook adapter, the layout check, cell normalization, duplicate keys, the preview token, the import report and screen), `implemented/2026-10-20--1634UTC-stock-ledger-corrections.md` (#80: `postStockMovements`, the ledger, the balance row, the transit refusal of manual corrections), `implemented/2026-10-20--2046UTC-transfers.md` (#82: in-transit stock belongs to its transfer) · **Design authority:** `.ai/specs/product-brief.md` (R03, R05, R07, R08, R09, D02, D05), `.ai/specs/research/CPG-prd001.pdf` §05 ("Stock XLS, opening balances and corrections", "Stock movement and correction") and §06, `CPG-prd-decisions.pdf` ("Opening stock and XLS correction", I-02), `CPG-prd-datamodel.pdf` ("Inventory adjustment", "Import dry run"), `CPG-acceptance.md` (STX-001…021, INV-016, TRF-014, API-028, AUD-022), `research/decisions/D07-manual-stock-input.md` (XLS input stays absolute), [mockup 01, the sidebar tree](../assets/menu-revamp/01-sidebar-tree/index.html) (Inventory → **Stock import**, for everyone)
 
 ## 📝 TLDR
 
@@ -126,9 +126,9 @@ Prototype: `.ai/specs/assets/stock-import/`, static mockups following #27's. The
 - `mockup-02-dry-run-errors.png`: step 2 with errors (−1, an unknown material, a duplicate position, a Transfer column).
 - `mockup-03-committed.png`: step 3 with the reason, after a commit.
 
-![Dry run preview](assets/stock-import/mockup-01-dry-run-preview.png)
-![Dry run errors](assets/stock-import/mockup-02-dry-run-errors.png)
-![Committed](assets/stock-import/mockup-03-committed.png)
+![Dry run preview](../assets/stock-import/mockup-01-dry-run-preview.png)
+![Dry run errors](../assets/stock-import/mockup-02-dry-run-errors.png)
+![Committed](../assets/stock-import/mockup-03-committed.png)
 
 ## 📝 Edge Cases & Failure Scenarios
 
@@ -247,3 +247,8 @@ One PR, built in this order. The phases are review checkpoints.
     - uploads a clean workbook, sees −15 / +30 / No change, enters a reason, commits, and the Stock page shows the new balances with the reason in the ledger.
 
     Then the full gate: lint, typecheck, `test:coverage` (100%), build, and the touched integration files. CI runs the full suite.
+
+## Implementation notes
+
+- Design PR #116 (`38ed937`), implementation PR #118 (`c312a6e`), both merged on 2026-10-21; #81 closed. Plan: `.ai/pipeline/runs/2026-10-20--2234UTC-stock-import.md`.
+- The plan's "Measurements and deviations" records the Q11 remedy, applied: chunked flushes of 25, so 2,000 positions commit in about 1.2 s. It also records that the template has no example rows, that `dryRun` takes no actor, and that `ImportScreen` takes a `kind`, not function props.

@@ -29,7 +29,7 @@ interface StockView {
   movements: { quantity: string; reason: string; actorUsername: string; channel: string; type: string; postingId: string }[];
 }
 
-// The stock import through the API (spec .ai/specs/2026-10-20--2225UTC-stock-import.md, R07): keyed and
+// The stock import through the API (spec .ai/specs/implemented/2026-10-20--2225UTC-stock-import.md, R07): keyed and
 // gated like every tenant write, for both roles. Everything is in Prod, on this file's own masters.
 describe("the stock import through the API", () => {
   let admin: Browser;
