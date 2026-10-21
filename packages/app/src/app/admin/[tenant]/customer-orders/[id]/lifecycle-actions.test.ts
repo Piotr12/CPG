@@ -34,11 +34,11 @@ it("refuses malformed input and signed-out callers before mutation", async () =>
   expect(mocks.service.cancel).not.toHaveBeenCalled(); expect(mocks.service.closeEarly).not.toHaveBeenCalled();
   expect(mocks.refresh).not.toHaveBeenCalled();
 });
-it("preserves read-only errors without refreshing and refreshes conflicts", async () => {
+it("preserves read-only errors and conflicts without refreshing removable rows", async () => {
   mocks.service.cancel.mockRejectedValueOnce(new ConflictError("Read-only", "TENANT_READ_ONLY"));
   expect(await cancelCustomerOrder("prod", 4, "00000001", { version: 3 })).toMatchObject({ error: { code: "TENANT_READ_ONLY" } });
   expect(mocks.refresh).not.toHaveBeenCalled();
   mocks.service.closeEarly.mockRejectedValueOnce(new ConflictError("Changed", "VERSION_CONFLICT"));
   expect(await closeEarlyCustomerOrder("prod", 4, "00000001", { version: 3 })).toMatchObject({ error: { code: "VERSION_CONFLICT" } });
-  expect(mocks.refresh).toHaveBeenCalledWith("/admin/prod/customer-orders");
+  expect(mocks.refresh).not.toHaveBeenCalled();
 });

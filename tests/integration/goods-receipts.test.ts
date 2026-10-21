@@ -79,9 +79,9 @@ describe("goods receipts in the UI", () => {
     await una.waitForText("Line 1 received 10 kg more than was outstanding.");
     await una.waitForText("Line 2: 4 each");
     const lines = await tableRows(una, "Lines");
-    expect(lines.map((row) => row.slice(-3))).toEqual([
-      ["110 kg", "0 kg", "Received"],
-      ["4 each", "6 each", "Open"],
+    expect(lines.map((row) => row.slice(-5))).toEqual([
+      ["110 kg", "0 kg", "Received", "0 kg", ""],
+      ["4 each", "6 each", "Open", "0 each", "Close Early"],
     ]);
     const receipts = await tableRows(una, "Goods receipts");
     expect(receipts).toHaveLength(1);

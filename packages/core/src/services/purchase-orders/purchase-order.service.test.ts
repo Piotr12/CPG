@@ -8,6 +8,7 @@ import {
   MaterialConversion,
   OptimisticLockError,
   PurchaseOrder,
+  PurchaseOrderLine,
   selectTenant,
   Supplier,
   Tenant,
@@ -107,6 +108,29 @@ describe("PurchaseOrderService", () => {
   afterEach(async () => {
     vi.restoreAllMocks();
     await orm.close();
+  });
+
+  it("recognizes old-release receipts written after migration on reads, closure, usage and new postings", async () => {
+    const order = await service().create(DIRECT, ACTOR);
+    // During deployment overlap the old container knows received, but not the new status column.
+    await scopedEm().nativeUpdate(PurchaseOrderLine, { order: { code: order.id }, position: 1 }, { received: "20.000000" });
+    const current = await service().get(order.id);
+    expect(current.lines[0]).toMatchObject({ status: "completed", outstanding: "0.000000" });
+    expect((await service().list())[0].lines[0].status).toBe("completed");
+    const materials = new MaterialService({ em: scopedEm() });
+    const inactive = await materials.update("00000001", { active: false }, (await materials.get("00000001")).version, ADMIN);
+    expect(inactive.active).toBe(false);
+    await expect(service().cancel(order.id, current.version, ACTOR, [1])).rejects.toMatchObject({ code: "DOCUMENT_NOT_OPEN" });
+    const closed = await service().closeEarly(order.id, current.version, ACTOR);
+    expect(closed.lines.map(({ status, abandoned }) => ({ status, abandoned }))).toEqual([
+      { status: "completed", abandoned: "0.000000" }, { status: "closed-early", abandoned: "10.000000" },
+    ]);
+    await materials.update("00000001", { active: true }, inactive.version, ADMIN);
+    const next = await service().create(DIRECT, ACTOR);
+    await scopedEm().nativeUpdate(PurchaseOrderLine, { order: { code: next.id }, position: 1 }, { received: "21.000000" });
+    await new GoodsReceiptService({ em: scopedEm() }).post({ purchaseOrder: next.id, lines: [{ line: 2, quantity: "10", unit: "each" }] }, ACTOR);
+    expect(await service().get(next.id)).toMatchObject({ status: "completed", lines: [{ status: "completed", received: "21.000000" }, { status: "completed" }] });
+    expect((await scopedEm().find(PurchaseOrderLine, { order: { code: next.id } })).map(({ status }) => status)).toEqual(["completed", "completed"]);
   });
 
   it("cancels unreceived lines without restoring their requisition conversion", async () => {

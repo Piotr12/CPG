@@ -20,7 +20,7 @@ import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit } from "../audit/audit-recorder";
 import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quantity";
 import { lineError } from "../materials/line-error";
-import { assertOrderOpen, findOrder } from "../purchase-orders/order-records";
+import { assertOrderOpen, findOrder, orderLineState } from "../purchase-orders/order-records";
 import { postStockMovements } from "../stock/stock-posting";
 
 /** The stock movement type a receipt posts (INV-012: every movement names its source). */
@@ -224,6 +224,7 @@ function receive(em: EntityManager, order: PurchaseOrder, orderLines: readonly P
     orderLine.received = line.received;
     orderLine.status = line.completed ? "completed" : "open";
   }
+  for (const line of orderLines) line.status = orderLineState(line);
   order.status = documentState(orderLines.map(({ status }) => status));
   after.status = order.status;
   order.updatedAt = new Date();

@@ -73,7 +73,13 @@ describe("document cancellation and early closure", () => {
   });
   afterAll(async () => {
     if (secret) await api("PATCH", root, { key: randomUUID(), body: { readOnly: false } });
-    await Promise.all([admin?.close(), user?.close()]);
+    try {
+      for (const [token, name] of [[secret, "lifecycle-admin"], [userSecret, "lifecycle-user"]]) {
+        if (!token) continue;
+        const own = (json(await api("GET", "/api/tokens", {}, token)).data as { id: string; name: string }[]).find((entry) => entry.name === name);
+        if (own) expect((await api("DELETE", `/api/tokens/${own.id}`, { key: randomUUID() }, token)).status).toBe(200);
+      }
+    } finally { await Promise.all([admin?.close(), user?.close()]); }
   });
 
   it("cancels all five unprocessed document types, replays the key and retains a single audited transition", async () => {
@@ -125,6 +131,27 @@ describe("document cancellation and early closure", () => {
       .toEqual([["closed-early", "4.000000", "6.000000"], ["cancelled", "0.000000", "10.000000"]]);
     expect((await get("shipments", shipment.id)).status).toBe("completed");
     expect((await stock()).quantity).toBe("96.000000");
+  });
+
+  it("keeps a cancellation conflict visible when another editor removes the selected customer-order line", async () => {
+    const order = await co();
+    await open("customer-orders", order.id);
+    const label = `Cancel — Customer orders ${order.id} — Line 2`;
+    await user.waitUntil(`[...document.querySelectorAll("main button")].some((button) => button.getAttribute("aria-label") === ${JSON.stringify(label)} && Object.keys(button).some((key) => key.startsWith("__reactFiber")))`);
+    await user.clickRole("button", label); await user.waitFor(dialog);
+    const retained = order.lines[0];
+    const edited = await api("PATCH", `${root}/customer-orders/${order.id}`, { key: randomUUID(), body: {
+      version: order.version, customer, location,
+      lines: [{ id: retained.id, material, quantity: "10", unit: "kg", requiredDate: "2027-01-02" }],
+    } });
+    expect(edited.status, edited.text).toBe(200);
+    await user.click(`${dialog} button[type=submit]`); await user.waitFor(`${dialog} [role=alert]`);
+    expect(await user.text(`${dialog} [role=alert]`)).toContain("changed");
+    expect(await user.text(dialog)).toContain("Line 2");
+    expect((await get("customer-orders", order.id)).lines).toHaveLength(1);
+    await user.clickRole("button", "Keep open");
+    await open("customer-orders", order.id);
+    expect(await user.evaluate<boolean>(`[...document.querySelectorAll("main button")].some((button) => button.getAttribute("aria-label") === ${JSON.stringify(label)})`)).toBe(false);
   });
 
   it("preserves PO overreceipt and derives Closed Early for mixed completed/cancelled lines", async () => {

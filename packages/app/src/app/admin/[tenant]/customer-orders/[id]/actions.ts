@@ -28,7 +28,8 @@ export async function cancelCustomerOrder(tenant: string, generation: number, id
   const result = await tenantServerAction(customerOrderLifecycleSchema, (input, { cradle }) =>
     cradle.customerOrderService.cancel(id, input.version, uiActor(assertSignedIn(actor)), input.lines),
   )(tenant, generation, values);
-  return refreshAfterWrite(result, `/admin/${tenant}/customer-orders`, `/admin/${tenant}/customer-orders/${id}`, `/admin/${tenant}/shipments`);
+  // A conflict may mean this line was removed; refreshing would unmount its refusal dialog.
+  return result.ok ? refreshAfterWrite(result, `/admin/${tenant}/customer-orders`, `/admin/${tenant}/customer-orders/${id}`, `/admin/${tenant}/shipments`) : result;
 }
 
 /** Resolves the remainder using the version captured by the confirmation. */
@@ -37,5 +38,6 @@ export async function closeEarlyCustomerOrder(tenant: string, generation: number
   const result = await tenantServerAction(customerOrderLifecycleSchema, (input, { cradle }) =>
     cradle.customerOrderService.closeEarly(id, input.version, uiActor(assertSignedIn(actor)), input.lines),
   )(tenant, generation, values);
-  return refreshAfterWrite(result, `/admin/${tenant}/customer-orders`, `/admin/${tenant}/customer-orders/${id}`, `/admin/${tenant}/shipments`);
+  // A conflict may mean this line was removed; refreshing would unmount its refusal dialog.
+  return result.ok ? refreshAfterWrite(result, `/admin/${tenant}/customer-orders`, `/admin/${tenant}/customer-orders/${id}`, `/admin/${tenant}/shipments`) : result;
 }

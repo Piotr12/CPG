@@ -1,5 +1,7 @@
 import { PurchaseOrderLine, PurchaseRequisition, type EntityManager, type Material } from "@cpg/db";
 
+import { orderLineState } from "./order-records";
+
 /*
  * What the materials concept may ask about procurement documents: a leaf module, so
  * `MaterialService` checks it without importing the purchasing services.
@@ -14,7 +16,7 @@ export async function openOrderUsingMaterial(em: EntityManager, material: Materi
   // Sorted and filtered here: an `orderBy` or filter on relation fields would add query joins the tenant lint rules don't vet.
   return (
     lines
-      .filter(({ order }) => order.status === "open")
+      .filter((line) => line.order.status === "open" && orderLineState(line) === "open")
       .map(({ order }) => order.code)
       .sort()[0] ?? null
   );

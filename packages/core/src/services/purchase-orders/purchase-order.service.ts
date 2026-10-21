@@ -25,7 +25,7 @@ import { findActiveLocation } from "../locations/find-location";
 import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quantity";
 import { findActiveMaterial } from "../materials/find-material";
 import { lineError } from "../materials/line-error";
-import { assertOrderOpen, findOrder } from "./order-records";
+import { assertOrderOpen, findOrder, orderLineState } from "./order-records";
 import { findRequisition, requisitionEntry, requisitionSnapshot } from "../purchase-requisitions/requisition-records";
 import { findActiveSupplier } from "../suppliers/find-supplier";
 import { isScopeReadOnly } from "../tenants/tenant.service";
@@ -207,6 +207,7 @@ export class PurchaseOrderService {
         if (order.version !== version) throw versionConflict();
         assertOrderOpen(order);
         const lines = await em.find(PurchaseOrderLine, { order }, { populate: ["material"], refresh: true });
+        for (const line of lines) line.status = orderLineState(line);
         const before = lifecycleSnapshot(order, lines);
         const target = selectLifecycleLines(lines, selection, (line) => line.position);
         const resolved = resolveLifecycle(action, target.map((line) => ({ quantity: line.quantity, processed: line.received, abandoned: line.abandoned, status: line.status })));
@@ -373,7 +374,7 @@ async function viewsOf(em: EntityManager, orders: readonly PurchaseOrder[]): Pro
 }
 
 function toLineView(line: PurchaseOrderLine): OrderLineView {
-  const { position, material, quantity, enteredQuantity, enteredUnit, numerator, denominator, plannedDate, requisition, received, abandoned, status } = line;
+  const { position, material, quantity, enteredQuantity, enteredUnit, numerator, denominator, plannedDate, requisition, received, abandoned } = line;
   return {
     line: position,
     material: material.code,
@@ -387,7 +388,7 @@ function toLineView(line: PurchaseOrderLine): OrderLineView {
     received,
     abandoned,
     outstanding: unresolvedQuantity(quantity, received, abandoned),
-    status,
+    status: orderLineState(line),
   };
 }
 
