@@ -20,7 +20,7 @@
 | 1 | 1.5 | Timeline and generator | group:A:capable | done | e17dc3c |
 | 1 | 1.6 | Ledger replay and limits | group:A:capable | done | 81c37bd |
 | 2 | 2.1 | Seed posting context carries its date | group:B | done | f85d833 |
-| 2 | 2.2 | Customer-order seed path | group:B | todo | — |
+| 2 | 2.2 | Customer-order seed path | group:B | done | aa66d0f |
 | 2 | 2.3 | Shipment seed path | group:B | todo | — |
 | 2 | 2.4 | Goods-issue seed path | group:B | todo | — |
 | 2 | 2.5 | Requisition seed path | group:C | todo | — |
