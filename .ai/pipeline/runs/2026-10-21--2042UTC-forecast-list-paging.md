@@ -22,6 +22,7 @@ The spec's nine steps: service, schema/API, screen, docs and integration (phase 
 - The implementation branch is stacked on the spec branch (#150), so it carries the spec commit, as #135 did with #132.
 
 ## Log
+- 21:27 UTC — CI on c39b45a: lint, typecheck, build and unit tests pass. Integration: 375/377 pass, and all four touched files pass. The 2 failures are the `test-reset.test.ts` UI resets, which time out at 25 s. `main` (1882d6a, since #136) and other branches fail them too, tracked as #163. Not caused by this change.
 - 21:05 UTC — Fresh-context code review: approve, with 2 lows and 2 nits. Fixed: `count` no longer loads the master code maps (only `list` does); the AUD-001 integration assertion also checks the entry's new values; the header's scenario list is back in order. Kept: the one-line `codeById` duplicate of the stock report's (the standards allow it). After the fixes, lint, typecheck, coverage (483 files / 3,278 tests, 100%) and build pass, and the 4 integration files pass 35/35 on a fresh standalone copy.
 - 20:56 UTC — Browser QA on the standalone build: page 1 shows 100 rows and "Page 1 of 2"; Next opens `?page=2` with 20 rows; `?page=9` shows page 2; `?page=0` is the 404; a material filter shows 12 rows and no links; at 390 px there is no horizontal overflow. Screenshots in `.ai/qa/pr-156/`.
 - 20:55 UTC — Touched integration files on a fresh standalone copy with fresh data (Docker isn't running here): `forecasts`, `forecasts-api`, `shipments-api`, `customer-orders`, 4 files / 35 tests pass.
