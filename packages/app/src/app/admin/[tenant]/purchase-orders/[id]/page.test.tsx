@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveServerComponents } from "../../../../../../../../tests/setup/server-components";
 import { en } from "../../../../../i18n/messages/en";
@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => {
     materials: vi.fn(),
     units: vi.fn(),
     receipts: vi.fn(),
+    setPurchaseOrderLineDate: vi.fn(),
     notFound: vi.fn(() => {
       throw new Error("NEXT_HTTP_ERROR_FALLBACK;404");
     }),
@@ -33,7 +34,12 @@ vi.mock("next/navigation", () => ({ notFound: mocks.notFound }));
 vi.mock("@cpg/core", () => ({ AppError: mocks.AppError, tenantScope: mocks.tenantScope }));
 vi.mock("../../../../../auth/require-admin", () => ({ requireUser: mocks.requireUser }));
 vi.mock("../../../../../i18n/get-messages", () => ({ getMessages: mocks.getMessages }));
-vi.mock("./actions", () => ({ cancelPurchaseOrder: vi.fn(), closeEarlyPurchaseOrder: vi.fn(), postReceipt: vi.fn() }));
+vi.mock("./actions", () => ({
+  cancelPurchaseOrder: vi.fn(),
+  closeEarlyPurchaseOrder: vi.fn(),
+  postReceipt: vi.fn(),
+  setPurchaseOrderLineDate: mocks.setPurchaseOrderLineDate,
+}));
 
 const material = (id: string, description: string, baseUnit: string) => ({ id, type: "raw", description, baseUnit, active: true, createdAt: new Date(), version: 1 });
 const ORDER = {
@@ -88,10 +94,31 @@ describe("PurchaseOrderPage", () => {
     const rows = within(screen.getByRole("table", { name: "Lines" })).getAllByRole("row").slice(1);
     expect(rows.map((row) => within(row).getAllByRole("cell").map((cell) => cell.textContent))).toEqual([
       ["1", "00000001Steel sheet", "500 kg", "0.5 t at 1 t = 1000 kg", "2027-03-03", "00000007", "530 kg", "0 kg", "Received", "0 kg", ""],
-      ["2", "00000002Bolt M8", "10 each", "", "2027-03-05", "—", "4 each", "6 each", "Open", "0 each", "Close Early"],
+      ["2", "00000002Bolt M8", "10 each", "", "2027-03-05", "—", "4 each", "6 each", "Open", "0 each", "Change dateClose Early"],
     ]);
     expect(screen.getByRole("link", { name: "00000007" }).getAttribute("href")).toBe("/admin/test/purchase-requisitions");
     expect(screen.getByRole("link", { name: "All purchase orders" }).getAttribute("href")).toBe("/admin/test/purchase-orders");
+  });
+
+  it("changes an Open line's planned date at the order version the page loaded, also after receipts (BUY-024), with the shared refusal wording", async () => {
+    mocks.setPurchaseOrderLineDate.mockResolvedValueOnce({ ok: false, error: { code: "VERSION_CONFLICT", message: "Changed." } });
+    render(await resolveServerComponents(page()));
+    const rows = within(screen.getByRole("table", { name: "Lines" })).getAllByRole("row").slice(1);
+    expect(within(rows[0]).queryByRole("button")).toBeNull();
+
+    fireEvent.click(within(rows[1]).getByRole("button", { name: "Change date — Purchase orders 00000001 — Line 2" }));
+    expect(screen.getByRole("dialog", { name: "Change planned date — Purchase orders 00000001 — Line 2" })).toBeTruthy();
+    expect((screen.getByLabelText("Planned") as HTMLInputElement).value).toBe("2027-03-05");
+    fireEvent.change(screen.getByLabelText("Planned"), { target: { value: "2027-03-20" } });
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Save" })));
+
+    expect(mocks.setPurchaseOrderLineDate).toHaveBeenCalledWith("test", 1, "00000001", 2, 1, { plannedDate: "2027-03-20" });
+    // Not the creation wording ("A requisition changed…"): the order itself changed.
+    expect(screen.getByRole("alert").textContent).toBe(en.errors.VERSION_CONFLICT);
+
+    mocks.setPurchaseOrderLineDate.mockResolvedValueOnce({ ok: false, error: { code: "GENERATION_STALE", message: "Reset." } });
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Save" })));
+    expect(screen.getByRole("alert").textContent).toBe(en.purchaseOrders.errors.GENERATION_STALE);
   });
 
   it("shows the order's goods receipts, newest first, and the Post goods receipt dialog with every line (BUY-010, BUY-015)", async () => {
@@ -114,6 +141,7 @@ describe("PurchaseOrderPage", () => {
     const { unmount } = render(await resolveServerComponents(page()));
     expect(screen.getByText("Completed")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Post goods receipt" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Change date/ })).toBeNull();
     unmount();
 
     mocks.get.mockResolvedValue(ORDER);
@@ -130,6 +158,7 @@ describe("PurchaseOrderPage", () => {
     });
     render(await resolveServerComponents(page()));
     expect(screen.queryByRole("button", { name: "Post goods receipt" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Change date/ })).toBeNull();
     expect(screen.getByText(en.goodsReceipts.empty)).toBeTruthy();
   });
 

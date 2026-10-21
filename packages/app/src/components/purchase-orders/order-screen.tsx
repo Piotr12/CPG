@@ -1,5 +1,6 @@
-import { cancelPurchaseOrder, closeEarlyPurchaseOrder } from "../../app/admin/[tenant]/purchase-orders/[id]/actions";
+import { cancelPurchaseOrder, closeEarlyPurchaseOrder, setPurchaseOrderLineDate } from "../../app/admin/[tenant]/purchase-orders/[id]/actions";
 import { LifecycleControl } from "../document-lifecycle/lifecycle-control";
+import { ChangeDateDialog } from "../purchasing/change-date-dialog";
 import { fill } from "../forms/form-labels";
 import Link from "next/link";
 import { stockLabels } from "../stock/labels";
@@ -29,8 +30,9 @@ interface OrderScreenProps {
 
 /**
  * The body of a purchase order's page: its supplier, location and status, every line with its
- * planned date, requisition and what it has received (E09-S02), the Post goods receipt dialog (any
- * user, not while the tenant is read-only), and the order's receipts.
+ * planned date, requisition and what it has received (E09-S02), an Open line's Change date and
+ * lifecycle actions, the Post goods receipt dialog (any user, not while the tenant is read-only), and
+ * the order's receipts.
  */
 export function OrderScreen({ tenant, order, receipts, materials, units, suppliers, locations, locale, messages }: OrderScreenProps) {
   const labels = ordersLabels(messages);
@@ -40,6 +42,11 @@ export function OrderScreen({ tenant, order, receipts, materials, units, supplie
   const location = byId(locations).get(order.location)!;
   const t = labels.details;
   const c = labels.lines.columns;
+  const lineEditable = (line: OrderLineView) => !tenant.readOnly && order.status === "open" && line.status === "open";
+  const lineSubject = (line: OrderLineView) => `${labels.link} ${order.id} — ${fill(messages.lifecycle.line, { line: String(line.line) })}`;
+  const dateLabels = { ...labels.changeDate, field: labels.form.plannedDate, cancel: labels.cancel, date: labels.fieldErrors.date };
+  // The shared wording: the order screen's own VERSION_CONFLICT and PURCHASE_ORDER_NOT_OPEN are written for creating an order.
+  const dateErrors = { ...messages.errors, GENERATION_STALE: messages.purchaseOrders.errors.GENERATION_STALE };
   const details = [
     { label: t.supplier, value: `${supplier.id} ${supplier.name}` },
     { label: t.location, value: `${location.id} ${location.name}` },
@@ -102,12 +109,16 @@ export function OrderScreen({ tenant, order, receipts, materials, units, supplie
       cell: (line) => <Badge variant={line.status === "completed" ? "outline" : "secondary"}>{labels.lines.status[line.status]}</Badge>,
     },
     { id: "abandoned", header: messages.lifecycle.abandoned, cell: (line) => `${shownQuantity(line.abandoned)} ${materialsById.get(line.material)!.baseUnit}`, className: "text-right" },
-    { id: "actions", header: messages.lifecycle.actions, cell: (line) => <LifecycleControl
-      available={!tenant.readOnly && order.status === "open" && line.status === "open"} processed={line.received !== "0.000000" || receipts.some((receipt) => receipt.lines.some((entry) => entry.line === line.line))}
-      subject={`${labels.link} ${order.id} — ${fill(messages.lifecycle.line, { line: String(line.line) })}`}
-      version={order.version} lines={[line.line]} quantities={[`${shownQuantity(line.outstanding)} ${materialsById.get(line.material)!.baseUnit}`]}
-      labels={messages.lifecycle} errors={messages.errors}
-      cancel={cancelPurchaseOrder.bind(null, tenant.code, tenant.generation, order.id)} closeEarly={closeEarlyPurchaseOrder.bind(null, tenant.code, tenant.generation, order.id)} /> },
+    { id: "actions", header: messages.lifecycle.actions, cell: (line) => <div className="flex flex-wrap gap-2">
+      <ChangeDateDialog kind="orderLine" available={lineEditable(line)} subject={lineSubject(line)} value={line.plannedDate} version={order.version}
+        save={setPurchaseOrderLineDate.bind(null, tenant.code, tenant.generation, order.id, line.line)} labels={dateLabels} errors={dateErrors} />
+      <LifecycleControl
+        available={lineEditable(line)} processed={line.received !== "0.000000" || receipts.some((receipt) => receipt.lines.some((entry) => entry.line === line.line))}
+        subject={lineSubject(line)}
+        version={order.version} lines={[line.line]} quantities={[`${shownQuantity(line.outstanding)} ${materialsById.get(line.material)!.baseUnit}`]}
+        labels={messages.lifecycle} errors={messages.errors}
+        cancel={cancelPurchaseOrder.bind(null, tenant.code, tenant.generation, order.id)} closeEarly={closeEarlyPurchaseOrder.bind(null, tenant.code, tenant.generation, order.id)} />
+    </div> },
   ];
 
   return (
