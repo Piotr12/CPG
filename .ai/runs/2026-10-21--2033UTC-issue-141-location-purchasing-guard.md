@@ -3,7 +3,7 @@
 **Date:** 2026-10-21 20:33 UTC
 **Agent:** Claude Code (claude-opus-5-5), `om-auto-fix-issue` bug route, dispatched by cezar
 **Spec:** none for the story itself. It touches `implemented/2026-10-20--1636UTC-purchase-requisitions-orders.md` and `implemented/2026-10-20--1933UTC-goods-receipts.md` (notes only).
-**Status:** in progress
+**Status:** done
 
 ## Goal
 
@@ -29,6 +29,8 @@ E09-S03 (#141): a location an Open purchase order delivers to, or with an Open r
   - Two in `test-reset.test.ts` (reset wait timeout): pre-existing on `main` (the Deploy of 1882d6a failed on the same two) and tracked as #163.
   - One in `document-lifecycle.test.ts`, caused by this PR: it counted every `*.cancelled` audit event in Prod (expected 5), and `purchasing-api.test.ts` now cancels three Prod documents before it in CI's file order (got 8). It now counts one cancellation per own document, by action and subject ID. Running purchasing-api, then document-lifecycle, on one standalone server passes 14/14 and 10/10.
 
+- 22:45 — CI on c290ccc passed lint, typecheck, unit-tests and build; integration had 377 passed and 2 failed, both the pre-existing test-reset timeouts (#163). QA evidence (PASS) is posted on PR #161. The PR waits for #163, a human `qa-approved` and the merge.
+
 ## Changes
 
 - `packages/core/src/services/purchase-orders/purchasing-usage.ts`: `assertNoPurchasingAtLocation`.
@@ -45,5 +47,6 @@ E09-S03 (#141): a location an Open purchase order delivers to, or with an Open r
 
 ## Follow-ups
 
+- #163 (not this PR): `main`'s test-reset integration tests time out on CI, so #161 stays red until it lands.
 - #162: composite indexes for the location guards (purchase orders, requisitions, customer orders).
 - #139 generalises the deactivation-blocker links. The new purchase-order refusal could then link `/admin/{tenant}/purchase-orders/{id}`; requisitions have no detail page.
