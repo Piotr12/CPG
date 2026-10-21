@@ -62,6 +62,8 @@ The spec ships on design PR #157 (`spec/purchasing-date-edits`), which is not me
 
 ## Progress
 
+PR: #159
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Validators, server actions, version guard
