@@ -152,11 +152,23 @@ describe("purchase requisitions and orders in the UI", () => {
     expect(entries[0]).toContain(USERNAME);
     expect(entries[0]).toContain("2027-03-01 → 2027-04-15");
 
-    // At phone width the page itself never scrolls sideways: the row's actions stay within the table's own scroll.
+    // At phone width the page itself never scrolls sideways: the row's actions are reached in the table's own
+    // scroll, inside the table's box and the window, and still open the dialog.
     try {
       await una.setViewport(390, 844);
       await rows(una, "/admin/prod/purchase-requisitions");
-      expect(await una.evaluate<boolean>(`document.documentElement.scrollWidth <= innerWidth && !!${trigger}`)).toBe(true);
+      await una.waitUntil(ready(trigger));
+      expect(await una.evaluate<boolean>(`(${trigger}.scrollIntoView({ block: "center", inline: "center" }), true)`)).toBe(true);
+      expect(await una.evaluate<boolean>(`(() => {
+        const box = ${trigger}.getBoundingClientRect();
+        const table = ${trigger}.closest("[data-slot=table-container]").getBoundingClientRect();
+        return document.documentElement.scrollWidth <= innerWidth && box.left >= table.left && box.right <= table.right && box.right <= innerWidth;
+      })()`)).toBe(true);
+      await una.clickRole("button", label);
+      await una.waitFor("[role=dialog]");
+      expect(await una.text("[role=dialog] h2")).toBe(`Change required date — Purchase requisitions ${id}`);
+      await una.clickRole("button", "Cancel");
+      await una.waitUntil(`${closed} && !document.querySelector("[data-slot=dialog-overlay]")`);
     } finally {
       await una.setViewport(1280, 800);
     }
