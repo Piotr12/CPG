@@ -35,7 +35,7 @@
 | 3 | 3.3 | Startup seeds an untouched Test only | inline | done | 7af9666 |
 | 3 | 3.4 | Reset seeds the generated dataset; old fixtures removed | inline | done | 0f2341a |
 | 3 | 3.4-review-fix | Dataset configuration injected, not mocked | inline | done | b826da6 |
-| 3 | 3.5 | Seed-context callers test | dispatch:cheap | todo | — |
+| 3 | 3.5 | Seed-context callers test | dispatch:cheap | done | 6c8af4c |
 | 4 | 4.1 | Remaining unit tests pinned to old fixtures | dispatch | todo | — |
 | 4 | 4.2 | Integration tests adapted to the dataset | dispatch | todo | — |
 | 4 | 4.3 | Purchase-order list paged by 100 | dispatch | todo | — |
