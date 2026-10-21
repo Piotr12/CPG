@@ -40,3 +40,8 @@
   - the master seeds drop their default rows; the planning-parameter, safety-stock and forecast seeds drop `isUntouchedKind` and `activeDemoReferences` for the materials' guard (none yet, not read-only) and resolve references with the `findActive*` helpers;
   - `seedFixtures()` and the `demo-*.ts` constants are deleted.
 - Delegated to one executor (tier capable → opus) to keep the main session's context for Phases 3 and 4.
+
+## 2026-10-21T13:57:10Z — checkpoint 4 (Steps 3.1..3.4-review-fix)
+- Seeder, startup and reset wired to the generated dataset; old fixtures removed (19 files). Full coverage green; build green.
+- Production standalone server on a fresh data dir: the startup seed took 9.0 s, under the 15 s budget.
+- Review fix appended (3.4-review-fix): config injected through the container instead of the 3.4 executor's module mock.

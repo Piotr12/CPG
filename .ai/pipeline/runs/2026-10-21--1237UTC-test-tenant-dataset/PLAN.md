@@ -33,7 +33,7 @@
 | 3 | 3.1 | Timeline seeder and untouched-Test check | inline | done | 04e3152 |
 | 3 | 3.2 | Seed timing spike | inline | done | 1fc5174 |
 | 3 | 3.3 | Startup seeds an untouched Test only | inline | done | cb9a6ec |
-| 3 | 3.4 | Reset seeds the generated dataset; old fixtures removed | inline | done | a13b527 |
+| 3 | 3.4 | Reset seeds the generated dataset; old fixtures removed | inline | done | 0f2341a |
 | 3 | 3.4-review-fix | Dataset configuration injected, not mocked | inline | done | 8aef7a6 |
 | 3 | 3.5 | Seed-context callers test | dispatch:cheap | todo | — |
 | 4 | 4.1 | Remaining unit tests pinned to old fixtures | dispatch | todo | — |
