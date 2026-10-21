@@ -146,7 +146,7 @@ export class CustomerOrderService {
           return existing ? em.assign(existing, fields) : em.create(CustomerOrderLine, { order, ...fields });
         });
         completeDelivered(order, saved);
-        await completeFinishedShipments(em, order, actor);
+        await completeFinishedShipments(em, order, { kind: "user", actor });
         // New UUIDs are assigned on create; comparing allowlisted snapshots also detects reordering.
         if (JSON.stringify(snapshot(before)) !== JSON.stringify(snapshot(view(order, saved, posted)))) {
           order.updatedAt = new Date(Math.max(Date.now(), order.updatedAt.getTime() + 1));
@@ -186,7 +186,7 @@ export class CustomerOrderService {
         resolved.forEach(({ status, abandoned }, index) => { Object.assign(target[index], { status, abandoned }); });
         order.status = documentState(lines.map(({ status }) => status));
         order.updatedAt = new Date(Math.max(Date.now(), order.updatedAt.getTime() + 1));
-        await completeFinishedShipments(em, order, actor);
+        await completeFinishedShipments(em, order, { kind: "user", actor });
         recordTenantAudit(em, actor, { action: `customer-orders.customer-order.${action === "cancel" ? "cancelled" : "closed-early"}`,
           subject: subject(order), before, after: snapshot(view(order, lines, posted)) });
         await em.flush();

@@ -106,8 +106,12 @@ describe("atomic Test reset", () => {
     await populate();
     await container.createScope().cradle.tenantService.setReadOnly("test", true, actor);
     const scoped = await scope();
-    const service = { locations: scoped.cradle.locationService, BOMs: scoped.cradle.bomService, "customer orders": scoped.cradle.customerOrderService }[kind];
-    vi.spyOn(service, "seedDemo").mockRejectedValueOnce(new Error("injected seed failure"));
+    const spies = {
+      locations: () => vi.spyOn(scoped.cradle.locationService, "seedDemo"),
+      BOMs: () => vi.spyOn(scoped.cradle.bomService, "seedDemo"),
+      "customer orders": () => vi.spyOn(scoped.cradle.customerOrderService, "seedFixtures"),
+    };
+    spies[kind]().mockRejectedValueOnce(new Error("injected seed failure"));
     const before = await snapshot();
     await expect(scoped.cradle.testResetService.reset(1, actor)).rejects.toThrow("injected seed failure");
     expect(await snapshot()).toEqual(before);

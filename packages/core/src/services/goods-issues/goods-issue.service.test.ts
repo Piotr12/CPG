@@ -442,6 +442,35 @@ describe("GoodsIssueService", () => {
     });
   });
 
+  describe("seedDemo", () => {
+    const at = new Date("2025-06-15T23:30:00Z");
+
+    it("posts, completes and stamps everything from the seed's moment without audit, under the same rules as post", async () => {
+      const order = await orders().create(SIXTY, ACTOR);
+      const shipment = await shipAll(order);
+      await count("00000001", "100");
+      const auditBefore = await scoped().count(TenantAuditEvent, {});
+      const issue = await service().seedDemo(issueOf(shipment, each(1, "60")), at);
+      expect(issue).toMatchObject({ id: "00000001", businessDate: "2025-06-15", createdAt: at, lines: [{ quantity: "60.000000" }] });
+      const [movement] = await scoped().find(StockMovement, { type: GOODS_ISSUE_MOVEMENT });
+      expect(movement).toMatchObject({ businessDate: "2025-06-15", channel: "seed", actorUsername: "Demo seed", quantity: "-60.000000", balanceAfter: "40.000000" });
+      expect(movement.occurredAt).toEqual(at);
+      expect(await orders().get(order.id)).toMatchObject({ status: "completed", updatedAt: at, lines: [{ fulfilled: "60.000000", status: "completed" }] });
+      expect(await shipments().get(shipment.id)).toMatchObject({ status: "completed", lines: [{ issued: "60.000000" }] });
+      expect(await scoped().count(TenantAuditEvent, {})).toBe(auditBefore);
+    });
+
+    it("refuses an issue over the stock or over the shipment's to-issue and writes nothing", async () => {
+      const shipment = await shipAll(await orders().create(SIXTY, ACTOR));
+      await count("00000001", "10");
+      await expect(service().seedDemo(issueOf(shipment, each(1, "20")), at)).rejects.toMatchObject({ code: "INSUFFICIENT_STOCK" });
+      await expect(service().seedDemo(issueOf(shipment, each(1, "61")), at))
+        .rejects.toMatchObject({ code: "VALIDATION_FAILED", fieldErrors: { "lines.0.quantity": [ISSUE_QUANTITY_MESSAGE] } });
+      expect(await scoped().count(GoodsIssue, {})).toBe(0);
+      expect((await stock("00000001")).quantity).toBe("10.000000");
+    });
+  });
+
   describe("list and get", () => {
     it("lists in pages of 100, newest first, each with its own lines (lesson 2026-10-20)", async () => {
       await count("00000001", "100");
