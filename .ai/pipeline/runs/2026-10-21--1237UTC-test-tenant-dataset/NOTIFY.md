@@ -45,3 +45,8 @@
 - Seeder, startup and reset wired to the generated dataset; old fixtures removed (19 files). Full coverage green; build green.
 - Production standalone server on a fresh data dir: the startup seed took 9.0 s, under the 15 s budget.
 - Review fix appended (3.4-review-fix): config injected through the container instead of the 3.4 executor's module mock.
+
+## 2026-10-21T13:57:36Z — ~20-step safety checkpoint reached; continuing
+- 21 Steps have landed (18 of them dispatched). Every checkpoint so far is green on the full validation subset (coverage 100 %, build). The production standalone seed meets its budget.
+- The remaining Steps (3.5, 4.1–4.6) are tests, verification and docs, with no new production design. The main session continues autonomously rather than parking the run, and the user can interrupt at any time. Recorded here as the deviation from the dispatcher's safety stop.
+- Tasks-table SHAs for 3.1–3.3 and 3.4-review-fix corrected to the pushed commits.
