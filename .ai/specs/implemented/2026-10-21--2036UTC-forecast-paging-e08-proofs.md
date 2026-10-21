@@ -1,6 +1,6 @@
 # Page the forecast list, and prove fulfilment after deactivation, return corrections and order-audit accounts
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-21 20:36 UTC
 **Issue:** #140 (E08-S04), epic #74 · **Builds on:** `implemented/2026-10-20--1700UTC-forecasts.md` (E08-S03, #85), `implemented/2026-10-20--1635UTC-customer-orders.md` (E08-S01, #83), `implemented/2026-10-20--2045UTC-shipments-goods-issues.md` (E08-S02, #84), `implemented/2026-10-21--0718UTC-test-tenant-dataset.md` (E12-S02, #126) · **Design authority:** `.ai/specs/product-brief.md` (R07, R08, N02), `.ai/specs/research/CPG-acceptance.md` (SAL-024, SAL-025, LFC-020, AUD-001)
 
@@ -121,3 +121,12 @@ One implementation PR, in two phases:
 7. **SAL-024.** Service test: an order fully issued (Completed), then a positive correction with a reason at its material and location. The balance rises, and the order stays Completed with its fulfilled quantity unchanged. Integration in `shipments-api.test.ts`: the same, through the API.
 8. **AUD-001.** `customer-order.service.test.ts`: the create entry names the actor's account, beside the channel, session and values already asserted. `tests/integration/customer-orders.test.ts`: an order created with the normal user's token has a tenant-audit create entry that names that user's account.
 9. **Catalogue.** `CPG-acceptance.md`: SAL-024, SAL-025 and LFC-020 become `Passed (automated)`, with the new tests as evidence. AUD-001 stays "Partially verified", and its evidence cites the customer-order account assertions. Remove the "not asserted yet (#140)" notes.
+
+## Implementation notes
+
+Implemented in #156 (plan `.ai/pipeline/runs/2026-10-21--2042UTC-forecast-list-paging.md`).
+
+- `forecasts-api.test.ts` also asserted Test's 120 forecasts in one response. That check now reads both pages, as step 5 says for the screen.
+- INV-017 ("Customer physical return as adjustment") is the same scenario as SAL-024 from the inventory side. The SAL-024 tests assert it, so it also became `Passed (automated)`.
+- No Test filter matches more than 100 forecasts. So only the unit page tests check that the page links keep the filter. The integration test follows Next on the unfiltered list.
+- None of the proofs found a defect (Q8).
