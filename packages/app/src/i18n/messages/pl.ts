@@ -680,7 +680,7 @@ export const pl: Messages = {
       reversal: {
         open: "Odwróć", title: "Odwrócić wykonanie {id}?",
         description: "Wszystkie ruchy tego wykonania zostaną w całości odwrócone z dzisiejszą datą. Wykonanie zostaje w historii, oznaczone jako odwrócone.",
-        original: "Pierwotne", date: "Data odwrócenia", today: "{date} (UTC)", changes: "Zmiany zapasu w lokalizacji {location}",
+        original: "Pierwotne", date: "Data odwrócenia", today: "{date} (czas UTC)", changes: "Zmiany zapasu w lokalizacji {location}",
         output: "Wytworzono {quantity} {unit}", effect: "Wytworzona ilość {produced} {unit} zmniejszy się o {output} {unit}. Zlecenie Zakończone poniżej celu wróci do stanu Otwarte; zlecenie Zamknięte wcześniej pozostanie zamknięte.",
         stockRule: "Jeśli którejkolwiek z tych ilości nie ma już w zapasie, nic nie zostanie odwrócone.",
         reason: "Powód", submit: "Odwróć wykonanie", pending: "Odwracanie…", cancel: "Anuluj",
@@ -1191,7 +1191,7 @@ export const pl: Messages = {
       open: "Odwróć",
       titles: { dispatch: "Odwrócić to wydanie?", receipt: "Odwrócić to przyjęcie?", "write-off": "Odwrócić ten odpis?" },
       description: "Całe księgowanie zostanie odwrócone z dzisiejszą datą. Oryginał zostaje w rejestrze, oznaczony jako odwrócony.",
-      original: "Oryginał", date: "Data odwrócenia", today: "{date} (UTC)", changes: "Zmiany",
+      original: "Oryginał", date: "Data odwrócenia", today: "{date} (czas UTC)", changes: "Zmiany",
       effect: "Przesunięcie znów będzie Otwarte; przesunięcie Zamknięte wcześniej zostanie otwarte bez porzuconej ilości.",
       stockRule: "Zapas i tranzyt nie mogą spaść poniżej zera: jeśli któraś zmiana się nie mieści, nic nie zostanie odwrócone.",
       reason: "Powód", submit: "Odwróć w całości", pending: "Odwracanie…", cancel: "Anuluj",
