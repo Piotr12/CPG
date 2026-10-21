@@ -68,14 +68,14 @@ describe("VarianceReportService", () => {
   };
   /**
    * Links completion `code`'s first movement to an inverse, as a completion reversal will (spec Q5):
-   * #92 isn't built yet, so the link and its inverse movement are written here by hand.
+   * #92 isn't built yet, so the link and its inverse movement (type `reversal`, its spec's Q4) are written here by hand.
    */
   const reverse = async (code: string) => {
     const em = scoped();
     const posted = await em.findOneOrFail(ProductionCompletion, { code });
     const original = (await em.find(StockMovement, { postingId: posted.id, type: PRODUCTION_COMPLETION_MOVEMENT }, { populate: ["material", "location"], orderBy: { position: "asc" }, limit: 1 }))[0];
     const inverse = em.create(StockMovement, {
-      postingId: randomUUID(), position: 0, type: "production-completion-reversal", material: original.material, location: original.location,
+      postingId: randomUUID(), position: 0, type: "reversal", material: original.material, location: original.location,
       businessDate: today(), quantity: "0.000000", baseUnit: original.baseUnit, enteredQuantity: "0", enteredUnit: original.baseUnit,
       numerator: "1", denominator: "1", balanceBefore: "0.000000", balanceAfter: "0.000000", reason: "Wrong posting", actorUserId: null, actorUsername: "alice", channel: "ui",
     });
