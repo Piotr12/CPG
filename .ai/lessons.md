@@ -173,3 +173,5 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 - **2026-10-20 — Compare development prefetch Insights against the baseline** — The current Next version reports URL-data Insights even on the existing customer-order Suspense pattern. Before changing route semantics to silence one, reproduce on an unchanged route and check the production build/browser; reordering URL reads merely moved this diagnostic into shared preferences.
 
 - **2026-10-21 — Reversals do not erase posting history** — Derive customer-order identity locks from immutable goods-issue references, not only the current fulfilled counter. A full reversal can return progress to zero while the original customer, location and posted line identity must remain protected.
+
+- **2026-10-21 — Bound managed entities as well as SQL pages** — Reversal recalculation paged sibling shipments but retained every previous batch, making later flushes revisit all history. Flush and clear completed batches in the same transaction, keep only primitive cursor/source IDs, index the tenant/order cursor, and test a failure after an earlier batch flushed.

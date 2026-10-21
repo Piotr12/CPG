@@ -73,7 +73,7 @@ describe("StockReversal persistence", () => {
 
   it("rolls down links without deleting movements and upgrades a populated previous schema", async () => {
     const { original } = await fixture(scope());
-    await orm.migrator.down();
+    await orm.migrator.down({ to: "Migration20261020223625_production_completions" });
     expect(await orm.em.getConnection().execute("select name from sqlite_master where name like 'stock_reversal%'")).toEqual([]);
     expect(await scope().count(StockMovement, {})).toBe(2);
     await orm.migrator.up();

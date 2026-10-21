@@ -6807,6 +6807,18 @@
           "keyName": "shipment_tenant_code_index",
           "primary": false,
           "unique": false
+        },
+        {
+          "columnNames": [
+            "tenant_code",
+            "order_id",
+            "code"
+          ],
+          "composite": true,
+          "constraint": false,
+          "keyName": "shipment_tenant_code_order_id_code_index",
+          "primary": false,
+          "unique": false
         }
       ],
       "checks": [

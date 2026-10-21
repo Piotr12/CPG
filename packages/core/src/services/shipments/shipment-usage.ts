@@ -43,11 +43,14 @@ export async function completeFinishedShipments(em: EntityManager, order: Custom
 
 /** Reversal can restore demand to every sibling, including a shipment auto-completed by another's issue. */
 export async function recalculateReversedShipments(em: EntityManager, order: CustomerOrder, actor: AuditActor): Promise<void> {
-  // Persist the changed counters inside the caller's transaction before the bounded reads.
+  const { id: orderId, code: orderCode } = order;
+  // Everything the caller changed must be persisted before releasing its managed entities. The
+  // transaction stays open: later failures still roll back the counters, stock, links and every batch.
   await em.flush();
+  em.clear();
   let cursor = "";
   while (true) {
-    const shipments = await em.find(Shipment, { order, status: { $in: ["open", "completed"] }, code: { $gt: cursor } }, { orderBy: { code: "asc" }, limit: 100 });
+    const shipments = await em.find(Shipment, { order: orderId, status: { $in: ["open", "completed"] }, code: { $gt: cursor } }, { orderBy: { code: "asc" }, limit: 100 });
     if (shipments.length === 0) return;
     const lines = await em.find(ShipmentLine, { shipment: { $in: shipments } }, { populate: ["orderLine"] });
     for (const shipment of shipments) {
@@ -59,11 +62,12 @@ export async function recalculateReversedShipments(em: EntityManager, order: Cus
       shipment.status = status;
       recordTenantAudit(em, actor, {
         action: "shipments.shipment.recalculated",
-        subject: { type: "Shipment", id: shipment.code, label: `${shipment.code} — customer order ${order.code}` },
+        subject: { type: "Shipment", id: shipment.code, label: `${shipment.code} — customer order ${orderCode}` },
         before, after: { status },
       });
     }
     await em.flush();
     cursor = shipments[shipments.length - 1].code;
+    em.clear();
   }
 }

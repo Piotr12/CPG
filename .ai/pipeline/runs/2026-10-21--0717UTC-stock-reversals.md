@@ -19,6 +19,7 @@ Follow the spec's eight steps. Persistence/core, existing stock/PO/shipment/cust
 - User Guard prevents publishing to shared qa-evidence without approval. Prepare artifacts before any permission request; own feature/spec branch publication is authorized by the invoked workflow. Never merge into main.
 
 ## Log
+- 2026-10-21 07:56 UTC — Independent review found retained shipment batches (608 managed records for 301 siblings). Added flush/clear per batch and generated tenant/order/code cursor index migration. 34 targeted tests pass, including late-batch rollback and query-plan checks. Original reversal/smoke integration passed 2 files / 6 tests. Re-running full gate before re-review.
 - 2026-10-21 07:48 UTC — GR/GI reconciliation, bounded link reads, API/actions, UI controls and historical locks implemented. 441 files/2,855 tests pass with 100% all-metric coverage; lint (one existing warning), typecheck and build pass. Backend adapters/read metadata committed together because their regression tests verify the linked history. New integration journey is ready to run against fresh standalone output.
 - 2026-10-21 07:28 UTC — Exact inverse and correction service committed; 65 targeted tests, core typecheck and stock lint pass. Real second-connection stale snapshot test proves once-only retry. Next GR/GI owning-document adapters.
 - 07:20 UTC — Persistence gate: 66 tests across ORM/migration/export/entity/isolation suites pass, db typecheck passes. New migration generated from entity; smoke expects 25 migrations.

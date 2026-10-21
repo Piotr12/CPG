@@ -38,19 +38,27 @@ it("reverses one full line and reopens its order, own shipment and auto-complete
   const shipment = await ship(order); const em = scope();
   const storedOrder = await em.findOneOrFail(CustomerOrder, { code: order.id });
   const orderLine = await em.findOneOrFail(CustomerOrderLine, order.lines[0].id);
-  for (let index = 2; index <= 103; index++) {
+  for (let index = 2; index <= 301; index++) {
     const sibling = em.create(Shipment, { code: String(index).padStart(8, "0"), order: storedOrder, plannedDate: "2026-11-01" });
     em.create(ShipmentLine, { shipment: sibling, orderLine, position: 0, quantity: "10.000000", enteredQuantity: "10", enteredUnit: "each", numerator: "1", denominator: "1" });
   }
   await em.flush();
   const issue = await issues().post({ shipment: shipment.id, lines: [{ line: 1, quantity: "10", unit: "each" }, { line: 2, quantity: "10", unit: "each" }] }, actor);
   const before = await orders().get(order.id);
-  expect(await scope().count(Shipment, { status: "completed" })).toBe(103);
+  expect(await scope().count(Shipment, { status: "completed" })).toBe(301);
+  const retained: number[] = []; const record = audit.recordTenantAudit;
+  vi.spyOn(audit, "recordTenantAudit").mockImplementation((tx, who, event) => {
+    if (event.action === "shipments.shipment.recalculated") retained.push(tx.getUnitOfWork().getIdentityMap().values().length);
+    return record(tx, who, event);
+  });
   await reverse((await movement(issue.id)).id);
+  // Four pages retain only their current shipments, lines and shared references, never earlier pages.
+  expect(retained).toHaveLength(301);
+  expect(Math.max(...retained)).toBeLessThan(310);
   expect(await orders().get(order.id)).toMatchObject({ status: "open", version: before.version + 1, lines: [{ fulfilled: "0.000000", status: "open", posted: true }, { fulfilled: "10.000000", status: "completed", posted: true }] });
   expect(await shipments().get(shipment.id)).toMatchObject({ status: "open", lines: [{ issued: "0.000000", toIssue: "10.000000" }, { issued: "10.000000", toIssue: "0.000000" }] });
-  expect(await scope().count(Shipment, { status: "open" })).toBe(103);
-  expect(await scope().count(TenantAuditEvent, { action: "shipments.shipment.recalculated" })).toBe(103);
+  expect(await scope().count(Shipment, { status: "open" })).toBe(301);
+  expect(await scope().count(TenantAuditEvent, { action: "shipments.shipment.recalculated" })).toBe(301);
   expect(await issues().get(issue.id)).toEqual({ ...issue, lines: issue.lines.map((line) => ({ ...line, reversedBy: line.line === 1 ? expect.any(String) : null })) });
   expect(await new StockService({ em: scope() }).get({ material: "00000001", location: "00000001" })).toMatchObject({ quantity: "90.000000" });
 });
@@ -77,16 +85,26 @@ it("preserves explicit closure and abandoned quantity", async () => {
   expect(await orders().get(order.id)).toMatchObject({ status: "closed-early", lines: [{ fulfilled: "0.000000", abandoned: "6.000000", status: "closed-early" }] });
   expect(await shipments().get(shipment.id)).toMatchObject({ status: "open", lines: [{ issued: "0.000000" }] });
 });
-it("rolls back counters, stock, links and audits after a document audit failure", async () => {
+it("rolls back counters, stock, links and earlier flushed batches after a later document audit failure", async () => {
   const order = await orders().create(orderInput, actor); const shipment = await ship(order);
+  const em = scope();
+  const storedOrder = await em.findOneOrFail(CustomerOrder, { code: order.id });
+  const orderLine = await em.findOneOrFail(CustomerOrderLine, order.lines[0].id);
+  for (let index = 2; index <= 102; index++) {
+    const sibling = em.create(Shipment, { code: String(index).padStart(8, "0"), order: storedOrder, plannedDate: "2026-11-01" });
+    em.create(ShipmentLine, { shipment: sibling, orderLine, position: 0, quantity: "10.000000", enteredQuantity: "10", enteredUnit: "each", numerator: "1", denominator: "1" });
+  }
+  await em.flush();
   const issue = await issues().post({ shipment: shipment.id, lines: [{ line: 1, quantity: "10", unit: "each" }] }, actor);
   const before = await orders().get(order.id); const beforeShipment = await shipments().get(shipment.id); const record = audit.recordTenantAudit;
   vi.spyOn(audit, "recordTenantAudit").mockImplementation((em, who, event) => {
-    if (event.action === "shipments.shipment.recalculated") throw new Error("Audit unavailable");
+    if (event.action === "shipments.shipment.recalculated" && event.subject.id === "00000101") throw new Error("Audit unavailable");
     return record(em, who, event);
   });
   await expect(reverse((await movement(issue.id)).id)).rejects.toThrow("Audit unavailable");
   expect(await orders().get(order.id)).toEqual(before); expect(await shipments().get(shipment.id)).toEqual(beforeShipment);
+  expect(await scope().count(Shipment, { status: "completed" })).toBe(102);
+  expect(await scope().count(TenantAuditEvent, { action: "shipments.shipment.recalculated" })).toBe(0);
   expect(await scope().count(StockReversal, {})).toBe(0); expect(await scope().count(StockMovement, {})).toBe(2);
   expect(await scope().count(TenantAuditEvent, { action: "customer-orders.customer-order.issue-reversed" })).toBe(0);
 });
