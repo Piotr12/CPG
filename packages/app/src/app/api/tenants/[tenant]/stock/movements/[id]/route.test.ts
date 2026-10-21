@@ -1,0 +1,32 @@
+import { afterEach, expect, it, vi } from "vitest";
+import { ConflictError, NotFoundError, UnauthorizedError } from "@cpg/core";
+import { GET } from "./route";
+import { POST } from "./reverse/route";
+const mocks = vi.hoisted(() => ({ getMovement: vi.fn(), reverse: vi.fn(), tenantScope: vi.fn(), requireApiUser: vi.fn(), state: { caller: null as unknown, cradle: null as unknown } }));
+vi.mock("@cpg/core", async (original) => ({ ...(await original<typeof import("@cpg/core")>()), tenantScope: mocks.tenantScope }));
+vi.mock("../../../../../../../auth/require-api-user", () => ({ requireApiUser: mocks.requireApiUser }));
+vi.mock("../../../../../../../auth/api-write", async () => (await import("../../../../../../../../../../tests/setup/api-write")).fakeApiWrite(mocks.state));
+const id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const context = { params: Promise.resolve({ tenant: "test", id }) };
+afterEach(() => vi.clearAllMocks());
+it("authenticates the tenant-scoped GET and keeps missing and foreign IDs indistinguishable", async () => {
+  mocks.tenantScope.mockResolvedValue({ cradle: { stockService: { getMovement: mocks.getMovement } } });
+  mocks.getMovement.mockResolvedValue({ id, canReverse: true });
+  const response = await GET(new Request("http://cpg.test/movement"), context);
+  expect(await response.json()).toEqual({ ok: true, data: { id, canReverse: true } });
+  expect(mocks.tenantScope).toHaveBeenCalledWith("test"); expect(mocks.getMovement).toHaveBeenCalledWith(id);
+  mocks.getMovement.mockRejectedValue(new NotFoundError("STOCK_MOVEMENT_NOT_FOUND", "missing"));
+  expect((await GET(new Request("http://cpg.test/movement"), context)).status).toBe(404);
+  mocks.requireApiUser.mockRejectedValue(new UnauthorizedError());
+  expect((await GET(new Request("http://cpg.test/movement"), context)).status).toBe(401);
+});
+it("passes the original ID and strict body to the shared write cradle with the token actor", async () => {
+  mocks.state.caller = { userId: "u", username: "Alice", role: "user", tokenId: "t", tokenName: "ops" };
+  mocks.state.cradle = { stockReversalService: { reverse: mocks.reverse } }; mocks.reverse.mockResolvedValue({ original: id, movement: { id: "inverse" } });
+  const request = () => new Request("http://cpg.test/reverse", { method: "POST", body: JSON.stringify({ reason: "Duplicate" }) });
+  expect(await (await POST(request(), context)).json()).toMatchObject({ ok: true, data: { original: id } });
+  expect(mocks.reverse).toHaveBeenCalledWith(id, { reason: "Duplicate" }, { userId: "u", username: "Alice", sessionId: null, channel: "api", token: { id: "t", name: "ops" } });
+  mocks.reverse.mockRejectedValue(new ConflictError("Already reversed", "STOCK_ALREADY_REVERSED", { reversal: "inverse" }));
+  const refused = await POST(request(), context);
+  expect(refused.status).toBe(409); expect(await refused.json()).toMatchObject({ error: { code: "STOCK_ALREADY_REVERSED", params: { reversal: "inverse" } } });
+});

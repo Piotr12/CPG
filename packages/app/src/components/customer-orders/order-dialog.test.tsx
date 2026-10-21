@@ -49,3 +49,12 @@ describe("OrderDialog", () => {
   });
 
 });
+it("keeps posted identity disabled after all fulfilled quantity is reversed, while allowing a quantity edit", () => {
+  const posted = { ...order, lines: [{ ...order.lines[0], fulfilled: "0.000000", posted: true }] };
+  render(<OrderDialog context={{ tenant: "prod", generation: 1 }} labels={labels} choices={choices} order={posted} />);
+  fireEvent.click(screen.getByRole("button", { name: labels.edit }));
+  for (const label of ["Customer", "Location", "Material, Line 1", "Unit, Line 1", "Required date, Line 1"]) expect(screen.getByLabelText(label)).toHaveProperty("disabled", true);
+  expect(screen.getByRole("button", { name: "Remove line 1" })).toHaveProperty("disabled", true);
+  expect(screen.getByLabelText("Ordered quantity, Line 1")).toHaveProperty("disabled", false);
+  expect(screen.getByText(labels.postedHint)).toBeTruthy();
+});

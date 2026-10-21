@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { stockLabels } from "../stock/labels";
 import type { Locale, MaterialSummary, NamedRecordView, OrderLineView, OrderView, ReceiptView } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { Badge } from "@cpg/ui/components/badge";
@@ -138,7 +139,7 @@ export function OrderScreen({ tenant, order, receipts, materials, units, supplie
             canPost={order.status === "open"}
           />
         )}
-        <ReceiptsTable receipts={receipts} materials={materialsById} labels={receiptLabels} />
+        <ReceiptsTable tenant={tenant} reversalLabels={stockLabels(messages)} receipts={receipts} materials={materialsById} labels={receiptLabels} />
       </section>
     </div>
   );

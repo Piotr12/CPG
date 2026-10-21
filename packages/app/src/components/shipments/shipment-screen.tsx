@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { stockLabels } from "../stock/labels";
 import { isNothing, type IssueView, type Locale, type MaterialSummary, type NamedRecordView, type ShipmentLineView, type ShipmentView, type TenantInfo } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { Badge } from "@cpg/ui/components/badge";
@@ -104,7 +105,7 @@ export function ShipmentScreen({ tenant, shipment, issues, materials, units, cus
             canPost={shipment.status === "open" && choices.length > 0}
           />
         )}
-        <IssuesTable issues={issues} materials={materialsById} labels={issueLabels} />
+        <IssuesTable tenant={tenant} reversalLabels={stockLabels(messages)} issues={issues} materials={materialsById} labels={issueLabels} />
       </section>
     </div>
   );

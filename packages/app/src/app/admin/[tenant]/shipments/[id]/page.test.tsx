@@ -84,7 +84,7 @@ describe("ShipmentPage", () => {
     mocks.tenantScope.mockResolvedValue({ cradle: cradle() });
     mocks.get.mockResolvedValue(SHIPMENT);
     mocks.issues.mockResolvedValue([
-      { id: "00000004", shipment: "00000002", customerOrder: "00000007", location: "00000001", businessDate: "2027-01-03", createdAt: new Date(), lines: [{ line: 2, material: "00000004", quantity: "10.000000" }] },
+      { id: "00000004", shipment: "00000002", customerOrder: "00000007", location: "00000001", businessDate: "2027-01-03", createdAt: new Date(), lines: [{ movementId: null, reversedBy: null, line: 2, material: "00000004", quantity: "10.000000" }] },
     ]);
     mocks.customers.mockResolvedValue([named("00000001", "Retail")]);
     mocks.locations.mockResolvedValue([named("00000001", "Main plant")]);

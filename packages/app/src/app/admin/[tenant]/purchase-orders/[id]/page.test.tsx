@@ -69,8 +69,8 @@ describe("PurchaseOrderPage", () => {
     mocks.materials.mockResolvedValue([material("00000001", "Steel sheet", "kg"), material("00000002", "Bolt M8", "each")]);
     mocks.units.mockResolvedValue({ "00000001": ["kg", "t"], "00000002": ["each"] });
     mocks.receipts.mockResolvedValue([
-      { id: "00000003", purchaseOrder: "00000001", location: "00000001", businessDate: "2027-03-02", createdAt: new Date(), lines: [{ line: 2, material: "00000002", quantity: "4.000000" }] },
-      { id: "00000001", purchaseOrder: "00000001", location: "00000001", businessDate: "2027-03-01", createdAt: new Date(), lines: [{ line: 1, material: "00000001", quantity: "530.000000" }] },
+      { id: "00000003", purchaseOrder: "00000001", location: "00000001", businessDate: "2027-03-02", createdAt: new Date(), lines: [{ movementId: null, reversedBy: null, line: 2, material: "00000002", quantity: "4.000000" }] },
+      { id: "00000001", purchaseOrder: "00000001", location: "00000001", businessDate: "2027-03-01", createdAt: new Date(), lines: [{ movementId: null, reversedBy: null, line: 1, material: "00000001", quantity: "530.000000" }] },
     ]);
     mocks.getMessages.mockResolvedValue({ locale: "en", messages: en });
   });

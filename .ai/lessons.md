@@ -171,3 +171,5 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 - **2026-10-20 — A closed dialog can remain in an inactive Next page** — After create-and-navigate, React/Next retained a closed portal with display:none. Wait for no open/visible dialogs and overlays, and scope subsequent interaction to data-state=open; DOM presence alone is not evidence that a dialog is still open.
 
 - **2026-10-20 — Compare development prefetch Insights against the baseline** — The current Next version reports URL-data Insights even on the existing customer-order Suspense pattern. Before changing route semantics to silence one, reproduce on an unchanged route and check the production build/browser; reordering URL reads merely moved this diagnostic into shared preferences.
+
+- **2026-10-21 — Reversals do not erase posting history** — Derive customer-order identity locks from immutable goods-issue references, not only the current fulfilled counter. A full reversal can return progress to zero while the original customer, location and posted line identity must remain protected.

@@ -260,3 +260,12 @@ Tenant routes under `/api/tenants/{tenant}/production-orders/{id}/completions`, 
 - The order's `produced` rises by the output, and its status becomes `completed` once produced ≥ target.
 - Audit actions: `production-orders.production-completion.posted` (flat per-line keys `line{n}Material/Expected/Actual/Variance/Extra`) and `production-orders.production-order.progressed`.
 - The additive `production_completion` and `production_completion_line` tables are tenant-owned and immutable. The completion's nullable `submission` is the UI's duplicate-submit token, unique per tenant and never exposed.
+
+### Stock reversals (#91)
+
+- `GET /api/tenants/{tenant}/stock/movements/{id}` reads one tenant-local movement with source and reversal links; invalid UUID is `400 VALIDATION_FAILED`, missing/foreign ID is `404 STOCK_MOVEMENT_NOT_FOUND`.
+- `POST /api/tenants/{tenant}/stock/movements/{id}/reverse` accepts only `{ reason }` (trimmed, 1–500 characters), under the existing bearer, idempotency, generation and read-only contract. Both roles may reverse. Success returns `{ original, movement }` in the shared envelope. Quantity is the full exact inverse and business date is today UTC.
+- `409 STOCK_ALREADY_REVERSED` includes `error.params.reversal`, the existing inverse UUID. Unsupported source or inconsistent history returns `409 STOCK_REVERSAL_UNSUPPORTED` / `STOCK_REVERSAL_INCONSISTENT`. Existing insufficient-stock and 400 overflow refusals remain unchanged. A failure writes no stock, document progress, audit or idempotency receipt.
+- Ledger movements add `reverses`, `reversedBy` (nullable UUIDs) and `canReverse` (source eligibility). GR/GI lines add `movementId` and `reversedBy` (nullable UUIDs). Customer-order lines add `posted`, which remains true after full reversal. Receipt lists remain unpaged; ledger/GI pagination is unchanged.
+- Reversal links and original movements are immutable. Receipt/issue originals retain their quantities and dates. Reversals may reopen automatically completed orders/shipments; explicit closure and abandonment stay authoritative. Historical customer/location/material/unit/date locks survive net fulfilment returning to zero.
+- The additive link migration needs no ledger backfill. Its down migration only removes links: it does not undo inverses or document progress. After reversals are used, rolling back the application requires backup recovery or forward repair; down alone is not a business rollback.

@@ -5,19 +5,19 @@ import { resolveServerComponents } from "../../../../../../../tests/setup/server
 import { en } from "../../../../i18n/messages/en";
 import { pl } from "../../../../i18n/messages/pl";
 import StockPage from "./page";
-const mocks = vi.hoisted(() => ({ connection: vi.fn(), requireUser: vi.fn(), tenantScope: vi.fn(), getMessages: vi.fn(), get: vi.fn(), materials: vi.fn(), locations: vi.fn(), material: vi.fn() }));
+const mocks = vi.hoisted(() => ({ connection: vi.fn(), requireUser: vi.fn(), tenantScope: vi.fn(), getMessages: vi.fn(), getMovement: vi.fn(), get: vi.fn(), materials: vi.fn(), locations: vi.fn(), material: vi.fn() }));
 vi.mock("next/server", () => ({ connection: mocks.connection }));
 vi.mock("@cpg/core", async (original) => ({ ...(await original<typeof import("@cpg/core")>()), tenantScope: mocks.tenantScope }));
 vi.mock("../../../../auth/require-admin", () => ({ requireUser: mocks.requireUser }));
 vi.mock("../../../../i18n/get-messages", () => ({ getMessages: mocks.getMessages }));
-vi.mock("./actions", () => ({ postStockCorrection: vi.fn() }));
+vi.mock("./actions", () => ({ postStockCorrection: vi.fn(), reverseStockMovement: vi.fn() }));
 const tenant = { code: "test", name: "Test", generation: 1, readOnly: false };
 const material = { id: "00000001", type: "raw", description: "Bolts", baseUnit: "each", active: true, createdAt: new Date(), version: 1 };
 const location = { id: "00000001", name: "Warehouse", active: true, createdAt: new Date(), version: 1 };
 const pair = { material: "00000001", location: "00000001" };
-const movement = { ...pair, id: "m1", postingId: "p1", position: 0, type: "correction", businessDate: "2027-01-01", occurredAt: new Date(), quantity: "2.000000", baseUnit: "each", enteredQuantity: "2.000000", enteredUnit: "case", numerator: "12", denominator: "1", balanceBefore: "0.000000", balanceAfter: "2.000000", reason: "Opening balance", actorUserId: null, actorUsername: "Demo seed", channel: "seed" as const, source: { id: null, document: null } };
+const movement = { ...pair, id: "m1", postingId: "p1", position: 0, type: "correction", businessDate: "2027-01-01", occurredAt: new Date(), quantity: "2.000000", baseUnit: "each", enteredQuantity: "2.000000", enteredUnit: "case", numerator: "12", denominator: "1", balanceBefore: "0.000000", balanceAfter: "2.000000", reason: "Opening balance", actorUserId: null, actorUsername: "Demo seed", channel: "seed" as const, source: { id: null, document: null }, reverses: null, reversedBy: null, canReverse: true };
 const view: StockView = { ...pair, quantity: "0.000000", baseUnit: "each", materialDescription: "Bolts", locationName: "Warehouse", materialActive: true, locationActive: true, inTransitFrom: "0.000000", inTransitTo: "0.000000", transitTransfers: [], page: 1, movementCount: 0, movements: [] };
-const scope = (readOnly = false) => ({ cradle: { tenant: { ...tenant, readOnly }, stockService: { get: mocks.get }, materialService: { list: mocks.materials, get: mocks.material }, locationService: { list: mocks.locations } } });
+const scope = (readOnly = false) => ({ cradle: { tenant: { ...tenant, readOnly }, stockService: { get: mocks.get, getMovement: mocks.getMovement }, materialService: { list: mocks.materials, get: mocks.material }, locationService: { list: mocks.locations } } });
 const page = (search: Record<string, string | string[]> = {}) => StockPage({ params: Promise.resolve({ tenant: "test" }), searchParams: Promise.resolve(search) });
 beforeEach(() => {
   mocks.requireUser.mockResolvedValue({ role: "user" }); mocks.tenantScope.mockResolvedValue(scope()); mocks.getMessages.mockResolvedValue({ locale: "en", messages: en });
@@ -119,4 +119,18 @@ describe("StockPage", () => {
     mocks.tenantScope.mockRejectedValue(new AppError("TENANT_NOT_FOUND", "missing"));
     await expect(resolveServerComponents(page())).rejects.toThrow("404");
   });
+});
+
+it("shows direct movement detail outside the current page, with original/inverse navigation", async () => {
+  const id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  mocks.getMovement.mockResolvedValue({ ...movement, id, type: "reversal", canReverse: false, reverses: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" });
+  render(await resolveServerComponents(page({ ...pair, movement: id })));
+  expect(mocks.getMovement).toHaveBeenCalledWith(id, { ...pair, page: 1 });
+  expect(screen.getByRole("table", { name: en.stock.reversal.selected })).toBeTruthy();
+  expect(screen.getByRole("link", { name: en.stock.reversal.viewOriginal }).getAttribute("href")).toContain("movement=bbbbbbbb");
+});
+it("rejects malformed and mismatched movement selections", async () => {
+  await expect(resolveServerComponents(page({ movement: ["bad", "bad"] }))).rejects.toThrow("404");
+  mocks.getMovement.mockRejectedValue(new AppError("STOCK_MOVEMENT_NOT_FOUND", "missing"));
+  await expect(resolveServerComponents(page({ movement: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" }))).rejects.toThrow("404");
 });
