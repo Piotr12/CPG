@@ -87,7 +87,7 @@ describe("goods receipts in the UI", () => {
     expect(receipts).toHaveLength(1);
     expect(receipts[0][0]).toMatch(/^\d{8}$/);
     expect(receipts[0][1]).toBe(new Date().toISOString().slice(0, 10));
-    expect(receipts[0][2]).toBe("Line 1: 110 kg Line 2: 4 each");
+    expect(receipts[0][2]).toBe("Line 1: 110 kg Reverse Line 2: 4 each Reverse");
 
     const stock = json(await api("GET", `/api/tenants/prod/stock?material=${ids.steel}&location=${ids.plant}`)).data as StockView;
     expect(stock.quantity).toBe("110.000000");

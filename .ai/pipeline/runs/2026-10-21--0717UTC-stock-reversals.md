@@ -19,6 +19,7 @@ Follow the spec's eight steps. Persistence/core, existing stock/PO/shipment/cust
 - User Guard prevents publishing to shared qa-evidence without approval. Prepare artifacts before any permission request; own feature/spec branch publication is authorized by the invoked workflow. Never merge into main.
 
 ## Log
+- 2026-10-21 08:06 UTC — Independent re-review approved 14db421; all four gates pass (2,855 tests / 100%). Rebuilt reversal+smoke tests pass6/6. Full CI identified two existing whole-row assertions needing the new Reverse control; updated receipts/shipments integration expectations and both affected files pass5/5. Browser state matrix passes: receipt success/history, issue restoration, identity locks, linked inverse, empty/loading/error/read-only/long content, EN/PL and360px keyboard flow. Ten reviewed screenshots prepared locally; shared qa-evidence publication still needs Guard approval.
 - 2026-10-21 07:56 UTC — Independent review found retained shipment batches (608 managed records for 301 siblings). Added flush/clear per batch and generated tenant/order/code cursor index migration. 34 targeted tests pass, including late-batch rollback and query-plan checks. Original reversal/smoke integration passed 2 files / 6 tests. Re-running full gate before re-review.
 - 2026-10-21 07:48 UTC — GR/GI reconciliation, bounded link reads, API/actions, UI controls and historical locks implemented. 441 files/2,855 tests pass with 100% all-metric coverage; lint (one existing warning), typecheck and build pass. Backend adapters/read metadata committed together because their regression tests verify the linked history. New integration journey is ready to run against fresh standalone output.
 - 2026-10-21 07:28 UTC — Exact inverse and correction service committed; 65 targeted tests, core typecheck and stock lint pass. Real second-connection stale snapshot test proves once-only retry. Next GR/GI owning-document adapters.
@@ -34,14 +35,14 @@ Follow the spec's eight steps. Persistence/core, existing stock/PO/shipment/cust
 - [x] 1.1 Add StockReversal entity, migration and persistence/reset/isolation tests. — 96f4e0b
 - [x] 1.2 Share resolved-line posting and exact historical inverse logic. — 782ccdf
 - [x] 1.3 Implement correction reversal service, validation, audit and concurrency protection. — ddc9d10
-- [x] 1.4 Implement GR/GI recalculation, sibling shipment states and historical edit locks.
+- [x] 1.4 Implement GR/GI recalculation, sibling shipment states and historical edit locks. — 74ce569, 14db421
 
 ### Phase 2: UI/API operation
 
-- [x] 2.1 Add bounded read metadata/detail, API/actions and compatibility contract.
-- [x] 2.2 Add reason dialog, existing-screen controls, links, translations and help.
+- [x] 2.1 Add bounded read metadata/detail, API/actions and compatibility contract. — 74ce569, fb7eecb
+- [x] 2.2 Add reason dialog, existing-screen controls, links, translations and help. — fb7eecb
 
 ### Phase 3: verification and delivery
 
-- [ ] 3.1 Add and run touched integration files plus migration smoke; capture browser evidence.
+- [x] 3.1 Add and run touched integration files plus migration smoke; capture browser evidence.
 - [ ] 3.2 Full validation gate, independent review, PR reporting, QA evidence and CI result.
