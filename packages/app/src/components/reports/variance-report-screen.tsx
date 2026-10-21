@@ -57,6 +57,70 @@ export function VarianceReportScreen({ tenant, report, selected, rangeError, mat
       {row.reversed.length > 0 && <dd className="col-span-2 text-xs text-muted-foreground" data-report-reversed>{fill(t.reversed, { ids: row.reversed.join(", ") })}</dd>}
     </dl>
   );
+  const extraBadge = (extra: boolean) =>
+    extra && (
+      <>
+        {" "}
+        <Badge variant="outline" className="ml-1">{t.extra}</Badge>
+      </>
+    );
+  const nothingCounted = <span className="text-sm text-muted-foreground">{t.noComponents}</span>;
+  const componentTable = (row: VarianceReportRow) =>
+    row.components.length === 0 ? (
+      nothingCounted
+    ) : (
+      <table className="w-full text-sm" aria-label={fill(t.componentsOf, { id: row.id })}>
+        <thead>
+          <tr className="text-xs text-muted-foreground">
+            <th scope="col" className="pb-1 pr-2 text-left font-medium">{t.component.material}</th>
+            <th scope="col" className="pb-1 pr-2 text-right font-medium">{t.component.expected}</th>
+            <th scope="col" className="pb-1 pr-2 text-right font-medium">{t.component.actual}</th>
+            <th scope="col" className="pb-1 pr-2 text-right font-medium">{t.component.variance}</th>
+            <th scope="col" className="pb-1 text-right font-medium">{t.component.waste}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {row.components.map((component) => (
+            <tr key={component.material} className="border-t" data-report-component={component.material}>
+              <td className="py-1 pr-2 wrap-anywhere">
+                {`${component.material} ${component.description}`}
+                {extraBadge(component.extra)}
+              </td>
+              <td className="py-1 pr-2 text-right font-mono whitespace-nowrap">{amount(component.expected, component.baseUnit)}</td>
+              <td className="py-1 pr-2 text-right font-mono whitespace-nowrap">{amount(component.actual, component.baseUnit)}</td>
+              <td className="py-1 pr-2 text-right font-mono whitespace-nowrap">{`${shownVariance(component.variance)} ${component.baseUnit}`}</td>
+              <td className="py-1 text-right font-mono whitespace-nowrap">{amount(component.waste, component.baseUnit)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  /** The components on a phone: each one's name, then its four figures, so no column is squeezed (lesson 2026-10-21). */
+  const stackedComponents = (row: VarianceReportRow) =>
+    row.components.length === 0 ? (
+      nothingCounted
+    ) : (
+      <ul className="flex flex-col gap-2">
+        {row.components.map((component) => (
+          <li key={component.material} className="border-t pt-2 text-sm" data-report-stacked={component.material}>
+            <span className="wrap-anywhere">
+              {`${component.material} ${component.description}`}
+              {extraBadge(component.extra)}
+            </span>
+            <dl className="mt-1 grid grid-cols-[auto_auto] gap-x-3 text-xs">
+              {(["expected", "actual", "variance", "waste"] as const).map((figure) => (
+                <div key={figure} className="contents">
+                  <dt className="text-muted-foreground">{t.component[figure]}</dt>
+                  <dd className="text-right font-mono">
+                    {figure === "variance" ? `${shownVariance(component.variance)} ${component.baseUnit}` : amount(component[figure], component.baseUnit)}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </li>
+        ))}
+      </ul>
+    );
   const columns: DataTableColumn<VarianceReportRow>[] = [
     {
       id: "order",
@@ -73,8 +137,11 @@ export function VarianceReportScreen({ tenant, report, selected, rangeError, mat
             <Badge variant="outline">{t.statuses[row.status]}</Badge>
             {fill(t.recipe, { bom: row.bom, revision: String(row.revision) })}
           </span>
-          {/* Narrow screens: the output figures move under the order. */}
-          <div className="mt-2 md:hidden">{figures(row)}</div>
+          {/* Narrow screens: the output figures and the components move under the order, one column. */}
+          <div className="mt-2 flex flex-col gap-3 md:hidden">
+            {figures(row)}
+            {stackedComponents(row)}
+          </div>
         </div>
       ),
     },
@@ -82,37 +149,8 @@ export function VarianceReportScreen({ tenant, report, selected, rangeError, mat
     {
       id: "components",
       header: t.columns.components,
-      className: "min-w-72 whitespace-normal",
-      cell: (row) =>
-        row.components.length === 0 ? (
-          <span className="text-sm text-muted-foreground">{t.noComponents}</span>
-        ) : (
-          <table className="w-full text-sm" aria-label={fill(t.componentsOf, { id: row.id })}>
-            <thead>
-              <tr className="text-xs text-muted-foreground">
-                <th scope="col" className="pb-1 pr-2 text-left font-medium">{t.component.material}</th>
-                <th scope="col" className="pb-1 pr-2 text-right font-medium">{t.component.expected}</th>
-                <th scope="col" className="pb-1 pr-2 text-right font-medium">{t.component.actual}</th>
-                <th scope="col" className="pb-1 pr-2 text-right font-medium">{t.component.variance}</th>
-                <th scope="col" className="pb-1 text-right font-medium">{t.component.waste}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {row.components.map((component) => (
-                <tr key={component.material} className="border-t" data-report-component={component.material}>
-                  <td className="py-1 pr-2 wrap-anywhere">
-                    {`${component.material} ${component.description}`}
-                    {component.extra && <Badge variant="outline" className="ml-2">{t.extra}</Badge>}
-                  </td>
-                  <td className="py-1 pr-2 text-right font-mono whitespace-nowrap">{amount(component.expected, component.baseUnit)}</td>
-                  <td className="py-1 pr-2 text-right font-mono whitespace-nowrap">{amount(component.actual, component.baseUnit)}</td>
-                  <td className="py-1 pr-2 text-right font-mono whitespace-nowrap">{`${shownVariance(component.variance)} ${component.baseUnit}`}</td>
-                  <td className="py-1 text-right font-mono whitespace-nowrap">{amount(component.waste, component.baseUnit)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ),
+      className: "hidden min-w-72 whitespace-normal md:table-cell",
+      cell: componentTable,
     },
   ];
   const query = (page: number) => {
@@ -161,9 +199,10 @@ export function VarianceReportScreen({ tenant, report, selected, rangeError, mat
         <div className="grid min-w-0 gap-2">
           <Label htmlFor="variance-to">{t.to}</Label>
           <Input id="variance-to" name="to" type="date" defaultValue={selected.to ?? ""} aria-invalid={rangeError ? true : undefined} aria-describedby={rangeError ? "variance-to-error" : undefined} />
-          {rangeError && <p id="variance-to-error" role="alert" className="text-sm text-destructive">{rangeError}</p>}
         </div>
         <Button type="submit" variant="outline">{t.apply}</Button>
+        {/* On its own row, so the fields stay aligned. */}
+        {rangeError && <p id="variance-to-error" role="alert" className="text-sm text-destructive sm:col-span-3 lg:col-span-6">{rangeError}</p>}
       </form>
       {report && (
         <>

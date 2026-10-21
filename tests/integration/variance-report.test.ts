@@ -53,7 +53,7 @@ describe("the production variance report in the UI", () => {
       return [...table.querySelectorAll(":scope > tbody > tr")].map((row) => ({
         order: row.cells[0].querySelector("a").innerText.trim(),
         output: row.cells[1].innerText.replace(/\\s+/g, " ").trim(),
-        components: [...row.cells[2].querySelectorAll("tbody tr")].map((line) => [...line.cells].map((cell) => cell.innerText.replace(/\\s+/g, " ").trim())),
+        components: [...row.cells[2].querySelectorAll(":scope tbody tr")].map((line) => [...line.cells].map((cell) => cell.innerText.replace(/\\s+/g, " ").trim())),
       }));
     })()`);
 
@@ -123,6 +123,10 @@ describe("the production variance report in the UI", () => {
       expect(await una.evaluate<number>("document.documentElement.scrollWidth")).toBeLessThanOrEqual(390);
       expect(await una.evaluate<string>(`${shown(report)}.querySelector("tbody td [data-report-output]").innerText.replace(/\\s+/g, " ").trim()`)).toBe(
         "Target 40 each Produced 40 each Output variance 0 each Completions 1 Waste postings 0",
+      );
+      // The components stack under the order too, each figure named, none squeezed into a column.
+      expect(await una.evaluate<string>(`${shown(report)}.querySelector("[data-report-stacked='${ids.milk}']").innerText.replace(/\\s+/g, " ").trim()`)).toBe(
+        `${ids.milk} vrui milk Extra Expected 0 kg Actual 2 kg Variance +2 kg Waste 0 kg`,
       );
     } finally {
       await una.setViewport(1280, 800);

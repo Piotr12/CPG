@@ -73,7 +73,11 @@ describe("VarianceReportPage", () => {
     const components = within(first).getByRole("table", { name: "Components of production order 00000001" });
     expect(within(components).getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual(["Material", "Expected", "Actual", "Variance", "Waste"]);
     expect(componentCells(first, "00000002")).toEqual(["00000002 Cocoa mass", "20 kg", "18 kg", "-2 kg", "0 kg"]);
-    expect(componentCells(first, "00000004")).toEqual(["00000004 Milk powderExtra", "0 kg", "2 kg", "+2 kg", "0 kg"]);
+    expect(componentCells(first, "00000004")).toEqual(["00000004 Milk powder Extra", "0 kg", "2 kg", "+2 kg", "0 kg"]);
+    // Phones get the same figures stacked under the order, each named.
+    expect([...first.querySelector("[data-report-stacked='00000004']")!.querySelectorAll("span, dt, dd")].map((node) => node.textContent)).toEqual([
+      "00000004 Milk powder Extra", "Extra", "Expected", "0 kg", "Actual", "2 kg", "Variance", "+2 kg", "Waste", "0 kg",
+    ]);
     expect(first.querySelector("[data-report-reversed]")).toBeNull();
     expect(screen.queryByRole("navigation", { name: en.varianceReport.pagination })).toBeNull();
     expect(screen.queryByText(en.varianceReport.partial, { exact: false })).toBeNull();
@@ -94,7 +98,8 @@ describe("VarianceReportPage", () => {
 
     const [only] = rows();
     expect(figures(only)).toContain("—");
-    expect(within(only).getByText(en.varianceReport.noComponents)).toBeTruthy();
+    // Once in the components column, once stacked for phones.
+    expect(within(only).getAllByText(en.varianceReport.noComponents)).toHaveLength(2);
     expect(screen.getByText(`Orders: 1 ${en.varianceReport.partial}`)).toBeTruthy();
   });
 

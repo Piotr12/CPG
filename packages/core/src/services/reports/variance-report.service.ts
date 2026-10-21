@@ -149,15 +149,16 @@ export class VarianceReportService {
       if (batch.length < BATCH) break;
       after = batch.at(-1)!.id;
     }
-    const records = new Map<string, ProductionOrder>();
+    // Each order's business ID and output, kept as primitives like the completions.
+    const records = new Map<string, { code: string; output: string }>();
     for (const ids of chunks([...byOrder.keys()])) {
-      for (const record of await this.em.find(ProductionOrder, { id: { $in: ids } }, { disableIdentityMap: true })) records.set(record.id, record);
+      for (const { id, code, output } of await this.em.find(ProductionOrder, { id: { $in: ids } }, { disableIdentityMap: true })) records.set(id, { code, output: output.id });
     }
     // In the order the completions' UUIDs met them, which says nothing about business IDs: the caller sorts.
     return [...byOrder.entries()]
-      .map(([id, completions]) => ({ record: records.get(id)!, completions }))
-      .filter(({ record, completions }) => !material || record.output.id === material.id || completions.some(({ id }) => usesMaterial.has(id)))
-      .map(({ record, completions }) => ({ id: record.id, code: record.code, completions }));
+      .map(([id, completions]) => ({ id, ...records.get(id)!, completions }))
+      .filter(({ output, completions }) => !material || output === material.id || completions.some(({ id }) => usesMaterial.has(id)))
+      .map(({ id, code, completions }) => ({ id, code, completions }));
   }
 
   /** Which of `completions` have a line of `material` that expected or used something (a pinned line is stored even when unused). */

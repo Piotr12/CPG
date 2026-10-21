@@ -1,6 +1,6 @@
 # A user opens the production variance report: each order's target and pinned-BOM expected consumption against actual output and inputs, with extra components, zero-output waste and reversed completions, filters, and the same through the API
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-21 09:47 UTC
 **Issue:** #95 (E13-S02), epic #79 · **Builds on:** `implemented/2026-10-20--2221UTC-production-completions.md` (#89: completions and their stored expected, actual and variance lines), `implemented/2026-10-20--2047UTC-production-orders.md` (#88: orders and their pinned revision), `implemented/2026-10-21--0706UTC-stock-reversals.md` (#91: the append-only `StockReversal` link), `implemented/2026-10-21--0707UTC-document-lifecycle.md` (#90: the four states), `implemented/2026-10-20--2221UTC-stock-report.md` (#94: the first report, whose shape this one follows), `implemented/2026-10-19--2018UTC-read-only-tenants.md`, `implemented/2026-10-19--0913UTC-test-prod-tenants.md` · **Design authority:** `.ai/specs/product-brief.md` (R05, R07, R11, N01, N04, D02), `.ai/specs/research/CPG-prd001.pdf` §07 "Production variance reporting" and §03 "Production postings" / "Reversal transaction", `CPG-prd-datamodel.pdf` ("Production completion posting", "Actual component usage"), `CPG-acceptance.md` (PRD-013, PRD-014, PRD-015, PRD-018, REV-011, REV-013, REV-014, UX-021, API-014, TEN-018, UX-013)
 
@@ -53,24 +53,24 @@ flowchart LR
 
 ### UI
 
-![Proposed variance report](assets/production-variance-report/mockup-01-variance-report.png)
+![Proposed variance report](../assets/production-variance-report/mockup-01-variance-report.png)
 
 The page follows the stock report: a heading, one sentence on what the figures mean, a filter form (material, location, state, from, to as date inputs, Apply), the row count, then the order table. Each row's components sit in a small table in the row's last cell, so one order reads as one block. Below `md` the location, state and recipe move under the order, and the component table stays readable at 390 px (lesson 2026-10-21: dense tables at phone width).
 
-Current screens it builds on: the order's completion history (`assets/production-variance-report/current-01-order-completions.png`) and the stock report (`assets/production-variance-report/current-02-stock-report.png`).
+Current screens it builds on: the order's completion history (`../assets/production-variance-report/current-01-order-completions.png`) and the stock report (`../assets/production-variance-report/current-02-stock-report.png`).
 
-![Completion history on the production order page today](assets/production-variance-report/current-01-order-completions.png)
+![Completion history on the production order page today](../assets/production-variance-report/current-01-order-completions.png)
 
 ## Requirements
 
-- [ ] Rows per Q1–Q4: target, produced and output variance per order; expected, actual, variance and waste per component; Extra for inputs outside the pinned recipe; waste postings counted (PRD-013, PRD-014, PRD-015, PRD-018).
-- [ ] Reversed completions excluded from every figure and listed as reversed (Q5, REV-011, REV-014).
-- [ ] Filters by material, location, state and date range; paging (Q6, Q7).
-- [ ] `GET /api/tenants/{tenant}/reports/variance` (Q9), the page route with its query parameters and the `variance-report` help topic, documented in `BACKWARD_COMPATIBILITY.md` §4.
-- [ ] Both roles, both channels, tenant-scoped; a read-only tenant opens the report (Q10, API-014, UX-021, TEN-018, R05, R07).
-- [ ] No cost or capacity figure (Q13, N01, N04): a test pins the exact key set of a row and of a component.
-- [ ] Sidebar entry, EN/PL strings and help (Q11–Q12, R11, UX-013).
-- [ ] Unit tests at 100%, and integration tests for the page and the API.
+- [x] Rows per Q1–Q4: target, produced and output variance per order; expected, actual, variance and waste per component; Extra for inputs outside the pinned recipe; waste postings counted (PRD-013, PRD-014, PRD-015, PRD-018).
+- [x] Reversed completions excluded from every figure and listed as reversed (Q5, REV-011, REV-014).
+- [x] Filters by material, location, state and date range; paging (Q6, Q7).
+- [x] `GET /api/tenants/{tenant}/reports/variance` (Q9), the page route with its query parameters and the `variance-report` help topic, documented in `BACKWARD_COMPATIBILITY.md` §4.
+- [x] Both roles, both channels, tenant-scoped; a read-only tenant opens the report (Q10, API-014, UX-021, TEN-018, R05, R07).
+- [x] No cost or capacity figure (Q13, N01, N04): a test pins the exact key set of a row and of a component.
+- [x] Sidebar entry, EN/PL strings and help (Q11–Q12, R11, UX-013).
+- [x] Unit tests at 100%, and integration tests for the page and the API.
 
 ## Out of scope
 
@@ -91,3 +91,8 @@ The six criteria of issue #95.
 
 - **Reversals (#92).** At the time of writing #92 (completion reversal) is being designed in parallel. The report decides "reversed" in one helper over the completions' movements and `StockReversal`. If #92 links a reversal to the completion itself instead, that helper reads the new link; nothing else in the report changes.
 - **Spec review.** A fresh-context review before publication found the output variance misleading under a date range (now null), an ambiguous material filter (now counted lines with a non-zero figure), an unbounded line read (now keyset batches into a tally), a 404 for a reversed date range on the page (now a field error), and an envelope that differed from the stock report's (now `asOf` and `rows`, with `status` as the query name). All are folded into Q1–Q9 above.
+- **Recipe order and business-ID order.** The orders reach the sort in the order their completions' UUIDs met them, not in the database's insertion order, so the service test with 60 orders really proves the sort: `$in` finds come back in rowid order, which for sequential IDs already looks sorted.
+- **States in the schema.** `ORDER_STATES` is listed again in `validators/reports/variance-report.schema.ts`, because client components import the schema and `@cpg/db` must stay out of the browser bundle. A test pins it to `DOCUMENT_STATES`.
+- **The range error on the page.** The schema is split into `varianceReportFieldsSchema` (each parameter) and `varianceReportQuerySchema` (plus `from` ≤ `to`). A query whose fields fail is the not-found state, as before; one whose fields pass but whose range doesn't shows the form with the error beside **To**.
+- **Reversals.** Criterion 2 is proven by `variance-report.service.test.ts`, which writes the `StockReversal` link and its inverse movement by hand. No completion can be reversed through the product until #92; its run was told where the rule lives (#92 comment).
+- **Verification.** Docker had no space left, so the touched integration files (`variance-report.test.ts`, `variance-report-api.test.ts`, `navigation.test.ts`, `help.test.ts`) ran against a fresh standalone copy of the production build on fresh data; CI runs the full image suite.
