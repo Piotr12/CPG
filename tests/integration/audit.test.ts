@@ -110,7 +110,8 @@ describe("every change is kept in an append-only audit", () => {
       "Password reset",
       "User created",
     ]);
-    expect(await alice.evaluate<number>(`document.querySelectorAll("main button, main input, main select").length`)).toBe(0);
+    // Only the filter form has controls: nothing that changes an entry.
+    expect(await alice.evaluate<number>(`[...document.querySelectorAll("main button, main input, main select")].filter((e) => !e.closest("main form[aria-label]")).length`)).toBe(0);
   });
 
   it("records a user's own theme change under their own session", async () => {
@@ -221,6 +222,6 @@ describe("every change is kept in an append-only audit", () => {
     await alice.waitUntil(own);
 
     expect(await alice.evaluate<string>(`${own}.cells[4].innerText.trim()`)).toBe("Location created");
-    expect(await alice.evaluate<number>(`document.querySelectorAll("main button, main input, main select, main textarea").length`)).toBe(0);
+    expect(await alice.evaluate<number>(`[...document.querySelectorAll("main button, main input, main select, main textarea")].filter((e) => !e.closest("main form[aria-label]")).length`)).toBe(0);
   });
 });

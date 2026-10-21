@@ -9,7 +9,8 @@ import { appendOnlyTriggers, auditEventProperties } from "./audit-event";
 export const GlobalAuditEvent = defineEntity({
   name: "GlobalAuditEvent",
   properties: auditEventProperties(),
-  indexes: [{ properties: ["occurredAt"] }],
+  /** Newest first; the record index serves a history filtered by subject (keyset on occurredAt, id). */
+  indexes: [{ properties: ["occurredAt"] }, { properties: ["subjectType", "subjectId", "occurredAt", "id"] }],
   triggers: appendOnlyTriggers("global_audit_event"),
 });
 

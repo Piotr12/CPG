@@ -46,6 +46,27 @@ describe("GET /api/audit", () => {
     expect(mocks.listGlobal).toHaveBeenCalledWith({ limit: 50 });
   });
 
+  it("passes the history filters to the service, parsed", async () => {
+    mocks.requireApiUser.mockResolvedValue({ username: "alice", role: "user" });
+    mocks.listGlobal.mockResolvedValue(page);
+
+    await get("?subjectType=User&subjectId=u1&account=Bob&channel=api&from=2026-10-01&to=2026-10-21");
+
+    expect(mocks.listGlobal).toHaveBeenCalledWith({
+      limit: 50, subjectType: "User", subjectId: "u1", account: "bob", channel: "api", from: "2026-10-01", to: "2026-10-21",
+    });
+  });
+
+  it("answers a filter error with 400 keyed by the parameter", async () => {
+    mocks.requireApiUser.mockResolvedValue({ username: "alice", role: "user" });
+
+    const response = await get("?from=2026-10-21&to=2026-10-01");
+
+    expect(response.status).toBe(400);
+    expect((await response.json()).error.fieldErrors).toEqual({ to: ["The end date can't be before the start date."] });
+    expect(mocks.listGlobal).not.toHaveBeenCalled();
+  });
+
   it("answers a bad query with 400 VALIDATION_FAILED", async () => {
     mocks.requireApiUser.mockResolvedValue({ username: "alice", role: "user" });
 

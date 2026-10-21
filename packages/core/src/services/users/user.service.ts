@@ -46,7 +46,7 @@ interface Deps {
  * Every change records its Global audit entry in that same flush (R08), and so does every token it
  * deletes (AUD-014). An edit carries the version the caller loaded, and a stale one is
  * `VERSION_CONFLICT`: the newer change is kept (AUD-024, AUD-025, API-029). Callers check that the
- * actor is the admin (`assertAdmin`) before calling.
+ * actor is the admin (`assertAdmin`) before calling, except for `usernames`.
  */
 export class UserService {
   private readonly em: EntityManager;
@@ -59,6 +59,15 @@ export class UserService {
   async list(): Promise<UserSummary[]> {
     const users = await this.em.find(User, {}, { orderBy: { role: "asc", username: "asc" } });
     return users.map(toSummary);
+  }
+
+  /**
+   * Every account's username, sorted: nothing else, so any signed-in account may read it (the audit's
+   * account filter, AUD-009). Unlike `list`, it needs no admin check.
+   */
+  async usernames(): Promise<string[]> {
+    const users = await this.em.find(User, {}, { fields: ["username"], orderBy: { username: "asc" } });
+    return users.map(({ username }) => username);
   }
 
   /** A new, active normal user. `ConflictError` when the name is taken or reserved. */
