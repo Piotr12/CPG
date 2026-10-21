@@ -1,6 +1,6 @@
 "use client";
 
-import { productionBlockerError } from "../production-orders/production-blocker-error";
+import { deactivationBlockerError } from "../master-data/deactivation-blocker-error";
 
 import { useState } from "react";
 import type { NamedRecordView } from "@cpg/core";
@@ -78,7 +78,7 @@ export function NamedRecordActions({ record, context, labels, update }: NamedRec
             submitLabel={labels.edit.submit}
             pendingLabel={labels.edit.submitting}
             cancelLabel={labels.cancel}
-            formatError={productionBlockerError(labels, context.tenant)}
+            formatError={deactivationBlockerError(labels, context.tenant)}
             formatFieldError={fieldErrorFormatter(labels)}
             onSuccess={close}
             onCancel={close}
@@ -94,7 +94,7 @@ export function NamedRecordActions({ record, context, labels, update }: NamedRec
         cancelLabel={labels.cancel}
         destructive={!target}
         action={() => write({ active: target })}
-        formatError={productionBlockerError(labels, context.tenant)}
+        formatError={deactivationBlockerError(labels, context.tenant)}
       />
     </>
   );
