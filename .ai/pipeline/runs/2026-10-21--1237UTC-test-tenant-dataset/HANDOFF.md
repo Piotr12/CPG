@@ -1,16 +1,16 @@
 # Handoff — 2026-10-21--1237UTC-test-tenant-dataset
 
-**Last updated:** 2026-10-21T12:39:23Z
+**Last updated:** 2026-10-21T13:11:15Z
 **Branch:** feat/test-tenant-dataset
-**PR:** not yet opened
-**Current phase/step:** Phase 1 Step 1.1
-**Last commit:** — (run folder only)
+**PR:** https://github.com/Piotr12/CPG/pull/136 (draft, claimed)
+**Current phase/step:** Phase 2 Step 2.1
+**Last commit:** 81c37bd — feat(demo): replay the test tenant's ledger and enforce its limits
 
 ## What just happened
-- Run started from `om-auto-fix-issue 126` (feature route) → `om-auto-implement-spec` → `om-auto-create-pr-loop`.
+- Phase 1 (pure generator, Steps 1.1–1.6) landed via executor group A; checkpoint 1 green (typecheck, lint, 100 % coverage of domain/demo).
 
 ## Next concrete action
-- Dispatch group A (Steps 1.1–1.6, the pure generator) to one capable executor.
+- Dispatch group B (Steps 2.1–2.4: seed posting date, customer-order, shipment, goods-issue seed paths).
 
 ## Blockers / open questions
 - none

@@ -15,3 +15,7 @@
 - Decision: variances count only completions whose recipe has a raw component measured in kg or l, and the 3 %/2 % delta is what is rounded up to 0.1.
 - Decision: config keys beyond the spec's table: demand.customers[] names the customer by ID with a wholePacks flag (not by name); enteredIn is a unit name (the base unit instead of the literal "base"); supply.overConsumption/underConsumption, supply.waste, supply.requisitions and supply.topUps hold the rules' materials and plants (top-up sheet: steel 2 mm at Wrocław, steel 1.0 mm elsewhere).
 - Decision: limits.documents counts every timeline event except the four opening postings. Openings are derived (safety + one minimum lot), so the zero-opening replay test zeroes the timeline's openings rather than a config value.
+
+## 2026-10-21T13:11:15Z — checkpoint 1 (Steps 1.1..1.6)
+- Phase 1 generator landed (6cdb5f7..81c37bd) through one capable executor (group A, tier capable → opus). Typecheck, lint and 100 % coverage of `domain/demo` pass; the every-day replay passes for 730 days in ~3.5 s.
+- Decision: executors leave the Tasks-table Commit cell with the pre-amend SHA; the next checkpoint corrects it to the pushed SHA.

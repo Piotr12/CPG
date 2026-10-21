@@ -13,12 +13,12 @@
 
 | Phase | Step | Title | Exec | Status | Commit |
 |-------|------|-------|------|--------|--------|
-| 1 | 1.1 | Config file and its schema | group:A:capable | done | cb3c320 |
-| 1 | 1.2 | Calendar and seeded random helpers | group:A:capable | done | 654094d |
-| 1 | 1.3 | Demand plan | group:A:capable | done | e719f11 |
-| 1 | 1.4 | Supply plan | group:A:capable | done | 6a4d600 |
-| 1 | 1.5 | Timeline and generator | group:A:capable | done | fc7d1c2 |
-| 1 | 1.6 | Ledger replay and limits | group:A:capable | done | b4d043d |
+| 1 | 1.1 | Config file and its schema | group:A:capable | done | 6cdb5f7 |
+| 1 | 1.2 | Calendar and seeded random helpers | group:A:capable | done | a52dfee |
+| 1 | 1.3 | Demand plan | group:A:capable | done | a06b485 |
+| 1 | 1.4 | Supply plan | group:A:capable | done | 42e3522 |
+| 1 | 1.5 | Timeline and generator | group:A:capable | done | e17dc3c |
+| 1 | 1.6 | Ledger replay and limits | group:A:capable | done | 81c37bd |
 | 2 | 2.1 | Seed posting context carries its date | group:B | todo | — |
 | 2 | 2.2 | Customer-order seed path | group:B | todo | — |
 | 2 | 2.3 | Shipment seed path | group:B | todo | — |
