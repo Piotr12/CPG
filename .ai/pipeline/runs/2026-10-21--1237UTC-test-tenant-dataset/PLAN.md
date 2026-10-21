@@ -43,6 +43,7 @@
 | 4 | 4.4 | Every list checked with the dataset | inline | done | e9b15ed |
 | 4 | 4.5 | Seed timing and lock window measured | inline | done | 1f41fab |
 | 4 | 4.6 | Docs, lessons and spec moved | inline | done | 927f35c |
+| 4 | 4.6-review-fix | Today's documents stamped no later than the seed's clock | inline | done | a0f23d8 |
 
 ## Goal
 

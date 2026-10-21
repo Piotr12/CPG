@@ -1,6 +1,7 @@
 import { Material, TenantAuditEvent, type EntityManager } from "@cpg/db";
 import type { Cradle } from "../../container/cradle";
 import { generateTestTenantDataset, type TimelineEvent } from "../../domain/demo/generate-dataset";
+import { notAfter } from "../../domain/demo/timeline";
 import type { TestTenantConfig } from "../../domain/demo/test-tenant-config.schema";
 
 /** What the generated dataset holds, in the order the seed writes it (spec `2026-10-21--0718UTC-test-tenant-dataset`). */
@@ -33,7 +34,8 @@ export async function isUntouchedTest(em: EntityManager): Promise<boolean> {
 }
 
 /**
- * Writes the dataset generated for `today` into the scope's tenant through the services' seed paths,
+ * Writes the dataset generated for `today` (the seed's clock: its date picks the dataset, and today's
+ * partial documents are stamped no later than it) into the scope's tenant through the services' seed paths,
  * in the caller's transaction, and returns how many records of each kind it created. The masters come
  * first, created on the setup date, then every timeline event in order, each dated by its own `at`;
  * documents are referenced by the IDs and line IDs the services return, and the identity map is
@@ -63,7 +65,8 @@ export async function seedTestTenantDataset(services: DatasetServices, today: Da
 
   const customerOrders = new Map<string, { id: string; lines: string[] }>();
   const ids = new Map<string, string>();
-  for (const event of dataset.timeline) {
+  // `today` is the seed's clock: today's partial documents are stamped no later than it.
+  for (const event of notAfter(dataset.timeline, today)) {
     const at = new Date(event.at);
     switch (event.kind) {
       case "opening":

@@ -5,7 +5,7 @@ import { planDemand } from "./demand-plan";
 import { Ledger } from "./ledger";
 import { expectedUse, planSupply, type SupplyPlan } from "./supply-plan";
 import { TEST_TENANT_CONFIG } from "./test-tenant-config.schema";
-import { buildTimeline, planEvents, type TimelineEvent } from "./timeline";
+import { buildTimeline, notAfter, planEvents, type TimelineEvent } from "./timeline";
 
 const config = TEST_TENANT_CONFIG;
 
@@ -198,5 +198,33 @@ describe("buildTimeline", () => {
     const sheet = completion.components[0].material;
     const starved = timelineOn(day, lessStock(sheet, order.location, balanceBefore(dayTimeline, sheet, order.location, `${day}T13`), day));
     expect(ofKind(on(starved, day), "completion").some(({ order: key }) => key === order.key)).toBe(false);
+  });
+});
+
+describe("notAfter", () => {
+  const increasing = (events: readonly TimelineEvent[]) => events.every(({ at }, index) => index === 0 || events[index - 1].at < at);
+
+  it("moves today's events to no later than the seed's clock, keeping their order and earlier days as they are", () => {
+    expect(todays.length).toBeGreaterThan(1);
+    const early = new Date(`${today}T06:00:00.000Z`);
+
+    const moved = notAfter(timeline, early);
+
+    expect(moved.filter(({ at }) => at < today)).toEqual(timeline.filter(({ at }) => at < today));
+    const movedToday = on(moved, today);
+    expect(movedToday.map(({ kind }) => kind)).toEqual(todays.map(({ kind }) => kind));
+    expect(movedToday.every(({ at }) => Date.parse(at) <= early.getTime())).toBe(true);
+    expect(movedToday.at(-1)!.at).toBe(early.toISOString());
+    expect(increasing(moved)).toBe(true);
+  });
+
+  it("leaves today's slots alone once the clock is past them", () => {
+    expect(notAfter(timeline, new Date(`${today}T23:00:00.000Z`))).toEqual(timeline);
+  });
+
+  it("never moves an event before midnight, even a millisecond after it", () => {
+    const moved = on(notAfter(timeline, new Date(`${today}T00:00:00.001Z`)), today);
+
+    expect(moved.map(({ at }) => at)).toEqual(todays.map((_, index) => new Date(Date.parse(`${today}T00:00:00.000Z`) + index).toISOString()));
   });
 });

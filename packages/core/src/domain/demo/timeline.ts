@@ -299,3 +299,23 @@ export function buildTimeline(config: TestTenantConfig, plan: AnchorPlan, today:
   const todays = todaysDocuments(config, plan, today, ledger).sort(byDayOrder);
   return stamped([...past, ...todays]);
 }
+
+/**
+ * `timeline` with its events of `now`'s day moved to no later than `now`. Today's slots (receipts at
+ * 09:00, issues at 15:00…) are where a day's work is, but a seed that runs earlier must not write the
+ * future: the ledger lists by `occurredAt`, so a user's posting made after the seed would sort before
+ * it. Today's events keep their order: each is at most its slot and at most `now` less one millisecond
+ * per event after it, and never before midnight. Earlier days are unchanged.
+ */
+export function notAfter(timeline: readonly TimelineEvent[], now: Date): TimelineEvent[] {
+  const today = now.toISOString().slice(0, 10);
+  const midnight = Date.parse(`${today}T00:00:00.000Z`);
+  const todays = timeline.filter(({ at }) => at.startsWith(today)).length;
+  let seen = 0;
+  return timeline.map((event) => {
+    if (!event.at.startsWith(today)) return event;
+    seen += 1;
+    const latest = Math.min(Date.parse(event.at), now.getTime() - (todays - seen));
+    return { ...event, at: new Date(Math.max(latest, midnight + seen - 1)).toISOString() };
+  });
+}

@@ -81,6 +81,23 @@ describe("seedTestTenantDataset", () => {
     expect(lastCompletion[0].createdAt.getTime()).toBeLessThanOrEqual(new Date(dataset.timeline.at(-1)!.at).getTime());
   }, 60_000);
 
+  it("stamps nothing later than the seed's clock, even when it runs before today's slots", async () => {
+    const cradle = await testScope();
+    const { em } = cradle;
+    const early = new Date("2026-10-21T06:00:00.000Z");
+    const { timeline } = generateTestTenantDataset(REDUCED_TEST_TENANT_CONFIG, "2026-10-21");
+    expect(timeline.some(({ at }) => at > early.toISOString())).toBe(true);
+
+    await seedTestTenantDataset(cradle, early, REDUCED_TEST_TENANT_CONFIG);
+
+    const latest = async (entity: typeof StockMovement | typeof CustomerOrder | typeof ProductionCompletion, field: "occurredAt" | "createdAt" | "updatedAt") =>
+      ((await em.find(entity as typeof StockMovement, {}, { orderBy: { [field]: "desc" }, limit: 1 }))[0] as unknown as Record<string, Date>)[field];
+    expect((await latest(StockMovement, "occurredAt")).getTime()).toBeLessThanOrEqual(early.getTime());
+    expect((await latest(CustomerOrder, "updatedAt")).getTime()).toBeLessThanOrEqual(early.getTime());
+    expect((await latest(ProductionCompletion, "createdAt")).getTime()).toBeLessThanOrEqual(early.getTime());
+    expect((await em.find(StockMovement, {}, { orderBy: { occurredAt: "desc" }, limit: 1 }))[0].businessDate).toBe("2026-10-21");
+  }, 60_000);
+
   it("fulfils every history order line by exactly what its goods issues took (SAL-006…009, INV-012)", async () => {
     const cradle = await testScope();
     const { em } = cradle;
