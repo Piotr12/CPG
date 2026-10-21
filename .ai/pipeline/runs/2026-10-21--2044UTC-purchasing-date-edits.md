@@ -4,7 +4,7 @@
 **Agent:** Claude Code (Opus 5.5), `om-auto-fix-issue 142` → `om-auto-implement-spec` → `om-auto-create-pr`
 **Source doc:** .ai/specs/2026-10-21--2036UTC-purchasing-date-edits.md (design PR #157)
 **Issue:** #142 (E09-S04)
-**Status:** in progress
+**Status:** done
 
 ## Goal
 
@@ -82,10 +82,14 @@ The spec ships on design PR #157 (`spec/purchasing-date-edits`), which is not me
 
 ### Phase 4: Integration and docs
 
-- [ ] 4.1 Integration journeys and existing assertions
-- [ ] 4.2 Acceptance, spec notes, lessons, spec move
+- [x] 4.1 Integration journeys and existing assertions — 4ce059a
+- [x] 4.2 Acceptance, spec notes, lessons, spec move — a08abec (spec move pending #157, see Log)
 
 ## Log
 
 - 20:44 UTC — Plan drafted with 10 Steps, under the loop threshold of 20, so the engine is `om-auto-create-pr`.
 - 20:47 UTC — Phase 1 is done. The new service test failed before the guard: version 1, where 2 was expected.
+- 20:55 UTC — Deviation: the PO-line journey went into `goods-receipts.test.ts` rather than `purchasing.test.ts`, because that file already has a token, an order and a partly received Open line. Its existing Actions-cell assertion now reads "Change date Close Early".
+- 20:58 UTC — Layout: the extra button squeezed the PO Material column until IDs broke mid-number at 1280 px. `min-w-40` and `min-w-24` pushed the table past its container (by 75 px and 11 px). Fix: stacked row actions plus `whitespace-nowrap` IDs, which fit unscrolled at 1280×800 (cbbd40c). At 390 px the page doesn't overflow, and the actions stay within the table's own horizontal scroll, as Cancel already did.
+- 21:05 UTC — Gate: lint 0 errors (1 warning in `bom.service.ts`, already on main), typecheck 0, `test:coverage` 484 files / 3279 tests at 100%, build 0. No Docker here (lesson 2026-10-19), so the integration files ran against a fresh standalone copy on :3418: `purchasing.test.ts` + `goods-receipts.test.ts` 7/7, `document-lifecycle.test.ts` 10/10.
+- 21:07 UTC — BUY-024 stays "Partially verified": the catalogue reserves Passed (automated) for a whole scenario, and SAL-019 is the precedent. Its evidence now says the non-MRP half passes automated on UI and API. The spec move to `implemented/` waits for design PR #157 to merge, because this branch must not add the spec file too.
