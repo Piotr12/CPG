@@ -1,6 +1,6 @@
 # A user changes a requisition's required date and a purchase order line's planned date on screen
 
-**Status:** ready
+**Status:** implemented (PR #159)
 **Created:** 2026-10-21 20:36 UTC
 **Issue:** #142 (E09-S04), epic #75 · **Builds on:** `implemented/2026-10-20--1636UTC-purchase-requisitions-orders.md` (#86, Q8: the only edits after creation), `implemented/2026-10-20--1933UTC-goods-receipts.md` (#87, BUY-020…024), `implemented/2026-10-20--2046UTC-transfers.md` (the Change dates dialog), `implemented/2026-10-21--0707UTC-document-lifecycle.md` (row actions, line states) · **Design authority:** `.ai/specs/product-brief.md` (R05, R07), `CPG-acceptance.md` (BUY-024)
 
@@ -175,3 +175,15 @@ One phase: both edits ship on one implementation PR (Q1).
    - In `CPG-acceptance.md`, BUY-024 becomes `Passed (automated)` for its non-MRP half, with the new evidence. Its MRP half stays slice 3 (#14).
    - Update the #86 spec's Implementation notes line that says "API-only".
    - Move this spec to `implemented/`.
+
+## Implementation notes
+
+Implementation PR #159 changed these points from the plan above:
+
+- **Row actions are stacked** (`flex flex-col items-start gap-2`), not side by side (`flex flex-wrap gap-2`), and material IDs are `whitespace-nowrap`. Side by side, the table sized the Actions column for both buttons, which squeezed the purchase-order Material column until IDs broke mid-number at 1280 px beside the sidebar. A column minimum (`min-w-40`, `min-w-24`) pushed the table past its container instead.
+- **The PO-line journey is in `tests/integration/goods-receipts.test.ts`**, not `purchasing.test.ts`. That file already has an order with a partly received Open line and an API token to read the audit. The requisition journey and the phone-width check are in `purchasing.test.ts`.
+- **At 390 px the Actions column stays in the table's own horizontal scroll.** That was already true of Cancel, and the page itself doesn't overflow. The test scrolls the button into the table's box and opens the dialog.
+- **BUY-024 stays "Partially verified."** The acceptance catalogue reserves "Passed (automated)" for a whole scenario, and SAL-019 is the precedent. Its evidence line now says that the non-MRP half passes on both UI and API.
+- **The requisition dialog's errors are the screen's merged map** (`labels.errors`, the shared map plus the requisition screen's own). The requisition screen overrides none of the codes the dialog can show, so this matches the spec's explicit map.
+- **Moving the spec to `implemented/`** happens once this design PR is on `main`.
+
