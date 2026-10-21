@@ -3,7 +3,7 @@
 **Date:** 2026-10-21 09:35 UTC
 **Agent:** Claude Code (Opus 5.5) via cezar, `om-auto-fix-issue 128`
 **Spec:** none (CI-reliability bug)
-**Status:** done (pending the PR's CI)
+**Status:** done
 
 ## Goal
 
@@ -52,8 +52,11 @@ whether it is a sign-in/session race or browser readiness timing, fix the cause,
 ## Changes
 
 - `tests/integration/sign-in.ts`: `signedOutLayoutSettled`, awaited by `signIn` before filling.
-- `.ai/lessons.md`: new lesson on late layout shifts and coordinate clicks; the 2026-10-20 hydration
-  lesson now points to it.
+- `.ai/lessons.md` + `.ai/lessons/2026-10-21--1007UTC-late-layout-shift-lost-click.md`: late layout shifts
+  and coordinate clicks, plus the shared sign-in throttle bucket of the standalone server; the
+  2026-10-20 hydration lesson now points to them.
+- PR #134. Merged `origin/main` (document lifecycle, #123) cleanly; independent review: approve, one
+  minor (lesson length) and four nits, all fixed.
 
 ## Verification
 
@@ -64,7 +67,8 @@ whether it is a sign-in/session race or browser readiness timing, fix the cause,
   CI runs the full suite.
 - `npm run lint`: 0 errors, 1 warning in `bom.service.ts`, which this branch doesn't touch.
   `npm run typecheck`: clean. `npm run test:coverage`: 441 files, 2,858 tests, 100% on all four metrics.
-  `npm run build`: passed (before the test-only edit).
+  `npm run build`: passed (before the test-only edit). After merging `main`: lint 0 errors, typecheck clean,
+  coverage 462 files / 2,952 tests at 100%. CI on the PR runs the full integration suite.
 
 ## Follow-ups
 
