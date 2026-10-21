@@ -24,6 +24,7 @@ Every story of epics #73 (E07), #74 (E08), #75 (E09), #76 (E10), #77 (E11) and #
 - 13:25 — A subagent is applying the six reports' catalogue tables to `CPG-acceptance.md`, citing #139–#145 for the open halves.
 
 - 13:40 — The catalogue pass changed 238 rows: 196 `Passed (automated)` and 42 `Partially verified`. Each open half cites #139–#145 or slice 3 (#14). Where reports conflicted, the more conservative status won: LFC-018 is partial because of #139. REV-011/014 are Passed: their Given/When/Then are asserted by the E11 tests, and the variance-report half is noted against #145.
+- After PR #146 merged — The owner asked for the #84 leftover as an issue: filed #147 (E08-S05, shipment edit and cancel), added it to epic #74, and pointed the shipments spec note and the #84 run log at it.
 
 ## Changes
 
@@ -55,12 +56,11 @@ Every story of epics #73 (E07), #74 (E08), #75 (E09), #76 (E10), #77 (E11) and #
 - `npm run test:coverage`: 479 files, 3,137 tests pass, 100% statements (9102/9102), branches (3913/3913), functions (3025/3025) and lines (7992/7992). This includes `tests/ai-filenames.test.ts` and `tests/spec-images.test.ts`.
 - `npm run build`: passed.
 - No integration test was touched, so none was run locally; CI runs the suite. The only runtime change is help copy, covered by the help unit tests.
-- The `main` Deploy run on `d2300ef` was still in progress when this was written. PRs #133 and #135 merged 24 seconds apart, so that run is the first CI of the two together. The new Passed rows assume it goes green.
+- The `main` Deploy run on `d2300ef` was still in progress when this was written. PRs #133 and #135 merged 24 seconds apart, so that run is the first CI of the two together. The new Passed rows assumed it would go green, and it did (noted on PR #146).
 
 ## Follow-ups
 
-- None of the six epics closes until its new story ships: #139 (E07), #140 (E08), #141 and #142 (E09), #143 (E10), #144 (E11), #145 (E13). E09 also has the open follow-ups #115 and #138.
+- None of the six epics closes until its new story ships: #139 (E07), #140 and #147 (E08), #141 and #142 (E09), #143 (E10), #144 (E11), #145 (E13). E09 also has the open follow-ups #115 and #138.
 - Owner decisions:
-  - shipment edit and cancel (out of scope in the #84 spec, never filed);
   - the QA labels on the merged story PRs. Most still carry `review`/`needs-qa` with no human QA recorded.
 - No issue tracks the development-mode hydration limitation noted in #90/PR #123.
