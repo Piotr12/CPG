@@ -13,10 +13,10 @@ Issue #139 (E07-S04): a deactivation refused by an Open transfer links to that t
 
 - 20:33 Classified as a feature (`feature` label): feature route. FR triage: not built (the refusal sends `params.transfer`, the dialog formatter links only `*_HAS_PRODUCTION_ORDERS`), no spec covers it, no open PR references #139. `SDLC.md` has no Definition of Ready, so the ticket-level gate is skipped. Claimed #139.
 - 20:35 `om-auto-write-spec`: branch `spec/transfer-refusal-links`, spec written with autonomous defaults (Q1–Q6). Current-state screenshot from a throwaway dev server (an Open transfer of an unstocked material), plus one static mockup.
-- 20:45 Fresh-context review: 1 High (the planned integration test would hit `STOCK_NOT_EMPTY` first, because deactivation checks physical stock before transfers), 3 Medium (the STX-018 UI test's helper and audit-filter work, the API channel of STX-018, a service test that proves nothing new), 4 Low. All folded into the spec.
+- 20:38 Fresh-context review: 1 High (the planned integration test would hit `STOCK_NOT_EMPTY` first, because deactivation checks physical stock before transfers), 3 Medium (the STX-018 UI test's helper and audit-filter work, the API channel of STX-018, a service test that proves nothing new), 4 Low. All folded into the spec.
 
-- 20:50 Spec PR #149 opened (ready, `review` · `documentation` · `skip-qa` · `priority-low` · `risk-low`), with the design evidence, assumptions and summary comments. The issue lock was handed to `om-auto-implement-spec`.
-- 20:41 onwards: implementation on PR #151. Its execution plan is `.ai/pipeline/runs/2026-10-21--2041UTC-transfer-refusal-links.md`, the run log for that phase.
+- 20:40 Spec PR #149 opened (ready, `review` · `documentation` · `skip-qa` · `priority-low` · `risk-low`), with the design evidence, assumptions and summary comments. The issue lock was handed to `om-auto-implement-spec`.
+- 20:41 Implementation began, on PR #151. Its execution plan is `.ai/pipeline/runs/2026-10-21--2041UTC-transfer-refusal-links.md`, the run log for that phase.
 
 ## Changes
 

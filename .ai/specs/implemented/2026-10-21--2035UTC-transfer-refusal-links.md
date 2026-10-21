@@ -105,3 +105,4 @@ The two phases land as separate commits on one PR, so either can be reverted alo
 - Implemented on PR #151 (`feat/transfer-refusal-links`, based on this spec's PR #149), as planned.
 - After the refusal's link is followed, Next.js keeps the material page mounted but hidden (`display: none`, React Activity), with its open Deactivate dialog. The transfer page shows and stays interactive. So `transfers.test.ts` waits for the transfer's shown heading, not for the dialog to disappear.
 - STX-018's UI test also checks that the admin's session differs from the normal user's, to show that the admin's attribution uses the admin's own session.
+- STX-006's test lists two of the three stocked sites, as issue #139 words it, and checks the third. The existing test already covers a workbook listing a single site.

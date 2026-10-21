@@ -3353,7 +3353,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/imports/stock-import.service.test.ts` (an unlisted position at another location keeps its 20; with stock at three locations and a workbook listing only one, the other two keep every balance and get no movement), `tests/integration/stock-import-api.test.ts`. E07-S02, #81; #139.
+- **Evidence:** `packages/core/src/services/imports/stock-import.service.test.ts` (an unlisted position at another location keeps its 20; with stock at three locations and a workbook listing two, the third keeps every balance and gets no movement), `tests/integration/stock-import-api.test.ts`. E07-S02, #81; #139.
 - **Given:** Three sites A/B/C have stock; workbook only site A
 - **When:** Commit import
 - **Then:** A targeted positions updated; B/C exactly unchanged.
@@ -4447,7 +4447,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/stock/stock.service.test.ts` and `tests/integration/stock.test.ts` (a stocked material's and location's deactivation is `STOCK_NOT_EMPTY`, naming the material, location, quantity and unit; allowed once zero), `packages/core/src/services/imports/import.service.test.ts` (a location refusal names material, location and exact quantity). E07-S01, #80; #139.
+- **Evidence:** `packages/core/src/services/stock/stock.service.test.ts` (a stocked material's and location's deactivation is `STOCK_NOT_EMPTY`, naming the material, location, quantity and unit; allowed once zero), `tests/integration/stock.test.ts` (`STOCK_NOT_EMPTY`; allowed once zero), `packages/core/src/services/imports/import.service.test.ts` (a location refusal names material, location and exact quantity). E07-S01, #80; #139.
 - **Given:** Location contains nonzero stock
 - **When:** Admin tries deactivate
 - **Then:** Rejected and identifies nonzero balances.
