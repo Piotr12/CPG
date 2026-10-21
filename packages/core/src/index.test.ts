@@ -102,6 +102,7 @@ describe("@cpg/core", () => {
       "UserService",
       "VERSION_CONFLICT",
       "ValidationError",
+      "VarianceReportService",
       "apiActor",
       "assertAdmin",
       "assertServerConfig",
