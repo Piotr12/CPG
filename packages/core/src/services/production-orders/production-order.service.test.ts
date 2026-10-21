@@ -243,13 +243,25 @@ describe("production master references", () => {
 
 describe("demo", () => {
   it("skips existing orders, read-only tenants and edited masters; unexpected failures propagate", async () => {
-    expect(await service().seedDemo()).toBe(0); // Fixture uses demo output 4, absent in edited dataset.
-    await service().create(input, actor); expect(await service().seedDemo()).toBe(0);
+    expect(await service().seedFixtures()).toBe(0); // Fixture uses demo output 4, absent in edited dataset.
+    await service().create(input, actor); expect(await service().seedFixtures()).toBe(0);
     await masters("test"); const global = orm.em.fork(); await global.nativeUpdate(Tenant, { code: "test" }, { readOnly: true });
-    expect(await service(em("test")).seedDemo()).toBe(0);
+    expect(await service(em("test")).seedFixtures()).toBe(0);
     const manager = em("test"); await global.nativeUpdate(Tenant, { code: "test" }, { readOnly: false });
     const spy = vi.spyOn(manager, "transactional").mockImplementationOnce(async (callback) => callback(manager)).mockRejectedValueOnce(new Error("broken seed"));
-    await expect(service(manager).seedDemo()).rejects.toThrow("broken seed"); expect(spy).toHaveBeenCalled();
+    await expect(service(manager).seedFixtures()).rejects.toThrow("broken seed"); expect(spy).toHaveBeenCalled();
+  });
+
+  it("seeds a dated, unaudited order under the user rules, with a planned start before the revision's validity", async () => {
+    const at = new Date("2025-03-10T08:00:00Z");
+    const auditBefore = await auditCount();
+    const seeded = await service().seedDemo({ ...input, plannedFinish: "2026-01-03", bom: "00000001", revision: 1 }, at);
+    expect(seeded).toMatchObject({ id: "00000001", status: "open", plannedStart: "2025-12-29", plannedFinish: "2026-01-03", bom: "00000001", revision: 1 });
+    const stored = await em().findOneOrFail(ProductionOrder, { code: "00000001" });
+    expect(stored.createdAt).toEqual(at); expect(stored.updatedAt).toEqual(at);
+    expect(await auditCount()).toBe(auditBefore);
+    await expect(service().seedDemo({ ...input, plannedFinish: "2025-12-31" }, at)).rejects.toMatchObject({ code: "PRODUCTION_NO_USABLE_BOM" });
+    expect(await em().count(ProductionOrder, {})).toBe(1);
   });
 });
 
