@@ -25,6 +25,10 @@ E09-S03 (#141): a location an Open purchase order delivers to, or with an Open r
 
 - 21:40 — Fresh-context review (`om-code-review`, subagent) approved: no blocker or major. Fixed on the PR: the BUY-009 evidence wrongly cited the UI test, which doesn't read stock; LFC-018's "Missing:" now also lists the unlinked purchasing and customer-order refusals; the guard's doc comment; a Polish help phrase; a note that the UI refusal test uses the test above. The guards have no composite index (a successful deactivation scans the tenant's orders by code, as the customer-order guard already does). Adding one needs a migration (risk-high), so it is filed as #162.
 
+- 22:20 — CI on a95f165: 3 integration failures.
+  - Two in `test-reset.test.ts` (reset wait timeout): pre-existing on `main` (the Deploy of 1882d6a failed on the same two) and tracked as #163.
+  - One in `document-lifecycle.test.ts`, caused by this PR: it counted every `*.cancelled` audit event in Prod (expected 5), and `purchasing-api.test.ts` now cancels three Prod documents before it in CI's file order (got 8). It now counts one cancellation per own document, by action and subject ID. Running purchasing-api, then document-lifecycle, on one standalone server passes 14/14 and 10/10.
+
 ## Changes
 
 - `packages/core/src/services/purchase-orders/purchasing-usage.ts`: `assertNoPurchasingAtLocation`.
