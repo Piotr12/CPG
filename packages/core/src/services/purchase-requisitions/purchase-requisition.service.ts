@@ -15,6 +15,7 @@ import { findActiveLocation } from "../locations/find-location";
 import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quantity";
 import { findActiveMaterial } from "../materials/find-material";
 import { lineError } from "../materials/line-error";
+import type { PostingContext } from "../stock/stock-posting";
 import { isScopeReadOnly } from "../tenants/tenant.service";
 import {
   findRequisition,
@@ -73,11 +74,22 @@ export class PurchaseRequisitionService {
   }
 
   /** A new Open requisition with the next ID and nothing converted (LFC-001). */
-  async create(input: NewRequisition, actor: AuditActor): Promise<RequisitionView> {
+  create(input: NewRequisition, actor: AuditActor): Promise<RequisitionView> {
+    return this.createWith(input, { kind: "user", actor });
+  }
+
+  /** The demo seed's requisition, stamped at `at` and unaudited; every business rule of `create` still applies. */
+  seedDemo(input: NewRequisition, at: Date): Promise<RequisitionView> {
+    return this.createWith(input, { kind: "seed", at });
+  }
+
+  private async createWith(input: NewRequisition, context: PostingContext): Promise<RequisitionView> {
     try {
       return await this.em.transactional(async (em) => {
-        const requisition = await insertRequisition(em, input);
-        recordTenantAudit(em, actor, requisitionEntry("created", requisition, null, requisitionSnapshot(requisition)));
+        const requisition = await insertRequisition(em, input, context.kind === "seed" ? context.at : undefined);
+        if (context.kind === "user") {
+          recordTenantAudit(em, context.actor, requisitionEntry("created", requisition, null, requisitionSnapshot(requisition)));
+        }
         await em.flush();
         return toRequisitionView(requisition);
       });
@@ -144,7 +156,7 @@ export class PurchaseRequisitionService {
    * demo material or location missing, inactive or without its conversion in an edited Test tenant)
    * is skipped. Not audited, like the other demo records. Seeds nothing into a read-only tenant (R05).
    */
-  async seedDemo(): Promise<number> {
+  async seedFixtures(): Promise<number> {
     return this.em.transactional(async (em) => {
       if ((await em.count(PurchaseRequisition, {})) > 0 || (await isScopeReadOnly(em))) return 0;
       let created = 0;
@@ -164,8 +176,8 @@ export class PurchaseRequisitionService {
   }
 }
 
-/** Checks and inserts (unflushed) a requisition with the tenant's next ID; shared by `create` and the demo seed. */
-async function insertRequisition(em: EntityManager, input: NewRequisition): Promise<PurchaseRequisition> {
+/** Checks and inserts (unflushed) a requisition with the tenant's next ID; shared by `create` and the demo seeds; `at` stamps the seed's `createdAt`. */
+async function insertRequisition(em: EntityManager, input: NewRequisition, at?: Date): Promise<PurchaseRequisition> {
   const material = await findActiveMaterial(em, input.material);
   const location = await findActiveLocation(em, input.location);
   const record = await convertEntered(em, material, input);
@@ -187,6 +199,7 @@ async function insertRequisition(em: EntityManager, input: NewRequisition): Prom
     requiredDate: input.requiredDate,
     converted: "0.000000",
     status: "open",
+    ...(at && { createdAt: at }),
   });
 }
 

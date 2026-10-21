@@ -669,7 +669,7 @@ describe("PurchaseOrderService", () => {
 
     it("creates the demo orders after the requisitions they convert, unaudited, and nothing the second time", async () => {
       await seedDemoMasters();
-      await new PurchaseRequisitionService({ em: scopedEm("test") }).seedDemo();
+      await new PurchaseRequisitionService({ em: scopedEm("test") }).seedFixtures();
 
       expect(await service("test").seedDemo()).toBe(DEMO_ORDERS.length);
       expect(await service("test").seedDemo()).toBe(0);

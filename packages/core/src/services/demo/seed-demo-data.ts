@@ -28,7 +28,7 @@ export function demoSeeders(services: DemoServices): Record<DemoKind, { expected
     forecasts: { expected: DEMO_FORECASTS.length, run: () => services.forecastService.seedDemo() },
     "customer orders": { expected: 1, run: () => services.customerOrderService.seedFixtures() },
     "stock openings": { expected: DEMO_STOCK.length, run: () => services.stockService.seedDemo() },
-    "purchase requisitions": { expected: DEMO_REQUISITIONS.length, run: () => services.purchaseRequisitionService.seedDemo() },
+    "purchase requisitions": { expected: DEMO_REQUISITIONS.length, run: () => services.purchaseRequisitionService.seedFixtures() },
     "purchase orders": { expected: DEMO_ORDERS.length, run: () => services.purchaseOrderService.seedDemo() },
     "production orders": { expected: 1, run: () => services.productionOrderService.seedDemo() },
   };

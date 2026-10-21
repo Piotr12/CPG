@@ -303,7 +303,7 @@ describe("PurchaseRequisitionService", () => {
     });
   });
 
-  describe("seedDemo", () => {
+  describe("seedFixtures", () => {
     async function seedDemoMasters() {
       const em = scopedEm("test");
       em.create(Material, { code: "00000001", type: "raw", description: "Steel sheet", baseUnit: "kg" });
@@ -316,8 +316,8 @@ describe("PurchaseRequisitionService", () => {
     it("creates the demo requisitions in an empty tenant, unaudited, and nothing the second time", async () => {
       await seedDemoMasters();
 
-      expect(await service("test").seedDemo()).toBe(DEMO_REQUISITIONS.length);
-      expect(await service("test").seedDemo()).toBe(0);
+      expect(await service("test").seedFixtures()).toBe(DEMO_REQUISITIONS.length);
+      expect(await service("test").seedFixtures()).toBe(0);
       expect((await service("test").list()).map(({ id, quantity }) => [id, quantity])).toEqual([
         ["00000001", "100.000000"],
         ["00000002", "60.000000"],
@@ -332,7 +332,7 @@ describe("PurchaseRequisitionService", () => {
       em.create(Location, { code: "00000001", name: "Main plant" });
       await em.flush();
 
-      expect(await service("test").seedDemo()).toBe(1);
+      expect(await service("test").seedFixtures()).toBe(1);
       expect((await service("test").list()).map(({ id, material }) => [id, material])).toEqual([["00000001", "00000002"]]);
     });
 
@@ -342,14 +342,31 @@ describe("PurchaseRequisitionService", () => {
       vi.spyOn(em, "transactional")
         .mockImplementationOnce(async (callback) => callback(em))
         .mockRejectedValueOnce(new Error("disk full"));
-      await expect(service("test", em).seedDemo()).rejects.toThrow("disk full");
+      await expect(service("test", em).seedFixtures()).rejects.toThrow("disk full");
     });
 
     it("seeds nothing into a read-only Test (R05)", async () => {
       await seedDemoMasters();
       await orm.em.fork().nativeUpdate(Tenant, { code: "test" }, { readOnly: true });
 
-      expect(await service("test").seedDemo()).toBe(0);
+      expect(await service("test").seedFixtures()).toBe(0);
+    });
+  });
+
+  describe("seedDemo", () => {
+    const at = new Date("2025-06-15T23:30:00Z");
+
+    it("creates a requisition stamped at the seed's moment without audit, returning its view", async () => {
+      const auditBefore = await scopedEm("prod").count(TenantAuditEvent, {});
+      const view = await service().seedDemo(NEW, at);
+      expect(view).toMatchObject({ id: "00000001", material: "00000001", quantity: "100.000000", status: "open" });
+      expect((await scopedEm("prod").findOneOrFail(PurchaseRequisition, { code: "00000001" })).createdAt).toEqual(at);
+      expect(await scopedEm("prod").count(TenantAuditEvent, {})).toBe(auditBefore);
+    });
+
+    it("applies the same rules as create and writes nothing on a refusal", async () => {
+      await expect(service().seedDemo({ ...NEW, material: "00000003" }, at)).rejects.toMatchObject({ code: "MATERIAL_INACTIVE" });
+      expect(await scopedEm("prod").count(PurchaseRequisition, {})).toBe(0);
     });
   });
 });
