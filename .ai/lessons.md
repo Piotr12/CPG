@@ -177,3 +177,5 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 - **2026-10-21 — Bound managed entities as well as SQL pages** — Reversal recalculation paged sibling shipments but retained every previous batch, making later flushes revisit all history. Flush and clear completed batches in the same transaction, keep only primitive cursor/source IDs, index the tenant/order cursor, and test a failure after an earlier batch flushed.
 
 - **2026-10-21 — Update existing browser assertions when row actions change** — Adding reversal buttons changed the full text of existing receipt and issue cells. Search and update those integration assertions alongside the UI, then run the affected existing files as well as the new journey; otherwise the full CI suite finds the stale expectations late.
+
+- **2026-10-21 — Inspect the cold-load frame, not only settled pages** — Existing blank Suspense placeholders made the reversal screens appear empty during navigation. Reuse LoadingMessage on touched data pages and capture the initial streamed frame during QA.

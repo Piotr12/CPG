@@ -159,3 +159,10 @@ describe("ShipmentPage", () => {
     await expect(resolveServerComponents(page("00000009"))).rejects.toThrow("404");
   });
 });
+
+it("shows a visible language-neutral skeleton while request-time content loads", () => {
+  const { container } = render(page().props.children.props.fallback);
+  expect(container.querySelector('[aria-busy="true"]')).toBeTruthy();
+  expect(container.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(3);
+  expect(container.textContent).toBe("");
+});

@@ -134,3 +134,10 @@ it("rejects malformed and mismatched movement selections", async () => {
   mocks.getMovement.mockRejectedValue(new AppError("STOCK_MOVEMENT_NOT_FOUND", "missing"));
   await expect(resolveServerComponents(page({ movement: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" }))).rejects.toThrow("404");
 });
+
+it("shows a visible language-neutral skeleton while request-time content loads", () => {
+  const { container } = render(page().props.children.props.fallback);
+  expect(container.querySelector('[aria-busy="true"]')).toBeTruthy();
+  expect(container.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(3);
+  expect(container.textContent).toBe("");
+});
