@@ -53,3 +53,7 @@
 
 ## 2026-10-21T14:00:18Z — Step 4.1 ran inline (cell said dispatch)
 - Nothing in the unit suite still depended on the old fixtures: Step 3.4 had already moved what the tests need to `tests/setup/demo-fixtures.ts`, and the app component tests mock their own data (their names, such as "Cabinet, red", are arbitrary strings). The only leftover description of the old fixtures was the Stock and Reset help (EN and PL), which this Step updates. Too small to dispatch.
+
+## 2026-10-21T14:36:32Z — spec deviation found at 4.2-review-fix
+- The spec's step 15 says the ledger of 00000007 at 00000001 runs "over more than one page". Across a two-year window of seed dates, that pair has 97–100 movements (every raw-material pair has at most 97 at its minimum). Every finished product at its plant has at least 105, and most at least 131.
+- The integration test now proves receipt and completion links on 00000007 at 00000001, and paging on 00000005 at 00000001 (131+ movements), instead of topping the pair up with corrections. Recorded for the spec's Implementation notes (Step 4.6).
