@@ -1,7 +1,8 @@
-import type { StockMovement } from "@cpg/db";
+import { StockMovement, StockReversal, type EntityManager } from "@cpg/db";
 import { formatDecimal, parseDecimal } from "../../domain/quantities/decimal";
 import { parseSignedQuantity } from "../../domain/stock/signed-quantity";
 import { ConflictError } from "../../http/errors";
+import type { StockMovementView } from "./stock-posting";
 
 export const inconsistentReversal = () => new ConflictError("The original posting no longer matches its document.", "STOCK_REVERSAL_INCONSISTENT");
 
@@ -18,4 +19,16 @@ export function subtractReversedQuantity(total: string, quantity: string): strin
   const amount = parseDecimal(quantity);
   if (before === null || amount === null || before < amount) throw inconsistentReversal();
   return formatDecimal(before - amount, { fixed: true });
+}
+
+/** The first existing link from any of `originals`, with its inverse loaded: one of a group already reversed. */
+export function existingReversal(em: EntityManager, originals: readonly StockMovement[]): Promise<StockReversal | null> {
+  return em.findOne(StockReversal, { original: { $in: [...originals] } }, { populate: ["inverse"] });
+}
+
+/** Links each original to the inverse posted at its position; the unique original index is the final once-only guard. */
+export async function linkReversals(em: EntityManager, originals: readonly StockMovement[], inverses: readonly StockMovementView[]): Promise<void> {
+  for (const [position, original] of originals.entries()) {
+    em.create(StockReversal, { original, inverse: await em.findOneOrFail(StockMovement, inverses[position].id) });
+  }
 }

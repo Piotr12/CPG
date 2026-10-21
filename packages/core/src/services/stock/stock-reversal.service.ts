@@ -9,6 +9,7 @@ import { isScopeReadOnly } from "../tenants/tenant.service";
 import { prepareReceiptReversal } from "../goods-receipts/receipt-reversal";
 import { prepareIssueReversal } from "../goods-issues/issue-reversal";
 import { CORRECTION_MOVEMENT, postHistoricalInverse, type StockMovementView } from "./stock-posting";
+import { linkReversals } from "./reversal-records";
 
 export interface StockReversalView { original: string; movement: StockMovementView }
 
@@ -33,8 +34,7 @@ export class StockReversalService {
         throw new ConflictError("This posting cannot be reversed with a stock line reversal.", "STOCK_REVERSAL_UNSUPPORTED");
       }
       const movement = await postHistoricalInverse(em, original, reason, randomUUID(), actor);
-      const inverse = await em.findOneOrFail(StockMovement, movement.id);
-      em.create(StockReversal, { original, inverse });
+      await linkReversals(em, [original], [movement]);
       await recalculate?.();
       recordTenantAudit(em, actor, {
         action: "stock.movement.reversed",

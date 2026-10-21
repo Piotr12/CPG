@@ -5,7 +5,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { initOrm, migrate, selectTenant, Location, Material, MaterialConversion, StockMovement, TenantAuditEvent, type Orm } from "@cpg/db";
 import { StockService } from "./stock.service";
-import { postHistoricalInverse } from "./stock-posting";
+import { postHistoricalInverse, postHistoricalInverses } from "./stock-posting";
 
 const actor = { userId: "u1", username: "Alice", sessionId: "s1", channel: "ui" as const, token: null };
 const pair = { material: "00000001", location: "00000001" };
@@ -72,5 +72,29 @@ describe("historical stock inverse", () => {
     Object.assign(loaded, change);
     await expect(postHistoricalInverse(em, loaded, "Bad history", randomUUID(), actor)).rejects.toMatchObject({ code: "STOCK_REVERSAL_INCONSISTENT" });
     expect(await scope().count(StockMovement, {})).toBe(1);
+  });
+
+  it("inverts a group position for position under one posting, and one short line writes nothing", async () => {
+    const em = scope();
+    em.create(Material, { code: "00000002", type: "finished", description: "Panel", baseUnit: "each" });
+    await em.flush();
+    const output = { material: "00000002", location: pair.location };
+    await correct("40");
+    const [made, used] = await stock().post({ lines: [{ ...output, quantity: "10", unit: "each" }, { ...pair, quantity: "-25", unit: "each" }], reason: "Completion" }, { type: "production-completion", id: randomUUID() }, actor);
+    const invert = (postingId: string) => scope().transactional(async (tx) => {
+      const originals = await tx.find(StockMovement, { id: { $in: [made.id, used.id] } }, { populate: ["material", "location"], orderBy: { position: "asc" } });
+      return postHistoricalInverses(tx, originals, "Entered twice", postingId, actor);
+    });
+    await stock().correct({ ...output, quantity: "-1", unit: "each", reason: "Scrap" }, actor);
+    await expect(invert(randomUUID())).rejects.toMatchObject({ code: "INSUFFICIENT_STOCK", messageParams: { material: "00000002", available: "9.000000", requested: "10.000000" } });
+    expect(await scope().count(StockMovement, { type: "reversal" })).toBe(0);
+    expect(await stock().get(pair)).toMatchObject({ quantity: "15.000000" });
+    await stock().correct({ ...output, quantity: "1", unit: "each", reason: "Found" }, actor);
+    const postingId = randomUUID();
+    const inverses = await invert(postingId);
+    expect(inverses).toMatchObject([
+      { postingId, position: 0, type: "reversal", material: "00000002", quantity: "-10.000000", balanceAfter: "0.000000" },
+      { postingId, position: 1, type: "reversal", material: "00000001", quantity: "25.000000", balanceAfter: "40.000000" },
+    ]);
   });
 });
