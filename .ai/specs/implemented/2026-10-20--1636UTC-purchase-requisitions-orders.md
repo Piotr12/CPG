@@ -54,6 +54,8 @@ The issue's nine criteria (#86), each covered by a unit test and, for the screen
 ## Implementation notes
 
 - One branch and one PR carry the spec and the implementation (the cezar task owns one branch); no separate design-only spec PR.
-- The UI offers create and view only; the required-date and planned-date edits (Q8) are API-only (`PATCH`).
-- BUY-009 / INV-024 ("no stock effect") hold by construction: no stock ledger exists yet, and neither document writes to any quantity-on-hand record. An end-to-end check belongs to E07, once stock exists.
+- The UI offers create and view only; the required-date and planned-date edits (Q8) are API-only (`PATCH`). Editing them on screen is E09-S04 (#142).
+- BUY-009 / INV-024 ("no stock effect"): INV-024 is asserted by `goods-receipt.service.test.ts` (no stock until a receipt posts, for a direct PO). The requisition-conversion path of BUY-009 has no stock assertion yet (E09-S03, #141).
+- The material-deactivation refusal shipped as `MATERIAL_IN_OPEN_ORDER` (Q10 says `MATERIAL_IN_OPEN_PO`).
+- The merge with main (PR #108, run log `2026-10-20--1720UTC-pr-108-merge-main.md`) put both screens in the sidebar's Transactions group, not flat entries after Master data (Q13), and added requisitions and orders to the demo seed and the Test reset.
 - Linking the two screens from the tenant home page made the Tenants/navigation integration tests' soft navigation 404 on the standalone server; the sidebar is the way in, so the home page is unchanged.
