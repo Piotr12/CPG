@@ -31,12 +31,12 @@ vi.mock("next/navigation", () => ({ notFound: mocks.notFound }));
 vi.mock("@cpg/core", () => ({ AppError: mocks.AppError, tenantScope: mocks.tenantScope }));
 vi.mock("../../../../../auth/require-admin", () => ({ requireUser: mocks.requireUser }));
 vi.mock("../../../../../i18n/get-messages", () => ({ getMessages: mocks.getMessages }));
-vi.mock("./actions", () => ({ cancelTransfer: vi.fn(), closeEarlyTransfer: vi.fn(), dispatchTransfer: vi.fn(), receiveTransfer: vi.fn(), writeOffTransfer: vi.fn(), setTransferDates: vi.fn() }));
+vi.mock("./actions", () => ({ cancelTransfer: vi.fn(), closeEarlyTransfer: vi.fn(), dispatchTransfer: vi.fn(), receiveTransfer: vi.fn(), writeOffTransfer: vi.fn(), setTransferDates: vi.fn(), reverseTransferPosting: vi.fn() }));
 
 const location = (id: string, name: string) => ({ id, name, active: true, createdAt: new Date(), version: 1 });
-const posting = (id: string, kind: string, legs: unknown[], reason: string) => ({
-  id, kind, businessDate: "2027-03-02", occurredAt: new Date(), quantity: "50.000000", enteredQuantity: "50", enteredUnit: "kg", numerator: "1", denominator: "1",
-  reason, actorUsername: "alice", channel: "ui", legs,
+const posting = (id: string, kind: string, legs: unknown[], reason: string, occurredAt: Date) => ({
+  id, kind, businessDate: "2027-03-02", occurredAt, quantity: "50.000000", enteredQuantity: "50", enteredUnit: "kg", numerator: "1", denominator: "1",
+  reason, actorUsername: "alice", channel: "ui", legs, reversedBy: null, canReverse: kind !== "dispatch",
 });
 const TRANSFER = {
   id: "00000001", material: "00000001", source: "00000001", destination: "00000002", quantity: "100.000000", enteredQuantity: "100", enteredUnit: "kg",
@@ -46,12 +46,13 @@ const TRANSFER = {
     posting("r1", "receipt", [
       { place: "transit", location: null, quantity: "-50.000000", before: "60.000000", after: "10.000000" },
       { place: "destination", location: "00000002", quantity: "50.000000", before: "0.000000", after: "50.000000" },
-    ], "Transfer 00000001 receipt at 00000002 from 00000001"),
+    ], "Transfer 00000001 receipt at 00000002 from 00000001", new Date("2027-03-02T10:00:00Z")),
     posting("d1", "dispatch", [
       { place: "source", location: "00000001", quantity: "-60.000000", before: "100.000000", after: "40.000000" },
       { place: "transit", location: null, quantity: "60.000000", before: "0.000000", after: "60.000000" },
-    ], "Transfer 00000001 dispatch from 00000001 to 00000002"),
+    ], "Transfer 00000001 dispatch from 00000001 to 00000002", new Date("2027-03-02T09:00:00Z")),
   ],
+  reversals: [],
 };
 const scope = (readOnly = false) => ({
   cradle: {
@@ -132,7 +133,9 @@ describe("TransferPage", () => {
     mocks.get.mockResolvedValue({ ...TRANSFER, status: "completed" });
     mocks.getMessages.mockResolvedValue({ locale: "pl", messages: pl });
     const { unmount } = render(await resolveServerComponents(page()));
-    expect(screen.queryByRole("button")).toBeNull();
+    // Only a reversal can still change a Completed transfer (E11-S03): it reopens it.
+    expect(screen.getAllByRole("button").map((button) => button.textContent)).toEqual([pl.transfers.reversal.open]);
+    expect(screen.getByText(pl.transfers.ledger.blocked)).toBeTruthy();
     expect(screen.getByText("Zrealizowane")).toBeTruthy();
     unmount();
 
