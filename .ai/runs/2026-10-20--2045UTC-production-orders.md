@@ -2,8 +2,8 @@
 
 **Date:** 2026-10-20 20:45 UTC
 **Agent:** Codex
-**Spec:** .ai/specs/2026-10-20--2047UTC-production-orders.md
-**Status:** in progress
+**Spec:** .ai/specs/implemented/2026-10-20--2047UTC-production-orders.md
+**Status:** done
 
 ## Goal
 Deliver E10-S01: production orders pinning a BOM revision with derived calendar dates, shortage warnings, UI/API parity and reference guards.
@@ -16,11 +16,11 @@ Deliver E10-S01: production orders pinning a BOM revision with derived calendar 
 - 20:48 UTC: Feature passes ticket readiness: user, problem, outcomes, exclusions and nonblocking Q05 are explicit. Route through autonomous spec writing, then implementation. User Guard requires approval before publishing shared branches; prepare concrete local deliverables before that gate.
 
 ## Changes
-- Pending design and implementation.
+- Design PR #113 (`2c5a4cb`) and implementation PR #114 (`ce24740`), both merged on 2026-10-20.
 
 ## Verification
 - Spec-stage lint passed (one pre-existing unused `lineError` warning in BomService); metadata tests: 2 files, 6 tests passed.
 - Read-only issue, PR and code searches completed.
 
 ## Follow-ups
-- Write and review spec, prepare UI evidence; publication requires Guard approval.
+- None. Both PRs were merged; #88 is closed. The spec is in `implemented/` (closed out by the 2026-10-21 cleanup run, `.ai/runs/2026-10-21--0704UTC-cleanup-closed-stories.md`).

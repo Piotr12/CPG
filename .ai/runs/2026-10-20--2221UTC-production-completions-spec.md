@@ -2,8 +2,8 @@
 
 **Date:** 2026-10-20 22:21 UTC
 **Agent:** Claude Code (Opus 5.5) via cezar, `om-auto-fix-issue 89` → `om-auto-write-spec 89`
-**Spec:** `.ai/specs/2026-10-20--2221UTC-production-completions.md`
-**Status:** in progress
+**Spec:** `.ai/specs/implemented/2026-10-20--2221UTC-production-completions.md`
+**Status:** done
 
 ## Goal
 
@@ -18,7 +18,7 @@ Issue #89 (E10-S02) asks for partial production completions: expected consumptio
 - 22:33 — Fresh-context scope review: verdict "revise". Applied: H1 ledger 100-movement cap → explicit limit; H2 UI double-submit → `submission` UUID + unique index (Q7); H3 target lowered to produced → completes the order (new Q8); M1 amend the BACKWARD_COMPATIBILITY "no production-order write changes stock" sentence; M2 the service validates lines itself so errors land on rows; M3 produced overflow; M4 `refresh: true` + `PRODUCTION_ORDER_CHANGED`; L1 camelCase audit keys; L2 separate `…progressed` audit action; L3 contract consistency (units, outstanding on both views, newest first, flag ignored when not exceeding); L4 completions page by 20; L5 bespoke completion form, promotion deferred with reason.
 
 ## Changes
-- `.ai/specs/2026-10-20--2221UTC-production-completions.md` (new spec)
+- `.ai/specs/implemented/2026-10-20--2221UTC-production-completions.md` (new spec)
 - `.ai/specs/assets/production-completions/` (two HTML mockups + PNG renders)
 - this run log
 
@@ -26,3 +26,4 @@ Issue #89 (E10-S02) asks for partial production completions: expected consumptio
 - `npx vitest run tests/ai-filenames.test.ts tests/spec-images.test.ts` — 2 files, 6 tests passed.
 
 ## Follow-ups
+- None. Spec PR #117 (`bb145f3`) and implementation PR #119 (`c6bfcda`) were merged on 2026-10-21; #89 is closed. Recorded by the 2026-10-21 cleanup run.
