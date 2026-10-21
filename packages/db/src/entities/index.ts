@@ -17,6 +17,7 @@ import {
   TransferPosting,
   type TransferPostingKind,
 } from "./transfers/transfer-posting.entity";
+import { TransferReversal, TRANSFER_REVERSAL_IMMUTABLE } from "./transfers/transfer-reversal.entity";
 import { Shipment, SHIPMENT_STATUSES, type ShipmentStatus } from "./shipments/shipment.entity";
 import { ShipmentLine } from "./shipments/shipment-line.entity";
 import { GoodsIssue, GOODS_ISSUE_IMMUTABLE } from "./goods-issues/goods-issue.entity";
@@ -94,7 +95,7 @@ export { PlanningParameterSet, PROCUREMENT_MODES, SafetyStockTarget };
 export { Forecast };
 export { StockBalance, StockMovement, STOCK_MOVEMENT_IMMUTABLE, StockReversal, STOCK_REVERSAL_IMMUTABLE };
 export { GoodsReceipt, GOODS_RECEIPT_IMMUTABLE, GoodsReceiptLine };
-export { Transfer, TRANSFER_POSTING_IMMUTABLE, TRANSFER_POSTING_KINDS, TRANSFER_STATUSES, TransferPosting };
+export { Transfer, TRANSFER_POSTING_IMMUTABLE, TRANSFER_POSTING_KINDS, TRANSFER_REVERSAL_IMMUTABLE, TRANSFER_STATUSES, TransferPosting, TransferReversal };
 export type { TransferPostingKind, TransferStatus };
 export { Shipment, ShipmentLine, SHIPMENT_STATUSES, GoodsIssue, GOODS_ISSUE_IMMUTABLE, GoodsIssueLine };
 export type { ShipmentStatus };
@@ -140,6 +141,7 @@ export const entities = [
   GoodsReceiptLine,
   Transfer,
   TransferPosting,
+  TransferReversal,
   Shipment,
   ShipmentLine,
   GoodsIssue,
