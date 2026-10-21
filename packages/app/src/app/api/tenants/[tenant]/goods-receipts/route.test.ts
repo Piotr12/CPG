@@ -28,23 +28,27 @@ const post = (body: unknown) =>
 describe("/api/tenants/{tenant}/goods-receipts", () => {
   afterEach(() => vi.clearAllMocks());
 
-  it("GET lists the tenant's receipts, or one order's, for any signed-in account", async () => {
+  it("GET lists a page of the tenant's receipts, or of one order's, for any signed-in account", async () => {
     mocks.requireApiUser.mockResolvedValue({ username: "alice", role: "user" });
     mocks.tenantScope.mockResolvedValue({ cradle: { goodsReceiptService: { list: mocks.list } } });
     mocks.list.mockResolvedValue([{ id: "00000001" }]);
 
     expect(await (await get()).json()).toEqual({ ok: true, data: [{ id: "00000001" }] });
-    expect(mocks.list).toHaveBeenLastCalledWith({});
+    expect(mocks.list).toHaveBeenLastCalledWith({ page: 1 });
     expect(mocks.tenantScope).toHaveBeenCalledWith("test");
 
     await get("?purchaseOrder=00000004");
-    expect(mocks.list).toHaveBeenLastCalledWith({ purchaseOrder: "00000004" });
+    expect(mocks.list).toHaveBeenLastCalledWith({ purchaseOrder: "00000004", page: 1 });
+    await get("?purchaseOrder=00000004&page=2");
+    expect(mocks.list).toHaveBeenLastCalledWith({ purchaseOrder: "00000004", page: 2 });
   });
 
-  it("GET refuses a malformed order filter, and checks the caller before opening the tenant", async () => {
+  it("GET refuses a malformed order filter or page, and checks the caller before opening the tenant", async () => {
     mocks.requireApiUser.mockResolvedValue({ username: "alice", role: "user" });
     mocks.tenantScope.mockResolvedValue({ cradle: { goodsReceiptService: { list: mocks.list } } });
     expect((await get("?purchaseOrder=4")).status).toBe(400);
+    expect((await get("?page=0")).status).toBe(400);
+    expect((await get("?page=1.5")).status).toBe(400);
     expect(mocks.list).not.toHaveBeenCalled();
 
     const { UnauthorizedError } = await vi.importActual<typeof import("@cpg/core")>("@cpg/core");

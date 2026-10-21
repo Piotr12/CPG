@@ -71,9 +71,11 @@ describe("receiptFormSchema", () => {
 });
 
 describe("receiptListQuerySchema", () => {
-  it("takes an optional order ID", () => {
-    expect(receiptListQuerySchema.parse({})).toEqual({});
-    expect(receiptListQuerySchema.parse({ purchaseOrder: "00000002" })).toEqual({ purchaseOrder: "00000002" });
+  it("takes an optional order ID and a 1-based page, the first when absent (#115)", () => {
+    expect(receiptListQuerySchema.parse({})).toEqual({ page: 1 });
+    expect(receiptListQuerySchema.parse({ purchaseOrder: "00000002", page: "3" })).toEqual({ purchaseOrder: "00000002", page: 3 });
     expect(receiptListQuerySchema.safeParse({ purchaseOrder: "2" }).success).toBe(false);
+    expect(receiptListQuerySchema.safeParse({ page: "0" }).success).toBe(false);
+    expect(receiptListQuerySchema.safeParse({ page: "1.5" }).success).toBe(false);
   });
 });

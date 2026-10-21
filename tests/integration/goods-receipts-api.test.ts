@@ -162,6 +162,9 @@ describe("goods receipts through the API", () => {
     expect(new Date(audit.occurredAt).getTime()).toBeGreaterThan(Date.now() - 600_000);
 
     expect((await api("GET", `/api/tenants/prod/goods-receipts?purchaseOrder=${order.id}`)).text).toContain(receipt.id);
+    expect((await api("GET", `/api/tenants/prod/goods-receipts?purchaseOrder=${order.id}&page=1`)).text).toContain(receipt.id);
+    expect((await api("GET", `/api/tenants/prod/goods-receipts?purchaseOrder=${order.id}&page=2`)).text).toBe('{"ok":true,"data":[]}');
+    expect((await api("GET", "/api/tenants/prod/goods-receipts?page=0")).status).toBe(400);
     expect(json(await api("GET", `/api/tenants/prod/goods-receipts/${receipt.id}`)).data as ReceiptView).toMatchObject({ id: receipt.id, purchaseOrder: order.id });
     const missing = await api("GET", "/api/tenants/test/goods-receipts/99999999");
     expect(missing.status).toBe(404);

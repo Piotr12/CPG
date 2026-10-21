@@ -20,7 +20,7 @@ export const SHIPMENT_QUANTITY_OUTSTANDING_MESSAGE = "This is more than the orde
 /** The most lines one shipment carries, as many as a customer order. */
 export const SHIPMENT_LINES_MAX = 100;
 
-/** Shipments and goods issues are listed in fixed pages, so a list stays bounded as history grows (lesson 2026-10-20). */
+/** Shipments, goods issues and goods receipts are listed in fixed pages, so a list stays bounded as history grows (lesson 2026-10-20). */
 export const DOCUMENT_PAGE_SIZE = 100;
 
 /** A 1-based page of a document list: `?page=2`; the first page when absent. */

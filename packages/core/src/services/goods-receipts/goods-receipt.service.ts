@@ -16,11 +16,13 @@ import { QUANTITY_OUT_OF_RANGE_MESSAGE } from "../../validators/boms/bom-fields.
 import type { ReceiptCreateInput } from "../../validators/goods-receipts/goods-receipt.schema";
 import { RECEIPT_LINE_ORDER_MESSAGE } from "../../validators/goods-receipts/goods-receipt.schema";
 import { LINE_NO_SUCH_LINE_MESSAGE } from "../../validators/purchasing/purchasing-fields.schema";
+import { DOCUMENT_PAGE_SIZE } from "../../validators/shipments/shipment.schema";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit } from "../audit/audit-recorder";
 import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quantity";
 import { lineError } from "../materials/line-error";
 import { assertOrderOpen, findOrder, orderLineState } from "../purchase-orders/order-records";
+import { groupBy } from "../shipments/shipment-records";
 import { postStockMovements } from "../stock/stock-posting";
 import { documentMovements, NO_MOVEMENT, type DocumentMovement } from "../stock/movement-reversals";
 
@@ -92,10 +94,18 @@ export class GoodsReceiptService {
     this.em = em;
   }
 
-  /** Every receipt of the tenant, or of one purchase order (404 when this tenant has no such order), newest first. */
-  async list(filter: { purchaseOrder?: string } = {}): Promise<ReceiptView[]> {
+  /**
+   * A page of the tenant's receipts, or of one purchase order's (404 when this tenant has no such
+   * order), newest first, `DOCUMENT_PAGE_SIZE` to a page; a page past the last is empty.
+   */
+  async list(filter: { purchaseOrder?: string; page?: number } = {}): Promise<ReceiptView[]> {
     const where = filter.purchaseOrder === undefined ? {} : { order: await findOrder(this.em, filter.purchaseOrder) };
-    const receipts = await this.em.find(GoodsReceipt, where, { populate: ["order", "order.location"], orderBy: { code: "desc" } });
+    const receipts = await this.em.find(GoodsReceipt, where, {
+      populate: ["order", "order.location"],
+      orderBy: { code: "desc" },
+      limit: DOCUMENT_PAGE_SIZE,
+      offset: ((filter.page ?? 1) - 1) * DOCUMENT_PAGE_SIZE,
+    });
     return viewsOf(this.em, receipts);
   }
 
@@ -251,6 +261,7 @@ async function viewsOf(em: EntityManager, receipts: readonly GoodsReceipt[]): Pr
     { receipt: { $in: [...receipts] } },
     { populate: ["orderLine", "orderLine.material"], orderBy: { position: "asc" } },
   );
+  const byReceipt = groupBy(lines, (line) => line.receipt.id);
   const movements = await documentMovements(em, GOODS_RECEIPT_MOVEMENT, receipts.map(({ id }) => id));
   return receipts.map((receipt) => ({
     id: receipt.code,
@@ -258,8 +269,8 @@ async function viewsOf(em: EntityManager, receipts: readonly GoodsReceipt[]): Pr
     location: receipt.order.location.code,
     businessDate: receipt.businessDate,
     createdAt: receipt.createdAt,
-    lines: lines
-      .filter((line) => line.receipt.id === receipt.id)
+    lines: byReceipt
+      .get(receipt.id)!
       .map(({ position, orderLine, quantity, enteredQuantity, enteredUnit, numerator, denominator }) => ({
         ...(movements.get(`${receipt.id}:${position}`) ?? NO_MOVEMENT),
         line: orderLine.position,
