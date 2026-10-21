@@ -9,9 +9,12 @@ import {
   OptimisticLockError,
   selectTenant,
   StockMovement,
+  StockReversal,
+  Tenant,
   TenantAuditEvent,
   Transfer,
   TransferPosting,
+  TransferReversal,
   TRANSFER_POSTING_IMMUTABLE,
   UniqueConstraintViolationException,
   type Orm,
@@ -272,6 +275,8 @@ describe("TransferService", () => {
           { place: "source", location: A, quantity: "-60.000000", before: "100.000000", after: "40.000000" },
           { place: "transit", location: null, quantity: "60.000000", before: "0.000000", after: "60.000000" },
         ],
+        reversedBy: null,
+        canReverse: true,
       });
       expect(await physical(A)).toBe("40.000000");
       expect(await physical(B)).toBe("0.000000");
@@ -730,6 +735,245 @@ describe("TransferService", () => {
         code: "BASE_UNIT_IN_USE",
         message: "Transfers use this material, so its base unit can't change: their quantities are stored in it.",
       });
+    });
+  });
+
+  describe("reverse", () => {
+    const reason = { reason: "Posted on the wrong transfer" };
+    const sixty = { ...TRANSFER, quantity: "60" };
+    const postingOf = async (id: string, kind: string) => (await service().get(id)).postings.find((posting) => posting.kind === kind)!;
+    const untouched = async (id: string) => ({
+      a: await physical(A), b: await physical(B), transfer: await service().get(id),
+      reversals: await scoped().count(TransferReversal, {}), links: await scoped().count(StockReversal, {}), audit: await scoped().count(TenantAuditEvent, {}),
+    });
+
+    it("lands a reversed receipt back in transit, linked, audited and once only (TRF-019)", async () => {
+      const transfer = await created();
+      await service().dispatch(transfer.id, kg("60"), ACTOR);
+      const receipt = (await service().receive(transfer.id, kg("50"), ACTOR)).posting;
+      const reversed = await service().reverse(transfer.id, receipt.id, { reason: " Posted on the wrong transfer " }, API_ACTOR);
+
+      expect(reversed.transfer).toMatchObject({ dispatched: "60.000000", received: "0.000000", inTransit: "60.000000", status: "open", version: transfer.version + 3 });
+      expect(reversed.reversal).toEqual({
+        id: expect.any(String), original: receipt.id, kind: "receipt", businessDate: today(), occurredAt: expect.any(Date), quantity: "50.000000",
+        reason: reason.reason, actorUsername: "alice", channel: "api",
+        legs: [
+          { place: "destination", location: B, quantity: "-50.000000", before: "50.000000", after: "0.000000" },
+          { place: "transit", location: null, quantity: "50.000000", before: "10.000000", after: "60.000000" },
+        ],
+      });
+      expect([await physical(A), await physical(B)]).toEqual(["40.000000", "0.000000"]);
+      const [inverse] = await scoped().find(StockMovement, { postingId: reversed.reversal.id }, { populate: ["location"] });
+      expect(inverse).toMatchObject({ type: "reversal", quantity: "-50.000000", reason: reason.reason, location: { code: B } });
+      expect(await scoped().findOneOrFail(StockReversal, { inverse }, { populate: ["original"] })).toMatchObject({ original: { postingId: receipt.id } });
+      const detail = await service().get(transfer.id);
+      expect(detail.postings.find(({ id }) => id === receipt.id)).toMatchObject({ reversedBy: reversed.reversal.id, canReverse: false });
+      expect(detail.reversals).toEqual([reversed.reversal]);
+      expect(await entries("transfers.transfer.reversed")).toEqual([{
+        subjectId: transfer.id, subjectLabel: "00000001 — 00000001 Steel sheet: 00000001 → 00000002",
+        before: { dispatched: "60.000000", received: "50.000000", writtenOff: "0.000000", inTransit: "10.000000", status: "open", abandoned: "0.000000" },
+        after: { dispatched: "60.000000", received: "0.000000", writtenOff: "0.000000", inTransit: "60.000000", status: "open", abandoned: "0.000000",
+          posting: receipt.id, kind: "receipt", reversal: reversed.reversal.id, quantity: "50.000000", businessDate: today(), reason: reason.reason },
+      }]);
+      await expect(service().reverse(transfer.id, receipt.id, reason, ACTOR)).rejects.toMatchObject({
+        code: "TRANSFER_POSTING_ALREADY_REVERSED", status: 409, messageParams: { reversal: reversed.reversal.id },
+      });
+      expect(await scoped().count(TransferReversal, {})).toBe(1);
+    });
+
+    it("reverses a dispatch only after its receipts and write-offs, restoring the source (TRF-020, TRF-021)", async () => {
+      const transfer = await created();
+      const dispatch = (await service().dispatch(transfer.id, kg("60"), ACTOR)).posting;
+      const receipt = (await service().receive(transfer.id, kg("50"), ACTOR)).posting;
+      expect(await postingOf(transfer.id, "dispatch")).toMatchObject({ canReverse: false });
+      const before = await untouched(transfer.id);
+      await expect(service().reverse(transfer.id, dispatch.id, reason, ACTOR)).rejects.toMatchObject({
+        code: "TRANSFER_REVERSAL_ORDER", status: 409, messageParams: { transfer: transfer.id, received: "50.000000", writtenOff: "0.000000", unit: "kg" },
+      });
+      expect(await untouched(transfer.id)).toEqual(before);
+      await service().reverse(transfer.id, receipt.id, reason, ACTOR);
+      expect(await postingOf(transfer.id, "dispatch")).toMatchObject({ canReverse: true });
+      const reversed = await service().reverse(transfer.id, dispatch.id, reason, ACTOR);
+      expect(reversed.transfer).toMatchObject({ dispatched: "0.000000", received: "0.000000", inTransit: "0.000000", undispatched: "100.000000", status: "open" });
+      expect(reversed.reversal.legs).toEqual([
+        { place: "transit", location: null, quantity: "-60.000000", before: "60.000000", after: "0.000000" },
+        { place: "source", location: A, quantity: "60.000000", before: "40.000000", after: "100.000000" },
+      ]);
+      expect([await physical(A), await physical(B)]).toEqual(["100.000000", "0.000000"]);
+    });
+
+    it("waits for every receipt even when another dispatch's quantity is still in transit", async () => {
+      const transfer = await created();
+      const first = (await service().dispatch(transfer.id, kg("30"), ACTOR)).posting;
+      await service().dispatch(transfer.id, kg("30"), ACTOR);
+      await service().receive(transfer.id, kg("30"), ACTOR);
+      await expect(service().reverse(transfer.id, first.id, reason, ACTOR)).rejects.toMatchObject({ code: "TRANSFER_REVERSAL_ORDER" });
+      expect((await service().get(transfer.id)).postings.filter(({ canReverse }) => canReverse).map(({ kind }) => kind)).toEqual(["receipt"]);
+    });
+
+    it("puts a written-off loss back in transit and reopens a Closed Early transfer (TRF-025, TRF-027)", async () => {
+      const transfer = await created("100", sixty);
+      await service().dispatch(transfer.id, kg("60"), ACTOR);
+      await service().receive(transfer.id, kg("55"), ACTOR);
+      const loss = (await service().writeOff(transfer.id, { ...kg("5"), reason: "Damaged" }, ACTOR)).posting;
+      const closed = await service().closeEarly(transfer.id, (await service().get(transfer.id)).version, ACTOR);
+      expect(closed).toMatchObject({ status: "closed-early", abandoned: "5.000000", inTransit: "0.000000" });
+
+      const reversed = await service().reverse(transfer.id, loss.id, reason, ACTOR);
+      expect(reversed.transfer).toMatchObject({ status: "open", abandoned: "0.000000", writtenOff: "0.000000", inTransit: "5.000000", outstanding: "5.000000" });
+      expect(reversed.reversal.legs).toEqual([{ place: "transit", location: null, quantity: "5.000000", before: "0.000000", after: "5.000000" }]);
+      expect(await scoped().count(StockMovement, { type: "reversal" })).toBe(0);
+      expect((await entries("transfers.transfer.reversed"))[0]).toMatchObject({ before: { status: "closed-early", abandoned: "5.000000" }, after: { status: "open", abandoned: "0.000000", kind: "write-off" } });
+      expect((await service().receive(transfer.id, kg("5"), ACTOR)).transfer).toMatchObject({ status: "completed", inTransit: "0.000000" });
+    });
+
+    it("reopens a Completed transfer only while the destination still holds the receipt", async () => {
+      const transfer = await created();
+      await service().dispatch(transfer.id, kg("100"), ACTOR);
+      const receipt = (await service().receive(transfer.id, kg("100"), ACTOR)).posting;
+      await correct(B, "-1");
+      const before = await untouched(transfer.id);
+      await expect(service().reverse(transfer.id, receipt.id, reason, ACTOR)).rejects.toMatchObject({
+        code: "INSUFFICIENT_STOCK", messageParams: { location: B, available: "99.000000", requested: "100.000000" },
+      });
+      expect(await untouched(transfer.id)).toEqual(before);
+      await correct(B, "1");
+      expect((await service().reverse(transfer.id, receipt.id, reason, ACTOR)).transfer).toMatchObject({ status: "open", received: "0.000000", inTransit: "100.000000" });
+    });
+
+    it("keeps a fully reversed transfer processed: Cancel refuses, Close Early resolves it", async () => {
+      const transfer = await created();
+      const dispatch = (await service().dispatch(transfer.id, kg("10"), ACTOR)).posting;
+      const { transfer: reversed } = await service().reverse(transfer.id, dispatch.id, reason, ACTOR);
+      await expect(service().cancel(transfer.id, reversed.version, ACTOR)).rejects.toMatchObject({ code: "DOCUMENT_PROCESSED" });
+      expect(await service().closeEarly(transfer.id, reversed.version, ACTOR)).toMatchObject({ status: "closed-early", abandoned: "100.000000" });
+    });
+
+    const setActive = (role: "material" | "source" | "destination", code: string, active: boolean) =>
+      role === "material" ? scoped().nativeUpdate(Material, { code }, { active }) : scoped().nativeUpdate(Location, { code }, { active });
+    it.each([
+      ["material", A],
+      ["source", A],
+      ["destination", B],
+    ] as const)("refuses to reopen a transfer whose %s was deactivated after it closed", async (role, code) => {
+      const transfer = await created("100", sixty);
+      await service().dispatch(transfer.id, kg("60"), ACTOR);
+      await service().receive(transfer.id, kg("55"), ACTOR);
+      const loss = (await service().writeOff(transfer.id, { ...kg("5"), reason: "Damaged" }, ACTOR)).posting;
+      await service().closeEarly(transfer.id, (await service().get(transfer.id)).version, ACTOR);
+      await setActive(role, code, false);
+      const before = await untouched(transfer.id);
+      await expect(service().reverse(transfer.id, loss.id, reason, ACTOR)).rejects.toMatchObject({
+        code: "TRANSFER_MASTER_INACTIVE", messageParams: { transfer: transfer.id, [role]: code },
+      });
+      expect(await untouched(transfer.id)).toEqual(before);
+      await setActive(role, code, true);
+      expect((await service().reverse(transfer.id, loss.id, reason, ACTOR)).transfer.status).toBe("open");
+    });
+
+    it("refuses a dispatch reversal that would overflow the source balance and writes nothing", async () => {
+      const transfer = await created("999999999999.999999");
+      const dispatch = (await service().dispatch(transfer.id, kg("1"), ACTOR)).posting;
+      await correct(A, "1");
+      await expect(service().reverse(transfer.id, dispatch.id, reason, ACTOR)).rejects.toMatchObject({ code: "QUANTITY_OUT_OF_RANGE", status: 400 });
+      expect(await scoped().count(TransferReversal, {})).toBe(0);
+    });
+
+    it("refuses bad input, unknown, other-transfer and other-tenant postings and a read-only tenant", async () => {
+      const transfer = await created();
+      const other = await service().create(TRANSFER, ACTOR);
+      const dispatch = (await service().dispatch(transfer.id, kg("10"), ACTOR)).posting;
+      const before = await untouched(transfer.id);
+      await expect(service().reverse(transfer.id, dispatch.id, { reason: "" }, ACTOR)).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+      await expect(service().reverse(transfer.id, dispatch.id, { ...reason, quantity: "1" }, ACTOR)).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+      await expect(service().reverse(transfer.id, "not-a-uuid", reason, ACTOR)).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+      await expect(service().reverse(transfer.id, "11111111-1111-4111-8111-111111111111", reason, ACTOR)).rejects.toMatchObject({ code: "TRANSFER_POSTING_NOT_FOUND", status: 404 });
+      await expect(service().reverse(other.id, dispatch.id, reason, ACTOR)).rejects.toMatchObject({ code: "TRANSFER_POSTING_NOT_FOUND" });
+      await expect(service("test").reverse(transfer.id, dispatch.id, reason, ACTOR)).rejects.toMatchObject({ code: "TRANSFER_NOT_FOUND" });
+      const stale = service();
+      await orm.em.fork().nativeUpdate(Tenant, { code: "prod" }, { readOnly: true });
+      await expect(stale.reverse(transfer.id, dispatch.id, reason, ACTOR)).rejects.toMatchObject({ code: "TENANT_READ_ONLY" });
+      await orm.em.fork().nativeUpdate(Tenant, { code: "prod" }, { readOnly: false });
+      expect(await untouched(transfer.id)).toEqual(before);
+    });
+
+    it("refuses a posting whose physical leg no longer matches it, before anything changes", async () => {
+      const transfer = await created();
+      await service().dispatch(transfer.id, kg("60"), ACTOR);
+      const em = scoped();
+      const loaded = await em.findOneOrFail(Transfer, { code: transfer.id }, { populate: ["material", "source", "destination"] });
+      const [dispatchMovement] = await em.find(StockMovement, { type: TRANSFER_DISPATCH_MOVEMENT });
+      const forged = (kind: "dispatch" | "receipt" | "write-off", quantity: string) => em.create(TransferPosting, {
+        transfer: loaded, kind, businessDate: today(), quantity, enteredQuantity: quantity, enteredUnit: "kg", numerator: "1", denominator: "1",
+        transitBefore: "0.000000", transitAfter: "0.000000", reason: "Forged", actorUserId: null, actorUsername: "x", channel: "ui",
+      });
+      const movement = (postingId: string, type: string, quantity: string, location = loaded.destination) => em.create(StockMovement, {
+        ...dispatchMovement, id: undefined, postingId, type, quantity, location, position: 0,
+      } as never);
+      const strayWriteOff = forged("write-off", "1.000000");
+      const noLeg = forged("receipt", "1.000000");
+      const wrongType = forged("receipt", "1.000000");
+      const wrongQuantity = forged("receipt", "1.000000");
+      const tooMuch = forged("receipt", "1.000000");
+      await em.flush();
+      movement(strayWriteOff.id, "correction", "1.000000");
+      movement(wrongType.id, "correction", "1.000000");
+      movement(wrongQuantity.id, TRANSFER_RECEIPT_MOVEMENT, "2.000000");
+      movement(tooMuch.id, TRANSFER_RECEIPT_MOVEMENT, "1.000000");
+      await em.flush();
+      const before = await untouched(transfer.id);
+      for (const posting of [strayWriteOff, noLeg, wrongType, wrongQuantity, tooMuch]) {
+        await expect(service().reverse(transfer.id, posting.id, reason, ACTOR)).rejects.toMatchObject({ code: "STOCK_REVERSAL_INCONSISTENT" });
+      }
+      expect(await untouched(transfer.id)).toEqual(before);
+    });
+
+    it("rolls back both legs, the link and progress when the reversal's audit fails after the stock flush", async () => {
+      const transfer = await created();
+      await service().dispatch(transfer.id, kg("60"), ACTOR);
+      const receipt = (await service().receive(transfer.id, kg("50"), ACTOR)).posting;
+      const before = await untouched(transfer.id);
+      crash.action = "transfers.transfer.reversed";
+      await expect(service().reverse(transfer.id, receipt.id, reason, ACTOR)).rejects.toThrow("crash while recording");
+      expect(await untouched(transfer.id)).toEqual(before);
+    });
+
+    it("lets only one of two racing reversals post, the other retried into the existing one", async () => {
+      const transfer = await created();
+      await service().dispatch(transfer.id, kg("60"), ACTOR);
+      const receipt = (await service().receive(transfer.id, kg("50"), ACTOR)).posting;
+      const other = await initOrm(toDbOptions(loadConfig({ DATA_DIR: directory })));
+      let raced = false;
+      try {
+        const em = scoped();
+        await expect(retryingStaleSnapshot(() => inRequestTransaction(em, async () => {
+          await new TransferService({ em }).get(transfer.id);
+          if (!raced) {
+            raced = true;
+            await new TransferService({ em: scoped("prod", other) }).reverse(transfer.id, receipt.id, reason, ACTOR);
+          }
+          return new TransferService({ em }).reverse(transfer.id, receipt.id, reason, ACTOR);
+        }))).rejects.toMatchObject({ code: "TRANSFER_POSTING_ALREADY_REVERSED" });
+        expect([await scoped().count(TransferReversal, {}), await physical(B)]).toEqual([1, "0.000000"]);
+      } finally {
+        await other.close();
+      }
+    });
+
+    it("names the existing reversal when a unique violation slips past the check, and maps a version race", async () => {
+      const transfer = await created();
+      await service().dispatch(transfer.id, kg("60"), ACTOR);
+      const receipt = (await service().receive(transfer.id, kg("50"), ACTOR)).posting;
+      const em = scoped();
+      const transfers = new TransferService({ em });
+      const transactional = vi.spyOn(em, "transactional");
+      transactional.mockRejectedValueOnce(new UniqueConstraintViolationException(new Error("UNIQUE")));
+      expect(await transfers.reverse(transfer.id, receipt.id, reason, ACTOR).catch((error: unknown) => error)).toMatchObject({ code: "TRANSFER_POSTING_ALREADY_REVERSED", messageParams: undefined });
+      const reversed = await service().reverse(transfer.id, receipt.id, reason, ACTOR);
+      transactional.mockRejectedValueOnce(new UniqueConstraintViolationException(new Error("UNIQUE")));
+      await expect(transfers.reverse(transfer.id, receipt.id, reason, ACTOR)).rejects.toMatchObject({ messageParams: { reversal: reversed.reversal.id } });
+      transactional.mockRejectedValueOnce(new OptimisticLockError("stale"));
+      await expect(transfers.reverse(transfer.id, receipt.id, reason, ACTOR)).rejects.toMatchObject({ code: "VERSION_CONFLICT" });
     });
   });
 });

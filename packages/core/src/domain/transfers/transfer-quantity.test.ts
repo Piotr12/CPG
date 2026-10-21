@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { afterPosting, inTransitOf, isFullyReceived, postingLimit, undispatchedOf, type TransferProgress } from "./transfer-quantity";
+import { afterPosting, afterReversal, inTransitOf, isFullyReceived, postingLimit, undispatchedOf, type TransferProgress } from "./transfer-quantity";
 
 const planned = (changes: Partial<TransferProgress> = {}): TransferProgress => ({
   quantity: "100.000000",
@@ -55,5 +55,29 @@ describe("transfer quantities", () => {
     expect(isFullyReceived(planned({ dispatched: "100.000000", received: "99.999999" }))).toBe(false);
     expect(isFullyReceived(planned({ dispatched: "100.000000", received: "100.000000" }))).toBe(true);
     expect(isFullyReceived(planned({ dispatched: "100.000000", received: "90.000000", writtenOff: "10.000000" }))).toBe(false);
+  });
+});
+
+describe("afterReversal", () => {
+  const progress = { quantity: "60.000000", dispatched: "60.000000", received: "50.000000", writtenOff: "5.000000" };
+
+  it("puts a reversed receipt or write-off back into transit (TRF-019, TRF-027)", () => {
+    expect(afterReversal(progress, "receipt", "50")).toEqual({
+      progress: { ...progress, received: "0.000000" }, transitBefore: "5.000000", transitAfter: "55.000000",
+    });
+    expect(afterReversal(progress, "write-off", "5")).toEqual({
+      progress: { ...progress, writtenOff: "0.000000" }, transitBefore: "5.000000", transitAfter: "10.000000",
+    });
+  });
+
+  it("takes a reversed dispatch out of transit once nothing downstream remains (TRF-021)", () => {
+    expect(afterReversal({ ...progress, received: "0.000000", writtenOff: "0.000000" }, "dispatch", "60")).toEqual({
+      progress: { quantity: "60.000000", dispatched: "0.000000", received: "0.000000", writtenOff: "0.000000" }, transitBefore: "60.000000", transitAfter: "0.000000",
+    });
+  });
+
+  it("refuses a reversal that would make a quantity or transit negative", () => {
+    expect(afterReversal(progress, "receipt", "51")).toBeNull();
+    expect(afterReversal(progress, "dispatch", "10")).toBeNull();
   });
 });

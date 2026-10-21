@@ -4,6 +4,7 @@ import { calendarDateSchema } from "../dates/calendar-date.schema";
 import { unitSchema } from "../materials/material-fields.schema";
 import { locationReferenceSchema, materialReferenceSchema } from "../planning-parameters/planning-parameter-fields.schema";
 import { stockReasonSchema } from "../stock/stock-correction.schema";
+import { stockReversalSchema } from "../stock/stock-reversal.schema";
 import { versionSchema } from "../version.schema";
 
 /** The English messages; screens translate them by matching these constants. */
@@ -87,3 +88,9 @@ export type TransferWriteOffInput = z.infer<typeof transferWriteOffSchema>;
 
 /** `GET /api/tenants/{tenant}/transfers?page=N` and the list page: a 1-based page of `TRANSFER_PAGE_SIZE`. */
 export const transferListSchema = z.strictObject({ page: z.coerce.number().int().min(1).max(1_000_000).default(1) });
+
+/** A posting of a transfer in a path: the UUID its ledger shows (`TransferPostingView.id`). */
+export const transferPostingIdSchema = z.uuid();
+
+/** The Reverse posting dialog's action (E11-S03): the reason, plus the posting bound when the dialog opens. */
+export const transferReversalActionSchema = stockReversalSchema.extend({ posting: transferPostingIdSchema });

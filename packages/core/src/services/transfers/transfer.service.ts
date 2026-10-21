@@ -5,28 +5,35 @@ import {
   StockMovement,
   Transfer,
   TransferPosting,
+  TransferReversal,
   UniqueConstraintViolationException,
   type EntityManager,
   type Material,
   type TransferPostingKind,
 } from "@cpg/db";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
-import { afterPosting, inTransitOf, isFullyReceived, postingLimit, undispatchedOf } from "../../domain/transfers/transfer-quantity";
+import { afterPosting, afterReversal, inTransitOf, isFullyReceived, postingLimit, undispatchedOf } from "../../domain/transfers/transfer-quantity";
+import { parseDecimal } from "../../domain/quantities/decimal";
 import { ConflictError, NotFoundError, ValidationError, versionConflict } from "../../http/errors";
 import {
   TRANSFER_PAGE_SIZE,
+  transferPostingIdSchema,
   type TransferCreateInput,
   type TransferDates,
   type TransferPostingInput,
   type TransferWriteOffInput,
 } from "../../validators/transfers/transfer.schema";
+import { parseInput } from "../../http/parse-input";
+import { stockReversalSchema } from "../../validators/stock/stock-reversal.schema";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
 import { findActiveLocation } from "../locations/find-location";
 import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quantity";
 import { findActiveMaterial } from "../materials/find-material";
 import { lineError } from "../materials/line-error";
-import { postStockMovements } from "../stock/stock-posting";
+import { assertReversalSource, inconsistentReversal, linkReversals } from "../stock/reversal-records";
+import { postHistoricalInverses, postStockMovements, REVERSAL_MOVEMENT } from "../stock/stock-posting";
+import { isScopeReadOnly } from "../tenants/tenant.service";
 
 export type { TransferPostingKind };
 
@@ -95,11 +102,39 @@ export interface TransferPostingView {
   actorUsername: string;
   channel: "ui" | "api";
   legs: TransferLegView[];
+  /** The reversal that undid it, or null (E11-S03). */
+  reversedBy: string | null;
+  /** Whether it may be reversed now: not yet reversed, and a dispatch only once nothing received or written off remains (spec Q2). */
+  canReverse: boolean;
 }
 
-/** A transfer with its newest postings (at most `TRANSFER_POSTINGS_SHOWN`). */
+/**
+ * The full reversal of one posting (E11-S03): `original` is the posting's ID and `kind` its kind. Its
+ * legs mirror the original's with opposite signs, in the order the goods move back.
+ */
+export interface TransferReversalView {
+  id: string;
+  original: string;
+  kind: TransferPostingKind;
+  businessDate: string;
+  occurredAt: Date;
+  quantity: string;
+  reason: string;
+  actorUsername: string;
+  channel: "ui" | "api";
+  legs: TransferLegView[];
+}
+
+/** A transfer with its newest postings (at most `TRANSFER_POSTINGS_SHOWN`) and the reversals of those postings. */
 export interface TransferDetailView extends TransferView {
   postings: TransferPostingView[];
+  reversals: TransferReversalView[];
+}
+
+/** What a reversal returns: the transfer after it, and the reversal. */
+export interface TransferReversalResult {
+  transfer: TransferView;
+  reversal: TransferReversalView;
 }
 
 /** What a posting returns: the transfer after it, and the posting. */
@@ -159,7 +194,8 @@ export class TransferService {
   async get(id: string): Promise<TransferDetailView> {
     const transfer = await findTransfer(this.em, id);
     const postings = await this.em.find(TransferPosting, { transfer }, { orderBy: { occurredAt: "desc", id: "desc" }, limit: TRANSFER_POSTINGS_SHOWN });
-    return { ...toView(transfer), postings: await postingViews(this.em, transfer, postings) };
+    const reversals = postings.length === 0 ? [] : await this.em.find(TransferReversal, { original: { $in: postings } }, { orderBy: { occurredAt: "desc", id: "desc" } });
+    return { ...toView(transfer), postings: await postingViews(this.em, transfer, postings, reversals), reversals: await reversalViews(this.em, reversals) };
   }
 
   /** A new Open transfer with the next ID and nothing moved (TRF-001, TRF-003, LFC-001). The caller has parsed `input` with `transferCreateSchema`. */
@@ -244,7 +280,8 @@ export class TransferService {
       }
       const before = { ...progressSnapshot(transfer), abandoned: transfer.abandoned };
       const [resolved] = resolveLifecycle(action, [{ quantity: transfer.quantity, processed: transfer.received,
-        abandoned: transfer.abandoned, status: transfer.status as DocumentState }], { hasProcessing: transfer.dispatched !== "0.000000" });
+        // Immutable history counts as processing, even once every posting is reversed (spec Q8).
+        abandoned: transfer.abandoned, status: transfer.status as DocumentState }], { hasProcessing: (await em.count(TransferPosting, { transfer })) > 0 });
       transfer.abandoned = resolved.abandoned;
       transfer.status = documentState([resolved.status]);
       transfer.updatedAt = new Date(Math.max(Date.now(), transfer.updatedAt.getTime() + 1));
@@ -302,9 +339,69 @@ export class TransferService {
         ...progressSnapshot(transfer), moved: record.baseQuantity, businessDate, ...(kind === "write-off" ? { reason } : {}),
       }));
       await em.flush();
-      const [view] = await postingViews(em, transfer, [posting]);
+      const [view] = await postingViews(em, transfer, [posting], []);
       return { transfer: toView(transfer), posting: view };
     });
+  }
+
+  /**
+   * Reverses posting `postingId` of transfer `id` in full, once, today (E11-S03): its physical leg (if
+   * any) as an exact historical inverse, linked to the original movement, and its transit leg as a
+   * `TransferReversal`, with the transfer's progress and audit, in one transaction. A dispatch waits
+   * until every receipt and write-off is reversed (TRF-020, spec Q2); a reversed receipt needs the
+   * destination to still hold it (TRF-019). The transfer is Open again afterwards, a Closed Early one
+   * included, with nothing abandoned (TRF-027, spec Q5); its masters must all be active (spec Q7).
+   */
+  async reverse(id: string, postingId: string, raw: unknown, actor: AuditActor): Promise<TransferReversalResult> {
+    const original = parseInput(transferPostingIdSchema, postingId);
+    const { reason } = parseInput(stockReversalSchema, raw);
+    try {
+      return await this.versioned(async (em) => {
+        if (await isScopeReadOnly(em)) throw new ConflictError("This tenant is read-only.", "TENANT_READ_ONLY");
+        const transfer = await findTransfer(em, id, { refresh: true });
+        const posting = await em.findOne(TransferPosting, { transfer, id: original });
+        if (!posting) throw new NotFoundError("TRANSFER_POSTING_NOT_FOUND", `Transfer ${transfer.code} has no posting ${original}.`);
+        const existing = await em.findOne(TransferReversal, { original: posting });
+        if (existing) throw postingAlreadyReversed(existing.id);
+        assertActiveMasters(transfer);
+        if (posting.kind === "dispatch" && !hasNothingDownstream(transfer)) {
+          throw new ConflictError(`Transfer ${transfer.code}: reverse its receipts and write-offs before a dispatch.`, "TRANSFER_REVERSAL_ORDER",
+            { transfer: transfer.code, received: transfer.received, writtenOff: transfer.writtenOff, unit: transfer.material.baseUnit });
+        }
+        const physical = await physicalLeg(em, transfer, posting);
+        const outcome = afterReversal(transfer, posting.kind, posting.quantity);
+        if (!outcome) throw inconsistentReversal();
+        const reversalId = randomUUID();
+        let businessDate = new Date().toISOString().slice(0, 10);
+        if (physical) {
+          const inverses = await postHistoricalInverses(em, [physical], reason, reversalId, actor);
+          await linkReversals(em, [physical], inverses);
+          businessDate = inverses[0].businessDate;
+        }
+        const before = { ...progressSnapshot(transfer), abandoned: transfer.abandoned };
+        const reversal = em.create(TransferReversal, {
+          id: reversalId, transfer, original: posting, businessDate, quantity: posting.quantity,
+          transitBefore: outcome.transitBefore, transitAfter: outcome.transitAfter, reason,
+          actorUserId: actor.userId, actorUsername: actor.username, channel: actor.channel,
+        });
+        // A transfer can't stay closed with stock in transit, nor Completed once less is received (spec Q5).
+        Object.assign(transfer, outcome.progress, { abandoned: "0.000000", status: "open", updatedAt: new Date(Math.max(Date.now(), transfer.updatedAt.getTime() + 1)) });
+        recordTenantAudit(em, actor, entry("reversed", transfer, before, {
+          ...progressSnapshot(transfer), abandoned: transfer.abandoned, posting: posting.id, kind: posting.kind,
+          reversal: reversalId, quantity: posting.quantity, businessDate, reason,
+        }));
+        await em.flush();
+        const [view] = await reversalViews(em, [reversal]);
+        return { transfer: toView(transfer), reversal: view };
+      });
+    } catch (error) {
+      if (error instanceof UniqueConstraintViolationException) {
+        // A racing reversal won past the in-transaction check: name the one that exists, read afresh.
+        const existing = await this.em.findOne(TransferReversal, { original }, { refresh: true });
+        throw postingAlreadyReversed(existing?.id ?? null);
+      }
+      throw error;
+    }
   }
 
   /** Runs a change in one transaction; a stale version, the caller's or one a racing write advanced, is `VERSION_CONFLICT`. */
@@ -323,6 +420,43 @@ async function findTransfer(em: EntityManager, id: string, options: { refresh?: 
   const transfer = await em.findOne(Transfer, { code: id }, { ...options, populate: ["material", "source", "destination"] });
   if (!transfer) throw new NotFoundError("TRANSFER_NOT_FOUND", `There is no transfer ${id} in this tenant.`);
   return transfer;
+}
+
+function postingAlreadyReversed(reversal: string | null): ConflictError {
+  return new ConflictError("This posting has already been reversed.", "TRANSFER_POSTING_ALREADY_REVERSED", reversal === null ? undefined : { reversal });
+}
+
+/** Nothing received or written off remains: only then may a dispatch be reversed (spec Q2). */
+function hasNothingDownstream({ received, writtenOff }: Transfer): boolean {
+  return parseDecimal(received) === 0n && parseDecimal(writtenOff) === 0n;
+}
+
+/** Refuses a reversal that would leave an Open transfer on an inactive material or location (spec Q7). */
+function assertActiveMasters({ code, material, source, destination }: Transfer): void {
+  const inactive = Object.entries({ material, source, destination }).filter(([, record]) => !record.active);
+  if (inactive.length > 0) {
+    throw new ConflictError(`Transfer ${code} uses an inactive material or location. Reactivate it before reversing.`, "TRANSFER_MASTER_INACTIVE",
+      { transfer: code, ...Object.fromEntries(inactive.map(([role, record]) => [role, record.code])) });
+  }
+}
+
+/**
+ * The posting's physical stock movement, checked against the posting before anything is inverted: a
+ * dispatch's −q at the source, a receipt's +q at the destination; a write-off has none. Anything else is
+ * `STOCK_REVERSAL_INCONSISTENT`.
+ */
+async function physicalLeg(em: EntityManager, transfer: Transfer, posting: TransferPosting): Promise<StockMovement | null> {
+  const movements = await em.find(StockMovement, { postingId: posting.id }, { populate: ["material", "location"], refresh: true });
+  if (posting.kind === "write-off") {
+    if (movements.length > 0) throw inconsistentReversal();
+    return null;
+  }
+  const [movement] = movements;
+  const type = posting.kind === "dispatch" ? TRANSFER_DISPATCH_MOVEMENT : TRANSFER_RECEIPT_MOVEMENT;
+  if (movements.length !== 1 || movement.type !== type) throw inconsistentReversal();
+  const location = posting.kind === "dispatch" ? transfer.source : transfer.destination;
+  assertReversalSource(movement, transfer.material.id, location.id, posting.quantity, posting.kind === "dispatch" ? -1n : 1n);
+  return movement;
 }
 
 /** Refuses a change to a transfer that is no longer Open: a Completed one takes no posting and no edit (spec Q7). */
@@ -361,9 +495,13 @@ function toView(transfer: Transfer): TransferView {
   };
 }
 
-/** The postings with their legs, in the order given; the physical legs are the stock movements posted under each posting's ID. */
-async function postingViews(em: EntityManager, transfer: Transfer, postings: readonly TransferPosting[]): Promise<TransferPostingView[]> {
+/**
+ * The postings with their legs, in the order given; the physical legs are the stock movements posted
+ * under each posting's ID. `reversals` holds the reversals of these postings that exist.
+ */
+async function postingViews(em: EntityManager, transfer: Transfer, postings: readonly TransferPosting[], reversals: readonly TransferReversal[]): Promise<TransferPostingView[]> {
   if (postings.length === 0) return [];
+  const reversedBy = new Map(reversals.map((reversal) => [reversal.original.id, reversal.id]));
   const movements = await em.find(StockMovement, { postingId: { $in: postings.map(({ id }) => id) } }, { populate: ["location"] });
   return postings.map((posting) => {
     const transit: TransferLegView = {
@@ -389,6 +527,40 @@ async function postingViews(em: EntityManager, transfer: Transfer, postings: rea
       channel: channel as TransferPostingView["channel"],
       // Each leg in the order the goods move: off the source into transit, out of transit onto the destination.
       legs: kind === "dispatch" ? [...physical, transit] : [transit, ...physical],
+      reversedBy: reversedBy.get(id) ?? null,
+      canReverse: !reversedBy.has(id) && (kind !== "dispatch" || hasNothingDownstream(transfer)),
+    };
+  });
+}
+
+/**
+ * The reversals with their legs, in the order given: the transit leg is the reversal itself, the
+ * physical leg the `reversal` movement posted under its ID. Each leg runs the opposite way to its
+ * original's, in the order the goods move back.
+ */
+async function reversalViews(em: EntityManager, reversals: readonly TransferReversal[]): Promise<TransferReversalView[]> {
+  if (reversals.length === 0) return [];
+  const movements = await em.find(StockMovement, { type: REVERSAL_MOVEMENT, postingId: { $in: reversals.map(({ id }) => id) } }, { populate: ["location"] });
+  const originals = await em.find(TransferPosting, { id: { $in: reversals.map(({ original }) => original.id) } });
+  const kinds = new Map(originals.map(({ id, kind }) => [id, kind]));
+  return reversals.map((reversal) => {
+    const kind = kinds.get(reversal.original.id)!;
+    const transit: TransferLegView = {
+      place: "transit",
+      location: null,
+      quantity: `${kind === "dispatch" ? "-" : ""}${reversal.quantity}`,
+      before: reversal.transitBefore,
+      after: reversal.transitAfter,
+    };
+    const movement = movements.find(({ postingId }) => postingId === reversal.id);
+    const physical: TransferLegView[] = movement
+      ? [{ place: kind === "dispatch" ? "source" : "destination", location: movement.location.code, quantity: movement.quantity, before: movement.balanceBefore, after: movement.balanceAfter }]
+      : [];
+    const { id, businessDate, occurredAt, quantity, reason, actorUsername, channel } = reversal;
+    return {
+      id, original: reversal.original.id, kind, businessDate, occurredAt, quantity, reason, actorUsername,
+      channel: channel as TransferReversalView["channel"],
+      legs: kind === "dispatch" ? [transit, ...physical] : [...physical, transit],
     };
   });
 }
