@@ -13,8 +13,8 @@ const PASSWORD = "shapi first password";
 const today = () => new Date().toISOString().slice(0, 10);
 
 // Shipments and goods issues through the API (R07, E08-S02): SAL-006…013, SAL-018, SAL-020…022,
-// INV-003, INV-005, INV-010, INV-011, INV-021, AUD-026, AUD-030, LFC-002, LFC-003, LFC-010, TEN-017,
-// API-020, API-021.
+// SAL-024, SAL-025, INV-003, INV-005, INV-010, INV-011, INV-021, AUD-026, AUD-030, LFC-002, LFC-003,
+// LFC-010, LFC-020, TEN-017, API-020, API-021.
 describe("shipments and goods issues through the API", () => {
   let admin: Browser;
   let user: Browser;
@@ -165,6 +165,53 @@ describe("shipments and goods issues through the API", () => {
     const closed = await issue(shipment.id, [{ line: 2, quantity: "1", unit: "each" }]);
     expect(closed.status).toBe(409);
     expect(json(closed).error.code).toBe("SHIPMENT_NOT_OPEN");
+  });
+
+  it("ships and issues an Open order after its customer is deactivated, while a new order for that customer is refused (SAL-025, LFC-020)", async () => {
+    await freshMaterials();
+    const customer = json(await write("POST", "/api/tenants/prod/customers", { name: "shapi leaving" })).data as { id: string; version: number };
+    const placed = await write("POST", "/api/tenants/prod/customer-orders", {
+      customer: customer.id,
+      location: ids.plant,
+      lines: [{ material: ids.widget, quantity: "40", unit: "each", requiredDate: "2026-11-04" }],
+    });
+    expect(placed.status).toBe(200);
+    const order = json(placed).data as CustomerOrderView;
+    expect((await write("PATCH", `/api/tenants/prod/customers/${customer.id}`, { active: false, version: customer.version })).status).toBe(200);
+
+    const shipment = await ship(order, ["40"], userSecret);
+    expect((await issue(shipment.id, [{ line: 1, quantity: "15", unit: "each" }], userSecret)).status).toBe(200);
+
+    expect(await getOrder(order.id)).toMatchObject({ customer: customer.id, status: "open", lines: [{ fulfilled: "15.000000", status: "open" }] });
+    expect(await stockOf(ids.widget)).toBe("85.000000");
+    const refused = await write("POST", "/api/tenants/prod/customer-orders", {
+      customer: customer.id,
+      location: ids.plant,
+      lines: [{ material: ids.widget, quantity: "1", unit: "each", requiredDate: "2026-11-04" }],
+    });
+    expect(refused.status).toBe(409);
+    expect(json(refused).error.code).toBe("CUSTOMER_INACTIVE");
+  });
+
+  it("leaves a completed order Completed and fulfilled after a reasoned positive correction returns its goods (SAL-024, N02)", async () => {
+    await freshMaterials();
+    const order = await placeOrder("60");
+    const shipment = await ship(order);
+    expect((await issue(shipment.id, [{ line: 1, quantity: "60", unit: "each" }, { line: 2, quantity: "30", unit: "each" }])).status).toBe(200);
+    const completed = await getOrder(order.id);
+    expect(completed).toMatchObject({ status: "completed", lines: [{ fulfilled: "60.000000" }, { fulfilled: "30.000000" }] });
+
+    const correction = await write(
+      "POST",
+      "/api/tenants/prod/stock/corrections",
+      { material: ids.widget, location: ids.plant, quantity: "5", unit: "each", reason: "Physical customer return" },
+      userSecret,
+    );
+    expect(correction.status).toBe(200);
+
+    expect(await stockOf(ids.widget)).toBe("45.000000");
+    expect(await getOrder(order.id)).toEqual(completed);
+    expect((json(await api("GET", `/api/tenants/prod/goods-issues?shipment=${shipment.id}`)).data as IssueView[])).toHaveLength(1);
   });
 
   it("refuses an issue beyond the stock naming available and requested, and lets one of two racing issues commit (INV-005, INV-021, AUD-026)", async () => {
