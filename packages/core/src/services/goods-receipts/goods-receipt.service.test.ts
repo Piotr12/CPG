@@ -31,10 +31,13 @@ import { LINE_NO_SUCH_LINE_MESSAGE } from "../../validators/purchasing/purchasin
 import type { AuditActor } from "../audit/actor";
 import { MaterialService } from "../materials/material.service";
 import { PurchaseOrderService, type NewOrder } from "../purchase-orders/purchase-order.service";
+import { PurchaseRequisitionService } from "../purchase-requisitions/purchase-requisition.service";
 import { StockService } from "../stock/stock.service";
+import { SupplierService } from "../suppliers/supplier.service";
 import { GOODS_RECEIPT_MOVEMENT, GoodsReceiptService, RECEIPT_ID_RACE } from "./goods-receipt.service";
 
 const ACTOR: AuditActor = { userId: "user-id", username: "alice", sessionId: "user-session", channel: "ui", token: null };
+const ADMIN: AuditActor = { userId: "admin-id", username: "admin", sessionId: "admin-session", channel: "ui", token: null };
 
 /** An order to supplier 1 at location 1: 100 kg of steel planned a week ago, and 10 bolts. */
 const ORDER: NewOrder = {
@@ -186,6 +189,18 @@ describe("GoodsReceiptService", () => {
       expect(await scoped().count(GoodsReceipt, {})).toBe(0);
       expect(await scoped().count(StockMovement, {})).toBe(0);
       expect((await orders().get(order.id)).lines[0].received).toBe("0.000000");
+    });
+
+    it("receives on an Open order whose supplier was deactivated since, raising stock (LFC-021)", async () => {
+      const order = await orders().create(ORDER, ACTOR);
+      const suppliers = new SupplierService({ em: scoped() });
+      await suppliers.update("00000001", { active: false }, (await suppliers.get("00000001")).version, ADMIN);
+
+      const receipt = await service().post(receiptOf(order.id, { line: 1, quantity: "30", unit: "kg" }), ACTOR);
+
+      expect(receipt.lines[0].quantity).toBe("30.000000");
+      expect((await stock("00000001")).quantity).toBe("30.000000");
+      expect((await orders().get(order.id)).lines[0]).toMatchObject({ received: "30.000000", status: "open" });
     });
 
     it("refuses a line from another order (BUY-013)", async () => {
@@ -447,6 +462,21 @@ describe("GoodsReceiptService", () => {
 
       expect((await stock("00000001")).quantity).toBe("40.000000");
       expect(await scoped().count(StockMovement, {})).toBe(1);
+    });
+
+    it("leaves stock at zero when a requisition is converted into an order, until a receipt posts (BUY-009)", async () => {
+      const requisition = await new PurchaseRequisitionService({ em: scoped() }).create(
+        { material: "00000001", location: "00000001", quantity: "100", unit: "kg", requiredDate: "2026-10-20" },
+        ACTOR,
+      );
+      const order = await orders().create({ ...ORDER, lines: [{ ...ORDER.lines[0], requisition: requisition.id }] }, ACTOR);
+      expect(order.lines[0].requisition).toBe(requisition.id);
+
+      expect(await stock("00000001")).toMatchObject({ quantity: "0.000000", movements: [] });
+      expect(await scoped().count(StockBalance, {})).toBe(0);
+
+      await service().post(receiptOf(order.id, { line: 1, quantity: "100", unit: "kg" }), ACTOR);
+      expect((await stock("00000001")).quantity).toBe("100.000000");
     });
   });
 

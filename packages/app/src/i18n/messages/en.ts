@@ -1898,6 +1898,8 @@ export const en = {
     MATERIAL_HAS_CUSTOMER_DEMAND: "Customer order {order} has outstanding demand for this material.",
     LOCATION_HAS_CUSTOMER_ORDERS: "Customer order {order} is still Open at this location.",
     LOCATION_HAS_OPEN_TRANSFERS: "Transfer {transfer} is still Open from or to this location.",
+    LOCATION_HAS_PURCHASE_ORDERS: "Purchase order {order} is still Open for delivery to this location.",
+    LOCATION_HAS_REQUISITIONS: "Purchase requisition {requisition} is still Open at this location.",
     MATERIAL_IN_OPEN_TRANSFER: "Transfer {transfer} of this material is still Open, so it can't be deactivated.",
     INSUFFICIENT_STOCK: "Material {material} at location {location}: available {available} {unit}; requested {requested} {unit}.",
     STOCK_NOT_EMPTY: "Material {material} at location {location} holds {quantity} {unit}. Clear its stock before deactivation.",

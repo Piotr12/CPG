@@ -1,11 +1,25 @@
-import { PurchaseOrderLine, PurchaseRequisition, type EntityManager, type Material } from "@cpg/db";
+import { PurchaseOrder, PurchaseOrderLine, PurchaseRequisition, type EntityManager, type Material, type NamedRecord } from "@cpg/db";
+import { ConflictError } from "../../http/errors";
 
 import { orderLineState } from "./order-records";
 
 /*
- * What the materials concept may ask about procurement documents: a leaf module, so
- * `MaterialService` checks it without importing the purchasing services.
+ * What the masters may ask about procurement documents: a leaf module, so `MaterialService` and
+ * `LocationService` check it without importing the purchasing services.
  */
+
+/**
+ * Refuses deactivating a location that an Open purchase order delivers to, or that an Open requisition
+ * needs stock at (LFC-018): its receipts would be refused with `LOCATION_INACTIVE`. Names the lowest one.
+ */
+export async function assertNoPurchasingAtLocation(em: EntityManager, location: NamedRecord): Promise<void> {
+  const order = await em.findOne(PurchaseOrder, { location: location.id, status: "open" }, { orderBy: { code: "asc" } });
+  if (order) throw new ConflictError(`Purchase order ${order.code} is still Open for delivery to this location.`, "LOCATION_HAS_PURCHASE_ORDERS", { order: order.code });
+  const requisition = await em.findOne(PurchaseRequisition, { location: location.id, status: "open" }, { orderBy: { code: "asc" } });
+  if (requisition) {
+    throw new ConflictError(`Purchase requisition ${requisition.code} is still Open at this location.`, "LOCATION_HAS_REQUISITIONS", { requisition: requisition.code });
+  }
+}
 
 /**
  * The ID of the lowest-numbered Open purchase order with a line for `material`; null when none has
