@@ -42,7 +42,7 @@ async function TenantAudit({
     orNotFound(tenantScope((await params).tenant), ["TENANT_NOT_FOUND"]),
     getMessages(),
   ]);
-  const { page, isFirstPage, query } = await readAuditPage(searchParams, (list) => cradle.auditService.listTenant(list));
+  const { page, isFirstPage, query, invalid } = await readAuditPage(searchParams, (list) => cradle.auditService.listTenant(list));
   const [accounts, reversals] = await Promise.all([
     cradle.userService.usernames(),
     cradle.auditService.reversalLinks(movementIdsOf(page.entries)),
@@ -67,6 +67,7 @@ async function TenantAudit({
         path={`/admin/${tenant.code}/audit`}
         isFirstPage={isFirstPage}
         selected={query}
+        invalid={invalid}
         accounts={accounts}
         subjectTypes={TENANT_SUBJECT_TYPES}
         reversals={reversals}

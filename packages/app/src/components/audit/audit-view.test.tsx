@@ -5,7 +5,7 @@ import type { AuditFilterQuery } from "@cpg/core/validators/audit/audit-list.sch
 import { AuditView } from "./audit-view";
 import { GLOBAL_SUBJECT_TYPES } from "./subject-types";
 
-const view = (nextBefore: string | null, isFirstPage: boolean, withBack = true, selected: AuditFilterQuery = {}) =>
+const view = (nextBefore: string | null, isFirstPage: boolean, withBack = true, selected: AuditFilterQuery = {}, invalid: ("subjectId" | "to")[] = []) =>
   render(
     <AuditView
       heading="Global audit"
@@ -17,6 +17,7 @@ const view = (nextBefore: string | null, isFirstPage: boolean, withBack = true, 
       selected={selected}
       accounts={["admin", "alice"]}
       subjectTypes={GLOBAL_SUBJECT_TYPES}
+      invalid={invalid}
       labels={en.audit}
     />,
   );
@@ -53,6 +54,14 @@ describe("AuditView", () => {
     expect(screen.getByText("Showing entries that match the filters.")).toBeTruthy();
     expect(screen.getByText("No entries match these filters.")).toBeTruthy();
     expect(href("Clear filters")).toBe("/admin/audit");
+  });
+
+  it("shows no entries, only the explanation, while a filter is refused", () => {
+    view(null, true, false, { subjectId: "00000012" }, ["subjectId"]);
+
+    expect(screen.getByRole("alert").textContent).toContain(en.audit.filterForm.errors.subjectId);
+    expect(screen.queryByRole("table")).toBeNull();
+    expect(screen.queryByText("Showing entries that match the filters.")).toBeNull();
   });
 
   it("keeps the filters on both paging links", () => {

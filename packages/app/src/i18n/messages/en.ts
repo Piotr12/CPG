@@ -1476,7 +1476,7 @@ export const en = {
       label: "Filter the audit",
       subjectType: "Record type",
       subjectId: "Record ID",
-      subjectIdHint: "Set by a Subject link, or type an ID such as 00000012",
+      subjectIdHint: "Choose the record type, then type its ID (such as 00000012), or use a Subject link",
       account: "Account",
       channel: "Channel",
       from: "From (UTC)",
@@ -1486,6 +1486,16 @@ export const en = {
       clear: "Clear filters",
       showing: "Showing entries that match the filters.",
       empty: "No entries match these filters.",
+      invalid: "Correct the filters to see entries:",
+      /** Why a filter was refused, keyed by its parameter. */
+      errors: {
+        subjectType: "Choose a record type from the list.",
+        subjectId: "Choose the record type for this ID (IDs repeat across types), or clear the ID.",
+        account: "Choose an account from the list.",
+        channel: "Choose a channel from the list.",
+        from: "Enter a real start date.",
+        to: "Enter a real end date, no earlier than the start date.",
+      },
     },
     /** The Subject link's accessible name: it opens that record's history. */
     history: "History of {label}",

@@ -5,7 +5,7 @@ import { Input } from "@cpg/ui/components/input";
 import { Label } from "@cpg/ui/components/label";
 import { NativeSelect, NativeSelectOption } from "@cpg/ui/components/native-select";
 import type { Messages } from "../../i18n/messages/en";
-import { isFiltered } from "./audit-query";
+import { isFiltered, type AuditFilterKey } from "./audit-query";
 import type { AuditSubjectType } from "./subject-types";
 
 /**
@@ -18,6 +18,7 @@ export function AuditFilters({
   selected,
   accounts,
   subjectTypes,
+  invalid = [],
   labels,
 }: {
   /** The audit screen's path, the form's action. */
@@ -28,14 +29,21 @@ export function AuditFilters({
   accounts: readonly string[];
   /** The record types this audit holds. */
   subjectTypes: readonly AuditSubjectType[];
+  /** The filters the server refused: marked invalid and explained above Apply. */
+  invalid?: readonly AuditFilterKey[];
   labels: Messages["audit"];
 }) {
   const t = labels.filterForm;
+  /** Marks a refused field for assistive technology and points it at the explanation. */
+  const refused = (key: AuditFilterKey, hint?: string) => {
+    const describedBy = [hint, invalid.includes(key) ? "audit-filter-errors" : undefined].filter(Boolean).join(" ");
+    return { ...(invalid.includes(key) && { "aria-invalid": true }), ...(describedBy && { "aria-describedby": describedBy }) };
+  };
   return (
     <form action={path} aria-label={t.label} className="grid min-w-0 gap-4 rounded-lg border p-4 sm:grid-cols-3 sm:items-end">
       <div className="grid min-w-0 gap-2">
         <Label htmlFor="audit-subject-type">{t.subjectType}</Label>
-        <NativeSelect id="audit-subject-type" name="subjectType" defaultValue={selected.subjectType ?? ""} className="w-full">
+        <NativeSelect id="audit-subject-type" name="subjectType" defaultValue={selected.subjectType ?? ""} className="w-full" {...refused("subjectType")}>
           <NativeSelectOption value="">{t.all}</NativeSelectOption>
           {subjectTypes.map((type) => (
             <NativeSelectOption key={type} value={type}>{labels.subjects[type]}</NativeSelectOption>
@@ -44,12 +52,12 @@ export function AuditFilters({
       </div>
       <div className="grid min-w-0 gap-2">
         <Label htmlFor="audit-subject-id">{t.subjectId}</Label>
-        <Input id="audit-subject-id" name="subjectId" defaultValue={selected.subjectId ?? ""} aria-describedby="audit-subject-id-hint" />
+        <Input id="audit-subject-id" name="subjectId" defaultValue={selected.subjectId ?? ""} {...refused("subjectId", "audit-subject-id-hint")} />
         <p id="audit-subject-id-hint" className="text-xs text-muted-foreground">{t.subjectIdHint}</p>
       </div>
       <div className="grid min-w-0 gap-2">
         <Label htmlFor="audit-account">{t.account}</Label>
-        <NativeSelect id="audit-account" name="account" defaultValue={selected.account ?? ""} className="w-full">
+        <NativeSelect id="audit-account" name="account" defaultValue={selected.account ?? ""} className="w-full" {...refused("account")}>
           <NativeSelectOption value="">{t.all}</NativeSelectOption>
           {accounts.map((account) => (
             <NativeSelectOption key={account} value={account}>{account}</NativeSelectOption>
@@ -58,7 +66,7 @@ export function AuditFilters({
       </div>
       <div className="grid min-w-0 gap-2">
         <Label htmlFor="audit-channel">{t.channel}</Label>
-        <NativeSelect id="audit-channel" name="channel" defaultValue={selected.channel ?? ""} className="w-full">
+        <NativeSelect id="audit-channel" name="channel" defaultValue={selected.channel ?? ""} className="w-full" {...refused("channel")}>
           <NativeSelectOption value="">{t.all}</NativeSelectOption>
           <NativeSelectOption value="ui">{labels.channels.ui}</NativeSelectOption>
           <NativeSelectOption value="api">{labels.channels.api}</NativeSelectOption>
@@ -66,12 +74,20 @@ export function AuditFilters({
       </div>
       <div className="grid min-w-0 gap-2">
         <Label htmlFor="audit-from">{t.from}</Label>
-        <Input id="audit-from" name="from" type="date" defaultValue={selected.from ?? ""} />
+        <Input id="audit-from" name="from" type="date" defaultValue={selected.from ?? ""} {...refused("from")} />
       </div>
       <div className="grid min-w-0 gap-2">
         <Label htmlFor="audit-to">{t.to}</Label>
-        <Input id="audit-to" name="to" type="date" defaultValue={selected.to ?? ""} />
+        <Input id="audit-to" name="to" type="date" defaultValue={selected.to ?? ""} {...refused("to")} />
       </div>
+      {invalid.length > 0 && (
+        <div id="audit-filter-errors" role="alert" className="text-sm text-destructive sm:col-span-3">
+          <p className="font-medium">{t.invalid}</p>
+          <ul className="list-disc pl-5">
+            {invalid.map((key) => <li key={key}>{t.errors[key]}</li>)}
+          </ul>
+        </div>
+      )}
       <div className="flex items-center gap-4">
         <Button type="submit">{t.apply}</Button>
         {isFiltered(selected) && (

@@ -4,7 +4,7 @@ import type { AuditPage, AuditReversalLink } from "@cpg/core";
 import type { AuditFilterQuery } from "@cpg/core/validators/audit/audit-list.schema";
 import type { Messages } from "../../i18n/messages/en";
 import { AuditFilters } from "./audit-filters";
-import { auditUrl, isFiltered } from "./audit-query";
+import { auditUrl, isFiltered, type AuditFilterKey } from "./audit-query";
 import { AuditTable } from "./audit-table";
 import type { AuditSubjectType } from "./subject-types";
 
@@ -25,6 +25,7 @@ export function AuditView({
   accounts,
   subjectTypes,
   reversals = [],
+  invalid = [],
   labels,
 }: {
   heading: string;
@@ -40,6 +41,8 @@ export function AuditView({
   subjectTypes: readonly AuditSubjectType[];
   /** The reversal links of the page's stock movements (tenant audit only). */
   reversals?: readonly AuditReversalLink[];
+  /** Filters the server refused: the form explains them, and no entries are shown until corrected. */
+  invalid?: readonly AuditFilterKey[];
   labels: Messages["audit"];
 }) {
   const filtered = isFiltered(selected);
@@ -55,16 +58,18 @@ export function AuditView({
       </div>
       <div className="text-sm text-muted-foreground">{intro}</div>
       {/* Keyed by the query: following a history link on this screen remounts the form with its new values. */}
-      <AuditFilters key={auditUrl(path, selected)} path={path} selected={selected} accounts={accounts} subjectTypes={subjectTypes} labels={labels} />
-      {filtered && <p className="text-sm font-medium">{labels.filterForm.showing}</p>}
-      <AuditTable
-        entries={page.entries}
-        label={heading}
-        path={path}
-        reversals={reversals}
-        empty={filtered ? labels.filterForm.empty : labels.empty}
-        labels={labels}
-      />
+      <AuditFilters key={auditUrl(path, selected)} path={path} selected={selected} accounts={accounts} subjectTypes={subjectTypes} invalid={invalid} labels={labels} />
+      {invalid.length === 0 && filtered && <p className="text-sm font-medium">{labels.filterForm.showing}</p>}
+      {invalid.length === 0 && (
+        <AuditTable
+          entries={page.entries}
+          label={heading}
+          path={path}
+          reversals={reversals}
+          empty={filtered ? labels.filterForm.empty : labels.empty}
+          labels={labels}
+        />
+      )}
       {(page.nextBefore || !isFirstPage) && (
         <nav className="flex justify-between gap-4 text-sm font-medium">
           {isFirstPage ? <span /> : <Link href={auditUrl(path, selected)}>{labels.newest}</Link>}

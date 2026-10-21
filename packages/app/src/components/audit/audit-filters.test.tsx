@@ -17,7 +17,9 @@ describe("AuditFilters", () => {
     expect(filters.getAttribute("action")).toBe("/admin/test/audit");
     expect(filters.getAttribute("method")).toBeNull();
     expect(["Record type", "Record ID", "Account", "Channel", "From (UTC)", "To (UTC)"].map(value)).toEqual(["", "", "", "", "", ""]);
-    expect(screen.getByText("Set by a Subject link, or type an ID such as 00000012")).toBeTruthy();
+    expect(screen.getByText("Choose the record type, then type its ID (such as 00000012), or use a Subject link")).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByLabelText("Record ID").getAttribute("aria-describedby")).toBe("audit-subject-id-hint");
     expect(screen.getByRole("button", { name: "Apply" })).toBeTruthy();
     expect(screen.queryByRole("link", { name: "Clear filters" })).toBeNull();
   });
@@ -52,8 +54,23 @@ describe("AuditFilters", () => {
     form({}, pl.audit);
 
     expect(screen.getByRole("form", { name: "Filtruj audyt" })).toBeTruthy();
-    expect(within(screen.getByLabelText("Rodzaj rekordu")).getByRole("option", { name: "Ruch magazynowy" })).toBeTruthy();
+    expect(within(screen.getByLabelText("Rodzaj rekordu")).getByRole("option", { name: "Ruch zapasu" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Zastosuj" })).toBeTruthy();
+  });
+});
+
+describe("refused filters", () => {
+  it("marks each refused field, explains it in the reader's language, and keeps the hint (accessibility)", () => {
+    render(<AuditFilters path="/admin/audit" selected={{ subjectId: "00000012", from: "2026-10-21", to: "2026-10-01" }} accounts={[]} subjectTypes={GLOBAL_SUBJECT_TYPES} invalid={["subjectId", "to"]} labels={pl.audit} />);
+
+    const alert = screen.getByRole("alert");
+    expect(alert.textContent).toContain("Popraw filtry, aby zobaczyć wpisy:");
+    expect(within(alert).getAllByRole("listitem").map((item) => item.textContent)).toEqual([pl.audit.filterForm.errors.subjectId, pl.audit.filterForm.errors.to]);
+    expect(screen.getByLabelText("ID rekordu").getAttribute("aria-invalid")).toBe("true");
+    expect(screen.getByLabelText("ID rekordu").getAttribute("aria-describedby")).toBe("audit-subject-id-hint audit-filter-errors");
+    expect(screen.getByLabelText("Do (UTC)").getAttribute("aria-describedby")).toBe("audit-filter-errors");
+    expect(screen.getByLabelText("Od (UTC)").getAttribute("aria-invalid")).toBeNull();
+    expect((screen.getByLabelText("ID rekordu") as HTMLInputElement).value).toBe("00000012");
   });
 });
 

@@ -26,7 +26,7 @@ async function GlobalAudit({ searchParams }: { searchParams: Promise<Record<stri
   await connection();
   await requireUser();
   const [{ cradle }, { locale, messages }] = await Promise.all([requestScope(), getMessages()]);
-  const { page, isFirstPage, query } = await readAuditPage(searchParams, (list) => cradle.auditService.listGlobal(list));
+  const { page, isFirstPage, query, invalid } = await readAuditPage(searchParams, (list) => cradle.auditService.listGlobal(list));
   const accounts = await cradle.userService.usernames();
   const t = messages.audit;
 
@@ -39,6 +39,7 @@ async function GlobalAudit({ searchParams }: { searchParams: Promise<Record<stri
         path="/admin/audit"
         isFirstPage={isFirstPage}
         selected={query}
+        invalid={invalid}
         accounts={accounts}
         subjectTypes={GLOBAL_SUBJECT_TYPES}
         labels={t}

@@ -3,6 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { en } from "../packages/app/src/i18n/messages/en";
 import { pl } from "../packages/app/src/i18n/messages/pl";
+import { GLOBAL_SUBJECT_TYPES, TENANT_SUBJECT_TYPES } from "../packages/app/src/components/audit/subject-types";
 
 /**
  * Every audit action `core` can record has a name in both languages (UX-022), so neither audit ever
@@ -49,7 +50,7 @@ function verbsDeclaredIn(text: string): string[] {
   return [...variables, ...maps];
 }
 
-export function recordableActions(): Set<string> {
+function recordableActions(): Set<string> {
   const files = sources();
   const actions = new Set<string>();
   const prefixes = files.flatMap(({ text }) => [...text.matchAll(new RegExp(`actionPrefix: "(${ACTION})"`, "g"))].map((match) => match[1]));
@@ -74,6 +75,30 @@ export function recordableActions(): Set<string> {
   }
   return actions;
 }
+
+/** Every subject type `core` records: subjects written `{ type: "…", id: … }`, and named-record kinds' `subjectType: "…"`. */
+function recordableSubjectTypes(): Set<string> {
+  return new Set(
+    sources().flatMap(({ text }) => [
+      ...[...text.matchAll(/\{\s*type: "([A-Z]\w*)",\s*id:/g)].map((match) => match[1]),
+      ...[...text.matchAll(/subjectType: "([A-Z]\w*)"/g)].map((match) => match[1]),
+    ]),
+  );
+}
+
+describe("audit record types", () => {
+  const types = recordableSubjectTypes();
+
+  it("finds the subject types of every kind of producer (the scan itself works)", () => {
+    expect([...types]).toEqual(expect.arrayContaining(["User", "ApiToken", "Tenant", "Location", "StockMovement", "PurchaseOrder", "Forecast"]));
+  });
+
+  it("offers every record type core records in one audit's Record type filter, named in both languages", () => {
+    const offered = new Set<string>([...GLOBAL_SUBJECT_TYPES, ...TENANT_SUBJECT_TYPES]);
+    expect([...types].filter((type) => !offered.has(type)).sort()).toEqual([]);
+    expect([...offered].filter((type) => !types.has(type)).sort()).toEqual([]);
+  });
+});
 
 describe("audit action labels", () => {
   const actions = recordableActions();

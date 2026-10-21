@@ -10,8 +10,8 @@ const baseUrl = inject("baseUrl");
 // This file's own account and records: other files share the app, and users are never deleted.
 const username = `history-${randomUUID().slice(0, 8)}`;
 const password = "audit-history-integration-password";
-const today = new Date().toISOString().slice(0, 10);
-const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+/** A UTC day, read when asserted: a run that crosses midnight still compares like with like. */
+const utcDay = (offsetDays = 0) => new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
 /** One audit row's cells: time, account, session, channel, action, subject, changes. */
 type Row = [string, string, string, string, string, string, string];
@@ -115,7 +115,7 @@ describe("tracing one record's history in the audit (E13-S03, #96)", () => {
     await openAudit(operator, `/admin/prod/audit?subjectType=StockMovement&subjectId=${movement}`);
 
     const [posted] = await rows(operator);
-    expect(posted[0]).toMatch(new RegExp(`^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\nBusiness date ${today}$`));
+    expect(posted[0]).toMatch(new RegExp(`^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\nBusiness date ${utcDay()}$`));
     expect(posted[4]).toBe("Stock movement posted");
     expect((await api<OrderView>("GET", `/api/tenants/prod/purchase-orders/${purchase.id}`)).body.data.lines[0]).toMatchObject({ plannedDate: "2027-01-05" });
   });
@@ -149,7 +149,7 @@ describe("tracing one record's history in the audit (E13-S03, #96)", () => {
       [username, true, "UI", "Stock movement reversed"],
       [username, true, "UI", "Stock movement posted"],
     ]);
-    expect(original[0][0]).toContain(`Business date ${today}`);
+    expect(original[0][0]).toContain(`Business date ${utcDay()}`);
     expect(original[0][6]).toContain("reason: — → History wrong bin");
     expect(original[0][6]).toMatch(/Reversed by [0-9a-f]{8}$/);
     expect(original[1][6]).toMatch(/Reversed by [0-9a-f]{8}$/);
@@ -165,14 +165,31 @@ describe("tracing one record's history in the audit (E13-S03, #96)", () => {
   });
 
   it("filters by account, channel and day on the tenant and the Global audit, and keeps the filters when paging", async () => {
-    await openAudit(operator, `/admin/prod/audit?account=${username}&channel=ui&from=${today}&to=${today}`);
+    await openAudit(operator, `/admin/prod/audit?account=${username}&channel=ui&from=${utcDay()}&to=${utcDay()}`);
     const ui = await rows(operator);
     expect(ui.length).toBeGreaterThanOrEqual(3);
     expect(ui.every(([, account, , channel]) => account === username && channel === "UI")).toBe(true);
 
-    await openAudit(operator, `/admin/prod/audit?account=${username}&from=${tomorrow}`);
+    await openAudit(operator, `/admin/prod/audit?account=${username}&from=${utcDay(1)}`);
     expect(await rows(operator)).toEqual([]);
     expect(await operator.text("main")).toContain("No entries match these filters.");
+
+    // An ID typed without its record type is explained in the form, not answered with a not-found page.
+    await openAudit(operator, "/admin/prod/audit");
+    await operator.fill("#audit-subject-id", purchase.id);
+    await operator.waitUntil(hydrated(`document.querySelector("main form button[type=submit]")`));
+    await operator.click("main form button[type=submit]");
+    await operator.waitUntil(`location.search.includes("subjectId=") && ${shown("#audit-filter-errors")}`);
+    expect(await operator.text("#audit-filter-errors")).toContain("Choose the record type for this ID");
+    expect(await operator.evaluate<boolean>(shown("main table"))).toBe(false);
+    expect(await operator.evaluate<string>(`document.querySelector("#audit-subject-id").value`)).toBe(purchase.id);
+
+    // A Global entry of the operator's through the API: a spare token, revoked with the bearer token.
+    await openTokens(operator, baseUrl);
+    await createToken(operator, `${username}-spare`);
+    const tokens = await api<{ id: string; name: string }[]>("GET", "/api/tokens", undefined, operatorSecret);
+    const spare = tokens.body.data.find(({ name }) => name === `${username}-spare`)!;
+    expect((await api("DELETE", `/api/tokens/${spare.id}`, undefined, operatorSecret)).status).toBe(200);
 
     // The form: choose the account and the API channel on the Global audit, then Apply.
     await openAudit(operator, "/admin/audit");
@@ -182,7 +199,9 @@ describe("tracing one record's history in the audit (E13-S03, #96)", () => {
     await operator.click("main form button[type=submit]");
     await operator.waitUntil(`location.search.includes("account=${username}") && location.search.includes("channel=api")`);
     await operator.waitUntil(shown("main table"));
-    expect((await rows(operator)).every(([, account, , channel]) => account === username && channel.startsWith("API"))).toBe(true);
+    const global = await rows(operator);
+    expect(global.map(([, , , , action]) => action)).toContain("API token revoked");
+    expect(global.every(([, account, , channel]) => account === username && channel.startsWith("API"))).toBe(true);
 
     await openAudit(operator, `/admin/prod/audit?account=${username}&limit=1`);
     const older = await operator.evaluate<string>(`[...document.querySelectorAll("main nav a")].find((a) => !a.closest("[hidden]"))?.getAttribute("href") ?? ""`);
@@ -218,7 +237,7 @@ describe("tracing one record's history in the audit (E13-S03, #96)", () => {
     expect(await operator.text("main h1")).toBe("Audyt — Prod");
     const [reversed] = await rows(operator);
     expect(reversed[4]).toBe("Odwrócono ruch zapasu");
-    expect(reversed[0]).toContain(`Data księgowania ${today}`);
+    expect(reversed[0]).toContain(`Data księgowania ${utcDay()}`);
     expect(reversed[6]).toContain("odwrócony: nie → tak");
     expect(reversed[6]).toContain("powód: — → History wrong bin");
     expect(reversed[6]).toMatch(/Odwrócony przez [0-9a-f]{8}$/);

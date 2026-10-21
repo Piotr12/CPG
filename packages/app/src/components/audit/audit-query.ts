@@ -3,7 +3,7 @@ import type { AuditFilterQuery } from "@cpg/core/validators/audit/audit-list.sch
 import { isCalendarDate } from "@cpg/core/validators/dates/calendar-date.schema";
 
 /** The filter parameters, in the order an audit URL lists them. */
-const FILTER_KEYS = ["subjectType", "subjectId", "account", "channel", "from", "to"] as const satisfies readonly (keyof AuditFilterQuery)[];
+export const FILTER_KEYS = ["subjectType", "subjectId", "account", "channel", "from", "to"] as const satisfies readonly (keyof AuditFilterQuery)[];
 
 /**
  * An audit screen's URL for a query: the active filters (absent ones left out) and, for an older page,
@@ -28,6 +28,21 @@ export function recordHistoryUrl(path: string, subject: { type: string; id: stri
 /** A parsed query's filters alone, without its page position. */
 export function filtersOf(query: AuditFilterQuery): AuditFilterQuery {
   return Object.fromEntries(FILTER_KEYS.filter((key) => query[key] !== undefined).map((key) => [key, query[key]]));
+}
+
+/** A filter parameter's name. */
+export type AuditFilterKey = (typeof FILTER_KEYS)[number];
+
+/**
+ * The filters as a URL sent them, before validation: what a refused form shows back so the reader can
+ * correct it. A repeated parameter counts once; a channel other than UI or API is shown as "All".
+ */
+export function rawFiltersOf(params: Record<string, string | string[] | undefined>): AuditFilterQuery {
+  const raw = Object.fromEntries(
+    FILTER_KEYS.map((key) => [key, [params[key]].flat()[0]?.trim()]).filter(([, value]) => value),
+  ) as Record<AuditFilterKey, string | undefined>;
+  const { channel, ...rest } = raw;
+  return { ...rest, ...(channel === "ui" || channel === "api" ? { channel } : {}) };
 }
 
 /** Whether the query narrows the audit at all. */

@@ -82,6 +82,16 @@ describe("TenantAuditPage", () => {
     expect(Array.from((screen.getByLabelText("Record type") as HTMLSelectElement).options).map(({ value }) => value)).toContain("StockMovement");
   });
 
+  it("explains a refused filter in the form instead of a not-found page", async () => {
+    render(await resolveServerComponents(page("test", { subjectId: "00000012" })));
+
+    expect(mocks.listTenant).not.toHaveBeenCalled();
+    expect(mocks.notFound).not.toHaveBeenCalled();
+    expect(mocks.reversalLinks).toHaveBeenCalledWith([]);
+    expect(screen.getByRole("alert").textContent).toContain("Choose the record type for this ID");
+    expect((screen.getByLabelText("Record ID") as HTMLInputElement).value).toBe("00000012");
+  });
+
   it("speaks Polish to a Polish account", async () => {
     mocks.getMessages.mockResolvedValue({ locale: "pl", messages: pl });
 

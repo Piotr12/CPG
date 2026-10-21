@@ -223,11 +223,11 @@ describe("AuditTable", () => {
         movement(ORIGINAL, { action: "stock.movement.reversed", before: { reversed: false, balance: "525.000000" }, after: { reversed: true, balance: "500.000000", reason: "Counted the wrong bin" } }),
       ], [], pl.audit);
 
-      expect(screen.getByText("Przesunięcie wysłane")).toBeTruthy();
-      expect(screen.getByText("ilość wysłana: 0.000000 → 4.000000")).toBeTruthy();
-      expect(screen.getByText("typ: — → wysyłka przesunięcia")).toBeTruthy();
+      expect(screen.getByText("Przesunięcie wydane")).toBeTruthy();
+      expect(screen.getByText("ilość wydana: 0.000000 → 4.000000")).toBeTruthy();
+      expect(screen.getByText("typ: — → wydanie przesunięcia")).toBeTruthy();
       expect(screen.getByText("odwrócony: nie → tak")).toBeTruthy();
-      expect(screen.getByText("stan: 525.000000 → 500.000000")).toBeTruthy();
+      expect(screen.getByText("stan zapasu: 525.000000 → 500.000000")).toBeTruthy();
       expect(screen.getByText("powód: — → Counted the wrong bin")).toBeTruthy();
       expect(cells(rows()[0])[0]).toBe("2026-10-19 10:30:12Data księgowania 2026-10-21");
       expect(cells(rows()[1])[0]).toBe("2026-10-19 10:30:12");
