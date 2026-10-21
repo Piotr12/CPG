@@ -1,3 +1,5 @@
+import { cancelCustomerOrder, closeEarlyCustomerOrder } from "../../app/admin/[tenant]/customer-orders/[id]/actions";
+import { LifecycleControl } from "../document-lifecycle/lifecycle-control";
 import Link from "next/link";
 import { outstandingOf, type CustomerOrderView, type Locale, type MaterialSummary, type NamedRecordView, type ShipmentView, type TenantInfo } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
@@ -61,6 +63,13 @@ export function OrdersScreen({ tenant, orders, order, shipments = [], page = 1, 
     { id: "fulfilled", header: t.fulfilled, cell: (line) => shownQuantity(line.fulfilled), className: "hidden sm:table-cell" },
     { id: "outstanding", header: t.outstanding, cell: (line) => shownQuantity(outstandingOf(line)), className: "hidden sm:table-cell" },
     { id: "status", header: t.status, cell: (line) => t.states[line.status], className: "hidden sm:table-cell" },
+    { id: "abandoned", header: messages.lifecycle.abandoned, cell: (line) => shownQuantity(line.abandoned), className: "text-right" },
+    { id: "actions", header: messages.lifecycle.actions, cell: (line) => order && <LifecycleControl
+      available={!tenant.readOnly && order.status === "open" && line.status === "open"} processed={line.fulfilled !== "0.000000"}
+      subject={`${t.link} ${order.id} — ${fill(messages.lifecycle.line, { line: String(order.lines.indexOf(line) + 1) })}`}
+      version={order.version} lines={[line.id]} quantities={[`${shownQuantity(outstandingOf(line))} ${byMaterial.get(line.material)!.baseUnit}`]}
+      labels={messages.lifecycle} errors={messages.errors}
+      cancel={cancelCustomerOrder.bind(null, tenant.code, tenant.generation, order.id)} closeEarly={closeEarlyCustomerOrder.bind(null, tenant.code, tenant.generation, order.id)} /> },
   ];
   return <div lang={locale} className="flex flex-col gap-6">
     {order && <Link className="text-sm underline underline-offset-4" href={path}>{t.back}</Link>}
@@ -70,6 +79,11 @@ export function OrdersScreen({ tenant, orders, order, shipments = [], page = 1, 
     </div>
     <p className="text-sm text-muted-foreground">{t.intro}</p>
     {order ? <>
+      <LifecycleControl available={!tenant.readOnly && order.status === "open"} processed={order.lines.some((line) => line.fulfilled !== "0.000000")}
+        subject={`${t.link} ${order.id}`} version={order.version}
+        quantities={order.lines.filter((line) => line.status === "open").map((line) => `${byMaterial.get(line.material)!.description}: ${shownQuantity(outstandingOf(line))} ${byMaterial.get(line.material)!.baseUnit}`)}
+        labels={messages.lifecycle} errors={messages.errors}
+        cancel={cancelCustomerOrder.bind(null, tenant.code, tenant.generation, order.id)} closeEarly={closeEarlyCustomerOrder.bind(null, tenant.code, tenant.generation, order.id)} />
       <dl className="grid gap-4 rounded-md border p-4 text-sm sm:grid-cols-3">
         {[{ label: t.customer, value: named(customers, order.customer) }, { label: t.location, value: named(locations, order.location) }, { label: t.status, value: t.states[order.status] }].map(({ label, value }) => <div key={label}><dt className="text-muted-foreground">{label}</dt><dd className="mt-1 wrap-anywhere">{value}</dd></div>)}
       </dl>

@@ -33,6 +33,8 @@ Run lint, typecheck, test:coverage (100%), build; locally affected integrations 
 - Spec remains on design PR #122; materialized locally but excluded from implementation commits until base contains it.
 
 ## Log
+- 2026-10-21 07:47 UTC — Full unit gate: 451 files / 2869 tests pass; 100% statements, branches, functions and lines. Lint passes (one pre-existing BOM unused-function warning); all workspace typechecks pass. Build and runtime/integration evidence remain.
+- 2026-10-21 07:46 UTC — Phase 3: 96 route/action/schema and purchase service tests pass; 36 focused screen/confirmation tests pass. Confirmation retains loaded actions/versions after conflict refresh. Full suite exposed migration counts and fixture updates, now fixed. Design PR #122 merged externally; base update follows the phase commit.
 - 2026-10-21 07:39 UTC — Phase 2: 226 service/domain tests pass, covering partial and zero-output production, transit refusal, closure rollback, line selection, retained conversions and shipment completion. Adding the historical base-unit regression found during review. App typecheck now identifies new view fixtures and state labels to update in Phase 3.
 - 2026-10-21 07:21 UTC — Phase 1: 28 tests pass, including populated migration upgrade/down and exact near-maximum decimal backfill. Scoped lint passed. Fixed a migration-test TypeScript result annotation. Generated migration initially failed with NOT NULL copied NULL; replaced with additive columns and enum CHECK. User reiterated autonomous completion.
 - 2026-10-21 07:15 UTC — Spec #122 published after independent approve review. Starting implementation from origin/main in this linked worktree. Original spec-phase log lives on #122; this plan is the implementation run log.
@@ -50,14 +52,14 @@ PR: #123
 
 ### Phase 2: Transactional workflows
 
-- [x] 2.1 Customer-order and PO resolution
-- [x] 2.2 Requisition and production resolution
-- [x] 2.3 Transfer resolution
+- [x] 2.1 Customer-order and PO resolution — d9f570c
+- [x] 2.2 Requisition and production resolution — d9f570c
+- [x] 2.3 Transfer resolution — d9f570c
 
 ### Phase 3: API and UI
 
-- [ ] 3.1 Schemas, routes and actions
-- [ ] 3.2 Controls, translations and help
+- [x] 3.1 Schemas, routes and actions
+- [x] 3.2 Controls, translations and help
 
 ### Phase 4: Verification
 

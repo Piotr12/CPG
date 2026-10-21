@@ -663,6 +663,17 @@ export const en = {
     },
   },
   /** The BOM screens (E04-S01). Client components get plain strings; only the headings are functions. */
+  lifecycle: {
+    "cancel": "Cancel",
+    "closeEarly": "Close Early",
+    "keepOpen": "Keep open",
+    "pending": "Resolving…",
+    "description": "End {subject} and abandon the quantities below. Recorded work and stock stay unchanged. This cannot be reopened manually.",
+    "abandoned": "Abandoned quantity",
+    "actions": "Actions",
+    "line": "Line {line}",
+    "transit": "Receive or write off all stock in transit before closing."
+},
   productionOrders: {
     title: "Production orders", heading: "{tenant} · Production orders", detailHeading: "Production order {id}",
     intro: "Plan one Make output at one location and keep its chosen BOM revision. Planning never changes physical stock.",
@@ -902,7 +913,7 @@ export const en = {
       requiredDate: "Required",
       status: "Status",
     },
-    status: { open: "Open", completed: "Completed" },
+    status: { open: "Open", completed: "Completed", "closed-early": "Closed Early", cancelled: "Cancelled" },
     inactive: "Inactive",
     cancel: "Cancel",
     form: {
@@ -952,7 +963,7 @@ export const en = {
     emptyHint: "Create the first one with Create purchase order.",
     allOrders: "All purchase orders",
     columns: { id: "Order", supplier: "Supplier", location: "Location", lines: "Lines", status: "Status" },
-    status: { open: "Open", completed: "Completed" },
+    status: { open: "Open", completed: "Completed", "closed-early": "Closed Early", cancelled: "Cancelled" },
     inactive: "Inactive",
     cancel: "Cancel",
     details: { supplier: "Supplier", location: "Location", status: "Status", created: "Created" },
@@ -970,7 +981,7 @@ export const en = {
         outstanding: "Outstanding",
         status: "Status",
       },
-      status: { open: "Open", completed: "Received" },
+      status: { open: "Open", completed: "Received", "closed-early": "Closed Early", cancelled: "Cancelled" },
       enteredAs: "{quantity} {unit} at {conversion}",
       noRequisition: "—",
       summary: "{count} lines",
@@ -1105,7 +1116,7 @@ export const en = {
       plannedDates: "Planned dates",
       status: "Status",
     },
-    status: { open: "Open", completed: "Completed" },
+    status: { open: "Open", completed: "Completed", "closed-early": "Closed Early", cancelled: "Cancelled" },
     route: "{source} → {destination}",
     plannedDates: "{dispatch} → {arrival}",
     inactive: "Inactive",
@@ -1471,6 +1482,17 @@ export const en = {
     channels: { ui: "UI", api: "API" },
     /** Keyed by the entry's action ID; an action missing here is shown as its ID. */
     actions: {
+      "customer-orders.customer-order.cancelled": "Customer order cancelled",
+      "customer-orders.customer-order.closed-early": "Customer order closed early",
+      "purchase-orders.purchase-order.cancelled": "Purchase order cancelled",
+      "purchase-orders.purchase-order.closed-early": "Purchase order closed early",
+      "purchase-requisitions.purchase-requisition.cancelled": "Purchase requisition cancelled",
+      "purchase-requisitions.purchase-requisition.closed-early": "Purchase requisition closed early",
+      "production-orders.production-order.cancelled": "Production order cancelled",
+      "production-orders.production-order.closed-early": "Production order closed early",
+      "transfers.transfer.cancelled": "Transfer cancelled",
+      "transfers.transfer.closed-early": "Transfer closed early",
+
       "production-orders.production-order.created": "Production order created",
       "production-orders.production-order.updated": "Production order changed",
       "production-orders.production-order.progressed": "Production order progressed",
@@ -1704,6 +1726,17 @@ export const en = {
   },
   /** Keyed by the result envelope's error `code`; unknown codes fall back to the server's message. */
   errors: {
+    DOCUMENT_NOT_OPEN: "This document or line is no longer open.",
+    DOCUMENT_PROCESSED: "Work has already been recorded. Use Close Early to abandon the remainder.",
+    DOCUMENT_UNPROCESSED: "No work has been recorded. Use Cancel instead.",
+    TRANSFER_IN_TRANSIT: "Receive or write off the {quantity} {unit} still in transit first.",
+    VERSION_CONFLICT: "This record was changed since you loaded it. Keep this dialog open to review the refusal, or dismiss it and reload before retrying.",
+    CUSTOMER_ORDER_LOCKED: "This customer order is no longer open or cannot be changed.",
+    PURCHASE_ORDER_NOT_OPEN: "This purchase order is no longer open.",
+    REQUISITION_NOT_OPEN: "This purchase requisition is no longer open.",
+    PRODUCTION_ORDER_LOCKED: "This production order is no longer open or cannot be changed.",
+    TRANSFER_NOT_OPEN: "This transfer is no longer open.",
+
     MATERIAL_HAS_PRODUCTION_ORDERS: "Production order {order} is still Open. Open it from Transactions → Production orders.",
     LOCATION_HAS_PRODUCTION_ORDERS: "Production order {order} is still Open at this location. Open it from Transactions → Production orders.",
     MATERIAL_HAS_CUSTOMER_DEMAND: "Customer order {order} has outstanding demand for this material.",

@@ -1,3 +1,5 @@
+import { cancelRequisition, closeEarlyRequisition } from "../../app/admin/[tenant]/purchase-requisitions/actions";
+import { LifecycleControl } from "../document-lifecycle/lifecycle-control";
 import Link from "next/link";
 import type { RequisitionView } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
@@ -5,7 +7,7 @@ import { Badge } from "@cpg/ui/components/badge";
 import { fill, shownQuantity, type LocationsById, type MaterialsById, type RequisitionsLabels } from "./labels";
 
 interface RequisitionsTableProps {
-  tenant: { code: string; name: string };
+  tenant: { code: string; name: string; generation: number };
   requisitions: RequisitionView[];
   materials: MaterialsById;
   locations: LocationsById;
@@ -72,6 +74,11 @@ export function RequisitionsTable({ tenant, requisitions, materials, locations, 
         <Badge variant={requisition.status === "open" ? "secondary" : "outline"}>{labels.status[requisition.status as keyof typeof labels.status]}</Badge>
       ),
     },
+    { id: "abandoned", header: labels.lifecycle.abandoned, cell: (row) => amount(row.abandoned, row.material), className: "text-right" },
+    { id: "actions", header: labels.lifecycle.actions, cell: (row) => <LifecycleControl available={editable && row.status === "open"} processed={row.converted !== "0.000000"}
+      subject={`${labels.link} ${row.id}`} version={row.version} quantities={[amount(row.outstanding, row.material)]}
+      labels={labels.lifecycle} errors={labels.errors}
+      cancel={cancelRequisition.bind(null, tenant.code, tenant.generation, row.id)} closeEarly={closeEarlyRequisition.bind(null, tenant.code, tenant.generation, row.id)} /> },
   ];
 
   return (

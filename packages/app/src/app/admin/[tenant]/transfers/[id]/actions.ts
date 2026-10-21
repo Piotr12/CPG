@@ -2,6 +2,7 @@
 
 import { assertSignedIn, tenantServerAction, uiActor, type PostedTransferView, type Result, type TransferView } from "@cpg/core";
 import { transferDatesSchema, transferPostingSchema, transferWriteOffSchema } from "@cpg/core/validators/transfers/transfer.schema";
+import { documentLifecycleSchema } from "@cpg/core/validators/document-lifecycle/lifecycle.schema";
 import { currentUser } from "../../../../../auth/require-admin";
 import { refreshAfterWrite } from "../../../../../routing/refresh-after-write";
 
@@ -49,4 +50,22 @@ export async function setTransferDates(tenant: string, generation: number, id: s
     cradle.transferService.setPlannedDates(id, input, version, uiActor(assertSignedIn(actor))),
   )(tenant, generation, values);
   return refreshAfterWrite(result, `/admin/${tenant}/transfers/${id}`, `/admin/${tenant}/transfers`);
+}
+
+/** Resolves the remainder using the version captured by the confirmation. */
+export async function cancelTransfer(tenant: string, generation: number, id: string, values: unknown): Promise<Result<TransferView>> {
+  const actor = await currentUser();
+  const result = await tenantServerAction(documentLifecycleSchema, (input, { cradle }) =>
+    cradle.transferService.cancel(id, input.version, uiActor(assertSignedIn(actor))),
+  )(tenant, generation, values);
+  return refreshAfterWrite(result, `/admin/${tenant}/transfers`, `/admin/${tenant}/transfers/${id}`);
+}
+
+/** Resolves the remainder using the version captured by the confirmation. */
+export async function closeEarlyTransfer(tenant: string, generation: number, id: string, values: unknown): Promise<Result<TransferView>> {
+  const actor = await currentUser();
+  const result = await tenantServerAction(documentLifecycleSchema, (input, { cradle }) =>
+    cradle.transferService.closeEarly(id, input.version, uiActor(assertSignedIn(actor))),
+  )(tenant, generation, values);
+  return refreshAfterWrite(result, `/admin/${tenant}/transfers`, `/admin/${tenant}/transfers/${id}`);
 }

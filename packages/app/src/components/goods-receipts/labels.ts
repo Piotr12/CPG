@@ -51,7 +51,7 @@ export interface ReceiptLineChoice {
 
 /** Every line of `order`, each labelled with its material and outstanding quantity; a received line may still take an excess (BUY-015). */
 export function receiptLineChoices(order: OrderView, materials: MaterialsById, units: Record<string, string[]>, labels: ReceiptsLabels): ReceiptLineChoice[] {
-  return order.lines.map(({ line, material, outstanding }) => {
+  return order.lines.filter(({ status }) => status === "open" || status === "completed").map(({ line, material, outstanding }) => {
     const { id, description, baseUnit } = materials.get(material)!;
     return {
       line,

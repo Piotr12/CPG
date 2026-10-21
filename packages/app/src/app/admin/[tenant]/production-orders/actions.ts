@@ -3,6 +3,7 @@
 import { assertSignedIn, tenantServerAction, uiActor, type CompletionResult, type ProductionOrderDetail, type Result } from "@cpg/core";
 import { productionCompletionActionSchema } from "@cpg/core/validators/production-orders/production-completion.schema";
 import { productionOrderCreateSchema, productionOrderUpdateActionSchema } from "@cpg/core/validators/production-orders/production-order.schema";
+import { documentLifecycleSchema } from "@cpg/core/validators/document-lifecycle/lifecycle.schema";
 import { currentUser } from "../../../../auth/require-admin";
 import { formValues, refreshAfterWrite } from "../../../../routing/refresh-after-write";
 
@@ -31,4 +32,22 @@ export async function postProductionCompletion(tenant: string, generation: numbe
     cradle.productionCompletionService.post(order, input, uiActor(assertSignedIn(user)), { submission }),
   )(tenant, generation, { ...formValues(values), order: orderId, submission });
   return refreshAfterWrite(result, `/admin/${tenant}/production-orders`, `/admin/${tenant}/production-orders/${orderId}`, `/admin/${tenant}/stock`);
+}
+
+/** Resolves the remainder using the version captured by the confirmation. */
+export async function cancelProductionOrder(tenant: string, generation: number, id: string, values: unknown): Promise<Result<ProductionOrderDetail>> {
+  const actor = await currentUser();
+  const result = await tenantServerAction(documentLifecycleSchema, (input, { cradle }) =>
+    cradle.productionOrderService.cancel(id, input.version, uiActor(assertSignedIn(actor))),
+  )(tenant, generation, values);
+  return refreshAfterWrite(result, `/admin/${tenant}/production-orders`, `/admin/${tenant}/production-orders/${id}`);
+}
+
+/** Resolves the remainder using the version captured by the confirmation. */
+export async function closeEarlyProductionOrder(tenant: string, generation: number, id: string, values: unknown): Promise<Result<ProductionOrderDetail>> {
+  const actor = await currentUser();
+  const result = await tenantServerAction(documentLifecycleSchema, (input, { cradle }) =>
+    cradle.productionOrderService.closeEarly(id, input.version, uiActor(assertSignedIn(actor))),
+  )(tenant, generation, values);
+  return refreshAfterWrite(result, `/admin/${tenant}/production-orders`, `/admin/${tenant}/production-orders/${id}`);
 }
