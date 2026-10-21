@@ -27,6 +27,27 @@ describe("GET /api/tenants/{tenant}/audit", () => {
     expect(await response.json()).toEqual({ ok: true, data: { entries: [], nextBefore: null } });
   });
 
+  it("passes the history filters to the tenant's service, parsed", async () => {
+    mocks.requireApiUser.mockResolvedValue({ username: "alice", role: "user" });
+    mocks.tenantScope.mockResolvedValue({ cradle: { auditService: { listTenant: mocks.listTenant } } });
+    mocks.listTenant.mockResolvedValue({ entries: [], nextBefore: null });
+
+    await get("test", "?subjectType=PurchaseOrder&subjectId=00000012&channel=ui&from=2026-10-21");
+
+    expect(mocks.listTenant).toHaveBeenCalledWith({ limit: 50, subjectType: "PurchaseOrder", subjectId: "00000012", channel: "ui", from: "2026-10-21" });
+  });
+
+  it("answers a record ID without its type with 400 on subjectId", async () => {
+    mocks.requireApiUser.mockResolvedValue({ username: "alice", role: "user" });
+    mocks.tenantScope.mockResolvedValue({ cradle: { auditService: { listTenant: mocks.listTenant } } });
+
+    const response = await get("test", "?subjectId=00000012");
+
+    expect(response.status).toBe(400);
+    expect(Object.keys((await response.json()).error.fieldErrors)).toEqual(["subjectId"]);
+    expect(mocks.listTenant).not.toHaveBeenCalled();
+  });
+
   it("answers an unknown tenant with 404 TENANT_NOT_FOUND", async () => {
     mocks.requireApiUser.mockResolvedValue({ username: "alice", role: "user" });
     mocks.tenantScope.mockRejectedValue((await core()).tenantNotFound());
