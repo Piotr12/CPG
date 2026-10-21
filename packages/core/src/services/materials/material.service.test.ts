@@ -681,6 +681,23 @@ describe("MaterialService", () => {
       expect(await service("prod").list()).toEqual([]);
     });
 
+    it("seeds the given rows with their conversions, each material created at `at`", async () => {
+      const at = new Date("2026-10-01T06:00:00Z");
+      const rows = [
+        { type: "finished" as const, description: "Cabinet", baseUnit: "each", conversions: [CASE] },
+        { type: "raw" as const, description: "Screw", baseUnit: "kg", conversions: [] },
+      ];
+      expect(await service("test").seedDemo(rows, at)).toBe(2);
+
+      const materials = await scopedEm("test").find(Material, {}, { orderBy: { code: "asc" } });
+      expect(materials.map(({ code, description, type, createdAt }) => [code, description, type, createdAt])).toEqual([
+        ["00000001", "Cabinet", "finished", at],
+        ["00000002", "Screw", "raw", at],
+      ]);
+      expect((await service("test").get("00000001")).conversions.map(({ unit }) => unit)).toEqual(["case"]);
+      expect(await audit("test")).toEqual([]);
+    });
+
     it("seeds nothing into a read-only tenant, read past the identity map (R05)", async () => {
       const em = scopedEm("test");
       await em.findOneOrFail(Tenant, { code: "test" });

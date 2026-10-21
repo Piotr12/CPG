@@ -7,7 +7,7 @@ import {
   type Material,
   type ProcurementMode,
 } from "@cpg/db";
-import { DEMO_PLANNING_PARAMETERS } from "../../domain/planning-parameters/demo-planning-parameters";
+import { DEMO_PLANNING_PARAMETERS, type DemoPlanningParameters } from "../../domain/planning-parameters/demo-planning-parameters";
 import { isProcurementAllowed } from "../../domain/planning-parameters/procurement";
 import { ConflictError, NotFoundError, ValidationError, versionConflict } from "../../http/errors";
 import { RAW_MATERIAL_BUY_ONLY_MESSAGE } from "../../validators/planning-parameters/planning-parameter-fields.schema";
@@ -139,12 +139,12 @@ export class PlanningParameterService {
    * would make a raw material, is skipped: production's Test tenant may have been edited since its
    * masters were seeded. Not audited, like the other demo records.
    */
-  async seedDemo(): Promise<number> {
+  async seedDemo(rows: readonly DemoPlanningParameters[] = DEMO_PLANNING_PARAMETERS): Promise<number> {
     return this.em.transactional(async (em) => {
       if (!(await isUntouchedKind(em, await em.count(PlanningParameterSet, {}), "planning-parameters"))) return 0;
-      const references = await activeDemoReferences(em, DEMO_PLANNING_PARAMETERS);
+      const references = await activeDemoReferences(em, rows);
       let created = 0;
-      for (const demo of DEMO_PLANNING_PARAMETERS) {
+      for (const demo of rows) {
         const material = references.material.get(demo.material);
         const location = references.location.get(demo.location);
         if (!material || !location || !isProcurementAllowed(material.type, demo.procurement)) continue;

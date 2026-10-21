@@ -4,7 +4,7 @@ import {
   UniqueConstraintViolationException,
   type EntityManager,
 } from "@cpg/db";
-import { DEMO_SAFETY_STOCK_TARGETS } from "../../domain/safety-stock/demo-safety-stock-targets";
+import { DEMO_SAFETY_STOCK_TARGETS, type DemoSafetyStockTarget } from "../../domain/safety-stock/demo-safety-stock-targets";
 import { ConflictError, NotFoundError, versionConflict } from "../../http/errors";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
@@ -123,12 +123,12 @@ export class SafetyStockTargetService {
    * ever audited), and returns how many. A target whose material or location is missing or inactive
    * is skipped. Not audited, like the other demo records.
    */
-  async seedDemo(): Promise<number> {
+  async seedDemo(rows: readonly DemoSafetyStockTarget[] = DEMO_SAFETY_STOCK_TARGETS): Promise<number> {
     return this.em.transactional(async (em) => {
       if (!(await isUntouchedKind(em, await em.count(SafetyStockTarget, {}), "safety-stock"))) return 0;
-      const references = await activeDemoReferences(em, DEMO_SAFETY_STOCK_TARGETS);
+      const references = await activeDemoReferences(em, rows);
       let created = 0;
-      for (const { effectiveFrom, quantity, ...demo } of DEMO_SAFETY_STOCK_TARGETS) {
+      for (const { effectiveFrom, quantity, ...demo } of rows) {
         const material = references.material.get(demo.material);
         const location = references.location.get(demo.location);
         if (!material || !location) continue;

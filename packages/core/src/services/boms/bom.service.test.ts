@@ -694,6 +694,20 @@ describe("BomService", () => {
       expect((await service("test").list()).map(({ id, output, priority }) => [id, output, priority])).toEqual(expected);
     });
 
+    it("seeds the given rows, each BOM and its first revision created at `at`", async () => {
+      const at = new Date("2026-10-01T06:00:00Z");
+      const row = {
+        output: "00000005", priority: 1, validFrom: "2026-02-01", validThrough: null,
+        components: [{ material: "00000002", quantity: "16", unit: "each" }],
+      };
+      expect(await service("test").seedDemo([row], at)).toBe(1);
+
+      const em = scopedEm("test");
+      expect((await em.find(Bom, {})).map(({ createdAt }) => createdAt)).toEqual([at]);
+      expect((await em.find(BomRevision, {})).map(({ createdAt }) => createdAt)).toEqual([at]);
+      expect((await service("test").list()).map(({ id, output, components }) => [id, output, components.length])).toEqual([["00000001", "00000005", 1]]);
+    });
+
     it("lets a failure that isn't a rule through", async () => {
       const em = scopedEm("test");
       vi.spyOn(em, "transactional")

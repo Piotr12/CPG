@@ -51,7 +51,7 @@ export class LocationService {
     return this.records.update(id, changes, version, actor);
   }
 
-  seedDemo(): Promise<number> {
-    return this.records.seedDemo();
+  seedDemo(rows?: readonly string[], at?: Date): Promise<number> {
+    return this.records.seedDemo(rows, at);
   }
 }

@@ -1,5 +1,5 @@
 import { Forecast, OptimisticLockError, UniqueConstraintViolationException, type EntityManager, type Material } from "@cpg/db";
-import { DEMO_FORECASTS } from "../../domain/forecasts/demo-forecasts";
+import { DEMO_FORECASTS, type DemoForecast } from "../../domain/forecasts/demo-forecasts";
 import { ConflictError, NotFoundError, ValidationError, versionConflict } from "../../http/errors";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
@@ -136,12 +136,12 @@ export class ForecastService {
    * none ever audited), and returns how many. A forecast whose material or location is missing or
    * inactive is skipped. Not audited, like the other demo records.
    */
-  async seedDemo(): Promise<number> {
+  async seedDemo(rows: readonly DemoForecast[] = DEMO_FORECASTS): Promise<number> {
     return this.em.transactional(async (em) => {
       if (!(await isUntouchedKind(em, await em.count(Forecast, {}), "forecasts"))) return 0;
-      const references = await activeDemoReferences(em, DEMO_FORECASTS);
+      const references = await activeDemoReferences(em, rows);
       let created = 0;
-      for (const { date, quantity, ...demo } of DEMO_FORECASTS) {
+      for (const { date, quantity, ...demo } of rows) {
         const material = references.material.get(demo.material);
         const location = references.location.get(demo.location);
         if (!material || !location) continue;

@@ -118,27 +118,27 @@ export class NamedRecords {
    * Creates the kind's demonstration records (D06) when the tenant has none of the kind, and returns
    * how many. Not audited, like the demo materials (spec Q8). Each is flushed before the next reads
    * the highest ID, so they get consecutive IDs. Seeds nothing into a read-only tenant (R05): its
-   * flag is read in the seed's own transaction.
+   * flag is read in the seed's own transaction. `at`, when given, is each record's `createdAt`.
    */
-  async seedDemo(): Promise<number> {
+  async seedDemo(rows: readonly string[] = this.kind.demoNames, at?: Date): Promise<number> {
     return this.em.transactional(async (em) => {
       if ((await em.count(this.kind.entity, {})) > 0 || (await isScopeReadOnly(em))) return 0;
-      for (const name of this.kind.demoNames) {
-        await this.insert(em, name);
+      for (const name of rows) {
+        await this.insert(em, name, at);
         await em.flush();
       }
-      return this.kind.demoNames.length;
+      return rows.length;
     });
   }
 
-  /** Creates (unflushed) a record with the ID after the kind's highest in this tenant. */
-  private async insert(em: EntityManager, name: string): Promise<NamedRecord> {
+  /** Creates (unflushed) a record with the ID after the kind's highest in this tenant, created at `at` when a seed gives one. */
+  private async insert(em: EntityManager, name: string, at?: Date): Promise<NamedRecord> {
     const [highest] = await em.find(this.kind.entity, {}, { orderBy: { code: "desc" }, limit: 1 });
     const code = nextSequentialId(highest?.code ?? null, {
       code: `${this.kind.codePrefix}_IDS_EXHAUSTED`,
       message: `This tenant has used every eight-digit ${this.kind.noun} ID.`,
     });
-    return em.create(this.kind.entity, { code, name });
+    return em.create(this.kind.entity, { code, name, ...(at && { createdAt: at }) });
   }
 
   private entry(action: string, record: NamedRecord, before: AuditEntry["before"], after: AuditEntry["after"]): AuditEntry {

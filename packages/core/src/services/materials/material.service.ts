@@ -10,7 +10,7 @@ import {
   type EntityManager,
   type MaterialType,
 } from "@cpg/db";
-import { DEMO_MATERIALS } from "../../domain/materials/demo-materials";
+import { DEMO_MATERIALS, type DemoMaterial } from "../../domain/materials/demo-materials";
 import { nextMaterialCode } from "../../domain/materials/material-code";
 import { formatDecimal, inverseFactor, parseDecimal } from "../../domain/quantities/decimal";
 import { AppError, ConflictError, NotFoundError, versionConflict } from "../../http/errors";
@@ -256,24 +256,25 @@ export class MaterialService {
    * Creates the demonstration materials (D06) when the tenant has none, and returns how many. Not
    * audited (spec Q9): it is an installation step, like the tenants the migration inserts. Each
    * material is flushed before the next reads the highest ID, so they get consecutive IDs. Seeds
-   * nothing into a read-only tenant (R05): its flag is read in the seed's own transaction.
+   * nothing into a read-only tenant (R05): its flag is read in the seed's own transaction. The
+   * generated dataset passes its own `rows` and the seed's date `at`, which becomes each material's `createdAt`.
    */
-  async seedDemo(): Promise<number> {
+  async seedDemo(rows: readonly DemoMaterial[] = DEMO_MATERIALS, at?: Date): Promise<number> {
     return this.em.transactional(async (em) => {
       if ((await em.count(Material, {})) > 0 || (await isScopeReadOnly(em))) return 0;
-      for (const { conversions, ...fields } of DEMO_MATERIALS) {
-        const material = await this.insert(em, fields);
+      for (const { conversions, ...fields } of rows) {
+        const material = await this.insert(em, fields, at);
         for (const conversion of conversions) em.create(MaterialConversion, { material, ...conversion });
         await em.flush();
       }
-      return DEMO_MATERIALS.length;
+      return rows.length;
     });
   }
 
-  /** Creates (unflushed) a material with the ID after the tenant's highest. */
-  private async insert(em: EntityManager, input: NewMaterial): Promise<Material> {
+  /** Creates (unflushed) a material with the ID after the tenant's highest, created at `at` when a seed gives one. */
+  private async insert(em: EntityManager, input: NewMaterial, at?: Date): Promise<Material> {
     const [highest] = await em.find(Material, {}, { orderBy: { code: "desc" }, limit: 1 });
-    return em.create(Material, { code: nextMaterialCode(highest?.code ?? null), ...input });
+    return em.create(Material, { code: nextMaterialCode(highest?.code ?? null), ...input, ...(at && { createdAt: at }) });
   }
 
   /**

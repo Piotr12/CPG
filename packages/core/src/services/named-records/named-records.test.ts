@@ -247,6 +247,16 @@ describe.each(KINDS)("$Service.name", ({ Service, subjectType, prefix, code, nou
       expect(await service("prod").list()).toEqual([]);
     });
 
+    it("seeds the given names as consecutive records, each created at `at`", async () => {
+      const at = new Date("2026-10-01T06:00:00Z");
+      expect(await service("test").seedDemo(["First", "Second"], at)).toBe(2);
+
+      expect(await service("test").list()).toEqual([
+        expect.objectContaining({ id: "00000001", name: "First", createdAt: at }),
+        expect.objectContaining({ id: "00000002", name: "Second", createdAt: at }),
+      ]);
+    });
+
     it("seeds nothing into a read-only tenant, read past the identity map (R05)", async () => {
       const em = scopedEm("test");
       await em.findOneOrFail(Tenant, { code: "test" });

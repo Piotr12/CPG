@@ -287,6 +287,14 @@ describe("PlanningParameterService", () => {
       expect(await service("prod").list()).toEqual([]);
     });
 
+    it("seeds the given rows instead of the fixtures", async () => {
+      await seedTestMasters();
+      const rows = [{ material: "00000002", location: "00000001", procurement: "buy" as const, leadTimeDays: 3, minimumQuantity: "1.000000", lotMultiple: "1.000000" }];
+
+      expect(await service("test").seedDemo(rows)).toBe(1);
+      expect(await service("test").list()).toEqual([{ ...rows[0], version: 1 }]);
+    });
+
     it("never brings back sets the admin removed: the audit remembers them", async () => {
       await seedTestMasters();
       await service("test").seedDemo();

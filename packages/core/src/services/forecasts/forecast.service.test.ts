@@ -264,6 +264,14 @@ describe("ForecastService", () => {
       expect(await scopedEm("test").find(TenantAuditEvent, {})).toEqual([]);
     });
 
+    it("seeds the given rows instead of the fixtures", async () => {
+      await seedTestMasters();
+      const rows = [{ material: "00000001", location: "00000001", date: "2026-03-01", quantity: "7.000000" }];
+
+      expect(await service("test").seedDemo(rows)).toBe(1);
+      expect(await service("test").list()).toEqual([{ ...rows[0], version: 1 }]);
+    });
+
     it("never brings back removed forecasts, and skips an inactive material", async () => {
       await seedTestMasters();
       const em = scopedEm("test");
