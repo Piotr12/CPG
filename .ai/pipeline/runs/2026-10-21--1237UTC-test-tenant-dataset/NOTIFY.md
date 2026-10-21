@@ -32,3 +32,11 @@
 - In one transaction (`inRequestTransaction`, as startup and the reset will run it) against a fresh SQLite file, Node in-process on the dev Mac (Apple silicon): **8.7 s** and **8.1 s** (two runs). Without an outer transaction (each document its own commit): 8.7 s.
 - Within the 15 s budget locally. The production image on the CI runner is measured at Step 4.5 (startup and reset); if it misses, the first lever is fewer queries per document on the seed path.
 - Deviation (planned): the spike ran on the real seeder (Step 3.1) rather than a throwaway one.
+
+## 2026-10-21T13:39:00Z — Step 3.4 delegated (deviation from its `inline` cell)
+- Step 3.4 touches about 49 files, most of them tests that used the old fixtures as setup data. The design calls are made here, and the executor gets them as rules:
+  - the fixture rows move to `tests/setup/demo-fixtures.ts` as `FIXTURE_*` (test setup data, outside production code and coverage);
+  - the row types move to `domain/demo/generate-dataset.ts`;
+  - the master seeds drop their default rows; the planning-parameter, safety-stock and forecast seeds drop `isUntouchedKind` and `activeDemoReferences` for the materials' guard (none yet, not read-only) and resolve references with the `findActive*` helpers;
+  - `seedFixtures()` and the `demo-*.ts` constants are deleted.
+- Delegated to one executor (tier capable → opus) to keep the main session's context for Phases 3 and 4.
