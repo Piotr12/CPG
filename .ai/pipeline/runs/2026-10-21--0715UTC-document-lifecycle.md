@@ -33,6 +33,7 @@ Run lint, typecheck, test:coverage (100%), build; locally affected integrations 
 - Spec remains on design PR #122; materialized locally but excluded from implementation commits until base contains it.
 
 ## Log
+- 2026-10-21 07:55 UTC — Build passes. Fresh standalone browser/API integration plus smoke: 2 files / 10 tests pass (all five types, selected CO/PO lines, conversion retention, zero-output waste, transit refusal/loss, read-only/version/generation/key/replay). Test harness waits for streamed controls and treats stock corrections as signed deltas. Docker image verification remains CI-owned because local Docker storage is exhausted. Merged current base including spec #122.
 - 2026-10-21 07:47 UTC — Full unit gate: 451 files / 2869 tests pass; 100% statements, branches, functions and lines. Lint passes (one pre-existing BOM unused-function warning); all workspace typechecks pass. Build and runtime/integration evidence remain.
 - 2026-10-21 07:46 UTC — Phase 3: 96 route/action/schema and purchase service tests pass; 36 focused screen/confirmation tests pass. Confirmation retains loaded actions/versions after conflict refresh. Full suite exposed migration counts and fixture updates, now fixed. Design PR #122 merged externally; base update follows the phase commit.
 - 2026-10-21 07:39 UTC — Phase 2: 226 service/domain tests pass, covering partial and zero-output production, transit refusal, closure rollback, line selection, retained conversions and shipment completion. Adding the historical base-unit regression found during review. App typecheck now identifies new view fixtures and state labels to update in Phase 3.
@@ -58,8 +59,8 @@ PR: #123
 
 ### Phase 3: API and UI
 
-- [x] 3.1 Schemas, routes and actions
-- [x] 3.2 Controls, translations and help
+- [x] 3.1 Schemas, routes and actions — 89be288
+- [x] 3.2 Controls, translations and help — 89be288
 
 ### Phase 4: Verification
 
