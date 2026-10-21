@@ -41,7 +41,7 @@
 | 4 | 4.2-review-fix | Ledger paging proven by the dataset, not topped up | inline | done | 7483307 |
 | 4 | 4.3 | Purchase-order list paged by 100 | dispatch | done | f5c4956 |
 | 4 | 4.4 | Every list checked with the dataset | inline | done | e9b15ed |
-| 4 | 4.5 | Seed timing and lock window measured | inline | todo | — |
+| 4 | 4.5 | Seed timing and lock window measured | inline | done | 1f41fab |
 | 4 | 4.6 | Docs, lessons and spec moved | inline | todo | — |
 
 ## Goal

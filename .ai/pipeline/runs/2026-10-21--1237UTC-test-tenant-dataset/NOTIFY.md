@@ -61,3 +61,7 @@
 ## 2026-10-21T14:45:02Z — checkpoint 5 (Steps 3.5..4.3)
 - Callers test, help texts, integration suite (37 files green on the production standalone build), and purchase-order paging (UI and API) are done. UI screenshots are taken from a fresh standalone server, which seeded in 9.2 s.
 - Delegations: 3.5 (cheap → haiku), 4.2 (capable → opus), 4.3 (standard → sonnet).
+
+## 2026-10-21T14:49:19Z — Step 4.5 timings and a finding about the lock window
+- Seed: the startup seed takes 9.0–9.3 s and a reset 9.4–10.2 s on the production standalone build (budget 15 s). The CI image could not be timed here (no Docker).
+- Finding: during a reset the whole server is unresponsive (~10 s). Every request (Prod writes via the API and the UI, reads, `/up`, static files) waits, then succeeds. Q16 expected writes from other bundles to fail after 5 s instead. Kept as is (safer than interleaving), and documented in timings.md, BACKWARD_COMPATIBILITY.md §4, the spec's Implementation notes and the PR.
