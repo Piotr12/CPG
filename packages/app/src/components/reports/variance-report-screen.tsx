@@ -40,22 +40,25 @@ export function VarianceReportScreen({ tenant, report, selected, rangeError, mat
   const inactive = (active: boolean) => (active ? "" : ` (${t.inactive})`);
   const amount = (quantity: string, unit: string) => `${shownQuantity(quantity)} ${unit}`;
   const figures = (row: VarianceReportRow) => (
-    <dl className="grid grid-cols-[auto_auto] gap-x-3 gap-y-0.5 text-sm" data-report-output>
-      <dt className="text-muted-foreground">{t.figures.target}</dt>
-      <dd className="text-right font-mono">{amount(row.target, row.baseUnit)}</dd>
-      <dt className="text-muted-foreground">{t.figures.produced}</dt>
-      <dd className="text-right font-mono">{amount(row.produced, row.baseUnit)}</dd>
-      <dt className="text-muted-foreground">{t.figures.outputVariance}</dt>
-      <dd className="text-right font-mono">{row.outputVariance === null ? "—" : `${shownVariance(row.outputVariance)} ${row.baseUnit}`}</dd>
-      <dt className="text-muted-foreground">{t.figures.completions}</dt>
-      <dd className="text-right font-mono">{row.completions}</dd>
-      <dt className="text-muted-foreground">{t.figures.wasteCompletions}</dt>
-      <dd className="flex items-center justify-end gap-2 font-mono">
-        {row.wasteCompletions}
-        {row.wasteCompletions > 0 && <Badge variant="destructive">{t.waste}</Badge>}
-      </dd>
-      {row.reversed.length > 0 && <dd className="col-span-2 text-xs text-muted-foreground" data-report-reversed>{fill(t.reversed, { ids: row.reversed.join(", ") })}</dd>}
-    </dl>
+    <div className="flex flex-col gap-1">
+      <dl className="grid grid-cols-[auto_auto] gap-x-3 gap-y-0.5 text-sm" data-report-output>
+        <dt className="text-muted-foreground">{t.figures.target}</dt>
+        <dd className="text-right font-mono">{amount(row.target, row.baseUnit)}</dd>
+        <dt className="text-muted-foreground">{t.figures.produced}</dt>
+        <dd className="text-right font-mono">{amount(row.produced, row.baseUnit)}</dd>
+        <dt className="text-muted-foreground">{t.figures.outputVariance}</dt>
+        <dd className="text-right font-mono">{row.outputVariance === null ? "—" : `${shownVariance(row.outputVariance)} ${row.baseUnit}`}</dd>
+        <dt className="text-muted-foreground">{t.figures.completions}</dt>
+        <dd className="text-right font-mono">{row.completions}</dd>
+        <dt className="text-muted-foreground">{t.figures.wasteCompletions}</dt>
+        <dd className="flex items-center justify-end gap-2 font-mono">
+          {row.wasteCompletions}
+          {row.wasteCompletions > 0 && <Badge variant="destructive">{t.waste}</Badge>}
+        </dd>
+      </dl>
+      {/* Its own line, not a value of Waste postings. */}
+      {row.reversed.length > 0 && <p className="text-xs text-muted-foreground" data-report-reversed>{fill(t.reversed, { ids: row.reversed.join(", ") })}</p>}
+    </div>
   );
   const extraBadge = (extra: boolean) =>
     extra && (

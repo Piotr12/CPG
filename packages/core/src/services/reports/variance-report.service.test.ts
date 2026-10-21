@@ -305,12 +305,16 @@ describe("VarianceReportService", () => {
     const first = await report();
     expect(first.total).toBe(orderCount);
     expect(first.rows.map(({ id }) => id)).toEqual(Array.from({ length: VARIANCE_REPORT_PAGE_SIZE }, (_, index) => String(index + 1).padStart(8, "0")));
-    expect(first.rows[0]).toMatchObject({ produced: "18.000000", completions: perOrder });
-    expect(first.rows[0].components).toEqual([
-      expect.objectContaining({ material: COCOA, expected: "9.000000", actual: "13.500000", variance: "4.500000" }),
-      expect.objectContaining({ material: WRAPPER, expected: "36.000000", actual: "36.000000", variance: "0.000000" }),
-    ]);
-    expect((await report({ page: "2" })).rows.map(({ id }) => id)).toEqual(Array.from({ length: 10 }, (_, index) => String(index + 51).padStart(8, "0")));
+    const second = await report({ page: "2" });
+    expect(second.rows.map(({ id }) => id)).toEqual(Array.from({ length: 10 }, (_, index) => String(index + 51).padStart(8, "0")));
+    // Every row of both pages, so a completion or line counted twice (or skipped) at a batch boundary shows.
+    for (const row of [...first.rows, ...second.rows]) {
+      expect(row, row.id).toMatchObject({ produced: "18.000000", completions: perOrder });
+      expect(row.components, row.id).toEqual([
+        expect.objectContaining({ material: COCOA, expected: "9.000000", actual: "13.500000", variance: "4.500000" }),
+        expect.objectContaining({ material: WRAPPER, expected: "36.000000", actual: "36.000000", variance: "0.000000" }),
+      ]);
+    }
     expect(await report({ page: "3" })).toMatchObject({ page: 3, total: orderCount, rows: [] });
     expect((await report({ material: COCOA, from: "2026-10-01" })).total).toBe(orderCount);
   });

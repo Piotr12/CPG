@@ -87,7 +87,10 @@ describe("VarianceReportPage", () => {
     render(await resolveServerComponents(page()));
 
     const [, second] = rows();
-    expect(figures(second)).toEqual(["Target", "100 each", "Produced", "40 each", "Output variance", "-60 each", "Completions", "2", "Waste postings", "1Waste", "Reversed: 00000007, 00000009"]);
+    expect(figures(second)).toEqual(["Target", "100 each", "Produced", "40 each", "Output variance", "-60 each", "Completions", "2", "Waste postings", "1Waste"]);
+    // The reversed completions are their own line, not a value of Waste postings.
+    expect(second.querySelector("[data-report-reversed]")!.tagName).toBe("P");
+    expect(second.querySelector("[data-report-reversed]")!.textContent).toBe("Reversed: 00000007, 00000009");
     expect(componentCells(second, "00000002")).toEqual(["00000002 Cocoa mass", "20 kg", "30 kg", "+10 kg", "10 kg"]);
   });
 
