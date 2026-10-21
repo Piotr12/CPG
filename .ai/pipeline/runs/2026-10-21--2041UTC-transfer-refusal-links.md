@@ -2,7 +2,7 @@
 
 Source doc: .ai/specs/implemented/2026-10-21--2035UTC-transfer-refusal-links.md
 Spec PR: #149
-Status: in-progress
+Status: complete
 Engine: om-auto-create-pr (steps: 8, --loop: no)
 
 ## Goal
@@ -17,6 +17,7 @@ The spec's two phases plus the paperwork: the generalised `deactivationBlockerEr
 - The implementation branch is based on the spec branch (as #135 was on #132), so it carries the spec commits; #149 merges first.
 
 ## Log
+- 21:35 UTC — Review record, manual QA instructions and UI evidence posted on #151. The evidence is 5 screenshots from a fresh standalone build: the location and material refusals in English, the transfer opened from the link, Polish, and 390 px. Filed #164: `stock-import-api.test.ts` fails under `next dev`, on `main` too.
 - 21:25 UTC — `om-auto-review-pr --autofix` (fresh-context `om-code-review`): approve, with 2 minors and 3 nits, all fixed. The fixes: LFC-016's evidence named an integration file that doesn't assert the parameters; STX-006 now lists two of three sites, as the issue words it; STX-018 checks sam's entry exists; the run log's times. Commits eee6a34 and 7173d2a. Re-run: coverage 3,266 tests at 100%, lint, and the 3 integration files (16 tests) on a fresh standalone copy.
 - 21:10 UTC — Phase 3 done: LFC-018, STX-006 and STX-018 are `Passed (automated)`, and LFC-016's evidence names the location assertion. The spec moved to `implemented/` with `../assets` links, and two lessons were added. `tests/ai-filenames.test.ts` and `tests/spec-images.test.ts` pass.
 - 21:05 UTC — Phase 2 done. Gate on this source: lint (one existing warning in `bom.service.ts`), typecheck, 483 files / 3,266 tests with 100% statements, branches, functions and lines, build. On a fresh standalone copy (static + public, empty `DATA_DIR`): `transfers.test.ts`, `stock-import.test.ts`, `stock-import-api.test.ts`, 3 files / 16 tests pass. Under `next dev`, `stock-import-api.test.ts` fails in `beforeAll` (bob's sign-in wait) on main's copy too, so it was verified on the standalone build; Docker isn't running here, and CI runs the image suite.
@@ -24,6 +25,8 @@ The spec's two phases plus the paperwork: the generalised `deactivationBlockerEr
 - 20:41 UTC — Began from `spec/transfer-refusal-links` (8a12eaa) on `feat/transfer-refusal-links` in the cezar worktree.
 
 ## Progress
+
+PR: #151
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
