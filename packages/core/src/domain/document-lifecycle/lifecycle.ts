@@ -23,7 +23,9 @@ export function documentState(states: readonly DocumentState[]): DocumentState {
 }
 
 /** Exact unresolved quantity, clamped after allowed overreceipt/overproduction. */
-export function outstandingQuantity(quantity: string, processed: string, abandoned: string): string {
+export function outstandingQuantity(quantity: string, processed: string, abandoned: string, status?: DocumentState): string {
+  // A reversal changes net progress, never the explicit decision to stop the remainder.
+  if (status === "cancelled" || status === "closed-early") return "0.000000";
   const remaining = parseDecimal(quantity)! - parseDecimal(processed)! - parseDecimal(abandoned)!;
   return formatDecimal(remaining > 0n ? remaining : 0n, { fixed: true });
 }

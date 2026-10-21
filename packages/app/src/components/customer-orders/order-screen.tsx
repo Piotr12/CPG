@@ -56,7 +56,7 @@ export function OrdersScreen({ tenant, orders, order, shipments = [], page = 1, 
     { id: "status", header: t.status, cell: (row) => <Badge variant="secondary">{t.states[row.status]}</Badge> },
   ];
   const lineColumns: DataTableColumn<CustomerOrderView["lines"][number]>[] = [
-    { id: "material", header: t.material, cell: (line) => <Link className="underline underline-offset-4" href={`/admin/${tenant.code}/materials/${line.material}`}>{line.material} {byMaterial.get(line.material)!.description}</Link>, className: "whitespace-normal wrap-anywhere" },
+    { id: "material", header: t.material, cell: (line) => <Link className="underline underline-offset-4" href={`/admin/${tenant.code}/materials/${line.material}`}>{line.material} {byMaterial.get(line.material)!.description}</Link>, className: "min-w-40 whitespace-normal wrap-anywhere" },
     { id: "quantity", header: t.quantity, cell: (line) => `${shownQuantity(line.quantity)} ${byMaterial.get(line.material)!.baseUnit}`, className: "whitespace-normal" },
     { id: "entered", header: t.entered, cell: (line) => `${line.enteredQuantity} ${line.enteredUnit} (${line.denominator} ${line.enteredUnit} = ${line.numerator} ${byMaterial.get(line.material)!.baseUnit})`, className: "hidden whitespace-normal md:table-cell" },
     { id: "date", header: t.requiredDate, cell: (line) => line.requiredDate },
@@ -65,7 +65,7 @@ export function OrdersScreen({ tenant, orders, order, shipments = [], page = 1, 
     { id: "status", header: t.status, cell: (line) => t.states[line.status], className: "hidden sm:table-cell" },
     { id: "abandoned", header: messages.lifecycle.abandoned, cell: (line) => shownQuantity(line.abandoned), className: "text-right" },
     { id: "actions", header: messages.lifecycle.actions, cell: (line) => order && <LifecycleControl
-      available={!tenant.readOnly && order.status === "open" && line.status === "open"} processed={line.fulfilled !== "0.000000"}
+      available={!tenant.readOnly && order.status === "open" && line.status === "open"} processed={line.posted || line.fulfilled !== "0.000000"}
       subject={`${t.link} ${order.id} — ${fill(messages.lifecycle.line, { line: String(order.lines.indexOf(line) + 1) })}`}
       version={order.version} lines={[line.id]} quantities={[`${shownQuantity(outstandingOf(line))} ${byMaterial.get(line.material)!.baseUnit}`]}
       labels={messages.lifecycle} errors={messages.errors}
@@ -79,7 +79,7 @@ export function OrdersScreen({ tenant, orders, order, shipments = [], page = 1, 
     </div>
     <p className="text-sm text-muted-foreground">{t.intro}</p>
     {order ? <>
-      <LifecycleControl available={!tenant.readOnly && order.status === "open"} processed={order.lines.some((line) => line.fulfilled !== "0.000000")}
+      <LifecycleControl available={!tenant.readOnly && order.status === "open"} processed={order.lines.some((line) => line.posted || line.fulfilled !== "0.000000")}
         subject={`${t.link} ${order.id}`} version={order.version}
         quantities={order.lines.filter((line) => line.status === "open").map((line) => `${byMaterial.get(line.material)!.description}: ${shownQuantity(outstandingOf(line))} ${byMaterial.get(line.material)!.baseUnit}`)}
         labels={messages.lifecycle} errors={messages.errors}

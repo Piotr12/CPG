@@ -36,7 +36,7 @@ export function LifecycleControl(props: LifecycleControlProps) {
     </DialogTrigger>}
     <DialogContent className={TALL_DIALOG}>
       <DialogHeader>
-        <DialogTitle>{loadedLabel} — {loaded.subject}</DialogTitle>
+        <DialogTitle className="pr-8">{loadedLabel} — {loaded.subject}</DialogTitle>
         <DialogDescription>{fill(loaded.labels.description, { subject: loaded.subject })}</DialogDescription>
       </DialogHeader>
       <p className="text-sm font-medium">{loaded.labels.abandoned}</p>

@@ -1,0 +1,65 @@
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, expect, it, vi } from "vitest";
+import { en } from "../../i18n/messages/en";
+import { pl } from "../../i18n/messages/pl";
+import { ReversalDialog } from "./reversal-dialog";
+import { ReversalControls } from "./reversal-controls";
+import { stockLabels } from "./labels";
+import { movementHref } from "./movement-link";
+const mocks = vi.hoisted(() => ({ reverseStockMovement: vi.fn() }));
+vi.mock("../../app/admin/[tenant]/stock/actions", () => mocks);
+const movement = { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", material: "00000001", location: "00000002", quantity: "5.000000", baseUnit: "each", businessDate: "2026-10-20", sourceLabel: "Goods receipt 00000003 · Line 2" };
+const context = { tenant: "test", generation: 3 };
+const dialog = (messages = en, target = movement) => <ReversalDialog context={context} movement={target} today="2026-10-21" labels={stockLabels(messages)} />;
+const open = () => fireEvent.click(screen.getByRole("button", { name: en.stock.reversal.open }));
+const reason = () => fireEvent.change(screen.getByLabelText("Reason"), { target: { value: "Duplicate receipt" } });
+afterEach(() => vi.clearAllMocks());
+it("confirms the entire inverse with a reason only, keeping its original target through a rerender", async () => {
+  let finish!: (value: unknown) => void;
+  mocks.reverseStockMovement.mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
+  const { rerender } = render(dialog()); open();
+  expect(screen.getByText("-5 each")).toBeTruthy(); expect(screen.getByText(/2026-10-20 · 5 each/)).toBeTruthy();
+  expect(screen.getAllByRole("textbox")).toHaveLength(1);
+  reason(); rerender(dialog(en, { ...movement, id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", quantity: "-7.000000" }));
+  expect(screen.getByText("-5 each")).toBeTruthy();
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: en.stock.reversal.submit })));
+  expect(screen.getByRole("button", { name: en.stock.reversal.pending })).toHaveProperty("disabled", true);
+  expect(mocks.reverseStockMovement).toHaveBeenCalledWith("test", 3, movement.id, { reason: "Duplicate receipt" });
+  await act(async () => finish({ ok: true, data: {} }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  open(); expect(screen.getByText("7 each")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: en.stock.form.cancel }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+});
+it("requires a reason in Polish, supports escape, and never exposes quantity/date inputs", async () => {
+  render(dialog(pl)); fireEvent.click(screen.getByRole("button", { name: pl.stock.reversal.open }));
+  fireEvent.click(screen.getByRole("button", { name: pl.stock.reversal.submit }));
+  expect(screen.getByText(pl.stock.fieldErrors.reason)).toBeTruthy(); expect(mocks.reverseStockMovement).not.toHaveBeenCalled();
+  fireEvent.keyDown(screen.getByLabelText(pl.stock.reason), { key: "Escape" });
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+});
+it.each(["TENANT_READ_ONLY", "INSUFFICIENT_STOCK", "STOCK_REVERSAL_INCONSISTENT", "STOCK_ALREADY_REVERSED"])("retains the reason and explanation for %s", async (code) => {
+  mocks.reverseStockMovement.mockResolvedValue({ ok: false, error: { code, message: "Refused" } });
+  render(dialog()); open(); reason();
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: en.stock.reversal.submit })));
+  expect(screen.getByRole("dialog")).toBeTruthy(); expect(screen.getByRole("alert").textContent).not.toBe("");
+  expect(screen.getByLabelText("Reason")).toHaveProperty("value", "Duplicate receipt");
+  expect(screen.queryByRole("link", { name: en.stock.reversal.viewInverse })).toBeNull();
+});
+it("offers the existing inverse on a stale duplicate without dismissing the refusal", async () => {
+  mocks.reverseStockMovement.mockResolvedValue({ ok: false, error: { code: "STOCK_ALREADY_REVERSED", message: "Already reversed", params: { reversal: "inverse-id" } } });
+  render(dialog()); open(); reason();
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: en.stock.reversal.submit })));
+  expect(screen.getByRole("link", { name: en.stock.reversal.viewInverse }).getAttribute("href")).toBe(movementHref("test", movement, "inverse-id"));
+});
+it("shows links on read-only history, hides unsupported actions and permits inactive historical targets", () => {
+  const props = { tenant: { code: "test", generation: 1, readOnly: true }, movement, reversedBy: "inverse-id", reverses: null, canReverse: false, labels: stockLabels(en) };
+  const { rerender } = render(<ReversalControls {...props} />);
+  expect(screen.getByText(en.stock.reversal.reversed)).toBeTruthy(); expect(screen.getByRole("link", { name: en.stock.reversal.viewInverse })).toBeTruthy();
+  expect(screen.queryByRole("button")).toBeNull();
+  rerender(<ReversalControls {...props} reversedBy={null} reverses="original-id" />);
+  expect(screen.getByRole("link", { name: en.stock.reversal.viewOriginal }).getAttribute("href")).toBe(movementHref("test", movement, "original-id"));
+  rerender(<ReversalControls {...props} reversedBy={null} canReverse />); expect(screen.queryByRole("button")).toBeNull();
+  rerender(<ReversalControls {...props} tenant={{ ...props.tenant, readOnly: false }} reversedBy={null} canReverse />);
+  expect(screen.getByRole("button", { name: en.stock.reversal.open })).toBeTruthy();
+});

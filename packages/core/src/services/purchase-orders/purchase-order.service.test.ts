@@ -133,6 +133,17 @@ describe("PurchaseOrderService", () => {
     expect((await scopedEm().find(PurchaseOrderLine, { order: { code: next.id } })).map(({ status }) => status)).toEqual(["completed", "completed"]);
   });
 
+  it("protects restored supply when an old release reverses a backfilled completed line", async () => {
+    const order = await service().create({ ...DIRECT, lines: [DIRECT.lines[0]] }, ACTOR);
+    await scopedEm().nativeUpdate(PurchaseOrderLine, { order: { code: order.id } }, { received: "20.000000", status: "completed" });
+    // The preceding release reverses the counter and header, without knowing the added status column.
+    await scopedEm().nativeUpdate(PurchaseOrderLine, { order: { code: order.id } }, { received: "0.000000" });
+    await scopedEm().nativeUpdate(PurchaseOrder, { code: order.id }, { status: "open" });
+    expect(await service().get(order.id)).toMatchObject({ status: "open", lines: [{ status: "open", outstanding: "20.000000" }] });
+    const materials = new MaterialService({ em: scopedEm() });
+    await expect(materials.update("00000001", { active: false }, (await materials.get("00000001")).version, ADMIN)).rejects.toMatchObject({ code: "MATERIAL_IN_OPEN_ORDER" });
+  });
+
   it("cancels unreceived lines without restoring their requisition conversion", async () => {
     const source = await requisition();
     const order = await service().create(converting(source.id, "60"), ACTOR);

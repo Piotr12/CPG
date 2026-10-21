@@ -1,3 +1,4 @@
+import type { StockReversalService } from "../services/stock/stock-reversal.service";
 import type { ProductionOrderService } from "../services/production-orders/production-order.service";
 import type { ProductionCompletionService } from "../services/production-orders/production-completion.service";
 import type { CustomerOrderService } from "../services/customer-orders/customer-order.service";
@@ -50,6 +51,7 @@ export interface Cradle {
   auditService: AuditService;
   idempotencyService: IdempotencyService;
   stockService: StockService;
+  stockReversalService: StockReversalService;
   materialService: MaterialService;
   locationService: LocationService;
   customerService: CustomerService;

@@ -715,6 +715,7 @@ export const pl: Messages = {
     },
   },
   customerOrders: {
+    postedHint: "Dane zaksięgowanej pozycji pozostają zablokowane po odwróceniu; zamówioną ilość nadal można zmienić.",
     pagination: "Strony zamówień klientów", page: "Strona {page} z {pages}", previous: "Poprzednia strona", next: "Następna strona",
     link: "Zamówienia klientów", heading: "Zamówienia klientów — {tenant}", detailHeading: "Zamówienie klienta {id}",
     intro: "Zapisz popyt klienta w jednej lokalizacji, z terminem dla każdej pozycji. Zapis zamówienia nie zmienia zapasu.",
@@ -1451,6 +1452,11 @@ export const pl: Messages = {
       "transfers.transfer.cancelled": "Przesunięcie anulowane",
       "transfers.transfer.closed-early": "Przesunięcie zamknięte wcześniej",
 
+      "stock.movement.reversed": "Odwrócono ruch zapasu",
+      "purchase-orders.purchase-order.receipt-reversed": "Odwrócono przyjęcie zamówienia zakupu",
+      "customer-orders.customer-order.issue-reversed": "Odwrócono wydanie zamówienia klienta",
+      "shipments.shipment.issue-reversed": "Odwrócono wydanie wysyłki",
+      "shipments.shipment.recalculated": "Przeliczono status wysyłki",
       "production-orders.production-order.created": "Utworzono zlecenie produkcyjne",
       "production-orders.production-order.updated": "Zmieniono zlecenie produkcyjne",
       "production-orders.production-order.progressed": "Postęp zlecenia produkcyjnego",
@@ -1585,6 +1591,7 @@ export const pl: Messages = {
     readOnly: "Tylko do odczytu",
   },
   stock: {
+    reversal: { open: "Odwróć", title: "Odwrócić ten ruch?", description: "Zaksięguj dziś pełną przeciwną ilość. Oryginalny zapis pozostaje bez zmian. Aby poprawić ilość, najpierw ją odwróć, a potem zaksięguj poprawną.", original: "Oryginalny ruch", inverse: "Nowy ruch odwrotny", stockRule: "Stan nie może spaść poniżej zera. Jeśli brakuje zapasu, nic się nie zmieni.", lineOnly: "Odwracana jest tylko ta pozycja: {source}. Pozostałe pozycje pozostają bez zmian.", submit: "Odwróć pełną ilość", pending: "Odwracanie…", reversed: "Odwrócono", viewInverse: "Zobacz odwrócenie", viewOriginal: "Zobacz oryginał", selected: "Wybrany ruch", type: "Odwrócenie", line: "Pozycja {line}" },
     heading: "Zapas — {tenant}", intro: "Zapas fizyczny jest w jednostce podstawowej materiału. Korekty są księgowane dzisiaj (UTC); zapas nie może być ujemny.",
     material: "Materiał", location: "Lokalizacja", show: "Pokaż zapas", quantity: "Zapas fizyczny", ledger: "Ruchy magazynowe", empty: "Brak ruchów dla tego materiału i lokalizacji.",
     noMasters: "Przed odczytem zapasu dodaj materiały i lokalizacje. Poproś administratora o ich utworzenie.", inactive: "Nieaktywny", unavailable: "Nowa korekta wymaga aktywnego materiału i lokalizacji oraz środowiska z możliwością zapisu.",
@@ -1596,7 +1603,7 @@ export const pl: Messages = {
     inTransitFrom: "W tranzycie stąd", inTransitTo: "W tranzycie tutaj", transitNote: "Zapas w tranzycie należy do swojego przesunięcia: żadna z lokalizacji nie może go użyć, dopóki nie zostanie przyjęty.", transfers: "Przesunięcia",
     form: { open: "Zaksięguj korektę", title: "Korekta zapasu", description: "Wpisz zmianę ze znakiem: 5 dodaje pięć, -5 odejmuje pięć. Powstanie trwały ruch z dzisiejszą datą.", quantity: "Ilość ze znakiem", quantityHint: "Do sześciu miejsc dziesiętnych. Ilość ujemna pomniejsza zapas.", unit: "Jednostka", reason: "Powód", submit: "Zaksięguj", pending: "Księgowanie…", cancel: "Anuluj" },
     fieldErrors: { quantity: "Wpisz niezerową ilość ze znakiem, do 12 cyfr całkowitych i 6 po przecinku (użyj kropki).", reason: "Wpisz powód, do 500 znaków.", unit: "Wybierz poprawną jednostkę." },
-    errors: { QUANTITY_OUT_OF_RANGE: "Ilość lub wynikowy zapas jest zbyt duży.", QUANTITY_ROUNDS_TO_ZERO: "Ta ilość zaokrągla się do zera w jednostce podstawowej.", MATERIAL_INACTIVE: "Materiał jest nieaktywny. Nowe korekty są zablokowane.", LOCATION_INACTIVE: "Lokalizacja jest nieaktywna. Nowe korekty są zablokowane.", UNIT_NOT_CONVERTIBLE: "Jednostka nie ma przelicznika na jednostkę podstawową materiału." },
+    errors: { STOCK_ALREADY_REVERSED: "Ten ruch został już odwrócony. Zobacz odwrócenie przed kolejnym księgowaniem.", STOCK_REVERSAL_UNSUPPORTED: "Tego rodzaju księgowania nie można tutaj odwrócić.", STOCK_REVERSAL_INCONSISTENT: "Oryginalne księgowanie nie zgadza się z dokumentem. Poproś administratora o sprawdzenie.", STOCK_MOVEMENT_NOT_FOUND: "Ten ruch nie jest już dostępny w tym środowisku.", QUANTITY_OUT_OF_RANGE: "Ilość lub wynikowy zapas jest zbyt duży.", QUANTITY_ROUNDS_TO_ZERO: "Ta ilość zaokrągla się do zera w jednostce podstawowej.", MATERIAL_INACTIVE: "Materiał jest nieaktywny. Nowe korekty są zablokowane.", LOCATION_INACTIVE: "Lokalizacja jest nieaktywna. Nowe korekty są zablokowane.", UNIT_NOT_CONVERTIBLE: "Jednostka nie ma przelicznika na jednostkę podstawową materiału." },
   },
   stockReport: {
     heading: "Raport zapasu — {tenant}",

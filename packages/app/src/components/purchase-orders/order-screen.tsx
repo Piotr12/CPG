@@ -2,6 +2,7 @@ import { cancelPurchaseOrder, closeEarlyPurchaseOrder } from "../../app/admin/[t
 import { LifecycleControl } from "../document-lifecycle/lifecycle-control";
 import { fill } from "../forms/form-labels";
 import Link from "next/link";
+import { stockLabels } from "../stock/labels";
 import type { Locale, MaterialSummary, NamedRecordView, OrderLineView, OrderView, ReceiptView } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { Badge } from "@cpg/ui/components/badge";
@@ -102,7 +103,7 @@ export function OrderScreen({ tenant, order, receipts, materials, units, supplie
     },
     { id: "abandoned", header: messages.lifecycle.abandoned, cell: (line) => `${shownQuantity(line.abandoned)} ${materialsById.get(line.material)!.baseUnit}`, className: "text-right" },
     { id: "actions", header: messages.lifecycle.actions, cell: (line) => <LifecycleControl
-      available={!tenant.readOnly && order.status === "open" && line.status === "open"} processed={line.received !== "0.000000"}
+      available={!tenant.readOnly && order.status === "open" && line.status === "open"} processed={line.received !== "0.000000" || receipts.some((receipt) => receipt.lines.some((entry) => entry.line === line.line))}
       subject={`${labels.link} ${order.id} — ${fill(messages.lifecycle.line, { line: String(line.line) })}`}
       version={order.version} lines={[line.line]} quantities={[`${shownQuantity(line.outstanding)} ${materialsById.get(line.material)!.baseUnit}`]}
       labels={messages.lifecycle} errors={messages.errors}
@@ -117,7 +118,7 @@ export function OrderScreen({ tenant, order, receipts, materials, units, supplie
           {labels.allOrders}
         </Link>
       </p>
-      <LifecycleControl available={!tenant.readOnly && order.status === "open"} processed={order.lines.some((line) => line.received !== "0.000000")}
+      <LifecycleControl available={!tenant.readOnly && order.status === "open"} processed={receipts.length > 0 || order.lines.some((line) => line.received !== "0.000000")}
         subject={`${labels.link} ${order.id}`} version={order.version}
         quantities={order.lines.filter((line) => line.status === "open").map((line) => `${materialsById.get(line.material)!.description}: ${shownQuantity(line.outstanding)} ${materialsById.get(line.material)!.baseUnit}`)}
         labels={messages.lifecycle} errors={messages.errors}
@@ -153,7 +154,7 @@ export function OrderScreen({ tenant, order, receipts, materials, units, supplie
             canPost={order.status === "open"}
           />
         )}
-        <ReceiptsTable receipts={receipts} materials={materialsById} labels={receiptLabels} />
+        <ReceiptsTable tenant={tenant} reversalLabels={stockLabels(messages)} receipts={receipts} materials={materialsById} labels={receiptLabels} />
       </section>
     </div>
   );

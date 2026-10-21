@@ -23,6 +23,11 @@ describe("document lifecycle", () => {
     expect(outstandingQuantity("100", "101", "0")).toBe("0.000000");
   });
 
+  it("keeps explicit closure authoritative after a reversal while allowing active progress to return", () => {
+    for (const status of ["cancelled", "closed-early"] as const) expect(outstandingQuantity("10", "0", "6", status)).toBe("0.000000");
+    expect(outstandingQuantity("10", "0", "0", "open")).toBe("10.000000");
+  });
+
   it("cancels unprocessed targets without mutating the supplied history", () => {
     const original = line();
     expect(resolveLines("cancel", [original])).toEqual([{ ...original, abandoned: "100.000000", status: "cancelled" }]);

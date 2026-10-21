@@ -1,4 +1,5 @@
 import {
+  GoodsReceiptLine,
   OptimisticLockError,
   PurchaseOrder,
   PurchaseOrderLine,
@@ -210,7 +211,9 @@ export class PurchaseOrderService {
         for (const line of lines) line.status = orderLineState(line);
         const before = lifecycleSnapshot(order, lines);
         const target = selectLifecycleLines(lines, selection, (line) => line.position);
-        const resolved = resolveLifecycle(action, target.map((line) => ({ quantity: line.quantity, processed: line.received, abandoned: line.abandoned, status: line.status })));
+        const hasProcessing = target.some((line) => line.received !== "0.000000") ||
+          (await em.count(GoodsReceiptLine, { orderLine: { $in: target } })) > 0;
+        const resolved = resolveLifecycle(action, target.map((line) => ({ quantity: line.quantity, processed: line.received, abandoned: line.abandoned, status: line.status })), { hasProcessing });
         resolved.forEach(({ status, abandoned }, index) => { Object.assign(target[index], { status, abandoned }); });
         order.status = documentState(lines.map(({ status }) => status));
         order.updatedAt = new Date(Math.max(Date.now(), order.updatedAt.getTime() + 1));
@@ -387,7 +390,7 @@ function toLineView(line: PurchaseOrderLine): OrderLineView {
     requisition: requisition?.code ?? null,
     received,
     abandoned,
-    outstanding: unresolvedQuantity(quantity, received, abandoned),
+    outstanding: unresolvedQuantity(quantity, received, abandoned, line.status),
     status: orderLineState(line),
   };
 }

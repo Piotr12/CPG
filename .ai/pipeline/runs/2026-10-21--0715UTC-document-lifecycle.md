@@ -74,3 +74,5 @@ PR: #123
 All five lifecycle flows, selected-line resolution, audit and API/UI parity are implemented. [Review](https://github.com/Piotr12/CPG/pull/123#issuecomment-6311280060) and [browser evidence](https://github.com/Piotr12/CPG/pull/123#issuecomment-6311384777) are published. GitHub rejected author self-approval; a separate reviewer and risk-high QA sign-off are still required. The run delivers a ready implementation PR, not a merge.
 
 Local Docker storage was full; fresh standalone verification and green Docker CI cover the production behavior. `npm run dev` rendered the pages but its client controls did not hydrate, also reproduced on unchanged forecasts; this development baseline issue is outside the lifecycle change. Owned browsers and test servers were stopped. Final head checks and delivery state are recorded in the PR's completion comment.
+
+Subsequent base integration and reversal compatibility fixes are recorded in [the PR stabilization run](../../runs/2026-10-21--0856UTC-pr-123-stabilization.md).

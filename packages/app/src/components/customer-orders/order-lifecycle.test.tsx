@@ -33,3 +33,14 @@ it("keeps a removed line's conflict visible by deferring the refresh that would 
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(within(screen.getByRole("table", { name: "Lines" })).queryByRole("button")).toBeNull();
 });
+
+it("offers Close Early after a full issue reversal, while an untouched sibling can still be cancelled", () => {
+  const posted = { ...order.lines[0], posted: true, fulfilled: "0.000000" };
+  const untouched = { ...order.lines[0], id: "untouched", posted: false };
+  render(<OrdersScreen tenant={tenant} orders={[]} customers={customers} locations={locations} materials={materials} units={{}} locale="en" messages={en}
+    order={{ ...order, lines: [posted, untouched] }} />);
+  expect(screen.getByRole("button", { name: `Close Early — Customer orders ${order.id}` })).toBeTruthy();
+  const rows = within(screen.getByRole("table", { name: "Lines" })).getAllByRole("row").slice(1);
+  expect(within(rows[0]).getByRole("button", { name: /Close Early/ })).toBeTruthy();
+  expect(within(rows[1]).getByRole("button", { name: /Cancel/ })).toBeTruthy();
+});

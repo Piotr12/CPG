@@ -69,8 +69,8 @@ describe("PurchaseOrderPage", () => {
     mocks.materials.mockResolvedValue([material("00000001", "Steel sheet", "kg"), material("00000002", "Bolt M8", "each")]);
     mocks.units.mockResolvedValue({ "00000001": ["kg", "t"], "00000002": ["each"] });
     mocks.receipts.mockResolvedValue([
-      { id: "00000003", purchaseOrder: "00000001", location: "00000001", businessDate: "2027-03-02", createdAt: new Date(), lines: [{ line: 2, material: "00000002", quantity: "4.000000" }] },
-      { id: "00000001", purchaseOrder: "00000001", location: "00000001", businessDate: "2027-03-01", createdAt: new Date(), lines: [{ line: 1, material: "00000001", quantity: "530.000000" }] },
+      { id: "00000003", purchaseOrder: "00000001", location: "00000001", businessDate: "2027-03-02", createdAt: new Date(), lines: [{ movementId: null, reversedBy: null, line: 2, material: "00000002", quantity: "4.000000" }] },
+      { id: "00000001", purchaseOrder: "00000001", location: "00000001", businessDate: "2027-03-01", createdAt: new Date(), lines: [{ movementId: null, reversedBy: null, line: 1, material: "00000001", quantity: "530.000000" }] },
     ]);
     mocks.getMessages.mockResolvedValue({ locale: "en", messages: en });
   });
@@ -133,6 +133,17 @@ describe("PurchaseOrderPage", () => {
     expect(screen.getByText(en.goodsReceipts.empty)).toBeTruthy();
   });
 
+  it("uses retained receipt history after full reversal for header and per-line lifecycle actions", async () => {
+    mocks.get.mockResolvedValue({ ...ORDER, lines: ORDER.lines.map((line) => ({ ...line, status: "open", received: "0.000000", outstanding: line.quantity })) });
+    mocks.receipts.mockResolvedValue([{ id: "00000003", purchaseOrder: ORDER.id, location: ORDER.location, businessDate: "2027-03-02", createdAt: new Date(),
+      lines: [{ movementId: null, reversedBy: "inverse", line: 2, material: "00000002", quantity: "4.000000" }] }]);
+    render(await resolveServerComponents(page()));
+    expect(screen.getByRole("button", { name: `Close Early — Purchase orders ${ORDER.id}` })).toBeTruthy();
+    const rows = within(screen.getByRole("table", { name: "Lines" })).getAllByRole("row").slice(1);
+    expect(within(rows[0]).getByRole("button", { name: /Cancel/ })).toBeTruthy();
+    expect(within(rows[1]).getByRole("button", { name: /Close Early/ })).toBeTruthy();
+  });
+
   it("shows the page in Polish", async () => {
     mocks.getMessages.mockResolvedValue({ locale: "pl", messages: pl });
 
@@ -149,4 +160,11 @@ describe("PurchaseOrderPage", () => {
     mocks.tenantScope.mockRejectedValue(new mocks.AppError("TENANT_NOT_FOUND"));
     await expect(resolveServerComponents(page())).rejects.toThrow("404");
   });
+});
+
+it("shows a visible language-neutral skeleton while request-time content loads", () => {
+  const { container } = render(page().props.children.props.fallback);
+  expect(container.querySelector('[aria-busy="true"]')).toBeTruthy();
+  expect(container.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(3);
+  expect(container.textContent).toBe("");
 });

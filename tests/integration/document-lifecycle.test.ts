@@ -169,6 +169,59 @@ describe("document cancellation and early closure", () => {
     expect((await get("purchase-orders", another.id)).lines[0]).toMatchObject({ received: "3.000000", abandoned: "7.000000", outstanding: "0.000000", status: "closed-early" });
   });
 
+  it("keeps reversal history authoritative for cancellation and closed remainders in both order types", async () => {
+    await correct();
+    for (const concept of ["purchase-orders", "customer-orders"]) {
+      const order = concept === "purchase-orders" ? await po() : await co();
+      const shipment = concept === "customer-orders" ? await create("shipments", { customerOrder: order.id, plannedDate: "2027-01-02",
+        lines: [{ orderLine: order.lines[0].id, quantity: "10", unit: "kg" }] }) : null;
+      const posting = concept === "purchase-orders"
+        ? await create("goods-receipts", { purchaseOrder: order.id, lines: [{ line: 1, quantity: "4", unit: "kg" }] })
+        : await create("goods-issues", { shipment: shipment.id, lines: [{ line: 1, quantity: "4", unit: "kg" }] });
+      expect((await write(`${root}/stock/movements/${posting.lines[0].movementId}/reverse`, { reason: "Lifecycle reversal regression" })).status).toBe(200);
+      const current = await get(concept, order.id);
+      expect(json(await write(`${root}/${concept}/${order.id}/cancel`, { version: current.version })).error.code).toBe("DOCUMENT_PROCESSED");
+      await open(concept, order.id);
+      const title = concept === "purchase-orders" ? "Purchase orders" : "Customer orders";
+      await confirm(`Close Early — ${title} ${order.id}`, "10 kg");
+      const closed = await get(concept, order.id);
+      expect(closed.status).toBe("closed-early");
+      expect(closed.lines[0]).toMatchObject({ status: "closed-early", abandoned: "10.000000" });
+      if (shipment) expect(await get("shipments", shipment.id)).toMatchObject({ status: "completed", lines: [{ toIssue: "0.000000" }] });
+      else expect(closed.lines[0].outstanding).toBe("0.000000");
+    }
+  });
+
+  it("does not restore issuable quantities when a closed customer line is reversed with an open sibling", async () => {
+    await correct(); const order = await co();
+    const shipment = await create("shipments", { customerOrder: order.id, plannedDate: "2027-01-02", lines: [{ orderLine: order.lines[0].id, quantity: "10", unit: "kg" }] });
+    const issue = await create("goods-issues", { shipment: shipment.id, lines: [{ line: 1, quantity: "4", unit: "kg" }] });
+    const partial = await get("customer-orders", order.id);
+    expect((await write(`${root}/customer-orders/${order.id}/close-early`, { version: partial.version, lines: [order.lines[0].id] })).status).toBe(200);
+    expect((await write(`${root}/stock/movements/${issue.lines[0].movementId}/reverse`, { reason: "Reverse after closure" })).status).toBe(200);
+    expect(await get("customer-orders", order.id)).toMatchObject({ status: "open", lines: [{ status: "closed-early", fulfilled: "0.000000", abandoned: "6.000000" }, { status: "open" }] });
+    expect(await get("shipments", shipment.id)).toMatchObject({ status: "completed", lines: [{ toIssue: "0.000000" }] });
+    expect((await write(`${root}/goods-issues`, { shipment: shipment.id, lines: [{ line: 1, quantity: "1", unit: "kg" }] })).status).toBe(409);
+    await user.setViewport(390, 844);
+    try {
+      await open("customer-orders", order.id);
+      await user.waitFor('table[aria-label="Lines"] tbody td');
+      expect(await user.evaluate<number>(`document.querySelector('table[aria-label="Lines"] tbody td').getBoundingClientRect().width`)).toBeGreaterThanOrEqual(128);
+      expect(await user.evaluate<boolean>('document.documentElement.scrollWidth <= innerWidth')).toBe(true);
+      await user.clickRole("button", `Close Early — Customer orders ${order.id}`);
+      await user.waitFor(dialog);
+      expect(await user.evaluate<boolean>(`(() => {
+        const dialog = document.querySelector('[role="dialog"]');
+        const title = dialog.querySelector('[data-slot="dialog-title"]');
+        const close = dialog.querySelector('[data-slot="dialog-close"]').getBoundingClientRect();
+        const range = document.createRange(); range.selectNodeContents(title);
+        return [...range.getClientRects()].every((rect) => rect.right <= close.left || rect.top >= close.bottom);
+      })()`)).toBe(true);
+      await user.clickRole("button", "Keep open");
+    } finally { await user.setViewport(1280, 900); }
+
+  });
+
   it("treats zero-output waste as processing and closes production without changing consumed stock", async () => {
     await correct(); const order = await production();
     await write(`${root}/production-orders/${order.id}/completions`, { quantity: "0", unit: "each", components: [{ material, quantity: "2", unit: "kg" }] });

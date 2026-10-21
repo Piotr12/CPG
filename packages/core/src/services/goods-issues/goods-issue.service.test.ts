@@ -122,7 +122,7 @@ describe("GoodsIssueService", () => {
         location: "00000001",
         businessDate: today(),
         createdAt: expect.any(Date),
-        lines: [{ line: 1, orderLine: order.lines[0].id, material: "00000001", quantity: "20.000000", enteredQuantity: "20", enteredUnit: "each", numerator: "1", denominator: "1" }],
+        lines: [{ movementId: expect.any(String), reversedBy: null, line: 1, orderLine: order.lines[0].id, material: "00000001", quantity: "20.000000", enteredQuantity: "20", enteredUnit: "each", numerator: "1", denominator: "1" }],
       });
       expect(await orders().get(order.id)).toMatchObject({ status: "open", lines: [{ fulfilled: "20.000000", status: "open" }, { fulfilled: "0.000000", status: "open" }] });
       expect((await stock("00000001")).quantity).toBe("80.000000");

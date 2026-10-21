@@ -100,7 +100,7 @@ describe("GoodsReceiptService", () => {
         location: "00000001",
         businessDate: today(),
         createdAt: expect.any(Date),
-        lines: [{ line: 1, material: "00000001", quantity: "30.000000", enteredQuantity: "30", enteredUnit: "kg", numerator: "1", denominator: "1" }],
+        lines: [{ movementId: expect.any(String), reversedBy: null, line: 1, material: "00000001", quantity: "30.000000", enteredQuantity: "30", enteredUnit: "kg", numerator: "1", denominator: "1" }],
         warnings: [],
       });
       expect((await orders().get(order.id)).lines[0]).toMatchObject({ received: "30.000000", outstanding: "70.000000", status: "open" });
@@ -385,7 +385,7 @@ describe("GoodsReceiptService", () => {
         location: "00000001",
         businessDate: today(),
         createdAt: expect.any(Date),
-        lines: [{ line: 2, material: "00000002", quantity: "3.000000", enteredQuantity: "3", enteredUnit: "each", numerator: "1", denominator: "1" }],
+        lines: [{ movementId: expect.any(String), reversedBy: null, line: 2, material: "00000002", quantity: "3.000000", enteredQuantity: "3", enteredUnit: "each", numerator: "1", denominator: "1" }],
       });
       await expect(service("test").get("00000002")).rejects.toMatchObject({ code: "GOODS_RECEIPT_NOT_FOUND", status: 404 });
     });

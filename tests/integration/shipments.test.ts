@@ -107,7 +107,7 @@ describe("shipments and goods issues in the UI", () => {
       ["2", `${ids.gadget} sh gadget`, "30 each", "0 each", "30 each"],
     ]);
     const issues = await tableRows(una, "Goods issues");
-    expect(issues).toEqual([[expect.stringMatching(/^\d{8}$/), new Date().toISOString().slice(0, 10), "Line 1: 20 each"]]);
+    expect(issues).toEqual([[expect.stringMatching(/^\d{8}$/), new Date().toISOString().slice(0, 10), "Line 1: 20 each Reverse"]]);
     expect(await order()).toMatchObject({ status: "open", lines: [{ fulfilled: "20.000000" }, { fulfilled: "0.000000" }] });
     const stock = json(await api("GET", `/api/tenants/prod/stock?material=${ids.widget}&location=${ids.plant}`)).data as StockView;
     expect(stock.quantity).toBe("80.000000");

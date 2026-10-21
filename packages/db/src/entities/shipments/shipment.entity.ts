@@ -30,6 +30,7 @@ export const Shipment = defineEntity({
     createdAt: p.datetime().onCreate(() => new Date()),
   },
   uniques: [{ properties: ["tenant", "code"] }],
+  indexes: [{ properties: ["tenant", "order", "code"] }],
 });
 
 export type Shipment = InferEntity<typeof Shipment>;

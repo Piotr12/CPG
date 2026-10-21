@@ -22,13 +22,14 @@ import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quan
 import { lineError } from "../materials/line-error";
 import { assertOrderOpen, findOrder, orderLineState } from "../purchase-orders/order-records";
 import { postStockMovements } from "../stock/stock-posting";
+import { documentMovements, NO_MOVEMENT, type DocumentMovement } from "../stock/movement-reversals";
 
 /** The stock movement type a receipt posts (INV-012: every movement names its source). */
 export const GOODS_RECEIPT_MOVEMENT = "goods-receipt";
 export const RECEIPT_ID_RACE = "Another goods receipt was posted at the same moment. Try again.";
 
 /** One line of a receipt as the screens and the API show it. */
-export interface ReceiptLineView {
+export interface ReceiptLineView extends DocumentMovement {
   /** The purchase-order line it is for, by its 1-based number. */
   line: number;
   material: string;
@@ -250,6 +251,7 @@ async function viewsOf(em: EntityManager, receipts: readonly GoodsReceipt[]): Pr
     { receipt: { $in: [...receipts] } },
     { populate: ["orderLine", "orderLine.material"], orderBy: { position: "asc" } },
   );
+  const movements = await documentMovements(em, GOODS_RECEIPT_MOVEMENT, receipts.map(({ id }) => id));
   return receipts.map((receipt) => ({
     id: receipt.code,
     purchaseOrder: receipt.order.code,
@@ -258,7 +260,8 @@ async function viewsOf(em: EntityManager, receipts: readonly GoodsReceipt[]): Pr
     createdAt: receipt.createdAt,
     lines: lines
       .filter((line) => line.receipt.id === receipt.id)
-      .map(({ orderLine, quantity, enteredQuantity, enteredUnit, numerator, denominator }) => ({
+      .map(({ position, orderLine, quantity, enteredQuantity, enteredUnit, numerator, denominator }) => ({
+        ...(movements.get(`${receipt.id}:${position}`) ?? NO_MOVEMENT),
         line: orderLine.position,
         material: orderLine.material.code,
         quantity,
