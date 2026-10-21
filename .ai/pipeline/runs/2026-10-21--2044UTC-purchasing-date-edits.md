@@ -72,8 +72,8 @@ The spec ships on design PR #157 (`spec/purchasing-date-edits`), which is not me
 
 ### Phase 2: Dialog and messages
 
-- [ ] 2.1 EN/PL changeDate messages
-- [ ] 2.2 ChangeDateDialog with jsdom tests
+- [x] 2.1 EN/PL changeDate messages — 7c084e2
+- [x] 2.2 ChangeDateDialog with jsdom tests — 6469a15
 
 ### Phase 3: Screens and help
 
