@@ -62,7 +62,7 @@ export function OrderScreen({ tenant, order, receipts, materials, units, supplie
         const material = materialsById.get(line.material)!;
         return (
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <Link href={`/admin/${tenant.code}/materials/${material.id}`} className="font-mono underline underline-offset-4">
+            <Link href={`/admin/${tenant.code}/materials/${material.id}`} className="font-mono whitespace-nowrap underline underline-offset-4">
               {material.id}
             </Link>
             <span>{material.description}</span>
@@ -109,7 +109,7 @@ export function OrderScreen({ tenant, order, receipts, materials, units, supplie
       cell: (line) => <Badge variant={line.status === "completed" ? "outline" : "secondary"}>{labels.lines.status[line.status]}</Badge>,
     },
     { id: "abandoned", header: messages.lifecycle.abandoned, cell: (line) => `${shownQuantity(line.abandoned)} ${materialsById.get(line.material)!.baseUnit}`, className: "text-right" },
-    { id: "actions", header: messages.lifecycle.actions, cell: (line) => <div className="flex flex-wrap gap-2">
+    { id: "actions", header: messages.lifecycle.actions, cell: (line) => <div className="flex flex-col items-start gap-2">
       <ChangeDateDialog kind="orderLine" available={lineEditable(line)} subject={lineSubject(line)} value={line.plannedDate} version={order.version}
         save={setPurchaseOrderLineDate.bind(null, tenant.code, tenant.generation, order.id, line.line)} labels={dateLabels} errors={dateErrors} />
       <LifecycleControl

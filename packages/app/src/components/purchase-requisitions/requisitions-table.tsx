@@ -34,7 +34,7 @@ export function RequisitionsTable({ tenant, requisitions, materials, locations, 
         const material = materials.get(requisition.material)!;
         return (
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <Link href={`/admin/${tenant.code}/materials/${material.id}`} className="font-mono underline underline-offset-4">
+            <Link href={`/admin/${tenant.code}/materials/${material.id}`} className="font-mono whitespace-nowrap underline underline-offset-4">
               {material.id}
             </Link>
             <span>{material.description}</span>
@@ -80,7 +80,7 @@ export function RequisitionsTable({ tenant, requisitions, materials, locations, 
       ),
     },
     { id: "abandoned", header: labels.lifecycle.abandoned, cell: (row) => amount(row.abandoned, row.material), className: "text-right" },
-    { id: "actions", header: labels.lifecycle.actions, cell: (row) => <div className="flex flex-wrap gap-2">
+    { id: "actions", header: labels.lifecycle.actions, cell: (row) => <div className="flex flex-col items-start gap-2">
       <ChangeDateDialog kind="requisition" available={editable && row.status === "open"} subject={`${labels.link} ${row.id}`} value={row.requiredDate}
         version={row.version} save={setRequisitionRequiredDate.bind(null, tenant.code, tenant.generation, row.id)} labels={dateLabels} errors={labels.errors} />
       <LifecycleControl available={editable && row.status === "open"} processed={row.converted !== "0.000000"}
