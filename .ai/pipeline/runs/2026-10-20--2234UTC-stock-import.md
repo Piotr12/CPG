@@ -1,9 +1,10 @@
 # Execution plan — stock import (E07-S02, #81)
 
-Source doc: .ai/specs/2026-10-20--2225UTC-stock-import.md
+Source doc: .ai/specs/implemented/2026-10-20--2225UTC-stock-import.md
 Spec PR: #116 (design only)
 Issue: #81
 Engine: om-auto-create-pr (steps: 11, --loop: no)
+Status: complete (PR #118, `c312a6e`)
 Earlier steps of this run (issue claim, spec, mockups): .ai/runs/2026-10-20--2221UTC-issue-81-stock-import.md (on `spec/stock-import`)
 
 ## Goal

@@ -1,6 +1,6 @@
 # Production completions
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-20 22:21 UTC
 **Issue:** #89 (E10-S02)
 
@@ -241,8 +241,8 @@ Other states:
 
 Prototype: `.ai/specs/assets/production-completions/mockup-01-completion-dialog.html`, `.ai/specs/assets/production-completions/mockup-02-order-detail.html`
 
-![Completion dialog, consumption step](assets/production-completions/mockup-01-completion-dialog.png)
-![Order detail with progress and completion history](assets/production-completions/mockup-02-order-detail.png)
+![Completion dialog, consumption step](../assets/production-completions/mockup-01-completion-dialog.png)
+![Order detail with progress and completion history](../assets/production-completions/mockup-02-order-detail.png)
 
 ## 📝 Edge Cases & Failure Scenarios
 - **Stock short for one line** (stock 5, actual 6): `INSUFFICIENT_STOCK` names A. No movement for any material, no completion row, produced unchanged (PRD-020/021). The dialog stays open with the error.
@@ -320,3 +320,8 @@ N01/N04 exclude costing and capacity. No product decision is superseded.
   - the read-only refusal.
 ### Phase 4 — Verification and publication
 - Step 4.1: Run lint, typecheck, `test:coverage` at 100%, build, the touched integration files and `smoke.test.ts`, and live UI checks with screenshots. Review against the engineering standards and the compatibility rules, fix the findings, and publish the implementation PR (`Closes #89`, `Refs` this spec's PR). The full integration suite runs in CI.
+
+## Implementation notes
+
+- Design PR #117 (`bb145f3`), implementation PR #119 (`c6bfcda`), both merged on 2026-10-21; #89 closed. Plan: `.ai/pipeline/runs/2026-10-20--2235UTC-production-completions.md`.
+- The plan's "Deviations from the spec" records seven deviations. Among them: the form shows no live per-row variance (the server records it), an added input's errors land on its row, and the ledger keeps each line's entered quantity and unit.
