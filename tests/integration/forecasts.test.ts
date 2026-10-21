@@ -99,8 +99,17 @@ describe("forecasts (E08-S03)", () => {
     await admin.waitForText("Forecasts — Test");
     expect(await admin.title()).toBe("Test · Forecasts");
 
-    const rows = await listRows(admin, "/admin/test/forecasts");
-    expect(rows).toHaveLength(120);
+    // 120 forecasts: 100 on the first page, the other 20 behind Next.
+    const firstPage = await listRows(admin, "/admin/test/forecasts");
+    expect(firstPage).toHaveLength(100);
+    expect(await admin.text("main nav[aria-label='Forecast pages']")).toContain("Page 1 of 2");
+    await admin.waitUntil(ready(`document.querySelector("main nav[aria-label='Forecast pages'] a")`));
+    await admin.click("main nav[aria-label='Forecast pages'] a");
+    await admin.waitForText("Page 2 of 2");
+    expect(await admin.url()).toBe(`${baseUrl}/admin/test/forecasts?page=2`);
+    const secondPage = await listRows(admin, "/admin/test/forecasts?page=2");
+    expect(secondPage).toHaveLength(20);
+    const rows = [...firstPage, ...secondPage];
     expect(new Set(rows.map(([material]) => material)).size).toBe(10);
     expect(new Set(rows.map(([, , date]) => date)).size).toBe(12);
     for (const [, , date, quantity] of rows) {
