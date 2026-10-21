@@ -86,20 +86,21 @@ describe("ForecastsPage", () => {
 
   it("shows the page in the URL with links that keep the filter, counting what the filter matches", async () => {
     mocks.count.mockResolvedValue(250);
-    render(await resolveServerComponents(page("test", { material: "00000005", location: "00000001", page: "2" })));
+    render(await resolveServerComponents(page("test", { material: "00000005", page: "2" })));
 
-    expect(mocks.count).toHaveBeenCalledWith({ material: "00000005", location: "00000001" });
-    expect(mocks.forecasts).toHaveBeenCalledWith({ material: "00000005", location: "00000001" }, 2);
+    expect(mocks.count).toHaveBeenCalledWith({ material: "00000005" });
+    expect(mocks.forecasts).toHaveBeenCalledWith({ material: "00000005" }, 2);
     const pages = screen.getByRole("navigation", { name: "Forecast pages" });
     expect(pages.textContent).toContain("Page 2 of 3");
-    expect(within(pages).getByRole("link", { name: "Previous" }).getAttribute("href")).toBe("/admin/test/forecasts?material=00000005&location=00000001&page=1");
-    expect(within(pages).getByRole("link", { name: "Next" }).getAttribute("href")).toBe("/admin/test/forecasts?material=00000005&location=00000001&page=3");
+    expect(within(pages).getByRole("link", { name: "Previous" }).getAttribute("href")).toBe("/admin/test/forecasts?material=00000005&page=1");
+    expect(within(pages).getByRole("link", { name: "Next" }).getAttribute("href")).toBe("/admin/test/forecasts?material=00000005&page=3");
   });
 
-  it("shows the last page for a page past it, and keeps only the filter that is set in the links", async () => {
+  it("shows the last page for a page past it, its links keeping a location filter", async () => {
     mocks.count.mockResolvedValue(101);
     render(await resolveServerComponents(page("test", { location: "00000001", page: ["9", "1"] })));
 
+    expect(mocks.count).toHaveBeenCalledWith({ location: "00000001" });
     expect(mocks.forecasts).toHaveBeenCalledWith({ location: "00000001" }, 2);
     const pages = screen.getByRole("navigation", { name: "Forecast pages" });
     expect(pages.textContent).toContain("Page 2 of 2");
