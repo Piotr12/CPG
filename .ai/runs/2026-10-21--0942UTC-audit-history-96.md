@@ -2,8 +2,8 @@
 
 **Date:** 2026-10-21 09:42 UTC
 **Agent:** Claude Code / claude-opus-5-5 (cezar)
-**Spec:** .ai/specs/2026-10-21--0944UTC-audit-history-filters.md
-**Status:** in progress
+**Spec:** .ai/specs/implemented/2026-10-21--0944UTC-audit-history-filters.md
+**Status:** done
 
 ## Goal
 Run `om-auto-fix-issue 96` (E13-S03): filters on the tenant and Global audit by record, account, channel and date range, the business date beside the audit timestamp, linked original and reversal entries, localised labels, and the same filters through the API.
@@ -32,5 +32,17 @@ Run `om-auto-fix-issue 96` (E13-S03): filters on the tenant and Global audit by 
 2. Implementation PR off `main` per the spec's plan, full gate, touched integration files plus smoke (migration), review, UI QA evidence.
 
 ## Changes
+- Design: spec, 2 current-app screenshots and 2 mockups on PR #129 (merged as 2ea4162). Assumptions and evidence comments are on #129 and #96.
+- Implementation: PR #130 (`Closes #96`), tracked in `.ai/pipeline/runs/2026-10-21--0955UTC-audit-history-filters.md`. It also moves the spec to `implemented/` with its Implementation notes, which were written after #129 merged.
+
 ## Verification
+- Spec phase: `tests/ai-filenames.test.ts` and `tests/spec-images.test.ts` pass. A fresh-context architectural review gave "revise, minor"; all 9 findings were applied.
+- Implementation:
+  - lint, typecheck, `test:coverage` (3,042 tests, 100%) and build pass;
+  - `audit-history`, `audit` and `smoke` integration: 19/19 on the standalone production build (Docker out of disk locally);
+  - fresh-context code review approves after one fix round;
+  - 7 QA screenshots are on #130.
+- CI on #130: see the PR's CI-result comment.
+
 ## Follow-ups
+- #130 needs a human approval and manual QA (`needs-qa`, `risk-high`). Never merge or push `main` from automation.

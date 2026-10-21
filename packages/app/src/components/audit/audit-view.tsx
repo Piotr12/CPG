@@ -1,13 +1,18 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import type { AuditPage } from "@cpg/core";
+import type { AuditPage, AuditReversalLink } from "@cpg/core";
+import type { AuditFilterQuery } from "@cpg/core/validators/audit/audit-list.schema";
 import type { Messages } from "../../i18n/messages/en";
+import { AuditFilters } from "./audit-filters";
+import { auditUrl, isFiltered, type AuditFilterKey } from "./audit-query";
 import { AuditTable } from "./audit-table";
+import type { AuditSubjectType } from "./subject-types";
 
 /**
- * One audit screen: heading, an optional back link, what this audit holds, the entries and the paging
- * links. Shared by the Global and the tenant audit; each page reads its own entries. The Global audit is
- * in the menu, so only the tenant audit links back (to its tenant home).
+ * One audit screen: heading, an optional back link, what this audit holds, the filter form, the entries
+ * and the paging links. Shared by the Global and the tenant audit; each page reads its own entries. The
+ * Global audit is in the menu, so only the tenant audit links back (to its tenant home). Paging keeps
+ * the filters.
  */
 export function AuditView({
   heading,
@@ -16,17 +21,31 @@ export function AuditView({
   page,
   path,
   isFirstPage,
+  selected,
+  accounts,
+  subjectTypes,
+  reversals = [],
+  invalid = [],
   labels,
 }: {
   heading: string;
   back?: { href: string; label: string };
   intro: ReactNode;
   page: AuditPage;
-  /** This screen's path, for the paging links. */
+  /** This screen's path, for the form and the paging and history links. */
   path: string;
   isFirstPage: boolean;
+  /** The filters the page was read with. */
+  selected: AuditFilterQuery;
+  accounts: readonly string[];
+  subjectTypes: readonly AuditSubjectType[];
+  /** The reversal links of the page's stock movements (tenant audit only). */
+  reversals?: readonly AuditReversalLink[];
+  /** Filters the server refused: the form explains them, and no entries are shown until corrected. */
+  invalid?: readonly AuditFilterKey[];
   labels: Messages["audit"];
 }) {
+  const filtered = isFiltered(selected);
   return (
     <>
       <div className="flex items-center justify-between gap-4">
@@ -38,11 +57,23 @@ export function AuditView({
         )}
       </div>
       <div className="text-sm text-muted-foreground">{intro}</div>
-      <AuditTable entries={page.entries} label={heading} labels={labels} />
+      {/* Keyed by the query: following a history link on this screen remounts the form with its new values. */}
+      <AuditFilters key={auditUrl(path, selected)} path={path} selected={selected} accounts={accounts} subjectTypes={subjectTypes} invalid={invalid} labels={labels} />
+      {invalid.length === 0 && filtered && <p className="text-sm font-medium">{labels.filterForm.showing}</p>}
+      {invalid.length === 0 && (
+        <AuditTable
+          entries={page.entries}
+          label={heading}
+          path={path}
+          reversals={reversals}
+          empty={filtered ? labels.filterForm.empty : labels.empty}
+          labels={labels}
+        />
+      )}
       {(page.nextBefore || !isFirstPage) && (
         <nav className="flex justify-between gap-4 text-sm font-medium">
-          {isFirstPage ? <span /> : <Link href={path}>{labels.newest}</Link>}
-          {page.nextBefore && <Link href={`${path}?before=${page.nextBefore}`}>{labels.older}</Link>}
+          {isFirstPage ? <span /> : <Link href={auditUrl(path, selected)}>{labels.newest}</Link>}
+          {page.nextBefore && <Link href={auditUrl(path, selected, page.nextBefore)}>{labels.older}</Link>}
         </nav>
       )}
     </>

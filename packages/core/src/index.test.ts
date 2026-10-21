@@ -108,6 +108,7 @@ describe("@cpg/core", () => {
       "assertServerConfig",
       "assertSignedIn",
       "auditCursorNotFound",
+      "auditWhere",
       "callerActor",
       "canonicalJson",
       "columnHeader",

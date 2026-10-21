@@ -14,7 +14,8 @@ export const TenantAuditEvent = defineEntity({
   name: "TenantAuditEvent",
   filters: owned.filters,
   properties: { ...auditEventProperties(), tenant: owned.tenant },
-  indexes: [{ properties: ["tenant", "occurredAt"] }],
+  /** Newest first; the record index serves a history filtered by subject (keyset on occurredAt, id). */
+  indexes: [{ properties: ["tenant", "occurredAt"] }, { properties: ["tenant", "subjectType", "subjectId", "occurredAt", "id"] }],
   triggers: appendOnlyTriggers("tenant_audit_event").map((trigger) =>
     trigger.name.endsWith("_no_delete") ? { ...trigger, when: "old.tenant_code <> 'test'" } : trigger,
   ),

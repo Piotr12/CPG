@@ -71,6 +71,7 @@ describe("migrate", () => {
       "Migration20261021071704_document_lifecycle",
       "Migration20261021071806_stock_reversals",
       "Migration20261021075527_shipment_order_cursor",
+      "Migration20261021095627_audit_record_index",
     ]);
     expect(await migrate({ databasePath })).toEqual([]);
   });
@@ -79,10 +80,10 @@ describe("migrate", () => {
     try {
       const previous = migrations.map((migration) => migration.name).filter((name) => !name.includes("customer_order") && !name.includes("shipment"));
       await orm.migrator.up({ migrations: previous });
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 23, pending: 4 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 24, pending: 4 });
       await orm.em.getConnection().execute("update tenant set generation = 23 where code = 'prod'");
       await orm.migrator.up();
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 27, pending: 0 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 28, pending: 0 });
       expect(await orm.em.getConnection().execute("select generation from tenant where code = 'prod'")).toEqual([{ generation: 23 }]);
       expect(await orm.em.getConnection().execute("select count(*) as count from stock_movement")).toEqual([{ count: 0 }]);
       expect(await orm.em.getConnection().execute("select count(*) as count from customer_order")).toEqual([{ count: 0 }]);
@@ -98,9 +99,9 @@ describe("migrate", () => {
       // Production applied transfers first, although production orders carry the earlier timestamp.
       const previous = migrations.map((migration) => migration.name).filter((name) => !name.includes("production_"));
       await orm.migrator.up({ migrations: previous });
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 25, pending: 2 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 26, pending: 2 });
       await orm.migrator.up();
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 27, pending: 0 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 28, pending: 0 });
       expect(await orm.em.getConnection().execute("select count(*) as count from production_order")).toEqual([{ count: 0 }]);
       expect(await orm.em.getConnection().execute("select count(*) as count from transfer")).toEqual([{ count: 0 }]);
       expect(await orm.schema.getUpdateSchemaSQL()).not.toMatch(/production_order|transfer/);
@@ -116,9 +117,9 @@ describe("getMigrationStatus", () => {
     const orm = await initOrm({ databasePath });
 
     try {
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 27 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 28 });
       await orm.migrator.up();
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 27, pending: 0 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 28, pending: 0 });
     } finally {
       await orm.close();
     }
@@ -215,6 +216,9 @@ describe("migrations", () => {
         where tenant_code = ? and order_id = ? and status in ('open', 'completed') and code > ? order by code limit 100`, ["prod", "order", "00000100"]);
       expect(shipmentPlan.map(({ detail }) => detail).join(" ")).toContain("shipment_tenant_code_order_id_code_index (tenant_code=? AND order_id=? AND code>?)");
       expect(shipmentPlan.map(({ detail }) => detail).join(" ")).not.toContain("TEMP B-TREE");
+      await orm.migrator.down();
+      expect(await orm.em.getConnection().execute("select name from sqlite_master where name like '%audit_event_%subject_type%'")).toEqual([]);
+      expect(await triggers()).toContain("tenant_audit_event_no_delete");
       await orm.migrator.down();
       expect(await orm.em.getConnection().execute("select name from sqlite_master where name = 'shipment_tenant_code_order_id_code_index'")).toEqual([]);
       expect(await tables()).toContain("shipment");
@@ -563,7 +567,7 @@ describe("forecasts migration", () => {
       ]);
 
       // The migrations that landed after the forecasts come off first.
-      for (let later = 0; later < 13; later += 1) await orm.migrator.down();
+      for (let later = 0; later < 14; later += 1) await orm.migrator.down();
       expect(await execute(orm, "select name from sqlite_master where name = 'forecast'")).toEqual([{ name: "forecast" }]);
       await orm.migrator.down();
       expect(await execute(orm, "select name from sqlite_master where name = 'forecast'")).toEqual([]);
@@ -677,6 +681,7 @@ describe("purchasing migration", () => {
       await execute(orm, "delete from purchase_order_line");
       await execute(orm, "delete from purchase_order");
       await execute(orm, "delete from purchase_requisition");
+      await orm.migrator.down(); // Audit record index.
       await orm.migrator.down(); // Shipment order cursor index.
       await orm.migrator.down(); // Stock reversals.
       await orm.migrator.down(); // Document lifecycle.
@@ -728,6 +733,7 @@ describe("goods-receipts migration", () => {
       await expect(execute(orm, "update goods_receipt set business_date = '2026-10-01'")).rejects.toThrow(GOODS_RECEIPT_IMMUTABLE);
       await expect(execute(orm, "update goods_receipt_line set quantity = '1.000000'")).rejects.toThrow(GOODS_RECEIPT_IMMUTABLE);
 
+      await orm.migrator.down(); // Audit record index.
       await orm.migrator.down(); // Shipment order cursor index.
       await orm.migrator.down(); // Stock reversals.
       await orm.migrator.down(); // Document lifecycle.
@@ -782,6 +788,7 @@ describe("transfers migration", () => {
       ).rejects.toThrow(/CHECK/);
 
       // Rolls back with postings still in place: they are dropped before the transfers they reference.
+      await orm.migrator.down(); // Audit record index.
       await orm.migrator.down(); // Shipment order cursor index.
       await orm.migrator.down(); // Stock reversals.
       await orm.migrator.down(); // Document lifecycle.
@@ -839,6 +846,7 @@ describe("shipments and goods-issues migration", () => {
       await execute(orm, "update shipment_line set issued = '20.000000'");
       await execute(orm, "update shipment set status = 'completed'");
 
+      await orm.migrator.down(); // Audit record index.
       await orm.migrator.down(); // Shipment order cursor index.
       await orm.migrator.down(); // Stock reversals.
       await orm.migrator.down(); // Document lifecycle.
@@ -899,6 +907,7 @@ describe("production-completions migration", () => {
       await expect(execute(orm, "update production_completion set quantity = '1.000000'")).rejects.toThrow(PRODUCTION_COMPLETION_IMMUTABLE);
       await expect(execute(orm, "update production_completion_line set actual = '1.000000'")).rejects.toThrow(PRODUCTION_COMPLETION_IMMUTABLE);
 
+      await orm.migrator.down(); // Audit record index.
       await orm.migrator.down(); // Shipment order cursor index.
       await orm.migrator.down(); // Stock reversals.
       await orm.migrator.down(); // Document lifecycle.

@@ -24,7 +24,7 @@ const cells = (row: HTMLElement) => within(row).getAllByRole("cell").map((cell) 
 
 describe("AuditTable", () => {
   it("shows time in UTC, account, a short session id, channel, action, subject and changes", () => {
-    render(<AuditTable entries={[entry({})]} label="Global audit" labels={en.audit} />);
+    render(<AuditTable entries={[entry({})]} label="Global audit" path="/admin/audit" reversals={[]} empty={en.audit.empty} labels={en.audit} />);
 
     expect(screen.getByRole("table", { name: "Global audit" })).toBeTruthy();
     expect(cells(rows()[0])).toEqual([
@@ -44,7 +44,7 @@ describe("AuditTable", () => {
       <AuditTable
         entries={[entry({ action: "users.user.created", before: null, after: { username: "alice", active: true } })]}
         label="Global audit"
-        labels={en.audit}
+        path="/admin/audit" reversals={[]} empty={en.audit.empty} labels={en.audit}
       />,
     );
 
@@ -56,7 +56,7 @@ describe("AuditTable", () => {
       <AuditTable
         entries={[entry({ action: "users.user.password-reset", before: null, after: null })]}
         label="Global audit"
-        labels={en.audit}
+        path="/admin/audit" reversals={[]} empty={en.audit.empty} labels={en.audit}
       />,
     );
 
@@ -68,7 +68,7 @@ describe("AuditTable", () => {
       <AuditTable
         entries={[entry({ channel: "api", sessionId: null, token: { id: "t-1", name: "robot-a" } })]}
         label="Global audit"
-        labels={en.audit}
+        path="/admin/audit" reversals={[]} empty={en.audit.empty} labels={en.audit}
       />,
     );
 
@@ -76,7 +76,7 @@ describe("AuditTable", () => {
   });
 
   it("shows an action it has no name for as its ID", () => {
-    render(<AuditTable entries={[entry({ action: "future.entity.changed" })]} label="Global audit" labels={en.audit} />);
+    render(<AuditTable entries={[entry({ action: "future.entity.changed" })]} label="Global audit" path="/admin/audit" reversals={[]} empty={en.audit.empty} labels={en.audit} />);
 
     expect(screen.getByText("future.entity.changed")).toBeTruthy();
   });
@@ -88,18 +88,18 @@ describe("AuditTable", () => {
       before: { readOnly: false },
       after: { readOnly: true },
     });
-    render(<AuditTable entries={[change]} label="Global audit" labels={en.audit} />);
+    render(<AuditTable entries={[change]} label="Global audit" path="/admin/audit" reversals={[]} empty={en.audit.empty} labels={en.audit} />);
 
     expect(screen.getByText("Read-only flag changed")).toBeTruthy();
     expect(screen.getByRole("row", { name: /Read-only flag changed/ }).textContent).toMatch(/read-only: no → yes/);
   });
 
-  it("offers no way to change an entry (AUD-009)", () => {
-    render(<AuditTable entries={[entry({})]} label="Global audit" labels={en.audit} />);
+  it("offers no way to change an entry, only its record's history (AUD-009)", () => {
+    render(<AuditTable entries={[entry({})]} label="Global audit" path="/admin/audit" reversals={[]} empty={en.audit.empty} labels={en.audit} />);
 
     expect(screen.queryAllByRole("button")).toEqual([]);
-    expect(screen.queryAllByRole("link")).toEqual([]);
     expect(screen.queryAllByRole("textbox")).toEqual([]);
+    expect(screen.getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual(["/admin/audit?subjectType=User&subjectId=u-2"]);
   });
 
   it("names fields and known values in the reader's language, and others as stored", () => {
@@ -113,7 +113,7 @@ describe("AuditTable", () => {
           }),
         ]}
         label="Audyt globalny"
-        labels={pl.audit}
+        path="/admin/audit" reversals={[]} empty={pl.audit.empty} labels={pl.audit}
       />,
     );
 
@@ -125,13 +125,13 @@ describe("AuditTable", () => {
   });
 
   it("says when nothing has been recorded, in the reader's language", () => {
-    render(<AuditTable entries={[]} label="Audyt globalny" labels={pl.audit} />);
+    render(<AuditTable entries={[]} label="Audyt globalny" path="/admin/audit" reversals={[]} empty={pl.audit.empty} labels={pl.audit} />);
 
     expect(screen.getByText("Nic jeszcze nie zapisano.")).toBeTruthy();
     expect(screen.getByRole("columnheader", { name: "Czas (UTC)" })).toBeTruthy();
   });
   it("names stock movements and their stored context in Polish", () => {
-    render(<AuditTable entries={[entry({ action: "stock.movement.posted", before: { quantity: "2.000000" }, after: { quantity: "1.000000", movement: "-1.000000", postingId: "posting-1", type: "correction", businessDate: "2026-10-20", reason: "Spis", enteredQuantity: "-1.000000", enteredUnit: "each" } })]} label="Audyt" labels={pl.audit} />);
+    render(<AuditTable entries={[entry({ action: "stock.movement.posted", before: { quantity: "2.000000" }, after: { quantity: "1.000000", movement: "-1.000000", postingId: "posting-1", type: "correction", businessDate: "2026-10-20", reason: "Spis", enteredQuantity: "-1.000000", enteredUnit: "each" } })]} label="Audyt" path="/admin/audit" reversals={[]} empty={pl.audit.empty} labels={pl.audit} />);
     expect(screen.getByText("Zaksięgowano ruch zapasu")).toBeTruthy();
     expect(screen.getAllByRole("listitem").map((item) => item.textContent)).toEqual([
       "ilość: 2.000000 → 1.000000", "ruch: — → -1.000000", "ID księgowania: — → posting-1", "typ: — → korekta", "data księgowania: — → 2026-10-20", "powód: — → Spis", "wprowadzona ilość: — → -1.000000", "wprowadzona jednostka: — → each",
@@ -144,11 +144,93 @@ describe("AuditTable", () => {
     render(<AuditTable entries={[
       entry({ action: "customer-orders.customer-order.created", before: null, after: { customer: "ACME", lines: "[]", status: "open" } }),
       entry({ action: "customer-orders.customer-order.updated", before: { status: "open" }, after: { status: "completed" } }),
-    ]} label="Audit" labels={labels} />);
+    ]} label="Audit" path="/admin/audit" reversals={[]} empty={labels.empty} labels={labels} />);
     expect(screen.getByText(created)).toBeTruthy();
     expect(screen.getByText(updated)).toBeTruthy();
     expect(within(rows()[0]).getAllByRole("listitem").map((item) => item.textContent)).toEqual(changes);
     expect(within(rows()[1]).getByRole("listitem").textContent).toBe(labels.fields.status + ": " + labels.values.status.open + " → " + labels.values.status.completed);
   });
 
+  describe("tracing history (E13-S03)", () => {
+    const table = (entries: AuditEntryView[], reversals: { original: string; inverse: string }[] = [], labels = en.audit) =>
+      render(<AuditTable entries={entries} label="Audit" path="/admin/test/audit" reversals={reversals} empty="None match." labels={labels} />);
+    const ORIGINAL = "04f49ff9-3cb6-4583-be90-b89287794b08";
+    const INVERSE = "264846a6-a50c-4ac8-9945-ee427f810aff";
+    const movement = (id: string, overrides: Partial<AuditEntryView> = {}) =>
+      entry({ id, action: "stock.movement.posted", subject: { type: "StockMovement", id, label: "00000001 — Bolts at 00000001 — Plant" },
+        before: { quantity: "0.000000" }, after: { quantity: "25.000000", businessDate: "2026-10-21", reason: "Count" }, ...overrides });
+
+    it("opens a record's history from its subject, named for screen readers", () => {
+      table([entry({ subject: { type: "PurchaseOrder", id: "00000012", label: "00000012 — 00000003 Steelworks" } })]);
+
+      const link = screen.getByRole("link", { name: "History of 00000012 — 00000003 Steelworks" });
+      expect(link.getAttribute("href")).toBe("/admin/test/audit?subjectType=PurchaseOrder&subjectId=00000012");
+      expect(link.textContent).toBe("00000012 — 00000003 Steelworks");
+    });
+
+    it("shows the business date beneath the audit timestamp only when the entry recorded one (AUD-030)", () => {
+      table([movement(ORIGINAL), entry({ id: "e-2" })]);
+
+      expect(cells(rows()[0])[0]).toBe("2026-10-19 10:30:12Business date 2026-10-21");
+      expect(cells(rows()[1])[0]).toBe("2026-10-19 10:30:12");
+    });
+
+    it("links an original movement and its reversal both ways, next to the reason (AUD-004, REV-020)", () => {
+      const link = { original: ORIGINAL, inverse: INVERSE };
+      table([movement(INVERSE, { after: { quantity: "0.000000", reason: "Wrong bin", type: "reversal" } }), movement(ORIGINAL)], [link]);
+
+      const [inverseRow, originalRow] = rows();
+      expect(within(inverseRow).getByText(/Reverses/).textContent).toBe("Reverses 04f49ff9");
+      expect(within(inverseRow).getByRole("link", { name: "04f49ff9" }).getAttribute("href")).toBe(`/admin/test/audit?subjectType=StockMovement&subjectId=${ORIGINAL}`);
+      expect(within(inverseRow).getByText("reason: — → Wrong bin")).toBeTruthy();
+      expect(within(inverseRow).getByText("type: — → reversal")).toBeTruthy();
+      expect(within(originalRow).getByText(/Reversed by/).textContent).toBe("Reversed by 264846a6");
+      expect(within(originalRow).getByRole("link", { name: "264846a6" }).getAttribute("title")).toBe(INVERSE);
+      expect(within(originalRow).queryByText(/Reverses/)).toBeNull();
+    });
+
+    it("shows no reversal link for an unreversed movement or another record type", () => {
+      table([movement(ORIGINAL), entry({ id: "e-2", subject: { type: "Material", id: ORIGINAL, label: "Odd" } })], [{ original: "other", inverse: "another" }]);
+
+      expect(screen.queryByText(/Reverse/)).toBeNull();
+    });
+
+    it("says when no entry matches the filters", () => {
+      table([]);
+
+      expect(screen.getByText("None match.")).toBeTruthy();
+    });
+
+    it.each([
+      [en.audit, ["line 2: status: open → completed", "line 1: extra component: no", "line 1: fulfilled quantity: — → 5"]],
+      [pl.audit, ["pozycja 2: stan: otwarta → zrealizowana", "pozycja 1: składnik dodatkowy: nie", "pozycja 1: ilość zrealizowana: — → 5"]],
+    ])("names per-line fields and their values in the reader's language", (labels, expected) => {
+      table([entry({ action: "customer-orders.customer-order.fulfilled", before: { line2Status: "open" }, after: { line2Status: "completed", line1Fulfilled: "5" } }),
+        entry({ id: "e-2", action: "production-orders.production-completion.posted", before: null, after: { line1Extra: false } })], [], labels);
+
+      expect(screen.getAllByRole("listitem").map((item) => item.textContent)).toEqual([expected[0], expected[2], expected[1]]);
+    });
+
+    it("keeps an unknown per-line field's name as stored", () => {
+      table([entry({ before: null, after: { line3Mystery: "x" } })]);
+
+      expect(screen.getByRole("listitem").textContent).toBe("line 3: mystery: x");
+    });
+
+    it("translates the transfer actions and reversal context, leaving recorded values unchanged (UX-022)", () => {
+      table([
+        entry({ action: "transfers.transfer.dispatched", before: { dispatched: "0.000000" }, after: { dispatched: "4.000000", type: "transfer-dispatch", businessDate: "2026-10-21" } }),
+        movement(ORIGINAL, { action: "stock.movement.reversed", before: { reversed: false, balance: "525.000000" }, after: { reversed: true, balance: "500.000000", reason: "Counted the wrong bin" } }),
+      ], [], pl.audit);
+
+      expect(screen.getByText("Przesunięcie wydane")).toBeTruthy();
+      expect(screen.getByText("ilość wydana: 0.000000 → 4.000000")).toBeTruthy();
+      expect(screen.getByText("typ: — → wydanie przesunięcia")).toBeTruthy();
+      expect(screen.getByText("odwrócony: nie → tak")).toBeTruthy();
+      expect(screen.getByText("stan zapasu: 525.000000 → 500.000000")).toBeTruthy();
+      expect(screen.getByText("powód: — → Counted the wrong bin")).toBeTruthy();
+      expect(cells(rows()[0])[0]).toBe("2026-10-19 10:30:12Data księgowania 2026-10-21");
+      expect(cells(rows()[1])[0]).toBe("2026-10-19 10:30:12");
+    });
+  });
 });

@@ -8,6 +8,7 @@ import GlobalAuditPage, { metadata } from "./page";
 const mocks = vi.hoisted(() => ({
   connection: vi.fn(),
   listGlobal: vi.fn(),
+  usernames: vi.fn(),
   requireUser: vi.fn(),
   getMessages: vi.fn(),
   notFound: vi.fn(() => {
@@ -18,7 +19,7 @@ vi.mock("next/server", () => ({ connection: mocks.connection }));
 vi.mock("next/navigation", () => ({ notFound: mocks.notFound }));
 vi.mock("@cpg/core", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@cpg/core")>()),
-  requestScope: async () => ({ cradle: { auditService: { listGlobal: mocks.listGlobal } } }),
+  requestScope: async () => ({ cradle: { auditService: { listGlobal: mocks.listGlobal }, userService: { usernames: mocks.usernames } } }),
 }));
 vi.mock("../../../../auth/require-admin", () => ({ requireUser: mocks.requireUser }));
 vi.mock("../../../../i18n/get-messages", () => ({ getMessages: mocks.getMessages }));
@@ -43,6 +44,7 @@ describe("GlobalAuditPage", () => {
   beforeEach(() => {
     mocks.requireUser.mockResolvedValue({ username: "alice", role: "user" });
     mocks.listGlobal.mockResolvedValue({ entries: [entry], nextBefore: CURSOR });
+    mocks.usernames.mockResolvedValue(["admin", "alice"]);
     mocks.getMessages.mockResolvedValue({ locale: "en", messages: en });
   });
   afterEach(() => vi.clearAllMocks());
@@ -68,6 +70,18 @@ describe("GlobalAuditPage", () => {
 
     expect(mocks.listGlobal).toHaveBeenCalledWith({ before: CURSOR, limit: 50 });
     expect(screen.getByRole("link", { name: "← Newest entries" }).getAttribute("href")).toBe("/admin/audit");
+  });
+
+  it("filters by the URL's query, offering Global record types and every account, and keeps the filters on paging", async () => {
+    render(await resolveServerComponents(page({ subjectType: "User", subjectId: "u-2", channel: "ui" })));
+
+    expect(mocks.listGlobal).toHaveBeenCalledWith({ limit: 50, subjectType: "User", subjectId: "u-2", channel: "ui" });
+    expect((screen.getByLabelText("Record type") as HTMLSelectElement).value).toBe("User");
+    expect(Array.from((screen.getByLabelText("Record type") as HTMLSelectElement).options).map(({ text }) => text)).toEqual(["All", "User", "API token", "Tenant"]);
+    expect(Array.from((screen.getByLabelText("Account") as HTMLSelectElement).options).map(({ text }) => text)).toEqual(["All", "admin", "alice"]);
+    expect(screen.getByText("Showing entries that match the filters.")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Older entries →" }).getAttribute("href")).toBe(`/admin/audit?subjectType=User&subjectId=u-2&channel=ui&before=${CURSOR}`);
+    expect(screen.getByRole("link", { name: "History of alice" }).getAttribute("href")).toBe("/admin/audit?subjectType=User&subjectId=u-2");
   });
 
   it("renders not-found for a page that doesn't exist", async () => {
