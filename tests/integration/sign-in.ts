@@ -4,8 +4,9 @@ import type { Browser } from "./browser";
 export async function signIn(browser: Browser, baseUrl: string, password: string, username = "admin") {
   await browser.open(`${baseUrl}/login`);
   await browser.waitFor("#username");
-  // The login form may still be static HTML; an early submit can be lost before hydration.
-  await browser.waitUntil(hydrated('document.querySelector("#username")'));
+  // The login form may still be static HTML; an early submit can be lost before hydration. And the
+  // card must have stopped moving: agent-browser clicks the button where it measured it.
+  await browser.waitUntil(`${hydrated('document.querySelector("#username")')} && ${signedOutLayoutSettled}`);
   await browser.fill("#username", username);
   await browser.fill("#password", password);
   await browser.click("button[type=submit]");
@@ -22,6 +23,16 @@ const SIGNED_IN = "[data-signed-in-as]";
 const signedInMarker = `document.querySelector(${JSON.stringify(SIGNED_IN)})`;
 /** True once React has hydrated an element, so a click on it isn't lost. */
 export const hydrated = (element: string) => `Object.keys(${element} ?? {}).some((key) => key.startsWith("__reactFiber"))`;
+
+const visitorBar = `document.querySelector("[data-visitor-bar]")`;
+/**
+ * A page condition: a signed-out page's layout is final. Until the visitor bar streams in over the
+ * sidebar skeleton (out of Next.js's hidden staging container), the page keeps the skeleton's column,
+ * and the swap moves the sign-in card (128 px left and 24 px down at 1280 px). Under load React reveals it after
+ * `load` and even after hydration, so a click measured before it lands on the form, not the button,
+ * and nothing is submitted (#128). Web fonts swapping in can move the card the same way.
+ */
+export const signedOutLayoutSettled = `!!${visitorBar} && !${visitorBar}.closest("[hidden]") && document.fonts.status === "loaded"`;
 
 /**
  * A page condition: the sidebar has streamed in (outside Next.js's hidden staging container) and names
