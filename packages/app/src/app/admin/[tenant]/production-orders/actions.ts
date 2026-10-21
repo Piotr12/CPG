@@ -1,7 +1,7 @@
 "use server";
 
-import { assertSignedIn, tenantServerAction, uiActor, type CompletionResult, type ProductionOrderDetail, type Result } from "@cpg/core";
-import { productionCompletionActionSchema } from "@cpg/core/validators/production-orders/production-completion.schema";
+import { assertSignedIn, tenantServerAction, uiActor, type CompletionResult, type CompletionReversalResult, type ProductionOrderDetail, type Result } from "@cpg/core";
+import { productionCompletionActionSchema, productionCompletionReversalActionSchema } from "@cpg/core/validators/production-orders/production-completion.schema";
 import { productionOrderCreateSchema, productionOrderUpdateActionSchema } from "@cpg/core/validators/production-orders/production-order.schema";
 import { documentLifecycleSchema } from "@cpg/core/validators/document-lifecycle/lifecycle.schema";
 import { currentUser } from "../../../../auth/require-admin";
@@ -31,6 +31,18 @@ export async function postProductionCompletion(tenant: string, generation: numbe
   const result = await tenantServerAction(productionCompletionActionSchema, ({ order, submission, ...input }, { cradle }) =>
     cradle.productionCompletionService.post(order, input, uiActor(assertSignedIn(user)), { submission }),
   )(tenant, generation, { ...formValues(values), order: orderId, submission });
+  return refreshAfterWrite(result, `/admin/${tenant}/production-orders`, `/admin/${tenant}/production-orders/${orderId}`, `/admin/${tenant}/stock`);
+}
+
+/**
+ * Reverses one whole completion (E11-S03). The order and completion are bound when the dialog opens; a
+ * repeated submit meets the once-only refusal. Refreshes the order, the list and stock.
+ */
+export async function reverseProductionCompletion(tenant: string, generation: number, orderId: string, completionId: string, values: unknown): Promise<Result<CompletionReversalResult>> {
+  const user = await currentUser();
+  const result = await tenantServerAction(productionCompletionReversalActionSchema, ({ order, completion, ...input }, { cradle }) =>
+    cradle.productionCompletionService.reverse(order, completion, input, uiActor(assertSignedIn(user))),
+  )(tenant, generation, { ...formValues(values), order: orderId, completion: completionId });
   return refreshAfterWrite(result, `/admin/${tenant}/production-orders`, `/admin/${tenant}/production-orders/${orderId}`, `/admin/${tenant}/stock`);
 }
 

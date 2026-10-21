@@ -6,6 +6,7 @@ import { unitSchema } from "../materials/material-fields.schema";
 import { materialReferenceSchema } from "../planning-parameters/planning-parameter-fields.schema";
 import { QUANTITY_MESSAGE } from "../quantities/quantity.schema";
 import { pageSchema } from "../shipments/shipment.schema";
+import { stockReversalSchema } from "../stock/stock-reversal.schema";
 
 /** The English messages; screens translate them by matching these constants. */
 export const COMPLETION_LINE_COUNT_MESSAGE = `Enter at least 1 and at most ${BOM_COMPONENTS_MAX} materials used.`;
@@ -81,6 +82,12 @@ export type ProductionCompletionInput = z.infer<typeof productionCompletionCreat
 export const productionCompletionActionSchema = productionCompletionCreateSchema.extend({
   order: businessIdSchema,
   submission: z.uuid(),
+});
+
+/** The Reverse completion dialog's action: the reason, plus the order and completion bound when the dialog opens (E11-S03). */
+export const productionCompletionReversalActionSchema = stockReversalSchema.extend({
+  order: businessIdSchema,
+  completion: businessIdSchema,
 });
 
 /** `GET …/completions/preview?quantity=&unit=`: what a completion of this output expects. */

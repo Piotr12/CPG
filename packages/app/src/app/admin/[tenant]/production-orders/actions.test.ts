@@ -1,8 +1,8 @@
 import { ConflictError } from "@cpg/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { productionInput as input } from "../../../../../../../tests/setup/production-orders";
-import { createProductionOrder, postProductionCompletion, updateProductionOrder } from "./actions";
-const mocks = vi.hoisted(() => ({ service: { create: vi.fn(), update: vi.fn(), options: vi.fn() }, completions: { post: vi.fn() }, currentUser: vi.fn(), bound: vi.fn(), tenantScope: vi.fn(), revalidatePath: vi.fn() }));
+import { createProductionOrder, postProductionCompletion, reverseProductionCompletion, updateProductionOrder } from "./actions";
+const mocks = vi.hoisted(() => ({ service: { create: vi.fn(), update: vi.fn(), options: vi.fn() }, completions: { post: vi.fn(), reverse: vi.fn() }, currentUser: vi.fn(), bound: vi.fn(), tenantScope: vi.fn(), revalidatePath: vi.fn() }));
 vi.mock("@cpg/core", async (original) => {
   const core = await original<typeof import("@cpg/core")>();
   return { ...core, tenantScope: mocks.tenantScope, tenantServerAction: (schema: Parameters<typeof core.serverAction>[0], handler: (input: unknown, scope: unknown) => Promise<unknown>) =>
@@ -68,6 +68,23 @@ describe("production order actions", () => {
     expect(mocks.completions.post).not.toHaveBeenCalled();
     mocks.completions.post.mockRejectedValueOnce(new ConflictError("short", "INSUFFICIENT_STOCK"));
     expect(await postProductionCompletion("test", 1, "00000001", submission, { quantity: "1", unit: "each", components: [{ material: "00000002", quantity: "1", unit: "kg" }] })).toMatchObject({ error: { code: "INSUFFICIENT_STOCK" } });
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+  it("reverses the bound completion with the UI actor and refreshes order, list and stock", async () => {
+    mocks.completions.reverse.mockResolvedValue({ completion: { id: "00000002" } });
+    expect(await reverseProductionCompletion("test", 7, "00000001", "00000002", { reason: " Entered twice ", order: "00000099", completion: "00000099" })).toEqual({ ok: true, data: { completion: { id: "00000002" } } });
+    expect(mocks.bound).toHaveBeenCalledWith("test", 7);
+    expect(mocks.completions.reverse).toHaveBeenCalledWith("00000001", "00000002", { reason: "Entered twice" }, expect.objectContaining({ channel: "ui", sessionId: "s1" }));
+    expect(mocks.revalidatePath.mock.calls).toEqual([["/admin/test/production-orders"], ["/admin/test/production-orders/00000001"], ["/admin/test/stock"]]);
+  });
+  it("refuses a blank reason or a signed-out user without reversing, and keeps the page on a refusal", async () => {
+    expect(await reverseProductionCompletion("test", 1, "00000001", "00000002", { reason: " " })).toMatchObject({ error: { code: "VALIDATION_FAILED" } });
+    mocks.currentUser.mockResolvedValue(null);
+    expect(await reverseProductionCompletion("test", 1, "00000001", "00000002", { reason: "Twice" })).toMatchObject({ error: { code: "UNAUTHORIZED" } });
+    expect(mocks.completions.reverse).not.toHaveBeenCalled();
+    mocks.currentUser.mockResolvedValue({ userId: "u1", username: "alice", role: "user", sessionId: "s1" });
+    mocks.completions.reverse.mockRejectedValueOnce(new ConflictError("short", "INSUFFICIENT_STOCK"));
+    expect(await reverseProductionCompletion("test", 1, "00000001", "00000002", { reason: "Twice" })).toMatchObject({ error: { code: "INSUFFICIENT_STOCK" } });
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 });
