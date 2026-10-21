@@ -1,6 +1,6 @@
 # Production completions — execution plan
 
-Source doc: .ai/specs/2026-10-20--2221UTC-production-completions.md
+Source doc: .ai/specs/implemented/2026-10-20--2221UTC-production-completions.md
 Issue: #89
 Spec PR: #117
 Engine: om-auto-create-pr (steps: 10, --loop: no)

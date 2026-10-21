@@ -25,7 +25,7 @@ const ready = (element: string) =>
 const button = (name: string) => `[...document.querySelectorAll("main button")].find((b) => b.textContent.trim().startsWith(${JSON.stringify(name)}))`;
 const FILE_INPUT = `document.querySelector("main input[type=file]")`;
 
-// The Stock import screen (spec .ai/specs/2026-10-20--2225UTC-stock-import.md), used by a normal user
+// The Stock import screen (spec .ai/specs/implemented/2026-10-20--2225UTC-stock-import.md), used by a normal user
 // in Prod (STX-018), on this file's own materials and locations.
 describe("the Stock import screen", () => {
   const dir = mkdtempSync(path.join(tmpdir(), "cpg-stock-import-ui-"));
