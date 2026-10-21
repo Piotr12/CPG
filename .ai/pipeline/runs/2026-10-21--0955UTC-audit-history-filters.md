@@ -45,11 +45,11 @@ A user can trace one record's history in the tenant and Global audit. Both audit
 
 ### Phase 1: Query and API
 
-- [ ] 1.1 Record index migration
-- [ ] 1.2 Audit list schema filters
-- [ ] 1.3 Service filters
-- [ ] 1.4 Reversal links and usernames
-- [ ] 1.5 Route tests and compatibility notes
+- [x] 1.1 Record index migration — a13e20a
+- [x] 1.2 Audit list schema filters — 7f37a56
+- [x] 1.3 Service filters — 1025004
+- [x] 1.4 Reversal links and usernames — 1025004
+- [x] 1.5 Route tests and compatibility notes — 5aeb05c
 
 ### Phase 2: Screens
 
