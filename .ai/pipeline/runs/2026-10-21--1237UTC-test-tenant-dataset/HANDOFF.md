@@ -1,16 +1,16 @@
 # Handoff — 2026-10-21--1237UTC-test-tenant-dataset
 
-**Last updated:** 2026-10-21T13:21:12Z
+**Last updated:** 2026-10-21T13:29:35Z
 **Branch:** feat/test-tenant-dataset
 **PR:** https://github.com/Piotr12/CPG/pull/136 (draft, claimed)
-**Current phase/step:** Phase 2 Step 2.8
-**Last commit:** 60103f6 — feat(goods-receipts): add a dated, unaudited seed path
+**Current phase/step:** Phase 3 Step 3.1
+**Last commit:** 3aed882 — feat(seed): master seeds take generated rows and a creation date
 
 ## What just happened
-- Groups B and C (Steps 2.1–2.7) landed: seed posting date and the sales/purchasing seed paths; checkpoint 2 green (full test:coverage 100 %).
+- Phase 2 closed (Steps 2.1–2.11); checkpoint 3 green (full test:coverage 100 %, 3,253 tests).
 
 ## Next concrete action
-- Dispatch group D (Steps 2.8–2.9: production-order and completion seed paths).
+- Step 3.1 inline: \`seedTestTenantDataset\` + \`isUntouchedTest\` in \`core/src/services/demo/seed-demo-data.ts\`.
 
 ## Blockers / open questions
 - none

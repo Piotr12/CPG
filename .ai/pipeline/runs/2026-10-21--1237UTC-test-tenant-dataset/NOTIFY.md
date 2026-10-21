@@ -23,3 +23,6 @@
 ## 2026-10-21T13:21:12Z — checkpoint 2 (Steps 2.1..2.7)
 - Groups B and C (tier standard → sonnet) landed 0ff1db5..60103f6; full gate subset green: typecheck, lint, test:coverage 100 % (3,240 tests).
 - 2.2's commit alone left the reset test red (fixed in 2.4); recorded, not rewritten.
+
+## 2026-10-21T13:29:35Z — checkpoint 3 (Steps 2.8..2.11, Phase 2 closed)
+- Groups D (standard → sonnet) and E (cheap → haiku) landed 002997f..3aed882; typecheck, lint, test:coverage 100 % (3,253 tests).
