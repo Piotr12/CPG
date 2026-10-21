@@ -89,8 +89,13 @@ export class StockService {
     return this.em.transactional((em) => postStockMovements(em, input, source, { kind: "user", actor }));
   }
 
-  /** Installation openings use the same ledger/balance primitive with explicit non-user provenance. */
-  async seedDemo(): Promise<number> {
+  /** The generated dataset's opening balances: one correction group posted as the seed at `at`, unaudited and unguarded. */
+  async seedDemo(lines: readonly { material: string; location: string; quantity: string; unit: string }[], at: Date): Promise<StockMovementView[]> {
+    return this.em.transactional((em) => postStockMovements(em, { lines: [...lines], reason: "Demonstration opening balance" }, { type: CORRECTION_MOVEMENT, id: randomUUID() }, { kind: "seed", at }));
+  }
+
+  /** Installation openings (the fixture path, until the generated dataset replaces it): the same primitive with explicit non-user provenance. */
+  async seedFixtures(): Promise<number> {
     return this.em.transactional(async (em) => {
       if (!(await isUntouchedKind(em, await em.count(StockMovement, {}), "stock"))) return 0;
       const references = await activeDemoReferences(em, DEMO_STOCK);

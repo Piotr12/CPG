@@ -28,7 +28,7 @@
 | 2 | 2.7 | Goods-receipt seed path | group:C | done | 60103f6 |
 | 2 | 2.8 | Production-order seed path | group:D | done | b19348a |
 | 2 | 2.9 | Production-completion seed path | group:D | done | 30b58f7 |
-| 2 | 2.10 | Stock opening seed takes rows and a date | group:E:cheap | todo | — |
+| 2 | 2.10 | Stock opening seed takes rows and a date | group:E:cheap | done | 8fa431b |
 | 2 | 2.11 | Master seeds take generated rows | group:E:cheap | todo | — |
 | 3 | 3.1 | Timeline seeder and untouched-Test check | inline | todo | — |
 | 3 | 3.2 | Seed timing spike | inline | todo | — |
