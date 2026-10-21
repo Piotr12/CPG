@@ -49,6 +49,10 @@ Declined with reason:
 - `npm run build` → exit 0.
 - Integration, against the standalone production build (Docker storage is full: `no space left on device`): `production-transfer-reversals` (4 tests), and `smoke`, `transfers`, `transfers-api`, `production-completions`, `document-lifecycle`, `stock-reversals` (37 tests). All passed.
 
+## Late base merge (after spec PR #131 merged)
+- Merged `origin/main`, which brought `audit_record_index` (#96). Resolved the migration-index and migration-test conflicts in timestamp order (audit index, then transfer reversals); migrations total 29. Carried the implementation notes over and moved the spec to `.ai/specs/implemented/`, with `../assets` links.
+- Re-ran the gate: typecheck 0, lint 0, 3,100 unit tests at 100 %, build 0. Smoke and the reversal journey (7 integration tests) pass against a fresh standalone build.
+
 ## Risks
 - Risk-high: a migration plus multi-leg stock and transit writes. Mitigations: rollback-after-flush tests, two-connection race tests, and populated-upgrade migration tests.
 - Docker storage on this machine is full (`no space left on device`), so local integration runs may need the standalone-server fallback from the lessons. CI remains the gate.
