@@ -1,6 +1,6 @@
 # Production completion and transfer posting reversals
 
-**Status:** ready
+**Status:** in progress
 **Created:** 2026-10-21 09:46 UTC
 **Issue:** #92 (E11-S03)
 
@@ -242,3 +242,25 @@ A fresh-context architectural review checked the design against the code. It con
 - (Low) Merged ledger truncation.
 
 The review did not execute any implementation.
+
+## Implementation notes
+
+Implemented on [PR #133](https://github.com/Piotr12/CPG/pull/133). This design PR stays documentation-only. Deviations and refinements, all within the design above:
+- **Audit keys.** The completion reversal audit names its pairs `movementNOriginal` / `movementNInverse` rather than `lineN…`, because position 1 is the output movement and not a completion line.
+- **Dialog effect.** The completion dialog states the order effect as "produced X drops by Y" plus the state rule, instead of computed before→after values, so the app does no decimal arithmetic.
+- **Stale duplicate.** On `…_ALREADY_REVERSED`, the dialog links back to the page, where the history or ledger shows the existing reversal.
+- **Accessible names.** Every Reverse trigger has a distinct accessible name ("Reverse completion 00000002", "Reverse the receipt of 2027-03-02").
+- **Terminal transfers.** Reversal is offered on Completed and Closed Early transfers too, since that is how such a transfer reopens; only a read-only tenant hides it.
+- **Server action location.** The completion server action lives in the existing `admin/[tenant]/production-orders/actions.ts`.
+- **Audit labels.** The three new audit actions have EN/PL audit labels.
+
+Verification on the implementation head:
+- lint 0 errors, typecheck 0;
+- 3,010 unit tests, 100 % on every measure;
+- build passes;
+- 41 integration tests across 7 touched files pass against the standalone production build (Docker storage was full locally); full CI is tracked on #133;
+- an independent fresh-context review found no blockers or majors, and its minors are fixed;
+- six real-browser screenshots, including 360 px, are on #133.
+
+Manual QA (`needs-qa`) and human approval remain merge gates.
+
