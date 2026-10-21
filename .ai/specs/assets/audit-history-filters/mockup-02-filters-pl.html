@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Mockup — Audyt z filtrami (PL)</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; color: #111; background: #fff; display: flex; min-height: 100vh; }
+  aside { width: 256px; border-right: 1px solid #e5e5e5; background: #fafafa; padding: 14px 12px; flex: none; }
+  aside .brand { font-weight: 600; font-size: 17px; margin-bottom: 14px; }
+  aside .tenants { display: flex; border: 1px solid #e5e5e5; border-radius: 8px; overflow: hidden; margin-bottom: 18px; }
+  aside .tenants span { flex: 1; text-align: center; padding: 6px; font-size: 12px; font-weight: 600; letter-spacing: .08em; color: #666; }
+  aside .tenants .on { background: #fde68a; color: #111; }
+  aside .item { padding: 6px 8px; color: #333; }
+  aside .item.active { background: #efefef; border-radius: 6px; }
+  .page { flex: 1; min-width: 0; }
+  .crumb { height: 44px; border-bottom: 1px solid #e5e5e5; border-top: 3px solid #f59e0b; display: flex; align-items: center; gap: 10px; padding: 0 24px; font-size: 14px; }
+  .tag { background: #fde68a; font-size: 12px; font-weight: 700; letter-spacing: .08em; padding: 2px 8px; border-radius: 4px; }
+  main { max-width: 1024px; margin: 0 auto; padding: 40px 24px; display: flex; flex-direction: column; gap: 20px; }
+  h1 { font-size: 24px; margin: 0; font-weight: 600; letter-spacing: -.01em; }
+  .head { display: flex; justify-content: space-between; align-items: center; }
+  a { color: #111; text-decoration: underline; text-underline-offset: 4px; }
+  .muted { color: #6b6b6b; }
+  form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 16px; align-items: end; border: 1px solid #e5e5e5; border-radius: 10px; padding: 16px; }
+  label { display: grid; gap: 6px; font-size: 13px; font-weight: 500; }
+  input, select { font: inherit; height: 36px; border: 1px solid #d4d4d4; border-radius: 8px; padding: 0 10px; background: #fff; width: 100%; }
+  .actions { display: flex; gap: 14px; align-items: center; }
+  button { font: inherit; font-weight: 500; height: 36px; padding: 0 16px; border-radius: 8px; border: 0; background: #171717; color: #fff; }
+  .hint { font-size: 12px; color: #6b6b6b; font-weight: 400; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-weight: 500; padding: 10px 8px; border-bottom: 1px solid #e5e5e5; white-space: nowrap; }
+  td { padding: 10px 8px; border-bottom: 1px solid #eee; vertical-align: top; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  .badge { display: inline-block; background: #f1f1f1; border-radius: 6px; padding: 1px 8px; font-size: 12px; font-weight: 500; }
+  .bd { display: block; margin-top: 4px; font-size: 12px; color: #6b6b6b; white-space: nowrap; }
+  .bd b { color: #111; font-weight: 500; }
+  ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+  .subject a { overflow-wrap: anywhere; }
+  .link { margin-top: 6px; font-size: 13px; font-weight: 500; }
+</style>
+</head>
+<body>
+<aside>
+  <div class="brand">🦣 CPG</div>
+  <div class="tenants"><span class="on">TEST</span><span>PROD</span></div>
+  <div class="item">Przegląd</div><div class="item">Dane podstawowe</div><div class="item">Sprzedaż</div><div class="item">Zapasy</div><div class="item">Transakcje</div><div class="item active">Audyt</div><div class="item">Audyt globalny</div><div class="item">Pomoc</div>
+</aside>
+<div class="page">
+  <div class="crumb"><span class="tag">TEST</span> › Audyt</div>
+  <main>
+    <div class="head"><h1>Audyt — Test</h1><a href="#">Test</a></div>
+    <div class="muted">Pokazano wpisy pasujące do filtrów. Nikt nie może edytować ani usuwać wpisów. <a href="#">Otwórz audyt globalny</a></div>
+    <form>
+      <label>Rodzaj rekordu<select><option>Wszystkie</option></select></label>
+      <label>ID rekordu<input value=""><span class="hint">Ustawiane przez link w kolumnie Obiekt lub wpisz ID, np. 00000012</span></label>
+      <label>Konto<select><option>admin</option></select></label>
+      <label>Kanał<select><option>UI</option></select></label>
+      <label>Od (UTC)<input value="2026-10-21"></label>
+      <label>Do (UTC)<input value="2026-10-21"></label>
+      <div class="actions"><button type="button">Zastosuj</button><a href="#">Wyczyść filtry</a></div>
+    </form>
+    <table>
+      <thead><tr><th>Czas (UTC)</th><th>Konto</th><th>Sesja</th><th>Kanał</th><th>Akcja</th><th>Obiekt</th><th>Zmiany</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="mono">2026-10-21 09:52:10</span></td>
+          <td>admin</td><td class="mono">d6af4ecb</td><td><span class="badge">UI</span></td>
+          <td>Zmieniono zamówienie zakupu</td>
+          <td class="subject"><a href="#">00000003 — 00000001 Huta Stali Sp. z o.o.</a></td>
+          <td><ul><li>planowana data: 2026-11-04 → 2026-11-06</li></ul></td>
+        </tr>
+        <tr>
+          <td><span class="mono">2026-10-21 09:48:59</span><span class="bd">Data księgowania <b>2026-10-21</b></span></td>
+          <td>admin</td><td class="mono">d6af4ecb</td><td><span class="badge">UI</span></td>
+          <td>Odwrócono ruch magazynowy</td>
+          <td class="subject"><a href="#">00000001 — Steel sheet 2 mm at 00000001 — Main plant, Wrocław</a></td>
+          <td><ul><li>odwrócony: nie → tak</li><li>powód: Counted the wrong bin</li></ul>
+            <div class="link">Odwrócony przez <a href="#" class="mono">264846a6</a></div></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="muted">Etykiety, rodzaje rekordów i nazwy akcji są przetłumaczone; zapisane wartości (ID, nazwy, powody, daty) pokazano tak, jak je zapisano. Makieta poglądowa.</div>
+  </main>
+</div>
+</body>
+</html>
