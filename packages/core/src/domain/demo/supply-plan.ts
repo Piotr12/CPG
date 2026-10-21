@@ -127,6 +127,16 @@ export function roundUpToMultiple(quantity: bigint, multiple: bigint): bigint {
   return ((quantity + multiple - 1n) / multiple) * multiple;
 }
 
+/** The larger of two quantities. */
+export function largerOf(a: bigint, b: bigint): bigint {
+  return a > b ? a : b;
+}
+
+/** The smaller of two quantities. */
+export function smallerOf(a: bigint, b: bigint): bigint {
+  return a < b ? a : b;
+}
+
 /** The lot that covers `need`: nothing when nothing is needed, else the need rounded up to the multiple and at least the minimum. */
 export function lotFor(need: bigint, minimum: bigint, multiple: bigint): bigint {
   if (need <= 0n) return 0n;
@@ -156,6 +166,11 @@ export function recipeOf(config: TestTenantConfig, output: string): { bom: strin
 /** What `output` base units of a recipe's output need of a component: rounded up once, as the services expect it (BOM-007). */
 function requirement(perOutput: bigint, output: bigint): bigint {
   return scaledRequirement(formatDecimal(perOutput), formatDecimal(output));
+}
+
+/** What a completion of `quantity` of `output` is expected to use of each priority-1 recipe component (PRD-010). */
+export function expectedUse(config: TestTenantConfig, output: string, quantity: bigint): UsedComponent[] {
+  return recipeOf(config, output).components.map(({ material, perOutput }) => ({ material, base: requirement(perOutput, quantity) }));
 }
 
 /**
@@ -374,7 +389,7 @@ export function planSupply(config: TestTenantConfig, demand: DemandPlan, anchor:
       for (const { material, base } of components) used.set(pairKey(material, location), (used.get(pairKey(material, location)) ?? 0n) + base);
     };
     for (const order of monthOrders) {
-      const expected = recipeOf(config, order.output).components.map(({ material, perOutput }) => ({ material, base: requirement(perOutput, order.quantity) }));
+      const expected = expectedUse(config, order.output, order.quantity);
       let components = expected;
       if (expected.some(({ material }) => isVariable(config, material))) {
         const sequence = (eligibleCompletions.get(order.location) ?? 0) + 1;

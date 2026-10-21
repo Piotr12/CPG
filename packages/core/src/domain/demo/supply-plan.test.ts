@@ -3,7 +3,7 @@ import { scaledRequirement } from "../production-orders/production-planning";
 import { formatDecimal, ONE } from "../quantities/decimal";
 import { addWeekdays, monthOf, monthStart, nthWeekday, weekdaysOf } from "./calendar";
 import { planDemand } from "./demand-plan";
-import { lotFor, pairKey, planningPairs, planSupply, recipeOf, roundUpToMultiple, toBase, varied, type SupplyPlan } from "./supply-plan";
+import { largerOf, lotFor, pairKey, smallerOf, planningPairs, planSupply, recipeOf, roundUpToMultiple, toBase, varied, type SupplyPlan } from "./supply-plan";
 import { byId, TEST_TENANT_CONFIG, type TestTenantConfig } from "./test-tenant-config.schema";
 
 const config = TEST_TENANT_CONFIG;
@@ -31,6 +31,10 @@ describe("lot rounding", () => {
     expect(lotFor(501n * ONE, 500n * ONE, 100n * ONE)).toBe(600n * ONE);
     expect(lotFor(0n, 500n * ONE, 100n * ONE)).toBe(0n);
     expect(lotFor(-3n * ONE, 500n * ONE, 100n * ONE)).toBe(0n);
+  });
+
+  it("picks the larger or smaller of two quantities", () => {
+    expect([largerOf(ONE, 2n * ONE), largerOf(2n * ONE, ONE), smallerOf(ONE, 2n * ONE), smallerOf(2n * ONE, ONE)]).toEqual([2n * ONE, 2n * ONE, ONE, ONE]);
   });
 
   it("converts entered recipe quantities to base units as the services do (MAT-019)", () => {
