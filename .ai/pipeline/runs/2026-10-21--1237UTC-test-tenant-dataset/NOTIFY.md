@@ -26,3 +26,9 @@
 
 ## 2026-10-21T13:29:35Z — checkpoint 3 (Steps 2.8..2.11, Phase 2 closed)
 - Groups D (standard → sonnet) and E (cheap → haiku) landed 002997f..3aed882; typecheck, lint, test:coverage 100 % (3,253 tests).
+
+## 2026-10-21T13:35:12Z — Step 3.2 seed timing spike
+- Full committed configuration, today 2026-10-21: 26 materials, 4 locations, 10 customers, 6 suppliers, 48 planning parameter sets, 50 safety-stock targets, 16 BOMs, 120 forecasts, 4 openings, 589 customer orders, 640 shipments, 630 goods issues, 5 requisitions, 466 purchase orders, 450 receipts, 390 production orders, 379 completions (3,748 movements).
+- In one transaction (`inRequestTransaction`, as startup and the reset will run it) against a fresh SQLite file, Node in-process on the dev Mac (Apple silicon): **8.7 s** and **8.1 s** (two runs). Without an outer transaction (each document its own commit): 8.7 s.
+- Within the 15 s budget locally. The production image on the CI runner is measured at Step 4.5 (startup and reset); if it misses, the first lever is fewer queries per document on the seed path.
+- Deviation (planned): the spike ran on the real seeder (Step 3.1) rather than a throwaway one.
