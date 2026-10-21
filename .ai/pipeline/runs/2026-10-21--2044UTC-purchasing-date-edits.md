@@ -77,8 +77,8 @@ The spec ships on design PR #157 (`spec/purchasing-date-edits`), which is not me
 
 ### Phase 3: Screens and help
 
-- [ ] 3.1 Wire the dialog into RequisitionsTable and OrderScreen
-- [ ] 3.2 Help topics EN/PL
+- [x] 3.1 Wire the dialog into RequisitionsTable and OrderScreen — 1ac0957
+- [x] 3.2 Help topics EN/PL — 4816a66
 
 ### Phase 4: Integration and docs
 
