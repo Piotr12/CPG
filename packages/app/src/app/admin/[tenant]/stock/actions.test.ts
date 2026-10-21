@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ConflictError } from "@cpg/core";
-import { postStockCorrection } from "./actions";
-const mocks = vi.hoisted(() => ({ correct: vi.fn(), currentUser: vi.fn(), bound: vi.fn(), revalidatePath: vi.fn() }));
+import { postStockCorrection, reverseStockMovement } from "./actions";
+const mocks = vi.hoisted(() => ({ reverse: vi.fn(), correct: vi.fn(), currentUser: vi.fn(), bound: vi.fn(), revalidatePath: vi.fn() }));
 vi.mock("@cpg/core", async (original) => {
   const core = await original<typeof import("@cpg/core")>();
   return { ...core, tenantServerAction: (schema: Parameters<typeof core.serverAction>[0], handler: (input: unknown, scope: unknown) => Promise<unknown>) => (tenant: string, generation: number, raw: unknown) => {
-    mocks.bound(tenant, generation); return core.serverAction(schema, (input) => handler(input, { cradle: { stockService: { correct: mocks.correct } } }))(raw);
+    mocks.bound(tenant, generation); return core.serverAction(schema, (input) => handler(input, { cradle: { stockReversalService: { reverse: mocks.reverse }, stockService: { correct: mocks.correct } } }))(raw);
   } };
 });
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
@@ -30,4 +30,19 @@ describe("stock correction action", () => {
     expect(await postStockCorrection("prod", 1, pair, values)).toMatchObject({ error: { code: "TENANT_READ_ONLY" } });
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
+});
+
+it("binds the original UUID and generation, requires a session and strict reason, and refreshes only a successful reversal", async () => {
+  const id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  mocks.currentUser.mockResolvedValue({ userId: "u", username: "alice", sessionId: "s", role: "user" }); mocks.reverse.mockResolvedValue({ original: id, movement: {} });
+  expect(await reverseStockMovement("test", 3, id, { reason: " Duplicate ", movementId: "forged" })).toMatchObject({ ok: true, data: { original: id } });
+  expect(mocks.reverse).toHaveBeenCalledWith(id, { reason: "Duplicate" }, { userId: "u", username: "alice", sessionId: "s", channel: "ui", token: null });
+  expect(mocks.bound).toHaveBeenCalledWith("test", 3); expect(mocks.revalidatePath).toHaveBeenCalledTimes(4); mocks.revalidatePath.mockClear();
+  mocks.currentUser.mockResolvedValue(null);
+  expect(await reverseStockMovement("test", 3, id, { reason: "Duplicate" })).toMatchObject({ error: { code: "UNAUTHORIZED" } });
+  mocks.currentUser.mockResolvedValue({ userId: "u", username: "alice", sessionId: "s", role: "admin" });
+  expect(await reverseStockMovement("test", 3, id, { reason: "Duplicate", quantity: "1" })).toMatchObject({ error: { code: "VALIDATION_FAILED" } });
+  mocks.reverse.mockRejectedValue(new ConflictError("Read-only", "TENANT_READ_ONLY"));
+  expect(await reverseStockMovement("test", 3, id, { reason: "Duplicate" })).toMatchObject({ error: { code: "TENANT_READ_ONLY" } });
+  expect(mocks.revalidatePath).not.toHaveBeenCalled();
 });

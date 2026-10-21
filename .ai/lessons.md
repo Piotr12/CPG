@@ -173,3 +173,11 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 - **2026-10-20 — A closed dialog can remain in an inactive Next page** — After create-and-navigate, React/Next retained a closed portal with display:none. Wait for no open/visible dialogs and overlays, and scope subsequent interaction to data-state=open; DOM presence alone is not evidence that a dialog is still open.
 
 - **2026-10-20 — Compare development prefetch Insights against the baseline** — The current Next version reports URL-data Insights even on the existing customer-order Suspense pattern. Before changing route semantics to silence one, reproduce on an unchanged route and check the production build/browser; reordering URL reads merely moved this diagnostic into shared preferences.
+
+- **2026-10-21 — Reversals do not erase posting history** — Derive customer-order identity locks from immutable goods-issue references, not only the current fulfilled counter. A full reversal can return progress to zero while the original customer, location and posted line identity must remain protected.
+
+- **2026-10-21 — Bound managed entities as well as SQL pages** — Reversal recalculation paged sibling shipments but retained every previous batch, making later flushes revisit all history. Flush and clear completed batches in the same transaction, keep only primitive cursor/source IDs, index the tenant/order cursor, and test a failure after an earlier batch flushed.
+
+- **2026-10-21 — Update existing browser assertions when row actions change** — Adding reversal buttons changed the full text of existing receipt and issue cells. Search and update those integration assertions alongside the UI, then run the affected existing files as well as the new journey; otherwise the full CI suite finds the stale expectations late.
+
+- **2026-10-21 — Inspect the cold-load frame, not only settled pages** — Existing blank Suspense placeholders made the reversal screens appear empty during navigation. Reuse LoadingMessage on touched data pages and capture the initial streamed frame during QA.

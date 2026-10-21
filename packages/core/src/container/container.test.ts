@@ -1,3 +1,4 @@
+import { StockReversalService } from "../services/stock/stock-reversal.service";
 import { ProductionOrderService } from "../services/production-orders/production-order.service";
 import { ProductionCompletionService } from "../services/production-orders/production-completion.service";
 import { CustomerOrderService } from "../services/customer-orders/customer-order.service";
@@ -55,6 +56,7 @@ describe("createAppContainer", () => {
     expect(cradle.apiTokenService).toBeInstanceOf(ApiTokenService);
     expect(cradle.auditService).toBeInstanceOf(AuditService);
     expect(cradle.stockService).toBeInstanceOf(StockService);
+    expect(cradle.stockReversalService).toBeInstanceOf(StockReversalService);
     expect(cradle.materialService).toBeInstanceOf(MaterialService);
     expect(cradle.locationService).toBeInstanceOf(LocationService);
     expect(cradle.planningParameterService).toBeInstanceOf(PlanningParameterService);

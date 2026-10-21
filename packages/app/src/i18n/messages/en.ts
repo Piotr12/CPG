@@ -737,6 +737,7 @@ export const en = {
     },
   },
   customerOrders: {
+    postedHint: "Posted identity stays locked after reversal; the ordered quantity can still change.",
     pagination: "Customer order pages", page: "Page {page} of {pages}", previous: "Previous page", next: "Next page",
     link: "Customer orders", heading: "Customer orders — {tenant}", detailHeading: "Customer order {id}",
     intro: "Record customer demand at one location, with a required date on each line. Entering an order moves no stock.",
@@ -1471,6 +1472,11 @@ export const en = {
     channels: { ui: "UI", api: "API" },
     /** Keyed by the entry's action ID; an action missing here is shown as its ID. */
     actions: {
+      "stock.movement.reversed": "Stock movement reversed",
+      "purchase-orders.purchase-order.receipt-reversed": "Purchase order receipt reversed",
+      "customer-orders.customer-order.issue-reversed": "Customer order issue reversed",
+      "shipments.shipment.issue-reversed": "Shipment issue reversed",
+      "shipments.shipment.recalculated": "Shipment status recalculated",
       "production-orders.production-order.created": "Production order created",
       "production-orders.production-order.updated": "Production order changed",
       "production-orders.production-order.progressed": "Production order progressed",
@@ -1610,6 +1616,7 @@ export const en = {
   },
   /** The sidebar every signed-in page shares, and the visitor bar (components/layout). Test and Prod are tenant names, never translated. */
   stock: {
+    reversal: { open: "Reverse", title: "Reverse this movement?", description: "Post the full opposite quantity today. The original record remains unchanged. To correct a quantity, reverse it first, then post the correct amount.", original: "Original movement", inverse: "New inverse movement", stockRule: "Stock must remain nonnegative. If there is not enough stock, nothing is changed.", lineOnly: "Only this line is reversed: {source}. Other lines stay unchanged.", submit: "Reverse full quantity", pending: "Reversing…", reversed: "Reversed", viewInverse: "View reversal", viewOriginal: "View original", selected: "Selected movement", type: "Reversal", line: "Line {line}" },
     heading: "Stock — {tenant}", intro: "Physical stock is in the material's base unit. Corrections post today (UTC); stock cannot go below zero.",
     material: "Material", location: "Location", show: "Show stock", quantity: "Physical balance", ledger: "Stock movements", empty: "No movements for this material and location.",
     noMasters: "Create materials and locations before reading stock. Ask the administrator to add them.", inactive: "Inactive", unavailable: "New corrections require an active material and location in a writable tenant.",
@@ -1621,7 +1628,7 @@ export const en = {
     inTransitFrom: "In transit from here", inTransitTo: "In transit to here", transitNote: "Stock in transit belongs to its transfer: neither location can use it until it is received.", transfers: "Transfers",
     form: { open: "Post correction", title: "Post stock correction", description: "Enter a signed change: 5 adds five; -5 removes five. This records a permanent movement today.", quantity: "Signed quantity", quantityHint: "Use up to six decimals. Negative quantities remove stock.", unit: "Unit", reason: "Reason", submit: "Post", pending: "Posting…", cancel: "Cancel" },
     fieldErrors: { quantity: "Enter a nonzero signed quantity, with at most 12 integer digits and 6 decimals.", reason: "Enter a reason, up to 500 characters.", unit: "Choose a valid unit." },
-    errors: { QUANTITY_OUT_OF_RANGE: "That quantity or resulting balance is too large.", QUANTITY_ROUNDS_TO_ZERO: "That quantity rounds to zero in the base unit.", MATERIAL_INACTIVE: "This material is inactive. New corrections are blocked.", LOCATION_INACTIVE: "This location is inactive. New corrections are blocked.", UNIT_NOT_CONVERTIBLE: "The unit has no conversion to this material's base unit." },
+    errors: { STOCK_ALREADY_REVERSED: "This movement was already reversed. View its reversal before making another posting.", STOCK_REVERSAL_UNSUPPORTED: "This kind of posting cannot be reversed here.", STOCK_REVERSAL_INCONSISTENT: "The original posting does not match its document. Ask an administrator to check it.", STOCK_MOVEMENT_NOT_FOUND: "This movement is no longer available in this tenant.", QUANTITY_OUT_OF_RANGE: "That quantity or resulting balance is too large.", QUANTITY_ROUNDS_TO_ZERO: "That quantity rounds to zero in the base unit.", MATERIAL_INACTIVE: "This material is inactive. New corrections are blocked.", LOCATION_INACTIVE: "This location is inactive. New corrections are blocked.", UNIT_NOT_CONVERTIBLE: "The unit has no conversion to this material's base unit." },
   },
   /** The current stock report (E13-S01). */
   stockReport: {

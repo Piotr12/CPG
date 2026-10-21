@@ -12,6 +12,7 @@ import { PageLinks } from "../layout/page-links";
 import { ImportLink } from "../imports/import-link";
 import { CorrectionDialog } from "./correction-dialog";
 import { stockLabels } from "./labels";
+import { ReversalControls } from "./reversal-controls";
 
 /** The screen that lists each kind of source document: a receipt is on its order, an issue on its shipment, a completion on its production order. */
 const DOCUMENT_SECTIONS: Record<SourceDocument["type"], string> = { "purchase-order": "purchase-orders", shipment: "shipments", transfer: "transfers", "production-order": "production-orders" };
@@ -20,13 +21,14 @@ const DOCUMENT_SECTIONS: Record<SourceDocument["type"], string> = { "purchase-or
  * Physical balance and ledger of a selected pair, including inactive historical masters, with what is
  * in transit from and to the location shown apart: it belongs to its transfers, never to the pair (UX-017).
  */
-export function StockScreen({ tenant, view, materials, locations, units, locale, messages }: {
+export function StockScreen({ tenant, view, materials, locations, units, locale, messages, selected = null }: {
   tenant: { code: string; name: string; generation: number; readOnly: boolean }; view: StockView | null;
+  selected?: LedgerMovementView | null;
   materials: MaterialSummary[]; locations: NamedRecordView[]; units: string[]; locale: Locale; messages: Messages;
 }) {
   const t = stockLabels(messages);
   const path = `/admin/${tenant.code}`;
-  const types: Record<string, string> = { correction: t.correction, "goods-receipt": t.goodsReceipt, "transfer-dispatch": t.transferDispatch, "transfer-receipt": t.transferReceipt, "goods-issue": t.goodsIssue, "production-completion": t.productionCompletion };
+  const types: Record<string, string> = { reversal: t.reversal.type, correction: t.correction, "goods-receipt": t.goodsReceipt, "transfer-dispatch": t.transferDispatch, "transfer-receipt": t.transferReceipt, "goods-issue": t.goodsIssue, "production-completion": t.productionCompletion };
   const records: Record<string, string> = t.records;
   // A narrow screen scrolls the ledger sideways rather than squeezing a column to one character.
   const columns: DataTableColumn<LedgerMovementView>[] = [
@@ -46,6 +48,7 @@ export function StockScreen({ tenant, view, materials, locations, units, locale,
         <p>{t.after}: {shownQuantity(row.balanceAfter)} {row.baseUnit}</p>
       </details>
     </div> },
+    { id: "reversal", header: t.reversal.type, className: "min-w-36 whitespace-normal", cell: (row) => <ReversalControls tenant={tenant} movement={{ ...row, sourceLabel: `${types[row.type] ?? row.type}${row.source.id === null ? "" : ` ${row.source.id}`} · ${fill(t.reversal.line, { line: String(row.position + 1) })}` }} reversedBy={row.reversedBy} reverses={row.reverses} canReverse={row.canReverse} labels={t} /> },
   ];
   const editable = view !== null && !tenant.readOnly && view.materialActive && view.locationActive;
   return <div lang={locale} className="flex min-w-0 flex-col gap-6">
@@ -77,6 +80,10 @@ export function StockScreen({ tenant, view, materials, locations, units, locale,
         </div>
         {editable ? <CorrectionDialog context={{ tenant: tenant.code, generation: tenant.generation }} pair={{ material: view.material, location: view.location }} units={units} labels={t} /> : <p className="text-sm text-muted-foreground">{t.unavailable}</p>}
       </div>
+      {selected !== null && <section className="flex min-w-0 flex-col gap-3 rounded-xl border p-4" aria-label={t.reversal.selected}>
+        <h2 className="text-lg font-semibold">{t.reversal.selected}</h2>
+        <DataTable label={t.reversal.selected} columns={columns} rows={[selected]} rowKey={(row) => row.id} empty={t.empty} />
+      </section>}
       <section className="flex min-w-0 flex-col gap-3"><h2 className="text-lg font-semibold">{t.ledger}</h2><p className="text-xs text-muted-foreground">{t.recent}</p>
         <DataTable label={t.ledger} columns={columns} rows={view.movements} rowKey={(row) => row.id} empty={t.empty} pagination={
           <PageLinks page={view.page} pages={Math.ceil(view.movementCount / STOCK_LEDGER_PAGE_SIZE)} labels={t}

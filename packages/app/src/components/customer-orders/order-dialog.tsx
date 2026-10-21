@@ -27,7 +27,7 @@ export function OrderDialog({ context, labels, choices, order }: Props) {
     <DialogTrigger asChild><Button>{order ? labels.edit : labels.create}</Button></DialogTrigger>
     <DialogContent className={`sm:max-w-2xl ${TALL_DIALOG}`}>
       <DialogHeader><DialogTitle>{order ? fill(labels.editTitle, { id: order.id }) : labels.createTitle}</DialogTitle><DialogDescription>{labels.description}</DialogDescription></DialogHeader>
-      <OrderForm labels={labels} choices={choices} initial={initial}
+      <OrderForm lockedLines={editing?.lines.filter(({ posted }) => posted).map(({ id }) => id)} labels={labels} choices={choices} initial={initial}
         action={(values) => editing ? updateCustomerOrder(context.tenant, context.generation, editing.id, editing.version, values) : createCustomerOrder(context.tenant, context.generation, values)}
         onSuccess={close} onCancel={close} />
     </DialogContent>

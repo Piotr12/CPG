@@ -1,3 +1,4 @@
+import { StockReversal, STOCK_REVERSAL_IMMUTABLE } from "./stock/stock-reversal.entity";
 import { ProductionOrder } from "./production-orders/production-order.entity";
 import {
   PRODUCTION_COMPLETION_IMMUTABLE,
@@ -91,7 +92,7 @@ export { Customer, Location, NAMED_RECORD_NAME_MAX, Supplier };
 export type { NamedRecord, NamedRecordEntity };
 export { PlanningParameterSet, PROCUREMENT_MODES, SafetyStockTarget };
 export { Forecast };
-export { StockBalance, StockMovement, STOCK_MOVEMENT_IMMUTABLE };
+export { StockBalance, StockMovement, STOCK_MOVEMENT_IMMUTABLE, StockReversal, STOCK_REVERSAL_IMMUTABLE };
 export { GoodsReceipt, GOODS_RECEIPT_IMMUTABLE, GoodsReceiptLine };
 export { Transfer, TRANSFER_POSTING_IMMUTABLE, TRANSFER_POSTING_KINDS, TRANSFER_STATUSES, TransferPosting };
 export type { TransferPostingKind, TransferStatus };
@@ -134,6 +135,7 @@ export const entities = [
   CustomerOrderLine,
   StockBalance,
   StockMovement,
+  StockReversal,
   GoodsReceipt,
   GoodsReceiptLine,
   Transfer,

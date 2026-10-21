@@ -3,6 +3,8 @@ import { StockBalance, StockMovement, type EntityManager } from "@cpg/db";
 import type { z } from "zod";
 import { DEMO_STOCK } from "../../domain/stock/demo-stock";
 import { parseInput } from "../../http/parse-input";
+import { NotFoundError } from "../../http/errors";
+import { stockMovementIdSchema } from "../../validators/stock/stock-reversal.schema";
 import { STOCK_LEDGER_PAGE_SIZE, stockCorrectionSchema, stockLedgerQuerySchema, stockPairSchema, stockPostingSchema } from "../../validators/stock/stock-correction.schema";
 import type { AuditActor } from "../audit/actor";
 import { activeDemoReferences, isUntouchedKind } from "../demo/demo-references";
@@ -11,6 +13,7 @@ import { findMaterial } from "../materials/find-material";
 import { transitAt } from "../transfers/transfer-usage";
 import { movementSources, NO_SOURCE, type MovementSource } from "./movement-sources";
 import { CORRECTION_MOVEMENT, postStockMovements, toMovementView, type PostingSource, type StockMovementView } from "./stock-posting";
+import { movementReversals } from "./movement-reversals";
 
 export type { MovementSource, StockMovementView };
 export type { SourceDocument } from "./movement-sources";
@@ -20,6 +23,9 @@ export type StockLedgerQuery = z.input<typeof stockLedgerQuerySchema>;
 /** A ledger movement with the document it came from (INV-012). */
 export interface LedgerMovementView extends StockMovementView {
   source: MovementSource;
+  reverses: string | null;
+  reversedBy: string | null;
+  canReverse: boolean;
 }
 export interface StockView extends StockPair {
   materialDescription: string; locationName: string; baseUnit: string;
@@ -52,15 +58,23 @@ export class StockService {
     const movements = await em.find(StockMovement, { material, location }, {
       orderBy: { occurredAt: "desc", id: "desc" }, limit: STOCK_LEDGER_PAGE_SIZE, offset: (page - 1) * STOCK_LEDGER_PAGE_SIZE,
     });
-    const sources = await movementSources(em, movements);
     const transit = await transitAt(em, material, location);
     return {
       ...key, materialDescription: material.description, locationName: location.name, baseUnit: material.baseUnit,
       materialActive: material.active, locationActive: location.active, quantity: balance?.quantity ?? "0.000000",
       inTransitFrom: transit.from, inTransitTo: transit.to, transitTransfers: transit.transfers,
       page, movementCount,
-      movements: movements.map((movement) => ({ ...toMovementView(movement), source: sources.get(movement.postingId) ?? NO_SOURCE })),
+      movements: await ledgerViews(em, movements),
     };
+  }
+
+  /** Direct detail keeps original/inverse links reachable beyond the current ledger page. */
+  async getMovement(id: string, pair?: StockPair): Promise<LedgerMovementView> {
+    const movementId = parseInput(stockMovementIdSchema, id);
+    const key = pair === undefined ? null : parseInput(stockPairSchema, pair);
+    const movement = await this.em.findOne(StockMovement, { id: movementId, ...(key ? { material: { code: key.material }, location: { code: key.location } } : {}) }, { populate: ["material", "location"] });
+    if (!movement) throw new NotFoundError("STOCK_MOVEMENT_NOT_FOUND", "This movement does not exist in this tenant or stock pair.");
+    return (await ledgerViews(this.em, [movement]))[0];
   }
 
   /** The public correction path accepts only the allowlisted user input, never source/date/actor. */
@@ -85,4 +99,19 @@ export class StockService {
       return (await postStockMovements(em, { lines, reason: "Demonstration opening balance" }, { type: CORRECTION_MOVEMENT, id: randomUUID() }, { kind: "seed" })).length;
     });
   }
+}
+
+async function ledgerViews(em: EntityManager, movements: StockMovement[]): Promise<LedgerMovementView[]> {
+  const links = await movementReversals(em, movements.map(({ id }) => id));
+  const originals = new Map(links.map(({ original, inverse }) => [inverse.id, original]));
+  const inverses = new Map(links.map(({ original, inverse }) => [original.id, inverse.id]));
+  const sources = await movementSources(em, [...movements, ...originals.values()]);
+  return movements.map((movement) => {
+    const original = originals.get(movement.id);
+    const reversedBy = inverses.get(movement.id) ?? null;
+    return { ...toMovementView(movement), source: sources.get((original ?? movement).postingId) ?? NO_SOURCE,
+      reverses: original?.id ?? null, reversedBy,
+      canReverse: reversedBy === null && [CORRECTION_MOVEMENT, "goods-receipt", "goods-issue"].includes(movement.type),
+    };
+  });
 }

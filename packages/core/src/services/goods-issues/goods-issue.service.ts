@@ -28,13 +28,14 @@ import { lineError } from "../materials/line-error";
 import { assertShipmentOpen, findShipment, groupBy } from "../shipments/shipment-records";
 import { completeFinishedShipments } from "../shipments/shipment-usage";
 import { postStockMovements } from "../stock/stock-posting";
+import { documentMovements, NO_MOVEMENT, type DocumentMovement } from "../stock/movement-reversals";
 
 /** The stock movement type a goods issue posts (INV-012: every movement names its source). */
 export const GOODS_ISSUE_MOVEMENT = "goods-issue";
 export const ISSUE_ID_RACE = "Another goods issue was posted at the same moment. Try again.";
 
 /** One line of a goods issue as the screens and the API show it. */
-export interface IssueLineView {
+export interface IssueLineView extends DocumentMovement {
   /** The shipment line it issued, by its 1-based number. */
   line: number;
   /** The stable ID of the customer-order line it fulfilled. */
@@ -272,6 +273,7 @@ async function viewsOf(em: EntityManager, issues: readonly GoodsIssue[]): Promis
     { populate: ["shipmentLine", "shipmentLine.orderLine", "shipmentLine.orderLine.material"], orderBy: { position: "asc" } },
   );
   const byIssue = groupBy(lines, (line) => line.issue.id);
+  const movements = await documentMovements(em, GOODS_ISSUE_MOVEMENT, issues.map(({ id }) => id));
   return issues.map((issue) => ({
     id: issue.code,
     shipment: issue.shipment.code,
@@ -281,7 +283,8 @@ async function viewsOf(em: EntityManager, issues: readonly GoodsIssue[]): Promis
     createdAt: issue.createdAt,
     lines: byIssue
       .get(issue.id)!
-      .map(({ shipmentLine, quantity, enteredQuantity, enteredUnit, numerator, denominator }) => ({
+      .map(({ position, shipmentLine, quantity, enteredQuantity, enteredUnit, numerator, denominator }) => ({
+        ...(movements.get(`${issue.id}:${position}`) ?? NO_MOVEMENT),
         line: shipmentLine.position + 1,
         orderLine: shipmentLine.orderLine.id,
         material: shipmentLine.orderLine.material.code,
