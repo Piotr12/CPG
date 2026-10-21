@@ -109,6 +109,38 @@ describe("PurchaseOrderService", () => {
     await orm.close();
   });
 
+  it("lists in pages of 100 by ID, each with its own lines only, and counts the tenant's orders", async () => {
+    const em = scopedEm();
+    const supplier = await em.findOneOrFail(Supplier, { code: "00000001" });
+    const location = await em.findOneOrFail(Location, { code: "00000001" });
+    const material = await em.findOneOrFail(Material, { code: "00000001" });
+    for (let index = 1; index <= 101; index++) {
+      const order = em.create(PurchaseOrder, { code: String(index).padStart(8, "0"), supplier, location, status: "open" });
+      for (let position = 1; position <= 1 + (index % 2); position++) {
+        em.create(PurchaseOrderLine, {
+          order, position, material, quantity: `${index}.000000`, enteredQuantity: String(index), enteredUnit: "kg", numerator: "1", denominator: "1", plannedDate: "2027-03-03",
+        });
+      }
+    }
+    await em.flush();
+
+    const first = await service().list();
+    expect(first).toHaveLength(100);
+    expect([first[0].id, first[99].id]).toEqual(["00000001", "00000100"]);
+    expect(first.every(({ id, lines }) => lines.length === 1 + (Number(id) % 2) && lines.every(({ quantity }) => quantity === `${Number(id)}.000000`))).toBe(true);
+    expect((await service().list(1)).map(({ id }) => id)).toEqual(first.map(({ id }) => id));
+    expect((await service().list(2)).map(({ id }) => id)).toEqual(["00000101"]);
+    expect(await service().list(3)).toEqual([]);
+    expect(await service().count()).toBe(101);
+    expect(await service("test").count()).toBe(0);
+  });
+
+  it("refuses an invalid page as VALIDATION_FAILED", async () => {
+    for (const page of [0, -1, 1.5, Number.NaN]) {
+      await expect(service().list(page)).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+    }
+  });
+
   it("recognizes old-release receipts written after migration on reads, closure, usage and new postings", async () => {
     const order = await service().create(DIRECT, ACTOR);
     // During deployment overlap the old container knows received, but not the new status column.

@@ -13,6 +13,9 @@ import { documentState, outstandingQuantity as unresolvedQuantity, resolveLines 
 import { selectLifecycleLines } from "../../domain/document-lifecycle/select-lines";
 import { addQuantities, afterConversion, fitsOutstanding, outstandingQuantity } from "../../domain/purchasing/requisition-quantity";
 import { ConflictError, ValidationError, versionConflict, type FieldErrors } from "../../http/errors";
+import { parseInput } from "../../http/parse-input";
+import { DOCUMENT_PAGE_SIZE } from "../../validators/shipments/shipment.schema";
+import { purchaseOrderListQuerySchema } from "../../validators/purchasing/purchase-order.schema";
 import {
   LINE_NO_SUCH_LINE_MESSAGE,
   LINE_LOCATION_MESSAGE,
@@ -27,6 +30,7 @@ import { findActiveMaterial } from "../materials/find-material";
 import { lineError } from "../materials/line-error";
 import { assertOrderOpen, findOrder, orderLineState } from "./order-records";
 import { findRequisition, requisitionEntry, requisitionSnapshot } from "../purchase-requisitions/requisition-records";
+import { groupBy } from "../shipments/shipment-records";
 import { findActiveSupplier } from "../suppliers/find-supplier";
 import type { PostingContext } from "../stock/stock-posting";
 
@@ -120,10 +124,24 @@ export class PurchaseOrderService {
     this.em = em;
   }
 
-  /** Every order of the tenant with its lines, by ID. */
-  async list(): Promise<OrderView[]> {
-    const orders = await this.em.find(PurchaseOrder, {}, { populate: ["supplier", "location"], orderBy: { code: "asc" } });
+  /**
+   * A page of the tenant's orders with their lines, by ID, `DOCUMENT_PAGE_SIZE` to a page (lines are
+   * read for that page's orders only); a page past the last is empty, an invalid `page` is `VALIDATION_FAILED`.
+   */
+  async list(page = 1): Promise<OrderView[]> {
+    const { page: valid } = parseInput(purchaseOrderListQuerySchema, { page });
+    const orders = await this.em.find(PurchaseOrder, {}, {
+      populate: ["supplier", "location"],
+      orderBy: { code: "asc" },
+      limit: DOCUMENT_PAGE_SIZE,
+      offset: (valid - 1) * DOCUMENT_PAGE_SIZE,
+    });
     return viewsOf(this.em, orders);
+  }
+
+  /** How many orders the tenant has, for the pages of `list`. */
+  count(): Promise<number> {
+    return this.em.count(PurchaseOrder, {});
   }
 
   /** One order; `PURCHASE_ORDER_NOT_FOUND` when this tenant has no such ID, another tenant's included (TEN-014). */
@@ -346,12 +364,13 @@ async function viewsOf(em: EntityManager, orders: readonly PurchaseOrder[]): Pro
     { order: { $in: [...orders] } },
     { populate: ["material", "requisition"], orderBy: { position: "asc" } },
   );
+  const byOrder = groupBy(lines, (line) => line.order.id);
   return orders.map((order) => ({
     id: order.code,
     supplier: order.supplier.code,
     location: order.location.code,
     status: order.status as OrderView["status"],
-    lines: lines.filter((line) => line.order.id === order.id).map(toLineView),
+    lines: byOrder.get(order.id)!.map(toLineView),
     createdAt: order.createdAt,
     version: order.version,
   }));

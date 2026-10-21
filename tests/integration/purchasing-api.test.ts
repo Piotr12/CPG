@@ -73,7 +73,15 @@ describe("purchase requisitions and orders through the API", () => {
   });
   const order = (lines: unknown[], overrides: Record<string, unknown> = {}) => ({ supplier: ids.acme, location: ids.plant, lines, ...overrides });
   const placeOrder = async (body: unknown, secret = adminSecret) => write("POST", "/api/tenants/prod/purchase-orders", body, secret);
-  const orders = async (tenant: string) => json(await api("GET", `/api/tenants/${tenant}/purchase-orders`)).data as Order[];
+  /** One page of a tenant's purchase orders (100 to a page); the first when `page` is omitted. */
+  const ordersPage = async (tenant: string, page?: number) =>
+    json(await api("GET", `/api/tenants/${tenant}/purchase-orders${page === undefined ? "" : `?page=${page}`}`)).data as Order[];
+  /** Every purchase order of a tenant, walking its pages. */
+  const orders = async (tenant: string) => {
+    const all: Order[] = [];
+    for (let page = 1, batch = await ordersPage(tenant, page); batch.length > 0; batch = await ordersPage(tenant, ++page)) all.push(...batch);
+    return all;
+  };
 
   beforeAll(async () => {
     admin = openBrowser();
@@ -234,6 +242,24 @@ describe("purchase requisitions and orders through the API", () => {
     const missing = await write("POST", "/api/tenants/test/purchase-requisitions", { material: "00000001", location: "00000001", quantity: "1", unit: "kg", requiredDate: "2027-03-01" });
     expect(missing.status).toBe(428);
     expect(json(missing).error.code).toBe("GENERATION_REQUIRED");
+  });
+
+  it("pages the purchase-order list by 100 (?page=, additive): Test spans several pages, an invalid page is refused", async () => {
+    const first = await ordersPage("test");
+    const second = await ordersPage("test", 2);
+
+    expect(first).toHaveLength(100);
+    expect(await ordersPage("test", 1)).toEqual(first);
+    expect(second.length).toBeGreaterThan(0);
+    expect(second.length).toBeLessThanOrEqual(100);
+    expect(second.some(({ id }) => first.some((order) => order.id === id))).toBe(false);
+    expect(Number(second[0].id)).toBeGreaterThan(Number(first[99].id));
+    expect(await ordersPage("test", 1000)).toEqual([]);
+    for (const bad of ["0", "x"]) {
+      const refused = await api("GET", `/api/tenants/test/purchase-orders?page=${bad}`);
+      expect(refused.status).toBe(400);
+      expect(json(refused).error.code).toBe("VALIDATION_FAILED");
+    }
   });
 
   it("doesn't find another tenant's requisition or order (TEN-014)", async () => {

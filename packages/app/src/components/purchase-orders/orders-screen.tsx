@@ -9,6 +9,9 @@ import { OrdersTable } from "./orders-table";
 interface OrdersScreenProps {
   tenant: { code: string; name: string; generation: number; readOnly: boolean };
   orders: OrderView[];
+  /** The 1-based page of `orders` and how many pages the tenant's orders make. */
+  page: number;
+  pages: number;
   /** The form's choices: suppliers, locations, materials with their units, and the requisitions a line may convert. */
   suppliers: NamedRecordView[];
   locations: NamedRecordView[];
@@ -23,7 +26,7 @@ interface OrdersScreenProps {
  * The body of the Purchase orders page (E09-S01): heading, intro, Create purchase order and the
  * list. Any signed-in account may create, but not while the tenant is read-only (R05).
  */
-export function OrdersScreen({ tenant, orders, suppliers, locations, materials, units, requisitions, locale, messages }: OrdersScreenProps) {
+export function OrdersScreen({ tenant, orders, page, pages, suppliers, locations, materials, units, requisitions, locale, messages }: OrdersScreenProps) {
   const labels = ordersLabels(messages);
   const editable = !tenant.readOnly;
 
@@ -43,7 +46,7 @@ export function OrdersScreen({ tenant, orders, suppliers, locations, materials, 
           />
         )}
       </div>
-      <OrdersTable tenant={tenant} orders={orders} suppliers={byId(suppliers)} locations={byId(locations)} labels={labels} editable={editable} />
+      <OrdersTable tenant={tenant} orders={orders} page={page} pages={pages} suppliers={byId(suppliers)} locations={byId(locations)} labels={labels} editable={editable} />
     </div>
   );
 }

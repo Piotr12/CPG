@@ -61,21 +61,35 @@ describe("purchase requisitions and orders in the UI", () => {
     ]);
   });
 
-  it("lists the dataset's orders and opens the open one that converts a requisition, with its dated lines", async () => {
-    const table = await rows(una, "/admin/test/purchase-orders");
-    expect(table[0][0]).toBe("00000001");
-    expect(table[0].at(-1)).toBe("Completed");
+  it("pages the dataset's orders by 100, and opens the open one that converts a requisition, with its dated lines", async () => {
+    const first = await rows(una, "/admin/test/purchase-orders");
+    expect(first).toHaveLength(100);
+    expect(first[0][0]).toBe("00000001");
+    expect(first[0].at(-1)).toBe("Completed");
+    // Page 1 shows "Page 1 of N" with a Next link only.
+    const nav = `document.querySelector('main nav[aria-label="Purchase order pages"]')`;
+    await una.waitUntil(`${nav} && !${nav}.closest("[hidden]")`);
+    const label = await una.evaluate<string>(`${nav}.querySelector("span").textContent`);
+    const pages = Number(/^Page 1 of (\d+)$/.exec(label)![1]);
+    expect(pages).toBeGreaterThan(1);
+    expect(await una.evaluate<string[]>(`[...${nav}.querySelectorAll("a")].map((a) => a.textContent.trim())`)).toEqual(["Next"]);
 
-    // Next month's order of 2 mm sheet for Wrocław converts requisition 00000001: it is one of that pair's open orders.
-    const candidates = table
-      .filter((row) => row[1] === "00000001 Steel Service Centre Sp. z o.o." && row[2] === "00000001 Main plant, Wrocław" && row.at(-1) === "Open")
-      .map(([id]) => id)
-      .reverse();
-    expect(candidates.length).toBeGreaterThan(0);
+    const second = await rows(una, "/admin/test/purchase-orders?page=2");
+    expect(second[0][0]).toBe(String(Number(first[99][0]) + 1).padStart(8, "0"));
+
+    // Next month's order of 2 mm sheet for Wrocław converts requisition 00000001: it is one of that pair's open
+    // orders, among the latest, so walk the pages from the last.
     let converting: string[] | undefined;
-    for (const id of candidates) {
-      converting = (await rows(una, `/admin/test/purchase-orders/${id}`)).find((line) => line[5] === "00000001");
-      if (converting) break;
+    for (let page = pages; page >= 1 && !converting; page--) {
+      const table = await rows(una, `/admin/test/purchase-orders?page=${page}`);
+      const candidates = table
+        .filter((row) => row[1] === "00000001 Steel Service Centre Sp. z o.o." && row[2] === "00000001 Main plant, Wrocław" && row.at(-1) === "Open")
+        .map(([id]) => id)
+        .reverse();
+      for (const id of candidates) {
+        converting = (await rows(una, `/admin/test/purchase-orders/${id}`)).find((line) => line[5] === "00000001");
+        if (converting) break;
+      }
     }
     expect(converting!.slice(0, 2)).toEqual(["1", "00000001 Steel sheet 2 mm"]);
     expect(converting![4]).toMatch(/^\d{4}-\d{2}-\d{2}$/);

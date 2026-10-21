@@ -3,6 +3,7 @@ import { calendarDateSchema } from "../dates/calendar-date.schema";
 import { enteredQuantitySchema } from "../boms/bom-fields.schema";
 import { unitSchema } from "../materials/material-fields.schema";
 import { locationReferenceSchema, materialReferenceSchema } from "../planning-parameters/planning-parameter-fields.schema";
+import { pageSchema } from "../shipments/shipment.schema";
 import { versionSchema } from "../version.schema";
 import {
   DUPLICATE_LINE_MESSAGE,
@@ -77,3 +78,6 @@ export const orderUpdateBodySchema = z.object({
   supplier: z.never({ error: ORDER_IMMUTABLE_MESSAGE }).optional(),
   location: z.never({ error: ORDER_IMMUTABLE_MESSAGE }).optional(),
 });
+
+/** `GET /api/tenants/{tenant}/purchase-orders`: a 1-based `?page=` (additive; the first page when absent), as the shipments list takes it. */
+export const purchaseOrderListQuerySchema = z.object({ page: pageSchema });

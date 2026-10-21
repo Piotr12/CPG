@@ -944,6 +944,7 @@ export const pl: Messages = {
     empty: "Brak zamówień zakupu w {tenant}.",
     emptyHint: "Utwórz pierwsze przyciskiem Utwórz zamówienie zakupu.",
     allOrders: "Wszystkie zamówienia zakupu",
+    pagination: "Strony zamówień zakupu", previous: "Poprzednia", next: "Następna", page: "Strona {page} z {pages}",
     columns: { id: "Zamówienie", supplier: "Dostawca", location: "Lokalizacja", lines: "Pozycje", status: "Status" },
     status: { open: "Otwarte", completed: "Zrealizowane", "closed-early": "Zamknięte wcześniej", cancelled: "Anulowane" },
     inactive: "Nieaktywny",

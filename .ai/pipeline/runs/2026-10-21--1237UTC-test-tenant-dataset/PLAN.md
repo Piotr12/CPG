@@ -39,7 +39,7 @@
 | 4 | 4.1 | Remaining unit tests pinned to old fixtures | dispatch | done | df6113c |
 | 4 | 4.2 | Integration tests adapted to the dataset | dispatch | done | 24730f7 |
 | 4 | 4.2-review-fix | Ledger paging proven by the dataset, not topped up | inline | done | 7483307 |
-| 4 | 4.3 | Purchase-order list paged by 100 | dispatch | todo | — |
+| 4 | 4.3 | Purchase-order list paged by 100 | dispatch | done | PENDING |
 | 4 | 4.4 | Every list checked with the dataset | inline | todo | — |
 | 4 | 4.5 | Seed timing and lock window measured | inline | todo | — |
 | 4 | 4.6 | Docs, lessons and spec moved | inline | todo | — |
