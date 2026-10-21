@@ -58,4 +58,13 @@ export { TestResetService } from "./services/tenants/test-reset.service";
 export * from "./services/customer-orders/customer-order.service";
 export * from "./services/stock/stock.service";
 
+export {
+  PRODUCTION_COMPLETION_MOVEMENT,
+  ProductionCompletionService,
+  type CompletionLineView,
+  type CompletionPreview,
+  type CompletionPreviewComponent,
+  type CompletionResult,
+  type CompletionView,
+} from "./services/production-orders/production-completion.service";
 export { ProductionOrderService, type ProductionOrderView, type ProductionOrderDetail, type ProductionOptions, type ProductionComponent, type ProductionRecipe } from "./services/production-orders/production-order.service";

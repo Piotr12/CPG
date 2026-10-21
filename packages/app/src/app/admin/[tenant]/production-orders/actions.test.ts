@@ -1,12 +1,12 @@
 import { ConflictError } from "@cpg/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { productionInput as input } from "../../../../../../../tests/setup/production-orders";
-import { createProductionOrder, updateProductionOrder } from "./actions";
-const mocks = vi.hoisted(() => ({ service: { create: vi.fn(), update: vi.fn(), options: vi.fn() }, currentUser: vi.fn(), bound: vi.fn(), tenantScope: vi.fn(), revalidatePath: vi.fn() }));
+import { createProductionOrder, postProductionCompletion, updateProductionOrder } from "./actions";
+const mocks = vi.hoisted(() => ({ service: { create: vi.fn(), update: vi.fn(), options: vi.fn() }, completions: { post: vi.fn() }, currentUser: vi.fn(), bound: vi.fn(), tenantScope: vi.fn(), revalidatePath: vi.fn() }));
 vi.mock("@cpg/core", async (original) => {
   const core = await original<typeof import("@cpg/core")>();
   return { ...core, tenantScope: mocks.tenantScope, tenantServerAction: (schema: Parameters<typeof core.serverAction>[0], handler: (input: unknown, scope: unknown) => Promise<unknown>) =>
-    (tenant: string, generation: number, raw: unknown) => { mocks.bound(tenant, generation); return core.serverAction(schema, (input) => handler(input, { cradle: { productionOrderService: mocks.service } }))(raw); } };
+    (tenant: string, generation: number, raw: unknown) => { mocks.bound(tenant, generation); return core.serverAction(schema, (input) => handler(input, { cradle: { productionOrderService: mocks.service, productionCompletionService: mocks.completions } }))(raw); } };
 });
 vi.mock("../../../../auth/require-admin", () => ({ currentUser: mocks.currentUser }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
@@ -43,5 +43,31 @@ describe("production order actions", () => {
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/test/production-orders/00000001");
     mocks.service.create.mockRejectedValueOnce(new ConflictError("locked", "TENANT_READ_ONLY"));
     expect(await createProductionOrder("test", 1, input)).toMatchObject({ error: { code: "TENANT_READ_ONLY" } });
+  });
+  it("posts a completion with the bound order, submission token and UI actor, refreshing order, list and stock", async () => {
+    const submission = "11111111-1111-4111-8111-111111111111";
+    mocks.completions.post.mockResolvedValue({ completion: { id: "00000001" } });
+    const values = { quantity: "40", unit: "each", components: [{ material: "00000002", quantity: "18", unit: "kg" }], order: "00000099", submission: "x" };
+    expect(await postProductionCompletion("test", 7, "00000001", submission, values)).toEqual({ ok: true, data: { completion: { id: "00000001" } } });
+    expect(mocks.bound).toHaveBeenCalledWith("test", 7);
+    expect(mocks.completions.post).toHaveBeenCalledWith(
+      "00000001",
+      { quantity: "40", unit: "each", components: [{ material: "00000002", quantity: "18", unit: "kg" }] },
+      expect.objectContaining({ channel: "ui", sessionId: "s1" }),
+      { submission },
+    );
+    expect(mocks.revalidatePath.mock.calls).toEqual([["/admin/test/production-orders"], ["/admin/test/production-orders/00000001"], ["/admin/test/stock"]]);
+  });
+  it("refuses a signed-out or malformed completion without posting, and keeps the page on a refusal", async () => {
+    const submission = "11111111-1111-4111-8111-111111111111";
+    mocks.currentUser.mockResolvedValue(null);
+    expect(await postProductionCompletion("test", 1, "00000001", submission, { quantity: "1", unit: "each", components: [{ material: "00000002", quantity: "1", unit: "kg" }] })).toMatchObject({ error: { code: "UNAUTHORIZED" } });
+    mocks.currentUser.mockResolvedValue({ userId: "u1", username: "alice", role: "user", sessionId: "s1" });
+    expect(await postProductionCompletion("test", 1, "00000001", "not-a-token", { quantity: "1", unit: "each", components: [] })).toMatchObject({ error: { code: "VALIDATION_FAILED" } });
+    expect(await postProductionCompletion("test", 1, "00000001", submission, null)).toMatchObject({ error: { code: "VALIDATION_FAILED" } });
+    expect(mocks.completions.post).not.toHaveBeenCalled();
+    mocks.completions.post.mockRejectedValueOnce(new ConflictError("short", "INSUFFICIENT_STOCK"));
+    expect(await postProductionCompletion("test", 1, "00000001", submission, { quantity: "1", unit: "each", components: [{ material: "00000002", quantity: "1", unit: "kg" }] })).toMatchObject({ error: { code: "INSUFFICIENT_STOCK" } });
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 });

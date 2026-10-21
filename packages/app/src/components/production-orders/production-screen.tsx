@@ -1,18 +1,23 @@
 import Link from "next/link";
-import type { Locale, MaterialSummary, NamedRecordView, ProductionOrderDetail, ProductionOrderView, TenantInfo } from "@cpg/core";
+import type { CompletionView, Locale, MaterialSummary, NamedRecordView, ProductionOrderDetail, ProductionOrderView, TenantInfo } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { Badge } from "@cpg/ui/components/badge";
 import { Button } from "@cpg/ui/components/button";
 import { PRODUCTION_PAGE_SIZE } from "@cpg/core/validators/production-orders/production-order.schema";
 import type { Messages } from "../../i18n/messages/en";
 import { fill, shownQuantity } from "../forms/form-labels";
+import { CompletionDialog } from "./completion-dialog";
+import { CompletionHistory } from "./completion-history";
+import { completionInputs } from "./completion-inputs";
 import { productionLabels } from "./labels";
 import { ProductionDialog } from "./production-dialog";
 import { ProductionRequirements } from "./production-requirements";
 
 interface Props { tenant: TenantInfo; orders: ProductionOrderView[]; order?: ProductionOrderDetail; materials: MaterialSummary[]; locations: NamedRecordView[];
-  total: number; page: number; messages: Messages; locale: Locale }
-export function ProductionScreen({ tenant, orders, order, materials, locations, total, page, messages, locale }: Props) {
+  total: number; page: number; messages: Messages; locale: Locale;
+  /** A detail page's completions (one page of them) and the units every material's quantities may be entered in. */
+  completions?: CompletionView[]; completionsPage?: number; units?: Record<string, string[]> }
+export function ProductionScreen({ tenant, orders, order, materials, locations, total, page, messages, locale, completions = [], completionsPage = 1, units = {} }: Props) {
   const t = productionLabels(messages);
   const path = `/admin/${tenant.code}/production-orders`;
   const byMaterial = new Map(materials.map((m) => [m.id, m]));
@@ -35,12 +40,20 @@ export function ProductionScreen({ tenant, orders, order, materials, locations, 
     {order && <Link className="text-sm underline" href={path}>{t.backList}</Link>}
     <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-start">
       <h1 className="text-2xl font-semibold">{order ? fill(t.detailHeading, { id: order.id }) : fill(t.heading, { tenant: tenant.name })}</h1>
-      {!tenant.readOnly && (!order || order.status === "open") && <ProductionDialog context={{ tenant: tenant.code, generation: tenant.generation }} labels={t} materials={materials} locations={locations} order={order} />}
+      <div className="flex flex-wrap items-start gap-2">
+        {!tenant.readOnly && (!order || order.status === "open") && <ProductionDialog context={{ tenant: tenant.code, generation: tenant.generation }} labels={t} materials={materials} locations={locations} order={order} />}
+        {!tenant.readOnly && order && <CompletionDialog context={{ tenant: tenant.code, generation: tenant.generation }} labels={t} order={order}
+          outputUnits={units[order.output] ?? [byMaterial.get(order.output)!.baseUnit]} locationLabel={location(order.location)}
+          inputs={completionInputs(order, materials, units)}
+          canPost={order.status === "open"} />}
+      </div>
     </div>
     <p className="text-sm text-muted-foreground">{t.intro}</p>
     {order ? <>
       <dl className="grid gap-4 rounded-md border p-4 text-sm sm:grid-cols-3">
         {[{ label: t.output, value: output(order) }, { label: t.location, value: location(order.location) }, { label: t.quantity, value: quantity(order) },
+          { label: t.produced, value: `${shownQuantity(order.produced)} ${byMaterial.get(order.output)!.baseUnit}` },
+          { label: t.outstanding, value: `${shownQuantity(order.outstanding)} ${byMaterial.get(order.output)!.baseUnit}` },
           { label: t.entered, value: `${order.enteredQuantity} ${order.enteredUnit} (${order.denominator} ${order.enteredUnit} = ${order.numerator} ${byMaterial.get(order.output)!.baseUnit})` },
           { label: t.finish, value: order.plannedFinish }, { label: t.start, value: order.plannedStart },
           { label: t.leadTime, value: fill(t.leadTimeDays, { days: String(order.leadTimeDays) }) }, { label: t.recipe, value: recipe(order) },
@@ -48,6 +61,7 @@ export function ProductionScreen({ tenant, orders, order, materials, locations, 
       </dl>
       <p className="rounded-md border p-3 text-sm" role="status">{order.shortages.length ? t.warning : t.sufficient}</p>
       <ProductionRequirements labels={t} components={order.components} materials={materials} tenant={tenant.code} />
+      <CompletionHistory completions={completions} page={completionsPage} materials={materials} labels={t} path={`${path}/${order.id}`} />
     </> : <DataTable label={t.title} columns={columns} rows={orders} rowKey={(row) => row.id} empty={t.empty} pagination={pages > 1 && <nav aria-label={t.pagination} className="flex flex-wrap items-center justify-end gap-3">
       {page > 1 && <Button asChild variant="outline"><Link href={`${path}?page=${page - 1}`}>{t.previous}</Link></Button>}
       <span className="text-sm">{fill(t.page, { page: String(page), pages: String(pages) })}</span>

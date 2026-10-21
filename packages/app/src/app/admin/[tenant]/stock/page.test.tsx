@@ -46,7 +46,7 @@ describe("StockPage", () => {
   it("shows what is in transit from and to the location apart from its physical balance, and names transfer movements (UX-017, TRF-024)", async () => {
     mocks.get.mockResolvedValue({
       ...view, quantity: "40.000000", inTransitFrom: "60.000000", inTransitTo: "12.500000", transitTransfers: ["00000003", "00000007"],
-      movements: [{ ...movement, id: "m4", postingId: "d1", type: "transfer-dispatch", quantity: "-60.000000" }, { ...movement, id: "m5", postingId: "r1", type: "transfer-receipt" }],
+      movements: [{ ...movement, id: "m4", postingId: "d1", type: "transfer-dispatch", quantity: "-60.000000" }, { ...movement, id: "m5", postingId: "r1", type: "transfer-receipt" }, { ...movement, id: "m6", postingId: "p1", type: "production-completion" }],
     });
     render(await resolveServerComponents(page()));
     expect(document.querySelector("[data-stock-balance]")!.textContent).toBe("40 each");
@@ -60,6 +60,7 @@ describe("StockPage", () => {
     const table = within(screen.getByRole("table", { name: en.stock.ledger }));
     expect(table.getByText(/Source: Transfer dispatch · d1/)).toBeTruthy();
     expect(table.getByText(/Source: Transfer receipt · r1/)).toBeTruthy();
+    expect(table.getByText(/Source: Production completion · p1/)).toBeTruthy();
   });
   it.each(["tenant", "material", "location"])("keeps history but hides posting for read-only/inactive %s", async (kind) => {
     mocks.tenantScope.mockResolvedValue(scope(kind === "tenant"));

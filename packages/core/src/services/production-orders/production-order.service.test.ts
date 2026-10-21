@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { initOrm, migrate, Material, MaterialConversion, Location, Bom, BomRevision, BomComponent, StockBalance, StockMovement,
   PlanningParameterSet, ProductionOrder, Tenant, TenantAuditEvent, selectTenant, UniqueConstraintViolationException, OptimisticLockError, type Orm, type EntityManager, type TenantCode } from "@cpg/db";
 import { ProductionOrderService } from "./production-order.service";
+import { ProductionCompletionService } from "./production-completion.service";
 import { productionUsingMaterial, assertNoProductionOrders } from "./production-order-usage";
 import { MaterialService } from "../materials/material.service";
 import { LocationService } from "../locations/location.service";
@@ -242,4 +243,48 @@ it("keeps alternatives beyond the first 100 selectable while bounding current-re
   expect((await service(manager).options(input)).alternatives).toHaveLength(104);
   expect(reads.mock.calls.filter(([entity]) => entity === BomRevision)).toHaveLength(2);
   expect((await service().create({ ...input, bom: "00000104", revision: 1 }, actor)).bom).toBe("00000104");
+});
+
+describe("edits after a first completion", () => {
+  /** An order of 30 Cabinets on BOM 00000001 (2 kg steel each) with 10 already produced from 20 kg. */
+  async function partlyProduced() {
+    const order = await service().create({ ...input, bom: "00000001", revision: 1 }, actor);
+    await balance("30.000000");
+    const posted = await new ProductionCompletionService({ em: em() }).post(order.id, {
+      quantity: "10", unit: "each", components: [{ material: "00000002", quantity: "20", unit: "kg" }],
+    }, actor);
+    expect(posted.order).toMatchObject({ produced: "10.000000", outstanding: "20.000000", version: 2 });
+    return posted.order;
+  }
+  it("refuses a target below what was produced and allows raising it, audited (PRD-026, PRD-025)", async () => {
+    const order = await partlyProduced();
+    await expect(service().update(order.id, { quantity: "9" }, order.version, actor)).rejects.toMatchObject({ code: "VALIDATION_FAILED",
+      fieldErrors: { quantity: ["The target cannot be less than the quantity already produced."] } });
+    const raised = await service().update(order.id, { quantity: "40" }, order.version, actor);
+    expect(raised).toMatchObject({ quantity: "40.000000", produced: "10.000000", outstanding: "30.000000", status: "open", version: 3 });
+    const audit = await em().findOneOrFail(TenantAuditEvent, { subjectId: order.id, action: "production-orders.production-order.updated" });
+    expect(audit).toMatchObject({ before: { quantity: "30.000000", produced: "10.000000" }, after: { quantity: "40.000000", produced: "10.000000", status: "open" } });
+  });
+  it("keeps output, location and recipe locked and moves the planned finish (PRD-024, PRD-027)", async () => {
+    const order = await partlyProduced();
+    for (const change of [{ output: "00000002" }, { location: "00000002" }, { bom: "00000002" }, { revision: 2 }]) {
+      await expect(service().update(order.id, change as never, order.version, actor)).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+    }
+    expect(await service().update(order.id, { plannedFinish: "2026-10-20" }, order.version, actor)).toMatchObject({
+      output: input.output, location: input.location, bom: "00000001", revision: 1, plannedFinish: "2026-10-20", plannedStart: "2026-10-15" });
+  });
+  it("completes the order when the target is lowered to exactly what was produced (spec Q8)", async () => {
+    const order = await partlyProduced();
+    const completed = await service().update(order.id, { quantity: "10" }, order.version, actor);
+    expect(completed).toMatchObject({ quantity: "10.000000", produced: "10.000000", outstanding: "0.000000", status: "completed" });
+    const audit = await em().findOneOrFail(TenantAuditEvent, { subjectId: order.id, action: "production-orders.production-order.updated" });
+    expect(audit.after).toMatchObject({ status: "completed" });
+    await expect(service().update(order.id, { quantity: "12" }, completed.version, actor)).rejects.toMatchObject({ code: "PRODUCTION_ORDER_LOCKED" });
+  });
+  it("locks the type of a material a completion consumed (MAT-012)", async () => {
+    await partlyProduced();
+    const steel = await em().findOneOrFail(Material, { code: "00000002" });
+    await expect(new MaterialService({ em: em() }).update(steel.code, { type: "intermediate" }, steel.version, actor)).rejects.toMatchObject({ code: "MATERIAL_HAS_MOVEMENTS" });
+    expect((await em().findOneOrFail(Material, { code: "00000002" })).type).toBe("raw");
+  });
 });

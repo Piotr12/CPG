@@ -9,10 +9,20 @@ export function plannedStart(finish: string, leadTimeDays: number): string {
   return date.toISOString().slice(0, 10);
 }
 
+/**
+ * A component's direct need for `output` base units of the output: its per-output base quantity scaled
+ * and rounded upward once to six decimals (PRD §02/§04, BOM-007). An order's requirement and a
+ * completion's expected consumption both use it, so the two always agree.
+ */
+export function scaledRequirement(perOutput: string, output: string): bigint {
+  const required = (parseDecimal(perOutput)! * parseDecimal(output)! + ONE - 1n) / ONE;
+  if (required > MAX_QUANTITY) throw new ValidationError({ quantity: ["The component requirement is too large to store."] });
+  return required;
+}
+
 /** Direct component need rounded upward once, then compared with physical stock at this site only. */
 export function componentRequirement(perOutput: string, target: string, available: string) {
-  const required = (parseDecimal(perOutput)! * parseDecimal(target)! + ONE - 1n) / ONE;
-  if (required > MAX_QUANTITY) throw new ValidationError({ quantity: ["The component requirement is too large to store."] });
+  const required = scaledRequirement(perOutput, target);
   const missing = required - parseDecimal(available)!;
   return { required: formatDecimal(required, { fixed: true }), available, shortage: formatDecimal(missing > 0n ? missing : 0n, { fixed: true }) };
 }
