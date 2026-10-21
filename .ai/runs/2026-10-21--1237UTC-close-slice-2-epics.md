@@ -26,6 +26,7 @@ Every story of epics #73 (E07), #74 (E08), #75 (E09), #76 (E10), #77 (E11) and #
 - 13:40 — The catalogue pass changed 238 rows: 196 `Passed (automated)` and 42 `Partially verified`. Each open half cites #139–#145 or slice 3 (#14). Where reports conflicted, the more conservative status won: LFC-018 is partial because of #139. REV-011/014 are Passed: their Given/When/Then are asserted by the E11 tests, and the variance-report half is noted against #145.
 - After PR #146 merged — The owner asked for the #84 leftover as an issue: filed #147 (E08-S05, shipment edit and cancel), added it to epic #74, and pointed the shipments spec note and the #84 run log at it.
 - Later — The owner asked for every leftover to be tracked: filed #152–#155, extended #140, and fixed the stale spec paths (follow-up docs PR).
+- Later — #158's integration job failed in `tests/integration/test-reset.test.ts`, the same two UI cases that fail on `main` since #136 (the reset takes ~25–30 s on the CI runner against a 15 s budget). Not caused by this work; filed as #163 in epic #78 rather than loosening the test, because the time it exposes is a budget the owner set.
 
 ## Changes
 
