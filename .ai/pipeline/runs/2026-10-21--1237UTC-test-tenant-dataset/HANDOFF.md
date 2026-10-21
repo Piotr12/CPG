@@ -1,16 +1,16 @@
 # Handoff — 2026-10-21--1237UTC-test-tenant-dataset
 
-**Last updated:** 2026-10-21T13:57:10Z
+**Last updated:** 2026-10-21T14:45:02Z
 **Branch:** feat/test-tenant-dataset
 **PR:** https://github.com/Piotr12/CPG/pull/136 (draft, claimed)
-**Current phase/step:** Phase 3 Step 3.5
-**Last commit:** b826da6 — refactor(demo): inject the dataset configuration instead of mocking it
+**Current phase/step:** Phase 4 Step 4.4
+**Last commit:** a5511bd — docs(runs): record the 4.3 commit SHA in the plan
 
 ## What just happened
-- Steps 3.1–3.4 (+3.4-review-fix) landed: the timeline seeder, the untouched-Test startup seed, the reset on the generated dataset, and the old fixtures removed. Checkpoint 4 is green: full coverage, build, and a standalone server that seeded in 9.0 s.
+- Steps 3.5–4.3 landed: the seed-context callers test, the help texts, the integration suite adapted (plus a ledger-paging review fix), and the purchase-order list paged by 100. Checkpoint 5 is green, with UI screenshots.
 
 ## Next concrete action
-- Step 3.5: dispatch the seed-context callers test (`tests/seed-context-callers.test.ts`).
+- Step 4.4 inline: open every tenant list (UI + API) with the dataset on the standalone server, record row counts and render times in the run folder.
 
 ## Blockers / open questions
 - none

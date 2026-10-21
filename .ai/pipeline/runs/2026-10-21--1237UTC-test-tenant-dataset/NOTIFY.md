@@ -57,3 +57,7 @@
 ## 2026-10-21T14:36:32Z — spec deviation found at 4.2-review-fix
 - The spec's step 15 says the ledger of 00000007 at 00000001 runs "over more than one page". Across a two-year window of seed dates, that pair has 97–100 movements (every raw-material pair has at most 97 at its minimum). Every finished product at its plant has at least 105, and most at least 131.
 - The integration test now proves receipt and completion links on 00000007 at 00000001, and paging on 00000005 at 00000001 (131+ movements), instead of topping the pair up with corrections. Recorded for the spec's Implementation notes (Step 4.6).
+
+## 2026-10-21T14:45:02Z — checkpoint 5 (Steps 3.5..4.3)
+- Callers test, help texts, integration suite (37 files green on the production standalone build), and purchase-order paging (UI and API) are done. UI screenshots are taken from a fresh standalone server, which seeded in 9.2 s.
+- Delegations: 3.5 (cheap → haiku), 4.2 (capable → opus), 4.3 (standard → sonnet).
