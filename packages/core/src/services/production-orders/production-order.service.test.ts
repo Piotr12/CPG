@@ -151,7 +151,7 @@ describe("manual production", () => {
     const revision = manager.create(BomRevision, { bom, number: 2, priority: 1, validFrom: "2026-01-01", validThrough: "2026-09-30" });
     manager.create(BomComponent, { revision, position: 0, material: component, quantity: "3", enteredQuantity: "3", enteredUnit: "kg", numerator: "1", denominator: "1" });
     bom.revision = 2; await manager.flush();
-    expect((await service().options(input)).alternatives.map(({ bom, revision }) => [bom, revision])).toEqual([["00000002", 1]]);
+    expect((await service().options(input)).alternatives.map((offered) => [offered.bom, offered.revision])).toEqual([["00000002", 1]]);
     await expect(service().create({ ...input, bom: "00000001", revision: 2 }, actor)).rejects.toMatchObject({ code: "PRODUCTION_BOM_CHANGED" });
     expect([await service().count(), await auditCount(), await em().count(StockMovement, {})]).toEqual([0, 0, 0]);
     expect(await service().create({ ...input, plannedFinish: "2026-09-30", bom: "00000001", revision: 2 }, actor)).toMatchObject({ bom: "00000001", revision: 2 });

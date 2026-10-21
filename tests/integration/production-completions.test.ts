@@ -166,6 +166,7 @@ describe("production completions in the UI and API", () => {
     const planned = await order("5");
     const ledgers = () => Promise.all([bar, cocoa, wrapper].map(stock));
     const before = await ledgers();
+    expect(before.every(({ movements }) => movements.length > 0)).toBe(true);
     expect((await write("PATCH", "/api/tenants/prod", { readOnly: true })).status).toBe(200);
     try {
       expect((await write("POST", completions(planned.id), used("1", "0.5", "2"), userSecret)).status).toBe(409);

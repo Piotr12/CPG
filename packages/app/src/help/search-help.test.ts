@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { cleanHelpQuery, foldForSearch, HELP_QUERY_MAX_LENGTH, searchHelp } from "./search-help";
-import { helpTopics, type HelpTopic } from "./topics";
+import { HELP_TOPIC_ROUTES, helpTopics, type HelpTopic } from "./topics";
 
 const topic = (id: string, title: string, ...body: string[]) => ({ id, route: "/", title, body }) as unknown as HelpTopic;
 const ids = (topics: HelpTopic[]) => topics.map(({ id }) => id);
@@ -57,6 +57,7 @@ describe("searchHelp", () => {
     const topic = searchHelp(helpTopics("en"), "completion").find(({ id }) => id === "production-order-detail");
     expect(topic?.body.join(" ")).toContain("Posting a completion: choose Post completion");
     expect(topic?.body.join(" ")).toContain("0.5 kg per bar × 4 bars = 2 kg");
-    expect(ids(searchHelp(helpTopics("pl"), "wykonanie"))).toContain("production-order-detail");
+    expect(ids(searchHelp(helpTopics("pl"), "księgowanie wykonania"))).toContain("production-order-detail");
+    expect(HELP_TOPIC_ROUTES["production-order-detail"]).toBe("/admin/[tenant]/production-orders/[id]");
   });
 });
