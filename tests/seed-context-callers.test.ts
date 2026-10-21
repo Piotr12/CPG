@@ -3,7 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 // The seed posting context (`kind: "seed"`) backdates postings, so no page, action or route may reach it (spec
-// .ai/specs/2026-10-21--0718UTC-test-tenant-dataset.md, INV-010, INV-011, R08). It may appear only in the PostingContext
+// .ai/specs/implemented/2026-10-21--0718UTC-test-tenant-dataset.md, INV-010, INV-011, R08). It may appear only in the PostingContext
 // type, in a service's seedDemo method, and in services/demo/ (the seeder). Only the seeder, and the named-record
 // delegations that forward to it, may call .seedDemo(.
 const packagesDir = path.resolve(import.meta.dirname, "../packages");

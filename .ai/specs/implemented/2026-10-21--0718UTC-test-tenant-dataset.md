@@ -1,6 +1,6 @@
 # A realistic Test tenant dataset: two years of history, a year of forecast
 
-**Status:** ready (a proposal until its design PR merges)
+**Status:** implemented (PR #136)
 **Created:** 2026-10-21 07:18 UTC
 **Issue:** #126 (E12-S02), epic #78
 **Design authority:** `.ai/specs/product-brief.md` (D04, D06, R01–R05, R08, R09, N03, N04, N06), `.ai/specs/research/CPG-prd001.pdf` §05 (Test starts with demonstration records), `.ai/specs/research/CPG-acceptance.md` TEN-001, TEN-022…TEN-029, INV-010, INV-011, the seeder contract in `implemented/2026-10-19--0913UTC-test-prod-tenants.md` (Q4) and the atomic Test reset (#93). The owner's requirements for this dataset were given directly in the session that produced this spec (2026-10-21) and are recorded verbatim in "Owner's requirements".
@@ -412,3 +412,21 @@ Nothing is superseded.
 18. **Docs.** `engineering-standards.md` adoption status: the seed context and the generator; `BACKWARD_COMPATIBILITY.md` §4 reset entry: a note that the reset seeds the generated dataset and takes seconds; `.ai/lessons.md`: anything learned; this spec moves to `implemented/` with the implementation PR, with a note of the measured timings and any deviation.
 
 Then the full gate: lint, typecheck, `test:coverage` (100 %), build, the integration files touched, and the PR's CI run.
+
+## Implementation notes
+
+Implemented by PR #136 (run folder `.ai/pipeline/runs/2026-10-21--1237UTC-test-tenant-dataset/`). The design held. These are the measurements and the places where the implementation reads the spec differently:
+
+- **Measured** (`timings.md`, production standalone build on the dev Mac; Docker was unavailable there, so the CI image is covered by the PR's integration run):
+  - the startup seed takes 9.0–9.3 s and the reset 9.4–10.2 s, within the 15 s budget;
+  - the dataset for 2026-10-21 holds 589 customer orders, 640 shipments, 630 goods issues, 466 purchase orders (4 of them top-ups), 450 receipts, 390 production orders, 379 completions and 5 requisitions: 3,549 documents and 3,748 movements.
+- **The lock window is wider than Q16 assumed, and safer.** During a reset the whole server answers nothing else, because better-sqlite3's synchronous statements never yield to the event loop. Every request issued meanwhile waits and then succeeds: a Prod write through the API and through the UI, reads, `/up` and static files, about 7.7 s each when issued 2 s in. None failed "database is locked". This is kept as is and documented in `BACKWARD_COMPATIBILITY.md` §4.
+- **Step 15's ledger example.** 00000007 at 00000001 has 97–100 movements depending on the seed date, so it doesn't always reach a second page. The integration test proves receipt and completion links on that pair, and proves paging on 00000005 at 00000001 (131+ movements on every day of a two-year window).
+- **Configuration.** The committed config is the container value `testTenantConfig`. Tests register a two-month history over it (`REDUCED_TEST_TENANT_CONFIG`). Demand entries name customers by ID with a `wholePacks` flag, and the rule parameters (variances, waste, requisitions, top-ups) are config keys beside the spec's. Forecasts average every history month when the history is shorter than a year.
+- **Generator readings:**
+  - The first history month's documents are created in the setup month (Q3).
+  - Today's partial and open shipments go to each plant's first and second open orders that have no shipment yet. Poznań gets no open shipment on about 8 days in two years.
+  - Partial postings dated today are capped by the stock on hand at that moment.
+- **Names.** The spec's `DemoServices` is `DatasetServices`, and the seeder takes an optional configuration. The old per-kind fixture seeds were renamed `seedFixtures()` during Phase 2 so that every commit stayed green, then deleted with the constants. The fixture rows that unit tests still use live in `tests/setup/demo-fixtures.ts`.
+- **Behaviour removed with the per-kind seeds:** "a removed demo row is never brought back" and the tolerance of edited masters. Startup now seeds only an untouched Test (Q4), all or nothing.
+- **Purchase-order list.** It pages by 100 in the UI and the API (`?page=`, additive). Every other list was checked with the dataset (`lists-check.md`). The unpaged goods-receipt list API (450 receipts, 209 KB, 105 ms) stays with #115, and no new follow-up was needed.
