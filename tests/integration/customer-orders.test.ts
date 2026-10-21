@@ -103,7 +103,7 @@ describe("customer orders through the UI and API", () => {
     await user.press("Escape"); uiOrder = await getOrder(uiOrder.id);
   });
 
-  it("has keyed API parity for both roles, exact conversions, strict line location and stale-version refusals (SAL-004, AUD-025, R07)", async () => {
+  it("has keyed API parity for both roles, exact conversions, strict line location, stale-version refusals and the creator's account in the audit (SAL-004, AUD-001, AUD-025, R07)", async () => {
     const createdIds: string[] = [];
     for (const secret of [adminSecret, userSecret]) {
       const key = randomUUID(); const body = input();
@@ -115,6 +115,11 @@ describe("customer orders through the UI and API", () => {
       const stale = await write("PATCH", `${ROOT}/${order.id}`, edit(order), secret); expect(stale.status).toBe(409); expect(json(stale).error.code).toBe("VERSION_CONFLICT");
       expect((await getOrder(order.id)).lines[0].quantity).toBe("36.000000");
     }
+    // The normal user's create entry names their account, with the API channel and their token (AUD-001).
+    const created = json(await api("GET", `/api/tenants/prod/audit?subjectType=CustomerOrder&subjectId=${createdIds[1]}`)).data.entries as AuditEntryView[];
+    expect(created.filter(({ action }) => action === "customer-orders.customer-order.created")).toEqual([
+      expect.objectContaining({ actor: expect.objectContaining({ username: USER }), channel: "api", sessionId: null, token: expect.objectContaining({ name: "orders-cli" }), before: null }),
+    ]);
     expect(json(await api("POST", ROOT, { body: input() }, userSecret)).error.code).toBe("IDEMPOTENCY_KEY_REQUIRED");
     const cross = await write("POST", ROOT, { ...input(), lines: [{ ...input().lines[0], location: location.id }] }, userSecret);
     expect(cross.status).toBe(400);
