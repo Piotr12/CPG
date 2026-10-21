@@ -192,7 +192,7 @@ describe("GoodsIssueService", () => {
       await expect(orders().create(SIXTY, ACTOR)).rejects.toMatchObject({ code: "CUSTOMER_INACTIVE" });
     });
 
-    it("leaves a completed order Completed and fulfilled when a reasoned positive correction returns its goods, with no return document (SAL-024, N02)", async () => {
+    it("leaves a completed order Completed and fulfilled when a reasoned positive correction returns its goods, with no return document (SAL-024, INV-017, N02)", async () => {
       await count("00000001", "100");
       const order = await orders().create(SIXTY, ACTOR);
       const shipment = await shipAll(order);
