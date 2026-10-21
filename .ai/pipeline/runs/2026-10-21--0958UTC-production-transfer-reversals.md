@@ -25,6 +25,8 @@ Phase 1 — production completion reversal (spec steps 1–4); Phase 2 — trans
 ## Decisions during the run
 - The completion reversal server action lives in the existing `admin/[tenant]/production-orders/actions.ts` beside the other production actions; the spec's `[id]/` folder has no actions file.
 - The completion dialog's order effect is stated as "produced X drops by Y" plus the state rule, rather than computed before→after values, so the app does no decimal arithmetic. On `…_ALREADY_REVERSED` it offers a link that reloads the order page, where the history shows the existing reversal.
+- Reversal is offered on Completed and Closed Early transfers too, not only Open ones, because reversing a receipt or write-off is how such a transfer reopens (TRF-027). Only a read-only tenant hides it. The transfer page's Cancel/Close Early control now reads processing as "any posting exists" (Q8).
+- The smoke integration test's migration count moved to 28 together with the migration (step 2.1).
 
 ## Risks
 - Risk-high: a migration plus multi-leg stock and transit writes. Mitigations: rollback-after-flush tests, two-connection race tests, and populated-upgrade migration tests.
@@ -44,10 +46,10 @@ Phase 1 — production completion reversal (spec steps 1–4); Phase 2 — trans
 
 ### Phase 2: Transfer posting reversal
 
-- [ ] 2.1 Add the TransferReversal entity and migration
-- [ ] 2.2 Add afterReversal and TransferService.reverse
-- [ ] 2.3 Add transfer reversal read fields, API route, server action and compatibility entry
-- [ ] 2.4 Add transfer ledger reversal UI
+- [x] 2.1 Add the TransferReversal entity and migration — dbf82c6
+- [x] 2.2 Add afterReversal and TransferService.reverse — 2fb5df3
+- [x] 2.3 Add transfer reversal read fields, API route, server action and compatibility entry — 8864a56
+- [x] 2.4 Add transfer ledger reversal UI — 6251a79
 
 ### Phase 3: Verification and delivery
 
