@@ -19,6 +19,8 @@ Deliver issue #83 (E08-S01): tenant-scoped, audited customer orders with one hea
 
 - 16:38 UTC — Wrote skeleton then full spec with eight autonomous defaults from PRD/catalogue. Fresh-context scope review approved; clarified line positions have no database uniqueness constraint. Design metadata tests: 2 files / 6 tests passed. Shared test-env descriptor absent, so design visuals skipped per skill. npm ci completed; 10 known high advisories reported, no dependency changes.
 
+- 17:47 UTC — Design verified against the implemented behaviour and moved to implemented/ with original creation stamp. Performance clarifications record bounded collection/batches/index. Source validation and production UI verification are recorded on implementation #102; no runtime code is on this design branch.
+
 ## Changes
 - Design-only spec PR #101; implementation remains on separate PR #102.
 
@@ -26,6 +28,4 @@ Deliver issue #83 (E08-S01): tenant-scoped, audited customer orders with one hea
 - Initial read-only triage: `gh issue view 83`, current user Piotr12, open PR search `[]`, code search no customer-orders implementation.
 
 ## Follow-ups
-- Review and merge design #101 with implementation #102; implementation claim/evidence remain owned by its tracking plan.
-
-- 17:47 UTC — Design verified against the implemented behaviour and moved to implemented/ with original creation stamp. Performance clarifications record bounded collection/batches/index. Source validation and production UI verification are recorded on implementation #102; no runtime code is on this design branch.
+- Done: design #101 and implementation #102 merged on 2026-10-20.

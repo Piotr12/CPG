@@ -101,9 +101,11 @@ The issue's nine criteria (#84). Each is covered by a service test against real 
 
 - One branch and one PR carry the spec and the implementation, as for #86 and #87.
 - An independent review found no blocker. Four of its points were changed:
-  - Both lists page by 100 (`?page=`), newest first, following the lesson "Bound a new document collection from its first release". The screens show the first page. The goods-receipt list predates that lesson and is still unbounded: follow-up.
+  - Both lists page by 100 (`?page=`), newest first, following the lesson "Bound a new document collection from its first release". The screens show the first page. The goods-receipt list predates that lesson and is still unbounded: follow-up #115.
   - The shipment lock is one count over the lines an edit removes or replaces.
   - Q12 now lists the `shipments.shipment.completed` entry.
   - A two-connection race on the outstanding was added (two shipments, plenty of stock): the loser is refused with `SHIPMENT_NOT_OPEN`.
 - Known gap for E11-S01. A line completes on `fulfilled ≥ quantity`, while outstanding also subtracts `abandoned`. When Close Early starts setting `abandoned`, it must set the line and order statuses (`closed-early`) in the same step. Nothing sets `abandoned` today.
+  - Resolved by E11-S01 (#90, PR #123): outstanding honours the line status, and Close Early sets the line and order states and completes the shipments (`tests/integration/document-lifecycle.test.ts`).
+- Implemented in PR #112 (883459a). Editing or cancelling a shipment stays out of scope, as this spec says; no issue tracks it.
 

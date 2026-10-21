@@ -7,8 +7,9 @@ import { apiHandler } from "../../../../../routing/api-handler";
 type Context = RouteContext<"/api/tenants/[tenant]/goods-receipts">;
 
 /**
- * The tenant's goods receipts with their lines, newest first; `?purchaseOrder=00000001` keeps one
- * order's (404 `PURCHASE_ORDER_NOT_FOUND` for an order this tenant doesn't have). Any signed-in account.
+ * The tenant's goods receipts with their lines, newest first, in pages of 100 (`?page=2`);
+ * `?purchaseOrder=00000001` keeps one order's (404 `PURCHASE_ORDER_NOT_FOUND` for an order this
+ * tenant doesn't have). Any signed-in account.
  */
 export const GET = apiHandler(async (request: Request, { params }: Context) => {
   await requireApiUser(request);

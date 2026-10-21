@@ -60,11 +60,13 @@ Source: `packages/app/src/app/up/route.ts`, `Dockerfile`, `config/deploy.yml`.
 Source: `packages/app/src/app/`. Today that is:
 
 - `/`, `/login` and `/help`, which are public. `/help` accepts `?q=` and anchors topics as `#<topic-id>`.
-- physical stock (spec `2026-10-20--1634UTC-stock-ledger-corrections`, D07): both roles can read and correct one tenant; decimal quantities are strings. UI `/admin/{tenant}/stock` accepts `?material={id}&location={id}&page={n}`, help topic `stock`:
-  - `GET /api/tenants/{tenant}/stock?material={id}&location={id}&page={n}` returns a physical quantity in BUoM (zero for a missing pair) and a page of up to 100 movements, newest first (`page` defaults to 1, so a caller that sends none gets the newest 100 as before; since E13-S01 a malformed `page` is 400, where it used to be ignored. Additive since E13-S01: `page`, `movementCount`, and each movement's `source` `{ id, document }`, where `id` is its goods receipt's, goods issue's, transfer's or production completion's business ID and `document` is `{ type: "purchase-order" | "shipment" | "transfer" | "production-order", id }`, both null for a correction), with source, entered unit/factor, date and actor; since E07-S03 also `inTransitFrom` and `inTransitTo`, what Open transfers have in transit from and to the location, and `transitTransfers`, the IDs of those transfers (additive);
-  - `POST /api/tenants/{tenant}/stock/corrections` takes `{ material, location, quantity, unit, reason }`, where `quantity` is a nonzero signed **change**, never a target balance; the date/source/actor/factor are server-owned. A body that names a `transfer` is 400 on `transfer` (since E07-S03; it used to be dropped): transit is written off on its transfer. Returns the immutable movement with its before/after balance. Shared bearer/key/generation/read-only requirements apply;
-  - 409 `INSUFFICIENT_STOCK` includes available/required quantities; 400 `QUANTITY_OUT_OF_RANGE` or `QUANTITY_ROUNDS_TO_ZERO`; 409 `MATERIAL_INACTIVE` / `LOCATION_INACTIVE`, 404 missing references;
-  - any movement permanently locks both material type and BUoM (`MATERIAL_HAS_MOVEMENTS`, 409), even at zero stock. Nonzero stock blocks material/location deactivation (`STOCK_NOT_EMPTY`, 409 with the affected pair and quantity). Movements remain immutable; future reversals append history.
+- `/admin` (the Global tenant chooser), `/admin/users` and `/admin/tokens` (help topics `managing-users`, `api-tokens`), `/admin/test` and `/admin/prod` (the tenant homes). Every tenant page lives under `/admin/{tenant}/`, with eight-digit record IDs:
+  - master data: `/admin/{tenant}/materials` and `/admin/{tenant}/materials/{id}`, `/admin/{tenant}/locations`, `/admin/{tenant}/customers` and `/admin/{tenant}/suppliers` (help topics `materials`, `material-conversions`, `locations`, `customers`, `suppliers`), `/admin/{tenant}/planning-parameters` and `/admin/{tenant}/safety-stock` (help topics `planning-parameters`, `safety-stock`), `/admin/{tenant}/boms` and `/admin/{tenant}/boms/{id}` (with `?revision=N` for an older revision; help topics `boms`, `bom-revisions`) and `/admin/{tenant}/import` (admin only: a normal user is sent to `/admin`; help topic `import`);
+  - demand: `/admin/{tenant}/forecasts` (help topic `forecasts`; it accepts `?material=` and `?location=` to narrow the list), `/admin/{tenant}/customer-orders` and `/admin/{tenant}/customer-orders/{id}` (help topics `customer-orders`, `customer-order-detail`) and `/admin/{tenant}/shipments/{id}` (help topic `shipment`);
+  - supply and movements: `/admin/{tenant}/purchase-requisitions`, `/admin/{tenant}/purchase-orders` and `/admin/{tenant}/purchase-orders/{id}` (help topics `purchase-requisitions`, `purchase-orders`, `purchase-order`), `/admin/{tenant}/production-orders` and `/admin/{tenant}/production-orders/{id}` (help topics `production-orders`, `production-order-detail`), `/admin/{tenant}/transfers` and `/admin/{tenant}/transfers/{id}` (help topics `transfers`, `transfer`), and the stock, stock import, reports and audit pages below.
+
+  All of them require a signed-in session and redirect to `/login` otherwise; tenant pages are readable by every account unless noted.
+- physical stock (spec `2026-10-20--1634UTC-stock-ledger-corrections`, D07): UI `/admin/{tenant}/stock` accepts `?material={id}&location={id}&page={n}`, help topic `stock`; the API is listed below.
 - the current stock report (spec `2026-10-20--2221UTC-stock-report`, E13-S01): UI `/admin/{tenant}/reports/stock` accepts `?material={id}&location={id}&includeZero=true&page={n}`, help topic `stock-report`; the API is listed below.
 - the production variance report (spec `2026-10-21--0947UTC-production-variance-report`, E13-S02): UI `/admin/{tenant}/reports/variance` accepts `?material={id}&location={id}&status={state}&from={YYYY-MM-DD}&to={YYYY-MM-DD}&page={n}`, help topic `variance-report`; the API is listed below.
 - the audits (spec `2026-10-19--1050UTC-audit-log`, E02-S02; filters since E13-S03, spec `2026-10-21--0944UTC-audit-history-filters`): UI `/admin/audit` and `/admin/{tenant}/audit`, help topics `global-audit` and `tenant-audit`; API `GET /api/audit` and `GET /api/tenants/{tenant}/audit`, read-only for every signed-in account, `GET` only:
@@ -99,7 +101,7 @@ Route handlers under `app/api/` are protected the same way: their paths, methods
   - `GET /api/tenants/{tenant}/materials`;
   - `POST /api/tenants/{tenant}/materials` (`{ type, description, baseUnit }`; 409 `CONFLICT` for a create racing past the retry, 409 `MATERIAL_IDS_EXHAUSTED` past 99999999);
   - `GET /api/tenants/{tenant}/materials/{id}` (with its `conversions`; 404 `MATERIAL_NOT_FOUND`);
-  - `PATCH /api/tenants/{tenant}/materials/{id}` (`{ version, description?, type?, baseUnit?, active? }`; an `id` in the body is 400; 409 `BASE_UNIT_HAS_CONVERSIONS`, `BASE_UNIT_IN_USE` once a BOM references the material or while planning parameters or safety targets hold quantities in it, `MATERIAL_TYPE_IN_USE` for a type change once a BOM references it, and `MATERIAL_MADE_AT_LOCATIONS` for a change to raw while it is Make somewhere);
+  - `PATCH /api/tenants/{tenant}/materials/{id}` (`{ version, description?, type?, baseUnit?, active? }`; an `id` in the body is 400; 409 `BASE_UNIT_HAS_CONVERSIONS`, `BASE_UNIT_IN_USE` once a BOM references the material or while planning parameters, safety targets or forecasts hold quantities in it, `MATERIAL_TYPE_IN_USE` for a type change once a BOM references it, and `MATERIAL_MADE_AT_LOCATIONS` for a change to raw while it is Make somewhere);
   - `POST /api/tenants/{tenant}/materials/{id}/conversions` (`{ unit, numerator, denominator }`; 400 `UNIT_IS_BASE_UNIT`, 409 `CONVERSION_EXISTS`);
   - `PATCH /api/tenants/{tenant}/materials/{id}/conversions/{unit}` (`{ numerator, denominator, version }`; 404 `CONVERSION_NOT_FOUND`);
   - `DELETE /api/tenants/{tenant}/materials/{id}/conversions/{unit}`, the first `DELETE` with a JSON body: `{ version }`.
@@ -144,7 +146,7 @@ Route handlers under `app/api/` are protected the same way: their paths, methods
   - `PATCH /api/tenants/{tenant}/purchase-orders/{id}` (`{ version, lines: [{ line, plannedDate }] }`, the planned dates of lines by their number, a number the order doesn't have is 400 on `lines.N.line`; a `supplier` or `location` in the body, or a line's `material`, `unit` or `quantity`, is 400 (until E09-S02 a line's extra fields were dropped); `VERSION_CONFLICT` for a stale version; 409 `PURCHASE_ORDER_NOT_OPEN` once the order is `completed`).
   - A material with an open order line can't be deactivated: `PATCH /api/tenants/{tenant}/materials/{id}` answers 409 `MATERIAL_IN_OPEN_ORDER`, naming the order, and a base-unit change once any requisition or order line holds a quantity of it is 409 `BASE_UNIT_IN_USE`.
 - the goods receipts of one tenant (spec `2026-10-20--1933UTC-goods-receipts`). Any token may post them. A receipt is against one Open purchase order, has an eight-digit ID numbered per tenant, and never changes; posting it raises stock at the order's location, dated the server's UTC day, adds to each order line's `received` and completes the order once every line is received in full, all in one transaction or not at all:
-  - `GET /api/tenants/{tenant}/goods-receipts` (newest first; `?purchaseOrder=00000001` keeps one order's, 404 `PURCHASE_ORDER_NOT_FOUND` for an order the tenant doesn't have). Each is `{ id, purchaseOrder, location, businessDate, createdAt, lines: [{ line, material, quantity, enteredQuantity, enteredUnit, numerator, denominator }] }`, `line` being the order line's number;
+  - `GET /api/tenants/{tenant}/goods-receipts` (newest first, in pages of 100: `?page=2`, 1-based, a page past the last is empty; `page` defaults to 1, so a caller that sends none gets the newest 100 receipts, every receipt for a tenant with no more than 100, and since #115 a malformed `page` is 400; `?purchaseOrder=00000001` keeps one order's, 404 `PURCHASE_ORDER_NOT_FOUND` for an order the tenant doesn't have). Each is `{ id, purchaseOrder, location, businessDate, createdAt, lines: [{ line, material, quantity, enteredQuantity, enteredUnit, numerator, denominator }] }`, `line` being the order line's number;
   - `POST /api/tenants/{tenant}/goods-receipts` (`{ purchaseOrder, lines: [{ line, quantity, unit, purchaseOrder? }] }`, 1 to 100 lines, each for a different order line; no date is taken). The posted receipt adds `warnings`, `[{ code: "OVER_RECEIPT", line, excess }]` for each line that received more than was outstanding: an excess is accepted. A line `purchaseOrder` other than the receipt's is 400 on `lines.N.purchaseOrder`, a line number the order doesn't have 400 on `lines.N.line`, a repeated one 400 on the repeat; 404 `PURCHASE_ORDER_NOT_FOUND`; 409 `PURCHASE_ORDER_NOT_OPEN`, `MATERIAL_INACTIVE`, `LOCATION_INACTIVE`, `RECEIPT_ID_RACE` or `RECEIPT_IDS_EXHAUSTED`; 400 on `lines.N.quantity` when the line's received total would not fit, and `QUANTITY_OUT_OF_RANGE` when the stock balance would not;
   - `GET /api/tenants/{tenant}/goods-receipts/{id}` (404 `GOODS_RECEIPT_NOT_FOUND`).
   - Each receipt line's stock movement has `type` `goods-receipt` and the receipt's internal UUID as its `postingId`.
@@ -226,29 +228,13 @@ These header names, codes and statuses are part of the contract. `tests/api-writ
 
 Stock conflict envelopes may include additive `error.params` (string-valued public context for translations). `INSUFFICIENT_STOCK` supplies material, location, available, requested and unit; `STOCK_NOT_EMPTY` supplies material, location, quantity and unit. The existing English `message`, status and code remain stable.
 
-### 5. Commands used by CI, deploy and the docs
-
-Source: root `package.json` scripts, `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `.ai/agentic.config.json`, `AGENTS.md`, `SDLC.md`.
-
-**Breaking:** renaming or removing `dev`, `build`, `start`, `lint`, `typecheck`, `test`, `test:coverage`, `test:integration`, `db:migrate` or `db:migration:create`. **Required path:** update every workflow, the config's `validation.commands`, `AGENTS.md` and `SDLC.md` in the same PR.
-
-## Not protected
-
-- **`@cpg/*` package exports.** The workspace packages are private, unpublished and consumed only inside this monorepo. Change them freely, but update every caller in the same PR (typecheck enforces it).
-- **Domain event IDs** (`concept.entity.action`). They are in-process only, with no external subscribers. Revisit this if events ever leave the process (webhooks, a queue).
-- **Internal file layout**, as long as `AGENTS.md` and the engineering standards stay accurate.
-
-## Changing this document
-
-Add a surface here in the same PR that creates it, for example the first `/api` route, the first webhook or the first exported file format.
-
 Customer-order collection reads use optional `?page=1` (integer 1–1000000), fixed pages of 100 orders in ascending ID order. The data remains an array; request successive pages until fewer than 100 records are returned. Unknown query keys and invalid page values are validation errors.
 
-### Production orders (E10-S01, #88)
+#### Production orders (E10-S01, #88)
 
 Tenant routes `/api/tenants/{tenant}/production-orders`, `/{id}` and `/options` use business IDs, shared envelopes and decimal-string quantities. Collection pages contain at most 100 summaries (`page` defaults to 1). Options is an authenticated read; create/update use the shared bearer, key, generation and read-only gates. Creation accepts output/location/target/unit/finish and optional paired BOM/revision; explicit selection never silently repins a superseded revision. PATCH changes target/unit/finish at the submitted version only. Detail and options components carry `material`, `baseUnit`, `active` (the component material's current state), `quantity`, `required`, `available` and `shortage`. Stored revision, lead time and unchanged conversion remain historical facts; creating or editing a production order changes no stock (completions, below, are the one production write that does). Summaries and detail carry `outstanding` (target − produced, never below zero). An edit that lowers the target to exactly the produced quantity makes the order `completed`. New refusal codes use the `PRODUCTION_` prefix plus master usage codes `MATERIAL_HAS_PRODUCTION_ORDERS` and `LOCATION_HAS_PRODUCTION_ORDERS` with public `order` parameters. The additive production_order table is tenant-owned.
 
-### Production completions (E10-S02, #89)
+#### Production completions (E10-S02, #89)
 
 Tenant routes under `/api/tenants/{tenant}/production-orders/{id}/completions`, `{id}` the order's business ID:
 
@@ -267,7 +253,7 @@ Tenant routes under `/api/tenants/{tenant}/production-orders/{id}/completions`, 
 - Audit actions: `production-orders.production-completion.posted` (flat per-line keys `line{n}Material/Expected/Actual/Variance/Extra`) and `production-orders.production-order.progressed`.
 - The additive `production_completion` and `production_completion_line` tables are tenant-owned and immutable. The completion's nullable `submission` is the UI's duplicate-submit token, unique per tenant and never exposed.
 
-### Document cancellation and early closure (E11-S01, #90)
+#### Document cancellation and early closure (E11-S01, #90)
 
 Each tenant document path `/{customer-orders,purchase-requisitions,purchase-orders,production-orders,transfers}/{id}` adds keyed `POST /cancel` and `POST /close-early`. Both roles may call them, with the existing bearer, tenant-generation and read-only guards. The strict body is `{ version }`; customer orders additionally accept `lines: UUID[]`, purchase orders `lines: number[]` using their existing 1-based positions. An omitted selection resolves the whole document; a selection must contain 1–100 unique lines belonging to it. No endpoint accepts arbitrary status or reopens a terminal document.
 
@@ -276,22 +262,23 @@ Each tenant document path `/{customer-orders,purchase-requisitions,purchase-orde
 - Requisition and transfer views add `abandoned`; transfer views also add `outstanding`. PO lines add `abandoned` and persist all four states. Production detail adds `hasProcessing`. Outstanding across these documents is `max(quantity − processed − abandoned, 0)`; a terminal transfer's `undispatched` is zero. Existing fields remain present.
 - New 409 codes are `DOCUMENT_NOT_OPEN`, `DOCUMENT_PROCESSED` (use Close Early), `DOCUMENT_UNPROCESSED` (use Cancel), and `TRANSFER_IN_TRANSIT` with public `quantity`/`unit` parameters. Existing document-specific terminal, not-found and version codes remain. Invalid selections return `VALIDATION_FAILED`; a refusal changes nothing.
 - Audit adds `.cancelled` / `.closed-early` under each existing document prefix, preserving before/after quantities and state. Same-key retries replay the original result without new audit. Customer-order closure completes affected shipment contexts in the same transaction.
-### Stock reversals (#91)
+
+#### Stock reversals (#91)
 
 - `GET /api/tenants/{tenant}/stock/movements/{id}` reads one tenant-local movement with source and reversal links; invalid UUID is `400 VALIDATION_FAILED`, missing/foreign ID is `404 STOCK_MOVEMENT_NOT_FOUND`.
 - `POST /api/tenants/{tenant}/stock/movements/{id}/reverse` accepts only `{ reason }` (trimmed, 1–500 characters), under the existing bearer, idempotency, generation and read-only contract. Both roles may reverse. Success returns `{ original, movement }` in the shared envelope. Quantity is the full exact inverse and business date is today UTC.
 - `409 STOCK_ALREADY_REVERSED` includes `error.params.reversal`, the existing inverse UUID. Unsupported source or inconsistent history returns `409 STOCK_REVERSAL_UNSUPPORTED` / `STOCK_REVERSAL_INCONSISTENT`. Existing insufficient-stock and 400 overflow refusals remain unchanged. A failure writes no stock, document progress, audit or idempotency receipt.
-- Ledger movements add `reverses`, `reversedBy` (nullable UUIDs) and `canReverse` (source eligibility). GR/GI lines add `movementId` and `reversedBy` (nullable UUIDs). Customer-order lines add `posted`, which remains true after full reversal. Receipt lists remain unpaged; ledger/GI pagination is unchanged.
+- Ledger movements add `reverses`, `reversedBy` (nullable UUIDs) and `canReverse` (source eligibility). GR/GI lines add `movementId` and `reversedBy` (nullable UUIDs). Customer-order lines add `posted`, which remains true after full reversal. Ledger/GI pagination is unchanged; receipt lists are paged since #115.
 - Reversal links and original movements are immutable. Receipt/issue originals retain their quantities and dates. Reversals may reopen automatically completed orders/shipments; explicit closure and abandonment stay authoritative. Historical customer/location/material/unit/date locks survive net fulfilment returning to zero.
 - The additive link migration needs no ledger backfill. Its down migration only removes links: it does not undo inverses or document progress. After reversals are used, rolling back the application requires backup recovery or forward repair; down alone is not a business rollback.
 
-### Lifecycle and reversal integration (#90 / #91)
+#### Lifecycle and reversal integration (#90 / #91)
 
 - Immutable receipt/issue history counts as processing even when its net quantity returns to zero: Cancel refuses and Close Early remains available for the restored remainder.
 - Reversals preserve each Cancelled/Closed Early line and its recorded abandonment; these lines expose zero outstanding and cannot receive or issue more. Headers are recomputed from retained line states, so reversing an automatically Completed sibling may reopen a mixed header without reopening explicitly closed lines.
 - PO progress readers and material-use checks tolerate an older writer changing received quantities without knowing the added status column during deployment overlap.
 
-### Production completion and transfer posting reversals (E11-S03, #92)
+#### Production completion and transfer posting reversals (E11-S03, #92)
 
 - `POST /api/tenants/{tenant}/production-orders/{id}/completions/{completionId}/reverse` accepts only `{ reason }` (trimmed, 1–500 characters). It uses the existing bearer, idempotency, generation and read-only contract, and both roles may call it. It reverses the whole completion once, today: every movement of the completion is inverted as one `reversal` posting group, and each original is linked through `StockReversal`. Success returns `{ completion, order, movements }`. An invalid completion ID is `400 VALIDATION_FAILED`; a missing, foreign or other-order ID is `404 PRODUCTION_COMPLETION_NOT_FOUND`.
 - `409 PRODUCTION_COMPLETION_ALREADY_REVERSED` carries `error.params.reversal` (the reversal's posting ID) when it is known. Short finished output is the existing `409 INSUFFICIENT_STOCK`, and an overflowing returned input is `400 QUANTITY_OUT_OF_RANGE`. Inconsistent history is `409 STOCK_REVERSAL_INCONSISTENT`, and a concurrent order change is `409 PRODUCTION_ORDER_CHANGED`. A failure writes no stock, link, progress, audit or idempotency receipt.
@@ -306,3 +293,19 @@ Each tenant document path `/{customer-orders,purchase-requisitions,purchase-orde
 - Transfer detail adds `reversals: [{ id, original, kind, businessDate, occurredAt, quantity, reason, actorUsername, channel, legs }]`: the reversals of the postings it returns, so each original is shown too. Each posting adds `reversedBy` (nullable UUID) and `canReverse` (source eligibility; the writable-tenant gate stays separate). `TransferPosting.kind` and existing posting fields are unchanged. The movement endpoint keeps refusing transfer movements.
 - **Amendment to the lifecycle bullets above, transfers only:** every transfer reversal leaves the transfer Open and resets its `abandoned` to zero. A Completed or Closed Early transfer therefore reopens, because a transfer cannot stay closed with stock in transit (TRF-027). A transfer's processing is now the existence of any posting, not `dispatched > 0`, so a fully reversed transfer still refuses Cancel.
 - The additive `transfer_reversal` migration needs no backfill. Its down migration only drops the table: it does not undo posted inverses or recalculated progress, so a rollback after use needs backup recovery or forward repair. During deploy overlap the previous release ignores the table.
+
+### 5. Commands used by CI, deploy and the docs
+
+Source: root `package.json` scripts, `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `.ai/agentic.config.json`, `AGENTS.md`, `SDLC.md`.
+
+**Breaking:** renaming or removing `dev`, `build`, `start`, `lint`, `typecheck`, `test`, `test:coverage`, `test:integration`, `db:migrate` or `db:migration:create`. **Required path:** update every workflow, the config's `validation.commands`, `AGENTS.md` and `SDLC.md` in the same PR.
+
+## Not protected
+
+- **`@cpg/*` package exports.** The workspace packages are private, unpublished and consumed only inside this monorepo. Change them freely, but update every caller in the same PR (typecheck enforces it).
+- **Domain event IDs** (`concept.entity.action`). They are in-process only, with no external subscribers. Revisit this if events ever leave the process (webhooks, a queue).
+- **Internal file layout**, as long as `AGENTS.md` and the engineering standards stay accurate.
+
+## Changing this document
+
+Add a surface here in the same PR that creates it, for example the first `/api` route, the first webhook or the first exported file format.

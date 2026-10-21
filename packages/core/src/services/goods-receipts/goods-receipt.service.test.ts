@@ -363,6 +363,25 @@ describe("GoodsReceiptService", () => {
   });
 
   describe("list and get", () => {
+    it("lists in pages of 100, newest first, each with its own lines (#115, lesson 2026-10-20)", async () => {
+      const order = await orders().create(ORDER, ACTOR);
+      const em = scoped();
+      const orderLine = await em.findOneOrFail(PurchaseOrderLine, { position: 2 }, { populate: ["order"] });
+      for (let index = 1; index <= 101; index++) {
+        const receipt = em.create(GoodsReceipt, { code: String(index).padStart(8, "0"), order: orderLine.order, businessDate: "2026-10-20" });
+        em.create(GoodsReceiptLine, { receipt, position: 0, orderLine, quantity: `${index}.000000`, enteredQuantity: String(index), enteredUnit: "each", numerator: "1", denominator: "1" });
+      }
+      await em.flush();
+
+      const first = await service().list();
+      expect(first).toHaveLength(100);
+      expect([first[0].id, first[99].id]).toEqual(["00000101", "00000002"]);
+      expect(first.every(({ id, lines }) => lines.length === 1 && lines[0].quantity === `${Number(id)}.000000`)).toBe(true);
+      expect(await service().list({ page: 1 })).toEqual(first);
+      expect((await service().list({ purchaseOrder: order.id, page: 2 })).map(({ id }) => id)).toEqual(["00000001"]);
+      expect(await service().list({ page: 3 })).toEqual([]);
+    });
+
     it("lists the tenant's receipts newest first, or one order's, and reads one (TEN-014)", async () => {
       const first = await orders().create(ORDER, ACTOR);
       const second = await orders().create(ORDER, ACTOR);
