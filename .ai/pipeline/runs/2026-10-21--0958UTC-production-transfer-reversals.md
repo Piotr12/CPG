@@ -28,6 +28,13 @@ Phase 1 — production completion reversal (spec steps 1–4); Phase 2 — trans
 - Reversal is offered on Completed and Closed Early transfers too, not only Open ones, because reversing a receipt or write-off is how such a transfer reopens (TRF-027). Only a read-only tenant hides it. The transfer page's Cancel/Close Early control now reads processing as "any posting exists" (Q8).
 - The smoke integration test's migration count moved to 28 together with the migration (step 2.1).
 
+## Verification (local)
+- `npm run lint` → 0 errors (1 existing warning in `boms/bom.service.ts`, untouched).
+- `npm run typecheck` → exit 0.
+- `npm run test:coverage` → 468 files, 3,009 tests passed; 100 % statements, branches, functions and lines.
+- `npm run build` → exit 0.
+- Integration, against the standalone production build (Docker storage is full: `no space left on device`): `production-transfer-reversals` (4 tests), and `smoke`, `transfers`, `transfers-api`, `production-completions`, `document-lifecycle`, `stock-reversals` (37 tests). All passed.
+
 ## Risks
 - Risk-high: a migration plus multi-leg stock and transit writes. Mitigations: rollback-after-flush tests, two-connection race tests, and populated-upgrade migration tests.
 - Docker storage on this machine is full (`no space left on device`), so local integration runs may need the standalone-server fallback from the lessons. CI remains the gate.
@@ -53,5 +60,5 @@ Phase 1 — production completion reversal (spec steps 1–4); Phase 2 — trans
 
 ### Phase 3: Verification and delivery
 
-- [ ] 3.1 Add the integration test and update smoke
+- [x] 3.1 Add the integration test and update smoke — dbf82c6 (smoke), 370eaf4
 - [ ] 3.2 Run the full gate, review and deliver
