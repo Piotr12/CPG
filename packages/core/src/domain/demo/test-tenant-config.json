@@ -1,0 +1,391 @@
+{
+  "randomSeed": 20261021,
+  "horizon": { "historyMonths": 24, "forecastMonths": 12 },
+  "shape": {
+    "locations": 4,
+    "customers": 10,
+    "suppliers": 6,
+    "rawMaterials": 12,
+    "intermediates": 4,
+    "finishedProducts": { "simple": 5, "composed": 5 },
+    "alternateBoms": { "product": "00000026", "count": 3 }
+  },
+  "limits": { "documents": 5000, "movements": 7000 },
+  "demand": {
+    "growthPerYear": "0.04",
+    "noise": "0.12",
+    "seasonality": {
+      "flat": ["1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1"],
+      "backToSchool": ["0.8", "0.85", "0.95", "1", "1.05", "1.15", "1.35", "1.4", "1.1", "0.9", "0.8", "0.75"],
+      "spring": ["0.8", "0.9", "1.2", "1.3", "1.25", "1.1", "1", "0.95", "0.95", "0.9", "0.8", "0.85"]
+    },
+    "products": [
+      { "material": "00000005", "monthlyBase": "60", "profile": "flat", "enteredIn": "pallet" },
+      { "material": "00000018", "monthlyBase": "45", "profile": "flat", "enteredIn": "pallet" },
+      { "material": "00000019", "monthlyBase": "80", "profile": "backToSchool", "enteredIn": "pallet" },
+      { "material": "00000020", "monthlyBase": "50", "profile": "backToSchool", "enteredIn": "pallet" },
+      { "material": "00000021", "monthlyBase": "30", "profile": "flat", "enteredIn": "pallet" },
+      { "material": "00000022", "monthlyBase": "120", "profile": "spring", "enteredIn": "pallet" },
+      { "material": "00000023", "monthlyBase": "200", "profile": "spring", "enteredIn": "case" },
+      { "material": "00000024", "monthlyBase": "150", "profile": "flat", "enteredIn": "case" },
+      { "material": "00000025", "monthlyBase": "300", "profile": "flat", "enteredIn": "case" },
+      { "material": "00000026", "monthlyBase": "90", "profile": "flat", "enteredIn": "case" }
+    ],
+    "customers": [
+      { "customer": "00000001", "wholePacks": false, "shares": { "00000022": "0.35", "00000023": "0.3", "00000024": "0.4", "00000025": "0.2", "00000026": "0.2" } },
+      { "customer": "00000002", "wholePacks": false, "shares": { "00000005": "0.3", "00000018": "0.5", "00000025": "0.3", "00000026": "0.2" } },
+      { "customer": "00000003", "wholePacks": false, "shares": { "00000005": "0.2", "00000023": "0.3", "00000024": "0.3", "00000025": "0.3", "00000026": "0.2" } },
+      { "customer": "00000004", "wholePacks": true, "shares": { "00000018": "0.3", "00000019": "0.2", "00000022": "0.3", "00000024": "0.3" } },
+      { "customer": "00000005", "wholePacks": false, "shares": { "00000018": "0.1", "00000019": "0.35", "00000020": "0.4" } },
+      { "customer": "00000006", "wholePacks": false, "shares": { "00000005": "0.2", "00000018": "0.1", "00000019": "0.15", "00000020": "0.2" } },
+      { "customer": "00000007", "wholePacks": false, "shares": { "00000020": "0.3", "00000021": "0.3", "00000022": "0.2" } },
+      { "customer": "00000008", "wholePacks": false, "shares": { "00000019": "0.3", "00000020": "0.1", "00000026": "0.2" } },
+      { "customer": "00000009", "wholePacks": false, "shares": { "00000005": "0.3", "00000021": "0.7", "00000022": "0.15", "00000023": "0.2" } },
+      { "customer": "00000010", "wholePacks": true, "shares": { "00000023": "0.2", "00000025": "0.2", "00000026": "0.2" } }
+    ]
+  },
+  "supply": {
+    "partialShipmentEvery": 9,
+    "varianceEvery": 7,
+    "underConsumptionEvery": 11,
+    "overConsumption": "0.03",
+    "underConsumption": "0.02",
+    "safetyStock": {
+      "finishedMonths": "0.5",
+      "intermediateMonths": "0.25",
+      "rawLeadTimeFactor": "1.2",
+      "laterIncreases": [
+        { "material": "00000019", "location": "00000002", "monthsAfterAnchor": 3, "factor": "1.25" },
+        { "material": "00000023", "location": "00000003", "monthsAfterAnchor": 3, "factor": "1.25" }
+      ]
+    },
+    "waste": {
+      "monthsBeforeAnchor": 7,
+      "orders": [
+        { "location": "00000001", "output": "00000021", "sheet": "00000001" },
+        { "location": "00000002", "output": "00000016", "sheet": "00000007" },
+        { "location": "00000003", "output": "00000022", "sheet": "00000007" },
+        { "location": "00000004", "output": "00000025", "sheet": "00000007" }
+      ]
+    },
+    "requisitions": {
+      "open": [
+        { "material": "00000007", "location": "00000004", "quantity": "1000", "unit": "kg" },
+        { "material": "00000013", "location": "00000003", "quantity": "500", "unit": "kg" },
+        { "material": "00000014", "location": "00000002", "quantity": "30", "unit": "kg" }
+      ],
+      "converted": [
+        { "material": "00000001", "location": "00000001" },
+        { "material": "00000009", "location": "00000002" }
+      ]
+    },
+    "topUps": [
+      { "location": "00000001", "material": "00000001" },
+      { "location": "00000002", "material": "00000007" },
+      { "location": "00000003", "material": "00000007" },
+      { "location": "00000004", "material": "00000007" }
+    ]
+  },
+  "catalogue": {
+    "locations": ["Main plant, Wrocław", "Lockers plant, Poznań", "Sheet-metal plant, Łódź", "Small goods plant, Gdańsk"],
+    "customers": [
+      "Hardware Store Chain Sp. z o.o.",
+      "Office Interiors S.A.",
+      "Online shop (direct sales)",
+      "Export distributor (DE)",
+      "School Furniture Partners Sp. z o.o.",
+      "Regional Hospital Procurement",
+      "Logistics & Warehousing Group S.A.",
+      "FitZone gym chain",
+      "Construction Wholesale Hub Sp. z o.o.",
+      "Export distributor (CZ/SK)"
+    ],
+    "suppliers": [
+      "Steel Service Centre Sp. z o.o.",
+      "Fasteners Wholesale",
+      "Packaging Supplies Ltd.",
+      "Coatings & Paints S.A.",
+      "Metal Components Nord",
+      "Fittings Direct GmbH"
+    ],
+    "materials": [
+      {
+        "type": "raw", "description": "Steel sheet 2 mm", "baseUnit": "kg",
+        "conversions": [{ "unit": "t", "numerator": "1000", "denominator": "1" }],
+        "buy": { "leadTimeDays": 14, "minimumQuantity": "500", "lotMultiple": "100", "suppliers": ["00000001"] }
+      },
+      {
+        "type": "raw", "description": "Bolt M8", "baseUnit": "each",
+        "conversions": [{ "unit": "case", "numerator": "12", "denominator": "1" }, { "unit": "box", "numerator": "100", "denominator": "1" }],
+        "buy": { "leadTimeDays": 7, "minimumQuantity": "1000", "lotMultiple": "100", "suppliers": ["00000002"] }
+      },
+      {
+        "type": "raw", "description": "Paint, red", "baseUnit": "l",
+        "conversions": [{ "unit": "ml", "numerator": "1", "denominator": "1000" }],
+        "buy": { "leadTimeDays": 10, "minimumQuantity": "20", "lotMultiple": "5", "suppliers": ["00000004"] }
+      },
+      { "type": "intermediate", "description": "Painted side panel", "baseUnit": "each", "conversions": [] },
+      {
+        "type": "finished", "description": "Cabinet, red", "baseUnit": "each",
+        "conversions": [{ "unit": "pallet", "numerator": "20", "denominator": "1" }]
+      },
+      {
+        "type": "raw", "description": "Cardboard box", "baseUnit": "each",
+        "conversions": [{ "unit": "bundle", "numerator": "25", "denominator": "1" }],
+        "buy": { "leadTimeDays": 5, "minimumQuantity": "100", "lotMultiple": "25", "suppliers": ["00000003"] }
+      },
+      {
+        "type": "raw", "description": "Steel sheet 1.0 mm", "baseUnit": "kg",
+        "conversions": [{ "unit": "t", "numerator": "1000", "denominator": "1" }],
+        "buy": { "leadTimeDays": 14, "minimumQuantity": "1000", "lotMultiple": "250", "suppliers": ["00000001"] }
+      },
+      {
+        "type": "raw", "description": "Paint, grey", "baseUnit": "l",
+        "conversions": [{ "unit": "ml", "numerator": "1", "denominator": "1000" }],
+        "buy": { "leadTimeDays": 10, "minimumQuantity": "20", "lotMultiple": "5", "suppliers": ["00000004"] }
+      },
+      {
+        "type": "raw", "description": "Powder coat, grey RAL 7035", "baseUnit": "kg",
+        "conversions": [{ "unit": "bag", "numerator": "25", "denominator": "1" }],
+        "buy": { "leadTimeDays": 12, "minimumQuantity": "50", "lotMultiple": "25", "suppliers": ["00000004"] }
+      },
+      {
+        "type": "raw", "description": "Hinge, steel", "baseUnit": "each",
+        "conversions": [{ "unit": "box", "numerator": "50", "denominator": "1" }],
+        "buy": { "leadTimeDays": 10, "minimumQuantity": "200", "lotMultiple": "50", "suppliers": ["00000002", "00000006"] }
+      },
+      {
+        "type": "raw", "description": "Cam lock with two keys", "baseUnit": "each",
+        "conversions": [{ "unit": "box", "numerator": "20", "denominator": "1" }],
+        "buy": { "leadTimeDays": 10, "minimumQuantity": "100", "lotMultiple": "20", "suppliers": ["00000002", "00000006"] }
+      },
+      {
+        "type": "raw", "description": "Shelf support clip", "baseUnit": "each",
+        "conversions": [{ "unit": "bag", "numerator": "200", "denominator": "1" }],
+        "buy": { "leadTimeDays": 7, "minimumQuantity": "2000", "lotMultiple": "200", "suppliers": ["00000002"] }
+      },
+      {
+        "type": "raw", "description": "Galvanised steel sheet 0.8 mm", "baseUnit": "kg",
+        "conversions": [{ "unit": "t", "numerator": "1000", "denominator": "1" }],
+        "buy": { "leadTimeDays": 21, "minimumQuantity": "500", "lotMultiple": "100", "suppliers": ["00000001"] }
+      },
+      {
+        "type": "raw", "description": "Welding wire 0.8 mm", "baseUnit": "kg",
+        "conversions": [{ "unit": "spool", "numerator": "15", "denominator": "1" }],
+        "buy": { "leadTimeDays": 7, "minimumQuantity": "30", "lotMultiple": "15", "suppliers": ["00000005"] }
+      },
+      { "type": "intermediate", "description": "Door, assembled", "baseUnit": "each", "conversions": [] },
+      { "type": "intermediate", "description": "Locker frame, welded", "baseUnit": "each", "conversions": [] },
+      { "type": "intermediate", "description": "Shelf, powder-coated", "baseUnit": "each", "conversions": [] },
+      {
+        "type": "finished", "description": "Office cabinet, grey, 2 doors", "baseUnit": "each",
+        "conversions": [{ "unit": "pallet", "numerator": "12", "denominator": "1" }]
+      },
+      {
+        "type": "finished", "description": "Locker, 2 compartments", "baseUnit": "each",
+        "conversions": [{ "unit": "pallet", "numerator": "8", "denominator": "1" }]
+      },
+      {
+        "type": "finished", "description": "Locker, 4 compartments", "baseUnit": "each",
+        "conversions": [{ "unit": "pallet", "numerator": "8", "denominator": "1" }]
+      },
+      {
+        "type": "finished", "description": "Workshop cabinet, 4 shelves", "baseUnit": "each",
+        "conversions": [{ "unit": "pallet", "numerator": "10", "denominator": "1" }]
+      },
+      {
+        "type": "finished", "description": "Steel shelf unit, 5 shelves", "baseUnit": "each",
+        "conversions": [{ "unit": "pallet", "numerator": "10", "denominator": "1" }]
+      },
+      {
+        "type": "finished", "description": "Letterbox, galvanised", "baseUnit": "each",
+        "conversions": [{ "unit": "case", "numerator": "6", "denominator": "1" }]
+      },
+      {
+        "type": "finished", "description": "Tool tray, powder-coated", "baseUnit": "each",
+        "conversions": [{ "unit": "case", "numerator": "10", "denominator": "1" }]
+      },
+      {
+        "type": "finished", "description": "Document box, A4", "baseUnit": "each",
+        "conversions": [{ "unit": "case", "numerator": "12", "denominator": "1" }]
+      },
+      {
+        "type": "finished", "description": "Key cabinet, wall-mounted", "baseUnit": "each",
+        "conversions": [{ "unit": "case", "numerator": "6", "denominator": "1" }]
+      }
+    ],
+    "boms": [
+      {
+        "output": "00000004", "priority": 1,
+        "components": [
+          { "material": "00000001", "quantity": "4.5", "unit": "kg" },
+          { "material": "00000003", "quantity": "250", "unit": "ml" }
+        ]
+      },
+      {
+        "output": "00000015", "priority": 1,
+        "components": [
+          { "material": "00000007", "quantity": "3.2", "unit": "kg" },
+          { "material": "00000010", "quantity": "2", "unit": "each" },
+          { "material": "00000011", "quantity": "1", "unit": "each" },
+          { "material": "00000008", "quantity": "150", "unit": "ml" }
+        ]
+      },
+      {
+        "output": "00000016", "priority": 1,
+        "components": [
+          { "material": "00000007", "quantity": "9", "unit": "kg" },
+          { "material": "00000014", "quantity": "0.3", "unit": "kg" },
+          { "material": "00000009", "quantity": "0.4", "unit": "kg" }
+        ]
+      },
+      {
+        "output": "00000017", "priority": 1,
+        "components": [
+          { "material": "00000007", "quantity": "1.8", "unit": "kg" },
+          { "material": "00000009", "quantity": "0.12", "unit": "kg" },
+          { "material": "00000012", "quantity": "4", "unit": "each" }
+        ]
+      },
+      {
+        "output": "00000005", "priority": 1,
+        "components": [
+          { "material": "00000004", "quantity": "4", "unit": "each" },
+          { "material": "00000015", "quantity": "1", "unit": "each" },
+          { "material": "00000002", "quantity": "16", "unit": "each" },
+          { "material": "00000006", "quantity": "1", "unit": "each" }
+        ]
+      },
+      {
+        "output": "00000018", "priority": 1,
+        "components": [
+          { "material": "00000007", "quantity": "18", "unit": "kg" },
+          { "material": "00000015", "quantity": "2", "unit": "each" },
+          { "material": "00000017", "quantity": "2", "unit": "each" },
+          { "material": "00000002", "quantity": "2", "unit": "case" },
+          { "material": "00000008", "quantity": "400", "unit": "ml" },
+          { "material": "00000006", "quantity": "1", "unit": "each" }
+        ]
+      },
+      {
+        "output": "00000019", "priority": 1,
+        "components": [
+          { "material": "00000016", "quantity": "1", "unit": "each" },
+          { "material": "00000015", "quantity": "2", "unit": "each" },
+          { "material": "00000017", "quantity": "1", "unit": "each" },
+          { "material": "00000002", "quantity": "12", "unit": "each" },
+          { "material": "00000006", "quantity": "1", "unit": "each" }
+        ]
+      },
+      {
+        "output": "00000020", "priority": 1,
+        "components": [
+          { "material": "00000016", "quantity": "1", "unit": "each" },
+          { "material": "00000015", "quantity": "4", "unit": "each" },
+          { "material": "00000017", "quantity": "3", "unit": "each" },
+          { "material": "00000002", "quantity": "20", "unit": "each" },
+          { "material": "00000006", "quantity": "1", "unit": "each" }
+        ]
+      },
+      {
+        "output": "00000021", "priority": 1,
+        "components": [
+          { "material": "00000001", "quantity": "22", "unit": "kg" },
+          { "material": "00000017", "quantity": "4", "unit": "each" },
+          { "material": "00000015", "quantity": "2", "unit": "each" },
+          { "material": "00000002", "quantity": "32", "unit": "each" },
+          { "material": "00000008", "quantity": "600", "unit": "ml" },
+          { "material": "00000006", "quantity": "1", "unit": "each" }
+        ]
+      },
+      {
+        "output": "00000022", "priority": 1,
+        "components": [
+          { "material": "00000007", "quantity": "24", "unit": "kg" },
+          { "material": "00000002", "quantity": "40", "unit": "each" },
+          { "material": "00000012", "quantity": "20", "unit": "each" },
+          { "material": "00000009", "quantity": "0.9", "unit": "kg" },
+          { "material": "00000006", "quantity": "1", "unit": "each" }
+        ]
+      },
+      {
+        "output": "00000023", "priority": 1,
+        "components": [
+          { "material": "00000013", "quantity": "2.4", "unit": "kg" },
+          { "material": "00000011", "quantity": "1", "unit": "each" },
+          { "material": "00000002", "quantity": "4", "unit": "each" },
+          { "material": "00000006", "quantity": "1", "unit": "each" }
+        ]
+      },
+      {
+        "output": "00000024", "priority": 1,
+        "components": [
+          { "material": "00000007", "quantity": "1.6", "unit": "kg" },
+          { "material": "00000009", "quantity": "0.08", "unit": "kg" },
+          { "material": "00000006", "quantity": "1", "unit": "each" }
+        ]
+      },
+      {
+        "output": "00000025", "priority": 1,
+        "components": [
+          { "material": "00000007", "quantity": "1.1", "unit": "kg" },
+          { "material": "00000008", "quantity": "60", "unit": "ml" },
+          { "material": "00000006", "quantity": "1", "unit": "each" }
+        ]
+      },
+      {
+        "output": "00000026", "priority": 1,
+        "components": [
+          { "material": "00000007", "quantity": "2.2", "unit": "kg" },
+          { "material": "00000009", "quantity": "0.1", "unit": "kg" },
+          { "material": "00000010", "quantity": "2", "unit": "each" },
+          { "material": "00000011", "quantity": "1", "unit": "each" },
+          { "material": "00000006", "quantity": "1", "unit": "each" }
+        ]
+      },
+      {
+        "output": "00000026", "priority": 2,
+        "components": [
+          { "material": "00000007", "quantity": "2.2", "unit": "kg" },
+          { "material": "00000008", "quantity": "120", "unit": "ml" },
+          { "material": "00000010", "quantity": "2", "unit": "each" },
+          { "material": "00000011", "quantity": "1", "unit": "each" },
+          { "material": "00000006", "quantity": "1", "unit": "each" }
+        ]
+      },
+      {
+        "output": "00000026", "priority": 3,
+        "components": [
+          { "material": "00000001", "quantity": "3.8", "unit": "kg" },
+          { "material": "00000008", "quantity": "150", "unit": "ml" },
+          { "material": "00000010", "quantity": "2", "unit": "each" },
+          { "material": "00000011", "quantity": "1", "unit": "each" },
+          { "material": "00000006", "quantity": "1", "unit": "each" }
+        ]
+      }
+    ],
+    "production": [
+      { "material": "00000004", "location": "00000001", "leadTimeDays": 2, "minimumQuantity": "50", "lotMultiple": "10" },
+      { "material": "00000015", "location": "00000001", "leadTimeDays": 3, "minimumQuantity": "40", "lotMultiple": "10" },
+      { "material": "00000017", "location": "00000001", "leadTimeDays": 2, "minimumQuantity": "100", "lotMultiple": "50" },
+      { "material": "00000005", "location": "00000001", "leadTimeDays": 3, "minimumQuantity": "20", "lotMultiple": "10" },
+      { "material": "00000018", "location": "00000001", "leadTimeDays": 4, "minimumQuantity": "10", "lotMultiple": "5" },
+      { "material": "00000021", "location": "00000001", "leadTimeDays": 4, "minimumQuantity": "10", "lotMultiple": "5" },
+      { "material": "00000015", "location": "00000002", "leadTimeDays": 3, "minimumQuantity": "40", "lotMultiple": "10" },
+      { "material": "00000016", "location": "00000002", "leadTimeDays": 3, "minimumQuantity": "20", "lotMultiple": "10" },
+      { "material": "00000019", "location": "00000002", "leadTimeDays": 4, "minimumQuantity": "20", "lotMultiple": "10" },
+      { "material": "00000020", "location": "00000002", "leadTimeDays": 5, "minimumQuantity": "10", "lotMultiple": "5" },
+      { "material": "00000022", "location": "00000003", "leadTimeDays": 3, "minimumQuantity": "20", "lotMultiple": "10" },
+      { "material": "00000023", "location": "00000003", "leadTimeDays": 2, "minimumQuantity": "50", "lotMultiple": "25" },
+      { "material": "00000024", "location": "00000003", "leadTimeDays": 2, "minimumQuantity": "50", "lotMultiple": "25" },
+      { "material": "00000025", "location": "00000004", "leadTimeDays": 2, "minimumQuantity": "100", "lotMultiple": "50" },
+      { "material": "00000026", "location": "00000004", "leadTimeDays": 3, "minimumQuantity": "20", "lotMultiple": "10" }
+    ],
+    "purchasedIntermediates": [
+      {
+        "material": "00000017", "location": "00000002",
+        "buy": { "leadTimeDays": 10, "minimumQuantity": "100", "lotMultiple": "50", "suppliers": ["00000005"] }
+      }
+    ]
+  }
+}

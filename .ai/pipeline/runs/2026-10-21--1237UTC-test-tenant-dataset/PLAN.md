@@ -13,7 +13,7 @@
 
 | Phase | Step | Title | Exec | Status | Commit |
 |-------|------|-------|------|--------|--------|
-| 1 | 1.1 | Config file and its schema | group:A:capable | todo | — |
+| 1 | 1.1 | Config file and its schema | group:A:capable | done | cb3c320 |
 | 1 | 1.2 | Calendar and seeded random helpers | group:A:capable | todo | — |
 | 1 | 1.3 | Demand plan | group:A:capable | todo | — |
 | 1 | 1.4 | Supply plan | group:A:capable | todo | — |
