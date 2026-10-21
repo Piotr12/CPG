@@ -19,3 +19,7 @@
 ## 2026-10-21T13:11:15Z — checkpoint 1 (Steps 1.1..1.6)
 - Phase 1 generator landed (6cdb5f7..81c37bd) through one capable executor (group A, tier capable → opus). Typecheck, lint and 100 % coverage of `domain/demo` pass; the every-day replay passes for 730 days in ~3.5 s.
 - Decision: executors leave the Tasks-table Commit cell with the pre-amend SHA; the next checkpoint corrects it to the pushed SHA.
+
+## 2026-10-21T13:21:12Z — checkpoint 2 (Steps 2.1..2.7)
+- Groups B and C (tier standard → sonnet) landed 0ff1db5..60103f6; full gate subset green: typecheck, lint, test:coverage 100 % (3,240 tests).
+- 2.2's commit alone left the reset test red (fixed in 2.4); recorded, not rewritten.

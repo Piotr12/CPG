@@ -19,13 +19,13 @@
 | 1 | 1.4 | Supply plan | group:A:capable | done | 42e3522 |
 | 1 | 1.5 | Timeline and generator | group:A:capable | done | e17dc3c |
 | 1 | 1.6 | Ledger replay and limits | group:A:capable | done | 81c37bd |
-| 2 | 2.1 | Seed posting context carries its date | group:B | done | f85d833 |
-| 2 | 2.2 | Customer-order seed path | group:B | done | aa66d0f |
-| 2 | 2.3 | Shipment seed path | group:B | done | cc9a878 |
-| 2 | 2.4 | Goods-issue seed path | group:B | done | 2361f36 |
-| 2 | 2.5 | Requisition seed path | group:C | done | 99e7d6a |
-| 2 | 2.6 | Purchase-order seed path | group:C | done | 0ef5aab |
-| 2 | 2.7 | Goods-receipt seed path | group:C | done | 5b470c6 |
+| 2 | 2.1 | Seed posting context carries its date | group:B | done | 0ff1db5 |
+| 2 | 2.2 | Customer-order seed path | group:B | done | e2d6d1d |
+| 2 | 2.3 | Shipment seed path | group:B | done | 52a20dd |
+| 2 | 2.4 | Goods-issue seed path | group:B | done | b99403c |
+| 2 | 2.5 | Requisition seed path | group:C | done | 8edb2dd |
+| 2 | 2.6 | Purchase-order seed path | group:C | done | c293f18 |
+| 2 | 2.7 | Goods-receipt seed path | group:C | done | 60103f6 |
 | 2 | 2.8 | Production-order seed path | group:D | todo | — |
 | 2 | 2.9 | Production-completion seed path | group:D | todo | — |
 | 2 | 2.10 | Stock opening seed takes rows and a date | group:E:cheap | todo | — |
