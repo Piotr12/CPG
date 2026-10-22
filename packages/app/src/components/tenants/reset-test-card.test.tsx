@@ -57,6 +57,13 @@ describe("ResetTestCard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Reset Test" }));
     await waitFor(() => expect(screen.getByRole("status")).toBeTruthy());
     expect(mocks.reset).toHaveBeenCalledWith({ generation: 4, dataset: "realistic" });
+    // After a reset the choice is back on tiny.
+    fireEvent.change(select, { target: { value: "realistic" } });
+    fireEvent.click(screen.getByRole("button", { name: "Reset Test…" }));
+    mocks.reset.mockResolvedValueOnce({ ok: true, data: { generation: 6, readOnly: true } });
+    fireEvent.click(screen.getByRole("button", { name: "Reset Test" }));
+    await waitFor(() => expect(screen.getByRole("status").textContent).toContain("generation 6"));
+    expect(select.value).toBe("tiny");
   });
 
   it("reports a writable result in Polish and blocks repeated submission while pending", async () => {

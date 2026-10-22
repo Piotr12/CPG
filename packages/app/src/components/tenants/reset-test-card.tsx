@@ -63,7 +63,11 @@ export function ResetTestCard({ generation, readOnly, labels, errors }: Props) {
               destructive
               action={async () => {
                 const result = await resetTest(target);
-                if (result.ok) setSuccess(fill(labels.success, { generation: String(result.data.generation), state: result.data.readOnly ? labels.readOnly : labels.writable }));
+                if (result.ok) {
+                  setSuccess(fill(labels.success, { generation: String(result.data.generation), state: result.data.readOnly ? labels.readOnly : labels.writable }));
+                  // Each reset starts from the default again (spec Q5): realistic stays a deliberate choice.
+                  setDataset("tiny");
+                }
                 return result;
               }}
               formatError={(error) => errorMessage({ ...errors, ...labels.errors }, error)}

@@ -141,8 +141,14 @@ describe("customer orders through the UI and API", () => {
     expect(demo[0].id).toBe("00000001");
     expect(demo.length).toBeGreaterThan(0);
     expect(demo.some(({ status }) => status === "open")).toBe(true);
-    // IDs run from 00000001 in each tenant, so the tenant with more orders has an ID the other lacks: the other must not find it.
-    const prod = await allPages("prod");
+    // IDs run from 00000001 in each tenant, so the tenant with more orders has an ID the other lacks (one more
+    // Prod order breaks a tie): the other must not find it.
+    let prod = await allPages("prod");
+    if (prod.length === demo.length) {
+      expect((await write("POST", ROOT, input(), userSecret)).status).toBe(200);
+      prod = await allPages("prod");
+      createdIds.push(prod.at(-1)!.id);
+    }
     const prodIds = new Set(prod.map(({ id }) => id));
     expect(createdIds.every((id) => prodIds.has(id))).toBe(true);
     const [owner, other] = demo.length > prod.length ? [demo, "prod"] : [prod, "test"];
