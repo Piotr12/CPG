@@ -2,9 +2,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { ApiToken, CustomerOrder, GlobalAuditEvent, GlobalIdempotencyKey, initOrm, Material, ProductionCompletion, Session, StockMovement, Tenant, TenantAuditEvent, TenantIdempotencyKey, User, UserPreference, type Orm } from "@cpg/db";
-import { asValue } from "awilix";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { REDUCED_TEST_TENANT_CONFIG } from "../../../../../tests/setup/demo-fixtures";
 import { loadConfig } from "../../config";
 import { createAppContainer } from "../../container/container";
 import type { AppContainer } from "../../container/cradle";
@@ -14,7 +12,7 @@ import type { AuditActor } from "../audit/actor";
 import { seedTestTenantDataset } from "../demo/seed-demo-data";
 import { ShipmentService } from "../shipments/shipment.service";
 import { generateTestTenantDataset } from "../../domain/demo/generate-dataset";
-import { TEST_TENANT_CONFIG } from "../../domain/demo/test-tenant-config.schema";
+import { TEST_DATASET_CONFIGS } from "../../domain/demo/test-datasets";
 import { assertCurrentGeneration } from "../../domain/tenants/generation";
 import { inRequestTransaction, retryingStaleSnapshot } from "../../http/request-transaction";
 import { fingerprintOf } from "../idempotency/fingerprint";
@@ -22,13 +20,12 @@ import { IDEMPOTENCY_TTL_MS } from "../idempotency/idempotency.service";
 import { MAX_DATASET_GENERATION } from "../../validators/tenants/test-reset.schema";
 
 /*
- * A reset generates the dataset for today from the container's `testTenantConfig`. The full two years
- * take seconds to write, so these tests register the committed catalogue over two history months, and
- * only the one test that pins the committed configuration registers it instead.
+ * A reset generates the dataset for today from the container's `testDatasets`: tiny, two history months,
+ * unless it is asked for realistic, whose two years take seconds to write; only one test does.
  */
 /** The reset's clock: the dataset it writes is the one generated for this day. */
 const TODAY = new Date("2026-10-21T10:00:00.000Z");
-const generated = (config = REDUCED_TEST_TENANT_CONFIG) => generateTestTenantDataset(config, "2026-10-21");
+const generated = (config = TEST_DATASET_CONFIGS.tiny) => generateTestTenantDataset(config, "2026-10-21");
 
 const actor: AuditActor = { userId: "admin", username: "admin", sessionId: "session-admin", channel: "ui", token: null };
 let orm: Orm;
@@ -43,7 +40,6 @@ beforeEach(async () => {
   await migrateDatabase(config);
   orm = await initOrm(toDbOptions(config));
   container = createAppContainer(config, orm);
-  container.register({ testTenantConfig: asValue(REDUCED_TEST_TENANT_CONFIG) });
 });
 afterEach(async () => { vi.useRealTimers(); vi.restoreAllMocks(); await orm.close(); });
 
@@ -115,16 +111,15 @@ describe("atomic Test reset", { timeout: 60_000 }, () => {
     // A second seed would refuse: the dataset is complete.
     await expect(seedTestTenantDataset(current, TODAY)).rejects.toThrow("Incomplete demonstration seed: materials");
     const events = await current.em.find(GlobalAuditEvent, { action: "tenants.tenant.reset" });
-    expect(events).toMatchObject([{ before: { generation: 1, readOnly }, after: { generation: 2, readOnly }, actorUsername: "admin", sessionId: "session-admin" }]);
+    expect(events).toMatchObject([{ before: { generation: 1, readOnly }, after: { generation: 2, readOnly, dataset: "tiny" }, actorUsername: "admin", sessionId: "session-admin" }]);
     expect(await orm.em.getConnection().execute("pragma foreign_key_check")).toEqual([]);
     expect(await (await scope("prod")).cradle.tenantService.get("prod")).toEqual({ code: "prod", name: "Prod", generation: 1, readOnly: false });
   });
 
-  it("writes the committed configuration's two years for today (TEN-001, TEN-022)", async () => {
-    container.register({ testTenantConfig: asValue(TEST_TENANT_CONFIG) });
-    const { masters, summary, timeline } = generated(TEST_TENANT_CONFIG);
+  it("writes the realistic dataset's two years for today when the admin picks it, and audits the choice (TEN-001, TEN-022)", async () => {
+    const { masters, summary, timeline } = generated(TEST_DATASET_CONFIGS.realistic);
 
-    expect(await reset()).toMatchObject({ generation: 2 });
+    expect(await (await scope()).cradle.testResetService.reset(1, actor, "realistic")).toMatchObject({ generation: 2 });
 
     const current = (await scope()).cradle;
     expect(await current.em.count(Material, {})).toBe(masters.materials.length);
@@ -134,6 +129,7 @@ describe("atomic Test reset", { timeout: 60_000 }, () => {
     expect(await current.em.count(TenantAuditEvent, {})).toBe(0);
     const first = await current.customerOrderService.get("00000001");
     expect(first.createdAt.toISOString()).toBe(timeline.find(({ kind }) => kind === "customerOrder")!.at);
+    expect(await current.em.find(GlobalAuditEvent, { action: "tenants.tenant.reset" })).toMatchObject([{ after: { generation: 2, readOnly: false, dataset: "realistic" } }]);
   }, 300_000);
 
   it.each(["locations", "BOMs", "shipments"] as const)("rolls back deletion and partially seeded %s, including both flags and all audits (TEN-027)", async (kind) => {
