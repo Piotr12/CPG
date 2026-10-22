@@ -1,5 +1,4 @@
 import type { DemoBom, DemoForecast, DemoMaterial, DemoPlanningParameters, DemoSafetyStockTarget } from "../../packages/core/src/domain/demo/generate-dataset";
-import { TEST_TENANT_CONFIG, type TestTenantConfig } from "../../packages/core/src/domain/demo/test-tenant-config.schema";
 
 /*
  * A small, fixed set of master rows for unit tests: a red cabinet and what it's made of,
@@ -98,10 +97,3 @@ export const FIXTURE_FORECASTS: readonly DemoForecast[] = [
   { material: "00000005", location: "00000001", date: "2026-11-03", quantity: "55.000000" },
   { material: "00000005", location: "00000001", date: "2026-11-04", quantity: "60.000000" },
 ];
-
-/**
- * The committed dataset configuration over two history months instead of 24: every rule of the
- * generated dataset at a fraction of its size, so a test that seeds or resets Test writes it in about
- * a second. Register it as the container's `testTenantConfig`, or pass it to the seeder.
- */
-export const REDUCED_TEST_TENANT_CONFIG: TestTenantConfig = { ...TEST_TENANT_CONFIG, horizon: { ...TEST_TENANT_CONFIG.horizon, historyMonths: 2 } };
