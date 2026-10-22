@@ -127,12 +127,19 @@ describe("production completion and transfer posting reversals (#92)", () => {
     expect(await physical(ids.bar)).toBe("0.000000");
     const history = await ok<CompletionView[]>("GET", `production-orders/${planned.id}/completions`);
     expect(history.map(({ id, reversal }) => [id, reversal?.reason ?? null])).toEqual([[second.id, "Entered twice"], [history[1].id, null]]);
-    // Test holds two years of production orders, more than Prod: its last completed one is Test's alone, and Prod must not reverse its completion.
-    const testOrders: { id: string; status: string }[] = [];
-    for (let page = 1; testOrders.length === (page - 1) * 100; page += 1) {
-      testOrders.push(...(await api<{ id: string; status: string }[]>("GET", `/api/tenants/test/production-orders?page=${page}`)).body.data);
-    }
-    const testOrder = testOrders.findLast(({ status }) => status === "completed")!.id;
+    // A completed Test order whose ID Prod doesn't have (Test's tiny dataset holds 45+ production orders, far more
+    // than this suite makes in Prod): Prod must neither find it nor reverse its completion.
+    const allOrders = async (tenant: string) => {
+      const all: { id: string; status: string }[] = [];
+      for (let page = 1; all.length === (page - 1) * 100; page += 1) {
+        all.push(...(await api<{ id: string; status: string }[]>("GET", `/api/tenants/${tenant}/production-orders?page=${page}`)).body.data);
+      }
+      return all;
+    };
+    const prodIds = new Set((await allOrders("prod")).map(({ id }) => id));
+    const candidate = (await allOrders("test")).findLast(({ id, status }) => status === "completed" && !prodIds.has(id));
+    expect(candidate, "a completed Test production order with an ID Prod lacks").toBeDefined();
+    const testOrder = candidate!.id;
     const [testCompletion] = (await api<CompletionView[]>("GET", `/api/tenants/test/production-orders/${testOrder}/completions`)).body.data;
     expect((await api("GET", `/api/tenants/prod/production-orders/${testOrder}`)).status).toBe(404);
     expect((await api("POST", completionReverse(testOrder, testCompletion.id), { reason: "Wrong tenant" }, operatorSecret)).status).toBe(404);
