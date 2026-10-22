@@ -94,6 +94,20 @@ describe("AuditTable", () => {
     expect(screen.getByRole("row", { name: /Read-only flag changed/ }).textContent).toMatch(/read-only: no → yes/);
   });
 
+  it("names a Test reset's dataset in the reader's language", () => {
+    const reset = entry({
+      action: "tenants.tenant.reset",
+      subject: { type: "Tenant", id: "test", label: "Test" },
+      before: { generation: 3, readOnly: false },
+      after: { generation: 4, readOnly: false, dataset: "realistic" },
+    });
+    const { unmount } = render(<AuditTable entries={[reset]} label="Global audit" path="/admin/audit" reversals={[]} empty={en.audit.empty} labels={en.audit} />);
+    expect(screen.getAllByRole("row")[1].textContent).toMatch(/dataset: [^;]*realistic/);
+    unmount();
+    render(<AuditTable entries={[reset]} label="Audyt globalny" path="/admin/audit" reversals={[]} empty={pl.audit.empty} labels={pl.audit} />);
+    expect(screen.getAllByRole("row")[1].textContent).toMatch(/zbiór danych: [^;]*realistyczny/);
+  });
+
   it("offers no way to change an entry, only its record's history (AUD-009)", () => {
     render(<AuditTable entries={[entry({})]} label="Global audit" path="/admin/audit" reversals={[]} empty={en.audit.empty} labels={en.audit} />);
 

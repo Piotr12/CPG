@@ -8,9 +8,17 @@ describe("Test reset input", () => {
     for (const generation of [0, -1, 1.5, 1000000000, "1", null]) expect(testResetSchema.safeParse({ generation }).success).toBe(false);
     expect(testResetSchema.safeParse({ generation: 1, tenant: "prod" }).success).toBe(false);
   });
-  it("accepts only an empty API body", () => {
+  it("takes an optional dataset, tiny or realistic, beside the generation", () => {
+    expect(testResetSchema.parse({ generation: 1, dataset: "realistic" })).toEqual({ generation: 1, dataset: "realistic" });
+    expect(testResetSchema.parse({ generation: 1, dataset: "tiny" })).toEqual({ generation: 1, dataset: "tiny" });
+    expect(testResetSchema.safeParse({ generation: 1, dataset: "huge" }).success).toBe(false);
+  });
+  it("accepts an empty API body or one naming a dataset, nothing else", () => {
     expect(testResetBodySchema.parse({})).toEqual({});
-    expect(testResetBodySchema.safeParse({ tenant: "prod" }).success).toBe(false);
-    expect(testResetBodySchema.safeParse(null).success).toBe(false);
+    expect(testResetBodySchema.parse({ dataset: "realistic" })).toEqual({ dataset: "realistic" });
+    expect(testResetBodySchema.parse({ dataset: "tiny" })).toEqual({ dataset: "tiny" });
+    for (const body of [{ tenant: "prod" }, { dataset: "huge" }, { dataset: null }, { dataset: "tiny", tenant: "prod" }, null]) {
+      expect(testResetBodySchema.safeParse(body).success).toBe(false);
+    }
   });
 });
