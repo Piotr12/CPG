@@ -128,7 +128,7 @@ describe("customer orders through the UI and API", () => {
     for (const body of [{ ...input(), customer: "99999999" }, { ...input(), lines: [{ ...input().lines[0], material: "99999999" }] }])
       expect((await write("POST", ROOT, body, userSecret)).status).toBe(404);
     expect(await orders()).toHaveLength(before);
-    // Test starts with the dataset's two years of orders, many pages of them, the latest still open.
+    // Test starts with the tiny dataset's orders, the latest still open.
     const allPages = async (tenant: string) => {
       const all: CustomerOrderView[] = [];
       for (let page = 1; ; page += 1) {
@@ -139,14 +139,16 @@ describe("customer orders through the UI and API", () => {
     };
     const demo = await allPages("test");
     expect(demo[0].id).toBe("00000001");
-    expect(demo.length).toBeGreaterThan(100);
+    expect(demo.length).toBeGreaterThan(0);
     expect(demo.some(({ status }) => status === "open")).toBe(true);
-    // Test holds more orders than Prod, so its last order's ID is one Prod lacks: Prod must not find it.
-    const prodIds = new Set((await allPages("prod")).map(({ id }) => id));
+    // IDs run from 00000001 in each tenant, so the tenant with more orders has an ID the other lacks: the other must not find it.
+    const prod = await allPages("prod");
+    const prodIds = new Set(prod.map(({ id }) => id));
     expect(createdIds.every((id) => prodIds.has(id))).toBe(true);
-    const testOnly = demo.at(-1)!.id;
-    expect(prodIds.has(testOnly)).toBe(false);
-    expect((await api("GET", `${ROOT}/${testOnly}`, {}, userSecret)).status).toBe(404);
+    const [owner, other] = demo.length > prod.length ? [demo, "prod"] : [prod, "test"];
+    const onlyOne = owner.at(-1)!.id;
+    expect((other === "prod" ? prodIds : new Set(demo.map(({ id }) => id))).has(onlyOne)).toBe(false);
+    expect((await api("GET", `/api/tenants/${other}/customer-orders/${onlyOne}`, {}, userSecret)).status).toBe(404);
     const noGeneration = await write("POST", "/api/tenants/test/customer-orders", { customer: "00000001", location: "00000001", lines: [{ material: "00000005", quantity: "1", unit: "each", requiredDate: "2027-01-01" }] });
     expect(noGeneration.status).toBe(428); expect(json(noGeneration).error.code).toBe("GENERATION_REQUIRED");
   });

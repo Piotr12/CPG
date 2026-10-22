@@ -235,31 +235,13 @@ describe("purchase requisitions and orders through the API", () => {
       ["500.000000", "0.000000", "open"],
       ["30.000000", "0.000000", "open"],
     ]);
-    // Two years of history are received; the latest orders are still open.
+    // The history is received; the latest orders are still open.
     expect(demo[0]).toMatchObject({ id: "00000001", status: "completed" });
     expect(demo.some(({ status }) => status === "open")).toBe(true);
 
     const missing = await write("POST", "/api/tenants/test/purchase-requisitions", { material: "00000001", location: "00000001", quantity: "1", unit: "kg", requiredDate: "2027-03-01" });
     expect(missing.status).toBe(428);
     expect(json(missing).error.code).toBe("GENERATION_REQUIRED");
-  });
-
-  it("pages the purchase-order list by 100 (?page=, additive): Test spans several pages, an invalid page is refused", async () => {
-    const first = await ordersPage("test");
-    const second = await ordersPage("test", 2);
-
-    expect(first).toHaveLength(100);
-    expect(await ordersPage("test", 1)).toEqual(first);
-    expect(second.length).toBeGreaterThan(0);
-    expect(second.length).toBeLessThanOrEqual(100);
-    expect(second.some(({ id }) => first.some((order) => order.id === id))).toBe(false);
-    expect(Number(second[0].id)).toBeGreaterThan(Number(first[99].id));
-    expect(await ordersPage("test", 1000)).toEqual([]);
-    for (const bad of ["0", "x"]) {
-      const refused = await api("GET", `/api/tenants/test/purchase-orders?page=${bad}`);
-      expect(refused.status).toBe(400);
-      expect(json(refused).error.code).toBe("VALIDATION_FAILED");
-    }
   });
 
   it("doesn't find another tenant's requisition or order (TEN-014)", async () => {

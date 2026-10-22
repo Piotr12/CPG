@@ -37,9 +37,9 @@ export async function setTenantReadOnly(values: unknown): Promise<Result<TenantI
 /** Test reset is a global admin control; its service owns the atomic write even when Test is read-only. */
 export async function resetTest(values: unknown): Promise<Result<TenantInfo>> {
   const user = await currentUser();
-  const result = await serverAction(testResetSchema, async ({ generation }) => {
+  const result = await serverAction(testResetSchema, async ({ generation, dataset }) => {
     const actor = uiActor(assertAdmin(user));
-    return (await tenantScope("test")).cradle.testResetService.reset(generation, actor);
+    return (await tenantScope("test")).cradle.testResetService.reset(generation, actor, dataset);
   })(values);
   // The control survives this refresh and keeps its confirmed generation/error until closed.
   if (result.ok || result.error.code === "GENERATION_STALE") revalidatePath("/admin");
