@@ -9,6 +9,7 @@ import type { VarianceReportService } from "../services/reports/variance-report.
 import type { EntityManager, Orm } from "@cpg/db";
 import type { AwilixContainer } from "awilix";
 import type { AppConfig } from "../config";
+import type { TestDataset } from "../domain/demo/test-datasets";
 import type { TestTenantConfig } from "../domain/demo/test-tenant-config.schema";
 import type { ApiTokenService } from "../services/api-tokens/api-token.service";
 import type { AuditService } from "../services/audit/audit.service";
@@ -39,8 +40,8 @@ import type { TenantInfo, TenantService } from "../services/tenants/tenant.servi
 /** Everything the DI container can resolve — one entry per registration in `container.ts`. */
 export interface Cradle {
   config: AppConfig;
-  /** The shape of Test's generated demonstration dataset: the committed `test-tenant-config.json`. */
-  testTenantConfig: TestTenantConfig;
+  /** The configuration of each of Test's generated datasets: tiny and realistic (`domain/demo/test-datasets.ts`). */
+  testDatasets: Readonly<Record<TestDataset, TestTenantConfig>>;
   orm: Orm;
   /** A fresh EntityManager fork per container scope (i.e. per request). */
   em: EntityManager;

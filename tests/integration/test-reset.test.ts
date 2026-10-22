@@ -48,7 +48,7 @@ describe("Test reset in Cave control", () => {
     } finally { await Promise.all([admin, stale, normal].map((browser) => browser.close())); }
   });
 
-  it("hides reset from a normal user, and cancellation changes nothing", async () => {
+  it("hides reset from a normal user, offers tiny by default and warns of realistic's wait, and cancellation changes nothing", async () => {
     await normal.open(`${baseUrl}/admin`);
     await normal.waitForText("Cave control");
     expect(await normal.evaluate<boolean>(`!!document.querySelector('[data-test-reset]')`)).toBe(false);
@@ -58,6 +58,16 @@ describe("Test reset in Cave control", () => {
     await clickHydrated(admin, "[data-test-reset] button");
     await admin.waitFor("[role=alertdialog]");
     expect(await admin.text("[role=alertdialog]")).toContain(`generation ${before.generation}`);
+    expect(await admin.text("[role=alertdialog]")).toContain("the tiny demonstration dataset");
+    await admin.clickRole("button", "Cancel");
+    await admin.waitUntil(`!document.querySelector("[role=alertdialog]") && !document.querySelector("[data-slot=alert-dialog-overlay]")`);
+    // Realistic is the admin's deliberate choice: the confirmation says what it costs. This file never confirms it
+    // (it takes longer than a browser wait on CI); test-reset-realistic.test.ts resets to it through the API.
+    await admin.select("[data-test-reset] select", "realistic");
+    await clickHydrated(admin, "[data-test-reset] button");
+    await admin.waitFor("[role=alertdialog]");
+    expect(await admin.text("[role=alertdialog]")).toContain("the realistic demonstration dataset");
+    expect(await admin.text("[role=alertdialog]")).toContain("takes up to half a minute");
     await admin.clickRole("button", "Cancel");
     expect(await state()).toEqual(before);
   });
@@ -78,10 +88,10 @@ describe("Test reset in Cave control", () => {
     await confirm(admin);
     expect(await state()).toEqual({ ...before, code: "test", name: "Test", generation: before.generation + 1, readOnly: false });
     const events = json(await api("GET", "/api/audit?limit=100")).data.entries as { action: string; channel: string; sessionId: string | null; actor: { username: string } }[];
-    expect(events.find(({ action }) => action === "tenants.tenant.reset")).toMatchObject({ channel: "ui", actor: { username: "admin" }, sessionId: expect.any(String) });
+    expect(events.find(({ action }) => action === "tenants.tenant.reset")).toMatchObject({ channel: "ui", actor: { username: "admin" }, sessionId: expect.any(String), after: { dataset: "tiny" } });
   });
 
-  it("leaves Test with the generated dataset after the reset: its 26 materials, and its customer orders from 00000001 again (TEN-022)", async () => {
+  it("leaves Test with the tiny dataset after the reset: its 26 materials, and less than a page of customer orders from 00000001 again (TEN-022)", async () => {
     await admin.open(`${baseUrl}/admin/test/materials`);
     await admin.waitUntil(`!!document.querySelector("main table tbody tr") && !document.querySelector("main table").closest("[hidden]")`);
     const materials = await admin.evaluate<string[][]>(
@@ -93,7 +103,7 @@ describe("Test reset in Cave control", () => {
     expect(json(await api("GET", "/api/tenants/test/materials")).data).toHaveLength(26);
     const orders = json(await api("GET", "/api/tenants/test/customer-orders")).data as { id: string }[];
     expect(orders[0].id).toBe("00000001");
-    expect(orders).toHaveLength(100);
+    expect(orders.length).toBeLessThan(100);
     // The order added before the reset is gone: the regenerated orders stop before its ID.
     expect((await api("GET", `/api/tenants/test/customer-orders/${extraOrder}`)).status).toBe(404);
   });

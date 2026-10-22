@@ -3,14 +3,13 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { CustomerOrder, CustomerOrderLine, GoodsIssueLine, initOrm, migrate, ProductionCompletion, StockBalance, StockMovement, TenantAuditEvent, type Orm } from "@cpg/db";
 import { afterEach, describe, expect, it } from "vitest";
-import { REDUCED_TEST_TENANT_CONFIG } from "../../../../../tests/setup/demo-fixtures";
 import { loadConfig } from "../../config";
 import { createAppContainer } from "../../container/container";
 import { scopeForTenant } from "../../container/tenant-scope";
 import { toDbOptions } from "../../database";
 import { generateTestTenantDataset } from "../../domain/demo/generate-dataset";
 import { Ledger } from "../../domain/demo/ledger";
-import { TEST_TENANT_CONFIG } from "../../domain/demo/test-tenant-config.schema";
+import { TEST_DATASET_CONFIGS } from "../../domain/demo/test-datasets";
 import { formatDecimal, parseDecimal } from "../../domain/quantities/decimal";
 import { DATASET_KINDS, isUntouchedTest, seedTestTenantDataset } from "./seed-demo-data";
 import { FIXTURE_MATERIALS } from "../../../../../tests/setup/demo-fixtures";
@@ -35,9 +34,9 @@ describe("seedTestTenantDataset", () => {
     const cradle = await testScope();
     const { em } = cradle;
     expect(await isUntouchedTest(em)).toBe(true);
-    const dataset = generateTestTenantDataset(REDUCED_TEST_TENANT_CONFIG, "2026-10-21");
+    const dataset = generateTestTenantDataset(TEST_DATASET_CONFIGS.tiny, "2026-10-21");
 
-    const counts = await seedTestTenantDataset(cradle, TODAY, REDUCED_TEST_TENANT_CONFIG);
+    const counts = await seedTestTenantDataset(cradle, TODAY);
 
     const { masters, summary } = dataset;
     expect(Object.keys(counts)).toEqual(DATASET_KINDS);
@@ -53,7 +52,7 @@ describe("seedTestTenantDataset", () => {
     expect(await isUntouchedTest(em)).toBe(false);
 
     // Every pair ends where the generator's own replay of the timeline ends (R09: none below zero).
-    const ledger = new Ledger(REDUCED_TEST_TENANT_CONFIG);
+    const ledger = new Ledger(TEST_DATASET_CONFIGS.tiny);
     for (const event of dataset.timeline) ledger.apply(event);
     const balances = await em.find(StockBalance, {}, { populate: ["material", "location"] });
     expect(balances.length).toBeGreaterThan(0);
@@ -66,9 +65,9 @@ describe("seedTestTenantDataset", () => {
   it("dates every record by its own event, never by the time the seed ran (spec Q10)", async () => {
     const cradle = await testScope();
     const { em } = cradle;
-    const dataset = generateTestTenantDataset(REDUCED_TEST_TENANT_CONFIG, "2026-10-21");
+    const dataset = generateTestTenantDataset(TEST_DATASET_CONFIGS.tiny, "2026-10-21");
 
-    await seedTestTenantDataset(cradle, TODAY, REDUCED_TEST_TENANT_CONFIG);
+    await seedTestTenantDataset(cradle, TODAY);
 
     const opening = dataset.timeline.find(({ kind }) => kind === "opening")!;
     const first = await em.find(StockMovement, {}, { orderBy: { occurredAt: "asc" }, limit: 1 });
@@ -85,10 +84,10 @@ describe("seedTestTenantDataset", () => {
     const cradle = await testScope();
     const { em } = cradle;
     const early = new Date("2026-10-21T06:00:00.000Z");
-    const { timeline } = generateTestTenantDataset(REDUCED_TEST_TENANT_CONFIG, "2026-10-21");
+    const { timeline } = generateTestTenantDataset(TEST_DATASET_CONFIGS.tiny, "2026-10-21");
     expect(timeline.some(({ at }) => at > early.toISOString())).toBe(true);
 
-    await seedTestTenantDataset(cradle, early, REDUCED_TEST_TENANT_CONFIG);
+    await seedTestTenantDataset(cradle, early);
 
     const latest = async (entity: typeof StockMovement | typeof CustomerOrder | typeof ProductionCompletion, field: "occurredAt" | "createdAt" | "updatedAt") =>
       ((await em.find(entity as typeof StockMovement, {}, { orderBy: { [field]: "desc" }, limit: 1 }))[0] as unknown as Record<string, Date>)[field];
@@ -101,7 +100,7 @@ describe("seedTestTenantDataset", () => {
   it("fulfils every history order line by exactly what its goods issues took (SAL-006…009, INV-012)", async () => {
     const cradle = await testScope();
     const { em } = cradle;
-    await seedTestTenantDataset(cradle, TODAY, REDUCED_TEST_TENANT_CONFIG);
+    await seedTestTenantDataset(cradle, TODAY);
 
     const issued = new Map<string, bigint>();
     for (const line of await em.find(GoodsIssueLine, {}, { populate: ["shipmentLine.orderLine"] })) {
@@ -118,14 +117,14 @@ describe("seedTestTenantDataset", () => {
     await cradle.materialService.seedDemo(FIXTURE_MATERIALS);
     cradle.em.clear();
 
-    await expect(seedTestTenantDataset(cradle, TODAY, REDUCED_TEST_TENANT_CONFIG)).rejects.toThrow("Incomplete demonstration seed: materials");
+    await expect(seedTestTenantDataset(cradle, TODAY)).rejects.toThrow("Incomplete demonstration seed: materials");
   });
 
-  it("seeds the committed configuration's full two years", async () => {
+  it("seeds the realistic dataset's full two years when asked to, tiny otherwise", async () => {
     const cradle = await testScope();
-    const { summary } = generateTestTenantDataset(TEST_TENANT_CONFIG, "2026-10-21");
+    const { summary } = generateTestTenantDataset(TEST_DATASET_CONFIGS.realistic, "2026-10-21");
 
-    const counts = await seedTestTenantDataset(cradle, TODAY);
+    const counts = await seedTestTenantDataset(cradle, TODAY, "realistic");
 
     expect(counts["customer orders"]).toBe(summary.customerOrders);
     expect(counts["production completions"]).toBe(summary.completions);
