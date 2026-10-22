@@ -1,0 +1,152 @@
+import { randomUUID } from "node:crypto";
+import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
+import { callApi, json } from "./api";
+import { clickHydrated, openBrowser, type Browser } from "./browser";
+import { signInAsAdmin } from "./sign-in";
+import { createToken, openTokens } from "./tokens";
+
+const baseUrl = inject("baseUrl");
+const password = inject("adminPassword");
+const TOKEN = "reset-realistic-admin";
+
+/** The first element matching `selector` outside Next.js's hidden staging container. */
+const shown = (selector: string) => `[...document.querySelectorAll(${JSON.stringify(selector)})].find((e) => !e.closest("[hidden]"))`;
+/** The rows of the shown table named `name`, as their cells' text. */
+const tableRows = (browser: Browser, name: string) =>
+  browser.evaluate<string[][]>(`(() => {
+    const table = [...document.querySelectorAll("main table")].find((t) => t.getAttribute("aria-label") === ${JSON.stringify(name)} && !t.closest("[hidden]"));
+    return [...table.querySelectorAll("tbody tr")].map((row) => [...row.cells].map((cell) => cell.innerText.trim().replace(/\\s+/g, " ")));
+  })()`);
+const newestFirst = (rows: { date: string }[]) => rows.every(({ date }, index) => index === 0 || rows[index - 1].date >= date);
+
+// Test starts with the tiny dataset, and every other file runs on it. This file resets Test to the realistic
+// two years once, through the API (spec 2026-10-22--0902UTC-test-tenant-two-datasets, Q4), checks what only
+// that volume shows, and resets Test back to tiny for the files after it.
+describe("the realistic Test dataset, written by an API reset", () => {
+  let admin: Browser;
+  let secret: string;
+  const api = (method: string, path: string, options: Parameters<typeof callApi>[4] = {}) => callApi(baseUrl, method, path, secret, options);
+  const generation = async () => (json(await api("GET", "/api/tenants/test")).data as { generation: number }).generation;
+  const reset = async (body: unknown) => api("POST", "/api/tenants/test/reset", { key: randomUUID(), body, generation: await generation() });
+  /** Every row of a paged Test list, walking its pages of 100. */
+  const allPages = async <T,>(list: string) => {
+    const all: T[] = [];
+    for (let page = 1; ; page += 1) {
+      const rows = json(await api("GET", `/api/tenants/test/${list}?page=${page}`)).data as T[];
+      all.push(...rows);
+      if (rows.length < 100) return all;
+    }
+  };
+  const ledger = async () => (await tableRows(admin, "Stock movements")).map(([date, type, , source, reason]) => ({ date, type, source, reason }));
+
+  beforeAll(async () => {
+    admin = openBrowser();
+    await signInAsAdmin(admin, baseUrl, password);
+    await openTokens(admin, baseUrl);
+    secret = await createToken(admin, TOKEN);
+    await admin.setViewport(1280, 800);
+    const started = performance.now();
+    const realistic = await reset({ dataset: "realistic" });
+    // The runner's figure for the realistic reset, which the spec leaves without a budget (Q7). Straight to
+    // stdout: Vitest drops a passing test's console output.
+    process.stdout.write(`The realistic Test reset took ${((performance.now() - started) / 1000).toFixed(1)} s on this runner\n`);
+    expect(realistic.status).toBe(200);
+  }, 180_000);
+  afterAll(async () => {
+    try {
+      if (secret) {
+        expect((await reset({})).status).toBe(200);
+        const tokens = json(await api("GET", "/api/tokens")).data as { id: string; name: string }[];
+        const own = tokens.find(({ name }) => name === TOKEN);
+        if (own) await api("DELETE", `/api/tokens/${own.id}`, { key: randomUUID() });
+      }
+    } finally { await admin.close(); }
+  }, 60_000);
+
+  it("writes two years of customer orders, many pages of them, and audits the reset as realistic (TEN-022, AUD-013)", async () => {
+    const orders = await allPages<{ id: string; status: string }>("customer-orders");
+    expect(orders[0].id).toBe("00000001");
+    expect(orders.length).toBeGreaterThan(300);
+    expect(orders.some(({ status }) => status === "open")).toBe(true);
+    const entries = json(await api("GET", "/api/audit?limit=100")).data.entries as { action: string; after: Record<string, unknown> | null }[];
+    expect(entries.find(({ action }) => action === "tenants.tenant.reset")).toMatchObject({ after: { dataset: "realistic" } });
+  });
+
+  it("pages the purchase-order list by 100 (?page=, additive): Test spans several pages, an invalid page is refused", async () => {
+    const page = async (number?: number) =>
+      json(await api("GET", `/api/tenants/test/purchase-orders${number === undefined ? "" : `?page=${number}`}`)).data as { id: string }[];
+    const first = await page();
+    const second = await page(2);
+
+    expect(first).toHaveLength(100);
+    expect(await page(1)).toEqual(first);
+    expect(second.length).toBeGreaterThan(0);
+    expect(second.length).toBeLessThanOrEqual(100);
+    expect(second.some(({ id }) => first.some((order) => order.id === id))).toBe(false);
+    expect(Number(second[0].id)).toBeGreaterThan(Number(first[99].id));
+    expect(await page(1000)).toEqual([]);
+    for (const bad of ["0", "x"]) {
+      const refused = await api("GET", `/api/tenants/test/purchase-orders?page=${bad}`);
+      expect(refused.status).toBe(400);
+      expect(json(refused).error.code).toBe("VALIDATION_FAILED");
+    }
+  });
+
+  it("pages the purchase-order screen: Page 1 of N with Next only, page 2 continuing the IDs", async () => {
+    const rows = async (path: string) => {
+      await admin.open(`${baseUrl}${path}`);
+      await admin.waitUntil(`document.querySelector("main table") && !document.querySelector("main table").closest("[hidden]")`);
+      return admin.evaluate<string[][]>(`[...document.querySelectorAll("main table tbody tr")].map((row) => [...row.cells].map((cell) => cell.innerText.trim()))`);
+    };
+    const first = await rows("/admin/test/purchase-orders");
+    expect(first).toHaveLength(100);
+    expect(first[0][0]).toBe("00000001");
+    const nav = `document.querySelector('main nav[aria-label="Purchase order pages"]')`;
+    await admin.waitUntil(`${nav} && !${nav}.closest("[hidden]")`);
+    const label = await admin.evaluate<string>(`${nav}.querySelector("span").textContent`);
+    expect(Number(/^Page 1 of (\d+)$/.exec(label)![1])).toBeGreaterThan(1);
+    expect(await admin.evaluate<string[]>(`[...${nav}.querySelectorAll("a")].map((a) => a.textContent.trim())`)).toEqual(["Next"]);
+    const second = await rows("/admin/test/purchase-orders?page=2");
+    expect(second[0][0]).toBe(String(Number(first[99][0]) + 1).padStart(8, "0"));
+  });
+
+  it("shows a Test pair's two-year history newest first, each receipt and completion linking its document (INV-012)", async () => {
+    // Steel sheet 1.0 mm at the main plant: a receipt and three completions a month, for two years.
+    await admin.open(`${baseUrl}/admin/test/stock?material=00000007&location=00000001`);
+    await admin.waitUntil(shown("table[aria-label='Stock movements']"));
+    const rows = await ledger();
+    expect(newestFirst(rows)).toBe(true);
+    const receipts = rows.filter(({ type }) => type === "Goods receipt");
+    const completions = rows.filter(({ type }) => type === "Production completion");
+    expect(receipts.length).toBeGreaterThan(10);
+    expect(completions.length).toBeGreaterThan(30);
+    for (const { source } of receipts) expect(source).toMatch(/^Purchase order \d{8} Goods receipt \S+$/);
+    for (const { source } of completions) expect(source).toMatch(/^Production order \d{8} Production completion \S+$/);
+  });
+
+  it("pages a finished product's two-year ledger, back to the dataset's opening balance (UX-017)", async () => {
+    // The red cabinet at the main plant: a completion and its customers' goods issues every month, well over a page.
+    const pair = "material=00000005&location=00000001";
+    const { movementCount } = json(await api("GET", `/api/tenants/test/stock?${pair}`)).data as { movementCount: number };
+    const pages = Math.ceil(movementCount / 100);
+    expect(pages).toBeGreaterThan(1);
+
+    await admin.open(`${baseUrl}/admin/test/stock?${pair}`);
+    await admin.waitUntil(shown("table[aria-label='Stock movements']"));
+    await admin.waitForText(`Page 1 of ${pages}`);
+    const first = await ledger();
+    expect(first).toHaveLength(100);
+    expect(first.some(({ type }) => type === "Goods issue")).toBe(true);
+    expect(first.some(({ type }) => type === "Production completion")).toBe(true);
+
+    await clickHydrated(admin, "main a[href$='page=2']");
+    await admin.waitUntil(`location.search.includes("page=2")`);
+    await admin.waitForText(`Page 2 of ${pages}`);
+    expect(newestFirst([...first, ...(await ledger())])).toBe(true);
+
+    // The oldest movement is the dataset's opening balance, a correction that is its own source.
+    await admin.open(`${baseUrl}/admin/test/stock?${pair}&page=${pages}`);
+    await admin.waitForText(`Page ${pages} of ${pages}`);
+    expect((await ledger()).at(-1)).toMatchObject({ type: "Correction", source: "This correction", reason: expect.stringContaining("Demonstration opening balance") });
+  });
+});

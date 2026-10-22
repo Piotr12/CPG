@@ -7,7 +7,7 @@ import { StockReportService } from "../services/reports/stock-report.service";
 import { VarianceReportService } from "../services/reports/variance-report.service";
 import { entities, initOrm, type Orm } from "@cpg/db";
 import { asClass, asFunction, asValue, createContainer, InjectionMode } from "awilix";
-import { TEST_TENANT_CONFIG } from "../domain/demo/test-tenant-config.schema";
+import { TEST_DATASET_CONFIGS } from "../domain/demo/test-datasets";
 import { loadConfig, type AppConfig } from "../config";
 import { toDbOptions } from "../database";
 import { ApiTokenService } from "../services/api-tokens/api-token.service";
@@ -49,7 +49,7 @@ export function createAppContainer(config: AppConfig, orm: Orm): AppContainer {
   const container = createContainer<Cradle>({ injectionMode: InjectionMode.PROXY, strict: true });
   container.register({
     config: asValue(config),
-    testTenantConfig: asValue(TEST_TENANT_CONFIG),
+    testDatasets: asValue(TEST_DATASET_CONFIGS),
     orm: asValue(orm),
     em: asFunction(({ orm }: { orm: Orm }) => orm.em.fork()).scoped(),
     systemStatusService: asClass(SystemStatusService).scoped(),

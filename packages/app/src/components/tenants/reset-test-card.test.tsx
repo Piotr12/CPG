@@ -20,7 +20,7 @@ describe("ResetTestCard", () => {
     mocks.reset.mockResolvedValueOnce({ ok: false, error: { code: "GENERATION_STALE", message: "stale" } });
     fireEvent.click(screen.getByRole("button", { name: "Reset Test" }));
     await waitFor(() => expect(screen.getByRole("alert").textContent).toBe(en.admin.reset.errors.GENERATION_STALE));
-    expect(mocks.reset).toHaveBeenCalledWith({ generation: 4 });
+    expect(mocks.reset).toHaveBeenCalledWith({ generation: 4, dataset: "tiny" });
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     fireEvent.click(screen.getByRole("button", { name: "Reset Test…" }));
     expect(screen.queryByRole("alert")).toBeNull();
@@ -28,10 +28,42 @@ describe("ResetTestCard", () => {
     mocks.reset.mockResolvedValueOnce({ ok: true, data: { generation: 6, readOnly: true } });
     fireEvent.click(screen.getByRole("button", { name: "Reset Test" }));
     await waitFor(() => expect(screen.getByRole("status").textContent).toBe("Test reset to generation 6. Test will remain read-only."));
-    expect(mocks.reset).toHaveBeenLastCalledWith({ generation: 5 });
+    expect(mocks.reset).toHaveBeenLastCalledWith({ generation: 5, dataset: "tiny" });
     expect(screen.queryByRole("alertdialog")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Reset Test…" }));
     expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("offers tiny by default and realistic on request, naming the dataset and warning of the realistic one's wait", async () => {
+    render(<ResetTestCard {...props} />);
+    const select = screen.getByLabelText("Dataset") as HTMLSelectElement;
+    expect(select.value).toBe("tiny");
+    expect([...select.options].map(({ value, text }) => [value, text])).toEqual([
+      ["tiny", "Tiny: two months of history"],
+      ["realistic", "Realistic: two years of history"],
+    ]);
+    fireEvent.click(screen.getByRole("button", { name: "Reset Test…" }));
+    expect(screen.getByRole("alertdialog").textContent).toContain("reseed it with the tiny demonstration dataset");
+    expect(screen.getByRole("alertdialog").textContent).not.toContain(en.admin.reset.slow);
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    fireEvent.change(select, { target: { value: "realistic" } });
+    fireEvent.click(screen.getByRole("button", { name: "Reset Test…" }));
+    expect(screen.getByRole("alertdialog").textContent).toContain("reseed it with the realistic demonstration dataset");
+    expect(screen.getByRole("alertdialog").textContent).toContain(en.admin.reset.slow);
+    // A choice changed behind the open confirmation doesn't change what it confirms.
+    fireEvent.change(select, { target: { value: "tiny" } });
+    mocks.reset.mockResolvedValueOnce({ ok: true, data: { generation: 5, readOnly: true } });
+    fireEvent.click(screen.getByRole("button", { name: "Reset Test" }));
+    await waitFor(() => expect(screen.getByRole("status")).toBeTruthy());
+    expect(mocks.reset).toHaveBeenCalledWith({ generation: 4, dataset: "realistic" });
+    // After a reset the choice is back on tiny.
+    fireEvent.change(select, { target: { value: "realistic" } });
+    fireEvent.click(screen.getByRole("button", { name: "Reset Test…" }));
+    mocks.reset.mockResolvedValueOnce({ ok: true, data: { generation: 6, readOnly: true } });
+    fireEvent.click(screen.getByRole("button", { name: "Reset Test" }));
+    await waitFor(() => expect(screen.getByRole("status").textContent).toContain("generation 6"));
+    expect(select.value).toBe("tiny");
   });
 
   it("reports a writable result in Polish and blocks repeated submission while pending", async () => {

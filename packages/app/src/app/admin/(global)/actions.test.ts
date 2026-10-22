@@ -92,8 +92,15 @@ describe("resetTest", () => {
   it("passes the admin session and loaded generation to the fixed Test service and refreshes only Cave control", async () => {
     expect(await resetTest({ generation: 3 })).toEqual({ ok: true, data: { code: "test", generation: 4, readOnly: true } });
     expect(mocks.tenantScope).toHaveBeenCalledWith("test");
-    expect(mocks.reset).toHaveBeenCalledWith(3, adminActor);
+    expect(mocks.reset).toHaveBeenCalledWith(3, adminActor, undefined);
     expect(mocks.revalidatePath.mock.calls).toEqual([["/admin"]]);
+  });
+  it("passes the dataset the admin picked", async () => {
+    expect(await resetTest({ generation: 3, dataset: "realistic" })).toMatchObject({ ok: true });
+    expect(mocks.reset).toHaveBeenCalledWith(3, adminActor, "realistic");
+    mocks.reset.mockClear();
+    expect(await resetTest({ generation: 3, dataset: "huge" })).toMatchObject({ ok: false, error: { code: "VALIDATION_FAILED" } });
+    expect(mocks.reset).not.toHaveBeenCalled();
   });
   it("refreshes stale metadata while preserving the service error, and does not refresh other refusals", async () => {
     const { ConflictError } = await vi.importActual<typeof import("@cpg/core")>("@cpg/core");
