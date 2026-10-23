@@ -3,8 +3,8 @@ import type { Locale, MaterialSummary, NamedRecordView, TransferView } from "@cp
 import { TRANSFER_PAGE_SIZE } from "@cpg/core/validators/transfers/transfer.schema";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { Badge } from "@cpg/ui/components/badge";
-import { Button } from "@cpg/ui/components/button";
 import type { Messages } from "../../i18n/messages/en";
+import { PageLinks } from "../layout/page-links";
 import { activeOptions, materialChoices } from "../purchase-requisitions/choices";
 import { CreateTransferDialog } from "./create-transfer-dialog";
 import { byId, fill, locationName, materialName, shownQuantity, transfersLabels } from "./labels";
@@ -90,23 +90,7 @@ export function TransfersScreen({ tenant, transfers, page, total, materials, loc
         columns={columns}
         rows={transfers}
         rowKey={(transfer) => transfer.id}
-        pagination={
-          pages > 1 && (
-            <nav aria-label={labels.pagination} className="flex flex-wrap items-center justify-end gap-3">
-              {page > 1 && (
-                <Button asChild variant="outline">
-                  <Link href={`${path}?page=${page - 1}`}>{labels.previous}</Link>
-                </Button>
-              )}
-              <span className="text-sm">{fill(labels.page, { page: String(page), pages: String(pages) })}</span>
-              {page < pages && (
-                <Button asChild variant="outline">
-                  <Link href={`${path}?page=${page + 1}`}>{labels.next}</Link>
-                </Button>
-              )}
-            </nav>
-          )
-        }
+        pagination={<PageLinks page={page} pages={pages} labels={labels} href={(target) => `${path}?page=${target}`} />}
         empty={[fill(labels.empty, { tenant: tenant.name }), ...(tenant.readOnly ? [] : [labels.emptyHint])].join(" ")}
       />
     </div>

@@ -4,10 +4,10 @@ import Link from "next/link";
 import type { CompletionView, Locale, MaterialSummary, NamedRecordView, ProductionOrderDetail, ProductionOrderView, TenantInfo } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { Badge } from "@cpg/ui/components/badge";
-import { Button } from "@cpg/ui/components/button";
 import { PRODUCTION_PAGE_SIZE } from "@cpg/core/validators/production-orders/production-order.schema";
 import type { Messages } from "../../i18n/messages/en";
 import { fill, shownQuantity } from "../forms/form-labels";
+import { PageLinks } from "../layout/page-links";
 import { CompletionDialog } from "./completion-dialog";
 import { CompletionHistory } from "./completion-history";
 import { completionInputs } from "./completion-inputs";
@@ -71,10 +71,7 @@ export function ProductionScreen({ tenant, orders, order, materials, locations, 
       <CompletionHistory completions={completions} page={completionsPage} materials={materials} labels={t} path={`${path}/${order.id}`}
         reversible={tenant.readOnly ? undefined : { context: { tenant: tenant.code, generation: tenant.generation },
           order: { id: order.id, output: order.output, location: location(order.location), produced: order.produced } }} />
-    </> : <DataTable label={t.title} columns={columns} rows={orders} rowKey={(row) => row.id} empty={t.empty} pagination={pages > 1 && <nav aria-label={t.pagination} className="flex flex-wrap items-center justify-end gap-3">
-      {page > 1 && <Button asChild variant="outline"><Link href={`${path}?page=${page - 1}`}>{t.previous}</Link></Button>}
-      <span className="text-sm">{fill(t.page, { page: String(page), pages: String(pages) })}</span>
-      {page < pages && <Button asChild variant="outline"><Link href={`${path}?page=${page + 1}`}>{t.next}</Link></Button>}
-    </nav>} />}
+    </> : <DataTable label={t.title} columns={columns} rows={orders} rowKey={(row) => row.id} empty={t.empty}
+      pagination={<PageLinks page={page} pages={pages} labels={t} href={(target) => `${path}?page=${target}`} />} />}
   </div>;
 }

@@ -105,6 +105,18 @@ describe("TransfersPage", () => {
     expect(nav.getByRole("link", { name: "Next" }).getAttribute("href")).toBe("/admin/test/transfers?page=2");
   });
 
+  it("pages the list in Polish", async () => {
+    mocks.getMessages.mockResolvedValue({ locale: "pl", messages: pl });
+    mocks.count.mockResolvedValue(250);
+
+    render(await resolveServerComponents(page({ page: "2" })));
+
+    const nav = within(screen.getByRole("navigation", { name: "Strony przesunięć" }));
+    expect(nav.getByText("Strona 2 z 3")).toBeTruthy();
+    expect(nav.getByRole("link", { name: "Poprzednia" }).getAttribute("href")).toBe("/admin/test/transfers?page=1");
+    expect(nav.getByRole("link", { name: "Następna" }).getAttribute("href")).toBe("/admin/test/transfers?page=3");
+  });
+
   it("shows the empty state in Polish, with how to start only while the tenant is writable (R05)", async () => {
     mocks.getMessages.mockResolvedValue({ locale: "pl", messages: pl });
     mocks.list.mockResolvedValue([]);
