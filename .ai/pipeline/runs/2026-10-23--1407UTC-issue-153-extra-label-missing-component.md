@@ -27,21 +27,26 @@ Non-goals: how variance is recorded or reported; a live per-row variance column 
 - `tests/integration/production-completions.test.ts` clicks "Add input", which is unchanged.
 
 ## Log
+- 14:14 UTC — Gate on this source: lint (only the existing `bom.service.ts` warning), typecheck, `test:coverage` 487 files / 3,327 tests at 100%, build. Docker isn't running here, so `production-completions.test.ts` (4 tests) ran against a fresh standalone copy (static + public, empty `DATA_DIR`) on port 3174 and passed, including the new 400 with `params.material`.
+- 14:12 UTC — Phases 1–3 committed (2cfe98a, 08c7787, 37d4871). Decision comment posted on #153. The compatibility notes and the standards' envelope description now mention `params` on `VALIDATION_FAILED`.
+- 14:08 UTC — Draft PR #174 opened.
 - 14:07 UTC — Began on `feat/issue-153-extra-label-missing-component` from `origin/main` (8adea42) in the cezar worktree. Feature route: no Definition of Ready in `SDLC.md`, no PR or claim on #153.
 
 ## Progress
+
+PR: #174
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: One term for an extra component
 
-- [ ] 1.1 EN/PL completion labels use "Extra" / "Dodatkowy", with label tests asserting the three screens agree.
+- [x] 1.1 EN/PL completion labels use "Extra" / "Dodatkowy", with label tests asserting the three screens agree. — 2cfe98a
 
 ### Phase 2: Name the missing pinned component
 
-- [ ] 2.1 `ValidationError` carries optional params through both wrappers.
-- [ ] 2.2 The completion service names the missing components, and the form shows them in EN and PL.
+- [x] 2.1 `ValidationError` carries optional params through both wrappers. — 08c7787
+- [x] 2.2 The completion service names the missing components, and the form shows them in EN and PL. — 08c7787
 
 ### Phase 3: Paperwork
 
-- [ ] 3.1 Spec implementation notes, decision comment on #153, lessons.
+- [x] 3.1 Spec implementation notes, decision comment on #153, lessons. — 37d4871
