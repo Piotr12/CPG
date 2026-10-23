@@ -2,6 +2,8 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import {
+  GoodsReceipt,
+  GoodsReceiptLine,
   initOrm,
   Location,
   Material,
@@ -137,6 +139,38 @@ describe("PurchaseOrderService", () => {
     expect(await service("test").count()).toBe(0);
   });
 
+  it("marks a line posted once any goods receipt was posted for it, beyond the newest 100 and after a full reversal (#138)", async () => {
+    const order = await service().create(DIRECT, ACTOR);
+    expect(order.lines.map(({ posted }) => posted)).toEqual([false, false]);
+    // Line 2's only receipt is older than the 100 for line 1; a full reversal leaves both received at zero.
+    const em = scopedEm();
+    const [steel, bolts] = await em.find(PurchaseOrderLine, { order: { code: order.id } }, { populate: ["order"], orderBy: { position: "asc" } });
+    for (let index = 1; index <= 101; index++) {
+      const receipt = em.create(GoodsReceipt, { code: String(index).padStart(8, "0"), order: steel.order, businessDate: "2027-03-01" });
+      em.create(GoodsReceiptLine, { receipt, position: 0, orderLine: index === 1 ? bolts : steel, quantity: "1.000000", enteredQuantity: "1", enteredUnit: "each", numerator: "1", denominator: "1" });
+    }
+    await em.flush();
+    const newest = await new GoodsReceiptService({ em: scopedEm() }).list({ purchaseOrder: order.id });
+    expect(newest.some(({ lines }) => lines.some(({ line }) => line === 2))).toBe(false);
+
+    const reading = scopedEm();
+    const find = vi.spyOn(reading, "find");
+    const read = await service("prod", reading).get(order.id);
+    expect(read.lines.map(({ received, posted }) => ({ received, posted }))).toEqual([
+      { received: "0.000000", posted: true }, { received: "0.000000", posted: true },
+    ]);
+    // Many receipts for line 1 fill one bounded result; line 2 is still found by the next query.
+    expect(find.mock.calls.filter(([entity]) => entity === GoodsReceiptLine).length).toBeLessThanOrEqual(2);
+    expect((await service().list())[0].lines.map(({ posted }) => posted)).toEqual([true, true]);
+
+    // A line with something received is posted without a lookup.
+    await scopedEm().nativeUpdate(PurchaseOrderLine, { order: { code: order.id } }, { received: "1.000000" });
+    const received = scopedEm();
+    const lookup = vi.spyOn(received, "find");
+    expect((await service("prod", received).get(order.id)).lines.map(({ posted }) => posted)).toEqual([true, true]);
+    expect(lookup.mock.calls.filter(([entity]) => entity === GoodsReceiptLine)).toEqual([]);
+  });
+
   it("refuses an invalid page as VALIDATION_FAILED", async () => {
     for (const page of [0, -1, 1.5, Number.NaN]) {
       await expect(service().list(page)).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
@@ -250,6 +284,7 @@ describe("PurchaseOrderService", () => {
             abandoned: "0.000000",
             outstanding: "20.000000",
             status: "open",
+            posted: false,
           },
           {
             line: 2,
@@ -265,6 +300,7 @@ describe("PurchaseOrderService", () => {
             abandoned: "0.000000",
             outstanding: "10.000000",
             status: "open",
+            posted: false,
           },
         ],
         createdAt: expect.any(Date),

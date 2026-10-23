@@ -20,6 +20,7 @@ const line = (number: number, materialId: string, outstanding: string) => ({
   received: "0.000000", abandoned: "0.000000",
   outstanding,
   status: "open" as const,
+  posted: false,
 });
 const ORDER = {
   id: "00000001",
