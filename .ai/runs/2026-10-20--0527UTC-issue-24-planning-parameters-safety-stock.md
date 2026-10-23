@@ -55,7 +55,7 @@
 
 ## Changes
 
-- `.ai/specs/2026-10-20--0532UTC-planning-parameters-safety-stock.md` (now in `implemented/`) and `.ai/specs/assets/planning-parameters-safety-stock/` (one current screenshot, three mockups with their HTML), on #64.
+- `.ai/specs/implemented/2026-10-20--0532UTC-planning-parameters-safety-stock.md` (now in `implemented/`) and `.ai/specs/assets/planning-parameters-safety-stock/` (one current screenshot, three mockups with their HTML), on #64.
 - The implementation, on #65 (see its tracking plan).
 
 ## Verification

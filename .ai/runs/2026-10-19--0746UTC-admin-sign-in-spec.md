@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-19 07:46 UTC
 **Agent:** Claude Code / claude-opus-5-5 (`om-auto-fix-issue` → `om-auto-write-spec` → `om-spec-writing --autonomous`)
-**Spec:** `.ai/specs/2026-10-19--0746UTC-admin-sign-in.md`
+**Spec:** `.ai/specs/implemented/2026-10-19--0746UTC-admin-sign-in.md`
 **Status:** done
 
 ## Goal
@@ -27,7 +27,7 @@ Turn issue #15 (E01-S01: the admin signs in with the environment password; CPG r
 
 ## Changes
 
-- `.ai/specs/2026-10-19--0746UTC-admin-sign-in.md` (new)
+- `.ai/specs/implemented/2026-10-19--0746UTC-admin-sign-in.md` (new)
 - this run log
 
 ## Verification
