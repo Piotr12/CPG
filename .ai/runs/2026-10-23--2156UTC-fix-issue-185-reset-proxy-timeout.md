@@ -33,6 +33,8 @@ Not done here:
 - 01:00 PR #198 opened (`Refs #185`, so the issue stays open for the cpg.baby timing); lock handed to the PR. A fresh-context review approved with three doc/process fixes (a wrong test path in the `deploy.yml` comment; Go retries only bodiless requests, so API writes with `Idempotency-Key` would have failed too; this log unfinished) and nits (await the reset and the write together, drop a constant-only assertion, read the container log by line, note a deploy's drain in BC §4). All applied.
 - 01:30 CI run 40032461012 green on 7e9c0eb4. Its figures: the startup seed of tiny 6.7–7.0 s on all four shards; the realistic reset **42.4 s**, slower than the 40.5 s assumed, so the slowest figure is now 42.4 s; a Prod write 2 s into it answered 200 after 40.3 s. Recorded in the spec's implementation notes.
 
+- 02:00 CI run 40033444311 green on ef3c36e9: the realistic reset took 43.0 s, a Prod write 2 s in answered after 41.0 s, and the tiny seed 4.1–7.0 s. The slowest figure is now 43.0 s; spec updated.
+
 ## Changes
 - `config/deploy.yml`: `proxy.response_timeout: 120`.
 - `Dockerfile`: `KEEP_ALIVE_TIMEOUT=3600000` in the runner stage.
@@ -49,8 +51,8 @@ Not done here:
 - `npm run build`: exit 0 (the later changes touch only the Dockerfile, tests and docs).
 - Regression checks: with `response_timeout` removed, the repo check fails (`response_timeout 30 s < 2 × 40.5 s`); with `KEEP_ALIVE_TIMEOUT` removed, it fails (`NaN ms < 1 h`); without the keep-alive the integration file fails with ECONNRESET.
 - `CPG_BASE_URL=… npm run test:integration -- tests/integration/test-reset-realistic.test.ts tests/integration/test-reset.test.ts` against the standalone build with the image's keep-alive: 2 files, 10 tests pass.
-- CI run [40032461012](https://github.com/Piotr12/CPG/actions/runs/40032461012) on 7e9c0eb4: lint, typecheck, unit tests, build and all four integration shards passed.
+- CI runs [40032461012](https://github.com/Piotr12/CPG/actions/runs/40032461012) on 7e9c0eb4 and [40033444311](https://github.com/Piotr12/CPG/actions/runs/40033444311) on ef3c36e9: lint, typecheck, unit tests, build and all four integration shards passed.
 
 ## Follow-ups
-- **Owner, after #198 deploys:** time one realistic reset on cpg.baby from the Reset Test card. Check that it answers 200 and the UI shows success. Record the figure in the spec's implementation notes and on #185, then close #185. If the VM is much slower than 42 s, revisit "up to a minute" and the 120 s timeout.
+- **Owner, after #198 deploys:** time one realistic reset on cpg.baby from the Reset Test card. Check that it answers 200 and the UI shows success. Record the figure in the spec's implementation notes and on #185, then close #185. If the VM is much slower than 43 s, revisit "up to a minute" and the 120 s timeout.
 - `wip/issue-163-seed-perf` stays parked. Rebase it only if the cpg.baby figure calls for it.
