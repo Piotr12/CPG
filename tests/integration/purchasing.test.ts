@@ -124,7 +124,7 @@ describe("purchase requisitions and orders in the UI", () => {
   });
 
   // Uses the orders and the location the test above creates.
-  it("refuses the admin's deactivation of a location an Open PO delivers to, naming the order, and keeps it Active (LFC-018)", async () => {
+  it("refuses the admin's deactivation of a location an Open PO delivers to, linking the order, and keeps it Active (LFC-018)", async () => {
     const [order] = (await ordersOf(admin, "buypo acme"))[0];
     const [location] = (await rows(admin, "/admin/prod/locations")).find((row) => row[1] === "buypo plant")!;
 
@@ -135,9 +135,12 @@ describe("purchase requisitions and orders in the UI", () => {
     await admin.click("[role=alertdialog] button[data-variant=destructive]");
     await admin.waitUntil(`!!document.querySelector("[role=alertdialog] [role=alert]")`);
 
-    expect(await admin.evaluate<string>(`document.querySelector("[role=alertdialog] [role=alert]").innerText.trim()`)).toBe(
-      `Purchase order ${order} is still Open for delivery to this location.`,
-    );
+    expect(
+      await admin.evaluate<{ text: string; href: string | null }>(`(() => {
+        const alert = document.querySelector("[role=alertdialog] [role=alert]");
+        return { text: alert.innerText.trim(), href: alert.querySelector("a")?.getAttribute("href") ?? null };
+      })()`),
+    ).toEqual({ text: `Purchase order ${order} is still Open for delivery to this location. ${order}`, href: `/admin/prod/purchase-orders/${order}` });
     await admin.clickRole("button", "Cancel");
     await admin.waitUntil(`!document.querySelector("[role=alertdialog]")`);
     expect((await rows(admin, "/admin/prod/locations")).find(([id]) => id === location)?.[2]).toBe("Active");

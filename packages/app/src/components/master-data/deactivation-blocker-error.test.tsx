@@ -13,6 +13,7 @@ const BLOCKERS: (Required<Pick<Refusal, "code" | "params">> & { href: string })[
   { code: "MATERIAL_HAS_PRODUCTION_ORDERS", params: { order: "00000017" }, href: "/admin/prod/production-orders/00000017" },
   { code: "LOCATION_HAS_OPEN_TRANSFERS", params: { transfer: "00000003" }, href: "/admin/prod/transfers/00000003" },
   { code: "MATERIAL_IN_OPEN_TRANSFER", params: { transfer: "00000003" }, href: "/admin/prod/transfers/00000003" },
+  { code: "LOCATION_HAS_PURCHASE_ORDERS", params: { order: "00000004" }, href: "/admin/prod/purchase-orders/00000004" },
 ];
 
 it("links each blocking document after its translated refusal, in English and Polish (LFC-018)", () => {
@@ -39,6 +40,8 @@ it("links nothing for another refusal, a missing or malformed ID, or the other d
     { code: "LOCATION_HAS_OPEN_TRANSFERS", message: "Bad", params: { transfer: "../../admin" } },
     { code: "LOCATION_HAS_OPEN_TRANSFERS", message: "Wrong parameter", params: { order: "00000003" } },
     { code: "MATERIAL_HAS_PRODUCTION_ORDERS", message: "Wrong parameter", params: { transfer: "00000003" } },
+    // A requisition has no page to link to.
+    { code: "LOCATION_HAS_REQUISITIONS", message: "Open requisition", params: { requisition: "00000002" } },
   ];
   for (const error of refusals) {
     render(<>{format(error)}</>);
