@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
+import { proxyResponseTimeoutSeconds } from "../deploy-config";
 import { callApi, json } from "./api";
 import { clickHydrated, openBrowser, type Browser } from "./browser";
 import { signInAsAdmin } from "./sign-in";
@@ -45,12 +46,28 @@ describe("the realistic Test dataset, written by an API reset", () => {
     await openTokens(admin, baseUrl);
     secret = await createToken(admin, TOKEN);
     await admin.setViewport(1280, 800);
+    const seconds = (since: number) => (performance.now() - since) / 1000;
     const started = performance.now();
-    const realistic = await reset({ dataset: "realistic" });
-    // The runner's figure for the realistic reset, which the spec leaves without a budget (Q7). Straight to
-    // stdout: Vitest drops a passing test's console output.
-    process.stdout.write(`The realistic Test reset took ${((performance.now() - started) / 1000).toFixed(1)} s on this runner\n`);
+    const resetting = reset({ dataset: "realistic" });
+    // A Prod write issued 2 s into the reset waits for it: the server answers nothing else until the
+    // reset commits (spec 2026-10-21--0718UTC-test-tenant-dataset, Q16). Like kamal-proxy's, it goes on a
+    // pooled connection, which the image's KEEP_ALIVE_TIMEOUT keeps open through the reset (#185; a local
+    // server started without it answers ECONNRESET here).
+    await new Promise((resolve) => setTimeout(resolve, 2_000));
+    const writeStarted = performance.now();
+    const prodWrite = await api("POST", "/api/tenants/prod/locations", { key: randomUUID(), body: { name: "reset-realistic prod write" } });
+    const writeSeconds = seconds(writeStarted);
+    const realistic = await resetting;
+    const resetSeconds = seconds(started);
+    // The runner's figures, which the spec leaves without a budget (Q7). Straight to stdout: Vitest drops
+    // a passing test's console output.
+    process.stdout.write(`The realistic Test reset took ${resetSeconds.toFixed(1)} s on this runner\n`);
+    process.stdout.write(`A Prod write issued 2 s into it answered after ${writeSeconds.toFixed(1)} s\n`);
     expect(realistic.status).toBe(200);
+    expect(prodWrite.status).toBe(200);
+    // Behind kamal-proxy either would answer 504 past its response timeout, though the reset commits (#185).
+    expect(resetSeconds).toBeLessThan(proxyResponseTimeoutSeconds());
+    expect(writeSeconds).toBeLessThan(proxyResponseTimeoutSeconds());
   }, 180_000);
   afterAll(async () => {
     try {

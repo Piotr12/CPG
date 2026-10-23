@@ -46,6 +46,13 @@ export default async function setup(project: TestProject) {
     .withExposedPorts(PORT)
     .withWaitStrategy(Wait.forHttp("/up", PORT).forStatusCode(200))
     .withStartupTimeout(STARTUP_TIMEOUT_MS)
+    // The startup seed's duration on this runner, in the CI log (#185).
+    .withLogConsumer((stream) =>
+      stream.on("data", (chunk) => {
+        const seeded = /Seeded the Test tenant.*/.exec(String(chunk))?.[0];
+        if (seeded) process.stdout.write(`App startup: ${seeded}\n`);
+      }),
+    )
     .start();
 
   project.provide("baseUrl", `http://${container.getHost()}:${container.getMappedPort(PORT)}`);

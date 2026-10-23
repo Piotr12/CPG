@@ -28,11 +28,17 @@ RUN npm run build
 
 # Minimal runtime image
 FROM base AS runner
+# KEEP_ALIVE_TIMEOUT: how long server.js keeps an idle connection open, in ms (Node's default is 5 s).
+# kamal-proxy never closes its idle connections to the app, so the app does. While a realistic Test reset
+# blocks the event loop, kamal-proxy can send a request on a connection whose 5 s timer then fires before
+# the server reads it, and the server closes it: a POST answers 502 (#185). An hour keeps that timer clear
+# of any reset, for at most kamal-proxy's 100 idle connections.
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
     HOSTNAME=0.0.0.0 \
-    DATA_DIR=/externaldata
+    DATA_DIR=/externaldata \
+    KEEP_ALIVE_TIMEOUT=3600000
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs && \
