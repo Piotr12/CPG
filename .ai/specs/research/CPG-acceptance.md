@@ -13,7 +13,7 @@ The original export marked every scenario `Not executed`. Scenarios are updated 
 - **Partially verified**: only part of the scenario can be or is asserted today; the **Evidence** line says which part is missing and why.
 - **Not executed**: not yet built or not yet checked.
 
-Last updated 2026-10-23 for E11-S04 (#144), against `main` at `8195a0b`: its tests move LFC-004 and BUY-017 to Passed (automated) (their MRP halves are slice 3, #14) and add evidence to PRD-029. Before that, the same day for E13-S05 (#152), against `main` at `8adea42`: more evidence for AUD-004 and UX-010, whose status is unchanged. Before that, 2026-10-21 for E10-S03 (#143), against `main` at `1882d6a`, whose tests moved LFC-022, BOM-026, BOM-028, BOM-029, UX-013 and E2E-011 to Passed (automated). Before that, the same day: epics E07 (#73), E08 (#74), E09 (#75), E10 (#76), E11 (#77) and E13 (#79), against `main` at `d2300ef` (PRs #102, #104, #107, #108, #109, #111, #112, #114, #118, #119, #120, #123, #125, #130, #133, #135); the gaps found are filed as #139–#145, and #139 (PR #151) closes LFC-018, STX-006 and STX-018. Earlier: epic E05 (#13) against `2a2976a` (PR #99 for E05-S01), plus the tests and the workbook cell limit added with that update; epic E04 (#12) against `082f2d5`; epic E03 (#11) against `3f553a5`, and the E02 end-to-end follow-up (#67); epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
+Last updated 2026-10-23 for the second slice 2 closing pass, against `main` at `db50cf07`: the slice 2 rows were rechecked against the tests that PRs #156 (#140), #159 (#142), #161 (#141), #170 (#168), #174 (#153), #177 (#152), #178 (#144), #179 (#138), #181 (#145) and #182 (#147) added. TEN-009, MAT-009, MAT-029, INV-023, LFC-019, API-034, AUD-001 and UX-025 move to Passed (automated), their whole Then now asserted; TRF-012 and BUY-017 go back to Partially verified (no test closes a transfer with 10 of 60 in transit after 50 received; BUY-017's scheduled supply is MRP, #14); SAL-015, E2E-004, E2E-006, E2E-009, E2E-013, E2E-017, E2E-018 and E2E-020 move from Not executed to Partially verified; REV-001, REV-010, SAL-008, SAL-018, AUD-002 and AUD-025 gain the #144 and #147 evidence, and the stale notes of TEN-001, TEN-025, TEN-029, MAT-006, MAT-024, INV-007, DEM-016 and E2E-015 are corrected. The gaps found are filed as #185–#192 and named in each row. Before that, the same day for E11-S04 (#144), against `main` at `8195a0b`: its tests moved LFC-004 and BUY-017 to Passed (automated) (their MRP halves are slice 3, #14) and added evidence to PRD-029. Before that, the same day for E13-S05 (#152), against `main` at `8adea42`: more evidence for AUD-004 and UX-010, whose status is unchanged. Before that, 2026-10-21 for E10-S03 (#143), against `main` at `1882d6a`, whose tests moved LFC-022, BOM-026, BOM-028, BOM-029, UX-013 and E2E-011 to Passed (automated). Before that, the same day: epics E07 (#73), E08 (#74), E09 (#75), E10 (#76), E11 (#77) and E13 (#79), against `main` at `d2300ef` (PRs #102, #104, #107, #108, #109, #111, #112, #114, #118, #119, #120, #123, #125, #130, #133, #135); the gaps found are filed as #139–#145, and #139 (PR #151) closes LFC-018, STX-006 and STX-018. Earlier: epic E05 (#13) against `2a2976a` (PR #99 for E05-S01), plus the tests and the workbook cell limit added with that update; epic E04 (#12) against `082f2d5`; epic E03 (#11) against `3f553a5`, and the E02 end-to-end follow-up (#67); epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
 
 This document contains the complete acceptance catalogue for the CPG MVP. Each test preserves its ID, title, priority, execution channel, and Given / When / Then criteria.
 
@@ -23,7 +23,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/tenants.test.ts` (the chooser offers Test and Prod), `tests/integration/materials.test.ts`, `named-records.test.ts`, `materials-api.test.ts` and `named-records-api.test.ts`, `planning-parameters.test.ts` and `planning-parameters-api.test.ts`, `boms.test.ts` and `boms-api.test.ts` (Test starts with the demo records, the three demo BOMs included), `packages/core/src/demo-data.test.ts` (the startup seed fills Test, never Prod, BOMs included). Prod being empty on a fresh install is asserted by that unit test only: the integration files share one app. E02-S01, #19, with #26.
+- **Evidence:** `tests/integration/tenants.test.ts` (the chooser offers Test and Prod), `tests/integration/materials.test.ts`, `named-records.test.ts`, `materials-api.test.ts` and `named-records-api.test.ts`, `planning-parameters.test.ts` and `planning-parameters-api.test.ts`, `boms.test.ts` and `boms-api.test.ts` (Test starts with the generated dataset's records, its 16 BOMs included), `packages/core/src/demo-data.test.ts` (the startup seed fills Test with the generated tiny dataset, BOMs, customer orders and stock movements included, and Prod with nothing), `packages/core/src/services/demo/seed-demo-data.test.ts` (every kind's count). Prod being empty on a fresh install is asserted by that unit test only: the integration files share one app. E02-S01, #19, with #26.
 - **Given:** Fresh CPG runtime with valid administrator password
 - **When:** Inspect tenant selection and data
 - **Then:** Test contains demonstration business records; Prod contains none; both tenants selectable.
@@ -93,8 +93,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### TEN-009 — Shared sessions permitted
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/users.test.ts` (:96: alice signs in from two browsers, and the first stays signed in and working after the second), `packages/core/src/services/auth/auth.service.test.ts` (:166: two sign-ins give two different session tokens, both stored, until a password reset ends both). E01-S02, PR #34.
 - **Given:** One active normal account
 - **When:** Log in simultaneously from two different clients with same credentials
 - **Then:** Both sessions remain valid and functional, with independent session identifiers.
@@ -237,7 +238,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `tests/integration/test-reset-api.test.ts` compares all currently available Prod lists, audit and metadata; the reset service tests preserve Prod values. Customer orders and stock do not exist yet, so that part of this Given awaits those stories. The deletion footprint is generic and excludes global/Prod data (`tests/test-reset-coverage.test.ts`). #93.
+- **Evidence:** `tests/integration/test-reset-api.test.ts` compares Prod's master lists, BOMs and customer orders, its metadata and its tenant audit before and after a reset; `packages/core/src/services/tenants/test-reset.service.test.ts` puts a customer order, masters and their audit into Prod and finds every Prod row of every table unchanged. Neither seeds Prod stock or makes Prod read-only before the reset, so unchanged balances and an unchanged read-only flag aren't asserted yet (#189). The deletion footprint is generic and excludes global/Prod data (`tests/test-reset-coverage.test.ts`). #93.
 - **Given:** Prod contains customer orders, stock and immutable audit
 - **When:** Admin resets Test
 - **Then:** All Prod records, balances, audit and read-only state remain identical.
@@ -273,7 +274,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `tests/integration/test-reset-api.test.ts` and reset service tests restart materials, locations, customers, suppliers and BOMs at 00000001 and create the next material after the demo rows. Document sequences are not built yet; their part awaits those stories. All current tenant-owned tables participate automatically. #93.
+- **Evidence:** `tests/integration/test-reset-api.test.ts` and reset service tests restart materials, locations, customers, suppliers, BOMs and customer orders at 00000001 (an order added before the reset is 404 after it) and create the next material after the demo rows. The other document sequences (shipments, goods issues, requisitions, POs, receipts, production orders, transfers) and Prod's sequences carrying on are not asserted yet (#189). All current tenant-owned tables participate automatically. #93.
 - **Given:** Test had material 00000047 and several documents before reset
 - **When:** Administrator performs full Test reset
 - **Then:** New Test generation starts all auto-generated business sequences afresh. Seeded demonstration materials receive initial IDs beginning 00000001, followed by subsequent IDs; Prod and global identities do not restart.
@@ -338,7 +339,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `material-fields.schema.test.ts` (raw, intermediate and finished are accepted), `packages/core/src/domain/materials/demo-materials.test.ts` (the demo set holds all three), `packages/core/src/services/materials/material.service.test.ts`. E03-S01, #22.
+- **Evidence:** `material-fields.schema.test.ts` (raw, intermediate and finished are accepted), `packages/core/src/domain/demo/test-tenant-config.schema.test.ts` (the demo catalogue holds 12 raw, 4 intermediate and 10 finished materials, and the schema checks its count per type), `packages/core/src/services/materials/material.service.test.ts`. E03-S01, #22.
 - **Given:** Create raw, intermediate and finished materials
 - **When:** Save and inspect
 - **Then:** All three documented types accepted and retained accurately.
@@ -363,9 +364,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MAT-009 — BUoM can change before transactional use
 
-**Priority:** P1 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/materials/material.service.test.ts`: the base unit changes on an unreferenced material, also while a BOM exists in the tenant. It is refused while the material has conversions (`BASE_UNIT_HAS_CONVERSIONS`), planning parameters or safety-stock targets (`BASE_UNIT_IN_USE`, #24), or once a BOM uses it (`BASE_UNIT_IN_USE` naming the BOM, ahead of the conversions check, #26). The document and stock-movement locks come in slice 2. E03-S01, #22; E04-S01, #26.
+- **Evidence:** `packages/core/src/services/materials/material.service.test.ts`: the base unit changes on an unreferenced material, also while a BOM exists in the tenant. It is refused while the material has conversions (`BASE_UNIT_HAS_CONVERSIONS`), planning parameters or safety-stock targets (`BASE_UNIT_IN_USE`, #24), or once a BOM uses it (`BASE_UNIT_IN_USE` naming the BOM, ahead of the conversions check, #26). Documents (`BASE_UNIT_IN_USE`): `packages/core/src/services/purchase-orders/purchase-order.service.test.ts`, `goods-receipt.service.test.ts`, `customer-order.service.test.ts`, `production-order.service.test.ts`, `transfer.service.test.ts`, `tests/integration/goods-receipts-api.test.ts`, `tests/integration/forecasts-api.test.ts`. Stock movements (`MATERIAL_HAS_MOVEMENTS`, also once the balance is back at zero): `packages/core/src/services/stock/stock.service.test.ts` (:128), `tests/integration/stock.test.ts` (:150). E03-S01, #22; E04-S01, #26; E07-S01/S03, #80, #82; E08-S01/S03, #83, #85; E09-S01/S02, #86, #87; E10-S01, #88.
 - **Given:** Material has no BOM revision reference, operational document reference or inventory movement
 - **When:** Admin changes base UoM
 - **Then:** BUoM can change, with conversion consistency verified; after any listed reference the same change is rejected.
@@ -499,7 +500,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/domain/quantities/decimal.test.ts`, `packages/core/src/services/materials/base-quantity.test.ts` and `packages/core/src/services/materials/material.service.test.ts` (0.123456 kept exactly, every quantity a six-decimal string, never a binary float). Stored: `packages/core/src/services/boms/bom.service.test.ts` (a BOM line of 0.123456 is stored as 0.123456), `packages/db/src/orm.test.ts` (a BOM line's quantity is stored as text), and planning parameters and safety-stock targets (`packages/core/src/validators/quantities/quantity.schema.test.ts`, JSON numbers refused). Posting to the ledger waits for slice 2. E03-S01, #22; E04-S01, #26.
+- **Evidence:** `packages/core/src/domain/quantities/decimal.test.ts`, `packages/core/src/services/materials/base-quantity.test.ts` and `packages/core/src/services/materials/material.service.test.ts` (0.123456 kept exactly, every quantity a six-decimal string, never a binary float). Stored: `packages/core/src/services/boms/bom.service.test.ts` (a BOM line of 0.123456 is stored as 0.123456), `packages/db/src/orm.test.ts` (a BOM line's quantity is stored as text), and planning parameters and safety-stock targets (`packages/core/src/validators/quantities/quantity.schema.test.ts`, JSON numbers refused), `packages/db/src/entities/stock/stock-migration.test.ts` (a stock balance of 0.123456 is stored as text). No test yet posts 0.123456 through a stock movement and reads it back exactly from the ledger and the balance (#190). E03-S01, #22; E04-S01, #26.
 - **Given:** BUoM quantity entered as 0.123456
 - **When:** Post valid quantity
 - **Then:** Exact six-place value preserved in calculations and ledger.
@@ -540,9 +541,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MAT-029 — Inactive material excluded from new entries
 
-**Priority:** P1 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/materials/find-material.test.ts`, `packages/core/src/services/planning-parameters/planning-parameter.service.test.ts` and `packages/core/src/services/safety-stock/safety-stock-target.service.test.ts` (a new set or target refuses an inactive material, `MATERIAL_INACTIVE`; an existing target stays readable and editable), `packages/app/src/components/master-data/references.test.tsx` and `tests/integration/planning-parameters.test.ts` (a deactivated material isn't offered and its target stays), `tests/integration/planning-parameters-api.test.ts` (409 and nothing stored). BOMs: `packages/core/src/services/boms/bom.service.test.ts` (a new BOM for an inactive output, or adding an inactive component, is `MATERIAL_INACTIVE`, while an edit keeps an inactive component already on the recipe), `packages/app/src/components/boms/choices.test.ts` (only active materials are offered, plus inactive ones the recipe already has). Purchasing: `packages/core/src/services/purchase-orders/purchase-order.service.test.ts` and `packages/core/src/services/purchase-requisitions/purchase-requisition.service.test.ts` (a new line refuses an inactive material, `MATERIAL_INACTIVE`), `packages/app/src/components/purchase-requisitions/choices.test.ts`. A PO stays readable, in the API and on its page, after the material of its cancelled line is deactivated, and its other line is still received (`purchase-order.service.test.ts`, `tests/integration/purchasing-api.test.ts`). E03-S03, #24; E04-S01, #26; E09-S01, #86; E09-S03, #141.
+- **Evidence:** `packages/core/src/services/materials/find-material.test.ts`, `packages/core/src/services/planning-parameters/planning-parameter.service.test.ts` and `packages/core/src/services/safety-stock/safety-stock-target.service.test.ts` (a new set or target refuses an inactive material, `MATERIAL_INACTIVE`; an existing target stays readable and editable), `packages/app/src/components/master-data/references.test.tsx` and `tests/integration/planning-parameters.test.ts` (a deactivated material isn't offered and its target stays), `tests/integration/planning-parameters-api.test.ts` (409 and nothing stored). BOMs: `packages/core/src/services/boms/bom.service.test.ts` (a new BOM for an inactive output, or adding an inactive component, is `MATERIAL_INACTIVE`, while an edit keeps an inactive component already on the recipe), `packages/app/src/components/boms/choices.test.ts` (only active materials are offered, plus inactive ones the recipe already has). Purchasing: `packages/core/src/services/purchase-orders/purchase-order.service.test.ts` and `packages/core/src/services/purchase-requisitions/purchase-requisition.service.test.ts` (a new line refuses an inactive material, `MATERIAL_INACTIVE`), `packages/app/src/components/purchase-requisitions/choices.test.ts`. A PO stays readable, in the API and on its page, after the material of its cancelled line is deactivated, and its other line is still received, completing the order (`purchase-order.service.test.ts` :545, `tests/integration/purchasing-api.test.ts` :242); a material can't go inactive while a PO line for it is open (LFC-013), so that is how a historical PO completes. E03-S03, #24; E04-S01, #26; E09-S01, #86; E09-S03, #141.
 - **Given:** Material inactive, historical PO remains
 - **When:** Create new PO line using inactive material
 - **Then:** New selection rejected; historical PO remains readable and eligible for completion.
@@ -652,6 +653,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Not executed
 
+- **Evidence:** Not yet asserted: the manual order's default selection is #191; MRP's is slice 3 (#14).
 - **Given:** Two valid alternatives, higher priority stock sufficient
 - **When:** Run MRP or create manual order with default selection
 - **Then:** Higher-priority currently valid BOM revision selected.
@@ -811,6 +813,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Not executed
 
+- **Evidence:** Not yet asserted: saving the master without a BOM is #191; MRP's Missing BOM is slice 3 (#14).
 - **Given:** Intermediate Make material exists without any BOM
 - **When:** Save master and run MRP
 - **Then:** Master allowed; MRP identifies Missing BOM for affected demand.
@@ -1165,7 +1168,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/shipments/shipment.service.test.ts` (a line of another order, stated or by its ID, is a field error and nothing is written), `tests/integration/shipments-api.test.ts` (400 on `lines.1.customerOrder`; the order still has only its own shipment). E08-S02, #84.
+- **Evidence:** `packages/core/src/services/shipments/shipment.service.test.ts` (a line of another order, stated or by its ID, is a field error and nothing is written), `tests/integration/shipments-api.test.ts` (400 on `lines.1.customerOrder`; the order still has only its own shipment). An edit can't add another order's line either: `shipment.service.test.ts` :348 (a field error on `lines.1.customerOrder`). E08-S02, #84; E08-S05, #147.
 - **Given:** Open orders O1 and O2
 - **When:** Try shipment with a line from each
 - **Then:** Rejected; separate shipment required.
@@ -1225,8 +1228,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### SAL-015 — Early close releases abandoned forecast consumption
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** The order half: `packages/core/src/services/customer-orders/customer-order.service.test.ts` (:73: a line of 10 with 4 issued, Closed Early → 4 fulfilled and kept, 6 abandoned, stock and postings unchanged). The residual forecast is MRP, slice 3 (#14). E11-S01, #90.
 - **Given:** Forecast 100, order 60 and GI 30
 - **When:** Close remaining order line Early
 - **Then:** MRP residual forecast 70; outstanding firm demand 0; 30 deliveries remain historical.
@@ -1252,7 +1256,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/goods-issues/goods-issue.service.test.ts` (16 on a 15-unit shipment is refused with 100 in stock; across shipments only the order line's outstanding may be issued), `tests/integration/shipments-api.test.ts` (16 is 400). E08-S02, #84.
+- **Evidence:** `packages/core/src/services/goods-issues/goods-issue.service.test.ts` (16 on a 15-unit shipment is refused with 100 in stock; across shipments only the order line's outstanding may be issued), `tests/integration/shipments-api.test.ts` (16 is 400). An edit can't plan past it either: `packages/core/src/services/shipments/shipment.service.test.ts` :348 (a line raised beyond the order line's outstanding, or a new line beyond its own, is a field error on its quantity). E08-S02, #84; E08-S05, #147.
 - **Given:** Shipment for 15 outstanding units of order line
 - **When:** Try to issue 16
 - **Then:** Blocked even if physical stock 100.
@@ -1467,9 +1471,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### BUY-017 — PO closure after partial receipt
 
-**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/services/purchase-orders/purchase-order.service.test.ts` ("keeps what was received in stock…": a PO line of 100 kg with 60 received, Closed Early → received 60, abandoned 40, outstanding 0, no new movement and stock still 60; later receipts refused on the closed line), `tests/integration/document-lifecycle.test.ts` (a PO of 10 with 3 received, Closed Early in the UI → received 3, abandoned 7, outstanding 0, stock unchanged). Scheduled supply is MRP, slice 3 (#14). E11-S01, #90; E11-S04, #144.
+- **Evidence:** The inventory half: `packages/core/src/services/purchase-orders/purchase-order.service.test.ts` (:244, "keeps what was received in stock…": a PO line of 100 kg with 60 received, Closed Early → received 60, abandoned 40, outstanding 0, no new movement and stock still 60; :227/:236: a later receipt on a Closed Early line is refused, `DOCUMENT_NOT_OPEN`), `tests/integration/document-lifecycle.test.ts` (:160: a PO of 10 with 3 received, Closed Early in the UI → received 3, abandoned 7, outstanding 0, stock unchanged). The remaining 40 dropping out of scheduled supply is MRP, slice 3 (#14). E11-S01, #90; E11-S04, #144.
 - **Given:** PO line ordered 100, received 60
 - **When:** Close Early
 - **Then:** Remaining 40 no longer counted as scheduled supply; actual 60 remains in inventory.
@@ -1884,7 +1888,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/services/stock/stock.service.test.ts` (a group of +2, −1, −1 ends at exactly 0.000000), `tests/integration/stock.test.ts` (−24 from 24 reads 0.000000). A goods issue that takes the balance to exactly zero is not asserted yet. E07-S01, #80.
+- **Evidence:** `packages/core/src/services/stock/stock.service.test.ts` (a group of +2, −1, −1 ends at exactly 0.000000), `tests/integration/stock.test.ts` (−24 from 24 reads 0.000000). A goods issue that takes the balance to exactly zero is not asserted yet (#188). E07-S01, #80.
 - **Given:** Material on-hand 10
 - **When:** Post valid issue of exactly 10
 - **Then:** Remaining stock exactly zero.
@@ -2025,9 +2029,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### INV-023 — Stock calculations BUoM only
 
-**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/stock/stock.service.test.ts` and `tests/integration/stock.test.ts` (2 case at 12 each posts +24.000000 each, keeping the entered quantity, unit and factor). A goods receipt entered in cases is not asserted yet. E07-S01, #80.
+- **Evidence:** `packages/core/src/services/stock/stock.service.test.ts` and `tests/integration/stock.test.ts` (2 case at 12 each posts +24.000000 each, keeping the entered quantity, unit and factor). A goods receipt in another unit: `packages/core/src/services/goods-receipts/goods-receipt.service.test.ts` (:151: 0.025 t received posts a +25.000000 kg movement, keeping 0.025 t and the factor), `tests/integration/goods-receipts-api.test.ts` (:107–111: a receipt of 0.02 t raises the steel balance by 20.000000 kg), `packages/core/src/services/goods-receipts/receipt-reversal.test.ts` (a receipt's reversal takes back the base quantity it captured, even after the conversion is removed). E07-S01, #80; E09-S02, #87; E11-S02, #91.
 - **Given:** Input quantity 2 cases, factor 12 each per case
 - **When:** Post valid receipt
 - **Then:** Movement amount is +24 each and query shows BUoM authority.
@@ -2056,7 +2060,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/stock-reversals.test.ts` (−100 dated today, the receipt line `reversedBy`, stock restored), `packages/core/src/services/goods-receipts/receipt-reversal.test.ts`. E11-S02, #91.
+- **Evidence:** `tests/integration/stock-reversals.test.ts` (−100 dated today, the receipt line `reversedBy`, stock restored; :118: an operator reverses a 30-each receipt from its PO's page in the browser, stock back to its pre-receipt amount, the line `reversedBy`, the order Open again), `packages/core/src/services/goods-receipts/receipt-reversal.test.ts`. E11-S02, #91; E11-S04, #144 (PR #178).
 - **Given:** GR line posted +100, at least 100 stock remains
 - **When:** Reverse original GR line with reason
 - **Then:** One −100 movement posted today, linked original marked reversed, stock restored to pre-GR amount.
@@ -2137,7 +2141,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/stock/stock-reversal.service.test.ts` (±5 corrections reversed once, linked, balance restored), `tests/integration/stock-reversals.test.ts` (UI reversal of a −2 correction at 360 px). E11-S02, #91.
+- **Evidence:** `packages/core/src/services/stock/stock-reversal.service.test.ts` (±5 corrections reversed once, linked, balance restored), `tests/integration/stock-reversals.test.ts` (UI reversal of a −2 correction at 360 px). One line of a multi-line posting reversed alone, once, the others untouched: an imported correction (`packages/core/src/services/imports/stock-import.service.test.ts` :243) and a seeded opening balance (`stock-reversal.service.test.ts` :50); a second attempt is `STOCK_ALREADY_REVERSED`. E11-S02, #91; E11-S04, #144 (PR #178).
 - **Given:** Adjustment −5 or +5 previously posted
 - **When:** Reverse with valid reason and sufficient stock
 - **Then:** Inverse quantity posted once, linked to original, balance correctly restored.
@@ -2344,9 +2348,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### TRF-012 — Transfer cannot close with transit
 
-**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/services/transfers/transfer.service.test.ts` (Close Early with 60 in transit is `TRANSFER_IN_TRANSIT` naming the quantity), `tests/integration/document-lifecycle.test.ts` (the UI dialog shows "10 kg still in transit" and refuses, at 390 px). E11-S01, #90.
+- **Evidence:** `packages/core/src/services/transfers/transfer.service.test.ts` (:138: Close Early with 60 dispatched and nothing received is `TRANSFER_IN_TRANSIT` naming 60 kg), `tests/integration/document-lifecycle.test.ts` (10 dispatched, nothing received: the UI dialog shows "10 kg still in transit" and refuses, at 390 px). No test closes a transfer with 60 dispatched, 50 received and 10 in transit and checks the refusal names the 10 (#190). E11-S01, #90.
 - **Given:** Transfer dispatched 60, received 50, transit 10
 - **When:** Request Closed Early
 - **Then:** Rejected with 10 remaining in transit.
@@ -2612,7 +2616,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `target-on.test.ts` (100 from January 1, 150 from February 1, across the boundary), `packages/core/src/services/safety-stock/safety-stock-target.service.test.ts`, `demo-safety-stock-targets.test.ts`. The MRP run is slice 3. E03-S03, #24.
+- **Evidence:** `target-on.test.ts` (100 from January 1, 150 from February 1, across the boundary), `packages/core/src/services/safety-stock/safety-stock-target.service.test.ts`, `packages/core/src/domain/demo/supply-plan.test.ts` (the demo dataset raises two targets from a later date, three months after its anchor). The MRP run is slice 3. E03-S03, #24.
 - **Given:** Target 100 from January 1 and 150 from February 1
 - **When:** Run MRP across boundary
 - **Then:** January uses 100; February uses 150.
@@ -3768,6 +3772,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** API · **Status:** Not executed
 
+- **Evidence:** Not yet asserted; #192.
 - **Given:** Admin deactivates a user using Global-scoped action
 - **When:** Inspect audit and active tenant records
 - **Then:** Global audit written; tenant business stock/master data unchanged.
@@ -3792,10 +3797,10 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### API-034 — Tenant metadata supplies current Test-generation precondition
 
-**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
 - **Evidence:** `tests/integration/tenants.test.ts` (tenant metadata gives the generation), `tests/integration/materials-api.test.ts` and `named-records-api.test.ts` (a Test write without it is 428, with the current one it succeeds), `tests/integration/boms-api.test.ts` (a Test BOM write without it is 428 `GENERATION_REQUIRED`), `tests/integration/tenant-isolation-api.test.ts` (a generation above the current one is 409 `GENERATION_STALE`, in Test and in Prod, and nothing is created), `packages/core/src/domain/tenants/generation.test.ts` and `packages/app/src/auth/api-write.test.ts`. The real reset and its stale-generation case are verified by #93 (see the additional evidence below). `tests/integration/import-api.test.ts` (a Test import dry run without the generation is 428 `GENERATION_REQUIRED`, and with a stale one 409 `GENERATION_STALE`). `tests/integration/customer-orders.test.ts` and `tests/integration/forecasts-api.test.ts` (a Test write without the generation is 428 `GENERATION_REQUIRED`). E02-S03, #21, with #26 and #27; E08-S01, #83; E08-S03, #85.
-- **Evidence (#93):** `tests/integration/test-reset-api.test.ts` fetches the incremented generation after a real reset and refuses the old precondition; the same key with the current precondition replays exactly once.
+- **Evidence (#93):** `tests/integration/test-reset-api.test.ts` fetches the incremented generation from tenant metadata after a real reset and refuses the old precondition (:126–128: the old reset is 409, a material write at the old generation `GENERATION_STALE`); the same key with the current precondition replays exactly once. `tests/integration/test-reset.test.ts` refuses an edit loaded before a real reset on the screen.
 - **Given:** User bearer token can read Test and Prod tenant metadata; Test dataset generation is G1
 - **When:** Make Test mutation without precondition, with G1, and after reset with old G1
 - **Then:** Missing generation rejected (HTTP 428), current G1 mutation may succeed subject to ordinary rules, stale G1 after reset G2 rejected (HTTP 409). Current generation is available from tenant metadata.
@@ -3804,9 +3809,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### AUD-001 — All creates audited
 
-**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/audit.test.ts` (user creation with account, session and channel), `tests/integration/materials.test.ts` and `named-records.test.ts` (creates in the tenant audit, with account, session and channel), `tests/integration/planning-parameters.test.ts`, the user, material, named-record, planning-parameter and safety-stock service tests, and `packages/core/src/services/boms/bom.service.test.ts` (a BOM create's entry with its new values and recipe). `packages/core/src/services/stock/stock.service.test.ts` and `tests/integration/stock.test.ts` (every correction writes a tenant-audit entry with actor, session or token, channel and before/after), `packages/core/src/services/customer-orders/customer-order.service.test.ts` (an order's create entry with the UI channel, session and its new lines, and the account that created it), `tests/integration/customer-orders.test.ts` (a normal user's API create entry names that user's account, with the API channel and token). E02-S02, #20, with #26; E07-S01, #80; E08-S01, #83; E08-S04, #140.
+- **Evidence:** `tests/integration/audit.test.ts` (user creation with account, session and channel), `tests/integration/materials.test.ts` and `named-records.test.ts` (creates in the tenant audit, with account, session and channel), `tests/integration/planning-parameters.test.ts`, the user, material, named-record, planning-parameter and safety-stock service tests, and `packages/core/src/services/boms/bom.service.test.ts` (a BOM create's entry with its new values and recipe). `packages/core/src/services/stock/stock.service.test.ts` and `tests/integration/stock.test.ts` (every correction writes a tenant-audit entry with actor, session or token, channel and before/after), `packages/core/src/services/customer-orders/customer-order.service.test.ts` (an order's create entry with the UI channel, session and its new lines, and the account that created it), `tests/integration/customer-orders.test.ts` (:106: a normal user's API create entry in the Prod tenant audit names that user's account, with the API channel, their token, no session, and the new customer, location and lines). E02-S02, #20, with #26; E07-S01, #80; E08-S01, #83; E08-S04, #140.
 - **Given:** Normal user creates customer order
 - **When:** Read tenant audit
 - **Then:** Create event with actor, tenant, session, channel, new values exists.
@@ -3815,7 +3820,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/materials.test.ts` (an edit shows before → after in the tenant audit), `tests/integration/named-records.test.ts`, the material, named-record, planning-parameter and safety-stock service tests, and `packages/core/src/services/boms/bom.service.test.ts` (a revision's entry with the old and new recipe). Documents: `tests/integration/customer-orders.test.ts` (an order edit's before/after lines), `packages/core/src/services/forecasts/forecast.service.test.ts` and `tests/integration/forecasts-api.test.ts` (a forecast change's before/after). E02-S02, #20, with #22, #23, #24 and #26; E08-S01, #83; E08-S03, #85.
+- **Evidence:** `tests/integration/materials.test.ts` (an edit shows before → after in the tenant audit), `tests/integration/named-records.test.ts`, the material, named-record, planning-parameter and safety-stock service tests, and `packages/core/src/services/boms/bom.service.test.ts` (a revision's entry with the old and new recipe). Documents: `tests/integration/customer-orders.test.ts` (an order edit's before/after lines), `packages/core/src/services/forecasts/forecast.service.test.ts` and `tests/integration/forecasts-api.test.ts` (a forecast change's before/after), `packages/core/src/services/shipments/shipment.service.test.ts` (:274) and `tests/integration/shipments-api.test.ts` (:328) (a shipment edit's before/after date and lines, once per keyed request). E02-S02, #20, with #22, #23, #24 and #26; E08-S01, #83; E08-S03, #85; E08-S05, #147.
 - **Given:** Admin edits material description
 - **When:** Read audit
 - **Then:** Before/after values of changed master record visible.
@@ -3995,7 +4000,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/services/imports/import.service.test.ts` (a commit with a valid row and an invalid one writes neither), `packages/core/src/services/imports/import-boms.test.ts` (a refused BOM workbook applies none of its sheets), `packages/core/src/http/request-savepoint.test.ts` (every row written through the real services rolls back when the commit throws). Tested with small workbooks, not hundreds of rows. A refused commit answers `IMPORT_STALE`; the full list of problems comes from the dry run (XLS-009). Inventory: `packages/core/src/services/imports/stock-import.service.test.ts` (a stock commit of a workbook with errors writes no movement or audit; a failure in a later chunk of 40 rows rolls all of them back), again tens of rows, not hundreds. E05-S01, #27; E07-S02, #81.
+- **Evidence:** `packages/core/src/services/imports/import.service.test.ts` (a commit with a valid row and an invalid one writes neither), `packages/core/src/services/imports/import-boms.test.ts` (a refused BOM workbook applies none of its sheets), `packages/core/src/http/request-savepoint.test.ts` (every row written through the real services rolls back when the commit throws). Tested with small workbooks, not hundreds of rows (#192). A refused commit answers `IMPORT_STALE`; the full list of problems comes from the dry run (XLS-009). Inventory: `packages/core/src/services/imports/stock-import.service.test.ts` (a stock commit of a workbook with errors writes no movement or audit; a failure in a later chunk of 40 rows rolls all of them back), again tens of rows, not hundreds. E05-S01, #27; E07-S02, #81.
 - **Given:** Hundreds of rows with one invalid
 - **When:** Try commit
 - **Then:** No subset of masters/inventory changes; failed operation surfaces all detected validation issues.
@@ -4021,7 +4026,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/api-idempotency.test.ts`, `materials-api.test.ts` and `named-records-api.test.ts` (the second, stale update is 409; no last write wins). Documents: `tests/integration/customer-orders.test.ts` (a stale order PATCH from either role is 409 `VERSION_CONFLICT` and the first change, 36.000000, stays), `packages/core/src/services/customer-orders/customer-order.service.test.ts`, `tests/integration/purchasing-api.test.ts` (a stale requisition or order PATCH is 409, the newer change kept), `packages/core/src/services/goods-receipts/goods-receipt.service.test.ts` (a receipt advances the PO version), `tests/integration/production-orders.test.ts` (a stale production-order PATCH is 409). E02-S03, #21; E08-S01, #83; E09-S01/S02, #86, #87; E10-S01, #88.
+- **Evidence:** `tests/integration/api-idempotency.test.ts`, `materials-api.test.ts` and `named-records-api.test.ts` (the second, stale update is 409; no last write wins). Documents: `tests/integration/customer-orders.test.ts` (a stale order PATCH from either role is 409 `VERSION_CONFLICT` and the first change, 36.000000, stays), `packages/core/src/services/customer-orders/customer-order.service.test.ts`, `tests/integration/purchasing-api.test.ts` (a stale requisition or order PATCH is 409, the newer change kept), `packages/core/src/services/goods-receipts/goods-receipt.service.test.ts` (a receipt advances the PO version), `tests/integration/production-orders.test.ts` (a stale production-order PATCH is 409), `tests/integration/shipments-api.test.ts` (:328: a stale shipment PATCH is 409 `VERSION_CONFLICT`), `packages/core/src/services/shipments/shipment.service.test.ts` (:388: the newer planned date stays). E02-S03, #21; E08-S01, #83; E08-S05, #147; E09-S01/S02, #86, #87; E10-S01, #88.
 - **Given:** Two API clients use same version number
 - **When:** First changes order, second submits stale update
 - **Then:** Second HTTP 409; no last-write-wins.
@@ -4149,6 +4154,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** UI · **Status:** Not executed
 
+- **Evidence:** Not yet asserted; #192.
 - **Given:** Authenticated normal user opens operational maintenance
 - **When:** Inspect footer
 - **Then:** Exact footnote sentence and both links present.
@@ -4270,6 +4276,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P2 · **Channel:** Both · **Status:** Not executed
 
+- **Evidence:** Not yet asserted; #192.
 - **Given:** User browsing main screens and API help
 - **When:** Inspect available functions
 - **Then:** No required invoicing/pricing/payments modules; core planning works without them.
@@ -4285,8 +4292,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### UX-025 — No SSO required
 
-**Priority:** P1 · **Channel:** UI · **Status:** Not executed
+**Priority:** P1 · **Channel:** UI · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/auth.test.ts` (:35: on a fresh production container with no single sign-on configured, the admin signs in with the built-in password and gets a local session cookie), `tests/integration/users.test.ts` (a normal user signs in with a local password too). E01-S01/S02, PRs #29, #34.
 - **Given:** New runtime has valid built-in admin secret
 - **When:** Sign in with local password
 - **Then:** Works without Microsoft/Google single sign-on.
@@ -4295,6 +4303,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Not executed
 
+- **Evidence:** Not yet asserted: the unreserved goods issue is #192; the next MRP's shortage is slice 3 (#14).
 - **Given:** Planning has outstanding production demand and raw stock exists
 - **When:** Post otherwise valid physical goods issue before production
 - **Then:** No reservation system blocks transaction; next MRP detects resulting shortage.
@@ -4439,6 +4448,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Not executed
 
+- **Evidence:** Not yet asserted: the deactivation and the unchanged BOM are #191; MRP's choice of parent recipe is slice 3 (#14).
 - **Given:** Material has zero physical/transit stock, no unfinished direct operational documents, but may appear in active/historic BOMs
 - **When:** Admin deactivates material
 - **Then:** Deactivation allowed despite BOM-only references; historic BOM immutable and new MRP parent creation must use eligible alternative or raise inactive-input exception.
@@ -4472,9 +4482,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### LFC-019 — Location can deactivate after clearing
 
-**Priority:** P1 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** Deactivation stores Inactive and keeps the record and its history (`packages/core/src/services/named-records/named-records.test.ts`, `tests/integration/named-records.test.ts` and `named-records-api.test.ts`); new planning parameter sets and safety-stock targets refuse it and its pickers drop it (`packages/core/src/services/locations/find-location.test.ts`, `packages/core/src/services/planning-parameters/planning-parameter.service.test.ts`, `packages/core/src/services/safety-stock/safety-stock-target.service.test.ts`, `references.test.tsx`, `tests/integration/planning-parameters.test.ts`), while its existing rows stay. Stock, transfers and documents don't exist yet, so the clearing preconditions (LFC-016…018) are slice 2. E03-S02, #23, with #24.
+- **Evidence:** Deactivation stores Inactive and keeps the record and its history (`packages/core/src/services/named-records/named-records.test.ts`, `tests/integration/named-records.test.ts` and `named-records-api.test.ts`); new planning parameter sets and safety-stock targets refuse it and its pickers drop it (`packages/core/src/services/locations/find-location.test.ts`, `packages/core/src/services/planning-parameters/planning-parameter.service.test.ts`, `packages/core/src/services/safety-stock/safety-stock-target.service.test.ts`, `references.test.tsx`, `tests/integration/planning-parameters.test.ts`), while its existing rows stay; so do new POs and requisitions (`purchase-order.service.test.ts`, `purchase-requisition.service.test.ts`, `LOCATION_INACTIVE`). Once cleared, the refused location deactivates: stock counted to zero (`packages/core/src/services/stock/stock.service.test.ts` :128), its transfer received in full (`packages/core/src/services/transfers/transfer.service.test.ts` :710), its POs Completed, Cancelled or Closed Early and its requisitions no longer Open (`purchase-order.service.test.ts` :631–683, `tests/integration/purchasing-api.test.ts` :217); a Cancelled production order no longer blocks it (`production-order.service.test.ts` :237). E03-S02, #23, with #24; E07-S01/S03, #80, #82; E09-S03, #141; E10-S01, #88.
 - **Given:** Location empty, transfers complete, no open operational documents
 - **When:** Admin deactivates location
 - **Then:** Inactive status stored and future selection blocked; history readable.
@@ -4527,6 +4537,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Not executed
 
+- **Evidence:** Not yet asserted: the audited deactivation and the unchanged BOM are #191; MRP not selecting the recipe is slice 3 (#14).
 - **Given:** Raw R is referenced by currently active BOM of F but R has no stock/transit or unfinished direct document
 - **When:** Admin deactivates R
 - **Then:** Allowed, audited; historic BOM unchanged; new MRP must not select the recipe without active R.
@@ -4543,6 +4554,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Not executed
 
+- **Evidence:** Not yet asserted: the deactivation and the preserved pinned order are #191; MRP's at-risk report is slice 3 (#14).
 - **Given:** Raw material R has only active BOM references; existing order of finished F pins a recipe using R, and R has no stock/transit or unfinished direct R document
 - **When:** Deactivate R then run MRP
 - **Then:** Deactivation allowed; pinned order preserved; MRP reports F at-risk due to inactive R, excludes prospective F output from dependable planning and never silently auto-replaces it.
@@ -4575,8 +4587,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### E2E-004 — BOM version edit while executing production
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/services/production-orders/production-completion.service.test.ts` (:218: after the BOM is revised to revision 2, a completion still expects and stores revision 1's quantities, the order stays on revision 1 and both revisions remain). The scenario's order is partly completed before the revision; no test posts a completion on each side of it (#191). E10-S03, #143.
 - **Given:** Order pinned revision 1, partially completed; admin changes recipe to revision 2
 - **When:** Post next production completion
 - **Then:** Uses revision 1 expected quantities; historical production and new revision remain distinct.
@@ -4591,8 +4604,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### E2E-006 — Two simultaneous order postings against stock
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `tests/integration/shipments-api.test.ts` (:217: with 10 in stock, two concurrent issues of 7 are one 200 and one 409 `INSUFFICIENT_STOCK`; stock 3, one goods issue), `packages/core/src/services/goods-issues/goods-issue.service.test.ts` (two connections race: one issue, one movement, stock 3). Both race the same line of one shipment, through one token, where the scenario races two order lines from two sessions, and neither checks the audit (#192). E08-S02, #84.
 - **Given:** Site stock 10 with two outstanding order lines for 7 each
 - **When:** Issue both from independent sessions concurrently
 - **Then:** At most one GI succeeds; audit and ledger show physical stock not below zero.
@@ -4615,8 +4629,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### E2E-009 — Partial transfer with loss
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/services/transfers/transfer.service.test.ts` (:138, :477: 60 dispatched, 50 received, 10 written off: A 40, B 50, nothing in transit, the write-off posting linked from its audit entry, the transfer still Open until Close Early makes it Closed Early, never Completed). The scenario's 55/5 journey through the API or the screens is not run end to end (#190). E07-S03, #82; E11-S01, #90.
 - **Given:** A has 100 and B 0, transfer planned 60
 - **When:** Dispatch 60, receive 55, write off lost 5, close transfer
 - **Then:** A stock 40, B stock 55, transit 0; transfer Closed Early, never Completed, because 5 units written off; loss linked in audit and ledger.
@@ -4625,6 +4640,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Not executed
 
+- **Evidence:** Not yet asserted; #189 (the MRP results in its Given are slice 3, #14).
 - **Given:** Test has demo stock, Prod contains an open PO and MRP results
 - **When:** Admin resets Test while user reads/posts valid Prod GR
 - **Then:** Test fully regenerated with old Test audit cleared; Prod PO, stock, audit and global user accounts unaffected.
@@ -4648,8 +4664,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### E2E-013 — Agent API retry during network failure
 
-**Priority:** P0 · **Channel:** API · **Status:** Not executed
+**Priority:** P0 · **Channel:** API · **Status:** Partially verified
 
+- **Evidence:** `tests/integration/shipments-api.test.ts` (:307: a keyed goods issue of 10 and its same-key retry: the retry is marked replayed with the original issue's ID, stock moves from 100 to 90 once, the shipment has one goods issue; API-020, API-021). The retry's audit isn't counted: no test checks that the replayed issue leaves exactly one `goods-issues.goods-issue.posted` entry (that is asserted for a replayed shipment edit, :328); #192. E08-S02, #84.
 - **Given:** Agent token issues valid GI with idempotency key, response lost
 - **When:** Agent retries within 24h using same key/body then reads stock ledger
 - **Then:** Only one physical issue and matching audit exists, original result returned to agent.
@@ -4658,6 +4675,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** API · **Status:** Not executed
 
+- **Evidence:** Not yet asserted; #192.
 - **Given:** Normal account has valid API token and prod business access
 - **When:** Attempt master BOM edit and then valid customer GI
 - **Then:** BOM edit forbidden; permitted GI succeeds with account/token audit attribution.
@@ -4666,7 +4684,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `tests/integration/import-api.test.ts` (a new BOM imported through its import reference gets a permanent ID at revision 1, and a later import makes revision 2 while revision 1 stays), `tests/integration/import.test.ts` (the same on the screen). MRP and the production order that pins the recipe come in slices 2 and 3. E05-S01, #27.
+- **Evidence:** `tests/integration/import-api.test.ts` (a new BOM imported through its import reference gets a permanent ID at revision 1, and a later import makes revision 2 while revision 1 stays), `tests/integration/import.test.ts` (the same on the screen). A production order pins its BOM revision (`production-order.service.test.ts`), but no test creates one from an imported BOM (#191); MRP picking the recipe is slice 3 (#14). E05-S01, #27.
 - **Given:** New logical BOM import references existing materials via temporary Import Reference
 - **When:** Dry run+commit, run MRP for feasible Make, create production order
 - **Then:** Permanent BOM ID and immutable revision created, MRP picks valid recipe and order pins it.
@@ -4681,16 +4699,18 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### E2E-017 — Inactivated supplier but existing procurement completes
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/services/goods-receipts/goods-receipt.service.test.ts` (:194: a receipt on an Open PO whose supplier was deactivated since raises stock and the line's received), `packages/core/src/services/purchase-orders/purchase-order.service.test.ts` (:519) and `tests/integration/purchasing-api.test.ts` (:176) (a new PO for the inactive supplier is 409 `SUPPLIER_INACTIVE`; the earlier PO stays readable and editable). The receipt's audit entry isn't checked, and no integration test receives against the old PO (#186). E09-S01/S02, #86, #87.
 - **Given:** Supplier has existing PO, then admin makes supplier inactive
 - **When:** Post GR against old PO; try create a new PO
 - **Then:** Old PO receives normally with movement/audit; new PO rejected.
 
 ### E2E-018 — Language/theme/help survive Test reset
 
-**Priority:** P1 · **Channel:** UI · **Status:** Not executed
+**Priority:** P1 · **Channel:** UI · **Status:** Partially verified
 
+- **Evidence:** `tests/integration/test-reset-api.test.ts` (:68: a normal user with Polish/dark and a token; after a real reset their stored preferences and token are unchanged, their browser opens `/admin` still signed in, and Test holds the regenerated demo data again). The user sets the preferences through the API, the reset goes through the API, and the revisit doesn't check that the page renders in Polish and dark (#189). #93.
 - **Given:** Normal user selects Polish/dark and owns active token; Test has data
 - **When:** Reset Test, revisit app with same user
 - **Then:** Polish/dark preferences, token and sessions preserved; Test demo data regenerated.
@@ -4705,8 +4725,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### E2E-020 — Reused Test IDs are safe after full reset
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `tests/integration/test-reset-api.test.ts` (:68, :126–131: after a real reset, a material write retried with its G1 key and generation is `GENERATION_STALE`, the same key at G2 is a new request, the admin's token keeps working, and Prod's lists, metadata and audit are unchanged), `tests/integration/test-reset.test.ts` (a screen edit loaded before the reset is refused and the new material 00000001 keeps its demo description). The retried request is a material write, not a goods issue, and G2's stock isn't compared (#189). #93.
 - **Given:** Agent cached Test generation G1 with material 00000001 and an idempotent API GI request, while Prod operates
 - **When:** Admin resets Test to G2 (new material 00000001), agent retries G1 request
 - **Then:** G1 API precondition rejects retry; G2 material and stock unchanged, global token still valid for freshly scoped G2 API actions, Prod unaffected.
