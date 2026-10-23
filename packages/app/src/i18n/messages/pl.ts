@@ -1498,6 +1498,7 @@ export const pl: Messages = {
       from: "Od (UTC)",
       to: "Do (UTC)",
       all: "Wszystkie",
+      unlisted: "{value} (spoza listy)",
       apply: "Zastosuj",
       clear: "Wyczyść filtry",
       showing: "Pokazano wpisy pasujące do filtrów.",

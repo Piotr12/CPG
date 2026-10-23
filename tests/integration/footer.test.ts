@@ -71,20 +71,24 @@ describe("the footer", () => {
     await expectFooter();
   });
 
-  // The admin's other screens and a tenant's (UX-010 names user administration).
+  // The admin's other screens and a tenant's (UX-010 names user administration), its reports and a filtered audit.
   it.each([
     ["/admin/users", "table"],
     ["/admin/tokens", "table"],
     ["/admin/audit", "table"],
     ["/admin/test", "[data-slot=card-description]"],
     ["/admin/test/audit", "main h1"],
+    ["/admin/test/reports/stock", "table[aria-label='Current stock']"],
+    ["/admin/test/reports/variance", "table[aria-label='Production variance']"],
+    ["/admin/test/audit?subjectType=Material&subjectId=00000001", "main table"],
   ])("ends %s", async (path, content) => {
     await browser.open(`${baseUrl}${path}`);
     // The page's own content, swapped in from Next.js's hidden streaming container.
     await browser.waitUntil(
       `[...document.querySelectorAll(${JSON.stringify(content)})].some((element) => !element.closest("[hidden]"))`,
     );
-    expect(new URL(await browser.url()).pathname).toBe(path);
+    const shown = new URL(await browser.url());
+    expect(shown.pathname + shown.search).toBe(path);
     await expectFooter();
   });
 });
