@@ -136,7 +136,8 @@ describe("audit action labels", () => {
 /**
  * Every field a snapshot may carry has a name in both languages (UX-022), so neither audit shows a stored
  * key. The recorder refuses a field `AUDIT_FIELDS` doesn't list, so a service that records a new one fails
- * its own tests until it is listed, and then fails here until it is named (#145).
+ * its own tests until it is listed, and then fails here until it is named (#145). A field nothing records
+ * any more keeps its labels: stored entries are never rewritten (R08), so they still show it.
  */
 describe("audit field labels", () => {
   it.each([
@@ -147,11 +148,5 @@ describe("audit field labels", () => {
     expect([...AUDIT_FIELDS, ...AUDIT_LINE_FIELDS].filter((field) => !named.has(field)).sort()).toEqual([]);
     expect(AUDIT_MOVEMENT_ROLES.filter((role) => !messages.audit.movementField[role]?.includes("{movement}"))).toEqual([]);
     expect(messages.audit.lineField).toMatch(/\{line\}.*\{field\}/);
-  });
-
-  it("names no field that nothing records any more", () => {
-    const recordable = new Set<string>([...AUDIT_FIELDS, ...AUDIT_LINE_FIELDS]);
-    expect(Object.keys(en.audit.fields).filter((field) => !recordable.has(field)).sort()).toEqual([]);
-    expect(Object.keys(en.audit.values).filter((field) => !recordable.has(field)).sort()).toEqual([]);
   });
 });

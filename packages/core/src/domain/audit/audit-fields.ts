@@ -21,6 +21,7 @@ export const AUDIT_LINE_FIELDS = ["actual", "expected", "extra", "fulfilled", "i
 /** A completion reversal's movement pairs, `movement{n}Original` and `movement{n}Inverse`. */
 export const AUDIT_MOVEMENT_ROLES = ["original", "inverse"] as const;
 
+const LISTED = new Set<string>(AUDIT_FIELDS);
 const LINE_FIELD = /^line[1-9]\d*([A-Z]\w*)$/;
 const MOVEMENT_FIELD = /^movement[1-9]\d*([A-Z]\w*)$/;
 
@@ -30,5 +31,5 @@ export function isAuditField(name: string): boolean {
     const match = pattern.exec(name);
     return match !== null && names.includes(match[1][0].toLowerCase() + match[1].slice(1));
   };
-  return (AUDIT_FIELDS as readonly string[]).includes(name) || numbered(LINE_FIELD, AUDIT_LINE_FIELDS) || numbered(MOVEMENT_FIELD, AUDIT_MOVEMENT_ROLES);
+  return LISTED.has(name) || numbered(LINE_FIELD, AUDIT_LINE_FIELDS) || numbered(MOVEMENT_FIELD, AUDIT_MOVEMENT_ROLES);
 }

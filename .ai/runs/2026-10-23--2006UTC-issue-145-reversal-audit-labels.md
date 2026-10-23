@@ -24,6 +24,7 @@ Issue #145: completion and transfer reversal entries record audit fields without
 
 - 20:10 — Implemented steps 1–7 as planned. Labels: EN "original movement {n}" / "reversing movement {n}", "movement count", "posting", "posting kind" (values dispatch/receipt/write-off), "completion"; `reversal` now reads "reversal". PL: "ruch pierwotny {n}" / "ruch odwracający {n}", "liczba ruchów", "księgowanie", "rodzaj księgowania" (wydanie/przyjęcie/odpis), "wykonanie", "odwrócenie".
 - 20:14 — Docker isn't reachable from this account (lesson 2026-10-19), so I ran the touched integration files against the standalone build on a fresh `DATA_DIR`.
+- 20:30 — PR #181 opened. A fresh-context review (subagent running `om-code-review`) approved with minors only. It found no field missing from `AUDIT_FIELDS` after reading every recorder call and snapshot helper. Fixed: the Polish integration test resets the language in `finally`; both reversal tests assert the records the AUD-004 test made; the "names no field nothing records" assertion is gone, because stored entries keep retired fields (R08) and need their labels; the new labels are in alphabetical order; `isAuditField` uses a `Set`. Not changed: the app keeps its own field patterns, because `audit-table.tsx` renders on the client and importing `@cpg/core` there would pull server code into its bundle.
 
 ## Changes
 

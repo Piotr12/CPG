@@ -211,6 +211,7 @@ describe("tracing one record's history in the audit (E13-S03, #96)", () => {
 
   it("names every field of the reversal entries, and the dispatch's entry records the posting its reversal names (UX-022, #145)", async () => {
     const { order, completion, transfer, posting } = reversedRecords;
+    expect(completion, "the reversals the AUD-004 test above made").not.toBe("");
     await openAudit(operator, `/admin/prod/audit?subjectType=ProductionCompletion&subjectId=${completion}`);
     const [reversed] = await rows(operator);
     // One output and one component: two movements, each with its inverse.
@@ -307,29 +308,34 @@ describe("tracing one record's history in the audit (E13-S03, #96)", () => {
   it("reads in Polish with the recorded facts unchanged (UX-022)", async () => {
     await choosePreference(operator, "pl");
     await operator.waitUntil(`document.documentElement.lang === "pl"`);
-    await openAudit(operator, `/admin/prod/audit?subjectType=StockMovement&subjectId=${correction}`);
+    // Back to English even when an assertion fails, so the next test doesn't read a Polish screen.
+    try {
+      await openAudit(operator, `/admin/prod/audit?subjectType=StockMovement&subjectId=${correction}`);
 
-    expect(await operator.text("main h1")).toBe("Audyt — Prod");
-    const [reversed] = await rows(operator);
-    expect(reversed[4]).toBe("Odwrócono ruch zapasu");
-    expect(reversed[0]).toContain(`Data księgowania ${utcDay()}`);
-    expect(reversed[6]).toContain("odwrócony: nie → tak");
-    expect(reversed[6]).toContain("powód: — → History wrong bin");
-    expect(reversed[6]).toMatch(/Odwrócony przez [0-9a-f]{8}$/);
+      expect(await operator.text("main h1")).toBe("Audyt — Prod");
+      const [reversed] = await rows(operator);
+      expect(reversed[4]).toBe("Odwrócono ruch zapasu");
+      expect(reversed[0]).toContain(`Data księgowania ${utcDay()}`);
+      expect(reversed[6]).toContain("odwrócony: nie → tak");
+      expect(reversed[6]).toContain("powód: — → History wrong bin");
+      expect(reversed[6]).toMatch(/Odwrócony przez [0-9a-f]{8}$/);
 
-    // A completion reversal and a transfer posting reversal: no field shows its stored key (#145).
-    await openAudit(operator, `/admin/prod/audit?subjectType=ProductionCompletion&subjectId=${reversedRecords.completion}`);
-    const [completion] = await rows(operator);
-    expect(completion[4]).toBe("Odwrócono wykonanie produkcji");
-    for (const field of ["odwrócenie: — → ", "liczba ruchów: — → 2", "ruch pierwotny 1: — → ", "ruch odwracający 2: — → "]) expect(completion[6]).toContain(field);
-    expect(completion[6]).not.toMatch(/movement\d|movements|reversal:/);
-    await openAudit(operator, `/admin/prod/audit?subjectType=Transfer&subjectId=${reversedRecords.transfer}`);
-    const [posting] = await rows(operator);
-    expect(posting[6]).toContain(`księgowanie: — → ${reversedRecords.posting}`);
-    expect(posting[6]).toContain("rodzaj księgowania: — → wydanie");
-    expect(posting[6]).not.toMatch(/posting:|kind:/);
-    await choosePreference(operator, "en");
-    await operator.waitUntil(`document.documentElement.lang === "en"`);
+      // A completion reversal and a transfer posting reversal: no field shows its stored key (#145).
+      expect(reversedRecords.completion, "the reversals the AUD-004 test above made").not.toBe("");
+      await openAudit(operator, `/admin/prod/audit?subjectType=ProductionCompletion&subjectId=${reversedRecords.completion}`);
+      const [completion] = await rows(operator);
+      expect(completion[4]).toBe("Odwrócono wykonanie produkcji");
+      for (const field of ["odwrócenie: — → ", "liczba ruchów: — → 2", "ruch pierwotny 1: — → ", "ruch odwracający 2: — → "]) expect(completion[6]).toContain(field);
+      expect(completion[6]).not.toMatch(/movement\d|movements|reversal:/);
+      await openAudit(operator, `/admin/prod/audit?subjectType=Transfer&subjectId=${reversedRecords.transfer}`);
+      const [posting] = await rows(operator);
+      expect(posting[6]).toContain(`księgowanie: — → ${reversedRecords.posting}`);
+      expect(posting[6]).toContain("rodzaj księgowania: — → wydanie");
+      expect(posting[6]).not.toMatch(/posting:|kind:/);
+    } finally {
+      await choosePreference(operator, "en");
+      await operator.waitUntil(`document.documentElement.lang === "en"`);
+    }
   });
 
   it("keeps every column in view at 1280 × 800 and the form usable at 390 px", async () => {
