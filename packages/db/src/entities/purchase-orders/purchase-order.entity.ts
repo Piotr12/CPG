@@ -37,6 +37,8 @@ export const PurchaseOrder = defineEntity({
     version: p.integer().version(),
   },
   uniques: [{ properties: ["tenant", "code"] }],
+  /** Serves the location-deactivation guard: the lowest Open order delivering to a location. */
+  indexes: [{ properties: ["tenant", "location", "status", "code"] }],
 });
 
 export type PurchaseOrder = InferEntity<typeof PurchaseOrder>;

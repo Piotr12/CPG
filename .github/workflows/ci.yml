@@ -66,9 +66,14 @@ jobs:
 
   # Builds the production image, starts it with Testcontainers on an empty data directory and
   # drives it with agent-browser (tests/integration/).
+  #
+  # The browser install and the suite each get their own budget, and the job's covers both plus
+  # setup (tests/ci-workflow.test.ts). The install usually takes 15 s, but `--with-deps` fetches
+  # ~70 MB of fonts from Ubuntu's apt mirror, which has taken over 19 minutes (#167). A slow install
+  # then fails its own step with a timeout instead of cancelling the suite halfway through.
   integration-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -77,5 +82,8 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Install Chrome for agent-browser
+        timeout-minutes: 10
         run: npx agent-browser install --with-deps
-      - run: npm run test:integration
+      - name: Run integration tests
+        timeout-minutes: 20
+        run: npm run test:integration

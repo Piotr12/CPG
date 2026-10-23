@@ -1255,6 +1255,19 @@
         },
         {
           "columnNames": [
+            "tenant_code",
+            "location_id",
+            "status",
+            "code"
+          ],
+          "composite": true,
+          "constraint": false,
+          "keyName": "customer_order_tenant_code_location_id_status_code_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
             "id"
           ],
           "composite": false,
@@ -5485,6 +5498,19 @@
           "keyName": "purchase_order_tenant_code_index",
           "primary": false,
           "unique": false
+        },
+        {
+          "columnNames": [
+            "tenant_code",
+            "location_id",
+            "status",
+            "code"
+          ],
+          "composite": true,
+          "constraint": false,
+          "keyName": "purchase_order_tenant_code_location_id_status_code_index",
+          "primary": false,
+          "unique": false
         }
       ],
       "checks": [],
@@ -6236,6 +6262,19 @@
           "composite": false,
           "constraint": false,
           "keyName": "purchase_requisition_tenant_code_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "tenant_code",
+            "location_id",
+            "status",
+            "code"
+          ],
+          "composite": true,
+          "constraint": false,
+          "keyName": "purchase_requisition_tenant_code_location_id_status_code_index",
           "primary": false,
           "unique": false
         }
