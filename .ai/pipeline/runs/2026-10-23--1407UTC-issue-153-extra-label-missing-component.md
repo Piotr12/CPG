@@ -27,6 +27,7 @@ Non-goals: how variance is recorded or reported; a live per-row variance column 
 - `tests/integration/production-completions.test.ts` clicks "Add input", which is unchanged.
 
 ## Log
+- 14:18 UTC — `om-auto-review-pr 174 --autofix`: approve, no blockers or majors. Gate re-run on 3c9e20a: lint (only the existing `bom.service.ts` warning), typecheck, `test:coverage` 100% (487 files, 3,327 tests), build all pass. `production-completions.test.ts` passed 4/4 against a fresh standalone copy of that build on port 3175 (the 3174 server's data dir already held the suite's fixtures, so its `beforeAll` got a 409). Two nits: `BACKWARD_COMPATIBILITY.md`'s route envelope now lists `params?` (0d0fe80); `EXTRA_INPUT_QUANTITY_MESSAGE` still says "added input" in the English API text, left as is because the issue covers the three screens and English API messages stay stable.
 - 14:14 UTC — Gate on this source: lint (only the existing `bom.service.ts` warning), typecheck, `test:coverage` 487 files / 3,327 tests at 100%, build. Docker isn't running here, so `production-completions.test.ts` (4 tests) ran against a fresh standalone copy (static + public, empty `DATA_DIR`) on port 3174 and passed, including the new 400 with `params.material`.
 - 14:12 UTC — Phases 1–3 committed (2cfe98a, 08c7787, 37d4871). Decision comment posted on #153. The compatibility notes and the standards' envelope description now mention `params` on `VALIDATION_FAILED`.
 - 14:08 UTC — Draft PR #174 opened.
