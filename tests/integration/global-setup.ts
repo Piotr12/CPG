@@ -1,4 +1,5 @@
 import path from "node:path";
+import { createInterface } from "node:readline";
 import { GenericContainer, Wait, type StartedTestContainer } from "testcontainers";
 import type { TestProject } from "vitest/node";
 
@@ -48,9 +49,8 @@ export default async function setup(project: TestProject) {
     .withStartupTimeout(STARTUP_TIMEOUT_MS)
     // The startup seed's duration on this runner, in the CI log (#185).
     .withLogConsumer((stream) =>
-      stream.on("data", (chunk) => {
-        const seeded = /Seeded the Test tenant.*/.exec(String(chunk))?.[0];
-        if (seeded) process.stdout.write(`App startup: ${seeded}\n`);
+      createInterface({ input: stream }).on("line", (line) => {
+        if (line.includes("Seeded the Test tenant")) process.stdout.write(`App startup: ${line}\n`);
       }),
     )
     .start();

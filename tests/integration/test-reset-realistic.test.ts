@@ -48,16 +48,19 @@ describe("the realistic Test dataset, written by an API reset", () => {
     await admin.setViewport(1280, 800);
     const seconds = (since: number) => (performance.now() - since) / 1000;
     const started = performance.now();
-    const resetting = reset({ dataset: "realistic" });
+    let writeSeconds = 0;
     // A Prod write issued 2 s into the reset waits for it: the server answers nothing else until the
     // reset commits (spec 2026-10-21--0718UTC-test-tenant-dataset, Q16). Like kamal-proxy's, it goes on a
     // pooled connection, which the image's KEEP_ALIVE_TIMEOUT keeps open through the reset (#185; a local
     // server started without it answers ECONNRESET here).
-    await new Promise((resolve) => setTimeout(resolve, 2_000));
-    const writeStarted = performance.now();
-    const prodWrite = await api("POST", "/api/tenants/prod/locations", { key: randomUUID(), body: { name: "reset-realistic prod write" } });
-    const writeSeconds = seconds(writeStarted);
-    const realistic = await resetting;
+    const prodWriteDuringReset = async () => {
+      await new Promise((resolve) => setTimeout(resolve, 2_000));
+      const writeStarted = performance.now();
+      const response = await api("POST", "/api/tenants/prod/locations", { key: randomUUID(), body: { name: "reset-realistic prod write" } });
+      writeSeconds = seconds(writeStarted);
+      return response;
+    };
+    const [realistic, prodWrite] = await Promise.all([reset({ dataset: "realistic" }), prodWriteDuringReset()]);
     const resetSeconds = seconds(started);
     // The runner's figures, which the spec leaves without a budget (Q7). Straight to stdout: Vitest drops
     // a passing test's console output.
