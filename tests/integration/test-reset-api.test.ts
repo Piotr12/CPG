@@ -62,7 +62,7 @@ describe("atomic Test reset through the bearer API", () => {
       await openTokens(browser, baseUrl);
       userSecrets.push(await createToken(browser, "reset-survivor"));
     }
-    await api("PATCH", "/api/preferences", { key: randomUUID(), body: { locale: "pl", theme: "dark" } }, userSecrets[0]);
+    expect((await api("PATCH", "/api/preferences", { key: randomUUID(), body: { locale: "pl", theme: "dark" } }, userSecrets[0])).status).toBe(200);
     expect((await write("PATCH", "/api/tenants/test", { readOnly: false })).status).toBe(200);
     prod.material = (await created("/api/tenants/prod/materials", { type: "raw", description: "reset-api keep Prod", baseUnit: "kg" })).id;
     prod.source = (await created("/api/tenants/prod/locations", { name: "reset-api source" })).id;
@@ -200,12 +200,15 @@ describe("atomic Test reset through the bearer API", () => {
     expect(receipt.status, receipt.text).toBe(200);
     expect(await test()).toMatchObject({ generation: generation + 1, readOnly: false });
     expect((json(await api("GET", "/api/tenants/test/audit")).data as AuditPage).entries).toEqual([]);
-    expect((await materials())[0]).toMatchObject({ id: "00000001", description: "Steel sheet 2 mm" });
+    const fresh = await materials();
+    expect(fresh.map(({ id }) => id)).toEqual(sequence(26));
+    expect(fresh[0]).toMatchObject({ id: "00000001", description: "Steel sheet 2 mm" });
     const after = await prodState();
     // The receipt is posted once, by the user, at the order's location; the transfer, the destination and the accounts are untouched.
     expect(after.order.lines[0]).toMatchObject({ received: "2.000000" });
-    expect(after.stock[0].quantity).toBe("8.000000");
-    expect(after.stock[0].movements.length).toBe(before.stock[0].movements.length + 1);
+    expect(after.stock[0]).toMatchObject({ quantity: "8.000000", movementCount: before.stock[0].movementCount + 1 });
+    expect(after.stock[0].movements[0]).toMatchObject({ quantity: "2.000000", balanceBefore: "6.000000", balanceAfter: "8.000000", actorUsername: users[0], channel: "api" });
+    expect(after.stock[0].movements.slice(1)).toEqual(before.stock[0].movements);
     expect(after.stock[1]).toEqual(before.stock[1]);
     expect(after.transfer).toEqual(before.transfer);
     expect(after.tenant).toEqual(before.tenant);
@@ -242,7 +245,8 @@ describe("atomic Test reset through the bearer API", () => {
     });
     const before = await g2();
     // G2 has the same shipment again, nothing issued on it yet: a retry that got through would land on it.
-    expect(before.shipment).toMatchObject({ id: shipment.id, status: "open", lines: expect.arrayContaining([expect.objectContaining({ line, toIssue })]) });
+    // Both generations are today's tiny dataset; a run that crosses midnight UTC fails here rather than passing on another plan.
+    expect(before.shipment).toMatchObject({ id: shipment.id, location, status: "open", lines: expect.arrayContaining([expect.objectContaining({ line, material, toIssue })]) });
     const prodBefore = await prodState();
 
     // The agent retries its G1 request with the same key, and with a new one: both are refused before anything is written.

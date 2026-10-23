@@ -50,3 +50,9 @@ Issue #189 (E12-S04), tests only: Prod gets a stock correction, a transfer and a
 
 - E2E-010's MRP results await MRP.
 - `auth.service.test.ts` "throttles a client that sprays usernames" can exceed Vitest's 5 s default under a loaded full run. Not caused by this change, which touches no auth code; noted in case it recurs.
+
+## Review round 1 (fresh-context reviewer)
+
+- Major: rewriting the TEN-026 retry test had removed the only real-interleave test of the service's own retry, the direct (UI) path. It is restored, with the spy only timing a real second-connection write and an exact read count proving the retry. The API case now goes through `IdempotencyService.run`'s own retry (`attempts === 2`).
+- Minors fixed: E2E-010 now says the server runs the two requests one after the other, and keeps that as a gap. It asserts the full material sequence and the exact new ledger movement. Evidence wording now names the first list page and the latest audit page, and drops the unasserted "holds the writer lock". E2E-020 pins the G2 shipment's location and material, so a run that crosses midnight fails instead of passing on another plan. The preference PATCH status is checked.
+- Re-verified: unit 15/15. Integration against a fresh standalone server: test-reset-api, test-reset-realistic and test-reset, 15/15. lint 0, typecheck 0, `test:coverage` 3,547 tests at 100% (exit 0), build 0.

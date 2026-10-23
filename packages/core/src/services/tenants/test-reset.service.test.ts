@@ -304,21 +304,46 @@ describe("reset and a write on an independent SQLite connection (TEN-026)", { ti
     );
   }
 
-  it("retries reset after another write commits first, removing that completed old-generation write", async () => {
+  it("retries a direct (UI) reset after another write commits first, removing that completed old-generation write", async () => {
     await populate();
     const other = await initOrm({ databasePath: orm.config.get("dbName") });
     try {
       const writer = (await scopeForTenant(createAppContainer(container.cradle.config, other), "test")).cradle;
       const resetting = (await scope()).cradle;
-      // As the API runs a reset: its transaction reads the generation, then another connection commits a write.
+      // The spy only times the write: right after the reset's own transaction has read the generation.
+      const read = resetting.tenantService.currentState.bind(resetting.tenantService);
+      const currentState = vi.spyOn(resetting.tenantService, "currentState").mockImplementationOnce(async (code) => {
+        const state = await read(code);
+        await apiWrite(writer, "committed just before reset");
+        return state;
+      });
+      await expect(resetting.testResetService.reset(1, actor)).resolves.toMatchObject({ generation: 2 });
+      // The first attempt stopped at its first write, its snapshot stale; the retry read again, saw the write and removed it.
+      // Each attempt reads the state before and after; a single attempt would read it twice.
+      expect(currentState.mock.calls.map(([code]) => code)).toEqual(["test", "test", "test"]);
+      expect(await (await scope()).cradle.em.count(Material, { description: "committed just before reset" })).toBe(0);
+      expect(await (await scope()).cradle.em.count(GlobalAuditEvent, { action: "tenants.tenant.reset" })).toBe(1);
+    } finally { await other.close(); }
+  });
+
+  it("retries an API reset after another write commits first, through the idempotency gate's own retry", async () => {
+    await populate();
+    const other = await initOrm({ databasePath: orm.config.get("dbName") });
+    try {
+      const writer = (await scopeForTenant(createAppContainer(container.cradle.config, other), "test")).cradle;
+      const resetting = (await scope()).cradle;
+      const fingerprint = await fingerprintOf({ method: "POST", path: "/api/tenants/test/reset", body: {} });
       let attempts = 0;
-      await expect(retryingStaleSnapshot(() => inRequestTransaction(resetting.em, async () => {
-        attempts++;
-        await resetting.tenantService.currentState("test");
-        if (attempts === 1) await apiWrite(writer, "committed just before reset");
-        return resetting.testResetService.reset(1, actor);
-      }))).resolves.toMatchObject({ generation: 2 });
-      // The first attempt's snapshot went stale at its first write; the retry saw the write and removed it.
+      // The gate has read the generation in its transaction when it calls the write; another connection commits first.
+      await expect(resetting.idempotencyService.run(
+        { userId: "admin", key: "reset", operation: "POST /api/tenants/test/reset", fingerprint },
+        { kind: "test-reset", tenant: "test", generation: 1, requireGeneration: true },
+        async () => {
+          if (++attempts === 1) await apiWrite(writer, "committed just before reset");
+          return resetting.testResetService.reset(1, actor);
+        },
+      )).resolves.toMatchObject({ replayed: false, data: { generation: 2 } });
+      // The first attempt's snapshot went stale at the reset's first write; the gate's retry saw the write and removed it.
       expect(attempts).toBe(2);
       expect(await (await scope()).cradle.em.count(Material, { description: "committed just before reset" })).toBe(0);
       expect(await (await scope()).cradle.em.count(GlobalAuditEvent, { action: "tenants.tenant.reset" })).toBe(1);
