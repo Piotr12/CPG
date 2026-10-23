@@ -83,6 +83,13 @@ it("bounds pages, clamps stale pages and rejects invalid parameters", async () =
   cleanup(); render(await resolveServerComponents(page("999"))); expect(mocks.list).toHaveBeenLastCalledWith(3); expect(screen.queryByRole("link", { name: en.productionOrders.next })).toBeNull();
   await expect(resolveServerComponents(page("0"))).rejects.toThrow("404");
 });
+it("pages the list in Polish", () => {
+  render(<ProductionScreen tenant={tenant} orders={[production]} total={201} page={2} materials={materials} locations={locations} messages={pl} locale="pl" />);
+  const nav = within(screen.getByRole("navigation", { name: "Strony zleceń produkcyjnych" }));
+  expect(nav.getByRole("link", { name: "Poprzednia" }).getAttribute("href")).toBe("/admin/test/production-orders?page=1");
+  expect(nav.getByRole("link", { name: "Następna" }).getAttribute("href")).toBe("/admin/test/production-orders?page=3");
+  expect(nav.getByText("Strona 2 z 3")).toBeTruthy();
+});
 it("translates empty/read-only states and keeps terminal orders readable without edit controls", async () => {
   const props = { tenant: { ...tenant, readOnly: true }, orders: [], total: 0, page: 1, materials, locations, messages: pl, locale: "pl" as const };
   render(<ProductionScreen {...props} />); expect(screen.getByText(pl.productionOrders.empty)).toBeTruthy(); expect(screen.queryByRole("button")).toBeNull();

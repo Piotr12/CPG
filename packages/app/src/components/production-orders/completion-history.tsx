@@ -1,10 +1,9 @@
-import Link from "next/link";
 import type { CompletionView, MaterialSummary } from "@cpg/core";
 import { COMPLETION_PAGE_SIZE } from "@cpg/core/validators/production-orders/production-completion.schema";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { Badge } from "@cpg/ui/components/badge";
-import { Button } from "@cpg/ui/components/button";
 import { fill, shownQuantity, type TenantContext } from "../forms/form-labels";
+import { PageLinks } from "../layout/page-links";
 import { CompletionReversalDialog, type CompletionReversalTarget } from "./completion-reversal-dialog";
 import type { ProductionLabels } from "./labels";
 
@@ -93,7 +92,9 @@ export function CompletionHistory({ completions, page, materials, labels, path, 
         completion={target(row, reversible.order)} today={today} existingHref={`${path}?completions=${page}`} labels={labels} />,
     }] : []),
   ];
-  const older = completions.length === COMPLETION_PAGE_SIZE;
+  // The history doesn't count its completions: a full page means an older one may exist, so it
+  // knows of one page past this one at most (its label shows only `{page}`).
+  const pages = completions.length === COMPLETION_PAGE_SIZE ? page + 1 : page;
   return (
     <section className="flex flex-col gap-3">
       <h2 className="text-lg font-semibold">{t.history}</h2>
@@ -103,23 +104,7 @@ export function CompletionHistory({ completions, page, materials, labels, path, 
         rows={completions}
         rowKey={(row) => row.id}
         empty={page > 1 ? t.historyPastEnd : t.historyEmpty}
-        pagination={
-          (page > 1 || older) && (
-            <nav aria-label={t.pagination} className="flex flex-wrap items-center justify-end gap-3">
-              {page > 1 && (
-                <Button asChild variant="outline">
-                  <Link href={`${path}?completions=${page - 1}`}>{t.previous}</Link>
-                </Button>
-              )}
-              <span className="text-sm">{fill(t.page, { page: String(page) })}</span>
-              {older && (
-                <Button asChild variant="outline">
-                  <Link href={`${path}?completions=${page + 1}`}>{t.next}</Link>
-                </Button>
-              )}
-            </nav>
-          )
-        }
+        pagination={<PageLinks page={page} pages={pages} labels={t} href={(target) => `${path}?completions=${target}`} />}
       />
     </section>
   );

@@ -59,6 +59,13 @@ describe("customer order pages", () => {
     expect(screen.queryByRole("link", { name: "Next page" })).toBeNull();
     await expect(resolveServerComponents(paged("0"))).rejects.toThrow("404");
   });
+  it("pages the list in Polish", () => {
+    render(<OrdersScreen tenant={tenant} orders={[order]} page={2} total={201} customers={customers} locations={locations} materials={materials} units={{}} locale="pl" messages={pl} />);
+    const nav = within(screen.getByRole("navigation", { name: "Strony zamówień klientów" }));
+    expect(nav.getByRole("link", { name: "Poprzednia strona" }).getAttribute("href")).toBe("/admin/test/customer-orders?page=1");
+    expect(nav.getByRole("link", { name: "Następna strona" }).getAttribute("href")).toBe("/admin/test/customer-orders?page=3");
+    expect(nav.getByText("Strona 2 z 3")).toBeTruthy();
+  });
   it("shows original entries, exact base quantities, dates and progress on the detail", async () => {
     render(await resolveServerComponents(page(true)));
     expect(mocks.get).toHaveBeenCalledWith(order.id); expect(mocks.list).not.toHaveBeenCalled();

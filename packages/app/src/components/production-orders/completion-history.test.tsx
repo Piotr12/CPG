@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import { expect, it } from "vitest";
 import { completionMaterials, completionView, wasteView } from "../../../../../tests/setup/production-orders";
 import { en } from "../../i18n/messages/en";
+import { pl } from "../../i18n/messages/pl";
 import { CompletionHistory, shownVariance } from "./completion-history";
 import { productionLabels } from "./labels";
 
@@ -44,6 +45,18 @@ it("pages newest first: older while a page is full, newer after the first", () =
   rerender(<CompletionHistory {...props} completions={[]} page={3} />);
   expect(screen.getByText(t.historyPastEnd)).toBeTruthy();
   expect(screen.queryByText(t.historyEmpty)).toBeNull();
+  expect(screen.getByRole("link", { name: t.previous }).getAttribute("href")).toBe("/admin/test/production-orders/00000001?completions=2");
+  expect(screen.queryByRole("link", { name: t.next })).toBeNull();
+});
+
+it("pages in Polish, newer and older with the page number alone", () => {
+  const polish = productionLabels(pl);
+  const full = Array.from({ length: 20 }, (_, index) => ({ ...completionView, id: String(40 - index).padStart(8, "0") }));
+  render(<CompletionHistory {...props} labels={polish} completions={full} page={2} />);
+  const nav = within(screen.getByRole("navigation", { name: "Strony wykonań" }));
+  expect(nav.getByRole("link", { name: "Nowsze" }).getAttribute("href")).toBe("/admin/test/production-orders/00000001?completions=1");
+  expect(nav.getByRole("link", { name: "Starsze" }).getAttribute("href")).toBe("/admin/test/production-orders/00000001?completions=3");
+  expect(nav.getByText("Strona 2")).toBeTruthy();
 });
 
 it("says when nothing was posted yet", () => {

@@ -4,10 +4,10 @@ import Link from "next/link";
 import { outstandingOf, type CustomerOrderView, type Locale, type MaterialSummary, type NamedRecordView, type ShipmentView, type TenantInfo } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { ORDER_PAGE_SIZE } from "@cpg/core/validators/customer-orders/customer-order.schema";
-import { Button } from "@cpg/ui/components/button";
 import { Badge } from "@cpg/ui/components/badge";
 import type { Messages } from "../../i18n/messages/en";
 import { fill, shownQuantity } from "../forms/form-labels";
+import { PageLinks } from "../layout/page-links";
 import { shipmentsLabels } from "../shipments/labels";
 import { firstDueDate, shipmentLineChoices } from "../shipments/line-choices";
 import { ShipmentDialog } from "../shipments/shipment-dialog";
@@ -103,10 +103,7 @@ export function OrdersScreen({ tenant, orders, order, shipments = [], page = 1, 
         )}
         <ShipmentsTable tenant={tenant.code} shipments={shipments} materials={byMaterial} labels={shipmentLabels} />
       </section>
-    </> : <DataTable label={t.link} columns={columns} rows={orders} rowKey={(row) => row.id} pagination={pages > 1 && <nav aria-label={t.pagination} className="flex flex-wrap items-center justify-end gap-3">
-      {page > 1 && <Button asChild variant="outline"><Link href={`${path}?page=${page - 1}`}>{t.previous}</Link></Button>}
-      <span className="text-sm">{fill(t.page, { page: String(page), pages: String(pages) })}</span>
-      {page < pages && <Button asChild variant="outline"><Link href={`${path}?page=${page + 1}`}>{t.next}</Link></Button>}
-    </nav>} empty={`${t.empty}${tenant.readOnly ? "" : ` ${t.emptyHint}`}`} />}
+    </> : <DataTable label={t.link} columns={columns} rows={orders} rowKey={(row) => row.id}
+      pagination={<PageLinks page={page} pages={pages} labels={t} href={(target) => `${path}?page=${target}`} />} empty={`${t.empty}${tenant.readOnly ? "" : ` ${t.emptyHint}`}`} />}
   </div>;
 }
