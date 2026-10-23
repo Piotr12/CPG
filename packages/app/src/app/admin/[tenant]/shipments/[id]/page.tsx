@@ -36,6 +36,7 @@ async function Shipment({ params }: { params: Promise<{ tenant: string; id: stri
     <ShipmentScreen
       tenant={cradle.tenant}
       shipment={shipment}
+      order={await cradle.customerOrderService.get(shipment.customerOrder)}
       issues={await cradle.goodsIssueService.list({ shipment: id })}
       materials={await cradle.materialService.list()}
       units={await cradle.materialService.listUnits()}

@@ -1,5 +1,7 @@
 import {
   CustomerOrderLine,
+  GoodsIssue,
+  OptimisticLockError,
   Shipment,
   ShipmentLine,
   UniqueConstraintViolationException,
@@ -8,13 +10,18 @@ import {
   type ShipmentStatus,
 } from "@cpg/db";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
-import { exceeds, outstandingOf, toIssueOf } from "../../domain/goods-issues/issue-quantity";
-import { ConflictError, ValidationError, type FieldErrors } from "../../http/errors";
+import { addQuantities, exceeds, outstandingOf, toIssueOf } from "../../domain/goods-issues/issue-quantity";
+import { parseDecimal } from "../../domain/quantities/decimal";
+import { ConflictError, ValidationError, versionConflict, type FieldErrors } from "../../http/errors";
+import { validationError } from "../../http/parse-input";
 import {
   SHIPMENT_LINE_ORDER_MESSAGE,
   SHIPMENT_NO_SUCH_LINE_MESSAGE,
   DOCUMENT_PAGE_SIZE,
+  SHIPMENT_QUANTITY_ISSUED_MESSAGE,
   SHIPMENT_QUANTITY_OUTSTANDING_MESSAGE,
+  shipmentUpdateSchema,
+  type ShipmentChanges,
   type ShipmentCreateInput,
 } from "../../validators/shipments/shipment.schema";
 import type { AuditActor } from "../audit/actor";
@@ -23,7 +30,11 @@ import { assertCustomerOrderOpen, findCustomerOrder } from "../customer-orders/o
 import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quantity";
 import { lineError } from "../materials/line-error";
 import type { PostingContext } from "../stock/stock-posting";
-import { findShipment, groupBy } from "./shipment-records";
+import { assertShipmentOpen, findShipment, groupBy, postedShipmentLineIds } from "./shipment-records";
+import { completeFinishedShipments, touchShipment } from "./shipment-usage";
+
+/** A six-decimal zero (R03): what a cancelled shipment's lines have left to issue. */
+const NOTHING = "0.000000";
 
 export const SHIPMENT_ID_RACE = "Another shipment was created at the same moment. Try again.";
 
@@ -42,6 +53,8 @@ export interface ShipmentLineView {
   denominator: string;
   /** What its goods issues have issued so far. */
   issued: string;
+  /** Whether any goods issue ever named it, even one reversed since: such a line can't be removed (shipment edit spec Q9). */
+  posted: boolean;
   /** What a goods issue may still issue on it: the plan's remainder, at most the order line's outstanding (spec Q5). */
   toIssue: string;
 }
@@ -54,12 +67,15 @@ export interface ShipmentView {
   location: string;
   plannedDate: string;
   status: ShipmentStatus;
+  /** The version an edit or a cancel must name; it advances on every change the shipment's page shows (shipment edit spec Q5). */
+  version: number;
   createdAt: Date;
   lines: ShipmentLineView[];
 }
 
-/** A shipment line ready to store: its order line and the converted planned quantity. */
+/** A shipment line ready to store: the line it keeps (none for a new one), its order line and the converted planned quantity. */
 interface ResolvedLine {
+  existing?: ShipmentLine;
   orderLine: CustomerOrderLine;
   record: BaseQuantity;
 }
@@ -115,18 +131,115 @@ export class ShipmentService {
     return this.createWith(input, { kind: "seed", at });
   }
 
+  /**
+   * Replaces an Open shipment's planned date and line set at the `version` the caller loaded (shipment
+   * edit spec Q2–Q5, Q9): a listed order line it already ships keeps its line, a new one adds a line
+   * numbered from `nextLine`, and a line left out is removed, unless a goods issue ever named it
+   * (`SHIPMENT_LINE_ISSUED`). An edit that changes nothing records nothing and keeps the version. One
+   * that leaves no line anything to issue completes the shipment in the same transaction.
+   */
+  async update(id: string, input: ShipmentChanges, version: number, actor: AuditActor): Promise<ShipmentView> {
+    const parsed = shipmentUpdateSchema.safeParse({ ...input, version });
+    if (!parsed.success) throw validationError(parsed.error);
+    const changes = parsed.data;
+    try {
+      return await this.em.transactional(async (em) => {
+        const shipment = await findShipment(em, id, { refresh: true });
+        if (shipment.version !== version) throw versionConflict();
+        assertShipmentOpen(shipment, "change");
+        const { order } = shipment;
+        const orderLines = await em.find(CustomerOrderLine, { order, removed: false }, { populate: ["material"], orderBy: { position: "asc" }, refresh: true });
+        const current = await em.find(ShipmentLine, { shipment }, { populate: ["orderLine", "orderLine.material"], orderBy: { position: "asc" }, refresh: true });
+        const resolved = await resolveLines(em, order, orderLines, current, changes.lines);
+        const removed = current.filter((line) => !resolved.some(({ existing }) => existing === line));
+        const issued = await postedShipmentLineIds(em, removed);
+        const lost = removed.find(({ id }) => issued.has(id));
+        if (lost) {
+          throw new ConflictError(
+            `Line ${lost.position + 1} has goods issued against it, so it stays on the shipment. Lower it to what was issued instead.`,
+            "SHIPMENT_LINE_ISSUED",
+            { line: String(lost.position + 1) },
+          );
+        }
+        const isChanged = shipment.plannedDate !== changes.plannedDate || removed.length > 0 ||
+          resolved.some((line) => !line.existing || isLineChanged(line.existing, line));
+        if (!isChanged) return (await viewsOf(em, [shipment]))[0];
+        const before = planSnapshot(shipment, current);
+        let next = Math.max(shipment.nextLine, ...current.map(({ position }) => position + 1));
+        const saved = resolved.map(({ existing, orderLine, record }) => {
+          const { baseQuantity, enteredQuantity, enteredUnit, numerator, denominator } = record;
+          const fields = { quantity: baseQuantity, enteredQuantity, enteredUnit, numerator, denominator };
+          return existing ? em.assign(existing, fields) : em.create(ShipmentLine, { shipment, position: next++, orderLine, ...fields });
+        });
+        removed.forEach((line) => em.remove(line));
+        shipment.plannedDate = changes.plannedDate;
+        shipment.nextLine = next;
+        touchShipment(shipment);
+        recordTenantAudit(em, actor, {
+          action: "shipments.shipment.updated",
+          subject: subject(shipment),
+          before,
+          after: planSnapshot(shipment, [...saved].sort((a, b) => a.position - b.position)),
+        });
+        // Flushed before the completion check, whose refreshing read would discard unflushed header changes.
+        await em.flush();
+        await completeFinishedShipments(em, order, { kind: "user", actor });
+        await em.flush();
+        return (await viewsOf(em, [shipment]))[0];
+      });
+    } catch (error) {
+      if (error instanceof OptimisticLockError) throw versionConflict();
+      throw error;
+    }
+  }
+
+  /**
+   * Cancels an Open shipment at the `version` the caller loaded, when no goods issue was ever posted
+   * against it, even one reversed since (shipment edit spec Q6): it plans nothing more. It reserved no
+   * stock and fulfilled nothing, so nothing else changes. A partly issued shipment is finished by
+   * lowering its lines to what was issued instead (`SHIPMENT_ISSUED`).
+   */
+  async cancel(id: string, version: number, actor: AuditActor): Promise<ShipmentView> {
+    try {
+      return await this.em.transactional(async (em) => {
+        const shipment = await findShipment(em, id, { refresh: true });
+        if (shipment.version !== version) throw versionConflict();
+        assertShipmentOpen(shipment, "cancel");
+        if ((await em.count(GoodsIssue, { shipment })) > 0) {
+          throw new ConflictError(
+            `Goods have been issued against shipment ${shipment.code}, so it can't be cancelled. To finish it, lower its lines to what was issued.`,
+            "SHIPMENT_ISSUED",
+          );
+        }
+        shipment.status = "cancelled";
+        recordTenantAudit(em, actor, { action: "shipments.shipment.cancelled", subject: subject(shipment), before: { status: "open" }, after: { status: shipment.status } });
+        await em.flush();
+        return (await viewsOf(em, [shipment]))[0];
+      });
+    } catch (error) {
+      if (error instanceof OptimisticLockError) throw versionConflict();
+      throw error;
+    }
+  }
+
   private async createWith(input: ShipmentCreateInput, context: PostingContext): Promise<ShipmentView> {
     try {
       return await this.em.transactional(async (em) => {
         const order = await findCustomerOrder(em, input.customerOrder, { refresh: true });
         assertCustomerOrderOpen(order);
         const orderLines = await em.find(CustomerOrderLine, { order, removed: false }, { populate: ["material"], orderBy: { position: "asc" }, refresh: true });
-        const resolved = await resolveLines(em, order, orderLines, input);
+        const resolved = await resolveLines(em, order, orderLines, [], input.lines);
         const code = nextSequentialId((await em.find(Shipment, {}, { orderBy: { code: "desc" }, limit: 1 }))[0]?.code ?? null, {
           code: "SHIPMENT_IDS_EXHAUSTED",
           message: "This tenant has used every eight-digit shipment ID.",
         });
-        const shipment = em.create(Shipment, { code, order, plannedDate: input.plannedDate, ...(context.kind === "seed" && { createdAt: context.at }) });
+        const shipment = em.create(Shipment, {
+          code,
+          order,
+          plannedDate: input.plannedDate,
+          nextLine: resolved.length,
+          ...(context.kind === "seed" && { createdAt: context.at, updatedAt: context.at }),
+        });
         resolved.forEach(({ orderLine, record }, position) => {
           const { baseQuantity, enteredQuantity, enteredUnit, numerator, denominator } = record;
           em.create(ShipmentLine, { shipment, position, orderLine, quantity: baseQuantity, enteredQuantity, enteredUnit, numerator, denominator });
@@ -141,7 +254,7 @@ export class ShipmentService {
             location: order.location.code,
             plannedDate: input.plannedDate,
             status: shipment.status,
-            lines: resolved.map(({ orderLine, record }, index) => `${index + 1}: ${orderLine.material.code} ${record.baseQuantity} ${orderLine.material.baseUnit}`).join("; "),
+            lines: resolved.map(({ orderLine, record }, index) => planned(index, orderLine, record.baseQuantity)).join("; "),
           },
         });
         await em.flush();
@@ -155,16 +268,23 @@ export class ShipmentService {
   }
 }
 
-/** Matches each input line to its order line and converts its quantity, collecting every field error before refusing. */
+/**
+ * Matches each input line to its order line, and to the shipment line already shipping it among
+ * `current` (none on create), and converts its quantity, collecting every field error before refusing
+ * (shipment edit spec Q2, Q4). A kept line whose entered quantity and unit are unchanged keeps its
+ * stored conversion. A new line can't plan more than its order line still has outstanding (spec Q3);
+ * a kept line never goes below what it issued, and when raised, never leaves more to issue than that.
+ */
 async function resolveLines(
   em: EntityManager,
   order: CustomerOrder,
   orderLines: readonly CustomerOrderLine[],
-  input: ShipmentCreateInput,
+  current: readonly ShipmentLine[],
+  inputs: ShipmentCreateInput["lines"],
 ): Promise<ResolvedLine[]> {
   const errors: FieldErrors = {};
   const resolved: ResolvedLine[] = [];
-  for (const [index, line] of input.lines.entries()) {
+  for (const [index, line] of inputs.entries()) {
     const field = (name: string) => `lines.${index}.${name}`;
     if (line.customerOrder !== undefined && line.customerOrder !== order.code) {
       errors[field("customerOrder")] = [SHIPMENT_LINE_ORDER_MESSAGE];
@@ -175,22 +295,61 @@ async function resolveLines(
       errors[field("orderLine")] = [SHIPMENT_NO_SUCH_LINE_MESSAGE];
       continue;
     }
+    const existing = current.find((shipped) => shipped.orderLine.id === orderLine.id);
     let record: BaseQuantity;
     try {
-      record = await convertToBaseQuantity(em, orderLine.material, line);
+      record = existing && isUnchanged(existing, line) ? storedRecord(existing) : await convertToBaseQuantity(em, orderLine.material, line);
     } catch (error) {
       const [name, message] = lineError(error);
       errors[field(name)] = [message];
       continue;
     }
-    if (exceeds(record.baseQuantity, outstandingOf(orderLine))) {
-      errors[field("quantity")] = [SHIPMENT_QUANTITY_OUTSTANDING_MESSAGE];
+    const outstanding = outstandingOf(orderLine);
+    const message = !existing
+      ? exceeds(record.baseQuantity, outstanding) && SHIPMENT_QUANTITY_OUTSTANDING_MESSAGE
+      : exceeds(existing.issued, record.baseQuantity)
+        ? SHIPMENT_QUANTITY_ISSUED_MESSAGE
+        : exceeds(record.baseQuantity, existing.quantity) && exceeds(record.baseQuantity, addQuantities(existing.issued, outstanding)) && SHIPMENT_QUANTITY_OUTSTANDING_MESSAGE;
+    if (message) {
+      errors[field("quantity")] = [message];
       continue;
     }
-    resolved.push({ orderLine, record });
+    resolved.push({ existing, orderLine, record });
   }
   if (Object.keys(errors).length > 0) throw new ValidationError(errors);
   return resolved;
+}
+
+/** Whether an edit sent a kept line's entered quantity and unit as stored: equal decimals, so "20" is "20.000000". */
+function isUnchanged(line: ShipmentLine, input: { quantity: string; unit: string }): boolean {
+  return line.enteredUnit === input.unit && parseDecimal(line.enteredQuantity) === parseDecimal(input.quantity);
+}
+
+function storedRecord({ quantity, enteredQuantity, enteredUnit, numerator, denominator }: ShipmentLine): BaseQuantity {
+  return { baseQuantity: quantity, enteredQuantity, enteredUnit, numerator, denominator };
+}
+
+/** One line of the audit's readable plan: `N: material quantity unit`, numbered from 1. */
+function planned(position: number, orderLine: CustomerOrderLine, quantity: string): string {
+  return `${position + 1}: ${orderLine.material.code} ${quantity} ${orderLine.material.baseUnit}`;
+}
+
+/** The audit's allowlisted view of a shipment's plan. */
+function planSnapshot(shipment: Shipment, lines: readonly ShipmentLine[]) {
+  return {
+    plannedDate: shipment.plannedDate,
+    status: shipment.status,
+    lines: lines.map(({ position, orderLine, quantity }) => planned(position, orderLine, quantity)).join("; "),
+  };
+}
+
+/** Whether a kept line's stored plan differs from what an edit resolved for it. */
+function isLineChanged(line: ShipmentLine, { record }: ResolvedLine): boolean {
+  return line.quantity !== record.baseQuantity || line.enteredQuantity !== record.enteredQuantity || line.enteredUnit !== record.enteredUnit;
+}
+
+function subject(shipment: Shipment) {
+  return { type: "Shipment", id: shipment.code, label: `${shipment.code} — customer order ${shipment.order.code}` };
 }
 
 /** The shipments with their lines, in the order given. */
@@ -202,6 +361,7 @@ async function viewsOf(em: EntityManager, shipments: readonly Shipment[]): Promi
     { populate: ["orderLine", "orderLine.material"], orderBy: { position: "asc" } },
   );
   const byShipment = groupBy(lines, (line) => line.shipment.id);
+  const posted = await postedShipmentLineIds(em, lines);
   return shipments.map((shipment) => ({
     id: shipment.code,
     customerOrder: shipment.order.code,
@@ -209,10 +369,11 @@ async function viewsOf(em: EntityManager, shipments: readonly Shipment[]): Promi
     location: shipment.order.location.code,
     plannedDate: shipment.plannedDate,
     status: shipment.status,
+    version: shipment.version,
     createdAt: shipment.createdAt,
     lines: byShipment
       .get(shipment.id)!
-      .map(({ position, orderLine, quantity, enteredQuantity, enteredUnit, numerator, denominator, issued }) => ({
+      .map(({ id, position, orderLine, quantity, enteredQuantity, enteredUnit, numerator, denominator, issued }) => ({
         line: position + 1,
         orderLine: orderLine.id,
         material: orderLine.material.code,
@@ -222,7 +383,9 @@ async function viewsOf(em: EntityManager, shipments: readonly Shipment[]): Promi
         numerator,
         denominator,
         issued,
-        toIssue: toIssueOf(quantity, issued, outstandingOf(orderLine)),
+        posted: posted.has(id),
+        // A cancelled shipment plans nothing more (shipment edit spec Q6), so nothing is left to issue on it.
+        toIssue: shipment.status === "cancelled" ? NOTHING : toIssueOf(quantity, issued, outstandingOf(orderLine)),
       })),
   }));
 }

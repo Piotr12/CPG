@@ -8,6 +8,7 @@ import {
   SHIPMENT_LINE_COUNT_MESSAGE,
   SHIPMENT_LINE_ORDER_MESSAGE,
   SHIPMENT_NO_SUCH_LINE_MESSAGE,
+  SHIPMENT_QUANTITY_ISSUED_MESSAGE,
   SHIPMENT_QUANTITY_OUTSTANDING_MESSAGE,
 } from "@cpg/core/validators/shipments/shipment.schema";
 import type { Messages } from "../../i18n/messages/en";
@@ -36,6 +37,7 @@ export function shipmentFieldErrorFormatter(labels: ShipmentsLabels) {
     [SHIPMENT_LINE_ORDER_MESSAGE]: t.lineOrder,
     [SHIPMENT_NO_SUCH_LINE_MESSAGE]: t.noSuchLine,
     [SHIPMENT_QUANTITY_OUTSTANDING_MESSAGE]: t.outstanding,
+    [SHIPMENT_QUANTITY_ISSUED_MESSAGE]: t.issued,
     [DUPLICATE_LINE_MESSAGE]: t.duplicateLine,
     [ORDER_LINE_CHOICE_MESSAGE]: t.orderLine,
     [SHIPMENT_LINE_COUNT_MESSAGE]: t.lines,

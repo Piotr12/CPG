@@ -136,4 +136,54 @@ describe("shipments and goods issues in the UI", () => {
     expect((await tableRows(una, "Shipments"))[0].slice(2)).toEqual(["Completed", "Line 1: 50 of 50 each Line 2: 30 of 30 each"]);
     expect(await una.evaluate<boolean>(`!${button("Create shipment")}`)).toBe(true);
   });
+
+  /** A fresh Open order of 50 widgets and 30 gadgets, and a shipment of 20 widgets against it, through the API. */
+  const shippedOrder = async () => {
+    const orderId = await create("/api/tenants/prod/customer-orders", {
+      customer: ids.retail,
+      location: ids.plant,
+      lines: [
+        { material: ids.widget, quantity: "50", unit: "each", requiredDate: "2026-11-04" },
+        { material: ids.gadget, quantity: "30", unit: "each", requiredDate: "2026-11-08" },
+      ],
+    });
+    const lines = (json(await api("GET", `/api/tenants/prod/customer-orders/${orderId}`)).data as CustomerOrderView).lines;
+    const shipment = await create("/api/tenants/prod/shipments", { customerOrder: orderId, plannedDate: "2026-11-03", lines: [{ orderLine: lines[0].id, quantity: "20", unit: "each" }] });
+    return { orderId, shipment };
+  };
+
+  it("edits a shipment's plan on its page: a new date, a lowered line and the order's other line added (#147)", async () => {
+    const { shipment } = await shippedOrder();
+    await una.open(`${baseUrl}/admin/prod/shipments/${shipment}`);
+    await una.waitUntil(ready(button("Edit shipment")));
+    await una.clickRole("button", "Edit shipment");
+    await una.waitFor("[role=dialog]");
+    expect(await una.fillDate("[role=dialog] input[type=date]", "2026-11-12")).toBe("2026-11-12");
+    await una.fillLabel(lineLabel("Quantity to ship", 1, ids.widget, "sh widget"), "15");
+    await una.fillLabel(`Quantity to ship, Order line 2: ${ids.gadget} sh gadget`, "5");
+    await una.click("[role=dialog] button[type=submit]");
+    await una.waitUntil(closed);
+
+    await una.waitUntil(`document.querySelector("main dl")?.innerText.includes("2026-11-12")`);
+    expect(await tableRows(una, "Lines")).toEqual([
+      ["1", `${ids.widget} sh widget`, "15 each", "0 each", "15 each"],
+      ["2", `${ids.gadget} sh gadget`, "5 each", "0 each", "5 each"],
+    ]);
+  });
+
+  it("cancels a shipment nothing was issued against after confirming, leaving it Cancelled with no controls (#147)", async () => {
+    const { shipment } = await shippedOrder();
+    await una.open(`${baseUrl}/admin/prod/shipments/${shipment}`);
+    await una.waitUntil(ready(button("Cancel shipment")));
+    await una.clickRole("button", "Cancel shipment");
+    await una.waitFor("[role=alertdialog]");
+    expect(await una.text("[role=alertdialog] p")).toBe("It will plan nothing more. Stock and the order are not changed.");
+    await una.click("[role=alertdialog] button[data-variant=destructive]");
+    await una.waitUntil(`!document.querySelector("[role=alertdialog]")`);
+
+    await una.waitUntil(`document.querySelector("main dl")?.innerText.includes("Cancelled")`);
+    expect(await una.evaluate<boolean>(`!${button("Edit shipment")} && !${button("Cancel shipment")} && !${button("Post goods issue")}`)).toBe(true);
+    const stock = json(await api("GET", `/api/tenants/prod/stock?material=${ids.widget}&location=${ids.plant}`)).data as StockView;
+    expect(stock.quantity).toBe("50.000000");
+  });
 });

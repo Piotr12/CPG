@@ -27,7 +27,7 @@ import { assertCustomerOrderOpen, findCustomerOrder } from "../customer-orders/o
 import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quantity";
 import { lineError } from "../materials/line-error";
 import { assertShipmentOpen, findShipment, groupBy } from "../shipments/shipment-records";
-import { completeFinishedShipments } from "../shipments/shipment-usage";
+import { completeFinishedShipments, touchShipment } from "../shipments/shipment-usage";
 import { postStockMovements, type PostingContext } from "../stock/stock-posting";
 import { documentMovements, NO_MOVEMENT, type DocumentMovement } from "../stock/movement-reversals";
 
@@ -167,6 +167,8 @@ export class GoodsIssueService {
         fulfil(em, order, orderLines, resolved, context);
         issueShipment(em, shipment, order, resolved, context);
         await completeFinishedShipments(em, order, context);
+        // After the completion check, whose refreshing read would discard an earlier unflushed touch.
+        touchShipment(shipment, context.kind === "seed" ? context.at : undefined);
         if (context.kind === "user") recordTenantAudit(em, context.actor, {
           action: "goods-issues.goods-issue.posted",
           subject: { type: "GoodsIssue", id: code, label: `${code} — shipment ${shipment.code}` },

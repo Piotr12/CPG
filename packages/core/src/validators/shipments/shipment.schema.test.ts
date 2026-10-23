@@ -12,6 +12,7 @@ import {
   shipmentFormSchema,
   shipmentListQuerySchema,
   shipmentReferenceSchema,
+  shipmentUpdateSchema,
 } from "./shipment.schema";
 
 const A = "7f0c8a8e-3b7b-4a52-9a39-1f2a0e6b2c11";
@@ -78,5 +79,24 @@ describe("the form, list and reference schemas", () => {
     expect(shipmentListQuerySchema.safeParse({ page: "1.5" }).success).toBe(false);
     expect(shipmentListQuerySchema.safeParse({ customerOrder: "2" }).success).toBe(false);
     expect(shipmentReferenceSchema.safeParse("x").error?.issues[0].message).toBe(SHIPMENT_CHOICE_MESSAGE);
+  });
+});
+
+describe("shipmentUpdateSchema", () => {
+  it("parses the version, the planned date and the whole new plan in create's line shape (shipment edit spec Q2)", () => {
+    expect(shipmentUpdateSchema.parse({ version: 3, plannedDate: "2026-11-02", lines: [{ orderLine: A, quantity: "20", unit: "each" }] })).toEqual({
+      version: 3,
+      plannedDate: "2026-11-02",
+      lines: [{ orderLine: A, quantity: "20", unit: "each" }],
+    });
+  });
+
+  it("refuses a missing version, a line listed twice, no lines, and a moved order or a set status", () => {
+    const fields = (input: unknown) => shipmentUpdateSchema.safeParse(input).error?.issues.map(({ path, code }) => `${path.join(".")}:${code}`);
+    const line = { orderLine: A, quantity: "20", unit: "each" };
+    expect(fields({ plannedDate: "2026-11-02", lines: [line] })).toEqual(["version:invalid_type"]);
+    expect(fields({ version: 1, plannedDate: "2026-11-02", lines: [line, line] })).toEqual(["lines.1.orderLine:custom"]);
+    expect(fields({ version: 1, plannedDate: "2026-11-02", lines: [] })).toEqual(["lines:too_small"]);
+    expect(fields({ version: 1, plannedDate: "2026-11-02", lines: [line], customerOrder: "00000002", status: "cancelled" })).toEqual([":unrecognized_keys"]);
   });
 });

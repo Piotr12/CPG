@@ -35,4 +35,4 @@ Shipments against one customer order, and goods issues that lower physical stock
 ## Follow-ups
 - Goods-issue reversal (E11-S02), Close Early and cancellation (E11-S01), forecast consumption and overdue demand (SAL-014…017).
 - Page the goods-receipt list as shipments and issues now are.
-- Shipment edits and cancellation: a plan can't be changed yet; create another shipment instead. Filed as E08-S05 (#147).
+- Shipment edits and cancellation: a plan can't be changed yet; create another shipment instead. Filed as E08-S05 (#147), and implemented by PR #182.

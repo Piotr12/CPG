@@ -3,6 +3,7 @@ import { BUSINESS_ID_PATTERN } from "../business-ids/business-id.schema";
 import { enteredQuantitySchema } from "../boms/bom-fields.schema";
 import { calendarDateSchema } from "../dates/calendar-date.schema";
 import { unitSchema } from "../materials/material-fields.schema";
+import { versionSchema } from "../version.schema";
 import { DUPLICATE_LINE_MESSAGE } from "../purchasing/purchasing-fields.schema";
 
 /** The English messages; screens translate them by matching these constants. */
@@ -16,6 +17,9 @@ export const SHIPMENT_LINE_ORDER_MESSAGE = "A shipment covers one customer order
 export const SHIPMENT_NO_SUCH_LINE_MESSAGE = "This order has no such line.";
 /** What the service says about a planned quantity above the order line's outstanding (spec Q3). */
 export const SHIPMENT_QUANTITY_OUTSTANDING_MESSAGE = "This is more than the order line still has outstanding.";
+
+/** What the service says, next to the line, about a planned quantity below what the line has issued (shipment edit spec Q4). */
+export const SHIPMENT_QUANTITY_ISSUED_MESSAGE = "This is less than this line has already issued.";
 
 /** The most lines one shipment carries, as many as a customer order. */
 export const SHIPMENT_LINES_MAX = 100;
@@ -68,6 +72,20 @@ export type ShipmentCreateInput = z.infer<typeof shipmentCreateSchema>;
 
 /** The Create shipment form's own check: the date and lines, since the page binds the order. */
 export const shipmentFormSchema = shipmentCreateSchema.omit({ customerOrder: true });
+
+/**
+ * `PATCH /api/tenants/{tenant}/shipments/{id}`, and the Edit shipment form with the version it opened
+ * with (shipment edit spec Q2): the whole new plan, its lines in create's shape. A listed order line
+ * the shipment already ships keeps its line, a new one adds a line, and a line left out is removed.
+ * Strict: a shipment never moves to another order, and its status is not the caller's to set.
+ */
+export const shipmentUpdateSchema = z.strictObject({
+  version: versionSchema,
+  plannedDate: shipmentCreateSchema.shape.plannedDate,
+  lines: shipmentCreateSchema.shape.lines,
+});
+
+export type ShipmentChanges = Omit<z.infer<typeof shipmentUpdateSchema>, "version">;
 
 /** `GET /api/tenants/{tenant}/shipments`: a page of every shipment, or of one customer order's. */
 export const shipmentListQuerySchema = z.object({ customerOrder: customerOrderReferenceSchema.optional(), page: pageSchema });

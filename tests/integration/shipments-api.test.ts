@@ -14,7 +14,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 // Shipments and goods issues through the API (R07, E08-S02): SAL-006…013, SAL-018, SAL-020…022,
 // SAL-024, SAL-025, INV-003, INV-005, INV-010, INV-011, INV-017, INV-021, AUD-026, AUD-030, LFC-002, LFC-003,
-// LFC-010, LFC-020, TEN-017, API-020, API-021.
+// LFC-010, LFC-020, TEN-017, API-020, API-021. Shipment edit and cancel (#147, E08-S05).
 describe("shipments and goods issues through the API", () => {
   let admin: Browser;
   let user: Browser;
@@ -319,5 +319,77 @@ describe("shipments and goods issues through the API", () => {
     expect(await stockOf(ids.widget)).toBe("90.000000");
     expect((await getOrder(order.id)).lines[0].fulfilled).toBe("10.000000");
     expect(json(await api("GET", `/api/tenants/prod/goods-issues?shipment=${shipment.id}`)).data).toHaveLength(1);
+  });
+
+  /** The audit entries of `action` on shipment `id`, newest first. */
+  const shipmentAudit = async (action: string, id: string) =>
+    (json(await api("GET", "/api/tenants/prod/audit?limit=100")).data as AuditPage).entries.filter((entry) => entry.action === action && entry.subject.id === id);
+
+  it("edits an Open shipment at its version: refuses a stale one and a line below what it issued, adds and removes lines, completes it at exactly what was issued, and replays a same-key retry without a second audit entry (#147)", async () => {
+    await freshMaterials();
+    const order = await placeOrder("50", "30");
+    const shipment = await ship(order, ["40", "10"], userSecret);
+    expect(shipment).toMatchObject({ version: 1, lines: [{ posted: false }, { posted: false }] });
+    expect((await issue(shipment.id, [{ line: 1, quantity: "30", unit: "each" }])).status).toBe(200);
+    const loaded = json(await api("GET", `/api/tenants/prod/shipments/${shipment.id}`)).data as ShipmentView;
+    expect(loaded).toMatchObject({ version: 2, lines: [{ issued: "30.000000", posted: true }, { posted: false }] });
+    const [a, b] = order.lines;
+    const patch = (version: number, lines: unknown[], key = randomUUID()) =>
+      api("PATCH", `/api/tenants/prod/shipments/${shipment.id}`, { key, body: { version, plannedDate: "2026-11-10", lines } }, userSecret);
+
+    const stale = await patch(1, [{ orderLine: a.id, quantity: "40", unit: "each" }, { orderLine: b.id, quantity: "10", unit: "each" }]);
+    expect([stale.status, json(stale).error.code]).toEqual([409, "VERSION_CONFLICT"]);
+    const below = await patch(2, [{ orderLine: a.id, quantity: "20", unit: "each" }, { orderLine: b.id, quantity: "10", unit: "each" }]);
+    expect([below.status, json(below).error.fieldErrors]).toEqual([400, { "lines.0.quantity": ["This is less than this line has already issued."] }]);
+    const lost = await patch(2, [{ orderLine: b.id, quantity: "10", unit: "each" }]);
+    expect([lost.status, json(lost).error]).toEqual([409, expect.objectContaining({ code: "SHIPMENT_LINE_ISSUED", params: { line: "1" } })]);
+
+    // Line 2 goes, so line 1 at exactly its issued 30 leaves nothing to issue: the shipment completes.
+    const key = randomUUID();
+    const done = await patch(2, [{ orderLine: a.id, quantity: "30", unit: "each" }], key);
+    expect(done.status).toBe(200);
+    expect(json(done).data).toMatchObject({ plannedDate: "2026-11-10", status: "completed", lines: [{ line: 1, quantity: "30.000000", toIssue: "0.000000" }] });
+    const replay = await patch(2, [{ orderLine: a.id, quantity: "30", unit: "each" }], key);
+    expect(replay.replayed).toBe("true");
+    expect(json(replay).data).toEqual(json(done).data);
+    const [updated, ...more] = await shipmentAudit("shipments.shipment.updated", shipment.id);
+    expect(more).toEqual([]);
+    expect(updated).toMatchObject({ channel: "api", before: { plannedDate: "2026-11-03" }, after: { plannedDate: "2026-11-10", lines: `1: ${ids.widget} 30.000000 each` } });
+    expect(await shipmentAudit("shipments.shipment.completed", shipment.id)).toHaveLength(1);
+    // Nothing moved: only the issue did.
+    expect(await stockOf(ids.widget)).toBe("70.000000");
+    expect((await getOrder(order.id)).lines.map(({ fulfilled }) => fulfilled)).toEqual(["30.000000", "0.000000"]);
+
+    const closed = await patch(json(done).data.version, [{ orderLine: a.id, quantity: "40", unit: "each" }]);
+    expect([closed.status, json(closed).error.code]).toEqual([409, "SHIPMENT_NOT_OPEN"]);
+  });
+
+  it("cancels a shipment nothing was issued against, which then takes no issue; refuses one whose issue was reversed, and any write in a read-only tenant (#147)", async () => {
+    await freshMaterials();
+    const order = await placeOrder();
+    const [unissued, reversed] = [await ship(order, ["5", "5"]), await ship(order, ["5", "5"])];
+    const cancel = (id: string, version: number, secret = userSecret) => api("POST", `/api/tenants/prod/shipments/${id}/cancel`, { key: randomUUID(), body: { version } }, secret);
+
+    expect((await write("PATCH", "/api/tenants/prod", { readOnly: true })).status).toBe(200);
+    try {
+      const refused = await cancel(unissued.id, 1);
+      expect([refused.status, json(refused).error.code]).toEqual([409, "TENANT_READ_ONLY"]);
+    } finally {
+      expect((await write("PATCH", "/api/tenants/prod", { readOnly: false })).status).toBe(200);
+    }
+    const cancelled = await cancel(unissued.id, 1);
+    expect(cancelled.status).toBe(200);
+    expect(json(cancelled).data).toMatchObject({ status: "cancelled", version: 2 });
+    expect(await shipmentAudit("shipments.shipment.cancelled", unissued.id)).toMatchObject([{ before: { status: "open" }, after: { status: "cancelled" } }]);
+    const issueRefused = await issue(unissued.id, [{ line: 1, quantity: "1", unit: "each" }]);
+    expect([issueRefused.status, json(issueRefused).error.code]).toEqual([409, "SHIPMENT_NOT_OPEN"]);
+
+    const posted = json(await issue(reversed.id, [{ line: 1, quantity: "5", unit: "each" }])).data as IssueView;
+    expect((await write("POST", `/api/tenants/prod/stock/movements/${posted.lines[0].movementId}/reverse`, { reason: "Wrong shipment" })).status).toBe(200);
+    const current = json(await api("GET", `/api/tenants/prod/shipments/${reversed.id}`)).data as ShipmentView;
+    const issued = await cancel(reversed.id, current.version);
+    expect([issued.status, json(issued).error.code]).toEqual([409, "SHIPMENT_ISSUED"]);
+    expect(await stockOf(ids.widget)).toBe("100.000000");
+    expect((await getOrder(order.id)).lines.map(({ fulfilled }) => fulfilled)).toEqual(["0.000000", "0.000000"]);
   });
 });

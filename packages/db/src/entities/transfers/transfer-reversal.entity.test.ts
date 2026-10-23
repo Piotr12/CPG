@@ -76,6 +76,7 @@ describe("TransferReversal persistence", () => {
 
   it("rolls down without touching postings and upgrades a populated previous schema", async () => {
     const { posting } = await fixture(scope());
+    await orm.migrator.down(); // Shipment edit and cancel.
     await orm.migrator.down(); // Location guard indexes.
     await orm.migrator.down();
     expect(await orm.em.getConnection().execute("select name from sqlite_master where name like 'transfer_reversal%'")).toEqual([]);

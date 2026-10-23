@@ -74,6 +74,7 @@ describe("migrate", () => {
       "Migration20261021095627_audit_record_index",
       "Migration20261021101252_transfer_reversals",
       "Migration20261023101022_location_guard_indexes",
+      "Migration20261023201801_shipment_edit_cancel",
     ]);
     expect(await migrate({ databasePath })).toEqual([]);
   });
@@ -85,10 +86,10 @@ describe("migrate", () => {
         .map((migration) => migration.name)
         .filter((name) => !name.includes("customer_order") && !name.includes("shipment") && !name.includes("location_guard"));
       await orm.migrator.up({ migrations: previous });
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 25, pending: 5 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 25, pending: 6 });
       await orm.em.getConnection().execute("update tenant set generation = 23 where code = 'prod'");
       await orm.migrator.up();
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 30, pending: 0 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 31, pending: 0 });
       expect(await orm.em.getConnection().execute("select generation from tenant where code = 'prod'")).toEqual([{ generation: 23 }]);
       expect(await orm.em.getConnection().execute("select count(*) as count from stock_movement")).toEqual([{ count: 0 }]);
       expect(await orm.em.getConnection().execute("select count(*) as count from customer_order")).toEqual([{ count: 0 }]);
@@ -104,9 +105,9 @@ describe("migrate", () => {
       // Production applied transfers first, although production orders carry the earlier timestamp.
       const previous = migrations.map((migration) => migration.name).filter((name) => !name.includes("production_"));
       await orm.migrator.up({ migrations: previous });
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 28, pending: 2 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 29, pending: 2 });
       await orm.migrator.up();
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 30, pending: 0 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 31, pending: 0 });
       expect(await orm.em.getConnection().execute("select count(*) as count from production_order")).toEqual([{ count: 0 }]);
       expect(await orm.em.getConnection().execute("select count(*) as count from transfer")).toEqual([{ count: 0 }]);
       expect(await orm.schema.getUpdateSchemaSQL()).not.toMatch(/production_order|transfer/);
@@ -122,9 +123,9 @@ describe("getMigrationStatus", () => {
     const orm = await initOrm({ databasePath });
 
     try {
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 30 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 31 });
       await orm.migrator.up();
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 30, pending: 0 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 31, pending: 0 });
     } finally {
       await orm.close();
     }
@@ -154,6 +155,11 @@ describe("migrations", () => {
 
     const tenantColumns = async () =>
       (await orm.em.getConnection().execute<{ name: string }[]>("select name from pragma_table_info('tenant')"))
+        .map(({ name }) => name)
+        .sort();
+
+    const shipmentColumns = async () =>
+      (await orm.em.getConnection().execute<{ name: string }[]>("select name from pragma_table_info('shipment')"))
         .map(({ name }) => name)
         .sort();
 
@@ -224,6 +230,9 @@ describe("migrations", () => {
       expect(shipmentPlan.map(({ detail }) => detail).join(" ")).not.toContain("TEMP B-TREE");
       expect(await tables()).toContain("transfer_reversal");
       expect(await triggers()).toContain("transfer_reversal_no_update");
+      expect(await shipmentColumns()).toEqual(["code", "created_at", "id", "next_line", "order_id", "planned_date", "status", "tenant_code", "updated_at", "version"]);
+      await orm.migrator.down();
+      expect(await shipmentColumns()).toEqual(["code", "created_at", "id", "order_id", "planned_date", "status", "tenant_code"]);
       await orm.migrator.down();
       expect(await orm.em.getConnection().execute("select name from sqlite_master where name like '%_location_id_status_code_index'")).toEqual([]);
       expect(await tables()).toContain("purchase_order");
@@ -582,7 +591,7 @@ describe("forecasts migration", () => {
       ]);
 
       // The migrations that landed after the forecasts come off first.
-      for (let later = 0; later < 16; later += 1) await orm.migrator.down();
+      for (let later = 0; later < 17; later += 1) await orm.migrator.down();
       expect(await execute(orm, "select name from sqlite_master where name = 'forecast'")).toEqual([{ name: "forecast" }]);
       await orm.migrator.down();
       expect(await execute(orm, "select name from sqlite_master where name = 'forecast'")).toEqual([]);
@@ -696,6 +705,7 @@ describe("purchasing migration", () => {
       await execute(orm, "delete from purchase_order_line");
       await execute(orm, "delete from purchase_order");
       await execute(orm, "delete from purchase_requisition");
+      await orm.migrator.down(); // Shipment edit and cancel.
       await orm.migrator.down(); // Location guard indexes.
       await orm.migrator.down(); // Transfer reversals.
       await orm.migrator.down(); // Audit record index.
@@ -749,6 +759,8 @@ describe("goods-receipts migration", () => {
       await expect(line("gl2", 0)).rejects.toThrow(/UNIQUE/);
       await expect(execute(orm, "update goods_receipt set business_date = '2026-10-01'")).rejects.toThrow(GOODS_RECEIPT_IMMUTABLE);
       await expect(execute(orm, "update goods_receipt_line set quantity = '1.000000'")).rejects.toThrow(GOODS_RECEIPT_IMMUTABLE);
+
+      await orm.migrator.down(); // Shipment edit and cancel.
 
       await orm.migrator.down(); // Location guard indexes.
       await orm.migrator.down(); // Transfer reversals.
@@ -807,6 +819,7 @@ describe("transfers migration", () => {
       ).rejects.toThrow(/CHECK/);
 
       // Rolls back with postings still in place: they are dropped before the transfers they reference.
+      await orm.migrator.down(); // Shipment edit and cancel.
       await orm.migrator.down(); // Location guard indexes.
       await orm.migrator.down(); // Transfer reversals.
       await orm.migrator.down(); // Audit record index.
@@ -866,6 +879,8 @@ describe("shipments and goods-issues migration", () => {
       await expect(execute(orm, "update goods_issue_line set quantity = '1.000000'")).rejects.toThrow(GOODS_ISSUE_IMMUTABLE);
       await execute(orm, "update shipment_line set issued = '20.000000'");
       await execute(orm, "update shipment set status = 'completed'");
+
+      await orm.migrator.down(); // Shipment edit and cancel.
 
       await orm.migrator.down(); // Location guard indexes.
       await orm.migrator.down(); // Transfer reversals.
@@ -929,6 +944,8 @@ describe("production-completions migration", () => {
       ]);
       await expect(execute(orm, "update production_completion set quantity = '1.000000'")).rejects.toThrow(PRODUCTION_COMPLETION_IMMUTABLE);
       await expect(execute(orm, "update production_completion_line set actual = '1.000000'")).rejects.toThrow(PRODUCTION_COMPLETION_IMMUTABLE);
+
+      await orm.migrator.down(); // Shipment edit and cancel.
 
       await orm.migrator.down(); // Location guard indexes.
       await orm.migrator.down(); // Transfer reversals.

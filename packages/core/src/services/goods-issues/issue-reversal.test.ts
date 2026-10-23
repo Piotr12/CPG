@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { initOrm, migrate, selectTenant, Customer, CustomerOrder, CustomerOrderLine, GoodsIssue, GoodsIssueLine, Location, Material, Shipment, ShipmentLine, StockMovement, StockReversal, TenantAuditEvent, type Orm } from "@cpg/db";
+import { initOrm, migrate, selectTenant, OptimisticLockError, Customer, CustomerOrder, CustomerOrderLine, GoodsIssue, GoodsIssueLine, Location, Material, Shipment, ShipmentLine, StockMovement, StockReversal, TenantAuditEvent, type Orm } from "@cpg/db";
 import { CustomerOrderService, type CustomerOrderView } from "../customer-orders/customer-order.service";
 import { ShipmentService } from "../shipments/shipment.service";
 import { StockService } from "../stock/stock.service";
@@ -176,4 +176,23 @@ it("does not issue or plan again against a closed line after reversal while anot
   // Posting on one target does not prevent cancelling its never-posted sibling.
   const latest = await orders().get(order.id);
   expect(await orders().cancel(order.id, latest.version, actor, [order.lines[1].id])).toMatchObject({ status: "closed-early", lines: [{ status: "closed-early" }, { status: "cancelled" }] });
+});
+
+it("advances the shipment's version on a partial issue and on its reversal, and keeps the line posted after the reversal (shipment edit spec Q5, Q6)", async () => {
+  const order = await orders().create(orderInput, actor);
+  const shipment = await ship(order);
+  expect(shipment).toMatchObject({ version: 1, lines: [{ posted: false }] });
+
+  const issue = await issues().post({ shipment: shipment.id, lines: [{ line: 1, quantity: "4", unit: "each" }] }, actor);
+  // A partial issue leaves the shipment Open, so only the touch can have moved its version.
+  expect(await shipments().get(shipment.id)).toMatchObject({ status: "open", version: 2, lines: [{ issued: "4.000000", posted: true }] });
+
+  await reverse((await movement(issue.id)).id);
+  expect(await shipments().get(shipment.id)).toMatchObject({ status: "open", version: 3, lines: [{ issued: "0.000000", posted: true }] });
+});
+
+it("answers a reversal that lost a race on a version as VERSION_CONFLICT", async () => {
+  const em = scope();
+  vi.spyOn(em, "transactional").mockRejectedValueOnce(new OptimisticLockError("stale"));
+  await expect(new StockReversalService({ em }).reverse(randomUUID(), { reason: "Wrong issue" }, actor)).rejects.toMatchObject({ code: "VERSION_CONFLICT" });
 });
