@@ -49,6 +49,7 @@ and `GET /api/tenants/{tenant}/purchase-requisitions`. Page it by 100 as the pur
   addressed minor #2: `document-lifecycle`'s read-only check now finds its own row on the last page
   before asserting it has no actions. Fixed the BC nit (requisition statuses and `abandoned`).
   Declined the help-topic note: the purchase-order topic doesn't mention paging either.
+- 23:05 The QA instructions first claimed a loading skeleton on cold load, but the page kept a blank `aria-busy` fallback. Switched it to `LoadingMessage` (lesson "Inspect the cold-load frame"), as the stock and report pages do.
 - 22:55 Browser check on `next start`: PO 00000013's line links requisition 00000111 to `?page=2`,
   and the requisition is on that page. The Create purchase order form offers Open requisition
   00000112 (page 2) and leaves out the Cancelled and Closed Early ones. CI on the first commit: all
