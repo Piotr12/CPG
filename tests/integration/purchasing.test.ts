@@ -13,8 +13,9 @@ const PASSWORD = "buy una's first password";
 /** True once `element` is hydrated, shown, and outside Next.js's hidden staging container. */
 const ready = (element: string) =>
   `(${element}) && !(${element}).closest("[hidden]") && Object.keys(${element}).some((key) => key.startsWith("__reactFiber"))`;
+/** The page's button with exactly this text or accessible name, if any. */
 const button = (name: string) =>
-  `[...document.querySelectorAll("main button")].find((b) => b.textContent.trim() === ${JSON.stringify(name)})`;
+  `[...document.querySelectorAll("main button")].find((b) => b.textContent.trim() === ${JSON.stringify(name)} || b.getAttribute("aria-label") === ${JSON.stringify(name)})`;
 const closed = `!document.querySelector("[role=dialog]")`;
 
 /** A page's table rows as their cells' text, once its first table is shown. */
@@ -87,24 +88,62 @@ describe("purchase requisitions and orders in the UI", () => {
   it("lets a normal user create a requisition in Prod, which then appears Open and unconverted", async () => {
     await createMaster(admin, "materials", "buy steel", { type: "raw", baseUnit: "kg" });
     await createMaster(admin, "locations", "buy plant");
-    await una.open(`${baseUrl}/admin/prod/purchase-requisitions`);
 
-    await una.waitUntil(ready(button("Create requisition")));
-    await una.clickRole("button", "Create requisition");
-    await una.waitFor("[role=dialog]");
-    await una.select("[role=dialog] select[name=material]", await optionFor(una, "buy steel"));
-    await una.select("[role=dialog] select[name=location]", await optionFor(una, "buy plant"));
-    await una.fill("[role=dialog] [name=quantity]", "100");
-    expect(await una.fillDate("[role=dialog] [name=requiredDate]", "2027-03-01")).toBe("2027-03-01");
-    await una.click("[role=dialog] button[type=submit]");
-    await una.waitUntil(closed);
+    const mine = await createRequisition(una, "buy steel", "buy plant", "100");
 
-    const table = await rows(una, "/admin/prod/purchase-requisitions");
-    // Other files create Prod requisitions too: the one made here is the "buy steel" one.
-    const mine = table.find((row) => row.join(" ").includes("buy steel"));
-    expect(mine![0]).toMatch(/^\d{8}$/);
-    expect(mine!.join(" ")).toContain("Open");
-    expect(mine!.join(" ")).toContain("100");
+    expect(mine[0]).toMatch(/^\d{8}$/);
+    expect(mine.join(" ")).toContain("Open");
+    expect(mine.join(" ")).toContain("100");
+  });
+
+  it("lets a normal user create a PO directly and by converting a requisition in the Create purchase order dialog; both open with their lines", async () => {
+    await createMaster(admin, "materials", "buypo steel", { type: "raw", baseUnit: "kg" });
+    await createMaster(admin, "locations", "buypo plant");
+    await createMaster(admin, "suppliers", "buypo acme");
+    const [requisition] = await createRequisition(una, "buypo steel", "buypo plant", "100");
+
+    await una.setViewport(1280, 800);
+    await createOrder(una, { material: "buypo steel", quantity: "20", plannedDate: "2027-03-03" });
+    await createOrder(una, { material: "buypo steel", quantity: "60", plannedDate: "2027-03-04", requisition });
+
+    const placed = await ordersOf(una, "buypo acme");
+    expect(placed.map((row) => [row[2], row.at(-1)])).toEqual([
+      [expect.stringContaining("buypo plant"), "Open"],
+      [expect.stringContaining("buypo plant"), "Open"],
+    ]);
+    const direct = await orderLines(una, placed[0][0]);
+    const converting = await orderLines(una, placed[1][0]);
+    expect(direct).toHaveLength(1);
+    expect(direct[0].slice(0, 2)).toEqual(["1", expect.stringContaining("buypo steel")]);
+    expect([direct[0][4], direct[0][5]]).toEqual(["2027-03-03", "—"]);
+    expect(converting).toHaveLength(1);
+    expect([converting[0][1], converting[0][4], converting[0][5]]).toEqual([expect.stringContaining("buypo steel"), "2027-03-04", requisition]);
+    // The requisition counts what the order converted.
+    const converted = (await rows(una, "/admin/prod/purchase-requisitions")).find(([id]) => id === requisition)!;
+    expect(converted.slice(3, 6)).toEqual(["100 kg", "60 kg", "40 kg"]);
+  });
+
+  // Uses the orders and the location the test above creates.
+  it("refuses the admin's deactivation of a location an Open PO delivers to, linking the order, and keeps it Active (LFC-018)", async () => {
+    const [order] = (await ordersOf(admin, "buypo acme"))[0];
+    const [location] = (await rows(admin, "/admin/prod/locations")).find((row) => row[1] === "buypo plant")!;
+
+    await admin.waitUntil(ready(button(`Actions for ${location}`)));
+    await admin.clickRole("button", `Actions for ${location}`);
+    await admin.clickRole("menuitem", "Deactivate");
+    await admin.waitFor("[role=alertdialog]");
+    await admin.click("[role=alertdialog] button[data-variant=destructive]");
+    await admin.waitUntil(`!!document.querySelector("[role=alertdialog] [role=alert]")`);
+
+    expect(
+      await admin.evaluate<{ text: string; href: string | null }>(`(() => {
+        const alert = document.querySelector("[role=alertdialog] [role=alert]");
+        return { text: alert.innerText.trim(), href: alert.querySelector("a")?.getAttribute("href") ?? null };
+      })()`),
+    ).toEqual({ text: `Purchase order ${order} is still Open for delivery to this location. ${order}`, href: `/admin/prod/purchase-orders/${order}` });
+    await admin.clickRole("button", "Cancel");
+    await admin.waitUntil(`!document.querySelector("[role=alertdialog]")`);
+    expect((await rows(admin, "/admin/prod/locations")).find(([id]) => id === location)?.[2]).toBe("Active");
   });
 
   it("lets a normal user change an Open requisition's required date on screen, which the audit records (#142)", async () => {
@@ -164,6 +203,58 @@ describe("purchase requisitions and orders in the UI", () => {
   });
 });
 
+/** Creates a Prod requisition through the Create requisition dialog; its row in the list. */
+async function createRequisition(browser: Browser, material: string, location: string, quantity: string): Promise<string[]> {
+  await browser.open(`${baseUrl}/admin/prod/purchase-requisitions`);
+  await browser.waitUntil(ready(button("Create requisition")));
+  await browser.clickRole("button", "Create requisition");
+  await browser.waitFor("[role=dialog]");
+  await browser.select("[role=dialog] select[name=material]", await optionFor(browser, material));
+  await browser.select("[role=dialog] select[name=location]", await optionFor(browser, location));
+  await browser.fill("[role=dialog] [name=quantity]", quantity);
+  expect(await browser.fillDate("[role=dialog] [name=requiredDate]", "2027-03-01")).toBe("2027-03-01");
+  await browser.click("[role=dialog] button[type=submit]");
+  await browser.waitUntil(closed);
+  // Other files create Prod requisitions too: the one made here is the one for `material`.
+  return (await rows(browser, "/admin/prod/purchase-requisitions")).find((row) => row[1].includes(material))!;
+}
+
+/** Creates a one-line Prod order from "buypo acme" to "buypo plant" through the Create purchase order dialog. */
+async function createOrder(browser: Browser, line: { material: string; quantity: string; plannedDate: string; requisition?: string }) {
+  await browser.open(`${baseUrl}/admin/prod/purchase-orders`);
+  await browser.waitUntil(ready(button("Create purchase order")));
+  await browser.clickRole("button", "Create purchase order");
+  await browser.waitFor("[role=dialog]");
+  await browser.select("[role=dialog] select[name=supplier]", await optionFor(browser, "buypo acme"));
+  await browser.select("[role=dialog] select[name=location]", await optionFor(browser, "buypo plant"));
+  await browser.select(`[role=dialog] select[name="lines.0.material"]`, await optionFor(browser, line.material));
+  await browser.fill(`[role=dialog] [name="lines.0.quantity"]`, line.quantity);
+  expect(await browser.fillDate(`[role=dialog] [name="lines.0.plannedDate"]`, line.plannedDate)).toBe(line.plannedDate);
+  if (line.requisition) await browser.select(`[role=dialog] select[name="lines.0.requisition"]`, line.requisition);
+  await browser.click("[role=dialog] button[type=submit]");
+  await browser.waitUntil(closed);
+}
+
+/** A Prod order's lines as their cells' text: the page's first table (its receipts follow). */
+async function orderLines(browser: Browser, id: string): Promise<string[][]> {
+  await rows(browser, `/admin/prod/purchase-orders/${id}`);
+  return browser.evaluate<string[][]>(
+    `[...document.querySelector("main table").querySelectorAll(":scope tbody tr")].map((row) => [...row.cells].map((cell) => cell.innerText.trim().replace(/\\s+/g, " ")))`,
+  );
+}
+
+/** The Prod order rows of `supplier`, by ID. They are the newest, so on the list's last page or the one before. */
+async function ordersOf(browser: Browser, supplier: string): Promise<string[][]> {
+  await rows(browser, "/admin/prod/purchase-orders");
+  const label = await browser.evaluate<string>(`document.querySelector('main nav[aria-label="Purchase order pages"] span')?.textContent ?? "Page 1 of 1"`);
+  const pages = Number(/of (\d+)$/.exec(label)![1]);
+  const found: string[][] = [];
+  for (const page of [pages - 1, pages].filter((each) => each >= 1)) {
+    found.push(...(await rows(browser, `/admin/prod/purchase-orders?page=${page}`)).filter((row) => row[1].includes(supplier)));
+  }
+  return found;
+}
+
 /** The value of the select option whose label contains `text`, in the open dialog's first matching select. */
 async function optionFor(browser: Browser, text: string): Promise<string> {
   return browser.evaluate<string>(
@@ -172,10 +263,11 @@ async function optionFor(browser: Browser, text: string): Promise<string> {
 }
 
 /** Creates a Prod master through its screen's own dialog. */
-async function createMaster(admin: Browser, kind: "materials" | "locations", name: string, extra: { type?: string; baseUnit?: string } = {}) {
+async function createMaster(admin: Browser, kind: "materials" | "locations" | "suppliers", name: string, extra: { type?: string; baseUnit?: string } = {}) {
+  const create = { materials: "Create material", locations: "Create location", suppliers: "Create supplier" }[kind];
   await admin.open(`${baseUrl}/admin/prod/${kind}`);
-  await admin.waitUntil(ready(button(kind === "materials" ? "Create material" : "Create location")));
-  await admin.clickRole("button", kind === "materials" ? "Create material" : "Create location");
+  await admin.waitUntil(ready(button(create)));
+  await admin.clickRole("button", create);
   await admin.waitFor("[role=dialog]");
   if (kind === "materials") {
     await admin.select("[role=dialog] select[name=type]", extra.type!);

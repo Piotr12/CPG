@@ -30,8 +30,10 @@ import {
 } from "../../validators/purchasing/purchasing-fields.schema";
 import type { AuditActor } from "../audit/actor";
 import { GoodsReceiptService } from "../goods-receipts/goods-receipt.service";
+import { LocationService } from "../locations/location.service";
 import { MaterialService } from "../materials/material.service";
 import { PurchaseRequisitionService } from "../purchase-requisitions/purchase-requisition.service";
+import { StockService } from "../stock/stock.service";
 import { SupplierService } from "../suppliers/supplier.service";
 import { ORDER_ID_RACE, PurchaseOrderService, type NewOrder, type NewOrderLine } from "./purchase-order.service";
 
@@ -491,6 +493,21 @@ describe("PurchaseOrderService", () => {
       await expect(service().create(DIRECT, ACTOR)).rejects.toMatchObject({ code: "SUPPLIER_INACTIVE" });
     });
 
+    it("keeps an order readable, and its other lines receivable, after the material of its cancelled line is deactivated (MAT-029)", async () => {
+      const order = await service().create(DIRECT, ACTOR);
+      await service().cancel(order.id, order.version, ACTOR, [1]);
+      const materials = new MaterialService({ em: scopedEm() });
+      await materials.update("00000001", { active: false }, (await materials.get("00000001")).version, ADMIN);
+
+      const read = await service().get(order.id);
+      expect(read).toMatchObject({ status: "open", lines: [{ material: "00000001", quantity: "20.000000", status: "cancelled" }, { material: "00000002", status: "open" }] });
+      expect((await service().list()).find(({ id }) => id === order.id)?.lines[0].material).toBe("00000001");
+      await expect(service().create(DIRECT, ACTOR)).rejects.toMatchObject({ code: "MATERIAL_INACTIVE" });
+
+      await new GoodsReceiptService({ em: scopedEm() }).post({ purchaseOrder: order.id, lines: [{ line: 2, quantity: "10", unit: "each" }] }, ACTOR);
+      expect(await service().get(order.id)).toMatchObject({ status: "closed-early", lines: [{ material: "00000001" }, { status: "completed" }] });
+    });
+
     it("puts a refused conversion on the line's own field, every line at once", async () => {
       const lines = [line("00000001", "1", "case", "2027-03-03"), line("00000002", "1", "each", "2027-03-03"), line("00000001", "999999999999", "t", "2027-03-03")];
 
@@ -559,6 +576,61 @@ describe("PurchaseOrderService", () => {
         const { version } = await materials.get(material);
         await expect(materials.update(material, { baseUnit: "pcs" }, version, ADMIN)).rejects.toMatchObject({ code: "BASE_UNIT_IN_USE", status: 409 });
       }
+    });
+  });
+
+  describe("location deactivation with open purchasing (LFC-018, #141)", () => {
+    const locations = () => new LocationService({ em: scopedEm() });
+    const deactivate = async (location: string) => locations().update(location, { active: false }, (await locations().get(location)).version, ADMIN);
+
+    it("refuses a location an Open order delivers to, naming the lowest such order, and changes nothing", async () => {
+      await service().create({ ...DIRECT, location: "00000002" }, ACTOR);
+      const second = await service().create(DIRECT, ACTOR);
+      await service().create(DIRECT, ACTOR);
+      const before = await locations().get("00000001");
+
+      await expect(deactivate("00000001")).rejects.toMatchObject({
+        code: "LOCATION_HAS_PURCHASE_ORDERS",
+        status: 409,
+        message: `Purchase order ${second.id} is still Open for delivery to this location.`,
+        messageParams: { order: second.id },
+      });
+      expect(await locations().get("00000001")).toEqual(before);
+    });
+
+    it("refuses a location with an Open requisition, naming the lowest one", async () => {
+      await requisition();
+      const elsewhere = await requisition({ location: "00000002" });
+      await requisition({ location: "00000002" });
+
+      await expect(deactivate("00000002")).rejects.toMatchObject({
+        code: "LOCATION_HAS_REQUISITIONS",
+        status: 409,
+        message: `Purchase requisition ${elsewhere.id} is still Open at this location.`,
+        messageParams: { requisition: elsewhere.id },
+      });
+      expect((await locations().get("00000002")).active).toBe(true);
+    });
+
+    it("lets the location go once its orders are Completed, Cancelled or Closed Early and its requisitions are no longer Open", async () => {
+      // A requisition converted in full is Completed; cancelling its order leaves it so.
+      const converted = await requisition();
+      const cancelled = await service().create(converting(converted.id, "100"), ACTOR);
+      await service().cancel(cancelled.id, cancelled.version, ACTOR);
+      const dropped = await requisition();
+      await requisitions().cancel(dropped.id, dropped.version, ACTOR);
+      // Received in full, then its stock counted away so only the documents are in question.
+      const received = await service().create(DIRECT, ACTOR);
+      await new GoodsReceiptService({ em: scopedEm() }).post({ purchaseOrder: received.id, lines: [{ line: 1, quantity: "20", unit: "kg" }, { line: 2, quantity: "10", unit: "each" }] }, ACTOR);
+      for (const [material, quantity, unit] of [["00000001", "-20", "kg"], ["00000002", "-10", "each"]]) {
+        await new StockService({ em: scopedEm() }).correct({ material, location: "00000001", quantity, unit, reason: "Count" }, ACTOR);
+      }
+      const closed = await service().create(DIRECT, ACTOR);
+      await scopedEm().nativeUpdate(PurchaseOrder, { code: closed.id }, { status: "closed-early" });
+      expect((await service().get(received.id)).status).toBe("completed");
+      expect((await requisitions().get(converted.id)).status).toBe("completed");
+
+      await expect(deactivate("00000001")).resolves.toMatchObject({ active: false });
     });
   });
 

@@ -1867,6 +1867,8 @@ export const pl: Messages = {
     MATERIAL_HAS_CUSTOMER_DEMAND: "Zamówienie klienta {order} ma niezrealizowany popyt na ten materiał.",
     LOCATION_HAS_CUSTOMER_ORDERS: "Zamówienie klienta {order} jest nadal otwarte w tej lokalizacji.",
     LOCATION_HAS_OPEN_TRANSFERS: "Przesunięcie {transfer} z tej lub do tej lokalizacji jest nadal otwarte.",
+    LOCATION_HAS_PURCHASE_ORDERS: "Zamówienie zakupu {order} z dostawą do tej lokalizacji jest nadal otwarte.",
+    LOCATION_HAS_REQUISITIONS: "Zapotrzebowanie zakupu {requisition} jest nadal otwarte w tej lokalizacji.",
     MATERIAL_IN_OPEN_TRANSFER: "Przesunięcie {transfer} tego materiału jest nadal otwarte, więc nie można go dezaktywować.",
     INSUFFICIENT_STOCK: "Materiał {material} w lokalizacji {location}: dostępne {available} {unit}; wymagane {requested} {unit}.",
     STOCK_NOT_EMPTY: "Materiał {material} w lokalizacji {location} ma zapas {quantity} {unit}. Wyzeruj zapas przed dezaktywacją.",

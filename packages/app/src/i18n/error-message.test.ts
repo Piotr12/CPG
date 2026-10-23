@@ -35,4 +35,13 @@ describe("errorMessage", () => {
     expect(errorMessage(pl.errors, { code: "LOCATION_HAS_CUSTOMER_ORDERS", message: "unexpected detail" })).toBe("unexpected detail");
   });
 
+  it("names the Open purchase order or requisition that keeps a location active, in English and Polish (#141)", () => {
+    const order = { code: "LOCATION_HAS_PURCHASE_ORDERS", message: "Purchase order 00000004 is still Open.", params: { order: "00000004" } };
+    const requisition = { code: "LOCATION_HAS_REQUISITIONS", message: "Purchase requisition 00000002 is still Open.", params: { requisition: "00000002" } };
+    expect(errorMessage(en.errors, order)).toBe("Purchase order 00000004 is still Open for delivery to this location.");
+    expect(errorMessage(pl.errors, order)).toBe("Zamówienie zakupu 00000004 z dostawą do tej lokalizacji jest nadal otwarte.");
+    expect(errorMessage(en.errors, requisition)).toBe("Purchase requisition 00000002 is still Open at this location.");
+    expect(errorMessage(pl.errors, requisition)).toBe("Zapotrzebowanie zakupu 00000002 jest nadal otwarte w tej lokalizacji.");
+  });
+
 });

@@ -102,7 +102,10 @@ describe("document cancellation and early closure", () => {
     }
     const audit = json(await api("GET", `${root}/audit`)).data;
     const events = Array.isArray(audit) ? audit : audit.entries;
-    expect(events.filter((event: { action: string }) => event.action.endsWith(".cancelled"))).toHaveLength(5);
+    // Other files cancel Prod documents too: count only this test's own, once each.
+    const cancelled = (concept: string, id: string) =>
+      events.filter((event: { action: string; subject: { id: string } }) => event.action === `${concept}.${concept.slice(0, -1)}.cancelled` && event.subject.id === id);
+    for (const [concept, document] of documents) expect(cancelled(concept, document.id), concept).toHaveLength(1);
   });
 
   it("closes a partly converted requisition from its row and preserves the purchase order", async () => {

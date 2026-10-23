@@ -182,9 +182,19 @@ describe("purchase requisitions and orders through the API", () => {
     const refused = await placeOrder(order([line(ids.bolt, "1", "each", "2027-03-03")], { supplier: ids.gone }));
     expect(refused.status).toBe(409);
     expect(json(refused).error.code).toBe("SUPPLIER_INACTIVE");
-    // Test's suppliers are 00000001…: the Prod supplier past them is not Test's.
+    // Test's suppliers are 00000001…: the Prod supplier past them is not Test's, so a Test order naming it is refused.
     const testSuppliers = new Set((json(await api("GET", "/api/tenants/test/suppliers")).data as { id: string }[]).map(({ id }) => id));
     expect(testSuppliers.has(ids.gone)).toBe(false);
+    const testOrders = (await orders("test")).length;
+    const { generation } = json(await api("GET", "/api/tenants/test")).data as { generation: number };
+    const foreign = await api("POST", "/api/tenants/test/purchase-orders", {
+      key: randomUUID(),
+      generation,
+      body: { supplier: ids.gone, location: "00000001", lines: [line("00000001", "1", "kg", "2027-03-03")] },
+    });
+    expect(foreign.status).toBe(404);
+    expect(json(foreign).error.code).toBe("SUPPLIER_NOT_FOUND");
+    expect((await orders("test")).length).toBe(testOrders);
 
     const read = json(await api("GET", `/api/tenants/prod/purchase-orders/${earlier.id}`)).data as Order;
     expect(read).toMatchObject({ supplier: ids.gone, status: "open" });
@@ -202,6 +212,51 @@ describe("purchase requisitions and orders through the API", () => {
 
     expect(refused.status).toBe(409);
     expect(json(refused).error).toMatchObject({ code: "MATERIAL_IN_OPEN_ORDER", message: expect.stringContaining(`Purchase order ${placed.id} `) });
+  });
+
+  it("refuses to deactivate a location an Open PO delivers to, then one with an Open requisition, naming each; once both are cancelled it goes (LFC-018)", async () => {
+    const site = await create("/api/tenants/prod/locations", { name: "buyapi site" });
+    const placed = json(await placeOrder(order([line(ids.bolt, "1", "each", "2027-03-03")], { location: site }))).data as Order;
+    const need = await requisition({ location: site });
+    const deactivate = async () => {
+      const { version } = json(await api("GET", `/api/tenants/prod/locations/${site}`)).data as { version: number };
+      return write("PATCH", `/api/tenants/prod/locations/${site}`, { version, active: false });
+    };
+
+    const byOrder = await deactivate();
+    expect(byOrder.status).toBe(409);
+    expect(json(byOrder).error).toMatchObject({ code: "LOCATION_HAS_PURCHASE_ORDERS", params: { order: placed.id } });
+    expect((await write("POST", `/api/tenants/prod/purchase-orders/${placed.id}/cancel`, { version: placed.version })).status).toBe(200);
+
+    const byRequisition = await deactivate();
+    expect(byRequisition.status).toBe(409);
+    expect(json(byRequisition).error).toMatchObject({ code: "LOCATION_HAS_REQUISITIONS", params: { requisition: need.id } });
+    expect(json(await api("GET", `/api/tenants/prod/locations/${site}`)).data).toMatchObject({ active: true });
+    expect((await write("POST", `/api/tenants/prod/purchase-requisitions/${need.id}/cancel`, { version: need.version })).status).toBe(200);
+
+    const done = await deactivate();
+    expect(done.status).toBe(200);
+    expect(json(done).data).toMatchObject({ id: site, active: false });
+  });
+
+  it("keeps a PO readable in the API and the UI after the material of its cancelled line is deactivated, and receives its other line (MAT-029)", async () => {
+    const rivet = await create("/api/tenants/prod/materials", { type: "raw", description: "buyapi rivet", baseUnit: "each" });
+    const placed = json(await placeOrder(order([line(rivet, "5", "each", "2027-03-03"), line(ids.bolt, "2", "each", "2027-03-04")]))).data as Order;
+    expect((await write("POST", `/api/tenants/prod/purchase-orders/${placed.id}/cancel`, { version: placed.version, lines: [1] })).status).toBe(200);
+    const material = json(await api("GET", `/api/tenants/prod/materials/${rivet}`)).data as { version: number };
+    expect((await write("PATCH", `/api/tenants/prod/materials/${rivet}`, { version: material.version, active: false })).status).toBe(200);
+
+    const read = await api("GET", `/api/tenants/prod/purchase-orders/${placed.id}`);
+    expect(read.status).toBe(200);
+    expect(json(read).data).toMatchObject({ status: "open", lines: [{ line: 1, material: rivet, status: "cancelled" }, { line: 2, material: ids.bolt, status: "open" }] });
+    await admin.open(`${baseUrl}/admin/prod/purchase-orders/${placed.id}`);
+    await admin.waitUntil(`document.querySelector("main table") && !document.querySelector("main table").closest("[hidden]")`);
+    const shown = await admin.evaluate<string[]>(`[...document.querySelector("main table").querySelectorAll(":scope tbody tr")].map((row) => row.cells[1].innerText.trim())`);
+    expect(shown).toEqual([expect.stringContaining("buyapi rivet"), expect.stringContaining("buyapi bolt")]);
+
+    const receipt = await write("POST", "/api/tenants/prod/goods-receipts", { purchaseOrder: placed.id, lines: [{ line: 2, quantity: "2", unit: "each" }] });
+    expect(receipt.status).toBe(200);
+    expect(json(await api("GET", `/api/tenants/prod/purchase-orders/${placed.id}`)).data).toMatchObject({ status: "closed-early", lines: [{ material: rivet }, { status: "completed" }] });
   });
 
   it("answers a stale version with 409 and keeps the newer change (AUD-025, API-029)", async () => {
