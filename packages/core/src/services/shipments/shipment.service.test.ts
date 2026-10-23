@@ -94,12 +94,15 @@ describe("ShipmentService", () => {
         location: "00000001",
         plannedDate: "2026-11-03",
         status: "open",
+        version: 1,
         createdAt: expect.any(Date),
         lines: [
-          { line: 1, orderLine: a.id, material: "00000001", quantity: "50.000000", enteredQuantity: "50", enteredUnit: "each", numerator: "1", denominator: "1", issued: "0.000000", toIssue: "50.000000" },
-          { line: 2, orderLine: b.id, material: "00000002", quantity: "30.000000", enteredQuantity: "30", enteredUnit: "each", numerator: "1", denominator: "1", issued: "0.000000", toIssue: "30.000000" },
+          { line: 1, orderLine: a.id, material: "00000001", quantity: "50.000000", enteredQuantity: "50", enteredUnit: "each", numerator: "1", denominator: "1", issued: "0.000000", posted: false, toIssue: "50.000000" },
+          { line: 2, orderLine: b.id, material: "00000002", quantity: "30.000000", enteredQuantity: "30", enteredUnit: "each", numerator: "1", denominator: "1", issued: "0.000000", posted: false, toIssue: "30.000000" },
         ],
       });
+      // The next added line is numbered after these two (shipment edit spec Q3).
+      expect((await scoped().findOneOrFail(Shipment, { code: "00000001" })).nextLine).toBe(2);
       expect((await stock("00000001")).quantity).toBe("100.000000");
       expect(await scoped().count(StockMovement, { type: { $ne: "correction" } })).toBe(0);
       expect((await orders().get(order.id)).lines.map(({ fulfilled }) => fulfilled)).toEqual(["0.000000", "0.000000"]);

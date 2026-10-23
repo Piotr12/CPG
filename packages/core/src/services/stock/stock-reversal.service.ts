@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { StockMovement, StockReversal, type EntityManager } from "@cpg/db";
-import { ConflictError, NotFoundError } from "../../http/errors";
+import { OptimisticLockError, StockMovement, StockReversal, type EntityManager } from "@cpg/db";
+import { ConflictError, NotFoundError, versionConflict } from "../../http/errors";
 import { parseInput } from "../../http/parse-input";
 import { stockMovementIdSchema, stockReversalSchema } from "../../validators/stock/stock-reversal.schema";
 import type { AuditActor } from "../audit/actor";
@@ -21,6 +21,16 @@ export class StockReversalService {
   async reverse(id: string, raw: unknown, actor: AuditActor): Promise<StockReversalView> {
     const movementId = parseInput(stockMovementIdSchema, id);
     const { reason } = parseInput(stockReversalSchema, raw);
+    try {
+      return await this.reverseIn(movementId, reason, actor);
+    } catch (error) {
+      // An issue reversal advances its order's and shipment's versions; a write that raced them lost.
+      if (error instanceof OptimisticLockError) throw versionConflict();
+      throw error;
+    }
+  }
+
+  private reverseIn(movementId: string, reason: string, actor: AuditActor): Promise<StockReversalView> {
     return this.em.transactional(async (em) => {
       if (await isScopeReadOnly(em)) throw new ConflictError("This tenant is read-only.", "TENANT_READ_ONLY");
       const original = await em.findOne(StockMovement, movementId, { populate: ["material", "location"], refresh: true });

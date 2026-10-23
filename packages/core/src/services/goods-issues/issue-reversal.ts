@@ -3,7 +3,7 @@ import { documentState } from "../../domain/document-lifecycle/lifecycle";
 import { isLineFulfilled } from "../../domain/goods-issues/issue-quantity";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit } from "../audit/audit-recorder";
-import { recalculateReversedShipments } from "../shipments/shipment-usage";
+import { recalculateReversedShipments, touchShipment } from "../shipments/shipment-usage";
 import { assertReversalSource, inconsistentReversal, subtractReversedQuantity } from "../stock/reversal-records";
 
 /** A goods issue's immutable source selects both counters; no client input selects an order line. */
@@ -24,6 +24,8 @@ export async function prepareIssueReversal(em: EntityManager, original: StockMov
     const before = { status: order.status, line: orderLine.id, lineStatus: orderLine.status, fulfilled: orderLine.fulfilled, abandoned: orderLine.abandoned };
     const shipmentBefore = { line: line.shipmentLine.position + 1, issued: line.shipmentLine.issued };
     line.shipmentLine.issued = issued;
+    // Before the recalculation, which flushes and then clears the identity map.
+    touchShipment(shipment);
     orderLine.fulfilled = fulfilled;
     if (orderLine.status === "open" || orderLine.status === "completed") orderLine.status = isLineFulfilled(orderLine) ? "completed" : "open";
     order.status = documentState(lines.map(({ status }) => status));

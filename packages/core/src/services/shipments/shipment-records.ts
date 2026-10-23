@@ -1,4 +1,4 @@
-import { Shipment, type EntityManager } from "@cpg/db";
+import { GoodsIssueLine, Shipment, type EntityManager, type ShipmentLine } from "@cpg/db";
 import { ConflictError, NotFoundError } from "../../http/errors";
 
 /*
@@ -11,6 +11,27 @@ export async function findShipment(em: EntityManager, code: string, options: { r
   const shipment = await em.findOne(Shipment, { code }, { ...options, populate: ["order", "order.customer", "order.location"] });
   if (!shipment) throw new NotFoundError("SHIPMENT_NOT_FOUND", `There is no shipment ${code} in this tenant.`);
   return shipment;
+}
+
+/**
+ * The IDs of `lines` that any goods issue has ever named (shipment edit spec Q6, Q9): a reversal
+ * returns `issued` to zero but never erases the issue (#91). Bounded like `postedOrderLineIds`: 100
+ * IDs to a query, at most 100 issue lines read at a time, and a found ID leaves the batch at once.
+ */
+export async function postedShipmentLineIds(em: EntityManager, lines: readonly ShipmentLine[]): Promise<Set<string>> {
+  const posted = new Set<string>();
+  for (let start = 0; start < lines.length; start += 100) {
+    const remaining = new Set(lines.slice(start, start + 100).map(({ id }) => id));
+    while (remaining.size > 0) {
+      const issues = await em.find(GoodsIssueLine, { shipmentLine: { $in: [...remaining] } }, { fields: ["shipmentLine"], limit: 100, disableIdentityMap: true });
+      if (issues.length === 0) break;
+      for (const { shipmentLine } of issues) {
+        posted.add(shipmentLine.id);
+        remaining.delete(shipmentLine.id);
+      }
+    }
+  }
+  return posted;
 }
 
 /** `items` grouped by `key`, each group in the items' order: one pass, however many headers a page has. */

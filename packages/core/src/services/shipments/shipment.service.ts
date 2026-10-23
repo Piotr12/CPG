@@ -23,7 +23,7 @@ import { assertCustomerOrderOpen, findCustomerOrder } from "../customer-orders/o
 import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quantity";
 import { lineError } from "../materials/line-error";
 import type { PostingContext } from "../stock/stock-posting";
-import { findShipment, groupBy } from "./shipment-records";
+import { findShipment, groupBy, postedShipmentLineIds } from "./shipment-records";
 
 export const SHIPMENT_ID_RACE = "Another shipment was created at the same moment. Try again.";
 
@@ -42,6 +42,8 @@ export interface ShipmentLineView {
   denominator: string;
   /** What its goods issues have issued so far. */
   issued: string;
+  /** Whether any goods issue ever named it, even one reversed since: such a line can't be removed (shipment edit spec Q9). */
+  posted: boolean;
   /** What a goods issue may still issue on it: the plan's remainder, at most the order line's outstanding (spec Q5). */
   toIssue: string;
 }
@@ -54,6 +56,8 @@ export interface ShipmentView {
   location: string;
   plannedDate: string;
   status: ShipmentStatus;
+  /** The version an edit or a cancel must name; it advances on every change the shipment's page shows (shipment edit spec Q5). */
+  version: number;
   createdAt: Date;
   lines: ShipmentLineView[];
 }
@@ -126,7 +130,13 @@ export class ShipmentService {
           code: "SHIPMENT_IDS_EXHAUSTED",
           message: "This tenant has used every eight-digit shipment ID.",
         });
-        const shipment = em.create(Shipment, { code, order, plannedDate: input.plannedDate, ...(context.kind === "seed" && { createdAt: context.at }) });
+        const shipment = em.create(Shipment, {
+          code,
+          order,
+          plannedDate: input.plannedDate,
+          nextLine: resolved.length,
+          ...(context.kind === "seed" && { createdAt: context.at, updatedAt: context.at }),
+        });
         resolved.forEach(({ orderLine, record }, position) => {
           const { baseQuantity, enteredQuantity, enteredUnit, numerator, denominator } = record;
           em.create(ShipmentLine, { shipment, position, orderLine, quantity: baseQuantity, enteredQuantity, enteredUnit, numerator, denominator });
@@ -202,6 +212,7 @@ async function viewsOf(em: EntityManager, shipments: readonly Shipment[]): Promi
     { populate: ["orderLine", "orderLine.material"], orderBy: { position: "asc" } },
   );
   const byShipment = groupBy(lines, (line) => line.shipment.id);
+  const posted = await postedShipmentLineIds(em, lines);
   return shipments.map((shipment) => ({
     id: shipment.code,
     customerOrder: shipment.order.code,
@@ -209,10 +220,11 @@ async function viewsOf(em: EntityManager, shipments: readonly Shipment[]): Promi
     location: shipment.order.location.code,
     plannedDate: shipment.plannedDate,
     status: shipment.status,
+    version: shipment.version,
     createdAt: shipment.createdAt,
     lines: byShipment
       .get(shipment.id)!
-      .map(({ position, orderLine, quantity, enteredQuantity, enteredUnit, numerator, denominator, issued }) => ({
+      .map(({ id, position, orderLine, quantity, enteredQuantity, enteredUnit, numerator, denominator, issued }) => ({
         line: position + 1,
         orderLine: orderLine.id,
         material: orderLine.material.code,
@@ -222,6 +234,7 @@ async function viewsOf(em: EntityManager, shipments: readonly Shipment[]): Promi
         numerator,
         denominator,
         issued,
+        posted: posted.has(id),
         toIssue: toIssueOf(quantity, issued, outstandingOf(orderLine)),
       })),
   }));

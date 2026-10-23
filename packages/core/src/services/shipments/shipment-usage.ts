@@ -10,6 +10,16 @@ import type { PostingContext } from "../stock/stock-posting";
  */
 
 /**
+ * Advances `shipment`'s version when a write changes only its lines (shipment edit spec Q5): the
+ * header row has to change for its version to. Monotonic, so two writes in one millisecond still
+ * differ (lesson "A version bumped through a timestamp needs a monotonic timestamp"). A seed write is
+ * dated at its own `at`.
+ */
+export function touchShipment(shipment: Shipment, at: Date = new Date()): void {
+  shipment.updatedAt = new Date(Math.max(at.getTime(), shipment.updatedAt.getTime() + 1));
+}
+
+/**
  * Whether a shipment names any of `lines` (shipments spec Q10): such a line keeps its material and
  * stays on its order, so a planned dispatch always means what it was planned for. One count, loading
  * nothing, and no query at all when an edit removes or replaces no line.
