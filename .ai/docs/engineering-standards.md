@@ -378,6 +378,12 @@ Done when these standards were adopted:
   - The quantity-per-line form of every document posted against another is `components/forms/line-quantities-form.tsx`, used by goods receipts, shipments and goods issues.
   - Both lists page by 100 (`?page=`) from their first release, grouping lines once per page (`groupBy` in `shipment-records.ts`).
   - The shipment page is `/admin/[tenant]/shipments/[id]`. The API is `/api/tenants/{tenant}/shipments/…` and `/goods-issues/…`.
+  - Shipment edit and cancel (2026-10-23, spec `2026-10-23--2006UTC-shipment-edit-cancel`, #147):
+    - `Shipment` has a `version`. `touchShipment` (`shipment-usage.ts`) moves its `updatedAt` when a write changes only lines, so the version advances.
+    - A removed line's row is deleted, and `nextLine` keeps its number from being reused.
+    - `completeFinishedShipments` reads with `refresh: true`, so a writer flushes its own header changes first, or touches the shipment after it.
+    - `LineQuantitiesForm` takes per-row `initial` values, which is how the edit dialog reuses the create form.
+    - The migration widens `shipment.status`'s `CHECK` in place: add, copy, drop, rename (`BACKWARD_COMPATIBILITY.md` §1, named exception).
 - The current stock report (2026-10-20, spec `2026-10-20--2221UTC-stock-report`), the first report:
   - `StockReportService` (`core/src/services/reports/`) is a read-only service with no entity of its own, like `system`. It reads balances and Open transfers in bounded batches without the identity map, and the pure `domain/reports/stock-report-rows.ts` merges, filters and pages the rows.
   - `services/stock/movement-sources.ts` is the leaf that resolves a page of movements' `postingId`s to their documents, with one query per document kind.

@@ -30,6 +30,14 @@ Source: `packages/db/src/entities/`, `packages/db/src/migrations/` (+ `.snapshot
 4. Every migration has a working `down()`, and its test covers up and down against a real SQLite file.
 5. The PR is `risk-high` and its body carries a rollback note: what `kamal rollback` does against the migrated database.
 
+**Named exception, widening a checked enum in place** (#147, `Migration20261023201801_shipment_edit_cancel`). SQLite can't alter a `CHECK`, and rebuilding a table that immutable rows reference is what the lesson "Verify generated SQLite additions on populated data" warns against. So `shipment.status` gained `cancelled` like this, all in one migration transaction:
+- add a new checked column;
+- copy `status` into it;
+- drop `status`;
+- rename the new column to `status`.
+
+No release stops using `status`. The previous release finds the same column name, with the same values and a wider check, so this is a widening, not the drop or rename this section forbids. The pattern may be reused for an enum that only gains values; narrowing still follows the expand/contract path above.
+
 ### 2. Data directory and runtime configuration
 
 Source: `packages/core/src/config.ts` (`loadConfig`), `Dockerfile`, `config/deploy.yml`.
@@ -62,7 +70,7 @@ Source: `packages/app/src/app/`. Today that is:
 - `/`, `/login` and `/help`, which are public. `/help` accepts `?q=` and anchors topics as `#<topic-id>`.
 - `/admin` (the Global tenant chooser), `/admin/users` and `/admin/tokens` (help topics `managing-users`, `api-tokens`), `/admin/test` and `/admin/prod` (the tenant homes). Every tenant page lives under `/admin/{tenant}/`, with eight-digit record IDs:
   - master data: `/admin/{tenant}/materials` and `/admin/{tenant}/materials/{id}`, `/admin/{tenant}/locations`, `/admin/{tenant}/customers` and `/admin/{tenant}/suppliers` (help topics `materials`, `material-conversions`, `locations`, `customers`, `suppliers`), `/admin/{tenant}/planning-parameters` and `/admin/{tenant}/safety-stock` (help topics `planning-parameters`, `safety-stock`), `/admin/{tenant}/boms` and `/admin/{tenant}/boms/{id}` (with `?revision=N` for an older revision; help topics `boms`, `bom-revisions`) and `/admin/{tenant}/import` (admin only: a normal user is sent to `/admin`; help topic `import`);
-  - demand: `/admin/{tenant}/forecasts` (help topic `forecasts`; it accepts `?material=` and `?location=` to narrow the list, and since #140 `?page=` for its pages of 100), `/admin/{tenant}/customer-orders` and `/admin/{tenant}/customer-orders/{id}` (help topics `customer-orders`, `customer-order-detail`) and `/admin/{tenant}/shipments/{id}` (help topic `shipment`);
+  - demand: `/admin/{tenant}/forecasts` (help topic `forecasts`; it accepts `?material=` and `?location=` to narrow the list, and since #140 `?page=` for its pages of 100), `/admin/{tenant}/customer-orders` and `/admin/{tenant}/customer-orders/{id}` (help topics `customer-orders`, `customer-order-detail`) and `/admin/{tenant}/shipments/{id}` (help topic `shipment`; since #147 it also offers Edit shipment and Cancel shipment);
   - supply and movements: `/admin/{tenant}/purchase-requisitions`, `/admin/{tenant}/purchase-orders` and `/admin/{tenant}/purchase-orders/{id}` (help topics `purchase-requisitions`, `purchase-orders`, `purchase-order`), `/admin/{tenant}/production-orders` and `/admin/{tenant}/production-orders/{id}` (help topics `production-orders`, `production-order-detail`), `/admin/{tenant}/transfers` and `/admin/{tenant}/transfers/{id}` (help topics `transfers`, `transfer`), and the stock, stock import, reports and audit pages below.
 
   All of them require a signed-in session and redirect to `/login` otherwise; tenant pages are readable by every account unless noted.
@@ -179,17 +187,34 @@ Route handlers under `app/api/` are protected the same way: their paths, methods
   - all request objects are strict: no client-written status/progress/ID or line location override; line errors use `lines.N.field`. Non-Open orders and posted-field edits are 409 `CUSTOMER_ORDER_LOCKED`; quantity cannot fall below fulfilled plus abandoned. Outstanding demand blocks material/location deactivation (`MATERIAL_HAS_CUSTOMER_DEMAND`, `LOCATION_HAS_CUSTOMER_ORDERS`); customer deactivation remains allowed.
   - a goods issue advances the order's `version`, and fulfils lines: a line whose `fulfilled` reaches its quantity becomes `completed`, and the order once every line is. A `PATCH` that lowers a delivered line to exactly its fulfilled quantity completes it the same way. A line that a shipment names can't be removed or change its material (409 `CUSTOMER_ORDER_LOCKED`).
 - shipments and goods issues of one tenant (spec `2026-10-20--2045UTC-shipments-goods-issues`). Any token may write them. Both have eight-digit IDs numbered per tenant.
-  - A shipment plans a dispatch against one Open customer order and never moves stock. It is `open` until nothing is left to issue on it, then `completed`.
+  - A shipment plans a dispatch against one Open customer order and never moves stock. It is `open` until nothing is left to issue on it, then `completed`. Since #147 it can also be `cancelled`, which is terminal.
   - A goods issue is posted against one Open shipment and never changes. Posting it, in one transaction or not at all:
     - lowers stock at the order's location, dated the server's UTC day;
     - adds to each order line's `fulfilled` and to each shipment line's `issued`;
     - completes the lines, the order and the shipments that have nothing left.
-  - `GET /api/tenants/{tenant}/shipments` returns the shipments newest first, in pages of 100 (`?page=2`; a page past the last is empty); `?customerOrder=00000001` keeps one order's (404 `CUSTOMER_ORDER_NOT_FOUND`). Each is `{ id, customerOrder, customer, location, plannedDate, status, createdAt, lines: [{ line, orderLine, material, quantity, enteredQuantity, enteredUnit, numerator, denominator, issued, toIssue }] }`. `line` numbers the shipment's lines from 1, `orderLine` is the order line's stable ID, and `toIssue` is the smaller of the plan's remainder and the order line's outstanding.
+  - `GET /api/tenants/{tenant}/shipments` returns the shipments newest first, in pages of 100 (`?page=2`; a page past the last is empty); `?customerOrder=00000001` keeps one order's (404 `CUSTOMER_ORDER_NOT_FOUND`). Each is `{ id, customerOrder, customer, location, plannedDate, status, createdAt, lines: [{ line, orderLine, material, quantity, enteredQuantity, enteredUnit, numerator, denominator, issued, toIssue }] }`. `line` numbers the shipment's lines from 1, `orderLine` is the order line's stable ID, and `toIssue` is the smaller of the plan's remainder and the order line's outstanding. Additive since #147:
+    - every shipment has `version`, and every line `posted` (true once any goods issue named it, even after a reversal);
+    - a removed line no longer appears, and the remaining lines keep their numbers, so numbering can have gaps;
+    - a number is never reused.
   - `POST /api/tenants/{tenant}/shipments` takes `{ customerOrder, plannedDate, lines: [{ orderLine, quantity, unit, customerOrder? }] }`, with 1 to 100 lines, each for a different order line. Refusals:
     - 400 on a line field: `lines.N.customerOrder` for a line naming another order; `lines.N.orderLine` for an ID that isn't a visible line of the order; `lines.N.quantity` for more than the line's outstanding;
     - 404 `CUSTOMER_ORDER_NOT_FOUND`;
     - 409 `CUSTOMER_ORDER_NOT_OPEN`, `SHIPMENT_ID_RACE` or `SHIPMENT_IDS_EXHAUSTED`.
   - `GET /api/tenants/{tenant}/shipments/{id}` returns one shipment (404 `SHIPMENT_NOT_FOUND`).
+  - `PATCH /api/tenants/{tenant}/shipments/{id}` (since #147, spec `2026-10-23--2006UTC-shipment-edit-cancel`) takes `{ version, plannedDate, lines: [{ orderLine, quantity, unit, customerOrder? }] }`, a strict body.
+    - It replaces an Open shipment's plan. A listed order line the shipment already ships keeps its line, a new one adds a line numbered after every earlier one, and a line left out is removed.
+    - An unchanged entered quantity and unit keeps its stored factor. An edit that changes nothing writes no audit and keeps the version.
+    - One that leaves nothing to issue completes the shipment in the same transaction.
+    - Refusals:
+      - 400 `lines.N.quantity` below the line's `issued`, or a raise that would leave more to issue than the order line's outstanding; plus create's line refusals;
+      - 404 `SHIPMENT_NOT_FOUND`;
+      - 409 `VERSION_CONFLICT`, `SHIPMENT_NOT_OPEN`, or `SHIPMENT_LINE_ISSUED` with `params.line` when a removed line had any goods issue.
+  - `POST /api/tenants/{tenant}/shipments/{id}/cancel` (since #147) takes the strict body `{ version }`.
+    - It cancels an Open shipment that no goods issue was ever posted against, even one reversed since. Stock and the order are untouched.
+    - Refusals: 404 `SHIPMENT_NOT_FOUND`; 409 `VERSION_CONFLICT`, `SHIPMENT_NOT_OPEN` or `SHIPMENT_ISSUED`.
+  - Both are keyed tenant writes: bearer, `Idempotency-Key`, `Dataset-Generation`, read-only refusal. Both roles may call them.
+  - They audit `shipments.shipment.updated` (before/after `{ plannedDate, status, lines }`) and `shipments.shipment.cancelled`.
+  - A shipment's `version` also advances on a goods issue, its reversal and every status change, and a stock reversal that loses a race on it answers 409 `VERSION_CONFLICT`.
   - `GET /api/tenants/{tenant}/goods-issues` returns the goods issues newest first, in pages of 100 (`?page=2`); `?shipment=00000001` keeps one shipment's (404 `SHIPMENT_NOT_FOUND`). Each is `{ id, shipment, customerOrder, location, businessDate, createdAt, lines: [{ line, orderLine, material, quantity, enteredQuantity, enteredUnit, numerator, denominator }] }`.
   - `POST /api/tenants/{tenant}/goods-issues` takes `{ shipment, lines: [{ line, quantity, unit, shipment? }] }`, with 1 to 100 lines, each for a different shipment line. It takes no date: a sent date is dropped. Refusals:
     - 400 on a line field: `lines.N.shipment` for a line naming another shipment; `lines.N.line` for a line number the shipment doesn't have; `lines.N.quantity` for more than the line's `toIssue`, whatever the stock;

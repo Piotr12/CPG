@@ -107,5 +107,5 @@ The issue's nine criteria (#84). Each is covered by a service test against real 
   - A two-connection race on the outstanding was added (two shipments, plenty of stock): the loser is refused with `SHIPMENT_NOT_OPEN`.
 - Known gap for E11-S01. A line completes on `fulfilled ≥ quantity`, while outstanding also subtracts `abandoned`. When Close Early starts setting `abandoned`, it must set the line and order statuses (`closed-early`) in the same step. Nothing sets `abandoned` today.
   - Resolved by E11-S01 (#90, PR #123): outstanding honours the line status, and Close Early sets the line and order states and completes the shipments (`tests/integration/document-lifecycle.test.ts`).
-- Implemented in PR #112 (883459a). Editing or cancelling a shipment stays out of scope, as this spec says. It is tracked as E08-S05 (#147).
+- Implemented in PR #112 (883459a). Editing or cancelling a shipment stays out of scope, as this spec says. E08-S05 (#147) adds it: spec `2026-10-23--2006UTC-shipment-edit-cancel`, design PR #180, implementation PR #182.
 
