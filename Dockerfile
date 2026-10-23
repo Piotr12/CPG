@@ -12,6 +12,11 @@ COPY packages/db/package.json packages/db/
 COPY packages/ui/package.json packages/ui/
 # --ignore-scripts: better-sqlite3 ships prebuilt binaries (incl. musl) and picks one at runtime;
 # without it npm runs node-gyp, which needs a compiler toolchain.
+# One ECONNRESET from the registry outlasted npm's default 2 retries and failed a deploy, so retry
+# each request 5 times, waiting 20 s to 2 min between tries.
+ENV NPM_CONFIG_FETCH_RETRIES=5 \
+    NPM_CONFIG_FETCH_RETRY_MINTIMEOUT=20000 \
+    NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT=120000
 RUN npm ci --ignore-scripts
 
 # Build the app (output: "standalone", traced from the monorepo root)
