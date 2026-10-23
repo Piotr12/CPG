@@ -50,6 +50,7 @@ describe("migrateDatabase", () => {
       "Migration20261021075527_shipment_order_cursor",
       "Migration20261021095627_audit_record_index",
       "Migration20261021101252_transfer_reversals",
+      "Migration20261023101022_location_guard_indexes",
     ]);
     expect(await migrateDatabase(config)).toEqual([]);
   });

@@ -48,6 +48,8 @@ export const PurchaseRequisition = defineEntity({
     version: p.integer().version(),
   },
   uniques: [{ properties: ["tenant", "code"] }],
+  /** Serves the location-deactivation guard: the lowest Open requisition at a location. */
+  indexes: [{ properties: ["tenant", "location", "status", "code"] }],
 });
 
 export type PurchaseRequisition = InferEntity<typeof PurchaseRequisition>;

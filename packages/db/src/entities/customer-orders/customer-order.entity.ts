@@ -24,5 +24,7 @@ export const CustomerOrder = defineEntity({
     version: p.integer().version(),
   },
   uniques: [{ properties: ["tenant", "code"] }],
+  /** Serves the location-deactivation guard: the lowest Open order at a location. */
+  indexes: [{ properties: ["tenant", "location", "status", "code"] }],
 });
 export type CustomerOrder = InferEntity<typeof CustomerOrder>;
