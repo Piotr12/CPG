@@ -3,7 +3,7 @@
 **Date:** 2026-10-23 10:07 UTC
 **Agent:** Claude Code / claude-opus-5-5 (cezar, `om-auto-fix-issue 164`)
 **Spec:** none
-**Status:** done
+**Status:** in progress (PR #173 open, CI pending)
 
 ## Goal
 
