@@ -326,3 +326,7 @@ N01/N04 exclude costing and capacity. No product decision is superseded.
 - Design PR #117 (`bb145f3`), implementation PR #119 (`c6bfcda`), both merged on 2026-10-21; #89 closed. Plan: `.ai/pipeline/runs/2026-10-20--2235UTC-production-completions.md`.
 - The plan's "Deviations from the spec" records seven deviations. Among them: the form shows no live per-row variance (the server records it), an added input's errors land on its row, and the ledger keeps each line's entered quantity and unit.
 - Closure follow-up (2026-10-21): an added component is labelled "Added" here but "Extra" in the variance report. The two unconfirmed deviations (no live per-row variance on the form; a missing pinned component refused without naming the material) await the owner's decision in E10-S04 (#153).
+- E10-S04 (#153, PR #174, 2026-10-23), decided with the issue's defaults and posted on #153 for the owner to override:
+  - The flag is "Extra" / "Dodatkowy" on the completion form, the completion history and the variance report. The form's added rows read "Extra input N" / "Dodatkowy materiał N".
+  - Q1 kept: no live per-row variance on the form. The history shows each line's variance once the completion is posted.
+  - Q2 built: a completion that leaves out a pinned component answers 400 `VALIDATION_FAILED`, still keyed on `components`, with `params.material` naming every missing code in recipe order (comma-separated). The form translates it in EN and PL. `ValidationError` now carries optional message parameters through both wrappers.

@@ -117,6 +117,9 @@ describe("production completions in the UI and API", () => {
     const finished = await write("POST", completions(planned.id), used("1", "0.5", "2", [{ material: giftBox, quantity: "1", unit: "each" }]));
     expect(finished.status).toBe(400);
     expect(Object.keys(json(finished).error.fieldErrors)).toEqual(["components.2.material"]);
+    const missing = await write("POST", completions(planned.id), { quantity: "1", unit: "each", components: [{ material: cocoa, quantity: "0.5", unit: "kg" }] });
+    expect(missing.status).toBe(400);
+    expect(json(missing).error).toMatchObject({ code: "VALIDATION_FAILED", fieldErrors: { components: [expect.any(String)] }, params: { material: wrapper } });
     expect((await stock(cocoa)).quantity).toBe(before);
     expect(json(await api("GET", completions(planned.id))).data).toEqual([]);
 

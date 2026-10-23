@@ -375,12 +375,29 @@ describe("ProductionCompletionService", () => {
       const before = await nothingWritten();
       await expect(
         service().post("00000001", { quantity: "40", unit: "each", components: [{ material: COCOA, quantity: "20", unit: "lb" }] }, ACTOR),
-      ).rejects.toMatchObject({ code: "VALIDATION_FAILED", fieldErrors: { components: [MISSING_COMPONENT_MESSAGE], "components.0.unit": [UNIT_NOT_CONVERTIBLE_MESSAGE] } });
+      ).rejects.toMatchObject({
+        code: "VALIDATION_FAILED",
+        fieldErrors: { components: [MISSING_COMPONENT_MESSAGE], "components.0.unit": [UNIT_NOT_CONVERTIBLE_MESSAGE] },
+        messageParams: { material: WRAPPER },
+      });
       await expect(service().post("00000001", { ...completion("40", "20", "80"), unit: "box" }, ACTOR)).rejects.toMatchObject({
         code: "VALIDATION_FAILED",
         fieldErrors: { unit: [UNIT_NOT_CONVERTIBLE_MESSAGE] },
       });
       expect(await nothingWritten()).toEqual(before);
+    });
+
+    it("names every missing recipe component, in recipe order, and nothing when none is missing (#153)", async () => {
+      await order();
+      await correct(MILK, "10");
+      const refusal = (components: ProductionCompletionInput["components"]) => service().post("00000001", { quantity: "40", unit: "each", components }, ACTOR).catch((error: unknown) => error);
+      expect(await refusal([{ material: MILK, quantity: "1", unit: "kg" }])).toMatchObject({
+        fieldErrors: { components: [MISSING_COMPONENT_MESSAGE] },
+        messageParams: { material: `${COCOA}, ${WRAPPER}` },
+      });
+      const unconvertible = await refusal(completion("40", "20", "80").components.map((line) => line.material === COCOA ? { ...line, unit: "lb" } : line));
+      expect(unconvertible).toMatchObject({ fieldErrors: { "components.0.unit": [UNIT_NOT_CONVERTIBLE_MESSAGE] } });
+      expect(unconvertible).toHaveProperty("messageParams", undefined);
     });
 
     it("records zero output as waste: inputs fall, output and produced stay, the order stays Open (PRD-018)", async () => {

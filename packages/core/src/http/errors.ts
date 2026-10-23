@@ -21,10 +21,10 @@ export class AppError extends Error {
   }
 }
 
-/** The input failed its schema. */
+/** The input failed its schema. `messageParams` name what a field message refers to, such as a missing record. */
 export class ValidationError extends AppError {
-  constructor(readonly fieldErrors: FieldErrors) {
-    super("VALIDATION_FAILED", "Some fields are invalid.");
+  constructor(readonly fieldErrors: FieldErrors, messageParams?: ErrorParams) {
+    super("VALIDATION_FAILED", "Some fields are invalid.", 400, messageParams);
   }
 }
 

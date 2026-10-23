@@ -34,7 +34,8 @@ export interface CompletionFormProps {
   unit: string;
   inputs: CompletionInputChoice[];
   formatError: (error: Extract<ApiResult<unknown>, { ok: false }>["error"]) => string;
-  formatFieldError: (message: string) => string;
+  /** Translates a field message; `params` are the refusal's, for a message about no single row. */
+  formatFieldError: (message: string, params?: Record<string, string>) => string;
   action: (values: CompletionValues) => Promise<ApiResult<CompletionResult>>;
   onSuccess: (result: CompletionResult) => void;
   onBack: () => void;
@@ -87,11 +88,11 @@ export function CompletionForm({ labels, preview, unit, inputs, formatError, for
     setFieldErrors({});
   };
 
-  function show(errors: FieldErrors, fallback: string | null) {
+  function show(errors: FieldErrors, fallback: string | null, params?: Record<string, string>) {
     const rows = Object.fromEntries(Object.entries(errors).filter(([name]) => /^components\.\d+\.(material|quantity|unit)$/.test(name)));
     const other = Object.entries(errors).filter(([name]) => !Object.hasOwn(rows, name)).flatMap(([, messages]) => messages);
     setFieldErrors(rows);
-    setFormError(other.length > 0 ? formatFieldError(other[0]) : Object.keys(rows).length > 0 ? null : fallback);
+    setFormError(other.length > 0 ? formatFieldError(other[0], params) : Object.keys(rows).length > 0 ? null : fallback);
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -126,7 +127,7 @@ export function CompletionForm({ labels, preview, unit, inputs, formatError, for
           setRaced({ produced, target, output, unit: base });
           setAccepted(false);
         }
-        show(result.error.fieldErrors ?? {}, formatError(result.error));
+        show(result.error.fieldErrors ?? {}, formatError(result.error), result.error.params);
       });
     });
   }
