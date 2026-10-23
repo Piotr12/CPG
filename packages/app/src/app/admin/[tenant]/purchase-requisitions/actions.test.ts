@@ -1,6 +1,6 @@
 import { ConflictError } from "@cpg/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createRequisition } from "./actions";
+import { createRequisition, setRequisitionRequiredDate } from "./actions";
 
 const alice = { sessionId: "s2", userId: "u2", username: "alice", role: "user" };
 const aliceActor = { userId: "u2", username: "alice", sessionId: "s2", channel: "ui", token: null };
@@ -8,7 +8,7 @@ const requisition = { id: "00000002", version: 1 };
 const FORM = { material: "00000001", location: "00000001", quantity: "100", unit: "kg", requiredDate: "2027-03-01" };
 
 const mocks = vi.hoisted(() => ({
-  purchaseRequisitionService: { create: vi.fn() },
+  purchaseRequisitionService: { create: vi.fn(), setRequiredDate: vi.fn() },
   bound: vi.fn(),
   currentUser: vi.fn(),
   revalidatePath: vi.fn(),
@@ -68,5 +68,58 @@ describe("requisition actions", () => {
     await expect(createRequisition("prod", 1, FORM)).resolves.toMatchObject({ error: { code: "TENANT_READ_ONLY" } });
 
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  describe("setRequisitionRequiredDate", () => {
+    beforeEach(() => {
+      mocks.purchaseRequisitionService.setRequiredDate.mockResolvedValue({ ...requisition, version: 2 });
+    });
+
+    it("sets the bound row's required date at the version its dialog opened with, and refreshes the list", async () => {
+      await expect(setRequisitionRequiredDate("prod", 1, "00000002", 1, { requiredDate: "2027-04-01" })).resolves.toEqual({
+        ok: true,
+        data: { ...requisition, version: 2 },
+      });
+
+      expect(mocks.bound).toHaveBeenCalledWith("prod", 1);
+      expect(mocks.purchaseRequisitionService.setRequiredDate).toHaveBeenCalledWith("00000002", "2027-04-01", 1, aliceActor);
+      expect(mocks.revalidatePath.mock.calls).toEqual([["/admin/prod/purchase-requisitions"]]);
+    });
+
+    it("refreshes after a version conflict, so the row shows what changed", async () => {
+      mocks.purchaseRequisitionService.setRequiredDate.mockRejectedValueOnce(new ConflictError("Changed.", "VERSION_CONFLICT"));
+
+      await expect(setRequisitionRequiredDate("prod", 1, "00000002", 1, { requiredDate: "2027-04-01" })).resolves.toMatchObject({
+        ok: false,
+        error: { code: "VERSION_CONFLICT" },
+      });
+
+      expect(mocks.revalidatePath.mock.calls).toEqual([["/admin/prod/purchase-requisitions"]]);
+    });
+
+    it("refuses a signed-out caller or a date that isn't one, writing and refreshing nothing", async () => {
+      await expect(setRequisitionRequiredDate("prod", 1, "00000002", 1, { requiredDate: "2027-02-30" })).resolves.toMatchObject({
+        ok: false,
+        error: { code: "VALIDATION_FAILED", fieldErrors: { requiredDate: [expect.any(String)] } },
+      });
+      mocks.currentUser.mockResolvedValue(null);
+      await expect(setRequisitionRequiredDate("prod", 1, "00000002", 1, { requiredDate: "2027-04-01" })).resolves.toMatchObject({
+        ok: false,
+        error: { code: "UNAUTHORIZED" },
+      });
+
+      expect(mocks.purchaseRequisitionService.setRequiredDate).not.toHaveBeenCalled();
+      expect(mocks.revalidatePath).not.toHaveBeenCalled();
+    });
+
+    it("doesn't refresh after a read-only refusal", async () => {
+      mocks.purchaseRequisitionService.setRequiredDate.mockRejectedValueOnce(new ConflictError("Read-only.", "TENANT_READ_ONLY"));
+
+      await expect(setRequisitionRequiredDate("prod", 1, "00000002", 1, { requiredDate: "2027-04-01" })).resolves.toMatchObject({
+        error: { code: "TENANT_READ_ONLY" },
+      });
+
+      expect(mocks.revalidatePath).not.toHaveBeenCalled();
+    });
   });
 });

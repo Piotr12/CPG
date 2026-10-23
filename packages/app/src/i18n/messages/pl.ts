@@ -568,6 +568,7 @@ export const pl: Messages = {
     empty: "Brak prognoz w {tenant}.",
     emptyHint: "Dodaj pierwszą przyciskiem Dodaj prognozę.",
     emptyFiltered: "Żadna prognoza nie pasuje do filtra.",
+    pagination: "Strony prognoz", previous: "Poprzednia", next: "Następna", page: "Strona {page} z {pages}",
     filter: {
       label: "Filtr prognoz",
       material: "Materiał",
@@ -905,6 +906,13 @@ export const pl: Messages = {
     status: { open: "Otwarte", completed: "Zrealizowane", "closed-early": "Zamknięte wcześniej", cancelled: "Anulowane" },
     inactive: "Nieaktywny",
     cancel: "Anuluj",
+    changeDate: {
+      open: "Zmień datę",
+      title: "Zmień wymagany termin",
+      description: "Zmienia się tylko wymagany termin. Materiał, lokalizacja i ilość pozostają bez zmian.",
+      submit: "Zapisz",
+      pending: "Zapisywanie…",
+    },
     form: {
       material: "Materiał",
       location: "Lokalizacja",
@@ -956,6 +964,13 @@ export const pl: Messages = {
     status: { open: "Otwarte", completed: "Zrealizowane", "closed-early": "Zamknięte wcześniej", cancelled: "Anulowane" },
     inactive: "Nieaktywny",
     cancel: "Anuluj",
+    changeDate: {
+      open: "Zmień datę",
+      title: "Zmień planowaną datę",
+      description: "Zmienia się tylko planowana data tej pozycji. Jej ilość i to, co już przyjęto, pozostają bez zmian.",
+      submit: "Zapisz",
+      pending: "Zapisywanie…",
+    },
     details: { supplier: "Dostawca", location: "Lokalizacja", status: "Status", created: "Utworzono" },
     lines: {
       heading: "Pozycje",

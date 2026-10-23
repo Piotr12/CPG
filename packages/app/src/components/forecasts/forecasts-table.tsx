@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { ForecastView } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { fill, shownQuantity, type TenantContext } from "../forms/form-labels";
@@ -16,10 +17,12 @@ interface ForecastsTableProps {
   editable: boolean;
   /** Whether a filter is narrowing the list: an empty result then isn't an empty tenant. */
   filtered: boolean;
+  /** The page links under the table. */
+  pagination?: ReactNode;
 }
 
 /** A tenant's forecasts by material, location, then day: the quantity per day (DEM-001). */
-export function ForecastsTable({ tenant, rows, labels, editable, filtered }: ForecastsTableProps) {
+export function ForecastsTable({ tenant, rows, labels, editable, filtered, pagination }: ForecastsTableProps) {
   const t = labels.columns;
   const context: TenantContext = { tenant: tenant.code, generation: tenant.generation };
   const columns: DataTableColumn<ForecastRow>[] = [
@@ -51,6 +54,7 @@ export function ForecastsTable({ tenant, rows, labels, editable, filtered }: For
       rowKey={(row) => `${row.material}/${row.location}/${row.date}`}
       rowActions={editable ? (row) => <ForecastActions row={row} context={context} labels={labels} /> : undefined}
       empty={empty}
+      pagination={pagination}
     />
   );
 }

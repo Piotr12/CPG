@@ -1,0 +1,33 @@
+<!doctype html>
+<!-- Illustrative mockup for .ai/specs/2026-10-21--2035UTC-transfer-refusal-links.md: the refusal links the blocking transfer. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mockup — transfer refusal link</title>
+<style>
+  body { margin: 0; height: 100vh; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; background: #e5e5e5; display: flex; align-items: center; justify-content: center; }
+  .dialog { width: 384px; background: #fff; border: 1px solid #ddd; border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.12); overflow: hidden; }
+  .body { padding: 16px; }
+  h2 { margin: 0 0 6px; font-size: 16px; font-weight: 600; color: #111; }
+  p { margin: 0 0 14px; font-size: 14px; line-height: 1.45; color: #666; }
+  .alert { border: 1px solid #f3a3a8; background: #fde7e9; color: #d0021b; border-radius: 8px; padding: 9px 12px; font-size: 14px; line-height: 1.45; }
+  .alert a { color: inherit; text-decoration: underline; }
+  .new { outline: 2px dashed #2563eb; outline-offset: 2px; border-radius: 2px; }
+  .footer { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 16px; border-top: 1px solid #eee; background: #fafafa; }
+  button { font: inherit; font-size: 14px; border-radius: 8px; padding: 6px 10px; border: 1px solid #ddd; background: #fff; }
+  .destructive { border-color: transparent; background: #fde7e9; color: #d0021b; }
+  .note { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); font-size: 12px; color: #2563eb; }
+</style>
+</head>
+<body>
+  <div class="dialog" role="alertdialog">
+    <div class="body">
+      <h2>Deactivate 00000002?</h2>
+      <p>An inactive material can't be picked for new entries. It stays readable, with its history.</p>
+      <div class="alert" role="alert">Transfer 00000002 of this material is still Open, so it can't be deactivated. <a class="new" href="#/admin/prod/transfers/00000002">00000002</a></div>
+    </div>
+    <div class="footer"><button>Cancel</button><button class="destructive">Deactivate</button></div>
+  </div>
+  <div class="note">Proposed: the blocking transfer's ID links to /admin/prod/transfers/00000002 (dashed outline marks the change).</div>
+</body>
+</html>

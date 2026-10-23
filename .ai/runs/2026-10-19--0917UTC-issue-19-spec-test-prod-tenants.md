@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-19 09:17 UTC
 **Agent:** Claude Code (claude-opus-5-5) via cezar, `om-auto-fix-issue 19` → feature route → `om-auto-write-spec 19`
-**Spec:** .ai/specs/2026-10-19--0913UTC-test-prod-tenants.md
+**Spec:** .ai/specs/implemented/2026-10-19--0913UTC-test-prod-tenants.md
 **Status:** done
 
 ## Goal

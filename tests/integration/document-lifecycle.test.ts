@@ -261,7 +261,7 @@ describe("document cancellation and early closure", () => {
     try {
       expect(json(await write(`${root}/purchase-requisitions/${order.id}/cancel`, { version: order.version })).error.code).toBe("TENANT_READ_ONLY");
       await open("purchase-requisitions");
-      expect(await user.evaluate<number>('[...document.querySelectorAll("main button")].filter((button) => /^(Cancel|Close Early)/.test(button.textContent)).length')).toBe(0);
+      expect(await user.evaluate<number>('[...document.querySelectorAll("main button")].filter((button) => /^(Cancel|Close Early|Change date)/.test(button.textContent)).length')).toBe(0);
     } finally { await api("PATCH", root, { key: randomUUID(), body: { readOnly: false } }); }
     const testPath = "/api/tenants/test/purchase-requisitions/99999999/cancel";
     const tenant = json(await api("GET", "/api/tenants/test")).data;

@@ -325,3 +325,4 @@ N01/N04 exclude costing and capacity. No product decision is superseded.
 
 - Design PR #117 (`bb145f3`), implementation PR #119 (`c6bfcda`), both merged on 2026-10-21; #89 closed. Plan: `.ai/pipeline/runs/2026-10-20--2235UTC-production-completions.md`.
 - The plan's "Deviations from the spec" records seven deviations. Among them: the form shows no live per-row variance (the server records it), an added input's errors land on its row, and the ledger keeps each line's entered quantity and unit.
+- Closure follow-up (2026-10-21): an added component is labelled "Added" here but "Extra" in the variance report. The two unconfirmed deviations (no live per-row variance on the form; a missing pinned component refused without naming the material) await the owner's decision in E10-S04 (#153).

@@ -55,7 +55,7 @@
 
 ## Changes
 
-- `.ai/specs/2026-10-20--0908UTC-master-data-bom-import.md` and `.ai/specs/assets/master-data-bom-import/` (one current screenshot, three mockups with their HTML), on #97.
+- `.ai/specs/implemented/2026-10-20--0908UTC-master-data-bom-import.md` and `.ai/specs/assets/master-data-bom-import/` (one current screenshot, three mockups with their HTML), on #97.
 - The implementation, on #99 (see its tracking plan).
 
 ## Verification

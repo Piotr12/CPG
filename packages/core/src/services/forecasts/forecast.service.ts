@@ -1,4 +1,4 @@
-import { Forecast, OptimisticLockError, UniqueConstraintViolationException, type EntityManager, type Material } from "@cpg/db";
+import { Forecast, Location, Material, OptimisticLockError, UniqueConstraintViolationException, type EntityManager } from "@cpg/db";
 import type { DemoForecast } from "../../domain/demo/generate-dataset";
 import { ConflictError, NotFoundError, ValidationError, versionConflict } from "../../http/errors";
 import type { AuditActor } from "../audit/actor";
@@ -8,6 +8,7 @@ import { convertToBaseQuantity } from "../materials/base-quantity";
 import { conversionFieldError } from "../materials/conversion-field-error";
 import { findActiveMaterial, findMaterial } from "../materials/find-material";
 import { isScopeReadOnly } from "../tenants/tenant.service";
+import { DOCUMENT_PAGE_SIZE } from "../../validators/shipments/shipment.schema";
 
 /**
  * One forecast, as the screens and the API show it: material and location business IDs, the ISO
@@ -51,6 +52,17 @@ interface Deps {
   em: EntityManager;
 }
 
+/** How many forecasts `list` reads per query, without the identity map. */
+const KEY_BATCH = 500;
+
+/** A filter's query: the material and/or location it narrows to. */
+interface ForecastWhere {
+  material?: Material;
+  location?: Location;
+}
+
+const codeById = (records: { id: string; code: string }[]) => new Map(records.map(({ id, code }) => [id, code]));
+
 /**
  * The tenant's forecasts (E08-S03): the demand expected per material, location and day, with no
  * customer (DEM-001). At most one per day (DEM-007, D04), the input the slice 3 MRP run nets orders
@@ -67,21 +79,41 @@ export class ForecastService {
     this.em = em;
   }
 
-  /** The tenant's forecasts, by material ID, location ID, then date; `filter` narrows them. */
-  async list(filter: ForecastFilter = {}): Promise<ForecastView[]> {
-    const forecasts = await this.em.find(Forecast, {}, { populate: ["material", "location"] });
-    // Filtered and sorted here by business IDs: the populated material and location carry them, and a
-    // relation `orderBy` or `where` would add query joins the tenant lint rules don't vet.
-    return forecasts
-      .map(toView)
-      .filter(
-        ({ material, location }) =>
-          (filter.material === undefined || material === filter.material) &&
-          (filter.location === undefined || location === filter.location),
-      )
-      .sort(
-        (a, b) => a.material.localeCompare(b.material) || a.location.localeCompare(b.location) || a.date.localeCompare(b.date),
+  /**
+   * A page of the tenant's forecasts, `DOCUMENT_PAGE_SIZE` to a page, by material ID, location ID, then
+   * date; `filter` narrows them before paging, and a page past the last is empty.
+   */
+  async list(filter: ForecastFilter = {}, page = 1): Promise<ForecastView[]> {
+    const where = await this.where(filter);
+    if (!where) return [];
+    const codes = {
+      material: codeById(await this.em.find(Material, where.material ? { id: where.material.id } : {})),
+      location: codeById(await this.em.find(Location, where.location ? { id: where.location.id } : {})),
+    };
+    // Read as plain rows in batches and sorted here by business IDs: forecasts reference their material
+    // and location by UUID, and a relation `orderBy` would add query joins the tenant lint rules don't vet.
+    const views: ForecastView[] = [];
+    let after: string | undefined;
+    for (;;) {
+      const batch = await this.em.find(
+        Forecast,
+        { ...where, ...(after !== undefined && { id: { $gt: after } }) },
+        { fields: ["material", "location", "date", "quantity", "version"], orderBy: { id: "asc" }, limit: KEY_BATCH, disableIdentityMap: true },
       );
+      for (const { material, location, date, quantity, version } of batch) {
+        views.push({ material: codes.material.get(material.id)!, location: codes.location.get(location.id)!, date, quantity, version });
+      }
+      if (batch.length < KEY_BATCH) break;
+      after = batch.at(-1)!.id;
+    }
+    views.sort((a, b) => a.material.localeCompare(b.material) || a.location.localeCompare(b.location) || a.date.localeCompare(b.date));
+    return views.slice((page - 1) * DOCUMENT_PAGE_SIZE, page * DOCUMENT_PAGE_SIZE);
+  }
+
+  /** How many forecasts `filter` matches, for the pages of `list`. */
+  async count(filter: ForecastFilter = {}): Promise<number> {
+    const where = await this.where(filter);
+    return where ? this.em.count(Forecast, where) : 0;
   }
 
   /** A forecast for a day that has none yet for this material and location (DEM-001, DEM-007). */
@@ -147,6 +179,17 @@ export class ForecastService {
       await em.flush();
       return rows.length;
     });
+  }
+
+  /**
+   * The query `filter` makes, or null when it names a material or location the tenant doesn't have:
+   * it matches nothing.
+   */
+  private async where(filter: ForecastFilter): Promise<ForecastWhere | null> {
+    const material = filter.material === undefined ? undefined : await this.em.findOne(Material, { code: filter.material });
+    const location = filter.location === undefined ? undefined : await this.em.findOne(Location, { code: filter.location });
+    if (material === null || location === null) return null;
+    return { ...(material && { material }), ...(location && { location }) };
   }
 
   /** Runs an edit in one transaction; a write landing before its flush is `VERSION_CONFLICT`. */

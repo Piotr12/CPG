@@ -106,6 +106,17 @@ describe("CustomerOrderService", () => {
     await expect(service(scope).cancel(next.id, next.version, actor)).rejects.toMatchObject({ code: "VERSION_CONFLICT" });
   });
 
+  it("names the account that created an order in its create entry, with the session, channel and new values (AUD-001)", async () => {
+    const alice: AuditActor = { userId: "alice-id", username: "alice", sessionId: "browser-2", channel: "ui", token: null };
+    const order = await service().create(input(), alice);
+    expect(await audit()).toEqual([
+      expect.objectContaining({
+        action: "customer-orders.customer-order.created", subjectId: order.id, actorUserId: "alice-id", actorUsername: "alice",
+        sessionId: "browser-2", channel: "ui", before: null, after: expect.objectContaining({ customer: "00000001", lines: expect.stringContaining(order.lines[0].id) }),
+      }),
+    ]);
+  });
+
   it("stores one location, separate dates and exact historical quantities, starts Open, and audits the UI session (SAL-002, SAL-003, SAL-005, LFC-001)", async () => {
     const orders = service(); expect(await orders.list()).toEqual([]);
     const order = await orders.create(input(), actor);

@@ -15,8 +15,12 @@ describe("purchase-order labels", () => {
     expect(labels.errors).toMatchObject({ VALIDATION_FAILED: "Some fields are invalid.", REQUISITION_OVER_CONVERTED: expect.any(String) });
   });
 
-  it("hold no function, so the whole set can reach a client component", () => {
-    expect(Object.entries(ordersLabels(en)).filter(([, value]) => typeof value === "function")).toEqual([]);
+  it("hold no function at any depth, the Change date strings included, so the whole set can reach a client component", () => {
+    const functions = (node: unknown): boolean =>
+      typeof node === "function" || (typeof node === "object" && node !== null && Object.values(node).some(functions));
+    expect(functions(ordersLabels(en))).toBe(false);
+    expect(functions(ordersLabels(pl))).toBe(false);
+    expect(Object.values(ordersLabels(pl).changeDate).every((text) => typeof text === "string" && text !== "")).toBe(true);
   });
 
   it("translate an error by its code, and keep the server's message for an unknown one", () => {

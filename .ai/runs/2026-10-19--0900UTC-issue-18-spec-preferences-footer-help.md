@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-19 08:50 UTC
 **Agent:** Claude Code (claude-opus-5-5) via cezar, `om-auto-fix-issue 18` → feature route → `om-auto-write-spec 18`
-**Spec:** .ai/specs/2026-10-19--0855UTC-user-preferences-footer-help.md
+**Spec:** .ai/specs/implemented/2026-10-19--0855UTC-user-preferences-footer-help.md
 **Status:** done
 
 ## Goal

@@ -682,6 +682,24 @@ describe("PurchaseOrderService", () => {
       ]);
     });
 
+    it("advances the version even when the clock reads the order's last update to the millisecond", async () => {
+      // The order's version moves only when its row changes, and a line date change marks it through
+      // updatedAt: a clock that hasn't moved since the last write would leave the version behind.
+      vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-10-21T12:00:00.000Z") });
+      try {
+        const order = await service().create(DIRECT, ACTOR);
+
+        const changed = await service().setPlannedDates(order.id, [{ line: 1, plannedDate: "2027-04-01" }], order.version, ACTOR);
+
+        expect(changed.version).toBe(order.version + 1);
+        await expect(service().setPlannedDates(order.id, [{ line: 1, plannedDate: "2027-05-01" }], order.version, ACTOR)).rejects.toMatchObject({
+          code: "VERSION_CONFLICT",
+        });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it("writes and records nothing when no date differs", async () => {
       const order = await service().create(DIRECT, ACTOR);
 

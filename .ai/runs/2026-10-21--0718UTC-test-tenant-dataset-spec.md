@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-21 07:18 UTC
 **Agent:** Claude Code (Claude Fable 5.1) via cezar, headless
-**Spec:** `.ai/specs/2026-10-21--0718UTC-test-tenant-dataset.md` (written by this run)
+**Spec:** `.ai/specs/implemented/2026-10-21--0718UTC-test-tenant-dataset.md` (written by this run)
 **Status:** done (spec and issue delivered; the spec is a proposal until design PR #127 merges)
 
 ## Goal
@@ -21,7 +21,7 @@ The owner asked (through `/om-discover`, but explicitly without an intermediate 
 
 ## Changes
 
-- `.ai/specs/2026-10-21--0718UTC-test-tenant-dataset.md` (new)
+- `.ai/specs/implemented/2026-10-21--0718UTC-test-tenant-dataset.md` (new)
 - `.ai/runs/2026-10-21--0718UTC-test-tenant-dataset-spec.md` (this log)
 - GitHub issue #126 (E12-S02, labels `feature`, `priority-medium`, `risk-high`), linking the spec and design PR #127.
 - Design-only PR #127 (`cez/a447fe6d` → `main`, labels `documentation`, `review`, `skip-qa`, `priority-medium`, `risk-low`), carrying the spec and this log.
@@ -34,4 +34,4 @@ The owner asked (through `/om-discover`, but explicitly without an intermediate 
 ## Follow-ups
 
 - The owner confirms Q2, Q4, Q6, Q15 and Q16 on the design PR; the spec is a proposal until it merges (SDLC.md).
-- Implementation: `om-auto-implement-spec .ai/specs/2026-10-21--0718UTC-test-tenant-dataset.md` after the design PR merges; existing deployments then adopt the dataset with one Test reset.
+- Implementation: `om-auto-implement-spec .ai/specs/implemented/2026-10-21--0718UTC-test-tenant-dataset.md` after the design PR merges; existing deployments then adopt the dataset with one Test reset.
