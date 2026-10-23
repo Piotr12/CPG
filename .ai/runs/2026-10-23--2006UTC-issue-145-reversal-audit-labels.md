@@ -3,7 +3,7 @@
 **Date:** 2026-10-23 20:06 UTC
 **Agent:** Claude Code (cezar, `om-auto-fix-issue`) / claude-opus-5-5
 **Spec:** none (issue #145, E13-S04; specs of #92, #95, #96 already implemented)
-**Status:** in progress
+**Status:** done
 
 ## Goal
 
@@ -25,6 +25,7 @@ Issue #145: completion and transfer reversal entries record audit fields without
 - 20:10 — Implemented steps 1–7 as planned. Labels: EN "original movement {n}" / "reversing movement {n}", "movement count", "posting", "posting kind" (values dispatch/receipt/write-off), "completion"; `reversal` now reads "reversal". PL: "ruch pierwotny {n}" / "ruch odwracający {n}", "liczba ruchów", "księgowanie", "rodzaj księgowania" (wydanie/przyjęcie/odpis), "wykonanie", "odwrócenie".
 - 20:14 — Docker isn't reachable from this account (lesson 2026-10-19), so I ran the touched integration files against the standalone build on a fresh `DATA_DIR`.
 - 20:30 — PR #181 opened. A fresh-context review (subagent running `om-code-review`) approved with minors only. It found no field missing from `AUDIT_FIELDS` after reading every recorder call and snapshot helper. Fixed: the Polish integration test resets the language in `finally`; both reversal tests assert the records the AUD-004 test made; the "names no field nothing records" assertion is gone, because stored entries keep retired fields (R08) and need their labels; the new labels are in alphabetical order; `isAuditField` uses a `Set`. Not changed: the app keeps its own field patterns, because `audit-table.tsx` renders on the client and importing `@cpg/core` there would pull server code into its bundle.
+- 20:45 — Browser QA (evidence only; standalone build, as Docker is unavailable) passed every step in EN and PL: completion, production-order and transfer (dispatch and write-off) reversal entries, the variance report, and 390 px. Evidence: https://github.com/Piotr12/CPG/pull/181#issuecomment-6374143812. `needs-qa` stays for a human QA sign-off.
 
 ## Changes
 
@@ -46,3 +47,6 @@ Issue #145: completion and transfer reversal entries record audit fields without
 - `CPG_BASE_URL=http://127.0.0.1:3145 npm run test:integration -- tests/integration/audit-history.test.ts tests/integration/production-transfer-reversals.test.ts tests/integration/variance-report-api.test.ts`: 3 files, 20 tests passed (standalone build, fresh `DATA_DIR`). The full suite runs in the PR's CI.
 
 ## Follow-ups
+- Human QA (`needs-qa` → `qa-approved`) before merge.
+- Not exercised in the browser: a reversed *receipt*'s kind label (unit-tested) and the UI reversal dialogs (reversals were posted through the API).
+- Optional, from review: type `AuditEntry` snapshot keys as a compile-time layer on top of the runtime check.
