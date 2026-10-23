@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-19 09:12 UTC
 **Agent:** Claude Code (Opus 5.5) via cezar, `om-auto-fix-issue 16` → `om-auto-write-spec 16` → `om-spec-writing --autonomous`
-**Spec:** `.ai/specs/2026-10-19--0912UTC-user-management.md` (written in this run)
+**Spec:** `.ai/specs/implemented/2026-10-19--0912UTC-user-management.md` (written in this run)
 **Status:** done (spec PR #33 open)
 
 ## Goal
@@ -26,7 +26,7 @@ Write the spec for E01-S02 (#16) and open the design-only spec PR. The issue say
 
 ## Changes
 
-- `.ai/specs/2026-10-19--0912UTC-user-management.md` (new spec)
+- `.ai/specs/implemented/2026-10-19--0912UTC-user-management.md` (new spec)
 - `.ai/specs/assets/user-management/` (1 current screenshot, 4 mockups with their HTML)
 - `.ai/lessons.md` (zsh `path` lesson)
 

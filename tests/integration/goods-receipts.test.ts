@@ -81,7 +81,7 @@ describe("goods receipts in the UI", () => {
     const lines = await tableRows(una, "Lines");
     expect(lines.map((row) => row.slice(-5))).toEqual([
       ["110 kg", "0 kg", "Received", "0 kg", ""],
-      ["4 each", "6 each", "Open", "0 each", "Close Early"],
+      ["4 each", "6 each", "Open", "0 each", "Change date Close Early"],
     ]);
     const receipts = await tableRows(una, "Goods receipts");
     expect(receipts).toHaveLength(1);
@@ -91,6 +91,45 @@ describe("goods receipts in the UI", () => {
 
     const stock = json(await api("GET", `/api/tenants/prod/stock?material=${ids.steel}&location=${ids.plant}`)).data as StockView;
     expect(stock.quantity).toBe("110.000000");
+  });
+
+  it("changes the partly received line's planned date on screen, leaving what it received unchanged (BUY-024, #142)", async () => {
+    const before = json(await api("GET", `/api/tenants/prod/purchase-orders/${ids.order}`)).data as OrderView;
+    const label = `Change date — Purchase orders ${ids.order} — Line 2`;
+    await una.open(`${baseUrl}/admin/prod/purchase-orders/${ids.order}`);
+    await una.waitUntil(ready(`document.querySelector(${JSON.stringify(`main button[aria-label="${label}"]`)})`));
+    // Line 1 received everything, so only line 2 offers it.
+    expect(await una.evaluate<number>(`document.querySelectorAll('main button[aria-label^="Change date"]').length`)).toBe(1);
+
+    await una.clickRole("button", label);
+    await una.waitFor("[role=dialog]");
+    expect(await una.evaluate<string>(`document.querySelector("[role=dialog] [name=plannedDate]").value`)).toBe("2026-10-14");
+    expect(await una.fillDate("[role=dialog] [name=plannedDate]", "2026-10-28")).toBe("2026-10-28");
+    await una.click("[role=dialog] button[type=submit]");
+    await una.waitUntil(closed);
+
+    await una.waitForText("2026-10-28");
+    expect((await tableRows(una, "Lines"))[1].slice(4, 8)).toEqual(["2026-10-28", "—", "4 each", "6 each"]);
+    const after = json(await api("GET", `/api/tenants/prod/purchase-orders/${ids.order}`)).data as OrderView;
+    expect(after.version).toBe(before.version + 1);
+    expect(after.lines.map(({ plannedDate, received, quantity }) => [plannedDate, received, quantity])).toEqual([
+      ["2026-10-13", "110.000000", "100.000000"],
+      ["2026-10-28", "4.000000", "10.000000"],
+    ]);
+    const audit = json(await api("GET", `/api/tenants/prod/audit?subjectType=PurchaseOrder&subjectId=${ids.order}`)).data.entries as {
+      action: string;
+      channel: string;
+      actor: { username: string };
+      before: unknown;
+      after: unknown;
+    }[];
+    expect(audit[0]).toMatchObject({
+      action: "purchase-orders.purchase-order.updated",
+      channel: "ui",
+      actor: { username: USERNAME },
+      before: { line2PlannedDate: "2026-10-14" },
+      after: { line2PlannedDate: "2026-10-28" },
+    });
   });
 
   it("completes the order on the last outstanding quantity and offers no more receipts (BUY-016, LFC-008)", async () => {

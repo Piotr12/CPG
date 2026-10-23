@@ -2,6 +2,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import {
+  Forecast,
   initOrm,
   Location,
   Material,
@@ -248,6 +249,76 @@ describe("ForecastService", () => {
     expect(await days({ location: "00000001" })).toEqual(["00000001@00000001", "00000004@00000001"]);
     expect(await days({ material: "00000001", location: "00000003" })).toEqual(["00000001@00000003"]);
     expect(await days({ material: "00000009" })).toEqual([]);
+  });
+
+  describe("paging", () => {
+    const DAYS = 84;
+    const day = (offset: number) => new Date(Date.UTC(2027, 0, 1 + offset)).toISOString().slice(0, 10);
+
+    // 3 materials × 2 locations × 84 days = 504 forecasts: more than one read batch of 500. The masters'
+    // UUIDs run against their business IDs, and the forecasts are inserted newest material first, so
+    // neither UUID nor insertion order matches the list's order.
+    beforeEach(async () => {
+      const em = scopedEm();
+      const materials = [
+        em.create(Material, { id: "ffffffff-0000-4000-8000-000000000000", code: "00000004", type: "finished", description: "Desk", baseUnit: "each" }),
+        em.create(Material, { id: "00000000-0000-4000-8000-000000000000", code: "00000003", type: "finished", description: "Chair", baseUnit: "each" }),
+        await em.findOneOrFail(Material, { code: "00000001" }),
+      ];
+      const locations = [
+        em.create(Location, { id: "00000000-0000-4000-8000-000000000001", code: "00000003", name: "Warehouse" }),
+        await em.findOneOrFail(Location, { code: "00000001" }),
+      ];
+      for (const material of materials) {
+        for (const location of locations) {
+          for (let offset = DAYS - 1; offset >= 0; offset--) em.create(Forecast, { material, location, date: day(offset), quantity: "1.000000" });
+        }
+      }
+      await em.flush();
+    });
+
+    const keys = (views: { material: string; location: string; date: string }[]) =>
+      views.map(({ material, location, date }) => `${material}@${location}@${date}`);
+    const expected = (materials: string[], locations: string[]) =>
+      materials.flatMap((material) => locations.flatMap((location) => Array.from({ length: DAYS }, (_, i) => `${material}@${location}@${day(i)}`)));
+    const allPages = async (filter: ForecastFilter, pages: number) => {
+      const result = [];
+      for (let page = 1; page <= pages; page++) result.push(...(await service().list(filter, page)));
+      return result;
+    };
+
+    it("pages by 100 in material, location and date order, a page past the last being empty", async () => {
+      expect(await service().count()).toBe(504);
+      expect(await service().list()).toEqual(await service().list({}, 1));
+      expect(await service().list({}, 1)).toHaveLength(100);
+      expect(await service().list({}, 6)).toHaveLength(4);
+      expect(await service().list({}, 7)).toEqual([]);
+      expect(keys(await allPages({}, 6))).toEqual(expected(["00000001", "00000003", "00000004"], ["00000001", "00000003"]));
+    });
+
+    it("keeps each forecast's quantity and current version", async () => {
+      await service().update({ material: "00000004", location: "00000003", date: day(83) }, { quantity: "7" }, 1, ACTOR);
+      const last = (await service().list({}, 6)).at(-1);
+      expect(last).toEqual({ material: "00000004", location: "00000003", date: day(83), quantity: "7.000000", version: 2 });
+      expect((await service().list({}, 6))[0]).toEqual({ material: "00000004", location: "00000003", date: day(80), quantity: "1.000000", version: 1 });
+    });
+
+    it("narrows before paging, and counts what the filter matches", async () => {
+      expect(await service().count({ material: "00000003" })).toBe(168);
+      expect(keys(await allPages({ material: "00000003" }, 2))).toEqual(expected(["00000003"], ["00000001", "00000003"]));
+      expect(await service().count({ location: "00000003" })).toBe(252);
+      expect(keys(await allPages({ location: "00000003" }, 3))).toEqual(expected(["00000001", "00000003", "00000004"], ["00000003"]));
+      expect(await service().count({ material: "00000004", location: "00000001" })).toBe(84);
+      expect(keys(await service().list({ material: "00000004", location: "00000001" }))).toEqual(expected(["00000004"], ["00000001"]));
+      expect(await service("test").count()).toBe(0);
+    });
+
+    it("matches nothing for a material or location the tenant doesn't have", async () => {
+      expect(await service().count({ material: "00000009" })).toBe(0);
+      expect(await service().list({ material: "00000009" })).toEqual([]);
+      expect(await service().count({ location: "00000009" })).toBe(0);
+      expect(await service().list({ material: "00000001", location: "00000009" })).toEqual([]);
+    });
   });
 
   describe("seedDemo", () => {

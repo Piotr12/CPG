@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveServerComponents } from "../../../../../../../tests/setup/server-components";
 import { en } from "../../../../i18n/messages/en";
@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => {
     materials: vi.fn(),
     locations: vi.fn(),
     units: vi.fn(),
+    setRequisitionRequiredDate: vi.fn(),
     notFound: vi.fn(() => {
       throw new Error("NEXT_HTTP_ERROR_FALLBACK;404");
     }),
@@ -31,7 +32,12 @@ vi.mock("next/navigation", () => ({ notFound: mocks.notFound }));
 vi.mock("@cpg/core", () => ({ AppError: mocks.AppError, tenantScope: mocks.tenantScope }));
 vi.mock("../../../../auth/require-admin", () => ({ requireUser: mocks.requireUser }));
 vi.mock("../../../../i18n/get-messages", () => ({ getMessages: mocks.getMessages }));
-vi.mock("./actions", () => ({ cancelRequisition: vi.fn(), closeEarlyRequisition: vi.fn(), createRequisition: vi.fn() }));
+vi.mock("./actions", () => ({
+  cancelRequisition: vi.fn(),
+  closeEarlyRequisition: vi.fn(),
+  createRequisition: vi.fn(),
+  setRequisitionRequiredDate: mocks.setRequisitionRequiredDate,
+}));
 
 const material = (id: string, description: string, baseUnit: string, active = true) => ({
   id,
@@ -98,11 +104,27 @@ describe("PurchaseRequisitionsPage", () => {
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Purchase requisitions — Test");
     const rows = within(screen.getByRole("table", { name: "Purchase requisitions" })).getAllByRole("row").slice(1);
     expect(rows.map((row) => within(row).getAllByRole("cell").map((cell) => cell.textContent))).toEqual([
-      ["00000001", "00000001Steel sheet", "00000001Main plant", "100 kg", "60 kg", "40 kg", "2027-03-01", "Open", "0 kg", "Close Early"],
+      ["00000001", "00000001Steel sheet", "00000001Main plant", "100 kg", "60 kg", "40 kg", "2027-03-01", "Open", "0 kg", "Change dateClose Early"],
       ["00000002", "00000002Old rivetInactive", "00000001Main plant", "5 each", "5 each", "40 each", "2027-03-01", "Completed", "0 each", ""],
     ]);
     expect(screen.getAllByRole("link", { name: "00000001" })[0].getAttribute("href")).toBe("/admin/test/materials/00000001");
     expect(screen.getByRole("button", { name: "Create requisition" })).toBeTruthy();
+  });
+
+  it("changes an Open row's required date at the version the page loaded, and offers no Change date on a Completed row", async () => {
+    mocks.setRequisitionRequiredDate.mockResolvedValue({ ok: false, error: { code: "VERSION_CONFLICT", message: "Changed." } });
+    render(await resolveServerComponents(page()));
+    const rows = within(screen.getByRole("table", { name: "Purchase requisitions" })).getAllByRole("row").slice(1);
+    expect(within(rows[1]).queryByRole("button")).toBeNull();
+
+    fireEvent.click(within(rows[0]).getByRole("button", { name: "Change date — Purchase requisitions 00000001" }));
+    expect(screen.getByRole("dialog", { name: "Change required date — Purchase requisitions 00000001" })).toBeTruthy();
+    expect((screen.getByLabelText("Required by") as HTMLInputElement).value).toBe("2027-03-01");
+    fireEvent.change(screen.getByLabelText("Required by"), { target: { value: "2027-04-01" } });
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Save" })));
+
+    expect(mocks.setRequisitionRequiredDate).toHaveBeenCalledWith("test", 1, "00000001", 1, { requiredDate: "2027-04-01" });
+    expect(screen.getByRole("alert").textContent).toBe(en.errors.VERSION_CONFLICT);
   });
 
   it("shows the list in Polish, and the empty state with how to start", async () => {
@@ -119,9 +141,16 @@ describe("PurchaseRequisitionsPage", () => {
     mocks.tenantScope.mockResolvedValue(scope(true));
     mocks.requisitions.mockResolvedValue([]);
 
-    render(await resolveServerComponents(page()));
+    const { unmount } = render(await resolveServerComponents(page()));
 
     expect(screen.getByText("No purchase requisitions in Test yet.")).toBeTruthy();
+    expect(screen.queryByRole("button")).toBeNull();
+    unmount();
+
+    // An Open row offers neither Change date nor its lifecycle action either.
+    mocks.requisitions.mockResolvedValue([requisition("00000001", "00000001", "100.000000", "0.000000", "open")]);
+    render(await resolveServerComponents(page()));
+    expect(screen.getByText("Open")).toBeTruthy();
     expect(screen.queryByRole("button")).toBeNull();
   });
 

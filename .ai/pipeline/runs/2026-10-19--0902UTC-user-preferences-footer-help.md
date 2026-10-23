@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-19 09:02 UTC
 **Agent:** Claude Code / claude-opus-5-5. `om-auto-fix-issue 18` → feature route → `om-auto-write-spec` (spec PR #31) → `om-auto-implement-spec` → `om-auto-create-pr`
-Source doc: .ai/specs/2026-10-19--0855UTC-user-preferences-footer-help.md (design on spec PR #31)
+Source doc: .ai/specs/implemented/2026-10-19--0855UTC-user-preferences-footer-help.md (design on spec PR #31)
 Issue: #18
 
 ## Goal

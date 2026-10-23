@@ -8,7 +8,7 @@ import {
   ORDER_LINE_COUNT_MESSAGE,
   SUPPLIER_CHOICE_MESSAGE,
 } from "./purchasing-fields.schema";
-import { orderCreateSchema, orderUpdateBodySchema } from "./purchase-order.schema";
+import { orderCreateSchema, orderLineDateSchema, orderUpdateBodySchema } from "./purchase-order.schema";
 
 const line = { material: "00000001", quantity: "20.0", unit: "kg", plannedDate: "2027-03-03" };
 const valid = { supplier: "00000001", location: "00000002", lines: [line] };
@@ -72,5 +72,11 @@ describe("order schemas", () => {
     expect(issues(update([]))).toEqual([["lines", ORDER_LINE_COUNT_MESSAGE]]);
     expect(issues(update(undefined))).toEqual([["lines", ORDER_LINE_COUNT_MESSAGE]]);
     expect(issues(update(Array.from({ length: 101 }, (_, index) => ({ line: index + 1, plannedDate: "2027-04-01" }))))).toEqual([["lines", ORDER_LINE_COUNT_MESSAGE]]);
+  });
+
+  it("takes a line's Change date form as the planned date alone, and names it when it is missing or not a date", () => {
+    expect(orderLineDateSchema.parse({ plannedDate: "2027-04-01", line: 2 })).toEqual({ plannedDate: "2027-04-01" });
+    expect(issues(orderLineDateSchema.safeParse({}))).toEqual([["plannedDate", CALENDAR_DATE_MESSAGE]]);
+    expect(issues(orderLineDateSchema.safeParse({ plannedDate: "2027-13-01" }))).toEqual([["plannedDate", CALENDAR_DATE_MESSAGE]]);
   });
 });

@@ -34,3 +34,9 @@ export const requisitionUpdateBodySchema = z.object({
   quantity: z.never({ error: REQUISITION_IMMUTABLE_MESSAGE }).optional(),
   unit: z.never({ error: REQUISITION_IMMUTABLE_MESSAGE }).optional(),
 });
+
+/**
+ * The requisition list's Change date form (spec 2026-10-21--2036UTC-purchasing-date-edits): only the
+ * new required date. The action supplies the version the dialog opened with.
+ */
+export const requisitionDateSchema = requisitionUpdateBodySchema.pick({ requiredDate: true });

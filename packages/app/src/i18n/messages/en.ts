@@ -600,6 +600,7 @@ export const en = {
     empty: "No forecasts in {tenant} yet.",
     emptyHint: "Add the first one with Add forecast.",
     emptyFiltered: "No forecasts match this filter.",
+    pagination: "Forecast pages", previous: "Previous", next: "Next", page: "Page {page} of {pages}",
     filter: {
       label: "Filter forecasts",
       material: "Material",
@@ -938,6 +939,14 @@ export const en = {
     status: { open: "Open", completed: "Completed", "closed-early": "Closed Early", cancelled: "Cancelled" },
     inactive: "Inactive",
     cancel: "Cancel",
+    /** The row's Change date dialog (spec 2026-10-21--2036UTC-purchasing-date-edits). */
+    changeDate: {
+      open: "Change date",
+      title: "Change required date",
+      description: "Only the required date changes. The material, location and quantity stay as they are.",
+      submit: "Save",
+      pending: "Saving…",
+    },
     form: {
       material: "Material",
       location: "Location",
@@ -989,6 +998,14 @@ export const en = {
     status: { open: "Open", completed: "Completed", "closed-early": "Closed Early", cancelled: "Cancelled" },
     inactive: "Inactive",
     cancel: "Cancel",
+    /** A line's Change date dialog (spec 2026-10-21--2036UTC-purchasing-date-edits). */
+    changeDate: {
+      open: "Change date",
+      title: "Change planned date",
+      description: "Only this line's planned date changes. Its quantity and what it has received stay as they are.",
+      submit: "Save",
+      pending: "Saving…",
+    },
     details: { supplier: "Supplier", location: "Location", status: "Status", created: "Created" },
     lines: {
       heading: "Lines",

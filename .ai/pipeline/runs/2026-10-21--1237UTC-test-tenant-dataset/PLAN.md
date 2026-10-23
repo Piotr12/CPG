@@ -3,7 +3,7 @@
 **Date:** 2026-10-21 12:37 UTC
 **Agent:** Claude Code (claude-opus-5-5), `om-auto-fix-issue` → `om-auto-implement-spec` → `om-auto-create-pr-loop`
 **Issue:** #126 (epic #78)
-**Source spec:** `.ai/specs/2026-10-21--0718UTC-test-tenant-dataset.md` (design PR #127, merged 2026-10-21 by the owner)
+**Source spec:** `.ai/specs/implemented/2026-10-21--0718UTC-test-tenant-dataset.md` (design PR #127, merged 2026-10-21 by the owner)
 **Branch:** `feat/test-tenant-dataset`
 **Engine:** om-auto-create-pr-loop (steps: 28, --loop: no)
 

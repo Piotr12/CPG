@@ -46,6 +46,6 @@ A report of physical on-hand and in-transit stock per material and location, wit
 - `npm audit`: not run. The only new code is CLI-generated from `radix-ui`, which is already a dependency, so no dependency changed.
 
 ## Follow-ups
-- Older lists (transfers, customer orders, production orders) still render their page links inline. They could switch to `PageLinks`.
+- Older lists (transfers, customer orders, production orders) still render their page links inline. They could switch to `PageLinks`: filed as #154.
 - A Reports group in the sidebar, when the variance and last-MRP reports arrive.
 - The acceptance catalogue statuses for UX-017, INV-012, API-014, UX-021 and TEN-018 are updated when epic E13 closes.

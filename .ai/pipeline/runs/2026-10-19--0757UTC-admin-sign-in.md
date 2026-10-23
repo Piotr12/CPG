@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-19 07:57 UTC
 **Agent:** Claude Code / claude-opus-5-5. `om-auto-fix-issue 15` → feature route → `om-auto-implement-spec 28` → `om-auto-create-pr`
-Source doc: .ai/specs/2026-10-19--0746UTC-admin-sign-in.md (design on spec PR #28)
+Source doc: .ai/specs/implemented/2026-10-19--0746UTC-admin-sign-in.md (design on spec PR #28)
 Issue: #15
 
 ## Goal

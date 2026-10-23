@@ -243,7 +243,7 @@ const en: Record<HelpTopicId, HelpText> = {
     body: [
       "Forecasts, under Sales in the sidebar, list the demand you expect per material, location and day. A forecast names no customer. The MRP run nets customer orders against it, so a forecast is the demand beyond the firm orders.",
       "Enter the quantity in the material's base unit, or in any unit the material converts, such as 2 cases; CPG stores it in the base unit. A material, location and day can have only one forecast. To change the quantity, use Change forecast; to move the day, remove the forecast and add one on the new day.",
-      "Choose a material and/or a location above the list and select Filter to see their quantities day by day. Clear filter shows everything again.",
+      "Choose a material and/or a location above the list and select Filter to see their quantities day by day. Clear filter shows everything again. The list is ordered by material, location and day, 100 per page; Previous and Next under it keep the filter.",
       "Every account can read the list. Only the administrator adds, changes and removes forecasts, with Add forecast and each row's ⋯ menu; through the API too. Only active materials and locations can get a new forecast. Every change appears in the tenant's audit, and a removal keeps the quantity it held.",
     ],
   },
@@ -272,6 +272,7 @@ const en: Record<HelpTopicId, HelpText> = {
       "A purchase order converts a requisition, wholly or in parts, possibly to different suppliers. Converted shows how much orders have taken so far and Outstanding what is left; when everything is converted the requisition becomes Completed.",
       "A requisition is planned supply only: it never changes stock. The quantity can be entered in any unit the material converts; CPG stores it in the base unit and keeps what was entered.",
       "Every account can create and read requisitions, with Create requisition here and through the API; only active materials and locations can be picked. A read-only tenant refuses new ones. Every change appears in the tenant's audit.",
+      "Change date on an Open requisition sets a new required date, here or through the API with PATCH, at the version you loaded; the material, location and quantity never change. A read-only tenant refuses it. Every change appears in the tenant's audit.",
     ],
   },
   "purchase-orders": {
@@ -291,7 +292,7 @@ const en: Record<HelpTopicId, HelpText> = {
       "Choose an order's ID to open its page: its supplier, location, status and every line, with the quantity in the material's base unit, the unit it was entered in, the planned date and the requisition it converted, if any.",
       "Each line shows what has been received and what is still outstanding. Post goods receipt records what arrived: a quantity per line, in any unit the material converts, leaving the other lines empty. Stock rises at the order's location with today's date, and the lines and the order update in the same step, or nothing is posted.",
       "A receipt may be partial, repeated or larger than what is outstanding: an excess is accepted and named in a warning. Once every line has received its quantity the order is Completed and takes no more receipts. Receipts can't be changed; they are listed under Goods receipts, newest first.",
-      "Planned dates can be changed through the API with PATCH, at the version you loaded, while the order is Open; each change appears in the tenant's audit. The supplier, the location and a line's material, unit and quantity never change.",
+      "Change date on an Open line sets its planned date, also after receipts, while the order is Open. The API changes planned dates with PATCH, several lines at once if needed. Both work at the version you loaded, and each change appears in the tenant's audit. The supplier, the location and a line's material, unit and quantity never change.",
     ],
   },
   transfers: {
@@ -537,7 +538,7 @@ const pl: Record<HelpTopicId, HelpText> = {
     body: [
       "Prognozy, w sekcji Sprzedaż w menu bocznym, to popyt, którego się spodziewasz, dla materiału, lokalizacji i dnia. Prognoza nie wskazuje klienta. Przebieg MRP bilansuje z nią zamówienia klientów, więc prognoza to popyt ponad twarde zamówienia.",
       "Ilość wpisz w jednostce bazowej materiału albo w każdej jednostce, którą materiał przelicza, na przykład 2 kartony; CPG zapisuje ją w jednostce bazowej. Materiał, lokalizacja i dzień mogą mieć tylko jedną prognozę. Aby zmienić ilość, użyj Zmień prognozę; aby przesunąć dzień, usuń prognozę i dodaj nową.",
-      "Wybierz materiał i/lub lokalizację nad listą i naciśnij Filtruj, aby zobaczyć ich ilości dzień po dniu. Wyczyść filtr pokazuje znów wszystko.",
+      "Wybierz materiał i/lub lokalizację nad listą i naciśnij Filtruj, aby zobaczyć ich ilości dzień po dniu. Wyczyść filtr pokazuje znów wszystko. Lista jest uporządkowana według materiału, lokalizacji i dnia, po 100 na stronę; Poprzednia i Następna pod nią zachowują filtr.",
       "Listę może przeglądać każde konto. Prognozy dodaje, zmienia i usuwa tylko administrator, przyciskiem Dodaj prognozę i menu ⋯ w wierszu; także przez API. Nową prognozę mogą dostać tylko aktywne materiały i lokalizacje. Każda zmiana pojawia się w audycie środowiska, a usunięcie zachowuje ilość, którą prognoza miała.",
     ],
   },
@@ -566,6 +567,7 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Zamówienie zakupu przekształca zapotrzebowanie w całości lub w częściach, także do różnych dostawców. Przekształcono pokazuje, ile zabrały dotąd zamówienia, a Pozostało to, co zostało; gdy wszystko przekształcono, zapotrzebowanie staje się Zrealizowane.",
       "Zapotrzebowanie to tylko planowana podaż: nigdy nie zmienia stanu magazynowego. Ilość można wpisać w każdej jednostce, którą materiał przelicza; CPG zapisuje ją w jednostce bazowej i zachowuje to, co wpisano.",
       "Zapotrzebowania może tworzyć i przeglądać każde konto, przyciskiem Utwórz zapotrzebowanie tutaj i przez API; wybrać można tylko aktywne materiały i lokalizacje. Środowisko tylko do odczytu odrzuca nowe. Każda zmiana pojawia się w audycie środowiska.",
+      "Zmień datę przy otwartym zapotrzebowaniu ustawia nowy wymagany termin, tutaj lub przez API poleceniem PATCH, w wersji, którą wczytano; materiał, lokalizacja i ilość nigdy się nie zmieniają. Środowisko tylko do odczytu odrzuca zmianę. Każda zmiana pojawia się w audycie środowiska.",
     ],
   },
   "purchase-orders": {
@@ -585,7 +587,7 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Wybierz ID zamówienia, aby otworzyć jego stronę: dostawca, lokalizacja, status i każda pozycja, z ilością w jednostce bazowej materiału, jednostką, w której ją wpisano, planowaną datą i zapotrzebowaniem, które przekształciła, jeśli jest.",
       "Każda pozycja pokazuje, ile przyjęto i ile jeszcze pozostało. Zaksięguj przyjęcie towaru zapisuje, co dotarło: ilość dla pozycji, w dowolnej jednostce, którą materiał przelicza, pozostałe pozycje zostają puste. Zapas w lokalizacji zamówienia rośnie z dzisiejszą datą, a pozycje i zamówienie zmieniają się w tym samym kroku albo nic nie zostaje zaksięgowane.",
       "Przyjęcie może być częściowe, powtórzone albo większe niż to, co pozostało: nadwyżka zostaje przyjęta i wskazana w ostrzeżeniu. Gdy każda pozycja przyjmie swoją ilość, zamówienie jest Zrealizowane i nie przyjmuje kolejnych dostaw. Przyjęć nie można zmieniać; są wymienione w sekcji Przyjęcia towaru, od najnowszego.",
-      "Planowane daty można zmienić przez API poleceniem PATCH, w wersji, którą wczytano, dopóki zamówienie jest Otwarte; każda zmiana pojawia się w audycie środowiska. Dostawca, lokalizacja oraz materiał, jednostka i ilość pozycji nigdy się nie zmieniają.",
+      "Zmień datę przy otwartej pozycji ustawia jej planowaną datę, także po przyjęciach, dopóki zamówienie jest Otwarte. API zmienia planowane daty poleceniem PATCH, także kilku pozycji naraz. Oba działają w wersji, którą wczytano, a każda zmiana pojawia się w audycie środowiska. Dostawca, lokalizacja oraz materiał, jednostka i ilość pozycji nigdy się nie zmieniają.",
     ],
   },
   transfers: {

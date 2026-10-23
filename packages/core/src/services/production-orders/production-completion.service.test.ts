@@ -39,6 +39,7 @@ import {
   type ProductionCompletionInput,
 } from "../../validators/production-orders/production-completion.schema";
 import type { AuditActor } from "../audit/actor";
+import { BomService } from "../boms/bom.service";
 import * as records from "../stock/reversal-records";
 import { StockService } from "../stock/stock.service";
 import { TransferService } from "../transfers/transfer.service";
@@ -203,7 +204,7 @@ describe("ProductionCompletionService", () => {
         ],
         reversal: null,
       });
-      expect(progressed).toMatchObject({ id: "00000001", produced: "40.000000", status: "open", version: 2 });
+      expect(progressed).toMatchObject({ id: "00000001", produced: "40.000000", outstanding: "60.000000", status: "open", version: 2 });
       expect([await physical(BAR), await physical(COCOA), await physical(WRAPPER)]).toEqual(["40.000000", "80.000000", "220.000000"]);
       const movements = await scoped().find(StockMovement, { type: PRODUCTION_COMPLETION_MOVEMENT }, { orderBy: { position: "asc" }, populate: ["material"] });
       const record = await scoped().findOneOrFail(ProductionCompletion, { code: "00000001" });
@@ -212,6 +213,29 @@ describe("ProductionCompletionService", () => {
         { postingId: record.id, position: 1, material: COCOA, quantity: "-20.000000", businessDate: today(), reason: "Production completion 00000001 for production order 00000001" },
         { postingId: record.id, position: 2, material: WRAPPER, quantity: "-80.000000", businessDate: today(), reason: "Production completion 00000001 for production order 00000001" },
       ]);
+    });
+
+    it("posts against the pinned revision after the BOM is revised and deactivated, and stays pinned once reactivated (LFC-022, BOM-026, BOM-029)", async () => {
+      await order();
+      await correct(COCOA, "100");
+      await correct(WRAPPER, "300");
+      const boms = () => new BomService({ em: scoped() });
+      const revised = await boms().update("00000001", { components: [{ material: COCOA, quantity: "9", unit: "kg" }, { material: WRAPPER, quantity: "5", unit: "each" }] }, 1, ACTOR);
+      const off = await boms().update("00000001", { active: false }, revised.version, ACTOR);
+      expect([revised.revision, off.active]).toEqual([2, false]);
+
+      const { completion: posted, order: progressed } = await service().post("00000001", completion("40", "20", "80"), ACTOR);
+      const pinned = [[COCOA, "20.000000", "0.000000"], [WRAPPER, "80.000000", "0.000000"]];
+      expect(posted.lines.map(({ material, expected, variance }) => [material, expected, variance])).toEqual(pinned);
+      expect(progressed).toMatchObject({ bom: "00000001", revision: 1, produced: "40.000000" });
+
+      const on = await boms().update("00000001", { active: true }, off.version, ACTOR);
+      expect(on).toMatchObject({ active: true, revision: 2 });
+      expect(on.revisions.map(({ number }) => number)).toEqual([2, 1]);
+      expect(await orders().get("00000001")).toMatchObject({ bom: "00000001", revision: 1 });
+      const [stored] = await service().list("00000001");
+      expect(stored.lines.map(({ material, expected, variance }) => [material, expected, variance])).toEqual(pinned);
+      expect((await service().preview("00000001", { quantity: "4", unit: "each" })).components.map(({ material, expected }) => [material, expected])).toEqual([[COCOA, "2.000000"], [WRAPPER, "8.000000"]]);
     });
 
     it("adds a second partial completion and keeps the first (PRD-012), listing the newest first", async () => {

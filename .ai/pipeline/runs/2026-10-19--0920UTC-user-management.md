@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-19 09:20 UTC
 **Agent:** Claude Code / claude-opus-5-5. cezar → `om-auto-fix-issue 16` → feature route → `om-auto-write-spec 16` (spec PR #33) → `om-auto-implement-spec` → `om-auto-create-pr`
-Source doc: .ai/specs/2026-10-19--0912UTC-user-management.md (design on spec PR #33, not yet on `main`)
+Source doc: .ai/specs/implemented/2026-10-19--0912UTC-user-management.md (design on spec PR #33, not yet on `main`)
 Issue: #16
 
 ## Goal
