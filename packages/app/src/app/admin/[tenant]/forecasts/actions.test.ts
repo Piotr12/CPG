@@ -79,7 +79,7 @@ describe("forecast actions", () => {
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 
-  it("doesn't refresh after a stale generation, a page rendered before a Test reset (TEN-030)", async () => {
+  it("doesn't refresh after a stale generation, a page rendered before a Test reset", async () => {
     const { ConflictError } = await vi.importActual<typeof import("@cpg/core")>("@cpg/core");
     mocks.service.remove.mockRejectedValue(new ConflictError("This tenant's data was reset since you read it.", "GENERATION_STALE"));
 

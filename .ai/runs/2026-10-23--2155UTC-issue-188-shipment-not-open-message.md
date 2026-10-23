@@ -16,13 +16,14 @@ Fix #188: (1) the goods-issue dialog's `SHIPMENT_NOT_OPEN` text no longer calls 
 - Test titles: besides the eight the issue lists, the same scan found four more E08 titles with the same problem: `orders-content.test.tsx` (SAL-006, mocked shipments), `goods-issues/route.test.ts` (INV-011, mocked service), and `issue-quantity.test.ts` (SAL-012 and SAL-013 on pure helpers that don't refuse or complete anything). All twelve get retitled; R07 stays on the route tests because they assert the token's actor. `seed-demo-data.test.ts` (SAL-006…009) belongs to the dataset epic, not E08, so it is left alone.
 
 - 22:10 Claimed #188 (assignee, `in-progress`, claim comment). Edits made. Targeted tests green. With the old EN/PL text put back, the new dialog test and the PL label assertion both fail, so they guard the fix.
+- 00:20 Fresh-context review (subagent, `om-code-review` checklist) found no blocker and three more over-claiming E08 titles: forecasts `route.test.ts` (DEM-001 on a mocked service → R07), forecasts `actions.test.ts` (TEN-030 on a mocked rejection) and the shipment page's not-found test (TEN-014 on mocked lookups). It also noted INV-020 belongs on the forecasts-api test that asserts `LOCATION_INACTIVE`, which the catalogue cites. All four were applied.
 - 00:02 Full gate green. Docker isn't available on this machine, so the touched integration files ran against a standalone build (fresh copy, fresh `DATA_DIR`, lessons 2026-10-19/20).
 
 ## Changes
 
 - `packages/app/src/i18n/messages/{en,pl}.ts`: the goods-issue `SHIPMENT_NOT_OPEN` now reads "This shipment isn't Open any more, so nothing more is issued against it." / "Ta wysyłka nie jest już otwarta, więc nic więcej w jej ramach nie wydajesz."
 - `components/goods-issues/issue-dialog.test.tsx`: a refusal of a shipment cancelled meanwhile shows the neutral text and no "completed". `labels.test.ts`: the PL text for the same code.
-- Retitled 12 test titles (the 8 the issue lists, plus `orders-content.test.tsx` SAL-006, `goods-issues/route.test.ts` INV-011, and `issue-quantity.test.ts` SAL-012/SAL-013). No catalogue row cites any of these files.
+- Retitled 15 test titles (12 in the first commit, 3 after review) and moved INV-020 onto the forecasts-api test that asserts it. The first 12 are the 8 the issue lists, plus `orders-content.test.tsx` SAL-006, `goods-issues/route.test.ts` INV-011, and `issue-quantity.test.ts` SAL-012/SAL-013. No catalogue row cites any of these files.
 - INV-007: `goods-issue.service.test.ts` (10 from 10 leaves 0.000000; movement balance 10 → 0) and `tests/integration/shipments-api.test.ts` (API issue of 10 from 10, stock reads 0.000000). The catalogue row is now Passed (automated).
 
 ## Verification

@@ -195,7 +195,7 @@ describe("ShipmentPage", () => {
     expect(document.querySelector("[lang]")?.getAttribute("lang")).toBe("pl");
   });
 
-  it("is the not-found state for an unknown tenant or a shipment this tenant doesn't have (TEN-014)", async () => {
+  it("is the not-found state for an unknown tenant or a shipment this tenant doesn't have", async () => {
     mocks.tenantScope.mockRejectedValueOnce(new mocks.AppError("TENANT_NOT_FOUND"));
     await expect(resolveServerComponents(page())).rejects.toThrow("404");
     mocks.get.mockRejectedValueOnce(new mocks.AppError("SHIPMENT_NOT_FOUND"));

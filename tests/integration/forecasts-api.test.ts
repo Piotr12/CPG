@@ -130,7 +130,7 @@ describe("forecasts through the API (E08-S03, R07)", () => {
     expect([rebased.status, json(rebased).error.code]).toEqual([409, "BASE_UNIT_IN_USE"]);
   });
 
-  it("refuses an inactive material or location in a new forecast, and stores nothing (MAT-029, LFC-019)", async () => {
+  it("refuses an inactive material or location in a new forecast, and stores nothing (MAT-029, LFC-019, INV-020)", async () => {
     const retired = await createMaster("materials", { type: "finished", description: "fcapi retired cabinet", baseUnit: "each" });
     const closed = await createMaster("locations", { name: "fcapi closed plant" });
     const deactivate = async (path: string) => {
