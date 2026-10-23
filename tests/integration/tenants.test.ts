@@ -49,10 +49,11 @@ describe("tenants in the admin", () => {
 
   it("opens Test with its header row, title and generation (TEN-011)", async () => {
     await clickHydrated(browser, "nav[aria-label='Choose a tenant'] a[href='/admin/test']");
+    // /admin has a card description too: wait for Test's page before reading anything.
+    await browser.waitUntil(`${shownHeader}?.dataset.tenant === "test" && ${shownHeader}.textContent.includes("Active tenant")`);
     await browser.waitFor("[data-slot=card-description]");
 
     expect(await pathname(browser)).toBe("/admin/test");
-    await browser.waitUntil(`${shownHeader}?.dataset.tenant === "test" && ${shownHeader}.textContent.includes("Active tenant")`);
     expect(await headerName(browser)).toBe("TEST Active tenant");
     expect(await browser.title()).toBe("Test · Admin · Caveman Planning Good");
     const generation = await browser.evaluate<number>(`fetch("/api/tenants/test").then(r=>r.json()).then(result=>result.data.generation)`);

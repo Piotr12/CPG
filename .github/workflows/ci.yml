@@ -71,9 +71,17 @@ jobs:
   # setup (tests/ci-workflow.test.ts). The install usually takes 15 s, but `--with-deps` fetches
   # ~70 MB of fonts from Ubuntu's apt mirror, which has taken over 19 minutes (#167). A slow install
   # then fails its own step with a timeout instead of cancelling the suite halfway through.
+  #
+  # The files run one at a time against one app, so the suite is split across parallel runners, each
+  # with its own image and app: 12 minutes of files in one job became about 3 per shard. Every shard
+  # runs to the end, so one failing shard doesn't hide the others' results.
   integration-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -86,4 +94,4 @@ jobs:
         run: npx agent-browser install --with-deps
       - name: Run integration tests
         timeout-minutes: 20
-        run: npm run test:integration
+        run: npm run test:integration -- --shard=${{ matrix.shard }}/${{ strategy.job-total }}
