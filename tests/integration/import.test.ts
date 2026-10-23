@@ -199,7 +199,6 @@ describe("the Import screen", () => {
     const una = openBrowser();
     try {
       await signIn(una, baseUrl, PASSWORD, USERNAME);
-      // signIn doesn't wait for the page it lands on: open nothing before the session exists.
       await una.waitForText(USERNAME);
       await una.open(`${baseUrl}/admin/prod/materials`);
       await una.waitForText("Materials — Prod");
