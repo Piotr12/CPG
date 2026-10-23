@@ -32,12 +32,13 @@ Drive PR #171 (the #166 app-icons wait) to merge-ready, and, as the owner asked,
 - First full local run with the new helper: 427.9 s, 1 failure (the `tenants.test.ts` race above). Second full run after the fix: 388 passed, 1 skipped (`startup-guard`, Docker only), 0 failed, 428.1 s.
 - 12:33 — Pushed 1429971. Fresh-context review: approve, minor findings only. Fixed: the native binary is used only when executable and not on musl; a syntax error fails at once; the last slice stays inside the deadline; the timeout names the last in-page error.
 - CI run 39954264051: shards 2 and 4 green, 1 and 3 red. Shard 3 never ran tests: `agent-browser install --with-deps` stalled on Ubuntu's apt mirror (fonts-noto-cjk) until the 10-minute cap, and on shard 4 it took 9 min. Sharding multiplies that exposure. The runner image already has Chrome's libraries, so the install now runs without `--with-deps` (`tests/ci-workflow.test.ts` pins it). Shard 1 failed `app-icons.test.ts` with `[]`, #166 itself: signed out, `/admin` redirects to `/login` by a hard navigation (seen locally: the navigation entry is `/login`), and the read hit the new document before its head. The test now reads `/admin` signed in, waiting for its own path, which is the partially prerendered page its comment says it covers.
+- CI run 39957643129 (docs-only a1c76a2): shard 2 failed `audit-history.test.ts` ("expected inverse not to be the correction"). `follow` waited for `subjectId=` in the URL after clicking, but the page it left already had one: another race the faster waits exposed. It now waits for the URL to change as well. Scanned the other URL waits after clicks: each waits for a parameter only the submit adds.
 - CI run 39956419066 on 489b941: all green. Install 3 s per shard. Integration shards finished in 6.0, 6.0, 6.3 and 6.8 min (Vitest 309–365 s each, ~3 min of it the image build and start). Baseline: one 16m16s job.
 
 ## Changes
 
 - `tests/integration/browser.ts`: native agent-browser binary; in-page polling for `waitUntil`/`waitFor`/`waitForText`; `click`/`clickRole` wait for finite animations.
-- `tests/integration/tenants.test.ts`: wait for Test's header before reading.
+- `tests/integration/tenants.test.ts`: wait for Test's header before reading. `tests/integration/audit-history.test.ts`: `follow` waits for the URL to change.
 - `tests/integration/app-icons.test.ts`: the #166 wait, then `/admin` read signed in on its own path.
 - `.github/workflows/ci.yml`: four-shard integration matrix, `agent-browser install` without `--with-deps`. `tests/ci-workflow.test.ts` pins both.
 - `AGENTS.md`, `SDLC.md`: suite duration. `.ai/lessons.md`: three entries (driver races, agent-browser wait semantics, apt mirror and shards).
