@@ -697,6 +697,7 @@ export const pl: Messages = {
       },
       fieldErrors: {
         missingComponent: "Podaj zużycie każdego składnika receptury, 0 gdy nie był użyty.",
+        missingComponentNamed: "Podaj zużycie każdego składnika receptury, 0 gdy nie był użyty. Brakuje: {material}.",
         unknownInput: "Wybierz materiał z tego zbioru.",
         inactiveInput: "Ten materiał jest nieaktywny: produkcja nie może go zużyć.",
         outputAsInput: "Wyrób zlecenia nie może być jednocześnie jego materiałem.",

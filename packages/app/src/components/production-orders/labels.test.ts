@@ -11,6 +11,10 @@ it("keeps every label serializable and translates known field errors while prese
     expect(productionFieldError(labels)("specific server context")).toBe("specific server context");
     expect(labels.errors.TENANT_READ_ONLY).toBe(messages.errors.TENANT_READ_ONLY);
     expect(completionFieldError(labels)(MISSING_COMPONENT_MESSAGE)).toBe(labels.completion.fieldErrors.missingComponent);
+    const named = completionFieldError(labels)(MISSING_COMPONENT_MESSAGE, { material: "00000006, 00000007" });
+    expect(named).toContain("00000006, 00000007");
+    expect(named.startsWith(labels.completion.fieldErrors.missingComponent)).toBe(true);
+    expect(completionFieldError(labels)(CALENDAR_DATE_MESSAGE, { material: "00000006" })).toBe(labels.invalidDate);
     expect(completionFieldError(labels)(CALENDAR_DATE_MESSAGE)).toBe(labels.invalidDate);
     expect(completionFieldError(labels)("specific server context")).toBe("specific server context");
     expect(labels.errors.INSUFFICIENT_STOCK).toBe(messages.errors.INSUFFICIENT_STOCK);

@@ -730,6 +730,7 @@ export const en = {
       },
       fieldErrors: {
         missingComponent: "Enter what was used of every recipe component, 0 when none was.",
+        missingComponentNamed: "Enter what was used of every recipe component, 0 when none was. Missing: {material}.",
         unknownInput: "Choose a material from this tenant.",
         inactiveInput: "This material is inactive: production can't consume it.",
         outputAsInput: "The order's output can't also be one of its inputs.",

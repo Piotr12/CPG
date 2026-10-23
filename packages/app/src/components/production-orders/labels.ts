@@ -19,6 +19,7 @@ import {
   UNKNOWN_INPUT_MESSAGE,
 } from "@cpg/core/validators/production-orders/production-completion.schema";
 import { POSITIVE_QUANTITY_MESSAGE, QUANTITY_MESSAGE } from "@cpg/core/validators/quantities/quantity.schema";
+import { fill } from "../../i18n/fill";
 import type { Messages } from "../../i18n/messages/en";
 
 export type ProductionLabels = Messages["productionOrders"] & { errors: Record<string, string> };
@@ -36,7 +37,10 @@ export function productionFieldError(labels: ProductionLabels) {
   };
   return (message: string) => known[message] ?? message;
 }
-/** The Post completion form's field messages, from its schema and the completion service, in the reader's language. */
+/**
+ * The Post completion form's field messages, from its schema and the completion service, in the reader's
+ * language. A missing recipe component is named when the server sends it in `params.material` (#153).
+ */
 export function completionFieldError(labels: ProductionLabels) {
   const t = labels.completion.fieldErrors;
   const known: Record<string, string> = {
@@ -57,5 +61,8 @@ export function completionFieldError(labels: ProductionLabels) {
     [SUBMISSION_REUSED_MESSAGE]: t.submission,
   };
   const production = productionFieldError(labels);
-  return (message: string) => known[message] ?? production(message);
+  return (message: string, params: Record<string, string> = {}) => {
+    if (message === MISSING_COMPONENT_MESSAGE && Object.hasOwn(params, "material")) return fill(t.missingComponentNamed, { material: params.material });
+    return known[message] ?? production(message);
+  };
 }

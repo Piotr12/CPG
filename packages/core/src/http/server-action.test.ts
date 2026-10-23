@@ -54,6 +54,17 @@ describe("serverAction", () => {
     });
   });
 
+  it("keeps the parameters of a ValidationError the handler throws, for the form to name what is missing", async () => {
+    const action = serverAction(z.object({}), async () => {
+      throw new ValidationError({ components: ["Missing."] }, { material: "00000006" });
+    });
+
+    expect(await action({})).toEqual({
+      ok: false,
+      error: { code: "VALIDATION_FAILED", message: expect.any(String), fieldErrors: { components: ["Missing."] }, params: { material: "00000006" } },
+    });
+  });
+
   it("logs anything else and returns a generic internal error", async () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     const boom = new Error("database is locked at /secret/path");
