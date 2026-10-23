@@ -139,7 +139,9 @@ async function insertOrder(em: EntityManager, input: ProductionOrderInput, at?: 
     plannedFinish: input.plannedFinish, plannedStart: options.plannedStart, leadTimeDays: options.leadTimeDays,
     ...(at && { createdAt: at, updatedAt: at }) });
 }
+/** Requirements cover only what is still to be made: none once the order is resolved (LFC-004, PRD-029). */
 async function detail(em: EntityManager, order: ProductionOrder) {
-  const components = await recipeComponents(em, order.recipe, order.location, order.quantity);
-  return { ...productionOrderView(order), hasProcessing: (await em.count(ProductionCompletion, { order })) > 0, components, shortages: componentShortages(components) };
+  const view = productionOrderView(order);
+  const components = await recipeComponents(em, order.recipe, order.location, view.outstanding);
+  return { ...view, hasProcessing: (await em.count(ProductionCompletion, { order })) > 0, components, shortages: componentShortages(components) };
 }

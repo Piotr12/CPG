@@ -695,6 +695,7 @@ export const en = {
     recipeLabel: "BOM {bom} / revision {revision} · priority {priority}",
     warning: "Component shortage: you can still create this plan. Current physical stock is shown below; stock is checked when a completion is posted.",
     sufficient: "Current physical stock covers these direct requirements. Planning does not reserve or consume it.",
+    resolved: "This order is {status}, so it needs no more components.",
     components: "Pinned component requirements and current stock", component: "Component", required: "Required", available: "Available now", shortage: "Shortage",
     empty: "No production orders yet. Configure a Make output, location and active recipe, then create an order.",
     pagination: "Production order pages", previous: "Previous", next: "Next", page: "Page {page} of {pages}",

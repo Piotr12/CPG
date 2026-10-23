@@ -240,6 +240,26 @@ describe("the stock import's commit", () => {
     expect(posted.map((movement) => movement.location.code)).toEqual(["00000001", "00000001", "00000002"]);
   });
 
+  it("reverses one line of an imported correction alone, and only once (#91 spec Q6)", async () => {
+    await apply(stock([1, 1, 100, null], [2, 1, 50, null], [1, 2, 30, null]));
+    const em = async () => (await scopeForTenant(kit.container, "prod")).cradle.em;
+    const posted = await (await em()).find(StockMovement, { reason: "Stock count 2027-01" }, { orderBy: { position: "asc" } });
+    expect(posted).toHaveLength(3);
+    expect(new Set(posted.map((movement) => movement.postingId)).size).toBe(1);
+    const reverse = (id: string) => kit.write(({ stockReversalService }) => stockReversalService.reverse(id, { reason: "Hide miscounted" }, ACTOR));
+
+    const reversal = await reverse(posted[1].id);
+
+    expect(reversal).toMatchObject({ original: posted[1].id, movement: expect.objectContaining({ type: "reversal", quantity: "-50.000000" }) });
+    expect(await balance("00000002", "00000001")).toBe("0.000000");
+    // The posting's other lines stay exactly as imported.
+    expect([await balance("00000001", "00000001"), await balance("00000001", "00000002")]).toEqual(["100.000000", "30.000000"]);
+    expect(await (await em()).count(StockMovement, { type: "reversal" })).toBe(1);
+    await expect(reverse(posted[1].id)).rejects.toMatchObject({ code: "STOCK_ALREADY_REVERSED" });
+    expect(await balance("00000002", "00000001")).toBe("0.000000");
+    expect(await (await em()).count(StockMovement, { type: "reversal" })).toBe(1);
+  });
+
   it("posts more than one flush's lines as one posting, numbered in row order", async () => {
     await kit.write(async ({ em }) => {
       for (let code = 3; code <= 51; code++) em.create(Location, { code: String(code).padStart(8, "0"), name: `Cave ${code}` });

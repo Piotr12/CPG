@@ -333,6 +333,35 @@ describe("edits after a first completion", () => {
     expect(audit.after).toMatchObject({ status: "completed" });
     await expect(service().update(order.id, { quantity: "12" }, completed.version, actor)).rejects.toMatchObject({ code: "PRODUCTION_ORDER_LOCKED" });
   });
+  it("requires components for the outstanding quantity only, and none once the order is closed early (LFC-004, PRD-029)", async () => {
+    const order = await service().create({ ...input, quantity: "100", bom: "00000001", revision: 1 }, actor);
+    await balance("100.000000");
+    await new ProductionCompletionService({ em: em() }).post(order.id, {
+      quantity: "40", unit: "each", components: [{ material: "00000002", quantity: "80", unit: "kg" }],
+    }, actor);
+    const open = await service().get(order.id);
+    expect(open).toMatchObject({ status: "open", produced: "40.000000", outstanding: "60.000000" });
+    // 60 Cabinets still to make at 2 kg each, against the 20 kg left: not the 200 kg the whole target would need.
+    expect(open.components).toEqual([expect.objectContaining({ material: "00000002", required: "120.000000", available: "20.000000", shortage: "100.000000" })]);
+    expect(open.shortages).toEqual(open.components);
+    const closed = await service().closeEarly(order.id, open.version, actor);
+    expect(closed).toMatchObject({ status: "closed-early", abandoned: "60.000000", outstanding: "0.000000" });
+    expect(closed.components).toEqual([expect.objectContaining({ material: "00000002", quantity: "2.000000", required: "0.000000", shortage: "0.000000" })]);
+    expect(closed.shortages).toEqual([]);
+    expect(await service().get(order.id)).toMatchObject({ components: closed.components, shortages: [] });
+  });
+  it("requires nothing of a cancelled or completed order, even with no stock (LFC-004)", async () => {
+    const short = await service().create({ ...input, bom: "00000001", revision: 1 }, actor);
+    expect(short.shortages).toEqual([expect.objectContaining({ required: "60.000000", shortage: "60.000000" })]);
+    const cancelled = await service().cancel(short.id, short.version, actor);
+    expect(cancelled.components).toEqual([expect.objectContaining({ required: "0.000000", available: "0.000000", shortage: "0.000000" })]);
+    expect(cancelled.shortages).toEqual([]);
+    const order = await partlyProduced();
+    const completed = await service().update(order.id, { quantity: "10" }, order.version, actor);
+    expect(completed).toMatchObject({ status: "completed", outstanding: "0.000000" });
+    expect(completed.components).toEqual([expect.objectContaining({ required: "0.000000", shortage: "0.000000" })]);
+    expect(completed.shortages).toEqual([]);
+  });
   it("locks the type of a material a completion consumed (MAT-012)", async () => {
     await partlyProduced();
     const steel = await em().findOneOrFail(Material, { code: "00000002" });

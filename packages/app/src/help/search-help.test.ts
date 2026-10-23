@@ -60,4 +60,12 @@ describe("searchHelp", () => {
     expect(ids(searchHelp(helpTopics("pl"), "księgowanie wykonania"))).toContain("production-order-detail");
     expect(HELP_TOPIC_ROUTES["production-order-detail"]).toBe("/admin/[tenant]/production-orders/[id]");
   });
+
+  it("says a production order needs components only for its outstanding quantity, in both languages (LFC-004, PRD-029)", () => {
+    const body = (locale: "en" | "pl") => helpTopics(locale).find(({ id }) => id === "production-order-detail")!.body.join(" ");
+    expect(body("en")).toContain("an Open order of 100 with 40 produced needs components for 60");
+    expect(body("en")).toContain("A Cancelled, Completed or Closed Early order needs no components and shows no shortage.");
+    expect(body("pl")).toContain("otwarte zlecenie na 100 z 40 wyprodukowanymi potrzebuje składników na 60");
+    expect(body("pl")).toContain("Zlecenie anulowane, zakończone lub zamknięte wcześniej nie potrzebuje składników i nie pokazuje niedoboru.");
+  });
 });

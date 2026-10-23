@@ -111,4 +111,20 @@ describe("full stock reversals (#91)", () => {
     const test = (await api<{ generation: number }>("GET", "/api/tenants/test")).body.data;
     expect((await api("POST", reversePath(correction.id, "test"), { reason: "Stale" }, operatorSecret, randomUUID(), test.generation + 1)).body.error.code).toBe("GENERATION_STALE");
   });
+  it("lets an operator reverse a goods receipt from its purchase order, reopening the order", async () => {
+    const before = (await stock()).quantity;
+    const completed = await create<OrderView>("purchase-orders", { supplier: purchase.supplier, location, lines: [{ material, quantity: "30", unit: "each", plannedDate: "2026-11-01" }] });
+    const posted = await create<ReceiptView>("goods-receipts", { purchaseOrder: completed.id, lines: [{ line: 1, quantity: "30", unit: "each" }] });
+    expect(await get<OrderView>(`purchase-orders/${completed.id}`)).toMatchObject({ status: "completed", lines: [{ received: "30.000000" }] });
+    expect(Number((await stock()).quantity) - Number(before)).toBe(30);
+    await operator.open(`${baseUrl}/admin/prod/purchase-orders/${completed.id}`); await operator.waitForText("Goods receipts");
+    await operator.waitUntil(hydrated(`[...document.querySelectorAll("main button")].find((button) => button.textContent === "Reverse")`));
+    await operator.clickRole("button", "Reverse"); await operator.waitFor("[role=dialog]");
+    expect(await operator.text("[role=dialog]")).toContain("30 each");
+    await operator.fillLabel("Reason", "Delivered to the wrong site"); await operator.clickRole("button", "Reverse full quantity");
+    await operator.waitUntil(`!document.querySelector("[role=dialog]")`); await operator.waitForText("View reversal");
+    expect((await stock()).quantity).toBe(before);
+    expect(await get<OrderView>(`purchase-orders/${completed.id}`)).toMatchObject({ status: "open", lines: [{ received: "0.000000", status: "open" }] });
+    expect((await get<ReceiptView>(`goods-receipts/${posted.id}`)).lines[0]).toMatchObject({ quantity: "30.000000", reversedBy: expect.any(String) });
+  });
 });
