@@ -4,6 +4,8 @@ import { Button } from "@cpg/ui/components/button";
 import { Input } from "@cpg/ui/components/input";
 import { Label } from "@cpg/ui/components/label";
 import { NativeSelect, NativeSelectOption } from "@cpg/ui/components/native-select";
+import { ErrorSummary } from "@cpg/ui/backend/feedback/error-summary";
+import { fill } from "../../i18n/fill";
 import type { Messages } from "../../i18n/messages/en";
 import { isFiltered, type AuditFilterKey } from "./audit-query";
 import type { AuditSubjectType } from "./subject-types";
@@ -39,6 +41,12 @@ export function AuditFilters({
     const describedBy = [hint, invalid.includes(key) ? "audit-filter-errors" : undefined].filter(Boolean).join(" ");
     return { ...(invalid.includes(key) && { "aria-invalid": true }), ...(describedBy && { "aria-describedby": describedBy }) };
   };
+  /**
+   * A value the URL holds that the select doesn't offer (an account it doesn't list, a record type of
+   * the other audit): its own option, so the select keeps it and Apply sends it back unchanged.
+   */
+  const unlisted = (value: string | undefined, listed: readonly string[]) =>
+    value !== undefined && !listed.includes(value) && <NativeSelectOption value={value}>{fill(t.unlisted, { value })}</NativeSelectOption>;
   return (
     <form action={path} aria-label={t.label} className="grid min-w-0 gap-4 rounded-lg border p-4 sm:grid-cols-3 sm:items-end">
       <div className="grid min-w-0 gap-2">
@@ -48,6 +56,7 @@ export function AuditFilters({
           {subjectTypes.map((type) => (
             <NativeSelectOption key={type} value={type}>{labels.subjects[type]}</NativeSelectOption>
           ))}
+          {unlisted(selected.subjectType, subjectTypes)}
         </NativeSelect>
       </div>
       <div className="grid min-w-0 gap-2">
@@ -62,6 +71,7 @@ export function AuditFilters({
           {accounts.map((account) => (
             <NativeSelectOption key={account} value={account}>{account}</NativeSelectOption>
           ))}
+          {unlisted(selected.account, accounts)}
         </NativeSelect>
       </div>
       <div className="grid min-w-0 gap-2">
@@ -81,12 +91,12 @@ export function AuditFilters({
         <Input id="audit-to" name="to" type="date" defaultValue={selected.to ?? ""} {...refused("to")} />
       </div>
       {invalid.length > 0 && (
-        <div id="audit-filter-errors" role="alert" className="text-sm text-destructive sm:col-span-3">
+        <ErrorSummary id="audit-filter-errors" className="text-sm text-destructive sm:col-span-3">
           <p className="font-medium">{t.invalid}</p>
           <ul className="list-disc pl-5">
             {invalid.map((key) => <li key={key}>{t.errors[key]}</li>)}
           </ul>
-        </div>
+        </ErrorSummary>
       )}
       <div className="flex items-center gap-4">
         <Button type="submit">{t.apply}</Button>

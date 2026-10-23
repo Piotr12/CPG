@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { EmptyState } from "./empty-state";
 import { ErrorMessage } from "./error-message";
+import { ErrorSummary } from "./error-summary";
 import { LoadingMessage } from "./loading-message";
 
 describe("feedback", () => {
@@ -15,6 +16,22 @@ describe("feedback", () => {
     render(<ErrorMessage>{"That didn't work."}</ErrorMessage>);
 
     expect(screen.getByRole("alert").textContent).toBe("That didn't work.");
+  });
+
+  it("takes focus with the errors a page opens with, so a screen reader reads them out unasked", () => {
+    render(
+      <>
+        <input aria-label="Before" autoFocus />
+        <ErrorSummary id="filter-errors" className="text-destructive">{"Correct the filters."}</ErrorSummary>
+      </>,
+    );
+
+    const summary = screen.getByRole("alert");
+    expect(document.activeElement).toBe(summary);
+    expect(summary.textContent).toBe("Correct the filters.");
+    expect(summary.id).toBe("filter-errors");
+    expect(summary.getAttribute("tabindex")).toBe("-1");
+    expect(summary.className).toBe("outline-none text-destructive");
   });
 
   it("shows an empty state's title and, when given, what to do", () => {

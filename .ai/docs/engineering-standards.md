@@ -73,7 +73,7 @@ No action or route writes its own `try/catch` + response mapping.
 - `api/api-call.ts` — the only place a client component calls `fetch()` on `/api/*`. It parses the envelope defensively and returns a typed `ApiResult<T>`, and `apiCallOrThrow` throws instead. `ui` declares its own `ApiResult` type with the same shape in `api/result.ts`, because `ui` must not import `core`.
 - `forms/crud-form.tsx` — a schema-driven form: fields, server `fieldErrors` next to the right field, submit/cancel/pending states, `Cmd/Ctrl+Enter` submits, `Escape` cancels. It is bound to a server action (or `apiCall`). Use it for every create/edit form, and write a bespoke form only when the UX isn't form-over-schema (e.g. a planning board).
 - `tables/data-table.tsx` — column-config-driven lists with loading/empty/error states, pagination and row actions. Use it for every list screen.
-- `feedback/{error-message,empty-state,loading-message}.tsx` — the only sanctioned loading/error/empty renderers, including `<Suspense>` fallbacks. `LoadingMessage` is a language-neutral skeleton for request-time page content.
+- `feedback/{error-message,error-summary,empty-state,loading-message}.tsx` — the only sanctioned loading/error/empty renderers, including `<Suspense>` fallbacks. `LoadingMessage` is a language-neutral skeleton for request-time page content. `ErrorSummary` holds errors a page can open with (a refused bookmarked filter): it takes focus on mount, because an alert already in the page at load isn't announced by every screen reader.
 
 **Language, theme and help** (spec `2026-10-19--0855UTC-user-preferences-footer-help`):
 

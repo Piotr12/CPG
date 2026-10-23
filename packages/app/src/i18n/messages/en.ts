@@ -1542,6 +1542,8 @@ export const en = {
       from: "From (UTC)",
       to: "To (UTC)",
       all: "All",
+      /** A value the URL holds that the select doesn't list: kept as its own option. */
+      unlisted: "{value} (not in the list)",
       apply: "Apply",
       clear: "Clear filters",
       showing: "Showing entries that match the filters.",
