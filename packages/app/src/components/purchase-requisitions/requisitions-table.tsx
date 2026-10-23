@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { RequisitionView } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { Badge } from "@cpg/ui/components/badge";
+import { PageLinks } from "../layout/page-links";
 import { fill, shownQuantity, type LocationsById, type MaterialsById, type RequisitionsLabels } from "./labels";
 
 interface RequisitionsTableProps {
@@ -13,6 +14,9 @@ interface RequisitionsTableProps {
   materials: MaterialsById;
   locations: LocationsById;
   labels: RequisitionsLabels;
+  /** The 1-based page shown and how many pages the tenant's requisitions make. */
+  page: number;
+  pages: number;
   /** Everyone who may write also gets a hint on how to start. */
   editable: boolean;
 }
@@ -21,7 +25,7 @@ interface RequisitionsTableProps {
  * A tenant's purchase requisitions by ID, with how much of each purchase orders have converted, and
  * an Open row's Change date and lifecycle actions while the tenant is writable.
  */
-export function RequisitionsTable({ tenant, requisitions, materials, locations, labels, editable }: RequisitionsTableProps) {
+export function RequisitionsTable({ tenant, requisitions, materials, locations, labels, page, pages, editable }: RequisitionsTableProps) {
   const t = labels.columns;
   const amount = (quantity: string, material: string) => `${shownQuantity(quantity)} ${materials.get(material)!.baseUnit}`;
   const dateLabels = { ...labels.changeDate, field: labels.form.requiredDate, cancel: labels.cancel, date: labels.fieldErrors.date };
@@ -96,6 +100,7 @@ export function RequisitionsTable({ tenant, requisitions, materials, locations, 
       columns={columns}
       rows={requisitions}
       rowKey={(requisition) => requisition.id}
+      pagination={<PageLinks page={page} pages={pages} labels={labels} href={(target) => `/admin/${tenant.code}/purchase-requisitions?page=${target}`} />}
       empty={[fill(labels.empty, { tenant: tenant.name }), ...(editable ? [labels.emptyHint] : [])].join(" ")}
     />
   );

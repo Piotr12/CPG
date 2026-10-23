@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveServerComponents } from "../../../../../../../tests/setup/server-components";
 import { en } from "../../../../i18n/messages/en";
@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => {
     requireUser: vi.fn(),
     tenantScope: vi.fn(),
     requisitions: vi.fn(),
+    count: vi.fn(),
     materials: vi.fn(),
     locations: vi.fn(),
     units: vi.fn(),
@@ -71,11 +72,12 @@ const requisition = (id: string, materialId: string, quantity: string, converted
   version: 1,
 });
 const tenant = (readOnly = false) => ({ code: "test", name: "Test", generation: 1, readOnly });
-const page = () => PurchaseRequisitionsPage({ params: Promise.resolve({ tenant: "test" }), searchParams: Promise.resolve({}) });
+const page = (search: Record<string, string> = {}) =>
+  PurchaseRequisitionsPage({ params: Promise.resolve({ tenant: "test" }), searchParams: Promise.resolve(search) });
 const scope = (readOnly = false) => ({
   cradle: {
     tenant: tenant(readOnly),
-    purchaseRequisitionService: { list: mocks.requisitions },
+    purchaseRequisitionService: { list: mocks.requisitions, count: mocks.count },
     materialService: { list: mocks.materials, listUnits: mocks.units },
     locationService: { list: mocks.locations },
   },
@@ -89,6 +91,7 @@ describe("PurchaseRequisitionsPage", () => {
       requisition("00000001", "00000001", "100.000000", "60.000000", "open"),
       requisition("00000002", "00000002", "5.000000", "5.000000", "completed"),
     ]);
+    mocks.count.mockResolvedValue(2);
     mocks.materials.mockResolvedValue(MATERIALS);
     mocks.locations.mockResolvedValue(LOCATIONS);
     mocks.units.mockResolvedValue({ "00000001": ["kg", "t"], "00000002": ["each"] });
@@ -152,6 +155,40 @@ describe("PurchaseRequisitionsPage", () => {
     render(await resolveServerComponents(page()));
     expect(screen.getByText("Open")).toBeTruthy();
     expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("pages by 100: links to the neighbouring pages, reads the asked page, and shows no links for a single page", async () => {
+    const { unmount } = render(await resolveServerComponents(page()));
+    expect(mocks.requisitions).toHaveBeenLastCalledWith(1);
+    expect(screen.queryByRole("navigation", { name: "Purchase requisition pages" })).toBeNull();
+    unmount();
+
+    mocks.count.mockResolvedValue(250);
+    render(await resolveServerComponents(page({ page: "2" })));
+
+    expect(mocks.requisitions).toHaveBeenLastCalledWith(2);
+    const nav = screen.getByRole("navigation", { name: "Purchase requisition pages" });
+    expect(nav.textContent).toContain("Page 2 of 3");
+    expect(within(nav).getByRole("link", { name: "Previous" }).getAttribute("href")).toBe("/admin/test/purchase-requisitions?page=1");
+    expect(within(nav).getByRole("link", { name: "Next" }).getAttribute("href")).toBe("/admin/test/purchase-requisitions?page=3");
+  });
+
+  it("shows the last page for a page past it, and the first page of an empty tenant", async () => {
+    mocks.count.mockResolvedValue(250);
+    render(await resolveServerComponents(page({ page: "9" })));
+    expect(mocks.requisitions).toHaveBeenLastCalledWith(3);
+    expect(screen.getByRole("navigation", { name: "Purchase requisition pages" }).textContent).toContain("Page 3 of 3");
+    cleanup();
+
+    mocks.count.mockResolvedValue(0);
+    mocks.requisitions.mockResolvedValue([]);
+    render(await resolveServerComponents(page({ page: "4" })));
+    expect(mocks.requisitions).toHaveBeenLastCalledWith(1);
+  });
+
+  it("renders not-found for an invalid page", async () => {
+    for (const bad of ["0", "x", "1.5"]) await expect(resolveServerComponents(page({ page: bad }))).rejects.toThrow("404");
+    expect(mocks.requisitions).not.toHaveBeenCalled();
   });
 
   it("renders not-found for an unknown tenant", async () => {

@@ -928,6 +928,7 @@ export const en = {
       "A requisition says what is needed, where and by when. Purchase orders convert it, in one or more steps. A requisition is planned supply only: it never changes stock.",
     empty: "No purchase requisitions in {tenant} yet.",
     emptyHint: "Create the first one with Create requisition.",
+    pagination: "Purchase requisition pages", previous: "Previous", next: "Next", page: "Page {page} of {pages}",
     columns: {
       id: "Requisition",
       material: "Material",

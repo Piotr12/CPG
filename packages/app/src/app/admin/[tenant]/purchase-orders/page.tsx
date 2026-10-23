@@ -50,7 +50,7 @@ async function PurchaseOrders({ params, searchParams }: Pick<PageProps<"/admin/[
       locations={await cradle.locationService.list()}
       materials={await cradle.materialService.list()}
       units={await cradle.materialService.listUnits()}
-      requisitions={await cradle.purchaseRequisitionService.list()}
+      requisitions={await cradle.purchaseRequisitionService.listOpen()}
       locale={locale}
       messages={messages}
     />

@@ -111,7 +111,8 @@ describe("document cancellation and early closure", () => {
   it("closes a partly converted requisition from its row and preserves the purchase order", async () => {
     const source = await requisition();
     const order = await create("purchase-orders", { supplier, location, lines: [{ material, quantity: "4", unit: "kg", plannedDate: "2027-01-02", requisition: source.id }] });
-    await open("purchase-requisitions");
+    // The newest requisition is on the list's last page, which a page past it shows (#187).
+    await open("purchase-requisitions?page=1000000");
     await confirm(`Close Early — Purchase requisitions ${source.id}`, "6 kg");
     expect(await get("purchase-requisitions", source.id)).toMatchObject({ status: "closed-early", converted: "4.000000", abandoned: "6.000000", outstanding: "0.000000" });
     expect((await get("purchase-orders", order.id)).lines[0]).toMatchObject({ quantity: "4.000000", requisition: source.id });
