@@ -17,6 +17,16 @@ it("keeps every label serializable and translates known field errors while prese
     expect(labels.errors.PRODUCTION_OVERPRODUCTION).toContain("{target}");
   }
 });
+it("calls a component outside the pinned recipe what the variance report calls it, on the form and in the history (#153)", () => {
+  for (const messages of [en, pl]) {
+    const { completion } = messages.productionOrders;
+    const term = messages.varianceReport.extra;
+    expect(completion.extra).toBe(term);
+    expect(completion.inputLine.startsWith(`${term} `)).toBe(true);
+    expect(completion.removeInput).toContain(` ${term.toLowerCase()} `);
+    expect(completion.fieldErrors.extraQuantity).toContain(term.toLowerCase().slice(0, -1));
+  }
+});
 it("names every production audit action and snapshot field in both languages", () => {
   for (const messages of [en, pl]) {
     expect(messages.audit.actions["production-orders.production-order.created"]).not.toContain("production-orders.");
