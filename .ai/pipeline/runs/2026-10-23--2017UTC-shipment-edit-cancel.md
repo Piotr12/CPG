@@ -137,4 +137,4 @@ PR: #182
 
 - None in this repository: #180 merged during the run. The follow-up docs PR moves the spec to `implemented/` and carried in the spec's last correction (409 for read-only, `toIssue` 0 when cancelled).
 - #182 merged at 21a48c2 while this run was finishing, so the spec move and correction ship on a follow-up docs PR off `main`.
-- Two pushes went out after their PRs had merged and recreated the remote branches `spec/shipment-edit-cancel` and `feat/shipment-edit-cancel`. Both stray branches are left for the owner to delete.
+- Two pushes went out after their PRs had merged and recreated the remote branches `spec/shipment-edit-cancel` and `feat/shipment-edit-cancel`. Both were checked to hold nothing beyond this follow-up PR's content, then deleted.
