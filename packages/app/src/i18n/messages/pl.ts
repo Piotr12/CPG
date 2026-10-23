@@ -905,6 +905,13 @@ export const pl: Messages = {
     status: { open: "Otwarte", completed: "Zrealizowane", "closed-early": "Zamknięte wcześniej", cancelled: "Anulowane" },
     inactive: "Nieaktywny",
     cancel: "Anuluj",
+    changeDate: {
+      open: "Zmień datę",
+      title: "Zmień wymagany termin",
+      description: "Zmienia się tylko wymagany termin. Materiał, lokalizacja i ilość pozostają bez zmian.",
+      submit: "Zapisz",
+      pending: "Zapisywanie…",
+    },
     form: {
       material: "Materiał",
       location: "Lokalizacja",
@@ -956,6 +963,13 @@ export const pl: Messages = {
     status: { open: "Otwarte", completed: "Zrealizowane", "closed-early": "Zamknięte wcześniej", cancelled: "Anulowane" },
     inactive: "Nieaktywny",
     cancel: "Anuluj",
+    changeDate: {
+      open: "Zmień datę",
+      title: "Zmień planowaną datę",
+      description: "Zmienia się tylko planowana data tej pozycji. Jej ilość i to, co już przyjęto, pozostają bez zmian.",
+      submit: "Zapisz",
+      pending: "Zapisywanie…",
+    },
     details: { supplier: "Dostawca", location: "Lokalizacja", status: "Status", created: "Utworzono" },
     lines: {
       heading: "Pozycje",

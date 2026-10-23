@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { CALENDAR_DATE_MESSAGE } from "../dates/calendar-date.schema";
 import { MATERIAL_CHOICE_MESSAGE } from "../planning-parameters/planning-parameter-fields.schema";
 import { REQUISITION_IMMUTABLE_MESSAGE } from "./purchasing-fields.schema";
-import { requisitionCreateSchema, requisitionUpdateBodySchema } from "./purchase-requisition.schema";
+import { requisitionCreateSchema, requisitionDateSchema, requisitionUpdateBodySchema } from "./purchase-requisition.schema";
 
 const valid = { material: "00000001", location: "00000002", quantity: "100.0", unit: "kg", requiredDate: "2027-03-01" };
 const issues = (result: { error?: { issues: { path: PropertyKey[]; message: string }[] } }) =>
@@ -29,5 +29,11 @@ describe("requisition schemas", () => {
     ]);
     expect(requisitionUpdateBodySchema.safeParse({ requiredDate: "2027-04-01" }).success).toBe(false);
     expect(requisitionUpdateBodySchema.safeParse({ version: 1 }).success).toBe(false);
+  });
+
+  it("takes the Change date form's required date alone, and names it when it is missing or not a date", () => {
+    expect(requisitionDateSchema.parse({ requiredDate: " 2027-04-01 " })).toEqual({ requiredDate: "2027-04-01" });
+    expect(issues(requisitionDateSchema.safeParse({}))).toEqual([["requiredDate", CALENDAR_DATE_MESSAGE]]);
+    expect(issues(requisitionDateSchema.safeParse({ requiredDate: "2027-02-30" }))).toEqual([["requiredDate", CALENDAR_DATE_MESSAGE]]);
   });
 });

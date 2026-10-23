@@ -54,7 +54,7 @@ The issue's nine criteria (#86), each covered by a unit test and, for the screen
 ## Implementation notes
 
 - One branch and one PR carry the spec and the implementation (the cezar task owns one branch); no separate design-only spec PR.
-- The UI offers create and view only; the required-date and planned-date edits (Q8) are API-only (`PATCH`). Editing them on screen is E09-S04 (#142).
+- The UI first offered create and view only, and the required-date and planned-date edits (Q8) were API-only (`PATCH`). E09-S04 (#142, spec `2026-10-21--2036UTC-purchasing-date-edits`) added Change date on Open requisition rows and Open purchase-order lines.
 - BUY-009 / INV-024 ("no stock effect"): INV-024 is asserted by `goods-receipt.service.test.ts` (no stock until a receipt posts, for a direct PO). The requisition-conversion path of BUY-009 has no stock assertion yet (E09-S03, #141).
 - The material-deactivation refusal shipped as `MATERIAL_IN_OPEN_ORDER` (Q10 says `MATERIAL_IN_OPEN_PO`).
 - The merge with main (PR #108, run log `2026-10-20--1720UTC-pr-108-merge-main.md`) put both screens in the sidebar's Transactions group, not flat entries after Master data (Q13), and added requisitions and orders to the demo seed and the Test reset.
