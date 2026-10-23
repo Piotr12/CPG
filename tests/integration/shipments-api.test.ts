@@ -13,7 +13,7 @@ const PASSWORD = "shapi first password";
 const today = () => new Date().toISOString().slice(0, 10);
 
 // Shipments and goods issues through the API (R07, E08-S02): SAL-006…013, SAL-018, SAL-020…022,
-// SAL-024, SAL-025, INV-003, INV-005, INV-010, INV-011, INV-017, INV-021, AUD-026, AUD-030, LFC-002, LFC-003,
+// SAL-024, SAL-025, INV-003, INV-005, INV-007, INV-010, INV-011, INV-017, INV-021, AUD-026, AUD-030, LFC-002, LFC-003,
 // LFC-010, LFC-020, TEN-017, API-020, API-021. Shipment edit and cancel (#147, E08-S05).
 describe("shipments and goods issues through the API", () => {
   let admin: Browser;
@@ -231,6 +231,17 @@ describe("shipments and goods issues through the API", () => {
     expect(await stockOf(ids.widget)).toBe("3.000000");
     expect((await getOrder(order.id)).lines[0].fulfilled).toBe("7.000000");
     expect(json(await api("GET", `/api/tenants/prod/goods-issues?shipment=${shipment.id}`)).data).toHaveLength(1);
+  });
+
+  it("lets an issue of exactly the stock on hand take the balance to zero (INV-007)", async () => {
+    await freshMaterials("10");
+    const order = await placeOrder("60");
+    const shipment = await ship(order);
+
+    expect((await issue(shipment.id, [{ line: 1, quantity: "10", unit: "each" }])).status).toBe(200);
+
+    expect(await stockOf(ids.widget)).toBe("0.000000");
+    expect((await getOrder(order.id)).lines[0].fulfilled).toBe("10.000000");
   });
 
   it("dates the issue and its movement today whatever date is sent, keeps the required date, and audits with its own timestamp (INV-010, INV-011, AUD-030)", async () => {

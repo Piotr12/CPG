@@ -93,7 +93,7 @@ describe("customer order pages", () => {
       locale="en" messages={en} />);
     expect(screen.queryByRole("button")).toBeNull(); expect(screen.getAllByText("Completed").length).toBeGreaterThan(0);
   });
-  it("lists the order's shipments and offers Create shipment only while a writable order has anything outstanding (SAL-006)", () => {
+  it("lists the order's shipments and offers Create shipment only while a writable order has anything outstanding", () => {
     const shipment = { id: "00000002", customerOrder: order.id, customer: "00000001", location: "00000001", plannedDate: "2027-01-02", status: "open" as const, version: 1, createdAt: order.createdAt,
       lines: [{ line: 1, orderLine: order.lines[0].id, material: "00000005", quantity: "24.000000", enteredQuantity: "24", enteredUnit: "each", numerator: "1", denominator: "1", issued: "4.000000", posted: true, toIssue: "20.000000" }] };
     const screenOf = (props: Partial<Parameters<typeof OrdersScreen>[0]>) =>

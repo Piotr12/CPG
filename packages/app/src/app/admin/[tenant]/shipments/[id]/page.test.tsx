@@ -109,7 +109,7 @@ describe("ShipmentPage", () => {
   });
   afterEach(() => vi.clearAllMocks());
 
-  it("shows the shipment's order, customer, location, date and status, and each line's plan, issued and to issue (SAL-006, SAL-011)", async () => {
+  it("shows the shipment's order, customer, location, date and status, and each line's plan, issued and to issue", async () => {
     render(await resolveServerComponents(page()));
 
     expect(mocks.connection).toHaveBeenCalledOnce();
@@ -129,7 +129,7 @@ describe("ShipmentPage", () => {
     expect(screen.getByRole("link", { name: "00000004 Panel" }).getAttribute("href")).toBe("/admin/test/materials/00000004");
   });
 
-  it("lists the shipment's goods issues and offers Post goods issue for the lines with anything to issue (SAL-010)", async () => {
+  it("lists the shipment's goods issues and offers Post goods issue for the lines with anything to issue", async () => {
     render(await resolveServerComponents(page()));
 
     expect(mocks.issues).toHaveBeenCalledWith({ shipment: "00000002" });

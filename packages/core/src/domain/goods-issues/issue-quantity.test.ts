@@ -17,7 +17,7 @@ describe("toIssueOf", () => {
     expect(toIssueOf("15.000000", "5.000000", "50.000000")).toBe("10.000000");
   });
 
-  it("is the order line's outstanding when the shipment plans more (SAL-012)", () => {
+  it("is the order line's outstanding when the shipment plans more", () => {
     expect(toIssueOf("60.000000", "0.000000", "10.000000")).toBe("10.000000");
   });
 
@@ -38,7 +38,7 @@ describe("quantity helpers", () => {
 });
 
 describe("isLineFulfilled", () => {
-  it("holds once fulfilled reaches the quantity (SAL-013)", () => {
+  it("holds once fulfilled reaches the quantity", () => {
     expect(isLineFulfilled({ quantity: "60.000000", fulfilled: "60.000000" })).toBe(true);
     expect(isLineFulfilled({ quantity: "60.000000", fulfilled: "59.999999" })).toBe(false);
   });

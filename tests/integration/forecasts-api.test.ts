@@ -171,7 +171,7 @@ describe("forecasts through the API (E08-S03, R07)", () => {
     expect(missing.status).toBe(428);
   });
 
-  it("doesn't find a Prod-only material from Test, so no Test forecast can name one (TEN-014, INV-020)", async () => {
+  it("doesn't find a Prod-only material from Test, so no Test forecast can name one (TEN-014)", async () => {
     const generation = (json(await api("GET", "/api/tenants/test", adminSecret)).data as { generation: number }).generation;
     const inTest = new Set((json(await api("GET", "/api/tenants/test/materials", adminSecret)).data as { id: string }[]).map(({ id }) => id));
     // Both tenants number from 00000001, so create Prod materials until one gets an ID Test lacks.

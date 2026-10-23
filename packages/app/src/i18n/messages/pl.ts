@@ -1381,7 +1381,7 @@ export const pl: Messages = {
       lines: "Wydaj co najmniej 1 i najwyżej 100 pozycji.",
     },
     errors: {
-      SHIPMENT_NOT_OPEN: "Ta wysyłka jest zakończona, więc nic więcej w jej ramach nie wydajesz.",
+      SHIPMENT_NOT_OPEN: "Ta wysyłka nie jest już otwarta, więc nic więcej w jej ramach nie wydajesz.",
       SHIPMENT_NOT_FOUND: "Taka wysyłka nie istnieje w tym środowisku.",
       CUSTOMER_ORDER_NOT_OPEN: "Zamówienie klienta tej wysyłki nie jest otwarte, więc nic więcej w jej ramach nie wydajesz.",
       ISSUE_ID_RACE: "W tej samej chwili zaksięgowano inne wydanie towaru. Spróbuj ponownie.",
