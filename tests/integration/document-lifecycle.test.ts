@@ -288,8 +288,11 @@ describe("document cancellation and early closure", () => {
     expect((await api("PATCH", root, { key: randomUUID(), body: { readOnly: true } })).status).toBe(200);
     try {
       expect(json(await write(`${root}/purchase-requisitions/${order.id}/cancel`, { version: order.version })).error.code).toBe("TENANT_READ_ONLY");
-      await open("purchase-requisitions");
-      expect(await user.evaluate<number>('[...document.querySelectorAll("main button")].filter((button) => /^(Cancel|Close Early|Change date)/.test(button.textContent)).length')).toBe(0);
+      // This test's Open requisition is the newest, on the last page, which a page past it shows (#187).
+      await open("purchase-requisitions?page=1000000");
+      const row = `[...document.querySelectorAll("main tbody tr")].find((row) => row.offsetParent && row.cells[0].textContent === ${JSON.stringify(order.id)})`;
+      await user.waitUntil(`!!${row}`);
+      expect(await user.evaluate<number>(`${row}.querySelectorAll("button").length`)).toBe(0);
     } finally { await api("PATCH", root, { key: randomUUID(), body: { readOnly: false } }); }
     const testPath = "/api/tenants/test/purchase-requisitions/99999999/cancel";
     const tenant = json(await api("GET", "/api/tenants/test")).data;

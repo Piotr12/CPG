@@ -12,6 +12,7 @@ import type { Messages } from "../../i18n/messages/en";
 import { receiptLineChoices, receiptsLabels } from "../goods-receipts/labels";
 import { ReceiptDialog } from "../goods-receipts/receipt-dialog";
 import { ReceiptsTable } from "../goods-receipts/receipts-table";
+import { requisitionHref } from "../purchase-requisitions/requisition-link";
 import { byId, enteredAs, ordersLabels, shownQuantity } from "./labels";
 
 interface OrderScreenProps {
@@ -86,7 +87,7 @@ export function OrderScreen({ tenant, order, receipts, materials, units, supplie
         line.requisition === null ? (
           labels.lines.noRequisition
         ) : (
-          <Link href={`/admin/${tenant.code}/purchase-requisitions`} className="font-mono underline underline-offset-4">
+          <Link href={requisitionHref(tenant.code, line.requisition)} className="font-mono underline underline-offset-4">
             {line.requisition}
           </Link>
         ),

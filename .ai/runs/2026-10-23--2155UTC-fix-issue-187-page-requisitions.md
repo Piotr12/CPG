@@ -42,6 +42,17 @@ and `GET /api/tenants/{tenant}/purchase-requisitions`. Page it by 100 as the pur
   `beforeAll` (the file's user already exists): not this change. On a fresh server, running
   `purchasing-api.test.ts` first (leaving Prod with 101+ requisitions) and then `purchasing.test.ts`
   and `document-lifecycle.test.ts` passes, which exercises the page-walking helpers.
+- 22:45 Fresh-context review (subagent) found no blockers and one major: a purchase-order line's
+  requisition link opened the list's page 1, which no longer shows a requisition past 100. Fixed with
+  `requisitionHref` (`components/purchase-requisitions/requisition-link.ts`): requisition IDs run
+  from 00000001 without gaps and are never deleted, so requisition N is on page ⌈N/100⌉. Also
+  addressed minor #2: `document-lifecycle`'s read-only check now finds its own row on the last page
+  before asserting it has no actions. Fixed the BC nit (requisition statuses and `abandoned`).
+  Declined the help-topic note: the purchase-order topic doesn't mention paging either.
+- 22:55 Browser check on `next start`: PO 00000013's line links requisition 00000111 to `?page=2`,
+  and the requisition is on that page. The Create purchase order form offers Open requisition
+  00000112 (page 2) and leaves out the Cancelled and Closed Early ones. CI on the first commit: all
+  green.
 
 ## Changes
 
@@ -58,11 +69,11 @@ and `GET /api/tenants/{tenant}/purchase-requisitions`. Page it by 100 as the pur
 
 - `npm run lint`: 0 errors (1 warning in `bom.service.ts`, already on `main`).
 - `npm run typecheck`: 0.
-- `npm run test:coverage`: 496 files, 3,552 tests passed; 100 % statements, branches, functions, lines.
+- `npm run test:coverage`: 497 files, 3,553 tests passed (after the review fixes); 100 % statements, branches, functions, lines.
 - `npm run build`: 0.
 - Integration against `next start` on a fresh `DATA_DIR`: `purchasing-api`, `purchasing`,
   `document-lifecycle`: 31/31 together; then 14/14 followed by 17/17 with Prod past 100.
-- Full integration suite: CI (pending on the PR).
+- Full integration suite: CI green on the first commit (4 shards); re-run on the review fixes pending.
 
 ## Follow-ups
 
