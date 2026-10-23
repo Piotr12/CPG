@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mockup — Change date on a purchase order line</title>
+<style>
+  body { margin: 0; font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: #171717; background: #fff; font-size: 14px; }
+  main { padding: 32px 40px; max-width: 1180px; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 16px; }
+  h2.section { font-size: 18px; font-weight: 600; margin: 24px 0 8px; }
+  p.intro { color: #737373; margin: 0 0 12px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-weight: 500; padding: 10px 8px; border-bottom: 1px solid #e5e5e5; }
+  td { padding: 12px 8px; border-bottom: 1px solid #e5e5e5; vertical-align: middle; }
+  .mono { font-family: ui-monospace, Menlo, monospace; }
+  .r { text-align: right; }
+  .badge { display: inline-block; border: 1px solid #e5e5e5; border-radius: 999px; padding: 1px 8px; font-size: 12px; background: #f5f5f5; }
+  .btn { display: inline-block; border: 1px solid #e5e5e5; border-radius: 8px; padding: 6px 12px; background: #fff; font-size: 14px; }
+  .btn.new { outline: 2px dashed #f59e0b; outline-offset: 2px; }
+  .btn.primary { background: #171717; color: #fff; border-color: #171717; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; }
+  .dialog { background: #fff; border-radius: 12px; width: 460px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+  .dialog h2 { font-size: 18px; margin: 0 0 6px; padding-right: 24px; }
+  .dialog p { color: #737373; margin: 0 0 18px; }
+  label { display: block; font-weight: 500; margin-bottom: 6px; }
+  input { width: 100%; box-sizing: border-box; border: 1px solid #e5e5e5; border-radius: 8px; padding: 8px 10px; font-size: 14px; }
+  .buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+  .note { position: fixed; left: 40px; bottom: 16px; color: #92400e; font-size: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Purchase order 00000447 — Steel Service Centre Sp. z o.o.</h1>
+  <h2 class="section">Lines</h2>
+  <p class="intro">Quantities are in each material's base unit, with the unit they were entered in.</p>
+  <table>
+    <thead><tr><th class="r">Line</th><th>Material</th><th class="r">Quantity</th><th>Planned</th><th class="r">Received</th><th class="r">Outstanding</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>
+      <tr><td class="r">1</td><td><span class="mono">00000001</span> Steel sheet 2 mm</td><td class="r">1900 kg</td><td>2026-11-02</td><td class="r">1900 kg</td><td class="r">0 kg</td><td><span class="badge">Received</span></td><td></td></tr>
+      <tr><td class="r">2</td><td><span class="mono">00000007</span> Steel sheet 1.0 mm</td><td class="r">2000 kg</td><td>2026-11-02</td><td class="r">800 kg</td><td class="r">1200 kg</td><td><span class="badge">Open</span></td><td><div class="actions"><span class="btn new">Change date</span><span class="btn">Close Early</span></div></td></tr>
+    </tbody>
+  </table>
+</main>
+<div class="overlay">
+  <div class="dialog" role="dialog" aria-label="Change planned date — Purchase orders 00000447 — Line 2">
+    <h2>Change planned date — Purchase orders 00000447 — Line 2</h2>
+    <p>Only this line's planned date changes. Its quantity and what it has received stay as they are.</p>
+    <label for="d">Planned</label>
+    <input id="d" type="text" value="2026-11-20">
+    <div class="buttons"><span class="btn">Cancel</span><span class="btn primary">Save</span></div>
+  </div>
+</div>
+<div class="note">Illustrative mockup — dashed outline marks the new control; line 2 shown partly received.</div>
+</body>
+</html>
