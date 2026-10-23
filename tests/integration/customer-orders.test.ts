@@ -190,6 +190,45 @@ describe("customer orders through the UI and API", () => {
     expect(await user.evaluate<string>(`document.querySelector(${JSON.stringify(field("customer"))}).selectedOptions[0].textContent`)).toContain("Inactive");
     await user.press("Escape");
   });
+
+  it("links the Open customer order that refuses deactivating its location or its material, and the link opens it (LFC-018, LFC-014)", async () => {
+    const alert = "[role=alertdialog] [role=alert]";
+    /** Confirms the open Deactivate dialog and returns its refusal's text and link. */
+    const refusal = async () => {
+      await admin.waitFor("[role=alertdialog]");
+      await admin.click("[role=alertdialog] button[data-variant=destructive]");
+      await admin.waitUntil(`!!document.querySelector("${alert} a")`);
+      return admin.evaluate<{ text: string; id: string; href: string }>(`(() => {
+        const link = document.querySelector("${alert} a");
+        return { text: document.querySelector("${alert}").innerText.trim(), id: link.textContent, href: link.getAttribute("href") };
+      })()`);
+    };
+    await admin.setViewport(1280, 800);
+
+    // The material's refusal names whichever Open order with demand it finds first, so check that it is one.
+    await admin.open(`${baseUrl}/admin/prod/materials/${material}`);
+    await admin.waitUntil(`[...document.querySelectorAll("main button")].some((b) => b.offsetParent && b.textContent.trim() === "Deactivate" && Object.keys(b).some((key) => key.startsWith("__reactFiber")))`);
+    await admin.clickRole("button", "Deactivate");
+    const demand = await refusal();
+    expect(demand).toEqual({ text: `Customer order ${demand.id} has outstanding demand for this material. ${demand.id}`, id: expect.stringMatching(/^\d{8}$/), href: `/admin/prod/customer-orders/${demand.id}` });
+    expect(await getOrder(demand.id)).toMatchObject({ status: "open", lines: expect.arrayContaining([expect.objectContaining({ material })]) });
+    await admin.clickRole("button", "Cancel");
+    await admin.waitUntil(`!document.querySelector("[role=alertdialog]")`);
+
+    // The location's refusal names its lowest Open order: the one this file created first.
+    await admin.open(`${baseUrl}/admin/prod/locations`);
+    await clickHydrated(admin, `main button[aria-label='Actions for ${location.id}']`);
+    await admin.clickRole("menuitem", "Deactivate");
+    expect(await refusal()).toEqual({ text: `Customer order ${uiOrder.id} is still Open at this location. ${uiOrder.id}`, id: uiOrder.id, href: `/admin/prod/customer-orders/${uiOrder.id}` });
+    await admin.click(`${alert} a`);
+    // The locations page stays mounted but hidden, its dialog with it: wait for the order's shown heading.
+    await admin.waitUntil(
+      `location.pathname === "/admin/prod/customer-orders/${uiOrder.id}" && [...document.querySelectorAll("main h1")].some((h) => h.offsetParent && h.textContent.startsWith("Customer order ${uiOrder.id}"))`,
+    );
+    expect(json(await api("GET", `/api/tenants/prod/locations/${location.id}`)).data.active).toBe(true);
+    expect(json(await api("GET", `/api/tenants/prod/materials/${material}`)).data.active).toBe(true);
+  });
+
   it("keeps API pages bounded and lets a user navigate a collection beyond 100 orders", async () => {
     const created = await write("POST", "/api/tenants/prod/customers", { name: "orders pagination " + "long customer name ".repeat(4) });
     expect(created.status).toBe(200);
