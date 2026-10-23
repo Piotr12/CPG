@@ -155,6 +155,8 @@ describe("the production variance report in the UI", () => {
     await una.open(`${baseUrl}/admin/prod/reports/variance?material=${ids.bar}&from=2026-10-22&to=2026-10-21`);
     await una.waitForText("The end date must not be before the start date.");
     expect(await una.evaluate<string | null>(`${shown("#variance-to")}.getAttribute("aria-invalid")`)).toBe("true");
+    // The error takes focus, so a screen reader reads it out without the user moving there.
+    await una.waitUntil(`document.activeElement?.id === "variance-to-error"`);
     expect(await una.evaluate<boolean>(`!${shown(report)}`)).toBe(true);
   });
 

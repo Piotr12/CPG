@@ -27,7 +27,7 @@ export function serverAction<Schema extends z.ZodType, T>(
       return ok(await handler(parsed.data));
     } catch (error) {
       if (error instanceof ValidationError) {
-        return fail({ code: error.code, message: error.message, fieldErrors: error.fieldErrors });
+        return fail({ code: error.code, message: error.message, fieldErrors: error.fieldErrors, ...(error.messageParams && { params: error.messageParams }) });
       }
       if (error instanceof AppError) return fail({ code: error.code, message: error.message, ...(error.messageParams && { params: error.messageParams }) });
       console.error("Server action failed:", error);

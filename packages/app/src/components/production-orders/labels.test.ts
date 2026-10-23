@@ -11,10 +11,24 @@ it("keeps every label serializable and translates known field errors while prese
     expect(productionFieldError(labels)("specific server context")).toBe("specific server context");
     expect(labels.errors.TENANT_READ_ONLY).toBe(messages.errors.TENANT_READ_ONLY);
     expect(completionFieldError(labels)(MISSING_COMPONENT_MESSAGE)).toBe(labels.completion.fieldErrors.missingComponent);
+    const named = completionFieldError(labels)(MISSING_COMPONENT_MESSAGE, { material: "00000006, 00000007" });
+    expect(named).toContain("00000006, 00000007");
+    expect(named.startsWith(labels.completion.fieldErrors.missingComponent)).toBe(true);
+    expect(completionFieldError(labels)(CALENDAR_DATE_MESSAGE, { material: "00000006" })).toBe(labels.invalidDate);
     expect(completionFieldError(labels)(CALENDAR_DATE_MESSAGE)).toBe(labels.invalidDate);
     expect(completionFieldError(labels)("specific server context")).toBe("specific server context");
     expect(labels.errors.INSUFFICIENT_STOCK).toBe(messages.errors.INSUFFICIENT_STOCK);
     expect(labels.errors.PRODUCTION_OVERPRODUCTION).toContain("{target}");
+  }
+});
+it("calls a component outside the pinned recipe what the variance report calls it, on the form and in the history (#153)", () => {
+  for (const messages of [en, pl]) {
+    const { completion } = messages.productionOrders;
+    const term = messages.varianceReport.extra;
+    expect(completion.extra).toBe(term);
+    expect(completion.inputLine.startsWith(`${term} `)).toBe(true);
+    expect(completion.removeInput).toContain(` ${term.toLowerCase()} `);
+    expect(completion.fieldErrors.extraQuantity).toContain(term.toLowerCase().slice(0, -1));
   }
 });
 it("names every production audit action and snapshot field in both languages", () => {

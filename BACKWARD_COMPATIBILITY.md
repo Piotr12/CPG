@@ -85,7 +85,7 @@ Source: `packages/app/src/app/`. Today that is:
 
 Rename either one only by reading the old name for one release.
 
-Route handlers under `app/api/` are protected the same way: their paths, methods, request schemas, the result envelope (`{ ok, data }` / `{ ok: false, error: { code, message, fieldErrors? } }`), error codes and HTTP statuses. Changes are additive (new optional fields, new routes), and removals go through a deprecation release. Today's routes:
+Route handlers under `app/api/` are protected the same way: their paths, methods, request schemas, the result envelope (`{ ok, data }` / `{ ok: false, error: { code, message, fieldErrors?, params? } }`), error codes and HTTP statuses. Changes are additive (new optional fields, new routes), and removals go through a deprecation release. Today's routes:
 
 - `GET /api/tenants` and `GET /api/tenants/{tenant}` (404 `TENANT_NOT_FOUND`). Each tenant is `{ code, name, generation, readOnly }`;
 - `PATCH /api/tenants/{tenant}` (`{ readOnly }` and nothing else, admin only; spec `2026-10-19--2018UTC-read-only-tenants`). It sets the tenant's read-only flag and answers the tenant. It is global metadata, not tenant data, so it is the stated exception to the tenant-write rules below: its key goes in the global store, it takes no `Dataset-Generation`, and it works while the tenant is read-only;
@@ -242,7 +242,7 @@ Tenant routes under `/api/tenants/{tenant}/production-orders/{id}/completions`, 
 - `GET …/completions/preview?quantity=&unit=` is an authenticated read (it works in read-only tenants). It returns `{ order, location, quantity, baseQuantity, baseUnit, produced, target, producedAfter, exceedsTarget, components: [{ material, description, baseUnit, units, active, perOutput, expected, available }] }`, where `expected` is the pinned revision's per-output quantity × output, rounded up to six decimals. A non-Open order is `PRODUCTION_ORDER_LOCKED`.
 - `GET …/completions?page=1` returns the order's completions newest first, 20 to a page: `{ id, order, businessDate, quantity, enteredQuantity, enteredUnit, baseUnit, waste, createdAt, lines: [{ material, baseUnit, expected, actual, variance, enteredQuantity, enteredUnit, extra }] }`. `variance` is signed (actual − expected); `waste` means a zero output.
 - `POST …/completions` uses the shared bearer, key, generation and read-only gates. It takes the strict body `{ quantity, unit, components: [{ material, quantity, unit }] (1–100), acceptOverproduction? }`. Every pinned component must be listed once (0 allowed). Extra inputs must be active raw/intermediate materials with a positive quantity. It returns `{ completion, order }`. Refusals:
-  - line problems: `VALIDATION_FAILED` keyed `components.N.<field>`, or `components` for a missing pinned component or more than 100 movements;
+  - line problems: `VALIDATION_FAILED` keyed `components.N.<field>`, or `components` for a missing pinned component or more than 100 movements. Since E10-S04 (#153) a missing pinned component also sets the additive `params.material`: the missing codes in recipe order, comma-separated;
   - a completion that produces and uses nothing: `PRODUCTION_COMPLETION_EMPTY`;
   - a total past the target without `acceptOverproduction: true`: `PRODUCTION_OVERPRODUCTION` (409, params `produced`, `target`, `output`, `unit`);
   - an overdraw: `INSUFFICIENT_STOCK` (409, params `material`, `location`, `available`, `requested`, `unit`);

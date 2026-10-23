@@ -123,6 +123,9 @@ describe("CompletionForm", () => {
     post();
     await waitFor(() => expect(screen.getByRole("alert").textContent).toBe(t.fieldErrors.missingComponent));
     expect(actual("00000007 Wrapper").getAttribute("aria-invalid")).toBe("true");
+    mocks.action.mockResolvedValueOnce({ ok: false, error: { code: "VALIDATION_FAILED", message: "bad", fieldErrors: { components: [MISSING_COMPONENT_MESSAGE] }, params: { material: "00000007" } } });
+    post();
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toBe(t.fieldErrors.missingComponentNamed.replace("{material}", "00000007")));
     mocks.action.mockResolvedValueOnce({ ok: false, error: { code: "VALIDATION_FAILED", message: "bad", fieldErrors: { "components.0.unit": [UNKNOWN_INPUT_MESSAGE] } } });
     post();
     await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());

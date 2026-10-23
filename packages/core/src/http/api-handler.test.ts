@@ -51,6 +51,14 @@ describe("createApiHandler", () => {
     expect(result.body.error).toEqual({ code: "VALIDATION_FAILED", message: "Some fields are invalid.", fieldErrors: { name: ["Required."] } });
   });
 
+  it("keeps the parameters a validation failure names, beside its field errors", async () => {
+    const result = await call(async () => {
+      throw new ValidationError({ components: ["Missing."] }, { material: "00000006" });
+    });
+
+    expect(result.body.error).toEqual({ code: "VALIDATION_FAILED", message: "Some fields are invalid.", fieldErrors: { components: ["Missing."] }, params: { material: "00000006" } });
+  });
+
   it("hides anything unexpected behind INTERNAL and logs it", async () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
 

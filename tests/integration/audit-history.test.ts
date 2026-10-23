@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import type { AuditPage, OrderView, ReceiptView, StockView } from "@cpg/core";
+import type { AuditPage, CompletionResult, OrderView, ProductionOrderDetail, ReceiptView, StockView, TransferView } from "@cpg/core";
 import { callApi, json } from "./api";
 import { openBrowser, type Browser } from "./browser";
 import { choosePreference, hydrated, signInAs, signInAsAdmin } from "./sign-in";
@@ -166,6 +166,46 @@ describe("tracing one record's history in the audit (E13-S03, #96)", () => {
     expect(reversal[0][6]).toMatch(new RegExp(`Reverses ${correction.slice(0, 8)}$`));
   });
 
+  it("traces a production completion reversal and a transfer posting reversal to their reason and movements (AUD-004)", async () => {
+    // The file's normal user reverses, through the API, a completion and a transfer dispatch the admin posted.
+    const bar = (await create<{ id: string }>("materials", { type: "finished", description: `${username} bracket`, baseUnit: "each" })).id;
+    const depot = (await create<{ id: string }>("locations", { name: `${username} depot` })).id;
+    await create("planning-parameters", { material: bar, location, procurement: "make", leadTimeDays: 1, minimumQuantity: "1", lotMultiple: "1" });
+    await create("boms", { output: bar, priority: 1, validFrom: "2026-01-01", validThrough: null, components: [{ material, quantity: "2", unit: "each" }] });
+    await create("stock/corrections", { material, location, quantity: "10", unit: "each", reason: `${username} stock` });
+    const made = await create<ProductionOrderDetail>("production-orders", { output: bar, location, quantity: "2", unit: "each", plannedFinish: "2027-01-05" });
+    const { completion } = await create<CompletionResult>(`production-orders/${made.id}/completions`, {
+      quantity: "2", unit: "each", components: [{ material, quantity: "4", unit: "each" }],
+    });
+    await create(`production-orders/${made.id}/completions/${completion.id}/reverse`, { reason: "History completion twice" }, operatorSecret);
+    const moved = await create<TransferView>("transfers", { material, source: location, destination: depot, quantity: "3", unit: "each", plannedDispatch: "2027-01-05", plannedArrival: "2027-01-06" });
+    const { posting } = await create<{ posting: { id: string } }>(`transfers/${moved.id}/dispatches`, { quantity: "3", unit: "each" });
+    await create(`transfers/${moved.id}/postings/${posting.id}/reverse`, { reason: "History wrong route" }, operatorSecret);
+    /** The newest movement of a ledger: each reversal's inverse, which names the movement it reverses. */
+    const newest = async (of: string) => (await api<StockView>("GET", `/api/tenants/prod/stock?material=${of}&location=${location}`)).body.data.movements[0];
+
+    for (const [subject, inverse, reason, action] of [
+      [`subjectType=ProductionCompletion&subjectId=${completion.id}`, await newest(bar), "History completion twice", "Production completion reversed"],
+      [`subjectType=Transfer&subjectId=${moved.id}`, await newest(material), "History wrong route", "Transfer posting reversed"],
+    ] as const) {
+      await openAudit(operator, `/admin/prod/audit?${subject}`);
+      const [reversed] = await rows(operator);
+      expect([reversed[1], reversed[4]]).toEqual([username, action]);
+      expect(reversed[3]).toMatch(new RegExp(`^API\\s*${username}-operator$`));
+      expect(reversed[6]).toContain(reason);
+
+      expect(inverse.reverses).toMatch(/^[0-9a-f-]{36}$/);
+      await openAudit(operator, `/admin/prod/audit?subjectType=StockMovement&subjectId=${inverse.id}`);
+      const posted = await rows(operator);
+      expect(posted.map(([, account, , , entry]) => [account, entry])).toEqual([[username, "Stock movement posted"]]);
+      expect(posted[0][3]).toMatch(new RegExp(`^API\\s*${username}-operator$`));
+      expect(posted[0][6]).toContain(reason);
+      expect(posted[0][6]).toMatch(new RegExp(`Reverses ${inverse.reverses!.slice(0, 8)}$`));
+      await openAudit(operator, `/admin/prod/audit?subjectType=StockMovement&subjectId=${inverse.reverses}`);
+      expect((await rows(operator))[0][6]).toMatch(new RegExp(`Reversed by ${inverse.id.slice(0, 8)}$`));
+    }
+  });
+
   it("filters by account, channel and day on the tenant and the Global audit, and keeps the filters when paging", async () => {
     await openAudit(operator, `/admin/prod/audit?account=${username}&channel=ui&from=${utcDay()}&to=${utcDay()}`);
     const ui = await rows(operator);
@@ -183,8 +223,21 @@ describe("tracing one record's history in the audit (E13-S03, #96)", () => {
     await operator.click("main form button[type=submit]");
     await operator.waitUntil(`location.search.includes("subjectId=") && ${shown("#audit-filter-errors")}`);
     expect(await operator.text("#audit-filter-errors")).toContain("Choose the record type for this ID");
+    // The refusal takes focus, so a screen reader reads it out without the user moving there.
+    await operator.waitUntil(`document.activeElement?.id === "audit-filter-errors"`);
     expect(await operator.evaluate<boolean>(shown("main table"))).toBe(false);
     expect(await operator.evaluate<string>(`document.querySelector("#audit-subject-id").value`)).toBe(purchase.id);
+
+    // A bookmarked account the select doesn't list stays selected, named as such, and Apply sends it back.
+    const ghost = `${username}-gone`;
+    await openAudit(operator, `/admin/prod/audit?account=${ghost}`);
+    expect(await operator.evaluate<string>(`(() => { const select = document.querySelector("#audit-account"); return select.value + " | " + select.selectedOptions[0].text; })()`))
+      .toBe(`${ghost} | ${ghost} (not in the list)`);
+    await operator.select("#audit-channel", "ui");
+    await operator.waitUntil(hydrated(`document.querySelector("main form button[type=submit]")`));
+    await operator.click("main form button[type=submit]");
+    await operator.waitUntil(`location.search.includes("channel=ui")`);
+    expect(new URL(await operator.url()).searchParams.get("account")).toBe(ghost);
 
     // A Global entry of the operator's through the API: a spare token, revoked with the bearer token.
     await openTokens(operator, baseUrl);

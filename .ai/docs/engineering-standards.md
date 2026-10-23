@@ -54,8 +54,8 @@ There will be many concepts, and the main risk is that each route, action and pa
 
 **Server — `packages/core/src/http/`:**
 
-- `errors.ts` — the typed error hierarchy: `AppError` base; `NotFoundError`, `ValidationError` (carries `fieldErrors`), `ConflictError`, `UnauthorizedError`, `ForbiddenError`. Services throw these. A service never builds a `Response`.
-- `result.ts` — the one result envelope shared by route handlers and server actions: `{ ok: true, data }` / `{ ok: false, error: { code, message, fieldErrors? } }`.
+- `errors.ts` — the typed error hierarchy: `AppError` base; `NotFoundError`, `ValidationError` (carries `fieldErrors`, and optional `messageParams` for what a field message refers to), `ConflictError`, `UnauthorizedError`, `ForbiddenError`. Services throw these. A service never builds a `Response`.
+- `result.ts` — the one result envelope shared by route handlers and server actions: `{ ok: true, data }` / `{ ok: false, error: { code, message, fieldErrors?, params? } }`.
 - `server-action.ts` — wraps a server action. It parses the input with a Zod schema, maps thrown `AppError`s to the envelope, and logs anything else without leaking a stack trace. It is the default for mutations made from CPG's own pages.
 - `api-handler.ts` — the same wrapper for route handlers (`Response.json` + status code). Use it for endpoints called from outside the app or fetched by client components. Core builds it with `createApiHandler(rethrow)`; routes import `apiHandler` from `app/src/routing/api-handler.ts`, which passes Next.js's `unstable_rethrow` so `redirect()`, `notFound()` and the build-time prerender bail-out propagate instead of being logged as a 500. ESLint stops `app` code from importing `createApiHandler` anywhere else.
 - **Every state-changing route** (`POST`/`PUT`/`PATCH`/`DELETE`) is built with `apiWrite`, or `tenantApiWrite` under `api/tenants/[tenant]/` (`app/src/auth/api-write.ts`, spec `2026-10-19--1548UTC-api-idempotency`).
@@ -73,7 +73,7 @@ No action or route writes its own `try/catch` + response mapping.
 - `api/api-call.ts` — the only place a client component calls `fetch()` on `/api/*`. It parses the envelope defensively and returns a typed `ApiResult<T>`, and `apiCallOrThrow` throws instead. `ui` declares its own `ApiResult` type with the same shape in `api/result.ts`, because `ui` must not import `core`.
 - `forms/crud-form.tsx` — a schema-driven form: fields, server `fieldErrors` next to the right field, submit/cancel/pending states, `Cmd/Ctrl+Enter` submits, `Escape` cancels. It is bound to a server action (or `apiCall`). Use it for every create/edit form, and write a bespoke form only when the UX isn't form-over-schema (e.g. a planning board).
 - `tables/data-table.tsx` — column-config-driven lists with loading/empty/error states, pagination and row actions. Use it for every list screen.
-- `feedback/{error-message,empty-state,loading-message}.tsx` — the only sanctioned loading/error/empty renderers, including `<Suspense>` fallbacks. `LoadingMessage` is a language-neutral skeleton for request-time page content.
+- `feedback/{error-message,error-summary,empty-state,loading-message}.tsx` — the only sanctioned loading/error/empty renderers, including `<Suspense>` fallbacks. `LoadingMessage` is a language-neutral skeleton for request-time page content. `ErrorSummary` holds errors a page can open with (a refused bookmarked filter): it takes focus on mount (unless the reader is already in a field), because an alert already in the page at load isn't announced by every screen reader.
 
 **Language, theme and help** (spec `2026-10-19--0855UTC-user-preferences-footer-help`):
 

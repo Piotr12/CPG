@@ -439,10 +439,10 @@ async function resolveLines(em: EntityManager, order: ProductionOrder, output: s
     const expected = component === undefined ? "0.000000" : expectedConsumption(component.quantity, output);
     byMaterial.set(material!.code, { material: material!, record, expected, extra: component === undefined });
   }
-  if (pinned.some(({ material }) => !values.components.some((line) => line.material === material.code))) {
-    errors.components = [MISSING_COMPONENT_MESSAGE];
-  }
-  if (Object.keys(errors).length > 0) throw new ValidationError(errors);
+  // Named in `params.material`, so an API caller learns which component it left out (#153, R07).
+  const missing = pinned.filter(({ material }) => !values.components.some((line) => line.material === material.code)).map(({ material }) => material.code);
+  if (missing.length > 0) errors.components = [MISSING_COMPONENT_MESSAGE];
+  if (Object.keys(errors).length > 0) throw new ValidationError(errors, missing.length > 0 ? { material: missing.join(", ") } : undefined);
   const pinnedLines = pinned.map(({ material }) => byMaterial.get(material.code)!);
   return [...pinnedLines, ...[...byMaterial.values()].filter(({ extra }) => extra)];
 }
