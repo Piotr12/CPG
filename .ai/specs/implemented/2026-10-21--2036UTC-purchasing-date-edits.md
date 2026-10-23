@@ -83,10 +83,10 @@ Takeaway: the new code is presentation and action wiring. The rules (version che
 
 ## 📝 UI/UX
 
-![Requisition list today](assets/purchasing-date-edits/current-01-requisitions.png)
-![Purchase order page today](assets/purchasing-date-edits/current-02-purchase-order.png)
-![Proposed: Change date on a requisition row](assets/purchasing-date-edits/mockup-01-requisition-date.png)
-![Proposed: Change date on a purchase order line](assets/purchasing-date-edits/mockup-02-order-line-date.png)
+![Requisition list today](../assets/purchasing-date-edits/current-01-requisitions.png)
+![Purchase order page today](../assets/purchasing-date-edits/current-02-purchase-order.png)
+![Proposed: Change date on a requisition row](../assets/purchasing-date-edits/mockup-01-requisition-date.png)
+![Proposed: Change date on a purchase order line](../assets/purchasing-date-edits/mockup-02-order-line-date.png)
 
 Prototype: `.ai/specs/assets/purchasing-date-edits/` (static mockups)
 
@@ -185,5 +185,5 @@ Implementation PR #159 changed these points from the plan above:
 - **At 390 px the Actions column stays in the table's own horizontal scroll.** That was already true of Cancel, and the page itself doesn't overflow. The test scrolls the button into the table's box and opens the dialog.
 - **BUY-024 stays "Partially verified."** The acceptance catalogue reserves "Passed (automated)" for a whole scenario, and SAL-019 is the precedent. Its evidence line now says that the non-MRP half passes on both UI and API.
 - **The requisition dialog's errors are the screen's merged map** (`labels.errors`, the shared map plus the requisition screen's own). The requisition screen overrides none of the codes the dialog can show, so this matches the spec's explicit map.
-- **Moving the spec to `implemented/`** happens once this design PR is on `main`.
+- **The spec moved to `implemented/` on its design PR #157**, not on #159, so the two PRs don't both add the file. #159 merged first, so the move happened when #157 was brought up to date with `main`.
 
