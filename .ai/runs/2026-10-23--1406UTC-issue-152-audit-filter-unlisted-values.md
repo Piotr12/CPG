@@ -3,7 +3,7 @@
 **Date:** 2026-10-23 14:06 UTC
 **Agent:** Claude Code / claude-opus-5-5 (`om-auto-fix-issue`, dispatched by cezar)
 **Spec:** none (issue #152; the audit filters shipped under `.ai/specs/implemented/2026-10-21--0944UTC-audit-history-filters.md`)
-**Status:** in progress
+**Status:** done (PR #177; full integration suite pending in CI)
 
 ## Goal
 
@@ -28,6 +28,7 @@ The four acceptance criteria of #152: an unlisted account or record type in the 
   - The unlisted record-type option now names a type of the other audit ("Purchase order (not in the list)"). The name is looked up as an own key, since the schema accepts letters such as `toString`.
   - The channel assertions use the regex form of line 102.
   - Declined: comparing an unlisted account case-insensitively. It only matters on the refused path, where values are shown as sent.
+- 16:30 — UI QA (`om-auto-qa-pr`, evidence only) on the standalone build of `14be82c`: 9/9 pass, screenshots on PR #177. Steps 1–6 cover the unlisted values and the focused refusals at 1280 and 390 px. Step 7 reversed completion 00000005 in Test through its dialog and read it on the audit; its inverse movement shows "Reverses". The seeded original has no audit entry, so "Reversed by" is left to the integration test. The footer was checked on both reports. Completion 00000001 was refused first because its output had shipped since: expected behaviour.
 - 14:50 — Docker isn't reachable from this account, so both files ran against the standalone build (lesson of 2026-10-19). AUD-004 and UX-010 in `CPG-acceptance.md` get the new evidence. UX-010 stays "Partially verified" because the MRP report doesn't exist yet.
 
 ## Changes
