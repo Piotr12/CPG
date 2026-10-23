@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-23 20:17 UTC
 **Agent:** Claude Code (Opus 5.5), `om-auto-fix-issue 147` → `om-auto-write-spec` (#180) → `om-auto-implement-spec` → `om-auto-create-pr`
-**Source doc:** .ai/specs/2026-10-23--2006UTC-shipment-edit-cancel.md (design PR #180)
+**Source doc:** .ai/specs/implemented/2026-10-23--2006UTC-shipment-edit-cancel.md (design PR #180)
 **Issue:** #147 (E08-S05)
 **Status:** done
 
@@ -44,7 +44,7 @@
 
 ## Note on the spec file
 
-The spec ships on design PR #180 (`spec/shipment-edit-cancel`), which is not merged yet. This branch doesn't commit it, so the two PRs don't both add the file. It moves to `implemented/` once #180 is on `main`; until then that move is a named follow-up.
+The spec shipped on design PR #180 (`spec/shipment-edit-cancel`), which merged during this run. This branch doesn't commit it, so the two PRs don't both add the file. It moves to `implemented/` once #180 is on `main`; until then that move is a named follow-up.
 
 ## Implementation Plan
 
@@ -135,4 +135,6 @@ PR: #182
 
 ## Follow-ups
 
-- Move the spec to `.ai/specs/implemented/` once #180 is on `main`.
+- None in this repository: #180 merged during the run. The follow-up docs PR moves the spec to `implemented/` and carried in the spec's last correction (409 for read-only, `toIssue` 0 when cancelled).
+- #182 merged at 21a48c2 while this run was finishing, so the spec move and correction ship on a follow-up docs PR off `main`.
+- Two pushes went out after their PRs had merged and recreated the remote branches `spec/shipment-edit-cancel` and `feat/shipment-edit-cancel`. Both were checked to hold nothing beyond this follow-up PR's content, then deleted.

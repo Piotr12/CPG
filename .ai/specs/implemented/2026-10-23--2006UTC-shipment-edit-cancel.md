@@ -1,6 +1,6 @@
 # A user changes an Open shipment's plan, and cancels a shipment nothing has been issued against
 
-**Status:** ready
+**Status:** implemented (PR #182)
 **Created:** 2026-10-23 20:06 UTC
 **Issue:** #147 (E08-S05), epic #74 · **Builds on:** `implemented/2026-10-20--2045UTC-shipments-goods-issues.md` (#84: shipments, Q8 completion, Q10 order-line locks), `implemented/2026-10-21--0707UTC-document-lifecycle.md` (#90: Cancel versus Close Early), `implemented/2026-10-21--0706UTC-stock-reversals.md` (#91: posting history outlives a reversal) · **Design authority:** `.ai/specs/product-brief.md` (R03, R05, R07, R08, D04), `BACKWARD_COMPATIBILITY.md`
 
@@ -109,7 +109,7 @@ alter table shipment rename column status_next to status;
 
 ## 📝 API Contracts
 
-Both routes are keyed writes (`tenantApiWrite`): bearer token, `Idempotency-Key`, JSON body, and in Test the current `Dataset-Generation`. Read-only tenants answer 403 `TENANT_READ_ONLY`, and a same-key retry replays the first answer with no second audit entry. Both answer 200 with the `ShipmentView`.
+Both routes are keyed writes (`tenantApiWrite`): bearer token, `Idempotency-Key`, JSON body, and in Test the current `Dataset-Generation`. Read-only tenants answer 409 `TENANT_READ_ONLY`, as every tenant write does, and a same-key retry replays the first answer with no second audit entry. Both answer 200 with the `ShipmentView`.
 
 **`PATCH /api/tenants/{tenant}/shipments/{id}`**:
 
@@ -134,7 +134,7 @@ Both routes are keyed writes (`tenantApiWrite`): bearer token, `Idempotency-Key`
 
 **`POST /api/tenants/{tenant}/shipments/{id}/cancel`** takes `{ "version": 3 }`, a strict body like the other lifecycle routes. Refusals: 404 `SHIPMENT_NOT_FOUND`; 409 `VERSION_CONFLICT`, `SHIPMENT_NOT_OPEN` or `SHIPMENT_ISSUED`.
 
-**Reads (additive)**: every shipment adds `version`, and every line `posted`. `status` may now be `cancelled`. A removed line no longer appears, and the remaining lines keep their numbers, so numbering can have gaps. Messages:
+**Reads (additive)**: every shipment adds `version`, and every line `posted`. `status` may now be `cancelled`, and a cancelled shipment's lines report `toIssue` 0: it plans nothing more. A removed line no longer appears, and the remaining lines keep their numbers, so numbering can have gaps. Messages:
 - `SHIPMENT_NOT_OPEN` reads "Shipment N is completed, so it can't be changed." or "…cancelled…", depending on the action. The goods issue keeps its existing text.
 - `SHIPMENT_ISSUED` reads "Goods have been issued against shipment N, so it can't be cancelled. To finish it, lower its lines to what was issued."
 - `SHIPMENT_LINE_ISSUED` reads "Line N has goods issued against it, so it stays on the shipment. Lower it to what was issued instead." 
@@ -162,9 +162,9 @@ Prototype: `.ai/specs/assets/shipment-edit-cancel/` (static mockups, illustrativ
 
 | Today | Proposed |
 |---|---|
-| ![Shipment page today](assets/shipment-edit-cancel/current-01-shipment.png) | ![Edit shipment dialog](assets/shipment-edit-cancel/mockup-01-edit-dialog.png) |
-| ![Customer order with its shipments](assets/shipment-edit-cancel/current-02-customer-order.png) | ![Cancel confirmation](assets/shipment-edit-cancel/mockup-02-cancel-confirm.png) |
-| | ![A cancelled shipment](assets/shipment-edit-cancel/mockup-03-cancelled.png) |
+| ![Shipment page today](../assets/shipment-edit-cancel/current-01-shipment.png) | ![Edit shipment dialog](../assets/shipment-edit-cancel/mockup-01-edit-dialog.png) |
+| ![Customer order with its shipments](../assets/shipment-edit-cancel/current-02-customer-order.png) | ![Cancel confirmation](../assets/shipment-edit-cancel/mockup-02-cancel-confirm.png) |
+| | ![A cancelled shipment](../assets/shipment-edit-cancel/mockup-03-cancelled.png) |
 
 ## 📝 Edge Cases & Failure Scenarios
 
