@@ -210,7 +210,7 @@ Route handlers under `app/api/` are protected the same way: their paths, methods
       - 404 `SHIPMENT_NOT_FOUND`;
       - 409 `VERSION_CONFLICT`, `SHIPMENT_NOT_OPEN`, or `SHIPMENT_LINE_ISSUED` with `params.line` when a removed line had any goods issue.
   - `POST /api/tenants/{tenant}/shipments/{id}/cancel` (since #147) takes the strict body `{ version }`.
-    - It cancels an Open shipment that no goods issue was ever posted against, even one reversed since. Stock and the order are untouched.
+    - It cancels an Open shipment that no goods issue was ever posted against, even one reversed since. Stock and the order are untouched. A cancelled shipment's lines report `toIssue` 0.
     - Refusals: 404 `SHIPMENT_NOT_FOUND`; 409 `VERSION_CONFLICT`, `SHIPMENT_NOT_OPEN` or `SHIPMENT_ISSUED`.
   - Both are keyed tenant writes: bearer, `Idempotency-Key`, `Dataset-Generation`, read-only refusal. Both roles may call them.
   - They audit `shipments.shipment.updated` (before/after `{ plannedDate, status, lines }`) and `shipments.shipment.cancelled`.

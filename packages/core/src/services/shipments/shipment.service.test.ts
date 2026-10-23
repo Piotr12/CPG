@@ -423,7 +423,8 @@ describe("ShipmentService", () => {
       const orderBefore = await orders().get(order.id);
 
       const cancelled = await service().cancel(shipment.id, 1, ACTOR);
-      expect(cancelled).toMatchObject({ status: "cancelled", version: 2, lines: [{ quantity: "20.000000", issued: "0.000000" }] });
+      // The order line still has 50 outstanding, but a cancelled shipment has nothing left to issue.
+      expect(cancelled).toMatchObject({ status: "cancelled", version: 2, lines: [{ quantity: "20.000000", issued: "0.000000", toIssue: "0.000000" }] });
       const [entry] = await scoped().find(TenantAuditEvent, { action: "shipments.shipment.cancelled" });
       expect(entry).toMatchObject({ subjectId: shipment.id, subjectLabel: `${shipment.id} — customer order ${order.id}`, before: { status: "open" }, after: { status: "cancelled" } });
       expect(await orders().get(order.id)).toEqual(orderBefore);

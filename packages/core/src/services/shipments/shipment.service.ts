@@ -33,6 +33,9 @@ import type { PostingContext } from "../stock/stock-posting";
 import { assertShipmentOpen, findShipment, groupBy, postedShipmentLineIds } from "./shipment-records";
 import { completeFinishedShipments, touchShipment } from "./shipment-usage";
 
+/** A six-decimal zero (R03): what a cancelled shipment's lines have left to issue. */
+const NOTHING = "0.000000";
+
 export const SHIPMENT_ID_RACE = "Another shipment was created at the same moment. Try again.";
 
 /** One line of a shipment as the screens and the API show it. Quantities are six-decimal base-unit text (R03). */
@@ -381,7 +384,8 @@ async function viewsOf(em: EntityManager, shipments: readonly Shipment[]): Promi
         denominator,
         issued,
         posted: posted.has(id),
-        toIssue: toIssueOf(quantity, issued, outstandingOf(orderLine)),
+        // A cancelled shipment plans nothing more (shipment edit spec Q6), so nothing is left to issue on it.
+        toIssue: shipment.status === "cancelled" ? NOTHING : toIssueOf(quantity, issued, outstandingOf(orderLine)),
       })),
   }));
 }
