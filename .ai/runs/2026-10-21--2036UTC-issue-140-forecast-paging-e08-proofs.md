@@ -14,6 +14,7 @@ Page `GET /api/tenants/{tenant}/forecasts` and the forecasts screen by 100 (`?pa
 - 20:36 Spec written with seven autonomous defaults, none marked for human confirmation. Paging design: scan the keys only, sort them by business IDs in code (the repo convention is no relation `orderBy`), then load only the page. Same pattern as the stock report.
 
 - 20:42 Fresh-context spec review: verdict "revise, then proceed", six findings, all folded in. Changes: one partial read with no second `$in` query; the existing 120-row integration check rewritten; Q8 bounds the fixes a proof can pull in; AUD-001 is also proven through the API; the "fewer than 100" stop rule; one citation fixed.
+- 2026-10-23 07:10 `om-auto-fix-pr 150`: merged `main` (incl. #163, Test starts tiny; Test still has 120 forecasts, since the dataset's forecast months don't depend on its history length). Spec review: no blocker or major. Fixed in the spec: INV-017 carries the same "not asserted yet (#140)" note as SAL-024 and is proven by the same test, so step 9 promotes it too; two citations corrected (the stock report's path, and `customer-orders.test.ts:175` after the merge moved the line).
 - 20:44 No mockups or screenshots in the design PR. The screen reuses `PageLinks` unchanged (as on the purchase-order list). The implementation PR's browser QA carries the before/after screenshots.
 
 ## Plan
