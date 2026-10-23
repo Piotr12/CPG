@@ -24,6 +24,7 @@ Issue #144: a Cancelled, Completed or Closed Early production order still lists 
 - 20:10 Tests for the closure's other gaps: BUY-017 unit (PO 100 kg, 60 received, Close Early → no movement, stock 60) plus a stock check on the existing UI closure; a stock-import line reversal and a seeded-opening line reversal (only that movement, once); a browser receipt reversal from the PO page (Completed → Open, received 0, stock back).
 - 20:12 Integration first run: my new production check read `[role=status]` before the page streamed it, and a rerun on the same `DATA_DIR` hit the existing user (409). Both are recorded lessons; waited for the text, read only shown elements, restarted on a fresh `DATA_DIR`. Docker is unavailable to this account, so integration files ran against the standalone build.
 - 20:15 Coverage first run was 99.97 % branches: the old completed-order screen test had been the only one reaching "sufficient". Added an Open, no-shortage case.
+- 20:19 `om-auto-review-pr` (PR #178, `--autofix`): approvable; gate on the PR head green. Two findings fixed. Minor: PRD-029's evidence said the page shows the 160 still to make, but the integration test checked that only in the API detail. It now reads the page's requirement row before Close Early (160 kg required, 60 kg available, 100 kg short), as the lesson on evidence lines asks. Nit: LFC-004's evidence cited `production-order.service.test.ts` twice; merged into one citation.
 
 ## Changes
 
@@ -36,6 +37,7 @@ Issue #144: a Cancelled, Completed or Closed Early production order still lists 
 
 - `npm run lint` → 0; `npm run typecheck` → 0; `npm run test:coverage` → 0 (488 files, 3,488 tests, 100 % on every metric); `npm run build` → 0.
 - Integration against the standalone build (fresh `DATA_DIR`): `document-lifecycle.test.ts` + `stock-reversals.test.ts` → 15 passed; `production-orders.test.ts` + `production-completions.test.ts` → 10 passed. The full suite runs in CI.
+- Review fix: `npm run lint`, `npm run typecheck`, `npm run test:coverage` (3,488 tests, 100 %), `npm run build` → all 0; `document-lifecycle.test.ts` against a fresh standalone copy and `DATA_DIR` → 11 passed.
 
 ## Follow-ups
 

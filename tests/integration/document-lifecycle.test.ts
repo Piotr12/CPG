@@ -247,17 +247,18 @@ describe("document cancellation and early closure", () => {
     expect((await write(`${root}/production-orders/${order.id}/completions`, { quantity: "40", unit: "each", components: [{ material, quantity: "40", unit: "kg" }] })).status).toBe(200);
     // Shown statuses only: Next.js keeps earlier pages mounted but hidden.
     const statuses = () => user.evaluate<string[]>('[...document.querySelectorAll("main [role=status]")].filter((element) => element.offsetParent).map((element) => element.textContent)');
+    const requirements = () => user.evaluate<string[]>(`[...document.querySelectorAll('main table[aria-label="Pinned component requirements and current stock"] tbody td')].filter((cell) => cell.closest("table").offsetParent).map((cell) => cell.textContent)`);
     const partial = await get("production-orders", order.id);
     // 160 still to make at 1 kg each, against the 60 kg left after the completion.
     expect(partial).toMatchObject({ status: "open", produced: "40.000000", outstanding: "160.000000",
       components: [expect.objectContaining({ material, required: "160.000000", available: "60.000000", shortage: "100.000000" })] });
     await open("production-orders", order.id);
     await user.waitForText("Component shortage: you can still create this plan.");
+    expect(await requirements()).toEqual([`${material} Lifecycle steel`, "160 kg", "60 kg", "100 kg"]);
     await confirm(`Close Early — Production orders ${order.id}`, "160 each");
     await user.waitForText("This order is Closed Early, so it needs no more components.");
     expect((await statuses()).some((text) => text.startsWith("Component shortage"))).toBe(false);
-    expect(await user.evaluate<string[]>(`[...document.querySelectorAll('main table[aria-label="Pinned component requirements and current stock"] tbody td')].filter((cell) => cell.closest("table").offsetParent).map((cell) => cell.textContent)`))
-      .toEqual([`${material} Lifecycle steel`, "0 kg", "60 kg", "0 kg"]);
+    expect(await requirements()).toEqual([`${material} Lifecycle steel`, "0 kg", "60 kg", "0 kg"]);
     expect(await get("production-orders", order.id)).toMatchObject({ status: "closed-early", outstanding: "0.000000", shortages: [],
       components: [expect.objectContaining({ material, required: "0.000000", shortage: "0.000000" })] });
     expect((await stock()).quantity).toBe("60.000000");
