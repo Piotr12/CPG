@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { stockLabels } from "../stock/labels";
-import { isNothing, type IssueView, type Locale, type MaterialSummary, type NamedRecordView, type ShipmentLineView, type ShipmentView, type TenantInfo } from "@cpg/core";
+import { isNothing, type CustomerOrderView, type IssueView, type Locale, type MaterialSummary, type NamedRecordView, type ShipmentLineView, type ShipmentView, type TenantInfo } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { Badge } from "@cpg/ui/components/badge";
 import type { Messages } from "../../i18n/messages/en";
@@ -9,11 +9,16 @@ import { IssueDialog } from "../goods-issues/issue-dialog";
 import { issuesLabels } from "../goods-issues/labels";
 import { IssuesTable } from "../goods-issues/issues-table";
 import { byId } from "../purchase-requisitions/labels";
+import { CancelShipmentButton } from "./cancel-shipment-button";
+import { EditShipmentDialog } from "./edit-shipment-dialog";
 import { fill, shipmentsLabels, shownQuantity } from "./labels";
+import { shipmentEditChoices } from "./line-choices";
 
 interface ShipmentScreenProps {
   tenant: TenantInfo;
   shipment: ShipmentView;
+  /** The shipment's order: an edit may add its other lines. */
+  order: CustomerOrderView;
   /** The shipment's goods issues, newest first. */
   issues: IssueView[];
   materials: MaterialSummary[];
@@ -28,15 +33,18 @@ interface ShipmentScreenProps {
 /**
  * The body of a shipment's page: its order, customer, location, planned date and status, every line
  * with what it planned, issued and still has to issue, the Post goods issue dialog (any user, not
- * while the tenant is read-only), and the shipment's goods issues.
+ * while the tenant is read-only), and the shipment's goods issues. While it is Open and the tenant
+ * writable, Edit shipment changes its plan, and Cancel shipment ends it if nothing was ever issued
+ * against it; otherwise a note points to editing its lines down instead (shipment edit spec).
  */
-export function ShipmentScreen({ tenant, shipment, issues, materials, units, customers, locations, locale, messages }: ShipmentScreenProps) {
+export function ShipmentScreen({ tenant, shipment, order, issues, materials, units, customers, locations, locale, messages }: ShipmentScreenProps) {
   const labels = shipmentsLabels(messages);
   const issueLabels = issuesLabels(messages);
   const materialsById = byId(materials);
   const customer = byId(customers).get(shipment.customer)!;
   const location = byId(locations).get(shipment.location)!;
   const orderPath = `/admin/${tenant.code}/customer-orders/${shipment.customerOrder}`;
+  const context = { tenant: tenant.code, generation: tenant.generation };
   const t = labels.details;
   const c = labels.lineColumns;
   const baseUnit = (line: ShipmentLineView) => materialsById.get(line.material)!.baseUnit;
@@ -90,13 +98,32 @@ export function ShipmentScreen({ tenant, shipment, issues, materials, units, cus
           </div>
         ))}
       </dl>
+      {!tenant.readOnly && shipment.status === "open" && (
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+          <EditShipmentDialog
+            context={context}
+            shipment={shipment.id}
+            customerOrder={shipment.customerOrder}
+            version={shipment.version}
+            location={`${location.id} ${location.name}`}
+            labels={labels}
+            lines={shipmentEditChoices(shipment, order, materialsById, units, labels)}
+            plannedDate={shipment.plannedDate}
+          />
+          {shipment.lines.some(({ posted }) => posted) ? (
+            <p className="text-sm text-muted-foreground">{labels.cancel.issued}</p>
+          ) : (
+            <CancelShipmentButton context={context} shipment={shipment.id} customerOrder={shipment.customerOrder} version={shipment.version} labels={labels} />
+          )}
+        </div>
+      )}
       <DataTable label={labels.lines} columns={columns} rows={shipment.lines} rowKey={(line) => String(line.line)} empty={labels.empty} />
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold">{issueLabels.heading}</h2>
         <p className="text-sm text-muted-foreground">{issueLabels.intro}</p>
         {!tenant.readOnly && (
           <IssueDialog
-            context={{ tenant: tenant.code, generation: tenant.generation }}
+            context={context}
             shipment={shipment.id}
             customerOrder={shipment.customerOrder}
             location={`${location.id} ${location.name}`}
