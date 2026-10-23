@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import type { CompletionReversalResult, CompletionResult, CompletionView, ProductionOrderDetail, StockView, TransferDetailView, TransferReversalResult, TransferView } from "@cpg/core";
+import type { CompletionReversalResult, CompletionResult, CompletionView, ProductionOrderDetail, StockView, TransferDetailView, TransferReversalResult, TransferView, VarianceReportView } from "@cpg/core";
 import { callApi, json } from "./api";
 import { openBrowser, type Browser } from "./browser";
 import { signIn, signInAsAdmin, signedInAndHydrated } from "./sign-in";
@@ -90,7 +90,7 @@ describe("production completion and transfer posting reversals (#92)", () => {
     await Promise.all([admin?.close(), operator?.close()]);
   });
 
-  it("reverses one completion of two atomically once, refusing short output, partial and read-only requests (REV-011/012/014/017/019)", async () => {
+  it("reverses one completion of two atomically once, refusing short output, partial and read-only requests, and the variance report drops it (REV-011/012/014/017/019)", async () => {
     const planned = await order("50");
     await complete(planned.id, "40", "20", "80");
     const second = (await complete(planned.id, "25", "12.5", "50", true)).completion;
@@ -127,6 +127,13 @@ describe("production completion and transfer posting reversals (#92)", () => {
     expect(await physical(ids.bar)).toBe("0.000000");
     const history = await ok<CompletionView[]>("GET", `production-orders/${planned.id}/completions`);
     expect(history.map(({ id, reversal }) => [id, reversal?.reason ?? null])).toEqual([[second.id, "Entered twice"], [history[1].id, null]]);
+    // The variance report, read by the user who reversed it, counts the 40 only and lists the 25 as reversed (#145).
+    const variance = await ok<VarianceReportView>("GET", `reports/variance?material=${ids.bar}`, undefined, operatorSecret);
+    const row = variance.rows.find(({ id }) => id === planned.id)!;
+    expect(row).toMatchObject({ status: "open", target: "50.000000", produced: "40.000000", outputVariance: "-10.000000", completions: 1, wasteCompletions: 0, reversed: [second.id] });
+    expect(row.components.map(({ material, expected, actual }) => [material, expected, actual])).toEqual([
+      [ids.cocoa, "20.000000", "20.000000"], [ids.wrapper, "80.000000", "80.000000"],
+    ]);
     // A completed Test order whose ID Prod doesn't have (Test's tiny dataset holds 45+ production orders, far more
     // than this suite makes in Prod): Prod must neither find it nor reverse its completion.
     const allOrders = async (tenant: string) => {

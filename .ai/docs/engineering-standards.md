@@ -137,7 +137,7 @@ No action or route writes its own `try/catch` + response mapping.
 - **Audit (R08).** Every change is recorded in an append-only audit (spec `2026-10-19--1050UTC-audit-log`): account-level changes in the Global audit (`GlobalAuditEvent`), tenant records in that tenant's audit (`TenantAuditEvent`, tenant-owned).
   - **Every mutating service method takes an `actor: AuditActor`.** Actions build it from the validated session with `uiActor(user)`; API routes build it with `apiActor(…)`, which names the token (never its secret).
   - **The service records the entry itself**, with `recordGlobalAudit(em, actor, entry)` or `recordTenantAudit(…)` on the EntityManager it writes with. The entry then commits or rolls back with the change. Never record from an event handler: events fire after the commit.
-  - **Snapshots are explicit allowlists** of the entity's fields, never the whole entity. The recorder refuses keys that look like secrets (`password`, `hash`, `secret`), but the allowlist is the real protection.
+  - **Snapshots are explicit allowlists** of the entity's fields, never the whole entity. The recorder refuses keys that look like secrets (`password`, `hash`, `secret`), but the allowlist is the real protection. It also refuses a field `AUDIT_FIELDS` doesn't list, because the audit screens must name every field in EN and PL (UX-022).
   - **A write that changes nothing records nothing.** Action IDs follow the event naming (`concept.entity.action`).
   - **Nothing updates an entry; Global and Prod entries are never deleted.** Entity-level triggers enforce it in SQLite, audit routes export only `GET`, and `tests/audit-append-only.test.ts` scans core/app. The sole planned exception is now implemented: `db/src/tenants/reset-test-data.ts` clears Test audit with all Test-owned data during the atomic admin reset. That helper requires Test scope and an active transaction; it cannot clear Prod or Global audit.
 
@@ -332,6 +332,8 @@ Done when these standards were adopted:
   - a refused filter is explained in the form; only a bad page position (`before`, `limit` or a foreign cursor, alone or with a filter error) is a not-found page.
 
   A new producer's action IDs and subject types need EN/PL labels and a place in `components/audit/subject-types.ts`: `tests/audit-labels.test.ts` scans `core` and fails until they have both.
+
+  A new snapshot field goes in `AUDIT_FIELDS` (`core/src/domain/audit/audit-fields.ts`; a per-line one in `AUDIT_LINE_FIELDS`) and gets EN/PL labels in `audit.fields`. The recorder refuses an unlisted field, so the service's own tests fail until it is listed, and `tests/audit-labels.test.ts` fails until it is named (#145).
 - Materials (2026-10-19, spec `2026-10-19--1858UTC-materials`), the first tenant business concept:
   - `Material` and `MaterialConversion` (`db/src/entities/materials/`, tenant-owned), `MaterialService` (`core/src/services/materials/`), and the Test demo seed at startup (`core/src/demo-data.ts`);
   - exact decimals in `core/src/domain/quantities/`, material IDs in `core/src/domain/materials/`;

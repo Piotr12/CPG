@@ -12,8 +12,6 @@ import {
   ProductionCompletion,
   ProductionCompletionLine,
   ProductionOrder,
-  StockMovement,
-  StockReversal,
   initOrm,
   selectTenant,
   type Orm,
@@ -25,7 +23,7 @@ import { migrateDatabase, toDbOptions } from "../../database";
 import { VARIANCE_RANGE_MESSAGE, VARIANCE_REPORT_PAGE_SIZE } from "../../validators/reports/variance-report.schema";
 import type { ProductionCompletionInput } from "../../validators/production-orders/production-completion.schema";
 import type { AuditActor } from "../audit/actor";
-import { ProductionCompletionService, PRODUCTION_COMPLETION_MOVEMENT } from "../production-orders/production-completion.service";
+import { ProductionCompletionService } from "../production-orders/production-completion.service";
 import { ProductionOrderService } from "../production-orders/production-order.service";
 import { StockService } from "../stock/stock.service";
 import { VarianceReportService } from "./variance-report.service";
@@ -66,22 +64,9 @@ describe("VarianceReportService", () => {
       await new StockService({ em: scoped(tenant) }).correct({ material, location, quantity, unit, reason: "Count" }, ACTOR);
     }
   };
-  /**
-   * Links completion `code`'s first movement to an inverse, as a completion reversal will (spec Q5):
-   * #92 isn't built yet, so the link and its inverse movement (type `reversal`, its spec's Q4) are written here by hand.
-   */
-  const reverse = async (code: string) => {
-    const em = scoped();
-    const posted = await em.findOneOrFail(ProductionCompletion, { code });
-    const original = (await em.find(StockMovement, { postingId: posted.id, type: PRODUCTION_COMPLETION_MOVEMENT }, { populate: ["material", "location"], orderBy: { position: "asc" }, limit: 1 }))[0];
-    const inverse = em.create(StockMovement, {
-      postingId: randomUUID(), position: 0, type: "reversal", material: original.material, location: original.location,
-      businessDate: today(), quantity: "0.000000", baseUnit: original.baseUnit, enteredQuantity: "0", enteredUnit: original.baseUnit,
-      numerator: "1", denominator: "1", balanceBefore: "0.000000", balanceAfter: "0.000000", reason: "Wrong posting", actorUserId: null, actorUsername: "alice", channel: "ui",
-    });
-    em.create(StockReversal, { original, inverse });
-    await em.flush();
-  };
+  /** Reverses completion `code` of order `orderId` through the product, as a user does (E11-S03). */
+  const reverse = (orderId: string, code: string) =>
+    new ProductionCompletionService({ em: scoped() }).reverse(orderId, code, { reason: "Wrong posting" }, ACTOR);
 
   beforeEach(async () => {
     const config = loadConfig({ DATA_DIR: mkdtempSync(path.join(tmpdir(), "cpg-variance-report-")) });
@@ -160,14 +145,14 @@ describe("VarianceReportService", () => {
     ]);
   });
 
-  it("leaves a reversed completion out of every figure and lists it as reversed, keeping the others (REV-011, REV-014)", async () => {
+  it("leaves a completion reversed through the product out of every figure and lists it as reversed, keeping the others (REV-011, REV-014)", async () => {
     await stock();
     await order("100");
     await post("00000001", completion("40", "20", "80"));
     await post("00000001", completion("25", "15", "50", [{ material: MILK, quantity: "1", unit: "kg" }]));
     await post("00000001", completion("0", "4", "0"));
-    await reverse("00000002");
-    await reverse("00000003");
+    await reverse("00000001", "00000002");
+    await reverse("00000001", "00000003");
 
     const [row] = (await report()).rows;
     expect(row).toMatchObject({ produced: "40.000000", outputVariance: "-60.000000", completions: 1, wasteCompletions: 0, reversed: ["00000002", "00000003"] });
@@ -181,7 +166,7 @@ describe("VarianceReportService", () => {
     await stock();
     await order("25");
     await post("00000001", completion("25", "12.5", "50"));
-    await reverse("00000001");
+    await reverse("00000001", "00000001");
 
     expect((await report()).rows).toEqual([
       expect.objectContaining({ id: "00000001", produced: "0.000000", outputVariance: "-25.000000", completions: 0, wasteCompletions: 0, reversed: ["00000001"], components: [] }),
@@ -261,7 +246,7 @@ describe("VarianceReportService", () => {
     await post("00000003", completion("0", "1", "0"));
     // Milk on a reversed completion matches nothing.
     await post("00000004", completion("5", "2.5", "10", [{ material: MILK, quantity: "1", unit: "kg" }]));
-    await reverse("00000004");
+    await reverse("00000004", "00000004");
 
     const ids = async (material: string) => (await report({ material })).rows.map(({ id }) => id);
     expect(await ids(BAR)).toEqual(["00000001", "00000002", "00000003", "00000004"]);

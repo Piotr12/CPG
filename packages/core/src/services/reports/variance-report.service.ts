@@ -239,9 +239,8 @@ export class VarianceReportService {
 
 /**
  * Which of the completions `ids` are reversed (spec Q5): any of their stock movements, whose posting ID
- * is the completion's own, is the original of a reversal link (#91). Read from the link's side, so only
- * the few links come back. This is the one place that answers it: if #92 records a completion's
- * reversal another way, only this function changes.
+ * is the completion's own, is the original of a reversal link (#91), as `ProductionCompletionService.reverse`
+ * links every one (#92). Read from the link's side, so only the few links come back.
  */
 async function reversedCompletions(em: EntityManager, ids: readonly string[]): Promise<Set<string>> {
   if (ids.length === 0) return new Set();

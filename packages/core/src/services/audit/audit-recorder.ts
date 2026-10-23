@@ -6,6 +6,7 @@ import {
   type AuditSnapshot,
   type EntityManager,
 } from "@cpg/db";
+import { isAuditField } from "../../domain/audit/audit-fields";
 import type { AuditActor } from "./actor";
 
 /** One change, as the service that made it describes it. */
@@ -43,6 +44,8 @@ export function recordTenantAudit(em: EntityManager, actor: AuditActor, entry: A
 function toEvent(actor: AuditActor, { action, subject, before, after }: AuditEntry) {
   assertNoSecrets(before);
   assertNoSecrets(after);
+  assertListedFields(before);
+  assertListedFields(after);
   return {
     action,
     subjectType: subject.type,
@@ -62,4 +65,10 @@ function toEvent(actor: AuditActor, { action, subject, before, after }: AuditEnt
 function assertNoSecrets(snapshot: AuditSnapshot | null): void {
   const key = Object.keys(snapshot ?? {}).find((name) => SECRET_KEY.test(name));
   if (key) throw new Error(`Audit snapshots must not carry secrets (field "${key}").`);
+}
+
+/** Every field the audit screens must name (UX-022): one missing from `AUDIT_FIELDS` fails the write, as a secret does. */
+function assertListedFields(snapshot: AuditSnapshot | null): void {
+  const key = Object.keys(snapshot ?? {}).find((name) => !isAuditField(name));
+  if (key) throw new Error(`Audit field "${key}" is not in AUDIT_FIELDS: list it, then name it in English and Polish.`);
 }
