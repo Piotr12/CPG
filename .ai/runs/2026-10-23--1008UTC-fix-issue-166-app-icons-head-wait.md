@@ -3,7 +3,7 @@
 **Date:** 2026-10-23 10:08 UTC
 **Agent:** Claude Code / claude-opus-5-5 (`om-auto-fix-issue`, dispatched by cezar)
 **Spec:** none (bug)
-**Status:** done (CI pending on the PR)
+**Status:** done
 
 ## Goal
 
@@ -25,7 +25,8 @@
 - Docker unavailable on this machine (lesson 2026-10-19), so the file ran against a fresh standalone copy of `npm run build` on port 3166 with a fresh `DATA_DIR`: `CPG_BASE_URL=http://127.0.0.1:3166 npm run test:integration -- tests/integration/app-icons.test.ts` → `Tests 5 passed (5)`, three runs in a row.
 - `npm run lint` → 0 errors, 1 warning (`lineError` unused in `packages/core/src/services/boms/bom.service.ts`, already on `main`, not touched here).
 - `npm run typecheck` → clean. `npm run test:coverage` → 485 files, 3314 tests passed, "604 files fully covered", exit 0. `npm run build` → succeeded.
-- CI runs the full integration suite on the PR.
+- PR #171 CI (run 39938282999): lint, typecheck, unit tests, build and integration tests (16m16s) all passed.
+- Fresh-context review approved it; it found one nit (`=await` spacing), fixed in 789843d.
 
 ## Follow-ups
 
