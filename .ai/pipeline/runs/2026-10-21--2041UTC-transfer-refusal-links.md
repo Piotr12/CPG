@@ -1,0 +1,48 @@
+# Link the transfer that blocks a deactivation, and prove the stock import's remaining scenarios — #139
+
+Source doc: .ai/specs/implemented/2026-10-21--2035UTC-transfer-refusal-links.md
+Spec PR: #149
+Status: complete
+Engine: om-auto-create-pr (steps: 8, --loop: no)
+
+## Goal
+A deactivation refused by an Open transfer links to `/admin/{tenant}/transfers/{id}`, as production-order refusals link to their order (LFC-018). Tests for STX-006, STX-018 (both channels) and the location `STOCK_NOT_EMPTY` parameters (LFC-016). `CPG-acceptance.md` updated (issue #139, E07-S04).
+
+## Scope
+The spec's two phases plus the paperwork: the generalised `deactivationBlockerError` in `components/master-data/` and its two callers, unit and integration tests, the acceptance doc, and the spec move. Non-goals: the deactivation rules, the API's error shape, the import report's text, the message copy.
+
+## Risks
+- Deactivation checks physical stock before transfers, so the link's integration test uses its own unstocked material and locations (spec review, High).
+- Integration files share one Prod database: the STX-018 UI test filters audit entries by a reason only it uses, and commits a material of its own.
+- The implementation branch is based on the spec branch (as #135 was on #132), so it carries the spec commits; #149 merges first.
+
+## Log
+- 21:35 UTC — Review record, manual QA instructions and UI evidence posted on #151. The evidence is 5 screenshots from a fresh standalone build: the location and material refusals in English, the transfer opened from the link, Polish, and 390 px. Filed #164: `stock-import-api.test.ts` fails under `next dev`, on `main` too.
+- 21:25 UTC — `om-auto-review-pr --autofix` (fresh-context `om-code-review`): approve, with 2 minors and 3 nits, all fixed. The fixes: LFC-016's evidence named an integration file that doesn't assert the parameters; STX-006 now lists two of three sites, as the issue words it; STX-018 checks sam's entry exists; the run log's times. Commits eee6a34 and 7173d2a. Re-run: coverage 3,266 tests at 100%, lint, and the 3 integration files (16 tests) on a fresh standalone copy.
+- 21:10 UTC — Phase 3 done: LFC-018, STX-006 and STX-018 are `Passed (automated)`, and LFC-016's evidence names the location assertion. The spec moved to `implemented/` with `../assets` links, and two lessons were added. `tests/ai-filenames.test.ts` and `tests/spec-images.test.ts` pass.
+- 21:05 UTC — Phase 2 done. Gate on this source: lint (one existing warning in `bom.service.ts`), typecheck, 483 files / 3,266 tests with 100% statements, branches, functions and lines, build. On a fresh standalone copy (static + public, empty `DATA_DIR`): `transfers.test.ts`, `stock-import.test.ts`, `stock-import-api.test.ts`, 3 files / 16 tests pass. Under `next dev`, `stock-import-api.test.ts` fails in `beforeAll` (bob's sign-in wait) on main's copy too, so it was verified on the standalone build; Docker isn't running here, and CI runs the image suite.
+- 20:48 UTC — Phase 1 done. `transfers.test.ts` (5 tests) passes against a fresh `next dev` server (`CPG_BASE_URL`; Docker isn't running here). Following the link leaves the material page mounted but `display: none` (React Activity), its open dialog included; the transfer page stays interactive, so the test waits for the shown heading instead of the dialog to go.
+- 20:41 UTC — Began from `spec/transfer-refusal-links` (8a12eaa) on `feat/transfer-refusal-links` in the cezar worktree.
+
+## Progress
+
+PR: #151
+
+> Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
+
+### Phase 1: Link transfer refusals (LFC-018)
+
+- [x] 1.1 Generalise the blocker link into `deactivationBlockerError`, switch its two callers, unit tests at 100%. — 56a9911
+- [x] 1.2 Integration: the location's and the material's Deactivate refusals link the Open transfer. — 74c3cea
+
+### Phase 2: Prove the stock import's remaining scenarios (STX-006, STX-018, LFC-016)
+
+- [x] 2.1 Service test: a site the workbook leaves out keeps its balances and gets no movement (STX-006). — 550429a
+- [x] 2.2 Action test: an admin session commits with the admin's `uiActor` (STX-018). — 8143afb
+- [x] 2.3 Integration: the admin's UI commit is audited with the admin's account, session and `ui` (STX-018). — 1786ade
+- [x] 2.4 Integration: the admin's API commit names the admin and `api` (STX-018). — 388b075
+- [x] 2.5 Service test: the location `STOCK_NOT_EMPTY` refusal carries its parameters (LFC-016). — 46efd0a
+
+### Phase 3: Paperwork
+
+- [x] 3.1 Acceptance doc, spec to `implemented/`, lessons. — 5db4ae3

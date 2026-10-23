@@ -121,7 +121,7 @@ describe("the stock import through the API", () => {
     expect((await stock(hide, east)).movements[0].postingId).toBe(opening.movements[0].postingId);
   });
 
-  it("moves listed positions to their counted balance and leaves the others alone (STX-003, STX-004, STX-006…009)", async () => {
+  it("moves listed positions to their counted balance and leaves the others alone, as the admin (STX-003, STX-004, STX-006…009, STX-018)", async () => {
     const base64 = await workbook([[flint, east, 85, null], [hide, east, 0, null], [flint, west, 24, null]]);
     const preview = await dryRun(base64);
     expect(preview.rows.map((row) => row.action)).toEqual(["update", "update", "unchanged"]);
@@ -129,7 +129,12 @@ describe("the stock import through the API", () => {
 
     expect((await commit(base64, preview.previewToken, "Stock count 2027-01")).status).toBe(200);
 
-    expect((await stock(flint, east)).quantity).toBe("85.000000");
+    const counted = await stock(flint, east);
+    expect(counted.quantity).toBe("85.000000");
+    // The admin's token committed it: the movement names the admin, on the API channel.
+    expect(counted.movements).toContainEqual(
+      expect.objectContaining({ quantity: "-15.000000", type: "correction", reason: "Stock count 2027-01", actorUsername: "admin", channel: "api" }),
+    );
     expect((await stock(hide, east)).quantity).toBe("0.000000");
     expect((await stock(flint, west)).movements).toHaveLength(1);
   });
