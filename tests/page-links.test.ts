@@ -15,15 +15,16 @@ function sources(dir: string): string[] {
 }
 
 // Engineering standards, reusable layers built once (#154): a paged list renders its Previous/Next
-// links through PageLinks rather than its own markup, so every list reads and behaves the same.
+// links through PageLinks rather than its own markup, so every list reads and behaves the same. The
+// check looks for a link labelled `….previous` or `….next`, the shape every list's own markup had.
 describe("paged lists", () => {
   const files = sources(appDir).map((file) => path.relative(appDir, file));
 
-  it("include PageLinks", () => {
+  it("find the PageLinks source", () => {
     expect(files).toContain(PAGE_LINKS);
   });
 
   it.each(files.filter((file) => file !== PAGE_LINKS))("%s renders no Previous/Next page links of its own", (file) => {
-    expect(readFileSync(path.join(appDir, file), "utf8")).not.toMatch(/\.(previous|next)\}/);
+    expect(readFileSync(path.join(appDir, file), "utf8")).not.toMatch(/\.(previous|next)\}\s*<\/Link>/);
   });
 });

@@ -3,7 +3,7 @@
 **Date:** 2026-10-23 14:06 UTC
 **Agent:** Claude Code / claude-opus-5-5 (`om-auto-fix-issue`, dispatched by cezar)
 **Spec:** none (refactor)
-**Status:** in progress
+**Status:** done
 
 ## Goal
 
@@ -16,6 +16,7 @@ The customer-order, transfer and production-order lists and the completion histo
 
 - 14:20 — Swapped the four `<nav>`s for `PageLinks`. Added a PL paging test per list, a past-the-end check on the completion history (Newer link to the previous page, no Older), and `tests/page-links.test.ts`. That test fails when a `.tsx` under `packages/app/src` other than `page-links.tsx` renders `.previous}`/`.next}` labels. It failed with the old transfers screen restored and passes with the change.
 - Not moved: the audit view (`components/audit/audit-view.tsx`). Its cursor paging (Newest / Older, no page numbers) is a different control, and the issue doesn't list it. Moving it would change what it shows.
+- 14:40 — PR #175 opened. A fresh-context review approved it with two minors and two nits: this log's status, the audit view against the issue's "no other paging markup" criterion, and the guard's regex and test name. The guard now matches only a `….previous}`/`….next}` label closing a `<Link>`. It still matches all four screens as they are on `main`.
 
 ## Changes
 
@@ -29,3 +30,5 @@ The customer-order, transfer and production-order lists and the completion histo
 - Integration: Docker unavailable on this machine, and no integration file changed. The rendered markup is unchanged (same `nav` aria-label, classes, buttons, hrefs), so CI's suite is the check.
 
 ## Follow-ups
+
+- The audit view's cursor paging (Newest / Older) is still its own markup. Moving it to a shared control would need a cursor variant of `PageLinks`; file that only if consistency there matters.
