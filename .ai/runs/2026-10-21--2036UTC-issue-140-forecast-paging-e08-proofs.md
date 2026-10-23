@@ -18,6 +18,8 @@ Page `GET /api/tenants/{tenant}/forecasts` and the forecasts screen by 100 (`?pa
 
 - 20:45 Design PR #150 opened. Draft implementation PR #156 on `feat/forecast-list-paging`, stacked on the spec branch as #135 was on #132. Tracked in `.ai/pipeline/runs/2026-10-21--2042UTC-forecast-list-paging.md`.
 - 20:56 Implementation, gate, integration files and browser QA done (details in the plan's log).
+- 2026-10-23 05:10 UTC `om-auto-fix-pr 150`: merged `main` (incl. #163, Test starts tiny; Test still has 120 forecasts, since the dataset's forecast months don't depend on its history length). Spec review: no blocker or major. Fixed in the spec: INV-017 carries the same "not asserted yet (#140)" note as SAL-024 and is proven by the same test, so step 9 promotes it too; two citations corrected (the stock report's path, and `customer-orders.test.ts:175` after the merge moved the line).
+- 2026-10-23 06:29 UTC `om-auto-fix-pr 150` (second run): #156 merged first and brought the spec, already in `implemented/`, and this log. Merging `main` kept its versions: the spec's step 9 and implementation notes already cover INV-017. Re-applied the citation fixes, against `main`'s lines: the stock report's path, `customer-orders.test.ts:181` and `customer-order.service.test.ts:218`. This PR now adds only these citation fixes and these two log lines.
 
 ## Plan
 1. Spec, fresh-context spec review, design PR.
