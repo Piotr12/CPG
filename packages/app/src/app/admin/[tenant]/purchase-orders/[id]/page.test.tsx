@@ -48,8 +48,8 @@ const ORDER = {
   location: "00000001",
   status: "open",
   lines: [
-    { line: 1, material: "00000001", quantity: "500.000000", enteredQuantity: "0.5", enteredUnit: "t", numerator: "1000", denominator: "1", plannedDate: "2027-03-03", requisition: "00000007", abandoned: "0.000000", received: "530.000000", outstanding: "0.000000", status: "completed" },
-    { line: 2, material: "00000002", quantity: "10.000000", enteredQuantity: "10", enteredUnit: "each", numerator: "1", denominator: "1", plannedDate: "2027-03-05", requisition: null, abandoned: "0.000000", received: "4.000000", outstanding: "6.000000", status: "open" },
+    { line: 1, material: "00000001", quantity: "500.000000", enteredQuantity: "0.5", enteredUnit: "t", numerator: "1000", denominator: "1", plannedDate: "2027-03-03", requisition: "00000007", abandoned: "0.000000", received: "530.000000", outstanding: "0.000000", status: "completed", posted: true },
+    { line: 2, material: "00000002", quantity: "10.000000", enteredQuantity: "10", enteredUnit: "each", numerator: "1", denominator: "1", plannedDate: "2027-03-05", requisition: null, abandoned: "0.000000", received: "4.000000", outstanding: "6.000000", status: "open", posted: true },
   ],
   createdAt: new Date("2027-02-01T10:00:00Z"),
   version: 1,
@@ -162,15 +162,21 @@ describe("PurchaseOrderPage", () => {
     expect(screen.getByText(en.goodsReceipts.empty)).toBeTruthy();
   });
 
-  it("uses retained receipt history after full reversal for header and per-line lifecycle actions", async () => {
-    mocks.get.mockResolvedValue({ ...ORDER, lines: ORDER.lines.map((line) => ({ ...line, status: "open", received: "0.000000", outstanding: line.quantity })) });
-    mocks.receipts.mockResolvedValue([{ id: "00000003", purchaseOrder: ORDER.id, location: ORDER.location, businessDate: "2027-03-02", createdAt: new Date(),
-      lines: [{ movementId: null, reversedBy: "inverse", line: 2, material: "00000002", quantity: "4.000000" }] }]);
-    render(await resolveServerComponents(page()));
+  it("decides Cancel or Close Early from each line's server-side posted flag, also after a full reversal (#138)", async () => {
+    const reversed = ORDER.lines.map((line) => ({ ...line, status: "open", received: "0.000000", outstanding: line.quantity }));
+    mocks.get.mockResolvedValue({ ...ORDER, lines: [{ ...reversed[0], posted: false }, reversed[1]] });
+    // Line 2's reversed receipt is older than the newest page of receipts the screen lists.
+    mocks.receipts.mockResolvedValue([]);
+    const { unmount } = render(await resolveServerComponents(page()));
     expect(screen.getByRole("button", { name: `Close Early — Purchase orders ${ORDER.id}` })).toBeTruthy();
     const rows = within(screen.getByRole("table", { name: "Lines" })).getAllByRole("row").slice(1);
     expect(within(rows[0]).getByRole("button", { name: /Cancel/ })).toBeTruthy();
     expect(within(rows[1]).getByRole("button", { name: /Close Early/ })).toBeTruthy();
+    unmount();
+
+    mocks.get.mockResolvedValue({ ...ORDER, lines: reversed.map((line) => ({ ...line, posted: false })) });
+    render(await resolveServerComponents(page()));
+    expect(screen.getByRole("button", { name: `Cancel — Purchase orders ${ORDER.id}` })).toBeTruthy();
   });
 
   it("shows the page in Polish", async () => {

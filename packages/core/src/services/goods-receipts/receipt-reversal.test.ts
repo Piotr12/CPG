@@ -38,7 +38,7 @@ it("reopens only the received line, advances the version and preserves immutable
   const original = await movement(receipt.id); const reversed = await reverse(original.id);
   expect(await new StockService({ em: scope() }).getMovement(reversed.movement.id)).toMatchObject({ source: { id: receipt.id, document: { type: "purchase-order", id: order.id } }, reverses: original.id });
   const result = await orders().get(order.id);
-  expect(result).toMatchObject({ status: "open", lines: [{ received: "0.000000" }, { received: "10.000000" }] });
+  expect(result).toMatchObject({ status: "open", lines: [{ received: "0.000000", posted: true }, { received: "10.000000", posted: true }] });
   expect(result.version).toBeGreaterThan(completed.version);
   expect(await receipts().get(receipt.id)).toMatchObject({ id: receipt.id, lines: receipt.lines.map((line) => ({ ...line, reversedBy: line.line === 1 ? expect.any(String) : null })) });
   expect(await scope().findOneOrFail(TenantAuditEvent, { action: "purchase-orders.purchase-order.receipt-reversed" })).toMatchObject({ before: { status: "completed", received: "10.000000" }, after: { status: "open", received: "0.000000", movement: original.id } });

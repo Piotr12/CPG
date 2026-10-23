@@ -17,7 +17,7 @@ import { byId, enteredAs, ordersLabels, shownQuantity } from "./labels";
 interface OrderScreenProps {
   tenant: { code: string; name: string; generation: number; readOnly: boolean };
   order: OrderView;
-  /** The order's goods receipts, newest first. */
+  /** The order's newest goods receipts (one page), newest first; the lifecycle actions read each line's `posted` instead (#138). */
   receipts: ReceiptView[];
   materials: MaterialSummary[];
   /** The units each material's quantities may be entered in, its base unit first. */
@@ -113,7 +113,7 @@ export function OrderScreen({ tenant, order, receipts, materials, units, supplie
       <ChangeDateDialog kind="orderLine" available={lineEditable(line)} subject={lineSubject(line)} value={line.plannedDate} version={order.version}
         save={setPurchaseOrderLineDate.bind(null, tenant.code, tenant.generation, order.id, line.line)} labels={dateLabels} errors={dateErrors} />
       <LifecycleControl
-        available={lineEditable(line)} processed={line.received !== "0.000000" || receipts.some((receipt) => receipt.lines.some((entry) => entry.line === line.line))}
+        available={lineEditable(line)} processed={line.posted}
         subject={lineSubject(line)}
         version={order.version} lines={[line.line]} quantities={[`${shownQuantity(line.outstanding)} ${materialsById.get(line.material)!.baseUnit}`]}
         labels={messages.lifecycle} errors={messages.errors}
@@ -129,7 +129,7 @@ export function OrderScreen({ tenant, order, receipts, materials, units, supplie
           {labels.allOrders}
         </Link>
       </p>
-      <LifecycleControl available={!tenant.readOnly && order.status === "open"} processed={receipts.length > 0 || order.lines.some((line) => line.received !== "0.000000")}
+      <LifecycleControl available={!tenant.readOnly && order.status === "open"} processed={order.lines.some((line) => line.posted)}
         subject={`${labels.link} ${order.id}`} version={order.version}
         quantities={order.lines.filter((line) => line.status === "open").map((line) => `${materialsById.get(line.material)!.description}: ${shownQuantity(line.outstanding)} ${materialsById.get(line.material)!.baseUnit}`)}
         labels={messages.lifecycle} errors={messages.errors}

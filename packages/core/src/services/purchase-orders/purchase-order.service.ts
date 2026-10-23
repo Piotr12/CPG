@@ -29,6 +29,7 @@ import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quan
 import { findActiveMaterial } from "../materials/find-material";
 import { lineError } from "../materials/line-error";
 import { assertOrderOpen, findOrder, orderLineState } from "./order-records";
+import { postedOrderLineIds } from "./posted-order-lines";
 import { findRequisition, requisitionEntry, requisitionSnapshot } from "../purchase-requisitions/requisition-records";
 import { groupBy } from "../shipments/shipment-records";
 import { findActiveSupplier } from "../suppliers/find-supplier";
@@ -54,6 +55,8 @@ export interface OrderLineView {
   /** `completed` once the line has received at least its quantity (BUY-016). */
   status: DocumentState;
   abandoned: string;
+  /** True once a goods receipt was posted for the line, also after a full reversal (#138): it closes early, never cancels. */
+  posted: boolean;
 }
 
 /** An order with its lines. `id` is its eight-digit business ID; `supplier` and `location` are theirs. */
@@ -366,18 +369,19 @@ async function viewsOf(em: EntityManager, orders: readonly PurchaseOrder[]): Pro
     { populate: ["material", "requisition"], orderBy: { position: "asc" } },
   );
   const byOrder = groupBy(lines, (line) => line.order.id);
+  const posted = await postedOrderLineIds(em, lines);
   return orders.map((order) => ({
     id: order.code,
     supplier: order.supplier.code,
     location: order.location.code,
     status: order.status as OrderView["status"],
-    lines: byOrder.get(order.id)!.map(toLineView),
+    lines: byOrder.get(order.id)!.map((line) => toLineView(line, posted)),
     createdAt: order.createdAt,
     version: order.version,
   }));
 }
 
-function toLineView(line: PurchaseOrderLine): OrderLineView {
+function toLineView(line: PurchaseOrderLine, posted: ReadonlySet<string>): OrderLineView {
   const { position, material, quantity, enteredQuantity, enteredUnit, numerator, denominator, plannedDate, requisition, received, abandoned } = line;
   return {
     line: position,
@@ -393,6 +397,7 @@ function toLineView(line: PurchaseOrderLine): OrderLineView {
     abandoned,
     outstanding: unresolvedQuantity(quantity, received, abandoned, line.status),
     status: orderLineState(line),
+    posted: posted.has(line.id),
   };
 }
 
