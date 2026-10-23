@@ -74,7 +74,8 @@ and `GET /api/tenants/{tenant}/purchase-requisitions`. Page it by 100 as the pur
 - `npm run build`: 0.
 - Integration against `next start` on a fresh `DATA_DIR`: `purchasing-api`, `purchasing`,
   `document-lifecycle`: 31/31 together; then 14/14 followed by 17/17 with Prod past 100.
-- Full integration suite: CI green on the first commit (4 shards); re-run on the review fixes pending.
+- Full integration suite: CI green on 2e018f50 and on 8073afa4 (lint, typecheck, unit tests, build, 4 integration shards).
+- Browser (agent-browser on `next start`): pager pages 1–2, 390 px with no sideways scroll, the PO form's page-2 requisition choice, a PO line's requisition link to `?page=2`. Evidence on PR #197.
 
 ## Follow-ups
 
