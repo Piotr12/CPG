@@ -57,6 +57,17 @@ describe("LineQuantitiesForm", () => {
     expect(action).toHaveBeenCalledWith({ lines: [{ line: 1, quantity: "0.02", unit: "t" }] });
   });
 
+  it("starts a row with its initial quantity and unit, so an edit sends a stored line unless it is emptied", async () => {
+    action.mockResolvedValue({ ok: true, data: { id: "00000004" } });
+    renderForm({ lines: [{ ...LINES[0], initial: { quantity: "0.5", unit: "t" } }, LINES[1]] });
+
+    expect((quantity(1) as HTMLInputElement).value).toBe("0.5");
+    expect((unit(1) as HTMLSelectElement).value).toBe("t");
+    expect((quantity(2) as HTMLInputElement).value).toBe("");
+    submit();
+    await waitFor(() => expect(action).toHaveBeenCalledWith({ lines: [{ line: 1, quantity: "0.5", unit: "t" }] }));
+  });
+
   it("asks for a quantity when every line is empty, and sends nothing", () => {
     renderForm();
 

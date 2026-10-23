@@ -18,6 +18,8 @@ export interface LineQuantityChoice {
   hint: string;
   /** The material's base unit first, then the units it converts. */
   units: string[];
+  /** What the row starts with when an edit loads a stored line; one of `units`. Without it the row starts empty, in the base unit. */
+  initial?: { quantity: string; unit: string };
 }
 
 /** The form's own strings, in the reader's language. */
@@ -78,7 +80,7 @@ function byRow(errors: FieldErrors, sent: readonly (number | string)[]): { rows:
  */
 export function LineQuantitiesForm<T>({ labels: t, keyName, lines, date, schema, formatError, formatFieldError, action, onSuccess, onCancel }: LineQuantitiesFormProps<T>) {
   const id = useId();
-  const [rows, setRows] = useState(() => lines.map(({ key, units }) => ({ key, quantity: "", unit: units[0] })));
+  const [rows, setRows] = useState(() => lines.map(({ key, units, initial }) => ({ key, quantity: initial?.quantity ?? "", unit: initial?.unit ?? units[0] })));
   const [plannedDate, setPlannedDate] = useState(date?.initial ?? "");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);

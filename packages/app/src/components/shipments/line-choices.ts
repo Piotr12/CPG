@@ -1,4 +1,4 @@
-import { isNothing, outstandingOf, type CustomerOrderView } from "@cpg/core";
+import { isNothing, outstandingOf, type CustomerOrderView, type ShipmentView } from "@cpg/core";
 import type { LineQuantityChoice } from "../forms/line-quantities-form";
 import type { MaterialsById } from "../purchase-orders/labels";
 import { fill, shownQuantity, type ShipmentsLabels } from "./labels";
@@ -34,4 +34,47 @@ export function firstDueDate(order: CustomerOrderView): string {
     .filter((line) => !isNothing(outstandingOf(line)))
     .map(({ requiredDate }) => requiredDate)
     .sort()[0];
+}
+
+/**
+ * The Edit shipment dialog's rows (shipment edit spec Q8): the shipment's lines first, filled with what
+ * was entered, then the order's other lines with anything outstanding, empty. Every row is named by its
+ * order line, as create's are. A kept row always offers its stored unit, even one whose conversion has
+ * since been removed, so it can be sent unchanged.
+ */
+export function shipmentEditChoices(
+  shipment: ShipmentView,
+  order: CustomerOrderView,
+  materials: MaterialsById,
+  units: Record<string, string[]>,
+  labels: ShipmentsLabels,
+): LineQuantityChoice[] {
+  const t = labels.edit;
+  const kept = shipment.lines.map((line): LineQuantityChoice => {
+    const { id, description, baseUnit } = materials.get(line.material)!;
+    const offered = units[line.material] ?? [baseUnit];
+    const quantities = { quantity: shownQuantity(line.quantity), issued: shownQuantity(line.issued), baseUnit };
+    return {
+      key: line.orderLine,
+      label: fill(t.line, { line: String(line.line), material: `${id} ${description}` }),
+      hint: fill(isNothing(line.issued) ? t.planned : t.plannedIssued, quantities),
+      units: offered.includes(line.enteredUnit) ? offered : [...offered, line.enteredUnit],
+      initial: { quantity: line.enteredQuantity, unit: line.enteredUnit },
+    };
+  });
+  const shipped = new Set(shipment.lines.map(({ orderLine }) => orderLine));
+  const added = order.lines.flatMap((line, index): LineQuantityChoice[] => {
+    const outstanding = outstandingOf(line);
+    if (shipped.has(line.id) || isNothing(outstanding)) return [];
+    const { id, description, baseUnit } = materials.get(line.material)!;
+    return [
+      {
+        key: line.id,
+        label: fill(t.orderLine, { line: String(index + 1), material: `${id} ${description}` }),
+        hint: fill(t.outstanding, { outstanding: shownQuantity(outstanding), baseUnit }),
+        units: units[line.material] ?? [baseUnit],
+      },
+    ];
+  });
+  return [...kept, ...added];
 }

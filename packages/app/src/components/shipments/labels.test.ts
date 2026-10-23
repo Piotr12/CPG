@@ -1,5 +1,5 @@
 import { CALENDAR_DATE_MESSAGE } from "@cpg/core/validators/dates/calendar-date.schema";
-import { SHIPMENT_LINE_ORDER_MESSAGE, SHIPMENT_QUANTITY_OUTSTANDING_MESSAGE } from "@cpg/core/validators/shipments/shipment.schema";
+import { SHIPMENT_LINE_ORDER_MESSAGE, SHIPMENT_QUANTITY_ISSUED_MESSAGE, SHIPMENT_QUANTITY_OUTSTANDING_MESSAGE } from "@cpg/core/validators/shipments/shipment.schema";
 import { describe, expect, it } from "vitest";
 import { en } from "../../i18n/messages/en";
 import { pl } from "../../i18n/messages/pl";
@@ -18,6 +18,8 @@ describe("shipment labels", () => {
     const format = shipmentFieldErrorFormatter(labels);
     expect(format(SHIPMENT_LINE_ORDER_MESSAGE)).toBe(pl.shipments.fieldErrors.lineOrder);
     expect(format(SHIPMENT_QUANTITY_OUTSTANDING_MESSAGE)).toBe(pl.shipments.fieldErrors.outstanding);
+    expect(format(SHIPMENT_QUANTITY_ISSUED_MESSAGE)).toBe(pl.shipments.fieldErrors.issued);
+    expect(errorFormatter(labels)({ code: "SHIPMENT_LINE_ISSUED", message: "x", params: { line: "2" } })).toBe("W pozycji 2 wydano już towar, więc zostaje w wysyłce. Zamiast tego zmniejsz ją do tego, co wydano.");
     expect(format(CALENDAR_DATE_MESSAGE)).toBe(pl.shipments.fieldErrors.date);
     expect(format("Something new.")).toBe("Something new.");
   });
