@@ -94,7 +94,23 @@ it("translates empty/read-only states and keeps terminal orders readable without
   const props = { tenant: { ...tenant, readOnly: true }, orders: [], total: 0, page: 1, materials, locations, messages: pl, locale: "pl" as const };
   render(<ProductionScreen {...props} />); expect(screen.getByText(pl.productionOrders.empty)).toBeTruthy(); expect(screen.queryByRole("button")).toBeNull();
   cleanup(); render(<ProductionScreen {...props} tenant={tenant} order={{ ...production, status: "completed", shortages: [] }} />);
-  expect(screen.getByRole("status").textContent).toBe(pl.productionOrders.sufficient); expect(screen.queryByRole("button")).toBeNull();
+  expect(screen.getByRole("status").textContent).toBe("Zlecenie ma stan „Zakończone”, więc nie potrzebuje już składników."); expect(screen.queryByRole("button")).toBeNull();
+});
+it("tells a resolved order's reader it needs no more components, never that stock is short (LFC-004, PRD-029)", () => {
+  const props = { tenant, orders: [], total: 0, page: 1, materials, locations, messages: en, locale: "en" as const };
+  const none = production.components.map((component) => ({ ...component, required: "0.000000", shortage: "0.000000" }));
+  for (const [status, label] of [["closed-early", "Closed Early"], ["cancelled", "Cancelled"]] as const) {
+    render(<ProductionScreen {...props} order={{ ...production, status, outstanding: "0.000000", components: none, shortages: [] }} />);
+    expect(screen.getByRole("status").textContent).toBe(`This order is ${label}, so it needs no more components.`);
+    expect(within(screen.getByRole("table", { name: en.productionOrders.components })).getAllByRole("cell").map((cell) => cell.textContent)).toEqual(["00000005 Cabinet", "0 kg", "30 kg", "0 kg"]);
+    cleanup();
+  }
+  // Even a stale shortage on a resolved order never brings the warning back.
+  render(<ProductionScreen {...props} order={{ ...production, status: "closed-early" }} />);
+  expect(screen.getByRole("status").textContent).toBe("This order is Closed Early, so it needs no more components.");
+  cleanup();
+  render(<ProductionScreen {...props} order={{ ...production, shortages: [] }} />);
+  expect(screen.getByRole("status").textContent).toBe(en.productionOrders.sufficient);
 });
 it("returns not-found for missing tenants or orders and propagates other failures", async () => {
   mocks.tenantScope.mockRejectedValueOnce(new mocks.AppError("TENANT_NOT_FOUND"));

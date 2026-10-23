@@ -47,6 +47,19 @@ describe("StockReversalService", () => {
     expect(await scope().count(StockReversal, {})).toBe(1);
   });
 
+  it("reverses one line of a seeded opening balance alone, and only once (#91 spec Q6)", async () => {
+    const em = scope(); em.create(Location, { code: "00000002", name: "Store" }); await em.flush();
+    const store = { ...pair, location: "00000002" };
+    const [plant, other] = await stock().seedDemo([{ ...pair, quantity: "7", unit: "each" }, { ...store, quantity: "4", unit: "each" }], new Date("2026-01-01T06:00:00Z"));
+    expect(other.postingId).toBe(plant.postingId);
+    const response = await reversals().reverse(plant.id, { reason: "Seeded twice" }, actor);
+    expect(response).toMatchObject({ original: plant.id, movement: { type: "reversal", quantity: "-7.000000", reason: "Seeded twice" } });
+    expect(await stock().get(pair)).toMatchObject({ quantity: "0.000000", movementCount: 2 });
+    expect(await stock().get(store)).toMatchObject({ quantity: "4.000000", movementCount: 1 });
+    await expect(reversals().reverse(plant.id, input, actor)).rejects.toMatchObject({ code: "STOCK_ALREADY_REVERSED" });
+    expect([await scope().count(StockReversal, {}), (await stock().get(pair)).quantity]).toEqual([1, "0.000000"]);
+  });
+
   it("refuses blank reasons, partial quantities and unknown or other-tenant movements without a write", async () => {
     const original = await correct("5");
     await expect(reversals().reverse(original.id, { reason: " " }, actor)).rejects.toMatchObject({ code: "VALIDATION_FAILED" });

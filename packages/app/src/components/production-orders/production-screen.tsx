@@ -66,7 +66,7 @@ export function ProductionScreen({ tenant, orders, order, materials, locations, 
           { label: t.leadTime, value: fill(t.leadTimeDays, { days: String(order.leadTimeDays) }) }, { label: t.recipe, value: recipe(order) },
           { label: t.status, value: t.states[order.status] }].map(({ label, value }) => <div key={label}><dt className="text-muted-foreground">{label}</dt><dd className="mt-1 wrap-anywhere">{value}</dd></div>)}
       </dl>
-      <p className="rounded-md border p-3 text-sm" role="status">{order.shortages.length ? t.warning : t.sufficient}</p>
+      <p className="rounded-md border p-3 text-sm" role="status">{order.status !== "open" ? fill(t.resolved, { status: t.states[order.status] }) : order.shortages.length ? t.warning : t.sufficient}</p>
       <ProductionRequirements labels={t} components={order.components} materials={materials} tenant={tenant.code} />
       <CompletionHistory completions={completions} page={completionsPage} materials={materials} labels={t} path={`${path}/${order.id}`}
         reversible={tenant.readOnly ? undefined : { context: { tenant: tenant.code, generation: tenant.generation },

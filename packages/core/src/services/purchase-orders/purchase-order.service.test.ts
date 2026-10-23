@@ -11,6 +11,7 @@ import {
   PurchaseOrderLine,
   PurchaseRequisition,
   selectTenant,
+  StockMovement,
   Supplier,
   TenantAuditEvent,
   UniqueConstraintViolationException,
@@ -204,6 +205,18 @@ describe("PurchaseOrderService", () => {
     const result = await service().get(order.id);
     expect(result.status).toBe("closed-early"); expect(result.lines[1]).toMatchObject({ status: "completed", received: "12.000000" });
     expect(await entries("purchase-orders.purchase-order.closed-early")).toHaveLength(1);
+  });
+
+  it("keeps what was received in stock when a partly received order is Closed Early (BUY-017)", async () => {
+    const order = await service().create({ ...DIRECT, lines: [line("00000001", "100", "kg", "2027-03-03")] }, ACTOR);
+    await new GoodsReceiptService({ em: scopedEm() }).post({ purchaseOrder: order.id, lines: [{ line: 1, quantity: "60", unit: "kg" }] }, ACTOR);
+    const stock = () => new StockService({ em: scopedEm() }).get({ material: "00000001", location: "00000001" });
+    expect(await stock()).toMatchObject({ quantity: "60.000000" });
+    const movements = await scopedEm().count(StockMovement, {});
+    const closed = await service().closeEarly(order.id, (await service().get(order.id)).version, ACTOR);
+    expect(closed).toMatchObject({ status: "closed-early", lines: [expect.objectContaining({ received: "60.000000", abandoned: "40.000000", outstanding: "0.000000" })] });
+    expect(await scopedEm().count(StockMovement, {})).toBe(movements);
+    expect(await stock()).toMatchObject({ quantity: "60.000000" });
   });
 
   it("supports whole-document early closure and numeric selection while preserving prior terminal lines", async () => {

@@ -13,7 +13,7 @@ The original export marked every scenario `Not executed`. Scenarios are updated 
 - **Partially verified**: only part of the scenario can be or is asserted today; the **Evidence** line says which part is missing and why.
 - **Not executed**: not yet built or not yet checked.
 
-Last updated 2026-10-23 for E13-S05 (#152), against `main` at `8adea42`: more evidence for AUD-004 and UX-010, whose status is unchanged. Before that, 2026-10-21 for E10-S03 (#143), against `main` at `1882d6a`, whose tests moved LFC-022, BOM-026, BOM-028, BOM-029, UX-013 and E2E-011 to Passed (automated). Before that, the same day: epics E07 (#73), E08 (#74), E09 (#75), E10 (#76), E11 (#77) and E13 (#79), against `main` at `d2300ef` (PRs #102, #104, #107, #108, #109, #111, #112, #114, #118, #119, #120, #123, #125, #130, #133, #135); the gaps found are filed as #139–#145, and #139 (PR #151) closes LFC-018, STX-006 and STX-018. Earlier: epic E05 (#13) against `2a2976a` (PR #99 for E05-S01), plus the tests and the workbook cell limit added with that update; epic E04 (#12) against `082f2d5`; epic E03 (#11) against `3f553a5`, and the E02 end-to-end follow-up (#67); epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
+Last updated 2026-10-23 for E11-S04 (#144), against `main` at `8195a0b`: its tests move LFC-004 and BUY-017 to Passed (automated) (their MRP halves are slice 3, #14) and add evidence to PRD-029. Before that, the same day for E13-S05 (#152), against `main` at `8adea42`: more evidence for AUD-004 and UX-010, whose status is unchanged. Before that, 2026-10-21 for E10-S03 (#143), against `main` at `1882d6a`, whose tests moved LFC-022, BOM-026, BOM-028, BOM-029, UX-013 and E2E-011 to Passed (automated). Before that, the same day: epics E07 (#73), E08 (#74), E09 (#75), E10 (#76), E11 (#77) and E13 (#79), against `main` at `d2300ef` (PRs #102, #104, #107, #108, #109, #111, #112, #114, #118, #119, #120, #123, #125, #130, #133, #135); the gaps found are filed as #139–#145, and #139 (PR #151) closes LFC-018, STX-006 and STX-018. Earlier: epic E05 (#13) against `2a2976a` (PR #99 for E05-S01), plus the tests and the workbook cell limit added with that update; epic E04 (#12) against `082f2d5`; epic E03 (#11) against `3f553a5`, and the E02 end-to-end follow-up (#67); epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
 
 This document contains the complete acceptance catalogue for the CPG MVP. Each test preserves its ID, title, priority, execution channel, and Given / When / Then criteria.
 
@@ -1467,9 +1467,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### BUY-017 — PO closure after partial receipt
 
-**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/document-lifecycle.test.ts` (a PO of 10 with 3 received, Closed Early in the UI → received 3, abandoned 7, outstanding 0), `packages/core/src/services/purchase-orders/purchase-order.service.test.ts` (later receipts refused on the closed line). That stock still holds what was received after a PO closure is not asserted yet (#144); scheduled supply is MRP, slice 3 (#14). E11-S01, #90.
+- **Evidence:** `packages/core/src/services/purchase-orders/purchase-order.service.test.ts` ("keeps what was received in stock…": a PO line of 100 kg with 60 received, Closed Early → received 60, abandoned 40, outstanding 0, no new movement and stock still 60; later receipts refused on the closed line), `tests/integration/document-lifecycle.test.ts` (a PO of 10 with 3 received, Closed Early in the UI → received 3, abandoned 7, outstanding 0, stock unchanged). Scheduled supply is MRP, slice 3 (#14). E11-S01, #90; E11-S04, #144.
 - **Given:** PO line ordered 100, received 60
 - **When:** Close Early
 - **Then:** Remaining 40 no longer counted as scheduled supply; actual 60 remains in inventory.
@@ -1810,7 +1810,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/services/production-orders/production-completion.service.test.ts` (100 with 40 produced → Closed Early: 40 kept, 60 abandoned, 0 outstanding), `packages/core/src/services/production-orders/production-order.service.test.ts` ("retains a 10-output completion and abandons only the remainder": produced kept, outstanding 0, no movement). Missing: the order detail still shows component needs for the whole target (#144); the drop from MRP is slice 3 (#14). E11-S01, #90.
+- **Evidence:** `packages/core/src/services/production-orders/production-completion.service.test.ts` (100 with 40 produced → Closed Early: 40 kept, 60 abandoned, 0 outstanding), `packages/core/src/services/production-orders/production-order.service.test.ts` ("retains a 10-output completion and abandons only the remainder": produced kept, outstanding 0, no movement; "requires components for the outstanding quantity only…": 100 with 40 produced requires components for 60, then none once Closed Early), `tests/integration/document-lifecycle.test.ts` ("plans only the outstanding quantity…": the API detail and the page show the 160 still to make, then no requirement and no shortage warning after Close Early in the UI). The drop from MRP is slice 3 (#14). E11-S01, #90; E11-S04, #144.
 - **Given:** Order 100 has 40 physically produced
 - **When:** Close Early
 - **Then:** 40 output remains; remaining planned output 60 and component need drop from MRP.
@@ -4338,9 +4338,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### LFC-004 — Partial document Closed Early
 
-**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/production-orders/production-completion.service.test.ts` (target 100, 40 produced, Close Early → Closed Early, 60 abandoned, 0 outstanding; unchanged after a reversal), `packages/core/src/services/production-orders/production-order.service.test.ts` (closure posts no movement and refuses later completions), `tests/integration/document-lifecycle.test.ts` (UI closure of a waste-only order, stock unchanged). Missing: the order detail still lists component requirements and a shortage warning for the whole target, not nothing for the abandoned 60 (#144); MRP's view is slice 3 (#14). E11-S01, #90.
+- **Evidence:** `packages/core/src/services/production-orders/production-completion.service.test.ts` (target 100, 40 produced, Close Early → Closed Early, 60 abandoned, 0 outstanding; unchanged after a reversal), `packages/core/src/services/production-orders/production-order.service.test.ts` (closure posts no movement and refuses later completions; "requires components for the outstanding quantity only…": target 100, 40 produced → requirements for 60; after Close Early every component's required and shortage are 0 and there is no shortage; "requires nothing of a cancelled or completed order…"), `packages/app/src/components/production-orders/production-content.test.tsx` (a Closed Early or Cancelled order's page says it needs no more components, never the shortage warning), `tests/integration/document-lifecycle.test.ts` (UI closure of a waste-only order, stock unchanged; "plans only the outstanding quantity…": UI closure of a partly produced order, after which the page and the API detail show no requirement and no shortage). MRP's view is slice 3 (#14). E11-S01, #90; E11-S04, #144.
 - **Given:** Production order 100, produced 40
 - **When:** Close Early
 - **Then:** Status Closed Early; no planned output/components for remaining 60.

@@ -662,6 +662,7 @@ export const pl: Messages = {
     recipeLabel: "BOM {bom} / rewizja {revision} · priorytet {priority}",
     warning: "Niedobór składników: nadal możesz utworzyć plan. Poniżej aktualny zapas fizyczny; zapas jest sprawdzany przy księgowaniu wykonania.",
     sufficient: "Aktualny zapas fizyczny pokrywa bezpośrednie potrzeby. Planowanie go nie rezerwuje ani nie zużywa.",
+    resolved: "Zlecenie ma stan „{status}”, więc nie potrzebuje już składników.",
     components: "Potrzeby przypiętej receptury i aktualny zapas", component: "Składnik", required: "Potrzeba", available: "Dostępne teraz", shortage: "Niedobór",
     empty: "Brak zleceń produkcyjnych. Skonfiguruj wytwarzany materiał, lokalizację i aktywną recepturę, a następnie utwórz zlecenie.",
     pagination: "Strony zleceń produkcyjnych", previous: "Poprzednia", next: "Następna", page: "Strona {page} z {pages}",
