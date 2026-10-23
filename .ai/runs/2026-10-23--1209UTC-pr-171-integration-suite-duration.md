@@ -49,6 +49,7 @@ Drive PR #171 (the #166 app-icons wait) to merge-ready, and, as the owner asked,
 - Local, standalone build: full suite twice (second run 388 passed / 1 skipped / 0 failed, 428 s); sample boms + materials + api-tokens 54 s → 35 s; after the review fixes, six files (boms, materials, api-tokens, tenants, navigation, app-icons) 55/55; app-icons after its fix 5/5.
 - `npm run lint`: 0 errors, 1 warning (`lineError` in `bom.service.ts`, already on `main`). `npm run typecheck`: exit 0. `npm run test:coverage`: 487 files, 3322 tests, 605 files fully covered. `npm run build`: exit 0 (this run made no app change after it).
 - CI run 39956419066: lint, typecheck, unit-tests, build and integration-tests 1–4 all green. Integration wall-clock 16m16s → 6m48s (slowest shard).
+- CI run 39958991737 on a00dd50 (the `follow` fix), twice (a rerun as a stability check): all jobs green both times; slowest integration shard 6m50s and 6m38s.
 
 ## Follow-ups
 
