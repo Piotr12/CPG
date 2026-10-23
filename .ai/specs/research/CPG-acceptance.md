@@ -235,9 +235,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### TEN-025 — Test reset excludes Prod
 
-**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/test-reset-api.test.ts` compares all currently available Prod lists, audit and metadata; the reset service tests preserve Prod values. Customer orders and stock do not exist yet, so that part of this Given awaits those stories. The deletion footprint is generic and excludes global/Prod data (`tests/test-reset-coverage.test.ts`). #93.
+- **Evidence:** `packages/core/src/services/tenants/test-reset.service.test.ts` gives Prod a customer order, a stock correction, a transfer dispatched into transit and a purchase order received in part, then compares every stored Prod row of every table before and after a reset (balances, ledger, transfer postings and audit included; each is checked to be non-empty), with Test writable and read-only; Prod's tenant row is unchanged. `tests/integration/test-reset-api.test.ts` gives Prod stock, a dispatched transfer and an open purchase order, then compares every Prod list, the transfer and the order, the stock ledger at both locations, the Prod audit and its metadata before and after each reset. The deletion footprint is generic and excludes global/Prod data (`tests/test-reset-coverage.test.ts`). #93, #189.
 - **Given:** Prod contains customer orders, stock and immutable audit
 - **When:** Admin resets Test
 - **Then:** All Prod records, balances, audit and read-only state remain identical.
@@ -246,7 +246,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/tenants/test-reset.service.test.ts` interleaves two real SQLite connections in both orders: a write commits before reset and is removed, or its old snapshot is refused after reset and its generation retry is stale. No partial write enters the new generation. #93.
+- **Evidence:** `packages/core/src/services/tenants/test-reset.service.test.ts` runs the reset and a write on two real SQLite connections. A write that commits after the reset's transaction has read the generation makes the reset retry once and remove it; a write from a snapshot older than a committed reset is refused, and its retry is stale. With Test really read-only, a write through the API's own path (`IdempotencyService.run`) made while the reset is uncommitted and holds the writer lock is refused `TENANT_READ_ONLY`, and after the commit `GENERATION_STALE`. Nothing it sent is in the new generation, and Test stays read-only. #93, #189.
 - **Given:** One session preparing Test update and admin resets Test
 - **When:** Attempt write during reset while read-only gate active
 - **Then:** Update is blocked or safely completed before reset; no partial demo data leaks into regenerated dataset.
@@ -271,9 +271,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### TEN-029 — Test reset restarts all business ID counters
 
-**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/test-reset-api.test.ts` and reset service tests restart materials, locations, customers, suppliers and BOMs at 00000001 and create the next material after the demo rows. Document sequences are not built yet; their part awaits those stories. All current tenant-owned tables participate automatically. #93.
+- **Evidence:** `packages/core/src/services/tenants/test-reset.service.test.ts` resets two years of realistic data, plus one more material, location, customer, supplier, BOM and requisition and two transfers, to the tiny dataset. Every tenant-owned table with a business ID (all 14 sequenced kinds, found from the metadata) then holds exactly 00000001…N for the dataset's N, below what the old generation reached, and the first new transfer is 00000001. Prod's next material and purchase order continue at 00000002. `tests/integration/test-reset-api.test.ts` checks after each real reset that the IDs of every listed kind, and the completions of every production order, run 00000001…N without a gap. The next material after the demo rows is 00000027 and the first transfer is 00000001. #93, #189.
 - **Given:** Test had material 00000047 and several documents before reset
 - **When:** Administrator performs full Test reset
 - **Then:** New Test generation starts all auto-generated business sequences afresh. Seeded demonstration materials receive initial IDs beginning 00000001, followed by subsequent IDs; Prod and global identities do not restart.
@@ -4623,7 +4623,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### E2E-010 — Test reset while Prod operations continue
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+
+- **Evidence:** `tests/integration/test-reset-api.test.ts` sends a Test reset and a normal user's Prod goods receipt against Prod's open purchase order at the same time. Both succeed. Test moves to the next generation with its demo data back from 00000001 and its audit empty, including an entry written just before. In Prod, the order line has received the 2 kg once, the receiving location's stock and ledger gain exactly that receipt, and the audit gains only the user's entries. The transfer in transit, the other location's ledger, Prod's metadata and the user accounts are unchanged. Remaining gap: the Given's MRP results, which await MRP. #189.
 
 - **Given:** Test has demo stock, Prod contains an open PO and MRP results
 - **When:** Admin resets Test while user reads/posts valid Prod GR
@@ -4689,7 +4691,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### E2E-018 — Language/theme/help survive Test reset
 
-**Priority:** P1 · **Channel:** UI · **Status:** Not executed
+**Priority:** P1 · **Channel:** UI · **Status:** Passed (automated)
+
+- **Evidence:** `tests/integration/test-reset-api.test.ts`: a normal user chooses Polish and dark and owns a token; after each real reset (with Test writable and read-only) the API returns the same preferences, the user's token still answers and is still listed, and the user's browser session is still signed in. Revisiting the app, it renders `<html lang="pl">` in dark, the help link reads "Pomoc", and `/help` opens with the heading "Pomoc", still dark. Test's demo data is regenerated from 00000001. #93, #189.
 
 - **Given:** Normal user selects Polish/dark and owns active token; Test has data
 - **When:** Reset Test, revisit app with same user
@@ -4705,7 +4709,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### E2E-020 — Reused Test IDs are safe after full reset
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
+
+- **Evidence:** `tests/integration/test-reset-api.test.ts`: an agent token posts a G1 goods issue, with its own idempotency key, for what is left on an Open demo shipment. After a real reset, G2 has a shipment with the same ID, still Open with the same quantity left to issue. The agent's retry under G1, with its key and with a new key, is 409 `GENERATION_STALE` both times. G2's material, its stock ledger at the shipment's location, G2's goods issues and that shipment are unchanged, and so is everything of Prod's. The same token then creates G2's first transfer, 00000001. A stale G1 edit of material 00000001 is refused the same way, with its used key and a new one (TEN-030). #93, #189.
 
 - **Given:** Agent cached Test generation G1 with material 00000001 and an idempotent API GI request, while Prod operates
 - **When:** Admin resets Test to G2 (new material 00000001), agent retries G1 request
