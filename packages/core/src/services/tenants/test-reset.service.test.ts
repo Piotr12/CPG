@@ -96,9 +96,11 @@ async function populate() {
 }
 
 describe("atomic Test reset", { timeout: 60_000 }, () => {
-  it.each([false, true])("reseeds every kind and restores readOnly=%s, preserving globals and Prod (TEN-022…025, TEN-028, AUD-011…013)", async (readOnly) => {
+  it.each([false, true])("reseeds every kind and restores readOnly=%s, preserving globals and Prod, read-only alike (TEN-022…025, TEN-028, AUD-011…013)", async (readOnly) => {
     await populate();
     await container.createScope().cradle.tenantService.setReadOnly("test", readOnly, actor);
+    // Prod shares the flag, so its read-only state is compared both ways (TEN-025).
+    await container.createScope().cradle.tenantService.setReadOnly("prod", readOnly, actor);
     const before = await snapshot();
 
     expect(await reset()).toEqual({ code: "test", name: "Test", generation: 2, readOnly });
@@ -138,8 +140,9 @@ describe("atomic Test reset", { timeout: 60_000 }, () => {
     expect(events).toMatchObject([{ before: { generation: 1, readOnly }, after: { generation: 2, readOnly, dataset: "tiny" }, actorUsername: "admin", sessionId: "session-admin" }]);
     expect(await orm.em.getConnection().execute("pragma foreign_key_check")).toEqual([]);
     const prod = (await scope("prod")).cradle;
-    expect(await prod.tenantService.get("prod")).toEqual({ code: "prod", name: "Prod", generation: 1, readOnly: false });
+    expect(await prod.tenantService.get("prod")).toEqual({ code: "prod", name: "Prod", generation: 1, readOnly });
     // Prod's sequences carry on where they were (TEN-029).
+    await container.createScope().cradle.tenantService.setReadOnly("prod", false, actor);
     expect((await prod.materialService.create({ type: "raw", description: "next Prod", baseUnit: "kg" }, actor)).id).toBe("00000002");
     expect((await prod.purchaseOrderService.create({ supplier: "00000001", location: "00000001", lines: [{ material: "00000001", quantity: "1", unit: "kg", plannedDate: "2027-01-01" }] }, actor)).id).toBe("00000002");
   });

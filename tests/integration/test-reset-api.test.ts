@@ -79,6 +79,7 @@ describe("atomic Test reset through the bearer API", () => {
     try {
       if (secret) {
         await write("PATCH", "/api/tenants/test", { readOnly: false });
+        await write("PATCH", "/api/tenants/prod", { readOnly: false });
         const tokens = json(await api("GET", "/api/tokens")).data as { id: string; name: string }[];
         const own = tokens.find((token) => token.name === "reset-api-admin");
         if (own) await write("DELETE", `/api/tokens/${own.id}`, null);
@@ -115,8 +116,11 @@ describe("atomic Test reset through the bearer API", () => {
     const preview = json(await write("POST", "/api/tenants/test/import/dry-run", { workbook }, generation)).data as { previewToken: string };
     expect(preview.previewToken).toMatch(/^[a-f0-9]{64}$/);
     await write("PATCH", "/api/tenants/test", { readOnly });
+    // Prod shares the flag, so its read-only state is compared both ways; other files expect it writable again (TEN-025).
+    expect((await write("PATCH", "/api/tenants/prod", { readOnly })).status).toBe(200);
     const prodBefore = await prodState();
     // Prod holds stock, a transfer in transit and an open purchase order (TEN-025).
+    expect(prodBefore.tenant).toMatchObject({ code: "prod", readOnly });
     expect(prodBefore.stock.map(({ quantity }: { quantity: string }) => quantity)).toEqual(["6.000000", "0.000000"]);
     expect(prodBefore.transfer).toMatchObject({ id: prod.transfer, inTransit: "4.000000" });
     expect(prodBefore.order).toMatchObject({ id: prod.order, status: "open" });
@@ -175,6 +179,7 @@ describe("atomic Test reset through the bearer API", () => {
     expect(json(staleWrite).error.code).toBe("GENERATION_STALE");
     expect(json(await write("PATCH", `/api/tenants/test/materials/${firstMaterial.id}`, oldBody, generation)).error.code).toBe("GENERATION_STALE");
     await write("PATCH", "/api/tenants/test", { readOnly: false });
+    expect((await write("PATCH", "/api/tenants/prod", { readOnly: false })).status).toBe(200);
     const staleImport = await write("POST", "/api/tenants/test/import/commit", { workbook, previewToken: preview.previewToken }, generation + 1);
     expect(json(staleImport).error.code).toBe("IMPORT_STALE");
     const reused = await api("POST", "/api/tenants/test/materials", { key: oldKey, body: { type: "raw", description: "reset-api new generation", baseUnit: "kg" }, generation: generation + 1 });
@@ -191,6 +196,8 @@ describe("atomic Test reset through the bearer API", () => {
     const before = await prodState();
     const accountsBefore = await accounts();
 
+    // The receipt can wait several seconds behind the reset on a kept-alive connection: like `test-reset-realistic.test.ts`,
+    // this relies on the image's `KEEP_ALIVE_TIMEOUT`, and a server started without it may close the connection unread (#185).
     const [reset, receipt] = await Promise.all([
       api("POST", "/api/tenants/test/reset", { key: randomUUID(), body: {}, generation }),
       api("POST", "/api/tenants/prod/goods-receipts", { key: randomUUID(), body: { purchaseOrder: prod.order, lines: [{ line: 1, quantity: "2", unit: "kg" }] } }, userSecrets[0]),

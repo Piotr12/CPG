@@ -145,7 +145,7 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 - **2026-10-23 — QA a pager with data that spans pages** — the realistic dataset has no transfers and few completions per order, so create them through the API first (#154). Choose the dataset through the hidden native `[data-test-reset] select`.
 - **2026-10-23 — Running integration tests against a local standalone server** — needed when Docker is unavailable, e.g. when Docker Desktop belongs to another macOS user: don't touch that session. For every run:
   - copy `.next/standalone` into a **new empty directory**, adding `.next/static` under `packages/app/.next/` and `packages/app/public` beside `server.js`;
-  - start `node packages/app/server.js` (not `next start`) with a fresh `DATA_DIR` and `CPG_ADMIN_PASSWORD`, then run with `CPG_BASE_URL=…`.
+  - start `node packages/app/server.js` (not `next start`) with a fresh `DATA_DIR`, `CPG_ADMIN_PASSWORD` and the image's `KEEP_ALIVE_TIMEOUT=3600000` (without it, a request queued behind a reset can fail `ECONNRESET`), then run with `CPG_BASE_URL=…`.
 
   Reusing a copy keeps Next's route cache, including the `/admin/TEST` 404 on case-insensitive APFS. Stop servers by port, `lsof -ti tcp:<port> | xargs kill`, and check the port is free: `pkill -f` misses them. Restart between long runs, because all browsers share one sign-in throttle bucket. `startup-guard` is skipped; CI covers the image.
 - **2026-10-21 — Local integration images are shared across worktrees** — `global-setup.ts` tags every build `cpg-integration`, so a concurrent session can test another checkout's image. Check the image was created after your last commit. Don't prune shared Docker state; rely on CI.
