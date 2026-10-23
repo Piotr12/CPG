@@ -4,7 +4,7 @@
 **Agent:** Claude Code (Opus 5.5), `om-auto-fix-issue 147` → `om-auto-write-spec` (#180) → `om-auto-implement-spec` → `om-auto-create-pr`
 **Source doc:** .ai/specs/2026-10-23--2006UTC-shipment-edit-cancel.md (design PR #180)
 **Issue:** #147 (E08-S05)
-**Status:** in progress
+**Status:** done
 
 ## Goal
 
@@ -106,5 +106,33 @@ PR: #182
 
 ### Phase 5: Integration and docs
 
-- [ ] 5.1 Integration tests
-- [ ] 5.2 Docs and lessons
+- [x] 5.1 Integration tests — 5f53899f
+- [x] 5.2 Docs and lessons — 3e706321
+
+### Review fixes
+
+- [x] Cancelled shipments report nothing to issue; the help states the raise limit exactly — b346485f
+
+## Log
+
+- 20:06 UTC: wrote spec #180. A fresh-context review found 1 critical, 1 high and 3 medium issues (refresh clobber, drift check, hidden rows, reversal mapping, a pointer to editing); all are resolved in the spec.
+- 20:17 UTC: plan; draft PR #182.
+- The generated migration rebuilt `shipment` and copied NULL into NOT NULL columns, so it was replaced by the in-place add/copy/drop/rename (lesson added).
+- One commit (ef60be4) was first made with a test type error, then amended before any push (lesson "Gate a commit on the real typecheck").
+- Docker isn't available to this account. The integration files ran on a standalone build instead (lesson 2026-10-19).
+- A fresh-context code review found one medium and two low issues, fixed in the commit under "Review fixes" above. UI QA passed 9 of 9 steps (screenshots on #182).
+
+## Verification
+
+- `npm run lint`: 0 errors. One warning, in `bom.service.ts`, predates this branch.
+- `npm run typecheck`: 0.
+- `npm run test:coverage`: 3,515 tests, 100% lines, branches, functions and statements.
+- `npm run build`: OK.
+- Integration on a standalone build (`CPG_BASE_URL`):
+  - `shipments.test.ts`, `shipments-api.test.ts` and `smoke.test.ts`: 20/20 pass;
+  - `document-lifecycle.test.ts`, `stock-reversals.test.ts` and `customer-orders.test.ts`: 21/21 pass.
+- The full suite runs in CI.
+
+## Follow-ups
+
+- Move the spec to `.ai/specs/implemented/` once #180 is on `main`.
