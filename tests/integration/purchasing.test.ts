@@ -146,6 +146,34 @@ describe("purchase requisitions and orders in the UI", () => {
     expect((await rows(admin, "/admin/prod/locations")).find(([id]) => id === location)?.[2]).toBe("Active");
   });
 
+  // Uses the orders the Create purchase order test above creates: both have a line for buypo steel, so the lower one is named.
+  it("refuses the admin's deactivation of a material an Open PO line uses, linking the order, which the link opens (LFC-013, #186)", async () => {
+    const [order] = (await ordersOf(admin, "buypo acme"))[0];
+    const [material] = (await orderLines(admin, order))[0][1].split(" ");
+    const alert = "[role=alertdialog] [role=alert]";
+
+    await admin.open(`${baseUrl}/admin/prod/materials/${material}`);
+    await admin.waitUntil(ready(button("Deactivate")));
+    await admin.clickRole("button", "Deactivate");
+    await admin.waitFor("[role=alertdialog]");
+    await admin.click("[role=alertdialog] button[data-variant=destructive]");
+    await admin.waitUntil(`!!document.querySelector("${alert} a")`);
+
+    expect(
+      await admin.evaluate<{ text: string; href: string | null }>(`(() => {
+        const alert = document.querySelector("${alert}");
+        return { text: alert.innerText.trim(), href: alert.querySelector("a")?.getAttribute("href") ?? null };
+      })()`),
+    ).toEqual({ text: `Purchase order ${order} has an open line for this material, so it can't be deactivated. ${order}`, href: `/admin/prod/purchase-orders/${order}` });
+    await admin.click(`${alert} a`);
+    await admin.waitUntil(
+      `location.pathname === "/admin/prod/purchase-orders/${order}" && [...document.querySelectorAll("main h1")].some((h) => h.offsetParent && h.textContent.startsWith("Purchase order ${order} "))`,
+    );
+    await admin.open(`${baseUrl}/admin/prod/materials/${material}`);
+    await admin.waitUntil(ready(button("Deactivate")));
+    expect(await admin.texts("main dd")).toContain("Active");
+  });
+
   it("lets a normal user change an Open requisition's required date on screen, which the audit records (#142)", async () => {
     // At 1280 × 800 the Required column shows and the row's actions sit inside the table, unscrolled.
     await una.setViewport(1280, 800);

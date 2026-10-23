@@ -584,9 +584,11 @@ describe("PurchaseOrderService", () => {
         code: "MATERIAL_IN_OPEN_ORDER",
         status: 409,
         message: `Purchase order ${second.id} has an open line for this material, so it can't be deactivated.`,
+        messageParams: { order: second.id },
       });
       await expect(deactivate("00000002")).rejects.toMatchObject({
         message: "Purchase order 00000001 has an open line for this material, so it can't be deactivated.",
+        messageParams: { order: "00000001" },
       });
     });
 

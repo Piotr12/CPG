@@ -44,4 +44,10 @@ describe("errorMessage", () => {
     expect(errorMessage(pl.errors, requisition)).toBe("Zapotrzebowanie zakupu 00000002 jest nadal otwarte w tej lokalizacji.");
   });
 
+  it("names the Open purchase order that keeps a material active, in English and Polish (#186)", () => {
+    const order = { code: "MATERIAL_IN_OPEN_ORDER", message: "Purchase order 00000004 has an open line.", params: { order: "00000004" } };
+    expect(errorMessage(en.errors, order)).toBe("Purchase order 00000004 has an open line for this material, so it can't be deactivated.");
+    expect(errorMessage(pl.errors, order)).toBe("Zamówienie zakupu 00000004 ma otwartą pozycję z tym materiałem, więc nie można go dezaktywować.");
+  });
+
 });

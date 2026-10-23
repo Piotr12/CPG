@@ -13,7 +13,7 @@ The original export marked every scenario `Not executed`. Scenarios are updated 
 - **Partially verified**: only part of the scenario can be or is asserted today; the **Evidence** line says which part is missing and why.
 - **Not executed**: not yet built or not yet checked.
 
-Last updated 2026-10-23 for E11-S04 (#144), against `main` at `8195a0b`: its tests move LFC-004 and BUY-017 to Passed (automated) (their MRP halves are slice 3, #14) and add evidence to PRD-029. Before that, the same day for E13-S05 (#152), against `main` at `8adea42`: more evidence for AUD-004 and UX-010, whose status is unchanged. Before that, 2026-10-21 for E10-S03 (#143), against `main` at `1882d6a`, whose tests moved LFC-022, BOM-026, BOM-028, BOM-029, UX-013 and E2E-011 to Passed (automated). Before that, the same day: epics E07 (#73), E08 (#74), E09 (#75), E10 (#76), E11 (#77) and E13 (#79), against `main` at `d2300ef` (PRs #102, #104, #107, #108, #109, #111, #112, #114, #118, #119, #120, #123, #125, #130, #133, #135); the gaps found are filed as #139–#145, and #139 (PR #151) closes LFC-018, STX-006 and STX-018. Earlier: epic E05 (#13) against `2a2976a` (PR #99 for E05-S01), plus the tests and the workbook cell limit added with that update; epic E04 (#12) against `082f2d5`; epic E03 (#11) against `3f553a5`, and the E02 end-to-end follow-up (#67); epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
+Last updated 2026-10-23 for E09-S05 (#186), against `main` at `db50cf0`: its tests move E2E-017 to Passed (automated) and add evidence to LFC-013. Before that, the same day for E11-S04 (#144), against `main` at `8195a0b`: its tests move LFC-004 and BUY-017 to Passed (automated) (their MRP halves are slice 3, #14) and add evidence to PRD-029. Before that, the same day for E13-S05 (#152), against `main` at `8adea42`: more evidence for AUD-004 and UX-010, whose status is unchanged. Before that, 2026-10-21 for E10-S03 (#143), against `main` at `1882d6a`, whose tests moved LFC-022, BOM-026, BOM-028, BOM-029, UX-013 and E2E-011 to Passed (automated). Before that, the same day: epics E07 (#73), E08 (#74), E09 (#75), E10 (#76), E11 (#77) and E13 (#79), against `main` at `d2300ef` (PRs #102, #104, #107, #108, #109, #111, #112, #114, #118, #119, #120, #123, #125, #130, #133, #135); the gaps found are filed as #139–#145, and #139 (PR #151) closes LFC-018, STX-006 and STX-018. Earlier: epic E05 (#13) against `2a2976a` (PR #99 for E05-S01), plus the tests and the workbook cell limit added with that update; epic E04 (#12) against `082f2d5`; epic E03 (#11) against `3f553a5`, and the E02 end-to-end follow-up (#67); epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
 
 This document contains the complete acceptance catalogue for the CPG MVP. Each test preserves its ID, title, priority, execution channel, and Given / When / Then criteria.
 
@@ -4421,7 +4421,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/purchase-orders/purchase-order.service.test.ts` ("material deactivation with an open order": 409 `MATERIAL_IN_OPEN_ORDER` naming the PO), `tests/integration/purchasing-api.test.ts`. E09-S01, #86.
+- **Evidence:** `packages/core/src/services/purchase-orders/purchase-order.service.test.ts` ("material deactivation with an open order": 409 `MATERIAL_IN_OPEN_ORDER` naming the PO, with its ID as `params.order`), `tests/integration/purchasing-api.test.ts` (the API refusal's `params.order`), `tests/integration/purchasing.test.ts` (the material's Deactivate dialog names the Open PO and links `/admin/prod/purchase-orders/{id}`, which opens it; the material stays Active), `packages/app/src/i18n/error-message.test.ts` and `packages/app/src/components/master-data/deactivation-blocker-error.test.tsx` (the message and link in English and Polish). E09-S01, #86; E09-S05, #186.
 - **Given:** Material stock zero but has an open PO line
 - **When:** Admin deactivates material
 - **Then:** Rejected with outstanding document reference.
@@ -4681,8 +4681,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### E2E-017 — Inactivated supplier but existing procurement completes
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/purchasing-api.test.ts` ("receives an Open PO after its supplier is deactivated": the receipt posts, the PO completes, stock gains a `goods-receipt` movement naming the receipt and the PO, the audit records `goods-receipts.goods-receipt.posted`, and a new PO for that supplier is 409 `SUPPLIER_INACTIVE`); unit: `packages/core/src/services/goods-receipts/goods-receipt.service.test.ts`, `packages/core/src/services/purchase-orders/purchase-order.service.test.ts`. E09-S05, #186.
 - **Given:** Supplier has existing PO, then admin makes supplier inactive
 - **When:** Post GR against old PO; try create a new PO
 - **Then:** Old PO receives normally with movement/audit; new PO rejected.

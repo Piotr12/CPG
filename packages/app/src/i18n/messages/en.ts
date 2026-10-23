@@ -1972,6 +1972,7 @@ export const en = {
     LOCATION_HAS_PURCHASE_ORDERS: "Purchase order {order} is still Open for delivery to this location.",
     LOCATION_HAS_REQUISITIONS: "Purchase requisition {requisition} is still Open at this location.",
     MATERIAL_IN_OPEN_TRANSFER: "Transfer {transfer} of this material is still Open, so it can't be deactivated.",
+    MATERIAL_IN_OPEN_ORDER: "Purchase order {order} has an open line for this material, so it can't be deactivated.",
     INSUFFICIENT_STOCK: "Material {material} at location {location}: available {available} {unit}; requested {requested} {unit}.",
     STOCK_NOT_EMPTY: "Material {material} at location {location} holds {quantity} {unit}. Clear its stock before deactivation.",
     MATERIAL_HAS_MOVEMENTS: "This material has stock history, so its type and base unit cannot change.",
