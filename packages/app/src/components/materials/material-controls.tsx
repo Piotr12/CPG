@@ -1,6 +1,6 @@
 "use client";
 
-import { productionBlockerError } from "../production-orders/production-blocker-error";
+import { deactivationBlockerError } from "../master-data/deactivation-blocker-error";
 
 import { useState } from "react";
 import type { MaterialSummary } from "@cpg/core";
@@ -62,7 +62,7 @@ export function MaterialControls({ material, context, labels }: MaterialControls
             submitLabel={t.submit}
             pendingLabel={t.submitting}
             cancelLabel={labels.cancel}
-            formatError={productionBlockerError(labels, context.tenant)}
+            formatError={deactivationBlockerError(labels, context.tenant)}
             formatFieldError={fieldErrorFormatter(labels)}
             onSuccess={close}
             onCancel={close}
@@ -82,7 +82,7 @@ export function MaterialControls({ material, context, labels }: MaterialControls
         cancelLabel={labels.cancel}
         destructive={!target}
         action={() => update({ active: target })}
-        formatError={productionBlockerError(labels, context.tenant)}
+        formatError={deactivationBlockerError(labels, context.tenant)}
       />
     </div>
   );

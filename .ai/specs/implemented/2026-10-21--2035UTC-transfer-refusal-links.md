@@ -1,6 +1,6 @@
 # A user refused a deactivation by an Open transfer opens that transfer from the message, and the stock import's remaining scenarios are proven
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-21 20:35 UTC
 **Issue:** #139 (E07-S04), epic #73 · **Builds on:** `implemented/2026-10-20--2046UTC-transfers.md` (#82: `LOCATION_HAS_OPEN_TRANSFERS`, `MATERIAL_IN_OPEN_TRANSFER`), `implemented/2026-10-20--2047UTC-production-orders.md` (#88: the production-order blocker link this reuses), `implemented/2026-10-20--2225UTC-stock-import.md` (#81), `implemented/2026-10-20--1634UTC-stock-ledger-corrections.md` (#80: `STOCK_NOT_EMPTY`) · **Design authority:** `.ai/specs/product-brief.md` (R08, D04), `.ai/specs/research/CPG-acceptance.md` (LFC-016, LFC-018, STX-006, STX-018)
 
@@ -56,13 +56,13 @@ Polish: "Przesunięcie 00000003 z tej lub do tej lokalizacji jest nadal otwarte.
 
 Today, on a material's page (dev server, an Open transfer of a material with no stock):
 
-![Current: the transfer ID is plain text](assets/transfer-refusal-links/current-01-material-refusal.png)
+![Current: the transfer ID is plain text](../assets/transfer-refusal-links/current-01-material-refusal.png)
 
 Proposed (illustrative mockup, the dashed outline marks the change):
 
-![Proposed: the transfer ID links to its page](assets/transfer-refusal-links/mockup-01-material-refusal.png)
+![Proposed: the transfer ID links to its page](../assets/transfer-refusal-links/mockup-01-material-refusal.png)
 
-Prototype: `assets/transfer-refusal-links/mockup-01-material-refusal.html`
+Prototype: `../assets/transfer-refusal-links/mockup-01-material-refusal.html`
 
 ## 📝 Edge Cases & Failure Scenarios
 
@@ -99,3 +99,10 @@ The two phases land as separate commits on one PR, so either can be reverted alo
 ### Phase 3 — Paperwork
 
 8. `CPG-acceptance.md`: LFC-018, STX-006 and STX-018 become `Passed (automated)` with Evidence naming the new tests; LFC-018's Evidence replaces the moved `production-blocker-error.test.tsx` path; LFC-016's Evidence adds the location assertion. Move this spec to `implemented/`.
+
+## Implementation notes
+
+- Implemented on PR #151 (`feat/transfer-refusal-links`, based on this spec's PR #149), as planned.
+- After the refusal's link is followed, Next.js keeps the material page mounted but hidden (`display: none`, React Activity), with its open Deactivate dialog. The transfer page shows and stays interactive. So `transfers.test.ts` waits for the transfer's shown heading, not for the dialog to disappear.
+- STX-018's UI test also checks that the admin's session differs from the normal user's, to show that the admin's attribution uses the admin's own session.
+- STX-006's test lists two of the three stocked sites, as issue #139 words it, and checks the third. The existing test already covers a workbook listing a single site.

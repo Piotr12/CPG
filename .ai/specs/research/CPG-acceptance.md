@@ -13,7 +13,7 @@ The original export marked every scenario `Not executed`. Scenarios are updated 
 - **Partially verified**: only part of the scenario can be or is asserted today; the **Evidence** line says which part is missing and why.
 - **Not executed**: not yet built or not yet checked.
 
-Last updated 2026-10-21 for E10-S03 (#143), against `main` at `1882d6a`, whose tests moved LFC-022, BOM-026, BOM-028, BOM-029, UX-013 and E2E-011 to Passed (automated). Before that, the same day: epics E07 (#73), E08 (#74), E09 (#75), E10 (#76), E11 (#77) and E13 (#79), against `main` at `d2300ef` (PRs #102, #104, #107, #108, #109, #111, #112, #114, #118, #119, #120, #123, #125, #130, #133, #135); the gaps found are filed as #139–#145. Earlier: epic E05 (#13) against `2a2976a` (PR #99 for E05-S01), plus the tests and the workbook cell limit added with that update; epic E04 (#12) against `082f2d5`; epic E03 (#11) against `3f553a5`, and the E02 end-to-end follow-up (#67); epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
+Last updated 2026-10-21 for E10-S03 (#143), against `main` at `1882d6a`, whose tests moved LFC-022, BOM-026, BOM-028, BOM-029, UX-013 and E2E-011 to Passed (automated). Before that, the same day: epics E07 (#73), E08 (#74), E09 (#75), E10 (#76), E11 (#77) and E13 (#79), against `main` at `d2300ef` (PRs #102, #104, #107, #108, #109, #111, #112, #114, #118, #119, #120, #123, #125, #130, #133, #135); the gaps found are filed as #139–#145, and #139 (PR #151) closes LFC-018, STX-006 and STX-018. Earlier: epic E05 (#13) against `2a2976a` (PR #99 for E05-S01), plus the tests and the workbook cell limit added with that update; epic E04 (#12) against `082f2d5`; epic E03 (#11) against `3f553a5`, and the E02 end-to-end follow-up (#67); epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
 
 This document contains the complete acceptance catalogue for the CPG MVP. Each test preserves its ID, title, priority, execution channel, and Given / When / Then criteria.
 
@@ -3351,9 +3351,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### STX-006 — Partial location selection
 
-**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/imports/stock-import.service.test.ts` (an unlisted position at another location keeps its 20). A site entirely absent from the workbook is not asserted yet; only two locations are tested (#139). E07-S02, #81.
+- **Evidence:** `packages/core/src/services/imports/stock-import.service.test.ts` (an unlisted position at another location keeps its 20; with stock at three locations and a workbook listing two, the third keeps every balance and gets no movement), `tests/integration/stock-import-api.test.ts`. E07-S02, #81; #139.
 - **Given:** Three sites A/B/C have stock; workbook only site A
 - **When:** Commit import
 - **Then:** A targeted positions updated; B/C exactly unchanged.
@@ -3459,9 +3459,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### STX-018 — Role parity for correction
 
-**Priority:** P1 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/imports/stock-import.service.test.ts` and `tests/integration/stock-import-api.test.ts` (a normal user's commit records their account, session and channel), `tests/integration/stock-import.test.ts`. The admin's commits succeed, but the admin's own attribution is not asserted yet (#139). E07-S02, #81.
+- **Evidence:** `packages/core/src/services/imports/stock-import.service.test.ts` and `tests/integration/stock-import-api.test.ts` (a normal user's commit records their account, session and channel; the admin's token commit names the admin on `api`), `packages/app/src/app/admin/[tenant]/stock-import/actions.test.ts` (a normal user's and an admin's UI commit each pass their own account, session and `ui`), `tests/integration/stock-import.test.ts` (both roles commit in the browser; the admin's movements are audited as `admin`, on `ui`, with a session other than the normal user's). E07-S02, #81; #139.
 - **Given:** Normal user and admin have write access
 - **When:** Each executes equivalent validated correction workflow
 - **Then:** Both can commit, with their own account/session attribution.
@@ -4447,7 +4447,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/stock/stock.service.test.ts` and `tests/integration/stock.test.ts` (a stocked location's deactivation is `STOCK_NOT_EMPTY`; allowed once zero), `packages/core/src/services/imports/import.service.test.ts` (a location refusal names material, location and exact quantity). E07-S01, #80.
+- **Evidence:** `packages/core/src/services/stock/stock.service.test.ts` (a stocked material's and location's deactivation is `STOCK_NOT_EMPTY`, naming the material, location, quantity and unit; allowed once zero), `tests/integration/stock.test.ts` (`STOCK_NOT_EMPTY`; allowed once zero), `packages/core/src/services/imports/import.service.test.ts` (a location refusal names material, location and exact quantity). E07-S01, #80; #139.
 - **Given:** Location contains nonzero stock
 - **When:** Admin tries deactivate
 - **Then:** Rejected and identifies nonzero balances.
@@ -4463,9 +4463,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### LFC-018 — Location blocked with outstanding documents
 
-**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/transfers/transfer.service.test.ts` and `tests/integration/transfers-api.test.ts` (an unfinished transfer blocks deactivation, naming its ID), `packages/core/src/services/production-orders/production-order.service.test.ts` (`LOCATION_HAS_PRODUCTION_ORDERS`), `tests/integration/production-orders.test.ts` (409 with `params.order`; the dialog links `/admin/prod/production-orders/{id}`), `packages/app/src/components/production-orders/production-blocker-error.test.tsx`. Missing: the transfer refusal names the transfer's ID but doesn't link it (#139). E07-S03, #82; E10-S01, #88.
+- **Evidence:** `packages/core/src/services/transfers/transfer.service.test.ts` and `tests/integration/transfers-api.test.ts` (an unfinished transfer blocks deactivation, naming its ID), `packages/core/src/services/production-orders/production-order.service.test.ts` (`LOCATION_HAS_PRODUCTION_ORDERS`), `tests/integration/production-orders.test.ts` (409 with `params.order`; the dialog links `/admin/prod/production-orders/{id}`), `tests/integration/transfers.test.ts` (the location's and the material's Deactivate dialogs link `/admin/prod/transfers/{id}`, which opens the transfer), `packages/app/src/components/master-data/deactivation-blocker-error.test.tsx` (both documents link in English and Polish). E07-S03, #82; E10-S01, #88; #139.
 - **Given:** Location has unfinished production order or transfer
 - **When:** Admin tries deactivate
 - **Then:** Rejected with blocking document links.
