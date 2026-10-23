@@ -31,7 +31,7 @@ describe("the mammoth app icons", () => {
       // Signed out, /admin streams a redirect to the login page, so `open` can return before the
       // head is complete: read the links only once the document has loaded and holds the manifest.
       await browser.waitUntil(`document.readyState === "complete" && document.querySelector('link[rel="manifest"]')`);
-      links[page] =await browser.evaluate<IconLink[]>(
+      links[page] = await browser.evaluate<IconLink[]>(
         `[...document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"], link[rel="manifest"]')]
           .map((l) => ({ rel: l.rel, href: l.getAttribute("href"), sizes: l.getAttribute("sizes"), type: l.getAttribute("type") }))`,
       );
