@@ -45,10 +45,21 @@ export function AuditFilters({
    * A value the URL holds that the select doesn't offer (an account it doesn't list, a record type of
    * the other audit): its own option, so the select keeps it and Apply sends it back unchanged.
    */
-  const unlisted = (value: string | undefined, listed: readonly string[]) =>
-    value !== undefined && !listed.includes(value) && <NativeSelectOption value={value}>{fill(t.unlisted, { value })}</NativeSelectOption>;
+  const unlisted = (value: string | undefined, listed: readonly string[], name?: string) =>
+    value !== undefined && !listed.includes(value) && <NativeSelectOption value={value}>{fill(t.unlisted, { value: name ?? value })}</NativeSelectOption>;
+  /** A record type's name when it is one at all (the other audit's), checked as an own key: the URL sends any letters. */
+  const subjectName = (type = "") => (Object.hasOwn(labels.subjects, type) ? labels.subjects[type as AuditSubjectType] : undefined);
   return (
     <form action={path} aria-label={t.label} className="grid min-w-0 gap-4 rounded-lg border p-4 sm:grid-cols-3 sm:items-end">
+      {/* First, so that from the focused summary Tab reaches the fields to correct. */}
+      {invalid.length > 0 && (
+        <ErrorSummary id="audit-filter-errors" className="text-sm text-destructive sm:col-span-3">
+          <p className="font-medium">{t.invalid}</p>
+          <ul className="list-disc pl-5">
+            {invalid.map((key) => <li key={key}>{t.errors[key]}</li>)}
+          </ul>
+        </ErrorSummary>
+      )}
       <div className="grid min-w-0 gap-2">
         <Label htmlFor="audit-subject-type">{t.subjectType}</Label>
         <NativeSelect id="audit-subject-type" name="subjectType" defaultValue={selected.subjectType ?? ""} className="w-full" {...refused("subjectType")}>
@@ -56,7 +67,7 @@ export function AuditFilters({
           {subjectTypes.map((type) => (
             <NativeSelectOption key={type} value={type}>{labels.subjects[type]}</NativeSelectOption>
           ))}
-          {unlisted(selected.subjectType, subjectTypes)}
+          {unlisted(selected.subjectType, subjectTypes, subjectName(selected.subjectType))}
         </NativeSelect>
       </div>
       <div className="grid min-w-0 gap-2">
@@ -90,14 +101,6 @@ export function AuditFilters({
         <Label htmlFor="audit-to">{t.to}</Label>
         <Input id="audit-to" name="to" type="date" defaultValue={selected.to ?? ""} {...refused("to")} />
       </div>
-      {invalid.length > 0 && (
-        <ErrorSummary id="audit-filter-errors" className="text-sm text-destructive sm:col-span-3">
-          <p className="font-medium">{t.invalid}</p>
-          <ul className="list-disc pl-5">
-            {invalid.map((key) => <li key={key}>{t.errors[key]}</li>)}
-          </ul>
-        </ErrorSummary>
-      )}
       <div className="flex items-center gap-4">
         <Button type="submit">{t.apply}</Button>
         {isFiltered(selected) && (

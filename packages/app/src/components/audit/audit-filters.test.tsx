@@ -61,6 +61,17 @@ describe("AuditFilters", () => {
     expect([sent.get("subjectType"), sent.get("account")]).toEqual(["User", "zoe"]);
   });
 
+  it("names a record type of the other audit, and shows any other as sent", () => {
+    const { unmount } = render(<AuditFilters path="/admin/audit" selected={{ subjectType: "PurchaseOrder" }} accounts={[]} subjectTypes={GLOBAL_SUBJECT_TYPES} labels={en.audit} />);
+    expect(screen.getByRole("option", { name: "Purchase order (not in the list)" }).getAttribute("value")).toBe("PurchaseOrder");
+    unmount();
+
+    // Letters the schema accepts that name a built-in property, not a record type.
+    form({ subjectType: "toString" });
+    expect(screen.getByRole("option", { name: "toString (not in the list)" }).getAttribute("value")).toBe("toString");
+    expect(value("Record type")).toBe("toString");
+  });
+
   it("adds no option for a value the select already lists", () => {
     form({ subjectType: "PurchaseOrder", account: "alice" });
 
@@ -85,6 +96,8 @@ describe("refused filters", () => {
     const alert = screen.getByRole("alert");
     // An alert already in the page at load isn't announced by every screen reader: it takes focus instead.
     expect(document.activeElement).toBe(alert);
+    // First in the form, so Tab from the summary reaches the fields to correct.
+    expect(screen.getByRole("form").firstElementChild).toBe(alert);
     expect(alert.textContent).toContain("Popraw filtry, aby zobaczyć wpisy:");
     expect(within(alert).getAllByRole("listitem").map((item) => item.textContent)).toEqual([pl.audit.filterForm.errors.subjectId, pl.audit.filterForm.errors.to]);
     expect(screen.getByLabelText("ID rekordu").getAttribute("aria-invalid")).toBe("true");

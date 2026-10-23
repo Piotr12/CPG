@@ -161,7 +161,11 @@ describe("VarianceReportPage", () => {
     const to = screen.getByLabelText("To") as HTMLInputElement;
     expect(to.value).toBe("2026-10-21");
     expect(to.getAttribute("aria-invalid")).toBe("true");
-    expect(document.getElementById(to.getAttribute("aria-describedby")!)!.textContent).toBe(en.varianceReport.rangeError);
+    const error = document.getElementById(to.getAttribute("aria-describedby")!)!;
+    expect(error.textContent).toBe(en.varianceReport.rangeError);
+    // Rendered with the page, so it takes focus: an alert already in the page at load isn't announced by every screen reader.
+    expect(document.activeElement).toBe(error);
+    expect(error.getAttribute("role")).toBe("alert");
     expect((screen.getByLabelText("Material") as HTMLSelectElement).value).toBe("00000001");
     expect(screen.queryByRole("table")).toBeNull();
     expect(screen.getByText(/as of \d{4}-\d{2}-\d{2} \(UTC\)/)).toBeTruthy();

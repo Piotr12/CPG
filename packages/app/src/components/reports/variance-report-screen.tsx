@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Locale, MaterialSummary, NamedRecordView, VarianceReportRow, VarianceReportView } from "@cpg/core";
 import { ORDER_STATES, type VarianceReportQuery } from "@cpg/core/validators/reports/variance-report.schema";
+import { ErrorSummary } from "@cpg/ui/backend/feedback/error-summary";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { Badge } from "@cpg/ui/components/badge";
 import { Button } from "@cpg/ui/components/button";
@@ -205,7 +206,7 @@ export function VarianceReportScreen({ tenant, report, selected, rangeError, mat
         </div>
         <Button type="submit" variant="outline">{t.apply}</Button>
         {/* On its own row, so the fields stay aligned. */}
-        {rangeError && <p id="variance-to-error" role="alert" className="text-sm text-destructive sm:col-span-3 lg:col-span-6">{rangeError}</p>}
+        {rangeError && <ErrorSummary id="variance-to-error" className="text-sm text-destructive sm:col-span-3 lg:col-span-6">{rangeError}</ErrorSummary>}
       </form>
       {report && (
         <>

@@ -19,12 +19,7 @@ describe("feedback", () => {
   });
 
   it("takes focus with the errors a page opens with, so a screen reader reads them out unasked", () => {
-    render(
-      <>
-        <input aria-label="Before" autoFocus />
-        <ErrorSummary id="filter-errors" className="text-destructive">{"Correct the filters."}</ErrorSummary>
-      </>,
-    );
+    render(<ErrorSummary id="filter-errors" className="text-destructive">{"Correct the filters."}</ErrorSummary>);
 
     const summary = screen.getByRole("alert");
     expect(document.activeElement).toBe(summary);
@@ -32,6 +27,18 @@ describe("feedback", () => {
     expect(summary.id).toBe("filter-errors");
     expect(summary.getAttribute("tabindex")).toBe("-1");
     expect(summary.className).toBe("outline-none text-destructive");
+  });
+
+  it("leaves focus in a field the reader already chose", () => {
+    render(
+      <>
+        <input aria-label="Record ID" autoFocus />
+        <ErrorSummary id="filter-errors">{"Correct the filters."}</ErrorSummary>
+      </>,
+    );
+
+    expect(document.activeElement).toBe(screen.getByLabelText("Record ID"));
+    expect(screen.getByRole("alert").textContent).toBe("Correct the filters.");
   });
 
   it("shows an empty state's title and, when given, what to do", () => {

@@ -190,13 +190,15 @@ describe("tracing one record's history in the audit (E13-S03, #96)", () => {
     ] as const) {
       await openAudit(operator, `/admin/prod/audit?${subject}`);
       const [reversed] = await rows(operator);
-      expect([reversed[1], reversed[3], reversed[4]]).toEqual([username, `API\n${username}-operator`, action]);
+      expect([reversed[1], reversed[4]]).toEqual([username, action]);
+      expect(reversed[3]).toMatch(new RegExp(`^API\\s*${username}-operator$`));
       expect(reversed[6]).toContain(reason);
 
       expect(inverse.reverses).toMatch(/^[0-9a-f-]{36}$/);
       await openAudit(operator, `/admin/prod/audit?subjectType=StockMovement&subjectId=${inverse.id}`);
       const posted = await rows(operator);
-      expect(posted.map(([, account, , channel, entry]) => [account, channel, entry])).toEqual([[username, `API\n${username}-operator`, "Stock movement posted"]]);
+      expect(posted.map(([, account, , , entry]) => [account, entry])).toEqual([[username, "Stock movement posted"]]);
+      expect(posted[0][3]).toMatch(new RegExp(`^API\\s*${username}-operator$`));
       expect(posted[0][6]).toContain(reason);
       expect(posted[0][6]).toMatch(new RegExp(`Reverses ${inverse.reverses!.slice(0, 8)}$`));
       await openAudit(operator, `/admin/prod/audit?subjectType=StockMovement&subjectId=${inverse.reverses}`);

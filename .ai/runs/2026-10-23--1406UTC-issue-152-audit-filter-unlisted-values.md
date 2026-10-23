@@ -21,6 +21,13 @@ The four acceptance criteria of #152: an unlisted account or record type in the 
 - 14:20 — A focused error summary is a generic feedback state, so it went into `ui/src/backend/feedback/error-summary.tsx` (standards §1 "Where a new component goes"), not into the audit folder. The standards doc lists it beside `ErrorMessage`.
 - 14:40 — The browser also proves items 1 and 2: on a bookmarked `?account=<unknown>`, the select reads "<name> (not in the list)" and Apply keeps `account=` in the URL. The refusal from the existing "ID without its type" step holds focus (`document.activeElement`).
 - 14:45 — First integration run: the new reversal test expected the channel cell to be "API", but that cell also holds the token's name ("API\n<token>"). Fixed the assertion; nothing in the app was wrong.
+- 14:55 — PR #177 opened; the lock moved to the PR. A fresh-context review subagent approved: no blockers or majors, 3 minors and 3 nits. Fixed:
+  - `ErrorSummary` took focus even from a field the reader had already entered while the page hydrated. It now focuses only when nothing else has focus.
+  - The audit summary sat after the fields, so Tab from it went to Apply. It is now first in the form.
+  - The variance report's range error was the same server-rendered `role="alert"` defect. It now uses `ErrorSummary`, so the rule just added to the standards doc holds everywhere. The other `role="alert"` paragraphs (sign-in, preferences, completion form) appear after an action on a client form, which screen readers do announce.
+  - The unlisted record-type option now names a type of the other audit ("Purchase order (not in the list)"). The name is looked up as an own key, since the schema accepts letters such as `toString`.
+  - The channel assertions use the regex form of line 102.
+  - Declined: comparing an unlisted account case-insensitively. It only matters on the refused path, where values are shown as sent.
 - 14:50 — Docker isn't reachable from this account, so both files ran against the standalone build (lesson of 2026-10-19). AUD-004 and UX-010 in `CPG-acceptance.md` get the new evidence. UX-010 stays "Partially verified" because the MRP report doesn't exist yet.
 
 ## Changes
@@ -29,11 +36,13 @@ The four acceptance criteria of #152: an unlisted account or record type in the 
 - `packages/app/src/i18n/messages/{en,pl}.ts` — `audit.filterForm.unlisted`.
 - `tests/integration/audit-history.test.ts` — completion and transfer dispatch reversals on the tenant audit; the unlisted account kept on Apply; the refusal takes focus.
 - `tests/integration/footer.test.ts` — the stock report, the variance report and a filtered audit.
+- `packages/app/src/components/reports/variance-report-screen.tsx` + `app/admin/[tenant]/reports/variance/page.test.tsx` + `tests/integration/variance-report.test.ts` — the range error renders through `ErrorSummary` and takes focus (review finding).
 - `.ai/docs/engineering-standards.md`, `.ai/lessons.md`, `.ai/specs/research/CPG-acceptance.md` (AUD-004, UX-010 evidence).
 
 ## Verification
 - `npm run lint` 0 (one warning in `bom.service.ts` that was already there), `npm run typecheck` 0, `npm run test:coverage` 0 (3,326 tests, 100% statements/branches/functions/lines), `npm run build` 0.
 - `CPG_BASE_URL=http://127.0.0.1:3152 npm run test:integration -- tests/integration/footer.test.ts tests/integration/audit-history.test.ts` against `node packages/app/server.js` from this build, fresh copy and empty `DATA_DIR`: 20/20 passed.
+- After the review fixes: lint 0, typecheck 0, `test:coverage` 0 (3,328 tests, 100%), build 0; `footer`, `audit-history` and `variance-report` integration files 24/24 on a fresh standalone copy and empty `DATA_DIR`.
 - The full integration suite runs in the PR's CI.
 
 ## Follow-ups
