@@ -3,7 +3,7 @@
 **Date:** 2026-10-23 20:02 UTC
 **Agent:** Claude Code / claude-opus-5-5 (`om-auto-fix-issue`, dispatched by cezar)
 **Spec:** none (issue #138, follow-up from the #137 review)
-**Status:** done locally; awaiting the PR's CI
+**Status:** done
 
 ## Goal
 
@@ -38,6 +38,7 @@ The purchase-order screen decides per line whether to offer Cancel or Close earl
 - `npm run test:coverage`: 3485 tests pass; 100% statements, branches, functions and lines.
 - `npm run build`: pass.
 - `npm run test:integration -- tests/integration/stock-reversals.test.ts tests/integration/document-lifecycle.test.ts` (plus `goods-receipts`, `purchasing` before the refactor) against the local production build: all pass.
+- PR #179 CI (run 40018624804) on `6dc20c5`: lint, typecheck, unit tests, build and all 4 integration shards green.
 
 ## Follow-ups
 
