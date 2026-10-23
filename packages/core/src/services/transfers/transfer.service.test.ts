@@ -498,7 +498,7 @@ describe("TransferService", () => {
           before: { dispatched: "60.000000", received: "50.000000", writtenOff: "0.000000", inTransit: "10.000000", status: "open" },
           after: {
             dispatched: "60.000000", received: "50.000000", writtenOff: "10.000000", inTransit: "0.000000", status: "open",
-            moved: "10.000000", businessDate: today(), reason: "Pallet lost in transit",
+            moved: "10.000000", businessDate: today(), posting: posting.id, reason: "Pallet lost in transit",
           },
         },
       ]);
@@ -623,18 +623,18 @@ describe("TransferService", () => {
   describe("audit", () => {
     it("audits each posting with the transfer's progress, and each physical leg in the ledger's own entry (R08, TRF-024)", async () => {
       const transfer = await created();
-      await service().dispatch(transfer.id, kg("60"), ACTOR);
-      await service().receive(transfer.id, kg("50"), ACTOR);
+      const dispatch = (await service().dispatch(transfer.id, kg("60"), ACTOR)).posting;
+      const receipt = (await service().receive(transfer.id, kg("50"), ACTOR)).posting;
 
       expect(await entries("transfers.transfer.dispatched")).toEqual([
         {
           subjectId: "00000001",
           subjectLabel: "00000001 — 00000001 Steel sheet: 00000001 → 00000002",
           before: { dispatched: "0.000000", received: "0.000000", writtenOff: "0.000000", inTransit: "0.000000", status: "open" },
-          after: { dispatched: "60.000000", received: "0.000000", writtenOff: "0.000000", inTransit: "60.000000", status: "open", moved: "60.000000", businessDate: today() },
+          after: { dispatched: "60.000000", received: "0.000000", writtenOff: "0.000000", inTransit: "60.000000", status: "open", moved: "60.000000", businessDate: today(), posting: dispatch.id },
         },
       ]);
-      expect((await entries("transfers.transfer.received"))[0].after).toMatchObject({ received: "50.000000", inTransit: "10.000000", moved: "50.000000" });
+      expect((await entries("transfers.transfer.received"))[0].after).toMatchObject({ received: "50.000000", inTransit: "10.000000", moved: "50.000000", posting: receipt.id });
       const ledger = await entries("stock.movement.posted");
       expect(ledger.map(({ after }) => [after!.location, after!.movement, after!.type])).toEqual([
         [A, "100.000000", "correction"],
@@ -823,7 +823,9 @@ describe("TransferService", () => {
       expect(reversed.transfer).toMatchObject({ status: "open", abandoned: "0.000000", writtenOff: "0.000000", inTransit: "5.000000", outstanding: "5.000000" });
       expect(reversed.reversal.legs).toEqual([{ place: "transit", location: null, quantity: "5.000000", before: "0.000000", after: "5.000000" }]);
       expect(await scoped().count(StockMovement, { type: "reversal" })).toBe(0);
-      expect((await entries("transfers.transfer.reversed"))[0]).toMatchObject({ before: { status: "closed-early", abandoned: "5.000000" }, after: { status: "open", abandoned: "0.000000", kind: "write-off" } });
+      expect((await entries("transfers.transfer.reversed"))[0]).toMatchObject({ before: { status: "closed-early", abandoned: "5.000000" }, after: { status: "open", abandoned: "0.000000", kind: "write-off", posting: loss.id } });
+      // The reversal names the write-off as its own entry recorded it (#145).
+      expect((await entries("transfers.transfer.written-off"))[0].after).toMatchObject({ posting: loss.id });
       expect((await service().receive(transfer.id, kg("5"), ACTOR)).transfer).toMatchObject({ status: "completed", inTransit: "0.000000" });
     });
 

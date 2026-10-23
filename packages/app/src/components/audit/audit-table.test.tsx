@@ -246,5 +246,26 @@ describe("AuditTable", () => {
       expect(cells(rows()[0])[0]).toBe("2026-10-19 10:30:12Data księgowania 2026-10-21");
       expect(cells(rows()[1])[0]).toBe("2026-10-19 10:30:12");
     });
+
+    it.each([
+      [en.audit, [
+        "reversed: no → yes", "reversal: — → group-1", "movement count: — → 2", "original movement 1: — → m-1", "reversing movement 1: — → i-1", "original movement 2: — → m-2",
+        "produced quantity: 65.000000 → 40.000000", "completion: — → 00000002",
+        "posting: p-1", "posting kind: write-off", "reversal: r-1",
+      ]],
+      [pl.audit, [
+        "odwrócony: nie → tak", "odwrócenie: — → group-1", "liczba ruchów: — → 2", "ruch pierwotny 1: — → m-1", "ruch odwracający 1: — → i-1", "ruch pierwotny 2: — → m-2",
+        "ilość wyprodukowana: 65.000000 → 40.000000", "wykonanie: — → 00000002",
+        "księgowanie: p-1", "rodzaj księgowania: odpis", "odwrócenie: r-1",
+      ]],
+    ])("names every field of a completion reversal and a transfer posting reversal, keeping the recorded IDs (UX-022, #145)", (labels, expected) => {
+      table([
+        entry({ action: "production-orders.production-completion.reversed", before: { reversed: false }, after: { reversed: true, reversal: "group-1", movements: 2, movement1Original: "m-1", movement1Inverse: "i-1", movement2Original: "m-2" } }),
+        entry({ id: "e-2", action: "production-orders.production-order.completion-reversed", before: { produced: "65.000000" }, after: { produced: "40.000000", completion: "00000002" } }),
+        entry({ id: "e-3", action: "transfers.transfer.reversed", before: null, after: { posting: "p-1", kind: "write-off", reversal: "r-1" } }),
+      ], [], labels);
+
+      expect(screen.getAllByRole("listitem").map((item) => item.textContent)).toEqual(expected);
+    });
   });
 });

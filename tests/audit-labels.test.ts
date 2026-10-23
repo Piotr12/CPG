@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { en } from "../packages/app/src/i18n/messages/en";
 import { pl } from "../packages/app/src/i18n/messages/pl";
 import { GLOBAL_SUBJECT_TYPES, TENANT_SUBJECT_TYPES } from "../packages/app/src/components/audit/subject-types";
+import { AUDIT_FIELDS, AUDIT_LINE_FIELDS, AUDIT_MOVEMENT_ROLES } from "../packages/core/src/domain/audit/audit-fields";
 
 /**
  * Every audit action `core` can record has a name in both languages (UX-022), so neither audit ever
@@ -129,5 +130,28 @@ describe("audit action labels", () => {
 
   it("names no action that nothing records any more", () => {
     expect(Object.keys(en.audit.actions).filter((action) => !actions.has(action)).sort()).toEqual([]);
+  });
+});
+
+/**
+ * Every field a snapshot may carry has a name in both languages (UX-022), so neither audit shows a stored
+ * key. The recorder refuses a field `AUDIT_FIELDS` doesn't list, so a service that records a new one fails
+ * its own tests until it is listed, and then fails here until it is named (#145).
+ */
+describe("audit field labels", () => {
+  it.each([
+    ["English", en],
+    ["Polish", pl],
+  ])("names every field a snapshot may carry in %s: plain, per line and per reversed movement", (_language, messages) => {
+    const named = new Set(Object.keys(messages.audit.fields));
+    expect([...AUDIT_FIELDS, ...AUDIT_LINE_FIELDS].filter((field) => !named.has(field)).sort()).toEqual([]);
+    expect(AUDIT_MOVEMENT_ROLES.filter((role) => !messages.audit.movementField[role]?.includes("{movement}"))).toEqual([]);
+    expect(messages.audit.lineField).toMatch(/\{line\}.*\{field\}/);
+  });
+
+  it("names no field that nothing records any more", () => {
+    const recordable = new Set<string>([...AUDIT_FIELDS, ...AUDIT_LINE_FIELDS]);
+    expect(Object.keys(en.audit.fields).filter((field) => !recordable.has(field)).sort()).toEqual([]);
+    expect(Object.keys(en.audit.values).filter((field) => !recordable.has(field)).sort()).toEqual([]);
   });
 });

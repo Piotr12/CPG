@@ -56,6 +56,8 @@ describe("tracing one record's history in the audit (E13-S03, #96)", () => {
   let receipt: ReceiptView;
   let correction: string;
   let inverse: string;
+  /** The completion and the transfer dispatch the file's normal user reverses (AUD-004, UX-022). */
+  const reversedRecords = { order: "", completion: "", transfer: "", posting: "" };
 
   async function api<T>(method: string, endpoint: string, body?: unknown, secret = adminSecret) {
     const response = await callApi(baseUrl, method, endpoint, secret, { body, key: method === "GET" ? undefined : randomUUID() });
@@ -181,6 +183,7 @@ describe("tracing one record's history in the audit (E13-S03, #96)", () => {
     const moved = await create<TransferView>("transfers", { material, source: location, destination: depot, quantity: "3", unit: "each", plannedDispatch: "2027-01-05", plannedArrival: "2027-01-06" });
     const { posting } = await create<{ posting: { id: string } }>(`transfers/${moved.id}/dispatches`, { quantity: "3", unit: "each" });
     await create(`transfers/${moved.id}/postings/${posting.id}/reverse`, { reason: "History wrong route" }, operatorSecret);
+    Object.assign(reversedRecords, { order: made.id, completion: completion.id, transfer: moved.id, posting: posting.id });
     /** The newest movement of a ledger: each reversal's inverse, which names the movement it reverses. */
     const newest = async (of: string) => (await api<StockView>("GET", `/api/tenants/prod/stock?material=${of}&location=${location}`)).body.data.movements[0];
 
@@ -204,6 +207,23 @@ describe("tracing one record's history in the audit (E13-S03, #96)", () => {
       await openAudit(operator, `/admin/prod/audit?subjectType=StockMovement&subjectId=${inverse.reverses}`);
       expect((await rows(operator))[0][6]).toMatch(new RegExp(`Reversed by ${inverse.id.slice(0, 8)}$`));
     }
+  });
+
+  it("names every field of the reversal entries, and the dispatch's entry records the posting its reversal names (UX-022, #145)", async () => {
+    const { order, completion, transfer, posting } = reversedRecords;
+    await openAudit(operator, `/admin/prod/audit?subjectType=ProductionCompletion&subjectId=${completion}`);
+    const [reversed] = await rows(operator);
+    // One output and one component: two movements, each with its inverse.
+    for (const field of ["reversed: no → yes", "reversal: — → ", "movement count: — → 2", "original movement 1: — → ", "reversing movement 2: — → "]) expect(reversed[6]).toContain(field);
+    await openAudit(operator, `/admin/prod/audit?subjectType=ProductionOrder&subjectId=${order}`);
+    expect((await rows(operator))[0][6]).toContain(`completion: — → ${completion}`);
+
+    await openAudit(operator, `/admin/prod/audit?subjectType=Transfer&subjectId=${transfer}`);
+    const [undone, dispatched] = await rows(operator);
+    expect([undone[4], dispatched[4]]).toEqual(["Transfer posting reversed", "Transfer dispatched"]);
+    expect(undone[6]).toContain(`posting: — → ${posting}`);
+    expect(undone[6]).toContain("posting kind: — → dispatch");
+    expect(dispatched[6]).toContain(`posting: — → ${posting}`);
   });
 
   it("filters by account, channel and day on the tenant and the Global audit, and keeps the filters when paging", async () => {
@@ -296,6 +316,18 @@ describe("tracing one record's history in the audit (E13-S03, #96)", () => {
     expect(reversed[6]).toContain("odwrócony: nie → tak");
     expect(reversed[6]).toContain("powód: — → History wrong bin");
     expect(reversed[6]).toMatch(/Odwrócony przez [0-9a-f]{8}$/);
+
+    // A completion reversal and a transfer posting reversal: no field shows its stored key (#145).
+    await openAudit(operator, `/admin/prod/audit?subjectType=ProductionCompletion&subjectId=${reversedRecords.completion}`);
+    const [completion] = await rows(operator);
+    expect(completion[4]).toBe("Odwrócono wykonanie produkcji");
+    for (const field of ["odwrócenie: — → ", "liczba ruchów: — → 2", "ruch pierwotny 1: — → ", "ruch odwracający 2: — → "]) expect(completion[6]).toContain(field);
+    expect(completion[6]).not.toMatch(/movement\d|movements|reversal:/);
+    await openAudit(operator, `/admin/prod/audit?subjectType=Transfer&subjectId=${reversedRecords.transfer}`);
+    const [posting] = await rows(operator);
+    expect(posting[6]).toContain(`księgowanie: — → ${reversedRecords.posting}`);
+    expect(posting[6]).toContain("rodzaj księgowania: — → wydanie");
+    expect(posting[6]).not.toMatch(/posting:|kind:/);
     await choosePreference(operator, "en");
     await operator.waitUntil(`document.documentElement.lang === "en"`);
   });

@@ -102,6 +102,18 @@ describe("audit recorder", () => {
       await em.flush();
       expect(await orm.em.fork().count(GlobalAuditEvent, { subjectId: recorded.subject.id })).toBe(0);
     });
+
+    it.each([
+      ["before", { before: { colour: "red" } }],
+      ["after", { after: { active: false, line2Supplier: "00000001" } }],
+    ])("refuses a snapshot whose %s holds a field no screen names, and nothing is stored (UX-022)", async (_side, overrides) => {
+      const em = orm.em.fork();
+      const recorded = entry(overrides);
+
+      expect(() => recordGlobalAudit(em, actor, recorded)).toThrow(/is not in AUDIT_FIELDS/);
+      await em.flush();
+      expect(await orm.em.fork().count(GlobalAuditEvent, { subjectId: recorded.subject.id })).toBe(0);
+    });
   });
 
   describe("recordTenantAudit", () => {
@@ -122,6 +134,16 @@ describe("audit recorder", () => {
 
     it("refuses a secret like the Global audit does", () => {
       expect(() => recordTenantAudit(tenantEm(), actor, entry({ before: { secret: "x" } }))).toThrow(/secrets/);
+    });
+
+    it("refuses an unlisted field like the Global audit does, and takes numbered line and movement fields", async () => {
+      expect(() => recordTenantAudit(tenantEm(), actor, entry({ after: { movement1Reversal: "x" } }))).toThrow(/AUDIT_FIELDS/);
+
+      const em = tenantEm();
+      const recorded = entry({ before: { line3Received: "0" }, after: { movement2Original: "a", movement2Inverse: "b" } });
+      recordTenantAudit(em, actor, recorded);
+      await em.flush();
+      expect((await tenantEm().findOneOrFail(TenantAuditEvent, { subjectId: recorded.subject.id })).after).toEqual({ movement2Original: "a", movement2Inverse: "b" });
     });
   });
 });

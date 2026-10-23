@@ -1519,6 +1519,7 @@ export const pl: Messages = {
     reverses: "Odwraca",
     reversedBy: "Odwrócony przez",
     lineField: "pozycja {line}: {field}",
+    movementField: { original: "ruch pierwotny {movement}", inverse: "ruch odwracający {movement}" },
     subjects: {
       User: "Użytkownik",
       ApiToken: "Token API",
@@ -1711,12 +1712,16 @@ export const pl: Messages = {
       receipt: "przyjęcie towaru",
       received: "ilość przyjęta",
       requiredDate: "wymagana data",
-      reversal: "ruch odwracający",
+      reversal: "odwrócenie",
       reversed: "odwrócony",
       source: "źródło",
       supplier: "dostawca",
       variance: "odchylenie",
       writtenOff: "ilość odpisana",
+      completion: "wykonanie",
+      kind: "rodzaj księgowania",
+      movements: "liczba ruchów",
+      posting: "księgowanie",
     },
     values: {
       status: { open: "otwarte", completed: "zrealizowane", "closed-early": "zamknięte wcześniej", cancelled: "anulowane" },
@@ -1731,6 +1736,7 @@ export const pl: Messages = {
       theme: { light: "jasny", dark: "ciemny" },
       type: { raw: "surowiec", intermediate: "półprodukt", finished: "wyrób gotowy", correction: "korekta", "goods-receipt": "przyjęcie towaru", "goods-issue": "wydanie towaru", "production-completion": "wykonanie produkcji", "transfer-dispatch": "wydanie przesunięcia", "transfer-receipt": "przyjęcie przesunięcia", reversal: "odwrócenie" },
       procurement: { make: "produkcja", buy: "zakup" },
+      kind: { dispatch: "wydanie", receipt: "przyjęcie", "write-off": "odpis" },
     },
   },
   tenants: {

@@ -2146,7 +2146,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/production-orders/production-completion.service.test.ts` (+10 F / −25 A / −15 B → F −10, A +25, B +15 in one group, produced −10), `tests/integration/production-transfer-reversals.test.ts`. The variance report's handling of a really reversed completion is not asserted end to end yet (#145). E11-S03, #92.
+- **Evidence:** `packages/core/src/services/production-orders/production-completion.service.test.ts` (+10 F / −25 A / −15 B → F −10, A +25, B +15 in one group, produced −10), `tests/integration/production-transfer-reversals.test.ts`. The variance report leaves a completion reversed through the product out of every figure and lists it as reversed: `packages/core/src/services/reports/variance-report.service.test.ts`, and end to end in `tests/integration/production-transfer-reversals.test.ts` (#145). E11-S03, #92.
 - **Given:** Completion +10 finished F and −25 A/−15 B; F stock at least 10
 - **When:** Reverse completion
 - **Then:** F −10, A +25, B +15 atomically; completion/order produced amount decremented.
@@ -2173,7 +2173,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/production-orders/production-completion.service.test.ts`, `tests/integration/production-transfer-reversals.test.ts` (completions of 40 and 25 on a target of 50: reversing the 25 leaves 40, 10 outstanding, Completed → Open). The variance report's handling of a really reversed completion is not asserted end to end yet (#145). E11-S03, #92.
+- **Evidence:** `packages/core/src/services/production-orders/production-completion.service.test.ts`, `tests/integration/production-transfer-reversals.test.ts` (completions of 40 and 25 on a target of 50: reversing the 25 leaves 40, 10 outstanding, Completed → Open; the variance report then counts only the 40, its 20 kg and 80 wrappers, and lists the 25 under `reversed`). Also `packages/core/src/services/reports/variance-report.service.test.ts` (#145). E11-S03, #92.
 - **Given:** Production order has completion 40 and completion 25
 - **When:** Reverse completion 25 only
 - **Then:** Only corresponding actual movements reversed; output 40 remains and planned outstanding recalculated.
@@ -4259,9 +4259,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### UX-022 — Audit readable in both languages
 
-**Priority:** P2 · **Channel:** UI · **Status:** Partially verified
+**Priority:** P2 · **Channel:** UI · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/audit-history.test.ts` (in Polish, a movement reversal's action, fields and business date are translated while the IDs, reason and dates stay as recorded), `packages/app/src/components/audit/audit-table.test.tsx`, `tests/audit-labels.test.ts` (every recorded action and record type is named in EN and PL). Missing: the fields recorded by completion and transfer reversals (`movementNOriginal`/`movementNInverse`, `movements`, `posting`, `kind`, `completion`) still show as stored in both languages (#145). E13-S03, #96.
+- **Evidence:** `tests/integration/audit-history.test.ts` (in Polish, a movement reversal's action, fields and business date are translated while the IDs, reason and dates stay as recorded; in English and Polish, every field of a completion reversal and a transfer posting reversal is named), `packages/app/src/components/audit/audit-table.test.tsx`, `tests/audit-labels.test.ts` (every recorded action, record type and audit field is named in EN and PL; the recorder refuses a field `AUDIT_FIELDS` doesn't list, so a new one cannot ship unnamed). E13-S03, #96; E13-S04, #145.
 - **Given:** Normal user switches between English and Polish
 - **When:** View audit history
 - **Then:** Field labels/action descriptions localized without changing immutable audit facts.

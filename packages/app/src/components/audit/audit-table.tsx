@@ -12,6 +12,8 @@ const ID_PREFIX_LENGTH = 8;
 
 /** A per-line snapshot field, such as `line2Status`: the line number and the field it holds. */
 const LINE_FIELD = /^line(\d+)([A-Z]\w*)$/;
+/** One of a completion reversal's movement pairs: `movement2Original`, `movement2Inverse`. */
+const MOVEMENT_FIELD = /^movement(\d+)(Original|Inverse)$/;
 
 /**
  * An audit's entries, newest first. Read-only: no row actions, nothing to edit (AUD-009). Each subject
@@ -182,9 +184,11 @@ function ChangeList({ entry, labels }: { entry: AuditEntryView; labels: Messages
   );
 }
 
-/** A snapshot field's name in the reader's language: per-line fields read "line 2: status". */
+/** A snapshot field's name in the reader's language: per-line fields read "line 2: status", movement pairs "original movement 2". */
 export function fieldLabel(field: string, labels: Messages["audit"]): string {
   const fields: Record<string, string> = labels.fields;
+  const movement = MOVEMENT_FIELD.exec(field);
+  if (movement) return fill(labels.movementField[movement[2] === "Original" ? "original" : "inverse"], { movement: movement[1] });
   const line = LINE_FIELD.exec(field);
   if (!line) return fields[field] ?? field;
   const inner = line[2][0].toLowerCase() + line[2].slice(1);

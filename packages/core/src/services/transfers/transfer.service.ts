@@ -336,7 +336,8 @@ export class TransferService {
       Object.assign(transfer, outcome.progress, { updatedAt: new Date() });
       transfer.status = documentState([isFullyReceived(transfer) ? "completed" : "open"]);
       recordTenantAudit(em, actor, entry(POSTED_ACTION[kind], transfer, before, {
-        ...progressSnapshot(transfer), moved: record.baseQuantity, businessDate, ...(kind === "write-off" ? { reason } : {}),
+        // `posting` is what this posting's reversal records as `posting`, so the two entries match (#145).
+        ...progressSnapshot(transfer), moved: record.baseQuantity, businessDate, posting: postingId, ...(kind === "write-off" ? { reason } : {}),
       }));
       await em.flush();
       const [view] = await postingViews(em, transfer, [posting], []);

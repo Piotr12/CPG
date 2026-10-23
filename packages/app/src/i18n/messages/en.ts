@@ -1567,6 +1567,8 @@ export const en = {
     reversedBy: "Reversed by",
     /** A per-line snapshot field such as `line2Status`. */
     lineField: "line {line}: {field}",
+    /** A completion reversal's movement pair, `movement2Original` and `movement2Inverse`. */
+    movementField: { original: "original movement {movement}", inverse: "reversing movement {movement}" },
     /** Record types, keyed by the entry's subject type. */
     subjects: {
       User: "User",
@@ -1762,12 +1764,16 @@ export const en = {
       receipt: "goods receipt",
       received: "received quantity",
       requiredDate: "required date",
-      reversal: "reversal movement",
+      reversal: "reversal",
       reversed: "reversed",
       source: "source",
       supplier: "supplier",
       variance: "variance",
       writtenOff: "written-off quantity",
+      completion: "completion",
+      kind: "posting kind",
+      movements: "movement count",
+      posting: "posting",
     },
     /** Snapshot values per field; a value missing here is shown as stored. */
     values: {
@@ -1783,6 +1789,7 @@ export const en = {
       theme: { light: "light", dark: "dark" },
       type: { raw: "raw", intermediate: "intermediate", finished: "finished", correction: "correction", "goods-receipt": "goods receipt", "goods-issue": "goods issue", "production-completion": "production completion", "transfer-dispatch": "transfer dispatch", "transfer-receipt": "transfer receipt", reversal: "reversal" },
       procurement: { make: "make", buy: "buy" },
+      kind: { dispatch: "dispatch", receipt: "receipt", "write-off": "write-off" },
     },
   },
   tenants: {
