@@ -1,6 +1,9 @@
 import type { Browser } from "./browser";
 
-/** Signs in through the /login form, from a signed-out browser, and waits for the page the form lands on. */
+/**
+ * Signs in through the /login form, from a signed-out browser, and waits until the form has answered:
+ * the page has left /login (signed in) or shows the form's error (refused).
+ */
 export async function signIn(browser: Browser, baseUrl: string, password: string, username = "admin") {
   await browser.open(`${baseUrl}/login`);
   await browser.waitFor("#username");
@@ -10,7 +13,13 @@ export async function signIn(browser: Browser, baseUrl: string, password: string
   await browser.fill("#username", username);
   await browser.fill("#password", password);
   await browser.click("button[type=submit]");
+  // The session cookie arrives with the sign-in action's answer. Opening another page before then
+  // cancels that answer, and the browser stays signed out; `next dev` answers slowly enough to lose it (#164).
+  await browser.waitUntil(signInAnswered);
 }
+
+/** A page condition: the sign-in form has answered, by leaving /login or by showing its error. */
+const signInAnswered = `location.pathname !== "/login" || !!document.querySelector("[role=alert]")`;
 
 /** Signs the admin in and waits until /admin shows its data. */
 export async function signInAsAdmin(browser: Browser, baseUrl: string, password: string) {
