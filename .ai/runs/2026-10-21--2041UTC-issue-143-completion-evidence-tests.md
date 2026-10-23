@@ -3,7 +3,7 @@
 **Date:** 2026-10-21 20:41 UTC
 **Agent:** Claude Code / claude-opus-5-5 (`om-auto-fix-issue`, dispatched by cezar)
 **Spec:** none (issue #143; catalogue `.ai/specs/research/CPG-acceptance.md`)
-**Status:** done (PR #160; full integration suite pending in CI)
+**Status:** done (PR #160, merged 2026-10-23 with CI green)
 
 ## Goal
 
