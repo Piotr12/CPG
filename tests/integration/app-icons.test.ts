@@ -2,8 +2,10 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { openBrowser, type Browser } from "./browser";
+import { signInAsAdmin } from "./sign-in";
 
 const baseUrl = inject("baseUrl");
+const password = inject("adminPassword");
 const appDir = path.resolve(import.meta.dirname, "../../packages/app");
 
 type IconLink = { rel: string; href: string; sizes: string | null; type: string | null };
@@ -21,16 +23,20 @@ async function fetchAs(url: string, contentType: string) {
 describe("the mammoth app icons", () => {
   let browser: Browser;
   // The icon <link>s of each page, keyed by path. The home page is static; /admin is partially
-  // prerendered, so both rendering modes are covered.
+  // prerendered, so both rendering modes are covered. /admin is read signed in: signed out, it
+  // streams a redirect to /login, and a read could land on that new document before its head (#166).
   const links: Record<string, IconLink[]> = {};
 
   beforeAll(async () => {
     browser = openBrowser();
     for (const page of PAGES) {
+      if (page === "/admin") await signInAsAdmin(browser, baseUrl, password);
       await browser.open(`${baseUrl}${page}`);
-      // Signed out, /admin streams a redirect to the login page, so `open` can return before the
-      // head is complete: read the links only once the document has loaded and holds the manifest.
-      await browser.waitUntil(`document.readyState === "complete" && document.querySelector('link[rel="manifest"]')`);
+      // `open` can return before the head is complete: read the links only once this page's
+      // document has loaded and holds the manifest.
+      await browser.waitUntil(
+        `location.pathname === ${JSON.stringify(page)} && document.readyState === "complete" && document.querySelector('link[rel="manifest"]')`,
+      );
       links[page] = await browser.evaluate<IconLink[]>(
         `[...document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"], link[rel="manifest"]')]
           .map((l) => ({ rel: l.rel, href: l.getAttribute("href"), sizes: l.getAttribute("sizes"), type: l.getAttribute("type") }))`,

@@ -55,3 +55,9 @@ test("the integration suite runs as numbered shards, each running its own slice 
   // `strategy.job-total` keeps the shard count in one place: the matrix.
   assert.match(stepRunning("npm run test:integration").run!, /--shard=\$\{\{ matrix\.shard \}\}\/\$\{\{ strategy\.job-total \}\}$/);
 });
+
+// `--with-deps` apt-installs fonts from Ubuntu's mirror, which stalled for 9 to over 19 minutes
+// (#167, #171); the runner image already has Chrome's libraries.
+test("the browser install downloads only Chrome, nothing from apt", () => {
+  assert.doesNotMatch(stepRunning("agent-browser install").run!, /--with-deps/);
+});

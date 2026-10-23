@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
+import { accessSync, constants } from "node:fs";
 import { arch, platform } from "node:os";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -9,12 +9,23 @@ import { promisify } from "node:util";
 const run = promisify(execFile);
 const binaries = path.resolve(import.meta.dirname, "../../node_modules/agent-browser/bin");
 const nativeBinary = path.join(binaries, `agent-browser-${platform()}-${arch()}${platform() === "win32" ? ".exe" : ""}`);
+/** Whether this is a musl Linux (Alpine): Node reports a glibc version only on glibc. */
+const musl = platform() === "linux" && !(process.report.getReport() as { header: { glibcVersionRuntime?: string } }).header.glibcVersionRuntime;
+/** Whether the package's binary for this machine is there and executable (its postinstall sets the bit). */
+function runnable(file: string) {
+  try {
+    accessSync(file, constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
 /**
- * agent-browser's native binary when the package ships one for this machine, else its Node wrapper.
- * The wrapper starts Node (and on Linux runs `ldd`) before every command, which cost the suite's
- * thousands of commands ~70 ms each.
+ * agent-browser's native binary when the package ships a runnable one for this machine, else its Node
+ * wrapper, which also finds musl's. The wrapper starts Node (and on Linux runs `ldd`) before every
+ * command, which cost the suite's thousands of commands ~70 ms each.
  */
-const agentBrowser = existsSync(nativeBinary) ? nativeBinary : path.resolve(import.meta.dirname, "../../node_modules/.bin/agent-browser");
+const agentBrowser = !musl && runnable(nativeBinary) ? nativeBinary : path.resolve(import.meta.dirname, "../../node_modules/.bin/agent-browser");
 
 /** How long `waitUntil` waits before failing, as long as agent-browser's own `wait`. */
 const WAIT_TIMEOUT_MS = 25_000;
@@ -24,15 +35,17 @@ const POLL_MS = 10;
 const SLICE_MS = 2_000;
 
 /**
- * A script that checks `expression` in the page every `POLL_MS` for up to `SLICE_MS` and resolves to
- * whether it became truthy. Like `wait --fn`, an expression that throws counts as not yet true.
+ * A script that checks `expression` in the page every `POLL_MS` for up to `slice` ms and resolves to
+ * whether it became truthy, with the last error it threw. Like `wait --fn`, an expression that throws
+ * counts as not yet true.
  */
-const checkInPage = (expression: string) => `new Promise((resolve) => {
-  const end = Date.now() + ${SLICE_MS};
+const checkInPage = (expression: string, slice: number) => `new Promise((resolve) => {
+  const end = Date.now() + ${slice};
+  let error = null;
   const check = () => {
     let met = false;
-    try { met = Boolean(${expression}); } catch {}
-    if (met || Date.now() >= end) resolve(met);
+    try { met = Boolean(${expression}); } catch (thrown) { error = String(thrown); }
+    if (met || Date.now() >= end) resolve({ met, error });
     else setTimeout(check, ${POLL_MS});
   };
   check();
@@ -70,7 +83,8 @@ export function openBrowser() {
   /**
    * Waits until the page's finite animations have finished, for at most 1 s. agent-browser clicks
    * where it measured and refuses a point an opening dialog's overlay still covers. The Node
-   * wrapper's start-up used to leave that time before every click by accident.
+   * wrapper's start-up used to leave that time before every click by accident. Only animations
+   * already running count: after an action that opens something later, wait for it first.
    */
   const settled = async () => {
     try {
@@ -90,10 +104,14 @@ export function openBrowser() {
   const waitUntil = async (expression: string) => {
     const deadline = Date.now() + WAIT_TIMEOUT_MS;
     let lastError: unknown;
-    while (Date.now() < deadline) {
+    for (let remaining = WAIT_TIMEOUT_MS; remaining > 0; remaining = deadline - Date.now()) {
       try {
-        if (await evaluate<boolean>(checkInPage(expression))) return;
+        const { met, error } = await evaluate<{ met: boolean; error: string | null }>(checkInPage(expression, Math.min(SLICE_MS, remaining)));
+        if (met) return;
+        if (error) lastError = new Error(error);
       } catch (error) {
+        // An expression that isn't JavaScript never will be: say so now rather than after 25 s.
+        if (String((error as { stdout?: string }).stdout ?? error).includes("SyntaxError")) throw error;
         // The page navigated, or has no document yet: check again on the next one.
         lastError = error;
         await sleep(POLL_MS);
