@@ -1,4 +1,4 @@
-// Checks the committed app icons (spec .ai/specs/2026-10-17--1321UTC-mammoth-app-icons.md) have the
+// Checks the committed app icons (spec .ai/specs/implemented/2026-10-17--1321UTC-mammoth-app-icons.md) have the
 // sizes browsers request, so a regeneration with a wrong size fails here instead of in a browser.
 // THIRD_PARTY_NOTICES.md holds the commands that render them from icon.svg.
 import assert from "node:assert/strict";
