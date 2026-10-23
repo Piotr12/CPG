@@ -29,6 +29,8 @@ Stop a slow "Install Chrome for agent-browser" step from cancelling the integrat
 - `npm run lint` 0, `npm run typecheck` 0, `npm run test:coverage` 0 (486 files, 3,317 tests, 100 %), `npm run build` 0.
 - `npm audit`: the 10 known `braces` advisories only (engineering-standards.md); `yaml` adds none.
 - No integration file touched; the PR's own CI run exercises the new limits.
+- PR #169 CI ([run 39937722061](https://github.com/Piotr12/CPG/actions/runs/39937722061)): all five jobs green. In `integration-tests` the browser install took 17 s (limit 10 min) and the suite 15 min 54 s (limit 20 min).
+- Fresh-context review: approve, one nit (this log said `done` before CI finished), addressed by this entry.
 
 ## Follow-ups
 
