@@ -1264,7 +1264,7 @@ export const pl: Messages = {
     empty: "Brak wysyłek.",
     columns: { id: "Wysyłka", plannedDate: "Planowana data", status: "Status", lines: "Wydano z planu" },
     lineSummary: "Pozycja {line}: {issued} z {quantity} {baseUnit}",
-    states: { open: "Otwarta", completed: "Zakończona" },
+    states: { open: "Otwarta", completed: "Zakończona", cancelled: "Anulowana" },
     create: {
       open: "Utwórz wysyłkę",
       title: "Utwórz wysyłkę",

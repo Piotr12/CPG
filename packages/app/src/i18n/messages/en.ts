@@ -1302,7 +1302,7 @@ export const en = {
     empty: "No shipments yet.",
     columns: { id: "Shipment", plannedDate: "Planned date", status: "Status", lines: "Issued of planned" },
     lineSummary: "Line {line}: {issued} of {quantity} {baseUnit}",
-    states: { open: "Open", completed: "Completed" },
+    states: { open: "Open", completed: "Completed", cancelled: "Cancelled" },
     create: {
       open: "Create shipment",
       title: "Create a shipment",

@@ -6809,6 +6809,23 @@
           "enumItems": [],
           "mappedType": "text"
         },
+        "next_line": {
+          "name": "next_line",
+          "type": "integer",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "0",
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        },
         "order_id": {
           "name": "order_id",
           "type": "text",
@@ -6859,7 +6876,8 @@
           "collation": null,
           "enumItems": [
             "open",
-            "completed"
+            "completed",
+            "cancelled"
           ],
           "mappedType": "enum"
         },
@@ -6879,6 +6897,40 @@
           "collation": null,
           "enumItems": [],
           "mappedType": "text"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "datetime",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "0",
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "1",
+          "comment": null,
+          "collation": null,
+          "enumItems": [],
+          "mappedType": "integer"
         }
       },
       "indexes": [
@@ -6939,8 +6991,8 @@
       "checks": [
         {
           "name": "shipment_status_check",
-          "expression": "`status` in ('open', 'completed')",
-          "definition": "check (`status` in ('open', 'completed'))",
+          "expression": "`status` in ('open', 'completed', 'cancelled')",
+          "definition": "check (`status` in ('open', 'completed', 'cancelled'))",
           "columnName": "status"
         }
       ],
