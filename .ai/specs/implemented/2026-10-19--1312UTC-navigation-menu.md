@@ -1,6 +1,6 @@
 # One role-based navigation menu on every page, and a Sign in button on the homepage
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-19 13:12 UTC
 **Issue:** #43 · **Builds on:** `implemented/2026-10-19--1053UTC-api-tokens.md` (#17, merged), `implemented/2026-10-19--1050UTC-audit-log.md` (#20, merged), `implemented/2026-10-19--0855UTC-user-preferences-footer-help.md` (#18, merged) · **Design authority:** `.ai/specs/product-brief.md` (R11, Q03), `.ai/specs/research/CPG-acceptance.md` (UX-002, UX-008…010)
 
@@ -92,9 +92,9 @@ Prototype: `.ai/specs/assets/navigation-menu/` (static mockups; the implementati
 
 | Screen | Today | Proposed |
 | --- | --- | --- |
-| `/` signed out | ![](assets/navigation-menu/current-01-home.png) | ![](assets/navigation-menu/mockup-01-home.png) |
-| `/admin`, admin, 1280 px | ![](assets/navigation-menu/current-02-admin.png) | ![](assets/navigation-menu/mockup-02-admin-desktop.png) |
-| `/admin`, 360 px (menu open in the mockup) | ![](assets/navigation-menu/current-03-admin-360.png) | ![](assets/navigation-menu/mockup-03-admin-mobile.png) |
+| `/` signed out | ![](../assets/navigation-menu/current-01-home.png) | ![](../assets/navigation-menu/mockup-01-home.png) |
+| `/admin`, admin, 1280 px | ![](../assets/navigation-menu/current-02-admin.png) | ![](../assets/navigation-menu/mockup-02-admin-desktop.png) |
+| `/admin`, 360 px (menu open in the mockup) | ![](../assets/navigation-menu/current-03-admin-360.png) | ![](../assets/navigation-menu/mockup-03-admin-mobile.png) |
 
 ## 📝 Edge Cases & Failure Scenarios
 
@@ -134,3 +134,8 @@ One phase: the menu, the retired headers and the homepage button ship together (
    - on `/` at 1280×800, signed out and signed in: the footer's bottom is inside the viewport; at 360×800 its top is within two viewport heights.
 
    `footer.test.ts` keeps passing unchanged.
+
+## Implementation notes
+
+- Implemented in PR #46 (spec PR #45); #43 closed as completed on 2026-10-19. Filed as implemented on 2026-10-23, in the second slice 2 closing pass: the spec had stayed in the active folder with `Status: ready`.
+- `implemented/2026-10-19--2048UTC-sidebar-navigation.md` (#58) superseded this spec's layout answers (Q1 top bar, Q4 inline account controls, Q7 brand → `/`). The rest stands: role filtering, `aria-current`, the account controls, the server-side gates and the homepage **Sign in** / **Open CPG** button. `tests/integration/navigation.test.ts` covers them.

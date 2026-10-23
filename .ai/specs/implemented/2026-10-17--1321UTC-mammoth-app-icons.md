@@ -1,6 +1,6 @@
 # Mammoth app icons
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-17 13:21 UTC
 **Issue:** #4
 
@@ -117,3 +117,9 @@ One phase: everything ships in a single PR that closes #4.
 - A full PWA: a service worker, offline mode or `display: "standalone"`.
 - Open Graph / social preview images.
 - A brand colour or theme beyond the white icon backgrounds.
+
+## Implementation notes
+
+- Implemented in PR #6 (spec PR #5); #4 closed as completed. Filed as implemented on 2026-10-23, in the second slice 2 closing pass: the spec had stayed in the active folder with `Status: ready`.
+- `tests/app-icons.test.ts` checks the committed icons, and `tests/integration/app-icons.test.ts` checks the served tags and URLs. The latter waits for `/admin`'s streamed head since #166.
+- The acceptance checkboxes above are left as written. The automated ones are covered by those tests. The human QA in Firefox and Safari was never recorded.

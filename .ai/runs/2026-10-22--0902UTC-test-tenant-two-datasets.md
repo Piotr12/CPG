@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-22 09:02 UTC
 **Agent:** Claude Code (claude-opus-5-5), `om-auto-fix-issue 163` redirected by the owner, dispatched by cezar
-**Spec:** `.ai/specs/2026-10-22--0902UTC-test-tenant-two-datasets.md`
+**Spec:** `.ai/specs/implemented/2026-10-22--0902UTC-test-tenant-two-datasets.md`
 **Status:** done
 
 ## Goal
