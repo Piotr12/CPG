@@ -4,7 +4,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { CustomerOrder, PurchaseOrder, PurchaseRequisition, selectTenant } from "./entities";
 import { migrations } from "./migrations";
-import { initOrm } from "./orm";
+import { initOrm, type EntityManager } from "./orm";
 
 const tempDatabase = () => path.join(mkdtempSync(path.join(tmpdir(), "cpg-location-guard-index-")), "cpg.sqlite");
 const MIGRATION = "Migration20261023101022_location_guard_indexes";
@@ -48,11 +48,14 @@ describe("location guard index migration", () => {
     }
   });
 
+  // The guards' own query (`assertNoPurchasingAtLocation`, `assertNoCustomerOrdersAtLocation`).
+  const where = { location: "l1", status: "open" } as const;
+  const options = { orderBy: { code: "asc" } } as const;
   it.each([
-    ["purchase_order", PurchaseOrder],
-    ["purchase_requisition", PurchaseRequisition],
-    ["customer_order", CustomerOrder],
-  ] as const)("finds the lowest Open %s at a location from its guard index, without a temporary sort", async (table, entity) => {
+    ["purchase_order", (em: EntityManager) => em.findOne(PurchaseOrder, where, options)],
+    ["purchase_requisition", (em: EntityManager) => em.findOne(PurchaseRequisition, where, options)],
+    ["customer_order", (em: EntityManager) => em.findOne(CustomerOrder, where, options)],
+  ] as const)("finds the lowest Open %s at a location from its guard index, without a temporary sort", async (table, guardQuery) => {
     const queries: { sql: string; params: readonly unknown[] }[] = [];
     const orm = await initOrm({ databasePath: tempDatabase() }, { onQuery: (sql, params) => (queries.push({ sql, params }), sql) });
     try {
@@ -60,11 +63,10 @@ describe("location guard index migration", () => {
       const em = orm.em.fork();
       selectTenant(em, "prod");
       queries.length = 0;
-      // The guards' own query (`assertNoPurchasingAtLocation`, `assertNoCustomerOrdersAtLocation`).
-      expect(await em.findOne(entity, { location: "l1", status: "open" }, { orderBy: { code: "asc" } })).toBeNull();
+      expect(await guardQuery(em)).toBeNull();
       expect(queries).toHaveLength(1);
       const [{ sql, params }] = queries;
-      expect(sql).toMatch(/`tenant_code` = \?/);
+      // The plan's `tenant_code=?` shows the tenant filter reached the guarded table itself.
       const plan = (await orm.em.getConnection().execute<{ detail: string }[]>(`explain query plan ${sql}`, [...params]))
         .map(({ detail }) => detail)
         .join(" ");
