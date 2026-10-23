@@ -162,13 +162,20 @@ describe("production completions in the UI and API", () => {
     expect(await user.evaluate<boolean>("document.documentElement.scrollWidth <= innerWidth")).toBe(true);
   });
 
-  it("refuses completions in a read-only tenant while the preview and history stay readable (E2E-011, INV-022)", async () => {
+  it("refuses completions in a read-only tenant, leaving stock and history unchanged, while the preview and history stay readable (E2E-011, INV-022)", async () => {
     const planned = await order("5");
+    const ledgers = () => Promise.all([bar, cocoa, wrapper].map(stock));
+    const before = await ledgers();
+    expect(before.every(({ movements }) => movements.length > 0)).toBe(true);
     expect((await write("PATCH", "/api/tenants/prod", { readOnly: true })).status).toBe(200);
     try {
       expect((await write("POST", completions(planned.id), used("1", "0.5", "2"), userSecret)).status).toBe(409);
       expect((await api("GET", `${completions(planned.id)}/preview?quantity=1&unit=each`, {}, userSecret)).status).toBe(200);
-      expect((await api("GET", completions(planned.id), {}, userSecret)).status).toBe(200);
+      const history = await api("GET", completions(planned.id), {}, userSecret);
+      expect(history.status).toBe(200);
+      expect(json(history).data).toEqual([]);
+      expect(await ledgers()).toEqual(before);
+      expect(json(await api("GET", `${orders}/${planned.id}`, {}, userSecret)).data).toMatchObject({ produced: "0.000000", outstanding: "5.000000", version: planned.version });
       await user.setViewport(1280, 800);
       await user.open(`${baseUrl}/admin/prod/production-orders/${planned.id}`);
       await user.waitForText("No completions yet");

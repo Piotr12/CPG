@@ -15,8 +15,13 @@ it("validates the body and forwards the validated generation and bearer audit ac
   mocks.reset.mockResolvedValue({ code: "test", generation: 4, readOnly: true });
   const request = (body: unknown) => new Request("http://cpg.test/api/tenants/test/reset", { method: "POST", headers: { Authorization: "Bearer dummy-test-secret", "Idempotency-Key": "k", "Dataset-Generation": "3" }, body: JSON.stringify(body) });
   expect(await (await POST(request({}), {})).json()).toEqual({ ok: true, data: { code: "test", generation: 4, readOnly: true } });
-  expect(mocks.reset).toHaveBeenCalledWith(3, { userId: "admin", username: "admin", sessionId: null, channel: "api", token: { id: "token-id", name: "ops" } });
+  const actor = { userId: "admin", username: "admin", sessionId: null, channel: "api", token: { id: "token-id", name: "ops" } };
+  expect(mocks.reset).toHaveBeenCalledWith(3, actor, undefined);
+  mocks.reset.mockClear();
+  expect((await POST(request({ dataset: "realistic" }), {})).status).toBe(200);
+  expect(mocks.reset).toHaveBeenCalledWith(3, actor, "realistic");
   mocks.reset.mockClear();
   expect((await POST(request({ tenant: "prod" }), {})).status).toBe(400);
+  expect((await POST(request({ dataset: "huge" }), {})).status).toBe(400);
   expect(mocks.reset).not.toHaveBeenCalled();
 });

@@ -208,7 +208,8 @@ export class PurchaseOrderService {
         }
         if (Object.keys(errors).length > 0) throw new ValidationError(errors);
         if (Object.keys(after).length > 0) {
-          order.updatedAt = new Date();
+          // Always later than the stored value, so the order's row changes and its version advances.
+          order.updatedAt = new Date(Math.max(Date.now(), order.updatedAt.getTime() + 1));
           recordTenantAudit(em, actor, orderEntry("updated", order, before, after));
           await em.flush();
         }

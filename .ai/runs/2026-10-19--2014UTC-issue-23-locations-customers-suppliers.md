@@ -45,7 +45,7 @@
 
 ## Changes
 
-- `.ai/specs/2026-10-19--2014UTC-locations-customers-suppliers.md` (the spec) and `.ai/specs/assets/locations-customers-suppliers/` (one current screenshot, three mockups with their HTML).
+- `.ai/specs/implemented/2026-10-19--2014UTC-locations-customers-suppliers.md` (the spec) and `.ai/specs/assets/locations-customers-suppliers/` (one current screenshot, three mockups with their HTML).
 
 ## Verification
 - `npx vitest run tests/ai-filenames.test.ts` passes. This PR is docs only; the implementation PR #56 ran the full gate (lint, typecheck, test:coverage 100%, build, test:integration).

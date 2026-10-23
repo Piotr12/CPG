@@ -13,7 +13,7 @@ const users = [`reset-a-${randomUUID().slice(0, 8)}`, `reset-b-${randomUUID().sl
 const kinds = ["materials", "locations", "customers", "suppliers", "planning-parameters", "safety-stock-targets", "boms", "customer-orders"];
 interface Tenant { code: string; generation: number; readOnly: boolean }
 interface Material { id: string; version: number; description: string }
-interface AuditPage { entries: { id: string; action: string; actor: { username: string }; channel: string; token: { name: string } | null }[] }
+interface AuditPage { entries: { id: string; action: string; actor: { username: string }; channel: string; token: { name: string } | null; after: Record<string, unknown> | null }[] }
 
 describe("atomic Test reset through the bearer API", () => {
   let admin: Browser;
@@ -58,6 +58,7 @@ describe("atomic Test reset through the bearer API", () => {
     expect((await write("POST", "/api/tenants/test/reset", {})).status).toBe(428);
     expect((await api("POST", "/api/tenants/test/reset", { body: {}, generation })).status).toBe(400);
     expect((await write("POST", "/api/tenants/test/reset", { tenant: "prod" }, generation)).status).toBe(400);
+    expect((await write("POST", "/api/tenants/test/reset", { dataset: "huge" }, generation)).status).toBe(400);
     const cookie = (await admin.cookies()).map(({ name, value }) => `${name}=${value}`).join("; ");
     expect((await fetch(`${baseUrl}/api/tenants/test/reset`, { method: "POST", headers: { cookie, "Idempotency-Key": randomUUID(), "Dataset-Generation": String(generation) }, body: "{}" })).status).toBe(401);
     expect((await write("POST", "/api/tenants/prod/reset", {}, 1)).status).toBe(404);
@@ -94,9 +95,10 @@ describe("atomic Test reset through the bearer API", () => {
     const fresh = await materials();
     expect(fresh[0]).toMatchObject({ id: "00000001", description: "Steel sheet 2 mm" });
     expect(fresh).toHaveLength(26);
-    // The dataset's orders fill more than a page; the first is 00000001 again.
+    // A reset that names no dataset writes the tiny one: less than a page of orders, the first 00000001 again.
     const orders = json(await api("GET", "/api/tenants/test/customer-orders")).data as { id: string }[];
-    expect(orders).toHaveLength(100);
+    expect(orders.length).toBeGreaterThan(0);
+    expect(orders.length).toBeLessThan(100);
     expect(orders[0].id).toBe("00000001");
     expect((await api("GET", `/api/tenants/test/customer-orders/${extraId}`)).status).toBe(404);
     for (const kind of ["locations", "customers", "suppliers", "boms"]) {
@@ -116,7 +118,7 @@ describe("atomic Test reset through the bearer API", () => {
       expect(await browser.evaluate<string>(`document.querySelector('[data-signed-in-as]').dataset.signedInAs`)).toBe(users[index]);
     }
     const globalAfter = (json(await api("GET", "/api/audit?limit=100")).data as AuditPage).entries;
-    expect(globalAfter[0]).toMatchObject({ action: "tenants.tenant.reset", actor: { username: "admin" }, channel: "api", token: { name: "reset-api-admin" } });
+    expect(globalAfter[0]).toMatchObject({ action: "tenants.tenant.reset", actor: { username: "admin" }, channel: "api", token: { name: "reset-api-admin" }, after: { dataset: "tiny" } });
     expect(globalAfter.map(({ id }) => id)).toEqual(expect.arrayContaining(globalBefore.slice(0, 99).map(({ id }) => id)));
     const replay = await api("POST", "/api/tenants/test/reset", { key, body: {}, generation: generation + 1 });
     expect(replay.replayed).toBe("true"); expect(replay.text).toBe(first.text);
