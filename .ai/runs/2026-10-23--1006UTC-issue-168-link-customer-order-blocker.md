@@ -3,7 +3,7 @@
 **Date:** 2026-10-23 10:06 UTC
 **Agent:** Claude Code (claude-opus-5-5), `om-auto-fix-issue 168`, dispatched by cezar
 **Spec:** none (follow-up of #161; LFC-018 in `.ai/specs/research/CPG-acceptance.md`)
-**Status:** in progress
+**Status:** done
 
 ## Goal
 
@@ -15,6 +15,8 @@ The location's Deactivate dialog names the Open customer order that blocks it (`
 - 10:10 — Scope decision: the material's Deactivate dialog has the same gap for `MATERIAL_HAS_CUSTOMER_DEMAND` (`params.order`, LFC-014), through the same `BLOCKERS` map. Linking it too is one more entry and keeps the two dialogs consistent, so this PR covers both rather than filing another follow-up. Reversible: drop the entry.
 - 10:12 — Added both `BLOCKERS` entries, their unit rows, a browser test in `customer-orders.test.ts`, and the LFC-018/LFC-014 evidence. The unit test fails without the map entries (checked by stashing the component change: "Unable to find … link … 00000009").
 - 10:40 — Gate green. The changed integration file passes on a fresh standalone copy, since Docker isn't available here.
+
+- 10:50 — Opened #170 (labels, lock handed to the PR, issue lock released). A fresh-context review approved it with two minors: the LFC-014 Evidence said "with demand" where the test checks only an Open order with a line for the material (reworded), and this log's status (finalized).
 
 ## Changes
 
@@ -33,4 +35,4 @@ The location's Deactivate dialog names the Open customer order that blocks it (`
 
 ## Follow-ups
 
-- None. The full integration suite runs in CI on the PR.
+- None. The full integration suite runs in CI on #170. Docker wasn't available, so the image was tested only by CI.

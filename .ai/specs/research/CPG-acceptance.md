@@ -4430,7 +4430,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/customer-orders/customer-order.service.test.ts` (`MATERIAL_HAS_CUSTOMER_DEMAND` names the order, also beyond a 100-line batch, and is allowed once demand is resolved), `tests/integration/customer-orders.test.ts` (409 naming the customer order; the material's Deactivate dialog links `/admin/prod/customer-orders/{id}` for an Open order with demand for it), `packages/app/src/components/master-data/deactivation-blocker-error.test.tsx` (the link in English and Polish). E08-S01, #83; #168.
+- **Evidence:** `packages/core/src/services/customer-orders/customer-order.service.test.ts` (`MATERIAL_HAS_CUSTOMER_DEMAND` names the order, also beyond a 100-line batch, and is allowed once demand is resolved), `tests/integration/customer-orders.test.ts` (409 naming the customer order; the material's Deactivate dialog links `/admin/prod/customer-orders/{id}` for an Open order that has a line for it), `packages/app/src/components/master-data/deactivation-blocker-error.test.tsx` (the link in English and Polish). E08-S01, #83; #168.
 - **Given:** Material stock zero with active undelivered order
 - **When:** Admin tries deactivate
 - **Then:** Rejected; user shown outstanding demand blocker.
