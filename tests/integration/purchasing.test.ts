@@ -157,7 +157,7 @@ describe("purchase requisitions and orders in the UI", () => {
     await admin.clickRole("button", "Deactivate");
     await admin.waitFor("[role=alertdialog]");
     await admin.click("[role=alertdialog] button[data-variant=destructive]");
-    await admin.waitUntil(`!!document.querySelector("${alert} a")`);
+    await admin.waitUntil(`!!document.querySelector("${alert}")`);
 
     expect(
       await admin.evaluate<{ text: string; href: string | null }>(`(() => {

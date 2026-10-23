@@ -217,7 +217,9 @@ describe("purchase requisitions and orders through the API", () => {
   it("receives an Open PO after its supplier is deactivated, with its movement and audit entry, and refuses a new PO for that supplier (E2E-017)", async () => {
     const supplier = await create("/api/tenants/prod/suppliers", { name: "buyapi retired" });
     const nut = await create("/api/tenants/prod/materials", { type: "raw", description: "buyapi nut", baseUnit: "each" });
-    const placed = json(await placeOrder(order([line(nut, "8", "each", "2027-03-03")], { supplier }))).data as Order;
+    const placing = await placeOrder(order([line(nut, "8", "each", "2027-03-03")], { supplier }));
+    expect(placing.status).toBe(200);
+    const placed = json(placing).data as Order;
     const { version } = json(await api("GET", `/api/tenants/prod/suppliers/${supplier}`)).data as { version: number };
     expect((await write("PATCH", `/api/tenants/prod/suppliers/${supplier}`, { version, active: false })).status).toBe(200);
 

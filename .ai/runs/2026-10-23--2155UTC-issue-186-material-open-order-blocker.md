@@ -16,6 +16,8 @@
 - 21:58 — Kept the cezar branch (`cez/6ba83fce`) instead of `fix/issue-186-…`: the cockpit tracks this worktree's branch, as the earlier #168 run did.
 - 22:05 — Tests: the service test asserts `messageParams`; `error-message.test.ts` checks EN and PL; the component test gets the row; `purchasing-api.test.ts` asserts `params.order` and adds E2E-017 (receipt, completed PO, movement, audit entry, `SUPPLIER_INACTIVE` for a new PO); `purchasing.test.ts` checks the material's Deactivate dialog and follows the link. Catalogue: LFC-013 evidence, E2E-017 → Passed (automated).
 
+- 22:30 — Opened #196 (labels; lock handed to the PR; issue lock released). A fresh-context review approved it with four nits, all fixed: the Polish text now says "pozycję tego materiału, więc materiału nie można dezaktywować" ("go" could have meant the order), E2E-017's unit evidence names its tests, the E2E-017 setup asserts the order was placed, and the UI test waits for the alert rather than its link, so a missing link fails on the diff.
+- 00:07 — The first re-run of the integration files skipped every test: `pkill -f server.js` hadn't stopped the earlier standalone server (it runs as `next-server`), so the new one hit `EADDRINUSE` and the tests ran against the old data. Freed the port by PID and re-ran on a fresh server: 21/21. Lesson added.
 - 22:20 — Gate green. Docker isn't available here, so the two changed integration files ran against a fresh standalone copy of the build (`CPG_BASE_URL`); CI runs the image.
 
 ## Changes
@@ -34,7 +36,8 @@
 - `npm run typecheck` — exit 0.
 - `npm run test:coverage` — 496 files, 3546 tests passed; 100% statements, branches, functions, lines.
 - `npm run build` — exit 0.
-- `tests/integration/purchasing-api.test.ts` and `purchasing.test.ts` against a fresh standalone copy — 2 files, 21 tests passed.
+- `tests/integration/purchasing-api.test.ts` and `purchasing.test.ts` against a fresh standalone copy — 2 files, 21 tests passed (before and after the review fixes).
+- After the review fixes: lint, typecheck, build exit 0; `test:coverage` 3546 tests, 100%.
 
 ## Follow-ups
 

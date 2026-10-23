@@ -4683,7 +4683,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/purchasing-api.test.ts` ("receives an Open PO after its supplier is deactivated": the receipt posts, the PO completes, stock gains a `goods-receipt` movement naming the receipt and the PO, the audit records `goods-receipts.goods-receipt.posted`, and a new PO for that supplier is 409 `SUPPLIER_INACTIVE`); unit: `packages/core/src/services/goods-receipts/goods-receipt.service.test.ts`, `packages/core/src/services/purchase-orders/purchase-order.service.test.ts`. E09-S05, #186.
+- **Evidence:** `tests/integration/purchasing-api.test.ts` ("receives an Open PO after its supplier is deactivated": the receipt posts, the PO completes, stock gains a `goods-receipt` movement naming the receipt and the PO, the audit records `goods-receipts.goods-receipt.posted`, and a new PO for that supplier is 409 `SUPPLIER_INACTIVE`); unit: `packages/core/src/services/goods-receipts/goods-receipt.service.test.ts` ("receives on an Open order whose supplier was deactivated since"), `packages/core/src/services/purchase-orders/purchase-order.service.test.ts` ("refuses an inactive supplier … for a new order", "keeps an earlier order readable and editable when its supplier is deactivated"). E09-S05, #186.
 - **Given:** Supplier has existing PO, then admin makes supplier inactive
 - **When:** Post GR against old PO; try create a new PO
 - **Then:** Old PO receives normally with movement/audit; new PO rejected.
