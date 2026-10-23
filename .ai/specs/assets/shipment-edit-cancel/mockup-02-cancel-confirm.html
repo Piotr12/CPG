@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup 02 · Cancel shipment confirmation</title>
+<!-- Static mockup for .ai/specs/2026-10-23--2006UTC-shipment-edit-cancel.md (illustrative, not app code). -->
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:Geist,"Geist Fallback",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;font-size:14px;color:#0a0a0a;background:#fff;line-height:1.43}
+.app{display:flex;min-height:100vh}
+.side{width:256px;flex:none;background:#fafafa;border-right:1px solid #e5e5e5;display:flex;flex-direction:column;height:100vh;position:sticky;top:0}
+.brand{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 10px 12px;font-weight:600;font-size:16px}
+.brand .logo{display:flex;gap:8px;align-items:center}
+.collapse{width:16px;height:14px;border:1.5px solid #404040;border-radius:3px;position:relative}
+.collapse:after{content:"";position:absolute;left:4px;top:0;bottom:0;border-left:1.5px solid #404040}
+.tenants{margin:4px 8px 0;border:1px solid #e5e5e5;border-radius:10px;display:flex;padding:2px;background:#fff}
+.tenants span{flex:1;text-align:center;font-size:12px;font-weight:600;letter-spacing:.08em;padding:6px 0;border-radius:8px;color:#525252}
+.tenants .on{background:#fde68a;border:1px solid #f59e0b;color:#0a0a0a}
+.tenant-note{font-size:12px;color:#737373;padding:8px 12px 10px;border-bottom:1px solid #e5e5e5}
+.nav{padding:8px 8px;flex:1;overflow:hidden}
+.nav a{display:flex;align-items:center;gap:10px;padding:6px 8px;color:#0a0a0a;text-decoration:none;border-radius:8px}
+.nav a i{width:16px;height:16px;border:1.5px solid #404040;border-radius:4px;display:inline-block;opacity:.8}
+.nav .sub{margin-left:16px;border-left:1px solid #e5e5e5;padding-left:8px}
+.nav .sub a{padding:6px 8px}
+.nav .grp{display:flex;justify-content:space-between;align-items:center}
+.nav .grp:after{content:"";width:7px;height:7px;border-right:1.5px solid #404040;border-bottom:1.5px solid #404040;transform:rotate(45deg);margin-right:10px;margin-top:-4px}
+.nav .act{background:#f0f0f0;font-weight:500}
+.shared{border-top:1px solid #e5e5e5;padding:8px}
+.shared .lbl{font-size:12px;color:#525252;padding:4px 8px}
+.user{display:flex;align-items:center;gap:10px;padding:12px 16px;border-top:1px solid #e5e5e5}
+.avatar{width:32px;height:32px;border-radius:50%;background:#171717;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px}
+.user small{display:block;color:#737373;font-size:12px}
+.main{flex:1;min-width:0;border-top:3px solid #f59e0b}
+.topbar{height:41px;border-bottom:1px solid #e5e5e5;display:flex;align-items:center;padding:0 24px;gap:10px;color:#737373}
+.tag{background:#fde68a;color:#0a0a0a;font-size:12px;font-weight:600;letter-spacing:.08em;padding:1px 8px;border-radius:4px}
+.content{padding:48px 24px 40px}
+.back{color:#0a0a0a;text-decoration:none;border-bottom:1px solid #0a0a0a}
+h1{font-size:24px;font-weight:600;letter-spacing:-.01em;margin:30px 0 26px}
+h2{font-size:18px;font-weight:600;margin:28px 0 10px}
+.lead{color:#737373;margin-bottom:24px}
+.muted{color:#737373;font-size:13px}
+.card{border:1px solid #e5e5e5;border-radius:10px;padding:16px;display:grid;grid-template-columns:repeat(3,1fr);row-gap:18px;margin-bottom:16px}
+.card dt{color:#525252;margin-bottom:4px}
+.card dd a{color:#0a0a0a;text-decoration:none;border-bottom:1px solid #0a0a0a;font-family:ui-monospace,Menlo,monospace;font-size:13px}
+.badge{display:inline-block;background:#f5f5f5;color:#171717;font-size:12px;font-weight:500;padding:2px 8px;border-radius:26px}
+.actions{display:flex;gap:8px;margin:0 0 12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:32px;padding:0 12px;border-radius:8px;font:inherit;font-weight:500;border:1px solid #e5e5e5;background:#fff;color:#0a0a0a;white-space:nowrap}
+.btn.primary{background:#171717;border-color:#171717;color:#fafafa}
+.btn.sm{height:28px;font-size:13px;padding:0 10px}
+table{width:100%;border-collapse:collapse}
+th{font-weight:500;text-align:left;padding:10px 8px;border-bottom:1px solid #e5e5e5}
+td{padding:9px 8px;border-bottom:1px solid #e5e5e5;vertical-align:middle}
+td.num,th.num{text-align:right;width:56px}
+td a{color:#0a0a0a;text-decoration:none;border-bottom:1px solid #0a0a0a}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:13px}
+.empty{text-align:center;color:#525252;padding:40px 0}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.1);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.dialog{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;border-radius:14px;box-shadow:0 0 0 1px rgba(0,0,0,.1),0 10px 30px rgba(0,0,0,.08);padding:16px;width:768px;max-height:calc(100vh - 48px);overflow:auto}
+.dialog.sm{width:384px}
+.dialog h3{font-size:16px;font-weight:500;margin-bottom:6px;padding-right:28px}
+.dialog .x{position:absolute;right:16px;top:14px;font-size:18px;line-height:1;color:#0a0a0a}
+.dialog .desc{color:#737373;margin-bottom:12px}
+label.f{display:block;font-weight:500;margin-bottom:4px}
+.input{height:32px;border:1px solid #d4d4d4;border-radius:10px;padding:0 10px;font:inherit;color:#0a0a0a;background:#fff;width:100%}
+.date{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.row{border:1px solid #e5e5e5;border-radius:10px;padding:12px;display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.row .who{flex:1;min-width:0}
+.row .who small{display:block;color:#737373;font-size:12px;margin-top:2px}
+.row .q{width:174px}
+.row .u{width:174px;appearance:none;-webkit-appearance:none;background:#fff url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>") no-repeat right 10px center;padding-right:30px}
+.sep{display:flex;align-items:center;gap:10px;color:#737373;font-size:12px;margin:4px 0 12px}
+.sep:before,.sep:after{content:"";flex:1;border-top:1px solid #e5e5e5}
+.foot{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
+footer{color:#737373;font-size:12px;text-align:center;padding:40px 0 10px}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="side">
+  <div class="brand"><span class="logo">&#x1F9A3; CPG</span><span class="collapse"></span></div>
+  <div class="tenants"><span class="on">TEST</span><span>PROD</span></div>
+  <div class="tenant-note">Demonstration data, safe to experiment</div>
+  <nav class="nav">
+    <a><i></i>Overview</a>
+    <a class="grp"><span style="display:flex;gap:10px;align-items:center"><i></i>Master data</span></a>
+    <div class="sub"><a>Materials</a><a>Locations</a><a>Customers</a><a>Suppliers</a><a>Planning parameters</a><a>Safety stock</a><a>BOMs</a><a>Import</a></div>
+    <a class="grp"><span style="display:flex;gap:10px;align-items:center"><i></i>Sales</span></a>
+    <div class="sub"><a>Forecasts</a></div>
+    <a><i></i>Stock</a>
+  </nav>
+  <div class="shared">
+    <div class="lbl">Shared by Test and Prod</div>
+    <a style="display:flex;gap:10px;padding:6px 8px"><i></i>Administration</a>
+    <a style="display:flex;gap:10px;padding:6px 8px"><i></i>Global audit</a>
+    <a style="display:flex;gap:10px;padding:6px 8px"><i></i>Help</a>
+  </div>
+  <div class="user"><span class="avatar">A</span><span>admin<small>Administrator</small></span></div>
+</aside>
+<main class="main">
+  <div class="topbar"><span class="tag">TEST</span></div>
+  <div class="content">
+    <a class="back">Customer order 00000008</a>
+    <h1>Shipment 00000012</h1>
+    <p class="lead">What is planned to leave against this customer order, and what has left. Post a goods issue as goods leave: stock falls at the order's location with today's date, and the order's lines are fulfilled.</p>
+    <dl class="card">
+      <div><dt>Customer order</dt><dd><a>00000008</a></dd></div>
+      <div><dt>Customer</dt><dd>00000010 Export distributor (CZ/SK)</dd></div>
+      <div><dt>Location</dt><dd>00000004 Small goods plant, Gdańsk</dd></div>
+      <div><dt>Planned date</dt><dd>2026-11-16</dd></div>
+      <div><dt>Status</dt><dd><span class="badge">Open</span></dd></div>
+    </dl>
+    <div class="actions"><button class="btn">Edit shipment</button><button class="btn">Cancel shipment</button></div>
+    <table>
+      <thead><tr><th class="num">Line</th><th>Material</th><th>Planned</th><th>Issued</th><th>To issue</th></tr></thead>
+      <tbody><tr><td class="num">1</td><td><a>00000025 Document box, A4</a></td><td>24 PC</td><td>0 PC</td><td>24 PC</td></tr><tr><td class="num">2</td><td><a>00000019 Desk organiser, bamboo</a></td><td>12 PC</td><td>0 PC</td><td>12 PC</td></tr></tbody>
+    </table>
+    <h2>Goods issues</h2>
+    <p class="muted" style="margin-bottom:10px">What left against this shipment. Each issue lowered stock at the order's location on its date, and can't be changed.</p>
+    <div class="actions"><button class="btn primary">Post goods issue</button></div>
+    <table>
+      <thead><tr><th>Goods issue</th><th>Date</th><th>Issued</th></tr></thead>
+      <tbody><tr><td colspan="3" class="empty">Nothing has been issued yet.</td></tr></tbody>
+    </table>
+    <footer>Caveman Planning Good! Made in Jozefoslaw with Tokens, Coffee and OpenMercato Skills during AITechLeaders training.</footer>
+  </div>
+</main>
+<div class="overlay"></div>
+<div class="dialog sm" role="alertdialog" aria-modal="true" aria-labelledby="t2">
+  <h3 id="t2">Cancel shipment 00000012?</h3>
+  <p class="desc">It will plan nothing more. Stock and the order are not changed.</p>
+  <div class="foot"><button class="btn">Keep shipment</button><button class="btn primary">Cancel shipment</button></div>
+</div></div>
+</body>
+</html>
