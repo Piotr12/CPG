@@ -45,9 +45,15 @@ export function groupBy<T>(items: readonly T[], key: (item: T) => string): Map<s
   return groups;
 }
 
-/** Refuses an issue against a Completed shipment: nothing is left to issue on it (shipments spec Q8). */
-export function assertShipmentOpen(shipment: Shipment): void {
+/** What `SHIPMENT_NOT_OPEN` says each refused action can't do; screens translate the code. */
+const NOT_OPEN_CONSEQUENCE = { issue: "nothing more is issued against it", change: "it can't be changed", cancel: "it can't be cancelled" } as const;
+
+/**
+ * Refuses `action` on a shipment that isn't Open: an issue against a Completed or Cancelled one has
+ * nothing left to issue (shipments spec Q8), and neither can be edited or cancelled (shipment edit spec).
+ */
+export function assertShipmentOpen(shipment: Shipment, action: keyof typeof NOT_OPEN_CONSEQUENCE = "issue"): void {
   if (shipment.status !== "open") {
-    throw new ConflictError(`Shipment ${shipment.code} is ${shipment.status}, so nothing more is issued against it.`, "SHIPMENT_NOT_OPEN");
+    throw new ConflictError(`Shipment ${shipment.code} is ${shipment.status}, so ${NOT_OPEN_CONSEQUENCE[action]}.`, "SHIPMENT_NOT_OPEN");
   }
 }
