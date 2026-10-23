@@ -29,6 +29,7 @@ The four acceptance criteria of #152: an unlisted account or record type in the 
   - The channel assertions use the regex form of line 102.
   - Declined: comparing an unlisted account case-insensitively. It only matters on the refused path, where values are shown as sent.
 - 16:30 — UI QA (`om-auto-qa-pr`, evidence only) on the standalone build of `14be82c`: 9/9 pass, screenshots on PR #177. Steps 1–6 cover the unlisted values and the focused refusals at 1280 and 390 px. Step 7 reversed completion 00000005 in Test through its dialog and read it on the audit; its inverse movement shows "Reverses". The seeded original has no audit entry, so "Reversed by" is left to the integration test. The footer was checked on both reports. Completion 00000001 was refused first because its output had shipped since: expected behaviour.
+- 16:50 — CI on `5152ece`: every job green except integration shard 1. `users.test.ts` "lets alice sign in twice" read `/admin/users` where it expected the redirect to `/admin`. That file isn't touched here. The cause is a race in its `landsOn` helper: it waited for "signed in as alice" or the sign-in form, and the layout streams the signed-in account before the page's `requireAdmin` redirect lands. Every caller expects a redirect, so `landsOn` now waits for the URL to leave the opened path first. Ran `users.test.ts` on a fresh standalone copy and empty `DATA_DIR` twice: 8/8 both times. Two reruns on reused data failed only because alice already existed (users are never deleted).
 - 14:50 — Docker isn't reachable from this account, so both files ran against the standalone build (lesson of 2026-10-19). AUD-004 and UX-010 in `CPG-acceptance.md` get the new evidence. UX-010 stays "Partially verified" because the MRP report doesn't exist yet.
 
 ## Changes
@@ -38,6 +39,7 @@ The four acceptance criteria of #152: an unlisted account or record type in the 
 - `tests/integration/audit-history.test.ts` — completion and transfer dispatch reversals on the tenant audit; the unlisted account kept on Apply; the refusal takes focus.
 - `tests/integration/footer.test.ts` — the stock report, the variance report and a filtered audit.
 - `packages/app/src/components/reports/variance-report-screen.tsx` + `app/admin/[tenant]/reports/variance/page.test.tsx` + `tests/integration/variance-report.test.ts` — the range error renders through `ErrorSummary` and takes focus (review finding).
+- `tests/integration/users.test.ts` — `landsOn` waits for the redirect (CI flake found on this PR).
 - `.ai/docs/engineering-standards.md`, `.ai/lessons.md`, `.ai/specs/research/CPG-acceptance.md` (AUD-004, UX-010 evidence).
 
 ## Verification

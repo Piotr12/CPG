@@ -33,9 +33,13 @@ async function aliceMenu(admin: Browser, item: string) {
 const aliceRow = (condition: string) =>
   `[...document.querySelectorAll("tbody tr")].some((row) => row.innerText.startsWith("alice\\t") && ${condition})`;
 
-/** Whether a signed-in page still opens /admin, or is sent to /login. */
+/**
+ * Where a page the reader may not open sends them: /admin, or /login. The layout streams the signed-in
+ * account before the page's own gate redirects, so wait for the URL to leave the page first.
+ */
 async function landsOn(browser: Browser, url: string) {
   await browser.open(url);
+  await browser.waitUntil(`location.pathname !== ${JSON.stringify(new URL(url).pathname)}`);
   await browser.waitFor("main");
   await browser.waitUntil(`!!document.querySelector("#username") || (${signedInAs()})`);
   return pathname(browser);
