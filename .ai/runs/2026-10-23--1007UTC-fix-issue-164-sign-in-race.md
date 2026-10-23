@@ -3,7 +3,7 @@
 **Date:** 2026-10-23 10:07 UTC
 **Agent:** Claude Code / claude-opus-5-5 (cezar, `om-auto-fix-issue 164`)
 **Spec:** none
-**Status:** in progress (PR #173 open, CI pending)
+**Status:** done
 
 ## Goal
 
@@ -29,7 +29,8 @@
 - `CPG_BASE_URL=http://localhost:3164 … npm run test:integration -- tests/integration/stock-import-api.test.ts` against `next dev` on a fresh data dir: 7 passed. The same run without the fix: failed in `beforeAll`, 7 skipped.
 - The same dev server, `api-users`, `users`, `import`, `transfers-api` (the refused path and the sign-in-then-open path): 4 files, 32 tests passed.
 - `npm run lint`: 0 errors, 1 warning that was already there (`bom.service.ts` `lineError`). `npm run typecheck`: passed. `npm run test:coverage`: 100% on every metric, 485 files and 3314 tests passed. `npm run build`: passed.
-- Not run locally: the full integration suite against the Docker image (CI runs it on the PR).
+- Not run locally: the full integration suite against the Docker image.
+- PR #173 CI ([run 39938709060](https://github.com/Piotr12/CPG/actions/runs/39938709060)): lint, typecheck, unit-tests, build and integration-tests all passed, the integration suite with 54/54 files. The first integration attempt was cancelled at its 20-minute timeout in "Install Chrome for agent-browser": the runner's apt mirror stalled on `fonts-noto-cjk`, and no test ran. The rerun of that job passed.
 
 ## Follow-ups
 
