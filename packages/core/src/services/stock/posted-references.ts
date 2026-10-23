@@ -7,7 +7,8 @@ export const REFERENCE_BATCH = 100;
  * counter, say whether the line was ever posted (#91, #138). `lookup` returns the referenced ID of
  * each record it finds for `batch`, at most `limit` of them. Both the IN list and the results are
  * bounded, and matched IDs leave the batch after each lookup, so many records for one ID can't force
- * a scan of its entire history; never one query per ID.
+ * a scan of its entire history; never one query per ID. A short result already holds every match,
+ * and an ID outside the batch counts for nothing, so the loop always ends.
  */
 export async function postedReferences(ids: readonly string[], lookup: (batch: string[], limit: number) => Promise<string[]>): Promise<Set<string>> {
   const posted = new Set<string>();
@@ -15,11 +16,9 @@ export async function postedReferences(ids: readonly string[], lookup: (batch: s
     const remaining = new Set(ids.slice(start, start + REFERENCE_BATCH));
     while (remaining.size > 0) {
       const found = await lookup([...remaining], REFERENCE_BATCH);
-      if (found.length === 0) break;
-      for (const id of found) {
-        posted.add(id);
-        remaining.delete(id);
-      }
+      const matched = found.filter((id) => remaining.delete(id));
+      for (const id of matched) posted.add(id);
+      if (matched.length === 0 || found.length < REFERENCE_BATCH) break;
     }
   }
   return posted;

@@ -3,7 +3,7 @@
 **Date:** 2026-10-23 20:02 UTC
 **Agent:** Claude Code / claude-opus-5-5 (`om-auto-fix-issue`, dispatched by cezar)
 **Spec:** none (issue #138, follow-up from the #137 review)
-**Status:** done
+**Status:** done locally; awaiting the PR's CI
 
 ## Goal
 
@@ -18,6 +18,7 @@ The purchase-order screen decides per line whether to offer Cancel or Close earl
 - 20:05 Claimed #138 (assignee, `in-progress`, claim comment).
 - 20:15 Implemented the flag and switched the screen. The regression page test fails on the old screen (1 failed / 18 passed) and passes with the fix.
 - 20:25 Self-review: the new lookup copied the customer-order batching loop. Extracted `postedReferences` (`services/stock/posted-references.ts`) and made both `postedOrderLineIds` use it, per the standards' "copied block with branching logic" rule. The purchase-order version skips the lookup for lines with something received.
+- 20:45 Opened #179. A fresh-context review approved with 2 minors and 2 nits, all fixed: the lesson moved to General, this log waits on CI, and `postedReferences` counts only IDs from its batch and stops after a short result, which always holds every match (one query fewer).
 - Docker isn't running on this machine, so the integration files ran against `next start` of the production build on an empty `DATA_DIR` (`CPG_BASE_URL`), not the container. CI runs the whole suite in the container.
 
 ## Changes
