@@ -10,7 +10,14 @@ const baseUrl = inject("baseUrl");
 const password = inject("adminPassword");
 const userPassword = "reset integration password";
 const users = [`reset-a-${randomUUID().slice(0, 8)}`, `reset-b-${randomUUID().slice(0, 8)}`];
-const kinds = ["materials", "locations", "customers", "suppliers", "planning-parameters", "safety-stock-targets", "boms", "customer-orders"];
+/** Every tenant list a reset of Test must leave alone in Prod. */
+const kinds = ["materials", "locations", "customers", "suppliers", "planning-parameters", "safety-stock-targets", "boms", "customer-orders",
+  "shipments", "goods-issues", "purchase-requisitions", "purchase-orders", "goods-receipts", "production-orders", "transfers"];
+/** The sequenced kinds the tiny dataset writes, each listed whole on one page; completions are listed per production order. */
+const sequenced = ["materials", "locations", "customers", "suppliers", "boms", "customer-orders", "shipments", "goods-issues",
+  "purchase-requisitions", "purchase-orders", "goods-receipts", "production-orders"];
+const sequence = (count: number) => Array.from({ length: count }, (_, index) => String(index + 1).padStart(8, "0"));
+const today = () => new Date().toISOString().slice(0, 10);
 interface Tenant { code: string; generation: number; readOnly: boolean }
 interface Material { id: string; version: number; description: string }
 interface AuditPage { entries: { id: string; action: string; actor: { username: string }; channel: string; token: { name: string } | null; after: Record<string, unknown> | null }[] }
@@ -24,6 +31,24 @@ describe("atomic Test reset through the bearer API", () => {
   const write = (method: string, path: string, body: unknown, generation?: number) => api(method, path, { key: randomUUID(), body, generation });
   const test = async () => json(await api("GET", "/api/tenants/test")).data as Tenant;
   const materials = async () => json(await api("GET", "/api/tenants/test/materials")).data as Material[];
+  const get = async (path: string) => json(await api("GET", path)).data;
+  const created = async (path: string, body: unknown, generation?: number) => {
+    const response = await write("POST", path, body, generation);
+    expect(response.status, `${path}: ${response.text}`).toBe(200);
+    return json(response).data;
+  };
+  /** Prod's own records for TEN-025: stock at a source, a transfer in transit to a destination, an open purchase order. */
+  const prod = {} as Record<"material" | "source" | "destination" | "supplier" | "transfer" | "order", string>;
+  /** Everything of Prod's a Test reset must not touch. */
+  const prodState = async () => ({
+    lists: await Promise.all(kinds.map((kind) => get(`/api/tenants/prod/${kind}`))),
+    tenant: await get("/api/tenants/prod"),
+    audit: await get("/api/tenants/prod/audit"),
+    transfer: await get(`/api/tenants/prod/transfers/${prod.transfer}`),
+    order: await get(`/api/tenants/prod/purchase-orders/${prod.order}`),
+    stock: await Promise.all([prod.source, prod.destination].map((location) => get(`/api/tenants/prod/stock?material=${prod.material}&location=${location}`))),
+  });
+  const accounts = async () => (await get("/api/users") as { username: string }[]).filter(({ username }) => users.includes(username));
 
   beforeAll(async () => {
     admin = openBrowser();
@@ -39,7 +64,16 @@ describe("atomic Test reset through the bearer API", () => {
     }
     await api("PATCH", "/api/preferences", { key: randomUUID(), body: { locale: "pl", theme: "dark" } }, userSecrets[0]);
     expect((await write("PATCH", "/api/tenants/test", { readOnly: false })).status).toBe(200);
-    expect((await write("POST", "/api/tenants/prod/materials", { type: "raw", description: "reset-api keep Prod", baseUnit: "kg" })).status).toBe(200);
+    prod.material = (await created("/api/tenants/prod/materials", { type: "raw", description: "reset-api keep Prod", baseUnit: "kg" })).id;
+    prod.source = (await created("/api/tenants/prod/locations", { name: "reset-api source" })).id;
+    prod.destination = (await created("/api/tenants/prod/locations", { name: "reset-api destination" })).id;
+    prod.supplier = (await created("/api/tenants/prod/suppliers", { name: "reset-api supplier" })).id;
+    await created("/api/tenants/prod/stock/corrections", { material: prod.material, location: prod.source, quantity: "10", unit: "kg", reason: "reset-api count" });
+    prod.transfer = (await created("/api/tenants/prod/transfers", { material: prod.material, source: prod.source, destination: prod.destination,
+      quantity: "4", unit: "kg", plannedDispatch: today(), plannedArrival: today() })).id;
+    await created(`/api/tenants/prod/transfers/${prod.transfer}/dispatches`, { quantity: "4", unit: "kg" });
+    prod.order = (await created("/api/tenants/prod/purchase-orders", { supplier: prod.supplier, location: prod.source,
+      lines: [{ material: prod.material, quantity: "5", unit: "kg", plannedDate: "2027-01-01" }] })).id;
   });
   afterAll(async () => {
     try {
@@ -65,7 +99,7 @@ describe("atomic Test reset through the bearer API", () => {
     expect((await test()).generation).toBe(generation);
   });
 
-  it.each([false, true])("resets with readOnly=%s, preserving Prod/accounts/sessions/tokens/preferences and the Global audit (TEN-022, TEN-023, TEN-024, TEN-028, AUD-011…013, API-017)", async (readOnly) => {
+  it.each([false, true])("resets with readOnly=%s, restarting every sequence and preserving Prod/accounts/sessions/tokens/preferences and the Global audit (TEN-022…025, TEN-028, TEN-029, AUD-011…013, API-017, E2E-018)", async (readOnly) => {
     await write("PATCH", "/api/tenants/test", { readOnly: false });
     const generation = (await test()).generation;
     const demoOrder = json(await api("GET", "/api/tenants/test/customer-orders/00000001")).data;
@@ -81,10 +115,12 @@ describe("atomic Test reset through the bearer API", () => {
     const preview = json(await write("POST", "/api/tenants/test/import/dry-run", { workbook }, generation)).data as { previewToken: string };
     expect(preview.previewToken).toMatch(/^[a-f0-9]{64}$/);
     await write("PATCH", "/api/tenants/test", { readOnly });
-    const prodBefore = await Promise.all(kinds.map(async (kind) => json(await api("GET", `/api/tenants/prod/${kind}`)).data));
-    const prodMeta = json(await api("GET", "/api/tenants/prod")).data;
-    const prodAudit = json(await api("GET", "/api/tenants/prod/audit")).data;
-    const accountsBefore = (json(await api("GET", "/api/users")).data as { username: string }[]).filter(({ username }) => users.includes(username));
+    const prodBefore = await prodState();
+    // Prod holds stock, a transfer in transit and an open purchase order (TEN-025).
+    expect(prodBefore.stock.map(({ quantity }: { quantity: string }) => quantity)).toEqual(["6.000000", "0.000000"]);
+    expect(prodBefore.transfer).toMatchObject({ id: prod.transfer, inTransit: "4.000000" });
+    expect(prodBefore.order).toMatchObject({ id: prod.order, status: "open" });
+    const accountsBefore = await accounts();
     const preferences = await Promise.all(userSecrets.map(async (token) => json(await api("GET", "/api/preferences", {}, token)).data));
     const globalBefore = (json(await api("GET", "/api/audit?limit=100")).data as AuditPage).entries;
     const key = randomUUID();
@@ -95,21 +131,24 @@ describe("atomic Test reset through the bearer API", () => {
     const fresh = await materials();
     expect(fresh[0]).toMatchObject({ id: "00000001", description: "Steel sheet 2 mm" });
     expect(fresh).toHaveLength(26);
-    // A reset that names no dataset writes the tiny one: less than a page of orders, the first 00000001 again.
-    const orders = json(await api("GET", "/api/tenants/test/customer-orders")).data as { id: string }[];
-    expect(orders.length).toBeGreaterThan(0);
-    expect(orders.length).toBeLessThan(100);
-    expect(orders[0].id).toBe("00000001");
     expect((await api("GET", `/api/tenants/test/customer-orders/${extraId}`)).status).toBe(404);
-    for (const kind of ["locations", "customers", "suppliers", "boms"]) {
-      const rows = json(await api("GET", `/api/tenants/test/${kind}`)).data as { id: string }[];
-      expect(rows[0].id, kind).toBe("00000001");
+    // A reset that names no dataset writes the tiny one, less than a page of each kind; every sequence starts again at 00000001, with no gap (TEN-029).
+    for (const kind of sequenced) {
+      const ids = (await get(`/api/tenants/test/${kind}`) as { id: string }[]).map(({ id }) => id).sort();
+      expect(ids.length, kind).toBeGreaterThan(0);
+      expect(ids.length, kind).toBeLessThan(100);
+      expect(ids, kind).toEqual(sequence(ids.length));
     }
+    const productionOrders = (await get("/api/tenants/test/production-orders") as { id: string }[]).map(({ id }) => id);
+    const completions = (await Promise.all(productionOrders.map((id) => get(`/api/tenants/test/production-orders/${id}/completions`) as Promise<{ id: string }[]>)))
+      .flat().map(({ id }) => id).sort();
+    expect(completions.length).toBeGreaterThan(0);
+    expect(completions).toEqual(sequence(completions.length));
+    // The tiny dataset has no transfers; the first one a client creates is 00000001 (E2E-020 below).
+    expect(await get("/api/tenants/test/transfers")).toEqual([]);
     expect((json(await api("GET", "/api/tenants/test/audit")).data as AuditPage).entries).toEqual([]);
-    expect(await Promise.all(kinds.map(async (kind) => json(await api("GET", `/api/tenants/prod/${kind}`)).data))).toEqual(prodBefore);
-    expect(json(await api("GET", "/api/tenants/prod")).data).toEqual(prodMeta);
-    expect(json(await api("GET", "/api/tenants/prod/audit")).data).toEqual(prodAudit);
-    expect((json(await api("GET", "/api/users")).data as { username: string }[]).filter(({ username }) => users.includes(username))).toEqual(accountsBefore);
+    expect(await prodState()).toEqual(prodBefore);
+    expect(await accounts()).toEqual(accountsBefore);
     expect(await Promise.all(userSecrets.map(async (token) => json(await api("GET", "/api/preferences", {}, token)).data))).toEqual(preferences);
     for (const token of userSecrets) expect(json(await api("GET", "/api/tokens", {}, token)).data).toEqual(expect.arrayContaining([expect.objectContaining({ name: "reset-survivor" })]));
     for (const [index, browser] of people.entries()) {
@@ -117,6 +156,15 @@ describe("atomic Test reset through the bearer API", () => {
       await browser.waitUntil(signedInAs(users[index]));
       expect(await browser.evaluate<string>(`document.querySelector('[data-signed-in-as]').dataset.signedInAs`)).toBe(users[index]);
     }
+    // E2E-018: the user who chose Polish and dark still reads the app, and its help, in Polish and dark.
+    const [polish] = people;
+    await polish.waitUntil(`document.documentElement.lang === "pl" && document.documentElement.classList.contains("dark")`);
+    await polish.waitFor("nav a[href='/help']");
+    expect(await polish.text("nav a[href='/help']")).toBe("Pomoc");
+    await polish.open(`${baseUrl}/help`);
+    await polish.waitFor("section#signing-in");
+    expect(await polish.text("main h1")).toBe("Pomoc");
+    expect(await polish.evaluate<boolean>(`document.documentElement.classList.contains("dark")`)).toBe(true);
     const globalAfter = (json(await api("GET", "/api/audit?limit=100")).data as AuditPage).entries;
     expect(globalAfter[0]).toMatchObject({ action: "tenants.tenant.reset", actor: { username: "admin" }, channel: "api", token: { name: "reset-api-admin" }, after: { dataset: "tiny" } });
     expect(globalAfter.map(({ id }) => id)).toEqual(expect.arrayContaining(globalBefore.slice(0, 99).map(({ id }) => id)));
@@ -131,5 +179,84 @@ describe("atomic Test reset through the bearer API", () => {
     expect(json(staleImport).error.code).toBe("IMPORT_STALE");
     const reused = await api("POST", "/api/tenants/test/materials", { key: oldKey, body: { type: "raw", description: "reset-api new generation", baseUnit: "kg" }, generation: generation + 1 });
     expect(reused.status).toBe(200); expect(json(reused).data.id).toBe("00000027");
+  });
+
+  it("lets a normal user post a Prod goods receipt while the admin resets Test; the receipt alone changes Prod (E2E-010)", async () => {
+    await write("PATCH", "/api/tenants/test", { readOnly: false });
+    const generation = (await test()).generation;
+    // Test has its demo stock and an audit entry of its own to clear.
+    const firstMaterial = (await materials())[0];
+    expect((await write("PATCH", `/api/tenants/test/materials/${firstMaterial.id}`, { version: firstMaterial.version, description: "reset-api E2E-010" }, generation)).status).toBe(200);
+    expect((json(await api("GET", "/api/tenants/test/audit")).data as AuditPage).entries.length).toBeGreaterThan(0);
+    const before = await prodState();
+    const accountsBefore = await accounts();
+
+    const [reset, receipt] = await Promise.all([
+      api("POST", "/api/tenants/test/reset", { key: randomUUID(), body: {}, generation }),
+      api("POST", "/api/tenants/prod/goods-receipts", { key: randomUUID(), body: { purchaseOrder: prod.order, lines: [{ line: 1, quantity: "2", unit: "kg" }] } }, userSecrets[0]),
+    ]);
+
+    expect(reset.status, reset.text).toBe(200);
+    expect(receipt.status, receipt.text).toBe(200);
+    expect(await test()).toMatchObject({ generation: generation + 1, readOnly: false });
+    expect((json(await api("GET", "/api/tenants/test/audit")).data as AuditPage).entries).toEqual([]);
+    expect((await materials())[0]).toMatchObject({ id: "00000001", description: "Steel sheet 2 mm" });
+    const after = await prodState();
+    // The receipt is posted once, by the user, at the order's location; the transfer, the destination and the accounts are untouched.
+    expect(after.order.lines[0]).toMatchObject({ received: "2.000000" });
+    expect(after.stock[0].quantity).toBe("8.000000");
+    expect(after.stock[0].movements.length).toBe(before.stock[0].movements.length + 1);
+    expect(after.stock[1]).toEqual(before.stock[1]);
+    expect(after.transfer).toEqual(before.transfer);
+    expect(after.tenant).toEqual(before.tenant);
+    // Prod's audit only gained the receipt's own entries, the user's, newest first.
+    const ids = (page: AuditPage) => page.entries.map(({ id }) => id);
+    const added = (after.audit as AuditPage).entries.filter(({ id }) => !ids(before.audit).includes(id));
+    expect(added.length).toBeGreaterThan(0);
+    for (const entry of added) expect(entry).toMatchObject({ actor: { username: users[0] }, channel: "api" });
+    expect(ids(after.audit)).toEqual([...added.map(({ id }) => id), ...ids(before.audit)].slice(0, after.audit.entries.length));
+    expect(await accounts()).toEqual(accountsBefore);
+  });
+
+  it("refuses a goods issue an agent retries under the old generation after a reset; G2 stock, issues and Prod are unchanged and the token works on G2 (E2E-020)", async () => {
+    await write("PATCH", "/api/tenants/test", { readOnly: false });
+    const generation = (await test()).generation;
+    // G1: the agent issues what is left on a line of an Open demo shipment, whose ID G2 reuses for the same plan.
+    type Shipment = { id: string; location: string; status: string; lines: { line: number; material: string; toIssue: string }[] };
+    const shipment = (await get("/api/tenants/test/shipments") as Shipment[]).find(({ status, lines }) => status === "open" && Number(lines[0].toIssue) > 0)!;
+    expect(shipment).toBeDefined();
+    const [{ line, material, toIssue }] = shipment.lines;
+    const { location } = shipment;
+    const { baseUnit } = await get(`/api/tenants/test/materials/${material}`);
+    await created("/api/tenants/test/stock/corrections", { material, location, quantity: toIssue, unit: baseUnit, reason: "reset-api agent" }, generation);
+    const key = randomUUID();
+    const body = { shipment: shipment.id, lines: [{ line, quantity: toIssue, unit: baseUnit }] };
+    expect((await api("POST", "/api/tenants/test/goods-issues", { key, body, generation })).status).toBe(200);
+
+    expect((await write("POST", "/api/tenants/test/reset", {}, generation)).status).toBe(200);
+    const g2 = async () => ({
+      material: await get(`/api/tenants/test/materials/${material}`),
+      stock: await get(`/api/tenants/test/stock?material=${material}&location=${location}`),
+      issues: await get("/api/tenants/test/goods-issues"),
+      shipment: await get(`/api/tenants/test/shipments/${shipment.id}`),
+    });
+    const before = await g2();
+    // G2 has the same shipment again, nothing issued on it yet: a retry that got through would land on it.
+    expect(before.shipment).toMatchObject({ id: shipment.id, status: "open", lines: expect.arrayContaining([expect.objectContaining({ line, toIssue })]) });
+    const prodBefore = await prodState();
+
+    // The agent retries its G1 request with the same key, and with a new one: both are refused before anything is written.
+    for (const retry of [key, randomUUID()]) {
+      const response = await api("POST", "/api/tenants/test/goods-issues", { key: retry, body, generation });
+      expect(response.status).toBe(409);
+      expect(json(response).error.code).toBe("GENERATION_STALE");
+    }
+    expect(await g2()).toEqual(before);
+    expect(await prodState()).toEqual(prodBefore);
+    // The same token is still good for G2: the first transfer of the new generation is 00000001.
+    const destination = (await get("/api/tenants/test/locations") as { id: string }[]).find(({ id }) => id !== location)!.id;
+    const transfer = await created("/api/tenants/test/transfers", { material, source: location, destination, quantity: "1", unit: baseUnit,
+      plannedDispatch: today(), plannedArrival: today() }, generation + 1);
+    expect(transfer.id).toBe("00000001");
   });
 });
