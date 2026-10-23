@@ -1,5 +1,6 @@
 import type { ForecastView, Locale, MaterialSummary, NamedRecordView } from "@cpg/core";
 import type { Messages } from "../../i18n/messages/en";
+import { PageLinks } from "../layout/page-links";
 import { locationOptions, materialOptions, withReferences } from "../master-data/references";
 import { AddForecastDialog } from "./add-forecast-dialog";
 import { ForecastsFilter } from "./forecasts-filter";
@@ -15,14 +16,17 @@ interface ForecastsScreenProps {
   locations: NamedRecordView[];
   /** The material and location the list is narrowed to, if any. */
   filter: { material?: string; location?: string };
+  /** The page shown, 1-based, and how many there are. */
+  page: number;
+  pages: number;
   locale: Locale;
   messages: Messages;
   /** Only the admin gets Add and the row menus (TEN-004), and only while the tenant isn't read-only (R05). */
   admin: boolean;
 }
 
-/** The body of the forecasts page (E08-S03): heading, intro, the filter, the admin's Add forecast, and the list. */
-export function ForecastsScreen({ tenant, forecasts, materials, locations, filter, locale, messages, admin }: ForecastsScreenProps) {
+/** The body of the forecasts page (E08-S03): heading, intro, the filter, the admin's Add forecast, and a page of the list. */
+export function ForecastsScreen({ tenant, forecasts, materials, locations, filter, page, pages, locale, messages, admin }: ForecastsScreenProps) {
   const labels = forecastsLabels(messages);
   const editable = admin && !tenant.readOnly;
   const rows = withReferences(forecasts, materials, locations);
@@ -54,7 +58,17 @@ export function ForecastsScreen({ tenant, forecasts, materials, locations, filte
         labels={labels}
         editable={editable}
         filtered={filter.material !== undefined || filter.location !== undefined}
+        pagination={<PageLinks page={page} pages={pages} labels={labels} href={(target) => pageHref(tenant.code, filter, target)} />}
       />
     </div>
   );
+}
+
+/** A page of the list, keeping the filter: `/admin/test/forecasts?material=00000005&page=2`. */
+function pageHref(tenant: string, filter: { material?: string; location?: string }, page: number): string {
+  const query = new URLSearchParams();
+  if (filter.material !== undefined) query.set("material", filter.material);
+  if (filter.location !== undefined) query.set("location", filter.location);
+  query.set("page", String(page));
+  return `/admin/${tenant}/forecasts?${query}`;
 }

@@ -3,6 +3,7 @@ import { calendarDateSchema } from "../dates/calendar-date.schema";
 import { unitSchema } from "../materials/material-fields.schema";
 import { locationReferenceSchema, materialReferenceSchema } from "../planning-parameters/planning-parameter-fields.schema";
 import { quantitySchema } from "../quantities/quantity.schema";
+import { pageSchema } from "../shipments/shipment.schema";
 import { versionSchema } from "../version.schema";
 
 /**
@@ -72,3 +73,9 @@ export const forecastFilterSchema = z.object({
 });
 
 export type ForecastFilter = z.infer<typeof forecastFilterSchema>;
+
+/**
+ * `GET /api/tenants/{tenant}/forecasts`: the filter and a 1-based `page` of 100 (`DOCUMENT_PAGE_SIZE`),
+ * the first when left out.
+ */
+export const forecastListQuerySchema = forecastFilterSchema.extend({ page: pageSchema });
