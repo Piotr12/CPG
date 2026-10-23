@@ -122,7 +122,7 @@ const en: Record<HelpTopicId, HelpText> = {
       "The administrator opens this page from Administration → Tenants in the sidebar, next to Users, and also sees the Database card here. The card shows where CPG keeps its data, how many migrations are applied, whether any are still pending, and how many settings are stored.",
       "A pending migration normally means CPG is still starting. If it stays, tell whoever runs CPG.",
       "The administrator's Read-only card makes Test or Prod read-only, and writable again, after a confirmation. Each tenant has its own flag, and every change is kept in the Global audit. A read-only tenant shows Read-only on the chooser, a lock on its side of the TEST | PROD switch, and a banner on its pages.",
-      "Reset Test, on this page for the administrator, permanently replaces Test business data and its audit with a fresh demonstration dataset, generated for today, and a new generation; writing its two years of history takes several seconds. It restores the previous read-only flag. Prod, users, sessions, tokens, preferences and Global audit survive. Old Test forms must reload. The API is POST /api/tenants/test/reset with an empty object, an admin bearer token, Idempotency-Key and the current Dataset-Generation. After a lost response, fetch the new generation and retry the same key, never a new one.",
+      "Reset Test, on this page for the administrator, permanently replaces Test business data and its audit with a fresh demonstration dataset, generated for today, and a new generation. Pick the dataset first: Tiny, two months of history, is written in a moment and is what a new installation starts with; Realistic, two years of history, takes up to half a minute, and CPG answers nobody else until it is done. It restores the previous read-only flag. Prod, users, sessions, tokens, preferences and Global audit survive. Old Test forms must reload. The API is POST /api/tenants/test/reset with an empty object for tiny or { \"dataset\": \"realistic\" }, an admin bearer token, Idempotency-Key and the current Dataset-Generation. After a lost response, fetch the new generation and retry the same key, never a new one.",
       "Open Test or Open Prod takes you to that tenant's business data.",
     ],
   },
@@ -272,6 +272,7 @@ const en: Record<HelpTopicId, HelpText> = {
       "A purchase order converts a requisition, wholly or in parts, possibly to different suppliers. Converted shows how much orders have taken so far and Outstanding what is left; when everything is converted the requisition becomes Completed.",
       "A requisition is planned supply only: it never changes stock. The quantity can be entered in any unit the material converts; CPG stores it in the base unit and keeps what was entered.",
       "Every account can create and read requisitions, with Create requisition here and through the API; only active materials and locations can be picked. A read-only tenant refuses new ones. Every change appears in the tenant's audit.",
+      "Change date on an Open requisition sets a new required date, here or through the API with PATCH, at the version you loaded; the material, location and quantity never change. A read-only tenant refuses it. Every change appears in the tenant's audit.",
     ],
   },
   "purchase-orders": {
@@ -291,7 +292,7 @@ const en: Record<HelpTopicId, HelpText> = {
       "Choose an order's ID to open its page: its supplier, location, status and every line, with the quantity in the material's base unit, the unit it was entered in, the planned date and the requisition it converted, if any.",
       "Each line shows what has been received and what is still outstanding. Post goods receipt records what arrived: a quantity per line, in any unit the material converts, leaving the other lines empty. Stock rises at the order's location with today's date, and the lines and the order update in the same step, or nothing is posted.",
       "A receipt may be partial, repeated or larger than what is outstanding: an excess is accepted and named in a warning. Once every line has received its quantity the order is Completed and takes no more receipts. Receipts can't be changed; they are listed under Goods receipts, newest first.",
-      "Planned dates can be changed through the API with PATCH, at the version you loaded, while the order is Open; each change appears in the tenant's audit. The supplier, the location and a line's material, unit and quantity never change.",
+      "Change date on an Open line sets its planned date, also after receipts, while the order is Open. The API changes planned dates with PATCH, several lines at once if needed. Both work at the version you loaded, and each change appears in the tenant's audit. The supplier, the location and a line's material, unit and quantity never change.",
     ],
   },
   transfers: {
@@ -412,7 +413,7 @@ const pl: Record<HelpTopicId, HelpText> = {
   "admin-home": {
     title: "Kontrola jaskini",
     body: [
-      "Reset środowiska Test jest dostępny tu tylko dla administratora. Trwale zastępuje dane biznesowe i audyt środowiska Test świeżym zbiorem danych demonstracyjnych, wygenerowanym na dziś, w nowej generacji; zapis jego dwuletniej historii trwa kilka sekund. Przywraca poprzednią flagę tylko do odczytu. Prod, użytkownicy, sesje, tokeny, preferencje i audyt globalny pozostają bez zmian. Stare formularze Test trzeba odświeżyć. API: POST /api/tenants/test/reset z pustym obiektem, tokenem administratora, Idempotency-Key i aktualnym Dataset-Generation. Po utracie odpowiedzi pobierz nową generację i ponów ten sam klucz, nigdy nowy.",
+      "Reset środowiska Test jest dostępny tu tylko dla administratora. Trwale zastępuje dane biznesowe i audyt środowiska Test świeżym zbiorem danych demonstracyjnych, wygenerowanym na dziś, w nowej generacji. Najpierw wybierz zbiór: mały, z dwoma miesiącami historii, zapisuje się w chwilę i od niego zaczyna nowa instalacja; realistyczny, z dwoma latami historii, zapisuje się do pół minuty, a w tym czasie CPG nie odpowiada nikomu innemu. Przywraca poprzednią flagę tylko do odczytu. Prod, użytkownicy, sesje, tokeny, preferencje i audyt globalny pozostają bez zmian. Stare formularze Test trzeba odświeżyć. API: POST /api/tenants/test/reset z pustym obiektem dla małego zbioru lub { \"dataset\": \"realistic\" }, tokenem administratora, Idempotency-Key i aktualnym Dataset-Generation. Po utracie odpowiedzi pobierz nową generację i ponów ten sam klucz, nigdy nowy.",
       "Kontrola jaskini to strona, na którą trafia każde konto po zalogowaniu: wybierz tu środowisko Test lub Prod. Język i motyw, tokeny API oraz przycisk Wyloguj są na karcie konta na dole panelu bocznego. Nie ma tu zmiany hasła: hasła ustawia tylko administrator.",
       "Administrator otwiera tę stronę pozycją Administracja → Środowiska w panelu bocznym, obok Użytkowników, i widzi tu też kartę Baza danych. Karta pokazuje, gdzie CPG przechowuje dane, ile migracji zastosowano, czy jakieś jeszcze oczekują i ile ustawień zapisano.",
       "Oczekująca migracja zwykle oznacza, że CPG jeszcze się uruchamia. Jeśli nie znika, powiedz o tym osobie, która utrzymuje CPG.",
@@ -566,6 +567,7 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Zamówienie zakupu przekształca zapotrzebowanie w całości lub w częściach, także do różnych dostawców. Przekształcono pokazuje, ile zabrały dotąd zamówienia, a Pozostało to, co zostało; gdy wszystko przekształcono, zapotrzebowanie staje się Zrealizowane.",
       "Zapotrzebowanie to tylko planowana podaż: nigdy nie zmienia stanu magazynowego. Ilość można wpisać w każdej jednostce, którą materiał przelicza; CPG zapisuje ją w jednostce bazowej i zachowuje to, co wpisano.",
       "Zapotrzebowania może tworzyć i przeglądać każde konto, przyciskiem Utwórz zapotrzebowanie tutaj i przez API; wybrać można tylko aktywne materiały i lokalizacje. Środowisko tylko do odczytu odrzuca nowe. Każda zmiana pojawia się w audycie środowiska.",
+      "Zmień datę przy otwartym zapotrzebowaniu ustawia nowy wymagany termin, tutaj lub przez API poleceniem PATCH, w wersji, którą wczytano; materiał, lokalizacja i ilość nigdy się nie zmieniają. Środowisko tylko do odczytu odrzuca zmianę. Każda zmiana pojawia się w audycie środowiska.",
     ],
   },
   "purchase-orders": {
@@ -585,7 +587,7 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Wybierz ID zamówienia, aby otworzyć jego stronę: dostawca, lokalizacja, status i każda pozycja, z ilością w jednostce bazowej materiału, jednostką, w której ją wpisano, planowaną datą i zapotrzebowaniem, które przekształciła, jeśli jest.",
       "Każda pozycja pokazuje, ile przyjęto i ile jeszcze pozostało. Zaksięguj przyjęcie towaru zapisuje, co dotarło: ilość dla pozycji, w dowolnej jednostce, którą materiał przelicza, pozostałe pozycje zostają puste. Zapas w lokalizacji zamówienia rośnie z dzisiejszą datą, a pozycje i zamówienie zmieniają się w tym samym kroku albo nic nie zostaje zaksięgowane.",
       "Przyjęcie może być częściowe, powtórzone albo większe niż to, co pozostało: nadwyżka zostaje przyjęta i wskazana w ostrzeżeniu. Gdy każda pozycja przyjmie swoją ilość, zamówienie jest Zrealizowane i nie przyjmuje kolejnych dostaw. Przyjęć nie można zmieniać; są wymienione w sekcji Przyjęcia towaru, od najnowszego.",
-      "Planowane daty można zmienić przez API poleceniem PATCH, w wersji, którą wczytano, dopóki zamówienie jest Otwarte; każda zmiana pojawia się w audycie środowiska. Dostawca, lokalizacja oraz materiał, jednostka i ilość pozycji nigdy się nie zmieniają.",
+      "Zmień datę przy otwartej pozycji ustawia jej planowaną datę, także po przyjęciach, dopóki zamówienie jest Otwarte. API zmienia planowane daty poleceniem PATCH, także kilku pozycji naraz. Oba działają w wersji, którą wczytano, a każda zmiana pojawia się w audycie środowiska. Dostawca, lokalizacja oraz materiał, jednostka i ilość pozycji nigdy się nie zmieniają.",
     ],
   },
   transfers: {

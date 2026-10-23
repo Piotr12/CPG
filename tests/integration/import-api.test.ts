@@ -32,7 +32,7 @@ interface Report {
   errors: { sheet: string; row: number; column: string | null; code: string }[];
 }
 
-// The import through the API (spec .ai/specs/2026-10-20--0908UTC-master-data-bom-import.md, R07):
+// The import through the API (spec .ai/specs/implemented/2026-10-20--0908UTC-master-data-bom-import.md, R07):
 // keyed, gated and admin-only like every tenant write. Everything is in Prod, by this file's own names.
 describe("the master-data and BOM import through the API", () => {
   let admin: Browser;

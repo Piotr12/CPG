@@ -25,6 +25,8 @@ Every story of epics #73 (E07), #74 (E08), #75 (E09), #76 (E10), #77 (E11) and #
 
 - 13:40 — The catalogue pass changed 238 rows: 196 `Passed (automated)` and 42 `Partially verified`. Each open half cites #139–#145 or slice 3 (#14). Where reports conflicted, the more conservative status won: LFC-018 is partial because of #139. REV-011/014 are Passed: their Given/When/Then are asserted by the E11 tests, and the variance-report half is noted against #145.
 - After PR #146 merged — The owner asked for the #84 leftover as an issue: filed #147 (E08-S05, shipment edit and cancel), added it to epic #74, and pointed the shipments spec note and the #84 run log at it.
+- Later — The owner asked for every leftover to be tracked: filed #152–#155, extended #140, and fixed the stale spec paths (follow-up docs PR).
+- Later — #158's integration job failed in `tests/integration/test-reset.test.ts`, the same two UI cases that fail on `main` since #136 (the reset takes ~25–30 s on the CI runner against a 15 s budget). Not caused by this work; filed as #163 in epic #78 rather than loosening the test, because the time it exposes is a budget the owner set.
 
 ## Changes
 
@@ -63,4 +65,15 @@ Every story of epics #73 (E07), #74 (E08), #75 (E09), #76 (E10), #77 (E11) and #
 - None of the six epics closes until its new story ships: #139 (E07), #140 and #147 (E08), #141 and #142 (E09), #143 (E10), #144 (E11), #145 (E13). E09 also has the open follow-ups #115 and #138.
 - Owner decisions:
   - the QA labels on the merged story PRs. Most still carry `review`/`needs-qa` with no human QA recorded.
-- No issue tracks the development-mode hydration limitation noted in #90/PR #123.
+- Smaller leftovers, filed after the owner asked for every one to be tracked:
+  - #152 (E13-S05): audit filter values the select doesn't list, alerts present on first load, browser checks of reversal entries and report footers;
+  - #153 (E10-S04): "Added" vs "Extra", plus the two unconfirmed completion deviations;
+  - #154: the older lists move to `PageLinks`;
+  - #155: development-mode hydration;
+  - #140 also gained the retitling of tests that cite scenarios they don't assert.
+- This PR also points every stale `.ai/specs/…` path in run logs, plans and integration-test comments at `implemented/`, for every slice.
+- Accepted by design, not tracked (out of scope in their specs, or accepted in review):
+  - stock import: exporting balances, a dry run on a read-only tenant, historical posting dates;
+  - transfers: quantity edits, demo transfers;
+  - reports: no shared read snapshot, no Reports sidebar group, no "History" links on record screens;
+  - no manual stress test of a 100-line confirmation dialog.

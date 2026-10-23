@@ -1,6 +1,5 @@
-import { asValue } from "awilix";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { REDUCED_TEST_TENANT_CONFIG } from "../../../../../tests/setup/demo-fixtures";
+import { TEST_DATASET_CONFIGS } from "../../domain/demo/test-datasets";
 import { scopeForTenant } from "../../container/tenant-scope";
 import { generateTestTenantDataset } from "../../domain/demo/generate-dataset";
 import { prepareImport } from "../../domain/imports/prepare-import";
@@ -378,8 +377,7 @@ describe("each master sheet", () => {
 it("invalidates an old preview even when the request scope predates reset and the transaction uses the new generation", async () => {
   const workbook = [sheet("materials", [null, "raw", "same deterministic input", "kg", null])];
   // The reset writes the dataset's materials again, so the workbook's new material gets the same ID in both generations.
-  kit.container.register({ testTenantConfig: asValue(REDUCED_TEST_TENANT_CONFIG) });
-  const { masters } = generateTestTenantDataset(REDUCED_TEST_TENANT_CONFIG, new Date().toISOString().slice(0, 10));
+  const { masters } = generateTestTenantDataset(TEST_DATASET_CONFIGS.tiny, new Date().toISOString().slice(0, 10));
   await (await scopeForTenant(kit.container, "test")).cradle.materialService.seedDemo(masters.materials);
   const old = await kit.dryRun(workbook, "test");
   const captured = await scopeForTenant(kit.container, "test");

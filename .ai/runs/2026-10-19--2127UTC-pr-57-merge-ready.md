@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-19 (UTC)
 **Agent:** Claude Code (Opus 5.5) via cezar, `om-auto-fix-pr 57`
-**Spec:** `.ai/specs/2026-10-19--2018UTC-read-only-tenants.md`
+**Spec:** `.ai/specs/implemented/2026-10-19--2018UTC-read-only-tenants.md`
 **Status:** done (PR ready for human review and QA; CI result in the PR comments)
 
 ## Goal

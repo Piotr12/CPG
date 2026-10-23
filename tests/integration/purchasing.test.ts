@@ -26,7 +26,7 @@ async function rows(browser: Browser, path: string): Promise<string[][]> {
   );
 }
 
-// E09-S01: the purchasing screens in a real browser. The Test tenant is seeded with the generated
+// E09-S01: the purchasing screens in a real browser. The Test tenant is seeded with the tiny generated
 // dataset's requisitions and orders (D06); a normal user creates a requisition in Prod, in the UI.
 describe("purchase requisitions and orders in the UI", () => {
   let admin: Browser;
@@ -61,35 +61,24 @@ describe("purchase requisitions and orders in the UI", () => {
     ]);
   });
 
-  it("pages the dataset's orders by 100, and opens the open one that converts a requisition, with its dated lines", async () => {
+  it("lists the dataset's orders, and opens the open one that converts a requisition, with its dated lines", async () => {
+    // The tiny dataset's orders fit one page; paging them is test-reset-realistic.test.ts's.
     const first = await rows(una, "/admin/test/purchase-orders");
-    expect(first).toHaveLength(100);
+    expect(first.length).toBeGreaterThan(0);
+    expect(first.length).toBeLessThanOrEqual(100);
     expect(first[0][0]).toBe("00000001");
     expect(first[0].at(-1)).toBe("Completed");
-    // Page 1 shows "Page 1 of N" with a Next link only.
-    const nav = `document.querySelector('main nav[aria-label="Purchase order pages"]')`;
-    await una.waitUntil(`${nav} && !${nav}.closest("[hidden]")`);
-    const label = await una.evaluate<string>(`${nav}.querySelector("span").textContent`);
-    const pages = Number(/^Page 1 of (\d+)$/.exec(label)![1]);
-    expect(pages).toBeGreaterThan(1);
-    expect(await una.evaluate<string[]>(`[...${nav}.querySelectorAll("a")].map((a) => a.textContent.trim())`)).toEqual(["Next"]);
-
-    const second = await rows(una, "/admin/test/purchase-orders?page=2");
-    expect(second[0][0]).toBe(String(Number(first[99][0]) + 1).padStart(8, "0"));
 
     // Next month's order of 2 mm sheet for Wrocław converts requisition 00000001: it is one of that pair's open
-    // orders, among the latest, so walk the pages from the last.
+    // orders, among the latest, so look from the last.
     let converting: string[] | undefined;
-    for (let page = pages; page >= 1 && !converting; page--) {
-      const table = await rows(una, `/admin/test/purchase-orders?page=${page}`);
-      const candidates = table
-        .filter((row) => row[1] === "00000001 Steel Service Centre Sp. z o.o." && row[2] === "00000001 Main plant, Wrocław" && row.at(-1) === "Open")
-        .map(([id]) => id)
-        .reverse();
-      for (const id of candidates) {
-        converting = (await rows(una, `/admin/test/purchase-orders/${id}`)).find((line) => line[5] === "00000001");
-        if (converting) break;
-      }
+    const candidates = first
+      .filter((row) => row[1] === "00000001 Steel Service Centre Sp. z o.o." && row[2] === "00000001 Main plant, Wrocław" && row.at(-1) === "Open")
+      .map(([id]) => id)
+      .reverse();
+    for (const id of candidates) {
+      converting = (await rows(una, `/admin/test/purchase-orders/${id}`)).find((line) => line[5] === "00000001");
+      if (converting) break;
     }
     expect(converting!.slice(0, 2)).toEqual(["1", "00000001 Steel sheet 2 mm"]);
     expect(converting![4]).toMatch(/^\d{4}-\d{2}-\d{2}$/);
@@ -116,6 +105,62 @@ describe("purchase requisitions and orders in the UI", () => {
     expect(mine![0]).toMatch(/^\d{8}$/);
     expect(mine!.join(" ")).toContain("Open");
     expect(mine!.join(" ")).toContain("100");
+  });
+
+  it("lets a normal user change an Open requisition's required date on screen, which the audit records (#142)", async () => {
+    // At 1280 × 800 the Required column shows and the row's actions sit inside the table, unscrolled.
+    await una.setViewport(1280, 800);
+    const id = (await rows(una, "/admin/prod/purchase-requisitions")).find((row) => row.join(" ").includes("buy steel"))![0];
+    const label = `Change date — Purchase requisitions ${id}`;
+    const trigger = `document.querySelector(${JSON.stringify(`main button[aria-label="${label}"]`)})`;
+    await una.waitUntil(ready(trigger));
+    expect(await una.evaluate<boolean>(`(() => {
+      const box = ${trigger}.getBoundingClientRect();
+      const table = ${trigger}.closest("[data-slot=table-container]");
+      return box.right <= innerWidth && table.scrollWidth <= table.clientWidth;
+    })()`)).toBe(true);
+
+    await una.clickRole("button", label);
+    await una.waitFor("[role=dialog]");
+    expect(await una.text("[role=dialog] h2")).toBe(`Change required date — Purchase requisitions ${id}`);
+    expect(await una.fillDate("[role=dialog] [name=requiredDate]", "2027-04-15")).toBe("2027-04-15");
+    await una.click("[role=dialog] button[type=submit]");
+    await una.waitUntil(closed);
+
+    const mine = (await rows(una, "/admin/prod/purchase-requisitions")).find((row) => row[0] === id)!;
+    expect(mine[6]).toBe("2027-04-15");
+    expect(mine[7]).toBe("Open");
+
+    await una.open(`${baseUrl}/admin/prod/audit?subjectType=PurchaseRequisition&subjectId=${id}`);
+    await una.waitUntil(`document.querySelector("main table") && !document.querySelector("main table").closest("[hidden]")`);
+    const entries = await una.evaluate<string[]>(
+      `[...document.querySelectorAll("main tbody tr")].filter((row) => !row.closest("[hidden]")).map((row) => row.innerText.replace(/\\s+/g, " "))`,
+    );
+    expect(entries).toHaveLength(2);
+    expect(entries[0]).toContain("Purchase requisition changed");
+    expect(entries[0]).toContain(USERNAME);
+    expect(entries[0]).toContain("2027-03-01 → 2027-04-15");
+
+    // At phone width the page itself never scrolls sideways: the row's actions are reached in the table's own
+    // scroll, inside the table's box and the window, and still open the dialog.
+    try {
+      await una.setViewport(390, 844);
+      await rows(una, "/admin/prod/purchase-requisitions");
+      await una.waitUntil(ready(trigger));
+      expect(await una.evaluate<boolean>(`(${trigger}.scrollIntoView({ block: "center", inline: "center" }), true)`)).toBe(true);
+      expect(await una.evaluate<boolean>(`(() => {
+        const box = ${trigger}.getBoundingClientRect();
+        const table = ${trigger}.closest("[data-slot=table-container]").getBoundingClientRect();
+        return document.documentElement.scrollWidth <= innerWidth && box.left >= table.left && box.right <= table.right && box.right <= innerWidth;
+      })()`)).toBe(true);
+      await una.clickRole("button", label);
+      await una.waitFor("[role=dialog]");
+      expect(await una.text("[role=dialog] h2")).toBe(`Change required date — Purchase requisitions ${id}`);
+      await una.clickRole("button", "Cancel");
+      await una.waitUntil(`${closed} && !document.querySelector("[data-slot=dialog-overlay]")`);
+    } finally {
+      await una.setViewport(1280, 800);
+    }
   });
 });
 

@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-19 10:53 UTC
 **Agent:** Claude Code (Opus 5.5) via cezar, `om-auto-fix-issue 17` → `om-auto-write-spec 17` → `om-spec-writing --autonomous`
-**Spec:** `.ai/specs/2026-10-19--1053UTC-api-tokens.md` (written in this run)
+**Spec:** `.ai/specs/implemented/2026-10-19--1053UTC-api-tokens.md` (written in this run)
 **Status:** done (spec PR open)
 
 ## Goal
@@ -28,7 +28,7 @@ Write the spec for E01-S03 (#17) and open the design-only spec PR. Then `om-auto
 
 ## Changes
 
-- `.ai/specs/2026-10-19--1053UTC-api-tokens.md` (new spec)
+- `.ai/specs/implemented/2026-10-19--1053UTC-api-tokens.md` (new spec)
 - `.ai/specs/assets/api-tokens/` (1 current screenshot, 4 mockups with their HTML)
 
 ## Verification

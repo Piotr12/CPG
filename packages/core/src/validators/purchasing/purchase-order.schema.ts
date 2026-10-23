@@ -81,3 +81,9 @@ export const orderUpdateBodySchema = z.object({
 
 /** `GET /api/tenants/{tenant}/purchase-orders`: a 1-based `?page=` (additive; the first page when absent), as the shipments list takes it. */
 export const purchaseOrderListQuerySchema = z.object({ page: pageSchema });
+
+/**
+ * A purchase-order line's Change date form (spec 2026-10-21--2036UTC-purchasing-date-edits): only the
+ * new planned date. The action supplies the line and the version the dialog opened with.
+ */
+export const orderLineDateSchema = lineDateSchema.pick({ plannedDate: true });
