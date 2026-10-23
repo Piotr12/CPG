@@ -27,6 +27,7 @@ import { UNIT_NOT_CONVERTIBLE_MESSAGE } from "../../validators/boms/bom-fields.s
 import { ISSUE_LINE_SHIPMENT_MESSAGE, ISSUE_NO_SUCH_LINE_MESSAGE, ISSUE_QUANTITY_MESSAGE, type IssueCreateInput } from "../../validators/goods-issues/goods-issue.schema";
 import type { AuditActor } from "../audit/actor";
 import { CustomerOrderService, type CustomerOrderView } from "../customer-orders/customer-order.service";
+import { CustomerService } from "../customers/customer.service";
 import { ShipmentService, type ShipmentView } from "../shipments/shipment.service";
 import { StockService } from "../stock/stock.service";
 import { TransferService } from "../transfers/transfer.service";
@@ -175,6 +176,39 @@ describe("GoodsIssueService", () => {
       expect(await orders().get(order.id)).toMatchObject({ status: "completed", lines: [{ status: "completed" }, { fulfilled: "30.000000", status: "completed" }] });
       expect((await shipments().get(shipment.id)).status).toBe("completed");
       await expect(service().post(issueOf(shipment, each(2, "1")), ACTOR)).rejects.toMatchObject({ code: "SHIPMENT_NOT_OPEN" });
+    });
+
+    it("ships and issues an Open order whose customer was deactivated after it was placed, while a new order is refused (SAL-025, LFC-020)", async () => {
+      await count("00000001", "100");
+      const order = await orders().create(SIXTY, ACTOR);
+      await new CustomerService({ em: scoped() }).update("00000001", { active: false }, 1, ACTOR);
+
+      const shipment = await shipAll(order);
+      const issue = await service().post(issueOf(shipment, each(1, "20")), ACTOR);
+
+      expect(issue.lines).toMatchObject([{ quantity: "20.000000" }]);
+      expect(await orders().get(order.id)).toMatchObject({ status: "open", lines: [{ fulfilled: "20.000000", status: "open" }] });
+      expect((await stock("00000001")).quantity).toBe("80.000000");
+      await expect(orders().create(SIXTY, ACTOR)).rejects.toMatchObject({ code: "CUSTOMER_INACTIVE" });
+    });
+
+    it("leaves a completed order Completed and fulfilled when a reasoned positive correction returns its goods, with no return document (SAL-024, INV-017, N02)", async () => {
+      await count("00000001", "100");
+      const order = await orders().create(SIXTY, ACTOR);
+      const shipment = await shipAll(order);
+      await service().post(issueOf(shipment, each(1, "60")), ACTOR);
+      const completed = await orders().get(order.id);
+      expect(completed).toMatchObject({ status: "completed", lines: [{ fulfilled: "60.000000", status: "completed" }] });
+
+      await new StockService({ em: scoped() }).correct(
+        { material: "00000001", location: "00000001", quantity: "5", unit: "each", reason: "Physical customer return" },
+        ACTOR,
+      );
+
+      expect((await stock("00000001")).quantity).toBe("45.000000");
+      expect(await orders().get(order.id)).toEqual(completed);
+      expect((await shipments().get(shipment.id)).status).toBe("completed");
+      expect(await scoped().count(GoodsIssue, {})).toBe(1);
     });
 
     it("refuses beyond a shipment's plan whatever the stock, and beyond the order line across shipments (SAL-018, spec Q5)", async () => {

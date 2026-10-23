@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mockup — Change date on a requisition row</title>
+<style>
+  body { margin: 0; font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: #171717; background: #fff; font-size: 14px; }
+  main { padding: 32px 40px; max-width: 1180px; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 16px; }
+  p.intro { color: #737373; margin: 0 0 20px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-weight: 500; padding: 10px 8px; border-bottom: 1px solid #e5e5e5; }
+  td { padding: 12px 8px; border-bottom: 1px solid #e5e5e5; vertical-align: middle; }
+  .mono { font-family: ui-monospace, Menlo, monospace; }
+  .r { text-align: right; }
+  .badge { display: inline-block; border: 1px solid #e5e5e5; border-radius: 999px; padding: 1px 8px; font-size: 12px; background: #f5f5f5; }
+  .btn { display: inline-block; border: 1px solid #e5e5e5; border-radius: 8px; padding: 6px 12px; background: #fff; font-size: 14px; }
+  .btn.new { outline: 2px dashed #f59e0b; outline-offset: 2px; }
+  .btn.primary { background: #171717; color: #fff; border-color: #171717; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; }
+  .dialog { background: #fff; border-radius: 12px; width: 440px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+  .dialog h2 { font-size: 18px; margin: 0 0 6px; }
+  .dialog p { color: #737373; margin: 0 0 18px; }
+  label { display: block; font-weight: 500; margin-bottom: 6px; }
+  input { width: 100%; box-sizing: border-box; border: 1px solid #e5e5e5; border-radius: 8px; padding: 8px 10px; font-size: 14px; }
+  .buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+  .note { position: fixed; left: 40px; bottom: 16px; color: #92400e; font-size: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Purchase requisitions — Test</h1>
+  <p class="intro">A requisition says what is needed, where and by when. Purchase orders convert it, in one or more steps.</p>
+  <table>
+    <thead><tr><th>Requisition</th><th>Material</th><th>Quantity</th><th class="r">Converted</th><th>Required</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">00000002</td><td><span class="mono">00000009</span> Powder coat, grey RAL 7035</td><td class="r">50 kg</td><td class="r">50 kg</td><td>2026-11-02</td><td><span class="badge">Completed</span></td><td></td></tr>
+      <tr><td class="mono">00000003</td><td><span class="mono">00000007</span> Steel sheet 1.0 mm</td><td class="r">1000 kg</td><td class="r">0 kg</td><td>2026-11-09</td><td><span class="badge">Open</span></td><td><div class="actions"><span class="btn new">Change date</span><span class="btn">Cancel</span></div></td></tr>
+      <tr><td class="mono">00000004</td><td><span class="mono">00000013</span> Galvanised steel sheet 0.8 mm</td><td class="r">500 kg</td><td class="r">200 kg</td><td>2026-11-12</td><td><span class="badge">Open</span></td><td><div class="actions"><span class="btn new">Change date</span><span class="btn">Close Early</span></div></td></tr>
+    </tbody>
+  </table>
+</main>
+<div class="overlay">
+  <div class="dialog" role="dialog" aria-label="Change required date — Purchase requisitions 00000003">
+    <h2>Change required date — Purchase requisitions 00000003</h2>
+    <p>Only the required date changes. The material, location and quantity stay as they are.</p>
+    <label for="d">Required by</label>
+    <input id="d" type="text" value="2026-11-16">
+    <div class="buttons"><span class="btn">Cancel</span><span class="btn primary">Save</span></div>
+  </div>
+</div>
+<div class="note">Illustrative mockup — dashed outline marks the new control.</div>
+</body>
+</html>

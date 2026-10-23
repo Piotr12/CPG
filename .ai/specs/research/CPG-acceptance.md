@@ -1304,18 +1304,18 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### SAL-024 — No customer-return workflow
 
-**Priority:** P1 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/stock.test.ts` (a normal user's +0.5 "Physical customer return" correction raises stock); no return or credit entity exists (N02). That a completed order stays fulfilled after the correction is not asserted yet (#140). E07-S01, #80.
+- **Evidence:** `packages/core/src/services/goods-issues/goods-issue.service.test.ts` and `tests/integration/shipments-api.test.ts` (after a completed order, a reasoned +5 "Physical customer return" correction raises stock; the order stays Completed and equal to before, with its fulfilled quantities, and no further goods issue exists); `tests/integration/stock.test.ts` (a normal user's +0.5 return correction raises stock); no return or credit entity exists (N02). E07-S01, #80; E08-S04, #140.
 - **Given:** Completed customer order and goods physically returned
 - **When:** Record positive inventory correction with reason
 - **Then:** Physical stock rises but original customer order stays fulfilled; no return/credit document created.
 
 ### SAL-025 — Inactive customer existing order
 
-**Priority:** P1 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/customer-orders/customer-order.service.test.ts` and `tests/integration/customer-orders.test.ts` (after the customer's deactivation the order stays editable; a new order is `CUSTOMER_INACTIVE`). A goods issue after the deactivation is not asserted yet (#140). E08-S01, #83.
+- **Evidence:** `packages/core/src/services/goods-issues/goods-issue.service.test.ts` and `tests/integration/shipments-api.test.ts` (after the customer's deactivation, a shipment and a goods issue post on the Open order, its fulfilled quantity rises and stock falls; a new order for that customer is `CUSTOMER_INACTIVE`), `packages/core/src/services/customer-orders/customer-order.service.test.ts` and `tests/integration/customer-orders.test.ts` (the order stays editable). E08-S01, #83; E08-S04, #140.
 - **Given:** Customer was active at order creation, later deactivated
 - **When:** Fulfill existing order with valid GI
 - **Then:** Existing order remains processable; creating new order for inactive customer is forbidden.
@@ -1971,9 +1971,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### INV-017 — Customer physical return as adjustment
 
-**Priority:** P1 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/stock.test.ts` (a normal user's +0.5 "Physical customer return" correction raises 24 to 24.5). That a fulfilled order's fulfilled quantity stays unchanged is not asserted yet (#140). E07-S01, #80.
+- **Evidence:** `tests/integration/stock.test.ts` (a normal user's +0.5 "Physical customer return" correction raises 24 to 24.5), `packages/core/src/services/goods-issues/goods-issue.service.test.ts` and `tests/integration/shipments-api.test.ts` (after a fulfilled order, the reasoned return correction raises stock and leaves the order's fulfilled quantities unchanged). E07-S01, #80; E08-S04, #140.
 - **Given:** Fulfilled customer sale and product returned to warehouse
 - **When:** Post positive inventory correction with reason
 - **Then:** Physical stock increases, original customer order fulfilled amount unchanged.
@@ -3806,7 +3806,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `tests/integration/audit.test.ts` (user creation with account, session and channel), `tests/integration/materials.test.ts` and `named-records.test.ts` (creates in the tenant audit, with account, session and channel), `tests/integration/planning-parameters.test.ts`, the user, material, named-record, planning-parameter and safety-stock service tests, and `packages/core/src/services/boms/bom.service.test.ts` (a BOM create's entry with its new values and recipe). `packages/core/src/services/stock/stock.service.test.ts` and `tests/integration/stock.test.ts` (every correction writes a tenant-audit entry with actor, session or token, channel and before/after), `packages/core/src/services/customer-orders/customer-order.service.test.ts` (an order's create entry with the UI channel, session and its new lines). The account on a customer-order create entry is not asserted yet (#140). E02-S02, #20, with #26; E07-S01, #80; E08-S01, #83.
+- **Evidence:** `tests/integration/audit.test.ts` (user creation with account, session and channel), `tests/integration/materials.test.ts` and `named-records.test.ts` (creates in the tenant audit, with account, session and channel), `tests/integration/planning-parameters.test.ts`, the user, material, named-record, planning-parameter and safety-stock service tests, and `packages/core/src/services/boms/bom.service.test.ts` (a BOM create's entry with its new values and recipe). `packages/core/src/services/stock/stock.service.test.ts` and `tests/integration/stock.test.ts` (every correction writes a tenant-audit entry with actor, session or token, channel and before/after), `packages/core/src/services/customer-orders/customer-order.service.test.ts` (an order's create entry with the UI channel, session and its new lines, and the account that created it), `tests/integration/customer-orders.test.ts` (a normal user's API create entry names that user's account, with the API channel and token). E02-S02, #20, with #26; E07-S01, #80; E08-S01, #83; E08-S04, #140.
 - **Given:** Normal user creates customer order
 - **When:** Read tenant audit
 - **Then:** Create event with actor, tenant, session, channel, new values exists.
@@ -4481,9 +4481,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### LFC-020 — Customer can deactivate with open order
 
-**Priority:** P1 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/customer-orders/customer-order.service.test.ts` and `tests/integration/customer-orders.test.ts` (the customer's deactivation is allowed while an order is outstanding; the order stays editable; a new order is `CUSTOMER_INACTIVE`). A goods issue on that order after the deactivation is not asserted yet (#140). E08-S01, #83.
+- **Evidence:** `packages/core/src/services/customer-orders/customer-order.service.test.ts` and `tests/integration/customer-orders.test.ts` (the customer's deactivation is allowed while an order is outstanding; the order stays editable; a new order is `CUSTOMER_INACTIVE`), `packages/core/src/services/goods-issues/goods-issue.service.test.ts` and `tests/integration/shipments-api.test.ts` (the order is still shipped and issued after the deactivation, and its fulfilled quantity rises). E08-S01, #83; E08-S04, #140.
 - **Given:** Customer has outstanding order
 - **When:** Admin deactivates customer
 - **Then:** Allowed; existing order can still be fulfilled; new customer order blocked.

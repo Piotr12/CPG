@@ -148,11 +148,24 @@ describe("forecasts through the API (E08-S03, R07)", () => {
     expect((await forecasts()).filter((row) => row.material === retired || row.location === closed)).toEqual([]);
   });
 
-  it("starts Test with the dataset's forecasts, and needs the Test generation to write there (TEN-001, D06, API-034)", async () => {
-    const demo = json(await api("GET", "/api/tenants/test/forecasts", adminSecret)).data as { material: string; location: string }[];
-    // A year of months for each of the ten finished products, at the plant that makes it.
-    expect(demo).toHaveLength(120);
+  it("starts Test with the dataset's forecasts in pages of 100, and needs the Test generation to write there (TEN-001, D06, API-034)", async () => {
+    type Row = { material: string; location: string; date: string };
+    const testPage = async (query: string) => json(await api("GET", `/api/tenants/test/forecasts${query}`, adminSecret)).data as Row[];
+    const first = await testPage("");
+    expect(await testPage("?page=1")).toEqual(first);
+    const second = await testPage("?page=2");
+    // A year of months for each of the ten finished products, at the plant that makes it: 120, so two pages.
+    expect(first).toHaveLength(100);
+    expect(second).toHaveLength(20);
+    expect(await testPage("?page=3")).toEqual([]);
+    const demo = [...first, ...second];
     expect(new Set(demo.map(({ material, location }) => `${material}@${location}`)).size).toBe(10);
+    const key = ({ material, location, date }: Row) => `${material}@${location}@${date}`;
+    const keys = demo.map(key);
+    expect(keys).toEqual([...keys].sort());
+    const malformed = await api("GET", "/api/tenants/test/forecasts?page=0", adminSecret);
+    expect(malformed.status).toBe(400);
+    expect(Object.keys(json(malformed).error.fieldErrors)).toEqual(["page"]);
 
     const missing = await write("POST", "/api/tenants/test/forecasts", { material: "00000005", location: "00000001", date: "2030-01-01", quantity: "1" });
     expect(missing.status).toBe(428);

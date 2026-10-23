@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-21 20:44 UTC
 **Agent:** Claude Code (Opus 5.5), `om-auto-fix-issue 142` → `om-auto-implement-spec` → `om-auto-create-pr`
-**Source doc:** .ai/specs/2026-10-21--2036UTC-purchasing-date-edits.md (design PR #157)
+**Source doc:** .ai/specs/implemented/2026-10-21--2036UTC-purchasing-date-edits.md (design PR #157)
 **Issue:** #142 (E09-S04)
 **Status:** done
 
@@ -97,3 +97,4 @@ PR: #159
 - 21:07 UTC — BUY-024 stays "Partially verified": the catalogue reserves Passed (automated) for a whole scenario, and SAL-019 is the precedent. Its evidence now says the non-MRP half passes automated on UI and API. The spec move to `implemented/` waits for design PR #157 to merge, because this branch must not add the spec file too.
 - 21:10 UTC — Fresh-context code review: approve, with 0 blockers, 0 majors, 2 minors and 3 nits. Four fixed in 5eea7f7 (recursive labels tests, read-only Change date check, stronger 390 px check) and in the spec's Implementation notes on #157 (2f9ca2c). One nit declined: the requisition dialog uses the screen's merged error map, which gives the same wording. The review went up as a PR comment, because GitHub refuses self-approval.
 - 21:12 UTC — UI evidence on the production build found the requisition Location column breaking IDs and words at 1280 px. Fixed in c5064ce by keeping location IDs whole. Rebuilt; the three touched integration files pass 17/17 on a fresh standalone copy. Evidence with 8 screenshots is posted on #159.
+- 2026-10-23 05:08 UTC — The spec move landed on design PR #157 (`om-auto-fix-pr` run, after #159 merged): `implemented/2026-10-21--2036UTC-purchasing-date-edits.md`.

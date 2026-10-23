@@ -9,6 +9,7 @@ import {
   forecastChangeSchema,
   forecastCreateSchema,
   forecastFilterSchema,
+  forecastListQuerySchema,
   forecastRemoveBodySchema,
   forecastRemoveSchema,
 } from "./forecast.schema";
@@ -73,5 +74,16 @@ describe("forecastFilterSchema", () => {
   it("refuses anything that is not a business ID", () => {
     const result = forecastFilterSchema.safeParse({ material: "cabinet" });
     expect(result.error?.issues.map(({ path, message }) => [path[0], message])).toEqual([["material", MATERIAL_CHOICE_MESSAGE]]);
+  });
+});
+
+describe("forecastListQuerySchema", () => {
+  it("defaults to the first page, and keeps the filter beside the page", () => {
+    expect(forecastListQuerySchema.parse({})).toEqual({ page: 1 });
+    expect(forecastListQuerySchema.parse({ material: "00000005", page: "2" })).toEqual({ material: "00000005", page: 2 });
+  });
+
+  it("refuses a page that isn't a positive whole number", () => {
+    for (const page of ["0", "1.5", "x", "-1"]) expect(forecastListQuerySchema.safeParse({ page }).success).toBe(false);
   });
 });
