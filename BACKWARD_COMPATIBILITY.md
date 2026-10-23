@@ -85,7 +85,7 @@ Source: `packages/app/src/app/`. Today that is:
 
 Rename either one only by reading the old name for one release.
 
-Route handlers under `app/api/` are protected the same way: their paths, methods, request schemas, the result envelope (`{ ok, data }` / `{ ok: false, error: { code, message, fieldErrors? } }`), error codes and HTTP statuses. Changes are additive (new optional fields, new routes), and removals go through a deprecation release. Today's routes:
+Route handlers under `app/api/` are protected the same way: their paths, methods, request schemas, the result envelope (`{ ok, data }` / `{ ok: false, error: { code, message, fieldErrors?, params? } }`), error codes and HTTP statuses. Changes are additive (new optional fields, new routes), and removals go through a deprecation release. Today's routes:
 
 - `GET /api/tenants` and `GET /api/tenants/{tenant}` (404 `TENANT_NOT_FOUND`). Each tenant is `{ code, name, generation, readOnly }`;
 - `PATCH /api/tenants/{tenant}` (`{ readOnly }` and nothing else, admin only; spec `2026-10-19--2018UTC-read-only-tenants`). It sets the tenant's read-only flag and answers the tenant. It is global metadata, not tenant data, so it is the stated exception to the tenant-write rules below: its key goes in the global store, it takes no `Dataset-Generation`, and it works while the tenant is read-only;
