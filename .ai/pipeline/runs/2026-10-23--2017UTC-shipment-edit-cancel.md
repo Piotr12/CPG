@@ -78,29 +78,31 @@ The spec ships on design PR #180 (`spec/shipment-edit-cancel`), which is not mer
 
 ## Progress
 
+PR: #182
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Schema
 
-- [ ] 1.1 Entities, migration and migration tests
+- [x] 1.1 Entities, migration and migration tests — 7e090223
 
 ### Phase 2: Core
 
-- [ ] 2.1 Version touch, reversal mapping, view fields
-- [ ] 2.2 Update and cancel schemas
-- [ ] 2.3 ShipmentService.update
-- [ ] 2.4 ShipmentService.cancel
+- [x] 2.1 Version touch, reversal mapping, view fields — 51e693b5
+- [x] 2.2 Update and cancel schemas — a6b973dd
+- [x] 2.3 ShipmentService.update — 433f4934
+- [x] 2.4 ShipmentService.cancel — 433f4934
 
 ### Phase 3: API
 
-- [ ] 3.1 PATCH and cancel routes
+- [x] 3.1 PATCH and cancel routes — a417c955
 
 ### Phase 4: Screen
 
-- [ ] 4.1 Messages, audit labels, help
-- [ ] 4.2 Form initial values and edit choices
-- [ ] 4.3 Server actions
-- [ ] 4.4 Edit and cancel controls on the shipment page
+- [x] 4.1 Messages, audit labels, help — 983fe80b
+- [x] 4.2 Form initial values and edit choices — ef60be44
+- [x] 4.3 Server actions — 61db72a6
+- [x] 4.4 Edit and cancel controls on the shipment page — 11098770
 
 ### Phase 5: Integration and docs
 
