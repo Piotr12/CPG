@@ -35,8 +35,10 @@ const rows = (browser: Browser) =>
 async function follow(browser: Browser, selector: string, urlPart: string) {
   const link = `[...document.querySelectorAll(${JSON.stringify(selector)})].find((e) => !e.closest("[hidden]"))`;
   await browser.waitUntil(hydrated(link));
+  const from = await browser.url();
   await browser.evaluate(`${link}.click()`);
-  await browser.waitUntil(`location.href.includes(${JSON.stringify(urlPart)})`);
+  // The page it starts from can already match `urlPart` (one record's history linking another's).
+  await browser.waitUntil(`location.href !== ${JSON.stringify(from)} && location.href.includes(${JSON.stringify(urlPart)})`);
   // The new page has rendered once its form shows the URL's record.
   await browser.waitUntil(
     `${shown("main table")} && [...document.querySelectorAll("#audit-subject-id")].some((input) => !input.closest("[hidden]") && input.value === (new URLSearchParams(location.search).get("subjectId") ?? ""))`,

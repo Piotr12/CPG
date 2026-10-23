@@ -8,7 +8,11 @@ import { test } from "vitest";
 import { parse } from "yaml";
 
 type Step = { name?: string; run?: string; "timeout-minutes"?: number };
-type Job = { "timeout-minutes"?: number; steps: Step[] };
+type Job = {
+  "timeout-minutes"?: number;
+  strategy?: { "fail-fast"?: boolean; matrix?: { shard?: number[] } };
+  steps: Step[];
+};
 
 const workflow = parse(readFileSync(join(import.meta.dirname, "..", ".github", "workflows", "ci.yml"), "utf8")) as {
   jobs: Record<string, Job>;
@@ -40,4 +44,20 @@ test("the integration job's limit covers setup, the whole browser install and th
 
 test("the suite keeps at least the 20 minutes it had before the install got its own limit", () => {
   assert.ok((stepRunning("npm run test:integration")["timeout-minutes"] ?? Infinity) >= 20);
+});
+
+// The files run one at a time against one app, so CI splits them across parallel runners instead.
+test("the integration suite runs as numbered shards, each running its own slice to the end", () => {
+  const shards = job.strategy?.matrix?.shard ?? [];
+  assert.ok(shards.length > 1, "the integration job is not sharded");
+  assert.deepEqual(shards, shards.map((_, index) => index + 1));
+  assert.equal(job.strategy?.["fail-fast"], false);
+  // `strategy.job-total` keeps the shard count in one place: the matrix.
+  assert.match(stepRunning("npm run test:integration").run!, /--shard=\$\{\{ matrix\.shard \}\}\/\$\{\{ strategy\.job-total \}\}$/);
+});
+
+// `--with-deps` apt-installs fonts from Ubuntu's mirror, which stalled for 9 to over 19 minutes
+// (#167, #171); the runner image already has Chrome's libraries.
+test("the browser install downloads only Chrome, nothing from apt", () => {
+  assert.doesNotMatch(stepRunning("agent-browser install").run!, /--with-deps/);
 });

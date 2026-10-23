@@ -126,7 +126,7 @@ Every PR passes the full validation gate before review sign-off. The local gate,
 - `npm run test:coverage`
 - `npm run build`
 
-plus the integration files the change adds or touches (`npm run test:integration -- tests/integration/<name>.test.ts`; a new migration adds `smoke.test.ts`). The full integration suite (`npm run test:integration`, about 15 minutes) runs only in CI, on every pull request: running it locally as well would double it.
+plus the integration files the change adds or touches (`npm run test:integration -- tests/integration/<name>.test.ts`; a new migration adds `smoke.test.ts`). The full integration suite (`npm run test:integration`, about 7 minutes locally, four ~7-minute shards in CI) runs only in CI, on every pull request: running it locally as well would double it.
 
 Any non-zero exit, locally or in CI, fails the gate and blocks the PR. The implementing skills run the local gate before opening a PR, and `om-check-and-commit` runs it before pushing a hand-worked branch; review sign-off waits for the PR's CI run to be green. The local command list lives in `.ai/agentic.config.json`; when it changes, update it there and in this section together.
 
