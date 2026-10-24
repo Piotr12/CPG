@@ -42,7 +42,7 @@ export const pl: Messages = {
       title: "Zresetować dane środowiska Test?",
       confirmation: "Trwale usuń generację {generation} środowiska Test wraz ze wszystkimi danymi biznesowymi i audytem, a następnie utwórz {dataset} zbiór danych demonstracyjnych. Identyfikatory zaczną się od 00000001. Prod, konta, sesje, tokeny, preferencje i audyt globalny zostaną zachowane. Tej operacji nie można cofnąć.",
       datasetNames: { tiny: "mały", realistic: "realistyczny" },
-      slow: "Zapis realistycznego zbioru danych trwa do pół minuty, a w tym czasie aplikacja nie odpowiada nikomu innemu.",
+      slow: "Zapis realistycznego zbioru danych trwa do minuty, a w tym czasie aplikacja nie odpowiada nikomu innemu.",
       readOnly: "Test pozostanie tylko do odczytu.",
       writable: "Test pozostanie zapisywalne.",
       confirm: "Resetuj Test",

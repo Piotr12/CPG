@@ -44,7 +44,7 @@ export const en = {
       title: "Reset Test data?",
       confirmation: "Permanently delete Test generation {generation}, including all its business records and audit, and reseed it with the {dataset} demonstration dataset. Business IDs restart from 00000001. Prod, accounts, sessions, tokens, preferences and Global audit are kept. This cannot be undone.",
       datasetNames: { tiny: "tiny", realistic: "realistic" },
-      slow: "Writing the realistic dataset takes up to half a minute, and the app answers nobody else until it is done.",
+      slow: "Writing the realistic dataset takes up to a minute, and the app answers nobody else until it is done.",
       readOnly: "Test will remain read-only.",
       writable: "Test will remain writable.",
       confirm: "Reset Test",
