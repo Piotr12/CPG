@@ -19,7 +19,7 @@
 | P1 Admin page frame and states | parallel | `app/src/app/admin/**` (except `(global)/page.tsx`), `layout.tsx` notice + fallback, not-found and error pages, `tests/integration/not-found.test.ts` | dispatched | cez/32091c4f | |
 | P2 Document screens | parallel | `components/{customer-orders,shipments,goods-issues,forecasts,production-orders,purchase-orders,purchase-requisitions,purchasing,goods-receipts,transfers,document-lifecycle}/**` (except `status-tone.ts`), 10 integration files | dispatched | cez/44d4eae8 | |
 | P3 Master data, stock, reports, admin tools | parallel | `components/{materials,named-records,master-data,boms,planning-parameters,safety-stock,stock,reports,imports,api-tokens,audit,users,preferences,forms}/**`, 14 integration files | dispatched | cez/9d4e6465 | |
-| P4 Tenants and navigation shell | parallel | `components/tenants/**`, `components/layout/**`, `admin/(global)/page.tsx` + test, `tenants` and `navigation` integration | dispatched | cez/e63761ed | |
+| P4 Tenants and navigation shell | parallel | `components/tenants/**`, `components/layout/**`, `admin/(global)/page.tsx` + test, `tenants` and `navigation` integration | done | cez/e63761ed | 5806f17f |
 | Close (the lead) | last | the scan flip, `.ai/docs/engineering-standards.md`, the spec move, this folder, the PR | todo | | |
 
 ## Goal
