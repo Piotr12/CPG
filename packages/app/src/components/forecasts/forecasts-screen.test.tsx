@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/messages/en";
 import { listLinks } from "../lists/list-params";
@@ -23,6 +23,13 @@ describe("ForecastsScreen", () => {
     const cells = within(screen.getByRole("table", { name: en.forecasts.link })).getAllByRole("cell");
     expect(cells[2].textContent).toBe("2027-01-04"); expect(cells[2].className).not.toContain("font-mono");
     expect(cells[3].textContent).toBe("12 each"); expect(cells[3].className).toContain("text-right tabular-nums");
+  });
+
+  it("offers only active materials in Add forecast's material picker (MAT-029, #217)", () => {
+    render(<ForecastsScreen {...props} materials={[material, { ...material, id: "00000006", description: "Old cabinet", active: false }]} />);
+    fireEvent.click(screen.getByRole("button", { name: en.forecasts.add.open }));
+    fireEvent.focus(screen.getByRole("combobox", { name: en.forecasts.form.material }));
+    expect(within(screen.getByRole("listbox")).getAllByRole("option").map((option) => option.textContent)).toEqual(["00000005—Cabineteach"]);
   });
 
   it("gives a normal user no header action", () => {

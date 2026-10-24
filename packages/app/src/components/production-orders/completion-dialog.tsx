@@ -24,6 +24,8 @@ interface Props {
   inputs: CompletionInputChoice[];
   /** Whether the order still takes completions: Open, in a writable tenant. The notice of a post outlives the button. */
   canPost: boolean;
+  /** The reader's language, for the material picker's counts. */
+  locale?: string;
 }
 
 /**
@@ -31,7 +33,7 @@ interface Props {
  * dialog's `submission` token is made when it opens and kept until it closes, so a double submit or a
  * retried action posts once (spec Q7).
  */
-export function CompletionDialog({ context, labels: t, order, outputUnits, locationLabel, inputs, canPost }: Props) {
+export function CompletionDialog({ context, labels: t, order, outputUnits, locationLabel, inputs, canPost, locale }: Props) {
   const [open, setOpen] = useState(false);
   const [submission, setSubmission] = useState("");
   const [draft, setDraft] = useState<Record<string, string>>({ quantity: "", unit: outputUnits[0] });
@@ -70,6 +72,7 @@ export function CompletionDialog({ context, labels: t, order, outputUnits, locat
                 preview={preview}
                 unit={draft.unit}
                 inputs={inputs}
+                locale={locale}
                 formatError={formatError}
                 formatFieldError={formatFieldError}
                 action={(values) => postProductionCompletion(context.tenant, context.generation, order.id, submission, values)}

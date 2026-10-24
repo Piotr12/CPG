@@ -53,11 +53,11 @@ export function ProductionScreen({ tenant, orders, order, materials, locations, 
   ];
   const pages = Math.ceil(total / PRODUCTION_PAGE_SIZE);
   const actions = !tenant.readOnly && <>
-    {(!order || order.status === "open") && <ProductionDialog context={{ tenant: tenant.code, generation: tenant.generation }} labels={t} materials={materials} locations={locations} order={order} />}
+    {(!order || order.status === "open") && <ProductionDialog context={{ tenant: tenant.code, generation: tenant.generation }} labels={t} materials={materials} locations={locations} order={order} locale={locale} />}
     {order && <CompletionDialog context={{ tenant: tenant.code, generation: tenant.generation }} labels={t} order={order}
       outputUnits={units[order.output] ?? [byMaterial.get(order.output)!.baseUnit]} locationLabel={location(order.location)}
       inputs={completionInputs(order, materials, units)}
-      canPost={order.status === "open"} />}
+      canPost={order.status === "open"} locale={locale} />}
     {order && <LifecycleControl kind="productionOrder" available={order.status === "open"} processed={order.hasProcessing}
       subject={`${t.title} ${order.id}`} version={order.version} quantities={[`${shownQuantity(order.outstanding)} ${byMaterial.get(order.output)!.baseUnit}`]}
       labels={messages.lifecycle} errors={messages.errors}

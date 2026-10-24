@@ -18,6 +18,7 @@ describe("forecastsLabels", () => {
     expect(labels).not.toHaveProperty("heading");
     expect(labels.errors.FORECAST_EXISTS).toBe(en.forecasts.errors.FORECAST_EXISTS);
     expect(labels.errors.VALIDATION_FAILED).toBe(en.errors.VALIDATION_FAILED);
+    expect(labels.picker).toEqual({ labels: expect.objectContaining({ refused: en.lists.materialPicker.refused }), placeholder: en.lists.materialPicker.placeholder });
   });
 
   it("holds plain data only, so a server page can hand it to a client component", () => {

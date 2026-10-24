@@ -57,7 +57,7 @@ export function OrdersScreen({ tenant, orders, order, shipments = [], page = 1, 
   const choice = ({ id, name, active }: NamedRecordView): OrderChoice => ({ value: id, label: `${id} ${name}${active ? "" : ` (${t.inactive})`}`, active, units: [] });
   const choices = {
     customers: customers.map(choice), locations: locations.map(choice),
-    materials: materials.map(({ id, description, active, baseUnit }) => ({ value: id, label: `${id} ${description}${active ? "" : ` (${t.inactive})`}`, active, units: units[id] ?? [baseUnit] })),
+    materials: materials.map(({ id, description, active, baseUnit }) => ({ value: id, code: id, name: `${description}${active ? "" : ` (${t.inactive})`}`, detail: baseUnit, active, units: units[id] ?? [baseUnit] })),
   };
   const shipmentChoices = order ? shipmentLineChoices(order, byMaterial, units, shipmentLabels) : [];
   const status = (value: CustomerOrderView["status"]) => <StatusBadge {...documentStatusTone(value)}>{t.states[value]}</StatusBadge>;
@@ -85,7 +85,7 @@ export function OrdersScreen({ tenant, orders, order, shipments = [], page = 1, 
       cancel={cancelCustomerOrder.bind(null, tenant.code, tenant.generation, order.id)} closeEarly={closeEarlyCustomerOrder.bind(null, tenant.code, tenant.generation, order.id)} /> },
   ];
   const actions = !tenant.readOnly && (!order || order.status === "open") && <>
-    <OrderDialog context={{ tenant: tenant.code, generation: tenant.generation }} labels={t} choices={choices} order={order} />
+    <OrderDialog context={{ tenant: tenant.code, generation: tenant.generation }} labels={t} choices={choices} order={order} locale={locale} />
     {order && <LifecycleControl kind="order" available processed={order.lines.some((line) => line.posted || line.fulfilled !== "0.000000")}
       subject={`${t.link} ${order.id}`} version={order.version}
       quantities={order.lines.filter((line) => line.status === "open").map((line) => `${byMaterial.get(line.material)!.description}: ${shownQuantity(outstandingOf(line))} ${byMaterial.get(line.material)!.baseUnit}`)}
