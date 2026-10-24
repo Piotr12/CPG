@@ -1,6 +1,6 @@
 # CPG design system v1: one neutral, tenant-aware system for every screen
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-24 08:42 UTC
 **Issue:** #203 (the discussion that decided this spec; owner answers of 2026-10-24) · **Builds on:** `implemented/2026-10-19--2048UTC-sidebar-navigation.md` (#58: shell, rail, trail), `implemented/2026-10-19--0913UTC-test-prod-tenants.md` (TEN-011: the tenant is always shown in words and colour), `implemented/2026-10-17--1321UTC-mammoth-app-icons.md` (the Fluent Flat mammoth artwork), `implemented/2026-10-19--0855UTC-user-preferences-footer-help.md` (theme, exact footer sentence, Help) · **Design authority:** this spec. It distils the two proposals attached to #203 as comments (A, "CPG design system — application guide"; B, "CPG Design System v1"); they are inputs, and where either disagrees with this spec, this spec wins. Also bound by `product-brief.md` (D04, R03, Q04) and `BACKWARD_COMPATIBILITY.md`.
 
@@ -185,8 +185,8 @@ Generic pieces live in `packages/ui`; domain mappings live in `packages/app` (en
 | Sign-in refusal | "Invalid username or password. Check both and try again. If you cannot sign in, contact your administrator." | `sign-in-form.tsx` |
 | Success | "Material saved." plus the resulting record state; no duplicate success panels. | `Callout tone="success" role="status"` |
 | Reversal | Confirms the exact record, consequence and reason the domain requires; never implies a generic Undo. | `ConfirmDialog` |
-| Not found (new) | `app/src/app/not-found.tsx` and `app/src/app/admin/[tenant]/not-found.tsx`, inside the shell and themed: "Page not found. The address may be mistyped, or the record belongs to the other tenant." → **Go to Tenants**, or **Back to {list}** inside a tenant. | `EmptyState` |
-| Unexpected error (new) | `app/src/app/error.tsx` (client): "Something went wrong on our side. Try again; if it keeps happening, tell your administrator and quote reference {digest}." → **Try again** (`reset()`); `global-error.tsx` with the same message and minimal markup. | `ErrorMessage` |
+| Not found (new) | `app/src/app/not-found.tsx` and `app/src/app/admin/[tenant]/not-found.tsx`, inside the shell and themed: "Page not found. The address may be mistyped, or the record belongs to the other tenant." → **Go to Tenants**, or **Back to {list}** inside a tenant (else **Back to Overview — {tenant}**). The title is the page's `h1` (through `PageHeader`, so "one `h1` per page" holds on state pages too); the next step is an outline button. | `PageHeader` + `Button` |
+| Unexpected error (new) | `app/src/app/error.tsx` (client): "Something went wrong on our side. Try again; if it keeps happening, tell your administrator and quote reference {digest}." → **Try again** (`retry()`: Next.js 16.4's error boundary re-fetches and re-renders with it, where `reset()` only re-renders and a server error would recur); `global-error.tsx` with the same message and minimal markup. The page's title is its `h1` (through `PageHeader`); the message box carries what to do. | `PageHeader` + `ErrorMessage` |
 | No JavaScript | JavaScript is required on every page (decision D5). The root layout renders one `<noscript>` notice in the static shell, styled as a warning `Callout`, in both languages because the shell is language-neutral: "CPG needs JavaScript. Turn it on in your browser and reload this page." / its Polish equivalent. | `Callout` markup inside `<noscript>` |
 
 Existing messages are audited against this table and kept where they already comply. Errors say what is wrong and what to do; refusal parameters stay structured (`params`, never interpolated). One term per concept: BOM, not recipe (brief Q04). Every new string lands in `en.ts` and `pl.ts`.
@@ -624,3 +624,34 @@ The complete token file for slice 1. The shadcn names are kept so the primitives
 ```
 
 Notes: `--destructive` is no longer defined; `--color-destructive` maps to `--danger`, so shadcn's `bg-destructive` / `text-destructive` resolve to the danger colour without editing every primitive. In Tailwind 4, setting `--radius-*` directly in `@theme inline` overrides the multiplier-based values shadcn generated. `--chart-*` are unchanged and identical in both themes, so `.dark` does not repeat them.
+
+## Implementation notes
+
+Implemented on 2026-10-24 in one pull request by a lead agent (Claude Fable 5.1) and seven workers (Claude Opus 5.5), per decision D8. The run folder `.ai/pipeline/runs/2026-10-24--0925UTC-design-system-v1/` holds the plan, the decision log (`NOTIFY.md`), every brief, the workers' screenshots and the close QA (`qa-artifacts/`). `tests/design-tokens.test.ts` now fails on any offender outside the Exceptions table and passes on the merged tree with none; `packages/ui/src/styles/tokens.test.ts` pins every pair of the accessibility floor in both themes.
+
+### Amendments made during implementation (spec and code together)
+
+- **`--danger-solid-foreground`** (`oklch(1 0 0)`, both themes) labels `destructive-solid`: the contract said `text-white`, which the spec's own scan bans.
+- **`--danger-solid-hover`** (`oklch(0.47 0.19 27)` light, `oklch(0.45 0.12 22)` dark) is the solid confirm button's hover fill: white on the dark `danger` is 2.12:1, so `hover:bg-danger` failed there. `destructive`'s hover darkens the border (`hover:border-danger`), because `danger` on `danger-edge` is 3.80:1.
+- **Invalid controls use `border-danger`**, not `border-danger-edge` (1.74:1 on white, below the 3:1 floor for a boundary), and no invalid ring; `tokens.test.ts` pins `danger` on `background`, `card` and `muted` ≥ 3.
+- **`prefers-reduced-motion`**: Appendix A gains the reduced-motion block the Motion paragraph asked for.
+- **`StatusBadge`'s `px-1.5`** lives in `badge.tsx` through `badgeVariants`, where the scan's path rule allows it.
+- **`retry()`, not `reset()`**, on the error pages (Next.js 16.4), and **an `h1` on the state pages** through `PageHeader` (the States table rows above say so now).
+- The **tone map** also holds the import-row outcomes (dry run quiet, committed success) and the variance report's Waste mark (warning), which the Components row did not list.
+
+### Decisions taken by the lead
+
+- Parallel units added dictionary keys only inside their own concept sections of `en.ts`/`pl.ts` ("never share a file" read as "never share a hunk"); every key is listed in the units' reports.
+- Workers were authorised, case by case, to change the one assertion or selector outside their scope that their change moved (the `ConfirmDialog` variant, the lifecycle labels, the chooser text, the BOM status, the unknown-tenant text, the shipment cancel label); each is recorded in `NOTIFY.md`.
+- The shortage title's Polish plural needs a `few` form, which the shared `counted` helper has no room for: the production screen carries its own `{ one, few, other }` helper.
+- The "Back to …" list links on the production-order and customer-order details went once the section trail linked its ancestors; the shipment page's link to its order stays (shipments have no sidebar entry, so no trail).
+- Screenshots in the run folder are viewport captures; the workers' 768 px captures were dropped from it (the close QA attached to the PR covers 768 px), and the measurements stay in each folder's metrics file.
+
+### Deviations and known limitations
+
+- `error.tsx` and `global-error.tsx` are covered by unit tests only (no deterministic trigger in the production image); the not-found pages carry the integration test.
+- The icon rail's default between 768 and 1023 px is applied after hydration, so a cold load shows the expanded sidebar for a frame; a CSS-first default would need the sidebar provider.
+- A 320 px screenshot with JavaScript off is not capturable with agent-browser; `p1-artifacts/nojs-320-metrics.json` records the notice's box and the absence of overflow instead.
+- With the `kind` minimum widths, ten-column tables (the requisition list's sum to 1,342 px) scroll inside their container at 1,280 px with the sidebar expanded, and the audit table at 1,280 px: the spec's density judgement for the owner (adjust column priorities or row spacing before widening the `lg` control).
+- Three allow-list entries (`bg-[Canvas]`, `text-[CanvasText]`, `border-t-[3px]`) match no scan rule and document the Exceptions table only.
+- "Recipe" wording outside the one site the spec names (16 English values, 18 Polish lines, 23 help lines) stays for now: it describes document and master-data screens whose tests assert it, and is filed as a follow-up issue cited in the pull request.

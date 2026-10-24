@@ -191,6 +191,10 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 ## Process and agent pipeline (om-* skills)
 
+- **2026-10-24 — A lead-and-workers run: briefs in the run folder, viewport screenshots, one hunk per worker** — three rules from the design system run (`.ai/pipeline/runs/2026-10-24--0925UTC-design-system-v1/`):
+  - a cezar dispatch objective is capped at 4,000 characters, so commit each worker's full brief under the run folder and make the objective point at it;
+  - evidence screenshots are viewport captures (a full-page Help capture was 37,000 px tall and 3.4 MB), with the measurements in a `metrics.json`;
+  - parallel workers may share a file only when their hunks are disjoint (a dictionary's concept sections) and a worker that needs one assertion outside its scope asks the lead, who authorises that hunk and tells the file's owner to stay off it.
 - **2026-10-23 — Close the paperwork in the PR that does the work** — two rules:
   - File every follow-up a PR, spec or run log names before merging, and cite its number. Prose follow-ups were lost (#109's location guard, #95's reversal check).
   - The implementation PR moves its spec to `implemented/` (`Status: implemented`, implementation notes, image links rewritten to `](../assets/…)`). The specs of #4, #43 and #147 stayed in `.ai/specs/` after merging, and `tests/spec-images.test.ts` fails on a broken image.

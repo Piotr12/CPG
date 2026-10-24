@@ -3,7 +3,7 @@
 **Date:** 2026-10-24 09:25 UTC
 **Agent:** lead: Claude Code (claude-fable-5-1) in cezar; workers: cezar child tasks on Claude Code (claude-opus-5-5), one git worktree and branch each
 **Issue:** #203 (closes); design PR #204 (refs)
-**Source spec:** `.ai/specs/2026-10-24--0842UTC-design-system-v1.md` (Status ready; moved to `implemented/` by the Close unit)
+**Source spec:** `.ai/specs/implemented/2026-10-24--0842UTC-design-system-v1.md` (Status implemented; moved there at the close)
 **Branch:** `cez/eb7fb400` (the lead's integration branch; the PR branch)
 **Engine:** lead-and-workers per the spec's Phasing table; this folder is the run log (AGENTS.md "Before starting any task", `.ai/skills/om-auto-create-pr-loop/SKILL.md` "Run log")
 
