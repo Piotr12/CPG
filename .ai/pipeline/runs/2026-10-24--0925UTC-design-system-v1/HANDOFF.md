@@ -3,7 +3,7 @@
 **Last updated:** 2026-10-24T19:50:00Z
 **Branch:** cez/eb7fb400
 **PR:** https://github.com/Piotr12/CPG/pull/207 (open; labels feature, priority-medium, risk-high, needs-qa, review)
-**Current phase/step:** complete; CI on the PR is being watched.
+**Current phase/step:** complete; CI green on the PR (run 40092489318).
 **Last commit:** the close-QA evidence and this handoff
 
 ## What just happened
@@ -11,7 +11,7 @@
 - The spec moved to `.ai/specs/implemented/` with implementation notes; follow-up #206 (the remaining "recipe" wording) is filed and cited.
 
 ## Next concrete action
-- Watch CI on PR #207 (lint, typecheck, coverage, build, four integration shards); fix anything red on this branch and push through the open-PR gate.
+- Nothing for the pipeline: CI is green (run 40092489318 on 10c8d82e).
 - The owner reviews and approves; manual QA per the evidence comment; `qa-approved` gates the merge.
 
 ## Blockers / open questions

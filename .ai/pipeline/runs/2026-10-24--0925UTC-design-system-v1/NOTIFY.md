@@ -113,3 +113,6 @@
 ## 2026-10-24T19:50:00Z — pull request #207 opened
 - Branch `cez/eb7fb400` pushed; PR #207 against `main`, "feat(design-system): one neutral, tenant-aware system for every screen (design system v1)", Closes #203, Refs #204, follow-up #206. The QA evidence comment (15 captures inline, uploaded to the `qa-evidence` branch under `pr-207/`): https://github.com/Piotr12/CPG/pull/207#issuecomment-6383976947. Labels through the guards: feature, priority-medium, risk-high, needs-qa, and the pipeline label review (the pipeline cannot approve its own PR; approval is the owner's).
 - The standalone server on port 3100 is stopped; the temporary QA drivers are deleted. CI on the PR is the remaining gate to watch.
+
+## 2026-10-24T20:35:00Z — CI green on PR #207
+- Run 40092489318 on head `10c8d82e`: lint, typecheck, build, unit-tests and the four integration-tests shards all succeeded. The run is complete; approval, manual QA (`qa-approved`) and the merge are the owner's.
