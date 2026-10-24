@@ -51,10 +51,30 @@ beforeAll(() => {
   };
 });
 
-/** Sets the viewport width the sidebar reads (jsdom has no matchMedia). */
+/** Who listens for media-query changes, so a test can resize the window under a mounted sidebar. */
+const mediaListeners = new Set<() => void>();
+const matchesWidth = (query: string, width: number) => {
+  const min = /min-width: (\d+)px/.exec(query);
+  const max = /max-width: (\d+)px/.exec(query);
+  return (!min || width >= Number(min[1])) && (!max || width <= Number(max[1]));
+};
+
+/** Sets the viewport width the sidebar reads (jsdom has no matchMedia): `innerWidth` and every media query. */
 function viewport(width: number) {
   window.innerWidth = width;
-  window.matchMedia = vi.fn().mockReturnValue({ addEventListener: vi.fn(), removeEventListener: vi.fn() });
+  window.matchMedia = vi.fn((query: string) => ({
+    matches: matchesWidth(query, width),
+    addEventListener: (_: string, listener: () => void) => mediaListeners.add(listener),
+    removeEventListener: (_: string, listener: () => void) => mediaListeners.delete(listener),
+  })) as unknown as typeof window.matchMedia;
+}
+
+/** Resizes a mounted sidebar: the new width, then every listener told. */
+function resize(width: number) {
+  act(() => {
+    viewport(width);
+    for (const listener of [...mediaListeners]) listener();
+  });
 }
 
 const WRITABLE = { test: false, prod: false };
@@ -95,7 +115,7 @@ describe("SidebarNav on a desktop", () => {
     renderAt("/admin/test/materials");
 
     expect(menu().getAllByRole("link").map((link) => [link.textContent, link.getAttribute("href")])).toEqual([
-      ["🦣CPG", "/admin/test"],
+      ["CPG", "/admin/test"],
       ["Test", "/admin/test/materials"],
       ["Prod", "/admin/prod/materials"],
       ["Overview", "/admin/test"],
@@ -108,15 +128,15 @@ describe("SidebarNav on a desktop", () => {
       ["BOMs", "/admin/test/boms"],
       ["Import", "/admin/test/import"],
       ["Forecasts", "/admin/test/forecasts"],
-      ["Stock", "/admin/test/stock"],
-      ["Stock import", "/admin/test/stock-import"],
-      ["Stock report", "/admin/test/reports/stock"],
-      ["Variance report", "/admin/test/reports/variance"],
       ["Production orders", "/admin/test/production-orders"],
       ["Customer orders", "/admin/test/customer-orders"],
       ["Purchase requisitions", "/admin/test/purchase-requisitions"],
       ["Purchase orders", "/admin/test/purchase-orders"],
       ["Transfers", "/admin/test/transfers"],
+      ["Stock", "/admin/test/stock"],
+      ["Stock import", "/admin/test/stock-import"],
+      ["Stock report", "/admin/test/reports/stock"],
+      ["Variance report", "/admin/test/reports/variance"],
       ["Audit", "/admin/test/audit"],
       ["Users", "/admin/users"],
       ["Tenants", "/admin"],
@@ -129,6 +149,11 @@ describe("SidebarNav on a desktop", () => {
     expect(menu().getByText("Demonstration data, safe to experiment")).toBeTruthy();
     expect(menu().getByText("Shared by Test and Prod")).toBeTruthy();
     expect(screen.getByRole("navigation", { name: "Menu" }).getAttribute("lang")).toBe("en");
+    // The brand is the mammoth mark beside the name, 20 px, 16 px once folded to the rail; no emoji.
+    const mark = menu().getByRole("link", { name: "CPG" }).querySelector("svg[data-slot=mammoth-mark]")!;
+    expect(mark.getAttribute("width")).toBe("20");
+    expect(mark.getAttribute("class")).toContain("group-data-[collapsible=icon]:size-4");
+    expect(document.body.textContent).not.toContain("🦣");
   });
 
   it("gives a normal user no Administration", () => {
@@ -252,7 +277,13 @@ describe("SidebarNav on a desktop", () => {
     fireEvent.click(menu().getByRole("button", { name: "Collapse menu" }));
     const card = screen.getByRole("button", { name: "Account: alice" });
     expect(within(card).getByText("Administrator")).toBeTruthy();
-    expect(within(card).getByText("A")).toBeTruthy();
+    // A quiet account icon, not an initial in a filled circle; in the rail the icon alone keeps the card's name.
+    const icon = card.querySelector("svg[data-account-icon]")!;
+    expect(icon.getAttribute("class")).toContain("lucide-circle-user-round");
+    expect(icon.getAttribute("class")).toContain("text-muted-foreground");
+    expect(icon.getAttribute("aria-hidden")).toBe("true");
+    expect(within(card).queryByText("A")).toBeNull();
+    expect(card.querySelector(".rounded-full")).toBeNull();
 
     fireEvent.click(card);
     const popover = screen.getByRole("dialog", { name: "Account" });
@@ -277,6 +308,71 @@ describe("SidebarNav on a desktop", () => {
   });
 });
 
+describe("SidebarNav between 768 and 1023 px (D6)", () => {
+  beforeEach(() => viewport(800));
+  afterEach(() => viewport(1280));
+
+  const state = () => document.querySelector<HTMLElement>("[data-slot=sidebar]")!.dataset.state;
+
+  it("starts as the icon rail, the switch folded to its letters with the tenants' names", () => {
+    renderAt("/admin/prod/materials", "admin", { test: false, prod: true });
+
+    expect(state()).toBe("collapsed");
+    expect(menu().getByRole("button", { name: "Expand menu" })).toBeTruthy();
+    const group = tenantSwitch("Tenant: Prod");
+    expect(group.getByRole("link", { name: "Test" }).textContent).toBe("T");
+    expect(group.getByRole("link", { name: "Prod (read-only)" }).textContent).toBe("P");
+    expect(group.getByRole("link", { name: "Prod (read-only)" }).getAttribute("aria-current")).toBe("page");
+    // The account card is the icon alone, and keeps its name.
+    expect(screen.getByRole("button", { name: "Account: alice" }).querySelector("svg[data-account-icon]")).not.toBeNull();
+  });
+
+  it("expands from lg and folds again below it, while the account hasn't toggled it", () => {
+    renderAt("/admin/test");
+    expect(state()).toBe("collapsed");
+
+    resize(1280);
+    expect(state()).toBe("expanded");
+    expect(tenantSwitch("Tenant: Test").getByRole("link", { name: "Test" }).textContent).toBe("Test");
+
+    resize(900);
+    expect(state()).toBe("collapsed");
+  });
+
+  it("leaves the sidebar as the account set it for the rest of the page session, and stores nothing", () => {
+    const view = renderAt("/admin/test");
+    fireEvent.click(menu().getByRole("button", { name: "Expand menu" }));
+    expect(state()).toBe("expanded");
+
+    resize(900);
+    view.navigate("/admin/test/audit");
+    resize(1280);
+    resize(800);
+
+    expect(state()).toBe("expanded");
+    expect(document.cookie).not.toContain("sidebar");
+  });
+
+  it("takes over from the drawer once the window widens into the band", () => {
+    viewport(390);
+    renderAt("/admin/test");
+
+    resize(800);
+
+    expect(state()).toBe("collapsed");
+  });
+
+  it("starts expanded at lg and folds when the window narrows into the band", () => {
+    viewport(1280);
+    renderAt("/admin/test");
+    expect(state()).toBe("expanded");
+
+    resize(1000);
+
+    expect(state()).toBe("collapsed");
+  });
+});
+
 describe("SidebarNav below 768 px", () => {
   beforeEach(() => viewport(390));
   afterEach(() => viewport(1280));
@@ -289,6 +385,9 @@ describe("SidebarNav below 768 px", () => {
 
     const bar = within(screen.getByRole("banner"));
     expect(bar.getByRole("link", { name: "CPG" }).getAttribute("href")).toBe("/admin/test");
+    expect(bar.getByRole("link", { name: "CPG" }).querySelector("svg[data-slot=mammoth-mark]")!.getAttribute("width")).toBe("20");
+    // The top bar's switch keeps the names: it is never the rail.
+    expect(bar.getByRole("link", { name: "Prod" }).textContent).toBe("Prod");
     expect(bar.getByRole("group", { name: "Tenant: Test" }).className).toContain("w-32");
     expect(bar.getByRole("link", { name: "Prod" }).getAttribute("href")).toBe("/admin/prod/materials");
     expect(drawer()).toBeNull();

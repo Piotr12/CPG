@@ -51,7 +51,7 @@ export interface NavGroup {
 
 export type NavNode = NavLeaf | NavGroup;
 
-/** The tenant zone: what the switch's tenant holds. Slice 1 as built; each story adds its own line. */
+/** The tenant zone: what the switch's tenant holds, Transactions above Stock and Reports (design system D6). Each story adds its own line. */
 export const TENANT_TREE: NavNode[] = [
   { id: "overview", section: "", match: "exact" },
   {
@@ -68,10 +68,6 @@ export const TENANT_TREE: NavNode[] = [
     ],
   },
   { id: "sales", children: [{ id: "forecasts", section: "forecasts", match: "prefix" }] },
-  { id: "stock", section: "stock", match: "prefix" },
-  { id: "stockImport", section: "stock-import", match: "prefix" },
-  { id: "stockReport", section: "reports/stock", match: "prefix" },
-  { id: "varianceReport", section: "reports/variance", match: "prefix" },
   {
     id: "transactions",
     children: [
@@ -82,6 +78,10 @@ export const TENANT_TREE: NavNode[] = [
       { id: "transfers", section: "transfers", match: "prefix" },
     ],
   },
+  { id: "stock", section: "stock", match: "prefix" },
+  { id: "stockImport", section: "stock-import", match: "prefix" },
+  { id: "stockReport", section: "reports/stock", match: "prefix" },
+  { id: "varianceReport", section: "reports/variance", match: "prefix" },
   { id: "tenantAudit", section: "audit", match: "prefix" },
 ];
 
@@ -133,17 +133,35 @@ export function leafHref(leaf: NavLeaf, tenant: TenantCode): string {
 export const isCurrentLeaf = (leaf: NavLeaf, tenant: TenantCode, pathname: string) =>
   isCurrentPath(leafHref(leaf, tenant), pathname, leaf.match);
 
+/** One step of the section trail: a group (plain words), an entry (a link while a record is open under it), or the record. */
+export interface TrailStep {
+  label: string;
+  /** Where the step leads; only an entry whose page isn't the open one has it. */
+  href?: string;
+  /** The open record's ID, the last step on a detail page. */
+  record?: boolean;
+}
+
+/** The entry's step, then the open record's ID when the page sits under the entry rather than on it. */
+function entrySteps(entry: NavEntry, tenant: TenantCode, pathname: string): TrailStep[] {
+  const href = leafHref(entry, tenant);
+  if (pathname === href) return [{ label: entry.label }];
+  const [record] = pathname.slice(href.length + 1).split("/");
+  return [{ label: entry.label, href }, { label: record, record: true }];
+}
+
 /**
- * The open page's place in the sidebar: its group's label (if any), then its entry's. Empty when the
+ * The open page's place in the sidebar: its group's label (if any), its entry's, and on a detail page
+ * the record (`Transactions › Production orders › 00000060`, the list a link). Empty when the
  * sidebar doesn't hold it (`/admin/tokens`, or Tenants for a normal user).
  */
-export function trailOf(model: NavModel, tenant: TenantCode, pathname: string): string[] {
+export function trailOf(model: NavModel, tenant: TenantCode, pathname: string): TrailStep[] {
   for (const node of [...model.tenant, ...model.shared]) {
     if (isGroup(node)) {
       const entry = node.children.find((child) => isCurrentLeaf(child, tenant, pathname));
-      if (entry) return [node.label, entry.label];
+      if (entry) return [{ label: node.label }, ...entrySteps(entry, tenant, pathname)];
     } else if (isCurrentLeaf(node, tenant, pathname)) {
-      return [node.label];
+      return entrySteps(node, tenant, pathname);
     }
   }
   return [];
