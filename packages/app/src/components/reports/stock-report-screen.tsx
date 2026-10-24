@@ -37,7 +37,8 @@ export function StockReportScreen({ tenant, report, selected, materials, locatio
   const location = (row: StockReportRow) => `${row.location} — ${row.locationName}${inactive(row.locationActive)}`;
   // Narrow screens: the location moves under the material, and the three figures stack in one cell.
   const columns: DataTableColumn<StockReportRow>[] = [
-    { id: "material", header: t.columns.material, kind: "longText", cell: (row) => <div className="flex flex-col gap-1">
+    // `text`, not `longText`: the sticky first column stays narrow enough on a phone for the stacked figures beside it.
+    { id: "material", header: t.columns.material, kind: "text", className: "whitespace-normal wrap-break-word", cell: (row) => <div className="flex flex-col gap-1">
       <span>{material(row)}</span><span className="text-xs text-muted-foreground md:hidden">{location(row)}</span>
     </div> },
     { id: "location", header: t.columns.location, kind: "longText", priority: 2, cell: location },
