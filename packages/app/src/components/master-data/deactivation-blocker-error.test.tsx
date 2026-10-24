@@ -14,6 +14,7 @@ const BLOCKERS: (Required<Pick<Refusal, "code" | "params">> & { href: string })[
   { code: "LOCATION_HAS_OPEN_TRANSFERS", params: { transfer: "00000003" }, href: "/admin/prod/transfers/00000003" },
   { code: "MATERIAL_IN_OPEN_TRANSFER", params: { transfer: "00000003" }, href: "/admin/prod/transfers/00000003" },
   { code: "LOCATION_HAS_PURCHASE_ORDERS", params: { order: "00000004" }, href: "/admin/prod/purchase-orders/00000004" },
+  { code: "MATERIAL_IN_OPEN_ORDER", params: { order: "00000004" }, href: "/admin/prod/purchase-orders/00000004" },
   { code: "LOCATION_HAS_CUSTOMER_ORDERS", params: { order: "00000009" }, href: "/admin/prod/customer-orders/00000009" },
   { code: "MATERIAL_HAS_CUSTOMER_DEMAND", params: { order: "00000009" }, href: "/admin/prod/customer-orders/00000009" },
 ];

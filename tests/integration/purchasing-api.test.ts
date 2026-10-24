@@ -39,7 +39,7 @@ interface Order {
 }
 
 // Purchase requisitions and purchase orders through the API (R07): BUY-002…009, BUY-025, LFC-001,
-// LFC-013, LFC-021, LFC-023, AUD-025, AUD-027, TEN-014, R05.
+// LFC-013, LFC-021, LFC-023, AUD-025, AUD-027, TEN-014, E2E-017, R05.
 describe("purchase requisitions and orders through the API", () => {
   let admin: Browser;
   let adminSecret: string;
@@ -211,7 +211,34 @@ describe("purchase requisitions and orders through the API", () => {
     const refused = await write("PATCH", `/api/tenants/prod/materials/${washer}`, { version: material.version, active: false });
 
     expect(refused.status).toBe(409);
-    expect(json(refused).error).toMatchObject({ code: "MATERIAL_IN_OPEN_ORDER", message: expect.stringContaining(`Purchase order ${placed.id} `) });
+    expect(json(refused).error).toMatchObject({ code: "MATERIAL_IN_OPEN_ORDER", message: expect.stringContaining(`Purchase order ${placed.id} `), params: { order: placed.id } });
+  });
+
+  it("receives an Open PO after its supplier is deactivated, with its movement and audit entry, and refuses a new PO for that supplier (E2E-017)", async () => {
+    const supplier = await create("/api/tenants/prod/suppliers", { name: "buyapi retired" });
+    const nut = await create("/api/tenants/prod/materials", { type: "raw", description: "buyapi nut", baseUnit: "each" });
+    const placing = await placeOrder(order([line(nut, "8", "each", "2027-03-03")], { supplier }));
+    expect(placing.status).toBe(200);
+    const placed = json(placing).data as Order;
+    const { version } = json(await api("GET", `/api/tenants/prod/suppliers/${supplier}`)).data as { version: number };
+    expect((await write("PATCH", `/api/tenants/prod/suppliers/${supplier}`, { version, active: false })).status).toBe(200);
+
+    const posted = await write("POST", "/api/tenants/prod/goods-receipts", { purchaseOrder: placed.id, lines: [{ line: 1, quantity: "8", unit: "each" }] });
+
+    expect(posted.status).toBe(200);
+    const receipt = json(posted).data as { id: string };
+    expect(json(await api("GET", `/api/tenants/prod/purchase-orders/${placed.id}`)).data).toMatchObject({ supplier, status: "completed" });
+    const stock = json(await api("GET", `/api/tenants/prod/stock?material=${nut}&location=${ids.plant}`)).data as { quantity: string; movements: { type: string; reason: string }[] };
+    expect(stock.quantity).toBe("8.000000");
+    expect(stock.movements).toEqual([expect.objectContaining({ type: "goods-receipt", reason: `Goods receipt ${receipt.id} for purchase order ${placed.id}` })]);
+    const audit = (json(await api("GET", "/api/tenants/prod/audit?limit=100")).data.entries as { action: string; subject: { id: string }; after: unknown }[]).find(
+      (entry) => entry.action === "goods-receipts.goods-receipt.posted" && entry.subject.id === receipt.id,
+    );
+    expect(audit).toMatchObject({ after: { purchaseOrder: placed.id } });
+
+    const refused = await placeOrder(order([line(nut, "1", "each", "2027-03-03")], { supplier }));
+    expect(refused.status).toBe(409);
+    expect(json(refused).error.code).toBe("SUPPLIER_INACTIVE");
   });
 
   it("refuses to deactivate a location an Open PO delivers to, then one with an Open requisition, naming each; once both are cancelled it goes (LFC-018)", async () => {

@@ -9,6 +9,7 @@ const BLOCKERS = new Map([
   ["LOCATION_HAS_OPEN_TRANSFERS", { param: "transfer", route: "transfers" }],
   ["MATERIAL_IN_OPEN_TRANSFER", { param: "transfer", route: "transfers" }],
   ["LOCATION_HAS_PURCHASE_ORDERS", { param: "order", route: "purchase-orders" }],
+  ["MATERIAL_IN_OPEN_ORDER", { param: "order", route: "purchase-orders" }],
   ["LOCATION_HAS_CUSTOMER_ORDERS", { param: "order", route: "customer-orders" }],
   ["MATERIAL_HAS_CUSTOMER_DEMAND", { param: "order", route: "customer-orders" }],
 ]);

@@ -358,6 +358,7 @@ async function assertNoOpenOrder(em: EntityManager, material: Material): Promise
     throw new ConflictError(
       `Purchase order ${order} has an open line for this material, so it can't be deactivated.`,
       "MATERIAL_IN_OPEN_ORDER",
+      { order },
     );
   }
 }
