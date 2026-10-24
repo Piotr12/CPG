@@ -18,6 +18,8 @@ describe("NativeSelect", () => {
     expect(select.value).toBe("b");
     expect(select.dataset.size).toBe("sm");
     expect(select.parentElement!.className).toContain("extra");
+    expect(select.className.split(" ")).toEqual(expect.arrayContaining([...["focus-visible:ring-2", "focus-visible:ring-ring", "focus-visible:ring-offset-2", "focus-visible:ring-offset-background"], ...["aria-invalid:border-danger-edge", "aria-invalid:ring-2", "aria-invalid:ring-danger-edge", "aria-invalid:focus-visible:ring-ring"], "rounded-md", "pl-3"]));
+    expect(select.className).not.toMatch(/bg-input|rounded-\[|ring-ring\//);
     expect(screen.getAllByRole("option").map((option) => option.dataset.slot)).toEqual([
       "native-select-option",
       "native-select-option",

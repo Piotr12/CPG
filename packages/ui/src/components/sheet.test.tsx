@@ -37,7 +37,10 @@ describe("Sheet", () => {
     expect(screen.getByText("description").dataset.slot).toBe("sheet-description");
     expect(screen.getByText("title").parentElement!.dataset.slot).toBe("sheet-header");
     expect(screen.getByText("done").parentElement!.dataset.slot).toBe("sheet-footer");
-    expect(document.querySelector("[data-slot=sheet-overlay]")).not.toBeNull();
+    // Design system v1: an opaque scrim, no blur.
+    const overlay = document.querySelector<HTMLElement>("[data-slot=sheet-overlay]")!;
+    expect(overlay.classList).toContain("bg-scrim");
+    expect(overlay.className).not.toMatch(/backdrop-blur|bg-black/);
     expect(screen.getByRole("button", { name: "Close" }).dataset.slot).toBe("sheet-close");
   });
 

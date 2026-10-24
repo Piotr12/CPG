@@ -288,6 +288,11 @@ describe("Sidebar parts", () => {
     expect(skeletons[1].querySelector("[data-sidebar=menu-skeleton-icon]")).not.toBeNull();
     expect(screen.getByText("foot").dataset.slot).toBe("sidebar-footer");
     expect(screen.getByRole("main").dataset.slot).toBe("sidebar-inset");
+    // The ring is drawn inside each focusable row, so the scrolling sidebar can't clip it.
+    for (const focusable of [active, subLink, screen.getByTitle("Plain action"), screen.getByText("plain menu action")]) {
+      expect(focusable.className.split(" ")).toEqual(expect.arrayContaining(["focus-visible:ring-2", "focus-visible:ring-inset", "ring-sidebar-ring"]));
+    }
+    expect(screen.getByText("Plain label").className).toContain("text-muted-foreground");
   });
 
   it("gives leaves a tooltip that shows only in the rail", async () => {
