@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import type { StockView, TransferDetailView, TransferView } from "@cpg/core";
 import { callApi, json } from "./api";
-import { openBrowser, type Browser } from "./browser";
+import { chooseFromList, clickHydrated, openBrowser, type Browser } from "./browser";
 import { signedInAndHydrated, signIn, signInAsAdmin } from "./sign-in";
 import { createToken, openTokens } from "./tokens";
 import { createUser } from "./users";
@@ -79,7 +79,7 @@ describe("transfers in the UI", () => {
     await una.waitUntil(ready(button("Create transfer")));
     await una.clickRole("button", "Create transfer");
     await una.waitFor("[role=dialog]");
-    await una.select("[role=dialog] select[name=material]", ids.steel);
+    await chooseFromList(una, "[role=dialog] input[aria-autocomplete=list]", "tr steel", ids.steel);
     await una.select("[role=dialog] select[name=source]", ids.plant);
     await una.select("[role=dialog] select[name=destination]", ids.depot);
     await una.fill("[role=dialog] input[name=quantity]", "100");
@@ -187,5 +187,42 @@ describe("transfers in the UI", () => {
     );
     expect(json(await api("GET", `/api/tenants/prod/locations/${kiln}`)).data.active).toBe(true);
     expect(json(await api("GET", `/api/tenants/prod/materials/${copper}`)).data.active).toBe(true);
+  });
+
+  it("sorts the transfers by a header and searches them by material and location, marking matches, and clears back (#217)", async () => {
+    const brass = await create("/api/tenants/prod/materials", { type: "raw", description: "tr brass", baseUnit: "kg" });
+    const back = await create("/api/tenants/prod/transfers", { material: brass, source: ids.depot, destination: ids.plant, quantity: "3", unit: "kg", plannedDispatch: "2026-11-05", plannedArrival: "2026-11-06" });
+    /** Waits until the page's address has this query and the table under it is the new one. */
+    const atQuery = (query: string) =>
+      una.waitUntil(`location.search === ${JSON.stringify(query)} && document.querySelector("main [aria-sort]") && !document.querySelector("main table").closest("[hidden]")`);
+    /** This file's two transfers between the plant and the depot, in the order the list shows them (other files may list more). */
+    const own = async () => (await tableRows(una, "Transfers")).map(([id]) => id).filter((id) => id === transfer || id === back);
+
+    await una.open(`${baseUrl}/admin/prod/transfers`);
+    await una.waitUntil(`Boolean(document.querySelector("main [role=search] input[name=q]")) && Object.keys(document.querySelector("main [role=search] button")).some((key) => key.startsWith("__reactFiber"))`);
+    await una.fill("main [role=search] input[name=q]", "tr brass");
+    await una.click("main [role=search] button[type=submit]");
+    await atQuery("?q=tr+brass");
+    await una.waitFor("main [role=status]");
+    expect((await tableRows(una, "Transfers")).map(([id, material]) => [id, material])).toEqual([[back, `${brass} tr brass`]]);
+    expect(await una.text("main [role=status]")).toBe("1 result for “tr brass” · Clear search");
+    expect(await una.evaluate<string[]>(`[...document.querySelectorAll("main tbody mark")].map((mark) => mark.textContent)`)).toEqual(expect.arrayContaining(["tr", "brass"]));
+
+    // Both routes touch the plant; by material, steel (the older ID) comes first, then the other way.
+    await una.open(`${baseUrl}/admin/prod/transfers?q=tr+plant`);
+    await una.waitFor("main [role=status]");
+    for (const [, , route] of await tableRows(una, "Transfers")) expect(route).toContain("tr plant");
+    await clickHydrated(una, "main th a[href$='q=tr+plant&sort=material&dir=asc']");
+    await atQuery("?q=tr+plant&sort=material&dir=asc");
+    expect(await own()).toEqual([transfer, back]);
+    await clickHydrated(una, "main th a[href$='q=tr+plant&sort=material&dir=desc']");
+    await atQuery("?q=tr+plant&sort=material&dir=desc");
+    await una.waitUntil(`document.querySelector("main th[aria-sort=descending]")?.innerText.trim() === "Material"`);
+    expect(await own()).toEqual([back, transfer]);
+
+    await clickHydrated(una, "main [role=status] a");
+    await atQuery("?sort=material&dir=desc");
+    await una.waitUntil(`document.querySelector("main [role=search] input[name=q]").value === "" && !document.querySelector("main [role=status]")`);
+    expect(await own()).toEqual([back, transfer]);
   });
 });
