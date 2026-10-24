@@ -24,16 +24,22 @@ interface DocumentState {
 }
 
 /** What the reader sees: <html lang>, the theme class and the shown page's heading. */
+/**
+ * The page's own heading: since the sign-in page has an `h1` too, and Next keeps a page left by a soft
+ * navigation mounted with `display: none`, it is the `h1` that is laid out, outside streamed `[hidden]` slots.
+ */
+const shownHeading = `[...document.querySelectorAll("h1")].find((heading) => heading.offsetParent && !heading.closest("[hidden]"))`;
+
 const documentState = (browser: Browser) =>
   browser.evaluate<DocumentState>(`({
     lang: document.documentElement.lang,
     isDark: document.documentElement.classList.contains("dark"),
-    heading: [...document.querySelectorAll("h1")].find((heading) => !heading.closest("[hidden]"))?.textContent,
+    heading: ${shownHeading}?.textContent,
   })`);
 
 /** Waits until the page shows `heading` in place, without a reload. */
 const waitForHeading = (browser: Browser, heading: string) =>
-  browser.waitUntil(`document.querySelector("h1")?.textContent === ${JSON.stringify(heading)}`);
+  browser.waitUntil(`${shownHeading}?.textContent === ${JSON.stringify(heading)}`);
 
 /** The tenant header row the page shows: Next.js keeps earlier pages' rows mounted but hidden. */
 const HEADER = "[role=region][data-tenant]";
@@ -114,7 +120,8 @@ describe("language and theme", () => {
     ] as const) {
       await signOut(browser);
       await signInAs(browser, baseUrl, username, password);
-      await browser.waitUntil(`[...document.querySelectorAll("h1")].some((heading) => !heading.closest("[hidden]"))`);
+      // Wait for the destination's heading: the sign-in page being left has one too.
+      await waitForHeading(browser, expected.heading);
 
       expect({ username, ...(await documentState(browser)) }).toEqual({ username, ...expected });
     }
