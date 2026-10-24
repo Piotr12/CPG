@@ -6,9 +6,20 @@ import { NamedRecordsScreen } from "./named-records-screen";
 vi.mock("./create-named-record-dialog", () => ({ CreateNamedRecordDialog: () => <button>Create location</button> }));
 
 const TENANT = { code: "test", name: "Test", generation: 1, readOnly: false };
+const LIST = { search: { q: "", typed: "" }, sort: { sort: "id" as const, dir: "asc" as const } };
 const renderScreen = (admin: boolean, readOnly = false) =>
   render(
-    <NamedRecordsScreen kind="locations" tenant={{ ...TENANT, readOnly }} records={[]} locale="en" messages={en} admin={admin} create={vi.fn()} update={vi.fn()} />,
+    <NamedRecordsScreen
+      kind="locations"
+      tenant={{ ...TENANT, readOnly }}
+      records={[]}
+      locale="en"
+      messages={en}
+      admin={admin}
+      create={vi.fn()}
+      update={vi.fn()}
+      {...LIST}
+    />,
   );
 
 describe("NamedRecordsScreen", () => {
@@ -25,7 +36,30 @@ describe("NamedRecordsScreen", () => {
   it("gives the admin of a read-only tenant no Create, and tells them whom to ask", () => {
     renderScreen(true, true);
 
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Create location" })).toBeNull();
     expect(screen.getByText("Ask an administrator to add locations.")).toBeTruthy();
+  });
+
+  it("puts the kind's search box between the header and the list, its links keeping the sort (#217)", () => {
+    render(
+      <NamedRecordsScreen
+        kind="customers"
+        tenant={TENANT}
+        records={[{ id: "00000002", name: "Acme", active: true, createdAt: new Date(), version: 1 }]}
+        locale="en"
+        messages={en}
+        admin={false}
+        create={vi.fn()}
+        update={vi.fn()}
+        search={{ q: "acme", typed: "acme" }}
+        sort={{ sort: "name", dir: "desc" }}
+      />,
+    );
+
+    expect(screen.getByRole("searchbox", { name: "Search customers" })).toBeTruthy();
+    expect(screen.getByText("Matches the ID or the name.")).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toBe("1 result for “acme” · Clear search");
+    expect(screen.getByRole("link", { name: "Clear search" }).getAttribute("href")).toBe("/admin/test/customers?sort=name&dir=desc");
+    expect(screen.getByRole("link", { name: "ID" }).getAttribute("href")).toBe("/admin/test/customers?q=acme&sort=id&dir=asc");
   });
 });
