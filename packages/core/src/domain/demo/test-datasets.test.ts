@@ -38,14 +38,20 @@ describe("Test datasets", () => {
   });
 
   // E2E-020 (`tests/integration/test-reset-api.test.ts`) posts a G1 goods issue for what is left on an Open demo shipment
-  // of the tiny dataset the server generated for its day, whatever day the run falls on (#200). The seed issues a
-  // shipment in full or not at all, and an order's shipments partition its lines, so a shipment that no goods issue
-  // names is Open with each positive line left to issue: those two facts of the timeline are what is asserted.
-  it("leaves tiny a shipment that no goods issue names, with positive quantities, on every day of 2025 to 2027", { timeout: 30_000 }, () => {
+  // of the tiny dataset the server generated for its day, whatever day the run falls on (#200). Asserted here: such a
+  // shipment exists, its lines are positive, and every seeded goods issue takes its shipment's lines in full. Inferred
+  // from the planner (`shipmentsOf` splits each order line between an order's shipments, never twice): a shipment that
+  // no goods issue names is therefore Open with everything left to issue.
+  it("leaves tiny a shipment that no goods issue names, with positive lines, on every day of 2025 to 2027, and issues a shipment in full or not at all", { timeout: 30_000 }, () => {
     for (let today = "2025-01-01"; today <= "2027-12-31"; today = addDays(today, 1)) {
       const { timeline } = generateTestTenantDataset(TEST_DATASET_CONFIGS.tiny, today);
-      const issued = new Set(timeline.flatMap((event) => (event.kind === "goodsIssue" ? [event.shipment] : [])));
-      const unissued = timeline.filter((event): event is Extract<TimelineEvent, { kind: "shipment" }> => event.kind === "shipment" && !issued.has(event.key));
+      const shipments = new Map(timeline.flatMap((event) => (event.kind === "shipment" ? [[event.key, event] as const] : [])));
+      const issues = timeline.filter((event): event is Extract<TimelineEvent, { kind: "goodsIssue" }> => event.kind === "goodsIssue");
+      for (const issue of issues) {
+        expect(issue.lines, `${today} ${issue.shipment}`).toEqual(shipments.get(issue.shipment)?.lines.map(({ quantity, unit }, index) => ({ line: index + 1, quantity, unit })));
+      }
+      const issued = new Set(issues.map(({ shipment }) => shipment));
+      const unissued = [...shipments.values()].filter(({ key }) => !issued.has(key));
       expect(unissued.length, today).toBeGreaterThan(0);
       expect(unissued.every(({ lines }) => lines.every(({ quantity }) => (parseDecimal(quantity) ?? 0n) > 0n)), today).toBe(true);
     }

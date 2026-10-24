@@ -3,7 +3,7 @@
 **Date:** 2026-10-24 17:00 UTC
 **Agent:** Claude Code (Fable 5.1), `om-auto-fix-issue 200` under cezar
 **Spec:** none (follow-up from #199's review; the catalogue row is `.ai/specs/research/CPG-acceptance.md` E2E-020)
-**Status:** in progress
+**Status:** done
 
 ## Goal
 
@@ -31,7 +31,7 @@ E2E-020 in `tests/integration/test-reset-api.test.ts` picks an Open shipment fro
 ## Changes
 
 - `tests/integration/test-reset-api.test.ts` — `withinOneDay(run)`; E2E-020 resets first (G1 is its own), posts the G1 goods issue and resets to G2 inside that guard; every earlier assertion kept.
-- `packages/core/src/domain/demo/test-datasets.test.ts` — "leaves tiny an Open shipment with nothing issued on it on every day of 2025 to 2027" (the window reaches a year past today's, so the runs of the coming year are covered; a one-line loop instead of a copied `days` helper, after self-review).
+- `packages/core/src/domain/demo/test-datasets.test.ts` — "leaves tiny a shipment that no goods issue names, with positive lines, on every day of 2025 to 2027, and issues a shipment in full or not at all" (the window reaches a year past today's, so the runs of the coming year are covered; a one-line loop instead of a copied `days` helper, after self-review; the positive-lines and full-issue assertions after the review).
 - `.ai/specs/research/CPG-acceptance.md` — E2E-020 Evidence names the same-day guarantee and the window check; "Last updated" line.
 - `.ai/lessons.md` — one bullet under Integration tests.
 - This run log.
@@ -45,8 +45,14 @@ E2E-020 in `tests/integration/test-reset-api.test.ts` picks an Open shipment fro
 - `npm run build`: exit 0 ("Compiled successfully", 103 static pages).
 - Integration, Docker unavailable here: the standalone build copied to a fresh directory, `node packages/app/server.js` on 127.0.0.1:3200 with a fresh `DATA_DIR`, `KEEP_ALIVE_TIMEOUT=3600000` (startup seed 1.5 s: 84 shipments, 75 goods issues). `CPG_BASE_URL=… npm run test:integration -- tests/integration/test-reset-api.test.ts`: 5 passed in 17.8 s, E2E-020 included.
 - After the self-review edit (the window check's loop), on the final tree: `npm run lint` exit 0 (0 errors, the same warning), `npm run typecheck` exit 0, `npm run test:coverage` exit 0 with 3,861 tests in 531 files at the 100% thresholds. The build is unaffected by a test-file edit, so it was not re-run.
+- Reviewer's own gate runs (fresh context): on `7d94969f` and on `87aed6c6`, lint, typecheck, test:coverage (3,861 tests, 100%) and build all exit 0.
+- After each review fix: the unit file, `npm run lint` (0 errors) and `npm run typecheck` (exit 0) on the changed tree; the integration file is unchanged since its run above.
+- CI: run 40115934673 on `7d94969f` green except shard 1 (#213's flake); run 40117124522 on `87aed6c6` and the run on the final commit are reported on PR #212 (the `om-auto-review-pr` CI-result comment).
 
 - 18:20 UTC — Review verdict (fresh-context reviewer): **changes requested**, the one blocker being the red `integration-tests (1)` check (#213's flake); the diff had one minor (the unit test asserted a proxy, "a shipment no goods issue names", while the Evidence said "Open"), and two nits (no clock seam in `withinOneDay`; the run log's status). Posted as a PR comment (the pipeline can't review its own PR), pipeline label `changes-requested`. Autofix: the unit test now also asserts every unissued shipment's lines are positive and its comment states the inference; the Evidence line says exactly that. Nit 3 declined: the helper is six lines, and this repo has no unit tests of integration helpers (`tests/` holds repo-wide checks); its branch is a day compare and one bounded recursion, reviewed by reading.
+
+- 18:28 UTC — Autofix validated (the unit file 4/4, lint 0 errors, typecheck exit 0), committed as `87aed6c6` and pushed; a fresh-context re-review runs on the new head while CI does. The shard-1 re-run on `7d94969f` was cancelled by the push (the workflow's concurrency rule); the run on the new head covers it.
+- 18:45 UTC — Re-review (fresh-context): **approve**. Finding 2 fixed, 3 declined with an acceptable reason, 1 pending on CI. Two nits: the test comment read as if its premises were asserted, so the test now also asserts that every seeded goods issue takes its shipment's lines in full (the "partition" premise stays an inference, verified by the reviewer in `demand-plan.ts` `shipmentsOf`), and the comment names what is asserted and what is inferred; this run log is finalized. Final commit below; the review and CI result are posted on PR #212.
 
 ## Follow-ups
 
