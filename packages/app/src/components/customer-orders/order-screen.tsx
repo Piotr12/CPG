@@ -83,7 +83,6 @@ export function OrdersScreen({ tenant, orders, order, shipments = [], page = 1, 
       cancel={cancelCustomerOrder.bind(null, tenant.code, tenant.generation, order.id)} closeEarly={closeEarlyCustomerOrder.bind(null, tenant.code, tenant.generation, order.id)} />}
   </>;
   return <div lang={locale}>
-    {order && <p className="mb-4"><Link className="text-sm underline underline-offset-4" href={path}>{t.back}</Link></p>}
     <PageHeader title={order ? fill(t.detailHeading, { id: order.id }) : fill(t.heading, { tenant: tenant.name })}
       meta={order && status(order.status)} description={t.intro} actions={actions} />
     <div className="flex flex-col gap-8">

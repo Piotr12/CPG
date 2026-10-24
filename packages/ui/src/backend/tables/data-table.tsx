@@ -128,7 +128,8 @@ export function DataTable<Row>({
       <TableBody>
         {rows.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={width}>
+            {/* The empty state wraps inside a table that scrolls sideways (cells are nowrap by default). */}
+            <TableCell colSpan={width} className="whitespace-normal">
               <EmptyState title={empty} />
             </TableCell>
           </TableRow>
@@ -142,8 +143,8 @@ export function DataTable<Row>({
                     key={column.id}
                     title={column.truncate?.(row)}
                     className={cn(
-                      shared[index],
                       column.kind && CELL_KIND_CLASSES[column.kind],
+                      shared[index],
                       index === 0 && STICKY_CELL,
                       index === 0 && rowTone && cn("border-l-2 border-l-transparent", tone && ROW_TONE_EDGES[tone]),
                       column.className,

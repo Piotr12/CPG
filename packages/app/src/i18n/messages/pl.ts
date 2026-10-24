@@ -669,7 +669,7 @@ export const pl: Messages = {
   productionOrders: {
     title: "Zlecenia produkcyjne", heading: "Zlecenia produkcyjne — {tenant}", detailHeading: "Zlecenie produkcyjne {id}",
     intro: "Zaplanuj jeden wyrób w jednej lokalizacji i zachowaj wybraną rewizję BOM. Planowanie nie zmienia zapasu fizycznego.",
-    create: "Utwórz zlecenie produkcyjne", edit: "Edytuj zlecenie produkcyjne", save: "Zapisz zmiany", preview: "Podgląd receptur", pending: "Przetwarzanie…", cancel: "Anuluj", back: "Wstecz", backList: "Wróć do zleceń produkcyjnych",
+    create: "Utwórz zlecenie produkcyjne", edit: "Edytuj zlecenie produkcyjne", save: "Zapisz zmiany", preview: "Podgląd receptur", pending: "Przetwarzanie…", cancel: "Anuluj", back: "Wstecz",
     id: "ID", output: "Materiał wyjściowy", location: "Lokalizacja", quantity: "Planowana ilość", unit: "Jednostka", finish: "Planowany koniec", start: "Planowany początek", recipe: "BOM / rewizja", status: "Status", entered: "Wprowadzona ilość / przelicznik",
     choose: "Wybierz…", unitHint: "Wpisz jednostkę bazową wyrobu (obok jego nazwy) lub skonfigurowaną jednostkę alternatywną.",
     previewDates: "Orientacyjny początek: {start} ({days} dni kalendarzowych przed końcem). Daty są sprawdzane ponownie przy zapisie.",
@@ -764,7 +764,7 @@ export const pl: Messages = {
     empty: "Brak zamówień klientów.", emptyHint: "Utwórz zamówienie, aby zapisać popyt z terminami.",
     create: "Utwórz zamówienie", edit: "Edytuj zamówienie", createTitle: "Nowe zamówienie klienta", editTitle: "Edycja zamówienia klienta {id}",
     description: "Wybierz jednego klienta i lokalizację. Dodaj materiały, ilości, jednostki i wymagane terminy.",
-    save: "Zapisz zamówienie", saving: "Zapisywanie…", cancel: "Anuluj", back: "Wszystkie zamówienia klientów",
+    save: "Zapisz zamówienie", saving: "Zapisywanie…", cancel: "Anuluj",
     id: "Zamówienie", customer: "Klient", location: "Lokalizacja", status: "Status", lines: "Pozycje", material: "Materiał",
     quantity: "Ilość zamówiona", unit: "Jednostka", requiredDate: "Wymagany termin", fulfilled: "Zrealizowano", outstanding: "Pozostało", entered: "Wprowadzono jako",
     choose: "Wybierz…", addLine: "Dodaj pozycję", removeLine: "Usuń pozycję {number}", line: "Pozycja {number}", inactive: "Nieaktywny",

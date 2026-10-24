@@ -6,8 +6,11 @@ import { describe, expect, it } from "vitest";
 // never a palette colour, an off-scale radius, size or spacing, a blur or gradient, or an emoji. The
 // allow-list is the spec's Exceptions table, verbatim; a new exception goes into that table first.
 
-/** Report-only during the design system run: print the offenders and pass. The lead flips it to `false` at the close. */
-export const REPORT_ONLY = true;
+/**
+ * Report-only during the design system run (print the offenders and pass); flipped to `false` at the run's
+ * close, so the test now fails on any offender outside the spec's Exceptions table.
+ */
+export const REPORT_ONLY = false;
 
 export interface Offender {
   /** Repo-relative, forward slashes. */

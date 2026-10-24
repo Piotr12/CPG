@@ -706,7 +706,7 @@ export const en = {
   productionOrders: {
     title: "Production orders", heading: "Production orders — {tenant}", detailHeading: "Production order {id}",
     intro: "Plan one Make output at one location and keep its chosen BOM revision. Planning never changes physical stock.",
-    create: "Create production order", edit: "Edit production order", save: "Save changes", preview: "Preview recipes", pending: "Working…", cancel: "Cancel", back: "Back", backList: "Back to production orders",
+    create: "Create production order", edit: "Edit production order", save: "Save changes", preview: "Preview recipes", pending: "Working…", cancel: "Cancel", back: "Back",
     id: "ID", output: "Output material", location: "Location", quantity: "Planned quantity", unit: "Unit", finish: "Planned finish", start: "Planned start", recipe: "BOM / revision", status: "Status", entered: "Entered quantity / conversion",
     choose: "Choose…", unitHint: "Enter the output's base unit (shown beside its name) or a configured alternate unit.",
     previewDates: "Indicative start: {start} ({days} calendar days before finish). Dates are checked again when saving.",
@@ -801,7 +801,7 @@ export const en = {
     empty: "No customer orders yet.", emptyHint: "Create an order to record dated demand.",
     create: "Create order", edit: "Edit order", createTitle: "Create customer order", editTitle: "Edit customer order {id}",
     description: "Choose one customer and location. Add each material, quantity, unit and required date below.",
-    save: "Save order", saving: "Saving…", cancel: "Cancel", back: "All customer orders",
+    save: "Save order", saving: "Saving…", cancel: "Cancel",
     id: "Order", customer: "Customer", location: "Location", status: "Status", lines: "Lines", material: "Material",
     quantity: "Ordered quantity", unit: "Unit", requiredDate: "Required date", fulfilled: "Fulfilled", outstanding: "Outstanding", entered: "Entered as",
     choose: "Choose…", addLine: "Add line", removeLine: "Remove line {number}", line: "Line {number}", inactive: "Inactive",

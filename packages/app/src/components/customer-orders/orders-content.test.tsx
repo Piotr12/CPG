@@ -73,7 +73,8 @@ describe("customer order pages", () => {
     render(await resolveServerComponents(page(true)));
     expect(mocks.get).toHaveBeenCalledWith(order.id); expect(mocks.list).not.toHaveBeenCalled();
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Customer order 00000001");
-    expect(screen.getByRole("link", { name: "All customer orders" }).getAttribute("href")).toBe("/admin/test/customer-orders");
+    // The way back to the list is the section trail's link (design system v1), not a link on the screen.
+    expect(screen.queryByRole("link", { name: "All customer orders" })).toBeNull();
     expect(screen.getByRole("link", { name: "00000005 Cabinet" }).getAttribute("href")).toBe("/admin/test/materials/00000005");
     const cells = within(screen.getByRole("table", { name: "Lines" })).getAllByRole("cell");
     expect(cells.map((cell) => cell.textContent)).toEqual(["00000005 Cabinet", "24 each", "2 case (1 case = 12 each)", "2027-01-04", "0", "24", "Open", "0", "Cancel line…"]);

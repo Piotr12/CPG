@@ -13,3 +13,5 @@ Viewport captures (not full pages) of the P3 screens on the realistic Test datas
 | `tall-dialog-*` | Add planning parameters: Polish labels wrap, nothing clips, the actions stay reachable |
 
 `metrics.json` (from the last capture run, so without the tenant `audit-*` rows) records, per capture, page sideways overflow, the visible `h1`s, which tables scroll, clipped buttons or labels, and for the dialog whether it fits and its submit is reachable. Every capture has exactly one `h1`, nothing clipped, and the dialog fits with its actions reachable. The one page overflow, `materials-*-en-320` (347 px), comes from the header actions row in `app/admin/[tenant]/materials/page.tsx` (P1's file, `flex shrink-0`, no wrap); P1's `PageHeader` conversion wraps it.
+
+_Lead, at the close: the 768 px captures were dropped from this folder to keep the run folder at the repository's size norm; the close QA attached to the pull request covers 768 px for the acceptance screens, and the metrics files above keep the measurements._

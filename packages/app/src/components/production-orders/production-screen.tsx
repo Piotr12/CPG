@@ -56,7 +56,6 @@ export function ProductionScreen({ tenant, orders, order, materials, locations, 
   </>;
   const shortages = order?.shortages.length ?? 0;
   return <div lang={locale}>
-    {order && <p className="mb-4"><Link className="text-sm underline" href={path}>{t.backList}</Link></p>}
     <PageHeader title={order ? fill(t.detailHeading, { id: order.id }) : fill(t.heading, { tenant: tenant.name })}
       meta={order && status(order.status)} description={t.intro} actions={actions} />
     <div className="flex flex-col gap-8">

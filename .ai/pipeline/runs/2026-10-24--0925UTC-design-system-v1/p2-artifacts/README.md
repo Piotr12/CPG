@@ -15,3 +15,5 @@ order 00000591 and purchase order 00000447 closed early through the new header c
 
 `metrics.jsonl` has one line per main capture: page overflow (none), shown `h1` count (always 1), clipped buttons,
 badges, headings or column headers (none), and each table's own overflow.
+
+_Lead, at the close: the 768 px captures were dropped from this folder to keep the run folder at the repository's size norm; the close QA attached to the pull request covers 768 px for the acceptance screens, and the metrics files above keep the measurements._
