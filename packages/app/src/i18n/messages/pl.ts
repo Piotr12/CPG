@@ -146,6 +146,7 @@ export const pl: Messages = {
     secret: {
       title: "Utworzono token „{name}”",
       label: "Sekret",
+      warningTitle: "Skopiuj ten token teraz",
       warning: "Skopiuj go teraz. Nie zobaczysz go ponownie.",
       usage: "Wysyłaj go jako Authorization: Bearer <sekret>.",
       copy: "Kopiuj",
@@ -176,6 +177,7 @@ export const pl: Messages = {
       "Każda ilość materiału jest zapisywana w jego jednostce bazowej, dokładnie do sześciu miejsc po przecinku. Identyfikatory są nadawane po kolei i nigdy się nie zmieniają.",
     empty: "W środowisku {tenant} nie ma jeszcze materiałów.",
     emptyHint: "Utwórz pierwszy przyciskiem Utwórz materiał.",
+    emptyReader: "Poproś administratora o dodanie materiałów.",
     allMaterials: "Wszystkie materiały",
     columns: {
       id: "ID materiału",
@@ -287,6 +289,7 @@ export const pl: Messages = {
     intro: "Miejsca, w których materiały są wytwarzane i składowane. Identyfikatory są nadawane po kolei i nigdy się nie zmieniają.",
     empty: "W środowisku {tenant} nie ma jeszcze lokalizacji.",
     emptyHint: "Utwórz pierwszą przyciskiem Utwórz lokalizację.",
+    emptyReader: "Poproś administratora o dodanie lokalizacji.",
     columns: { id: "ID", name: "Nazwa", status: "Status", actions: "Akcje" },
     status: { active: "Aktywny", inactive: "Nieaktywny" },
     cancel: "Anuluj",
@@ -334,6 +337,7 @@ export const pl: Messages = {
     intro: "Komu sprzedajesz. Identyfikatory są nadawane po kolei i nigdy się nie zmieniają.",
     empty: "W środowisku {tenant} nie ma jeszcze klientów.",
     emptyHint: "Utwórz pierwszego przyciskiem Utwórz klienta.",
+    emptyReader: "Poproś administratora o dodanie klientów.",
     columns: { id: "ID", name: "Nazwa", status: "Status", actions: "Akcje" },
     status: { active: "Aktywny", inactive: "Nieaktywny" },
     cancel: "Anuluj",
@@ -381,6 +385,7 @@ export const pl: Messages = {
     intro: "Od kogo kupujesz. Identyfikatory są nadawane po kolei i nigdy się nie zmieniają.",
     empty: "W środowisku {tenant} nie ma jeszcze dostawców.",
     emptyHint: "Utwórz pierwszego przyciskiem Utwórz dostawcę.",
+    emptyReader: "Poproś administratora o dodanie dostawców.",
     columns: { id: "ID", name: "Nazwa", status: "Status", actions: "Akcje" },
     status: { active: "Aktywny", inactive: "Nieaktywny" },
     cancel: "Anuluj",
@@ -429,6 +434,7 @@ export const pl: Messages = {
       "Jeden wiersz na materiał i lokalizację: czy MRP go produkuje, czy kupuje, czas realizacji w pełnych dniach kalendarzowych oraz minimalna partia i wielokrotność partii w jednostce bazowej materiału.",
     empty: "Brak parametrów planowania w {tenant}.",
     emptyHint: "Dodaj pierwszy zestaw przyciskiem Dodaj parametry.",
+    emptyReader: "Poproś administratora o dodanie parametrów planowania.",
     columns: {
       material: "Materiał",
       location: "Lokalizacja",
@@ -501,6 +507,7 @@ export const pl: Messages = {
       "Cele datowane dla materiału i lokalizacji. Cel obowiązuje od swojej daty do następnego; bez celu wynosi 0. Status według dzisiejszej daty, {today} (UTC).",
     empty: "Brak celów zapasu bezpieczeństwa w {tenant}.",
     emptyHint: "Dodaj pierwszy przyciskiem Dodaj cel.",
+    emptyReader: "Poproś administratora o dodanie celów zapasu bezpieczeństwa.",
     columns: {
       material: "Materiał",
       location: "Lokalizacja",
@@ -769,6 +776,7 @@ export const pl: Messages = {
       "Struktury wyrobów (BOM) z alternatywami, priorytetem i okresem ważności. Zmiana BOM-u tworzy nową rewizję; wcześniejsze rewizje pozostają do wglądu i nigdy się nie zmieniają.",
     empty: "Brak BOM-ów w {tenant}.",
     emptyHint: "Utwórz pierwszy przyciskiem Utwórz BOM.",
+    emptyReader: "Poproś administratora o dodanie BOM-ów.",
     allBoms: "Wszystkie BOM-y",
     columns: {
       id: "BOM",
@@ -1802,7 +1810,7 @@ export const pl: Messages = {
   stockReport: {
     heading: "Raport zapasu — {tenant}",
     intro: "Zapas fizyczny na stanie i zapas w tranzycie dla każdego materiału i lokalizacji, w jednostce podstawowej materiału, na dzień {date} (UTC). Zapas w tranzycie należy do swojego przesunięcia: żadna z lokalizacji nie może go użyć, dopóki nie zostanie przyjęty.",
-    material: "Materiał", location: "Lokalizacja", all: "Wszystkie", includeZero: "Pokaż wiersze z samymi zerami", apply: "Zastosuj",
+    material: "Materiał", location: "Lokalizacja", all: "Wszystkie", includeZero: "Pokaż wiersze z samymi zerami", apply: "Zastosuj", clear: "Wyczyść filtry",
     columns: { material: "Materiał", location: "Lokalizacja", quantity: "Na stanie", inTransitFrom: "W tranzycie stąd", inTransitTo: "W tranzycie tutaj", figures: "Zapas" },
     inactive: "Nieaktywny", label: "Bieżący zapas", empty: "Żaden zapas nie pasuje do tych filtrów.", rows: "Wierszy: {count}",
     ledger: "Ruchy", ledgerOf: "Ruchy {material} w {location}", actions: "Ruchy",
@@ -1821,6 +1829,7 @@ export const pl: Messages = {
     recipe: "BOM {bom} wer. {revision}", orderLink: "Zlecenie produkcyjne {id}", componentsOf: "Składniki zlecenia produkcyjnego {id}",
     label: "Odchylenia produkcji", empty: "Żadne zlecenie produkcyjne z wykonaniami nie pasuje do tych filtrów.", rows: "Zleceń: {count}",
     rangeError: "Data końcowa nie może być wcześniejsza niż początkowa.",
+    clear: "Wyczyść filtry",
     pagination: "Strony raportu odchyleń", previous: "Poprzednia", next: "Następna", page: "Strona {page} z {pages}",
   },
   nav: {

@@ -55,7 +55,7 @@ export function RevokeTokenDialog({ token, labels }: { token: ApiTokenSummary; l
         {error && <ErrorMessage>{error}</ErrorMessage>}
         <AlertDialogFooter>
           <AlertDialogCancel>{labels.cancel}</AlertDialogCancel>
-          <Button variant="destructive" disabled={isPending} onClick={confirm}>
+          <Button variant="destructive-solid" disabled={isPending} onClick={confirm}>
             {t.confirm}
           </Button>
         </AlertDialogFooter>

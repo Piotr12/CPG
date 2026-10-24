@@ -1,13 +1,15 @@
 "use client";
 
+import { Check, Lock, OctagonAlert } from "lucide-react";
 import Link from "next/link";
 import { useId, useRef, useState, useTransition, type ChangeEvent } from "react";
 import type { ImportReport, ImportRowOutcome, ImportSheetSummary } from "@cpg/core";
 import { IMPORT_FILE_MAX_BYTES, WORKBOOK_TOO_LARGE_MESSAGE } from "@cpg/core/validators/imports/import-request.schema";
 import { STOCK_REASON_MAX } from "@cpg/core/validators/stock/stock-correction.schema";
+import { Callout } from "@cpg/ui/backend/feedback/callout";
 import { ErrorMessage } from "@cpg/ui/backend/feedback/error-message";
+import { StatusBadge } from "@cpg/ui/backend/feedback/status-badge";
 import { DataTable } from "@cpg/ui/backend/tables/data-table";
-import { Badge } from "@cpg/ui/components/badge";
 import { Button } from "@cpg/ui/components/button";
 import { Input } from "@cpg/ui/components/input";
 import { Label } from "@cpg/ui/components/label";
@@ -17,6 +19,7 @@ import { errorMessage } from "../../i18n/error-message";
 import { fill } from "../forms/form-labels";
 import { fileToBase64 } from "./base64";
 import type { ImportLabels } from "./labels";
+import { IMPORT_RESULT_TONE, importPreviewTone } from "./outcome-tone";
 import { changeText, counted, createdText, problemText } from "./report-text";
 
 /** Which import the screen runs: the admin's master data and BOMs, or physical stock (both roles). */
@@ -165,6 +168,8 @@ export function ImportScreen({ tenant, labels, kind = "masterData" }: ImportScre
       </ul>
     );
   const rowKey = (row: ImportRowOutcome) => `${row.sheet}:${row.row}`;
+  /** An empty cell: a dash a screen reader reads as "none". */
+  const none = <span aria-label="none">—</span>;
   const t = labels;
 
   return (
@@ -174,17 +179,17 @@ export function ImportScreen({ tenant, labels, kind = "masterData" }: ImportScre
           <li
             key={name}
             aria-current={index + 1 === step ? "step" : undefined}
-            className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${index + 1 === step ? "border-foreground font-semibold" : "text-muted-foreground"}`}
+            className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm ${index + 1 === step ? "border-foreground font-semibold" : "text-muted-foreground"}`}
           >
-            <span aria-hidden className="flex size-6 items-center justify-center rounded-full border text-xs">
-              {index + 1 < step ? "✓" : index + 1}
+            <span aria-hidden className="flex size-6 shrink-0 items-center justify-center rounded-full border text-xs">
+              {index + 1 < step ? <Check className="size-3.5" /> : index + 1}
             </span>
             {name}
           </li>
         ))}
       </ol>
 
-      <section aria-labelledby={`${id}-template`} className="flex flex-col gap-3 rounded-xl border p-5">
+      <section aria-labelledby={`${id}-template`} className="flex flex-col gap-4 rounded-lg border p-4">
         <h2 id={`${id}-template`} className="text-lg font-semibold">
           {t.template.title}
         </h2>
@@ -198,12 +203,16 @@ export function ImportScreen({ tenant, labels, kind = "masterData" }: ImportScre
         </div>
       </section>
 
-      <section aria-labelledby={`${id}-upload`} className="flex flex-col gap-3 rounded-xl border p-5">
+      <section aria-labelledby={`${id}-upload`} className="flex flex-col gap-4 rounded-lg border p-4">
         <h2 id={`${id}-upload`} className="text-lg font-semibold">
           {t.upload.title}
         </h2>
         <p className="text-sm text-muted-foreground">{t.upload.text}</p>
-        {blocked && <ErrorMessage>🔒 {fill(t.readOnly, { tenant: tenant.name })}</ErrorMessage>}
+        {blocked && (
+          <Callout tone="warning" icon={Lock}>
+            {fill(t.readOnly, { tenant: tenant.name })}
+          </Callout>
+        )}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
           <div className="flex flex-1 flex-col gap-2">
             <Label htmlFor={`${id}-file`}>{t.upload.file}</Label>
@@ -228,15 +237,22 @@ export function ImportScreen({ tenant, labels, kind = "masterData" }: ImportScre
               rowKey={(row) => row.sheet}
               empty="—"
               columns={[
-                { id: "sheet", header: t.summary.sheet, cell: (row) => row.sheet },
-                ...(kind === "stock" ? [] : [{ id: "created", header: t.summary.created, cell: (row: ImportSheetSummary) => row.created, className: "text-right" }]),
-                { id: "updated", header: t.summary.updated, cell: (row) => row.updated, className: "text-right" },
-                { id: "unchanged", header: t.summary.unchanged, cell: (row) => row.unchanged, className: "text-right" },
+                { id: "sheet", header: t.summary.sheet, kind: "text", cell: (row) => row.sheet },
+                ...(kind === "stock" ? [] : [{ id: "created", header: t.summary.created, kind: "quantity" as const, cell: (row: ImportSheetSummary) => row.created }]),
+                { id: "updated", header: t.summary.updated, kind: "quantity", cell: (row) => row.updated },
+                { id: "unchanged", header: t.summary.unchanged, kind: "quantity", cell: (row) => row.unchanged },
                 {
                   id: "errors",
                   header: t.summary.errors,
-                  cell: (row) => (row.errors > 0 ? <Badge variant="destructive">{row.errors}</Badge> : 0),
-                  className: "text-right",
+                  kind: "quantity",
+                  cell: (row) =>
+                    row.errors > 0 ? (
+                      <StatusBadge tone="danger" icon={OctagonAlert}>
+                        {row.errors}
+                      </StatusBadge>
+                    ) : (
+                      0
+                    ),
                 },
               ]}
             />
@@ -249,10 +265,10 @@ export function ImportScreen({ tenant, labels, kind = "masterData" }: ImportScre
                   rowKey={({ index }) => String(index)}
                   empty="—"
                   columns={[
-                    { id: "sheet", header: t.problems.sheet, cell: ({ issue }) => issue.sheet ?? "—" },
-                    { id: "row", header: t.problems.row, cell: ({ issue }) => issue.row ?? "—", className: "text-right" },
-                    { id: "column", header: t.problems.column, cell: ({ issue }) => issue.column ?? "—" },
-                    { id: "problem", header: t.problems.problem, cell: ({ issue }) => problemText(issue, labels, tenant.name), className: "whitespace-normal" },
+                    { id: "sheet", header: t.problems.sheet, kind: "text", cell: ({ issue }) => issue.sheet ?? none },
+                    { id: "row", header: t.problems.row, kind: "quantity", cell: ({ issue }) => issue.row ?? none },
+                    { id: "column", header: t.problems.column, kind: "text", priority: 2, cell: ({ issue }) => issue.column ?? none },
+                    { id: "problem", header: t.problems.problem, kind: "longText", cell: ({ issue }) => problemText(issue, labels, tenant.name) },
                   ]}
                 />
               </>
@@ -264,11 +280,11 @@ export function ImportScreen({ tenant, labels, kind = "masterData" }: ImportScre
                   rowKey={rowKey}
                   empty={t.commit.nothing}
                   columns={[
-                    { id: "sheet", header: t.preview.sheet, cell: (row) => row.sheet },
-                    { id: "row", header: t.preview.row, cell: (row) => row.row, className: "text-right" },
-                    { id: "action", header: t.preview.action, cell: (row) => <Badge variant="outline">{t.actions[row.action]}</Badge> },
-                    { id: "record", header: t.preview.record, cell: (row) => recordCell(row, false), className: "whitespace-normal" },
-                    { id: "changes", header: t.preview.changes, cell: changesCell, className: "whitespace-normal" },
+                    { id: "sheet", header: t.preview.sheet, kind: "text", cell: (row) => row.sheet },
+                    { id: "row", header: t.preview.row, kind: "quantity", cell: (row) => row.row },
+                    { id: "action", header: t.preview.action, kind: "status", cell: (row) => <StatusBadge {...importPreviewTone(row.action)}>{t.actions[row.action]}</StatusBadge> },
+                    { id: "record", header: t.preview.record, kind: "longText", cell: (row) => recordCell(row, false) },
+                    { id: "changes", header: t.preview.changes, kind: "longText", cell: changesCell },
                   ]}
                 />
                 {unchanged > 0 && !showUnchanged && (
@@ -284,14 +300,13 @@ export function ImportScreen({ tenant, labels, kind = "masterData" }: ImportScre
         )}
       </section>
 
-      <section aria-labelledby={`${id}-commit`} className="flex flex-col gap-3 rounded-xl border p-5">
+      <section aria-labelledby={`${id}-commit`} className="flex flex-col gap-4 rounded-lg border p-4">
         <h2 id={`${id}-commit`} className="text-lg font-semibold">
           {t.commit.title}
         </h2>
         {committed ? (
           <>
-            <p role="status" className="rounded-lg border border-green-600/30 bg-green-600/10 px-3 py-2 text-sm">
-              ✓{" "}
+            <Callout tone="success" role="status">
               {fill(t.commit.done, {
                 tenant: tenant.name,
                 reason: reason.trim(),
@@ -302,17 +317,17 @@ export function ImportScreen({ tenant, labels, kind = "masterData" }: ImportScre
                   ]),
                 ),
               })}
-            </p>
+            </Callout>
             <DataTable
               label={t.commit.title}
               rows={committed.rows.filter((row) => row.action !== "unchanged")}
               rowKey={rowKey}
               empty={t.commit.nothing}
               columns={[
-                { id: "sheet", header: t.preview.sheet, cell: (row) => row.sheet },
-                { id: "row", header: t.preview.row, cell: (row) => row.row, className: "text-right" },
-                { id: "result", header: t.preview.action, cell: (row) => <Badge variant="outline">{t.results[row.action]}</Badge> },
-                { id: "record", header: t.preview.record, cell: (row) => recordCell(row, true), className: "whitespace-normal" },
+                { id: "sheet", header: t.preview.sheet, kind: "text", cell: (row) => row.sheet },
+                { id: "row", header: t.preview.row, kind: "quantity", cell: (row) => row.row },
+                { id: "result", header: t.preview.action, kind: "status", cell: (row) => <StatusBadge {...IMPORT_RESULT_TONE}>{t.results[row.action]}</StatusBadge> },
+                { id: "record", header: t.preview.record, kind: "longText", cell: (row) => recordCell(row, true) },
               ]}
             />
             <div>

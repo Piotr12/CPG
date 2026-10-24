@@ -118,6 +118,10 @@ describe("RecipeForm", () => {
     expect(screen.getByText("This material is already in the recipe: enter its total quantity once.")).toBeTruthy();
     expect(lineField("Quantity", 1).getAttribute("aria-invalid")).toBe("true");
     expect(screen.getByText(/^Enter a number greater than 0/).id).toBe(lineField("Quantity", 1).getAttribute("aria-describedby"));
+    // A field error is icon + text in the danger tone, as in CrudForm.
+    const note = screen.getByText("Choose the material this BOM makes.");
+    expect(note.className).toContain("text-danger");
+    expect(note.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
     expect(action).not.toHaveBeenCalled();
   });
 

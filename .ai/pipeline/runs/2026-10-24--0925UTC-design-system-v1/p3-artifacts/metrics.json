@@ -1,0 +1,1310 @@
+[
+  {
+    "name": "materials-light-en-320",
+    "width": 320,
+    "clippedButtons": [],
+    "h1": [
+      "Materials — Test"
+    ],
+    "pageOverflow": true,
+    "scrollWidth": 347,
+    "tables": [
+      {
+        "label": "Materials",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "bom-light-en-320",
+    "width": 320,
+    "clippedButtons": [],
+    "h1": [
+      "BOM 00000001 — Painted side panel"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 320,
+    "tables": [
+      {
+        "label": "Recipe (revision 1)",
+        "scrolls": true
+      },
+      {
+        "label": "Revisions",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "stock-report-light-en-320",
+    "width": 320,
+    "clippedButtons": [
+      ""
+    ],
+    "h1": [
+      "Stock report — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 320,
+    "tables": [
+      {
+        "label": "Current stock",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "global-audit-light-en-320",
+    "width": 320,
+    "clippedButtons": [],
+    "h1": [
+      "Global audit"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 320,
+    "tables": [
+      {
+        "label": "Global audit",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "import-refusal-light-en-320",
+    "width": 320,
+    "clippedButtons": [],
+    "h1": [
+      "Import from spreadsheet — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 320,
+    "tables": [
+      {
+        "label": "Sheet",
+        "scrolls": true
+      },
+      {
+        "label": "Problem",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "tall-dialog-light-en-320",
+    "width": 320,
+    "clippedButtons": [],
+    "h1": [
+      "Planning parameters — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 320,
+    "tables": [
+      {
+        "label": "Planning parameters",
+        "scrolls": true
+      }
+    ],
+    "dialogFits": true,
+    "dialogScrolls": false,
+    "submitReachable": true
+  },
+  {
+    "name": "materials-light-en-768",
+    "width": 768,
+    "clippedButtons": [],
+    "h1": [
+      "Materials — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 768,
+    "tables": [
+      {
+        "label": "Materials",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "bom-light-en-768",
+    "width": 768,
+    "clippedButtons": [],
+    "h1": [
+      "BOM 00000001 — Painted side panel"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 768,
+    "tables": [
+      {
+        "label": "Recipe (revision 1)",
+        "scrolls": true
+      },
+      {
+        "label": "Revisions",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "stock-report-light-en-768",
+    "width": 768,
+    "clippedButtons": [
+      ""
+    ],
+    "h1": [
+      "Stock report — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 768,
+    "tables": [
+      {
+        "label": "Current stock",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "global-audit-light-en-768",
+    "width": 768,
+    "clippedButtons": [],
+    "h1": [
+      "Global audit"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 768,
+    "tables": [
+      {
+        "label": "Global audit",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "import-refusal-light-en-768",
+    "width": 768,
+    "clippedButtons": [],
+    "h1": [
+      "Import from spreadsheet — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 768,
+    "tables": [
+      {
+        "label": "Sheet",
+        "scrolls": true
+      },
+      {
+        "label": "Problem",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "tall-dialog-light-en-768",
+    "width": 768,
+    "clippedButtons": [],
+    "h1": [
+      "Planning parameters — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 768,
+    "tables": [
+      {
+        "label": "Planning parameters",
+        "scrolls": true
+      }
+    ],
+    "dialogFits": true,
+    "dialogScrolls": false,
+    "submitReachable": true
+  },
+  {
+    "name": "materials-light-en-1440",
+    "width": 1440,
+    "clippedButtons": [],
+    "h1": [
+      "Materials — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 1440,
+    "tables": [
+      {
+        "label": "Materials",
+        "scrolls": false
+      }
+    ]
+  },
+  {
+    "name": "bom-light-en-1440",
+    "width": 1440,
+    "clippedButtons": [],
+    "h1": [
+      "BOM 00000001 — Painted side panel"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 1440,
+    "tables": [
+      {
+        "label": "Recipe (revision 1)",
+        "scrolls": false
+      },
+      {
+        "label": "Revisions",
+        "scrolls": false
+      }
+    ]
+  },
+  {
+    "name": "stock-report-light-en-1440",
+    "width": 1440,
+    "clippedButtons": [
+      ""
+    ],
+    "h1": [
+      "Stock report — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 1440,
+    "tables": [
+      {
+        "label": "Current stock",
+        "scrolls": false
+      }
+    ]
+  },
+  {
+    "name": "global-audit-light-en-1440",
+    "width": 1440,
+    "clippedButtons": [],
+    "h1": [
+      "Global audit"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 1440,
+    "tables": [
+      {
+        "label": "Global audit",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "import-refusal-light-en-1440",
+    "width": 1440,
+    "clippedButtons": [],
+    "h1": [
+      "Import from spreadsheet — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 1440,
+    "tables": [
+      {
+        "label": "Sheet",
+        "scrolls": false
+      },
+      {
+        "label": "Problem",
+        "scrolls": false
+      }
+    ]
+  },
+  {
+    "name": "tall-dialog-light-en-1440",
+    "width": 1440,
+    "clippedButtons": [],
+    "h1": [
+      "Planning parameters — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 1440,
+    "tables": [
+      {
+        "label": "Planning parameters",
+        "scrolls": false
+      }
+    ],
+    "dialogFits": true,
+    "dialogScrolls": false,
+    "submitReachable": true
+  },
+  {
+    "name": "materials-dark-en-320",
+    "width": 320,
+    "clippedButtons": [],
+    "h1": [
+      "Materials — Test"
+    ],
+    "pageOverflow": true,
+    "scrollWidth": 347,
+    "tables": [
+      {
+        "label": "Materials",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "bom-dark-en-320",
+    "width": 320,
+    "clippedButtons": [],
+    "h1": [
+      "BOM 00000001 — Painted side panel"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 320,
+    "tables": [
+      {
+        "label": "Recipe (revision 1)",
+        "scrolls": true
+      },
+      {
+        "label": "Revisions",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "stock-report-dark-en-320",
+    "width": 320,
+    "clippedButtons": [
+      ""
+    ],
+    "h1": [
+      "Stock report — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 320,
+    "tables": [
+      {
+        "label": "Current stock",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "global-audit-dark-en-320",
+    "width": 320,
+    "clippedButtons": [],
+    "h1": [
+      "Global audit"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 320,
+    "tables": [
+      {
+        "label": "Global audit",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "import-refusal-dark-en-320",
+    "width": 320,
+    "clippedButtons": [],
+    "h1": [
+      "Import from spreadsheet — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 320,
+    "tables": [
+      {
+        "label": "Sheet",
+        "scrolls": true
+      },
+      {
+        "label": "Problem",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "tall-dialog-dark-en-320",
+    "width": 320,
+    "clippedButtons": [],
+    "h1": [
+      "Planning parameters — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 320,
+    "tables": [
+      {
+        "label": "Planning parameters",
+        "scrolls": true
+      }
+    ],
+    "dialogFits": true,
+    "dialogScrolls": false,
+    "submitReachable": true
+  },
+  {
+    "name": "materials-dark-en-768",
+    "width": 768,
+    "clippedButtons": [],
+    "h1": [
+      "Materials — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 768,
+    "tables": [
+      {
+        "label": "Materials",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "bom-dark-en-768",
+    "width": 768,
+    "clippedButtons": [],
+    "h1": [
+      "BOM 00000001 — Painted side panel"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 768,
+    "tables": [
+      {
+        "label": "Recipe (revision 1)",
+        "scrolls": true
+      },
+      {
+        "label": "Revisions",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "stock-report-dark-en-768",
+    "width": 768,
+    "clippedButtons": [
+      ""
+    ],
+    "h1": [
+      "Stock report — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 768,
+    "tables": [
+      {
+        "label": "Current stock",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "global-audit-dark-en-768",
+    "width": 768,
+    "clippedButtons": [],
+    "h1": [
+      "Global audit"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 768,
+    "tables": [
+      {
+        "label": "Global audit",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "import-refusal-dark-en-768",
+    "width": 768,
+    "clippedButtons": [],
+    "h1": [
+      "Import from spreadsheet — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 768,
+    "tables": [
+      {
+        "label": "Sheet",
+        "scrolls": true
+      },
+      {
+        "label": "Problem",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "tall-dialog-dark-en-768",
+    "width": 768,
+    "clippedButtons": [],
+    "h1": [
+      "Planning parameters — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 768,
+    "tables": [
+      {
+        "label": "Planning parameters",
+        "scrolls": true
+      }
+    ],
+    "dialogFits": true,
+    "dialogScrolls": false,
+    "submitReachable": true
+  },
+  {
+    "name": "materials-dark-en-1440",
+    "width": 1440,
+    "clippedButtons": [],
+    "h1": [
+      "Materials — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 1440,
+    "tables": [
+      {
+        "label": "Materials",
+        "scrolls": false
+      }
+    ]
+  },
+  {
+    "name": "bom-dark-en-1440",
+    "width": 1440,
+    "clippedButtons": [],
+    "h1": [
+      "BOM 00000001 — Painted side panel"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 1440,
+    "tables": [
+      {
+        "label": "Recipe (revision 1)",
+        "scrolls": false
+      },
+      {
+        "label": "Revisions",
+        "scrolls": false
+      }
+    ]
+  },
+  {
+    "name": "stock-report-dark-en-1440",
+    "width": 1440,
+    "clippedButtons": [
+      ""
+    ],
+    "h1": [
+      "Stock report — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 1440,
+    "tables": [
+      {
+        "label": "Current stock",
+        "scrolls": false
+      }
+    ]
+  },
+  {
+    "name": "global-audit-dark-en-1440",
+    "width": 1440,
+    "clippedButtons": [],
+    "h1": [
+      "Global audit"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 1440,
+    "tables": [
+      {
+        "label": "Global audit",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "import-refusal-dark-en-1440",
+    "width": 1440,
+    "clippedButtons": [],
+    "h1": [
+      "Import from spreadsheet — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 1440,
+    "tables": [
+      {
+        "label": "Sheet",
+        "scrolls": false
+      },
+      {
+        "label": "Problem",
+        "scrolls": false
+      }
+    ]
+  },
+  {
+    "name": "tall-dialog-dark-en-1440",
+    "width": 1440,
+    "clippedButtons": [],
+    "h1": [
+      "Planning parameters — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 1440,
+    "tables": [
+      {
+        "label": "Planning parameters",
+        "scrolls": false
+      }
+    ],
+    "dialogFits": true,
+    "dialogScrolls": false,
+    "submitReachable": true
+  },
+  {
+    "name": "materials-light-pl-320",
+    "width": 320,
+    "clippedButtons": [],
+    "h1": [
+      "Materiały — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 320,
+    "tables": [
+      {
+        "label": "Materiały",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "bom-light-pl-320",
+    "width": 320,
+    "clippedButtons": [],
+    "h1": [
+      "BOM 00000001 — Painted side panel"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 320,
+    "tables": [
+      {
+        "label": "Receptura (rewizja 1)",
+        "scrolls": true
+      },
+      {
+        "label": "Rewizje",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "stock-report-light-pl-320",
+    "width": 320,
+    "clippedButtons": [
+      ""
+    ],
+    "h1": [
+      "Raport zapasu — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 320,
+    "tables": [
+      {
+        "label": "Bieżący zapas",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "global-audit-light-pl-320",
+    "width": 320,
+    "clippedButtons": [],
+    "h1": [
+      "Audyt globalny"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 320,
+    "tables": [
+      {
+        "label": "Audyt globalny",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "import-refusal-light-pl-320",
+    "width": 320,
+    "clippedButtons": [],
+    "h1": [
+      "Import z arkusza kalkulacyjnego — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 320,
+    "tables": [
+      {
+        "label": "Arkusz",
+        "scrolls": true
+      },
+      {
+        "label": "Problem",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "tall-dialog-light-pl-320",
+    "width": 320,
+    "clippedButtons": [],
+    "h1": [
+      "Parametry planowania — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 320,
+    "tables": [
+      {
+        "label": "Parametry planowania",
+        "scrolls": true
+      }
+    ],
+    "dialogFits": true,
+    "dialogScrolls": false,
+    "submitReachable": true
+  },
+  {
+    "name": "materials-light-pl-768",
+    "width": 768,
+    "clippedButtons": [],
+    "h1": [
+      "Materiały — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 768,
+    "tables": [
+      {
+        "label": "Materiały",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "bom-light-pl-768",
+    "width": 768,
+    "clippedButtons": [],
+    "h1": [
+      "BOM 00000001 — Painted side panel"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 768,
+    "tables": [
+      {
+        "label": "Receptura (rewizja 1)",
+        "scrolls": true
+      },
+      {
+        "label": "Rewizje",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "stock-report-light-pl-768",
+    "width": 768,
+    "clippedButtons": [
+      ""
+    ],
+    "h1": [
+      "Raport zapasu — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 768,
+    "tables": [
+      {
+        "label": "Bieżący zapas",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "global-audit-light-pl-768",
+    "width": 768,
+    "clippedButtons": [],
+    "h1": [
+      "Audyt globalny"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 768,
+    "tables": [
+      {
+        "label": "Audyt globalny",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "import-refusal-light-pl-768",
+    "width": 768,
+    "clippedButtons": [],
+    "h1": [
+      "Import z arkusza kalkulacyjnego — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 768,
+    "tables": [
+      {
+        "label": "Arkusz",
+        "scrolls": true
+      },
+      {
+        "label": "Problem",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "tall-dialog-light-pl-768",
+    "width": 768,
+    "clippedButtons": [],
+    "h1": [
+      "Parametry planowania — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 768,
+    "tables": [
+      {
+        "label": "Parametry planowania",
+        "scrolls": true
+      }
+    ],
+    "dialogFits": true,
+    "dialogScrolls": false,
+    "submitReachable": true
+  },
+  {
+    "name": "materials-light-pl-1440",
+    "width": 1440,
+    "clippedButtons": [],
+    "h1": [
+      "Materiały — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 1440,
+    "tables": [
+      {
+        "label": "Materiały",
+        "scrolls": false
+      }
+    ]
+  },
+  {
+    "name": "bom-light-pl-1440",
+    "width": 1440,
+    "clippedButtons": [],
+    "h1": [
+      "BOM 00000001 — Painted side panel"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 1440,
+    "tables": [
+      {
+        "label": "Receptura (rewizja 1)",
+        "scrolls": false
+      },
+      {
+        "label": "Rewizje",
+        "scrolls": false
+      }
+    ]
+  },
+  {
+    "name": "stock-report-light-pl-1440",
+    "width": 1440,
+    "clippedButtons": [
+      ""
+    ],
+    "h1": [
+      "Raport zapasu — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 1440,
+    "tables": [
+      {
+        "label": "Bieżący zapas",
+        "scrolls": false
+      }
+    ]
+  },
+  {
+    "name": "global-audit-light-pl-1440",
+    "width": 1440,
+    "clippedButtons": [],
+    "h1": [
+      "Audyt globalny"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 1440,
+    "tables": [
+      {
+        "label": "Audyt globalny",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "import-refusal-light-pl-1440",
+    "width": 1440,
+    "clippedButtons": [],
+    "h1": [
+      "Import z arkusza kalkulacyjnego — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 1440,
+    "tables": [
+      {
+        "label": "Arkusz",
+        "scrolls": false
+      },
+      {
+        "label": "Problem",
+        "scrolls": false
+      }
+    ]
+  },
+  {
+    "name": "tall-dialog-light-pl-1440",
+    "width": 1440,
+    "clippedButtons": [],
+    "h1": [
+      "Parametry planowania — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 1440,
+    "tables": [
+      {
+        "label": "Parametry planowania",
+        "scrolls": false
+      }
+    ],
+    "dialogFits": true,
+    "dialogScrolls": false,
+    "submitReachable": true
+  },
+  {
+    "name": "materials-dark-pl-320",
+    "width": 320,
+    "clippedButtons": [],
+    "h1": [
+      "Materiały — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 320,
+    "tables": [
+      {
+        "label": "Materiały",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "bom-dark-pl-320",
+    "width": 320,
+    "clippedButtons": [],
+    "h1": [
+      "BOM 00000001 — Painted side panel"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 320,
+    "tables": [
+      {
+        "label": "Receptura (rewizja 1)",
+        "scrolls": true
+      },
+      {
+        "label": "Rewizje",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "stock-report-dark-pl-320",
+    "width": 320,
+    "clippedButtons": [
+      ""
+    ],
+    "h1": [
+      "Raport zapasu — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 320,
+    "tables": [
+      {
+        "label": "Bieżący zapas",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "global-audit-dark-pl-320",
+    "width": 320,
+    "clippedButtons": [],
+    "h1": [
+      "Audyt globalny"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 320,
+    "tables": [
+      {
+        "label": "Audyt globalny",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "import-refusal-dark-pl-320",
+    "width": 320,
+    "clippedButtons": [],
+    "h1": [
+      "Import z arkusza kalkulacyjnego — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 320,
+    "tables": [
+      {
+        "label": "Arkusz",
+        "scrolls": true
+      },
+      {
+        "label": "Problem",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "tall-dialog-dark-pl-320",
+    "width": 320,
+    "clippedButtons": [],
+    "h1": [
+      "Parametry planowania — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 320,
+    "tables": [
+      {
+        "label": "Parametry planowania",
+        "scrolls": true
+      }
+    ],
+    "dialogFits": true,
+    "dialogScrolls": false,
+    "submitReachable": true
+  },
+  {
+    "name": "materials-dark-pl-768",
+    "width": 768,
+    "clippedButtons": [],
+    "h1": [
+      "Materiały — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 768,
+    "tables": [
+      {
+        "label": "Materiały",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "bom-dark-pl-768",
+    "width": 768,
+    "clippedButtons": [],
+    "h1": [
+      "BOM 00000001 — Painted side panel"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 768,
+    "tables": [
+      {
+        "label": "Receptura (rewizja 1)",
+        "scrolls": true
+      },
+      {
+        "label": "Rewizje",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "stock-report-dark-pl-768",
+    "width": 768,
+    "clippedButtons": [
+      ""
+    ],
+    "h1": [
+      "Raport zapasu — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 768,
+    "tables": [
+      {
+        "label": "Bieżący zapas",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "global-audit-dark-pl-768",
+    "width": 768,
+    "clippedButtons": [],
+    "h1": [
+      "Audyt globalny"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 768,
+    "tables": [
+      {
+        "label": "Audyt globalny",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "import-refusal-dark-pl-768",
+    "width": 768,
+    "clippedButtons": [],
+    "h1": [
+      "Import z arkusza kalkulacyjnego — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 768,
+    "tables": [
+      {
+        "label": "Arkusz",
+        "scrolls": true
+      },
+      {
+        "label": "Problem",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "tall-dialog-dark-pl-768",
+    "width": 768,
+    "clippedButtons": [],
+    "h1": [
+      "Parametry planowania — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 768,
+    "tables": [
+      {
+        "label": "Parametry planowania",
+        "scrolls": true
+      }
+    ],
+    "dialogFits": true,
+    "dialogScrolls": false,
+    "submitReachable": true
+  },
+  {
+    "name": "materials-dark-pl-1440",
+    "width": 1440,
+    "clippedButtons": [],
+    "h1": [
+      "Materiały — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 1440,
+    "tables": [
+      {
+        "label": "Materiały",
+        "scrolls": false
+      }
+    ]
+  },
+  {
+    "name": "bom-dark-pl-1440",
+    "width": 1440,
+    "clippedButtons": [],
+    "h1": [
+      "BOM 00000001 — Painted side panel"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 1440,
+    "tables": [
+      {
+        "label": "Receptura (rewizja 1)",
+        "scrolls": false
+      },
+      {
+        "label": "Rewizje",
+        "scrolls": false
+      }
+    ]
+  },
+  {
+    "name": "stock-report-dark-pl-1440",
+    "width": 1440,
+    "clippedButtons": [
+      ""
+    ],
+    "h1": [
+      "Raport zapasu — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 1440,
+    "tables": [
+      {
+        "label": "Bieżący zapas",
+        "scrolls": false
+      }
+    ]
+  },
+  {
+    "name": "global-audit-dark-pl-1440",
+    "width": 1440,
+    "clippedButtons": [],
+    "h1": [
+      "Audyt globalny"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 1440,
+    "tables": [
+      {
+        "label": "Audyt globalny",
+        "scrolls": true
+      }
+    ]
+  },
+  {
+    "name": "import-refusal-dark-pl-1440",
+    "width": 1440,
+    "clippedButtons": [],
+    "h1": [
+      "Import z arkusza kalkulacyjnego — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 1440,
+    "tables": [
+      {
+        "label": "Arkusz",
+        "scrolls": false
+      },
+      {
+        "label": "Problem",
+        "scrolls": false
+      }
+    ]
+  },
+  {
+    "name": "tall-dialog-dark-pl-1440",
+    "width": 1440,
+    "clippedButtons": [],
+    "h1": [
+      "Parametry planowania — Test"
+    ],
+    "pageOverflow": false,
+    "scrollWidth": 1440,
+    "tables": [
+      {
+        "label": "Parametry planowania",
+        "scrolls": false
+      }
+    ],
+    "dialogFits": true,
+    "dialogScrolls": false,
+    "submitReachable": true
+  }
+]

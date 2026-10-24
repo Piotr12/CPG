@@ -120,7 +120,9 @@ describe("the Import screen", () => {
     expect(preview[0][3]).toMatch(/^\d{8} — importui steel$/);
 
     await commit("Commit 3 changes");
-    expect(await admin.text("main [role=status]")).toBe("✓ Imported into Prod: 3 created, 0 updated, 0 unchanged.");
+    expect(await admin.text("main [role=status]")).toBe("Imported into Prod: 3 created, 0 updated, 0 unchanged.");
+    // The one authoritative result: a success callout, its committed rows marked done.
+    expect(await admin.evaluate<string[]>(`[document.querySelector("main [role=status]").dataset.tone, ...[...document.querySelectorAll("main tbody [data-slot=status-badge]")].map((b) => b.dataset.tone)].filter((t, i, all) => all.indexOf(t) === i)`)).toEqual(["success"]);
     await admin.open(`${baseUrl}/admin/prod/materials`);
     await admin.waitForText("importui panel");
     await admin.open(`${baseUrl}/admin/prod/locations`);

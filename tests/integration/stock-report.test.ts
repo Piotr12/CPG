@@ -85,11 +85,18 @@ describe("the stock report in the UI", () => {
     ]);
     expect(await una.text("main h1")).toBe("Stock report — Prod");
 
-    // On a phone the figures stack in one cell, and each row's Ledger button stays in view.
+    // On a phone the figures stack in one cell; the table scrolls sideways in its own region (the material
+    // column sticky) while the page never does, and each row's Ledger button, scrolled to, is in view.
     await una.setViewport(390, 844);
     try {
       await open(`?material=${ids.steel}`);
-      const rightEdges = await una.evaluate<number[]>(`[...${shown(report)}.querySelectorAll("tbody a")].map((a) => a.getBoundingClientRect().right)`);
+      expect(await una.evaluate<boolean>(`document.documentElement.scrollWidth <= innerWidth`)).toBe(true);
+      const rightEdges = await una.evaluate<number[]>(`[...${shown(report)}.querySelectorAll("tbody a")].map((a) => {
+        a.scrollIntoView({ block: "nearest", inline: "nearest" });
+        const box = a.closest("[data-slot=table-container]");
+        const sticky = a.closest("tr").querySelector("td").getBoundingClientRect().right;
+        return a.getBoundingClientRect().left >= sticky - 0.5 && box.tabIndex === 0 ? a.getBoundingClientRect().right : Infinity;
+      })`);
       expect(rightEdges).toHaveLength(2);
       for (const right of rightEdges) expect(right).toBeLessThanOrEqual(390);
       expect(await una.evaluate<string>(`${shown(report)}.querySelector("tbody dl").innerText.replace(/\\s+/g, " ").trim()`)).toBe("On hand 70 kg In transit out 30 kg In transit in 0 kg");
