@@ -21,7 +21,7 @@ describe("SignInForm", () => {
   });
 
   it("submits the form data and shows the action's error", async () => {
-    const action = vi.fn(async () => ({ error: "Invalid username or password." }));
+    const action = vi.fn(async () => ({ error: en.login.invalidCredentials }));
     render(<SignInForm action={action} labels={en.login} />);
 
     await act(async () => fillAndSubmit());
@@ -29,7 +29,20 @@ describe("SignInForm", () => {
     const formData = (action.mock.calls[0] as unknown as [unknown, FormData])[1];
     expect(formData.get("username")).toBe("admin");
     expect(formData.get("password")).toBe("wrong");
-    expect(screen.getByRole("alert").textContent).toBe("Invalid username or password.");
+    const alert = screen.getByRole("alert");
+    expect(alert.textContent).toBe("Invalid username or password. Check both and try again. If you cannot sign in, contact your administrator.");
+    expect(alert.getAttribute("data-slot")).toBe("callout");
+    expect(alert.getAttribute("data-tone")).toBe("danger");
+  });
+
+  it("keeps the typed username in its field after a refusal (the States table: entered values kept)", async () => {
+    const action = vi.fn(async () => ({ error: en.login.invalidCredentials, username: "admin" }));
+    render(<SignInForm action={action} labels={en.login} />);
+
+    await act(async () => fillAndSubmit());
+
+    expect((screen.getByLabelText("Username") as HTMLInputElement).value).toBe("admin");
+    expect((screen.getByLabelText("Password") as HTMLInputElement).value).toBe("");
   });
 
   it("disables the button while signing in", async () => {

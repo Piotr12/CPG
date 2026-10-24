@@ -162,7 +162,7 @@ describe("transfers in the UI", () => {
     /** Confirms the open Deactivate dialog and returns its refusal's text and link. */
     const refusal = async () => {
       await admin.waitFor("[role=alertdialog]");
-      await admin.click("[role=alertdialog] button[data-variant=destructive]");
+      await admin.click("[role=alertdialog] button[data-variant=destructive-solid]");
       await admin.waitUntil(`!!document.querySelector("${alert} a")`);
       return { text: await admin.text(alert), href: await admin.evaluate<string>(`document.querySelector("${alert} a").getAttribute("href")`) };
     };

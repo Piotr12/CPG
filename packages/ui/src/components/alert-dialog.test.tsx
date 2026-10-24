@@ -43,7 +43,10 @@ describe("AlertDialog", () => {
     expect(screen.getByText("Yes").parentElement!.dataset.slot).toBe("alert-dialog-footer");
     expect(screen.getByRole("button", { name: "Yes" }).dataset).toMatchObject({ slot: "alert-dialog-action", variant: "default" });
     expect(screen.getByRole("button", { name: "No" }).dataset).toMatchObject({ slot: "alert-dialog-cancel", variant: "outline" });
-    expect(document.querySelector("[data-slot=alert-dialog-overlay]")).not.toBeNull();
+    // Design system v1: an opaque scrim, no blur.
+    const overlay = document.querySelector<HTMLElement>("[data-slot=alert-dialog-overlay]")!;
+    expect(overlay.classList).toContain("bg-scrim");
+    expect(overlay.className).not.toMatch(/backdrop-blur|bg-black/);
   });
 
   it("takes a small size and button variants, and closes on cancel", () => {

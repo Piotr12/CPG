@@ -137,7 +137,7 @@ describe("locations, customers and suppliers (E03-S02)", () => {
 
     await rowMenu(admin, id, "Deactivate");
     await admin.waitFor("[role=alertdialog]");
-    await admin.click("[role=alertdialog] button[data-variant=destructive]");
+    await admin.click("[role=alertdialog] button[data-variant=destructive-solid]");
     await admin.waitUntil(`!document.querySelector("[role=alertdialog]")`);
     expect((await listRows(admin, "prod", "locations")).find(([rowId]) => rowId === id)).toEqual([id, "nr-ui old warehouse", "Inactive"]);
 
@@ -183,19 +183,27 @@ describe("locations, customers and suppliers (E03-S02)", () => {
     expect((await listRows(admin, "prod", "locations")).find(([rowId]) => rowId === id)).toEqual([id, "nr-ui dock first", "Active"]);
   });
 
-  it("keeps each row's menu in view on a phone", async () => {
+  it("keeps each row's menu reachable on a phone: the table scrolls, the page doesn't", async () => {
     await listRows(admin, "test", "customers");
     await admin.waitUntil(ready(button("Actions for 00000001")));
     try {
       await admin.setViewport(390, 844);
-      const inView = await admin.evaluate<boolean>(`(() => {
-        const box = document.querySelector("main table").parentElement;
-        const edge = Math.min(box.getBoundingClientRect().right, window.innerWidth);
-        const buttons = [...document.querySelectorAll("main tbody button")];
-        return buttons.length > 0 && box.scrollWidth <= box.clientWidth &&
-          buttons.every((button) => button.getBoundingClientRect().right <= edge);
+      // The design system's tables scroll sideways in their own labelled region with the ID column sticky,
+      // so a menu may start out of view; scrolled to, it sits inside the region and the window.
+      const reachable = await admin.evaluate<boolean>(`(() => {
+        const box = document.querySelector("main [data-slot=table-container]");
+        const buttons = [...box.querySelectorAll("tbody button")];
+        const pageFits = document.documentElement.scrollWidth <= window.innerWidth;
+        return pageFits && box.getAttribute("role") === "region" && box.tabIndex === 0 && buttons.length > 0 &&
+          buttons.every((button) => {
+            button.scrollIntoView({ block: "nearest", inline: "nearest" });
+            const edge = Math.min(box.getBoundingClientRect().right, window.innerWidth);
+            const sticky = box.querySelector("tbody td").getBoundingClientRect().right;
+            const { left, right } = button.getBoundingClientRect();
+            return right <= edge + 0.5 && left >= sticky - 0.5;
+          });
       })()`);
-      expect(inView).toBe(true);
+      expect(reachable).toBe(true);
     } finally {
       await admin.setViewport(1280, 720);
     }

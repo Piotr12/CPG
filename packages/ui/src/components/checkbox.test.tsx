@@ -14,6 +14,8 @@ describe("Checkbox", () => {
     const box = screen.getByRole("checkbox", { name: "Accept" });
     expect(box.getAttribute("data-slot")).toBe("checkbox");
     expect(box.className).toContain("extra");
+    expect(box.className.split(" ")).toEqual(expect.arrayContaining([...["focus-visible:ring-2", "focus-visible:ring-ring", "focus-visible:ring-offset-2", "focus-visible:ring-offset-background"], "aria-invalid:border-danger", "rounded-sm"]));
+    expect(box.className).not.toMatch(/bg-input|rounded-\[|ring-ring\//);
     expect(box.getAttribute("aria-checked")).toBe("false");
     fireEvent.click(box);
     expect(onCheckedChange).toHaveBeenCalledWith(true);

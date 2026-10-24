@@ -12,10 +12,18 @@ describe("feedback", () => {
     expect(container.querySelectorAll('[data-slot="skeleton"][aria-hidden="true"]')).toHaveLength(3);
   });
 
-  it("announces an error at once", () => {
+  it("announces an error at once, as icon + text on the danger tokens", () => {
     render(<ErrorMessage>{"That didn't work."}</ErrorMessage>);
 
-    expect(screen.getByRole("alert").textContent).toBe("That didn't work.");
+    const alert = screen.getByRole("alert");
+    expect(alert.textContent).toBe("That didn't work.");
+    expect(alert.className.split(" ")).toEqual(
+      expect.arrayContaining(["flex", "gap-2", "rounded-md", "border", "border-danger-edge", "bg-danger-surface", "p-3", "text-sm", "text-danger"]),
+    );
+    expect(alert.className).not.toMatch(/\//);
+    const icon = alert.querySelector("svg")!;
+    expect(icon.getAttribute("aria-hidden")).toBe("true");
+    expect(icon.classList).toContain("size-4");
   });
 
   it("takes focus with the errors a page opens with, so a screen reader reads them out unasked", () => {
@@ -46,7 +54,9 @@ describe("feedback", () => {
     expect(screen.getByText("No users yet")).toBeTruthy();
     expect(container.firstElementChild!.children).toHaveLength(1);
 
+    expect(screen.getByText("No users yet").className).toBe("text-sm font-medium");
+
     rerender(<EmptyState title="No users yet">Create the first one.</EmptyState>);
-    expect(screen.getByText("Create the first one.")).toBeTruthy();
+    expect(screen.getByText("Create the first one.").className).toBe("max-w-prose text-sm text-muted-foreground");
   });
 });

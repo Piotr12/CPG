@@ -18,12 +18,12 @@ interface IssuesTableProps {
 export function IssuesTable({ issues, materials, labels, tenant, reversalLabels }: IssuesTableProps) {
   const c = labels.columns;
   const columns: DataTableColumn<IssueView>[] = [
-    { id: "id", header: c.id, cell: (issue) => <span className="font-mono">{issue.id}</span> },
-    { id: "date", header: c.date, cell: (issue) => issue.businessDate },
+    { id: "id", header: c.id, kind: "id", cell: (issue) => issue.id },
+    { id: "date", header: c.date, kind: "date", cell: (issue) => issue.businessDate },
     {
       id: "lines",
       header: c.lines,
-      className: "whitespace-normal wrap-anywhere",
+      kind: "longText",
       cell: (issue) => (
         <ul className="flex flex-col gap-1">
           {issue.lines.map(({ line, material, quantity, movementId, reversedBy }) => (

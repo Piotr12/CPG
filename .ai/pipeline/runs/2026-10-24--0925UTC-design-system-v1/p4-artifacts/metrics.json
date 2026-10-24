@@ -1,0 +1,798 @@
+{
+  "tenants-320-light-en": {
+    "clipped": [],
+    "h1": [
+      "Tenants"
+    ],
+    "overflowX": false,
+    "sidebar": null,
+    "switch": [],
+    "tag": {
+      "inView": true,
+      "text": "GLOBAL"
+    },
+    "trail": "Administration Tenants"
+  },
+  "test-record-320-light-en": {
+    "clipped": [
+      "Actions"
+    ],
+    "h1": [
+      "00000001 — Steel sheet 2 mm"
+    ],
+    "overflowX": false,
+    "sidebar": null,
+    "switch": [],
+    "tag": {
+      "inView": true,
+      "text": "TEST"
+    },
+    "trail": "Master data Materials 00000001"
+  },
+  "prod-readonly-320-light-en": {
+    "clipped": [],
+    "h1": [
+      "Materials — Prod"
+    ],
+    "overflowX": false,
+    "sidebar": null,
+    "switch": [],
+    "tag": {
+      "inView": true,
+      "text": "PROD"
+    },
+    "trail": "Master data Materials"
+  },
+  "tenants-768-light-en": {
+    "clipped": [
+      "CPG",
+      "Expand menu",
+      "Overview",
+      "Master data",
+      "Sales",
+      "Transactions",
+      "Stock",
+      "Stock import",
+      "Stock report",
+      "Variance report",
+      "Audit",
+      "Administration",
+      "Global audit",
+      "Help"
+    ],
+    "h1": [
+      "Tenants"
+    ],
+    "overflowX": false,
+    "sidebar": "collapsed",
+    "switch": [
+      "T",
+      "P"
+    ],
+    "tag": {
+      "inView": true,
+      "text": "GLOBAL"
+    },
+    "trail": "Administration Tenants"
+  },
+  "test-record-768-light-en": {
+    "clipped": [
+      "CPG",
+      "Expand menu",
+      "Overview",
+      "Master data",
+      "Sales",
+      "Transactions",
+      "Stock",
+      "Stock import",
+      "Stock report",
+      "Variance report",
+      "Audit",
+      "Administration",
+      "Global audit",
+      "Help",
+      "Actions"
+    ],
+    "h1": [
+      "00000001 — Steel sheet 2 mm"
+    ],
+    "overflowX": false,
+    "sidebar": "collapsed",
+    "switch": [
+      "T",
+      "P"
+    ],
+    "tag": {
+      "inView": true,
+      "text": "TEST"
+    },
+    "trail": "Master data Materials 00000001"
+  },
+  "prod-readonly-768-light-en": {
+    "clipped": [
+      "CPG",
+      "Expand menu",
+      "Overview",
+      "Master data",
+      "Sales",
+      "Transactions",
+      "Stock",
+      "Stock import",
+      "Stock report",
+      "Variance report",
+      "Audit",
+      "Administration",
+      "Global audit",
+      "Help"
+    ],
+    "h1": [
+      "Materials — Prod"
+    ],
+    "overflowX": false,
+    "sidebar": "collapsed",
+    "switch": [
+      "T",
+      "P"
+    ],
+    "tag": {
+      "inView": true,
+      "text": "PROD"
+    },
+    "trail": "Master data Materials"
+  },
+  "tenants-1440-light-en": {
+    "clipped": [
+      "Collapse menu"
+    ],
+    "h1": [
+      "Tenants"
+    ],
+    "overflowX": false,
+    "sidebar": "expanded",
+    "switch": [
+      "Test",
+      "Prod"
+    ],
+    "tag": {
+      "inView": true,
+      "text": "GLOBAL"
+    },
+    "trail": "Administration Tenants"
+  },
+  "test-record-1440-light-en": {
+    "clipped": [
+      "Collapse menu",
+      "Actions"
+    ],
+    "h1": [
+      "00000001 — Steel sheet 2 mm"
+    ],
+    "overflowX": false,
+    "sidebar": "expanded",
+    "switch": [
+      "Test",
+      "Prod"
+    ],
+    "tag": {
+      "inView": true,
+      "text": "TEST"
+    },
+    "trail": "Master data Materials 00000001"
+  },
+  "prod-readonly-1440-light-en": {
+    "clipped": [
+      "Collapse menu"
+    ],
+    "h1": [
+      "Materials — Prod"
+    ],
+    "overflowX": false,
+    "sidebar": "expanded",
+    "switch": [
+      "Test",
+      "Prod"
+    ],
+    "tag": {
+      "inView": true,
+      "text": "PROD"
+    },
+    "trail": "Master data Materials"
+  },
+  "tenants-320-dark-en": {
+    "clipped": [],
+    "h1": [
+      "Tenants"
+    ],
+    "overflowX": false,
+    "sidebar": null,
+    "switch": [],
+    "tag": {
+      "inView": true,
+      "text": "GLOBAL"
+    },
+    "trail": "Administration Tenants"
+  },
+  "test-record-320-dark-en": {
+    "clipped": [
+      "Actions"
+    ],
+    "h1": [
+      "00000001 — Steel sheet 2 mm"
+    ],
+    "overflowX": false,
+    "sidebar": null,
+    "switch": [],
+    "tag": {
+      "inView": true,
+      "text": "TEST"
+    },
+    "trail": "Master data Materials 00000001"
+  },
+  "prod-readonly-320-dark-en": {
+    "clipped": [],
+    "h1": [
+      "Materials — Prod"
+    ],
+    "overflowX": false,
+    "sidebar": null,
+    "switch": [],
+    "tag": {
+      "inView": true,
+      "text": "PROD"
+    },
+    "trail": "Master data Materials"
+  },
+  "tenants-768-dark-en": {
+    "clipped": [
+      "CPG",
+      "Expand menu",
+      "Overview",
+      "Master data",
+      "Sales",
+      "Transactions",
+      "Stock",
+      "Stock import",
+      "Stock report",
+      "Variance report",
+      "Audit",
+      "Administration",
+      "Global audit",
+      "Help"
+    ],
+    "h1": [
+      "Tenants"
+    ],
+    "overflowX": false,
+    "sidebar": "collapsed",
+    "switch": [
+      "T",
+      "P"
+    ],
+    "tag": {
+      "inView": true,
+      "text": "GLOBAL"
+    },
+    "trail": "Administration Tenants"
+  },
+  "test-record-768-dark-en": {
+    "clipped": [
+      "CPG",
+      "Expand menu",
+      "Overview",
+      "Master data",
+      "Sales",
+      "Transactions",
+      "Stock",
+      "Stock import",
+      "Stock report",
+      "Variance report",
+      "Audit",
+      "Administration",
+      "Global audit",
+      "Help",
+      "Actions"
+    ],
+    "h1": [
+      "00000001 — Steel sheet 2 mm"
+    ],
+    "overflowX": false,
+    "sidebar": "collapsed",
+    "switch": [
+      "T",
+      "P"
+    ],
+    "tag": {
+      "inView": true,
+      "text": "TEST"
+    },
+    "trail": "Master data Materials 00000001"
+  },
+  "prod-readonly-768-dark-en": {
+    "clipped": [
+      "CPG",
+      "Expand menu",
+      "Overview",
+      "Master data",
+      "Sales",
+      "Transactions",
+      "Stock",
+      "Stock import",
+      "Stock report",
+      "Variance report",
+      "Audit",
+      "Administration",
+      "Global audit",
+      "Help"
+    ],
+    "h1": [
+      "Materials — Prod"
+    ],
+    "overflowX": false,
+    "sidebar": "collapsed",
+    "switch": [
+      "T",
+      "P"
+    ],
+    "tag": {
+      "inView": true,
+      "text": "PROD"
+    },
+    "trail": "Master data Materials"
+  },
+  "tenants-1440-dark-en": {
+    "clipped": [
+      "Collapse menu"
+    ],
+    "h1": [
+      "Tenants"
+    ],
+    "overflowX": false,
+    "sidebar": "expanded",
+    "switch": [
+      "Test",
+      "Prod"
+    ],
+    "tag": {
+      "inView": true,
+      "text": "GLOBAL"
+    },
+    "trail": "Administration Tenants"
+  },
+  "test-record-1440-dark-en": {
+    "clipped": [
+      "Collapse menu",
+      "Actions"
+    ],
+    "h1": [
+      "00000001 — Steel sheet 2 mm"
+    ],
+    "overflowX": false,
+    "sidebar": "expanded",
+    "switch": [
+      "Test",
+      "Prod"
+    ],
+    "tag": {
+      "inView": true,
+      "text": "TEST"
+    },
+    "trail": "Master data Materials 00000001"
+  },
+  "prod-readonly-1440-dark-en": {
+    "clipped": [
+      "Collapse menu"
+    ],
+    "h1": [
+      "Materials — Prod"
+    ],
+    "overflowX": false,
+    "sidebar": "expanded",
+    "switch": [
+      "Test",
+      "Prod"
+    ],
+    "tag": {
+      "inView": true,
+      "text": "PROD"
+    },
+    "trail": "Master data Materials"
+  },
+  "tenants-320-light-pl": {
+    "clipped": [],
+    "h1": [
+      "Środowiska"
+    ],
+    "overflowX": false,
+    "sidebar": null,
+    "switch": [],
+    "tag": {
+      "inView": true,
+      "text": "GLOBAL"
+    },
+    "trail": "Administracja Środowiska"
+  },
+  "test-record-320-light-pl": {
+    "clipped": [
+      "Akcje"
+    ],
+    "h1": [
+      "00000001 — Steel sheet 2 mm"
+    ],
+    "overflowX": false,
+    "sidebar": null,
+    "switch": [],
+    "tag": {
+      "inView": true,
+      "text": "TEST"
+    },
+    "trail": "Dane podstawowe Materiały 00000001"
+  },
+  "prod-readonly-320-light-pl": {
+    "clipped": [],
+    "h1": [
+      "Materiały — Prod"
+    ],
+    "overflowX": false,
+    "sidebar": null,
+    "switch": [],
+    "tag": {
+      "inView": true,
+      "text": "PROD"
+    },
+    "trail": "Dane podstawowe Materiały"
+  },
+  "tenants-768-light-pl": {
+    "clipped": [
+      "CPG",
+      "Rozwiń menu",
+      "Przegląd",
+      "Dane podstawowe",
+      "Sprzedaż",
+      "Transakcje",
+      "Zapas",
+      "Import stanów",
+      "Raport zapasu",
+      "Raport odchyleń",
+      "Audyt",
+      "Administracja",
+      "Audyt globalny",
+      "Pomoc"
+    ],
+    "h1": [
+      "Środowiska"
+    ],
+    "overflowX": false,
+    "sidebar": "collapsed",
+    "switch": [
+      "T",
+      "P"
+    ],
+    "tag": {
+      "inView": true,
+      "text": "GLOBAL"
+    },
+    "trail": "Administracja Środowiska"
+  },
+  "test-record-768-light-pl": {
+    "clipped": [
+      "CPG",
+      "Rozwiń menu",
+      "Przegląd",
+      "Dane podstawowe",
+      "Sprzedaż",
+      "Transakcje",
+      "Zapas",
+      "Import stanów",
+      "Raport zapasu",
+      "Raport odchyleń",
+      "Audyt",
+      "Administracja",
+      "Audyt globalny",
+      "Pomoc",
+      "Akcje"
+    ],
+    "h1": [
+      "00000001 — Steel sheet 2 mm"
+    ],
+    "overflowX": false,
+    "sidebar": "collapsed",
+    "switch": [
+      "T",
+      "P"
+    ],
+    "tag": {
+      "inView": true,
+      "text": "TEST"
+    },
+    "trail": "Dane podstawowe Materiały 00000001"
+  },
+  "prod-readonly-768-light-pl": {
+    "clipped": [
+      "CPG",
+      "Rozwiń menu",
+      "Przegląd",
+      "Dane podstawowe",
+      "Sprzedaż",
+      "Transakcje",
+      "Zapas",
+      "Import stanów",
+      "Raport zapasu",
+      "Raport odchyleń",
+      "Audyt",
+      "Administracja",
+      "Audyt globalny",
+      "Pomoc"
+    ],
+    "h1": [
+      "Materiały — Prod"
+    ],
+    "overflowX": false,
+    "sidebar": "collapsed",
+    "switch": [
+      "T",
+      "P"
+    ],
+    "tag": {
+      "inView": true,
+      "text": "PROD"
+    },
+    "trail": "Dane podstawowe Materiały"
+  },
+  "tenants-1440-light-pl": {
+    "clipped": [
+      "Zwiń menu"
+    ],
+    "h1": [
+      "Środowiska"
+    ],
+    "overflowX": false,
+    "sidebar": "expanded",
+    "switch": [
+      "Test",
+      "Prod"
+    ],
+    "tag": {
+      "inView": true,
+      "text": "GLOBAL"
+    },
+    "trail": "Administracja Środowiska"
+  },
+  "test-record-1440-light-pl": {
+    "clipped": [
+      "Zwiń menu",
+      "Akcje"
+    ],
+    "h1": [
+      "00000001 — Steel sheet 2 mm"
+    ],
+    "overflowX": false,
+    "sidebar": "expanded",
+    "switch": [
+      "Test",
+      "Prod"
+    ],
+    "tag": {
+      "inView": true,
+      "text": "TEST"
+    },
+    "trail": "Dane podstawowe Materiały 00000001"
+  },
+  "prod-readonly-1440-light-pl": {
+    "clipped": [
+      "Zwiń menu"
+    ],
+    "h1": [
+      "Materiały — Prod"
+    ],
+    "overflowX": false,
+    "sidebar": "expanded",
+    "switch": [
+      "Test",
+      "Prod"
+    ],
+    "tag": {
+      "inView": true,
+      "text": "PROD"
+    },
+    "trail": "Dane podstawowe Materiały"
+  },
+  "tenants-320-dark-pl": {
+    "clipped": [],
+    "h1": [
+      "Środowiska"
+    ],
+    "overflowX": false,
+    "sidebar": null,
+    "switch": [],
+    "tag": {
+      "inView": true,
+      "text": "GLOBAL"
+    },
+    "trail": "Administracja Środowiska"
+  },
+  "test-record-320-dark-pl": {
+    "clipped": [
+      "Akcje"
+    ],
+    "h1": [
+      "00000001 — Steel sheet 2 mm"
+    ],
+    "overflowX": false,
+    "sidebar": null,
+    "switch": [],
+    "tag": {
+      "inView": true,
+      "text": "TEST"
+    },
+    "trail": "Dane podstawowe Materiały 00000001"
+  },
+  "prod-readonly-320-dark-pl": {
+    "clipped": [],
+    "h1": [
+      "Materiały — Prod"
+    ],
+    "overflowX": false,
+    "sidebar": null,
+    "switch": [],
+    "tag": {
+      "inView": true,
+      "text": "PROD"
+    },
+    "trail": "Dane podstawowe Materiały"
+  },
+  "tenants-768-dark-pl": {
+    "clipped": [
+      "CPG",
+      "Rozwiń menu",
+      "Przegląd",
+      "Dane podstawowe",
+      "Sprzedaż",
+      "Transakcje",
+      "Zapas",
+      "Import stanów",
+      "Raport zapasu",
+      "Raport odchyleń",
+      "Audyt",
+      "Administracja",
+      "Audyt globalny",
+      "Pomoc"
+    ],
+    "h1": [
+      "Środowiska"
+    ],
+    "overflowX": false,
+    "sidebar": "collapsed",
+    "switch": [
+      "T",
+      "P"
+    ],
+    "tag": {
+      "inView": true,
+      "text": "GLOBAL"
+    },
+    "trail": "Administracja Środowiska"
+  },
+  "test-record-768-dark-pl": {
+    "clipped": [
+      "CPG",
+      "Rozwiń menu",
+      "Przegląd",
+      "Dane podstawowe",
+      "Sprzedaż",
+      "Transakcje",
+      "Zapas",
+      "Import stanów",
+      "Raport zapasu",
+      "Raport odchyleń",
+      "Audyt",
+      "Administracja",
+      "Audyt globalny",
+      "Pomoc",
+      "Akcje"
+    ],
+    "h1": [
+      "00000001 — Steel sheet 2 mm"
+    ],
+    "overflowX": false,
+    "sidebar": "collapsed",
+    "switch": [
+      "T",
+      "P"
+    ],
+    "tag": {
+      "inView": true,
+      "text": "TEST"
+    },
+    "trail": "Dane podstawowe Materiały 00000001"
+  },
+  "prod-readonly-768-dark-pl": {
+    "clipped": [
+      "CPG",
+      "Rozwiń menu",
+      "Przegląd",
+      "Dane podstawowe",
+      "Sprzedaż",
+      "Transakcje",
+      "Zapas",
+      "Import stanów",
+      "Raport zapasu",
+      "Raport odchyleń",
+      "Audyt",
+      "Administracja",
+      "Audyt globalny",
+      "Pomoc"
+    ],
+    "h1": [
+      "Materiały — Prod"
+    ],
+    "overflowX": false,
+    "sidebar": "collapsed",
+    "switch": [
+      "T",
+      "P"
+    ],
+    "tag": {
+      "inView": true,
+      "text": "PROD"
+    },
+    "trail": "Dane podstawowe Materiały"
+  },
+  "tenants-1440-dark-pl": {
+    "clipped": [
+      "Zwiń menu"
+    ],
+    "h1": [
+      "Środowiska"
+    ],
+    "overflowX": false,
+    "sidebar": "expanded",
+    "switch": [
+      "Test",
+      "Prod"
+    ],
+    "tag": {
+      "inView": true,
+      "text": "GLOBAL"
+    },
+    "trail": "Administracja Środowiska"
+  },
+  "test-record-1440-dark-pl": {
+    "clipped": [
+      "Zwiń menu",
+      "Akcje"
+    ],
+    "h1": [
+      "00000001 — Steel sheet 2 mm"
+    ],
+    "overflowX": false,
+    "sidebar": "expanded",
+    "switch": [
+      "Test",
+      "Prod"
+    ],
+    "tag": {
+      "inView": true,
+      "text": "TEST"
+    },
+    "trail": "Dane podstawowe Materiały 00000001"
+  },
+  "prod-readonly-1440-dark-pl": {
+    "clipped": [
+      "Zwiń menu"
+    ],
+    "h1": [
+      "Materiały — Prod"
+    ],
+    "overflowX": false,
+    "sidebar": "expanded",
+    "switch": [
+      "Test",
+      "Prod"
+    ],
+    "tag": {
+      "inView": true,
+      "text": "PROD"
+    },
+    "trail": "Dane podstawowe Materiały"
+  }
+}

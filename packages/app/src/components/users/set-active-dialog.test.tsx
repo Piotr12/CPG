@@ -21,7 +21,7 @@ describe("SetActiveDialog", () => {
     expect(screen.getByRole("alertdialog", { name: "Deactivate alice?" })).toBeTruthy();
     expect(screen.getByText(/signed out everywhere and can't sign in until reactivated/)).toBeTruthy();
     const confirm = screen.getByRole("button", { name: "Deactivate" });
-    expect(confirm.dataset.variant).toBe("destructive");
+    expect(confirm.dataset.variant).toBe("destructive-solid");
     fireEvent.click(confirm);
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());

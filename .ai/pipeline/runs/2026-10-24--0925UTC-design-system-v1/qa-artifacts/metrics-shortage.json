@@ -1,0 +1,122 @@
+[
+  {
+    "file": "production-order-shortage-320-light-en.png",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Production order 00000390"
+    ],
+    "callout": "1 component short",
+    "tonedRows": 1
+  },
+  {
+    "file": "production-order-shortage-768-light-en.png",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Production order 00000390"
+    ],
+    "callout": "1 component short",
+    "tonedRows": 1
+  },
+  {
+    "file": "production-order-shortage-1440-light-en.png",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Production order 00000390"
+    ],
+    "callout": "1 component short",
+    "tonedRows": 1
+  },
+  {
+    "file": "production-order-shortage-320-dark-en.png",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Production order 00000390"
+    ],
+    "callout": "1 component short",
+    "tonedRows": 1
+  },
+  {
+    "file": "production-order-shortage-768-dark-en.png",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Production order 00000390"
+    ],
+    "callout": "1 component short",
+    "tonedRows": 1
+  },
+  {
+    "file": "production-order-shortage-1440-dark-en.png",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Production order 00000390"
+    ],
+    "callout": "1 component short",
+    "tonedRows": 1
+  },
+  {
+    "file": "production-order-shortage-320-light-pl.png",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Zlecenie produkcyjne 00000390"
+    ],
+    "callout": "1 składnik z niedoborem",
+    "tonedRows": 1
+  },
+  {
+    "file": "production-order-shortage-768-light-pl.png",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Zlecenie produkcyjne 00000390"
+    ],
+    "callout": "1 składnik z niedoborem",
+    "tonedRows": 1
+  },
+  {
+    "file": "production-order-shortage-1440-light-pl.png",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Zlecenie produkcyjne 00000390"
+    ],
+    "callout": "1 składnik z niedoborem",
+    "tonedRows": 1
+  },
+  {
+    "file": "production-order-shortage-320-dark-pl.png",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Zlecenie produkcyjne 00000390"
+    ],
+    "callout": "1 składnik z niedoborem",
+    "tonedRows": 1
+  },
+  {
+    "file": "production-order-shortage-768-dark-pl.png",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Zlecenie produkcyjne 00000390"
+    ],
+    "callout": "1 składnik z niedoborem",
+    "tonedRows": 1
+  },
+  {
+    "file": "production-order-shortage-1440-dark-pl.png",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Zlecenie produkcyjne 00000390"
+    ],
+    "callout": "1 składnik z niedoborem",
+    "tonedRows": 1
+  }
+]

@@ -2,6 +2,7 @@
 
 import { useId, useState } from "react";
 import { ConfirmDialog } from "@cpg/ui/backend/dialogs/confirm-dialog";
+import { Callout } from "@cpg/ui/backend/feedback/callout";
 import { Badge } from "@cpg/ui/components/badge";
 import { Button } from "@cpg/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@cpg/ui/components/card";
@@ -75,7 +76,7 @@ export function ResetTestCard({ generation, readOnly, labels, errors }: Props) {
           </div>
         </div>
         <p className="text-sm text-muted-foreground">{readOnly ? labels.readOnly : labels.writable}</p>
-        {success && <p role="status" className="text-sm">{success}</p>}
+        {success && <Callout tone="success" role="status">{success}</Callout>}
       </CardContent>
     </Card>
   );

@@ -73,12 +73,26 @@ describe("ImportScreen", () => {
     expect(screen.getByText("00000001 — Cave")).toBeTruthy();
     expect(screen.getByText(/All 2 changes are written to Test in one transaction/)).toBeTruthy();
     expect(screen.getAllByRole("listitem")[2].getAttribute("aria-current")).toBe("step");
+    // A finished step shows a check icon instead of its number.
+    expect(screen.getAllByRole("listitem")[0].querySelector("svg")).toBeTruthy();
+    expect(screen.getAllByRole("listitem")[2].textContent).toBe("3Commit");
+    // A dry run's outcomes are quiet states told apart by label and icon.
+    const preview = screen.getByRole("table", { name: "Changes" });
+    const create = within(preview).getByText("Create");
+    expect(create.dataset.slot).toBe("status-badge");
+    expect(create.dataset.tone).toBe("neutral");
+    expect(within(preview).getByText("Unchanged").dataset.tone).toBe("neutral");
 
     fireEvent.click(button("Commit 2 changes"));
 
     await screen.findByRole("status");
     expect(mocks.commitImport).toHaveBeenCalledWith("test", 2, { workbook: "AAAA", previewToken: TOKEN });
-    expect(screen.getByRole("status").textContent).toBe("✓ Imported into Test: 1 created, 1 updated, 1 unchanged.");
+    const done = screen.getByRole("status");
+    expect(done.dataset.slot).toBe("callout");
+    expect(done.dataset.tone).toBe("success");
+    expect(done.textContent).toBe("Imported into Test: 1 created, 1 updated, 1 unchanged.");
+    const results = screen.getByRole("table", { name: "3. Commit" });
+    expect(within(results).getAllByText("Created").map((badge) => badge.dataset.tone)).toEqual(["success"]);
     expect(screen.getByRole("link", { name: "00000007 — Rod" }).getAttribute("href")).toBe("/admin/test/materials/00000007");
     expect(screen.getByRole("link", { name: "00000002 — 00000004 Panel (PANEL)" }).getAttribute("href")).toBe("/admin/test/boms/00000002");
 
@@ -137,7 +151,10 @@ describe("ImportScreen", () => {
     await screen.findByText(/2 problems found/);
     const problems = screen.getByRole("table", { name: "Problem" });
     expect(within(problems).getByText("Material 00009876 doesn't exist in Test. Leave the ID blank to create a new record.")).toBeTruthy();
-    expect(within(problems).getAllByText("—")).toHaveLength(3);
+    expect(within(problems).getAllByText("—").map((dash) => dash.getAttribute("aria-label"))).toEqual(["none", "none", "none"]);
+    const errors = within(screen.getByRole("table", { name: "Sheet" })).getByText("2");
+    expect(errors.dataset.slot).toBe("status-badge");
+    expect(errors.dataset.tone).toBe("danger");
     expect(button("Commit 0 changes").disabled).toBe(true);
   });
 
@@ -223,7 +240,10 @@ describe("ImportScreen", () => {
   it("blocks the upload and the commit while the tenant is read-only", () => {
     renderScreen({ ...TENANT, readOnly: true });
 
-    expect(screen.getByText(/Test is read-only: imports are blocked/)).toBeTruthy();
+    const blocked = screen.getByText(/Test is read-only: imports are blocked/).closest("[data-slot=callout]") as HTMLElement;
+    expect(blocked.dataset.tone).toBe("warning");
+    expect(blocked.getAttribute("role")).toBe("note");
+    expect(blocked.textContent).not.toContain("🔒");
     expect((screen.getByLabelText(en.imports.upload.file) as HTMLInputElement).disabled).toBe(true);
     expect(button("Commit 0 changes").disabled).toBe(true);
     expect(screen.getByRole("link", { name: "Download template (.xlsx)" })).toBeTruthy();
@@ -291,7 +311,7 @@ describe("ImportScreen — the stock import", () => {
 
     await screen.findByRole("status");
     expect(stockMocks.commitStockImport).toHaveBeenCalledWith("test", 2, { workbook: "AAAA", previewToken: TOKEN, reason: " Stock count 2027-01 " });
-    expect(screen.getByRole("status").textContent).toBe("✓ Posted to Test. Corrections: 1, unchanged: 1. Reason: Stock count 2027-01.");
+    expect(screen.getByRole("status").textContent).toBe("Posted to Test. Corrections: 1, unchanged: 1. Reason: Stock count 2027-01.");
     expect(screen.getByText("Corrected")).toBeTruthy();
     expect(screen.getByRole("link", { name: "00000001 — Flint at 00000002 — River cave" }).getAttribute("href")).toBe(
       "/admin/test/stock?material=00000001&location=00000002",

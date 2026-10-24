@@ -42,7 +42,10 @@ describe("customer order pages", () => {
     expect(screen.getByRole("link", { name: "00000001" }).getAttribute("href")).toBe("/admin/test/customer-orders/00000001");
     const cells = within(screen.getByRole("table", { name: "Customer orders" })).getAllByRole("cell");
     expect(cells.map((cell) => cell.textContent)).toEqual(["00000001", "00000001 Customer A", "00000001 Warehouse", "1", "Open"]);
-    expect(screen.getByRole("button", { name: "Create order" })).toBeTruthy();
+    expect(cells[0].className).toContain("font-mono"); expect(cells[2].className).toContain("hidden md:table-cell"); expect(cells[3].className).toContain("text-right");
+    expect(cells[4].querySelector("[data-slot=status-badge]")?.getAttribute("data-tone")).toBe("neutral");
+    expect(cells[4].querySelector("svg.lucide-circle-dot")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Create order" }).closest("[data-slot=page-header]")).toBeTruthy();
   });
   it("renders bounded page navigation and rejects an invalid page", async () => {
     mocks.count.mockResolvedValue(201);
@@ -70,11 +73,16 @@ describe("customer order pages", () => {
     render(await resolveServerComponents(page(true)));
     expect(mocks.get).toHaveBeenCalledWith(order.id); expect(mocks.list).not.toHaveBeenCalled();
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Customer order 00000001");
-    expect(screen.getByRole("link", { name: "All customer orders" }).getAttribute("href")).toBe("/admin/test/customer-orders");
+    // The way back to the list is the section trail's link (design system v1), not a link on the screen.
+    expect(screen.queryByRole("link", { name: "All customer orders" })).toBeNull();
     expect(screen.getByRole("link", { name: "00000005 Cabinet" }).getAttribute("href")).toBe("/admin/test/materials/00000005");
     const cells = within(screen.getByRole("table", { name: "Lines" })).getAllByRole("cell");
-    expect(cells.map((cell) => cell.textContent)).toEqual(["00000005 Cabinet", "24 each", "2 case (1 case = 12 each)", "2027-01-04", "0", "24", "Open", "0", "Cancel"]);
-    expect(screen.getByRole("button", { name: "Edit order" })).toBeTruthy();
+    expect(cells.map((cell) => cell.textContent)).toEqual(["00000005 Cabinet", "24 each", "2 case (1 case = 12 each)", "2027-01-04", "0", "24", "Open", "0", "Cancel line…"]);
+    expect(cells[6].querySelector("[data-slot=status-badge]")?.getAttribute("data-tone")).toBe("neutral");
+    const header = screen.getByRole("heading", { level: 1 }).closest("[data-slot=page-header]") as HTMLElement;
+    expect(within(header).getByText("Open").closest("[data-slot=status-badge]")?.getAttribute("data-tone")).toBe("neutral");
+    expect(within(header).getAllByRole("button").map((button) => button.textContent)).toEqual(["Edit order", "Cancel order…"]);
+    expect(within(header).getByText(en.customerOrders.intro)).toBeTruthy();
     expect(mocks.shipments).toHaveBeenCalledWith({ customerOrder: order.id });
     expect(screen.getByRole("button", { name: "Create shipment" })).toBeTruthy();
     expect(screen.getByText("No shipments yet.")).toBeTruthy();
@@ -102,11 +110,15 @@ describe("customer order pages", () => {
     screenOf({});
     const cells = within(screen.getByRole("table", { name: "Shipments" })).getAllByRole("cell");
     expect(cells.map((cell) => cell.textContent)).toEqual(["00000002", "2027-01-02", "Open", "Line 1: 4 of 24 each"]);
+    expect(cells[2].querySelector("[data-slot=status-badge]")?.getAttribute("data-tone")).toBe("neutral");
     expect(screen.getByRole("link", { name: "00000002" }).getAttribute("href")).toBe("/admin/test/shipments/00000002");
     expect(screen.getByRole("button", { name: "Create shipment" })).toBeTruthy();
 
-    cleanup(); screenOf({ order: { ...order, lines: [{ ...order.lines[0], fulfilled: "24.000000", status: "completed" }] } });
+    cleanup(); screenOf({ order: { ...order, lines: [{ ...order.lines[0], fulfilled: "24.000000", status: "completed" }] }, shipments: [{ ...shipment, status: "cancelled" }] });
     expect(within(screen.getByRole("table", { name: "Lines" })).getAllByRole("cell")[5].textContent).toBe("0");
+    expect(within(screen.getByRole("table", { name: "Lines" })).getByText("Completed").closest("[data-slot=status-badge]")?.getAttribute("data-tone")).toBe("success");
+    const cancelled = within(screen.getByRole("table", { name: "Shipments" })).getByText("Cancelled").closest("[data-slot=status-badge]");
+    expect(cancelled?.getAttribute("data-tone")).toBe("neutral"); expect(cancelled?.querySelector("svg.lucide-circle-x")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Create shipment" })).toBeNull();
     cleanup(); screenOf({ tenant: { ...tenant, readOnly: true } });
     expect(screen.queryByRole("button", { name: "Create shipment" })).toBeNull();

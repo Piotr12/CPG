@@ -3,14 +3,16 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@cpg/ui/components/card";
 import { tenantScope } from "@cpg/core";
+import { LoadingMessage } from "@cpg/ui/backend/feedback/loading-message";
+import { PageHeader } from "@cpg/ui/backend/page-header";
 import { requireUser } from "../../../auth/require-admin";
 import { getMessages } from "../../../i18n/get-messages";
 import { orNotFound } from "../../../routing/or-not-found";
 
 export default function TenantHomePage({ params }: PageProps<"/admin/[tenant]">) {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-6 py-12">
-      <Suspense fallback={<div aria-busy="true" className="min-h-40" />}>
+    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pt-6 pb-8 md:px-6 md:pt-12 md:pb-12">
+      <Suspense fallback={<LoadingMessage />}>
         <TenantHome params={params} />
       </Suspense>
     </main>
@@ -28,10 +30,8 @@ async function TenantHome({ params }: { params: Promise<{ tenant: string }> }) {
   const { tenant } = cradle;
 
   return (
-    <div lang={locale} className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">
-        {messages.admin.heading} — {tenant.name}
-      </h1>
+    <div lang={locale}>
+      <PageHeader title={`${messages.admin.tenantHeading} — ${tenant.name}`} />
       <Card>
         <CardHeader>
           <CardTitle>{tenant.name}</CardTitle>

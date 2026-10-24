@@ -101,15 +101,15 @@ const ADMIN_TREE = [
   { label: "BOMs", href: "/admin/test/boms" },
   { label: "Import", href: "/admin/test/import" },
   { label: "Forecasts", href: "/admin/test/forecasts" },
-  { label: "Stock", href: "/admin/test/stock" },
-  { label: "Stock import", href: "/admin/test/stock-import" },
-  { label: "Stock report", href: "/admin/test/reports/stock" },
-  { label: "Variance report", href: "/admin/test/reports/variance" },
   { label: "Production orders", href: "/admin/test/production-orders" },
   { label: "Customer orders", href: "/admin/test/customer-orders" },
   { label: "Purchase requisitions", href: "/admin/test/purchase-requisitions" },
   { label: "Purchase orders", href: "/admin/test/purchase-orders" },
   { label: "Transfers", href: "/admin/test/transfers" },
+  { label: "Stock", href: "/admin/test/stock" },
+  { label: "Stock import", href: "/admin/test/stock-import" },
+  { label: "Stock report", href: "/admin/test/reports/stock" },
+  { label: "Variance report", href: "/admin/test/reports/variance" },
   { label: "Audit", href: "/admin/test/audit" },
   { label: "Users", href: "/admin/users" },
   { label: "Tenants", href: "/admin" },
@@ -249,15 +249,15 @@ describe("sidebar navigation", () => {
       "Safety stock",
       "BOMs",
       "Forecasts",
-      "Stock",
-      "Stock import",
-      "Stock report",
-      "Variance report",
       "Production orders",
       "Customer orders",
       "Purchase requisitions",
       "Purchase orders",
       "Transfers",
+      "Stock",
+      "Stock import",
+      "Stock report",
+      "Variance report",
       "Audit",
       "Global audit",
       "Help",
@@ -289,6 +289,40 @@ describe("sidebar navigation", () => {
     await admin.waitUntil(`${sidebar}.dataset.state === "expanded"`);
     await admin.waitUntil(`Math.round(document.querySelector("[data-slot=sidebar-container]").getBoundingClientRect().width) === 256`);
     expect(await currentEntry(admin)).toEqual(["Locations"]);
+  });
+
+  it("starts as the icon rail at 800 px, the tenant still named in words, and expanded at 1280 px (D6, TEN-011)", async () => {
+    const railWidth = `Math.round(document.querySelector("[data-slot=sidebar-container]").getBoundingClientRect().width)`;
+    const switchSides = `[...document.querySelectorAll("[data-slot=sidebar] [data-tenant-switch] a")].map((side) => [side.textContent, side.getAttribute("aria-label")])`;
+    await admin.setViewport(800, 800);
+    try {
+      await openPage(admin, "/admin/prod/materials");
+      await admin.waitUntil(`${sidebar}.dataset.state === "collapsed" && ${railWidth} === 48`);
+
+      // Folded to one letter per side, each still named by its tenant.
+      expect(await admin.evaluate<string[][]>(switchSides)).toEqual([
+        ["T", "Test"],
+        ["P", "Prod"],
+      ]);
+      // The header row beside the rail keeps the word PROD in view.
+      expect(
+        await admin.evaluate(`(() => {
+          const tag = ${shownHeader}.querySelector("[data-tenant-tag]");
+          const box = tag.getBoundingClientRect();
+          return { text: tag.innerText, inView: box.left >= 48 && box.right <= innerWidth && box.top >= 0 && box.bottom <= innerHeight };
+        })()`),
+      ).toEqual({ text: "PROD", inView: true });
+      expect(await overflows(admin)).toBe(false);
+
+      await admin.setViewport(1280, 800);
+      await admin.waitUntil(`${sidebar}.dataset.state === "expanded" && ${railWidth} === 256`);
+      expect(await admin.evaluate<string[][]>(switchSides)).toEqual([
+        ["Test", null],
+        ["Prod", null],
+      ]);
+    } finally {
+      await admin.setViewport(1280, 800);
+    }
   });
 
   describe.each([
@@ -363,15 +397,15 @@ describe("sidebar navigation", () => {
       "Zapas bezpieczeństwa",
       "BOM-y",
       "Prognozy",
-      "Zapas",
-      "Import stanów",
-      "Raport zapasu",
-      "Raport odchyleń",
       "Zlecenia produkcyjne",
       "Zamówienia klientów",
       "Zapotrzebowania zakupu",
       "Zamówienia zakupu",
       "Przesunięcia",
+      "Zapas",
+      "Import stanów",
+      "Raport zapasu",
+      "Raport odchyleń",
       "Audyt",
       "Audyt globalny",
       "Pomoc",

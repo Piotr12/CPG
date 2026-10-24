@@ -196,7 +196,7 @@ describe("customer orders through the UI and API", () => {
     /** Confirms the open Deactivate dialog and returns its refusal's text and link. */
     const refusal = async () => {
       await admin.waitFor("[role=alertdialog]");
-      await admin.click("[role=alertdialog] button[data-variant=destructive]");
+      await admin.click("[role=alertdialog] button[data-variant=destructive-solid]");
       await admin.waitUntil(`!!document.querySelector("${alert} a")`);
       return admin.evaluate<{ text: string; id: string; href: string }>(`(() => {
         const link = document.querySelector("${alert} a");

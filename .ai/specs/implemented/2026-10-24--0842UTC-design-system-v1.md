@@ -1,6 +1,6 @@
 # CPG design system v1: one neutral, tenant-aware system for every screen
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-24 08:42 UTC
 **Issue:** #203 (the discussion that decided this spec; owner answers of 2026-10-24) · **Builds on:** `implemented/2026-10-19--2048UTC-sidebar-navigation.md` (#58: shell, rail, trail), `implemented/2026-10-19--0913UTC-test-prod-tenants.md` (TEN-011: the tenant is always shown in words and colour), `implemented/2026-10-17--1321UTC-mammoth-app-icons.md` (the Fluent Flat mammoth artwork), `implemented/2026-10-19--0855UTC-user-preferences-footer-help.md` (theme, exact footer sentence, Help) · **Design authority:** this spec. It distils the two proposals attached to #203 as comments (A, "CPG design system — application guide"; B, "CPG Design System v1"); they are inputs, and where either disagrees with this spec, this spec wins. Also bound by `product-brief.md` (D04, R03, Q04) and `BACKWARD_COMPATIBILITY.md`.
 
@@ -44,7 +44,7 @@ The token file is `packages/ui/src/styles/globals.css`; Appendix A is its comple
 | `sidebar`, `sidebar-accent`, `sidebar-primary` | `oklch(0.985 0 0)`, `oklch(0.94 0 0)`, `oklch(0.205 0 0)` | `oklch(0.205 0 0)`, `oklch(0.30 0 0)`, `oklch(0.922 0 0)` | surface, active row, indicator bar; the dark indigo goes |
 | `success` text / `-surface` / `-edge` | `oklch(0.47 0.11 150)` / `oklch(0.97 0.025 150)` / `oklch(0.84 0.07 150)` | `oklch(0.80 0.12 150)` / `oklch(0.26 0.045 150)` / `oklch(0.42 0.08 150)` | done, received, in effect, import OK |
 | `warning` | `oklch(0.47 0.10 60)` / `oklch(0.975 0.035 90)` / `oklch(0.82 0.12 80)` | `oklch(0.85 0.12 85)` / `oklch(0.27 0.05 70)` / `oklch(0.45 0.09 70)` | shortage, closed early, copy-once secret, read-only |
-| `danger` (+ `danger-solid`) | `oklch(0.50 0.19 27)` / `oklch(0.97 0.014 20)` / `oklch(0.83 0.08 22)`; solid `oklch(0.53 0.21 27)` | `oklch(0.78 0.13 22)` / `oklch(0.27 0.06 22)` / `oklch(0.45 0.12 22)`; solid `oklch(0.54 0.20 25)` | destructive action, failure, refusal; solid only on the confirm button |
+| `danger` (+ `danger-solid` / `danger-solid-foreground` / `danger-solid-hover`) | `oklch(0.50 0.19 27)` / `oklch(0.97 0.014 20)` / `oklch(0.83 0.08 22)`; solid `oklch(0.53 0.21 27)` with `oklch(1 0 0)`, hover `oklch(0.47 0.19 27)` | `oklch(0.78 0.13 22)` / `oklch(0.27 0.06 22)` / `oklch(0.45 0.12 22)`; solid `oklch(0.54 0.20 25)` with `oklch(1 0 0)`, hover `oklch(0.45 0.12 22)` | destructive action, failure, refusal, the invalid control border (`danger`, ≥ 3:1 on page, card and muted); solid only on the confirm button, labelled in `danger-solid-foreground` with its own hover fill (added during implementation: the scan bans `text-white`, and white on the dark `danger` is 2.12:1, so the hover cannot be `bg-danger`) |
 | `neutral-tone` / `neutral-surface` / `neutral-edge` | `oklch(0.37 0 0)` / `oklch(0.96 0 0)` / `oklch(0.88 0 0)` | `oklch(0.85 0 0)` / `oklch(0.27 0 0)` / `oklch(0.40 0 0)` | open, cancelled, superseded, inactive, reversed: the quiet states (named `neutral-tone` because Tailwind owns `neutral-*`) |
 | `tenant-test-edge`; `tenant-test-tag` / `-tag-foreground` | `oklch(0.769 0.188 70.08)`; `oklch(0.924 0.12 95.75)` / `oklch(0.279 0.077 45.64)` | same | the 3 px top edge and switch outline; the TEST tag, pressed segment and banner |
 | `tenant-prod-edge`; `tenant-prod-tag` / `-tag-foreground` | `oklch(0.577 0.245 27.33)`; `oklch(0.205 0 0)` / `oklch(0.985 0 0)` | `oklch(0.637 0.237 25.33)`; `oklch(0.922 0 0)` / `oklch(0.205 0 0)` | the PROD edge, tag and pressed segment |
@@ -157,17 +157,17 @@ Generic pieces live in `packages/ui`; domain mappings live in `packages/app` (en
 
 | Component | Where | Contract |
 |---|---|---|
-| `StatusBadge` (new) | `packages/ui/src/backend/feedback/status-badge.tsx` | `tone: "success" \| "warning" \| "danger" \| "neutral"`, `icon: LucideIcon`, `dashed?: boolean`, `children` (the label, always visible). `[icon 14px] Label`, `text-xs font-medium`, 20 px tall, `px-1.5`, `rounded-sm`, `bg-{tone}-surface text-{tone} border border-{tone}-edge` (`border-dashed` when `dashed`). The icon is `aria-hidden`. |
+| `StatusBadge` (new) | `packages/ui/src/backend/feedback/status-badge.tsx` | `tone: "success" \| "warning" \| "danger" \| "neutral"`, `icon: LucideIcon`, `dashed?: boolean`, `children` (the label, always visible). `[icon 14px] Label`, `text-xs font-medium`, 20 px tall, `px-1.5`, `rounded-sm`, `bg-{tone}-surface text-{tone} border border-{tone}-edge` (`border-dashed` when `dashed`). The icon is `aria-hidden`. It composes `badgeVariants` for its geometry, so the `px-1.5` inset lives in `packages/ui/src/components/badge.tsx`, where the scan allows it. |
 | Status tone map (new) | `packages/app/src/components/document-lifecycle/status-tone.ts` | Documents (customer, production and purchase orders, requisitions, transfers, shipments): `open` → neutral `CircleDot`; `completed` (Received on PO lines) → success `CircleCheck`; `closed-early` → warning `CircleMinus`; `cancelled` → neutral `CircleX`. Transfers `inTransit` → neutral `Truck`. Movements and completions `reversed` → neutral `Undo2`. Safety stock `inEffect` → success `CircleCheck`, `scheduled` → neutral `Clock`, `superseded` → neutral `History`. Master data `active` → neutral `Circle`, `inactive` → neutral dashed `CircleOff`. Tenant read-only → warning `Lock`, writable → neutral `Pencil`. Colour marks attention and completion; the resting states stay quiet (decision D4). Not statuses, so plain `Badge`: material type, "Generation 1", migration counts, role names. |
 | `Badge` (restyled) | `packages/ui/src/components/badge.tsx` | A category tag, not a state: `rounded-sm`, `text-xs font-medium px-1.5 h-5`; `secondary` is `bg-muted text-foreground`, `outline` is `border-border bg-transparent`. The `default` and `destructive` variants stay for shadcn compatibility and leave domain use. |
 | `Callout` (new) | `packages/ui/src/backend/feedback/callout.tsx` | `tone: "neutral" \| "success" \| "warning" \| "danger"`, `title?`, `role?` (`"note"` default, `"status"` for async results, `"alert"` only when it blocks the next step), `icon?` (defaults `Info`, `CircleCheck`, `TriangleAlert`, `OctagonAlert`), `actions?`, `children`. `rounded-md border p-4 gap-2 bg-{tone}-surface border-{tone}-edge`; icon 16 px in the tone colour; title `text-sm font-medium text-foreground`; body `text-sm text-foreground max-w-prose`. |
 | `PageHeader` (new) | `packages/ui/src/backend/page-header.tsx` | `title` (string or node, rendered as the `h1`), `description?`, `actions?`, `meta?`; renders `h1 text-2xl font-semibold tracking-tight`, the description, the actions row; the block ends with `mb-6`. |
-| `Button` (adjusted) | `packages/ui/src/components/button.tsx` | `default` `bg-primary text-primary-foreground hover:bg-primary-hover active:bg-primary-active`; `outline` `border-border bg-background hover:bg-muted`; `secondary` `bg-secondary hover:bg-secondary-hover`; `ghost` for icon and row actions; **`destructive`** restyled as `text-danger bg-danger-surface border border-danger-edge` (opens a destructive flow: "Reset Test…", "Cancel order…"; today's variant measures 3.97:1); **`destructive-solid`** new, `bg-danger-solid text-white`, for the confirm button inside an `AlertDialog` only; `link` underlined foreground. Sizes keep their heights; `sm` uses `text-xs`; `rounded-[min(var(--radius-md),…)]` becomes `rounded-md`; `px-2.5` becomes `px-3`. Labels are verb + object; a trailing `…` means a confirmation follows; a bare "Cancel" is only a dialog's dismiss button; destructive document actions sit in the `PageHeader` actions after the primary ones, never full width. |
+| `Button` (adjusted) | `packages/ui/src/components/button.tsx` | `default` `bg-primary text-primary-foreground hover:bg-primary-hover active:bg-primary-active`; `outline` `border-border bg-background hover:bg-muted`; `secondary` `bg-secondary hover:bg-secondary-hover`; `ghost` for icon and row actions; **`destructive`** restyled as `text-danger bg-danger-surface border border-danger-edge` (opens a destructive flow: "Reset Test…", "Cancel order…"; today's variant measures 3.97:1); **`destructive-solid`** new, `bg-danger-solid text-danger-solid-foreground hover:bg-danger-solid-hover`, for the confirm button inside an `AlertDialog` only; `destructive`'s hover darkens the border (`hover:border-danger`), because `danger` on `danger-edge` measures 3.80:1; `link` underlined foreground. Sizes keep their heights; `sm` uses `text-xs`; `rounded-[min(var(--radius-md),…)]` becomes `rounded-md`; `px-2.5` becomes `px-3`. Labels are verb + object; a trailing `…` means a confirmation follows; a bare "Cancel" is only a dialog's dismiss button; destructive document actions sit in the `PageHeader` actions after the primary ones, never full width. |
 | `DataTable` (extended) | `packages/ui/src/backend/tables/data-table.tsx` | `kind`, `priority`, `rowTone`, horizontal scroll with a sticky first column, as in Layout above. |
 | `TenantTag`, `TenantBanner`, `TenantChoiceCard` (new) | `packages/app/src/components/tenants/` | Thin wrappers applying the `tenant-*` tokens so the tenant is styled in one place: the tag (`bg-tenant-test-tag text-tenant-test-tag-foreground`, Prod inverted by the token), the read-only banner (tag colours + `border-tenant-*-edge` + a `Lock` icon + the word Read-only), the `/admin` choice cards (`border-tenant-*-edge`, plain `bg-card`, the tag inside; the tenant is shown by edge and tag, not by tinting the card). `tenant-switch.tsx` and `tenant-header.tsx` consume the same tokens. |
 | `MammothMark` (new) | `packages/app/src/components/layout/mammoth-mark.tsx` | An inline SVG whose paths and fills are those of `packages/app/src/app/icon.svg` (the Fluent Flat mammoth, MIT), `aria-hidden`, `size` 16 (rail), 20 (sidebar, visitor bar) or 40 (home). A unit test reads `icon.svg` and asserts the component's path data and fills match it, so the two copies cannot drift. No brand colour token (decision D3). It replaces the six emoji sites (`sidebar-nav.tsx:208,218`, `visitor-bar.tsx:23`, `app/page.tsx:30`, and the emoji inside the login title strings `en.ts:21`, `pl.ts:19`). |
 | Account control | `components/layout/sidebar-nav.tsx:263` | A `CircleUserRound` icon in `text-muted-foreground` plus the name and role; the initial avatar in a filled circle goes; in the rail the icon alone keeps its accessible name. |
-| Forms (`CrudForm`, unchanged behaviour) | `packages/ui/src/backend/forms/crud-form.tsx` and screens | Every control has a visible `<Label>` (an `aria-label` alone is not enough); help text `text-xs text-muted-foreground`; an error replaces the help text with a 14 px `CircleAlert` icon and `text-danger`, and the control gets `border-danger-edge`, `aria-invalid` and `aria-describedby`. Search and filter forms keep submitted and invalid values, show the active scope and offer a reset; a `<select>` whose URL value matches no option adds it as its own option. |
+| Forms (`CrudForm`, unchanged behaviour) | `packages/ui/src/backend/forms/crud-form.tsx` and screens | Every control has a visible `<Label>` (an `aria-label` alone is not enough); help text `text-xs text-muted-foreground`; an error replaces the help text with a 14 px `CircleAlert` icon and `text-danger`, and the control gets `border-danger` (not `border-danger-edge`: the edge tint measured 1.74:1 on white, below the 3:1 floor for a control boundary; the focus ring stays `ring`), `aria-invalid` and `aria-describedby`. Search and filter forms keep submitted and invalid values, show the active scope and offer a reset; a `<select>` whose URL value matches no option adds it as its own option. |
 
 ### States and copy
 
@@ -185,8 +185,8 @@ Generic pieces live in `packages/ui`; domain mappings live in `packages/app` (en
 | Sign-in refusal | "Invalid username or password. Check both and try again. If you cannot sign in, contact your administrator." | `sign-in-form.tsx` |
 | Success | "Material saved." plus the resulting record state; no duplicate success panels. | `Callout tone="success" role="status"` |
 | Reversal | Confirms the exact record, consequence and reason the domain requires; never implies a generic Undo. | `ConfirmDialog` |
-| Not found (new) | `app/src/app/not-found.tsx` and `app/src/app/admin/[tenant]/not-found.tsx`, inside the shell and themed: "Page not found. The address may be mistyped, or the record belongs to the other tenant." → **Go to Tenants**, or **Back to {list}** inside a tenant. | `EmptyState` |
-| Unexpected error (new) | `app/src/app/error.tsx` (client): "Something went wrong on our side. Try again; if it keeps happening, tell your administrator and quote reference {digest}." → **Try again** (`reset()`); `global-error.tsx` with the same message and minimal markup. | `ErrorMessage` |
+| Not found (new) | `app/src/app/not-found.tsx` and `app/src/app/admin/[tenant]/not-found.tsx`, inside the shell and themed: "Page not found. The address may be mistyped, or the record belongs to the other tenant." → **Go to Tenants**, or **Back to {list}** inside a tenant (else **Back to Overview — {tenant}**). The title is the page's `h1` (through `PageHeader`, so "one `h1` per page" holds on state pages too); the next step is an outline button. | `PageHeader` + `Button` |
+| Unexpected error (new) | `app/src/app/error.tsx` (client): "Something went wrong on our side. Try again; if it keeps happening, tell your administrator and quote reference {digest}." → **Try again** (`retry()`: Next.js 16.4's error boundary re-fetches and re-renders with it, where `reset()` only re-renders and a server error would recur); `global-error.tsx` with the same message and minimal markup. The page's title is its `h1` (through `PageHeader`); the message box carries what to do. | `PageHeader` + `ErrorMessage` |
 | No JavaScript | JavaScript is required on every page (decision D5). The root layout renders one `<noscript>` notice in the static shell, styled as a warning `Callout`, in both languages because the shell is language-neutral: "CPG needs JavaScript. Turn it on in your browser and reload this page." / its Polish equivalent. | `Callout` markup inside `<noscript>` |
 
 Existing messages are audited against this table and kept where they already comply. Errors say what is wrong and what to do; refusal parameters stay structured (`params`, never interpolated). One term per concept: BOM, not recipe (brief Q04). Every new string lands in `en.ts` and `pl.ts`.
@@ -315,7 +315,7 @@ Rules for every unit: read `.ai/lessons.md` and this spec first; `npm ci` in a f
 2. In every `packages/ui/src/components/*.tsx`, replace `focus-visible:ring-3 focus-visible:ring-ring/50` (and `ring-[3px]`) with `focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background`; in `sidebar.tsx` menu buttons add `ring-inset`.
 3. `dialog.tsx:42`, `alert-dialog.tsx:39`, `sheet.tsx:40`: `bg-black/10 … supports-backdrop-filter:backdrop-blur-xs` → `bg-scrim`.
 4. `button.tsx`: `default` to `hover:bg-primary-hover active:bg-primary-active`; `secondary` to `hover:bg-secondary-hover`.
-5. Write `packages/ui/src/styles/tokens.test.ts`: parse the `:root` and `.dark` blocks, convert OKLCH to sRGB, compute WCAG ratios, assert: `foreground` on `background`, `card`, `muted` ≥ 4.5; `muted-foreground` on `background`, `muted`, `sidebar` ≥ 4.5; `primary-foreground` on `primary` ≥ 4.5; each tone text on its surface ≥ 4.5; `danger-solid` with white ≥ 4.5; tenant tag foregrounds on their tags ≥ 4.5; `ring` on `background`, `sidebar`, `muted` ≥ 3; `input` on `background`, `card`, `muted` ≥ 3; `tenant-prod-edge` on `background` ≥ 3; both themes.
+5. Write `packages/ui/src/styles/tokens.test.ts`: parse the `:root` and `.dark` blocks, convert OKLCH to sRGB, compute WCAG ratios, assert: `foreground` on `background`, `card`, `muted` ≥ 4.5; `muted-foreground` on `background`, `muted`, `sidebar` ≥ 4.5; `primary-foreground` on `primary` ≥ 4.5; each tone text on its surface ≥ 4.5; `danger-solid-foreground` on `danger-solid` ≥ 4.5; tenant tag foregrounds on their tags ≥ 4.5; `ring` on `background`, `sidebar`, `muted` ≥ 3; `input` on `background`, `card`, `muted` ≥ 3; `danger` (the invalid control border) on `background`, `card`, `muted` ≥ 3; `tenant-prod-edge` on `background` ≥ 3; both themes.
 6. Write `tests/design-tokens.test.ts` with the scan rules from Architecture and the allow-list from Exceptions, in report-only mode: one exported constant switches between "print offenders and pass" and "fail on any offender"; a unit test of the scanner itself asserts both modes on fixture strings.
 7. Gate; run `smoke.test.ts` and `navigation.test.ts`.
 
@@ -453,6 +453,8 @@ The complete token file for slice 1. The shadcn names are kept so the primitives
     --color-danger-surface: var(--danger-surface);
     --color-danger-edge: var(--danger-edge);
     --color-danger-solid: var(--danger-solid);
+    --color-danger-solid-foreground: var(--danger-solid-foreground);
+    --color-danger-solid-hover: var(--danger-solid-hover);
     --color-neutral-tone: var(--neutral-tone);
     --color-neutral-surface: var(--neutral-surface);
     --color-neutral-edge: var(--neutral-edge);
@@ -510,6 +512,8 @@ The complete token file for slice 1. The shadcn names are kept so the primitives
     --danger-surface: oklch(0.97 0.014 20);
     --danger-edge: oklch(0.83 0.08 22);
     --danger-solid: oklch(0.53 0.21 27);
+    --danger-solid-foreground: oklch(1 0 0);
+    --danger-solid-hover: oklch(0.47 0.19 27);
     --neutral-tone: oklch(0.37 0 0);
     --neutral-surface: oklch(0.96 0 0);
     --neutral-edge: oklch(0.88 0 0);
@@ -571,6 +575,8 @@ The complete token file for slice 1. The shadcn names are kept so the primitives
     --danger-surface: oklch(0.27 0.06 22);
     --danger-edge: oklch(0.45 0.12 22);
     --danger-solid: oklch(0.54 0.20 25);
+    --danger-solid-foreground: oklch(1 0 0);
+    --danger-solid-hover: oklch(0.45 0.12 22);
     --neutral-tone: oklch(0.85 0 0);
     --neutral-surface: oklch(0.27 0 0);
     --neutral-edge: oklch(0.40 0 0);
@@ -603,7 +609,49 @@ The complete token file for slice 1. The shadcn names are kept so the primitives
         outline: 2px solid var(--ring);
         outline-offset: 2px;
     }
+    /* Motion: non-essential transitions and animations go when the reader asks for reduced motion. */
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        ::before,
+        ::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+            scroll-behavior: auto !important;
+        }
+    }
 }
 ```
 
 Notes: `--destructive` is no longer defined; `--color-destructive` maps to `--danger`, so shadcn's `bg-destructive` / `text-destructive` resolve to the danger colour without editing every primitive. In Tailwind 4, setting `--radius-*` directly in `@theme inline` overrides the multiplier-based values shadcn generated. `--chart-*` are unchanged and identical in both themes, so `.dark` does not repeat them.
+
+## Implementation notes
+
+Implemented on 2026-10-24 in one pull request by a lead agent (Claude Fable 5.1) and seven workers (Claude Opus 5.5), per decision D8. The run folder `.ai/pipeline/runs/2026-10-24--0925UTC-design-system-v1/` holds the plan, the decision log (`NOTIFY.md`), every brief, the workers' screenshots and the close QA (`qa-artifacts/`). `tests/design-tokens.test.ts` now fails on any offender outside the Exceptions table and passes on the merged tree with none; `packages/ui/src/styles/tokens.test.ts` pins every pair of the accessibility floor in both themes.
+
+### Amendments made during implementation (spec and code together)
+
+- **`--danger-solid-foreground`** (`oklch(1 0 0)`, both themes) labels `destructive-solid`: the contract said `text-white`, which the spec's own scan bans.
+- **`--danger-solid-hover`** (`oklch(0.47 0.19 27)` light, `oklch(0.45 0.12 22)` dark) is the solid confirm button's hover fill: white on the dark `danger` is 2.12:1, so `hover:bg-danger` failed there. `destructive`'s hover darkens the border (`hover:border-danger`), because `danger` on `danger-edge` is 3.80:1.
+- **Invalid controls use `border-danger`**, not `border-danger-edge` (1.74:1 on white, below the 3:1 floor for a boundary), and no invalid ring; `tokens.test.ts` pins `danger` on `background`, `card` and `muted` ≥ 3.
+- **`prefers-reduced-motion`**: Appendix A gains the reduced-motion block the Motion paragraph asked for.
+- **`StatusBadge`'s `px-1.5`** lives in `badge.tsx` through `badgeVariants`, where the scan's path rule allows it.
+- **`retry()`, not `reset()`**, on the error pages (Next.js 16.4), and **an `h1` on the state pages** through `PageHeader` (the States table rows above say so now).
+- The **tone map** also holds the import-row outcomes (dry run quiet, committed success) and the variance report's Waste mark (warning), which the Components row did not list.
+
+### Decisions taken by the lead
+
+- Parallel units added dictionary keys only inside their own concept sections of `en.ts`/`pl.ts` ("never share a file" read as "never share a hunk"); every key is listed in the units' reports.
+- Workers were authorised, case by case, to change the one assertion or selector outside their scope that their change moved (the `ConfirmDialog` variant, the lifecycle labels, the chooser text, the BOM status, the unknown-tenant text, the shipment cancel label); each is recorded in `NOTIFY.md`.
+- The shortage title's Polish plural needs a `few` form, which the shared `counted` helper has no room for: the production screen carries its own `{ one, few, other }` helper.
+- The "Back to …" list links on the production-order and customer-order details went once the section trail linked its ancestors; the shipment page's link to its order stays (shipments have no sidebar entry, so no trail).
+- Screenshots in the run folder are viewport captures; the workers' 768 px captures were dropped from it (the close QA attached to the PR covers 768 px), and the measurements stay in each folder's metrics file.
+
+### Deviations and known limitations
+
+- `error.tsx` and `global-error.tsx` are covered by unit tests only (no deterministic trigger in the production image); the not-found pages carry the integration test.
+- The icon rail's default between 768 and 1023 px is applied after hydration, so a cold load shows the expanded sidebar for a frame; a CSS-first default would need the sidebar provider.
+- A 320 px screenshot with JavaScript off is not capturable with agent-browser; `p1-artifacts/nojs-320-metrics.json` records the notice's box and the absence of overflow instead.
+- With the `kind` minimum widths, ten-column tables (the requisition list's sum to 1,342 px) scroll inside their container at 1,280 px with the sidebar expanded, and the audit table at 1,280 px: the spec's density judgement for the owner (adjust column priorities or row spacing before widening the `lg` control).
+- Three allow-list entries (`bg-[Canvas]`, `text-[CanvasText]`, `border-t-[3px]`) match no scan rule and document the Exceptions table only.
+- "Recipe" wording outside the one site the spec names (16 English values, 18 Polish lines, 23 help lines) stays for now: it describes document and master-data screens whose tests assert it, and is filed as #206.

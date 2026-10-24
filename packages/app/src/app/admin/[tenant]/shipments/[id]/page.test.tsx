@@ -157,7 +157,7 @@ describe("ShipmentPage", () => {
     render(await resolveServerComponents(page()));
     expect(screen.queryByRole("button", { name: "Post goods issue" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Edit shipment" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Cancel shipment" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Cancel shipment…" })).toBeNull();
     expect(screen.getByText(en.goodsIssues.empty)).toBeTruthy();
   });
 
@@ -165,7 +165,7 @@ describe("ShipmentPage", () => {
     render(await resolveServerComponents(page()));
 
     expect(mocks.order).toHaveBeenCalledWith("00000007");
-    expect(screen.queryByRole("button", { name: "Cancel shipment" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Cancel shipment…" })).toBeNull();
     expect(screen.getByText(en.shipments.cancel.issued)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Edit shipment" }));
     const dialog = screen.getByRole("dialog", { name: "Edit shipment 00000002" });
@@ -181,7 +181,7 @@ describe("ShipmentPage", () => {
 
     expect(screen.getByRole("button", { name: "Edit shipment" })).toBeTruthy();
     expect(screen.queryByText(en.shipments.cancel.issued)).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Cancel shipment" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel shipment…" }));
     expect(screen.getByRole("alertdialog", { name: "Cancel shipment 00000002?" })).toBeTruthy();
   });
 

@@ -34,7 +34,7 @@ async function openMaterials(browser: Browser, tenant: string) {
 }
 
 /**
- * Sets a tenant's flag from the Read-only card on Cave control, unless it is already set that way,
+ * Sets a tenant's flag from the Read-only card on the Tenants page, unless it is already set that way,
  * and waits until the card shows the new state.
  */
 async function setReadOnly(admin: Browser, name: string, readOnly: boolean) {
@@ -68,7 +68,7 @@ describe("read-only tenants on the screens (R05)", () => {
     }
   });
 
-  it("makes Prod read-only from Cave control, and the chooser says so", async () => {
+  it("makes Prod read-only from the Tenants page, and the chooser says so", async () => {
     // A page loaded while Prod was still writable, kept open for the next test.
     await openMaterials(stale, "prod");
     await stale.waitUntil(ready(button("Create material")));
@@ -78,7 +78,7 @@ describe("read-only tenants on the screens (R05)", () => {
     const chooser = await admin.evaluate<string[]>(
       `[...document.querySelectorAll("main nav a")].map((link) => link.innerText.replace(/\\s+/g, " ").trim())`,
     );
-    expect(chooser).toEqual(["Test Demonstration data, safe to experiment Open Test →", "Prod Live data Read-only Open Prod →"]);
+    expect(chooser).toEqual(["Test TEST Demonstration data, safe to experiment Open Test →", "Prod PROD Live data Read-only Open Prod →"]);
   });
 
   it("refuses the admin's write from a page loaded before the flag, and keeps what was stored (TEN-016)", async () => {
@@ -90,7 +90,7 @@ describe("read-only tenants on the screens (R05)", () => {
     await stale.waitFor("[role=dialog] [role=alert]");
 
     expect(await stale.text("[role=dialog] [role=alert]")).toBe(
-      "This tenant is read-only, so its business data can't be changed. The administrator can make it writable on the Cave control page.",
+      "This tenant is read-only, so its business data can't be changed. The administrator can make it writable on the Tenants page.",
     );
     await openMaterials(admin, "prod");
     expect(await admin.evaluate<string>(`document.querySelector("main table").innerText`)).not.toContain(REFUSED);

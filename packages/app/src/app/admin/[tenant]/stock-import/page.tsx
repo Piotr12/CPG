@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { connection } from "next/server";
 import { tenantScope } from "@cpg/core";
 import { LoadingMessage } from "@cpg/ui/backend/feedback/loading-message";
+import { PageHeader } from "@cpg/ui/backend/page-header";
 import { requireUser } from "../../../../auth/require-admin";
 import { ImportScreen } from "../../../../components/imports/import-screen";
 import { stockImportLabels } from "../../../../components/imports/stock-labels";
@@ -14,7 +15,7 @@ export const metadata: Metadata = { title: "Stock import" };
 
 export default function StockImportPage({ params }: PageProps<"/admin/[tenant]/stock-import">) {
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-12">
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pt-6 pb-8 md:px-6 md:pt-12 md:pb-12">
       <Suspense fallback={<LoadingMessage />}>
         <StockImport params={params} />
       </Suspense>
@@ -36,9 +37,8 @@ async function StockImport({ params }: { params: Promise<{ tenant: string }> }) 
   const { code, name, generation, readOnly } = cradle.tenant;
 
   return (
-    <div lang={locale} className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">{messages.stockImport.heading(name)}</h1>
-      <p className="text-sm text-muted-foreground">{messages.stockImport.intro}</p>
+    <div lang={locale}>
+      <PageHeader title={messages.stockImport.heading(name)} description={messages.stockImport.intro} />
       <ImportScreen tenant={{ code, name, generation, readOnly }} labels={stockImportLabels(messages)} kind="stock" />
     </div>
   );

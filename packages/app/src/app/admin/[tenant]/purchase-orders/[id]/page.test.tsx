@@ -94,7 +94,7 @@ describe("PurchaseOrderPage", () => {
     const rows = within(screen.getByRole("table", { name: "Lines" })).getAllByRole("row").slice(1);
     expect(rows.map((row) => within(row).getAllByRole("cell").map((cell) => cell.textContent))).toEqual([
       ["1", "00000001Steel sheet", "500 kg", "0.5 t at 1 t = 1000 kg", "2027-03-03", "00000007", "530 kg", "0 kg", "Received", "0 kg", ""],
-      ["2", "00000002Bolt M8", "10 each", "", "2027-03-05", "—", "4 each", "6 each", "Open", "0 each", "Change dateClose Early"],
+      ["2", "00000002Bolt M8", "10 each", "", "2027-03-05", "—", "4 each", "6 each", "Open", "0 each", "Change dateClose line early…"],
     ]);
     expect(screen.getByRole("link", { name: "00000007" }).getAttribute("href")).toBe("/admin/test/purchase-requisitions?page=1");
     expect(screen.getByRole("link", { name: "All purchase orders" }).getAttribute("href")).toBe("/admin/test/purchase-orders");
@@ -168,15 +168,15 @@ describe("PurchaseOrderPage", () => {
     // Line 2's reversed receipt is older than the newest page of receipts the screen lists.
     mocks.receipts.mockResolvedValue([]);
     const { unmount } = render(await resolveServerComponents(page()));
-    expect(screen.getByRole("button", { name: `Close Early — Purchase orders ${ORDER.id}` })).toBeTruthy();
+    expect(screen.getByRole("button", { name: `Close order early… — Purchase orders ${ORDER.id}` })).toBeTruthy();
     const rows = within(screen.getByRole("table", { name: "Lines" })).getAllByRole("row").slice(1);
     expect(within(rows[0]).getByRole("button", { name: /Cancel/ })).toBeTruthy();
-    expect(within(rows[1]).getByRole("button", { name: /Close Early/ })).toBeTruthy();
+    expect(within(rows[1]).getByRole("button", { name: /Close line early…/ })).toBeTruthy();
     unmount();
 
     mocks.get.mockResolvedValue({ ...ORDER, lines: reversed.map((line) => ({ ...line, posted: false })) });
     render(await resolveServerComponents(page()));
-    expect(screen.getByRole("button", { name: `Cancel — Purchase orders ${ORDER.id}` })).toBeTruthy();
+    expect(screen.getByRole("button", { name: `Cancel order… — Purchase orders ${ORDER.id}` })).toBeTruthy();
   });
 
   it("shows the page in Polish", async () => {

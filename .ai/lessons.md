@@ -69,10 +69,13 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 ## UI and React
 
+- **2026-10-24 — Design tokens: `--input` is a boundary, never a fill** — since design system v1 `--input` is the opaque 3:1 control border, so shadcn's `dark:bg-input/30`, `disabled:bg-input/50` and `dark:hover:bg-input/50` paint grey fields and buttons; use `bg-muted` for a disabled fill and `bg-background` with `border-border` for an outline button. Likewise an invalid control's border is `border-danger` (the `danger-edge` tint measured 1.74:1 on white); `tokens.test.ts` pins both floors.
+- **2026-10-24 — `Button` publishes its variant as `data-variant`, and tests select by it** — integration tests find a confirm button with `[role=alertdialog] button[data-variant=destructive-solid]`, so renaming or swapping a variant (W2 moved `ConfirmDialog` to `destructive-solid`) moves a dozen selectors: grep `tests/integration` and the unit tests before changing one.
+- **2026-10-24 — Tailwind 4 orders `aria-*` variants after `focus-visible`** — an `aria-invalid:ring-…` colour overrides the focus ring on a focused invalid field. Give invalid controls a border only (`aria-invalid:border-danger`) and leave the ring to `focus-visible`, or add `aria-invalid:focus-visible:ring-ring` when an invalid ring is unavoidable.
 - **2026-10-24 — A new status needs a sweep of status-specific copy** — When an enum gains a value, check EN/PL messages for the guarding error codes and old status names; use neutral or parameterised text and test it through the screen. After #147 added shipment cancellation, the goods-issue dialog still called a cancelled shipment completed (#188).
 
 - **2026-10-19 — A client component must not import a module that imports `@cpg/core`** — the browser bundle pulls in the ORM, and only `npm run build` fails. Keep client helpers dependency-free (`components/layout/current-path.ts`) or import `@cpg/core/validators/*`.
-- **2026-10-20 — A label passed to a client component must be plain data** — function-valued labels pass unit tests but the server refuses the page. Use `{ one, other }` forms (`counted` in `components/imports/report-text.ts`), and test that labels hold no function.
+- **2026-10-24 — A label passed to a client component must be plain data** — function-valued labels pass unit tests but the server refuses the page. Use `{ one, other }` forms (`counted` in `components/imports/report-text.ts`; Polish needs a `few` form for 2–4), and test that labels hold no function. The same trap hides in a whole dictionary section (`messages.nav` holds functions): pick the plain strings a client component needs instead of passing the section (the tenant not-found page's `BackLink`).
 - **2026-10-19 — React 19: updates after `await` leave the transition** — wrap post-await `setState` in another `startTransition` (`ui/src/backend/forms/crud-form.tsx`), or an error can show while `isPending` is still true.
 - **2026-10-19 — Name a function `useX` only if it is a React hook** — `react-hooks/rules-of-hooks` treats every `useX()` call as a hook (hence `selectTenant`).
 - **2026-10-21 — Dialogs and refresh: bind to what was opened, keep what explains a refusal** — three rules:
@@ -122,6 +125,7 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 ## Integration tests and agent-browser
 
+- **2026-10-24 — A `StatusBadge`'s `innerText` breaks the line before its label** — the icon is a flex item, so a row's `innerText` reads `"\nActive"`; match row text with `\s*` or read the label span. A second integration pass on a server already used by a first fails on its fixed usernames and records: copy the standalone build and give it a fresh `DATA_DIR` for every pass (P3 of the design system run).
 - **2026-10-22 — Integration files share one app, one admin and one database** — files run one at a time (`fileParallelism: false`). A file:
   - restores the admin's preferences in `afterAll`;
   - revokes only the tokens it created;
@@ -188,6 +192,10 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 ## Process and agent pipeline (om-* skills)
 
 - **2026-10-24 — A closing keyword anywhere in a PR body closes the issue** — GitHub parses `closes #N` / `fixes #N` / `resolves #N` in any sentence of the body, so the spec PR #204, which opened with `Refs #203` and later said "its implementation PR closes #203", closed the issue on merge. A PR that must leave an issue open (a spec PR, a partial fix) never puts a closing keyword next to that number, not even about a future PR: write "the implementation PR will close it" without the number, and grep the body for `clos|fix|resolv` before opening it.
+- **2026-10-24 — A lead-and-workers run: briefs in the run folder, viewport screenshots, one hunk per worker** — three rules from the design system run (`.ai/pipeline/runs/2026-10-24--0925UTC-design-system-v1/`):
+  - a cezar dispatch objective is capped at 4,000 characters, so commit each worker's full brief under the run folder and make the objective point at it;
+  - evidence screenshots are viewport captures (a full-page Help capture was 37,000 px tall and 3.4 MB), with the measurements in a `metrics.json`;
+  - parallel workers may share a file only when their hunks are disjoint (a dictionary's concept sections) and a worker that needs one assertion outside its scope asks the lead, who authorises that hunk and tells the file's owner to stay off it.
 - **2026-10-23 — Close the paperwork in the PR that does the work** — two rules:
   - File every follow-up a PR, spec or run log names before merging, and cite its number. Prose follow-ups were lost (#109's location guard, #95's reversal check).
   - The implementation PR moves its spec to `implemented/` (`Status: implemented`, implementation notes, image links rewritten to `](../assets/…)`). The specs of #4, #43 and #147 stayed in `.ai/specs/` after merging, and `tests/spec-images.test.ts` fails on a broken image.

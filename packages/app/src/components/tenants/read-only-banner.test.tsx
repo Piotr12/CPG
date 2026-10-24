@@ -39,11 +39,14 @@ describe("ReadOnlyBanner", () => {
 
     const banner = screen.getByRole("status");
     expect(banner.dataset.readOnlyBanner).toBe("prod");
-    expect(banner.className).toContain("bg-neutral-900");
+    expect(banner.className).toContain("bg-tenant-prod-tag text-tenant-prod-tag-foreground border-tenant-prod-edge");
+    expect(banner.querySelector("svg.lucide-lock")).not.toBeNull();
+    expect(banner.querySelector("p")!.className).toBe("min-w-0 flex-1 basis-64");
     expect(banner.textContent).toBe(
       "Prod is read-only — business changes are blocked. Reading, the audit, preferences and user management still work.",
     );
     expect(screen.getByText("Prod is read-only").tagName).toBe("STRONG");
+    expect(screen.getByText("Prod is read-only").className).toBe("font-semibold");
     expect(screen.queryByRole("link")).toBeNull();
   });
 
@@ -54,7 +57,7 @@ describe("ReadOnlyBanner", () => {
 
     const banner = screen.getByRole("status");
     expect(banner.getAttribute("lang")).toBe("pl");
-    expect(banner.className).toContain("bg-amber-100");
+    expect(banner.className).toContain("bg-tenant-test-tag text-tenant-test-tag-foreground border-tenant-test-edge");
     expect(screen.getByText("Test jest tylko do odczytu")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Zmień w Środowiskach" }).getAttribute("href")).toBe("/admin");
   });

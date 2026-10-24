@@ -12,6 +12,8 @@ describe("AccountPanel", () => {
     render(<AccountPanel username="alice" locale="en" theme="dark" messages={en} />);
 
     expect(screen.getByText("alice").tagName).toBe("STRONG");
+    // Weights stop at semibold (design system v1).
+    expect(screen.getByText("alice").className).toContain("font-semibold");
     expect(screen.getByText(/Signed in as/)).toBeTruthy();
     const language = screen.getByRole("group", { name: "Language" });
     expect(within(language).getByRole("button", { name: "English" }).getAttribute("aria-pressed")).toBe("true");

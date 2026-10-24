@@ -39,7 +39,8 @@ describe("ConfirmDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Open" }));
     expect(screen.getByRole("alertdialog", { name: "Remove case?" })).toBeTruthy();
     expect(screen.getByText("Quantities can no longer be entered in case.")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Remove" }).dataset.variant).toBe("destructive");
+    // The confirm button of a destructive dialog is the solid red one.
+    expect(screen.getByRole("button", { name: "Remove" }).dataset.variant).toBe("destructive-solid");
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Remove" })));
 
     expect(action).toHaveBeenCalledOnce();

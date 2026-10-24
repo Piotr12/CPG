@@ -22,8 +22,8 @@ it("keeps a removed line's conflict visible by deferring the refresh that would 
   mocks.refresh.mockImplementation(() => view.rerender(<OrdersScreen {...props} order={{ ...order, version: order.version + 1, lines: [] }} />));
   const { versionConflict } = await import("@cpg/core");
   mocks.cancel.mockRejectedValue(versionConflict());
-  fireEvent.click(within(screen.getByRole("table", { name: "Lines" })).getByRole("button", { name: /Cancel/ }));
-  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Cancel" }));
+  fireEvent.click(within(screen.getByRole("table", { name: "Lines" })).getByRole("button", { name: /Cancel line… —/ }));
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Cancel line" }));
   expect((await screen.findByRole("alert")).textContent).toContain(en.errors.VERSION_CONFLICT);
   expect(screen.getByRole("dialog")).toBeTruthy();
   expect(mocks.refresh).not.toHaveBeenCalled();
@@ -39,8 +39,9 @@ it("offers Close Early after a full issue reversal, while an untouched sibling c
   const untouched = { ...order.lines[0], id: "untouched", posted: false };
   render(<OrdersScreen tenant={tenant} orders={[]} customers={customers} locations={locations} materials={materials} units={{}} locale="en" messages={en}
     order={{ ...order, lines: [posted, untouched] }} />);
-  expect(screen.getByRole("button", { name: `Close Early — Customer orders ${order.id}` })).toBeTruthy();
+  const header = screen.getByRole("heading", { level: 1 }).closest("[data-slot=page-header]") as HTMLElement;
+  expect(within(header).getByRole("button", { name: `Close order early… — Customer orders ${order.id}` }).textContent).toBe("Close order early…");
   const rows = within(screen.getByRole("table", { name: "Lines" })).getAllByRole("row").slice(1);
-  expect(within(rows[0]).getByRole("button", { name: /Close Early/ })).toBeTruthy();
-  expect(within(rows[1]).getByRole("button", { name: /Cancel/ })).toBeTruthy();
+  expect(within(rows[0]).getByRole("button", { name: `Close line early… — Customer orders ${order.id} — Line 1` }).getAttribute("data-variant")).toBe("destructive");
+  expect(within(rows[1]).getByRole("button", { name: /^Cancel line… —/ })).toBeTruthy();
 });

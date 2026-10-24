@@ -37,6 +37,12 @@ describe("AuditTable", () => {
       "active: yes → no",
     ]);
     expect(screen.getByTitle("c41e08b6-1111-4222-8333-444455556666")).toBeTruthy();
+    // Time first and sticky; the session ID is monospaced and gives way below lg, the channel (a tag) below md.
+    const row = rows()[0].querySelectorAll("td");
+    expect(row[0].className).toMatch(/\bwhitespace-nowrap\b.*\bsticky left-0\b/);
+    expect(row[2].className).toMatch(/\bfont-mono\b.*\bhidden lg:table-cell\b/);
+    expect(row[3].className).toContain("hidden md:table-cell");
+    expect(row[3].querySelector("[data-slot=badge]")?.textContent).toBe("UI");
   });
 
   it("lists a create's values, one per line", () => {
@@ -73,6 +79,7 @@ describe("AuditTable", () => {
     );
 
     expect(cells(rows()[0]).slice(2, 4)).toEqual(["—", "APIrobot-a"]);
+    expect(rows()[0].querySelectorAll("td")[2].querySelector("[aria-label=none]")?.textContent).toBe("—");
   });
 
   it("shows an action it has no name for as its ID", () => {

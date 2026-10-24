@@ -1,13 +1,21 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { connection } from "next/server";
+import { ArrowRight } from "lucide-react";
+import { LoadingMessage } from "@cpg/ui/backend/feedback/loading-message";
+import { Button } from "@cpg/ui/components/button";
 import { currentUser, HOME_PATH, SIGN_IN_PATH } from "../auth/require-admin";
+import { MammothMark } from "../components/layout/mammoth-mark";
+import type { HelpTopicId } from "../help/topics";
 import { getMessages } from "../i18n/get-messages";
+
+/** The help topic behind each of `home.steps`, in the same order: ids are routes, not text. */
+const HOME_FLOW_TOPICS = ["forecasts", "boms", "production-orders", "stock"] as const satisfies readonly HelpTopicId[];
 
 export default function HomePage() {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-6 py-12">
-      <Suspense fallback={<div aria-busy="true" className="min-h-96" />}>
+    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pt-6 pb-8 md:px-6 md:pt-12 md:pb-12">
+      <Suspense fallback={<LoadingMessage />}>
         <HomeContent />
       </Suspense>
     </main>
@@ -25,31 +33,25 @@ async function HomeContent() {
 
   return (
     <div lang={locale} className="flex flex-col gap-8">
-      <header className="flex flex-col gap-4">
-        <span className="text-5xl" aria-hidden>
-          🦣
-        </span>
+      <header className="flex flex-col items-start gap-4">
+        <MammothMark size={40} />
         <h1 className="text-4xl font-semibold tracking-tight">{t.title}</h1>
-        <p className="text-lg text-zinc-600 dark:text-zinc-400">{t.tagline}</p>
-        <Link
-          href={user ? HOME_PATH : SIGN_IN_PATH}
-          className="self-start rounded-lg bg-zinc-900 px-5 py-2.5 font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
-        >
-          {user ? t.open : t.signIn}
-        </Link>
+        <p className="max-w-prose text-lg text-muted-foreground">{t.tagline}</p>
+        <Button asChild size="lg">
+          <Link href={user ? HOME_PATH : SIGN_IN_PATH}>{user ? t.open : t.signIn}</Link>
+        </Button>
       </header>
 
-      <ol className="grid gap-4 sm:grid-cols-2">
+      <ol aria-label={t.flowLabel} className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         {t.steps.map((step, i) => (
-          <li key={step.name} className="rounded-2xl border border-zinc-200 p-5 dark:border-zinc-800">
-            <p className="font-mono text-xs text-zinc-500">{String(i + 1).padStart(2, "0")}</p>
-            <h2 className="mt-1 font-medium">{step.name}</h2>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{step.grunt}</p>
+          <li key={HOME_FLOW_TOPICS[i]} className="flex items-center gap-2">
+            {i > 0 && <ArrowRight aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />}
+            <Link href={`/help#${HOME_FLOW_TOPICS[i]}`} className="text-foreground underline underline-offset-4">
+              {step.name}
+            </Link>
           </li>
         ))}
       </ol>
-
-      <p className="text-sm text-zinc-500">{t.motto}</p>
     </div>
   );
 }

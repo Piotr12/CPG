@@ -47,7 +47,7 @@ describe("TenantHomePage", () => {
 
     expect(mocks.connection).toHaveBeenCalledOnce();
     expect(mocks.tenantScope).toHaveBeenCalledWith("prod");
-    expect(screen.getByRole("heading", { name: "Cave control — Prod" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Overview — Prod" })).toBeTruthy();
     expect(screen.getByText("Prod")).toBeTruthy();
     expect(screen.getByText("Dataset generation 1")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Materials" }).getAttribute("href")).toBe("/admin/prod/materials");
@@ -66,7 +66,7 @@ describe("TenantHomePage", () => {
 
     render(await resolveServerComponents(page("prod")));
 
-    expect(screen.getByRole("heading", { name: "Cave control — Prod" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Overview — Prod" })).toBeTruthy();
     // The account and its controls are in the menu, not on the page.
     expect(screen.queryByText("alice")).toBeNull();
     expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
@@ -77,7 +77,7 @@ describe("TenantHomePage", () => {
 
     render(await resolveServerComponents(page("prod")));
 
-    expect(screen.getByRole("heading", { name: "Kontrola jaskini — Prod" }).closest("[lang]")?.getAttribute("lang")).toBe("pl");
+    expect(screen.getByRole("heading", { name: "Przegląd — Prod" }).closest("[lang]")?.getAttribute("lang")).toBe("pl");
     expect(screen.getByText("Generacja zbioru danych: 1")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Materiały" })).toBeTruthy();
   });

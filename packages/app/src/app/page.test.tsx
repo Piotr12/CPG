@@ -1,6 +1,9 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
+import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { LoadingMessage } from "@cpg/ui/backend/feedback/loading-message";
 import { resolveServerComponents } from "../../../../tests/setup/server-components";
+import { HELP_TOPIC_IDS } from "../help/topics";
 import { en } from "../i18n/messages/en";
 import { pl } from "../i18n/messages/pl";
 import HomePage from "./page";
@@ -41,38 +44,62 @@ describe("HomePage", () => {
     expect(screen.queryByRole("link", { name: "Zaloguj się" })).toBeNull();
   });
 
-  it("lists the four MRP II steps in order, numbered", async () => {
+  it("puts the mark and the plain tagline above the way in", async () => {
     await renderAs("en");
 
-    const steps = screen.getAllByRole("listitem");
-    expect(steps.map((step) => step.querySelector("h2")?.textContent)).toEqual([
-      "Demand Forecast",
-      "Bill of Materials",
-      "Production Planning",
-      "Production Execution",
-    ]);
-    expect(steps.map((step) => step.querySelector("p")?.textContent)).toEqual(["01", "02", "03", "04"]);
+    const mark = document.querySelector("[data-slot=mammoth-mark]");
+    expect(mark?.getAttribute("width")).toBe("40");
+    expect(mark?.getAttribute("aria-hidden")).toBe("true");
+    expect(screen.getByText(en.home.tagline).className).toContain("text-muted-foreground");
+    expect(en.home.tagline).toBe("A small MRP II planning tool: it turns what customers want into plans for what to buy and what to make.");
+    expect(screen.getByRole("link", { name: "Sign in" }).getAttribute("data-slot")).toBe("button");
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
   });
 
-  it("leaves the footer to the layout: its motto is a plain paragraph", async () => {
+  it("names what is built, in the order work flows, each linked to its help topic", async () => {
     await renderAs("en");
 
-    expect(screen.getByText("Demand come. Caveman plan. Caveman make.").tagName).toBe("P");
+    const flow = screen.getByRole("list", { name: "What CPG covers" });
+    const links = within(flow).getAllByRole("link");
+    expect(links.map((link) => [link.textContent, link.getAttribute("href")])).toEqual([
+      ["Forecasts and customer orders", "/help#forecasts"],
+      ["BOMs", "/help#boms"],
+      ["Production and purchase orders", "/help#production-orders"],
+      ["Stock", "/help#stock"],
+    ]);
+    // Arrows join the steps: none before the first, decorative only.
+    const arrows = within(flow).getAllByRole("listitem").map((item) => item.querySelector("svg"));
+    expect(arrows[0]).toBeNull();
+    expect(arrows.slice(1).every((arrow) => arrow?.getAttribute("aria-hidden") === "true")).toBe(true);
+  });
+
+  it("links only to help topics that exist", async () => {
+    await renderAs("en");
+
+    const ids = screen.getAllByRole("listitem").map((item) => item.querySelector("a")?.getAttribute("href")?.replace("/help#", ""));
+    expect(ids.every((id) => (HELP_TOPIC_IDS as readonly (string | undefined)[]).includes(id))).toBe(true);
+  });
+
+  it("leaves the footer to the layout", async () => {
+    await renderAs("en");
+
     expect(screen.queryByRole("contentinfo")).toBeNull();
   });
 
   it("speaks Polish to a Polish account, marked with lang=pl", async () => {
     await renderAs("pl");
 
-    expect(screen.getByText("Prognoza popytu").closest("[lang]")?.getAttribute("lang")).toBe("pl");
-    expect(screen.getByText("Popyt przyjść. Jaskiniowiec planować. Jaskiniowiec robić.")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Prognozy i zamówienia klientów" }).closest("[lang]")?.getAttribute("lang")).toBe("pl");
+    expect(screen.getByRole("list", { name: "Co obejmuje CPG" })).toBeTruthy();
+    expect(screen.getByText(pl.home.tagline)).toBeTruthy();
   });
 
-  it("holds no text in its static fallback", () => {
+  it("shows the language-neutral loading shell until the request-time content streams", () => {
     const main = HomePage();
-    const fallback = (main.props.children as { props: { fallback: { props: Record<string, unknown> } } }).props.fallback;
+    const { fallback } = (main.props.children as { props: { fallback: ReactElement } }).props;
 
-    expect(fallback.props["aria-busy"]).toBe("true");
-    expect(fallback.props.children).toBeUndefined();
+    expect(fallback.type).toBe(LoadingMessage);
+    render(fallback);
+    expect(document.querySelector("[aria-busy=true]")?.textContent).toBe("");
   });
 });

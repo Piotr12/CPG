@@ -50,7 +50,7 @@ describe("UsersPage", () => {
     // The menu leads back; the page carries no back link of its own.
     expect(screen.queryByRole("link")).toBeNull();
     expect(screen.getByText(/Users are never deleted\. Deactivate an account to end its access/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Create user" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Create user" }).closest("[data-slot=page-header]")).toBeTruthy();
     expect(screen.getByText("Users table: admin, alice")).toBeTruthy();
   });
 

@@ -2,9 +2,11 @@ import { cancelTransfer, closeEarlyTransfer } from "../../app/admin/[tenant]/tra
 import { LifecycleControl } from "../document-lifecycle/lifecycle-control";
 import Link from "next/link";
 import type { Locale, MaterialSummary, NamedRecordView, TransferDetailView, TransferPostingKind } from "@cpg/core";
-import { Badge } from "@cpg/ui/components/badge";
+import { StatusBadge } from "@cpg/ui/backend/feedback/status-badge";
+import { PageHeader } from "@cpg/ui/backend/page-header";
 import { Card, CardContent } from "@cpg/ui/components/card";
 import type { Messages } from "../../i18n/messages/en";
+import { transferStatusTone } from "../document-lifecycle/status-tone";
 import { DatesDialog } from "./dates-dialog";
 import { byId, fill, isPositive, locationName, materialName, shownQuantity, transfersLabels } from "./labels";
 import { LedgerTable } from "./ledger-table";
@@ -39,7 +41,6 @@ export function TransferScreen({ tenant, transfer, materials, locations, units, 
     { label: t.material, value: materialName(materialsById, transfer.material) },
     { label: t.source, value: source },
     { label: t.destination, value: destination },
-    { label: t.status, value: <Badge variant="secondary">{labels.status[transfer.status]}</Badge> },
     { label: t.plannedDispatch, value: transfer.plannedDispatch },
     { label: t.plannedArrival, value: transfer.plannedArrival },
     { label: t.quantity, value: amount(transfer.quantity) },
@@ -59,15 +60,45 @@ export function TransferScreen({ tenant, transfer, materials, locations, units, 
     { kind: "write-off", limit: transfer.inTransit },
   ];
   const fills = { source, destination, baseUnit };
+  const offered = postings.filter(({ limit }) => isPositive(limit));
 
   return (
-    <div lang={locale} className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">{messages.transfers.detailHeading(transfer.id, materialName(materialsById, transfer.material))}</h1>
-      <p>
+    <div lang={locale}>
+      <p className="mb-4">
         <Link href={`/admin/${tenant.code}/transfers`} className="text-sm underline underline-offset-4">
           {labels.allTransfers}
         </Link>
       </p>
+      <PageHeader
+        title={messages.transfers.detailHeading(transfer.id, materialName(materialsById, transfer.material))}
+        meta={<StatusBadge {...transferStatusTone(transfer.status)}>{labels.status[transfer.status]}</StatusBadge>}
+        actions={writable && <>
+          {offered.map(({ kind, limit }, index) => (
+            <PostingDialog
+              key={kind}
+              context={context}
+              transfer={transfer.id}
+              kind={kind}
+              title={fill(labels.post[kind].title, fills)}
+              description={fill(labels.post[kind].description, { ...fills, limit: shownQuantity(limit) })}
+              units={units}
+              labels={labels}
+              primary={index === 0}
+            />
+          ))}
+          <DatesDialog
+            context={context}
+            transfer={{ id: transfer.id, plannedDispatch: transfer.plannedDispatch, plannedArrival: transfer.plannedArrival, version: transfer.version }}
+            labels={labels}
+          />
+          <LifecycleControl kind="transfer" available processed={transfer.postings.length > 0}
+            subject={`${labels.link} ${transfer.id}`} version={transfer.version} quantities={[amount(transfer.outstanding)]}
+            notice={isPositive(transfer.inTransit) ? fill(messages.errors.TRANSFER_IN_TRANSIT, { quantity: shownQuantity(transfer.inTransit), unit: baseUnit }) : undefined}
+            labels={messages.lifecycle} errors={messages.errors}
+            cancel={cancelTransfer.bind(null, tenant.code, tenant.generation, transfer.id)} closeEarly={closeEarlyTransfer.bind(null, tenant.code, tenant.generation, transfer.id)} />
+        </>}
+      />
+      <div className="flex flex-col gap-8">
       <Card>
         <CardContent>
           <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
@@ -80,40 +111,13 @@ export function TransferScreen({ tenant, transfer, materials, locations, units, 
           </dl>
         </CardContent>
       </Card>
-      <LifecycleControl available={writable} processed={transfer.postings.length > 0}
-        subject={`${labels.link} ${transfer.id}`} version={transfer.version} quantities={[amount(transfer.outstanding)]}
-        notice={isPositive(transfer.inTransit) ? fill(messages.errors.TRANSFER_IN_TRANSIT, { quantity: shownQuantity(transfer.inTransit), unit: baseUnit }) : undefined}
-        labels={messages.lifecycle} errors={messages.errors}
-        cancel={cancelTransfer.bind(null, tenant.code, tenant.generation, transfer.id)} closeEarly={closeEarlyTransfer.bind(null, tenant.code, tenant.generation, transfer.id)} />
-      {writable && (
-        <div className="flex flex-wrap gap-3">
-          {postings
-            .filter(({ limit }) => isPositive(limit))
-            .map(({ kind, limit }) => (
-              <PostingDialog
-                key={kind}
-                context={context}
-                transfer={transfer.id}
-                kind={kind}
-                title={fill(labels.post[kind].title, fills)}
-                description={fill(labels.post[kind].description, { ...fills, limit: shownQuantity(limit) })}
-                units={units}
-                labels={labels}
-              />
-            ))}
-          <DatesDialog
-            context={context}
-            transfer={{ id: transfer.id, plannedDispatch: transfer.plannedDispatch, plannedArrival: transfer.plannedArrival, version: transfer.version }}
-            labels={labels}
-          />
-        </div>
-      )}
       <section className="flex min-w-0 flex-col gap-3">
         <h2 className="text-lg font-semibold">{labels.ledger.heading}</h2>
         <p className="text-sm text-muted-foreground">{labels.ledger.intro}</p>
         <LedgerTable postings={transfer.postings} reversals={transfer.reversals} locations={locationsById} baseUnit={baseUnit} labels={labels}
           reversible={tenant.readOnly ? undefined : { context, transfer: transfer.id, path: `/admin/${tenant.code}/transfers/${transfer.id}` }} />
       </section>
+      </div>
     </div>
   );
 }

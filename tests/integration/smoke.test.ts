@@ -20,16 +20,16 @@ describe("a fresh app instance", () => {
     expect(await response.text()).toBe("OK");
   });
 
-  it("serves the home page with the four MRP II steps", async () => {
+  it("serves the home page with the flow of what is built, each step linked to its help topic", async () => {
     await browser.open(baseUrl);
 
     expect(await browser.title()).toBe("Caveman Planning Good");
     expect(await browser.text("h1")).toBe("Caveman Planning Good");
-    expect(await browser.texts("li h2")).toEqual([
-      "Demand Forecast",
-      "Bill of Materials",
-      "Production Planning",
-      "Production Execution",
+    expect(await browser.texts("ol[aria-label='What CPG covers'] a")).toEqual([
+      "Forecasts and customer orders",
+      "BOMs",
+      "Production and purchase orders",
+      "Stock",
     ]);
   });
 
@@ -37,7 +37,9 @@ describe("a fresh app instance", () => {
     await signInAsAdmin(browser, baseUrl, adminPassword);
 
     expect(await browser.title()).toBe("Admin · Caveman Planning Good");
-    expect(await browser.text("h1")).toBe("Cave control");
-    expect(await browser.texts("[data-slot=badge]")).toEqual(["Writable", "Writable", expect.stringMatching(/^Generation [1-9]\d*$/), "31 migrations applied", "0 pending", "1 settings"]);
+    expect(await browser.text("h1")).toBe("Tenants");
+    // Design system v1: a tenant's access is a status (icon + label), the counts stay category tags.
+    expect(await browser.texts("[data-slot=status-badge]")).toEqual(["Writable", "Writable"]);
+    expect(await browser.texts("[data-slot=badge]")).toEqual([expect.stringMatching(/^Generation [1-9]\d*$/), "31 migrations applied", "0 pending", "1 settings"]);
   });
 });

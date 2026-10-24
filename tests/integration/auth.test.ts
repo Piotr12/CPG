@@ -27,7 +27,7 @@ describe("signing in", () => {
     await signIn(browser, baseUrl, "not the admin password");
     await browser.waitFor("[role=alert]");
 
-    expect(await browser.text("[role=alert]")).toBe("Invalid username or password.");
+    expect(await browser.text("[role=alert]")).toBe("Invalid username or password. Check both and try again. If you cannot sign in, contact your administrator.");
     expect(new URL(await browser.url()).pathname).toBe("/login");
     expect(await sessionCookie(browser)).toBeUndefined();
   });

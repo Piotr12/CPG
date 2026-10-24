@@ -14,12 +14,19 @@ describe("VisitorBar", () => {
     const bar = screen.getByRole("banner");
     expect(bar.getAttribute("lang")).toBe("pl");
     expect(bar.dataset.visitorBar).toBeDefined();
-    expect(within(bar).getByRole("link", { name: "CPG" }).getAttribute("href")).toBe("/");
+    const brand = within(bar).getByRole("link", { name: "CPG" });
+    expect(brand.getAttribute("href")).toBe("/");
+    // The mammoth mark at 20 px beside the name, not an emoji.
+    expect(brand.querySelector("svg[data-slot=mammoth-mark]")!.getAttribute("width")).toBe("20");
+    expect(brand.textContent).toBe("CPG");
     const nav = within(screen.getByRole("navigation", { name: "Menu" }));
     expect(nav.getAllByRole("link").map((link) => [link.textContent, link.getAttribute("href"), link.getAttribute("aria-current")])).toEqual([
       ["Pomoc", "/help", "page"],
       ["Zaloguj się", "/login", null],
     ]);
+    const help = nav.getByRole("link", { name: "Pomoc" });
+    expect(help.className).toContain("py-2");
+    expect(help.className).toContain("aria-[current=page]:underline-offset-4");
   });
 
   it("marks Sign in on the sign-in page", () => {

@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { CompletionPreview, ProductionOrderDetail } from "@cpg/core";
 import { productionCompletionPreviewSchema } from "@cpg/core/validators/production-orders/production-completion.schema";
 import { apiCall } from "@cpg/ui/backend/api/api-call";
+import { Callout } from "@cpg/ui/backend/feedback/callout";
 import { CrudForm } from "@cpg/ui/backend/forms/crud-form";
 import { Button } from "@cpg/ui/components/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@cpg/ui/components/dialog";
@@ -107,9 +108,9 @@ export function CompletionDialog({ context, labels: t, order, outputUnits, locat
         </Dialog>
       )}
       {notice && (
-        <p role="status" className="text-sm">
+        <Callout tone="success" role="status">
           {notice}
-        </p>
+        </Callout>
       )}
     </div>
   );
