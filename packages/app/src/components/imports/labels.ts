@@ -34,6 +34,7 @@ import {
   TYPE_MESSAGE,
   UNIT_FORMAT_MESSAGE,
 } from "@cpg/core/validators/materials/material-fields.schema";
+import { UNIT_NOT_REGISTERED_MESSAGE } from "@cpg/core/validators/units/unit-registry";
 import { NAME_REQUIRED_MESSAGE, NAME_TOO_LONG_MESSAGE } from "@cpg/core/validators/named-records/named-record-fields.schema";
 import {
   LEAD_TIME_MESSAGE,
@@ -70,6 +71,7 @@ const SCREEN_MESSAGES = [
   DESCRIPTION_REQUIRED_MESSAGE,
   DESCRIPTION_TOO_LONG_MESSAGE,
   UNIT_FORMAT_MESSAGE,
+  UNIT_NOT_REGISTERED_MESSAGE,
   FACTOR_MESSAGE,
   NAME_REQUIRED_MESSAGE,
   NAME_TOO_LONG_MESSAGE,

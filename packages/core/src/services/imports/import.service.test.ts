@@ -313,6 +313,25 @@ describe("each master sheet", () => {
     expect((await kit.dryRun([sheet("unitConversions", [2, "case", "12.0", 1])])).rows.map((row) => row.action)).toEqual(["unchanged"]);
   });
 
+  it("refuses a new base unit or conversion unit outside the unit list on its cell, writing nothing (#217)", async () => {
+    await seedMasters();
+    const audits = await kit.auditCount();
+
+    const report = await kit.dryRun([
+      sheet("materials", [null, "raw", "Oak board", "płyta", null], [2, "raw", "Bolt M8", "szt.", null]),
+      sheet("unitConversions", [1, "lb", "0.45", 1]),
+    ]);
+
+    expect(report.errors.map(({ sheet: name, row, column, code, message }) => [name, row, column, code, message])).toEqual([
+      ["Materials", 2, "Base unit", "VALIDATION_FAILED", "Choose a unit from the list."],
+      ["Materials", 3, "Base unit", "VALIDATION_FAILED", "Choose a unit from the list."],
+      ["Unit conversions", 2, "Unit", "VALIDATION_FAILED", "Choose a unit from the list."],
+    ]);
+    expect(report.previewToken).toBeNull();
+    expect(await descriptions()).toEqual(["00000001 Steel sheet", "00000002 Bolt M8"]);
+    expect(await kit.auditCount()).toBe(audits);
+  });
+
   it("creates and updates locations, customers and suppliers, and reports an unknown ID", async () => {
     await seedMasters();
     const workbook = [
