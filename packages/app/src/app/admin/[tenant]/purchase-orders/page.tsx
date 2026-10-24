@@ -29,7 +29,8 @@ export default function PurchaseOrdersPage({ params, searchParams }: PageProps<"
 /**
  * One tenant's purchase orders, read through that tenant's own scope (R05) by any signed-in
  * account, a page of 100 at a time (`?page=`; a page past the last shows the last, an invalid one is
- * not found), searched with `?q=` and sorted with `?sort=&dir=` across every page (#217), with the suppliers, locations, materials and open requisitions the Create form offers.
+ * not found), searched with `?q=` and sorted with `?sort=&dir=` across every page (#217), with the
+ * suppliers, locations, materials and open requisitions the Create form offers.
  */
 async function PurchaseOrders({ params, searchParams }: Pick<PageProps<"/admin/[tenant]/purchase-orders">, "params" | "searchParams">) {
   await connection();
