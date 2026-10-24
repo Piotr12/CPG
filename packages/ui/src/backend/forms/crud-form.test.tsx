@@ -55,9 +55,13 @@ describe("CrudForm", () => {
 
     const password = screen.getByLabelText("Password");
     expect(password.getAttribute("aria-invalid")).toBe("true");
-    expect(document.getElementById(password.getAttribute("aria-describedby")!)!.textContent).toBe(
-      "Use at least 12 characters.",
-    );
+    const error = document.getElementById(password.getAttribute("aria-describedby")!)!;
+    expect(error.textContent).toBe("Use at least 12 characters.");
+    // An error is icon + text, in the danger tone, replacing the help text.
+    expect(error.classList).toContain("text-danger");
+    const icon = error.querySelector("svg")!;
+    expect(icon.getAttribute("aria-hidden")).toBe("true");
+    expect(icon.classList).toContain("size-3.5");
     expect(screen.queryByText("At least 12 characters.")).toBeNull();
     expect(action).not.toHaveBeenCalled();
   });

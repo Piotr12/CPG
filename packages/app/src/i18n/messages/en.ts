@@ -1,3 +1,5 @@
+import { ERROR_BOUNDARY } from "./error-boundary";
+
 /**
  * Every user-visible string of CPG's screens, in English. `pl.ts` is typed against this object, so a
  * screen can't ship a string that only exists in one language. Strings handed to client components
@@ -6,27 +8,25 @@
 export const en = {
   home: {
     title: "Caveman Planning Good",
-    tagline: "MRP II. Because planning hard. Caveman try anyway.",
-    steps: [
-      { name: "Demand Forecast", grunt: "Guess what people want. They want something else." },
-      { name: "Bill of Materials", grunt: "Know what things made of. Before making them." },
-      { name: "Production Planning", grunt: "Decide what make, how much, when." },
-      { name: "Production Execution", grunt: "Make things. Learn why plan wrong." },
-    ],
-    motto: "Demand come. Caveman plan. Caveman make.",
+    tagline: "A small MRP II planning tool: it turns what customers want into plans for what to buy and what to make.",
+    /** What is built, in the order work flows through it; the page links each to its help topic. */
+    steps: [{ name: "Forecasts and customer orders" }, { name: "BOMs" }, { name: "Production and purchase orders" }, { name: "Stock" }],
+    flowLabel: "What CPG covers",
     signIn: "Sign in",
     open: "Open CPG",
   },
   login: {
-    title: "🦣 Sign in to CPG",
+    title: "Sign in to CPG",
     description: "Use your CPG account.",
     username: "Username",
     password: "Password",
     submit: "Sign in",
     submitting: "Signing in…",
+    invalidCredentials: "Invalid username or password. Check both and try again. If you cannot sign in, contact your administrator.",
   },
   admin: {
-    heading: "Cave control",
+    heading: "Tenants",
+    tenantHeading: "Overview",
     database: "Database",
     migrationsApplied: (count: number) => `${count} migrations applied`,
     migrationsPending: (count: number) => `${count} pending`,
@@ -153,7 +153,8 @@ export const en = {
     secret: {
       title: "Token “{name}” created",
       label: "Secret",
-      warning: "Copy it now. You won't see it again.",
+      warningTitle: "Copy this token now",
+      warning: "You won't see it again.",
       usage: "Send it as Authorization: Bearer <secret>.",
       copy: "Copy",
       copied: "Copied",
@@ -188,6 +189,7 @@ export const en = {
       "Every quantity of a material is stored in its base unit, exactly to six decimals. IDs are assigned in order and never change.",
     empty: "No materials in {tenant} yet.",
     emptyHint: "Create the first one with Create material.",
+    emptyReader: "Ask an administrator to add materials.",
     allMaterials: "All materials",
     columns: {
       id: "Material ID",
@@ -302,6 +304,7 @@ export const en = {
     intro: "Sites where materials are made and stocked. IDs are assigned in order and never change.",
     empty: "No locations in {tenant} yet.",
     emptyHint: "Create the first one with Create location.",
+    emptyReader: "Ask an administrator to add locations.",
     columns: { id: "ID", name: "Name", status: "Status", actions: "Actions" },
     status: { active: "Active", inactive: "Inactive" },
     cancel: "Cancel",
@@ -355,6 +358,7 @@ export const en = {
     intro: "Who you sell to. IDs are assigned in order and never change.",
     empty: "No customers in {tenant} yet.",
     emptyHint: "Create the first one with Create customer.",
+    emptyReader: "Ask an administrator to add customers.",
     columns: { id: "ID", name: "Name", status: "Status", actions: "Actions" },
     status: { active: "Active", inactive: "Inactive" },
     cancel: "Cancel",
@@ -408,6 +412,7 @@ export const en = {
     intro: "Who you buy from. IDs are assigned in order and never change.",
     empty: "No suppliers in {tenant} yet.",
     emptyHint: "Create the first one with Create supplier.",
+    emptyReader: "Ask an administrator to add suppliers.",
     columns: { id: "ID", name: "Name", status: "Status", actions: "Actions" },
     status: { active: "Active", inactive: "Inactive" },
     cancel: "Cancel",
@@ -460,6 +465,7 @@ export const en = {
       "One row per material and location: whether MRP makes or buys it, the lead time in whole calendar days, and the minimum lot and lot multiple, in the material's base unit.",
     empty: "No planning parameters in {tenant} yet.",
     emptyHint: "Add the first set with Add parameters.",
+    emptyReader: "Ask an administrator to add planning parameters.",
     columns: {
       material: "Material",
       location: "Location",
@@ -534,6 +540,7 @@ export const en = {
       "Effective-dated targets per material and location. A target applies from its date until the next one; with no target, the target is 0. Status is as of today, {today} (UTC).",
     empty: "No safety-stock targets in {tenant} yet.",
     emptyHint: "Add the first one with Add target.",
+    emptyReader: "Ask an administrator to add safety-stock targets.",
     columns: {
       material: "Material",
       location: "Location",
@@ -672,8 +679,22 @@ export const en = {
   },
   /** The BOM screens (E04-S01). Client components get plain strings; only the headings are functions. */
   lifecycle: {
-    "cancel": "Cancel",
-    "closeEarly": "Close Early",
+    /** Opens the confirmation: verb + object, with `…` because a confirmation follows. */
+    "open": {
+      "order": { "cancel": "Cancel order…", "closeEarly": "Close order early…" },
+      "productionOrder": { "cancel": "Cancel order…", "closeEarly": "Close order early…" },
+      "transfer": { "cancel": "Cancel transfer…", "closeEarly": "Close transfer early…" },
+      "requisition": { "cancel": "Cancel requisition…", "closeEarly": "Close requisition early…" },
+      "line": { "cancel": "Cancel line…", "closeEarly": "Close line early…" },
+    },
+    /** The confirmation's title and its confirm button. */
+    "confirm": {
+      "order": { "cancel": "Cancel order", "closeEarly": "Close order early" },
+      "productionOrder": { "cancel": "Cancel order", "closeEarly": "Close order early" },
+      "transfer": { "cancel": "Cancel transfer", "closeEarly": "Close transfer early" },
+      "requisition": { "cancel": "Cancel requisition", "closeEarly": "Close requisition early" },
+      "line": { "cancel": "Cancel line", "closeEarly": "Close line early" },
+    },
     "keepOpen": "Keep open",
     "pending": "Resolving…",
     "description": "End {subject} and abandon the quantities below. Recorded work and stock stay unchanged. This cannot be reopened manually.",
@@ -683,9 +704,9 @@ export const en = {
     "transit": "Receive or write off all stock in transit before closing."
 },
   productionOrders: {
-    title: "Production orders", heading: "{tenant} · Production orders", detailHeading: "Production order {id}",
+    title: "Production orders", heading: "Production orders — {tenant}", detailHeading: "Production order {id}",
     intro: "Plan one Make output at one location and keep its chosen BOM revision. Planning never changes physical stock.",
-    create: "Create production order", edit: "Edit production order", save: "Save changes", preview: "Preview recipes", pending: "Working…", cancel: "Cancel", back: "Back", backList: "Back to production orders",
+    create: "Create production order", edit: "Edit production order", save: "Save changes", preview: "Preview recipes", pending: "Working…", cancel: "Cancel", back: "Back",
     id: "ID", output: "Output material", location: "Location", quantity: "Planned quantity", unit: "Unit", finish: "Planned finish", start: "Planned start", recipe: "BOM / revision", status: "Status", entered: "Entered quantity / conversion",
     choose: "Choose…", unitHint: "Enter the output's base unit (shown beside its name) or a configured alternate unit.",
     previewDates: "Indicative start: {start} ({days} calendar days before finish). Dates are checked again when saving.",
@@ -693,11 +714,12 @@ export const en = {
     finishHint: "The planned start is recalculated from the captured lead time of {days} calendar days.",
     previewNotice: "Review the direct component requirements and current stock. Shortages allow manual planning; no stock is reserved or consumed.",
     recipeLabel: "BOM {bom} / revision {revision} · priority {priority}",
-    warning: "Component shortage: you can still create this plan. Current physical stock is shown below; stock is checked when a completion is posted.",
+    shortageTitle: { one: "{count} component short", few: "{count} components short", other: "{count} components short" },
+    shortageBody: "You can still create this plan; stock is checked when a completion is posted.",
     sufficient: "Current physical stock covers these direct requirements. Planning does not reserve or consume it.",
     resolved: "This order is {status}, so it needs no more components.",
     components: "Pinned component requirements and current stock", component: "Component", required: "Required", available: "Available now", shortage: "Shortage",
-    empty: "No production orders yet. Configure a Make output, location and active recipe, then create an order.",
+    empty: "No production orders yet. Configure a Make output, location and active BOM, then create an order.",
     pagination: "Production order pages", previous: "Previous", next: "Next", page: "Page {page} of {pages}",
     invalidDate: "Enter a real date written YYYY-MM-DD.", invalidUnit: "Enter a valid unit.", invalidQuantity: "Enter a positive quantity with at most 6 decimals.",
     invalidStart: "The derived start must fit a four-digit calendar year.", requirementOverflow: "The component requirement is too large. Reduce the target.", belowProduced: "The target cannot be less than the quantity already produced.",
@@ -779,7 +801,7 @@ export const en = {
     empty: "No customer orders yet.", emptyHint: "Create an order to record dated demand.",
     create: "Create order", edit: "Edit order", createTitle: "Create customer order", editTitle: "Edit customer order {id}",
     description: "Choose one customer and location. Add each material, quantity, unit and required date below.",
-    save: "Save order", saving: "Saving…", cancel: "Cancel", back: "All customer orders",
+    save: "Save order", saving: "Saving…", cancel: "Cancel",
     id: "Order", customer: "Customer", location: "Location", status: "Status", lines: "Lines", material: "Material",
     quantity: "Ordered quantity", unit: "Unit", requiredDate: "Required date", fulfilled: "Fulfilled", outstanding: "Outstanding", entered: "Entered as",
     choose: "Choose…", addLine: "Add line", removeLine: "Remove line {number}", line: "Line {number}", inactive: "Inactive",
@@ -804,6 +826,7 @@ export const en = {
       "Bills of materials with alternatives, priority and validity. Changing a BOM creates a new revision; earlier revisions stay readable and never change.",
     empty: "No BOMs in {tenant} yet.",
     emptyHint: "Create the first one with Create BOM.",
+    emptyReader: "Ask an administrator to add BOMs.",
     allBoms: "All BOMs",
     columns: {
       id: "BOM",
@@ -1339,7 +1362,7 @@ export const en = {
       nothing: "Keep a quantity on at least one line. To drop every line, cancel the shipment instead.",
     },
     cancel: {
-      open: "Cancel shipment",
+      open: "Cancel shipment…",
       title: "Cancel shipment {id}?",
       description: "It will plan nothing more. Stock and the order are not changed.",
       confirm: "Cancel shipment",
@@ -1861,7 +1884,7 @@ export const en = {
   stockReport: {
     heading: "Stock report — {tenant}",
     intro: "Physical stock on hand and stock in transit per material and location, in the material's base unit, as of {date} (UTC). Stock in transit belongs to its transfer: neither location can use it until it is received.",
-    material: "Material", location: "Location", all: "All", includeZero: "Show rows that are all zero", apply: "Apply",
+    material: "Material", location: "Location", all: "All", includeZero: "Show rows that are all zero", apply: "Apply", clear: "Clear filters",
     columns: { material: "Material", location: "Location", quantity: "On hand", inTransitFrom: "In transit out", inTransitTo: "In transit in", figures: "Stock" },
     inactive: "Inactive", label: "Current stock", empty: "No stock matches these filters.", rows: "Rows: {count}",
     ledger: "Ledger", ledgerOf: "Ledger of {material} at {location}", actions: "Ledger",
@@ -1880,6 +1903,7 @@ export const en = {
     recipe: "BOM {bom} rev. {revision}", orderLink: "Production order {id}", componentsOf: "Components of production order {id}",
     label: "Production variance", empty: "No production order with completions matches these filters.", rows: "Orders: {count}",
     rangeError: "The end date must not be before the start date.",
+    clear: "Clear filters",
     pagination: "Variance report pages", previous: "Previous", next: "Next", page: "Page {page} of {pages}",
   },
   nav: {
@@ -1952,6 +1976,17 @@ export const en = {
     light: "Light",
     dark: "Dark",
   },
+  /** An unknown address or a record outside the tenant: the not-found pages. */
+  notFound: {
+    title: "Page not found.",
+    description: "The address may be mistyped, or the record belongs to the other tenant.",
+    goToTenants: "Go to Tenants",
+    backTo: "Back to {list}",
+    backToOverview: "Back to Overview — {tenant}",
+  },
+  /** The root layout's `<noscript>` notice; the static shell knows no locale, so it shows both. */
+  noscript: "CPG needs JavaScript. Turn it on in your browser and reload this page.",
+  unexpectedError: ERROR_BOUNDARY.en,
   /** Keyed by the result envelope's error `code`; unknown codes fall back to the server's message. */
   errors: {
     DOCUMENT_NOT_OPEN: "This document or line is no longer open.",
@@ -1983,7 +2018,7 @@ export const en = {
     VALIDATION_FAILED: "Some fields are invalid.",
     INTERNAL: "Something went wrong. Try again.",
     TENANT_READ_ONLY:
-      "This tenant is read-only, so its business data can't be changed. The administrator can make it writable on the Cave control page.",
+      "This tenant is read-only, so its business data can't be changed. The administrator can make it writable on the Tenants page.",
   },
 };
 

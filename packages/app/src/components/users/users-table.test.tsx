@@ -25,7 +25,14 @@ describe("UsersTable", () => {
       ["alice", "user", "Active", "2026-10-19", "Actions for alice"],
       ["carol", "user", "Inactive", "2026-10-18", "Actions for carol"],
     ]);
-    expect(within(rows[2]).getByText("Inactive").dataset.variant).toBe("destructive");
+    const inactive = within(rows[2]).getByText("Inactive");
+    expect(inactive.dataset.slot).toBe("status-badge");
+    expect(inactive.dataset.tone).toBe("neutral");
+    expect(inactive.className).toContain("border-dashed");
+    const active = within(rows[1]).getByText("Active");
+    expect(active.dataset.tone).toBe("neutral");
+    expect(active.className).not.toContain("border-dashed");
+    expect(within(rows[0]).getByText("admin", { selector: "[data-slot=badge]" })).toBeTruthy();
     expect(within(rows[2]).getByText("carol").classList).toContain("text-muted-foreground");
   });
 

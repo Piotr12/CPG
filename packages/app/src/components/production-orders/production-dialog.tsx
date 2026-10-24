@@ -19,7 +19,7 @@ export function ProductionDialog({ context, labels: t, materials, locations, ord
   const [open, setOpen] = useState(false);
   const [openedOrder, setOpenedOrder] = useState(order);
   return <Dialog open={open} onOpenChange={(value) => { if (value) setOpenedOrder(order); setOpen(value); }}>
-    <DialogTrigger asChild><Button>{order ? t.edit : t.create}</Button></DialogTrigger>
+    <DialogTrigger asChild><Button variant={order ? "outline" : "default"}>{order ? t.edit : t.create}</Button></DialogTrigger>
     <DialogContent className={`sm:max-w-2xl ${TALL_DIALOG}`}>
       <DialogHeader><DialogTitle>{order ? t.edit : t.create}</DialogTitle><DialogDescription>{t.intro}</DialogDescription></DialogHeader>
       <ProductionForm context={context} labels={t} materials={materials} locations={locations} order={openedOrder} close={() => setOpen(false)} />

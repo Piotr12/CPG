@@ -9,7 +9,7 @@ const baseUrl = inject("baseUrl");
 const password = inject("adminPassword");
 const normalName = `reset-ui-${randomUUID().slice(0, 8)}`;
 
-describe("Test reset in Cave control", () => {
+describe("Test reset on the Tenants page", () => {
   let admin: Browser;
   let stale: Browser;
   let normal: Browser;
@@ -23,7 +23,7 @@ describe("Test reset in Cave control", () => {
     await browser.waitUntil(`!!document.querySelector('[data-test-reset] button') && document.querySelector('[data-test-reset] button').offsetParent && Object.keys(document.querySelector('[data-test-reset] button')).some(k=>k.startsWith('__reactFiber'))`);
   }
   const confirm = async (browser: Browser, name = "Reset Test") => {
-    await browser.click(`[role=alertdialog] button[data-variant=destructive]`);
+    await browser.click(`[role=alertdialog] button[data-variant=destructive-solid]`);
     await browser.waitUntil(`!document.querySelector('[role=alertdialog]') && !!document.querySelector('[data-test-reset] [role=status]')`);
     expect(await browser.text("[data-test-reset] [role=status]")).toContain(name === "Reset Test" ? "Test reset to generation" : "Test zresetowano do generacji");
   };
@@ -50,7 +50,8 @@ describe("Test reset in Cave control", () => {
 
   it("hides reset from a normal user, offers tiny by default and warns of realistic's wait, and cancellation changes nothing", async () => {
     await normal.open(`${baseUrl}/admin`);
-    await normal.waitForText("Cave control");
+    // "Tenants" is also a sidebar word, so wait for the page's own heading.
+    await normal.waitUntil(`Boolean([...document.querySelectorAll("h1")].some((h1) => h1.textContent === "Tenants" && !h1.closest("[hidden]")))`);
     expect(await normal.evaluate<boolean>(`!!document.querySelector('[data-test-reset]')`)).toBe(false);
     await api("PATCH", "/api/tenants/test", { readOnly: false });
     const before = await state();
@@ -118,7 +119,7 @@ describe("Test reset in Cave control", () => {
     await clickHydrated(admin, "[data-test-reset] button");
     await admin.waitFor("[role=alertdialog]");
     expect((await api("POST", "/api/tenants/test/reset", {}, before.generation)).status).toBe(200);
-    await admin.click("[role=alertdialog] button[data-variant=destructive]");
+    await admin.click("[role=alertdialog] button[data-variant=destructive-solid]");
     await admin.waitFor("[role=alertdialog] [role=alert]");
     expect(await admin.text("[role=alertdialog] [role=alert]")).toContain("Test was reset since this page loaded");
     expect(await admin.text("[role=alertdialog]")).toContain(`generation ${before.generation}`);
@@ -143,7 +144,7 @@ describe("Test reset in Cave control", () => {
     await clickHydrated(admin, "[data-test-reset] button");
     await admin.waitFor("[role=alertdialog]");
     expect(await admin.text("[role=alertdialog]")).toContain("Tej operacji nie można cofnąć");
-    expect(await admin.evaluate<boolean>(`(() => { const b=document.querySelector('[role=alertdialog] button[data-variant=destructive]').getBoundingClientRect(); return b.x>=0 && b.right<=innerWidth && b.bottom<=innerHeight })()`)).toBe(true);
+    expect(await admin.evaluate<boolean>(`(() => { const b=document.querySelector('[role=alertdialog] button[data-variant=destructive-solid]').getBoundingClientRect(); return b.x>=0 && b.right<=innerWidth && b.bottom<=innerHeight })()`)).toBe(true);
     await confirm(admin, "Resetuj Test");
     expect(await state()).toMatchObject({ generation: before.generation + 1, readOnly: true });
     expect(await admin.text("[data-test-reset] [role=status]")).toContain("Test pozostanie tylko do odczytu");

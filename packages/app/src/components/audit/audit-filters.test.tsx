@@ -61,6 +61,14 @@ describe("AuditFilters", () => {
     expect([sent.get("subjectType"), sent.get("account")]).toEqual(["User", "zoe"]);
   });
 
+  it("keeps a channel the select doesn't offer, so Apply sends it back for the server to refuse again", () => {
+    form({ channel: "fax" as never });
+
+    expect(within(screen.getByLabelText("Channel")).getAllByRole("option").map((option) => option.textContent)).toEqual(["All", "UI", "API", "fax (not in the list)"]);
+    expect(value("Channel")).toBe("fax");
+    expect(new FormData(screen.getByRole("form") as HTMLFormElement).get("channel")).toBe("fax");
+  });
+
   it("names a record type of the other audit, and shows any other as sent", () => {
     const { unmount } = render(<AuditFilters path="/admin/audit" selected={{ subjectType: "PurchaseOrder" }} accounts={[]} subjectTypes={GLOBAL_SUBJECT_TYPES} labels={en.audit} />);
     expect(screen.getByRole("option", { name: "Purchase order (not in the list)" }).getAttribute("value")).toBe("PurchaseOrder");
@@ -98,6 +106,9 @@ describe("refused filters", () => {
     expect(document.activeElement).toBe(alert);
     // First in the form, so Tab from the summary reaches the fields to correct.
     expect(screen.getByRole("form").firstElementChild).toBe(alert);
+    // An error is icon + text in the danger tone.
+    expect(alert.className).toContain("text-danger");
+    expect(alert.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
     expect(alert.textContent).toContain("Popraw filtry, aby zobaczyć wpisy:");
     expect(within(alert).getAllByRole("listitem").map((item) => item.textContent)).toEqual([pl.audit.filterForm.errors.subjectId, pl.audit.filterForm.errors.to]);
     expect(screen.getByLabelText("ID rekordu").getAttribute("aria-invalid")).toBe("true");

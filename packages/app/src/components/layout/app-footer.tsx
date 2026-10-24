@@ -16,12 +16,14 @@ function FooterLink({ label, href }: { label: string; href: string }) {
   );
 }
 
-/** The branded footer that ends every page. The root layout renders it after the page. */
+/** The branded footer that ends every page, wrapping within a prose line. The root layout renders it after the page. */
 export function AppFooter() {
   return (
     <footer className="px-6 pt-4 pb-6 text-center text-xs text-muted-foreground">
-      Caveman Planning Good! Made in Jozefoslaw with Tokens, Coffee and <FooterLink {...FOOTER_LINKS.openMercatoSkills} />{" "}
-      during <FooterLink {...FOOTER_LINKS.aiTechLeaders} />.
+      <p className="mx-auto max-w-prose">
+        Caveman Planning Good! Made in Jozefoslaw with Tokens, Coffee and <FooterLink {...FOOTER_LINKS.openMercatoSkills} />{" "}
+        during <FooterLink {...FOOTER_LINKS.aiTechLeaders} />.
+      </p>
     </footer>
   );
 }

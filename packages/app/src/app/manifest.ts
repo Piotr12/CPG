@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
 
-// White matches the opaque background baked into the maskable icon (THIRD_PARTY_NOTICES.md).
+// White matches the opaque background baked into the maskable icon (THIRD_PARTY_NOTICES.md). It is the
+// light `--background` token of packages/ui/src/styles/globals.css (oklch(1 0 0)) written as a literal,
+// because a Web App Manifest cannot read CSS variables (design system v1, Exceptions).
 const ICON_BACKGROUND = "#ffffff";
 
 /**

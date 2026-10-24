@@ -112,7 +112,7 @@ describe("the users API", () => {
 
     await signIn(una, baseUrl, UNA_PASSWORD, UNA);
     await una.waitFor("[role=alert]");
-    expect(await una.text("[role=alert]")).toBe("Invalid username or password.");
+    expect(await una.text("[role=alert]")).toBe("Invalid username or password. Check both and try again. If you cannot sign in, contact your administrator.");
 
     await signInAs(una, baseUrl, UNA, UNA_NEW_PASSWORD);
     expect(new URL(await una.url()).pathname).toBe("/admin");

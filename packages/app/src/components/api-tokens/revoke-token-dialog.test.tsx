@@ -17,10 +17,15 @@ describe("RevokeTokenDialog", () => {
     mocks.revokeApiToken.mockResolvedValue({ ok: true, data: { id: "t1" } });
     render(<RevokeTokenDialog token={token} labels={tokensLabels(en)} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Revoke agent1" }));
+    const opener = screen.getByRole("button", { name: "Revoke agent1" });
+    expect(opener.dataset.variant).toBe("outline");
+    fireEvent.click(opener);
     const dialog = screen.getByRole("alertdialog", { name: "Revoke agent1?" });
     expect(dialog.textContent).toContain("Anything using it stops working at once.");
-    fireEvent.click(screen.getByRole("button", { name: "Revoke" }));
+    const confirm = screen.getByRole("button", { name: "Revoke" });
+    // The opener only opens the dialog; the confirm inside it is the one solid danger button.
+    expect(confirm.dataset.variant).toBe("destructive-solid");
+    fireEvent.click(confirm);
 
     await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
     expect(mocks.revokeApiToken).toHaveBeenCalledWith({ tokenId: "t1" });

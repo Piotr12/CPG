@@ -86,7 +86,7 @@ describe("named API tokens", () => {
     expect((await api("/api/tenants", secrets.omar)).status).toBe(200);
   });
 
-  it("keeps every Revoke in view with the longest name, on a desktop and on a phone", async () => {
+  it("keeps every Revoke in view with the longest name on a desktop, and reachable on a phone", async () => {
     const longest = "Nightly-ERP-export-for-the-Jozefoslaw-plant-scheduler-bot-v2-oka";
     expect(longest).toHaveLength(64);
     const longSecret = await createToken(tara, longest);
@@ -100,11 +100,30 @@ describe("named API tokens", () => {
           buttons.every((button) => button.getBoundingClientRect().right <= edge);
       })()`);
 
+    /**
+     * On a phone the table scrolls sideways in its own labelled region, the name column sticky, and the
+     * page never does: every Revoke, scrolled to, sits inside the region and the window, clear of the name.
+     */
+    const revokeReachable = () =>
+      tara.evaluate<boolean>(`(() => {
+        const box = document.querySelector("[data-slot=table-container]");
+        const buttons = [...box.querySelectorAll("tbody button")];
+        const pageFits = document.documentElement.scrollWidth <= window.innerWidth;
+        return pageFits && box.getAttribute("role") === "region" && box.tabIndex === 0 && buttons.length === 3 &&
+          buttons.every((button) => {
+            button.scrollIntoView({ block: "nearest", inline: "nearest" });
+            const edge = Math.min(box.getBoundingClientRect().right, window.innerWidth);
+            const sticky = button.closest("tr").querySelector("td").getBoundingClientRect().right;
+            const { left, right } = button.getBoundingClientRect();
+            return right <= edge + 0.5 && left >= sticky - 0.5;
+          });
+      })()`);
+
     try {
       await tara.setViewport(1100, 760);
       expect(await revokeInView()).toBe(true);
       await tara.setViewport(390, 844);
-      expect(await revokeInView()).toBe(true);
+      expect(await revokeReachable()).toBe(true);
     } finally {
       await tara.setViewport(1280, 720);
     }

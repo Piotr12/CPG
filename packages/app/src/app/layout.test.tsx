@@ -1,4 +1,5 @@
 import { Suspense, type ReactElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { SidebarProvider } from "@cpg/ui/components/sidebar";
 import { TooltipProvider } from "@cpg/ui/components/tooltip";
@@ -38,7 +39,7 @@ describe("RootLayout", () => {
     const [, body] = layout().props.children;
 
     expect(body.type).toBe("body");
-    const tooltips = body.props.children as unknown as Element;
+    const [, tooltips] = body.props.children;
     expect(tooltips.type).toBe(TooltipProvider);
     const provider = tooltips.props.children as unknown as Element;
     expect(provider.type).toBe(SidebarProvider);
@@ -52,6 +53,18 @@ describe("RootLayout", () => {
     expect(column.props["data-content-column"]).toBe(true);
     expect(page).toEqual(<p>page</p>);
     expect(footer.type).toBe(AppFooter);
+  });
+
+  it("tells a reader without JavaScript to turn it on, in both languages, before the page (D5)", () => {
+    const [, body] = layout().props.children;
+    const [notice] = body.props.children;
+
+    expect(notice.type).toBe("noscript");
+    const markup = renderToStaticMarkup(notice);
+    expect(markup).toContain('<p lang="en">CPG needs JavaScript. Turn it on in your browser and reload this page.</p>');
+    expect(markup).toContain('<p lang="pl">CPG wymaga JavaScriptu. Włącz go w przeglądarce i odśwież tę stronę.</p>');
+    // Styled as a warning Callout, a note rather than an alert: it doesn't block reading.
+    expect(markup).toContain('data-slot="callout" data-tone="warning" role="note"');
   });
 
   it("sets the site title", () => {

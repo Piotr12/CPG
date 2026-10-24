@@ -122,7 +122,8 @@ describe("the Stock import screen", () => {
     expect(await sam.evaluate<boolean>(`${button("Post 1 correction")}.disabled`)).toBe(true);
 
     await postOne(sam, "stockimportui count");
-    expect(await sam.text("main [role=status]")).toBe("✓ Posted to Prod. Corrections: 1, unchanged: 1. Reason: stockimportui count.");
+    expect(await sam.text("main [role=status]")).toBe("Posted to Prod. Corrections: 1, unchanged: 1. Reason: stockimportui count.");
+    expect(await sam.evaluate<string>(`document.querySelector("main [role=status]").dataset.tone`)).toBe("success");
 
     await sam.evaluate(`[...document.querySelectorAll("main a")].find((a) => a.textContent.startsWith(${JSON.stringify(flint)})).click(), true`);
     await sam.waitUntil(`document.querySelector("[data-stock-balance]")?.textContent === "85 each"`);
@@ -137,7 +138,7 @@ describe("the Stock import screen", () => {
       ["Stock", "2", "Correct", `${ore} — stockimportui ore at ${cave} — stockimportui cave`, "Physical quantity: 0.000000 kg → 12.000000 kg Movement: +12.000000 kg"],
     ]);
     await postOne(admin, reason);
-    expect(await admin.text("main [role=status]")).toBe(`✓ Posted to Prod. Corrections: 1, unchanged: 0. Reason: ${reason}.`);
+    expect(await admin.text("main [role=status]")).toBe(`Posted to Prod. Corrections: 1, unchanged: 0. Reason: ${reason}.`);
 
     // Read with each browser's own session cookie (a GET needs no token). Other files post movements in
     // Prod, so keep this file's entries by their reason and material, never by account or channel.

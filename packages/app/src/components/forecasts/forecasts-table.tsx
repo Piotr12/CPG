@@ -29,17 +29,17 @@ export function ForecastsTable({ tenant, rows, labels, editable, filtered, pagin
     {
       id: "material",
       header: t.material,
+      kind: "longText",
       cell: (row) => <MaterialCell tenant={tenant.code} row={row} inactive={labels.inactive} />,
-      className: "whitespace-normal wrap-anywhere",
     },
     {
       id: "location",
       header: t.location,
+      kind: "longText",
       cell: (row) => <LocationCell row={row} inactive={labels.inactive} />,
-      className: "whitespace-normal wrap-anywhere",
     },
-    { id: "date", header: t.date, cell: (row) => <span className="font-mono">{row.date}</span> },
-    { id: "quantity", header: t.quantity, cell: (row) => `${shownQuantity(row.quantity)} ${row.baseUnit}`, className: "text-right" },
+    { id: "date", header: t.date, kind: "date", cell: (row) => row.date },
+    { id: "quantity", header: t.quantity, kind: "quantity", cell: (row) => `${shownQuantity(row.quantity)} ${row.baseUnit}` },
   ];
   const empty = filtered
     ? labels.emptyFiltered

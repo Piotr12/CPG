@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Callout } from "@cpg/ui/backend/feedback/callout";
 import { ErrorMessage } from "@cpg/ui/backend/feedback/error-message";
 import { Button } from "@cpg/ui/components/button";
 import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@cpg/ui/components/dialog";
@@ -52,9 +53,9 @@ export function TokenSecretPanel({ name, secret, labels, onDone }: TokenSecretPa
         </div>
         {copy === "failed" && <ErrorMessage>{t.copyFailed}</ErrorMessage>}
       </div>
-      <p className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
+      <Callout tone="warning" title={t.warningTitle}>
         {t.warning}
-      </p>
+      </Callout>
       <DialogFooter>
         <Button type="button" onClick={onDone}>
           {t.done}

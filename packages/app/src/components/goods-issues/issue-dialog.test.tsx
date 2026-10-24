@@ -40,6 +40,7 @@ describe("IssueDialog", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(mocks.postIssue).toHaveBeenCalledWith("prod", 3, "00000002", "00000007", { lines: [{ line: 2, quantity: "20", unit: "each" }] });
     expect(screen.getByRole("status").textContent).toBe("Goods issue 00000009 posted.Dismiss");
+    expect(screen.getByRole("status").getAttribute("data-tone")).toBe("success");
 
     // The issue completed the shipment: the page re-renders without the button, the notice stays.
     rerender(dialog(false));

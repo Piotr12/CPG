@@ -4,7 +4,8 @@ import { ChangeDateDialog } from "../purchasing/change-date-dialog";
 import Link from "next/link";
 import type { RequisitionView } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
-import { Badge } from "@cpg/ui/components/badge";
+import { StatusBadge } from "@cpg/ui/backend/feedback/status-badge";
+import { documentStatusTone, masterDataStatusTone, type DocumentStatus } from "../document-lifecycle/status-tone";
 import { PageLinks } from "../layout/page-links";
 import { fill, shownQuantity, type LocationsById, type MaterialsById, type RequisitionsLabels } from "./labels";
 
@@ -30,10 +31,11 @@ export function RequisitionsTable({ tenant, requisitions, materials, locations, 
   const amount = (quantity: string, material: string) => `${shownQuantity(quantity)} ${materials.get(material)!.baseUnit}`;
   const dateLabels = { ...labels.changeDate, field: labels.form.requiredDate, cancel: labels.cancel, date: labels.fieldErrors.date };
   const columns: DataTableColumn<RequisitionView>[] = [
-    { id: "id", header: t.id, cell: (requisition) => <span className="font-mono">{requisition.id}</span> },
+    { id: "id", header: t.id, kind: "id", cell: (requisition) => requisition.id },
     {
       id: "material",
       header: t.material,
+      kind: "longText",
       cell: (requisition) => {
         const material = materials.get(requisition.material)!;
         return (
@@ -42,15 +44,16 @@ export function RequisitionsTable({ tenant, requisitions, materials, locations, 
               {material.id}
             </Link>
             <span>{material.description}</span>
-            {!material.active && <Badge variant="destructive">{labels.inactive}</Badge>}
+            {!material.active && <StatusBadge {...masterDataStatusTone(false)}>{labels.inactive}</StatusBadge>}
           </span>
         );
       },
-      className: "whitespace-normal wrap-anywhere",
     },
     {
       id: "location",
       header: t.location,
+      kind: "longText",
+      priority: 2,
       cell: (requisition) => {
         const location = locations.get(requisition.location)!;
         return (
@@ -60,34 +63,24 @@ export function RequisitionsTable({ tenant, requisitions, materials, locations, 
           </span>
         );
       },
-      className: "hidden whitespace-normal wrap-anywhere md:table-cell",
     },
-    { id: "quantity", header: t.quantity, cell: (requisition) => amount(requisition.quantity, requisition.material), className: "text-right" },
-    {
-      id: "converted",
-      header: t.converted,
-      cell: (requisition) => amount(requisition.converted, requisition.material),
-      className: "hidden text-right sm:table-cell",
-    },
-    {
-      id: "outstanding",
-      header: t.outstanding,
-      cell: (requisition) => amount(requisition.outstanding, requisition.material),
-      className: "hidden text-right sm:table-cell",
-    },
-    { id: "requiredDate", header: t.requiredDate, cell: (requisition) => requisition.requiredDate, className: "hidden sm:table-cell" },
+    { id: "quantity", header: t.quantity, kind: "quantity", cell: (requisition) => amount(requisition.quantity, requisition.material) },
+    { id: "converted", header: t.converted, kind: "quantity", priority: 2, cell: (requisition) => amount(requisition.converted, requisition.material) },
+    { id: "outstanding", header: t.outstanding, kind: "quantity", priority: 2, cell: (requisition) => amount(requisition.outstanding, requisition.material) },
+    { id: "requiredDate", header: t.requiredDate, kind: "date", priority: 2, cell: (requisition) => requisition.requiredDate },
     {
       id: "status",
       header: t.status,
+      kind: "status",
       cell: (requisition) => (
-        <Badge variant={requisition.status === "open" ? "secondary" : "outline"}>{labels.status[requisition.status as keyof typeof labels.status]}</Badge>
+        <StatusBadge {...documentStatusTone(requisition.status as DocumentStatus)}>{labels.status[requisition.status as keyof typeof labels.status]}</StatusBadge>
       ),
     },
-    { id: "abandoned", header: labels.lifecycle.abandoned, cell: (row) => amount(row.abandoned, row.material), className: "text-right" },
-    { id: "actions", header: labels.lifecycle.actions, cell: (row) => <div className="flex flex-col items-start gap-2">
+    { id: "abandoned", header: labels.lifecycle.abandoned, kind: "quantity", priority: 2, cell: (row) => amount(row.abandoned, row.material) },
+    { id: "actions", header: labels.lifecycle.actions, kind: "actions", cell: (row) => <div className="flex flex-col items-start gap-2">
       <ChangeDateDialog kind="requisition" available={editable && row.status === "open"} subject={`${labels.link} ${row.id}`} value={row.requiredDate}
         version={row.version} save={setRequisitionRequiredDate.bind(null, tenant.code, tenant.generation, row.id)} labels={dateLabels} errors={labels.errors} />
-      <LifecycleControl available={editable && row.status === "open"} processed={row.converted !== "0.000000"}
+      <LifecycleControl kind="requisition" available={editable && row.status === "open"} processed={row.converted !== "0.000000"}
         subject={`${labels.link} ${row.id}`} version={row.version} quantities={[amount(row.outstanding, row.material)]}
         labels={labels.lifecycle} errors={labels.errors}
         cancel={cancelRequisition.bind(null, tenant.code, tenant.generation, row.id)} closeEarly={closeEarlyRequisition.bind(null, tenant.code, tenant.generation, row.id)} />

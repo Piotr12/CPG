@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/messages/en";
 import { CancelShipmentButton } from "./cancel-shipment-button";
@@ -10,7 +10,7 @@ vi.mock("../../app/admin/[tenant]/shipments/[id]/actions", () => ({ cancelShipme
 const button = (version = 2) => (
   <CancelShipmentButton context={{ tenant: "prod", generation: 4 }} shipment="00000012" customerOrder="00000007" version={version} labels={shipmentsLabels(en)} />
 );
-const confirm = () => fireEvent.click(screen.getAllByRole("button", { name: "Cancel shipment" }).at(-1)!);
+const confirm = () => fireEvent.click(screen.getByRole("button", { name: "Cancel shipment" }));
 
 describe("CancelShipmentButton", () => {
   afterEach(() => vi.clearAllMocks());
@@ -19,8 +19,11 @@ describe("CancelShipmentButton", () => {
     mocks.cancelShipment.mockResolvedValue({ ok: true, data: { id: "00000012", status: "cancelled" } });
     render(button());
 
-    fireEvent.click(screen.getByRole("button", { name: "Cancel shipment" }));
+    const trigger = screen.getByRole("button", { name: "Cancel shipment…" });
+    expect(trigger.getAttribute("data-variant")).toBe("destructive");
+    fireEvent.click(trigger);
     const dialog = screen.getByRole("alertdialog", { name: "Cancel shipment 00000012?" });
+    expect(within(dialog).getByRole("button", { name: "Cancel shipment" }).getAttribute("data-variant")).toBe("destructive-solid");
     expect(dialog.textContent).toContain("It will plan nothing more. Stock and the order are not changed.");
     confirm();
 
@@ -31,7 +34,7 @@ describe("CancelShipmentButton", () => {
   it("keeps the dialog open with a translated refusal, and Keep shipment closes it", async () => {
     mocks.cancelShipment.mockResolvedValue({ ok: false, error: { code: "SHIPMENT_ISSUED", message: "x" } });
     const { rerender } = render(button(2));
-    fireEvent.click(screen.getByRole("button", { name: "Cancel shipment" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel shipment…" }));
     rerender(button(3));
     confirm();
 

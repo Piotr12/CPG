@@ -18,13 +18,14 @@ interface ConversionsTableProps {
 export function ConversionsTable({ material, conversions, context, labels, editable }: ConversionsTableProps) {
   const t = labels.conversions;
   const columns: DataTableColumn<ConversionView>[] = [
-    { id: "unit", header: t.columns.unit, cell: (row) => <span className="font-medium">{row.unit}</span> },
-    { id: "conversion", header: t.columns.conversion, cell: (row) => conversionText(row, material.baseUnit) },
+    { id: "unit", header: t.columns.unit, kind: "text", cell: (row) => <span className="font-medium">{row.unit}</span> },
+    { id: "conversion", header: t.columns.conversion, kind: "text", cell: (row) => conversionText(row, material.baseUnit) },
     {
       id: "inverse",
       header: t.columns.inverse,
+      kind: "text",
+      priority: 2,
       cell: (row) => <span className="text-muted-foreground">{inverseText(row, material.baseUnit, labels)}</span>,
-      className: "hidden sm:table-cell",
     },
   ];
 

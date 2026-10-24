@@ -200,6 +200,7 @@ Authentication is server-side sessions (specs `2026-10-19--0746UTC-admin-sign-in
 - [ ] No import breaks the package layering (ESLint passes), and no code reaches into another concept's internals instead of its service.
 - [ ] Pages/actions/routes go through services, never `em`/`orm`.
 - [ ] Actions/routes use the shared wrappers, forms use `CrudForm`, lists use `DataTable` and states use the `feedback/` components. A bespoke alternative needs a stated reason.
+- [ ] Uses tokens and components from the design system (spec `2026-10-24--0842UTC-design-system-v1`); no new palette classes, radius, size or spacing values; states use `StatusBadge` or `Callout`; copy is plain. `tests/design-tokens.test.ts` fails on an offender outside the spec's Exceptions table.
 - [ ] `npm run lint`, `npm run typecheck`, `npm run test:coverage`, `npm run build` and `npm run test:integration` pass in CI, which runs them all on the pull request. Locally the author runs the first four and only the integration files the change touches.
 
 **Security** (apply in full once authentication exists)
@@ -241,7 +242,7 @@ Example: "add production orders". Create each file only when the change needs it
    - From CPG's own pages, a server action in `actions.ts` next to the page, wrapped in the shared `server-action` helper. For tenant data, it uses `tenantServerAction`, and the page binds its tenant with `action.bind(null, tenant)`.
    - For external callers or client fetching, `app/src/app/api/production-orders/…/route.ts` via `apiHandler` (or `makeCrudRoute` for plain CRUD).
    - Authentication checks come first, once auth exists.
-7. **Pages:** tenant screens under `app/src/app/admin/[tenant]/production-orders/`, read through `tenantScope(tenant)`; global backend screens under `app/src/app/admin/(global)/`. Both use shadcn via `@cpg/ui`. Public pages go under `app/src/app/` (plain Tailwind). The one exception is the navigation the root layout renders on every page (`app/src/components/layout/`): the sidebar a signed-in account sees, and the visitor bar a visitor sees, are built from `@cpg/ui` (`Sidebar`, `Collapsible`, `Popover`, `Button`) on public pages too.
+7. **Pages:** tenant screens under `app/src/app/admin/[tenant]/production-orders/`, read through `tenantScope(tenant)`; global backend screens under `app/src/app/admin/(global)/`. Both use shadcn via `@cpg/ui`. Public pages go under `app/src/app/` (plain Tailwind on the design tokens); they may use the `@cpg/ui` controls `Button`, `Input` and `Label`. The one exception is the navigation the root layout renders on every page (`app/src/components/layout/`): the sidebar a signed-in account sees, and the visitor bar a visitor sees, are built from `@cpg/ui` (`Sidebar`, `Collapsible`, `Popover`, `Button`) on public pages too.
    - Read in a server component through the service, with `await connection()` inside `<Suspense>` and a `feedback/` fallback.
    - Forms use `CrudForm` bound to the schema from step 3, through a small client component in `app/src/components/production-orders/` (a Zod schema can't be passed as a prop from a server component).
    - Lists use `DataTable`.

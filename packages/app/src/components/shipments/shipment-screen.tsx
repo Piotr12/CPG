@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { stockLabels } from "../stock/labels";
 import { isNothing, type CustomerOrderView, type IssueView, type Locale, type MaterialSummary, type NamedRecordView, type ShipmentLineView, type ShipmentView, type TenantInfo } from "@cpg/core";
+import { StatusBadge } from "@cpg/ui/backend/feedback/status-badge";
+import { PageHeader } from "@cpg/ui/backend/page-header";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
-import { Badge } from "@cpg/ui/components/badge";
+import { documentStatusTone } from "../document-lifecycle/status-tone";
 import type { Messages } from "../../i18n/messages/en";
 import type { LineQuantityChoice } from "../forms/line-quantities-form";
 import { IssueDialog } from "../goods-issues/issue-dialog";
@@ -53,23 +55,22 @@ export function ShipmentScreen({ tenant, shipment, order, issues, materials, uni
     { label: t.customer, value: `${customer.id} ${customer.name}` },
     { label: t.location, value: `${location.id} ${location.name}` },
     { label: t.plannedDate, value: shipment.plannedDate },
-    { label: t.status, value: <Badge variant="secondary">{labels.states[shipment.status]}</Badge> },
   ];
   const columns: DataTableColumn<ShipmentLineView>[] = [
-    { id: "line", header: c.line, cell: (line) => line.line, className: "text-right" },
+    { id: "line", header: c.line, kind: "id", cell: (line) => line.line },
     {
       id: "material",
       header: c.material,
-      className: "whitespace-normal wrap-anywhere",
+      kind: "longText",
       cell: (line) => (
         <Link className="underline underline-offset-4" href={`/admin/${tenant.code}/materials/${line.material}`}>
           {line.material} {materialsById.get(line.material)!.description}
         </Link>
       ),
     },
-    { id: "quantity", header: c.quantity, cell: (line) => `${shownQuantity(line.quantity)} ${baseUnit(line)}`, className: "hidden sm:table-cell" },
-    { id: "issued", header: c.issued, cell: (line) => `${shownQuantity(line.issued)} ${baseUnit(line)}` },
-    { id: "toIssue", header: c.toIssue, cell: (line) => `${shownQuantity(line.toIssue)} ${baseUnit(line)}` },
+    { id: "quantity", header: c.quantity, kind: "quantity", priority: 2, cell: (line) => `${shownQuantity(line.quantity)} ${baseUnit(line)}` },
+    { id: "issued", header: c.issued, kind: "quantity", cell: (line) => `${shownQuantity(line.issued)} ${baseUnit(line)}` },
+    { id: "toIssue", header: c.toIssue, kind: "quantity", cell: (line) => `${shownQuantity(line.toIssue)} ${baseUnit(line)}` },
   ];
   const choices: LineQuantityChoice[] = shipment.lines
     .filter(({ toIssue }) => !isNothing(toIssue))
@@ -83,23 +84,21 @@ export function ShipmentScreen({ tenant, shipment, order, issues, materials, uni
       };
     });
 
+  const editable = !tenant.readOnly && shipment.status === "open";
+  const issued = shipment.lines.some(({ posted }) => posted);
+
   return (
-    <div lang={locale} className="flex flex-col gap-6">
-      <Link className="text-sm underline underline-offset-4" href={orderPath}>
-        {fill(labels.back, { order: shipment.customerOrder })}
-      </Link>
-      <h1 className="text-2xl font-semibold tracking-tight">{fill(labels.detailHeading, { id: shipment.id })}</h1>
-      <p className="text-sm text-muted-foreground">{labels.detailIntro}</p>
-      <dl className="grid gap-4 rounded-md border p-4 text-sm sm:grid-cols-3">
-        {details.map(({ label, value }) => (
-          <div key={label}>
-            <dt className="text-muted-foreground">{label}</dt>
-            <dd className="mt-1 wrap-anywhere">{value}</dd>
-          </div>
-        ))}
-      </dl>
-      {!tenant.readOnly && shipment.status === "open" && (
-        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+    <div lang={locale}>
+      <p className="mb-4">
+        <Link className="text-sm underline underline-offset-4" href={orderPath}>
+          {fill(labels.back, { order: shipment.customerOrder })}
+        </Link>
+      </p>
+      <PageHeader
+        title={fill(labels.detailHeading, { id: shipment.id })}
+        meta={<StatusBadge {...documentStatusTone(shipment.status)}>{labels.states[shipment.status]}</StatusBadge>}
+        description={labels.detailIntro}
+        actions={editable && <>
           <EditShipmentDialog
             context={context}
             shipment={shipment.id}
@@ -110,13 +109,19 @@ export function ShipmentScreen({ tenant, shipment, order, issues, materials, uni
             lines={shipmentEditChoices(shipment, order, materialsById, units, labels)}
             plannedDate={shipment.plannedDate}
           />
-          {shipment.lines.some(({ posted }) => posted) ? (
-            <p className="text-sm text-muted-foreground">{labels.cancel.issued}</p>
-          ) : (
-            <CancelShipmentButton context={context} shipment={shipment.id} customerOrder={shipment.customerOrder} version={shipment.version} labels={labels} />
-          )}
-        </div>
-      )}
+          {!issued && <CancelShipmentButton context={context} shipment={shipment.id} customerOrder={shipment.customerOrder} version={shipment.version} labels={labels} />}
+        </>}
+      />
+      <div className="flex flex-col gap-8">
+      {editable && issued && <p className="max-w-prose text-sm text-muted-foreground">{labels.cancel.issued}</p>}
+      <dl className="grid gap-4 rounded-md border p-4 text-sm sm:grid-cols-3">
+        {details.map(({ label, value }) => (
+          <div key={label}>
+            <dt className="text-muted-foreground">{label}</dt>
+            <dd className="mt-1 wrap-anywhere">{value}</dd>
+          </div>
+        ))}
+      </dl>
       <DataTable label={labels.lines} columns={columns} rows={shipment.lines} rowKey={(line) => String(line.line)} empty={labels.empty} />
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold">{issueLabels.heading}</h2>
@@ -134,6 +139,7 @@ export function ShipmentScreen({ tenant, shipment, order, issues, materials, uni
         )}
         <IssuesTable tenant={tenant} reversalLabels={stockLabels(messages)} issues={issues} materials={materialsById} labels={issueLabels} />
       </section>
+      </div>
     </div>
   );
 }

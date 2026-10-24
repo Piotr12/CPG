@@ -1,7 +1,8 @@
 import type { NamedRecordView } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
-import { Badge } from "@cpg/ui/components/badge";
-import { fill, type TenantContext } from "../forms/form-labels";
+import type { TenantContext } from "../forms/form-labels";
+import { ActiveStatus } from "../master-data/active-status";
+import { EmptyText } from "../master-data/empty-text";
 import type { NamedRecordsLabels, UpdateNamedRecord } from "./labels";
 import { NamedRecordActions } from "./named-record-actions";
 
@@ -18,24 +19,14 @@ export function NamedRecordsTable({ tenant, records, labels, update }: NamedReco
   const t = labels.columns;
   const context: TenantContext = { tenant: tenant.code, generation: tenant.generation };
   const columns: DataTableColumn<NamedRecordView>[] = [
-    { id: "id", header: t.id, cell: (record) => <span className="font-mono">{record.id}</span> },
+    { id: "id", header: t.id, kind: "id", cell: (record) => record.id },
     {
       id: "name",
       header: t.name,
+      kind: "longText",
       cell: (record) => <span className={record.active ? "font-medium" : "text-muted-foreground"}>{record.name}</span>,
-      // A long name wraps instead of widening the row (shadcn cells never wrap otherwise).
-      className: "whitespace-normal wrap-anywhere",
     },
-    {
-      id: "status",
-      header: t.status,
-      cell: (record) =>
-        record.active ? (
-          <Badge variant="secondary">{labels.status.active}</Badge>
-        ) : (
-          <Badge variant="destructive">{labels.status.inactive}</Badge>
-        ),
-    },
+    { id: "status", header: t.status, kind: "status", cell: (record) => <ActiveStatus active={record.active} labels={labels.status} /> },
   ];
 
   return (
@@ -48,7 +39,7 @@ export function NamedRecordsTable({ tenant, records, labels, update }: NamedReco
       rowActions={
         update ? (record) => <NamedRecordActions record={record} context={context} labels={labels} update={update} /> : undefined
       }
-      empty={[fill(labels.empty, { tenant: tenant.name }), ...(update ? [labels.emptyHint] : [])].join(" ")}
+      empty={<EmptyText labels={labels} tenant={tenant.name} editable={update !== undefined} />}
     />
   );
 }

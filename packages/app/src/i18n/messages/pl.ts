@@ -1,30 +1,28 @@
 import type { Messages } from "./en";
+import { ERROR_BOUNDARY } from "./error-boundary";
 
 /** Polish. Same shape as `en`; "Caveman Planning Good" is the product name and stays as it is. */
 export const pl: Messages = {
   home: {
     title: "Caveman Planning Good",
-    tagline: "MRP II. Bo planowanie trudne. Jaskiniowiec i tak próbuje.",
-    steps: [
-      { name: "Prognoza popytu", grunt: "Zgadnij, czego ludzie chcą. Chcą czegoś innego." },
-      { name: "Struktura wyrobu", grunt: "Wiedz, z czego rzeczy zrobione. Zanim je zrobisz." },
-      { name: "Planowanie produkcji", grunt: "Zdecyduj, co robić, ile i kiedy." },
-      { name: "Realizacja produkcji", grunt: "Rób rzeczy. Dowiedz się, czemu plan zły." },
-    ],
-    motto: "Popyt przyjść. Jaskiniowiec planować. Jaskiniowiec robić.",
+    tagline: "Małe narzędzie do planowania MRP II: zamienia to, czego chcą klienci, w plany zakupów i produkcji.",
+    steps: [{ name: "Prognozy i zamówienia klientów" }, { name: "BOM-y" }, { name: "Zlecenia produkcyjne i zamówienia zakupu" }, { name: "Zapas" }],
+    flowLabel: "Co obejmuje CPG",
     signIn: "Zaloguj się",
     open: "Otwórz CPG",
   },
   login: {
-    title: "🦣 Zaloguj się do CPG",
+    title: "Zaloguj się do CPG",
     description: "Użyj swojego konta CPG.",
     username: "Nazwa użytkownika",
     password: "Hasło",
     submit: "Zaloguj",
     submitting: "Logowanie…",
+    invalidCredentials: "Nieprawidłowa nazwa użytkownika lub hasło. Sprawdź oba pola i spróbuj ponownie. Jeśli nie możesz się zalogować, skontaktuj się z administratorem.",
   },
   admin: {
-    heading: "Kontrola jaskini",
+    heading: "Środowiska",
+    tenantHeading: "Przegląd",
     database: "Baza danych",
     migrationsApplied: (count) => `Zastosowane migracje: ${count}`,
     migrationsPending: (count) => `Oczekujące: ${count}`,
@@ -148,7 +146,8 @@ export const pl: Messages = {
     secret: {
       title: "Utworzono token „{name}”",
       label: "Sekret",
-      warning: "Skopiuj go teraz. Nie zobaczysz go ponownie.",
+      warningTitle: "Skopiuj ten token teraz",
+      warning: "Nie zobaczysz go ponownie.",
       usage: "Wysyłaj go jako Authorization: Bearer <sekret>.",
       copy: "Kopiuj",
       copied: "Skopiowano",
@@ -178,6 +177,7 @@ export const pl: Messages = {
       "Każda ilość materiału jest zapisywana w jego jednostce bazowej, dokładnie do sześciu miejsc po przecinku. Identyfikatory są nadawane po kolei i nigdy się nie zmieniają.",
     empty: "W środowisku {tenant} nie ma jeszcze materiałów.",
     emptyHint: "Utwórz pierwszy przyciskiem Utwórz materiał.",
+    emptyReader: "Poproś administratora o dodanie materiałów.",
     allMaterials: "Wszystkie materiały",
     columns: {
       id: "ID materiału",
@@ -289,6 +289,7 @@ export const pl: Messages = {
     intro: "Miejsca, w których materiały są wytwarzane i składowane. Identyfikatory są nadawane po kolei i nigdy się nie zmieniają.",
     empty: "W środowisku {tenant} nie ma jeszcze lokalizacji.",
     emptyHint: "Utwórz pierwszą przyciskiem Utwórz lokalizację.",
+    emptyReader: "Poproś administratora o dodanie lokalizacji.",
     columns: { id: "ID", name: "Nazwa", status: "Status", actions: "Akcje" },
     status: { active: "Aktywny", inactive: "Nieaktywny" },
     cancel: "Anuluj",
@@ -336,6 +337,7 @@ export const pl: Messages = {
     intro: "Komu sprzedajesz. Identyfikatory są nadawane po kolei i nigdy się nie zmieniają.",
     empty: "W środowisku {tenant} nie ma jeszcze klientów.",
     emptyHint: "Utwórz pierwszego przyciskiem Utwórz klienta.",
+    emptyReader: "Poproś administratora o dodanie klientów.",
     columns: { id: "ID", name: "Nazwa", status: "Status", actions: "Akcje" },
     status: { active: "Aktywny", inactive: "Nieaktywny" },
     cancel: "Anuluj",
@@ -383,6 +385,7 @@ export const pl: Messages = {
     intro: "Od kogo kupujesz. Identyfikatory są nadawane po kolei i nigdy się nie zmieniają.",
     empty: "W środowisku {tenant} nie ma jeszcze dostawców.",
     emptyHint: "Utwórz pierwszego przyciskiem Utwórz dostawcę.",
+    emptyReader: "Poproś administratora o dodanie dostawców.",
     columns: { id: "ID", name: "Nazwa", status: "Status", actions: "Akcje" },
     status: { active: "Aktywny", inactive: "Nieaktywny" },
     cancel: "Anuluj",
@@ -431,6 +434,7 @@ export const pl: Messages = {
       "Jeden wiersz na materiał i lokalizację: czy MRP go produkuje, czy kupuje, czas realizacji w pełnych dniach kalendarzowych oraz minimalna partia i wielokrotność partii w jednostce bazowej materiału.",
     empty: "Brak parametrów planowania w {tenant}.",
     emptyHint: "Dodaj pierwszy zestaw przyciskiem Dodaj parametry.",
+    emptyReader: "Poproś administratora o dodanie parametrów planowania.",
     columns: {
       material: "Materiał",
       location: "Lokalizacja",
@@ -503,6 +507,7 @@ export const pl: Messages = {
       "Cele datowane dla materiału i lokalizacji. Cel obowiązuje od swojej daty do następnego; bez celu wynosi 0. Status według dzisiejszej daty, {today} (UTC).",
     empty: "Brak celów zapasu bezpieczeństwa w {tenant}.",
     emptyHint: "Dodaj pierwszy przyciskiem Dodaj cel.",
+    emptyReader: "Poproś administratora o dodanie celów zapasu bezpieczeństwa.",
     columns: {
       material: "Materiał",
       location: "Lokalizacja",
@@ -639,8 +644,20 @@ export const pl: Messages = {
     },
   },
   lifecycle: {
-    "cancel": "Anuluj",
-    "closeEarly": "Zamknij wcześniej",
+    "open": {
+      "order": { "cancel": "Anuluj zamówienie…", "closeEarly": "Zamknij zamówienie wcześniej…" },
+      "productionOrder": { "cancel": "Anuluj zlecenie…", "closeEarly": "Zamknij zlecenie wcześniej…" },
+      "transfer": { "cancel": "Anuluj przesunięcie…", "closeEarly": "Zamknij przesunięcie wcześniej…" },
+      "requisition": { "cancel": "Anuluj zapotrzebowanie…", "closeEarly": "Zamknij zapotrzebowanie wcześniej…" },
+      "line": { "cancel": "Anuluj wiersz…", "closeEarly": "Zamknij wiersz wcześniej…" },
+    },
+    "confirm": {
+      "order": { "cancel": "Anuluj zamówienie", "closeEarly": "Zamknij zamówienie wcześniej" },
+      "productionOrder": { "cancel": "Anuluj zlecenie", "closeEarly": "Zamknij zlecenie wcześniej" },
+      "transfer": { "cancel": "Anuluj przesunięcie", "closeEarly": "Zamknij przesunięcie wcześniej" },
+      "requisition": { "cancel": "Anuluj zapotrzebowanie", "closeEarly": "Zamknij zapotrzebowanie wcześniej" },
+      "line": { "cancel": "Anuluj wiersz", "closeEarly": "Zamknij wiersz wcześniej" },
+    },
     "keepOpen": "Pozostaw otwarte",
     "pending": "Zamykanie…",
     "description": "Zakończ {subject} i porzuć poniższe ilości. Zapisane operacje i zapas pozostaną bez zmian. Dokumentu nie można ręcznie otworzyć ponownie.",
@@ -650,9 +667,9 @@ export const pl: Messages = {
     "transit": "Przed zamknięciem przyjmij lub spisz cały zapas w tranzycie."
 },
   productionOrders: {
-    title: "Zlecenia produkcyjne", heading: "{tenant} · Zlecenia produkcyjne", detailHeading: "Zlecenie produkcyjne {id}",
+    title: "Zlecenia produkcyjne", heading: "Zlecenia produkcyjne — {tenant}", detailHeading: "Zlecenie produkcyjne {id}",
     intro: "Zaplanuj jeden wyrób w jednej lokalizacji i zachowaj wybraną rewizję BOM. Planowanie nie zmienia zapasu fizycznego.",
-    create: "Utwórz zlecenie produkcyjne", edit: "Edytuj zlecenie produkcyjne", save: "Zapisz zmiany", preview: "Podgląd receptur", pending: "Przetwarzanie…", cancel: "Anuluj", back: "Wstecz", backList: "Wróć do zleceń produkcyjnych",
+    create: "Utwórz zlecenie produkcyjne", edit: "Edytuj zlecenie produkcyjne", save: "Zapisz zmiany", preview: "Podgląd receptur", pending: "Przetwarzanie…", cancel: "Anuluj", back: "Wstecz",
     id: "ID", output: "Materiał wyjściowy", location: "Lokalizacja", quantity: "Planowana ilość", unit: "Jednostka", finish: "Planowany koniec", start: "Planowany początek", recipe: "BOM / rewizja", status: "Status", entered: "Wprowadzona ilość / przelicznik",
     choose: "Wybierz…", unitHint: "Wpisz jednostkę bazową wyrobu (obok jego nazwy) lub skonfigurowaną jednostkę alternatywną.",
     previewDates: "Orientacyjny początek: {start} ({days} dni kalendarzowych przed końcem). Daty są sprawdzane ponownie przy zapisie.",
@@ -660,11 +677,12 @@ export const pl: Messages = {
     finishHint: "Planowany początek jest przeliczany z zapisanego czasu realizacji: {days} dni kalendarzowych.",
     previewNotice: "Sprawdź bezpośrednie potrzeby składników i aktualny zapas. Niedobory nie blokują ręcznego planowania; zapas nie jest rezerwowany ani zużywany.",
     recipeLabel: "BOM {bom} / rewizja {revision} · priorytet {priority}",
-    warning: "Niedobór składników: nadal możesz utworzyć plan. Poniżej aktualny zapas fizyczny; zapas jest sprawdzany przy księgowaniu wykonania.",
+    shortageTitle: { one: "{count} składnik z niedoborem", few: "{count} składniki z niedoborem", other: "{count} składników z niedoborem" },
+    shortageBody: "Nadal możesz utworzyć ten plan; zapas jest sprawdzany przy księgowaniu wykonania.",
     sufficient: "Aktualny zapas fizyczny pokrywa bezpośrednie potrzeby. Planowanie go nie rezerwuje ani nie zużywa.",
     resolved: "Zlecenie ma stan „{status}”, więc nie potrzebuje już składników.",
     components: "Potrzeby przypiętej receptury i aktualny zapas", component: "Składnik", required: "Potrzeba", available: "Dostępne teraz", shortage: "Niedobór",
-    empty: "Brak zleceń produkcyjnych. Skonfiguruj wytwarzany materiał, lokalizację i aktywną recepturę, a następnie utwórz zlecenie.",
+    empty: "Brak zleceń produkcyjnych. Skonfiguruj wytwarzany materiał, lokalizację i aktywny BOM, a następnie utwórz zlecenie.",
     pagination: "Strony zleceń produkcyjnych", previous: "Poprzednia", next: "Następna", page: "Strona {page} z {pages}",
     invalidDate: "Podaj prawidłową datę w formacie RRRR-MM-DD.", invalidUnit: "Podaj prawidłową jednostkę.", invalidQuantity: "Podaj dodatnią ilość z maksymalnie 6 miejscami po przecinku.",
     invalidStart: "Wyliczony początek musi mieścić się w czterocyfrowym roku.", requirementOverflow: "Potrzeba składnika jest zbyt duża. Zmniejsz ilość docelową.", belowProduced: "Ilość docelowa nie może być mniejsza od już wyprodukowanej.",
@@ -746,7 +764,7 @@ export const pl: Messages = {
     empty: "Brak zamówień klientów.", emptyHint: "Utwórz zamówienie, aby zapisać popyt z terminami.",
     create: "Utwórz zamówienie", edit: "Edytuj zamówienie", createTitle: "Nowe zamówienie klienta", editTitle: "Edycja zamówienia klienta {id}",
     description: "Wybierz jednego klienta i lokalizację. Dodaj materiały, ilości, jednostki i wymagane terminy.",
-    save: "Zapisz zamówienie", saving: "Zapisywanie…", cancel: "Anuluj", back: "Wszystkie zamówienia klientów",
+    save: "Zapisz zamówienie", saving: "Zapisywanie…", cancel: "Anuluj",
     id: "Zamówienie", customer: "Klient", location: "Lokalizacja", status: "Status", lines: "Pozycje", material: "Materiał",
     quantity: "Ilość zamówiona", unit: "Jednostka", requiredDate: "Wymagany termin", fulfilled: "Zrealizowano", outstanding: "Pozostało", entered: "Wprowadzono jako",
     choose: "Wybierz…", addLine: "Dodaj pozycję", removeLine: "Usuń pozycję {number}", line: "Pozycja {number}", inactive: "Nieaktywny",
@@ -771,6 +789,7 @@ export const pl: Messages = {
       "Struktury wyrobów (BOM) z alternatywami, priorytetem i okresem ważności. Zmiana BOM-u tworzy nową rewizję; wcześniejsze rewizje pozostają do wglądu i nigdy się nie zmieniają.",
     empty: "Brak BOM-ów w {tenant}.",
     emptyHint: "Utwórz pierwszy przyciskiem Utwórz BOM.",
+    emptyReader: "Poproś administratora o dodanie BOM-ów.",
     allBoms: "Wszystkie BOM-y",
     columns: {
       id: "BOM",
@@ -1301,7 +1320,7 @@ export const pl: Messages = {
       nothing: "Zostaw ilość w co najmniej jednej pozycji. Aby usunąć wszystkie pozycje, anuluj wysyłkę.",
     },
     cancel: {
-      open: "Anuluj wysyłkę",
+      open: "Anuluj wysyłkę…",
       title: "Anulować wysyłkę {id}?",
       description: "Nie będzie już niczego planować. Zapas i zamówienie się nie zmienią.",
       confirm: "Anuluj wysyłkę",
@@ -1804,7 +1823,7 @@ export const pl: Messages = {
   stockReport: {
     heading: "Raport zapasu — {tenant}",
     intro: "Zapas fizyczny na stanie i zapas w tranzycie dla każdego materiału i lokalizacji, w jednostce podstawowej materiału, na dzień {date} (UTC). Zapas w tranzycie należy do swojego przesunięcia: żadna z lokalizacji nie może go użyć, dopóki nie zostanie przyjęty.",
-    material: "Materiał", location: "Lokalizacja", all: "Wszystkie", includeZero: "Pokaż wiersze z samymi zerami", apply: "Zastosuj",
+    material: "Materiał", location: "Lokalizacja", all: "Wszystkie", includeZero: "Pokaż wiersze z samymi zerami", apply: "Zastosuj", clear: "Wyczyść filtry",
     columns: { material: "Materiał", location: "Lokalizacja", quantity: "Na stanie", inTransitFrom: "W tranzycie stąd", inTransitTo: "W tranzycie tutaj", figures: "Zapas" },
     inactive: "Nieaktywny", label: "Bieżący zapas", empty: "Żaden zapas nie pasuje do tych filtrów.", rows: "Wierszy: {count}",
     ledger: "Ruchy", ledgerOf: "Ruchy {material} w {location}", actions: "Ruchy",
@@ -1823,6 +1842,7 @@ export const pl: Messages = {
     recipe: "BOM {bom} wer. {revision}", orderLink: "Zlecenie produkcyjne {id}", componentsOf: "Składniki zlecenia produkcyjnego {id}",
     label: "Odchylenia produkcji", empty: "Żadne zlecenie produkcyjne z wykonaniami nie pasuje do tych filtrów.", rows: "Zleceń: {count}",
     rangeError: "Data końcowa nie może być wcześniejsza niż początkowa.",
+    clear: "Wyczyść filtry",
     pagination: "Strony raportu odchyleń", previous: "Poprzednia", next: "Następna", page: "Strona {page} z {pages}",
   },
   nav: {
@@ -1894,6 +1914,15 @@ export const pl: Messages = {
     light: "Jasny",
     dark: "Ciemny",
   },
+  notFound: {
+    title: "Nie znaleziono strony.",
+    description: "Adres może zawierać literówkę albo rekord należy do drugiego środowiska.",
+    goToTenants: "Przejdź do Środowisk",
+    backTo: "Wróć do listy: {list}",
+    backToOverview: "Wróć do strony Przegląd — {tenant}",
+  },
+  noscript: "CPG wymaga JavaScriptu. Włącz go w przeglądarce i odśwież tę stronę.",
+  unexpectedError: ERROR_BOUNDARY.pl,
   errors: {
     DOCUMENT_NOT_OPEN: "Ten dokument lub wiersz nie jest już otwarty.",
     DOCUMENT_PROCESSED: "Zapisano już operacje. Wybierz „Zamknij wcześniej”, aby porzucić resztę.",
@@ -1924,6 +1953,6 @@ export const pl: Messages = {
     VALIDATION_FAILED: "Niektóre pola są nieprawidłowe.",
     INTERNAL: "Coś poszło nie tak. Spróbuj ponownie.",
     TENANT_READ_ONLY:
-      "To środowisko jest tylko do odczytu, więc jego danych biznesowych nie można zmieniać. Administrator może je ustawić jako zapisywalne na stronie Kontrola jaskini.",
+      "To środowisko jest tylko do odczytu, więc jego danych biznesowych nie można zmieniać. Administrator może je ustawić jako zapisywalne na stronie Środowiska.",
   },
 };

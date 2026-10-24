@@ -43,26 +43,31 @@ export function AuditTable({
     {
       id: "time",
       header: labels.columns.time,
+      kind: "date",
       cell: (entry) => <Time entry={entry} labels={labels} />,
-      className: "whitespace-nowrap align-top",
+      className: "align-top",
     },
-    { id: "account", header: labels.columns.account, cell: (entry) => entry.actor.username, className: "align-top" },
+    { id: "account", header: labels.columns.account, kind: "text", cell: (entry) => entry.actor.username, className: "align-top" },
     {
       id: "session",
       header: labels.columns.session,
+      kind: "id",
+      priority: 3,
       className: "align-top",
       cell: (entry) =>
         entry.sessionId ? (
-          <span className="font-mono text-xs" title={entry.sessionId}>
+          <span className="text-xs" title={entry.sessionId}>
             {entry.sessionId.slice(0, ID_PREFIX_LENGTH)}
           </span>
         ) : (
-          "—"
+          <span aria-label="none">—</span>
         ),
     },
     {
       id: "channel",
       header: labels.columns.channel,
+      kind: "text",
+      priority: 2,
       className: "align-top",
       cell: (entry) => (
         <span className="flex flex-wrap items-center gap-1">
@@ -74,13 +79,15 @@ export function AuditTable({
     {
       id: "action",
       header: labels.columns.action,
-      className: "min-w-28 whitespace-normal align-top",
+      kind: "text",
+      className: "whitespace-normal align-top",
       cell: (entry) => actions[entry.action] ?? entry.action,
     },
     {
       id: "subject",
       header: labels.columns.subject,
-      className: "min-w-40 whitespace-normal align-top",
+      kind: "longText",
+      className: "align-top",
       cell: (entry) => (
         <Link
           href={recordHistoryUrl(path, entry.subject)}
@@ -94,7 +101,8 @@ export function AuditTable({
     {
       id: "changes",
       header: labels.columns.changes,
-      className: "min-w-48 whitespace-normal align-top",
+      kind: "longText",
+      className: "align-top",
       cell: (entry) => <Changes entry={entry} path={path} reversals={reversals} labels={labels} />,
     },
   ];
@@ -171,7 +179,7 @@ function ChangeList({ entry, labels }: { entry: AuditEntryView; labels: Messages
   const show = (field: string, value: AuditChangeValue) =>
     dictionaries(field).map((key) => values[key]?.[String(value)]).find((shown) => shown !== undefined) ?? formatAuditValue(value);
   return (
-    <ul className="flex flex-col gap-0.5">
+    <ul className="flex flex-col gap-1">
       {auditChanges(entry.before, entry.after).map((change) => (
         <li key={change.field} className="wrap-anywhere">
           {fieldLabel(change.field, labels)}:{" "}

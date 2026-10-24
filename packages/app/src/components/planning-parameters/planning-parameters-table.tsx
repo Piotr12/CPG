@@ -1,7 +1,8 @@
 import type { PlanningParameterView } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { Badge } from "@cpg/ui/components/badge";
-import { fill, shownQuantity, type TenantContext } from "../forms/form-labels";
+import { shownQuantity, type TenantContext } from "../forms/form-labels";
+import { EmptyText } from "../master-data/empty-text";
 import type { PlanningParametersLabels } from "./labels";
 import { PlanningParameterActions } from "./planning-parameter-actions";
 import { LocationCell, MaterialCell, type ReferenceDetails } from "../master-data/references";
@@ -26,25 +27,27 @@ export function PlanningParametersTable({ tenant, rows, labels, editable }: Plan
     {
       id: "material",
       header: t.material,
+      kind: "longText",
       cell: (row) => <MaterialCell tenant={tenant.code} row={row} inactive={labels.inactive} />,
-      className: "whitespace-normal wrap-anywhere",
     },
     {
       id: "location",
       header: t.location,
+      kind: "longText",
       cell: (row) => <LocationCell row={row} inactive={labels.inactive} />,
-      className: "whitespace-normal wrap-anywhere",
     },
     {
       id: "procurement",
       header: t.procurement,
+      kind: "text",
+      // A category, not a state: a tag, Make filled and Buy outlined.
       cell: (row) => (
-        <Badge variant={row.procurement === "make" ? "default" : "outline"}>{labels.procurement[row.procurement]}</Badge>
+        <Badge variant={row.procurement === "make" ? "secondary" : "outline"}>{labels.procurement[row.procurement]}</Badge>
       ),
     },
-    { id: "leadTime", header: t.leadTime, cell: (row) => row.leadTimeDays, className: "text-right" },
-    { id: "minimum", header: t.minimum, cell: (row) => quantity(row.minimumQuantity, row), className: "text-right" },
-    { id: "multiple", header: t.multiple, cell: (row) => quantity(row.lotMultiple, row), className: "text-right" },
+    { id: "leadTime", header: t.leadTime, kind: "quantity", cell: (row) => row.leadTimeDays },
+    { id: "minimum", header: t.minimum, kind: "quantity", priority: 2, cell: (row) => quantity(row.minimumQuantity, row) },
+    { id: "multiple", header: t.multiple, kind: "quantity", priority: 2, cell: (row) => quantity(row.lotMultiple, row) },
   ];
 
   return (
@@ -55,7 +58,7 @@ export function PlanningParametersTable({ tenant, rows, labels, editable }: Plan
       rows={rows}
       rowKey={(row) => `${row.material}/${row.location}`}
       rowActions={editable ? (row) => <PlanningParameterActions row={row} context={context} labels={labels} /> : undefined}
-      empty={[fill(labels.empty, { tenant: tenant.name }), ...(editable ? [labels.emptyHint] : [])].join(" ")}
+      empty={<EmptyText labels={labels} tenant={tenant.name} editable={editable} />}
     />
   );
 }

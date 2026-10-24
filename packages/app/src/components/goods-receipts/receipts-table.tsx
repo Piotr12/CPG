@@ -18,12 +18,12 @@ interface ReceiptsTableProps {
 export function ReceiptsTable({ receipts, materials, labels, tenant, reversalLabels }: ReceiptsTableProps) {
   const c = labels.columns;
   const columns: DataTableColumn<ReceiptView>[] = [
-    { id: "id", header: c.id, cell: (receipt) => <span className="font-mono">{receipt.id}</span> },
-    { id: "date", header: c.date, cell: (receipt) => receipt.businessDate },
+    { id: "id", header: c.id, kind: "id", cell: (receipt) => receipt.id },
+    { id: "date", header: c.date, kind: "date", cell: (receipt) => receipt.businessDate },
     {
       id: "lines",
       header: c.lines,
-      className: "whitespace-normal wrap-anywhere",
+      kind: "longText",
       cell: (receipt) => (
         <ul className="flex flex-col gap-1">
           {receipt.lines.map(({ line, material, quantity, movementId, reversedBy }) => (

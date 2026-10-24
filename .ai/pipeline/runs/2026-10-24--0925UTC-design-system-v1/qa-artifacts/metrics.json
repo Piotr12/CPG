@@ -1,0 +1,2262 @@
+[
+  {
+    "file": "tenants-320-light-en.png",
+    "url": "http://localhost:3100/admin",
+    "width": 320,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Tenants"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "tenants-768-light-en.png",
+    "url": "http://localhost:3100/admin",
+    "width": 768,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Tenants"
+    ],
+    "clipped": [
+      "Overview",
+      "Master data",
+      "Sales",
+      "Transactions",
+      "Stock",
+      "Stock import",
+      "Stock report",
+      "Variance report",
+      "Audit",
+      "Administration",
+      "Global audit",
+      "Help"
+    ],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "tenants-1440-light-en.png",
+    "url": "http://localhost:3100/admin",
+    "width": 1440,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Tenants"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "overview-320-light-en.png",
+    "url": "http://localhost:3100/admin/test",
+    "width": 320,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Overview — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "overview-768-light-en.png",
+    "url": "http://localhost:3100/admin/test",
+    "width": 768,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Overview — Test"
+    ],
+    "clipped": [
+      "Overview",
+      "Master data",
+      "Sales",
+      "Transactions",
+      "Stock",
+      "Stock import",
+      "Stock report",
+      "Variance report",
+      "Audit",
+      "Administration",
+      "Global audit",
+      "Help"
+    ],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "overview-1440-light-en.png",
+    "url": "http://localhost:3100/admin/test",
+    "width": 1440,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Overview — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "materials-320-light-en.png",
+    "url": "http://localhost:3100/admin/test/materials",
+    "width": 320,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Materials — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "materials-768-light-en.png",
+    "url": "http://localhost:3100/admin/test/materials",
+    "width": 768,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Materials — Test"
+    ],
+    "clipped": [
+      "Overview",
+      "Master data",
+      "Sales",
+      "Transactions",
+      "Stock",
+      "Stock import",
+      "Stock report",
+      "Variance report",
+      "Audit",
+      "Administration",
+      "Global audit",
+      "Help"
+    ],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "materials-1440-light-en.png",
+    "url": "http://localhost:3100/admin/test/materials",
+    "width": 1440,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Materials — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "material-320-light-en.png",
+    "url": "http://localhost:3100/admin/test/materials/00000001",
+    "width": 320,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "00000001 — Steel sheet 2 mm"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "material-768-light-en.png",
+    "url": "http://localhost:3100/admin/test/materials/00000001",
+    "width": 768,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "00000001 — Steel sheet 2 mm"
+    ],
+    "clipped": [
+      "Overview",
+      "Master data",
+      "Sales",
+      "Transactions",
+      "Stock",
+      "Stock import",
+      "Stock report",
+      "Variance report",
+      "Audit",
+      "Administration",
+      "Global audit",
+      "Help"
+    ],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "material-1440-light-en.png",
+    "url": "http://localhost:3100/admin/test/materials/00000001",
+    "width": 1440,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "00000001 — Steel sheet 2 mm"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "customer-orders-320-light-en.png",
+    "url": "http://localhost:3100/admin/test/customer-orders",
+    "width": 320,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Customer orders — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "customer-orders-768-light-en.png",
+    "url": "http://localhost:3100/admin/test/customer-orders",
+    "width": 768,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Customer orders — Test"
+    ],
+    "clipped": [
+      "Overview",
+      "Master data",
+      "Sales",
+      "Transactions",
+      "Stock",
+      "Stock import",
+      "Stock report",
+      "Variance report",
+      "Audit",
+      "Administration",
+      "Global audit",
+      "Help"
+    ],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "customer-orders-1440-light-en.png",
+    "url": "http://localhost:3100/admin/test/customer-orders",
+    "width": 1440,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Customer orders — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "stock-report-320-light-en.png",
+    "url": "http://localhost:3100/admin/test/reports/stock",
+    "width": 320,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Stock report — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "stock-report-768-light-en.png",
+    "url": "http://localhost:3100/admin/test/reports/stock",
+    "width": 768,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Stock report — Test"
+    ],
+    "clipped": [
+      "Overview",
+      "Master data",
+      "Sales",
+      "Transactions",
+      "Stock",
+      "Stock import",
+      "Stock report",
+      "Variance report",
+      "Audit",
+      "Administration",
+      "Global audit",
+      "Help"
+    ],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "stock-report-1440-light-en.png",
+    "url": "http://localhost:3100/admin/test/reports/stock",
+    "width": 1440,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Stock report — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "import-320-light-en.png",
+    "url": "http://localhost:3100/admin/test/import",
+    "width": 320,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Import from spreadsheet — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "import-768-light-en.png",
+    "url": "http://localhost:3100/admin/test/import",
+    "width": 768,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Import from spreadsheet — Test"
+    ],
+    "clipped": [
+      "Overview",
+      "Master data",
+      "Sales",
+      "Transactions",
+      "Stock",
+      "Stock import",
+      "Stock report",
+      "Variance report",
+      "Audit",
+      "Administration",
+      "Global audit",
+      "Help"
+    ],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "import-1440-light-en.png",
+    "url": "http://localhost:3100/admin/test/import",
+    "width": 1440,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Import from spreadsheet — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "help-320-light-en.png",
+    "url": "http://localhost:3100/help",
+    "width": 320,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Help"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "help-768-light-en.png",
+    "url": "http://localhost:3100/help",
+    "width": 768,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Help"
+    ],
+    "clipped": [
+      "Overview",
+      "Master data",
+      "Sales",
+      "Transactions",
+      "Stock",
+      "Stock import",
+      "Stock report",
+      "Variance report",
+      "Audit",
+      "Administration",
+      "Global audit",
+      "Help"
+    ],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "help-1440-light-en.png",
+    "url": "http://localhost:3100/help",
+    "width": 1440,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Help"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "home-320-light-en.png",
+    "url": "http://localhost:3100/",
+    "width": 320,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Caveman Planning Good"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "home-768-light-en.png",
+    "url": "http://localhost:3100/",
+    "width": 768,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Caveman Planning Good"
+    ],
+    "clipped": [
+      "Overview",
+      "Master data",
+      "Sales",
+      "Transactions",
+      "Stock",
+      "Stock import",
+      "Stock report",
+      "Variance report",
+      "Audit",
+      "Administration",
+      "Global audit",
+      "Help"
+    ],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "home-1440-light-en.png",
+    "url": "http://localhost:3100/",
+    "width": 1440,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Caveman Planning Good"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "tenants-320-dark-en.png",
+    "url": "http://localhost:3100/admin",
+    "width": 320,
+    "theme": "dark",
+    "lang": "en",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Tenants"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "tenants-768-dark-en.png",
+    "url": "http://localhost:3100/admin",
+    "width": 768,
+    "theme": "dark",
+    "lang": "en",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Tenants"
+    ],
+    "clipped": [
+      "Overview",
+      "Master data",
+      "Sales",
+      "Transactions",
+      "Stock",
+      "Stock import",
+      "Stock report",
+      "Variance report",
+      "Audit",
+      "Administration",
+      "Global audit",
+      "Help"
+    ],
+    "htmlLang": "en",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "tenants-1440-dark-en.png",
+    "url": "http://localhost:3100/admin",
+    "width": 1440,
+    "theme": "dark",
+    "lang": "en",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Tenants"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "overview-320-dark-en.png",
+    "url": "http://localhost:3100/admin/test",
+    "width": 320,
+    "theme": "dark",
+    "lang": "en",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Overview — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "overview-768-dark-en.png",
+    "url": "http://localhost:3100/admin/test",
+    "width": 768,
+    "theme": "dark",
+    "lang": "en",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Overview — Test"
+    ],
+    "clipped": [
+      "Overview",
+      "Master data",
+      "Sales",
+      "Transactions",
+      "Stock",
+      "Stock import",
+      "Stock report",
+      "Variance report",
+      "Audit",
+      "Administration",
+      "Global audit",
+      "Help"
+    ],
+    "htmlLang": "en",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "overview-1440-dark-en.png",
+    "url": "http://localhost:3100/admin/test",
+    "width": 1440,
+    "theme": "dark",
+    "lang": "en",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Overview — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "materials-320-dark-en.png",
+    "url": "http://localhost:3100/admin/test/materials",
+    "width": 320,
+    "theme": "dark",
+    "lang": "en",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Materials — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "materials-768-dark-en.png",
+    "url": "http://localhost:3100/admin/test/materials",
+    "width": 768,
+    "theme": "dark",
+    "lang": "en",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Materials — Test"
+    ],
+    "clipped": [
+      "Overview",
+      "Master data",
+      "Sales",
+      "Transactions",
+      "Stock",
+      "Stock import",
+      "Stock report",
+      "Variance report",
+      "Audit",
+      "Administration",
+      "Global audit",
+      "Help"
+    ],
+    "htmlLang": "en",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "materials-1440-dark-en.png",
+    "url": "http://localhost:3100/admin/test/materials",
+    "width": 1440,
+    "theme": "dark",
+    "lang": "en",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Materials — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "material-320-dark-en.png",
+    "url": "http://localhost:3100/admin/test/materials/00000001",
+    "width": 320,
+    "theme": "dark",
+    "lang": "en",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "00000001 — Steel sheet 2 mm"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "material-768-dark-en.png",
+    "url": "http://localhost:3100/admin/test/materials/00000001",
+    "width": 768,
+    "theme": "dark",
+    "lang": "en",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "00000001 — Steel sheet 2 mm"
+    ],
+    "clipped": [
+      "Overview",
+      "Master data",
+      "Sales",
+      "Transactions",
+      "Stock",
+      "Stock import",
+      "Stock report",
+      "Variance report",
+      "Audit",
+      "Administration",
+      "Global audit",
+      "Help"
+    ],
+    "htmlLang": "en",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "material-1440-dark-en.png",
+    "url": "http://localhost:3100/admin/test/materials/00000001",
+    "width": 1440,
+    "theme": "dark",
+    "lang": "en",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "00000001 — Steel sheet 2 mm"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "customer-orders-320-dark-en.png",
+    "url": "http://localhost:3100/admin/test/customer-orders",
+    "width": 320,
+    "theme": "dark",
+    "lang": "en",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Customer orders — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "customer-orders-768-dark-en.png",
+    "url": "http://localhost:3100/admin/test/customer-orders",
+    "width": 768,
+    "theme": "dark",
+    "lang": "en",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Customer orders — Test"
+    ],
+    "clipped": [
+      "Overview",
+      "Master data",
+      "Sales",
+      "Transactions",
+      "Stock",
+      "Stock import",
+      "Stock report",
+      "Variance report",
+      "Audit",
+      "Administration",
+      "Global audit",
+      "Help"
+    ],
+    "htmlLang": "en",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "customer-orders-1440-dark-en.png",
+    "url": "http://localhost:3100/admin/test/customer-orders",
+    "width": 1440,
+    "theme": "dark",
+    "lang": "en",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Customer orders — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "stock-report-320-dark-en.png",
+    "url": "http://localhost:3100/admin/test/reports/stock",
+    "width": 320,
+    "theme": "dark",
+    "lang": "en",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Stock report — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "stock-report-768-dark-en.png",
+    "url": "http://localhost:3100/admin/test/reports/stock",
+    "width": 768,
+    "theme": "dark",
+    "lang": "en",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Stock report — Test"
+    ],
+    "clipped": [
+      "Overview",
+      "Master data",
+      "Sales",
+      "Transactions",
+      "Stock",
+      "Stock import",
+      "Stock report",
+      "Variance report",
+      "Audit",
+      "Administration",
+      "Global audit",
+      "Help"
+    ],
+    "htmlLang": "en",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "stock-report-1440-dark-en.png",
+    "url": "http://localhost:3100/admin/test/reports/stock",
+    "width": 1440,
+    "theme": "dark",
+    "lang": "en",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Stock report — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "import-320-dark-en.png",
+    "url": "http://localhost:3100/admin/test/import",
+    "width": 320,
+    "theme": "dark",
+    "lang": "en",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Import from spreadsheet — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "import-768-dark-en.png",
+    "url": "http://localhost:3100/admin/test/import",
+    "width": 768,
+    "theme": "dark",
+    "lang": "en",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Import from spreadsheet — Test"
+    ],
+    "clipped": [
+      "Overview",
+      "Master data",
+      "Sales",
+      "Transactions",
+      "Stock",
+      "Stock import",
+      "Stock report",
+      "Variance report",
+      "Audit",
+      "Administration",
+      "Global audit",
+      "Help"
+    ],
+    "htmlLang": "en",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "import-1440-dark-en.png",
+    "url": "http://localhost:3100/admin/test/import",
+    "width": 1440,
+    "theme": "dark",
+    "lang": "en",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Import from spreadsheet — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "help-320-dark-en.png",
+    "url": "http://localhost:3100/help",
+    "width": 320,
+    "theme": "dark",
+    "lang": "en",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Help"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "help-768-dark-en.png",
+    "url": "http://localhost:3100/help",
+    "width": 768,
+    "theme": "dark",
+    "lang": "en",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Help"
+    ],
+    "clipped": [
+      "Overview",
+      "Master data",
+      "Sales",
+      "Transactions",
+      "Stock",
+      "Stock import",
+      "Stock report",
+      "Variance report",
+      "Audit",
+      "Administration",
+      "Global audit",
+      "Help"
+    ],
+    "htmlLang": "en",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "help-1440-dark-en.png",
+    "url": "http://localhost:3100/help",
+    "width": 1440,
+    "theme": "dark",
+    "lang": "en",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Help"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "home-320-dark-en.png",
+    "url": "http://localhost:3100/",
+    "width": 320,
+    "theme": "dark",
+    "lang": "en",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Caveman Planning Good"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "home-768-dark-en.png",
+    "url": "http://localhost:3100/",
+    "width": 768,
+    "theme": "dark",
+    "lang": "en",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Caveman Planning Good"
+    ],
+    "clipped": [
+      "Overview",
+      "Master data",
+      "Sales",
+      "Transactions",
+      "Stock",
+      "Stock import",
+      "Stock report",
+      "Variance report",
+      "Audit",
+      "Administration",
+      "Global audit",
+      "Help"
+    ],
+    "htmlLang": "en",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "home-1440-dark-en.png",
+    "url": "http://localhost:3100/",
+    "width": 1440,
+    "theme": "dark",
+    "lang": "en",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Caveman Planning Good"
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "tenants-320-light-pl.png",
+    "url": "http://localhost:3100/admin",
+    "width": 320,
+    "theme": "light",
+    "lang": "pl",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Środowiska"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "tenants-768-light-pl.png",
+    "url": "http://localhost:3100/admin",
+    "width": 768,
+    "theme": "light",
+    "lang": "pl",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Środowiska"
+    ],
+    "clipped": [
+      "Przegląd",
+      "Dane podstawowe",
+      "Sprzedaż",
+      "Transakcje",
+      "Zapas",
+      "Import stanów",
+      "Raport zapasu",
+      "Raport odchyleń",
+      "Audyt",
+      "Administracja",
+      "Audyt globalny",
+      "Pomoc"
+    ],
+    "htmlLang": "pl",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "tenants-1440-light-pl.png",
+    "url": "http://localhost:3100/admin",
+    "width": 1440,
+    "theme": "light",
+    "lang": "pl",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Środowiska"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "overview-320-light-pl.png",
+    "url": "http://localhost:3100/admin/test",
+    "width": 320,
+    "theme": "light",
+    "lang": "pl",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Przegląd — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "overview-768-light-pl.png",
+    "url": "http://localhost:3100/admin/test",
+    "width": 768,
+    "theme": "light",
+    "lang": "pl",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Przegląd — Test"
+    ],
+    "clipped": [
+      "Przegląd",
+      "Dane podstawowe",
+      "Sprzedaż",
+      "Transakcje",
+      "Zapas",
+      "Import stanów",
+      "Raport zapasu",
+      "Raport odchyleń",
+      "Audyt",
+      "Administracja",
+      "Audyt globalny",
+      "Pomoc"
+    ],
+    "htmlLang": "pl",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "overview-1440-light-pl.png",
+    "url": "http://localhost:3100/admin/test",
+    "width": 1440,
+    "theme": "light",
+    "lang": "pl",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Przegląd — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "materials-320-light-pl.png",
+    "url": "http://localhost:3100/admin/test/materials",
+    "width": 320,
+    "theme": "light",
+    "lang": "pl",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Materiały — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "materials-768-light-pl.png",
+    "url": "http://localhost:3100/admin/test/materials",
+    "width": 768,
+    "theme": "light",
+    "lang": "pl",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Materiały — Test"
+    ],
+    "clipped": [
+      "Przegląd",
+      "Dane podstawowe",
+      "Sprzedaż",
+      "Transakcje",
+      "Zapas",
+      "Import stanów",
+      "Raport zapasu",
+      "Raport odchyleń",
+      "Audyt",
+      "Administracja",
+      "Audyt globalny",
+      "Pomoc"
+    ],
+    "htmlLang": "pl",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "materials-1440-light-pl.png",
+    "url": "http://localhost:3100/admin/test/materials",
+    "width": 1440,
+    "theme": "light",
+    "lang": "pl",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Materiały — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "material-320-light-pl.png",
+    "url": "http://localhost:3100/admin/test/materials/00000001",
+    "width": 320,
+    "theme": "light",
+    "lang": "pl",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "00000001 — Steel sheet 2 mm"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "material-768-light-pl.png",
+    "url": "http://localhost:3100/admin/test/materials/00000001",
+    "width": 768,
+    "theme": "light",
+    "lang": "pl",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "00000001 — Steel sheet 2 mm"
+    ],
+    "clipped": [
+      "Przegląd",
+      "Dane podstawowe",
+      "Sprzedaż",
+      "Transakcje",
+      "Zapas",
+      "Import stanów",
+      "Raport zapasu",
+      "Raport odchyleń",
+      "Audyt",
+      "Administracja",
+      "Audyt globalny",
+      "Pomoc"
+    ],
+    "htmlLang": "pl",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "material-1440-light-pl.png",
+    "url": "http://localhost:3100/admin/test/materials/00000001",
+    "width": 1440,
+    "theme": "light",
+    "lang": "pl",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "00000001 — Steel sheet 2 mm"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "customer-orders-320-light-pl.png",
+    "url": "http://localhost:3100/admin/test/customer-orders",
+    "width": 320,
+    "theme": "light",
+    "lang": "pl",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Zamówienia klientów — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "customer-orders-768-light-pl.png",
+    "url": "http://localhost:3100/admin/test/customer-orders",
+    "width": 768,
+    "theme": "light",
+    "lang": "pl",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Zamówienia klientów — Test"
+    ],
+    "clipped": [
+      "Przegląd",
+      "Dane podstawowe",
+      "Sprzedaż",
+      "Transakcje",
+      "Zapas",
+      "Import stanów",
+      "Raport zapasu",
+      "Raport odchyleń",
+      "Audyt",
+      "Administracja",
+      "Audyt globalny",
+      "Pomoc"
+    ],
+    "htmlLang": "pl",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "customer-orders-1440-light-pl.png",
+    "url": "http://localhost:3100/admin/test/customer-orders",
+    "width": 1440,
+    "theme": "light",
+    "lang": "pl",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Zamówienia klientów — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "stock-report-320-light-pl.png",
+    "url": "http://localhost:3100/admin/test/reports/stock",
+    "width": 320,
+    "theme": "light",
+    "lang": "pl",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Raport zapasu — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "stock-report-768-light-pl.png",
+    "url": "http://localhost:3100/admin/test/reports/stock",
+    "width": 768,
+    "theme": "light",
+    "lang": "pl",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Raport zapasu — Test"
+    ],
+    "clipped": [
+      "Przegląd",
+      "Dane podstawowe",
+      "Sprzedaż",
+      "Transakcje",
+      "Zapas",
+      "Import stanów",
+      "Raport zapasu",
+      "Raport odchyleń",
+      "Audyt",
+      "Administracja",
+      "Audyt globalny",
+      "Pomoc"
+    ],
+    "htmlLang": "pl",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "stock-report-1440-light-pl.png",
+    "url": "http://localhost:3100/admin/test/reports/stock",
+    "width": 1440,
+    "theme": "light",
+    "lang": "pl",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Raport zapasu — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "import-320-light-pl.png",
+    "url": "http://localhost:3100/admin/test/import",
+    "width": 320,
+    "theme": "light",
+    "lang": "pl",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Import z arkusza kalkulacyjnego — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "import-768-light-pl.png",
+    "url": "http://localhost:3100/admin/test/import",
+    "width": 768,
+    "theme": "light",
+    "lang": "pl",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Import z arkusza kalkulacyjnego — Test"
+    ],
+    "clipped": [
+      "Przegląd",
+      "Dane podstawowe",
+      "Sprzedaż",
+      "Transakcje",
+      "Zapas",
+      "Import stanów",
+      "Raport zapasu",
+      "Raport odchyleń",
+      "Audyt",
+      "Administracja",
+      "Audyt globalny",
+      "Pomoc"
+    ],
+    "htmlLang": "pl",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "import-1440-light-pl.png",
+    "url": "http://localhost:3100/admin/test/import",
+    "width": 1440,
+    "theme": "light",
+    "lang": "pl",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Import z arkusza kalkulacyjnego — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "help-320-light-pl.png",
+    "url": "http://localhost:3100/help",
+    "width": 320,
+    "theme": "light",
+    "lang": "pl",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Pomoc"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "help-768-light-pl.png",
+    "url": "http://localhost:3100/help",
+    "width": 768,
+    "theme": "light",
+    "lang": "pl",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Pomoc"
+    ],
+    "clipped": [
+      "Przegląd",
+      "Dane podstawowe",
+      "Sprzedaż",
+      "Transakcje",
+      "Zapas",
+      "Import stanów",
+      "Raport zapasu",
+      "Raport odchyleń",
+      "Audyt",
+      "Administracja",
+      "Audyt globalny",
+      "Pomoc"
+    ],
+    "htmlLang": "pl",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "help-1440-light-pl.png",
+    "url": "http://localhost:3100/help",
+    "width": 1440,
+    "theme": "light",
+    "lang": "pl",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Pomoc"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "home-320-light-pl.png",
+    "url": "http://localhost:3100/",
+    "width": 320,
+    "theme": "light",
+    "lang": "pl",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Caveman Planning Good"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "home-768-light-pl.png",
+    "url": "http://localhost:3100/",
+    "width": 768,
+    "theme": "light",
+    "lang": "pl",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Caveman Planning Good"
+    ],
+    "clipped": [
+      "Przegląd",
+      "Dane podstawowe",
+      "Sprzedaż",
+      "Transakcje",
+      "Zapas",
+      "Import stanów",
+      "Raport zapasu",
+      "Raport odchyleń",
+      "Audyt",
+      "Administracja",
+      "Audyt globalny",
+      "Pomoc"
+    ],
+    "htmlLang": "pl",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "home-1440-light-pl.png",
+    "url": "http://localhost:3100/",
+    "width": 1440,
+    "theme": "light",
+    "lang": "pl",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Caveman Planning Good"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "tenants-320-dark-pl.png",
+    "url": "http://localhost:3100/admin",
+    "width": 320,
+    "theme": "dark",
+    "lang": "pl",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Środowiska"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "tenants-768-dark-pl.png",
+    "url": "http://localhost:3100/admin",
+    "width": 768,
+    "theme": "dark",
+    "lang": "pl",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Środowiska"
+    ],
+    "clipped": [
+      "Przegląd",
+      "Dane podstawowe",
+      "Sprzedaż",
+      "Transakcje",
+      "Zapas",
+      "Import stanów",
+      "Raport zapasu",
+      "Raport odchyleń",
+      "Audyt",
+      "Administracja",
+      "Audyt globalny",
+      "Pomoc"
+    ],
+    "htmlLang": "pl",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "tenants-1440-dark-pl.png",
+    "url": "http://localhost:3100/admin",
+    "width": 1440,
+    "theme": "dark",
+    "lang": "pl",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Środowiska"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "overview-320-dark-pl.png",
+    "url": "http://localhost:3100/admin/test",
+    "width": 320,
+    "theme": "dark",
+    "lang": "pl",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Przegląd — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "overview-768-dark-pl.png",
+    "url": "http://localhost:3100/admin/test",
+    "width": 768,
+    "theme": "dark",
+    "lang": "pl",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Przegląd — Test"
+    ],
+    "clipped": [
+      "Przegląd",
+      "Dane podstawowe",
+      "Sprzedaż",
+      "Transakcje",
+      "Zapas",
+      "Import stanów",
+      "Raport zapasu",
+      "Raport odchyleń",
+      "Audyt",
+      "Administracja",
+      "Audyt globalny",
+      "Pomoc"
+    ],
+    "htmlLang": "pl",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "overview-1440-dark-pl.png",
+    "url": "http://localhost:3100/admin/test",
+    "width": 1440,
+    "theme": "dark",
+    "lang": "pl",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Przegląd — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "materials-320-dark-pl.png",
+    "url": "http://localhost:3100/admin/test/materials",
+    "width": 320,
+    "theme": "dark",
+    "lang": "pl",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Materiały — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "materials-768-dark-pl.png",
+    "url": "http://localhost:3100/admin/test/materials",
+    "width": 768,
+    "theme": "dark",
+    "lang": "pl",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Materiały — Test"
+    ],
+    "clipped": [
+      "Przegląd",
+      "Dane podstawowe",
+      "Sprzedaż",
+      "Transakcje",
+      "Zapas",
+      "Import stanów",
+      "Raport zapasu",
+      "Raport odchyleń",
+      "Audyt",
+      "Administracja",
+      "Audyt globalny",
+      "Pomoc"
+    ],
+    "htmlLang": "pl",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "materials-1440-dark-pl.png",
+    "url": "http://localhost:3100/admin/test/materials",
+    "width": 1440,
+    "theme": "dark",
+    "lang": "pl",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Materiały — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "material-320-dark-pl.png",
+    "url": "http://localhost:3100/admin/test/materials/00000001",
+    "width": 320,
+    "theme": "dark",
+    "lang": "pl",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "00000001 — Steel sheet 2 mm"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "material-768-dark-pl.png",
+    "url": "http://localhost:3100/admin/test/materials/00000001",
+    "width": 768,
+    "theme": "dark",
+    "lang": "pl",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "00000001 — Steel sheet 2 mm"
+    ],
+    "clipped": [
+      "Przegląd",
+      "Dane podstawowe",
+      "Sprzedaż",
+      "Transakcje",
+      "Zapas",
+      "Import stanów",
+      "Raport zapasu",
+      "Raport odchyleń",
+      "Audyt",
+      "Administracja",
+      "Audyt globalny",
+      "Pomoc"
+    ],
+    "htmlLang": "pl",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "material-1440-dark-pl.png",
+    "url": "http://localhost:3100/admin/test/materials/00000001",
+    "width": 1440,
+    "theme": "dark",
+    "lang": "pl",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "00000001 — Steel sheet 2 mm"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "customer-orders-320-dark-pl.png",
+    "url": "http://localhost:3100/admin/test/customer-orders",
+    "width": 320,
+    "theme": "dark",
+    "lang": "pl",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Zamówienia klientów — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "customer-orders-768-dark-pl.png",
+    "url": "http://localhost:3100/admin/test/customer-orders",
+    "width": 768,
+    "theme": "dark",
+    "lang": "pl",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Zamówienia klientów — Test"
+    ],
+    "clipped": [
+      "Przegląd",
+      "Dane podstawowe",
+      "Sprzedaż",
+      "Transakcje",
+      "Zapas",
+      "Import stanów",
+      "Raport zapasu",
+      "Raport odchyleń",
+      "Audyt",
+      "Administracja",
+      "Audyt globalny",
+      "Pomoc"
+    ],
+    "htmlLang": "pl",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "customer-orders-1440-dark-pl.png",
+    "url": "http://localhost:3100/admin/test/customer-orders",
+    "width": 1440,
+    "theme": "dark",
+    "lang": "pl",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Zamówienia klientów — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "stock-report-320-dark-pl.png",
+    "url": "http://localhost:3100/admin/test/reports/stock",
+    "width": 320,
+    "theme": "dark",
+    "lang": "pl",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Raport zapasu — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "stock-report-768-dark-pl.png",
+    "url": "http://localhost:3100/admin/test/reports/stock",
+    "width": 768,
+    "theme": "dark",
+    "lang": "pl",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Raport zapasu — Test"
+    ],
+    "clipped": [
+      "Przegląd",
+      "Dane podstawowe",
+      "Sprzedaż",
+      "Transakcje",
+      "Zapas",
+      "Import stanów",
+      "Raport zapasu",
+      "Raport odchyleń",
+      "Audyt",
+      "Administracja",
+      "Audyt globalny",
+      "Pomoc"
+    ],
+    "htmlLang": "pl",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "stock-report-1440-dark-pl.png",
+    "url": "http://localhost:3100/admin/test/reports/stock",
+    "width": 1440,
+    "theme": "dark",
+    "lang": "pl",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Raport zapasu — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "import-320-dark-pl.png",
+    "url": "http://localhost:3100/admin/test/import",
+    "width": 320,
+    "theme": "dark",
+    "lang": "pl",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Import z arkusza kalkulacyjnego — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "import-768-dark-pl.png",
+    "url": "http://localhost:3100/admin/test/import",
+    "width": 768,
+    "theme": "dark",
+    "lang": "pl",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Import z arkusza kalkulacyjnego — Test"
+    ],
+    "clipped": [
+      "Przegląd",
+      "Dane podstawowe",
+      "Sprzedaż",
+      "Transakcje",
+      "Zapas",
+      "Import stanów",
+      "Raport zapasu",
+      "Raport odchyleń",
+      "Audyt",
+      "Administracja",
+      "Audyt globalny",
+      "Pomoc"
+    ],
+    "htmlLang": "pl",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "import-1440-dark-pl.png",
+    "url": "http://localhost:3100/admin/test/import",
+    "width": 1440,
+    "theme": "dark",
+    "lang": "pl",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Import z arkusza kalkulacyjnego — Test"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "help-320-dark-pl.png",
+    "url": "http://localhost:3100/help",
+    "width": 320,
+    "theme": "dark",
+    "lang": "pl",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Pomoc"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "help-768-dark-pl.png",
+    "url": "http://localhost:3100/help",
+    "width": 768,
+    "theme": "dark",
+    "lang": "pl",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Pomoc"
+    ],
+    "clipped": [
+      "Przegląd",
+      "Dane podstawowe",
+      "Sprzedaż",
+      "Transakcje",
+      "Zapas",
+      "Import stanów",
+      "Raport zapasu",
+      "Raport odchyleń",
+      "Audyt",
+      "Administracja",
+      "Audyt globalny",
+      "Pomoc"
+    ],
+    "htmlLang": "pl",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "help-1440-dark-pl.png",
+    "url": "http://localhost:3100/help",
+    "width": 1440,
+    "theme": "dark",
+    "lang": "pl",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Pomoc"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "home-320-dark-pl.png",
+    "url": "http://localhost:3100/",
+    "width": 320,
+    "theme": "dark",
+    "lang": "pl",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Caveman Planning Good"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "home-768-dark-pl.png",
+    "url": "http://localhost:3100/",
+    "width": 768,
+    "theme": "dark",
+    "lang": "pl",
+    "innerWidth": 768,
+    "scrollWidth": 768,
+    "h1s": [
+      "Caveman Planning Good"
+    ],
+    "clipped": [
+      "Przegląd",
+      "Dane podstawowe",
+      "Sprzedaż",
+      "Transakcje",
+      "Zapas",
+      "Import stanów",
+      "Raport zapasu",
+      "Raport odchyleń",
+      "Audyt",
+      "Administracja",
+      "Audyt globalny",
+      "Pomoc"
+    ],
+    "htmlLang": "pl",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "home-1440-dark-pl.png",
+    "url": "http://localhost:3100/",
+    "width": 1440,
+    "theme": "dark",
+    "lang": "pl",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Caveman Planning Good"
+    ],
+    "clipped": [],
+    "htmlLang": "pl",
+    "dark": true,
+    "overflow": false
+  },
+  {
+    "file": "not-found-root-320-light-en.png",
+    "url": "http://localhost:3100/this-page-does-not-exist",
+    "width": 320,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Page not found."
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "not-found-tenant-320-light-en.png",
+    "url": "http://localhost:3100/admin/test/materials/99999999",
+    "width": 320,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 320,
+    "scrollWidth": 320,
+    "h1s": [
+      "Page not found."
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "not-found-root-1440-light-en.png",
+    "url": "http://localhost:3100/this-page-does-not-exist",
+    "width": 1440,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Page not found."
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  },
+  {
+    "file": "not-found-tenant-1440-light-en.png",
+    "url": "http://localhost:3100/admin/test/materials/99999999",
+    "width": 1440,
+    "theme": "light",
+    "lang": "en",
+    "innerWidth": 1440,
+    "scrollWidth": 1440,
+    "h1s": [
+      "Page not found."
+    ],
+    "clipped": [],
+    "htmlLang": "en",
+    "dark": false,
+    "overflow": false
+  }
+]

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/messages/en";
 import { receiptsLabels } from "./labels";
@@ -41,6 +41,7 @@ describe("ReceiptDialog", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(mocks.postReceipt).toHaveBeenCalledWith("prod", 3, "00000002", { lines: [{ line: 1, quantity: "30", unit: "kg" }] });
     expect(screen.getByRole("status").textContent).toBe("Goods receipt 00000005 posted.Dismiss");
+    expect(screen.getByRole("status").getAttribute("data-tone")).toBe("success");
   });
 
   it("warns about an excess after posting, keeps the notice when the order can take no more, and dismisses it (BUY-015)", async () => {
@@ -49,6 +50,10 @@ describe("ReceiptDialog", () => {
 
     post("110");
     expect(await screen.findByText("Line 1 received 10 kg more than was outstanding.")).toBeTruthy();
+    const notice = screen.getByRole("status");
+    expect(notice.getAttribute("data-tone")).toBe("warning"); expect(notice.className).not.toMatch(/amber/);
+    expect(within(notice).getByText("Goods receipt 00000006 posted.").className).toContain("font-medium");
+    expect(within(notice).getAllByRole("listitem").map((item) => item.textContent)).toEqual(["Line 1 received 10 kg more than was outstanding."]);
 
     // The post completed the order: the page re-renders without the button, the notice stays.
     rerender(dialog(false));

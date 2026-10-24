@@ -41,6 +41,7 @@ describe("ShipmentDialog", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(mocks.createShipment).toHaveBeenCalledWith("prod", 3, "00000007", { plannedDate: "2027-01-04", lines: [{ orderLine: A, quantity: "24", unit: "each" }] });
     expect(screen.getByRole("status").textContent).toContain("Shipment 00000005 created.");
+    expect(screen.getByRole("status").getAttribute("data-tone")).toBe("success");
     expect(screen.getByRole("link", { name: "Open shipment 00000005" }).getAttribute("href")).toBe("/admin/prod/shipments/00000005");
     fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
     expect(screen.queryByRole("status")).toBeNull();
