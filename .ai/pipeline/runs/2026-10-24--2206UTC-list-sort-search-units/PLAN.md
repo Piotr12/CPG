@@ -30,13 +30,15 @@ Every main list sorts by a header click and searches through one labelled box, b
 | F2 | `ui`: `DataTable` sort headers, `ListSearch`, `SearchResultLine`, `Highlight`, `--highlight`, `CrudField.groups`, `Autocomplete` | lead | done |
 | F3 | `app`: list URL helpers, `lists` i18n section, `PageLinks` keeps the query; integration helper to choose from an autocomplete | lead | done |
 | F4 | Materials pilot: sort + search + highlight; base unit and conversion unit selects; imports use the registry; unit test churn; integration test | lead | in progress (integration run pending) |
-| W1 | Master data: locations, customers, suppliers, BOMs (list + recipe form autocomplete), planning parameters, safety stock, users | worker | todo |
+| W1 | Master data: locations, customers, suppliers, BOMs (list + recipe form autocomplete), planning parameters, safety stock, users | worker | done, merged |
 | W2 | Sales and production: forecasts, customer orders, production orders (lists + material autocompletes in their forms) | worker | done, merged |
 | W3 | Purchasing and logistics: purchase requisitions, purchase orders, transfers (lists + forms) | worker | done, merged |
 | C1 | Merge workers one by one, gate after each; Help + BACKWARD_COMPATIBILITY + follow-up issues | lead | todo |
 | C2 | Full gate, touched integration files, build, browser QA with screenshots, PR, CI green | lead | todo |
 
 ## Progress
+
+- 2026-10-25 — W1 merged (cez/ddc961ae): its integration run on :3301: boms 10/10; named-records, named-records-api, boms-api, planning-parameters(+api), users, api-users all green after two test fixes. Lead follow-ups (2dfe2b91): one material-picker helper (`components/materials/material-picker.ts`: `materialPicker`, `activeMaterialOptions`) replacing W1's, W2's and W3's three; Forecasts' reference cells mark the search; the Autocomplete list opens upward when the room below its field in a scrolling dialog is short (W1 measured the Create BOM list 16 px past the dialog). Gate: lint 0 (1 pre-existing warning), typecheck 0, test:coverage 0 (4,083 tests, 100 %), build 0. Follow-up issues filed: #220 indexes, #221 API sort/q, #222 other pickers + listbox name, #223 Polish-letter case, #224 quantity and PO-date sort.
 
 - 2026-10-25 — W2 merged (cez/76002577): typecheck 0, test:coverage 0 (4,024 tests, 100 %). Its integration run on :3302: forecasts 9/9, forecasts-api 10/10, customer-orders 9/9, production-orders 7/7, production-completions 4/4, production-transfer-reversals 4/4, document-lifecycle 11/11, shipments 5/5. Open for the lead after W1: `query` on Forecasts' reference cells + the mark assertion in `forecasts.test.ts`; unify W1's and W2's material-picker helpers. Tried naming the autocomplete's listbox with the field label: `getByLabelText` then matched two elements across six tests, so reverted (the list is named by its field only when open via `aria-controls`).
 
