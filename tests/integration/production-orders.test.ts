@@ -70,10 +70,10 @@ describe("manual production orders in the UI and API", () => {
     expect(await user.text("[role=dialog][data-state=open]")).toContain("30 kg");
     await user.select("[role=dialog][data-state=open] [name=bom]", alternative); await user.click("[role=dialog][data-state=open] button[type=submit]");
     await user.waitUntil('![...document.querySelectorAll("[role=dialog], [data-slot=dialog-overlay]")].some((el) => el.getClientRects().length > 0)');
-    await user.waitUntil('location.pathname.split("/").at(-2) === "production-orders" && /^[0-9]{8}$/.test(location.pathname.split("/").at(-1)) && !!document.querySelector("main [role=status]")');
+    await user.waitUntil('location.pathname.split("/").at(-2) === "production-orders" && /^[0-9]{8}$/.test(location.pathname.split("/").at(-1)) && !!document.querySelector("main [data-slot=callout]")');
     const id = (await user.url()).split("/").at(-1)!;
     expect(await detail(id)).toMatchObject({ bom: alternative, revision: 1, quantity: "60.000000" });
-    expect(await user.text("main [role=status]")).toContain("Component shortage");
+    expect(await user.text("main [data-slot=callout][data-tone=warning]")).toContain("1 component short");
     await clickHydrated(user, "main button"); await user.waitFor("[role=dialog][data-state=open]");
     await user.fill("[role=dialog][data-state=open] [name=quantity]", "65"); await user.fillDate("[role=dialog][data-state=open] [name=plannedFinish]", "2026-10-16");
     await user.click("[role=dialog][data-state=open] button[type=submit]"); await user.waitUntil('!document.querySelector("[role=dialog][data-state=open]")');

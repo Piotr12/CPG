@@ -113,7 +113,7 @@ describe("document cancellation and early closure", () => {
     const order = await create("purchase-orders", { supplier, location, lines: [{ material, quantity: "4", unit: "kg", plannedDate: "2027-01-02", requisition: source.id }] });
     // The newest requisition is on the list's last page, which a page past it shows (#187).
     await open("purchase-requisitions?page=1000000");
-    await confirm(`Close Early — Purchase requisitions ${source.id}`, "6 kg");
+    await confirm(`Close requisition early… — Purchase requisitions ${source.id}`, "6 kg");
     expect(await get("purchase-requisitions", source.id)).toMatchObject({ status: "closed-early", converted: "4.000000", abandoned: "6.000000", outstanding: "0.000000" });
     expect((await get("purchase-orders", order.id)).lines[0]).toMatchObject({ quantity: "4.000000", requisition: source.id });
   });
@@ -126,9 +126,9 @@ describe("document cancellation and early closure", () => {
     const partial = await get("customer-orders", order.id);
     expect((await write(`${root}/customer-orders/${order.id}/cancel`, { version: partial.version })).status).toBe(409);
     await open("customer-orders", order.id);
-    await confirm(`Cancel — Customer orders ${order.id} — Line 2`, "10 kg");
+    await confirm(`Cancel line… — Customer orders ${order.id} — Line 2`, "10 kg");
     expect((await get("customer-orders", order.id)).status).toBe("open");
-    await confirm(`Close Early — Customer orders ${order.id}`, "6 kg");
+    await confirm(`Close order early… — Customer orders ${order.id}`, "6 kg");
     const closed = await get("customer-orders", order.id);
     expect(closed.status).toBe("closed-early");
     expect(closed.lines.map((line: { status: string; fulfilled: string; abandoned: string }) => [line.status, line.fulfilled, line.abandoned]))
@@ -140,7 +140,7 @@ describe("document cancellation and early closure", () => {
   it("keeps a cancellation conflict visible when another editor removes the selected customer-order line", async () => {
     const order = await co();
     await open("customer-orders", order.id);
-    const label = `Cancel — Customer orders ${order.id} — Line 2`;
+    const label = `Cancel line… — Customer orders ${order.id} — Line 2`;
     await user.waitUntil(`[...document.querySelectorAll("main button")].some((button) => button.getAttribute("aria-label") === ${JSON.stringify(label)} && Object.keys(button).some((key) => key.startsWith("__reactFiber")))`);
     await user.clickRole("button", label); await user.waitFor(dialog);
     const retained = order.lines[0];
@@ -172,7 +172,7 @@ describe("document cancellation and early closure", () => {
     const received = (await stock()).quantity;
     expect(Number(received) - Number(before)).toBe(3);
     await open("purchase-orders", another.id);
-    await confirm(`Close Early — Purchase orders ${another.id}`, "7 kg");
+    await confirm(`Close order early… — Purchase orders ${another.id}`, "7 kg");
     expect((await get("purchase-orders", another.id)).lines[0]).toMatchObject({ received: "3.000000", abandoned: "7.000000", outstanding: "0.000000", status: "closed-early" });
     expect((await stock()).quantity).toBe(received);
   });
@@ -191,7 +191,7 @@ describe("document cancellation and early closure", () => {
       expect(json(await write(`${root}/${concept}/${order.id}/cancel`, { version: current.version })).error.code).toBe("DOCUMENT_PROCESSED");
       await open(concept, order.id);
       const title = concept === "purchase-orders" ? "Purchase orders" : "Customer orders";
-      await confirm(`Close Early — ${title} ${order.id}`, "10 kg");
+      await confirm(`Close order early… — ${title} ${order.id}`, "10 kg");
       const closed = await get(concept, order.id);
       expect(closed.status).toBe("closed-early");
       expect(closed.lines[0]).toMatchObject({ status: "closed-early", abandoned: "10.000000" });
@@ -216,7 +216,7 @@ describe("document cancellation and early closure", () => {
       await user.waitFor('table[aria-label="Lines"] tbody td');
       expect(await user.evaluate<number>(`document.querySelector('table[aria-label="Lines"] tbody td').getBoundingClientRect().width`)).toBeGreaterThanOrEqual(128);
       expect(await user.evaluate<boolean>('document.documentElement.scrollWidth <= innerWidth')).toBe(true);
-      await user.clickRole("button", `Close Early — Customer orders ${order.id}`);
+      await user.clickRole("button", `Close order early… — Customer orders ${order.id}`);
       await user.waitFor(dialog);
       expect(await user.evaluate<boolean>(`(() => {
         const dialog = document.querySelector('[role="dialog"]');
@@ -237,7 +237,7 @@ describe("document cancellation and early closure", () => {
     expect(partial.hasProcessing).toBe(true);
     expect(json(await write(`${root}/production-orders/${order.id}/cancel`, { version: partial.version })).error.code).toBe("DOCUMENT_PROCESSED");
     await open("production-orders", order.id);
-    await confirm(`Close Early — Production orders ${order.id}`, "10 each");
+    await confirm(`Close order early… — Production orders ${order.id}`, "10 each");
     expect(await get("production-orders", order.id)).toMatchObject({ status: "closed-early", produced: "0.000000", abandoned: "10.000000", outstanding: "0.000000" });
     expect((await stock()).quantity).toBe("98.000000");
   });
@@ -246,19 +246,20 @@ describe("document cancellation and early closure", () => {
     await correct();
     const order = await create("production-orders", { output, location, quantity: "200", unit: "each", plannedFinish: "2027-01-02" });
     expect((await write(`${root}/production-orders/${order.id}/completions`, { quantity: "40", unit: "each", components: [{ material, quantity: "40", unit: "kg" }] })).status).toBe(200);
-    // Shown statuses only: Next.js keeps earlier pages mounted but hidden.
-    const statuses = () => user.evaluate<string[]>('[...document.querySelectorAll("main [role=status]")].filter((element) => element.offsetParent).map((element) => element.textContent)');
+    // Shown callouts only: Next.js keeps earlier pages mounted but hidden.
+    const callouts = () => user.evaluate<string[]>('[...document.querySelectorAll("main [data-slot=callout]")].filter((element) => element.offsetParent).map((element) => `${element.dataset.tone}: ${element.textContent}`)');
     const requirements = () => user.evaluate<string[]>(`[...document.querySelectorAll('main table[aria-label="Pinned component requirements and current stock"] tbody td')].filter((cell) => cell.closest("table").offsetParent).map((cell) => cell.textContent)`);
     const partial = await get("production-orders", order.id);
     // 160 still to make at 1 kg each, against the 60 kg left after the completion.
     expect(partial).toMatchObject({ status: "open", produced: "40.000000", outstanding: "160.000000",
       components: [expect.objectContaining({ material, required: "160.000000", available: "60.000000", shortage: "100.000000" })] });
     await open("production-orders", order.id);
-    await user.waitForText("Component shortage: you can still create this plan.");
+    await user.waitForText("1 component short");
+    expect(await callouts()).toEqual(["warning: 1 component shortYou can still create this plan; stock is checked when a completion is posted."]);
     expect(await requirements()).toEqual([`${material} Lifecycle steel`, "160 kg", "60 kg", "100 kg"]);
-    await confirm(`Close Early — Production orders ${order.id}`, "160 each");
+    await confirm(`Close order early… — Production orders ${order.id}`, "160 each");
     await user.waitForText("This order is Closed Early, so it needs no more components.");
-    expect((await statuses()).some((text) => text.startsWith("Component shortage"))).toBe(false);
+    expect(await callouts()).toEqual(["neutral: This order is Closed Early, so it needs no more components."]);
     expect(await requirements()).toEqual([`${material} Lifecycle steel`, "0 kg", "60 kg", "0 kg"]);
     expect(await get("production-orders", order.id)).toMatchObject({ status: "closed-early", outstanding: "0.000000", shortages: [],
       components: [expect.objectContaining({ material, required: "0.000000", shortage: "0.000000" })] });
@@ -269,7 +270,7 @@ describe("document cancellation and early closure", () => {
     await correct(); const order = await transfer();
     expect((await write(`${root}/transfers/${order.id}/dispatches`, { quantity: "10", unit: "kg" })).status).toBe(200);
     await user.setViewport(390, 844); await open("transfers", order.id);
-    await user.clickRole("button", `Close Early — Transfers ${order.id}`); await user.waitFor(dialog);
+    await user.clickRole("button", `Close transfer early… — Transfers ${order.id}`); await user.waitFor(dialog);
     expect(await user.text(dialog)).toContain("10 kg still in transit");
     await user.click(`${dialog} button[type=submit]`); await user.waitFor(`${dialog} [role=alert]`);
     expect(await user.text(`${dialog} [role=alert]`)).toContain("10.000000 kg still in transit");
@@ -277,7 +278,7 @@ describe("document cancellation and early closure", () => {
     await user.clickRole("button", "Keep open");
     expect((await write(`${root}/transfers/${order.id}/receipts`, { quantity: "8", unit: "kg" })).status).toBe(200);
     expect((await write(`${root}/transfers/${order.id}/write-offs`, { quantity: "2", unit: "kg", reason: "Lost" })).status).toBe(200);
-    await open("transfers", order.id); await confirm(`Close Early — Transfers ${order.id}`, "2 kg");
+    await open("transfers", order.id); await confirm(`Close transfer early… — Transfers ${order.id}`, "2 kg");
     expect(await get("transfers", order.id)).toMatchObject({ status: "closed-early", received: "8.000000", writtenOff: "2.000000", abandoned: "2.000000", inTransit: "0.000000", outstanding: "0.000000" });
     expect((await stock()).quantity).toBe("90.000000"); await user.setViewport(1280, 800);
   });
