@@ -87,6 +87,7 @@ export const en = {
     heading: "Users",
     neverDeleted: "Users are never deleted. Deactivate an account to end its access; its history keeps its name.",
     empty: "No accounts yet.",
+    search: { label: "Search users", hint: "Matches the username." },
     columns: { username: "Username", role: "Role", status: "Status", created: "Created", actions: "Actions" },
     roles: { admin: "admin", user: "user" },
     status: { active: "Active", inactive: "Inactive" },
@@ -311,6 +312,7 @@ export const en = {
     empty: "No locations in {tenant} yet.",
     emptyHint: "Create the first one with Create location.",
     emptyReader: "Ask an administrator to add locations.",
+    search: { label: "Search locations", hint: "Matches the ID or the name." },
     columns: { id: "ID", name: "Name", status: "Status", actions: "Actions" },
     status: { active: "Active", inactive: "Inactive" },
     cancel: "Cancel",
@@ -365,6 +367,7 @@ export const en = {
     empty: "No customers in {tenant} yet.",
     emptyHint: "Create the first one with Create customer.",
     emptyReader: "Ask an administrator to add customers.",
+    search: { label: "Search customers", hint: "Matches the ID or the name." },
     columns: { id: "ID", name: "Name", status: "Status", actions: "Actions" },
     status: { active: "Active", inactive: "Inactive" },
     cancel: "Cancel",
@@ -419,6 +422,7 @@ export const en = {
     empty: "No suppliers in {tenant} yet.",
     emptyHint: "Create the first one with Create supplier.",
     emptyReader: "Ask an administrator to add suppliers.",
+    search: { label: "Search suppliers", hint: "Matches the ID or the name." },
     columns: { id: "ID", name: "Name", status: "Status", actions: "Actions" },
     status: { active: "Active", inactive: "Inactive" },
     cancel: "Cancel",
@@ -472,6 +476,7 @@ export const en = {
     empty: "No planning parameters in {tenant} yet.",
     emptyHint: "Add the first set with Add parameters.",
     emptyReader: "Ask an administrator to add planning parameters.",
+    search: { label: "Search planning parameters", hint: "Matches the material's ID or description, or the location's ID or name." },
     columns: {
       material: "Material",
       location: "Location",
@@ -547,6 +552,7 @@ export const en = {
     empty: "No safety-stock targets in {tenant} yet.",
     emptyHint: "Add the first one with Add target.",
     emptyReader: "Ask an administrator to add safety-stock targets.",
+    search: { label: "Search safety stock", hint: "Matches the material's ID or description, or the location's ID or name." },
     columns: {
       material: "Material",
       location: "Location",
@@ -836,6 +842,7 @@ export const en = {
     empty: "No BOMs in {tenant} yet.",
     emptyHint: "Create the first one with Create BOM.",
     emptyReader: "Ask an administrator to add BOMs.",
+    search: { label: "Search BOMs", hint: "Matches the BOM ID or the output's ID or description." },
     allBoms: "All BOMs",
     columns: {
       id: "BOM",
@@ -878,7 +885,6 @@ export const en = {
     form: {
       output: "Output",
       outputHint: "An intermediate or finished material. It can't change later: make a new BOM instead.",
-      choose: "Choose…",
       priority: "Priority",
       priorityHint: "1 is the highest. Two active alternatives for one output can't share a priority on the same days.",
       validFrom: "Valid from",

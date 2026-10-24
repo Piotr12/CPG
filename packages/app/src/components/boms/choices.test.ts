@@ -22,16 +22,16 @@ const MATERIALS = [
 describe("recipe choices", () => {
   it("offer active intermediate and finished materials as outputs (R02, MAT-029)", () => {
     expect(outputChoices(MATERIALS)).toEqual([
-      { value: "00000002", label: "00000002 — M00000002 (each)", description: "M00000002", baseUnit: "each" },
-      { value: "00000003", label: "00000003 — M00000003 (each)", description: "M00000003", baseUnit: "each" },
+      { value: "00000002", code: "00000002", name: "M00000002", detail: "each", baseUnit: "each" },
+      { value: "00000003", code: "00000003", name: "M00000003", detail: "each", baseUnit: "each" },
     ]);
   });
 
   it("offer active raw and intermediate components with their units, and inactive ones the recipe keeps (spec Q10)", () => {
     const units = { "00000001": ["each", "case"], "00000002": ["each"], "00000004": ["each"] };
-    expect(componentChoices(MATERIALS, units).map(({ value, units }) => [value, units])).toEqual([
-      ["00000001", ["each", "case"]],
-      ["00000002", ["each"]],
+    expect(componentChoices(MATERIALS, units)).toEqual([
+      { value: "00000001", code: "00000001", name: "M00000001", detail: "each", units: ["each", "case"] },
+      { value: "00000002", code: "00000002", name: "M00000002", detail: "each", units: ["each"] },
     ]);
     expect(componentChoices(MATERIALS, units, ["00000004", "00000005"]).map(({ value }) => value)).toEqual(["00000001", "00000002", "00000004"]);
   });

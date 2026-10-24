@@ -1,5 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import type { SortDirection } from "@cpg/core/validators/lists/list-query.schema";
+import type { SafetyStockSort } from "@cpg/core/validators/safety-stock/safety-stock-list.schema";
 import { en } from "../../i18n/messages/en";
 import { SafetyStockScreen } from "./safety-stock-screen";
 
@@ -10,7 +12,8 @@ const MATERIALS = [{ id: "00000005", type: "finished" as const, description: "Ca
 const LOCATIONS = [{ id: "00000001", name: "Main plant", active: true, createdAt: new Date(), version: 1 }];
 const target = (effectiveFrom: string) => ({ material: "00000005", location: "00000001", effectiveFrom, quantity: "10.000000", version: 1 });
 const TENANT = { code: "test", name: "Test", generation: 1, readOnly: false };
-const renderScreen = (targets: object[], admin = true) =>
+const LIST = { search: { q: "", typed: "" }, sort: { sort: "material" as SafetyStockSort, dir: "asc" as SortDirection } };
+const renderScreen = (targets: object[], admin = true, list = LIST) =>
   render(
     <SafetyStockScreen
       tenant={TENANT}
@@ -21,6 +24,7 @@ const renderScreen = (targets: object[], admin = true) =>
       locale="en"
       messages={en}
       admin={admin}
+      {...list}
     />,
   );
 
@@ -50,6 +54,23 @@ describe("SafetyStockScreen", () => {
     renderScreen([], false);
 
     expect(screen.getByText("Ask an administrator to add safety-stock targets.")).toBeTruthy();
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryAllByRole("button").map((button) => button.textContent)).toEqual(["Search"]);
+  });
+
+  it("searches above the list, sorts by every column but the decimal target, and marks the matches (#217)", () => {
+    renderScreen([target("2027-01-01")], false, { search: { q: "0005 main", typed: "0005 main" }, sort: { sort: "status", dir: "desc" } });
+
+    expect(screen.getByRole("searchbox", { name: "Search safety stock" })).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toBe("1 result for “0005 main” · Clear search");
+    expect(screen.getByRole("link", { name: "Clear search" }).getAttribute("href")).toBe("/admin/test/safety-stock?sort=status&dir=desc");
+    expect(screen.getAllByRole("columnheader").map((header) => header.getAttribute("aria-sort"))).toEqual(["none", "none", "none", null, "descending"]);
+    expect(screen.getByRole("link", { name: "Effective from" }).getAttribute("href")).toBe("/admin/test/safety-stock?q=0005+main&sort=effectiveFrom&dir=asc");
+    expect([...document.querySelectorAll("mark")].map((mark) => mark.textContent)).toEqual(["0005", "Main"]);
+  });
+
+  it("says when nothing matches, with the way back to the whole list (#217)", () => {
+    renderScreen([], false, { search: { q: "brass", typed: "brass" }, sort: LIST.sort });
+
+    expect(screen.getByRole("cell").textContent).toBe("Nothing matches “brass”. Clear search");
   });
 });

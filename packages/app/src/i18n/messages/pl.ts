@@ -80,6 +80,7 @@ export const pl: Messages = {
     heading: "Użytkownicy",
     neverDeleted: "Użytkownicy nigdy nie są usuwani. Dezaktywuj konto, aby odebrać dostęp; historia zachowa jego nazwę.",
     empty: "Nie ma jeszcze kont.",
+    search: { label: "Szukaj użytkowników", hint: "Dopasowuje nazwę użytkownika." },
     columns: { username: "Nazwa użytkownika", role: "Rola", status: "Stan", created: "Utworzono", actions: "Akcje" },
     roles: { admin: "administrator", user: "użytkownik" },
     status: { active: "Aktywny", inactive: "Nieaktywny" },
@@ -294,6 +295,7 @@ export const pl: Messages = {
     empty: "W środowisku {tenant} nie ma jeszcze lokalizacji.",
     emptyHint: "Utwórz pierwszą przyciskiem Utwórz lokalizację.",
     emptyReader: "Poproś administratora o dodanie lokalizacji.",
+    search: { label: "Szukaj lokalizacji", hint: "Dopasowuje ID albo nazwę." },
     columns: { id: "ID", name: "Nazwa", status: "Status", actions: "Akcje" },
     status: { active: "Aktywny", inactive: "Nieaktywny" },
     cancel: "Anuluj",
@@ -342,6 +344,7 @@ export const pl: Messages = {
     empty: "W środowisku {tenant} nie ma jeszcze klientów.",
     emptyHint: "Utwórz pierwszego przyciskiem Utwórz klienta.",
     emptyReader: "Poproś administratora o dodanie klientów.",
+    search: { label: "Szukaj klientów", hint: "Dopasowuje ID albo nazwę." },
     columns: { id: "ID", name: "Nazwa", status: "Status", actions: "Akcje" },
     status: { active: "Aktywny", inactive: "Nieaktywny" },
     cancel: "Anuluj",
@@ -390,6 +393,7 @@ export const pl: Messages = {
     empty: "W środowisku {tenant} nie ma jeszcze dostawców.",
     emptyHint: "Utwórz pierwszego przyciskiem Utwórz dostawcę.",
     emptyReader: "Poproś administratora o dodanie dostawców.",
+    search: { label: "Szukaj dostawców", hint: "Dopasowuje ID albo nazwę." },
     columns: { id: "ID", name: "Nazwa", status: "Status", actions: "Akcje" },
     status: { active: "Aktywny", inactive: "Nieaktywny" },
     cancel: "Anuluj",
@@ -439,6 +443,7 @@ export const pl: Messages = {
     empty: "Brak parametrów planowania w {tenant}.",
     emptyHint: "Dodaj pierwszy zestaw przyciskiem Dodaj parametry.",
     emptyReader: "Poproś administratora o dodanie parametrów planowania.",
+    search: { label: "Szukaj w parametrach planowania", hint: "Dopasowuje ID lub opis materiału albo ID lub nazwę lokalizacji." },
     columns: {
       material: "Materiał",
       location: "Lokalizacja",
@@ -512,6 +517,7 @@ export const pl: Messages = {
     empty: "Brak celów zapasu bezpieczeństwa w {tenant}.",
     emptyHint: "Dodaj pierwszy przyciskiem Dodaj cel.",
     emptyReader: "Poproś administratora o dodanie celów zapasu bezpieczeństwa.",
+    search: { label: "Szukaj w zapasie bezpieczeństwa", hint: "Dopasowuje ID lub opis materiału albo ID lub nazwę lokalizacji." },
     columns: {
       material: "Materiał",
       location: "Lokalizacja",
@@ -797,6 +803,7 @@ export const pl: Messages = {
     empty: "Brak BOM-ów w {tenant}.",
     emptyHint: "Utwórz pierwszy przyciskiem Utwórz BOM.",
     emptyReader: "Poproś administratora o dodanie BOM-ów.",
+    search: { label: "Szukaj BOM-ów", hint: "Dopasowuje ID BOM-u albo ID lub opis wyrobu." },
     allBoms: "Wszystkie BOM-y",
     columns: {
       id: "BOM",
@@ -839,7 +846,6 @@ export const pl: Messages = {
     form: {
       output: "Wyrób",
       outputHint: "Półprodukt lub wyrób gotowy. Nie można go później zmienić: utwórz wtedy nowy BOM.",
-      choose: "Wybierz…",
       priority: "Priorytet",
       priorityHint: "1 to najwyższy. Dwie aktywne alternatywy jednego wyrobu nie mogą mieć tego samego priorytetu w tych samych dniach.",
       validFrom: "Ważny od",

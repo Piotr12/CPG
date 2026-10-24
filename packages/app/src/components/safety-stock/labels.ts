@@ -5,9 +5,16 @@ import {
 } from "@cpg/core/validators/planning-parameters/planning-parameter-fields.schema";
 import { QUANTITY_MESSAGE } from "@cpg/core/validators/quantities/quantity.schema";
 import type { Messages } from "../../i18n/messages/en";
+import { materialPicker, type MaterialPickerLabels } from "../master-data/references";
 
-/** The safety stock screen's strings in the reader's language: plain strings for client components. */
-export type SafetyStockLabels = Omit<Messages["safetyStock"], "heading" | "errors"> & { errors: Record<string, string> };
+/**
+ * The safety stock screen's strings in the reader's language: plain strings for client components;
+ * `picker` is the shared material picker's words (#217).
+ */
+export type SafetyStockLabels = Omit<Messages["safetyStock"], "heading" | "errors"> & {
+  errors: Record<string, string>;
+  picker: MaterialPickerLabels;
+};
 
 /** Builds the labels from a dictionary (server side, where `messages` is available). */
 export function safetyStockLabels(messages: Messages): SafetyStockLabels {
@@ -16,6 +23,7 @@ export function safetyStockLabels(messages: Messages): SafetyStockLabels {
   return {
     ...(labels as Omit<Messages["safetyStock"], "heading">),
     errors: { ...messages.errors, ...messages.safetyStock.errors },
+    picker: materialPicker(messages.lists),
   };
 }
 

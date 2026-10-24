@@ -616,6 +616,42 @@ describe("BomService", () => {
 
       expect((await service().list()).map(({ id }) => id)).toEqual(["00000002", "00000003", "00000001", "00000004"]);
     });
+
+    describe("sorted and searched (#217)", () => {
+      beforeEach(async () => {
+        await service().create({ ...CABINET, priority: 2, validFrom: "2030-01-01", validThrough: "2030-01-31" }, ACTOR);
+        await service().create(simple("00000004", "00000006"), ACTOR);
+        await service().create(CABINET, ACTOR);
+        const revised = await service().create(simple("00000008", "00000006", { validFrom: "2026-06-01" }), ACTOR);
+        await service().update(revised.id, { priority: 3 }, revised.version, ACTOR);
+        await service().update("00000002", { active: false }, 1, ACTOR);
+        await seedMaterials(orm, "test");
+        await service("test").create(simple("00000004", "00000006"), ACTOR);
+      });
+
+      const ids = (boms: { id: string }[]) => boms.map(({ id }) => id);
+
+      it("sorts by each column, both ways, by BOM ID within equal values, past the identity map's order", async () => {
+        expect(ids(await service().list({ sort: "id", dir: "desc" }))).toEqual(["00000004", "00000003", "00000002", "00000001"]);
+        expect(ids(await service().list({ sort: "output", dir: "desc" }))).toEqual(["00000004", "00000003", "00000001", "00000002"]);
+        expect(ids(await service().list({ sort: "priority", dir: "desc" }))).toEqual(["00000004", "00000001", "00000002", "00000003"]);
+        expect(ids(await service().list({ sort: "revision", dir: "desc" }))).toEqual(["00000004", "00000001", "00000002", "00000003"]);
+        expect(ids(await service().list({ sort: "validFrom" }))).toEqual(["00000004", "00000002", "00000003", "00000001"]);
+        expect(ids(await service().list({ sort: "validThrough" }))).toEqual(["00000001", "00000002", "00000003", "00000004"]);
+        expect(ids(await service().list({ sort: "status" }))).toEqual(["00000002", "00000001", "00000003", "00000004"]);
+      });
+
+      it("keeps BOMs whose ID or output's ID or description holds every word, ignoring ASCII case, in this tenant only", async () => {
+        expect(ids(await service().list({ q: "CABINET" }))).toEqual(["00000003", "00000001"]);
+        expect(ids(await service().list({ q: "cabinet 0001" }))).toEqual(["00000001"]);
+        expect(ids(await service().list({ q: "00000008" }))).toEqual(["00000004"]);
+        expect(ids(await service().list({ q: "panel" }))).toEqual(["00000002"]);
+        // A component isn't searched: the box is in every recipe.
+        expect(ids(await service().list({ q: "cardboard" }))).toEqual([]);
+        expect(ids(await service().list({ q: "red", sort: "id", dir: "desc" }))).toEqual(["00000003", "00000001"]);
+        expect(ids(await service("test").list({ q: "panel" }))).toEqual(["00000001"]);
+      });
+    });
   });
 
   describe("seedDemo", () => {

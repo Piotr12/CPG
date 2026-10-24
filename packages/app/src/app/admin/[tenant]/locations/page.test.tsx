@@ -43,7 +43,8 @@ const records = [
   { id: "00000001", name: "First", active: true, createdAt: new Date(), version: 1 },
   { id: "00000002", name: "Second", active: false, createdAt: new Date(), version: 2 },
 ];
-const page = (tenant: string) => LocationsPage({ params: Promise.resolve({ tenant }), searchParams: Promise.resolve({}) });
+const page = (tenant: string, searchParams: Record<string, string> = {}) =>
+  LocationsPage({ params: Promise.resolve({ tenant }), searchParams: Promise.resolve(searchParams) });
 
 describe("LocationsPage", () => {
   beforeEach(() => {
@@ -76,7 +77,7 @@ describe("LocationsPage", () => {
 
     expect(screen.getByRole("heading", { name: "Lokalizacje — Test" }).closest("[lang]")?.getAttribute("lang")).toBe("pl");
     expect(screen.getByText("First")).toBeTruthy();
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryAllByRole("button").map((button) => button.textContent)).toEqual([pl.lists.search]);
   });
 
   it("offers the admin no control while the tenant is read-only (R05)", async () => {
@@ -87,7 +88,24 @@ describe("LocationsPage", () => {
     render(await resolveServerComponents(page("test")));
 
     expect(screen.getByText("Second")).toBeTruthy();
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryAllByRole("button").map((button) => button.textContent)).toEqual([en.lists.search]);
+  });
+
+  it("lists by ID when the address asks for nothing, and searches and sorts on the server as it says (#217)", async () => {
+    render(await resolveServerComponents(page("test")));
+    expect(mocks.list).toHaveBeenLastCalledWith({ q: "", sort: "id", dir: "asc" });
+    expect(screen.getByRole("columnheader", { name: "ID" }).getAttribute("aria-sort")).toBe("ascending");
+
+    render(await resolveServerComponents(page("test", { q: " second ", sort: "name", dir: "desc" })));
+    expect(mocks.list).toHaveBeenLastCalledWith({ q: "second", sort: "name", dir: "desc" });
+    expect(screen.getByRole("link", { name: "Clear search" }).getAttribute("href")).toBe("/admin/test/locations?sort=name&dir=desc");
+  });
+
+  it("refuses a search past the limits in the form, listing everything, and ignores an unknown sort (#217)", async () => {
+    render(await resolveServerComponents(page("test", { q: "a b c d e f", sort: "uuid" })));
+
+    expect(mocks.list).toHaveBeenCalledWith({ q: "", sort: "id", dir: "asc" });
+    expect(screen.getByRole("searchbox").getAttribute("aria-invalid")).toBe("true");
   });
 
   it("reads nothing for a visitor the gate refuses", async () => {

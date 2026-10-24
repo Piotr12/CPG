@@ -141,6 +141,36 @@ describe.each(KINDS)("$Service.name", ({ Service, subjectType, prefix, code, nou
       ]);
     });
 
+    describe("sorted and searched (#217)", () => {
+      beforeEach(async () => {
+        await service().create({ name: "North hall" }, ACTOR);
+        await service().create({ name: "Annex" }, ACTOR);
+        await service().create({ name: "North hall" }, ACTOR);
+        await service().create({ name: "south yard" }, ACTOR);
+        await service().update("00000002", { active: false }, 1, ACTOR);
+        await service("test").create({ name: "North test" }, ACTOR);
+      });
+
+      const ids = (records: { id: string }[]) => records.map(({ id }) => id);
+
+      it("sorts by ID, name and status, both ways, by ID within equal values", async () => {
+        expect(ids(await service().list({ sort: "id", dir: "desc" }))).toEqual(["00000004", "00000003", "00000002", "00000001"]);
+        expect(ids(await service().list({ sort: "name" }))).toEqual(["00000002", "00000001", "00000003", "00000004"]);
+        expect(ids(await service().list({ sort: "name", dir: "desc" }))).toEqual(["00000004", "00000001", "00000003", "00000002"]);
+        expect(ids(await service().list({ sort: "status" }))).toEqual(["00000002", "00000001", "00000003", "00000004"]);
+        expect(ids(await service().list({ sort: "status", dir: "desc" }))).toEqual(["00000001", "00000003", "00000004", "00000002"]);
+      });
+
+      it("keeps records whose ID or name holds every word, ignoring ASCII case, in this tenant only", async () => {
+        expect(ids(await service().list({ q: "NORTH" }))).toEqual(["00000001", "00000003"]);
+        expect(ids(await service().list({ q: "hall 0003" }))).toEqual(["00000003"]);
+        expect(ids(await service().list({ q: "0002" }))).toEqual(["00000002"]);
+        expect(ids(await service().list({ q: "north yard" }))).toEqual([]);
+        expect(ids(await service().list({ q: "yard", sort: "name", dir: "desc" }))).toEqual(["00000004"]);
+        expect(ids(await service("test").list({ q: "north" }))).toEqual(["00000001"]);
+      });
+    });
+
     it("doesn't find an unknown or malformed ID, or another tenant's (TEN-014)", async () => {
       await service("prod").create({ name: "Prod only" }, ACTOR);
 

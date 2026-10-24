@@ -4,6 +4,7 @@ import { CircleAlert } from "lucide-react";
 import { useId, useState, useTransition, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import type { ApiResult, FieldErrors } from "@cpg/ui/backend/api/result";
 import { ErrorMessage } from "@cpg/ui/backend/feedback/error-message";
+import { Autocomplete, type AutocompleteOption } from "@cpg/ui/backend/forms/autocomplete";
 import { toFieldErrors, type FormSchema } from "@cpg/ui/backend/forms/crud-form";
 import { Button } from "@cpg/ui/components/button";
 import { Input } from "@cpg/ui/components/input";
@@ -11,18 +12,13 @@ import { Label } from "@cpg/ui/components/label";
 import { NativeSelect, NativeSelectOption } from "@cpg/ui/components/native-select";
 import { errorFormatter, fieldErrorFormatter, fill, type BomsLabels } from "./labels";
 
-/** A material a line may pick: its label and the units a quantity of it may be entered in, base unit first. */
-export interface ComponentChoice {
-  value: string;
-  label: string;
+/** A material a line may pick (#217): its picker option and the units a quantity of it may be entered in, base unit first. */
+export interface ComponentChoice extends AutocompleteOption {
   units: string[];
 }
 
-/** A material the BOM may make, with what the components heading says about it. */
-export interface OutputChoice {
-  value: string;
-  label: string;
-  description: string;
+/** A material the BOM may make (#217), with the base unit the components heading names; its `name` is the description. */
+export interface OutputChoice extends AutocompleteOption {
   baseUnit: string;
 }
 
@@ -49,6 +45,8 @@ export interface RecipeFormProps<T> {
   /** An edit's fixed output. */
   output?: { description: string; baseUnit: string };
   choices: ComponentChoice[];
+  /** The reader's language, for the material pickers' plural forms. */
+  locale: string;
   /** What the form starts with: an edit's current revision as entered. */
   initial?: RecipeValues;
   schema: FormSchema;
@@ -63,16 +61,18 @@ const EMPTY_LINE: LineValues = { material: "", quantity: "", unit: "" };
 
 /**
  * The create and edit form of a BOM's recipe (spec Q12): the output (on create), priority, validity,
- * and a variable list of component lines, each with its own unit choices. Not a `CrudForm`, which
- * holds one string per field, but it keeps its conventions: client-side checks with the shared
- * schema, server field errors under the field they name (`components.2.unit` under line 3's unit),
- * other errors above the buttons, a pending state, `Cmd/Ctrl+Enter` to submit and `Escape` to cancel.
+ * and a variable list of component lines, each with its own unit choices. Materials are chosen with
+ * an `Autocomplete` (#217). Not a `CrudForm`, which holds one string per field, but it keeps its
+ * conventions: client-side checks with the shared schema, server field errors under the field they
+ * name (`components.2.unit` under line 3's unit), other errors above the buttons, a pending state,
+ * `Cmd/Ctrl+Enter` to submit and `Escape` to cancel (unless an open material list claims it).
  */
 export function RecipeForm<T>({
   labels,
   outputs,
   output,
   choices,
+  locale,
   initial,
   schema,
   action,
@@ -95,7 +95,9 @@ export function RecipeForm<T>({
   const formatFieldError = fieldErrorFormatter(labels);
   // An edit keeps a line's entered unit even when its conversion was removed since (spec Q12).
   const keptUnits = new Map((initial?.components ?? []).map(({ material, unit }) => [material, unit]));
-  const chosenOutput = outputs?.find(({ value }) => value === values.output) ?? output;
+  const chosen = outputs?.find(({ value }) => value === values.output);
+  const chosenOutput = chosen ? { description: chosen.name, baseUnit: chosen.baseUnit } : output;
+  const picker = { options: choices, labels: labels.picker, locale, placeholder: labels.picker.placeholder };
 
   const set = (changes: Partial<RecipeValues>) => setValues((current) => ({ ...current, ...changes }));
   const setLine = (index: number, changes: Partial<LineValues>) =>
@@ -133,6 +135,8 @@ export function RecipeForm<T>({
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLFormElement>) {
+    // A control that handled the key itself (a material list closing) keeps it.
+    if (event.defaultPrevented) return;
     if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
       event.currentTarget.requestSubmit();
@@ -185,16 +189,13 @@ export function RecipeForm<T>({
       {outputs && (
         <div className="flex flex-col gap-2">
           <Label htmlFor={outputControl.props.id}>{t.output}</Label>
-          <NativeSelect className="w-full" value={values.output} onChange={(event) => set({ output: event.target.value })} {...outputControl.props}>
-            <NativeSelectOption value="" disabled>
-              {t.choose}
-            </NativeSelectOption>
-            {outputs.map((choice) => (
-              <NativeSelectOption key={choice.value} value={choice.value}>
-                {choice.label}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
+          <Autocomplete
+            {...picker}
+            {...outputControl.props}
+            options={outputs}
+            value={values.output ?? ""}
+            onChange={(value) => set({ output: value })}
+          />
           {outputControl.node}
         </div>
       )}
@@ -228,26 +229,17 @@ export function RecipeForm<T>({
           const material = control(`components.${index}.material`);
           const quantity = control(`components.${index}.quantity`);
           const unit = control(`components.${index}.unit`);
-          const chosen = choices.find(({ value }) => value === line.material);
+          const chosenLine = choices.find(({ value }) => value === line.material);
           return (
             <div key={keys[index]} className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[2fr_1fr_1fr_auto] sm:items-start" data-line={index}>
               <div className="col-span-2 flex flex-col gap-1 sm:col-span-1">
-                <NativeSelect
-                  className="w-full"
+                <Autocomplete
+                  {...picker}
+                  {...material.props}
                   aria-label={lineLabel(t.material)}
                   value={line.material}
-                  onChange={(event) => setLine(index, { material: event.target.value, unit: unitsOf(event.target.value)[0] ?? "" })}
-                  {...material.props}
-                >
-                  <NativeSelectOption value="" disabled>
-                    {t.choose}
-                  </NativeSelectOption>
-                  {choices.map((choice) => (
-                    <NativeSelectOption key={choice.value} value={choice.value}>
-                      {choice.label}
-                    </NativeSelectOption>
-                  ))}
-                </NativeSelect>
+                  onChange={(value) => setLine(index, { material: value, unit: unitsOf(value)[0] ?? "" })}
+                />
                 {material.node}
               </div>
               <div className="flex flex-col gap-1">
@@ -273,7 +265,7 @@ export function RecipeForm<T>({
               <Button
                 type="button"
                 variant="outline"
-                aria-label={chosen ? fill(t.removeComponent, { material: chosen.label }) : t.removeEmpty}
+                aria-label={chosenLine ? fill(t.removeComponent, { material: `${chosenLine.code} — ${chosenLine.name}` }) : t.removeEmpty}
                 disabled={isPending}
                 onClick={() => {
                   set({ components: values.components.filter((_, at) => at !== index) });

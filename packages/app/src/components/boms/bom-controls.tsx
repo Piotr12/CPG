@@ -18,6 +18,8 @@ interface BomControlsProps {
   context: TenantContext;
   labels: BomsLabels;
   choices: ComponentChoice[];
+  /** The reader's language, for the material pickers. */
+  locale: string;
 }
 
 /**
@@ -25,7 +27,7 @@ interface BomControlsProps {
  * the page loaded; a stale one shows the conflict and the page refreshes. A save that changes
  * nothing closes the form and says that the current revision stays (BOM-023).
  */
-export function BomControls({ bom, output, context, labels, choices }: BomControlsProps) {
+export function BomControls({ bom, output, context, labels, choices, locale }: BomControlsProps) {
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [unchanged, setUnchanged] = useState(false);
@@ -64,6 +66,7 @@ export function BomControls({ bom, output, context, labels, choices }: BomContro
               labels={labels}
               output={output}
               choices={choices}
+              locale={locale}
               initial={initial}
               schema={bomRecipeFormSchema}
               action={(values) => updateBomRecipe(context.tenant, context.generation, bom.id, bom.version, values)}

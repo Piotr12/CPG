@@ -1,6 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { LocationCell, locationOptions, MaterialCell, materialOptions, withReferences } from "./references";
+import { en } from "../../i18n/messages/en";
+import { pl } from "../../i18n/messages/pl";
+import { LocationCell, locationOptions, MaterialCell, materialChoices, materialOptions, materialPicker, withReferences } from "./references";
 
 const materials = [
   { id: "00000001", type: "raw", description: "Bolt M8", baseUnit: "each", active: true, createdAt: new Date(), version: 1 },
@@ -33,6 +35,12 @@ describe("options", () => {
     expect(materialOptions([...materials])).toEqual([{ value: "00000001", label: "00000001 — Bolt M8 (each)" }]);
     expect(locationOptions(locations)).toEqual([{ value: "00000001", label: "00000001 — Main plant" }]);
   });
+
+  it("offer only active materials to the material picker, with its words in the reader's language (#217)", () => {
+    expect(materialChoices([...materials])).toEqual([{ value: "00000001", code: "00000001", name: "Bolt M8", detail: "each" }]);
+    expect(materialPicker(pl.lists)).toEqual(pl.lists.materialPicker);
+    expect(materialPicker(en.lists).placeholder).toBe("Type an ID or a name");
+  });
 });
 
 describe("cells", () => {
@@ -59,5 +67,15 @@ describe("cells", () => {
     render(<MaterialCell tenant="test" row={active} inactive="Inactive" />);
     render(<LocationCell row={active} inactive="Inactive" />);
     expect(screen.queryByText("Inactive")).toBeNull();
+  });
+
+  it("mark a search's words in the IDs, the description and the name (#217)", () => {
+    render(
+      <>
+        <MaterialCell tenant="prod" row={row} inactive="Inactive" query="paint 0003 quarry" />
+        <LocationCell row={row} inactive="Inactive" query="paint 0003 quarry" />
+      </>,
+    );
+    expect([...document.querySelectorAll("mark")].map((mark) => mark.textContent)).toEqual(["paint", "0003", "quarry"]);
   });
 });

@@ -120,6 +120,37 @@ describe("UserService", () => {
       ]);
       expect(users.every((user) => !("passwordHash" in user))).toBe(true);
     });
+
+    describe("sorted and searched (#217)", () => {
+      beforeEach(async () => {
+        const em = orm.em.fork();
+        // Inserted out of username order, so only the sort can put them in order.
+        em.create(User, { username: "zed", role: "user", active: false, createdAt: new Date("2026-10-02T00:00:00Z") });
+        em.create(User, { username: "admin", role: "admin", createdAt: new Date("2026-10-01T00:00:00Z") });
+        em.create(User, { username: "anna", role: "user", createdAt: new Date("2026-10-03T00:00:00Z") });
+        em.create(User, { username: "bob", role: "user", active: false, createdAt: new Date("2026-10-03T00:00:00Z") });
+        await em.flush();
+      });
+
+      const names = (users: { username: string }[]) => users.map(({ username }) => username);
+
+      it("sorts by role, username, status and creation, both ways, by username within equal values", async () => {
+        expect(names(await service().list({ sort: "role", dir: "desc" }))).toEqual(["anna", "bob", "zed", "admin"]);
+        expect(names(await service().list({ sort: "username" }))).toEqual(["admin", "anna", "bob", "zed"]);
+        expect(names(await service().list({ sort: "username", dir: "desc" }))).toEqual(["zed", "bob", "anna", "admin"]);
+        expect(names(await service().list({ sort: "status" }))).toEqual(["bob", "zed", "admin", "anna"]);
+        expect(names(await service().list({ sort: "created", dir: "desc" }))).toEqual(["anna", "bob", "zed", "admin"]);
+        expect(names(await service().list({ sort: "created" }))).toEqual(["admin", "zed", "anna", "bob"]);
+      });
+
+      it("keeps the accounts whose username holds every word, ignoring ASCII case", async () => {
+        expect(names(await service().list({ q: "AN" }))).toEqual(["anna"]);
+        expect(names(await service().list({ q: "a" }))).toEqual(["admin", "anna"]);
+        expect(names(await service().list({ q: "a nn" }))).toEqual(["anna"]);
+        expect(names(await service().list({ q: "b", sort: "username", dir: "desc" }))).toEqual(["bob"]);
+        expect(names(await service().list({ q: "carol" }))).toEqual([]);
+      });
+    });
   });
 
   describe("resetPassword", () => {

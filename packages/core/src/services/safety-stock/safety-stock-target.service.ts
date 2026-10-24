@@ -3,9 +3,14 @@ import {
   SafetyStockTarget,
   UniqueConstraintViolationException,
   type EntityManager,
+  type FilterQuery,
 } from "@cpg/db";
 import type { DemoSafetyStockTarget } from "../../domain/demo/generate-dataset";
+import { searchWhere } from "../../domain/lists/list-query";
+import { sortTargets } from "../../domain/safety-stock/target-order";
 import { ConflictError, NotFoundError, versionConflict } from "../../http/errors";
+import type { ListOptions } from "../../validators/lists/list-query.schema";
+import type { SafetyStockSort } from "../../validators/safety-stock/safety-stock-list.schema";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
 import { findActiveLocation, findLocation } from "../locations/find-location";
@@ -39,6 +44,12 @@ export interface SafetyStockTargetKey {
   effectiveFrom: string;
 }
 
+/** What the safety stock search matches: the material's ID and description, the location's ID and name (#217). */
+const SEARCH_FIELDS = ["material.code", "material.description", "location.code", "location.name"];
+
+/** The safety stock list's search and sort; `today` (`YYYY-MM-DD`, UTC by default) is the day the status sort is about. */
+export type SafetyStockListOptions = Omit<ListOptions<SafetyStockSort>, "page"> & { today?: string };
+
 interface Deps {
   em: EntityManager;
 }
@@ -58,19 +69,17 @@ export class SafetyStockTargetService {
     this.em = em;
   }
 
-  /** Every target of the tenant, by material ID, location ID, then date. */
-  async list(): Promise<SafetyStockTargetView[]> {
-    const targets = await this.em.find(SafetyStockTarget, {}, { populate: ["material", "location"] });
-    // Sorted here by business IDs: the populated material and location carry them, and an
-    // `orderBy` on relation fields would add query joins the tenant lint rules don't vet.
-    return targets
-      .map(toView)
-      .sort(
-        (a, b) =>
-          a.material.localeCompare(b.material) ||
-          a.location.localeCompare(b.location) ||
-          a.effectiveFrom.localeCompare(b.effectiveFrom),
-      );
+  /**
+   * Every target of the tenant, by material ID, location ID, then date, unless `sort` says otherwise;
+   * `q` keeps those whose material's ID or description or location's ID or name contains every word
+   * (#217), so a material and location's targets are kept or dropped together.
+   */
+  async list({ q = "", sort = "material", dir = "asc", today = new Date().toISOString().slice(0, 10) }: SafetyStockListOptions = {}): Promise<
+    SafetyStockTargetView[]
+  > {
+    const where = searchWhere(q, SEARCH_FIELDS) as FilterQuery<SafetyStockTarget>;
+    const targets = await this.em.find(SafetyStockTarget, where, { populate: ["material", "location"] });
+    return sortTargets(targets.map(toView), sort, dir, today);
   }
 
   /** A target from a date that has none yet for this material and location (DEM-015, DEM-017). */

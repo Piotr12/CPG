@@ -179,6 +179,35 @@ describe("PlanningParameterService", () => {
       ]);
       expect(await service("test").list()).toEqual([]);
     });
+
+    describe("sorted and searched (#217)", () => {
+      beforeEach(async () => {
+        await service().create({ ...SET, location: "00000002", procurement: "buy", leadTimeDays: 7 }, ACTOR);
+        await service().create({ ...SET, material: "00000001", location: "00000002", procurement: "buy", leadTimeDays: 2 }, ACTOR);
+        await service().create(SET, ACTOR);
+        await seedMasters(orm, "test");
+        await service("test").create(SET, ACTOR);
+      });
+
+      const keys = (sets: { material: string; location: string }[]) => sets.map(({ material, location }) => `${material}@${location}`);
+
+      it("sorts by material, location, procurement and lead time, both ways, by material and location within equal values", async () => {
+        expect(keys(await service().list({ sort: "material", dir: "desc" }))).toEqual(["00000002@00000001", "00000002@00000002", "00000001@00000002"]);
+        expect(keys(await service().list({ sort: "location" }))).toEqual(["00000002@00000001", "00000001@00000002", "00000002@00000002"]);
+        expect(keys(await service().list({ sort: "procurement", dir: "desc" }))).toEqual(["00000002@00000001", "00000001@00000002", "00000002@00000002"]);
+        expect(keys(await service().list({ sort: "leadTime", dir: "desc" }))).toEqual(["00000002@00000002", "00000001@00000002", "00000002@00000001"]);
+      });
+
+      it("keeps sets whose material's ID or description or location's ID or name holds every word, in this tenant only", async () => {
+        expect(keys(await service().list({ q: "PANEL" }))).toEqual(["00000002@00000001", "00000002@00000002"]);
+        expect(keys(await service().list({ q: "panel packer" }))).toEqual(["00000002@00000002"]);
+        expect(keys(await service().list({ q: "bolt" }))).toEqual(["00000001@00000002"]);
+        expect(keys(await service().list({ q: "main", sort: "location", dir: "desc" }))).toEqual(["00000002@00000001"]);
+        expect(keys(await service().list({ q: "00000001" }))).toEqual(["00000001@00000002", "00000002@00000001"]);
+        expect(keys(await service().list({ q: "quarry" }))).toEqual([]);
+        expect(keys(await service("test").list({ q: "panel" }))).toEqual(["00000002@00000001"]);
+      });
+    });
   });
 
   describe("update", () => {

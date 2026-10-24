@@ -1,5 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import type { BomSort } from "@cpg/core/validators/boms/bom-list.schema";
+import type { SortDirection } from "@cpg/core/validators/lists/list-query.schema";
 import { en } from "../../i18n/messages/en";
 import { BomsScreen } from "./boms-screen";
 
@@ -29,9 +31,10 @@ const bom = (id: string, active: boolean) => ({
 });
 const TENANT = { code: "test", name: "Test", generation: 1, readOnly: false };
 
-const renderScreen = (boms: object[], admin = true, readOnly = false) =>
+const LIST = { search: { q: "", typed: "" }, sort: { sort: "output" as BomSort, dir: "asc" as SortDirection } };
+const renderScreen = (boms: object[], admin = true, readOnly = false, list = LIST) =>
   render(
-    <BomsScreen tenant={{ ...TENANT, readOnly }} boms={boms as never} materials={MATERIALS} units={{}} locale="en" messages={en} admin={admin} />,
+    <BomsScreen tenant={{ ...TENANT, readOnly }} boms={boms as never} materials={MATERIALS} units={{}} locale="en" messages={en} admin={admin} {...list} />,
   );
 
 describe("BomsScreen", () => {
@@ -58,7 +61,7 @@ describe("BomsScreen", () => {
     // The component summary gives way below lg; revision and validity below md.
     expect(cells[6].className).toContain("hidden lg:table-cell");
     expect(cells[3].className).toContain("hidden md:table-cell");
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryAllByRole("button").map((button) => button.textContent)).toEqual(["Search"]);
   });
 
   it("says what is missing and the next step, by role", () => {
@@ -68,6 +71,33 @@ describe("BomsScreen", () => {
 
     renderScreen([], true, true);
     expect(screen.getByText("Ask an administrator to add BOMs.")).toBeTruthy();
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Create BOM" })).toBeNull();
+  });
+
+  it("searches above the list, sorts by every column but the components, and marks the matches (#217)", () => {
+    renderScreen([bom("00000001", true)], false, false, { search: { q: "cabinet 0001", typed: "cabinet 0001" }, sort: { sort: "priority", dir: "desc" } });
+
+    expect(screen.getByRole("searchbox", { name: "Search BOMs" })).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toBe("1 result for “cabinet 0001” · Clear search");
+    expect(screen.getByRole("link", { name: "Clear search" }).getAttribute("href")).toBe("/admin/test/boms?sort=priority&dir=desc");
+    expect(screen.getAllByRole("columnheader").map((header) => header.getAttribute("aria-sort"))).toEqual([
+      "none",
+      "none",
+      "descending",
+      "none",
+      "none",
+      "none",
+      null,
+      "none",
+    ]);
+    expect(screen.getByRole("link", { name: "Priority" }).getAttribute("href")).toBe("/admin/test/boms?q=cabinet+0001&sort=priority&dir=asc");
+    expect(screen.getByRole("link", { name: "Valid through" }).getAttribute("href")).toBe("/admin/test/boms?q=cabinet+0001&sort=validThrough&dir=asc");
+    expect([...document.querySelectorAll("mark")].map((mark) => mark.textContent)).toEqual(["0001", "cabinet"]);
+  });
+
+  it("says when nothing matches, with the way back to the whole list (#217)", () => {
+    renderScreen([], true, false, { search: { q: "brass", typed: "brass" }, sort: LIST.sort });
+
+    expect(screen.getByRole("cell").textContent).toBe("Nothing matches “brass”. Clear search");
   });
 });

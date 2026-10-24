@@ -95,6 +95,7 @@ export function BomScreen({ tenant, bom, historic, materials, units, locale, mes
               context={{ tenant: tenant.code, generation: tenant.generation }}
               labels={labels}
               choices={componentChoices(materials, units, bom.components.map(({ material }) => material))}
+              locale={locale}
             />
           )
         }

@@ -17,6 +17,12 @@ describe("BOM labels", () => {
     expect(labels.errors).toMatchObject({ VALIDATION_FAILED: "Some fields are invalid.", FORBIDDEN: "Only the administrator can change BOMs." });
   });
 
+  it("carry the shared material picker's words in the reader's language, as plain data (#217)", () => {
+    const { picker } = bomsLabels(pl);
+    expect(picker).toEqual({ ...pl.lists.materialPicker });
+    expect(JSON.parse(JSON.stringify(picker))).toEqual(picker);
+  });
+
   it("append a clash's or a cycle's language-neutral details to the translated sentence", () => {
     const format = errorFormatter(bomsLabels(pl));
     const clash = { code: "BOM_PRIORITY_CONFLICT", message: "Another active BOM …: BOM 00000001 (2027-03-01 – …)." };

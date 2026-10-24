@@ -2,14 +2,26 @@ import {
   OptimisticLockError,
   UniqueConstraintViolationException,
   type EntityManager,
+  type FilterQuery,
   type NamedRecord,
+  type OrderDefinition,
 } from "@cpg/db";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
+import { listOrderBy, searchWhere } from "../../domain/lists/list-query";
 import { ConflictError, versionConflict } from "../../http/errors";
+import type { ListOptions } from "../../validators/lists/list-query.schema";
+import type { NamedRecordSort } from "../../validators/named-records/named-record-list.schema";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
 import { isScopeReadOnly } from "../tenants/tenant.service";
 import { findNamedRecord, type NamedRecordLookup } from "./find-named-record";
+
+/** What the locations, customers and suppliers search matches, and the column each sort key orders by (#217). */
+const SEARCH_FIELDS = ["code", "name"];
+const SORT_PATHS: Record<NamedRecordSort, string> = { id: "code", name: "name", status: "active" };
+
+/** A list of named records: an optional search and sort (#217); these lists aren't paged. */
+export type NamedRecordListOptions = Omit<ListOptions<NamedRecordSort>, "page">;
 
 /** What the screens and the API show about a location, customer or supplier. `id` is its business ID. */
 export interface NamedRecordView {
@@ -50,9 +62,14 @@ export class NamedRecords {
     private readonly kind: NamedRecordKind,
   ) {}
 
-  /** Every record of the kind, by ID, inactive ones included. */
-  async list(): Promise<NamedRecordView[]> {
-    return (await this.em.find(this.kind.entity, {}, { orderBy: { code: "asc" } })).map(toView);
+  /**
+   * Every record of the kind, inactive ones included, by ID unless `sort` says otherwise; `q` keeps
+   * those whose ID or name contains every word (#217).
+   */
+  async list({ q = "", sort = "id", dir = "asc" }: NamedRecordListOptions = {}): Promise<NamedRecordView[]> {
+    const where = searchWhere(q, SEARCH_FIELDS) as FilterQuery<NamedRecord>;
+    const orderBy = listOrderBy(SORT_PATHS[sort], dir) as OrderDefinition<NamedRecord>;
+    return (await this.em.find(this.kind.entity, where, { orderBy })).map(toView);
   }
 
   /** One record; `{KIND}_NOT_FOUND` when this tenant has no such ID, another tenant's included (TEN-014). */
