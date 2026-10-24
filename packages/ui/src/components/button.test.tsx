@@ -42,7 +42,7 @@ describe("Button", () => {
     expect(classes("default").join(" ")).not.toMatch(/hover:bg-primary\/|color-mix|ring-ring\/|ring-3/);
     // No variant swaps the ring for a translucent one.
     expect(classes("destructive").join(" ")).not.toMatch(/focus-visible:ring-destructive/);
-    expect(classes("default")).toEqual(expect.arrayContaining(["aria-invalid:border-danger-edge", "aria-invalid:ring-2", "aria-invalid:ring-danger-edge", "aria-invalid:focus-visible:ring-ring"]));
+    expect(classes("default")).toEqual(expect.arrayContaining(["aria-invalid:border-danger"]));
   });
 
   it("exposes the variant classes for non-button elements", () => {

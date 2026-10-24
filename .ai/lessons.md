@@ -69,6 +69,8 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 ## UI and React
 
+- **2026-10-24 — Design tokens: `--input` is a boundary, never a fill** — since design system v1 `--input` is the opaque 3:1 control border, so shadcn's `dark:bg-input/30`, `disabled:bg-input/50` and `dark:hover:bg-input/50` paint grey fields and buttons; use `bg-muted` for a disabled fill and `bg-background` with `border-border` for an outline button. Likewise an invalid control's border is `border-danger` (the `danger-edge` tint measured 1.74:1 on white); `tokens.test.ts` pins both floors.
+- **2026-10-24 — Tailwind 4 orders `aria-*` variants after `focus-visible`** — an `aria-invalid:ring-…` colour overrides the focus ring on a focused invalid field. Give invalid controls a border only (`aria-invalid:border-danger`) and leave the ring to `focus-visible`, or add `aria-invalid:focus-visible:ring-ring` when an invalid ring is unavoidable.
 - **2026-10-24 — A new status needs a sweep of status-specific copy** — When an enum gains a value, check EN/PL messages for the guarding error codes and old status names; use neutral or parameterised text and test it through the screen. After #147 added shipment cancellation, the goods-issue dialog still called a cancelled shipment completed (#188).
 
 - **2026-10-19 — A client component must not import a module that imports `@cpg/core`** — the browser bundle pulls in the ORM, and only `npm run build` fails. Keep client helpers dependency-free (`components/layout/current-path.ts`) or import `@cpg/core/validators/*`.

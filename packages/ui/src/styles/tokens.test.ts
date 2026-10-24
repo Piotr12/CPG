@@ -57,7 +57,7 @@ const themes = { light, dark };
 
 const TEXT = 4.5;
 const NON_TEXT = 3;
-/** `[foreground, background, minimum]`; `white` is the literal `oklch(1 0 0)` (the `destructive-solid` label). */
+/** `[foreground, background, minimum]`. */
 const PAIRS: [string, string, number][] = [
   ...["background", "card", "muted"].map((surface): [string, string, number] => ["foreground", surface, TEXT]),
   ...["background", "muted", "sidebar"].map((surface): [string, string, number] => ["muted-foreground", surface, TEXT]),
@@ -66,11 +66,13 @@ const PAIRS: [string, string, number][] = [
   ["warning", "warning-surface", TEXT],
   ["danger", "danger-surface", TEXT],
   ["neutral-tone", "neutral-surface", TEXT],
-  ["white", "danger-solid", TEXT],
+  ["danger-solid-foreground", "danger-solid", TEXT],
   ["tenant-test-tag-foreground", "tenant-test-tag", TEXT],
   ["tenant-prod-tag-foreground", "tenant-prod-tag", TEXT],
   ...["background", "sidebar", "muted"].map((surface): [string, string, number] => ["ring", surface, NON_TEXT]),
   ...["background", "card", "muted"].map((surface): [string, string, number] => ["input", surface, NON_TEXT]),
+  // The invalid control border (`aria-invalid:border-danger`): a boundary, so the non-text floor applies.
+  ...["background", "card", "muted"].map((surface): [string, string, number] => ["danger", surface, NON_TEXT]),
   ["tenant-prod-edge", "background", NON_TEXT],
 ];
 
@@ -117,7 +119,7 @@ describe("globals.css meets the accessibility floor", () => {
 
   for (const [theme, tokens] of Object.entries(themes)) {
     it.each(PAIRS)(`${theme}: %s on %s ≥ %s:1`, (foreground, background, minimum) => {
-      const value = (name: string) => (name === "white" ? 1 : tokens.get(name));
+      const value = (name: string) => tokens.get(name);
       expect(value(foreground), `--${foreground} in ${theme}`).toBeTypeOf("number");
       expect(value(background), `--${background} in ${theme}`).toBeTypeOf("number");
       const ratio = contrast(value(foreground)!, value(background)!);

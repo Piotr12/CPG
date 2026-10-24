@@ -63,6 +63,7 @@
     --color-danger-surface: var(--danger-surface);
     --color-danger-edge: var(--danger-edge);
     --color-danger-solid: var(--danger-solid);
+    --color-danger-solid-foreground: var(--danger-solid-foreground);
     --color-neutral-tone: var(--neutral-tone);
     --color-neutral-surface: var(--neutral-surface);
     --color-neutral-edge: var(--neutral-edge);
@@ -120,6 +121,7 @@
     --danger-surface: oklch(0.97 0.014 20);
     --danger-edge: oklch(0.83 0.08 22);
     --danger-solid: oklch(0.53 0.21 27);
+    --danger-solid-foreground: oklch(1 0 0);
     --neutral-tone: oklch(0.37 0 0);
     --neutral-surface: oklch(0.96 0 0);
     --neutral-edge: oklch(0.88 0 0);
@@ -181,6 +183,7 @@
     --danger-surface: oklch(0.27 0.06 22);
     --danger-edge: oklch(0.45 0.12 22);
     --danger-solid: oklch(0.54 0.20 25);
+    --danger-solid-foreground: oklch(1 0 0);
     --neutral-tone: oklch(0.85 0 0);
     --neutral-surface: oklch(0.27 0 0);
     --neutral-edge: oklch(0.40 0 0);
@@ -212,5 +215,16 @@
     :focus-visible {
         outline: 2px solid var(--ring);
         outline-offset: 2px;
+    }
+    /* Motion: non-essential transitions and animations go when the reader asks for reduced motion. */
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        ::before,
+        ::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+            scroll-behavior: auto !important;
+        }
     }
 }
