@@ -3,7 +3,7 @@
 **Date:** 2026-10-24 17:08 UTC
 **Agent:** Claude Code / claude-fable-5-1 (`om-auto-fix-issue 206`, cezar task 3abe5cd0)
 **Spec:** `.ai/specs/implemented/2026-10-24--0842UTC-design-system-v1.md` (Principle 7, "one term per concept: BOM, not recipe"; its implementation note filed #206)
-**Status:** in progress
+**Status:** done
 
 ## Goal
 
@@ -29,6 +29,9 @@ Fix #206: every user-visible "recipe"/"receptur…" in the EN and PL dictionarie
 - 17:19 `tests/integration/boms.test.ts` against the standalone production build of this tree (Docker is unavailable on this machine; lesson 2026-10-23): 7 tests passed in 30 s.
 - 17:21 PR #210 opened (`review`, `refactor`, `needs-qa`, `priority-low`, `risk-low`); the chain lock moved onto the PR and the issue lock was released.
 - 17:30 Review (`om-auto-review-pr --autofix`): head mergeable, CI in progress, no reviewer feedback to inherit, nothing already on `main`, the diff pattern scan clean. A fresh-context reviewer (subagent on the `om-code-review` checklist, `CODE_REVIEW.md` and `BACKWARD_COMPATIBILITY.md`) returned approve with three minors and nits, all applied: the template's `RECIPE-X` example reaches the downloaded template's Example column, so it is `BOM-X` now (four import test fixtures renamed) and the template guard also scans examples; "tego BOM" → "tego BOM-u" on the touched line; the BOMs help says "show how", not "list how"; the stale test title "the full recipe" renamed; this log's Plan moved above the Log; the API-messages follow-up is filed as an issue instead of prose (number below).
+- 17:40 The full gate passed again on the fixed tree (all four commands exit 0; coverage 531 files, 3,864 tests, 100%). The review went up as a comment with verdict APPROVE (GitHub refuses an approval from the PR's own account): https://github.com/Piotr12/CPG/pull/210#issuecomment-6387407062. The follow-up is #214 (reword the API's English messages, or declare them stable), linked from the review and the PR body. The fixes were pushed as 7e5e14b5 and the manual QA instructions posted. CI on the first head 02353bfc: everything green except integration shard 1, which failed only on `footer.test.ts` "ends the home page", the flaky cold-home-page read already filed as #213 and untouched by this PR.
+- 17:50 UI QA (`om-auto-qa-pr`, evidence only): `.ai/scripts/test-env-up.sh` fails here (Docker is not running), so the standalone production build of the fixed tree served on 127.0.0.1:3461 with a fresh data directory (lesson 2026-10-23). One agent-browser session as admin walked ten steps in English and Polish: the BOM page's "Components (revision 1)" and "Edit BOM", the "Edit BOM 00000001" dialog and its duplicate-line refusal, the production-order dialog's "Preview BOMs", the BOMs help, then "Składniki (rewizja 1)", "Edytuj BOM", "Podgląd BOM-ów" and the Polish help, and the BOM page at 390 px without overflow. All PASS; screenshots on the `qa-evidence` branch under `pr-210/`, report in the gitignored `.ai/qa/artifacts_pr-210/`: https://github.com/Piotr12/CPG/pull/210#issuecomment-6387481306. Desktop captures are 1280×577 because `set viewport` was sent before the browser had launched (lesson added).
+- 17:52 Chain lock released from the PR, `ci-monitoring` applied until the CI result for the final head is posted; the run-complete comment is on the PR. This log and the lessons go up as a docs commit.
 
 ## Changes
 
@@ -45,8 +48,11 @@ Fix #206: every user-visible "recipe"/"receptur…" in the EN and PL dictionarie
 - `npm run build`: exit 0.
 - `CPG_BASE_URL=http://127.0.0.1:3461 CPG_ADMIN_PASSWORD=… npm run test:integration -- tests/integration/boms.test.ts` against the standalone build with a fresh `DATA_DIR`: 7 passed.
 - Regression check: with `main`'s `en.ts`, `pl.ts`, `topics.ts` and `workbook-layout.ts` restored, the three guards fail (16 EN dictionary values, 12 EN and 13 PL help lines, 4 template strings listed) and the updated `/all its components/` assertion fails; restored, all pass.
-- After the review fixes: the touched unit tests pass (22 files, 163 tests); the full gate re-run is recorded below.
+- After the review fixes: the touched unit tests pass (22 files, 163 tests), and the full gate ran again: lint, typecheck, `test:coverage` (531 files, 3,864 tests, 100%) and build all exit 0.
+- UI QA on the standalone build of the fixed tree: 10 of 10 steps PASS in EN and PL (evidence comment on #210).
+- CI: the run on 02353bfc was green except the flaky `footer.test.ts` case (#213); the run on the final head is reported in the PR's CI-result comment.
 
 ## Follow-ups
 
-- The API's English server messages still say "recipe" (`BomService` `BOM_CYCLE`, `ProductionOrderService` `PRODUCTION_BOM_CHANGED`, `MISSING_COMPONENT_MESSAGE`, `DUPLICATE_COMPONENT_MESSAGE`, `prepare-import.ts`). The screens translate them by code or exact text, and the issue keeps API shapes; whether to reword them is the owner's decision, filed as a follow-up issue from the PR's review (its number is in the closing log entry).
+- The API's English server messages still say "recipe" (`BomService` `BOM_CYCLE`, `ProductionOrderService` `PRODUCTION_BOM_CHANGED`, `MISSING_COMPONENT_MESSAGE`, `DUPLICATE_COMPONENT_MESSAGE`, `prepare-import.ts`). The screens translate them by code or exact text, and the issue keeps API shapes; whether to reword them is the owner's decision, filed as #214.
+- `tests/integration/footer.test.ts` "ends the home page" is flaky on a cold home page (#213, filed before this run); it failed once on this PR's first CI run and is not caused by it.
