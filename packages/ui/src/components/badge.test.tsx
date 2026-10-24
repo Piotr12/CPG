@@ -21,6 +21,14 @@ describe("Badge", () => {
     expect(badge.className).toContain("text-destructive");
   });
 
+  it("focuses with the opaque ring in every variant", () => {
+    render(<Badge variant="destructive">late</Badge>);
+
+    const classes = screen.getByText("late").className.split(" ");
+    expect(classes).toEqual(expect.arrayContaining(["focus-visible:ring-2", "focus-visible:ring-ring", "focus-visible:ring-offset-2", "focus-visible:ring-offset-background"]));
+    expect(classes.filter((name) => /ring-\[3px\]|ring-ring\/|focus-visible:ring-destructive/.test(name))).toEqual([]);
+  });
+
   it("renders its child instead of a span with asChild", () => {
     render(
       <Badge asChild>

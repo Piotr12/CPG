@@ -35,6 +35,16 @@ describe("Button", () => {
     expect(screen.getByRole("link", { name: "Example" }).dataset.slot).toBe("button");
   });
 
+  it("hovers and presses on explicit tokens and focuses with the opaque ring", () => {
+    const classes = (variant: "default" | "secondary" | "destructive") => buttonVariants({ variant }).split(" ");
+    expect(classes("default")).toEqual(expect.arrayContaining(["hover:bg-primary-hover", "active:bg-primary-active", ...["focus-visible:ring-2", "focus-visible:ring-ring", "focus-visible:ring-offset-2", "focus-visible:ring-offset-background"]]));
+    expect(classes("secondary")).toContain("hover:bg-secondary-hover");
+    expect(classes("default").join(" ")).not.toMatch(/hover:bg-primary\/|color-mix|ring-ring\/|ring-3/);
+    // No variant swaps the ring for a translucent one.
+    expect(classes("destructive").join(" ")).not.toMatch(/focus-visible:ring-destructive/);
+    expect(classes("default")).toEqual(expect.arrayContaining(["aria-invalid:border-danger-edge", "aria-invalid:ring-2", "aria-invalid:ring-danger-edge", "aria-invalid:focus-visible:ring-ring"]));
+  });
+
   it("exposes the variant classes for non-button elements", () => {
     expect(buttonVariants({ variant: "ghost", size: "icon" })).toContain("size-8");
   });

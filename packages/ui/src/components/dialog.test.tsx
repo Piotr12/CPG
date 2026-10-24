@@ -36,7 +36,10 @@ describe("Dialog", () => {
     expect(screen.getByText("description").dataset.slot).toBe("dialog-description");
     expect(screen.getByText("title").parentElement!.dataset.slot).toBe("dialog-header");
     expect(screen.getByText("done").parentElement!.dataset.slot).toBe("dialog-footer");
-    expect(document.querySelector("[data-slot=dialog-overlay]")).not.toBeNull();
+    // Design system v1: an opaque scrim, no blur.
+    const overlay = document.querySelector<HTMLElement>("[data-slot=dialog-overlay]")!;
+    expect(overlay.classList).toContain("bg-scrim");
+    expect(overlay.className).not.toMatch(/backdrop-blur|bg-black/);
     // The corner close button and the footer's.
     expect(screen.getAllByRole("button", { name: "Close" })).toHaveLength(2);
   });
