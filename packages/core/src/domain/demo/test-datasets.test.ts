@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { generateTestTenantDataset } from "./generate-dataset";
+import { parseDecimal } from "../quantities/decimal";
+import { addDays } from "./calendar";
+import { generateTestTenantDataset, type TimelineEvent } from "./generate-dataset";
 import { DEFAULT_TEST_DATASET, TEST_DATASET_CONFIGS, TEST_DATASETS, TINY_HISTORY_MONTHS } from "./test-datasets";
 import { TEST_TENANT_CONFIG, testTenantConfigSchema } from "./test-tenant-config.schema";
 
@@ -33,5 +35,25 @@ describe("Test datasets", () => {
     expect(tiny.summary.movements).toBeLessThan(realistic.summary.movements / 5);
     expect(tiny.summary.customerOrders).toBeLessThan(100);
     expect(realistic.summary.customerOrders).toBeGreaterThan(100);
+  });
+
+  // E2E-020 (`tests/integration/test-reset-api.test.ts`) posts a G1 goods issue for what is left on an Open demo shipment
+  // of the tiny dataset the server generated for its day, whatever day the run falls on (#200). Asserted here: such a
+  // shipment exists, its lines are positive, and every seeded goods issue takes its shipment's lines in full. Inferred
+  // from the planner (`shipmentsOf` splits each order line between an order's shipments, never twice): a shipment that
+  // no goods issue names is therefore Open with everything left to issue.
+  it("leaves tiny a shipment that no goods issue names, with positive lines, on every day of 2025 to 2027, and issues a shipment in full or not at all", { timeout: 30_000 }, () => {
+    for (let today = "2025-01-01"; today <= "2027-12-31"; today = addDays(today, 1)) {
+      const { timeline } = generateTestTenantDataset(TEST_DATASET_CONFIGS.tiny, today);
+      const shipments = new Map(timeline.flatMap((event) => (event.kind === "shipment" ? [[event.key, event] as const] : [])));
+      const issues = timeline.filter((event): event is Extract<TimelineEvent, { kind: "goodsIssue" }> => event.kind === "goodsIssue");
+      for (const issue of issues) {
+        expect(issue.lines, `${today} ${issue.shipment}`).toEqual(shipments.get(issue.shipment)?.lines.map(({ quantity, unit }, index) => ({ line: index + 1, quantity, unit })));
+      }
+      const issued = new Set(issues.map(({ shipment }) => shipment));
+      const unissued = [...shipments.values()].filter(({ key }) => !issued.has(key));
+      expect(unissued.length, today).toBeGreaterThan(0);
+      expect(unissued.every(({ lines }) => lines.every(({ quantity }) => (parseDecimal(quantity) ?? 0n) > 0n)), today).toBe(true);
+    }
   });
 });
