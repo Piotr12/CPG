@@ -174,15 +174,15 @@ describe("shipments and goods issues in the UI", () => {
   it("cancels a shipment nothing was issued against after confirming, leaving it Cancelled with no controls (#147)", async () => {
     const { shipment } = await shippedOrder();
     await una.open(`${baseUrl}/admin/prod/shipments/${shipment}`);
-    await una.waitUntil(ready(button("Cancel shipment")));
-    await una.clickRole("button", "Cancel shipment");
+    await una.waitUntil(ready(button("Cancel shipment…")));
+    await una.clickRole("button", "Cancel shipment…");
     await una.waitFor("[role=alertdialog]");
     expect(await una.text("[role=alertdialog] p")).toBe("It will plan nothing more. Stock and the order are not changed.");
     await una.click("[role=alertdialog] button[data-variant=destructive-solid]");
     await una.waitUntil(`!document.querySelector("[role=alertdialog]")`);
 
-    await una.waitUntil(`document.querySelector("main dl")?.innerText.includes("Cancelled")`);
-    expect(await una.evaluate<boolean>(`!${button("Edit shipment")} && !${button("Cancel shipment")} && !${button("Post goods issue")}`)).toBe(true);
+    await una.waitUntil(`document.querySelector("main [data-slot=page-header] [data-slot=status-badge]")?.innerText.includes("Cancelled")`);
+    expect(await una.evaluate<boolean>(`!${button("Edit shipment")} && !${button("Cancel shipment…")} && !${button("Post goods issue")}`)).toBe(true);
     const stock = json(await api("GET", `/api/tenants/prod/stock?material=${ids.widget}&location=${ids.plant}`)).data as StockView;
     expect(stock.quantity).toBe("50.000000");
   });

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { PostedReceiptView } from "@cpg/core";
 import { receiptFormSchema } from "@cpg/core/validators/goods-receipts/goods-receipt.schema";
+import { Callout } from "@cpg/ui/backend/feedback/callout";
 import { Button } from "@cpg/ui/components/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@cpg/ui/components/dialog";
 import { postReceipt } from "../../app/admin/[tenant]/purchase-orders/[id]/actions";
@@ -65,21 +66,33 @@ export function ReceiptDialog({ context, purchaseOrder, location, labels, lines,
         </Dialog>
       )}
       {posted && (
-        <div role="status" className="flex w-full flex-col gap-1 rounded-md border p-3 text-sm">
-          <p>{fill(labels.posted, { id: posted.id })}</p>
-          {posted.warnings.map(({ line, excess }) => (
-            <p key={line} className="text-amber-700 dark:text-amber-400">
-              {fill(labels.overReceipt, {
-                line: String(line),
-                excess: shownQuantity(excess),
-                baseUnit: baseUnits[line],
-              })}
-            </p>
-          ))}
-          <Button type="button" variant="outline" size="sm" className="self-end" onClick={() => setPosted(null)}>
-            {labels.dismiss}
-          </Button>
-        </div>
+        <Callout
+          // An excess is accepted but said (BUY-015): the receipt then reports in the warning tone, its lines listed.
+          tone={posted.warnings.length > 0 ? "warning" : "success"}
+          role="status"
+          title={posted.warnings.length > 0 ? fill(labels.posted, { id: posted.id }) : undefined}
+          actions={
+            <Button type="button" variant="outline" size="sm" onClick={() => setPosted(null)}>
+              {labels.dismiss}
+            </Button>
+          }
+        >
+          {posted.warnings.length > 0 ? (
+            <ul className="flex flex-col gap-1">
+              {posted.warnings.map(({ line, excess }) => (
+                <li key={line}>
+                  {fill(labels.overReceipt, {
+                    line: String(line),
+                    excess: shownQuantity(excess),
+                    baseUnit: baseUnits[line],
+                  })}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            fill(labels.posted, { id: posted.id })
+          )}
+        </Callout>
       )}
     </div>
   );

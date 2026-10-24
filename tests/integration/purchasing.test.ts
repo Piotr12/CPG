@@ -175,16 +175,18 @@ describe("purchase requisitions and orders in the UI", () => {
   });
 
   it("lets a normal user change an Open requisition's required date on screen, which the audit records (#142)", async () => {
-    // At 1280 × 800 the Required column shows and the row's actions sit inside the table, unscrolled.
+    // At 1280 × 800 the Required column shows. The columns' minimum widths (design system v1) can make the
+    // table wider than the page: it then scrolls in its own container, and the row's actions are reached there.
     await una.setViewport(1280, 800);
     const [id] = await requisitionRow(una, (row) => row.join(" ").includes("buy steel"));
     const label = `Change date — Purchase requisitions ${id}`;
     const trigger = `document.querySelector(${JSON.stringify(`main button[aria-label="${label}"]`)})`;
     await una.waitUntil(ready(trigger));
+    expect(await una.evaluate<boolean>(`(${trigger}.scrollIntoView({ block: "center", inline: "nearest" }), true)`)).toBe(true);
     expect(await una.evaluate<boolean>(`(() => {
       const box = ${trigger}.getBoundingClientRect();
-      const table = ${trigger}.closest("[data-slot=table-container]");
-      return box.right <= innerWidth && table.scrollWidth <= table.clientWidth;
+      const table = ${trigger}.closest("[data-slot=table-container]").getBoundingClientRect();
+      return document.documentElement.scrollWidth <= innerWidth && box.left >= table.left && box.right <= table.right && box.right <= innerWidth;
     })()`)).toBe(true);
 
     await una.clickRole("button", label);

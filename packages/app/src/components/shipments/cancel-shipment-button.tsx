@@ -32,7 +32,7 @@ export function CancelShipmentButton({ context, shipment, customerOrder, version
         if (next) setLoaded(version);
         setOpen(next);
       }}
-      trigger={<Button variant="outline">{t.open}</Button>}
+      trigger={<Button variant="destructive">{t.open}</Button>}
       title={fill(t.title, { id: shipment })}
       description={t.description}
       confirmLabel={t.confirm}

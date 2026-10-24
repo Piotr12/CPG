@@ -1,4 +1,5 @@
 import type { ForecastView, Locale, MaterialSummary, NamedRecordView } from "@cpg/core";
+import { PageHeader } from "@cpg/ui/backend/page-header";
 import type { Messages } from "../../i18n/messages/en";
 import { PageLinks } from "../layout/page-links";
 import { locationOptions, materialOptions, withReferences } from "../master-data/references";
@@ -32,11 +33,11 @@ export function ForecastsScreen({ tenant, forecasts, materials, locations, filte
   const rows = withReferences(forecasts, materials, locations);
 
   return (
-    <div lang={locale} className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">{messages.forecasts.heading(tenant.name)}</h1>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-muted-foreground">{labels.intro}</p>
-        {editable && (
+    <div lang={locale}>
+      <PageHeader
+        title={messages.forecasts.heading(tenant.name)}
+        description={labels.intro}
+        actions={editable && (
           <AddForecastDialog
             context={{ tenant: tenant.code, generation: tenant.generation }}
             labels={labels}
@@ -44,7 +45,8 @@ export function ForecastsScreen({ tenant, forecasts, materials, locations, filte
             locations={locationOptions(locations)}
           />
         )}
-      </div>
+      />
+      <div className="flex flex-col gap-8">
       <ForecastsFilter
         action={`/admin/${tenant.code}/forecasts`}
         labels={labels}
@@ -60,6 +62,7 @@ export function ForecastsScreen({ tenant, forecasts, materials, locations, filte
         filtered={filter.material !== undefined || filter.location !== undefined}
         pagination={<PageLinks page={page} pages={pages} labels={labels} href={(target) => pageHref(tenant.code, filter, target)} />}
       />
+      </div>
     </div>
   );
 }

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { ShipmentView } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
-import { Badge } from "@cpg/ui/components/badge";
+import { StatusBadge } from "@cpg/ui/backend/feedback/status-badge";
+import { documentStatusTone } from "../document-lifecycle/status-tone";
 import type { MaterialsById } from "../purchase-orders/labels";
 import { fill, shownQuantity, type ShipmentsLabels } from "./labels";
 
@@ -19,18 +20,20 @@ export function ShipmentsTable({ tenant, shipments, materials, labels }: Shipmen
     {
       id: "id",
       header: c.id,
+      kind: "id",
       cell: (shipment) => (
-        <Link className="font-mono underline underline-offset-4" href={`/admin/${tenant}/shipments/${shipment.id}`}>
+        <Link className="underline underline-offset-4" href={`/admin/${tenant}/shipments/${shipment.id}`}>
           {shipment.id}
         </Link>
       ),
     },
-    { id: "date", header: c.plannedDate, cell: (shipment) => shipment.plannedDate },
-    { id: "status", header: c.status, cell: (shipment) => <Badge variant="secondary">{labels.states[shipment.status]}</Badge> },
+    { id: "date", header: c.plannedDate, kind: "date", cell: (shipment) => shipment.plannedDate },
+    { id: "status", header: c.status, kind: "status", cell: (shipment) => <StatusBadge {...documentStatusTone(shipment.status)}>{labels.states[shipment.status]}</StatusBadge> },
     {
       id: "lines",
       header: c.lines,
-      className: "hidden whitespace-normal wrap-anywhere sm:table-cell",
+      kind: "longText",
+      priority: 2,
       cell: (shipment) => (
         <ul className="flex flex-col gap-1">
           {shipment.lines.map(({ line, material, quantity, issued }) => (

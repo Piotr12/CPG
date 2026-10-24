@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { ShipmentView } from "@cpg/core";
 import { shipmentFormSchema } from "@cpg/core/validators/shipments/shipment.schema";
+import { Callout } from "@cpg/ui/backend/feedback/callout";
 import { Button } from "@cpg/ui/components/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@cpg/ui/components/dialog";
 import { createShipment } from "../../app/admin/[tenant]/customer-orders/[id]/actions";
@@ -63,15 +64,20 @@ export function ShipmentDialog({ context, customerOrder, location, labels, lines
         </DialogContent>
       </Dialog>
       {created && (
-        <div role="status" className="flex w-full flex-col gap-1 rounded-md border p-3 text-sm">
-          <p>{fill(labels.created, { id: created.id })}</p>
+        <Callout
+          tone="success"
+          role="status"
+          title={fill(labels.created, { id: created.id })}
+          actions={
+            <Button type="button" variant="outline" size="sm" onClick={() => setCreated(null)}>
+              {labels.dismiss}
+            </Button>
+          }
+        >
           <Link className="underline underline-offset-4" href={`/admin/${context.tenant}/shipments/${created.id}`}>
             {fill(labels.openCreated, { id: created.id })}
           </Link>
-          <Button type="button" variant="outline" size="sm" className="self-end" onClick={() => setCreated(null)}>
-            {labels.dismiss}
-          </Button>
-        </div>
+        </Callout>
       )}
     </div>
   );

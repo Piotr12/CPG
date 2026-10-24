@@ -1,4 +1,5 @@
 import type { Locale, MaterialSummary, NamedRecordView, OrderView, RequisitionView } from "@cpg/core";
+import { PageHeader } from "@cpg/ui/backend/page-header";
 import type { Messages } from "../../i18n/messages/en";
 import { activeOptions, materialChoices } from "../purchase-requisitions/choices";
 import { requisitionChoices } from "./choices";
@@ -31,11 +32,11 @@ export function OrdersScreen({ tenant, orders, page, pages, suppliers, locations
   const editable = !tenant.readOnly;
 
   return (
-    <div lang={locale} className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">{messages.purchaseOrders.heading(tenant.name)}</h1>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-muted-foreground">{labels.intro}</p>
-        {editable && (
+    <div lang={locale}>
+      <PageHeader
+        title={messages.purchaseOrders.heading(tenant.name)}
+        description={labels.intro}
+        actions={editable && (
           <CreateOrderDialog
             context={{ tenant: tenant.code, generation: tenant.generation }}
             labels={labels}
@@ -45,7 +46,7 @@ export function OrdersScreen({ tenant, orders, page, pages, suppliers, locations
             requisitions={requisitionChoices(requisitions, byId(materials), labels)}
           />
         )}
-      </div>
+      />
       <OrdersTable tenant={tenant} orders={orders} page={page} pages={pages} suppliers={byId(suppliers)} locations={byId(locations)} labels={labels} editable={editable} />
     </div>
   );

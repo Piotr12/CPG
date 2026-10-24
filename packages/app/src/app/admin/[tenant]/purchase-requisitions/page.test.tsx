@@ -107,7 +107,7 @@ describe("PurchaseRequisitionsPage", () => {
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Purchase requisitions — Test");
     const rows = within(screen.getByRole("table", { name: "Purchase requisitions" })).getAllByRole("row").slice(1);
     expect(rows.map((row) => within(row).getAllByRole("cell").map((cell) => cell.textContent))).toEqual([
-      ["00000001", "00000001Steel sheet", "00000001Main plant", "100 kg", "60 kg", "40 kg", "2027-03-01", "Open", "0 kg", "Change dateClose Early"],
+      ["00000001", "00000001Steel sheet", "00000001Main plant", "100 kg", "60 kg", "40 kg", "2027-03-01", "Open", "0 kg", "Change dateClose requisition early…"],
       ["00000002", "00000002Old rivetInactive", "00000001Main plant", "5 each", "5 each", "40 each", "2027-03-01", "Completed", "0 each", ""],
     ]);
     expect(screen.getAllByRole("link", { name: "00000001" })[0].getAttribute("href")).toBe("/admin/test/materials/00000001");

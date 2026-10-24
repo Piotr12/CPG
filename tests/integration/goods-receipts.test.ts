@@ -81,7 +81,7 @@ describe("goods receipts in the UI", () => {
     const lines = await tableRows(una, "Lines");
     expect(lines.map((row) => row.slice(-5))).toEqual([
       ["110 kg", "0 kg", "Received", "0 kg", ""],
-      ["4 each", "6 each", "Open", "0 each", "Change date Close Early"],
+      ["4 each", "6 each", "Open", "0 each", "Change date Close line early…"],
     ]);
     const receipts = await tableRows(una, "Goods receipts");
     expect(receipts).toHaveLength(1);
