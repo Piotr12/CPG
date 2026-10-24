@@ -16,6 +16,7 @@ Resolve PR #195's conflict with current main, review the result, validate and ve
 5. After authorized push, inspect CI on the new head, normalize labels, post findings/QA evidence, and release the claim.
 
 ## Log
+- 2026-10-24 08:14 UTC: Operator approved publishing changes and evidence. Confirmed remote head 1965dc15 and main 74d9519a unchanged. Uploaded all five inspected screenshots and posted [QA evidence](https://github.com/Piotr12/CPG/pull/195#issuecomment-6381864823). Final publication/CI outcome is tracked in the [result comment](https://github.com/Piotr12/CPG/pull/195#issuecomment-6381870559); all implementation and validation details below remain applicable.
 - 2026-10-24 08:05 UTC: Full local gate, 23 integration tests and EN/PL desktop/mobile QA passed. Preparing local merge commit; shared-branch push and screenshot publication await the user’s explicit cezar Guard approval.
 - 2026-10-24 07:59 UTC: Lint (zero errors, one existing unused lineError warning) and typecheck pass. Docker entrypoint reports not running; used the documented standalone/dev fallback in an ignored per-run launcher. Fresh dev database outside the repository, local-only port 64003.
 - 2026-10-24 07:57 UTC: Checked out PR head; checkout first rejected the descriptor’s `--recurse-submodules=no`; retry with `false` succeeded. Initial merge on the cezar branch was a no-op. Actual PR/main merge conflicts are documentation-only.
@@ -41,5 +42,5 @@ Resolve PR #195's conflict with current main, review the result, validate and ve
 
 
 ## Follow-ups
-- Pending Guard approval: push the prepared merge to the existing PR branch and upload local screenshots to qa-evidence; then inspect CI for the new head, finish report/labels, and hand off. Never merge PR #195.
+- Publication approved; final head and CI disposition are recorded in the [result comment](https://github.com/Piotr12/CPG/pull/195#issuecomment-6381870559), which is updated in place after the bounded CI follow-up. No merge is performed.
 - Human code approval and manual QA remain required; this account cannot approve its own PR.
