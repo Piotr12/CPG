@@ -76,8 +76,8 @@ const quantities = (components: { material: string; quantity: string }[]) => com
 describe("new BOMs", () => {
   it("binds a new header and its lines through the import reference (XLS-018)", async () => {
     const workbook = [
-      sheet("bomHeaders", header(null, "RECIPE-X", 4)),
-      sheet("bomLines", line("RECIPE-X", 1, 4.5, "kg"), line("RECIPE-X", 3, "250", "ml"), line("RECIPE-X", 2, 2)),
+      sheet("bomHeaders", header(null, "BOM-X", 4)),
+      sheet("bomLines", line("BOM-X", 1, 4.5, "kg"), line("BOM-X", 3, "250", "ml"), line("BOM-X", 2, 2)),
     ];
     const dryRun = await kit.dryRun(workbook);
     expect(dryRun.errors).toEqual([]);
@@ -87,7 +87,7 @@ describe("new BOMs", () => {
         row: 2,
         action: "create",
         record: "00000001",
-        reference: "RECIPE-X",
+        reference: "BOM-X",
         label: "00000001 — 00000004 Panel",
         changes: [
           { field: "Output material ID", before: null, after: "00000004" },

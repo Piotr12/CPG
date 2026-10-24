@@ -250,7 +250,7 @@ const en: Record<HelpTopicId, HelpText> = {
   boms: {
     title: "BOMs",
     body: [
-      "BOMs (bills of materials), under Master data in the sidebar, list how that tenant's materials are made. A BOM makes one intermediate or finished material, its output, from raw and intermediate components; the quantities are for one base unit of the output. Each BOM has an eight-digit ID that CPG assigns in order and that never changes.",
+      "BOMs (bills of materials), under Master data in the sidebar, show how that tenant's materials are made. A BOM makes one intermediate or finished material, its output, from raw and intermediate components; the quantities are for one base unit of the output. Each BOM has an eight-digit ID that CPG assigns in order and that never changes.",
       "One output can have several BOMs, its alternatives. Each has a priority (1 is the highest) and a validity: from a date, through a date or with no end, both days included. Two active alternatives for the same output can't have the same priority on any shared day.",
       "A component can be entered in any unit the material converts, such as 2 cases; CPG stores it in the material's base unit (24 each) and keeps what was entered. A BOM can't use its own output, directly or through other BOMs: CPG shows the cycle it would make.",
       "Every account can read BOMs. Only the administrator creates and changes them, with Create BOM here and Edit BOM on a BOM's page; through the API too, with the same rules. Only active materials can be picked.",

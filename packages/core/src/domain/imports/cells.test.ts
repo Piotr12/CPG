@@ -79,7 +79,7 @@ describe("bomTarget", () => {
   it("reads digits as a BOM ID and anything else as an import reference", () => {
     expect(bomTarget(4)).toEqual({ kind: "id", id: "00000004" });
     expect(bomTarget("00000004")).toEqual({ kind: "id", id: "00000004" });
-    expect(bomTarget(" RECIPE-X ")).toEqual({ kind: "reference", reference: "RECIPE-X" });
+    expect(bomTarget(" BOM-X ")).toEqual({ kind: "reference", reference: "BOM-X" });
     expect(bomTarget(null)).toBeNull();
   });
 });

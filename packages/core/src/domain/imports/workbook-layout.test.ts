@@ -39,13 +39,13 @@ describe("the import workbook layout", () => {
     }
   });
 
-  it("says BOM, never recipe, in both languages of the Instructions prose (one term per concept, #206)", () => {
-    const prose = IMPORT_SHEETS.flatMap((sheet) => [sheet.purpose, ...sheet.columns.map((column) => column.meaning)]).flatMap(({ en, pl }) => [en, pl]);
+  it("says BOM, never recipe, in both languages of the Instructions prose and in the Example column (one term per concept, #206)", () => {
+    const prose = IMPORT_SHEETS.flatMap((sheet) => [sheet.purpose.en, sheet.purpose.pl, ...sheet.columns.flatMap((column) => [column.meaning.en, column.meaning.pl, column.example])]);
 
     expect(prose.filter((text) => /recipe|receptur/i.test(text))).toEqual([]);
   });
 
-  it("documents blank, known and unknown IDs, the import reference and the full recipe (XLS-001, XLS-017)", () => {
+  it("documents blank, known and unknown IDs, the import reference and the full component list (XLS-001, XLS-017)", () => {
     const materials = sheetSpec("materials");
     expect(materials.columns.map((column) => column.header)).toEqual(["ID", "Type", "Description", "Base unit", "Active"]);
     expect(materials.columns[0].meaning.en).toMatch(/Blank creates.*existing ID updates.*doesn't exist is an error/);

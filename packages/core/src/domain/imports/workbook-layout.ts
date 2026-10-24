@@ -315,7 +315,7 @@ export const IMPORT_SHEETS: readonly SheetSpec[] = [
         example: "",
         meaning: {
           en: "Blank creates a new BOM with the next ID. An existing ID revises that BOM when its lines change. An ID that doesn't exist is an error.",
-          pl: "Puste tworzy nowy BOM z kolejnym ID. Istniejące ID tworzy nową rewizję tego BOM, gdy jego wiersze się zmieniają. ID, które nie istnieje, jest błędem.",
+          pl: "Puste tworzy nowy BOM z kolejnym ID. Istniejące ID tworzy nową rewizję tego BOM-u, gdy jego wiersze się zmieniają. ID, które nie istnieje, jest błędem.",
         },
       },
       {
@@ -323,7 +323,7 @@ export const IMPORT_SHEETS: readonly SheetSpec[] = [
         field: "reference",
         kind: "text",
         required: "on-create",
-        example: "RECIPE-X",
+        example: "BOM-X",
         meaning: {
           en: "Required when BOM ID is blank: a name of your choice, unique in this sheet, with at least one letter. The BOM lines of a new BOM name it in their BOM column.",
           pl: "Wymagane, gdy BOM ID jest puste: dowolna nazwa, unikalna w arkuszu, z co najmniej jedną literą. Wiersze nowego BOM podają ją w kolumnie BOM.",
@@ -380,7 +380,7 @@ export const IMPORT_SHEETS: readonly SheetSpec[] = [
         field: "bom",
         kind: "bom",
         required: "always",
-        example: "RECIPE-X",
+        example: "BOM-X",
         meaning: {
           en: "The BOM ID of an existing BOM, or the import reference of a new one, from the BOM headers sheet.",
           pl: "BOM ID istniejącego BOM lub referencja importu nowego, z arkusza BOM headers.",
