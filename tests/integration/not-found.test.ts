@@ -10,8 +10,8 @@ const REASON = "The address may be mistyped, or the record belongs to the other 
 
 /** The shown not-found message's way back: its one link (Next keeps earlier pages mounted but hidden). */
 const wayBack = `[...document.querySelectorAll("main a")].find((link) => link.offsetParent)`;
-/** True once the not-found message has streamed in and is shown, not still in a hidden Suspense slot. */
-const messageShown = `[...document.querySelectorAll("main p")].some((p) => p.textContent === ${JSON.stringify(MESSAGE)} && p.offsetParent && !p.closest("[hidden]"))`;
+/** True once the not-found page's h1 has streamed in and is shown, not still in a hidden Suspense slot. */
+const messageShown = `[...document.querySelectorAll("main h1")].some((h) => h.textContent === ${JSON.stringify(MESSAGE)} && h.offsetParent && !h.closest("[hidden]"))`;
 
 /**
  * Design system v1, "States and copy → Not found". With Partial Prefetching a `notFound()` streams

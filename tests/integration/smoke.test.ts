@@ -38,6 +38,8 @@ describe("a fresh app instance", () => {
 
     expect(await browser.title()).toBe("Admin · Caveman Planning Good");
     expect(await browser.text("h1")).toBe("Tenants");
-    expect(await browser.texts("[data-slot=badge]")).toEqual(["Writable", "Writable", expect.stringMatching(/^Generation [1-9]\d*$/), "31 migrations applied", "0 pending", "1 settings"]);
+    // Design system v1: a tenant's access is a status (icon + label), the counts stay category tags.
+    expect(await browser.texts("[data-slot=status-badge]")).toEqual(["Writable", "Writable"]);
+    expect(await browser.texts("[data-slot=badge]")).toEqual([expect.stringMatching(/^Generation [1-9]\d*$/), "31 migrations applied", "0 pending", "1 settings"]);
   });
 });
