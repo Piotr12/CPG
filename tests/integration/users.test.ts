@@ -65,7 +65,8 @@ describe("the admin manages normal users", () => {
     expect(await admin.text("main p")).toBe(
       "Users are never deleted. Deactivate an account to end its access; its history keeps its name.",
     );
-    expect(await ownRows(admin, "tbody tr")).toEqual([expect.stringMatching(/^admin\tadmin\tActive\t\d{4}-\d{2}-\d{2}/)]);
+    // The status is a StatusBadge, whose icon is a flex item: innerText may break the line before its label.
+    expect(await ownRows(admin, "tbody tr")).toEqual([expect.stringMatching(/^admin\tadmin\t\s*Active\t\d{4}-\d{2}-\d{2}/)]);
     const controls = await admin.texts("button, a, [role=menuitem]");
     expect(controls.filter((text) => /delete|remove/i.test(text))).toEqual([]);
   });
