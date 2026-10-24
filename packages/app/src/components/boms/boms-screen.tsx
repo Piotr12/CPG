@@ -1,7 +1,11 @@
 import type { BomView, Locale, MaterialSummary } from "@cpg/core";
+import { bomSortSchema, type BomSort } from "@cpg/core/validators/boms/bom-list.schema";
+import type { SortDirection } from "@cpg/core/validators/lists/list-query.schema";
 import { PageHeader } from "@cpg/ui/backend/page-header";
 import type { Messages } from "../../i18n/messages/en";
 import { ImportLink } from "../imports/import-link";
+import { listLinks, type ListSearchState } from "../lists/list-params";
+import { ListSearchBar } from "../lists/list-search-bar";
 import { BomsTable } from "./boms-table";
 import { componentChoices, outputChoices } from "./choices";
 import { CreateBomDialog } from "./create-bom-dialog";
@@ -17,12 +21,19 @@ interface BomsScreenProps {
   messages: Messages;
   /** Only the admin gets Create BOM (TEN-004), and only while the tenant isn't read-only (R05). */
   admin: boolean;
+  /** The search and sort the page read from its address, and listed `boms` with (#217). */
+  search: ListSearchState;
+  sort: { sort: BomSort; dir: SortDirection };
 }
 
-/** The body of the BOMs page (E04-S01): heading, intro, the admin's Create BOM, and the list. */
-export function BomsScreen({ tenant, boms, materials, units, locale, messages, admin }: BomsScreenProps) {
+/**
+ * The body of the BOMs page (E04-S01): heading, intro, the admin's Create BOM, the search box and the
+ * sortable list (#217).
+ */
+export function BomsScreen({ tenant, boms, materials, units, locale, messages, admin, search, sort }: BomsScreenProps) {
   const labels = bomsLabels(messages);
   const editable = admin && !tenant.readOnly;
+  const links = listLinks({ path: `/admin/${tenant.code}/boms`, search: search.q, sort, defaults: bomSortSchema.parse({}) });
 
   return (
     <div lang={locale}>
@@ -38,13 +49,25 @@ export function BomsScreen({ tenant, boms, materials, units, locale, messages, a
                 labels={labels}
                 outputs={outputChoices(materials)}
                 choices={componentChoices(materials, units)}
+                locale={locale}
               />
             </>
           )
         }
       />
+      <ListSearchBar links={links} search={search} labels={labels.search} lists={messages.lists} locale={locale} count={boms.length} />
       <div className="flex flex-col gap-8">
-        <BomsTable tenant={tenant} boms={boms} materials={materialsById(materials)} labels={labels} editable={editable} />
+        <BomsTable
+          tenant={tenant}
+          boms={boms}
+          materials={materialsById(materials)}
+          labels={labels}
+          editable={editable}
+          search={search.q}
+          sort={sort}
+          links={links}
+          lists={messages.lists}
+        />
       </div>
     </div>
   );

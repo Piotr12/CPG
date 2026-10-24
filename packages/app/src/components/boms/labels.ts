@@ -15,22 +15,32 @@ import { CALENDAR_DATE_MESSAGE } from "@cpg/core/validators/dates/calendar-date.
 import { UNIT_FORMAT_MESSAGE } from "@cpg/core/validators/materials/material-fields.schema";
 import { MATERIAL_CHOICE_MESSAGE } from "@cpg/core/validators/planning-parameters/planning-parameter-fields.schema";
 import { POSITIVE_QUANTITY_MESSAGE } from "@cpg/core/validators/quantities/quantity.schema";
+import type { AutocompleteLabels } from "@cpg/ui/backend/forms/autocomplete";
 import { errorMessage } from "../../i18n/error-message";
 import type { Messages } from "../../i18n/messages/en";
 import { fill, shownQuantity, type TenantContext } from "../forms/form-labels";
+import { materialPickerLabels } from "../materials/material-picker";
 
 /**
  * The BOM screens' strings in the reader's language: plain strings, so they can reach client
- * components (the server-side headings stay behind). `errors` holds every code the screens can show.
+ * components (the server-side headings stay behind). `errors` holds every code the screens can show;
+ * `picker` is the shared material picker's words (#217).
  */
-export type BomsLabels = Omit<Messages["boms"], "heading" | "detailHeading" | "errors"> & { errors: Record<string, string> };
+export type BomsLabels = Omit<Messages["boms"], "heading" | "detailHeading" | "errors"> & {
+  errors: Record<string, string>;
+  picker: AutocompleteLabels & { placeholder: string };
+};
 
 /** Builds the BOM screens' labels from a dictionary (server side, where `messages` is available). */
 export function bomsLabels(messages: Messages): BomsLabels {
   const labels: Partial<Messages["boms"]> = { ...messages.boms };
   delete labels.heading;
   delete labels.detailHeading;
-  return { ...(labels as Omit<Messages["boms"], "heading" | "detailHeading">), errors: { ...messages.errors, ...messages.boms.errors } };
+  return {
+    ...(labels as Omit<Messages["boms"], "heading" | "detailHeading">),
+    errors: { ...messages.errors, ...messages.boms.errors },
+    picker: { ...materialPickerLabels(messages.lists), placeholder: messages.lists.materialPicker.placeholder },
+  };
 }
 
 export { fill, shownQuantity, type TenantContext };

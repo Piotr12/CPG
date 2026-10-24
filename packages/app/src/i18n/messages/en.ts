@@ -837,6 +837,7 @@ export const en = {
     empty: "No BOMs in {tenant} yet.",
     emptyHint: "Create the first one with Create BOM.",
     emptyReader: "Ask an administrator to add BOMs.",
+    search: { label: "Search BOMs", hint: "Matches the BOM ID or the output's ID or description." },
     allBoms: "All BOMs",
     columns: {
       id: "BOM",
@@ -879,7 +880,6 @@ export const en = {
     form: {
       output: "Output",
       outputHint: "An intermediate or finished material. It can't change later: make a new BOM instead.",
-      choose: "Choose…",
       priority: "Priority",
       priorityHint: "1 is the highest. Two active alternatives for one output can't share a priority on the same days.",
       validFrom: "Valid from",

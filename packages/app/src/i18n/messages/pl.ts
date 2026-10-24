@@ -798,6 +798,7 @@ export const pl: Messages = {
     empty: "Brak BOM-ów w {tenant}.",
     emptyHint: "Utwórz pierwszy przyciskiem Utwórz BOM.",
     emptyReader: "Poproś administratora o dodanie BOM-ów.",
+    search: { label: "Szukaj BOM-ów", hint: "Dopasowuje ID BOM-u albo ID lub opis wyrobu." },
     allBoms: "Wszystkie BOM-y",
     columns: {
       id: "BOM",
@@ -840,7 +841,6 @@ export const pl: Messages = {
     form: {
       output: "Wyrób",
       outputHint: "Półprodukt lub wyrób gotowy. Nie można go później zmienić: utwórz wtedy nowy BOM.",
-      choose: "Wybierz…",
       priority: "Priorytet",
       priorityHint: "1 to najwyższy. Dwie aktywne alternatywy jednego wyrobu nie mogą mieć tego samego priorytetu w tych samych dniach.",
       validFrom: "Ważny od",

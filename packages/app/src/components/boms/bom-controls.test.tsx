@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({ updateBomRecipe: vi.fn(), setBomActive: vi.fn(
 vi.mock("../../app/admin/[tenant]/boms/actions", () => mocks);
 
 const context = { tenant: "test", generation: 1 };
-const choices = [{ value: "00000002", label: "00000002 — Bolt M8 (each)", units: ["each", "case"] }];
+const choices = [{ value: "00000002", code: "00000002", name: "Bolt M8", detail: "each", units: ["each", "case"] }];
 const bom: BomView = {
   id: "00000003",
   output: "00000005",
@@ -23,7 +23,7 @@ const bom: BomView = {
   version: 5,
 };
 const controls = (overrides: Partial<BomView> = {}) => (
-  <BomControls bom={{ ...bom, ...overrides }} output={{ description: "Cabinet, red", baseUnit: "each" }} context={context} labels={bomsLabels(en)} choices={choices} />
+  <BomControls bom={{ ...bom, ...overrides }} output={{ description: "Cabinet, red", baseUnit: "each" }} context={context} labels={bomsLabels(en)} choices={choices} locale="en" />
 );
 
 describe("BomControls", () => {
@@ -59,9 +59,9 @@ describe("BomControls", () => {
     fireEvent.click(screen.getByRole("button", { name: "Edit BOM" }));
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
-    expect((await screen.findByRole("status")).textContent).toBe("No change: revision 2 is still current.");
+    expect((await screen.findByText("No change: revision 2 is still current.")).getAttribute("role")).toBe("status");
     fireEvent.click(screen.getByRole("button", { name: "Edit BOM" }));
-    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByText("No change: revision 2 is still current.")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(screen.queryByRole("dialog")).toBeNull();
   });
