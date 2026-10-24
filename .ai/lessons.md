@@ -187,6 +187,7 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 ## Process and agent pipeline (om-* skills)
 
+- **2026-10-24 — A closing keyword anywhere in a PR body closes the issue** — GitHub parses `closes #N` / `fixes #N` / `resolves #N` in any sentence of the body, so the spec PR #204, which opened with `Refs #203` and later said "its implementation PR closes #203", closed the issue on merge. A PR that must leave an issue open (a spec PR, a partial fix) never puts a closing keyword next to that number, not even about a future PR: write "the implementation PR will close it" without the number, and grep the body for `clos|fix|resolv` before opening it.
 - **2026-10-23 — Close the paperwork in the PR that does the work** — two rules:
   - File every follow-up a PR, spec or run log names before merging, and cite its number. Prose follow-ups were lost (#109's location guard, #95's reversal check).
   - The implementation PR moves its spec to `implemented/` (`Status: implemented`, implementation notes, image links rewritten to `](../assets/…)`). The specs of #4, #43 and #147 stayed in `.ai/specs/` after merging, and `tests/spec-images.test.ts` fails on a broken image.
