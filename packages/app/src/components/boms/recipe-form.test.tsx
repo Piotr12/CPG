@@ -271,6 +271,13 @@ describe("RecipeForm", () => {
     expect(onCancel).toHaveBeenCalledTimes(2);
   });
 
+  it("shows no output chosen when starting values leave it out", () => {
+    renderForm({ initial: { priority: "1", validFrom: "", validThrough: "", components: [{ material: "", quantity: "", unit: "" }] } });
+
+    expect((picker("Output") as HTMLInputElement).value).toBe("");
+    expect(screen.getByText("Per 1 base unit of the output")).toBeTruthy();
+  });
+
   it("leaves Escape to an open material list, which closes only the list (#217)", () => {
     renderForm();
     fireEvent.change(picker("Material, Line 1"), { target: { value: "Bolt" } });
