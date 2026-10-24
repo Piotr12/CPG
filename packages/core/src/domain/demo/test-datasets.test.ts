@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { addDays } from "./calendar";
 import { generateTestTenantDataset } from "./generate-dataset";
 import { DEFAULT_TEST_DATASET, TEST_DATASET_CONFIGS, TEST_DATASETS, TINY_HISTORY_MONTHS } from "./test-datasets";
 import { TEST_TENANT_CONFIG, testTenantConfigSchema } from "./test-tenant-config.schema";
@@ -33,5 +34,15 @@ describe("Test datasets", () => {
     expect(tiny.summary.movements).toBeLessThan(realistic.summary.movements / 5);
     expect(tiny.summary.customerOrders).toBeLessThan(100);
     expect(realistic.summary.customerOrders).toBeGreaterThan(100);
+  });
+
+  // E2E-020 (`tests/integration/test-reset-api.test.ts`) posts a G1 goods issue for what is left on an Open demo shipment
+  // of the tiny dataset the server generated for its day, whatever day the run falls on (#200).
+  it("leaves tiny an Open shipment with nothing issued on it on every day of 2025 to 2027", { timeout: 30_000 }, () => {
+    for (let today = "2025-01-01"; today <= "2027-12-31"; today = addDays(today, 1)) {
+      const { timeline } = generateTestTenantDataset(TEST_DATASET_CONFIGS.tiny, today);
+      const issued = new Set(timeline.flatMap((event) => (event.kind === "goodsIssue" ? [event.shipment] : [])));
+      expect(timeline.some((event) => event.kind === "shipment" && !issued.has(event.key)), today).toBe(true);
+    }
   });
 });

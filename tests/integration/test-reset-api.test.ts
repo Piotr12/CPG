@@ -18,6 +18,18 @@ const sequenced = ["materials", "locations", "customers", "suppliers", "boms", "
   "purchase-requisitions", "purchase-orders", "goods-receipts", "production-orders"];
 const sequence = (count: number) => Array.from({ length: count }, (_, index) => String(index + 1).padStart(8, "0"));
 const today = () => new Date().toISOString().slice(0, 10);
+/**
+ * `run`, finished on the UTC day it started. A generated Test dataset is its day's (#200), so a scenario that compares
+ * two generations needs both from one day: a run that crossed midnight is thrown away and run again, on the new day.
+ * The server shares this process's clock (one host, in CI and locally), and no run crosses midnight twice.
+ */
+async function withinOneDay<T>(run: () => Promise<T>, attempt = 1): Promise<T> {
+  const day = today();
+  const result = await run();
+  if (today() === day) return result;
+  expect(attempt, "a run crosses midnight UTC at most once").toBe(1);
+  return withinOneDay(run, attempt + 1);
+}
 interface Tenant { code: string; generation: number; readOnly: boolean }
 interface Material { id: string; version: number; description: string }
 interface AuditPage { entries: { id: string; action: string; actor: { username: string }; channel: string; token: { name: string } | null; after: Record<string, unknown> | null }[] }
@@ -230,20 +242,27 @@ describe("atomic Test reset through the bearer API", () => {
 
   it("refuses a goods issue an agent retries under the old generation after a reset; G2 stock, issues and Prod are unchanged and the token works on G2 (E2E-020)", async () => {
     await write("PATCH", "/api/tenants/test", { readOnly: false });
-    const generation = (await test()).generation;
-    // G1: the agent issues what is left on a line of an Open demo shipment, whose ID G2 reuses for the same plan.
     type Shipment = { id: string; location: string; status: string; lines: { line: number; material: string; toIssue: string }[] };
-    const shipment = (await get("/api/tenants/test/shipments") as Shipment[]).find(({ status, lines }) => status === "open" && Number(lines[0].toIssue) > 0)!;
-    expect(shipment).toBeDefined();
-    const [{ line, material, toIssue }] = shipment.lines;
-    const { location } = shipment;
-    const { baseUnit } = await get(`/api/tenants/test/materials/${material}`);
-    await created("/api/tenants/test/stock/corrections", { material, location, quantity: toIssue, unit: baseUnit, reason: "reset-api agent" }, generation);
-    const key = randomUUID();
-    const body = { shipment: shipment.id, lines: [{ line, quantity: toIssue, unit: baseUnit }] };
-    expect((await api("POST", "/api/tenants/test/goods-issues", { key, body, generation })).status).toBe(200);
+    // G1 is this test's own reset, and G2 follows within the day (`withinOneDay`), so both are one day's tiny dataset: the
+    // same shipment IDs, statuses and quantities. The agent issues what is left on a line of an Open demo shipment (the
+    // tiny dataset has one on every day, `test-datasets.test.ts`), whose ID G2 reuses for the same plan.
+    const issueUnderG1ThenReset = async () => {
+      expect((await write("POST", "/api/tenants/test/reset", {}, (await test()).generation)).status).toBe(200);
+      const generation = (await test()).generation;
+      const shipment = (await get("/api/tenants/test/shipments") as Shipment[]).find(({ status, lines }) => status === "open" && Number(lines[0].toIssue) > 0)!;
+      expect(shipment).toBeDefined();
+      const [{ line, material, toIssue }] = shipment.lines;
+      const { location } = shipment;
+      const { baseUnit } = await get(`/api/tenants/test/materials/${material}`);
+      await created("/api/tenants/test/stock/corrections", { material, location, quantity: toIssue, unit: baseUnit, reason: "reset-api agent" }, generation);
+      const key = randomUUID();
+      const body = { shipment: shipment.id, lines: [{ line, quantity: toIssue, unit: baseUnit }] };
+      expect((await api("POST", "/api/tenants/test/goods-issues", { key, body, generation })).status).toBe(200);
+      expect((await write("POST", "/api/tenants/test/reset", {}, generation)).status).toBe(200);
+      return { generation, shipment, line, material, toIssue, location, baseUnit, key, body };
+    };
+    const { generation, shipment, line, material, toIssue, location, baseUnit, key, body } = await withinOneDay(issueUnderG1ThenReset);
 
-    expect((await write("POST", "/api/tenants/test/reset", {}, generation)).status).toBe(200);
     const g2 = async () => ({
       material: await get(`/api/tenants/test/materials/${material}`),
       stock: await get(`/api/tenants/test/stock?material=${material}&location=${location}`),
@@ -252,7 +271,6 @@ describe("atomic Test reset through the bearer API", () => {
     });
     const before = await g2();
     // G2 has the same shipment again, nothing issued on it yet: a retry that got through would land on it.
-    // Both generations are today's tiny dataset; a run that crosses midnight UTC fails here rather than passing on another plan.
     expect(before.shipment).toMatchObject({ id: shipment.id, location, status: "open", lines: expect.arrayContaining([expect.objectContaining({ line, material, toIssue })]) });
     const prodBefore = await prodState();
 
