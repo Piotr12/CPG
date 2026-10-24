@@ -9,7 +9,7 @@ import { PostingDialog } from "./posting-dialog";
 const mocks = vi.hoisted(() => ({ dispatchTransfer: vi.fn(), receiveTransfer: vi.fn(), writeOffTransfer: vi.fn(), setTransferDates: vi.fn() }));
 vi.mock("../../app/admin/[tenant]/transfers/[id]/actions", () => mocks);
 
-const dialog = (kind: TransferPostingKind, messages = en) => (
+const dialog = (kind: TransferPostingKind, messages = en, primary = true) => (
   <PostingDialog
     context={{ tenant: "test", generation: 3 }}
     transfer="00000004"
@@ -18,12 +18,20 @@ const dialog = (kind: TransferPostingKind, messages = en) => (
     description={`Description of ${kind}`}
     units={["kg", "t"]}
     labels={transfersLabels(messages)}
+    primary={primary}
   />
 );
 const change = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
 afterEach(() => vi.clearAllMocks());
 
 describe("PostingDialog", () => {
+  it("is the page's solid action only when it is the first posting offered", () => {
+    const { rerender } = render(dialog("receipt"));
+    expect(screen.getByRole("button", { name: "Receive" }).getAttribute("data-variant")).toBe("default");
+    rerender(dialog("receipt", en, false));
+    expect(screen.getByRole("button", { name: "Receive" }).getAttribute("data-variant")).toBe("outline");
+  });
+
   it.each([
     ["dispatch", "Dispatch", mocks.dispatchTransfer],
     ["receipt", "Receive", mocks.receiveTransfer],

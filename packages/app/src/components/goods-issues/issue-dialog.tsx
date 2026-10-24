@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { IssueView } from "@cpg/core";
 import { issueFormSchema } from "@cpg/core/validators/goods-issues/goods-issue.schema";
+import { Callout } from "@cpg/ui/backend/feedback/callout";
 import { Button } from "@cpg/ui/components/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@cpg/ui/components/dialog";
 import { postIssue } from "../../app/admin/[tenant]/shipments/[id]/actions";
@@ -62,12 +63,17 @@ export function IssueDialog({ context, shipment, customerOrder, location, labels
         </Dialog>
       )}
       {posted && (
-        <div role="status" className="flex w-full flex-col gap-1 rounded-md border p-3 text-sm">
-          <p>{fill(labels.posted, { id: posted.id })}</p>
-          <Button type="button" variant="outline" size="sm" className="self-end" onClick={() => setPosted(null)}>
-            {labels.dismiss}
-          </Button>
-        </div>
+        <Callout
+          tone="success"
+          role="status"
+          actions={
+            <Button type="button" variant="outline" size="sm" onClick={() => setPosted(null)}>
+              {labels.dismiss}
+            </Button>
+          }
+        >
+          {fill(labels.posted, { id: posted.id })}
+        </Callout>
       )}
     </div>
   );

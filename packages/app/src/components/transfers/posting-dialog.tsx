@@ -24,6 +24,8 @@ interface PostingDialogProps {
   /** The material's units, its base unit first. */
   units: string[];
   labels: Pick<TransfersLabels, "post" | "cancel" | "errors" | "fieldErrors">;
+  /** The page's one solid action: the first posting it offers. The others are outline buttons. */
+  primary: boolean;
 }
 
 /**
@@ -31,7 +33,7 @@ interface PostingDialogProps {
  * unit the material converts, and for a write-off the reason (spec Q4–Q6). The server dates it today
  * and repeats every check; a refusal keeps the dialog open with its explanation.
  */
-export function PostingDialog({ context, transfer, kind, title, description, units, labels }: PostingDialogProps) {
+export function PostingDialog({ context, transfer, kind, title, description, units, labels, primary }: PostingDialogProps) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
   const t = labels.post;
@@ -44,7 +46,7 @@ export function PostingDialog({ context, transfer, kind, title, description, uni
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant={kind === "write-off" ? "outline" : "default"}>{t[kind].open}</Button>
+        <Button variant={primary ? "default" : "outline"}>{t[kind].open}</Button>
       </DialogTrigger>
       <DialogContent className={TALL_DIALOG}>
         <DialogHeader>

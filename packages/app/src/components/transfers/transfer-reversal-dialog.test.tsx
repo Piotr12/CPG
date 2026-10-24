@@ -53,7 +53,8 @@ it("merges each reversal into the ledger by time, linked to the posting it rever
     ["", "", "In transit", "+60 kg", "60 kg"],
   ]);
   expect(within(rows()[0]).getByText("bob · API · Reverses the posting of 2027-03-02")).toBeTruthy();
-  expect(within(rows()[3]).getByText(en.transfers.ledger.reversed)).toBeTruthy();
+  expect(within(rows()[3]).getByText(en.transfers.ledger.reversed).closest("[data-slot=status-badge]")?.getAttribute("data-tone")).toBe("neutral");
+  expect(within(rows()[3]).getByText(en.transfers.ledger.reversed).closest("[data-slot=status-badge]")?.querySelector("svg.lucide-undo-2")).toBeTruthy();
   expect(within(rows()[5]).getByText(en.transfers.ledger.blocked)).toBeTruthy();
   expect(within(rows()[2]).getByRole("button", { name: "Reverse the write-off of 2027-03-02" }).textContent).toBe(t.open);
   expect(screen.getAllByRole("button")).toHaveLength(1);
