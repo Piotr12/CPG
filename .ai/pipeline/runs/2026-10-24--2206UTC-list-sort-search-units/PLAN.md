@@ -31,12 +31,14 @@ Every main list sorts by a header click and searches through one labelled box, b
 | F3 | `app`: list URL helpers, `lists` i18n section, `PageLinks` keeps the query; integration helper to choose from an autocomplete | lead | done |
 | F4 | Materials pilot: sort + search + highlight; base unit and conversion unit selects; imports use the registry; unit test churn; integration test | lead | in progress (integration run pending) |
 | W1 | Master data: locations, customers, suppliers, BOMs (list + recipe form autocomplete), planning parameters, safety stock, users | worker | todo |
-| W2 | Sales and production: forecasts, customer orders, production orders (lists + material autocompletes in their forms) | worker | todo |
+| W2 | Sales and production: forecasts, customer orders, production orders (lists + material autocompletes in their forms) | worker | done, merged |
 | W3 | Purchasing and logistics: purchase requisitions, purchase orders, transfers (lists + forms) | worker | done, merged |
 | C1 | Merge workers one by one, gate after each; Help + BACKWARD_COMPATIBILITY + follow-up issues | lead | todo |
 | C2 | Full gate, touched integration files, build, browser QA with screenshots, PR, CI green | lead | todo |
 
 ## Progress
+
+- 2026-10-25 — W2 merged (cez/76002577): typecheck 0, test:coverage 0 (4,024 tests, 100 %). Its integration run on :3302: forecasts 9/9, forecasts-api 10/10, customer-orders 9/9, production-orders 7/7, production-completions 4/4, production-transfer-reversals 4/4, document-lifecycle 11/11, shipments 5/5. Open for the lead after W1: `query` on Forecasts' reference cells + the mark assertion in `forecasts.test.ts`; unify W1's and W2's material-picker helpers. Tried naming the autocomplete's listbox with the field label: `getByLabelText` then matched two elements across six tests, so reverted (the list is named by its field only when open via `aria-controls`).
 
 - 2026-10-25 — W3 merged (cez/3c71fdbd): typecheck 0, test:coverage 0 (4,001 tests, 100 %). Its integration run on :3303: purchasing 10/10, transfers 6/6, transfers-api 13/13, purchasing-api 15/15, goods-receipts 3/3 + api 8/8, document-lifecycle 11/11, test-reset-realistic 5/5. Follow-up: an order-date column on the PO list so it can sort by date.
 
