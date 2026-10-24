@@ -86,7 +86,18 @@ describe("Test reset on the Tenants page", () => {
     await openControl(admin);
     await clickHydrated(admin, "[data-test-reset] button");
     await admin.waitFor("[role=alertdialog]");
-    await confirm(admin);
+    // The UI reset runs in the pages bundle, on its own ORM. A Prod write through the API (the route handlers'
+    // ORM) and the health check arrive while it runs: the write waits for the reset's commit on the write gate
+    // and answers 200, the health check answers at once (#185).
+    await admin.click(`[role=alertdialog] button[data-variant=destructive-solid]`);
+    const [prodWrite, up] = await Promise.all([
+      api("POST", "/api/tenants/prod/locations", { name: `reset-ui prod write ${normalName}` }),
+      fetch(`${baseUrl}/up`),
+      admin.waitUntil(`!document.querySelector('[role=alertdialog]') && !!document.querySelector('[data-test-reset] [role=status]')`),
+    ]);
+    expect(prodWrite.status).toBe(200);
+    expect(up.status).toBe(200);
+    expect(await admin.text("[data-test-reset] [role=status]")).toContain("Test reset to generation");
     expect(await state()).toEqual({ ...before, code: "test", name: "Test", generation: before.generation + 1, readOnly: false });
     const events = json(await api("GET", "/api/audit?limit=100")).data.entries as { action: string; channel: string; sessionId: string | null; actor: { username: string } }[];
     expect(events.find(({ action }) => action === "tenants.tenant.reset")).toMatchObject({ channel: "ui", actor: { username: "admin" }, sessionId: expect.any(String), after: { dataset: "tiny" } });

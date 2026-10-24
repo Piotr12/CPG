@@ -1,4 +1,4 @@
-import { currentTenant, resetTestData, Tenant, TenantViolationError, type EntityManager } from "@cpg/db";
+import { currentTenant, holdWriteGate, resetTestData, Tenant, TenantViolationError, type EntityManager } from "@cpg/db";
 import { DEFAULT_TEST_DATASET, type TestDataset } from "../../domain/demo/test-datasets";
 import { assertCurrentGeneration } from "../../domain/tenants/generation";
 import { ConflictError } from "../../http/errors";
@@ -49,6 +49,9 @@ export class TestResetService {
     assertCurrentGeneration(before.generation, expectedGeneration, true);
     if (before.generation >= MAX_DATASET_GENERATION) throw new ConflictError("Test has reached its last dataset generation.", "GENERATION_EXHAUSTED");
     const started = performance.now();
+    // The seed yields to the event loop between documents, so a transaction another Next.js bundle's
+    // ORM begins meanwhile waits for this one's commit instead of hitting the write lock (#185).
+    await holdWriteGate(this.em);
     // A real update even when already read-only: acquire the cross-connection writer lock.
     await this.em.nativeUpdate(Tenant, { code: "test" }, { readOnly: true });
     await resetTestData(this.em);

@@ -165,6 +165,24 @@ describe("atomic Test reset", { timeout: 60_000 }, () => {
     expect(await resetting).toMatchObject({ generation: 2 });
   });
 
+  it("makes a write another ORM copy begins during the reset wait for its commit, then succeed (#185)", async () => {
+    await populate();
+    // Another Next.js bundle: its own ORM and SQLite connection on the same file (lesson of 2026-10-17).
+    const other = await initOrm({ databasePath: orm.config.get("dbName") });
+    try {
+      const writer = (await scopeForTenant(createAppContainer(container.cradle.config, other), "prod")).cradle;
+      const resetting = reset();
+      // Issued once the reset is under way and has yielded to the event loop, as a request arriving meanwhile is.
+      await new Promise((resolve) => setImmediate(resolve));
+      const written = writer.locationService.create({ name: "written during the reset" }, actor);
+
+      expect(await resetting).toMatchObject({ generation: 2 });
+      // Without the gate this write got "database is locked" at once: the reset held SQLite's write lock.
+      expect((await written).name).toBe("written during the reset");
+      expect(await (await scope("prod")).cradle.locationService.list()).toContainEqual(expect.objectContaining({ name: "written during the reset" }));
+    } finally { await other.close(); }
+  });
+
   it("writes the realistic dataset's two years for today when the admin picks it, and audits the choice (TEN-001, TEN-022)", async () => {
     const { masters, summary, timeline } = generated(TEST_DATASET_CONFIGS.realistic);
     const info = vi.spyOn(console, "info");
@@ -373,19 +391,24 @@ describe("reset and a write on an independent SQLite connection (TEN-026)", { ti
     } finally { await other.close(); }
   });
 
-  it("refuses a write to a read-only Test from another connection while the reset is uncommitted, and keeps Test read-only", async () => {
+  it("holds a write from another connection while the reset is uncommitted, then refuses it as stale, and keeps Test read-only", async () => {
     await populate();
     await container.createScope().cradle.tenantService.setReadOnly("test", true, actor);
     const other = await initOrm({ databasePath: orm.config.get("dbName") });
     try {
       const writer = (await scopeForTenant(createAppContainer(container.cradle.config, other), "test")).cradle;
       const resetting = (await scope()).cradle;
+      let written: Promise<unknown> | undefined;
       await inRequestTransaction(resetting.em, async () => {
         await resetting.testResetService.reset(1, actor);
-        // The reset has deleted and reseeded Test and holds SQLite's writer lock; the other connection still reads the committed flag.
-        await expect(apiWrite(writer, "written during reset")).rejects.toMatchObject({ code: "TENANT_READ_ONLY" });
+        // The reset has deleted and reseeded Test and holds the write gate: the other connection's write waits for the
+        // commit instead of reaching SQLite's writer lock (#185).
+        written = apiWrite(writer, "written during reset").then(() => "written", (error: unknown) => error);
+        expect(await Promise.race([written, new Promise((resolve) => setTimeout(() => resolve("waiting"), 300))])).toBe("waiting");
       });
-      // Once it commits, the same write is refused as stale before the gate is even reached.
+      // Once it commits, the waiting write sees the new generation and is refused as stale before the gate is even reached;
+      // so is the same write issued afterwards.
+      expect(await written).toMatchObject({ code: "GENERATION_STALE" });
       await expect(apiWrite(writer, "written after reset")).rejects.toMatchObject({ code: "GENERATION_STALE" });
       const current = (await scope()).cradle;
       expect(await current.tenantService.get("test")).toMatchObject({ generation: 2, readOnly: true });

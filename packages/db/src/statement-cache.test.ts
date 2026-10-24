@@ -21,14 +21,18 @@ describe("cacheStatements", () => {
     expect(db.prepared).toEqual(["select 1", "select 2"]);
   });
 
-  it("prepares a fresh statement while the cached one is busy", () => {
+  it("prepares a fresh statement while the cached one is busy, and that one becomes the most recent", () => {
     const db = fakeDatabase();
-    cacheStatements(db);
+    cacheStatements(db, 2);
     const first = db.prepare("select 1");
+    db.prepare("select 2");
     first.busy = true;
     const second = db.prepare("select 1");
     expect(second).not.toBe(first);
     expect(db.prepare("select 1")).toBe(second);
+    db.prepare("select 3"); // evicts "select 2", the least recent, not the replacement
+    expect(db.prepare("select 1")).toBe(second);
+    expect(db.prepared).toEqual(["select 1", "select 2", "select 1", "select 3"]);
   });
 
   it("drops the least recently used statement beyond its size", () => {

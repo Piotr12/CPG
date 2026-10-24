@@ -4,6 +4,7 @@ import { entities } from "./entities";
 import { migrations } from "./migrations";
 import { TenantEntityManager } from "./tenants/tenant-entity-manager";
 import { TenantGuard } from "./tenants/tenant-guard";
+import { WriteGate } from "./write-gate";
 import type { DbOptions } from "./orm";
 
 /**
@@ -16,7 +17,8 @@ export function createOrmConfig(options: DbOptions, overrides: Partial<Options> 
     entities,
     // Tenant isolation (R05): bulk write paths refused for tenant-owned entities, flushes checked.
     entityManager: TenantEntityManager,
-    subscribers: [new TenantGuard()],
+    // The write gate: a transaction another ORM copy begins during a long write waits for its commit (#185).
+    subscribers: [new TenantGuard(), new WriteGate()],
     extensions: [Migrator],
     debug: options.debug ?? false,
     ...overrides,

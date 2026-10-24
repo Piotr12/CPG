@@ -3,7 +3,7 @@
 **Date:** 2026-10-24 17:20 UTC
 **Agent:** Claude Code (Fable 5.1), `om-auto-fix-issue 185`, dispatched by cezar
 **Spec:** `.ai/specs/implemented/2026-10-22--0902UTC-test-tenant-two-datasets.md` (implementation notes only)
-**Status:** in progress
+**Status:** partial: the repository side is done on PR #215; timing a reset on cpg.baby stays with the owner (#185)
 
 ## Goal
 
@@ -88,9 +88,85 @@ the reset and a Prod write go through one container. The batched lookups must ke
   and `test-reset.test.ts` pass (10 tests). The realistic API reset took **6.6 s** (9.3–9.9 s on this Mac before), the Prod write
   issued 2 s in answered 200 after 4.6 s, `GET /up` issued 2 s in answered after **0.01 s**. The server log shows every reset's
   duration line. The first coverage run failed only on `db/src/index.test.ts`'s export list (`pingDatabase` added); re-running.
+- 19:20 Coverage green (532 files, 3,867 tests, 100%). On a second fresh standalone instance (127.0.0.1:3186) the 13 integration
+  files that post stock pass (78 tests). Committed ad008cac, pushed, PR #215 opened (`Refs #185`), labels `review`, `bug`,
+  `needs-qa`, `priority-high`, `risk-medium`; the chain lock moved onto the PR and the issue's `in-progress` released.
+- 19:25 Fresh-context review dispatched (it runs the gate itself); browser QA of the copy next, on the local instance.
+- 19:45 Browser QA (agent-browser, the standalone build on 127.0.0.1:3185): the dialog and help say "a minute or two" in EN
+  and PL, no old phrasing anywhere, Cancel/Anuluj change nothing, the dialog fits 390×844, and a realistic reset confirmed from
+  the UI succeeded after 6.6 s while `curl /up` every 0.4 s answered 200 in 3–6 ms; the server logged 6.5 s. Evidence posted on
+  #215 (six screenshots on `qa-evidence/pr-215`). CI so far: lint, typecheck, unit tests, build and shard 4 green.
+- 20:05 CI shard 1 failed on two home-page tests that read the DOM before the streamed home content arrives (`footer.test.ts`
+  "ends the home page", `navigation.test.ts` visitor Sign in): the flake #213 tracks, failing on four other branches this hour;
+  evidence added to #213, the shard re-run and green. CI figures: the realistic reset 27.0 s (42.4–43.0 s before), the Prod
+  write 2 s in 25.0 s, `GET /up` 2 s in 0.01 s.
+- 20:15 **Review finding (major), accepted.** The standalone build holds three ORM copies (route handlers, pages and server
+  actions, instrumentation), so Kysely's mutex queues only the reset's own bundle: a transaction another bundle begins while
+  the seed yields reaches SQLite mid-reset and gets `SQLITE_BUSY` at once (a WAL read-to-write upgrade skips the busy handler),
+  where before this PR it waited unread in the socket and then succeeded. My run-log note "the reset and a Prod write go
+  through one container" was true only for the API+API pair the integration test exercises. Fix: `@cpg/db`'s write gate
+  (`holdWriteGate`, `WriteGate` subscriber on `beforeTransactionStart` / `afterTransactionCommit` / `afterTransactionRollback`):
+  the reset holds it from before its first write to its commit, and a root transaction of any other connection in the process
+  waits (bounded by the proxy's 120 s). Armed after the reads, so the TEN-026 retry and the idempotency races still work.
+  Next.js holds requests until the instrumentation hook returns, so the startup seed needs no gate. Also the reviewer's nits:
+  the statement cache's busy replacement is now most recent, the `/up` comment says what the ping proves.
 
 ## Changes
 
+- `packages/db/src/orm.ts`: `pingDatabase` (a `select 1` on the native connection, outside Kysely's mutex); `initOrm` installs
+  `cacheStatements`. `packages/db/src/statement-cache.ts` (new): an LRU of 500 prepared statements on `Database.prepare`.
+- `packages/db/src/write-gate.ts` (new): `holdWriteGate(em)` and the `WriteGate` subscriber, registered in `config.ts` beside
+  `TenantGuard`; a root transaction of another ORM copy in the process waits for the holder's commit or rollback, at most
+  `WRITE_GATE_WAIT_MS` (the proxy's 120 s); a holder whose connection closed is dropped.
+- `packages/core/src/services/demo/seed-demo-data.ts`: `await setImmediate` after each master batch and each document.
+- `packages/core/src/services/tenants/test-reset.service.ts`: holds the write gate before its first write; logs the reset's
+  duration (`Reset the Test tenant to the <dataset> dataset, generation N: deleted and reseeded in X s`).
+- `packages/core/src/services/system/system-status.service.ts`: `ping()` through `pingDatabase`; the ESLint `rawSql` exemption
+  for it removed (`eslint.config.mjs`, `tests/tenant-lint.test.ts`).
+- The seed speed-up ported from `wip/issue-163-seed-perf`: `seedDemo` of customer orders (ID and line IDs), shipments, goods
+  issues, goods receipts, purchase orders, production orders and completions return only IDs through a `result` callback of
+  `createWith`/`postWith`; `stock-posting.ts` loads materials, locations and balances in one query each (`materialsByCode`,
+  `pickActiveMaterial`, `locationsByCode`, `pickActiveLocation`, `currentBalances`); `find-named-record.ts` exports
+  `namedRecordNotFound`.
+- Copy: `en.ts`, `pl.ts`, `help/topics.ts` ("a minute or two"); `app/src/app/up/route.ts` comment.
+- Tests: `orm.test.ts`, `statement-cache.test.ts`, `write-gate.test.ts`, `index.test.ts`, `system-status.service.test.ts`,
+  `seed-demo-data.test.ts`, `test-reset.service.test.ts` (ping during a reset, a write from another ORM copy during a reset,
+  the TEN-026 uncommitted-reset case reworded to the gate's behaviour, the log line), the seven services' seed tests,
+  `tests/realistic-reset-duration.test.ts`, `tests/integration/test-reset-realistic.test.ts` (`GET /up` 2 s into the reset),
+  `tests/integration/test-reset.test.ts` (a UI reset with an API Prod write and `/up` meanwhile), `global-setup.ts` (the
+  reset log lines in the CI log).
+- Docs: `BACKWARD_COMPATIBILITY.md` §4, the spec's implementation notes, `.ai/lessons.md` (the better-sqlite3 and bulk-write
+  lessons), this run log.
+
 ## Verification
 
+- `npm run lint`: exit 0, 0 errors, 1 warning (the old unused `lineError` in `bom.service.ts`).
+- `npm run typecheck`: exit 0.
+- `npm run test:coverage`: exit 0; 533 files, 3,875 tests; 100% statements (10,483), branches (4,475), functions (3,490),
+  lines (9,078).
+- `npm run build`: exit 0 (re-run on the final tree, see the log).
+- Regression checks: without the yields the timer-scheduled ping only fires after the reset and the loop-turn counter stays at
+  one; through Kysely instead of the native handle the ping parks on the mutex (`orm.test.ts` keeps that as a control); without
+  the gate a second ORM's write fails at once with `SQLITE_BUSY` (`write-gate.test.ts`, the control is the ORM built without the
+  subscriber).
+- Integration, against the production standalone build (no Docker on this machine), each file set on a fresh copy and
+  `DATA_DIR`: `test-reset-realistic.test.ts`, `test-reset.test.ts`, `test-reset-api.test.ts` (15 tests); the 13 files that post
+  stock (78 tests). On the idle machine the realistic API reset took **6.5 s** (6.4 s by the server's log), the Prod write issued
+  2 s in answered 200 after 4.5 s, `GET /up` after 0.01 s; the UI tiny reset with an API Prod write and `/up` meanwhile: both 200.
+- CI run [40117347645](https://github.com/Piotr12/CPG/actions/runs/40117347645) on `ad008cac`: lint, typecheck, unit tests,
+  build and the four shards green (shard 1 after a re-run; its first run hit the home-page flake #213). The realistic reset
+  **27.0 s**, the Prod write 2 s in 25.0 s, `GET /up` 2 s in 0.01 s, the tiny seed 3.1–5.1 s. The gate commit's own run is
+  linked from the PR.
+- Browser QA on the standalone build: [evidence on #215](https://github.com/Piotr12/CPG/pull/215#issuecomment-6387532086).
+- Not verified here: kamal-proxy and cpg.baby (no proxy locally); the owner's post-deploy reset (below).
+
 ## Follow-ups
+
+- **Owner, after #215 deploys:** one realistic reset on cpg.baby from the Reset Test card; the UI shows success, `/up` answers
+  meanwhile, `kamal app logs` shows `Reset the Test tenant to the realistic dataset … in N s`. Record N on #185 and in the
+  spec's implementation notes, then close #185. Over about two minutes means the 120 s timeout and the copy need another look.
+- #213: the home-page tests read the DOM before the streamed content arrives; `navigation.test.ts`'s visitor test has the same
+  race (evidence on the issue).
+- `wip/issue-163-seed-perf` (local, 29c77bd9) is superseded by this PR and can be deleted.
+- Known, pre-existing: two writers from different bundles at the same instant still race for SQLite's write lock (one gets
+  `SQLITE_BUSY`); the gate serialises only what arrives while a long write holds it.

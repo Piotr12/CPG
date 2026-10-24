@@ -1,8 +1,9 @@
 import { connection } from "next/server";
 import { requestScope } from "@cpg/core";
 
-// Health check used by kamal-proxy before switching traffic. Touches the database, so a deploy
-// with an unwritable /externaldata never goes live.
+// Health check used by kamal-proxy before switching traffic. Answers once the database connection
+// does (the startup migrations already proved /externaldata writable), also while a realistic Test
+// reset holds that connection in its transaction (#185).
 export async function GET() {
   await connection();
   const { systemStatusService } = (await requestScope()).cradle;

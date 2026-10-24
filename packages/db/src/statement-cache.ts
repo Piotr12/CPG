@@ -25,6 +25,8 @@ export function cacheStatements<S extends { busy: boolean }>(db: Preparing<S>, s
       return cached;
     }
     const statement = prepare(sql);
+    // Delete first: a busy statement's replacement must become the most recent, not keep the old slot.
+    cache.delete(sql);
     cache.set(sql, statement);
     if (cache.size > size) cache.delete(cache.keys().next().value!);
     return statement;
