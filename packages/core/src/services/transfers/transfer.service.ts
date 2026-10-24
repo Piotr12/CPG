@@ -8,10 +8,13 @@ import {
   TransferReversal,
   UniqueConstraintViolationException,
   type EntityManager,
+  type FilterQuery,
   type Material,
+  type OrderDefinition,
   type TransferPostingKind,
 } from "@cpg/db";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
+import { listOrderBy, searchWhere } from "../../domain/lists/list-query";
 import { afterPosting, afterReversal, inTransitOf, isFullyReceived, postingLimit, undispatchedOf } from "../../domain/transfers/transfer-quantity";
 import { parseDecimal } from "../../domain/quantities/decimal";
 import { ConflictError, NotFoundError, ValidationError, versionConflict } from "../../http/errors";
@@ -24,6 +27,8 @@ import {
   type TransferWriteOffInput,
 } from "../../validators/transfers/transfer.schema";
 import { parseInput } from "../../http/parse-input";
+import type { ListOptions } from "../../validators/lists/list-query.schema";
+import type { TransferSort } from "../../validators/transfers/transfer-list.schema";
 import { stockReversalSchema } from "../../validators/stock/stock-reversal.schema";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
@@ -40,6 +45,16 @@ export type { TransferPostingKind };
 /** The stock movement types a transfer posts (INV-012: every movement names its source). */
 export const TRANSFER_DISPATCH_MOVEMENT = "transfer-dispatch";
 export const TRANSFER_RECEIPT_MOVEMENT = "transfer-receipt";
+/** What the Transfers search matches, and the column each sort key orders by (#217). */
+const TRANSFER_SEARCH_FIELDS = ["code", "material.code", "material.description", "source.code", "source.name", "destination.code", "destination.name"];
+const TRANSFER_SORT_PATHS: Record<TransferSort, string> = {
+  id: "code",
+  material: "material.code",
+  source: "source.code",
+  plannedDispatch: "plannedDispatch",
+  status: "status",
+};
+
 export const TRANSFER_ID_RACE = "Another transfer was created at the same moment. Try again.";
 
 /** The most postings a transfer's page and `GET …/transfers/{id}` show, newest first, as the stock ledger does. */
@@ -175,19 +190,23 @@ export class TransferService {
     this.em = em;
   }
 
-  /** One page of the tenant's transfers, by ID (`TRANSFER_PAGE_SIZE` each). */
-  async list(page = 1): Promise<TransferView[]> {
-    const transfers = await this.em.find(Transfer, {}, {
+  /**
+   * One page of the tenant's transfers, by ID unless `sort` says otherwise (`TRANSFER_PAGE_SIZE`
+   * each); `q` keeps those whose ID, material or either location holds every word (#217).
+   */
+  async list({ page = 1, q = "", sort = "id", dir = "asc" }: ListOptions<TransferSort> = {}): Promise<TransferView[]> {
+    const transfers = await this.em.find(Transfer, transferSearch(q), {
       populate: ["material", "source", "destination"],
-      orderBy: { code: "asc" },
+      orderBy: listOrderBy(TRANSFER_SORT_PATHS[sort], dir) as OrderDefinition<Transfer>,
       limit: TRANSFER_PAGE_SIZE,
       offset: (page - 1) * TRANSFER_PAGE_SIZE,
     });
     return transfers.map(toView);
   }
 
-  async count(): Promise<number> {
-    return this.em.count(Transfer, {});
+  /** How many transfers the tenant has that `q` keeps, for the pages of `list`. */
+  async count({ q = "" }: { q?: string } = {}): Promise<number> {
+    return this.em.count(Transfer, transferSearch(q));
   }
 
   /** One transfer with its newest postings; `TRANSFER_NOT_FOUND` when this tenant has no such ID, another tenant's included (TEN-014). */
@@ -580,4 +599,9 @@ function entry(action: string, transfer: Transfer, before: AuditEntry["before"],
     before,
     after,
   };
+}
+
+/** The transfers a list search keeps: `list` and `count` share it, so the pages add up. */
+function transferSearch(q: string): FilterQuery<Transfer> {
+  return searchWhere(q, TRANSFER_SEARCH_FIELDS) as FilterQuery<Transfer>;
 }

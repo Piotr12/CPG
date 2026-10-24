@@ -3,13 +3,18 @@ import {
   PurchaseRequisition,
   UniqueConstraintViolationException,
   type EntityManager,
+  type FilterQuery,
   type Material,
+  type OrderDefinition,
 } from "@cpg/db";
 import { documentState, resolveLines as resolveLifecycle, type LifecycleAction, type DocumentState } from "../../domain/document-lifecycle/lifecycle";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
+import { listOrderBy, searchWhere } from "../../domain/lists/list-query";
 import { ConflictError, ValidationError, versionConflict } from "../../http/errors";
 import { parseInput } from "../../http/parse-input";
+import type { ListOptions } from "../../validators/lists/list-query.schema";
 import { requisitionListQuerySchema } from "../../validators/purchasing/purchase-requisition.schema";
+import type { RequisitionSort } from "../../validators/purchasing/purchase-requisition-list.schema";
 import { DOCUMENT_PAGE_SIZE } from "../../validators/shipments/shipment.schema";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit } from "../audit/audit-recorder";
@@ -37,6 +42,16 @@ export interface NewRequisition {
   requiredDate: string;
 }
 
+/** What the Purchase requisitions search matches, and the column each sort key orders by (#217). */
+const REQUISITION_SEARCH_FIELDS = ["code", "material.code", "material.description", "location.code", "location.name"];
+const REQUISITION_SORT_PATHS: Record<RequisitionSort, string> = {
+  id: "code",
+  material: "material.code",
+  location: "location.code",
+  requiredDate: "requiredDate",
+  status: "status",
+};
+
 export const REQUISITION_ID_RACE = "Another purchase requisition was created at the same moment. Try again.";
 
 interface Deps {
@@ -60,23 +75,24 @@ export class PurchaseRequisitionService {
   }
 
   /**
-   * A page of the tenant's requisitions, by ID, `DOCUMENT_PAGE_SIZE` to a page; a page past the last
+   * A page of the tenant's requisitions, by ID unless `sort` says otherwise, `DOCUMENT_PAGE_SIZE` to a
+   * page; `q` keeps those whose ID, material or location holds every word (#217). A page past the last
    * is empty, an invalid `page` is `VALIDATION_FAILED`.
    */
-  async list(page = 1): Promise<RequisitionView[]> {
+  async list({ page = 1, q = "", sort = "id", dir = "asc" }: ListOptions<RequisitionSort> = {}): Promise<RequisitionView[]> {
     const { page: valid } = parseInput(requisitionListQuerySchema, { page });
-    const requisitions = await this.em.find(PurchaseRequisition, {}, {
+    const requisitions = await this.em.find(PurchaseRequisition, requisitionSearch(q), {
       populate: ["material", "location"],
-      orderBy: { code: "asc" },
+      orderBy: listOrderBy(REQUISITION_SORT_PATHS[sort], dir) as OrderDefinition<PurchaseRequisition>,
       limit: DOCUMENT_PAGE_SIZE,
       offset: (valid - 1) * DOCUMENT_PAGE_SIZE,
     });
     return requisitions.map(toRequisitionView);
   }
 
-  /** How many requisitions the tenant has, for the pages of `list`. */
-  count(): Promise<number> {
-    return this.em.count(PurchaseRequisition, {});
+  /** How many requisitions the tenant has that `q` keeps, for the pages of `list`. */
+  count({ q = "" }: { q?: string } = {}): Promise<number> {
+    return this.em.count(PurchaseRequisition, requisitionSearch(q));
   }
 
   /** The tenant's Open requisitions, by ID: the only ones a purchase-order line may convert (BUY-003). */
@@ -207,4 +223,9 @@ async function convertEntered(
     const [field, message] = lineError(error);
     throw new ValidationError({ [field]: [message] });
   }
+}
+
+/** The requisitions a list search keeps: `list` and `count` share it, so the pages add up. */
+function requisitionSearch(q: string): FilterQuery<PurchaseRequisition> {
+  return searchWhere(q, REQUISITION_SEARCH_FIELDS) as FilterQuery<PurchaseRequisition>;
 }
