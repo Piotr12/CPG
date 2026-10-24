@@ -1,7 +1,7 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { ApiToken, CustomerOrder, GlobalAuditEvent, GlobalIdempotencyKey, initOrm, Material, ProductionCompletion, Session, StockMovement, Tenant, TenantAuditEvent, TenantIdempotencyKey, User, UserPreference, type Orm } from "@cpg/db";
+import { ApiToken, CustomerOrder, GlobalAuditEvent, GlobalIdempotencyKey, initOrm, isTenantOwned, Material, ProductionCompletion, Session, StockMovement, Tenant, TenantAuditEvent, TenantIdempotencyKey, User, UserPreference, type Orm } from "@cpg/db";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadConfig } from "../../config";
 import { createAppContainer } from "../../container/container";
@@ -11,6 +11,7 @@ import { migrateDatabase, toDbOptions } from "../../database";
 import type { AuditActor } from "../audit/actor";
 import { seedTestTenantDataset } from "../demo/seed-demo-data";
 import { ShipmentService } from "../shipments/shipment.service";
+import { formatSequentialId } from "../../domain/business-ids/sequential-id";
 import { generateTestTenantDataset } from "../../domain/demo/generate-dataset";
 import { TEST_DATASET_CONFIGS } from "../../domain/demo/test-datasets";
 import { assertCurrentGeneration } from "../../domain/tenants/generation";
@@ -51,6 +52,17 @@ async function snapshot() {
   return result;
 }
 
+/** Every tenant-owned table with a business ID, and the tenant's IDs in it in order (TEN-029). */
+async function sequences(tenant: string) {
+  const result: Record<string, string[]> = {};
+  for (const meta of orm.getMetadata().getAll().values()) {
+    if (!isTenantOwned(meta) || !meta.properties.code) continue;
+    const rows = await orm.em.getConnection().execute<{ code: string }[]>(`select code from "${meta.tableName}" where tenant_code = ? order by code`, [tenant]);
+    result[meta.tableName] = rows.map(({ code }) => code);
+  }
+  return result;
+}
+
 async function populate() {
   await seedTestTenantDataset((await scope()).cradle, TODAY);
   const test = (await scope()).cradle;
@@ -61,6 +73,14 @@ async function populate() {
   await prod.customerService.create({ name: "keep Prod customer" }, actor);
   await prod.locationService.create({ name: "keep Prod location" }, actor);
   await prod.customerOrderService.create({ customer: "00000001", location: "00000001", lines: [{ material: "00000001", quantity: "3", unit: "kg", requiredDate: "2027-01-01" }] }, actor);
+  // Prod stock, a transfer in transit, and a purchase order received in part (TEN-025).
+  await prod.locationService.create({ name: "keep Prod destination" }, actor);
+  await prod.supplierService.create({ name: "keep Prod supplier" }, actor);
+  await prod.stockService.correct({ material: "00000001", location: "00000001", quantity: "10", unit: "kg", reason: "keep Prod count" }, actor);
+  const transfer = await prod.transferService.create({ material: "00000001", source: "00000001", destination: "00000002", quantity: "4", unit: "kg", plannedDispatch: "2026-10-21", plannedArrival: "2026-10-22" }, actor);
+  await prod.transferService.dispatch(transfer.id, { quantity: "4", unit: "kg" }, actor);
+  const order = await prod.purchaseOrderService.create({ supplier: "00000001", location: "00000001", lines: [{ material: "00000001", quantity: "5", unit: "kg", plannedDate: "2027-01-01" }] }, actor);
+  await prod.goodsReceiptService.post({ purchaseOrder: order.id, lines: [{ line: 1, quantity: "2", unit: "kg" }] }, actor);
   const em = orm.em.fork();
   for (const [index, username] of ["admin", "alice"].entries()) {
     const user = em.create(User, { username, role: index === 0 ? "admin" : "user" });
@@ -76,9 +96,11 @@ async function populate() {
 }
 
 describe("atomic Test reset", { timeout: 60_000 }, () => {
-  it.each([false, true])("reseeds every kind and restores readOnly=%s, preserving globals and Prod (TEN-022, TEN-023, TEN-024, TEN-028, AUD-011…013)", async (readOnly) => {
+  it.each([false, true])("reseeds every kind and restores readOnly=%s, preserving globals and Prod, read-only alike (TEN-022…025, TEN-028, AUD-011…013)", async (readOnly) => {
     await populate();
     await container.createScope().cradle.tenantService.setReadOnly("test", readOnly, actor);
+    // Prod shares the flag, so its read-only state is compared both ways (TEN-025).
+    await container.createScope().cradle.tenantService.setReadOnly("prod", readOnly, actor);
     const before = await snapshot();
 
     expect(await reset()).toEqual({ code: "test", name: "Test", generation: 2, readOnly });
@@ -92,6 +114,10 @@ describe("atomic Test reset", { timeout: 60_000 }, () => {
     for (const [table, rows] of Object.entries(before)) {
       if (table === "tenant") continue;
       expect(prodRows(after[table]), table).toEqual(prodRows(rows));
+    }
+    // Prod had the records TEN-025 names, so the comparison above covers them.
+    for (const table of ["customer_order", "stock_balance", "stock_movement", "transfer", "transfer_posting", "purchase_order", "goods_receipt", "tenant_audit_event"]) {
+      expect(prodRows(before[table]).length, table).toBeGreaterThan(0);
     }
     const current = (await scope()).cradle;
     expect(await current.em.count(TenantAuditEvent, {})).toBe(0);
@@ -113,7 +139,12 @@ describe("atomic Test reset", { timeout: 60_000 }, () => {
     const events = await current.em.find(GlobalAuditEvent, { action: "tenants.tenant.reset" });
     expect(events).toMatchObject([{ before: { generation: 1, readOnly }, after: { generation: 2, readOnly, dataset: "tiny" }, actorUsername: "admin", sessionId: "session-admin" }]);
     expect(await orm.em.getConnection().execute("pragma foreign_key_check")).toEqual([]);
-    expect(await (await scope("prod")).cradle.tenantService.get("prod")).toEqual({ code: "prod", name: "Prod", generation: 1, readOnly: false });
+    const prod = (await scope("prod")).cradle;
+    expect(await prod.tenantService.get("prod")).toEqual({ code: "prod", name: "Prod", generation: 1, readOnly });
+    // Prod's sequences carry on where they were (TEN-029).
+    await container.createScope().cradle.tenantService.setReadOnly("prod", false, actor);
+    expect((await prod.materialService.create({ type: "raw", description: "next Prod", baseUnit: "kg" }, actor)).id).toBe("00000002");
+    expect((await prod.purchaseOrderService.create({ supplier: "00000001", location: "00000001", lines: [{ material: "00000001", quantity: "1", unit: "kg", plannedDate: "2027-01-01" }] }, actor)).id).toBe("00000002");
   });
 
   it("writes the realistic dataset's two years for today when the admin picks it, and audits the choice (TEN-001, TEN-022)", async () => {
@@ -130,6 +161,42 @@ describe("atomic Test reset", { timeout: 60_000 }, () => {
     const first = await current.customerOrderService.get("00000001");
     expect(first.createdAt.toISOString()).toBe(timeline.find(({ kind }) => kind === "customerOrder")!.at);
     expect(await current.em.find(GlobalAuditEvent, { action: "tenants.tenant.reset" })).toMatchObject([{ after: { generation: 2, readOnly: false, dataset: "realistic" } }]);
+
+    // TEN-029: from two years of documents, one more of each master and of requisitions (realistic has as many as tiny), and
+    // two transfers, a tiny reset restarts every sequence.
+    const { material, location, enteredQuantity, enteredUnit } = (await current.purchaseRequisitionService.list())[0];
+    await current.purchaseRequisitionService.create({ material, location, quantity: enteredQuantity, unit: enteredUnit, requiredDate: "2030-01-01" }, actor);
+    await current.materialService.create({ type: "raw", description: "old generation only", baseUnit: "kg" }, actor);
+    await current.locationService.create({ name: "old generation location" }, actor);
+    await current.customerService.create({ name: "old generation customer" }, actor);
+    await current.supplierService.create({ name: "old generation supplier" }, actor);
+    const recipes = await current.bomService.list();
+    const recipe = recipes[0];
+    const priority = Math.max(...recipes.filter(({ output }) => output === recipe.output).map(({ priority }) => priority)) + 1;
+    await current.bomService.create({ output: recipe.output, priority, validFrom: "2030-01-01", validThrough: null,
+      components: recipe.components.map(({ material, enteredQuantity, enteredUnit }) => ({ material, quantity: enteredQuantity, unit: enteredUnit })) }, actor);
+    const transfer = { material: "00000001", source: "00000001", destination: "00000002", quantity: "1", unit: "kg", plannedDispatch: "2026-10-21", plannedArrival: "2026-10-22" };
+    for (let index = 0; index < 2; index++) await current.transferService.create(transfer, actor);
+    const old = await sequences("test");
+
+    await reset(2);
+
+    const tiny = generated();
+    const expected: Record<string, number> = {
+      material: tiny.masters.materials.length, location: tiny.masters.locations.length, customer: tiny.masters.customers.length,
+      supplier: tiny.masters.suppliers.length, bom: tiny.masters.boms.length, customer_order: tiny.summary.customerOrders,
+      shipment: tiny.summary.shipments, goods_issue: tiny.summary.goodsIssues, purchase_requisition: tiny.summary.requisitions,
+      purchase_order: tiny.summary.purchaseOrders, goods_receipt: tiny.summary.goodsReceipts, production_order: tiny.summary.productionOrders,
+      production_completion: tiny.summary.completions, transfer: 0,
+    };
+    const fresh = await sequences("test");
+    expect(Object.keys(fresh).sort()).toEqual(Object.keys(expected).sort());
+    for (const [table, codes] of Object.entries(fresh)) {
+      // The old generation went further, so a sequence that carried on would not start at 00000001.
+      expect(old[table].length, table).toBeGreaterThan(expected[table]);
+      expect(codes, table).toEqual(Array.from({ length: expected[table] }, (_, index) => formatSequentialId(index + 1)));
+    }
+    expect((await (await scope()).cradle.transferService.create(transfer, actor)).id).toBe("00000001");
   }, 300_000);
 
   it.each(["locations", "BOMs", "shipments"] as const)("rolls back deletion and partially seeded %s, including both flags and all audits (TEN-027)", async (kind) => {
@@ -229,22 +296,81 @@ describe("keyed reset", { timeout: 60_000 }, () => {
   });
 });
 
-describe("reset and an in-flight write on independent SQLite connections (TEN-026)", { timeout: 60_000 }, () => {
-  it("retries reset after another write commits first, removing that completed old-generation write", async () => {
+describe("reset and a write on an independent SQLite connection (TEN-026)", { timeout: 60_000 }, () => {
+  /** A write the way the API makes it: generation and read-only checked inside its own transaction. */
+  async function apiWrite(writer: AppContainer["cradle"], description: string) {
+    const fingerprint = await fingerprintOf({ method: "POST", path: "/api/tenants/test/materials", body: { description } });
+    return writer.idempotencyService.run(
+      { userId: "admin", key: description, operation: "POST /api/tenants/test/materials", fingerprint },
+      { kind: "tenant", tenant: "test", generation: 1, requireGeneration: true },
+      () => writer.materialService.create({ type: "raw", description, baseUnit: "kg" }, actor),
+    );
+  }
+
+  it("retries a direct (UI) reset after another write commits first, removing that completed old-generation write", async () => {
     await populate();
     const other = await initOrm({ databasePath: orm.config.get("dbName") });
     try {
-      const writer = await scopeForTenant(createAppContainer(container.cradle.config, other), "test");
-      const resetting = await scope();
-      const read = resetting.cradle.tenantService.currentState.bind(resetting.cradle.tenantService);
-      vi.spyOn(resetting.cradle.tenantService, "currentState").mockImplementationOnce(async (code) => {
+      const writer = (await scopeForTenant(createAppContainer(container.cradle.config, other), "test")).cradle;
+      const resetting = (await scope()).cradle;
+      // The spy only times the write: right after the reset's own transaction has read the generation.
+      const read = resetting.tenantService.currentState.bind(resetting.tenantService);
+      const currentState = vi.spyOn(resetting.tenantService, "currentState").mockImplementationOnce(async (code) => {
         const state = await read(code);
-        await writer.cradle.materialService.create({ type: "raw", description: "committed just before reset", baseUnit: "kg" }, actor);
+        await apiWrite(writer, "committed just before reset");
         return state;
       });
-      await expect(resetting.cradle.testResetService.reset(1, actor)).resolves.toMatchObject({ generation: 2 });
+      await expect(resetting.testResetService.reset(1, actor)).resolves.toMatchObject({ generation: 2 });
+      // The first attempt stopped at its first write, its snapshot stale; the retry read again, saw the write and removed it.
+      // Each attempt reads the state before and after; a single attempt would read it twice.
+      expect(currentState.mock.calls.map(([code]) => code)).toEqual(["test", "test", "test"]);
       expect(await (await scope()).cradle.em.count(Material, { description: "committed just before reset" })).toBe(0);
       expect(await (await scope()).cradle.em.count(GlobalAuditEvent, { action: "tenants.tenant.reset" })).toBe(1);
+    } finally { await other.close(); }
+  });
+
+  it("retries an API reset after another write commits first, through the idempotency gate's own retry", async () => {
+    await populate();
+    const other = await initOrm({ databasePath: orm.config.get("dbName") });
+    try {
+      const writer = (await scopeForTenant(createAppContainer(container.cradle.config, other), "test")).cradle;
+      const resetting = (await scope()).cradle;
+      const fingerprint = await fingerprintOf({ method: "POST", path: "/api/tenants/test/reset", body: {} });
+      let attempts = 0;
+      // The gate has read the generation in its transaction when it calls the write; another connection commits first.
+      await expect(resetting.idempotencyService.run(
+        { userId: "admin", key: "reset", operation: "POST /api/tenants/test/reset", fingerprint },
+        { kind: "test-reset", tenant: "test", generation: 1, requireGeneration: true },
+        async () => {
+          if (++attempts === 1) await apiWrite(writer, "committed just before reset");
+          return resetting.testResetService.reset(1, actor);
+        },
+      )).resolves.toMatchObject({ replayed: false, data: { generation: 2 } });
+      // The first attempt's snapshot went stale at the reset's first write; the gate's retry saw the write and removed it.
+      expect(attempts).toBe(2);
+      expect(await (await scope()).cradle.em.count(Material, { description: "committed just before reset" })).toBe(0);
+      expect(await (await scope()).cradle.em.count(GlobalAuditEvent, { action: "tenants.tenant.reset" })).toBe(1);
+    } finally { await other.close(); }
+  });
+
+  it("refuses a write to a read-only Test from another connection while the reset is uncommitted, and keeps Test read-only", async () => {
+    await populate();
+    await container.createScope().cradle.tenantService.setReadOnly("test", true, actor);
+    const other = await initOrm({ databasePath: orm.config.get("dbName") });
+    try {
+      const writer = (await scopeForTenant(createAppContainer(container.cradle.config, other), "test")).cradle;
+      const resetting = (await scope()).cradle;
+      await inRequestTransaction(resetting.em, async () => {
+        await resetting.testResetService.reset(1, actor);
+        // The reset has deleted and reseeded Test and holds SQLite's writer lock; the other connection still reads the committed flag.
+        await expect(apiWrite(writer, "written during reset")).rejects.toMatchObject({ code: "TENANT_READ_ONLY" });
+      });
+      // Once it commits, the same write is refused as stale before the gate is even reached.
+      await expect(apiWrite(writer, "written after reset")).rejects.toMatchObject({ code: "GENERATION_STALE" });
+      const current = (await scope()).cradle;
+      expect(await current.tenantService.get("test")).toMatchObject({ generation: 2, readOnly: true });
+      expect(await current.em.count(Material, { description: { $like: "written %" } })).toBe(0);
+      expect(await current.em.count(Material, {})).toBe(generated().masters.materials.length);
     } finally { await other.close(); }
   });
 

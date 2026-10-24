@@ -42,7 +42,7 @@ export const pl: Messages = {
       title: "Zresetować dane środowiska Test?",
       confirmation: "Trwale usuń generację {generation} środowiska Test wraz ze wszystkimi danymi biznesowymi i audytem, a następnie utwórz {dataset} zbiór danych demonstracyjnych. Identyfikatory zaczną się od 00000001. Prod, konta, sesje, tokeny, preferencje i audyt globalny zostaną zachowane. Tej operacji nie można cofnąć.",
       datasetNames: { tiny: "mały", realistic: "realistyczny" },
-      slow: "Zapis realistycznego zbioru danych trwa do pół minuty, a w tym czasie aplikacja nie odpowiada nikomu innemu.",
+      slow: "Zapis realistycznego zbioru danych trwa do minuty, a w tym czasie aplikacja nie odpowiada nikomu innemu.",
       readOnly: "Test pozostanie tylko do odczytu.",
       writable: "Test pozostanie zapisywalne.",
       confirm: "Resetuj Test",
@@ -895,6 +895,7 @@ export const pl: Messages = {
       "Zapotrzebowanie mówi, czego potrzeba, gdzie i na kiedy. Zamówienia zakupu przekształcają je, w jednym lub kilku krokach. Zapotrzebowanie to tylko planowana podaż: nigdy nie zmienia stanu magazynowego.",
     empty: "Brak zapotrzebowań zakupu w {tenant}.",
     emptyHint: "Utwórz pierwsze przyciskiem Utwórz zapotrzebowanie.",
+    pagination: "Strony zapotrzebowań zakupu", previous: "Poprzednia", next: "Następna", page: "Strona {page} z {pages}",
     columns: {
       id: "Zapotrzebowanie",
       material: "Materiał",

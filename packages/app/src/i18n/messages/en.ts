@@ -44,7 +44,7 @@ export const en = {
       title: "Reset Test data?",
       confirmation: "Permanently delete Test generation {generation}, including all its business records and audit, and reseed it with the {dataset} demonstration dataset. Business IDs restart from 00000001. Prod, accounts, sessions, tokens, preferences and Global audit are kept. This cannot be undone.",
       datasetNames: { tiny: "tiny", realistic: "realistic" },
-      slow: "Writing the realistic dataset takes up to half a minute, and the app answers nobody else until it is done.",
+      slow: "Writing the realistic dataset takes up to a minute, and the app answers nobody else until it is done.",
       readOnly: "Test will remain read-only.",
       writable: "Test will remain writable.",
       confirm: "Reset Test",
@@ -928,6 +928,7 @@ export const en = {
       "A requisition says what is needed, where and by when. Purchase orders convert it, in one or more steps. A requisition is planned supply only: it never changes stock.",
     empty: "No purchase requisitions in {tenant} yet.",
     emptyHint: "Create the first one with Create requisition.",
+    pagination: "Purchase requisition pages", previous: "Previous", next: "Next", page: "Page {page} of {pages}",
     columns: {
       id: "Requisition",
       material: "Material",

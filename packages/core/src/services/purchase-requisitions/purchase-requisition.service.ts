@@ -8,6 +8,9 @@ import {
 import { documentState, resolveLines as resolveLifecycle, type LifecycleAction, type DocumentState } from "../../domain/document-lifecycle/lifecycle";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
 import { ConflictError, ValidationError, versionConflict } from "../../http/errors";
+import { parseInput } from "../../http/parse-input";
+import { requisitionListQuerySchema } from "../../validators/purchasing/purchase-requisition.schema";
+import { DOCUMENT_PAGE_SIZE } from "../../validators/shipments/shipment.schema";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit } from "../audit/audit-recorder";
 import { findActiveLocation } from "../locations/find-location";
@@ -56,13 +59,29 @@ export class PurchaseRequisitionService {
     this.em = em;
   }
 
-  /** Every requisition of the tenant, by ID. */
-  async list(): Promise<RequisitionView[]> {
-    const requisitions = await this.em.find(
-      PurchaseRequisition,
-      {},
-      { populate: ["material", "location"], orderBy: { code: "asc" } },
-    );
+  /**
+   * A page of the tenant's requisitions, by ID, `DOCUMENT_PAGE_SIZE` to a page; a page past the last
+   * is empty, an invalid `page` is `VALIDATION_FAILED`.
+   */
+  async list(page = 1): Promise<RequisitionView[]> {
+    const { page: valid } = parseInput(requisitionListQuerySchema, { page });
+    const requisitions = await this.em.find(PurchaseRequisition, {}, {
+      populate: ["material", "location"],
+      orderBy: { code: "asc" },
+      limit: DOCUMENT_PAGE_SIZE,
+      offset: (valid - 1) * DOCUMENT_PAGE_SIZE,
+    });
+    return requisitions.map(toRequisitionView);
+  }
+
+  /** How many requisitions the tenant has, for the pages of `list`. */
+  count(): Promise<number> {
+    return this.em.count(PurchaseRequisition, {});
+  }
+
+  /** The tenant's Open requisitions, by ID: the only ones a purchase-order line may convert (BUY-003). */
+  async listOpen(): Promise<RequisitionView[]> {
+    const requisitions = await this.em.find(PurchaseRequisition, { status: "open" }, { populate: ["material", "location"], orderBy: { code: "asc" } });
     return requisitions.map(toRequisitionView);
   }
 

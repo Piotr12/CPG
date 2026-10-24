@@ -69,7 +69,7 @@ const scope = (readOnly = false) => ({
     supplierService: { list: mocks.suppliers },
     locationService: { list: mocks.locations },
     materialService: { list: mocks.materials, listUnits: mocks.units },
-    purchaseRequisitionService: { list: mocks.requisitions },
+    purchaseRequisitionService: { listOpen: mocks.requisitions },
   },
 });
 
@@ -101,6 +101,8 @@ describe("PurchaseOrdersPage", () => {
     ]);
     expect(screen.getByRole("link", { name: "00000001" }).getAttribute("href")).toBe("/admin/test/purchase-orders/00000001");
     expect(screen.getByRole("button", { name: "Create purchase order" })).toBeTruthy();
+    // The form's requisition choices are every Open requisition, never a page of the list (#187).
+    expect(mocks.requisitions).toHaveBeenCalledExactlyOnceWith();
   });
 
   it("shows the list in Polish, and the empty state with how to start", async () => {

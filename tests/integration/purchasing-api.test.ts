@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { callApi, json } from "./api";
-import { openBrowser, type Browser } from "./browser";
+import { clickHydrated, openBrowser, type Browser } from "./browser";
 import { signIn, signInAsAdmin } from "./sign-in";
 import { createToken, openTokens } from "./tokens";
 
@@ -334,5 +334,40 @@ describe("purchase requisitions and orders through the API", () => {
     } finally {
       expect((await write("PATCH", "/api/tenants/prod", { readOnly: false })).status).toBe(200);
     }
+  });
+
+  it("pages the requisition list by 100 in the API (?page=, additive) and on screen, past 100 requisitions (#187)", async () => {
+    const mine = new Set<string>();
+    for (let index = 0; index < 101; index++) mine.add((await requisition({ quantity: "1" })).id);
+    const requisitionsPage = async (query = "") => {
+      const response = await api("GET", `/api/tenants/prod/purchase-requisitions${query}`);
+      expect(response.status).toBe(200);
+      return json(response).data as Requisition[];
+    };
+
+    const first = await requisitionsPage();
+    expect(first).toHaveLength(100);
+    expect(await requisitionsPage("?page=1")).toEqual(first);
+    const all = [...first];
+    for (let page = 2, batch = await requisitionsPage(`?page=${page}`); batch.length > 0; batch = await requisitionsPage(`?page=${++page}`)) {
+      expect(batch.length).toBeLessThanOrEqual(100);
+      all.push(...batch);
+    }
+    const ids = all.map(({ id }) => id);
+    // Every page continues the IDs of the one before, and the pages together hold every requisition once.
+    expect(ids).toEqual([...new Set(ids)].sort());
+    expect([...mine].every((id) => ids.includes(id))).toBe(true);
+    const pages = Math.ceil(all.length / 100);
+    expect(await requisitionsPage(`?page=${pages + 1}`)).toEqual([]);
+    for (const bad of ["?page=0", "?page=x", "?page=1.5"]) expect((await api("GET", `/api/tenants/prod/purchase-requisitions${bad}`)).status).toBe(400);
+
+    await user.open(`${baseUrl}/admin/prod/purchase-requisitions`);
+    const nav = 'main nav[aria-label="Purchase requisition pages"]';
+    await user.waitForText(`Page 1 of ${pages}`);
+    expect(await user.evaluate<string[]>(`[...document.querySelectorAll('${nav} a')].map((link) => link.textContent)`)).toEqual(["Next"]);
+    await clickHydrated(user, `${nav} a[href$='page=2']`);
+    await user.waitForText(`Page 2 of ${pages}`);
+    // Next.js keeps page 1 mounted but hidden: read the shown table's first row.
+    expect(await user.evaluate<string>(`[...document.querySelectorAll("main table tbody tr")].find((row) => row.offsetParent).cells[0].textContent`)).toBe(all[100].id);
   });
 });

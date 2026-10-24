@@ -26,4 +26,4 @@ Implement issue #90 via om-auto-fix-issue: cancellation, early closure and share
 - Read issue #90, prerequisite issue states, PR search and origin/main history.
 
 ## Follow-ups
-- Implementation delivered on PR #123; independent code/QA approval precedes any merge. No base-branch push, merge or deployment was performed.
+- Implementation delivered on PR #123; independent code/QA approval precedes any merge. No base-branch push, merge or deployment was performed. Update 2026-10-23: PR #123 merged; human QA is still not recorded on it (`needs-qa`).
