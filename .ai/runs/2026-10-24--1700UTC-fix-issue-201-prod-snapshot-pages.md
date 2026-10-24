@@ -3,7 +3,7 @@
 **Date:** 2026-10-24 17:00 UTC
 **Agent:** cezar → Claude Code (Claude Fable 5.1), `/om-auto-fix-issue 201`
 **Spec:** none (follow-up from #197; the atomic reset spec `.ai/specs/implemented/2026-10-20--1636UTC-atomic-test-reset.md` is already implemented)
-**Status:** in progress
+**Status:** done — PR #209 open and reviewed (approve, posted as a comment); CI on the final head and a human approval still gate the merge
 
 ## Goal
 
@@ -44,6 +44,10 @@
   > **Tests:** `tests/integration-helpers.test.ts` (3 cases) and the strengthened reset test; lint 0 errors, typecheck 0, coverage 3,863 tests at the 100% thresholds, build 0; touched integration files 30/30 in order on one standalone server (Docker unavailable), full suite left to CI; negative run fails as expected.
   > **Breaking changes:** none (test code only).
 - 17:41 UTC — Step 8 (`om-open-pr --handoff om-auto-review-pr`): committing, pushing `fix/issue-201-prod-snapshot-every-page`, opening the PR as `refactor` (the issue's category), `skip-qa`, `priority-low`, `risk-low`.
+- 17:45 UTC — Commit `64d921c1` pushed; cezar's `cez/71bcff64` moved to the same commit. PR #209 opened ready (`https://github.com/Piotr12/CPG/pull/209`) with `review`, `refactor`, `skip-qa`, `priority-low`, `risk-low`; label rationale and run-summary comments posted; chain lock handed to the PR (assignee, `in-progress`, hand-off comment). Issue #201: author is the automation user, so no reassignment; `in-progress` removed and the completion comment posted.
+- 17:46 UTC — Step 9 (`om-auto-review-pr 209 --autofix`): take-over comment posted on the inherited lock, then metadata, prior feedback, CI signals and base history gathered. Head `64d921c1` MERGEABLE; no prior reviews or inherited feedback; branch protection not readable (404), so every check counts as required; CI run 40115619121: lint, typecheck, build SUCCESS, unit-tests and integration shards 1–4 in progress; no main commit on the touched files addresses #201.
+- 17:50 UTC — Review: ✅ approve, no blocker/major/minor, one informational nit (101 writes on a fresh server). Posted as a comment review (GitHub refuses self-approval; lesson 2026-10-17), PR kept in `review` for a human approval; `om-auto-review-pr` label rationale and completion comment (`Lock retained — chain continues.`). Step 10 skipped: the diff touches test files and `.ai/` only, no UI surface. Step 12: `in-progress` → `ci-monitoring` on #209 (CI result follow-up owed), run-complete comment posted. Standalone test server stopped.
+- 17:53 UTC — Run log finalized and pushed as a docs-only second commit on the PR branch; CI reruns on that head, and the CI-result comment (step 13 of the review) follows it.
 
 ## Plan
 
@@ -70,4 +74,5 @@
 
 ## Follow-ups
 
-- (pending)
+- A human approves and merges #209 once CI on its final head is green (the automation can't approve its own PR; the PR stays in `review`).
+- The `ci-monitoring` label on #209 comes off with the CI-result comment this run posts when the final head's run settles (or when the 40-minute wait is exhausted).
