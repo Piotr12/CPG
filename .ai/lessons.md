@@ -177,6 +177,7 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 ## Tooling, shell and CI
 
+- **2026-10-24 — Fix an npm advisory with `npm update <package>`, and read the advisory record before writing the baseline** — `npm audit fix` (like a plain `npm install` under npm 11.12) also prunes four hoisted optional wasm entries the lockfile still lists, so the diff is no longer the advisory packages alone; `npm update body-parser fast-uri` changed exactly those two (#202). The "Known `npm audit` state" paragraph in `engineering-standards.md` went stale within a week: `gh api /advisories/<GHSA>` showed the braces finding withdrawn, not fixed, so date the paragraph and cite the record.
 - **2026-10-23 — Judge a gate command by its exit code, never by a piped tail** — `… | tail` / `| head` reports the pipe's status, so type errors were committed (#92) and shipped (#162). Run `npm run typecheck > log; echo $?`. A bare `tsc -p packages/app` also misses `RouteContext` types, which `next typegen` (inside `npm run typecheck`) generates.
 - **2026-10-19 — A cezar worktree needs its own `npm ci`** — without it Node resolves `@cpg/*` to the main checkout's packages, and tests and typecheck run the wrong code.
 - **2026-10-24 — zsh traps** — four to avoid:

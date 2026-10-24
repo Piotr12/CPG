@@ -407,7 +407,7 @@ Deliberately **not built yet** (YAGNI). Each arrives with the first concept that
 - `core/src/events/*`
 - a shared logger
 
-Known `npm audit` state: 10 high advisories, all from `braces` (GHSA-vfj7-8cjw-p6xm, no patched version) via `fast-glob`. That reaches the app only through `awilix` (`loadModules`, which this project never calls). Otherwise it is dev tooling (`eslint-config-next`, `shadcn`). `npm audit fix --force` would downgrade `awilix` to 6.0.0: don't. Re-check when `braces` ships a fix.
+Known `npm audit` state (2026-10-24, #202): clean, no advisories. Advisories reach this project through tooling the app never runs: the `shadcn` CLI (`@cpg/ui` keeps it for `npx shadcn add`) brings `@modelcontextprotocol/sdk` → `express` → `body-parser` and three copies of `ajv` → `fast-uri`, and `eslint-config-next` brings `fast-glob` → `braces`. None of `shadcn`, `express`, `body-parser`, `ajv` or `fast-uri` is in the traced standalone runtime (`packages/app/.next/standalone/node_modules`, which the image copies). History: the 10 `braces` findings (GHSA-vfj7-8cjw-p6xm) were withdrawn by GitHub on 2026-10-23; `body-parser` 2.3.0 (GHSA-27r3-jxmh-p828) and `fast-uri` 3.1.8 (GHSA-w74x-v6f9-j3xg, GHSA-wjr9-j795-jxcr, GHSA-xhq7-xmqj-769h, GHSA-333x-w4r6-6crp) were moved to 2.4.0 and 3.1.9 the day after, and `tests/lockfile-advisories.test.ts` keeps every copy at or above those floors. To fix the next one, run `npm update <package>` for the flagged package only and check the lockfile diff: `npm audit fix` also prunes unrelated optional entries, and `npm audit fix --force` once offered to downgrade `awilix` to 6.0.0.
 
 ## 6. Deviations from the DevMentor original
 
@@ -422,7 +422,7 @@ Known `npm audit` state: 10 high advisories, all from `braces` (GHSA-vfj7-8cjw-p
 | Plural table names | MikroORM's default singular snake_case | Avoids a `tableName` on every entity and a rename migration for the existing `setting` table. |
 | JWT HS256 + bcrypt, `env.ts` with zod, `pino` | Auth mechanism decided in a future spec (minimums kept); config via `loadConfig`; no logger until needed | CPG has no auth, zod or logger yet, and adding them speculatively breaks YAGNI. |
 | Persona route groups `(student)`, `(mentor)`, …; bookings, payments, slot races, money | Public frontend vs `/admin` backend; MRP concepts; stock/release races, recomputed quantities/costs | Different product. The underlying rules carry over unchanged. |
-| `npm audit` as a gate | `npm audit` triage | It currently reports 10 unfixable dev-tooling/unused-path advisories, so a hard gate would block every deploy. |
+| `npm audit` as a gate | `npm audit` triage | Advisories arrive through dev tooling outside the traced runtime (`shadcn`, `eslint-config-next`) and can lack a patched release for weeks, so a hard gate would block deploys on code that never ships. Triage fixes what has a patch and records the rest in the "Known `npm audit` state" paragraph above. |
 | `docs/product-scope.md` "no DI container" fix | Not applicable | CPG has no such document. Awilix is already a stack decision in `AGENTS.md`. |
 
 ### Atomic Test reset (2026-10-20, issue #93)
