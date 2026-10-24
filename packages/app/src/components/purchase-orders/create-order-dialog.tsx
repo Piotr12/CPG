@@ -6,7 +6,7 @@ import { Button } from "@cpg/ui/components/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@cpg/ui/components/dialog";
 import { createOrder } from "../../app/admin/[tenant]/purchase-orders/actions";
 import { TALL_DIALOG, type FormOption } from "../forms/form-labels";
-import type { MaterialChoice } from "../purchase-requisitions/requisition-form";
+import type { MaterialPick } from "../purchase-requisitions/choices";
 import type { RequisitionChoice } from "./choices";
 import type { OrdersLabels, TenantContext } from "./labels";
 import { OrderForm } from "./order-form";
@@ -16,12 +16,13 @@ interface CreateOrderDialogProps {
   labels: OrdersLabels;
   suppliers: FormOption[];
   locations: FormOption[];
-  materials: MaterialChoice[];
+  materials: MaterialPick[];
   requisitions: RequisitionChoice[];
+  locale: string;
 }
 
 /** The Create purchase order button and its form, for any signed-in account; the server assigns the ID (LFC-001). */
-export function CreateOrderDialog({ context, labels, suppliers, locations, materials, requisitions }: CreateOrderDialogProps) {
+export function CreateOrderDialog({ context, labels, suppliers, locations, materials, requisitions, locale }: CreateOrderDialogProps) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
   const t = labels.create;
@@ -42,6 +43,7 @@ export function CreateOrderDialog({ context, labels, suppliers, locations, mater
           locations={locations}
           materials={materials}
           requisitions={requisitions}
+          locale={locale}
           schema={orderCreateSchema}
           action={(values) => createOrder(context.tenant, context.generation, values)}
           onSuccess={close}

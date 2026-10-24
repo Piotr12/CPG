@@ -4,6 +4,7 @@ import type { OrderView } from "@cpg/core";
 import { en } from "../../i18n/messages/en";
 import { pl } from "../../i18n/messages/pl";
 import { OrderScreen } from "./order-screen";
+import { listLinks } from "../lists/list-params";
 import { OrdersScreen } from "./orders-screen";
 
 vi.mock("../../app/admin/[tenant]/purchase-orders/[id]/actions", () => ({ cancelPurchaseOrder: vi.fn(), closeEarlyPurchaseOrder: vi.fn(), postReceipt: vi.fn(), setPurchaseOrderLineDate: vi.fn() }));
@@ -50,7 +51,9 @@ describe("OrderScreen", () => {
 });
 
 describe("OrdersScreen", () => {
-  const list = { tenant, orders: [order], page: 1, pages: 1, suppliers: [supplier], locations: [location], materials: [material], units: {}, requisitions: [], locale: "en" as const, messages: en };
+  const state = { search: { q: "", typed: "" }, sort: { sort: "id" as const, dir: "asc" as const }, count: 2,
+    links: listLinks({ path: "/admin/test/purchase-orders", search: "", sort: { sort: "id", dir: "asc" }, defaults: { sort: "id", dir: "asc" } }) };
+  const list = { tenant, orders: [order], page: 1, pages: 1, list: state, suppliers: [supplier], locations: [location], materials: [material], units: {}, requisitions: [], locale: "en" as const, messages: en };
 
   it("heads the list with its intro and Create purchase order, and badges each status and an inactive supplier", () => {
     render(<OrdersScreen {...list} suppliers={[{ ...supplier, active: false }]} orders={[order, { ...order, id: "00000002", status: "closed-early" } as unknown as OrderView]} />);
@@ -68,7 +71,8 @@ describe("OrdersScreen", () => {
   });
 
   it("offers no create action in a read-only tenant", () => {
-    render(<OrdersScreen {...list} tenant={{ ...tenant, readOnly: true }} />);
+    render(<OrdersScreen {...list} tenant={{ ...tenant, readOnly: true }} messages={pl} locale="pl" />);
     expect(within(header()).queryByRole("button")).toBeNull();
+    expect(screen.getByRole("searchbox", { name: pl.purchaseOrders.search.label })).toBeTruthy();
   });
 });

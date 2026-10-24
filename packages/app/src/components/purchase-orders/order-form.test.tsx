@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { orderCreateSchema } from "@cpg/core/validators/purchasing/purchase-order.schema";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/messages/en";
@@ -12,8 +12,8 @@ const LOCATIONS = [
   { value: "00000002", label: "00000002 — Warehouse" },
 ];
 const MATERIALS = [
-  { value: "00000001", label: "00000001 — Steel (kg)", units: ["kg", "t"] },
-  { value: "00000002", label: "00000002 — Bolt (each)", units: ["each"] },
+  { value: "00000001", code: "00000001", name: "Steel", detail: "kg", units: ["kg", "t"] },
+  { value: "00000002", code: "00000002", name: "Bolt", detail: "each", units: ["each"] },
 ];
 const REQUISITIONS = [{ value: "00000007", label: "00000007 — 40 kg outstanding", material: "00000001", location: "00000001" }];
 
@@ -29,6 +29,7 @@ function renderForm(props: Partial<OrderFormProps<{ id: string }>> = {}) {
       locations={LOCATIONS}
       materials={MATERIALS}
       requisitions={REQUISITIONS}
+      locale="en"
       schema={orderCreateSchema}
       action={action}
       onSuccess={onSuccess}
@@ -39,8 +40,20 @@ function renderForm(props: Partial<OrderFormProps<{ id: string }>> = {}) {
 }
 const change = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
 const lineField = (field: string, number: number) => screen.getByLabelText(`${field}, Line ${number}`);
+/** Types `code` into the material autocomplete named `label` and clicks its option; "" clears it. */
+const choose = (label: string, code: string) => {
+  const combobox = screen.getByRole("combobox", { name: label });
+  fireEvent.change(combobox, { target: { value: code } });
+  if (code === "") {
+    fireEvent.blur(combobox);
+    return;
+  }
+  const listbox = document.getElementById(combobox.getAttribute("aria-controls")!)!;
+  fireEvent.mouseDown(within(listbox).getAllByRole("option").find((option) => option.textContent!.startsWith(code))!);
+};
+const chooseLine = (number: number, code: string) => choose(`Material, Line ${number}`, code);
 const setLine = (number: number, material: string, quantity: string, plannedDate: string) => {
-  fireEvent.change(lineField("Material", number), { target: { value: material } });
+  chooseLine(number, material);
   fireEvent.change(lineField("Quantity", number), { target: { value: quantity } });
   fireEvent.change(lineField("Planned", number), { target: { value: plannedDate } });
 };
@@ -77,22 +90,22 @@ describe("OrderForm", () => {
     renderForm();
 
     expect(optionsOf(lineField("Unit", 1))).toEqual([]);
-    fireEvent.change(lineField("Material", 1), { target: { value: "00000001" } });
+    chooseLine(1, "00000001");
     expect(optionsOf(lineField("Unit", 1))).toEqual(["kg", "t"]);
     fireEvent.change(lineField("Unit", 1), { target: { value: "t" } });
-    fireEvent.change(lineField("Material", 1), { target: { value: "00000002" } });
+    chooseLine(1, "00000002");
     expect((lineField("Unit", 1) as HTMLSelectElement).value).toBe("each");
-    fireEvent.change(lineField("Material", 1), { target: { value: "" } });
+    chooseLine(1, "");
     expect(optionsOf(lineField("Unit", 1))).toEqual([]);
   });
 
   it("offers a line only the open requisitions of its material and the order's location, and clears a choice that stops matching", () => {
     renderForm();
     change("Location", "00000001");
-    fireEvent.change(lineField("Material", 1), { target: { value: "00000002" } });
+    chooseLine(1, "00000002");
     expect(optionsOf(lineField("Requisition", 1))).toEqual(["No requisition"]);
 
-    fireEvent.change(lineField("Material", 1), { target: { value: "00000001" } });
+    chooseLine(1, "00000001");
     expect(optionsOf(lineField("Requisition", 1))).toEqual(["No requisition", "00000007 — 40 kg outstanding"]);
     fireEvent.change(lineField("Requisition", 1), { target: { value: "00000007" } });
     change("Location", "00000001");
@@ -104,7 +117,7 @@ describe("OrderForm", () => {
 
     change("Location", "00000001");
     fireEvent.change(lineField("Requisition", 1), { target: { value: "00000007" } });
-    fireEvent.change(lineField("Material", 1), { target: { value: "00000002" } });
+    chooseLine(1, "00000002");
     expect((lineField("Requisition", 1) as HTMLSelectElement).value).toBe("");
   });
 
@@ -152,7 +165,7 @@ describe("OrderForm", () => {
     renderForm({ labels: ordersLabels(pl) });
     fireEvent.change(screen.getByLabelText("Dostawca"), { target: { value: "00000001" } });
     fireEvent.change(screen.getByLabelText("Lokalizacja"), { target: { value: "00000001" } });
-    fireEvent.change(screen.getByLabelText("Materiał, Pozycja 1"), { target: { value: "00000001" } });
+    choose("Materiał, Pozycja 1", "00000001");
     fireEvent.change(screen.getByLabelText("Ilość, Pozycja 1"), { target: { value: "1" } });
     fireEvent.change(screen.getByLabelText("Planowana, Pozycja 1"), { target: { value: "2027-03-03" } });
     const send = () => fireEvent.click(screen.getByRole("button", { name: "Utwórz zamówienie zakupu" }));
@@ -220,5 +233,20 @@ describe("OrderForm", () => {
     fireEvent.keyDown(screen.getByLabelText("Supplier"), { key: "Escape" });
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(onCancel).toHaveBeenCalledTimes(2);
+  });
+
+  it("gives every line's material autocomplete its own name, and leaves Escape to an open list (#217)", () => {
+    renderForm();
+    fireEvent.click(screen.getByRole("button", { name: "+ Add line" }));
+    expect([...document.querySelectorAll("[aria-autocomplete=list]")].map((combobox) => combobox.getAttribute("aria-label"))).toEqual(["Material, Line 1", "Material, Line 2"]);
+    expect(screen.getByRole("combobox", { name: "Material, Line 2" }).getAttribute("placeholder")).toBe("Type an ID or a name");
+
+    const second = screen.getByRole("combobox", { name: "Material, Line 2" });
+    act(() => second.focus());
+    fireEvent.change(second, { target: { value: "bolt" } });
+    expect(screen.getAllByRole("status").map((status) => status.textContent)).toEqual(["", "1 material"]);
+    fireEvent.keyDown(second, { key: "Escape" });
+    expect(second.getAttribute("aria-expanded")).toBe("false");
+    expect(onCancel).not.toHaveBeenCalled();
   });
 });
