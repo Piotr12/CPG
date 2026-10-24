@@ -32,11 +32,13 @@ Every main list sorts by a header click and searches through one labelled box, b
 | F4 | Materials pilot: sort + search + highlight; base unit and conversion unit selects; imports use the registry; unit test churn; integration test | lead | in progress (integration run pending) |
 | W1 | Master data: locations, customers, suppliers, BOMs (list + recipe form autocomplete), planning parameters, safety stock, users | worker | todo |
 | W2 | Sales and production: forecasts, customer orders, production orders (lists + material autocompletes in their forms) | worker | todo |
-| W3 | Purchasing and logistics: purchase requisitions, purchase orders, transfers (lists + forms) | worker | todo |
+| W3 | Purchasing and logistics: purchase requisitions, purchase orders, transfers (lists + forms) | worker | done, merged |
 | C1 | Merge workers one by one, gate after each; Help + BACKWARD_COMPATIBILITY + follow-up issues | lead | todo |
 | C2 | Full gate, touched integration files, build, browser QA with screenshots, PR, CI green | lead | todo |
 
 ## Progress
+
+- 2026-10-25 — W3 merged (cez/3c71fdbd): typecheck 0, test:coverage 0 (4,001 tests, 100 %). Its integration run on :3303: purchasing 10/10, transfers 6/6, transfers-api 13/13, purchasing-api 15/15, goods-receipts 3/3 + api 8/8, document-lifecycle 11/11, test-reset-realistic 5/5. Follow-up: an order-date column on the PO list so it can sort by date.
 
 - 2026-10-24 23:40 UTC — F1–F3 and the Materials pilot done: unit coverage 100 % (3,977 tests), lint and typecheck clean. Registered-unit refusal also covers a blank select ("Choose a unit from the list."); the edit form keeps a legacy unit (`materialEditFormSchema`, service checks only a changed unit). Autocomplete claims Escape on `window` in the capture phase while open, because Radix dialogs listen on `document` in the capture phase (B's prototype bug). Workers dispatched with `briefs/`.
 
