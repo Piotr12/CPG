@@ -12,6 +12,17 @@ describe("AppFooter", () => {
     expect(FOOTER_SENTENCE).toBe(screen.getByRole("contentinfo").textContent);
   });
 
+  it("wraps the sentence within a prose line, centred, in the caption style", () => {
+    render(<AppFooter />);
+
+    const footer = screen.getByRole("contentinfo");
+    expect(footer.className).toContain("text-xs text-muted-foreground");
+    const sentence = footer.querySelector("p")!;
+    expect(sentence.className).toBe("mx-auto max-w-prose");
+    expect(sentence.textContent).toBe(FOOTER_SENTENCE);
+    expect(screen.getByRole("link", { name: "OpenMercato Skills" }).className).toBe("underline underline-offset-4 hover:text-foreground");
+  });
+
   it.each([
     ["OpenMercato Skills", "https://github.com/open-mercato/skills"],
     ["AITechLeaders training", "https://www.aitechleaders.pl/"],

@@ -6,16 +6,16 @@ import { TENANT_CODES, type TenantCode } from "@cpg/core/validators/tenants/tena
 import { cn } from "@cpg/ui/lib/utils";
 import { switchTenantPath } from "./switch-tenant-path";
 
-/** The pressed side wears its tenant's colours (TEN-011); the words TEST and PROD always say it too. */
+/** The pressed side wears its tenant's tag colours and edge (TEN-011); the words TEST and PROD always say it too. */
 const PRESSED: Record<TenantCode, string> = {
-  test: "bg-amber-200 text-amber-950 shadow-[inset_0_0_0_1px_var(--color-amber-500)] hover:bg-amber-200",
-  prod: "bg-neutral-900 text-neutral-50 shadow-[inset_0_-2px_0_var(--color-red-600)] hover:bg-neutral-900 dark:bg-neutral-950",
+  test: "bg-tenant-test-tag text-tenant-test-tag-foreground ring-1 ring-inset ring-tenant-test-edge hover:bg-tenant-test-tag",
+  prod: "bg-tenant-prod-tag text-tenant-prod-tag-foreground border-b-2 border-tenant-prod-edge hover:bg-tenant-prod-tag",
 };
 
 const OPTION =
-  "flex min-h-7 items-center justify-center rounded-[5px] px-2 uppercase transition-colors hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-hidden " +
-  // In the rail the two options stack and shrink to fit 3 rem.
-  "group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:text-[9px] group-data-[collapsible=icon]:tracking-normal";
+  "flex min-h-7 items-center justify-center rounded-sm px-2 uppercase transition-colors hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-hidden " +
+  // In the rail the two options stack, each one letter wide.
+  "group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:tracking-normal";
 
 interface TenantSwitchProps {
   /** The tenant the menu targets: the page's own on a tenant page, the remembered one elsewhere. */
@@ -33,6 +33,8 @@ interface TenantSwitchProps {
   onChoose: (tenant: TenantCode) => void;
   /** Mobile top bar: a narrower switch. */
   compact?: boolean;
+  /** The icon rail: each side shows its tenant's first letter, and keeps the name as its accessible name. */
+  rail?: boolean;
   /** Following a link closes the drawer it sits in. */
   onNavigate?: () => void;
 }
@@ -53,6 +55,7 @@ export function TenantSwitch({
   readOnlyLabel,
   onChoose,
   compact = false,
+  rail = false,
   onNavigate,
 }: TenantSwitchProps) {
   return (
@@ -61,8 +64,8 @@ export function TenantSwitch({
       aria-label={label}
       data-tenant-switch={tenant}
       className={cn(
-        "grid grid-cols-2 gap-0.5 rounded-md border bg-background p-0.5 text-xs font-bold tracking-widest",
-        "group-data-[collapsible=icon]:grid-cols-1",
+        "grid grid-cols-2 gap-1 rounded-md border bg-background p-1 text-xs font-semibold tracking-widest",
+        "group-data-[collapsible=icon]:grid-cols-1 group-data-[collapsible=icon]:p-0",
         compact ? "w-32" : "w-full",
       )}
     >
@@ -72,11 +75,12 @@ export function TenantSwitch({
         const content = (
           <>
             {readOnly[code] && <LockIcon aria-hidden data-read-only className="size-3 shrink-0 group-data-[collapsible=icon]:hidden" />}
-            {names[code]}
+            {rail ? names[code].charAt(0) : names[code]}
           </>
         );
-        // The name keeps the visible tenant name first, so what a reader sees is what is announced (WCAG 2.5.3).
-        const name = readOnly[code] ? `${names[code]} (${readOnlyLabel})` : undefined;
+        // The name keeps the visible tenant name first, so what a reader sees is what is announced (WCAG 2.5.3);
+        // in the rail the letter alone would be the name, so the full one is given.
+        const name = readOnly[code] ? `${names[code]} (${readOnlyLabel})` : rail ? names[code] : undefined;
         return isTenantPage ? (
           <Link
             key={code}

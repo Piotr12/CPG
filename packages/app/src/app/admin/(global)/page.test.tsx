@@ -1,8 +1,10 @@
+import { isValidElement, type ReactElement } from "react";
 import { render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveServerComponents } from "../../../../../../tests/setup/server-components";
 import { en } from "../../../i18n/messages/en";
 import { pl } from "../../../i18n/messages/pl";
+import { LoadingMessage } from "@cpg/ui/backend/feedback/loading-message";
 import AdminPage, { metadata } from "./page";
 
 const mocks = vi.hoisted(() => ({
@@ -54,7 +56,8 @@ describe("AdminPage", () => {
 
     expect(mocks.connection).toHaveBeenCalledOnce();
     expect(mocks.requireUser).toHaveBeenCalledOnce();
-    expect(screen.getByRole("heading", { name: "Tenants" })).toBeTruthy();
+    const heading = screen.getByRole("heading", { level: 1, name: "Tenants" });
+    expect(heading.closest("[data-slot=page-header]")).not.toBeNull();
     expect(screen.getByText("/externaldata/cpg.sqlite")).toBeTruthy();
     expect(screen.getByText("3 migrations applied")).toBeTruthy();
     expect(screen.getByText("7 settings")).toBeTruthy();
@@ -99,9 +102,22 @@ describe("AdminPage", () => {
     render(await resolveServerComponents(AdminPage()));
 
     expect(choices("Choose a tenant")).toEqual([
-      ["/admin/test", "TestDemonstration data, safe to experimentOpen Test →"],
-      ["/admin/prod", "ProdLive dataOpen Prod →"],
+      ["/admin/test", "TestTESTDemonstration data, safe to experimentOpen Test →"],
+      ["/admin/prod", "ProdPRODLive dataOpen Prod →"],
     ]);
+    // Each card is the tenant's own: its edge and tag, on a plain card that never casts a shadow.
+    const [test, prod] = screen.getByRole("navigation", { name: "Choose a tenant" }).querySelectorAll("a");
+    expect(test.className).toContain("border-tenant-test-edge");
+    expect(prod.className).toContain("border-tenant-prod-edge");
+    expect(test.className).not.toMatch(/shadow|amber/);
+  });
+
+  it("streams behind the shared loading state, in the narrow width and the page rhythm", () => {
+    const main = AdminPage() as ReactElement<{ className: string; children: ReactElement<{ fallback: unknown }> }>;
+    expect(main.props.className).toContain("max-w-3xl");
+    expect(main.props.className).toContain("px-4 pt-6 pb-8 md:px-6 md:pt-12 md:pb-12");
+    const fallback = main.props.children.props.fallback;
+    expect(isValidElement(fallback) && fallback.type).toBe(LoadingMessage);
   });
 
   it("marks a read-only tenant on the chooser, for every account (R05)", async () => {
@@ -111,9 +127,13 @@ describe("AdminPage", () => {
     render(await resolveServerComponents(AdminPage()));
 
     expect(choices("Choose a tenant")).toEqual([
-      ["/admin/test", "TestDemonstration data, safe to experimentOpen Test →"],
-      ["/admin/prod", "ProdLive dataRead-onlyOpen Prod →"],
+      ["/admin/test", "TestTESTDemonstration data, safe to experimentOpen Test →"],
+      ["/admin/prod", "ProdPRODLive dataRead-onlyOpen Prod →"],
     ]);
+    const badge = screen.getByText("Read-only");
+    expect(badge.dataset.slot).toBe("status-badge");
+    expect(badge.dataset.tone).toBe("warning");
+    expect(badge.querySelector("svg.lucide-lock")).not.toBeNull();
   });
 
   it("gives the admin a read-only switch per tenant, showing each one's state", async () => {
@@ -126,6 +146,14 @@ describe("AdminPage", () => {
       ["test", "TestWritableMake Test read-only"],
       ["prod", "ProdRead-onlyMake Prod writable"],
     ]);
+    // Read-only is a warning with a lock; writable stays quiet, with a pencil.
+    expect(rows.map((row) => {
+      const badge = row.querySelector<HTMLElement>("[data-slot=status-badge]")!;
+      return [badge.dataset.tone, badge.querySelector("svg")!.classList.contains("lucide-lock") ? "lock" : badge.querySelector("svg.lucide-pencil") && "pencil"];
+    })).toEqual([
+      ["neutral", "pencil"],
+      ["warning", "lock"],
+    ]);
     expect(screen.getByText(/nobody can change its business data, the administrator and the API included/)).toBeTruthy();
   });
 
@@ -135,8 +163,8 @@ describe("AdminPage", () => {
     render(await resolveServerComponents(AdminPage()));
 
     expect(choices("Wybierz środowisko")).toEqual([
-      ["/admin/test", "TestDane demonstracyjne, można bezpiecznie eksperymentowaćOtwórz Test →"],
-      ["/admin/prod", "ProdDane rzeczywisteOtwórz Prod →"],
+      ["/admin/test", "TestTESTDane demonstracyjne, można bezpiecznie eksperymentowaćOtwórz Test →"],
+      ["/admin/prod", "ProdPRODDane rzeczywisteOtwórz Prod →"],
     ]);
   });
 

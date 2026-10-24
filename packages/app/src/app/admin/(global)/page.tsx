@@ -1,30 +1,37 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { connection } from "next/server";
+import { LoadingMessage } from "@cpg/ui/backend/feedback/loading-message";
+import { StatusBadge } from "@cpg/ui/backend/feedback/status-badge";
+import { PageHeader } from "@cpg/ui/backend/page-header";
 import { Badge } from "@cpg/ui/components/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@cpg/ui/components/card";
-import { cn } from "@cpg/ui/lib/utils";
-import { requestScope, type TenantCode, type TenantInfo } from "@cpg/core";
+import { requestScope, type TenantInfo } from "@cpg/core";
 import { requireUser } from "../../../auth/require-admin";
+import { tenantAccessTone } from "../../../components/document-lifecycle/status-tone";
 import { ResetTestCard } from "../../../components/tenants/reset-test-card";
 import { ReadOnlyControls } from "../../../components/tenants/read-only-controls";
 import { readOnlyControlsLabels } from "../../../components/tenants/read-only-labels";
+import { TenantChoiceCard } from "../../../components/tenants/tenant-choice-card";
 import { getMessages } from "../../../i18n/get-messages";
 import type { Messages } from "../../../i18n/messages/en";
 
 export const metadata: Metadata = { title: "Admin · Caveman Planning Good" };
 
-/** How the chooser frames each tenant: Test is the safe playground, Prod is live. */
-const CHOICE_STYLES: Record<TenantCode, string> = {
-  test: "border-amber-500 bg-amber-50 dark:bg-amber-950/40",
-  prod: "border-red-600",
-};
+/** A tenant's read-only state as a status: read-only is a warning with a lock, writable stays quiet. */
+function AccessBadge({ readOnly, label }: { readOnly: boolean; label: string }) {
+  const { tone, icon } = tenantAccessTone(readOnly);
+  return (
+    <StatusBadge tone={tone} icon={icon}>
+      {label}
+    </StatusBadge>
+  );
+}
 
 export default function AdminPage() {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-6 py-12">
-      <Suspense fallback={<div aria-busy="true" className="min-h-40" />}>
+    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pt-6 pb-8 md:px-6 md:pt-12 md:pb-12">
+      <Suspense fallback={<LoadingMessage />}>
         <AdminContent />
       </Suspense>
     </main>
@@ -40,27 +47,28 @@ async function AdminContent() {
   const t = messages.admin;
 
   return (
-    <div lang={locale} className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">{t.heading}</h1>
-      <nav aria-label={messages.tenants.choose} className="grid gap-4 sm:grid-cols-2">
-        {tenants.map(({ code, name, readOnly }) => (
-          <Link
-            key={code}
-            href={`/admin/${code}`}
-            className={cn("flex flex-col gap-1 rounded-xl border p-5 transition-shadow hover:shadow-md", CHOICE_STYLES[code])}
-          >
-            <span className="text-lg font-semibold">{name}</span>
-            <span className="text-sm text-muted-foreground">{messages.tenants.description[code]}</span>
-            {readOnly && <Badge className="mt-1">{messages.tenants.readOnly}</Badge>}
-            <span className="mt-2 text-sm font-semibold">{messages.tenants.open(name)}</span>
-          </Link>
+    <div lang={locale} className="flex flex-col">
+      <PageHeader title={t.heading} />
+      <div className="flex flex-col gap-8">
+        <nav aria-label={messages.tenants.choose} className="grid gap-4 sm:grid-cols-2">
+          {tenants.map(({ code, name, readOnly }) => (
+            <TenantChoiceCard key={code} tenant={code} href={`/admin/${code}`} name={name}>
+              <span className="text-sm text-muted-foreground">{messages.tenants.description[code]}</span>
+              {readOnly && (
+                <span className="mt-1">
+                  <AccessBadge readOnly label={messages.tenants.readOnly} />
+                </span>
+              )}
+              <span className="mt-2 text-sm font-semibold">{messages.tenants.open(name)}</span>
+            </TenantChoiceCard>
+          ))}
+        </nav>
+        {user.role === "admin" && <ReadOnlyCard tenants={tenants} messages={messages} />}
+        {user.role === "admin" && tenants.filter(({ code }) => code === "test").map((tenant) => (
+          <ResetTestCard key={tenant.code} generation={tenant.generation} readOnly={tenant.readOnly} labels={t.reset} errors={messages.errors} />
         ))}
-      </nav>
-      {user.role === "admin" && <ReadOnlyCard tenants={tenants} messages={messages} />}
-      {user.role === "admin" && tenants.filter(({ code }) => code === "test").map((tenant) => (
-        <ResetTestCard key={tenant.code} generation={tenant.generation} readOnly={tenant.readOnly} labels={t.reset} errors={messages.errors} />
-      ))}
-      {user.role === "admin" && <DatabaseStatus t={t} />}
+        {user.role === "admin" && <DatabaseStatus t={t} />}
+      </div>
     </div>
   );
 }
@@ -81,7 +89,7 @@ function ReadOnlyCard({ tenants, messages }: { tenants: TenantInfo[]; messages: 
             <li key={code} data-tenant={code} className="flex flex-wrap items-center justify-between gap-3 py-3">
               <span className="flex items-center gap-3">
                 <span className="font-medium">{name}</span>
-                <Badge variant={readOnly ? "default" : "outline"}>{readOnly ? t.readOnly : t.writable}</Badge>
+                <AccessBadge readOnly={readOnly} label={readOnly ? t.readOnly : t.writable} />
               </span>
               <ReadOnlyControls tenant={code} readOnly={readOnly} labels={readOnlyControlsLabels(messages, name)} />
             </li>

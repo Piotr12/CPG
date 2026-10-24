@@ -13,6 +13,7 @@ import {
   ChevronsUpDownIcon,
   ClipboardListIcon,
   CircleHelpIcon,
+  CircleUserRoundIcon,
   DatabaseIcon,
   FileSpreadsheetIcon,
   FileTextIcon,
@@ -59,7 +60,9 @@ import {
 } from "@cpg/ui/components/sidebar";
 import { TenantSwitch } from "../tenants/tenant-switch";
 import { isCurrentPath, tenantFromPath } from "./current-path";
+import { MammothMark } from "./mammoth-mark";
 import { isCurrentLeaf, isGroup, leafHref, TOKENS_PATH, type NavEntry, type NavId, type NavModel, type NavSection } from "./nav-tree";
+import { useRailByDefault } from "./use-rail-by-default";
 
 /** On a fresh load of a page outside any tenant, the menu targets Test: the safe default (Q7). */
 const DEFAULT_TENANT: TenantCode = "test";
@@ -137,9 +140,9 @@ interface TreeContext {
 /**
  * The sidebar every signed-in page shares (spec 2026-10-19--2048UTC-sidebar-navigation): the TEST |
  * PROD switch, the tenant's screens, the shared screens and the account card. Desktop: expanded or an
- * icon rail; below 768 px a drawer behind a slim top bar. The server decides what the account may
- * see (`navModel`); this decides where things go, which tenant the tree targets and which entry is
- * current. It lives in the root layout, so it keeps its state across navigations: the remembered
+ * icon rail (the rail by default between 768 and 1023 px); below 768 px a drawer behind a slim top
+ * bar. The server decides what the account may see (`navModel`); this decides where things go, which
+ * tenant the tree targets and which entry is current. It lives in the root layout, so it keeps its state across navigations: the remembered
  * tenant survives, and the drawer and the account popover close whenever the path changes.
  */
 export function SidebarNav({ model, labels, readOnly, account, locale }: SidebarNavProps) {
@@ -156,7 +159,8 @@ export function SidebarNav({ model, labels, readOnly, account, locale }: Sidebar
   if (pageTenant && pageTenant !== remembered) setRemembered(pageTenant);
   const tenant = pageTenant ?? remembered;
 
-  const { isMobile, state, openMobile, setOpenMobile, toggleSidebar } = useSidebar();
+  const { isMobile, state, open, setOpen, openMobile, setOpenMobile, toggleSidebar } = useSidebar();
+  useRailByDefault(open, setOpen);
   // The drawer's state belongs to the provider, so it can't be adjusted while this renders.
   useEffect(() => setOpenMobile(false), [pathname, setOpenMobile]);
   // Menu isn't the sheet's own Radix trigger, so the sheet can't give focus back to it on close.
@@ -192,6 +196,7 @@ export function SidebarNav({ model, labels, readOnly, account, locale }: Sidebar
       readOnlyLabel={labels.readOnly}
       onChoose={setRemembered}
       compact={compact}
+      rail={!compact && isRail}
       onNavigate={closeDrawer}
     />
   );
@@ -204,8 +209,9 @@ export function SidebarNav({ model, labels, readOnly, account, locale }: Sidebar
           <MenuIcon aria-hidden />
           {labels.menu}
         </Button>
-        <Link href={brandHref} className="font-semibold whitespace-nowrap">
-          <span aria-hidden>🦣</span> CPG
+        <Link href={brandHref} className="flex items-center gap-2 font-semibold whitespace-nowrap">
+          <MammothMark size={20} />
+          CPG
         </Link>
         <div className="ml-auto">{tenantSwitch(true)}</div>
       </header>
@@ -215,7 +221,7 @@ export function SidebarNav({ model, labels, readOnly, account, locale }: Sidebar
           <SidebarHeader className="gap-3 border-b">
             <div className="flex items-center justify-between gap-2 group-data-[collapsible=icon]:flex-col">
               <Link href={brandHref} onClick={closeDrawer} className="flex items-center gap-2 px-1 font-semibold whitespace-nowrap">
-                <span aria-hidden>🦣</span>
+                <MammothMark size={20} className="group-data-[collapsible=icon]:size-4" />
                 <span className="group-data-[collapsible=icon]:sr-only">CPG</span>
               </Link>
               {isMobile ? (
@@ -260,10 +266,8 @@ export function SidebarNav({ model, labels, readOnly, account, locale }: Sidebar
                       aria-label={`${labels.account}: ${account.name}`}
                       data-action="account-menu"
                     >
-                      <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sidebar-primary font-semibold text-sidebar-primary-foreground">
-                        {account.name.charAt(0).toUpperCase()}
-                      </span>
-                      {/* In the rail the card shows only the avatar. */}
+                      <CircleUserRoundIcon aria-hidden data-account-icon className="text-muted-foreground" />
+                      {/* In the rail the card shows only the icon; its accessible name stays. */}
                       <span className="grid min-w-0 flex-1 leading-tight group-data-[collapsible=icon]:hidden">
                         <span title={account.name} className="truncate font-medium">
                           {account.name}

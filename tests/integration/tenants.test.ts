@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { clickHydrated, openBrowser, type Browser } from "./browser";
-import { signInAsAdmin } from "./sign-in";
+import { hydrated, signInAsAdmin } from "./sign-in";
 
 const baseUrl = inject("baseUrl");
 const adminPassword = inject("adminPassword");
@@ -137,5 +137,81 @@ describe("the tenant API", () => {
     expect(response.status).toBe(401);
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(await response.json()).toEqual({ ok: false, error: { code: "UNAUTHORIZED", message: "You need to sign in." } });
+  });
+});
+
+// Design system v1 (spec 2026-10-24--0842UTC): the tenant on its own tokens, the trail's way back to a list.
+describe("the tenant shell", () => {
+  let browser: Browser;
+
+  beforeAll(async () => {
+    browser = openBrowser();
+    await browser.setViewport(1280, 800);
+    await signInAsAdmin(browser, baseUrl, adminPassword);
+  });
+  afterAll(() => browser.close());
+
+  it("offers each tenant on a card carrying its TEST or PROD tag", async () => {
+    await browser.open(`${baseUrl}/admin`);
+    // The page streams into a hidden container first: read it once it is in main.
+    await browser.waitUntil(`document.querySelectorAll("main nav[aria-label='Choose a tenant'] [data-tenant-choice] [data-tenant-tag]").length === 2`);
+
+    expect(
+      await browser.evaluate(
+        `[...document.querySelectorAll("main nav[aria-label='Choose a tenant'] [data-tenant-choice]")].map((card) => [card.getAttribute("href"), card.querySelector("[data-tenant-tag]").innerText])`,
+      ),
+    ).toEqual([
+      ["/admin/test", "TEST"],
+      ["/admin/prod", "PROD"],
+    ]);
+    expect(await browser.text("main h1")).toBe("Tenants");
+  });
+
+  it("keeps the TEST tag in view beside the icon rail at 768 px (TEN-011)", async () => {
+    await browser.setViewport(768, 800);
+    try {
+      await browser.open(`${baseUrl}/admin/test/materials`);
+      await browser.waitUntil(`document.querySelector("[data-slot=sidebar]")?.dataset.state === "collapsed" && ${shownHeader}?.textContent.includes("Materials")`);
+
+      expect(
+        await browser.evaluate(`(() => {
+          const tag = ${shownHeader}.querySelector("[data-tenant-tag]");
+          const box = tag.getBoundingClientRect();
+          return { text: tag.innerText, inView: box.width > 0 && box.right <= innerWidth && box.bottom <= innerHeight };
+        })()`),
+      ).toEqual({ text: "TEST", inView: true });
+      expect(await browser.evaluate<string>(`document.querySelector("${SWITCH} [aria-current=page]").getAttribute("aria-label")`)).toBe("Test");
+    } finally {
+      await browser.setViewport(1280, 800);
+    }
+  });
+
+  it("shows a record in the trail and links back to its list, in reach at 320 px", async () => {
+    const trail = `${shownHeader}?.querySelector("nav")`;
+    const listLink = `${trail}?.querySelector("a[href='/admin/test/materials']")`;
+    await browser.setViewport(320, 800);
+    try {
+      await browser.open(`${baseUrl}/admin/test/materials/00000001`);
+      await browser.waitUntil(hydrated(listLink));
+
+      expect(
+        await browser.evaluate(`(() => {
+          const current = ${trail}.querySelector("[aria-current=page]");
+          const box = ${listLink}.getBoundingClientRect();
+          return {
+            steps: [...${trail}.querySelectorAll("li[data-slot=breadcrumb-item]")].map((item) => item.innerText),
+            record: [current.textContent, current.classList.contains("font-mono")],
+            linkInView: box.left >= 0 && box.right <= innerWidth,
+            pageFits: document.documentElement.scrollWidth <= innerWidth,
+          };
+        })()`),
+      ).toEqual({ steps: ["Master data", "Materials", "00000001"], record: ["00000001", true], linkInView: true, pageFits: true });
+
+      await clickHydrated(browser, "[role=region][data-tenant] nav a[href='/admin/test/materials']");
+      await browser.waitUntil(`location.pathname === "/admin/test/materials" && ${trail}?.querySelector("[aria-current=page]")?.textContent === "Materials"`);
+      expect(await pathname(browser)).toBe("/admin/test/materials");
+    } finally {
+      await browser.setViewport(1280, 800);
+    }
   });
 });

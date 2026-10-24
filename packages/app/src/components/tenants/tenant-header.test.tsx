@@ -20,8 +20,8 @@ describe("TenantHeader", () => {
   afterEach(() => vi.clearAllMocks());
 
   it.each([
-    ["test", "TEST", "border-t-amber-500", "bg-amber-200"],
-    ["prod", "PROD", "border-t-red-600", "bg-neutral-900"],
+    ["test", "TEST", "border-t-tenant-test-edge", "bg-tenant-test-tag"],
+    ["prod", "PROD", "border-t-tenant-prod-edge", "bg-tenant-prod-tag"],
   ] as const)("names the %s tenant in words and colour, with the trail to the open page (TEN-011)", async (scope, tag, edge, tagColour) => {
     as("en");
     mocks.pathname = `/admin/${scope}/materials/00000005`;
@@ -31,11 +31,16 @@ describe("TenantHeader", () => {
     const header = screen.getByRole("region", { name: `${tag} Active tenant` });
     expect(header.dataset.tenant).toBe(scope);
     expect(header.className).toContain(edge);
-    expect(within(header).getByText(tag).className).toContain(tagColour);
+    expect(header.className).toContain("border-t-[3px]");
+    const tagElement = within(header).getByText(tag);
+    expect(tagElement.className).toContain(tagColour);
+    expect(tagElement.dataset.tenantTag).toBe(scope);
     expect(within(header).getByText("Active tenant").className).toBe("sr-only");
     const trail = within(within(header).getByRole("navigation", { name: "You are here" }));
     expect(trail.getByText("Master data")).toBeTruthy();
-    expect(trail.getByText("Materials").getAttribute("aria-current")).toBe("page");
+    // A record page: the list is a link back, the record the current step.
+    expect(trail.getByRole("link", { name: "Materials" }).getAttribute("href")).toBe(`/admin/${scope}/materials`);
+    expect(trail.getByText("00000005").getAttribute("aria-current")).toBe("page");
   });
 
   it("marks pages outside any tenant as Global and says so in visible words", async () => {
@@ -47,6 +52,7 @@ describe("TenantHeader", () => {
     const name = "GLOBAL Shared by Test and Prod — switching tenant doesn't change this page";
     const header = screen.getByRole("region", { name });
     expect(header.className).toContain("border-t-border");
+    expect(within(header).getByText("GLOBAL").className).toContain("bg-muted text-muted-foreground");
     expect(within(header).getByText(/^Shared by Test and Prod/).className).not.toContain("sr-only");
     expect(within(header).getByRole("navigation", { name: "You are here" }).textContent).toBe("AdministrationUsers");
   });

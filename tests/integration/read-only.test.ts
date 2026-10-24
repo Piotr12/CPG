@@ -78,7 +78,7 @@ describe("read-only tenants on the screens (R05)", () => {
     const chooser = await admin.evaluate<string[]>(
       `[...document.querySelectorAll("main nav a")].map((link) => link.innerText.replace(/\\s+/g, " ").trim())`,
     );
-    expect(chooser).toEqual(["Test Demonstration data, safe to experiment Open Test →", "Prod Live data Read-only Open Prod →"]);
+    expect(chooser).toEqual(["Test TEST Demonstration data, safe to experiment Open Test →", "Prod PROD Live data Read-only Open Prod →"]);
   });
 
   it("refuses the admin's write from a page loaded before the flag, and keeps what was stored (TEN-016)", async () => {
