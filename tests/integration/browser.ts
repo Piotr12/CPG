@@ -201,6 +201,25 @@ export async function clickHydrated(browser: Browser, selector: string) {
   await browser.click("[data-test-click]");
 }
 
+/**
+ * Chooses from an `Autocomplete` (#217): types `typed` into the combobox matching `selector` (a CSS
+ * selector, e.g. `[role=dialog] [role=combobox][aria-label="Component 1 material"]`), waits for its
+ * open list, clicks the option whose code is `code`, and waits until the field shows that choice.
+ */
+export async function chooseFromList(browser: Browser, selector: string, typed: string, code: string) {
+  await browser.waitUntil(`Boolean([...document.querySelectorAll(${JSON.stringify(selector)})].find((input) => input.offsetParent && Object.keys(input).some((key) => key.startsWith("__reactFiber"))))`);
+  await browser.fill(selector, typed);
+  const option = `[...document.querySelectorAll("[role=listbox]:not([hidden]) [role=option]")].find((row) => row.offsetParent && row.querySelector(".font-mono")?.textContent === ${JSON.stringify(code)})`;
+  await browser.waitUntil(`Boolean(${option})`);
+  await browser.evaluate(`(() => {
+    document.querySelectorAll("[data-test-click]").forEach((element) => element.removeAttribute("data-test-click"));
+    ${option}.setAttribute("data-test-click", "");
+    return true;
+  })()`);
+  await browser.click("[data-test-click]");
+  await browser.waitUntil(`[...document.querySelectorAll(${JSON.stringify(selector)})].some((input) => input.value.startsWith(${JSON.stringify(`${code} — `)}))`);
+}
+
 export interface Cookie {
   name: string;
   value: string;

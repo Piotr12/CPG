@@ -35,7 +35,8 @@ vi.mock("../../../../components/materials/create-material-dialog", () => ({
 }));
 
 const bolt = { id: "00000001", type: "raw", description: "Bolt M8", baseUnit: "each", active: true, createdAt: new Date(), version: 1 };
-const page = (tenant: string) => MaterialsPage({ params: Promise.resolve({ tenant }), searchParams: Promise.resolve({}) });
+const page = (tenant: string, searchParams: Record<string, string> = {}) =>
+  MaterialsPage({ params: Promise.resolve({ tenant }), searchParams: Promise.resolve(searchParams) });
 
 describe("MaterialsPage", () => {
   beforeEach(() => {
@@ -71,7 +72,7 @@ describe("MaterialsPage", () => {
 
     expect(screen.getByRole("heading", { name: "Materiały — Test" }).closest("[lang]")?.getAttribute("lang")).toBe("pl");
     expect(screen.getByText("Surowiec")).toBeTruthy();
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByRole("button", { name: /^create in/ })).toBeNull();
   });
 
   it("offers the admin no Create while the tenant is read-only (R05)", async () => {
@@ -82,9 +83,36 @@ describe("MaterialsPage", () => {
 
     render(await resolveServerComponents(page("test")));
 
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByRole("button", { name: /^create in/ })).toBeNull();
     expect(screen.queryByRole("link", { name: "Import from spreadsheet" })).toBeNull();
     expect(screen.getByText("No materials in Test yet.")).toBeTruthy();
+  });
+
+  it("lists everything by ID with a search box and sortable headers when the address asks for nothing (#217)", async () => {
+    render(await resolveServerComponents(page("test")));
+
+    expect(mocks.list).toHaveBeenCalledWith({ q: "", sort: "id", dir: "asc" });
+    expect(screen.getByRole("searchbox", { name: "Search materials" })).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Material ID" }).getAttribute("aria-sort")).toBe("ascending");
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("searches and sorts the whole list on the server, saying how many match (#217)", async () => {
+    render(await resolveServerComponents(page("test", { q: " bolt ", sort: "description", dir: "desc" })));
+
+    expect(mocks.list).toHaveBeenCalledWith({ q: "bolt", sort: "description", dir: "desc" });
+    expect(screen.getByRole("status").textContent).toBe("1 result for “bolt” · Clear search");
+    expect(screen.getByRole("link", { name: "Clear search" }).getAttribute("href")).toBe("/admin/test/materials?sort=description&dir=desc");
+    expect(screen.getByRole("link", { name: "Description" }).getAttribute("href")).toBe("/admin/test/materials?q=bolt&sort=description&dir=asc");
+    expect(screen.getByText("Bolt").tagName).toBe("MARK");
+  });
+
+  it("refuses a search past the limits in the form, listing everything, and ignores an unknown sort (#217)", async () => {
+    render(await resolveServerComponents(page("test", { q: "a b c d e f", sort: "uuid" })));
+
+    expect(mocks.list).toHaveBeenCalledWith({ q: "", sort: "id", dir: "asc" });
+    expect(screen.getByRole("searchbox").getAttribute("aria-invalid")).toBe("true");
+    expect(screen.getByText("Search with at most 5 words and 100 characters.")).toBeTruthy();
   });
 
   it("reads nothing for a visitor the gate refuses", async () => {

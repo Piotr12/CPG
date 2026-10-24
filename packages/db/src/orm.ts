@@ -6,6 +6,8 @@ import { cacheStatements } from "./statement-cache";
 
 export type Orm = MikroORM;
 export type { EntityManager };
+/** The where and order-by types a service casts a built query to (list search and sort, #217). */
+export type { FilterQuery, OrderDefinition } from "@mikro-orm/sqlite";
 /** Thrown on a duplicate in a unique column; services map it to their own conflict error. */
 export { UniqueConstraintViolationException } from "@mikro-orm/sqlite";
 /**

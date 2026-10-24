@@ -291,4 +291,97 @@ describe("toFieldErrors", () => {
       ]),
     ).toEqual({ description: ["Enter a description."], "components.2.unit": ["No conversion."] });
   });
+
+  describe("grouped selects and autocompletes (#217)", () => {
+    it("offers options in labelled groups, with disabled choices, and submits the chosen value", async () => {
+      const action = vi.fn().mockResolvedValue({ ok: true, data: null });
+      render(
+        <CrudForm
+          fields={[
+            {
+              name: "unit",
+              label: "Unit",
+              type: "select",
+              placeholder: "Choose a unit",
+              options: [{ value: "płyta", label: "płyta" }],
+              groups: [
+                { label: "Count", options: [{ value: "each", label: "each", disabled: true }, { value: "pcs", label: "pcs — piece" }] },
+                { label: "Mass", options: [{ value: "kg", label: "kg — kilogram" }] },
+              ],
+            },
+          ]}
+          action={action}
+          submitLabel="Add"
+        />,
+      );
+
+      const select = screen.getByLabelText("Unit") as HTMLSelectElement;
+      expect([...select.querySelectorAll("optgroup")].map((group) => group.label)).toEqual(["Count", "Mass"]);
+      expect([...select.options].map((option) => `${option.value}${option.disabled ? " (disabled)" : ""}`)).toEqual([
+        " (disabled)",
+        "płyta",
+        "each (disabled)",
+        "pcs",
+        "kg",
+      ]);
+      fireEvent.change(select, { target: { value: "kg" } });
+      await act(async () => fireEvent.click(screen.getByRole("button", { name: "Add" })));
+
+      expect(action).toHaveBeenCalledWith({ unit: "kg" });
+    });
+
+    const materialField: CrudField = {
+      name: "material",
+      label: "Material",
+      type: "autocomplete",
+      placeholder: "Type an ID or a name",
+      choices: [
+        { value: "00000001", code: "00000001", name: "Steel sheet" },
+        { value: "00000002", code: "00000002", name: "Bolt M8" },
+      ],
+      autocompleteLabels: { results: { one: "{count} wynik", few: "{count} wyniki", other: "{count} wyników" }, noMatch: "Brak „{text}”.", more: { other: "{count} więcej" }, refused: "Wybierz z listy." },
+    };
+
+    it("chooses an autocomplete's value with the keyboard and submits it, in the reader's language", async () => {
+      const action = vi.fn().mockResolvedValue({ ok: true, data: null });
+      render(<CrudForm fields={[materialField]} action={action} submitLabel="Add" locale="pl" />);
+
+      const combobox = screen.getByRole("combobox", { name: "Material" });
+      expect(combobox.getAttribute("placeholder")).toBe("Type an ID or a name");
+      fireEvent.change(combobox, { target: { value: "0000000" } });
+      expect(screen.getByRole("status").textContent).toBe("2 wyniki");
+      fireEvent.keyDown(combobox, { key: "ArrowDown" });
+      fireEvent.keyDown(combobox, { key: "Enter" });
+      await act(async () => fireEvent.click(screen.getByRole("button", { name: "Add" })));
+
+      expect(action).toHaveBeenCalledWith({ material: "00000002" });
+    });
+
+    it("leaves Escape to an autocomplete with an open list, and cancels on the next", () => {
+      const onCancel = vi.fn();
+      render(<CrudForm fields={[materialField]} action={vi.fn()} submitLabel="Add" onCancel={onCancel} />);
+
+      const combobox = screen.getByRole("combobox", { name: "Material" });
+      act(() => combobox.focus());
+      fireEvent.keyDown(combobox, { key: "Escape" });
+      expect(onCancel).not.toHaveBeenCalled();
+      expect(combobox.getAttribute("aria-expanded")).toBe("false");
+
+      fireEvent.keyDown(combobox, { key: "Escape" });
+      expect(onCancel).toHaveBeenCalledOnce();
+    });
+
+    it("marks an autocomplete invalid with the server's message under it", async () => {
+      const action = vi.fn().mockResolvedValue({ ok: false, error: { code: "VALIDATION_FAILED", message: "x", fieldErrors: { material: ["Choose a material."] } } });
+      render(<CrudForm fields={[{ ...materialField, choices: undefined }]} action={action} submitLabel="Add" />);
+
+      await act(async () => fireEvent.click(screen.getByRole("button", { name: "Add" })));
+
+      const combobox = screen.getByRole("combobox", { name: "Material" });
+      expect(combobox.getAttribute("aria-invalid")).toBe("true");
+      expect(document.getElementById(combobox.getAttribute("aria-describedby")!)!.textContent).toBe("Choose a material.");
+      fireEvent.focus(combobox);
+      expect(screen.queryAllByRole("option")).toEqual([]);
+    });
+  });
 });

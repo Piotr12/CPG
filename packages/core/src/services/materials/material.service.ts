@@ -8,12 +8,18 @@ import {
   OptimisticLockError,
   UniqueConstraintViolationException,
   type EntityManager,
+  type FilterQuery,
   type MaterialType,
+  type OrderDefinition,
 } from "@cpg/db";
 import type { DemoMaterial } from "../../domain/demo/generate-dataset";
 import { nextMaterialCode } from "../../domain/materials/material-code";
 import { formatDecimal, inverseFactor, parseDecimal } from "../../domain/quantities/decimal";
-import { AppError, ConflictError, NotFoundError, versionConflict } from "../../http/errors";
+import { listOrderBy, searchWhere } from "../../domain/lists/list-query";
+import { AppError, ConflictError, NotFoundError, ValidationError, versionConflict } from "../../http/errors";
+import type { ListOptions } from "../../validators/lists/list-query.schema";
+import type { MaterialSort } from "../../validators/materials/material-list.schema";
+import { isRegisteredUnit, UNIT_NOT_REGISTERED_MESSAGE } from "../../validators/units/unit-registry";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
 import { bomUsingMaterial } from "../boms/bom-usage";
@@ -28,6 +34,10 @@ import { findMaterial } from "./find-material";
 export type { BaseQuantity } from "./base-quantity";
 
 export { materialNotFound } from "./find-material";
+
+/** What the Materials search matches, and the column each sort key orders by (#217). */
+const MATERIAL_SEARCH_FIELDS = ["code", "description"];
+const MATERIAL_SORT_PATHS: Record<MaterialSort, string> = { id: "code", description: "description", type: "type", baseUnit: "baseUnit", status: "active" };
 
 /** What the screens and the API show about a material. `id` is its eight-digit business ID (R01). */
 export interface MaterialSummary {
@@ -95,9 +105,13 @@ export class MaterialService {
     this.em = em;
   }
 
-  /** Every material of the tenant, by ID. */
-  async list(): Promise<MaterialSummary[]> {
-    return (await this.em.find(Material, {}, { orderBy: { code: "asc" } })).map(toSummary);
+  /**
+   * Every material of the tenant, by ID unless `sort` says otherwise; `q` keeps those whose ID or
+   * description contains every word (#217).
+   */
+  async list({ q = "", sort = "id", dir = "asc" }: Omit<ListOptions<MaterialSort>, "page"> = {}): Promise<MaterialSummary[]> {
+    const where = searchWhere(q, MATERIAL_SEARCH_FIELDS) as FilterQuery<Material>;
+    return (await this.em.find(Material, where, { orderBy: listOrderBy(MATERIAL_SORT_PATHS[sort], dir) as OrderDefinition<Material> })).map(toSummary);
   }
 
   /** One material with its conversions, by unit; `MATERIAL_NOT_FOUND` when this tenant has no such ID. */
@@ -109,6 +123,7 @@ export class MaterialService {
 
   /** A new active material with the next ID (MAT-001…003). */
   async create(input: NewMaterial, actor: AuditActor): Promise<MaterialSummary> {
+    assertRegisteredUnit("baseUnit", input.baseUnit);
     try {
       return await this.em.transactional(async (em) => {
         const material = await this.insert(em, input);
@@ -136,6 +151,7 @@ export class MaterialService {
       const material = await findMaterial(em, materialId, { refresh: true });
       if (material.version !== version) throw versionConflict();
       const { active, ...fields } = changedFields(material, changes);
+      if (fields.baseUnit !== undefined) assertRegisteredUnit("baseUnit", fields.baseUnit);
       if (fields.type !== undefined || fields.baseUnit !== undefined) {
         if (await hasStockMovements(em, material)) {
           throw new ConflictError("This material has stock movements, so its type and base unit are locked permanently.", "MATERIAL_HAS_MOVEMENTS");
@@ -183,6 +199,7 @@ export class MaterialService {
     { unit, numerator, denominator }: ConversionFactor & { unit: string },
     actor: AuditActor,
   ): Promise<ConversionView> {
+    assertRegisteredUnit("unit", unit);
     try {
       return await this.em.transactional(async (em) => {
         const material = await findMaterial(em, materialId);
@@ -376,6 +393,14 @@ function changedFields(material: Material, changes: MaterialChanges): MaterialCh
 }
 
 /** The fields of a material the audit may show: an allowlist (R08). */
+/**
+ * A unit a material doesn't have yet comes from the registry (#217): a new base unit or conversion.
+ * Units stored before the registry stay valid where a record already has them.
+ */
+function assertRegisteredUnit(field: "baseUnit" | "unit", unit: string): void {
+  if (!isRegisteredUnit(unit)) throw new ValidationError({ [field]: [UNIT_NOT_REGISTERED_MESSAGE] });
+}
+
 function snapshot({ code, type, description, baseUnit, active }: Material) {
   return { id: code, type, description, baseUnit, active };
 }

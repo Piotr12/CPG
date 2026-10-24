@@ -179,6 +179,7 @@ export const pl: Messages = {
     emptyHint: "Utwórz pierwszy przyciskiem Utwórz materiał.",
     emptyReader: "Poproś administratora o dodanie materiałów.",
     allMaterials: "Wszystkie materiały",
+    search: { label: "Szukaj materiałów", hint: "Dopasowuje ID albo opis." },
     columns: {
       id: "ID materiału",
       description: "Opis",
@@ -196,8 +197,8 @@ export const pl: Messages = {
       typeHint: "Surowiec się kupuje, półprodukt wytwarza i zużywa do innych materiałów, wyrób gotowy wytwarza i sprzedaje.",
       description: "Opis",
       baseUnit: "Jednostka bazowa",
-      baseUnitHint:
-        "Każda ilość tego materiału jest zapisywana w tej jednostce, dokładnie do sześciu miejsc po przecinku. Do 16 liter, cyfr, kropek, myślników lub podkreśleń.",
+      baseUnitPlaceholder: "Wybierz jednostkę",
+      baseUnitHint: "Każda ilość tego materiału jest zapisywana w tej jednostce, dokładnie do sześciu miejsc po przecinku.",
     },
     create: {
       open: "Utwórz materiał",
@@ -234,7 +235,9 @@ export const pl: Messages = {
       tiny: "< 0.000001",
       menu: { label: "Akcje dla {unit}", change: "Zmień przelicznik", remove: "Usuń" },
       unit: "Jednostka",
-      unitHint: "Jednostka, w której wpisuje się ilości, np. karton albo t. Do 16 liter, cyfr, kropek, myślników lub podkreśleń; wielkość liter ma znaczenie.",
+      unitHint: "Jednostka, w której wpisuje się ilości, np. karton albo t.",
+      unitPlaceholder: "Wybierz jednostkę",
+      unitReasons: { baseUnit: "jednostka bazowa", converted: "już przeliczana" },
       denominator: "Ilość w jednostce alternatywnej",
       denominatorHint: "Zwykle 1, jak w „1 karton = 12 szt.”.",
       numerator: "Ilość w jednostce bazowej",
@@ -263,6 +266,7 @@ export const pl: Messages = {
       descriptionRequired: "Wpisz opis.",
       descriptionTooLong: "Użyj najwyżej 200 znaków.",
       unitFormat: "Użyj od 1 do 16 liter, cyfr, kropek, myślników lub podkreśleń, zaczynając od litery lub cyfry.",
+      unitNotRegistered: "Wybierz jednostkę z listy.",
       factor: "Wpisz liczbę większą od 0, z najwyżej 12 cyframi przed kropką i 6 po niej.",
     },
     errors: {
@@ -1844,6 +1848,24 @@ export const pl: Messages = {
     rangeError: "Data końcowa nie może być wcześniejsza niż początkowa.",
     clear: "Wyczyść filtry",
     pagination: "Strony raportu odchyleń", previous: "Poprzednia", next: "Następna", page: "Strona {page} z {pages}",
+  },
+  lists: {
+    search: "Szukaj",
+    clear: "Wyczyść wyszukiwanie",
+    results: { one: "1 wynik dla „{query}”", few: "{count} wyniki dla „{query}”", other: "{count} wyników dla „{query}”" },
+    noResults: "Nic nie pasuje do „{query}”.",
+    searchTooLong: "Wyszukuj najwyżej 5 słowami i 100 znakami.",
+    materialPicker: {
+      placeholder: "Wpisz ID albo nazwę",
+      results: { one: "{count} materiał", few: "{count} materiały", other: "{count} materiałów" },
+      noMatch: "Żaden materiał nie pasuje do „{text}”.",
+      more: { other: "Jeszcze {count}: pisz dalej, aby zawęzić listę" },
+      refused: "Wybierz materiał z listy.",
+    },
+  },
+  units: {
+    dimensions: { count: "Liczba", packaging: "Opakowanie", mass: "Masa", volume: "Objętość", length: "Długość", area: "Powierzchnia", time: "Czas" },
+    notListed: "{unit} (spoza listy jednostek)",
   },
   nav: {
     menu: "Menu",

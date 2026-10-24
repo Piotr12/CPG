@@ -68,6 +68,8 @@
     --color-neutral-tone: var(--neutral-tone);
     --color-neutral-surface: var(--neutral-surface);
     --color-neutral-edge: var(--neutral-edge);
+    /* A search match (#217): neutral, because colour means state. */
+    --color-highlight: var(--highlight);
 
     /* Tenant: the only place these hues mean something (TEN-011) */
     --color-tenant-test-edge: var(--tenant-test-edge);
@@ -127,6 +129,7 @@
     --neutral-tone: oklch(0.37 0 0);
     --neutral-surface: oklch(0.96 0 0);
     --neutral-edge: oklch(0.88 0 0);
+    --highlight: oklch(0.90 0 0);
 
     --tenant-test-edge: oklch(0.769 0.188 70.08);
     --tenant-test-tag: oklch(0.924 0.12 95.75);
@@ -190,6 +193,7 @@
     --neutral-tone: oklch(0.85 0 0);
     --neutral-surface: oklch(0.27 0 0);
     --neutral-edge: oklch(0.40 0 0);
+    --highlight: oklch(0.38 0 0);
 
     --tenant-test-edge: oklch(0.769 0.188 70.08);
     --tenant-test-tag: oklch(0.924 0.12 95.75);

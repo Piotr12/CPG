@@ -83,7 +83,7 @@ describe("forecasts (E08-S03)", () => {
       async () => {
         await admin.select("[role=dialog] select[name=type]", "finished");
         await admin.fillLabel("Description", "fc-ui cabinet");
-        await admin.fillLabel("Base unit", "each");
+        await admin.select("[role=dialog] select[name=baseUnit]", "each");
       },
       "fc-ui cabinet",
     );

@@ -115,16 +115,35 @@ describe("materials through the API (R07)", () => {
     expect(json(await api("GET", path, adminSecret)).data).toMatchObject({ id: created.id, description: "matapi plate 2 mm" });
   });
 
-  it("adds, changes and removes a conversion, refusing a zero denominator on both, also for a unit with a Polish letter in the path (MAT-022)", async () => {
+  it("refuses a base unit or conversion unit outside the unit list, creating nothing (#217)", async () => {
+    const refused = await write("POST", "/api/tenants/prod/materials", adminSecret, { type: "raw", description: "matapi unlisted", baseUnit: "szt." });
     const created = json(
-      await write("POST", "/api/tenants/prod/materials", adminSecret, { type: "raw", description: "matapi panel", baseUnit: "szt." }),
+      await write("POST", "/api/tenants/prod/materials", adminSecret, { type: "raw", description: "matapi listed", baseUnit: "pcs" }),
+    ).data as MaterialRow;
+    const conversion = await write("POST", `/api/tenants/prod/materials/${created.id}/conversions`, adminSecret, { unit: "płyta", numerator: "4", denominator: "1" });
+    const rebased = await write("PATCH", `/api/tenants/prod/materials/${created.id}`, adminSecret, { version: created.version, baseUnit: "KG" });
+
+    expect(refused.status).toBe(400);
+    expect(json(refused).error.fieldErrors).toEqual({ baseUnit: ["Choose a unit from the list."] });
+    expect(conversion.status).toBe(400);
+    expect(json(conversion).error.fieldErrors).toEqual({ unit: ["Choose a unit from the list."] });
+    expect(rebased.status).toBe(400);
+    expect(json(rebased).error.fieldErrors).toEqual({ baseUnit: ["Choose a unit from the list."] });
+    const all = json(await api("GET", "/api/tenants/prod/materials", adminSecret)).data as MaterialRow[];
+    expect(all.filter((material) => material.description === "matapi unlisted")).toEqual([]);
+    expect(json(await api("GET", `/api/tenants/prod/materials/${created.id}`, adminSecret)).data).toMatchObject({ baseUnit: "pcs", conversions: [] });
+  });
+
+  it("adds, changes and removes a conversion, refusing a zero denominator on both, also for a unit with a non-ASCII character in the path (MAT-022)", async () => {
+    const created = json(
+      await write("POST", "/api/tenants/prod/materials", adminSecret, { type: "raw", description: "matapi panel", baseUnit: "pcs" }),
     ).data as MaterialRow;
     const conversions = `/api/tenants/prod/materials/${created.id}/conversions`;
     const material = `/api/tenants/prod/materials/${created.id}`;
 
-    const zero = await write("POST", conversions, adminSecret, { unit: "płyta", numerator: "4", denominator: "0" });
-    const added = await write("POST", conversions, adminSecret, { unit: "płyta", numerator: "4", denominator: "1" });
-    const one = `${conversions}/${encodeURIComponent("płyta")}`;
+    const zero = await write("POST", conversions, adminSecret, { unit: "m²", numerator: "4", denominator: "0" });
+    const added = await write("POST", conversions, adminSecret, { unit: "m²", numerator: "4", denominator: "1" });
+    const one = `${conversions}/${encodeURIComponent("m²")}`;
     const zeroChange = await write("PATCH", one, adminSecret, { numerator: "6", denominator: "0", version: 1 });
     const kept = json(await api("GET", material, adminSecret)).data;
     const changed = await write("PATCH", one, adminSecret, { numerator: "6", denominator: "1", version: 1 });
@@ -133,13 +152,13 @@ describe("materials through the API (R07)", () => {
 
     expect(zero.status).toBe(400);
     expect(json(zero).error.fieldErrors).toHaveProperty("denominator");
-    expect(json(added).data).toEqual({ unit: "płyta", numerator: "4", denominator: "1", inverse: "0.25", version: 1 });
+    expect(json(added).data).toEqual({ unit: "m²", numerator: "4", denominator: "1", inverse: "0.25", version: 1 });
     expect(zeroChange.status).toBe(400);
     expect(json(zeroChange).error.fieldErrors).toHaveProperty("denominator");
-    expect(kept.conversions).toEqual([{ unit: "płyta", numerator: "4", denominator: "1", inverse: "0.25", version: 1 }]);
-    expect(json(changed).data).toMatchObject({ unit: "płyta", numerator: "6", version: 2 });
-    expect(read.conversions).toEqual([{ unit: "płyta", numerator: "6", denominator: "1", inverse: "0.166667", version: 2 }]);
-    expect(json(removed).data).toEqual({ unit: "płyta" });
+    expect(kept.conversions).toEqual([{ unit: "m²", numerator: "4", denominator: "1", inverse: "0.25", version: 1 }]);
+    expect(json(changed).data).toMatchObject({ unit: "m²", numerator: "6", version: 2 });
+    expect(read.conversions).toEqual([{ unit: "m²", numerator: "6", denominator: "1", inverse: "0.166667", version: 2 }]);
+    expect(json(removed).data).toEqual({ unit: "m²" });
     expect(json(await api("GET", material, adminSecret)).data.conversions).toEqual([]);
   });
 

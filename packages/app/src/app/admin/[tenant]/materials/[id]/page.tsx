@@ -13,6 +13,7 @@ import { AddConversionDialog } from "../../../../../components/materials/add-con
 import { ConversionsTable } from "../../../../../components/materials/conversions-table";
 import { fill, materialsLabels } from "../../../../../components/materials/labels";
 import { MaterialControls } from "../../../../../components/materials/material-controls";
+import { unitChoices } from "../../../../../components/units/unit-choices";
 import { getMessages } from "../../../../../i18n/get-messages";
 import { orNotFound } from "../../../../../routing/or-not-found";
 
@@ -48,6 +49,7 @@ async function Material({ params }: { params: Promise<{ tenant: string; id: stri
   const labels = materialsLabels(messages);
   const context = { tenant: tenant.code, generation: tenant.generation };
   const editable = user.role === "admin" && !tenant.readOnly;
+  const units = unitChoices(locale, messages.units);
   const details = [
     { label: labels.columns.type, value: labels.types[material.type] },
     { label: labels.columns.baseUnit, value: material.baseUnit },
@@ -71,7 +73,7 @@ async function Material({ params }: { params: Promise<{ tenant: string; id: stri
             <span className="font-mono">{material.id}</span> — {material.description}
           </span>
         }
-        actions={editable && <MaterialControls material={material} context={context} labels={labels} />}
+        actions={editable && <MaterialControls material={material} context={context} labels={labels} units={units} />}
       />
       <div className="flex flex-col gap-8">
         <Card>
@@ -91,7 +93,9 @@ async function Material({ params }: { params: Promise<{ tenant: string; id: stri
             <h2 id="conversions-heading" className="text-lg font-semibold">
               {labels.conversions.heading}
             </h2>
-            {editable && <AddConversionDialog material={material} context={context} labels={labels} />}
+            {editable && (
+              <AddConversionDialog material={material} converted={conversions.map(({ unit }) => unit)} units={units} context={context} labels={labels} />
+            )}
           </div>
           <p className="text-sm text-muted-foreground">{fill(labels.conversions.intro, { baseUnit: material.baseUnit })}</p>
           <ConversionsTable material={material} conversions={conversions} context={context} labels={labels} editable={editable} />

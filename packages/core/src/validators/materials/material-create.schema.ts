@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { registeredUnitSchema } from "../units/unit-registry";
 import { descriptionSchema, materialTypeSchema, unitSchema } from "./material-fields.schema";
 
 /**
@@ -8,7 +9,14 @@ import { descriptionSchema, materialTypeSchema, unitSchema } from "./material-fi
 export const materialCreateSchema = z.object({
   type: materialTypeSchema,
   description: descriptionSchema,
-  baseUnit: unitSchema,
+  // A new material's unit comes from the registry (#217).
+  baseUnit: registeredUnitSchema,
 });
 
 export type MaterialCreateInput = z.infer<typeof materialCreateSchema>;
+
+/**
+ * The Edit material form's check: the same fields, but the base unit only well formed, so a material
+ * keeps a unit stored before the registry; the service refuses a *changed* unit outside it (#217).
+ */
+export const materialEditFormSchema = materialCreateSchema.extend({ baseUnit: unitSchema });

@@ -316,7 +316,7 @@ async function createMaster(admin: Browser, kind: "materials" | "locations" | "s
   if (kind === "materials") {
     await admin.select("[role=dialog] select[name=type]", extra.type!);
     await admin.fillLabel("Description", name);
-    await admin.fillLabel("Base unit", extra.baseUnit!);
+    await admin.select("[role=dialog] select[name=baseUnit]", extra.baseUnit!);
   } else {
     await admin.fillLabel("Name", name);
   }

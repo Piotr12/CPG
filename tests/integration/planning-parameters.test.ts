@@ -109,7 +109,7 @@ describe("planning parameters and safety stock (E03-S03)", () => {
     const material = (type: string, description: string, baseUnit: string) => async () => {
       await admin.select("[role=dialog] select[name=type]", type);
       await admin.fillLabel("Description", description);
-      await admin.fillLabel("Base unit", baseUnit);
+      await admin.select("[role=dialog] select[name=baseUnit]", baseUnit);
     };
     const location = (name: string) => () => admin.fillLabel("Name", name);
     steel = await createInProd(admin, "materials", "Create material", material("raw", "pp-ui steel", "kg"), "pp-ui steel");

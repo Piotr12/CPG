@@ -1,3 +1,4 @@
+import type { PluralForms } from "@cpg/ui/lib/plural";
 import { ERROR_BOUNDARY } from "./error-boundary";
 
 /**
@@ -191,6 +192,7 @@ export const en = {
     emptyHint: "Create the first one with Create material.",
     emptyReader: "Ask an administrator to add materials.",
     allMaterials: "All materials",
+    search: { label: "Search materials", hint: "Matches the ID or the description." },
     columns: {
       id: "Material ID",
       description: "Description",
@@ -208,7 +210,8 @@ export const en = {
       typeHint: "Raw is bought, intermediate is made and used to make other materials, finished is made and sold.",
       description: "Description",
       baseUnit: "Base unit",
-      baseUnitHint: "Every quantity of this material is stored in this unit, exactly to six decimals. Up to 16 letters, digits, dots, dashes or underscores.",
+      baseUnitPlaceholder: "Choose a unit",
+      baseUnitHint: "Every quantity of this material is stored in this unit, exactly to six decimals.",
     },
     create: {
       open: "Create material",
@@ -245,7 +248,9 @@ export const en = {
       tiny: "< 0.000001",
       menu: { label: "Actions for {unit}", change: "Change factor", remove: "Remove" },
       unit: "Unit",
-      unitHint: "The unit people enter, such as case or t. Up to 16 letters, digits, dots, dashes or underscores; case counts.",
+      unitHint: "The unit people enter, such as case or t.",
+      unitPlaceholder: "Choose a unit",
+      unitReasons: { baseUnit: "base unit", converted: "already converted" },
       denominator: "Alternate quantity",
       denominatorHint: "Usually 1, as in “1 case = 12 each”.",
       numerator: "Base quantity",
@@ -274,6 +279,7 @@ export const en = {
       descriptionRequired: "Enter a description.",
       descriptionTooLong: "Use at most 200 characters.",
       unitFormat: "Use 1–16 letters, digits, dots, dashes or underscores, starting with a letter or digit.",
+      unitNotRegistered: "Choose a unit from the list.",
       factor: "Enter a number greater than 0, with at most 12 digits before the point and 6 after it.",
     },
     /** What these error codes mean on the materials screens, merged over the shared `errors` by `materialsLabels`. */
@@ -1905,6 +1911,26 @@ export const en = {
     rangeError: "The end date must not be before the start date.",
     clear: "Clear filters",
     pagination: "Variance report pages", previous: "Previous", next: "Next", page: "Page {page} of {pages}",
+  },
+  /** Every list's search box, result line and empty result, and the material picker (#217). */
+  lists: {
+    search: "Search",
+    clear: "Clear search",
+    results: { one: "1 result for “{query}”", few: "{count} results for “{query}”", other: "{count} results for “{query}”" } as PluralForms,
+    noResults: "Nothing matches “{query}”.",
+    searchTooLong: "Search with at most 5 words and 100 characters.",
+    materialPicker: {
+      placeholder: "Type an ID or a name",
+      results: { one: "{count} material", few: "{count} materials", other: "{count} materials" } as PluralForms,
+      noMatch: "No material matches “{text}”.",
+      more: { other: "{count} more: keep typing to narrow the list" } as PluralForms,
+      refused: "Choose a material from the list.",
+    },
+  },
+  /** The unit registry's groups, and a stored unit it doesn't list (#217). */
+  units: {
+    dimensions: { count: "Count", packaging: "Packaging", mass: "Mass", volume: "Volume", length: "Length", area: "Area", time: "Time" },
+    notListed: "{unit} (not in the unit list)",
   },
   nav: {
     menu: "Menu",

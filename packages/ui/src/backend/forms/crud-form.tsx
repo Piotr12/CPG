@@ -5,25 +5,39 @@ import { useId, useState, useTransition, type ChangeEvent, type FormEvent, type 
 import { Button } from "../../components/button";
 import { Input } from "../../components/input";
 import { Label } from "../../components/label";
-import { NativeSelect, NativeSelectOption } from "../../components/native-select";
+import { NativeSelect, NativeSelectOptGroup, NativeSelectOption } from "../../components/native-select";
 import type { ApiResult, FieldErrors } from "../api/result";
 import { ErrorMessage } from "../feedback/error-message";
+import { Autocomplete, type AutocompleteLabels, type AutocompleteOption } from "./autocomplete";
+
+/** One choice of a select; a disabled one says why in its label ("box (already converted)"). */
+export interface CrudOption {
+  value: string;
+  label: string;
+  disabled?: boolean;
+}
 
 export interface CrudField {
   name: string;
   label: string;
   /**
-   * `select` offers `options` in a native select (its keyboard and screen-reader behaviour for free);
-   * `date` is the browser's date input, whose value is an ISO `YYYY-MM-DD` date.
+   * `select` offers `options` (or `groups`) in a native select (its keyboard and screen-reader
+   * behaviour for free); `autocomplete` offers `choices` in an `Autocomplete`, for lists too long for
+   * a select; `date` is the browser's date input, whose value is an ISO `YYYY-MM-DD` date.
    */
-  type?: "text" | "password" | "select" | "date";
+  type?: "text" | "password" | "select" | "autocomplete" | "date";
   autoComplete?: string;
   /** A hint under the field, such as a length rule. */
   description?: string;
   /** A select's choices, in order. */
-  options?: { value: string; label: string }[];
-  /** A select's unselectable first entry, shown while nothing is chosen ("Choose a type"). */
+  options?: CrudOption[];
+  /** A select's choices in labelled `<optgroup>`s, after any `options` (units by dimension, #217). */
+  groups?: { label: string; options: CrudOption[] }[];
+  /** A select's unselectable first entry, shown while nothing is chosen ("Choose a type"); an autocomplete's placeholder. */
   placeholder?: string;
+  /** An autocomplete's choices and words. */
+  choices?: AutocompleteOption[];
+  autocompleteLabels?: AutocompleteLabels;
 }
 
 /**
@@ -53,6 +67,8 @@ export interface CrudFormProps<T> {
   formatError?: (error: { code: string; message: string; params?: Record<string, string> }) => ReactNode;
   /** Turns a field message (from the schema or the server) into the reader's language. */
   formatFieldError?: (message: string) => string;
+  /** The reader's language, for an autocomplete's plural forms. */
+  locale?: string;
 }
 
 /**
@@ -72,6 +88,7 @@ export function CrudForm<T>({
   cancelLabel = "Cancel",
   formatError = ({ message }) => message,
   formatFieldError = (message) => message,
+  locale,
 }: CrudFormProps<T>) {
   const id = useId();
   const [values, setValues] = useState<Record<string, string>>(() =>
@@ -109,6 +126,8 @@ export function CrudForm<T>({
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLFormElement>) {
+    // A control that handled the key itself (an autocomplete closing its list) keeps it.
+    if (event.defaultPrevented) return;
     if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
       event.currentTarget.requestSubmit();
@@ -124,12 +143,12 @@ export function CrudForm<T>({
         const inputId = `${id}-${field.name}`;
         const errors = fieldErrors[field.name];
         const hintId = `${inputId}-hint`;
+        const set = (value: string) => setValues((current) => ({ ...current, [field.name]: value }));
         const control = {
           id: inputId,
           name: field.name,
           value: values[field.name],
-          onChange: (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-            setValues((current) => ({ ...current, [field.name]: event.target.value })),
+          onChange: (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => set(event.target.value),
           "aria-invalid": errors ? true : undefined,
           "aria-describedby": errors || field.description ? hintId : undefined,
         };
@@ -144,11 +163,33 @@ export function CrudForm<T>({
                   </NativeSelectOption>
                 )}
                 {field.options?.map((option) => (
-                  <NativeSelectOption key={option.value} value={option.value}>
+                  <NativeSelectOption key={option.value} value={option.value} disabled={option.disabled}>
                     {option.label}
                   </NativeSelectOption>
                 ))}
+                {field.groups?.map((group) => (
+                  <NativeSelectOptGroup key={group.label} label={group.label}>
+                    {group.options.map((option) => (
+                      <NativeSelectOption key={option.value} value={option.value} disabled={option.disabled}>
+                        {option.label}
+                      </NativeSelectOption>
+                    ))}
+                  </NativeSelectOptGroup>
+                ))}
               </NativeSelect>
+            ) : field.type === "autocomplete" ? (
+              <Autocomplete
+                id={inputId}
+                name={field.name}
+                options={field.choices ?? []}
+                value={values[field.name]}
+                onChange={set}
+                labels={field.autocompleteLabels!}
+                locale={locale}
+                placeholder={field.placeholder}
+                aria-invalid={control["aria-invalid"]}
+                aria-describedby={control["aria-describedby"]}
+              />
             ) : (
               <Input {...control} type={field.type ?? "text"} autoComplete={field.autoComplete} />
             )}

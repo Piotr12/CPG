@@ -38,7 +38,7 @@ async function createMaterial(admin: Browser, type: string, description: string,
   await admin.clickRole("button", "Create material");
   await admin.select("[role=dialog] select[name=type]", type);
   await admin.fillLabel("Description", description);
-  await admin.fillLabel("Base unit", baseUnit);
+  await admin.select("[role=dialog] select[name=baseUnit]", baseUnit);
   await admin.click("[role=dialog] button[type=submit]");
   await admin.waitUntil(closed);
   await admin.waitForText(description);
