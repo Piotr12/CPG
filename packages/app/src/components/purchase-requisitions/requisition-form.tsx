@@ -3,6 +3,7 @@
 import { useId, useState, useTransition, type FormEvent, type KeyboardEvent } from "react";
 import type { ApiResult, FieldErrors } from "@cpg/ui/backend/api/result";
 import { ErrorMessage } from "@cpg/ui/backend/feedback/error-message";
+import { Autocomplete } from "@cpg/ui/backend/forms/autocomplete";
 import { toFieldErrors, type FormSchema } from "@cpg/ui/backend/forms/crud-form";
 import { Button } from "@cpg/ui/components/button";
 import { Input } from "@cpg/ui/components/input";
@@ -10,6 +11,7 @@ import { Label } from "@cpg/ui/components/label";
 import { NativeSelect, NativeSelectOption } from "@cpg/ui/components/native-select";
 import type { FormOption } from "../forms/form-labels";
 import { fieldControls } from "../purchasing/field-controls";
+import type { MaterialPick } from "./choices";
 import { errorFormatter, fieldErrorFormatter, type RequisitionsLabels } from "./labels";
 
 /** A material the form may pick: its label and the units a quantity of it may be entered in, base unit first. */
@@ -30,8 +32,11 @@ export interface RequisitionValues {
 
 export interface RequisitionFormProps<T> {
   labels: RequisitionsLabels;
-  materials: MaterialChoice[];
+  /** The materials the autocomplete offers (#217). */
+  materials: MaterialPick[];
   locations: FormOption[];
+  /** The reader's language, for the autocomplete's counts. */
+  locale: string;
   schema: FormSchema;
   action: (values: RequisitionValues) => Promise<ApiResult<T>>;
   onSuccess: (data: T) => void;
@@ -41,12 +46,12 @@ export interface RequisitionFormProps<T> {
 const FIELDS = ["material", "location", "quantity", "unit", "requiredDate"];
 
 /**
- * The Create requisition form (spec Q13): a material and its unit (the units depend on the
+ * The Create requisition form (spec Q13): a material, chosen in an autocomplete (#217), and its unit (the units depend on the
  * material, so this is not a `CrudForm`), a location, a quantity and a date. It keeps `CrudForm`'s
  * conventions: client-side checks with the shared schema, server field errors under the field they
  * name, other errors above the buttons, a pending state, `Cmd/Ctrl+Enter` to submit, `Escape` to cancel.
  */
-export function RequisitionForm<T>({ labels, materials, locations, schema, action, onSuccess, onCancel }: RequisitionFormProps<T>) {
+export function RequisitionForm<T>({ labels, materials, locations, locale, schema, action, onSuccess, onCancel }: RequisitionFormProps<T>) {
   const id = useId();
   const t = labels.form;
   const [values, setValues] = useState<RequisitionValues>({ material: "", location: "", quantity: "", unit: "", requiredDate: "" });
@@ -85,6 +90,8 @@ export function RequisitionForm<T>({ labels, materials, locations, schema, actio
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLFormElement>) {
+    // A control that handled the key itself (the autocomplete closing its list) keeps it.
+    if (event.defaultPrevented) return;
     if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
       event.currentTarget.requestSubmit();
@@ -104,21 +111,18 @@ export function RequisitionForm<T>({ labels, materials, locations, schema, actio
     <form onSubmit={submit} onKeyDown={onKeyDown} noValidate className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         <Label htmlFor={material.props.id}>{t.material}</Label>
-        <NativeSelect
-          className="w-full"
+        <Autocomplete
+          id={material.props.id}
+          name={material.props.name}
+          options={materials}
           value={values.material}
-          onChange={(event) => set({ material: event.target.value, unit: materials.find(({ value }) => value === event.target.value)?.units[0] ?? "" })}
-          {...material.props}
-        >
-          <NativeSelectOption value="" disabled>
-            {t.choose}
-          </NativeSelectOption>
-          {materials.map((choice) => (
-            <NativeSelectOption key={choice.value} value={choice.value}>
-              {choice.label}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
+          onChange={(value) => set({ material: value, unit: materials.find((choice) => choice.value === value)?.units[0] ?? "" })}
+          labels={labels.picker.labels}
+          locale={locale}
+          placeholder={labels.picker.placeholder}
+          aria-invalid={material.props["aria-invalid"]}
+          aria-describedby={material.props["aria-describedby"]}
+        />
         {material.node}
       </div>
       <div className="flex flex-col gap-2">

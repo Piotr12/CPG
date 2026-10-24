@@ -958,6 +958,7 @@ export const en = {
     empty: "No purchase requisitions in {tenant} yet.",
     emptyHint: "Create the first one with Create requisition.",
     pagination: "Purchase requisition pages", previous: "Previous", next: "Next", page: "Page {page} of {pages}",
+    search: { label: "Search purchase requisitions", hint: "Matches the requisition ID, or the ID or name of its material or location." },
     columns: {
       id: "Requisition",
       material: "Material",
@@ -1026,6 +1027,7 @@ export const en = {
     emptyHint: "Create the first one with Create purchase order.",
     allOrders: "All purchase orders",
     pagination: "Purchase order pages", previous: "Previous", next: "Next", page: "Page {page} of {pages}",
+    search: { label: "Search purchase orders", hint: "Matches the order ID, or the ID or name of its supplier or location." },
     columns: { id: "Order", supplier: "Supplier", location: "Location", lines: "Lines", status: "Status" },
     status: { open: "Open", completed: "Completed", "closed-early": "Closed Early", cancelled: "Cancelled" },
     inactive: "Inactive",
@@ -1177,6 +1179,7 @@ export const en = {
     empty: "No transfers in {tenant} yet.",
     emptyHint: "Create the first one with Create transfer.",
     allTransfers: "All transfers",
+    search: { label: "Search transfers", hint: "Matches the transfer ID, or the ID or name of its material or either location." },
     columns: {
       id: "Transfer",
       material: "Material",

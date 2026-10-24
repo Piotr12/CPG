@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { requisitionCreateSchema } from "@cpg/core/validators/purchasing/purchase-requisition.schema";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/messages/en";
@@ -7,8 +7,8 @@ import { requisitionsLabels } from "./labels";
 import { RequisitionForm, type RequisitionFormProps } from "./requisition-form";
 
 const MATERIALS = [
-  { value: "00000001", label: "00000001 — Steel (kg)", units: ["kg", "t"] },
-  { value: "00000002", label: "00000002 — Bolt (each)", units: ["each"] },
+  { value: "00000001", code: "00000001", name: "Steel", detail: "kg", units: ["kg", "t"] },
+  { value: "00000002", code: "00000002", name: "Bolt", detail: "each", units: ["each"] },
 ];
 const LOCATIONS = [{ value: "00000001", label: "00000001 — Main plant" }];
 
@@ -22,6 +22,7 @@ function renderForm(props: Partial<RequisitionFormProps<{ id: string }>> = {}) {
       labels={requisitionsLabels(en)}
       materials={MATERIALS}
       locations={LOCATIONS}
+      locale="en"
       schema={requisitionCreateSchema}
       action={action}
       onSuccess={onSuccess}
@@ -31,8 +32,13 @@ function renderForm(props: Partial<RequisitionFormProps<{ id: string }>> = {}) {
   );
 }
 const change = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
+/** Types `code` into the material autocomplete named `label` and clicks its option. */
+const choose = (label: string, code: string) => {
+  fireEvent.change(screen.getByRole("combobox", { name: label }), { target: { value: code } });
+  fireEvent.mouseDown(within(screen.getByRole("listbox")).getAllByRole("option").find((option) => option.textContent!.startsWith(code))!);
+};
 const fill = () => {
-  change("Material", "00000001");
+  choose("Material", "00000001");
   change("Location", "00000001");
   change("Quantity", "100");
   change("Required by", "2027-03-01");
@@ -58,12 +64,14 @@ describe("RequisitionForm", () => {
     const units = () => within(screen.getByLabelText("Unit")).queryAllByRole("option").map((option) => option.textContent);
 
     expect(units()).toEqual([]);
-    change("Material", "00000001");
+    choose("Material", "00000001");
     expect(units()).toEqual(["kg", "t"]);
     expect((screen.getByLabelText("Unit") as HTMLSelectElement).value).toBe("kg");
-    change("Material", "00000002");
+    choose("Material", "00000002");
     expect(units()).toEqual(["each"]);
-    change("Material", "");
+    const material = screen.getByRole("combobox", { name: "Material" });
+    fireEvent.change(material, { target: { value: "" } });
+    fireEvent.blur(material);
     expect(units()).toEqual([]);
   });
 
@@ -90,7 +98,7 @@ describe("RequisitionForm", () => {
 
   it("puts the server's field errors under their fields, translated, and other errors above the buttons", async () => {
     renderForm({ labels: requisitionsLabels(pl) });
-    fireEvent.change(screen.getByLabelText("Materiał"), { target: { value: "00000001" } });
+    choose("Materiał", "00000001");
     fireEvent.change(screen.getByLabelText("Lokalizacja"), { target: { value: "00000001" } });
     fireEvent.change(screen.getByLabelText("Ilość"), { target: { value: "1" } });
     fireEvent.change(screen.getByLabelText("Wymagane do"), { target: { value: "2027-03-01" } });
@@ -135,5 +143,24 @@ describe("RequisitionForm", () => {
     fireEvent.keyDown(screen.getByLabelText("Quantity"), { key: "Escape" });
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(onCancel).toHaveBeenCalledTimes(2);
+  });
+
+  it("chooses the material in an autocomplete that refuses free text, and leaves Escape to its open list (#217)", () => {
+    renderForm({ labels: requisitionsLabels(pl), locale: "pl" });
+    const material = screen.getByRole("combobox", { name: "Materiał" });
+    expect(material.getAttribute("placeholder")).toBe(pl.lists.materialPicker.placeholder);
+
+    fireEvent.change(material, { target: { value: "stal" } });
+    expect(screen.getByRole("status").textContent).toBe("Żaden materiał nie pasuje do „stal”.");
+    fireEvent.blur(material);
+    expect(screen.getByText(pl.lists.materialPicker.refused)).toBeTruthy();
+    expect(material.getAttribute("aria-invalid")).toBe("true");
+
+    act(() => material.focus());
+    fireEvent.keyDown(material, { key: "Escape" });
+    expect(material.getAttribute("aria-expanded")).toBe("false");
+    expect(onCancel).not.toHaveBeenCalled();
+    fireEvent.keyDown(material, { key: "Escape" });
+    expect(onCancel).toHaveBeenCalledOnce();
   });
 });

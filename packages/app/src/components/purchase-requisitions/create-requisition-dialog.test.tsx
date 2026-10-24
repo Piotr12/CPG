@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/messages/en";
 import { CreateRequisitionDialog } from "./create-requisition-dialog";
@@ -7,10 +7,10 @@ import { requisitionsLabels } from "./labels";
 const mocks = vi.hoisted(() => ({ createRequisition: vi.fn() }));
 vi.mock("../../app/admin/[tenant]/purchase-requisitions/actions", () => ({ createRequisition: mocks.createRequisition }));
 
-const materials = [{ value: "00000001", label: "00000001 — Steel (kg)", units: ["kg", "t"] }];
+const materials = [{ value: "00000001", code: "00000001", name: "Steel", detail: "kg", units: ["kg", "t"] }];
 const locations = [{ value: "00000001", label: "00000001 — Main plant" }];
 const dialog = () => (
-  <CreateRequisitionDialog context={{ tenant: "prod", generation: 1 }} labels={requisitionsLabels(en)} materials={materials} locations={locations} />
+  <CreateRequisitionDialog context={{ tenant: "prod", generation: 1 }} labels={requisitionsLabels(en)} materials={materials} locations={locations} locale="en" />
 );
 
 describe("CreateRequisitionDialog", () => {
@@ -22,7 +22,8 @@ describe("CreateRequisitionDialog", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Create requisition" }));
     expect(screen.getByRole("dialog", { name: "Create a purchase requisition" })).toBeTruthy();
-    fireEvent.change(screen.getByLabelText("Material"), { target: { value: "00000001" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "Material" }), { target: { value: "steel" } });
+    fireEvent.mouseDown(within(screen.getByRole("listbox")).getByRole("option"));
     fireEvent.change(screen.getByLabelText("Location"), { target: { value: "00000001" } });
     fireEvent.change(screen.getByLabelText("Quantity"), { target: { value: "100" } });
     fireEvent.change(screen.getByLabelText("Required by"), { target: { value: "2027-03-01" } });

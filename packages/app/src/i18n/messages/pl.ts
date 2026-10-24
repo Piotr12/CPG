@@ -919,6 +919,7 @@ export const pl: Messages = {
     empty: "Brak zapotrzebowań zakupu w {tenant}.",
     emptyHint: "Utwórz pierwsze przyciskiem Utwórz zapotrzebowanie.",
     pagination: "Strony zapotrzebowań zakupu", previous: "Poprzednia", next: "Następna", page: "Strona {page} z {pages}",
+    search: { label: "Szukaj zapotrzebowań zakupu", hint: "Dopasowuje ID zapotrzebowania albo ID lub nazwę jego materiału lub lokalizacji." },
     columns: {
       id: "Zapotrzebowanie",
       material: "Materiał",
@@ -986,6 +987,7 @@ export const pl: Messages = {
     emptyHint: "Utwórz pierwsze przyciskiem Utwórz zamówienie zakupu.",
     allOrders: "Wszystkie zamówienia zakupu",
     pagination: "Strony zamówień zakupu", previous: "Poprzednia", next: "Następna", page: "Strona {page} z {pages}",
+    search: { label: "Szukaj zamówień zakupu", hint: "Dopasowuje ID zamówienia albo ID lub nazwę jego dostawcy lub lokalizacji." },
     columns: { id: "Zamówienie", supplier: "Dostawca", location: "Lokalizacja", lines: "Pozycje", status: "Status" },
     status: { open: "Otwarte", completed: "Zrealizowane", "closed-early": "Zamknięte wcześniej", cancelled: "Anulowane" },
     inactive: "Nieaktywny",
@@ -1134,6 +1136,7 @@ export const pl: Messages = {
     empty: "Brak przesunięć w środowisku {tenant}.",
     emptyHint: "Utwórz pierwsze przyciskiem Utwórz przesunięcie.",
     allTransfers: "Wszystkie przesunięcia",
+    search: { label: "Szukaj przesunięć", hint: "Dopasowuje ID przesunięcia albo ID lub nazwę jego materiału lub którejkolwiek lokalizacji." },
     columns: {
       id: "Przesunięcie",
       material: "Materiał",

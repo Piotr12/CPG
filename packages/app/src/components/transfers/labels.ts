@@ -16,19 +16,28 @@ import {
 } from "@cpg/core/validators/transfers/transfer.schema";
 import type { Messages } from "../../i18n/messages/en";
 import { errorFormatter, fill, shownQuantity, type TenantContext } from "../forms/form-labels";
+import { documentMaterialPicker, type DocumentMaterialPicker } from "../purchasing/material-picker";
 
 /**
  * The transfer screens' strings in the reader's language: plain strings, so they can reach client
  * components (the server-side headings stay behind). `errors` holds every code the screens can show.
  */
-export type TransfersLabels = Omit<Messages["transfers"], "heading" | "detailHeading" | "errors"> & { errors: Record<string, string> };
+export type TransfersLabels = Omit<Messages["transfers"], "heading" | "detailHeading" | "errors"> & {
+  errors: Record<string, string>;
+  /** The form's material autocomplete (#217). */
+  picker: DocumentMaterialPicker;
+};
 
 /** Builds the transfer labels from a dictionary (server side, where `messages` is available). */
 export function transfersLabels(messages: Messages): TransfersLabels {
   const labels: Partial<Messages["transfers"]> = { ...messages.transfers };
   delete labels.heading;
   delete labels.detailHeading;
-  return { ...(labels as Omit<Messages["transfers"], "heading" | "detailHeading">), errors: { ...messages.errors, ...messages.transfers.errors } };
+  return {
+    ...(labels as Omit<Messages["transfers"], "heading" | "detailHeading">),
+    errors: { ...messages.errors, ...messages.transfers.errors },
+    picker: documentMaterialPicker(messages),
+  };
 }
 
 export { errorFormatter, fill, shownQuantity, type TenantContext };
