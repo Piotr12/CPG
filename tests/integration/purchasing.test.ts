@@ -119,7 +119,7 @@ describe("purchase requisitions and orders in the UI", () => {
     expect(converting).toHaveLength(1);
     expect([converting[0][1], converting[0][4], converting[0][5]]).toEqual([expect.stringContaining("buypo steel"), "2027-03-04", requisition]);
     // The requisition counts what the order converted.
-    const converted = (await rows(una, "/admin/prod/purchase-requisitions")).find(([id]) => id === requisition)!;
+    const converted = await requisitionRow(una, ([id]) => id === requisition);
     expect(converted.slice(3, 6)).toEqual(["100 kg", "60 kg", "40 kg"]);
   });
 
@@ -149,7 +149,7 @@ describe("purchase requisitions and orders in the UI", () => {
   it("lets a normal user change an Open requisition's required date on screen, which the audit records (#142)", async () => {
     // At 1280 × 800 the Required column shows and the row's actions sit inside the table, unscrolled.
     await una.setViewport(1280, 800);
-    const id = (await rows(una, "/admin/prod/purchase-requisitions")).find((row) => row.join(" ").includes("buy steel"))![0];
+    const [id] = await requisitionRow(una, (row) => row.join(" ").includes("buy steel"));
     const label = `Change date — Purchase requisitions ${id}`;
     const trigger = `document.querySelector(${JSON.stringify(`main button[aria-label="${label}"]`)})`;
     await una.waitUntil(ready(trigger));
@@ -166,7 +166,7 @@ describe("purchase requisitions and orders in the UI", () => {
     await una.click("[role=dialog] button[type=submit]");
     await una.waitUntil(closed);
 
-    const mine = (await rows(una, "/admin/prod/purchase-requisitions")).find((row) => row[0] === id)!;
+    const mine = await requisitionRow(una, (row) => row[0] === id);
     expect(mine[6]).toBe("2027-04-15");
     expect(mine[7]).toBe("Open");
 
@@ -184,7 +184,7 @@ describe("purchase requisitions and orders in the UI", () => {
     // scroll, inside the table's box and the window, and still open the dialog.
     try {
       await una.setViewport(390, 844);
-      await rows(una, "/admin/prod/purchase-requisitions");
+      await requisitionRow(una, (row) => row[0] === id);
       await una.waitUntil(ready(trigger));
       expect(await una.evaluate<boolean>(`(${trigger}.scrollIntoView({ block: "center", inline: "center" }), true)`)).toBe(true);
       expect(await una.evaluate<boolean>(`(() => {
@@ -216,7 +216,21 @@ async function createRequisition(browser: Browser, material: string, location: s
   await browser.click("[role=dialog] button[type=submit]");
   await browser.waitUntil(closed);
   // Other files create Prod requisitions too: the one made here is the one for `material`.
-  return (await rows(browser, "/admin/prod/purchase-requisitions")).find((row) => row[1].includes(material))!;
+  return requisitionRow(browser, (row) => row[1].includes(material));
+}
+
+/**
+ * The first Prod requisition row `match` finds, from the list's last page back (the newest are last;
+ * other files leave Prod with more than a page), leaving the browser on that row's page.
+ */
+async function requisitionRow(browser: Browser, match: (row: string[]) => boolean): Promise<string[]> {
+  // A page past the last shows the last; 1,000,000 is the highest page the list takes.
+  let found = (await rows(browser, "/admin/prod/purchase-requisitions?page=1000000")).find(match);
+  const label = await browser.evaluate<string>(`document.querySelector('main nav[aria-label="Purchase requisition pages"] span')?.textContent ?? "Page 1 of 1"`);
+  for (let page = Number(/of (\d+)$/.exec(label)![1]) - 1; !found && page >= 1; page -= 1) {
+    found = (await rows(browser, `/admin/prod/purchase-requisitions?page=${page}`)).find(match);
+  }
+  return found!;
 }
 
 /** Creates a one-line Prod order from "buypo acme" to "buypo plant" through the Create purchase order dialog. */

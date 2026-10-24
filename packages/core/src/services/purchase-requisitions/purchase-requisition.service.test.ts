@@ -237,6 +237,56 @@ describe("PurchaseRequisitionService", () => {
       expect(await service().get("00000002")).toMatchObject({ id: "00000002", material: "00000002" });
     });
 
+    it("lists in pages of 100 by ID and counts the tenant's requisitions (#187)", async () => {
+      const em = scopedEm();
+      const material = await em.findOneOrFail(Material, { code: "00000001" });
+      const location = await em.findOneOrFail(Location, { code: "00000001" });
+      for (let index = 1; index <= 101; index++) {
+        em.create(PurchaseRequisition, {
+          code: String(index).padStart(8, "0"), material, location, quantity: `${index}.000000`, enteredQuantity: String(index), enteredUnit: "kg",
+          numerator: "1", denominator: "1", requiredDate: "2027-03-01", converted: "0.000000", status: "open",
+        });
+      }
+      await em.flush();
+
+      const first = await service().list();
+      expect(first).toHaveLength(100);
+      expect([first[0].id, first[99].id]).toEqual(["00000001", "00000100"]);
+      expect(first.every(({ id, quantity }) => quantity === `${Number(id)}.000000`)).toBe(true);
+      expect((await service().list(1)).map(({ id }) => id)).toEqual(first.map(({ id }) => id));
+      expect((await service().list(2)).map(({ id }) => id)).toEqual(["00000101"]);
+      expect(await service().list(3)).toEqual([]);
+      expect(await service().count()).toBe(101);
+      expect(await service("test").count()).toBe(0);
+    });
+
+    it("refuses an invalid page as VALIDATION_FAILED", async () => {
+      for (const page of [0, -1, 1.5, Number.NaN]) {
+        await expect(service().list(page)).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+      }
+    });
+
+    it("lists every Open requisition, past the first page, and no other (BUY-003)", async () => {
+      const em = scopedEm();
+      const material = await em.findOneOrFail(Material, { code: "00000001" });
+      const location = await em.findOneOrFail(Location, { code: "00000001" });
+      const statuses = ["completed", "cancelled", "closed-early"];
+      for (let index = 1; index <= 103; index++) {
+        em.create(PurchaseRequisition, {
+          code: String(index).padStart(8, "0"), material, location, quantity: "1.000000", enteredQuantity: "1", enteredUnit: "kg", numerator: "1",
+          denominator: "1", requiredDate: "2027-03-01", converted: "0.000000", status: index % 4 === 3 ? "open" : statuses[index % 4],
+        });
+      }
+      await em.flush();
+      await seedMasters(orm, "test");
+      await service("test").create(NEW, ACTOR);
+
+      const open = await service().listOpen();
+      // 00000103 is on the list's second page, and still a choice.
+      expect(open.map(({ id }) => Number(id))).toEqual(Array.from({ length: 26 }, (_, index) => 4 * index + 3));
+      expect(open.every(({ status, material: id }) => status === "open" && id === "00000001")).toBe(true);
+    });
+
     it("doesn't find an unknown ID, or another tenant's requisition (TEN-014)", async () => {
       await service().create(NEW, ACTOR);
 

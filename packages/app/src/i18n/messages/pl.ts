@@ -895,6 +895,7 @@ export const pl: Messages = {
       "Zapotrzebowanie mówi, czego potrzeba, gdzie i na kiedy. Zamówienia zakupu przekształcają je, w jednym lub kilku krokach. Zapotrzebowanie to tylko planowana podaż: nigdy nie zmienia stanu magazynowego.",
     empty: "Brak zapotrzebowań zakupu w {tenant}.",
     emptyHint: "Utwórz pierwsze przyciskiem Utwórz zapotrzebowanie.",
+    pagination: "Strony zapotrzebowań zakupu", previous: "Poprzednia", next: "Następna", page: "Strona {page} z {pages}",
     columns: {
       id: "Zapotrzebowanie",
       material: "Materiał",

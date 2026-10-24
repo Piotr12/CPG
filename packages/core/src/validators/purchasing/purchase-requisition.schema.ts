@@ -3,8 +3,12 @@ import { calendarDateSchema } from "../dates/calendar-date.schema";
 import { enteredQuantitySchema } from "../boms/bom-fields.schema";
 import { unitSchema } from "../materials/material-fields.schema";
 import { locationReferenceSchema, materialReferenceSchema } from "../planning-parameters/planning-parameter-fields.schema";
+import { pageSchema } from "../shipments/shipment.schema";
 import { versionSchema } from "../version.schema";
 import { REQUISITION_IMMUTABLE_MESSAGE } from "./purchasing-fields.schema";
+
+/** `GET /api/tenants/{tenant}/purchase-requisitions` and the list page: a 1-based `?page=` of 100 (additive since #187; the first page when absent). */
+export const requisitionListQuerySchema = z.object({ page: pageSchema });
 
 /**
  * `POST /api/tenants/{tenant}/purchase-requisitions`, and the Create requisition form (spec Q3): the

@@ -39,6 +39,21 @@ describe("/api/tenants/{tenant}/purchase-requisitions", () => {
     expect(await response.json()).toEqual({ ok: true, data: [{ id: "00000001" }] });
   });
 
+  it("GET forwards ?page= to the service, takes the first page without one, and refuses an invalid page (#187)", async () => {
+    mocks.requireApiUser.mockResolvedValue({ username: "alice", role: "user" });
+    mocks.tenantScope.mockResolvedValue({ cradle: { purchaseRequisitionService: { list: mocks.list } } });
+    mocks.list.mockResolvedValue([]);
+    const get = (query: string) => route.GET(new Request(`http://cpg.test/api/tenants/test/purchase-requisitions${query}`), context("test"));
+
+    await get("");
+    await get("?page=2");
+    expect(mocks.list.mock.calls).toEqual([[1], [2]]);
+
+    mocks.list.mockClear();
+    for (const bad of ["?page=0", "?page=x", "?page=1.5"]) expect((await get(bad)).status).toBe(400);
+    expect(mocks.list).not.toHaveBeenCalled();
+  });
+
   it("GET checks the caller before opening the tenant", async () => {
     const { UnauthorizedError } = await vi.importActual<typeof import("@cpg/core")>("@cpg/core");
     mocks.requireApiUser.mockRejectedValue(new UnauthorizedError());
