@@ -55,3 +55,6 @@
 - Gate on the merged tree: running; P1–P4 are dispatched at once when it is green.
 - Lead fix (no unit owns `login/` any more): a refused sign-in keeps the typed username. `SignInState` gains `username`, the action returns it on every refusal, the field uses it as `defaultValue` (React 19 resets the form after an action); `actions.test.ts` and `sign-in-form.test.tsx` pin it. The first gate run caught the test file mid-edit (6 stale assertions); lint, typecheck and build exited 0, and coverage is re-run on the finished tree before P1–P4 fork.
 - Gate on the finished tree: lint exit 0, typecheck exit 0, test:coverage exit 0 (506 files, 3,730 tests, 100 %), build exit 0. Scan: 82 offenders in 24 files, all in `app`. P1, P2, P3 and P4 dispatched at once from this tip.
+
+## 2026-10-24T13:40:00Z — P1–P4 dispatched from f7b666d7
+- P1 `32091c4f`, P2 `44d4eae8`, P3 `9d4e6465`, P4 `e63761ed`, all claude-opus-5-5, forked from `f7b666d7` (W1–W3 merged, the lead's amendments and the login fix). Ports 3111–3114. They are merged one at a time as they settle, with the gate re-run and the scan read after each merge.
