@@ -84,8 +84,6 @@ const eslintConfig = defineConfig([
   ),
   restrictTenantSyntax(tenantSource),
   restrictTenantSyntax(["packages/core/src/container/tenant-scope.ts"], "selectTenant"),
-  // The health check's database round trip touches no tenant data.
-  restrictTenantSyntax(["packages/core/src/services/system/system-status.service.ts"], "rawSql"),
   // Debug output doesn't ship; CLIs and tests may print.
   { rules: { "no-console": ["error", { allow: ["info", "warn", "error"] }] } },
   { files: ["packages/*/scripts/**", "tests/**"], rules: { "no-console": "off" } },

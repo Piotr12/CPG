@@ -832,9 +832,9 @@ describe("PurchaseOrderService", () => {
     it("creates an order stamped at the seed's moment, converting a requisition fully, without any audit", async () => {
       const source = await requisition();
       const auditBefore = await scopedEm().count(TenantAuditEvent, {});
-      const view = await service().seedDemo(converting(source.id, "100"), at);
-      expect(view).toMatchObject({ id: "00000001", status: "open", createdAt: at, lines: [{ requisition: source.id, quantity: "100.000000" }] });
-      expect(await scopedEm().findOneOrFail(PurchaseOrder, { code: view.id })).toMatchObject({ createdAt: at, updatedAt: at });
+      expect(await service().seedDemo(converting(source.id, "100"), at)).toEqual({ id: "00000001" });
+      expect(await service().get("00000001")).toMatchObject({ status: "open", createdAt: at, lines: [{ requisition: source.id, quantity: "100.000000" }] });
+      expect(await scopedEm().findOneOrFail(PurchaseOrder, { code: "00000001" })).toMatchObject({ createdAt: at, updatedAt: at });
       expect(await requisitions().get(source.id)).toMatchObject({ converted: "100.000000", status: "completed" });
       expect(await scopedEm().count(TenantAuditEvent, {})).toBe(auditBefore);
     });

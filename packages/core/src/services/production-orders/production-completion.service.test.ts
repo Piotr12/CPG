@@ -659,8 +659,10 @@ describe("ProductionCompletionService", () => {
       await correct(COCOA, "100");
       await correct(WRAPPER, "300");
       const auditBefore = await scoped().count(TenantAuditEvent, {});
-      const { completion: posted, order: progressed } = await service().seedDemo("00000001", completion("40", "21", "80"), at);
+      expect(await service().seedDemo("00000001", completion("40", "21", "80"), at)).toEqual({ id: "00000001" });
 
+      const [posted] = await service().list("00000001");
+      const progressed = await orders().get("00000001");
       expect(posted).toMatchObject({ id: "00000001", businessDate: "2025-06-15", createdAt: at, quantity: "40.000000", waste: false });
       expect(posted.lines.map(({ material, variance }) => [material, variance])).toEqual([[COCOA, "1.000000"], [WRAPPER, "0.000000"]]);
       expect(progressed).toMatchObject({ produced: "40.000000", status: "completed" });
@@ -678,7 +680,9 @@ describe("ProductionCompletionService", () => {
       await correct(COCOA, "100");
       await correct(WRAPPER, "300");
       const before = (await scoped().findOneOrFail(ProductionOrder, { code: "00000001" })).updatedAt;
-      const { completion: posted, order: progressed } = await service().seedDemo("00000001", completion("0", "3", "6"), at);
+      expect(await service().seedDemo("00000001", completion("0", "3", "6"), at)).toEqual({ id: "00000001" });
+      const [posted] = await service().list("00000001");
+      const progressed = await orders().get("00000001");
       expect(posted).toMatchObject({ waste: true, createdAt: at, businessDate: "2025-06-15" });
       expect(progressed).toMatchObject({ produced: "0.000000", status: "open" });
       expect((await scoped().findOneOrFail(ProductionOrder, { code: "00000001" })).updatedAt).toEqual(before);
@@ -692,8 +696,8 @@ describe("ProductionCompletionService", () => {
       await correct(COCOA, "100");
       await expect(service().seedDemo("00000001", completion("50", "25", "100"), at)).rejects.toMatchObject({ code: "PRODUCTION_OVERPRODUCTION" });
       expect(await scoped().count(ProductionCompletion, {})).toBe(0);
-      const accepted = await service().seedDemo("00000001", { ...completion("50", "25", "100"), acceptOverproduction: true }, at);
-      expect(accepted.order).toMatchObject({ produced: "50.000000", status: "completed" });
+      await service().seedDemo("00000001", { ...completion("50", "25", "100"), acceptOverproduction: true }, at);
+      expect(await orders().get("00000001")).toMatchObject({ produced: "50.000000", status: "completed" });
     });
   });
 

@@ -123,12 +123,15 @@ export class ShipmentService {
    * unit the material doesn't convert, a quantity above the order line's outstanding.
    */
   create(input: ShipmentCreateInput, actor: AuditActor): Promise<ShipmentView> {
-    return this.createWith(input, { kind: "user", actor });
+    return this.createWith(input, { kind: "user", actor }, async (em, shipment) => (await viewsOf(em, [shipment]))[0]);
   }
 
-  /** The demo seed's shipment, stamped at `at` and unaudited; every business rule of `create` still applies. */
-  seedDemo(input: ShipmentCreateInput, at: Date): Promise<ShipmentView> {
-    return this.createWith(input, { kind: "seed", at });
+  /**
+   * The demo seed's shipment, stamped at `at` and unaudited; every business rule of `create` still
+   * applies. It returns only the shipment's ID: the seed reads nothing back (#163, #185).
+   */
+  seedDemo(input: ShipmentCreateInput, at: Date): Promise<{ id: string }> {
+    return this.createWith(input, { kind: "seed", at }, (_em, shipment) => ({ id: shipment.code }));
   }
 
   /**
@@ -222,7 +225,8 @@ export class ShipmentService {
     }
   }
 
-  private async createWith(input: ShipmentCreateInput, context: PostingContext): Promise<ShipmentView> {
+  /** Creates the shipment in one transaction and returns what `result` makes of it. */
+  private async createWith<T>(input: ShipmentCreateInput, context: PostingContext, result: (em: EntityManager, shipment: Shipment) => T | Promise<T>): Promise<T> {
     try {
       return await this.em.transactional(async (em) => {
         const order = await findCustomerOrder(em, input.customerOrder, { refresh: true });
@@ -258,7 +262,7 @@ export class ShipmentService {
           },
         });
         await em.flush();
-        return (await viewsOf(em, [shipment]))[0];
+        return result(em, shipment);
       });
     } catch (error) {
       // A racing create normally surfaces as a stale snapshot, which the request wrappers retry.

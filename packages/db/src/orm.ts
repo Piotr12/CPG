@@ -2,6 +2,7 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { MikroORM, type EntityManager, type Options } from "@mikro-orm/sqlite";
 import { createOrmConfig } from "./config";
+import { cacheStatements } from "./statement-cache";
 
 export type Orm = MikroORM;
 export type { EntityManager };
@@ -30,8 +31,21 @@ export async function initOrm(options: DbOptions, overrides: Partial<Options> = 
   const orm = await MikroORM.init(createOrmConfig(options, overrides));
   // WAL lets readers work while a write is in progress; the setting persists in the file.
   await orm.em.getConnection().execute("pragma journal_mode = wal");
+  cacheStatements(await orm.em.getConnection().getNativeClient());
 
   return orm;
+}
+
+/**
+ * Proves the database connection is open, without queuing behind a transaction on it. Kysely
+ * serialises the one SQLite connection with a mutex, which a transaction holds from `begin` to
+ * `commit`, so an ordinary query issued during a realistic Test reset waits 40 s or more for it;
+ * the `/up` health check must answer meanwhile (#185). `select 1` reads no table and leaves whatever
+ * transaction is open on the connection as it was.
+ */
+export async function pingDatabase(orm: Orm): Promise<void> {
+  const db = await orm.em.getConnection().getNativeClient();
+  db.prepare("select 1").get();
 }
 
 /** Applies pending migrations with a short-lived connection. Returns the applied migration names. */

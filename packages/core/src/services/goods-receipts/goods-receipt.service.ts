@@ -123,18 +123,30 @@ export class GoodsReceiptService {
    * unit the material doesn't convert. Any refusal, here or in the posting, writes nothing.
    */
   post(input: ReceiptCreateInput, actor: AuditActor): Promise<PostedReceiptView> {
-    return this.postWith(input, { kind: "user", actor });
+    return this.postWith(input, { kind: "user", actor }, async (em, receipt, resolved) => {
+      const [view] = await viewsOf(em, [receipt]);
+      const warnings = resolved
+        .filter(({ after }) => after.excess !== "0.000000")
+        .map(({ orderLine, after }): ReceiptWarning => ({ code: "OVER_RECEIPT", line: orderLine.position, excess: after.excess }));
+      return { ...view, warnings };
+    });
   }
 
   /**
    * The demo seed's receipt, posted and stamped at `at` and unaudited. The same checks apply: a line
-   * the order doesn't have or an order that is no longer Open is refused as `post` would.
+   * the order doesn't have or an order that is no longer Open is refused as `post` would. It returns
+   * only the receipt's ID: the seed reads nothing back, and building the view costs about as much as
+   * the posting (#163, #185).
    */
-  seedDemo(input: ReceiptCreateInput, at: Date): Promise<PostedReceiptView> {
-    return this.postWith(input, { kind: "seed", at });
+  seedDemo(input: ReceiptCreateInput, at: Date): Promise<{ id: string }> {
+    return this.postWith(input, { kind: "seed", at }, (_em, receipt) => ({ id: receipt.code }));
   }
 
-  private async postWith(input: ReceiptCreateInput, context: PostingContext): Promise<PostedReceiptView> {
+  /** Posts the receipt in one transaction and returns what `result` makes of it and the lines it resolved. */
+  private async postWith<T>(
+    input: ReceiptCreateInput, context: PostingContext,
+    result: (em: EntityManager, receipt: GoodsReceipt, resolved: readonly ResolvedLine[]) => T | Promise<T>,
+  ): Promise<T> {
     try {
       return await this.em.transactional(async (em) => {
         const order = await findOrder(em, input.purchaseOrder, { refresh: true });
@@ -173,11 +185,7 @@ export class GoodsReceiptService {
           after: { id: code, purchaseOrder: order.code, location: order.location.code, businessDate, lines: linesText(resolved) },
         });
         await em.flush();
-        const [view] = await viewsOf(em, [receipt]);
-        const warnings = resolved
-          .filter(({ after }) => after.excess !== "0.000000")
-          .map(({ orderLine, after }): ReceiptWarning => ({ code: "OVER_RECEIPT", line: orderLine.position, excess: after.excess }));
-        return { ...view, warnings };
+        return result(em, receipt, resolved);
       });
     } catch (error) {
       // A racing receipt normally surfaces as a stale snapshot, which the request wrappers retry;

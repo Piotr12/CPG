@@ -348,8 +348,9 @@ describe("ApiTokenService", () => {
       const alice = await signedIn("alice");
       const { token, secret } = await service().create(alice, "agent1");
       const tokens = service();
-      const em = (tokens as unknown as { em: { nativeUpdate: () => Promise<number> } }).em;
-      vi.spyOn(em, "nativeUpdate").mockRejectedValueOnce(new Error("database is locked"));
+      // The touch runs in its own transaction (so that it waits on the write gate, #185): fail that transaction.
+      const em = (tokens as unknown as { em: { transactional: () => Promise<number> } }).em;
+      vi.spyOn(em, "transactional").mockRejectedValueOnce(new Error("database is locked"));
       const log = vi.spyOn(console, "error").mockImplementation(() => {});
 
       expect(await tokens.authenticate(secret)).toMatchObject({ username: "alice" });

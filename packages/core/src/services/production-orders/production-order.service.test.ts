@@ -256,8 +256,8 @@ describe("demo", () => {
   it("seeds a dated, unaudited order under the user rules, with a planned start before the revision's validity", async () => {
     const at = new Date("2025-03-10T08:00:00Z");
     const auditBefore = await auditCount();
-    const seeded = await service().seedDemo({ ...input, plannedFinish: "2026-01-03", bom: "00000001", revision: 1 }, at);
-    expect(seeded).toMatchObject({ id: "00000001", status: "open", plannedStart: "2025-12-29", plannedFinish: "2026-01-03", bom: "00000001", revision: 1 });
+    expect(await service().seedDemo({ ...input, plannedFinish: "2026-01-03", bom: "00000001", revision: 1 }, at)).toEqual({ id: "00000001" });
+    expect(await service().get("00000001")).toMatchObject({ id: "00000001", status: "open", plannedStart: "2025-12-29", plannedFinish: "2026-01-03", bom: "00000001", revision: 1 });
     const stored = await em().findOneOrFail(ProductionOrder, { code: "00000001" });
     expect(stored.createdAt).toEqual(at); expect(stored.updatedAt).toEqual(at);
     expect(await auditCount()).toBe(auditBefore);

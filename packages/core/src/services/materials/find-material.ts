@@ -22,9 +22,24 @@ export async function findMaterial(em: EntityManager, materialId: string, option
  * (MAT-029), so it is `MATERIAL_INACTIVE`. Entries made before the deactivation stay valid.
  */
 export async function findActiveMaterial(em: EntityManager, materialId: string): Promise<Material> {
-  const material = await findMaterial(em, materialId);
+  return assertMaterialActive(await findMaterial(em, materialId));
+}
+
+/** The materials with business IDs `materialIds` in `em`'s tenant, keyed by ID, in one query; an ID it doesn't have is absent. */
+export async function materialsByCode(em: EntityManager, materialIds: readonly string[]): Promise<Map<string, Material>> {
+  return new Map((await em.find(Material, { code: { $in: [...new Set(materialIds)] } })).map((material) => [material.code, material]));
+}
+
+/** `findActiveMaterial` over materials loaded by `materialsByCode`, with the same errors. */
+export function pickActiveMaterial(materials: ReadonlyMap<string, Material>, materialId: string): Material {
+  const material = materials.get(materialId);
+  if (!material) throw materialNotFound(materialId);
+  return assertMaterialActive(material);
+}
+
+function assertMaterialActive(material: Material): Material {
   if (!material.active) {
-    throw new ConflictError(`Material ${materialId} is inactive, so it can't be picked for new entries.`, "MATERIAL_INACTIVE");
+    throw new ConflictError(`Material ${material.code} is inactive, so it can't be picked for new entries.`, "MATERIAL_INACTIVE");
   }
   return material;
 }

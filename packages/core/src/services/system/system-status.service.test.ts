@@ -19,8 +19,16 @@ describe("SystemStatusService", () => {
 
   const service = () => new SystemStatusService({ config, orm, em: orm.em.fork() });
 
-  it("pings the database", async () => {
+  it("pings the database, also while a transaction holds its connection (#185)", async () => {
     await expect(service().ping()).resolves.toBeUndefined();
+    const writer = orm.em.fork();
+    await writer.begin();
+    try {
+      const outcome = await Promise.race([service().ping().then(() => "answered"), new Promise<string>((resolve) => setTimeout(() => resolve("still waiting"), 300))]);
+      expect(outcome).toBe("answered");
+    } finally {
+      await writer.rollback();
+    }
   });
 
   it("reports pending migrations on a fresh database", async () => {

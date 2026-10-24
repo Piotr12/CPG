@@ -35,26 +35,28 @@ export class ProductionOrderService {
     return (await resolveProductionOptions(this.em, parseInput(productionOrderOptionsSchema, input))).options;
   }
   create(input: ProductionOrderInput, actor: AuditActor) {
-    return this.createWith(input, { kind: "user", actor });
+    return this.createWith(input, { kind: "user", actor }, (em, order) => detail(em, order));
   }
 
   /**
    * The demo seed's order, stamped at `at` and unaudited. The same checks apply, and the BOM revision's
    * validity is judged at the order's own planned finish, as for a user (the planned start, the finish
-   * less the lead time, may precede the revision's start).
+   * less the lead time, may precede the revision's start). It returns only the order's ID: the seed
+   * reads nothing back (#163, #185).
    */
-  seedDemo(input: ProductionOrderInput, at: Date) {
-    return this.createWith(input, { kind: "seed", at });
+  seedDemo(input: ProductionOrderInput, at: Date): Promise<{ id: string }> {
+    return this.createWith(input, { kind: "seed", at }, (_em, order) => ({ id: order.code }));
   }
 
-  private async createWith(input: ProductionOrderInput, context: PostingContext) {
+  /** Inserts the order in one transaction and returns what `result` makes of it. */
+  private async createWith<T>(input: ProductionOrderInput, context: PostingContext, result: (em: EntityManager, order: ProductionOrder) => T | Promise<T>): Promise<T> {
     const values = parseInput(productionOrderCreateSchema, input);
     try {
       return await this.em.transactional(async (em) => {
         const order = await insertOrder(em, values, context.kind === "seed" ? context.at : undefined);
         if (context.kind === "user") recordTenantAudit(em, context.actor, { action: "production-orders.production-order.created", subject: productionSubject(order), before: null, after: productionSnapshot(order) });
         await em.flush();
-        return detail(em, order);
+        return result(em, order);
       });
     } catch (error) {
       if (error instanceof UniqueConstraintViolationException) throw new ConflictError("Another production order was created at the same moment. Try again.", "PRODUCTION_ORDER_ID_RACE");

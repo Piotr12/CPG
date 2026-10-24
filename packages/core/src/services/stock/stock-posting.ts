@@ -6,9 +6,9 @@ import { AppError, ConflictError } from "../../http/errors";
 import type { stockPostingSchema } from "../../validators/stock/stock-correction.schema";
 import { recordTenantAudit } from "../audit/audit-recorder";
 import type { AuditActor } from "../audit/actor";
-import { findActiveLocation } from "../locations/find-location";
+import { locationsByCode, pickActiveLocation } from "../locations/find-location";
 import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quantity";
-import { findActiveMaterial } from "../materials/find-material";
+import { materialsByCode, pickActiveMaterial } from "../materials/find-material";
 
 /*
  * The ledger's one posting primitive (stock spec, Architecture): a leaf module, so a document's
@@ -61,10 +61,13 @@ export async function postStockMovements(
   context: PostingContext,
   { firstPosition = 0 }: { firstPosition?: number } = {},
 ): Promise<StockMovementView[]> {
+  // One query per kind for the whole posting, then checked line by line, in line order, as before (#163, #185).
+  const materials = await materialsByCode(em, input.lines.map(({ material }) => material));
+  const locations = await locationsByCode(em, input.lines.map(({ location }) => location));
   const resolved: ResolvedStockLine[] = [];
   for (const line of input.lines) {
-    const material = await findActiveMaterial(em, line.material);
-    const location = await findActiveLocation(em, line.location);
+    const material = pickActiveMaterial(materials, line.material);
+    const location = pickActiveLocation(locations, line.location);
     const signed = parseSignedQuantity(line.quantity)!;
     const converted = await convertToBaseQuantity(em, material, { quantity: formatDecimal(signed < 0n ? -signed : signed), unit: line.unit });
     resolved.push({ material, location, signed, converted, delta: parseDecimal(converted.baseQuantity)! * (signed < 0n ? -1n : 1n) });
@@ -116,14 +119,15 @@ async function postResolvedStockMovements(
   em: EntityManager, lines: readonly ResolvedStockLine[], reason: string, source: PostingSource, context: PostingContext, firstPosition: number,
 ): Promise<StockMovementView[]> {
   const businessDate = (context.kind === "seed" ? context.at : new Date()).toISOString().slice(0, 10);
+  const balances = await currentBalances(em, lines);
   const pairs = new Map<string, { balance: StockBalance; quantity: bigint }>();
   const pending: StockMovement[] = [];
   for (const [position, { material, location, signed, delta, converted }] of lines.entries()) {
     const line = { material: material.code, location: location.code };
-    const key = `${line.material}/${line.location}`;
+    const key = pairKey(material, location);
     let pair = pairs.get(key);
     if (!pair) {
-      const balance = await em.findOne(StockBalance, { material, location }, { refresh: true });
+      const balance = balances.get(key);
       pair = { balance: balance ?? em.create(StockBalance, { material, location, quantity: "0.000000" }), quantity: parseDecimal(balance?.quantity ?? "0")! };
       pairs.set(key, pair);
     }
@@ -162,6 +166,17 @@ async function postResolvedStockMovements(
   }
   await em.flush();
   return pending.map(toMovementView);
+}
+
+function pairKey(material: Material, location: Location): string {
+  return `${material.id}/${location.id}`;
+}
+
+/** The stored balances of the lines' pairs, fresh, keyed by `pairKey`, in one query; a pair without one is absent. */
+async function currentBalances(em: EntityManager, lines: readonly ResolvedStockLine[]): Promise<Map<string, StockBalance>> {
+  if (lines.length === 0) return new Map();
+  const balances = await em.find(StockBalance, { $or: lines.map(({ material, location }) => ({ material, location })) }, { refresh: true });
+  return new Map(balances.map((balance) => [pairKey(balance.material, balance.location), balance]));
 }
 
 export function toMovementView(movement: StockMovement): StockMovementView {

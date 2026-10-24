@@ -10,6 +10,7 @@ import { toDbOptions } from "../../database";
 import { generateTestTenantDataset } from "../../domain/demo/generate-dataset";
 import { Ledger } from "../../domain/demo/ledger";
 import { TEST_DATASET_CONFIGS } from "../../domain/demo/test-datasets";
+import { notAfter } from "../../domain/demo/timeline";
 import { formatDecimal, parseDecimal } from "../../domain/quantities/decimal";
 import { DATASET_KINDS, isUntouchedTest, seedTestTenantDataset } from "./seed-demo-data";
 import { FIXTURE_MATERIALS } from "../../../../../tests/setup/demo-fixtures";
@@ -60,6 +61,22 @@ describe("seedTestTenantDataset", () => {
       expect(quantity, `${material.code} at ${location.code}`).toBe(formatDecimal(ledger.balance(material.code, location.code), { fixed: true }));
       expect(quantity.startsWith("-")).toBe(false);
     }
+  }, 60_000);
+
+  it("gives the event loop a turn after every document, so requests are read while a reset runs (#185)", async () => {
+    const cradle = await testScope();
+    const dataset = generateTestTenantDataset(TEST_DATASET_CONFIGS.tiny, "2026-10-21");
+    // A probe that re-arms itself counts the loop's turns while the seed runs; every synchronous
+    // better-sqlite3 call and microtask-resolved await between them would otherwise leave it at one.
+    let turns = 0;
+    let seeding = true;
+    const spin = () => { turns += 1; if (seeding) setImmediate(spin); };
+    setImmediate(spin);
+
+    await seedTestTenantDataset(cradle, TODAY);
+    seeding = false;
+
+    expect(turns).toBeGreaterThanOrEqual(notAfter(dataset.timeline, TODAY).length);
   }, 60_000);
 
   it("dates every record by its own event, never by the time the seed ran (spec Q10)", async () => {

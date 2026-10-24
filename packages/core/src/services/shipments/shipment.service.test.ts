@@ -208,8 +208,8 @@ describe("ShipmentService", () => {
       const at = new Date("2025-06-15T08:30:00Z");
       const order = await orders().create(ORDER, ACTOR);
       const input = shipmentOf(order, { orderLine: order.lines[0].id, quantity: "50", unit: "each" });
-      const seeded = await service().seedDemo(input, at);
-      expect(seeded).toMatchObject({ id: "00000001", status: "open", createdAt: at, lines: [{ quantity: "50.000000", toIssue: "50.000000" }] });
+      expect(await service().seedDemo(input, at)).toEqual({ id: "00000001" });
+      expect(await service().get("00000001")).toMatchObject({ status: "open", createdAt: at, lines: [{ quantity: "50.000000", toIssue: "50.000000" }] });
       expect((await scoped().findOneOrFail(Shipment, { code: "00000001" })).createdAt).toEqual(at);
       expect(await scoped().count(TenantAuditEvent, { action: { $like: "shipments.%" } })).toBe(0);
       const user = await service().create(shipmentOf(order, { orderLine: order.lines[1].id, quantity: "1", unit: "each" }), ACTOR);
