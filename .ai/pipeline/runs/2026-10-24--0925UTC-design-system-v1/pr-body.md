@@ -24,7 +24,7 @@ The spec's Implementation notes list each with its reasoning.
 
 ## Acceptance criteria
 
-- [x] Every representative screen (Tenants, Overview, Materials list and detail, a production order with a shortage, the import, the stock report, Help, home, login) at 320, 768 and 1440 px in light and dark: essential actions reachable, no horizontal page overflow, table overflow local, labelled and keyboard-operable. QA_EVIDENCE_LINE
+- [x] Every representative screen (Tenants, Overview, Materials list and detail, a production order with a shortage, the import, the stock report, Help, home, login) at 320, 768 and 1440 px in light and dark: essential actions reachable, no horizontal page overflow, table overflow local, labelled and keyboard-operable. Evidence: the close-QA comment on this PR (112 + 12 captures, `metrics.json`), and `.ai/pipeline/runs/2026-10-24--0925UTC-design-system-v1/qa-artifacts/`.
 - [x] `tokens.test.ts` passes every pair of the accessibility floor in both themes (50 pairs, 25 per theme; the lowest non-text pair is 3.83:1, the lowest text pair 5.50:1); the rendered focus, hover, disabled and invalid states are in the W1 and W2 screenshots and the QA captures.
 - [x] Keyboard: focus visible on every control (the opaque `ring` plus a global `:focus-visible` outline), returned to the opener after a dialog closes (QA capture `keyboard-focus-*` and the dialog check).
 - [x] Empty, filtered-empty, loading, successful and refused operations show the state and a next step from the States table (reader and writer empty states, "Clear filters", `LoadingMessage` on every page, success and refusal `Callout`s; a refused sign-in keeps the typed username).
@@ -47,7 +47,7 @@ The spec's Implementation notes list each with its reasoning.
 ## How it was verified
 
 - Lead's gate on the final tree: `npm run lint` exit 0 (one pre-existing warning), `npm run typecheck` exit 0, `npm run test:coverage` exit 0 (531 files, 3,860 tests, 100 % lines, branches, functions and statements), `npm run build` exit 0; the gate was re-run after every one of the seven merges.
-- INTEGRATION_LINE
+- The full integration suite (every file in `tests/integration`, 55 files, 413 tests) ran once against the production standalone build on a local server (Docker is unavailable here; `startup-guard` is skipped without it and CI covers the image): 52 files passed, 1 skipped, and the two files whose assertions the close itself moved (`smoke`, `not-found`) were updated and re-run green (5/5). CI runs the same suite in four shards on this PR.
 - Every worker ran the integration files in its scope against its own standalone server (ports 3101–3114); the counts are in `NOTIFY.md`.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
