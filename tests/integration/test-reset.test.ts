@@ -67,7 +67,7 @@ describe("Test reset in Cave control", () => {
     await clickHydrated(admin, "[data-test-reset] button");
     await admin.waitFor("[role=alertdialog]");
     expect(await admin.text("[role=alertdialog]")).toContain("the realistic demonstration dataset");
-    expect(await admin.text("[role=alertdialog]")).toContain("takes up to half a minute");
+    expect(await admin.text("[role=alertdialog]")).toContain("takes up to a minute");
     await admin.clickRole("button", "Cancel");
     expect(await state()).toEqual(before);
   });
