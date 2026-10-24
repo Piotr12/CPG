@@ -110,6 +110,14 @@ the reset and a Prod write go through one container. The batched lookups must ke
   waits (bounded by the proxy's 120 s). Armed after the reads, so the TEN-026 retry and the idempotency races still work.
   Next.js holds requests until the instrumentation hook returns, so the startup seed needs no gate. Also the reviewer's nits:
   the statement cache's busy replacement is now most recent, the `/up` comment says what the ping proves.
+- 21:05 Gate committed e26c7af3; CI run 40120166764 green on all eight checks (the reset 27.4 s, the Prod write 25.4 s,
+  `GET /up` 0.02 s). The re-review approved the delta with two minors, both applied: (1) a native write outside a transaction
+  bypasses the gate and busy-waits 5 s in C (the reviewer measured 5.44 s, stalling the holder too), reachable through the
+  token touch (`recordUse`) and the session deletes (`validateSession`, `signOut`); those now run in `em.transactional`, and
+  the lesson says the gate sees transactions only. (2) a second holder on another bundle replaced the first's gate and orphaned
+  its waiters; `holdWriteGate` now waits for a foreign gate (bounded) and the subscriber re-checks after each release, since a
+  released gate may have passed to the next holder. Tests: two more in `write-gate.test.ts` (three ORMs), the token test fails
+  the transaction instead of the native call.
 
 ## Changes
 
@@ -117,7 +125,9 @@ the reset and a Prod write go through one container. The batched lookups must ke
   `cacheStatements`. `packages/db/src/statement-cache.ts` (new): an LRU of 500 prepared statements on `Database.prepare`.
 - `packages/db/src/write-gate.ts` (new): `holdWriteGate(em)` and the `WriteGate` subscriber, registered in `config.ts` beside
   `TenantGuard`; a root transaction of another ORM copy in the process waits for the holder's commit or rollback, at most
-  `WRITE_GATE_WAIT_MS` (the proxy's 120 s); a holder whose connection closed is dropped.
+  `WRITE_GATE_WAIT_MS` (the proxy's 120 s); a holder whose connection closed is dropped; a second holder waits for the first.
+- `packages/core/src/services/api-tokens/api-token.service.ts` (`recordUse`) and `auth/auth.service.ts` (`deleteSession`):
+  the native writes outside a transaction now run in one, so they pass the gate instead of busy-waiting in C.
 - `packages/core/src/services/demo/seed-demo-data.ts`: `await setImmediate` after each master batch and each document.
 - `packages/core/src/services/tenants/test-reset.service.ts`: holds the write gate before its first write; logs the reset's
   duration (`Reset the Test tenant to the <dataset> dataset, generation N: deleted and reseeded in X s`).
@@ -157,6 +167,10 @@ the reset and a Prod write go through one container. The batched lookups must ke
   build and the four shards green (shard 1 after a re-run; its first run hit the home-page flake #213). The realistic reset
   **27.0 s**, the Prod write 2 s in 25.0 s, `GET /up` 2 s in 0.01 s, the tiny seed 3.1–5.1 s. The gate commit's own run is
   linked from the PR.
+- After the review's minors (the last tree): lint 0 errors, typecheck clean, coverage 533 files / 3,877 tests / 100% on all
+  four, build green; against a fresh standalone copy `auth.test.ts`, `api-tokens.test.ts`, `test-reset-api.test.ts`,
+  `test-reset.test.ts` and `test-reset-realistic.test.ts` pass (29 tests): the realistic reset 6.3 s, the Prod write 2 s in
+  4.3 s, `GET /up` 0.01 s, no "database is locked" in the server log.
 - Browser QA on the standalone build: [evidence on #215](https://github.com/Piotr12/CPG/pull/215#issuecomment-6387532086).
 - Not verified here: kamal-proxy and cpg.baby (no proxy locally); the owner's post-deploy reset (below).
 

@@ -85,13 +85,13 @@ export class AuthService {
     const session = await this.em.findOne(Session, { tokenHash: hashSessionToken(token) }, { populate: ["user"] });
     if (!session) return null;
     if (session.expiresAt.getTime() <= Date.now()) {
-      await this.em.nativeDelete(Session, { id: session.id });
+      await this.deleteSession({ id: session.id });
       return null;
     }
     const { user } = session;
     if (!user.active) {
       // Deactivation already deleted it; a leftover is a bug or a manual edit, so fail closed.
-      await this.em.nativeDelete(Session, { id: session.id });
+      await this.deleteSession({ id: session.id });
       return null;
     }
     return { sessionId: session.id, userId: user.id, username: user.username, role: user.role };
@@ -99,7 +99,15 @@ export class AuthService {
 
   /** Ends the session behind `token`. Safe to call twice or with no token. */
   async signOut(token: string | undefined): Promise<void> {
-    if (token) await this.em.nativeDelete(Session, { tokenHash: hashSessionToken(token) });
+    if (token) await this.deleteSession({ tokenHash: hashSessionToken(token) });
+  }
+
+  /**
+   * In a transaction, so that it waits on the write gate while another bundle's Test reset holds
+   * the database, instead of busy-waiting in C and stalling the whole process (#185).
+   */
+  private deleteSession(where: { id: string } | { tokenHash: string }): Promise<number> {
+    return this.em.transactional((em) => em.nativeDelete(Session, where));
   }
 
   /** Checks the password against the admin's or the user's credential; null when it doesn't match. */

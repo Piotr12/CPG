@@ -44,24 +44,33 @@ function currentGate(): Gate | undefined {
  * Holds the gate for `em`'s open transaction until that transaction commits or rolls back. Call it
  * inside the transaction, after the reads a retried attempt repeats and before its first write; a
  * second call from the same connection changes nothing. A gate another connection still holds is
- * replaced: two writers can't both have the database, and SQLite refuses the slower one.
+ * waited for first, so the transactions queued behind it are never orphaned; this transaction's
+ * snapshot is then stale and its first write fails as such, which the request wrappers retry.
  */
 export async function holdWriteGate(em: EntityManager): Promise<void> {
   if (!em.isInTransaction()) throw new Error("holdWriteGate needs an open transaction to hold the gate for.");
   const connection = em.getConnection();
-  if (currentGate()?.connection === connection) return;
   const database = await connection.getNativeClient();
+  await foreignGateReleased(connection, WRITE_GATE_WAIT_MS);
+  if (currentGate()?.connection === connection) return;
   let release!: () => void;
   const released = new Promise<void>((resolve) => { release = resolve; });
   registry[GATE] = { connection, alive: () => database.open, released, release };
 }
 
-/** Resolves when the gate is released, or after `ms` when its holder never lets go. */
-function releasedWithin(gate: Gate, ms: number): Promise<void> {
+/** Waits while another connection holds the gate, at most `ms` per holder; a released gate may have passed to the next one. */
+async function foreignGateReleased(connection: object, ms: number): Promise<void> {
+  for (let gate = currentGate(); gate && gate.connection !== connection; gate = currentGate()) {
+    if (!(await releasedWithin(gate, ms))) return;
+  }
+}
+
+/** True once the gate is released, false after `ms` when its holder never lets go. */
+function releasedWithin(gate: Gate, ms: number): Promise<boolean> {
   return new Promise((resolve) => {
-    const timer = setTimeout(resolve, ms);
+    const timer = setTimeout(() => resolve(false), ms);
     timer.unref();
-    void gate.released.then(() => { clearTimeout(timer); resolve(); });
+    void gate.released.then(() => { clearTimeout(timer); resolve(true); });
   });
 }
 
@@ -74,12 +83,10 @@ export class WriteGate implements EventSubscriber {
   }
 
   async beforeTransactionStart({ em, transaction }: TransactionEventArgs): Promise<void> {
-    // A savepoint's root transaction already passed the gate or holds it.
+    // A savepoint's root transaction already passed the gate or holds it; the holder's own bundle
+    // queues on Kysely's connection mutex instead.
     if (transaction) return;
-    const gate = currentGate();
-    // The holder's own bundle queues on Kysely's connection mutex instead.
-    if (!gate || gate.connection === em.getConnection()) return;
-    await releasedWithin(gate, this.waitMs);
+    await foreignGateReleased(em.getConnection(), this.waitMs);
   }
 
   afterTransactionCommit(args: TransactionEventArgs): void {

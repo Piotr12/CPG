@@ -98,6 +98,42 @@ describe("the write gate", () => {
     expect((await b.em.fork().find(Setting, {}, { orderBy: { key: "asc" } })).map(({ key }) => key)).toEqual(["holder", "nested", "own-bundle"]);
   });
 
+  it("lets a second holder wait for the first and take over, so nobody queued behind either is orphaned", async () => {
+    const { a, b } = await twoOrms();
+    const c = await initOrm({ databasePath: a.config.get("dbName") });
+    opened.push(c);
+    // The second holder's transaction began before the first held the gate, so it never waited at its begin.
+    const second = b.em.fork();
+    await second.begin();
+    const first = await holdAndWrite(a);
+    const holdingSecond = holdWriteGate(second);
+    const queuedBehindFirst = write(c, "queued-behind-first");
+
+    expect(await settled(holdingSecond)).toBe("pending");
+    await first.commit();
+    await holdingSecond;
+    // The second holder's snapshot predates the first's commit, so its first write is refused as stale: the
+    // request wrappers retry the whole transaction. Here it writes nothing and just holds.
+    const queuedBehindSecond = write(c, "queued-behind-second");
+    expect(await settled(queuedBehindSecond)).toBe("pending");
+    await second.commit();
+    await Promise.all([queuedBehindFirst, queuedBehindSecond]);
+
+    expect((await c.em.fork().find(Setting, { key: { $like: "queued-%" } })).map(({ key }) => key).sort()).toEqual(["queued-behind-first", "queued-behind-second"]);
+  });
+
+  it("gates a native write only inside a transaction: wrap such writes, an autocommit one busy-waits in C instead", async () => {
+    const { a, b } = await twoOrms();
+    const holder = await holdAndWrite(a);
+    const touching = b.em.fork().transactional((em) => em.nativeUpdate(Setting, { key: "holder" }, { value: "touched" }));
+
+    expect(await settled(touching)).toBe("pending");
+    await holder.commit();
+    expect(await touching).toBe(1);
+
+    expect((await b.em.fork().findOneOrFail(Setting, { key: "holder" })).value).toBe("touched");
+  });
+
   it("drops a gate whose holder closed its connection without ending the transaction", async () => {
     const { a, b } = await twoOrms();
     await holdAndWrite(a);

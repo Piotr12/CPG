@@ -130,13 +130,14 @@ export class ApiTokenService {
   /**
    * Records the use, at most once per `LAST_USED_RESOLUTION_MS` (API-007). Bookkeeping, not an
    * access decision: a failure is logged and the request goes on. `nativeUpdate` never re-creates
-   * a row a concurrent revoke just deleted.
+   * a row a concurrent revoke just deleted. In a transaction, so that it waits on the write gate
+   * while another bundle's Test reset holds the database, instead of busy-waiting in C (#185).
    */
   private async recordUse(token: ApiToken): Promise<void> {
     const now = new Date();
     if (token.lastUsedAt && now.getTime() - token.lastUsedAt.getTime() < LAST_USED_RESOLUTION_MS) return;
     try {
-      await this.em.nativeUpdate(ApiToken, { id: token.id }, { lastUsedAt: now });
+      await this.em.transactional((em) => em.nativeUpdate(ApiToken, { id: token.id }, { lastUsedAt: now }));
     } catch (error) {
       console.error(`Recording the use of API token ${token.id} failed:`, error);
     }
