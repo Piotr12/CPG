@@ -205,6 +205,7 @@ export async function clickHydrated(browser: Browser, selector: string) {
  * Chooses from an `Autocomplete` (#217): types `typed` into the combobox matching `selector` (a CSS
  * selector, e.g. `[role=dialog] [role=combobox][aria-label="Component 1 material"]`), waits for its
  * open list, clicks the option whose code is `code`, and waits until the field shows that choice.
+ * Type the code itself when other files may have records of the same name: the list shows 20 rows.
  */
 export async function chooseFromList(browser: Browser, selector: string, typed: string, code: string) {
   await browser.waitUntil(`Boolean([...document.querySelectorAll(${JSON.stringify(selector)})].find((input) => input.offsetParent && Object.keys(input).some((key) => key.startsWith("__reactFiber"))))`);
@@ -213,6 +214,8 @@ export async function chooseFromList(browser: Browser, selector: string, typed: 
   await browser.waitUntil(`Boolean(${option})`);
   await browser.evaluate(`(() => {
     document.querySelectorAll("[data-test-click]").forEach((element) => element.removeAttribute("data-test-click"));
+    // The option may sit below the list's scrolled-out part when many match (other files' records).
+    ${option}.scrollIntoView({ block: "nearest" });
     ${option}.setAttribute("data-test-click", "");
     return true;
   })()`);

@@ -79,7 +79,7 @@ describe("transfers in the UI", () => {
     await una.waitUntil(ready(button("Create transfer")));
     await una.clickRole("button", "Create transfer");
     await una.waitFor("[role=dialog]");
-    await chooseFromList(una, "[role=dialog] input[aria-autocomplete=list]", "tr steel", ids.steel);
+    await chooseFromList(una, "[role=dialog] input[aria-autocomplete=list]", `${ids.steel} tr steel`, ids.steel);
     await una.select("[role=dialog] select[name=source]", ids.plant);
     await una.select("[role=dialog] select[name=destination]", ids.depot);
     await una.fill("[role=dialog] input[name=quantity]", "100");
