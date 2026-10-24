@@ -116,6 +116,14 @@ describe("HelpPage", () => {
     expect(screen.getByText("Ekran: /login")).toBeTruthy();
   });
 
+  it("lets a topic's long words, such as API paths, wrap rather than widen the page", async () => {
+    await renderHelp(undefined);
+
+    const section = screen.getByRole("heading", { name: "Stock report" }).closest("section");
+    expect(section?.className).toContain("wrap-break-word");
+    expect(section?.className).toContain("min-w-0");
+  });
+
   it("has its own title", () => {
     expect(metadata.title).toBe("Help · Caveman Planning Good");
   });
