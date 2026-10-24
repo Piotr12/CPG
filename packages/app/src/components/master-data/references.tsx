@@ -1,10 +1,7 @@
 import Link from "next/link";
 import type { MaterialSummary, NamedRecordView } from "@cpg/core";
-import type { AutocompleteLabels, AutocompleteOption } from "@cpg/ui/backend/forms/autocomplete";
 import { Highlight } from "@cpg/ui/backend/tables/highlight";
-import type { Messages } from "../../i18n/messages/en";
 import type { FormOption } from "../forms/form-labels";
-import { materialOptions as pickerOptions, materialPickerLabels } from "../materials/material-picker";
 import { InactiveMark } from "./active-status";
 
 /*
@@ -43,25 +40,6 @@ export function withReferences<T extends { material: string; location: string }>
       locationActive: location.active,
     };
   });
-}
-
-/** The active materials a new row may pick, each with its base unit: a form hint can't follow the choice. */
-export function materialOptions(materials: MaterialSummary[]): FormOption[] {
-  return materials
-    .filter(({ active }) => active)
-    .map(({ id, description, baseUnit }) => ({ value: id, label: `${id} — ${description} (${baseUnit})` }));
-}
-
-/** The active materials a new row may pick, as material picker options (#217). */
-export function materialChoices(materials: MaterialSummary[]): AutocompleteOption[] {
-  return pickerOptions(materials.filter(({ active }) => active));
-}
-
-/** The material picker's words and placeholder: plain data for a client form (#217). */
-export type MaterialPickerLabels = AutocompleteLabels & { placeholder: string };
-
-export function materialPicker(lists: Messages["lists"]): MaterialPickerLabels {
-  return { ...materialPickerLabels(lists), placeholder: lists.materialPicker.placeholder };
 }
 
 /** The active locations a new row may pick. */

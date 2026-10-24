@@ -1,8 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { en } from "../../i18n/messages/en";
-import { pl } from "../../i18n/messages/pl";
-import { LocationCell, locationOptions, MaterialCell, materialChoices, materialOptions, materialPicker, withReferences } from "./references";
+import { LocationCell, locationOptions, MaterialCell, withReferences } from "./references";
 
 const materials = [
   { id: "00000001", type: "raw", description: "Bolt M8", baseUnit: "each", active: true, createdAt: new Date(), version: 1 },
@@ -31,15 +29,8 @@ describe("withReferences", () => {
 });
 
 describe("options", () => {
-  it("offer only active materials (with their base unit) and locations for a new row (MAT-029, LFC-019)", () => {
-    expect(materialOptions([...materials])).toEqual([{ value: "00000001", label: "00000001 — Bolt M8 (each)" }]);
+  it("offer only active locations for a new row (LFC-019)", () => {
     expect(locationOptions(locations)).toEqual([{ value: "00000001", label: "00000001 — Main plant" }]);
-  });
-
-  it("offer only active materials to the material picker, with its words in the reader's language (#217)", () => {
-    expect(materialChoices([...materials])).toEqual([{ value: "00000001", code: "00000001", name: "Bolt M8", detail: "each" }]);
-    expect(materialPicker(pl.lists)).toEqual(pl.lists.materialPicker);
-    expect(materialPicker(en.lists).placeholder).toBe("Type an ID or a name");
   });
 });
 

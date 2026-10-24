@@ -23,7 +23,7 @@ interface ForecastsTableProps {
   editable: boolean;
   /** Whether a filter is narrowing the list: an empty result then isn't an empty tenant. */
   filtered: boolean;
-  /** The list's search: an empty result then says nothing matched it. */
+  /** The list's search: its words are marked in the material and location cells, and an empty result says nothing matched it. */
   search: string;
   /** The list's sort and the links that sort it by another column (#217). */
   sort: { sort: ForecastSort; dir: SortDirection };
@@ -46,14 +46,14 @@ export function ForecastsTable({ tenant, rows, labels, editable, filtered, searc
       header: t.material,
       kind: "longText",
       sortKey: "material",
-      cell: (row) => <MaterialCell tenant={tenant.code} row={row} inactive={labels.inactive} />,
+      cell: (row) => <MaterialCell tenant={tenant.code} row={row} inactive={labels.inactive} query={search} />,
     },
     {
       id: "location",
       header: t.location,
       kind: "longText",
       sortKey: "location",
-      cell: (row) => <LocationCell row={row} inactive={labels.inactive} />,
+      cell: (row) => <LocationCell row={row} inactive={labels.inactive} query={search} />,
     },
     { id: "date", header: t.date, kind: "date", sortKey: "date", cell: (row) => row.date },
     { id: "quantity", header: t.quantity, kind: "quantity", cell: (row) => `${shownQuantity(row.quantity)} ${row.baseUnit}` },

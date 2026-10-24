@@ -118,6 +118,8 @@ describe("ForecastsPage", () => {
     expect(mocks.forecasts).toHaveBeenCalledWith({ material: "00000005" }, { page: 2, q: "cabinet", sort: "date", dir: "desc" });
     expect((screen.getByRole("searchbox", { name: "Search forecasts" }) as HTMLInputElement).value).toBe("cabinet");
     expect(screen.getByText(/250 results for “cabinet”/)).toBeTruthy();
+    // The search's words are marked in the material and location cells.
+    expect([...container.querySelectorAll("tbody mark")].map((mark) => mark.textContent)).toContain("Cabinet");
     expect(screen.getByRole("link", { name: "Clear search" }).getAttribute("href")).toBe("/admin/test/forecasts?material=00000005&sort=date&dir=desc");
     const hidden = (form: Element) => [...form.querySelectorAll<HTMLInputElement>("input[type=hidden]")].map(({ name, value }) => `${name}=${value}`);
     const [searchForm, filterForm] = container.querySelectorAll("form[role=search]");

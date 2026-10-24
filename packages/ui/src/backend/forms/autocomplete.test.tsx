@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "../../components/dialog";
-import { Autocomplete, matchOptions, type AutocompleteLabels, type AutocompleteOption } from "./autocomplete";
+import { Autocomplete, clipBounds, matchOptions, placeList, type AutocompleteLabels, type AutocompleteOption } from "./autocomplete";
 
 const options: AutocompleteOption[] = [
   { value: "m1", code: "00000001", name: "Steel sheet 2 mm", detail: "kg" },
@@ -56,6 +56,42 @@ describe("matchOptions", () => {
     expect(matchOptions(options, "STEEL sh").map((option) => option.value)).toEqual(["m1", "m7"]);
     expect(matchOptions(options, "0001").map((option) => option.value)).toEqual(["m1", "m10", "m11"]);
     expect(matchOptions(options, "")).toEqual(options);
+  });
+});
+
+describe("placeList", () => {
+  it("opens below, as tall as the room under the field allows, up to 320 px", () => {
+    expect(placeList({ top: 100, bottom: 132 }, { top: 0, bottom: 800 })).toEqual({ side: "below", maxHeight: 320 });
+    expect(placeList({ top: 500, bottom: 532 }, { top: 300, bottom: 740 })).toEqual({ side: "below", maxHeight: 200 });
+  });
+
+  it("opens upward when little room is left below and more above (a field low in a tall dialog)", () => {
+    expect(placeList({ top: 560, bottom: 592 }, { top: 168, bottom: 628 })).toEqual({ side: "above", maxHeight: 320 });
+    expect(placeList({ top: 300, bottom: 332 }, { top: 100, bottom: 400 })).toEqual({ side: "above", maxHeight: 192 });
+  });
+
+  it("stays below when there is no more room above, never with a negative height", () => {
+    expect(placeList({ top: 10, bottom: 42 }, { top: 0, bottom: 100 })).toEqual({ side: "below", maxHeight: 50 });
+    expect(placeList({ top: 0, bottom: 40 }, { top: 0, bottom: 40 })).toEqual({ side: "below", maxHeight: 0 });
+  });
+});
+
+describe("clipBounds", () => {
+  it("is the nearest ancestor that scrolls, or the viewport", () => {
+    const { container } = render(
+      <div data-testid="dialog" style={{ overflowY: "auto" }}>
+        <div>
+          <input data-testid="inside" />
+        </div>
+      </div>,
+    );
+    const dialog = screen.getByTestId("dialog");
+    vi.spyOn(dialog, "getBoundingClientRect").mockReturnValue({ top: 168, bottom: 628 } as DOMRect);
+
+    expect(clipBounds(screen.getByTestId("inside"))).toEqual({ top: 168, bottom: 628 });
+    const loose = document.createElement("input");
+    container.append(loose);
+    expect(clipBounds(loose)).toEqual({ top: 0, bottom: window.innerHeight });
   });
 });
 
@@ -264,5 +300,24 @@ describe("Autocomplete", () => {
     fireEvent.keyDown(window, { key: "Escape" });
     key("Tab");
     expect(input().getAttribute("aria-expanded")).toBe("true");
+  });
+
+  it("opens its list upward when the field sits low in a scrolling container", () => {
+    render(
+      <div data-testid="dialog" style={{ overflowY: "auto" }}>
+        <Field />
+      </div>,
+    );
+    vi.spyOn(screen.getByTestId("dialog"), "getBoundingClientRect").mockReturnValue({ top: 168, bottom: 628 } as DOMRect);
+    vi.spyOn(input(), "getBoundingClientRect").mockReturnValue({ top: 560, bottom: 592 } as DOMRect);
+
+    fireEvent.focus(input());
+    const list = screen.getByRole("listbox");
+    expect(list.dataset.side).toBe("above");
+    expect(list.className).toContain("bottom-full");
+    expect(list.style.maxHeight).toBe("320px");
+    // Typing keeps the side it opened on.
+    type("steel");
+    expect(screen.getByRole("listbox").dataset.side).toBe("above");
   });
 });

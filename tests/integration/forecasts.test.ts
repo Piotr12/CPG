@@ -153,6 +153,7 @@ describe("forecasts (E08-S03)", () => {
     expect(found.length).toBeGreaterThan(0);
     for (const [material, location] of found) expect(`${material} ${location}`.toLowerCase()).toContain(word.toLowerCase());
     expect(found.map(([, , date]) => date)).toEqual(found.map(([, , date]) => date).sort().reverse());
+    expect(await admin.evaluate<number>(`document.querySelectorAll("main tbody mark").length`)).toBeGreaterThanOrEqual(found.length);
     expect(await admin.text("main p[role=status]")).toMatch(new RegExp(`^${found.length} results? for “${word}” · Clear search$`));
     // The filter form keeps the search and the sort.
     expect(await admin.evaluate<string[]>(`[...document.querySelectorAll("form[aria-label='Filter forecasts'] input[type=hidden]")].map((input) => input.name + "=" + input.value)`)).toEqual([`q=${word}`, "sort=date", "dir=desc"]);

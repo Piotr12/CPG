@@ -7,7 +7,7 @@ import {
 } from "@cpg/core/validators/planning-parameters/planning-parameter-fields.schema";
 import { POSITIVE_QUANTITY_MESSAGE, QUANTITY_MESSAGE } from "@cpg/core/validators/quantities/quantity.schema";
 import type { Messages } from "../../i18n/messages/en";
-import { materialPicker, type MaterialPickerLabels } from "../master-data/references";
+import { materialPicker, type MaterialPicker } from "../materials/material-picker";
 
 /**
  * The planning parameters screen's strings in the reader's language: plain strings, so they can
@@ -16,7 +16,7 @@ import { materialPicker, type MaterialPickerLabels } from "../master-data/refere
  */
 export type PlanningParametersLabels = Omit<Messages["planningParameters"], "heading" | "errors"> & {
   errors: Record<string, string>;
-  picker: MaterialPickerLabels;
+  picker: MaterialPicker;
 };
 
 /** Builds the labels from a dictionary (server side, where `messages` is available). */

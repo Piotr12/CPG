@@ -51,6 +51,43 @@ export interface AutocompleteProps {
 
 const labelOf = (option: AutocompleteOption) => `${option.code} — ${option.name}`;
 
+/** The list's tallest height, in px (`max-h-80`). */
+const LIST_MAX = 320;
+/** Below this much room under the field, the list opens upward if there is more room above. */
+const LIST_MIN = 160;
+/** The gap kept between the list and the edge of what clips it. */
+const EDGE = 8;
+
+/** Where the open list goes, and how tall it may be. */
+export interface ListPlacement {
+  side: "below" | "above";
+  maxHeight: number;
+}
+
+/**
+ * The list's side and height for a field at `field` inside `bounds` (the box that clips it: a
+ * scrolling dialog, or the viewport). It opens below, as tall as there is room for; with less than
+ * `LIST_MIN` px below and more room above, it opens upward instead, so a field low in a tall dialog
+ * doesn't push its list past the dialog's edge (#217).
+ */
+export function placeList(field: { top: number; bottom: number }, bounds: { top: number; bottom: number }): ListPlacement {
+  const below = bounds.bottom - field.bottom - EDGE;
+  const above = field.top - bounds.top - EDGE;
+  if (below >= LIST_MIN || below >= above) return { side: "below", maxHeight: Math.max(Math.min(LIST_MAX, below), 0) };
+  return { side: "above", maxHeight: Math.min(LIST_MAX, above) };
+}
+
+/** The box that clips `element`: its nearest ancestor that scrolls or hides overflow, else the viewport. */
+export function clipBounds(element: HTMLElement): { top: number; bottom: number } {
+  for (let parent = element.parentElement; parent; parent = parent.parentElement) {
+    if (/(auto|scroll|hidden|clip)/.test(getComputedStyle(parent).overflowY)) {
+      const { top, bottom } = parent.getBoundingClientRect();
+      return { top, bottom };
+    }
+  }
+  return { top: 0, bottom: window.innerHeight };
+}
+
 /** Every word of `text` in the option's code or name, ignoring case. */
 export function matchOptions(options: AutocompleteOption[], text: string): AutocompleteOption[] {
   const words = highlightWords(text);
@@ -89,6 +126,7 @@ export function Autocomplete({
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const [refused, setRefused] = useState(false);
+  const [placement, setPlacement] = useState<ListPlacement>({ side: "below", maxHeight: LIST_MAX });
   // The value this field last showed or chose; a different `value` was set from outside (a reset,
   // another field), so the field shows its label instead of what was typed.
   const [synced, setSynced] = useState(value);
@@ -118,6 +156,12 @@ export function Autocomplete({
     return () => window.removeEventListener("keydown", claimEscape, { capture: true });
   }, [open]);
 
+  /** Opens the list on the side of the field with room for it. */
+  function openList() {
+    if (!open && input.current) setPlacement(placeList(input.current.getBoundingClientRect(), clipBounds(input.current)));
+    setOpen(true);
+  }
+
   /** Tells the form, remembering the value as this field's own. */
   function emit(next: string) {
     setSynced(next);
@@ -135,7 +179,7 @@ export function Autocomplete({
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === "ArrowDown") {
       event.preventDefault();
-      setOpen(true);
+      openList();
       setActive((current) => Math.min(current + 1, shown.length - 1));
     } else if (event.key === "ArrowUp") {
       event.preventDefault();
@@ -181,12 +225,12 @@ export function Autocomplete({
         value={text}
         onChange={(event) => {
           setText(event.target.value);
-          setOpen(true);
+          openList();
           setActive(0);
           setRefused(false);
         }}
-        onFocus={() => setOpen(true)}
-        onClick={() => setOpen(true)}
+        onFocus={openList}
+        onClick={openList}
         onBlur={onBlur}
         onKeyDown={onKeyDown}
       />
@@ -196,7 +240,12 @@ export function Autocomplete({
         role="listbox"
         aria-label={aria["aria-label"]}
         hidden={!open}
-        className="absolute top-full left-0 z-50 mt-1 max-h-80 w-full min-w-full overflow-y-auto sm:w-max sm:max-w-lg rounded-md bg-popover p-1 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10"
+        data-side={placement.side}
+        style={{ maxHeight: placement.maxHeight }}
+        className={cn(
+          "absolute left-0 z-50 w-full min-w-full overflow-y-auto rounded-md bg-popover p-1 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10 sm:w-max sm:max-w-lg",
+          placement.side === "below" ? "top-full mt-1" : "bottom-full mb-1",
+        )}
       >
         {shown.map((option, index) => (
           <li

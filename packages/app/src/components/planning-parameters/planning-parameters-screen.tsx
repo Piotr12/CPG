@@ -8,7 +8,8 @@ import { ListSearchBar } from "../lists/list-search-bar";
 import { AddPlanningParametersDialog } from "./add-planning-parameters-dialog";
 import { planningParametersLabels } from "./labels";
 import { PlanningParametersTable } from "./planning-parameters-table";
-import { locationOptions, materialChoices, withReferences } from "../master-data/references";
+import { activeMaterialOptions } from "../materials/material-picker";
+import { locationOptions, withReferences } from "../master-data/references";
 
 interface PlanningParametersScreenProps {
   tenant: { code: string; name: string; generation: number; readOnly: boolean };
@@ -49,7 +50,7 @@ export function PlanningParametersScreen({ tenant, sets, materials, locations, l
             <AddPlanningParametersDialog
               context={{ tenant: tenant.code, generation: tenant.generation }}
               labels={labels}
-              materials={materialChoices(materials)}
+              materials={activeMaterialOptions(materials)}
               locations={locationOptions(locations)}
               locale={locale}
             />

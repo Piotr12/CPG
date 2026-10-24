@@ -97,7 +97,7 @@ export function RecipeForm<T>({
   const keptUnits = new Map((initial?.components ?? []).map(({ material, unit }) => [material, unit]));
   const chosen = outputs?.find(({ value }) => value === values.output);
   const chosenOutput = chosen ? { description: chosen.name, baseUnit: chosen.baseUnit } : output;
-  const picker = { options: choices, labels: labels.picker, locale, placeholder: labels.picker.placeholder };
+  const picker = { options: choices, labels: labels.picker.labels, locale, placeholder: labels.picker.placeholder };
 
   const set = (changes: Partial<RecipeValues>) => setValues((current) => ({ ...current, ...changes }));
   const setLine = (index: number, changes: Partial<LineValues>) =>

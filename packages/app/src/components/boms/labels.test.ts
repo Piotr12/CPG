@@ -19,7 +19,8 @@ describe("BOM labels", () => {
 
   it("carry the shared material picker's words in the reader's language, as plain data (#217)", () => {
     const { picker } = bomsLabels(pl);
-    expect(picker).toEqual({ ...pl.lists.materialPicker });
+    const { placeholder, ...labels } = pl.lists.materialPicker;
+    expect(picker).toEqual({ labels, placeholder });
     expect(JSON.parse(JSON.stringify(picker))).toEqual(picker);
   });
 

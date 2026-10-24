@@ -6,7 +6,8 @@ import type { Messages } from "../../i18n/messages/en";
 import { fill } from "../forms/form-labels";
 import { listLinks, type ListSearchState } from "../lists/list-params";
 import { ListSearchBar } from "../lists/list-search-bar";
-import { locationOptions, materialChoices, withReferences } from "../master-data/references";
+import { activeMaterialOptions } from "../materials/material-picker";
+import { locationOptions, withReferences } from "../master-data/references";
 import { AddSafetyStockTargetDialog } from "./add-safety-stock-target-dialog";
 import { safetyStockLabels } from "./labels";
 import { SafetyStockTable, type SafetyStockRow } from "./safety-stock-table";
@@ -52,7 +53,7 @@ export function SafetyStockScreen({ tenant, targets, materials, locations, today
             <AddSafetyStockTargetDialog
               context={{ tenant: tenant.code, generation: tenant.generation }}
               labels={labels}
-              materials={materialChoices(materials)}
+              materials={activeMaterialOptions(materials)}
               locations={locationOptions(locations)}
               locale={locale}
             />

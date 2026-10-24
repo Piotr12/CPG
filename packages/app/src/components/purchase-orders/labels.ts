@@ -19,7 +19,7 @@ import { POSITIVE_QUANTITY_MESSAGE } from "@cpg/core/validators/quantities/quant
 import { errorMessage } from "../../i18n/error-message";
 import type { Messages } from "../../i18n/messages/en";
 import { fill, shownQuantity, type TenantContext } from "../forms/form-labels";
-import { documentMaterialPicker, type DocumentMaterialPicker } from "../purchasing/material-picker";
+import { materialPicker, type MaterialPicker } from "../materials/material-picker";
 import { byId } from "../purchase-requisitions/labels";
 
 /**
@@ -29,7 +29,7 @@ import { byId } from "../purchase-requisitions/labels";
 export type OrdersLabels = Omit<Messages["purchaseOrders"], "heading" | "detailHeading" | "errors"> & {
   errors: Record<string, string>;
   /** The form's material autocomplete (#217). */
-  picker: DocumentMaterialPicker;
+  picker: MaterialPicker;
 };
 
 /** Builds the purchase-order screens' labels from a dictionary (server side, where `messages` is available). */
@@ -40,7 +40,7 @@ export function ordersLabels(messages: Messages): OrdersLabels {
   return {
     ...(labels as Omit<Messages["purchaseOrders"], "heading" | "detailHeading">),
     errors: { ...messages.errors, ...messages.purchaseOrders.errors },
-    picker: documentMaterialPicker(messages),
+    picker: materialPicker(messages.lists),
   };
 }
 

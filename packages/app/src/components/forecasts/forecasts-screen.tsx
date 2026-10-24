@@ -7,7 +7,7 @@ import { PageLinks } from "../layout/page-links";
 import type { ListLinks, ListSearchState } from "../lists/list-params";
 import { ListSearchBar } from "../lists/list-search-bar";
 import { locationOptions, withReferences } from "../master-data/references";
-import { materialOptions } from "../materials/material-picker";
+import { activeMaterialOptions } from "../materials/material-picker";
 import { AddForecastDialog } from "./add-forecast-dialog";
 import { ForecastsFilter } from "./forecasts-filter";
 import { ForecastsTable } from "./forecasts-table";
@@ -53,7 +53,7 @@ export function ForecastsScreen({ tenant, forecasts, materials, locations, filte
           <AddForecastDialog
             context={{ tenant: tenant.code, generation: tenant.generation }}
             labels={labels}
-            materials={materialOptions(materials.filter(({ active }) => active))}
+            materials={activeMaterialOptions(materials)}
             locations={locationOptions(locations)}
             locale={locale}
           />

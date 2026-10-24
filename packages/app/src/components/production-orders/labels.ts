@@ -20,18 +20,17 @@ import {
 } from "@cpg/core/validators/production-orders/production-completion.schema";
 import { POSITIVE_QUANTITY_MESSAGE, QUANTITY_MESSAGE } from "@cpg/core/validators/quantities/quantity.schema";
 import { fill } from "../../i18n/fill";
-import type { AutocompleteLabels } from "@cpg/ui/backend/forms/autocomplete";
 import type { Messages } from "../../i18n/messages/en";
-import { materialPickerLabels } from "../materials/material-picker";
+import { materialPicker, type MaterialPicker } from "../materials/material-picker";
 
 export type ProductionLabels = Messages["productionOrders"] & {
   errors: Record<string, string>;
   /** The output and added-input material pickers (#217). */
-  picker: { labels: AutocompleteLabels; placeholder: string };
+  picker: MaterialPicker;
 };
 export function productionLabels(messages: Messages): ProductionLabels {
   return { ...messages.productionOrders, errors: { ...messages.errors, ...messages.productionOrders.errors },
-    picker: { labels: materialPickerLabels(messages.lists), placeholder: messages.lists.materialPicker.placeholder } };
+    picker: materialPicker(messages.lists) };
 }
 export function productionFieldError(labels: ProductionLabels) {
   const known: Record<string, string> = {

@@ -28,7 +28,7 @@ export function valueFields(labels: PlanningParametersLabels): CrudField[] {
 export function addFields(labels: PlanningParametersLabels, materials: AutocompleteOption[], locations: FormOption[]): CrudField[] {
   const t = labels.form;
   return [
-    { name: "material", label: t.material, type: "autocomplete", placeholder: labels.picker.placeholder, choices: materials, autocompleteLabels: labels.picker },
+    { name: "material", label: t.material, type: "autocomplete", placeholder: labels.picker.placeholder, choices: materials, autocompleteLabels: labels.picker.labels },
     { name: "location", label: t.location, type: "select", placeholder: t.choose, options: locations },
     ...valueFields(labels),
   ];

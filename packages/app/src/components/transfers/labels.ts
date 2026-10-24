@@ -16,7 +16,7 @@ import {
 } from "@cpg/core/validators/transfers/transfer.schema";
 import type { Messages } from "../../i18n/messages/en";
 import { errorFormatter, fill, shownQuantity, type TenantContext } from "../forms/form-labels";
-import { documentMaterialPicker, type DocumentMaterialPicker } from "../purchasing/material-picker";
+import { materialPicker, type MaterialPicker } from "../materials/material-picker";
 
 /**
  * The transfer screens' strings in the reader's language: plain strings, so they can reach client
@@ -25,7 +25,7 @@ import { documentMaterialPicker, type DocumentMaterialPicker } from "../purchasi
 export type TransfersLabels = Omit<Messages["transfers"], "heading" | "detailHeading" | "errors"> & {
   errors: Record<string, string>;
   /** The form's material autocomplete (#217). */
-  picker: DocumentMaterialPicker;
+  picker: MaterialPicker;
 };
 
 /** Builds the transfer labels from a dictionary (server side, where `messages` is available). */
@@ -36,7 +36,7 @@ export function transfersLabels(messages: Messages): TransfersLabels {
   return {
     ...(labels as Omit<Messages["transfers"], "heading" | "detailHeading">),
     errors: { ...messages.errors, ...messages.transfers.errors },
-    picker: documentMaterialPicker(messages),
+    picker: materialPicker(messages.lists),
   };
 }
 

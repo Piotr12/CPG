@@ -18,7 +18,7 @@ import { POSITIVE_QUANTITY_MESSAGE } from "@cpg/core/validators/quantities/quant
 import { errorMessage } from "../../i18n/error-message";
 import type { Messages } from "../../i18n/messages/en";
 import { fill, shownQuantity, type TenantContext } from "../forms/form-labels";
-import { materialPicker, type MaterialPickerLabels } from "../master-data/references";
+import { materialPicker, type MaterialPicker } from "../materials/material-picker";
 
 /**
  * The BOM screens' strings in the reader's language: plain strings, so they can reach client
@@ -27,7 +27,7 @@ import { materialPicker, type MaterialPickerLabels } from "../master-data/refere
  */
 export type BomsLabels = Omit<Messages["boms"], "heading" | "detailHeading" | "errors"> & {
   errors: Record<string, string>;
-  picker: MaterialPickerLabels;
+  picker: MaterialPicker;
 };
 
 /** Builds the BOM screens' labels from a dictionary (server side, where `messages` is available). */

@@ -33,7 +33,7 @@ export function AddSafetyStockTargetDialog({ context, labels, materials, locatio
   const close = () => setOpen(false);
   const t = labels.form;
   const fields: CrudField[] = [
-    { name: "material", label: t.material, type: "autocomplete", placeholder: labels.picker.placeholder, choices: materials, autocompleteLabels: labels.picker },
+    { name: "material", label: t.material, type: "autocomplete", placeholder: labels.picker.placeholder, choices: materials, autocompleteLabels: labels.picker.labels },
     { name: "location", label: t.location, type: "select", placeholder: t.choose, options: locations },
     { name: "effectiveFrom", label: t.effectiveFrom, type: "date", description: t.effectiveFromHint },
     { name: "quantity", label: t.quantity, description: t.quantityHint, autoComplete: "off" },
