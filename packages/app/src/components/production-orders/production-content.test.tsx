@@ -42,13 +42,28 @@ it("lists targets with recipe links behind request-time authentication", async (
   expect(within(screen.getByRole("table", { name: en.productionOrders.title })).getAllByRole("cell").map((cell) => cell.textContent)).toEqual([
     "00000001", "00000005 Cabinet", "24 each", "00000001 Warehouse", "2027-01-04", "2026-12-30", "00000002 / 3", "Open",
   ]);
+  const badge = within(screen.getByRole("table", { name: en.productionOrders.title })).getByText("Open").closest("[data-slot=status-badge]");
+  expect(badge?.getAttribute("data-tone")).toBe("neutral"); expect(badge?.querySelector("svg.lucide-circle-dot")).toBeTruthy();
+  expect(screen.getByRole("heading", { level: 1 }).closest("[data-slot=page-header]")?.textContent).toContain(en.productionOrders.intro);
+  expect(screen.getByRole("button", { name: en.productionOrders.create }).closest("[data-slot=page-header]")).toBeTruthy();
 });
 it("shows pinned revision, stored conversion and current shortage detail", async () => {
   render(await resolveServerComponents(detail()));
   expect(mocks.get).toHaveBeenCalledWith(production.id); expect(mocks.list).not.toHaveBeenCalled();
   expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Production order 00000001");
   expect(screen.getByRole("link", { name: "00000002 / 3" }).getAttribute("href")).toBe("/admin/test/boms/00000002?revision=3");
-  expect(screen.getByText("2 case (1 case = 12 each)")).toBeTruthy(); expect(screen.getByRole("status").textContent).toBe(en.productionOrders.warning);
+  expect(screen.getByText("2 case (1 case = 12 each)")).toBeTruthy();
+  const header = screen.getByRole("heading", { level: 1 }).closest("[data-slot=page-header]") as HTMLElement;
+  expect(within(header).getByText("Open").closest("[data-slot=status-badge]")?.getAttribute("data-tone")).toBe("neutral");
+  expect(within(header).getAllByRole("button").map((button) => button.textContent)).toEqual([en.productionOrders.edit, en.productionOrders.completion.post, "Cancel order…"]);
+  expect(within(header).getByRole("button", { name: "Cancel order… — Production orders 00000001" }).getAttribute("data-variant")).toBe("destructive");
+  const shortage = screen.getByRole("note");
+  expect(shortage.getAttribute("data-tone")).toBe("warning");
+  expect(within(shortage).getByText("1 component short")).toBeTruthy(); expect(within(shortage).getByText(en.productionOrders.shortageBody)).toBeTruthy();
+  const short = within(screen.getByRole("table", { name: en.productionOrders.components })).getAllByRole("row")[1];
+  expect(short.getAttribute("data-tone")).toBe("warning");
+  const value = short.querySelector("[data-shortage]")!;
+  expect(value.textContent).toBe("18 kg"); expect(value.className).toContain("text-warning"); expect(value.querySelector("svg.lucide-triangle-alert")?.getAttribute("aria-hidden")).toBe("true");
   expect(screen.getByText("18 kg")).toBeTruthy();
   expect(screen.getByText(en.productionOrders.leadTime).nextElementSibling?.textContent).toBe("5 calendar days");
   expect(screen.getByText(en.productionOrders.produced).nextElementSibling?.textContent).toBe("0 each");
@@ -94,23 +109,30 @@ it("translates empty/read-only states and keeps terminal orders readable without
   const props = { tenant: { ...tenant, readOnly: true }, orders: [], total: 0, page: 1, materials, locations, messages: pl, locale: "pl" as const };
   render(<ProductionScreen {...props} />); expect(screen.getByText(pl.productionOrders.empty)).toBeTruthy(); expect(screen.queryByRole("button")).toBeNull();
   cleanup(); render(<ProductionScreen {...props} tenant={tenant} order={{ ...production, status: "completed", shortages: [] }} />);
-  expect(screen.getByRole("status").textContent).toBe("Zlecenie ma stan „Zakończone”, więc nie potrzebuje już składników."); expect(screen.queryByRole("button")).toBeNull();
+  expect(screen.getByRole("note").textContent).toBe("Zlecenie ma stan „Zakończone”, więc nie potrzebuje już składników."); expect(screen.queryByRole("button")).toBeNull();
+  expect(screen.getByRole("heading", { level: 1 }).parentElement?.querySelector("[data-slot=status-badge]")?.getAttribute("data-tone")).toBe("success");
+  cleanup(); render(<ProductionScreen {...props} tenant={tenant} order={{ ...production, shortages: [production.shortages[0], { ...production.shortages[0], material: "00000006" }] }} />);
+  expect(within(screen.getByRole("note")).getByText("Brakujące składniki: 2")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Anuluj zlecenie… — Zlecenia produkcyjne 00000001" })).toBeTruthy();
 });
 it("tells a resolved order's reader it needs no more components, never that stock is short (LFC-004, PRD-029)", () => {
   const props = { tenant, orders: [], total: 0, page: 1, materials, locations, messages: en, locale: "en" as const };
   const none = production.components.map((component) => ({ ...component, required: "0.000000", shortage: "0.000000" }));
   for (const [status, label] of [["closed-early", "Closed Early"], ["cancelled", "Cancelled"]] as const) {
     render(<ProductionScreen {...props} order={{ ...production, status, outstanding: "0.000000", components: none, shortages: [] }} />);
-    expect(screen.getByRole("status").textContent).toBe(`This order is ${label}, so it needs no more components.`);
-    expect(within(screen.getByRole("table", { name: en.productionOrders.components })).getAllByRole("cell").map((cell) => cell.textContent)).toEqual(["00000005 Cabinet", "0 kg", "30 kg", "0 kg"]);
+    expect(screen.getByRole("note").textContent).toBe(`This order is ${label}, so it needs no more components.`);
+    expect(screen.getByRole("note").getAttribute("data-tone")).toBe("neutral");
+    const table = within(screen.getByRole("table", { name: en.productionOrders.components }));
+    expect(table.getAllByRole("cell").map((cell) => cell.textContent)).toEqual(["00000005 Cabinet", "0 kg", "30 kg", "0 kg"]);
+    expect(table.getAllByRole("row")[1].hasAttribute("data-tone")).toBe(false); expect(table.queryByRole("img", { hidden: true })).toBeNull();
     cleanup();
   }
   // Even a stale shortage on a resolved order never brings the warning back.
   render(<ProductionScreen {...props} order={{ ...production, status: "closed-early" }} />);
-  expect(screen.getByRole("status").textContent).toBe("This order is Closed Early, so it needs no more components.");
+  expect(screen.getByRole("note").textContent).toBe("This order is Closed Early, so it needs no more components.");
   cleanup();
   render(<ProductionScreen {...props} order={{ ...production, shortages: [] }} />);
-  expect(screen.getByRole("status").textContent).toBe(en.productionOrders.sufficient);
+  expect(screen.getByRole("note").textContent).toBe(en.productionOrders.sufficient); expect(screen.getByRole("note").getAttribute("data-tone")).toBe("neutral");
 });
 it("returns not-found for missing tenants or orders and propagates other failures", async () => {
   mocks.tenantScope.mockRejectedValueOnce(new mocks.AppError("TENANT_NOT_FOUND"));

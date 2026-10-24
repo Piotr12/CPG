@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MISSING_COMPONENT_MESSAGE, UNKNOWN_INPUT_MESSAGE } from "@cpg/core/validators/production-orders/production-completion.schema";
 import { completionPreview as preview, completionView } from "../../../../../tests/setup/production-orders";
@@ -141,7 +141,11 @@ describe("CompletionForm", () => {
 
   it("warns past the target and posts only once the user accepts it (PRD-019, spec Q2)", async () => {
     render(<CompletionForm {...props({ preview: { ...preview, produced: "22.000000", exceedsTarget: true, producedAfter: "26.000000" } })} />);
-    expect(screen.getByRole("alert").textContent).toBe(`${t.overTitle} Target 24 each, produced 22 each: this completion adds 4 each and completes the order.${t.accept}`);
+    const alert = screen.getByRole("alert");
+    expect(alert.getAttribute("data-tone")).toBe("warning");
+    expect(alert.textContent).toBe(`${t.overTitle}Target 24 each, produced 22 each: this completion adds 4 each and completes the order.${t.accept}`);
+    expect(within(alert).getByText(t.overTitle).className).toContain("font-medium");
+    expect(within(alert).getByRole("checkbox", { name: t.accept })).toBeTruthy();
     post();
     expect(mocks.action).not.toHaveBeenCalled();
     expect(screen.getAllByRole("alert").at(-1)!.textContent).toBe(t.acceptRequired);

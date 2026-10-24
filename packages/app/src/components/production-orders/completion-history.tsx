@@ -1,7 +1,9 @@
 import type { CompletionView, MaterialSummary } from "@cpg/core";
 import { COMPLETION_PAGE_SIZE } from "@cpg/core/validators/production-orders/production-completion.schema";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
+import { StatusBadge } from "@cpg/ui/backend/feedback/status-badge";
 import { Badge } from "@cpg/ui/components/badge";
+import { reversalStatusTone } from "../document-lifecycle/status-tone";
 import { fill, shownQuantity, type TenantContext } from "../forms/form-labels";
 import { PageLinks } from "../layout/page-links";
 import { CompletionReversalDialog, type CompletionReversalTarget } from "./completion-reversal-dialog";
@@ -41,17 +43,18 @@ export function CompletionHistory({ completions, page, materials, labels, path, 
     };
   };
   const columns: DataTableColumn<CompletionView>[] = [
-    { id: "id", header: t.id, cell: (row) => <span className="font-mono">{row.id}</span> },
-    { id: "date", header: t.date, cell: (row) => row.businessDate, className: "hidden sm:table-cell" },
+    { id: "id", header: t.id, kind: "id", cell: (row) => row.id },
+    { id: "date", header: t.date, kind: "date", priority: 2, cell: (row) => row.businessDate },
     {
       id: "output",
       header: labels.output,
+      kind: "text",
       cell: (row) => (
         <span className="flex flex-wrap items-center gap-2">
-          {row.waste && <Badge variant="destructive">{t.waste}</Badge>}
+          {row.waste && <Badge variant="secondary">{t.waste}</Badge>}
           {shownQuantity(row.quantity)} {row.baseUnit}
           {row.reversal && <>
-            <Badge variant="outline">{t.reversal.reversed}</Badge>
+            <StatusBadge {...reversalStatusTone("reversed")}>{t.reversal.reversed}</StatusBadge>
             <span className="basis-full text-xs text-muted-foreground wrap-anywhere">
               {fill(t.reversal.by, { date: row.reversal.businessDate, actor: row.reversal.actorUsername, reason: row.reversal.reason })}
             </span>
@@ -62,11 +65,12 @@ export function CompletionHistory({ completions, page, materials, labels, path, 
     },
     {
       id: "lines",
+      kind: "longText",
       header: t.lines,
       cell: (row) => (
         <ul className="flex flex-col gap-1">
           {row.lines.map((line) => (
-            <li key={line.material} className="break-words">
+            <li key={line.material}>
               {fill(t.line, {
                 material: name(line.material),
                 expected: shownQuantity(line.expected),
@@ -83,11 +87,11 @@ export function CompletionHistory({ completions, page, materials, labels, path, 
           ))}
         </ul>
       ),
-      className: "min-w-48 whitespace-normal",
     },
     ...(reversible ? [{
       id: "actions",
       header: t.actions,
+      kind: "actions" as const,
       cell: (row: CompletionView) => row.reversal === null && <CompletionReversalDialog context={reversible.context} order={reversible.order.id}
         completion={target(row, reversible.order)} today={today} existingHref={`${path}?completions=${page}`} labels={labels} />,
     }] : []),

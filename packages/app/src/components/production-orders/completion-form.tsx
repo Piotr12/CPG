@@ -4,13 +4,15 @@ import { useId, useState, useTransition, type FormEvent, type KeyboardEvent } fr
 import type { CompletionPreview, CompletionResult } from "@cpg/core";
 import { productionCompletionCreateSchema } from "@cpg/core/validators/production-orders/production-completion.schema";
 import type { ApiResult, FieldErrors } from "@cpg/ui/backend/api/result";
+import { Callout } from "@cpg/ui/backend/feedback/callout";
 import { ErrorMessage } from "@cpg/ui/backend/feedback/error-message";
+import { StatusBadge } from "@cpg/ui/backend/feedback/status-badge";
 import { toFieldErrors } from "@cpg/ui/backend/forms/crud-form";
-import { Badge } from "@cpg/ui/components/badge";
 import { Button } from "@cpg/ui/components/button";
 import { Checkbox } from "@cpg/ui/components/checkbox";
 import { Input } from "@cpg/ui/components/input";
 import { NativeSelect, NativeSelectOption } from "@cpg/ui/components/native-select";
+import { masterDataStatusTone } from "../document-lifecycle/status-tone";
 import { fill, shownQuantity } from "../forms/form-labels";
 import { fieldControls } from "../purchasing/field-controls";
 import type { MaterialChoice } from "../purchase-requisitions/requisition-form";
@@ -147,16 +149,15 @@ export function CompletionForm({ labels, preview, unit, inputs, formatError, for
     <form onSubmit={submit} onKeyDown={onKeyDown} noValidate className="flex flex-col gap-4">
       <p className="text-sm text-muted-foreground">{t.prefilled}</p>
       {over && (
-        <div className="flex flex-col gap-2 rounded-md border border-amber-500 bg-amber-50 p-3 text-sm dark:bg-amber-950" role="alert">
-          <p>
-            <strong>{t.overTitle}</strong>{" "}
-            {fill(t.over, { produced: shownQuantity(over.produced), target: shownQuantity(over.target), output: shownQuantity(over.output), unit: over.unit })}
-          </p>
-          <label className="flex items-center gap-2">
-            <Checkbox checked={accepted} onCheckedChange={(checked) => setAccepted(checked === true)} />
-            {t.accept}
-          </label>
-        </div>
+        <Callout tone="warning" role="alert" title={t.overTitle}>
+          <div className="flex flex-col gap-2">
+            <p>{fill(t.over, { produced: shownQuantity(over.produced), target: shownQuantity(over.target), output: shownQuantity(over.output), unit: over.unit })}</p>
+            <label className="flex items-center gap-2">
+              <Checkbox checked={accepted} onCheckedChange={(checked) => setAccepted(checked === true)} />
+              {t.accept}
+            </label>
+          </div>
+        </Callout>
       )}
       {preview.components.map((component, index) => {
         const row = pinned[index];
@@ -172,7 +173,7 @@ export function CompletionForm({ labels, preview, unit, inputs, formatError, for
             <div className="col-span-2 flex flex-col gap-1 text-sm sm:col-span-1" aria-hidden="true">
               <span className="wrap-anywhere">{name}</span>
               <span id={hint} className="text-xs text-muted-foreground">
-                {!component.active && <Badge variant="outline" className="mr-2">{t.inactive}</Badge>}
+                {!component.active && <span className="mr-2"><StatusBadge {...masterDataStatusTone(false)}>{t.inactive}</StatusBadge></span>}
                 {t.expected}: {shownQuantity(component.expected)} {component.baseUnit} · {t.available}: {shownQuantity(component.available)} {component.baseUnit}
               </span>
             </div>

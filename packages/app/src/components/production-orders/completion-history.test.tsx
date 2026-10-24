@@ -63,3 +63,14 @@ it("says when nothing was posted yet", () => {
   render(<CompletionHistory {...props} completions={[]} page={1} />);
   expect(screen.getByText(t.historyEmpty)).toBeTruthy();
 });
+
+it("marks a reversed completion with the neutral Reversed status and keeps Waste a plain tag", () => {
+  const reversal = { businessDate: "2026-10-22", actorUsername: "una", reason: "Wrong batch" };
+  render(<CompletionHistory {...props} completions={[{ ...completionView, reversal } as typeof completionView, wasteView]} page={1} />);
+  const status = screen.getByText(t.reversal.reversed).closest("[data-slot=status-badge]")!;
+  expect(status.getAttribute("data-tone")).toBe("neutral");
+  expect(status.querySelector("svg.lucide-undo-2")?.getAttribute("aria-hidden")).toBe("true");
+  expect(screen.getByText("2026-10-22 by una: Wrong batch")).toBeTruthy();
+  const waste = screen.getByText(t.waste);
+  expect(waste.getAttribute("data-slot")).toBe("badge"); expect(waste.getAttribute("data-variant")).toBe("secondary");
+});

@@ -672,8 +672,22 @@ export const en = {
   },
   /** The BOM screens (E04-S01). Client components get plain strings; only the headings are functions. */
   lifecycle: {
-    "cancel": "Cancel",
-    "closeEarly": "Close Early",
+    /** Opens the confirmation: verb + object, with `…` because a confirmation follows. */
+    "open": {
+      "order": { "cancel": "Cancel order…", "closeEarly": "Close order early…" },
+      "productionOrder": { "cancel": "Cancel order…", "closeEarly": "Close order early…" },
+      "transfer": { "cancel": "Cancel transfer…", "closeEarly": "Close transfer early…" },
+      "requisition": { "cancel": "Cancel requisition…", "closeEarly": "Close requisition early…" },
+      "line": { "cancel": "Cancel line…", "closeEarly": "Close line early…" },
+    },
+    /** The confirmation's title and its confirm button. */
+    "confirm": {
+      "order": { "cancel": "Cancel order", "closeEarly": "Close order early" },
+      "productionOrder": { "cancel": "Cancel order", "closeEarly": "Close order early" },
+      "transfer": { "cancel": "Cancel transfer", "closeEarly": "Close transfer early" },
+      "requisition": { "cancel": "Cancel requisition", "closeEarly": "Close requisition early" },
+      "line": { "cancel": "Cancel line", "closeEarly": "Close line early" },
+    },
     "keepOpen": "Keep open",
     "pending": "Resolving…",
     "description": "End {subject} and abandon the quantities below. Recorded work and stock stay unchanged. This cannot be reopened manually.",
@@ -693,7 +707,8 @@ export const en = {
     finishHint: "The planned start is recalculated from the captured lead time of {days} calendar days.",
     previewNotice: "Review the direct component requirements and current stock. Shortages allow manual planning; no stock is reserved or consumed.",
     recipeLabel: "BOM {bom} / revision {revision} · priority {priority}",
-    warning: "Component shortage: you can still create this plan. Current physical stock is shown below; stock is checked when a completion is posted.",
+    shortageTitle: { one: "1 component short", other: "{count} components short" },
+    shortageBody: "You can still create this plan; stock is checked when a completion is posted.",
     sufficient: "Current physical stock covers these direct requirements. Planning does not reserve or consume it.",
     resolved: "This order is {status}, so it needs no more components.",
     components: "Pinned component requirements and current stock", component: "Component", required: "Required", available: "Available now", shortage: "Shortage",
@@ -1339,7 +1354,7 @@ export const en = {
       nothing: "Keep a quantity on at least one line. To drop every line, cancel the shipment instead.",
     },
     cancel: {
-      open: "Cancel shipment",
+      open: "Cancel shipment…",
       title: "Cancel shipment {id}?",
       description: "It will plan nothing more. Stock and the order are not changed.",
       confirm: "Cancel shipment",
