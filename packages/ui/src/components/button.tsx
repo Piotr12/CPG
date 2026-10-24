@@ -19,10 +19,10 @@ const buttonVariants = cva(
         // darkens the border and the text stays on danger-surface (6.04:1 and 7.27:1).
         destructive:
           "border-danger-edge bg-danger-surface text-danger hover:border-danger aria-expanded:border-danger",
-        // For the confirm button of an AlertDialog only. White on danger is 6.62:1 in light but
-        // 2.12:1 in dark (danger is a light pink there), so dark darkens to danger-edge (7.92:1).
+        // For the confirm button of an AlertDialog only. The hover is its own token because white on
+        // `danger` is 6.62:1 in light but 2.12:1 in dark (danger is a light pink there).
         "destructive-solid":
-          "bg-danger-solid text-danger-solid-foreground hover:bg-danger dark:hover:bg-danger-edge",
+          "bg-danger-solid text-danger-solid-foreground hover:bg-danger-solid-hover",
         link: "text-foreground underline underline-offset-4",
       },
       size: {

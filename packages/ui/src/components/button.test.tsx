@@ -61,7 +61,7 @@ describe("Button", () => {
     const button = screen.getByRole("button", { name: "Reset Test" });
     expect(button.dataset.variant).toBe("destructive-solid");
     expect(button.className.split(" ")).toEqual(
-      expect.arrayContaining(["bg-danger-solid", "text-danger-solid-foreground", "hover:bg-danger", "dark:hover:bg-danger-edge"]),
+      expect.arrayContaining(["bg-danger-solid", "text-danger-solid-foreground", "hover:bg-danger-solid-hover"]),
     );
     expect(button.className).not.toMatch(/text-white/);
   });

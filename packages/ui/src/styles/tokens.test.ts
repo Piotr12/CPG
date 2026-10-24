@@ -67,6 +67,7 @@ const PAIRS: [string, string, number][] = [
   ["danger", "danger-surface", TEXT],
   ["neutral-tone", "neutral-surface", TEXT],
   ["danger-solid-foreground", "danger-solid", TEXT],
+  ["danger-solid-foreground", "danger-solid-hover", TEXT],
   ["tenant-test-tag-foreground", "tenant-test-tag", TEXT],
   ["tenant-prod-tag-foreground", "tenant-prod-tag", TEXT],
   ...["background", "sidebar", "muted"].map((surface): [string, string, number] => ["ring", surface, NON_TEXT]),
