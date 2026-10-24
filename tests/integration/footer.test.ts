@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { openBrowser, type Browser } from "./browser";
-import { signInAsAdmin } from "./sign-in";
+import { signedOutLayoutSettled, signInAsAdmin } from "./sign-in";
 
 const baseUrl = inject("baseUrl");
 const adminPassword = inject("adminPassword");
@@ -10,22 +10,28 @@ const SENTENCE =
 
 interface Footer {
   text: string;
-  isLast: boolean;
+  /** The shown elements after the footer, as `tag#id.class`: none when the footer ends the page. */
+  after: string[];
   links: { text: string; href: string; target: string }[];
 }
 
-/** The page's last footer: its text, whether it ends the body's visible content, and its links. */
+/** The page's last footer: its text, what shown content follows it (nothing, when it ends the page), and its links. */
 const readFooter = (browser: Browser) =>
   browser.evaluate<Footer>(`(() => {
     const footer = [...document.querySelectorAll("footer")].at(-1);
     // The footer ends the content column beside the sidebar, so it is checked against every shown
     // element, not only <body>'s children: nothing shown may come after it. Next.js appends <script>s
-    // and its own <next-route-announcer> custom element; neither is content.
-    const shown = [...document.body.querySelectorAll("*")].filter((e) => e.tagName !== "SCRIPT" && !e.tagName.includes("-") && e.offsetParent !== null);
+    // and its own <next-route-announcer> custom element; neither is content. Nor is a Suspense slot's
+    // content still parked in Next.js's hidden staging <div> after the footer: offsetParent is null
+    // there, but only on HTML elements (SVG icons have none, so they are judged by checkVisibility()) (#213).
+    const visible = (e) => (e instanceof HTMLElement ? e.offsetParent !== null : e.checkVisibility());
+    const shown = [...document.body.querySelectorAll("*")].filter((e) => e.tagName !== "SCRIPT" && !e.tagName.includes("-") && visible(e));
     const after = shown.filter((e) => !footer.contains(e) && footer.compareDocumentPosition(e) & Node.DOCUMENT_POSITION_FOLLOWING);
+    // Named, so a failure says what followed the footer instead of "expected false to be true".
+    const describe = (e) => e.tagName.toLowerCase() + (e.id ? "#" + e.id : "") + [...e.classList].slice(0, 4).map((c) => "." + c).join("");
     return {
       text: footer.textContent,
-      isLast: after.length === 0,
+      after: after.map(describe),
       links: [...footer.querySelectorAll("a")].map((a) => ({ text: a.textContent, href: a.href, target: a.target })),
     };
   })()`);
@@ -42,7 +48,7 @@ describe("the footer", () => {
   async function expectFooter() {
     const footer = await readFooter(browser);
     expect(footer.text).toBe(SENTENCE);
-    expect(footer.isLast).toBe(true);
+    expect(footer.after).toEqual([]);
     expect(footer.links).toEqual([
       { text: "OpenMercato Skills", href: "https://github.com/open-mercato/skills", target: "_blank" },
       { text: "AITechLeaders training", href: "https://www.aitechleaders.pl/", target: "_blank" },
@@ -51,6 +57,10 @@ describe("the footer", () => {
 
   it("ends the home page", async () => {
     await browser.open(baseUrl);
+    // Read the settled page, as every other case does: the visitor bar and the home content stream in after the shell.
+    await browser.waitUntil(
+      `${signedOutLayoutSettled} && [...document.querySelectorAll("main h1")].some((element) => !element.closest("[hidden]"))`,
+    );
     await expectFooter();
   });
 

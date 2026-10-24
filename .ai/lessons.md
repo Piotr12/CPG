@@ -137,7 +137,7 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 - **2026-10-23 — After an action, wait for something only the destination has** — a faster driver (#171) exposed waits that were already true on the page being left: `[data-slot=card-description]` on `/admin`, `subjectId=` in the URL, `/admin/users` before `requireAdmin` redirected. `click`/`clickRole` in `tests/integration/browser.ts` wait for finite animations, so a dialog's or popover's fade no longer intercepts the click.
 - **2026-10-23 — Streaming, hydration and hidden pages** — what "visible" means here:
   - Click only hydrated elements (a `__reactFiber` key) once the last streamed layout change has settled (`signedOutLayoutSettled`). [details](lessons/2026-10-21--1007UTC-late-layout-shift-lost-click.md)
-  - A Suspense child streams into a `<div hidden>` first, so wait for `!el.closest("[hidden]")`.
+  - A Suspense child streams into a `<div hidden>` first, so wait for `!el.closest("[hidden]")`. And `offsetParent` is `undefined` on SVG elements (it belongs to `HTMLElement`), so an icon parked in that staging `<div>` passes an `offsetParent !== null` visibility check; judge non-HTML elements with `checkVisibility()` (#213, `footer.test.ts`).
   - Next keeps earlier pages and their open dialogs mounted with `display: none`. Select the shown one with `offsetParent`, and scope to `data-state=open`.
   - Read a page only after `waitUntil` its document holds what you read (#166), and wait for client-applied `<html>` attributes after a soft navigation.
 - **2026-10-23 — Never navigate while a form's server action is in flight** — opening another page cancels the answer carrying the session cookie (#164). A helper that submits waits for the form's answer (`signInAnswered`).
@@ -182,7 +182,7 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 - **2026-10-24 — zsh traps** — four to avoid:
   - never name a variable `path`: it is tied to `PATH`, and every later command fails;
   - zsh doesn't word-split `$cmd`, so run such loops under `bash -c` or `eval`;
-  - macOS has no `timeout`: use the tool's own timeout or a background `gh run watch --exit-status`;
+  - macOS has no `timeout`: use the tool's own timeout or a background `gh run watch --exit-status`, and read its last lines before trusting the exit code: it exits 1 on a transient API error (an HTTP 502 fetching the jobs) with the run still in progress (#205), so a loop over `gh run view --json status,conclusion` that treats an API error as still pending is the safer wait;
   - quote globs meant for a tool, `grep --include='*.tsx'`: unquoted, zsh expands them against the current directory and aborts the whole command with "no matches found", so a verification sweep reports nothing instead of failing loudly.
 - **2026-10-20 — This repo has no Prettier config** — default `npx prettier` reflows to 80 columns; the code is about 140. Pass `--print-width 140` and check the diff, or don't run it.
 - **2026-10-17 — Docker `npm ci` tries to compile better-sqlite3** — its prebuilt binaries cover musl, so the Dockerfile uses `npm ci --ignore-scripts`.
@@ -191,6 +191,7 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 ## Process and agent pipeline (om-* skills)
 
+- **2026-10-24 — A closing keyword anywhere in a PR body closes the issue** — GitHub parses `closes #N` / `fixes #N` / `resolves #N` in any sentence of the body, so the spec PR #204, which opened with `Refs #203` and later said "its implementation PR closes #203", closed the issue on merge. A PR that must leave an issue open (a spec PR, a partial fix) never puts a closing keyword next to that number, not even about a future PR: write "the implementation PR will close it" without the number, and grep the body for `clos|fix|resolv` before opening it.
 - **2026-10-24 — A lead-and-workers run: briefs in the run folder, viewport screenshots, one hunk per worker** — three rules from the design system run (`.ai/pipeline/runs/2026-10-24--0925UTC-design-system-v1/`):
   - a cezar dispatch objective is capped at 4,000 characters, so commit each worker's full brief under the run folder and make the objective point at it;
   - evidence screenshots are viewport captures (a full-page Help capture was 37,000 px tall and 3.4 MB), with the measurements in a `metrics.json`;
