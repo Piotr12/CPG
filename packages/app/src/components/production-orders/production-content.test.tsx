@@ -94,20 +94,21 @@ it("pages the completion history, rejects a malformed history page, and offers p
 it("bounds pages, clamps stale pages and rejects invalid parameters", async () => {
   mocks.count.mockResolvedValue(201); render(await resolveServerComponents(page("1")));
   expect(screen.queryByRole("link", { name: en.productionOrders.previous })).toBeNull(); expect(screen.getByRole("link", { name: en.productionOrders.next }).getAttribute("href")).toContain("?page=2");
-  cleanup(); render(await resolveServerComponents(page("2"))); expect(screen.getByRole("link", { name: en.productionOrders.previous }).getAttribute("href")).toContain("?page=1");
-  cleanup(); render(await resolveServerComponents(page("999"))); expect(mocks.list).toHaveBeenLastCalledWith(3); expect(screen.queryByRole("link", { name: en.productionOrders.next })).toBeNull();
+  cleanup(); render(await resolveServerComponents(page("2"))); expect(screen.getByRole("link", { name: en.productionOrders.previous }).getAttribute("href")).toBe("/admin/test/production-orders");
+  cleanup(); render(await resolveServerComponents(page("999"))); expect(mocks.list).toHaveBeenLastCalledWith({ page: 3, q: "", sort: "id", dir: "asc" }); expect(mocks.count).toHaveBeenLastCalledWith({ q: "" }); expect(screen.queryByRole("link", { name: en.productionOrders.next })).toBeNull();
   await expect(resolveServerComponents(page("0"))).rejects.toThrow("404");
 });
 it("pages the list in Polish", () => {
   render(<ProductionScreen tenant={tenant} orders={[production]} total={201} page={2} materials={materials} locations={locations} messages={pl} locale="pl" />);
   const nav = within(screen.getByRole("navigation", { name: "Strony zleceń produkcyjnych" }));
-  expect(nav.getByRole("link", { name: "Poprzednia" }).getAttribute("href")).toBe("/admin/test/production-orders?page=1");
+  expect(nav.getByRole("link", { name: "Poprzednia" }).getAttribute("href")).toBe("/admin/test/production-orders");
   expect(nav.getByRole("link", { name: "Następna" }).getAttribute("href")).toBe("/admin/test/production-orders?page=3");
   expect(nav.getByText("Strona 2 z 3")).toBeTruthy();
 });
 it("translates empty/read-only states and keeps terminal orders readable without edit controls", async () => {
   const props = { tenant: { ...tenant, readOnly: true }, orders: [], total: 0, page: 1, materials, locations, messages: pl, locale: "pl" as const };
-  render(<ProductionScreen {...props} />); expect(screen.getByText(pl.productionOrders.empty)).toBeTruthy(); expect(screen.queryByRole("button")).toBeNull();
+  render(<ProductionScreen {...props} />); expect(screen.getByText(pl.productionOrders.empty)).toBeTruthy();
+  expect(screen.getAllByRole("button").map((button) => button.textContent)).toEqual(["Szukaj"]);
   cleanup(); render(<ProductionScreen {...props} tenant={tenant} order={{ ...production, status: "completed", shortages: [] }} />);
   expect(screen.getByRole("note").textContent).toBe("Zlecenie ma stan „Zakończone”, więc nie potrzebuje już składników."); expect(screen.queryByRole("button")).toBeNull();
   expect(screen.getByRole("heading", { level: 1 }).parentElement?.querySelector("[data-slot=status-badge]")?.getAttribute("data-tone")).toBe("success");
@@ -140,4 +141,24 @@ it("returns not-found for missing tenants or orders and propagates other failure
   mocks.get.mockRejectedValueOnce(new mocks.AppError("PRODUCTION_ORDER_NOT_FOUND"));
   await expect(resolveServerComponents(detail())).rejects.toThrow("404");
   mocks.get.mockRejectedValueOnce(new Error("broken")); await expect(resolveServerComponents(detail())).rejects.toThrow("broken");
+});
+it("searches and sorts the list on the server, every link keeping both, and marks the matches (#217)", async () => {
+  mocks.count.mockResolvedValue(201);
+  const searched = (query: Record<string, string>) => ProductionOrdersPage({ params: Promise.resolve({ tenant: "test" }), searchParams: Promise.resolve(query) });
+  render(await resolveServerComponents(searched({ q: "00000001", sort: "finish", dir: "desc", page: "2" })));
+  expect(mocks.count).toHaveBeenLastCalledWith({ q: "00000001" });
+  expect(mocks.list).toHaveBeenLastCalledWith({ page: 2, q: "00000001", sort: "finish", dir: "desc" });
+  expect((screen.getByRole("searchbox", { name: en.productionOrders.search.label }) as HTMLInputElement).value).toBe("00000001");
+  expect(screen.getByText(/201 results for “00000001”/)).toBeTruthy();
+  const table = screen.getByRole("table", { name: en.productionOrders.title });
+  expect(within(table).getAllByRole("row")[1].querySelector("mark")?.textContent).toBe("00000001");
+  const headers = within(table).getAllByRole("columnheader");
+  expect(headers.map((header) => header.getAttribute("aria-sort"))).toEqual(["none", "none", null, "none", "descending", "none", null, "none"]);
+  expect(within(headers[1]).getByRole("link").getAttribute("href")).toBe("/admin/test/production-orders?q=00000001&sort=output&dir=asc");
+  expect(screen.getByRole("link", { name: en.productionOrders.next }).getAttribute("href")).toBe("/admin/test/production-orders?q=00000001&sort=finish&dir=desc&page=3");
+  expect(screen.getByRole("link", { name: en.productionOrders.previous }).getAttribute("href")).toBe("/admin/test/production-orders?q=00000001&sort=finish&dir=desc");
+  cleanup(); mocks.count.mockResolvedValue(0); mocks.list.mockResolvedValue([]);
+  render(await resolveServerComponents(searched({ q: "nothing" })));
+  expect(screen.getByText(/Nothing matches “nothing”\./)).toBeTruthy();
+  expect(within(screen.getByRole("table")).getByRole("link", { name: en.lists.clear }).getAttribute("href")).toBe("/admin/test/production-orders");
 });

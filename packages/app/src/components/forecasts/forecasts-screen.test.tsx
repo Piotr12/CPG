@@ -1,6 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/messages/en";
+import { listLinks } from "../lists/list-params";
 import { ForecastsScreen } from "./forecasts-screen";
 
 vi.mock("../../app/admin/[tenant]/forecasts/actions", () => ({ addForecast: vi.fn(), changeForecast: vi.fn(), removeForecast: vi.fn() }));
@@ -8,7 +9,9 @@ vi.mock("../../app/admin/[tenant]/forecasts/actions", () => ({ addForecast: vi.f
 const material = { id: "00000005", type: "finished", description: "Cabinet", baseUnit: "each", active: true, createdAt: new Date(), version: 1 } as const;
 const location = { id: "00000001", name: "Main plant", active: true, createdAt: new Date(), version: 1 };
 const props = { tenant: { code: "test", name: "Test", generation: 2, readOnly: false }, forecasts: [{ material: material.id, location: location.id, date: "2027-01-04", quantity: "12.000000", version: 1 }],
-  materials: [material], locations: [location], filter: {}, page: 1, pages: 1, locale: "en" as const, messages: en, admin: true };
+  materials: [material], locations: [location], filter: {}, page: 1, pages: 1,
+  list: { search: { q: "", typed: "" }, sort: { sort: "material" as const, dir: "asc" as const }, count: 1,
+    links: listLinks({ path: "/admin/test/forecasts", search: "", sort: { sort: "material", dir: "asc" }, defaults: { sort: "material", dir: "asc" } }) }, locale: "en" as const, messages: en, admin: true };
 const header = () => screen.getByRole("heading", { level: 1 }).closest("[data-slot=page-header]") as HTMLElement;
 
 describe("ForecastsScreen", () => {

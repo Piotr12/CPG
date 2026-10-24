@@ -5,9 +5,11 @@ import { connection } from "next/server";
 import { tenantScope } from "@cpg/core";
 import { LoadingMessage } from "@cpg/ui/backend/feedback/loading-message";
 import { forecastFilterSchema } from "@cpg/core/validators/forecasts/forecast.schema";
+import { forecastSortSchema } from "@cpg/core/validators/forecasts/forecast-list.schema";
 import { DOCUMENT_PAGE_SIZE, pageSchema } from "@cpg/core/validators/shipments/shipment.schema";
 import { requireUser } from "../../../../auth/require-admin";
 import { ForecastsScreen } from "../../../../components/forecasts/forecasts-screen";
+import { firstParam, listLinks, readSearch, readSort } from "../../../../components/lists/list-params";
 import { getMessages } from "../../../../i18n/get-messages";
 import { orNotFound } from "../../../../routing/or-not-found";
 
@@ -26,9 +28,9 @@ export default function ForecastsPage({ params, searchParams }: PageProps<"/admi
 
 /**
  * One tenant's forecasts, read through that tenant's own scope (R05) by any signed-in account,
- * narrowed by `?material=&location=`, a page of 100 at a time (`?page=`). A filter that isn't a
- * business ID is ignored, so a mistyped link still shows the list; a page past the last shows the
- * last, and an invalid one is not found.
+ * narrowed by `?material=&location=` and searched by `?q=`, sorted by `?sort=&dir=` (#217), a page of
+ * 100 at a time (`?page=`). A filter that isn't a business ID is ignored, so a mistyped link still
+ * shows the list; a page past the last shows the last, and an invalid one is not found.
  */
 async function Forecasts({ params, searchParams }: Pick<PageProps<"/admin/[tenant]/forecasts">, "params" | "searchParams">) {
   await connection();
@@ -38,13 +40,17 @@ async function Forecasts({ params, searchParams }: Pick<PageProps<"/admin/[tenan
     getMessages(),
     searchParams,
   ]);
-  const parsed = forecastFilterSchema.safeParse({ material: first(query.material), location: first(query.location) });
+  const parsed = forecastFilterSchema.safeParse({ material: firstParam(query.material), location: firstParam(query.location) });
   const filter = parsed.success ? parsed.data : {};
-  const requested = pageSchema.safeParse(first(query.page));
+  const requested = pageSchema.safeParse(firstParam(query.page));
   if (!requested.success) notFound();
-  const pages = Math.max(1, Math.ceil((await cradle.forecastService.count(filter)) / DOCUMENT_PAGE_SIZE));
+  const search = readSearch(query);
+  const sort = readSort(query, forecastSortSchema);
+  const count = await cradle.forecastService.count(filter, { q: search.q });
+  const pages = Math.max(1, Math.ceil(count / DOCUMENT_PAGE_SIZE));
   const page = Math.min(requested.data, pages);
-  const forecasts = await cradle.forecastService.list(filter, page);
+  const forecasts = await cradle.forecastService.list(filter, { page, q: search.q, ...sort });
+  const links = listLinks({ path: `/admin/${cradle.tenant.code}/forecasts`, search: search.q, sort, defaults: forecastSortSchema.parse({}), extra: filter });
   const materials = await cradle.materialService.list();
   const locations = await cradle.locationService.list();
 
@@ -55,6 +61,7 @@ async function Forecasts({ params, searchParams }: Pick<PageProps<"/admin/[tenan
       materials={materials}
       locations={locations}
       filter={filter}
+      list={{ search, sort, links, count }}
       page={page}
       pages={pages}
       locale={locale}
@@ -63,6 +70,3 @@ async function Forecasts({ params, searchParams }: Pick<PageProps<"/admin/[tenan
     />
   );
 }
-
-/** A query parameter's first value; repeated ones (`?material=a&material=b`) arrive as an array. */
-const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);

@@ -71,7 +71,7 @@ describe("ForecastsPage", () => {
     render(await resolveServerComponents(page("test")));
 
     expect(mocks.tenantScope).toHaveBeenCalledWith("test");
-    expect(mocks.forecasts).toHaveBeenCalledWith({}, 1);
+    expect(mocks.forecasts).toHaveBeenCalledWith({}, { page: 1, q: "", sort: "material", dir: "asc" });
     expect(screen.getByRole("heading", { name: "Forecasts — Test" })).toBeTruthy();
     const rows = within(screen.getByRole("table")).getAllByRole("row").slice(1);
     expect(rows.map((row) => within(row).getAllByRole("cell").slice(2, 4).map((cell) => cell.textContent))).toEqual([
@@ -88,11 +88,11 @@ describe("ForecastsPage", () => {
     mocks.count.mockResolvedValue(250);
     render(await resolveServerComponents(page("test", { material: "00000005", page: "2" })));
 
-    expect(mocks.count).toHaveBeenCalledWith({ material: "00000005" });
-    expect(mocks.forecasts).toHaveBeenCalledWith({ material: "00000005" }, 2);
+    expect(mocks.count).toHaveBeenCalledWith({ material: "00000005" }, { q: "" });
+    expect(mocks.forecasts).toHaveBeenCalledWith({ material: "00000005" }, { page: 2, q: "", sort: "material", dir: "asc" });
     const pages = screen.getByRole("navigation", { name: "Forecast pages" });
     expect(pages.textContent).toContain("Page 2 of 3");
-    expect(within(pages).getByRole("link", { name: "Previous" }).getAttribute("href")).toBe("/admin/test/forecasts?material=00000005&page=1");
+    expect(within(pages).getByRole("link", { name: "Previous" }).getAttribute("href")).toBe("/admin/test/forecasts?material=00000005");
     expect(within(pages).getByRole("link", { name: "Next" }).getAttribute("href")).toBe("/admin/test/forecasts?material=00000005&page=3");
   });
 
@@ -100,12 +100,48 @@ describe("ForecastsPage", () => {
     mocks.count.mockResolvedValue(101);
     render(await resolveServerComponents(page("test", { location: "00000001", page: ["9", "1"] })));
 
-    expect(mocks.count).toHaveBeenCalledWith({ location: "00000001" });
-    expect(mocks.forecasts).toHaveBeenCalledWith({ location: "00000001" }, 2);
+    expect(mocks.count).toHaveBeenCalledWith({ location: "00000001" }, { q: "" });
+    expect(mocks.forecasts).toHaveBeenCalledWith({ location: "00000001" }, { page: 2, q: "", sort: "material", dir: "asc" });
     const pages = screen.getByRole("navigation", { name: "Forecast pages" });
     expect(pages.textContent).toContain("Page 2 of 2");
-    expect(within(pages).getByRole("link", { name: "Previous" }).getAttribute("href")).toBe("/admin/test/forecasts?location=00000001&page=1");
+    expect(within(pages).getByRole("link", { name: "Previous" }).getAttribute("href")).toBe("/admin/test/forecasts?location=00000001");
     expect(within(pages).queryByRole("link", { name: "Next" })).toBeNull();
+  });
+
+  it("searches and sorts on the server, every link keeping the filter, the search and the sort (#217)", async () => {
+    mocks.count.mockResolvedValue(250);
+    const { container } = render(
+      await resolveServerComponents(page("test", { material: "00000005", q: " cabinet ", sort: "date", dir: "desc", page: "2" })),
+    );
+
+    expect(mocks.count).toHaveBeenCalledWith({ material: "00000005" }, { q: "cabinet" });
+    expect(mocks.forecasts).toHaveBeenCalledWith({ material: "00000005" }, { page: 2, q: "cabinet", sort: "date", dir: "desc" });
+    expect((screen.getByRole("searchbox", { name: "Search forecasts" }) as HTMLInputElement).value).toBe("cabinet");
+    expect(screen.getByText(/250 results for “cabinet”/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Clear search" }).getAttribute("href")).toBe("/admin/test/forecasts?material=00000005&sort=date&dir=desc");
+    const hidden = (form: Element) => [...form.querySelectorAll<HTMLInputElement>("input[type=hidden]")].map(({ name, value }) => `${name}=${value}`);
+    const [searchForm, filterForm] = container.querySelectorAll("form[role=search]");
+    expect(hidden(searchForm)).toEqual(["material=00000005", "sort=date", "dir=desc"]);
+    expect(hidden(filterForm)).toEqual(["q=cabinet", "sort=date", "dir=desc"]);
+    const headers = within(screen.getByRole("table")).getAllByRole("columnheader");
+    expect(headers.map((header) => header.getAttribute("aria-sort"))).toEqual(["none", "none", "descending", null, null]);
+    expect(within(headers[0]).getByRole("link").getAttribute("href")).toBe("/admin/test/forecasts?material=00000005&q=cabinet&sort=material&dir=asc");
+    expect(within(headers[2]).getByRole("link").getAttribute("href")).toBe("/admin/test/forecasts?material=00000005&q=cabinet&sort=date&dir=asc");
+    const pages = screen.getByRole("navigation", { name: "Forecast pages" });
+    expect(within(pages).getByRole("link", { name: "Next" }).getAttribute("href")).toBe("/admin/test/forecasts?material=00000005&q=cabinet&sort=date&dir=desc&page=3");
+  });
+
+  it("says when a search matches nothing, and shows a refused search unfiltered with its reason", async () => {
+    mocks.count.mockResolvedValue(0);
+    mocks.forecasts.mockResolvedValue([]);
+    const { unmount } = render(await resolveServerComponents(page("test", { q: "nothing", location: "00000001" })));
+    expect(screen.getByText(/Nothing matches “nothing”\./)).toBeTruthy();
+    expect(within(screen.getByRole("table")).getByRole("link", { name: "Clear search" }).getAttribute("href")).toBe("/admin/test/forecasts?location=00000001");
+    unmount();
+
+    render(await resolveServerComponents(page("test", { q: "a b c d e f" })));
+    expect(mocks.forecasts).toHaveBeenLastCalledWith({}, { page: 1, q: "", sort: "material", dir: "asc" });
+    expect(screen.getByText(en.lists.searchTooLong)).toBeTruthy();
   });
 
   it("renders not-found for a page that isn't a positive whole number", async () => {
@@ -117,14 +153,14 @@ describe("ForecastsPage", () => {
     mocks.count.mockResolvedValue(0);
     mocks.forecasts.mockResolvedValue([]);
     render(await resolveServerComponents(page("test", { page: "3" })));
-    expect(mocks.forecasts).toHaveBeenCalledWith({}, 1);
+    expect(mocks.forecasts).toHaveBeenCalledWith({}, { page: 1, q: "", sort: "material", dir: "asc" });
     expect(screen.queryByRole("navigation", { name: "Forecast pages" })).toBeNull();
   });
 
   it("narrows the list by the material and location in the URL, showing them as chosen", async () => {
     render(await resolveServerComponents(page("test", { material: "00000005", location: ["00000001", "00000002"] })));
 
-    expect(mocks.forecasts).toHaveBeenCalledWith({ material: "00000005", location: "00000001" }, 1);
+    expect(mocks.forecasts).toHaveBeenCalledWith({ material: "00000005", location: "00000001" }, { page: 1, q: "", sort: "material", dir: "asc" });
     expect((screen.getByLabelText("Material") as HTMLSelectElement).value).toBe("00000005");
     expect((screen.getByLabelText("Location") as HTMLSelectElement).value).toBe("00000001");
     expect(screen.getByRole("link", { name: "Clear filter" })).toBeTruthy();
@@ -132,7 +168,7 @@ describe("ForecastsPage", () => {
 
   it("ignores a filter that isn't a business ID, and says so when a real filter finds nothing", async () => {
     render(await resolveServerComponents(page("test", { material: "cabinet" })));
-    expect(mocks.forecasts).toHaveBeenCalledWith({}, 1);
+    expect(mocks.forecasts).toHaveBeenCalledWith({}, { page: 1, q: "", sort: "material", dir: "asc" });
 
     mocks.forecasts.mockResolvedValue([]);
     const { unmount } = render(await resolveServerComponents(page("test", { material: "00000005" })));

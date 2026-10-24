@@ -6,11 +6,16 @@ import { Callout } from "@cpg/ui/backend/feedback/callout";
 import { StatusBadge } from "@cpg/ui/backend/feedback/status-badge";
 import { PageHeader } from "@cpg/ui/backend/page-header";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
+import { Highlight } from "@cpg/ui/backend/tables/highlight";
+import type { SortDirection } from "@cpg/core/validators/lists/list-query.schema";
 import { PRODUCTION_PAGE_SIZE } from "@cpg/core/validators/production-orders/production-order.schema";
+import { productionOrderSortSchema, type ProductionOrderSort } from "@cpg/core/validators/production-orders/production-order-list.schema";
 import type { Messages } from "../../i18n/messages/en";
 import { fill, shownQuantity } from "../forms/form-labels";
 import { documentStatusTone } from "../document-lifecycle/status-tone";
 import { PageLinks } from "../layout/page-links";
+import { listLinks, type ListSearchState } from "../lists/list-params";
+import { ListSearchBar, NoSearchResults } from "../lists/list-search-bar";
 import { CompletionDialog } from "./completion-dialog";
 import { CompletionHistory } from "./completion-history";
 import { completionInputs } from "./completion-inputs";
@@ -22,10 +27,14 @@ import { ProductionRequirements } from "./production-requirements";
 interface Props { tenant: TenantInfo; orders: ProductionOrderView[]; order?: ProductionOrderDetail; materials: MaterialSummary[]; locations: NamedRecordView[];
   total: number; page: number; messages: Messages; locale: Locale;
   /** A detail page's completions (one page of them) and the units every material's quantities may be entered in. */
-  completions?: CompletionView[]; completionsPage?: number; units?: Record<string, string[]> }
-export function ProductionScreen({ tenant, orders, order, materials, locations, total, page, messages, locale, completions = [], completionsPage = 1, units = {} }: Props) {
+  completions?: CompletionView[]; completionsPage?: number; units?: Record<string, string[]>;
+  /** The list's search and sort (#217); the list without either when left out. */
+  search?: ListSearchState; sort?: { sort: ProductionOrderSort; dir: SortDirection } }
+export function ProductionScreen({ tenant, orders, order, materials, locations, total, page, messages, locale, completions = [], completionsPage = 1, units = {},
+  search = { q: "", typed: "" }, sort = productionOrderSortSchema.parse({}) }: Props) {
   const t = productionLabels(messages);
   const path = `/admin/${tenant.code}/production-orders`;
+  const links = listLinks({ path, search: search.q, sort, defaults: productionOrderSortSchema.parse({}) });
   const byMaterial = new Map(materials.map((m) => [m.id, m]));
   const location = (code: string) => `${code} ${locations.find((l) => l.id === code)!.name}`;
   const output = (row: ProductionOrderView) => `${row.output} ${byMaterial.get(row.output)!.description}`;
@@ -33,14 +42,14 @@ export function ProductionScreen({ tenant, orders, order, materials, locations, 
   const recipe = (row: ProductionOrderView) => <Link className="underline" href={`/admin/${tenant.code}/boms/${row.bom}?revision=${row.revision}`}>{row.bom} / {row.revision}</Link>;
   const status = (value: ProductionOrderView["status"]) => <StatusBadge {...documentStatusTone(value)}>{t.states[value]}</StatusBadge>;
   const columns: DataTableColumn<ProductionOrderView>[] = [
-    { id: "id", header: t.id, kind: "id", cell: (row) => <Link className="underline" href={`${path}/${row.id}`}>{row.id}</Link> },
-    { id: "output", header: t.output, kind: "longText", cell: output },
+    { id: "id", header: t.id, kind: "id", sortKey: "id", cell: (row) => <Link className="underline" href={`${path}/${row.id}`}><Highlight text={row.id} query={search.q} /></Link> },
+    { id: "output", header: t.output, kind: "longText", sortKey: "output", cell: (row) => <Highlight text={output(row)} query={search.q} /> },
     { id: "quantity", header: t.quantity, kind: "quantity", cell: quantity },
-    { id: "location", header: t.location, kind: "longText", priority: 2, cell: (row) => location(row.location) },
-    { id: "finish", header: t.finish, kind: "date", priority: 2, cell: (row) => row.plannedFinish },
-    { id: "start", header: t.start, kind: "date", priority: 3, cell: (row) => row.plannedStart },
+    { id: "location", header: t.location, kind: "longText", priority: 2, sortKey: "location", cell: (row) => location(row.location) },
+    { id: "finish", header: t.finish, kind: "date", priority: 2, sortKey: "finish", cell: (row) => row.plannedFinish },
+    { id: "start", header: t.start, kind: "date", priority: 3, sortKey: "start", cell: (row) => row.plannedStart },
     { id: "recipe", header: t.recipe, kind: "text", priority: 3, cell: recipe },
-    { id: "status", header: t.status, kind: "status", cell: (row) => status(row.status) },
+    { id: "status", header: t.status, kind: "status", sortKey: "status", cell: (row) => status(row.status) },
   ];
   const pages = Math.ceil(total / PRODUCTION_PAGE_SIZE);
   const actions = !tenant.readOnly && <>
@@ -76,8 +85,13 @@ export function ProductionScreen({ tenant, orders, order, materials, locations, 
       <CompletionHistory completions={completions} page={completionsPage} materials={materials} labels={t} path={`${path}/${order.id}`}
         reversible={tenant.readOnly ? undefined : { context: { tenant: tenant.code, generation: tenant.generation },
           order: { id: order.id, output: order.output, location: location(order.location), produced: order.produced } }} />
-    </> : <DataTable label={t.title} columns={columns} rows={orders} rowKey={(row) => row.id} empty={t.empty}
-      pagination={<PageLinks page={page} pages={pages} labels={t} href={(target) => `${path}?page=${target}`} />} />}
+    </> : <div>
+      <ListSearchBar links={links} search={search} labels={t.search} lists={messages.lists} locale={locale} count={total} />
+      <DataTable label={t.title} columns={columns} rows={orders} rowKey={(row) => row.id}
+        sort={{ key: sort.sort, dir: sort.dir, href: links.sortHref, link: Link }}
+        empty={search.q ? <NoSearchResults links={links} query={search.q} lists={messages.lists} /> : t.empty}
+        pagination={<PageLinks page={page} pages={pages} labels={t} href={links.pageHref} />} />
+    </div>}
     </div>
   </div>;
 }

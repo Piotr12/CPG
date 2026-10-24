@@ -41,6 +41,17 @@ describe("ForecastsFilter", () => {
     expect(screen.getByRole("link", { name: "Clear filter" }).getAttribute("href")).toBe("/admin/test/forecasts");
   });
 
+  it("keeps the list's search and sort through a new filter and through Clear filter (#217)", () => {
+    const { container } = render(
+      <ForecastsFilter action="/admin/test/forecasts" labels={labels} materials={materials} locations={locations} selected={{ material: "00000005" }}
+        keep={{ q: "cabinet", sort: "date", dir: "desc", empty: undefined }} />,
+    );
+
+    const hidden = [...container.querySelectorAll<HTMLInputElement>("input[type=hidden]")].map(({ name, value }) => `${name}=${value}`);
+    expect(hidden).toEqual(["q=cabinet", "sort=date", "dir=desc"]);
+    expect(screen.getByRole("link", { name: "Clear filter" }).getAttribute("href")).toBe("/admin/test/forecasts?q=cabinet&sort=date&dir=desc");
+  });
+
   it("offers to clear a filter on one field alone", () => {
     render(filter({ location: "00000001" }));
 
