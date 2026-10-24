@@ -6,7 +6,7 @@
 
 ## 📝 TLDR
 
-CPG keeps shadcn/ui `radix-nova`, Tailwind 4, Geist and `@cpg/ui`, and gets one written system on top: neutral surfaces and one ink action colour; hue only for the tenant (amber Test, ink Prod with a red edge), success, warning and danger; six text sizes, a 4 px spacing grid, four radii; one `PageHeader`, one `StatusBadge`, one `Callout`, one `DataTable` contract; a state and a next step for every loading, empty, error and refused screen; plain language everywhere, with "Caveman Planning Good" kept as the name. Eleven small PRs migrate today's literals, and two repo tests then keep the system honest. No product behaviour, business rule, route or permission changes.
+CPG keeps shadcn/ui `radix-nova`, Tailwind 4, Geist and `@cpg/ui`, and gets one written system on top: neutral surfaces and one ink action colour; hue only for the tenant (amber Test, ink Prod with a red edge), success, warning and danger; six text sizes, a 4 px spacing grid, four radii; one `PageHeader`, one `StatusBadge`, one `Callout`, one `DataTable` contract; a state and a next step for every loading, empty, error and refused screen; plain language everywhere, with "Caveman Planning Good" kept as the name. It ships as one pull request for the whole application (decision D8), built by a lead agent and parallel workers in disjoint file scopes, and two repo tests then keep the system honest. No product behaviour, business rule, route or permission changes.
 
 ## 📝 Problem Statement
 
@@ -219,7 +219,7 @@ Public pages keep plain Tailwind on tokens and may use the `@cpg/ui` controls `B
 ## 📝 Architecture
 
 - **Where things live.** Tokens, primitives and generic `backend/` blocks in `packages/ui`; the status tone map, tenant wrappers, the mark, pages and copy in `packages/app`; nothing in `core` or `db` changes except the one message string in `core/src/domain/tenants/read-only.ts`.
-- **Enforcement, two repo tests.** (1) `tests/design-tokens.test.ts` scans `packages/*/src/**/*.{ts,tsx}` (not tests, not `globals.css`) for: Tailwind palette classes `(bg|text|border|ring|outline|fill|stroke|from|to|via|shadow|divide)-(white|black|<palette>-\d+)` and arbitrary colour values (`[#…]`, `rgb(`, `hsl(`, `oklch(`, `color-mix(`, `var(--color-<palette>-…)`); colour literals; radius classes other than `rounded-(sm|md|lg|full)` and their direction variants, and `rounded-[…]`; font-size classes other than `text-(xs|sm|base|lg|2xl|4xl)` and arbitrary `text-[<length>]`; spacing steps `2.5|3.5|5|7` and arbitrary spacing anywhere, `0.5|1.5` outside `packages/ui/src/components`; `backdrop-blur`, `bg-gradient-*`, `bg-linear-*`, `bg-radial-*`; emoji in `.tsx` and in `i18n/messages/*.ts`; `max-w-(2xl|xl|5xl)` in `packages/app/src/app/**/page.tsx`. From slice 1 it is a **ratchet**: `tests/design-tokens.baseline.json` records today's offenders per file, the test fails on any file whose count grows or that is new to the list, and each slice shrinks the baseline; slice 11 deletes the baseline and the test fails on any offender. The allow-list is the Exceptions table below. (2) `packages/ui/src/styles/tokens.test.ts` parses `globals.css`, converts OKLCH to sRGB and asserts every pair in the accessibility floor for both themes.
+- **Enforcement, two repo tests.** (1) `tests/design-tokens.test.ts` scans `packages/*/src/**/*.{ts,tsx}` (not tests, not `globals.css`) for: Tailwind palette classes `(bg|text|border|ring|outline|fill|stroke|from|to|via|shadow|divide)-(white|black|<palette>-\d+)` and arbitrary colour values (`[#…]`, `rgb(`, `hsl(`, `oklch(`, `color-mix(`, `var(--color-<palette>-…)`); colour literals; radius classes other than `rounded-(sm|md|lg|full)` and their direction variants, and `rounded-[…]`; font-size classes other than `text-(xs|sm|base|lg|2xl|4xl)` and arbitrary `text-[<length>]`; spacing steps `2.5|3.5|5|7` and arbitrary spacing anywhere, `0.5|1.5` outside `packages/ui/src/components`; `backdrop-blur`, `bg-gradient-*`, `bg-linear-*`, `bg-radial-*`; emoji in `.tsx` and in `i18n/messages/*.ts`; `max-w-(2xl|xl|5xl)` in `packages/app/src/app/**/page.tsx`. During the run it is **report-only**: it prints the offenders per file (`process.stdout.write`, since Vitest drops a passing test's console output) and passes, so the lead can read what is left after every merge and no shared baseline file exists for parallel workers to collide on; the closing step removes the report-only switch, and the test then fails on any offender outside the allow-list. The allow-list is the Exceptions table below. (2) `packages/ui/src/styles/tokens.test.ts` parses `globals.css`, converts OKLCH to sRGB and asserts every pair in the accessibility floor for both themes.
 - **Package boundaries** stay as ESLint enforces them; `StatusBadge`, `Callout` and `PageHeader` know no domain. Optional, once `StatusBadge` exists: `no-restricted-imports` for `@cpg/ui/components/badge` under `app/src/components/**` so states cannot drift back to the generic Badge.
 - **Compatibility.** No surface protected by `BACKWARD_COMPATIBILITY.md` changes: page URLs, help topic ids, API paths, envelopes, error codes and statuses stay. Help topic titles, i18n strings and the `TENANT_READ_ONLY` message text change (the text is not a protected field; the code is), in one PR with both translations, so API clients that display the message see new wording.
 
@@ -243,17 +243,17 @@ Public pages keep plain Tailwind on tokens and may use the `@cpg/ui` controls `B
 
 - **A migrated control clips or shrinks.** Moving `px-2.5` to `px-3` or `h-7` text to `text-xs` can clip Polish labels or shrink a hit area; check the rendered control, keep `min-h`, and let the content wrap rather than reducing type.
 - **Two statuses look alike after the tone change.** Open and Cancelled are both neutral; the icon (`CircleDot` vs `CircleX`) and the label separate them, and a mixed list must be checked in a real browser in both themes.
-- **Radius aliases hide unmigrated call sites.** `rounded-xl|2xl|4xl` render as `lg` from slice 1; the ratchet test is what finds the leftovers, so every slice updates the baseline.
+- **Radius aliases hide unmigrated call sites.** `rounded-xl|2xl|4xl` render as `lg` from the first unit; the report-only scan is what finds the leftovers, so the lead reads it after every merge and the close flips it to failing.
 - **`notFound()` under Partial Prefetching answers 200** (lesson 2026-10-19): the not-found integration test asserts the UI and `noindex`, not the status.
 - **The error boundary has no deterministic trigger in the production image**, so `error.tsx` and `global-error.tsx` are covered by unit tests (a thrown error renders the message with its digest; Try again calls `reset()`), and AGENTS.md's one-integration-test-per-page rule is met by the not-found pages only. Flagged here as a deviation for the owner.
 - **The `<noscript>` notice sits in the static shell**, which knows no locale, hence both languages in one notice; a unit test on `layout.tsx` asserts both.
 - **`TENANT_READ_ONLY`'s message is matched by exact text** in the screens (lesson 2026-10-23): change `core/src/domain/tenants/read-only.ts`, `en.ts` and `pl.ts` in the same PR and run `read-only.test.ts`.
 - **The rail at 768–1023 px must keep the tenant visible** (TEN-011): the tenant header row carries it when the switch is collapsed to letters.
-- **Slices 8 and 9 both edit `en.ts` and `pl.ts`**: land them one after the other, not in parallel.
+- **Parallel workers must never share a file.** The original slices overlap at file level (the status badge and the shortage callout both edit `production-screen.tsx`; the page frame and the state pages both edit every `page.tsx`; the copy change edits tests that other units own), so the delivery plan cuts the parallel units by file ownership, not by slice, and runs the copy change before the parallel units because it touches `en.ts`, `pl.ts` and tests across the tree. A worker that needs a change outside its scope reports it instead of making it.
 
 ## 📝 Risks & Impact Review
 
-- Cross-cutting by nature (every screen, the shared primitives, the token file), hence `risk-high` on #203. Mitigation: eleven PRs, each green on the full gate and its integration files, with the ratchet preventing regressions in between and the enforcement switch last.
+- Cross-cutting by nature (every screen, the shared primitives, the token file), hence `risk-high` on #203. The owner chose one PR over eleven (D8), so the mitigation moves inside the run: the foundation units land one after another and are gated before anything builds on them; the parallel units own disjoint files and are merged one at a time with the gate re-run after each merge; the full integration suite and a browser QA of the acceptance screens run before the PR opens; and the owner reviews one large PR with screenshots rather than eleven small ones.
 - Density is the main untested assumption: 14 px text and 32 px controls are today's values, so no screen gets denser, but the acceptance run checks a populated Materials list, an order with long names and quantities, an import refusal and a tall dialog in both languages on the realistic dataset.
 - The copy slice changes strings 7 unit-test files and 4 integration files assert; the slice updates them, and `messages.test.ts` keeps EN/PL key parity.
 - The sidebar changes deviate from a spec the owner chose; the owner approved them in #203 (D6), and they are reversible in one file each.
@@ -272,6 +272,7 @@ Owner decisions, taken in #203 on 2026-10-24 (answers to the issue's Q1–Q7):
 | D5 | JavaScript | Required on every page; a `<noscript>` notice explains it. | States table; slice 10. |
 | D6 | Navigation defaults | Icon rail by default at 768–1023 px; Transactions above Stock and Reports. | Layout; slice 7. |
 | D7 | Scope | One spec with all eleven slices as phases. | Phasing below. |
+| D8 | Delivery | One pull request for the whole application, built in one go by a lead agent (Fable 5.1) that coordinates and workers (Opus 5.5) that implement, the sequential units first and then the parallel ones. Decided 2026-10-24, replacing the one-PR-per-slice rollout. | Phasing: the work units, their file ownership and the order; the report-only scan during the run. |
 
 Delegated decisions ("for the rest, proceed with your recommendations"): everything else in Proposed Solution, notably `tenant-*` naming, the distinct `--input`, explicit hover and active tokens, today's control heights, the two page widths, `Badge` kept as the category tag under its own name, no number-format change, no home-page screenshot, the ratchet form of the enforcement test, and the one-sentence standards amendment for public pages.
 
@@ -291,95 +292,83 @@ Any new exception records a user reason, its scope and a verification example in
 
 ## 📋 Phasing
 
-Each slice is one PR, green on `npm run lint`, `npm run typecheck`, `npm run test:coverage` (100 %), `npm run build` and the integration files it touches; UI slices are QA'd in a browser at 320, 768 and 1440 px in both themes. Slices 1 and 2 come first; 3–10 are independent except 8 and 9; 11 is last.
+**Delivery (decision D8): one pull request for the whole application.** A lead agent coordinates, integrates and closes; workers implement. Three units run one after another because everything else depends on them; four run in parallel in disjoint file scopes; the lead closes. The eleven slices of the original plan stay as the inventory of what changes, and the table maps them to units. The "Owns" column is the whole of what a unit may edit; everything a unit needs outside it is either already merged (the sequential units) or reported to the lead.
 
-| # | Slice | Contents | Tests touched or added | Integration files to run |
+| Unit | Order | Slices | Owns | Delivers |
 |---|---|---|---|---|
-| 1 | Tokens and focus | `globals.css` from Appendix A; global `:focus-visible`; primitives from `ring-3 ring-ring/50` to `ring-2 ring-ring ring-offset-2`; `outline-ring/50` → `outline-ring`; overlays to `bg-scrim`; radius values and aliases; `button.tsx` hovers to the new tokens | new `packages/ui/src/styles/tokens.test.ts`; new `tests/design-tokens.test.ts` + `tests/design-tokens.baseline.json`; primitive tests that pin focus or overlay classes | `smoke.test.ts`, `navigation.test.ts` |
-| 2 | Feedback components and the mark | `StatusBadge`, `Callout`, `PageHeader`; `Badge` restyle; `Button` `destructive` / `destructive-solid`, `sm` text, radius and padding; `MammothMark` | new unit tests at 100 %; `badge.test.tsx`, `button.test.tsx`; the mark's `icon.svg` sync test | none (no screen changes yet) |
-| 3 | Tenant components | `TenantTag`, `TenantBanner`, `TenantChoiceCard`; `tenant-switch.tsx` (`rounded-sm`, rail letters at `text-xs` with `aria-label`), `tenant-header.tsx`, `read-only-banner.tsx`, `admin/(global)/page.tsx` cards (no `hover:shadow-md`) | `tenant-switch.test.tsx`, `tenant-header.test.tsx`, `read-only-banner.test.tsx` from palette classes to token classes or `data-tenant`; `admin/(global)/page.test.tsx` | `tenants.test.ts`, `read-only.test.ts`, `navigation.test.ts` |
-| 4 | Statuses | `status-tone.ts`; every status cell to `StatusBadge`: the 12 `<Badge variant="secondary">` sites (`audit-table`, `boms-table`, customer-orders `order-screen`, `materials-table`, `named-records-table`, `production-screen`, purchase-orders `order-screen` and `orders-table`, `shipment-screen`, `shipments-table`, `transfer-screen`, `users-table`) and the `destructive` Inactive badges | unit test for the map; each screen's status cell | `document-lifecycle.test.ts`, `materials.test.ts`, `named-records.test.ts`, `users.test.ts` |
-| 5 | Callouts and shortage | The five boxes to `Callout` (rows in the colour migration table: `bom-screen`, `token-secret-panel`, `completion-form`, `receipt-dialog`, `import-screen`); the production-order shortage `Callout tone="warning" title="{n} components short"` ("You can still create this plan; stock is checked when a completion is posted.") plus `rowTone` on the components table with a `TriangleAlert` on the shortage value | the five screens' unit tests; `data-table.test.tsx` for `rowTone` | `production-orders.test.ts`, `import.test.ts`, `api-tokens.test.ts`, `boms.test.ts`, `goods-receipts.test.ts`, `production-completions.test.ts` |
-| 6 | Page frame | `PageHeader` on every admin page; `en.ts:686` and `pl.ts` to `Production orders — {tenant}`; the two widths; the record in the section trail; "Back to …" removed where the trail keeps the list reachable at 320 px; "Cancel order…" and its siblings into the header | page unit tests; integration selectors that used a "Back to" link or a `·` heading | `production-orders.test.ts`, `audit-history.test.ts`, `customer-orders.test.ts`, `purchasing.test.ts`, `transfers.test.ts`, `shipments.test.ts` |
-| 7 | Tables and sidebar | `DataTable` `kind` / `priority` / scroll / sticky ID; rail default below `lg`; Transactions reordered in `nav-tree.ts` | `data-table.test.tsx`, `nav-tree.test.ts`, `sidebar-nav.test.tsx` | `navigation.test.ts`; a 768 px viewport check of a list |
-| 8 | Plain voice and renames | The Voice table: `en.ts`, `pl.ts`, `layout.tsx` metadata, `help/topics.ts`, `core/src/domain/tenants/read-only.ts`, the two comments; "active recipe" → "active BOM" | `messages.test.ts`; the 7 unit-test files asserting "Cave control": `core/src/http/tenant-server-action.test.ts`, `admin/[tenant]/page.test.tsx`, `admin/(global)/page.test.tsx`, `admin/(global)/audit/page.test.tsx`, `admin/(global)/actions.test.ts`, `admin/(global)/tokens/page.test.tsx`, `help/page.test.tsx`; `app/src/app/page.test.tsx` | `preferences.test.ts`, `read-only.test.ts`, `smoke.test.ts`, `test-reset.test.ts` |
-| 9 | Public pages and decoration | Home rebuild; Help label, `Input` and `Button`; login `h1`; the six emoji sites to `MammothMark`; the account icon; off-scale type and spacing in `app`; the standards' "Pages" sentence | `page.test.tsx`, `login/page.test.tsx`, `help/page.test.tsx`, `sidebar-nav.test.tsx`, `visitor-bar.test.tsx`, `account-panel.test.tsx` | `help.test.ts`, `auth.test.ts`, `footer.test.ts`, `smoke.test.ts` |
-| 10 | States | `not-found.tsx` (root and tenant), `error.tsx`, `global-error.tsx`, the `<noscript>` notice, every blank Suspense fallback to `LoadingMessage` | new unit tests (layout asserts the notice in both languages; error pages assert message, digest and `reset()`); new `tests/integration/not-found.test.ts` | the new file; `smoke.test.ts` |
-| 11 | Enforcement on | Delete `tests/design-tokens.baseline.json`; the scan fails on any offender; the review-checklist line in `.ai/docs/engineering-standards.md`; optionally the `no-restricted-imports` rule | `tests/design-tokens.test.ts` | none |
+| **W1** Tokens and focus | sequential, first | 1 | `packages/ui/src/styles/**`, `packages/ui/src/components/**`, `tests/design-tokens.test.ts` (new) | Appendix A as `globals.css`; the focus ring and overlay changes in every primitive; `button.tsx` hovers on the new tokens; `tokens.test.ts`; the scan test in report-only mode |
+| **W2** Shared components | sequential, second | 2, plus the shared parts of 4, 5 and 7 | `packages/ui/src/backend/**`, `packages/ui/src/components/badge.tsx`, `packages/ui/src/components/button.tsx`, `packages/app/src/components/layout/mammoth-mark.tsx` (new, with its test), `packages/app/src/components/document-lifecycle/status-tone.ts` (new, with its test) | `StatusBadge`, `Callout`, `PageHeader`; the `Badge` restyle; `Button` `destructive` / `destructive-solid`, `sm` text, radius and padding; `DataTable` `kind` / `priority` / `rowTone` / horizontal scroll / sticky first column; `MammothMark` with its `icon.svg` sync test; the status tone map |
+| **W3** Copy and public pages | sequential, third | 8, plus the public pages of 9 | `packages/app/src/i18n/messages/**`, `packages/app/src/help/**`, `packages/core/src/domain/tenants/read-only.ts`, `packages/core/src/http/tenant-server-action.test.ts`, `packages/app/src/app/page.tsx` and `page.test.tsx`, `packages/app/src/app/help/**`, `packages/app/src/app/login/**`, `packages/app/src/app/layout.tsx` (the metadata only), `packages/app/src/app/admin/(global)/actions.ts` and its test, `packages/app/src/app/api/tenants/[tenant]/route.ts` (the comment), the "Cave control" assertions in `packages/app/src/app/admin/**/*.test.tsx`; integration `preferences`, `read-only`, `smoke`, `test-reset`, `help`, `auth`, `footer` | the Voice table in both languages; the home rebuild; Help's label and `@cpg/ui` controls; the login `h1` with the mark beside it; `metadata.description`; "active recipe" → "active BOM" |
+| **P1** Admin page frame and states | parallel | 6 (pages), 10 | `packages/app/src/app/admin/**` except `(global)/page.tsx` and its test; `packages/app/src/app/layout.tsx` (the `<noscript>` notice and the sidebar fallback); `packages/app/src/app/not-found.tsx`, `admin/[tenant]/not-found.tsx`, `error.tsx`, `global-error.tsx` (all new); `tests/integration/not-found.test.ts` (new) | `PageHeader` on every admin page; the two widths; every Suspense fallback → `LoadingMessage`; the not-found and error pages; the notice |
+| **P2** Document screens | parallel | 4, 5, 6 (components) and 7 (apply) for documents | `packages/app/src/components/{customer-orders,shipments,goods-issues,forecasts,production-orders,purchase-orders,purchase-requisitions,purchasing,goods-receipts,transfers,document-lifecycle}/**` except `status-tone.ts`; integration `production-orders`, `production-completions`, `production-transfer-reversals`, `goods-receipts`, `purchasing`, `customer-orders`, `shipments`, `transfers`, `forecasts`, `document-lifecycle` | `StatusBadge` in every document status cell; `Callout` in `completion-form` and `receipt-dialog`; the shortage callout and `rowTone` on the production order; `kind` / `priority` on every document table; "Back to …" links removed where the trail keeps the list reachable; "Cancel order…" and its siblings into the header via `lifecycle-control.tsx` |
+| **P3** Master data, stock, reports, admin tools | parallel | 4, 5, 6 (components) and 7 (apply) for the rest | `packages/app/src/components/{materials,named-records,master-data,boms,planning-parameters,safety-stock,stock,reports,imports,api-tokens,audit,users,preferences,forms}/**`; integration `materials`, `named-records`, `boms`, `planning-parameters`, `import`, `stock-import`, `stock`, `stock-reversals`, `stock-report`, `variance-report`, `audit`, `audit-history`, `users`, `api-tokens` | `StatusBadge` for materials, named records, BOMs, users, safety stock and the audit table; `Callout` in `bom-screen`, `token-secret-panel`, `import-screen`; `kind` / `priority` on every table here; "Back to …" links removed |
+| **P4** Tenants and navigation shell | parallel | 3, 7 (sidebar), 9 (shell) | `packages/app/src/components/tenants/**`, `packages/app/src/components/layout/**`, `packages/app/src/app/admin/(global)/page.tsx` and its test; integration `tenants`, `navigation` | `TenantTag`, `TenantBanner`, `TenantChoiceCard`; `tenant-switch`, `tenant-header`, `read-only-banner` on the tokens; the record in the section trail; the rail by default below `lg`; Transactions above Stock and Reports; `MammothMark` in the sidebar and the visitor bar; the account icon; `PageHeader`, the fallback and the choice cards on `/admin` |
+| **Close** (the lead) | last | 11 | `tests/design-tokens.test.ts` (the flip), `.ai/docs/engineering-standards.md`, the ESLint config (optional), this spec (the move to `implemented/`), `.ai/pipeline/runs/**` | the scan fails on any offender; the checklist line; the full gate and the full integration suite; browser QA evidence; the PR |
+
+Rules for every unit: read `.ai/lessons.md` and this spec first; `npm ci` in a fresh worktree; tests next to the code at 100 % coverage of the unit's own changes; the gate (`npm run lint`, `npm run typecheck`, `npm run test:coverage`, `npm run build`) green on the unit's own diff, judged by exit codes; the unit's integration files run with `npm run test:integration -- tests/integration/<file>.test.ts`; nothing edited outside "Owns"; no PR opened by a worker. The lead merges one unit at a time with `git merge --no-ff`, re-runs the gate after each merge, reads the scan's report, and re-dispatches a unit that came back partial.
 
 ## 📋 Implementation Plan
 
-Every slice: read this spec, run the gate, QA in a browser when a screen changes, record the run in `.ai/pipeline/runs/`, update `tests/design-tokens.baseline.json`, and move this spec to `implemented/` only after slice 11.
-
-### Phase 1 — Tokens and focus (`packages/ui`)
+### W1 — Tokens and focus (`packages/ui`)
 
 1. Replace `packages/ui/src/styles/globals.css` with Appendix A.
-2. In every `packages/ui/src/components/*.tsx` and `backend/**/*.tsx`, replace `focus-visible:ring-3 focus-visible:ring-ring/50` (and `ring-[3px]`) with `focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background`; in `sidebar.tsx` menu buttons add `ring-inset`.
+2. In every `packages/ui/src/components/*.tsx`, replace `focus-visible:ring-3 focus-visible:ring-ring/50` (and `ring-[3px]`) with `focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background`; in `sidebar.tsx` menu buttons add `ring-inset`.
 3. `dialog.tsx:42`, `alert-dialog.tsx:39`, `sheet.tsx:40`: `bg-black/10 … supports-backdrop-filter:backdrop-blur-xs` → `bg-scrim`.
 4. `button.tsx`: `default` to `hover:bg-primary-hover active:bg-primary-active`; `secondary` to `hover:bg-secondary-hover`.
 5. Write `packages/ui/src/styles/tokens.test.ts`: parse the `:root` and `.dark` blocks, convert OKLCH to sRGB, compute WCAG ratios, assert: `foreground` on `background`, `card`, `muted` ≥ 4.5; `muted-foreground` on `background`, `muted`, `sidebar` ≥ 4.5; `primary-foreground` on `primary` ≥ 4.5; each tone text on its surface ≥ 4.5; `danger-solid` with white ≥ 4.5; tenant tag foregrounds on their tags ≥ 4.5; `ring` on `background`, `sidebar`, `muted` ≥ 3; `input` on `background`, `card`, `muted` ≥ 3; `tenant-prod-edge` on `background` ≥ 3; both themes.
-6. Write `tests/design-tokens.test.ts` with the scan rules from Architecture and the allow-list from Exceptions, generate `tests/design-tokens.baseline.json` from the current tree, and assert no file exceeds its baseline count and no new file appears.
-7. Gate; run `smoke.test.ts` and `navigation.test.ts`; QA focus, hover and overlays in both themes.
+6. Write `tests/design-tokens.test.ts` with the scan rules from Architecture and the allow-list from Exceptions, in report-only mode: one exported constant switches between "print offenders and pass" and "fail on any offender"; a unit test of the scanner itself asserts both modes on fixture strings.
+7. Gate; run `smoke.test.ts` and `navigation.test.ts`.
 
-### Phase 2 — Feedback components and the mark
+### W2 — Shared components
 
 1. `packages/ui/src/backend/feedback/status-badge.tsx`, `callout.tsx`, and `packages/ui/src/backend/page-header.tsx` with the contracts in Components; export them from the package like the existing `backend/` blocks.
 2. `badge.tsx`: `rounded-4xl` → `rounded-sm`, `px-2` → `px-1.5`, `secondary` as `bg-muted text-foreground`, keep `outline`, `default` and `destructive`.
 3. `button.tsx`: restyle `destructive`, add `destructive-solid`, `sm` to `text-xs`, every `rounded-[min(var(--radius-md),…)]` to `rounded-md`, `px-2.5` to `px-3`.
-4. `packages/app/src/components/layout/mammoth-mark.tsx`: the inline SVG from `icon.svg`, `size` prop, `aria-hidden`; a test that reads `icon.svg` and compares path data and fills.
-5. Unit tests to 100 % for every new and changed component; gate.
+4. `data-table.tsx`: `kind` and `priority` on `DataTableColumn`, minimum widths, alignment, responsive classes, the validation that `status` is priority 1, `rowTone`, the scrolling container with a sticky first column and an accessible label; existing callers keep working without the new fields.
+5. `packages/app/src/components/layout/mammoth-mark.tsx`: the inline SVG from `icon.svg`, `size` prop, `aria-hidden`; a test that reads `icon.svg` and compares path data and fills.
+6. `packages/app/src/components/document-lifecycle/status-tone.ts` with the map from Components, typed over the existing status unions, and a unit test over every state.
+7. Unit tests to 100 % for every new and changed component; gate.
 
-### Phase 3 — Tenant components
+### W3 — Copy and public pages
 
-1. `tenant-tag.tsx`, `tenant-choice-card.tsx` (new) and `read-only-banner.tsx` restyled as `TenantBanner` behaviour (tag colours, `Lock`, "Read-only"), all on `tenant-*` tokens.
-2. `tenant-switch.tsx`, `tenant-header.tsx` and `admin/(global)/page.tsx` per the colour migration table; the `GLOBAL` tag stays `bg-muted text-muted-foreground`.
-3. Update the three tenant tests and the global page test to assert tokens or `data-tenant`; shrink the baseline; gate; run `tenants.test.ts`, `read-only.test.ts`, `navigation.test.ts`.
+1. Apply the Voice table in `en.ts` and `pl.ts` (new `admin.tenantHeading`), `layout.tsx` metadata, `help/topics.ts`, `core/src/domain/tenants/read-only.ts`, the two comments; "active recipe" → "active BOM"; `en.ts:686` and its `pl.ts` twin to `Production orders — {tenant}`.
+2. Rebuild `app/src/app/page.tsx` per Decoration (`MammothMark` 40 px, Display `h1`, plain tagline, `Button asChild size="lg"`, the flow of built capabilities as text links); Help gets `Label`, `Input`, `Button`; the login card title becomes the `h1` with the mark beside it.
+3. Update the seven unit-test files that assert "Cave control", `page.test.tsx`, `login/page.test.tsx`, `help/page.test.tsx` and `messages.test.ts`; gate; run `preferences`, `read-only`, `smoke`, `test-reset`, `help`, `auth`, `footer`.
 
-### Phase 4 — Statuses
+### P1 — Admin page frame and states
 
-1. `packages/app/src/components/document-lifecycle/status-tone.ts` with the map from Components, typed over the existing status unions, and a unit test over every state.
-2. Replace each status `Badge` in the twelve files listed in Phasing (and any `variant="destructive"` Inactive badge) with `<StatusBadge tone icon dashed>` fed by the map; labels and translations unchanged.
-3. Screen unit tests assert the badge's label and tone; shrink the baseline; gate; run the four integration files.
+1. Adopt `PageHeader` on every page under `app/src/app/admin/**` except `(global)/page.tsx`; map `max-w-5xl` to `max-w-6xl` and the narrow pages to `max-w-3xl`; every blank Suspense fallback to `LoadingMessage`.
+2. `not-found.tsx` (root, tenant), `error.tsx`, `global-error.tsx` per the States table; the `<noscript>` notice in `layout.tsx` in both languages.
+3. Unit tests (the layout asserts the notice in both languages; the error pages assert message, digest and `reset()`); `tests/integration/not-found.test.ts` (an unknown URL and an unknown record id, asserting the message, the way back and `noindex`); gate.
 
-### Phase 5 — Callouts and shortage
+### P2 — Document screens
 
-1. Replace the five hand-built boxes with `Callout` per the colour migration table, keeping each box's `role` and children.
-2. Production order: the shortage `Callout` above the components table; `rowTone="warning"` on shortage rows with the `TriangleAlert` beside the shortage value; zero-shortage rows plain. Add `rowTone` to `DataTable` here.
-3. Unit tests; shrink the baseline; gate; run the six integration files; QA the production order with a shortage in both themes.
+1. Replace each status `Badge` in the document screens and tables with `<StatusBadge>` fed by the tone map; labels and translations unchanged.
+2. `completion-form.tsx:150` and `receipt-dialog.tsx:71` to `Callout`, keeping each box's `role` and children; the shortage `Callout tone="warning" title="{n} components short"` ("You can still create this plan; stock is checked when a completion is posted.") above the components table, `rowTone="warning"` on shortage rows with the `TriangleAlert` beside the shortage value, zero-shortage rows plain.
+3. `kind` and `priority` on every table in scope; remove each "Back to …" link only after checking the section trail at 320 px keeps the list link; move the lifecycle "Cancel" into the header as "Cancel order…" (and transfer, shipment) via `lifecycle-control.tsx`.
+4. Screen unit tests assert the badge's label and tone and the callouts; gate; run the integration files in scope.
 
-### Phase 6 — Page frame
+### P3 — Master data, stock, reports, admin tools
 
-1. Adopt `PageHeader` on every page under `app/src/app/admin/**`; fix `en.ts:686` and the `pl.ts` twin; map `max-w-5xl` to `max-w-6xl` and the narrow pages to `max-w-3xl`.
-2. The section trail shows the record on detail pages; remove each "Back to …" link only after checking the trail at 320 px keeps the list link; move the lifecycle "Cancel" into the header as "Cancel order…" (and transfer, shipment) via `lifecycle-control.tsx`.
-3. Update unit tests and the integration files that selected a "Back to" link or a `·` heading; shrink the baseline; gate; QA three detail pages at 320 px.
+1. `StatusBadge` for materials, named records, BOMs, users, safety stock and the audit table (including the `destructive` Inactive badges), fed by the tone map.
+2. `bom-screen.tsx:115`, `token-secret-panel.tsx:55` and `import-screen.tsx:293` to `Callout`, keeping `role` and children.
+3. `kind` and `priority` on every table in scope; "Back to …" links removed where the trail keeps the list reachable.
+4. Unit tests; gate; run the integration files in scope.
 
-### Phase 7 — Tables and sidebar
+### P4 — Tenants and navigation shell
 
-1. `data-table.tsx`: `kind` and `priority` on `DataTableColumn`, minimum widths, alignment, responsive classes, the validation that `status` is priority 1, the scrolling container with a sticky first column and an accessible label.
-2. Apply `kind` and `priority` to every list; `sidebar-nav.tsx`: rail by default between `md` and `lg`; `nav-tree.ts`: Transactions above Stock and Reports.
-3. `data-table.test.tsx`, `nav-tree.test.ts`, `sidebar-nav.test.tsx`; gate; `navigation.test.ts`; QA a list at 768 px and 320 px.
+1. `tenant-tag.tsx`, `tenant-choice-card.tsx` (new) and `read-only-banner.tsx` restyled as `TenantBanner` behaviour (tag colours, `Lock`, "Read-only"), all on `tenant-*` tokens; `tenant-switch.tsx` and `tenant-header.tsx` per the colour migration table; the `GLOBAL` tag stays `bg-muted text-muted-foreground`; the section trail shows the record on detail pages.
+2. `sidebar-nav.tsx`: rail by default between `md` and `lg`, `MammothMark` at `:208` and `:218`, the `CircleUserRound` account icon at `:263`; `visitor-bar.tsx:23` to `MammothMark`; `nav-tree.ts`: Transactions above Stock and Reports.
+3. `admin/(global)/page.tsx`: `TenantChoiceCard`, no hover shadow, `PageHeader`, `LoadingMessage` fallback.
+4. Update the three tenant tests, `sidebar-nav.test.tsx`, `visitor-bar.test.tsx`, `account-panel.test.tsx`, `nav-tree.test.ts` and `admin/(global)/page.test.tsx`; gate; run `tenants` and `navigation`.
 
-### Phase 8 — Plain voice and renames
+### Close — the lead
 
-1. Apply the Voice table in `en.ts` and `pl.ts` (new `admin.tenantHeading`), `layout.tsx` metadata, `help/topics.ts`, `core/src/domain/tenants/read-only.ts`, the two comments; "active recipe" → "active BOM".
-2. Update the seven unit-test files, `page.test.tsx` and `messages.test.ts`; gate; run `preferences.test.ts`, `read-only.test.ts`, `smoke.test.ts`, `test-reset.test.ts`.
-
-### Phase 9 — Public pages and decoration
-
-1. Rebuild `app/src/app/page.tsx` per Decoration; Help gets `Label`, `Input`, `Button`; the login card title becomes the `h1`.
-2. `MammothMark` at the six emoji sites; the account icon replaces the avatar; remaining off-scale type and spacing in `packages/app` per the typography and spacing tables.
-3. Add the one sentence to `.ai/docs/engineering-standards.md` ("Pages"); update the unit tests; shrink the baseline; gate; run `help.test.ts`, `auth.test.ts`, `footer.test.ts`, `smoke.test.ts`; QA the three public pages at 320 and 1440 px in both themes.
-
-### Phase 10 — States
-
-1. `not-found.tsx` (root, tenant), `error.tsx`, `global-error.tsx`, the `<noscript>` notice in `layout.tsx`, every blank Suspense fallback to `LoadingMessage`.
-2. Unit tests as in Phasing; `tests/integration/not-found.test.ts` (an unknown URL and an unknown record id, asserting the message, the way back and `noindex`); gate; `smoke.test.ts`.
-
-### Phase 11 — Enforcement on
-
-1. Delete `tests/design-tokens.baseline.json`; the scan now fails on any offender outside the Exceptions allow-list.
-2. Add the review-checklist line to `.ai/docs/engineering-standards.md`; optionally the ESLint rule.
-3. Run the acceptance checks below on the realistic dataset, link the results from the PR, move this spec to `implemented/` with `Status: implemented` and implementation notes, and close #203.
+1. Flip `tests/design-tokens.test.ts` to failing; it must pass on the merged tree, with every remaining literal either migrated or in the Exceptions table.
+2. Add the review-checklist line to `.ai/docs/engineering-standards.md` ("Uses tokens and components from the design system; no new palette classes, radius, size or spacing values; states use `StatusBadge` or `Callout`; copy is plain") and the one sentence under "Pages" allowing `@cpg/ui` controls on public pages; optionally the `no-restricted-imports` rule.
+3. Run the full gate and the full integration suite once (`npm run test:integration`, about seven minutes on one machine; without Docker, the standalone-server method in `.ai/lessons.md`).
+4. QA the acceptance screens in a real browser at 320, 768 and 1440 px in light and dark, in both languages, on the realistic dataset; attach the screenshots to the PR as evidence.
+5. Move this spec to `.ai/specs/implemented/` with `Status: implemented` and implementation notes; finish the run folder in `.ai/pipeline/runs/`; open the PR against `main` with the acceptance criteria ticked, the evidence linked, `Closes #203` and `Refs #204`, and the labels `feature`, `priority-medium`, `risk-high`, `needs-qa`, `review` through the label guards.
 
 ## Acceptance criteria
 
