@@ -87,7 +87,7 @@ describe("/api/tenants/{tenant}/forecasts", () => {
     expect(mocks.list).not.toHaveBeenCalled();
   });
 
-  it("POST adds the parsed forecast, audited as the token (DEM-001)", async () => {
+  it("POST adds the parsed forecast, audited as the token (R07)", async () => {
     mocks.state.caller = ADMIN_TOKEN;
     mocks.state.cradle = { forecastService: { create: mocks.create } };
     mocks.create.mockResolvedValue({ date: "2027-01-01", version: 1 });

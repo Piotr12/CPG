@@ -28,7 +28,7 @@ const post = (quantity: string) => {
 describe("IssueDialog", () => {
   afterEach(() => vi.clearAllMocks());
 
-  it("posts against the page's shipment and order, tenant and generation, closes, and names the issue (SAL-010)", async () => {
+  it("posts against the page's shipment and order, tenant and generation, closes, and names the issue", async () => {
     mocks.postIssue.mockResolvedValue({ ok: true, data: { id: "00000009" } });
     const { rerender } = render(dialog());
 
@@ -48,7 +48,7 @@ describe("IssueDialog", () => {
     expect(screen.queryByRole("status")).toBeNull();
   });
 
-  it("says how much stock is available when there is too little, and clears an earlier notice on a new issue (INV-005)", async () => {
+  it("says how much stock is available when the service refuses for too little, and clears an earlier notice on a new issue", async () => {
     mocks.postIssue.mockResolvedValueOnce({
       ok: false,
       error: {
@@ -67,5 +67,15 @@ describe("IssueDialog", () => {
     await screen.findByRole("status");
     fireEvent.click(screen.getByRole("button", { name: "Post goods issue" }));
     expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("refuses an issue against a shipment cancelled since the page loaded without calling it completed (#188)", async () => {
+    mocks.postIssue.mockResolvedValue({ ok: false, error: { code: "SHIPMENT_NOT_OPEN", message: "Shipment 00000002 is cancelled, so nothing more is issued against it." } });
+    render(dialog());
+
+    post("20");
+
+    expect(await screen.findByText("This shipment isn't Open any more, so nothing more is issued against it.")).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: "Post a goods issue" }).textContent).not.toContain("completed");
   });
 });

@@ -58,7 +58,7 @@ describe("/api/tenants/{tenant}/goods-issues", () => {
     expect(mocks.tenantScope).not.toHaveBeenCalled();
   });
 
-  it("POST posts the parsed goods issue as the token's account, dropping a date a client sends (R07, INV-011)", async () => {
+  it("POST posts the parsed goods issue as the token's account, dropping a date a client sends (R07)", async () => {
     mocks.state.caller = USER_TOKEN;
     mocks.state.cradle = { goodsIssueService: { post: mocks.post } };
     mocks.post.mockResolvedValue({ id: "00000002" });

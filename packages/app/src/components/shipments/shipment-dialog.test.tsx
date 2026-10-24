@@ -28,7 +28,7 @@ const create = (quantity: string) => {
 describe("ShipmentDialog", () => {
   afterEach(() => vi.clearAllMocks());
 
-  it("creates against the page's order, tenant and generation with the planned date, closes, and links to the new shipment (SAL-006)", async () => {
+  it("creates against the page's order, tenant and generation with the planned date, closes, and links to the new shipment", async () => {
     mocks.createShipment.mockResolvedValue({ ok: true, data: { id: "00000005" } });
     render(dialog());
 

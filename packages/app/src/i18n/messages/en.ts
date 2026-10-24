@@ -1421,7 +1421,7 @@ export const en = {
       lines: "Issue at least 1 and at most 100 lines.",
     },
     errors: {
-      SHIPMENT_NOT_OPEN: "This shipment is completed, so nothing more is issued against it.",
+      SHIPMENT_NOT_OPEN: "This shipment isn't Open any more, so nothing more is issued against it.",
       SHIPMENT_NOT_FOUND: "That shipment doesn't exist in this tenant.",
       CUSTOMER_ORDER_NOT_OPEN: "This shipment's customer order isn't Open, so nothing more is issued against it.",
       ISSUE_ID_RACE: "Another goods issue was posted at the same moment. Try again.",

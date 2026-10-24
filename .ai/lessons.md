@@ -69,6 +69,8 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 ## UI and React
 
+- **2026-10-24 — A new status needs a sweep of status-specific copy** — When an enum gains a value, check EN/PL messages for the guarding error codes and old status names; use neutral or parameterised text and test it through the screen. After #147 added shipment cancellation, the goods-issue dialog still called a cancelled shipment completed (#188).
+
 - **2026-10-19 — A client component must not import a module that imports `@cpg/core`** — the browser bundle pulls in the ORM, and only `npm run build` fails. Keep client helpers dependency-free (`components/layout/current-path.ts`) or import `@cpg/core/validators/*`.
 - **2026-10-20 — A label passed to a client component must be plain data** — function-valued labels pass unit tests but the server refuses the page. Use `{ one, other }` forms (`counted` in `components/imports/report-text.ts`), and test that labels hold no function.
 - **2026-10-19 — React 19: updates after `await` leave the transition** — wrap post-await `setState` in another `startTransition` (`ui/src/backend/forms/crud-form.tsx`), or an error can show while `isPending` is still true.
@@ -191,5 +193,6 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 - **2026-10-20 — Gate every push on the PR being open** — the owner can merge mid-run, and a push then lands on a dead or recreated branch. Use `[ "$(gh pr view <n> --json state -q .state)" = OPEN ] && git push`, and send a retry through the same gate. Ship late fixes as a new PR off `main`.
 - **2026-10-17 — The pipeline can't approve its own PRs** — the skills run as Piotr12. Post the review as a comment, keep the PR in `review` (never `merge-queue`), and leave approval to a human.
 - **2026-10-19 — Never delete the `qa-evidence` branch** — old PR comments embed images from it (`attach-image-evidence` in `.ai/trackers/github.md`).
+- **2026-10-24 — GitHub CLI boolean flags** — Use `gh pr checkout --recurse-submodules=false`; `=no` is rejected by the installed CLI. Stop a command sequence on checkout failure before merging or validating.
 - **2026-10-21 — Tracker label guards** — copy `## Label guards` from `.ai/trackers/github.md` by its line range; its first `bash` fence runs installs. Set `PIPELINE_LABELS="$(jq -r '.labels.pipeline | join(" ")' .ai/agentic.config.json)"` and `LABELS_ENABLED` before sourcing, or `set_pipeline_label` leaves two pipeline labels.
 - **2026-10-17 — Keep same-day semantics when overriding om-* slot checks** — match `$(date -u +%Y-%m-%d)--????UTC-<slug>`, not the slug across all dates.
