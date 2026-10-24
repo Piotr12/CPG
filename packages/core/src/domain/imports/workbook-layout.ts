@@ -303,8 +303,8 @@ export const IMPORT_SHEETS: readonly SheetSpec[] = [
     key: "bomHeaders",
     name: "BOM headers",
     purpose: {
-      en: "One row per BOM. Its lines on the BOM lines sheet are its complete recipe: a component left out is removed in a new revision, and an identical recipe creates no revision.",
-      pl: "Jeden wiersz na BOM. Jego wiersze w arkuszu BOM lines to pełna receptura: pominięty składnik jest usuwany w nowej rewizji, a identyczna receptura nie tworzy rewizji.",
+      en: "One row per BOM. Its lines on the BOM lines sheet are all its components: a component left out is removed in a new revision, and identical lines create no revision.",
+      pl: "Jeden wiersz na BOM. Jego wiersze w arkuszu BOM lines to wszystkie jego składniki: pominięty składnik jest usuwany w nowej rewizji, a identyczne wiersze nie tworzą rewizji.",
     },
     columns: [
       {
@@ -314,8 +314,8 @@ export const IMPORT_SHEETS: readonly SheetSpec[] = [
         required: "never",
         example: "",
         meaning: {
-          en: "Blank creates a new BOM with the next ID. An existing ID revises that BOM when its recipe changes. An ID that doesn't exist is an error.",
-          pl: "Puste tworzy nowy BOM z kolejnym ID. Istniejące ID tworzy nową rewizję tego BOM, gdy receptura się zmienia. ID, które nie istnieje, jest błędem.",
+          en: "Blank creates a new BOM with the next ID. An existing ID revises that BOM when its lines change. An ID that doesn't exist is an error.",
+          pl: "Puste tworzy nowy BOM z kolejnym ID. Istniejące ID tworzy nową rewizję tego BOM-u, gdy jego wiersze się zmieniają. ID, które nie istnieje, jest błędem.",
         },
       },
       {
@@ -323,7 +323,7 @@ export const IMPORT_SHEETS: readonly SheetSpec[] = [
         field: "reference",
         kind: "text",
         required: "on-create",
-        example: "RECIPE-X",
+        example: "BOM-X",
         meaning: {
           en: "Required when BOM ID is blank: a name of your choice, unique in this sheet, with at least one letter. The BOM lines of a new BOM name it in their BOM column.",
           pl: "Wymagane, gdy BOM ID jest puste: dowolna nazwa, unikalna w arkuszu, z co najmniej jedną literą. Wiersze nowego BOM podają ją w kolumnie BOM.",
@@ -380,7 +380,7 @@ export const IMPORT_SHEETS: readonly SheetSpec[] = [
         field: "bom",
         kind: "bom",
         required: "always",
-        example: "RECIPE-X",
+        example: "BOM-X",
         meaning: {
           en: "The BOM ID of an existing BOM, or the import reference of a new one, from the BOM headers sheet.",
           pl: "BOM ID istniejącego BOM lub referencja importu nowego, z arkusza BOM headers.",

@@ -70,11 +70,11 @@ async function createBom(admin: Browser, output: string, priority: string, valid
   return (await rows(admin, "/admin/prod/boms")).find(([id]) => !before.has(id))![0];
 }
 
-/** Opens a BOM's Edit recipe dialog once it can be used. */
+/** Opens the Edit BOM dialog on a BOM's page once it can be used. */
 async function openEdit(admin: Browser, bom: string) {
   await rows(admin, `/admin/prod/boms/${bom}`);
-  await admin.waitUntil(ready(button("Edit recipe")));
-  await admin.clickRole("button", "Edit recipe");
+  await admin.waitUntil(ready(button("Edit BOM")));
+  await admin.clickRole("button", "Edit BOM");
   await admin.waitFor("[role=dialog]");
 }
 
@@ -146,7 +146,7 @@ describe("BOMs (E04-S01)", () => {
     await admin.fill(field("components.0.quantity"), "5");
     await admin.click("[role=dialog] button[type=submit]");
     await admin.waitUntil(closed);
-    await admin.waitForText("Recipe (revision 2)");
+    await admin.waitForText("Components (revision 2)");
 
     expect((await rows(admin, `/admin/prod/boms/${bom}`, RECIPE))[0][1]).toBe("5 kg");
     const old = await rows(admin, `/admin/prod/boms/${bom}?revision=1`, RECIPE);
@@ -172,14 +172,14 @@ describe("BOMs (E04-S01)", () => {
     await admin.click("[role=dialog] button[type=submit]");
     await admin.waitFor("[role=dialog] [role=alert]");
     expect(await admin.text("[role=dialog] [role=alert]")).toBe(
-      `This recipe would make a cycle, so it can't be saved: ${ids.subC} boms-ui sub C →(BOM ${c}) ${ids.subA} boms-ui sub A →(BOM ${a}) ` +
+      `This BOM would make a cycle, so it can't be saved: ${ids.subC} boms-ui sub C →(BOM ${c}) ${ids.subA} boms-ui sub A →(BOM ${a}) ` +
         `${ids.subB} boms-ui sub B →(BOM ${b}) ${ids.subC} boms-ui sub C.`,
     );
     await admin.clickRole("button", "Cancel");
     await admin.waitUntil(closed);
 
     expect(await rows(admin, `/admin/prod/boms/${c}`, RECIPE)).toEqual([[`${ids.steel} boms-ui steel`, "1 kg", ""]]);
-    await admin.waitForText("Recipe (revision 1)");
+    await admin.waitForText("Components (revision 1)");
     expect((await rows(admin, "/admin/prod/boms")).find(([id]) => id === c)![3]).toBe("rev 1");
   });
 

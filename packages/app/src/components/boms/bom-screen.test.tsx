@@ -70,7 +70,7 @@ describe("BomScreen", () => {
     expect(state.dataset.tone).toBe("neutral");
     expect(state.className).toContain("border-dashed");
     expect(within(header).queryByRole("button")).toBeNull();
-    const recipe = screen.getByRole("table", { name: "Recipe (revision 2)" });
+    const recipe = screen.getByRole("table", { name: "Components (revision 2)" });
     expect(within(recipe).getByText("Inactive").dataset.slot).toBe("status-badge");
     const quantity = within(recipe).getByText("24 each");
     expect(quantity.className).toMatch(/\btext-right tabular-nums\b/);

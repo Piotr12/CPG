@@ -116,7 +116,7 @@ describe("BomPage", () => {
       "2026-01-01 – 2026-12-31",
       "2026-10-20",
     ]);
-    expect(cells("Recipe (revision 2)")).toEqual([
+    expect(cells("Components (revision 2)")).toEqual([
       ["00000004Painted side panel", "4 each", ""],
       ["00000002Bolt M8Inactive", "24 each", "2 case at 1 case = 12 each"],
     ]);
@@ -137,11 +137,11 @@ describe("BomPage", () => {
     render(await resolveServerComponents(page("1")));
 
     expect(mocks.getRevision).toHaveBeenCalledWith("00000003", 1);
-    expect(screen.getByRole("heading", { level: 2, name: "Recipe (revision 1)" })).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 2, name: "Components (revision 1)" })).toBeTruthy();
     expect(screen.getByRole("note").textContent).toBe(
       "Revision 1 of 2: history, kept unchanged, with priority 2, valid 2026-01-01 – no end. Revision 2 is current. Show the current revision",
     );
-    expect(cells("Recipe (revision 1)")).toEqual([["00000002Bolt M8Inactive", "12 each", "1 case at 1 case = 12 each"]]);
+    expect(cells("Components (revision 1)")).toEqual([["00000002Bolt M8Inactive", "12 each", "1 case at 1 case = 12 each"]]);
   });
 
   it("shows the current revision for its own number, and not-found for another or a malformed one", async () => {

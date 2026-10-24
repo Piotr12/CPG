@@ -115,7 +115,7 @@ describe("RecipeForm", () => {
     expect(screen.getByText("Enter a whole number from 1 to 999; 1 is the highest.")).toBeTruthy();
     expect(screen.getByText("Valid through can't be before valid from.")).toBeTruthy();
     expect(screen.getByText(/^Enter a number greater than 0/)).toBeTruthy();
-    expect(screen.getByText("This material is already in the recipe: enter its total quantity once.")).toBeTruthy();
+    expect(screen.getByText("This material is already in the BOM: enter its total quantity once.")).toBeTruthy();
     expect(lineField("Quantity", 1).getAttribute("aria-invalid")).toBe("true");
     expect(screen.getByText(/^Enter a number greater than 0/).id).toBe(lineField("Quantity", 1).getAttribute("aria-describedby"));
     // A field error is icon + text in the danger tone, as in CrudForm.
