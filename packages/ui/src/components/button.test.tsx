@@ -48,4 +48,51 @@ describe("Button", () => {
   it("exposes the variant classes for non-button elements", () => {
     expect(buttonVariants({ variant: "ghost", size: "icon" })).toContain("size-8");
   });
+
+  it("opens a destructive flow in the soft danger tone, hovering on the border", () => {
+    const classes = buttonVariants({ variant: "destructive" }).split(" ");
+    expect(classes).toEqual(expect.arrayContaining(["text-danger", "bg-danger-surface", "border-danger-edge", "hover:border-danger"]));
+    expect(classes.join(" ")).not.toMatch(/destructive\/|hover:bg-/);
+  });
+
+  it("confirms in solid danger, darkening on hover in both themes", () => {
+    render(<Button variant="destructive-solid">Reset Test</Button>);
+
+    const button = screen.getByRole("button", { name: "Reset Test" });
+    expect(button.dataset.variant).toBe("destructive-solid");
+    expect(button.className.split(" ")).toEqual(
+      expect.arrayContaining(["bg-danger-solid", "text-danger-solid-foreground", "hover:bg-danger", "dark:hover:bg-danger-edge"]),
+    );
+    expect(button.className).not.toMatch(/text-white/);
+  });
+
+  it("underlines a link in the foreground colour", () => {
+    const classes = buttonVariants({ variant: "link" }).split(" ");
+    expect(classes).toEqual(expect.arrayContaining(["text-foreground", "underline", "underline-offset-4"]));
+    expect(classes).not.toContain("text-primary");
+  });
+
+  it("keeps an outline button opaque in both themes", () => {
+    const classes = buttonVariants({ variant: "outline" }).split(" ");
+    expect(classes).toEqual(expect.arrayContaining(["border-border", "bg-background", "hover:bg-muted"]));
+    expect(classes.join(" ")).not.toMatch(/input/);
+  });
+
+  it.each([
+    ["xs", "h-6"],
+    ["sm", "h-7"],
+    ["default", "h-8"],
+    ["lg", "h-9"],
+  ] as const)("keeps the %s height on the 8 px radius, without moving when pressed", (size, height) => {
+    const classes = buttonVariants({ size }).split(" ");
+    expect(classes).toEqual(expect.arrayContaining([height, "rounded-md"]));
+    expect(classes.join(" ")).not.toMatch(/rounded-\[|rounded-lg|translate-y|text-\[|px-2\.5/);
+  });
+
+  it("sets small text in the caption step and pads controls by 12 px", () => {
+    expect(buttonVariants({ size: "sm" }).split(" ")).toEqual(expect.arrayContaining(["text-xs", "px-3"]));
+    expect(buttonVariants({ size: "default" })).toContain("px-3");
+    expect(buttonVariants({ size: "lg" })).toContain("px-3");
+    for (const size of ["icon-xs", "icon-sm"] as const) expect(buttonVariants({ size })).toContain("rounded-md");
+  });
 });
