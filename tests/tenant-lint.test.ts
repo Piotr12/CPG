@@ -33,11 +33,11 @@ describe("tenant lint rules", () => {
     ]);
   });
 
-  it("allows selectTenant only in tenantScope and raw SQL only in the health check", async () => {
+  it("allows selectTenant only in tenantScope; the health check pings through @cpg/db and has no raw SQL exemption", async () => {
     expect(await restrictedSyntax('selectTenant(em, "test");', "packages/core/src/container/tenant-scope.ts")).toEqual([]);
     expect(
       await restrictedSyntax('await em.getConnection().execute("select 1");', "packages/core/src/services/system/system-status.service.ts"),
-    ).toEqual([]);
+    ).toEqual([expect.stringMatching(/No raw SQL/)]);
     expect(await restrictedSyntax('em.setFilterParams("tenant", {});', "packages/core/src/container/tenant-scope.ts")).toHaveLength(1);
   });
 

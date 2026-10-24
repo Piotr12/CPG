@@ -118,18 +118,21 @@ export class GoodsIssueService {
    * Too little stock is `INSUFFICIENT_STOCK`, from the posting. Any refusal writes nothing.
    */
   post(input: IssueCreateInput, actor: AuditActor): Promise<IssueView> {
-    return this.postWith(input, { kind: "user", actor });
+    return this.postWith(input, { kind: "user", actor }, async (em, issue) => (await viewsOf(em, [issue]))[0]);
   }
 
   /**
    * The demo seed's issue, posted and stamped at `at` and unaudited. The same checks apply: a seed
-   * issue beyond the shipment line's to-issue or the stock on hand is refused as `post` would.
+   * issue beyond the shipment line's to-issue or the stock on hand is refused as `post` would. It
+   * returns only the issue's ID: the seed reads nothing back, and building the view costs as much as
+   * the posting (#163, #185).
    */
-  seedDemo(input: IssueCreateInput, at: Date): Promise<IssueView> {
-    return this.postWith(input, { kind: "seed", at });
+  seedDemo(input: IssueCreateInput, at: Date): Promise<{ id: string }> {
+    return this.postWith(input, { kind: "seed", at }, (_em, issue) => ({ id: issue.code }));
   }
 
-  private async postWith(input: IssueCreateInput, context: PostingContext): Promise<IssueView> {
+  /** Posts the issue in one transaction and returns what `result` makes of it. */
+  private async postWith<T>(input: IssueCreateInput, context: PostingContext, result: (em: EntityManager, issue: GoodsIssue) => T | Promise<T>): Promise<T> {
     try {
       return await this.em.transactional(async (em) => {
         const shipment = await findShipment(em, input.shipment, { refresh: true });
@@ -185,7 +188,7 @@ export class GoodsIssueService {
           },
         });
         await em.flush();
-        return (await viewsOf(em, [issue]))[0];
+        return result(em, issue);
       });
     } catch (error) {
       // A racing issue normally surfaces as a stale snapshot, which the request wrappers retry; the

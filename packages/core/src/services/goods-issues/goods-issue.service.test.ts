@@ -495,8 +495,8 @@ describe("GoodsIssueService", () => {
       const shipment = await shipAll(order);
       await count("00000001", "100");
       const auditBefore = await scoped().count(TenantAuditEvent, {});
-      const issue = await service().seedDemo(issueOf(shipment, each(1, "60")), at);
-      expect(issue).toMatchObject({ id: "00000001", businessDate: "2025-06-15", createdAt: at, lines: [{ quantity: "60.000000" }] });
+      expect(await service().seedDemo(issueOf(shipment, each(1, "60")), at)).toEqual({ id: "00000001" });
+      expect(await service().get("00000001")).toMatchObject({ businessDate: "2025-06-15", createdAt: at, lines: [{ quantity: "60.000000" }] });
       const [movement] = await scoped().find(StockMovement, { type: GOODS_ISSUE_MOVEMENT });
       expect(movement).toMatchObject({ businessDate: "2025-06-15", channel: "seed", actorUsername: "Demo seed", quantity: "-60.000000", balanceAfter: "40.000000" });
       expect(movement.occurredAt).toEqual(at);

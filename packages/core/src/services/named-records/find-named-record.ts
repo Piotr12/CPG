@@ -22,6 +22,11 @@ export async function findNamedRecord(
   options: { refresh?: boolean } = {},
 ): Promise<NamedRecord> {
   const record = await em.findOne(kind.entity, { code: id }, options);
-  if (!record) throw new NotFoundError(`${kind.codePrefix}_NOT_FOUND`, `There is no ${kind.noun} ${id} in this tenant.`);
+  if (!record) throw namedRecordNotFound(kind, id);
   return record;
+}
+
+/** `{KIND}_NOT_FOUND`: this tenant has no record of `kind` with business ID `id`. */
+export function namedRecordNotFound(kind: NamedRecordLookup, id: string): NotFoundError {
+  return new NotFoundError(`${kind.codePrefix}_NOT_FOUND`, `There is no ${kind.noun} ${id} in this tenant.`);
 }

@@ -155,23 +155,25 @@ export class PurchaseOrderService {
 
   /** A new Open order with the next ID, converting the requisitions its lines name (LFC-001, BUY-003). */
   create(input: NewOrder, actor: AuditActor): Promise<OrderView> {
-    return this.createWith(input, { kind: "user", actor });
+    return this.createWith(input, { kind: "user", actor }, async (em, order) => (await viewsOf(em, [order]))[0]);
   }
 
   /**
    * The demo seed's order, stamped at `at` and unaudited, converting the requisitions its lines name
-   * (by business ID) as `create` does; every business rule of `create` still applies.
+   * (by business ID) as `create` does; every business rule of `create` still applies. It returns only
+   * the order's ID: the seed reads nothing back (#163, #185).
    */
-  seedDemo(input: NewOrder, at: Date): Promise<OrderView> {
-    return this.createWith(input, { kind: "seed", at });
+  seedDemo(input: NewOrder, at: Date): Promise<{ id: string }> {
+    return this.createWith(input, { kind: "seed", at }, (_em, order) => ({ id: order.code }));
   }
 
-  private async createWith(input: NewOrder, context: PostingContext): Promise<OrderView> {
+  /** Inserts the order in one transaction and returns what `result` makes of it. */
+  private async createWith<T>(input: NewOrder, context: PostingContext, result: (em: EntityManager, order: PurchaseOrder) => T | Promise<T>): Promise<T> {
     try {
       return await this.em.transactional(async (em) => {
         const order = await insertOrder(em, input, context);
         await em.flush();
-        return (await viewsOf(em, [order]))[0];
+        return result(em, order);
       });
     } catch (error) {
       // A racing create normally surfaces as a stale snapshot, which the request wrappers retry;

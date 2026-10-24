@@ -219,23 +219,35 @@ export class ProductionCompletionService {
    * A repeated `submission` (the UI dialog's token, spec Q7) returns the completion it already posted.
    */
   post(orderId: string, input: ProductionCompletionInput, actor: AuditActor, options: { submission?: string } = {}): Promise<CompletionResult> {
-    return this.postWith(orderId, input, { kind: "user", actor }, options.submission);
+    const { submission } = options;
+    return this.postWith(
+      orderId, input, { kind: "user", actor },
+      async (em, order, completion) => ({ completion: (await viewsOf(em, order, [completion]))[0], order: productionOrderView(order) }),
+      submission === undefined ? undefined : { token: submission, replay: (em) => replayed(em, orderId, submission) },
+    );
   }
 
   /**
    * The demo seed's completion, posted and stamped at `at`, unaudited and without a submission token.
    * The same rules apply: stock, the Open order, the components and the overproduction acknowledgement.
+   * It returns only the completion's ID: the seed reads nothing back, and building the views costs
+   * about as much as the posting (#163, #185).
    */
-  seedDemo(orderId: string, input: ProductionCompletionInput, at: Date): Promise<CompletionResult> {
-    return this.postWith(orderId, input, { kind: "seed", at }, undefined);
+  seedDemo(orderId: string, input: ProductionCompletionInput, at: Date): Promise<{ id: string }> {
+    return this.postWith(orderId, input, { kind: "seed", at }, (_em, _order, completion) => ({ id: completion.code }));
   }
 
-  private async postWith(orderId: string, input: ProductionCompletionInput, context: PostingContext, submission: string | undefined): Promise<CompletionResult> {
+  /** Posts in one transaction and returns what `result` makes of it, or what `submission` already posted. */
+  private async postWith<T>(
+    orderId: string, input: ProductionCompletionInput, context: PostingContext,
+    result: (em: EntityManager, order: ProductionOrder, completion: ProductionCompletion) => T | Promise<T>,
+    submission?: { token: string; replay: (em: EntityManager) => Promise<T | null> },
+  ): Promise<T> {
     const values = parseInput(productionCompletionCreateSchema, input);
     try {
       return await this.em.transactional(async (em) => {
         if (submission !== undefined) {
-          const posted = await replayed(em, orderId, submission);
+          const posted = await submission.replay(em);
           if (posted) return posted;
         }
         const order = await findProductionOrder(em, orderId, { refresh: true });
@@ -269,7 +281,7 @@ export class ProductionCompletionService {
           enteredUnit: output.enteredUnit,
           numerator: output.numerator,
           denominator: output.denominator,
-          submission: submission ?? null,
+          submission: submission?.token ?? null,
           ...(context.kind === "seed" && { createdAt: context.at }),
         });
         lines.forEach(({ material, record, expected, extra }, position) => {
@@ -295,7 +307,7 @@ export class ProductionCompletionService {
           after: completionSnapshot(order, completion, lines),
         });
         await em.flush();
-        return { completion: (await viewsOf(em, order, [completion]))[0], order: productionOrderView(order) };
+        return result(em, order, completion);
       });
     } catch (error) {
       // A racing completion normally surfaces as a stale snapshot, which the request wrappers retry; the

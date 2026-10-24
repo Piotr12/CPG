@@ -48,12 +48,16 @@ export class TestResetService {
     const before = await this.tenantService.currentState("test");
     assertCurrentGeneration(before.generation, expectedGeneration, true);
     if (before.generation >= MAX_DATASET_GENERATION) throw new ConflictError("Test has reached its last dataset generation.", "GENERATION_EXHAUSTED");
+    const started = performance.now();
     // A real update even when already read-only: acquire the cross-connection writer lock.
     await this.em.nativeUpdate(Tenant, { code: "test" }, { readOnly: true });
     await resetTestData(this.em);
     await this.em.nativeUpdate(Tenant, { code: "test" }, { generation: before.generation + 1, readOnly: false });
     // The dataset generated for today, through the services; any refusal or shortfall throws and the savepoint undoes it all.
     await seedTestTenantDataset(this.seeds, new Date(), dataset);
+    // The server's own record of how long the reset held the database: the figure the owner reads off
+    // the container log on cpg.baby (#185), and the one CI prints for the integration suite.
+    console.info(`Reset the Test tenant to the ${dataset} dataset, generation ${before.generation + 1}: deleted and reseeded in ${((performance.now() - started) / 1000).toFixed(1)} s`);
     await this.em.nativeUpdate(Tenant, { code: "test" }, { readOnly: before.readOnly });
     // Seed reads may have cached the temporary writable metadata; always return its fresh state.
     const after = await this.tenantService.currentState("test");

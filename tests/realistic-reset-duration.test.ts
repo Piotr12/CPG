@@ -1,7 +1,7 @@
-// A realistic Test reset took 33–43 s on the CI runner, and the server answers nothing else until it
-// commits (#185). kamal-proxy answers 504 to any request the app hasn't answered within its response
-// timeout, 30 s unless config/deploy.yml says otherwise: the reset, which still commits, and every
-// request queued behind it would fail at the proxy. What the admin is told must cover it too.
+// A realistic Test reset took 33–43 s on the CI runner, and the server answers nobody but the health
+// check until it commits (#185). kamal-proxy answers 504 to any request the app hasn't answered within
+// its response timeout, 30 s unless config/deploy.yml says otherwise: the reset, which still commits,
+// and every request queued behind it would fail at the proxy. What the admin is told must cover it too.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -27,12 +27,12 @@ test("the image keeps an idle connection open for an hour, so a request queued b
   assert.ok(keepAlive >= 3_600_000, `KEEP_ALIVE_TIMEOUT ${keepAlive} ms < 1 h`);
 });
 
-test("the reset dialog and its help promise up to a minute, in EN and PL, which the slowest reset fits", () => {
-  // Up to a minute covers the slowest measured reset, 43.0 s.
+test("the reset dialog and its help say a minute or two, in EN and PL, which the slowest reset and the proxy's wait both fit", () => {
+  // A minute or two covers the slowest measured reset, 43.0 s, with room for a slower VM, and stays inside the proxy's 120 s.
   const resetHelp = (locale: "en" | "pl") => helpTopics(locale).find(({ id }) => id === "admin-home")!.body.join(" ");
 
-  assert.match(en.admin.reset.slow, /takes up to a minute,/);
-  assert.match(resetHelp("en"), /Realistic, two years of history, takes up to a minute,/);
-  assert.match(pl.admin.reset.slow, /trwa do minuty,/);
-  assert.match(resetHelp("pl"), /z dwoma latami historii, zapisuje się do minuty,/);
+  assert.match(en.admin.reset.slow, /can take a minute or two,/);
+  assert.match(resetHelp("en"), /Realistic, two years of history, can take a minute or two,/);
+  assert.match(pl.admin.reset.slow, /może potrwać minutę lub dwie,/);
+  assert.match(resetHelp("pl"), /z dwoma latami historii, zapisuje się minutę lub dwie,/);
 });

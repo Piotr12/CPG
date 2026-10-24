@@ -18,6 +18,14 @@ export type DatasetServices = Pick<Cradle, "em" | "testDatasets" | "materialServ
   | "customerOrderService" | "shipmentService" | "goodsIssueService" | "purchaseRequisitionService" | "purchaseOrderService"
   | "goodsReceiptService" | "productionOrderService" | "productionCompletionService">;
 
+/**
+ * Lets the event loop read its sockets before the next document. Every statement is a synchronous
+ * better-sqlite3 call and the awaits between them resolve as microtasks, so without this a realistic
+ * reset keeps the whole server, `/up` included, silent until it commits (#185). Other requests still
+ * wait for the commit, on Kysely's connection mutex, and complete afterwards.
+ */
+const yieldToEventLoop = () => new Promise<void>((resolve) => setImmediate(resolve));
+
 const EVENT_KIND = {
   opening: "stock openings", customerOrder: "customer orders", shipment: "shipments", goodsIssue: "goods issues",
   requisition: "purchase requisitions", purchaseOrder: "purchase orders", goodsReceipt: "goods receipts",
@@ -39,8 +47,9 @@ export async function isUntouchedTest(em: EntityManager): Promise<boolean> {
  * in the caller's transaction, and returns how many records of each kind it created. The masters come
  * first, created on the setup date, then every timeline event in order, each dated by its own `at`;
  * documents are referenced by the IDs and line IDs the services return, and the identity map is
- * cleared after each one, so no flush walks what earlier documents created (lesson of 2026-10-20). A
- * master kind the tenant already had, or any refusal, throws: the caller's rollback leaves nothing.
+ * cleared after each one, so no flush walks what earlier documents created (lesson of 2026-10-20),
+ * then the event loop gets a turn. A master kind the tenant already had, or any refusal, throws: the
+ * caller's rollback leaves nothing.
  * `name` picks which of the container's `testDatasets` is written: tiny unless the caller asks for
  * realistic (spec `2026-10-22--0902UTC-test-tenant-two-datasets`).
  */
@@ -54,6 +63,7 @@ export async function seedTestTenantDataset(services: DatasetServices, today: Da
     counts[kind] = await seed();
     if (counts[kind] !== expected) throw new Error(`Incomplete demonstration seed: ${kind}`);
     em.clear();
+    await yieldToEventLoop();
   };
   await seedMasters("materials", masters.materials.length, () => services.materialService.seedDemo(masters.materials, setup));
   await seedMasters("locations", masters.locations.length, () => services.locationService.seedDemo(masters.locations, setup));
@@ -73,11 +83,9 @@ export async function seedTestTenantDataset(services: DatasetServices, today: Da
       case "opening":
         await services.stockService.seedDemo(event.lines.map((line) => ({ ...line, location: event.location })), at);
         break;
-      case "customerOrder": {
-        const order = await services.customerOrderService.seedDemo({ customer: event.customer, location: event.location, lines: event.lines }, at);
-        customerOrders.set(event.key, { id: order.id, lines: order.lines.map(({ id }) => id) });
+      case "customerOrder":
+        customerOrders.set(event.key, await services.customerOrderService.seedDemo({ customer: event.customer, location: event.location, lines: event.lines }, at));
         break;
-      }
       case "shipment": {
         const order = customerOrders.get(event.order)!;
         const lines = event.lines.map(({ orderLine, quantity, unit }) => ({ orderLine: order.lines[orderLine], quantity, unit }));
@@ -111,6 +119,7 @@ export async function seedTestTenantDataset(services: DatasetServices, today: Da
     }
     counts[EVENT_KIND[event.kind]] += 1;
     em.clear();
+    await yieldToEventLoop();
   }
   return counts;
 }

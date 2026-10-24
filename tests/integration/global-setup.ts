@@ -47,10 +47,10 @@ export default async function setup(project: TestProject) {
     .withExposedPorts(PORT)
     .withWaitStrategy(Wait.forHttp("/up", PORT).forStatusCode(200))
     .withStartupTimeout(STARTUP_TIMEOUT_MS)
-    // The startup seed's duration on this runner, in the CI log (#185).
+    // The startup seed's and every reset's duration on this runner, in the CI log (#185).
     .withLogConsumer((stream) =>
       createInterface({ input: stream }).on("line", (line) => {
-        if (line.includes("Seeded the Test tenant")) process.stdout.write(`App startup: ${line}\n`);
+        if (line.includes("Seeded the Test tenant") || line.includes("Reset the Test tenant")) process.stdout.write(`App log: ${line}\n`);
       }),
     )
     .start();

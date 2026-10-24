@@ -322,9 +322,12 @@ describe("CustomerOrderService", () => {
   it("seeds a dated, unaudited order from the seed path under the same rules as create", async () => {
     const at = new Date("2025-06-15T08:30:00Z");
     const seeded = await service().seedDemo(input(), at);
-    expect(seeded).toMatchObject({ id: "00000001", customer: "00000001", status: "open", createdAt: at, updatedAt: at, lines: [{ material: "00000005" }, { material: "00000004" }] });
-    const stored = await em().findOneOrFail(CustomerOrder, { code: "00000001" });
-    expect([stored.createdAt.toISOString(), stored.updatedAt.toISOString()]).toEqual([at.toISOString(), at.toISOString()]);
+    const stored = await service().get("00000001");
+    expect(stored).toMatchObject({ id: "00000001", customer: "00000001", status: "open", createdAt: at, updatedAt: at, lines: [{ material: "00000005" }, { material: "00000004" }] });
+    // The seed gets the IDs its shipments reference, in line order, and nothing it would have to read back.
+    expect(seeded).toEqual({ id: "00000001", lines: stored.lines.map(({ id }) => id) });
+    const record = await em().findOneOrFail(CustomerOrder, { code: "00000001" });
+    expect([record.createdAt.toISOString(), record.updatedAt.toISOString()]).toEqual([at.toISOString(), at.toISOString()]);
     expect(await audit()).toEqual([]);
     const user = await service().create(input(), actor);
     expect(user.id).toBe("00000002");

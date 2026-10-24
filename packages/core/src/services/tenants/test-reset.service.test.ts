@@ -102,8 +102,11 @@ describe("atomic Test reset", { timeout: 60_000 }, () => {
     // Prod shares the flag, so its read-only state is compared both ways (TEN-025).
     await container.createScope().cradle.tenantService.setReadOnly("prod", readOnly, actor);
     const before = await snapshot();
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
 
     expect(await reset()).toEqual({ code: "test", name: "Test", generation: 2, readOnly });
+    // The server's own record of the reset's duration, the figure the owner reads off cpg.baby's log (#185).
+    expect(info).toHaveBeenCalledWith(expect.stringMatching(/^Reset the Test tenant to the tiny dataset, generation 2: deleted and reseeded in \d+\.\d s$/));
 
     const after = await snapshot();
     for (const table of ["user", "session", "api_token", "user_preference", "setting", "global_idempotency_key"]) expect(after[table], table).toEqual(before[table]);
@@ -147,10 +150,27 @@ describe("atomic Test reset", { timeout: 60_000 }, () => {
     expect((await prod.purchaseOrderService.create({ supplier: "00000001", location: "00000001", lines: [{ material: "00000001", quantity: "1", unit: "kg", plannedDate: "2027-01-01" }] }, actor)).id).toBe("00000002");
   });
 
+  it("keeps the health check answering while a reset runs: the loop turns between documents and the ping skips the connection mutex (#185)", async () => {
+    await populate();
+    const { systemStatusService } = container.createScope().cradle;
+    let finished = false;
+    const resetting = reset().then((info) => { finished = true; return info; });
+    // Scheduled as a timer, so it needs an event-loop turn, as an incoming request does; it must answer
+    // before the reset ends, not once it has committed.
+    const pingedDuringReset = new Promise<boolean>((resolve, reject) => {
+      setTimeout(() => systemStatusService.ping().then(() => resolve(!finished), reject), 0);
+    });
+
+    expect(await pingedDuringReset).toBe(true);
+    expect(await resetting).toMatchObject({ generation: 2 });
+  });
+
   it("writes the realistic dataset's two years for today when the admin picks it, and audits the choice (TEN-001, TEN-022)", async () => {
     const { masters, summary, timeline } = generated(TEST_DATASET_CONFIGS.realistic);
+    const info = vi.spyOn(console, "info");
 
     expect(await (await scope()).cradle.testResetService.reset(1, actor, "realistic")).toMatchObject({ generation: 2 });
+    expect(info).toHaveBeenCalledWith(expect.stringMatching(/^Reset the Test tenant to the realistic dataset, generation 2: deleted and reseeded in \d+\.\d s$/));
 
     const current = (await scope()).cradle;
     expect(await current.em.count(Material, {})).toBe(masters.materials.length);

@@ -49,10 +49,12 @@ describe("the realistic Test dataset, written by an API reset", () => {
     const seconds = (since: number) => (performance.now() - since) / 1000;
     const started = performance.now();
     let writeSeconds = 0;
-    // A Prod write issued 2 s into the reset waits for it: the server answers nothing else until the
-    // reset commits (spec 2026-10-21--0718UTC-test-tenant-dataset, Q16). Like kamal-proxy's, it goes on a
-    // pooled connection, which the image's KEEP_ALIVE_TIMEOUT keeps open through the reset (#185; a local
-    // server started without it answers ECONNRESET here).
+    let upSeconds = 0;
+    // A Prod write issued 2 s into the reset waits for it: other requests queue behind the reset's
+    // transaction on the server's one connection and complete once it commits (spec
+    // 2026-10-21--0718UTC-test-tenant-dataset, Q16). Like kamal-proxy's, it goes on a pooled connection,
+    // which the image's KEEP_ALIVE_TIMEOUT keeps open through the reset (#185; a local server started
+    // without it answers ECONNRESET here).
     const prodWriteDuringReset = async () => {
       await new Promise((resolve) => setTimeout(resolve, 2_000));
       const writeStarted = performance.now();
@@ -60,15 +62,30 @@ describe("the realistic Test dataset, written by an API reset", () => {
       writeSeconds = seconds(writeStarted);
       return response;
     };
-    const [realistic, prodWrite] = await Promise.all([reset({ dataset: "realistic" }), prodWriteDuringReset()]);
+    // The health check doesn't wait: the seed gives the event loop a turn between documents and the ping
+    // skips the connection mutex (#185), so kamal-proxy and uptime checks see a live app throughout.
+    const upDuringReset = async () => {
+      await new Promise((resolve) => setTimeout(resolve, 2_000));
+      const upStarted = performance.now();
+      const response = await fetch(`${baseUrl}/up`);
+      upSeconds = seconds(upStarted);
+      return response;
+    };
+    const [realistic, prodWrite, up] = await Promise.all([reset({ dataset: "realistic" }), prodWriteDuringReset(), upDuringReset()]);
     const resetSeconds = seconds(started);
     // The runner's figures, which the spec leaves without a budget (Q7). Straight to stdout: Vitest drops
     // a passing test's console output.
     process.stdout.write(`The realistic Test reset took ${resetSeconds.toFixed(1)} s on this runner\n`);
     process.stdout.write(`A Prod write issued 2 s into it answered after ${writeSeconds.toFixed(1)} s\n`);
+    process.stdout.write(`GET /up issued 2 s into it answered after ${upSeconds.toFixed(2)} s\n`);
     expect(realistic.status).toBe(200);
     expect(prodWrite.status).toBe(200);
-    // Behind kamal-proxy either would answer 504 past its response timeout, though the reset commits (#185).
+    expect(up.status).toBe(200);
+    expect(await up.text()).toBe("OK");
+    // Answered while the reset was still running, within seconds, not once it had committed.
+    expect(upSeconds).toBeLessThan(5);
+    expect(2 + upSeconds).toBeLessThan(resetSeconds);
+    // Behind kamal-proxy the reset or the write would answer 504 past its response timeout, though the reset commits (#185).
     expect(resetSeconds).toBeLessThan(proxyResponseTimeoutSeconds());
     expect(writeSeconds).toBeLessThan(proxyResponseTimeoutSeconds());
   }, 180_000);

@@ -1,4 +1,4 @@
-import { getMigrationStatus, Setting, type EntityManager, type Orm } from "@cpg/db";
+import { getMigrationStatus, pingDatabase, Setting, type EntityManager, type Orm } from "@cpg/db";
 import type { AppConfig } from "../../config";
 
 export interface SystemStatus {
@@ -20,9 +20,12 @@ export class SystemStatusService {
     this.em = em;
   }
 
-  /** Throws if the database can't be queried. */
+  /**
+   * Throws if the database can't be queried. It answers while a realistic Test reset holds the
+   * connection in its transaction, so `/up` stays up meanwhile (#185).
+   */
   async ping(): Promise<void> {
-    await this.em.getConnection().execute("select 1");
+    await pingDatabase(this.orm);
   }
 
   async getStatus(): Promise<SystemStatus> {

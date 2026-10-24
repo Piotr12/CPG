@@ -15,7 +15,6 @@ import {
 import { validationError } from "../../http/parse-input";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit } from "../audit/audit-recorder";
-import type { PostingContext } from "../stock/stock-posting";
 import { findActiveLocation } from "../locations/find-location";
 import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quantity";
 import { findActiveMaterial, findMaterial } from "../materials/find-material";
@@ -83,26 +82,34 @@ export class CustomerOrderService {
   }
 
   create(input: CustomerOrderInput, actor: AuditActor): Promise<CustomerOrderView> {
-    return this.createWith(input, { kind: "user", actor });
+    return this.createWith(input, undefined, async (em, order) => {
+      const result = await detail(em, order);
+      recordTenantAudit(em, actor, { action: "customer-orders.customer-order.created", subject: subject(order), before: null, after: snapshot(result) });
+      await em.flush();
+      return result;
+    });
   }
 
-  /** The demo seed's order, stamped at `at` and unaudited; every business rule of `create` still applies. */
-  seedDemo(input: CustomerOrderInput, at: Date): Promise<CustomerOrderView> {
-    return this.createWith(input, { kind: "seed", at });
+  /**
+   * The demo seed's order, stamped at `at` and unaudited; every business rule of `create` still
+   * applies. It returns only the order's ID and its line IDs, in line order: the seed's shipments
+   * need nothing else, and reading the order back costs about as much as creating it (#163, #185).
+   */
+  seedDemo(input: CustomerOrderInput, at: Date): Promise<{ id: string; lines: string[] }> {
+    return this.createWith(input, at, (_em, order, lines) => ({ id: order.code, lines: lines.map(({ id }) => id) }));
   }
 
-  private async createWith(input: CustomerOrderInput, context: PostingContext): Promise<CustomerOrderView> {
+  /** Inserts the order, stamped at `at` when the seed writes it, in one transaction, and returns what `result` makes of it. */
+  private async createWith<T>(
+    input: CustomerOrderInput, at: Date | undefined,
+    result: (em: EntityManager, order: CustomerOrder, lines: readonly CustomerOrderLine[]) => T | Promise<T>,
+  ): Promise<T> {
     const parsed = customerOrderCreateSchema.safeParse(input);
     if (!parsed.success) throw validationError(parsed.error);
     try {
       return await this.em.transactional(async (em) => {
-        const order = await insertOrder(em, parsed.data, context.kind === "seed" ? context.at : undefined);
-        const result = await detail(em, order);
-        if (context.kind === "user") {
-          recordTenantAudit(em, context.actor, { action: "customer-orders.customer-order.created", subject: subject(order), before: null, after: snapshot(result) });
-        }
-        await em.flush();
-        return result;
+        const { order, lines } = await insertOrder(em, parsed.data, at);
+        return result(em, order, lines);
       });
     } catch (error) {
       if (error instanceof UniqueConstraintViolationException) {
@@ -203,19 +210,19 @@ async function activeCustomer(em: EntityManager, code: string): Promise<Customer
   if (!customer.active) throw new ConflictError(`Customer ${code} is inactive, so it can't be picked for new orders.`, "CUSTOMER_INACTIVE");
   return customer as Customer;
 }
-async function insertOrder(em: EntityManager, input: CustomerOrderInput, at?: Date): Promise<CustomerOrder> {
+async function insertOrder(em: EntityManager, input: CustomerOrderInput, at?: Date): Promise<{ order: CustomerOrder; lines: CustomerOrderLine[] }> {
   const customer = await activeCustomer(em, input.customer);
   const location = await findActiveLocation(em, input.location);
   const resolved = await resolveLines(em, input.lines, [], new Set());
   const [highest] = await em.find(CustomerOrder, {}, { orderBy: { code: "desc" }, limit: 1 });
   const code = nextSequentialId(highest?.code ?? null, { code: "CUSTOMER_ORDER_IDS_EXHAUSTED", message: "This tenant has used every eight-digit customer order ID." });
   const order = em.create(CustomerOrder, { code, customer, location, ...(at && { createdAt: at, updatedAt: at }) });
-  resolved.forEach(({ material, record, requiredDate }, position) => em.create(CustomerOrderLine, {
+  const lines = resolved.map(({ material, record, requiredDate }, position) => em.create(CustomerOrderLine, {
     order, material, position, quantity: record.baseQuantity, enteredQuantity: record.enteredQuantity, enteredUnit: record.enteredUnit,
     numerator: record.numerator, denominator: record.denominator, requiredDate,
   }));
   await em.flush();
-  return order;
+  return { order, lines };
 }
 async function resolveLines(em: EntityManager, inputs: (CustomerOrderInput["lines"][number] & { id?: string })[], current: CustomerOrderLine[], posted: ReadonlySet<string>): Promise<ResolvedLine[]> {
   const resolved: ResolvedLine[] = [];

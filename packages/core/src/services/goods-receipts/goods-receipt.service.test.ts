@@ -486,8 +486,8 @@ describe("GoodsReceiptService", () => {
     it("posts and stamps everything from the seed's moment without audit, under the same rules as post", async () => {
       const order = await orders().create({ ...ORDER, lines: [ORDER.lines[0]] }, ACTOR);
       const auditBefore = await scoped().count(TenantAuditEvent, {});
-      const receipt = await service().seedDemo(receiptOf(order.id, { line: 1, quantity: "100", unit: "kg" }), at);
-      expect(receipt).toMatchObject({ id: "00000001", businessDate: "2025-06-15", createdAt: at, lines: [{ quantity: "100.000000" }], warnings: [] });
+      expect(await service().seedDemo(receiptOf(order.id, { line: 1, quantity: "100", unit: "kg" }), at)).toEqual({ id: "00000001" });
+      expect(await service().get("00000001")).toMatchObject({ businessDate: "2025-06-15", createdAt: at, lines: [{ quantity: "100.000000" }] });
       const [movement] = await scoped().find(StockMovement, { type: GOODS_RECEIPT_MOVEMENT });
       expect(movement).toMatchObject({ businessDate: "2025-06-15", channel: "seed", actorUsername: "Demo seed", quantity: "100.000000", balanceAfter: "100.000000" });
       expect(movement.occurredAt).toEqual(at);

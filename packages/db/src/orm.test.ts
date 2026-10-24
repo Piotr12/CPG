@@ -10,7 +10,7 @@ import {
   TRANSFER_POSTING_IMMUTABLE,
 } from "./entities";
 import { migrations } from "./migrations";
-import { getMigrationStatus, initOrm, migrate } from "./orm";
+import { getMigrationStatus, initOrm, migrate, pingDatabase } from "./orm";
 
 const tempDatabase = () => path.join(mkdtempSync(path.join(tmpdir(), "cpg-db-")), "nested", "cpg.sqlite");
 
@@ -33,6 +33,26 @@ describe("initOrm", () => {
 
     try {
       expect(orm.config.get("debug")).toBe(true);
+    } finally {
+      await orm.close();
+    }
+  });
+});
+
+describe("pingDatabase", () => {
+  it("answers while a transaction holds the connection, which an ordinary query waits for (#185)", async () => {
+    const orm = await initOrm({ databasePath: tempDatabase() });
+    const settled = (promise: Promise<unknown>) =>
+      Promise.race([promise.then(() => "answered"), new Promise<string>((resolve) => setTimeout(() => resolve("still waiting"), 300))]);
+    const em = orm.em.fork();
+    await em.begin();
+    try {
+      expect(await settled(pingDatabase(orm))).toBe("answered");
+      // The same probe through Kysely parks on its connection mutex until the transaction ends.
+      const queued = orm.em.fork().getConnection().execute("select 1");
+      expect(await settled(queued)).toBe("still waiting");
+      await em.rollback();
+      expect(await settled(queued)).toBe("answered");
     } finally {
       await orm.close();
     }

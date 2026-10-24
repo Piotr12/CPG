@@ -68,7 +68,7 @@ describe("Test reset on the Tenants page", () => {
     await clickHydrated(admin, "[data-test-reset] button");
     await admin.waitFor("[role=alertdialog]");
     expect(await admin.text("[role=alertdialog]")).toContain("the realistic demonstration dataset");
-    expect(await admin.text("[role=alertdialog]")).toContain("takes up to a minute");
+    expect(await admin.text("[role=alertdialog]")).toContain("can take a minute or two");
     await admin.clickRole("button", "Cancel");
     expect(await state()).toEqual(before);
   });
