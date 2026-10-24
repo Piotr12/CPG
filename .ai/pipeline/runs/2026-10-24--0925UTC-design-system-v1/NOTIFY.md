@@ -58,3 +58,8 @@
 
 ## 2026-10-24T13:40:00Z — P1–P4 dispatched from f7b666d7
 - P1 `32091c4f`, P2 `44d4eae8`, P3 `9d4e6465`, P4 `e63761ed`, all claude-opus-5-5, forked from `f7b666d7` (W1–W3 merged, the lead's amendments and the login fix). Ports 3111–3114. They are merged one at a time as they settle, with the gate re-run and the scan read after each merge.
+
+## 2026-10-24T14:00:00Z — cross-scope assertions during the parallel phase
+- P1 (inbox): its root `not-found.tsx` replaces Next's default 404 text that `tests/integration/tenants.test.ts:86–87` (P4's file) asserts. Decision: P1 is authorised to change those two assertion lines only (wait for "Page not found.", assert the Go to Tenants link) and to run `tenants.test.ts` on its port; P4 told to add its own assertions elsewhere in the file.
+- P2 (inbox): the new lifecycle labels ("Close order early…" …) are asserted by two P1 page tests (`purchase-orders/[id]/page.test.tsx:97,171,174,179`, `purchase-requisitions/page.test.tsx:110`) and by P3's `stock-reversals.test.ts:72,74`. Decision: P2 is authorised to change those label strings only and to run `stock-reversals.test.ts`; P3 told to leave those two lines alone.
+- P2's shortage title is `{ one, other }` plain data (a function would be refused in a client prop, lesson 2026-10-20). `counted` (P3's `report-text.ts`) has no Polish `few` form, so P2 adds its own `{ one, few, other }` helper in its scope with the Polish 2–4 rule. The lifecycle dialog's confirm stays CrudForm's default: `destructive-solid` is for `AlertDialog` confirms only.
