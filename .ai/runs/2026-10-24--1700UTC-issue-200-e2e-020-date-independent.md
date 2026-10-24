@@ -54,6 +54,9 @@ E2E-020 in `tests/integration/test-reset-api.test.ts` picks an Open shipment fro
 - 18:28 UTC — Autofix validated (the unit file 4/4, lint 0 errors, typecheck exit 0), committed as `87aed6c6` and pushed; a fresh-context re-review runs on the new head while CI does. The shard-1 re-run on `7d94969f` was cancelled by the push (the workflow's concurrency rule); the run on the new head covers it.
 - 18:45 UTC — Re-review (fresh-context): **approve**. Finding 2 fixed, 3 declined with an acceptable reason, 1 pending on CI. Two nits: the test comment read as if its premises were asserted, so the test now also asserts that every seeded goods issue takes its shipment's lines in full (the "partition" premise stays an inference, verified by the reviewer in `demand-plan.ts` `shipmentsOf`), and the comment names what is asserted and what is inferred; this run log is finalized. Final commit below; the review and CI result are posted on PR #212.
 
+- 19:05 UTC — Re-review posted (approve), pipeline label `review`, lock swapped to `ci-monitoring`, run-complete comment posted. The `in-progress` and `ci-monitoring` guard skips had one cause: under `set -o pipefail`, `label_exists`'s `grep -q` closes the pipe early and the paginated writer's EPIPE fails the pipeline (probe: `ci-monitoring` found 1/5, `in-progress` 4/5; 5/5 without `pipefail`). Filed as #216; lesson extended. CI on the final head is reported on the PR.
+
 ## Follow-ups
 
+- #216 — `label_exists` misses defined labels under `set -o pipefail`; it skipped `in-progress` and `ci-monitoring` on PR #212, each applied directly afterwards.
 - #213 — `footer.test.ts` reads the DOM before the page settles; it failed shard 1 of this PR's CI, and two other branches' runs today. This run's evidence is posted there.
