@@ -37,7 +37,7 @@ it("gives both request-time routes a visible shared loading shell", () => {
 it("lists targets with recipe links behind request-time authentication", async () => {
   render(await resolveServerComponents(page()));
   expect(mocks.connection).toHaveBeenCalledOnce(); expect(mocks.requireUser).toHaveBeenCalledOnce(); expect(mocks.tenantScope).toHaveBeenCalledWith("test");
-  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Test · Production orders");
+  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Production orders — Test");
   expect(screen.getByRole("link", { name: "00000001" }).getAttribute("href")).toBe("/admin/test/production-orders/00000001");
   expect(within(screen.getByRole("table", { name: en.productionOrders.title })).getAllByRole("cell").map((cell) => cell.textContent)).toEqual([
     "00000001", "00000005 Cabinet", "24 each", "00000001 Warehouse", "2027-01-04", "2026-12-30", "00000002 / 3", "Open",

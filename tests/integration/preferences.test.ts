@@ -61,12 +61,12 @@ describe("language and theme", () => {
   it("starts a new account in English and light (UX-001)", async () => {
     await signInAsAdmin(browser, baseUrl, adminPassword);
 
-    expect(await documentState(browser)).toEqual({ lang: "en", isDark: false, heading: "Cave control" });
+    expect(await documentState(browser)).toEqual({ lang: "en", isDark: false, heading: "Tenants" });
   });
 
   it("switches to Polish in place (UX-002)", async () => {
     await choosePreference(browser, "pl");
-    await waitForHeading(browser, "Kontrola jaskini");
+    await waitForHeading(browser, "Środowiska");
 
     expect(await documentState(browser)).toMatchObject({ lang: "pl", isDark: false });
     expect(await browser.text(`${await openAccountMenu(browser)} form[data-action=sign-out] button`)).toBe("Wyloguj");
@@ -98,13 +98,13 @@ describe("language and theme", () => {
     // it on the client a moment after the Polish page has rendered, so wait for them, then compare.
     await browser.waitUntil(`document.documentElement.lang === "pl" && document.documentElement.classList.contains("dark")`);
 
-    expect(await documentState(browser)).toEqual({ lang: "pl", isDark: true, heading: "Kontrola jaskini" });
+    expect(await documentState(browser)).toEqual({ lang: "pl", isDark: true, heading: "Środowiska" });
   });
 
   // In one browser, so the account decides and not anything the browser kept from the last one.
   it("keeps each account's own language and theme, after signing in again too (UX-003)", async () => {
-    const admin = { lang: "pl", isDark: true, heading: "Kontrola jaskini" };
-    const bea = { lang: "en", isDark: false, heading: "Cave control" };
+    const admin = { lang: "pl", isDark: true, heading: "Środowiska" };
+    const bea = { lang: "en", isDark: false, heading: "Tenants" };
 
     for (const [username, password, expected] of [
       [BEA, BEA_PASSWORD, bea],

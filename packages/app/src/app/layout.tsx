@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Caveman Planning Good",
-  description: "MRP II. Because planning hard. Caveman try anyway.",
+  description: "A small MRP II planning tool: it turns what customers want into plans for what to buy and what to make.",
 };
 
 /**

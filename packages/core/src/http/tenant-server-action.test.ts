@@ -127,7 +127,7 @@ describe("tenantServerAction", () => {
       (await orm()).em.fork().nativeUpdate(Tenant, { code }, { readOnly });
     const readOnlyError = {
       code: "TENANT_READ_ONLY",
-      message: "This tenant is read-only, so its business data can't be changed. The administrator can make it writable on the Cave control page (/admin).",
+      message: "This tenant is read-only, so its business data can't be changed. The administrator can make it writable on the Tenants page (/admin).",
     };
     afterEach(async () => {
       await (await orm()).em.fork().nativeUpdate(Tenant, {}, { readOnly: false, generation: 1 });

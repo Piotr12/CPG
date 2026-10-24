@@ -30,7 +30,7 @@ async function TenantHome({ params }: { params: Promise<{ tenant: string }> }) {
   return (
     <div lang={locale} className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold tracking-tight">
-        {messages.admin.heading} — {tenant.name}
+        {messages.admin.tenantHeading} — {tenant.name}
       </h1>
       <Card>
         <CardHeader>

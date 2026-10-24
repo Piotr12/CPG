@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { fill } from "../fill";
 import { en } from "./en";
 import { pl } from "./pl";
 
@@ -64,6 +65,44 @@ describe("dictionaries", () => {
       "nav/import",
       "nav/roles/admin",
     ]);
+  });
+
+  it("speak plainly: no emoji and no caveman voice, the product name aside", () => {
+    const strings = (dictionary: object) =>
+      keyPaths(dictionary)
+        .filter((path) => path !== "home/title")
+        .map((path) => path.split("/").reduce<unknown>((node, key) => (node as Record<string, unknown>)[key], dictionary))
+        .filter((value): value is string => typeof value === "string");
+
+    for (const dictionary of [en, pl]) {
+      expect(strings(dictionary).filter((text) => /\p{Extended_Pictographic}|cave|jaskini/iu.test(text))).toEqual([]);
+    }
+  });
+
+  it("name the Tenants page and a tenant's Overview with the sidebar's words", () => {
+    expect([en.admin.heading, en.admin.tenantHeading]).toEqual([en.nav.tenantsPage, en.nav.overview]);
+    expect([pl.admin.heading, pl.admin.tenantHeading]).toEqual([pl.nav.tenantsPage, pl.nav.overview]);
+    expect(en.errors.TENANT_READ_ONLY).toContain("on the Tenants page.");
+    expect(pl.errors.TENANT_READ_ONLY).toContain("na stronie Środowiska.");
+  });
+
+  it("title production orders as {Concept} — {Tenant} in both languages", () => {
+    expect(fill(en.productionOrders.heading, { tenant: "Test" })).toBe("Production orders — Test");
+    expect(fill(pl.productionOrders.heading, { tenant: "Test" })).toBe("Zlecenia produkcyjne — Test");
+  });
+
+  it("word the not-found pages and the no-JavaScript notice in both languages", () => {
+    expect(en.notFound).toEqual({
+      title: "Page not found.",
+      description: "The address may be mistyped, or the record belongs to the other tenant.",
+      goToTenants: "Go to Tenants",
+      backTo: "Back to {list}",
+      backToOverview: "Back to Overview — {tenant}",
+    });
+    expect(fill(pl.notFound.backTo, { list: "Materiały" })).toBe("Wróć do listy: Materiały");
+    expect(fill(pl.notFound.backToOverview, { tenant: "Test" })).toBe("Wróć do strony Przegląd — Test");
+    expect(en.noscript).toBe("CPG needs JavaScript. Turn it on in your browser and reload this page.");
+    expect(pl.noscript).toBe("CPG wymaga JavaScriptu. Włącz go w przeglądarce i odśwież tę stronę.");
   });
 
   it("name a BOM's page in both languages", () => {
