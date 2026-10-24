@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import { openBrowser, type Browser } from "./browser";
+import { clickHydrated, openBrowser, type Browser } from "./browser";
 import { signedInAs, signIn, signInAsAdmin } from "./sign-in";
 
 const baseUrl = inject("baseUrl");
@@ -154,5 +154,58 @@ describe("the admin manages normal users", () => {
 
     await signInAsAlice(aliceB, ALICE_NEW_PASSWORD);
     expect(await pathname(aliceB)).toBe("/admin");
+  });
+});
+
+describe("sorting and searching the users list (#217)", () => {
+  let admin: Browser;
+  /** The shown usernames, in order. */
+  const usernames = () => admin.evaluate<string[]>(`[...document.querySelectorAll("main tbody tr")].map((row) => row.cells[0].innerText.trim())`);
+  /** Waits until the page's address has this query and the table under it is the new one. */
+  const atQuery = (query: string) =>
+    admin.waitUntil(`location.search === ${JSON.stringify(query)} && document.querySelector("main [aria-sort]") && !document.querySelector("main table").closest("[hidden]")`);
+
+  beforeAll(async () => {
+    admin = openBrowser();
+    await signInAsAdmin(admin, baseUrl, adminPassword);
+  });
+  afterAll(() => admin.close());
+
+  it("lists the admin first, then sorts by username both ways with a header click", async () => {
+    await admin.open(`${baseUrl}/admin/users`);
+    await admin.waitUntil(`document.querySelector("main th[aria-sort=ascending]")?.innerText.trim() === "Role"`);
+    const byRole = await usernames();
+    expect(byRole[0]).toBe("admin");
+
+    await clickHydrated(admin, "main th a[href$='sort=username&dir=asc']");
+    await atQuery("?sort=username&dir=asc");
+    const ascending = await usernames();
+    expect(ascending).toEqual([...byRole].sort());
+
+    await clickHydrated(admin, "main th a[href$='sort=username&dir=desc']");
+    await atQuery("?sort=username&dir=desc");
+    await admin.waitUntil(`document.querySelector("main th[aria-sort=descending]")?.innerText.trim() === "Username"`);
+    expect(await usernames()).toEqual([...ascending].reverse());
+  });
+
+  it("searches the username, keeping the sort, marking matches, and clears back", async () => {
+    await admin.open(`${baseUrl}/admin/users?sort=username&dir=desc`);
+    await atQuery("?sort=username&dir=desc");
+    await admin.waitUntil(`Boolean(document.querySelector("main [role=search] input[name=q]")) && Object.keys(document.querySelector("main [role=search] button")).some((key) => key.startsWith("__reactFiber"))`);
+    const all = await usernames();
+    await admin.fill("main [role=search] input[name=q]", "ADMI");
+    await admin.click("main [role=search] button[type=submit]");
+    await atQuery("?q=ADMI&sort=username&dir=desc");
+    await admin.waitFor("main [role=status]");
+
+    const found = await usernames();
+    expect(found).toEqual(all.filter((username) => username.includes("admi")));
+    expect(found).toContain("admin");
+    expect(await admin.evaluate<string[]>(`[...document.querySelectorAll("main tbody mark")].map((mark) => mark.textContent)`)).toEqual(found.map(() => "admi"));
+
+    await clickHydrated(admin, "main [role=status] a");
+    await atQuery("?sort=username&dir=desc");
+    await admin.waitUntil(`!document.querySelector("main [role=status]")`);
+    expect(await usernames()).toEqual(all);
   });
 });

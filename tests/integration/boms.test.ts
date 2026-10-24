@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import { openBrowser, type Browser } from "./browser";
+import { chooseFromList, clickHydrated, openBrowser, type Browser } from "./browser";
 import { signIn, signInAsAdmin } from "./sign-in";
 import { createUser } from "./users";
 
@@ -21,6 +21,11 @@ const closed = `!document.querySelector("[role=dialog]")`;
 const RECIPE = "section[aria-labelledby=recipe-heading] table";
 /** A dialog field by its form name; line fields are named `components.N.<field>`. */
 const field = (name: string) => `[role=dialog] [name='${name}']`;
+/** A dialog's material picker by the form name of the value it holds (#217). */
+const picker = (name: string) => `[role=dialog] :has(> input[name='${name}']) > input[role=combobox]`;
+/** The open picker list's material IDs. */
+const OFFERED = `[...document.querySelectorAll("[role=dialog] [role=listbox]:not([hidden]) [role=option] .font-mono")].map((code) => code.textContent)`;
+const LIST_OPEN = `Boolean(document.querySelector("[role=dialog] [role=listbox]:not([hidden])"))`;
 
 /** A page's table rows as their cells' text, once its first table is shown. */
 async function rows(browser: Browser, path: string, table = "main table"): Promise<string[][]> {
@@ -51,7 +56,7 @@ async function fillRecipe(admin: Browser, priority: string, validFrom: string, l
   expect(await admin.fillDate(field("validFrom"), validFrom)).toBe(validFrom);
   for (const [index, [material, quantity]] of lines.entries()) {
     if (index > 0) await admin.clickRole("button", "+ Add component");
-    await admin.select(field(`components.${index}.material`), material);
+    await chooseFromList(admin, picker(`components.${index}.material`), material, material);
     await admin.fill(field(`components.${index}.quantity`), quantity);
   }
 }
@@ -62,7 +67,7 @@ async function createBom(admin: Browser, output: string, priority: string, valid
   await admin.waitUntil(ready(button("Create BOM")));
   await admin.clickRole("button", "Create BOM");
   await admin.waitFor("[role=dialog]");
-  await admin.select(field("output"), output);
+  await chooseFromList(admin, picker("output"), output, output);
   await fillRecipe(admin, priority, validFrom, lines);
   await admin.click("[role=dialog] button[type=submit]");
   await admin.waitUntil(`${closed} || document.querySelector("[role=dialog] [role=alert]")`);
@@ -121,12 +126,26 @@ describe("BOMs (E04-S01)", () => {
     await admin.waitUntil(ready(button("Create BOM")));
     await admin.clickRole("button", "Create BOM");
     await admin.waitFor("[role=dialog]");
-    const options = (select: string) => admin.evaluate<string[]>(`[...document.querySelectorAll(${JSON.stringify(`${field(select)} option`)})].map((o) => o.value)`);
-    expect(await options("output")).toContain(ids.cabinet);
-    expect(await options("output")).not.toContain(ids.steel);
-    expect(await options("components.0.material")).toContain(ids.steel);
-    expect(await options("components.0.material")).not.toContain(ids.cabinet);
-    await admin.clickRole("button", "Cancel");
+    /** The materials a picker offers for this file's own description prefix. */
+    const offered = async (name: string) => {
+      await admin.waitUntil(ready(`document.querySelector(${JSON.stringify(picker(name))})`));
+      await admin.fill(picker(name), "boms-ui");
+      await admin.waitUntil(LIST_OPEN);
+      return admin.evaluate<string[]>(OFFERED);
+    };
+    const outputs = await offered("output");
+    expect(outputs).toContain(ids.cabinet);
+    expect(outputs).not.toContain(ids.steel);
+    // Escape in an open list closes only the list, not the dialog (#217).
+    await admin.press("Escape");
+    await admin.waitUntil(`!${LIST_OPEN}`);
+    expect(await admin.evaluate<boolean>(closed)).toBe(false);
+    const components = await offered("components.0.material");
+    expect(components).toContain(ids.steel);
+    expect(components).not.toContain(ids.cabinet);
+    await admin.press("Escape");
+    await admin.waitUntil(`!${LIST_OPEN}`);
+    await admin.press("Escape");
     await admin.waitUntil(closed);
 
     const bom = await createBom(admin, ids.cabinet, "1", "2027-01-01", [
@@ -168,7 +187,7 @@ describe("BOMs (E04-S01)", () => {
     const c = await createBom(admin, ids.subC, "1", "2027-01-01", [[ids.steel, "1"]]);
 
     await openEdit(admin, c!);
-    await admin.select(field("components.0.material"), ids.subA);
+    await chooseFromList(admin, picker("components.0.material"), ids.subA, ids.subA);
     await admin.click("[role=dialog] button[type=submit]");
     await admin.waitFor("[role=dialog] [role=alert]");
     expect(await admin.text("[role=dialog] [role=alert]")).toBe(
@@ -213,8 +232,70 @@ describe("BOMs (E04-S01)", () => {
     await una.waitForText(USERNAME);
 
     expect((await rows(una, "/admin/test/boms")).length).toBeGreaterThan(0);
-    expect(await una.evaluate<number>(`document.querySelectorAll("main button").length`)).toBe(0);
+    // Only the list's own Search button: nothing that changes data.
+    expect(await una.evaluate<string[]>(`[...document.querySelectorAll("main button")].map((b) => b.textContent.trim())`)).toEqual(["Search"]);
     expect((await rows(una, "/admin/test/boms/00000001", RECIPE)).length).toBe(2);
     expect(await una.evaluate<number>(`document.querySelectorAll("main button").length`)).toBe(0);
+  });
+});
+
+describe("sorting and searching the BOMs list (#217)", () => {
+  let admin: Browser;
+  /** The shown rows' cells, in order. */
+  const shown = () => admin.evaluate<string[][]>(`[...document.querySelectorAll("main tbody tr")].map((row) => [...row.cells].map((cell) => cell.innerText.trim().replace(/\\s+/g, " ")))`);
+  /** Waits until the page's address has this query and the table under it is the new one. */
+  const atQuery = (query: string) =>
+    admin.waitUntil(`location.search === ${JSON.stringify(query)} && document.querySelector("main [aria-sort]") && !document.querySelector("main table").closest("[hidden]")`);
+
+  beforeAll(async () => {
+    admin = openBrowser();
+    await signInAsAdmin(admin, baseUrl, adminPassword);
+  });
+  afterAll(() => admin.close());
+
+  it("sorts the whole list by priority, then the other way, by BOM ID within equal priorities", async () => {
+    await admin.open(`${baseUrl}/admin/test/boms`);
+    await admin.waitUntil(`document.querySelector("main th[aria-sort=ascending]")?.innerText.trim() === "Output"`);
+
+    await clickHydrated(admin, "main th a[href$='sort=priority&dir=asc']");
+    await atQuery("?sort=priority&dir=asc");
+    const ascending = (await shown()).map(([id, , priority]) => [Number(priority), id] as const);
+    expect(ascending.length).toBeGreaterThanOrEqual(16);
+    expect(ascending).toEqual([...ascending].sort(([a, x], [b, y]) => a - b || x.localeCompare(y)));
+
+    await clickHydrated(admin, "main th a[href$='sort=priority&dir=desc']");
+    await atQuery("?sort=priority&dir=desc");
+    await admin.waitUntil(`document.querySelector("main th[aria-sort=descending]")?.innerText.trim() === "Priority"`);
+    const descending = (await shown()).map(([id, , priority]) => [Number(priority), id] as const);
+    expect(descending).toEqual([...ascending].sort(([a, x], [b, y]) => b - a || x.localeCompare(y)));
+  });
+
+  it("searches the BOM ID and the output's ID and description, keeping the sort, marking matches, and clears back", async () => {
+    await admin.open(`${baseUrl}/admin/test/boms?sort=priority&dir=desc`);
+    await admin.waitUntil(`Boolean(document.querySelector("main [role=search] input[name=q]")) && Object.keys(document.querySelector("main [role=search] button")).some((key) => key.startsWith("__reactFiber"))`);
+    await admin.fill("main [role=search] input[name=q]", "key cabinet");
+    await admin.click("main [role=search] button[type=submit]");
+    await atQuery("?q=key+cabinet&sort=priority&dir=desc");
+    await admin.waitFor("main [role=status]");
+
+    const found = await shown();
+    expect(found.map(([id, output, priority]) => [id, output, priority])).toEqual([
+      ["00000016", "00000026 Key cabinet, wall-mounted", "3"],
+      ["00000015", "00000026 Key cabinet, wall-mounted", "2"],
+      ["00000014", "00000026 Key cabinet, wall-mounted", "1"],
+    ]);
+    expect(await admin.text("main [role=status]")).toBe("3 results for “key cabinet” · Clear search");
+    expect(await admin.evaluate<string[]>(`[...document.querySelectorAll("main tbody tr:first-child mark")].map((mark) => mark.textContent)`)).toEqual(["Key", "cabinet"]);
+
+    await clickHydrated(admin, "main [role=status] a");
+    await atQuery("?sort=priority&dir=desc");
+    await admin.waitUntil(`document.querySelector("main [role=search] input[name=q]").value === "" && !document.querySelector("main [role=status]")`);
+    expect((await shown()).length).toBeGreaterThanOrEqual(16);
+  });
+
+  it("says when a search finds nothing, with the way back", async () => {
+    await admin.open(`${baseUrl}/admin/test/boms?q=no+such+bom`);
+    await admin.waitForText("Nothing matches “no such bom”.");
+    expect(await admin.text("main [role=status]")).toBe("0 results for “no such bom” · Clear search");
   });
 });

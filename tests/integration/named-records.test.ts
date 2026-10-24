@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import { openBrowser, type Browser } from "./browser";
+import { clickHydrated, openBrowser, type Browser } from "./browser";
 import { signIn, signInAsAdmin } from "./sign-in";
 
 const baseUrl = inject("baseUrl");
@@ -223,7 +223,67 @@ describe("locations, customers and suppliers (E03-S02)", () => {
 
     for (const kind of ["locations", "customers", "suppliers"]) {
       expect((await listRows(una, "test", kind)).length).toBeGreaterThan(0);
-      expect(await una.evaluate<number>(`document.querySelectorAll("main button").length`)).toBe(0);
+      // Only the list's own Search button: nothing that changes data.
+      expect(await una.evaluate<string[]>(`[...document.querySelectorAll("main button")].map((b) => b.textContent.trim())`)).toEqual(["Search"]);
     }
+  });
+});
+
+describe.each([
+  ["locations", "Search locations"],
+  ["customers", "Search customers"],
+  ["suppliers", "Search suppliers"],
+])("sorting and searching the %s list (#217)", (kind, searchLabel) => {
+  let admin: Browser;
+  /** The shown rows as `[ID, name]`, in order. */
+  const shown = () => admin.evaluate<string[][]>(`[...document.querySelectorAll("main tbody tr")].map((row) => [...row.cells].slice(0, 2).map((cell) => cell.innerText.trim()))`);
+  /** Waits until the page's address has this query and the table under it is the new one. */
+  const atQuery = (query: string) =>
+    admin.waitUntil(`location.search === ${JSON.stringify(query)} && document.querySelector("main [aria-sort]") && !document.querySelector("main table").closest("[hidden]")`);
+
+  beforeAll(async () => {
+    admin = openBrowser();
+    await signInAsAdmin(admin, baseUrl, adminPassword);
+  });
+  afterAll(() => admin.close());
+
+  it("sorts by ID the other way, then by name, with a header click", async () => {
+    await admin.open(`${baseUrl}/admin/test/${kind}`);
+    await admin.waitUntil(`document.querySelector("main th[aria-sort=ascending]")?.innerText.trim() === "ID"`);
+    const byId = await shown();
+
+    await clickHydrated(admin, "main th a[href$='sort=id&dir=desc']");
+    await atQuery("?sort=id&dir=desc");
+    expect(await shown()).toEqual([...byId].reverse());
+
+    await clickHydrated(admin, "main th a[href$='sort=name&dir=asc']");
+    await atQuery("?sort=name&dir=asc");
+    await admin.waitUntil(`document.querySelector("main th[aria-sort=ascending]")?.innerText.trim() === "Name"`);
+    const byName = await shown();
+    expect(byName).toEqual([...byId].sort(([a, x], [b, y]) => (x < y ? -1 : x > y ? 1 : a.localeCompare(b))));
+  });
+
+  it("searches the ID and name, keeping the sort, marking matches, and clears back", async () => {
+    await admin.open(`${baseUrl}/admin/test/${kind}?sort=name&dir=desc`);
+    await atQuery("?sort=name&dir=desc");
+    await admin.waitUntil(`Boolean(document.querySelector("main [role=search] input[name=q]")) && Object.keys(document.querySelector("main [role=search] button")).some((key) => key.startsWith("__reactFiber"))`);
+    expect(await admin.text("main [role=search] label")).toBe(searchLabel);
+    const all = await shown();
+    // A word of the last name, so the search has something to find and, usually, something to leave out.
+    const word = all.at(-1)![1].split(/[\s,]+/)[0];
+    await admin.fill("main [role=search] input[name=q]", word);
+    await admin.click("main [role=search] button[type=submit]");
+    await atQuery(`?q=${encodeURIComponent(word)}&sort=name&dir=desc`);
+    await admin.waitFor("main [role=status]");
+
+    const found = await shown();
+    expect(found).toEqual(all.filter(([id, name]) => `${id} ${name}`.toLowerCase().includes(word.toLowerCase())));
+    expect(await admin.text("main [role=status]")).toBe(`${found.length} result${found.length === 1 ? "" : "s"} for “${word}” · Clear search`);
+    expect(await admin.evaluate<number>(`document.querySelectorAll("main tbody mark").length`)).toBeGreaterThanOrEqual(found.length);
+
+    await clickHydrated(admin, "main [role=status] a");
+    await atQuery("?sort=name&dir=desc");
+    await admin.waitUntil(`document.querySelector("main [role=search] input[name=q]").value === "" && !document.querySelector("main [role=status]")`);
+    expect(await shown()).toEqual(all);
   });
 });
