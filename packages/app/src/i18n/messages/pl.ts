@@ -147,7 +147,7 @@ export const pl: Messages = {
       title: "Utworzono token „{name}”",
       label: "Sekret",
       warningTitle: "Skopiuj ten token teraz",
-      warning: "Skopiuj go teraz. Nie zobaczysz go ponownie.",
+      warning: "Nie zobaczysz go ponownie.",
       usage: "Wysyłaj go jako Authorization: Bearer <sekret>.",
       copy: "Kopiuj",
       copied: "Skopiowano",

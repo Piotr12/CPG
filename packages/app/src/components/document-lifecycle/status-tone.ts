@@ -1,6 +1,24 @@
-import type { TargetStatus } from "@cpg/core";
+import type { ImportRowOutcome, TargetStatus } from "@cpg/core";
 import type { StatusTone } from "@cpg/ui/backend/feedback/status-badge";
-import { Circle, CircleCheck, CircleDot, CircleMinus, CircleOff, CircleX, Clock, History, Lock, Pencil, Truck, Undo2, type LucideIcon } from "lucide-react";
+import {
+  Circle,
+  CircleCheck,
+  CircleDot,
+  CircleMinus,
+  CircleOff,
+  CirclePlus,
+  CircleX,
+  Clock,
+  Equal,
+  History,
+  Lock,
+  Pencil,
+  PenLine,
+  TriangleAlert,
+  Truck,
+  Undo2,
+  type LucideIcon,
+} from "lucide-react";
 
 /** How a status renders in a `StatusBadge`: colour marks attention and completion, resting states stay quiet (D4). */
 export interface StatusToneSpec {
@@ -67,3 +85,20 @@ export const reversalStatusTone = (status: ReversalStatus): StatusToneSpec => RE
 export const targetStatusTone = (status: TargetStatus): StatusToneSpec => TARGET_STATUS_TONES[status];
 export const masterDataStatusTone = (active: boolean): StatusToneSpec => MASTER_DATA_STATUS_TONES[active ? "active" : "inactive"];
 export const tenantAccessTone = (readOnly: boolean): StatusToneSpec => TENANT_ACCESS_TONES[readOnly ? "readOnly" : "writable"];
+
+/**
+ * An import row's outcome. A dry run's outcomes are what a commit would do, so they stay quiet and differ
+ * by icon; a committed row is done, so it reads success (the token table's "import OK").
+ */
+export const IMPORT_PREVIEW_TONES = {
+  create: { tone: "neutral", icon: CirclePlus },
+  update: { tone: "neutral", icon: PenLine },
+  unchanged: { tone: "neutral", icon: Equal },
+} as const satisfies Record<ImportRowOutcome["action"], StatusToneSpec>;
+
+export const IMPORT_RESULT_TONE = { tone: "success", icon: CircleCheck } as const satisfies StatusToneSpec;
+
+/** A production order whose completions wasted material: a mark that it needs a look, so warning, never danger. */
+export const WASTE_TONE = { tone: "warning", icon: TriangleAlert } as const satisfies StatusToneSpec;
+
+export const importPreviewTone = (action: ImportRowOutcome["action"]): StatusToneSpec => IMPORT_PREVIEW_TONES[action];

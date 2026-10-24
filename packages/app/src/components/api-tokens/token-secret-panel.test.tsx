@@ -30,7 +30,7 @@ describe("TokenSecretPanel", () => {
     expect(secret.readOnly).toBe(true);
     const warning = screen.getByRole("note");
     expect(warning.dataset.tone).toBe("warning");
-    expect(warning.textContent).toBe("Copy this token nowCopy it now. You won't see it again.");
+    expect(warning.textContent).toBe("Copy this token nowYou won't see it again.");
     expect(within(warning).getByText("Copy this token now").className).toContain("font-medium");
     expect(screen.getByText("Send it as Authorization: Bearer <secret>.")).toBeTruthy();
   });

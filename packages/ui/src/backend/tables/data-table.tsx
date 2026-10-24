@@ -47,7 +47,7 @@ export interface DataTableProps<Row> {
 
 /** Complete class strings (Tailwind only generates classes it finds whole in the source). */
 const KIND_CLASSES: Record<DataTableColumnKind, string> = {
-  id: "min-w-28 font-mono whitespace-nowrap",
+  id: "min-w-28 whitespace-nowrap",
   text: "min-w-32",
   // Wraps at words; a single unbroken token widens the column rather than breaking per character.
   longText: "min-w-48 whitespace-normal wrap-break-word",
@@ -55,6 +55,11 @@ const KIND_CLASSES: Record<DataTableColumnKind, string> = {
   date: "min-w-28 whitespace-nowrap",
   status: "min-w-32",
   actions: "w-0 text-right",
+};
+
+/** Classes for a kind's body cells only: a business ID is monospaced, its column header is not. */
+const CELL_KIND_CLASSES: Partial<Record<DataTableColumnKind, string>> = {
+  id: "font-mono",
 };
 
 const PRIORITY_CLASSES: Record<DataTableColumnPriority, string | undefined> = {
@@ -138,6 +143,7 @@ export function DataTable<Row>({
                     title={column.truncate?.(row)}
                     className={cn(
                       shared[index],
+                      column.kind && CELL_KIND_CLASSES[column.kind],
                       index === 0 && STICKY_CELL,
                       index === 0 && rowTone && cn("border-l-2 border-l-transparent", tone && ROW_TONE_EDGES[tone]),
                       column.className,

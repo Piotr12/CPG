@@ -1,13 +1,17 @@
-import { Circle, CircleCheck, CircleDot, CircleMinus, CircleOff, CircleX, Clock, History, Lock, Pencil, Truck, Undo2 } from "lucide-react";
+import { Circle, CircleCheck, CircleDot, CircleMinus, CircleOff, CirclePlus, CircleX, Clock, Equal, History, Lock, Pencil, PenLine, TriangleAlert, Truck, Undo2 } from "lucide-react";
 import { describe, expect, it } from "vitest";
 import {
   DOCUMENT_STATUS_TONES,
+  IMPORT_PREVIEW_TONES,
+  IMPORT_RESULT_TONE,
   MASTER_DATA_STATUS_TONES,
   REVERSAL_STATUS_TONES,
   TARGET_STATUS_TONES,
   TENANT_ACCESS_TONES,
   TRANSFER_STATUS_TONES,
+  WASTE_TONE,
   documentStatusTone,
+  importPreviewTone,
   masterDataStatusTone,
   reversalStatusTone,
   targetStatusTone,
@@ -59,10 +63,23 @@ describe("status tone map", () => {
     expect(tenantAccessTone(false)).toEqual({ tone: "neutral", icon: Pencil });
   });
 
+  it("keeps a dry run's import outcomes quiet, told apart by icon, and marks a committed row as done", () => {
+    expect(Object.keys(IMPORT_PREVIEW_TONES)).toEqual(["create", "update", "unchanged"]);
+    expect(importPreviewTone("create")).toEqual({ tone: "neutral", icon: CirclePlus });
+    expect(importPreviewTone("update")).toEqual({ tone: "neutral", icon: PenLine });
+    expect(importPreviewTone("unchanged")).toEqual({ tone: "neutral", icon: Equal });
+    expect(IMPORT_RESULT_TONE).toEqual({ tone: "success", icon: CircleCheck });
+  });
+
+  it("marks wasted completions as a warning, never danger", () => {
+    expect(WASTE_TONE).toEqual({ tone: "warning", icon: TriangleAlert });
+  });
+
   it("uses no danger and dashes only inactive", () => {
-    const all = [DOCUMENT_STATUS_TONES, TRANSFER_STATUS_TONES, REVERSAL_STATUS_TONES, TARGET_STATUS_TONES, MASTER_DATA_STATUS_TONES, TENANT_ACCESS_TONES].flatMap(
+    const all = [DOCUMENT_STATUS_TONES, TRANSFER_STATUS_TONES, REVERSAL_STATUS_TONES, TARGET_STATUS_TONES, MASTER_DATA_STATUS_TONES, TENANT_ACCESS_TONES, IMPORT_PREVIEW_TONES].flatMap(
       (map): StatusToneSpec[] => Object.values(map),
     );
+    all.push(IMPORT_RESULT_TONE, WASTE_TONE);
     expect(all.filter(({ tone }) => tone === "danger")).toEqual([]);
     expect(all.filter((spec) => "dashed" in spec)).toEqual([MASTER_DATA_STATUS_TONES.inactive]);
   });

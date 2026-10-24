@@ -125,6 +125,7 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 ## Integration tests and agent-browser
 
+- **2026-10-24 — A `StatusBadge`'s `innerText` breaks the line before its label** — the icon is a flex item, so a row's `innerText` reads `"\nActive"`; match row text with `\s*` or read the label span. A second integration pass on a server already used by a first fails on its fixed usernames and records: copy the standalone build and give it a fresh `DATA_DIR` for every pass (P3 of the design system run).
 - **2026-10-22 — Integration files share one app, one admin and one database** — files run one at a time (`fileParallelism: false`). A file:
   - restores the admin's preferences in `afterAll`;
   - revokes only the tokens it created;

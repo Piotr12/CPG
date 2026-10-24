@@ -1,4 +1,4 @@
-import { CircleAlert, TriangleAlert } from "lucide-react";
+import { CircleAlert } from "lucide-react";
 import Link from "next/link";
 import type { Locale, MaterialSummary, NamedRecordView, VarianceReportRow, VarianceReportView } from "@cpg/core";
 import { ORDER_STATES, type VarianceReportQuery } from "@cpg/core/validators/reports/variance-report.schema";
@@ -12,7 +12,7 @@ import { Input } from "@cpg/ui/components/input";
 import { Label } from "@cpg/ui/components/label";
 import { NativeSelect, NativeSelectOption } from "@cpg/ui/components/native-select";
 import type { Messages } from "../../i18n/messages/en";
-import { documentStatusTone } from "../document-lifecycle/status-tone";
+import { documentStatusTone, WASTE_TONE } from "../document-lifecycle/status-tone";
 import { fill, shownQuantity } from "../forms/form-labels";
 import { PageLinks } from "../layout/page-links";
 import { shownVariance } from "../production-orders/completion-history";
@@ -60,12 +60,7 @@ export function VarianceReportScreen({ tenant, report, selected, rangeError, mat
         <dt className="text-muted-foreground">{t.figures.wasteCompletions}</dt>
         <dd className="flex items-center justify-end gap-2 tabular-nums">
           {row.wasteCompletions}
-          {/* Not a state in the tone map: a mark that the order needs a look, so warning, never danger. */}
-          {row.wasteCompletions > 0 && (
-            <StatusBadge tone="warning" icon={TriangleAlert}>
-              {t.waste}
-            </StatusBadge>
-          )}
+          {row.wasteCompletions > 0 && <StatusBadge {...WASTE_TONE}>{t.waste}</StatusBadge>}
         </dd>
       </dl>
       {/* Its own line, not a value of Waste postings. */}

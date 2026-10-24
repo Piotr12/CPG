@@ -19,7 +19,7 @@ import { errorMessage } from "../../i18n/error-message";
 import { fill } from "../forms/form-labels";
 import { fileToBase64 } from "./base64";
 import type { ImportLabels } from "./labels";
-import { IMPORT_RESULT_TONE, importPreviewTone } from "./outcome-tone";
+import { IMPORT_RESULT_TONE, importPreviewTone } from "../document-lifecycle/status-tone";
 import { changeText, counted, createdText, problemText } from "./report-text";
 
 /** Which import the screen runs: the admin's master data and BOMs, or physical stock (both roles). */

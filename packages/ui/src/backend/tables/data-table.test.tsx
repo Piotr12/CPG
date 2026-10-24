@@ -99,7 +99,7 @@ describe("DataTable", () => {
   });
 
   it.each([
-    ["id", ["min-w-28", "font-mono", "whitespace-nowrap"]],
+    ["id", ["min-w-28", "whitespace-nowrap"]],
     ["text", ["min-w-32"]],
     ["longText", ["min-w-48", "whitespace-normal", "wrap-break-word"]],
     ["quantity", ["min-w-24", "text-right", "tabular-nums", "whitespace-nowrap"]],
@@ -114,6 +114,9 @@ describe("DataTable", () => {
     const head = screen.getAllByRole("columnheader")[1];
     const cell = within(screen.getAllByRole("row")[1]).getAllByRole("cell")[1];
     for (const element of [head, cell]) expect([...element.classList]).toEqual(expect.arrayContaining([...classes]));
+    // A business ID is monospaced in its cells; the column's header is ordinary text.
+    expect(cell.classList.contains("font-mono")).toBe(kind === "id");
+    expect(head.classList).not.toContain("font-mono");
   });
 
   it("hides priority 2 columns below md and priority 3 below lg, header and cells alike", () => {

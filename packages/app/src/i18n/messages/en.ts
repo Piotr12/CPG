@@ -154,7 +154,7 @@ export const en = {
       title: "Token “{name}” created",
       label: "Secret",
       warningTitle: "Copy this token now",
-      warning: "Copy it now. You won't see it again.",
+      warning: "You won't see it again.",
       usage: "Send it as Authorization: Bearer <secret>.",
       copy: "Copy",
       copied: "Copied",
