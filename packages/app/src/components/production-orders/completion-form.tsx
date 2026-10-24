@@ -7,6 +7,7 @@ import type { ApiResult, FieldErrors } from "@cpg/ui/backend/api/result";
 import { Callout } from "@cpg/ui/backend/feedback/callout";
 import { ErrorMessage } from "@cpg/ui/backend/feedback/error-message";
 import { StatusBadge } from "@cpg/ui/backend/feedback/status-badge";
+import { Autocomplete, type AutocompleteOption } from "@cpg/ui/backend/forms/autocomplete";
 import { toFieldErrors } from "@cpg/ui/backend/forms/crud-form";
 import { Button } from "@cpg/ui/components/button";
 import { Checkbox } from "@cpg/ui/components/checkbox";
@@ -15,11 +16,10 @@ import { NativeSelect, NativeSelectOption } from "@cpg/ui/components/native-sele
 import { masterDataStatusTone } from "../document-lifecycle/status-tone";
 import { fill, shownQuantity } from "../forms/form-labels";
 import { fieldControls } from "../purchasing/field-controls";
-import type { MaterialChoice } from "../purchase-requisitions/requisition-form";
 import type { ProductionLabels } from "./labels";
 
-/** A material the form offers as an added input: an active raw or intermediate one outside the recipe, with its units. */
-export type CompletionInputChoice = MaterialChoice;
+/** A material the form offers as an added input: an active raw or intermediate one outside the recipe, with its units (#217). */
+export type CompletionInputChoice = AutocompleteOption & { units: string[] };
 
 /** What the form sends: the output it was opened for, every material used and, past the target, the acknowledgement. */
 export interface CompletionValues {
@@ -42,6 +42,8 @@ export interface CompletionFormProps {
   onSuccess: (result: CompletionResult) => void;
   onBack: () => void;
   onCancel: () => void;
+  /** The reader's language, for the material picker's counts. */
+  locale?: string;
 }
 
 /** What the overproduction warning says: the preview's figures, or the server's when another completion got there first. */
@@ -61,7 +63,7 @@ interface AddedRow {
  * check with the shared schema, field errors under their row (`components.N.<field>`, N the row's place
  * in what was sent), other errors above the buttons, a pending state, `Cmd/Ctrl+Enter` and `Escape`.
  */
-export function CompletionForm({ labels, preview, unit, inputs, formatError, formatFieldError, action, onSuccess, onBack, onCancel }: CompletionFormProps) {
+export function CompletionForm({ labels, preview, unit, inputs, formatError, formatFieldError, action, onSuccess, onBack, onCancel, locale }: CompletionFormProps) {
   const t = labels.completion;
   const id = useId();
   const [pinned, setPinned] = useState(() => preview.components.map(({ material, expected, baseUnit }) => ({ material, quantity: shownQuantity(expected), unit: baseUnit })));
@@ -135,6 +137,8 @@ export function CompletionForm({ labels, preview, unit, inputs, formatError, for
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLFormElement>) {
+    // A control that handled the key itself (the material picker closing its list) keeps it.
+    if (event.defaultPrevented) return;
     if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
       event.currentTarget.requestSubmit();
@@ -204,20 +208,18 @@ export function CompletionForm({ labels, preview, unit, inputs, formatError, for
           <fieldset key={row.key} className="grid grid-cols-2 gap-2 rounded-md border border-dashed p-3 sm:grid-cols-[2fr_1fr_1fr_auto] sm:items-start" data-added={position + 1}>
             <legend className="sr-only">{label}</legend>
             <div className="col-span-2 flex flex-col gap-1 sm:col-span-1">
-              <NativeSelect
-                className="w-full"
+              <Autocomplete
+                id={material.props.id}
                 aria-label={`${t.material}, ${label}`}
+                aria-invalid={material.props["aria-invalid"]}
+                aria-describedby={material.props["aria-describedby"]}
+                options={inputs}
                 value={row.material}
-                onChange={(event) => setAddedRow(row.key, { material: event.target.value, unit: unitsOf(event.target.value)[0] ?? "" })}
-                {...material.props}
-              >
-                <NativeSelectOption value="">{t.choose}</NativeSelectOption>
-                {inputs.map((choice) => (
-                  <NativeSelectOption key={choice.value} value={choice.value}>
-                    {choice.label}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
+                onChange={(value) => setAddedRow(row.key, { material: value, unit: unitsOf(value)[0] ?? "" })}
+                labels={labels.picker.labels}
+                placeholder={labels.picker.placeholder}
+                locale={locale}
+              />
               {material.node}
             </div>
             <div className="flex flex-col gap-1">

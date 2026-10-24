@@ -9,11 +9,19 @@ vi.mock("../../app/admin/[tenant]/forecasts/actions", () => mocks);
 
 const labels = forecastsLabels(en);
 const fill = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
+/** Types into the material autocomplete and picks the option that matches. */
+const choose = (label: string, typed: string, option: RegExp) => {
+  fill(label, typed);
+  fireEvent.mouseDown(screen.getByRole("option", { name: option }));
+};
 const dialog = () => (
   <AddForecastDialog
     context={{ tenant: "test", generation: 2 }}
     labels={labels}
-    materials={[{ value: "00000005", label: "00000005 — Cabinet, red (each)" }]}
+    materials={[
+      { value: "00000005", code: "00000005", name: "Cabinet, red", detail: "each" },
+      { value: "00000006", code: "00000006", name: "Desk", detail: "each" },
+    ]}
     locations={[{ value: "00000001", label: "00000001 — Main plant" }]}
   />
 );
@@ -26,7 +34,9 @@ describe("AddForecastDialog", () => {
     render(dialog());
 
     fireEvent.click(screen.getByRole("button", { name: "Add forecast" }));
-    fill("Material", "00000005");
+    expect(screen.getByRole("combobox", { name: "Material" }).getAttribute("placeholder")).toBe(en.lists.materialPicker.placeholder);
+    choose("Material", "cabinet", /Cabinet, red/);
+    expect((screen.getByRole("combobox", { name: "Material" }) as HTMLInputElement).value).toBe("00000005 — Cabinet, red");
     fill("Location", "00000001");
     expect((screen.getByLabelText("Day") as HTMLInputElement).type).toBe("date");
     expect(screen.queryByLabelText(/customer/i)).toBeNull();
@@ -50,14 +60,34 @@ describe("AddForecastDialog", () => {
     render(dialog());
 
     fireEvent.click(screen.getByRole("button", { name: "Add forecast" }));
-    fill("Material", "00000005");
+    choose("Material", "desk", /Desk/);
+    choose("Material", "00000005", /Cabinet, red/);
     fill("Location", "00000001");
     fill("Day", "2027-01-01");
     fill("Quantity", "20");
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Add" })));
 
     expect(screen.getByText("This material already has a forecast at that location on that day.")).toBeTruthy();
+    expect(mocks.addForecast).toHaveBeenCalledWith("test", 2, expect.objectContaining({ material: "00000005" }));
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("refuses typed text that is no material, never sending it (#217)", async () => {
+    render(dialog());
+
+    fireEvent.click(screen.getByRole("button", { name: "Add forecast" }));
+    const material = screen.getByRole("combobox", { name: "Material" });
+    fill("Material", "chair");
+    expect(screen.getByRole("listbox").textContent).toContain("No material matches “chair”.");
+    fireEvent.blur(material);
+    expect(screen.getByText(en.lists.materialPicker.refused)).toBeTruthy();
+    fill("Location", "00000001");
+    fill("Day", "2027-01-01");
+    fill("Quantity", "20");
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Add" })));
+
+    expect(mocks.addForecast).not.toHaveBeenCalled();
+    expect(screen.getByText(en.forecasts.fieldErrors.material)).toBeTruthy();
   });
 });

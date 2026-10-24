@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import type { CompletionPreview, CompletionResult, CompletionView, ProductionOrderDetail } from "@cpg/core";
 import { callApi, json } from "./api";
-import { openBrowser, type Browser } from "./browser";
+import { chooseFromList, openBrowser, type Browser } from "./browser";
 import { signIn, signInAsAdmin, signedInAndHydrated } from "./sign-in";
 import { createToken, openTokens } from "./tokens";
 
@@ -149,8 +149,7 @@ describe("production completions in the UI and API", () => {
     expect(await user.evaluate<string[]>(`[...document.querySelectorAll('${dialog} input[name$=".quantity"]')].map((input) => input.value)`)).toEqual(["2", "8"]);
     await user.fill(`${dialog} [name="components.0.quantity"]`, "1.5");
     await user.clickRole("button", "Add input");
-    await user.waitFor(`${dialog} [name="components.2.material"]`);
-    await user.select(`${dialog} [name="components.2.material"]`, milk);
+    await chooseFromList(user, `${dialog} [role=combobox][id$="-components.2.material"]`, milk, milk);
     await user.fill(`${dialog} [name="components.2.quantity"]`, "0.5");
     await user.click(`${dialog} button[type=submit]`);
     await user.waitUntil('![...document.querySelectorAll("[role=dialog], [data-slot=dialog-overlay]")].some((el) => el.getClientRects().length > 0)');

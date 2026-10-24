@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import type { AuditEntryView, CustomerOrderView } from "@cpg/core";
 import { callApi, json } from "./api";
-import { clickHydrated, openBrowser, type Browser } from "./browser";
+import { chooseFromList, clickHydrated, openBrowser, type Browser } from "./browser";
 import { signInAs, signInAsAdmin } from "./sign-in";
 import { createToken, openTokens } from "./tokens";
 
@@ -12,6 +12,8 @@ const USER = "orders-una";
 const PASSWORD = "orders una first password";
 const ROOT = "/api/tenants/prod/customer-orders";
 const field = (name: string) => `[role=dialog] [name='${name}']`;
+/** A line's material picker (#217), which has no form name of its own. */
+const picker = (line: number) => `[role=dialog] [role=combobox][id$='-lines.${line}.material']`;
 const edit = (order: CustomerOrderView) => ({ version: order.version, customer: order.customer, location: order.location,
   lines: order.lines.map(({ id, material, enteredQuantity, enteredUnit, requiredDate }) => ({ id, material, quantity: enteredQuantity, unit: enteredUnit, requiredDate })) });
 
@@ -29,7 +31,7 @@ describe("customer orders through the UI and API", () => {
     await user.open(`${baseUrl}/admin/prod/customer-orders`);
     await clickHydrated(user, "main button"); await user.waitFor("[role=dialog]");
     await user.select(field("customer"), customer.id); await user.select(field("location"), location.id);
-    await user.select(field("lines.0.material"), material); await user.fill(field("lines.0.quantity"), "60");
+    await chooseFromList(user, picker(0), "orders cabinet", material); await user.fill(field("lines.0.quantity"), "60");
     expect(await user.fillDate(field("lines.0.requiredDate"), "2027-01-04")).toBe("2027-01-04");
   };
   beforeAll(async () => {
@@ -57,7 +59,7 @@ describe("customer orders through the UI and API", () => {
     const beforeStock = await stock();
     expect(beforeStock).toMatchObject({ quantity: "0.000000", movements: [] });
     await openCreate(); await user.clickRole("button", "Add line");
-    await user.select(field("lines.1.material"), steel); await user.fill(field("lines.1.quantity"), "2");
+    await chooseFromList(user, picker(1), steel, steel); await user.fill(field("lines.1.quantity"), "2");
     expect(await user.fillDate(field("lines.1.requiredDate"), "2027-01-08")).toBe("2027-01-08");
     await user.click("[role=dialog] button[type=submit]"); await user.waitUntil(`!document.querySelector("[role=dialog]")`);
     const own = (await orders()).filter((order) => order.customer === customer.id); expect(own).toHaveLength(1); uiOrder = own[0];
@@ -242,8 +244,42 @@ describe("customer orders through the UI and API", () => {
     await user.waitForText("Page 2 of 2"); expect(await user.text("main")).toContain(second[0].id);
     await user.setViewport(390, 844);
     expect(await user.evaluate<number>("document.documentElement.scrollWidth")).toBe(390);
-    await clickHydrated(user, "main a[href$='page=1']"); await user.waitForText("Page 1 of 2");
+    // Page 1 keeps the list's plain address (#217).
+    await clickHydrated(user, "main nav[aria-label='Customer order pages'] a[href='/admin/prod/customer-orders']"); await user.waitForText("Page 1 of 2");
     await user.setViewport(1280, 900);
+  });
+
+  it("searches the orders by customer name across pages, sorts them by a header click, and clears back (#217)", async () => {
+    const atQuery = (query: string) =>
+      user.waitUntil(`location.search === ${JSON.stringify(query)} && document.querySelector("main [aria-sort]") && !document.querySelector("main table").closest("[hidden]")`);
+    const ids = () => user.evaluate<string[]>(`[...document.querySelectorAll("main tbody tr")].map((row) => row.cells[0].innerText.trim())`);
+    await user.open(`${baseUrl}/admin/prod/customer-orders`);
+    await user.waitUntil(`Boolean(document.querySelector("main [role=search] input[name=q]")) && Object.keys(document.querySelector("main [role=search] button")).some((key) => key.startsWith("__reactFiber"))`);
+    await user.fill("main [role=search] input[name=q]", "orders pagination");
+    await user.click("main [role=search] button[type=submit]");
+    await atQuery("?q=orders+pagination");
+    // The 101 orders of the previous test's customer, and no other.
+    expect(await user.text("main p[role=status]")).toBe("101 results for “orders pagination” · Clear search");
+    expect(await user.text("main nav[aria-label='Customer order pages']")).toContain("Page 1 of 2");
+    const customers = await user.evaluate<string[]>(`[...document.querySelectorAll("main tbody tr")].map((row) => row.cells[1].innerText)`);
+    expect(customers).toHaveLength(100);
+    for (const name of customers) expect(name).toContain("orders pagination");
+    expect(await user.evaluate<number>(`document.querySelectorAll("main tbody tr td:nth-child(2) mark").length`)).toBe(200);
+
+    await clickHydrated(user, "main th a[href$='sort=id&dir=desc']");
+    await atQuery("?q=orders+pagination&sort=id&dir=desc");
+    await user.waitUntil(`document.querySelector("main th[aria-sort=descending]")?.innerText.trim() === "Order"`);
+    const descending = await ids();
+    expect(descending).toEqual([...descending].sort().reverse());
+    await clickHydrated(user, "main nav[aria-label='Customer order pages'] a[href$='page=2']");
+    await atQuery("?q=orders+pagination&sort=id&dir=desc&page=2");
+    const [last] = await ids();
+    expect(last < descending.at(-1)!).toBe(true);
+
+    await clickHydrated(user, "main p[role=status] a");
+    await atQuery("?sort=id&dir=desc");
+    await user.waitUntil(`document.querySelector("main [role=search] input[name=q]").value === "" && !document.querySelector("main p[role=status]")`);
+    expect(await user.text("main nav[aria-label='Customer order pages']")).toContain("Page 1 of 2");
   });
 
 });

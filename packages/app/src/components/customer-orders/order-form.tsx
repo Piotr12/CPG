@@ -4,6 +4,7 @@ import { useId, useState, useTransition, type FormEvent, type KeyboardEvent } fr
 import { customerOrderCreateSchema, customerOrderUpdateSchema, ORDER_LINES_MAX, type CustomerOrderChanges } from "@cpg/core/validators/customer-orders/customer-order.schema";
 import type { ApiResult, FieldErrors } from "@cpg/ui/backend/api/result";
 import { ErrorMessage } from "@cpg/ui/backend/feedback/error-message";
+import { Autocomplete, type AutocompleteOption } from "@cpg/ui/backend/forms/autocomplete";
 import { toFieldErrors } from "@cpg/ui/backend/forms/crud-form";
 import { Button } from "@cpg/ui/components/button";
 import { Input } from "@cpg/ui/components/input";
@@ -13,7 +14,9 @@ import { errorFormatter, fill } from "../forms/form-labels";
 import { orderFieldError, type OrderLabels } from "./labels";
 
 export interface OrderChoice { value: string; label: string; active: boolean; units: string[] }
-export interface OrderChoices { customers: OrderChoice[]; locations: OrderChoice[]; materials: OrderChoice[] }
+/** A line's material, as the material picker offers it (#217), with the units it may be entered in. */
+export type OrderMaterialChoice = AutocompleteOption & { active: boolean; units: string[] };
+export interface OrderChoices { customers: OrderChoice[]; locations: OrderChoice[]; materials: OrderMaterialChoice[] }
 interface Props<T> {
   labels: OrderLabels;
   choices: OrderChoices;
@@ -22,11 +25,13 @@ interface Props<T> {
   action: (values: CustomerOrderChanges) => Promise<ApiResult<T>>;
   onSuccess: (data: T) => void;
   onCancel: () => void;
+  /** The reader's language, for the material picker's counts. */
+  locale?: string;
 }
 const EMPTY_LINE = { material: "", quantity: "", unit: "", requiredDate: "" };
 
 /** Aggregate array form, as for BOM recipes: CrudForm's string fields cannot hold editable line arrays. */
-export function OrderForm<T>({ labels: t, choices, initial, action, onSuccess, onCancel, lockedLines = [] }: Props<T>) {
+export function OrderForm<T>({ labels: t, choices, initial, action, onSuccess, onCancel, lockedLines = [], locale }: Props<T>) {
   const formId = useId();
   const [values, setValues] = useState<CustomerOrderChanges>(() => initial ?? { customer: "", location: "", lines: [EMPTY_LINE] });
   const [keys, setKeys] = useState(() => values.lines.map((_, index) => index));
@@ -52,15 +57,19 @@ export function OrderForm<T>({ labels: t, choices, initial, action, onSuccess, o
     });
   }
   function keyDown(event: KeyboardEvent<HTMLFormElement>) {
+    // A control that handled the key itself (the material picker closing its list) keeps it.
+    if (event.defaultPrevented) return;
     if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) { event.preventDefault(); event.currentTarget.requestSubmit(); }
     else if (event.key === "Escape") { event.preventDefault(); onCancel(); }
   }
-  function field(name: string, label: string, value: string, onChange: (value: string) => void, options?: { value: string; label: string }[], type = "text", locked = false) {
+  function field(name: string, label: string, value: string, onChange: (value: string) => void, options?: { value: string; label: string }[] | { picker: AutocompleteOption[] }, type = "text", locked = false) {
     const id = `${formId}-${name}`;
     const props = { id, name, value, disabled: pending || locked, "aria-invalid": errors[name] ? true as const : undefined, "aria-describedby": errors[name] ? `${id}-error` : undefined };
     return <div key={name} className="flex min-w-0 flex-col gap-1">
       <Label htmlFor={id}>{label}</Label>
-      {options ? <NativeSelect className="w-full" {...props} onChange={(event) => onChange(event.target.value)}>
+      {options && "picker" in options ? <Autocomplete id={id} value={value} onChange={onChange} options={options.picker} disabled={props.disabled}
+        aria-invalid={props["aria-invalid"]} aria-describedby={props["aria-describedby"]} labels={t.picker.labels} placeholder={t.picker.placeholder} locale={locale} />
+      : options ? <NativeSelect className="w-full" {...props} onChange={(event) => onChange(event.target.value)}>
         <NativeSelectOption value="" disabled>{t.choose}</NativeSelectOption>
         {options.map((option) => <NativeSelectOption key={option.value} value={option.value}>{option.label}</NativeSelectOption>)}
       </NativeSelect> : <Input {...props} type={type} inputMode={type === "text" ? "decimal" : undefined} onChange={(event) => onChange(event.target.value)} />}
@@ -84,7 +93,7 @@ export function OrderForm<T>({ labels: t, choices, initial, action, onSuccess, o
         {locked && <p className="mb-3 text-xs text-muted-foreground">{t.postedHint}</p>}
         <div className="grid gap-3 sm:grid-cols-2">
           {field(`lines.${index}.material`, `${t.material}, ${fill(t.line, { number })}`, line.material, (material) => setLine(index, { material, unit: choices.materials.find(({ value }) => value === material)?.units[0] ?? "" }),
-            choices.materials.filter((choice) => choice.active || choice.value === original?.material), "text", locked)}
+            { picker: choices.materials.filter((choice) => choice.active || choice.value === original?.material) }, "text", locked)}
           {field(`lines.${index}.quantity`, `${t.quantity}, ${fill(t.line, { number })}`, line.quantity, (quantity) => setLine(index, { quantity }))}
           {field(`lines.${index}.unit`, `${t.unit}, ${fill(t.line, { number })}`, line.unit, (unit) => setLine(index, { unit }), units.map((unit) => ({ value: unit, label: unit })), "text", locked)}
           {field(`lines.${index}.requiredDate`, `${t.requiredDate}, ${fill(t.line, { number })}`, line.requiredDate, (requiredDate) => setLine(index, { requiredDate }), undefined, "date", locked)}

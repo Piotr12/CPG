@@ -11,7 +11,7 @@ export const GET = apiHandler(async (request: Request, { params }: Context) => {
   await requireApiUser(request);
   const { cradle } = await tenantScope((await params).tenant);
   const { page } = parseInput(customerOrderListSchema, Object.fromEntries(new URL(request.url).searchParams));
-  return cradle.customerOrderService.list(page);
+  return cradle.customerOrderService.list({ page });
 });
 
 /** Keyed, generation-checked order entry for either role; no stock posting. */

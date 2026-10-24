@@ -51,21 +51,40 @@ describe("customer order pages", () => {
     mocks.count.mockResolvedValue(201);
     const paged = (page: string) => CustomerOrdersPage({ params: Promise.resolve({ tenant: "test" }), searchParams: Promise.resolve({ page }) });
     render(await resolveServerComponents(paged("1")));
-    expect(mocks.list).toHaveBeenLastCalledWith(1);
+    expect(mocks.list).toHaveBeenLastCalledWith({ page: 1, q: "", sort: "id", dir: "asc" }); expect(mocks.count).toHaveBeenLastCalledWith({ q: "" });
     expect(screen.queryByRole("link", { name: "Previous page" })).toBeNull();
     expect(screen.getByRole("link", { name: "Next page" }).getAttribute("href")).toBe("/admin/test/customer-orders?page=2");
     cleanup(); render(await resolveServerComponents(paged("2")));
-    expect(screen.getByRole("link", { name: "Previous page" }).getAttribute("href")).toBe("/admin/test/customer-orders?page=1");
+    expect(screen.getByRole("link", { name: "Previous page" }).getAttribute("href")).toBe("/admin/test/customer-orders");
     expect(screen.getByText("Page 2 of 3")).toBeTruthy();
     cleanup(); render(await resolveServerComponents(paged("99")));
-    expect(mocks.list).toHaveBeenLastCalledWith(3);
+    expect(mocks.list).toHaveBeenLastCalledWith({ page: 3, q: "", sort: "id", dir: "asc" });
     expect(screen.queryByRole("link", { name: "Next page" })).toBeNull();
     await expect(resolveServerComponents(paged("0"))).rejects.toThrow("404");
+  });
+  it("searches and sorts the list on the server, every link keeping both, and marks the matches (#217)", async () => {
+    mocks.count.mockResolvedValue(201);
+    const searched = (query: Record<string, string>) => CustomerOrdersPage({ params: Promise.resolve({ tenant: "test" }), searchParams: Promise.resolve(query) });
+    render(await resolveServerComponents(searched({ q: "customer", sort: "customer", dir: "desc", page: "2" })));
+    expect(mocks.count).toHaveBeenLastCalledWith({ q: "customer" });
+    expect(mocks.list).toHaveBeenLastCalledWith({ page: 2, q: "customer", sort: "customer", dir: "desc" });
+    expect((screen.getByRole("searchbox", { name: "Search customer orders" }) as HTMLInputElement).value).toBe("customer");
+    expect(screen.getByText(/201 results for “customer”/)).toBeTruthy();
+    const table = screen.getByRole("table", { name: "Customer orders" });
+    expect(within(table).getAllByRole("cell")[1].querySelector("mark")?.textContent).toBe("Customer");
+    const headers = within(table).getAllByRole("columnheader");
+    expect(headers.map((header) => header.getAttribute("aria-sort"))).toEqual(["none", "descending", "none", null, "none"]);
+    expect(within(headers[1]).getByRole("link").getAttribute("href")).toBe("/admin/test/customer-orders?q=customer&sort=customer&dir=asc");
+    expect(screen.getByRole("link", { name: "Next page" }).getAttribute("href")).toBe("/admin/test/customer-orders?q=customer&sort=customer&dir=desc&page=3");
+    cleanup(); mocks.count.mockResolvedValue(0); mocks.list.mockResolvedValue([]);
+    render(await resolveServerComponents(searched({ q: "nothing", sort: "status" })));
+    expect(screen.getByText(/Nothing matches “nothing”\./)).toBeTruthy();
+    expect(within(screen.getByRole("table")).getByRole("link", { name: "Clear search" }).getAttribute("href")).toBe("/admin/test/customer-orders?sort=status&dir=asc");
   });
   it("pages the list in Polish", () => {
     render(<OrdersScreen tenant={tenant} orders={[order]} page={2} total={201} customers={customers} locations={locations} materials={materials} units={{}} locale="pl" messages={pl} />);
     const nav = within(screen.getByRole("navigation", { name: "Strony zamówień klientów" }));
-    expect(nav.getByRole("link", { name: "Poprzednia strona" }).getAttribute("href")).toBe("/admin/test/customer-orders?page=1");
+    expect(nav.getByRole("link", { name: "Poprzednia strona" }).getAttribute("href")).toBe("/admin/test/customer-orders");
     expect(nav.getByRole("link", { name: "Następna strona" }).getAttribute("href")).toBe("/admin/test/customer-orders?page=3");
     expect(nav.getByText("Strona 2 z 3")).toBeTruthy();
   });
@@ -91,7 +110,9 @@ describe("customer order pages", () => {
     mocks.tenantScope.mockResolvedValue(scope(true)); mocks.list.mockResolvedValue([]); mocks.getMessages.mockResolvedValue({ locale: "pl", messages: pl });
     render(await resolveServerComponents(page()));
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Zamówienia klientów — Test");
-    expect(screen.getByText("Brak zamówień klientów.")).toBeTruthy(); expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.getByText("Brak zamówień klientów.")).toBeTruthy();
+    // Only the list's search remains.
+    expect(screen.getAllByRole("button").map((button) => button.textContent)).toEqual(["Szukaj"]);
     cleanup(); mocks.tenantScope.mockResolvedValue(scope());
     render(await resolveServerComponents(page())); expect(screen.getByText("Brak zamówień klientów. Utwórz zamówienie, aby zapisać popyt z terminami.")).toBeTruthy();
   });

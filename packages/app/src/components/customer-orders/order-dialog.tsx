@@ -9,9 +9,9 @@ import { fill, TALL_DIALOG, type TenantContext } from "../forms/form-labels";
 import type { OrderLabels } from "./labels";
 import { OrderForm, type OrderChoices } from "./order-form";
 
-interface Props { context: TenantContext; labels: OrderLabels; choices: OrderChoices; order?: CustomerOrderView }
+interface Props { context: TenantContext; labels: OrderLabels; choices: OrderChoices; order?: CustomerOrderView; locale?: string }
 /** One accessible create/edit dialog; the page's bound version protects every line. */
-export function OrderDialog({ context, labels, choices, order }: Props) {
+export function OrderDialog({ context, labels, choices, order, locale }: Props) {
   const [open, setOpen] = useState(false);
   const [snapshot, setSnapshot] = useState(order);
   const editing = open ? snapshot : order;
@@ -27,7 +27,7 @@ export function OrderDialog({ context, labels, choices, order }: Props) {
     <DialogTrigger asChild><Button>{order ? labels.edit : labels.create}</Button></DialogTrigger>
     <DialogContent className={`sm:max-w-2xl ${TALL_DIALOG}`}>
       <DialogHeader><DialogTitle>{order ? fill(labels.editTitle, { id: order.id }) : labels.createTitle}</DialogTitle><DialogDescription>{labels.description}</DialogDescription></DialogHeader>
-      <OrderForm lockedLines={editing?.lines.filter(({ posted }) => posted).map(({ id }) => id)} labels={labels} choices={choices} initial={initial}
+      <OrderForm lockedLines={editing?.lines.filter(({ posted }) => posted).map(({ id }) => id)} labels={labels} choices={choices} initial={initial} locale={locale}
         action={(values) => editing ? updateCustomerOrder(context.tenant, context.generation, editing.id, editing.version, values) : createCustomerOrder(context.tenant, context.generation, values)}
         onSuccess={close} onCancel={close} />
     </DialogContent>

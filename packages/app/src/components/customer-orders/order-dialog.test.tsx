@@ -17,7 +17,7 @@ describe("OrderDialog", () => {
     render(<OrderDialog context={{ tenant: "test", generation: 7 }} labels={labels} choices={choices} />);
     fireEvent.click(screen.getByRole("button", { name: labels.create }));
     const change = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
-    change("Customer", "00000001"); change("Location", "00000001"); change("Material, Line 1", "00000005"); change("Ordered quantity, Line 1", "2"); change("Required date, Line 1", "2027-01-04");
+    change("Customer", "00000001"); change("Location", "00000001"); change("Material, Line 1", "00000005"); fireEvent.mouseDown(screen.getByRole("option", { name: /^00000005/ })); change("Ordered quantity, Line 1", "2"); change("Required date, Line 1", "2027-01-04");
     fireEvent.click(screen.getByRole("button", { name: "Save order" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(mocks.create).toHaveBeenCalledWith("test", 7, expect.objectContaining({ customer: "00000001" }));

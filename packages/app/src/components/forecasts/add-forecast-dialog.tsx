@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { forecastCreateSchema } from "@cpg/core/validators/forecasts/forecast.schema";
+import type { AutocompleteOption } from "@cpg/ui/backend/forms/autocomplete";
 import { CrudForm, type CrudField } from "@cpg/ui/backend/forms/crud-form";
 import { Button } from "@cpg/ui/components/button";
 import {
@@ -19,18 +20,19 @@ import { fieldErrorFormatter, type ForecastsLabels } from "./labels";
 interface AddForecastDialogProps {
   context: TenantContext;
   labels: ForecastsLabels;
-  /** The active materials and locations a new forecast may pick (MAT-029, LFC-019). */
-  materials: FormOption[];
+  /** The active materials and locations a new forecast may pick (MAT-029, LFC-019); materials through an autocomplete (#217). */
+  materials: AutocompleteOption[];
   locations: FormOption[];
+  locale?: string;
 }
 
 /** The admin's Add forecast button and its form (DEM-001). */
-export function AddForecastDialog({ context, labels, materials, locations }: AddForecastDialogProps) {
+export function AddForecastDialog({ context, labels, materials, locations, locale }: AddForecastDialogProps) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
   const t = labels.form;
   const fields: CrudField[] = [
-    { name: "material", label: t.material, type: "select", placeholder: t.choose, options: materials },
+    { name: "material", label: t.material, type: "autocomplete", placeholder: labels.picker.placeholder, choices: materials, autocompleteLabels: labels.picker.labels },
     { name: "location", label: t.location, type: "select", placeholder: t.choose, options: locations },
     { name: "date", label: t.date, type: "date", description: t.dateHint },
     { name: "quantity", label: t.quantity, description: t.quantityHint, autoComplete: "off" },
@@ -58,6 +60,7 @@ export function AddForecastDialog({ context, labels, materials, locations }: Add
           formatFieldError={fieldErrorFormatter(labels)}
           onSuccess={close}
           onCancel={close}
+          locale={locale}
         />
       </DialogContent>
     </Dialog>

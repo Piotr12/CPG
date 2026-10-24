@@ -18,7 +18,7 @@ afterEach(() => vi.clearAllMocks());
 it("authenticates reads and parses bounded collection pages and options", async () => {
   mocks.service.list.mockResolvedValue([]); mocks.service.get.mockResolvedValue({ id: "00000001" }); mocks.service.options.mockResolvedValue({ selected: "bom" });
   expect((await collection.GET(new Request("http://cpg.test/?page=2"), context())).status).toBe(200);
-  expect(mocks.service.list).toHaveBeenCalledWith(2);
+  expect(mocks.service.list).toHaveBeenCalledWith({ page: 2 });
   expect(await (await item.GET(new Request("http://cpg.test/"), context())).json()).toEqual({ ok: true, data: { id: "00000001" } });
   expect(mocks.service.get).toHaveBeenCalledWith("00000001");
   expect((await options.GET(new Request(`http://cpg.test/?${new URLSearchParams(input)}`), context())).status).toBe(200);

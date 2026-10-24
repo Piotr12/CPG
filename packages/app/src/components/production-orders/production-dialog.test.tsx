@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, cleanup } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, cleanup, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { production, productionOptions, materials, locations } from "../../../../../tests/setup/production-orders";
 import { en } from "../../i18n/messages/en";
@@ -10,7 +10,8 @@ vi.mock("../../app/admin/[tenant]/production-orders/actions", () => ({ createPro
 const props = { context: { tenant: "test", generation: 7 }, labels: productionLabels(en), materials, locations };
 const open = (edit = false) => fireEvent.click(screen.getByRole("button", { name: edit ? en.productionOrders.edit : en.productionOrders.create }));
 async function preview() {
-  fireEvent.change(screen.getByLabelText(en.productionOrders.output), { target: { value: "00000005" } });
+  fireEvent.change(screen.getByLabelText(en.productionOrders.output), { target: { value: "cabinet" } });
+  fireEvent.mouseDown(screen.getByRole("option", { name: /^00000005/ }));
   fireEvent.change(screen.getByLabelText(en.productionOrders.location), { target: { value: "00000001" } });
   fireEvent.change(screen.getByLabelText(en.productionOrders.quantity), { target: { value: "2" } });
   fireEvent.change(screen.getByLabelText(en.productionOrders.unit), { target: { value: "case" } });
@@ -46,7 +47,7 @@ it("supports back, preview refusal, invalid input and cancellation without writi
   await preview(); await waitFor(() => expect(screen.getByLabelText(en.productionOrders.recipe)).toBeTruthy());
   fireEvent.click(screen.getByRole("button", { name: en.productionOrders.back }));
   expect(screen.queryByLabelText(en.productionOrders.recipe)).toBeNull();
-  expect((screen.getByLabelText(en.productionOrders.output) as HTMLSelectElement).value).toBe(production.output);
+  expect((screen.getByLabelText(en.productionOrders.output) as HTMLInputElement).value).toBe(`${production.output} — Cabinet`);
   expect((screen.getByLabelText(en.productionOrders.quantity) as HTMLInputElement).value).toBe("2");
   expect((screen.getByLabelText(en.productionOrders.finish) as HTMLInputElement).value).toBe(production.plannedFinish);
   fireEvent.click(screen.getByRole("button", { name: en.productionOrders.cancel }));
@@ -87,4 +88,15 @@ it("closes through the standard dialog close control without creating an order",
   fireEvent.click(screen.getByRole("button", { name: "Close" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   expect(mocks.create).not.toHaveBeenCalled();
+});
+it("offers only active Make outputs in an autocomplete that refuses free text (#217)", () => {
+  render(<ProductionDialog {...props} materials={[...materials, { ...materials[0], id: "00000006", description: "Steel", type: "raw" }]} />); open();
+  const output = screen.getByRole("combobox", { name: en.productionOrders.output });
+  expect(output.getAttribute("placeholder")).toBe(en.lists.materialPicker.placeholder);
+  fireEvent.focus(output);
+  expect(within(screen.getByRole("listbox")).getAllByRole("option").map((option) => option.textContent)).toEqual(["00000005—Cabineteach"]);
+  fireEvent.change(output, { target: { value: "steel" } }); fireEvent.blur(output);
+  expect(screen.getByText(en.lists.materialPicker.refused)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: en.productionOrders.preview }));
+  expect(mocks.preview).not.toHaveBeenCalled();
 });

@@ -2,11 +2,13 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { customerOrderListSchema } from "@cpg/core/validators/customer-orders/customer-order.schema";
+import { customerOrderSortSchema } from "@cpg/core/validators/customer-orders/customer-order-list.schema";
 import { connection } from "next/server";
 import { tenantScope } from "@cpg/core";
 import { LoadingMessage } from "@cpg/ui/backend/feedback/loading-message";
 import { requireUser } from "../../../../auth/require-admin";
 import { OrdersContent } from "../../../../components/customer-orders/orders-content";
+import { readSearch, readSort } from "../../../../components/lists/list-params";
 import { getMessages } from "../../../../i18n/get-messages";
 import { orNotFound } from "../../../../routing/or-not-found";
 
@@ -25,7 +27,9 @@ async function Content({ params, searchParams }: Pick<PageProps<"/admin/[tenant]
   const [{ cradle }, { locale, messages }] = await Promise.all([
     orNotFound(tenantScope(tenant), ["TENANT_NOT_FOUND"]), getMessages(),
   ]);
-  const query = customerOrderListSchema.safeParse({ page: (await searchParams).page });
-  if (!query.success) notFound();
-  return <OrdersContent cradle={cradle} locale={locale} messages={messages} page={query.data.page} />;
+  const query = await searchParams;
+  const page = customerOrderListSchema.safeParse({ page: query.page });
+  if (!page.success) notFound();
+  return <OrdersContent cradle={cradle} locale={locale} messages={messages} page={page.data.page}
+    search={readSearch(query)} sort={readSort(query, customerOrderSortSchema)} />;
 }
