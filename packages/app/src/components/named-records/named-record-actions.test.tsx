@@ -59,7 +59,7 @@ describe("NamedRecordActions", () => {
     const dialog = screen.getByRole("alertdialog", { name: "Deactivate location 00000002?" });
     expect(dialog.textContent).toContain("can't be picked for new entries");
     const confirm = screen.getByRole("button", { name: "Deactivate" });
-    expect(confirm.dataset.variant).toBe("destructive");
+    expect(confirm.dataset.variant).toBe("destructive-solid");
     await act(async () => fireEvent.click(confirm));
 
     expect(update).toHaveBeenCalledWith("test", 1, "00000002", 3, { active: false });
@@ -73,7 +73,7 @@ describe("NamedRecordActions", () => {
 
     open("Reactivate");
     const confirm = screen.getByRole("button", { name: "Reactivate" });
-    expect(confirm.dataset.variant).not.toBe("destructive");
+    expect(confirm.dataset.variant).not.toBe("destructive-solid");
     await act(async () => fireEvent.click(confirm));
     // The page re-renders with what another tab saved: already active, at a newer version.
     rerender(<NamedRecordActions record={{ ...site, version: 4 }} context={context} labels={labels} update={update} />);

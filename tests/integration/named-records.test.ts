@@ -137,7 +137,7 @@ describe("locations, customers and suppliers (E03-S02)", () => {
 
     await rowMenu(admin, id, "Deactivate");
     await admin.waitFor("[role=alertdialog]");
-    await admin.click("[role=alertdialog] button[data-variant=destructive]");
+    await admin.click("[role=alertdialog] button[data-variant=destructive-solid]");
     await admin.waitUntil(`!document.querySelector("[role=alertdialog]")`);
     expect((await listRows(admin, "prod", "locations")).find(([rowId]) => rowId === id)).toEqual([id, "nr-ui old warehouse", "Inactive"]);
 

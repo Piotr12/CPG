@@ -120,7 +120,7 @@ describe("manual production orders in the UI and API", () => {
     await admin.setViewport(1280, 800); await admin.open(`${baseUrl}/admin/prod/materials/${output}`);
     await admin.waitUntil('[...document.querySelectorAll("main button")].some((button) => button.textContent.trim() === "Deactivate" && Object.keys(button).some((key) => key.startsWith("__reactFiber")))');
     await admin.clickRole("button", "Deactivate"); await admin.waitFor("[role=alertdialog]");
-    await admin.click("[role=alertdialog] button[data-variant=destructive]");
+    await admin.click("[role=alertdialog] button[data-variant=destructive-solid]");
     await admin.waitUntil('!!document.querySelector("[role=alertdialog] [role=alert] a")');
     expect(await admin.evaluate<string>('document.querySelector("[role=alertdialog] [role=alert] a").getAttribute("href")')).toBe(`/admin/prod/production-orders/${pinned.id}`);
     await admin.clickRole("button", "Cancel");
