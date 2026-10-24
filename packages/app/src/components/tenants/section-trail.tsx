@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@cpg/ui/components/breadcrumb";
+import { ChevronRightIcon } from "lucide-react";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage } from "@cpg/ui/components/breadcrumb";
 import { tenantFromPath } from "../layout/current-path";
 import { trailOf, type NavModel, type TrailStep } from "../layout/nav-tree";
 
@@ -14,6 +15,18 @@ function Step({ step, isLast }: { step: TrailStep; isLast: boolean }) {
     <BreadcrumbLink asChild className="underline underline-offset-4">
       <Link href={step.href}>{step.label}</Link>
     </BreadcrumbLink>
+  );
+}
+
+/**
+ * The `›` before a step, inside the step's own item rather than shadcn's separate `li`, so a step that
+ * wraps to the next line at 320 px takes its separator along instead of leaving it at the line's end.
+ */
+function TrailSeparator() {
+  return (
+    <span data-slot="breadcrumb-separator" role="presentation" aria-hidden="true" className="[&>svg]:size-3.5">
+      <ChevronRightIcon />
+    </span>
   );
 }
 
@@ -31,12 +44,12 @@ export function SectionTrail({ model, label }: { model: NavModel; label: string 
   return (
     <Breadcrumb aria-label={label}>
       <BreadcrumbList>
-        {trail.flatMap((step, index) => [
-          <BreadcrumbSeparator key={`separator-${index}`} />,
+        {trail.map((step, index) => (
           <BreadcrumbItem key={`step-${index}`}>
+            <TrailSeparator />
             <Step step={step} isLast={index === trail.length - 1} />
-          </BreadcrumbItem>,
-        ])}
+          </BreadcrumbItem>
+        ))}
       </BreadcrumbList>
     </Breadcrumb>
   );
