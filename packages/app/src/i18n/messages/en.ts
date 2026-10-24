@@ -476,6 +476,7 @@ export const en = {
     empty: "No planning parameters in {tenant} yet.",
     emptyHint: "Add the first set with Add parameters.",
     emptyReader: "Ask an administrator to add planning parameters.",
+    search: { label: "Search planning parameters", hint: "Matches the material's ID or description, or the location's ID or name." },
     columns: {
       material: "Material",
       location: "Location",
@@ -551,6 +552,7 @@ export const en = {
     empty: "No safety-stock targets in {tenant} yet.",
     emptyHint: "Add the first one with Add target.",
     emptyReader: "Ask an administrator to add safety-stock targets.",
+    search: { label: "Search safety stock", hint: "Matches the material's ID or description, or the location's ID or name." },
     columns: {
       material: "Material",
       location: "Location",

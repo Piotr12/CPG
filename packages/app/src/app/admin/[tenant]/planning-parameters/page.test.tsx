@@ -68,7 +68,8 @@ const scope = (readOnly = false) => ({
     locationService: { list: mocks.locations },
   },
 });
-const page = (tenant: string) => PlanningParametersPage({ params: Promise.resolve({ tenant }), searchParams: Promise.resolve({}) });
+const page = (tenant: string, searchParams: Record<string, string> = {}) =>
+  PlanningParametersPage({ params: Promise.resolve({ tenant }), searchParams: Promise.resolve(searchParams) });
 
 describe("PlanningParametersPage", () => {
   beforeEach(() => {
@@ -105,7 +106,7 @@ describe("PlanningParametersPage", () => {
 
     expect(screen.getByRole("heading", { name: "Parametry planowania — Prod" }).closest("[lang]")?.getAttribute("lang")).toBe("pl");
     expect(screen.getAllByText("Produkcja")).toHaveLength(1);
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryAllByRole("button").map((button) => button.textContent)).toEqual(["Szukaj"]);
   });
 
   it("offers the admin no control while the tenant is read-only (R05), and an empty list says so", async () => {
@@ -115,7 +116,7 @@ describe("PlanningParametersPage", () => {
     render(await resolveServerComponents(page("prod")));
 
     expect(screen.getByText("No planning parameters in Prod yet.")).toBeTruthy();
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryAllByRole("button").map((button) => button.textContent)).toEqual(["Search"]);
   });
 
   it("tells the admin how to start in an empty, writable tenant", async () => {
@@ -124,6 +125,23 @@ describe("PlanningParametersPage", () => {
     render(await resolveServerComponents(page("prod")));
 
     expect(screen.getByText("No planning parameters in Prod yet. Add the first set with Add parameters.")).toBeTruthy();
+  });
+
+  it("lists by material when the address asks for nothing, and searches and sorts on the server as it says (#217)", async () => {
+    render(await resolveServerComponents(page("prod")));
+    expect(mocks.sets).toHaveBeenLastCalledWith({ q: "", sort: "material", dir: "asc" });
+    expect(screen.getByRole("columnheader", { name: "Material" }).getAttribute("aria-sort")).toBe("ascending");
+
+    render(await resolveServerComponents(page("prod", { q: "panel", sort: "location", dir: "desc" })));
+    expect(mocks.sets).toHaveBeenLastCalledWith({ q: "panel", sort: "location", dir: "desc" });
+    expect(screen.getByRole("status").textContent).toBe("2 results for “panel” · Clear search");
+  });
+
+  it("refuses a search past the limits in the form, listing everything, and ignores an unknown sort (#217)", async () => {
+    render(await resolveServerComponents(page("prod", { q: "a b c d e f", sort: "minimum" })));
+
+    expect(mocks.sets).toHaveBeenCalledWith({ q: "", sort: "material", dir: "asc" });
+    expect(screen.getByRole("searchbox").getAttribute("aria-invalid")).toBe("true");
   });
 
   it("reads nothing for a visitor the gate refuses, and renders not-found for an unknown tenant", async () => {

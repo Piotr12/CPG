@@ -443,6 +443,7 @@ export const pl: Messages = {
     empty: "Brak parametrów planowania w {tenant}.",
     emptyHint: "Dodaj pierwszy zestaw przyciskiem Dodaj parametry.",
     emptyReader: "Poproś administratora o dodanie parametrów planowania.",
+    search: { label: "Szukaj w parametrach planowania", hint: "Dopasowuje ID lub opis materiału albo ID lub nazwę lokalizacji." },
     columns: {
       material: "Materiał",
       location: "Lokalizacja",
@@ -516,6 +517,7 @@ export const pl: Messages = {
     empty: "Brak celów zapasu bezpieczeństwa w {tenant}.",
     emptyHint: "Dodaj pierwszy przyciskiem Dodaj cel.",
     emptyReader: "Poproś administratora o dodanie celów zapasu bezpieczeństwa.",
+    search: { label: "Szukaj w zapasie bezpieczeństwa", hint: "Dopasowuje ID lub opis materiału albo ID lub nazwę lokalizacji." },
     columns: {
       material: "Materiał",
       location: "Lokalizacja",

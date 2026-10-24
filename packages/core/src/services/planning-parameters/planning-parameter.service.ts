@@ -3,14 +3,19 @@ import {
   PlanningParameterSet,
   UniqueConstraintViolationException,
   type EntityManager,
+  type FilterQuery,
   type Location,
   type Material,
   type ProcurementMode,
 } from "@cpg/db";
 import type { DemoPlanningParameters } from "../../domain/demo/generate-dataset";
+import { searchWhere } from "../../domain/lists/list-query";
+import { comparePlanningParameters } from "../../domain/planning-parameters/planning-parameter-order";
 import { isProcurementAllowed } from "../../domain/planning-parameters/procurement";
 import { ConflictError, NotFoundError, ValidationError, versionConflict } from "../../http/errors";
+import type { ListOptions } from "../../validators/lists/list-query.schema";
 import { RAW_MATERIAL_BUY_ONLY_MESSAGE } from "../../validators/planning-parameters/planning-parameter-fields.schema";
+import type { PlanningParameterSort } from "../../validators/planning-parameters/planning-parameter-list.schema";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
 import { findActiveLocation, findLocation } from "../locations/find-location";
@@ -48,6 +53,9 @@ export interface NewPlanningParameters extends PlanningParameterValues {
 /** The values a change may set; absent ones stay as they are. */
 export type PlanningParameterChanges = Partial<PlanningParameterValues>;
 
+/** What the planning parameters search matches: the material's ID and description, the location's ID and name (#217). */
+const SEARCH_FIELDS = ["material.code", "material.description", "location.code", "location.name"];
+
 const VALUE_KEYS = ["procurement", "leadTimeDays", "minimumQuantity", "lotMultiple"] as const;
 
 interface Deps {
@@ -69,12 +77,14 @@ export class PlanningParameterService {
     this.em = em;
   }
 
-  /** Every set of the tenant, by material ID, then location ID. */
-  async list(): Promise<PlanningParameterView[]> {
-    const sets = await this.em.find(PlanningParameterSet, {}, { populate: ["material", "location"] });
-    // Sorted here by business IDs: the populated material and location carry them, and an
-    // `orderBy` on relation fields would add query joins the tenant lint rules don't vet.
-    return sets.map(toView).sort((a, b) => a.material.localeCompare(b.material) || a.location.localeCompare(b.location));
+  /**
+   * Every set of the tenant, by material ID, then location ID, unless `sort` says otherwise; `q` keeps
+   * those whose material's ID or description or location's ID or name contains every word (#217).
+   */
+  async list({ q = "", sort = "material", dir = "asc" }: Omit<ListOptions<PlanningParameterSort>, "page"> = {}): Promise<PlanningParameterView[]> {
+    const where = searchWhere(q, SEARCH_FIELDS) as FilterQuery<PlanningParameterSet>;
+    const sets = await this.em.find(PlanningParameterSet, where, { populate: ["material", "location"] });
+    return sets.map(toView).sort(comparePlanningParameters(sort, dir));
   }
 
   /** A set for a material at a location that has none yet (MAT-015, MAT-016). */

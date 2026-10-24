@@ -53,7 +53,8 @@ const scope = (readOnly = false) => ({
     locationService: { list: mocks.locations },
   },
 });
-const page = (tenant: string) => SafetyStockPage({ params: Promise.resolve({ tenant }), searchParams: Promise.resolve({}) });
+const page = (tenant: string, searchParams: Record<string, string> = {}) =>
+  SafetyStockPage({ params: Promise.resolve({ tenant }), searchParams: Promise.resolve(searchParams) });
 
 describe("SafetyStockPage", () => {
   beforeEach(() => {
@@ -97,7 +98,7 @@ describe("SafetyStockPage", () => {
 
     expect(screen.getByRole("heading", { name: "Zapas bezpieczeństwa — Test" })).toBeTruthy();
     expect(screen.getByText("Obowiązuje")).toBeTruthy();
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryAllByRole("button").map((button) => button.textContent)).toEqual(["Szukaj"]);
   });
 
   it("offers no control in a read-only tenant (R05); an empty list says so, with a hint for a writable one", async () => {
@@ -105,12 +106,29 @@ describe("SafetyStockPage", () => {
     mocks.tenantScope.mockResolvedValue(scope(true));
     const { unmount } = render(await resolveServerComponents(page("test")));
     expect(screen.getByText("No safety-stock targets in Test yet.")).toBeTruthy();
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryAllByRole("button").map((button) => button.textContent)).toEqual(["Search"]);
     unmount();
 
     mocks.tenantScope.mockResolvedValue(scope());
     render(await resolveServerComponents(page("test")));
     expect(screen.getByText("No safety-stock targets in Test yet. Add the first one with Add target.")).toBeTruthy();
+  });
+
+  it("lists by material when the address asks for nothing, and searches and sorts on the server as of today (#217)", async () => {
+    render(await resolveServerComponents(page("test")));
+    expect(mocks.targets).toHaveBeenLastCalledWith({ q: "", sort: "material", dir: "asc", today: "2027-01-20" });
+    expect(screen.getByRole("columnheader", { name: "Material" }).getAttribute("aria-sort")).toBe("ascending");
+
+    render(await resolveServerComponents(page("test", { q: "cabinet", sort: "status", dir: "desc" })));
+    expect(mocks.targets).toHaveBeenLastCalledWith({ q: "cabinet", sort: "status", dir: "desc", today: "2027-01-20" });
+    expect(screen.getByRole("status").textContent).toBe("3 results for “cabinet” · Clear search");
+  });
+
+  it("refuses a search past the limits in the form, listing everything, and ignores an unknown sort (#217)", async () => {
+    render(await resolveServerComponents(page("test", { q: "x".repeat(101), sort: "quantity" })));
+
+    expect(mocks.targets).toHaveBeenCalledWith({ q: "", sort: "material", dir: "asc", today: "2027-01-20" });
+    expect(screen.getByRole("searchbox").getAttribute("aria-invalid")).toBe("true");
   });
 
   it("renders not-found for an unknown tenant", async () => {

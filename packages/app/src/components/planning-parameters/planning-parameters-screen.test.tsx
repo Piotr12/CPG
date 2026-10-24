@@ -1,5 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import type { SortDirection } from "@cpg/core/validators/lists/list-query.schema";
+import type { PlanningParameterSort } from "@cpg/core/validators/planning-parameters/planning-parameter-list.schema";
 import { en } from "../../i18n/messages/en";
 import { PlanningParametersScreen } from "./planning-parameters-screen";
 
@@ -18,8 +20,20 @@ const set = (procurement: "make" | "buy") => ({
   version: 1,
 });
 const TENANT = { code: "test", name: "Test", generation: 1, readOnly: false };
-const renderScreen = (sets: object[], admin = true) =>
-  render(<PlanningParametersScreen tenant={TENANT} sets={sets as never} materials={MATERIALS} locations={LOCATIONS} locale="en" messages={en} admin={admin} />);
+const LIST = { search: { q: "", typed: "" }, sort: { sort: "material" as PlanningParameterSort, dir: "asc" as SortDirection } };
+const renderScreen = (sets: object[], admin = true, list = LIST) =>
+  render(
+    <PlanningParametersScreen
+      tenant={TENANT}
+      sets={sets as never}
+      materials={MATERIALS}
+      locations={LOCATIONS}
+      locale="en"
+      messages={en}
+      admin={admin}
+      {...list}
+    />,
+  );
 
 describe("PlanningParametersScreen", () => {
   it("heads the list with the one h1 and the admin's Add, then the table with right-aligned quantities", () => {
@@ -42,6 +56,23 @@ describe("PlanningParametersScreen", () => {
     renderScreen([], false);
 
     expect(screen.getByText("Ask an administrator to add planning parameters.")).toBeTruthy();
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryAllByRole("button").map((button) => button.textContent)).toEqual(["Search"]);
+  });
+
+  it("searches above the list, sorts by every stored column but the decimal quantities, and marks the matches (#217)", () => {
+    renderScreen([set("buy")], false, { search: { q: "cabinet plant", typed: "cabinet plant" }, sort: { sort: "leadTime", dir: "desc" } });
+
+    expect(screen.getByRole("searchbox", { name: "Search planning parameters" })).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toBe("1 result for “cabinet plant” · Clear search");
+    expect(screen.getByRole("link", { name: "Clear search" }).getAttribute("href")).toBe("/admin/test/planning-parameters?sort=leadTime&dir=desc");
+    expect(screen.getAllByRole("columnheader").map((header) => header.getAttribute("aria-sort"))).toEqual(["none", "none", "none", "descending", null, null]);
+    expect(screen.getByRole("link", { name: "Make / Buy" }).getAttribute("href")).toBe("/admin/test/planning-parameters?q=cabinet+plant&sort=procurement&dir=asc");
+    expect([...document.querySelectorAll("mark")].map((mark) => mark.textContent)).toEqual(["Cabinet", "plant"]);
+  });
+
+  it("says when nothing matches, with the way back to the whole list (#217)", () => {
+    renderScreen([], false, { search: { q: "brass", typed: "brass" }, sort: LIST.sort });
+
+    expect(screen.getByRole("cell").textContent).toBe("Nothing matches “brass”. Clear search");
   });
 });

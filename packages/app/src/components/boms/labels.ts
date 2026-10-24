@@ -15,11 +15,10 @@ import { CALENDAR_DATE_MESSAGE } from "@cpg/core/validators/dates/calendar-date.
 import { UNIT_FORMAT_MESSAGE } from "@cpg/core/validators/materials/material-fields.schema";
 import { MATERIAL_CHOICE_MESSAGE } from "@cpg/core/validators/planning-parameters/planning-parameter-fields.schema";
 import { POSITIVE_QUANTITY_MESSAGE } from "@cpg/core/validators/quantities/quantity.schema";
-import type { AutocompleteLabels } from "@cpg/ui/backend/forms/autocomplete";
 import { errorMessage } from "../../i18n/error-message";
 import type { Messages } from "../../i18n/messages/en";
 import { fill, shownQuantity, type TenantContext } from "../forms/form-labels";
-import { materialPickerLabels } from "../materials/material-picker";
+import { materialPicker, type MaterialPickerLabels } from "../master-data/references";
 
 /**
  * The BOM screens' strings in the reader's language: plain strings, so they can reach client
@@ -28,7 +27,7 @@ import { materialPickerLabels } from "../materials/material-picker";
  */
 export type BomsLabels = Omit<Messages["boms"], "heading" | "detailHeading" | "errors"> & {
   errors: Record<string, string>;
-  picker: AutocompleteLabels & { placeholder: string };
+  picker: MaterialPickerLabels;
 };
 
 /** Builds the BOM screens' labels from a dictionary (server side, where `messages` is available). */
@@ -39,7 +38,7 @@ export function bomsLabels(messages: Messages): BomsLabels {
   return {
     ...(labels as Omit<Messages["boms"], "heading" | "detailHeading">),
     errors: { ...messages.errors, ...messages.boms.errors },
-    picker: { ...materialPickerLabels(messages.lists), placeholder: messages.lists.materialPicker.placeholder },
+    picker: materialPicker(messages.lists),
   };
 }
 

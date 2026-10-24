@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/messages/en";
 import { AddSafetyStockTargetDialog } from "./add-safety-stock-target-dialog";
@@ -9,12 +9,18 @@ vi.mock("../../app/admin/[tenant]/safety-stock/actions", () => mocks);
 
 const labels = safetyStockLabels(en);
 const fill = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
+/** Chooses `code` in the material picker: types it, then clicks its row. */
+const choose = (code: string) => {
+  fireEvent.change(screen.getByRole("combobox", { name: "Material" }), { target: { value: code } });
+  fireEvent.mouseDown(within(screen.getByRole("listbox")).getByRole("option", { name: new RegExp(`^${code}`) }));
+};
 const dialog = () => (
   <AddSafetyStockTargetDialog
     context={{ tenant: "test", generation: 2 }}
     labels={labels}
-    materials={[{ value: "00000005", label: "00000005 — Cabinet, red (each)" }]}
+    materials={[{ value: "00000005", code: "00000005", name: "Cabinet, red", detail: "each" }]}
     locations={[{ value: "00000001", label: "00000001 — Main plant" }]}
+    locale="en"
   />
 );
 
@@ -26,8 +32,9 @@ describe("AddSafetyStockTargetDialog", () => {
     render(dialog());
 
     fireEvent.click(screen.getByRole("button", { name: "Add target" }));
-    fill("Material", "00000005");
+    choose("00000005");
     fill("Location", "00000001");
+    expect((screen.getByRole("combobox", { name: "Material" }) as HTMLInputElement).value).toBe("00000005 — Cabinet, red");
     expect((screen.getByLabelText("Effective from") as HTMLInputElement).type).toBe("date");
     fill("Effective from", "2027-01-01");
     fill("Target", "20");
@@ -47,7 +54,7 @@ describe("AddSafetyStockTargetDialog", () => {
     render(dialog());
 
     fireEvent.click(screen.getByRole("button", { name: "Add target" }));
-    fill("Material", "00000005");
+    choose("00000005");
     fill("Location", "00000001");
     fill("Effective from", "2027-01-01");
     fill("Target", "20");

@@ -2,8 +2,10 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { tenantScope } from "@cpg/core";
+import { safetyStockSortSchema } from "@cpg/core/validators/safety-stock/safety-stock-list.schema";
 import { LoadingMessage } from "@cpg/ui/backend/feedback/loading-message";
 import { requireUser } from "../../../../auth/require-admin";
+import { readSearch, readSort } from "../../../../components/lists/list-params";
 import { SafetyStockScreen } from "../../../../components/safety-stock/safety-stock-screen";
 import { getMessages } from "../../../../i18n/get-messages";
 import { orNotFound } from "../../../../routing/or-not-found";
@@ -11,11 +13,11 @@ import { orNotFound } from "../../../../routing/or-not-found";
 /** The tenant layout's title template puts the tenant first: "Test · Safety stock". */
 export const metadata: Metadata = { title: "Safety stock" };
 
-export default function SafetyStockPage({ params }: PageProps<"/admin/[tenant]/safety-stock">) {
+export default function SafetyStockPage({ params, searchParams }: PageProps<"/admin/[tenant]/safety-stock">) {
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pt-6 pb-8 md:px-6 md:pt-12 md:pb-12">
       <Suspense fallback={<LoadingMessage />}>
-        <SafetyStock params={params} />
+        <SafetyStock params={params} searchParams={searchParams} />
       </Suspense>
     </main>
   );
@@ -23,16 +25,21 @@ export default function SafetyStockPage({ params }: PageProps<"/admin/[tenant]/s
 
 /**
  * One tenant's safety-stock targets, read through that tenant's own scope (R05) by any signed-in
- * account, each labelled with where it stands today: the server's UTC date (spec Q10).
+ * account, each labelled with where it stands today: the server's UTC date (spec Q10). Searched and
+ * sorted as the address says (#217); the status sort is about the same day.
  */
-async function SafetyStock({ params }: { params: Promise<{ tenant: string }> }) {
+async function SafetyStock({ params, searchParams }: Pick<PageProps<"/admin/[tenant]/safety-stock">, "params" | "searchParams">) {
   await connection();
   const user = await requireUser();
   const [{ cradle }, { locale, messages }] = await Promise.all([
     orNotFound(tenantScope((await params).tenant), ["TENANT_NOT_FOUND"]),
     getMessages(),
   ]);
-  const targets = await cradle.safetyStockTargetService.list();
+  const query = await searchParams;
+  const search = readSearch(query);
+  const sort = readSort(query, safetyStockSortSchema);
+  const today = new Date().toISOString().slice(0, 10);
+  const targets = await cradle.safetyStockTargetService.list({ q: search.q, ...sort, today });
   const materials = await cradle.materialService.list();
   const locations = await cradle.locationService.list();
 
@@ -42,10 +49,12 @@ async function SafetyStock({ params }: { params: Promise<{ tenant: string }> }) 
       targets={targets}
       materials={materials}
       locations={locations}
-      today={new Date().toISOString().slice(0, 10)}
+      today={today}
       locale={locale}
       messages={messages}
       admin={user.role === "admin"}
+      search={search}
+      sort={sort}
     />
   );
 }
