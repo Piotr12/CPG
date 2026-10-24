@@ -3,7 +3,7 @@
 **Date:** 2026-10-24 22:06 UTC
 **Agent:** Claude Code / Opus 5.5 (lead, cezar) + three Opus workers
 **Spec:** none; the design is issue #217 (proposal A), chosen by the owner on 2026-10-25 ("lets implement A … end state a tested PR"). Decisions below fill what the issue leaves open.
-**Status:** in progress
+**Status:** done — PR #225, CI green
 **Branch:** `cez/6a8b02d5` → one PR against `main` that closes #217.
 
 ## Goal
@@ -34,9 +34,11 @@ Every main list sorts by a header click and searches through one labelled box, b
 | W2 | Sales and production: forecasts, customer orders, production orders (lists + material autocompletes in their forms) | worker | done, merged |
 | W3 | Purchasing and logistics: purchase requisitions, purchase orders, transfers (lists + forms) | worker | done, merged |
 | C1 | Merge workers one by one, gate after each; Help + BACKWARD_COMPATIBILITY + follow-up issues | lead | done |
-| C2 | Full gate, touched integration files, build, browser QA with screenshots, PR, CI green | lead | todo |
+| C2 | Full gate, touched integration files, build, browser QA with screenshots, PR, CI green | lead | done |
 
 ## Progress
+
+- 2026-10-25 — PR #225 opened with screenshot evidence; CI run 40142244548 green: lint, typecheck, unit-tests, build, integration-tests 1–4.
 
 - 2026-10-25 — Full local integration suite on a fresh standalone build (Docker unavailable): 53 files passed, 1 failed (transfers.test.ts, 5 tests): the transfer test's own material sat below 20+ "trapi steel" rows another file creates, so the click hit the dialog overlay (W3 had run the file alone). Fixed in `chooseFromList` (scroll the option into view) and by typing the ID (a9b68e09); transfers-api + transfers then 19/19 on a fresh server. Screenshots in `qa-artifacts/` (1440×900 light EN, one 390 px).
 
