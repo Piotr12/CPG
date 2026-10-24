@@ -31,7 +31,7 @@ export function BackLink({ lists, tenants, labels }: BackLinkProps) {
       : [`/admin/${tenant}`, fill(labels.backToOverview, { tenant: tenants[tenant] })];
 
   return (
-    <Button asChild variant="outline" className="mt-4">
+    <Button asChild variant="outline">
       <Link href={href}>{text}</Link>
     </Button>
   );

@@ -14,9 +14,8 @@ describe("ErrorPage", () => {
     const retry = vi.fn();
     render(<ErrorPage error={serverError} retry={retry} />);
 
-    const alert = screen.getByRole("alert");
-    expect(alert.textContent).toContain("Something went wrong on our side.");
-    expect(alert.textContent).toContain("Try again; if it keeps happening, tell your administrator and quote reference 2913876712.");
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Something went wrong on our side.");
+    expect(screen.getByRole("alert").textContent).toBe("Try again; if it keeps happening, tell your administrator and quote reference 2913876712.");
     expect(retry).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(retry).toHaveBeenCalledOnce();

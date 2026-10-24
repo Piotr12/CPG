@@ -2,8 +2,8 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
-import { EmptyState } from "@cpg/ui/backend/feedback/empty-state";
 import { LoadingMessage } from "@cpg/ui/backend/feedback/loading-message";
+import { PageHeader } from "@cpg/ui/backend/page-header";
 import { Button } from "@cpg/ui/components/button";
 import { getMessages } from "../i18n/get-messages";
 
@@ -27,13 +27,12 @@ async function NotFoundContent() {
   const t = messages.notFound;
 
   return (
-    <div lang={locale}>
-      <EmptyState title={t.title}>
-        <p>{t.description}</p>
-        <Button asChild variant="outline" className="mt-4">
-          <Link href="/admin">{t.goToTenants}</Link>
-        </Button>
-      </EmptyState>
+    <div lang={locale} className="flex flex-col items-start">
+      {/* The page's one h1 (design system v1, "Typography"); the next step follows it as the content. */}
+      <PageHeader title={t.title} description={t.description} />
+      <Button asChild variant="outline">
+        <Link href="/admin">{t.goToTenants}</Link>
+      </Button>
     </div>
   );
 }

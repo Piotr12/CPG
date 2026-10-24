@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { ErrorMessage } from "@cpg/ui/backend/feedback/error-message";
+import { PageHeader } from "@cpg/ui/backend/page-header";
 import { Button } from "@cpg/ui/components/button";
 import { fill } from "../i18n/fill";
 import { ERROR_BOUNDARY } from "../i18n/messages/error-boundary";
@@ -24,12 +25,13 @@ export default function ErrorPage({ error, retry }: { error: unknown; retry: () 
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pt-6 pb-8 md:px-6 md:pt-12 md:pb-12">
-      <div lang={lang} className="flex flex-col items-start gap-4">
-        <ErrorMessage>
-          <p className="font-medium">{t.title}</p>
-          <p>{fill(t.description, { digest: errorReference(error) })}</p>
-        </ErrorMessage>
-        <Button onClick={() => retry()}>{t.retry}</Button>
+      <div lang={lang} className="flex flex-col items-start">
+        {/* The page's one h1; the message box carries what to do, as icon + text. */}
+        <PageHeader title={t.title} />
+        <div className="flex flex-col items-start gap-4">
+          <ErrorMessage>{fill(t.description, { digest: errorReference(error) })}</ErrorMessage>
+          <Button onClick={() => retry()}>{t.retry}</Button>
+        </div>
       </div>
     </main>
   );

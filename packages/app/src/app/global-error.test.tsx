@@ -17,13 +17,11 @@ describe("GlobalError", () => {
     // React DOM renders <html> and <body> into the test document's own.
     render(<GlobalError error={serverError} retry={retry} />, { container: document });
 
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Something went wrong on our side. / Coś poszło nie tak po naszej stronie.");
     const [english, polish] = screen.getByRole("alert").querySelectorAll("p[lang]");
     expect(english.getAttribute("lang")).toBe("en");
-    expect(english.textContent).toBe(
-      "Something went wrong on our side. Try again; if it keeps happening, tell your administrator and quote reference 2913876712.",
-    );
+    expect(english.textContent).toBe("Try again; if it keeps happening, tell your administrator and quote reference 2913876712.");
     expect(polish.getAttribute("lang")).toBe("pl");
-    expect(polish.textContent).toContain("Coś poszło nie tak po naszej stronie.");
     expect(polish.textContent).toContain("podaj identyfikator 2913876712.");
     fireEvent.click(screen.getByRole("button", { name: "Try again / Spróbuj ponownie" }));
     expect(retry).toHaveBeenCalledOnce();

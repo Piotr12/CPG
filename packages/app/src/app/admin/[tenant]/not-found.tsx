@@ -1,8 +1,8 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { TENANT_NAMES } from "@cpg/core";
-import { EmptyState } from "@cpg/ui/backend/feedback/empty-state";
 import { LoadingMessage } from "@cpg/ui/backend/feedback/loading-message";
+import { PageHeader } from "@cpg/ui/backend/page-header";
 import { isGroup, TENANT_TREE, type NavEntry } from "../../../components/layout/nav-tree";
 import { getMessages } from "../../../i18n/get-messages";
 import { BackLink } from "./back-link";
@@ -32,15 +32,14 @@ async function TenantNotFoundContent() {
   const lists: NavEntry[] = LISTS.map((leaf) => ({ ...leaf, label: messages.nav[leaf.id] }));
 
   return (
-    <div lang={locale}>
-      <EmptyState title={t.title}>
-        <p>{t.description}</p>
-        <BackLink
-          lists={lists}
-          tenants={TENANT_NAMES}
-          labels={{ backTo: t.backTo, backToOverview: t.backToOverview, goToTenants: t.goToTenants }}
-        />
-      </EmptyState>
+    <div lang={locale} className="flex flex-col items-start">
+      {/* The page's one h1 (design system v1, "Typography"); the way back follows it as the content. */}
+      <PageHeader title={t.title} description={t.description} />
+      <BackLink
+        lists={lists}
+        tenants={TENANT_NAMES}
+        labels={{ backTo: t.backTo, backToOverview: t.backToOverview, goToTenants: t.goToTenants }}
+      />
     </div>
   );
 }
