@@ -152,7 +152,7 @@ describe("materials and their unit conversions (E03-S01)", () => {
     await admin.waitUntil(ready(button("Deactivate")));
     await admin.clickRole("button", "Deactivate");
     await admin.waitFor("[role=alertdialog]");
-    await admin.click("[role=alertdialog] button[data-variant=destructive]");
+    await admin.click("[role=alertdialog] button[data-variant=destructive-solid]");
     await admin.waitUntil(`!document.querySelector("[role=alertdialog]")`);
     await admin.waitUntil(ready(button("Reactivate")));
     expect(await admin.texts("main dd")).toContain("Inactive");

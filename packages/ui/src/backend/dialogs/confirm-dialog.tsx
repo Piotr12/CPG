@@ -25,7 +25,7 @@ export interface ConfirmDialogProps<T> {
   confirmLabel: string;
   pendingLabel?: string;
   cancelLabel: string;
-  /** A red confirm button, for what can't simply be undone. */
+  /** A solid red confirm button (`destructive-solid`), for what can't simply be undone. */
   destructive?: boolean;
   /** Usually a server action bound to the record. */
   action: () => Promise<ApiResult<T>>;
@@ -81,7 +81,7 @@ export function ConfirmDialog<T>({
         {error && <ErrorMessage>{error}</ErrorMessage>}
         <AlertDialogFooter>
           <AlertDialogCancel>{cancelLabel}</AlertDialogCancel>
-          <Button variant={destructive ? "destructive" : "default"} disabled={isPending} onClick={confirm}>
+          <Button variant={destructive ? "destructive-solid" : "default"} disabled={isPending} onClick={confirm}>
             {isPending ? (pendingLabel ?? confirmLabel) : confirmLabel}
           </Button>
         </AlertDialogFooter>

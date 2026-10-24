@@ -132,7 +132,7 @@ describe("purchase requisitions and orders in the UI", () => {
     await admin.clickRole("button", `Actions for ${location}`);
     await admin.clickRole("menuitem", "Deactivate");
     await admin.waitFor("[role=alertdialog]");
-    await admin.click("[role=alertdialog] button[data-variant=destructive]");
+    await admin.click("[role=alertdialog] button[data-variant=destructive-solid]");
     await admin.waitUntil(`!!document.querySelector("[role=alertdialog] [role=alert]")`);
 
     expect(
@@ -156,7 +156,7 @@ describe("purchase requisitions and orders in the UI", () => {
     await admin.waitUntil(ready(button("Deactivate")));
     await admin.clickRole("button", "Deactivate");
     await admin.waitFor("[role=alertdialog]");
-    await admin.click("[role=alertdialog] button[data-variant=destructive]");
+    await admin.click("[role=alertdialog] button[data-variant=destructive-solid]");
     await admin.waitUntil(`!!document.querySelector("${alert}")`);
 
     expect(

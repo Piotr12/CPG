@@ -23,7 +23,7 @@ describe("Test reset in Cave control", () => {
     await browser.waitUntil(`!!document.querySelector('[data-test-reset] button') && document.querySelector('[data-test-reset] button').offsetParent && Object.keys(document.querySelector('[data-test-reset] button')).some(k=>k.startsWith('__reactFiber'))`);
   }
   const confirm = async (browser: Browser, name = "Reset Test") => {
-    await browser.click(`[role=alertdialog] button[data-variant=destructive]`);
+    await browser.click(`[role=alertdialog] button[data-variant=destructive-solid]`);
     await browser.waitUntil(`!document.querySelector('[role=alertdialog]') && !!document.querySelector('[data-test-reset] [role=status]')`);
     expect(await browser.text("[data-test-reset] [role=status]")).toContain(name === "Reset Test" ? "Test reset to generation" : "Test zresetowano do generacji");
   };
@@ -118,7 +118,7 @@ describe("Test reset in Cave control", () => {
     await clickHydrated(admin, "[data-test-reset] button");
     await admin.waitFor("[role=alertdialog]");
     expect((await api("POST", "/api/tenants/test/reset", {}, before.generation)).status).toBe(200);
-    await admin.click("[role=alertdialog] button[data-variant=destructive]");
+    await admin.click("[role=alertdialog] button[data-variant=destructive-solid]");
     await admin.waitFor("[role=alertdialog] [role=alert]");
     expect(await admin.text("[role=alertdialog] [role=alert]")).toContain("Test was reset since this page loaded");
     expect(await admin.text("[role=alertdialog]")).toContain(`generation ${before.generation}`);
@@ -143,7 +143,7 @@ describe("Test reset in Cave control", () => {
     await clickHydrated(admin, "[data-test-reset] button");
     await admin.waitFor("[role=alertdialog]");
     expect(await admin.text("[role=alertdialog]")).toContain("Tej operacji nie można cofnąć");
-    expect(await admin.evaluate<boolean>(`(() => { const b=document.querySelector('[role=alertdialog] button[data-variant=destructive]').getBoundingClientRect(); return b.x>=0 && b.right<=innerWidth && b.bottom<=innerHeight })()`)).toBe(true);
+    expect(await admin.evaluate<boolean>(`(() => { const b=document.querySelector('[role=alertdialog] button[data-variant=destructive-solid]').getBoundingClientRect(); return b.x>=0 && b.right<=innerWidth && b.bottom<=innerHeight })()`)).toBe(true);
     await confirm(admin, "Resetuj Test");
     expect(await state()).toMatchObject({ generation: before.generation + 1, readOnly: true });
     expect(await admin.text("[data-test-reset] [role=status]")).toContain("Test pozostanie tylko do odczytu");

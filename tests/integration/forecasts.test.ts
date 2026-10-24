@@ -173,7 +173,7 @@ describe("forecasts (E08-S03)", () => {
 
     await rowMenu("2027-03-01", "Remove");
     await admin.waitFor("[role=alertdialog]");
-    await admin.click("[role=alertdialog] button[data-variant=destructive]");
+    await admin.click("[role=alertdialog] button[data-variant=destructive-solid]");
     await admin.waitUntil(`!document.querySelector("[role=alertdialog]")`);
     expect((await mine()).filter(([location]) => location.startsWith(plant)).map(([, date]) => date)).toEqual(["2027-03-02"]);
   });

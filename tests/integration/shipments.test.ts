@@ -178,7 +178,7 @@ describe("shipments and goods issues in the UI", () => {
     await una.clickRole("button", "Cancel shipment");
     await una.waitFor("[role=alertdialog]");
     expect(await una.text("[role=alertdialog] p")).toBe("It will plan nothing more. Stock and the order are not changed.");
-    await una.click("[role=alertdialog] button[data-variant=destructive]");
+    await una.click("[role=alertdialog] button[data-variant=destructive-solid]");
     await una.waitUntil(`!document.querySelector("[role=alertdialog]")`);
 
     await una.waitUntil(`document.querySelector("main dl")?.innerText.includes("Cancelled")`);
