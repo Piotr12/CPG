@@ -110,15 +110,15 @@ const en: Record<HelpTopicId, HelpText> = {
     title: "Signing in",
     body: [
       "Choose Sign in on the homepage or at the top of the page, enter your username and password, then choose Sign in.",
-      "If either is wrong you see “Invalid username or password.” CPG never says which of the two was wrong.",
+      "If either is wrong you see “Invalid username or password. Check both and try again. If you cannot sign in, contact your administrator.” CPG never says which of the two was wrong.",
       "After several failed attempts, signing in pauses for 15 minutes. Wait, then try again.",
       "A session lasts 12 hours. Sign out from your account card, with your name, at the bottom of the sidebar when you are done.",
     ],
   },
   "admin-home": {
-    title: "Cave control",
+    title: "Tenants",
     body: [
-      "Cave control is the page every account lands on after signing in: choose the Test or Prod tenant there. Your language and theme, your API tokens and Sign out are in your account card at the bottom of the sidebar. There is no password change: only the administrator sets passwords.",
+      "The Tenants page is where every account lands after signing in: choose the Test or Prod tenant there. Your language and theme, your API tokens and Sign out are in your account card at the bottom of the sidebar. There is no password change: only the administrator sets passwords.",
       "The administrator opens this page from Administration → Tenants in the sidebar, next to Users, and also sees the Database card here. The card shows where CPG keeps its data, how many migrations are applied, whether any are still pending, and how many settings are stored.",
       "A pending migration normally means CPG is still starting. If it stays, tell whoever runs CPG.",
       "The administrator's Read-only card makes Test or Prod read-only, and writable again, after a confirmation. Each tenant has its own flag, and every change is kept in the Global audit. A read-only tenant shows Read-only on the chooser, a lock on its side of the TEST | PROD switch, and a banner on its pages.",
@@ -412,10 +412,10 @@ const pl: Record<HelpTopicId, HelpText> = {
     ],
   },
   "admin-home": {
-    title: "Kontrola jaskini",
+    title: "Środowiska",
     body: [
       "Reset środowiska Test jest dostępny tu tylko dla administratora. Trwale zastępuje dane biznesowe i audyt środowiska Test świeżym zbiorem danych demonstracyjnych, wygenerowanym na dziś, w nowej generacji. Najpierw wybierz zbiór: mały, z dwoma miesiącami historii, zapisuje się w chwilę i od niego zaczyna nowa instalacja; realistyczny, z dwoma latami historii, zapisuje się do minuty, a w tym czasie CPG nie odpowiada nikomu innemu. Przywraca poprzednią flagę tylko do odczytu. Prod, użytkownicy, sesje, tokeny, preferencje i audyt globalny pozostają bez zmian. Stare formularze Test trzeba odświeżyć. API: POST /api/tenants/test/reset z pustym obiektem dla małego zbioru lub { \"dataset\": \"realistic\" }, tokenem administratora, Idempotency-Key i aktualnym Dataset-Generation. Po utracie odpowiedzi pobierz nową generację i ponów ten sam klucz, nigdy nowy.",
-      "Kontrola jaskini to strona, na którą trafia każde konto po zalogowaniu: wybierz tu środowisko Test lub Prod. Język i motyw, tokeny API oraz przycisk Wyloguj są na karcie konta na dole panelu bocznego. Nie ma tu zmiany hasła: hasła ustawia tylko administrator.",
+      "Środowiska to strona, na którą trafia każde konto po zalogowaniu: wybierz tu środowisko Test lub Prod. Język i motyw, tokeny API oraz przycisk Wyloguj są na karcie konta na dole panelu bocznego. Nie ma tu zmiany hasła: hasła ustawia tylko administrator.",
       "Administrator otwiera tę stronę pozycją Administracja → Środowiska w panelu bocznym, obok Użytkowników, i widzi tu też kartę Baza danych. Karta pokazuje, gdzie CPG przechowuje dane, ile migracji zastosowano, czy jakieś jeszcze oczekują i ile ustawień zapisano.",
       "Oczekująca migracja zwykle oznacza, że CPG jeszcze się uruchamia. Jeśli nie znika, powiedz o tym osobie, która utrzymuje CPG.",
       "Karta Tylko do odczytu administratora po potwierdzeniu ustawia Test lub Prod tylko do odczytu i z powrotem jako zapisywalne. Każde środowisko ma własne ustawienie, a każda zmiana trafia do audytu globalnego. Środowisko tylko do odczytu jest tak oznaczone przy wyborze środowiska, ma kłódkę po swojej stronie przełącznika TEST | PROD i baner na swoich stronach.",

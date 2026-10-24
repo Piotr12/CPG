@@ -9,7 +9,7 @@ const baseUrl = inject("baseUrl");
 const password = inject("adminPassword");
 const normalName = `reset-ui-${randomUUID().slice(0, 8)}`;
 
-describe("Test reset in Cave control", () => {
+describe("Test reset on the Tenants page", () => {
   let admin: Browser;
   let stale: Browser;
   let normal: Browser;
@@ -50,7 +50,8 @@ describe("Test reset in Cave control", () => {
 
   it("hides reset from a normal user, offers tiny by default and warns of realistic's wait, and cancellation changes nothing", async () => {
     await normal.open(`${baseUrl}/admin`);
-    await normal.waitForText("Cave control");
+    // "Tenants" is also a sidebar word, so wait for the page's own heading.
+    await normal.waitUntil(`Boolean([...document.querySelectorAll("h1")].some((h1) => h1.textContent === "Tenants" && !h1.closest("[hidden]")))`);
     expect(await normal.evaluate<boolean>(`!!document.querySelector('[data-test-reset]')`)).toBe(false);
     await api("PATCH", "/api/tenants/test", { readOnly: false });
     const before = await state();

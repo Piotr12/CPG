@@ -1,0 +1,338 @@
+[
+  {
+    "file": "home-light-en-320.png",
+    "clipped": [],
+    "dark": false,
+    "h1s": [
+      "Caveman Planning Good"
+    ],
+    "innerWidth": 320,
+    "lang": "en",
+    "overflow": false,
+    "scrollWidth": 320
+  },
+  {
+    "file": "home-light-en-1440.png",
+    "clipped": [],
+    "dark": false,
+    "h1s": [
+      "Caveman Planning Good"
+    ],
+    "innerWidth": 1440,
+    "lang": "en",
+    "overflow": false,
+    "scrollWidth": 1440
+  },
+  {
+    "file": "help-light-en-320.png",
+    "clipped": [],
+    "dark": false,
+    "h1s": [
+      "Help"
+    ],
+    "innerWidth": 320,
+    "lang": "en",
+    "overflow": false,
+    "scrollWidth": 320
+  },
+  {
+    "file": "help-light-en-1440.png",
+    "clipped": [],
+    "dark": false,
+    "h1s": [
+      "Help"
+    ],
+    "innerWidth": 1440,
+    "lang": "en",
+    "overflow": false,
+    "scrollWidth": 1440
+  },
+  {
+    "file": "help-zzz-light-en-320.png",
+    "clipped": [],
+    "dark": false,
+    "h1s": [
+      "Help"
+    ],
+    "innerWidth": 320,
+    "lang": "en",
+    "overflow": false,
+    "scrollWidth": 320
+  },
+  {
+    "file": "help-zzz-light-en-1440.png",
+    "clipped": [],
+    "dark": false,
+    "h1s": [
+      "Help"
+    ],
+    "innerWidth": 1440,
+    "lang": "en",
+    "overflow": false,
+    "scrollWidth": 1440
+  },
+  {
+    "file": "login-refused-light-en-320.png",
+    "clipped": [],
+    "dark": false,
+    "h1s": [
+      "Sign in to CPG"
+    ],
+    "innerWidth": 320,
+    "lang": "en",
+    "overflow": false,
+    "scrollWidth": 320
+  },
+  {
+    "file": "login-refused-light-en-1440.png",
+    "clipped": [],
+    "dark": false,
+    "h1s": [
+      "Sign in to CPG"
+    ],
+    "innerWidth": 1440,
+    "lang": "en",
+    "overflow": false,
+    "scrollWidth": 1440
+  },
+  {
+    "file": "login-refused-dark-en-320.png",
+    "clipped": [],
+    "dark": true,
+    "h1s": [
+      "Sign in to CPG"
+    ],
+    "innerWidth": 320,
+    "lang": "en",
+    "overflow": false,
+    "scrollWidth": 320
+  },
+  {
+    "file": "login-refused-dark-en-1440.png",
+    "clipped": [],
+    "dark": true,
+    "h1s": [
+      "Sign in to CPG"
+    ],
+    "innerWidth": 1440,
+    "lang": "en",
+    "overflow": false,
+    "scrollWidth": 1440
+  },
+  {
+    "file": "home-dark-en-320.png",
+    "clipped": [],
+    "dark": true,
+    "h1s": [
+      "Caveman Planning Good"
+    ],
+    "innerWidth": 320,
+    "lang": "en",
+    "overflow": false,
+    "scrollWidth": 320
+  },
+  {
+    "file": "home-dark-en-1440.png",
+    "clipped": [],
+    "dark": true,
+    "h1s": [
+      "Caveman Planning Good"
+    ],
+    "innerWidth": 1440,
+    "lang": "en",
+    "overflow": false,
+    "scrollWidth": 1440
+  },
+  {
+    "file": "help-dark-en-320.png",
+    "clipped": [],
+    "dark": true,
+    "h1s": [
+      "Help"
+    ],
+    "innerWidth": 320,
+    "lang": "en",
+    "overflow": false,
+    "scrollWidth": 320
+  },
+  {
+    "file": "help-dark-en-1440.png",
+    "clipped": [],
+    "dark": true,
+    "h1s": [
+      "Help"
+    ],
+    "innerWidth": 1440,
+    "lang": "en",
+    "overflow": false,
+    "scrollWidth": 1440
+  },
+  {
+    "file": "help-zzz-dark-en-320.png",
+    "clipped": [],
+    "dark": true,
+    "h1s": [
+      "Help"
+    ],
+    "innerWidth": 320,
+    "lang": "en",
+    "overflow": false,
+    "scrollWidth": 320
+  },
+  {
+    "file": "help-zzz-dark-en-1440.png",
+    "clipped": [],
+    "dark": true,
+    "h1s": [
+      "Help"
+    ],
+    "innerWidth": 1440,
+    "lang": "en",
+    "overflow": false,
+    "scrollWidth": 1440
+  },
+  {
+    "file": "home-light-pl-320.png",
+    "clipped": [],
+    "dark": false,
+    "h1s": [
+      "Caveman Planning Good"
+    ],
+    "innerWidth": 320,
+    "lang": "pl",
+    "overflow": false,
+    "scrollWidth": 320
+  },
+  {
+    "file": "home-light-pl-1440.png",
+    "clipped": [],
+    "dark": false,
+    "h1s": [
+      "Caveman Planning Good"
+    ],
+    "innerWidth": 1440,
+    "lang": "pl",
+    "overflow": false,
+    "scrollWidth": 1440
+  },
+  {
+    "file": "help-light-pl-320.png",
+    "clipped": [],
+    "dark": false,
+    "h1s": [
+      "Pomoc"
+    ],
+    "innerWidth": 320,
+    "lang": "pl",
+    "overflow": false,
+    "scrollWidth": 320
+  },
+  {
+    "file": "help-light-pl-1440.png",
+    "clipped": [],
+    "dark": false,
+    "h1s": [
+      "Pomoc"
+    ],
+    "innerWidth": 1440,
+    "lang": "pl",
+    "overflow": false,
+    "scrollWidth": 1440
+  },
+  {
+    "file": "help-zzz-light-pl-320.png",
+    "clipped": [],
+    "dark": false,
+    "h1s": [
+      "Pomoc"
+    ],
+    "innerWidth": 320,
+    "lang": "pl",
+    "overflow": false,
+    "scrollWidth": 320
+  },
+  {
+    "file": "help-zzz-light-pl-1440.png",
+    "clipped": [],
+    "dark": false,
+    "h1s": [
+      "Pomoc"
+    ],
+    "innerWidth": 1440,
+    "lang": "pl",
+    "overflow": false,
+    "scrollWidth": 1440
+  },
+  {
+    "file": "home-dark-pl-320.png",
+    "clipped": [],
+    "dark": true,
+    "h1s": [
+      "Caveman Planning Good"
+    ],
+    "innerWidth": 320,
+    "lang": "pl",
+    "overflow": false,
+    "scrollWidth": 320
+  },
+  {
+    "file": "home-dark-pl-1440.png",
+    "clipped": [],
+    "dark": true,
+    "h1s": [
+      "Caveman Planning Good"
+    ],
+    "innerWidth": 1440,
+    "lang": "pl",
+    "overflow": false,
+    "scrollWidth": 1440
+  },
+  {
+    "file": "help-dark-pl-320.png",
+    "clipped": [],
+    "dark": true,
+    "h1s": [
+      "Pomoc"
+    ],
+    "innerWidth": 320,
+    "lang": "pl",
+    "overflow": false,
+    "scrollWidth": 320
+  },
+  {
+    "file": "help-dark-pl-1440.png",
+    "clipped": [],
+    "dark": true,
+    "h1s": [
+      "Pomoc"
+    ],
+    "innerWidth": 1440,
+    "lang": "pl",
+    "overflow": false,
+    "scrollWidth": 1440
+  },
+  {
+    "file": "help-zzz-dark-pl-320.png",
+    "clipped": [],
+    "dark": true,
+    "h1s": [
+      "Pomoc"
+    ],
+    "innerWidth": 320,
+    "lang": "pl",
+    "overflow": false,
+    "scrollWidth": 320
+  },
+  {
+    "file": "help-zzz-dark-pl-1440.png",
+    "clipped": [],
+    "dark": true,
+    "h1s": [
+      "Pomoc"
+    ],
+    "innerWidth": 1440,
+    "lang": "pl",
+    "overflow": false,
+    "scrollWidth": 1440
+  }
+]

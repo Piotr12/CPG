@@ -54,7 +54,7 @@ describe("AdminPage", () => {
 
     expect(mocks.connection).toHaveBeenCalledOnce();
     expect(mocks.requireUser).toHaveBeenCalledOnce();
-    expect(screen.getByRole("heading", { name: "Cave control" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Tenants" })).toBeTruthy();
     expect(screen.getByText("/externaldata/cpg.sqlite")).toBeTruthy();
     expect(screen.getByText("3 migrations applied")).toBeTruthy();
     expect(screen.getByText("7 settings")).toBeTruthy();
@@ -77,7 +77,7 @@ describe("AdminPage", () => {
 
     render(await resolveServerComponents(AdminPage()));
 
-    expect(screen.getByRole("heading", { name: "Kontrola jaskini" }).closest("[lang]")?.getAttribute("lang")).toBe("pl");
+    expect(screen.getByRole("heading", { name: "Środowiska" }).closest("[lang]")?.getAttribute("lang")).toBe("pl");
     expect(screen.getByText("Zastosowane migracje: 3")).toBeTruthy();
   });
 

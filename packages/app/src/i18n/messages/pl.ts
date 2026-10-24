@@ -1,30 +1,28 @@
 import type { Messages } from "./en";
+import { ERROR_BOUNDARY } from "./error-boundary";
 
 /** Polish. Same shape as `en`; "Caveman Planning Good" is the product name and stays as it is. */
 export const pl: Messages = {
   home: {
     title: "Caveman Planning Good",
-    tagline: "MRP II. Bo planowanie trudne. Jaskiniowiec i tak próbuje.",
-    steps: [
-      { name: "Prognoza popytu", grunt: "Zgadnij, czego ludzie chcą. Chcą czegoś innego." },
-      { name: "Struktura wyrobu", grunt: "Wiedz, z czego rzeczy zrobione. Zanim je zrobisz." },
-      { name: "Planowanie produkcji", grunt: "Zdecyduj, co robić, ile i kiedy." },
-      { name: "Realizacja produkcji", grunt: "Rób rzeczy. Dowiedz się, czemu plan zły." },
-    ],
-    motto: "Popyt przyjść. Jaskiniowiec planować. Jaskiniowiec robić.",
+    tagline: "Małe narzędzie do planowania MRP II: zamienia to, czego chcą klienci, w plany zakupów i produkcji.",
+    steps: [{ name: "Prognozy i zamówienia klientów" }, { name: "BOM-y" }, { name: "Zlecenia produkcyjne i zamówienia zakupu" }, { name: "Zapas" }],
+    flowLabel: "Co obejmuje CPG",
     signIn: "Zaloguj się",
     open: "Otwórz CPG",
   },
   login: {
-    title: "🦣 Zaloguj się do CPG",
+    title: "Zaloguj się do CPG",
     description: "Użyj swojego konta CPG.",
     username: "Nazwa użytkownika",
     password: "Hasło",
     submit: "Zaloguj",
     submitting: "Logowanie…",
+    invalidCredentials: "Nieprawidłowa nazwa użytkownika lub hasło. Sprawdź oba pola i spróbuj ponownie. Jeśli nie możesz się zalogować, skontaktuj się z administratorem.",
   },
   admin: {
-    heading: "Kontrola jaskini",
+    heading: "Środowiska",
+    tenantHeading: "Przegląd",
     database: "Baza danych",
     migrationsApplied: (count) => `Zastosowane migracje: ${count}`,
     migrationsPending: (count) => `Oczekujące: ${count}`,
@@ -650,7 +648,7 @@ export const pl: Messages = {
     "transit": "Przed zamknięciem przyjmij lub spisz cały zapas w tranzycie."
 },
   productionOrders: {
-    title: "Zlecenia produkcyjne", heading: "{tenant} · Zlecenia produkcyjne", detailHeading: "Zlecenie produkcyjne {id}",
+    title: "Zlecenia produkcyjne", heading: "Zlecenia produkcyjne — {tenant}", detailHeading: "Zlecenie produkcyjne {id}",
     intro: "Zaplanuj jeden wyrób w jednej lokalizacji i zachowaj wybraną rewizję BOM. Planowanie nie zmienia zapasu fizycznego.",
     create: "Utwórz zlecenie produkcyjne", edit: "Edytuj zlecenie produkcyjne", save: "Zapisz zmiany", preview: "Podgląd receptur", pending: "Przetwarzanie…", cancel: "Anuluj", back: "Wstecz", backList: "Wróć do zleceń produkcyjnych",
     id: "ID", output: "Materiał wyjściowy", location: "Lokalizacja", quantity: "Planowana ilość", unit: "Jednostka", finish: "Planowany koniec", start: "Planowany początek", recipe: "BOM / rewizja", status: "Status", entered: "Wprowadzona ilość / przelicznik",
@@ -664,7 +662,7 @@ export const pl: Messages = {
     sufficient: "Aktualny zapas fizyczny pokrywa bezpośrednie potrzeby. Planowanie go nie rezerwuje ani nie zużywa.",
     resolved: "Zlecenie ma stan „{status}”, więc nie potrzebuje już składników.",
     components: "Potrzeby przypiętej receptury i aktualny zapas", component: "Składnik", required: "Potrzeba", available: "Dostępne teraz", shortage: "Niedobór",
-    empty: "Brak zleceń produkcyjnych. Skonfiguruj wytwarzany materiał, lokalizację i aktywną recepturę, a następnie utwórz zlecenie.",
+    empty: "Brak zleceń produkcyjnych. Skonfiguruj wytwarzany materiał, lokalizację i aktywny BOM, a następnie utwórz zlecenie.",
     pagination: "Strony zleceń produkcyjnych", previous: "Poprzednia", next: "Następna", page: "Strona {page} z {pages}",
     invalidDate: "Podaj prawidłową datę w formacie RRRR-MM-DD.", invalidUnit: "Podaj prawidłową jednostkę.", invalidQuantity: "Podaj dodatnią ilość z maksymalnie 6 miejscami po przecinku.",
     invalidStart: "Wyliczony początek musi mieścić się w czterocyfrowym roku.", requirementOverflow: "Potrzeba składnika jest zbyt duża. Zmniejsz ilość docelową.", belowProduced: "Ilość docelowa nie może być mniejsza od już wyprodukowanej.",
@@ -1894,6 +1892,15 @@ export const pl: Messages = {
     light: "Jasny",
     dark: "Ciemny",
   },
+  notFound: {
+    title: "Nie znaleziono strony.",
+    description: "Adres może zawierać literówkę albo rekord należy do drugiego środowiska.",
+    goToTenants: "Przejdź do Środowisk",
+    backTo: "Wróć do listy: {list}",
+    backToOverview: "Wróć do strony Przegląd — {tenant}",
+  },
+  noscript: "CPG wymaga JavaScriptu. Włącz go w przeglądarce i odśwież tę stronę.",
+  unexpectedError: ERROR_BOUNDARY.pl,
   errors: {
     DOCUMENT_NOT_OPEN: "Ten dokument lub wiersz nie jest już otwarty.",
     DOCUMENT_PROCESSED: "Zapisano już operacje. Wybierz „Zamknij wcześniej”, aby porzucić resztę.",
@@ -1924,6 +1931,6 @@ export const pl: Messages = {
     VALIDATION_FAILED: "Niektóre pola są nieprawidłowe.",
     INTERNAL: "Coś poszło nie tak. Spróbuj ponownie.",
     TENANT_READ_ONLY:
-      "To środowisko jest tylko do odczytu, więc jego danych biznesowych nie można zmieniać. Administrator może je ustawić jako zapisywalne na stronie Kontrola jaskini.",
+      "To środowisko jest tylko do odczytu, więc jego danych biznesowych nie można zmieniać. Administrator może je ustawić jako zapisywalne na stronie Środowiska.",
   },
 };

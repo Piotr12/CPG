@@ -1,3 +1,5 @@
+import { ERROR_BOUNDARY } from "./error-boundary";
+
 /**
  * Every user-visible string of CPG's screens, in English. `pl.ts` is typed against this object, so a
  * screen can't ship a string that only exists in one language. Strings handed to client components
@@ -6,27 +8,25 @@
 export const en = {
   home: {
     title: "Caveman Planning Good",
-    tagline: "MRP II. Because planning hard. Caveman try anyway.",
-    steps: [
-      { name: "Demand Forecast", grunt: "Guess what people want. They want something else." },
-      { name: "Bill of Materials", grunt: "Know what things made of. Before making them." },
-      { name: "Production Planning", grunt: "Decide what make, how much, when." },
-      { name: "Production Execution", grunt: "Make things. Learn why plan wrong." },
-    ],
-    motto: "Demand come. Caveman plan. Caveman make.",
+    tagline: "A small MRP II planning tool: it turns what customers want into plans for what to buy and what to make.",
+    /** What is built, in the order work flows through it; the page links each to its help topic. */
+    steps: [{ name: "Forecasts and customer orders" }, { name: "BOMs" }, { name: "Production and purchase orders" }, { name: "Stock" }],
+    flowLabel: "What CPG covers",
     signIn: "Sign in",
     open: "Open CPG",
   },
   login: {
-    title: "🦣 Sign in to CPG",
+    title: "Sign in to CPG",
     description: "Use your CPG account.",
     username: "Username",
     password: "Password",
     submit: "Sign in",
     submitting: "Signing in…",
+    invalidCredentials: "Invalid username or password. Check both and try again. If you cannot sign in, contact your administrator.",
   },
   admin: {
-    heading: "Cave control",
+    heading: "Tenants",
+    tenantHeading: "Overview",
     database: "Database",
     migrationsApplied: (count: number) => `${count} migrations applied`,
     migrationsPending: (count: number) => `${count} pending`,
@@ -683,7 +683,7 @@ export const en = {
     "transit": "Receive or write off all stock in transit before closing."
 },
   productionOrders: {
-    title: "Production orders", heading: "{tenant} · Production orders", detailHeading: "Production order {id}",
+    title: "Production orders", heading: "Production orders — {tenant}", detailHeading: "Production order {id}",
     intro: "Plan one Make output at one location and keep its chosen BOM revision. Planning never changes physical stock.",
     create: "Create production order", edit: "Edit production order", save: "Save changes", preview: "Preview recipes", pending: "Working…", cancel: "Cancel", back: "Back", backList: "Back to production orders",
     id: "ID", output: "Output material", location: "Location", quantity: "Planned quantity", unit: "Unit", finish: "Planned finish", start: "Planned start", recipe: "BOM / revision", status: "Status", entered: "Entered quantity / conversion",
@@ -697,7 +697,7 @@ export const en = {
     sufficient: "Current physical stock covers these direct requirements. Planning does not reserve or consume it.",
     resolved: "This order is {status}, so it needs no more components.",
     components: "Pinned component requirements and current stock", component: "Component", required: "Required", available: "Available now", shortage: "Shortage",
-    empty: "No production orders yet. Configure a Make output, location and active recipe, then create an order.",
+    empty: "No production orders yet. Configure a Make output, location and active BOM, then create an order.",
     pagination: "Production order pages", previous: "Previous", next: "Next", page: "Page {page} of {pages}",
     invalidDate: "Enter a real date written YYYY-MM-DD.", invalidUnit: "Enter a valid unit.", invalidQuantity: "Enter a positive quantity with at most 6 decimals.",
     invalidStart: "The derived start must fit a four-digit calendar year.", requirementOverflow: "The component requirement is too large. Reduce the target.", belowProduced: "The target cannot be less than the quantity already produced.",
@@ -1952,6 +1952,17 @@ export const en = {
     light: "Light",
     dark: "Dark",
   },
+  /** An unknown address or a record outside the tenant: the not-found pages. */
+  notFound: {
+    title: "Page not found.",
+    description: "The address may be mistyped, or the record belongs to the other tenant.",
+    goToTenants: "Go to Tenants",
+    backTo: "Back to {list}",
+    backToOverview: "Back to Overview — {tenant}",
+  },
+  /** The root layout's `<noscript>` notice; the static shell knows no locale, so it shows both. */
+  noscript: "CPG needs JavaScript. Turn it on in your browser and reload this page.",
+  unexpectedError: ERROR_BOUNDARY.en,
   /** Keyed by the result envelope's error `code`; unknown codes fall back to the server's message. */
   errors: {
     DOCUMENT_NOT_OPEN: "This document or line is no longer open.",
@@ -1983,7 +1994,7 @@ export const en = {
     VALIDATION_FAILED: "Some fields are invalid.",
     INTERNAL: "Something went wrong. Try again.",
     TENANT_READ_ONLY:
-      "This tenant is read-only, so its business data can't be changed. The administrator can make it writable on the Cave control page.",
+      "This tenant is read-only, so its business data can't be changed. The administrator can make it writable on the Tenants page.",
   },
 };
 

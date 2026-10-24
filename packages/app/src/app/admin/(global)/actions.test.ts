@@ -37,7 +37,7 @@ describe("setTenantReadOnly", () => {
   });
   afterEach(() => vi.clearAllMocks());
 
-  it("sets the flag as the signed-in admin and refreshes Cave control only", async () => {
+  it("sets the flag as the signed-in admin and refreshes the Tenants page only", async () => {
     await expect(setTenantReadOnly({ tenant: "prod", readOnly: true })).resolves.toEqual({ ok: true, data: prod });
 
     expect(mocks.tenantService.setReadOnly).toHaveBeenCalledWith("prod", true, adminActor);
@@ -89,7 +89,7 @@ describe("resetTest", () => {
     mocks.reset.mockResolvedValue({ code: "test", generation: 4, readOnly: true });
   });
   afterEach(() => vi.clearAllMocks());
-  it("passes the admin session and loaded generation to the fixed Test service and refreshes only Cave control", async () => {
+  it("passes the admin session and loaded generation to the fixed Test service and refreshes only the Tenants page", async () => {
     expect(await resetTest({ generation: 3 })).toEqual({ ok: true, data: { code: "test", generation: 4, readOnly: true } });
     expect(mocks.tenantScope).toHaveBeenCalledWith("test");
     expect(mocks.reset).toHaveBeenCalledWith(3, adminActor, undefined);

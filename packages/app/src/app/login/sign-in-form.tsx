@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { Callout } from "@cpg/ui/backend/feedback/callout";
 import { Button } from "@cpg/ui/components/button";
 import { Input } from "@cpg/ui/components/input";
 import { Label } from "@cpg/ui/components/label";
@@ -30,9 +31,9 @@ export function SignInForm({ action, labels }: SignInFormProps) {
         <Input id="password" name="password" type="password" autoComplete="current-password" required />
       </div>
       {state.error && (
-        <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+        <Callout tone="danger" role="alert">
           {state.error}
-        </p>
+        </Callout>
       )}
       <Button type="submit" disabled={isPending}>
         {isPending ? labels.submitting : labels.submit}

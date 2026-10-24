@@ -23,7 +23,10 @@ describe("LoginPage", () => {
 
     render(await resolveServerComponents(LoginPage()));
 
-    expect(screen.getByText("🦣 Sign in to CPG")).toBeTruthy();
+    const title = screen.getByRole("heading", { level: 1, name: "Sign in to CPG" });
+    expect(screen.getAllByRole("heading", { level: 1 })).toEqual([title]);
+    expect(title.className).toContain("text-2xl");
+    expect(title.querySelector("[data-slot=mammoth-mark]")?.getAttribute("width")).toBe("20");
     expect(screen.getByLabelText("Username")).toBeTruthy();
     expect(screen.getByLabelText("Password")).toBeTruthy();
     expect(mocks.redirect).not.toHaveBeenCalled();
