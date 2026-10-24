@@ -5,7 +5,7 @@ export function EmptyState({ title, children }: { title: ReactNode; children?: R
   return (
     <div className="flex flex-col items-center gap-1 py-8 text-center">
       <p className="text-sm font-medium">{title}</p>
-      {children && <div className="text-sm text-muted-foreground">{children}</div>}
+      {children && <div className="max-w-prose text-sm text-muted-foreground">{children}</div>}
     </div>
   );
 }

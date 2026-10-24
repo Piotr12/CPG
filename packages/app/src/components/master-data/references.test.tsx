@@ -48,7 +48,10 @@ describe("cells", () => {
     expect(screen.getByRole("link", { name: "00000002" }).getAttribute("href")).toBe("/admin/prod/materials/00000002");
     expect(screen.getByText("Old paint")).toBeTruthy();
     expect(screen.getByText("Old quarry")).toBeTruthy();
-    expect(screen.getAllByText("Inactive")).toHaveLength(2);
+    expect(screen.getAllByText("Inactive").map((badge) => [badge.dataset.slot, badge.dataset.tone, badge.className.includes("border-dashed")])).toEqual([
+      ["status-badge", "neutral", true],
+      ["status-badge", "neutral", true],
+    ]);
   });
 
   it("show no badge for active references", () => {

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { OrderView } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
-import { Badge } from "@cpg/ui/components/badge";
+import { StatusBadge } from "@cpg/ui/backend/feedback/status-badge";
+import { documentStatusTone, masterDataStatusTone, type DocumentStatus } from "../document-lifecycle/status-tone";
 import { PageLinks } from "../layout/page-links";
 import { fill, type OrdersLabels, type PartiesById } from "./labels";
 
@@ -25,8 +26,9 @@ export function OrdersTable({ tenant, orders, suppliers, locations, labels, page
     {
       id: "id",
       header: t.id,
+      kind: "id",
       cell: (order) => (
-        <Link href={`/admin/${tenant.code}/purchase-orders/${order.id}`} className="font-mono underline underline-offset-4">
+        <Link href={`/admin/${tenant.code}/purchase-orders/${order.id}`} className="underline underline-offset-4">
           {order.id}
         </Link>
       ),
@@ -34,21 +36,23 @@ export function OrdersTable({ tenant, orders, suppliers, locations, labels, page
     {
       id: "supplier",
       header: t.supplier,
+      kind: "longText",
       cell: (order) => {
         const supplier = suppliers.get(order.supplier)!;
         return (
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="font-mono">{supplier.id}</span>
             <span>{supplier.name}</span>
-            {!supplier.active && <Badge variant="destructive">{labels.inactive}</Badge>}
+            {!supplier.active && <StatusBadge {...masterDataStatusTone(false)}>{labels.inactive}</StatusBadge>}
           </span>
         );
       },
-      className: "whitespace-normal wrap-anywhere",
     },
     {
       id: "location",
       header: t.location,
+      kind: "longText",
+      priority: 2,
       cell: (order) => {
         const location = locations.get(order.location)!;
         return (
@@ -58,15 +62,20 @@ export function OrdersTable({ tenant, orders, suppliers, locations, labels, page
           </span>
         );
       },
-      className: "hidden whitespace-normal wrap-anywhere md:table-cell",
     },
     {
       id: "lines",
       header: t.lines,
+      kind: "text",
+      priority: 2,
       cell: (order) => (order.lines.length === 1 ? labels.lines.summaryOne : fill(labels.lines.summary, { count: String(order.lines.length) })),
-      className: "hidden sm:table-cell",
     },
-    { id: "status", header: t.status, cell: (order) => <Badge variant="secondary">{labels.status[order.status as keyof typeof labels.status]}</Badge> },
+    {
+      id: "status",
+      header: t.status,
+      kind: "status",
+      cell: (order) => <StatusBadge {...documentStatusTone(order.status as DocumentStatus)}>{labels.status[order.status as keyof typeof labels.status]}</StatusBadge>,
+    },
   ];
 
   return (

@@ -12,7 +12,7 @@ import { StockScreen } from "../../../../components/stock/stock-screen";
 
 export const metadata: Metadata = { title: "Stock" };
 export default function StockPage({ params, searchParams }: PageProps<"/admin/[tenant]/stock">) {
-  return <main className="mx-auto flex w-full min-w-0 max-w-6xl flex-1 flex-col gap-6 px-6 py-12">
+  return <main className="mx-auto flex w-full min-w-0 max-w-6xl flex-1 flex-col px-4 pt-6 pb-8 md:px-6 md:pt-12 md:pb-12">
     <Suspense fallback={<LoadingMessage />}><Stock params={params} searchParams={searchParams} /></Suspense>
   </main>;
 }

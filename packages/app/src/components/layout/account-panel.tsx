@@ -15,7 +15,7 @@ export function AccountPanel({ username, locale, theme, messages }: { username: 
   return (
     <div data-account-panel className="flex flex-col items-start gap-3">
       <p className="text-sm text-muted-foreground">
-        {messages.nav.signedInAs} <strong className="break-all text-foreground">{username}</strong>
+        {messages.nav.signedInAs} <strong className="font-semibold break-all text-foreground">{username}</strong>
       </p>
       <PreferencesControls locale={locale} theme={theme} labels={messages.preferences} action={updatePreferences} />
       <Button asChild variant="ghost" size="sm" className="-ml-2">

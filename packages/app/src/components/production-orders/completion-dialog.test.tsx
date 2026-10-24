@@ -46,6 +46,7 @@ it("previews the output, then posts what was used with the order and the dialog'
   expect(screen.getByText("Output 4 case at 00000001 Warehouse · BOM 00000002 / revision 3 (pinned)")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: t.submit }));
   await waitFor(() => expect(screen.getByRole("status").textContent).toBe("Completion 00000002 posted."));
+  expect(screen.getByRole("status").getAttribute("data-tone")).toBe("success");
   expect(screen.queryByRole("dialog")).toBeNull();
   const [tenant, generation, order, submission, values] = mocks.post.mock.calls[0];
   expect([tenant, generation, order]).toEqual(["test", 7, "00000001"]);

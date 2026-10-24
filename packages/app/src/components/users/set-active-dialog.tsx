@@ -67,7 +67,7 @@ export function SetActiveDialog({ user, mode, labels, open, onClose }: SetActive
         {error && <ErrorMessage>{error}</ErrorMessage>}
         <AlertDialogFooter>
           <AlertDialogCancel>{labels.cancel}</AlertDialogCancel>
-          <Button variant={deactivating ? "destructive" : "default"} disabled={isPending} onClick={confirm}>
+          <Button variant={deactivating ? "destructive-solid" : "default"} disabled={isPending} onClick={confirm}>
             {t.confirm}
           </Button>
         </AlertDialogFooter>

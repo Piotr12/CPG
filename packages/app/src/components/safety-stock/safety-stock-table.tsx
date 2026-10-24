@@ -1,7 +1,9 @@
 import type { SafetyStockTargetView, TargetStatus } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
-import { Badge } from "@cpg/ui/components/badge";
-import { fill, shownQuantity, type TenantContext } from "../forms/form-labels";
+import { StatusBadge } from "@cpg/ui/backend/feedback/status-badge";
+import { targetStatusTone } from "../document-lifecycle/status-tone";
+import { shownQuantity, type TenantContext } from "../forms/form-labels";
+import { EmptyText } from "../master-data/empty-text";
 import { LocationCell, MaterialCell, type ReferenceDetails } from "../master-data/references";
 import type { SafetyStockLabels } from "./labels";
 import { SafetyStockTargetActions } from "./safety-stock-target-actions";
@@ -25,25 +27,22 @@ export function SafetyStockTable({ tenant, rows, labels, editable }: SafetyStock
     {
       id: "material",
       header: t.material,
+      kind: "longText",
       cell: (row) => <MaterialCell tenant={tenant.code} row={row} inactive={labels.inactive} />,
-      className: "whitespace-normal wrap-anywhere",
     },
     {
       id: "location",
       header: t.location,
+      kind: "longText",
       cell: (row) => <LocationCell row={row} inactive={labels.inactive} />,
-      className: "whitespace-normal wrap-anywhere",
     },
-    { id: "effectiveFrom", header: t.effectiveFrom, cell: (row) => <span className="font-mono">{row.effectiveFrom}</span> },
-    { id: "quantity", header: t.quantity, cell: (row) => `${shownQuantity(row.quantity)} ${row.baseUnit}`, className: "text-right" },
+    { id: "effectiveFrom", header: t.effectiveFrom, kind: "date", cell: (row) => row.effectiveFrom },
+    { id: "quantity", header: t.quantity, kind: "quantity", cell: (row) => `${shownQuantity(row.quantity)} ${row.baseUnit}` },
     {
       id: "status",
       header: t.status,
-      cell: (row) => (
-        <Badge variant={row.status === "inEffect" ? "default" : row.status === "scheduled" ? "outline" : "secondary"}>
-          {labels.status[row.status]}
-        </Badge>
-      ),
+      kind: "status",
+      cell: (row) => <StatusBadge {...targetStatusTone(row.status)}>{labels.status[row.status]}</StatusBadge>,
     },
   ];
 
@@ -55,7 +54,7 @@ export function SafetyStockTable({ tenant, rows, labels, editable }: SafetyStock
       rows={rows}
       rowKey={(row) => `${row.material}/${row.location}/${row.effectiveFrom}`}
       rowActions={editable ? (row) => <SafetyStockTargetActions row={row} context={context} labels={labels} /> : undefined}
-      empty={[fill(labels.empty, { tenant: tenant.name }), ...(editable ? [labels.emptyHint] : [])].join(" ")}
+      empty={<EmptyText labels={labels} tenant={tenant.name} editable={editable} />}
     />
   );
 }

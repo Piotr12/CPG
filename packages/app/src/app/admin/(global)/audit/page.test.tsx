@@ -60,7 +60,7 @@ describe("GlobalAuditPage", () => {
     expect(screen.getByText("User created")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Older entries →" }).getAttribute("href")).toBe(`/admin/audit?before=${CURSOR}`);
     // The Global audit is in the menu, so it carries no back link.
-    expect(screen.queryByRole("link", { name: "Cave control" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Tenants" })).toBeNull();
   });
 
   it("reads the page the URL asks for", async () => {

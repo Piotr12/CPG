@@ -81,7 +81,7 @@ async function rowMenu(admin: Browser, path: string, menu: string, item: string)
 /** Confirms the open destructive confirmation and waits for it to close. */
 async function confirmRemoval(admin: Browser) {
   await admin.waitFor("[role=alertdialog]");
-  await admin.click("[role=alertdialog] button[data-variant=destructive]");
+  await admin.click("[role=alertdialog] button[data-variant=destructive-solid]");
   await admin.waitUntil(`!document.querySelector("[role=alertdialog]")`);
 }
 
@@ -225,7 +225,7 @@ describe("planning parameters and safety stock (E03-S03)", () => {
     await admin.clickRole("button", `Actions for ${packer}`);
     await admin.clickRole("menuitem", "Deactivate");
     await admin.waitFor("[role=alertdialog]");
-    await admin.click("[role=alertdialog] button[data-variant=destructive]");
+    await admin.click("[role=alertdialog] button[data-variant=destructive-solid]");
     await admin.waitUntil(`!document.querySelector("[role=alertdialog]")`);
 
     await openAdd(admin, "/admin/prod/planning-parameters", "Add parameters");
@@ -244,7 +244,7 @@ describe("planning parameters and safety stock (E03-S03)", () => {
     await admin.waitUntil(ready(button("Deactivate")));
     await admin.clickRole("button", "Deactivate");
     await admin.waitFor("[role=alertdialog]");
-    await admin.click("[role=alertdialog] button[data-variant=destructive]");
+    await admin.click("[role=alertdialog] button[data-variant=destructive-solid]");
     await admin.waitUntil(`!document.querySelector("[role=alertdialog]")`);
     await admin.waitUntil(ready(button("Reactivate")));
 

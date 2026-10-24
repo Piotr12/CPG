@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import type { AuditPage, AuditReversalLink } from "@cpg/core";
 import type { AuditFilterQuery } from "@cpg/core/validators/audit/audit-list.schema";
+import { PageHeader } from "@cpg/ui/backend/page-header";
 import type { Messages } from "../../i18n/messages/en";
 import { AuditFilters } from "./audit-filters";
 import { auditUrl, isFiltered, type AuditFilterKey } from "./audit-query";
@@ -47,35 +48,41 @@ export function AuditView({
 }) {
   const filtered = isFiltered(selected);
   return (
-    <>
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight">{heading}</h1>
-        {back && (
-          <Link href={back.href} className="text-sm font-medium underline underline-offset-4">
-            {back.label}
-          </Link>
+    <div className="min-w-0">
+      <PageHeader
+        title={heading}
+        description={intro}
+        actions={
+          back && (
+            <Link href={back.href} className="text-sm font-medium underline underline-offset-4">
+              {back.label}
+            </Link>
+          )
+        }
+      />
+      <div className="flex min-w-0 flex-col gap-8">
+        {/* Keyed by the query: following a history link on this screen remounts the form with its new values. */}
+        <AuditFilters key={auditUrl(path, selected)} path={path} selected={selected} accounts={accounts} subjectTypes={subjectTypes} invalid={invalid} labels={labels} />
+        {invalid.length === 0 && (
+          <div className="flex min-w-0 flex-col gap-4">
+            {filtered && <p className="text-sm font-medium">{labels.filterForm.showing}</p>}
+            <AuditTable
+              entries={page.entries}
+              label={heading}
+              path={path}
+              reversals={reversals}
+              empty={filtered ? labels.filterForm.empty : labels.empty}
+              labels={labels}
+            />
+          </div>
+        )}
+        {(page.nextBefore || !isFirstPage) && (
+          <nav className="flex justify-between gap-4 text-sm font-medium">
+            {isFirstPage ? <span /> : <Link href={auditUrl(path, selected)} className="underline underline-offset-4">{labels.newest}</Link>}
+            {page.nextBefore && <Link href={auditUrl(path, selected, page.nextBefore)} className="underline underline-offset-4">{labels.older}</Link>}
+          </nav>
         )}
       </div>
-      <div className="text-sm text-muted-foreground">{intro}</div>
-      {/* Keyed by the query: following a history link on this screen remounts the form with its new values. */}
-      <AuditFilters key={auditUrl(path, selected)} path={path} selected={selected} accounts={accounts} subjectTypes={subjectTypes} invalid={invalid} labels={labels} />
-      {invalid.length === 0 && filtered && <p className="text-sm font-medium">{labels.filterForm.showing}</p>}
-      {invalid.length === 0 && (
-        <AuditTable
-          entries={page.entries}
-          label={heading}
-          path={path}
-          reversals={reversals}
-          empty={filtered ? labels.filterForm.empty : labels.empty}
-          labels={labels}
-        />
-      )}
-      {(page.nextBefore || !isFirstPage) && (
-        <nav className="flex justify-between gap-4 text-sm font-medium">
-          {isFirstPage ? <span /> : <Link href={auditUrl(path, selected)}>{labels.newest}</Link>}
-          {page.nextBefore && <Link href={auditUrl(path, selected, page.nextBefore)}>{labels.older}</Link>}
-        </nav>
-      )}
-    </>
+    </div>
   );
 }

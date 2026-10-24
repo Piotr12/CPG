@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { BomComponentView } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
-import { Badge } from "@cpg/ui/components/badge";
+import { InactiveMark } from "../master-data/active-status";
 import { enteredAs, shownQuantity, type BomsLabels, type MaterialsById } from "./labels";
 
 interface RecipeTableProps {
@@ -20,6 +20,7 @@ export function RecipeTable({ tenant, lines, materials, labels, label }: RecipeT
     {
       id: "material",
       header: t.material,
+      kind: "longText",
       cell: (line) => {
         const material = materials.get(line.material)!;
         return (
@@ -28,23 +29,23 @@ export function RecipeTable({ tenant, lines, materials, labels, label }: RecipeT
               {material.id}
             </Link>
             <span>{material.description}</span>
-            {!material.active && <Badge variant="destructive">{labels.inactive}</Badge>}
+            <InactiveMark active={material.active} label={labels.inactive} />
           </span>
         );
       },
-      className: "whitespace-normal wrap-anywhere",
     },
     {
       id: "quantity",
       header: t.quantity,
+      kind: "quantity",
       cell: (line) => `${shownQuantity(line.quantity)} ${materials.get(line.material)!.baseUnit}`,
-      className: "text-right",
     },
     {
       id: "enteredAs",
       header: t.enteredAs,
+      kind: "longText",
+      priority: 2,
       cell: (line) => <span className="text-muted-foreground">{enteredAs(line, materials, labels)}</span>,
-      className: "whitespace-normal",
     },
   ];
 

@@ -1,8 +1,10 @@
 import Link from "next/link";
 import type { Locale, MaterialSummary, NamedRecordView, TransferView } from "@cpg/core";
 import { TRANSFER_PAGE_SIZE } from "@cpg/core/validators/transfers/transfer.schema";
+import { StatusBadge } from "@cpg/ui/backend/feedback/status-badge";
+import { PageHeader } from "@cpg/ui/backend/page-header";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
-import { Badge } from "@cpg/ui/components/badge";
+import { transferStatusTone } from "../document-lifecycle/status-tone";
 import type { Messages } from "../../i18n/messages/en";
 import { PageLinks } from "../layout/page-links";
 import { activeOptions, materialChoices } from "../purchase-requisitions/choices";
@@ -40,43 +42,47 @@ export function TransfersScreen({ tenant, transfers, page, total, materials, loc
     {
       id: "id",
       header: t.id,
+      kind: "id",
       cell: (transfer) => (
-        <Link href={`${path}/${transfer.id}`} className="font-mono underline underline-offset-4">
+        <Link href={`${path}/${transfer.id}`} className="underline underline-offset-4">
           {transfer.id}
         </Link>
       ),
     },
-    { id: "material", header: t.material, cell: (transfer) => materialName(materialsById, transfer.material), className: "whitespace-normal wrap-anywhere" },
+    { id: "material", header: t.material, kind: "longText", cell: (transfer) => materialName(materialsById, transfer.material) },
     {
       id: "route",
       header: t.route,
+      kind: "longText",
+      priority: 2,
       cell: (transfer) =>
         fill(labels.route, { source: locationName(locationsById, transfer.source), destination: locationName(locationsById, transfer.destination) }),
-      className: "hidden whitespace-normal wrap-anywhere md:table-cell",
     },
-    { id: "quantity", header: t.quantity, cell: (transfer) => amount(transfer.quantity, transfer.material), className: "text-right" },
-    { id: "dispatched", header: t.dispatched, cell: (transfer) => amount(transfer.dispatched, transfer.material), className: "hidden text-right sm:table-cell" },
-    { id: "inTransit", header: t.inTransit, cell: (transfer) => amount(transfer.inTransit, transfer.material), className: "text-right" },
-    { id: "received", header: t.received, cell: (transfer) => amount(transfer.received, transfer.material), className: "hidden text-right sm:table-cell" },
+    { id: "quantity", header: t.quantity, kind: "quantity", cell: (transfer) => amount(transfer.quantity, transfer.material) },
+    { id: "dispatched", header: t.dispatched, kind: "quantity", priority: 2, cell: (transfer) => amount(transfer.dispatched, transfer.material) },
+    { id: "inTransit", header: t.inTransit, kind: "quantity", cell: (transfer) => amount(transfer.inTransit, transfer.material) },
+    { id: "received", header: t.received, kind: "quantity", priority: 2, cell: (transfer) => amount(transfer.received, transfer.material) },
     {
       id: "plannedDates",
       header: t.plannedDates,
+      kind: "text",
+      priority: 3,
       cell: (transfer) => fill(labels.plannedDates, { dispatch: transfer.plannedDispatch, arrival: transfer.plannedArrival }),
-      className: "hidden lg:table-cell",
     },
     {
       id: "status",
       header: t.status,
-      cell: (transfer) => <Badge variant={transfer.status === "open" ? "secondary" : "outline"}>{labels.status[transfer.status]}</Badge>,
+      kind: "status",
+      cell: (transfer) => <StatusBadge {...transferStatusTone(transfer.status)}>{labels.status[transfer.status]}</StatusBadge>,
     },
   ];
 
   return (
-    <div lang={locale} className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">{messages.transfers.heading(tenant.name)}</h1>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-muted-foreground">{labels.intro}</p>
-        {!tenant.readOnly && (
+    <div lang={locale}>
+      <PageHeader
+        title={messages.transfers.heading(tenant.name)}
+        description={labels.intro}
+        actions={!tenant.readOnly && (
           <CreateTransferDialog
             context={{ tenant: tenant.code, generation: tenant.generation }}
             labels={labels}
@@ -84,7 +90,7 @@ export function TransfersScreen({ tenant, transfers, page, total, materials, loc
             locations={activeOptions(locations)}
           />
         )}
-      </div>
+      />
       <DataTable
         label={labels.link}
         columns={columns}

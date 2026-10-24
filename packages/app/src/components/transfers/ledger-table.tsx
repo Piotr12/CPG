@@ -1,6 +1,7 @@
 import type { NamedRecordView, TransferLegView, TransferPostingView, TransferReversalView } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
-import { Badge } from "@cpg/ui/components/badge";
+import { StatusBadge } from "@cpg/ui/backend/feedback/status-badge";
+import { reversalStatusTone } from "../document-lifecycle/status-tone";
 import { fill, locationName, shownQuantity, type TenantContext, type TransfersLabels } from "./labels";
 import { TransferReversalDialog } from "./transfer-reversal-dialog";
 
@@ -45,18 +46,20 @@ export function LedgerTable({ postings, reversals, locations, baseUnit, labels, 
   const today = new Date().toISOString().slice(0, 10);
   const originals = new Map(postings.map((posting) => [posting.id, posting]));
   const columns: DataTableColumn<LedgerRow>[] = [
-    { id: "date", header: t.columns.date, cell: (row) => (row.first ? (row.entry.posting ?? row.entry.reversal).businessDate : "") },
+    { id: "date", header: t.columns.date, kind: "date", cell: (row) => (row.first ? (row.entry.posting ?? row.entry.reversal).businessDate : "") },
     {
       id: "posting",
       header: t.columns.posting,
+      kind: "text",
       cell: ({ entry, first }) => first && (entry.posting ? t.kinds[entry.posting.kind] : t.reversalKinds[entry.reversal.kind]),
     },
-    { id: "place", header: t.columns.place, cell: ({ leg }) => place(leg), className: "whitespace-normal wrap-anywhere" },
-    { id: "change", header: t.columns.change, cell: ({ leg }) => signed(leg.quantity), className: "text-right font-mono" },
-    { id: "after", header: t.columns.after, cell: ({ leg }) => amount(leg.after), className: "hidden text-right sm:table-cell" },
+    { id: "place", header: t.columns.place, kind: "longText", cell: ({ leg }) => place(leg) },
+    { id: "change", header: t.columns.change, kind: "quantity", cell: ({ leg }) => signed(leg.quantity) },
+    { id: "after", header: t.columns.after, kind: "quantity", priority: 2, cell: ({ leg }) => amount(leg.after) },
     {
       id: "reason",
       header: t.columns.reason,
+      kind: "longText",
       cell: ({ entry, first }) => {
         if (!first) return null;
         const { reason, actorUsername, channel } = entry.posting ?? entry.reversal;
@@ -70,15 +73,15 @@ export function LedgerTable({ postings, reversals, locations, baseUnit, labels, 
           </div>
         );
       },
-      className: "whitespace-normal wrap-anywhere",
     },
     {
       id: "actions",
       header: t.actions,
+      kind: "actions",
       cell: ({ entry, first }) => {
         const { posting } = entry;
         if (!first || !posting) return null;
-        if (posting.reversedBy !== null) return <Badge variant="outline">{t.reversed}</Badge>;
+        if (posting.reversedBy !== null) return <StatusBadge {...reversalStatusTone("reversed")}>{t.reversed}</StatusBadge>;
         if (!reversible) return null;
         if (!posting.canReverse) return <span className="text-xs text-muted-foreground">{t.blocked}</span>;
         // The reversal runs the other way, so each leg's sign flips and the goods move back in reverse order.

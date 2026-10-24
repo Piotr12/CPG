@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { MaterialSummary, NamedRecordView } from "@cpg/core";
-import { Badge } from "@cpg/ui/components/badge";
 import type { FormOption } from "../forms/form-labels";
+import { InactiveMark } from "./active-status";
 
 /*
  * What the planning parameters and safety stock screens share: both list rows keyed by a material
@@ -61,7 +61,7 @@ export function MaterialCell({ tenant, row, inactive }: { tenant: string; row: {
         {row.material}
       </Link>
       <span>{row.materialDescription}</span>
-      {!row.materialActive && <Badge variant="destructive">{inactive}</Badge>}
+      <InactiveMark active={row.materialActive} label={inactive} />
     </span>
   );
 }
@@ -72,7 +72,7 @@ export function LocationCell({ row, inactive }: { row: { location: string } & Re
     <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
       <span className="font-mono">{row.location}</span>
       <span className="text-muted-foreground">{row.locationName}</span>
-      {!row.locationActive && <Badge variant="destructive">{inactive}</Badge>}
+      <InactiveMark active={row.locationActive} label={inactive} />
     </span>
   );
 }

@@ -20,4 +20,7 @@ it("offers full reversals on unreversed receipt/issue lines even when their mate
   expect(within(screen.getByRole("table", { name: en.goodsReceipts.heading })).getByRole("button", { name: "Reverse" })).toBeTruthy();
   expect(within(screen.getByRole("table", { name: en.goodsIssues.heading })).getByRole("button", { name: "Reverse" })).toBeTruthy();
   expect(screen.getByRole("link", { name: "View reversal" }).getAttribute("href")).toContain("movement=inverse-id");
+  const reversed = screen.getByText("Reversed");
+  expect([reversed.dataset.slot, reversed.dataset.tone]).toEqual(["status-badge", "neutral"]);
+  expect(reversed.querySelector("svg.lucide-undo-2")).toBeTruthy();
 });

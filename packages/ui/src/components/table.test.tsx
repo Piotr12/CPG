@@ -29,6 +29,9 @@ describe("Table", () => {
     expect(table.dataset.slot).toBe("table");
     expect(table.classList).toContain("tb");
     expect(table.parentElement!.dataset.slot).toBe("table-container");
+    // Unlabelled, the container is a plain scroller: no region, not in the tab order.
+    expect(table.parentElement!.hasAttribute("role")).toBe(false);
+    expect(table.parentElement!.hasAttribute("tabindex")).toBe(false);
     const parts: [HTMLElement, string, string][] = [
       [screen.getByText("caption"), "table-caption", "cap"],
       [screen.getByText("head"), "table-head", "hd"],
@@ -42,5 +45,23 @@ describe("Table", () => {
       expect(element.dataset.slot).toBe(slot);
       expect(element.classList).toContain(className);
     }
+  });
+
+  it("makes a labelled scroll container a focusable region", () => {
+    render(
+      <Table aria-label="Orders" scrollLabel="Orders">
+        <TableBody>
+          <TableRow>
+            <TableCell>cell</TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>,
+    );
+
+    const region = screen.getByRole("region", { name: "Orders" });
+    expect(region.dataset.slot).toBe("table-container");
+    expect(region.getAttribute("tabindex")).toBe("0");
+    expect(region.className).toBe("relative w-full overflow-x-auto");
+    expect(region.firstElementChild).toBe(screen.getByRole("table", { name: "Orders" }));
   });
 });

@@ -338,12 +338,25 @@ describe("tracing one record's history in the audit (E13-S03, #96)", () => {
     }
   });
 
-  it("keeps every column in view at 1280 × 800 and the form usable at 390 px", async () => {
+  it("keeps every column in view at 1440 × 900, Changes reachable at 1280 × 800, and the form usable at 390 px", async () => {
+    const changesHeader = `[...document.querySelectorAll("main thead th")].find((th) => !th.closest("[hidden]") && th.innerText.trim() === "Changes")`;
+    await operator.setViewport(1440, 900);
+    await openAudit(operator, `/admin/prod/audit?subjectType=StockMovement&subjectId=${correction}`);
+    expect(await operator.evaluate<boolean>(`(() => {
+      const changes = ${changesHeader};
+      return Boolean(changes) && changes.getBoundingClientRect().right <= innerWidth;
+    })()`)).toBe(true);
+
+    // At 1280 px the columns' minimum widths exceed the content column: the table scrolls in its own
+    // labelled region, the time column sticky, while the page never scrolls sideways.
     await operator.setViewport(1280, 800);
     await openAudit(operator, `/admin/prod/audit?subjectType=StockMovement&subjectId=${correction}`);
     expect(await operator.evaluate<boolean>(`(() => {
-      const changes = [...document.querySelectorAll("main thead th")].find((th) => !th.closest("[hidden]") && th.innerText.trim() === "Changes");
-      return Boolean(changes) && changes.getBoundingClientRect().right <= innerWidth;
+      const changes = ${changesHeader};
+      if (!changes || document.documentElement.scrollWidth > innerWidth) return false;
+      const box = changes.closest("[data-slot=table-container]");
+      changes.scrollIntoView({ block: "nearest", inline: "nearest" });
+      return box.getAttribute("role") === "region" && box.tabIndex === 0 && changes.getBoundingClientRect().right <= Math.min(innerWidth, box.getBoundingClientRect().right) + 0.5;
     })()`)).toBe(true);
 
     await operator.setViewport(390, 844);

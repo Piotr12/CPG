@@ -71,6 +71,11 @@ describe("MaterialPage", () => {
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("00000002 — Bolt M8");
     expect(screen.getByRole("link", { name: "All materials" }).getAttribute("href")).toBe("/admin/prod/materials");
     expect(screen.getAllByRole("definition").map((value) => value.textContent)).toEqual(["Raw", "each", "Inactive", "2026-10-19"]);
+    // Inactive is a quiet, switched-off state: a neutral StatusBadge with a dashed edge, inside the page header's block.
+    const status = screen.getByText("Inactive").closest("[data-slot=status-badge]");
+    expect(status?.getAttribute("data-tone")).toBe("neutral");
+    expect(status?.className).toContain("border-dashed");
+    expect(screen.getByRole("heading", { level: 1 }).closest("[data-slot=page-header]")?.textContent).toContain("controls 00000002 v4");
     expect(screen.getByText(/^Quantities entered in another unit are converted into each once/)).toBeTruthy();
     expect(screen.getByText("1 case = 12 each")).toBeTruthy();
     expect(screen.getByRole("button", { name: "controls 00000002 v4" })).toBeTruthy();
@@ -84,7 +89,7 @@ describe("MaterialPage", () => {
 
     render(await resolveServerComponents(page("00000002")));
 
-    expect(screen.getByText("Active")).toBeTruthy();
+    expect(screen.getByText("Active").closest("[data-slot=status-badge]")?.className).not.toContain("border-dashed");
     expect(screen.queryByRole("button")).toBeNull();
   });
 
@@ -97,6 +102,13 @@ describe("MaterialPage", () => {
 
     expect(screen.getByText("1 case = 12 each")).toBeTruthy();
     expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("shows the loading frame while the material streams in", () => {
+    const { container } = render(page("00000002").props.children.props.fallback);
+
+    expect(container.querySelector('[aria-busy="true"] [data-slot="skeleton"]')).toBeTruthy();
+    expect(container.textContent).toBe("");
   });
 
   it("renders not-found for an ID this tenant doesn't have (TEN-014), and lets other failures through", async () => {

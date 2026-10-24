@@ -60,7 +60,7 @@ describe("MaterialControls", () => {
     fireEvent.click(screen.getByRole("button", { name: "Deactivate" }));
     expect(screen.getByRole("alertdialog", { name: "Deactivate 00000002?" })).toBeTruthy();
     const confirm = screen.getAllByRole("button", { name: "Deactivate" }).at(-1)!;
-    expect(confirm.dataset.variant).toBe("destructive");
+    expect(confirm.dataset.variant).toBe("destructive-solid");
     await act(async () => fireEvent.click(confirm));
 
     expect(mocks.updateMaterial).toHaveBeenCalledWith("test", 1, "00000002", 3, { active: false });

@@ -69,9 +69,9 @@ describe("full stock reversals (#91)", () => {
     expect((await api("POST", reversePath(reversed.body.data.movement.id), { reason: "Undo inverse" })).body.error.code).toBe("STOCK_REVERSAL_UNSUPPORTED");
     // The line stays posted after the full reversal (#138): its order closes early, never cancels.
     expect(await get<OrderView>(`purchase-orders/${purchase.id}`)).toMatchObject({ status: "open", lines: [{ received: "0.000000", posted: true }] });
-    await admin.open(`${baseUrl}/admin/prod/purchase-orders/${purchase.id}`); await admin.waitForText("Close Early");
+    await admin.open(`${baseUrl}/admin/prod/purchase-orders/${purchase.id}`); await admin.waitForText("Close order early…");
     const actions = `[...document.querySelectorAll("main button[aria-label]")].map((button) => button.getAttribute("aria-label").split(" — ")[0])`;
-    expect((await admin.evaluate<string[]>(actions)).filter((label) => label === "Cancel" || label === "Close Early")).toEqual(["Close Early", "Close Early"]);
+    expect((await admin.evaluate<string[]>(actions)).filter((label) => /^(Cancel|Close) (order|line)/.test(label))).toEqual(["Close order early…", "Close line early…"]);
     await create("goods-receipts", { purchaseOrder: purchase.id, lines: [{ line: 1, quantity: "90", unit: "each" }] });
     expect((await api("POST", reversePath(temporary.id), { reason: "Remove temporary stock" })).status).toBe(200);
     expect((await stock()).quantity).toBe("10.000000");

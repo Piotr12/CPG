@@ -2,6 +2,8 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { tenantScope } from "@cpg/core";
+import { LoadingMessage } from "@cpg/ui/backend/feedback/loading-message";
+import { PageHeader } from "@cpg/ui/backend/page-header";
 import { requireUser } from "../../../../auth/require-admin";
 import { ImportLink } from "../../../../components/imports/import-link";
 import { CreateMaterialDialog } from "../../../../components/materials/create-material-dialog";
@@ -15,8 +17,8 @@ export const metadata: Metadata = { title: "Materials" };
 
 export default function MaterialsPage({ params }: PageProps<"/admin/[tenant]/materials">) {
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-6 py-12">
-      <Suspense fallback={<div aria-busy="true" className="min-h-40" />}>
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pt-6 pb-8 md:px-6 md:pt-12 md:pb-12">
+      <Suspense fallback={<LoadingMessage />}>
         <Materials params={params} />
       </Suspense>
     </main>
@@ -41,17 +43,19 @@ async function Materials({ params }: { params: Promise<{ tenant: string }> }) {
   const editable = user.role === "admin" && !tenant.readOnly;
 
   return (
-    <div lang={locale} className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">{messages.materials.heading(tenant.name)}</h1>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-muted-foreground">{labels.intro}</p>
-        {editable && (
-          <div className="flex shrink-0 gap-2">
-            <ImportLink tenant={tenant.code} label={messages.imports.link} />
-            <CreateMaterialDialog context={{ tenant: tenant.code, generation: tenant.generation }} labels={labels} />
-          </div>
-        )}
-      </div>
+    <div lang={locale}>
+      <PageHeader
+        title={messages.materials.heading(tenant.name)}
+        description={labels.intro}
+        actions={
+          editable && (
+            <>
+              <ImportLink tenant={tenant.code} label={messages.imports.link} />
+              <CreateMaterialDialog context={{ tenant: tenant.code, generation: tenant.generation }} labels={labels} />
+            </>
+          )
+        }
+      />
       <MaterialsTable tenant={tenant} materials={materials} labels={labels} editable={editable} />
     </div>
   );

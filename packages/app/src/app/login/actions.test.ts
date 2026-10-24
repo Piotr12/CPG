@@ -81,12 +81,13 @@ describe("signIn", () => {
     expect(mocks.writeThemeCookie).toHaveBeenCalledWith("light", { secure: false });
   });
 
-  it("shows the service's message when the credentials are refused", async () => {
+  it("answers refused credentials with the screen's refusal and its next step, not the API's terse message, keeping the typed username", async () => {
     const { UnauthorizedError } = await import("@cpg/core");
     mocks.authService.signIn.mockRejectedValue(new UnauthorizedError("Invalid username or password."));
 
     await expect(signIn({}, form({ username: "admin", password: "nope" }))).resolves.toEqual({
-      error: "Invalid username or password.",
+      error: "Invalid username or password. Check both and try again. If you cannot sign in, contact your administrator.",
+      username: "admin",
     });
     expect(mocks.writeSessionCookie).not.toHaveBeenCalled();
     expect(mocks.writeThemeCookie).not.toHaveBeenCalled();
@@ -94,17 +95,28 @@ describe("signIn", () => {
   });
 
   it.each([
-    ["an empty password", { username: "admin", password: "" }],
-    ["a missing field", { username: "admin" }],
-    ["a blank username", { username: "   ", password: "pw" }],
-  ])("asks for both fields on %s without calling the service", async (_case, fields) => {
-    await expect(signIn({}, form(fields))).resolves.toEqual({ error: "Enter your username and password." });
+    ["an empty password", { username: "admin", password: "" }, "admin"],
+    ["a missing field", { username: "admin" }, "admin"],
+    ["a blank username", { username: "   ", password: "pw" }, "   "],
+    ["a missing username", { password: "pw" }, ""],
+  ])("asks for both fields on %s without calling the service, keeping what was typed", async (_case, fields, username) => {
+    await expect(signIn({}, form(fields))).resolves.toEqual({ error: "Enter your username and password.", username });
     expect(mocks.authService.signIn).not.toHaveBeenCalled();
+  });
+
+  it("shows the service's message for any other refusal, such as the throttle", async () => {
+    const { TooManyRequestsError } = await import("@cpg/core");
+    const throttled = new TooManyRequestsError();
+    mocks.authService.signIn.mockRejectedValue(throttled);
+
+    await expect(signIn({}, form({ username: "admin", password: "nope" }))).resolves.toEqual({ error: throttled.message, username: "admin" });
+    expect(mocks.writeSessionCookie).not.toHaveBeenCalled();
   });
 
   it("answers an over-long password like any wrong credentials", async () => {
     await expect(signIn({}, form({ username: "admin", password: "x".repeat(257) }))).resolves.toEqual({
-      error: "Invalid username or password.",
+      error: "Invalid username or password. Check both and try again. If you cannot sign in, contact your administrator.",
+      username: "admin",
     });
     expect(mocks.authService.signIn).not.toHaveBeenCalled();
   });

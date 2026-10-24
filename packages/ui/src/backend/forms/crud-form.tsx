@@ -1,5 +1,6 @@
 "use client";
 
+import { CircleAlert } from "lucide-react";
 import { useId, useState, useTransition, type ChangeEvent, type FormEvent, type ReactNode, type KeyboardEvent } from "react";
 import { Button } from "../../components/button";
 import { Input } from "../../components/input";
@@ -152,7 +153,10 @@ export function CrudForm<T>({
               <Input {...control} type={field.type ?? "text"} autoComplete={field.autoComplete} />
             )}
             {errors ? (
-              <p id={hintId} className="text-sm text-destructive">
+              <p id={hintId} className="flex gap-1 text-sm text-danger">
+                <span className="flex h-5 shrink-0 items-center">
+                  <CircleAlert aria-hidden="true" className="size-3.5" />
+                </span>
                 {formatFieldError(errors[0])}
               </p>
             ) : (

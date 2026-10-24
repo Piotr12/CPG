@@ -65,4 +65,13 @@ describe("help", () => {
     expect(await browser.text("section#import")).toContain("Pobierz szablon");
     expect(await browser.text("section#import")).toContain("wykonaj próbę");
   });
+
+  // Last, so its narrow viewport and scroll position can't move another test's clicks; in Polish by now.
+  it("fits a 320 px screen: long API paths in topics wrap instead of scrolling the page sideways", async () => {
+    await browser.setViewport(320, 800);
+    await browser.open(`${baseUrl}/help`);
+    await browser.waitFor("section#stock-report");
+
+    expect(await browser.evaluate<number>("document.documentElement.scrollWidth")).toBe(320);
+  });
 });

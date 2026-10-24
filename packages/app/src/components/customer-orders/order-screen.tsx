@@ -2,9 +2,11 @@ import { cancelCustomerOrder, closeEarlyCustomerOrder } from "../../app/admin/[t
 import { LifecycleControl } from "../document-lifecycle/lifecycle-control";
 import Link from "next/link";
 import { outstandingOf, type CustomerOrderView, type Locale, type MaterialSummary, type NamedRecordView, type ShipmentView, type TenantInfo } from "@cpg/core";
+import { StatusBadge } from "@cpg/ui/backend/feedback/status-badge";
+import { PageHeader } from "@cpg/ui/backend/page-header";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { ORDER_PAGE_SIZE } from "@cpg/core/validators/customer-orders/customer-order.schema";
-import { Badge } from "@cpg/ui/components/badge";
+import { documentStatusTone } from "../document-lifecycle/status-tone";
 import type { Messages } from "../../i18n/messages/en";
 import { fill, shownQuantity } from "../forms/form-labels";
 import { PageLinks } from "../layout/page-links";
@@ -48,44 +50,45 @@ export function OrdersScreen({ tenant, orders, order, shipments = [], page = 1, 
     materials: materials.map(({ id, description, active, baseUnit }) => ({ value: id, label: `${id} ${description}${active ? "" : ` (${t.inactive})`}`, active, units: units[id] ?? [baseUnit] })),
   };
   const shipmentChoices = order ? shipmentLineChoices(order, byMaterial, units, shipmentLabels) : [];
+  const status = (value: CustomerOrderView["status"]) => <StatusBadge {...documentStatusTone(value)}>{t.states[value]}</StatusBadge>;
   const columns: DataTableColumn<CustomerOrderView>[] = [
-    { id: "id", header: t.id, cell: (row) => <Link className="font-mono underline underline-offset-4" href={`${path}/${row.id}`}>{row.id}</Link> },
-    { id: "customer", header: t.customer, cell: (row) => named(customers, row.customer), className: "whitespace-normal wrap-anywhere" },
-    { id: "location", header: t.location, cell: (row) => named(locations, row.location), className: "hidden whitespace-normal sm:table-cell" },
-    { id: "lines", header: t.lines, cell: (row) => row.lines.length, className: "hidden sm:table-cell" },
-    { id: "status", header: t.status, cell: (row) => <Badge variant="secondary">{t.states[row.status]}</Badge> },
+    { id: "id", header: t.id, kind: "id", cell: (row) => <Link className="underline underline-offset-4" href={`${path}/${row.id}`}>{row.id}</Link> },
+    { id: "customer", header: t.customer, kind: "longText", cell: (row) => named(customers, row.customer) },
+    { id: "location", header: t.location, kind: "longText", priority: 2, cell: (row) => named(locations, row.location) },
+    { id: "lines", header: t.lines, kind: "quantity", priority: 2, cell: (row) => row.lines.length },
+    { id: "status", header: t.status, kind: "status", cell: (row) => status(row.status) },
   ];
   const lineColumns: DataTableColumn<CustomerOrderView["lines"][number]>[] = [
-    { id: "material", header: t.material, cell: (line) => <Link className="underline underline-offset-4" href={`/admin/${tenant.code}/materials/${line.material}`}>{line.material} {byMaterial.get(line.material)!.description}</Link>, className: "min-w-40 whitespace-normal wrap-anywhere" },
-    { id: "quantity", header: t.quantity, cell: (line) => `${shownQuantity(line.quantity)} ${byMaterial.get(line.material)!.baseUnit}`, className: "whitespace-normal" },
-    { id: "entered", header: t.entered, cell: (line) => `${line.enteredQuantity} ${line.enteredUnit} (${line.denominator} ${line.enteredUnit} = ${line.numerator} ${byMaterial.get(line.material)!.baseUnit})`, className: "hidden whitespace-normal md:table-cell" },
-    { id: "date", header: t.requiredDate, cell: (line) => line.requiredDate },
-    { id: "fulfilled", header: t.fulfilled, cell: (line) => shownQuantity(line.fulfilled), className: "hidden sm:table-cell" },
-    { id: "outstanding", header: t.outstanding, cell: (line) => shownQuantity(outstandingOf(line)), className: "hidden sm:table-cell" },
-    { id: "status", header: t.status, cell: (line) => t.states[line.status], className: "hidden sm:table-cell" },
-    { id: "abandoned", header: messages.lifecycle.abandoned, cell: (line) => shownQuantity(line.abandoned), className: "text-right" },
-    { id: "actions", header: messages.lifecycle.actions, cell: (line) => order && <LifecycleControl
+    { id: "material", header: t.material, kind: "longText", cell: (line) => <Link className="underline underline-offset-4" href={`/admin/${tenant.code}/materials/${line.material}`}>{line.material} {byMaterial.get(line.material)!.description}</Link> },
+    { id: "quantity", header: t.quantity, kind: "quantity", cell: (line) => `${shownQuantity(line.quantity)} ${byMaterial.get(line.material)!.baseUnit}` },
+    { id: "entered", header: t.entered, kind: "longText", priority: 2, cell: (line) => `${line.enteredQuantity} ${line.enteredUnit} (${line.denominator} ${line.enteredUnit} = ${line.numerator} ${byMaterial.get(line.material)!.baseUnit})` },
+    { id: "date", header: t.requiredDate, kind: "date", cell: (line) => line.requiredDate },
+    { id: "fulfilled", header: t.fulfilled, kind: "quantity", priority: 2, cell: (line) => shownQuantity(line.fulfilled) },
+    { id: "outstanding", header: t.outstanding, kind: "quantity", priority: 2, cell: (line) => shownQuantity(outstandingOf(line)) },
+    { id: "status", header: t.status, kind: "status", cell: (line) => status(line.status) },
+    { id: "abandoned", header: messages.lifecycle.abandoned, kind: "quantity", cell: (line) => shownQuantity(line.abandoned) },
+    { id: "actions", header: messages.lifecycle.actions, kind: "actions", cell: (line) => order && <LifecycleControl kind="line"
       available={!tenant.readOnly && order.status === "open" && line.status === "open"} processed={line.posted || line.fulfilled !== "0.000000"}
       subject={`${t.link} ${order.id} — ${fill(messages.lifecycle.line, { line: String(order.lines.indexOf(line) + 1) })}`}
       version={order.version} lines={[line.id]} quantities={[`${shownQuantity(outstandingOf(line))} ${byMaterial.get(line.material)!.baseUnit}`]}
       labels={messages.lifecycle} errors={messages.errors}
       cancel={cancelCustomerOrder.bind(null, tenant.code, tenant.generation, order.id)} closeEarly={closeEarlyCustomerOrder.bind(null, tenant.code, tenant.generation, order.id)} /> },
   ];
-  return <div lang={locale} className="flex flex-col gap-6">
-    {order && <Link className="text-sm underline underline-offset-4" href={path}>{t.back}</Link>}
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-      <h1 className="text-2xl font-semibold tracking-tight">{order ? fill(t.detailHeading, { id: order.id }) : fill(t.heading, { tenant: tenant.name })}</h1>
-      {!tenant.readOnly && (!order || order.status === "open") && <OrderDialog context={{ tenant: tenant.code, generation: tenant.generation }} labels={t} choices={choices} order={order} />}
-    </div>
-    <p className="text-sm text-muted-foreground">{t.intro}</p>
+  const actions = !tenant.readOnly && (!order || order.status === "open") && <>
+    <OrderDialog context={{ tenant: tenant.code, generation: tenant.generation }} labels={t} choices={choices} order={order} />
+    {order && <LifecycleControl kind="order" available processed={order.lines.some((line) => line.posted || line.fulfilled !== "0.000000")}
+      subject={`${t.link} ${order.id}`} version={order.version}
+      quantities={order.lines.filter((line) => line.status === "open").map((line) => `${byMaterial.get(line.material)!.description}: ${shownQuantity(outstandingOf(line))} ${byMaterial.get(line.material)!.baseUnit}`)}
+      labels={messages.lifecycle} errors={messages.errors}
+      cancel={cancelCustomerOrder.bind(null, tenant.code, tenant.generation, order.id)} closeEarly={closeEarlyCustomerOrder.bind(null, tenant.code, tenant.generation, order.id)} />}
+  </>;
+  return <div lang={locale}>
+    <PageHeader title={order ? fill(t.detailHeading, { id: order.id }) : fill(t.heading, { tenant: tenant.name })}
+      meta={order && status(order.status)} description={t.intro} actions={actions} />
+    <div className="flex flex-col gap-8">
     {order ? <>
-      <LifecycleControl available={!tenant.readOnly && order.status === "open"} processed={order.lines.some((line) => line.posted || line.fulfilled !== "0.000000")}
-        subject={`${t.link} ${order.id}`} version={order.version}
-        quantities={order.lines.filter((line) => line.status === "open").map((line) => `${byMaterial.get(line.material)!.description}: ${shownQuantity(outstandingOf(line))} ${byMaterial.get(line.material)!.baseUnit}`)}
-        labels={messages.lifecycle} errors={messages.errors}
-        cancel={cancelCustomerOrder.bind(null, tenant.code, tenant.generation, order.id)} closeEarly={closeEarlyCustomerOrder.bind(null, tenant.code, tenant.generation, order.id)} />
       <dl className="grid gap-4 rounded-md border p-4 text-sm sm:grid-cols-3">
-        {[{ label: t.customer, value: named(customers, order.customer) }, { label: t.location, value: named(locations, order.location) }, { label: t.status, value: t.states[order.status] }].map(({ label, value }) => <div key={label}><dt className="text-muted-foreground">{label}</dt><dd className="mt-1 wrap-anywhere">{value}</dd></div>)}
+        {[{ label: t.customer, value: named(customers, order.customer) }, { label: t.location, value: named(locations, order.location) }].map(({ label, value }) => <div key={label}><dt className="text-muted-foreground">{label}</dt><dd className="mt-1 wrap-anywhere">{value}</dd></div>)}
       </dl>
       <DataTable label={t.lines} columns={lineColumns} rows={order.lines} rowKey={(line) => line.id} empty={t.empty} />
       <section className="flex flex-col gap-3">
@@ -105,5 +108,6 @@ export function OrdersScreen({ tenant, orders, order, shipments = [], page = 1, 
       </section>
     </> : <DataTable label={t.link} columns={columns} rows={orders} rowKey={(row) => row.id}
       pagination={<PageLinks page={page} pages={pages} labels={t} href={(target) => `${path}?page=${target}`} />} empty={`${t.empty}${tenant.readOnly ? "" : ` ${t.emptyHint}`}`} />}
+    </div>
   </div>;
 }

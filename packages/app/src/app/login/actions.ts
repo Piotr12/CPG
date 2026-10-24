@@ -2,14 +2,17 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { INVALID_CREDENTIALS, requestScope, serverAction, type Theme } from "@cpg/core";
+import { requestScope, serverAction, type Theme } from "@cpg/core";
 import { signInSchema } from "@cpg/core/validators/auth/sign-in.schema";
 import { clientIpFrom } from "../../auth/client-ip";
+import { en } from "../../i18n/messages/en";
 import { writeSessionCookie } from "../../auth/session-cookie";
 import { writeThemeCookie } from "../../preferences/theme-cookie";
 
 export interface SignInState {
   error?: string;
+  /** The username as typed, so a refused attempt keeps it in the field (React resets the form after an action). */
+  username?: string;
 }
 
 /** Where a successful sign-in lands. */
@@ -23,7 +26,7 @@ export async function signIn(_previous: SignInState, formData: FormData): Promis
   const attempt = serverAction(signInSchema, (input) => authService.signIn({ ...input, clientIp }));
   const result = await attempt({ username: formData.get("username"), password: formData.get("password") });
 
-  if (!result.ok) return { error: errorMessage(result.error, formData) };
+  if (!result.ok) return { error: errorMessage(result.error, formData), username: String(formData.get("username") ?? "") };
 
   const secure = config.env === "production";
   await writeSessionCookie(result.data.token, result.data.expiresAt, { secure });
@@ -41,9 +44,14 @@ async function storedTheme(read: () => Promise<{ theme: Theme }>): Promise<Theme
   }
 }
 
-/** Missing fields get a prompt; anything else the schema refuses reads like any wrong credentials. */
+/**
+ * Wrong credentials read as the screen's refusal, with what to do next (the service's message stays
+ * terse for the API). Missing fields get a prompt; anything else the schema refuses reads like wrong
+ * credentials. The sign-in screen speaks the default language, like its page.
+ */
 function errorMessage(error: { code: string; message: string }, formData: FormData): string {
+  if (error.code === "UNAUTHORIZED") return en.login.invalidCredentials;
   if (error.code !== "VALIDATION_FAILED") return error.message;
   const isFilled = (name: string) => String(formData.get(name) ?? "").trim() !== "";
-  return isFilled("username") && isFilled("password") ? INVALID_CREDENTIALS : MISSING_FIELDS;
+  return isFilled("username") && isFilled("password") ? en.login.invalidCredentials : MISSING_FIELDS;
 }
