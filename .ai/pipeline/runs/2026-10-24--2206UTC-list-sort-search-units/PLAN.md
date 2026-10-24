@@ -29,14 +29,16 @@ Every main list sorts by a header click and searches through one labelled box, b
 | F1 | `core`: unit registry + `registeredUnitSchema`; list query schema + search/sort helpers (`validators/lists/`, `domain/lists/`) | lead | done |
 | F2 | `ui`: `DataTable` sort headers, `ListSearch`, `SearchResultLine`, `Highlight`, `--highlight`, `CrudField.groups`, `Autocomplete` | lead | done |
 | F3 | `app`: list URL helpers, `lists` i18n section, `PageLinks` keeps the query; integration helper to choose from an autocomplete | lead | done |
-| F4 | Materials pilot: sort + search + highlight; base unit and conversion unit selects; imports use the registry; unit test churn; integration test | lead | in progress (integration run pending) |
+| F4 | Materials pilot: sort + search + highlight; base unit and conversion unit selects; imports use the registry; unit test churn; integration test | lead | done |
 | W1 | Master data: locations, customers, suppliers, BOMs (list + recipe form autocomplete), planning parameters, safety stock, users | worker | done, merged |
 | W2 | Sales and production: forecasts, customer orders, production orders (lists + material autocompletes in their forms) | worker | done, merged |
 | W3 | Purchasing and logistics: purchase requisitions, purchase orders, transfers (lists + forms) | worker | done, merged |
-| C1 | Merge workers one by one, gate after each; Help + BACKWARD_COMPATIBILITY + follow-up issues | lead | todo |
+| C1 | Merge workers one by one, gate after each; Help + BACKWARD_COMPATIBILITY + follow-up issues | lead | done |
 | C2 | Full gate, touched integration files, build, browser QA with screenshots, PR, CI green | lead | todo |
 
 ## Progress
+
+- 2026-10-25 — Full local integration suite on a fresh standalone build (Docker unavailable): 53 files passed, 1 failed (transfers.test.ts, 5 tests): the transfer test's own material sat below 20+ "trapi steel" rows another file creates, so the click hit the dialog overlay (W3 had run the file alone). Fixed in `chooseFromList` (scroll the option into view) and by typing the ID (a9b68e09); transfers-api + transfers then 19/19 on a fresh server. Screenshots in `qa-artifacts/` (1440×900 light EN, one 390 px).
 
 - 2026-10-25 — W1 merged (cez/ddc961ae): its integration run on :3301: boms 10/10; named-records, named-records-api, boms-api, planning-parameters(+api), users, api-users all green after two test fixes. Lead follow-ups (2dfe2b91): one material-picker helper (`components/materials/material-picker.ts`: `materialPicker`, `activeMaterialOptions`) replacing W1's, W2's and W3's three; Forecasts' reference cells mark the search; the Autocomplete list opens upward when the room below its field in a scrolling dialog is short (W1 measured the Create BOM list 16 px past the dialog). Gate: lint 0 (1 pre-existing warning), typecheck 0, test:coverage 0 (4,083 tests, 100 %), build 0. Follow-up issues filed: #220 indexes, #221 API sort/q, #222 other pickers + listbox name, #223 Polish-letter case, #224 quantity and PO-date sort.
 
