@@ -173,10 +173,11 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 - **2026-10-23 — Judge a gate command by its exit code, never by a piped tail** — `… | tail` / `| head` reports the pipe's status, so type errors were committed (#92) and shipped (#162). Run `npm run typecheck > log; echo $?`. A bare `tsc -p packages/app` also misses `RouteContext` types, which `next typegen` (inside `npm run typecheck`) generates.
 - **2026-10-19 — A cezar worktree needs its own `npm ci`** — without it Node resolves `@cpg/*` to the main checkout's packages, and tests and typecheck run the wrong code.
-- **2026-10-20 — zsh traps** — three to avoid:
+- **2026-10-24 — zsh traps** — four to avoid:
   - never name a variable `path`: it is tied to `PATH`, and every later command fails;
   - zsh doesn't word-split `$cmd`, so run such loops under `bash -c` or `eval`;
-  - macOS has no `timeout`: use the tool's own timeout or a background `gh run watch --exit-status`.
+  - macOS has no `timeout`: use the tool's own timeout or a background `gh run watch --exit-status`;
+  - quote globs meant for a tool, `grep --include='*.tsx'`: unquoted, zsh expands them against the current directory and aborts the whole command with "no matches found", so a verification sweep reports nothing instead of failing loudly.
 - **2026-10-20 — This repo has no Prettier config** — default `npx prettier` reflows to 80 columns; the code is about 140. Pass `--print-width 140` and check the diff, or don't run it.
 - **2026-10-17 — Docker `npm ci` tries to compile better-sqlite3** — its prebuilt binaries cover musl, so the Dockerfile uses `npm ci --ignore-scripts`.
 - **2026-10-23 — Read a red run's jobs and step timestamps before debugging code** — a red Deploy failed in `deploy` on registry `ECONNRESET` with every check green, so the Dockerfile sets longer `NPM_CONFIG_FETCH_RETRY*` (`tests/dockerfile.test.ts`). A "slow Chrome download" was really an apt mirror under `--with-deps`, now dropped. Give any step that downloads from outside GitHub its own `timeout-minutes` (`tests/ci-workflow.test.ts`).
