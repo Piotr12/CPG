@@ -1886,9 +1886,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### INV-007 — Zero stock is permitted
 
-**Priority:** P1 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/stock/stock.service.test.ts` (a group of +2, −1, −1 ends at exactly 0.000000), `tests/integration/stock.test.ts` (−24 from 24 reads 0.000000). A goods issue that takes the balance to exactly zero is not asserted yet (#188). E07-S01, #80.
+- **Evidence:** `packages/core/src/services/goods-issues/goods-issue.service.test.ts` (an issue of 10 from 10 on hand leaves 0.000000, its movement −10.000000 from 10.000000 to 0.000000), `tests/integration/shipments-api.test.ts` (a goods issue of 10 from 10 is 200 and stock reads 0.000000), `packages/core/src/services/stock/stock.service.test.ts` (a group of +2, −1, −1 ends at exactly 0.000000), `tests/integration/stock.test.ts` (−24 from 24 reads 0.000000). E07-S01, #80; E08-S06, #188.
 - **Given:** Material on-hand 10
 - **When:** Post valid issue of exactly 10
 - **Then:** Remaining stock exactly zero.

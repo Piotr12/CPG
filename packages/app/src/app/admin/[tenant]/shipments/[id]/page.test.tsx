@@ -109,7 +109,7 @@ describe("ShipmentPage", () => {
   });
   afterEach(() => vi.clearAllMocks());
 
-  it("shows the shipment's order, customer, location, date and status, and each line's plan, issued and to issue (SAL-006, SAL-011)", async () => {
+  it("shows the shipment's order, customer, location, date and status, and each line's plan, issued and to issue", async () => {
     render(await resolveServerComponents(page()));
 
     expect(mocks.connection).toHaveBeenCalledOnce();
@@ -129,7 +129,7 @@ describe("ShipmentPage", () => {
     expect(screen.getByRole("link", { name: "00000004 Panel" }).getAttribute("href")).toBe("/admin/test/materials/00000004");
   });
 
-  it("lists the shipment's goods issues and offers Post goods issue for the lines with anything to issue (SAL-010)", async () => {
+  it("lists the shipment's goods issues and offers Post goods issue for the lines with anything to issue", async () => {
     render(await resolveServerComponents(page()));
 
     expect(mocks.issues).toHaveBeenCalledWith({ shipment: "00000002" });
@@ -195,7 +195,7 @@ describe("ShipmentPage", () => {
     expect(document.querySelector("[lang]")?.getAttribute("lang")).toBe("pl");
   });
 
-  it("is the not-found state for an unknown tenant or a shipment this tenant doesn't have (TEN-014)", async () => {
+  it("is the not-found state for an unknown tenant or a shipment this tenant doesn't have", async () => {
     mocks.tenantScope.mockRejectedValueOnce(new mocks.AppError("TENANT_NOT_FOUND"));
     await expect(resolveServerComponents(page())).rejects.toThrow("404");
     mocks.get.mockRejectedValueOnce(new mocks.AppError("SHIPMENT_NOT_FOUND"));

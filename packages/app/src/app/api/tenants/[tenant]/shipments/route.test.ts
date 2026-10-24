@@ -59,7 +59,7 @@ describe("/api/tenants/{tenant}/shipments", () => {
     expect(mocks.tenantScope).not.toHaveBeenCalled();
   });
 
-  it("POST creates the parsed shipment as the token's account (R07, SAL-006)", async () => {
+  it("POST creates the parsed shipment as the token's account (R07)", async () => {
     mocks.state.caller = USER_TOKEN;
     mocks.state.cradle = { shipmentService: { create: mocks.create } };
     mocks.create.mockResolvedValue({ id: "00000002" });

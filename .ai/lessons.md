@@ -69,6 +69,8 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 ## UI and React
 
+- **2026-10-24 — A new status needs a sweep of status-specific copy** — When an enum gains a value, check EN/PL messages for the guarding error codes and old status names; use neutral or parameterised text and test it through the screen. After #147 added shipment cancellation, the goods-issue dialog still called a cancelled shipment completed (#188).
+
 - **2026-10-19 — A client component must not import a module that imports `@cpg/core`** — the browser bundle pulls in the ORM, and only `npm run build` fails. Keep client helpers dependency-free (`components/layout/current-path.ts`) or import `@cpg/core/validators/*`.
 - **2026-10-20 — A label passed to a client component must be plain data** — function-valued labels pass unit tests but the server refuses the page. Use `{ one, other }` forms (`counted` in `components/imports/report-text.ts`), and test that labels hold no function.
 - **2026-10-19 — React 19: updates after `await` leave the transition** — wrap post-await `setState` in another `startTransition` (`ui/src/backend/forms/crud-form.tsx`), or an error can show while `isPending` is still true.
@@ -146,7 +148,7 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 - **2026-10-24 — Paging by ascending ID moves the row a test just created off the first page** — once one file had made 101 Prod requisitions, every test that clicked its own new row on the plain list missed it (#187). Find a fresh row from the last page back (`requisitionRow` in `purchasing.test.ts`), or open `?page=1000000`, which the screen clamps to the last page. Check it by running the file that grows the list before the files that read it, on one server.
 - **2026-10-23 — Running integration tests against a local standalone server** — needed when Docker is unavailable, e.g. when Docker Desktop belongs to another macOS user: don't touch that session. For every run:
   - copy `.next/standalone` into a **new empty directory**, adding `.next/static` under `packages/app/.next/` and `packages/app/public` beside `server.js`;
-  - start `node packages/app/server.js` (not `next start`) with a fresh `DATA_DIR`, `CPG_ADMIN_PASSWORD` and the image's `KEEP_ALIVE_TIMEOUT=3600000` (without it, a request queued behind a reset can fail `ECONNRESET`), then run with `CPG_BASE_URL=…`.
+  - start `node packages/app/server.js` (not `next start`) with a fresh `DATA_DIR`, `CPG_ADMIN_PASSWORD` and the image's `KEEP_ALIVE_TIMEOUT=3600000` (without it, a request queued behind a reset can fail `ECONNRESET`), then run tests with `CPG_BASE_URL=…` and the **same** `CPG_ADMIN_PASSWORD` (the existing-server test setup defaults to an empty password if omitted, so all sign-in hooks fail).
 
   Reusing a copy keeps Next's route cache, including the `/admin/TEST` 404 on case-insensitive APFS. Stop servers by port, `lsof -ti tcp:<port> | xargs kill`, and check the port is free: `pkill -f` misses them. Restart between long runs, because all browsers share one sign-in throttle bucket. `startup-guard` is skipped; CI covers the image.
 - **2026-10-21 — Local integration images are shared across worktrees** — `global-setup.ts` tags every build `cpg-integration`, so a concurrent session can test another checkout's image. Check the image was created after your last commit. Don't prune shared Docker state; rely on CI.
@@ -173,7 +175,6 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 
 - **2026-10-23 — Judge a gate command by its exit code, never by a piped tail** — `… | tail` / `| head` reports the pipe's status, so type errors were committed (#92) and shipped (#162). Run `npm run typecheck > log; echo $?`. A bare `tsc -p packages/app` also misses `RouteContext` types, which `next typegen` (inside `npm run typecheck`) generates.
 - **2026-10-19 — A cezar worktree needs its own `npm ci`** — without it Node resolves `@cpg/*` to the main checkout's packages, and tests and typecheck run the wrong code.
-- **2026-10-24 — Pass boolean CLI flags as true/false** — `gh pr checkout --recurse-submodules=no` from the tracker descriptor fails on gh 2.102.1; use `--recurse-submodules=false` (or omit the flag).
 - **2026-10-20 — zsh traps** — three to avoid:
   - never name a variable `path`: it is tied to `PATH`, and every later command fails;
   - zsh doesn't word-split `$cmd`, so run such loops under `bash -c` or `eval`;
@@ -192,5 +193,6 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 - **2026-10-20 — Gate every push on the PR being open** — the owner can merge mid-run, and a push then lands on a dead or recreated branch. Use `[ "$(gh pr view <n> --json state -q .state)" = OPEN ] && git push`, and send a retry through the same gate. Ship late fixes as a new PR off `main`.
 - **2026-10-17 — The pipeline can't approve its own PRs** — the skills run as Piotr12. Post the review as a comment, keep the PR in `review` (never `merge-queue`), and leave approval to a human.
 - **2026-10-24 — Keep evidence links stable and tolerate concurrent uploads** — never delete `qa-evidence`: old PR comments embed images from it (`attach-image-evidence` in `.ai/trackers/github.md`). Contents API uploads to different folders can still race on its branch tip (HTTP 409); re-read the target blob SHA and retry the same upload with a bounded backoff, never force-push (#196).
+- **2026-10-24 — GitHub CLI boolean flags** — Use `gh pr checkout --recurse-submodules=false`; `=no` is rejected by the installed CLI. Stop a command sequence on checkout failure before merging or validating.
 - **2026-10-21 — Tracker label guards** — copy `## Label guards` from `.ai/trackers/github.md` by its line range; its first `bash` fence runs installs. Set `PIPELINE_LABELS="$(jq -r '.labels.pipeline | join(" ")' .ai/agentic.config.json)"` and `LABELS_ENABLED` before sourcing, or `set_pipeline_label` leaves two pipeline labels.
 - **2026-10-17 — Keep same-day semantics when overriding om-* slot checks** — match `$(date -u +%Y-%m-%d)--????UTC-<slug>`, not the slug across all dates.

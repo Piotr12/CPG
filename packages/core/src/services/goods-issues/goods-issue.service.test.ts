@@ -252,6 +252,17 @@ describe("GoodsIssueService", () => {
       expect(await entries("customer-orders.customer-order.fulfilled")).toEqual([]);
     });
 
+    it("lets an issue of exactly the stock on hand take the balance to zero (INV-007)", async () => {
+      await count("00000001", "10");
+      const order = await orders().create(SIXTY, ACTOR);
+      const shipment = await shipAll(order);
+
+      await service().post(issueOf(shipment, each(1, "10")), ACTOR);
+
+      expect((await stock("00000001")).quantity).toBe("0.000000");
+      expect(await scoped().findOneOrFail(StockMovement, { type: GOODS_ISSUE_MOVEMENT })).toMatchObject({ quantity: "-10.000000", balanceBefore: "10.000000", balanceAfter: "0.000000" });
+    });
+
     it("can't issue stock that a transfer has dispatched into transit: only physical stock at the location counts (R09)", async () => {
       await count("00000001", "10");
       const order = await orders().create(SIXTY, ACTOR);
