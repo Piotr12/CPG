@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { CustomerOrderView, ShipmentView } from "@cpg/core";
+import type { CustomerOrderView, ShipmentView, TenantInfo } from "@cpg/core";
 import { en } from "../../i18n/messages/en";
 import { pl } from "../../i18n/messages/pl";
 import { ShipmentScreen } from "./shipment-screen";
@@ -15,7 +15,8 @@ const order = {
   id: "00000007", customer: "00000001", location: "00000001", status: "open", version: 2, createdAt: new Date(), updatedAt: new Date(),
   lines: [{ id: "line-1", material: material.id, quantity: "30.000000", enteredQuantity: "30", enteredUnit: "each", numerator: "1", denominator: "1", requiredDate: "2027-01-02", fulfilled: "0.000000", posted: false, abandoned: "0.000000", status: "open" }],
 } as unknown as CustomerOrderView;
-const props = { tenant: { code: "test", name: "Test", generation: 1, readOnly: false }, shipment, order, issues: [], materials: [material], units: {}, customers: [named], locations: [named], locale: "en" as const, messages: en };
+const tenant: TenantInfo = { code: "test", name: "Test", generation: 1, readOnly: false };
+const props = { tenant, shipment, order, issues: [], materials: [material], units: {}, customers: [named], locations: [named], locale: "en" as const, messages: en };
 const header = () => screen.getByRole("heading", { level: 1 }).closest("[data-slot=page-header]") as HTMLElement;
 
 describe("ShipmentScreen", () => {
