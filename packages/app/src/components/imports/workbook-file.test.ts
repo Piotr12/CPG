@@ -56,7 +56,7 @@ describe("templateWorkbook", () => {
     const text = (name: string) => sheets.find((sheet) => sheet.name === name)!.rows.flat().join(" ");
     expect(text("Instructions")).toMatch(/Blank creates a new material with the next ID\. An existing ID updates that material\. An ID that doesn't exist is an error\./);
     expect(text("Instructions")).toMatch(/Import reference Required for a new record/);
-    expect(text("Instructions")).toMatch(/complete recipe/);
+    expect(text("Instructions")).toMatch(/all its components/);
     expect(text("Instructions")).toMatch(/Example/);
     expect(text("Instrukcja")).toMatch(/Puste tworzy nowy BOM z kolejnym ID/);
     expect(text("Instrukcja")).toMatch(/Wymagana dla nowego rekordu/);

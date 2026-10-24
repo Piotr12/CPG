@@ -53,4 +53,13 @@ describe("help topics", () => {
     expect(text("tenant-audit")).toContain(businessDate);
     expect(text("tenant-audit")).toContain(reversal);
   });
+
+  it.each([
+    ["en", /recipe/i],
+    ["pl", /receptur/i],
+  ] as const)("says BOM, never recipe, in %s (one term per concept, design system v1 Principle 7; #206)", (locale, recipe) => {
+    const offenders = helpTopics(locale).flatMap((topic) => [topic.title, ...topic.body]).filter((text) => recipe.test(text));
+
+    expect(offenders).toEqual([]);
+  });
 });

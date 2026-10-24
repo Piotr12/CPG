@@ -67,16 +67,22 @@ describe("dictionaries", () => {
     ]);
   });
 
-  it("speak plainly: no emoji and no caveman voice, the product name aside", () => {
-    const strings = (dictionary: object) =>
-      keyPaths(dictionary)
-        .filter((path) => path !== "home/title")
-        .map((path) => path.split("/").reduce<unknown>((node, key) => (node as Record<string, unknown>)[key], dictionary))
-        .filter((value): value is string => typeof value === "string");
+  /** Every string value of a dictionary, the product name aside. */
+  const strings = (dictionary: object) =>
+    keyPaths(dictionary)
+      .filter((path) => path !== "home/title")
+      .map((path) => path.split("/").reduce<unknown>((node, key) => (node as Record<string, unknown>)[key], dictionary))
+      .filter((value): value is string => typeof value === "string");
 
+  it("speak plainly: no emoji and no caveman voice, the product name aside", () => {
     for (const dictionary of [en, pl]) {
       expect(strings(dictionary).filter((text) => /\p{Extended_Pictographic}|cave|jaskini/iu.test(text))).toEqual([]);
     }
+  });
+
+  it("say BOM, never recipe: one term per concept (design system v1, Principle 7; #206)", () => {
+    expect(strings(en).filter((text) => /recipe/i.test(text))).toEqual([]);
+    expect(strings(pl).filter((text) => /receptur/i.test(text))).toEqual([]);
   });
 
   it("name the Tenants page and a tenant's Overview with the sidebar's words", () => {

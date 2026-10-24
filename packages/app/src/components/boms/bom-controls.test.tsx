@@ -33,9 +33,9 @@ describe("BomControls", () => {
     mocks.updateBomRecipe.mockResolvedValue({ ok: true, data: { ...bom, revision: 3 } });
     render(controls());
 
-    fireEvent.click(screen.getByRole("button", { name: "Edit recipe" }));
-    expect(screen.getByRole("dialog", { name: "Edit the recipe of BOM 00000003" })).toBeTruthy();
-    expect(screen.getByText("Saving a change creates revision 3. Saving the same recipe changes nothing.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Edit BOM" }));
+    expect(screen.getByRole("dialog", { name: "Edit BOM 00000003" })).toBeTruthy();
+    expect(screen.getByText("Saving a change creates revision 3. Saving the same BOM changes nothing.")).toBeTruthy();
     expect((screen.getByLabelText("Quantity, Line 1") as HTMLInputElement).value).toBe("2");
     expect((screen.getByLabelText("Unit, Line 1") as HTMLSelectElement).value).toBe("case");
     expect((screen.getByLabelText("Valid through") as HTMLInputElement).value).toBe("");
@@ -56,11 +56,11 @@ describe("BomControls", () => {
     mocks.updateBomRecipe.mockResolvedValue({ ok: true, data: bom });
     render(controls({ validThrough: "2026-12-31" }));
 
-    fireEvent.click(screen.getByRole("button", { name: "Edit recipe" }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit BOM" }));
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     expect((await screen.findByRole("status")).textContent).toBe("No change: revision 2 is still current.");
-    fireEvent.click(screen.getByRole("button", { name: "Edit recipe" }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit BOM" }));
     expect(screen.queryByRole("status")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(screen.queryByRole("dialog")).toBeNull();
