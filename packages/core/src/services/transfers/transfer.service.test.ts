@@ -17,6 +17,7 @@ import {
   TransferReversal,
   TRANSFER_POSTING_IMMUTABLE,
   UniqueConstraintViolationException,
+  type EntityManager,
   type Orm,
   type TenantCode,
 } from "@cpg/db";
@@ -659,7 +660,7 @@ describe("TransferService", () => {
       await service().receive(first.id, kg("50"), ACTOR);
 
       expect((await service().list()).map(({ id }) => id)).toEqual(["00000001", "00000002"]);
-      expect(await service().list(2)).toEqual([]);
+      expect(await service().list({ page: 2 })).toEqual([]);
       expect(await service().count()).toBe(2);
       expect(await service("test").list()).toEqual([]);
       const detail = await service().get(first.id);
@@ -672,6 +673,68 @@ describe("TransferService", () => {
       ]);
       expect((await service().get("00000002")).postings).toEqual([]);
       await expect(service("test").get(first.id)).rejects.toMatchObject({ code: "TRANSFER_NOT_FOUND" });
+    });
+
+    describe("sorted and searched (#217)", () => {
+      /** Stores a transfer as it stands, bypassing the create rules (any status). */
+      const store = async (em: EntityManager, code: string, material: string, source: string, destination: string, plannedDispatch: string, status: string) => {
+        em.create(Transfer, {
+          code,
+          material: await em.findOneOrFail(Material, { code: material }),
+          source: await em.findOneOrFail(Location, { code: source }),
+          destination: await em.findOneOrFail(Location, { code: destination }),
+          quantity: "1.000000", enteredQuantity: "1", enteredUnit: "kg", numerator: "1", denominator: "1", plannedDispatch, plannedArrival: "2027-04-01", status,
+        });
+      };
+      const ids = (transfers: { id: string }[]) => transfers.map(({ id }) => id);
+
+      beforeEach(async () => {
+        // Inserted out of ID order, so an unordered read wouldn't look sorted.
+        const em = scoped();
+        await store(em, "00000003", "00000002", A, B, "2027-01-10", "open");
+        await store(em, "00000001", "00000001", B, "00000003", "2027-03-01", "completed");
+        await store(em, "00000002", "00000002", A, "00000003", "2027-02-01", "cancelled");
+        await store(em, "00000004", "00000001", A, B, "2027-02-01", "open");
+        await em.flush();
+        await service("test").create(TRANSFER, ACTOR);
+      });
+
+      it("sorts by each column, both ways, by ID within equal values", async () => {
+        expect(ids(await service().list({ sort: "id", dir: "desc" }))).toEqual(["00000004", "00000003", "00000002", "00000001"]);
+        expect(ids(await service().list({ sort: "material" }))).toEqual(["00000001", "00000004", "00000002", "00000003"]);
+        expect(ids(await service().list({ sort: "material", dir: "desc" }))).toEqual(["00000002", "00000003", "00000001", "00000004"]);
+        expect(ids(await service().list({ sort: "source" }))).toEqual(["00000002", "00000003", "00000004", "00000001"]);
+        expect(ids(await service().list({ sort: "source", dir: "desc" }))).toEqual(["00000001", "00000002", "00000003", "00000004"]);
+        expect(ids(await service().list({ sort: "plannedDispatch" }))).toEqual(["00000003", "00000002", "00000004", "00000001"]);
+        expect(ids(await service().list({ sort: "plannedDispatch", dir: "desc" }))).toEqual(["00000001", "00000002", "00000004", "00000003"]);
+        expect(ids(await service().list({ sort: "status" }))).toEqual(["00000002", "00000001", "00000003", "00000004"]);
+        expect(ids(await service().list({ sort: "status", dir: "desc" }))).toEqual(["00000003", "00000004", "00000001", "00000002"]);
+      });
+
+      it("keeps transfers whose ID, material, source or destination holds every word, ignoring ASCII case, in this tenant only", async () => {
+        expect(ids(await service().list({ q: "STEEL" }))).toEqual(["00000001", "00000004"]);
+        expect(ids(await service().list({ q: "depot" }))).toEqual(["00000001", "00000002"]);
+        expect(ids(await service().list({ q: "warehouse" }))).toEqual(["00000001", "00000003", "00000004"]);
+        expect(ids(await service().list({ q: "0003" }))).toEqual(["00000001", "00000002", "00000003"]);
+        expect(ids(await service().list({ q: "bolt depot" }))).toEqual(["00000002"]);
+        expect(ids(await service().list({ q: "steel bolt" }))).toEqual([]);
+        expect(ids(await service().list({ q: "warehouse", sort: "source", dir: "desc" }))).toEqual(["00000001", "00000003", "00000004"]);
+        expect(await service().count({ q: "warehouse" })).toBe(3);
+        expect(await service().count({ q: "\\" })).toBe(4);
+        expect(ids(await service("test").list({ q: "steel" }))).toEqual(["00000001"]);
+      });
+
+      it("pages a sort with equal values by ID, so no transfer shows twice or never (lesson 2026-10-21)", async () => {
+        const em = scoped();
+        for (let index = 105; index >= 5; index--) await store(em, String(index).padStart(8, "0"), "00000002", A, B, "2027-01-10", "open");
+        await em.flush();
+
+        const first = await service().list({ sort: "material", dir: "desc", q: "bolt" });
+        const second = await service().list({ sort: "material", dir: "desc", q: "bolt", page: 2 });
+        expect(ids(first).slice(0, 3)).toEqual(["00000002", "00000003", "00000005"]);
+        expect(ids(second)).toEqual(["00000103", "00000104", "00000105"]);
+        expect(await service().count({ q: "bolt" })).toBe(first.length + second.length);
+      });
     });
 
     it("shows at most the newest postings, and pages past the first page", async () => {

@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import { openBrowser, type Browser } from "./browser";
+import { chooseFromList, clickHydrated, openBrowser, type Browser } from "./browser";
 import { signedInAndHydrated, signIn, signInAsAdmin } from "./sign-in";
 import { createUser } from "./users";
 
@@ -239,7 +239,7 @@ async function createRequisition(browser: Browser, material: string, location: s
   await browser.waitUntil(ready(button("Create requisition")));
   await browser.clickRole("button", "Create requisition");
   await browser.waitFor("[role=dialog]");
-  await browser.select("[role=dialog] select[name=material]", await optionFor(browser, material));
+  await chooseMaterial(browser, "[role=dialog] input[aria-autocomplete=list]", material);
   await browser.select("[role=dialog] select[name=location]", await optionFor(browser, location));
   await browser.fill("[role=dialog] [name=quantity]", quantity);
   expect(await browser.fillDate("[role=dialog] [name=requiredDate]", "2027-03-01")).toBe("2027-03-01");
@@ -271,7 +271,7 @@ async function createOrder(browser: Browser, line: { material: string; quantity:
   await browser.waitFor("[role=dialog]");
   await browser.select("[role=dialog] select[name=supplier]", await optionFor(browser, "buypo acme"));
   await browser.select("[role=dialog] select[name=location]", await optionFor(browser, "buypo plant"));
-  await browser.select(`[role=dialog] select[name="lines.0.material"]`, await optionFor(browser, line.material));
+  await chooseMaterial(browser, `[role=dialog] input[aria-label="Material, Line 1"]`, line.material);
   await browser.fill(`[role=dialog] [name="lines.0.quantity"]`, line.quantity);
   expect(await browser.fillDate(`[role=dialog] [name="lines.0.plannedDate"]`, line.plannedDate)).toBe(line.plannedDate);
   if (line.requisition) await browser.select(`[role=dialog] select[name="lines.0.requisition"]`, line.requisition);
@@ -299,6 +299,18 @@ async function ordersOf(browser: Browser, supplier: string): Promise<string[][]>
   return found;
 }
 
+/**
+ * Chooses the material named `name` in the material autocomplete matching `selector` (#217): types the
+ * name, reads the ID of the option it lists, and chooses that option.
+ */
+async function chooseMaterial(browser: Browser, selector: string, name: string) {
+  await browser.waitUntil(`[...document.querySelectorAll(${JSON.stringify(selector)})].some((input) => input.offsetParent && Object.keys(input).some((key) => key.startsWith("__reactFiber")))`);
+  await browser.fill(selector, name);
+  const option = `[...document.querySelectorAll("[role=listbox]:not([hidden]) [role=option]")].find((row) => row.offsetParent && row.textContent.includes(${JSON.stringify(name)}))`;
+  await browser.waitUntil(`Boolean(${option})`);
+  await chooseFromList(browser, selector, name, await browser.evaluate<string>(`${option}.querySelector(".font-mono").textContent`));
+}
+
 /** The value of the select option whose label contains `text`, in the open dialog's first matching select. */
 async function optionFor(browser: Browser, text: string): Promise<string> {
   return browser.evaluate<string>(
@@ -324,3 +336,86 @@ async function createMaster(admin: Browser, kind: "materials" | "locations" | "s
   await admin.waitUntil(closed);
   await admin.waitForText(name);
 }
+
+describe("sorting and searching the purchasing lists (#217)", () => {
+  let una: Browser;
+  /** The shown list's rows as their cells' text. */
+  const shown = () =>
+    una.evaluate<string[][]>(`[...document.querySelectorAll("main tbody tr")].map((row) => [...row.cells].map((cell) => cell.innerText.trim().replace(/\\s+/g, " ")))`);
+  /** Waits until the page's address has this query and the table under it is the new one. */
+  const atQuery = (query: string) =>
+    una.waitUntil(`location.search === ${JSON.stringify(query)} && document.querySelector("main [aria-sort]") && !document.querySelector("main table").closest("[hidden]")`);
+  /** Searches the list for `text` with its search box. */
+  const search = async (text: string) => {
+    await una.waitUntil(`Boolean(document.querySelector("main [role=search] input[name=q]")) && Object.keys(document.querySelector("main [role=search] button")).some((key) => key.startsWith("__reactFiber"))`);
+    await una.fill("main [role=search] input[name=q]", text);
+    await una.click("main [role=search] button[type=submit]");
+  };
+
+  beforeAll(async () => {
+    una = openBrowser();
+    await signIn(una, baseUrl, PASSWORD, USERNAME);
+    await una.waitUntil(signedInAndHydrated(USERNAME));
+    await una.setViewport(1280, 800);
+  });
+  afterAll(() => una.close());
+
+  it("sorts the requisitions by their required date both ways, marking the sorted column", async () => {
+    await una.open(`${baseUrl}/admin/test/purchase-requisitions`);
+    await una.waitUntil(`document.querySelector("main th[aria-sort=ascending]")?.innerText.trim() === "Requisition"`);
+
+    await clickHydrated(una, "main th a[href$='sort=requiredDate&dir=asc']");
+    await atQuery("?sort=requiredDate&dir=asc");
+    await una.waitUntil(`document.querySelector("main th[aria-sort=ascending]")?.innerText.trim() === "Required"`);
+    const ascending = (await shown()).map((row) => `${row[6]} ${row[0]}`);
+    expect(ascending).toHaveLength(5);
+    expect(ascending).toEqual([...ascending].sort());
+
+    await clickHydrated(una, "main th a[href$='sort=requiredDate&dir=desc']");
+    await atQuery("?sort=requiredDate&dir=desc");
+    await una.waitUntil(`Boolean(document.querySelector("main th[aria-sort=descending]"))`);
+    const descending = (await shown()).map((row) => row[6]);
+    expect(descending).toEqual([...descending].sort().reverse());
+  });
+
+  it("searches the requisitions by their material, keeping the sort, marking matches, and clears back", async () => {
+    await una.open(`${baseUrl}/admin/test/purchase-requisitions?sort=material&dir=desc`);
+    await search("steel sheet");
+    await atQuery("?q=steel+sheet&sort=material&dir=desc");
+    await una.waitFor("main [role=status]");
+
+    const found = await shown();
+    expect(found.map((row) => row[1].split(" ")[0])).toEqual(["00000013", "00000007", "00000001"]);
+    for (const row of found) expect(row[1].toLowerCase()).toContain("steel sheet");
+    expect(await una.text("main [role=status]")).toBe("3 results for “steel sheet” · Clear search");
+    expect(await una.evaluate<number>(`document.querySelectorAll("main tbody mark").length`)).toBeGreaterThanOrEqual(6);
+
+    await clickHydrated(una, "main [role=status] a");
+    await atQuery("?sort=material&dir=desc");
+    await una.waitUntil(`document.querySelector("main [role=search] input[name=q]").value === "" && !document.querySelector("main [role=status]")`);
+    expect(await shown()).toHaveLength(5);
+  });
+
+  it("sorts the orders by supplier and searches them by supplier name, saying when nothing matches", async () => {
+    await una.open(`${baseUrl}/admin/test/purchase-orders`);
+    await una.waitUntil(`document.querySelector("main th[aria-sort=ascending]")?.innerText.trim() === "Order"`);
+    await clickHydrated(una, "main th a[href$='sort=supplier&dir=asc']");
+    await atQuery("?sort=supplier&dir=asc");
+    await una.waitUntil(`document.querySelector("main th[aria-sort=ascending]")?.innerText.trim() === "Supplier"`);
+    // By supplier ID, then by order ID within a supplier.
+    const bySupplier = (await shown()).map((row) => `${row[1].split(" ")[0]} ${row[0]}`);
+    expect(bySupplier.length).toBeGreaterThan(1);
+    expect(bySupplier).toEqual([...bySupplier].sort());
+
+    await search("steel service");
+    await atQuery("?q=steel+service&sort=supplier&dir=asc");
+    await una.waitFor("main [role=status]");
+    const found = await shown();
+    expect(found.length).toBeGreaterThan(0);
+    for (const row of found) expect(row[1]).toContain("Steel Service");
+
+    await una.open(`${baseUrl}/admin/test/purchase-orders?q=no+such+supplier+anywhere`);
+    await una.waitForText("Nothing matches “no such supplier anywhere”.");
+    expect(await una.text("main [role=status]")).toBe("0 results for “no such supplier anywhere” · Clear search");
+  });
+});

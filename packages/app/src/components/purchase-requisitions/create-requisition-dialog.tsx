@@ -7,17 +7,19 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { createRequisition } from "../../app/admin/[tenant]/purchase-requisitions/actions";
 import { TALL_DIALOG, type FormOption } from "../forms/form-labels";
 import type { RequisitionsLabels, TenantContext } from "./labels";
-import { RequisitionForm, type MaterialChoice } from "./requisition-form";
+import type { MaterialPick } from "./choices";
+import { RequisitionForm } from "./requisition-form";
 
 interface CreateRequisitionDialogProps {
   context: TenantContext;
   labels: RequisitionsLabels;
-  materials: MaterialChoice[];
+  materials: MaterialPick[];
   locations: FormOption[];
+  locale: string;
 }
 
 /** The Create requisition button and its form, for any signed-in account; the server assigns the ID (LFC-001). */
-export function CreateRequisitionDialog({ context, labels, materials, locations }: CreateRequisitionDialogProps) {
+export function CreateRequisitionDialog({ context, labels, materials, locations, locale }: CreateRequisitionDialogProps) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
   const t = labels.create;
@@ -36,6 +38,7 @@ export function CreateRequisitionDialog({ context, labels, materials, locations 
           labels={labels}
           materials={materials}
           locations={locations}
+          locale={locale}
           schema={requisitionCreateSchema}
           action={(values) => createRequisition(context.tenant, context.generation, values)}
           onSuccess={close}

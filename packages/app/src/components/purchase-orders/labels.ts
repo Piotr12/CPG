@@ -19,13 +19,18 @@ import { POSITIVE_QUANTITY_MESSAGE } from "@cpg/core/validators/quantities/quant
 import { errorMessage } from "../../i18n/error-message";
 import type { Messages } from "../../i18n/messages/en";
 import { fill, shownQuantity, type TenantContext } from "../forms/form-labels";
+import { documentMaterialPicker, type DocumentMaterialPicker } from "../purchasing/material-picker";
 import { byId } from "../purchase-requisitions/labels";
 
 /**
  * The purchase-order screens' strings in the reader's language: plain strings, so they can reach
  * client components (the server-side headings stay behind). `errors` holds every code the screens can show.
  */
-export type OrdersLabels = Omit<Messages["purchaseOrders"], "heading" | "detailHeading" | "errors"> & { errors: Record<string, string> };
+export type OrdersLabels = Omit<Messages["purchaseOrders"], "heading" | "detailHeading" | "errors"> & {
+  errors: Record<string, string>;
+  /** The form's material autocomplete (#217). */
+  picker: DocumentMaterialPicker;
+};
 
 /** Builds the purchase-order screens' labels from a dictionary (server side, where `messages` is available). */
 export function ordersLabels(messages: Messages): OrdersLabels {
@@ -35,6 +40,7 @@ export function ordersLabels(messages: Messages): OrdersLabels {
   return {
     ...(labels as Omit<Messages["purchaseOrders"], "heading" | "detailHeading">),
     errors: { ...messages.errors, ...messages.purchaseOrders.errors },
+    picker: documentMaterialPicker(messages),
   };
 }
 

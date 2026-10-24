@@ -6,19 +6,20 @@ import { Button } from "@cpg/ui/components/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@cpg/ui/components/dialog";
 import { createTransfer } from "../../app/admin/[tenant]/transfers/actions";
 import { TALL_DIALOG, type FormOption } from "../forms/form-labels";
-import type { MaterialChoice } from "../purchase-requisitions/requisition-form";
+import type { MaterialPick } from "../purchase-requisitions/choices";
 import type { TenantContext, TransfersLabels } from "./labels";
 import { TransferForm } from "./transfer-form";
 
 interface CreateTransferDialogProps {
   context: TenantContext;
   labels: TransfersLabels;
-  materials: MaterialChoice[];
+  materials: MaterialPick[];
   locations: FormOption[];
+  locale: string;
 }
 
 /** The Create transfer button and its form, for any signed-in account; the server assigns the ID (LFC-001). */
-export function CreateTransferDialog({ context, labels, materials, locations }: CreateTransferDialogProps) {
+export function CreateTransferDialog({ context, labels, materials, locations, locale }: CreateTransferDialogProps) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
   const t = labels.create;
@@ -37,6 +38,7 @@ export function CreateTransferDialog({ context, labels, materials, locations }: 
           labels={labels}
           materials={materials}
           locations={locations}
+          locale={locale}
           schema={transferCreateSchema}
           action={(values) => createTransfer(context.tenant, context.generation, values)}
           onSuccess={close}

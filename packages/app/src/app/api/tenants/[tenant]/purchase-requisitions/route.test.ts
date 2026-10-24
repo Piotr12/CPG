@@ -47,7 +47,7 @@ describe("/api/tenants/{tenant}/purchase-requisitions", () => {
 
     await get("");
     await get("?page=2");
-    expect(mocks.list.mock.calls).toEqual([[1], [2]]);
+    expect(mocks.list.mock.calls).toEqual([[{ page: 1 }], [{ page: 2 }]]);
 
     mocks.list.mockClear();
     for (const bad of ["?page=0", "?page=x", "?page=1.5"]) expect((await get(bad)).status).toBe(400);

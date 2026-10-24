@@ -34,10 +34,10 @@ describe("/api/tenants/{tenant}/transfers", () => {
     mocks.list.mockResolvedValue([{ id: "00000001" }]);
 
     expect(await (await get()).json()).toEqual({ ok: true, data: [{ id: "00000001" }] });
-    expect(mocks.list).toHaveBeenLastCalledWith(1);
+    expect(mocks.list).toHaveBeenLastCalledWith({ page: 1 });
     expect(mocks.tenantScope).toHaveBeenCalledWith("test");
     await get("?page=2");
-    expect(mocks.list).toHaveBeenLastCalledWith(2);
+    expect(mocks.list).toHaveBeenLastCalledWith({ page: 2 });
   });
 
   it("GET refuses an unknown filter or page, and checks the caller before opening the tenant", async () => {

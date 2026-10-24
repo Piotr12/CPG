@@ -11,18 +11,29 @@ import { POSITIVE_QUANTITY_MESSAGE } from "@cpg/core/validators/quantities/quant
 import { errorMessage } from "../../i18n/error-message";
 import type { Messages } from "../../i18n/messages/en";
 import { fill, shownQuantity, type TenantContext } from "../forms/form-labels";
+import { documentMaterialPicker, type DocumentMaterialPicker } from "../purchasing/material-picker";
 
 /**
  * The requisition screen's strings in the reader's language: plain strings, so they can reach client
  * components (the server-side heading stays behind). `errors` holds every code the screen can show.
  */
-export type RequisitionsLabels = Omit<Messages["purchaseRequisitions"], "heading" | "errors"> & { errors: Record<string, string>; lifecycle: Messages["lifecycle"] };
+export type RequisitionsLabels = Omit<Messages["purchaseRequisitions"], "heading" | "errors"> & {
+  errors: Record<string, string>;
+  lifecycle: Messages["lifecycle"];
+  /** The form's material autocomplete (#217). */
+  picker: DocumentMaterialPicker;
+};
 
 /** Builds the requisition screen's labels from a dictionary (server side, where `messages` is available). */
 export function requisitionsLabels(messages: Messages): RequisitionsLabels {
   const labels: Partial<Messages["purchaseRequisitions"]> = { ...messages.purchaseRequisitions };
   delete labels.heading;
-  return { lifecycle: messages.lifecycle, ...(labels as Omit<Messages["purchaseRequisitions"], "heading">), errors: { ...messages.errors, ...messages.purchaseRequisitions.errors } };
+  return {
+    lifecycle: messages.lifecycle,
+    ...(labels as Omit<Messages["purchaseRequisitions"], "heading">),
+    errors: { ...messages.errors, ...messages.purchaseRequisitions.errors },
+    picker: documentMaterialPicker(messages),
+  };
 }
 
 export { fill, shownQuantity, type TenantContext };

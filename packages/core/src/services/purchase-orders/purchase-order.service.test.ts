@@ -133,9 +133,9 @@ describe("PurchaseOrderService", () => {
     expect(first).toHaveLength(100);
     expect([first[0].id, first[99].id]).toEqual(["00000001", "00000100"]);
     expect(first.every(({ id, lines }) => lines.length === 1 + (Number(id) % 2) && lines.every(({ quantity }) => quantity === `${Number(id)}.000000`))).toBe(true);
-    expect((await service().list(1)).map(({ id }) => id)).toEqual(first.map(({ id }) => id));
-    expect((await service().list(2)).map(({ id }) => id)).toEqual(["00000101"]);
-    expect(await service().list(3)).toEqual([]);
+    expect((await service().list({ page: 1 })).map(({ id }) => id)).toEqual(first.map(({ id }) => id));
+    expect((await service().list({ page: 2 })).map(({ id }) => id)).toEqual(["00000101"]);
+    expect(await service().list({ page: 3 })).toEqual([]);
     expect(await service().count()).toBe(101);
     expect(await service("test").count()).toBe(0);
   });
@@ -172,9 +172,70 @@ describe("PurchaseOrderService", () => {
     expect(lookup.mock.calls.filter(([entity]) => entity === GoodsReceiptLine)).toEqual([]);
   });
 
+  describe("sorted and searched (#217)", () => {
+    /** Stores an order of one steel line as it stands, bypassing the create rules (inactive masters, any status). */
+    const store = async (em: EntityManager, code: string, supplier: string, location: string, status: string) => {
+      const order = em.create(PurchaseOrder, {
+        code, supplier: await em.findOneOrFail(Supplier, { code: supplier }), location: await em.findOneOrFail(Location, { code: location }), status,
+      });
+      em.create(PurchaseOrderLine, {
+        order, position: 1, material: await em.findOneOrFail(Material, { code: "00000001" }), quantity: "1.000000", enteredQuantity: "1", enteredUnit: "kg",
+        numerator: "1", denominator: "1", plannedDate: "2027-03-03",
+      });
+    };
+    const ids = (orders: { id: string }[]) => orders.map(({ id }) => id);
+
+    beforeEach(async () => {
+      // Inserted out of ID order, so an unordered read wouldn't look sorted.
+      const em = scopedEm();
+      await store(em, "00000003", "00000002", "00000001", "open");
+      await store(em, "00000001", "00000001", "00000002", "completed");
+      await store(em, "00000002", "00000003", "00000001", "cancelled");
+      await store(em, "00000004", "00000001", "00000001", "open");
+      await em.flush();
+      await seedMasters(orm, "test");
+      await service("test").create(DIRECT, ACTOR);
+    });
+
+    it("sorts by each column, both ways, by ID within equal values", async () => {
+      expect(ids(await service().list({ sort: "id", dir: "desc" }))).toEqual(["00000004", "00000003", "00000002", "00000001"]);
+      expect(ids(await service().list({ sort: "supplier" }))).toEqual(["00000001", "00000004", "00000003", "00000002"]);
+      expect(ids(await service().list({ sort: "supplier", dir: "desc" }))).toEqual(["00000002", "00000003", "00000001", "00000004"]);
+      expect(ids(await service().list({ sort: "location" }))).toEqual(["00000002", "00000003", "00000004", "00000001"]);
+      expect(ids(await service().list({ sort: "location", dir: "desc" }))).toEqual(["00000001", "00000002", "00000003", "00000004"]);
+      expect(ids(await service().list({ sort: "status" }))).toEqual(["00000002", "00000001", "00000003", "00000004"]);
+      expect(ids(await service().list({ sort: "status", dir: "desc" }))).toEqual(["00000003", "00000004", "00000001", "00000002"]);
+    });
+
+    it("keeps orders whose ID, supplier or location holds every word, ignoring ASCII case, in this tenant only", async () => {
+      expect(ids(await service().list({ q: "STEEL" }))).toEqual(["00000001", "00000004"]);
+      expect(ids(await service().list({ q: "wholesale" }))).toEqual(["00000003"]);
+      expect(ids(await service().list({ q: "warehouse" }))).toEqual(["00000001"]);
+      expect(ids(await service().list({ q: "0003" }))).toEqual(["00000002", "00000003"]);
+      expect(ids(await service().list({ q: "fasteners main" }))).toEqual(["00000003"]);
+      expect(ids(await service().list({ q: "steel gone" }))).toEqual([]);
+      expect(ids(await service().list({ q: "steel", sort: "location", dir: "desc" }))).toEqual(["00000001", "00000004"]);
+      expect(await service().count({ q: "steel" })).toBe(2);
+      expect(await service().count({ q: "_" })).toBe(4);
+      expect(ids(await service("test").list({ q: "steel" }))).toEqual(["00000001"]);
+    });
+
+    it("pages a sort with equal values by ID, so no order shows twice or never (lesson 2026-10-21)", async () => {
+      const em = scopedEm();
+      for (let index = 105; index >= 5; index--) await store(em, String(index).padStart(8, "0"), "00000002", "00000001", "open");
+      await em.flush();
+
+      const first = await service().list({ sort: "supplier", dir: "desc", q: "fasteners" });
+      const second = await service().list({ sort: "supplier", dir: "desc", q: "fasteners", page: 2 });
+      expect(ids(first).slice(0, 3)).toEqual(["00000003", "00000005", "00000006"]);
+      expect(ids(second)).toEqual(["00000104", "00000105"]);
+      expect(await service().count({ q: "fasteners" })).toBe(first.length + second.length);
+    });
+  });
+
   it("refuses an invalid page as VALIDATION_FAILED", async () => {
     for (const page of [0, -1, 1.5, Number.NaN]) {
-      await expect(service().list(page)).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+      await expect(service().list({ page })).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
     }
   });
 
