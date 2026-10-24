@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { tenantScope } from "@cpg/core";
+import { LoadingMessage } from "@cpg/ui/backend/feedback/loading-message";
 import { TRANSFER_PAGE_SIZE, transferListSchema } from "@cpg/core/validators/transfers/transfer.schema";
 import { requireUser } from "../../../../auth/require-admin";
 import { TransfersScreen } from "../../../../components/transfers/transfers-screen";
@@ -14,8 +15,8 @@ export const metadata: Metadata = { title: "Transfers" };
 
 export default function TransfersPage({ params, searchParams }: PageProps<"/admin/[tenant]/transfers">) {
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-12">
-      <Suspense fallback={<div aria-busy="true" className="min-h-40" />}>
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pt-6 pb-8 md:px-6 md:pt-12 md:pb-12">
+      <Suspense fallback={<LoadingMessage />}>
         <Transfers params={params} searchParams={searchParams} />
       </Suspense>
     </main>

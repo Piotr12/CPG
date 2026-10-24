@@ -48,7 +48,7 @@ describe("TokensPage", () => {
     // The menu leads back; the page carries no back link of its own.
     expect(screen.queryByRole("link", { name: "Tenants" })).toBeNull();
     expect(screen.getByText(/as you, in Test and Prod, until you revoke it\. Tokens never expire\./)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Create token" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Create token" }).closest("[data-slot=page-header]")).toBeTruthy();
     expect(screen.getByText("API tokens table: agent1")).toBeTruthy();
   });
 

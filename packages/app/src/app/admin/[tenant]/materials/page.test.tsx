@@ -57,6 +57,10 @@ describe("MaterialsPage", () => {
     expect(screen.getByRole("link", { name: "00000001" }).getAttribute("href")).toBe("/admin/test/materials/00000001");
     expect(screen.getByRole("button", { name: "create in test generation 2" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Import from spreadsheet" }).getAttribute("href")).toBe("/admin/test/import");
+    // Both actions sit in the page header beside the title, the intro under it.
+    const header = screen.getByRole("heading", { level: 1 }).closest("[data-slot=page-header]");
+    expect(header?.querySelectorAll("a, button")).toHaveLength(2);
+    expect(header?.textContent).toContain(en.materials.intro);
   });
 
   it("shows a normal user the list without Create (TEN-004), in Polish when chosen", async () => {

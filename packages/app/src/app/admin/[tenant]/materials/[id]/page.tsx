@@ -3,9 +3,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { tenantScope } from "@cpg/core";
-import { Badge } from "@cpg/ui/components/badge";
+import { LoadingMessage } from "@cpg/ui/backend/feedback/loading-message";
+import { StatusBadge } from "@cpg/ui/backend/feedback/status-badge";
+import { PageHeader } from "@cpg/ui/backend/page-header";
 import { Card, CardContent } from "@cpg/ui/components/card";
 import { requireUser } from "../../../../../auth/require-admin";
+import { masterDataStatusTone } from "../../../../../components/document-lifecycle/status-tone";
 import { AddConversionDialog } from "../../../../../components/materials/add-conversion-dialog";
 import { ConversionsTable } from "../../../../../components/materials/conversions-table";
 import { fill, materialsLabels } from "../../../../../components/materials/labels";
@@ -18,8 +21,8 @@ export const metadata: Metadata = { title: "Material" };
 
 export default function MaterialPage({ params }: PageProps<"/admin/[tenant]/materials/[id]">) {
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-6 py-12">
-      <Suspense fallback={<div aria-busy="true" className="min-h-40" />}>
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pt-6 pb-8 md:px-6 md:pt-12 md:pb-12">
+      <Suspense fallback={<LoadingMessage />}>
         <Material params={params} />
       </Suspense>
     </main>
@@ -50,44 +53,50 @@ async function Material({ params }: { params: Promise<{ tenant: string; id: stri
     { label: labels.columns.baseUnit, value: material.baseUnit },
     {
       label: labels.columns.status,
-      value: <Badge variant={material.active ? "secondary" : "destructive"}>{labels.status[material.active ? "active" : "inactive"]}</Badge>,
+      value: <StatusBadge {...masterDataStatusTone(material.active)}>{labels.status[material.active ? "active" : "inactive"]}</StatusBadge>,
     },
     { label: labels.columns.created, value: material.createdAt.toISOString().slice(0, 10) },
   ];
 
   return (
-    <div lang={locale} className="flex flex-col gap-6">
-      <Link href={`/admin/${tenant.code}/materials`} className="text-sm underline underline-offset-4">
-        {labels.allMaterials}
-      </Link>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight wrap-anywhere">
-          <span className="font-mono">{material.id}</span> — {material.description}
-        </h1>
-        {editable && <MaterialControls material={material} context={context} labels={labels} />}
+    <div lang={locale}>
+      <p className="mb-4 text-sm">
+        <Link href={`/admin/${tenant.code}/materials`} className="underline underline-offset-4">
+          {labels.allMaterials}
+        </Link>
+      </p>
+      <PageHeader
+        title={
+          <span className="wrap-anywhere">
+            <span className="font-mono">{material.id}</span> — {material.description}
+          </span>
+        }
+        actions={editable && <MaterialControls material={material} context={context} labels={labels} />}
+      />
+      <div className="flex flex-col gap-8">
+        <Card>
+          <CardContent>
+            <dl className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
+              {details.map(({ label, value }) => (
+                <div key={label}>
+                  <dt className="text-muted-foreground">{label}</dt>
+                  <dd className="mt-1">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </CardContent>
+        </Card>
+        <section aria-labelledby="conversions-heading" className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <h2 id="conversions-heading" className="text-lg font-semibold">
+              {labels.conversions.heading}
+            </h2>
+            {editable && <AddConversionDialog material={material} context={context} labels={labels} />}
+          </div>
+          <p className="text-sm text-muted-foreground">{fill(labels.conversions.intro, { baseUnit: material.baseUnit })}</p>
+          <ConversionsTable material={material} conversions={conversions} context={context} labels={labels} editable={editable} />
+        </section>
       </div>
-      <Card>
-        <CardContent>
-          <dl className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
-            {details.map(({ label, value }) => (
-              <div key={label}>
-                <dt className="text-muted-foreground">{label}</dt>
-                <dd className="mt-1">{value}</dd>
-              </div>
-            ))}
-          </dl>
-        </CardContent>
-      </Card>
-      <section aria-labelledby="conversions-heading" className="flex flex-col gap-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h2 id="conversions-heading" className="text-lg font-semibold">
-            {labels.conversions.heading}
-          </h2>
-          {editable && <AddConversionDialog material={material} context={context} labels={labels} />}
-        </div>
-        <p className="text-sm text-muted-foreground">{fill(labels.conversions.intro, { baseUnit: material.baseUnit })}</p>
-        <ConversionsTable material={material} conversions={conversions} context={context} labels={labels} editable={editable} />
-      </section>
     </div>
   );
 }

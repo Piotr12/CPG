@@ -13,7 +13,7 @@ import { orNotFound } from "../../../../routing/or-not-found";
 export const metadata: Metadata = { title: "Production orders" };
 
 export default function ProductionOrdersPage({ params, searchParams }: PageProps<"/admin/[tenant]/production-orders">) {
-  return <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-12">
+  return <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pt-6 pb-8 md:px-6 md:pt-12 md:pb-12">
     <Suspense fallback={<LoadingMessage />}><Content params={params} searchParams={searchParams} /></Suspense>
   </main>;
 }
