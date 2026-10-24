@@ -1,10 +1,11 @@
 import {
   Customer, CustomerOrder, CustomerOrderLine, OptimisticLockError, UniqueConstraintViolationException,
-  type EntityManager, type Material, type DocumentState,
+  type EntityManager, type FilterQuery, type Material, type DocumentState, type OrderDefinition,
 } from "@cpg/db";
 import { documentState, resolveLines as resolveLifecycle, type LifecycleAction } from "../../domain/document-lifecycle/lifecycle";
 import { selectLifecycleLines } from "../../domain/document-lifecycle/select-lines";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
+import { listOrderBy, searchWhere } from "../../domain/lists/list-query";
 import { isLineFulfilled } from "../../domain/goods-issues/issue-quantity";
 import { parseDecimal } from "../../domain/quantities/decimal";
 import { AppError, ConflictError, ValidationError, versionConflict } from "../../http/errors";
@@ -12,6 +13,8 @@ import {
   customerOrderCreateSchema, customerOrderUpdateSchema, customerOrderListSchema, ORDER_PAGE_SIZE, ORDER_LINE_ID_MESSAGE, ORDER_QUANTITY_MIN_MESSAGE, ORDER_UNIT_CONVERSION_MESSAGE, ORDER_QUANTITY_CONVERSION_MESSAGE,
   type CustomerOrderInput, type CustomerOrderChanges,
 } from "../../validators/customer-orders/customer-order.schema";
+import type { CustomerOrderSort } from "../../validators/customer-orders/customer-order-list.schema";
+import type { ListOptions } from "../../validators/lists/list-query.schema";
 import { validationError } from "../../http/parse-input";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit } from "../audit/audit-recorder";
@@ -51,6 +54,9 @@ export interface CustomerOrderView {
 interface ResolvedLine { existing?: CustomerOrderLine; material: Material; record: BaseQuantity; requiredDate: string }
 const CUSTOMER_LOOKUP = { entity: Customer, noun: "customer", codePrefix: "CUSTOMER" };
 const POPULATE = ["customer", "location"] as const;
+/** What the Customer orders search matches, and the column each sort key orders by (#217). */
+const ORDER_SEARCH_FIELDS = ["code", "customer.code", "customer.name"];
+const ORDER_SORT_PATHS: Record<CustomerOrderSort, string> = { id: "code", customer: "customer.code", location: "location.code", status: "status" };
 const locked = () => new ConflictError("This order or a posted line can't be changed that way.", "CUSTOMER_ORDER_LOCKED");
 
 /** Tenant-local, audited customer demand. Writes persist the full aggregate under its header version. */
@@ -58,12 +64,19 @@ export class CustomerOrderService {
   private readonly em: EntityManager;
   constructor({ em }: { em: EntityManager }) { this.em = em; }
 
-  /** Fixed-size pages bound both the query and its full line payload; codes remain ascending. */
-  async list(page = 1): Promise<CustomerOrderView[]> {
+  /**
+   * Fixed-size pages bound both the query and its full line payload, by ID unless `sort` says
+   * otherwise (by ID within equal values); `q` keeps orders whose ID or customer ID or name holds
+   * every word (#217).
+   */
+  async list({ page = 1, q = "", sort = "id", dir = "asc" }: ListOptions<CustomerOrderSort> = {}): Promise<CustomerOrderView[]> {
     const parsed = customerOrderListSchema.safeParse({ page });
     if (!parsed.success) throw validationError(parsed.error);
     const em = this.em;
-    const orders = await em.find(CustomerOrder, {}, { populate: [...POPULATE], orderBy: { code: "asc" }, limit: ORDER_PAGE_SIZE, offset: (parsed.data.page - 1) * ORDER_PAGE_SIZE });
+    const orders = await em.find(CustomerOrder, searchWhere(q, ORDER_SEARCH_FIELDS) as FilterQuery<CustomerOrder>, {
+      populate: [...POPULATE], orderBy: listOrderBy(ORDER_SORT_PATHS[sort], dir) as OrderDefinition<CustomerOrder>,
+      limit: ORDER_PAGE_SIZE, offset: (parsed.data.page - 1) * ORDER_PAGE_SIZE,
+    });
     if (orders.length === 0) return [];
     const lines = await em.find(CustomerOrderLine, { order: { $in: orders }, removed: false }, { populate: ["material"], orderBy: { position: "asc" } });
     const grouped = new Map<string, CustomerOrderLine[]>();
@@ -75,7 +88,10 @@ export class CustomerOrderService {
     return orders.map((order) => view(order, grouped.get(order.id)!, posted));
   }
 
-  async count(): Promise<number> { return this.em.count(CustomerOrder, {}); }
+  /** How many orders `q` matches, for the pages of `list`. */
+  async count({ q = "" }: Pick<ListOptions<CustomerOrderSort>, "q"> = {}): Promise<number> {
+    return this.em.count(CustomerOrder, searchWhere(q, ORDER_SEARCH_FIELDS) as FilterQuery<CustomerOrder>);
+  }
 
   async get(id: string): Promise<CustomerOrderView> {
     return detail(this.em, await findCustomerOrder(this.em, id));

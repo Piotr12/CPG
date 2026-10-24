@@ -15,7 +15,7 @@ export const GET = apiHandler(async (request: Request, { params }: Context) => {
   await requireApiUser(request);
   const { page, ...filter } = parseInput(forecastListQuerySchema, Object.fromEntries(new URL(request.url).searchParams));
   const { cradle } = await tenantScope((await params).tenant);
-  return cradle.forecastService.list(filter, page);
+  return cradle.forecastService.list(filter, { page });
 });
 
 /**

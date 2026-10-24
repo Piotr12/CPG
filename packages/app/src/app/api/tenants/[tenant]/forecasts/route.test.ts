@@ -39,7 +39,7 @@ describe("/api/tenants/{tenant}/forecasts", () => {
     const response = await route.GET(new Request("http://cpg.test/api/tenants/prod/forecasts"), context("prod"));
 
     expect(mocks.tenantScope).toHaveBeenCalledWith("prod");
-    expect(mocks.list).toHaveBeenCalledWith({}, 1);
+    expect(mocks.list).toHaveBeenCalledWith({}, { page: 1 });
     expect(await response.json()).toEqual({ ok: true, data: [{ date: "2027-01-01" }] });
   });
 
@@ -52,7 +52,7 @@ describe("/api/tenants/{tenant}/forecasts", () => {
     await route.GET(new Request("http://cpg.test/api/tenants/prod/forecasts?location=00000001"), context("prod"));
     await route.GET(new Request("http://cpg.test/api/tenants/prod/forecasts?material="), context("prod"));
 
-    expect(mocks.list.mock.calls).toEqual([[{ material: "00000005", location: "00000001" }, 1], [{ location: "00000001" }, 1], [{}, 1]]);
+    expect(mocks.list.mock.calls).toEqual([[{ material: "00000005", location: "00000001" }, { page: 1 }], [{ location: "00000001" }, { page: 1 }], [{}, { page: 1 }]]);
   });
 
   it("GET asks for the page in the query, with the filter", async () => {
@@ -63,7 +63,7 @@ describe("/api/tenants/{tenant}/forecasts", () => {
     await route.GET(new Request("http://cpg.test/api/tenants/prod/forecasts?page=2"), context("prod"));
     await route.GET(new Request("http://cpg.test/api/tenants/prod/forecasts?material=00000005&page=3"), context("prod"));
 
-    expect(mocks.list.mock.calls).toEqual([[{}, 2], [{ material: "00000005" }, 3]]);
+    expect(mocks.list.mock.calls).toEqual([[{}, { page: 2 }], [{ material: "00000005" }, { page: 3 }]]);
   });
 
   it("GET refuses a page that isn't a positive whole number, listing nothing", async () => {
