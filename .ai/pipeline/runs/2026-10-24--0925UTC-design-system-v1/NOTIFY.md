@@ -84,3 +84,4 @@
 - Gate on the merged tree with the two follow-ups: running.
 - Gate on the merged P1 tree (caa2511c): lint exit 0, typecheck exit 0, test:coverage exit 0 (516 files, 3,811 tests, 100 %), build exit 0. Scan: 33 offenders in 11 files, all in P2's and P3's folders.
 - Lead: the not-found and error pages now render their one `h1` through `PageHeader` (title and description), with the next step or the `ErrorMessage` as the content; `global-error.tsx`'s heading carries both languages like the rest of that page. The lesson on plain-data labels is sharpened (a whole dictionary section holds functions).
+- P2 (inbox): one more P1 page test asserts the shipment cancel button by its old name (`shipments/[id]/page.test.tsx:160,168,184`). Decision: P2 is authorised to change those three label strings (P1 is merged; no conflict).
