@@ -83,8 +83,9 @@ describe("tenants in the admin", () => {
     expect(html).toContain('<meta name="robots" content="noindex"/>');
 
     await browser.open(`${baseUrl}/admin/${tenant}`);
-    await browser.waitFor("h2");
-    expect(await browser.text("h2")).toBe("This page could not be found.");
+    // The root not-found page (design system v1, "States and copy → Not found") replaces Next's default text.
+    await browser.waitForText("Page not found.");
+    expect(await browser.evaluate<string>(`document.querySelector("main a[href='/admin']")?.textContent ?? ""`)).toBe("Go to Tenants");
     expect(await browser.evaluate<boolean>(`document.querySelector("${HEADER}") === null`)).toBe(true);
   });
 });

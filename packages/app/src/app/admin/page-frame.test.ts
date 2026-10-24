@@ -14,9 +14,6 @@ function pages(dir: string): string[] {
 /** The narrow pages (spec "Layout and the page frame"); every other admin page is wide. */
 const NARROW = ["(global)/page.tsx", "(global)/tokens/page.tsx", "(global)/users/page.tsx", "[tenant]/page.tsx"];
 
-/** The Tenants page is the navigation shell's (unit P4 of the design system run), which brings it into the frame. */
-const NOT_YET = ["(global)/page.tsx"];
-
 // Design system v1, "Layout and the page frame" and "States and copy → Loading": two widths, one padding
 // rhythm, and a visible loading state from the first streamed frame on every admin page.
 describe("admin page frame", () => {
@@ -28,7 +25,7 @@ describe("admin page frame", () => {
     expect(all.length).toBeGreaterThan(NARROW.length);
   });
 
-  it.each(all.filter((page) => !NOT_YET.includes(page)))("%s has the frame", (page) => {
+  it.each(all)("%s has the frame", (page) => {
     const main = /<main className="([^"]+)"/.exec(source(page))?.[1].split(" ");
     expect(main).toEqual(expect.arrayContaining(["mx-auto", "w-full", "px-4", "pt-6", "pb-8", "md:px-6", "md:pt-12", "md:pb-12"]));
     expect(main).toContain(NARROW.includes(page) ? "max-w-3xl" : "max-w-6xl");
