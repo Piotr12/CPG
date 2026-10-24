@@ -50,9 +50,10 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 - **2026-10-21 — Locks follow immutable posting history, not net progress** — a full reversal returns `received`/`fulfilled` to zero but doesn't make a document unprocessed. Derive identity and edit locks from immutable posting references (`postedReferences`, `services/stock/posted-references.ts`), keep explicitly closed lines closed, and let headers follow retained line states (#91, #138).
   - Replacing a line's material must archive the old line first, or the old FK, and its type/base-unit lock, is lost.
   - A transfer write-off has no stock movement, so transfer reversals link through their own append-only `TransferReversal`.
-- **2026-10-23 — Paging a list: bound it from the first release, and move every decision off it** — paginate growing document collections in the service and API, fetch only the page's lines, and bound guards and previews (current recipes only, batched lookups, an index covering the filter plus cursor).
+- **2026-10-24 — Paging a list: bound it from the first release, and move every decision off it** — paginate growing document collections in the service and API, fetch only the page's lines, and bound guards and previews (current recipes only, batched lookups, an index covering the filter plus cursor).
   - When you page an existing list, grep the screens for decisions read from it (`.some`, `.length`, `.find`) and move them into server-computed fields (#138).
   - Grep the tests that count it whole too, both unit and integration (#140).
+  - A before/after snapshot that proves "nothing changed" must walk every page, or it proves it for the first 100 records only: read a paged list through `allPages` in `tests/integration/api.ts`, and make the test itself put the list past one page so a first-page read fails (#201).
 - **2026-10-23 — Refusals carry structured `params`; messages stay fixed text** — screens translate by code and exact message, so put record IDs and quantities in `params`, e.g. `new ValidationError(fieldErrors, { material })` or `ConflictError(…, code, { order })`. Never interpolate them into the message (#153).
   - Keep `params` through every adapter: HTTP, server actions, import reports.
   - Give every new code EN/PL text, and keep an unparameterised fallback.

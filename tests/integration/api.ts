@@ -26,6 +26,22 @@ export async function callApi(
 
 export const json = (response: { text: string }) => JSON.parse(response.text);
 
+/** How many rows one page of a paged tenant list holds (`?page=N`): `DOCUMENT_PAGE_SIZE` and its siblings in `@cpg/core`. */
+export const LIST_PAGE_SIZE = 100;
+
+/**
+ * Every row of a paged list: `readPage` is asked for page 1, 2, … until a page comes back short of
+ * `LIST_PAGE_SIZE`, so a list that has grown past one page is read whole (#201).
+ */
+export async function allPages<T>(readPage: (page: number) => Promise<T[]>): Promise<T[]> {
+  const all: T[] = [];
+  for (let page = 1; ; page += 1) {
+    const rows = await readPage(page);
+    all.push(...rows);
+    if (rows.length < LIST_PAGE_SIZE) return all;
+  }
+}
+
 /** A row of `GET /api/users`. */
 export interface UserRow {
   id: string;

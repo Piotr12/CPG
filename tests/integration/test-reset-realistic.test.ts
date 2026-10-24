@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { proxyResponseTimeoutSeconds } from "../deploy-config";
-import { callApi, json } from "./api";
+import { allPages, callApi, json } from "./api";
 import { clickHydrated, openBrowser, type Browser } from "./browser";
 import { signInAsAdmin } from "./sign-in";
 import { createToken, openTokens } from "./tokens";
@@ -29,15 +29,6 @@ describe("the realistic Test dataset, written by an API reset", () => {
   const api = (method: string, path: string, options: Parameters<typeof callApi>[4] = {}) => callApi(baseUrl, method, path, secret, options);
   const generation = async () => (json(await api("GET", "/api/tenants/test")).data as { generation: number }).generation;
   const reset = async (body: unknown) => api("POST", "/api/tenants/test/reset", { key: randomUUID(), body, generation: await generation() });
-  /** Every row of a paged Test list, walking its pages of 100. */
-  const allPages = async <T,>(list: string) => {
-    const all: T[] = [];
-    for (let page = 1; ; page += 1) {
-      const rows = json(await api("GET", `/api/tenants/test/${list}?page=${page}`)).data as T[];
-      all.push(...rows);
-      if (rows.length < 100) return all;
-    }
-  };
   const ledger = async () => (await tableRows(admin, "Stock movements")).map(([date, type, , source, reason]) => ({ date, type, source, reason }));
 
   beforeAll(async () => {
@@ -84,7 +75,7 @@ describe("the realistic Test dataset, written by an API reset", () => {
   }, 60_000);
 
   it("writes two years of customer orders, many pages of them, and audits the reset as realistic (TEN-022, AUD-013)", async () => {
-    const orders = await allPages<{ id: string; status: string }>("customer-orders");
+    const orders = await allPages(async (page) => json(await api("GET", `/api/tenants/test/customer-orders?page=${page}`)).data as { id: string; status: string }[]);
     expect(orders[0].id).toBe("00000001");
     expect(orders.length).toBeGreaterThan(300);
     expect(orders.some(({ status }) => status === "open")).toBe(true);

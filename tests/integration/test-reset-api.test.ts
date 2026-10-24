@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import writeXlsxFile from "write-excel-file/node";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import { callApi, json } from "./api";
+import { allPages, callApi, json, LIST_PAGE_SIZE } from "./api";
 import { openBrowser, type Browser } from "./browser";
 import { signInAs, signInAsAdmin, signedInAs } from "./sign-in";
 import { createToken, openTokens } from "./tokens";
@@ -12,7 +12,10 @@ const userPassword = "reset integration password";
 const users = [`reset-a-${randomUUID().slice(0, 8)}`, `reset-b-${randomUUID().slice(0, 8)}`];
 /** Every tenant list a reset of Test must leave alone in Prod. */
 const kinds = ["materials", "locations", "customers", "suppliers", "planning-parameters", "safety-stock-targets", "boms", "customer-orders",
-  "shipments", "goods-issues", "purchase-requisitions", "purchase-orders", "goods-receipts", "production-orders", "transfers"];
+  "shipments", "goods-issues", "purchase-requisitions", "purchase-orders", "goods-receipts", "production-orders", "transfers"] as const;
+/** The kinds among them that page by `LIST_PAGE_SIZE` (`?page=`): the snapshot walks every page of these; the rest list whole (#201). */
+const paged = new Set<(typeof kinds)[number]>(["customer-orders", "shipments", "goods-issues", "purchase-requisitions", "purchase-orders",
+  "goods-receipts", "production-orders", "transfers"]);
 /** The sequenced kinds the tiny dataset writes, each listed whole on one page; completions are listed per production order. */
 const sequenced = ["materials", "locations", "customers", "suppliers", "boms", "customer-orders", "shipments", "goods-issues",
   "purchase-requisitions", "purchase-orders", "goods-receipts", "production-orders"];
@@ -39,9 +42,14 @@ describe("atomic Test reset through the bearer API", () => {
   };
   /** Prod's own records for TEN-025: stock at a source, a transfer in transit to a destination, an open purchase order. */
   const prod = {} as Record<"material" | "source" | "destination" | "supplier" | "transfer" | "order", string>;
+  /** This file's Prod requisitions, which take Prod past one page of them (#201). */
+  const ownRequisitions: string[] = [];
+  /** Every record of one Prod list: every page of a paged kind, one read otherwise. */
+  const prodList = (kind: (typeof kinds)[number]) =>
+    paged.has(kind) ? allPages((page) => get(`/api/tenants/prod/${kind}?page=${page}`)) : get(`/api/tenants/prod/${kind}`);
   /** Everything of Prod's a Test reset must not touch. */
   const prodState = async () => ({
-    lists: await Promise.all(kinds.map((kind) => get(`/api/tenants/prod/${kind}`))),
+    lists: Object.fromEntries(await Promise.all(kinds.map(async (kind): Promise<[string, unknown]> => [kind, await prodList(kind)]))),
     tenant: await get("/api/tenants/prod"),
     audit: await get("/api/tenants/prod/audit"),
     transfer: await get(`/api/tenants/prod/transfers/${prod.transfer}`),
@@ -74,6 +82,12 @@ describe("atomic Test reset through the bearer API", () => {
     await created(`/api/tenants/prod/transfers/${prod.transfer}/dispatches`, { quantity: "4", unit: "kg" });
     prod.order = (await created("/api/tenants/prod/purchase-orders", { supplier: prod.supplier, location: prod.source,
       lines: [{ material: prod.material, quantity: "5", unit: "kg", plannedDate: "2027-01-01" }] })).id;
+    // More than a page of Prod requisitions, so the snapshot has pages to walk (#201): the ones missing, and at least one of this file's own.
+    const requisitions = await prodList("purchase-requisitions") as { id: string }[];
+    for (let missing = Math.max(1, LIST_PAGE_SIZE + 1 - requisitions.length); missing > 0; missing -= 1) {
+      ownRequisitions.push((await created("/api/tenants/prod/purchase-requisitions",
+        { material: prod.material, location: prod.source, quantity: "1", unit: "kg", requiredDate: "2027-01-01" })).id);
+    }
   });
   afterAll(async () => {
     try {
@@ -124,6 +138,10 @@ describe("atomic Test reset through the bearer API", () => {
     expect(prodBefore.stock.map(({ quantity }: { quantity: string }) => quantity)).toEqual(["6.000000", "0.000000"]);
     expect(prodBefore.transfer).toMatchObject({ id: prod.transfer, inTransit: "4.000000" });
     expect(prodBefore.order).toMatchObject({ id: prod.order, status: "open" });
+    // Prod's requisitions span more than one page, and the snapshot holds every one of them, this file's included (#201).
+    const requisitionIds = (prodBefore.lists["purchase-requisitions"] as { id: string }[]).map(({ id }) => id);
+    expect(requisitionIds.length).toBeGreaterThan(LIST_PAGE_SIZE);
+    expect(requisitionIds).toEqual(expect.arrayContaining(ownRequisitions));
     const accountsBefore = await accounts();
     const preferences = await Promise.all(userSecrets.map(async (token) => json(await api("GET", "/api/preferences", {}, token)).data));
     const globalBefore = (json(await api("GET", "/api/audit?limit=100")).data as AuditPage).entries;
