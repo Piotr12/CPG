@@ -3,6 +3,7 @@
 import { useId, useState, useTransition, type FormEvent, type KeyboardEvent } from "react";
 import type { ApiResult, FieldErrors } from "@cpg/ui/backend/api/result";
 import { ErrorMessage } from "@cpg/ui/backend/feedback/error-message";
+import { Autocomplete } from "@cpg/ui/backend/forms/autocomplete";
 import { toFieldErrors, type FormSchema } from "@cpg/ui/backend/forms/crud-form";
 import { Button } from "@cpg/ui/components/button";
 import { Input } from "@cpg/ui/components/input";
@@ -10,7 +11,7 @@ import { Label } from "@cpg/ui/components/label";
 import { NativeSelect, NativeSelectOption } from "@cpg/ui/components/native-select";
 import type { FormOption } from "../forms/form-labels";
 import { fieldControls } from "../purchasing/field-controls";
-import type { MaterialChoice } from "../purchase-requisitions/requisition-form";
+import type { MaterialPick } from "../purchase-requisitions/choices";
 import { errorFormatter, fieldErrorFormatter, type TransfersLabels } from "./labels";
 
 /** The form's fields as typed text; the server action parses them with the shared schema. */
@@ -26,8 +27,11 @@ export interface TransferValues {
 
 export interface TransferFormProps<T> {
   labels: TransfersLabels;
-  materials: MaterialChoice[];
+  /** The materials the autocomplete offers (#217). */
+  materials: MaterialPick[];
   locations: FormOption[];
+  /** The reader's language, for the autocomplete's counts. */
+  locale: string;
   schema: FormSchema;
   action: (values: TransferValues) => Promise<ApiResult<T>>;
   onSuccess: (data: T) => void;
@@ -38,13 +42,13 @@ const FIELDS = ["material", "source", "destination", "quantity", "unit", "planne
 const EMPTY: TransferValues = { material: "", source: "", destination: "", quantity: "", unit: "", plannedDispatch: "", plannedArrival: "" };
 
 /**
- * The Create transfer form (spec Q13): a material and its unit (the units depend on the material, so
+ * The Create transfer form (spec Q13): a material, chosen in an autocomplete (#217), and its unit (the units depend on the material, so
  * this is not a `CrudForm`), the two locations, a quantity and the planned dates. It keeps
  * `CrudForm`'s conventions, like the requisition form: client-side checks with the shared schema,
  * server field errors under the field they name, other errors above the buttons, a pending state,
  * `Cmd/Ctrl+Enter` to submit, `Escape` to cancel.
  */
-export function TransferForm<T>({ labels, materials, locations, schema, action, onSuccess, onCancel }: TransferFormProps<T>) {
+export function TransferForm<T>({ labels, materials, locations, locale, schema, action, onSuccess, onCancel }: TransferFormProps<T>) {
   const id = useId();
   const t = labels.form;
   const [values, setValues] = useState<TransferValues>(EMPTY);
@@ -83,6 +87,8 @@ export function TransferForm<T>({ labels, materials, locations, schema, action, 
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLFormElement>) {
+    // A control that handled the key itself (the autocomplete closing its list) keeps it.
+    if (event.defaultPrevented) return;
     if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
       event.currentTarget.requestSubmit();
@@ -129,21 +135,18 @@ export function TransferForm<T>({ labels, materials, locations, schema, action, 
     <form onSubmit={submit} onKeyDown={onKeyDown} noValidate className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         <Label htmlFor={material.props.id}>{t.material}</Label>
-        <NativeSelect
-          className="w-full"
+        <Autocomplete
+          id={material.props.id}
+          name={material.props.name}
+          options={materials}
           value={values.material}
-          onChange={(event) => set({ material: event.target.value, unit: materials.find(({ value }) => value === event.target.value)?.units[0] ?? "" })}
-          {...material.props}
-        >
-          <NativeSelectOption value="" disabled>
-            {t.choose}
-          </NativeSelectOption>
-          {materials.map((choice) => (
-            <NativeSelectOption key={choice.value} value={choice.value}>
-              {choice.label}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
+          onChange={(value) => set({ material: value, unit: materials.find((choice) => choice.value === value)?.units[0] ?? "" })}
+          labels={labels.picker.labels}
+          locale={locale}
+          placeholder={labels.picker.placeholder}
+          aria-invalid={material.props["aria-invalid"]}
+          aria-describedby={material.props["aria-describedby"]}
+        />
         {material.node}
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
