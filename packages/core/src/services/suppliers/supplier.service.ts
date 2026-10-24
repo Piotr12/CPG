@@ -1,6 +1,6 @@
 import { Supplier, type EntityManager } from "@cpg/db";
 import type { AuditActor } from "../audit/actor";
-import { NamedRecords, type NamedRecordChanges, type NamedRecordView } from "../named-records/named-records";
+import { NamedRecords, type NamedRecordChanges, type NamedRecordListOptions, type NamedRecordView } from "../named-records/named-records";
 
 interface Deps {
   em: EntityManager;
@@ -24,8 +24,8 @@ export class SupplierService {
     });
   }
 
-  list(): Promise<NamedRecordView[]> {
-    return this.records.list();
+  list(options?: NamedRecordListOptions): Promise<NamedRecordView[]> {
+    return this.records.list(options);
   }
 
   get(id: string): Promise<NamedRecordView> {

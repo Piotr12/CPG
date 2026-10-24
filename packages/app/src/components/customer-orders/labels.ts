@@ -3,11 +3,17 @@ import { CALENDAR_DATE_MESSAGE } from "@cpg/core/validators/dates/calendar-date.
 import { UNIT_FORMAT_MESSAGE } from "@cpg/core/validators/materials/material-fields.schema";
 import { POSITIVE_QUANTITY_MESSAGE } from "@cpg/core/validators/quantities/quantity.schema";
 import type { Messages } from "../../i18n/messages/en";
+import { materialPicker, type MaterialPicker } from "../materials/material-picker";
 
-export type OrderLabels = Omit<Messages["customerOrders"], "errors"> & { errors: Record<string, string> };
+export type OrderLabels = Omit<Messages["customerOrders"], "errors"> & {
+  errors: Record<string, string>;
+  /** The lines' material picker (#217). */
+  picker: MaterialPicker;
+};
 /** Plain data only: this dictionary crosses the server/client boundary. */
 export function orderLabels(messages: Messages): OrderLabels {
-  return { ...messages.customerOrders, errors: { ...messages.errors, ...messages.customerOrders.errors } };
+  return { ...messages.customerOrders, errors: { ...messages.errors, ...messages.customerOrders.errors },
+    picker: materialPicker(messages.lists) };
 }
 export function orderFieldError(labels: OrderLabels, message: string): string {
   const t = labels.fieldErrors;

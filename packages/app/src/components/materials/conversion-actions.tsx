@@ -56,7 +56,7 @@ export function ConversionActions({ material, conversion, context, labels }: Con
             <DialogDescription>{t.change.description}</DialogDescription>
           </DialogHeader>
           <CrudForm
-            fields={conversionFormFields(labels, material.baseUnit, { withUnit: false })}
+            fields={conversionFormFields(labels, material.baseUnit)}
             initialValues={{ numerator: conversion.numerator, denominator: conversion.denominator }}
             schema={conversionFactorFormSchema}
             action={(values) => changeConversion(context.tenant, context.generation, material.id, unit, version, values)}

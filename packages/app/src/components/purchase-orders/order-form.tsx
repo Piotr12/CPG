@@ -3,6 +3,7 @@
 import { useId, useState, useTransition, type FormEvent, type KeyboardEvent } from "react";
 import type { ApiResult, FieldErrors } from "@cpg/ui/backend/api/result";
 import { ErrorMessage } from "@cpg/ui/backend/feedback/error-message";
+import { Autocomplete } from "@cpg/ui/backend/forms/autocomplete";
 import { toFieldErrors, type FormSchema } from "@cpg/ui/backend/forms/crud-form";
 import { Button } from "@cpg/ui/components/button";
 import { Input } from "@cpg/ui/components/input";
@@ -10,7 +11,7 @@ import { Label } from "@cpg/ui/components/label";
 import { NativeSelect, NativeSelectOption } from "@cpg/ui/components/native-select";
 import type { FormOption } from "../forms/form-labels";
 import { fieldControls } from "../purchasing/field-controls";
-import type { MaterialChoice } from "../purchase-requisitions/requisition-form";
+import type { MaterialPick } from "../purchase-requisitions/choices";
 import type { RequisitionChoice } from "./choices";
 import { errorFormatter, fieldErrorFormatter, fill, type OrdersLabels } from "./labels";
 
@@ -35,8 +36,11 @@ export interface OrderFormProps<T> {
   labels: OrdersLabels;
   suppliers: FormOption[];
   locations: FormOption[];
-  materials: MaterialChoice[];
+  /** The materials each line's autocomplete offers (#217). */
+  materials: MaterialPick[];
   requisitions: RequisitionChoice[];
+  /** The reader's language, for the autocompletes' counts. */
+  locale: string;
   schema: FormSchema;
   action: (values: OrderValues) => Promise<ApiResult<T>>;
   onSuccess: (data: T) => void;
@@ -48,13 +52,13 @@ const LINE_FIELDS = ["material", "quantity", "unit", "plannedDate", "requisition
 
 /**
  * The Create purchase order form (spec Q13): a supplier, a location and a variable list of lines,
- * each with its material, quantity and unit, planned date and, optionally, the open requisition of
+ * each with its material (chosen in an autocomplete, #217), quantity and unit, planned date and, optionally, the open requisition of
  * the same material and location it converts. Not a `CrudForm`, which holds one string per field,
  * but it keeps its conventions: client-side checks with the shared schema, server field errors under
  * the field they name (`lines.2.unit` under line 3's unit), other errors above the buttons, a
  * pending state, `Cmd/Ctrl+Enter` to submit and `Escape` to cancel.
  */
-export function OrderForm<T>({ labels, suppliers, locations, materials, requisitions, schema, action, onSuccess, onCancel }: OrderFormProps<T>) {
+export function OrderForm<T>({ labels, suppliers, locations, materials, requisitions, locale, schema, action, onSuccess, onCancel }: OrderFormProps<T>) {
   const id = useId();
   const t = labels.form;
   const [values, setValues] = useState<OrderValues>({ supplier: "", location: "", lines: [EMPTY_LINE] });
@@ -105,6 +109,8 @@ export function OrderForm<T>({ labels, suppliers, locations, materials, requisit
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLFormElement>) {
+    // A control that handled the key itself (an autocomplete closing its list) keeps it.
+    if (event.defaultPrevented) return;
     if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
       event.currentTarget.requestSubmit();
@@ -178,22 +184,19 @@ export function OrderForm<T>({ labels, suppliers, locations, materials, requisit
           return (
             <div key={keys[index]} className="grid grid-cols-2 gap-2 rounded-md border p-3 sm:grid-cols-[2fr_1fr_1fr_auto] sm:items-start" data-line={index}>
               <div className="col-span-2 flex flex-col gap-1 sm:col-span-1">
-                <NativeSelect
-                  className="w-full"
+                <Autocomplete
+                  id={material.props.id}
+                  name={material.props.name}
                   aria-label={lineLabel(t.material)}
+                  options={materials}
                   value={line.material}
-                  onChange={(event) => setLine(index, { material: event.target.value, unit: unitsOf(event.target.value)[0] ?? "", requisition: "" })}
-                  {...material.props}
-                >
-                  <NativeSelectOption value="" disabled>
-                    {t.choose}
-                  </NativeSelectOption>
-                  {materials.map((choice) => (
-                    <NativeSelectOption key={choice.value} value={choice.value}>
-                      {choice.label}
-                    </NativeSelectOption>
-                  ))}
-                </NativeSelect>
+                  onChange={(value) => setLine(index, { material: value, unit: unitsOf(value)[0] ?? "", requisition: "" })}
+                  labels={labels.picker.labels}
+                  locale={locale}
+                  placeholder={labels.picker.placeholder}
+                  aria-invalid={material.props["aria-invalid"]}
+                  aria-describedby={material.props["aria-describedby"]}
+                />
                 {material.node}
               </div>
               <div className="flex flex-col gap-1">
@@ -220,7 +223,7 @@ export function OrderForm<T>({ labels, suppliers, locations, materials, requisit
                 type="button"
                 variant="outline"
                 className="col-start-2 row-start-1 justify-self-end sm:col-start-auto sm:row-start-auto"
-                aria-label={chosen ? fill(t.removeLine, { material: chosen.label }) : t.removeEmpty}
+                aria-label={chosen ? fill(t.removeLine, { material: `${chosen.code} — ${chosen.name} (${chosen.detail})` }) : t.removeEmpty}
                 disabled={isPending}
                 onClick={() => {
                   setValues({ ...values, lines: values.lines.filter((_, at) => at !== index) });

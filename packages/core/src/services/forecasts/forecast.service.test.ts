@@ -22,6 +22,8 @@ import { MaterialService } from "../materials/material.service";
 import type { AuditActor } from "../audit/actor";
 import { hasForecasts } from "./forecast-usage";
 import { ForecastService, type ForecastFilter, type NewForecast } from "./forecast.service";
+import type { ForecastSort } from "../../validators/forecasts/forecast-list.schema";
+import type { ListOptions } from "../../validators/lists/list-query.schema";
 import { QUANTITY_ROUNDS_TO_ZERO_MESSAGE, UNIT_NOT_CONVERTIBLE_MESSAGE } from "../../validators/boms/bom-fields.schema";
 import { FIXTURE_FORECASTS, FIXTURE_LOCATIONS, FIXTURE_MATERIALS } from "../../../../../tests/setup/demo-fixtures";
 
@@ -281,26 +283,34 @@ describe("ForecastService", () => {
       views.map(({ material, location, date }) => `${material}@${location}@${date}`);
     const expected = (materials: string[], locations: string[]) =>
       materials.flatMap((material) => locations.flatMap((location) => Array.from({ length: DAYS }, (_, i) => `${material}@${location}@${day(i)}`)));
-    const allPages = async (filter: ForecastFilter, pages: number) => {
+    const allPages = async (filter: ForecastFilter, pages: number, options: ListOptions<ForecastSort> = {}) => {
       const result = [];
-      for (let page = 1; page <= pages; page++) result.push(...(await service().list(filter, page)));
+      for (let page = 1; page <= pages; page++) result.push(...(await service().list(filter, { ...options, page })));
       return result;
     };
+    /** Every key, ordered by the given parts of `material@location@date` (0, 1, 2), each `1` or `-1`. */
+    const orderedBy = (keys: string[], ...parts: [number, 1 | -1][]) =>
+      [...keys].sort((a, b) => {
+        const [x, y] = [a.split("@"), b.split("@")];
+        for (const [part, sign] of parts) if (x[part] !== y[part]) return x[part] < y[part] ? -sign : sign;
+        return 0;
+      });
+    const ALL = expected(["00000001", "00000003", "00000004"], ["00000001", "00000003"]);
 
     it("pages by 100 in material, location and date order, a page past the last being empty", async () => {
       expect(await service().count()).toBe(504);
-      expect(await service().list()).toEqual(await service().list({}, 1));
-      expect(await service().list({}, 1)).toHaveLength(100);
-      expect(await service().list({}, 6)).toHaveLength(4);
-      expect(await service().list({}, 7)).toEqual([]);
+      expect(await service().list()).toEqual(await service().list({}, { page: 1 }));
+      expect(await service().list({}, { page: 1 })).toHaveLength(100);
+      expect(await service().list({}, { page: 6 })).toHaveLength(4);
+      expect(await service().list({}, { page: 7 })).toEqual([]);
       expect(keys(await allPages({}, 6))).toEqual(expected(["00000001", "00000003", "00000004"], ["00000001", "00000003"]));
     });
 
     it("keeps each forecast's quantity and current version", async () => {
       await service().update({ material: "00000004", location: "00000003", date: day(83) }, { quantity: "7" }, 1, ACTOR);
-      const last = (await service().list({}, 6)).at(-1);
+      const last = (await service().list({}, { page: 6 })).at(-1);
       expect(last).toEqual({ material: "00000004", location: "00000003", date: day(83), quantity: "7.000000", version: 2 });
-      expect((await service().list({}, 6))[0]).toEqual({ material: "00000004", location: "00000003", date: day(80), quantity: "1.000000", version: 1 });
+      expect((await service().list({}, { page: 6 }))[0]).toEqual({ material: "00000004", location: "00000003", date: day(80), quantity: "1.000000", version: 1 });
     });
 
     it("narrows before paging, and counts what the filter matches", async () => {
@@ -318,6 +328,44 @@ describe("ForecastService", () => {
       expect(await service().list({ material: "00000009" })).toEqual([]);
       expect(await service().count({ location: "00000009" })).toBe(0);
       expect(await service().list({ material: "00000001", location: "00000009" })).toEqual([]);
+    });
+
+    describe("sorted and searched (#217)", () => {
+      it("sorts by each column, both ways, by material, location and date within equal values, across pages", async () => {
+        expect(keys(await allPages({}, 6, { sort: "material", dir: "desc" }))).toEqual(orderedBy(ALL, [0, -1], [1, 1], [2, 1]));
+        expect(keys(await allPages({}, 6, { sort: "location" }))).toEqual(orderedBy(ALL, [1, 1], [0, 1], [2, 1]));
+        expect(keys(await allPages({}, 6, { sort: "location", dir: "desc" }))).toEqual(orderedBy(ALL, [1, -1], [0, 1], [2, 1]));
+        // 6 forecasts a day, so page 1 ends inside day 16 and page 2 starts with the rest of it.
+        const byDate = orderedBy(ALL, [2, 1], [0, 1], [1, 1]);
+        expect(keys(await service().list({}, { sort: "date", page: 2 }))[0]).toBe(`00000004@00000001@${day(16)}`);
+        expect(keys(await allPages({}, 6, { sort: "date" }))).toEqual(byDate);
+        expect(keys(await allPages({}, 6, { sort: "date", dir: "desc" }))).toEqual(orderedBy(ALL, [2, -1], [0, 1], [1, 1]));
+      });
+
+      it("keeps forecasts whose material ID or description or location ID or name holds every word, and counts them", async () => {
+        const searched = async (q: string, filter: ForecastFilter = {}) => {
+          const count = await service().count(filter, { q });
+          return { count, keys: keys(await allPages(filter, Math.max(1, Math.ceil(count / 100)), { q })) };
+        };
+        expect(await searched("CHAIR")).toEqual({ count: 168, keys: expected(["00000003"], ["00000001", "00000003"]) });
+        expect(await searched("warehouse")).toEqual({ count: 252, keys: expected(["00000001", "00000003", "00000004"], ["00000003"]) });
+        expect(await searched("desk main")).toEqual({ count: 84, keys: expected(["00000004"], ["00000001"]) });
+        expect(await searched("cabinet red")).toEqual({ count: 168, keys: expected(["00000001"], ["00000001", "00000003"]) });
+        // The ID of material 3 or of location 3.
+        expect((await searched("00000003")).count).toBe(336);
+        expect(await searched("cabinet", { location: "00000003" })).toEqual({ count: 84, keys: expected(["00000001"], ["00000003"]) });
+        expect(await searched("chair desk")).toEqual({ count: 0, keys: [] });
+        expect(await service("test").count({}, { q: "chair" })).toBe(0);
+        expect(await service("test").list({}, { q: "chair" })).toEqual([]);
+      });
+
+      it("searches and sorts together, and treats LIKE wildcards as separators", async () => {
+        expect(keys(await allPages({}, 3, { q: "warehouse", sort: "material", dir: "desc" }))).toEqual(
+          expected(["00000004", "00000003", "00000001"], ["00000003"]),
+        );
+        expect(await service().count({}, { q: "%" })).toBe(504);
+        expect(await service().count({}, { q: "main_plant" })).toBe(252);
+      });
     });
   });
 

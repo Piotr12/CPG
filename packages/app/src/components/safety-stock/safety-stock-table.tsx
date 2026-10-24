@@ -1,8 +1,14 @@
+import Link from "next/link";
 import type { SafetyStockTargetView, TargetStatus } from "@cpg/core";
+import type { SortDirection } from "@cpg/core/validators/lists/list-query.schema";
+import type { SafetyStockSort } from "@cpg/core/validators/safety-stock/safety-stock-list.schema";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { StatusBadge } from "@cpg/ui/backend/feedback/status-badge";
+import type { Messages } from "../../i18n/messages/en";
 import { targetStatusTone } from "../document-lifecycle/status-tone";
 import { shownQuantity, type TenantContext } from "../forms/form-labels";
+import type { ListLinks } from "../lists/list-params";
+import { NoSearchResults } from "../lists/list-search-bar";
 import { EmptyText } from "../master-data/empty-text";
 import { LocationCell, MaterialCell, type ReferenceDetails } from "../master-data/references";
 import type { SafetyStockLabels } from "./labels";
@@ -17,10 +23,18 @@ interface SafetyStockTableProps {
   labels: SafetyStockLabels;
   /** The admin's row menus and empty-state hint; a normal user (or a read-only tenant) gets neither. */
   editable: boolean;
+  /** The list's search, marked in the material and location cells. */
+  search: string;
+  sort: { sort: SafetyStockSort; dir: SortDirection };
+  links: ListLinks;
+  lists: Messages["lists"];
 }
 
-/** A tenant's safety-stock targets by material, location, then date, each with its status today (DEM-015, DEM-016). */
-export function SafetyStockTable({ tenant, rows, labels, editable }: SafetyStockTableProps) {
+/**
+ * A tenant's safety-stock targets by material, location, then date, unless sorted by another column
+ * (#217), each with its status today (DEM-015, DEM-016).
+ */
+export function SafetyStockTable({ tenant, rows, labels, editable, search, sort, links, lists }: SafetyStockTableProps) {
   const t = labels.columns;
   const context: TenantContext = { tenant: tenant.code, generation: tenant.generation };
   const columns: DataTableColumn<SafetyStockRow>[] = [
@@ -28,20 +42,23 @@ export function SafetyStockTable({ tenant, rows, labels, editable }: SafetyStock
       id: "material",
       header: t.material,
       kind: "longText",
-      cell: (row) => <MaterialCell tenant={tenant.code} row={row} inactive={labels.inactive} />,
+      sortKey: "material",
+      cell: (row) => <MaterialCell tenant={tenant.code} row={row} inactive={labels.inactive} query={search} />,
     },
     {
       id: "location",
       header: t.location,
       kind: "longText",
-      cell: (row) => <LocationCell row={row} inactive={labels.inactive} />,
+      sortKey: "location",
+      cell: (row) => <LocationCell row={row} inactive={labels.inactive} query={search} />,
     },
-    { id: "effectiveFrom", header: t.effectiveFrom, kind: "date", cell: (row) => row.effectiveFrom },
+    { id: "effectiveFrom", header: t.effectiveFrom, kind: "date", sortKey: "effectiveFrom", cell: (row) => row.effectiveFrom },
     { id: "quantity", header: t.quantity, kind: "quantity", cell: (row) => `${shownQuantity(row.quantity)} ${row.baseUnit}` },
     {
       id: "status",
       header: t.status,
       kind: "status",
+      sortKey: "status",
       cell: (row) => <StatusBadge {...targetStatusTone(row.status)}>{labels.status[row.status]}</StatusBadge>,
     },
   ];
@@ -54,7 +71,8 @@ export function SafetyStockTable({ tenant, rows, labels, editable }: SafetyStock
       rows={rows}
       rowKey={(row) => `${row.material}/${row.location}/${row.effectiveFrom}`}
       rowActions={editable ? (row) => <SafetyStockTargetActions row={row} context={context} labels={labels} /> : undefined}
-      empty={<EmptyText labels={labels} tenant={tenant.name} editable={editable} />}
+      sort={{ key: sort.sort, dir: sort.dir, href: links.sortHref, link: Link }}
+      empty={search ? <NoSearchResults links={links} query={search} lists={lists} /> : <EmptyText labels={labels} tenant={tenant.name} editable={editable} />}
     />
   );
 }

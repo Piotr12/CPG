@@ -11,9 +11,14 @@ import { completionFieldError, productionLabels } from "./labels";
 const labels = productionLabels(en);
 const t = labels.completion;
 const inputs = [
-  { value: "00000008", label: "00000008 — Milk (kg)", units: ["kg", "g"] },
-  { value: "00000009", label: "00000009 — Filling (kg)", units: ["kg"] },
+  { value: "00000008", code: "00000008", name: "Milk", detail: "kg", units: ["kg", "g"] },
+  { value: "00000009", code: "00000009", name: "Filling", detail: "kg", units: ["kg"] },
 ];
+/** Picks an added input through its material picker: types part of it, then clicks the matching option. */
+const pick = (row: string, typed: string) => {
+  fireEvent.change(screen.getByRole("combobox", { name: `${t.material}, ${row}` }), { target: { value: typed } });
+  fireEvent.mouseDown(screen.getByRole("option", { name: new RegExp(typed, "i") }));
+};
 const mocks = { action: vi.fn(), onSuccess: vi.fn(), onBack: vi.fn(), onCancel: vi.fn() };
 const props = (overrides: Partial<CompletionFormProps> = {}): CompletionFormProps => ({
   labels,
@@ -56,7 +61,7 @@ describe("CompletionForm", () => {
     fireEvent.change(actual("00000007 Wrapper"), { target: { value: "0" } });
     fireEvent.click(screen.getByRole("button", { name: t.addInput }));
     const added = fill(t.inputLine, "1");
-    fireEvent.change(screen.getByLabelText(`${t.material}, ${added}`), { target: { value: "00000008" } });
+    pick(added, "milk");
     expect((screen.getByLabelText(`${t.unit}, ${added}`) as HTMLSelectElement).value).toBe("kg");
     fireEvent.change(screen.getByLabelText(`${t.unit}, ${added}`), { target: { value: "g" } });
     fireEvent.change(actual(added), { target: { value: "500" } });
@@ -73,17 +78,33 @@ describe("CompletionForm", () => {
     });
   });
 
+  it("lets Escape close an open material list without cancelling the form, then cancel it (#217)", () => {
+    render(<CompletionForm {...props()} />);
+    fireEvent.click(screen.getByRole("button", { name: t.addInput }));
+    const material = screen.getByRole("combobox", { name: `${t.material}, ${fill(t.inputLine, "1")}` });
+    expect(material.getAttribute("placeholder")).toBe(en.lists.materialPicker.placeholder);
+    fireEvent.focus(material);
+    expect(material.getAttribute("aria-expanded")).toBe("true");
+    fireEvent.keyDown(material, { key: "Escape" });
+    expect(material.getAttribute("aria-expanded")).toBe("false");
+    expect(mocks.onCancel).not.toHaveBeenCalled();
+    fireEvent.keyDown(material, { key: "Escape" });
+    expect(mocks.onCancel).toHaveBeenCalledOnce();
+  });
+
   it("removes an added input, and empties its units when no material is chosen", () => {
     render(<CompletionForm {...props()} />);
     fireEvent.click(screen.getByRole("button", { name: t.addInput }));
     fireEvent.click(screen.getByRole("button", { name: t.addInput }));
     const second = fill(t.inputLine, "2");
-    fireEvent.change(screen.getByLabelText(`${t.material}, ${second}`), { target: { value: "00000009" } });
-    fireEvent.change(screen.getByLabelText(`${t.material}, ${second}`), { target: { value: "" } });
+    pick(second, "filling");
+    expect((screen.getByLabelText(`${t.unit}, ${second}`) as HTMLSelectElement).value).toBe("kg");
+    fireEvent.change(screen.getByRole("combobox", { name: `${t.material}, ${second}` }), { target: { value: "" } });
+    fireEvent.blur(screen.getByRole("combobox", { name: `${t.material}, ${second}` }));
     expect((screen.getByLabelText(`${t.unit}, ${second}`) as HTMLSelectElement).options).toHaveLength(0);
     fireEvent.click(screen.getByRole("button", { name: fill(t.removeInput, "1") }));
-    expect(screen.queryByLabelText(`${t.material}, ${second}`)).toBeNull();
-    expect(screen.getByLabelText(`${t.material}, ${fill(t.inputLine, "1")}`)).toBeTruthy();
+    expect(screen.queryByRole("combobox", { name: `${t.material}, ${second}` })).toBeNull();
+    expect(screen.getByRole("combobox", { name: `${t.material}, ${fill(t.inputLine, "1")}` })).toBeTruthy();
   });
 
   it("clears row errors when a row is removed, since the rows after it move up", async () => {
@@ -91,14 +112,14 @@ describe("CompletionForm", () => {
     render(<CompletionForm {...props()} />);
     for (const number of ["1", "2"]) {
       fireEvent.click(screen.getByRole("button", { name: t.addInput }));
-      fireEvent.change(screen.getByLabelText(`${t.material}, ${fill(t.inputLine, number)}`), { target: { value: number === "1" ? "00000008" : "00000009" } });
+      pick(fill(t.inputLine, number), number === "1" ? "00000008" : "00000009");
       fireEvent.change(actual(fill(t.inputLine, number)), { target: { value: "1" } });
     }
     post();
     await waitFor(() => expect(screen.getByText(t.fieldErrors.unknownInput)).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: fill(t.removeInput, "1") }));
     expect(screen.queryByText(t.fieldErrors.unknownInput)).toBeNull();
-    expect(screen.getByLabelText(`${t.material}, ${fill(t.inputLine, "1")}`).getAttribute("aria-invalid")).toBeNull();
+    expect(screen.getByRole("combobox", { name: `${t.material}, ${fill(t.inputLine, "1")}` }).getAttribute("aria-invalid")).toBeNull();
   });
 
   it("checks with the shared schema first and shows each problem under its row", async () => {

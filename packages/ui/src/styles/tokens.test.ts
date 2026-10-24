@@ -66,6 +66,8 @@ const PAIRS: [string, string, number][] = [
   ["warning", "warning-surface", TEXT],
   ["danger", "danger-surface", TEXT],
   ["neutral-tone", "neutral-surface", TEXT],
+  // A search match: body text on the highlight (#217).
+  ["foreground", "highlight", TEXT],
   ["danger-solid-foreground", "danger-solid", TEXT],
   ["danger-solid-foreground", "danger-solid-hover", TEXT],
   ["tenant-test-tag-foreground", "tenant-test-tag", TEXT],

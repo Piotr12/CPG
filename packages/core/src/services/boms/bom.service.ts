@@ -6,9 +6,12 @@ import {
   OptimisticLockError,
   UniqueConstraintViolationException,
   type EntityManager,
+  type FilterQuery,
 } from "@cpg/db";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
 import type { DemoBom } from "../../domain/demo/generate-dataset";
+import { compareBoms } from "../../domain/boms/bom-order";
+import { searchWhere } from "../../domain/lists/list-query";
 import { findCycle, type CycleStep, type RecipeEdge } from "../../domain/boms/find-cycle";
 import { findPriorityConflict, type PriorityConflict } from "../../domain/boms/priority-conflict";
 import { isSameRecipe } from "../../domain/boms/recipe-equality";
@@ -21,6 +24,8 @@ import {
   RAW_OUTPUT_MESSAGE,
   VALID_THROUGH_BEFORE_FROM_MESSAGE,
 } from "../../validators/boms/bom-fields.schema";
+import type { BomSort } from "../../validators/boms/bom-list.schema";
+import type { ListOptions } from "../../validators/lists/list-query.schema";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
 import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quantity";
@@ -28,6 +33,9 @@ import { conversionFieldError } from "../materials/conversion-field-error";
 import { findActiveMaterial, findMaterial } from "../materials/find-material";
 import { lineError } from "../materials/line-error";
 import { isScopeReadOnly } from "../tenants/tenant.service";
+
+/** What the BOMs search matches: the BOM's ID and its output material's ID and description (#217). */
+const BOM_SEARCH_FIELDS = ["code", "output.code", "output.description"];
 
 /** One line as the screens and the API show it: the component's ID and the stored record (materials spec Q5). */
 export interface BomComponentView {
@@ -138,13 +146,15 @@ export class BomService {
     this.em = em;
   }
 
-  /** Every BOM of the tenant with its current recipe, by output ID, then priority, then BOM ID. */
-  async list(): Promise<BomView[]> {
-    const boms = await this.em.find(Bom, {}, { populate: ["output"] });
+  /**
+   * Every BOM of the tenant with its current recipe, by output ID, then priority, then BOM ID, unless
+   * `sort` says otherwise; `q` keeps those whose ID or output's ID or description contains every
+   * word (#217).
+   */
+  async list({ q = "", sort = "output", dir = "asc" }: Omit<ListOptions<BomSort>, "page"> = {}): Promise<BomView[]> {
+    const boms = await this.em.find(Bom, searchWhere(q, BOM_SEARCH_FIELDS) as FilterQuery<Bom>, { populate: ["output"] });
     const current = await currentRecipes(this.em, boms);
-    return boms
-      .map((bom) => toView(bom, current.get(bom.id)!))
-      .sort((a, b) => a.output.localeCompare(b.output) || a.priority - b.priority || a.id.localeCompare(b.id));
+    return boms.map((bom) => toView(bom, current.get(bom.id)!)).sort(compareBoms(sort, dir));
   }
 
   /** One BOM with its current recipe and its revisions; `BOM_NOT_FOUND` when this tenant has no such ID. */

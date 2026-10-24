@@ -143,12 +143,65 @@ describe("CustomerOrderService", () => {
       for (const position of [1, 0]) scope.create(CustomerOrderLine, { order, position, material, quantity: "1.000000", enteredQuantity: "1", enteredUnit: "each", numerator: "1", denominator: "1", requiredDate: `2027-01-0${position + 1}` });
     }
     await scope.flush();
-    const first = await service().list(); const last = await service().list(2);
+    const first = await service().list(); const last = await service().list({ page: 2 });
     expect(first).toHaveLength(100); expect(first[0].id).toBe("00000001"); expect(first.at(-1)!.id).toBe("00000100");
     expect(last).toHaveLength(1); expect(last[0].id).toBe("00000101");
     expect([...first, ...last].every(({ lines }) => lines.map(({ requiredDate }) => requiredDate).join() === "2027-01-01,2027-01-02")).toBe(true);
-    expect(await service().list(3)).toEqual([]); expect(await service().count()).toBe(101); expect(await service(em("prod")).count()).toBe(0);
-    await expect(service().list(0)).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+    expect(await service().list({ page: 3 })).toEqual([]); expect(await service().count()).toBe(101); expect(await service(em("prod")).count()).toBe(0);
+    await expect(service().list({ page: 0 })).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+  });
+
+  describe("sorted and searched (#217)", () => {
+    // 105 orders, inserted newest first, under customers whose UUIDs run against their business IDs.
+    const COUNT = 105;
+    const model = Array.from({ length: COUNT }, (_, index) => {
+      const n = index + 1;
+      return { id: String(n).padStart(8, "0"), customer: `0000000${[1, 2, 3][n % 3]}`, location: n <= 50 ? "00000002" : "00000001", status: n % 4 === 0 ? "cancelled" : "open" };
+    });
+    type Row = (typeof model)[number];
+    const sorted = (key: keyof Row, sign: 1 | -1) =>
+      [...model].sort((a, b) => (a[key] === b[key] ? (a.id < b.id ? -1 : 1) : a[key] < b[key] ? -sign : sign)).map(({ id }) => id);
+    const allPages = async (options: Parameters<CustomerOrderService["list"]>[0] = {}) => {
+      const pages = await Promise.all([1, 2].map((page) => service().list({ ...options, page })));
+      return pages.flat().map(({ id }) => id);
+    };
+
+    beforeEach(async () => {
+      const scope = em();
+      const customers = new Map((await scope.find(Customer, {})).map((customer) => [customer.code, customer]));
+      customers.set("00000003", scope.create(Customer, { id: "00000000-0000-4000-8000-000000000003", code: "00000003", name: "Acme Retail" }));
+      const locations = new Map((await scope.find(Location, {})).map((location) => [location.code, location]));
+      const material = await scope.findOneOrFail(Material, { code: "00000005" });
+      for (const row of [...model].reverse()) {
+        const order = scope.create(CustomerOrder, { code: row.id, customer: customers.get(row.customer)!, location: locations.get(row.location)!, status: row.status as "open" });
+        scope.create(CustomerOrderLine, { order, position: 0, material, quantity: "1.000000", enteredQuantity: "1", enteredUnit: "each", numerator: "1", denominator: "1", requiredDate: "2027-01-01" });
+      }
+      await scope.flush();
+    });
+
+    it("sorts by each column, both ways, by ID within equal values, across the page boundary", async () => {
+      expect(await allPages()).toEqual(sorted("id", 1));
+      expect(await allPages({ sort: "id", dir: "desc" })).toEqual(sorted("id", -1));
+      for (const key of ["customer", "location", "status"] as const) {
+        expect(await allPages({ sort: key })).toEqual(sorted(key, 1));
+        expect(await allPages({ sort: key, dir: "desc" })).toEqual(sorted(key, -1));
+      }
+      expect((await service().list({ sort: "customer", page: 2 })).map(({ id }) => id)).toEqual(sorted("customer", 1).slice(100));
+    });
+
+    it("keeps orders whose ID or customer ID or name holds every word, counts them, in this tenant only", async () => {
+      const acme = model.filter(({ customer }) => customer === "00000003").map(({ id }) => id);
+      expect(await allPages({ q: "ACME" })).toEqual(acme);
+      expect(await service().count({ q: "acme retail" })).toBe(acme.length);
+      expect(await allPages({ q: "retail 00000005" })).toEqual(["00000005"]);
+      // Order 1, and every order of customer 1.
+      expect(await service().count({ q: "00000001" })).toBe(1 + model.filter(({ customer }) => customer === "00000001").length);
+      expect(await allPages({ q: "acme", sort: "id", dir: "desc" })).toEqual([...acme].reverse());
+      expect(await service().count({ q: "%" })).toBe(COUNT);
+      expect(await service().count({ q: "acme_retail" })).toBe(acme.length);
+      expect(await service(em("prod")).count({ q: "acme" })).toBe(0);
+      expect(await service(em("prod")).list({ q: "customer" })).toEqual([]);
+    });
   });
 
   it("allows repeated materials on different dates and keeps stable identities across reordering and line-only edits", async () => {

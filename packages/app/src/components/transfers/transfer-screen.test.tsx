@@ -4,6 +4,7 @@ import type { TransferDetailView, TransferView } from "@cpg/core";
 import { en } from "../../i18n/messages/en";
 import { pl } from "../../i18n/messages/pl";
 import { TransferScreen } from "./transfer-screen";
+import { listLinks } from "../lists/list-params";
 import { TransfersScreen } from "./transfers-screen";
 
 vi.mock("../../app/admin/[tenant]/transfers/[id]/actions", () => ({ cancelTransfer: vi.fn(), closeEarlyTransfer: vi.fn(), dispatchTransfer: vi.fn(), receiveTransfer: vi.fn(),
@@ -50,7 +51,10 @@ describe("TransferScreen", () => {
 
 describe("TransfersScreen", () => {
   const row = (id: string, status: string) => ({ ...base, id, status }) as unknown as TransferView;
-  const list = { tenant, transfers: [row("00000001", "open"), row("00000002", "closed-early"), row("00000003", "cancelled")], page: 1, total: 3, materials: [material], locations, units: {}, locale: "en" as const, messages: en };
+  const list = { tenant, transfers: [row("00000001", "open"), row("00000002", "closed-early"), row("00000003", "cancelled")], page: 1, total: 3,
+    list: { search: { q: "", typed: "" }, sort: { sort: "id" as const, dir: "asc" as const },
+      links: listLinks({ path: "/admin/test/transfers", search: "", sort: { sort: "id", dir: "asc" }, defaults: { sort: "id", dir: "asc" } }) },
+    materials: [material], locations, units: {}, locale: "en" as const, messages: en };
 
   it("heads the list with Create transfer and badges Open, Closed Early and Cancelled apart by tone and icon", () => {
     render(<TransfersScreen {...list} />);

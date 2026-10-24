@@ -6,16 +6,21 @@ import {
   PurchaseRequisition,
   UniqueConstraintViolationException,
   type EntityManager,
+  type FilterQuery,
   type Material,
+  type OrderDefinition,
 } from "@cpg/db";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
 import { documentState, outstandingQuantity as unresolvedQuantity, resolveLines as resolveLifecycle, type DocumentState, type LifecycleAction } from "../../domain/document-lifecycle/lifecycle";
+import { listOrderBy, searchWhere } from "../../domain/lists/list-query";
 import { selectLifecycleLines } from "../../domain/document-lifecycle/select-lines";
 import { addQuantities, afterConversion, fitsOutstanding, outstandingQuantity } from "../../domain/purchasing/requisition-quantity";
 import { ConflictError, ValidationError, versionConflict, type FieldErrors } from "../../http/errors";
 import { parseInput } from "../../http/parse-input";
 import { DOCUMENT_PAGE_SIZE } from "../../validators/shipments/shipment.schema";
+import type { ListOptions } from "../../validators/lists/list-query.schema";
 import { purchaseOrderListQuerySchema } from "../../validators/purchasing/purchase-order.schema";
+import type { PurchaseOrderSort } from "../../validators/purchasing/purchase-order-list.schema";
 import {
   LINE_NO_SUCH_LINE_MESSAGE,
   LINE_LOCATION_MESSAGE,
@@ -94,6 +99,10 @@ export interface LineDateChange {
   plannedDate: string;
 }
 
+/** What the Purchase orders search matches, and the column each sort key orders by (#217). */
+const ORDER_SEARCH_FIELDS = ["code", "supplier.code", "supplier.name", "location.code", "location.name"];
+const ORDER_SORT_PATHS: Record<PurchaseOrderSort, string> = { id: "code", supplier: "supplier.code", location: "location.code", status: "status" };
+
 export const ORDER_ID_RACE = "Another purchase order was created at the same moment. Try again.";
 
 /** A line ready to store. */
@@ -128,23 +137,25 @@ export class PurchaseOrderService {
   }
 
   /**
-   * A page of the tenant's orders with their lines, by ID, `DOCUMENT_PAGE_SIZE` to a page (lines are
-   * read for that page's orders only); a page past the last is empty, an invalid `page` is `VALIDATION_FAILED`.
+   * A page of the tenant's orders with their lines, by ID unless `sort` says otherwise,
+   * `DOCUMENT_PAGE_SIZE` to a page (lines are read for that page's orders only); `q` keeps those whose
+   * ID, supplier or location holds every word (#217). A page past the last is empty, an invalid
+   * `page` is `VALIDATION_FAILED`.
    */
-  async list(page = 1): Promise<OrderView[]> {
+  async list({ page = 1, q = "", sort = "id", dir = "asc" }: ListOptions<PurchaseOrderSort> = {}): Promise<OrderView[]> {
     const { page: valid } = parseInput(purchaseOrderListQuerySchema, { page });
-    const orders = await this.em.find(PurchaseOrder, {}, {
+    const orders = await this.em.find(PurchaseOrder, orderSearch(q), {
       populate: ["supplier", "location"],
-      orderBy: { code: "asc" },
+      orderBy: listOrderBy(ORDER_SORT_PATHS[sort], dir) as OrderDefinition<PurchaseOrder>,
       limit: DOCUMENT_PAGE_SIZE,
       offset: (valid - 1) * DOCUMENT_PAGE_SIZE,
     });
     return viewsOf(this.em, orders);
   }
 
-  /** How many orders the tenant has, for the pages of `list`. */
-  count(): Promise<number> {
-    return this.em.count(PurchaseOrder, {});
+  /** How many orders the tenant has that `q` keeps, for the pages of `list`. */
+  count({ q = "" }: { q?: string } = {}): Promise<number> {
+    return this.em.count(PurchaseOrder, orderSearch(q));
   }
 
   /** One order; `PURCHASE_ORDER_NOT_FOUND` when this tenant has no such ID, another tenant's included (TEN-014). */
@@ -428,4 +439,9 @@ function orderEntry(action: string, order: PurchaseOrder, before: AuditEntry["be
 function lifecycleSnapshot(order: PurchaseOrder, lines: readonly PurchaseOrderLine[]) {
   return { status: order.status, lines: JSON.stringify(lines.map(({ position, quantity, received, abandoned, status }) =>
     ({ line: position, quantity, received, abandoned, status }))) };
+}
+
+/** The orders a list search keeps: `list` and `count` share it, so the pages add up. */
+function orderSearch(q: string): FilterQuery<PurchaseOrder> {
+  return searchWhere(q, ORDER_SEARCH_FIELDS) as FilterQuery<PurchaseOrder>;
 }

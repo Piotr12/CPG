@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import { openBrowser, type Browser } from "./browser";
+import { chooseFromList, clickHydrated, openBrowser, type Browser } from "./browser";
 import { signIn, signInAsAdmin } from "./sign-in";
 
 const baseUrl = inject("baseUrl");
@@ -15,6 +15,9 @@ const ready = (element: string) =>
 /** The page's button with exactly this text or accessible name, if any. */
 const button = (name: string) =>
   `[...document.querySelectorAll("main button")].find((b) => b.textContent.trim() === ${JSON.stringify(name)} || b.getAttribute("aria-label") === ${JSON.stringify(name)})`;
+
+/** The open dialog's material picker (#217). */
+const MATERIAL = "[role=dialog] :has(> input[name=material]) > input[role=combobox]";
 
 /** A screen's rows as their cells' text, once its table is shown. */
 async function listRows(browser: Browser, path: string): Promise<string[][]> {
@@ -49,7 +52,7 @@ async function openAdd(admin: Browser, path: string, add: string) {
 /** Adds a parameter set in Prod; returns the form's error text when it stays open. */
 async function addSet(admin: Browser, values: { material: string; location: string; procurement: string; days: string; min: string; multiple: string }) {
   await openAdd(admin, "/admin/prod/planning-parameters", "Add parameters");
-  await admin.select("[role=dialog] select[name=material]", values.material);
+  await chooseFromList(admin, MATERIAL, values.material, values.material);
   await admin.select("[role=dialog] select[name=location]", values.location);
   await admin.select("[role=dialog] select[name=procurement]", values.procurement);
   await admin.fill("[role=dialog] input[name=leadTimeDays]", values.days);
@@ -61,7 +64,7 @@ async function addSet(admin: Browser, values: { material: string; location: stri
 /** Adds a safety target in Prod. */
 async function addTarget(admin: Browser, material: string, location: string, date: string, quantity: string) {
   await openAdd(admin, "/admin/prod/safety-stock", "Add target");
-  await admin.select("[role=dialog] select[name=material]", material);
+  await chooseFromList(admin, MATERIAL, material, material);
   await admin.select("[role=dialog] select[name=location]", location);
   expect(await admin.fillDate("[role=dialog] input[name=effectiveFrom]", date)).toBe(date);
   await admin.fill("[role=dialog] input[name=quantity]", quantity);
@@ -109,7 +112,7 @@ describe("planning parameters and safety stock (E03-S03)", () => {
     const material = (type: string, description: string, baseUnit: string) => async () => {
       await admin.select("[role=dialog] select[name=type]", type);
       await admin.fillLabel("Description", description);
-      await admin.fillLabel("Base unit", baseUnit);
+      await admin.select("[role=dialog] select[name=baseUnit]", baseUnit);
     };
     const location = (name: string) => () => admin.fillLabel("Name", name);
     steel = await createInProd(admin, "materials", "Create material", material("raw", "pp-ui steel", "kg"), "pp-ui steel");
@@ -253,10 +256,18 @@ describe("planning parameters and safety stock (E03-S03)", () => {
       ["/admin/prod/safety-stock", "Add target"],
     ]) {
       await openAdd(admin, path, add);
-      const offered = await admin.evaluate<string[]>(`[...document.querySelectorAll("[role=dialog] select[name=material] option")].map((o) => o.value)`);
+      await admin.waitUntil(ready(`document.querySelector(${JSON.stringify(MATERIAL)})`));
+      await admin.fill(MATERIAL, "pp-ui");
+      await admin.waitUntil(`Boolean(document.querySelector("[role=dialog] [role=listbox]:not([hidden])"))`);
+      const offered = await admin.evaluate<string[]>(
+        `[...document.querySelectorAll("[role=dialog] [role=listbox]:not([hidden]) [role=option] .font-mono")].map((code) => code.textContent)`,
+      );
       expect(offered).toContain(panel);
       expect(offered).not.toContain(steel);
-      await admin.clickRole("button", "Cancel");
+      // The first Escape closes only the list, the second the dialog (#217).
+      await admin.press("Escape");
+      await admin.waitUntil(`!document.querySelector("[role=dialog] [role=listbox]:not([hidden])")`);
+      await admin.press("Escape");
       await admin.waitUntil(closed);
     }
 
@@ -278,7 +289,95 @@ describe("planning parameters and safety stock (E03-S03)", () => {
 
     for (const path of ["/admin/test/planning-parameters", "/admin/test/safety-stock"]) {
       expect((await listRows(una, path)).length).toBeGreaterThan(0);
-      expect(await una.evaluate<number>(`document.querySelectorAll("main button").length`)).toBe(0);
+      // Only the list's own Search button: nothing that changes data.
+      expect(await una.evaluate<string[]>(`[...document.querySelectorAll("main button")].map((b) => b.textContent.trim())`)).toEqual(["Search"]);
     }
+  });
+});
+
+describe("sorting and searching the planning parameters and safety stock lists (#217)", () => {
+  let admin: Browser;
+  /** The shown rows' cells, in order. */
+  const shown = () =>
+    admin.evaluate<string[][]>(`[...document.querySelectorAll("main tbody tr")].map((row) => [...row.cells].map((cell) => cell.innerText.trim().replace(/\\s+/g, " ")))`);
+  /** Waits until the page's address has this query and the table under it is the new one. */
+  const atQuery = (query: string) =>
+    admin.waitUntil(`location.search === ${JSON.stringify(query)} && document.querySelector("main [aria-sort]") && !document.querySelector("main table").closest("[hidden]")`);
+  /** Searches the shown list for `q`, keeping its sort, and waits for the result line. */
+  const search = async (q: string, query: string) => {
+    await admin.waitUntil(`Boolean(document.querySelector("main [role=search] input[name=q]")) && Object.keys(document.querySelector("main [role=search] button")).some((key) => key.startsWith("__reactFiber"))`);
+    await admin.fill("main [role=search] input[name=q]", q);
+    await admin.click("main [role=search] button[type=submit]");
+    await atQuery(query);
+    await admin.waitFor("main [role=status]");
+  };
+
+  beforeAll(async () => {
+    admin = openBrowser();
+    await signInAsAdmin(admin, baseUrl, adminPassword);
+  });
+  afterAll(() => admin.close());
+
+  it("sorts planning parameters by lead time both ways, by material and location within equal lead times", async () => {
+    await admin.open(`${baseUrl}/admin/test/planning-parameters`);
+    await admin.waitUntil(`document.querySelector("main th[aria-sort=ascending]")?.innerText.trim() === "Material"`);
+    /** Rows as [lead time, material ID, location ID]. */
+    const keyed = async () => (await shown()).map(([material, location, , days]) => [Number(days), material.slice(0, 8), location.slice(0, 8)] as const);
+    const byKey = ([, m1, l1]: readonly [number, string, string], [, m2, l2]: readonly [number, string, string]) => m1.localeCompare(m2) || l1.localeCompare(l2);
+
+    await clickHydrated(admin, "main th a[href$='sort=leadTime&dir=asc']");
+    await atQuery("?sort=leadTime&dir=asc");
+    const ascending = await keyed();
+    expect(ascending.length).toBeGreaterThanOrEqual(48);
+    expect(ascending).toEqual([...ascending].sort((a, b) => a[0] - b[0] || byKey(a, b)));
+
+    await clickHydrated(admin, "main th a[href$='sort=leadTime&dir=desc']");
+    await atQuery("?sort=leadTime&dir=desc");
+    expect(await keyed()).toEqual([...ascending].sort((a, b) => b[0] - a[0] || byKey(a, b)));
+  });
+
+  it("searches planning parameters by material and location, keeping the sort, marking matches, and clears back", async () => {
+    await admin.open(`${baseUrl}/admin/test/planning-parameters?sort=location&dir=desc`);
+    await atQuery("?sort=location&dir=desc");
+    const all = await shown();
+    await search("steel wrocław", "?q=steel+wroc%C5%82aw&sort=location&dir=desc");
+
+    const found = await shown();
+    expect(found.length).toBeGreaterThan(0);
+    expect(found).toEqual(all.filter(([material, location]) => /steel/i.test(`${material} ${location}`) && `${material} ${location}`.toLowerCase().includes("wrocław")));
+    expect(await admin.text("main [role=status]")).toBe(`${found.length} result${found.length === 1 ? "" : "s"} for “steel wrocław” · Clear search`);
+    expect(await admin.evaluate<number>(`document.querySelectorAll("main tbody mark").length`)).toBeGreaterThanOrEqual(found.length * 2);
+
+    await clickHydrated(admin, "main [role=status] a");
+    await atQuery("?sort=location&dir=desc");
+    await admin.waitUntil(`!document.querySelector("main [role=status]")`);
+    expect(await shown()).toEqual(all);
+  });
+
+  it("sorts safety stock by effective date and by today's status, and searches it", async () => {
+    await admin.open(`${baseUrl}/admin/test/safety-stock`);
+    await admin.waitUntil(`document.querySelector("main th[aria-sort=ascending]")?.innerText.trim() === "Material"`);
+
+    await clickHydrated(admin, "main th a[href$='sort=effectiveFrom&dir=asc']");
+    await atQuery("?sort=effectiveFrom&dir=asc");
+    const dates = (await shown()).map((row) => row[2]);
+    expect(dates.length).toBeGreaterThanOrEqual(50);
+    expect(dates).toEqual([...dates].sort());
+
+    await clickHydrated(admin, "main th a[href$='sort=status&dir=asc']");
+    await atQuery("?sort=status&dir=asc");
+    const order = { Superseded: 0, "In effect": 1, Scheduled: 2 } as Record<string, number>;
+    const statuses = (await shown()).map((row) => order[row[4]]);
+    expect(statuses.every((rank) => rank !== undefined)).toBe(true);
+    expect(statuses).toEqual([...statuses].sort((a, b) => a - b));
+
+    await search("locker", "?q=locker&sort=status&dir=asc");
+    const found = await shown();
+    expect(found.length).toBeGreaterThan(0);
+    for (const [material, location] of found) expect(`${material} ${location}`.toLowerCase()).toContain("locker");
+    await clickHydrated(admin, "main [role=status] a");
+    await atQuery("?sort=status&dir=asc");
+    await admin.waitUntil(`!document.querySelector("main [role=status]")`);
+    expect((await shown()).length).toBeGreaterThan(found.length);
   });
 });

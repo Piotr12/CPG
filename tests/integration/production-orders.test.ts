@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import type { ProductionOrderDetail, ProductionOptions } from "@cpg/core";
 import { callApi, json } from "./api";
-import { openBrowser, clickHydrated, type Browser } from "./browser";
+import { chooseFromList, openBrowser, clickHydrated, type Browser } from "./browser";
 import { signIn, signInAsAdmin, signedInAndHydrated } from "./sign-in";
 import { createToken, openTokens } from "./tokens";
 
@@ -62,7 +62,7 @@ describe("manual production orders in the UI and API", () => {
   it("lets a normal user preview, choose a lower-priority recipe and save/edit through the UI (PRD-003/025/027)", async () => {
     await user.setViewport(1280, 800); await user.open(`${baseUrl}/admin/prod/production-orders`);
     await clickHydrated(user, "main button"); await user.waitFor("[role=dialog][data-state=open]");
-    await user.select("[role=dialog][data-state=open] [name=output]", output); await user.select("[role=dialog][data-state=open] [name=location]", plant);
+    await chooseFromList(user, "[role=dialog][data-state=open] [role=combobox]", output, output); await user.select("[role=dialog][data-state=open] [name=location]", plant);
     await user.fill("[role=dialog][data-state=open] [name=quantity]", "60"); await user.fill("[role=dialog][data-state=open] [name=unit]", "each");
     await user.fillDate("[role=dialog][data-state=open] [name=plannedFinish]", "2026-10-15"); await user.click("[role=dialog][data-state=open] button[type=submit]");
     await user.waitFor("[role=dialog][data-state=open] [name=bom]");
@@ -83,6 +83,39 @@ describe("manual production orders in the UI and API", () => {
     await user.setViewport(390, 844);
     expect(await user.evaluate<boolean>('document.documentElement.scrollWidth <= innerWidth')).toBe(true);
     expect(await user.evaluate<boolean>('(() => { const b = document.querySelector("main button").getBoundingClientRect(); return b.left >= 0 && b.right <= innerWidth; })()')).toBe(true);
+  });
+  it("sorts the orders by a header click, searches them by output, and clears back (#217)", async () => {
+    const atQuery = (query: string) =>
+      user.waitUntil(`location.search === ${JSON.stringify(query)} && document.querySelector("main [aria-sort]") && !document.querySelector("main table").closest("[hidden]")`);
+    const column = (index: number) => user.evaluate<string[]>(`[...document.querySelectorAll("main tbody tr")].map((row) => row.cells[${index}].innerText.trim())`);
+    await user.setViewport(1280, 800); await user.open(`${baseUrl}/admin/prod/production-orders`);
+    await user.waitUntil(`document.querySelector("main th[aria-sort=ascending]")?.innerText.trim() === "ID"`);
+
+    await clickHydrated(user, "main th a[href$='sort=finish&dir=asc']");
+    await atQuery("?sort=finish&dir=asc");
+    const finishes = await column(4);
+    expect(finishes.length).toBeGreaterThanOrEqual(2);
+    expect(finishes).toEqual([...finishes].sort());
+    await clickHydrated(user, "main th a[href$='sort=finish&dir=desc']");
+    await atQuery("?sort=finish&dir=desc");
+    await user.waitUntil(`document.querySelector("main th[aria-sort=descending]")?.innerText.trim() === "Planned finish"`);
+    expect(await column(4)).toEqual([...finishes].sort().reverse());
+
+    await user.waitUntil(`Object.keys(document.querySelector("main [role=search] button")).some((key) => key.startsWith("__reactFiber"))`);
+    await user.fill("main [role=search] input[name=q]", "production cabinet");
+    await user.click("main [role=search] button[type=submit]");
+    await atQuery("?q=production+cabinet&sort=finish&dir=desc");
+    const outputs = await column(1);
+    expect(outputs.length).toBeGreaterThanOrEqual(2);
+    for (const shown of outputs) expect(shown).toBe(`${output} production cabinet`);
+    expect(await user.text("main p[role=status]")).toBe(`${outputs.length} results for “production cabinet” · Clear search`);
+    expect(await user.evaluate<number>(`document.querySelectorAll("main tbody tr td:nth-child(2) mark").length`)).toBe(outputs.length * 2);
+
+    await clickHydrated(user, "main p[role=status] a");
+    await atQuery("?sort=finish&dir=desc");
+    expect((await column(4)).length).toBeGreaterThanOrEqual(outputs.length);
+    await user.open(`${baseUrl}/admin/prod/production-orders?q=no+such+order+anywhere`);
+    await user.waitForText("Nothing matches “no such order anywhere”.");
   });
   it("retains pinned history after BOM revision/deactivation and audits target/date edits (PRD-006)", async () => {
     const bom = json(await api("GET", `/api/tenants/prod/boms/${top}`)).data;
@@ -142,7 +175,8 @@ describe("manual production orders in the UI and API", () => {
       expect((await api("GET", `${collection}/options?${new URLSearchParams(input())}`, {}, userSecret)).status).toBe(200);
       await user.open(`${baseUrl}/admin/prod/production-orders`); await user.waitForText("Production orders");
       await user.waitUntil('document.querySelector("main table") && !document.querySelector("main table").closest("[hidden]")');
-      expect(await user.evaluate<number>('document.querySelectorAll("main button").length')).toBe(0);
+      // Only the list's own Search button: nothing that changes data.
+      expect(await user.evaluate<string[]>('[...document.querySelectorAll("main button")].map((button) => button.textContent.trim())')).toEqual(["Search"]);
     } finally { await write("PATCH", "/api/tenants/prod", { readOnly: false }); }
   });
 });

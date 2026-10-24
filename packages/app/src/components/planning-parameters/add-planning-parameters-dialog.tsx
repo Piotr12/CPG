@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { planningParameterCreateFormSchema } from "@cpg/core/validators/planning-parameters/planning-parameter-create.schema";
+import type { AutocompleteOption } from "@cpg/ui/backend/forms/autocomplete";
 import { CrudForm } from "@cpg/ui/backend/forms/crud-form";
 import { Button } from "@cpg/ui/components/button";
 import {
@@ -21,12 +22,14 @@ interface AddPlanningParametersDialogProps {
   context: TenantContext;
   labels: PlanningParametersLabels;
   /** The active materials and locations a new set may pick (MAT-029, LFC-019). */
-  materials: FormOption[];
+  materials: AutocompleteOption[];
   locations: FormOption[];
+  /** The reader's language, for the material picker. */
+  locale: string;
 }
 
 /** The admin's Add parameters button and its form (MAT-015, MAT-016). */
-export function AddPlanningParametersDialog({ context, labels, materials, locations }: AddPlanningParametersDialogProps) {
+export function AddPlanningParametersDialog({ context, labels, materials, locations, locale }: AddPlanningParametersDialogProps) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
   const t = labels.add;
@@ -52,6 +55,7 @@ export function AddPlanningParametersDialog({ context, labels, materials, locati
           formatFieldError={fieldErrorFormatter(labels)}
           onSuccess={close}
           onCancel={close}
+          locale={locale}
         />
       </DialogContent>
     </Dialog>

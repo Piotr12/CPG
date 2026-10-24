@@ -4,13 +4,17 @@ import { choices, initial, labels } from "../../../../../tests/setup/customer-or
 import { OrderForm } from "./order-form";
 const action = vi.fn(); const onSuccess = vi.fn(); const onCancel = vi.fn();
 const change = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
+/** Picks a line's material through its picker: types part of it, then clicks the matching option. */
+const pick = (label: string, typed: string) => {
+  change(label, typed); fireEvent.mouseDown(screen.getByRole("option", { name: new RegExp(typed, "i") }));
+};
 const submit = () => fireEvent.click(screen.getByRole("button", { name: labels.save }));
 function renderForm(values?: typeof initial, options = choices) {
   return render(<OrderForm choices={options} labels={labels} initial={values} action={action} onSuccess={onSuccess} onCancel={onCancel} />);
 }
 function validCreate() {
   change("Customer", "00000001"); change("Location", "00000001");
-  change("Material, Line 1", "00000005"); change("Ordered quantity, Line 1", "2");
+  pick("Material, Line 1", "00000005"); change("Ordered quantity, Line 1", "2");
   change("Unit, Line 1", "case"); change("Required date, Line 1", "2027-01-04");
 }
 describe("OrderForm", () => {
@@ -18,7 +22,7 @@ describe("OrderForm", () => {
   it("submits one header and multiple dated lines with the entered units", async () => {
     action.mockResolvedValue({ ok: true, data: { id: "00000001" } }); renderForm(); validCreate();
     fireEvent.click(screen.getByRole("button", { name: "Add line" }));
-    change("Material, Line 2", "00000005"); change("Ordered quantity, Line 2", "60"); change("Required date, Line 2", "2027-01-08"); submit();
+    pick("Material, Line 2", "cabinet"); change("Ordered quantity, Line 2", "60"); change("Required date, Line 2", "2027-01-08"); submit();
     await waitFor(() => expect(onSuccess).toHaveBeenCalledWith({ id: "00000001" }));
     expect(action).toHaveBeenCalledWith({ customer: "00000001", location: "00000001", lines: [
       { material: "00000005", quantity: "2", unit: "case", requiredDate: "2027-01-04" },
@@ -38,13 +42,15 @@ describe("OrderForm", () => {
     action.mockResolvedValue({ ok: true, data: {} });
     const old = { customer: "00000002", location: "00000002", lines: [{ ...initial.lines[0], material: "00000004", unit: "old-unit" }] };
     renderForm(old);
+    expect((screen.getByRole("combobox", { name: "Material, Line 1" }) as HTMLInputElement).value).toBe("00000004 — Old panel");
     expect((screen.getByLabelText("Customer") as HTMLSelectElement).value).toBe("00000002");
     expect((screen.getByLabelText("Location") as HTMLSelectElement).value).toBe("00000002");
     expect(within(screen.getByLabelText("Unit, Line 1")).getByRole("option", { name: "old-unit" })).toBeTruthy();
     submit(); await waitFor(() => expect(action).toHaveBeenCalledWith(old));
     cleanup(); renderForm();
     expect(within(screen.getByLabelText("Customer")).queryByRole("option", { name: "Old Customer A" })).toBeNull();
-    expect(within(screen.getByLabelText("Material, Line 1")).queryByRole("option", { name: "Old panel" })).toBeNull();
+    fireEvent.focus(screen.getByRole("combobox", { name: "Material, Line 1" }));
+    expect(within(screen.getByRole("listbox")).getAllByRole("option").map((option) => option.textContent)).toEqual(["00000005—Cabineteach"]);
   });
   it("shows server field errors and generic refusals, with a pending state and cancel keys", async () => {
     action.mockResolvedValueOnce({ ok: false, error: { code: "VALIDATION_FAILED", message: "invalid", fieldErrors: { "lines.0.quantity": ["too small"] } } });
@@ -61,11 +67,22 @@ describe("OrderForm", () => {
   it("supports keyboard submit and resets a material with no available units to an empty unit", async () => {
     action.mockResolvedValue({ ok: true, data: {} });
     const options = { ...choices, materials: [{ ...choices.materials[0], units: [] }] }; renderForm(undefined, options);
-    change("Material, Line 1", "00000005"); expect((screen.getByLabelText("Unit, Line 1") as HTMLSelectElement).value).toBe("");
+    pick("Material, Line 1", "00000005"); expect((screen.getByLabelText("Unit, Line 1") as HTMLSelectElement).value).toBe("");
     cleanup(); renderForm(initial);
     const form = screen.getByRole("button", { name: "Save order" }).closest("form")!;
     const requestSubmit = vi.spyOn(form, "requestSubmit").mockImplementation(() => { fireEvent.submit(form); });
     fireEvent.keyDown(form, { key: "Enter", ctrlKey: true }); await waitFor(() => expect(onSuccess).toHaveBeenCalled());
     fireEvent.keyDown(form, { key: "Enter", metaKey: true }); expect(requestSubmit).toHaveBeenCalledTimes(2);
+  });
+  it("refuses typed text that is no material, locks a posted line's picker, and lets Escape close only the open list (#217)", () => {
+    renderForm(); const material = screen.getByRole("combobox", { name: "Material, Line 1" });
+    expect(material.getAttribute("placeholder")).toBe(labels.picker.placeholder);
+    change("Material, Line 1", "old panel"); expect(screen.getByRole("listbox").textContent).toContain("No material matches “old panel”.");
+    fireEvent.keyDown(material, { key: "Escape" }); expect(onCancel).not.toHaveBeenCalled();
+    fireEvent.blur(material); expect(screen.getByText(labels.picker.labels.refused)).toBeTruthy();
+    submit(); expect(action).not.toHaveBeenCalled(); expect(material.getAttribute("aria-invalid")).toBe("true");
+    fireEvent.keyDown(material, { key: "Escape" }); expect(onCancel).toHaveBeenCalledOnce();
+    cleanup(); render(<OrderForm choices={choices} labels={labels} initial={initial} lockedLines={[initial.lines[0].id!]} action={action} onSuccess={onSuccess} onCancel={onCancel} />);
+    expect((screen.getByRole("combobox", { name: "Material, Line 1" }) as HTMLInputElement).disabled).toBe(true);
   });
 });

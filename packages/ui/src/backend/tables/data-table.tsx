@@ -1,9 +1,11 @@
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import type { ReactNode } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/table";
 import { cn } from "../../lib/utils";
 import { CALLOUT_TONES } from "../feedback/callout";
 import { EmptyState } from "../feedback/empty-state";
 import type { StatusTone } from "../feedback/status-badge";
+import type { LinkComponent } from "./list-search";
 
 /** What a column holds, which sets its minimum width and alignment. */
 export type DataTableColumnKind = "id" | "text" | "longText" | "quantity" | "date" | "status" | "actions";
@@ -25,6 +27,18 @@ export interface DataTableColumn<Row> {
    * as the cell's `title`.
    */
   truncate?: (row: Row) => string;
+  /** Makes the header a link that sorts the whole list by this key (#217), when the table has a `sort`. */
+  sortKey?: string;
+}
+
+export type DataTableSortDirection = "asc" | "desc";
+
+/** The list's one sort, and the address that sorts it another way (the page reset to 1). */
+export interface DataTableSort {
+  key: string;
+  dir: DataTableSortDirection;
+  href: (key: string, dir: DataTableSortDirection) => string;
+  link?: LinkComponent;
 }
 
 export interface DataTableProps<Row> {
@@ -43,6 +57,8 @@ export interface DataTableProps<Row> {
   label: string;
   /** Screen-reader name of the row-actions column. */
   actionsLabel?: string;
+  /** Turns the headers of columns with a `sortKey` into sort links. */
+  sort?: DataTableSort;
 }
 
 /** Complete class strings (Tailwind only generates classes it finds whole in the source). */
@@ -93,7 +109,8 @@ export function columnClasses<Row>(column: DataTableColumn<Row>): string {
 /**
  * Every list screen's table: columns from config, an empty state, and a row-actions slot. It scrolls
  * sideways inside a labelled, keyboard-reachable container with the first column sticky, so the page
- * never does. Sorting and filtering are added with the first list that needs them.
+ * never does. With `sort`, a column's header sorts the list on the server (#217); filtering is a
+ * `ListSearch` above the table.
  */
 export function DataTable<Row>({
   columns,
@@ -105,6 +122,7 @@ export function DataTable<Row>({
   empty,
   label,
   actionsLabel = "Actions",
+  sort,
 }: DataTableProps<Row>) {
   const width = columns.length + (rowActions ? 1 : 0);
   const shared = columns.map(columnClasses);
@@ -114,8 +132,18 @@ export function DataTable<Row>({
       <TableHeader>
         <TableRow>
           {columns.map((column, index) => (
-            <TableHead key={column.id} className={cn(shared[index], index === 0 && cn(STICKY_CELL, "z-10"), column.className)}>
-              {column.header}
+            <TableHead
+              key={column.id}
+              aria-sort={sort && column.sortKey ? ariaSort(sort, column.sortKey) : undefined}
+              className={cn(shared[index], index === 0 && cn(STICKY_CELL, "z-10"), column.className)}
+            >
+              {sort && column.sortKey ? (
+                <SortLink sort={sort} sortKey={column.sortKey} reverse={column.kind === "quantity"}>
+                  {column.header}
+                </SortLink>
+              ) : (
+                column.header
+              )}
             </TableHead>
           ))}
           {rowActions && (
@@ -173,5 +201,29 @@ function ToneMarker({ tone, children }: { tone: StatusTone; children: ReactNode 
       <Icon aria-hidden="true" className={cn("size-3.5 shrink-0", icon)} />
       {children}
     </span>
+  );
+}
+
+function ariaSort(sort: DataTableSort, key: string): "ascending" | "descending" | "none" {
+  if (sort.key !== key) return "none";
+  return sort.dir === "asc" ? "ascending" : "descending";
+}
+
+/**
+ * A sortable header (MOJ sortable table, Primer DataTable): a plain link, so it works before
+ * hydration and keeps back and forward. The arrow shows the current order, a muted double arrow a
+ * column that can be sorted; the `th`'s `aria-sort` tells screen readers. Clicking the sorted column
+ * flips it; another column starts ascending. A right-aligned column puts its arrow first.
+ */
+function SortLink({ sort, sortKey, reverse, children }: { sort: DataTableSort; sortKey: string; reverse: boolean; children: ReactNode }) {
+  const Link = sort.link ?? ("a" as unknown as LinkComponent);
+  const active = sort.key === sortKey;
+  const next: DataTableSortDirection = active && sort.dir === "asc" ? "desc" : "asc";
+  const Icon = !active ? ArrowUpDown : sort.dir === "asc" ? ArrowUp : ArrowDown;
+  return (
+    <Link href={sort.href(sortKey, next)} className={cn("inline-flex items-center gap-1 underline-offset-4 hover:underline", reverse && "flex-row-reverse")}>
+      <span>{children}</span>
+      <Icon aria-hidden="true" data-sort-icon={active ? sort.dir : "none"} className={cn("size-4 shrink-0", active ? "text-foreground" : "text-muted-foreground")} />
+    </Link>
   );
 }

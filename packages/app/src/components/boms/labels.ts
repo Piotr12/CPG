@@ -18,19 +18,28 @@ import { POSITIVE_QUANTITY_MESSAGE } from "@cpg/core/validators/quantities/quant
 import { errorMessage } from "../../i18n/error-message";
 import type { Messages } from "../../i18n/messages/en";
 import { fill, shownQuantity, type TenantContext } from "../forms/form-labels";
+import { materialPicker, type MaterialPicker } from "../materials/material-picker";
 
 /**
  * The BOM screens' strings in the reader's language: plain strings, so they can reach client
- * components (the server-side headings stay behind). `errors` holds every code the screens can show.
+ * components (the server-side headings stay behind). `errors` holds every code the screens can show;
+ * `picker` is the shared material picker's words (#217).
  */
-export type BomsLabels = Omit<Messages["boms"], "heading" | "detailHeading" | "errors"> & { errors: Record<string, string> };
+export type BomsLabels = Omit<Messages["boms"], "heading" | "detailHeading" | "errors"> & {
+  errors: Record<string, string>;
+  picker: MaterialPicker;
+};
 
 /** Builds the BOM screens' labels from a dictionary (server side, where `messages` is available). */
 export function bomsLabels(messages: Messages): BomsLabels {
   const labels: Partial<Messages["boms"]> = { ...messages.boms };
   delete labels.heading;
   delete labels.detailHeading;
-  return { ...(labels as Omit<Messages["boms"], "heading" | "detailHeading">), errors: { ...messages.errors, ...messages.boms.errors } };
+  return {
+    ...(labels as Omit<Messages["boms"], "heading" | "detailHeading">),
+    errors: { ...messages.errors, ...messages.boms.errors },
+    picker: materialPicker(messages.lists),
+  };
 }
 
 export { fill, shownQuantity, type TenantContext };

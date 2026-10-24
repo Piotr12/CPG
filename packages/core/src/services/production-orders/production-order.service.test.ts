@@ -207,10 +207,65 @@ describe("manual production", () => {
   it("bounds list pages and rejects invalid page/input queries", async () => {
     const order = await service().create(input, actor);
     expect(await service().list()).toEqual([expect.objectContaining({ id: order.id })]);
-    expect(await service().list(2)).toEqual([]); expect(await service().count()).toBe(1);
-    await expect(service().list(0)).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+    expect(await service().list({ page: 2 })).toEqual([]); expect(await service().count()).toBe(1);
+    await expect(service().list({ page: 0 })).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
     await expect(service().options({ ...input, quantity: "0" })).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
     await expect(service().update(order.id, { quantity: "0" }, 1, actor)).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+  });
+  describe("sorted and searched (#217)", () => {
+    // 105 orders, inserted newest first, of outputs and at locations whose UUIDs run against their IDs.
+    const COUNT = 105;
+    const day = (offset: number) => `2027-01-${String(offset + 1).padStart(2, "0")}`;
+    const model = Array.from({ length: COUNT }, (_, index) => {
+      const n = index + 1;
+      return { id: String(n).padStart(8, "0"), output: n % 3 === 0 ? "00000003" : "00000001", location: n <= 50 ? "00000002" : "00000001",
+        finish: day(n % 7), start: day((n * 5) % 11), status: n % 4 === 0 ? "cancelled" : "open" };
+    });
+    type Row = (typeof model)[number];
+    const sorted = (key: keyof Row, sign: 1 | -1) =>
+      [...model].sort((a, b) => (a[key] === b[key] ? (a.id < b.id ? -1 : 1) : a[key] < b[key] ? -sign : sign)).map(({ id }) => id);
+    const allPages = async (options: Parameters<ProductionOrderService["list"]>[0] = {}) =>
+      (await Promise.all([1, 2].map((page) => service().list({ ...options, page })))).flat().map(({ id }) => id);
+
+    beforeEach(async () => {
+      const manager = em();
+      const outputs = new Map([
+        ["00000001", await manager.findOneOrFail(Material, { code: "00000001" })],
+        ["00000003", manager.create(Material, { id: "00000000-0000-4000-8000-000000000003", code: "00000003", type: "intermediate", description: "Drawer front", baseUnit: "each" })],
+      ]);
+      const locations = new Map((await manager.find(Location, {})).map((location) => [location.code, location]));
+      const recipe = await manager.findOneOrFail(BomRevision, { bom: { code: "00000001" } });
+      for (const row of [...model].reverse()) {
+        manager.create(ProductionOrder, { code: row.id, output: outputs.get(row.output)!, location: locations.get(row.location)!, recipe,
+          quantity: "1.000000", enteredQuantity: "1", enteredUnit: "each", numerator: "1", denominator: "1",
+          plannedFinish: row.finish, plannedStart: row.start, leadTimeDays: 0, status: row.status as "open" });
+      }
+      await manager.flush();
+    });
+
+    it("sorts by each column, both ways, by ID within equal values, across the page boundary", async () => {
+      expect(await allPages()).toEqual(sorted("id", 1));
+      expect(await allPages({ sort: "id", dir: "desc" })).toEqual(sorted("id", -1));
+      for (const key of ["output", "location", "finish", "start", "status"] as const) {
+        expect(await allPages({ sort: key })).toEqual(sorted(key, 1));
+        expect(await allPages({ sort: key, dir: "desc" })).toEqual(sorted(key, -1));
+      }
+      expect((await service().list({ sort: "finish", page: 2 })).map(({ id }) => id)).toEqual(sorted("finish", 1).slice(100));
+    });
+
+    it("keeps orders whose ID or output ID or description holds every word, counts them, in this tenant only", async () => {
+      const drawers = model.filter(({ output }) => output === "00000003").map(({ id }) => id);
+      expect(await allPages({ q: "DRAWER" })).toEqual(drawers);
+      expect(await service().count({ q: "drawer front" })).toBe(drawers.length);
+      expect(await allPages({ q: "front 00000006" })).toEqual(["00000006"]);
+      // Order 1, and every order of output 1.
+      expect(await service().count({ q: "00000001" })).toBe(model.filter(({ id, output }) => id === "00000001" || output === "00000001").length);
+      expect(await allPages({ q: "cabinet", sort: "start", dir: "desc" })).toEqual(sorted("start", -1).filter((id) => !drawers.includes(id)));
+      expect(await service().count({ q: "%" })).toBe(COUNT);
+      expect(await service().count({ q: "drawer_front" })).toBe(drawers.length);
+      expect(await service(em("test")).count({ q: "drawer" })).toBe(0);
+      expect(await service(em("test")).list({ q: "cabinet" })).toEqual([]);
+    });
   });
   it("maps unique creates and optimistic edits but propagates unexpected transaction errors", async () => {
     const manager = em(); const spy = vi.spyOn(manager, "transactional");

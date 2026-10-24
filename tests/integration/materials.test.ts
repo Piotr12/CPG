@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import { openBrowser, type Browser } from "./browser";
+import { clickHydrated, openBrowser, type Browser } from "./browser";
 import { signIn, signInAsAdmin } from "./sign-in";
 
 const baseUrl = inject("baseUrl");
@@ -12,6 +12,7 @@ const BOLT = "mat-ui bolt";
 const NUT = "mat-ui nut";
 const GAUGE = "mat-ui test-only gauge";
 const CLAMP = "mat-ui clamp";
+const SPOOL = "mat-ui wire spool";
 
 /** True once `element` is hydrated, shown, and outside Next.js's hidden staging container. */
 const ready = (element: string) =>
@@ -36,7 +37,7 @@ async function create(admin: Browser, tenant: string, type: string, description:
   await admin.clickRole("button", "Create material");
   await admin.select("[role=dialog] select[name=type]", type);
   await admin.fillLabel("Description", description);
-  await admin.fillLabel("Base unit", baseUnit);
+  await admin.select("[role=dialog] select[name=baseUnit]", baseUnit);
   await admin.click("[role=dialog] button[type=submit]");
   await admin.waitUntil(`!document.querySelector("[role=dialog]")`);
   await admin.waitForText(description);
@@ -114,7 +115,7 @@ describe("materials and their unit conversions (E03-S01)", () => {
     await admin.waitUntil(ready(button("Create material")));
     await admin.clickRole("button", "Create material");
     await admin.select("[role=dialog] select[name=type]", "raw");
-    await admin.fillLabel("Base unit", "kg");
+    await admin.select("[role=dialog] select[name=baseUnit]", "kg");
     await admin.click("[role=dialog] button[type=submit]");
 
     await admin.waitForText("Enter a description.");
@@ -127,7 +128,7 @@ describe("materials and their unit conversions (E03-S01)", () => {
     expect(await admin.text("main h1")).toBe(`${boltId} — ${BOLT}`);
 
     await admin.clickRole("button", "Add conversion");
-    await admin.fillLabel("Unit", "case");
+    await admin.select("[role=dialog] select[name=unit]", "case");
     await admin.fillLabel("Alternate quantity", "0");
     await admin.fillLabel("Base quantity", "12");
     await admin.click("[role=dialog] button[type=submit]");
@@ -219,10 +220,108 @@ describe("materials and their unit conversions (E03-S01)", () => {
 
     const rows = await listRows(una, "prod");
     expect(rows.find((cells) => cells[0] === boltId)?.[1]).toBe(`${BOLT} 40`);
-    expect(await una.evaluate<number>(`document.querySelectorAll("main button").length`)).toBe(0);
+    // Only the list's own Search button: nothing that changes data.
+    expect(await una.evaluate<string[]>(`[...document.querySelectorAll("main button")].map((b) => b.textContent.trim())`)).toEqual(["Search"]);
 
     await openMaterial(una, boltId, false);
     await una.waitForText("1 case = 12 each");
     expect(await una.evaluate<number>(`document.querySelectorAll("main button").length`)).toBe(0);
+  });
+});
+
+describe("sorting and searching the materials list, and the unit list (#217)", () => {
+  let admin: Browser;
+  /** The descriptions of the shown list, in order. */
+  const descriptions = () => admin.evaluate<string[]>(`[...document.querySelectorAll("main tbody tr")].map((row) => row.cells[1].innerText.trim())`);
+  /** Waits until the page's address has this query and the table under it is the new one. */
+  const atQuery = (query: string) =>
+    admin.waitUntil(`location.search === ${JSON.stringify(query)} && document.querySelector("main [aria-sort]") && !document.querySelector("main table").closest("[hidden]")`);
+
+  beforeAll(async () => {
+    admin = openBrowser();
+    await signInAsAdmin(admin, baseUrl, adminPassword);
+  });
+  afterAll(() => admin.close());
+
+  it("sorts the whole list by a header click, then the other way, marking the sorted column", async () => {
+    await admin.open(`${baseUrl}/admin/test/materials`);
+    await admin.waitUntil(`document.querySelector("main th[aria-sort=ascending]")?.innerText.trim() === "Material ID"`);
+
+    await clickHydrated(admin, "main th a[href$='sort=description&dir=asc']");
+    await atQuery("?sort=description&dir=asc");
+    await admin.waitUntil(`document.querySelector("main th[aria-sort=ascending]")?.innerText.trim() === "Description"`);
+    const ascending = await descriptions();
+    expect(ascending.length).toBeGreaterThanOrEqual(26);
+    expect(ascending).toEqual([...ascending].sort());
+
+    await clickHydrated(admin, "main th a[href$='sort=description&dir=desc']");
+    await atQuery("?sort=description&dir=desc");
+    await admin.waitUntil(`Boolean(document.querySelector("main th[aria-sort=descending]"))`);
+    expect(await descriptions()).toEqual([...ascending].reverse());
+  });
+
+  it("searches by ID or description across the list, keeping the sort, marking matches, and clears back", async () => {
+    await admin.open(`${baseUrl}/admin/test/materials?sort=description&dir=desc`);
+    await admin.waitUntil(`Boolean(document.querySelector("main [role=search] input[name=q]")) && Object.keys(document.querySelector("main [role=search] button")).some((key) => key.startsWith("__reactFiber"))`);
+    await admin.fill("main [role=search] input[name=q]", "steel sheet");
+    await admin.click("main [role=search] button[type=submit]");
+    await atQuery("?q=steel+sheet&sort=description&dir=desc");
+    await admin.waitFor("main [role=status]");
+
+    const found = await descriptions();
+    expect(found.length).toBeGreaterThan(0);
+    for (const description of found) expect(description.toLowerCase()).toMatch(/steel.*sheet|sheet.*steel/);
+    expect(found).toEqual([...found].sort().reverse());
+    expect(await admin.text("main [role=status]")).toBe(`${found.length} result${found.length === 1 ? "" : "s"} for “steel sheet” · Clear search`);
+    expect(await admin.evaluate<number>(`document.querySelectorAll("main tbody mark").length`)).toBeGreaterThanOrEqual(found.length * 2);
+
+    await clickHydrated(admin, "main [role=status] a");
+    await atQuery("?sort=description&dir=desc");
+    await admin.waitUntil(`document.querySelector("main [role=search] input[name=q]").value === "" && !document.querySelector("main [role=status]")`);
+    expect((await descriptions()).length).toBeGreaterThan(found.length);
+  });
+
+  it("says when a search finds nothing, with the way back", async () => {
+    await admin.open(`${baseUrl}/admin/test/materials?q=no+such+material+anywhere`);
+    await admin.waitForText("Nothing matches “no such material anywhere”.");
+    expect(await admin.text("main [role=status]")).toBe("0 results for “no such material anywhere” · Clear search");
+  });
+
+  it("chooses a new material's base unit from the grouped list, and offers its base unit and converted units disabled", async () => {
+    await admin.open(`${baseUrl}/admin/prod/materials`);
+    await admin.waitUntil(ready(button("Create material")));
+    await admin.clickRole("button", "Create material");
+    await admin.waitFor("[role=dialog] select[name=baseUnit]");
+    expect(await admin.evaluate<string[]>(`[...document.querySelectorAll("[role=dialog] select[name=baseUnit] optgroup")].map((group) => group.label)`)).toEqual([
+      "Count",
+      "Packaging",
+      "Mass",
+      "Volume",
+      "Length",
+      "Area",
+      "Time",
+    ]);
+    await admin.select("[role=dialog] select[name=type]", "raw");
+    await admin.fillLabel("Description", SPOOL);
+    await admin.select("[role=dialog] select[name=baseUnit]", "spool");
+    await admin.click("[role=dialog] button[type=submit]");
+    await admin.waitUntil(`!document.querySelector("[role=dialog]")`);
+    const id = (await listRows(admin, "prod")).find(([, description]) => description === SPOOL)![0];
+
+    await admin.open(`${baseUrl}/admin/prod/materials/${id}`);
+    await admin.waitUntil(ready(button("Add conversion")));
+    await admin.clickRole("button", "Add conversion");
+    await admin.waitFor("[role=dialog] select[name=unit]");
+    await admin.select("[role=dialog] select[name=unit]", "m");
+    await admin.fillLabel("Base quantity", "0.002");
+    await admin.click("[role=dialog] button[type=submit]");
+    await admin.waitUntil(`!document.querySelector("[role=dialog]")`);
+    await admin.waitForText("1 m = 0.002 spool");
+
+    await admin.clickRole("button", "Add conversion");
+    await admin.waitFor("[role=dialog] select[name=unit]");
+    expect(
+      await admin.evaluate<string[]>(`[...document.querySelectorAll("[role=dialog] select[name=unit] option:disabled")].map((option) => option.textContent)`),
+    ).toEqual(["Choose a unit", "spool (base unit)", "m — metre (already converted)"]);
   });
 });

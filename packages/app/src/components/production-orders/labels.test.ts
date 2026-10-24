@@ -10,6 +10,7 @@ it("keeps every label serializable and translates known field errors while prese
     expect(productionFieldError(labels)(CALENDAR_DATE_MESSAGE)).toBe(labels.invalidDate);
     expect(productionFieldError(labels)("specific server context")).toBe("specific server context");
     expect(labels.errors.TENANT_READ_ONLY).toBe(messages.errors.TENANT_READ_ONLY);
+    expect(labels.picker).toEqual({ labels: expect.objectContaining({ refused: messages.lists.materialPicker.refused }), placeholder: messages.lists.materialPicker.placeholder });
     expect(completionFieldError(labels)(MISSING_COMPONENT_MESSAGE)).toBe(labels.completion.fieldErrors.missingComponent);
     const named = completionFieldError(labels)(MISSING_COMPONENT_MESSAGE, { material: "00000006, 00000007" });
     expect(named).toContain("00000006, 00000007");

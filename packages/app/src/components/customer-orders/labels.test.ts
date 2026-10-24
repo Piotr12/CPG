@@ -11,6 +11,7 @@ describe("customer order labels", () => {
     for (const messages of [en, pl]) {
       const labels = orderLabels(messages);
       expect(JSON.parse(JSON.stringify(labels))).toEqual(labels); expect(labels.errors.TENANT_READ_ONLY).toBe(messages.errors.TENANT_READ_ONLY);
+      expect(labels.picker).toEqual({ labels: expect.objectContaining({ noMatch: messages.lists.materialPicker.noMatch }), placeholder: messages.lists.materialPicker.placeholder });
     }
   });
   it("translates each known field message and preserves unknown detail", () => {

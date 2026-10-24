@@ -1,9 +1,14 @@
 import { MATERIAL_TYPES } from "@cpg/core/validators/materials/material-fields.schema";
 import type { CrudField } from "@cpg/ui/backend/forms/crud-form";
+import { unitSelect, type UnitChoices } from "../units/unit-choices";
 import type { MaterialsLabels } from "./labels";
 
-/** The fields of the Create and Edit material forms: type, description and base unit. */
-export function materialFormFields(labels: MaterialsLabels): CrudField[] {
+/**
+ * The fields of the Create and Edit material forms: type, description and base unit, the unit chosen
+ * from the registry (#217). `baseUnit` is the stored unit an edit starts from, offered even when the
+ * registry doesn't list it.
+ */
+export function materialFormFields(labels: MaterialsLabels, units: UnitChoices, baseUnit?: string): CrudField[] {
   const t = labels.form;
   return [
     {
@@ -15,16 +20,33 @@ export function materialFormFields(labels: MaterialsLabels): CrudField[] {
       description: t.typeHint,
     },
     { name: "description", label: t.description, autoComplete: "off" },
-    { name: "baseUnit", label: t.baseUnit, autoComplete: "off", description: t.baseUnitHint },
+    {
+      name: "baseUnit",
+      label: t.baseUnit,
+      type: "select",
+      placeholder: t.baseUnitPlaceholder,
+      ...unitSelect(units, { current: baseUnit }),
+      description: t.baseUnitHint,
+    },
   ];
 }
 
-/** The fields of the Add conversion and Change factor forms; the unit only when adding. */
-export function conversionFormFields(labels: MaterialsLabels, baseUnit: string, { withUnit }: { withUnit: boolean }): CrudField[] {
+/**
+ * The fields of the Add conversion and Change factor forms; the unit only when adding, from the
+ * registry, with the base unit and the units already converted shown but unselectable.
+ */
+export function conversionFormFields(
+  labels: MaterialsLabels,
+  baseUnit: string,
+  { units, converted = [] }: { units?: UnitChoices; converted?: string[] } = {},
+): CrudField[] {
   const t = labels.conversions;
-  const unit: CrudField = { name: "unit", label: t.unit, autoComplete: "off", description: t.unitHint };
+  const disabled = Object.fromEntries([[baseUnit, t.unitReasons.baseUnit], ...converted.map((unit) => [unit, t.unitReasons.converted])]);
+  const unit: CrudField[] = units
+    ? [{ name: "unit", label: t.unit, type: "select", placeholder: t.unitPlaceholder, ...unitSelect(units, { disabled }), description: t.unitHint }]
+    : [];
   return [
-    ...(withUnit ? [unit] : []),
+    ...unit,
     { name: "denominator", label: t.denominator, autoComplete: "off", description: t.denominatorHint },
     {
       name: "numerator",

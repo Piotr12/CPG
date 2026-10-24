@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { LocationCell, locationOptions, MaterialCell, materialOptions, withReferences } from "./references";
+import { LocationCell, locationOptions, MaterialCell, withReferences } from "./references";
 
 const materials = [
   { id: "00000001", type: "raw", description: "Bolt M8", baseUnit: "each", active: true, createdAt: new Date(), version: 1 },
@@ -29,8 +29,7 @@ describe("withReferences", () => {
 });
 
 describe("options", () => {
-  it("offer only active materials (with their base unit) and locations for a new row (MAT-029, LFC-019)", () => {
-    expect(materialOptions([...materials])).toEqual([{ value: "00000001", label: "00000001 — Bolt M8 (each)" }]);
+  it("offer only active locations for a new row (LFC-019)", () => {
     expect(locationOptions(locations)).toEqual([{ value: "00000001", label: "00000001 — Main plant" }]);
   });
 });
@@ -59,5 +58,15 @@ describe("cells", () => {
     render(<MaterialCell tenant="test" row={active} inactive="Inactive" />);
     render(<LocationCell row={active} inactive="Inactive" />);
     expect(screen.queryByText("Inactive")).toBeNull();
+  });
+
+  it("mark a search's words in the IDs, the description and the name (#217)", () => {
+    render(
+      <>
+        <MaterialCell tenant="prod" row={row} inactive="Inactive" query="paint 0003 quarry" />
+        <LocationCell row={row} inactive="Inactive" query="paint 0003 quarry" />
+      </>,
+    );
+    expect([...document.querySelectorAll("mark")].map((mark) => mark.textContent)).toEqual(["paint", "0003", "quarry"]);
   });
 });

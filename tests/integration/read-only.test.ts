@@ -85,7 +85,7 @@ describe("read-only tenants on the screens (R05)", () => {
     await stale.clickRole("button", "Create material");
     await stale.select("[role=dialog] select[name=type]", "raw");
     await stale.fillLabel("Description", REFUSED);
-    await stale.fillLabel("Base unit", "kg");
+    await stale.select("[role=dialog] select[name=baseUnit]", "kg");
     await stale.click("[role=dialog] button[type=submit]");
     await stale.waitFor("[role=dialog] [role=alert]");
 

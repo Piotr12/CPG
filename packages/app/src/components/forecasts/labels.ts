@@ -11,9 +11,14 @@ import {
 } from "@cpg/core/validators/planning-parameters/planning-parameter-fields.schema";
 import { QUANTITY_MESSAGE } from "@cpg/core/validators/quantities/quantity.schema";
 import type { Messages } from "../../i18n/messages/en";
+import { materialPicker, type MaterialPicker } from "../materials/material-picker";
 
 /** The forecasts screen's strings in the reader's language: plain strings for client components. */
-export type ForecastsLabels = Omit<Messages["forecasts"], "heading" | "errors"> & { errors: Record<string, string> };
+export type ForecastsLabels = Omit<Messages["forecasts"], "heading" | "errors"> & {
+  errors: Record<string, string>;
+  /** The Add forecast form's material picker (#217). */
+  picker: MaterialPicker;
+};
 
 /** Builds the labels from a dictionary (server side, where `messages` is available). */
 export function forecastsLabels(messages: Messages): ForecastsLabels {
@@ -22,6 +27,7 @@ export function forecastsLabels(messages: Messages): ForecastsLabels {
   return {
     ...(labels as Omit<Messages["forecasts"], "heading">),
     errors: { ...messages.errors, ...messages.forecasts.errors },
+    picker: materialPicker(messages.lists),
   };
 }
 

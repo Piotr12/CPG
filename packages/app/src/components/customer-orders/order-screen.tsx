@@ -5,11 +5,16 @@ import { outstandingOf, type CustomerOrderView, type Locale, type MaterialSummar
 import { StatusBadge } from "@cpg/ui/backend/feedback/status-badge";
 import { PageHeader } from "@cpg/ui/backend/page-header";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
+import { Highlight } from "@cpg/ui/backend/tables/highlight";
 import { ORDER_PAGE_SIZE } from "@cpg/core/validators/customer-orders/customer-order.schema";
+import { customerOrderSortSchema, type CustomerOrderSort } from "@cpg/core/validators/customer-orders/customer-order-list.schema";
+import type { SortDirection } from "@cpg/core/validators/lists/list-query.schema";
 import { documentStatusTone } from "../document-lifecycle/status-tone";
 import type { Messages } from "../../i18n/messages/en";
 import { fill, shownQuantity } from "../forms/form-labels";
 import { PageLinks } from "../layout/page-links";
+import { listLinks, type ListSearchState } from "../lists/list-params";
+import { ListSearchBar, NoSearchResults } from "../lists/list-search-bar";
 import { shipmentsLabels } from "../shipments/labels";
 import { firstDueDate, shipmentLineChoices } from "../shipments/line-choices";
 import { ShipmentDialog } from "../shipments/shipment-dialog";
@@ -32,31 +37,36 @@ export interface OrdersScreenProps {
   units: Record<string, string[]>;
   messages: Messages;
   locale: Locale;
+  /** The list's search and sort (#217); the list without either when left out. */
+  search?: ListSearchState;
+  sort?: { sort: CustomerOrderSort; dir: SortDirection };
 }
 /**
  * List and detail use the same master labels and choice policy; both roles may maintain demand. The
  * detail adds each line's outstanding quantity, the order's shipments and Create shipment (E08-S02).
  */
-export function OrdersScreen({ tenant, orders, order, shipments = [], page = 1, total = 0, materials, customers, locations, units, messages, locale }: OrdersScreenProps) {
+export function OrdersScreen({ tenant, orders, order, shipments = [], page = 1, total = 0, materials, customers, locations, units, messages, locale,
+  search = { q: "", typed: "" }, sort = customerOrderSortSchema.parse({}) }: OrdersScreenProps) {
   const t = orderLabels(messages);
   const shipmentLabels = shipmentsLabels(messages);
   const path = `/admin/${tenant.code}/customer-orders`;
+  const links = listLinks({ path, search: search.q, sort, defaults: customerOrderSortSchema.parse({}) });
   const pages = Math.ceil(total / ORDER_PAGE_SIZE);
   const byMaterial = new Map(materials.map((material) => [material.id, material]));
   const named = (records: NamedRecordView[], code: string) => `${code} ${records.find(({ id }) => id === code)!.name}`;
   const choice = ({ id, name, active }: NamedRecordView): OrderChoice => ({ value: id, label: `${id} ${name}${active ? "" : ` (${t.inactive})`}`, active, units: [] });
   const choices = {
     customers: customers.map(choice), locations: locations.map(choice),
-    materials: materials.map(({ id, description, active, baseUnit }) => ({ value: id, label: `${id} ${description}${active ? "" : ` (${t.inactive})`}`, active, units: units[id] ?? [baseUnit] })),
+    materials: materials.map(({ id, description, active, baseUnit }) => ({ value: id, code: id, name: `${description}${active ? "" : ` (${t.inactive})`}`, detail: baseUnit, active, units: units[id] ?? [baseUnit] })),
   };
   const shipmentChoices = order ? shipmentLineChoices(order, byMaterial, units, shipmentLabels) : [];
   const status = (value: CustomerOrderView["status"]) => <StatusBadge {...documentStatusTone(value)}>{t.states[value]}</StatusBadge>;
   const columns: DataTableColumn<CustomerOrderView>[] = [
-    { id: "id", header: t.id, kind: "id", cell: (row) => <Link className="underline underline-offset-4" href={`${path}/${row.id}`}>{row.id}</Link> },
-    { id: "customer", header: t.customer, kind: "longText", cell: (row) => named(customers, row.customer) },
-    { id: "location", header: t.location, kind: "longText", priority: 2, cell: (row) => named(locations, row.location) },
+    { id: "id", header: t.id, kind: "id", sortKey: "id", cell: (row) => <Link className="underline underline-offset-4" href={`${path}/${row.id}`}><Highlight text={row.id} query={search.q} /></Link> },
+    { id: "customer", header: t.customer, kind: "longText", sortKey: "customer", cell: (row) => <Highlight text={named(customers, row.customer)} query={search.q} /> },
+    { id: "location", header: t.location, kind: "longText", priority: 2, sortKey: "location", cell: (row) => named(locations, row.location) },
     { id: "lines", header: t.lines, kind: "quantity", priority: 2, cell: (row) => row.lines.length },
-    { id: "status", header: t.status, kind: "status", cell: (row) => status(row.status) },
+    { id: "status", header: t.status, kind: "status", sortKey: "status", cell: (row) => status(row.status) },
   ];
   const lineColumns: DataTableColumn<CustomerOrderView["lines"][number]>[] = [
     { id: "material", header: t.material, kind: "longText", cell: (line) => <Link className="underline underline-offset-4" href={`/admin/${tenant.code}/materials/${line.material}`}>{line.material} {byMaterial.get(line.material)!.description}</Link> },
@@ -75,7 +85,7 @@ export function OrdersScreen({ tenant, orders, order, shipments = [], page = 1, 
       cancel={cancelCustomerOrder.bind(null, tenant.code, tenant.generation, order.id)} closeEarly={closeEarlyCustomerOrder.bind(null, tenant.code, tenant.generation, order.id)} /> },
   ];
   const actions = !tenant.readOnly && (!order || order.status === "open") && <>
-    <OrderDialog context={{ tenant: tenant.code, generation: tenant.generation }} labels={t} choices={choices} order={order} />
+    <OrderDialog context={{ tenant: tenant.code, generation: tenant.generation }} labels={t} choices={choices} order={order} locale={locale} />
     {order && <LifecycleControl kind="order" available processed={order.lines.some((line) => line.posted || line.fulfilled !== "0.000000")}
       subject={`${t.link} ${order.id}`} version={order.version}
       quantities={order.lines.filter((line) => line.status === "open").map((line) => `${byMaterial.get(line.material)!.description}: ${shownQuantity(outstandingOf(line))} ${byMaterial.get(line.material)!.baseUnit}`)}
@@ -106,8 +116,13 @@ export function OrdersScreen({ tenant, orders, order, shipments = [], page = 1, 
         )}
         <ShipmentsTable tenant={tenant.code} shipments={shipments} materials={byMaterial} labels={shipmentLabels} />
       </section>
-    </> : <DataTable label={t.link} columns={columns} rows={orders} rowKey={(row) => row.id}
-      pagination={<PageLinks page={page} pages={pages} labels={t} href={(target) => `${path}?page=${target}`} />} empty={`${t.empty}${tenant.readOnly ? "" : ` ${t.emptyHint}`}`} />}
+    </> : <div>
+      <ListSearchBar links={links} search={search} labels={t.search} lists={messages.lists} locale={locale} count={total} />
+      <DataTable label={t.link} columns={columns} rows={orders} rowKey={(row) => row.id}
+        sort={{ key: sort.sort, dir: sort.dir, href: links.sortHref, link: Link }}
+        pagination={<PageLinks page={page} pages={pages} labels={t} href={links.pageHref} />}
+        empty={search.q ? <NoSearchResults links={links} query={search.q} lists={messages.lists} /> : `${t.empty}${tenant.readOnly ? "" : ` ${t.emptyHint}`}`} />
+    </div>}
     </div>
   </div>;
 }

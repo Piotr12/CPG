@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { safetyStockTargetCreateSchema } from "@cpg/core/validators/safety-stock/safety-stock-target.schema";
+import type { AutocompleteOption } from "@cpg/ui/backend/forms/autocomplete";
 import { CrudForm, type CrudField } from "@cpg/ui/backend/forms/crud-form";
 import { Button } from "@cpg/ui/components/button";
 import {
@@ -20,17 +21,19 @@ interface AddSafetyStockTargetDialogProps {
   context: TenantContext;
   labels: SafetyStockLabels;
   /** The active materials and locations a new target may pick (MAT-029, LFC-019). */
-  materials: FormOption[];
+  materials: AutocompleteOption[];
   locations: FormOption[];
+  /** The reader's language, for the material picker. */
+  locale: string;
 }
 
-/** The admin's Add target button and its form (DEM-015). */
-export function AddSafetyStockTargetDialog({ context, labels, materials, locations }: AddSafetyStockTargetDialogProps) {
+/** The admin's Add target button and its form (DEM-015); the material is chosen with the material picker (#217). */
+export function AddSafetyStockTargetDialog({ context, labels, materials, locations, locale }: AddSafetyStockTargetDialogProps) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
   const t = labels.form;
   const fields: CrudField[] = [
-    { name: "material", label: t.material, type: "select", placeholder: t.choose, options: materials },
+    { name: "material", label: t.material, type: "autocomplete", placeholder: labels.picker.placeholder, choices: materials, autocompleteLabels: labels.picker.labels },
     { name: "location", label: t.location, type: "select", placeholder: t.choose, options: locations },
     { name: "effectiveFrom", label: t.effectiveFrom, type: "date", description: t.effectiveFromHint },
     { name: "quantity", label: t.quantity, description: t.quantityHint, autoComplete: "off" },
@@ -57,6 +60,7 @@ export function AddSafetyStockTargetDialog({ context, labels, materials, locatio
           formatFieldError={fieldErrorFormatter(labels)}
           onSuccess={close}
           onCancel={close}
+          locale={locale}
         />
       </DialogContent>
     </Dialog>

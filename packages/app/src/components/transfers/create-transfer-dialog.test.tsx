@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/messages/en";
 import { CreateTransferDialog } from "./create-transfer-dialog";
@@ -7,12 +7,12 @@ import { transfersLabels } from "./labels";
 const mocks = vi.hoisted(() => ({ createTransfer: vi.fn() }));
 vi.mock("../../app/admin/[tenant]/transfers/actions", () => ({ createTransfer: mocks.createTransfer }));
 
-const materials = [{ value: "00000001", label: "00000001 — Steel (kg)", units: ["kg", "t"] }];
+const materials = [{ value: "00000001", code: "00000001", name: "Steel", detail: "kg", units: ["kg", "t"] }];
 const locations = [
   { value: "00000001", label: "00000001 — Main plant" },
   { value: "00000002", label: "00000002 — Warehouse" },
 ];
-const dialog = () => <CreateTransferDialog context={{ tenant: "prod", generation: 1 }} labels={transfersLabels(en)} materials={materials} locations={locations} />;
+const dialog = () => <CreateTransferDialog context={{ tenant: "prod", generation: 1 }} labels={transfersLabels(en)} materials={materials} locations={locations} locale="en" />;
 
 describe("CreateTransferDialog", () => {
   afterEach(() => vi.clearAllMocks());
@@ -23,7 +23,8 @@ describe("CreateTransferDialog", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Create transfer" }));
     expect(screen.getByRole("dialog", { name: "Create a transfer" })).toBeTruthy();
-    fireEvent.change(screen.getByLabelText("Material"), { target: { value: "00000001" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "Material" }), { target: { value: "steel" } });
+    fireEvent.mouseDown(within(screen.getByRole("listbox")).getByRole("option"));
     fireEvent.change(screen.getByLabelText("From"), { target: { value: "00000001" } });
     fireEvent.change(screen.getByLabelText("To"), { target: { value: "00000002" } });
     fireEvent.change(screen.getByLabelText("Quantity"), { target: { value: "100" } });

@@ -5,8 +5,13 @@ import {
   UniqueConstraintViolationException,
   User,
   type EntityManager,
+  type FilterQuery,
+  type OrderDefinition,
   type UserRole,
 } from "@cpg/db";
+import { listOrderBy, searchWhere } from "../../domain/lists/list-query";
+import type { ListOptions } from "../../validators/lists/list-query.schema";
+import type { UserSort } from "../../validators/users/user-list.schema";
 import { ConflictError, NotFoundError, versionConflict } from "../../http/errors";
 import type { AuditActor } from "../audit/actor";
 import { tokenRevokedEntry } from "../api-tokens/api-token-audit";
@@ -17,6 +22,9 @@ import { hashPassword } from "../auth/password-hash";
 /** One message for a taken name and the reserved `admin`: neither says more than "pick another". */
 export const USERNAME_TAKEN = "That username is taken.";
 export const USER_NOT_FOUND = "No such user.";
+
+/** The column each sort key of the users list orders by; the username is the tie-breaker (#217). */
+const USER_SORT_PATHS: Record<UserSort, string> = { role: "role", username: "username", status: "active", created: "createdAt" };
 
 /** What the users screen shows about an account. Never carries the password hash. */
 export interface UserSummary {
@@ -55,10 +63,14 @@ export class UserService {
     this.em = em;
   }
 
-  /** Every account, the built-in admin first, then by username. */
-  async list(): Promise<UserSummary[]> {
-    const users = await this.em.find(User, {}, { orderBy: { role: "asc", username: "asc" } });
-    return users.map(toSummary);
+  /**
+   * Every account, the built-in admin first, then by username, unless `sort` says otherwise; `q`
+   * keeps those whose username contains every word (#217).
+   */
+  async list({ q = "", sort = "role", dir = "asc" }: Omit<ListOptions<UserSort>, "page"> = {}): Promise<UserSummary[]> {
+    const where = searchWhere(q, ["username"]) as FilterQuery<User>;
+    const orderBy = listOrderBy(USER_SORT_PATHS[sort], dir, "username") as OrderDefinition<User>;
+    return (await this.em.find(User, where, { orderBy })).map(toSummary);
   }
 
   /**

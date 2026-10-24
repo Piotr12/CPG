@@ -22,6 +22,7 @@ import { VERSION_CONFLICT } from "../../http/errors";
 import { tenantServerAction } from "../../http/tenant-server-action";
 import { conversionChangeSchema } from "../../validators/materials/conversion.schema";
 import { FACTOR_MESSAGE } from "../../validators/materials/material-fields.schema";
+import { UNIT_NOT_REGISTERED_MESSAGE } from "../../validators/units/unit-registry";
 import type { AuditActor } from "../audit/actor";
 import { BomService } from "../boms/bom.service";
 import { PlanningParameterService } from "../planning-parameters/planning-parameter.service";
@@ -145,6 +146,15 @@ describe("MaterialService", () => {
 
       await expect(service("prod", em).create(BOLT, ACTOR)).rejects.toThrow("disk full");
     });
+
+    it("refuses a base unit outside the registry, writing nothing (#217)", async () => {
+      await expect(service().create({ ...BOLT, baseUnit: "szt." }, ACTOR)).rejects.toMatchObject({
+        code: "VALIDATION_FAILED",
+        fieldErrors: { baseUnit: [UNIT_NOT_REGISTERED_MESSAGE] },
+      });
+      expect(await service().list()).toEqual([]);
+      expect(await audit()).toEqual([]);
+    });
   });
 
   describe("list and get", () => {
@@ -157,6 +167,40 @@ describe("MaterialService", () => {
         "00000001 Bolt M8",
         "00000002 Nut M8",
       ]);
+    });
+
+    describe("sorted and searched (#217)", () => {
+      beforeEach(async () => {
+        await service().create({ type: "raw", description: "Steel sheet 2 mm", baseUnit: "kg" }, ACTOR);
+        await service().create({ type: "finished", description: "Cabinet", baseUnit: "each" }, ACTOR);
+        const shelf = await service().create({ type: "intermediate", description: "Steel shelf", baseUnit: "pcs" }, ACTOR);
+        await service().update(shelf.id, { active: false }, shelf.version, ACTOR);
+        await service("test").create({ type: "raw", description: "Test steel", baseUnit: "kg" }, ACTOR);
+      });
+
+      const ids = (materials: { id: string }[]) => materials.map(({ id }) => id);
+
+      it("sorts by each column, both ways, by ID within equal values", async () => {
+        expect(ids(await service().list({ sort: "description", dir: "asc" }))).toEqual(["00000002", "00000001", "00000003"]);
+        expect(ids(await service().list({ sort: "description", dir: "desc" }))).toEqual(["00000003", "00000001", "00000002"]);
+        expect(ids(await service().list({ sort: "id", dir: "desc" }))).toEqual(["00000003", "00000002", "00000001"]);
+        expect(ids(await service().list({ sort: "type" }))).toEqual(["00000002", "00000003", "00000001"]);
+        expect(ids(await service().list({ sort: "baseUnit", dir: "desc" }))).toEqual(["00000003", "00000001", "00000002"]);
+        expect(ids(await service().list({ sort: "status" }))).toEqual(["00000003", "00000001", "00000002"]);
+      });
+
+      it("keeps materials whose ID or description holds every word, ignoring ASCII case, in this tenant only", async () => {
+        expect(ids(await service().list({ q: "STEEL" }))).toEqual(["00000001", "00000003"]);
+        expect(ids(await service().list({ q: "steel 2 mm" }))).toEqual(["00000001"]);
+        expect(ids(await service().list({ q: "0002" }))).toEqual(["00000002"]);
+        expect(ids(await service().list({ q: "steel cabinet" }))).toEqual([]);
+        expect(ids(await service().list({ q: "steel", sort: "description", dir: "desc" }))).toEqual(["00000003", "00000001"]);
+      });
+
+      it("treats LIKE wildcards as separators, never as 'anything'", async () => {
+        expect(ids(await service().list({ q: "%" }))).toEqual(["00000001", "00000002", "00000003"]);
+        expect(ids(await service().list({ q: "Steel_sheet" }))).toEqual(["00000001"]);
+      });
     });
 
     it("gets a material with its conversions by unit, and the indicative inverse (MAT-021)", async () => {
@@ -409,13 +453,28 @@ describe("MaterialService", () => {
       });
     });
 
-    it("keeps units that differ only by case apart (spec Q2)", async () => {
-      const bolt = await service().create({ type: "raw", description: "Ore", baseUnit: "kg" }, ACTOR);
+    it("adds only registered units, matched exactly, writing nothing for another (spec Q2, #217)", async () => {
+      const ore = await service().create({ type: "raw", description: "Ore", baseUnit: "kg" }, ACTOR);
 
-      await service().addConversion(bolt.id, { unit: "Mg", numerator: "1000", denominator: "1" }, ACTOR);
-      await service().addConversion(bolt.id, { unit: "mg", numerator: "1", denominator: "1000000" }, ACTOR);
+      await expect(service().addConversion(ore.id, { unit: "Mg", numerator: "1000", denominator: "1" }, ACTOR)).rejects.toMatchObject({
+        code: "VALIDATION_FAILED",
+        fieldErrors: { unit: [UNIT_NOT_REGISTERED_MESSAGE] },
+      });
+      await service().addConversion(ore.id, { unit: "mg", numerator: "1", denominator: "1000000" }, ACTOR);
 
-      expect((await service().get(bolt.id)).conversions.map(({ unit }) => unit)).toEqual(["Mg", "mg"]);
+      expect((await service().get(ore.id)).conversions.map(({ unit }) => unit)).toEqual(["mg"]);
+    });
+
+    it("keeps a unit stored before the registry usable, and lets its material change other fields (#217)", async () => {
+      const em = scopedEm("prod");
+      em.create(Material, { code: "00000001", type: "raw", description: "Board", baseUnit: "płyta" });
+      await em.flush();
+
+      expect(await service().update("00000001", { description: "Board, oak", baseUnit: "płyta" }, 1, ACTOR)).toMatchObject({ baseUnit: "płyta", version: 2 });
+      await expect(service().update("00000001", { baseUnit: "szt." }, 2, ACTOR)).rejects.toMatchObject({
+        fieldErrors: { baseUnit: [UNIT_NOT_REGISTERED_MESSAGE] },
+      });
+      expect(await service().toBaseQuantity("00000001", { quantity: "2", unit: "płyta" })).toMatchObject({ baseQuantity: "2.000000" });
     });
 
     it("maps a racing duplicate that slips past the check to CONVERSION_EXISTS", async () => {
@@ -534,15 +593,15 @@ describe("MaterialService", () => {
     });
 
     it("rounds 1 at 1/3 half-up once to 0.333333, and refuses what rounds to zero (MAT-032)", async () => {
-      const id = await material("each", [{ unit: "third", numerator: "1", denominator: "3" }]);
+      const id = await material("each", [{ unit: "sheet", numerator: "1", denominator: "3" }]);
 
-      expect(await service().toBaseQuantity(id, { quantity: "1", unit: "third" })).toMatchObject({
+      expect(await service().toBaseQuantity(id, { quantity: "1", unit: "sheet" })).toMatchObject({
         baseQuantity: "0.333333",
         numerator: "1",
         denominator: "3",
       });
-      expect(await service().toBaseQuantity(id, { quantity: "0", unit: "third" })).toMatchObject({ baseQuantity: "0.000000" });
-      await expect(service().toBaseQuantity(id, { quantity: "0.000001", unit: "third" })).rejects.toMatchObject({
+      expect(await service().toBaseQuantity(id, { quantity: "0", unit: "sheet" })).toMatchObject({ baseQuantity: "0.000000" });
+      await expect(service().toBaseQuantity(id, { quantity: "0.000001", unit: "sheet" })).rejects.toMatchObject({
         code: "QUANTITY_ROUNDS_TO_ZERO",
       });
     });
@@ -557,9 +616,9 @@ describe("MaterialService", () => {
     });
 
     it("refuses a result too large to store, and a malformed quantity", async () => {
-      const id = await material("g", [{ unit: "huge", numerator: "999999999999", denominator: "0.000001" }]);
+      const id = await material("g", [{ unit: "pallet", numerator: "999999999999", denominator: "0.000001" }]);
 
-      await expect(service().toBaseQuantity(id, { quantity: "1", unit: "huge" })).rejects.toMatchObject({
+      await expect(service().toBaseQuantity(id, { quantity: "1", unit: "pallet" })).rejects.toMatchObject({
         code: "QUANTITY_OUT_OF_RANGE",
       });
       await expect(service().toBaseQuantity(id, { quantity: "-1", unit: "g" })).rejects.toMatchObject({

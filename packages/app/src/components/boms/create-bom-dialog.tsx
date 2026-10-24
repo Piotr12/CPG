@@ -14,10 +14,12 @@ interface CreateBomDialogProps {
   labels: BomsLabels;
   outputs: OutputChoice[];
   choices: ComponentChoice[];
+  /** The reader's language, for the material pickers. */
+  locale: string;
 }
 
 /** The admin's Create BOM button and its recipe form; the server assigns the ID and revision 1 (BOM-001). */
-export function CreateBomDialog({ context, labels, outputs, choices }: CreateBomDialogProps) {
+export function CreateBomDialog({ context, labels, outputs, choices, locale }: CreateBomDialogProps) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
   const t = labels.create;
@@ -36,6 +38,7 @@ export function CreateBomDialog({ context, labels, outputs, choices }: CreateBom
           labels={labels}
           outputs={outputs}
           choices={choices}
+          locale={locale}
           schema={bomCreateFormSchema}
           action={(values) => createBom(context.tenant, context.generation, values)}
           submitLabel={t.submit}

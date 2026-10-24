@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { transferCreateSchema } from "@cpg/core/validators/transfers/transfer.schema";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/messages/en";
@@ -7,8 +7,8 @@ import { transfersLabels } from "./labels";
 import { TransferForm, type TransferFormProps } from "./transfer-form";
 
 const MATERIALS = [
-  { value: "00000001", label: "00000001 — Steel (kg)", units: ["kg", "t"] },
-  { value: "00000002", label: "00000002 — Bolt (each)", units: ["each"] },
+  { value: "00000001", code: "00000001", name: "Steel", detail: "kg", units: ["kg", "t"] },
+  { value: "00000002", code: "00000002", name: "Bolt", detail: "each", units: ["each"] },
 ];
 const LOCATIONS = [
   { value: "00000001", label: "00000001 — Main plant" },
@@ -25,6 +25,7 @@ function renderForm(props: Partial<TransferFormProps<{ id: string }>> = {}) {
       labels={transfersLabels(en)}
       materials={MATERIALS}
       locations={LOCATIONS}
+      locale="en"
       schema={transferCreateSchema}
       action={action}
       onSuccess={onSuccess}
@@ -34,8 +35,18 @@ function renderForm(props: Partial<TransferFormProps<{ id: string }>> = {}) {
   );
 }
 const change = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
+/** Types `code` into the material autocomplete and clicks its option; "" clears it. */
+const choose = (code: string, label = "Material") => {
+  const combobox = screen.getByRole("combobox", { name: label });
+  fireEvent.change(combobox, { target: { value: code } });
+  if (code === "") {
+    fireEvent.blur(combobox);
+    return;
+  }
+  fireEvent.mouseDown(within(screen.getByRole("listbox")).getAllByRole("option").find((option) => option.textContent!.startsWith(code))!);
+};
 const fill = () => {
-  change("Material", "00000001");
+  choose("00000001");
   change("From", "00000001");
   change("To", "00000002");
   change("Quantity", "100");
@@ -65,12 +76,12 @@ describe("TransferForm", () => {
     const units = () => within(screen.getByLabelText("Unit")).queryAllByRole("option").map((option) => option.textContent);
 
     expect(units()).toEqual([]);
-    change("Material", "00000001");
+    choose("00000001");
     expect(units()).toEqual(["kg", "t"]);
     expect((screen.getByLabelText("Unit") as HTMLSelectElement).value).toBe("kg");
-    change("Material", "00000002");
+    choose("00000002");
     expect(units()).toEqual(["each"]);
-    change("Material", "");
+    choose("");
     expect(units()).toEqual([]);
   });
 
@@ -132,5 +143,20 @@ describe("TransferForm", () => {
     fireEvent.keyDown(screen.getByLabelText("Quantity"), { key: "Escape" });
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(onCancel).toHaveBeenCalledTimes(2);
+  });
+  it("chooses the material in an autocomplete that refuses free text, and leaves Escape to its open list (#217)", () => {
+    renderForm({ labels: transfersLabels(pl), locale: "pl" });
+    const material = screen.getByRole("combobox", { name: "Materiał" });
+    expect(material.getAttribute("placeholder")).toBe(pl.lists.materialPicker.placeholder);
+
+    act(() => material.focus());
+    fireEvent.change(material, { target: { value: "stal" } });
+    fireEvent.keyDown(material, { key: "Escape" });
+    expect(material.getAttribute("aria-expanded")).toBe("false");
+    expect(onCancel).not.toHaveBeenCalled();
+    fireEvent.blur(material);
+    expect(screen.getByText(pl.lists.materialPicker.refused)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: pl.transfers.create.submit }));
+    expect(action).not.toHaveBeenCalled();
   });
 });

@@ -1,3 +1,4 @@
+import type { AutocompleteOption } from "@cpg/ui/backend/forms/autocomplete";
 import type { CrudField } from "@cpg/ui/backend/forms/crud-form";
 import type { FormOption } from "../forms/form-labels";
 import type { PlanningParametersLabels } from "./labels";
@@ -23,11 +24,11 @@ export function valueFields(labels: PlanningParametersLabels): CrudField[] {
   ];
 }
 
-/** The Add form: the material and location to plan, then the four values. */
-export function addFields(labels: PlanningParametersLabels, materials: FormOption[], locations: FormOption[]): CrudField[] {
+/** The Add form: the material to plan, chosen with the material picker (#217), the location, then the four values. */
+export function addFields(labels: PlanningParametersLabels, materials: AutocompleteOption[], locations: FormOption[]): CrudField[] {
   const t = labels.form;
   return [
-    { name: "material", label: t.material, type: "select", placeholder: t.choose, options: materials },
+    { name: "material", label: t.material, type: "autocomplete", placeholder: labels.picker.placeholder, choices: materials, autocompleteLabels: labels.picker.labels },
     { name: "location", label: t.location, type: "select", placeholder: t.choose, options: locations },
     ...valueFields(labels),
   ];

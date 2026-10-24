@@ -9,7 +9,7 @@ export const GET = apiHandler(async (request: Request, { params }: Context) => {
   await requireApiUser(request);
   const { page } = parseInput(productionOrderListSchema, Object.fromEntries(new URL(request.url).searchParams));
   const { cradle } = await tenantScope((await params).tenant);
-  return cradle.productionOrderService.list(page);
+  return cradle.productionOrderService.list({ page });
 });
 export const POST = tenantApiWrite(async ({ caller, body, cradle }: WriteContext<Context>) =>
   cradle.productionOrderService.create(parseInput(productionOrderCreateSchema, body), apiActor(caller)),

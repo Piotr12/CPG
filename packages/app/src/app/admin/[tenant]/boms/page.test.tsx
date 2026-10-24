@@ -67,7 +67,7 @@ const bom = (id: string, priority: number, validThrough: string | null, active =
   version: 1,
 });
 const tenant = (readOnly = false) => ({ code: "test", name: "Test", generation: 1, readOnly });
-const page = () => BomsPage({ params: Promise.resolve({ tenant: "test" }), searchParams: Promise.resolve({}) });
+const page = (searchParams: Record<string, string> = {}) => BomsPage({ params: Promise.resolve({ tenant: "test" }), searchParams: Promise.resolve(searchParams) });
 const scope = (readOnly = false) => ({
   cradle: {
     tenant: tenant(readOnly),
@@ -113,7 +113,7 @@ describe("BomsPage", () => {
 
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("BOM-y — Test");
     expect(screen.getByText("Brak BOM-ów w Test.")).toBeTruthy();
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryAllByRole("button").map((button) => button.textContent)).toEqual(["Szukaj"]);
     expect(screen.queryByRole("link", { name: "Import z arkusza" })).toBeNull();
   });
 
@@ -124,7 +124,24 @@ describe("BomsPage", () => {
     render(await resolveServerComponents(page()));
 
     expect(screen.getByText("No BOMs in Test yet.")).toBeTruthy();
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Create BOM" })).toBeNull();
+  });
+
+  it("lists by output when the address asks for nothing, and searches and sorts on the server as it says (#217)", async () => {
+    render(await resolveServerComponents(page()));
+    expect(mocks.boms).toHaveBeenLastCalledWith({ q: "", sort: "output", dir: "asc" });
+    expect(screen.getByRole("columnheader", { name: "Output" }).getAttribute("aria-sort")).toBe("ascending");
+
+    render(await resolveServerComponents(page({ q: "cabinet", sort: "validFrom", dir: "desc" })));
+    expect(mocks.boms).toHaveBeenLastCalledWith({ q: "cabinet", sort: "validFrom", dir: "desc" });
+    expect(screen.getByRole("status").textContent).toBe("2 results for “cabinet” · Clear search");
+  });
+
+  it("refuses a search past the limits in the form, listing everything, and ignores an unknown sort (#217)", async () => {
+    render(await resolveServerComponents(page({ q: "x".repeat(101), sort: "components" })));
+
+    expect(mocks.boms).toHaveBeenCalledWith({ q: "", sort: "output", dir: "asc" });
+    expect(screen.getByRole("searchbox").getAttribute("aria-invalid")).toBe("true");
   });
 
   it("renders not-found for an unknown tenant", async () => {

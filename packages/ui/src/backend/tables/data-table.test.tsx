@@ -1,4 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import { DataTable, columnClasses, type DataTableColumn } from "./data-table";
 
@@ -205,5 +206,58 @@ describe("DataTable", () => {
     expect(first(4).classList).toContain("border-l-neutral-tone");
     // Only the first cell carries the tone.
     expect(within(rows[0]).getAllByRole("cell")[1].className).not.toMatch(/border-l/);
+  });
+
+  describe("sorting (#217)", () => {
+    const sortable: DataTableColumn<Pet>[] = [
+      { id: "name", header: "Name", cell: (pet) => pet.name, sortKey: "name" },
+      { id: "legs", header: "Legs", kind: "quantity", cell: (pet) => pet.legs, sortKey: "legs" },
+      { id: "id", header: "ID", cell: (pet) => pet.id },
+    ];
+    const href = (key: string, dir: string) => `?sort=${key}&dir=${dir}`;
+
+    it("turns sortable headers into links with aria-sort, flipping the sorted column and starting others ascending", () => {
+      render(<DataTable label="Pets" columns={sortable} rows={pets} rowKey={(pet) => pet.id} empty="No pets" sort={{ key: "name", dir: "asc", href }} />);
+
+      const [name, legs, id] = screen.getAllByRole("columnheader");
+      expect(name.getAttribute("aria-sort")).toBe("ascending");
+      expect(legs.getAttribute("aria-sort")).toBe("none");
+      expect(id.getAttribute("aria-sort")).toBeNull();
+      expect(within(name).getByRole("link", { name: "Name" }).getAttribute("href")).toBe("?sort=name&dir=desc");
+      expect(within(legs).getByRole("link", { name: "Legs" }).getAttribute("href")).toBe("?sort=legs&dir=asc");
+      expect(within(id).queryByRole("link")).toBeNull();
+      expect(name.querySelector("[data-sort-icon]")!.getAttribute("data-sort-icon")).toBe("asc");
+      expect(legs.querySelector("[data-sort-icon]")!.getAttribute("data-sort-icon")).toBe("none");
+      // A right-aligned column puts its arrow before the label.
+      expect(within(legs).getByRole("link").className).toContain("flex-row-reverse");
+      expect(within(name).getByRole("link").className).not.toContain("flex-row-reverse");
+    });
+
+    it("marks a descending sort and sends the next click ascending", () => {
+      render(<DataTable label="Pets" columns={sortable} rows={pets} rowKey={(pet) => pet.id} empty="No pets" sort={{ key: "legs", dir: "desc", href }} />);
+
+      const legs = screen.getAllByRole("columnheader")[1];
+      expect(legs.getAttribute("aria-sort")).toBe("descending");
+      expect(legs.querySelector("[data-sort-icon]")!.getAttribute("data-sort-icon")).toBe("desc");
+      expect(within(legs).getByRole("link").getAttribute("href")).toBe("?sort=legs&dir=asc");
+    });
+
+    it("renders sort links through the given link component", () => {
+      const AppLink = ({ href: target, children }: { href: string; children: ReactNode }) => (
+        <a data-app-link href={target}>
+          {children}
+        </a>
+      );
+      render(<DataTable label="Pets" columns={sortable} rows={pets} rowKey={(pet) => pet.id} empty="No pets" sort={{ key: "name", dir: "asc", href, link: AppLink }} />);
+
+      expect(screen.getByRole("link", { name: "Name" }).hasAttribute("data-app-link")).toBe(true);
+    });
+
+    it("leaves headers plain without a sort", () => {
+      render(<DataTable label="Pets" columns={sortable} rows={pets} rowKey={(pet) => pet.id} empty="No pets" />);
+
+      expect(screen.queryAllByRole("link")).toEqual([]);
+      expect(screen.getAllByRole("columnheader")[0].getAttribute("aria-sort")).toBeNull();
+    });
   });
 });

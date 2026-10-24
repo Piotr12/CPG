@@ -15,9 +15,10 @@ import {
 import { createMaterial } from "../../app/admin/[tenant]/materials/actions";
 import { errorFormatter, fieldErrorFormatter, type MaterialsLabels, type TenantContext } from "./labels";
 import { materialFormFields } from "./material-form-fields";
+import type { UnitChoices } from "../units/unit-choices";
 
 /** The admin's Create material button and its form; the server assigns the ID (MAT-001). */
-export function CreateMaterialDialog({ context, labels }: { context: TenantContext; labels: MaterialsLabels }) {
+export function CreateMaterialDialog({ context, labels, units }: { context: TenantContext; labels: MaterialsLabels; units: UnitChoices }) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
   const t = labels.create;
@@ -33,7 +34,7 @@ export function CreateMaterialDialog({ context, labels }: { context: TenantConte
           <DialogDescription>{t.description}</DialogDescription>
         </DialogHeader>
         <CrudForm
-          fields={materialFormFields(labels)}
+          fields={materialFormFields(labels, units)}
           schema={materialCreateSchema}
           action={(values) => createMaterial(context.tenant, context.generation, values)}
           submitLabel={t.submit}

@@ -196,6 +196,62 @@ describe("SafetyStockTargetService", () => {
     expect(await service("test").list()).toEqual([]);
   });
 
+  describe("sorted and searched (#217)", () => {
+    beforeEach(async () => {
+      const em = scopedEm();
+      em.create(Material, { code: "00000003", type: "raw", description: "Steel sheet", baseUnit: "kg" });
+      em.create(Location, { code: "00000003", name: "Warehouse" });
+      await em.flush();
+      await service().create({ ...JANUARY, location: "00000003", effectiveFrom: "2026-03-01" }, ACTOR);
+      await service().create({ ...JANUARY, effectiveFrom: "2026-01-01" }, ACTOR);
+      await service().create({ ...JANUARY, material: "00000003", effectiveFrom: "2026-02-01" }, ACTOR);
+      await service().create(JANUARY, ACTOR);
+      await service().create({ ...JANUARY, effectiveFrom: "2026-02-01" }, ACTOR);
+    });
+
+    const keys = (targets: { material: string; location: string; effectiveFrom: string }[]) =>
+      targets.map(({ material, location, effectiveFrom }) => `${material}@${location}@${effectiveFrom}`);
+
+    it("sorts by material, location, date and today's status, both ways, by the business key within equal values", async () => {
+      expect(keys(await service().list({ sort: "material", dir: "desc" }))).toEqual([
+        "00000003@00000001@2026-02-01",
+        "00000001@00000001@2026-01-01",
+        "00000001@00000001@2026-02-01",
+        "00000001@00000001@2027-01-01",
+        "00000001@00000003@2026-03-01",
+      ]);
+      expect(keys(await service().list({ sort: "location", dir: "desc" }))[0]).toBe("00000001@00000003@2026-03-01");
+      expect(keys(await service().list({ sort: "effectiveFrom", dir: "desc" }))).toEqual([
+        "00000001@00000001@2027-01-01",
+        "00000001@00000003@2026-03-01",
+        "00000001@00000001@2026-02-01",
+        "00000003@00000001@2026-02-01",
+        "00000001@00000001@2026-01-01",
+      ]);
+      // On 2026-06-01: January's target is superseded by February's, 2027's is scheduled.
+      expect(keys(await service().list({ sort: "status", today: "2026-06-01" }))).toEqual([
+        "00000001@00000001@2026-01-01",
+        "00000001@00000001@2026-02-01",
+        "00000001@00000003@2026-03-01",
+        "00000003@00000001@2026-02-01",
+        "00000001@00000001@2027-01-01",
+      ]);
+    });
+
+    it("keeps whole series whose material's ID or description or location's ID or name holds every word, in this tenant only", async () => {
+      expect(keys(await service().list({ q: "STEEL" }))).toEqual(["00000003@00000001@2026-02-01"]);
+      expect(keys(await service().list({ q: "cabinet warehouse" }))).toEqual(["00000001@00000003@2026-03-01"]);
+      expect(keys(await service().list({ q: "main cabinet", sort: "effectiveFrom", dir: "desc" }))).toEqual([
+        "00000001@00000001@2027-01-01",
+        "00000001@00000001@2026-02-01",
+        "00000001@00000001@2026-01-01",
+      ]);
+      expect(keys(await service().list({ q: "00000003" }))).toEqual(["00000001@00000003@2026-03-01", "00000003@00000001@2026-02-01"]);
+      expect(await service().list({ q: "quarry" })).toEqual([]);
+      expect(await service("test").list({ q: "cabinet" })).toEqual([]);
+    });
+  });
+
   describe("seedDemo", () => {
     const seedTestMasters = async () => {
       await new MaterialService({ em: scopedEm("test") }).seedDemo(FIXTURE_MATERIALS);

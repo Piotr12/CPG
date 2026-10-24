@@ -6,6 +6,7 @@ import {
   TYPE_MESSAGE,
   UNIT_FORMAT_MESSAGE,
 } from "@cpg/core/validators/materials/material-fields.schema";
+import { UNIT_NOT_REGISTERED_MESSAGE } from "@cpg/core/validators/units/unit-registry";
 import { errorFormatter, fill, type TenantContext } from "../forms/form-labels";
 import type { Messages } from "../../i18n/messages/en";
 
@@ -33,6 +34,7 @@ export function fieldErrorFormatter(labels: MaterialsLabels) {
     [DESCRIPTION_REQUIRED_MESSAGE]: t.descriptionRequired,
     [DESCRIPTION_TOO_LONG_MESSAGE]: t.descriptionTooLong,
     [UNIT_FORMAT_MESSAGE]: t.unitFormat,
+    [UNIT_NOT_REGISTERED_MESSAGE]: t.unitNotRegistered,
     [FACTOR_MESSAGE]: t.factor,
   };
   return (message: string): string => known[message] ?? message;

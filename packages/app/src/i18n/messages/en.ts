@@ -1,3 +1,4 @@
+import type { PluralForms } from "@cpg/ui/lib/plural";
 import { ERROR_BOUNDARY } from "./error-boundary";
 
 /**
@@ -86,6 +87,7 @@ export const en = {
     heading: "Users",
     neverDeleted: "Users are never deleted. Deactivate an account to end its access; its history keeps its name.",
     empty: "No accounts yet.",
+    search: { label: "Search users", hint: "Matches the username." },
     columns: { username: "Username", role: "Role", status: "Status", created: "Created", actions: "Actions" },
     roles: { admin: "admin", user: "user" },
     status: { active: "Active", inactive: "Inactive" },
@@ -191,6 +193,7 @@ export const en = {
     emptyHint: "Create the first one with Create material.",
     emptyReader: "Ask an administrator to add materials.",
     allMaterials: "All materials",
+    search: { label: "Search materials", hint: "Matches the ID or the description." },
     columns: {
       id: "Material ID",
       description: "Description",
@@ -208,7 +211,8 @@ export const en = {
       typeHint: "Raw is bought, intermediate is made and used to make other materials, finished is made and sold.",
       description: "Description",
       baseUnit: "Base unit",
-      baseUnitHint: "Every quantity of this material is stored in this unit, exactly to six decimals. Up to 16 letters, digits, dots, dashes or underscores.",
+      baseUnitPlaceholder: "Choose a unit",
+      baseUnitHint: "Every quantity of this material is stored in this unit, exactly to six decimals.",
     },
     create: {
       open: "Create material",
@@ -245,7 +249,9 @@ export const en = {
       tiny: "< 0.000001",
       menu: { label: "Actions for {unit}", change: "Change factor", remove: "Remove" },
       unit: "Unit",
-      unitHint: "The unit people enter, such as case or t. Up to 16 letters, digits, dots, dashes or underscores; case counts.",
+      unitHint: "The unit people enter, such as case or t.",
+      unitPlaceholder: "Choose a unit",
+      unitReasons: { baseUnit: "base unit", converted: "already converted" },
       denominator: "Alternate quantity",
       denominatorHint: "Usually 1, as in “1 case = 12 each”.",
       numerator: "Base quantity",
@@ -274,6 +280,7 @@ export const en = {
       descriptionRequired: "Enter a description.",
       descriptionTooLong: "Use at most 200 characters.",
       unitFormat: "Use 1–16 letters, digits, dots, dashes or underscores, starting with a letter or digit.",
+      unitNotRegistered: "Choose a unit from the list.",
       factor: "Enter a number greater than 0, with at most 12 digits before the point and 6 after it.",
     },
     /** What these error codes mean on the materials screens, merged over the shared `errors` by `materialsLabels`. */
@@ -305,6 +312,7 @@ export const en = {
     empty: "No locations in {tenant} yet.",
     emptyHint: "Create the first one with Create location.",
     emptyReader: "Ask an administrator to add locations.",
+    search: { label: "Search locations", hint: "Matches the ID or the name." },
     columns: { id: "ID", name: "Name", status: "Status", actions: "Actions" },
     status: { active: "Active", inactive: "Inactive" },
     cancel: "Cancel",
@@ -359,6 +367,7 @@ export const en = {
     empty: "No customers in {tenant} yet.",
     emptyHint: "Create the first one with Create customer.",
     emptyReader: "Ask an administrator to add customers.",
+    search: { label: "Search customers", hint: "Matches the ID or the name." },
     columns: { id: "ID", name: "Name", status: "Status", actions: "Actions" },
     status: { active: "Active", inactive: "Inactive" },
     cancel: "Cancel",
@@ -413,6 +422,7 @@ export const en = {
     empty: "No suppliers in {tenant} yet.",
     emptyHint: "Create the first one with Create supplier.",
     emptyReader: "Ask an administrator to add suppliers.",
+    search: { label: "Search suppliers", hint: "Matches the ID or the name." },
     columns: { id: "ID", name: "Name", status: "Status", actions: "Actions" },
     status: { active: "Active", inactive: "Inactive" },
     cancel: "Cancel",
@@ -466,6 +476,7 @@ export const en = {
     empty: "No planning parameters in {tenant} yet.",
     emptyHint: "Add the first set with Add parameters.",
     emptyReader: "Ask an administrator to add planning parameters.",
+    search: { label: "Search planning parameters", hint: "Matches the material's ID or description, or the location's ID or name." },
     columns: {
       material: "Material",
       location: "Location",
@@ -541,6 +552,7 @@ export const en = {
     empty: "No safety-stock targets in {tenant} yet.",
     emptyHint: "Add the first one with Add target.",
     emptyReader: "Ask an administrator to add safety-stock targets.",
+    search: { label: "Search safety stock", hint: "Matches the material's ID or description, or the location's ID or name." },
     columns: {
       material: "Material",
       location: "Location",
@@ -607,6 +619,7 @@ export const en = {
     empty: "No forecasts in {tenant} yet.",
     emptyHint: "Add the first one with Add forecast.",
     emptyFiltered: "No forecasts match this filter.",
+    search: { label: "Search forecasts", hint: "Matches the material's ID or description, or the location's ID or name." },
     pagination: "Forecast pages", previous: "Previous", next: "Next", page: "Page {page} of {pages}",
     filter: {
       label: "Filter forecasts",
@@ -720,6 +733,7 @@ export const en = {
     resolved: "This order is {status}, so it needs no more components.",
     components: "Pinned component requirements and current stock", component: "Component", required: "Required", available: "Available now", shortage: "Shortage",
     empty: "No production orders yet. Configure a Make output, location and active BOM, then create an order.",
+    search: { label: "Search production orders", hint: "Matches the order ID, or the output's ID or description." },
     pagination: "Production order pages", previous: "Previous", next: "Next", page: "Page {page} of {pages}",
     invalidDate: "Enter a real date written YYYY-MM-DD.", invalidUnit: "Enter a valid unit.", invalidQuantity: "Enter a positive quantity with at most 6 decimals.",
     invalidStart: "The derived start must fit a four-digit calendar year.", requirementOverflow: "The component requirement is too large. Reduce the target.", belowProduced: "The target cannot be less than the quantity already produced.",
@@ -732,7 +746,7 @@ export const en = {
       summary: "Output {quantity} {unit} at {location} · BOM {bom} / revision {revision} (pinned)",
       prefilled: "Actual quantities start at what the pinned BOM expects. Stock is checked when you post; nothing posts unless every material fits.",
       material: "Material", expected: "Expected", available: "Available here", actual: "Actual", inactive: "Inactive", extra: "Extra",
-      addInput: "Add input", removeInput: "Remove extra input {number}", inputLine: "Extra input {number}", choose: "Choose…",
+      addInput: "Add input", removeInput: "Remove extra input {number}", inputLine: "Extra input {number}",
       overTitle: "More than planned.", over: "Target {target} {unit}, produced {produced} {unit}: this completion adds {output} {unit} and completes the order.",
       accept: "Post more than planned", acceptRequired: "Tick “Post more than planned” to post this completion.",
       posted: "Completion {id} posted.",
@@ -799,6 +813,7 @@ export const en = {
     link: "Customer orders", heading: "Customer orders — {tenant}", detailHeading: "Customer order {id}",
     intro: "Record customer demand at one location, with a required date on each line. Entering an order moves no stock.",
     empty: "No customer orders yet.", emptyHint: "Create an order to record dated demand.",
+    search: { label: "Search customer orders", hint: "Matches the order ID, or the customer's ID or name." },
     create: "Create order", edit: "Edit order", createTitle: "Create customer order", editTitle: "Edit customer order {id}",
     description: "Choose one customer and location. Add each material, quantity, unit and required date below.",
     save: "Save order", saving: "Saving…", cancel: "Cancel",
@@ -827,6 +842,7 @@ export const en = {
     empty: "No BOMs in {tenant} yet.",
     emptyHint: "Create the first one with Create BOM.",
     emptyReader: "Ask an administrator to add BOMs.",
+    search: { label: "Search BOMs", hint: "Matches the BOM ID or the output's ID or description." },
     allBoms: "All BOMs",
     columns: {
       id: "BOM",
@@ -869,7 +885,6 @@ export const en = {
     form: {
       output: "Output",
       outputHint: "An intermediate or finished material. It can't change later: make a new BOM instead.",
-      choose: "Choose…",
       priority: "Priority",
       priorityHint: "1 is the highest. Two active alternatives for one output can't share a priority on the same days.",
       validFrom: "Valid from",
@@ -952,6 +967,7 @@ export const en = {
     empty: "No purchase requisitions in {tenant} yet.",
     emptyHint: "Create the first one with Create requisition.",
     pagination: "Purchase requisition pages", previous: "Previous", next: "Next", page: "Page {page} of {pages}",
+    search: { label: "Search purchase requisitions", hint: "Matches the requisition ID, or the ID or name of its material or location." },
     columns: {
       id: "Requisition",
       material: "Material",
@@ -1020,6 +1036,7 @@ export const en = {
     emptyHint: "Create the first one with Create purchase order.",
     allOrders: "All purchase orders",
     pagination: "Purchase order pages", previous: "Previous", next: "Next", page: "Page {page} of {pages}",
+    search: { label: "Search purchase orders", hint: "Matches the order ID, or the ID or name of its supplier or location." },
     columns: { id: "Order", supplier: "Supplier", location: "Location", lines: "Lines", status: "Status" },
     status: { open: "Open", completed: "Completed", "closed-early": "Closed Early", cancelled: "Cancelled" },
     inactive: "Inactive",
@@ -1171,6 +1188,7 @@ export const en = {
     empty: "No transfers in {tenant} yet.",
     emptyHint: "Create the first one with Create transfer.",
     allTransfers: "All transfers",
+    search: { label: "Search transfers", hint: "Matches the transfer ID, or the ID or name of its material or either location." },
     columns: {
       id: "Transfer",
       material: "Material",
@@ -1905,6 +1923,26 @@ export const en = {
     rangeError: "The end date must not be before the start date.",
     clear: "Clear filters",
     pagination: "Variance report pages", previous: "Previous", next: "Next", page: "Page {page} of {pages}",
+  },
+  /** Every list's search box, result line and empty result, and the material picker (#217). */
+  lists: {
+    search: "Search",
+    clear: "Clear search",
+    results: { one: "1 result for “{query}”", few: "{count} results for “{query}”", other: "{count} results for “{query}”" } as PluralForms,
+    noResults: "Nothing matches “{query}”.",
+    searchTooLong: "Search with at most 5 words and 100 characters.",
+    materialPicker: {
+      placeholder: "Type an ID or a name",
+      results: { one: "{count} material", few: "{count} materials", other: "{count} materials" } as PluralForms,
+      noMatch: "No material matches “{text}”.",
+      more: { other: "{count} more: keep typing to narrow the list" } as PluralForms,
+      refused: "Choose a material from the list.",
+    },
+  },
+  /** The unit registry's groups, and a stored unit it doesn't list (#217). */
+  units: {
+    dimensions: { count: "Count", packaging: "Packaging", mass: "Mass", volume: "Volume", length: "Length", area: "Area", time: "Time" },
+    notListed: "{unit} (not in the unit list)",
   },
   nav: {
     menu: "Menu",

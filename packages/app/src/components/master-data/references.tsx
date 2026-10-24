@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { MaterialSummary, NamedRecordView } from "@cpg/core";
+import { Highlight } from "@cpg/ui/backend/tables/highlight";
 import type { FormOption } from "../forms/form-labels";
 import { InactiveMark } from "./active-status";
 
@@ -41,37 +42,43 @@ export function withReferences<T extends { material: string; location: string }>
   });
 }
 
-/** The active materials a new row may pick, each with its base unit: a form hint can't follow the choice. */
-export function materialOptions(materials: MaterialSummary[]): FormOption[] {
-  return materials
-    .filter(({ active }) => active)
-    .map(({ id, description, baseUnit }) => ({ value: id, label: `${id} — ${description} (${baseUnit})` }));
-}
-
 /** The active locations a new row may pick. */
 export function locationOptions(locations: NamedRecordView[]): FormOption[] {
   return locations.filter(({ active }) => active).map(({ id, name }) => ({ value: id, label: `${id} — ${name}` }));
 }
 
+interface CellProps {
+  row: { material: string; location: string } & ReferenceDetails;
+  inactive: string;
+  /** A list's search, whose words are marked in the ID and the description or name (#217). */
+  query?: string;
+}
+
 /** A row's material: its ID linking to its page, its description, and Inactive when it is. */
-export function MaterialCell({ tenant, row, inactive }: { tenant: string; row: { material: string } & ReferenceDetails; inactive: string }) {
+export function MaterialCell({ tenant, row, inactive, query = "" }: CellProps & { tenant: string }) {
   return (
     <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
       <Link href={`/admin/${tenant}/materials/${row.material}`} className="font-mono underline underline-offset-4">
-        {row.material}
+        <Highlight text={row.material} query={query} />
       </Link>
-      <span>{row.materialDescription}</span>
+      <span>
+        <Highlight text={row.materialDescription} query={query} />
+      </span>
       <InactiveMark active={row.materialActive} label={inactive} />
     </span>
   );
 }
 
 /** A row's location: its ID and name, and Inactive when it is. */
-export function LocationCell({ row, inactive }: { row: { location: string } & ReferenceDetails; inactive: string }) {
+export function LocationCell({ row, inactive, query = "" }: CellProps) {
   return (
     <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-      <span className="font-mono">{row.location}</span>
-      <span className="text-muted-foreground">{row.locationName}</span>
+      <span className="font-mono">
+        <Highlight text={row.location} query={query} />
+      </span>
+      <span className="text-muted-foreground">
+        <Highlight text={row.locationName} query={query} />
+      </span>
       <InactiveMark active={row.locationActive} label={inactive} />
     </span>
   );

@@ -67,7 +67,7 @@ describe("TransfersPage", () => {
     render(await resolveServerComponents(page()));
 
     expect(mocks.tenantScope).toHaveBeenCalledWith("test");
-    expect(mocks.list).toHaveBeenCalledWith(1);
+    expect(mocks.list).toHaveBeenCalledWith({ page: 1, q: "", sort: "id", dir: "asc" });
     expect(screen.getByRole("heading", { name: "Transfers — Test" })).toBeTruthy();
     const table = within(screen.getByRole("table", { name: "Transfers" }));
     const row = table.getByRole("link", { name: "00000001" }).closest("tr")!;
@@ -88,7 +88,7 @@ describe("TransfersPage", () => {
 
     render(await resolveServerComponents(page({ page: "9" })));
 
-    expect(mocks.list).toHaveBeenCalledWith(3);
+    expect(mocks.list).toHaveBeenCalledWith({ page: 3, q: "", sort: "id", dir: "asc" });
     const nav = within(screen.getByRole("navigation", { name: en.transfers.pagination }));
     expect(nav.getByText("Page 3 of 3")).toBeTruthy();
     expect(nav.getByRole("link", { name: "Previous" }).getAttribute("href")).toBe("/admin/test/transfers?page=2");
@@ -113,7 +113,7 @@ describe("TransfersPage", () => {
 
     const nav = within(screen.getByRole("navigation", { name: "Strony przesunięć" }));
     expect(nav.getByText("Strona 2 z 3")).toBeTruthy();
-    expect(nav.getByRole("link", { name: "Poprzednia" }).getAttribute("href")).toBe("/admin/test/transfers?page=1");
+    expect(nav.getByRole("link", { name: "Poprzednia" }).getAttribute("href")).toBe("/admin/test/transfers");
     expect(nav.getByRole("link", { name: "Następna" }).getAttribute("href")).toBe("/admin/test/transfers?page=3");
   });
 
@@ -124,13 +124,47 @@ describe("TransfersPage", () => {
 
     const { unmount } = render(await resolveServerComponents(page()));
     expect(screen.getByText("Brak przesunięć w środowisku Test. Utwórz pierwsze przyciskiem Utwórz przesunięcie.")).toBeTruthy();
-    expect(mocks.list).toHaveBeenCalledWith(1);
+    expect(mocks.list).toHaveBeenCalledWith({ page: 1, q: "", sort: "id", dir: "asc" });
     unmount();
 
     mocks.tenantScope.mockResolvedValue(scope(true));
     render(await resolveServerComponents(page()));
     expect(screen.getByText("Brak przesunięć w środowisku Test.")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Utwórz przesunięcie" })).toBeNull();
+  });
+
+  it("lists by ID with a search box and sortable headers when the address asks for nothing (#217)", async () => {
+    render(await resolveServerComponents(page()));
+
+    expect(mocks.count).toHaveBeenCalledWith({ q: "" });
+    expect(screen.getByRole("searchbox", { name: "Search transfers" })).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Transfer" }).getAttribute("aria-sort")).toBe("ascending");
+    expect(screen.getByRole("link", { name: "From → to" }).getAttribute("href")).toBe("/admin/test/transfers?sort=source&dir=asc");
+    expect(screen.getByRole("link", { name: "Planned dates" }).getAttribute("href")).toBe("/admin/test/transfers?sort=plannedDispatch&dir=asc");
+    expect(screen.getByRole("columnheader", { name: "In transit" }).getAttribute("aria-sort")).toBeNull();
+  });
+
+  it("searches and sorts every page on the server, marking the matches in the material and route, and pages keep both (#217)", async () => {
+    mocks.count.mockResolvedValue(150);
+    render(await resolveServerComponents(page({ q: "steel warehouse", sort: "material", dir: "desc", page: "2" })));
+
+    expect(mocks.count).toHaveBeenCalledWith({ q: "steel warehouse" });
+    expect(mocks.list).toHaveBeenCalledWith({ page: 2, q: "steel warehouse", sort: "material", dir: "desc" });
+    expect(screen.getByRole("status").textContent).toBe("150 results for “steel warehouse” · Clear search");
+    const nav = within(screen.getByRole("navigation", { name: en.transfers.pagination }));
+    expect(nav.getByRole("link", { name: "Previous" }).getAttribute("href")).toBe("/admin/test/transfers?q=steel+warehouse&sort=material&dir=desc");
+    const row = within(screen.getByRole("table")).getByRole("link", { name: "00000001" }).closest("tr")!;
+    expect([...row.querySelectorAll("mark")].map((mark) => mark.textContent)).toEqual(["Steel", "Warehouse"]);
+    expect(within(row).getAllByRole("cell")[2].textContent).toBe("00000001 Main plant → 00000002 Warehouse");
+  });
+
+  it("says when a search finds nothing, with the way back to the whole list (#217)", async () => {
+    mocks.count.mockResolvedValue(0);
+    mocks.list.mockResolvedValue([]);
+    render(await resolveServerComponents(page({ q: "brass" })));
+
+    expect(screen.getByText(/^Nothing matches “brass”\./)).toBeTruthy();
+    expect(within(screen.getByRole("table")).getByRole("link", { name: "Clear search" }).getAttribute("href")).toBe("/admin/test/transfers");
   });
 
   it("renders not-found for a malformed page and an unknown tenant", async () => {

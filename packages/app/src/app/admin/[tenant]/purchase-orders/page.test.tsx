@@ -122,7 +122,7 @@ describe("PurchaseOrdersPage", () => {
     render(await resolveServerComponents(page()));
 
     expect(screen.getByText("No purchase orders in Test yet.")).toBeTruthy();
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Create purchase order" })).toBeNull();
   });
 
   it("pages by 100: links to the neighbouring pages, reads the asked page, and shows no links for a single page", async () => {
@@ -133,24 +133,56 @@ describe("PurchaseOrdersPage", () => {
     mocks.count.mockResolvedValue(250);
     render(await resolveServerComponents(page({ page: "2" })));
 
-    expect(mocks.orders).toHaveBeenLastCalledWith(2);
+    expect(mocks.orders).toHaveBeenLastCalledWith({ page: 2, q: "", sort: "id", dir: "asc" });
     const nav = screen.getByRole("navigation", { name: "Purchase order pages" });
     expect(nav.textContent).toContain("Page 2 of 3");
-    expect(within(nav).getByRole("link", { name: "Previous" }).getAttribute("href")).toBe("/admin/test/purchase-orders?page=1");
+    expect(within(nav).getByRole("link", { name: "Previous" }).getAttribute("href")).toBe("/admin/test/purchase-orders");
     expect(within(nav).getByRole("link", { name: "Next" }).getAttribute("href")).toBe("/admin/test/purchase-orders?page=3");
   });
 
   it("shows the last page for a page past it, and the first page of an empty tenant", async () => {
     mocks.count.mockResolvedValue(250);
     render(await resolveServerComponents(page({ page: "9" })));
-    expect(mocks.orders).toHaveBeenLastCalledWith(3);
+    expect(mocks.orders).toHaveBeenLastCalledWith({ page: 3, q: "", sort: "id", dir: "asc" });
     expect(screen.getByRole("navigation", { name: "Purchase order pages" }).textContent).toContain("Page 3 of 3");
     cleanup();
 
     mocks.count.mockResolvedValue(0);
     mocks.orders.mockResolvedValue([]);
     render(await resolveServerComponents(page({ page: "4" })));
-    expect(mocks.orders).toHaveBeenLastCalledWith(1);
+    expect(mocks.orders).toHaveBeenLastCalledWith({ page: 1, q: "", sort: "id", dir: "asc" });
+  });
+
+  it("lists by ID with a search box and sortable headers when the address asks for nothing (#217)", async () => {
+    render(await resolveServerComponents(page()));
+
+    expect(mocks.count).toHaveBeenCalledWith({ q: "" });
+    expect(screen.getByRole("searchbox", { name: "Search purchase orders" })).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Order" }).getAttribute("aria-sort")).toBe("ascending");
+    expect(screen.getByRole("link", { name: "Supplier" }).getAttribute("href")).toBe("/admin/test/purchase-orders?sort=supplier&dir=asc");
+    // The line count isn't stored, so it isn't sortable.
+    expect(screen.getByRole("columnheader", { name: "Lines" }).getAttribute("aria-sort")).toBeNull();
+  });
+
+  it("searches and sorts every page on the server, counting the matches, and pages keep both (#217)", async () => {
+    mocks.count.mockResolvedValue(150);
+    render(await resolveServerComponents(page({ q: "steel", sort: "location", dir: "desc", page: "2" })));
+
+    expect(mocks.count).toHaveBeenCalledWith({ q: "steel" });
+    expect(mocks.orders).toHaveBeenLastCalledWith({ page: 2, q: "steel", sort: "location", dir: "desc" });
+    expect(screen.getByRole("status").textContent).toBe("150 results for “steel” · Clear search");
+    const nav = screen.getByRole("navigation", { name: "Purchase order pages" });
+    expect(within(nav).getByRole("link", { name: "Previous" }).getAttribute("href")).toBe("/admin/test/purchase-orders?q=steel&sort=location&dir=desc");
+    expect([...document.querySelectorAll("mark")].map((mark) => mark.textContent)).toEqual(["Steel"]);
+  });
+
+  it("says when a search finds nothing, with the way back to the whole list (#217)", async () => {
+    mocks.count.mockResolvedValue(0);
+    mocks.orders.mockResolvedValue([]);
+    render(await resolveServerComponents(page({ q: "brass", sort: "status" })));
+
+    expect(screen.getByText(/^Nothing matches “brass”\./)).toBeTruthy();
+    expect(within(screen.getByRole("table")).getByRole("link", { name: "Clear search" }).getAttribute("href")).toBe("/admin/test/purchase-orders?sort=status&dir=asc");
   });
 
   it("renders not-found for an invalid page", async () => {

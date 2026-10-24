@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/messages/en";
 import { CreateOrderDialog } from "./create-order-dialog";
@@ -13,8 +13,9 @@ const dialog = () => (
     labels={ordersLabels(en)}
     suppliers={[{ value: "00000001", label: "00000001 — Steel Service" }]}
     locations={[{ value: "00000001", label: "00000001 — Main plant" }]}
-    materials={[{ value: "00000001", label: "00000001 — Steel (kg)", units: ["kg"] }]}
+    materials={[{ value: "00000001", code: "00000001", name: "Steel", detail: "kg", units: ["kg"] }]}
     requisitions={[]}
+    locale="en"
   />
 );
 
@@ -29,7 +30,8 @@ describe("CreateOrderDialog", () => {
     expect(screen.getByRole("dialog", { name: "Create a purchase order" })).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Supplier"), { target: { value: "00000001" } });
     fireEvent.change(screen.getByLabelText("Location"), { target: { value: "00000001" } });
-    fireEvent.change(screen.getByLabelText("Material, Line 1"), { target: { value: "00000001" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "Material, Line 1" }), { target: { value: "steel" } });
+    fireEvent.mouseDown(within(screen.getByRole("listbox", { name: "Material, Line 1" })).getByRole("option"));
     fireEvent.change(screen.getByLabelText("Quantity, Line 1"), { target: { value: "20" } });
     fireEvent.change(screen.getByLabelText("Planned, Line 1"), { target: { value: "2027-03-03" } });
     fireEvent.click(screen.getAllByRole("button", { name: "Create purchase order" }).at(-1)!);

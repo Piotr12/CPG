@@ -20,7 +20,7 @@ export const locations = named("Warehouse");
 export const choices = {
   customers: customers.map(({ id, name, active }) => ({ value: id, label: name, active, units: [] })),
   locations: locations.map(({ id, name, active }) => ({ value: id, label: name, active, units: [] })),
-  materials: materials.map(({ id, description, active }) => ({ value: id, label: description, active, units: ["each", "case"] })),
+  materials: materials.map(({ id, description, active, baseUnit }) => ({ value: id, code: id, name: description, detail: baseUnit, active, units: ["each", "case"] })),
 };
 export const labels = orderLabels(en);
 export const initial = { customer: order.customer, location: order.location,

@@ -1,6 +1,7 @@
-import { ProductionCompletion, ProductionOrder, OptimisticLockError, UniqueConstraintViolationException, type EntityManager } from "@cpg/db";
+import { ProductionCompletion, ProductionOrder, OptimisticLockError, UniqueConstraintViolationException, type EntityManager, type FilterQuery, type OrderDefinition } from "@cpg/db";
 import { documentState, resolveLines as resolveLifecycle, type LifecycleAction } from "../../domain/document-lifecycle/lifecycle";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
+import { listOrderBy, searchWhere } from "../../domain/lists/list-query";
 import { productionStatus } from "../../domain/production-orders/production-completion";
 import { plannedStart } from "../../domain/production-orders/production-planning";
 import { parseDecimal } from "../../domain/quantities/decimal";
@@ -8,6 +9,8 @@ import { ConflictError, ValidationError, versionConflict } from "../../http/erro
 import { parseInput } from "../../http/parse-input";
 import { productionOrderCreateSchema, productionOrderOptionsSchema, productionOrderListSchema, productionOrderUpdateSchema, PRODUCTION_PAGE_SIZE,
   type ProductionOrderInput, type ProductionOptionsInput, type ProductionOrderChanges } from "../../validators/production-orders/production-order.schema";
+import type { ListOptions } from "../../validators/lists/list-query.schema";
+import type { ProductionOrderSort } from "../../validators/production-orders/production-order-list.schema";
 import { recordTenantAudit } from "../audit/audit-recorder";
 import type { AuditActor } from "../audit/actor";
 import { convertToBaseQuantity } from "../materials/base-quantity";
@@ -19,17 +22,31 @@ export type { ProductionOrderView } from "./production-order-records";
 export type { ProductionOptions, ProductionComponent, ProductionRecipe } from "./production-recipes";
 export type ProductionOrderDetail = Awaited<ReturnType<ProductionOrderService["get"]>>;
 
+/** What the Production orders search matches, and the column each sort key orders by (#217). */
+const PRODUCTION_SEARCH_FIELDS = ["code", "output.code", "output.description"];
+const PRODUCTION_SORT_PATHS: Record<ProductionOrderSort, string> = {
+  id: "code", output: "output.code", location: "location.code", finish: "plannedFinish", start: "plannedStart", status: "status",
+};
+
 /** Manual planned production. All writes and their audit share the caller's tenant transaction; stock changes only through completions. */
 export class ProductionOrderService {
   private readonly em: EntityManager;
   constructor({ em }: { em: EntityManager }) { this.em = em; }
 
-  async list(page = 1) {
+  /**
+   * A page of orders by ID unless `sort` says otherwise (by ID within equal values); `q` keeps orders
+   * whose ID or output ID or description holds every word (#217).
+   */
+  async list({ page = 1, q = "", sort = "id", dir = "asc" }: ListOptions<ProductionOrderSort> = {}) {
     const query = parseInput(productionOrderListSchema, { page });
-    return (await this.em.find(ProductionOrder, {}, { populate: [...PRODUCTION_POPULATE], orderBy: { code: "asc" },
+    return (await this.em.find(ProductionOrder, searchWhere(q, PRODUCTION_SEARCH_FIELDS) as FilterQuery<ProductionOrder>, {
+      populate: [...PRODUCTION_POPULATE], orderBy: listOrderBy(PRODUCTION_SORT_PATHS[sort], dir) as OrderDefinition<ProductionOrder>,
       limit: PRODUCTION_PAGE_SIZE, offset: (query.page - 1) * PRODUCTION_PAGE_SIZE })).map(productionOrderView);
   }
-  async count() { return this.em.count(ProductionOrder, {}); }
+  /** How many orders `q` matches, for the pages of `list`. */
+  async count({ q = "" }: Pick<ListOptions<ProductionOrderSort>, "q"> = {}) {
+    return this.em.count(ProductionOrder, searchWhere(q, PRODUCTION_SEARCH_FIELDS) as FilterQuery<ProductionOrder>);
+  }
   async get(id: string) { return detail(this.em, await findProductionOrder(this.em, id)); }
   async options(input: ProductionOptionsInput) {
     return (await resolveProductionOptions(this.em, parseInput(productionOrderOptionsSchema, input))).options;

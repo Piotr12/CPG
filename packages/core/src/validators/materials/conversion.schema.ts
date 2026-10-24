@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { registeredUnitSchema } from "../units/unit-registry";
 import { versionSchema } from "../version.schema";
 import { factorSchema, materialIdSchema, unitSchema } from "./material-fields.schema";
 
@@ -7,7 +8,8 @@ import { factorSchema, materialIdSchema, unitSchema } from "./material-fields.sc
  * and `POST …/materials/{id}/conversions` share it. A zero denominator fails here (MAT-022).
  */
 export const conversionCreateSchema = z.object({
-  unit: unitSchema,
+  // A new conversion's unit comes from the registry (#217); existing ones keep theirs.
+  unit: registeredUnitSchema,
   numerator: factorSchema,
   denominator: factorSchema,
 });

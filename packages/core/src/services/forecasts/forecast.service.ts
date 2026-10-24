@@ -1,5 +1,15 @@
-import { Forecast, Location, Material, OptimisticLockError, UniqueConstraintViolationException, type EntityManager } from "@cpg/db";
+import {
+  Forecast,
+  Location,
+  Material,
+  OptimisticLockError,
+  UniqueConstraintViolationException,
+  type EntityManager,
+  type FilterQuery,
+  type OrderDefinition,
+} from "@cpg/db";
 import type { DemoForecast } from "../../domain/demo/generate-dataset";
+import { listOrderBy, searchWhere } from "../../domain/lists/list-query";
 import { ConflictError, NotFoundError, ValidationError, versionConflict } from "../../http/errors";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
@@ -8,6 +18,8 @@ import { convertToBaseQuantity } from "../materials/base-quantity";
 import { conversionFieldError } from "../materials/conversion-field-error";
 import { findActiveMaterial, findMaterial } from "../materials/find-material";
 import { isScopeReadOnly } from "../tenants/tenant.service";
+import type { ForecastSort } from "../../validators/forecasts/forecast-list.schema";
+import type { ListOptions } from "../../validators/lists/list-query.schema";
 import { DOCUMENT_PAGE_SIZE } from "../../validators/shipments/shipment.schema";
 
 /**
@@ -52,16 +64,21 @@ interface Deps {
   em: EntityManager;
 }
 
-/** How many forecasts `list` reads per query, without the identity map. */
-const KEY_BATCH = 500;
-
 /** A filter's query: the material and/or location it narrows to. */
 interface ForecastWhere {
   material?: Material;
   location?: Location;
 }
 
-const codeById = (records: { id: string; code: string }[]) => new Map(records.map(({ id, code }) => [id, code]));
+/**
+ * What the Forecasts search matches: the material's ID and description and the location's ID and
+ * name (#217). Each sort key orders by a business ID or the date, then by the list's own key.
+ */
+const FORECAST_SEARCH_FIELDS = ["material.code", "material.description", "location.code", "location.name"];
+const FORECAST_SORT_PATHS: Record<ForecastSort, string> = { material: "material.code", location: "location.code", date: "date" };
+
+/** After the sorted column, a forecast's key in the default order: material ID, location ID, then date. */
+const FORECAST_KEY_ORDER = [{ location: { code: "asc" } }, { date: "asc" }];
 
 /**
  * The tenant's forecasts (E08-S03): the demand expected per material, location and day, with no
@@ -81,38 +98,24 @@ export class ForecastService {
 
   /**
    * A page of the tenant's forecasts, `DOCUMENT_PAGE_SIZE` to a page, by material ID, location ID, then
-   * date; `filter` narrows them before paging, and a page past the last is empty.
+   * date unless `sort` says otherwise (equal values keep that order, #217); `filter` and `q` narrow
+   * them before paging, and a page past the last is empty.
    */
-  async list(filter: ForecastFilter = {}, page = 1): Promise<ForecastView[]> {
-    const where = await this.where(filter);
+  async list(filter: ForecastFilter = {}, { page = 1, q = "", sort = "material", dir = "asc" }: ListOptions<ForecastSort> = {}): Promise<ForecastView[]> {
+    const where = await this.where(filter, q);
     if (!where) return [];
-    const codes = {
-      material: codeById(await this.em.find(Material, where.material ? { id: where.material.id } : {})),
-      location: codeById(await this.em.find(Location, where.location ? { id: where.location.id } : {})),
-    };
-    // Read as plain rows in batches and sorted here by business IDs: forecasts reference their material
-    // and location by UUID, and a relation `orderBy` would add query joins the tenant lint rules don't vet.
-    const views: ForecastView[] = [];
-    let after: string | undefined;
-    for (;;) {
-      const batch = await this.em.find(
-        Forecast,
-        { ...where, ...(after !== undefined && { id: { $gt: after } }) },
-        { fields: ["material", "location", "date", "quantity", "version"], orderBy: { id: "asc" }, limit: KEY_BATCH, disableIdentityMap: true },
-      );
-      for (const { material, location, date, quantity, version } of batch) {
-        views.push({ material: codes.material.get(material.id)!, location: codes.location.get(location.id)!, date, quantity, version });
-      }
-      if (batch.length < KEY_BATCH) break;
-      after = batch.at(-1)!.id;
-    }
-    views.sort((a, b) => a.material.localeCompare(b.material) || a.location.localeCompare(b.location) || a.date.localeCompare(b.date));
-    return views.slice((page - 1) * DOCUMENT_PAGE_SIZE, page * DOCUMENT_PAGE_SIZE);
+    const forecasts = await this.em.find(Forecast, where, {
+      populate: ["material", "location"],
+      orderBy: [...listOrderBy(FORECAST_SORT_PATHS[sort], dir, "material.code"), ...FORECAST_KEY_ORDER] as OrderDefinition<Forecast>,
+      limit: DOCUMENT_PAGE_SIZE,
+      offset: (page - 1) * DOCUMENT_PAGE_SIZE,
+    });
+    return forecasts.map(toView);
   }
 
-  /** How many forecasts `filter` matches, for the pages of `list`. */
-  async count(filter: ForecastFilter = {}): Promise<number> {
-    const where = await this.where(filter);
+  /** How many forecasts `filter` and `q` match, for the pages of `list`. */
+  async count(filter: ForecastFilter = {}, { q = "" }: Pick<ListOptions<ForecastSort>, "q"> = {}): Promise<number> {
+    const where = await this.where(filter, q);
     return where ? this.em.count(Forecast, where) : 0;
   }
 
@@ -182,14 +185,15 @@ export class ForecastService {
   }
 
   /**
-   * The query `filter` makes, or null when it names a material or location the tenant doesn't have:
-   * it matches nothing.
+   * The query `filter` and the search `q` make, or null when the filter names a material or location
+   * the tenant doesn't have: it matches nothing.
    */
-  private async where(filter: ForecastFilter): Promise<ForecastWhere | null> {
+  private async where(filter: ForecastFilter, q: string): Promise<FilterQuery<Forecast> | null> {
     const material = filter.material === undefined ? undefined : await this.em.findOne(Material, { code: filter.material });
     const location = filter.location === undefined ? undefined : await this.em.findOne(Location, { code: filter.location });
     if (material === null || location === null) return null;
-    return { ...(material && { material }), ...(location && { location }) };
+    const narrowed: ForecastWhere = { ...(material && { material }), ...(location && { location }) };
+    return { ...narrowed, ...searchWhere(q, FORECAST_SEARCH_FIELDS) } as FilterQuery<Forecast>;
   }
 
   /** Runs an edit in one transaction; a write landing before its flush is `VERSION_CONFLICT`. */

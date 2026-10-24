@@ -6,7 +6,7 @@ import { assertNoPurchasingAtLocation } from "../purchase-orders/purchasing-usag
 import type { EntityManager } from "@cpg/db";
 import type { AuditActor } from "../audit/actor";
 import { LOCATION_LOOKUP } from "./find-location";
-import { NamedRecords, type NamedRecordChanges, type NamedRecordView } from "../named-records/named-records";
+import { NamedRecords, type NamedRecordChanges, type NamedRecordListOptions, type NamedRecordView } from "../named-records/named-records";
 
 interface Deps {
   em: EntityManager;
@@ -35,8 +35,8 @@ export class LocationService {
     });
   }
 
-  list(): Promise<NamedRecordView[]> {
-    return this.records.list();
+  list(options?: NamedRecordListOptions): Promise<NamedRecordView[]> {
+    return this.records.list(options);
   }
 
   get(id: string): Promise<NamedRecordView> {

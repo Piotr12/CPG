@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/messages/en";
 import { pl } from "../../i18n/messages/pl";
 import { CreateMaterialDialog } from "./create-material-dialog";
+import { unitChoices } from "../units/unit-choices";
 import { materialsLabels } from "./labels";
 
 const mocks = vi.hoisted(() => ({ createMaterial: vi.fn() }));
@@ -17,16 +18,23 @@ describe("CreateMaterialDialog", () => {
 
   it("creates a material in the page's tenant and generation, and closes (MAT-001)", async () => {
     mocks.createMaterial.mockResolvedValue({ ok: true, data: { id: "00000001" } });
-    render(<CreateMaterialDialog context={context} labels={materialsLabels(en)} />);
+    render(<CreateMaterialDialog context={context} labels={materialsLabels(en)} units={unitChoices("en", en.units)} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Create material" }));
     expect(screen.getByRole("dialog", { name: "Create material" })).toBeTruthy();
-    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
-      "Choose a type",
-      "Raw",
-      "Intermediate",
-      "Finished",
+    const type = screen.getByLabelText("Type") as HTMLSelectElement;
+    expect([...type.options].map((option) => option.textContent)).toEqual(["Choose a type", "Raw", "Intermediate", "Finished"]);
+    // The base unit is chosen from the registry, grouped by dimension (#217).
+    const unit = screen.getByLabelText("Base unit") as HTMLSelectElement;
+    expect(unit.options[0].textContent).toBe("Choose a unit");
+    expect([...unit.querySelectorAll("optgroup")].map((group) => group.label)).toEqual(["Count", "Packaging", "Mass", "Volume", "Length", "Area", "Time"]);
+    expect([...unit.querySelectorAll("optgroup[label=Mass] option")].map((option) => option.textContent)).toEqual([
+      "mg — milligram",
+      "g — gram",
+      "kg — kilogram",
+      "t — tonne",
     ]);
+    expect(screen.getByText("Every quantity of this material is stored in this unit, exactly to six decimals.")).toBeTruthy();
     change("Type", "finished");
     change("Description", "Cabinet, red");
     change("Base unit", "each");
@@ -37,25 +45,26 @@ describe("CreateMaterialDialog", () => {
   });
 
   it("names every missing field before sending anything (MAT-005, MAT-008)", () => {
-    render(<CreateMaterialDialog context={context} labels={materialsLabels(en)} />);
+    render(<CreateMaterialDialog context={context} labels={materialsLabels(en)} units={unitChoices("en", en.units)} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Create material" }));
     submit();
 
     expect(screen.getByText("Choose raw, intermediate or finished.")).toBeTruthy();
     expect(screen.getByText("Enter a description.")).toBeTruthy();
-    expect(screen.getByText(/^Use 1–16 letters/)).toBeTruthy();
+    expect(screen.getByText("Choose a unit from the list.")).toBeTruthy();
     expect(mocks.createMaterial).not.toHaveBeenCalled();
   });
 
   it("closes on cancel, and speaks Polish, a refused write included", async () => {
     mocks.createMaterial.mockResolvedValue({ ok: false, error: { code: "FORBIDDEN", message: "You don't have access to this." } });
-    render(<CreateMaterialDialog context={context} labels={materialsLabels(pl)} />);
+    render(<CreateMaterialDialog context={context} labels={materialsLabels(pl)} units={unitChoices("pl", pl.units)} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Utwórz materiał" }));
     change("Typ", "raw");
     change("Opis", "Śruba");
-    change("Jednostka bazowa", "szt.");
+    change("Jednostka bazowa", "pcs");
+    expect(screen.getByRole("option", { name: "pcs — sztuka" })).toBeTruthy();
     fireEvent.click(screen.getAllByRole("button", { name: "Utwórz materiał" }).at(-1)!);
 
     expect((await screen.findByRole("alert")).textContent).toBe("Tylko administrator może zmieniać materiały.");
