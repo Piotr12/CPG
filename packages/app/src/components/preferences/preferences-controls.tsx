@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import type { Locale, Theme } from "@cpg/core";
+import { ErrorMessage } from "@cpg/ui/backend/feedback/error-message";
 import { Button } from "@cpg/ui/components/button";
 import { LANGUAGE_NAMES } from "../../i18n/language-names";
 import type { Messages } from "../../i18n/messages/en";
@@ -44,9 +45,7 @@ export function PreferencesControls({ locale, theme, labels, action }: Preferenc
         ))}
       </OptionGroup>
       {state.error && (
-        <p role="alert" className="text-sm text-destructive">
-          {state.error}
-        </p>
+        <ErrorMessage>{state.error}</ErrorMessage>
       )}
     </form>
   );
@@ -54,7 +53,7 @@ export function PreferencesControls({ locale, theme, labels, action }: Preferenc
 
 function OptionGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div role="group" aria-label={label} className="inline-flex rounded-lg border border-border p-0.5">
+    <div role="group" aria-label={label} className="inline-flex rounded-md border border-border p-1">
       {children}
     </div>
   );

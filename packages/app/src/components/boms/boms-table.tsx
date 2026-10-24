@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { BomView } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
-import { Badge } from "@cpg/ui/components/badge";
+import { ActiveStatus, InactiveMark } from "../master-data/active-status";
+import { EmptyText } from "../master-data/empty-text";
 import { fill, lineSummary, type BomsLabels, type MaterialsById } from "./labels";
 
 interface BomsTableProps {
@@ -20,8 +21,9 @@ export function BomsTable({ tenant, boms, materials, labels, editable }: BomsTab
     {
       id: "id",
       header: t.id,
+      kind: "id",
       cell: (bom) => (
-        <Link href={`/admin/${tenant.code}/boms/${bom.id}`} className="font-mono underline underline-offset-4">
+        <Link href={`/admin/${tenant.code}/boms/${bom.id}`} className="underline underline-offset-4">
           {bom.id}
         </Link>
       ),
@@ -29,6 +31,7 @@ export function BomsTable({ tenant, boms, materials, labels, editable }: BomsTab
     {
       id: "output",
       header: t.output,
+      kind: "longText",
       cell: (bom) => {
         const output = materials.get(bom.output)!;
         return (
@@ -37,19 +40,20 @@ export function BomsTable({ tenant, boms, materials, labels, editable }: BomsTab
               {output.id}
             </Link>
             <span>{output.description}</span>
-            {!output.active && <Badge variant="destructive">{labels.inactive}</Badge>}
+            <InactiveMark active={output.active} label={labels.inactive} />
           </span>
         );
       },
-      className: "whitespace-normal wrap-anywhere",
     },
-    { id: "priority", header: t.priority, cell: (bom) => bom.priority, className: "text-right" },
-    { id: "revision", header: t.revision, cell: (bom) => fill(labels.revisionShort, { number: String(bom.revision) }) },
-    { id: "validFrom", header: t.validFrom, cell: (bom) => bom.validFrom, className: "hidden sm:table-cell" },
-    { id: "validThrough", header: t.validThrough, cell: (bom) => bom.validThrough ?? labels.noEnd, className: "hidden sm:table-cell" },
+    { id: "priority", header: t.priority, kind: "quantity", cell: (bom) => bom.priority },
+    { id: "revision", header: t.revision, kind: "text", priority: 2, cell: (bom) => fill(labels.revisionShort, { number: String(bom.revision) }) },
+    { id: "validFrom", header: t.validFrom, kind: "date", priority: 2, cell: (bom) => bom.validFrom },
+    { id: "validThrough", header: t.validThrough, kind: "date", priority: 2, cell: (bom) => bom.validThrough ?? labels.noEnd },
     {
       id: "components",
       header: t.components,
+      kind: "longText",
+      priority: 3,
       cell: (bom) => {
         const summary = bom.components.map((line) => lineSummary(line, materials)).join(", ");
         return (
@@ -58,14 +62,8 @@ export function BomsTable({ tenant, boms, materials, labels, editable }: BomsTab
           </span>
         );
       },
-      className: "hidden whitespace-normal md:table-cell",
     },
-    {
-      id: "status",
-      header: t.status,
-      cell: (bom) =>
-        bom.active ? <Badge variant="secondary">{labels.status.active}</Badge> : <Badge variant="destructive">{labels.status.inactive}</Badge>,
-    },
+    { id: "status", header: t.status, kind: "status", cell: (bom) => <ActiveStatus active={bom.active} labels={labels.status} /> },
   ];
 
   return (
@@ -74,7 +72,7 @@ export function BomsTable({ tenant, boms, materials, labels, editable }: BomsTab
       columns={columns}
       rows={boms}
       rowKey={(bom) => bom.id}
-      empty={[fill(labels.empty, { tenant: tenant.name }), ...(editable ? [labels.emptyHint] : [])].join(" ")}
+      empty={<EmptyText labels={labels} tenant={tenant.name} editable={editable} />}
     />
   );
 }

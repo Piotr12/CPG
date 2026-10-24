@@ -1,4 +1,5 @@
 import type { Locale, NamedRecordView } from "@cpg/core";
+import { PageHeader } from "@cpg/ui/backend/page-header";
 import type { Messages } from "../../i18n/messages/en";
 import { CreateNamedRecordDialog } from "./create-named-record-dialog";
 import { namedRecordsLabels, type CreateNamedRecord, type NamedRecordScreenKind, type UpdateNamedRecord } from "./labels";
@@ -29,13 +30,15 @@ export function NamedRecordsScreen({ kind, tenant, records, locale, messages, ad
   const editable = admin && !tenant.readOnly;
 
   return (
-    <div lang={locale} className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">{messages[kind].heading(tenant.name)}</h1>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-muted-foreground">{labels.intro}</p>
-        {editable && <CreateNamedRecordDialog context={{ tenant: tenant.code, generation: tenant.generation }} labels={labels} create={create} />}
+    <div lang={locale}>
+      <PageHeader
+        title={messages[kind].heading(tenant.name)}
+        description={labels.intro}
+        actions={editable && <CreateNamedRecordDialog context={{ tenant: tenant.code, generation: tenant.generation }} labels={labels} create={create} />}
+      />
+      <div className="flex flex-col gap-8">
+        <NamedRecordsTable tenant={tenant} records={records} labels={labels} update={editable ? update : undefined} />
       </div>
-      <NamedRecordsTable tenant={tenant} records={records} labels={labels} update={editable ? update : undefined} />
     </div>
   );
 }

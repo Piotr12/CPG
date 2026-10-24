@@ -1,3 +1,4 @@
+import { CircleAlert } from "lucide-react";
 import Link from "next/link";
 import type { AuditFilterQuery } from "@cpg/core/validators/audit/audit-list.schema";
 import { Button } from "@cpg/ui/components/button";
@@ -53,11 +54,16 @@ export function AuditFilters({
     <form action={path} aria-label={t.label} className="grid min-w-0 gap-4 rounded-lg border p-4 sm:grid-cols-3 sm:items-end">
       {/* First, so that from the focused summary Tab reaches the fields to correct. */}
       {invalid.length > 0 && (
-        <ErrorSummary id="audit-filter-errors" className="text-sm text-destructive sm:col-span-3">
-          <p className="font-medium">{t.invalid}</p>
-          <ul className="list-disc pl-5">
-            {invalid.map((key) => <li key={key}>{t.errors[key]}</li>)}
-          </ul>
+        <ErrorSummary id="audit-filter-errors" className="flex gap-2 text-sm text-danger sm:col-span-3">
+          <span className="flex h-5 shrink-0 items-center">
+            <CircleAlert aria-hidden="true" className="size-4" />
+          </span>
+          <div className="min-w-0">
+            <p className="font-medium">{t.invalid}</p>
+            <ul className="list-disc pl-4">
+              {invalid.map((key) => <li key={key}>{t.errors[key]}</li>)}
+            </ul>
+          </div>
         </ErrorSummary>
       )}
       <div className="grid min-w-0 gap-2">
@@ -91,6 +97,7 @@ export function AuditFilters({
           <NativeSelectOption value="">{t.all}</NativeSelectOption>
           <NativeSelectOption value="ui">{labels.channels.ui}</NativeSelectOption>
           <NativeSelectOption value="api">{labels.channels.api}</NativeSelectOption>
+          {unlisted(selected.channel, ["ui", "api"])}
         </NativeSelect>
       </div>
       <div className="grid min-w-0 gap-2">

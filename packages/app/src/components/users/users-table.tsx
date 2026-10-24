@@ -3,6 +3,7 @@
 import type { UserSummary } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { Badge } from "@cpg/ui/components/badge";
+import { ActiveStatus } from "../master-data/active-status";
 import type { UsersLabels } from "./labels";
 import { UserActions } from "./user-actions";
 
@@ -12,20 +13,12 @@ export function UsersTable({ users, labels }: { users: UserSummary[]; labels: Us
     {
       id: "username",
       header: labels.columns.username,
+      kind: "text",
       cell: (user) => <span className={user.active ? "font-medium" : "text-muted-foreground"}>{user.username}</span>,
     },
-    { id: "role", header: labels.columns.role, cell: (user) => <Badge variant="outline">{labels.roles[user.role]}</Badge> },
-    {
-      id: "status",
-      header: labels.columns.status,
-      cell: (user) =>
-        user.active ? (
-          <Badge variant="secondary">{labels.status.active}</Badge>
-        ) : (
-          <Badge variant="destructive">{labels.status.inactive}</Badge>
-        ),
-    },
-    { id: "created", header: labels.columns.created, cell: (user) => user.createdAt.toISOString().slice(0, 10) },
+    { id: "role", header: labels.columns.role, kind: "text", priority: 2, cell: (user) => <Badge variant="outline">{labels.roles[user.role]}</Badge> },
+    { id: "status", header: labels.columns.status, kind: "status", cell: (user) => <ActiveStatus active={user.active} labels={labels.status} /> },
+    { id: "created", header: labels.columns.created, kind: "date", priority: 2, cell: (user) => user.createdAt.toISOString().slice(0, 10) },
   ];
 
   return (

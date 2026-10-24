@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Dialog, DialogContent } from "@cpg/ui/components/dialog";
 import { en } from "../../i18n/messages/en";
@@ -28,7 +28,10 @@ describe("TokenSecretPanel", () => {
     const secret = screen.getByLabelText("Secret") as HTMLInputElement;
     expect(secret.value).toBe(SECRET);
     expect(secret.readOnly).toBe(true);
-    expect(screen.getByText("Copy it now. You won't see it again.")).toBeTruthy();
+    const warning = screen.getByRole("note");
+    expect(warning.dataset.tone).toBe("warning");
+    expect(warning.textContent).toBe("Copy this token nowCopy it now. You won't see it again.");
+    expect(within(warning).getByText("Copy this token now").className).toContain("font-medium");
     expect(screen.getByText("Send it as Authorization: Bearer <secret>.")).toBeTruthy();
   });
 

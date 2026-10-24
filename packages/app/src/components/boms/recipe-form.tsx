@@ -1,5 +1,6 @@
 "use client";
 
+import { CircleAlert } from "lucide-react";
 import { useId, useState, useTransition, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import type { ApiResult, FieldErrors } from "@cpg/ui/backend/api/result";
 import { ErrorMessage } from "@cpg/ui/backend/feedback/error-message";
@@ -148,7 +149,10 @@ export function RecipeForm<T>({
     if (errors) {
       return {
         node: (
-          <p id={noteId} className="text-sm text-destructive">
+          <p id={noteId} className="flex gap-1 text-sm text-danger">
+            <span className="flex h-5 shrink-0 items-center">
+              <CircleAlert aria-hidden="true" className="size-3.5" />
+            </span>
             {formatFieldError(errors[0])}
           </p>
         ),

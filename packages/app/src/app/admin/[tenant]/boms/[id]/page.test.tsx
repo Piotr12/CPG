@@ -111,7 +111,6 @@ describe("BomPage", () => {
     expect(screen.getByRole("link", { name: "All BOMs" }).getAttribute("href")).toBe("/admin/prod/boms");
     expect(screen.getAllByRole("definition").map((value) => value.textContent)).toEqual([
       "00000005 Cabinet, red (each)",
-      "Active",
       "rev 2",
       "2",
       "2026-01-01 – 2026-12-31",
@@ -159,7 +158,9 @@ describe("BomPage", () => {
     mocks.requireUser.mockResolvedValue({ username: "alice", role: "user" });
     mocks.get.mockResolvedValue({ ...BOM, active: false, validThrough: null });
     const { unmount } = render(await resolveServerComponents(page()));
-    expect(screen.getAllByRole("definition").map((value) => value.textContent).slice(1, 5)).toEqual(["Inactive", "rev 2", "2", "2026-01-01 – no end"]);
+    expect(screen.getAllByRole("definition").map((value) => value.textContent).slice(1, 4)).toEqual(["rev 2", "2", "2026-01-01 – no end"]);
+    const state = screen.getByRole("heading", { level: 1 }).parentElement!.querySelector<HTMLElement>("[data-slot=status-badge]")!;
+    expect([state.textContent, state.dataset.tone, state.className.includes("border-dashed")]).toEqual(["Inactive", "neutral", true]);
     expect(screen.queryByRole("button")).toBeNull();
     unmount();
 

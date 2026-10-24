@@ -20,6 +20,14 @@ describe("NamedRecordsTable", () => {
       ["00000001", "Main plant, Wrocław", "Active"],
       ["00000002", "Old warehouse", "Inactive"],
     ]);
+    // Both states are quiet; Inactive is dashed, never the danger tone.
+    expect(within(rows[0]).getByText("Active").dataset.tone).toBe("neutral");
+    const inactive = within(rows[1]).getByText("Inactive");
+    expect([inactive.dataset.slot, inactive.dataset.tone]).toEqual(["status-badge", "neutral"]);
+    expect(inactive.className).toContain("border-dashed");
+    // The ID column is first, monospaced and sticky; the table scrolls inside its own region.
+    expect(within(rows[0]).getAllByRole("cell")[0].className).toMatch(/\bfont-mono\b.*\bsticky left-0\b/);
+    expect(screen.getByRole("region", { name: "Suppliers" })).toBeTruthy();
   });
 
   it("gives the admin a menu on every row, and a normal user none (TEN-004)", () => {
@@ -34,6 +42,9 @@ describe("NamedRecordsTable", () => {
   it("says the list is empty, and tells the admin how to start", () => {
     const { rerender } = render(<NamedRecordsTable tenant={tenant} records={[]} labels={labels} />);
     expect(screen.getByText("No suppliers in Test yet.")).toBeTruthy();
+    // A reader (or a read-only tenant) is told whom to ask instead.
+    expect(screen.getByText("Ask an administrator to add suppliers.")).toBeTruthy();
+    expect(screen.queryByText(/Create the first one/)).toBeNull();
 
     rerender(<NamedRecordsTable tenant={tenant} records={[]} labels={labels} update={vi.fn()} />);
     expect(screen.getByText("No suppliers in Test yet. Create the first one with Create supplier.")).toBeTruthy();

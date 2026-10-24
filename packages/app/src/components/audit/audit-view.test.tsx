@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { en } from "../../i18n/messages/en";
 import type { AuditFilterQuery } from "@cpg/core/validators/audit/audit-list.schema";
@@ -27,7 +27,12 @@ describe("AuditView", () => {
   it("shows the heading, the back link, what the audit holds and its entries", () => {
     view(null, true);
 
-    expect(screen.getByRole("heading", { level: 1, name: "Global audit" })).toBeTruthy();
+    const heading = screen.getByRole("heading", { level: 1, name: "Global audit" });
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    // The page header holds the title, what the audit holds, and the way back as its action.
+    const header = heading.closest("[data-slot=page-header]") as HTMLElement;
+    expect(within(header).getByRole("link", { name: "Test" })).toBeTruthy();
+    expect(within(header).getByText("Every change to accounts is kept here.")).toBeTruthy();
     expect(href("Test")).toBe("/admin/test");
     expect(screen.getByText("Every change to accounts is kept here.")).toBeTruthy();
     expect(screen.getByRole("table", { name: "Global audit" })).toBeTruthy();

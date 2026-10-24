@@ -153,6 +153,7 @@ export const en = {
     secret: {
       title: "Token “{name}” created",
       label: "Secret",
+      warningTitle: "Copy this token now",
       warning: "Copy it now. You won't see it again.",
       usage: "Send it as Authorization: Bearer <secret>.",
       copy: "Copy",
@@ -188,6 +189,7 @@ export const en = {
       "Every quantity of a material is stored in its base unit, exactly to six decimals. IDs are assigned in order and never change.",
     empty: "No materials in {tenant} yet.",
     emptyHint: "Create the first one with Create material.",
+    emptyReader: "Ask an administrator to add materials.",
     allMaterials: "All materials",
     columns: {
       id: "Material ID",
@@ -302,6 +304,7 @@ export const en = {
     intro: "Sites where materials are made and stocked. IDs are assigned in order and never change.",
     empty: "No locations in {tenant} yet.",
     emptyHint: "Create the first one with Create location.",
+    emptyReader: "Ask an administrator to add locations.",
     columns: { id: "ID", name: "Name", status: "Status", actions: "Actions" },
     status: { active: "Active", inactive: "Inactive" },
     cancel: "Cancel",
@@ -355,6 +358,7 @@ export const en = {
     intro: "Who you sell to. IDs are assigned in order and never change.",
     empty: "No customers in {tenant} yet.",
     emptyHint: "Create the first one with Create customer.",
+    emptyReader: "Ask an administrator to add customers.",
     columns: { id: "ID", name: "Name", status: "Status", actions: "Actions" },
     status: { active: "Active", inactive: "Inactive" },
     cancel: "Cancel",
@@ -408,6 +412,7 @@ export const en = {
     intro: "Who you buy from. IDs are assigned in order and never change.",
     empty: "No suppliers in {tenant} yet.",
     emptyHint: "Create the first one with Create supplier.",
+    emptyReader: "Ask an administrator to add suppliers.",
     columns: { id: "ID", name: "Name", status: "Status", actions: "Actions" },
     status: { active: "Active", inactive: "Inactive" },
     cancel: "Cancel",
@@ -460,6 +465,7 @@ export const en = {
       "One row per material and location: whether MRP makes or buys it, the lead time in whole calendar days, and the minimum lot and lot multiple, in the material's base unit.",
     empty: "No planning parameters in {tenant} yet.",
     emptyHint: "Add the first set with Add parameters.",
+    emptyReader: "Ask an administrator to add planning parameters.",
     columns: {
       material: "Material",
       location: "Location",
@@ -534,6 +540,7 @@ export const en = {
       "Effective-dated targets per material and location. A target applies from its date until the next one; with no target, the target is 0. Status is as of today, {today} (UTC).",
     empty: "No safety-stock targets in {tenant} yet.",
     emptyHint: "Add the first one with Add target.",
+    emptyReader: "Ask an administrator to add safety-stock targets.",
     columns: {
       material: "Material",
       location: "Location",
@@ -804,6 +811,7 @@ export const en = {
       "Bills of materials with alternatives, priority and validity. Changing a BOM creates a new revision; earlier revisions stay readable and never change.",
     empty: "No BOMs in {tenant} yet.",
     emptyHint: "Create the first one with Create BOM.",
+    emptyReader: "Ask an administrator to add BOMs.",
     allBoms: "All BOMs",
     columns: {
       id: "BOM",
@@ -1861,7 +1869,7 @@ export const en = {
   stockReport: {
     heading: "Stock report — {tenant}",
     intro: "Physical stock on hand and stock in transit per material and location, in the material's base unit, as of {date} (UTC). Stock in transit belongs to its transfer: neither location can use it until it is received.",
-    material: "Material", location: "Location", all: "All", includeZero: "Show rows that are all zero", apply: "Apply",
+    material: "Material", location: "Location", all: "All", includeZero: "Show rows that are all zero", apply: "Apply", clear: "Clear filters",
     columns: { material: "Material", location: "Location", quantity: "On hand", inTransitFrom: "In transit out", inTransitTo: "In transit in", figures: "Stock" },
     inactive: "Inactive", label: "Current stock", empty: "No stock matches these filters.", rows: "Rows: {count}",
     ledger: "Ledger", ledgerOf: "Ledger of {material} at {location}", actions: "Ledger",
@@ -1880,6 +1888,7 @@ export const en = {
     recipe: "BOM {bom} rev. {revision}", orderLink: "Production order {id}", componentsOf: "Components of production order {id}",
     label: "Production variance", empty: "No production order with completions matches these filters.", rows: "Orders: {count}",
     rangeError: "The end date must not be before the start date.",
+    clear: "Clear filters",
     pagination: "Variance report pages", previous: "Previous", next: "Next", page: "Page {page} of {pages}",
   },
   nav: {

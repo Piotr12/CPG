@@ -35,6 +35,10 @@ describe("PreferencesControls", () => {
 
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Polski" })));
 
-    expect(screen.getByRole("alert").textContent).toBe("Some fields are invalid.");
+    const alert = screen.getByRole("alert");
+    expect(alert.textContent).toBe("Some fields are invalid.");
+    // The shared error message: icon + text in the danger tone, never the old destructive text.
+    expect(alert.className).toContain("text-danger");
+    expect(alert.querySelector("svg")).toBeTruthy();
   });
 });

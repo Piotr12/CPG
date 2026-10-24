@@ -1,4 +1,5 @@
 import type { BomView, Locale, MaterialSummary } from "@cpg/core";
+import { PageHeader } from "@cpg/ui/backend/page-header";
 import type { Messages } from "../../i18n/messages/en";
 import { ImportLink } from "../imports/import-link";
 import { BomsTable } from "./boms-table";
@@ -24,23 +25,27 @@ export function BomsScreen({ tenant, boms, materials, units, locale, messages, a
   const editable = admin && !tenant.readOnly;
 
   return (
-    <div lang={locale} className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">{messages.boms.heading(tenant.name)}</h1>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-muted-foreground">{labels.intro}</p>
-        {editable && (
-          <div className="flex shrink-0 gap-2">
-            <ImportLink tenant={tenant.code} label={messages.imports.link} />
-            <CreateBomDialog
-              context={{ tenant: tenant.code, generation: tenant.generation }}
-              labels={labels}
-              outputs={outputChoices(materials)}
-              choices={componentChoices(materials, units)}
-            />
-          </div>
-        )}
+    <div lang={locale}>
+      <PageHeader
+        title={messages.boms.heading(tenant.name)}
+        description={labels.intro}
+        actions={
+          editable && (
+            <>
+              <ImportLink tenant={tenant.code} label={messages.imports.link} />
+              <CreateBomDialog
+                context={{ tenant: tenant.code, generation: tenant.generation }}
+                labels={labels}
+                outputs={outputChoices(materials)}
+                choices={componentChoices(materials, units)}
+              />
+            </>
+          )
+        }
+      />
+      <div className="flex flex-col gap-8">
+        <BomsTable tenant={tenant} boms={boms} materials={materialsById(materials)} labels={labels} editable={editable} />
       </div>
-      <BomsTable tenant={tenant} boms={boms} materials={materialsById(materials)} labels={labels} editable={editable} />
     </div>
   );
 }
