@@ -670,7 +670,7 @@ export const pl: Messages = {
     finishHint: "Planowany początek jest przeliczany z zapisanego czasu realizacji: {days} dni kalendarzowych.",
     previewNotice: "Sprawdź bezpośrednie potrzeby składników i aktualny zapas. Niedobory nie blokują ręcznego planowania; zapas nie jest rezerwowany ani zużywany.",
     recipeLabel: "BOM {bom} / rewizja {revision} · priorytet {priority}",
-    shortageTitle: { one: "Brakuje 1 składnika", other: "Brakujące składniki: {count}" },
+    shortageTitle: { one: "{count} składnik z niedoborem", few: "{count} składniki z niedoborem", other: "{count} składników z niedoborem" },
     shortageBody: "Nadal możesz utworzyć ten plan; zapas jest sprawdzany przy księgowaniu wykonania.",
     sufficient: "Aktualny zapas fizyczny pokrywa bezpośrednie potrzeby. Planowanie go nie rezerwuje ani nie zużywa.",
     resolved: "Zlecenie ma stan „{status}”, więc nie potrzebuje już składników.",

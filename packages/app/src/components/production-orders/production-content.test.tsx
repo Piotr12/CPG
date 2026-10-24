@@ -112,7 +112,7 @@ it("translates empty/read-only states and keeps terminal orders readable without
   expect(screen.getByRole("note").textContent).toBe("Zlecenie ma stan „Zakończone”, więc nie potrzebuje już składników."); expect(screen.queryByRole("button")).toBeNull();
   expect(screen.getByRole("heading", { level: 1 }).parentElement?.querySelector("[data-slot=status-badge]")?.getAttribute("data-tone")).toBe("success");
   cleanup(); render(<ProductionScreen {...props} tenant={tenant} order={{ ...production, shortages: [production.shortages[0], { ...production.shortages[0], material: "00000006" }] }} />);
-  expect(within(screen.getByRole("note")).getByText("Brakujące składniki: 2")).toBeTruthy();
+  expect(within(screen.getByRole("note")).getByText("2 składniki z niedoborem")).toBeTruthy();
   expect(screen.getByRole("button", { name: "Anuluj zlecenie… — Zlecenia produkcyjne 00000001" })).toBeTruthy();
 });
 it("tells a resolved order's reader it needs no more components, never that stock is short (LFC-004, PRD-029)", () => {

@@ -707,7 +707,7 @@ export const en = {
     finishHint: "The planned start is recalculated from the captured lead time of {days} calendar days.",
     previewNotice: "Review the direct component requirements and current stock. Shortages allow manual planning; no stock is reserved or consumed.",
     recipeLabel: "BOM {bom} / revision {revision} · priority {priority}",
-    shortageTitle: { one: "1 component short", other: "{count} components short" },
+    shortageTitle: { one: "{count} component short", few: "{count} components short", other: "{count} components short" },
     shortageBody: "You can still create this plan; stock is checked when a completion is posted.",
     sufficient: "Current physical stock covers these direct requirements. Planning does not reserve or consume it.",
     resolved: "This order is {status}, so it needs no more components.",

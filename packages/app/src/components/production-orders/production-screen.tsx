@@ -15,6 +15,7 @@ import { CompletionDialog } from "./completion-dialog";
 import { CompletionHistory } from "./completion-history";
 import { completionInputs } from "./completion-inputs";
 import { productionLabels } from "./labels";
+import { plural } from "./plural";
 import { ProductionDialog } from "./production-dialog";
 import { ProductionRequirements } from "./production-requirements";
 
@@ -70,7 +71,7 @@ export function ProductionScreen({ tenant, orders, order, materials, locations, 
           { label: t.leadTime, value: fill(t.leadTimeDays, { days: String(order.leadTimeDays) }) }, { label: t.recipe, value: recipe(order) }].map(({ label, value }) => <div key={label}><dt className="text-muted-foreground">{label}</dt><dd className="mt-1 wrap-anywhere">{value}</dd></div>)}
       </dl>
       {order.status !== "open" ? <Callout tone="neutral">{fill(t.resolved, { status: t.states[order.status] })}</Callout>
-        : shortages ? <Callout tone="warning" title={fill(shortages === 1 ? t.shortageTitle.one : t.shortageTitle.other, { count: String(shortages) })}>{t.shortageBody}</Callout>
+        : shortages ? <Callout tone="warning" title={plural(t.shortageTitle, shortages)}>{t.shortageBody}</Callout>
         : <Callout tone="neutral">{t.sufficient}</Callout>}
       <ProductionRequirements labels={t} components={order.components} materials={materials} tenant={tenant.code} />
       <CompletionHistory completions={completions} page={completionsPage} materials={materials} labels={t} path={`${path}/${order.id}`}
