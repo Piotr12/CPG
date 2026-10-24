@@ -22,14 +22,19 @@ Bring PR #205 up to date with `main` (it conflicts with #207 in `.ai/lessons.md`
 - 17:10 `om-auto-review-pr 205 --autofix`: nothing inherited (no reviews, no inline comments), no duplicate on `main`, no diff-level patterns (markdown only). Verified the lesson against #203's timeline (closed 09:23 by #204's merge, reopened 09:26, closed 16:57 by #207 legitimately), checked #205's body closes nothing, and that the vendored `om-auto-write-spec` / `om-prepare-issue` / `om-open-pr` already template `Refs #` for spec PRs. No findings; approve, posted as a [comment](https://github.com/Piotr12/CPG/pull/205#issuecomment-6387102107) because GitHub refuses approving one's own PR. Pipeline label kept at `review` per the 2026-10-17 lesson.
 - Decision: the PR 195/196/197 runs set `merge-queue` after the same comment-only approval, which the 2026-10-17 lesson forbids. Followed the lesson; the discrepancy is reported to the owner so the lesson or the practice can be aligned.
 - UI: n/a (docs-only, `skip-qa`). Base did not advance during the run (`main` still `d4097577`).
+- 17:20 Reported before the CI wait (label rationale, summary, lock swapped to `ci-monitoring`), then watched CI on `a918682b`. `gh run watch --exit-status` exited 1 after about a minute on an HTTP 502 from the jobs endpoint while the run was still in progress; a `gh run view` poll loop that tolerates API errors finished the wait. Recorded as a sharpening of the zsh-traps lesson (`.ai/lessons.md`, *Tooling, shell and CI*), committed here with the final verification so the PR carries everything this run learned.
 
 ## Changes
 - `63df5ba3`: merge of `main`, resolving `.ai/lessons.md`.
+- `.ai/lessons.md`: the `gh run watch` clause of the 2026-10-24 zsh-traps lesson.
 - This run log.
 
 ## Verification
 - Local gate on `63df5ba3` (own `npm ci` in the cezar worktree): `npm run lint` exit 0, `npm run typecheck` exit 0, `npm run test:coverage` exit 0 (531 files, 3,860 tests, 100% statements/branches/functions/lines), `npm run build` exit 0.
-- CI run 40114359397 on `63df5ba3`: lint, typecheck and build passed; unit-tests and the four integration shards were still running when this log was pushed, and the push supersedes the run, so the final head gets its own, reported in the PR's CI-result comment.
+- CI run 40114359397 on `63df5ba3`: lint, typecheck and build passed before the run-log push superseded it.
+- CI run 40114866219 on `a918682b` (merge plus run log): completed success, all 8 checks green (lint, typecheck, unit-tests, build, integration-tests 1–4); one workflow run at that SHA, completed. `npx vitest run tests/` on the final head: 19 files, 373 tests, pass.
+- The final head adds only this lesson clause and these log lines; its CI run is reported in the PR's CI-result comment.
 
 ## Follow-ups
 - None filed: the review left no nit, and no flake was observed.
+- For the owner: the PR 195–197 runs put a comment-only approval into `merge-queue`; the 2026-10-17 lesson says `review`. Align one with the other.
