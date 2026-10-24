@@ -3,11 +3,24 @@
 import * as React from "react"
 import { cn } from "cn"
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+function Table({
+  className,
+  scrollLabel,
+  ...props
+}: React.ComponentProps<"table"> & {
+  /**
+   * Names the horizontal scroll container and makes it a focusable region, so a table wider than
+   * the page scrolls inside itself and a keyboard user can scroll it with the arrow keys.
+   */
+  scrollLabel?: string
+}) {
   return (
     <div
       data-slot="table-container"
       className="relative w-full overflow-x-auto"
+      role={scrollLabel ? "region" : undefined}
+      aria-label={scrollLabel}
+      tabIndex={scrollLabel ? 0 : undefined}
     >
       <table
         data-slot="table"
