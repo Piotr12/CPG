@@ -21,12 +21,14 @@ vi.mock("../../../../components/users/create-user-dialog", () => ({
   CreateUserDialog: ({ labels }: { labels: { create: { open: string } } }) => <button>{labels.create.open}</button>,
 }));
 vi.mock("../../../../components/users/users-table", () => ({
-  UsersTable: ({ users, labels }: { users: { username: string }[]; labels: { heading: string } }) => (
+  UsersTable: ({ users, labels, search, sort }: { users: { username: string }[]; labels: { heading: string }; search: string; sort: object }) => (
     <p>
-      {labels.heading} table: {users.map((user) => user.username).join(", ")}
+      {labels.heading} table: {users.map((user) => user.username).join(", ")} {JSON.stringify({ search, sort })}
     </p>
   ),
 }));
+
+const page = (searchParams: Record<string, string> = {}) => UsersPage({ params: Promise.resolve({}), searchParams: Promise.resolve(searchParams) });
 
 const users = [
   { id: "a", username: "admin", role: "admin", active: true, createdAt: new Date("2026-10-19T08:00:00Z") },
@@ -42,7 +44,7 @@ describe("UsersPage", () => {
   afterEach(() => vi.clearAllMocks());
 
   it("lists every account for the admin, says users are never deleted and offers Create user", async () => {
-    render(await resolveServerComponents(UsersPage()));
+    render(await resolveServerComponents(page()));
 
     expect(mocks.connection).toHaveBeenCalledOnce();
     expect(mocks.requireAdmin).toHaveBeenCalledOnce();
@@ -51,13 +53,30 @@ describe("UsersPage", () => {
     expect(screen.queryByRole("link")).toBeNull();
     expect(screen.getByText(/Users are never deleted\. Deactivate an account to end its access/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Create user" }).closest("[data-slot=page-header]")).toBeTruthy();
-    expect(screen.getByText("Users table: admin, alice")).toBeTruthy();
+    expect(screen.getByText(/^Users table: admin, alice/)).toBeTruthy();
+  });
+
+  it("lists the admin first, then by username, with a search box, when the address asks for nothing (#217)", async () => {
+    render(await resolveServerComponents(page()));
+
+    expect(mocks.list).toHaveBeenCalledWith({ q: "", sort: "role", dir: "asc" });
+    expect(screen.getByRole("searchbox", { name: "Search users" })).toBeTruthy();
+    expect(screen.getByText("Matches the username.")).toBeTruthy();
+  });
+
+  it("searches and sorts on the server as the address says, saying how many match (#217)", async () => {
+    render(await resolveServerComponents(page({ q: "ali", sort: "username", dir: "desc" })));
+
+    expect(mocks.list).toHaveBeenCalledWith({ q: "ali", sort: "username", dir: "desc" });
+    expect(screen.getByRole("status").textContent).toBe("2 results for “ali” · Clear search");
+    expect(screen.getByRole("link", { name: "Clear search" }).getAttribute("href")).toBe("/admin/users?sort=username&dir=desc");
+    expect(screen.getByText(/"search":"ali","sort":\{"sort":"username","dir":"desc"\}/)).toBeTruthy();
   });
 
   it("speaks Polish to a Polish account", async () => {
     mocks.getMessages.mockResolvedValue({ locale: "pl", messages: pl });
 
-    render(await resolveServerComponents(UsersPage()));
+    render(await resolveServerComponents(page()));
 
     const heading = screen.getByRole("heading", { name: "Użytkownicy" });
     expect(heading.closest("[lang]")?.getAttribute("lang")).toBe("pl");
@@ -68,7 +87,7 @@ describe("UsersPage", () => {
   it("renders no data when the gate refuses the visitor", async () => {
     mocks.requireAdmin.mockRejectedValue(new Error("NEXT_REDIRECT /admin"));
 
-    await expect(resolveServerComponents(UsersPage())).rejects.toThrow("NEXT_REDIRECT /admin");
+    await expect(resolveServerComponents(page())).rejects.toThrow("NEXT_REDIRECT /admin");
     expect(mocks.list).not.toHaveBeenCalled();
   });
 

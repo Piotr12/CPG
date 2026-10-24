@@ -87,6 +87,7 @@ export const en = {
     heading: "Users",
     neverDeleted: "Users are never deleted. Deactivate an account to end its access; its history keeps its name.",
     empty: "No accounts yet.",
+    search: { label: "Search users", hint: "Matches the username." },
     columns: { username: "Username", role: "Role", status: "Status", created: "Created", actions: "Actions" },
     roles: { admin: "admin", user: "user" },
     status: { active: "Active", inactive: "Inactive" },

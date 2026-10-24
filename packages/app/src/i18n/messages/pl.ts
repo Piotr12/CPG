@@ -80,6 +80,7 @@ export const pl: Messages = {
     heading: "Użytkownicy",
     neverDeleted: "Użytkownicy nigdy nie są usuwani. Dezaktywuj konto, aby odebrać dostęp; historia zachowa jego nazwę.",
     empty: "Nie ma jeszcze kont.",
+    search: { label: "Szukaj użytkowników", hint: "Dopasowuje nazwę użytkownika." },
     columns: { username: "Nazwa użytkownika", role: "Rola", status: "Stan", created: "Utworzono", actions: "Akcje" },
     roles: { admin: "administrator", user: "użytkownik" },
     status: { active: "Aktywny", inactive: "Nieaktywny" },
