@@ -15,7 +15,7 @@
 |------|-------|----------------------------------------------------|--------|--------|-------|
 | W1 Tokens and focus | sequential 1 | `packages/ui/src/styles/**`, `packages/ui/src/components/**`, `tests/design-tokens.test.ts` (new) | done | cez/a6a67846 | 5bea1416 |
 | W2 Shared components | sequential 2 | `packages/ui/src/backend/**`, `badge.tsx`, `button.tsx`, `mammoth-mark.tsx` (new), `status-tone.ts` (new) | done | cez/3e2f33ce | d0da985d |
-| W3 Copy and public pages | sequential 3 | i18n, help, `read-only.ts`, home, Help, login, layout metadata, the "Cave control" assertions, 7 integration files | todo | | |
+| W3 Copy and public pages | sequential 3 | i18n, help, `read-only.ts`, home, Help, login, layout metadata, the "Cave control" assertions, 7 integration files | done | cez/ae8611fb | 8c1f12ee |
 | P1 Admin page frame and states | parallel | `app/src/app/admin/**` (except `(global)/page.tsx`), `layout.tsx` notice + fallback, not-found and error pages, `tests/integration/not-found.test.ts` | todo | | |
 | P2 Document screens | parallel | `components/{customer-orders,shipments,goods-issues,forecasts,production-orders,purchase-orders,purchase-requisitions,purchasing,goods-receipts,transfers,document-lifecycle}/**` (except `status-tone.ts`), 10 integration files | todo | | |
 | P3 Master data, stock, reports, admin tools | parallel | `components/{materials,named-records,master-data,boms,planning-parameters,safety-stock,stock,reports,imports,api-tokens,audit,users,preferences,forms}/**`, 14 integration files | todo | | |

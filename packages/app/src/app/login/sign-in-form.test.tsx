@@ -35,6 +35,16 @@ describe("SignInForm", () => {
     expect(alert.getAttribute("data-tone")).toBe("danger");
   });
 
+  it("keeps the typed username in its field after a refusal (the States table: entered values kept)", async () => {
+    const action = vi.fn(async () => ({ error: en.login.invalidCredentials, username: "admin" }));
+    render(<SignInForm action={action} labels={en.login} />);
+
+    await act(async () => fillAndSubmit());
+
+    expect((screen.getByLabelText("Username") as HTMLInputElement).value).toBe("admin");
+    expect((screen.getByLabelText("Password") as HTMLInputElement).value).toBe("");
+  });
+
   it("disables the button while signing in", async () => {
     let finish: (state: object) => void = () => {};
     const action = vi.fn(() => new Promise<object>((resolve) => (finish = resolve)));

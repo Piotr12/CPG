@@ -24,7 +24,8 @@ export function SignInForm({ action, labels }: SignInFormProps) {
     <form action={formAction} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         <Label htmlFor="username">{labels.username}</Label>
-        <Input id="username" name="username" autoComplete="username" required autoFocus />
+        {/* `defaultValue` from the last refusal: React resets the fields after the action, and the typed name must survive it. */}
+        <Input id="username" name="username" autoComplete="username" required autoFocus defaultValue={state.username} />
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="password">{labels.password}</Label>

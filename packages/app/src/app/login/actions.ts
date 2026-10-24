@@ -11,6 +11,8 @@ import { writeThemeCookie } from "../../preferences/theme-cookie";
 
 export interface SignInState {
   error?: string;
+  /** The username as typed, so a refused attempt keeps it in the field (React resets the form after an action). */
+  username?: string;
 }
 
 /** Where a successful sign-in lands. */
@@ -24,7 +26,7 @@ export async function signIn(_previous: SignInState, formData: FormData): Promis
   const attempt = serverAction(signInSchema, (input) => authService.signIn({ ...input, clientIp }));
   const result = await attempt({ username: formData.get("username"), password: formData.get("password") });
 
-  if (!result.ok) return { error: errorMessage(result.error, formData) };
+  if (!result.ok) return { error: errorMessage(result.error, formData), username: String(formData.get("username") ?? "") };
 
   const secure = config.env === "production";
   await writeSessionCookie(result.data.token, result.data.expiresAt, { secure });
