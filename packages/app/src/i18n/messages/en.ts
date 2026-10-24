@@ -740,7 +740,7 @@ export const en = {
       summary: "Output {quantity} {unit} at {location} · BOM {bom} / revision {revision} (pinned)",
       prefilled: "Actual quantities start at what the pinned BOM expects. Stock is checked when you post; nothing posts unless every material fits.",
       material: "Material", expected: "Expected", available: "Available here", actual: "Actual", inactive: "Inactive", extra: "Extra",
-      addInput: "Add input", removeInput: "Remove extra input {number}", inputLine: "Extra input {number}", choose: "Choose…",
+      addInput: "Add input", removeInput: "Remove extra input {number}", inputLine: "Extra input {number}",
       overTitle: "More than planned.", over: "Target {target} {unit}, produced {produced} {unit}: this completion adds {output} {unit} and completes the order.",
       accept: "Post more than planned", acceptRequired: "Tick “Post more than planned” to post this completion.",
       posted: "Completion {id} posted.",

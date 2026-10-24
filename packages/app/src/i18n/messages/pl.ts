@@ -701,7 +701,7 @@ export const pl: Messages = {
       summary: "Wytworzono {quantity} {unit} w {location} · BOM {bom} / rewizja {revision} (przypięta)",
       prefilled: "Ilości rzeczywiste startują od tego, czego oczekuje przypięty BOM. Zapas jest sprawdzany przy księgowaniu; nic się nie księguje, jeśli choć jednego materiału brakuje.",
       material: "Materiał", expected: "Oczekiwane", available: "Dostępne tutaj", actual: "Rzeczywiste", inactive: "Nieaktywny", extra: "Dodatkowy",
-      addInput: "Dodaj materiał", removeInput: "Usuń dodatkowy materiał {number}", inputLine: "Dodatkowy materiał {number}", choose: "Wybierz…",
+      addInput: "Dodaj materiał", removeInput: "Usuń dodatkowy materiał {number}", inputLine: "Dodatkowy materiał {number}",
       overTitle: "Więcej niż planowano.", over: "Cel {target} {unit}, wyprodukowano {produced} {unit}: to wykonanie dodaje {output} {unit} i kończy zlecenie.",
       accept: "Zaksięguj ponad plan", acceptRequired: "Zaznacz „Zaksięguj ponad plan”, aby zaksięgować to wykonanie.",
       posted: "Zaksięgowano wykonanie {id}.",

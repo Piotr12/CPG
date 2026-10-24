@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import { openBrowser, type Browser } from "./browser";
+import { chooseFromList, openBrowser, type Browser } from "./browser";
 import { signIn, signInAsAdmin } from "./sign-in";
 
 const baseUrl = inject("baseUrl");
@@ -55,7 +55,7 @@ describe("forecasts (E08-S03)", () => {
     await admin.waitUntil(ready(button("Add forecast")));
     await admin.clickRole("button", "Add forecast");
     await admin.waitFor("[role=dialog]");
-    await admin.select("[role=dialog] select[name=material]", cabinet);
+    await chooseFromList(admin, "[role=dialog] [role=combobox]", "fc-ui cabinet", cabinet);
     await admin.select("[role=dialog] select[name=location]", location);
     expect(await admin.fillDate("[role=dialog] input[name=date]", date)).toBe(date);
     await admin.fill("[role=dialog] input[name=quantity]", quantity);
@@ -118,6 +118,52 @@ describe("forecasts (E08-S03)", () => {
     }
   });
 
+  it("sorts every page by a header click, searches materials and locations keeping the sort and filter, and clears back (#217)", async () => {
+    const atQuery = (query: string) =>
+      admin.waitUntil(`location.search === ${JSON.stringify(query)} && document.querySelector("main [aria-sort]") && !document.querySelector("main table").closest("[hidden]")`);
+    const shown = () => admin.evaluate<string[][]>(`[...document.querySelectorAll("main tbody tr")].map((row) => [...row.cells].map((cell) => cell.innerText.trim().replace(/\\s+/g, " ")))`);
+    await listRows(admin, "/admin/test/forecasts");
+    await admin.waitUntil(`document.querySelector("main th[aria-sort=ascending]")?.innerText.trim() === "Material"`);
+
+    // By day, across both pages: the first page holds the ten earliest months, in order.
+    await admin.waitUntil(ready(`document.querySelector("main th a[href$='sort=date&dir=asc']")`));
+    await admin.click("main th a[href$='sort=date&dir=asc']");
+    await atQuery("?sort=date&dir=asc");
+    const ascending = (await shown()).map(([, , date]) => date);
+    expect(ascending).toHaveLength(100);
+    expect(ascending).toEqual([...ascending].sort());
+    await admin.waitUntil(ready(`document.querySelector("main nav[aria-label='Forecast pages'] a")`));
+    await admin.click("main nav[aria-label='Forecast pages'] a");
+    await atQuery("?sort=date&dir=asc&page=2");
+    const later = (await shown()).map(([, , date]) => date);
+    expect(later.every((date) => date >= ascending.at(-1)!)).toBe(true);
+    await admin.waitUntil(ready(`document.querySelector("main th a[href$='sort=date&dir=desc']")`));
+    await admin.click("main th a[href$='sort=date&dir=desc']");
+    await atQuery("?sort=date&dir=desc");
+    expect((await shown())[0][2]).toBe([...ascending, ...later].sort().at(-1));
+
+    // Search the first row's material by a word of its description: the sort stays, matches are marked.
+    const word = (await shown())[0][0].split(" ")[1].replace(/[^A-Za-z]/g, "");
+    await admin.waitUntil(ready(`document.querySelector("main [role=search] button")`));
+    await admin.fill("main [role=search] input[name=q]", word);
+    await admin.click("main [role=search] button[type=submit]");
+    await atQuery(`?q=${word}&sort=date&dir=desc`);
+    await admin.waitFor("main p[role=status]");
+    const found = await shown();
+    expect(found.length).toBeGreaterThan(0);
+    for (const [material, location] of found) expect(`${material} ${location}`.toLowerCase()).toContain(word.toLowerCase());
+    expect(found.map(([, , date]) => date)).toEqual(found.map(([, , date]) => date).sort().reverse());
+    expect(await admin.text("main p[role=status]")).toMatch(new RegExp(`^${found.length} results? for “${word}” · Clear search$`));
+    // The filter form keeps the search and the sort.
+    expect(await admin.evaluate<string[]>(`[...document.querySelectorAll("form[aria-label='Filter forecasts'] input[type=hidden]")].map((input) => input.name + "=" + input.value)`)).toEqual([`q=${word}`, "sort=date", "dir=desc"]);
+
+    await admin.waitUntil(ready(`document.querySelector("main p[role=status] a")`));
+    await admin.click("main p[role=status] a");
+    await atQuery("?sort=date&dir=desc");
+    await admin.waitUntil(`document.querySelector("main [role=search] input[name=q]").value === "" && !document.querySelector("main p[role=status]")`);
+    expect(await shown()).toHaveLength(100);
+  });
+
   it("adds forecasts without a customer, in any unit the material converts, and lists the quantity per day", async () => {
     await addForecast(plant, "2027-03-02", "40");
     await admin.waitUntil(closed);
@@ -154,7 +200,7 @@ describe("forecasts (E08-S03)", () => {
     await admin.waitUntil(ready(`document.querySelector("form[role=search] select[name=material]")`));
     await admin.select("form[role=search] select[name=material]", cabinet);
     await admin.select("form[role=search] select[name=location]", packer);
-    await admin.click("form[role=search] button[type=submit]");
+    await admin.click("form[role=search][aria-label='Filter forecasts'] button[type=submit]");
     await admin.waitUntil(`location.search.includes("location=${packer}")`);
 
     expect(await mine(`?material=${cabinet}&location=${packer}`)).toEqual([[`${packer} fc-ui packer`, "2027-03-01", "7 each"]]);
@@ -203,7 +249,7 @@ describe("forecasts (E08-S03)", () => {
     await una.waitForText(USERNAME);
 
     expect((await listRows(una, "/admin/test/forecasts")).length).toBeGreaterThan(0);
-    expect(await una.evaluate<string[]>(`[...document.querySelectorAll("main button")].map((b) => b.textContent.trim())`)).toEqual(["Filter"]);
+    expect(await una.evaluate<string[]>(`[...document.querySelectorAll("main button")].map((b) => b.textContent.trim())`)).toEqual(["Search", "Filter"]);
     expect(await una.evaluate<boolean>(`!!document.querySelector("form[role=search]")`)).toBe(true);
   });
 });
