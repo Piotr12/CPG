@@ -2,6 +2,10 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
+import { LoadingMessage } from "@cpg/ui/backend/feedback/loading-message";
+import { Button } from "@cpg/ui/components/button";
+import { Input } from "@cpg/ui/components/input";
+import { Label } from "@cpg/ui/components/label";
 import { cleanHelpQuery, HELP_QUERY_MAX_LENGTH, searchHelp } from "../../help/search-help";
 import { helpTopics } from "../../help/topics";
 import { getMessages } from "../../i18n/get-messages";
@@ -11,8 +15,8 @@ export const metadata: Metadata = { title: "Help · Caveman Planning Good" };
 /** Public: help holds nothing sensitive, and the sign-in screen needs it too (spec Q8). */
 export default function HelpPage({ searchParams }: PageProps<"/help">) {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-6 py-12">
-      <Suspense fallback={<div aria-busy="true" className="min-h-96" />}>
+    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pt-6 pb-8 md:px-6 md:pt-12 md:pb-12">
+      <Suspense fallback={<LoadingMessage />}>
         <HelpContent searchParams={searchParams} />
       </Suspense>
     </main>
@@ -30,35 +34,27 @@ async function HelpContent({ searchParams }: Pick<PageProps<"/help">, "searchPar
   return (
     <div lang={locale} className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold tracking-tight">{t.heading}</h1>
-      <form action="/help" role="search" className="flex gap-2">
-        <input
-          type="search"
-          name="q"
-          defaultValue={query}
-          maxLength={HELP_QUERY_MAX_LENGTH}
-          aria-label={t.searchLabel}
-          className="flex-1 rounded-lg border border-zinc-300 bg-transparent px-3 py-1.5 dark:border-zinc-700"
-        />
-        <button type="submit" className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900">
-          {t.search}
-        </button>
+      <form action="/help" role="search" className="flex flex-col gap-2 sm:flex-row sm:items-end">
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <Label htmlFor="help-q">{t.searchLabel}</Label>
+          <Input id="help-q" type="search" name="q" defaultValue={query} maxLength={HELP_QUERY_MAX_LENGTH} />
+        </div>
+        <Button type="submit">{t.search}</Button>
       </form>
       {query && (
-        <p className="text-sm text-zinc-500">
+        <p className="max-w-prose text-muted-foreground">
           {topics.length ? t.matches(topics.length, query) : t.noMatch(query)}{" "}
-          <Link href="/help" className="underline underline-offset-4">
+          <Link href="/help" className="text-foreground underline underline-offset-4">
             {t.showAll}
           </Link>
         </p>
       )}
       {topics.map((topic) => (
-        <section key={topic.id} id={topic.id} className="flex flex-col gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-          <h2 className="font-medium">{topic.title}</h2>
-          <p className="text-xs text-zinc-500">{t.screen(topic.route)}</p>
+        <section key={topic.id} id={topic.id} className="flex max-w-prose flex-col gap-2 border-t border-border pt-4">
+          <h2 className="text-lg font-semibold">{topic.title}</h2>
+          <p className="text-xs text-muted-foreground">{t.screen(topic.route)}</p>
           {topic.body.map((paragraph, i) => (
-            <p key={`${topic.id}-${i}`} className="text-sm leading-relaxed">
-              {paragraph}
-            </p>
+            <p key={`${topic.id}-${i}`}>{paragraph}</p>
           ))}
         </section>
       ))}

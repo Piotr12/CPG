@@ -1,5 +1,7 @@
 import { render, screen } from "@testing-library/react";
+import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { LoadingMessage } from "@cpg/ui/backend/feedback/loading-message";
 import { resolveServerComponents } from "../../../../../tests/setup/server-components";
 import { en } from "../../i18n/messages/en";
 import { pl } from "../../i18n/messages/pl";
@@ -25,7 +27,7 @@ describe("HelpPage", () => {
     expect(topicTitles()).toEqual([
       "Getting started with CPG",
       "Signing in",
-      "Cave control",
+      "Tenants",
       "Managing users",
       "API tokens",
       "Test and Prod",
@@ -70,7 +72,15 @@ describe("HelpPage", () => {
 
     const form = screen.getByRole("search") as HTMLFormElement;
     expect(form.getAttribute("action")).toBe("/help");
-    expect((screen.getByRole("searchbox", { name: "Search help" }) as HTMLInputElement).value).toBe("minutes");
+    const searchbox = screen.getByRole("searchbox", { name: "Search help" }) as HTMLInputElement;
+    expect(searchbox.value).toBe("minutes");
+    expect(searchbox.name).toBe("q");
+    // A visible label, not an aria-label, and a submit button of the same 32 px height as the field.
+    expect(screen.getByText("Search help").tagName).toBe("LABEL");
+    expect(searchbox.getAttribute("aria-label")).toBeNull();
+    const submit = screen.getByRole("button", { name: "Search" }) as HTMLButtonElement;
+    expect(submit.type).toBe("submit");
+    expect([searchbox.className, submit.className].every((className) => className.includes("h-8"))).toBe(true);
     expect(topicTitles()).toEqual(["Signing in"]);
     expect(screen.getByText(/1 topic matches “minutes”\./)).toBeTruthy();
     expect(screen.getByRole("link", { name: "Show all topics" }).getAttribute("href")).toBe("/help");
@@ -87,6 +97,14 @@ describe("HelpPage", () => {
 
     expect(topicTitles()).toEqual([]);
     expect(screen.getByText(/No help topics match “forecast accuracy”\./)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Show all topics" }).getAttribute("href")).toBe("/help");
+  });
+
+  it("shows the language-neutral loading shell until the request-time content streams", () => {
+    const main = HelpPage({ params: Promise.resolve({}), searchParams: Promise.resolve({}) });
+    const { fallback } = (main.props.children as { props: { fallback: ReactElement } }).props;
+
+    expect(fallback.type).toBe(LoadingMessage);
   });
 
   it("speaks Polish to a Polish account (UX-013)", async () => {
