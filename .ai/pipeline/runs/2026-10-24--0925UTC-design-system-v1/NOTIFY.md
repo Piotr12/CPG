@@ -33,3 +33,6 @@
 - Two lessons added to `.ai/lessons.md` (UI): `--input` is a boundary, never a fill; Tailwind 4 orders `aria-*` after `focus-visible`.
 - Gate on the merged tree with the amendments: running (lint, typecheck, test:coverage, build), judged by exit codes; W2 is dispatched once it is green.
 - Gate on the merged tree after the amendments: lint exit 0 (one pre-existing warning), typecheck exit 0, test:coverage exit 0 (500 files, 3,657 tests, 100 %), build exit 0. Scan: 126 offenders in 31 files (app 117, ui 9). W2 dispatched.
+
+## 2026-10-24T11:20:00Z — W2 question: ConfirmDialog's confirm variant
+- W2 asked (inbox): `ConfirmDialog`'s `destructive` prop rendering `destructive-solid` changes the button's `data-variant`, which 3 unit assertions and 12 integration selectors outside its Owns read. Decision: W2 implements the spec's `destructive-solid` and is authorised to change only the variant token in those assertions and selectors (the ConfirmDialog ones; `set-active-dialog.tsx` and `revoke-token-dialog.tsx` keep `destructive` until P3), and to run every integration file it touched on port 3102. Recorded as a lead-authorised exception to W2's Owns.
