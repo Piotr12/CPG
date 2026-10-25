@@ -25,15 +25,17 @@ describe("Test datasets", () => {
       const factors = finished.map(({ description, conversions }) => [description, conversions.filter(({ unit }) => unit === "SU").map(({ numerator, denominator }) => `${numerator}/${denominator}`)]);
       expect(Object.fromEntries(factors)).toEqual({
         "Cabinet, red": ["1/1"],
+        "Cabinet, blue": ["1/1"],
+        "Cabinet, white": ["1/1"],
         "Office cabinet, grey, 2 doors": ["1/1.2"],
-        "Locker, 2 compartments": ["1/0.8"],
-        "Locker, 4 compartments": ["1/1.4"],
-        "Workshop cabinet, 4 shelves": ["1/1.5"],
-        "Steel shelf unit, 5 shelves": ["1/0.9"],
-        "Letterbox, galvanised": ["1/0.15"],
-        "Tool tray, powder-coated": ["1/0.1"],
-        "Document box, A4": ["1/0.05"],
-        "Key cabinet, wall-mounted": ["1/0.2"],
+        "Office cabinet, white, 2 doors": ["1/1.2"],
+        "Office cabinet, anthracite, 2 doors": ["1/1.2"],
+        "Locker, 2 compartments, grey": ["1/0.8"],
+        "Locker, 2 compartments, blue": ["1/0.8"],
+        "Locker, 4 compartments, grey": ["1/1.4"],
+        "Locker, 4 compartments, blue": ["1/1.4"],
+        "Workshop cabinet, grey": ["1/1.5"],
+        "Workshop cabinet, red": ["1/1.5"],
       });
     }
   });
@@ -44,7 +46,7 @@ describe("Test datasets", () => {
     const { boms, safetyStockTargets, ...masters } = tiny.masters;
     const { boms: realisticBoms, safetyStockTargets: realisticTargets, ...realisticMasters } = realistic.masters;
     expect(masters).toEqual(realisticMasters);
-    // The same forecast buckets; their quantities average whatever history there is (spec #126).
+    // The same daily forecast rows; their quantities follow the trend from each dataset's own history start.
     const buckets = (forecasts: typeof tiny.forecasts) => forecasts.map(({ material, location, date }) => `${material}@${location} ${date}`);
     expect(buckets(tiny.forecasts)).toEqual(buckets(realistic.forecasts));
     // Only what starts with the history moves: a BOM's validity, and the safety-stock series' first entries.
@@ -53,8 +55,8 @@ describe("Test datasets", () => {
     expect(new Set(boms.map(({ validFrom }) => validFrom))).toEqual(new Set(["2026-08-01"]));
     expect(safetyStockTargets.map(({ material, location }) => `${material}@${location}`)).toEqual(expect.arrayContaining(realisticTargets.map(({ material, location }) => `${material}@${location}`)));
     expect(tiny.summary.movements).toBeLessThan(realistic.summary.movements / 5);
-    expect(tiny.summary.customerOrders).toBeLessThan(100);
-    expect(realistic.summary.customerOrders).toBeGreaterThan(100);
+    expect(tiny.summary.customerOrders).toBeLessThan(150);
+    expect(realistic.summary.customerOrders).toBeGreaterThan(900);
   });
 
   // E2E-020 (`tests/integration/test-reset-api.test.ts`) posts a G1 goods issue for what is left on an Open demo shipment

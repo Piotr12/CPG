@@ -1,7 +1,7 @@
 import { isCalendarDate } from "../../validators/dates/calendar-date.schema";
 import { formatDecimal } from "../quantities/decimal";
-import { monthOf, monthStart, type Month } from "./calendar";
-import { planDemand, planForecasts } from "./demand-plan";
+import { addDays, addMonths, monthEnd, monthOf, monthStart, type Month } from "./calendar";
+import { forecastWindow, planDemand, planForecasts } from "./demand-plan";
 import { replayTimeline, type DatasetSummary } from "./replay";
 import { planSupply } from "./supply-plan";
 import type { MaterialType } from "../../validators/materials/material-fields.schema";
@@ -83,34 +83,44 @@ export interface TestTenantDataset {
   summary: DatasetSummary;
 }
 
+/** One anchor month's plans, and the forecasts every day of the month takes its window from. */
+interface AnchorPlans {
+  plan: AnchorPlan;
+  forecasts: DemoForecast[];
+}
+
 /**
  * The plans of each anchor month already worked out, per configuration object: every day of a month
  * shares them, so generating many days of one month (the replay tests) plans the month once. A
  * configuration is treated as immutable once generated from.
  */
-const PLANS = new WeakMap<TestTenantConfig, Map<Month, AnchorPlan>>();
+const PLANS = new WeakMap<TestTenantConfig, Map<Month, AnchorPlans>>();
 
-function anchorPlan(config: TestTenantConfig, anchor: Month): AnchorPlan {
-  const known = PLANS.get(config) ?? new Map<Month, AnchorPlan>();
+function anchorPlans(config: TestTenantConfig, anchor: Month): AnchorPlans {
+  const known = PLANS.get(config) ?? new Map<Month, AnchorPlans>();
   PLANS.set(config, known);
   const cached = known.get(anchor);
   if (cached) return cached;
   const demand = planDemand(config, anchor);
   const plan = planEvents(config, demand, planSupply(config, demand, anchor), anchor);
-  known.set(anchor, plan);
-  return plan;
+  // From the earliest window's first day to the latest window's last: the day after the 1st, and a forecast horizon past the month's end.
+  const forecasts = planForecasts(config, addDays(monthStart(anchor), 1), addMonths(monthEnd(anchor), config.horizon.forecastMonths), demand.historyStart);
+  const plans = { plan, forecasts };
+  known.set(anchor, plans);
+  return plans;
 }
 
 /**
- * The dataset as of `today` (`YYYY-MM-DD`, UTC): the masters, the forecasts for the months after
- * this one, and the timeline of documents and postings up to today (spec "The dataset"). It refuses,
+ * The dataset as of `today` (`YYYY-MM-DD`, UTC): the masters, the daily forecasts for the year after
+ * today, and the timeline of documents and postings up to today (spec "The dataset"). It refuses,
  * by throwing, a configuration whose timeline would drive a balance negative or exceed its limits.
  */
 export function generateTestTenantDataset(config: TestTenantConfig, today: string): TestTenantDataset {
   if (!isCalendarDate(today)) throw new RangeError(`Today must be a calendar date written YYYY-MM-DD; got ${today}.`);
   const anchor = monthOf(today);
   const historyStart = anchor - config.horizon.historyMonths;
-  const plan = anchorPlan(config, anchor);
+  const { plan, forecasts } = anchorPlans(config, anchor);
+  const window = forecastWindow(config, today);
   const timeline = buildTimeline(config, plan, today);
   const { catalogue } = config;
   return {
@@ -134,7 +144,7 @@ export function generateTestTenantDataset(config: TestTenantConfig, today: strin
       })),
       safetyStockTargets: plan.supply.safetyTargets.map(({ material, location, effectiveFrom, quantity }) => ({ material, location, effectiveFrom, quantity: formatDecimal(quantity) })),
     },
-    forecasts: planForecasts(config, plan.demand, anchor),
+    forecasts: forecasts.filter(({ date }) => window.first <= date && date <= window.last),
     timeline,
     summary: replayTimeline(config, timeline),
   };

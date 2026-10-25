@@ -185,7 +185,7 @@ export function planEvents(config: TestTenantConfig, demand: DemandPlan, supply:
   return { anchor, demand, supply, events: events.sort(byDayOrder) };
 }
 
-/** The documents created relative to today (spec "Today"): one overdue top-up order per plant, and the open requisitions. */
+/** The documents created relative to today (spec "Today"): the overdue top-up orders, and the open requisitions. */
 function todayRelativeCreations(config: TestTenantConfig, plan: AnchorPlan, today: string): DatedEvent[] {
   const topUpDate = addWeekdays(today, -TOP_UP_WEEKDAYS_AGO);
   const topUps = config.supply.topUps.map(({ location, material }, order): DatedEvent => {
@@ -198,7 +198,7 @@ function todayRelativeCreations(config: TestTenantConfig, plan: AnchorPlan, toda
       event: {
         kind: "purchaseOrder",
         key: `purchase-order:top-up:${location}`,
-        supplier: pair.suppliers[monthOf(topUpDate) % pair.suppliers.length],
+        supplier: pair.supplier!,
         location,
         lines: [{ material, quantity: formatDecimal(pair.multiple), unit: baseUnitOf(config, material), plannedDate: topUpDate }],
       },
