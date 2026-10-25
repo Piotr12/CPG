@@ -53,7 +53,7 @@ export function SafetyStockTable({ tenant, rows, labels, editable, search, sort,
       cell: (row) => <LocationCell row={row} inactive={labels.inactive} query={search} />,
     },
     { id: "effectiveFrom", header: t.effectiveFrom, kind: "date", sortKey: "effectiveFrom", cell: (row) => row.effectiveFrom },
-    { id: "quantity", header: t.quantity, kind: "quantity", cell: (row) => `${shownQuantity(row.quantity)} ${row.baseUnit}` },
+    { id: "quantity", header: t.quantity, kind: "quantity", sortKey: "quantity", cell: (row) => `${shownQuantity(row.quantity)} ${row.baseUnit}` },
     {
       id: "status",
       header: t.status,

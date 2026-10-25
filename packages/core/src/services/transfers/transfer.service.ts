@@ -14,7 +14,7 @@ import {
   type TransferPostingKind,
 } from "@cpg/db";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
-import { listOrderBy, searchWhere } from "../../domain/lists/list-query";
+import { listOrderBy, searchWhere, type SortField } from "../../domain/lists/list-query";
 import { afterPosting, afterReversal, inTransitOf, isFullyReceived, postingLimit, undispatchedOf } from "../../domain/transfers/transfer-quantity";
 import { parseDecimal } from "../../domain/quantities/decimal";
 import { ConflictError, NotFoundError, ValidationError, versionConflict } from "../../http/errors";
@@ -47,10 +47,13 @@ export const TRANSFER_DISPATCH_MOVEMENT = "transfer-dispatch";
 export const TRANSFER_RECEIPT_MOVEMENT = "transfer-receipt";
 /** What the Transfers search matches, and the column each sort key orders by (#217). */
 const TRANSFER_SEARCH_FIELDS = ["code", "material.code", "material.description", "source.code", "source.name", "destination.code", "destination.name"];
-const TRANSFER_SORT_PATHS: Record<TransferSort, string> = {
+const TRANSFER_SORT_PATHS: Record<TransferSort, SortField> = {
   id: "code",
   material: "material.code",
   source: "source.code",
+  quantity: { decimal: "quantity" },
+  dispatched: { decimal: "dispatched" },
+  received: { decimal: "received" },
   plannedDispatch: "plannedDispatch",
   status: "status",
 };

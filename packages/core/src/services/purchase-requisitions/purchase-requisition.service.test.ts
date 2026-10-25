@@ -19,6 +19,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadConfig } from "../../config";
 import { migrateDatabase, toDbOptions } from "../../database";
+import { formatDecimal, parseDecimal } from "../../domain/quantities/decimal";
 import { VERSION_CONFLICT } from "../../http/errors";
 import {
   ENTERED_QUANTITY_MESSAGE,
@@ -292,6 +293,22 @@ describe("PurchaseRequisitionService", () => {
         expect(ids(await service().list({ sort: "requiredDate", dir: "desc" }))).toEqual(["00000001", "00000002", "00000004", "00000003"]);
         expect(ids(await service().list({ sort: "status" }))).toEqual(["00000002", "00000001", "00000003", "00000004"]);
         expect(ids(await service().list({ sort: "status", dir: "desc" }))).toEqual(["00000003", "00000004", "00000001", "00000002"]);
+      });
+
+      it("sorts by each stored quantity by its value, not its text, by ID within equal values (#224)", async () => {
+        const em = scopedEm();
+        const fixed = (text: string) => formatDecimal(parseDecimal(text)!, { fixed: true });
+        const amounts = { "00000001": ["100", "25", "0"], "00000002": ["25", "0", "25"], "00000003": ["9.5", "9.5", "0"], "00000004": ["100", "0", "0"] };
+        for (const [code, [quantity, converted, abandoned]] of Object.entries(amounts)) {
+          Object.assign(await em.findOneOrFail(PurchaseRequisition, { code }), { quantity: fixed(quantity), converted: fixed(converted), abandoned: fixed(abandoned) });
+        }
+        await em.flush();
+        expect(ids(await service().list({ sort: "quantity" }))).toEqual(["00000003", "00000002", "00000001", "00000004"]);
+        expect(ids(await service().list({ sort: "quantity", dir: "desc" }))).toEqual(["00000001", "00000004", "00000002", "00000003"]);
+        expect(ids(await service().list({ sort: "converted" }))).toEqual(["00000002", "00000004", "00000003", "00000001"]);
+        expect(ids(await service().list({ sort: "converted", dir: "desc" }))).toEqual(["00000001", "00000003", "00000002", "00000004"]);
+        expect(ids(await service().list({ sort: "abandoned" }))).toEqual(["00000001", "00000003", "00000004", "00000002"]);
+        expect(ids(await service().list({ sort: "abandoned", dir: "desc" }))).toEqual(["00000002", "00000001", "00000003", "00000004"]);
       });
 
       it("keeps requisitions whose ID, material or location holds every word, ignoring ASCII case, in this tenant only", async () => {

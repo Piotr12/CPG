@@ -219,7 +219,9 @@ describe("manual production", () => {
     const model = Array.from({ length: COUNT }, (_, index) => {
       const n = index + 1;
       return { id: String(n).padStart(8, "0"), output: n % 3 === 0 ? "00000003" : "00000001", location: n <= 50 ? "00000002" : "00000001",
-        finish: day(n % 7), start: day((n * 5) % 11), status: n % 4 === 0 ? "cancelled" : "open" };
+        finish: day(n % 7), start: day((n * 5) % 11), status: n % 4 === 0 ? "cancelled" : "open",
+        // A number, so `sorted` compares it as one: 5 < 25 < 100, where the stored text puts "100" first.
+        quantity: (n * 37) % 120 };
     });
     type Row = (typeof model)[number];
     const sorted = (key: keyof Row, sign: 1 | -1) =>
@@ -237,7 +239,7 @@ describe("manual production", () => {
       const recipe = await manager.findOneOrFail(BomRevision, { bom: { code: "00000001" } });
       for (const row of [...model].reverse()) {
         manager.create(ProductionOrder, { code: row.id, output: outputs.get(row.output)!, location: locations.get(row.location)!, recipe,
-          quantity: "1.000000", enteredQuantity: "1", enteredUnit: "each", numerator: "1", denominator: "1",
+          quantity: `${row.quantity}.000000`, enteredQuantity: String(row.quantity), enteredUnit: "each", numerator: "1", denominator: "1",
           plannedFinish: row.finish, plannedStart: row.start, leadTimeDays: 0, status: row.status as "open" });
       }
       await manager.flush();
@@ -246,7 +248,7 @@ describe("manual production", () => {
     it("sorts by each column, both ways, by ID within equal values, across the page boundary", async () => {
       expect(await allPages()).toEqual(sorted("id", 1));
       expect(await allPages({ sort: "id", dir: "desc" })).toEqual(sorted("id", -1));
-      for (const key of ["output", "location", "finish", "start", "status"] as const) {
+      for (const key of ["output", "quantity", "location", "finish", "start", "status"] as const) {
         expect(await allPages({ sort: key })).toEqual(sorted(key, 1));
         expect(await allPages({ sort: key, dir: "desc" })).toEqual(sorted(key, -1));
       }

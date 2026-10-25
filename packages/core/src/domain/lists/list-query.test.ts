@@ -40,4 +40,12 @@ describe("listOrderBy", () => {
   it("takes another tie-breaker", () => {
     expect(listOrderBy("name", "asc", "username")).toEqual([{ name: "asc" }, { username: "asc" }]);
   });
+
+  it("sorts a decimal field by its integer part's length, then its text, then the tie-breaker (#224)", () => {
+    const [length, text, tieBreaker, ...rest] = listOrderBy({ decimal: "quantity" }, "desc", "material.code");
+    const [key] = Object.getOwnPropertySymbols(length);
+    expect(String(key)).toMatch(/instr\(.+\.quantity \|\| '\.', '\.'\)/);
+    expect((length as Record<symbol, unknown>)[key]).toBe("desc");
+    expect([text, tieBreaker, rest]).toEqual([{ quantity: "desc" }, { material: { code: "asc" } }, []]);
+  });
 });

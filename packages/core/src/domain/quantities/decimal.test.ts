@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { convertToBase, formatDecimal, inverseFactor, MAX_QUANTITY, ONE, parseDecimal } from "./decimal";
+import { compareDecimals, convertToBase, formatDecimal, inverseFactor, MAX_QUANTITY, ONE, parseDecimal } from "./decimal";
 
 /** Parses a value the test knows is valid. */
 const d = (text: string) => parseDecimal(text)!;
@@ -26,6 +26,17 @@ describe("parseDecimal", () => {
       expect(parseDecimal(text)).toBeNull();
     },
   );
+});
+
+describe("compareDecimals (#224)", () => {
+  it("compares stored decimal texts by value, whether or not they carry six decimals", () => {
+    expect(["100.000000", "25", "9.5", "999999999999.000002", "0.000000", "999999999999.000001", "12.05"].sort(compareDecimals)).toEqual([
+      "0.000000", "9.5", "12.05", "25", "100.000000", "999999999999.000001", "999999999999.000002",
+    ]);
+    expect(compareDecimals("12", "12.000000")).toBe(0);
+    expect(compareDecimals("25", "100")).toBe(-1);
+    expect(compareDecimals("100", "25")).toBe(1);
+  });
 });
 
 describe("formatDecimal", () => {

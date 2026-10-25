@@ -1034,7 +1034,7 @@ export const en = {
     allOrders: "All purchase orders",
     pagination: "Purchase order pages", previous: "Previous", next: "Next", page: "Page {page} of {pages}",
     search: { label: "Search purchase orders", hint: "Matches the order ID, or the ID or name of its supplier or location." },
-    columns: { id: "Order", supplier: "Supplier", location: "Location", lines: "Lines", status: "Status" },
+    columns: { id: "Order", supplier: "Supplier", location: "Location", created: "Created", lines: "Lines", status: "Status" },
     status: { open: "Open", completed: "Completed", "closed-early": "Closed Early", cancelled: "Cancelled" },
     inactive: "Inactive",
     cancel: "Cancel",

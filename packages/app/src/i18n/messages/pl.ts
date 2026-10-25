@@ -994,7 +994,7 @@ export const pl: Messages = {
     allOrders: "Wszystkie zamówienia zakupu",
     pagination: "Strony zamówień zakupu", previous: "Poprzednia", next: "Następna", page: "Strona {page} z {pages}",
     search: { label: "Szukaj zamówień zakupu", hint: "Dopasowuje ID zamówienia albo ID lub nazwę jego dostawcy lub lokalizacji." },
-    columns: { id: "Zamówienie", supplier: "Dostawca", location: "Lokalizacja", lines: "Pozycje", status: "Status" },
+    columns: { id: "Zamówienie", supplier: "Dostawca", location: "Lokalizacja", created: "Utworzono", lines: "Pozycje", status: "Status" },
     status: { open: "Otwarte", completed: "Zrealizowane", "closed-early": "Zamknięte wcześniej", cancelled: "Anulowane" },
     inactive: "Nieaktywny",
     cancel: "Anuluj",

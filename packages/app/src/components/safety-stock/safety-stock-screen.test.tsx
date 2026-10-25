@@ -71,13 +71,14 @@ describe("SafetyStockScreen", () => {
     expect(screen.queryAllByRole("button").map((button) => button.textContent)).toEqual(["Search"]);
   });
 
-  it("searches above the list, sorts by every column but the decimal target, and marks the matches (#217)", () => {
+  it("searches above the list, sorts by every column, the target quantity included (#224), and marks the matches (#217)", () => {
     renderScreen([target("2027-01-01")], false, { search: { q: "0005 main", typed: "0005 main" }, sort: { sort: "status", dir: "desc" } });
 
     expect(screen.getByRole("searchbox", { name: "Search safety stock" })).toBeTruthy();
     expect(screen.getByRole("status").textContent).toBe("1 result for “0005 main” · Clear search");
     expect(screen.getByRole("link", { name: "Clear search" }).getAttribute("href")).toBe("/admin/test/safety-stock?sort=status&dir=desc");
-    expect(screen.getAllByRole("columnheader").map((header) => header.getAttribute("aria-sort"))).toEqual(["none", "none", "none", null, "descending"]);
+    expect(screen.getAllByRole("columnheader").map((header) => header.getAttribute("aria-sort"))).toEqual(["none", "none", "none", "none", "descending"]);
+    expect(screen.getByRole("link", { name: "Target" }).getAttribute("href")).toBe("/admin/test/safety-stock?q=0005+main&sort=quantity&dir=asc");
     expect(screen.getByRole("link", { name: "Effective from" }).getAttribute("href")).toBe("/admin/test/safety-stock?q=0005+main&sort=effectiveFrom&dir=asc");
     expect([...document.querySelectorAll("mark")].map((mark) => mark.textContent)).toEqual(["0005", "Main"]);
   });

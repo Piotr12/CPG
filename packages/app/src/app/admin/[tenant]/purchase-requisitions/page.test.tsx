@@ -193,6 +193,11 @@ describe("PurchaseRequisitionsPage", () => {
     expect(screen.getByRole("searchbox", { name: "Search purchase requisitions" })).toBeTruthy();
     expect(screen.getByRole("columnheader", { name: "Requisition" }).getAttribute("aria-sort")).toBe("ascending");
     expect(screen.getByRole("link", { name: "Required" }).getAttribute("href")).toBe("/admin/test/purchase-requisitions?sort=requiredDate&dir=asc");
+    // The stored quantities sort by value (#224); the outstanding amount is computed, so it doesn't.
+    for (const [name, key] of [["Quantity", "quantity"], ["Converted", "converted"], ["Abandoned quantity", "abandoned"]]) {
+      expect(screen.getByRole("link", { name }).getAttribute("href")).toBe(`/admin/test/purchase-requisitions?sort=${key}&dir=asc`);
+    }
+    expect(screen.getByRole("columnheader", { name: "Outstanding" }).getAttribute("aria-sort")).toBeNull();
     expect(screen.queryByRole("status")).toBeNull();
   });
 

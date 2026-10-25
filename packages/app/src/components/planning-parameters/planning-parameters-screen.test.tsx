@@ -82,13 +82,15 @@ describe("PlanningParametersScreen", () => {
     expect(screen.queryAllByRole("button").map((button) => button.textContent)).toEqual(["Search"]);
   });
 
-  it("searches above the list, sorts by every stored column but the decimal quantities, and marks the matches (#217)", () => {
+  it("searches above the list, sorts by every column, the lot quantities included (#224), and marks the matches (#217)", () => {
     renderScreen([set("buy")], false, { search: { q: "cabinet plant", typed: "cabinet plant" }, sort: { sort: "leadTime", dir: "desc" } });
 
     expect(screen.getByRole("searchbox", { name: "Search planning parameters" })).toBeTruthy();
     expect(screen.getByRole("status").textContent).toBe("1 result for “cabinet plant” · Clear search");
     expect(screen.getByRole("link", { name: "Clear search" }).getAttribute("href")).toBe("/admin/test/planning-parameters?sort=leadTime&dir=desc");
-    expect(screen.getAllByRole("columnheader").map((header) => header.getAttribute("aria-sort"))).toEqual(["none", "none", "none", "descending", null, null]);
+    expect(screen.getAllByRole("columnheader").map((header) => header.getAttribute("aria-sort"))).toEqual(["none", "none", "none", "descending", "none", "none"]);
+    expect(screen.getByRole("link", { name: "Minimum lot" }).getAttribute("href")).toBe("/admin/test/planning-parameters?q=cabinet+plant&sort=minimum&dir=asc");
+    expect(screen.getByRole("link", { name: "Lot multiple" }).getAttribute("href")).toBe("/admin/test/planning-parameters?q=cabinet+plant&sort=multiple&dir=asc");
     expect(screen.getByRole("link", { name: "Make / Buy" }).getAttribute("href")).toBe("/admin/test/planning-parameters?q=cabinet+plant&sort=procurement&dir=asc");
     expect([...document.querySelectorAll("mark")].map((mark) => mark.textContent)).toEqual(["Cabinet", "plant"]);
   });

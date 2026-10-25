@@ -78,10 +78,10 @@ export function TransfersScreen({ tenant, transfers, page, total, list, material
           destination: <Highlight text={locationName(locationsById, transfer.destination)} query={search} />,
         }),
     },
-    { id: "quantity", header: t.quantity, kind: "quantity", cell: (transfer) => amount(transfer.quantity, transfer.material) },
-    { id: "dispatched", header: t.dispatched, kind: "quantity", priority: 2, cell: (transfer) => amount(transfer.dispatched, transfer.material) },
+    { id: "quantity", header: t.quantity, kind: "quantity", sortKey: "quantity", cell: (transfer) => amount(transfer.quantity, transfer.material) },
+    { id: "dispatched", header: t.dispatched, kind: "quantity", priority: 2, sortKey: "dispatched", cell: (transfer) => amount(transfer.dispatched, transfer.material) },
     { id: "inTransit", header: t.inTransit, kind: "quantity", cell: (transfer) => amount(transfer.inTransit, transfer.material) },
-    { id: "received", header: t.received, kind: "quantity", priority: 2, cell: (transfer) => amount(transfer.received, transfer.material) },
+    { id: "received", header: t.received, kind: "quantity", priority: 2, sortKey: "received", cell: (transfer) => amount(transfer.received, transfer.material) },
     {
       id: "plannedDates",
       header: t.plannedDates,

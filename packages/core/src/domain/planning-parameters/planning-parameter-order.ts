@@ -1,12 +1,15 @@
+import { compareDecimals } from "../quantities/decimal";
 import type { SortDirection } from "../../validators/lists/list-query.schema";
 import type { PlanningParameterSort } from "../../validators/planning-parameters/planning-parameter-list.schema";
 
-/** What a set is sorted by: its material's and location's business IDs and its stored values. */
+/** What a set is sorted by: its material's and location's business IDs and its stored values, quantities by value (#224). */
 export interface SortablePlanningParameters {
   material: string;
   location: string;
   procurement: string;
   leadTimeDays: number;
+  minimumQuantity: string;
+  lotMultiple: string;
 }
 
 const COMPARE: Record<PlanningParameterSort, (a: SortablePlanningParameters, b: SortablePlanningParameters) => number> = {
@@ -14,6 +17,8 @@ const COMPARE: Record<PlanningParameterSort, (a: SortablePlanningParameters, b: 
   location: (a, b) => a.location.localeCompare(b.location),
   procurement: (a, b) => a.procurement.localeCompare(b.procurement),
   leadTime: (a, b) => a.leadTimeDays - b.leadTimeDays,
+  minimum: (a, b) => compareDecimals(a.minimumQuantity, b.minimumQuantity),
+  multiple: (a, b) => compareDecimals(a.lotMultiple, b.lotMultiple),
 };
 
 /**

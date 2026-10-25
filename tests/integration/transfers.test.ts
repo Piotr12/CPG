@@ -214,6 +214,14 @@ describe("transfers in the UI", () => {
     await una.open(`${baseUrl}/admin/prod/transfers?q=tr+plant`);
     await una.waitFor("main [role=status]");
     for (const [, , route] of await tableRows(una, "Transfers")) expect(route).toContain("tr plant");
+    // By the planned quantity's value (#224): 3 kg before 100 kg, which the stored text has the other way round.
+    await clickHydrated(una, "main th a[href$='q=tr+plant&sort=quantity&dir=asc']");
+    await atQuery("?q=tr+plant&sort=quantity&dir=asc");
+    expect(await own()).toEqual([back, transfer]);
+    await clickHydrated(una, "main th a[href$='q=tr+plant&sort=quantity&dir=desc']");
+    await atQuery("?q=tr+plant&sort=quantity&dir=desc");
+    await una.waitUntil(`document.querySelector("main th[aria-sort=descending]")?.innerText.trim() === "Planned"`);
+    expect(await own()).toEqual([transfer, back]);
     await clickHydrated(una, "main th a[href$='q=tr+plant&sort=material&dir=asc']");
     await atQuery("?q=tr+plant&sort=material&dir=asc");
     expect(await own()).toEqual([transfer, back]);
