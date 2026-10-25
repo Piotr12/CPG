@@ -125,7 +125,7 @@ describe("SafetyStockPage", () => {
   });
 
   it("refuses a search past the limits in the form, listing everything, and ignores an unknown sort (#217)", async () => {
-    render(await resolveServerComponents(page("test", { q: "x".repeat(101), sort: "quantity" })));
+    render(await resolveServerComponents(page("test", { q: "x".repeat(101), sort: "version" })));
 
     expect(mocks.targets).toHaveBeenCalledWith({ q: "", sort: "material", dir: "asc", today: "2027-01-20" });
     expect(screen.getByRole("searchbox").getAttribute("aria-invalid")).toBe("true");

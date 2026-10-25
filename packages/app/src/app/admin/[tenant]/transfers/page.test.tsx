@@ -142,6 +142,10 @@ describe("TransfersPage", () => {
     expect(screen.getByRole("link", { name: "From → to" }).getAttribute("href")).toBe("/admin/test/transfers?sort=source&dir=asc");
     expect(screen.getByRole("link", { name: "Planned dates" }).getAttribute("href")).toBe("/admin/test/transfers?sort=plannedDispatch&dir=asc");
     expect(screen.getByRole("columnheader", { name: "In transit" }).getAttribute("aria-sort")).toBeNull();
+    // The stored quantities sort by value (#224).
+    for (const [name, key] of [["Planned", "quantity"], ["Dispatched", "dispatched"], ["Received", "received"]]) {
+      expect(screen.getByRole("link", { name }).getAttribute("href")).toBe(`/admin/test/transfers?sort=${key}&dir=asc`);
+    }
   });
 
   it("searches and sorts every page on the server, marking the matches in the material and route, and pages keep both (#217)", async () => {

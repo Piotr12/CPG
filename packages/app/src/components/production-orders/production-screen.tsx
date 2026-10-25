@@ -44,7 +44,7 @@ export function ProductionScreen({ tenant, orders, order, materials, locations, 
   const columns: DataTableColumn<ProductionOrderView>[] = [
     { id: "id", header: t.id, kind: "id", sortKey: "id", cell: (row) => <Link className="underline" href={`${path}/${row.id}`}><Highlight text={row.id} query={search.q} /></Link> },
     { id: "output", header: t.output, kind: "longText", sortKey: "output", cell: (row) => <Highlight text={output(row)} query={search.q} /> },
-    { id: "quantity", header: t.quantity, kind: "quantity", cell: quantity },
+    { id: "quantity", header: t.quantity, kind: "quantity", sortKey: "quantity", cell: quantity },
     { id: "location", header: t.location, kind: "longText", priority: 2, sortKey: "location", cell: (row) => location(row.location) },
     { id: "finish", header: t.finish, kind: "date", priority: 2, sortKey: "finish", cell: (row) => row.plannedFinish },
     { id: "start", header: t.start, kind: "date", priority: 3, sortKey: "start", cell: (row) => row.plannedStart },

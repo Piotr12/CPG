@@ -83,8 +83,8 @@ export function RequisitionsTable({ tenant, requisitions, materials, locations, 
         );
       },
     },
-    { id: "quantity", header: t.quantity, kind: "quantity", cell: (requisition) => amount(requisition.quantity, requisition.material) },
-    { id: "converted", header: t.converted, kind: "quantity", priority: 2, cell: (requisition) => amount(requisition.converted, requisition.material) },
+    { id: "quantity", header: t.quantity, kind: "quantity", sortKey: "quantity", cell: (requisition) => amount(requisition.quantity, requisition.material) },
+    { id: "converted", header: t.converted, kind: "quantity", priority: 2, sortKey: "converted", cell: (requisition) => amount(requisition.converted, requisition.material) },
     { id: "outstanding", header: t.outstanding, kind: "quantity", priority: 2, cell: (requisition) => amount(requisition.outstanding, requisition.material) },
     { id: "requiredDate", header: t.requiredDate, kind: "date", priority: 2, sortKey: "requiredDate", cell: (requisition) => requisition.requiredDate },
     {
@@ -96,7 +96,7 @@ export function RequisitionsTable({ tenant, requisitions, materials, locations, 
         <StatusBadge {...documentStatusTone(requisition.status as DocumentStatus)}>{labels.status[requisition.status as keyof typeof labels.status]}</StatusBadge>
       ),
     },
-    { id: "abandoned", header: labels.lifecycle.abandoned, kind: "quantity", priority: 2, cell: (row) => amount(row.abandoned, row.material) },
+    { id: "abandoned", header: labels.lifecycle.abandoned, kind: "quantity", priority: 2, sortKey: "abandoned", cell: (row) => amount(row.abandoned, row.material) },
     { id: "actions", header: labels.lifecycle.actions, kind: "actions", cell: (row) => <div className="flex flex-col items-start gap-2">
       <ChangeDateDialog kind="requisition" available={editable && row.status === "open"} subject={`${labels.link} ${row.id}`} value={row.requiredDate}
         version={row.version} save={setRequisitionRequiredDate.bind(null, tenant.code, tenant.generation, row.id)} labels={dateLabels} errors={labels.errors} />

@@ -9,7 +9,7 @@ import {
 } from "@cpg/db";
 import { documentState, resolveLines as resolveLifecycle, type LifecycleAction, type DocumentState } from "../../domain/document-lifecycle/lifecycle";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
-import { listOrderBy, searchWhere } from "../../domain/lists/list-query";
+import { listOrderBy, searchWhere, type SortField } from "../../domain/lists/list-query";
 import { ConflictError, ValidationError, versionConflict } from "../../http/errors";
 import { parseInput } from "../../http/parse-input";
 import type { ListOptions } from "../../validators/lists/list-query.schema";
@@ -44,12 +44,15 @@ export interface NewRequisition {
 
 /** What the Purchase requisitions search matches, and the column each sort key orders by (#217). */
 const REQUISITION_SEARCH_FIELDS = ["code", "material.code", "material.description", "location.code", "location.name"];
-const REQUISITION_SORT_PATHS: Record<RequisitionSort, string> = {
+const REQUISITION_SORT_PATHS: Record<RequisitionSort, SortField> = {
   id: "code",
   material: "material.code",
   location: "location.code",
+  quantity: { decimal: "quantity" },
+  converted: { decimal: "converted" },
   requiredDate: "requiredDate",
   status: "status",
+  abandoned: { decimal: "abandoned" },
 };
 
 export const REQUISITION_ID_RACE = "Another purchase requisition was created at the same moment. Try again.";
