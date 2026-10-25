@@ -76,6 +76,7 @@ describe("TransferReversal persistence", () => {
 
   it("rolls down without touching postings and upgrades a populated previous schema", async () => {
     const { posting } = await fixture(scope());
+    await orm.migrator.down(); // List key read indexes.
     await orm.migrator.down(); // Tenant `IN` list indexes.
     await orm.migrator.down(); // Demand review indexes.
     await orm.migrator.down(); // List sort indexes.

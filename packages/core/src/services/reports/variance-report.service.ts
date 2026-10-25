@@ -19,6 +19,9 @@ import { PRODUCTION_COMPLETION_MOVEMENT } from "../production-orders/production-
 /** How many completions, orders or lines one read holds, so the identity map and the `$in` lists stay bounded. */
 const BATCH = 500;
 
+/** What a row shows of a component's material. */
+type LineMaterial = Pick<Material, "code" | "description" | "baseUnit">;
+
 /** One component of a row: its figures summed over the order's counted completions, in its base unit (spec Q3). */
 export interface VarianceReportComponent {
   material: string;
@@ -210,29 +213,34 @@ export class VarianceReportService {
 
   /**
    * Adds every line of the `counted` completions to its order's tally, in keyset batches without the
-   * identity map, and returns the materials the lines name, by UUID.
+   * identity map, and returns the materials the lines name, by UUID. The materials come with their
+   * lines, joined by primary key: a read of them by `id IN` would walk every material of the tenant (#257).
    */
-  private async tallyLines(counted: ReadonlyMap<string, { tally: OrderTally; waste: boolean }>): Promise<Map<string, Material>> {
-    const materialIds = new Set<string>();
+  private async tallyLines(counted: ReadonlyMap<string, { tally: OrderTally; waste: boolean }>): Promise<Map<string, LineMaterial>> {
+    const materials = new Map<string, LineMaterial>();
     for (const ids of chunks([...counted.keys()])) {
       let after: string | undefined;
       for (;;) {
         const batch = await this.em.find(
           ProductionCompletionLine,
           { completion: { $in: ids }, ...(after !== undefined && { id: { $gt: after } }) },
-          { orderBy: { id: "asc" }, limit: BATCH, disableIdentityMap: true },
+          {
+            populate: ["material"],
+            fields: ["completion", "position", "extra", "expected", "actual", "variance", "material.code", "material.description", "material.baseUnit"],
+            orderBy: { id: "asc" },
+            limit: BATCH,
+            disableIdentityMap: true,
+          },
         );
         for (const { completion, material, position, extra, expected, actual, variance } of batch) {
           const { tally, waste } = counted.get(completion.id)!;
           tally.addLine({ material: material.id, position, extra, expected, actual, variance }, waste);
-          materialIds.add(material.id);
+          materials.set(material.id, { code: material.code, description: material.description, baseUnit: material.baseUnit });
         }
         if (batch.length < BATCH) break;
         after = batch.at(-1)!.id;
       }
     }
-    const materials = new Map<string, Material>();
-    for (const ids of chunks([...materialIds])) for (const record of await this.em.find(Material, { id: { $in: ids } })) materials.set(record.id, record);
     return materials;
   }
 }
