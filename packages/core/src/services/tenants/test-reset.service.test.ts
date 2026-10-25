@@ -234,6 +234,8 @@ describe("atomic Test reset", { timeout: 60_000 }, () => {
       expect(old[table].length, table).toBeGreaterThan(expected[table]);
       expect(codes, table).toEqual(Array.from({ length: expected[table] }, (_, index) => formatSequentialId(index + 1)));
     }
+    // The new generation has one plant: a transfer needs a second, which takes the next location ID too.
+    expect((await (await scope()).cradle.locationService.create({ name: "new generation location" }, actor)).id).toBe("00000002");
     expect((await (await scope()).cradle.transferService.create(transfer, actor)).id).toBe("00000001");
   }, 300_000);
 

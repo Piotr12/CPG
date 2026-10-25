@@ -185,7 +185,7 @@ export function planEvents(config: TestTenantConfig, demand: DemandPlan, supply:
   return { anchor, demand, supply, events: events.sort(byDayOrder) };
 }
 
-/** The documents created relative to today (spec "Today"): one overdue top-up order per plant, and the open requisitions. */
+/** The documents created relative to today (spec "Today"): the overdue top-up orders, and the open requisitions. */
 function todayRelativeCreations(config: TestTenantConfig, plan: AnchorPlan, today: string): DatedEvent[] {
   const topUpDate = addWeekdays(today, -TOP_UP_WEEKDAYS_AGO);
   const topUps = config.supply.topUps.map(({ location, material }, order): DatedEvent => {
@@ -198,7 +198,7 @@ function todayRelativeCreations(config: TestTenantConfig, plan: AnchorPlan, toda
       event: {
         kind: "purchaseOrder",
         key: `purchase-order:top-up:${location}`,
-        supplier: pair.suppliers[monthOf(topUpDate) % pair.suppliers.length],
+        supplier: pair.supplier!,
         location,
         lines: [{ material, quantity: formatDecimal(pair.multiple), unit: baseUnitOf(config, material), plannedDate: topUpDate }],
       },
@@ -288,12 +288,19 @@ function stamped(events: readonly DatedEvent[]): TimelineEvent[] {
   });
 }
 
+/** Whether a planned event is a planning run's order: on a Thursday, the run's orders are created that morning (spec "Edge Cases"). */
+function isPlanningRunOrder({ slot, event }: DatedEvent): boolean {
+  return slot === "creation" && (event.kind === "purchaseOrder" || event.kind === "productionOrder");
+}
+
 /**
  * The timeline as of `today` (spec "Today: what is open"): everything the anchor month's plan dates
- * before today, the documents created relative to today, then today's partial documents.
+ * before today, the orders a planning run creates today, the documents created relative to today,
+ * then today's partial documents.
  */
 export function buildTimeline(config: TestTenantConfig, plan: AnchorPlan, today: string): TimelineEvent[] {
-  const past = [...plan.events.filter(({ date }) => date < today), ...todayRelativeCreations(config, plan, today)].sort(byDayOrder);
+  const planned = plan.events.filter((dated) => dated.date < today || (dated.date === today && isPlanningRunOrder(dated)));
+  const past = [...planned, ...todayRelativeCreations(config, plan, today)].sort(byDayOrder);
   const ledger = new Ledger(config);
   for (const { event } of past) ledger.apply(event);
   const todays = todaysDocuments(config, plan, today, ledger).sort(byDayOrder);

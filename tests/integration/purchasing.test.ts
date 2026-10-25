@@ -50,21 +50,21 @@ describe("purchase requisitions and orders in the UI", () => {
     const table = (await rows(una, "/admin/test/purchase-requisitions")).map((row) => row.slice(0, 8));
 
     expect(table).toHaveLength(5);
-    // Two are converted in full by next month's orders; the quantity follows the supply plan, so only its shape is fixed.
+    // Two are converted in full by the last purchasing run before this month; the quantity follows the supply plan, so only its shape is fixed.
     expect(table[0].slice(0, 3)).toEqual(["00000001", "00000001 Steel sheet 2 mm", "00000001 Main plant, Wrocław"]);
     expect(table[0][4]).toBe(table[0][3]);
     expect(table[0].slice(5)).toEqual(["0 kg", expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), "Completed"]);
-    expect(table[1].slice(0, 3)).toEqual(["00000002", "00000009 Powder coat, grey RAL 7035", "00000002 Lockers plant, Poznań"]);
+    expect(table[1].slice(0, 3)).toEqual(["00000002", "00000009 Powder coat, grey RAL 7035", "00000001 Main plant, Wrocław"]);
     expect(table[1][7]).toBe("Completed");
     // Three are open, with nothing converted yet.
     expect(table.slice(2).map((row) => [row[0], row[1], row[2], row[3], row[4], row[5], row[7]])).toEqual([
-      ["00000003", "00000007 Steel sheet 1.0 mm", "00000004 Small goods plant, Gdańsk", "1000 kg", "0 kg", "1000 kg", "Open"],
-      ["00000004", "00000013 Galvanised steel sheet 0.8 mm", "00000003 Sheet-metal plant, Łódź", "500 kg", "0 kg", "500 kg", "Open"],
-      ["00000005", "00000014 Welding wire 0.8 mm", "00000002 Lockers plant, Poznań", "30 kg", "0 kg", "30 kg", "Open"],
+      ["00000003", "00000007 Steel sheet 1.0 mm", "00000001 Main plant, Wrocław", "1000 kg", "0 kg", "1000 kg", "Open"],
+      ["00000004", "00000013 Paint, blue RAL 5010", "00000001 Main plant, Wrocław", "40 l", "0 l", "40 l", "Open"],
+      ["00000005", "00000014 Welding wire 0.8 mm", "00000001 Main plant, Wrocław", "30 kg", "0 kg", "30 kg", "Open"],
     ]);
   });
 
-  it("lists the dataset's orders, and opens the open one that converts a requisition, with its dated lines", async () => {
+  it("lists the dataset's orders, and opens the one that converts a requisition, with its dated lines", async () => {
     // The tiny dataset's orders fit one page; paging them is test-reset-realistic.test.ts's.
     const first = await rows(una, "/admin/test/purchase-orders");
     expect(first.length).toBeGreaterThan(0);
@@ -72,11 +72,11 @@ describe("purchase requisitions and orders in the UI", () => {
     expect(first[0][0]).toBe("00000001");
     expect(first[0].at(-1)).toBe("Completed");
 
-    // Next month's order of 2 mm sheet for Wrocław converts requisition 00000001: it is one of that pair's open
-    // orders, among the latest, so look from the last.
+    // The last steel order placed before this month converts requisition 00000001: it is received early in the
+    // month, so it may be open or completed; look from the latest.
     let converting: string[] | undefined;
     const candidates = first
-      .filter((row) => row[1] === "00000001 Steel Service Centre Sp. z o.o." && row[2] === "00000001 Main plant, Wrocław" && row.at(-1) === "Open")
+      .filter((row) => row[1] === "00000001 Steel Service Centre Sp. z o.o." && row[2] === "00000001 Main plant, Wrocław")
       .map(([id]) => id)
       .reverse();
     for (const id of candidates) {
@@ -380,10 +380,10 @@ describe("sorting and searching the purchasing lists (#217)", () => {
     await una.waitFor("main [role=status]");
 
     const found = await shown();
-    expect(found.map((row) => row[1].split(" ")[0])).toEqual(["00000013", "00000007", "00000001"]);
+    expect(found.map((row) => row[1].split(" ")[0])).toEqual(["00000007", "00000001"]);
     for (const row of found) expect(row[1].toLowerCase()).toContain("steel sheet");
-    expect(await una.text("main [role=status]")).toBe("3 results for “steel sheet” · Clear search");
-    expect(await una.evaluate<number>(`document.querySelectorAll("main tbody mark").length`)).toBeGreaterThanOrEqual(6);
+    expect(await una.text("main [role=status]")).toBe("2 results for “steel sheet” · Clear search");
+    expect(await una.evaluate<number>(`document.querySelectorAll("main tbody mark").length`)).toBeGreaterThanOrEqual(4);
 
     await clickHydrated(una, "main [role=status] a");
     await atQuery("?sort=material&dir=desc");

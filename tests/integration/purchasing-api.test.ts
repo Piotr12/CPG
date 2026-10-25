@@ -94,7 +94,7 @@ describe("purchase requisitions and orders through the API", () => {
     await write("POST", `/api/tenants/prod/materials/${ids.steel}/conversions`, { unit: "t", numerator: "1000", denominator: "1" });
     ids.plant = await create("/api/tenants/prod/locations", { name: "buyapi plant" });
     ids.depot = await create("/api/tenants/prod/locations", { name: "buyapi depot" });
-    // Pad Prod past Test's suppliers (its six, plus any another file added) so `gone` is Prod's alone (TEN-014).
+    // Pad Prod past Test's suppliers (its two, plus any another file added) so `gone` is Prod's alone (TEN-014).
     const testSuppliers = (json(await api("GET", "/api/tenants/test/suppliers")).data as unknown[]).length;
     while (Number(await create("/api/tenants/prod/suppliers", { name: "buyapi pad" })) < testSuppliers);
     ids.acme = await create("/api/tenants/prod/suppliers", { name: "buyapi acme" });
@@ -303,18 +303,19 @@ describe("purchase requisitions and orders through the API", () => {
     expect(json(staleOrder).error.code).toBe("VERSION_CONFLICT");
   });
 
-  it("starts Test with the dataset's requisitions and POs, two requisitions converted in full by open POs, and needs the Test generation to write there (D06, BUY-003, API-034)", async () => {
+  it("starts Test with the dataset's requisitions and POs, two requisitions converted in full by the last run before this month, and needs the Test generation to write there (D06, BUY-003, API-034)", async () => {
     const requisitions = (json(await api("GET", "/api/tenants/test/purchase-requisitions")).data as Requisition[]).slice(0, 5);
     const demo = await orders("test");
 
     expect(requisitions.map(({ id }) => id)).toEqual(["00000001", "00000002", "00000003", "00000004", "00000005"]);
     for (const converted of requisitions.slice(0, 2)) {
       expect(converted).toMatchObject({ status: "completed", converted: converted.quantity, outstanding: "0.000000" });
-      expect(demo.find(({ lines }) => lines.some(({ requisition }) => requisition === converted.id))).toMatchObject({ status: "open" });
+      // Received early in the month: open until its receipt, completed after it.
+      expect(demo.find(({ lines }) => lines.some(({ requisition }) => requisition === converted.id))).toMatchObject({ status: expect.stringMatching(/^(open|completed)$/) });
     }
     expect(requisitions.slice(2).map(({ quantity, converted, status }) => [quantity, converted, status])).toEqual([
       ["1000.000000", "0.000000", "open"],
-      ["500.000000", "0.000000", "open"],
+      ["40.000000", "0.000000", "open"],
       ["30.000000", "0.000000", "open"],
     ]);
     // The history is received; the latest orders are still open.

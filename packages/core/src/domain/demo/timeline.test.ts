@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { ONE } from "../quantities/decimal";
+import { formatDecimal, ONE } from "../quantities/decimal";
 import { addDays, addWeekdays, monthOf, nthWeekday } from "./calendar";
 import { planDemand } from "./demand-plan";
 import { Ledger } from "./ledger";
 import { expectedUse, planSupply, type SupplyPlan } from "./supply-plan";
-import { TEST_TENANT_CONFIG } from "./test-tenant-config.schema";
+import { byId, TEST_TENANT_CONFIG } from "./test-tenant-config.schema";
 import { buildTimeline, notAfter, planEvents, type TimelineEvent } from "./timeline";
 
 const config = TEST_TENANT_CONFIG;
@@ -61,12 +61,8 @@ describe("buildTimeline", () => {
     expect(timeline.slice(1).every((event, index) => event.at > timeline[index].at)).toBe(true);
     const hours = { opening: "08:30", customerOrder: "08", shipment: "08", purchaseOrder: "08", productionOrder: "08", requisition: "08", goodsReceipt: "09", completion: "13", goodsIssue: "15" };
     for (const event of timeline) expect(event.at.slice(11)).toMatch(new RegExp(`^${hours[event.kind]}`));
-    expect(timeline.slice(0, 4).map(({ at, kind }) => [at, kind])).toEqual([
-      ["2024-09-01T08:30:00.000Z", "opening"],
-      ["2024-09-01T08:30:01.000Z", "opening"],
-      ["2024-09-01T08:30:02.000Z", "opening"],
-      ["2024-09-01T08:30:03.000Z", "opening"],
-    ]);
+    expect([timeline[0].at, timeline[0].kind]).toEqual(["2024-09-01T08:30:00.000Z", "opening"]);
+    expect(timeline.filter(({ kind }) => kind === "opening")).toHaveLength(1);
   });
 
   it("holds everything dated before today and, on today, only the partial documents", () => {
@@ -81,23 +77,26 @@ describe("buildTimeline", () => {
     }
   });
 
-  it("receives the first line of each plant's first open purchase order today", () => {
-    const receipts = ofKind(todays, "goodsReceipt");
-    expect(receipts).toHaveLength(4);
-    for (const receipt of receipts) {
-      const order = plan.supply.purchaseOrders.find(({ key }) => key === receipt.order)!;
-      const open = plan.supply.purchaseOrders.filter((candidate) => candidate.location === order.location && candidate.createdOn < today && candidate.plannedDate >= today);
-      expect(open.sort((a, b) => a.plannedDate.localeCompare(b.plannedDate))[0]).toBe(order);
-      expect(receipt.lines).toEqual([{ line: 1, quantity: String(order.lines[0].base / ONE), unit: "kg" }]);
-    }
+  it("receives the first line of the plant's first open purchase order today, when one is open", () => {
+    // Thursday's run orders for next Monday and Tuesday, so on a Wednesday every order is in.
+    expect(ofKind(todays, "goodsReceipt")).toEqual([]);
+    const day = "2026-10-19";
+    const dayPlan = planFor(day);
+    const receipts = ofKind(on(buildTimeline(config, dayPlan, day), day), "goodsReceipt");
+    expect(receipts).toHaveLength(1);
+    const order = dayPlan.supply.purchaseOrders.find(({ key }) => key === receipts[0].order)!;
+    const open = dayPlan.supply.purchaseOrders.filter((candidate) => candidate.createdOn < day && candidate.plannedDate >= day);
+    expect(open.sort((a, b) => a.plannedDate.localeCompare(b.plannedDate))[0]).toBe(order);
+    expect(receipts[0].lines).toEqual([{ line: 1, quantity: formatDecimal(order.lines[0].base), unit: byId(config.catalogue.materials, order.lines[0].material)!.baseUnit }]);
   });
 
-  it("ships half of each plant's first unshipped open order today and opens a shipment for the whole second", () => {
+  it("ships half of the plant's first unshipped open order today and opens a shipment for the whole second", () => {
     const shipments = ofKind(todays, "shipment");
     const issues = ofKind(todays, "goodsIssue");
-    for (const location of ["00000001", "00000002", "00000003", "00000004"]) {
+    expect(issues).toHaveLength(1);
+    {
       const unshipped = plan.demand.orders
-        .filter((order) => order.location === location && order.createdOn < today && order.requiredDate >= today && order.shipments.every(({ createdOn }) => createdOn >= today))
+        .filter((order) => order.createdOn < today && order.requiredDate >= today && order.shipments.every(({ createdOn }) => createdOn >= today))
         .sort((a, b) => a.requiredDate.localeCompare(b.requiredDate));
       const [partial, open] = unshipped.map((order) => shipments.find((shipment) => shipment.order === order.key)!);
       expect(partial.lines).toEqual(unshipped[0].lines.map(({ base }, orderLine) => ({ orderLine, quantity: String(base / ONE / 2n > 1n ? base / ONE / 2n : 1n), unit: "each" })));
@@ -108,14 +107,9 @@ describe("buildTimeline", () => {
     }
   });
 
-  it("creates one overdue top-up order per plant three weekdays ago, never received", () => {
+  it("creates the overdue top-up order three weekdays ago, never received", () => {
     const topUps = ofKind(timeline, "purchaseOrder").filter(({ key }) => key.startsWith("purchase-order:top-up:"));
-    expect(topUps.map(({ location, supplier, lines }) => [location, supplier, lines[0].material, lines[0].quantity])).toEqual([
-      ["00000001", "00000001", "00000001", "100"],
-      ["00000002", "00000001", "00000007", "250"],
-      ["00000003", "00000001", "00000007", "250"],
-      ["00000004", "00000001", "00000007", "250"],
-    ]);
+    expect(topUps.map(({ location, supplier, lines }) => [location, supplier, lines[0].material, lines[0].quantity])).toEqual([["00000001", "00000001", "00000001", "100"]]);
     for (const order of topUps) {
       expect(order.at.slice(0, 10)).toBe(addWeekdays(today, -3));
       expect(order.lines[0].plannedDate).toBe(addWeekdays(today, -3));
@@ -127,9 +121,9 @@ describe("buildTimeline", () => {
     const requisitions = ofKind(timeline, "requisition");
     const open = requisitions.filter(({ key }) => key.startsWith("requisition:open:"));
     expect(open.map(({ material, location, quantity, unit }) => [material, location, quantity, unit])).toEqual([
-      ["00000007", "00000004", "1000", "kg"],
-      ["00000013", "00000003", "500", "kg"],
-      ["00000014", "00000002", "30", "kg"],
+      ["00000007", "00000001", "1000", "kg"],
+      ["00000013", "00000001", "40", "l"],
+      ["00000014", "00000001", "30", "kg"],
     ]);
     for (const requisition of open) {
       expect(requisition.at.slice(0, 10)).toBe(addWeekdays(today, -2));
@@ -143,7 +137,7 @@ describe("buildTimeline", () => {
     }
   });
 
-  it("completes half of each plant's first order in progress today, in lot multiples, as far as its components allow", () => {
+  it("completes half of the plant's first order in progress today, in lot multiples, as far as its components allow", () => {
     for (const day of ["2026-10-05", "2026-10-07", "2026-10-10"]) {
       const dayPlan = planFor(day);
       const completions = ofKind(on(buildTimeline(config, dayPlan, day), day), "completion");
@@ -163,31 +157,42 @@ describe("buildTimeline", () => {
         );
       }
     }
-    const capped = ofKind(on(timelineOn("2026-10-05"), "2026-10-05"), "completion").find(({ order }) => order.endsWith(":00000015:00000002"))!;
-    expect(capped.quantity).toBe("160");
-    expect(planFor("2026-10-05").supply.productionOrders.find(({ key }) => key === capped.order)!.quantity).toBe(340n * ONE);
+  });
+
+  it("cuts today's partial completion to the lots its components cover", () => {
+    const day = "2026-10-07";
+    const dayTimeline = timelineOn(day);
+    const completion = ofKind(on(dayTimeline, day), "completion")[0];
+    const order = planFor(day).supply.productionOrders.find(({ key }) => key === completion.order)!;
+    const lot = planFor(day).supply.pairs.find(({ procurement, pairIndex }) => procurement === "make" && pairIndex === order.pairIndex)!.multiple;
+    expect(BigInt(completion.quantity) * ONE).toBeGreaterThan(lot);
+    // Leave exactly one lot's worth of the first component.
+    const [first] = expectedUse(config, order.output, lot);
+    const before = balanceBefore(dayTimeline, first.material, order.location, `${day}T13`);
+    const cut = timelineOn(day, lessStock(first.material, order.location, before - first.base, day));
+    expect(ofKind(on(cut, day), "completion").find(({ order: key }) => key === order.key)!.quantity).toBe(formatDecimal(lot));
   });
 
   it("caps today's partial issue at the stock on hand, dropping lines with none and the shipment when nothing is left", () => {
-    const location = "00000002";
+    const location = "00000001";
     const partial = ofKind(todays, "shipment").find(({ order }) => order.endsWith(`:${location}`))!;
     const order = plan.demand.orders.find(({ key }) => key === partial.order)!;
-    const [first, second] = order.lines.map(({ material }) => material);
+    const [first, ...others] = order.lines.map(({ material }) => material);
+    expect(others.length).toBeGreaterThan(0);
     const leaving = (material: string, keep: bigint) => lessStock(material, location, balanceBefore(timeline, material, location, `${today}T15`) - keep, today);
     const capped = timelineOn(today, (supply) => {
       leaving(first, 3n * ONE)(supply);
-      leaving(second, 0n)(supply);
+      for (const other of others) leaving(other, 0n)(supply);
     });
     const shipment = ofKind(on(capped, today), "shipment").find(({ order: key }) => key === order.key)!;
     expect(shipment.lines).toEqual([{ orderLine: 0, quantity: "3", unit: "each" }]);
     expect(ofKind(on(capped, today), "goodsIssue").find(({ shipment: key }) => key === shipment.key)!.lines).toEqual([{ line: 1, quantity: "3", unit: "each" }]);
 
     const empty = timelineOn(today, (supply) => {
-      leaving(first, 0n)(supply);
-      leaving(second, 0n)(supply);
+      for (const material of [first, ...others]) leaving(material, 0n)(supply);
     });
     expect(ofKind(on(empty, today), "shipment").some(({ order: key }) => key === order.key)).toBe(false);
-    expect(ofKind(on(empty, today), "goodsIssue")).toHaveLength(3);
+    expect(ofKind(on(empty, today), "goodsIssue")).toHaveLength(0);
   });
 
   it("leaves out today's partial completion when its components can't cover one lot", () => {

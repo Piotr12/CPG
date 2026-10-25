@@ -131,15 +131,15 @@ describe("planning parameters and safety stock (E03-S03)", () => {
     await admin.waitForText("Planning parameters — Test");
     expect(await admin.title()).toBe("Test · Planning parameters");
 
-    // Other files may add Test rows for their own masters, whose IDs come after the dataset's 26 materials and 4 locations.
-    const dataset = (rows: string[][]) => rows.filter(([material, location]) => material.slice(0, 8) <= "00000026" && location.slice(0, 8) <= "00000004");
+    // Other files may add Test rows for their own masters, whose IDs come after the dataset's 30 materials and one location.
+    const dataset = (rows: string[][]) => rows.filter(([material, location]) => material.slice(0, 8) <= "00000030" && location.slice(0, 8) <= "00000001");
     const sets = await listRows(admin, "/admin/test/planning-parameters");
     expect(sets[0].slice(0, 6)).toEqual(["00000001 Steel sheet 2 mm", "00000001 Main plant, Wrocław", "Buy", "14", "500 kg", "100 kg"]);
-    expect(dataset(sets)).toHaveLength(48);
+    expect(dataset(sets)).toHaveLength(30);
     const targets = dataset(await listRows(admin, "/admin/test/safety-stock"));
-    expect(targets).toHaveLength(50);
-    // Two targets rise later in the history, so each of those pairs shows a series of two.
-    for (const [material, location] of [["00000019 Locker, 2 compartments", "00000002 Lockers plant, Poznań"], ["00000023 Letterbox, galvanised", "00000003 Sheet-metal plant, Łódź"]]) {
+    expect(targets).toHaveLength(32);
+    // Two targets rise later, so each of those pairs shows a series of two.
+    for (const [material, location] of [["00000019 Locker, 2 compartments, grey", "00000001 Main plant, Wrocław"], ["00000024 Cabinet, blue", "00000001 Main plant, Wrocław"]]) {
       const series = targets.filter((row) => row[0] === material && row[1] === location).sort((a, b) => a[2].localeCompare(b[2]));
       expect(series).toHaveLength(2);
       expect(series[0][2]).not.toBe(series[1][2]);
@@ -332,7 +332,7 @@ describe("sorting and searching the planning parameters and safety stock lists (
     await clickHydrated(admin, "main th a[href$='sort=leadTime&dir=asc']");
     await atQuery("?sort=leadTime&dir=asc");
     const ascending = await keyed();
-    expect(ascending.length).toBeGreaterThanOrEqual(48);
+    expect(ascending.length).toBeGreaterThanOrEqual(30);
     expect(ascending).toEqual([...ascending].sort((a, b) => a[0] - b[0] || byKey(a, b)));
 
     await clickHydrated(admin, "main th a[href$='sort=leadTime&dir=desc']");
@@ -365,7 +365,7 @@ describe("sorting and searching the planning parameters and safety stock lists (
     await clickHydrated(admin, "main th a[href$='sort=effectiveFrom&dir=asc']");
     await atQuery("?sort=effectiveFrom&dir=asc");
     const dates = (await shown()).map((row) => row[2]);
-    expect(dates.length).toBeGreaterThanOrEqual(50);
+    expect(dates.length).toBeGreaterThanOrEqual(32);
     expect(dates).toEqual([...dates].sort());
 
     await clickHydrated(admin, "main th a[href$='sort=status&dir=asc']");

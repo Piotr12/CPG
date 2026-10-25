@@ -161,7 +161,8 @@ describe("manual production orders in the UI and API", () => {
     await admin.clickRole("button", "Cancel");
   });
   it("enforces read-only, Test generation and isolation while keeping preview readable (R05, R07, D06)", async () => {
-    expect(json(await api("GET", "/api/tenants/test/production-orders")).data[0]).toMatchObject({ id: "00000001", output: "00000004" });
+    // The dataset's first order is the first week's earliest completion: side panels on most days, locker frames when the opening stock covers the panels.
+    expect(json(await api("GET", "/api/tenants/test/production-orders")).data[0]).toMatchObject({ id: "00000001", output: expect.stringMatching(/^000000(04|16)$/) });
     const demo = { output: "00000004", location: "00000001", quantity: "1", unit: "each", plannedFinish: "2026-11-15" };
     expect((await write("POST", "/api/tenants/test/production-orders", demo)).status).toBe(428);
     const generation = json(await api("GET", "/api/tenants/test")).data.generation as number;

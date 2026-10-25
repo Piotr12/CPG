@@ -216,13 +216,13 @@ describe("planning parameters and safety-stock targets through the API (R07)", (
   });
 
   it("starts Test with the dataset's rows, and needs the Test generation to write there (TEN-001, API-034)", async () => {
-    // The test above adds a Test set for its own masters, whose IDs come after the dataset's 26 materials and 4 locations.
-    const dataset = <Row extends { material: string; location: string }>(rows: Row[]) => rows.filter(({ material, location }) => material <= "00000026" && location <= "00000004");
+    // The test above adds a Test set for its own masters, whose IDs come after the dataset's 30 materials and one location.
+    const dataset = <Row extends { material: string; location: string }>(rows: Row[]) => rows.filter(({ material, location }) => material <= "00000030" && location <= "00000001");
     const sets = dataset(json(await api("GET", "/api/tenants/test/planning-parameters", adminSecret)).data as { material: string; location: string }[]);
     const targets = dataset(json(await api("GET", "/api/tenants/test/safety-stock-targets", adminSecret)).data as { material: string; location: string }[]);
-    expect(sets.slice(0, 2).map(({ material, location }) => `${material}@${location}`)).toEqual(["00000001@00000001", "00000001@00000004"]);
-    expect(sets).toHaveLength(48);
-    expect(targets).toHaveLength(50);
+    expect(sets.slice(0, 2).map(({ material, location }) => `${material}@${location}`)).toEqual(["00000001@00000001", "00000002@00000001"]);
+    expect(sets).toHaveLength(30);
+    expect(targets).toHaveLength(32);
 
     const missing = await write("POST", "/api/tenants/test/safety-stock-targets", adminSecret, {
       material: "00000005",

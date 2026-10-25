@@ -1,7 +1,7 @@
 /*
  * Calendar arithmetic for the demonstration dataset, in UTC. Dates are ISO `YYYY-MM-DD` text, which
  * sorts and compares as plain strings; a month is one whole number, so months add and subtract like
- * integers. "Weekdays" are Monday to Friday, numbered from 1 within their month (spec "Demand").
+ * integers. "Weekdays" are Monday to Friday; demand falls on them, and weeks start on Monday (ISO 8601).
  */
 
 /** A calendar month as a count of months since January of year 0: `year × 12 + (month − 1)`. */
@@ -10,6 +10,8 @@ export type Month = number;
 const MONTHS_PER_YEAR = 12;
 const SATURDAY = 6;
 const SUNDAY = 0;
+const DAY_MS = 86_400_000;
+const DAYS_PER_WEEK = 7;
 
 function utc(date: string): Date {
   return new Date(`${date}T00:00:00Z`);
@@ -51,13 +53,54 @@ export function addDays(date: string, days: number): string {
   return isoDate(moved);
 }
 
+/** The number of days from 1970-01-01 to a date: the key a date's random draws and day counts use. */
+export function dayNumber(date: string): number {
+  return utc(date).getTime() / DAY_MS;
+}
+
+/** The ISO weekday of a date: 1 for Monday to 7 for Sunday. */
+export function isoWeekday(date: string): number {
+  return utc(date).getUTCDay() || DAYS_PER_WEEK;
+}
+
+/** The Monday of a date's ISO week: the week's key. */
+export function mondayOf(date: string): string {
+  return addDays(date, 1 - isoWeekday(date));
+}
+
+/** The last day of a month. */
+export function monthEnd(month: Month): string {
+  return addDays(monthStart(month + 1), -1);
+}
+
+/** The number of days in a month. */
+export function daysInMonth(month: Month): number {
+  return Number(monthEnd(month).slice(8, 10));
+}
+
+/** The date `months` calendar months after `date`, on the same day of the month or the month's last day when it is shorter. */
+export function addMonths(date: string, months: number): string {
+  const month = monthOf(date) + months;
+  const day = Math.min(Number(date.slice(8, 10)), daysInMonth(month));
+  return `${monthStart(month).slice(0, 8)}${String(day).padStart(2, "0")}`;
+}
+
+/** Every weekday from `first` to `last`, both included when they are weekdays, in order. */
+export function weekdaysFrom(first: string, last: string): string[] {
+  const weekdays: string[] = [];
+  for (let date = first; date <= last; date = addDays(date, 1)) {
+    if (isWeekday(date)) weekdays.push(date);
+  }
+  return weekdays;
+}
+
 /** Whether a date is Monday to Friday. */
 export function isWeekday(date: string): boolean {
   const day = utc(date).getUTCDay();
   return day !== SATURDAY && day !== SUNDAY;
 }
 
-/** Each month's weekdays once worked out: the generator asks for them thousands of times. */
+/** Each month's weekdays once worked out. */
 const WEEKDAYS = new Map<Month, readonly string[]>();
 
 /** The weekdays of a month, in order: every month has at least 20. */
@@ -77,11 +120,6 @@ export function nthWeekday(month: Month, n: number): string {
   const date = weekdaysOf(month)[n - 1];
   if (date === undefined) throw new RangeError(`${monthLabel(month)} has no weekday ${n}.`);
   return date;
-}
-
-/** The last weekday of a month. */
-export function lastWeekday(month: Month): string {
-  return weekdaysOf(month).at(-1)!;
 }
 
 /**

@@ -76,8 +76,8 @@ describe("materials through the API (R07)", () => {
       "00000001 Steel sheet 2 mm",
       "00000002 Bolt M8",
     ]);
-    // The dataset's 26; other files may add Test materials after them.
-    expect(test.filter(({ id }) => id <= "00000026")).toHaveLength(26);
+    // The dataset's 30; other files may add Test materials after them.
+    expect(test.filter(({ id }) => id <= "00000030")).toHaveLength(30);
     const { generation } = json(await api("GET", "/api/tenants/test", adminSecret)).data as { generation: number };
     const body = { type: "finished", description: "matapi test cabinet", baseUnit: "each" };
 

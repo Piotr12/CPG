@@ -429,10 +429,12 @@ describe("ForecastService", () => {
       ["a missing material", "MATERIAL_NOT_FOUND", { material: "00000099" }],
       ["an inactive material", "MATERIAL_INACTIVE", { material: "00000002" }],
       ["a missing location", "LOCATION_NOT_FOUND", { location: "00000099" }],
+      ["an inactive location", "LOCATION_INACTIVE", { location: "00000003" }],
     ])("refuses the whole seed for a row with %s, writing nothing", async (_, code, change) => {
       await seedTestMasters();
       const em = scopedEm("test");
       (await em.findOneOrFail(Material, { code: "00000002" })).active = false;
+      (await em.findOneOrFail(Location, { code: "00000003" })).active = false;
       await em.flush();
       const rows = [FIXTURE_FORECASTS[1], { ...FIXTURE_FORECASTS[2], ...change }];
 

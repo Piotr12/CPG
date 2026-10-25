@@ -145,7 +145,7 @@ describe("the realistic Test dataset, written by an API reset", () => {
   });
 
   it("shows a Test pair's two-year history newest first, each receipt and completion linking its document (INV-012)", async () => {
-    // Steel sheet 1.0 mm at the main plant: a receipt and three completions a month, for two years.
+    // Steel sheet 1.0 mm at the main plant: weekly receipts and the week's completions, for two years.
     await admin.open(`${baseUrl}/admin/test/stock?material=00000007&location=00000001`);
     await admin.waitUntil(shown("table[aria-label='Stock movements']"));
     const rows = await ledger();
@@ -159,7 +159,7 @@ describe("the realistic Test dataset, written by an API reset", () => {
   });
 
   it("pages a finished product's two-year ledger, back to the dataset's opening balance", async () => {
-    // The red cabinet at the main plant: a completion and its customers' goods issues every month, well over a page.
+    // The red cabinet at the main plant: a completion every week and its customers' goods issues every day, well over a page.
     const pair = "material=00000005&location=00000001";
     const { movementCount } = json(await api("GET", `/api/tenants/test/stock?${pair}`)).data as { movementCount: number };
     const pages = Math.ceil(movementCount / 100);
