@@ -207,7 +207,16 @@ describe("PurchaseOrderService", () => {
       expect(ids(await service().list({ sort: "status", dir: "desc" }))).toEqual(["00000003", "00000004", "00000001", "00000002"]);
     });
 
-    it("keeps orders whose ID, supplier or location holds every word, ignoring ASCII case, in this tenant only", async () => {
+    it("sorts by the creation date, both ways, by ID within equal times (#224)", async () => {
+      const em = scopedEm();
+      const created = { "00000001": "2026-10-03T08:00:00Z", "00000002": "2026-10-01T08:00:00Z", "00000003": "2026-10-02T08:00:00Z", "00000004": "2026-10-01T08:00:00Z" };
+      for (const [code, at] of Object.entries(created)) (await em.findOneOrFail(PurchaseOrder, { code })).createdAt = new Date(at);
+      await em.flush();
+      expect(ids(await service().list({ sort: "created" }))).toEqual(["00000002", "00000004", "00000003", "00000001"]);
+      expect(ids(await service().list({ sort: "created", dir: "desc" }))).toEqual(["00000001", "00000003", "00000002", "00000004"]);
+    });
+
+    it("keeps orders whose ID, supplier or location holds every word, ignoring case, in this tenant only", async () => {
       expect(ids(await service().list({ q: "STEEL" }))).toEqual(["00000001", "00000004"]);
       expect(ids(await service().list({ q: "wholesale" }))).toEqual(["00000003"]);
       expect(ids(await service().list({ q: "warehouse" }))).toEqual(["00000001"]);

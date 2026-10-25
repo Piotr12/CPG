@@ -3,6 +3,7 @@ import { defineEntity, p, type InferEntity } from "@mikro-orm/core";
 import { Location } from "../locations/location.entity";
 import { Material, MATERIAL_UNIT_MAX } from "../materials/material.entity";
 import { DOCUMENT_STATES } from "../customer-orders/customer-order.entity";
+import { listSortIndexes } from "../lists/list-sort-indexes";
 import { tenantOwned } from "../tenants/tenant-owned";
 
 /** Length of an ISO calendar date, `YYYY-MM-DD`. */
@@ -48,8 +49,8 @@ export const PurchaseRequisition = defineEntity({
     version: p.integer().version(),
   },
   uniques: [{ properties: ["tenant", "code"] }],
-  /** Serves the location-deactivation guard: the lowest Open requisition at a location. */
-  indexes: [{ properties: ["tenant", "location", "status", "code"] }],
+  /** Serves the location-deactivation guard: the lowest Open requisition at a location, then the list's date and status sorts (#220). */
+  indexes: [{ properties: ["tenant", "location", "status", "code"] }, ...listSortIndexes("purchase_requisition", ["required_date", "status"])],
 });
 
 export type PurchaseRequisition = InferEntity<typeof PurchaseRequisition>;

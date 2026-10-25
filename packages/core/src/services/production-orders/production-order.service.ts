@@ -1,7 +1,7 @@
 import { ProductionCompletion, ProductionOrder, OptimisticLockError, UniqueConstraintViolationException, type EntityManager, type FilterQuery, type OrderDefinition } from "@cpg/db";
 import { documentState, resolveLines as resolveLifecycle, type LifecycleAction } from "../../domain/document-lifecycle/lifecycle";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
-import { listOrderBy, searchWhere } from "../../domain/lists/list-query";
+import { listOrderBy, searchWhere, type SortField } from "../../domain/lists/list-query";
 import { productionStatus } from "../../domain/production-orders/production-completion";
 import { plannedStart } from "../../domain/production-orders/production-planning";
 import { parseDecimal } from "../../domain/quantities/decimal";
@@ -24,8 +24,8 @@ export type ProductionOrderDetail = Awaited<ReturnType<ProductionOrderService["g
 
 /** What the Production orders search matches, and the column each sort key orders by (#217). */
 const PRODUCTION_SEARCH_FIELDS = ["code", "output.code", "output.description"];
-const PRODUCTION_SORT_PATHS: Record<ProductionOrderSort, string> = {
-  id: "code", output: "output.code", location: "location.code", finish: "plannedFinish", start: "plannedStart", status: "status",
+const PRODUCTION_SORT_PATHS: Record<ProductionOrderSort, SortField> = {
+  id: "code", output: "output.code", quantity: { decimal: "quantity" }, location: "location.code", finish: "plannedFinish", start: "plannedStart", status: "status",
 };
 
 /** Manual planned production. All writes and their audit share the caller's tenant transaction; stock changes only through completions. */

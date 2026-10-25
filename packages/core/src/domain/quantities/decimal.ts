@@ -28,6 +28,12 @@ export function parseDecimal(text: string): bigint | null {
   return BigInt(whole) * MICRO + BigInt(fraction.padEnd(QUANTITY_DECIMALS, "0"));
 }
 
+/** `a` against `b`, two stored decimal texts, by value: negative, zero or positive, for `Array.sort` (#224). */
+export function compareDecimals(a: string, b: string): number {
+  const difference = parseDecimal(a)! - parseDecimal(b)!;
+  return difference < 0n ? -1 : difference > 0n ? 1 : 0;
+}
+
 /**
  * Micro-units as a decimal string. `fixed` always shows six decimals (`"24.000000"`), as stored
  * quantities are shown; otherwise trailing zeros go (`"12"`, `"0.5"`), as factors are shown.

@@ -55,6 +55,17 @@ describe("help topics", () => {
   });
 
   it.each([
+    ["en", "capital letters don't matter, Polish ones included", "accents do"],
+    ["pl", "wielkość liter, także polskich, nie ma znaczenia", "znaki diakrytyczne mają znaczenie"],
+  ] as const)("says in %s that list search ignores the case of Polish letters too, but not their accents (#223)", (locale, caseIgnored, accentsCount) => {
+    const text = helpTopics(locale).find((topic) => topic.id === "materials")!.body.join(" ");
+
+    expect(text).toContain(caseIgnored);
+    expect(text).toContain(accentsCount);
+    expect(text).not.toMatch(/Polish accent matches only|pasuje tylko w takiej wielkości/);
+  });
+
+  it.each([
     ["en", /recipe/i],
     ["pl", /receptur/i],
   ] as const)("says BOM, never recipe, in %s (one term per concept, design system v1 Principle 7; #206)", (locale, recipe) => {

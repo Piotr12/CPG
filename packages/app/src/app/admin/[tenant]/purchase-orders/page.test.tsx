@@ -57,7 +57,8 @@ const order = (id: string, supplier: string, lines: number) => ({
   location: "00000001",
   status: "open",
   lines: Array.from({ length: lines }, (_, index) => line(index + 1)),
-  createdAt: new Date(),
+  // Late in the UTC day, so a local-time date would show the next day east of UTC.
+  createdAt: new Date("2026-10-24T23:30:00Z"),
   version: 1,
 });
 const tenant = (readOnly = false) => ({ code: "test", name: "Test", generation: 1, readOnly });
@@ -96,8 +97,8 @@ describe("PurchaseOrdersPage", () => {
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Purchase orders — Test");
     const rows = within(screen.getByRole("table", { name: "Purchase orders" })).getAllByRole("row").slice(1);
     expect(rows.map((row) => within(row).getAllByRole("cell").map((cell) => cell.textContent))).toEqual([
-      ["00000001", "00000001Steel Service", "00000001Main plant", "2 lines", "Open"],
-      ["00000002", "00000002Gone LtdInactive", "00000001Main plant", "1 line", "Open"],
+      ["00000001", "00000001Steel Service", "00000001Main plant", "2026-10-24", "2 lines", "Open"],
+      ["00000002", "00000002Gone LtdInactive", "00000001Main plant", "2026-10-24", "1 line", "Open"],
     ]);
     expect(screen.getByRole("link", { name: "00000001" }).getAttribute("href")).toBe("/admin/test/purchase-orders/00000001");
     expect(screen.getByRole("button", { name: "Create purchase order" })).toBeTruthy();
@@ -162,6 +163,7 @@ describe("PurchaseOrdersPage", () => {
     expect(screen.getByRole("link", { name: "Supplier" }).getAttribute("href")).toBe("/admin/test/purchase-orders?sort=supplier&dir=asc");
     // The line count isn't stored, so it isn't sortable.
     expect(screen.getByRole("columnheader", { name: "Lines" }).getAttribute("aria-sort")).toBeNull();
+    expect(screen.getByRole("link", { name: "Created" }).getAttribute("href")).toBe("/admin/test/purchase-orders?sort=created&dir=asc");
   });
 
   it("searches and sorts every page on the server, counting the matches, and pages keep both (#217)", async () => {

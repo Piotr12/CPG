@@ -161,13 +161,23 @@ describe.each(KINDS)("$Service.name", ({ Service, subjectType, prefix, code, nou
         expect(ids(await service().list({ sort: "status", dir: "desc" }))).toEqual(["00000001", "00000003", "00000004", "00000002"]);
       });
 
-      it("keeps records whose ID or name holds every word, ignoring ASCII case, in this tenant only", async () => {
+      it("keeps records whose ID or name holds every word, ignoring case, in this tenant only", async () => {
         expect(ids(await service().list({ q: "NORTH" }))).toEqual(["00000001", "00000003"]);
         expect(ids(await service().list({ q: "hall 0003" }))).toEqual(["00000003"]);
         expect(ids(await service().list({ q: "0002" }))).toEqual(["00000002"]);
         expect(ids(await service().list({ q: "north yard" }))).toEqual([]);
         expect(ids(await service().list({ q: "yard", sort: "name", dir: "desc" }))).toEqual(["00000004"]);
         expect(ids(await service("test").list({ q: "north" }))).toEqual(["00000001"]);
+      });
+
+      it("ignores the case of Polish letters too, in each tenant (#223)", async () => {
+        await service().create({ name: "Łódź Śródmieście" }, ACTOR);
+        await service("test").create({ name: "ŻYRARDÓW" }, ACTOR);
+
+        expect(ids(await service().list({ q: "łódź" }))).toEqual(["00000005"]);
+        expect(ids(await service().list({ q: "ŚRÓDMIEŚCIE łÓDŹ" }))).toEqual(["00000005"]);
+        expect(ids(await service("test").list({ q: "żyrardów" }))).toEqual(["00000002"]);
+        expect(ids(await service("test").list({ q: "łódź" }))).toEqual([]);
       });
     });
 

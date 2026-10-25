@@ -143,7 +143,7 @@ describe("UserService", () => {
         expect(names(await service().list({ sort: "created" }))).toEqual(["admin", "zed", "anna", "bob"]);
       });
 
-      it("keeps the accounts whose username holds every word, ignoring ASCII case", async () => {
+      it("keeps the accounts whose username holds every word, ignoring case", async () => {
         expect(names(await service().list({ q: "AN" }))).toEqual(["anna"]);
         expect(names(await service().list({ q: "a" }))).toEqual(["admin", "anna"]);
         expect(names(await service().list({ q: "a nn" }))).toEqual(["anna"]);

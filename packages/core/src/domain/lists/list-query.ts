@@ -1,3 +1,4 @@
+import { decimalLengthKey } from "@cpg/db";
 import type { SortDirection } from "../../validators/lists/list-query.schema";
 
 /** A plain MikroORM where or order-by object; services cast it to the entity's query type. */
@@ -18,8 +19,8 @@ function nest(path: string, value: unknown): QueryObject {
 
 /**
  * Where every word of `q` is contained in at least one of `fields` (dotted paths, so `material.code`
- * searches a reference's business ID), or `{}` when `q` has no words. SQLite's `LIKE` ignores case for
- * ASCII letters only.
+ * searches a reference's business ID), or `{}` when `q` has no words. `LIKE` ignores the case of every
+ * letter, Polish ones included: `@cpg/db` replaces SQLite's, which ignores it for ASCII letters only (#223).
  */
 export function searchWhere(q: string, fields: readonly string[]): QueryObject {
   const words = searchWords(q);
@@ -28,9 +29,25 @@ export function searchWhere(q: string, fields: readonly string[]): QueryObject {
 }
 
 /**
- * A list's order: `path` (a dotted path for a reference's business ID, never its UUID) in `dir`, then
- * the business ID ascending, so equal values keep a stable order and pages never overlap.
+ * What a sort key orders by: a path (a dotted path for a reference's business ID, never its UUID), or
+ * a field of the listed entity holding stored decimal text, ordered by its value (#224).
  */
-export function listOrderBy(path: string, dir: SortDirection, tieBreaker = "code"): QueryObject[] {
-  return path === tieBreaker ? [nest(path, dir)] : [nest(path, dir), nest(tieBreaker, "asc")];
+export type SortField = string | { decimal: string };
+
+/**
+ * `field`, a stored decimal quantity whose column is named like the property, in `dir` by its numeric
+ * value: the length of its integer part, then its text. Exact for every R03 quantity, where the text
+ * alone puts `100` before `25`.
+ */
+function decimalOrderBy(field: string, dir: SortDirection): QueryObject[] {
+  return [{ [decimalLengthKey(field)]: dir }, { [field]: dir }];
+}
+
+/**
+ * A list's order: `field` in `dir`, then the business ID ascending, so equal values keep a stable order
+ * and pages never overlap.
+ */
+export function listOrderBy(field: SortField, dir: SortDirection, tieBreaker = "code"): QueryObject[] {
+  if (typeof field !== "string") return [...decimalOrderBy(field.decimal, dir), nest(tieBreaker, "asc")];
+  return field === tieBreaker ? [nest(field, dir)] : [nest(field, dir), nest(tieBreaker, "asc")];
 }

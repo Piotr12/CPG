@@ -342,6 +342,25 @@ describe("ForecastService", () => {
         expect(keys(await allPages({}, 6, { sort: "date", dir: "desc" }))).toEqual(orderedBy(ALL, [2, -1], [0, 1], [1, 1]));
       });
 
+      it("sorts by quantity by its value, not its text, by material, location and date within equal values (#224)", async () => {
+        const em = scopedEm();
+        const bigger = { "00000001@00000001@": "25.000000", "00000003@00000003@": "100.000000", "00000004@00000001@": "9.500000" };
+        for (const [prefix, quantity] of Object.entries(bigger)) {
+          const [material, location] = prefix.split("@");
+          const forecast = await em.findOneOrFail(Forecast, { material: { code: material }, location: { code: location }, date: day(40) });
+          forecast.quantity = quantity;
+        }
+        await em.flush();
+        const changed = Object.keys(bigger).map((prefix) => `${prefix}${day(40)}`);
+        const ones = ALL.filter((key) => !changed.includes(key));
+        const [nine, twentyFive, hundred] = [changed[2], changed[0], changed[1]];
+
+        const descending = keys(await allPages({}, 6, { sort: "quantity", dir: "desc" }));
+        expect(descending).toEqual([hundred, twentyFive, nine, ...ones]);
+        expect(keys(await allPages({}, 6, { sort: "quantity" }))).toEqual([...ones, nine, twentyFive, hundred]);
+        expect(keys(await service().list({}, { sort: "quantity", dir: "desc", page: 2 }))[0]).toBe(descending[100]);
+      });
+
       it("keeps forecasts whose material ID or description or location ID or name holds every word, and counts them", async () => {
         const searched = async (q: string, filter: ForecastFilter = {}) => {
           const count = await service().count(filter, { q });
