@@ -170,8 +170,11 @@ export class DemandReviewService {
     const { today } = window;
     const materialCode = new Map(products.map(({ id, code }) => [id, code]));
     const locationCode = new Map(locations.map(({ id, code }) => [id, code]));
-    // Every order whose month a read forecast falls in: from today's month, or the window's start if earlier, to the end of the window's last month.
-    const ordersFrom = window.from < monthStart(today) ? window.from : monthStart(today);
+    // Forecasts count from today's month on (earlier ones expired), and only from the window's first month:
+    // an earlier month's residual lands before the window. Orders are read from the window's start, or that
+    // month if earlier, to the end of the window's last month, so every read forecast sees its whole month.
+    const forecastsFrom = monthStart(today) > monthStart(window.from) ? monthStart(today) : monthStart(window.from);
+    const ordersFrom = window.from < forecastsFrom ? window.from : forecastsFrom;
     const ordersBefore = addMonths(addDays(window.to, -1), 1);
     const issued: IssuedLine[] = [];
     const orderLines: DemandOrderLine[] = [];
@@ -213,7 +216,7 @@ export class DemandReviewService {
         }
         const read = await this.em.find(
           Forecast,
-          { material: { $in: productChunk }, ...at, date: { $gte: monthStart(today), $lt: window.to } },
+          { material: { $in: productChunk }, ...at, date: { $gte: forecastsFrom, $lt: window.to } },
           { fields: ["material", "location", "date", "quantity"], disableIdentityMap: true },
         );
         for (const forecast of read) {

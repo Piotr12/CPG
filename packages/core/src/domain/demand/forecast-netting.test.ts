@@ -36,7 +36,7 @@ describe("netForecasts (D08)", () => {
     expect(residuals([forecast(100)], [order(60, "2026-10-31"), order(60, "2026-12-01")])).toEqual([100n]);
   });
 
-  it("DEM-008/009: shipping doesn't change consumption, partly or fully", () => {
+  it("shipping doesn't change consumption, partly or fully (DEM-008/009; the open part is the tally's)", () => {
     // Netting reads `quantity − abandoned`: what a goods issue fulfilled is still ordered.
     expect(residuals([forecast(100)], [order(60, "2026-11-10")])).toEqual([40n]);
   });

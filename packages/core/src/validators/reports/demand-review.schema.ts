@@ -16,8 +16,8 @@ export const FINISHED_PRODUCTS_ONLY_MESSAGE = "Choose finished products only.";
  */
 const references = (reference: z.ZodType<string>) =>
   z.preprocess(
-    (value) => (value === undefined ? [] : Array.isArray(value) ? value : [value]).filter((item) => item !== ""),
-    z.array(reference).max(DEMAND_SELECTION_MAX, DEMAND_SELECTION_MESSAGE).transform((ids) => [...new Set(ids)]),
+    (value) => [...new Set((value === undefined ? [] : Array.isArray(value) ? value : [value]).filter((item) => item !== ""))],
+    z.array(reference).max(DEMAND_SELECTION_MAX, DEMAND_SELECTION_MESSAGE),
   );
 
 /**
@@ -31,7 +31,7 @@ export const demandReviewQuerySchema = z.strictObject({
   material: references(materialReferenceSchema),
   location: references(locationReferenceSchema),
   unit: z.preprocess((value) => (typeof value === "string" && value.trim() === "" ? undefined : value), z.string().trim().optional()),
-  offset: z.coerce.number().int(DEMAND_OFFSET_MESSAGE).min(-MAX_DEMAND_OFFSET, DEMAND_OFFSET_MESSAGE).max(MAX_DEMAND_OFFSET, DEMAND_OFFSET_MESSAGE).default(0),
+  offset: z.coerce.number({ error: DEMAND_OFFSET_MESSAGE }).int(DEMAND_OFFSET_MESSAGE).min(-MAX_DEMAND_OFFSET, DEMAND_OFFSET_MESSAGE).max(MAX_DEMAND_OFFSET, DEMAND_OFFSET_MESSAGE).default(0),
 });
 
 export type DemandReviewQuery = z.output<typeof demandReviewQuerySchema>;
