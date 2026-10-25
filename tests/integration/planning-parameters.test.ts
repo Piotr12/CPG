@@ -234,10 +234,11 @@ describe("planning parameters and safety stock (E03-S03)", () => {
     await admin.waitUntil(`!document.querySelector("[role=alertdialog]")`);
 
     await openAdd(admin, "/admin/prod/planning-parameters", "Add parameters");
-    // The active location is offered; the inactive one isn't: its ID matches nothing (#222).
-    await chooseFromList(admin, LOCATION, plant, plant);
+    // The inactive location isn't offered: its ID matches nothing (#222). The active one is, and choosing it
+    // leaves nothing to refuse when the field loses focus, which would move Cancel under the click.
     await admin.fill(LOCATION, packer);
     await admin.waitUntil(`[...document.querySelectorAll("[role=dialog][data-state=open] [role=listbox]:not([hidden])")].some((list) => list.textContent === ${JSON.stringify(`No location matches “${packer}”.`)})`);
+    await chooseFromList(admin, LOCATION, plant, plant);
     await admin.clickRole("button", "Cancel");
     await admin.waitUntil(closed);
 
