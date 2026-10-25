@@ -42,13 +42,15 @@ Every main-list column that shows a stored quantity sorts by its numeric value, 
 - Steps 1.2–1.5 landed as one core commit (validators, services, order modules) and one app commit (tables, label), not one commit per step: each step was a one-line map entry per layer, and splitting by concept would have repeated the same files.
 - Deviation from the spec's helper shape: instead of a separate `decimalOrderBy(property, column, dir)` export, `listOrderBy` takes `{ decimal: field }` (property and column share the name for every sorted field), so each service changes one map entry. The in-memory lists use a new `compareDecimals` in `domain/quantities/decimal.ts`.
 - Found while testing: the demo dataset stores some quantities without six decimals (forecasts `"55"`, planning `"50"`), so the integer-length key, which doesn't assume `fixed`, was the right choice.
+- Deviation: browser coverage is one new file, `list-quantity-sort.test.ts` (the Test tenant's seeded lists, read-only), plus a quantity step in the existing transfers #217 test, rather than a step in each concept's integration file. Abandoned, Dispatched and Received have unit and page tests only.
+- Review (fresh-context `om-auto-review-pr` pass): approve, no blocker or major. Fixed: `decimalLengthKey` now refuses anything but a plain column name; the integration test no longer depends on the dataset's digit mix and matches `clickHydrated`'s visibility check; the "only raw SQL" wording is exact. Kept: the 999999999999.00000x pair (it documents the 18-digit range; 100/25/9.5 rule out text order).
 - Integration: Docker unavailable, so run against a local standalone build (lesson 2026-10-23) on port 3424 with a fresh `DATA_DIR`.
 
 ## Verification
 
 - `npm run lint`: 0 errors, 1 warning that was already on main (`bom.service.ts`).
 - `npm run typecheck`: exit 0.
-- `npm run test:coverage`: exit 0, 553 files, 4,094 tests, 100 % statements, branches, functions and lines.
+- `npm run test:coverage`: exit 0, 4,095 tests after the review fixes, 100 % statements, branches, functions and lines.
 - `npm run build`: exit 0.
 - Integration, against the local standalone server: `list-quantity-sort` 8/8 (new); `transfers`, `purchasing`, `goods-receipts`, `document-lifecycle`, `audit-history`, `stock-reversals` 43/43.
 

@@ -75,6 +75,11 @@ describe("decimalLengthKey", () => {
     ]);
   });
 
+  it("refuses anything but a plain column name, so no other SQL can reach the query", () => {
+    for (const column of ["material.code", "writtenOff", "quantity) --", ""]) expect(() => decimalLengthKey(column)).toThrow(`Not a column name: ${column}`);
+    expect(() => decimalLengthKey("written_off")).not.toThrow();
+  });
+
   it("leaves the tenant filter on: another tenant's rows never come back", async () => {
     const em = orm.em.fork();
     selectTenant(em, "prod");
