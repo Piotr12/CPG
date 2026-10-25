@@ -297,7 +297,7 @@ export function StackedColumnChart({ buckets, todayFraction, unit, labels, local
             <svg key={bucket.key} data-slot="chart-marker" x={percent(centre(index))} overflow="visible" pointerEvents="none">
               <TriangleAlertIcon aria-hidden="true" x={-6} y={baseline - 24} size={12} className="text-warning" />
               {/* A halo in the surface colour, so the Today rule never strikes through the warning. */}
-              <text x={0} y={baseline} textAnchor="middle" paintOrder="stroke" strokeWidth={4} strokeLinejoin="round" className="fill-warning stroke-background text-xs font-medium">
+              <text x={0} y={baseline} textAnchor="middle" paintOrder="stroke" strokeWidth={4} strokeLinejoin="round" className="fill-warning stroke-card text-xs font-medium">
                 {bucket.marker}
               </text>
             </svg>

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { MAX_DEMAND_OFFSET, type DemandReviewView, type Locale, type NamedRecordView, type StatisticalFactorView } from "@cpg/core";
+import { CircleAlert } from "lucide-react";
+import { DEMAND_WINDOWS, MAX_DEMAND_OFFSET, type DemandReviewView, type Locale, type NamedRecordView, type StatisticalFactorView } from "@cpg/core";
 import { ChartLegend } from "@cpg/ui/backend/charts/chart-legend";
 import { StackedColumnChart } from "@cpg/ui/backend/charts/stacked-column-chart";
 import { Callout } from "@cpg/ui/backend/feedback/callout";
@@ -62,7 +63,14 @@ export function DemandReviewScreen({ tenant, view, products, locations, refused,
     <div lang={locale} className="min-w-0">
       <PageHeader title={fill(t.heading, { tenant: tenant.name })} description={fill(t.intro[view.bucket], { date: view.today })} />
       <div className="flex min-w-0 flex-col gap-6">
-        {refused && <ErrorSummary id="review-errors">{t.finishedOnly}</ErrorSummary>}
+        {refused && (
+          <ErrorSummary id="review-errors" className="flex gap-2 text-sm text-danger">
+            <span className="flex h-5 shrink-0 items-center">
+              <CircleAlert aria-hidden="true" className="size-4" />
+            </span>
+            <p className="font-medium">{t.finishedOnly}</p>
+          </ErrorSummary>
+        )}
         <Card>
           <CardContent>
             <DemandReviewFilters action={path} view={view} products={products} locations={locations} locale={locale} labels={t} />
@@ -85,7 +93,7 @@ export function DemandReviewScreen({ tenant, view, products, locations, refused,
               <CardHeader>
                 <CardTitle>{title}</CardTitle>
                 <CardDescription data-headline>
-                  {fill(view.offset === 0 ? t.headline[view.bucket] : t.headlineMoved, { ...figures, unit: view.unit })}
+                  {fill(view.offset === 0 ? t.headline[view.bucket] : t.headlineMoved, { ...figures, unit: view.unit, back: String(DEMAND_WINDOWS[view.bucket].back), ahead: String(DEMAND_WINDOWS[view.bucket].ahead) })}
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
@@ -124,11 +132,12 @@ export function DemandReviewScreen({ tenant, view, products, locations, refused,
             <Card>
               <CardContent className="flex flex-col gap-2">
                 <DemandReviewGrid
+                  key={view.window.from}
                   buckets={view.buckets.map((bucket, index) => ({ key: bucket.start, ...columns[index], past: bucket.past, current: bucket.current }))}
                   lines={lines}
                   total={gridLine(view, "total", "", view.total, locale)}
                   labels={{
-                    label: fill(t.grid.label, { bucket: bucketName }),
+                    label: fill(byLocation ? t.grid.labelLocations : t.grid.label, { bucket: bucketName }),
                     caption: plural(locale, lines.length, byLocation ? t.grid.captionLocations : t.grid.captionProducts)
                       .replaceAll("{unit}", view.unit)
                       .replaceAll("{bucket}", bucketName),

@@ -1884,9 +1884,9 @@ export const pl: Messages = {
       month: "Wysłano i do wysłania na miesiąc, w {unit}",
     },
     headline: {
-      day: "Ostatnie 21 dni: wysłano {shipped} {unit} · dziś i kolejne 21 dni: {toShip} {unit} do wysłania",
-      week: "Ostatnie 13 tygodni: wysłano {shipped} {unit} · ten tydzień i kolejne 13: {toShip} {unit} do wysłania",
-      month: "Ostatnie 9 miesięcy: wysłano {shipped} {unit} · ten miesiąc i kolejne 6: {toShip} {unit} do wysłania",
+      day: "Ostatnie {back} dni: wysłano {shipped} {unit} · dziś i kolejne {ahead} dni: {toShip} {unit} do wysłania",
+      week: "Ostatnie {back} tygodni: wysłano {shipped} {unit} · ten tydzień i kolejne {ahead}: {toShip} {unit} do wysłania",
+      month: "Ostatnie {back} miesięcy: wysłano {shipped} {unit} · ten miesiąc i kolejne {ahead}: {toShip} {unit} do wysłania",
     },
     headlineMoved: "W tym oknie: wysłano {shipped} {unit} · {toShip} {unit} jeszcze do wysłania",
     series: { shipped: "Wysłano", open: "Otwarte zamówienia klientów", forecast: "Prognoza jeszcze niezamówiona", ordered: "Zamówiono" },
@@ -1899,6 +1899,7 @@ export const pl: Messages = {
     weekLabel: "T{week}", weekTitle: "T{week} · {date}",
     grid: {
       label: "Wysłano i do wysłania na wyrób i {bucket}",
+      labelLocations: "Wysłano i do wysłania na lokalizację i {bucket}",
       captionProducts: {
         one: "{count} wyrób · {unit} na {bucket} · kolumny cieniowane to wysłane, białe to do wysłania",
         few: "{count} wyroby · {unit} na {bucket} · kolumny cieniowane to wysłane, białe to do wysłania",

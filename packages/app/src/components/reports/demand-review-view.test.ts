@@ -69,6 +69,8 @@ describe("chartBuckets", () => {
 describe("headline", () => {
   it("adds shipped over the past buckets, and what is still to ship from today on", () => {
     expect(headline(demandView(), "en")).toEqual({ shipped: "12.5", toShip: "203" });
+    // Once Earlier or Later moved the window, today's bucket's shipped counts too ("in this window").
+    expect(headline(demandView({ offset: 2 }), "en")).toEqual({ shipped: "42.5", toShip: "203" });
   });
 });
 

@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { DemandReviewView, StatisticalFactorView } from "@cpg/core";
 import { en } from "../../i18n/messages/en";
@@ -43,7 +43,8 @@ describe("DemandReviewScreen", () => {
 
   it("says the window moved, and hides Later at the latest window", () => {
     renderScreen(demandView({ offset: 20 }));
-    expect(document.querySelector("[data-headline]")!.textContent).toBe("In this window: 12.5 SU shipped · 203 SU still to ship");
+    // A moved window counts today's bucket's shipped too: 12.5 + 30.
+    expect(document.querySelector("[data-headline]")!.textContent).toBe("In this window: 42.5 SU shipped · 203 SU still to ship");
     expect(screen.queryByRole("link", { name: t.laterLabel })).toBeNull();
     expect(href(t.earlierLabel).searchParams.get("offset")).toBe("19");
   });
@@ -76,9 +77,10 @@ describe("DemandReviewScreen", () => {
   it("lists one product's locations, keeping an unknown key as it is", () => {
     const row = [figures({ shipped: 1 }), figures(), figures()];
     renderScreen(demandView({ materials: ["00000001"], unit: "each", excluded: [], rows: [{ key: "00000002", figures: row }, { key: "00000009", figures: row }] }));
-    expect(grid().getAllByRole("columnheader")[0].textContent).toBe("Location");
-    expect(grid().getByRole("button", { name: "Details of 00000002 — Depot (Inactive)" })).toBeTruthy();
-    expect(grid().getByRole("button", { name: "Details of 00000009" })).toBeTruthy();
+    const locations = within(screen.getByRole("table", { name: "Shipped and still to ship per location and week" }));
+    expect(locations.getAllByRole("columnheader")[0].textContent).toBe("Location");
+    expect(locations.getByRole("button", { name: "Details of 00000002 — Depot (Inactive)" })).toBeTruthy();
+    expect(locations.getByRole("button", { name: "Details of 00000009" })).toBeTruthy();
     expect(screen.getByText("2 locations · each per week · tinted columns are shipped, white ones still to ship")).toBeTruthy();
     expect(screen.queryByText(/Left out/)).toBeNull();
     expect(document.querySelector("[data-omitted]")).toBeNull();
@@ -103,8 +105,19 @@ describe("DemandReviewScreen", () => {
     expect(screen.queryByRole("table")).toBeNull();
   });
 
-  it("explains a refused product above the form", () => {
+  it("explains a refused product above the form, as an error: icon and danger text", () => {
     renderScreen(demandView(), { refused: true });
-    expect(screen.getByText(t.finishedOnly)).toBeTruthy();
+    const summary = screen.getByText(t.finishedOnly).closest("#review-errors") as HTMLElement;
+    expect(summary.className).toContain("text-danger");
+    expect(summary.querySelector("svg[aria-hidden=true]")).not.toBeNull();
+  });
+
+  it("starts the grid afresh when Earlier or Later moves the window: rows closed, scrolled to today again", () => {
+    const { rerender } = renderScreen();
+    fireEvent.click(grid().getByRole("button", { name: "Details of 00000001 — Widget" }));
+    expect(grid().getByRole("button", { name: "Details of 00000001 — Widget" }).getAttribute("aria-expanded")).toBe("true");
+    const moved = demandView({ offset: -1, window: { from: "2026-07-20", to: "2026-08-10" } });
+    rerender(<DemandReviewScreen tenant={{ code: "test", name: "Test" }} view={moved} products={[widget, gadget]} locations={[plant, depot]} locale="en" messages={en} />);
+    expect(grid().getByRole("button", { name: "Details of 00000001 — Widget" }).getAttribute("aria-expanded")).toBe("false");
   });
 });

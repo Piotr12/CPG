@@ -1947,9 +1947,9 @@ export const en = {
       month: "Shipped and still to ship per month, in {unit}",
     },
     headline: {
-      day: "Last 21 days: {shipped} {unit} shipped · today and the next 21 days: {toShip} {unit} to ship",
-      week: "Last 13 weeks: {shipped} {unit} shipped · this week and the next 13: {toShip} {unit} to ship",
-      month: "Last 9 months: {shipped} {unit} shipped · this month and the next 6: {toShip} {unit} to ship",
+      day: "Last {back} days: {shipped} {unit} shipped · today and the next {ahead} days: {toShip} {unit} to ship",
+      week: "Last {back} weeks: {shipped} {unit} shipped · this week and the next {ahead}: {toShip} {unit} to ship",
+      month: "Last {back} months: {shipped} {unit} shipped · this month and the next {ahead}: {toShip} {unit} to ship",
     },
     headlineMoved: "In this window: {shipped} {unit} shipped · {toShip} {unit} still to ship",
     series: { shipped: "Shipped", open: "Open customer orders", forecast: "Forecast not yet ordered", ordered: "Ordered" },
@@ -1962,6 +1962,7 @@ export const en = {
     weekLabel: "W{week}", weekTitle: "W{week} · {date}",
     grid: {
       label: "Shipped and still to ship per product and {bucket}",
+      labelLocations: "Shipped and still to ship per location and {bucket}",
       captionProducts: {
         one: "{count} product · {unit} per {bucket} · tinted columns are shipped, white ones still to ship",
         few: "{count} products · {unit} per {bucket} · tinted columns are shipped, white ones still to ship",

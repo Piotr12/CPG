@@ -79,9 +79,13 @@ export function chartBuckets(view: DemandReviewView, locale: string, labels: Lab
   });
 }
 
-/** The chart's header figures: shipped in the past buckets, and still to ship from today's on. */
+/**
+ * The chart's header figures: still to ship from today's bucket on, and shipped in the past buckets
+ * ("last 13 weeks"), or in every bucket of a window Earlier or Later moved ("in this window").
+ */
 export function headline(view: DemandReviewView, locale: string): { shipped: string; toShip: string } {
-  const past = view.buckets.map((bucket, index) => (bucket.past ? micro(view.total[index].shipped) : 0n));
+  const counted = (bucket: DemandBucketFrame) => bucket.past || (view.offset !== 0 && bucket.current);
+  const past = view.buckets.map((bucket, index) => (counted(bucket) ? micro(view.total[index].shipped) : 0n));
   const ahead = view.buckets.map((bucket, index) => (bucket.past ? 0n : micro(view.total[index].open) + micro(view.total[index].forecast)));
   return { shipped: shown(sum(past), locale), toShip: shown(sum(ahead), locale) };
 }
