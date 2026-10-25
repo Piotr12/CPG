@@ -352,7 +352,7 @@ Since #221 the tenant list routes take three optional query parameters, the same
 
 These key names are part of the contract. Renaming or removing one is a breaking change; adding one is additive.
 
-#### BOM, never recipe, in the API's messages (#214)
+#### Reworded API messages: BOM, never recipe (#214), and extra inputs (#191)
 
 #206 made the screens say BOM, never recipe. #214 rewords the English `message` of six refusals the same way. Codes, statuses, `fieldErrors` keys and `params` stay the same:
 
@@ -364,6 +364,12 @@ These key names are part of the contract. Renaming or removing one is a breaking
 | `VALIDATION_FAILED` (`components`, production completions) | Enter what was used of every recipe component, 0 when none was. | Enter what was used of every BOM component, 0 when none was. |
 | `IMPORT_LINE_WITHOUT_HEADER` (import report) | … Add its header: a BOM's lines are its complete recipe. | … Add its header: a BOM's lines are all its components. |
 | `IMPORT_BOM_WITHOUT_LINES` (import report) | … list its complete recipe there. | … list all its components there. |
+
+Since #191 a production completion's extra input says "extra", as the Post completion form has since #153. The code, status and field key stay the same:
+
+| Code (field) | Before | Since #191 |
+| --- | --- | --- |
+| `VALIDATION_FAILED` (`components.N.quantity`, production completions) | Enter how much of an added input was used: more than 0. | Enter how much of an extra input was used: more than 0. |
 
 A client should switch on `code` and the field key, never on the English `message`. That is what the screens do: they translate by code, or by the exported message constants, which changed with the text. The text after `BOM_CYCLE`'s first colon, the cycle's path, is unchanged. During the deploy overlap, the previous release still answers with the old texts. `tests/api-messages-glossary.test.ts` keeps "recipe" out of every string and JSX text in `packages/core/src` and in `packages/app/src/{app,auth,routing}` (routes, pages, server actions).
 

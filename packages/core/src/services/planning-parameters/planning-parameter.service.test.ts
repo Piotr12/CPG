@@ -2,6 +2,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import {
+  Bom,
   initOrm,
   Location,
   Material,
@@ -107,6 +108,22 @@ describe("PlanningParameterService", () => {
       expect((await service().list()).map(({ location, procurement, leadTimeDays }) => [location, procurement, leadTimeDays])).toEqual([
         ["00000001", "make", 2],
         ["00000002", "buy", 5],
+      ]);
+    });
+
+    it("saves a new intermediate, its Make set and a later edit with no BOM for it, creating none (BOM-027)", async () => {
+      const materials = () => new MaterialService({ em: scopedEm() });
+      const filling = await materials().create({ type: "intermediate", description: "Filling", baseUnit: "kg" }, ACTOR);
+      expect(await service().create({ ...SET, material: filling.id }, ACTOR)).toMatchObject({ material: filling.id, procurement: "make" });
+      expect(await materials().update(filling.id, { description: "Hazelnut filling" }, filling.version, ACTOR)).toMatchObject({ description: "Hazelnut filling", active: true });
+
+      expect(await isMadeAnywhere(scopedEm(), await scopedEm().findOneOrFail(Material, { code: filling.id }))).toBe(true);
+      expect(await scopedEm().count(Bom, {})).toBe(0);
+      // Entries written in the same millisecond sort by their random id, so compare them sorted.
+      expect((await audit()).map(({ action, subjectId }) => `${action} ${subjectId}`).sort()).toEqual([
+        `materials.material.created ${filling.id}`,
+        `materials.material.updated ${filling.id}`,
+        `planning-parameters.planning-parameter-set.created ${filling.id}/00000001`,
       ]);
     });
 
