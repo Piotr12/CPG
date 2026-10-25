@@ -39,7 +39,7 @@ describe("/api/tenants/{tenant}/forecasts", () => {
     const response = await route.GET(new Request("http://cpg.test/api/tenants/prod/forecasts"), context("prod"));
 
     expect(mocks.tenantScope).toHaveBeenCalledWith("prod");
-    expect(mocks.list).toHaveBeenCalledWith({}, { page: 1 });
+    expect(mocks.list).toHaveBeenCalledWith({}, { page: 1, q: "" });
     expect(await response.json()).toEqual({ ok: true, data: [{ date: "2027-01-01" }] });
   });
 
@@ -52,7 +52,7 @@ describe("/api/tenants/{tenant}/forecasts", () => {
     await route.GET(new Request("http://cpg.test/api/tenants/prod/forecasts?location=00000001"), context("prod"));
     await route.GET(new Request("http://cpg.test/api/tenants/prod/forecasts?material="), context("prod"));
 
-    expect(mocks.list.mock.calls).toEqual([[{ material: "00000005", location: "00000001" }, { page: 1 }], [{ location: "00000001" }, { page: 1 }], [{}, { page: 1 }]]);
+    expect(mocks.list.mock.calls).toEqual([[{ material: "00000005", location: "00000001" }, { page: 1, q: "" }], [{ location: "00000001" }, { page: 1, q: "" }], [{}, { page: 1, q: "" }]]);
   });
 
   it("GET asks for the page in the query, with the filter", async () => {
@@ -63,7 +63,7 @@ describe("/api/tenants/{tenant}/forecasts", () => {
     await route.GET(new Request("http://cpg.test/api/tenants/prod/forecasts?page=2"), context("prod"));
     await route.GET(new Request("http://cpg.test/api/tenants/prod/forecasts?material=00000005&page=3"), context("prod"));
 
-    expect(mocks.list.mock.calls).toEqual([[{}, { page: 2 }], [{ material: "00000005" }, { page: 3 }]]);
+    expect(mocks.list.mock.calls).toEqual([[{}, { page: 2, q: "" }], [{ material: "00000005" }, { page: 3, q: "" }]]);
   });
 
   it("GET refuses a page that isn't a positive whole number, listing nothing", async () => {
@@ -107,5 +107,42 @@ describe("/api/tenants/{tenant}/forecasts", () => {
     mocks.state.caller = { ...ADMIN_TOKEN, role: "user" };
     expect((await post(FORECAST)).status).toBe(403);
     expect(mocks.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("/api/tenants/{tenant}/forecasts search and sort (#221)", () => {
+  const read = (query: string) => route.GET(new Request(`http://cpg.test/api/tenants/test/forecasts?${query}`), context("test"));
+
+  afterEach(() => vi.clearAllMocks());
+
+  it("GET forwards the search, sort and direction to the service, and leaves them out without a query (#221)", async () => {
+    mocks.requireApiUser.mockResolvedValue({ role: "user" });
+    mocks.tenantScope.mockResolvedValue({ cradle: { forecastService: { list: mocks.list } } });
+    mocks.list.mockResolvedValue([]);
+
+    expect((await read("material=00000005&page=2&q=+steel+&sort=date&dir=desc")).status).toBe(200);
+    expect(mocks.list).toHaveBeenLastCalledWith({ material: "00000005" }, { page: 2, q: "steel", sort: "date", dir: "desc" });
+    expect((await read("")).status).toBe(200);
+    expect(mocks.list).toHaveBeenLastCalledWith({}, { page: 1, q: "" });
+  });
+
+  it("GET refuses an unknown sort, a bad direction or a too-long search on that field, before reading (#221)", async () => {
+    mocks.requireApiUser.mockResolvedValue({ role: "user" });
+    mocks.tenantScope.mockResolvedValue({ cradle: { forecastService: { list: mocks.list } } });
+    for (const query of ["sort=quantity", "dir=up", "q=a+b+c+d+e+f"]) {
+      const response = await read(query);
+      expect(response.status).toBe(400);
+      expect(Object.keys((await response.json()).error.fieldErrors)).toEqual([query.split("=")[0]]);
+    }
+    expect(mocks.list).not.toHaveBeenCalled();
+  });
+
+  it("GET still ignores a query key it doesn't know (#221)", async () => {
+    mocks.requireApiUser.mockResolvedValue({ role: "user" });
+    mocks.tenantScope.mockResolvedValue({ cradle: { forecastService: { list: mocks.list } } });
+    mocks.list.mockResolvedValue([]);
+
+    expect((await read("status=open")).status).toBe(200);
+    expect(mocks.list).toHaveBeenLastCalledWith({}, { page: 1, q: "" });
   });
 });

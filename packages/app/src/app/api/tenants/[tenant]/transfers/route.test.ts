@@ -34,10 +34,10 @@ describe("/api/tenants/{tenant}/transfers", () => {
     mocks.list.mockResolvedValue([{ id: "00000001" }]);
 
     expect(await (await get()).json()).toEqual({ ok: true, data: [{ id: "00000001" }] });
-    expect(mocks.list).toHaveBeenLastCalledWith({ page: 1 });
+    expect(mocks.list).toHaveBeenLastCalledWith({ page: 1, q: "" });
     expect(mocks.tenantScope).toHaveBeenCalledWith("test");
     await get("?page=2");
-    expect(mocks.list).toHaveBeenLastCalledWith({ page: 2 });
+    expect(mocks.list).toHaveBeenLastCalledWith({ page: 2, q: "" });
   });
 
   it("GET refuses an unknown filter or page, and checks the caller before opening the tenant", async () => {
@@ -75,5 +75,40 @@ describe("/api/tenants/{tenant}/transfers", () => {
     const same = await post({ ...TRANSFER, destination: "00000001", plannedArrival: "2026-10-20" });
     expect(Object.keys((await same.json()).error.fieldErrors).sort()).toEqual(["destination", "plannedArrival"]);
     expect(mocks.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("/api/tenants/{tenant}/transfers search and sort (#221)", () => {
+  const read = (query: string) => route.GET(new Request(`http://cpg.test/api/tenants/test/transfers?${query}`), context("test"));
+
+  afterEach(() => vi.clearAllMocks());
+
+  it("GET forwards the search, sort and direction to the service, and leaves them out without a query (#221)", async () => {
+    mocks.requireApiUser.mockResolvedValue({ role: "user" });
+    mocks.tenantScope.mockResolvedValue({ cradle: { transferService: { list: mocks.list } } });
+    mocks.list.mockResolvedValue([]);
+
+    expect((await read("page=2&q=+steel+&sort=plannedDispatch&dir=desc")).status).toBe(200);
+    expect(mocks.list).toHaveBeenLastCalledWith({ page: 2, q: "steel", sort: "plannedDispatch", dir: "desc" });
+    expect((await read("")).status).toBe(200);
+    expect(mocks.list).toHaveBeenLastCalledWith({ page: 1, q: "" });
+  });
+
+  it("GET refuses an unknown sort, a bad direction or a too-long search on that field, before reading (#221)", async () => {
+    mocks.requireApiUser.mockResolvedValue({ role: "user" });
+    mocks.tenantScope.mockResolvedValue({ cradle: { transferService: { list: mocks.list } } });
+    for (const query of ["sort=quantity", "dir=up", "q=a+b+c+d+e+f"]) {
+      const response = await read(query);
+      expect(response.status).toBe(400);
+      expect(Object.keys((await response.json()).error.fieldErrors)).toEqual([query.split("=")[0]]);
+    }
+    expect(mocks.list).not.toHaveBeenCalled();
+  });
+
+  it("GET still refuses a query key it doesn't know (#221)", async () => {
+    mocks.requireApiUser.mockResolvedValue({ role: "user" });
+    mocks.tenantScope.mockResolvedValue({ cradle: { transferService: { list: mocks.list } } });
+    expect((await read("status=open")).status).toBe(400);
+    expect(mocks.list).not.toHaveBeenCalled();
   });
 });

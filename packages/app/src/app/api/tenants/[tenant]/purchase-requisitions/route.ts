@@ -1,5 +1,6 @@
 import { apiActor, parseInput, tenantScope } from "@cpg/core";
-import { requisitionCreateSchema, requisitionListQuerySchema } from "@cpg/core/validators/purchasing/purchase-requisition.schema";
+import { requisitionCreateSchema } from "@cpg/core/validators/purchasing/purchase-requisition.schema";
+import { requisitionApiQuerySchema } from "@cpg/core/validators/purchasing/purchase-requisition-list.schema";
 import { tenantApiWrite, type WriteContext } from "../../../../../auth/api-write";
 import { requireApiUser } from "../../../../../auth/require-api-user";
 import { apiHandler } from "../../../../../routing/api-handler";
@@ -8,13 +9,14 @@ type Context = RouteContext<"/api/tenants/[tenant]/purchase-requisitions">;
 
 /**
  * A page of the tenant's purchase requisitions, by ID, 100 to a page (`?page=2`; the first when
- * absent, a page past the last is empty), as the Purchase requisitions screen lists them. Any signed-in account.
+ * absent, a page past the last is empty), searched and sorted by the optional `q`, `sort` and `dir` as the
+ * Purchase requisitions screen lists them (#221). Any signed-in account.
  */
 export const GET = apiHandler(async (request: Request, { params }: Context) => {
   await requireApiUser(request);
   const { cradle } = await tenantScope((await params).tenant);
-  const { page } = parseInput(requisitionListQuerySchema, Object.fromEntries(new URL(request.url).searchParams));
-  return cradle.purchaseRequisitionService.list({ page });
+  const query = parseInput(requisitionApiQuerySchema, Object.fromEntries(new URL(request.url).searchParams));
+  return cradle.purchaseRequisitionService.list(query);
 });
 
 /**
