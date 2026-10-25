@@ -22,15 +22,17 @@ import { POSITIVE_QUANTITY_MESSAGE, QUANTITY_MESSAGE } from "@cpg/core/validator
 import { fill } from "../../i18n/fill";
 import type { Messages } from "../../i18n/messages/en";
 import { materialPicker, type MaterialPicker } from "../materials/material-picker";
+import { recordPicker } from "../named-records/record-picker";
 
 export type ProductionLabels = Messages["productionOrders"] & {
   errors: Record<string, string>;
   /** The output and added-input material pickers (#217). */
   picker: MaterialPicker;
+  locationPicker: MaterialPicker;
 };
 export function productionLabels(messages: Messages): ProductionLabels {
   return { ...messages.productionOrders, errors: { ...messages.errors, ...messages.productionOrders.errors },
-    picker: materialPicker(messages.lists) };
+    picker: materialPicker(messages.lists), locationPicker: recordPicker(messages.lists, "location") };
 }
 export function productionFieldError(labels: ProductionLabels) {
   const known: Record<string, string> = {

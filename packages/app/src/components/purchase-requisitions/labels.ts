@@ -12,6 +12,7 @@ import { errorMessage } from "../../i18n/error-message";
 import type { Messages } from "../../i18n/messages/en";
 import { fill, shownQuantity, type TenantContext } from "../forms/form-labels";
 import { materialPicker, type MaterialPicker } from "../materials/material-picker";
+import { recordPicker } from "../named-records/record-picker";
 
 /**
  * The requisition screen's strings in the reader's language: plain strings, so they can reach client
@@ -22,6 +23,7 @@ export type RequisitionsLabels = Omit<Messages["purchaseRequisitions"], "heading
   lifecycle: Messages["lifecycle"];
   /** The form's material autocomplete (#217). */
   picker: MaterialPicker;
+  locationPicker: MaterialPicker;
 };
 
 /** Builds the requisition screen's labels from a dictionary (server side, where `messages` is available). */
@@ -32,7 +34,7 @@ export function requisitionsLabels(messages: Messages): RequisitionsLabels {
     lifecycle: messages.lifecycle,
     ...(labels as Omit<Messages["purchaseRequisitions"], "heading">),
     errors: { ...messages.errors, ...messages.purchaseRequisitions.errors },
-    picker: materialPicker(messages.lists),
+    picker: materialPicker(messages.lists), locationPicker: recordPicker(messages.lists, "location"),
   };
 }
 

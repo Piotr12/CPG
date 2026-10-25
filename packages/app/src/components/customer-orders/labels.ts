@@ -4,16 +4,19 @@ import { UNIT_FORMAT_MESSAGE } from "@cpg/core/validators/materials/material-fie
 import { POSITIVE_QUANTITY_MESSAGE } from "@cpg/core/validators/quantities/quantity.schema";
 import type { Messages } from "../../i18n/messages/en";
 import { materialPicker, type MaterialPicker } from "../materials/material-picker";
+import { recordPicker } from "../named-records/record-picker";
 
 export type OrderLabels = Omit<Messages["customerOrders"], "errors"> & {
   errors: Record<string, string>;
   /** The lines' material picker (#217). */
   picker: MaterialPicker;
+  customerPicker: MaterialPicker;
+  locationPicker: MaterialPicker;
 };
 /** Plain data only: this dictionary crosses the server/client boundary. */
 export function orderLabels(messages: Messages): OrderLabels {
   return { ...messages.customerOrders, errors: { ...messages.errors, ...messages.customerOrders.errors },
-    picker: materialPicker(messages.lists) };
+    picker: materialPicker(messages.lists), customerPicker: recordPicker(messages.lists, "customer"), locationPicker: recordPicker(messages.lists, "location") };
 }
 export function orderFieldError(labels: OrderLabels, message: string): string {
   const t = labels.fieldErrors;
