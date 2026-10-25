@@ -74,7 +74,7 @@ Rework the generated Test dataset (`packages/core/src/domain/demo/`) into the si
 
 - [x] 3.1 ForecastService.seedDemo lookups — 9527bbec
 - [x] 3.2 Unit and integration tests the dataset moves — 590e1cad, 602d3e6c, 6ad63869
-- [x] 3.3 Paperwork, spec to implemented, lessons — see the paperwork commit
+- [x] 3.3 Paperwork, spec to implemented, lessons — 214f0788
 
 ## Log
 
