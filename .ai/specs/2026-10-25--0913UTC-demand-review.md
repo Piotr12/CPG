@@ -303,3 +303,14 @@ Two phases, one PR each, both tracked on #240. #239 is implemented first or toge
    Also run `tests/integration/navigation.test.ts`.
 
    Then QA screenshots on the realistic dataset (a local dev server reset by hand) at 1440 px, light and dark, and 390 px, posted on the PR.
+
+## Implementation notes
+
+Phase 1 shipped on PR #244 (`.ai/pipeline/runs/2026-10-25--1026UTC-demand-review.md`). It differs from the text above in three places, all reviewed on the PR:
+
+- **Shipped is read from the goods-issue stock movements**, not from `GoodsIssueLine` joined to its issue (Definitions, step 2 of the service). Each goods-issue line posts exactly one movement of its base quantity, out of its order's location, on the issue's business date, so the figures are the same. At 10× the realistic dataset, SQLite with no statistics planned the four-way join from the line table's tenant index, and the month read took 814 ms. A reversed line is found through its `StockReversal` link, reading only the window's reversed movements rather than every issue's movements.
+- **Indexes:** `stock_movement(tenant, type, business_date)` replaces `goods_issue(tenant, business_date)`. The other two are as specified. Every window read is a partial load (`fields`). Timings at 10×, fastest of three reads in an isolated run: day 52 ms, week 95 ms, month 158 ms. Under a parallel coverage run the month read took 815 ms, so the benchmark's CI bound is 3 s rather than 1 s.
+- **Validator:** a repeated `material` or `location` value is counted once rather than refused, and the cap of 500 applies after that.
+
+Forecasts are read from the later of today's month and the window's first month: with a positive offset, earlier months' residuals would land before the window.
+

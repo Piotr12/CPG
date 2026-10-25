@@ -15,8 +15,9 @@ describe("demandReviewQuerySchema", () => {
     expect(demandReviewQuerySchema.parse({ material: "", unit: "  " })).toEqual({ bucket: "week", material: [], location: [], offset: 0 });
   });
 
-  it("accepts 500 products and refuses 501", () => {
+  it("accepts 500 products and refuses 501, counting a repeated one once", () => {
     expect(demandReviewQuerySchema.parse({ material: ids(500) }).material).toHaveLength(500);
+    expect(demandReviewQuerySchema.parse({ material: [...ids(500), "00000001"] }).material).toHaveLength(500);
     const refused = demandReviewQuerySchema.safeParse({ material: ids(501) });
     expect(refused.error?.issues).toEqual([expect.objectContaining({ path: ["material"], message: DEMAND_SELECTION_MESSAGE })]);
   });
@@ -24,7 +25,7 @@ describe("demandReviewQuerySchema", () => {
   it("moves at most 20 windows either way, in whole steps", () => {
     expect(demandReviewQuerySchema.parse({ offset: "20" }).offset).toBe(20);
     expect(demandReviewQuerySchema.parse({ offset: "-20" }).offset).toBe(-20);
-    for (const offset of ["21", "-21", "1.5"]) {
+    for (const offset of ["21", "-21", "1.5", "abc"]) {
       expect(demandReviewQuerySchema.safeParse({ offset }).error?.issues[0]?.message, offset).toBe(DEMAND_OFFSET_MESSAGE);
     }
   });

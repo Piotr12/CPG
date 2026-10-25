@@ -69,4 +69,9 @@ describe("tallyDemand", () => {
     const total = figures("M", "L").reduce((sum, { forecast }) => sum + forecast, 0n);
     expect(total).toBe(units(47));
   });
+
+  it("DEM-008: 60 ordered with 30 shipped leaves 30 open and 40 of a 100 forecast", () => {
+    const [cell] = tallyDemand(window, { issued: [], orderLines: [line("2026-11-03", 60, "open", { fulfilled: 30 })], forecasts: [forecast("2026-11-01", 100)] });
+    expect([cell.figures[15].open, cell.figures[14].forecast]).toEqual([units(30), units(40)]);
+  });
 });

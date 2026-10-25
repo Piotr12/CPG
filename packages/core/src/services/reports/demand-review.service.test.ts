@@ -200,6 +200,24 @@ describe("DemandReviewService", () => {
     expect(view.omittedRows).toBe(2);
   });
 
+  it("converts each product's figure once and adds the converted rows, but converts one product's summed locations once (R03)", async () => {
+    // 1 each = 1/3 SU for the bolt, 1 box = 1/3 SU for the nut: one unit is 0.333333 SU, two converted together 0.666667.
+    const em = scoped();
+    const bolt = await em.findOneOrFail(MaterialConversion, { material: { code: BOLT }, unit: "SU" });
+    bolt.numerator = "3";
+    em.create(MaterialConversion, { material: await em.findOneOrFail(Material, { code: NUT }), unit: "SU", numerator: "3", denominator: "1" });
+    await em.flush();
+    await order(PLANT, BOLT, "1", "2026-11-03");
+    await order(STORE, BOLT, "1", "2026-11-03");
+    await orders().create({ customer: "00000001", location: PLANT, lines: [{ material: NUT, quantity: "1", unit: "box", requiredDate: "2026-11-03" }] }, ACTOR);
+    // Product rows at the plant: one unit of each converts alone, and the total adds the converted rows (0.666666).
+    const products = await review({ material: [BOLT, NUT], location: PLANT });
+    expect([row(products, BOLT)[15].open, row(products, NUT)[15].open, products.total[15].open]).toEqual(["0.333333", "0.333333", "0.666666"]);
+    // Location rows of the bolt: each location's unit converts alone, and the total converts the summed two (0.666667).
+    const locations = await review({ material: BOLT, unit: "SU" });
+    expect([row(locations, PLANT)[15].open, row(locations, STORE)[15].open, locations.total[15].open]).toEqual(["0.333333", "0.333333", "0.666667"]);
+  });
+
   it("refuses an unknown product or location, a product that isn't finished, and an offset out of range", async () => {
     await expect(review({ material: "00000099" })).rejects.toMatchObject({ code: "MATERIAL_NOT_FOUND" });
     await expect(review({ location: [PLANT, "00000099"] })).rejects.toMatchObject({ code: "LOCATION_NOT_FOUND" });
