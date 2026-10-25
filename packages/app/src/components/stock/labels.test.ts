@@ -16,10 +16,13 @@ describe("stock labels", () => {
     expect(functions).toEqual([]);
     expect(labels.errors.TENANT_READ_ONLY).toBe(messages.errors.TENANT_READ_ONLY);
     expect(labels.errors.UNIT_NOT_CONVERTIBLE).toBe(messages.stock.errors.UNIT_NOT_CONVERTIBLE);
-    // The stock import reaches this code with SU too, so the text says SU can't be entered (#243).
-    expect(labels.errors.UNIT_NOT_CONVERTIBLE).toContain("SU");
   });
-  it("says why SU is refused in English (#243)", () => {
-    expect(stockLabels(en).errors.UNIT_NOT_CONVERTIBLE).toBe("The unit has no conversion to this material's base unit. SU is for reports only.");
+  it("names SU among the causes of UNIT_NOT_CONVERTIBLE, which the stock import reaches with SU too (#243)", () => {
+    expect(stockLabels(en).errors.UNIT_NOT_CONVERTIBLE).toBe(
+      "This unit can't be entered for this material: it has no conversion to the base unit, or it is SU, which is for reports only.",
+    );
+    expect(stockLabels(pl).errors.UNIT_NOT_CONVERTIBLE).toBe(
+      "Tej jednostki nie można wpisać dla tego materiału: nie ma przelicznika na jednostkę podstawową albo jest to SU, które służy tylko do raportów.",
+    );
   });
 });
