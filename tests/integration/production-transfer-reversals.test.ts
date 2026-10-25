@@ -134,7 +134,7 @@ describe("production completion and transfer posting reversals (#92)", () => {
     expect(row.components.map(({ material, expected, actual }) => [material, expected, actual])).toEqual([
       [ids.cocoa, "20.000000", "20.000000"], [ids.wrapper, "80.000000", "80.000000"],
     ]);
-    // A completed Test order whose ID Prod doesn't have (Test's tiny dataset holds 45+ production orders, far more
+    // A completed Test order whose ID Prod doesn't have (Test's tiny dataset holds 100+ production orders, far more
     // than this suite makes in Prod): Prod must neither find it nor reverse its completion.
     const allOrders = async (tenant: string) => {
       const all: { id: string; status: string }[] = [];

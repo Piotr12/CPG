@@ -81,10 +81,10 @@ describe("materials and their unit conversions (E03-S01)", () => {
       ["00000002", "Bolt M8", "Raw", "each", "Active"],
       ["00000003", "Paint, red", "Raw", "l", "Active"],
     ]);
-    // The dataset's 26: 12 raw, 4 intermediate, 10 finished. Other files may add Test materials after them.
-    const types = rows.filter(([id]) => id <= "00000026").map(([, , type]) => type);
-    expect(types).toHaveLength(26);
-    expect(["Raw", "Intermediate", "Finished"].map((type) => types.filter((shown) => shown === type).length)).toEqual([12, 4, 10]);
+    // The dataset's 30: 14 raw, 4 intermediate, 12 finished. Other files may add Test materials after them.
+    const types = rows.filter(([id]) => id <= "00000030").map(([, , type]) => type);
+    expect(types).toHaveLength(30);
+    expect(["Raw", "Intermediate", "Finished"].map((type) => types.filter((shown) => shown === type).length)).toEqual([14, 4, 12]);
   });
 
   it("gives materials created in Prod consecutive IDs, independent of Test (MAT-001, MAT-002, MAT-003)", async () => {

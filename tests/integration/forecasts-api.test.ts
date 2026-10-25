@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import { callApi, json } from "./api";
+import { allPages, callApi, json } from "./api";
 import { openBrowser, type Browser } from "./browser";
 import { signIn, signInAsAdmin } from "./sign-in";
 import { createToken, openTokens } from "./tokens";
@@ -153,13 +153,13 @@ describe("forecasts through the API (E08-S03, R07)", () => {
     const testPage = async (query: string) => json(await api("GET", `/api/tenants/test/forecasts${query}`, adminSecret)).data as Row[];
     const first = await testPage("");
     expect(await testPage("?page=1")).toEqual(first);
-    const second = await testPage("?page=2");
-    // A year of months for each of the ten finished products, at the plant that makes it: 120, so two pages.
+    // A year of weekdays for each of the twelve finished products, at the plant that makes it: some 3,100 rows.
     expect(first).toHaveLength(100);
-    expect(second).toHaveLength(20);
-    expect(await testPage("?page=3")).toEqual([]);
-    const demo = [...first, ...second];
-    expect(new Set(demo.map(({ material, location }) => `${material}@${location}`)).size).toBe(10);
+    const demo = await allPages((page) => testPage(`?page=${page}`));
+    expect(demo.length).toBeGreaterThan(3000);
+    expect(demo.slice(0, 100)).toEqual(first);
+    expect(new Set(demo.map(({ material, location }) => `${material}@${location}`)).size).toBe(12);
+    expect(demo.every(({ location }) => location === "00000001")).toBe(true);
     const key = ({ material, location, date }: Row) => `${material}@${location}@${date}`;
     const keys = demo.map(key);
     expect(keys).toEqual([...keys].sort());

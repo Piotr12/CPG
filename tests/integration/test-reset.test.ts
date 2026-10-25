@@ -103,19 +103,19 @@ describe("Test reset on the Tenants page", () => {
     expect(events.find(({ action }) => action === "tenants.tenant.reset")).toMatchObject({ channel: "ui", actor: { username: "admin" }, sessionId: expect.any(String), after: { dataset: "tiny" } });
   });
 
-  it("leaves Test with the tiny dataset after the reset: its 26 materials, and less than a page of customer orders from 00000001 again (TEN-022)", async () => {
+  it("leaves Test with the tiny dataset after the reset: its 30 materials, and customer orders from 00000001 again (TEN-022)", async () => {
     await admin.open(`${baseUrl}/admin/test/materials`);
     await admin.waitUntil(`!!document.querySelector("main table tbody tr") && !document.querySelector("main table").closest("[hidden]")`);
     const materials = await admin.evaluate<string[][]>(
       `[...document.querySelectorAll("main table tbody tr")].map((row) => [...row.cells].map((cell) => cell.innerText.trim()))`,
     );
-    expect(materials).toHaveLength(26);
-    expect(materials.map(([id]) => id)).toEqual(Array.from({ length: 26 }, (_, index) => String(index + 1).padStart(8, "0")));
+    expect(materials).toHaveLength(30);
+    expect(materials.map(([id]) => id)).toEqual(Array.from({ length: 30 }, (_, index) => String(index + 1).padStart(8, "0")));
     expect(materials.flat()).not.toContain("reset-ui extra");
-    expect(json(await api("GET", "/api/tenants/test/materials")).data).toHaveLength(26);
+    expect(json(await api("GET", "/api/tenants/test/materials")).data).toHaveLength(30);
     const orders = json(await api("GET", "/api/tenants/test/customer-orders")).data as { id: string }[];
     expect(orders[0].id).toBe("00000001");
-    expect(orders.length).toBeLessThan(100);
+    expect(orders.length).toBeGreaterThan(0);
     // The order added before the reset is gone: the regenerated orders stop before its ID.
     expect((await api("GET", `/api/tenants/test/customer-orders/${extraOrder}`)).status).toBe(404);
   });

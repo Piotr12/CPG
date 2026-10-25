@@ -99,7 +99,7 @@ describe("BOMs (E04-S01)", () => {
   });
   afterAll(() => Promise.all([admin, una].map((browser) => browser.close())));
 
-  it("starts Test with the dataset's 16 BOMs, three alternates for one output, one with bolts entered as 2 cases and stored as 24 each (TEN-001, MAT-019)", async () => {
+  it("starts Test with the dataset's 18 BOMs, three alternates for one output, one with bolts entered as 2 cases and stored as 24 each (TEN-001, MAT-019)", async () => {
     await admin.open(`${baseUrl}/admin/test`);
     await admin.waitUntil(ready(`document.querySelector("main a[href='/admin/test/boms']")`));
     await admin.click("main a[href='/admin/test/boms']");
@@ -107,15 +107,15 @@ describe("BOMs (E04-S01)", () => {
     expect(await admin.title()).toBe("Test · BOMs");
 
     const list = (await rows(admin, "/admin/test/boms")).map((row) => row.slice(0, 4));
-    expect(list).toHaveLength(16);
+    expect(list).toHaveLength(18);
     expect(list.slice(0, 2)).toEqual([
-      ["00000001", "00000004 Painted side panel", "1", "rev 1"],
+      ["00000001", "00000004 Side panel, primed", "1", "rev 1"],
       ["00000005", "00000005 Cabinet, red", "1", "rev 1"],
     ]);
-    expect(list.filter(([, output]) => output === "00000026 Key cabinet, wall-mounted")).toEqual([
-      ["00000014", "00000026 Key cabinet, wall-mounted", "1", "rev 1"],
-      ["00000015", "00000026 Key cabinet, wall-mounted", "2", "rev 1"],
-      ["00000016", "00000026 Key cabinet, wall-mounted", "3", "rev 1"],
+    expect(list.filter(([, output]) => output === "00000018 Office cabinet, grey, 2 doors")).toEqual([
+      ["00000006", "00000018 Office cabinet, grey, 2 doors", "1", "rev 1"],
+      ["00000017", "00000018 Office cabinet, grey, 2 doors", "2", "rev 1"],
+      ["00000018", "00000018 Office cabinet, grey, 2 doors", "3", "rev 1"],
     ]);
     const recipe = await rows(admin, "/admin/test/boms/00000006", RECIPE);
     expect(recipe).toContainEqual(["00000002 Bolt M8", "24 each", "2 case at 1 case = 12 each"]);
@@ -234,7 +234,7 @@ describe("BOMs (E04-S01)", () => {
     expect((await rows(una, "/admin/test/boms")).length).toBeGreaterThan(0);
     // Only the list's own Search button: nothing that changes data.
     expect(await una.evaluate<string[]>(`[...document.querySelectorAll("main button")].map((b) => b.textContent.trim())`)).toEqual(["Search"]);
-    expect((await rows(una, "/admin/test/boms/00000001", RECIPE)).length).toBe(2);
+    expect((await rows(una, "/admin/test/boms/00000001", RECIPE)).length).toBe(1);
     expect(await una.evaluate<number>(`document.querySelectorAll("main button").length`)).toBe(0);
   });
 });
@@ -273,19 +273,19 @@ describe("sorting and searching the BOMs list (#217)", () => {
   it("searches the BOM ID and the output's ID and description, keeping the sort, marking matches, and clears back", async () => {
     await admin.open(`${baseUrl}/admin/test/boms?sort=priority&dir=desc`);
     await admin.waitUntil(`Boolean(document.querySelector("main [role=search] input[name=q]")) && Object.keys(document.querySelector("main [role=search] button")).some((key) => key.startsWith("__reactFiber"))`);
-    await admin.fill("main [role=search] input[name=q]", "key cabinet");
+    await admin.fill("main [role=search] input[name=q]", "office cabinet grey");
     await admin.click("main [role=search] button[type=submit]");
-    await atQuery("?q=key+cabinet&sort=priority&dir=desc");
+    await atQuery("?q=office+cabinet+grey&sort=priority&dir=desc");
     await admin.waitFor("main [role=status]");
 
     const found = await shown();
     expect(found.map(([id, output, priority]) => [id, output, priority])).toEqual([
-      ["00000016", "00000026 Key cabinet, wall-mounted", "3"],
-      ["00000015", "00000026 Key cabinet, wall-mounted", "2"],
-      ["00000014", "00000026 Key cabinet, wall-mounted", "1"],
+      ["00000018", "00000018 Office cabinet, grey, 2 doors", "3"],
+      ["00000017", "00000018 Office cabinet, grey, 2 doors", "2"],
+      ["00000006", "00000018 Office cabinet, grey, 2 doors", "1"],
     ]);
-    expect(await admin.text("main [role=status]")).toBe("3 results for “key cabinet” · Clear search");
-    expect(await admin.evaluate<string[]>(`[...document.querySelectorAll("main tbody tr:first-child mark")].map((mark) => mark.textContent)`)).toEqual(["Key", "cabinet"]);
+    expect(await admin.text("main [role=status]")).toBe("3 results for “office cabinet grey” · Clear search");
+    expect(await admin.evaluate<string[]>(`[...document.querySelectorAll("main tbody tr:first-child mark")].map((mark) => mark.textContent)`)).toEqual(["Office", "cabinet", "grey"]);
 
     await clickHydrated(admin, "main [role=status] a");
     await atQuery("?sort=priority&dir=desc");

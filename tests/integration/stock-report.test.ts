@@ -147,7 +147,7 @@ describe("the stock report in the UI", () => {
     const ledger = async () => (await tableRows(una, "Stock movements")).map(([date, type, , source, reason]) => ({ date, type, source, reason }));
     const newestFirst = (rows: { date: string }[]) => rows.every(({ date }, index) => index === 0 || rows[index - 1].date >= date);
 
-    // Steel sheet 1.0 mm at the main plant: a receipt and three completions a month, over the tiny dataset's two months.
+    // Steel sheet 1.0 mm at the main plant: weekly receipts and the week's completions, over the tiny dataset's two months.
     // The realistic two years, and paging a ledger, are test-reset-realistic.test.ts's.
     await una.open(`${baseUrl}/admin/test/stock?${pair}`);
     await una.waitUntil(shown("table[aria-label='Stock movements']"));

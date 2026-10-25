@@ -72,11 +72,11 @@ describe("locations, customers and suppliers (E03-S02)", () => {
   afterAll(() => Promise.all([admin, una, other].map((browser) => browser.close())));
 
   it("starts Test with the dataset's records of each kind, reached from the tenant home (TEN-001, D06)", async () => {
-    // The first and last of the dataset's 4 plants, 10 customers and 6 suppliers; other files may add Test records after them.
+    // The first and last of the dataset's one plant, 4 customers and 2 suppliers; other files may add Test records after them.
     for (const [kind, title, first, last] of [
-      ["locations", "Locations", "Main plant, Wrocław", "00000004 Small goods plant, Gdańsk"],
-      ["customers", "Customers", "Hardware Store Chain Sp. z o.o.", "00000010 Export distributor (CZ/SK)"],
-      ["suppliers", "Suppliers", "Steel Service Centre Sp. z o.o.", "00000006 Fittings Direct GmbH"],
+      ["locations", "Locations", "Main plant, Wrocław", "00000001 Main plant, Wrocław"],
+      ["customers", "Customers", "Hardware Store Chain Sp. z o.o.", "00000004 Export distributor (DE)"],
+      ["suppliers", "Suppliers", "Steel Service Centre Sp. z o.o.", "00000002 Industrial Supplies Wholesale Sp. z o.o."],
     ]) {
       await admin.open(`${baseUrl}/admin/test`);
       await admin.waitUntil(ready(`document.querySelector("main a[href='/admin/test/${kind}']")`));

@@ -85,6 +85,6 @@ describe("the statistical unit", () => {
   it("gives the Test dataset's finished products their SU factors", async () => {
     const rows = await ownRows("test");
     expect(rows.find(([product]) => product.endsWith("— Cabinet, red"))?.slice(1, 3)).toEqual(["1 each = 1 SU", "1 pallet = 20 SU"]);
-    expect(rows.find(([product]) => product.endsWith("— Document box, A4"))?.slice(1, 3)).toEqual(["1 each = 0.05 SU", "1 case = 0.6 SU"]);
+    expect(rows.find(([product]) => product.endsWith("— Locker, 2 compartments, grey"))?.slice(1, 3)).toEqual(["1 each = 0.8 SU", "1 pallet = 6.4 SU"]);
   });
 });

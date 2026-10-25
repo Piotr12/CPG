@@ -8,7 +8,7 @@ const adminPassword = inject("adminPassword");
 const FILTERS = "main form[aria-label=Filters]";
 const shown = (selector: string) => `[...document.querySelectorAll(${JSON.stringify(selector)})].find((e) => !e.closest("[hidden]") && e.offsetParent)`;
 
-// The Demand review screen (#240) on the tiny Test dataset the server starts with: its ten finished
+// The Demand review screen (#240) on the tiny Test dataset the server starts with: its twelve finished
 // products all have SU factors (#239). It writes nothing, so this file creates no records; the
 // figures themselves are asserted by `demand-review-api.test.ts` on its own documents.
 describe("the demand review in the UI", () => {

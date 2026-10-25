@@ -16,7 +16,7 @@ const kinds = ["materials", "locations", "customers", "suppliers", "planning-par
 /** The kinds among them that page by `LIST_PAGE_SIZE` (`?page=`): the snapshot walks every page of these; the rest list whole (#201). */
 const paged = new Set<(typeof kinds)[number]>(["customer-orders", "shipments", "goods-issues", "purchase-requisitions", "purchase-orders",
   "goods-receipts", "production-orders", "transfers"]);
-/** The sequenced kinds the tiny dataset writes, each listed whole on one page; completions are listed per production order. */
+/** The sequenced kinds the tiny dataset writes; completions are listed per production order. */
 const sequenced = ["materials", "locations", "customers", "suppliers", "boms", "customer-orders", "shipments", "goods-issues",
   "purchase-requisitions", "purchase-orders", "goods-receipts", "production-orders"];
 const sequence = (count: number) => Array.from({ length: count }, (_, index) => String(index + 1).padStart(8, "0"));
@@ -164,16 +164,17 @@ describe("atomic Test reset through the bearer API", () => {
     expect(await test()).toMatchObject({ generation: generation + 1, readOnly });
     const fresh = await materials();
     expect(fresh[0]).toMatchObject({ id: "00000001", description: "Steel sheet 2 mm" });
-    expect(fresh).toHaveLength(26);
+    expect(fresh).toHaveLength(30);
     expect((await api("GET", `/api/tenants/test/customer-orders/${extraId}`)).status).toBe(404);
-    // A reset that names no dataset writes the tiny one, less than a page of each kind; every sequence starts again at 00000001, with no gap (TEN-029).
+    // A reset that names no dataset writes the tiny one; every sequence starts again at 00000001, with no gap (TEN-029).
+    // Its daily orders and weekly production run past one page of some kinds, so every page is read.
+    const testList = (kind: string) => (paged.has(kind as (typeof kinds)[number]) ? allPages((page) => get(`/api/tenants/test/${kind}?page=${page}`)) : get(`/api/tenants/test/${kind}`));
     for (const kind of sequenced) {
-      const ids = (await get(`/api/tenants/test/${kind}`) as { id: string }[]).map(({ id }) => id).sort();
+      const ids = (await testList(kind) as { id: string }[]).map(({ id }) => id).sort();
       expect(ids.length, kind).toBeGreaterThan(0);
-      expect(ids.length, kind).toBeLessThan(100);
       expect(ids, kind).toEqual(sequence(ids.length));
     }
-    const productionOrders = (await get("/api/tenants/test/production-orders") as { id: string }[]).map(({ id }) => id);
+    const productionOrders = (await testList("production-orders") as { id: string }[]).map(({ id }) => id);
     const completions = (await Promise.all(productionOrders.map((id) => get(`/api/tenants/test/production-orders/${id}/completions`) as Promise<{ id: string }[]>)))
       .flat().map(({ id }) => id).sort();
     expect(completions.length).toBeGreaterThan(0);
@@ -213,7 +214,7 @@ describe("atomic Test reset through the bearer API", () => {
     const staleImport = await write("POST", "/api/tenants/test/import/commit", { workbook, previewToken: preview.previewToken }, generation + 1);
     expect(json(staleImport).error.code).toBe("IMPORT_STALE");
     const reused = await api("POST", "/api/tenants/test/materials", { key: oldKey, body: { type: "raw", description: "reset-api new generation", baseUnit: "kg" }, generation: generation + 1 });
-    expect(reused.status).toBe(200); expect(json(reused).data.id).toBe("00000027");
+    expect(reused.status).toBe(200); expect(json(reused).data.id).toBe("00000031");
   });
 
   it("lets a normal user post a Prod goods receipt while the admin resets Test; the receipt alone changes Prod (E2E-010)", async () => {
@@ -238,7 +239,7 @@ describe("atomic Test reset through the bearer API", () => {
     expect(await test()).toMatchObject({ generation: generation + 1, readOnly: false });
     expect((json(await api("GET", "/api/tenants/test/audit")).data as AuditPage).entries).toEqual([]);
     const fresh = await materials();
-    expect(fresh.map(({ id }) => id)).toEqual(sequence(26));
+    expect(fresh.map(({ id }) => id)).toEqual(sequence(30));
     expect(fresh[0]).toMatchObject({ id: "00000001", description: "Steel sheet 2 mm" });
     const after = await prodState();
     // The receipt is posted once, by the user, at the order's location; the transfer, the destination and the accounts are untouched.
@@ -300,8 +301,10 @@ describe("atomic Test reset through the bearer API", () => {
     }
     expect(await g2()).toEqual(before);
     expect(await prodState()).toEqual(prodBefore);
-    // The same token is still good for G2: the first transfer of the new generation is 00000001.
-    const destination = (await get("/api/tenants/test/locations") as { id: string }[]).find(({ id }) => id !== location)!.id;
+    // The same token is still good for G2: the first transfer of the new generation is 00000001. G2 has one plant, so the
+    // transfer goes to a second location created for it.
+    const destination = (await created("/api/tenants/test/locations", { name: "reset-api G2 destination" }, generation + 1)).id;
+    expect(destination).toBe("00000002");
     const transfer = await created("/api/tenants/test/transfers", { material, source: location, destination, quantity: "1", unit: baseUnit,
       plannedDispatch: today(), plannedArrival: today() }, generation + 1);
     expect(transfer.id).toBe("00000001");

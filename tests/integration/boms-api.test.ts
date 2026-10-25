@@ -184,11 +184,11 @@ describe("BOMs through the API (R07)", () => {
     expect(json(retype).error.code).toBe("MATERIAL_TYPE_IN_USE");
   });
 
-  it("starts Test with the dataset's 16 BOMs, and needs the Test generation to write there (TEN-001, API-034)", async () => {
+  it("starts Test with the dataset's 18 BOMs, and needs the Test generation to write there (TEN-001, API-034)", async () => {
     const test = json(await api("GET", "/api/tenants/test/boms")).data as BomRow[];
-    expect(test).toHaveLength(16);
+    expect(test).toHaveLength(18);
     expect(test.slice(0, 3).map(({ id, output }) => `${id} ${output}`)).toEqual(["00000001 00000004", "00000005 00000005", "00000002 00000015"]);
-    expect(test.filter(({ output }) => output === "00000026").map(({ id, priority }) => `${id} ${priority}`)).toEqual(["00000014 1", "00000015 2", "00000016 3"]);
+    expect(test.filter(({ output }) => output === "00000018").map(({ id, priority }) => `${id} ${priority}`)).toEqual(["00000006 1", "00000017 2", "00000018 3"]);
 
     const missing = await write("POST", "/api/tenants/test/boms", recipe("00000004", 9, [{ material: "00000001", quantity: "1", unit: "kg" }]));
     expect(missing.status).toBe(428);

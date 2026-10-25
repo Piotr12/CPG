@@ -123,29 +123,33 @@ describe("forecasts (E08-S03)", () => {
   });
   afterAll(() => Promise.all([admin, una].map((browser) => browser.close())));
 
-  it("starts Test with the dataset's forecasts, a year of months for each finished product, reached from the tenant home and the Sales group (TEN-001, D06)", async () => {
+  it("starts Test with the dataset's forecasts, a year of weekdays for each finished product, reached from the tenant home and the Sales group (TEN-001, D06)", async () => {
     await admin.open(`${baseUrl}/admin/test`);
     await admin.waitUntil(ready(`document.querySelector("main a[href='/admin/test/forecasts']")`));
     await admin.click("main a[href='/admin/test/forecasts']");
     await admin.waitForText("Forecasts — Test");
     expect(await admin.title()).toBe("Test · Forecasts");
 
-    // 120 forecasts: 100 on the first page, the other 20 behind Next.
+    // About 3,100 daily forecasts in pages of 100; by material, the first two pages are the red cabinet's earliest weekdays.
     const firstPage = await listRows(admin, "/admin/test/forecasts");
     expect(firstPage).toHaveLength(100);
-    expect(await admin.text("main nav[aria-label='Forecast pages']")).toContain("Page 1 of 2");
+    const pages = Number((await admin.text("main nav[aria-label='Forecast pages']")).match(/Page 1 of (\d+)/)![1]);
+    expect(pages).toBeGreaterThanOrEqual(31);
     await admin.waitUntil(ready(`document.querySelector("main nav[aria-label='Forecast pages'] a")`));
     await admin.click("main nav[aria-label='Forecast pages'] a");
-    await admin.waitForText("Page 2 of 2");
+    await admin.waitForText(`Page 2 of ${pages}`);
     expect(await admin.url()).toBe(`${baseUrl}/admin/test/forecasts?page=2`);
     const secondPage = await listRows(admin, "/admin/test/forecasts?page=2");
-    expect(secondPage).toHaveLength(20);
+    expect(secondPage).toHaveLength(100);
     const rows = [...firstPage, ...secondPage];
-    expect(new Set(rows.map(([material]) => material)).size).toBe(10);
-    expect(new Set(rows.map(([, , date]) => date)).size).toBe(12);
+    expect(new Set(rows.map(([material, location]) => `${material} @ ${location}`))).toEqual(new Set(["00000005 Cabinet, red @ 00000001 Main plant, Wrocław"]));
+    const dates = rows.map(([, , date]) => date);
+    expect(dates).toEqual([...new Set(dates)].sort());
+    const today = new Date().toISOString().slice(0, 10);
     for (const [, , date, quantity] of rows) {
-      expect(date).toMatch(/^\d{4}-\d{2}-01$/);
-      expect(quantity).toMatch(/^\d*[05] each$/);
+      expect(date > today).toBe(true);
+      expect([0, 6]).not.toContain(new Date(`${date}T00:00:00Z`).getUTCDay());
+      expect(quantity).toMatch(/^\d+ each$/);
     }
   });
 
@@ -156,7 +160,7 @@ describe("forecasts (E08-S03)", () => {
     await listRows(admin, "/admin/test/forecasts");
     await admin.waitUntil(`document.querySelector("main th[aria-sort=ascending]")?.innerText.trim() === "Material"`);
 
-    // By day, across both pages: the first page holds the ten earliest months, in order.
+    // By day, across two pages: the first page holds the earliest weekdays, in order.
     await admin.waitUntil(ready(`document.querySelector("main th a[href$='sort=date&dir=asc']")`));
     await admin.click("main th a[href$='sort=date&dir=asc']");
     await atQuery("?sort=date&dir=asc");
@@ -185,7 +189,9 @@ describe("forecasts (E08-S03)", () => {
     for (const [material, location] of found) expect(`${material} ${location}`.toLowerCase()).toContain(word.toLowerCase());
     expect(found.map(([, , date]) => date)).toEqual(found.map(([, , date]) => date).sort().reverse());
     expect(await admin.evaluate<number>(`document.querySelectorAll("main tbody mark").length`)).toBeGreaterThanOrEqual(found.length);
-    expect(await admin.text("main p[role=status]")).toMatch(new RegExp(`^${found.length} results? for “${word}” · Clear search$`));
+    // The count is the search's total; a word several SKUs share finds more than one page of daily rows.
+    const total = Number((await admin.text("main p[role=status]")).match(new RegExp(`^(\\d+) results? for “${word}” · Clear search$`))![1]);
+    expect(found).toHaveLength(Math.min(total, 100));
     // The filter form keeps the search and the sort, after its own two fields, empty (Any).
     expect(await admin.evaluate<string[]>(`[...document.querySelectorAll("form[aria-label='Filter forecasts'] input[type=hidden]")].map((input) => input.name + "=" + input.value)`)).toEqual(["material=", "location=", `q=${word}`, "sort=date", "dir=desc"]);
 
