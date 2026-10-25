@@ -59,8 +59,12 @@ tracker_repo() {
   else gh repo view --json nameWithOwner --jq .nameWithOwner; fi
 }
 
+# No `grep -q`: it exits at the first match and closes the pipe while the paginated listing
+# is still being written, and under `set -o pipefail` the writer's broken pipe fails the
+# pipeline, so a defined label near the top of the listing reads as undefined (#216).
+# Without `-q`, grep reads the whole listing before it answers.
 label_exists() {
-  gh api --paginate "repos/$(tracker_repo)/labels" --jq '.[].name' | grep -Fxq "$1"
+  gh api --paginate "repos/$(tracker_repo)/labels" --jq '.[].name' | grep -Fx -- "$1" >/dev/null
 }
 
 # PR labels. $1 = label, $2 = PR number.
