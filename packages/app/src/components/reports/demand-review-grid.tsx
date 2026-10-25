@@ -39,6 +39,8 @@ interface DemandReviewGridProps {
 }
 
 const STICKY = "sticky left-0 z-10 bg-background";
+/** Row names wrap on a phone, so the sticky column leaves room for the figures. */
+const NAME = "min-w-36 max-w-44 whitespace-normal sm:max-w-none sm:whitespace-nowrap";
 /** Past columns are tinted; today's column carries a rule on both sides. */
 const columnTone = ({ past, current }: GridBucket) => cn("text-right tabular-nums", past && "bg-muted", current && "border-x-2 border-foreground");
 /** A figure the screen formats as "–" is zero. */
@@ -89,7 +91,7 @@ export function DemandReviewGrid({ buckets, lines, total, labels }: DemandReview
           return (
             <Fragment key={line.key}>
               <TableRow data-grid-row={line.key}>
-                <TableHead scope="row" className={cn(STICKY, "font-normal")}>
+                <TableHead scope="row" className={cn(STICKY, NAME, "font-normal")}>
                   <button
                     type="button"
                     aria-expanded={expanded}
@@ -107,7 +109,7 @@ export function DemandReviewGrid({ buckets, lines, total, labels }: DemandReview
               {expanded &&
                 line.details.map((detail) => (
                   <TableRow key={detail.figure} data-grid-detail={detail.figure} className="text-muted-foreground">
-                    <TableHead scope="row" className={cn(STICKY, "pl-8 font-normal")}>{labels.details[detail.figure]}</TableHead>
+                    <TableHead scope="row" className={cn(STICKY, NAME, "pl-8 font-normal")}>{labels.details[detail.figure]}</TableHead>
                     {detail.cells.map((cell, index) => (
                       <TableCell key={buckets[index].key} className={columnTone(buckets[index])}>
                         {detail.figure === "overdue" && cell !== ZERO ? (

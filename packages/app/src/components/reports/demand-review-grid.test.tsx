@@ -44,6 +44,8 @@ describe("DemandReviewGrid", () => {
     expect(headers[2].getAttribute("title")).toBe("W43 · Oct 19");
     const row = grid().getAllByRole("row").find((candidate) => candidate.dataset.gridRow === "00000001")!;
     expect(within(row).getAllByRole("cell").map((cell) => cell.textContent)).toEqual(["12.5", "113", "120", "245"]);
+    // On a phone the name wraps inside a bounded sticky column, leaving room for the figures.
+    expect(within(row).getByRole("rowheader").className).toContain("min-w-36 max-w-44 whitespace-normal");
     const footer = grid().getAllByRole("row").find((candidate) => candidate.dataset.gridTotal !== undefined)!;
     expect(within(footer).getByRole("rowheader").textContent).toBe("Total (SU)");
     expect(screen.getByText(labels.caption).tagName).toBe("CAPTION");
