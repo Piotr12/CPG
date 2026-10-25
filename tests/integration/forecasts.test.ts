@@ -160,8 +160,8 @@ describe("forecasts (E08-S03)", () => {
     expect(found.map(([, , date]) => date)).toEqual(found.map(([, , date]) => date).sort().reverse());
     expect(await admin.evaluate<number>(`document.querySelectorAll("main tbody mark").length`)).toBeGreaterThanOrEqual(found.length);
     expect(await admin.text("main p[role=status]")).toMatch(new RegExp(`^${found.length} results? for “${word}” · Clear search$`));
-    // The filter form keeps the search and the sort.
-    expect(await admin.evaluate<string[]>(`[...document.querySelectorAll("form[aria-label='Filter forecasts'] input[type=hidden]")].map((input) => input.name + "=" + input.value)`)).toEqual([`q=${word}`, "sort=date", "dir=desc"]);
+    // The filter form keeps the search and the sort, after its own two fields, empty (Any).
+    expect(await admin.evaluate<string[]>(`[...document.querySelectorAll("form[aria-label='Filter forecasts'] input[type=hidden]")].map((input) => input.name + "=" + input.value)`)).toEqual(["material=", "location=", `q=${word}`, "sort=date", "dir=desc"]);
 
     await admin.waitUntil(ready(`document.querySelector("main p[role=status] a")`));
     await admin.click("main p[role=status] a");
@@ -222,7 +222,9 @@ describe("forecasts (E08-S03)", () => {
 
     // Emptying the location and pressing Enter submits it empty: every location again (Any).
     await admin.waitUntil(ready(`document.querySelector(${JSON.stringify(filterField("location"))})`));
-    await admin.fill(filterField("location"), "");
+    // A real keystroke empties it: agent-browser's fill("") clears the DOM without React seeing an input.
+    await admin.fill(filterField("location"), "x");
+    await admin.press("Backspace");
     await admin.press("Enter");
     await admin.waitUntil(`location.search.includes("location=&") || location.search.endsWith("location=")`);
     await admin.waitUntil(`document.querySelectorAll("main tbody tr").length === 3`);
@@ -245,7 +247,7 @@ describe("forecasts (E08-S03)", () => {
     const form = html.match(/<form[^>]*role="search"[^>]*aria-label="Filter forecasts"[^>]*>[\s\S]*?<\/form>/)?.[0] ?? "";
     expect(form).toMatch(/<select[^>]*name="material"/);
     expect(form).toMatch(/<select[^>]*name="location"/);
-    expect(form).toContain(`<option value="${cabinet}">${cabinet} — fc-ui cabinet</option>`);
+    expect(form).toMatch(new RegExp(`<option[^>]* value="${cabinet}">${cabinet} — fc-ui cabinet</option>`));
 
     // What that select submits once a material and a location are chosen and Filter is pressed.
     const filtered = await read(`?${new URLSearchParams({ material: cabinet, location: packer })}`);
