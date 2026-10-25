@@ -189,7 +189,7 @@ describe("MaterialService", () => {
         expect(ids(await service().list({ sort: "status" }))).toEqual(["00000003", "00000001", "00000002"]);
       });
 
-      it("keeps materials whose ID or description holds every word, ignoring ASCII case, in this tenant only", async () => {
+      it("keeps materials whose ID or description holds every word, ignoring case, in this tenant only", async () => {
         expect(ids(await service().list({ q: "STEEL" }))).toEqual(["00000001", "00000003"]);
         expect(ids(await service().list({ q: "steel 2 mm" }))).toEqual(["00000001"]);
         expect(ids(await service().list({ q: "0002" }))).toEqual(["00000002"]);
@@ -200,6 +200,19 @@ describe("MaterialService", () => {
       it("treats LIKE wildcards as separators, never as 'anything'", async () => {
         expect(ids(await service().list({ q: "%" }))).toEqual(["00000001", "00000002", "00000003"]);
         expect(ids(await service().list({ q: "Steel_sheet" }))).toEqual(["00000001"]);
+      });
+
+      it("ignores the case of Polish letters too, in each tenant (#223)", async () => {
+        await service().create({ type: "raw", description: "Łożysko kulkowe 6204", baseUnit: "each" }, ACTOR);
+        await service("test").create({ type: "raw", description: "ŻURAW SŁUPOWY", baseUnit: "each" }, ACTOR);
+        await service("test").create({ type: "raw", description: "łożysko igiełkowe", baseUnit: "each" }, ACTOR);
+
+        expect(ids(await service().list({ q: "łożysko" }))).toEqual(["00000004"]);
+        expect(ids(await service().list({ q: "ŁOŻYSKO KULKOWE" }))).toEqual(["00000004"]);
+        expect(ids(await service("test").list({ q: "żuraw słupowy" }))).toEqual(["00000002"]);
+        expect(ids(await service("test").list({ q: "Łożysko" }))).toEqual(["00000003"]);
+        // Case only: a letter without its accent is still another letter (spec Q2).
+        expect(ids(await service().list({ q: "lozysko" }))).toEqual([]);
       });
     });
 

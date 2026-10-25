@@ -3,6 +3,7 @@ import path from "node:path";
 import { MikroORM, type EntityManager, type Options } from "@mikro-orm/sqlite";
 import { createOrmConfig } from "./config";
 import { cacheStatements } from "./statement-cache";
+import { registerUnicodeLike } from "./unicode-like";
 
 export type Orm = MikroORM;
 export type { EntityManager };
@@ -33,7 +34,10 @@ export async function initOrm(options: DbOptions, overrides: Partial<Options> = 
   const orm = await MikroORM.init(createOrmConfig(options, overrides));
   // WAL lets readers work while a write is in progress; the setting persists in the file.
   await orm.em.getConnection().execute("pragma journal_mode = wal");
-  cacheStatements(await orm.em.getConnection().getNativeClient());
+  const db = await orm.em.getConnection().getNativeClient();
+  cacheStatements(db);
+  // List searches use `LIKE`; SQLite's own ignores case for ASCII letters only (#223).
+  registerUnicodeLike(db);
 
   return orm;
 }

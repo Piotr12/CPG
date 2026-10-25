@@ -216,7 +216,7 @@ describe("PurchaseOrderService", () => {
       expect(ids(await service().list({ sort: "created", dir: "desc" }))).toEqual(["00000001", "00000003", "00000002", "00000004"]);
     });
 
-    it("keeps orders whose ID, supplier or location holds every word, ignoring ASCII case, in this tenant only", async () => {
+    it("keeps orders whose ID, supplier or location holds every word, ignoring case, in this tenant only", async () => {
       expect(ids(await service().list({ q: "STEEL" }))).toEqual(["00000001", "00000004"]);
       expect(ids(await service().list({ q: "wholesale" }))).toEqual(["00000003"]);
       expect(ids(await service().list({ q: "warehouse" }))).toEqual(["00000001"]);

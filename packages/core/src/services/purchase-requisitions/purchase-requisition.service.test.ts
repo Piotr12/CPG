@@ -311,7 +311,7 @@ describe("PurchaseRequisitionService", () => {
         expect(ids(await service().list({ sort: "abandoned", dir: "desc" }))).toEqual(["00000002", "00000001", "00000003", "00000004"]);
       });
 
-      it("keeps requisitions whose ID, material or location holds every word, ignoring ASCII case, in this tenant only", async () => {
+      it("keeps requisitions whose ID, material or location holds every word, ignoring case, in this tenant only", async () => {
         expect(ids(await service().list({ q: "STEEL" }))).toEqual(["00000001", "00000004"]);
         expect(ids(await service().list({ q: "quarry" }))).toEqual(["00000001"]);
         expect(ids(await service().list({ q: "0003" }))).toEqual(["00000002", "00000003"]);

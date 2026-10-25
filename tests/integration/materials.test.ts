@@ -13,6 +13,7 @@ const NUT = "mat-ui nut";
 const GAUGE = "mat-ui test-only gauge";
 const CLAMP = "mat-ui clamp";
 const SPOOL = "mat-ui wire spool";
+const BEARING = "Łożysko mat-ui kulkowe";
 
 /** True once `element` is hydrated, shown, and outside Next.js's hidden staging container. */
 const ready = (element: string) =>
@@ -279,6 +280,20 @@ describe("sorting and searching the materials list, and the unit list (#217)", (
     await atQuery("?sort=description&dir=desc");
     await admin.waitUntil(`document.querySelector("main [role=search] input[name=q]").value === "" && !document.querySelector("main [role=status]")`);
     expect((await descriptions()).length).toBeGreaterThan(found.length);
+  });
+
+  it("finds a description starting with a Polish capital from the word in lower case, marking it (#223)", async () => {
+    const id = await create(admin, "test", "raw", BEARING, "pcs");
+    await admin.open(`${baseUrl}/admin/test/materials?q=${encodeURIComponent("łożysko mat-ui")}`);
+    await admin.waitUntil(`document.querySelector("main [role=status]") && !document.querySelector("main table").closest("[hidden]")`);
+
+    expect(await admin.evaluate<string[][]>(`[...document.querySelectorAll("main tbody tr")].map((row) => [row.cells[0].innerText.trim(), row.cells[1].innerText.trim()])`)).toEqual([
+      [id, BEARING],
+    ]);
+    expect(await admin.evaluate<string[]>(`[...document.querySelectorAll("main tbody tr td:nth-child(2) mark")].map((mark) => mark.textContent)`)).toEqual([
+      "Łożysko",
+      "mat-ui",
+    ]);
   });
 
   it("says when a search finds nothing, with the way back", async () => {
