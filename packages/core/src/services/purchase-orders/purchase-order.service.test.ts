@@ -788,6 +788,36 @@ describe("PurchaseOrderService", () => {
       await expect(service().get("00000009")).rejects.toMatchObject({ code: "PURCHASE_ORDER_NOT_FOUND", status: 404 });
       await expect(service("test").get("00000001")).rejects.toMatchObject({ code: "PURCHASE_ORDER_NOT_FOUND" });
     });
+
+    // Lesson 2026-10-23: EXPLAIN the query MikroORM really sends.
+    it("reads a page's lines with each requisition by its primary key, never every requisition of the tenant (#236)", async () => {
+      const { id: converted } = await requisition();
+      await requisition();
+      await service().create(converting(converted, "40"), ACTOR);
+      await service().create(DIRECT, ACTOR);
+      const queries: { sql: string; params: readonly unknown[] }[] = [];
+      const observed = await initOrm({ databasePath: orm.config.get("dbName")! }, { onQuery: (sql, params) => (queries.push({ sql, params }), sql) });
+      try {
+        const em = observed.em.fork();
+        selectTenant(em, "prod");
+
+        const page = await new PurchaseOrderService({ em }).list();
+
+        expect(page.map(({ id, lines }) => [id, lines.map(({ requisition }) => requisition)])).toEqual([
+          ["00000001", [converted]],
+          ["00000002", [null, null]],
+        ]);
+        const linesQuery = queries.find(({ sql }) => sql.includes(" from `purchase_order_line` as "));
+        expect(linesQuery).toBeDefined();
+        const plan = (await observed.em.getConnection().execute<{ detail: string }[]>(`explain query plan ${linesQuery!.sql}`, [...linesQuery!.params])).map(
+          ({ detail }) => detail,
+        );
+        expect(plan).toContainEqual(expect.stringMatching(/^SEARCH \w+ USING INDEX sqlite_autoindex_purchase_requisition_1 \(id=\?\) LEFT-JOIN$/));
+        expect(plan.filter((detail) => /^(MATERIALIZE|SCAN) /.test(detail))).toEqual([]);
+      } finally {
+        await observed.close();
+      }
+    });
   });
 
   describe("setPlannedDates (BUY-024)", () => {
