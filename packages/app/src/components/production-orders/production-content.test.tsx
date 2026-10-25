@@ -153,7 +153,8 @@ it("searches and sorts the list on the server, every link keeping both, and mark
   const table = screen.getByRole("table", { name: en.productionOrders.title });
   expect(within(table).getAllByRole("row")[1].querySelector("mark")?.textContent).toBe("00000001");
   const headers = within(table).getAllByRole("columnheader");
-  expect(headers.map((header) => header.getAttribute("aria-sort"))).toEqual(["none", "none", null, "none", "descending", "none", null, "none"]);
+  expect(headers.map((header) => header.getAttribute("aria-sort"))).toEqual(["none", "none", "none", "none", "descending", "none", null, "none"]);
+  expect(within(headers[2]).getByRole("link").getAttribute("href")).toBe("/admin/test/production-orders?q=00000001&sort=quantity&dir=asc");
   expect(within(headers[1]).getByRole("link").getAttribute("href")).toBe("/admin/test/production-orders?q=00000001&sort=output&dir=asc");
   expect(screen.getByRole("link", { name: en.productionOrders.next }).getAttribute("href")).toBe("/admin/test/production-orders?q=00000001&sort=finish&dir=desc&page=3");
   expect(screen.getByRole("link", { name: en.productionOrders.previous }).getAttribute("href")).toBe("/admin/test/production-orders?q=00000001&sort=finish&dir=desc");

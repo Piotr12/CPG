@@ -85,6 +85,7 @@ export function OrdersTable({ tenant, orders, suppliers, locations, labels, page
         );
       },
     },
+    { id: "created", header: t.created, kind: "date", priority: 2, sortKey: "created", cell: (order) => order.createdAt.toISOString().slice(0, 10) },
     {
       id: "lines",
       header: t.lines,

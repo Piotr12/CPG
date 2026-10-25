@@ -138,7 +138,7 @@ describe("PlanningParametersPage", () => {
   });
 
   it("refuses a search past the limits in the form, listing everything, and ignores an unknown sort (#217)", async () => {
-    render(await resolveServerComponents(page("prod", { q: "a b c d e f", sort: "minimum" })));
+    render(await resolveServerComponents(page("prod", { q: "a b c d e f", sort: "version" })));
 
     expect(mocks.sets).toHaveBeenCalledWith({ q: "", sort: "material", dir: "asc" });
     expect(screen.getByRole("searchbox").getAttribute("aria-invalid")).toBe("true");

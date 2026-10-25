@@ -56,7 +56,7 @@ export function ForecastsTable({ tenant, rows, labels, editable, filtered, searc
       cell: (row) => <LocationCell row={row} inactive={labels.inactive} query={search} />,
     },
     { id: "date", header: t.date, kind: "date", sortKey: "date", cell: (row) => row.date },
-    { id: "quantity", header: t.quantity, kind: "quantity", cell: (row) => `${shownQuantity(row.quantity)} ${row.baseUnit}` },
+    { id: "quantity", header: t.quantity, kind: "quantity", sortKey: "quantity", cell: (row) => `${shownQuantity(row.quantity)} ${row.baseUnit}` },
   ];
   const empty = search
     ? <NoSearchResults links={links} query={search} lists={lists} />
