@@ -1,6 +1,6 @@
 # API list routes: optional sort and search
 
-**Status:** ready
+**Status:** implemented (#231)
 **Created:** 2026-10-25 07:46 UTC
 **Issue:** #221 (follow-up to #217, decision D6 of `.ai/pipeline/runs/2026-10-24--2206UTC-list-sort-search-units/PLAN.md`)
 

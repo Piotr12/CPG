@@ -326,26 +326,26 @@ Each tenant document path `/{customer-orders,purchase-requisitions,purchase-orde
 
 #### List search and sort on the API (#221)
 
-Since #221 the tenant list routes take three optional query parameters, the same ones the screens have used since #217. They are additive: a request without them reaches the service with the defaults it had before and gets the same response.
+Since #221 the tenant list routes take three optional query parameters, the same ones the screens have used since #217. A request without them reaches the service with the defaults it had before and gets the same response. On the routes that ignored every query key they didn't know (the seven unpaged lists, forecasts, purchase orders and purchase requisitions), these names were ignored before #221, so a request that sent a malformed one now gets 400 where it used to get the whole list.
 
-- `q` searches: it is trimmed, and blank means no search. Every word must match one of the list's ID or name fields, or those of a material, customer, supplier or location it references (case-insensitive for ASCII letters only, a SQLite `LIKE` limit). More than 100 characters or 5 words is `400 VALIDATION_FAILED` on `q`, with the message "Search with at most 5 words and 100 characters."
-- `sort` is one of the route's keys below, and `dir` is `asc` (the default) or `desc`. Equal values keep the list's default order: the business ID, or material, location (and date) for the lists that have no ID. Any other `sort` is `400 VALIDATION_FAILED` on `sort` ("Sort by one of this list's columns."), and any other `dir` is the same on `dir` ("Sort direction must be asc or desc."). The screens fall back silently instead; the API tells the client. Without `sort` a list keeps its default order, and a `dir` alone applies to it.
+- `q` searches: it is trimmed, and blank means no search. Every word must match one of the route's search fields in the table below, the same fields its screen searches (case-insensitive for ASCII letters only, a SQLite `LIKE` limit). More than 100 characters or 5 words is `400 VALIDATION_FAILED` on `q`, with the message "Search with at most 5 words and 100 characters."
+- `sort` is one of the route's keys below, and `dir` is `asc` (the default) or `desc`. Equal values keep the list's default order: the business ID, or material, location (and date) for the lists that have no ID. Any other `sort`, a blank one (`sort=`) included, is `400 VALIDATION_FAILED` on `sort` ("Sort by one of this list's columns."), and any other `dir`, a blank one included, is the same on `dir` ("Sort direction must be asc or desc."). The screens fall back silently instead; the API tells the client. Without `sort` a list keeps its default order, and a `dir` alone applies to it.
 - Paged lists search and sort before paging, so `page=2` is the second 100 of the searched, sorted list.
 - Every other query key behaves as before: transfers, customer orders and production orders still refuse unknown keys, and the other routes still ignore them.
 
-| `GET /api/tenants/{tenant}/…` | `sort` keys, the default first |
-| --- | --- |
-| `materials` | `id`, `description`, `type`, `baseUnit`, `status` |
-| `locations`, `customers`, `suppliers` | `id`, `name`, `status` |
-| `boms` | `output`, `id`, `priority`, `revision`, `validFrom`, `validThrough`, `status` |
-| `planning-parameters` | `material`, `location`, `procurement`, `leadTime` |
-| `safety-stock-targets` | `material`, `location`, `effectiveFrom`, `status` |
-| `forecasts` | `material`, `location`, `date` |
-| `customer-orders` | `id`, `customer`, `location`, `status` |
-| `production-orders` | `id`, `output`, `location`, `finish`, `start`, `status` |
-| `purchase-requisitions` | `id`, `material`, `location`, `requiredDate`, `status` |
-| `purchase-orders` | `id`, `supplier`, `location`, `status` |
-| `transfers` | `id`, `material`, `source`, `plannedDispatch`, `status` |
+| `GET /api/tenants/{tenant}/…` | `sort` keys, the default first | `q` searches |
+| --- | --- | --- |
+| `materials` | `id`, `description`, `type`, `baseUnit`, `status` | ID, description |
+| `locations`, `customers`, `suppliers` | `id`, `name`, `status` | ID, name |
+| `boms` | `output`, `id`, `priority`, `revision`, `validFrom`, `validThrough`, `status` | BOM ID, output ID and description |
+| `planning-parameters` | `material`, `location`, `procurement`, `leadTime` | material ID and description, location ID and name |
+| `safety-stock-targets` | `material`, `location`, `effectiveFrom`, `status` | material ID and description, location ID and name |
+| `forecasts` | `material`, `location`, `date` | material ID and description, location ID and name |
+| `customer-orders` | `id`, `customer`, `location`, `status` | order ID, customer ID and name |
+| `production-orders` | `id`, `output`, `location`, `finish`, `start`, `status` | order ID, output ID and description |
+| `purchase-requisitions` | `id`, `material`, `location`, `requiredDate`, `status` | requisition ID, material ID and description, location ID and name |
+| `purchase-orders` | `id`, `supplier`, `location`, `status` | order ID, supplier ID and name, location ID and name |
+| `transfers` | `id`, `material`, `source`, `plannedDispatch`, `status` | transfer ID, material ID and description, source and destination IDs and names |
 
 These key names are part of the contract. Renaming or removing one is a breaking change; adding one is additive.
 
