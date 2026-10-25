@@ -1,6 +1,6 @@
 # Statistical unit (SU): one factor per product, used only in reports
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-25 09:13 UTC
 **Issue:** #239 (decided by the owner on the issue) · **First consumer:** #240, `2026-10-25--0913UTC-demand-review.md` · **Decision:** D08 (`research/decisions/D08-statistical-unit-and-demand-review.md`) · **Builds on:** the unit registry (#217, `core/src/validators/units/unit-registry.ts`), material conversions (`implemented/2026-10-19--1858UTC-materials.md`), the Test datasets (`implemented/2026-10-22--0902UTC-test-tenant-two-datasets.md`) · **Design authority:** `.ai/specs/product-brief.md` (R03 exact decimals, R05 tenant isolation, D04 baseline, D08)
 
@@ -171,3 +171,15 @@ One phase, one PR (size S–M). It ships before or with #240's first phase, whic
    - `engineering-standards.md` gets one line under units: "SU is report-only: entered quantities never use it".
    - Update `BACKWARD_COMPATIBILITY.md` as listed under Risks.
    - Run `smoke.test.ts` only if a migration slipped in (none expected).
+
+## Implementation notes
+
+Implemented on PR #242 (run plan `.ai/pipeline/runs/2026-10-25--0940UTC-statistical-unit.md`).
+
+- **Step 0 (production check) was not run by the agent.** Reading cpg.baby's database needs production access, which an autonomous run doesn't take. The owner runs it before merging (the PR says how); if any `SU` row exists, the owner decides before shipping the entry refusal.
+- **The count line reads "Finished products with an SU factor: 8 of 10."** (PL "Wyroby gotowe ze współczynnikiem SU: 8 z 10."), not "8 of 10 finished products have an SU factor.". The label form needs no plural forms in either language, where the sentence would agree with two different numbers.
+- **The SU hint follows the unit choice.** `CrudField.description` may now be a function of the form's values (`ui/backend/forms/crud-form.tsx`). The conversion form's Base quantity hint gains the SU sentence while SU is chosen. The form already asked for Alternate quantity before Base quantity, so that order needed no change.
+- **`unitSelect` takes `physicalOnly`.** It leaves the statistical group out of the base-unit select and keeps a stored `SU` first under its registry name, as it keeps an unregistered unit.
+- **Entry refusal.** `convertToBaseQuantity` refuses `SU` before looking for a conversion. The document services report it as `VALIDATION_FAILED` on `lines.N.unit` (or `components.N.unit`, `unit`), as they report any unit without a conversion; stock corrections and the stock import keep the `UNIT_NOT_CONVERTIBLE` code.
+- **`MaterialService.statisticalFactors()`** returns `StatisticalFactorView` rows: `perBaseUnit` (SU per base unit, or `null`) and `otherUnits` (each other conversion in SU, converted once to base and once to SU). `report-units.ts` has no core barrel export yet; #240 imports what it needs.
+- **The "Not set" warning** uses the warning text and icon in the factor cell, not a row tone, so the icon isn't shown twice.
