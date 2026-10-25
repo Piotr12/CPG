@@ -175,7 +175,10 @@ describe("forecasts (E08-S03)", () => {
     await admin.waitUntil(ready(`document.querySelector("main th a[href$='sort=date&dir=desc']")`));
     await admin.click("main th a[href$='sort=date&dir=desc']");
     await atQuery("?sort=date&dir=desc");
-    expect((await shown())[0][2]).toBe([...ascending, ...later].sort().at(-1));
+    // Newest first: the year's last weekdays, past everything the earliest two pages held.
+    const descending = (await shown()).map(([, , date]) => date);
+    expect(descending).toEqual([...descending].sort().reverse());
+    expect(descending[0] > later.at(-1)!).toBe(true);
 
     // Search the first row's material by a word of its description: the sort stays, matches are marked.
     const word = (await shown())[0][0].split(" ")[1].replace(/[^A-Za-z]/g, "");
