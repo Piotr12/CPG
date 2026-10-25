@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import type { TransferView } from "@cpg/core";
 import { callApi, json } from "./api";
-import { clickHydrated, openBrowser, type Browser } from "./browser";
+import { chooseFromList, clickHydrated, openBrowser, type Browser } from "./browser";
 import { signedInAndHydrated, signIn, signInAsAdmin } from "./sign-in";
 import { createToken, openTokens } from "./tokens";
 import { createUser } from "./users";
@@ -108,7 +108,8 @@ describe("the stock report in the UI", () => {
   it("narrows by location with the filter form, and shows all-zero rows only with the toggle", async () => {
     await open("");
     await una.waitUntil(ready(shown("#report-zero")));
-    await una.select("#report-location", ids.depot);
+    // The filter is an autocomplete once hydrated (#222); before that, the same id is the server's select.
+    await chooseFromList(una, "#report-location[role=combobox]", "srui depot", ids.depot);
     await una.click("main form button[type=submit]");
     await una.waitUntil(`location.search.includes("location=${ids.depot}")`);
     await una.waitUntil(shown(report));

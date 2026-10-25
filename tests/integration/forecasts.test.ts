@@ -16,6 +16,10 @@ const ready = (element: string) =>
 const button = (name: string) =>
   `[...document.querySelectorAll("main button")].find((b) => b.textContent.trim() === ${JSON.stringify(name)} || b.getAttribute("aria-label") === ${JSON.stringify(name)})`;
 const closed = `!document.querySelector("[role=dialog]")`;
+/** The open dialog's autocomplete for one field, found by the id of its label (#222). */
+const dialogField = (name: string) => `[role=dialog][data-state=open] [role=combobox][aria-labelledby$="-${name}-label"]`;
+/** The filter's autocomplete for one field (#222). */
+const filterField = (name: string) => `form[role=search] [role=combobox][aria-labelledby="forecast-filter-${name}-label"]`;
 
 /** A screen's rows as their cells' text, once its table is shown. */
 async function listRows(browser: Browser, path: string): Promise<string[][]> {
@@ -55,8 +59,9 @@ describe("forecasts (E08-S03)", () => {
     await admin.waitUntil(ready(button("Add forecast")));
     await admin.clickRole("button", "Add forecast");
     await admin.waitFor("[role=dialog]");
-    await chooseFromList(admin, "[role=dialog] [role=combobox]", "fc-ui cabinet", cabinet);
-    await admin.select("[role=dialog] select[name=location]", location);
+    // The dialog has two autocompletes: each is found by its field's label (#222).
+    await chooseFromList(admin, dialogField("material"), "fc-ui cabinet", cabinet);
+    await chooseFromList(admin, dialogField("location"), location, location);
     expect(await admin.fillDate("[role=dialog] input[name=date]", date)).toBe(date);
     await admin.fill("[role=dialog] input[name=quantity]", quantity);
     if (unit) await admin.fill("[role=dialog] input[name=unit]", unit);
@@ -196,19 +201,58 @@ describe("forecasts (E08-S03)", () => {
     await admin.waitUntil(closed);
   });
 
-  it("filters the list by material and location to show per-day quantities", async () => {
+  it("filters the list by material and location to show per-day quantities, typed and chosen with Enter (#222)", async () => {
+    /** The rows of the page now shown that belong to this file, as location, day and quantity. */
+    const shown = async () =>
+      (await admin.evaluate<string[][]>(`[...document.querySelectorAll("main tbody tr")].map((row) => [...row.cells].map((cell) => cell.innerText.trim().replace(/\\s+/g, " ")))`))
+        .filter(([material]) => material.endsWith("fc-ui cabinet")).map((row) => row.slice(1, 4));
     await listRows(admin, "/admin/prod/forecasts");
-    await admin.waitUntil(ready(`document.querySelector("form[role=search] select[name=material]")`));
-    await admin.select("form[role=search] select[name=material]", cabinet);
-    await admin.select("form[role=search] select[name=location]", packer);
-    await admin.click("form[role=search][aria-label='Filter forecasts'] button[type=submit]");
-    await admin.waitUntil(`location.search.includes("location=${packer}")`);
+    await admin.waitUntil(ready(`document.querySelector(${JSON.stringify(filterField("location"))})`));
+    await chooseFromList(admin, filterField("material"), "fc-ui cabinet", cabinet);
+    // The keyboard path: typing narrows the list to the one location and makes it the active row,
+    // Enter chooses it, and a second Enter submits the GET form.
+    await admin.fill(filterField("location"), packer);
+    await admin.waitUntil(`[...document.querySelectorAll("[role=listbox]:not([hidden]) [role=option]")].some((row) => row.offsetParent && row.getAttribute("aria-selected") === "true")`);
+    await admin.press("Enter");
+    await admin.waitUntil(`document.querySelector(${JSON.stringify(filterField("location"))}).value.startsWith(${JSON.stringify(`${packer} — `)})`);
+    await admin.press("Enter");
+    await admin.waitUntil(`location.search.includes("material=${cabinet}") && location.search.includes("location=${packer}")`);
+    await admin.waitUntil(`document.querySelectorAll("main tbody tr").length === 1`);
+    expect(await shown()).toEqual([[`${packer} fc-ui packer`, "2027-03-01", "7 each"]]);
 
-    expect(await mine(`?material=${cabinet}&location=${packer}`)).toEqual([[`${packer} fc-ui packer`, "2027-03-01", "7 each"]]);
+    // Emptying the location and pressing Enter submits it empty: every location again (Any).
+    await admin.waitUntil(ready(`document.querySelector(${JSON.stringify(filterField("location"))})`));
+    await admin.fill(filterField("location"), "");
+    await admin.press("Enter");
+    await admin.waitUntil(`location.search.includes("location=&") || location.search.endsWith("location=")`);
+    await admin.waitUntil(`document.querySelectorAll("main tbody tr").length === 3`);
+    expect(await shown()).toEqual([
+      [`${plant} fc-ui plant`, "2027-03-01", "25.5 each"],
+      [`${plant} fc-ui plant`, "2027-03-02", "40 each"],
+      [`${packer} fc-ui packer`, "2027-03-01", "7 each"],
+    ]);
     expect(await mine(`?location=${plant}`)).toEqual([
       [`${plant} fc-ui plant`, "2027-03-01", "25.5 each"],
       [`${plant} fc-ui plant`, "2027-03-02", "40 each"],
     ]);
+  });
+
+  it("filters without JavaScript: the server sends a select, and the URL it submits narrows the list (#222)", async () => {
+    const cookie = (await admin.cookies()).map(({ name, value }) => `${name}=${value}`).join("; ");
+    const read = async (query: string) => (await fetch(`${baseUrl}/admin/prod/forecasts${query}`, { headers: { cookie } })).text();
+
+    const html = await read("");
+    const form = html.match(/<form[^>]*role="search"[^>]*aria-label="Filter forecasts"[^>]*>[\s\S]*?<\/form>/)?.[0] ?? "";
+    expect(form).toMatch(/<select[^>]*name="material"/);
+    expect(form).toMatch(/<select[^>]*name="location"/);
+    expect(form).toContain(`<option value="${cabinet}">${cabinet} — fc-ui cabinet</option>`);
+
+    // What that select submits once a material and a location are chosen and Filter is pressed.
+    const filtered = await read(`?${new URLSearchParams({ material: cabinet, location: packer })}`);
+    const rows = [...filtered.matchAll(/<tr[^>]*>[\s\S]*?<\/tr>/g)].map(([row]) => row).filter((row) => row.includes("fc-ui cabinet") && row.includes("<td"));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toContain("fc-ui packer");
+    expect(rows[0]).toContain("2027-03-01");
   });
 
   it("changes a quantity, also from another unit, and removes a forecast, from each row's menu", async () => {
