@@ -12,7 +12,7 @@ describe("transferApiQuerySchema", () => {
   });
 
   it("refuses an unlisted column or direction with the fixed messages", () => {
-    expect(transferApiQuerySchema.safeParse({ sort: "quantity" }).error?.issues[0]?.message).toBe(SORT_KEY_MESSAGE);
+    expect(transferApiQuerySchema.safeParse({ sort: "destination" }).error?.issues[0]?.message).toBe(SORT_KEY_MESSAGE);
     expect(transferApiQuerySchema.safeParse({ dir: "up" }).error?.issues[0]?.message).toBe(SORT_DIR_MESSAGE);
   });
 

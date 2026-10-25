@@ -61,7 +61,7 @@ it("GET forwards the search, sort and direction to the service, and leaves them 
 });
 
 it("GET refuses an unknown sort, a bad direction or a too-long search on that field, before reading (#221)", async () => {
-  for (const query of ["sort=quantity", "dir=up", "q=a+b+c+d+e+f"]) {
+  for (const query of ["sort=material", "dir=up", "q=a+b+c+d+e+f"]) {
     const response = await read(query);
     expect(response.status).toBe(400);
     expect(Object.keys((await response.json()).error.fieldErrors)).toEqual([query.split("=")[0]]);

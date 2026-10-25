@@ -175,7 +175,7 @@ describe("the production variance report through the API", () => {
     expect(await list("q=VRAPI+bar&sort=location&dir=desc")).toEqual([ids.running, ids.done]);
     expect(await list("q=vrapi+bar&page=2")).toEqual([]);
 
-    for (const [query, field] of [["sort=quantity", "sort"], ["dir=up", "dir"], ["q=a+b+c+d+e+f", "q"]]) {
+    for (const [query, field] of [["sort=material", "sort"], ["dir=up", "dir"], ["q=a+b+c+d+e+f", "q"]]) {
       const refused = await api("GET", `/api/tenants/prod/production-orders?${query}`);
       expect(refused.status).toBe(400);
       expect(Object.keys(json(refused).error.fieldErrors)).toEqual([field]);

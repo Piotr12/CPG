@@ -12,7 +12,7 @@ describe("safetyStockApiQuerySchema", () => {
   });
 
   it("refuses an unlisted column or direction with the fixed messages", () => {
-    expect(safetyStockApiQuerySchema.safeParse({ sort: "quantity" }).error?.issues[0]?.message).toBe(SORT_KEY_MESSAGE);
+    expect(safetyStockApiQuerySchema.safeParse({ sort: "id" }).error?.issues[0]?.message).toBe(SORT_KEY_MESSAGE);
     expect(safetyStockApiQuerySchema.safeParse({ dir: "up" }).error?.issues[0]?.message).toBe(SORT_DIR_MESSAGE);
   });
 

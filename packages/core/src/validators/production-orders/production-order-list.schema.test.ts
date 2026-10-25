@@ -24,7 +24,7 @@ describe("productionOrderApiQuerySchema", () => {
   });
 
   it("refuses an unlisted column or direction with the fixed messages", () => {
-    expect(productionOrderApiQuerySchema.safeParse({ sort: "quantity" }).error?.issues[0]?.message).toBe(SORT_KEY_MESSAGE);
+    expect(productionOrderApiQuerySchema.safeParse({ sort: "material" }).error?.issues[0]?.message).toBe(SORT_KEY_MESSAGE);
     expect(productionOrderApiQuerySchema.safeParse({ dir: "up" }).error?.issues[0]?.message).toBe(SORT_DIR_MESSAGE);
   });
 

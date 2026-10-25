@@ -217,7 +217,7 @@ describe("forecasts through the API (E08-S03, R07)", () => {
     expect(await days(`?q=FCSQ+crate&location=${plant}&sort=date&dir=desc`)).toEqual([`${plant}@2027-05-02`, `${plant}@2027-05-01`]);
     expect(await days("?q=fcsq&surprise=1")).toHaveLength(3);
 
-    const refused = await api("GET", "/api/tenants/prod/forecasts?sort=quantity", adminSecret);
+    const refused = await api("GET", "/api/tenants/prod/forecasts?sort=id", adminSecret);
     expect(refused.status).toBe(400);
     expect(json(refused).error).toMatchObject({ code: "VALIDATION_FAILED", fieldErrors: { sort: ["Sort by one of this list's columns."] } });
   });

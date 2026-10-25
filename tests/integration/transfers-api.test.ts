@@ -340,7 +340,7 @@ describe("transfers through the API", () => {
     expect((await list("q=trsq&sort=source")).map(({ id }) => id)).toEqual([created[0], created[2], created[1]]);
     expect((await list("q=trsq&page=2"))).toEqual([]);
 
-    for (const [query, field] of [["sort=quantity", "sort"], ["dir=up", "dir"]]) {
+    for (const [query, field] of [["sort=destination", "sort"], ["dir=up", "dir"]]) {
       const refused = await api("GET", `/api/tenants/prod/transfers?${query}`);
       expect(refused.status).toBe(400);
       expect(Object.keys(json(refused).error.fieldErrors)).toEqual([field]);

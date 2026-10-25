@@ -429,7 +429,7 @@ describe("purchase requisitions and orders through the API", () => {
     expect((await list("purchase-orders", "q=buysq&surprise=1")).map(({ id }) => id)).toEqual(orderIds);
 
     for (const path of ["purchase-requisitions", "purchase-orders"]) {
-      const refused = await api("GET", `/api/tenants/prod/${path}?sort=quantity`);
+      const refused = await api("GET", `/api/tenants/prod/${path}?sort=price`);
       expect(refused.status).toBe(400);
       expect(json(refused).error).toMatchObject({ code: "VALIDATION_FAILED", fieldErrors: { sort: ["Sort by one of this list's columns."] } });
     }

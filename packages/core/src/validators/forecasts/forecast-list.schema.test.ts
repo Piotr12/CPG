@@ -24,7 +24,7 @@ describe("forecastApiQuerySchema", () => {
   });
 
   it("refuses an unlisted column or direction with the fixed messages", () => {
-    expect(forecastApiQuerySchema.safeParse({ sort: "quantity" }).error?.issues[0]?.message).toBe(SORT_KEY_MESSAGE);
+    expect(forecastApiQuerySchema.safeParse({ sort: "id" }).error?.issues[0]?.message).toBe(SORT_KEY_MESSAGE);
     expect(forecastApiQuerySchema.safeParse({ dir: "up" }).error?.issues[0]?.message).toBe(SORT_DIR_MESSAGE);
   });
 

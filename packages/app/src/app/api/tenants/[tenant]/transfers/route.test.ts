@@ -97,7 +97,7 @@ describe("/api/tenants/{tenant}/transfers search and sort (#221)", () => {
   it("GET refuses an unknown sort, a bad direction or a too-long search on that field, before reading (#221)", async () => {
     mocks.requireApiUser.mockResolvedValue({ role: "user" });
     mocks.tenantScope.mockResolvedValue({ cradle: { transferService: { list: mocks.list } } });
-    for (const query of ["sort=quantity", "dir=up", "q=a+b+c+d+e+f"]) {
+    for (const query of ["sort=destination", "dir=up", "q=a+b+c+d+e+f"]) {
       const response = await read(query);
       expect(response.status).toBe(400);
       expect(Object.keys((await response.json()).error.fieldErrors)).toEqual([query.split("=")[0]]);

@@ -284,7 +284,7 @@ describe("planning parameters and safety-stock targets through the API (R07)", (
     ]);
 
     for (const path of ["planning-parameters", "safety-stock-targets"]) {
-      const refused = await api("GET", `/api/tenants/prod/${path}?sort=quantity`, adminSecret);
+      const refused = await api("GET", `/api/tenants/prod/${path}?sort=id`, adminSecret);
       expect(refused.status).toBe(400);
       expect(json(refused).error).toMatchObject({ code: "VALIDATION_FAILED", fieldErrors: { sort: ["Sort by one of this list's columns."] } });
     }

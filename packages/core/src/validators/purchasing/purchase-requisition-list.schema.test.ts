@@ -12,7 +12,7 @@ describe("requisitionApiQuerySchema", () => {
   });
 
   it("refuses an unlisted column or direction with the fixed messages", () => {
-    expect(requisitionApiQuerySchema.safeParse({ sort: "quantity" }).error?.issues[0]?.message).toBe(SORT_KEY_MESSAGE);
+    expect(requisitionApiQuerySchema.safeParse({ sort: "supplier" }).error?.issues[0]?.message).toBe(SORT_KEY_MESSAGE);
     expect(requisitionApiQuerySchema.safeParse({ dir: "up" }).error?.issues[0]?.message).toBe(SORT_DIR_MESSAGE);
   });
 
