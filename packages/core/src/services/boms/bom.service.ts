@@ -31,7 +31,6 @@ import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
 import { convertToBaseQuantity, type BaseQuantity } from "../materials/base-quantity";
 import { conversionFieldError } from "../materials/conversion-field-error";
 import { findActiveMaterial, findMaterial } from "../materials/find-material";
-import { lineError } from "../materials/line-error";
 import { isScopeReadOnly } from "../tenants/tenant.service";
 
 /** What the BOMs search matches: the BOM's ID and its output material's ID and description (#217). */

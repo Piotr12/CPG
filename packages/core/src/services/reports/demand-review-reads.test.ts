@@ -19,6 +19,12 @@ const FORECASTS = 1_200;
  * parallel coverage run the same read took 815 ms locally, and CI runners are slower still.
  */
 const CI_BOUND_MS = 3_000;
+const RUNS = 3;
+/**
+ * Room for every run to take the bound and then some, so only the bound fails the test: on CI the
+ * fastest month read took 1,564 ms and three of them overran Vitest's default 5 s timeout.
+ */
+const TEST_TIMEOUT_MS = 2 * RUNS * CI_BOUND_MS;
 
 const seq = (count: number) => `with recursive s(x) as (select 1 union all select x + 1 from s where x < ${count})`;
 const code = "printf('%08d', x)";
@@ -88,7 +94,7 @@ describe("the demand review's reads at ten times the realistic dataset", () => {
   it.each(["day", "week", "month"])("reads every product per %s within the budget", async (bucket) => {
     // The fastest of three reads: a parallel test run (and coverage) slows a single one down.
     let fastest = Infinity;
-    for (let run = 0; run < 3; run += 1) {
+    for (let run = 0; run < RUNS; run += 1) {
       const started = performance.now();
       const view = await read({ bucket });
       fastest = Math.min(fastest, performance.now() - started);
@@ -96,5 +102,5 @@ describe("the demand review's reads at ten times the realistic dataset", () => {
     }
     process.stdout.write(`demand review, ${bucket} buckets, 10 products, 10x realistic: ${fastest.toFixed(0)} ms\n`);
     expect(fastest).toBeLessThan(CI_BOUND_MS);
-  });
+  }, TEST_TIMEOUT_MS);
 });
