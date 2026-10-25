@@ -18,6 +18,26 @@ describe("Test datasets", () => {
     expect(testTenantConfigSchema.safeParse(TEST_DATASET_CONFIGS.tiny).success).toBe(true);
   });
 
+  it("gives every finished product of both datasets an SU factor, 1 SU = 30 kg of finished steel product (#239)", () => {
+    for (const dataset of TEST_DATASETS) {
+      const finished = generateTestTenantDataset(TEST_DATASET_CONFIGS[dataset], "2026-10-21").masters.materials.filter(({ type }) => type === "finished");
+      // 1 SU = 1 / (SU per each) each.
+      const factors = finished.map(({ description, conversions }) => [description, conversions.filter(({ unit }) => unit === "SU").map(({ numerator, denominator }) => `${numerator}/${denominator}`)]);
+      expect(Object.fromEntries(factors)).toEqual({
+        "Cabinet, red": ["1/1"],
+        "Office cabinet, grey, 2 doors": ["1/1.2"],
+        "Locker, 2 compartments": ["1/0.8"],
+        "Locker, 4 compartments": ["1/1.4"],
+        "Workshop cabinet, 4 shelves": ["1/1.5"],
+        "Steel shelf unit, 5 shelves": ["1/0.9"],
+        "Letterbox, galvanised": ["1/0.15"],
+        "Tool tray, powder-coated": ["1/0.1"],
+        "Document box, A4": ["1/0.05"],
+        "Key cabinet, wall-mounted": ["1/0.2"],
+      });
+    }
+  });
+
   it("gives tiny the same records and IDs, dated from its shorter history, and a fraction of the documents and movements", () => {
     const tiny = generateTestTenantDataset(TEST_DATASET_CONFIGS.tiny, "2026-10-21");
     const realistic = generateTestTenantDataset(TEST_DATASET_CONFIGS.realistic, "2026-10-21");

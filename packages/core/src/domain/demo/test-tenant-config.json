@@ -127,7 +127,7 @@
       { "type": "intermediate", "description": "Painted side panel", "baseUnit": "each", "conversions": [] },
       {
         "type": "finished", "description": "Cabinet, red", "baseUnit": "each",
-        "conversions": [{ "unit": "pallet", "numerator": "20", "denominator": "1" }]
+        "conversions": [{ "unit": "pallet", "numerator": "20", "denominator": "1" }, { "unit": "SU", "numerator": "1", "denominator": "1" }]
       },
       {
         "type": "raw", "description": "Cardboard box", "baseUnit": "each",
@@ -179,39 +179,39 @@
       { "type": "intermediate", "description": "Shelf, powder-coated", "baseUnit": "each", "conversions": [] },
       {
         "type": "finished", "description": "Office cabinet, grey, 2 doors", "baseUnit": "each",
-        "conversions": [{ "unit": "pallet", "numerator": "12", "denominator": "1" }]
+        "conversions": [{ "unit": "pallet", "numerator": "12", "denominator": "1" }, { "unit": "SU", "numerator": "1", "denominator": "1.2" }]
       },
       {
         "type": "finished", "description": "Locker, 2 compartments", "baseUnit": "each",
-        "conversions": [{ "unit": "pallet", "numerator": "8", "denominator": "1" }]
+        "conversions": [{ "unit": "pallet", "numerator": "8", "denominator": "1" }, { "unit": "SU", "numerator": "1", "denominator": "0.8" }]
       },
       {
         "type": "finished", "description": "Locker, 4 compartments", "baseUnit": "each",
-        "conversions": [{ "unit": "pallet", "numerator": "8", "denominator": "1" }]
+        "conversions": [{ "unit": "pallet", "numerator": "8", "denominator": "1" }, { "unit": "SU", "numerator": "1", "denominator": "1.4" }]
       },
       {
         "type": "finished", "description": "Workshop cabinet, 4 shelves", "baseUnit": "each",
-        "conversions": [{ "unit": "pallet", "numerator": "10", "denominator": "1" }]
+        "conversions": [{ "unit": "pallet", "numerator": "10", "denominator": "1" }, { "unit": "SU", "numerator": "1", "denominator": "1.5" }]
       },
       {
         "type": "finished", "description": "Steel shelf unit, 5 shelves", "baseUnit": "each",
-        "conversions": [{ "unit": "pallet", "numerator": "10", "denominator": "1" }]
+        "conversions": [{ "unit": "pallet", "numerator": "10", "denominator": "1" }, { "unit": "SU", "numerator": "1", "denominator": "0.9" }]
       },
       {
         "type": "finished", "description": "Letterbox, galvanised", "baseUnit": "each",
-        "conversions": [{ "unit": "case", "numerator": "6", "denominator": "1" }]
+        "conversions": [{ "unit": "case", "numerator": "6", "denominator": "1" }, { "unit": "SU", "numerator": "1", "denominator": "0.15" }]
       },
       {
         "type": "finished", "description": "Tool tray, powder-coated", "baseUnit": "each",
-        "conversions": [{ "unit": "case", "numerator": "10", "denominator": "1" }]
+        "conversions": [{ "unit": "case", "numerator": "10", "denominator": "1" }, { "unit": "SU", "numerator": "1", "denominator": "0.1" }]
       },
       {
         "type": "finished", "description": "Document box, A4", "baseUnit": "each",
-        "conversions": [{ "unit": "case", "numerator": "12", "denominator": "1" }]
+        "conversions": [{ "unit": "case", "numerator": "12", "denominator": "1" }, { "unit": "SU", "numerator": "1", "denominator": "0.05" }]
       },
       {
         "type": "finished", "description": "Key cabinet, wall-mounted", "baseUnit": "each",
-        "conversions": [{ "unit": "case", "numerator": "6", "denominator": "1" }]
+        "conversions": [{ "unit": "case", "numerator": "6", "denominator": "1" }, { "unit": "SU", "numerator": "1", "denominator": "0.2" }]
       }
     ],
     "boms": [

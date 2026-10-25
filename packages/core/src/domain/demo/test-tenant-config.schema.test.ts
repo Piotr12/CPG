@@ -192,6 +192,8 @@ describe("testTenantConfigSchema's cross-checks", () => {
     ]);
     expect(messagesAfter((config) => (config.demand.products[0].profile = "winter"))).toEqual(["There is no seasonality profile winter."]);
     expect(messagesAfter((config) => (config.demand.products[0].enteredIn = "case"))).toEqual(["Material 00000005 has no unit case."]);
+    // Every finished product has an SU factor, but SU is never an entered unit (#239).
+    expect(messagesAfter((config) => (config.demand.products[0].enteredIn = "SU"))).toEqual(["Material 00000005 has no unit SU."]);
     expect(messagesAfter((config) => (config.demand.customers[0].shares["00000022"] = "0.36"))).toEqual(["The customers' weights for 00000022 must sum to 1."]);
   });
 
