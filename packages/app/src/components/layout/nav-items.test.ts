@@ -14,7 +14,7 @@ describe("navModel", () => {
 
   it("gives a normal user the tenant tree and the shared screens, without Administration", () => {
     const model = navModel({ role: "user" }, en.nav)!;
-    expect(shape(model.tenant)).toEqual(["overview", ["masterData", ["materials", "locations", "customers", "suppliers", "planningParameters", "safetyStock", "boms", "statisticalUnits"]], ["sales", ["forecasts"]], ["transactions", ["productionOrders", "customerOrders", "purchaseRequisitions", "purchaseOrders", "transfers"]], "stock", "stockImport", "stockReport", "varianceReport", "tenantAudit"]);
+    expect(shape(model.tenant)).toEqual(["overview", ["masterData", ["materials", "locations", "customers", "suppliers", "planningParameters", "safetyStock", "boms", "statisticalUnits"]], ["sales", ["forecasts", "demandReview"]], ["transactions", ["productionOrders", "customerOrders", "purchaseRequisitions", "purchaseOrders", "transfers"]], "stock", "stockImport", "stockReport", "varianceReport", "tenantAudit"]);
     expect(shape(model.shared)).toEqual(["globalAudit", "help"]);
   });
 

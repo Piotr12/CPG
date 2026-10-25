@@ -36,6 +36,7 @@ export const HELP_TOPIC_IDS = [
   "stock-import",
   "stock-report",
   "variance-report",
+  "demand-review",
   "language-and-theme",
   "using-help",
 ] as const;
@@ -81,6 +82,7 @@ export const HELP_TOPIC_ROUTES: Record<HelpTopicId, string> = {
   "stock-import": "/admin/[tenant]/stock-import",
   "stock-report": "/admin/[tenant]/reports/stock",
   "variance-report": "/admin/[tenant]/reports/variance",
+  "demand-review": "/admin/[tenant]/reports/demand-review",
   "language-and-theme": "/admin",
   "using-help": "/help",
 };
@@ -355,6 +357,15 @@ const en: Record<HelpTopicId, HelpText> = {
       "Opening balances and physical customer returns are ordinary positive corrections with a reason; there is no return document. Every user correction creates an immutable stock movement and a separate before/after audit entry. Each movement shows its type and its source document: a goods receipt links to its purchase order, a goods issue to its shipment, a transfer dispatch or receipt to its transfer, a production completion to its production order; a correction (also from a stock import) is its own source. The actor, the posting ID and the unit/factor appear in movement details. Installation openings are explicitly labelled Installation. The ledger shows 100 movements per page, newest first, while the balance includes all movements.",
       "To set many positions at once, such as an opening balance or a stock count, use Stock import (Import from spreadsheet on this screen): you write the quantity each position should have, not the change.",
       "A material with any movement keeps its type and base unit forever, even after returning to zero. Nonzero stock prevents material or location deactivation. The API reads GET /api/tenants/{tenant}/stock?material=00000001&location=00000001&page=1 and posts POST /api/tenants/{tenant}/stock/corrections with a bearer token, idempotency key, current Test generation and material, location, signed quantity, unit and reason.",
+    ],
+  },
+  "demand-review": {
+    title: "Demand review",
+    body: [
+      "Demand review under Sales shows, for your finished products, what shipped and what is still to ship on one time axis, per day, week or month. Shipped is what goods issues took out, on their business date, at the customer order's location; a reversed issue counts as nothing shipped. Still to ship is the open customer orders, with any order past its required date counted as due today and marked overdue, plus the forecast not yet ordered.",
+      "Forecast not yet ordered follows decision D08: a forecast is consumed by the orders of the same product and location whose required date falls in its calendar month, earliest forecast first. Orders closed early or cancelled release what they never shipped. What is left of this month's forecast is due today, and forecasts of months that have ended no longer count.",
+      "The chart stacks shipped, open orders and forecast not yet ordered per bucket, with the Ordered line over the past and today: where it runs above shipped, shipping fell behind demand. The table below has the same figures per product, or per location when one product is chosen. Tinted columns are shipped, white ones still to ship, and today's column has both; open a row to see its open orders, the overdue part and the forecast. Earlier and Later move the window; Apply always returns to today.",
+      "Several products can only be added up in statistical units (SU): choose one product to see it in its own units. A product without an SU factor is left out of an SU total and named above the chart; set its factor on Statistical units. Both roles can read the review, also in a read-only tenant. The API returns the same figures: GET /api/tenants/{tenant}/reports/demand-review?bucket=week&material=00000001&location=00000001&unit=SU&offset=0 (every parameter optional, material and location repeatable).",
     ],
   },
   "variance-report": {
@@ -662,6 +673,15 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Stany otwarcia i fizyczny zwrot od klienta to zwykłe dodatnie korekty z powodem; nie powstaje dokument zwrotu. Każda korekta użytkownika tworzy niezmienny ruch magazynowy i oddzielny wpis audytu ze stanem przed i po. Każdy ruch pokazuje rodzaj i dokument źródłowy: przyjęcie towaru prowadzi do zamówienia zakupu, wydanie towaru do wysyłki, wydanie lub przyjęcie przesunięcia do przesunięcia, wykonanie produkcji do zlecenia produkcyjnego; korekta (także z importu stanów) jest swoim własnym źródłem. Użytkownik, identyfikator księgowania i przelicznik są w szczegółach ruchu. Otwarcia demonstracyjne są oznaczone jako Instalacja. Ruchy są pokazywane po 100 na stronę, od najnowszych, a saldo uwzględnia wszystkie ruchy.",
       "Aby ustawić wiele pozycji naraz, np. bilans otwarcia lub wynik inwentaryzacji, użyj Importu stanów (Import z arkusza na tym ekranie): wpisujesz ilość, jaka ma być w każdej pozycji, a nie zmianę.",
       "Materiał po dowolnym ruchu zachowuje na zawsze typ i jednostkę podstawową, nawet po wyzerowaniu zapasu. Niezerowy zapas blokuje dezaktywację materiału i lokalizacji. API odczytuje GET /api/tenants/{tenant}/stock?material=00000001&location=00000001&page=1 i księguje POST /api/tenants/{tenant}/stock/corrections z tokenem, kluczem idempotencji, bieżącą generacją Test oraz materiałem, lokalizacją, ilością ze znakiem, jednostką i powodem.",
+    ],
+  },
+  "demand-review": {
+    title: "Przegląd popytu",
+    body: [
+      "Przegląd popytu w sekcji Sprzedaż pokazuje dla wyrobów gotowych, co wysłano i co jeszcze do wysłania, na jednej osi czasu, w podziale na dni, tygodnie lub miesiące. Wysłano to to, co wydały wydania towaru, w dniu ich daty księgowej, w lokalizacji zamówienia klienta; odwrócone wydanie liczy się jako nic niewysłane. Do wysłania to otwarte zamówienia klientów (zamówienie po wymaganej dacie liczy się jako należne dziś i jest oznaczone jako zaległe) oraz prognoza jeszcze niezamówiona.",
+      "Prognoza jeszcze niezamówiona wynika z decyzji D08: prognozę zużywają zamówienia tego samego wyrobu i lokalizacji, których wymagana data przypada w jej miesiącu kalendarzowym, zaczynając od najwcześniejszej prognozy. Zamówienia zamknięte wcześniej lub anulowane zwalniają to, czego nie wysłały. Reszta prognozy bieżącego miesiąca jest należna dziś, a prognozy miesięcy, które się skończyły, nie są już liczone.",
+      "Wykres układa w stos wysłane, otwarte zamówienia i prognozę jeszcze niezamówioną w każdym przedziale, a linia Zamówiono biegnie nad przeszłością i dniem dzisiejszym: gdy jest wyżej niż wysłane, wysyłki nie nadążały za popytem. Tabela poniżej ma te same liczby na wyrób albo, gdy wybrano jeden wyrób, na lokalizację. Kolumny cieniowane to wysłane, białe to do wysłania, a dzisiejsza ma jedno i drugie; rozwiń wiersz, aby zobaczyć otwarte zamówienia, część zaległą i prognozę. Wcześniej i Później przesuwają okno; Zastosuj zawsze wraca do dziś.",
+      "Kilka wyrobów można zsumować tylko w jednostkach statystycznych (SU): wybierz jeden wyrób, aby zobaczyć go w jego własnych jednostkach. Wyrób bez współczynnika SU jest pomijany w sumie SU i wymieniony nad wykresem; ustaw jego współczynnik w Jednostkach statystycznych. Obie role mogą czytać przegląd, także w środowisku tylko do odczytu. API zwraca te same liczby: GET /api/tenants/{tenant}/reports/demand-review?bucket=week&material=00000001&location=00000001&unit=SU&offset=0 (każdy parametr opcjonalny, material i location można powtarzać).",
     ],
   },
   "variance-report": {
