@@ -31,6 +31,11 @@ export const GoodsIssueLine = defineEntity({
     denominator: p.string(),
   },
   uniques: [{ properties: ["issue", "position"] }],
+  /**
+   * Serve a list page's line read, `issue IN (…)`, and the shipment page's posted-line check,
+   * `shipmentLine IN (…)`, which SQLite would plan through the tenant alone (#247).
+   */
+  indexes: [{ properties: ["tenant", "issue"] }, { properties: ["tenant", "shipmentLine"] }],
   triggers: goodsIssueTriggers("goods_issue_line"),
 });
 

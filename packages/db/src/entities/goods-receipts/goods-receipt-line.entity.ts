@@ -32,6 +32,11 @@ export const GoodsReceiptLine = defineEntity({
     denominator: p.string(),
   },
   uniques: [{ properties: ["receipt", "position"] }],
+  /**
+   * Serve a list page's line read, `receipt IN (…)`, and the purchase-order page's posted-line check,
+   * `orderLine IN (…)`, which SQLite would plan through the tenant alone (#247).
+   */
+  indexes: [{ properties: ["tenant", "receipt"] }, { properties: ["tenant", "orderLine"] }],
   triggers: goodsReceiptTriggers("goods_receipt_line"),
 });
 

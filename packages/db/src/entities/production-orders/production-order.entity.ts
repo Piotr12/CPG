@@ -40,6 +40,8 @@ export const ProductionOrder = defineEntity({
     { properties: ["tenant", "output", "status"] },
     /** Serve the list's date and status sorts (#220). */
     ...listSortIndexes("production_order", ["planned_finish", "planned_start", "status"]),
+    /** Serve the variance report's page read, `id IN (…)`, which SQLite would plan through the tenant alone (#247). */
+    { properties: ["tenant", "id"] },
   ],
 });
 export type ProductionOrder = InferEntity<typeof ProductionOrder>;

@@ -78,6 +78,8 @@ export const ProductionCompletionLine = defineEntity({
     extra: p.boolean(),
   },
   uniques: [{ properties: ["completion", "position"] }, { properties: ["completion", "material"] }],
+  /** Serve the variance report's line read, `completion IN (…)`, which SQLite would plan through the tenant alone (#247). */
+  indexes: [{ properties: ["tenant", "completion"] }],
   triggers: completionTriggers("production_completion_line"),
 });
 
