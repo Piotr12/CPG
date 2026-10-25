@@ -39,16 +39,24 @@ The thirteen tenant list routes accept optional `q`, `sort` and `dir` query para
 
 ## Progress
 
+PR: #231
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: sort and search on the tenant list routes
 
-- [ ] 1.1 Shared strict query shape in list-query.schema.ts
-- [ ] 1.2 Per-list API query schemas
-- [ ] 1.3 Route handlers parse and forward q/sort/dir
-- [ ] 1.4 BACKWARD_COMPATIBILITY.md and engineering standards
-- [ ] 1.5 Integration coverage in the API files
+- [x] 1.1 Shared strict query shape in list-query.schema.ts — dd5e4eba
+- [x] 1.2 Per-list API query schemas — a64e50ee
+- [x] 1.3 Route handlers parse and forward q/sort/dir — 72887952
+- [x] 1.4 BACKWARD_COMPATIBILITY.md and engineering standards — afaf202e
+- [x] 1.5 Integration coverage in the API files — 78dd5df5
 
 ## Log
 
 - 07:52 Plan drafted: 5 steps, so plain `om-auto-create-pr` (threshold 20).
+- 08:05 1.1–1.2: `listQueryShape(keys)` with fixed `SORT_KEY_MESSAGE`/`SORT_DIR_MESSAGE`. Each `*-list.schema.ts` exports `<x>ApiQuerySchema`: `z.object` for the unpaged lists, and `.extend` of the existing page schema for the paged ones, so each route keeps its strict or strip mode.
+- 08:20 1.3: the 13 GET handlers parse and forward. The unpaged ones parse before opening the tenant, as forecasts and production orders already did. The existing route tests asserted exact service arguments, so they now expect `q: ""`; new tests cover forwarding, the 400s and unknown keys.
+- 08:30 1.4: BACKWARD_COMPATIBILITY.md has a new "List search and sort on the API (#221)" section and per-route pointers; engineering standards got one sentence.
+- 08:55 1.5: one test each in the nine API integration files. They ran against a fresh local standalone build (no Docker here): 9 files, 110 tests passed. Against the old server the unpaged lists would return every record, so the new assertions fail without the change.
+- 09:05 Full gate: lint (only the existing `bom.service.ts` warning), typecheck, test:coverage (4,176 tests, 100% on all four metrics) and build: all exit 0.
+- Note: the spec file lives on spec PR #230. Once both PRs merge, move it to `implemented/` (follow-up).
