@@ -43,3 +43,13 @@ it("names every production audit action and snapshot field in both languages", (
     expect(messages.audit.fields.bom).toBe("BOM");
   }
 });
+it("says SU can't be entered wherever the unit copy names alternate units (#243)", () => {
+  expect(en.productionOrders.unitHint).toBe("Enter the output's base unit (shown beside its name) or one of its physical alternate units (not SU).");
+  expect(productionLabels(en).errors.UNIT_NOT_CONVERTIBLE).toBe("Choose the output base unit or one of its physical alternate units. SU is for reports only.");
+  for (const messages of [en, pl]) {
+    const labels = productionLabels(messages);
+    expect(labels.unitHint).toContain("SU");
+    expect(labels.errors.UNIT_NOT_CONVERTIBLE).toBe(messages.productionOrders.errors.UNIT_NOT_CONVERTIBLE);
+    expect(labels.errors.UNIT_NOT_CONVERTIBLE).toContain("SU");
+  }
+});

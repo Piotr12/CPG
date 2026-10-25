@@ -402,8 +402,8 @@ export const IMPORT_SHEETS: readonly SheetSpec[] = [
         required: "never",
         example: "kg",
         meaning: {
-          en: "The component's base unit or a unit it converts. Blank: its base unit.",
-          pl: "Jednostka bazowa składnika lub jednostka z przelicznikiem. Puste: jednostka bazowa.",
+          en: "The component's base unit or a physical unit it converts (not SU). Blank: its base unit.",
+          pl: "Jednostka bazowa składnika lub fizyczna jednostka z przelicznikiem (nie SU). Puste: jednostka bazowa.",
         },
       },
     ],

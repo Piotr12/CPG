@@ -16,5 +16,10 @@ describe("stock labels", () => {
     expect(functions).toEqual([]);
     expect(labels.errors.TENANT_READ_ONLY).toBe(messages.errors.TENANT_READ_ONLY);
     expect(labels.errors.UNIT_NOT_CONVERTIBLE).toBe(messages.stock.errors.UNIT_NOT_CONVERTIBLE);
+    // The stock import reaches this code with SU too, so the text says SU can't be entered (#243).
+    expect(labels.errors.UNIT_NOT_CONVERTIBLE).toContain("SU");
+  });
+  it("says why SU is refused in English (#243)", () => {
+    expect(stockLabels(en).errors.UNIT_NOT_CONVERTIBLE).toBe("The unit has no conversion to this material's base unit. SU is for reports only.");
   });
 });

@@ -20,6 +20,12 @@ describe("the stock workbook layout", () => {
     expect(STOCK_SHEET.purpose.en).toMatch(/should have.*not a change/);
   });
 
+  it("explains that the unit is a physical one, never SU, in both languages (#243)", () => {
+    const unit = STOCK_SHEET.columns.find((column) => column.field === "unit")!;
+    expect(unit.meaning.en).toBe("The material's base unit or a physical unit it converts (not SU). Blank: its base unit.");
+    expect(unit.meaning.pl).toContain("(nie SU)");
+  });
+
   it("refuses the transit columns with the manual correction's message (STX-020, TRF-014)", () => {
     expect(STOCK_SHEET.refusedColumns).toEqual([{ headers: TRANSIT_COLUMN_HEADERS, code: "IMPORT_TRANSIT_COLUMN", message: CORRECTION_TRANSIT_MESSAGE }]);
     expect(TRANSIT_COLUMN_HEADERS).toEqual(["Transfer", "Transfer ID", "In transit", "In-transit"]);

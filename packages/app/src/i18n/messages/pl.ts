@@ -614,7 +614,7 @@ export const pl: Messages = {
       quantity: "Ilość",
       quantityHint: "Liczba co najmniej 0.",
       unit: "Jednostka",
-      unitHint: "Zostaw puste dla jednostki bazowej materiału albo podaj jednostkę, którą materiał przelicza, np. karton.",
+      unitHint: "Zostaw puste dla jednostki bazowej materiału albo podaj fizyczną jednostkę, którą materiał przelicza, np. karton (nie SU).",
     },
     add: {
       open: "Dodaj prognozę",
@@ -684,7 +684,7 @@ export const pl: Messages = {
     intro: "Zaplanuj jeden wyrób w jednej lokalizacji i zachowaj wybraną rewizję BOM. Planowanie nie zmienia zapasu fizycznego.",
     create: "Utwórz zlecenie produkcyjne", edit: "Edytuj zlecenie produkcyjne", save: "Zapisz zmiany", preview: "Podgląd BOM-ów", pending: "Przetwarzanie…", cancel: "Anuluj", back: "Wstecz",
     id: "ID", output: "Materiał wyjściowy", location: "Lokalizacja", quantity: "Planowana ilość", unit: "Jednostka", finish: "Planowany koniec", start: "Planowany początek", recipe: "BOM / rewizja", status: "Status", entered: "Wprowadzona ilość / przelicznik",
-    unitHint: "Wpisz jednostkę bazową wyrobu (obok jego nazwy) lub skonfigurowaną jednostkę alternatywną.",
+    unitHint: "Wpisz jednostkę bazową wyrobu (obok jego nazwy) lub jedną z jego fizycznych jednostek alternatywnych (nie SU).",
     previewDates: "Orientacyjny początek: {start} ({days} dni kalendarzowych przed końcem). Daty są sprawdzane ponownie przy zapisie.",
     leadTime: "Zapisany czas realizacji", leadTimeDays: "{days} dni kalendarzowych",
     finishHint: "Planowany początek jest przeliczany z zapisanego czasu realizacji: {days} dni kalendarzowych.",
@@ -748,7 +748,7 @@ export const pl: Messages = {
     },
     states: { open: "Otwarte", completed: "Zakończone", "closed-early": "Zamknięte wcześniej", cancelled: "Anulowane" },
     errors: {
-      UNIT_NOT_CONVERTIBLE: "Wybierz jednostkę bazową wyrobu lub skonfigurowany przelicznik.",
+      UNIT_NOT_CONVERTIBLE: "Wybierz jednostkę bazową wyrobu lub jedną z jego fizycznych jednostek alternatywnych. SU służy tylko do raportów.",
       QUANTITY_OUT_OF_RANGE: "Przeliczona ilość jest zbyt duża do zapisania.",
       QUANTITY_ROUNDS_TO_ZERO: "Ta ilość zaokrągla się do zera w jednostce bazowej wyrobu.",
       NETWORK_ERROR: "Żądanie nie powiodło się. Spróbuj ponownie.",
@@ -1833,7 +1833,7 @@ export const pl: Messages = {
     inTransitFrom: "W tranzycie stąd", inTransitTo: "W tranzycie tutaj", transitNote: "Zapas w tranzycie należy do swojego przesunięcia: żadna z lokalizacji nie może go użyć, dopóki nie zostanie przyjęty.", transfers: "Przesunięcia",
     form: { open: "Zaksięguj korektę", title: "Korekta zapasu", description: "Wpisz zmianę ze znakiem: 5 dodaje pięć, -5 odejmuje pięć. Powstanie trwały ruch z dzisiejszą datą.", quantity: "Ilość ze znakiem", quantityHint: "Do sześciu miejsc dziesiętnych. Ilość ujemna pomniejsza zapas.", unit: "Jednostka", reason: "Powód", submit: "Zaksięguj", pending: "Księgowanie…", cancel: "Anuluj" },
     fieldErrors: { quantity: "Wpisz niezerową ilość ze znakiem, do 12 cyfr całkowitych i 6 po przecinku (użyj kropki).", reason: "Wpisz powód, do 500 znaków.", unit: "Wybierz poprawną jednostkę." },
-    errors: { STOCK_ALREADY_REVERSED: "Ten ruch został już odwrócony. Zobacz odwrócenie przed kolejnym księgowaniem.", STOCK_REVERSAL_UNSUPPORTED: "Tego rodzaju księgowania nie można tutaj odwrócić.", STOCK_REVERSAL_INCONSISTENT: "Oryginalne księgowanie nie zgadza się z dokumentem. Poproś administratora o sprawdzenie.", STOCK_MOVEMENT_NOT_FOUND: "Ten ruch nie jest już dostępny w tym środowisku.", QUANTITY_OUT_OF_RANGE: "Ilość lub wynikowy zapas jest zbyt duży.", QUANTITY_ROUNDS_TO_ZERO: "Ta ilość zaokrągla się do zera w jednostce podstawowej.", MATERIAL_INACTIVE: "Materiał jest nieaktywny. Nowe korekty są zablokowane.", LOCATION_INACTIVE: "Lokalizacja jest nieaktywna. Nowe korekty są zablokowane.", UNIT_NOT_CONVERTIBLE: "Jednostka nie ma przelicznika na jednostkę podstawową materiału." },
+    errors: { STOCK_ALREADY_REVERSED: "Ten ruch został już odwrócony. Zobacz odwrócenie przed kolejnym księgowaniem.", STOCK_REVERSAL_UNSUPPORTED: "Tego rodzaju księgowania nie można tutaj odwrócić.", STOCK_REVERSAL_INCONSISTENT: "Oryginalne księgowanie nie zgadza się z dokumentem. Poproś administratora o sprawdzenie.", STOCK_MOVEMENT_NOT_FOUND: "Ten ruch nie jest już dostępny w tym środowisku.", QUANTITY_OUT_OF_RANGE: "Ilość lub wynikowy zapas jest zbyt duży.", QUANTITY_ROUNDS_TO_ZERO: "Ta ilość zaokrągla się do zera w jednostce podstawowej.", MATERIAL_INACTIVE: "Materiał jest nieaktywny. Nowe korekty są zablokowane.", LOCATION_INACTIVE: "Lokalizacja jest nieaktywna. Nowe korekty są zablokowane.", UNIT_NOT_CONVERTIBLE: "Jednostka nie ma przelicznika na jednostkę podstawową materiału. SU służy tylko do raportów." },
   },
   statisticalUnits: {
     heading: "Jednostki statystyczne — {tenant}",

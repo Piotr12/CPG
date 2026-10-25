@@ -114,3 +114,7 @@ it("offers only active locations in an autocomplete named after its label that r
   fireEvent.click(screen.getByRole("button", { name: en.productionOrders.preview }));
   expect(mocks.preview).not.toHaveBeenCalled();
 });
+it("hints on the free-text unit field that SU can't be entered (#243)", () => {
+  render(<ProductionDialog {...props} />); open();
+  expect(screen.getByText("Enter the output's base unit (shown beside its name) or one of its physical alternate units (not SU).")).toBeTruthy();
+});
