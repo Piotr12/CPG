@@ -18,6 +18,11 @@ import {
   SUBMISSION_REUSED_MESSAGE,
   UNKNOWN_INPUT_MESSAGE,
 } from "@cpg/core/validators/production-orders/production-completion.schema";
+import {
+  PLANNED_START_YEAR_MESSAGE,
+  REQUIREMENT_OVERFLOW_MESSAGE,
+  TARGET_BELOW_PRODUCED_MESSAGE,
+} from "@cpg/core/validators/production-orders/production-order.schema";
 import { POSITIVE_QUANTITY_MESSAGE, QUANTITY_MESSAGE } from "@cpg/core/validators/quantities/quantity.schema";
 import { fill } from "../../i18n/fill";
 import type { Messages } from "../../i18n/messages/en";
@@ -39,9 +44,9 @@ export function productionFieldError(labels: ProductionLabels) {
     [CALENDAR_DATE_MESSAGE]: labels.invalidDate,
     [UNIT_FORMAT_MESSAGE]: labels.invalidUnit,
     [POSITIVE_QUANTITY_MESSAGE]: labels.invalidQuantity,
-    "The planned start must fit a four-digit calendar year.": labels.invalidStart,
-    "The component requirement is too large to store.": labels.requirementOverflow,
-    "The target cannot be less than the quantity already produced.": labels.belowProduced,
+    [PLANNED_START_YEAR_MESSAGE]: labels.invalidStart,
+    [REQUIREMENT_OVERFLOW_MESSAGE]: labels.requirementOverflow,
+    [TARGET_BELOW_PRODUCED_MESSAGE]: labels.belowProduced,
   };
   return (message: string) => known[message] ?? message;
 }

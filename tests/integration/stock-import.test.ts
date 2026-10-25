@@ -113,6 +113,19 @@ describe("the Stock import screen", () => {
     expect(await sam.evaluate<boolean>(`${button("Post")}.disabled`)).toBe(true);
   });
 
+  it("reports an unknown material on its row with corrective advice, offers no posting, and changes no stock (STX-011)", async () => {
+    const balance = () =>
+      sam.evaluate<string>(`fetch("/api/tenants/prod/stock?material=${flint}&location=${cave}").then((response) => response.json()).then((body) => body.data.quantity)`);
+    const before = await balance();
+
+    // A valid row beside it: nothing is posted while any row fails.
+    await dryRun(await workbook([[flint, cave, 1, null], ["99999999", cave, 5, null]]));
+
+    expect(await table("Problem")).toEqual([["Stock", "3", "Material ID", "Material 99999999 doesn't exist in Prod. Check the ID, or create it first."]]);
+    expect(await sam.evaluate<boolean>(`${button("Post")}.disabled`)).toBe(true);
+    expect(await balance()).toBe(before);
+  });
+
   it("previews each movement, posts them with a reason, and the Stock page shows the counted balance (STX-003, STX-005, STX-021)", async () => {
     await dryRun(await workbook([[flint, cave, 85, null], [hide, cave, 7, null]]));
     const preview = await table("Changes");

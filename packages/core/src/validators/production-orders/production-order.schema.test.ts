@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { productionOrderCreateSchema, productionOrderListSchema, productionOrderOptionsSchema, productionOrderUpdateSchema, productionOrderUpdateActionSchema } from "./production-order.schema";
+import { PLANNED_START_YEAR_MESSAGE, REQUIREMENT_OVERFLOW_MESSAGE, TARGET_BELOW_PRODUCED_MESSAGE, productionOrderCreateSchema, productionOrderListSchema, productionOrderOptionsSchema, productionOrderUpdateSchema, productionOrderUpdateActionSchema } from "./production-order.schema";
 
 const input = { output: "00000001", location: "00000002", quantity: "12", unit: "each", plannedFinish: "2028-02-29" };
 it("validates positive quantities, references, units and real dates and pairs an explicit recipe", () => {
@@ -19,4 +19,9 @@ it("refuses locked or unknown edit fields instead of silently dropping them", ()
   expect(productionOrderListSchema.parse({})).toEqual({ page: 1 });
   expect(productionOrderListSchema.parse({ page: "2" })).toEqual({ page: 2 });
   for (const query of [{ page: 0 }, { page: 1.5 }, { page: 1_000_001 }, { extra: true }]) expect(productionOrderListSchema.safeParse(query).success).toBe(false);
+});
+it("keeps the English texts of the messages screens translate by exact match (#251)", () => {
+  expect(PLANNED_START_YEAR_MESSAGE).toBe("The planned start must fit a four-digit calendar year.");
+  expect(REQUIREMENT_OVERFLOW_MESSAGE).toBe("The component requirement is too large to store.");
+  expect(TARGET_BELOW_PRODUCED_MESSAGE).toBe("The target cannot be less than the quantity already produced.");
 });
