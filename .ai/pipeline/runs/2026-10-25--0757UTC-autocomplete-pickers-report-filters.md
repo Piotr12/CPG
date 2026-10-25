@@ -161,3 +161,13 @@ PR: #233
   - the stock report material filter;
   - 390 px, with no horizontal overflow (`scrollWidth` 390 = `clientWidth` 390).
 - Workers: W1 $3.16, W2 $2.91, W3 $5.32. Each worker ran its own integration files green before merging; their reports are in the cezar tree.
+- Review (a fresh-context code reviewer, 2026-10-25):
+  - **High, fixed in 8866089a.** A `FilterAutocomplete` remounted by its `key` after Clear filter or Back read the previous combobox's display label as its value. Added a unit regression test (it fails without the fix) and an integration check through Clear filter.
+  - **Low, accepted (the spec accepts it).** Focus is lost if the reader focused the select before hydration.
+  - **Low, fixed.** The no-JS test now also asserts that the filter is a plain GET form back to the page.
+- After the fix:
+  - lint 0;
+  - typecheck 0;
+  - `test:coverage` 0, with 4,113 tests and 100 % on all four measures;
+  - build 0;
+  - forecasts, stock-report, variance-report and stock on a fresh standalone server: 24/24.
