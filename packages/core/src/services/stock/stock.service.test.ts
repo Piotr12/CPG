@@ -72,6 +72,24 @@ describe("StockService", () => {
     expect((await service().get(PAIR)).movements).toEqual(expect.arrayContaining([expect.objectContaining({ id: out.id, numerator: "12", quantity: "-1.500000" })]));
     expect(await entries()).toEqual(expect.arrayContaining([expect.objectContaining({ tokenId: "t", tokenName: "integration", sessionId: null })]));
   });
+  it("posts 0.123456 through the ledger and reads it back exactly from the movements, the balance, the audit and the stored text (MAT-024)", async () => {
+    const first = await service().correct(line("0.123456"), ACTOR);
+    for (let count = 0; count < 2; count += 1) await service().correct(line("0.123456"), ACTOR);
+    // 0.370368 - 0.2 is 0.17036799999999996 in binary floating point.
+    const last = await service().correct(line("-0.2"), ACTOR);
+    expect(first).toMatchObject({ quantity: "0.123456", enteredQuantity: "0.123456", balanceBefore: "0.000000", balanceAfter: "0.123456" });
+    expect(last).toMatchObject({ quantity: "-0.200000", balanceBefore: "0.370368", balanceAfter: "0.170368" });
+    const read = await service().get(PAIR);
+    expect(read.quantity).toBe("0.170368");
+    expect(read.movements.map(({ quantity }) => quantity).sort()).toEqual(["-0.200000", "0.123456", "0.123456", "0.123456"]);
+    expect((await entries()).map(({ after }) => after?.quantity).sort()).toEqual(["0.123456", "0.170368", "0.246912", "0.370368"]);
+    const stored = await scoped().getConnection().execute<{ quantity: unknown; kind: string }[]>(
+      "select quantity, typeof(quantity) as kind from stock_movement union all select quantity, typeof(quantity) from stock_balance",
+    );
+    expect(stored.map(({ quantity, kind }) => [quantity, kind]).sort()).toEqual([
+      ["-0.200000", "text"], ["0.123456", "text"], ["0.123456", "text"], ["0.123456", "text"], ["0.170368", "text"],
+    ]);
+  });
   it("refuses an overdraw with available/required context and writes no movement or audit (INV-006)", async () => {
     await service().correct(line("2"), ACTOR);
     await expect(service().correct(line("-3"), ACTOR)).rejects.toMatchObject({ code: "INSUFFICIENT_STOCK", messageParams: { ...PAIR, available: "2.000000", requested: "3.000000", unit: "each" }, message: expect.stringContaining("available 2.000000 each; requested 3.000000 each") });
