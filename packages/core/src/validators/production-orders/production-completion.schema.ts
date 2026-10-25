@@ -11,8 +11,8 @@ import { stockReversalSchema } from "../stock/stock-reversal.schema";
 /** The English messages; screens translate them by matching these constants. */
 export const COMPLETION_LINE_COUNT_MESSAGE = `Enter at least 1 and at most ${BOM_COMPONENTS_MAX} materials used.`;
 export const DUPLICATE_COMPLETION_MATERIAL_MESSAGE = "This material is already on the completion: enter what was used of it once.";
-/** What the service says, on `components`, when a pinned recipe component is not listed (spec Q4); `params.material` names the missing ones. */
-export const MISSING_COMPONENT_MESSAGE = "Enter what was used of every recipe component, 0 when none was.";
+/** What the service says, on `components`, when a pinned BOM component is not listed (spec Q4); `params.material` names the missing ones. */
+export const MISSING_COMPONENT_MESSAGE = "Enter what was used of every BOM component, 0 when none was.";
 /** What the service says about an added input of a material the tenant doesn't have. */
 export const UNKNOWN_INPUT_MESSAGE = "There is no such material in this tenant.";
 /** What the service says about consuming an inactive material (spec Q5, Q6). */

@@ -12,7 +12,7 @@ export const OUTPUT_CHOICE_MESSAGE = "Choose the material this BOM makes.";
 export const PRIORITY_MESSAGE = `Enter a whole number from 1 to ${BOM_PRIORITY_MAX}; 1 is the highest.`;
 export const VALID_THROUGH_BEFORE_FROM_MESSAGE = "Valid through can't be before valid from.";
 export const COMPONENT_COUNT_MESSAGE = `Add at least 1 and at most ${BOM_COMPONENTS_MAX} components.`;
-export const DUPLICATE_COMPONENT_MESSAGE = "This material is already in the recipe: enter its total quantity once.";
+export const DUPLICATE_COMPONENT_MESSAGE = "This material is already in the BOM: enter its total quantity once.";
 export const BOM_ID_IMMUTABLE_MESSAGE = "A BOM's ID can't be changed.";
 export const BOM_OUTPUT_IMMUTABLE_MESSAGE = "A BOM's output can't be changed: create a new BOM.";
 

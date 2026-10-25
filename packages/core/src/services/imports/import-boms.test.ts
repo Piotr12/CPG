@@ -346,7 +346,7 @@ describe("existing BOMs", () => {
         row: 2,
         column: null,
         code: "BOM_CYCLE",
-        message: "This recipe would make a cycle: 00000004 Panel →(BOM 00000001) 00000006 Frame →(BOM 00000002) 00000004 Panel.",
+        message: "This BOM would make a cycle: 00000004 Panel →(BOM 00000001) 00000006 Frame →(BOM 00000002) 00000004 Panel.",
       }),
     ]);
     await expect(kit.commit(workbook, "c".repeat(64))).rejects.toMatchObject({ code: "IMPORT_STALE" });

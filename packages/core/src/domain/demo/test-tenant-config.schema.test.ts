@@ -197,14 +197,14 @@ describe("testTenantConfigSchema's cross-checks", () => {
     expect(messagesAfter((config) => (config.demand.customers[0].shares["00000022"] = "0.36"))).toEqual(["The customers' weights for 00000022 must sum to 1."]);
   });
 
-  it("refuses a waste order on a pair that isn't made or a sheet its recipe doesn't use", () => {
+  it("refuses a waste order on a pair that isn't made or a sheet its priority-1 BOM doesn't use", () => {
     expect(messagesAfter((config) => (config.supply.waste.orders[0].location = "00000002"))).toEqual([
       "Material 00000021 is not made at location 00000002.",
     ]);
-    expect(messagesAfter((config) => (config.supply.waste.orders[0].sheet = "00000007"))).toEqual(["Material 00000021's recipe doesn't use 00000007."]);
+    expect(messagesAfter((config) => (config.supply.waste.orders[0].sheet = "00000007"))).toEqual(["Material 00000021's priority-1 BOM doesn't use 00000007."]);
     expect(messagesAfter((config) => (config.supply.waste.orders[0].output = "00000001"))).toEqual([
       "Material 00000001 is not made at location 00000001.",
-      "Material 00000001's recipe doesn't use 00000001.",
+      "Material 00000001's priority-1 BOM doesn't use 00000001.",
     ]);
   });
 

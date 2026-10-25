@@ -376,7 +376,7 @@ async function assertNoCycle(em: EntityManager, bomCode: string | null, output: 
   }
   const components = candidate.lines.map(({ material }) => material.code);
   const cycle = findCycle(edges, { bom: bomCode, output: output.code, components });
-  if (cycle) throw new ConflictError(`This recipe would make a cycle: ${await cyclePath(em, cycle)}.`, "BOM_CYCLE");
+  if (cycle) throw new ConflictError(`This BOM would make a cycle: ${await cyclePath(em, cycle)}.`, "BOM_CYCLE");
 }
 
 /**

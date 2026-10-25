@@ -230,9 +230,9 @@ describe("prepareImport — BOMs (spec Q8)", () => {
       sheet("bomLines", [4, 1, 1, null], ["R9", 1, 1, null], [3, 1, 1, null]),
     ]);
     expect(result.errors.map((error) => [error.sheet, error.row, error.column, error.code, error.message])).toEqual([
-      ["BOM lines", 2, "BOM", "IMPORT_LINE_WITHOUT_HEADER", "BOM 00000004 has no row on the BOM headers sheet. Add its header: a BOM's lines are its complete recipe."],
+      ["BOM lines", 2, "BOM", "IMPORT_LINE_WITHOUT_HEADER", "BOM 00000004 has no row on the BOM headers sheet. Add its header: a BOM's lines are all its components."],
       ["BOM lines", 3, "BOM", "IMPORT_LINE_WITHOUT_HEADER", "No row on the BOM headers sheet has the import reference R9."],
-      ["BOM headers", 2, null, "IMPORT_BOM_WITHOUT_LINES", "This BOM has no rows on the BOM lines sheet: list its complete recipe there."],
+      ["BOM headers", 2, null, "IMPORT_BOM_WITHOUT_LINES", "This BOM has no rows on the BOM lines sheet: list all its components there."],
     ]);
     expect(result.errors.slice(0, 2).map((error) => error.params)).toEqual([{ bom: "00000004" }, { bom: "R9" }]);
     expect(result.boms.map((bom) => bom.values.id)).toEqual(["00000003"]);

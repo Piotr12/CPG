@@ -150,7 +150,7 @@ async function insertOrder(em: EntityManager, input: ProductionOrderInput, at?: 
   const { output, location, record, records, options } = await resolveProductionOptions(em, input);
   const selection = input.bom === undefined ? options.selected : { bom: input.bom, revision: input.revision };
   const recipe = records.get(selection.bom);
-  if (!recipe || recipe.number !== selection.revision) throw new ConflictError("The selected BOM revision changed or is no longer usable. Review the recipe choices again.", "PRODUCTION_BOM_CHANGED");
+  if (!recipe || recipe.number !== selection.revision) throw new ConflictError("The selected BOM revision changed or is no longer usable. Review the BOM choices again.", "PRODUCTION_BOM_CHANGED");
   const [highest] = await em.find(ProductionOrder, {}, { orderBy: { code: "desc" }, limit: 1 });
   const code = nextSequentialId(highest?.code ?? null, { code: "PRODUCTION_ORDER_IDS_EXHAUSTED", message: "This tenant has used every eight-digit production order ID." });
   const { baseQuantity, enteredQuantity, enteredUnit, numerator, denominator } = record;
