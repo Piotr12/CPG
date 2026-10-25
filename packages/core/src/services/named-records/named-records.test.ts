@@ -169,6 +169,16 @@ describe.each(KINDS)("$Service.name", ({ Service, subjectType, prefix, code, nou
         expect(ids(await service().list({ q: "yard", sort: "name", dir: "desc" }))).toEqual(["00000004"]);
         expect(ids(await service("test").list({ q: "north" }))).toEqual(["00000001"]);
       });
+
+      it("ignores the case of Polish letters too, in each tenant (#223)", async () => {
+        await service().create({ name: "Łódź Śródmieście" }, ACTOR);
+        await service("test").create({ name: "ŻYRARDÓW" }, ACTOR);
+
+        expect(ids(await service().list({ q: "łódź" }))).toEqual(["00000005"]);
+        expect(ids(await service().list({ q: "ŚRÓDMIEŚCIE łÓDŹ" }))).toEqual(["00000005"]);
+        expect(ids(await service("test").list({ q: "żyrardów" }))).toEqual(["00000002"]);
+        expect(ids(await service("test").list({ q: "łódź" }))).toEqual([]);
+      });
     });
 
     it("doesn't find an unknown or malformed ID, or another tenant's (TEN-014)", async () => {

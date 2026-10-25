@@ -18,8 +18,8 @@ function nest(path: string, value: unknown): QueryObject {
 
 /**
  * Where every word of `q` is contained in at least one of `fields` (dotted paths, so `material.code`
- * searches a reference's business ID), or `{}` when `q` has no words. SQLite's `LIKE` ignores case for
- * ASCII letters only.
+ * searches a reference's business ID), or `{}` when `q` has no words. `LIKE` ignores the case of every
+ * letter, Polish ones included: `@cpg/db` replaces SQLite's, which ignores it for ASCII letters only (#223).
  */
 export function searchWhere(q: string, fields: readonly string[]): QueryObject {
   const words = searchWords(q);
