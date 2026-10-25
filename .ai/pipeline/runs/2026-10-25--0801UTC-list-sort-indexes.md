@@ -4,7 +4,7 @@
 **Agent:** Claude Code (Opus 5.5), `om-auto-fix-issue` → `om-auto-implement-spec` → `om-auto-create-pr`
 **Issue:** #220 · **Spec PR:** #234
 Source doc: .ai/specs/2026-10-25--0755UTC-list-sort-indexes.md
-**Status:** in progress
+**Status:** done
 
 ## Goal
 
@@ -45,6 +45,8 @@ Every date and status sort of a paged document list, in both directions, reads i
 - 08:50 — 2.1: filed #236 (the purchase-order lines' requisition join, spec Q6). Lesson added under Database.
 
 - 09:20 — Review (`om-auto-review-pr`, fresh-context reviewer): APPROVE, with no blockers or majors. Fixed: the plan's Scope and step 1.4 text; the seeded plan-test case now runs `ANALYZE`, because without statistics both cases planned the same; page sizes come from the services' constants; `listSortIndexName` is no longer exported; the lesson's path. Open: 2.2 waits for #234.
+
+- 09:55 — CI on ff43a9c9 green. #234 had merged, so I merged `main` and moved the spec to `implemented/` with implementation notes. Status done.
 
 ## Timings (step 1.4)
 
@@ -196,6 +198,8 @@ it.runIf(process.env.SCRATCH_PO)("profiles the purchase order list", { timeout: 
 
 ## Progress
 
+PR: #235
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: indexes, migration and proof
@@ -208,4 +212,4 @@ it.runIf(process.env.SCRATCH_PO)("profiles the purchase order list", { timeout: 
 ### Phase 2: paperwork
 
 - [x] 2.1 File the follow-up issue and add the lesson — #236, see the lesson commit
-- [ ] 2.2 Move the spec to implemented/ after #234 merges
+- [x] 2.2 Move the spec to implemented/ after #234 merges — see the spec-move commit
