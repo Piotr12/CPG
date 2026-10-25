@@ -126,6 +126,7 @@ describe("SidebarNav on a desktop", () => {
       ["Planning parameters", "/admin/test/planning-parameters"],
       ["Safety stock", "/admin/test/safety-stock"],
       ["BOMs", "/admin/test/boms"],
+      ["Statistical units", "/admin/test/statistical-units"],
       ["Import", "/admin/test/import"],
       ["Forecasts", "/admin/test/forecasts"],
       ["Production orders", "/admin/test/production-orders"],

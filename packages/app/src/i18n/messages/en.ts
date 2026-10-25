@@ -1896,6 +1896,20 @@ export const en = {
     errors: { STOCK_ALREADY_REVERSED: "This movement was already reversed. View its reversal before making another posting.", STOCK_REVERSAL_UNSUPPORTED: "This kind of posting cannot be reversed here.", STOCK_REVERSAL_INCONSISTENT: "The original posting does not match its document. Ask an administrator to check it.", STOCK_MOVEMENT_NOT_FOUND: "This movement is no longer available in this tenant.", QUANTITY_OUT_OF_RANGE: "That quantity or resulting balance is too large.", QUANTITY_ROUNDS_TO_ZERO: "That quantity rounds to zero in the base unit.", MATERIAL_INACTIVE: "This material is inactive. New corrections are blocked.", LOCATION_INACTIVE: "This location is inactive. New corrections are blocked.", UNIT_NOT_CONVERTIBLE: "The unit has no conversion to this material's base unit." },
   },
   /** The current stock report (E13-S01). */
+  statisticalUnits: {
+    heading: "Statistical units — {tenant}",
+    intro:
+      "One statistical unit (SU) lets reports add up different products. Each product's factor is one of its conversions: set or change it on the product's page. Quantities are never entered in SU, and a product's base unit can't change while it has a factor.",
+    count: "Finished products with an SU factor: {count} of {total}.",
+    label: "SU factors of the finished products",
+    columns: { product: "Product", factor: "SU factor", otherUnits: "Other units in SU" },
+    inactive: "Inactive",
+    notSet: "Not set",
+    change: "Change",
+    changeOf: "Change the SU factor of {product}",
+    actions: "Actions",
+    empty: "No finished products in {tenant} yet.",
+  },
   stockReport: {
     heading: "Stock report — {tenant}",
     intro: "Physical stock on hand and stock in transit per material and location, in the material's base unit, as of {date} (UTC). Stock in transit belongs to its transfer: neither location can use it until it is received.",
@@ -1984,6 +1998,7 @@ export const en = {
     varianceReport: "Variance report",
     safetyStock: "Safety stock",
     boms: "BOMs",
+    statisticalUnits: "Statistical units",
     purchaseRequisitions: "Purchase requisitions",
     purchaseOrders: "Purchase orders",
     transfers: "Transfers",

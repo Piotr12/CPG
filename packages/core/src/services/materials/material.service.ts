@@ -14,7 +14,8 @@ import {
 } from "@cpg/db";
 import type { DemoMaterial } from "../../domain/demo/generate-dataset";
 import { nextMaterialCode } from "../../domain/materials/material-code";
-import { formatDecimal, inverseFactor, parseDecimal } from "../../domain/quantities/decimal";
+import { convertToBase, formatDecimal, inverseFactor, ONE, parseDecimal } from "../../domain/quantities/decimal";
+import { fromBase, statisticalFactor, type ReportFactor } from "../../domain/units/report-units";
 import { listOrderBy, searchWhere } from "../../domain/lists/list-query";
 import { AppError, ConflictError, NotFoundError, ValidationError, versionConflict } from "../../http/errors";
 import type { ListOptions } from "../../validators/lists/list-query.schema";
@@ -69,6 +70,18 @@ export interface ConversionView {
 
 export interface MaterialDetail extends MaterialSummary {
   conversions: ConversionView[];
+}
+
+/** One finished product on the Statistical units page (#239). */
+export interface StatisticalFactorView {
+  id: string;
+  description: string;
+  active: boolean;
+  baseUnit: string;
+  /** How many SU one base unit counts as ("1.5" for 1 each = 1.5 SU), or `null` when not set. */
+  perBaseUnit: string | null;
+  /** Each other unit in SU ("1 pallet = 15 SU"), by unit; empty while the factor isn't set. */
+  otherUnits: { unit: string; statisticalUnits: string }[];
 }
 
 export interface NewMaterial {
@@ -277,6 +290,27 @@ export class MaterialService {
   }
 
   /**
+   * Every finished product with its SU factor or `null`, by ID (#239): two queries whatever the
+   * number of products, materials then their conversions. Inactive products keep their factor.
+   */
+  async statisticalFactors(): Promise<StatisticalFactorView[]> {
+    const materials = await this.em.find(Material, { type: "finished" }, { orderBy: { code: "asc" } });
+    const conversions = await this.em.find(MaterialConversion, { material: { $in: materials } }, { orderBy: { unit: "asc" } });
+    return materials.map((material) => {
+      const own = conversions.filter((conversion) => conversion.material === material);
+      const factor = statisticalFactor({ code: material.code, baseUnit: material.baseUnit, conversions: own });
+      return {
+        id: material.code,
+        description: material.description,
+        active: material.active,
+        baseUnit: material.baseUnit,
+        perBaseUnit: factor && formatDecimal(fromBase(ONE, factor)),
+        otherUnits: factor ? own.filter(({ unit }) => !isStatisticalUnit(unit)).map((conversion) => inStatisticalUnits(conversion, factor)) : [],
+      };
+    });
+  }
+
+  /**
    * Creates the generated dataset's materials `rows` when the tenant has none, and returns how many.
    * Not audited (spec Q9): it is an installation step, like the tenants the migration inserts. Each
    * material is flushed before the next reads the highest ID, so they get consecutive IDs. Seeds
@@ -373,6 +407,12 @@ async function assertBaseUnitFree(em: EntityManager, material: Material): Promis
   if (await hasTransfers(em, material)) {
     throw new ConflictError("Transfers use this material, so its base unit can't change: their quantities are stored in it.", "BASE_UNIT_IN_USE");
   }
+}
+
+/** One `unit` of a conversion in SU: its base quantity, converted once more (#239). */
+function inStatisticalUnits({ unit, numerator, denominator }: MaterialConversion, factor: ReportFactor) {
+  const base = convertToBase(ONE, parseDecimal(numerator)!, parseDecimal(denominator)!);
+  return { unit, statisticalUnits: formatDecimal(fromBase(base, factor)) };
 }
 
 /** Refuses deactivating a material while an Open purchase order has a line for it, naming the order (LFC-013). */

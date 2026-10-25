@@ -785,6 +785,45 @@ describe("MaterialService", () => {
     });
   });
 
+  describe("statisticalFactors", () => {
+    it("lists every finished product by ID with its SU factor and its other units in SU, or Not set (#239)", async () => {
+      await service().create(BOLT, ACTOR);
+      const cabinet = await service().create({ type: "finished", description: "Workshop cabinet", baseUnit: "each" }, ACTOR);
+      await service().addConversion(cabinet.id, { unit: "pallet", numerator: "10", denominator: "1" }, ACTOR);
+      await service().addConversion(cabinet.id, { unit: "SU", numerator: "1", denominator: "1.5" }, ACTOR);
+      const letterbox = await service().create({ type: "finished", description: "Letterbox", baseUnit: "each" }, ACTOR);
+      await service().addConversion(letterbox.id, { unit: "case", numerator: "6", denominator: "1" }, ACTOR);
+      await service().update(letterbox.id, { active: false }, letterbox.version, ACTOR);
+      const em = scopedEm("prod");
+      em.create(Material, { code: "00000004", type: "finished", description: "Kit", baseUnit: "SU" });
+      await em.flush();
+      await service("test").create({ type: "finished", description: "Elsewhere", baseUnit: "each" }, ACTOR);
+
+      expect(await service().statisticalFactors()).toEqual([
+        { id: "00000002", description: "Workshop cabinet", active: true, baseUnit: "each", perBaseUnit: "1.5", otherUnits: [{ unit: "pallet", statisticalUnits: "15" }] },
+        { id: "00000003", description: "Letterbox", active: false, baseUnit: "each", perBaseUnit: null, otherUnits: [] },
+        // A base unit SU stored before the registry counts 1:1.
+        { id: "00000004", description: "Kit", active: true, baseUnit: "SU", perBaseUnit: "1", otherUnits: [] },
+      ]);
+    });
+
+    it("reads 50 products in two queries, materials then conversions", async () => {
+      const em = scopedEm("prod");
+      for (let index = 1; index <= 50; index += 1) {
+        const material = em.create(Material, { code: String(index).padStart(8, "0"), type: "finished", description: `Product ${index}`, baseUnit: "each" });
+        em.create(MaterialConversion, { material, unit: "SU", numerator: "1", denominator: String(index) });
+      }
+      await em.flush();
+      const reader = scopedEm("prod");
+      const find = vi.spyOn(reader, "find");
+
+      const rows = await service("prod", reader).statisticalFactors();
+      expect(rows).toHaveLength(50);
+      expect(rows[49]).toMatchObject({ id: "00000050", perBaseUnit: "50" });
+      expect(find).toHaveBeenCalledTimes(2);
+    });
+  });
+
   describe("seedDemo", () => {
     it("creates the demo materials with consecutive IDs in an empty tenant, unaudited, and nothing the second time", async () => {
       expect(await service("test").seedDemo(FIXTURE_MATERIALS)).toBe(FIXTURE_MATERIALS.length);

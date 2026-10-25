@@ -20,6 +20,7 @@ export const HELP_TOPIC_IDS = [
   "forecasts",
   "boms",
   "bom-revisions",
+  "statistical-units",
   "purchase-requisitions",
   "purchase-orders",
   "purchase-order",
@@ -64,6 +65,7 @@ export const HELP_TOPIC_ROUTES: Record<HelpTopicId, string> = {
   forecasts: "/admin/[tenant]/forecasts",
   boms: "/admin/[tenant]/boms",
   "bom-revisions": "/admin/[tenant]/boms/[id]",
+  "statistical-units": "/admin/[tenant]/statistical-units",
   "purchase-requisitions": "/admin/[tenant]/purchase-requisitions",
   "purchase-orders": "/admin/[tenant]/purchase-orders",
   "purchase-order": "/admin/[tenant]/purchase-orders/[id]",
@@ -265,6 +267,15 @@ const en: Record<HelpTopicId, HelpText> = {
       "A BOM never changes in place. Saving a real change to the priority, the dates or the components creates a new revision; the old ones stay readable from Revisions, unchanged, for the orders that will use them. Saving the same BOM, or entering the same quantity in another unit, creates nothing.",
       "Changing a unit conversion later doesn't change a saved BOM: the line keeps its quantity and the factor it was entered with. To use a new factor, enter the line again.",
       "Deactivate keeps the BOM and its revisions, but it can't be chosen for new orders; Reactivate undoes that after checking its priority again. Neither creates a revision. Every change appears in the tenant's audit.",
+    ],
+  },
+  "statistical-units": {
+    title: "Statistical units",
+    body: [
+      "Different products can't be added up: 40 letterboxes and 12 workshop cabinets are not 52 of anything. A statistical unit (SU) solves that for reports. Each product gets one factor saying how many SU one of its base units counts as, such as 1 each = 1.5 SU, and a report filtered by two or more products, or by all of them, shows only SU totals. A report for one product can show any of its units.",
+      "There is one SU for the whole application, the same in Test and Prod; only the factors belong to a tenant. A product's factor is one of its unit conversions: on the product's page, choose Add conversion, pick SU and enter Alternate quantity 1.5 and Base quantity 1 for 1 each = 1.5 SU. Changing or removing it works like any other conversion and appears in the audit. Reports use today's factor for all of history.",
+      "SU is for reports only. No quantity is ever entered in SU: line forms don't offer it, and an entry in SU is refused as a unit the material doesn't convert. SU can't be a product's base unit either. While a product has an SU factor, its base unit can't change; remove the factor first.",
+      "Statistical units, under Master data in the sidebar, lists every finished product with its factor, or Not set, and its other units in SU, such as 1 pallet = 15 SU. A report leaves a product without a factor out of its SU totals and names it. Every account can read this page; Change opens the product's page, where the administrator sets the factor.",
     ],
   },
   "purchase-requisitions": {
@@ -563,6 +574,15 @@ const pl: Record<HelpTopicId, HelpText> = {
       "BOM nigdy nie zmienia się w miejscu. Zapisanie prawdziwej zmiany priorytetu, dat lub składników tworzy nową rewizję; stare pozostają do wglądu w sekcji Rewizje, bez zmian, dla zleceń, które będą ich używać. Zapisanie tego samego BOM-u albo wpisanie tej samej ilości w innej jednostce niczego nie tworzy.",
       "Późniejsza zmiana przelicznika jednostek nie zmienia zapisanego BOM-u: wiersz zachowuje swoją ilość i przelicznik, z którym go wpisano. Aby użyć nowego przelicznika, wpisz wiersz ponownie.",
       "Dezaktywuj zachowuje BOM i jego rewizje, ale nie można go wybrać dla nowych zleceń; Aktywuj ponownie to cofa po ponownym sprawdzeniu priorytetu. Żadne z nich nie tworzy rewizji. Każda zmiana pojawia się w audycie środowiska.",
+    ],
+  },
+  "statistical-units": {
+    title: "Jednostki statystyczne",
+    body: [
+      "Różnych wyrobów nie da się zsumować: 40 skrzynek na listy i 12 szaf warsztatowych to nie 52 czegokolwiek. Jednostka statystyczna (SU) rozwiązuje to w raportach. Każdy wyrób dostaje jeden współczynnik mówiący, ile SU liczy jedna jego jednostka bazowa, np. 1 each = 1.5 SU, a raport zawężony do dwóch lub więcej wyrobów albo do wszystkich pokazuje tylko sumy w SU. Raport dla jednego wyrobu może pokazać dowolną z jego jednostek.",
+      "W całej aplikacji jest jedna SU, ta sama w środowiskach Test i Prod; do środowiska należą tylko współczynniki. Współczynnik wyrobu to jeden z jego przeliczników jednostek: na stronie wyrobu wybierz Dodaj przelicznik, wybierz SU i wpisz ilość w jednostce alternatywnej 1.5 i ilość w jednostce bazowej 1, aby 1 each = 1.5 SU. Zmiana lub usunięcie działa jak przy każdym przeliczniku i pojawia się w audycie. Raporty stosują dzisiejszy współczynnik do całej historii.",
+      "SU służy tylko raportom. Żadnej ilości nie wpisuje się w SU: formularze wierszy jej nie oferują, a wpis w SU jest odrzucany jak jednostka, której materiał nie przelicza. SU nie może też być jednostką bazową wyrobu. Dopóki wyrób ma współczynnik SU, jego jednostka bazowa nie może się zmienić; najpierw usuń współczynnik.",
+      "Jednostki statystyczne, w sekcji Dane podstawowe w menu bocznym, wymieniają każdy wyrób gotowy z jego współczynnikiem albo Nie ustawiono oraz jego inne jednostki w SU, np. 1 pallet = 15 SU. Raport pomija w sumach SU wyrób bez współczynnika i podaje jego nazwę. Każde konto może czytać tę stronę; Zmień otwiera stronę wyrobu, na której administrator ustawia współczynnik.",
     ],
   },
   "purchase-requisitions": {
