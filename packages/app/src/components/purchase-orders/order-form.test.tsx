@@ -6,10 +6,10 @@ import { pl } from "../../i18n/messages/pl";
 import { ordersLabels } from "./labels";
 import { OrderForm, type OrderFormProps } from "./order-form";
 
-const SUPPLIERS = [{ value: "00000001", label: "00000001 — Steel Service" }];
+const SUPPLIERS = [{ value: "00000001", code: "00000001", name: "Steel Service" }];
 const LOCATIONS = [
-  { value: "00000001", label: "00000001 — Main plant" },
-  { value: "00000002", label: "00000002 — Warehouse" },
+  { value: "00000001", code: "00000001", name: "Main plant" },
+  { value: "00000002", code: "00000002", name: "Warehouse" },
 ];
 const MATERIALS = [
   { value: "00000001", code: "00000001", name: "Steel", detail: "kg", units: ["kg", "t"] },
@@ -38,9 +38,8 @@ function renderForm(props: Partial<OrderFormProps<{ id: string }>> = {}) {
     />,
   );
 }
-const change = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
 const lineField = (field: string, number: number) => screen.getByLabelText(`${field}, Line ${number}`);
-/** Types `code` into the material autocomplete named `label` and clicks its option; "" clears it. */
+/** Types `code` into the autocomplete named `label` (material, supplier or location) and clicks its option; "" clears it. */
 const choose = (label: string, code: string) => {
   const combobox = screen.getByRole("combobox", { name: label });
   fireEvent.change(combobox, { target: { value: code } });
@@ -67,8 +66,8 @@ describe("OrderForm", () => {
     action.mockResolvedValue({ ok: true, data: { id: "00000001" } });
     renderForm();
 
-    change("Supplier", "00000001");
-    change("Location", "00000001");
+    choose("Supplier", "00000001");
+    choose("Location", "00000001");
     setLine(1, "00000001", "40", "2027-03-03");
     fireEvent.change(lineField("Requisition", 1), { target: { value: "00000007" } });
     fireEvent.click(screen.getByRole("button", { name: "+ Add line" }));
@@ -101,21 +100,21 @@ describe("OrderForm", () => {
 
   it("offers a line only the open requisitions of its material and the order's location, and clears a choice that stops matching", () => {
     renderForm();
-    change("Location", "00000001");
+    choose("Location", "00000001");
     chooseLine(1, "00000002");
     expect(optionsOf(lineField("Requisition", 1))).toEqual(["No requisition"]);
 
     chooseLine(1, "00000001");
     expect(optionsOf(lineField("Requisition", 1))).toEqual(["No requisition", "00000007 — 40 kg outstanding"]);
     fireEvent.change(lineField("Requisition", 1), { target: { value: "00000007" } });
-    change("Location", "00000001");
+    choose("Location", "00000001");
     expect((lineField("Requisition", 1) as HTMLSelectElement).value).toBe("00000007");
 
-    change("Location", "00000002");
+    choose("Location", "00000002");
     expect((lineField("Requisition", 1) as HTMLSelectElement).value).toBe("");
     expect(optionsOf(lineField("Requisition", 1))).toEqual(["No requisition"]);
 
-    change("Location", "00000001");
+    choose("Location", "00000001");
     fireEvent.change(lineField("Requisition", 1), { target: { value: "00000007" } });
     chooseLine(1, "00000002");
     expect((lineField("Requisition", 1) as HTMLSelectElement).value).toBe("");
@@ -154,8 +153,8 @@ describe("OrderForm", () => {
   it("asks for a line when the last one is removed", () => {
     renderForm();
     fireEvent.click(screen.getByRole("button", { name: "Remove this line" }));
-    change("Supplier", "00000001");
-    change("Location", "00000001");
+    choose("Supplier", "00000001");
+    choose("Location", "00000001");
     submit();
 
     expect(screen.getByText("Add at least 1 and at most 100 lines.")).toBeTruthy();
@@ -163,8 +162,8 @@ describe("OrderForm", () => {
 
   it("puts the server's line errors on their lines, and shows other errors above the buttons, translated", async () => {
     renderForm({ labels: ordersLabels(pl) });
-    fireEvent.change(screen.getByLabelText("Dostawca"), { target: { value: "00000001" } });
-    fireEvent.change(screen.getByLabelText("Lokalizacja"), { target: { value: "00000001" } });
+    choose("Dostawca", "00000001");
+    choose("Lokalizacja", "00000001");
     choose("Materiał, Pozycja 1", "00000001");
     fireEvent.change(screen.getByLabelText("Ilość, Pozycja 1"), { target: { value: "1" } });
     fireEvent.change(screen.getByLabelText("Planowana, Pozycja 1"), { target: { value: "2027-03-03" } });
@@ -221,30 +220,53 @@ describe("OrderForm", () => {
     action.mockReturnValue(new Promise((resolve) => (finish = resolve)));
     renderForm({ schema: { safeParse: () => ({ success: true }) } });
 
-    fireEvent.keyDown(screen.getByLabelText("Supplier"), { key: "Enter", ctrlKey: true });
+    fireEvent.keyDown(screen.getByRole("combobox", { name: "Supplier" }), { key: "Enter", ctrlKey: true });
     expect(await screen.findByRole("button", { name: "Creating…" })).toBeTruthy();
     finish({ ok: true, data: { id: "00000001" } });
     await waitFor(() => expect(onSuccess).toHaveBeenCalled());
 
-    fireEvent.keyDown(screen.getByLabelText("Supplier"), { key: "Enter", metaKey: true });
+    fireEvent.keyDown(screen.getByRole("combobox", { name: "Supplier" }), { key: "Enter", metaKey: true });
     await waitFor(() => expect(action).toHaveBeenCalledTimes(2));
-    fireEvent.keyDown(screen.getByLabelText("Supplier"), { key: "Enter" });
+    fireEvent.keyDown(screen.getByRole("combobox", { name: "Supplier" }), { key: "Enter" });
     expect(action).toHaveBeenCalledTimes(2);
-    fireEvent.keyDown(screen.getByLabelText("Supplier"), { key: "Escape" });
+    fireEvent.keyDown(screen.getByRole("combobox", { name: "Supplier" }), { key: "Escape" });
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(onCancel).toHaveBeenCalledTimes(2);
+  });
+
+  it("chooses the supplier and the location in autocompletes named by their labels, refusing other text (#222)", () => {
+    renderForm();
+    const supplier = screen.getByRole("combobox", { name: "Supplier" });
+    expect(supplier.getAttribute("placeholder")).toBe("Type an ID or a name");
+    fireEvent.change(supplier, { target: { value: "steel" } });
+    expect(within(screen.getByRole("listbox", { name: "Supplier" })).getAllByRole("option").map((option) => option.textContent)).toEqual(["00000001—Steel Service"]);
+    fireEvent.change(supplier, { target: { value: "acme" } });
+    expect(screen.getByRole("listbox", { name: "Supplier" }).textContent).toBe("No supplier matches “acme”.");
+    fireEvent.blur(supplier);
+    expect(screen.getByText("Choose a supplier from the list.")).toBeTruthy();
+
+    const location = screen.getByRole("combobox", { name: "Location" });
+    fireEvent.change(location, { target: { value: "ware" } });
+    expect(within(screen.getByRole("listbox", { name: "Location" })).getAllByRole("option").map((option) => option.textContent)).toEqual(["00000002—Warehouse"]);
+    fireEvent.change(location, { target: { value: "dock" } });
+    fireEvent.keyDown(location, { key: "Enter" });
+    expect(screen.getByText("Choose a location from the list.")).toBeTruthy();
+    submit();
+    expect(screen.getByText("Choose a supplier.")).toBeTruthy();
+    expect(screen.getByText("Choose a location.")).toBeTruthy();
+    expect(action).not.toHaveBeenCalled();
   });
 
   it("gives every line's material autocomplete its own name, and leaves Escape to an open list (#217)", () => {
     renderForm();
     fireEvent.click(screen.getByRole("button", { name: "+ Add line" }));
-    expect([...document.querySelectorAll("[aria-autocomplete=list]")].map((combobox) => combobox.getAttribute("aria-label"))).toEqual(["Material, Line 1", "Material, Line 2"]);
+    expect([...document.querySelectorAll("[data-line] [aria-autocomplete=list]")].map((combobox) => combobox.getAttribute("aria-label"))).toEqual(["Material, Line 1", "Material, Line 2"]);
     expect(screen.getByRole("combobox", { name: "Material, Line 2" }).getAttribute("placeholder")).toBe("Type an ID or a name");
 
     const second = screen.getByRole("combobox", { name: "Material, Line 2" });
     act(() => second.focus());
     fireEvent.change(second, { target: { value: "bolt" } });
-    expect(screen.getAllByRole("status").map((status) => status.textContent)).toEqual(["", "1 material"]);
+    expect(screen.getAllByRole("status").map((status) => status.textContent)).toEqual(["", "", "", "1 material"]);
     fireEvent.keyDown(second, { key: "Escape" });
     expect(second.getAttribute("aria-expanded")).toBe("false");
     expect(onCancel).not.toHaveBeenCalled();

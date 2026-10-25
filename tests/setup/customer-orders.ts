@@ -18,8 +18,8 @@ const named = (name: string): NamedRecordView[] => [
 export const customers = named("Customer A");
 export const locations = named("Warehouse");
 export const choices = {
-  customers: customers.map(({ id, name, active }) => ({ value: id, label: name, active, units: [] })),
-  locations: locations.map(({ id, name, active }) => ({ value: id, label: name, active, units: [] })),
+  customers: customers.map(({ id, name, active }) => ({ id, name, active })),
+  locations: locations.map(({ id, name, active }) => ({ id, name, active })),
   materials: materials.map(({ id, description, active, baseUnit }) => ({ value: id, code: id, name: description, detail: baseUnit, active, units: ["each", "case"] })),
 };
 export const labels = orderLabels(en);

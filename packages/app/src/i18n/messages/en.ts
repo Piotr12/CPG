@@ -568,7 +568,6 @@ export const en = {
     form: {
       material: "Material",
       location: "Location",
-      choose: "Choose…",
       effectiveFrom: "Effective from",
       effectiveFromHint: "The target applies from this date until the next one.",
       quantity: "Target",
@@ -642,7 +641,6 @@ export const en = {
     form: {
       material: "Material",
       location: "Location",
-      choose: "Choose…",
       date: "Day",
       dateHint: "The day the demand is expected. One forecast per material, location and day.",
       quantity: "Quantity",
@@ -721,7 +719,7 @@ export const en = {
     intro: "Plan one Make output at one location and keep its chosen BOM revision. Planning never changes physical stock.",
     create: "Create production order", edit: "Edit production order", save: "Save changes", preview: "Preview BOMs", pending: "Working…", cancel: "Cancel", back: "Back",
     id: "ID", output: "Output material", location: "Location", quantity: "Planned quantity", unit: "Unit", finish: "Planned finish", start: "Planned start", recipe: "BOM / revision", status: "Status", entered: "Entered quantity / conversion",
-    choose: "Choose…", unitHint: "Enter the output's base unit (shown beside its name) or a configured alternate unit.",
+    unitHint: "Enter the output's base unit (shown beside its name) or a configured alternate unit.",
     previewDates: "Indicative start: {start} ({days} calendar days before finish). Dates are checked again when saving.",
     leadTime: "Captured lead time", leadTimeDays: "{days} calendar days",
     finishHint: "The planned start is recalculated from the captured lead time of {days} calendar days.",
@@ -992,7 +990,6 @@ export const en = {
     form: {
       material: "Material",
       location: "Location",
-      choose: "Choose…",
       quantity: "Quantity",
       quantityHint: "In any unit the material converts.",
       unit: "Unit",
@@ -1075,7 +1072,6 @@ export const en = {
       supplierHint: "Only active suppliers are offered.",
       location: "Location",
       locationHint: "The whole order is delivered here.",
-      choose: "Choose…",
       lines: "Lines",
       material: "Material",
       quantity: "Quantity",
@@ -1228,7 +1224,6 @@ export const en = {
       material: "Material",
       source: "From",
       destination: "To",
-      choose: "Choose…",
       quantity: "Quantity",
       quantityHint: "In any unit the material converts.",
       unit: "Unit",
@@ -1938,6 +1933,30 @@ export const en = {
       more: { other: "{count} more: keep typing to narrow the list" } as PluralForms,
       refused: "Choose a material from the list.",
     },
+    /** The customer, supplier and location pickers (#222): the same control, each in its own words. */
+    customerPicker: {
+      placeholder: "Type an ID or a name",
+      results: { one: "{count} customer", few: "{count} customers", other: "{count} customers" } as PluralForms,
+      noMatch: "No customer matches “{text}”.",
+      more: { other: "{count} more: keep typing to narrow the list" } as PluralForms,
+      refused: "Choose a customer from the list.",
+    },
+    supplierPicker: {
+      placeholder: "Type an ID or a name",
+      results: { one: "{count} supplier", few: "{count} suppliers", other: "{count} suppliers" } as PluralForms,
+      noMatch: "No supplier matches “{text}”.",
+      more: { other: "{count} more: keep typing to narrow the list" } as PluralForms,
+      refused: "Choose a supplier from the list.",
+    },
+    locationPicker: {
+      placeholder: "Type an ID or a name",
+      results: { one: "{count} location", few: "{count} locations", other: "{count} locations" } as PluralForms,
+      noMatch: "No location matches “{text}”.",
+      more: { other: "{count} more: keep typing to narrow the list" } as PluralForms,
+      refused: "Choose a location from the list.",
+    },
+    /** A filter's value from the address that names no record in the list (#222). */
+    notListed: "not in the list",
   },
   /** The unit registry's groups, and a stored unit it doesn't list (#217). */
   units: {

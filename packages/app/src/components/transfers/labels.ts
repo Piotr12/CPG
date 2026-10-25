@@ -17,6 +17,7 @@ import {
 import type { Messages } from "../../i18n/messages/en";
 import { errorFormatter, fill, shownQuantity, type TenantContext } from "../forms/form-labels";
 import { materialPicker, type MaterialPicker } from "../materials/material-picker";
+import { recordPicker } from "../named-records/record-picker";
 
 /**
  * The transfer screens' strings in the reader's language: plain strings, so they can reach client
@@ -26,6 +27,7 @@ export type TransfersLabels = Omit<Messages["transfers"], "heading" | "detailHea
   errors: Record<string, string>;
   /** The form's material autocomplete (#217). */
   picker: MaterialPicker;
+  locationPicker: MaterialPicker;
 };
 
 /** Builds the transfer labels from a dictionary (server side, where `messages` is available). */
@@ -36,7 +38,7 @@ export function transfersLabels(messages: Messages): TransfersLabels {
   return {
     ...(labels as Omit<Messages["transfers"], "heading" | "detailHeading">),
     errors: { ...messages.errors, ...messages.transfers.errors },
-    picker: materialPicker(messages.lists),
+    picker: materialPicker(messages.lists), locationPicker: recordPicker(messages.lists, "location"),
   };
 }
 

@@ -3,17 +3,19 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { choices, initial, labels } from "../../../../../tests/setup/customer-orders";
 import { OrderForm } from "./order-form";
 const action = vi.fn(); const onSuccess = vi.fn(); const onCancel = vi.fn();
-const change = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
+/** A field by its label: a combobox by role, since its list carries the same name (#222). */
+const field = (label: string) => screen.queryByRole("combobox", { name: label }) ?? screen.getByLabelText(label);
+const change = (label: string, value: string) => fireEvent.change(field(label), { target: { value } });
 /** Picks a line's material through its picker: types part of it, then clicks the matching option. */
 const pick = (label: string, typed: string) => {
-  change(label, typed); fireEvent.mouseDown(screen.getByRole("option", { name: new RegExp(typed, "i") }));
+  change(label, typed); fireEvent.mouseDown(within(screen.getByRole("listbox", { name: label })).getByRole("option", { name: new RegExp(typed, "i") }));
 };
 const submit = () => fireEvent.click(screen.getByRole("button", { name: labels.save }));
 function renderForm(values?: typeof initial, options = choices) {
   return render(<OrderForm choices={options} labels={labels} initial={values} action={action} onSuccess={onSuccess} onCancel={onCancel} />);
 }
 function validCreate() {
-  change("Customer", "00000001"); change("Location", "00000001");
+  pick("Customer", "00000001"); pick("Location", "00000001");
   pick("Material, Line 1", "00000005"); change("Ordered quantity, Line 1", "2");
   change("Unit, Line 1", "case"); change("Required date, Line 1", "2027-01-04");
 }
@@ -30,7 +32,7 @@ describe("OrderForm", () => {
     ] });
   });
   it("shows validation next to fields, preserves other rows on removal and bounds additions", () => {
-    renderForm(); submit(); expect(screen.getByLabelText("Customer").getAttribute("aria-invalid")).toBe("true");
+    renderForm(); submit(); expect(field("Customer").getAttribute("aria-invalid")).toBe("true");
     expect(screen.getByText(labels.fieldErrors.quantity)).toBeTruthy(); expect(action).not.toHaveBeenCalled();
     validCreate(); fireEvent.click(screen.getByRole("button", { name: "Add line" })); change("Ordered quantity, Line 2", "17");
     fireEvent.click(screen.getByRole("button", { name: "Remove line 1" })); expect((screen.getByLabelText("Ordered quantity, Line 1") as HTMLInputElement).value).toBe("17");
@@ -43,14 +45,18 @@ describe("OrderForm", () => {
     const old = { customer: "00000002", location: "00000002", lines: [{ ...initial.lines[0], material: "00000004", unit: "old-unit" }] };
     renderForm(old);
     expect((screen.getByRole("combobox", { name: "Material, Line 1" }) as HTMLInputElement).value).toBe("00000004 — Old panel");
-    expect((screen.getByLabelText("Customer") as HTMLSelectElement).value).toBe("00000002");
-    expect((screen.getByLabelText("Location") as HTMLSelectElement).value).toBe("00000002");
+    expect((field("Customer") as HTMLInputElement).value).toBe("00000002 — Old Customer A");
+    expect((field("Location") as HTMLInputElement).value).toBe("00000002 — Old Warehouse");
+    fireEvent.click(field("Customer"));
+    expect(within(screen.getByRole("listbox", { name: "Customer" })).getAllByRole("option").map((option) => option.textContent)).toEqual(["00000001—Customer A", `00000002—Old Customer A${labels.inactive}`]);
     expect(within(screen.getByLabelText("Unit, Line 1")).getByRole("option", { name: "old-unit" })).toBeTruthy();
     submit(); await waitFor(() => expect(action).toHaveBeenCalledWith(old));
     cleanup(); renderForm();
-    expect(within(screen.getByLabelText("Customer")).queryByRole("option", { name: "Old Customer A" })).toBeNull();
+    fireEvent.focus(field("Location"));
+    expect(within(screen.getByRole("listbox", { name: "Location" })).getAllByRole("option").map((option) => option.textContent)).toEqual(["00000001—Warehouse"]);
+    fireEvent.blur(field("Location"));
     fireEvent.focus(screen.getByRole("combobox", { name: "Material, Line 1" }));
-    expect(within(screen.getByRole("listbox")).getAllByRole("option").map((option) => option.textContent)).toEqual(["00000005—Cabineteach"]);
+    expect(within(screen.getByRole("listbox", { name: "Material, Line 1" })).getAllByRole("option").map((option) => option.textContent)).toEqual(["00000005—Cabineteach"]);
   });
   it("shows server field errors and generic refusals, with a pending state and cancel keys", async () => {
     action.mockResolvedValueOnce({ ok: false, error: { code: "VALIDATION_FAILED", message: "invalid", fieldErrors: { "lines.0.quantity": ["too small"] } } });
@@ -73,6 +79,16 @@ describe("OrderForm", () => {
     const requestSubmit = vi.spyOn(form, "requestSubmit").mockImplementation(() => { fireEvent.submit(form); });
     fireEvent.keyDown(form, { key: "Enter", ctrlKey: true }); await waitFor(() => expect(onSuccess).toHaveBeenCalled());
     fireEvent.keyDown(form, { key: "Enter", metaKey: true }); expect(requestSubmit).toHaveBeenCalledTimes(2);
+  });
+  it("names the customer and location lists after their labels and refuses text that is no record (#222)", () => {
+    renderForm(); const customer = field("Customer");
+    expect(customer.getAttribute("placeholder")).toBe(labels.customerPicker.placeholder);
+    change("Customer", "nobody"); expect(screen.getByRole("listbox", { name: "Customer" }).textContent).toContain("No customer matches “nobody”.");
+    fireEvent.blur(customer); expect(screen.getByText(labels.customerPicker.labels.refused)).toBeTruthy();
+    change("Location", "old warehouse"); expect(screen.getByRole("listbox", { name: "Location" }).textContent).toContain("No location matches “old warehouse”.");
+    fireEvent.blur(field("Location")); expect(screen.getByText(labels.locationPicker.labels.refused)).toBeTruthy();
+    submit(); expect(action).not.toHaveBeenCalled();
+    expect(customer.getAttribute("aria-invalid")).toBe("true"); expect(field("Location").getAttribute("aria-invalid")).toBe("true");
   });
   it("refuses typed text that is no material, locks a posted line's picker, and lets Escape close only the open list (#217)", () => {
     renderForm(); const material = screen.getByRole("combobox", { name: "Material, Line 1" });

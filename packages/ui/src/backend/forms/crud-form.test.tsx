@@ -350,6 +350,7 @@ describe("toFieldErrors", () => {
       expect(combobox.getAttribute("placeholder")).toBe("Type an ID or a name");
       fireEvent.change(combobox, { target: { value: "0000000" } });
       expect(screen.getByRole("status").textContent).toBe("2 wyniki");
+      expect(screen.getByRole("listbox", { name: "Material" })).toBeTruthy();
       fireEvent.keyDown(combobox, { key: "ArrowDown" });
       fireEvent.keyDown(combobox, { key: "Enter" });
       await act(async () => fireEvent.click(screen.getByRole("button", { name: "Add" })));

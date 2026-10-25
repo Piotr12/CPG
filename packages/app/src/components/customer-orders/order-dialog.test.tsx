@@ -1,7 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { choices, labels, order } from "../../../../../tests/setup/customer-orders";
 import { OrderDialog } from "./order-dialog";
+
+/** A field by its label: a combobox by role, since its list carries the same name (#222). */
+const field = (label: string) => screen.queryByRole("combobox", { name: label }) ?? screen.getByLabelText(label);
 const mocks = vi.hoisted(() => ({ create: vi.fn(), update: vi.fn() }));
 vi.mock("../../app/admin/[tenant]/customer-orders/actions", () => ({ createCustomerOrder: mocks.create, updateCustomerOrder: mocks.update }));
 afterEach(() => vi.clearAllMocks());
@@ -16,11 +19,12 @@ describe("OrderDialog", () => {
     mocks.create.mockResolvedValue({ ok: true, data: order });
     render(<OrderDialog context={{ tenant: "test", generation: 7 }} labels={labels} choices={choices} />);
     fireEvent.click(screen.getByRole("button", { name: labels.create }));
-    const change = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
-    change("Customer", "00000001"); change("Location", "00000001"); change("Material, Line 1", "00000005"); fireEvent.mouseDown(screen.getByRole("option", { name: /^00000005/ })); change("Ordered quantity, Line 1", "2"); change("Required date, Line 1", "2027-01-04");
+    const change = (label: string, value: string) => fireEvent.change(field(label), { target: { value } });
+    const pick = (label: string, typed: string) => { change(label, typed); fireEvent.mouseDown(within(screen.getByRole("listbox", { name: label })).getByRole("option", { name: new RegExp(`^${typed}`) })); };
+    pick("Customer", "00000001"); pick("Location", "00000001"); pick("Material, Line 1", "00000005"); change("Ordered quantity, Line 1", "2"); change("Required date, Line 1", "2027-01-04");
     fireEvent.click(screen.getByRole("button", { name: "Save order" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    expect(mocks.create).toHaveBeenCalledWith("test", 7, expect.objectContaining({ customer: "00000001" }));
+    expect(mocks.create).toHaveBeenCalledWith("test", 7, expect.objectContaining({ customer: "00000001", location: "00000001" }));
   });
   it("edits stable line IDs at the page version and closes after success", async () => {
     mocks.update.mockResolvedValue({ ok: true, data: order });
@@ -53,7 +57,7 @@ it("keeps posted identity disabled after all fulfilled quantity is reversed, whi
   const posted = { ...order, lines: [{ ...order.lines[0], fulfilled: "0.000000", posted: true }] };
   render(<OrderDialog context={{ tenant: "prod", generation: 1 }} labels={labels} choices={choices} order={posted} />);
   fireEvent.click(screen.getByRole("button", { name: labels.edit }));
-  for (const label of ["Customer", "Location", "Material, Line 1", "Unit, Line 1", "Required date, Line 1"]) expect(screen.getByLabelText(label)).toHaveProperty("disabled", true);
+  for (const label of ["Customer", "Location", "Material, Line 1", "Unit, Line 1", "Required date, Line 1"]) expect(field(label)).toHaveProperty("disabled", true);
   expect(screen.getByRole("button", { name: "Remove line 1" })).toHaveProperty("disabled", true);
   expect(screen.getByLabelText("Ordered quantity, Line 1")).toHaveProperty("disabled", false);
   expect(screen.getByText(labels.postedHint)).toBeTruthy();

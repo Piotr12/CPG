@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppError, type VarianceReportComponent, type VarianceReportRow, type VarianceReportView } from "@cpg/core";
 import { resolveServerComponents } from "../../../../../../../../tests/setup/server-components";
@@ -51,6 +51,16 @@ beforeEach(() => {
   mocks.read.mockResolvedValue(report());
 });
 afterEach(() => vi.clearAllMocks());
+
+/** A filter autocomplete's offered choices, read from its list (named by the field's label) while open. */
+function choices(name: string) {
+  const field = screen.getByRole("combobox", { name });
+  fireEvent.focus(field);
+  const offered = within(screen.getByRole("listbox", { name })).getAllByRole("option").map((option) => option.textContent);
+  fireEvent.keyDown(field, { key: "Escape" });
+  return offered;
+}
+const chosen = (name: string) => (screen.getByRole("combobox", { name }) as HTMLInputElement).value;
 
 describe("VarianceReportPage", () => {
   it("shows each order's target against what it produced, and each component's expected, actual, variance and waste (PRD-013, PRD-015)", async () => {
@@ -109,10 +119,10 @@ describe("VarianceReportPage", () => {
   it("offers every material, location and state as a filter, with All and empty dates", async () => {
     render(await resolveServerComponents(page()));
 
-    const material = screen.getByLabelText("Material") as HTMLSelectElement;
-    expect(material.name).toBe("material");
-    expect([...material.options].map((option) => option.textContent)).toEqual(["All", "00000001 — Chocolate bar", "00000004 — Milk powder (Inactive)"]);
-    expect([...(screen.getByLabelText("Location") as HTMLSelectElement).options].map((option) => option.textContent)).toEqual(["All", "00000001 — Main plant", "00000002 — Depot (Inactive)"]);
+    const material = screen.getByRole("combobox", { name: "Material" }) as HTMLInputElement;
+    expect([material.value, material.placeholder]).toEqual(["", "All"]);
+    expect(choices("Material")).toEqual(["00000001—Chocolate bar", "00000004—Milk powderInactive"]);
+    expect(choices("Location")).toEqual(["00000001—Main plant", "00000002—DepotInactive"]);
     const state = screen.getByLabelText("State") as HTMLSelectElement;
     expect(state.name).toBe("status");
     expect([...state.options].map((option) => [option.value, option.textContent])).toEqual([
@@ -134,8 +144,8 @@ describe("VarianceReportPage", () => {
 
     expect(mocks.read).toHaveBeenNthCalledWith(1, search);
     expect(mocks.read).toHaveBeenNthCalledWith(2, { ...search, page: "3" });
-    expect((screen.getByLabelText("Material") as HTMLSelectElement).value).toBe("00000001");
-    expect((screen.getByLabelText("Location") as HTMLSelectElement).value).toBe("00000002");
+    expect(chosen("Material")).toBe("00000001 — Chocolate bar");
+    expect(chosen("Location")).toBe("00000002 — Depot");
     expect((screen.getByLabelText("State") as HTMLSelectElement).value).toBe("open");
     expect((screen.getByLabelText("From") as HTMLInputElement).value).toBe("2026-10-01");
     expect((screen.getByLabelText("To") as HTMLInputElement).value).toBe("2026-10-31");
@@ -155,7 +165,7 @@ describe("VarianceReportPage", () => {
   });
 
   it("keeps the form and shows the error beside To for a range that ends before it starts, reading nothing", async () => {
-    render(await resolveServerComponents(page({ material: "00000001", from: "2026-10-22", to: "2026-10-21" })));
+    render(await resolveServerComponents(page({ material: "00000001", location: "00000099", from: "2026-10-22", to: "2026-10-21" })));
 
     expect(mocks.read).not.toHaveBeenCalled();
     const to = screen.getByLabelText("To") as HTMLInputElement;
@@ -166,7 +176,9 @@ describe("VarianceReportPage", () => {
     // Rendered with the page, so it takes focus: an alert already in the page at load isn't announced by every screen reader.
     expect(document.activeElement).toBe(error);
     expect(error.getAttribute("role")).toBe("alert");
-    expect((screen.getByLabelText("Material") as HTMLSelectElement).value).toBe("00000001");
+    expect(chosen("Material")).toBe("00000001 — Chocolate bar");
+    // The IDs aren't checked on this path, so one that names no location shows as itself (#222).
+    expect(chosen("Location")).toBe("00000099 — not in the list");
     expect(screen.queryByRole("table")).toBeNull();
     expect(screen.getByText(/as of \d{4}-\d{2}-\d{2} \(UTC\)/)).toBeTruthy();
   });

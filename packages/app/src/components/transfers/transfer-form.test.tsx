@@ -11,8 +11,8 @@ const MATERIALS = [
   { value: "00000002", code: "00000002", name: "Bolt", detail: "each", units: ["each"] },
 ];
 const LOCATIONS = [
-  { value: "00000001", label: "00000001 — Main plant" },
-  { value: "00000002", label: "00000002 — Warehouse" },
+  { value: "00000001", code: "00000001", name: "Main plant" },
+  { value: "00000002", code: "00000002", name: "Warehouse" },
 ];
 
 const action = vi.fn();
@@ -35,7 +35,7 @@ function renderForm(props: Partial<TransferFormProps<{ id: string }>> = {}) {
   );
 }
 const change = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
-/** Types `code` into the material autocomplete and clicks its option; "" clears it. */
+/** Types `code` into the autocomplete named `label` (the material, From or To) and clicks its option; "" clears it. */
 const choose = (code: string, label = "Material") => {
   const combobox = screen.getByRole("combobox", { name: label });
   fireEvent.change(combobox, { target: { value: code } });
@@ -43,12 +43,12 @@ const choose = (code: string, label = "Material") => {
     fireEvent.blur(combobox);
     return;
   }
-  fireEvent.mouseDown(within(screen.getByRole("listbox")).getAllByRole("option").find((option) => option.textContent!.startsWith(code))!);
+  fireEvent.mouseDown(within(screen.getByRole("listbox", { name: label })).getAllByRole("option").find((option) => option.textContent!.startsWith(code))!);
 };
 const fill = () => {
   choose("00000001");
-  change("From", "00000001");
-  change("To", "00000002");
+  choose("00000001", "From");
+  choose("00000002", "To");
   change("Quantity", "100");
   change("Planned dispatch", "2027-03-01");
   change("Planned arrival", "2027-03-03");
@@ -95,12 +95,12 @@ describe("TransferForm", () => {
     expect(screen.getAllByText("Enter a real date written YYYY-MM-DD.")).toHaveLength(2);
 
     fill();
-    change("To", "00000001");
+    choose("00000001", "To");
     change("Planned arrival", "2027-02-28");
     fireEvent.click(screen.getByRole("button", { name: "Create transfer" }));
     expect(screen.getByText(en.transfers.fieldErrors.sameLocation)).toBeTruthy();
     expect(screen.getByText(en.transfers.fieldErrors.arrivalBeforeDispatch)).toBeTruthy();
-    expect(screen.getByLabelText("To").getAttribute("aria-invalid")).toBe("true");
+    expect(screen.getByRole("combobox", { name: "To" }).getAttribute("aria-invalid")).toBe("true");
     expect(action).not.toHaveBeenCalled();
   });
 
@@ -158,5 +158,25 @@ describe("TransferForm", () => {
     expect(screen.getByText(pl.lists.materialPicker.refused)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: pl.transfers.create.submit }));
     expect(action).not.toHaveBeenCalled();
+  });
+
+  it("offers the same locations in From and To, each list named by its label, and refuses free text (#222)", () => {
+    renderForm();
+    const offered = (label: string) => {
+      fireEvent.focus(screen.getByRole("combobox", { name: label }));
+      const options = within(screen.getByRole("listbox", { name: label })).getAllByRole("option").map((option) => option.textContent);
+      fireEvent.blur(screen.getByRole("combobox", { name: label }));
+      return options;
+    };
+    expect(offered("From")).toEqual(["00000001—Main plant", "00000002—Warehouse"]);
+    expect(offered("To")).toEqual(offered("From"));
+    expect(screen.getByRole("combobox", { name: "To" }).getAttribute("placeholder")).toBe(en.lists.locationPicker.placeholder);
+
+    const to = screen.getByRole("combobox", { name: "To" });
+    fireEvent.change(to, { target: { value: "dock" } });
+    expect(screen.getByRole("listbox", { name: "To" }).textContent).toBe("No location matches “dock”.");
+    fireEvent.blur(to);
+    expect(screen.getByText(en.lists.locationPicker.refused)).toBeTruthy();
+    expect(to.getAttribute("aria-invalid")).toBe("true");
   });
 });

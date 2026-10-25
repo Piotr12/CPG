@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppError, type StockView } from "@cpg/core";
 import { resolveServerComponents } from "../../../../../../../tests/setup/server-components";
@@ -30,11 +30,24 @@ describe("StockPage", () => {
     expect(mocks.tenantScope).toHaveBeenCalledWith("test"); expect(mocks.get).toHaveBeenCalledWith({ ...pair, page: 1 });
     expect(screen.getByRole("heading", { name: "Stock — Test" })).toBeTruthy(); expect(document.querySelector("[data-stock-balance]")!.textContent).toBe("0 each");
     expect(screen.getByText(en.stock.empty)).toBeTruthy(); expect(screen.getByRole("button", { name: "Post correction" })).toBeTruthy();
-    expect(screen.getByLabelText("Material").getAttribute("name")).toBe("material");
+    const material = screen.getByRole("combobox", { name: "Material" }) as HTMLInputElement;
+    expect(material.value).toBe("00000001 — Bolts"); expect(material.placeholder).toBe(en.lists.materialPicker.placeholder);
+    expect(Object.fromEntries(new FormData(material.form!))).toEqual(pair);
     expect(screen.getByRole("link", { name: en.stock.report }).getAttribute("href")).toBe("/admin/test/reports/stock");
     expect(screen.queryByRole("navigation", { name: en.stock.pagination })).toBeNull();
     // Either role reaches the stock import from here (stock-import spec, UI/UX).
     expect(screen.getByRole("link", { name: en.stockImport.link }).getAttribute("href")).toBe("/admin/test/stock-import");
+  });
+  it("reads an emptied filter field as not given, opening the first pair, never Not found (#222)", async () => {
+    mocks.locations.mockResolvedValue([location, { ...location, id: "00000002", name: "Old yard", active: false }]);
+    render(await resolveServerComponents(page({ material: "", location: "" })));
+    expect(mocks.get).toHaveBeenCalledWith({ ...pair, page: 1 });
+    // Every location is offered, an inactive one marked, and the list is named by the field's label.
+    const field = screen.getByRole("combobox", { name: "Location" });
+    fireEvent.focus(field);
+    expect(within(screen.getByRole("listbox", { name: "Location" })).getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "00000001—Warehouse", "00000002—Old yardInactive",
+    ]);
   });
   it("reads selected query references, renders signed history with its type, source document, actor and factor (INV-012)", async () => {
     mocks.get.mockResolvedValue({ ...view, quantity: "23.500000", movementCount: 4, movements: [

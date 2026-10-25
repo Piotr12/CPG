@@ -143,6 +143,7 @@ export function CrudForm<T>({
         const inputId = `${id}-${field.name}`;
         const errors = fieldErrors[field.name];
         const hintId = `${inputId}-hint`;
+        const labelId = `${inputId}-label`;
         const set = (value: string) => setValues((current) => ({ ...current, [field.name]: value }));
         const control = {
           id: inputId,
@@ -154,7 +155,9 @@ export function CrudForm<T>({
         };
         return (
           <div key={field.name} className="flex flex-col gap-2">
-            <Label htmlFor={inputId}>{field.label}</Label>
+            <Label id={labelId} htmlFor={inputId}>
+              {field.label}
+            </Label>
             {field.type === "select" ? (
               <NativeSelect className="w-full" {...control}>
                 {field.placeholder !== undefined && (
@@ -187,6 +190,7 @@ export function CrudForm<T>({
                 labels={field.autocompleteLabels!}
                 locale={locale}
                 placeholder={field.placeholder}
+                aria-labelledby={labelId}
                 aria-invalid={control["aria-invalid"]}
                 aria-describedby={control["aria-describedby"]}
               />

@@ -45,6 +45,8 @@ export interface AutocompleteProps {
   /** At most this many rows show; the count announced is the full count. */
   limit?: number;
   "aria-label"?: string;
+  /** The id of the field's visible label, which then names the list too (#222). */
+  "aria-labelledby"?: string;
   "aria-invalid"?: boolean;
   "aria-describedby"?: string;
 }
@@ -101,8 +103,9 @@ export function matchOptions(options: AutocompleteOption[], text: string): Autoc
  * A combobox for a choice from a list too long for a select (#217): the WAI-ARIA 1.2 "combobox with
  * listbox popup" pattern after GOV.UK's accessible-autocomplete, no library. Every typed word must
  * appear in an option's code or name; ↑/↓ move, Enter chooses, Escape closes the list (and only the
- * list, inside a dialog). Text that isn't a choice never reaches the form: leaving the field with it
- * clears the value and says so.
+ * list, inside a dialog). Text that isn't a choice never reaches the form: leaving the field with it,
+ * or pressing Enter on it, clears the value and says so. Enter on an emptied field clears the value
+ * and lets the form submit, which is how a filter goes back to "any" (#222).
  */
 export function Autocomplete({
   id,
@@ -176,6 +179,21 @@ export function Autocomplete({
     setRefused(false);
   }
 
+  /** Clears the value when the text is empty, refuses it when it isn't the chosen option's label. */
+  function settle() {
+    setOpen(false);
+    setActive(-1);
+    if (text.trim() === "") {
+      emit("");
+      setRefused(false);
+    } else if (!chosen || labelOf(chosen) !== text) {
+      emit("");
+      setRefused(true);
+      return false;
+    }
+    return true;
+  }
+
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === "ArrowDown") {
       event.preventDefault();
@@ -188,18 +206,9 @@ export function Autocomplete({
       // Chooses instead of submitting the form.
       event.preventDefault();
       choose(shown[active]);
-    }
-  }
-
-  function onBlur() {
-    setOpen(false);
-    setActive(-1);
-    if (text.trim() === "") {
-      emit("");
-      setRefused(false);
-    } else if (!chosen || labelOf(chosen) !== text) {
-      emit("");
-      setRefused(true);
+    } else if (event.key === "Enter" && !settle()) {
+      // Text that isn't a choice would submit the previous value under it.
+      event.preventDefault();
     }
   }
 
@@ -216,7 +225,8 @@ export function Autocomplete({
         aria-expanded={open}
         aria-controls={listId}
         aria-activedescendant={open && active >= 0 && shown[active] ? `${listId}-${active}` : undefined}
-        aria-label={aria["aria-label"]}
+        aria-labelledby={aria["aria-labelledby"]}
+        aria-label={aria["aria-labelledby"] ? undefined : aria["aria-label"]}
         aria-invalid={aria["aria-invalid"] || refused || undefined}
         aria-describedby={describedBy}
         autoComplete="off"
@@ -226,19 +236,21 @@ export function Autocomplete({
         onChange={(event) => {
           setText(event.target.value);
           openList();
-          setActive(0);
+          // An emptied field has nothing to choose: Enter then clears it instead of taking the first row.
+          setActive(event.target.value.trim() === "" ? -1 : 0);
           setRefused(false);
         }}
         onFocus={openList}
         onClick={openList}
-        onBlur={onBlur}
+        onBlur={settle}
         onKeyDown={onKeyDown}
       />
       {name !== undefined && <input type="hidden" name={name} value={value} />}
       <ul
         id={listId}
         role="listbox"
-        aria-label={aria["aria-label"]}
+        aria-labelledby={aria["aria-labelledby"]}
+        aria-label={aria["aria-labelledby"] ? undefined : aria["aria-label"]}
         hidden={!open}
         data-side={placement.side}
         style={{ maxHeight: placement.maxHeight }}

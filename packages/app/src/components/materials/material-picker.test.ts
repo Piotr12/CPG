@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { en } from "../../i18n/messages/en";
 import { pl } from "../../i18n/messages/pl";
-import { activeMaterialOptions, materialOptions, materialPicker, materialPickerLabels } from "./material-picker";
+import { activeMaterialOptions, materialFilterOptions, materialOptions, materialPicker, materialPickerLabels, withUnlisted } from "./material-picker";
 
 describe("material picker", () => {
   it("offers materials by ID and description, with the base unit as detail", () => {
@@ -26,6 +26,22 @@ describe("material picker", () => {
     expect(activeMaterialOptions([material, { ...material, id: "00000002", active: false }])).toEqual([
       { value: "00000001", code: "00000001", name: "Bolt M8", detail: "each" },
     ]);
+  });
+
+  it("offers a filter every material, marking the inactive ones (#222)", () => {
+    const material = { id: "00000001", description: "Bolt M8", active: true };
+    expect(materialFilterOptions([material, { ...material, id: "00000002", active: false }], "Inactive")).toEqual([
+      { value: "00000001", code: "00000001", name: "Bolt M8" },
+      { value: "00000002", code: "00000002", name: "Bolt M8", detail: "Inactive" },
+    ]);
+  });
+
+  it("keeps a filter's value that names no record as its own option, not in the list (#222)", () => {
+    const options = [{ value: "00000001", code: "00000001", name: "Bolt M8" }];
+    expect(withUnlisted(options, "00000099", en.lists.notListed)).toEqual([...options, { value: "00000099", code: "00000099", name: "not in the list" }]);
+    expect(withUnlisted(options, "00000001", en.lists.notListed)).toBe(options);
+    expect(withUnlisted(options, undefined, en.lists.notListed)).toBe(options);
+    expect(withUnlisted(options, "", en.lists.notListed)).toBe(options);
   });
 
   it("gives every form the same words and placeholder, in the reader's language", () => {

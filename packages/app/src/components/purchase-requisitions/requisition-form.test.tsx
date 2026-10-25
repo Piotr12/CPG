@@ -10,7 +10,7 @@ const MATERIALS = [
   { value: "00000001", code: "00000001", name: "Steel", detail: "kg", units: ["kg", "t"] },
   { value: "00000002", code: "00000002", name: "Bolt", detail: "each", units: ["each"] },
 ];
-const LOCATIONS = [{ value: "00000001", label: "00000001 — Main plant" }];
+const LOCATIONS = [{ value: "00000001", code: "00000001", name: "Main plant" }];
 
 const action = vi.fn();
 const onSuccess = vi.fn();
@@ -32,14 +32,14 @@ function renderForm(props: Partial<RequisitionFormProps<{ id: string }>> = {}) {
   );
 }
 const change = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
-/** Types `code` into the material autocomplete named `label` and clicks its option. */
+/** Types `code` into the autocomplete named `label` (the material or the location) and clicks its option. */
 const choose = (label: string, code: string) => {
   fireEvent.change(screen.getByRole("combobox", { name: label }), { target: { value: code } });
-  fireEvent.mouseDown(within(screen.getByRole("listbox")).getAllByRole("option").find((option) => option.textContent!.startsWith(code))!);
+  fireEvent.mouseDown(within(screen.getByRole("listbox", { name: label })).getAllByRole("option").find((option) => option.textContent!.startsWith(code))!);
 };
 const fill = () => {
   choose("Material", "00000001");
-  change("Location", "00000001");
+  choose("Location", "00000001");
   change("Quantity", "100");
   change("Required by", "2027-03-01");
 };
@@ -99,7 +99,7 @@ describe("RequisitionForm", () => {
   it("puts the server's field errors under their fields, translated, and other errors above the buttons", async () => {
     renderForm({ labels: requisitionsLabels(pl) });
     choose("Materiał", "00000001");
-    fireEvent.change(screen.getByLabelText("Lokalizacja"), { target: { value: "00000001" } });
+    choose("Lokalizacja", "00000001");
     fireEvent.change(screen.getByLabelText("Ilość"), { target: { value: "1" } });
     fireEvent.change(screen.getByLabelText("Wymagane do"), { target: { value: "2027-03-01" } });
     const submit = () => fireEvent.click(screen.getByRole("button", { name: "Utwórz zapotrzebowanie" }));
@@ -151,7 +151,7 @@ describe("RequisitionForm", () => {
     expect(material.getAttribute("placeholder")).toBe(pl.lists.materialPicker.placeholder);
 
     fireEvent.change(material, { target: { value: "stal" } });
-    expect(screen.getByRole("status").textContent).toBe("Żaden materiał nie pasuje do „stal”.");
+    expect(screen.getAllByRole("status").map((status) => status.textContent)).toEqual(["Żaden materiał nie pasuje do „stal”.", ""]);
     fireEvent.blur(material);
     expect(screen.getByText(pl.lists.materialPicker.refused)).toBeTruthy();
     expect(material.getAttribute("aria-invalid")).toBe("true");
@@ -162,5 +162,21 @@ describe("RequisitionForm", () => {
     expect(onCancel).not.toHaveBeenCalled();
     fireEvent.keyDown(material, { key: "Escape" });
     expect(onCancel).toHaveBeenCalledOnce();
+  });
+
+  it("chooses the location in an autocomplete named by its label that refuses free text (#222)", () => {
+    renderForm({ labels: requisitionsLabels(pl), locale: "pl" });
+    const location = screen.getByRole("combobox", { name: "Lokalizacja" });
+    expect(location.getAttribute("placeholder")).toBe(pl.lists.locationPicker.placeholder);
+
+    fireEvent.change(location, { target: { value: "plant" } });
+    expect(within(screen.getByRole("listbox", { name: "Lokalizacja" })).getAllByRole("option").map((option) => option.textContent)).toEqual(["00000001—Main plant"]);
+    fireEvent.change(location, { target: { value: "magazyn" } });
+    expect(screen.getByRole("listbox", { name: "Lokalizacja" }).textContent).toBe(pl.lists.locationPicker.noMatch.replace("{text}", "magazyn"));
+    fireEvent.blur(location);
+    expect(screen.getByText(pl.lists.locationPicker.refused)).toBeTruthy();
+    expect(location.getAttribute("aria-invalid")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: pl.purchaseRequisitions.create.submit }));
+    expect(action).not.toHaveBeenCalled();
   });
 });

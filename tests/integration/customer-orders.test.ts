@@ -14,6 +14,8 @@ const ROOT = "/api/tenants/prod/customer-orders";
 const field = (name: string) => `[role=dialog] [name='${name}']`;
 /** A line's material picker (#217), which has no form name of its own. */
 const picker = (line: number) => `[role=dialog] [role=combobox][id$='-lines.${line}.material']`;
+/** The header's customer or location picker (#222), found by the label that names it, in the open dialog. */
+const header = (name: "customer" | "location") => `[role=dialog][data-state=open] [role=combobox][aria-labelledby$='-${name}-label']`;
 const edit = (order: CustomerOrderView) => ({ version: order.version, customer: order.customer, location: order.location,
   lines: order.lines.map(({ id, material, enteredQuantity, enteredUnit, requiredDate }) => ({ id, material, quantity: enteredQuantity, unit: enteredUnit, requiredDate })) });
 
@@ -30,7 +32,7 @@ describe("customer orders through the UI and API", () => {
   const openCreate = async () => {
     await user.open(`${baseUrl}/admin/prod/customer-orders`);
     await clickHydrated(user, "main button"); await user.waitFor("[role=dialog]");
-    await user.select(field("customer"), customer.id); await user.select(field("location"), location.id);
+    await chooseFromList(user, header("customer"), customer.id, customer.id); await chooseFromList(user, header("location"), location.id, location.id);
     await chooseFromList(user, picker(0), "orders cabinet", material); await user.fill(field("lines.0.quantity"), "60");
     expect(await user.fillDate(field("lines.0.requiredDate"), "2027-01-04")).toBe("2027-01-04");
   };
@@ -189,7 +191,12 @@ describe("customer orders through the UI and API", () => {
     const blocked = await write("PATCH", `/api/tenants/prod/materials/${material}`, { active: false, version: master.version });
     expect(blocked.status).toBe(409); expect(json(blocked).error).toMatchObject({ code: "MATERIAL_HAS_CUSTOMER_DEMAND", message: expect.stringContaining("Customer order") });
     await user.open(`${baseUrl}/admin/prod/customer-orders/${uiOrder.id}`); await clickHydrated(user, "main button");
-    expect(await user.evaluate<string>(`document.querySelector(${JSON.stringify(field("customer"))}).selectedOptions[0].textContent`)).toContain("Inactive");
+    // The edit keeps the inactive customer chosen, and its list marks it Inactive (#222).
+    await user.waitUntil(`document.querySelector(${JSON.stringify(header("customer"))})?.value.startsWith(${JSON.stringify(`${customer.id} — `)})`);
+    await user.click(header("customer"));
+    const option = `[...document.querySelectorAll("[role=listbox]:not([hidden]) [role=option]")].find((row) => row.querySelector(".font-mono")?.textContent === ${JSON.stringify(customer.id)})`;
+    await user.waitUntil(`Boolean(${option})`);
+    expect(await user.evaluate<string>(`${option}.textContent`)).toContain("Inactive");
     await user.press("Escape");
   });
 
