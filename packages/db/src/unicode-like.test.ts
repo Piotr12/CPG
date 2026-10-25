@@ -103,6 +103,7 @@ describe("registerUnicodeLike on a real SQLite connection", () => {
     expect(like("Ł_1", "ł\\_1", "\\")).toBe(1);
     expect(() => like("a", "a", "")).toThrow(ESCAPE_MESSAGE);
     expect(() => like("a", "a", "ab")).toThrow(ESCAPE_MESSAGE);
+    expect(() => like(null, "a", "")).toThrow(ESCAPE_MESSAGE);
     expect(like("a", "a", "😀")).toBe(1);
   });
 
@@ -118,8 +119,9 @@ describe("registerUnicodeLike on a real SQLite connection", () => {
 });
 
 describe("registerUnicodeLike's pattern cache", () => {
-  /** Captures the two registered forms and counts how often a pattern is compiled, through `RegExp`. */
+  /** Captures the two registered forms; `compiled` lists every pattern compiled, in order. */
   function registered(size?: number) {
+    const compiled: string[] = [];
     const forms: Record<number, (...args: SqlValue[]) => unknown> = {};
     const db: DefiningFunctions = {
       function(name, options, implementation) {
@@ -127,12 +129,15 @@ describe("registerUnicodeLike's pattern cache", () => {
         forms[implementation.length] = implementation as (...args: SqlValue[]) => unknown;
       },
     };
-    registerUnicodeLike(db, size);
-    return forms;
+    registerUnicodeLike(db, size, (pattern, escape) => {
+      compiled.push(pattern);
+      return likePattern(pattern, escape);
+    });
+    return { forms, compiled };
   }
 
   it("registers a two- and a three-argument form", () => {
-    const forms = registered();
+    const { forms } = registered();
     expect(Object.keys(forms).sort()).toEqual(["2", "3"]);
     expect(forms[2]("%Ł%", "ał")).toBe(1);
     expect(forms[3]("%!%", "50%", "!")).toBe(1);
@@ -140,7 +145,7 @@ describe("registerUnicodeLike's pattern cache", () => {
   });
 
   it("keeps the same pattern apart with and without an escape", () => {
-    const forms = registered();
+    const { forms } = registered();
     expect(forms[2]("a!%", "a!xyz")).toBe(1);
     expect(forms[3]("a!%", "a!xyz", "!")).toBe(0);
     expect(forms[3]("a!%", "a%", "!")).toBe(1);
@@ -148,25 +153,14 @@ describe("registerUnicodeLike's pattern cache", () => {
   });
 
   it("compiles a pattern once, and again only after it was dropped beyond the cache's size", () => {
-    const compiled: string[] = [];
-    const Original = RegExp;
-    const Counting = function (this: unknown, source: string, flags?: string) {
-      compiled.push(source);
-      return new Original(source, flags);
-    } as unknown as RegExpConstructor;
-    globalThis.RegExp = Counting;
-    try {
-      const forms = registered(2);
-      forms[2]("a", "a");
-      forms[2]("a", "A");
-      forms[2]("b", "b");
-      forms[2]("c", "c"); // drops "a", the oldest
-      forms[2]("b", "B");
-      forms[2]("a", "a");
-      expect(compiled).toEqual(["^a$", "^b$", "^c$", "^a$"]);
-    } finally {
-      globalThis.RegExp = Original;
-    }
+    const { forms, compiled } = registered(2);
+    forms[2]("a", "a");
+    forms[2]("a", "A");
+    forms[2]("b", "b");
+    forms[2]("c", "c"); // drops "a", the oldest
+    expect(forms[2]("b", "B")).toBe(1);
+    expect(forms[2]("a", "a")).toBe(1);
+    expect(compiled).toEqual(["a", "b", "c", "a"]);
   });
 
   it("keeps a hundred patterns by default", () => {

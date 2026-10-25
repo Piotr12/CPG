@@ -161,7 +161,7 @@ describe.each(KINDS)("$Service.name", ({ Service, subjectType, prefix, code, nou
         expect(ids(await service().list({ sort: "status", dir: "desc" }))).toEqual(["00000001", "00000003", "00000004", "00000002"]);
       });
 
-      it("keeps records whose ID or name holds every word, ignoring ASCII case, in this tenant only", async () => {
+      it("keeps records whose ID or name holds every word, ignoring case, in this tenant only", async () => {
         expect(ids(await service().list({ q: "NORTH" }))).toEqual(["00000001", "00000003"]);
         expect(ids(await service().list({ q: "hall 0003" }))).toEqual(["00000003"]);
         expect(ids(await service().list({ q: "0002" }))).toEqual(["00000002"]);

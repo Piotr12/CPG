@@ -52,21 +52,26 @@ function text(value: Exclude<SqlValue, null>): string {
 /**
  * Replaces SQLite's `like()` on `db`, the function behind `X LIKE Y` and `X LIKE Y ESCAPE Z`, with
  * {@link likePattern}'s, so list searches ignore the case of Polish letters too (#223): SQLite's own
- * ignores it for ASCII letters only. `NULL` anywhere gives `NULL`, as built in. One search compares the
- * same pattern with every row, so compiled patterns are cached, at most `size` of them.
+ * ignores it for ASCII letters only. `NULL` anywhere gives `NULL`, as built in. It is made for text:
+ * a number compares in JavaScript's notation (`1.0` as `1`), unlike SQLite's. Each `%` is a regular
+ * expression run, so many of them in one pattern backtrack; searches send only `%word%`, because
+ * `searchWords` splits at the wildcards. One search compares the same pattern with every row, so
+ * compiled patterns are cached, at most `size` of them; `compile` is replaceable for tests.
  */
-export function registerUnicodeLike(db: DefiningFunctions, size = LIKE_CACHE_SIZE): void {
+export function registerUnicodeLike(db: DefiningFunctions, size = LIKE_CACHE_SIZE, compile = likePattern): void {
   const cache = new Map<string, RegExp>();
   const like = (pattern: SqlValue, value: SqlValue, escape?: SqlValue): number | null => {
-    if (pattern === null || value === null || escape === null) return null;
+    if (escape === null) return null;
     const escapeText = escape === undefined ? undefined : text(escape);
+    // SQLite refuses a bad escape before it looks at the operands.
     if (escapeText !== undefined && [...escapeText].length !== 1) throw new Error(ESCAPE_MESSAGE);
+    if (pattern === null || value === null) return null;
     const patternText = text(pattern);
     // The escape is one character, so the key splits back into exactly one (escape, pattern).
     const key = escapeText === undefined ? `-${patternText}` : `+${escapeText}${patternText}`;
     let compiled = cache.get(key);
     if (!compiled) {
-      compiled = likePattern(patternText, escapeText);
+      compiled = compile(patternText, escapeText);
       cache.set(key, compiled);
       if (cache.size > size) cache.delete(cache.keys().next().value!);
     }

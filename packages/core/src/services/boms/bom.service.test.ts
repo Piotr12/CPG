@@ -641,7 +641,7 @@ describe("BomService", () => {
         expect(ids(await service().list({ sort: "status" }))).toEqual(["00000002", "00000001", "00000003", "00000004"]);
       });
 
-      it("keeps BOMs whose ID or output's ID or description holds every word, ignoring ASCII case, in this tenant only", async () => {
+      it("keeps BOMs whose ID or output's ID or description holds every word, ignoring case, in this tenant only", async () => {
         expect(ids(await service().list({ q: "CABINET" }))).toEqual(["00000003", "00000001"]);
         expect(ids(await service().list({ q: "cabinet 0001" }))).toEqual(["00000001"]);
         expect(ids(await service().list({ q: "00000008" }))).toEqual(["00000004"]);

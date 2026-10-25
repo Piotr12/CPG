@@ -56,7 +56,7 @@ describe("help topics", () => {
 
   it.each([
     ["en", "capital letters don't matter, Polish ones included", "accents do"],
-    ["pl", "wielkość liter nie ma znaczenia, także polskich", "polskie znaki mają znaczenie"],
+    ["pl", "wielkość liter, także polskich, nie ma znaczenia", "znaki diakrytyczne mają znaczenie"],
   ] as const)("says in %s that list search ignores the case of Polish letters too, but not their accents (#223)", (locale, caseIgnored, accentsCount) => {
     const text = helpTopics(locale).find((topic) => topic.id === "materials")!.body.join(" ");
 

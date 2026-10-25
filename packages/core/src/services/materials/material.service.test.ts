@@ -189,7 +189,7 @@ describe("MaterialService", () => {
         expect(ids(await service().list({ sort: "status" }))).toEqual(["00000003", "00000001", "00000002"]);
       });
 
-      it("keeps materials whose ID or description holds every word, ignoring ASCII case, in this tenant only", async () => {
+      it("keeps materials whose ID or description holds every word, ignoring case, in this tenant only", async () => {
         expect(ids(await service().list({ q: "STEEL" }))).toEqual(["00000001", "00000003"]);
         expect(ids(await service().list({ q: "steel 2 mm" }))).toEqual(["00000001"]);
         expect(ids(await service().list({ q: "0002" }))).toEqual(["00000002"]);

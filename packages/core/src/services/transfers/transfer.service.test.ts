@@ -711,7 +711,7 @@ describe("TransferService", () => {
         expect(ids(await service().list({ sort: "status", dir: "desc" }))).toEqual(["00000003", "00000004", "00000001", "00000002"]);
       });
 
-      it("keeps transfers whose ID, material, source or destination holds every word, ignoring ASCII case, in this tenant only", async () => {
+      it("keeps transfers whose ID, material, source or destination holds every word, ignoring case, in this tenant only", async () => {
         expect(ids(await service().list({ q: "STEEL" }))).toEqual(["00000001", "00000004"]);
         expect(ids(await service().list({ q: "depot" }))).toEqual(["00000001", "00000002"]);
         expect(ids(await service().list({ q: "warehouse" }))).toEqual(["00000001", "00000003", "00000004"]);
