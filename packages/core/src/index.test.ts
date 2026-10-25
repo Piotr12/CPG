@@ -16,6 +16,7 @@ describe("@cpg/core", () => {
       "CustomerService",
       "DATASET_KINDS",
       "DEFAULT_PREFERENCES",
+      "DemandReviewService",
       "ForbiddenError",
       "ForecastService",
       "GENERATION_HEADER",

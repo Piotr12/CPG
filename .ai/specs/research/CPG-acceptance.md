@@ -13,7 +13,7 @@ The original export marked every scenario `Not executed`. Scenarios are updated 
 - **Partially verified**: only part of the scenario can be or is asserted today; the **Evidence** line says which part is missing and why.
 - **Not executed**: not yet built or not yet checked.
 
-Last updated 2026-10-24 for #200: E2E-020's test now owns both Test generations within one UTC day, and the tiny dataset's unissued shipment is checked on every day of 2025–2027; its status is unchanged. Before that, the same day for E09-S05 (#186): its tests move E2E-017 to Passed (automated) and add evidence to LFC-013. Before that, 2026-10-23 for the second slice 2 closing pass, against `main` at `db50cf07`: the slice 2 rows were rechecked against the tests that PRs #156 (#140), #159 (#142), #161 (#141), #170 (#168), #174 (#153), #177 (#152), #178 (#144), #179 (#138), #181 (#145) and #182 (#147) added. TEN-009, MAT-009, MAT-029, INV-023, LFC-019, API-034, AUD-001 and UX-025 move to Passed (automated), their whole Then now asserted; TRF-012 and BUY-017 go back to Partially verified (no test closes a transfer with 10 of 60 in transit after 50 received; BUY-017's scheduled supply is MRP, #14); SAL-015, E2E-004, E2E-006, E2E-009, E2E-013, E2E-017, E2E-018 and E2E-020 move from Not executed to Partially verified; REV-001, REV-010, SAL-008, SAL-018, AUD-002 and AUD-025 gain the #144 and #147 evidence, and the stale notes of TEN-001, TEN-025, TEN-029, MAT-006, MAT-024, INV-007, DEM-016 and E2E-015 are corrected. The gaps found are filed as #185–#192 and named in each row. Before that, the same day for E11-S04 (#144), against `main` at `8195a0b`: its tests moved LFC-004 and BUY-017 to Passed (automated) (their MRP halves are slice 3, #14) and added evidence to PRD-029. Before that, the same day for E13-S05 (#152), against `main` at `8adea42`: more evidence for AUD-004 and UX-010, whose status is unchanged. Before that, 2026-10-21 for E10-S03 (#143), against `main` at `1882d6a`, whose tests moved LFC-022, BOM-026, BOM-028, BOM-029, UX-013 and E2E-011 to Passed (automated). Before that, the same day: epics E07 (#73), E08 (#74), E09 (#75), E10 (#76), E11 (#77) and E13 (#79), against `main` at `d2300ef` (PRs #102, #104, #107, #108, #109, #111, #112, #114, #118, #119, #120, #123, #125, #130, #133, #135); the gaps found are filed as #139–#145, and #139 (PR #151) closes LFC-018, STX-006 and STX-018. Earlier: epic E05 (#13) against `2a2976a` (PR #99 for E05-S01), plus the tests and the workbook cell limit added with that update; epic E04 (#12) against `082f2d5`; epic E03 (#11) against `3f553a5`, and the E02 end-to-end follow-up (#67); epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
+Last updated 2026-10-25 for #240: the D08 netting tests move DEM-002…013 from Not executed to Partially verified; each still needs MRP's run (#14). Before that, 2026-10-24 for #200: E2E-020's test now owns both Test generations within one UTC day, and the tiny dataset's unissued shipment is checked on every day of 2025–2027; its status is unchanged. Before that, the same day for E09-S05 (#186): its tests move E2E-017 to Passed (automated) and add evidence to LFC-013. Before that, 2026-10-23 for the second slice 2 closing pass, against `main` at `db50cf07`: the slice 2 rows were rechecked against the tests that PRs #156 (#140), #159 (#142), #161 (#141), #170 (#168), #174 (#153), #177 (#152), #178 (#144), #179 (#138), #181 (#145) and #182 (#147) added. TEN-009, MAT-009, MAT-029, INV-023, LFC-019, API-034, AUD-001 and UX-025 move to Passed (automated), their whole Then now asserted; TRF-012 and BUY-017 go back to Partially verified (no test closes a transfer with 10 of 60 in transit after 50 received; BUY-017's scheduled supply is MRP, #14); SAL-015, E2E-004, E2E-006, E2E-009, E2E-013, E2E-017, E2E-018 and E2E-020 move from Not executed to Partially verified; REV-001, REV-010, SAL-008, SAL-018, AUD-002 and AUD-025 gain the #144 and #147 evidence, and the stale notes of TEN-001, TEN-025, TEN-029, MAT-006, MAT-024, INV-007, DEM-016 and E2E-015 are corrected. The gaps found are filed as #185–#192 and named in each row. Before that, the same day for E11-S04 (#144), against `main` at `8195a0b`: its tests moved LFC-004 and BUY-017 to Passed (automated) (their MRP halves are slice 3, #14) and added evidence to PRD-029. Before that, the same day for E13-S05 (#152), against `main` at `8adea42`: more evidence for AUD-004 and UX-010, whose status is unchanged. Before that, 2026-10-21 for E10-S03 (#143), against `main` at `1882d6a`, whose tests moved LFC-022, BOM-026, BOM-028, BOM-029, UX-013 and E2E-011 to Passed (automated). Before that, the same day: epics E07 (#73), E08 (#74), E09 (#75), E10 (#76), E11 (#77) and E13 (#79), against `main` at `d2300ef` (PRs #102, #104, #107, #108, #109, #111, #112, #114, #118, #119, #120, #123, #125, #130, #133, #135); the gaps found are filed as #139–#145, and #139 (PR #151) closes LFC-018, STX-006 and STX-018. Earlier: epic E05 (#13) against `2a2976a` (PR #99 for E05-S01), plus the tests and the workbook cell limit added with that update; epic E04 (#12) against `082f2d5`; epic E03 (#11) against `3f553a5`, and the E02 end-to-end follow-up (#67); epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
 
 This document contains the complete acceptance catalogue for the CPG MVP. Each test preserves its ID, title, priority, execution channel, and Given / When / Then criteria.
 
@@ -2500,48 +2500,54 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### DEM-002 — Forecast and order same day net demand
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (an order on the forecast's day, and per D08 one later in its month, leaves 40 of 100). The demand review shows it (#240); MRP's run is #14.
 - **Given:** Forecast M/L/D=100; customer order M/L/D=60
 - **When:** Run MRP
 - **Then:** Total demand 100, decomposed 60 firm plus 40 residual forecast.
 
 ### DEM-003 — Firm orders greater than forecast
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (orders of 120 against 100 leave a residual of zero, never negative). MRP's 120 firm demand is #14.
 - **Given:** Forecast 100 and orders 120 same M/L/D
 - **When:** Run MRP
 - **Then:** Total demand 120 firm, residual forecast zero, not 220.
 
 ### DEM-004 — No order leaves forecast
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (no order leaves the whole 100) and `packages/core/src/services/reports/demand-review.service.test.ts` (the forecast left, per bucket). MRP's run is #14.
 - **Given:** Forecast 100 and no customer order matching
 - **When:** Run MRP
 - **Then:** Demand 100 forecast.
 
 ### DEM-005 — Forecast isolated by material
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (an order of another material consumes nothing). MRP's run is #14.
 - **Given:** Forecast A 100, customer order B 60 on same site/day
 - **When:** Run MRP
 - **Then:** A forecast remains 100; B customer order remains 60.
 
 ### DEM-006 — Forecast isolated by location
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (an order at another location consumes nothing). MRP's run is #14.
 - **Given:** Forecast M at A=100, order M at B=60
 - **When:** Run MRP
 - **Then:** A forecast unaffected by order at B.
 
 ### DEM-007 — Forecast isolated by original date
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` restates it per D08: an order in another month consumes nothing, one later in the same month does. MRP's run is #14.
 - **Given:** Forecast M/L Monday 100; customer order M/L Tuesday 60
 - **When:** Run MRP
 - **Then:** Tuesday order does not consume Monday forecast.
@@ -2549,48 +2555,54 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### DEM-008 — Partial fulfillment no double count
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (shipping doesn't change consumption: residual 40) and `packages/core/src/domain/demand/demand-tally.test.ts` (the open quantity is what is left to ship). MRP's total is #14.
 - **Given:** Forecast 100, ordered 60, physically shipped 30
 - **When:** Run MRP
 - **Then:** Remaining firm 30 and residual forecast 40; total outstanding demand 70.
 
 ### DEM-009 — Fully fulfilled order doesn't restore forecast
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (a fully shipped order still consumes: residual 40). MRP's run is #14.
 - **Given:** Forecast 100, customer order 60 fully shipped
 - **When:** Run MRP
 - **Then:** Outstanding firm zero; residual forecast 40.
 
 ### DEM-010 — Early closure releases undelivered forecast consumption
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (60 ordered, 30 abandoned on early closure: residual 70) and `packages/core/src/services/reports/demand-review.service.test.ts` (a cancelled order consumes nothing in the screen's read). MRP's run is #14.
 - **Given:** Forecast 100, order 60, GI 30, close rest Early
 - **When:** Run MRP
 - **Then:** Residual forecast 70, outstanding firm 0.
 
 ### DEM-011 — Cancellation before fulfillment releases all
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (a cancelled line consumes nothing: residual 100) and `packages/core/src/services/reports/demand-review.service.test.ts`. MRP's run is #14.
 - **Given:** Forecast 100, matching order 60 not fulfilled
 - **When:** Cancel order then run MRP
 - **Then:** Residual forecast returns to 100.
 
 ### DEM-012 — Overdue outstanding demand today
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/demand/demand-tally.test.ts` and `packages/core/src/services/reports/demand-review.service.test.ts` (an Open line past its required date counts in today's bucket as open and overdue, its own date kept for Ordered). MRP's planning bucket is #14.
 - **Given:** Order 40 due yesterday, nothing shipped
 - **When:** Run MRP today
 - **Then:** Demand 40 immediately due in today's planning bucket, original due date retained.
 
 ### DEM-013 — Overdue fulfillment retains original forecast mapping
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (an overdue line still consumes its own month) and `packages/core/src/domain/demand/demand-tally.test.ts` (its outstanding quantity counts today). MRP's run is #14.
 - **Given:** Monday forecast 100, order 60 due Monday, now Wednesday and unfulfilled
 - **When:** Run MRP Wednesday
 - **Then:** Order still consumes Monday forecast; overdue outstanding firm need due today.
