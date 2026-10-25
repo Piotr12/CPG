@@ -1,6 +1,6 @@
 # List search ignores the case of Polish letters too
 
-**Status:** ready
+**Status:** implemented (PR #229)
 **Created:** 2026-10-25 07:46 UTC
 **Issue:** #223 (follow-up to #217) · **Builds on:** the list search of #217 (`core/src/domain/lists/list-query.ts`, PR #225) · **Design authority:** `AGENTS.md` (stack: SQLite through MikroORM 7, better-sqlite3), `BACKWARD_COMPATIBILITY.md`
 
@@ -79,3 +79,11 @@ One phase, one implementation PR: the function, its wiring, the Help copy and th
 4. **Help copy** — replace the "letter with a Polish accent matches only in the case you type it" sentence in `app/src/help/topics.ts` (EN and PL) with one saying case doesn't matter for any letter, Polish ones included. Update its test.
 5. **Integration test** — extend `tests/integration/materials.test.ts`'s search scenario: create a material whose description starts with `Ł`, search with the lower-case word, and expect it in the results with the match marked.
 6. **Measure** — time a search over the realistic dataset's materials with and without the function, and record it in the run log.
+
+## Implementation notes
+
+- `packages/db/src/unicode-like.ts` (`likePattern`, `registerUnicodeLike`), registered in `initOrm`. Instead of one `varargs: true` function, it registers a two- and a three-argument `like`: SQLite looks functions up by name and argument count, so each form of the operator is replaced on its own, and SQLite keeps refusing any other count. A probe showed that replacing only the two-argument form leaves the built-in `… ESCAPE …` in place.
+- A REAL with an integral value arrives in JavaScript as an integer, so `1.0` compares as `1` (SQLite's own text would be `1.0`). No searched column holds a number.
+- Measured on an in-memory table, a two-word search over ID and description where every row matches (list and count each scan once): 1,000 rows 0.94 ms against 0.07 ms built in; 10,000 rows 7.8 ms against 0.6 ms.
+- Tests: `unicode-like.test.ts` (real SQL), the material and named-record service tests (both tenants), the Help topic test, and `tests/integration/materials.test.ts` (`Łożysko` found from `łożysko`, both words marked).
+

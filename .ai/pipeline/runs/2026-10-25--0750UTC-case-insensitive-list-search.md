@@ -33,6 +33,8 @@ Make every list search ignore the case of every letter, Polish ones included, by
 5. Integration: the materials search finds a description starting with `Ł` from a lower-case word, with the match marked.
 6. Measure a search over the realistic dataset's materials with and without the function.
 
+- [x] Post-review fix: escape checked before NULL, override documented as text-only, injected compiler in the cache test, test titles, Polish copy — 1e6a4ac7
+
 ### Phase 2: Paperwork
 
 1. Move the spec to `implemented/` with implementation notes; finalize this log and lessons.
@@ -67,6 +69,8 @@ Make every list search ignore the case of every letter, Polish ones included, by
 - `npm run test:coverage`: exit 0, 553 files, 4,106 tests, 100 % thresholds met
 - `npm run build`: exit 0
 - `npm run test:integration -- tests/integration/materials.test.ts` against a local standalone build: exit 0, 13 passed
+
+- Review (fresh-context subagent, `om-code-review` checklist): approve; 4 minors and 4 nits, all fixed except speed (recorded in the spec), JS number notation and backtracking (both documented), and NUL / invalid-UTF-8 / `ſ` folding edge cases (no such data). Gate re-run after the fixes: lint, typecheck, test:coverage (4,106 tests, 100 %), build all exit 0.
 
 ## Follow-ups
 
