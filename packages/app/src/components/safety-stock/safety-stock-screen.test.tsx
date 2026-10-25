@@ -5,7 +5,13 @@ import type { SafetyStockSort } from "@cpg/core/validators/safety-stock/safety-s
 import { en } from "../../i18n/messages/en";
 import { SafetyStockScreen } from "./safety-stock-screen";
 
-vi.mock("./add-safety-stock-target-dialog", () => ({ AddSafetyStockTargetDialog: () => <button>Add target</button> }));
+const dialog = vi.hoisted(() => vi.fn());
+vi.mock("./add-safety-stock-target-dialog", () => ({
+  AddSafetyStockTargetDialog: (props: object) => {
+    dialog(props);
+    return <button>Add target</button>;
+  },
+}));
 vi.mock("./safety-stock-target-actions", () => ({ SafetyStockTargetActions: () => <button>Row actions</button> }));
 
 const MATERIALS = [{ id: "00000005", type: "finished" as const, description: "Cabinet", baseUnit: "each", active: true, createdAt: new Date(), version: 1 }];
@@ -48,6 +54,14 @@ describe("SafetyStockScreen", () => {
     const cells = within(screen.getAllByRole("row")[1]).getAllByRole("cell");
     expect(cells[2].className).toMatch(/\bwhitespace-nowrap\b/);
     expect(cells[3].className).toMatch(/\btext-right tabular-nums\b/);
+  });
+
+  it("offers Add target only the active locations, as autocomplete choices (LFC-019, #222)", () => {
+    render(
+      <SafetyStockScreen tenant={TENANT} targets={[]} materials={MATERIALS} locations={[...LOCATIONS, ]} today="2027-01-15" locale="en" messages={en} admin {...LIST} />,
+    );
+
+    expect(dialog).toHaveBeenCalledWith(expect.objectContaining({ locations: [{ value: "00000001", code: "00000001", name: "Main plant" }] }));
   });
 
   it("tells a reader whom to ask when there are no targets", () => {

@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { createProductionOrder, updateProductionOrder } from "../../app/admin/[tenant]/production-orders/actions";
 import { errorFormatter, fill, TALL_DIALOG, type TenantContext } from "../forms/form-labels";
 import { materialOptions } from "../materials/material-picker";
+import { activeRecordOptions } from "../named-records/record-picker";
 import { productionFieldError, type ProductionLabels } from "./labels";
 import { ProductionRequirements } from "./production-requirements";
 
@@ -35,7 +36,8 @@ function ProductionForm({ context, labels: t, materials, locations, order, local
     ...(!order ? [
       { name: "output", label: t.output, type: "autocomplete" as const, placeholder: t.picker.placeholder, autocompleteLabels: t.picker.labels,
         choices: materialOptions(materials.filter((m) => m.active && m.type !== "raw")) },
-      { name: "location", label: t.location, type: "select" as const, placeholder: t.choose, options: locations.filter((l) => l.active).map((l) => ({ value: l.id, label: `${l.id} ${l.name}` })) },
+      { name: "location", label: t.location, type: "autocomplete" as const, placeholder: t.locationPicker.placeholder, autocompleteLabels: t.locationPicker.labels,
+        choices: activeRecordOptions(locations) },
     ] : []),
     { name: "quantity", label: t.quantity },
     { name: "unit", label: t.unit, description: t.unitHint },

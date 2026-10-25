@@ -32,6 +32,13 @@ describe("ForecastsScreen", () => {
     expect(within(screen.getByRole("listbox")).getAllByRole("option").map((option) => option.textContent)).toEqual(["00000005—Cabineteach"]);
   });
 
+  it("offers only active locations in Add forecast's location picker (LFC-019, #222)", () => {
+    render(<ForecastsScreen {...props} locations={[location, { ...location, id: "00000002", name: "Old quarry", active: false }]} />);
+    fireEvent.click(screen.getByRole("button", { name: en.forecasts.add.open }));
+    fireEvent.focus(screen.getByRole("combobox", { name: en.forecasts.form.location }));
+    expect(within(screen.getByRole("listbox", { name: en.forecasts.form.location })).getAllByRole("option").map((option) => option.textContent)).toEqual(["00000001—Main plant"]);
+  });
+
   it("gives a normal user no header action", () => {
     render(<ForecastsScreen {...props} admin={false} />);
     expect(within(header()).queryByRole("button")).toBeNull();
