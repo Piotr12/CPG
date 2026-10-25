@@ -16,7 +16,7 @@ Two independent audits of `main@bfd2b20c` found the same things, re-verified at 
 
 ### Principles
 
-1. **Colour means state, never decoration.** Neutral greys plus one ink action colour; hue only for the tenant, success, warning and danger. If removing a colour loses no information, remove it.
+1. **Colour means state, never decoration.** Neutral greys plus one ink action colour; hue only for the tenant, success, warning and danger. If removing a colour loses no information, remove it. Chart hues (`--chart-1…3`, added by the demand review, #240) are series identity inside a chart, never text, never anything outside `packages/ui/src/backend/charts/`.
 2. **The tenant is the product's signature.** Test is amber, Prod is ink with a red edge, always with the word TEST or PROD. Those tokens are used only for the tenant.
 3. **Every state carries a word and a shape.** A status is icon + label + tone; the current page is a bar + weight; an error is icon + text.
 4. **One way to do each thing.** One page header, one status badge, one callout, one table. A second inline implementation is a review blocker.
@@ -287,6 +287,7 @@ Delegated decisions ("for the rest, proceed with your recommendations"): everyth
 | `0.5` and `1.5` spacing | `packages/ui/src/components/**` only | Optical insets of compact controls | the scan's path rule |
 | `--card-spacing` alias and `gap-(--card-spacing)` | `ui/src/components/card.tsx` | The Card contract, 16 / 12 px | not a literal; passes the scan |
 | `16` (64 px) spacing | `app/src/app/page.tsx`, `help/`, `login/` | Public-page rhythm | the scan's path rule |
+| `--chart-1…3` (`bg-`, `fill-`, `stroke-`, `border-chart-*`, `var(--chart-*)`) | `packages/ui/src/backend/charts/**` only; `text-chart-*` nowhere | Series identity inside a chart, never text, never anything outside the charts folder (demand review, #240) | the scan's "chart colour" rule |
 
 Any new exception records a user reason, its scope and a verification example in this table before it is allow-listed.
 

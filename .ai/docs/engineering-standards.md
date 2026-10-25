@@ -209,6 +209,7 @@ Authentication is server-side sessions (specs `2026-10-19--0746UTC-admin-sign-in
 - [ ] Pages/actions/routes go through services, never `em`/`orm`.
 - [ ] Actions/routes use the shared wrappers, forms use `CrudForm`, lists use `DataTable` and states use the `feedback/` components. A bespoke alternative needs a stated reason.
 - [ ] Uses tokens and components from the design system (spec `2026-10-24--0842UTC-design-system-v1`); no new palette classes, radius, size or spacing values; states use `StatusBadge` or `Callout`; copy is plain. `tests/design-tokens.test.ts` fails on an offender outside the spec's Exceptions table.
+- [ ] Chart colours (`--chart-1…3`) are series identity inside a chart, never text, never anything outside `packages/ui/src/backend/charts/`; `tests/design-tokens.test.ts` enforces it.
 - [ ] `npm run lint`, `npm run typecheck`, `npm run test:coverage`, `npm run build` and `npm run test:integration` pass in CI, which runs them all on the pull request. Locally the author runs the first four and only the integration files the change touches.
 
 **Security** (apply in full once authentication exists)
