@@ -1,4 +1,4 @@
-import { GoodsIssue, GoodsReceipt, ProductionCompletion, TransferPosting, type EntityManager, type StockMovement } from "@cpg/db";
+import { GoodsIssue, GoodsReceipt, ProductionCompletion, ProductionOrder, TransferPosting, type EntityManager, type StockMovement } from "@cpg/db";
 import { GOODS_ISSUE_MOVEMENT } from "../goods-issues/goods-issue.service";
 import { GOODS_RECEIPT_MOVEMENT } from "../goods-receipts/goods-receipt.service";
 import { PRODUCTION_COMPLETION_MOVEMENT } from "../production-orders/production-completion.service";
@@ -23,8 +23,9 @@ export interface MovementSource {
 export const NO_SOURCE: MovementSource = { id: null, document: null };
 
 /**
- * The source of each movement in `movements`, by `postingId`: one read per kind of document, so a
- * ledger page costs at most four queries. A movement is posted by its document's own transaction and
+ * The source of each movement in `movements`, by `postingId`: one read per kind of document, and one
+ * more for the completions' orders, so a ledger page costs at most five queries. Each starts from its
+ * table's `(tenant, id)` index (#257). A movement is posted by its document's own transaction and
  * neither is ever deleted, so every non-correction movement finds one.
  */
 export async function movementSources(em: EntityManager, movements: StockMovement[]): Promise<Map<string, MovementSource>> {
@@ -50,9 +51,12 @@ export async function movementSources(em: EntityManager, movements: StockMovemen
   }
   const completions = ids(PRODUCTION_COMPLETION_MOVEMENT);
   if (completions.length > 0) {
-    for (const completion of await em.find(ProductionCompletion, { id: { $in: completions } }, { populate: ["order"] })) {
-      sources.set(completion.id, { id: completion.code, document: { type: "production-order", id: completion.order.code } });
-    }
+    // The orders in a read of their own: populated, they join their output, location and BOM revision,
+    // and SQLite then starts the join from every production order of the tenant.
+    const records = await em.find(ProductionCompletion, { id: { $in: completions } });
+    const orderIds = [...new Set(records.map(({ order }) => order.id))];
+    const orders = new Map((await em.find(ProductionOrder, { id: { $in: orderIds } })).map(({ id, code }) => [id, code]));
+    for (const { id, code, order } of records) sources.set(id, { id: code, document: { type: "production-order", id: orders.get(order.id)! } });
   }
   return sources;
 }

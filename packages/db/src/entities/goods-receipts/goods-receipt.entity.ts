@@ -38,6 +38,8 @@ export const GoodsReceipt = defineEntity({
     createdAt: p.datetime().onCreate(() => new Date()),
   },
   uniques: [{ properties: ["tenant", "code"] }],
+  /** Serve the stock ledger's source read, `id IN (…)`, which SQLite would plan through the tenant alone (#257). */
+  indexes: [{ properties: ["tenant", "id"] }],
   triggers: goodsReceiptTriggers("goods_receipt"),
 });
 

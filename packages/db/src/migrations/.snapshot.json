@@ -2558,6 +2558,17 @@
         },
         {
           "columnNames": [
+            "tenant_code",
+            "id"
+          ],
+          "composite": true,
+          "constraint": false,
+          "keyName": "goods_issue_tenant_code_id_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
             "tenant_code"
           ],
           "composite": false,
@@ -3040,6 +3051,17 @@
           "keyName": "goods_receipt_tenant_code_code_unique",
           "primary": false,
           "unique": true
+        },
+        {
+          "columnNames": [
+            "tenant_code",
+            "id"
+          ],
+          "composite": true,
+          "constraint": false,
+          "keyName": "goods_receipt_tenant_code_id_index",
+          "primary": false,
+          "unique": false
         },
         {
           "columnNames": [
@@ -4481,6 +4503,17 @@
           "keyName": "production_completion_tenant_code_code_unique",
           "primary": false,
           "unique": true
+        },
+        {
+          "columnNames": [
+            "tenant_code",
+            "id"
+          ],
+          "composite": true,
+          "constraint": false,
+          "keyName": "production_completion_tenant_code_id_index",
+          "primary": false,
+          "unique": false
         },
         {
           "columnNames": [
@@ -7505,6 +7538,17 @@
         {
           "columnNames": [
             "tenant_code",
+            "order_line_id"
+          ],
+          "composite": true,
+          "constraint": false,
+          "keyName": "shipment_line_tenant_code_order_line_id_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "tenant_code",
             "shipment_id"
           ],
           "composite": true,
@@ -10083,6 +10127,17 @@
           "keyName": "primary",
           "primary": true,
           "unique": true
+        },
+        {
+          "columnNames": [
+            "tenant_code",
+            "id"
+          ],
+          "composite": true,
+          "constraint": false,
+          "keyName": "transfer_posting_tenant_code_id_index",
+          "primary": false,
+          "unique": false
         },
         {
           "columnNames": [

@@ -46,7 +46,11 @@ export const TransferPosting = defineEntity({
     actorUsername: p.string(),
     channel: p.enum(["ui", "api"]),
   },
-  indexes: [{ properties: ["transfer", "occurredAt"] }],
+  indexes: [
+    { properties: ["transfer", "occurredAt"] },
+    /** Serve the stock ledger's source read, `id IN (…)`, which SQLite would plan through the tenant alone (#257). */
+    { properties: ["tenant", "id"] },
+  ],
   triggers: [
     {
       name: "transfer_posting_no_update",

@@ -44,7 +44,11 @@ export const ProductionCompletion = defineEntity({
     createdAt: p.datetime().onCreate(() => new Date()),
   },
   uniques: [{ properties: ["tenant", "code"] }, { properties: ["tenant", "submission"] }],
-  indexes: [{ properties: ["tenant", "order", "code"] }],
+  indexes: [
+    { properties: ["tenant", "order", "code"] },
+    /** Serve the stock ledger's source read, `id IN (…)`, which SQLite would plan through the tenant alone (#257). */
+    { properties: ["tenant", "id"] },
+  ],
   triggers: completionTriggers("production_completion"),
 });
 

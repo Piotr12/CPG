@@ -18,7 +18,7 @@ export async function findShipment(em: EntityManager, code: string, options: { r
  * returns `issued` to zero but never erases the issue (#91). Bounded like `postedOrderLineIds`: 100
  * IDs to a query, at most 100 issue lines read at a time, and a found ID leaves the batch at once.
  */
-export async function postedShipmentLineIds(em: EntityManager, lines: readonly ShipmentLine[]): Promise<Set<string>> {
+export async function postedShipmentLineIds(em: EntityManager, lines: readonly Pick<ShipmentLine, "id">[]): Promise<Set<string>> {
   const posted = new Set<string>();
   for (let start = 0; start < lines.length; start += 100) {
     const remaining = new Set(lines.slice(start, start + 100).map(({ id }) => id));
