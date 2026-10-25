@@ -45,7 +45,7 @@ describe("listOrderBy", () => {
     const [length, text, tieBreaker, ...rest] = listOrderBy({ decimal: "quantity" }, "desc", "material.code");
     const [key] = Object.getOwnPropertySymbols(length);
     expect(String(key)).toMatch(/instr\(.+\.quantity \|\| '\.', '\.'\)/);
-    expect(length[key]).toBe("desc");
+    expect((length as Record<symbol, unknown>)[key]).toBe("desc");
     expect([text, tieBreaker, rest]).toEqual([{ quantity: "desc" }, { material: { code: "asc" } }, []]);
   });
 });

@@ -26,7 +26,7 @@ describe("decimalLengthKey", () => {
     const databasePath = path.join(mkdtempSync(path.join(tmpdir(), "cpg-decimal-order-")), "db.sqlite");
     await migrate({ databasePath });
     orm = await initOrm({ databasePath });
-    for (const tenant of ["test", "prod"]) {
+    for (const tenant of ["test", "prod"] as const) {
       const em = orm.em.fork();
       selectTenant(em, tenant);
       const material = em.create(Material, { code: "00000001", type: "raw", description: "Flour", baseUnit: "kg" });
