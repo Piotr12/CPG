@@ -12,7 +12,7 @@ const adminPassword = inject("adminPassword");
 const UNA = "apiu-una";
 const UNA_PASSWORD = "apiu una's first password";
 const UNA_NEW_PASSWORD = "apiu una's second password";
-/** Deactivated by the API-031 test; left inactive. */
+/** Deactivated and reactivated by the API-031 test. */
 const DORA = "apiu-dora";
 const ADMIN_TOKEN = "apiu-ops";
 
@@ -94,14 +94,15 @@ describe("the users API", () => {
     const created = await write("POST", "/api/users", adminSecret, { username: DORA, password: UNA_PASSWORD });
     expect(created.status, created.text).toBe(200);
     const dora = (await userRow(DORA))!;
-    /** Each tenant's master data, current stock and audit, read whole (`allPages`) so a change past the first page counts. */
+    /**
+     * Each tenant's master data, current stock and audit. The master lists don't page (a `page` key is ignored, so
+     * `allPages` would never stop once one reaches 100 rows): one read each. The stock report pages, and is read whole.
+     */
     const tenants = async () => {
       const read = async (path: string) => json(await api("GET", path, adminSecret)).data;
       const snapshot: Record<string, unknown> = {};
       for (const tenant of ["test", "prod"]) {
-        for (const kind of ["materials", "locations", "customers", "suppliers"]) {
-          snapshot[`${tenant} ${kind}`] = await allPages(async (page) => read(`/api/tenants/${tenant}/${kind}?page=${page}`));
-        }
+        for (const kind of ["materials", "locations", "customers", "suppliers"]) snapshot[`${tenant} ${kind}`] = await read(`/api/tenants/${tenant}/${kind}`);
         snapshot[`${tenant} stock`] = await allPages(async (page) => (await read(`/api/tenants/${tenant}/reports/stock?page=${page}`)).rows);
         snapshot[`${tenant} audit`] = (await read(`/api/tenants/${tenant}/audit?limit=100`)).entries;
       }
@@ -119,6 +120,9 @@ describe("the users API", () => {
     expect(global.map(({ action }) => action)).toEqual(["users.user.deactivated", "users.user.created"]);
     expect(global[0]).toMatchObject({ subject: { type: "User" }, channel: "api", token: { name: ADMIN_TOKEN }, before: { active: true }, after: { active: false } });
     expect(await tenants()).toEqual(before);
+
+    // The file leaves its own accounts active (lessons, 2026-10-22).
+    expect((await write("PATCH", `/api/users/${dora.id}`, adminSecret, { active: true, version: dora.version + 1 })).status).toBe(200);
   });
 
   it("offers no way to delete a user, even to the admin (TEN-008)", async () => {

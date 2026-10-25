@@ -31,9 +31,11 @@ export const json = (response: { text: string }) => JSON.parse(response.text);
  * `what` with every failed answer or error, so a cleanup that must not fail silently (the realistic
  * restore in `test-reset-realistic.test.ts`, #192) fails its file with the reason.
  */
-export async function untilOk(what: string, call: () => Promise<ApiResponse>, attempts = 2): Promise<ApiResponse> {
+export async function untilOk(what: string, call: () => Promise<ApiResponse>, attempts = 2, pauseMs = 2_000): Promise<ApiResponse> {
   const failures: string[] = [];
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    // A pause before each retry, so a server still busy with the first attempt can finish.
+    if (attempt > 1) await new Promise((resolve) => setTimeout(resolve, pauseMs));
     try {
       const response = await call();
       if (response.status === 200) return response;

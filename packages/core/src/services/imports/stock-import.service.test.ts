@@ -396,6 +396,24 @@ describe("the stock import's commit", () => {
     expect(await counts()).toEqual(before.counts);
     expect(await balances()).toEqual(before.balances);
 
+    // The token check refuses before anything posts, so prove the rollback at this size too: the clean
+    // workbook's commit fails in its last chunk, after 19 chunks (475 lines) were posted, and all of them roll back.
+    const scope = await scopeForTenant(kit.container, "prod");
+    const flush = scope.cradle.em.flush.bind(scope.cradle.em);
+    let flushes = 0;
+    const failing = vi.spyOn(scope.cradle.em, "flush").mockImplementation(async () => {
+      flushes += 1;
+      if (flushes === 20) throw new Error("the last chunk failed");
+      return flush();
+    });
+    await expect(
+      inRequestTransaction(scope.cradle.em, () => scope.cradle.stockImportService.commit(prepareStockImport(workbook(false)), previewToken!, "Count", ACTOR)),
+    ).rejects.toThrow("the last chunk failed");
+    failing.mockRestore();
+    expect(flushes).toBe(20);
+    expect(await counts()).toEqual(before.counts);
+    expect(await balances()).toEqual(before.balances);
+
     // The control: without the bad line, the same commit posts all 500 movements, each audited.
     await commit(workbook(false), previewToken!);
     expect(await counts()).toEqual({ movements: before.counts.movements + 500, audit: before.counts.audit + 500, balances: 500 });

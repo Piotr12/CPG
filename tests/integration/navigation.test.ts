@@ -276,7 +276,8 @@ describe("sidebar navigation", () => {
   });
 
   it("offers no pricing, invoicing, payment or accounting function, in the sidebar or in help, beside the planning screens (UX-023)", async () => {
-    const money = /pric|invoic|payment|billing|accounting|ledger account|\bVAT\b|currenc/i;
+    // Word starts, so "concurrency" or "unpriced" in an explanation don't count.
+    const money = /\b(pric|invoic|payment|billing|accounting|VAT\b|currenc)/i;
     await openPage(ursula, "/admin/prod");
     const entries = await sidebarEntries(ursula);
     expect(entries.filter(({ label, href }) => money.test(label) || money.test(href))).toEqual([]);

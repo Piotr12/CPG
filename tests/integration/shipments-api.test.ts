@@ -250,10 +250,8 @@ describe("shipments and goods issues through the API", () => {
 
     const ledger = json(await api("GET", `/api/tenants/prod/stock?material=${ids.widget}&location=${ids.plant}`)).data as StockView;
     expect(ledger.quantity).toBe("3.000000");
-    // Oldest first: the count, then the one issue; the running balance never goes below zero.
-    const movements = [...ledger.movements].reverse();
-    expect(movements.map(({ type, quantity }) => [type, quantity])).toEqual([["correction", "10.000000"], ["goods-issue", "-7.000000"]]);
-    expect(movements.reduce((balances, { quantity }) => [...balances, (balances.at(-1) ?? 0) + Number(quantity)], [] as number[])).toEqual([10, 3]);
+    // Oldest first: the count of 10, then the one issue of 7, so the balance never goes below zero.
+    expect([...ledger.movements].reverse().map(({ type, quantity }) => [type, quantity])).toEqual([["correction", "10.000000"], ["goods-issue", "-7.000000"]]);
     const issued = (json(await api("GET", "/api/tenants/prod/audit?limit=100")).data as AuditPage).entries.filter(
       (entry) => entry.action === "goods-issues.goods-issue.posted" && shipments.some(({ id }) => entry.after?.shipment === id),
     );
@@ -387,10 +385,11 @@ describe("shipments and goods issues through the API", () => {
     // The ledger and the audit hold the issue once: the retry wrote neither again.
     const ledger = json(await api("GET", `/api/tenants/prod/stock?material=${ids.widget}&location=${ids.plant}`)).data as StockView;
     expect(ledger.movements.filter(({ type }) => type === "goods-issue").map(({ quantity }) => quantity)).toEqual(["-10.000000"]);
+    // By shipment, so a second issue the retry might have posted, under its own ID, would count too.
     const posted = (json(await api("GET", "/api/tenants/prod/audit?limit=100")).data as AuditPage).entries.filter(
-      (entry) => entry.action === "goods-issues.goods-issue.posted" && entry.subject.id === json(first).data.id,
+      (entry) => entry.action === "goods-issues.goods-issue.posted" && entry.after?.shipment === shipment.id,
     );
-    expect(posted).toHaveLength(1);
+    expect(posted.map(({ subject }) => subject.id)).toEqual([json(first).data.id]);
   });
 
   /** The audit entries of `action` on shipment `id`, newest first. */

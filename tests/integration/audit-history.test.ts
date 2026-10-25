@@ -54,7 +54,6 @@ describe("tracing one record's history in the audit (E13-S03, #96)", () => {
   let location: string;
   let purchase: OrderView;
   let receipt: ReceiptView;
-  let inverse: string;
   /**
    * The completion and the transfer dispatch the admin posts and the file's normal user reverses, through
    * the API (AUD-004, UX-022). Made once, by whichever test needs them first, so no test leans on another
@@ -186,7 +185,7 @@ describe("tracing one record's history in the audit (E13-S03, #96)", () => {
     expect(original[1][6]).toMatch(/Reversed by [0-9a-f]{8}$/);
 
     await follow(operator, `main a[title][href*="subjectType=StockMovement"]`, "subjectId=");
-    inverse = new URL(await operator.url()).searchParams.get("subjectId")!;
+    const inverse = new URL(await operator.url()).searchParams.get("subjectId")!;
     expect(inverse).not.toBe(correction);
     const reversal = await rows(operator);
     expect(reversal.map(([, account, , channel, action]) => [account, channel, action])).toEqual([[username, "UI", "Stock movement posted"]]);

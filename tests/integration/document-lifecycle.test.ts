@@ -115,19 +115,23 @@ describe("document cancellation and early closure", () => {
     expect((await get("production-orders", made.id)).components).toEqual([
       expect.objectContaining({ material, required: "100.000000", available: "100.000000", shortage: "0.000000" }),
     ]);
-    const order = await co();
-    const shipment = await create("shipments", { customerOrder: order.id, plannedDate: "2027-01-02", lines: [{ orderLine: order.lines[0].id, quantity: "10", unit: "kg" }] });
+    try {
+      const order = await co();
+      const shipment = await create("shipments", { customerOrder: order.id, plannedDate: "2027-01-02", lines: [{ orderLine: order.lines[0].id, quantity: "10", unit: "kg" }] });
 
-    const issued = await write(`${root}/goods-issues`, { shipment: shipment.id, lines: [{ line: 1, quantity: "10", unit: "kg" }] });
-    expect(issued.status, issued.text).toBe(200);
-    expect((await stock()).quantity).toBe("90.000000");
-    // The order still plans the whole 100 and now shows the 10 kg the issue took; the next MRP run
-    // reports it as a shortage (slice 3, #14).
-    expect(await get("production-orders", made.id)).toMatchObject({
-      status: "open", outstanding: "100.000000",
-      components: [expect.objectContaining({ material, required: "100.000000", available: "90.000000", shortage: "10.000000" })],
-    });
-    expect((await write(`${root}/production-orders/${made.id}/cancel`, { version: (await get("production-orders", made.id)).version })).status).toBe(200);
+      const issued = await write(`${root}/goods-issues`, { shipment: shipment.id, lines: [{ line: 1, quantity: "10", unit: "kg" }] });
+      expect(issued.status, issued.text).toBe(200);
+      expect((await stock()).quantity).toBe("90.000000");
+      // The order still plans the whole 100 and now shows the 10 kg the issue took; the next MRP run
+      // reports it as a shortage (slice 3, #14).
+      expect(await get("production-orders", made.id)).toMatchObject({
+        status: "open", outstanding: "100.000000",
+        components: [expect.objectContaining({ material, required: "100.000000", available: "90.000000", shortage: "10.000000" })],
+      });
+    } finally {
+      // The later tests plan from this file's stock: leave no open order needing it.
+      expect((await write(`${root}/production-orders/${made.id}/cancel`, { version: (await get("production-orders", made.id)).version })).status).toBe(200);
+    }
   });
 
   // Customer orders and transfers are closed over the API above and in production-transfer-reversals.test.ts (#192).

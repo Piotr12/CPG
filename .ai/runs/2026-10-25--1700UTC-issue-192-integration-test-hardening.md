@@ -36,6 +36,7 @@ Risks: integration files share one server and database; every new test asserts o
 - 17:13 AUD-022 delegated to a subagent (two core test files only): 500-row workbooks, one invalid row late, with a control commit proving the rows were applied and rolled back. Reviewed its diff. Its finding: the stock commit refuses on the token before posting, so the 500-line case proves "nothing changes" and the existing 40-line test still proves the rollback of real stock writes.
 - 17:16 E2E-014's audit filter first matched a customer order sharing the BOM's ID: filtered by subject type too (lessons, 2026-10-22).
 - 17:17 UX-026 asserts the unreserved goods issue and the production order's shortage; the next MRP run is #14, so the row stays Partially verified.
+- 17:35 Independent review (fresh subagent, `om-code-review`): request changes on one major, fixed. API-031's snapshot read the master lists through `allPages`, but they don't page (`page` is ignored), so it would never stop once a list reached 100 rows: one read each now. Also fixed: DORA reactivated at the end; UX-023 back to Partially verified (core planning is MRP, #14); the 500-line stock case now also fails its last chunk and rolls 475 posted lines back; the `expect` check walks subfolders and reports a test with no inline callback; E2E-013 counts audit entries by shipment; word-bounded money terms in UX-023; `untilOk` pauses before a retry; UX-026 cancels its order in a `finally`.
 
 ## Changes
 
@@ -47,7 +48,7 @@ Risks: integration files share one server and database; every new test asserts o
 - `tests/integration/audit-history.test.ts`, `forecasts.test.ts`: memoized fixtures instead of earlier tests' records.
 - `tests/integration/test-reset-realistic.test.ts`, `api.ts`, `tests/integration-helpers.test.ts`: the restore is retried once and fails the file with its reason; the token is revoked in a `finally`; the ledger-paging test loses the wrong UX-017 tag.
 - `tests/integration/footer.test.ts` (UX-009), `navigation.test.ts` (UX-023), `api-users.test.ts` (API-031), `shipments-api.test.ts` (E2E-006, E2E-013, E2E-014), `packages/core/src/services/imports/import.service.test.ts` and `stock-import.service.test.ts` (AUD-022).
-- `.ai/specs/research/CPG-acceptance.md`: UX-009, UX-023, API-031, AUD-022, E2E-006, E2E-013, E2E-014 → Passed (automated); UX-026 → Partially verified.
+- `.ai/specs/research/CPG-acceptance.md`: UX-009, API-031, AUD-022, E2E-006, E2E-013, E2E-014 → Passed (automated); UX-023 and UX-026 → Partially verified (MRP, #14).
 
 ## Verification
 

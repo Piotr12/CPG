@@ -52,21 +52,21 @@ describe("untilOk", () => {
 
   it("returns the first 200 without calling again", async () => {
     const { made, call } = calls(answer(200, "first"), answer(200, "second"));
-    expect((await untilOk("restore", call)).text).toBe("first");
+    expect((await untilOk("restore", call, 2, 0)).text).toBe("first");
     expect(made.count).toBe(1);
   });
 
   it("retries a refusal or a dropped connection once, and returns the 200 that follows", async () => {
     for (const first of [answer(503, "busy"), new Error("ECONNRESET")]) {
       const { made, call } = calls(first, answer(200, "restored"));
-      expect((await untilOk("restore", call)).text).toBe("restored");
+      expect((await untilOk("restore", call, 2, 0)).text).toBe("restored");
       expect(made.count).toBe(2);
     }
   });
 
   it("throws naming every failed attempt once they are used up", async () => {
     const { made, call } = calls(answer(409, '{"error":"stale"}'), new Error("ECONNRESET"));
-    await expect(untilOk("Restoring Test failed", call)).rejects.toThrow(
+    await expect(untilOk("Restoring Test failed", call, 2, 0)).rejects.toThrow(
       'Restoring Test failed: attempt 1: HTTP 409 {"error":"stale"}; attempt 2: Error: ECONNRESET',
     );
     expect(made.count).toBe(2);
