@@ -789,7 +789,7 @@ describe("PurchaseOrderService", () => {
       await expect(service("test").get("00000001")).rejects.toMatchObject({ code: "PURCHASE_ORDER_NOT_FOUND" });
     });
 
-    // Lesson 2026-10-23: EXPLAIN the query MikroORM really sends.
+    // Lesson 2026-10-25: EXPLAIN the query MikroORM really sends.
     it("reads a page's lines with each requisition by its primary key, never every requisition of the tenant (#236)", async () => {
       const { id: converted } = await requisition();
       await requisition();
@@ -812,7 +812,8 @@ describe("PurchaseOrderService", () => {
         const plan = (await observed.em.getConnection().execute<{ detail: string }[]>(`explain query plan ${linesQuery!.sql}`, [...linesQuery!.params])).map(
           ({ detail }) => detail,
         );
-        expect(plan).toContainEqual(expect.stringMatching(/^SEARCH \w+ USING INDEX sqlite_autoindex_purchase_requisition_1 \(id=\?\) LEFT-JOIN$/));
+        // `(id=?)` on the requisition: one primary-key lookup per line, whatever the index is called.
+        expect(plan).toContainEqual(expect.stringMatching(/^SEARCH \w+ USING (INDEX sqlite_autoindex_purchase_requisition_\d+|PRIMARY KEY) \(id=\?\) LEFT-JOIN$/));
         expect(plan.filter((detail) => /^(MATERIALIZE|SCAN) /.test(detail))).toEqual([]);
       } finally {
         await observed.close();

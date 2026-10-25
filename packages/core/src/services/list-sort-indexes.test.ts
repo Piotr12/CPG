@@ -15,7 +15,7 @@ import { TRANSFER_PAGE_SIZE } from "../validators/transfers/transfer.schema";
 
 // One file for five concepts: it pins the query plans the #220 indexes exist for, so each paged
 // list's date and status sorts read their page from an index, in both directions, instead of
-// sorting every document of the tenant first (lesson 2026-10-23: EXPLAIN the query MikroORM sends).
+// sorting every document of the tenant first (lesson 2026-10-25: EXPLAIN the query MikroORM really sends).
 
 type Lister = (em: EntityManager, sort: string, dir: "asc" | "desc") => Promise<unknown>;
 const LISTS: { table: string; list: Lister; page: number; sorts: Record<string, string> }[] = [
