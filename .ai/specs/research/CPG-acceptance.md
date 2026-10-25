@@ -2545,6 +2545,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 - **Given:** Forecast M/L Monday 100; customer order M/L Tuesday 60
 - **When:** Run MRP
 - **Then:** Tuesday order does not consume Monday forecast.
+- **Superseded by D08 (2026-10-25):** a forecast is consumed by the orders whose required date falls in its **calendar month**, so the Tuesday order consumes Monday's forecast when both fall in the same month. An order in another month still consumes nothing. Normative text: `research/decisions/D08-statistical-unit-and-demand-review.md`. Cases: `2026-10-25--0913UTC-demand-review.md`, "D08 restated as acceptance cases".
 
 ### DEM-008 — Partial fulfillment no double count
 

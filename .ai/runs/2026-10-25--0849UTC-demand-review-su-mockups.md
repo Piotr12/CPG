@@ -1,4 +1,4 @@
-# Demand review and statistical unit: mockups and decision issues
+# Demand review and statistical unit: mockups, decision issues and specs
 
 **Date:** 2026-10-25 08:49 UTC
 **Agent:** Claude Code / Opus 5.5 (cezar, headless)
@@ -37,6 +37,25 @@ GitHub issues (demand review, SU) with screenshots, questions and recommendation
 - Hit the documented zsh `path` trap (lesson 2026-10-24) with the `attach-image-evidence` snippet. Uploads
   then succeeded from a POSIX `sh` script.
 
+- 09:10 Second session. The owner answered both issues and accepted every recommendation. #239 also says
+  "single Stat Unit across the app altogether": one SU in every tenant, so the name and definition are
+  fixed registry text with no per-tenant settings record (Q8 dropped), and the factors stay per material, so
+  per tenant. Asked for implementation-ready spec PRs referenced from the issues.
+- 09:13 Branched `docs/specs-demand-review-statistical-unit` from `origin/main` (`3ae6dd8c`, which already
+  has #222's `FilterAutocomplete`) and cherry-picked this log. One PR, two specs, one decision row (D08),
+  because the screen depends on SU and both rely on the same D08. That also matches the owner's
+  one-PR preference.
+- Design choices made while specifying:
+  - SU entered on a line answers the existing `UNIT_NOT_CONVERTIBLE` from `convertToBaseQuantity`, the
+    one choke point of 16 services, so there is no new error code or translation;
+  - entry pickers filter SU in `listUnits`, the completion units map, the Stock page and the demo
+    `unitsOf`;
+  - a read-only Statistical units page replaces the issue's "no SU factor" Materials filter;
+  - D08 nets forecasts by calendar month, allocating consumption in date order; a residual dated before
+    today lands today, and ended months expire;
+  - the unused greyscale `--chart-1…5` become a categorical palette validated in both themes;
+  - the UI integration test runs on the tiny dataset (lesson: only `test-reset-realistic` switches Test).
+
 ## Changes
 
 - GitHub: #239 (Statistical unit, 1 mockup + 2 shared, Q1–Q10) and #240 (Demand review, 6 mockups, Q1–Q13),
@@ -52,6 +71,10 @@ GitHub issues (demand review, SU) with screenshots, questions and recommendation
 - `tsc --noEmit` on `packages/app` and `packages/core` was clean for the prototype files (route `PageProps`
   types need `next typegen`, so they were ignored). No lint/test/build run: no product code changed.
 - Dev server on 3221 stopped and the browser session closed.
+
+- Spec PR: `.ai/specs/2026-10-25--0913UTC-statistical-unit.md`, `.ai/specs/2026-10-25--0913UTC-demand-review.md`,
+  `research/decisions/D08-statistical-unit-and-demand-review.md`, the D08 row in `product-brief.md`, and the
+  DEM-007 erratum in `CPG-acceptance.md`.
 
 ## Follow-ups
 
