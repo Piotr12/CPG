@@ -196,4 +196,25 @@ describe("materials through the API (R07)", () => {
       await una.close();
     }
   });
+
+  it("searches and sorts the list on the server, and refuses a sort key it doesn't list (#221)", async () => {
+    const created: string[] = [];
+    for (const description of ["matsq alpha", "matsq gamma", "matsq beta"]) {
+      created.push(json(await write("POST", "/api/tenants/prod/materials", adminSecret, { type: "raw", description, baseUnit: "kg" })).data.id);
+    }
+    const list = async (query: string) => {
+      const response = await api("GET", `/api/tenants/prod/materials?${query}`, adminSecret);
+      expect(response.status).toBe(200);
+      return json(response).data as MaterialRow[];
+    };
+
+    expect((await list("q=matsq")).map(({ id }) => id)).toEqual(created);
+    expect((await list("q=MATSQ+be")).map(({ description }) => description)).toEqual(["matsq beta"]);
+    expect((await list("q=matsq&sort=description&dir=desc")).map(({ description }) => description)).toEqual(["matsq gamma", "matsq beta", "matsq alpha"]);
+    expect((await list("q=matsq&dir=desc")).map(({ id }) => id)).toEqual([...created].reverse());
+
+    const refused = await api("GET", "/api/tenants/prod/materials?sort=weight", adminSecret);
+    expect(refused.status).toBe(400);
+    expect(json(refused).error).toMatchObject({ code: "VALIDATION_FAILED", fieldErrors: { sort: ["Sort by one of this list's columns."] } });
+  });
 });

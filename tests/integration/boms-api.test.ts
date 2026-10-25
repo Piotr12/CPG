@@ -261,4 +261,28 @@ describe("BOMs through the API (R07)", () => {
       await una.close();
     }
   });
+
+  it("searches and sorts the list on the server, and refuses a sort key it doesn't list (#221)", async () => {
+    const kiosk = await material("finished", "bomsq kiosk", "each");
+    const created: string[] = [];
+    for (const priority of [5, 7, 6]) {
+      const response = await write("POST", "/api/tenants/prod/boms", recipe(kiosk, priority, [{ material: ids.steel, quantity: "1", unit: "kg" }]));
+      expect(response.status).toBe(200);
+      created.push(json(response).data.id);
+    }
+    const list = async (query: string) => {
+      const response = await api("GET", `/api/tenants/prod/boms?${query}`);
+      expect(response.status).toBe(200);
+      return json(response).data as BomRow[];
+    };
+
+    expect((await list("q=bomsq")).map(({ priority }) => priority)).toEqual([5, 6, 7]);
+    expect((await list("q=bomsq&sort=priority&dir=desc")).map(({ priority }) => priority)).toEqual([7, 6, 5]);
+    expect((await list("q=bomsq&sort=id&dir=desc")).map(({ id }) => id)).toEqual([...created].reverse());
+    expect(await list("q=bomsq+nothing")).toEqual([]);
+
+    const refused = await api("GET", "/api/tenants/prod/boms?dir=sideways");
+    expect(refused.status).toBe(400);
+    expect(json(refused).error).toMatchObject({ code: "VALIDATION_FAILED", fieldErrors: { dir: ["Sort direction must be asc or desc."] } });
+  });
 });

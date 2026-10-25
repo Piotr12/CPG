@@ -171,5 +171,26 @@ describe("locations, customers and suppliers through the API (R07)", () => {
       const prod = json(await api("GET", collection("prod"), adminSecret)).data as NamedRecordRow[];
       expect(prod.map(({ name }) => name)).not.toContain(`nrapi ${kind} forbidden`);
     });
+
+    it("searches and sorts the list on the server, and refuses a sort key it doesn't list (#221)", async () => {
+      const created: string[] = [];
+      for (const name of ["nrsq alpha", "nrsq gamma", "nrsq beta"]) {
+        created.push(json(await write("POST", collection("prod"), adminSecret, { name: `${name} ${kind}` })).data.id);
+      }
+      const list = async (query: string) => {
+        const response = await api("GET", `${collection("prod")}?${query}`, adminSecret);
+        expect(response.status).toBe(200);
+        return json(response).data as NamedRecordRow[];
+      };
+
+      expect((await list("q=nrsq")).map(({ id }) => id)).toEqual(created);
+      expect((await list("q=nrsq+GAM")).map(({ name }) => name)).toEqual([`nrsq gamma ${kind}`]);
+      expect((await list("q=nrsq&sort=name&dir=desc")).map(({ name }) => name)).toEqual([`nrsq gamma ${kind}`, `nrsq beta ${kind}`, `nrsq alpha ${kind}`]);
+      expect((await list("q=nrsq&sort=id&dir=desc")).map(({ id }) => id)).toEqual([...created].reverse());
+
+      const refused = await api("GET", `${collection("prod")}?sort=city`, adminSecret);
+      expect(refused.status).toBe(400);
+      expect(json(refused).error).toMatchObject({ code: "VALIDATION_FAILED", fieldErrors: { sort: ["Sort by one of this list's columns."] } });
+    });
   });
 });

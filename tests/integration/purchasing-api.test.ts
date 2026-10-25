@@ -397,4 +397,41 @@ describe("purchase requisitions and orders through the API", () => {
     // Next.js keeps page 1 mounted but hidden: read the shown table's first row.
     expect(await user.evaluate<string>(`[...document.querySelectorAll("main table tbody tr")].find((row) => row.offsetParent).cells[0].textContent`)).toBe(all[100].id);
   });
+
+  it("searches and sorts both lists on the server, and refuses a sort key they don't list (#221)", async () => {
+    const rivet = await create("/api/tenants/prod/materials", { type: "raw", description: "buysq rivet", baseUnit: "each" });
+    const requisitions: string[] = [];
+    for (const requiredDate of ["2027-06-02", "2027-06-03", "2027-06-01"]) {
+      requisitions.push((await requisition({ material: rivet, unit: "each", requiredDate })).id);
+    }
+    const zulu = await create("/api/tenants/prod/suppliers", { name: "buysq zulu" });
+    const yankee = await create("/api/tenants/prod/suppliers", { name: "buysq yankee" });
+    const orderIds: string[] = [];
+    for (const supplier of [yankee, zulu]) {
+      const response = await placeOrder(order([line(rivet, "5", "each", "2027-06-10")], { supplier }));
+      expect(response.status).toBe(200);
+      orderIds.push(json(response).data.id);
+    }
+    const list = async (path: string, query: string) => {
+      const response = await api("GET", `/api/tenants/prod/${path}?${query}`);
+      expect(response.status).toBe(200);
+      return json(response).data as { id: string; requiredDate?: string; supplier?: string }[];
+    };
+
+    expect((await list("purchase-requisitions", "q=buysq")).map(({ id }) => id)).toEqual(requisitions);
+    expect((await list("purchase-requisitions", "q=buysq&sort=requiredDate&dir=desc")).map(({ requiredDate }) => requiredDate)).toEqual([
+      "2027-06-03", "2027-06-02", "2027-06-01",
+    ]);
+    expect((await list("purchase-requisitions", "q=buysq&page=2")).map(({ id }) => id)).toEqual([]);
+    expect((await list("purchase-orders", "q=buysq")).map(({ id }) => id)).toEqual(orderIds);
+    expect((await list("purchase-orders", "q=buysq&sort=supplier")).map(({ supplier }) => supplier)).toEqual([zulu, yankee]);
+    expect((await list("purchase-orders", "q=buysq+zulu&sort=supplier&dir=desc")).map(({ supplier }) => supplier)).toEqual([zulu]);
+    expect((await list("purchase-orders", "q=buysq&surprise=1")).map(({ id }) => id)).toEqual(orderIds);
+
+    for (const path of ["purchase-requisitions", "purchase-orders"]) {
+      const refused = await api("GET", `/api/tenants/prod/${path}?sort=quantity`);
+      expect(refused.status).toBe(400);
+      expect(json(refused).error).toMatchObject({ code: "VALIDATION_FAILED", fieldErrors: { sort: ["Sort by one of this list's columns."] } });
+    }
+  });
 });

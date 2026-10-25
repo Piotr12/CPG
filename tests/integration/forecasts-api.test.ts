@@ -204,4 +204,21 @@ describe("forecasts through the API (E08-S03, R07)", () => {
       await una.close();
     }
   });
+
+  it("searches and sorts the list on the server with the filters, and refuses a sort key it doesn't list (#221)", async () => {
+    const crate = await createMaster("materials", { type: "finished", description: "fcsq crate", baseUnit: "each" });
+    for (const [location, date] of [[plant, "2027-05-02"], [packer, "2027-05-03"], [plant, "2027-05-01"]]) {
+      expect((await write("POST", "/api/tenants/prod/forecasts", { material: crate, location, date, quantity: "5" })).status).toBe(200);
+    }
+    const days = async (query: string) => (await forecasts(query)).map(({ location, date }) => `${location}@${date}`);
+
+    expect(await days("?q=fcsq")).toEqual([`${plant}@2027-05-01`, `${plant}@2027-05-02`, `${packer}@2027-05-03`]);
+    expect(await days("?q=fcsq&sort=date&dir=desc")).toEqual([`${packer}@2027-05-03`, `${plant}@2027-05-02`, `${plant}@2027-05-01`]);
+    expect(await days(`?q=FCSQ+crate&location=${plant}&sort=date&dir=desc`)).toEqual([`${plant}@2027-05-02`, `${plant}@2027-05-01`]);
+    expect(await days("?q=fcsq&surprise=1")).toHaveLength(3);
+
+    const refused = await api("GET", "/api/tenants/prod/forecasts?sort=quantity", adminSecret);
+    expect(refused.status).toBe(400);
+    expect(json(refused).error).toMatchObject({ code: "VALIDATION_FAILED", fieldErrors: { sort: ["Sort by one of this list's columns."] } });
+  });
 });

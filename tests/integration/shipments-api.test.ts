@@ -403,4 +403,35 @@ describe("shipments and goods issues through the API", () => {
     expect(await stockOf(ids.widget)).toBe("100.000000");
     expect((await getOrder(order.id)).lines.map(({ fulfilled }) => fulfilled)).toEqual(["0.000000", "0.000000"]);
   });
+
+  it("searches and sorts the customer orders on the server, and still refuses an unknown query key (#221)", async () => {
+    const widget = await create("/api/tenants/prod/materials", { type: "finished", description: "shsq widget", baseUnit: "each" });
+    const zulu = await create("/api/tenants/prod/customers", { name: "shsq zulu" });
+    const yankee = await create("/api/tenants/prod/customers", { name: "shsq yankee" });
+    const orderIds: string[] = [];
+    for (const customer of [yankee, zulu]) {
+      const response = await write("POST", "/api/tenants/prod/customer-orders", {
+        customer, location: ids.plant, lines: [{ material: widget, quantity: "5", unit: "each", requiredDate: "2026-11-04" }],
+      });
+      expect(response.status).toBe(200);
+      orderIds.push(json(response).data.id);
+    }
+    const list = async (query: string) => {
+      const response = await api("GET", `/api/tenants/prod/customer-orders?${query}`);
+      expect(response.status).toBe(200);
+      return json(response).data as CustomerOrderView[];
+    };
+
+    expect((await list("q=shsq")).map(({ id }) => id)).toEqual(orderIds);
+    expect((await list("q=shsq&sort=customer")).map(({ customer }) => customer)).toEqual([zulu, yankee]);
+    expect((await list("q=shsq&sort=id&dir=desc")).map(({ id }) => id)).toEqual([...orderIds].reverse());
+    expect((await list("q=SHSQ+yank")).map(({ customer }) => customer)).toEqual([yankee]);
+
+    for (const [query, field] of [["sort=quantity", "sort"], ["dir=up", "dir"]]) {
+      const refused = await api("GET", `/api/tenants/prod/customer-orders?${query}`);
+      expect(refused.status).toBe(400);
+      expect(Object.keys(json(refused).error.fieldErrors)).toEqual([field]);
+    }
+    expect((await api("GET", "/api/tenants/prod/customer-orders?q=shsq&surprise=1")).status).toBe(400);
+  });
 });
