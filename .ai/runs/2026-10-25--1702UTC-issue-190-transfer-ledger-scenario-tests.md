@@ -29,6 +29,7 @@ Deviation from the plan: E2E-009's API half lives in `document-lifecycle.test.ts
 
 - 17:05 Unit tests written; my first floating-point example for MAT-024 (0.246912 − 0.123455) is exact in binary too, so the test uses 0.370368 − 0.2 (0.17036799999999996 in floats), checked with `node -e`.
 - 17:20 Gate green; integration files green on a standalone server (Docker unavailable on this machine). Catalogue rows updated, plus TRF-025's evidence, which cited the replaced 10/8/2 lifecycle test.
+- 18:14 Review (`om-auto-review-pr --autofix`): the TRF-012 unit test checked only that no closed-early entry was written, while the catalogue says the audit doesn't change; it now also counts every audit entry before and after the refusal. Lint, typecheck and the transfer test file pass.
 
 ## Changes
 

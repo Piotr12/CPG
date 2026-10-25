@@ -163,6 +163,7 @@ describe("TransferService", () => {
     await service().receive(original.id, kg("50"), ACTOR);
     const partial = await service().get(original.id);
     expect(partial).toMatchObject({ dispatched: "60.000000", received: "50.000000", inTransit: "10.000000", status: "open" });
+    const audited = await scoped().count(TenantAuditEvent, {});
 
     await expect(service().closeEarly(original.id, partial.version, ACTOR)).rejects.toMatchObject({
       code: "TRANSFER_IN_TRANSIT",
@@ -171,6 +172,7 @@ describe("TransferService", () => {
       messageParams: { quantity: "10.000000", unit: "kg" },
     });
     expect(await service().get(original.id)).toEqual(partial);
+    expect(await scoped().count(TenantAuditEvent, {})).toBe(audited);
     expect(await entries("transfers.transfer.closed-early")).toEqual([]);
   });
 
