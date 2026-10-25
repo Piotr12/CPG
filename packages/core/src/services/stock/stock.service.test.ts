@@ -111,6 +111,13 @@ describe("StockService", () => {
     expect(await entries()).toEqual([]);
     expect(await scoped().count(StockBalance, {})).toBe(0);
   });
+  it("refuses a correction entered in the statistical unit, though the material has an SU factor, writing nothing (#239)", async () => {
+    const em = scoped(); const material = await em.findOneOrFail(Material, { code: PAIR.material }); em.create(MaterialConversion, { material, unit: "SU", numerator: "1", denominator: "1.5" }); await em.flush();
+    await expect(service().correct(line("3", { unit: "SU" }), ACTOR)).rejects.toMatchObject({ code: "UNIT_NOT_CONVERTIBLE", status: 400 });
+    expect(await scoped().count(StockMovement, {})).toBe(0);
+    expect(await scoped().count(StockBalance, {})).toBe(0);
+    expect(await entries()).toEqual([]);
+  });
   it("keeps equal business IDs isolated (INV-018)", async () => {
     await masters("test"); await service("test").correct(line("7"), ACTOR);
     expect((await service("test").get(PAIR)).quantity).toBe("7.000000");

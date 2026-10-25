@@ -1,4 +1,4 @@
-import { UNIT_DIMENSIONS, UNITS, isRegisteredUnit } from "@cpg/core/validators/units/unit-registry";
+import { UNIT_DIMENSIONS, UNITS, isRegisteredUnit, isStatisticalUnit } from "@cpg/core/validators/units/unit-registry";
 import type { CrudField, CrudOption } from "@cpg/ui/backend/forms/crud-form";
 import type { Messages } from "../../i18n/messages/en";
 
@@ -23,19 +23,33 @@ export function unitChoices(locale: "en" | "pl", labels: Messages["units"]): Uni
   };
 }
 
+interface UnitSelectOptions {
+  /** The stored unit, kept first when the select wouldn't offer it. */
+  current?: string;
+  /** Units shown but unselectable, each with why (symbol → reason). */
+  disabled?: Record<string, string>;
+  /** Leave out the report-only statistical unit, as a base unit select must (#239). */
+  physicalOnly?: boolean;
+}
+
 /**
- * A unit select's choices: the registry's groups, with `disabled` units (symbol → why) left in
- * place but unselectable, and `current`, when the registry lacks it, first, so a select never
- * silently submits another unit than the one stored (lesson 2026-10-23).
+ * A unit select's choices: the registry's groups, with `disabled` units left in place but
+ * unselectable, and `current`, when the registry lacks it or `physicalOnly` leaves it out, first, so
+ * a select never silently submits another unit than the one stored (lesson 2026-10-23).
  */
-export function unitSelect(choices: UnitChoices, { current, disabled = {} }: { current?: string; disabled?: Record<string, string> } = {}): Pick<CrudField, "options" | "groups"> {
+export function unitSelect(choices: UnitChoices, { current, disabled = {}, physicalOnly = false }: UnitSelectOptions = {}): Pick<CrudField, "options" | "groups"> {
+  const offered = (unit: string) => !physicalOnly || !isStatisticalUnit(unit);
+  const listed = choices.groups.flatMap((group) => group.options).find((option) => option.value === current);
+  const keep = current && !(isRegisteredUnit(current) && offered(current));
   return {
-    options: current && !isRegisteredUnit(current) ? [{ value: current, label: choices.notListed.replaceAll("{unit}", current) }] : [],
-    groups: choices.groups.map((group) => ({
-      label: group.label,
-      options: group.options.map((option) =>
-        disabled[option.value] ? { ...option, label: `${option.label} (${disabled[option.value]})`, disabled: true } : option,
-      ),
-    })),
+    options: keep ? [{ value: current, label: listed?.label ?? choices.notListed.replaceAll("{unit}", current) }] : [],
+    groups: choices.groups
+      .map((group) => ({
+        label: group.label,
+        options: group.options
+          .filter((option) => offered(option.value))
+          .map((option) => (disabled[option.value] ? { ...option, label: `${option.label} (${disabled[option.value]})`, disabled: true } : option)),
+      }))
+      .filter((group) => group.options.length > 0),
   };
 }

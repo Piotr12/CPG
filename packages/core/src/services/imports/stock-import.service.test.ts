@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Location, Material, StockBalance, StockMovement, TenantAuditEvent, type TenantCode } from "@cpg/db";
+import { Location, Material, MaterialConversion, StockBalance, StockMovement, TenantAuditEvent, type TenantCode } from "@cpg/db";
 import { scopeForTenant } from "../../container/tenant-scope";
 import type { Cell, WorkbookSheet } from "../../domain/imports/cells";
 import { prepareStockImport } from "../../domain/imports/prepare-stock-import";
@@ -159,6 +159,22 @@ describe("the stock import's dry run", () => {
     ]);
     await kit.write(({ materialService }) => materialService.addConversion("00000002", { unit: "g", numerator: "1", denominator: "1000000000" }, ACTOR));
     expect((await dryRun(stock([2, 2, "0.000001", "g"]))).errors.map((error) => [error.column, error.code])).toEqual([["Physical quantity", "QUANTITY_ROUNDS_TO_ZERO"]]);
+  });
+
+  it("refuses a row entered in the statistical unit, though the material has an SU factor, and the commit posts nothing (#239)", async () => {
+    await kit.write(async ({ em }) => {
+      em.create(MaterialConversion, { material: await em.findOneOrFail(Material, { code: "00000001" }), unit: "SU", numerator: "1", denominator: "1.5" });
+      await em.flush();
+    });
+    const workbook = stock([2, 1, 5, null], [1, 1, 3, "SU"]);
+    const before = await counts();
+
+    const report = await dryRun(workbook);
+    expect(report.previewToken).toBeNull();
+    expect(report.errors.map((error) => [error.row, error.column, error.code])).toEqual([[3, "Unit", "UNIT_NOT_CONVERTIBLE"]]);
+    await expect(commit(workbook, "f".repeat(64))).rejects.toMatchObject({ code: "IMPORT_STALE" });
+    expect(await counts()).toEqual(before);
+    expect(await balance("00000001", "00000001")).toBe("0.000000");
   });
 
   it("passes on a refusal it doesn't place, with no column, and lets a real failure through", async () => {

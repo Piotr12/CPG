@@ -638,6 +638,19 @@ describe("PurchaseOrderService", () => {
         },
       });
     });
+
+    it("refuses a line entered in the statistical unit, though the material has an SU factor, writing nothing (#239)", async () => {
+      const em = scopedEm();
+      em.create(MaterialConversion, { material: await em.findOneOrFail(Material, { code: "00000002" }), unit: "SU", numerator: "1", denominator: "1.5" });
+      await em.flush();
+
+      await expect(
+        service().create({ ...DIRECT, lines: [line("00000001", "20", "kg", "2027-03-03"), line("00000002", "3", "SU", "2027-03-05")] }, ACTOR),
+      ).rejects.toMatchObject({ code: "VALIDATION_FAILED", status: 400, fieldErrors: { "lines.1.unit": [UNIT_NOT_CONVERTIBLE_MESSAGE] } });
+      expect(await scopedEm().count(PurchaseOrder, {})).toBe(0);
+      expect(await scopedEm().count(PurchaseOrderLine, {})).toBe(0);
+      expect(await entries("purchase-orders.purchase-order.created")).toEqual([]);
+    });
   });
 
   describe("material deactivation with an open order (LFC-013)", () => {

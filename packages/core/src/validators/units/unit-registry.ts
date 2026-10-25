@@ -7,7 +7,7 @@ import { z } from "zod";
  * Units stored before the registry stay valid wherever a record already has them.
  */
 
-export const UNIT_DIMENSIONS = ["count", "packaging", "mass", "volume", "length", "area", "time"] as const;
+export const UNIT_DIMENSIONS = ["count", "packaging", "mass", "volume", "length", "area", "time", "statistical"] as const;
 export type UnitDimension = (typeof UNIT_DIMENSIONS)[number];
 
 export interface RegisteredUnit {
@@ -46,16 +46,33 @@ export const UNITS: readonly RegisteredUnit[] = [
   { code: "MTK", symbol: "m²", name: { en: "square metre", pl: "metr kwadratowy" }, dimension: "area" },
   { code: "MIN", symbol: "min", name: { en: "minute", pl: "minuta" }, dimension: "time" },
   { code: "HUR", symbol: "h", name: { en: "hour", pl: "godzina" }, dimension: "time" },
+  // Reports only (#239): a material's factor is its SU conversion, and nothing is entered in it.
+  // Rec 20 has no code for it and keeps `Z…` codes for local use.
+  { code: "ZSU", symbol: "SU", name: { en: "statistical unit", pl: "jednostka statystyczna" }, dimension: "statistical" },
 ];
+
+/**
+ * The one statistical unit (#239): what lets reports add up different products. A material's factor
+ * is its conversion for this unit. It is never a base unit and never an entered unit.
+ */
+export const STATISTICAL_UNIT = "SU";
 
 /** What a unit outside the registry is told, wherever a new unit is set; screens translate it by this text. */
 export const UNIT_NOT_REGISTERED_MESSAGE = "Choose a unit from the list.";
+
+/** What a new base unit `SU` is told (#239): SU is for reports only. Screens translate it by this text. */
+export const STATISTICAL_BASE_UNIT_MESSAGE = "The statistical unit can't be a base unit.";
 
 const SYMBOLS = new Set(UNITS.map((unit) => unit.symbol));
 
 /** Whether `symbol` is in the registry: exact, so `KG` is not `kg`. */
 export function isRegisteredUnit(symbol: string): boolean {
   return SYMBOLS.has(symbol);
+}
+
+/** Whether `symbol` is the statistical unit: exact, like `isRegisteredUnit`. */
+export function isStatisticalUnit(symbol: string): boolean {
+  return symbol === STATISTICAL_UNIT;
 }
 
 /**

@@ -237,12 +237,14 @@ export const pl: Messages = {
       menu: { label: "Akcje dla {unit}", change: "Zmień przelicznik", remove: "Usuń" },
       unit: "Jednostka",
       unitHint: "Jednostka, w której wpisuje się ilości, np. karton albo t.",
+      statisticalUnitHint: "Tylko do raportów: SU sumuje różne wyroby i nic się w niej nie wpisuje.",
       unitPlaceholder: "Wybierz jednostkę",
       unitReasons: { baseUnit: "jednostka bazowa", converted: "już przeliczana" },
       denominator: "Ilość w jednostce alternatywnej",
       denominatorHint: "Zwykle 1, jak w „1 karton = 12 szt.”.",
       numerator: "Ilość w jednostce bazowej",
       numeratorHint: "Ile {baseUnit} to tyle jednostek alternatywnych. Do sześciu miejsc po przecinku.",
+      statisticalHint: "Dla SU wpisz Ilość w jednostce alternatywnej 1.5 i Ilość w jednostce bazowej 1, gdy 1 {baseUnit} = 1.5 SU.",
       add: {
         open: "Dodaj przelicznik",
         title: "Dodaj przelicznik jednostek",
@@ -253,6 +255,7 @@ export const pl: Messages = {
       change: {
         title: "Zmień przelicznik dla {unit}",
         description: "Nowego przelicznika używają tylko nowe wpisy; ilości już zapisane zachowują swój.",
+        statisticalDescription: "Raporty stosują nowy współczynnik SU do całej historii. Żadna zapisana ilość się nie zmienia.",
         submit: "Zapisz",
         submitting: "Zapisywanie…",
       },
@@ -268,6 +271,7 @@ export const pl: Messages = {
       descriptionTooLong: "Użyj najwyżej 200 znaków.",
       unitFormat: "Użyj od 1 do 16 liter, cyfr, kropek, myślników lub podkreśleń, zaczynając od litery lub cyfry.",
       unitNotRegistered: "Wybierz jednostkę z listy.",
+      statisticalBaseUnit: "Jednostka statystyczna nie może być jednostką bazową.",
       factor: "Wpisz liczbę większą od 0, z najwyżej 12 cyframi przed kropką i 6 po niej.",
     },
     errors: {
@@ -1831,6 +1835,20 @@ export const pl: Messages = {
     fieldErrors: { quantity: "Wpisz niezerową ilość ze znakiem, do 12 cyfr całkowitych i 6 po przecinku (użyj kropki).", reason: "Wpisz powód, do 500 znaków.", unit: "Wybierz poprawną jednostkę." },
     errors: { STOCK_ALREADY_REVERSED: "Ten ruch został już odwrócony. Zobacz odwrócenie przed kolejnym księgowaniem.", STOCK_REVERSAL_UNSUPPORTED: "Tego rodzaju księgowania nie można tutaj odwrócić.", STOCK_REVERSAL_INCONSISTENT: "Oryginalne księgowanie nie zgadza się z dokumentem. Poproś administratora o sprawdzenie.", STOCK_MOVEMENT_NOT_FOUND: "Ten ruch nie jest już dostępny w tym środowisku.", QUANTITY_OUT_OF_RANGE: "Ilość lub wynikowy zapas jest zbyt duży.", QUANTITY_ROUNDS_TO_ZERO: "Ta ilość zaokrągla się do zera w jednostce podstawowej.", MATERIAL_INACTIVE: "Materiał jest nieaktywny. Nowe korekty są zablokowane.", LOCATION_INACTIVE: "Lokalizacja jest nieaktywna. Nowe korekty są zablokowane.", UNIT_NOT_CONVERTIBLE: "Jednostka nie ma przelicznika na jednostkę podstawową materiału." },
   },
+  statisticalUnits: {
+    heading: "Jednostki statystyczne — {tenant}",
+    intro:
+      "Jedna jednostka statystyczna (SU) pozwala raportom sumować różne wyroby. Współczynnik wyrobu to jeden z jego przeliczników: ustawia się go i zmienia na stronie wyrobu. Ilości nigdy nie wpisuje się w SU, a jednostka bazowa wyrobu ze współczynnikiem nie może się zmienić.",
+    count: "Wyroby gotowe ze współczynnikiem SU: {count} z {total}.",
+    label: "Współczynniki SU wyrobów gotowych",
+    columns: { product: "Wyrób", factor: "Współczynnik SU", otherUnits: "Inne jednostki w SU" },
+    inactive: "Nieaktywny",
+    notSet: "Nie ustawiono",
+    change: "Zmień",
+    changeOf: "Zmień współczynnik SU wyrobu {product}",
+    actions: "Akcje",
+    empty: "W środowisku {tenant} nie ma jeszcze wyrobów gotowych.",
+  },
   stockReport: {
     heading: "Raport zapasu — {tenant}",
     intro: "Zapas fizyczny na stanie i zapas w tranzycie dla każdego materiału i lokalizacji, w jednostce podstawowej materiału, na dzień {date} (UTC). Zapas w tranzycie należy do swojego przesunięcia: żadna z lokalizacji nie może go użyć, dopóki nie zostanie przyjęty.",
@@ -1893,7 +1911,7 @@ export const pl: Messages = {
     notListed: "nie ma na liście",
   },
   units: {
-    dimensions: { count: "Liczba", packaging: "Opakowanie", mass: "Masa", volume: "Objętość", length: "Długość", area: "Powierzchnia", time: "Czas" },
+    dimensions: { count: "Liczba", packaging: "Opakowanie", mass: "Masa", volume: "Objętość", length: "Długość", area: "Powierzchnia", time: "Czas", statistical: "Statystyczne" },
     notListed: "{unit} (spoza listy jednostek)",
   },
   nav: {
@@ -1915,6 +1933,7 @@ export const pl: Messages = {
     varianceReport: "Raport odchyleń",
     safetyStock: "Zapas bezpieczeństwa",
     boms: "BOM-y",
+    statisticalUnits: "Jednostki statystyczne",
     purchaseRequisitions: "Zapotrzebowania zakupu",
     purchaseOrders: "Zamówienia zakupu",
     transfers: "Przesunięcia",

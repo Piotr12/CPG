@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { UNIT_NOT_REGISTERED_MESSAGE } from "@cpg/core/validators/units/unit-registry";
+import { STATISTICAL_BASE_UNIT_MESSAGE, UNIT_NOT_REGISTERED_MESSAGE } from "@cpg/core/validators/units/unit-registry";
 import { ID_FORMAT_MESSAGE } from "@cpg/core/validators/imports/import-rows.schema";
 import { WORKBOOK_TOO_LARGE_MESSAGE, WORKBOOK_TOO_MANY_CELLS_MESSAGE } from "@cpg/core/validators/imports/import-request.schema";
 import { NAME_REQUIRED_MESSAGE } from "@cpg/core/validators/named-records/named-record-fields.schema";
@@ -15,6 +15,7 @@ describe("importLabels", () => {
 
     expect(labels.fieldMessages[TYPE_MESSAGE]).toBe(pl.materials.fieldErrors.type);
     expect(labels.fieldMessages[UNIT_NOT_REGISTERED_MESSAGE]).toBe("Wybierz jednostkę z listy.");
+    expect(labels.fieldMessages[STATISTICAL_BASE_UNIT_MESSAGE]).toBe("Jednostka statystyczna nie może być jednostką bazową.");
     expect(labels.fieldMessages[NAME_REQUIRED_MESSAGE]).toBe(pl.locations.fieldErrors.nameRequired);
     expect(labels.fieldMessages[PRIORITY_MESSAGE]).toBe(pl.boms.fieldErrors.priority);
     expect(labels.fieldMessages[ID_FORMAT_MESSAGE]).toBe(pl.imports.fieldErrors.id);

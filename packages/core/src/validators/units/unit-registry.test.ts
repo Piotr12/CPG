@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { unitSchema } from "../materials/material-fields.schema";
-import { isRegisteredUnit, registeredUnitSchema, UNIT_DIMENSIONS, UNIT_NOT_REGISTERED_MESSAGE, UNITS } from "./unit-registry";
+import {
+  isRegisteredUnit,
+  isStatisticalUnit,
+  registeredUnitSchema,
+  STATISTICAL_UNIT,
+  UNIT_DIMENSIONS,
+  UNIT_NOT_REGISTERED_MESSAGE,
+  UNITS,
+} from "./unit-registry";
 
 const message = (result: { error?: { issues: { message: string }[] } }) => result.error?.issues[0]?.message;
 
@@ -24,6 +32,21 @@ describe("the unit registry", () => {
     for (const symbol of ["each", "kg", "l", "ml", "t", "bag", "box", "bundle", "case", "pallet", "spool"]) {
       expect(isRegisteredUnit(symbol)).toBe(true);
     }
+  });
+
+  it("holds one statistical unit, SU, in its own dimension listed last, with a local Z code (#239)", () => {
+    expect(UNIT_DIMENSIONS.at(-1)).toBe("statistical");
+    expect(UNITS.filter((unit) => unit.dimension === "statistical")).toEqual([
+      { code: "ZSU", symbol: STATISTICAL_UNIT, name: { en: "statistical unit", pl: "jednostka statystyczna" }, dimension: "statistical" },
+    ]);
+    expect(STATISTICAL_UNIT).toBe("SU");
+    expect(isRegisteredUnit("SU")).toBe(true);
+    expect(UNITS).toHaveLength(26);
+  });
+
+  it("tells the statistical unit by its exact symbol", () => {
+    expect(isStatisticalUnit("SU")).toBe(true);
+    for (const symbol of ["su", "Su", " SU", "each"]) expect(isStatisticalUnit(symbol)).toBe(false);
   });
 
   it("matches symbols exactly", () => {

@@ -43,6 +43,7 @@ describe("HelpPage", () => {
       "Forecasts",
       "BOMs",
       "A BOM and its revisions",
+      "Statistical units",
       "Purchase requisitions",
       "Purchase orders",
       "A purchase order and its lines",

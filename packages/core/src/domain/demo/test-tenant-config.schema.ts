@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { businessIdSchema } from "../../validators/business-ids/business-id.schema";
 import { descriptionSchema, factorSchema, materialTypeSchema, unitSchema } from "../../validators/materials/material-fields.schema";
+import { isStatisticalUnit } from "../../validators/units/unit-registry";
 import { findCycle, type RecipeEdge } from "../boms/find-cycle";
 import { canBeBomComponent, canBeBomOutput } from "../boms/recipe-rules";
 import { formatSequentialId } from "../business-ids/sequential-id";
@@ -140,9 +141,9 @@ export function isSimpleProduct(config: TestTenantConfig, product: string): bool
     .every(({ components }) => components.every(({ material }) => byId(materials, material)?.type === "raw"));
 }
 
-/** The units a material may be entered in: its base unit and every conversion's unit. */
+/** The units a material may be entered in: its base unit and every conversion's unit but the report-only SU (#239). */
 export function unitsOf(material: CatalogueMaterial): string[] {
-  return [material.baseUnit, ...material.conversions.map(({ unit }) => unit)];
+  return [material.baseUnit, ...material.conversions.map(({ unit }) => unit).filter((unit) => !isStatisticalUnit(unit))];
 }
 
 type Issue = (path: (string | number)[], message: string) => void;

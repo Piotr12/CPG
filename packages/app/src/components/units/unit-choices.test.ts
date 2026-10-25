@@ -8,7 +8,7 @@ describe("unitChoices", () => {
   it("groups every registered unit by dimension, in the registry's order, named in the reader's language", () => {
     const choices = unitChoices("en", en.units);
 
-    expect(choices.groups.map((group) => group.label)).toEqual(["Count", "Packaging", "Mass", "Volume", "Length", "Area", "Time"]);
+    expect(choices.groups.map((group) => group.label)).toEqual(["Count", "Packaging", "Mass", "Volume", "Length", "Area", "Time", "Statistical"]);
     expect(choices.groups.flatMap((group) => group.options.map((option) => option.value))).toEqual(UNITS.map((unit) => unit.symbol));
     // A unit named by its own symbol isn't repeated.
     expect(choices.groups[0].options.slice(0, 2)).toEqual([
@@ -24,6 +24,7 @@ describe("unitChoices", () => {
         { value: "t", label: "t — tona" },
       ],
     });
+    expect(unitChoices("pl", pl.units).groups.at(-1)).toEqual({ label: "Statystyczne", options: [{ value: "SU", label: "SU — jednostka statystyczna" }] });
   });
 });
 
@@ -37,6 +38,19 @@ describe("unitSelect", () => {
 
   it("puts a stored unit the registry lacks first, saying so", () => {
     expect(unitSelect(choices, { current: "płyta" }).options).toEqual([{ value: "płyta", label: "płyta (not in the unit list)" }]);
+  });
+
+  it("leaves the statistical unit out of a physical-only select, keeping a stored SU first under its own name (#239)", () => {
+    const physical = unitSelect(choices, { physicalOnly: true });
+    expect(physical.options).toEqual([]);
+    expect(physical.groups!.map((group) => group.label)).not.toContain("Statistical");
+    expect(physical.groups!.flatMap((group) => group.options.map((option) => option.value))).not.toContain("SU");
+    expect(unitSelect(choices, { current: "SU", physicalOnly: true }).options).toEqual([{ value: "SU", label: "SU — statistical unit" }]);
+    expect(unitSelect(choices, { current: "płyta", physicalOnly: true }).options).toEqual([{ value: "płyta", label: "płyta (not in the unit list)" }]);
+    expect(unitSelect(choices, { current: "kg", physicalOnly: true }).options).toEqual([]);
+    // Without the option SU is an ordinary choice, in its own group.
+    expect(unitSelect(choices, { current: "SU" }).options).toEqual([]);
+    expect(unitSelect(choices).groups!.at(-1)).toEqual({ label: "Statistical", options: [{ value: "SU", label: "SU — statistical unit" }] });
   });
 
   it("keeps disabled units in place, saying why", () => {

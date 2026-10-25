@@ -250,12 +250,14 @@ export const en = {
       menu: { label: "Actions for {unit}", change: "Change factor", remove: "Remove" },
       unit: "Unit",
       unitHint: "The unit people enter, such as case or t.",
+      statisticalUnitHint: "For reports only: SU adds up different products, and nothing is entered in it.",
       unitPlaceholder: "Choose a unit",
       unitReasons: { baseUnit: "base unit", converted: "already converted" },
       denominator: "Alternate quantity",
       denominatorHint: "Usually 1, as in “1 case = 12 each”.",
       numerator: "Base quantity",
       numeratorHint: "How many {baseUnit} that many alternate units are. Up to six decimals.",
+      statisticalHint: "For SU, enter Alternate quantity 1.5 and Base quantity 1 when 1 {baseUnit} = 1.5 SU.",
       add: {
         open: "Add conversion",
         title: "Add a unit conversion",
@@ -266,6 +268,7 @@ export const en = {
       change: {
         title: "Change the factor of {unit}",
         description: "Only new entries use the new factor; quantities already stored keep theirs.",
+        statisticalDescription: "Reports use the new SU factor for all of history. No stored quantity changes.",
         submit: "Save",
         submitting: "Saving…",
       },
@@ -281,6 +284,7 @@ export const en = {
       descriptionTooLong: "Use at most 200 characters.",
       unitFormat: "Use 1–16 letters, digits, dots, dashes or underscores, starting with a letter or digit.",
       unitNotRegistered: "Choose a unit from the list.",
+      statisticalBaseUnit: "The statistical unit can't be a base unit.",
       factor: "Enter a number greater than 0, with at most 12 digits before the point and 6 after it.",
     },
     /** What these error codes mean on the materials screens, merged over the shared `errors` by `materialsLabels`. */
@@ -1894,6 +1898,20 @@ export const en = {
     errors: { STOCK_ALREADY_REVERSED: "This movement was already reversed. View its reversal before making another posting.", STOCK_REVERSAL_UNSUPPORTED: "This kind of posting cannot be reversed here.", STOCK_REVERSAL_INCONSISTENT: "The original posting does not match its document. Ask an administrator to check it.", STOCK_MOVEMENT_NOT_FOUND: "This movement is no longer available in this tenant.", QUANTITY_OUT_OF_RANGE: "That quantity or resulting balance is too large.", QUANTITY_ROUNDS_TO_ZERO: "That quantity rounds to zero in the base unit.", MATERIAL_INACTIVE: "This material is inactive. New corrections are blocked.", LOCATION_INACTIVE: "This location is inactive. New corrections are blocked.", UNIT_NOT_CONVERTIBLE: "The unit has no conversion to this material's base unit." },
   },
   /** The current stock report (E13-S01). */
+  statisticalUnits: {
+    heading: "Statistical units — {tenant}",
+    intro:
+      "One statistical unit (SU) lets reports add up different products. Each product's factor is one of its conversions: set or change it on the product's page. Quantities are never entered in SU, and a product's base unit can't change while it has a factor.",
+    count: "Finished products with an SU factor: {count} of {total}.",
+    label: "SU factors of the finished products",
+    columns: { product: "Product", factor: "SU factor", otherUnits: "Other units in SU" },
+    inactive: "Inactive",
+    notSet: "Not set",
+    change: "Change",
+    changeOf: "Change the SU factor of {product}",
+    actions: "Actions",
+    empty: "No finished products in {tenant} yet.",
+  },
   stockReport: {
     heading: "Stock report — {tenant}",
     intro: "Physical stock on hand and stock in transit per material and location, in the material's base unit, as of {date} (UTC). Stock in transit belongs to its transfer: neither location can use it until it is received.",
@@ -1960,7 +1978,7 @@ export const en = {
   },
   /** The unit registry's groups, and a stored unit it doesn't list (#217). */
   units: {
-    dimensions: { count: "Count", packaging: "Packaging", mass: "Mass", volume: "Volume", length: "Length", area: "Area", time: "Time" },
+    dimensions: { count: "Count", packaging: "Packaging", mass: "Mass", volume: "Volume", length: "Length", area: "Area", time: "Time", statistical: "Statistical" },
     notListed: "{unit} (not in the unit list)",
   },
   nav: {
@@ -1982,6 +2000,7 @@ export const en = {
     varianceReport: "Variance report",
     safetyStock: "Safety stock",
     boms: "BOMs",
+    statisticalUnits: "Statistical units",
     purchaseRequisitions: "Purchase requisitions",
     purchaseOrders: "Purchase orders",
     transfers: "Transfers",

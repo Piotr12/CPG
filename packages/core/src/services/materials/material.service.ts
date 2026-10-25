@@ -14,12 +14,19 @@ import {
 } from "@cpg/db";
 import type { DemoMaterial } from "../../domain/demo/generate-dataset";
 import { nextMaterialCode } from "../../domain/materials/material-code";
-import { formatDecimal, inverseFactor, parseDecimal } from "../../domain/quantities/decimal";
+import { convertToBase, formatDecimal, inverseFactor, ONE, parseDecimal } from "../../domain/quantities/decimal";
+import { fromBase, statisticalFactor, type ReportFactor } from "../../domain/units/report-units";
 import { listOrderBy, searchWhere } from "../../domain/lists/list-query";
 import { AppError, ConflictError, NotFoundError, ValidationError, versionConflict } from "../../http/errors";
 import type { ListOptions } from "../../validators/lists/list-query.schema";
 import type { MaterialSort } from "../../validators/materials/material-list.schema";
-import { isRegisteredUnit, UNIT_NOT_REGISTERED_MESSAGE } from "../../validators/units/unit-registry";
+import {
+  isRegisteredUnit,
+  isStatisticalUnit,
+  STATISTICAL_BASE_UNIT_MESSAGE,
+  STATISTICAL_UNIT,
+  UNIT_NOT_REGISTERED_MESSAGE,
+} from "../../validators/units/unit-registry";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
 import { bomUsingMaterial } from "../boms/bom-usage";
@@ -63,6 +70,18 @@ export interface ConversionView {
 
 export interface MaterialDetail extends MaterialSummary {
   conversions: ConversionView[];
+}
+
+/** One finished product on the Statistical units page (#239). */
+export interface StatisticalFactorView {
+  id: string;
+  description: string;
+  active: boolean;
+  baseUnit: string;
+  /** How many SU one base unit counts as ("1.5" for 1 each = 1.5 SU), or `null` when not set. */
+  perBaseUnit: string | null;
+  /** Each other unit in SU ("1 pallet = 15 SU"), by unit; empty while the factor isn't set. */
+  otherUnits: { unit: string; statisticalUnits: string }[];
 }
 
 export interface NewMaterial {
@@ -259,14 +278,38 @@ export class MaterialService {
 
   /**
    * Every material's units an entered quantity may use, by material ID: its base unit first, then
-   * its conversions' units in order. The recipe form offers them per line.
+   * its conversions' units in order, never the report-only statistical unit (#239). The line forms
+   * offer them per line.
    */
   async listUnits(): Promise<Record<string, string[]>> {
     const units: Record<string, string[]> = {};
     for (const material of await this.list()) units[material.id] = [material.baseUnit];
-    const conversions = await this.em.find(MaterialConversion, {}, { populate: ["material"], orderBy: { unit: "asc" } });
+    const conversions = await this.em.find(MaterialConversion, { unit: { $ne: STATISTICAL_UNIT } }, { populate: ["material"], orderBy: { unit: "asc" } });
     for (const { material, unit } of conversions) units[material.code].push(unit);
     return units;
+  }
+
+  /**
+   * Every finished product with its SU factor or `null`, by ID (#239): two queries whatever the
+   * number of products, materials then their conversions. Inactive products keep their factor.
+   */
+  async statisticalFactors(): Promise<StatisticalFactorView[]> {
+    const materials = await this.em.find(Material, { type: "finished" }, { orderBy: { code: "asc" } });
+    const conversions = await this.em.find(MaterialConversion, { material: { $in: materials } }, { orderBy: { unit: "asc" } });
+    const byMaterial = new Map<Material, MaterialConversion[]>(materials.map((material) => [material, []]));
+    for (const conversion of conversions) byMaterial.get(conversion.material)!.push(conversion);
+    return materials.map((material) => {
+      const own = byMaterial.get(material)!;
+      const factor = statisticalFactor({ code: material.code, baseUnit: material.baseUnit, conversions: own });
+      return {
+        id: material.code,
+        description: material.description,
+        active: material.active,
+        baseUnit: material.baseUnit,
+        perBaseUnit: factor && formatDecimal(fromBase(ONE, factor)),
+        otherUnits: factor ? own.filter(({ unit }) => !isStatisticalUnit(unit)).map((conversion) => inStatisticalUnits(conversion, factor)) : [],
+      };
+    });
   }
 
   /**
@@ -368,6 +411,15 @@ async function assertBaseUnitFree(em: EntityManager, material: Material): Promis
   }
 }
 
+/**
+ * One `unit` of a conversion in SU (#239): `1 unit = n/d` base units and `1 SU = sn/sd` base units
+ * make `1 unit = (n × sd) / (d × sn)` SU, rounded once (R03).
+ */
+function inStatisticalUnits({ unit, numerator, denominator }: MaterialConversion, factor: ReportFactor) {
+  const quantity = convertToBase(ONE, parseDecimal(numerator)! * factor.denominator, parseDecimal(denominator)! * factor.numerator);
+  return { unit, statisticalUnits: formatDecimal(quantity) };
+}
+
 /** Refuses deactivating a material while an Open purchase order has a line for it, naming the order (LFC-013). */
 async function assertNoOpenOrder(em: EntityManager, material: Material): Promise<void> {
   const order = await openOrderUsingMaterial(em, material);
@@ -392,15 +444,17 @@ function changedFields(material: Material, changes: MaterialChanges): MaterialCh
   return changed;
 }
 
-/** The fields of a material the audit may show: an allowlist (R08). */
 /**
  * A unit a material doesn't have yet comes from the registry (#217): a new base unit or conversion.
- * Units stored before the registry stay valid where a record already has them.
+ * Units stored before the registry stay valid where a record already has them. The statistical unit
+ * is a conversion only, never a new base unit (#239).
  */
 function assertRegisteredUnit(field: "baseUnit" | "unit", unit: string): void {
   if (!isRegisteredUnit(unit)) throw new ValidationError({ [field]: [UNIT_NOT_REGISTERED_MESSAGE] });
+  if (field === "baseUnit" && isStatisticalUnit(unit)) throw new ValidationError({ baseUnit: [STATISTICAL_BASE_UNIT_MESSAGE] });
 }
 
+/** The fields of a material the audit may show: an allowlist (R08). */
 function snapshot({ code, type, description, baseUnit, active }: Material) {
   return { id: code, type, description, baseUnit, active };
 }

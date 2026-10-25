@@ -101,6 +101,20 @@ describe("ForecastService", () => {
       expect(await audit()).toEqual([]);
     });
 
+    it("refuses a forecast entered in the statistical unit, though the material has an SU factor, writing nothing (#239)", async () => {
+      const em = scopedEm();
+      em.create(MaterialConversion, { material: await em.findOneOrFail(Material, { code: "00000001" }), unit: "SU", numerator: "1", denominator: "1.5" });
+      await em.flush();
+
+      await expect(service().create({ ...JANUARY, quantity: "3", unit: "SU" }, ACTOR)).rejects.toMatchObject({
+        code: "VALIDATION_FAILED",
+        status: 400,
+        fieldErrors: { unit: [UNIT_NOT_CONVERTIBLE_MESSAGE] },
+      });
+      expect(await scopedEm().count(Forecast, {})).toBe(0);
+      expect(await audit()).toEqual([]);
+    });
+
     it("stores several days of one material and location, ordered by date (DEM-001)", async () => {
       await service().create({ ...JANUARY, date: "2027-01-03" }, ACTOR);
       await service().create(JANUARY, ACTOR);

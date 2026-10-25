@@ -22,7 +22,7 @@ import { VERSION_CONFLICT } from "../../http/errors";
 import { tenantServerAction } from "../../http/tenant-server-action";
 import { conversionChangeSchema } from "../../validators/materials/conversion.schema";
 import { FACTOR_MESSAGE } from "../../validators/materials/material-fields.schema";
-import { UNIT_NOT_REGISTERED_MESSAGE } from "../../validators/units/unit-registry";
+import { STATISTICAL_BASE_UNIT_MESSAGE, UNIT_NOT_REGISTERED_MESSAGE } from "../../validators/units/unit-registry";
 import type { AuditActor } from "../audit/actor";
 import { BomService } from "../boms/bom.service";
 import { PlanningParameterService } from "../planning-parameters/planning-parameter.service";
@@ -151,6 +151,16 @@ describe("MaterialService", () => {
       await expect(service().create({ ...BOLT, baseUnit: "szt." }, ACTOR)).rejects.toMatchObject({
         code: "VALIDATION_FAILED",
         fieldErrors: { baseUnit: [UNIT_NOT_REGISTERED_MESSAGE] },
+      });
+      expect(await service().list()).toEqual([]);
+      expect(await audit()).toEqual([]);
+    });
+
+    it("refuses the statistical unit as a base unit, writing nothing (#239)", async () => {
+      await expect(service().create({ type: "finished", description: "Cabinet", baseUnit: "SU" }, ACTOR)).rejects.toMatchObject({
+        code: "VALIDATION_FAILED",
+        status: 400,
+        fieldErrors: { baseUnit: [STATISTICAL_BASE_UNIT_MESSAGE] },
       });
       expect(await service().list()).toEqual([]);
       expect(await audit()).toEqual([]);
@@ -490,6 +500,32 @@ describe("MaterialService", () => {
       expect(await service().toBaseQuantity("00000001", { quantity: "2", unit: "płyta" })).toMatchObject({ baseQuantity: "2.000000" });
     });
 
+    it("adds the statistical unit as a conversion, which is how a product gets its SU factor (#239)", async () => {
+      const cabinet = await service().create({ type: "finished", description: "Cabinet", baseUnit: "each" }, ACTOR);
+
+      // 1 each = 1.5 SU: 1 SU = 1 / 1.5 each.
+      expect(await service().addConversion(cabinet.id, { unit: "SU", numerator: "1", denominator: "1.5" }, ACTOR)).toMatchObject({
+        unit: "SU",
+        numerator: "1",
+        denominator: "1.5",
+        inverse: "1.5",
+      });
+    });
+
+    it("refuses a changed base unit SU, but keeps one stored before the registry (#239)", async () => {
+      const cabinet = await service().create({ type: "finished", description: "Cabinet", baseUnit: "each" }, ACTOR);
+      await expect(service().update(cabinet.id, { baseUnit: "SU" }, 1, ACTOR)).rejects.toMatchObject({
+        code: "VALIDATION_FAILED",
+        fieldErrors: { baseUnit: [STATISTICAL_BASE_UNIT_MESSAGE] },
+      });
+      expect(await service().get(cabinet.id)).toMatchObject({ baseUnit: "each", version: 1 });
+
+      const em = scopedEm("prod");
+      em.create(Material, { code: "00000002", type: "finished", description: "Kit", baseUnit: "SU" });
+      await em.flush();
+      expect(await service().update("00000002", { description: "Kit, large", baseUnit: "SU" }, 1, ACTOR)).toMatchObject({ baseUnit: "SU", version: 2 });
+    });
+
     it("maps a racing duplicate that slips past the check to CONVERSION_EXISTS", async () => {
       const bolt = await boltWithCase();
       const em = spyableEm();
@@ -736,6 +772,64 @@ describe("MaterialService", () => {
       await service("test").create({ type: "raw", description: "Elsewhere", baseUnit: "kg" }, ACTOR);
 
       expect(await service().listUnits()).toEqual({ "00000001": ["each", "box", "case"], [box.id]: ["each"] });
+    });
+
+    it("never offers the statistical unit for entry, though a material has an SU factor, but keeps a legacy base unit SU (#239)", async () => {
+      await boltWithCase();
+      await service().addConversion("00000001", { unit: "SU", numerator: "1", denominator: "0.2" }, ACTOR);
+      const em = scopedEm("prod");
+      em.create(Material, { code: "00000002", type: "finished", description: "Kit", baseUnit: "SU" });
+      await em.flush();
+
+      expect(await service().listUnits()).toEqual({ "00000001": ["each", "case"], "00000002": ["SU"] });
+    });
+  });
+
+  describe("statisticalFactors", () => {
+    it("lists every finished product by ID with its SU factor and its other units in SU, or Not set (#239)", async () => {
+      await service().create(BOLT, ACTOR);
+      const cabinet = await service().create({ type: "finished", description: "Workshop cabinet", baseUnit: "each" }, ACTOR);
+      await service().addConversion(cabinet.id, { unit: "pallet", numerator: "10", denominator: "1" }, ACTOR);
+      await service().addConversion(cabinet.id, { unit: "SU", numerator: "1", denominator: "1.5" }, ACTOR);
+      const letterbox = await service().create({ type: "finished", description: "Letterbox", baseUnit: "each" }, ACTOR);
+      await service().addConversion(letterbox.id, { unit: "case", numerator: "6", denominator: "1" }, ACTOR);
+      await service().update(letterbox.id, { active: false }, letterbox.version, ACTOR);
+      const em = scopedEm("prod");
+      em.create(Material, { code: "00000004", type: "finished", description: "Kit", baseUnit: "SU" });
+      await em.flush();
+      await service("test").create({ type: "finished", description: "Elsewhere", baseUnit: "each" }, ACTOR);
+
+      expect(await service().statisticalFactors()).toEqual([
+        { id: "00000002", description: "Workshop cabinet", active: true, baseUnit: "each", perBaseUnit: "1.5", otherUnits: [{ unit: "pallet", statisticalUnits: "15" }] },
+        { id: "00000003", description: "Letterbox", active: false, baseUnit: "each", perBaseUnit: null, otherUnits: [] },
+        // A base unit SU stored before the registry counts 1:1.
+        { id: "00000004", description: "Kit", active: true, baseUnit: "SU", perBaseUnit: "1", otherUnits: [] },
+      ]);
+    });
+
+    it("rounds another unit in SU once, never through the base unit first (R03)", async () => {
+      const tray = await service().create({ type: "finished", description: "Tray", baseUnit: "each" }, ACTOR);
+      // 1 box = 1/3 each and 1 each = 3 SU, so 1 box = 1 SU; through the base unit it would read 0.999999.
+      await service().addConversion(tray.id, { unit: "box", numerator: "1", denominator: "3" }, ACTOR);
+      await service().addConversion(tray.id, { unit: "SU", numerator: "1", denominator: "3" }, ACTOR);
+
+      expect((await service().statisticalFactors())[0]).toMatchObject({ perBaseUnit: "3", otherUnits: [{ unit: "box", statisticalUnits: "1" }] });
+    });
+
+    it("reads 50 products in two queries, materials then conversions", async () => {
+      const em = scopedEm("prod");
+      for (let index = 1; index <= 50; index += 1) {
+        const material = em.create(Material, { code: String(index).padStart(8, "0"), type: "finished", description: `Product ${index}`, baseUnit: "each" });
+        em.create(MaterialConversion, { material, unit: "SU", numerator: "1", denominator: String(index) });
+      }
+      await em.flush();
+      const reader = scopedEm("prod");
+      const find = vi.spyOn(reader, "find");
+
+      const rows = await service("prod", reader).statisticalFactors();
+      expect(rows).toHaveLength(50);
+      expect(rows[49]).toMatchObject({ id: "00000050", perBaseUnit: "50" });
+      expect(find).toHaveBeenCalledTimes(2);
     });
   });
 

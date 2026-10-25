@@ -165,6 +165,20 @@ describe("ShipmentService", () => {
       expect((await service().create(shipmentOf(order, { orderLine: order.lines[0].id, quantity: "50", unit: "each" }), ACTOR)).id).toBe("00000002");
     });
 
+    it("refuses a line entered in the statistical unit, though the material has an SU factor, writing nothing (#239)", async () => {
+      const order = await orders().create(ORDER, ACTOR);
+      const em = scoped();
+      em.create(MaterialConversion, { material: await em.findOneOrFail(Material, { code: "00000001" }), unit: "SU", numerator: "1", denominator: "1.5" });
+      await em.flush();
+
+      await expect(
+        service().create(shipmentOf(order, { orderLine: order.lines[1].id, quantity: "5", unit: "each" }, { orderLine: order.lines[0].id, quantity: "3", unit: "SU" }), ACTOR),
+      ).rejects.toMatchObject({ code: "VALIDATION_FAILED", status: 400, fieldErrors: { "lines.1.unit": [UNIT_NOT_CONVERTIBLE_MESSAGE] } });
+      expect(await scoped().count(Shipment, {})).toBe(0);
+      expect(await scoped().count(ShipmentLine, {})).toBe(0);
+      expect(await scoped().count(TenantAuditEvent, { action: "shipments.shipment.created" })).toBe(0);
+    });
+
     it("refuses a line removed from its order, which no longer awaits anything", async () => {
       const order = await orders().create(ORDER, ACTOR);
       const removed = order.lines[1].id;

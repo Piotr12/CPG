@@ -1,6 +1,7 @@
 import { MaterialConversion, type EntityManager, type Material } from "@cpg/db";
 import { convertToBase, formatDecimal, MAX_QUANTITY, parseDecimal } from "../../domain/quantities/decimal";
 import { AppError, ValidationError } from "../../http/errors";
+import { isStatisticalUnit } from "../../validators/units/unit-registry";
 
 /**
  * An entered quantity converted into the material's base unit (materials spec Q5): the six-decimal
@@ -21,8 +22,9 @@ export const ENTERED_QUANTITY_MESSAGE = "Enter a number of at least 0, with at m
 /**
  * `quantity` entered in `unit`, in `material`'s base unit: the base unit itself 1:1, another unit
  * through its conversion, rounded half-up once to six decimals (MAT-019…024, MAT-032). A unit without
- * a conversion is never assumed 1:1 (MAT-023). A leaf function, so the BOM service converts lines
- * the same way without importing `MaterialService`. `em` must be scoped to the material's tenant.
+ * a conversion is never assumed 1:1 (MAT-023), and the statistical unit is never an entered unit
+ * (#239). A leaf function, so the BOM service converts lines the same way without importing
+ * `MaterialService`. `em` must be scoped to the material's tenant.
  */
 export async function convertToBaseQuantity(
   em: EntityManager,
@@ -31,13 +33,19 @@ export async function convertToBaseQuantity(
 ): Promise<BaseQuantity> {
   const entered = parseDecimal(quantity);
   if (entered === null) throw new ValidationError({ quantity: [ENTERED_QUANTITY_MESSAGE] });
+  // The statistical unit's conversion is for reports only (#239): for entry it is no unit of the
+  // material, unless it is the material's own base unit (stored before the registry).
   const factor =
-    unit === material.baseUnit ? { numerator: "1", denominator: "1" } : await em.findOne(MaterialConversion, { material, unit });
+    unit === material.baseUnit
+      ? { numerator: "1", denominator: "1" }
+      : isStatisticalUnit(unit)
+        ? null
+        : await em.findOne(MaterialConversion, { material, unit });
   if (!factor) {
-    throw new AppError(
-      "UNIT_NOT_CONVERTIBLE",
-      `Material ${material.code} has no conversion from ${unit} to its base unit ${material.baseUnit}.`,
-    );
+    const message = isStatisticalUnit(unit)
+      ? `Material ${material.code} can't be entered in SU: the statistical unit is for reports only.`
+      : `Material ${material.code} has no conversion from ${unit} to its base unit ${material.baseUnit}.`;
+    throw new AppError("UNIT_NOT_CONVERTIBLE", message);
   }
   const base = convertToBase(entered, parseDecimal(factor.numerator)!, parseDecimal(factor.denominator)!);
   if (base > MAX_QUANTITY) {

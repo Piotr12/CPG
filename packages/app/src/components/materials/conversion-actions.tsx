@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { ConversionView, MaterialSummary } from "@cpg/core";
 import { conversionFactorFormSchema } from "@cpg/core/validators/materials/conversion.schema";
+import { isStatisticalUnit } from "@cpg/core/validators/units/unit-registry";
 import { ConfirmDialog } from "@cpg/ui/backend/dialogs/confirm-dialog";
 import { CrudForm } from "@cpg/ui/backend/forms/crud-form";
 import { Button } from "@cpg/ui/components/button";
@@ -53,10 +54,11 @@ export function ConversionActions({ material, conversion, context, labels }: Con
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{fill(t.change.title, { unit })}</DialogTitle>
-            <DialogDescription>{t.change.description}</DialogDescription>
+            {/* Reports read SU at today's factor, so a new SU factor reaches all of history (#239, Q4). */}
+            <DialogDescription>{isStatisticalUnit(unit) ? t.change.statisticalDescription : t.change.description}</DialogDescription>
           </DialogHeader>
           <CrudForm
-            fields={conversionFormFields(labels, material.baseUnit)}
+            fields={conversionFormFields(labels, material.baseUnit, { unit })}
             initialValues={{ numerator: conversion.numerator, denominator: conversion.denominator }}
             schema={conversionFactorFormSchema}
             action={(values) => changeConversion(context.tenant, context.generation, material.id, unit, version, values)}

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { materialCreateSchema } from "./material-create.schema";
+import { STATISTICAL_BASE_UNIT_MESSAGE, UNIT_NOT_REGISTERED_MESSAGE } from "../units/unit-registry";
+import { materialCreateSchema, materialEditFormSchema } from "./material-create.schema";
 
 describe("materialCreateSchema", () => {
   it("accepts a type, a description and a base unit, trimmed", () => {
@@ -20,5 +21,15 @@ describe("materialCreateSchema", () => {
     expect(materialCreateSchema.parse({ id: "00000009", type: "raw", description: "x", baseUnit: "kg" })).not.toHaveProperty(
       "id",
     );
+  });
+
+  it("refuses the statistical unit as a base unit, and an unlisted unit with the registry's message (#239)", () => {
+    const issues = (baseUnit: string) => materialCreateSchema.safeParse({ type: "finished", description: "x", baseUnit }).error?.issues;
+    expect(issues("SU")).toEqual([expect.objectContaining({ path: ["baseUnit"], message: STATISTICAL_BASE_UNIT_MESSAGE })]);
+    expect(issues("su")).toEqual([expect.objectContaining({ path: ["baseUnit"], message: UNIT_NOT_REGISTERED_MESSAGE })]);
+  });
+
+  it("lets the Edit form resend a stored base unit SU: the service refuses only a changed one", () => {
+    expect(materialEditFormSchema.parse({ type: "finished", description: "x", baseUnit: "SU" }).baseUnit).toBe("SU");
   });
 });

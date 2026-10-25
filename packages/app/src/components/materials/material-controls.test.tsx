@@ -109,4 +109,19 @@ describe("MaterialControls", () => {
 
     expect(mocks.updateMaterial).toHaveBeenCalledWith("test", 1, "00000002", 3, { type: "raw", description: "Board", baseUnit: "płyta" });
   });
+
+  it("keeps a stored base unit SU first and selected, though the select offers no statistical unit (#239)", async () => {
+    mocks.updateMaterial.mockResolvedValue({ ok: true, data: bolt });
+    render(<MaterialControls material={{ ...bolt, baseUnit: "SU" }} context={context} labels={materialsLabels(en)} units={units} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    const unit = screen.getByLabelText("Base unit") as HTMLSelectElement;
+    expect(unit.value).toBe("SU");
+    expect(unit.options[1].textContent).toBe("SU — statistical unit");
+    expect([...unit.options].filter((option) => option.value === "SU")).toHaveLength(1);
+    fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Kit" } });
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Save" })));
+
+    expect(mocks.updateMaterial).toHaveBeenCalledWith("test", 1, "00000002", 3, { type: "raw", description: "Kit", baseUnit: "SU" });
+  });
 });
