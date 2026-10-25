@@ -9,7 +9,7 @@ import {
   type OrderDefinition,
 } from "@cpg/db";
 import type { DemoForecast } from "../../domain/demo/generate-dataset";
-import { listOrderBy, searchWhere } from "../../domain/lists/list-query";
+import { listOrderBy, searchWhere, type SortField } from "../../domain/lists/list-query";
 import { ConflictError, NotFoundError, ValidationError, versionConflict } from "../../http/errors";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
@@ -75,7 +75,7 @@ interface ForecastWhere {
  * name (#217). Each sort key orders by a business ID or the date, then by the list's own key.
  */
 const FORECAST_SEARCH_FIELDS = ["material.code", "material.description", "location.code", "location.name"];
-const FORECAST_SORT_PATHS: Record<ForecastSort, string> = { material: "material.code", location: "location.code", date: "date" };
+const FORECAST_SORT_PATHS: Record<ForecastSort, SortField> = { material: "material.code", location: "location.code", date: "date", quantity: { decimal: "quantity" } };
 
 /** After the sorted column, a forecast's key in the default order: material ID, location ID, then date. */
 const FORECAST_KEY_ORDER = [{ location: { code: "asc" } }, { date: "asc" }];

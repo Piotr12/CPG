@@ -82,6 +82,7 @@ describe("@cpg/db", () => {
       "WriteGate",
       "createOrmConfig",
       "currentTenant",
+      "decimalLengthKey",
       "entities",
       "getMigrationStatus",
       "holdWriteGate",

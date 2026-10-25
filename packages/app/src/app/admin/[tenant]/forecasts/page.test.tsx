@@ -126,7 +126,8 @@ describe("ForecastsPage", () => {
     expect(hidden(searchForm)).toEqual(["material=00000005", "sort=date", "dir=desc"]);
     expect(hidden(filterForm)).toEqual(["q=cabinet", "sort=date", "dir=desc"]);
     const headers = within(screen.getByRole("table")).getAllByRole("columnheader");
-    expect(headers.map((header) => header.getAttribute("aria-sort"))).toEqual(["none", "none", "descending", null, null]);
+    expect(headers.map((header) => header.getAttribute("aria-sort"))).toEqual(["none", "none", "descending", "none", null]);
+    expect(within(headers[3]).getByRole("link").getAttribute("href")).toBe("/admin/test/forecasts?material=00000005&q=cabinet&sort=quantity&dir=asc");
     expect(within(headers[0]).getByRole("link").getAttribute("href")).toBe("/admin/test/forecasts?material=00000005&q=cabinet&sort=material&dir=asc");
     expect(within(headers[2]).getByRole("link").getAttribute("href")).toBe("/admin/test/forecasts?material=00000005&q=cabinet&sort=date&dir=asc");
     const pages = screen.getByRole("navigation", { name: "Forecast pages" });

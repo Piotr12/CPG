@@ -101,7 +101,7 @@ export interface LineDateChange {
 
 /** What the Purchase orders search matches, and the column each sort key orders by (#217). */
 const ORDER_SEARCH_FIELDS = ["code", "supplier.code", "supplier.name", "location.code", "location.name"];
-const ORDER_SORT_PATHS: Record<PurchaseOrderSort, string> = { id: "code", supplier: "supplier.code", location: "location.code", status: "status" };
+const ORDER_SORT_PATHS: Record<PurchaseOrderSort, string> = { id: "code", supplier: "supplier.code", location: "location.code", created: "createdAt", status: "status" };
 
 export const ORDER_ID_RACE = "Another purchase order was created at the same moment. Try again.";
 

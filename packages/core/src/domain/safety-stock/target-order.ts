@@ -1,8 +1,9 @@
 import type { SortDirection } from "../../validators/lists/list-query.schema";
 import type { SafetyStockSort } from "../../validators/safety-stock/safety-stock-list.schema";
+import { compareDecimals } from "../quantities/decimal";
 import { targetStatus, type TargetStatus } from "./target-on";
 
-/** What a target is sorted by: its material's and location's business IDs and its date. */
+/** What a target is sorted by: its material's and location's business IDs, its date and its quantity (#224). */
 export interface SortableTarget {
   material: string;
   location: string;
@@ -19,6 +20,7 @@ const COMPARE: Record<SafetyStockSort, (a: Ranked<SortableTarget>, b: Ranked<Sor
   material: (a, b) => a.target.material.localeCompare(b.target.material),
   location: (a, b) => a.target.location.localeCompare(b.target.location),
   effectiveFrom: (a, b) => a.target.effectiveFrom.localeCompare(b.target.effectiveFrom),
+  quantity: (a, b) => compareDecimals(a.target.quantity, b.target.quantity),
   status: (a, b) => a.status - b.status,
 };
 

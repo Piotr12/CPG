@@ -24,6 +24,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadConfig } from "../../config";
 import { migrateDatabase, toDbOptions } from "../../database";
+import { formatDecimal, parseDecimal } from "../../domain/quantities/decimal";
 import { inRequestTransaction, retryingStaleSnapshot } from "../../http/request-transaction";
 import { UNIT_NOT_CONVERTIBLE_MESSAGE } from "../../validators/boms/bom-fields.schema";
 import { CORRECTION_TRANSIT_MESSAGE, stockCorrectionSchema } from "../../validators/stock/stock-correction.schema";
@@ -709,6 +710,22 @@ describe("TransferService", () => {
         expect(ids(await service().list({ sort: "plannedDispatch", dir: "desc" }))).toEqual(["00000001", "00000002", "00000004", "00000003"]);
         expect(ids(await service().list({ sort: "status" }))).toEqual(["00000002", "00000001", "00000003", "00000004"]);
         expect(ids(await service().list({ sort: "status", dir: "desc" }))).toEqual(["00000003", "00000004", "00000001", "00000002"]);
+      });
+
+      it("sorts by each stored quantity by its value, not its text, by ID within equal values (#224)", async () => {
+        const em = scoped();
+        const fixed = (text: string) => formatDecimal(parseDecimal(text)!, { fixed: true });
+        const amounts = { "00000001": ["100", "25", "9.5"], "00000002": ["25", "0", "0"], "00000003": ["9.5", "9.5", "0"], "00000004": ["100", "100", "25"] };
+        for (const [code, [quantity, dispatched, received]] of Object.entries(amounts)) {
+          Object.assign(await em.findOneOrFail(Transfer, { code }), { quantity: fixed(quantity), dispatched: fixed(dispatched), received: fixed(received) });
+        }
+        await em.flush();
+        expect(ids(await service().list({ sort: "quantity" }))).toEqual(["00000003", "00000002", "00000001", "00000004"]);
+        expect(ids(await service().list({ sort: "quantity", dir: "desc" }))).toEqual(["00000001", "00000004", "00000002", "00000003"]);
+        expect(ids(await service().list({ sort: "dispatched" }))).toEqual(["00000002", "00000003", "00000001", "00000004"]);
+        expect(ids(await service().list({ sort: "dispatched", dir: "desc" }))).toEqual(["00000004", "00000001", "00000003", "00000002"]);
+        expect(ids(await service().list({ sort: "received" }))).toEqual(["00000002", "00000003", "00000001", "00000004"]);
+        expect(ids(await service().list({ sort: "received", dir: "desc" }))).toEqual(["00000004", "00000001", "00000002", "00000003"]);
       });
 
       it("keeps transfers whose ID, material, source or destination holds every word, ignoring ASCII case, in this tenant only", async () => {

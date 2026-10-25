@@ -63,8 +63,8 @@ export function PlanningParametersTable({ tenant, rows, labels, editable, search
       ),
     },
     { id: "leadTime", header: t.leadTime, kind: "quantity", sortKey: "leadTime", cell: (row) => row.leadTimeDays },
-    { id: "minimum", header: t.minimum, kind: "quantity", priority: 2, cell: (row) => quantity(row.minimumQuantity, row) },
-    { id: "multiple", header: t.multiple, kind: "quantity", priority: 2, cell: (row) => quantity(row.lotMultiple, row) },
+    { id: "minimum", header: t.minimum, kind: "quantity", priority: 2, sortKey: "minimum", cell: (row) => quantity(row.minimumQuantity, row) },
+    { id: "multiple", header: t.multiple, kind: "quantity", priority: 2, sortKey: "multiple", cell: (row) => quantity(row.lotMultiple, row) },
   ];
 
   return (
