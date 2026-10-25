@@ -89,7 +89,7 @@ export interface PlannedPurchaseOrder {
   lines: PlannedPurchaseLine[];
 }
 
-/** A requisition converted in full by one of the anchor month's first purchase orders (BUY-003). */
+/** A requisition converted in full by a purchase order of the last planning run before the anchor month (BUY-003). */
 export interface PlannedRequisition {
   key: string;
   material: string;
@@ -363,7 +363,8 @@ function replenish(
  * The supply side of the dataset as of `anchor` (the month of today): targets, opening balances, and
  * every week's production and purchase orders from the first week of the history to two weeks past
  * the anchor month, planned order-up-to-safety on the stock model, with completions, variances, the
- * waste posting and the requisitions the anchor month's first purchasing run converts.
+ * waste posting and the requisitions the last purchasing run before the anchor month converts, so
+ * they exist on every day of the month.
  */
 export function planSupply(config: TestTenantConfig, demand: DemandPlan, anchor: Month): SupplyPlan {
   const { historyStart } = demand;
@@ -440,7 +441,7 @@ export function planSupply(config: TestTenantConfig, demand: DemandPlan, anchor:
   }
 
   // Purchases: what the week's completions use, plus safety, less stock; one order per supplier, plant and week.
-  const converting = weeks.findIndex((monday) => planningRun(monday) >= monthStart(anchor));
+  const converting = weeks.findLastIndex((monday) => planningRun(monday) < monthStart(anchor));
   const requisitions: PlannedRequisition[] = [];
   const lines = new Map<string, PlannedPurchaseLine[]>();
   for (const pair of pairs.filter(({ procurement }) => procurement === "buy")) {

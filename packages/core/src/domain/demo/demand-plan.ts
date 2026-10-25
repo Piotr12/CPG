@@ -141,11 +141,11 @@ export function seasonOn(profile: readonly number[], date: string): number {
 export function expectedDemandOn(config: TestTenantConfig, date: string, historyStart: string): Map<string, number> {
   const model = modelOf(config);
   const day = model.weekday[isoWeekday(date) - 1] * (1 + model.growth) ** yearsSince(historyStart, date);
-  const seasons = new Map<number[], number>();
+  const seasons = new Map<number, number>();
   const expected = new Map<string, number>();
-  for (const [product, { base, profile }] of model.products) {
-    if (!seasons.has(profile)) seasons.set(profile, seasonOn(profile, date));
-    expected.set(product, base * seasons.get(profile)! * day);
+  for (const [product, { base, typeIndex, profile }] of model.products) {
+    if (!seasons.has(typeIndex)) seasons.set(typeIndex, seasonOn(profile, date));
+    expected.set(product, base * seasons.get(typeIndex)! * day);
   }
   return expected;
 }

@@ -6,9 +6,11 @@ import { initOrm, selectTenant, type Orm } from "@cpg/db";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { DemandReviewService } from "./demand-review.service";
 
-// The demand review's reads on ten times the realistic Test dataset (1,053 goods-issue lines, 988
-// order lines, 120 forecasts, #240): each window query must start from its #240 index (lesson
-// 2026-10-23: EXPLAIN the query MikroORM sends), and a whole read must stay well inside its budget.
+// The demand review's reads on ten times the realistic Test dataset as #240 measured it (1,053
+// goods-issue lines, 988 order lines, 120 monthly forecasts): each window query must start from its
+// #240 index (lesson 2026-10-23: EXPLAIN the query MikroORM sends), and a whole read must stay well
+// inside its budget. The single-site realistic dataset (#237) is daily and larger: 8,277 goods-issue
+// lines, 7,817 order lines and 3,132 forecasts, whose month read takes 84 ms at 1×.
 
 const ISSUES = 10_530;
 const ORDER_LINES = 9_880;

@@ -56,16 +56,15 @@ function checkOpenDocuments(of: TestTenantConfig, today: string, timeline: reado
     .sort((a, b) => a.plannedFinish.localeCompare(b.plannedFinish));
   expect((todays.filter((event) => event.kind === "completion") as Of<"completion">[]).map(({ order }) => order), today).toEqual(inProgress.slice(0, 1).map(({ key }) => key));
 
-  // The overdue top-up and the open requisitions, and the converted ones once the anchor month's first run is under way.
+  // The overdue top-up, the open requisitions, and the converted ones of the last run before the month.
   const topUps = timeline.filter((event) => event.kind === "purchaseOrder" && event.key.startsWith("purchase-order:top-up:"));
   expect(topUps.map(({ at }) => at.slice(0, 10))).toEqual([addWeekdays(today, -3)]);
   const requisitions = timeline.filter((event): event is Of<"requisition"> => event.kind === "requisition");
   expect(requisitions.filter(({ key }) => key.startsWith("requisition:open:")).map(({ at }) => at.slice(0, 10))).toEqual([1, 2, 3].map(() => addWeekdays(today, -2)));
-  let firstRun = monthStart(monthOf(today));
-  while (isoWeekday(firstRun) !== 4) firstRun = addDays(firstRun, 1);
-  expect(requisitions.filter(({ key }) => !key.startsWith("requisition:open:")), today).toHaveLength(addWeekdays(firstRun, -1) < today ? 2 : 0);
+  const converted = requisitions.filter(({ key }) => !key.startsWith("requisition:open:"));
+  expect(converted.map(({ at }) => at < monthStart(monthOf(today))), today).toEqual([true, true]);
   const converting = timeline.flatMap((event) => (event.kind === "purchaseOrder" ? event.lines.filter(({ requisition }) => requisition) : []));
-  expect(converting, today).toHaveLength(firstRun < today ? 2 : 0);
+  expect(converting.map(({ requisition }) => requisition), today).toEqual(converted.map(({ key }) => key));
 
   // The last planning run's orders exist: one purchase order per supplier and the week's production; the online shop's next order is in.
   const run = lastPlanningRun(today);

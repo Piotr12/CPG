@@ -24,6 +24,8 @@ const targetOf = (supply: SupplyPlan, material: string, location = "00000001") =
   supply.safetyTargets.find((target) => target.material === material && target.location === location)!.quantity;
 const pairOf = (supply: SupplyPlan, material: string) => supply.pairs.find((pair) => pair.material === material)!;
 const isFinished = (material: string) => byId(config.catalogue.materials, material)!.type === "finished";
+const expectedUseOf = (of: TestTenantConfig, order: { output: string; quantity: bigint }) =>
+  recipeOf(of, order.output).components.map(({ material, perOutput }) => ({ material, base: scaledRequirement(formatDecimal(perOutput), formatDecimal(order.quantity)) }));
 /** The average D of a SKU per history weekday, in micro-units. */
 const averageDemand = (sku: string) => (BigInt(demand.demand.get(sku)!.slice(0, historyDays).reduce((sum, units) => sum + units, 0)) * ONE) / BigInt(historyDays);
 
@@ -190,6 +192,20 @@ describe("production", () => {
     });
   });
 
+  it("leaves completions with no kg or l component out of the variance count", () => {
+    // Doors made of hinges and a lock only: nothing in kg or l to vary.
+    const fitted = changed((copy) => (copy.catalogue.boms[1].components = copy.catalogue.boms[1].components.slice(1)));
+    const supply = planSupply(fitted, planDemand(fitted, anchor), anchor);
+    const doors = supply.productionOrders.filter(({ output }) => output === "00000015");
+    expect(doors.length).toBeGreaterThan(50);
+    for (const order of doors) expect(order.completions[0].components.map(({ material }) => material)).toEqual(["00000010", "00000011"]);
+    for (const order of doors) expect(order.completions[0].components).toEqual(recipeOf(fitted, "00000015").components.map(({ material, perOutput }) => ({ material, base: scaledRequirement(formatDecimal(perOutput), formatDecimal(order.quantity)) })));
+    // Every other completion counts: the 7th and 11th of them still vary.
+    const counted = supply.productionOrders.filter(({ output }) => output !== "00000015");
+    expect(counted[6].completions.at(-1)!.components).not.toEqual(expectedUseOf(fitted, counted[6]));
+    expect(counted[10].completions.at(-1)!.components).not.toEqual(expectedUseOf(fitted, counted[10]));
+  });
+
   it("posts one zero-output waste completion seven months before the anchor, the weekday before the order's full completion (PRD-018)", () => {
     const wasted = plan.productionOrders.filter(({ completions }) => completions.length > 1);
     expect(wasted.map(({ output, plannedFinish }) => [output, monthOf(plannedFinish) - anchor])).toEqual([["00000021", -7]]);
@@ -225,17 +241,15 @@ describe("purchases", () => {
     expect(plan.purchaseOrders.length).toBeGreaterThan(weeks * 1.9);
   });
 
-  it("raise the converted requisitions' line in the anchor month's first purchasing run to at least a lot multiple (BUY-003)", () => {
-    const run = plan.purchaseOrders.find(({ createdOn }) => createdOn >= "2026-10-01")!;
-    expect(run.createdOn).toBe("2026-10-01");
+  it("raise the converted requisitions' line in the last purchasing run before the anchor month to at least a lot multiple (BUY-003)", () => {
     expect(plan.requisitions.map(({ material, location, createdOn }) => [material, location, createdOn])).toEqual([
-      ["00000001", "00000001", "2026-09-30"],
-      ["00000009", "00000001", "2026-09-30"],
+      ["00000001", "00000001", "2026-09-23"],
+      ["00000009", "00000001", "2026-09-23"],
     ]);
     for (const requisition of plan.requisitions) {
       const order = plan.purchaseOrders.find(({ lines }) => lines.some((line) => line.requisition === requisition.key))!;
       const line = order.lines.find((candidate) => candidate.requisition === requisition.key)!;
-      expect(order).toMatchObject({ week: "2026-10-05", location: requisition.location });
+      expect(order).toMatchObject({ week: "2026-09-28", createdOn: "2026-09-24", location: requisition.location });
       expect(line.base).toBe(requisition.base);
       expect(requisition.requiredDate).toBe(order.plannedDate);
       expect(requisition.base).toBeGreaterThanOrEqual(pairOf(plan, requisition.material).multiple);

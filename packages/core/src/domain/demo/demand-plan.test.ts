@@ -308,11 +308,17 @@ describe("customer orders", () => {
     expect(projects.filter(({ lines }) => lines[0].material === "00000018").map(({ requiredDate }) => requiredDate)).toEqual(["2024-11-27", "2025-11-27"]);
   });
 
-  it("skip a delivery with nothing to order", () => {
-    const quiet = changed((copy) => (copy.demand.types[4].baseDaily = "0.01"));
-    const quietPlan = planDemand(quiet, anchor);
-    expect(quietPlan.orders.some(({ lines }) => lines.some(({ material }) => material === "00000030"))).toBe(false);
-    expect(quietPlan.orders.every(({ lines }) => lines.length > 0)).toBe(true);
+  it("skip a delivery with nothing to order, and a SKU with nothing in its period", () => {
+    const quietWorkshop = planDemand(changed((copy) => (copy.demand.types[4].baseDaily = "0.01")), anchor);
+    expect(quietWorkshop.orders.some(({ lines }) => lines.some(({ material }) => material === "00000030"))).toBe(false);
+    expect(quietWorkshop.orders.every(({ lines }) => lines.length > 0)).toBe(true);
+    const silent = changed((copy) => {
+      for (const type of copy.demand.types) type.baseDaily = "0.01";
+      copy.demand.projects = [];
+    });
+    const silentPlan = planDemand(silent, anchor);
+    expect([...silentPlan.demand.values()].every((series) => series.every((units) => units === 0))).toBe(true);
+    expect(silentPlan.orders).toEqual([]);
   });
 
   it("ship every ninth order in two, 60 % first, and every other one in full on its required date", () => {
