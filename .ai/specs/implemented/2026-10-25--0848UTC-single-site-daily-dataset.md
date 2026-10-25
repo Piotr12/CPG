@@ -1,6 +1,6 @@
 # The realistic Test dataset becomes one plant, five furniture types, two suppliers and daily demand
 
-**Status:** ready. The owner answered Q1–Q14 on #237 on 2026-10-25.
+**Status:** implemented (PR #261). The owner answered Q1–Q14 on #237 on 2026-10-25.
 **Created:** 2026-10-25 08:48 UTC
 **Issue:** #237. It stays open to track the implementation.
 **Amends:** `implemented/2026-10-21--0718UTC-test-tenant-dataset.md` (#126: the shape, the demand and supply model, the forecasts) and `implemented/2026-10-22--0902UTC-test-tenant-two-datasets.md` (#163: what tiny shares with realistic, Q11 below).
@@ -368,10 +368,42 @@ The reset dialog's "takes longer" note on Realistic stays true.
 
 ## ✅ Acceptance criteria
 
-- [ ] A realistic reset writes one location, two suppliers and four customers. It writes 30 materials: 12 finished SKUs in five types, four intermediates, and fourteen raw materials including five paints. It writes 18 BOMs.
-- [ ] Over two years, customer-order lines show a non-zero daily figure from the online shop on most weekdays for the high-volume SKUs, and B2B lumps on their delivery days. The business's yearly total grows by about 10 %. The online shop's quarterly volume grows by about 10 % a quarter and the hardware chain's declines slightly. The monthly totals show each type's season, and no two consecutive weeks are identical.
-- [ ] Forecast rows exist per SKU for the weekdays of the next twelve months, with daily dates and none on weekends.
-- [ ] Production and purchase orders run weekly, from two suppliers in all. No balance goes negative on any day (replay).
-- [ ] Tiny uses the same masters with a two-month history, and the integration suite passes on it.
-- [ ] The realistic reset finishes within the measured budget (≤ 30 s locally), and the run log records the figure.
-- [ ] 100 % coverage, lint, typecheck and build pass.
+- [x] A realistic reset writes one location, two suppliers and four customers. It writes 30 materials: 12 finished SKUs in five types, four intermediates, and fourteen raw materials including five paints. It writes 18 BOMs.
+- [x] Over two years, customer-order lines show a non-zero daily figure from the online shop on most weekdays for the high-volume SKUs, and B2B lumps on their delivery days. The business's yearly total grows by about 10 %. The online shop's quarterly volume grows by about 10 % a quarter and the hardware chain's declines slightly. The monthly totals show each type's season, and no two consecutive weeks are identical.
+- [x] Forecast rows exist per SKU for the weekdays of the next twelve months, with daily dates and none on weekends.
+- [x] Production and purchase orders run weekly, from two suppliers in all. No balance goes negative on any day (replay).
+- [x] Tiny uses the same masters with a two-month history, and the integration suite passes on it.
+- [x] The realistic reset finishes within the measured budget (≤ 30 s locally), and the run log records the figure.
+- [x] 100 % coverage, lint, typecheck and build pass.
+
+## Implementation notes
+
+Implemented by PR #261. The run log is `.ai/pipeline/runs/2026-10-25--1835UTC-single-site-daily-dataset.md`.
+
+**Measured** (local, today 2026-10-21):
+
+- Realistic: 6,322 documents and 17,520 movements.
+  - Over every day of 2025–2027 it peaks at 6,458 and 17,930, within the 12,000 / 20,000 caps.
+  - The reset takes **14.7 s** in the unit-test harness and 15.4 s against the standalone server, within the ≤ 30 s budget. A request sent during the reset is answered in 0.01 s.
+- Tiny: 686 documents and 1,728 movements, seeded in 1.8 s at startup.
+- Demand:
+  - 61.8 units a weekday in the first year, and ×1.103 year over year;
+  - the online shop ×1.0985 a quarter, and the hardware chain ×0.9846 a quarter.
+
+**Decisions made while implementing:**
+
+- **Minimum lots.** Movements came to 19,583 at first, too close to the cap. So the spec's second lever is applied: the seven low-volume colour SKUs got minimum lots of about two weeks' demand, and they are made about every other week. The minimums are now 40 for cabinet blue and white, and for locker 2 blue; 30 for office white and locker 4 blue; 25 for office anthracite; and 20 for workshop red.
+- **Configuration shape.**
+  - `demand.types[]` has no `products` list: each `demand.products` entry names its type, so a SKU's type is stated once.
+  - `catalogue.purchasedIntermediates` is dropped rather than left empty.
+  - `buy.suppliers` became `buy.supplier`, so each material has exactly one supplier (Q4).
+  - `drift.amplitude` bounds the drift: the weekly shocks are averaged with weights 0.7^i, so the drift stays within ±6 %.
+- **Customer streams.** Each day's D goes to the buyers one unit at a time, each unit to the buyer owed the most of its exact running share. The streams sum to D every day, every buyer's running total stays within a unit of its exact share, and no daily stream is negative. Rounding each customer's running total separately can't promise that last point with three buyers.
+- **Projects** recur yearly on their day of the year (`date` is `MM-DD`), delivered on the first weekday on or after it.
+- **Partial receipt.** With Q10's weekly purchasing, orders are created on Thursday and received the next Monday or Tuesday. So no purchase order is open on Wednesdays and Thursdays, and the partially received purchase order of "Today: what is open" exists from Thursday's run to its receipt. That is like the partial completion "whenever one is in progress". **For the owner to confirm:** ordering two weeks ahead would keep one open every day, but changes the Q10 answer.
+- **Converted requisitions** are converted by the purchase orders of the last planning run *before* the anchor month. They therefore exist on every day of the month; tied to the month's first run, they would be missing for up to its first week. Their orders are received early in the month, so those orders are mostly completed.
+- **Supply plan horizon.** It runs two weeks past the anchor month. Past that, its shipments carry on without the weeks that would replenish them, and no timeline of the month reaches those days. The replay proves non-negative balances on every day a timeline holds.
+- **Forecasts** are planned once per anchor month and cut to each day's window: they were 85 % of a generation's time.
+- **`ForecastService.seedDemo`** reads materials and locations in one query each, which took the forecast seed from 0.30 s to 0.06 s. Tiny keeps `forecastMonths: 12`.
+
+**Follow-up:** #262. The demand review's #240 benchmark is stated at ten times the old realistic dataset. At ten times the new volumes its month read takes about 1.2 s against the 300 ms budget; at 1× it takes 84 ms.

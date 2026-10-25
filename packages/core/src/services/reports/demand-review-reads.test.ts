@@ -10,7 +10,8 @@ import { DemandReviewService } from "./demand-review.service";
 // goods-issue lines, 988 order lines, 120 monthly forecasts): each window query must start from its
 // #240 index (lesson 2026-10-23: EXPLAIN the query MikroORM sends), and a whole read must stay well
 // inside its budget. The single-site realistic dataset (#237) is daily and larger: 8,277 goods-issue
-// lines, 7,817 order lines and 3,132 forecasts, whose month read takes 84 ms at 1×.
+// lines, 7,817 order lines and 3,132 forecasts, whose month read takes 84 ms at 1×; re-baselining
+// the budget at ten times that is #262.
 
 const ISSUES = 10_530;
 const ORDER_LINES = 9_880;

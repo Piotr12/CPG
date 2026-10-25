@@ -5,7 +5,7 @@
 **Source doc:** .ai/specs/2026-10-25--0848UTC-single-site-daily-dataset.md
 **Issue:** #237 (stays open: the PR references it without a closing keyword, as the spec asks)
 **Spec PR:** #238 (merged)
-**Status:** in progress
+**Status:** complete (CI pending at the time of writing; see the PR)
 
 ## Goal
 
@@ -73,8 +73,8 @@ Rework the generated Test dataset (`packages/core/src/domain/demo/`) into the si
 ### Phase 3: Seeder, tests and paperwork
 
 - [x] 3.1 ForecastService.seedDemo lookups — 9527bbec
-- [ ] 3.2 Unit and integration tests the dataset moves
-- [ ] 3.3 Paperwork, spec to implemented, lessons
+- [x] 3.2 Unit and integration tests the dataset moves — 590e1cad, 602d3e6c, 6ad63869
+- [x] 3.3 Paperwork, spec to implemented, lessons — see the paperwork commit
 
 ## Log
 
@@ -88,3 +88,18 @@ Rework the generated Test dataset (`packages/core/src/domain/demo/`) into the si
 - Deviation, flagged for the owner: with Q10's weekly purchasing (created Thursday, received the next Monday or Tuesday) no purchase order is open on Wednesdays and Thursdays, so the partially received purchase order of "Today: what is open" exists from Thursday's run to its receipt, five days a week, like the partially completed production order "whenever one is in progress". Ordering two weeks ahead would keep one open every day but changes Q10's answer.
 - Deviation: `demand.types` carries no `products` list; each `demand.products` entry names its type, so a SKU's type is stated once. `catalogue.purchasedIntermediates` is dropped rather than left empty, and `buy.suppliers` became `buy.supplier` (exactly one supplier per material, Q4).
 - Deviation: streams split each day's D by giving each unit to the buyer owed most of its exact share (largest deficit). Every buyer's running total stays within a unit of its exact running share, and no daily stream goes negative, which rounding each customer's running total separately can't promise with three buyers.
+- 2026-10-25 20:30 UTC — Read-only sweep of `tests/integration` (Explore agent) found 33 assertions on the old dataset; all updated. It also found the converted requisitions missing for up to a week after the 1st (tied to the month's first run): moved to the last run before the month, so they exist every day (590e1cad).
+- 2026-10-25 20:40 UTC — Demand review checked on the new data (#240's budget is 300 ms at 10× realistic): 1× realistic month read 84 ms (day 11, week 34); at 10× the new orders and issues the month read is 1,246 ms. Not in this spec's scope: benchmark comment corrected (it keeps #240's fixed volumes) and follow-up **#262** filed.
+- 2026-10-25 21:20 UTC — Integration, local standalone server (Docker unavailable; lessons 2026-10-23/24): the 17 touched files, `test-reset-realistic.test.ts` included, 138/139 passed; the one failure (`forecasts.test.ts` newest-first) fixed and the file re-run on a fresh server: 10/10. The realistic API reset took **15.4 s** on this machine; a Prod write issued 2 s in answered after 13.4 s; `/up` after 0.01 s. Tiny's startup seed: 1.9 s.
+- 2026-10-25 21:40 UTC — Full gate on the final tree: `npm run lint` 0, `npm run typecheck` 0, `npm run test:coverage` 0 (4,577 tests, 100 %), `npm run build` 0.
+
+## Verification
+
+- Unit: `npm run test:coverage`: 4,577 passed, 100 % lines, branches, functions and statements.
+- Integration (local standalone): every touched file passed. The full suite runs in CI on the PR.
+- Measurements: in the Log above and in the spec's implementation notes.
+
+## Follow-ups
+
+- #262: re-baseline the demand review's budget at ten times the single-site realistic dataset.
+- For the owner: the Wednesday/Thursday partial-receipt gap (spec implementation notes, "Partial receipt").
