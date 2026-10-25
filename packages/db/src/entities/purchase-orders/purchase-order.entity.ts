@@ -3,6 +3,7 @@ import { defineEntity, p, type InferEntity } from "@mikro-orm/core";
 import { Location } from "../locations/location.entity";
 import { Supplier } from "../suppliers/supplier.entity";
 import { DOCUMENT_STATES } from "../customer-orders/customer-order.entity";
+import { listSortIndexes } from "../lists/list-sort-indexes";
 import { tenantOwned } from "../tenants/tenant-owned";
 
 /** The shared four-state lifecycle; header status follows the lines. */
@@ -37,8 +38,8 @@ export const PurchaseOrder = defineEntity({
     version: p.integer().version(),
   },
   uniques: [{ properties: ["tenant", "code"] }],
-  /** Serves the location-deactivation guard: the lowest Open order delivering to a location. */
-  indexes: [{ properties: ["tenant", "location", "status", "code"] }],
+  /** Serves the location-deactivation guard: the lowest Open order delivering to a location, then the list's status sorts (#220). */
+  indexes: [{ properties: ["tenant", "location", "status", "code"] }, ...listSortIndexes("purchase_order", ["status"])],
 });
 
 export type PurchaseOrder = InferEntity<typeof PurchaseOrder>;

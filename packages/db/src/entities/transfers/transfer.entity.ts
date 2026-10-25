@@ -3,6 +3,7 @@ import { defineEntity, p, type InferEntity } from "@mikro-orm/core";
 import { Location } from "../locations/location.entity";
 import { Material, MATERIAL_UNIT_MAX } from "../materials/material.entity";
 import { DOCUMENT_STATES } from "../customer-orders/customer-order.entity";
+import { listSortIndexes } from "../lists/list-sort-indexes";
 import { tenantOwned } from "../tenants/tenant-owned";
 
 /** Length of an ISO calendar date, `YYYY-MM-DD`. */
@@ -58,6 +59,8 @@ export const Transfer = defineEntity({
     version: p.integer().version(),
   },
   uniques: [{ properties: ["tenant", "code"] }],
+  /** Serve the list's date and status sorts (#220). */
+  indexes: listSortIndexes("transfer", ["planned_dispatch", "status"]),
 });
 
 export type Transfer = InferEntity<typeof Transfer>;

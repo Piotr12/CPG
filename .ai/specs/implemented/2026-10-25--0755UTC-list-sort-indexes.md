@@ -1,6 +1,6 @@
 # The paged document lists sort by a date or status from an index, not by sorting the whole tenant
 
-**Status:** ready
+**Status:** implemented (PR #235)
 **Created:** 2026-10-25 07:55 UTC
 **Issue:** #220 (follow-up to #217, decision D5 of `.ai/pipeline/runs/2026-10-24--2206UTC-list-sort-search-units/PLAN.md`) · **Design authority:** `.ai/specs/product-brief.md` (A04: best-effort performance, no numeric targets), lesson 2026-10-23 "EXPLAIN the query MikroORM really sends"
 
@@ -100,3 +100,10 @@ Relies on A04 (best-effort performance, no numeric targets), and revisits #217's
 ### Phase 2: paperwork
 
 5. File the Q6 follow-up issue (the purchase order lines' requisition join) and cite its number in the PR. Add a lesson on index direction versus mixed-direction `ORDER BY`. Move this spec to `implemented/`.
+
+## Implementation notes
+
+- **Both directions are `expression` indexes.** The spec planned `properties` for the ascending ones. One helper, `listSortIndexes` in `packages/db/src/entities/lists/list-sort-indexes.ts`, builds all 18, so their names and SQL live in one place. The ascending names are the ones MikroORM would have generated, and the migration and schema diff come out identical.
+- **Step 3 runs `ANALYZE` in the seeded case.** Without statistics SQLite plans by the schema alone, so an empty and a seeded database get the same plan. The seeded case now runs `ANALYZE`, which pins the choice both without statistics (as in production) and with them. The page sizes come from the services' `*_PAGE_SIZE` constants.
+- **Step 4's timings are in the tracking plan** (`.ai/pipeline/runs/2026-10-25--0801UTC-list-sort-indexes.md`, Timings) rather than a separate `timings.md`. At 100,000 documents per list, page 1 of every indexed sort takes 2–14 ms in both directions. Purchase orders are the exception: about 150 ms per page whatever the sort, which #236 tracks (Q6). The migration took 1,027 ms.
+- **A new sort key on a paged list's own column** (for example, the sorts `2026-10-25--0747UTC-list-quantity-and-po-date-sort.md` proposes) gets its indexes by adding the column to that entity's `listSortIndexes(...)` call and a case to `packages/core/src/services/list-sort-indexes.test.ts`. An `ORDER BY` on an expression can't use these indexes.

@@ -52,6 +52,7 @@ describe("migrateDatabase", () => {
       "Migration20261021101252_transfer_reversals",
       "Migration20261023101022_location_guard_indexes",
       "Migration20261023201801_shipment_edit_cancel",
+      "Migration20261025080239_list_sort_indexes",
     ]);
     expect(await migrateDatabase(config)).toEqual([]);
   });
