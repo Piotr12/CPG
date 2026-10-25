@@ -1,5 +1,6 @@
 import { GoodsIssueLine, Shipment, type EntityManager, type ShipmentLine } from "@cpg/db";
 import { ConflictError, NotFoundError } from "../../http/errors";
+import { REFERENCE_BATCH } from "../stock/posted-references";
 
 /*
  * What the shipment service and the goods-issue service (which issues against shipments) both need:
@@ -15,15 +16,16 @@ export async function findShipment(em: EntityManager, code: string, options: { r
 
 /**
  * The IDs of `lines` that any goods issue has ever named (shipment edit spec Q6, Q9): a reversal
- * returns `issued` to zero but never erases the issue (#91). Bounded like `postedOrderLineIds`: 100
- * IDs to a query, at most 100 issue lines read at a time, and a found ID leaves the batch at once.
+ * returns `issued` to zero but never erases the issue (#91). Bounded like `postedReferences`:
+ * `REFERENCE_BATCH` IDs to a query, as many issue lines read at a time, and a found ID leaves the batch
+ * at once.
  */
 export async function postedShipmentLineIds(em: EntityManager, lines: readonly Pick<ShipmentLine, "id">[]): Promise<Set<string>> {
   const posted = new Set<string>();
-  for (let start = 0; start < lines.length; start += 100) {
-    const remaining = new Set(lines.slice(start, start + 100).map(({ id }) => id));
+  for (let start = 0; start < lines.length; start += REFERENCE_BATCH) {
+    const remaining = new Set(lines.slice(start, start + REFERENCE_BATCH).map(({ id }) => id));
     while (remaining.size > 0) {
-      const issues = await em.find(GoodsIssueLine, { shipmentLine: { $in: [...remaining] } }, { fields: ["shipmentLine"], limit: 100, disableIdentityMap: true });
+      const issues = await em.find(GoodsIssueLine, { shipmentLine: { $in: [...remaining] } }, { fields: ["shipmentLine"], limit: REFERENCE_BATCH, disableIdentityMap: true });
       if (issues.length === 0) break;
       for (const { shipmentLine } of issues) {
         posted.add(shipmentLine.id);

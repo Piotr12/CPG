@@ -41,6 +41,12 @@ and empty `KNOWN_WALKS`.
   `count(TransferReversal)` now starts from `transfer_posting` instead of `transfer_reversal`, which only tests
   send. Instrumentation reverted.
 - 18:12 Claimed #257. Full gate green; smoke test against a local standalone server (Docker unavailable).
+- 18:20 PR #260 opened, lock handed to the PR. Independent review (fresh subagent, `om-code-review`): approve, no
+  blocker or major. Three nits fixed: the lesson shortened, with the plan-diff procedure moved to
+  `.ai/lessons/2026-10-25--1825UTC-diff-query-plans-for-a-new-index.md`; `movementSources` takes
+  `Pick<StockMovement, "type" | "postingId">`, so the test's fake transfer postings need no cast;
+  `postedShipmentLineIds` uses `REFERENCE_BATCH` and its doc no longer points at `postedOrderLineIds`.
+  Lint, typecheck, coverage and build re-run green.
 
 ## Changes
 

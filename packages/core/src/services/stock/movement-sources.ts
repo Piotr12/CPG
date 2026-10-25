@@ -28,7 +28,7 @@ export const NO_SOURCE: MovementSource = { id: null, document: null };
  * table's `(tenant, id)` index (#257). A movement is posted by its document's own transaction and
  * neither is ever deleted, so every non-correction movement finds one.
  */
-export async function movementSources(em: EntityManager, movements: StockMovement[]): Promise<Map<string, MovementSource>> {
+export async function movementSources(em: EntityManager, movements: readonly Pick<StockMovement, "type" | "postingId">[]): Promise<Map<string, MovementSource>> {
   const ids = (...types: string[]) => [...new Set(movements.filter((movement) => types.includes(movement.type)).map((movement) => movement.postingId))];
   const sources = new Map<string, MovementSource>();
   const receipts = ids(GOODS_RECEIPT_MOVEMENT);

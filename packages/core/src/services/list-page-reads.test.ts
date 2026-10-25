@@ -45,8 +45,8 @@ async function busiestOrder({ em }: Cradle): Promise<string> {
  * SQLite's guess for a tenant, plus transfer postings, which the Test dataset has none of: a plan
  * needs no rows.
  */
-async function everySource({ em }: Cradle): Promise<StockMovement[]> {
-  const transfers = Array.from({ length: 20 }, () => ({ type: TRANSFER_DISPATCH_MOVEMENT, postingId: randomUUID() }) as StockMovement);
+async function everySource({ em }: Cradle): Promise<Pick<StockMovement, "type" | "postingId">[]> {
+  const transfers = Array.from({ length: 20 }, () => ({ type: TRANSFER_DISPATCH_MOVEMENT, postingId: randomUUID() }));
   return [...(await em.find(StockMovement, {})), ...transfers];
 }
 
