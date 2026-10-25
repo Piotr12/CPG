@@ -147,11 +147,36 @@ describe("physical stock and reasoned corrections (#80)", () => {
     } finally { await api("PATCH", "/api/tenants/prod", adminSecret, { readOnly: false }); }
   });
 
+  it("posts 0.123456 through the ledger and reads it back exactly from the movement, the balance and the audit (MAT-024)", async () => {
+    expect((await stock()).body.data.quantity).toBe("24.000000");
+    const posted = await correction("0.123456", { reason: "Exact decimal count" });
+    expect(posted.status).toBe(200);
+    expect(posted.body.data).toMatchObject({ quantity: "0.123456", enteredQuantity: "0.123456", balanceBefore: "24.000000", balanceAfter: "24.123456" });
+    const read = (await stock()).body.data;
+    expect(read.quantity).toBe("24.123456");
+    expect(read.movements.find(({ id }) => id === posted.body.data.id)).toMatchObject({ quantity: "0.123456", balanceAfter: "24.123456" });
+    expect((await ownAudit()).find((row) => row.after?.postingId === posted.body.data.postingId)?.after).toMatchObject({ movement: "0.123456", quantity: "24.123456" });
+    const back = await correction("-0.123456", { reason: "Exact decimal count reversed" });
+    expect(back.body.data).toMatchObject({ quantity: "-0.123456", balanceAfter: "24.000000" });
+  });
+
   it("locks material type/unit after history and prevents nonzero deactivation until stock is zero (MAT-010/012, LFC-012/016)", async () => {
     expect((await patchMaster("materials", material, { type: "finished" })).body.error.code).toBe("MATERIAL_HAS_MOVEMENTS");
     expect((await patchMaster("materials", material, { baseUnit: "kg" })).body.error.code).toBe("MATERIAL_HAS_MOVEMENTS");
-    expect((await patchMaster("materials", material, { active: false })).body.error.code).toBe("STOCK_NOT_EMPTY");
-    expect((await patchMaster("locations", location, { active: false })).body.error.code).toBe("STOCK_NOT_EMPTY");
+    // The refusal names the blocking material, location and quantity, for both masters (LFC-012, LFC-016).
+    for (const refused of [await patchMaster("materials", material, { active: false }), await patchMaster("locations", location, { active: false })]) {
+      expect([refused.status, refused.body.error.code]).toEqual([409, "STOCK_NOT_EMPTY"]);
+      expect(refused.body.error.params).toEqual({ material, location, quantity: "24.000000", unit: "each" });
+      expect(refused.body.error.message).toBe(`Material ${material} at location ${location} holds 24.000000 each. Clear its stock before deactivation.`);
+    }
+    // On screen, the admin's Deactivate dialog shows the same refusal, and the material stays Active.
+    await admin.open(`${baseUrl}/admin/prod/materials/${material}`);
+    await admin.waitUntil(hydrated(`[...document.querySelectorAll("main button")].find((b) => b.textContent.trim() === "Deactivate")`));
+    await admin.clickRole("button", "Deactivate"); await admin.waitFor("[role=alertdialog]");
+    await admin.click("[role=alertdialog] button[data-variant=destructive-solid]"); await admin.waitFor("[role=alertdialog] [role=alert]");
+    expect(await admin.text("[role=alertdialog] [role=alert]")).toBe(`Material ${material} at location ${location} holds 24.000000 each. Clear its stock before deactivation.`);
+    await admin.clickRole("button", "Cancel"); await admin.waitUntil(`!document.querySelector("[role=alertdialog]")`);
+    expect((await api<{ active: boolean }>("GET", `/api/tenants/prod/materials/${material}`, adminSecret)).body.data.active).toBe(true);
     expect((await correction("-24")).status).toBe(200);
     expect((await patchMaster("materials", material, { baseUnit: "kg" })).body.error.code).toBe("MATERIAL_HAS_MOVEMENTS");
     expect((await patchMaster("locations", location, { active: false })).status).toBe(200);

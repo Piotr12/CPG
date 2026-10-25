@@ -157,6 +157,51 @@ describe("TransferService", () => {
     await expect(service().receive(original.id, kg("1"), ACTOR)).rejects.toMatchObject({ code: "TRANSFER_NOT_OPEN" });
   });
 
+  it("refuses Close Early with 60 dispatched, 50 received and 10 in transit, naming the 10, and changes nothing (TRF-012)", async () => {
+    const original = await created("100", { ...TRANSFER, quantity: "60" });
+    await service().dispatch(original.id, kg("60"), ACTOR);
+    await service().receive(original.id, kg("50"), ACTOR);
+    const partial = await service().get(original.id);
+    expect(partial).toMatchObject({ dispatched: "60.000000", received: "50.000000", inTransit: "10.000000", status: "open" });
+    const audited = await scoped().count(TenantAuditEvent, {});
+
+    await expect(service().closeEarly(original.id, partial.version, ACTOR)).rejects.toMatchObject({
+      code: "TRANSFER_IN_TRANSIT",
+      status: 409,
+      message: "Receive or write off the 10.000000 kg still in transit first.",
+      messageParams: { quantity: "10.000000", unit: "kg" },
+    });
+    expect(await service().get(original.id)).toEqual(partial);
+    expect(await scoped().count(TenantAuditEvent, {})).toBe(audited);
+    expect(await entries("transfers.transfer.closed-early")).toEqual([]);
+  });
+
+  it("takes a 60 kg plan through 55 received and 5 written off to Closed Early, the loss linked in its posting and audit (E2E-009)", async () => {
+    const original = await created("100", { ...TRANSFER, quantity: "60" });
+    expect([await physical(A), await physical(B)]).toEqual(["100.000000", "0.000000"]);
+    await service().dispatch(original.id, kg("60"), ACTOR);
+    await service().receive(original.id, kg("55"), ACTOR);
+    const { posting: loss } = await service().writeOff(original.id, { ...kg("5"), reason: "Crate lost" }, ACTOR);
+    // Every dispatched unit is accounted for, yet the loss keeps it from Completed.
+    const settled = await service().get(original.id);
+    expect(settled).toMatchObject({ inTransit: "0.000000", status: "open" });
+
+    const closed = await service().closeEarly(original.id, settled.version, ACTOR);
+
+    expect(closed).toMatchObject({ status: "closed-early", quantity: "60.000000", dispatched: "60.000000", received: "55.000000", writtenOff: "5.000000",
+      inTransit: "0.000000", abandoned: "5.000000", outstanding: "0.000000" });
+    expect([await physical(A), await physical(B)]).toEqual(["40.000000", "55.000000"]);
+    expect((await service().get(original.id)).postings.find(({ id }) => id === loss.id)).toMatchObject({
+      kind: "write-off", reason: "Crate lost", legs: [{ place: "transit", location: null, quantity: "-5.000000", before: "5.000000", after: "0.000000" }],
+    });
+    expect(await entries("transfers.transfer.written-off")).toEqual([
+      expect.objectContaining({ subjectId: original.id, after: expect.objectContaining({ posting: loss.id, moved: "5.000000", reason: "Crate lost", writtenOff: "5.000000" }) }),
+    ]);
+    expect(await entries("transfers.transfer.closed-early")).toEqual([
+      expect.objectContaining({ subjectId: original.id, after: expect.objectContaining({ status: "closed-early", abandoned: "5.000000", writtenOff: "5.000000" }) }),
+    ]);
+  });
+
   it("never calls a transfer with loss Completed and rolls back closure when audit fails", async () => {
     const original = await created();
     await service().dispatch(original.id, kg("100"), ACTOR);
