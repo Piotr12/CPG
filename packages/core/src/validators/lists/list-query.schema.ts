@@ -36,6 +36,23 @@ export function listSortSchema<Key extends string>(keys: readonly [Key, ...Key[]
   });
 }
 
+/** The English messages of the API's refusals of a list's `sort` and `dir` (#221). */
+export const SORT_KEY_MESSAGE = "Sort by one of this list's columns.";
+export const SORT_DIR_MESSAGE = "Sort direction must be asc or desc.";
+
+/**
+ * The API's `q`, `sort` and `dir` of a list whose keys are `keys` (#221), for a route's query schema.
+ * Strict, unlike `listSortSchema`: a client that misspells a key is told rather than silently given
+ * another order. Missing ones stay missing, so the service applies its own default order.
+ */
+export function listQueryShape<Key extends string>(keys: readonly [Key, ...Key[]]) {
+  return {
+    q: searchSchema,
+    sort: z.enum(keys, SORT_KEY_MESSAGE).optional(),
+    dir: z.enum(SORT_DIRECTIONS, SORT_DIR_MESSAGE).optional(),
+  };
+}
+
 /** What a list service is asked for: a page, an optional search and a sort. */
 export interface ListOptions<Key extends string> {
   page?: number;
