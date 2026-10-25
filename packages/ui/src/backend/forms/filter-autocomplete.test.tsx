@@ -48,6 +48,16 @@ describe("FilterAutocomplete", () => {
     expect(submitted()).toEqual({ location: "" });
   });
 
+  it("starts afresh when remounted with a new key, never taking the previous field's text as its value", () => {
+    const { rerender } = render(<Filter key="00000001" defaultValue="00000001" emptyLabel="Any" />);
+    expect(submitted()).toEqual({ location: "00000001" });
+
+    rerender(<Filter key="" defaultValue="" emptyLabel="Any" />);
+
+    expect((screen.getByRole("combobox", { name: "Location" }) as HTMLInputElement).value).toBe("");
+    expect(submitted()).toEqual({ location: "" });
+  });
+
   it("hydrates over the server's select, keeping a choice made before hydration", async () => {
     const element = <Filter defaultValue="00000001" placeholder="Type an ID or a name" />;
     const container = document.createElement("div");

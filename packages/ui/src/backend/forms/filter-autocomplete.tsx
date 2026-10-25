@@ -38,10 +38,11 @@ const selectLabel = ({ code, name, detail }: AutocompleteOption) => `${code} —
  */
 export function FilterAutocomplete({ id, name, options, defaultValue, emptyLabel, labels, locale, placeholder, className, ...aria }: FilterAutocompleteProps) {
   const hydrated = useSyncExternalStore(noSubscription, onClient, onServer);
-  // On the client this first runs while hydrating, with the server's select still in the document:
-  // it holds what the reader may already have chosen.
+  // While hydrating, the server's select is still in the document and holds what the reader may
+  // already have chosen. A later client mount (a new `key` after a soft navigation) must not read the
+  // element there: it is the previous field's combobox, whose value is a display label (#222).
   const [value, setValue] = useState(() =>
-    typeof document === "undefined" ? defaultValue : (document.getElementById(id) as HTMLSelectElement | null)?.value ?? defaultValue,
+    hydrated || typeof document === "undefined" ? defaultValue : ((document.getElementById(id) as HTMLSelectElement | null)?.value ?? defaultValue),
   );
 
   return (

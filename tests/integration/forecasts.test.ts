@@ -237,6 +237,18 @@ describe("forecasts (E08-S03)", () => {
       [`${plant} fc-ui plant`, "2027-03-01", "25.5 each"],
       [`${plant} fc-ui plant`, "2027-03-02", "40 each"],
     ]);
+
+    // Clear filter is a soft navigation: the remounted fields start empty, and a new filter never
+    // submits the previous field's label as its value (#222 review).
+    await listRows(admin, `/admin/prod/forecasts?material=${cabinet}`);
+    await admin.waitUntil(ready(`document.querySelector('form[aria-label="Filter forecasts"] a[href]')`));
+    await admin.click('form[aria-label="Filter forecasts"] a[href]');
+    await admin.waitUntil(`!location.search.includes("material=")`);
+    await admin.waitUntil(`document.querySelector(${JSON.stringify(filterField("material"))}).value === ""`);
+    await chooseFromList(admin, filterField("location"), packer, packer);
+    await admin.click('form[aria-label="Filter forecasts"] button[type=submit]');
+    await admin.waitUntil(`location.search.includes("location=${packer}")`);
+    expect(await admin.evaluate<string | null>(`new URLSearchParams(location.search).get("material")`)).toBe("");
   });
 
   it("filters without JavaScript: the server sends a select, and the URL it submits narrows the list (#222)", async () => {
@@ -245,6 +257,9 @@ describe("forecasts (E08-S03)", () => {
 
     const html = await read("");
     const form = html.match(/<form[^>]*role="search"[^>]*aria-label="Filter forecasts"[^>]*>[\s\S]*?<\/form>/)?.[0] ?? "";
+    // A plain GET form back to this page: what a browser submits without JavaScript.
+    expect(form).toMatch(/action="\/admin\/prod\/forecasts"/);
+    expect(form).not.toMatch(/method="post"/i);
     expect(form).toMatch(/<select[^>]*name="material"/);
     expect(form).toMatch(/<select[^>]*name="location"/);
     expect(form).toMatch(new RegExp(`<option[^>]* value="${cabinet}">${cabinet} — fc-ui cabinet</option>`));
