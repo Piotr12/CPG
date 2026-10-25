@@ -13,14 +13,14 @@ export const COMPLETION_LINE_COUNT_MESSAGE = `Enter at least 1 and at most ${BOM
 export const DUPLICATE_COMPLETION_MATERIAL_MESSAGE = "This material is already on the completion: enter what was used of it once.";
 /** What the service says, on `components`, when a pinned BOM component is not listed (spec Q4); `params.material` names the missing ones. */
 export const MISSING_COMPONENT_MESSAGE = "Enter what was used of every BOM component, 0 when none was.";
-/** What the service says about an added input of a material the tenant doesn't have. */
+/** What the service says about an extra input of a material the tenant doesn't have. */
 export const UNKNOWN_INPUT_MESSAGE = "There is no such material in this tenant.";
 /** What the service says about consuming an inactive material (spec Q5, Q6). */
 export const INACTIVE_INPUT_MESSAGE = "This material is inactive: production can't consume it.";
 /** What the service says about consuming the order's own output (spec Q5). */
 export const OUTPUT_AS_INPUT_MESSAGE = "The order's output can't also be one of its inputs.";
-/** What the service says about an added input with nothing used. */
-export const EXTRA_INPUT_QUANTITY_MESSAGE = "Enter how much of an added input was used: more than 0.";
+/** What the service says about an extra input with nothing used (#191: the screens have said "Extra" since #153). */
+export const EXTRA_INPUT_QUANTITY_MESSAGE = "Enter how much of an extra input was used: more than 0.";
 /** What the service says, on `submission`, about a dialog token already spent on another order (spec Q7). */
 export const SUBMISSION_REUSED_MESSAGE = "This form was already used to post a completion for another order.";
 /** The most stock movements one completion may post: the ledger's limit for one posting (`stockPostingSchema`). */

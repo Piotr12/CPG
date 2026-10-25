@@ -13,7 +13,7 @@ The original export marked every scenario `Not executed`. Scenarios are updated 
 - **Partially verified**: only part of the scenario can be or is asserted today; the **Evidence** line says which part is missing and why.
 - **Not executed**: not yet built or not yet checked.
 
-Last updated 2026-10-25 for #240: the D08 netting tests move DEM-002…013 from Not executed to Partially verified; each still needs MRP's run (#14). Before that, 2026-10-24 for #200: E2E-020's test now owns both Test generations within one UTC day, and the tiny dataset's unissued shipment is checked on every day of 2025–2027; its status is unchanged. Before that, the same day for E09-S05 (#186): its tests move E2E-017 to Passed (automated) and add evidence to LFC-013. Before that, 2026-10-23 for the second slice 2 closing pass, against `main` at `db50cf07`: the slice 2 rows were rechecked against the tests that PRs #156 (#140), #159 (#142), #161 (#141), #170 (#168), #174 (#153), #177 (#152), #178 (#144), #179 (#138), #181 (#145) and #182 (#147) added. TEN-009, MAT-009, MAT-029, INV-023, LFC-019, API-034, AUD-001 and UX-025 move to Passed (automated), their whole Then now asserted; TRF-012 and BUY-017 go back to Partially verified (no test closes a transfer with 10 of 60 in transit after 50 received; BUY-017's scheduled supply is MRP, #14); SAL-015, E2E-004, E2E-006, E2E-009, E2E-013, E2E-017, E2E-018 and E2E-020 move from Not executed to Partially verified; REV-001, REV-010, SAL-008, SAL-018, AUD-002 and AUD-025 gain the #144 and #147 evidence, and the stale notes of TEN-001, TEN-025, TEN-029, MAT-006, MAT-024, INV-007, DEM-016 and E2E-015 are corrected. The gaps found are filed as #185–#192 and named in each row. Before that, the same day for E11-S04 (#144), against `main` at `8195a0b`: its tests moved LFC-004 and BUY-017 to Passed (automated) (their MRP halves are slice 3, #14) and added evidence to PRD-029. Before that, the same day for E13-S05 (#152), against `main` at `8adea42`: more evidence for AUD-004 and UX-010, whose status is unchanged. Before that, 2026-10-21 for E10-S03 (#143), against `main` at `1882d6a`, whose tests moved LFC-022, BOM-026, BOM-028, BOM-029, UX-013 and E2E-011 to Passed (automated). Before that, the same day: epics E07 (#73), E08 (#74), E09 (#75), E10 (#76), E11 (#77) and E13 (#79), against `main` at `d2300ef` (PRs #102, #104, #107, #108, #109, #111, #112, #114, #118, #119, #120, #123, #125, #130, #133, #135); the gaps found are filed as #139–#145, and #139 (PR #151) closes LFC-018, STX-006 and STX-018. Earlier: epic E05 (#13) against `2a2976a` (PR #99 for E05-S01), plus the tests and the workbook cell limit added with that update; epic E04 (#12) against `082f2d5`; epic E03 (#11) against `3f553a5`, and the E02 end-to-end follow-up (#67); epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
+Last updated 2026-10-25 for #191 (E10-S05): BOM-009, BOM-027, E2E-004 and LFC-015 move to Passed (automated), LFC-025 and LFC-027 to Partially verified (their non-MRP halves), and E2E-015 now waits only on MRP (#14). Before that, the same day for #240: the D08 netting tests move DEM-002…013 from Not executed to Partially verified; each still needs MRP's run (#14). Before that, 2026-10-24 for #200: E2E-020's test now owns both Test generations within one UTC day, and the tiny dataset's unissued shipment is checked on every day of 2025–2027; its status is unchanged. Before that, the same day for E09-S05 (#186): its tests move E2E-017 to Passed (automated) and add evidence to LFC-013. Before that, 2026-10-23 for the second slice 2 closing pass, against `main` at `db50cf07`: the slice 2 rows were rechecked against the tests that PRs #156 (#140), #159 (#142), #161 (#141), #170 (#168), #174 (#153), #177 (#152), #178 (#144), #179 (#138), #181 (#145) and #182 (#147) added. TEN-009, MAT-009, MAT-029, INV-023, LFC-019, API-034, AUD-001 and UX-025 move to Passed (automated), their whole Then now asserted; TRF-012 and BUY-017 go back to Partially verified (no test closes a transfer with 10 of 60 in transit after 50 received; BUY-017's scheduled supply is MRP, #14); SAL-015, E2E-004, E2E-006, E2E-009, E2E-013, E2E-017, E2E-018 and E2E-020 move from Not executed to Partially verified; REV-001, REV-010, SAL-008, SAL-018, AUD-002 and AUD-025 gain the #144 and #147 evidence, and the stale notes of TEN-001, TEN-025, TEN-029, MAT-006, MAT-024, INV-007, DEM-016 and E2E-015 are corrected. The gaps found are filed as #185–#192 and named in each row. Before that, the same day for E11-S04 (#144), against `main` at `8195a0b`: its tests moved LFC-004 and BUY-017 to Passed (automated) (their MRP halves are slice 3, #14) and added evidence to PRD-029. Before that, the same day for E13-S05 (#152), against `main` at `8adea42`: more evidence for AUD-004 and UX-010, whose status is unchanged. Before that, 2026-10-21 for E10-S03 (#143), against `main` at `1882d6a`, whose tests moved LFC-022, BOM-026, BOM-028, BOM-029, UX-013 and E2E-011 to Passed (automated). Before that, the same day: epics E07 (#73), E08 (#74), E09 (#75), E10 (#76), E11 (#77) and E13 (#79), against `main` at `d2300ef` (PRs #102, #104, #107, #108, #109, #111, #112, #114, #118, #119, #120, #123, #125, #130, #133, #135); the gaps found are filed as #139–#145, and #139 (PR #151) closes LFC-018, STX-006 and STX-018. Earlier: epic E05 (#13) against `2a2976a` (PR #99 for E05-S01), plus the tests and the workbook cell limit added with that update; epic E04 (#12) against `082f2d5`; epic E03 (#11) against `3f553a5`, and the E02 end-to-end follow-up (#67); epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
 
 This document contains the complete acceptance catalogue for the CPG MVP. Each test preserves its ID, title, priority, execution channel, and Given / When / Then criteria.
 
@@ -651,9 +651,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### BOM-009 — Highest priority selected when feasible
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** Not yet asserted: the manual order's default selection is #191; MRP's is slice 3 (#14).
+- **Evidence:** `packages/core/src/services/production-orders/production-order.service.test.ts` (with stock for both alternatives neither shows a shortage, priority 1 is preselected, and an order created without a choice pins it; with priority 1 short, priority 2 is preselected). MRP's own selection is slice 3 (#14). E10-S05, #191.
 - **Given:** Two valid alternatives, higher priority stock sufficient
 - **When:** Run MRP or create manual order with default selection
 - **Then:** Higher-priority currently valid BOM revision selected.
@@ -811,9 +811,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### BOM-027 — No mandatory auto-BOM on new Make master
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** Not yet asserted: saving the master without a BOM is #191; MRP's Missing BOM is slice 3 (#14).
+- **Evidence:** `packages/core/src/services/planning-parameters/planning-parameter.service.test.ts` (a new intermediate, its Make set at a location and a later edit of the material are all saved and audited while the tenant has no BOM, and none is created). MRP's Missing BOM is slice 3 (#14). E10-S05, #191.
 - **Given:** Intermediate Make material exists without any BOM
 - **When:** Save master and run MRP
 - **Then:** Master allowed; MRP identifies Missing BOM for affected demand.
@@ -4459,9 +4459,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### LFC-015 — Material deactivation after cleanup
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** Not yet asserted: the deactivation and the unchanged BOM are #191; MRP's choice of parent recipe is slice 3 (#14).
+- **Evidence:** `packages/core/src/services/production-orders/production-order.service.test.ts` (a raw component with no stock, transit or Open document of its own, used by two active BOMs' current revisions, one historic revision and an Open order's pinned revision, is deactivated and audited; the BOMs, both revisions and the order, with its requirement, are unchanged). The new parent order's choice of an eligible alternative is MRP's, slice 3 (#14). E10-S05, #191.
 - **Given:** Material has zero physical/transit stock, no unfinished direct operational documents, but may appear in active/historic BOMs
 - **When:** Admin deactivates material
 - **Then:** Deactivation allowed despite BOM-only references; historic BOM immutable and new MRP parent creation must use eligible alternative or raise inactive-input exception.
@@ -4548,9 +4548,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### LFC-025 — Active BOM dependency alone does not block deactivation
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** Not yet asserted: the audited deactivation and the unchanged BOM are #191; MRP not selecting the recipe is slice 3 (#14).
+- **Evidence:** `packages/core/src/services/production-orders/production-order.service.test.ts` (the same test as LFC-015: the deactivation is allowed and audited as `materials.material.deactivated`, and the BOM is unchanged). MRP not selecting the recipe is slice 3 (#14). E10-S05, #191.
 - **Given:** Raw R is referenced by currently active BOM of F but R has no stock/transit or unfinished direct document
 - **When:** Admin deactivates R
 - **Then:** Allowed, audited; historic BOM unchanged; new MRP must not select the recipe without active R.
@@ -4565,9 +4565,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### LFC-027 — Deactivated BOM-only material risks existing parent production
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** Not yet asserted: the deactivation and the preserved pinned order are #191; MRP's at-risk report is slice 3 (#14).
+- **Evidence:** `packages/core/src/services/production-orders/production-order.service.test.ts` (the same test as LFC-015: the deactivation is allowed, and the Open order keeps its BOM, revision, status, version and requirement). MRP's at-risk report is slice 3 (#14). E10-S05, #191.
 - **Given:** Raw material R has only active BOM references; existing order of finished F pins a recipe using R, and R has no stock/transit or unfinished direct R document
 - **When:** Deactivate R then run MRP
 - **Then:** Deactivation allowed; pinned order preserved; MRP reports F at-risk due to inactive R, excludes prospective F output from dependable planning and never silently auto-replaces it.
@@ -4600,9 +4600,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### E2E-004 — BOM version edit while executing production
 
-**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/production-orders/production-completion.service.test.ts` (:218: after the BOM is revised to revision 2, a completion still expects and stores revision 1's quantities, the order stays on revision 1 and both revisions remain). The scenario's order is partly completed before the revision; no test posts a completion on each side of it (#191). E10-S03, #143.
+- **Evidence:** `packages/core/src/services/production-orders/production-completion.service.test.ts` (a completion of 40 is posted on revision 1, the BOM is revised to revision 2, and the next completion still expects and stores revision 1's quantities; the order stays on revision 1, both completions keep their own lines, and both revisions keep their own components; another test posts after a revision and a deactivation). E10-S03, #143; E10-S05, #191.
 - **Given:** Order pinned revision 1, partially completed; admin changes recipe to revision 2
 - **When:** Post next production completion
 - **Then:** Uses revision 1 expected quantities; historical production and new revision remain distinct.
@@ -4697,7 +4697,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `tests/integration/import-api.test.ts` (a new BOM imported through its import reference gets a permanent ID at revision 1, and a later import makes revision 2 while revision 1 stays), `tests/integration/import.test.ts` (the same on the screen). A production order pins its BOM revision (`production-order.service.test.ts`), but no test creates one from an imported BOM (#191); MRP picking the recipe is slice 3 (#14). E05-S01, #27.
+- **Evidence:** `tests/integration/import-api.test.ts` (a new BOM imported through its import reference gets a permanent ID at revision 1, and a later import makes revision 2 while revision 1 stays), `tests/integration/import.test.ts` (the same on the screen), `packages/core/src/services/imports/import-boms.test.ts` (a production order for the imported BOM's output preselects and pins it at revision 1, and keeps revision 1 and its quantities after a later import makes revision 2). Only MRP picking the recipe remains, slice 3 (#14). E05-S01, #27; E10-S05, #191.
 - **Given:** New logical BOM import references existing materials via temporary Import Reference
 - **When:** Dry run+commit, run MRP for feasible Make, create production order
 - **Then:** Permanent BOM ID and immutable revision created, MRP picks valid recipe and order pins it.

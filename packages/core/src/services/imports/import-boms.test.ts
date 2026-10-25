@@ -114,6 +114,27 @@ describe("new BOMs", () => {
     ]);
   });
 
+  it("pins an imported BOM on a production order, which keeps revision 1 once a later import revises it (E2E-015)", async () => {
+    const lines = (steel: Cell) => sheet("bomLines", line("BOM-X", 1, steel, "kg"), line("BOM-X", 2, 2));
+    const first = [sheet("bomHeaders", header(null, "BOM-X", 4)), lines(4.5)];
+    await kit.commit(first, (await kit.dryRun(first)).previewToken!);
+    const order = { output: "00000004", location: "00000001", quantity: "10", unit: "each", plannedFinish: "2027-02-01" };
+    const created = await kit.write(async ({ locationService, planningParameterService, productionOrderService }) => {
+      await locationService.create({ name: "Main plant" }, ACTOR);
+      await planningParameterService.create({ material: "00000004", location: "00000001", procurement: "make", leadTimeDays: 2, minimumQuantity: "1.000000", lotMultiple: "1.000000" }, ACTOR);
+      expect((await productionOrderService.options(order)).selected).toEqual({ bom: "00000001", revision: 1 });
+      return productionOrderService.create(order, ACTOR);
+    });
+    expect(created).toMatchObject({ id: "00000001", bom: "00000001", revision: 1 });
+
+    const second = [sheet("bomHeaders", header(1, null, 4)), sheet("bomLines", line(1, 1, 6, "kg"), line(1, 2, 2))];
+    await kit.commit(second, (await kit.dryRun(second)).previewToken!);
+    expect((await bom("00000001")).revision).toBe(2);
+    const pinned = await kit.write(({ productionOrderService }) => productionOrderService.get("00000001"));
+    expect(pinned).toMatchObject({ bom: "00000001", revision: 1 });
+    expect(pinned.components.map(({ material, required }) => `${material} ${required}`)).toEqual(["00000001 45.000000", "00000002 20.000000"]);
+  });
+
   it("creates two alternatives in one upload, each with its own lines (XLS-019), or refuses both on a priority clash (XLS-023)", async () => {
     const lines = sheet("bomLines", line("RECIPE-A", 4, 4), line("RECIPE-B", 4, 2), line("RECIPE-B", 2, 8));
     const clash = [sheet("bomHeaders", header(null, "RECIPE-A"), header(null, "RECIPE-B")), lines];
