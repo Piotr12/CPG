@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { defineEntity, p, type InferEntity } from "@mikro-orm/core";
 import { Customer } from "../customers/customer.entity";
 import { Location } from "../locations/location.entity";
+import { listSortIndexes } from "../lists/list-sort-indexes";
 import { tenantOwned } from "../tenants/tenant-owned";
 
 export const DOCUMENT_STATES = ["open", "completed", "closed-early", "cancelled"] as const;
@@ -24,7 +25,7 @@ export const CustomerOrder = defineEntity({
     version: p.integer().version(),
   },
   uniques: [{ properties: ["tenant", "code"] }],
-  /** Serves the location-deactivation guard: the lowest Open order at a location. */
-  indexes: [{ properties: ["tenant", "location", "status", "code"] }],
+  /** Serves the location-deactivation guard: the lowest Open order at a location, then the list's status sorts (#220). */
+  indexes: [{ properties: ["tenant", "location", "status", "code"] }, ...listSortIndexes("customer_order", ["status"])],
 });
 export type CustomerOrder = InferEntity<typeof CustomerOrder>;

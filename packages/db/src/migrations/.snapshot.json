@@ -1267,6 +1267,24 @@
           "unique": false
         },
         {
+          "columnNames": [],
+          "composite": false,
+          "constraint": false,
+          "keyName": "customer_order_tenant_code_status_code_index",
+          "primary": false,
+          "unique": false,
+          "expression": "create index `customer_order_tenant_code_status_code_index` on `customer_order` (`tenant_code`, `status`, `code`)"
+        },
+        {
+          "columnNames": [],
+          "composite": false,
+          "constraint": false,
+          "keyName": "customer_order_tenant_code_status_desc_code_index",
+          "primary": false,
+          "unique": false,
+          "expression": "create index `customer_order_tenant_code_status_desc_code_index` on `customer_order` (`tenant_code`, `status` desc, `code`)"
+        },
+        {
           "columnNames": [
             "id"
           ],
@@ -5231,6 +5249,60 @@
           "keyName": "production_order_tenant_code_output_id_status_index",
           "primary": false,
           "unique": false
+        },
+        {
+          "columnNames": [],
+          "composite": false,
+          "constraint": false,
+          "keyName": "production_order_tenant_code_planned_finish_code_index",
+          "primary": false,
+          "unique": false,
+          "expression": "create index `production_order_tenant_code_planned_finish_code_index` on `production_order` (`tenant_code`, `planned_finish`, `code`)"
+        },
+        {
+          "columnNames": [],
+          "composite": false,
+          "constraint": false,
+          "keyName": "production_order_tenant_code_planned_finish_desc_code_index",
+          "primary": false,
+          "unique": false,
+          "expression": "create index `production_order_tenant_code_planned_finish_desc_code_index` on `production_order` (`tenant_code`, `planned_finish` desc, `code`)"
+        },
+        {
+          "columnNames": [],
+          "composite": false,
+          "constraint": false,
+          "keyName": "production_order_tenant_code_planned_start_code_index",
+          "primary": false,
+          "unique": false,
+          "expression": "create index `production_order_tenant_code_planned_start_code_index` on `production_order` (`tenant_code`, `planned_start`, `code`)"
+        },
+        {
+          "columnNames": [],
+          "composite": false,
+          "constraint": false,
+          "keyName": "production_order_tenant_code_planned_start_desc_code_index",
+          "primary": false,
+          "unique": false,
+          "expression": "create index `production_order_tenant_code_planned_start_desc_code_index` on `production_order` (`tenant_code`, `planned_start` desc, `code`)"
+        },
+        {
+          "columnNames": [],
+          "composite": false,
+          "constraint": false,
+          "keyName": "production_order_tenant_code_status_code_index",
+          "primary": false,
+          "unique": false,
+          "expression": "create index `production_order_tenant_code_status_code_index` on `production_order` (`tenant_code`, `status`, `code`)"
+        },
+        {
+          "columnNames": [],
+          "composite": false,
+          "constraint": false,
+          "keyName": "production_order_tenant_code_status_desc_code_index",
+          "primary": false,
+          "unique": false,
+          "expression": "create index `production_order_tenant_code_status_desc_code_index` on `production_order` (`tenant_code`, `status` desc, `code`)"
         }
       ],
       "checks": [
@@ -5511,6 +5583,24 @@
           "keyName": "purchase_order_tenant_code_location_id_status_code_index",
           "primary": false,
           "unique": false
+        },
+        {
+          "columnNames": [],
+          "composite": false,
+          "constraint": false,
+          "keyName": "purchase_order_tenant_code_status_code_index",
+          "primary": false,
+          "unique": false,
+          "expression": "create index `purchase_order_tenant_code_status_code_index` on `purchase_order` (`tenant_code`, `status`, `code`)"
+        },
+        {
+          "columnNames": [],
+          "composite": false,
+          "constraint": false,
+          "keyName": "purchase_order_tenant_code_status_desc_code_index",
+          "primary": false,
+          "unique": false,
+          "expression": "create index `purchase_order_tenant_code_status_desc_code_index` on `purchase_order` (`tenant_code`, `status` desc, `code`)"
         }
       ],
       "checks": [],
@@ -6277,6 +6367,42 @@
           "keyName": "purchase_requisition_tenant_code_location_id_status_code_index",
           "primary": false,
           "unique": false
+        },
+        {
+          "columnNames": [],
+          "composite": false,
+          "constraint": false,
+          "keyName": "purchase_requisition_tenant_code_required_date_code_index",
+          "primary": false,
+          "unique": false,
+          "expression": "create index `purchase_requisition_tenant_code_required_date_code_index` on `purchase_requisition` (`tenant_code`, `required_date`, `code`)"
+        },
+        {
+          "columnNames": [],
+          "composite": false,
+          "constraint": false,
+          "keyName": "purchase_requisition_tenant_code_required_date_desc_code_index",
+          "primary": false,
+          "unique": false,
+          "expression": "create index `purchase_requisition_tenant_code_required_date_desc_code_index` on `purchase_requisition` (`tenant_code`, `required_date` desc, `code`)"
+        },
+        {
+          "columnNames": [],
+          "composite": false,
+          "constraint": false,
+          "keyName": "purchase_requisition_tenant_code_status_code_index",
+          "primary": false,
+          "unique": false,
+          "expression": "create index `purchase_requisition_tenant_code_status_code_index` on `purchase_requisition` (`tenant_code`, `status`, `code`)"
+        },
+        {
+          "columnNames": [],
+          "composite": false,
+          "constraint": false,
+          "keyName": "purchase_requisition_tenant_code_status_desc_code_index",
+          "primary": false,
+          "unique": false,
+          "expression": "create index `purchase_requisition_tenant_code_status_desc_code_index` on `purchase_requisition` (`tenant_code`, `status` desc, `code`)"
         }
       ],
       "checks": [],
@@ -9426,6 +9552,42 @@
           "keyName": "transfer_tenant_code_index",
           "primary": false,
           "unique": false
+        },
+        {
+          "columnNames": [],
+          "composite": false,
+          "constraint": false,
+          "keyName": "transfer_tenant_code_planned_dispatch_code_index",
+          "primary": false,
+          "unique": false,
+          "expression": "create index `transfer_tenant_code_planned_dispatch_code_index` on `transfer` (`tenant_code`, `planned_dispatch`, `code`)"
+        },
+        {
+          "columnNames": [],
+          "composite": false,
+          "constraint": false,
+          "keyName": "transfer_tenant_code_planned_dispatch_desc_code_index",
+          "primary": false,
+          "unique": false,
+          "expression": "create index `transfer_tenant_code_planned_dispatch_desc_code_index` on `transfer` (`tenant_code`, `planned_dispatch` desc, `code`)"
+        },
+        {
+          "columnNames": [],
+          "composite": false,
+          "constraint": false,
+          "keyName": "transfer_tenant_code_status_code_index",
+          "primary": false,
+          "unique": false,
+          "expression": "create index `transfer_tenant_code_status_code_index` on `transfer` (`tenant_code`, `status`, `code`)"
+        },
+        {
+          "columnNames": [],
+          "composite": false,
+          "constraint": false,
+          "keyName": "transfer_tenant_code_status_desc_code_index",
+          "primary": false,
+          "unique": false,
+          "expression": "create index `transfer_tenant_code_status_desc_code_index` on `transfer` (`tenant_code`, `status` desc, `code`)"
         }
       ],
       "checks": [],

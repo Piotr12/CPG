@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { defineEntity, p, type InferEntity } from "@mikro-orm/core";
 import { BomRevision } from "../boms/bom-revision.entity";
 import { DOCUMENT_STATES } from "../customer-orders/customer-order.entity";
+import { listSortIndexes } from "../lists/list-sort-indexes";
 import { Location } from "../locations/location.entity";
 import { Material } from "../materials/material.entity";
 import { tenantOwned } from "../tenants/tenant-owned";
@@ -34,6 +35,11 @@ export const ProductionOrder = defineEntity({
     version: p.integer().version(),
   },
   uniques: [{ properties: ["tenant", "code"] }],
-  indexes: [{ properties: ["tenant", "location", "status"] }, { properties: ["tenant", "output", "status"] }],
+  indexes: [
+    { properties: ["tenant", "location", "status"] },
+    { properties: ["tenant", "output", "status"] },
+    /** Serve the list's date and status sorts (#220). */
+    ...listSortIndexes("production_order", ["planned_finish", "planned_start", "status"]),
+  ],
 });
 export type ProductionOrder = InferEntity<typeof ProductionOrder>;
