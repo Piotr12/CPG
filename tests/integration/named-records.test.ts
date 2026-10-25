@@ -101,14 +101,36 @@ describe("locations, customers and suppliers (E03-S02)", () => {
   });
 
   it("names a missing customer name before creating anything", async () => {
-    await listRows(admin, "prod", "customers");
+    const before = await listRows(admin, "prod", "customers");
     await admin.waitUntil(ready(button("Create customer")));
     await admin.clickRole("button", "Create customer");
     await admin.click("[role=dialog] button[type=submit]");
 
     await admin.waitForText("Enter a name.");
+    expect(await admin.text("[role=dialog]")).toContain("Enter a name.");
     await admin.clickRole("button", "Cancel");
     await admin.waitUntil(`!document.querySelector("[role=dialog]")`);
+    expect(await listRows(admin, "prod", "customers")).toEqual(before);
+  });
+
+  it("creates a customer in Prod and renames it, with both in the Prod audit (#192)", async () => {
+    const id = await createInProd(admin, "customers", "Create customer", "nr-ui hardware outlet");
+    expect(id).toMatch(/^\d{8}$/);
+    expect((await listRows(admin, "prod", "customers")).find(([rowId]) => rowId === id)).toEqual([id, "nr-ui hardware outlet", "Active"]);
+
+    await rowMenu(admin, id, "Edit");
+    await admin.fillLabel("Name", "nr-ui hardware outlet north");
+    await admin.click("[role=dialog] button[type=submit]");
+    await admin.waitUntil(`!document.querySelector("[role=dialog]")`);
+    await admin.waitForText("nr-ui hardware outlet north");
+    expect((await listRows(admin, "prod", "customers")).find(([rowId]) => rowId === id)).toEqual([id, "nr-ui hardware outlet north", "Active"]);
+
+    expect(await auditOf(admin, `${id} — nr-ui hardware outlet`)).toEqual(
+      expect.arrayContaining([
+        ["Customer renamed", "name: nr-ui hardware outlet → nr-ui hardware outlet north"],
+        ["Customer created", `ID: ${id}\nname: nr-ui hardware outlet\nactive: yes`],
+      ]),
+    );
   });
 
   it("renames a supplier, with the name before and after in the Prod audit (AUD-002)", async () => {

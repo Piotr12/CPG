@@ -13,7 +13,7 @@ The original export marked every scenario `Not executed`. Scenarios are updated 
 - **Partially verified**: only part of the scenario can be or is asserted today; the **Evidence** line says which part is missing and why.
 - **Not executed**: not yet built or not yet checked.
 
-Last updated 2026-10-25 for #191 (E10-S05): BOM-009, BOM-027, E2E-004 and LFC-015 move to Passed (automated), LFC-025 and LFC-027 to Partially verified (their non-MRP halves), and E2E-015 now waits only on MRP (#14). Before that, the same day for #190: TRF-012, E2E-009 and MAT-024 move from Partially verified to Passed (automated), with a 60/50/10 Close Early refusal in the service and on screen, a 60-planned transfer received 55 and written off 5 through the API and closed early on screen, and 0.123456 posted through the ledger; LFC-012 gains the 409 with its material, location and quantity, through the API and the Deactivate dialog, and STX-011 the Stock import screen's dry run. Before that, the same day for #240: the D08 netting tests move DEM-002…013 from Not executed to Partially verified; each still needs MRP's run (#14). Before that, 2026-10-24 for #200: E2E-020's test now owns both Test generations within one UTC day, and the tiny dataset's unissued shipment is checked on every day of 2025–2027; its status is unchanged. Before that, the same day for E09-S05 (#186): its tests move E2E-017 to Passed (automated) and add evidence to LFC-013. Before that, 2026-10-23 for the second slice 2 closing pass, against `main` at `db50cf07`: the slice 2 rows were rechecked against the tests that PRs #156 (#140), #159 (#142), #161 (#141), #170 (#168), #174 (#153), #177 (#152), #178 (#144), #179 (#138), #181 (#145) and #182 (#147) added. TEN-009, MAT-009, MAT-029, INV-023, LFC-019, API-034, AUD-001 and UX-025 move to Passed (automated), their whole Then now asserted; TRF-012 and BUY-017 go back to Partially verified (no test closes a transfer with 10 of 60 in transit after 50 received; BUY-017's scheduled supply is MRP, #14); SAL-015, E2E-004, E2E-006, E2E-009, E2E-013, E2E-017, E2E-018 and E2E-020 move from Not executed to Partially verified; REV-001, REV-010, SAL-008, SAL-018, AUD-002 and AUD-025 gain the #144 and #147 evidence, and the stale notes of TEN-001, TEN-025, TEN-029, MAT-006, MAT-024, INV-007, DEM-016 and E2E-015 are corrected. The gaps found are filed as #185–#192 and named in each row. Before that, the same day for E11-S04 (#144), against `main` at `8195a0b`: its tests moved LFC-004 and BUY-017 to Passed (automated) (their MRP halves are slice 3, #14) and added evidence to PRD-029. Before that, the same day for E13-S05 (#152), against `main` at `8adea42`: more evidence for AUD-004 and UX-010, whose status is unchanged. Before that, 2026-10-21 for E10-S03 (#143), against `main` at `1882d6a`, whose tests moved LFC-022, BOM-026, BOM-028, BOM-029, UX-013 and E2E-011 to Passed (automated). Before that, the same day: epics E07 (#73), E08 (#74), E09 (#75), E10 (#76), E11 (#77) and E13 (#79), against `main` at `d2300ef` (PRs #102, #104, #107, #108, #109, #111, #112, #114, #118, #119, #120, #123, #125, #130, #133, #135); the gaps found are filed as #139–#145, and #139 (PR #151) closes LFC-018, STX-006 and STX-018. Earlier: epic E05 (#13) against `2a2976a` (PR #99 for E05-S01), plus the tests and the workbook cell limit added with that update; epic E04 (#12) against `082f2d5`; epic E03 (#11) against `3f553a5`, and the E02 end-to-end follow-up (#67); epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
+Last updated 2026-10-25 for #192: its tests move UX-009, API-031, AUD-022, E2E-006, E2E-013 and E2E-014 to Passed (automated), and UX-023 and UX-026 from Not executed to Partially verified (their MRP halves are #14). Before that, the same day for #191 (E10-S05): BOM-009, BOM-027, E2E-004 and LFC-015 move to Passed (automated), LFC-025 and LFC-027 to Partially verified (their non-MRP halves), and E2E-015 now waits only on MRP (#14). Before that, the same day for #190: TRF-012, E2E-009 and MAT-024 move from Partially verified to Passed (automated), with a 60/50/10 Close Early refusal in the service and on screen, a 60-planned transfer received 55 and written off 5 through the API and closed early on screen, and 0.123456 posted through the ledger; LFC-012 gains the 409 with its material, location and quantity, through the API and the Deactivate dialog, and STX-011 the Stock import screen's dry run. Before that, the same day for #240: the D08 netting tests move DEM-002…013 from Not executed to Partially verified; each still needs MRP's run (#14). Before that, 2026-10-24 for #200: E2E-020's test now owns both Test generations within one UTC day, and the tiny dataset's unissued shipment is checked on every day of 2025–2027; its status is unchanged. Before that, the same day for E09-S05 (#186): its tests move E2E-017 to Passed (automated) and add evidence to LFC-013. Before that, 2026-10-23 for the second slice 2 closing pass, against `main` at `db50cf07`: the slice 2 rows were rechecked against the tests that PRs #156 (#140), #159 (#142), #161 (#141), #170 (#168), #174 (#153), #177 (#152), #178 (#144), #179 (#138), #181 (#145) and #182 (#147) added. TEN-009, MAT-009, MAT-029, INV-023, LFC-019, API-034, AUD-001 and UX-025 move to Passed (automated), their whole Then now asserted; TRF-012 and BUY-017 go back to Partially verified (no test closes a transfer with 10 of 60 in transit after 50 received; BUY-017's scheduled supply is MRP, #14); SAL-015, E2E-004, E2E-006, E2E-009, E2E-013, E2E-017, E2E-018 and E2E-020 move from Not executed to Partially verified; REV-001, REV-010, SAL-008, SAL-018, AUD-002 and AUD-025 gain the #144 and #147 evidence, and the stale notes of TEN-001, TEN-025, TEN-029, MAT-006, MAT-024, INV-007, DEM-016 and E2E-015 are corrected. The gaps found are filed as #185–#192 and named in each row. Before that, the same day for E11-S04 (#144), against `main` at `8195a0b`: its tests moved LFC-004 and BUY-017 to Passed (automated) (their MRP halves are slice 3, #14) and added evidence to PRD-029. Before that, the same day for E13-S05 (#152), against `main` at `8adea42`: more evidence for AUD-004 and UX-010, whose status is unchanged. Before that, 2026-10-21 for E10-S03 (#143), against `main` at `1882d6a`, whose tests moved LFC-022, BOM-026, BOM-028, BOM-029, UX-013 and E2E-011 to Passed (automated). Before that, the same day: epics E07 (#73), E08 (#74), E09 (#75), E10 (#76), E11 (#77) and E13 (#79), against `main` at `d2300ef` (PRs #102, #104, #107, #108, #109, #111, #112, #114, #118, #119, #120, #123, #125, #130, #133, #135); the gaps found are filed as #139–#145, and #139 (PR #151) closes LFC-018, STX-006 and STX-018. Earlier: epic E05 (#13) against `2a2976a` (PR #99 for E05-S01), plus the tests and the workbook cell limit added with that update; epic E04 (#12) against `082f2d5`; epic E03 (#11) against `3f553a5`, and the E02 end-to-end follow-up (#67); epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
 
 This document contains the complete acceptance catalogue for the CPG MVP. Each test preserves its ID, title, priority, execution channel, and Given / When / Then criteria.
 
@@ -3783,9 +3783,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### API-031 — Global API actions scoped without tenant data leakage
 
-**Priority:** P0 · **Channel:** API · **Status:** Not executed
+**Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
 
-- **Evidence:** Not yet asserted; #192.
+- **Evidence:** `tests/integration/api-users.test.ts` (the admin's token deactivates a user through `PATCH /api/users/{id}`: the Global audit holds `users.user.deactivated` for that user on the API channel with the token's name, `active` yes → no, and both tenants' materials, locations, customers, suppliers, current stock and audit read the same before and after). #192.
 - **Given:** Admin deactivates a user using Global-scoped action
 - **When:** Inspect audit and active tenant records
 - **Then:** Global audit written; tenant business stock/master data unchanged.
@@ -4011,9 +4011,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### AUD-022 — Atomic XLS import
 
-**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/imports/import.service.test.ts` (a commit with a valid row and an invalid one writes neither), `packages/core/src/services/imports/import-boms.test.ts` (a refused BOM workbook applies none of its sheets), `packages/core/src/http/request-savepoint.test.ts` (every row written through the real services rolls back when the commit throws). Tested with small workbooks, not hundreds of rows (#192). A refused commit answers `IMPORT_STALE`; the full list of problems comes from the dry run (XLS-009). Inventory: `packages/core/src/services/imports/stock-import.service.test.ts` (a stock commit of a workbook with errors writes no movement or audit; a failure in a later chunk of 40 rows rolls all of them back), again tens of rows, not hundreds. E05-S01, #27; E07-S02, #81.
+- **Evidence:** `packages/core/src/services/imports/import.service.test.ts` (a commit with a valid row and an invalid one writes neither), `packages/core/src/services/imports/import-boms.test.ts` (a refused BOM workbook applies none of its sheets), `packages/core/src/http/request-savepoint.test.ts` (every row written through the real services rolls back when the commit throws). With hundreds of rows (#192): `import.service.test.ts` commits a 500-row workbook, 450 materials and 51 locations, with one unknown ID at row 400; the dry run reports only that error, on its row and column, and the commit is refused with `IMPORT_STALE`, leaving every material, location and audit entry as before, while the same workbook without that row writes all 501. A refused commit answers `IMPORT_STALE`; the full list of problems comes from the dry run (XLS-009). Inventory: `packages/core/src/services/imports/stock-import.service.test.ts` (a stock commit of a workbook with errors writes no movement or audit; a failure in a later chunk of 40 rows rolls all of them back; 500 stock lines across 20 posting chunks with one line in an unconvertible unit at row 481: the dry run reports only that line, and the commit is refused with `IMPORT_STALE`, posting no movement and changing no balance or audit entry; the clean workbook's commit failing in its last chunk, after 475 lines were posted, rolls them all back; the clean workbook then posts all 500). E05-S01, #27; E07-S02, #81.
 - **Given:** Hundreds of rows with one invalid
 - **When:** Try commit
 - **Then:** No subset of masters/inventory changes; failed operation surfaces all detected validation issues.
@@ -4165,9 +4165,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### UX-009 — Footer present on transaction page
 
-**Priority:** P1 · **Channel:** UI · **Status:** Not executed
+**Priority:** P1 · **Channel:** UI · **Status:** Passed (automated)
 
-- **Evidence:** Not yet asserted; #192.
+- **Evidence:** `tests/integration/footer.test.ts` (a normal user signed in on Prod's Materials and Customer orders pages: the page ends with the exact footnote sentence and both links, each opening in a new tab). #192.
 - **Given:** Authenticated normal user opens operational maintenance
 - **When:** Inspect footer
 - **Then:** Exact footnote sentence and both links present.
@@ -4287,9 +4287,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### UX-023 — No price or accounting workflow
 
-**Priority:** P2 · **Channel:** Both · **Status:** Not executed
+**Priority:** P2 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** Not yet asserted; #192.
+- **Evidence:** `tests/integration/navigation.test.ts` (a normal user's sidebar has no pricing, invoicing, payment, billing, accounting, VAT or currency entry, while it offers Forecasts, Demand review, Production orders, Purchase requisitions and Purchase orders; the help page, which covers the API, names none of them). No order, BOM or posting carries a price: every document test creates them without one. That core planning works without them waits for MRP (#14). #192.
 - **Given:** User browsing main screens and API help
 - **When:** Inspect available functions
 - **Then:** No required invoicing/pricing/payments modules; core planning works without them.
@@ -4314,9 +4314,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### UX-026 — No hard reservation required
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** Not yet asserted: the unreserved goods issue is #192; the next MRP's shortage is slice 3 (#14).
+- **Evidence:** `tests/integration/document-lifecycle.test.ts` (an open production order needs all 100 kg on hand; a goods issue of 10 kg of it posts with 200, with no reservation in the way, and the order then shows 90 kg available and a 10 kg shortage). The next MRP's shortage is slice 3 (#14). #192.
 - **Given:** Planning has outstanding production demand and raw stock exists
 - **When:** Post otherwise valid physical goods issue before production
 - **Then:** No reservation system blocks transaction; next MRP detects resulting shortage.
@@ -4617,9 +4617,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### E2E-006 — Two simultaneous order postings against stock
 
-**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/shipments-api.test.ts` (:217: with 10 in stock, two concurrent issues of 7 are one 200 and one 409 `INSUFFICIENT_STOCK`; stock 3, one goods issue), `packages/core/src/services/goods-issues/goods-issue.service.test.ts` (two connections race: one issue, one movement, stock 3). Both race the same line of one shipment, through one token, where the scenario races two order lines from two sessions, and neither checks the audit (#192). E08-S02, #84.
+- **Evidence:** `tests/integration/shipments-api.test.ts` (with 10 in stock, two order lines of 7 on two orders, each shipped, are issued at once through two accounts' tokens: one 200 and one 409 `INSUFFICIENT_STOCK` naming 3 available; the ledger is the count of 10 and one issue of 7, never below zero, stock 3, and the audit has exactly one `goods-issues.goods-issue.posted` entry, the winner's), and the same file's single-line race (two concurrent issues of 7 on one line: one goods issue, stock 3); `packages/core/src/services/goods-issues/goods-issue.service.test.ts` (two connections race: one issue, one movement, stock 3). E08-S02, #84; #192.
 - **Given:** Site stock 10 with two outstanding order lines for 7 each
 - **When:** Issue both from independent sessions concurrently
 - **Then:** At most one GI succeeds; audit and ledger show physical stock not below zero.
@@ -4677,18 +4677,18 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### E2E-013 — Agent API retry during network failure
 
-**Priority:** P0 · **Channel:** API · **Status:** Partially verified
+**Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/shipments-api.test.ts` (:307: a keyed goods issue of 10 and its same-key retry: the retry is marked replayed with the original issue's ID, stock moves from 100 to 90 once, the shipment has one goods issue; API-020, API-021). The retry's audit isn't counted: no test checks that the replayed issue leaves exactly one `goods-issues.goods-issue.posted` entry (that is asserted for a replayed shipment edit, :328); #192. E08-S02, #84.
+- **Evidence:** `tests/integration/shipments-api.test.ts` (a keyed goods issue of 10 and its same-key retry: the retry is marked replayed with the original issue's ID, stock moves from 100 to 90 once, the shipment has one goods issue, the ledger one goods-issue movement and the audit exactly one `goods-issues.goods-issue.posted` entry for it; API-020, API-021). E08-S02, #84; #192.
 - **Given:** Agent token issues valid GI with idempotency key, response lost
 - **When:** Agent retries within 24h using same key/body then reads stock ledger
 - **Then:** Only one physical issue and matching audit exists, original result returned to agent.
 
 ### E2E-014 — Normal user cannot modify master via agent
 
-**Priority:** P0 · **Channel:** API · **Status:** Not executed
+**Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
 
-- **Evidence:** Not yet asserted; #192.
+- **Evidence:** `tests/integration/shipments-api.test.ts` (a normal user's token is refused a `PATCH` of an existing BOM with 403 `FORBIDDEN`, the BOM and its audit unchanged; the same token's goods issue then posts, and its `goods-issues.goods-issue.posted` entry names the account and the token on the API channel). #192.
 - **Given:** Normal account has valid API token and prod business access
 - **When:** Attempt master BOM edit and then valid customer GI
 - **Then:** BOM edit forbidden; permitted GI succeeds with account/token audit attribution.

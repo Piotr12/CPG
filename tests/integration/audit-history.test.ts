@@ -54,10 +54,56 @@ describe("tracing one record's history in the audit (E13-S03, #96)", () => {
   let location: string;
   let purchase: OrderView;
   let receipt: ReceiptView;
-  let correction: string;
-  let inverse: string;
-  /** The completion and the transfer dispatch the file's normal user reverses (AUD-004, UX-022). */
-  const reversedRecords = { order: "", completion: "", transfer: "", posting: "" };
+  /**
+   * The completion and the transfer dispatch the admin posts and the file's normal user reverses, through
+   * the API (AUD-004, UX-022). Made once, by whichever test needs them first, so no test leans on another
+   * having run (#192).
+   */
+  let reversals: ReturnType<typeof reverseCompletionAndDispatch> | undefined;
+  const reversedRecords = () => (reversals ??= reverseCompletionAndDispatch());
+  async function reverseCompletionAndDispatch() {
+    const bar = (await create<{ id: string }>("materials", { type: "finished", description: `${username} bracket`, baseUnit: "each" })).id;
+    const depot = (await create<{ id: string }>("locations", { name: `${username} depot` })).id;
+    await create("planning-parameters", { material: bar, location, procurement: "make", leadTimeDays: 1, minimumQuantity: "1", lotMultiple: "1" });
+    await create("boms", { output: bar, priority: 1, validFrom: "2026-01-01", validThrough: null, components: [{ material, quantity: "2", unit: "each" }] });
+    await create("stock/corrections", { material, location, quantity: "10", unit: "each", reason: `${username} stock` });
+    const made = await create<ProductionOrderDetail>("production-orders", { output: bar, location, quantity: "2", unit: "each", plannedFinish: "2027-01-05" });
+    const { completion } = await create<CompletionResult>(`production-orders/${made.id}/completions`, {
+      quantity: "2", unit: "each", components: [{ material, quantity: "4", unit: "each" }],
+    });
+    await create(`production-orders/${made.id}/completions/${completion.id}/reverse`, { reason: "History completion twice" }, operatorSecret);
+    const moved = await create<TransferView>("transfers", { material, source: location, destination: depot, quantity: "3", unit: "each", plannedDispatch: "2027-01-05", plannedArrival: "2027-01-06" });
+    const { posting } = await create<{ posting: { id: string } }>(`transfers/${moved.id}/dispatches`, { quantity: "3", unit: "each" });
+    await create(`transfers/${moved.id}/postings/${posting.id}/reverse`, { reason: "History wrong route" }, operatorSecret);
+    return { order: made.id, completion: completion.id, transfer: moved.id, bar, posting: posting.id };
+  }
+  /** The operator's stock correction through the UI, fully reversed there: the correction's movement ID. Made once, like `reversedRecords`. */
+  let uiCorrection: Promise<string> | undefined;
+  const correctedInUi = () => (uiCorrection ??= correctAndReverseInUi());
+  async function correctAndReverseInUi() {
+    // A transactional change through the UI: a stock correction, then its full reversal.
+    await operator.open(`${baseUrl}/admin/prod/stock?material=${material}&location=${location}`);
+    await operator.waitFor("[data-stock-balance]");
+    await operator.waitUntil(hydrated(`document.querySelector("main button:not([type=submit])")`));
+    await operator.clickRole("button", "Post correction");
+    await operator.waitFor("[role=dialog]");
+    await operator.fillLabel("Signed quantity", "3");
+    await operator.fillLabel("Reason", "History count");
+    await operator.click("[role=dialog] button[type=submit]");
+    await operator.waitUntil(`!document.querySelector("[role=dialog]")`);
+    const ledger = await api<StockView>("GET", `/api/tenants/prod/stock?material=${material}&location=${location}`);
+    const correction = ledger.body.data.movements[0].id;
+
+    await operator.open(`${baseUrl}/admin/prod/stock?material=${material}&location=${location}&movement=${correction}`);
+    await operator.waitForText("Selected movement");
+    await operator.waitUntil(hydrated(`document.querySelector('section[aria-label="Selected movement"] button')`));
+    await operator.click('section[aria-label="Selected movement"] button');
+    await operator.waitFor("[role=dialog]");
+    await operator.fillLabel("Reason", "History wrong bin");
+    await operator.clickRole("button", "Reverse full quantity");
+    await operator.waitUntil(`!document.querySelector("[role=dialog]")`);
+    return correction;
+  }
 
   async function api<T>(method: string, endpoint: string, body?: unknown, secret = adminSecret) {
     const response = await callApi(baseUrl, method, endpoint, secret, { body, key: method === "GET" ? undefined : randomUUID() });
@@ -125,27 +171,7 @@ describe("tracing one record's history in the audit (E13-S03, #96)", () => {
   });
 
   it("links a UI correction and its reversal both ways, with UI channel, session, account and reason (AUD-004, AUD-006, REV-020)", async () => {
-    // A transactional change through the UI: a stock correction, then its full reversal.
-    await operator.open(`${baseUrl}/admin/prod/stock?material=${material}&location=${location}`);
-    await operator.waitFor("[data-stock-balance]");
-    await operator.waitUntil(hydrated(`document.querySelector("main button:not([type=submit])")`));
-    await operator.clickRole("button", "Post correction");
-    await operator.waitFor("[role=dialog]");
-    await operator.fillLabel("Signed quantity", "3");
-    await operator.fillLabel("Reason", "History count");
-    await operator.click("[role=dialog] button[type=submit]");
-    await operator.waitUntil(`!document.querySelector("[role=dialog]")`);
-    const ledger = await api<StockView>("GET", `/api/tenants/prod/stock?material=${material}&location=${location}`);
-    correction = ledger.body.data.movements[0].id;
-
-    await operator.open(`${baseUrl}/admin/prod/stock?material=${material}&location=${location}&movement=${correction}`);
-    await operator.waitForText("Selected movement");
-    await operator.waitUntil(hydrated(`document.querySelector('section[aria-label="Selected movement"] button')`));
-    await operator.click('section[aria-label="Selected movement"] button');
-    await operator.waitFor("[role=dialog]");
-    await operator.fillLabel("Reason", "History wrong bin");
-    await operator.clickRole("button", "Reverse full quantity");
-    await operator.waitUntil(`!document.querySelector("[role=dialog]")`);
+    const correction = await correctedInUi();
 
     await openAudit(operator, `/admin/prod/audit?subjectType=StockMovement&subjectId=${correction}`);
     const original = await rows(operator);
@@ -159,7 +185,7 @@ describe("tracing one record's history in the audit (E13-S03, #96)", () => {
     expect(original[1][6]).toMatch(/Reversed by [0-9a-f]{8}$/);
 
     await follow(operator, `main a[title][href*="subjectType=StockMovement"]`, "subjectId=");
-    inverse = new URL(await operator.url()).searchParams.get("subjectId")!;
+    const inverse = new URL(await operator.url()).searchParams.get("subjectId")!;
     expect(inverse).not.toBe(correction);
     const reversal = await rows(operator);
     expect(reversal.map(([, account, , channel, action]) => [account, channel, action])).toEqual([[username, "UI", "Stock movement posted"]]);
@@ -169,27 +195,13 @@ describe("tracing one record's history in the audit (E13-S03, #96)", () => {
   });
 
   it("traces a production completion reversal and a transfer posting reversal to their reason and movements (AUD-004)", async () => {
-    // The file's normal user reverses, through the API, a completion and a transfer dispatch the admin posted.
-    const bar = (await create<{ id: string }>("materials", { type: "finished", description: `${username} bracket`, baseUnit: "each" })).id;
-    const depot = (await create<{ id: string }>("locations", { name: `${username} depot` })).id;
-    await create("planning-parameters", { material: bar, location, procurement: "make", leadTimeDays: 1, minimumQuantity: "1", lotMultiple: "1" });
-    await create("boms", { output: bar, priority: 1, validFrom: "2026-01-01", validThrough: null, components: [{ material, quantity: "2", unit: "each" }] });
-    await create("stock/corrections", { material, location, quantity: "10", unit: "each", reason: `${username} stock` });
-    const made = await create<ProductionOrderDetail>("production-orders", { output: bar, location, quantity: "2", unit: "each", plannedFinish: "2027-01-05" });
-    const { completion } = await create<CompletionResult>(`production-orders/${made.id}/completions`, {
-      quantity: "2", unit: "each", components: [{ material, quantity: "4", unit: "each" }],
-    });
-    await create(`production-orders/${made.id}/completions/${completion.id}/reverse`, { reason: "History completion twice" }, operatorSecret);
-    const moved = await create<TransferView>("transfers", { material, source: location, destination: depot, quantity: "3", unit: "each", plannedDispatch: "2027-01-05", plannedArrival: "2027-01-06" });
-    const { posting } = await create<{ posting: { id: string } }>(`transfers/${moved.id}/dispatches`, { quantity: "3", unit: "each" });
-    await create(`transfers/${moved.id}/postings/${posting.id}/reverse`, { reason: "History wrong route" }, operatorSecret);
-    Object.assign(reversedRecords, { order: made.id, completion: completion.id, transfer: moved.id, posting: posting.id });
+    const { completion, transfer, bar } = await reversedRecords();
     /** The newest movement of a ledger: each reversal's inverse, which names the movement it reverses. */
     const newest = async (of: string) => (await api<StockView>("GET", `/api/tenants/prod/stock?material=${of}&location=${location}`)).body.data.movements[0];
 
     for (const [subject, inverse, reason, action] of [
-      [`subjectType=ProductionCompletion&subjectId=${completion.id}`, await newest(bar), "History completion twice", "Production completion reversed"],
-      [`subjectType=Transfer&subjectId=${moved.id}`, await newest(material), "History wrong route", "Transfer posting reversed"],
+      [`subjectType=ProductionCompletion&subjectId=${completion}`, await newest(bar), "History completion twice", "Production completion reversed"],
+      [`subjectType=Transfer&subjectId=${transfer}`, await newest(material), "History wrong route", "Transfer posting reversed"],
     ] as const) {
       await openAudit(operator, `/admin/prod/audit?${subject}`);
       const [reversed] = await rows(operator);
@@ -210,8 +222,7 @@ describe("tracing one record's history in the audit (E13-S03, #96)", () => {
   });
 
   it("names every field of the reversal entries, and the dispatch's entry records the posting its reversal names (UX-022, #145)", async () => {
-    const { order, completion, transfer, posting } = reversedRecords;
-    expect(completion, "the reversals the AUD-004 test above made").not.toBe("");
+    const { order, completion, transfer, posting } = await reversedRecords();
     await openAudit(operator, `/admin/prod/audit?subjectType=ProductionCompletion&subjectId=${completion}`);
     const [reversed] = await rows(operator);
     // One output and one component: two movements, each with its inverse.
@@ -228,6 +239,8 @@ describe("tracing one record's history in the audit (E13-S03, #96)", () => {
   });
 
   it("filters by account, channel and day on the tenant and the Global audit, and keeps the filters when paging", async () => {
+    // Its correction, reversal and inverse are the operator's UI entries today.
+    await correctedInUi();
     await openAudit(operator, `/admin/prod/audit?account=${username}&channel=ui&from=${utcDay()}&to=${utcDay()}`);
     const ui = await rows(operator);
     expect(ui.length).toBeGreaterThanOrEqual(3);
@@ -285,6 +298,7 @@ describe("tracing one record's history in the audit (E13-S03, #96)", () => {
   });
 
   it("gives a normal user's bearer token the same filtered entries as the screen, with no secret in them (R07, API-014, AUD-028, AUD-029)", async () => {
+    await correctedInUi();
     const query = `account=${username}&subjectType=StockMovement&channel=ui`;
     await openAudit(operator, `/admin/prod/audit?${query}`);
     const screen = await rows(operator);
@@ -306,6 +320,9 @@ describe("tracing one record's history in the audit (E13-S03, #96)", () => {
   });
 
   it("reads in Polish with the recorded facts unchanged (UX-022)", async () => {
+    // Recorded first, on the English screens the fixtures drive.
+    const correction = await correctedInUi();
+    const records = await reversedRecords();
     await choosePreference(operator, "pl");
     await operator.waitUntil(`document.documentElement.lang === "pl"`);
     // Back to English even when an assertion fails, so the next test doesn't read a Polish screen.
@@ -321,15 +338,14 @@ describe("tracing one record's history in the audit (E13-S03, #96)", () => {
       expect(reversed[6]).toMatch(/Odwrócony przez [0-9a-f]{8}$/);
 
       // A completion reversal and a transfer posting reversal: no field shows its stored key (#145).
-      expect(reversedRecords.completion, "the reversals the AUD-004 test above made").not.toBe("");
-      await openAudit(operator, `/admin/prod/audit?subjectType=ProductionCompletion&subjectId=${reversedRecords.completion}`);
+      await openAudit(operator, `/admin/prod/audit?subjectType=ProductionCompletion&subjectId=${records.completion}`);
       const [completion] = await rows(operator);
       expect(completion[4]).toBe("Odwrócono wykonanie produkcji");
       for (const field of ["odwrócenie: — → ", "liczba ruchów: — → 2", "ruch pierwotny 1: — → ", "ruch odwracający 2: — → "]) expect(completion[6]).toContain(field);
       expect(completion[6]).not.toMatch(/movement\d|movements|reversal:/);
-      await openAudit(operator, `/admin/prod/audit?subjectType=Transfer&subjectId=${reversedRecords.transfer}`);
+      await openAudit(operator, `/admin/prod/audit?subjectType=Transfer&subjectId=${records.transfer}`);
       const [posting] = await rows(operator);
-      expect(posting[6]).toContain(`księgowanie: — → ${reversedRecords.posting}`);
+      expect(posting[6]).toContain(`księgowanie: — → ${records.posting}`);
       expect(posting[6]).toContain("rodzaj księgowania: — → wydanie");
       expect(posting[6]).not.toMatch(/posting:|kind:/);
     } finally {
@@ -339,6 +355,7 @@ describe("tracing one record's history in the audit (E13-S03, #96)", () => {
   });
 
   it("keeps every column in view at 1440 × 900, Changes reachable at 1280 × 800, and the form usable at 390 px", async () => {
+    const correction = await correctedInUi();
     const changesHeader = `[...document.querySelectorAll("main thead th")].find((th) => !th.closest("[hidden]") && th.innerText.trim() === "Changes")`;
     await operator.setViewport(1440, 900);
     await openAudit(operator, `/admin/prod/audit?subjectType=StockMovement&subjectId=${correction}`);

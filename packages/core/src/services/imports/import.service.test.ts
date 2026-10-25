@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TEST_DATASET_CONFIGS } from "../../domain/demo/test-datasets";
 import { scopeForTenant } from "../../container/tenant-scope";
 import { generateTestTenantDataset } from "../../domain/demo/generate-dataset";
+import type { Cell } from "../../domain/imports/cells";
 import { prepareImport } from "../../domain/imports/prepare-import";
 import { inRequestTransaction } from "../../http/request-transaction";
 import { TYPE_MESSAGE } from "../../validators/materials/material-fields.schema";
@@ -161,6 +162,59 @@ describe("the dry run and the commit", () => {
     await expect(kit.commit(clean, "b".repeat(64))).rejects.toMatchObject({ code: "IMPORT_STALE" });
     expect(await descriptions()).toEqual(["00000001 Steel sheet", "00000002 Bolt M8"]);
   });
+
+  it("writes no master and no audit when one row of 500, late in the workbook, is invalid, and reports only that row (AUD-022)", async () => {
+    await seedMasters();
+    /**
+     * 450 material rows (sheet rows 2…451: two updates, then creates) and 51 location rows (an
+     * update, then creates). With `invalid`, sheet row 400 names an unknown ID, so 397 rows before
+     * it and every location after it are applied, and must be rolled back.
+     */
+    const workbook = (invalid: boolean) => {
+      const materialRows: Cell[][] = [[1, "raw", "Steel sheet 2 mm", "kg", null], [2, "raw", "Bolt M10", "each", "no"]];
+      for (let row = 4; row <= 451; row++) materialRows.push(invalid && row === 400 ? [9876, "raw", "Rod", "kg", null] : [null, "raw", `Part ${row}`, "kg", null]);
+      const locationRows: Cell[][] = [[1, "Main cave north", null]];
+      for (let row = 3; row <= 52; row++) locationRows.push([null, `Cave ${row}`, null]);
+      return [sheet("materials", ...materialRows), sheet("locations", ...locationRows)];
+    };
+    const locations = () => kit.write(({ locationService }) => locationService.list());
+    const before = { materials: await materials(), locations: await locations(), audits: await kit.auditCount() };
+
+    const report = await kit.dryRun(workbook(true));
+
+    expect(report.errors).toEqual([
+      {
+        sheet: "Materials",
+        row: 400,
+        column: "ID",
+        code: "IMPORT_UNKNOWN_ID",
+        message: "Material 00009876 doesn't exist in Prod. Leave the ID blank to create a new material.",
+        params: { id: "00009876", record: "material" },
+      },
+    ]);
+    expect(report.previewToken).toBeNull();
+    // Every other row was applied in the dry run's savepoint, the location sheet after the error included.
+    expect(report.summary).toEqual([
+      { sheet: "Materials", created: 447, updated: 2, unchanged: 0, errors: 1 },
+      { sheet: "Locations", created: 50, updated: 1, unchanged: 0, errors: 0 },
+    ]);
+
+    // The token of the same workbook without the bad row, as if that row was edited after a clean dry run.
+    const { previewToken } = await kit.dryRun(workbook(false));
+    expect(previewToken).toMatch(/^[0-9a-f]{64}$/);
+    await expect(kit.commit(workbook(true), previewToken!)).rejects.toMatchObject({ code: "IMPORT_STALE", message: IMPORT_STALE_MESSAGE });
+
+    expect(await materials()).toEqual(before.materials);
+    expect(await locations()).toEqual(before.locations);
+    expect(await kit.auditCount()).toBe(before.audits);
+
+    // The control: without the bad row, the same commit writes all 501 rows, each audited (the
+    // deactivation of 00000002 is an entry of its own).
+    await kit.commit(workbook(false), previewToken!);
+    expect(await materials()).toHaveLength(450);
+    expect(await locations()).toHaveLength(51);
+    expect(await kit.auditCount()).toBe(before.audits + 502);
+  }, 30_000);
 
   it("refuses the commit when a record the workbook updates was edited since the dry run, and keeps that edit (XLS-014)", async () => {
     await seedMasters();

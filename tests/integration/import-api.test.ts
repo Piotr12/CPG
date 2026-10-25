@@ -225,9 +225,12 @@ describe("the master-data and BOM import through the API", () => {
     const preview = await dryRun(base64);
     const elapsed = Math.round(performance.now() - started);
 
-    console.log(`2,000-row dry run: ${elapsed} ms`);
+    // Straight to stdout: Vitest drops a passing test's console output.
+    process.stdout.write(`2,000-row dry run: ${elapsed} ms\n`);
     expect(preview.errors).toEqual([]);
     expect(preview.rows).toHaveLength(2000);
-    expect(elapsed).toBeLessThan(5000);
+    // CI measured about 2.6 s; the bound keeps 4× headroom on shared runners (#192) and still catches the
+    // 17.9 s the dry run took before the identity map was cleared after every row.
+    expect(elapsed).toBeLessThan(12_000);
   });
 });

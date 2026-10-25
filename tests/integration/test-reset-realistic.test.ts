@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { proxyResponseTimeoutSeconds } from "../deploy-config";
-import { allPages, callApi, json } from "./api";
+import { allPages, callApi, json, untilOk } from "./api";
 import { clickHydrated, openBrowser, type Browser } from "./browser";
 import { signInAsAdmin } from "./sign-in";
 import { createToken, openTokens } from "./tokens";
@@ -82,14 +82,20 @@ describe("the realistic Test dataset, written by an API reset", () => {
   }, 180_000);
   afterAll(async () => {
     try {
-      if (secret) {
-        expect((await reset({})).status).toBe(200);
-        const tokens = json(await api("GET", "/api/tokens")).data as { id: string; name: string }[];
-        const own = tokens.find(({ name }) => name === TOKEN);
-        if (own) await api("DELETE", `/api/tokens/${own.id}`, { key: randomUUID() });
-      }
-    } finally { await admin.close(); }
-  }, 60_000);
+      // Retried once; a restore that still fails fails this file with the reason, since the files after it
+      // on the shard would otherwise run on the realistic dataset and fail far from the cause (#192).
+      if (secret) await untilOk("Restoring the tiny Test dataset failed, so the files after this one run on the realistic one", () => reset({}));
+    } finally {
+      // The token is revoked and the browser closed whether or not the restore worked.
+      try {
+        if (secret) {
+          const tokens = json(await api("GET", "/api/tokens")).data as { id: string; name: string }[];
+          const own = tokens.find(({ name }) => name === TOKEN);
+          if (own) await api("DELETE", `/api/tokens/${own.id}`, { key: randomUUID() });
+        }
+      } finally { await admin.close(); }
+    }
+  }, 120_000);
 
   it("writes two years of customer orders, many pages of them, and audits the reset as realistic (TEN-022, AUD-013)", async () => {
     const orders = await allPages(async (page) => json(await api("GET", `/api/tenants/test/customer-orders?page=${page}`)).data as { id: string; status: string }[]);
@@ -152,7 +158,7 @@ describe("the realistic Test dataset, written by an API reset", () => {
     for (const { source } of completions) expect(source).toMatch(/^Production order \d{8} Production completion \S+$/);
   });
 
-  it("pages a finished product's two-year ledger, back to the dataset's opening balance (UX-017)", async () => {
+  it("pages a finished product's two-year ledger, back to the dataset's opening balance", async () => {
     // The red cabinet at the main plant: a completion and its customers' goods issues every month, well over a page.
     const pair = "material=00000005&location=00000001";
     const { movementCount } = json(await api("GET", `/api/tenants/test/stock?${pair}`)).data as { movementCount: number };

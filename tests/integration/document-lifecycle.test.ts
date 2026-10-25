@@ -108,6 +108,67 @@ describe("document cancellation and early closure", () => {
     for (const [concept, document] of documents) expect(cancelled(concept, document.id), concept).toHaveLength(1);
   });
 
+  it("posts a goods issue of stock an open production order needs, with no reservation in the way, and the order then shows the shortage (UX-026)", async () => {
+    await correct();
+    // A production order needing every kg on hand: 100 each at 1 kg each.
+    const made = await create("production-orders", { output, location, quantity: "100", unit: "each", plannedFinish: "2027-01-02" });
+    expect((await get("production-orders", made.id)).components).toEqual([
+      expect.objectContaining({ material, required: "100.000000", available: "100.000000", shortage: "0.000000" }),
+    ]);
+    try {
+      const order = await co();
+      const shipment = await create("shipments", { customerOrder: order.id, plannedDate: "2027-01-02", lines: [{ orderLine: order.lines[0].id, quantity: "10", unit: "kg" }] });
+
+      const issued = await write(`${root}/goods-issues`, { shipment: shipment.id, lines: [{ line: 1, quantity: "10", unit: "kg" }] });
+      expect(issued.status, issued.text).toBe(200);
+      expect((await stock()).quantity).toBe("90.000000");
+      // The order still plans the whole 100 and now shows the 10 kg the issue took; the next MRP run
+      // reports it as a shortage (slice 3, #14).
+      expect(await get("production-orders", made.id)).toMatchObject({
+        status: "open", outstanding: "100.000000",
+        components: [expect.objectContaining({ material, required: "100.000000", available: "90.000000", shortage: "10.000000" })],
+      });
+    } finally {
+      // The later tests plan from this file's stock: leave no open order needing it.
+      expect((await write(`${root}/production-orders/${made.id}/cancel`, { version: (await get("production-orders", made.id)).version })).status).toBe(200);
+    }
+  });
+
+  // Customer orders and transfers are closed over the API above and in production-transfer-reversals.test.ts (#192).
+  it("closes a part-received purchase order, a part-converted requisition and a part-made production order early over the API, audited once, refusing the stale version", async () => {
+    await correct();
+    const order = await po();
+    await create("goods-receipts", { purchaseOrder: order.id, lines: [{ line: 1, quantity: "4", unit: "kg" }] });
+    const source = await requisition();
+    await create("purchase-orders", { supplier, location, lines: [{ material, quantity: "4", unit: "kg", plannedDate: "2027-01-02", requisition: source.id }] });
+    const made = await production();
+    expect((await write(`${root}/production-orders/${made.id}/completions`, { quantity: "4", unit: "each", components: [{ material, quantity: "4", unit: "kg" }] })).status).toBe(200);
+
+    for (const [concept, id, subjectType, remainder] of [
+      ["purchase-orders", order.id, "PurchaseOrder", { lines: [{ status: "closed-early", received: "4.000000", abandoned: "6.000000" }] }],
+      ["purchase-requisitions", source.id, "PurchaseRequisition", { converted: "4.000000", abandoned: "6.000000", outstanding: "0.000000" }],
+      ["production-orders", made.id, "ProductionOrder", { produced: "4.000000", abandoned: "6.000000", outstanding: "0.000000" }],
+    ] as const) {
+      const path = `${root}/${concept}/${id}/close-early`;
+      const loaded = await get(concept, id);
+      const closed = await write(path, { version: loaded.version });
+      expect(closed.status, closed.text).toBe(200);
+      expect(json(closed).data, concept).toMatchObject({ id, status: "closed-early", ...remainder });
+      expect(await get(concept, id), concept).toMatchObject({ status: "closed-early", ...remainder });
+
+      const stale = await write(path, { version: loaded.version });
+      expect(stale.status, concept).toBe(409);
+      expect(json(stale).error.code, concept).toBe("VERSION_CONFLICT");
+
+      const entries = json(await api("GET", `${root}/audit?subjectType=${subjectType}&subjectId=${id}`)).data.entries as {
+        action: string; channel: string; actor: { username: string }; token: { name: string } | null; after: Record<string, unknown> | null;
+      }[];
+      const closures = entries.filter(({ action }) => action === `${concept}.${concept.slice(0, -1)}.closed-early`);
+      expect(closures, concept).toHaveLength(1);
+      expect(closures[0], concept).toMatchObject({ channel: "api", actor: { username: "lifecycle-lee" }, token: { name: "lifecycle-user" } });
+    }
+  });
+
   it("closes a partly converted requisition from its row and preserves the purchase order", async () => {
     const source = await requisition();
     const order = await create("purchase-orders", { supplier, location, lines: [{ material, quantity: "4", unit: "kg", plannedDate: "2027-01-02", requisition: source.id }] });

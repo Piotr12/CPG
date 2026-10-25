@@ -26,6 +26,27 @@ export async function callApi(
 
 export const json = (response: { text: string }) => JSON.parse(response.text);
 
+/**
+ * Calls `call` until it answers 200, at most `attempts` times, and returns that answer. Otherwise throws
+ * `what` with every failed answer or error, so a cleanup that must not fail silently (the realistic
+ * restore in `test-reset-realistic.test.ts`, #192) fails its file with the reason.
+ */
+export async function untilOk(what: string, call: () => Promise<ApiResponse>, attempts = 2, pauseMs = 2_000): Promise<ApiResponse> {
+  const failures: string[] = [];
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    // A pause before each retry, so a server still busy with the first attempt can finish.
+    if (attempt > 1) await new Promise((resolve) => setTimeout(resolve, pauseMs));
+    try {
+      const response = await call();
+      if (response.status === 200) return response;
+      failures.push(`attempt ${attempt}: HTTP ${response.status} ${response.text.slice(0, 300)}`);
+    } catch (error) {
+      failures.push(`attempt ${attempt}: ${String(error)}`);
+    }
+  }
+  throw new Error(`${what}: ${failures.join("; ")}`);
+}
+
 /** How many rows one page of a paged tenant list holds (`?page=N`): `DOCUMENT_PAGE_SIZE` and its siblings in `@cpg/core`. */
 export const LIST_PAGE_SIZE = 100;
 

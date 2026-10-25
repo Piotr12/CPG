@@ -106,8 +106,10 @@ describe("the demand review in the UI", () => {
     await clickHydrated(admin, `main a[aria-label="Show the earlier window"]`);
     await admin.waitUntil(`location.search.includes("offset=-1")`);
     await admin.waitForText("In this window:");
+    expect(new URL(await admin.url()).searchParams.get("offset")).toBe("-1");
     await clickHydrated(admin, `main a[aria-label="Show the later window"]`);
     await admin.waitUntil(`!location.search.includes("offset")`);
     await admin.waitForText("Last 13 weeks:");
+    expect(new URL(await admin.url()).searchParams.has("offset")).toBe(false);
   });
 });

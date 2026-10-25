@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { allPages, LIST_PAGE_SIZE } from "./integration/api";
+import { allPages, LIST_PAGE_SIZE, untilOk, type ApiResponse } from "./integration/api";
 
 /** A list of `count` numbered rows served `LIST_PAGE_SIZE` to a page, recording the pages asked for. */
 const pagedList = (count: number) => {
@@ -33,5 +33,42 @@ describe("allPages", () => {
     const list = pagedList(2 * LIST_PAGE_SIZE);
     expect(await allPages(list.readPage)).toEqual(list.rows);
     expect(list.requested).toEqual([1, 2, 3]);
+  });
+});
+
+// The realistic Test reset's restore (tests/integration/test-reset-realistic.test.ts, #192).
+describe("untilOk", () => {
+  const answer = (status: number, text = "{}"): ApiResponse => ({ status, replayed: null, text });
+  /** A call that gives the outcomes in turn, counting how often it is made. */
+  const calls = (...outcomes: (ApiResponse | Error)[]) => {
+    const made = { count: 0 };
+    const call = async () => {
+      const outcome = outcomes[made.count++];
+      if (outcome instanceof Error) throw outcome;
+      return outcome;
+    };
+    return { made, call };
+  };
+
+  it("returns the first 200 without calling again", async () => {
+    const { made, call } = calls(answer(200, "first"), answer(200, "second"));
+    expect((await untilOk("restore", call, 2, 0)).text).toBe("first");
+    expect(made.count).toBe(1);
+  });
+
+  it("retries a refusal or a dropped connection once, and returns the 200 that follows", async () => {
+    for (const first of [answer(503, "busy"), new Error("ECONNRESET")]) {
+      const { made, call } = calls(first, answer(200, "restored"));
+      expect((await untilOk("restore", call, 2, 0)).text).toBe("restored");
+      expect(made.count).toBe(2);
+    }
+  });
+
+  it("throws naming every failed attempt once they are used up", async () => {
+    const { made, call } = calls(answer(409, '{"error":"stale"}'), new Error("ECONNRESET"));
+    await expect(untilOk("Restoring Test failed", call, 2, 0)).rejects.toThrow(
+      'Restoring Test failed: attempt 1: HTTP 409 {"error":"stale"}; attempt 2: Error: ECONNRESET',
+    );
+    expect(made.count).toBe(2);
   });
 });

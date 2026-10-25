@@ -76,6 +76,32 @@ describe("forecasts (E08-S03)", () => {
     await admin.clickRole("menuitem", item);
   }
 
+  /**
+   * The file's three forecasts, added through the Add dialog by the first test that needs them, and the
+   * change and removal made from their row menus: memoized, so no test leans on another having run (#192).
+   */
+  let adding: Promise<void> | undefined;
+  const threeForecasts = () => (adding ??= (async () => {
+    await addForecast(plant, "2027-03-02", "40");
+    await admin.waitUntil(closed);
+    await addForecast(plant, "2027-03-01", "25.5");
+    await admin.waitUntil(closed);
+    await addForecast(packer, "2027-03-01", "7");
+    await admin.waitUntil(closed);
+  })());
+  let editing: Promise<void> | undefined;
+  const changedAndRemoved = () => (editing ??= (async () => {
+    await threeForecasts();
+    await rowMenu("2027-03-02", "Change forecast");
+    await admin.fill("[role=dialog] input[name=quantity]", "50");
+    await admin.click("[role=dialog] button[type=submit]");
+    await admin.waitUntil(closed);
+    await rowMenu("2027-03-01", "Remove");
+    await admin.waitFor("[role=alertdialog]");
+    await admin.click("[role=alertdialog] button[data-variant=destructive-solid]");
+    await admin.waitUntil(`!document.querySelector("[role=alertdialog]")`);
+  })());
+
   beforeAll(async () => {
     [admin, una] = [openBrowser(), openBrowser()];
     await signInAsAdmin(admin, baseUrl, adminPassword);
@@ -171,12 +197,7 @@ describe("forecasts (E08-S03)", () => {
   });
 
   it("adds forecasts without a customer, in any unit the material converts, and lists the quantity per day", async () => {
-    await addForecast(plant, "2027-03-02", "40");
-    await admin.waitUntil(closed);
-    await addForecast(plant, "2027-03-01", "25.5");
-    await admin.waitUntil(closed);
-    await addForecast(packer, "2027-03-01", "7");
-    await admin.waitUntil(closed);
+    await threeForecasts();
 
     expect(await mine()).toEqual([
       [`${plant} fc-ui plant`, "2027-03-01", "25.5 each"],
@@ -186,6 +207,7 @@ describe("forecasts (E08-S03)", () => {
   });
 
   it("refuses a second forecast for the same material, location and day, next to the form (D04)", async () => {
+    await threeForecasts();
     await addForecast(plant, "2027-03-02", "99");
     await admin.waitForText("This material already has a forecast at that location on that day.");
     await admin.clickRole("button", "Cancel");
@@ -197,8 +219,10 @@ describe("forecasts (E08-S03)", () => {
   it("shows a unit the material doesn't convert as a field error (MAT-023)", async () => {
     await addForecast(plant, "2027-03-05", "1", "pallet");
     await admin.waitForText("This material has no conversion from this unit to its base unit.");
+    expect(await admin.text("[role=dialog]")).toContain("This material has no conversion from this unit to its base unit.");
     await admin.clickRole("button", "Cancel");
     await admin.waitUntil(closed);
+    expect((await mine()).filter(([, date]) => date === "2027-03-05")).toEqual([]);
   });
 
   it("filters the list by material and location to show per-day quantities, typed and chosen with Enter (#222)", async () => {
@@ -206,6 +230,7 @@ describe("forecasts (E08-S03)", () => {
     const shown = async () =>
       (await admin.evaluate<string[][]>(`[...document.querySelectorAll("main tbody tr")].map((row) => [...row.cells].map((cell) => cell.innerText.trim().replace(/\\s+/g, " ")))`))
         .filter(([material]) => material.endsWith("fc-ui cabinet")).map((row) => row.slice(1, 4));
+    await threeForecasts();
     await listRows(admin, "/admin/prod/forecasts");
     await admin.waitUntil(ready(`document.querySelector(${JSON.stringify(filterField("location"))})`));
     await chooseFromList(admin, filterField("material"), "fc-ui cabinet", cabinet);
@@ -252,6 +277,7 @@ describe("forecasts (E08-S03)", () => {
   });
 
   it("filters without JavaScript: the server sends a select, and the URL it submits narrows the list (#222)", async () => {
+    await threeForecasts();
     const cookie = (await admin.cookies()).map(({ name, value }) => `${name}=${value}`).join("; ");
     const read = async (query: string) => (await fetch(`${baseUrl}/admin/prod/forecasts${query}`, { headers: { cookie } })).text();
 
@@ -273,20 +299,13 @@ describe("forecasts (E08-S03)", () => {
   });
 
   it("changes a quantity, also from another unit, and removes a forecast, from each row's menu", async () => {
-    await rowMenu("2027-03-02", "Change forecast");
-    await admin.fill("[role=dialog] input[name=quantity]", "50");
-    await admin.click("[role=dialog] button[type=submit]");
-    await admin.waitUntil(closed);
+    await changedAndRemoved();
     expect((await mine()).find(([, date]) => date === "2027-03-02")).toEqual([`${plant} fc-ui plant`, "2027-03-02", "50 each"]);
-
-    await rowMenu("2027-03-01", "Remove");
-    await admin.waitFor("[role=alertdialog]");
-    await admin.click("[role=alertdialog] button[data-variant=destructive-solid]");
-    await admin.waitUntil(`!document.querySelector("[role=alertdialog]")`);
     expect((await mine()).filter(([location]) => location.startsWith(plant)).map(([, date]) => date)).toEqual(["2027-03-02"]);
   });
 
   it("records a change with before and after and a removal in the Prod audit (AUD-002, AUD-005)", async () => {
+    await changedAndRemoved();
     await admin.open(`${baseUrl}/admin/prod/audit`);
     await admin.waitFor("table");
     const rows = await admin.evaluate<string[][]>(
