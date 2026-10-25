@@ -1,5 +1,5 @@
 /** The name of the index that serves a list sorted by `column` in `dir`, then by business ID ascending. */
-export function listSortIndexName(table: string, column: string, dir: "asc" | "desc"): string {
+function listSortIndexName(table: string, column: string, dir: "asc" | "desc"): string {
   return `${table}_tenant_code_${column}${dir === "desc" ? "_desc" : ""}_code_index`;
 }
 

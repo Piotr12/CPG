@@ -12,7 +12,7 @@ Every date and status sort of a paged document list, in both directions, reads i
 
 ## Scope
 
-- `packages/db`: 18 index declarations on `production_order`, `purchase_order`, `purchase_requisition`, `customer_order` and `transfer`, plus one migration, `list_sort_indexes`. The ascending indexes use `properties`; the descending ones use an `expression` (the spec's Proposed Solution explains why).
+- `packages/db`: 18 index declarations on `production_order`, `purchase_order`, `purchase_requisition`, `customer_order` and `transfer`, plus one migration, `list_sort_indexes`. Both directions are `expression` indexes, built by one helper, `listSortIndexes` (`db/src/entities/lists/`); the spec's Proposed Solution explains why the descending ones must be.
 - Tests: a migration test in `packages/db`, a plan test in `packages/core/src/services/`, and the migration counts that move.
 
 **Non-goals:** search (FTS), keyset paging, the page count, sorts by a reference's ID, forecasts, the masters' lists, and the purchase-order lines' requisition join (spec Q6; filed as its own issue).
@@ -24,16 +24,16 @@ Every date and status sort of a paged document list, in both directions, reads i
 1. Declare the indexes, generate the migration, and check that it contains only `create index` / `drop index`. Update the migration lists and counts (`orm.test.ts`, `core/src/database.test.ts`, `system-status.service.test.ts`, `smoke.test.ts`, rollback-by-count tests).
 2. Migration test: a populated upgrade keeps rows, the 18 indexes exist, the schema diff is empty for the five tables, and down drops them.
 3. Plan test: for each key and direction, the real service query reads through the named index with no `TEMP B-TREE`, on an empty and on a seeded database.
-4. Timings at 100,000 documents per list, before and after the migration, plus how long the migration takes → `timings.md` beside this plan (evidence, not a test).
+4. Timings at 100,000 documents per list, before and after the migration, plus how long the migration takes, in this plan's Timings section (evidence, not a test).
 
 ### Phase 2: paperwork
 
 5. File the Q6 follow-up issue, and add the lesson on index direction for mixed-direction `ORDER BY` and on `expression` desc indexes.
-6. Move the spec to `implemented/` once spec PR #234 has merged (merge `main` first).
+6. Move the spec to `implemented/` once spec PR #234 has merged (merge `main` first). Add implementation notes for the three deviations recorded in the log: both directions are expressions, the timings live in this plan, and the seeded plan-test case runs `ANALYZE`.
 
 ## Risks
 
-- The planner may pick another plan on the seeded database than on an empty one. The test pins both.
+- With statistics the planner could pick another plan. The seeded plan-test case runs `ANALYZE`, so the test pins the plan both without statistics (as in production) and with them.
 - The spec move depends on #234 merging first (precedent #204 → #207).
 
 ## Log
@@ -43,6 +43,8 @@ Every date and status sort of a paged document list, in both directions, reads i
 - 08:30 — 1.2/1.3: mutation checks. With `columns: [{ sort: "desc" }]` instead of an expression, the migration test fails on the schema diff. Applied only up to the previous migration, all 36 plan cases fail.
 - 08:45 — 1.4: timings below. The migration takes 1.0 s at 100,000 rows in each of the five tables.
 - 08:50 — 2.1: filed #236 (the purchase-order lines' requisition join, spec Q6). Lesson added under Database.
+
+- 09:20 — Review (`om-auto-review-pr`, fresh-context reviewer): APPROVE, with no blockers or majors. Fixed: the plan's Scope and step 1.4 text; the seeded plan-test case now runs `ANALYZE`, because without statistics both cases planned the same; page sizes come from the services' constants; `listSortIndexName` is no longer exported; the lesson's path. Open: 2.2 waits for #234.
 
 ## Timings (step 1.4)
 
