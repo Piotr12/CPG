@@ -13,10 +13,10 @@ import { listOrderBy, searchWhere, type SortField } from "../../domain/lists/lis
 import { ConflictError, NotFoundError, ValidationError, versionConflict } from "../../http/errors";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
-import { findActiveLocation, findLocation } from "../locations/find-location";
+import { findActiveLocation, findLocation, locationsByCode, pickActiveLocation } from "../locations/find-location";
 import { convertToBaseQuantity } from "../materials/base-quantity";
 import { conversionFieldError } from "../materials/conversion-field-error";
-import { findActiveMaterial, findMaterial } from "../materials/find-material";
+import { findActiveMaterial, findMaterial, materialsByCode, pickActiveMaterial } from "../materials/find-material";
 import { isScopeReadOnly } from "../tenants/tenant.service";
 import type { ForecastSort } from "../../validators/forecasts/forecast-list.schema";
 import type { ListOptions } from "../../validators/lists/list-query.schema";
@@ -170,13 +170,16 @@ export class ForecastService {
    * Creates the generated dataset's forecasts `rows` when the tenant has none, and returns how many.
    * Seeds nothing into a read-only tenant (R05). A row whose material or location is missing or
    * inactive refuses the whole seed, as a save would. Not audited, like the other demo records.
+   * Materials and locations are read in one query each: the realistic dataset has thousands of daily rows.
    */
   async seedDemo(rows: readonly DemoForecast[]): Promise<number> {
     return this.em.transactional(async (em) => {
       if ((await em.count(Forecast, {})) > 0 || (await isScopeReadOnly(em))) return 0;
+      const materials = await materialsByCode(em, rows.map(({ material }) => material));
+      const locations = await locationsByCode(em, rows.map(({ location }) => location));
       for (const { date, quantity, ...demo } of rows) {
-        const material = await findActiveMaterial(em, demo.material);
-        const location = await findActiveLocation(em, demo.location);
+        const material = pickActiveMaterial(materials, demo.material);
+        const location = pickActiveLocation(locations, demo.location);
         em.create(Forecast, { material, location, date, quantity });
       }
       await em.flush();
