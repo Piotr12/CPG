@@ -1,6 +1,7 @@
 # Two Test datasets: tiny by default, realistic on the admin's request
 
 **Status:** implemented
+**Amended by:** `2026-10-25--0848UTC-single-site-daily-dataset.md` (#237): tiny keeps its two-month history over the new single-site catalogue (Q11), and both datasets forecast the next twelve months daily.
 **Created:** 2026-10-22 09:02 UTC
 **Issue:** #163 (`main` red since #136), epic #78
 **Amends:** `2026-10-21--0718UTC-test-tenant-dataset.md` (Q4, Q16, Risks "Seed duration"), and the reset of `2026-10-19--0913UTC-test-prod-tenants.md`
