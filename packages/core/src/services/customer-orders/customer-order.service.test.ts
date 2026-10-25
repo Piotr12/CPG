@@ -16,7 +16,7 @@ import { CustomerOrderService, type CustomerOrderView } from "./customer-order.s
 import { GoodsIssueService } from "../goods-issues/goods-issue.service";
 import { StockService } from "../stock/stock.service";
 import { ShipmentService } from "../shipments/shipment.service";
-import type { CustomerOrderChanges, CustomerOrderInput } from "../../validators/customer-orders/customer-order.schema";
+import { ORDER_UNIT_CONVERSION_MESSAGE, type CustomerOrderChanges, type CustomerOrderInput } from "../../validators/customer-orders/customer-order.schema";
 
 const actor: AuditActor = { userId: "admin", username: "admin", sessionId: "browser-1", channel: "ui", token: null };
 const line = (material = "00000005", quantity = "60", unit = "each", requiredDate = "2027-01-04") => ({ material, quantity, unit, requiredDate });
@@ -291,6 +291,16 @@ describe("CustomerOrderService", () => {
     if (unit === "third") { const scope = em(); const factor = await scope.findOneOrFail(MaterialConversion, { unit: "case", material: { code: "00000005" } }); factor.numerator = "0.000001"; factor.denominator = "1000"; await scope.flush(); }
     await expect(service().create({ ...input(), lines: [line("00000005", quantity, chosen)] }, actor)).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
     expect(await service().list()).toEqual([]); expect(await audit()).toEqual([]);
+  });
+
+  it("refuses a line entered in the statistical unit, though the material has an SU factor, writing nothing (#239)", async () => {
+    const scope = em();
+    scope.create(MaterialConversion, { material: await scope.findOneOrFail(Material, { code: "00000005" }), unit: "SU", numerator: "1", denominator: "1.5" });
+    await scope.flush();
+    await expect(service().create({ ...input(), lines: [line("00000004"), line("00000005", "3", "SU")] }, actor)).rejects.toMatchObject({
+      code: "VALIDATION_FAILED", status: 400, fieldErrors: { "lines.1.unit": [ORDER_UNIT_CONVERSION_MESSAGE] },
+    });
+    expect(await em().count(CustomerOrder, {})).toBe(0); expect(await em().count(CustomerOrderLine, {})).toBe(0); expect(await audit()).toEqual([]);
   });
 
   it("validates direct service calls as well as HTTP input", async () => {

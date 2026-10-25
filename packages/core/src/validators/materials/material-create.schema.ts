@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { registeredUnitSchema } from "../units/unit-registry";
+import { isStatisticalUnit, registeredUnitSchema, STATISTICAL_BASE_UNIT_MESSAGE } from "../units/unit-registry";
 import { descriptionSchema, materialTypeSchema, unitSchema } from "./material-fields.schema";
 
 /**
@@ -9,8 +9,8 @@ import { descriptionSchema, materialTypeSchema, unitSchema } from "./material-fi
 export const materialCreateSchema = z.object({
   type: materialTypeSchema,
   description: descriptionSchema,
-  // A new material's unit comes from the registry (#217).
-  baseUnit: registeredUnitSchema,
+  // A new material's unit comes from the registry (#217), and is never the report-only SU (#239).
+  baseUnit: registeredUnitSchema.refine((unit) => !isStatisticalUnit(unit), STATISTICAL_BASE_UNIT_MESSAGE),
 });
 
 export type MaterialCreateInput = z.infer<typeof materialCreateSchema>;

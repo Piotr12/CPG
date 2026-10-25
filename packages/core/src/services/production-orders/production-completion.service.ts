@@ -25,6 +25,7 @@ import { parseDecimal } from "../../domain/quantities/decimal";
 import { AppError, ConflictError, NotFoundError, ValidationError, type FieldErrors } from "../../http/errors";
 import { parseInput } from "../../http/parse-input";
 import { FINISHED_COMPONENT_MESSAGE } from "../../validators/boms/bom-fields.schema";
+import { STATISTICAL_UNIT } from "../../validators/units/unit-registry";
 import {
   COMPLETION_MOVEMENTS_MAX,
   COMPLETION_MOVEMENTS_MESSAGE,
@@ -173,7 +174,8 @@ export class ProductionCompletionService {
     const balances = await this.em.find(StockBalance, { location: order.location, material: { $in: materials } });
     const available = new Map(balances.map((balance) => [balance.material.id, balance.quantity]));
     const units = new Map(materials.map((material) => [material.id, [material.baseUnit]]));
-    const conversions = await this.em.find(MaterialConversion, { material: { $in: materials } }, { orderBy: { unit: "asc" } });
+    // Never the report-only statistical unit (#239).
+    const conversions = await this.em.find(MaterialConversion, { material: { $in: materials }, unit: { $ne: STATISTICAL_UNIT } }, { orderBy: { unit: "asc" } });
     for (const { material, unit } of conversions) units.get(material.id)!.push(unit);
     const after = producedAfter(order.produced, record.baseQuantity);
     return {

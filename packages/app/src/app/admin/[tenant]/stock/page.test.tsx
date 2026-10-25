@@ -38,6 +38,13 @@ describe("StockPage", () => {
     // Either role reaches the stock import from here (stock-import spec, UI/UX).
     expect(screen.getByRole("link", { name: en.stockImport.link }).getAttribute("href")).toBe("/admin/test/stock-import");
   });
+  it("offers a correction in the material's physical units only, never its SU factor (#239)", async () => {
+    mocks.material.mockResolvedValue({ ...material, conversions: [{ unit: "case" }, { unit: "SU" }] });
+    render(await resolveServerComponents(page()));
+    fireEvent.click(screen.getByRole("button", { name: "Post correction" }));
+    const unit = screen.getByRole("dialog").querySelector("select[name=unit]") as HTMLSelectElement;
+    expect([...unit.options].map((option) => option.value)).toEqual(["each", "case"]);
+  });
   it("reads an emptied filter field as not given, opening the first pair, never Not found (#222)", async () => {
     mocks.locations.mockResolvedValue([location, { ...location, id: "00000002", name: "Old yard", active: false }]);
     render(await resolveServerComponents(page({ material: "", location: "" })));

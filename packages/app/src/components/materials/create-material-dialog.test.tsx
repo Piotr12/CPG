@@ -24,10 +24,11 @@ describe("CreateMaterialDialog", () => {
     expect(screen.getByRole("dialog", { name: "Create material" })).toBeTruthy();
     const type = screen.getByLabelText("Type") as HTMLSelectElement;
     expect([...type.options].map((option) => option.textContent)).toEqual(["Choose a type", "Raw", "Intermediate", "Finished"]);
-    // The base unit is chosen from the registry, grouped by dimension (#217).
+    // The base unit is chosen from the registry, grouped by dimension (#217), never the report-only SU (#239).
     const unit = screen.getByLabelText("Base unit") as HTMLSelectElement;
     expect(unit.options[0].textContent).toBe("Choose a unit");
     expect([...unit.querySelectorAll("optgroup")].map((group) => group.label)).toEqual(["Count", "Packaging", "Mass", "Volume", "Length", "Area", "Time"]);
+    expect([...unit.options].map((option) => option.value)).not.toContain("SU");
     expect([...unit.querySelectorAll("optgroup[label=Mass] option")].map((option) => option.textContent)).toEqual([
       "mg — milligram",
       "g — gram",

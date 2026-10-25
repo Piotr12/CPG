@@ -10,7 +10,7 @@ import { convertToBaseQuantity, ENTERED_QUANTITY_MESSAGE } from "./base-quantity
 describe("convertToBaseQuantity", () => {
   let orm: Orm;
   let em: EntityManager;
-  /** Prod's bolt (base unit each): 1 case = 12, 1 third = 1/3, and a factor too large to store. */
+  /** Prod's bolt (base unit each): 1 case = 12, 1 third = 1/3, 1 SU = 2, and a factor too large to store. */
   let bolt: Material;
 
   beforeEach(async () => {
@@ -23,6 +23,7 @@ describe("convertToBaseQuantity", () => {
     em.create(MaterialConversion, { material: bolt, unit: "case", numerator: "12", denominator: "1" });
     em.create(MaterialConversion, { material: bolt, unit: "third", numerator: "1", denominator: "3" });
     em.create(MaterialConversion, { material: bolt, unit: "huge", numerator: "999999999999", denominator: "0.000001" });
+    em.create(MaterialConversion, { material: bolt, unit: "SU", numerator: "2", denominator: "1" });
     // Another material's case holds 10: only the bolt's own conversion may count.
     const nut = em.create(Material, { code: "00000002", type: "raw", description: "Nut M8", baseUnit: "each" });
     em.create(MaterialConversion, { material: nut, unit: "case", numerator: "10", denominator: "1" });
@@ -68,6 +69,20 @@ describe("convertToBaseQuantity", () => {
       code: "UNIT_NOT_CONVERTIBLE",
       message: "Material 00000001 has no conversion from pallet to its base unit each.",
     });
+  });
+
+  it("refuses the statistical unit as an entered unit, as a unit without a conversion, though the material has an SU factor (#239)", async () => {
+    await expect(convertToBaseQuantity(em, bolt, { quantity: "1", unit: "SU" })).rejects.toMatchObject({
+      code: "UNIT_NOT_CONVERTIBLE",
+      status: 400,
+      message: "Material 00000001 has no conversion from SU to its base unit each.",
+    });
+  });
+
+  it("still takes a legacy base unit SU 1:1 (#239)", async () => {
+    const legacy = em.create(Material, { code: "00000003", type: "finished", description: "Legacy kit", baseUnit: "SU" });
+    await em.flush();
+    expect(await convertToBaseQuantity(em, legacy, { quantity: "3", unit: "SU" })).toMatchObject({ baseQuantity: "3.000000", enteredUnit: "SU" });
   });
 
   it("refuses a positive quantity that rounds to zero in the base unit", async () => {

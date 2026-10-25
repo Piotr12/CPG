@@ -240,6 +240,18 @@ describe("CrudForm", () => {
       expect(screen.getByText("Choose one.")).toBeTruthy();
     });
 
+    it("follows the form's values with a hint given as a function, describing the field only while there is one", () => {
+      const factor: CrudField = { name: "factor", label: "Factor", description: ({ type }) => (type === "finished" ? "Per finished unit." : undefined) };
+      render(<CrudForm fields={[typeField, factor]} action={vi.fn()} submitLabel="Save" />);
+
+      const input = screen.getByLabelText("Factor");
+      expect(input.getAttribute("aria-describedby")).toBeNull();
+      fireEvent.change(screen.getByLabelText("Type"), { target: { value: "finished" } });
+      expect(document.getElementById(input.getAttribute("aria-describedby")!)!.textContent).toBe("Per finished unit.");
+      fireEvent.change(screen.getByLabelText("Type"), { target: { value: "raw" } });
+      expect(screen.queryByText("Per finished unit.")).toBeNull();
+    });
+
     it("renders a select without options as empty", () => {
       render(<CrudForm fields={[{ name: "unit", label: "Unit", type: "select" }]} action={vi.fn()} submitLabel="Save" />);
 

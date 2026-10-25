@@ -27,8 +27,11 @@ export interface CrudField {
    */
   type?: "text" | "password" | "select" | "autocomplete" | "date";
   autoComplete?: string;
-  /** A hint under the field, such as a length rule. */
-  description?: string;
+  /**
+   * A hint under the field, such as a length rule; a function follows the form's values (a hint for
+   * one choice of another field). A function can only be built in a client component.
+   */
+  description?: string | ((values: Record<string, string>) => string | undefined);
   /** A select's choices, in order. */
   options?: CrudOption[];
   /** A select's choices in labelled `<optgroup>`s, after any `options` (units by dimension, #217). */
@@ -143,6 +146,7 @@ export function CrudForm<T>({
         const inputId = `${id}-${field.name}`;
         const errors = fieldErrors[field.name];
         const hintId = `${inputId}-hint`;
+        const description = typeof field.description === "function" ? field.description(values) : field.description;
         const labelId = `${inputId}-label`;
         const set = (value: string) => setValues((current) => ({ ...current, [field.name]: value }));
         const control = {
@@ -151,7 +155,7 @@ export function CrudForm<T>({
           value: values[field.name],
           onChange: (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => set(event.target.value),
           "aria-invalid": errors ? true : undefined,
-          "aria-describedby": errors || field.description ? hintId : undefined,
+          "aria-describedby": errors || description ? hintId : undefined,
         };
         return (
           <div key={field.name} className="flex flex-col gap-2">
@@ -205,9 +209,9 @@ export function CrudForm<T>({
                 {formatFieldError(errors[0])}
               </p>
             ) : (
-              field.description && (
+              description && (
                 <p id={hintId} className="text-xs text-muted-foreground">
-                  {field.description}
+                  {description}
                 </p>
               )
             )}

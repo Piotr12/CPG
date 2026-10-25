@@ -6,7 +6,7 @@ import {
   TYPE_MESSAGE,
   UNIT_FORMAT_MESSAGE,
 } from "@cpg/core/validators/materials/material-fields.schema";
-import { UNIT_NOT_REGISTERED_MESSAGE } from "@cpg/core/validators/units/unit-registry";
+import { STATISTICAL_BASE_UNIT_MESSAGE, UNIT_NOT_REGISTERED_MESSAGE } from "@cpg/core/validators/units/unit-registry";
 import { en } from "../../i18n/messages/en";
 import { pl } from "../../i18n/messages/pl";
 import { conversionText, errorFormatter, fieldErrorFormatter, inverseText, materialsLabels } from "./labels";
@@ -37,19 +37,28 @@ describe("fieldErrorFormatter", () => {
     const format = fieldErrorFormatter(materialsLabels(pl));
 
     expect(
-      [TYPE_MESSAGE, DESCRIPTION_REQUIRED_MESSAGE, DESCRIPTION_TOO_LONG_MESSAGE, UNIT_FORMAT_MESSAGE, UNIT_NOT_REGISTERED_MESSAGE, FACTOR_MESSAGE].map(format),
+      [
+        TYPE_MESSAGE,
+        DESCRIPTION_REQUIRED_MESSAGE,
+        DESCRIPTION_TOO_LONG_MESSAGE,
+        UNIT_FORMAT_MESSAGE,
+        UNIT_NOT_REGISTERED_MESSAGE,
+        STATISTICAL_BASE_UNIT_MESSAGE,
+        FACTOR_MESSAGE,
+      ].map(format),
     ).toEqual(Object.values(pl.materials.fieldErrors));
     expect(format("Something new.")).toBe("Something new.");
   });
 
   it("matches the English messages word for word", () => {
     const t = en.materials.fieldErrors;
-    expect([t.type, t.descriptionRequired, t.descriptionTooLong, t.unitFormat, t.unitNotRegistered, t.factor]).toEqual([
+    expect([t.type, t.descriptionRequired, t.descriptionTooLong, t.unitFormat, t.unitNotRegistered, t.statisticalBaseUnit, t.factor]).toEqual([
       TYPE_MESSAGE,
       DESCRIPTION_REQUIRED_MESSAGE,
       DESCRIPTION_TOO_LONG_MESSAGE,
       UNIT_FORMAT_MESSAGE,
       UNIT_NOT_REGISTERED_MESSAGE,
+      STATISTICAL_BASE_UNIT_MESSAGE,
       FACTOR_MESSAGE,
     ]);
   });

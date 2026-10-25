@@ -36,6 +36,25 @@ describe("AddConversionDialog", () => {
     expect(mocks.addConversion).toHaveBeenCalledWith("prod", 1, "00000002", { unit: "case", denominator: "1", numerator: "12" });
   });
 
+  it("offers SU in its own Statistical group, and says how its factor is entered once it is chosen (#239)", async () => {
+    mocks.addConversion.mockResolvedValue({ ok: true, data: {} });
+    render(<AddConversionDialog material={bolt} converted={[]} units={unitChoices("en", en.units)} context={context} labels={materialsLabels(en)} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Add conversion" }));
+    const unit = screen.getByLabelText("Unit") as HTMLSelectElement;
+    expect(unit.querySelector('optgroup[label="Statistical"]')!.textContent).toBe("SU — statistical unit");
+    const hint = "For SU, enter Alternate quantity 1.5 and Base quantity 1 when 1 each = 1.5 SU.";
+    expect(screen.queryByText(hint, { exact: false })).toBeNull();
+    change("Unit", "SU");
+    expect(screen.getByText(`How many each that many alternate units are. Up to six decimals. ${hint}`)).toBeTruthy();
+    change("Alternate quantity", "1.5");
+    change("Base quantity", "1");
+    fireEvent.click(screen.getAllByRole("button", { name: "Add conversion" }).at(-1)!);
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(mocks.addConversion).toHaveBeenCalledWith("prod", 1, "00000002", { unit: "SU", denominator: "1.5", numerator: "1" });
+  });
+
   it("refuses a zero alternate quantity before sending (MAT-022), and closes on cancel", () => {
     render(<AddConversionDialog material={bolt} converted={["box"]} units={unitChoices("en", en.units)} context={context} labels={materialsLabels(en)} />);
 

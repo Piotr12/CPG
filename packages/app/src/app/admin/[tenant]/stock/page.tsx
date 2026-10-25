@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { connection } from "next/server";
 import { parseInput, tenantScope, type LedgerMovementView } from "@cpg/core";
 import { stockMovementIdSchema } from "@cpg/core/validators/stock/stock-reversal.schema";
+import { isStatisticalUnit } from "@cpg/core/validators/units/unit-registry";
 import { STOCK_LEDGER_PAGE_SIZE, stockLedgerQuerySchema } from "@cpg/core/validators/stock/stock-correction.schema";
 import { requireUser } from "../../../../auth/require-admin";
 import { getMessages } from "../../../../i18n/get-messages";
@@ -39,7 +40,8 @@ async function Stock({ params, searchParams }: Pick<PageProps<"/admin/[tenant]/s
     if (search.movement !== undefined) selected = await orNotFound(Promise.resolve().then(() =>
       cradle.stockService.getMovement(parseInput(stockMovementIdSchema, search.movement), pair)), ["VALIDATION_FAILED", "STOCK_MOVEMENT_NOT_FOUND"]);
     const detail = await cradle.materialService.get(pair.material);
-    units = [detail.baseUnit, ...detail.conversions.map(({ unit }) => unit)];
+    // A correction is entered in a physical unit, never the report-only SU (#239).
+    units = [detail.baseUnit, ...detail.conversions.map(({ unit }) => unit).filter((unit) => !isStatisticalUnit(unit))];
   }
   return <StockScreen selected={selected} tenant={cradle.tenant} view={view} materials={materials} locations={locations} units={units} locale={locale} messages={messages} />;
 }

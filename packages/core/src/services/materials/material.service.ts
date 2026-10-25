@@ -19,7 +19,13 @@ import { listOrderBy, searchWhere } from "../../domain/lists/list-query";
 import { AppError, ConflictError, NotFoundError, ValidationError, versionConflict } from "../../http/errors";
 import type { ListOptions } from "../../validators/lists/list-query.schema";
 import type { MaterialSort } from "../../validators/materials/material-list.schema";
-import { isRegisteredUnit, UNIT_NOT_REGISTERED_MESSAGE } from "../../validators/units/unit-registry";
+import {
+  isRegisteredUnit,
+  isStatisticalUnit,
+  STATISTICAL_BASE_UNIT_MESSAGE,
+  STATISTICAL_UNIT,
+  UNIT_NOT_REGISTERED_MESSAGE,
+} from "../../validators/units/unit-registry";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit, type AuditEntry } from "../audit/audit-recorder";
 import { bomUsingMaterial } from "../boms/bom-usage";
@@ -259,12 +265,13 @@ export class MaterialService {
 
   /**
    * Every material's units an entered quantity may use, by material ID: its base unit first, then
-   * its conversions' units in order. The recipe form offers them per line.
+   * its conversions' units in order, never the report-only statistical unit (#239). The line forms
+   * offer them per line.
    */
   async listUnits(): Promise<Record<string, string[]>> {
     const units: Record<string, string[]> = {};
     for (const material of await this.list()) units[material.id] = [material.baseUnit];
-    const conversions = await this.em.find(MaterialConversion, {}, { populate: ["material"], orderBy: { unit: "asc" } });
+    const conversions = await this.em.find(MaterialConversion, { unit: { $ne: STATISTICAL_UNIT } }, { populate: ["material"], orderBy: { unit: "asc" } });
     for (const { material, unit } of conversions) units[material.code].push(unit);
     return units;
   }
@@ -392,15 +399,17 @@ function changedFields(material: Material, changes: MaterialChanges): MaterialCh
   return changed;
 }
 
-/** The fields of a material the audit may show: an allowlist (R08). */
 /**
  * A unit a material doesn't have yet comes from the registry (#217): a new base unit or conversion.
- * Units stored before the registry stay valid where a record already has them.
+ * Units stored before the registry stay valid where a record already has them. The statistical unit
+ * is a conversion only, never a new base unit (#239).
  */
 function assertRegisteredUnit(field: "baseUnit" | "unit", unit: string): void {
   if (!isRegisteredUnit(unit)) throw new ValidationError({ [field]: [UNIT_NOT_REGISTERED_MESSAGE] });
+  if (field === "baseUnit" && isStatisticalUnit(unit)) throw new ValidationError({ baseUnit: [STATISTICAL_BASE_UNIT_MESSAGE] });
 }
 
+/** The fields of a material the audit may show: an allowlist (R08). */
 function snapshot({ code, type, description, baseUnit, active }: Material) {
   return { id: code, type, description, baseUnit, active };
 }

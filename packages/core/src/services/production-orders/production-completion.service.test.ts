@@ -114,6 +114,8 @@ describe("ProductionCompletionService", () => {
       em.create(MaterialConversion, { material: bar, unit: "case", numerator: "10", denominator: "1" });
       const cocoa = em.create(Material, { code: COCOA, type: "raw", description: "Cocoa mass", baseUnit: "kg" });
       em.create(MaterialConversion, { material: cocoa, unit: "g", numerator: "1", denominator: "1000" });
+      // An SU factor is for reports only: no completion line offers it (#239).
+      em.create(MaterialConversion, { material: cocoa, unit: "SU", numerator: "1", denominator: "2" });
       const wrapper = em.create(Material, { code: WRAPPER, type: "raw", description: "Wrapper", baseUnit: "each" });
       em.create(Material, { code: MILK, type: "raw", description: "Milk powder", baseUnit: "kg" });
       em.create(Material, { code: FILLING, type: "intermediate", description: "Filling", baseUnit: "kg" });

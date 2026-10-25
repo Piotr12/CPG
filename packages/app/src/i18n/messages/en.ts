@@ -256,6 +256,7 @@ export const en = {
       denominatorHint: "Usually 1, as in “1 case = 12 each”.",
       numerator: "Base quantity",
       numeratorHint: "How many {baseUnit} that many alternate units are. Up to six decimals.",
+      statisticalHint: "For SU, enter Alternate quantity 1.5 and Base quantity 1 when 1 {baseUnit} = 1.5 SU.",
       add: {
         open: "Add conversion",
         title: "Add a unit conversion",
@@ -281,6 +282,7 @@ export const en = {
       descriptionTooLong: "Use at most 200 characters.",
       unitFormat: "Use 1–16 letters, digits, dots, dashes or underscores, starting with a letter or digit.",
       unitNotRegistered: "Choose a unit from the list.",
+      statisticalBaseUnit: "The statistical unit can't be a base unit.",
       factor: "Enter a number greater than 0, with at most 12 digits before the point and 6 after it.",
     },
     /** What these error codes mean on the materials screens, merged over the shared `errors` by `materialsLabels`. */
@@ -1960,7 +1962,7 @@ export const en = {
   },
   /** The unit registry's groups, and a stored unit it doesn't list (#217). */
   units: {
-    dimensions: { count: "Count", packaging: "Packaging", mass: "Mass", volume: "Volume", length: "Length", area: "Area", time: "Time" },
+    dimensions: { count: "Count", packaging: "Packaging", mass: "Mass", volume: "Volume", length: "Length", area: "Area", time: "Time", statistical: "Statistical" },
     notListed: "{unit} (not in the unit list)",
   },
   nav: {

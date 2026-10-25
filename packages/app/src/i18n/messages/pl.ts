@@ -243,6 +243,7 @@ export const pl: Messages = {
       denominatorHint: "Zwykle 1, jak w „1 karton = 12 szt.”.",
       numerator: "Ilość w jednostce bazowej",
       numeratorHint: "Ile {baseUnit} to tyle jednostek alternatywnych. Do sześciu miejsc po przecinku.",
+      statisticalHint: "Dla SU wpisz ilość w jednostce alternatywnej 1.5 i ilość w jednostce bazowej 1, gdy 1 {baseUnit} = 1.5 SU.",
       add: {
         open: "Dodaj przelicznik",
         title: "Dodaj przelicznik jednostek",
@@ -268,6 +269,7 @@ export const pl: Messages = {
       descriptionTooLong: "Użyj najwyżej 200 znaków.",
       unitFormat: "Użyj od 1 do 16 liter, cyfr, kropek, myślników lub podkreśleń, zaczynając od litery lub cyfry.",
       unitNotRegistered: "Wybierz jednostkę z listy.",
+      statisticalBaseUnit: "Jednostka statystyczna nie może być jednostką bazową.",
       factor: "Wpisz liczbę większą od 0, z najwyżej 12 cyframi przed kropką i 6 po niej.",
     },
     errors: {
@@ -1893,7 +1895,7 @@ export const pl: Messages = {
     notListed: "nie ma na liście",
   },
   units: {
-    dimensions: { count: "Liczba", packaging: "Opakowanie", mass: "Masa", volume: "Objętość", length: "Długość", area: "Powierzchnia", time: "Czas" },
+    dimensions: { count: "Liczba", packaging: "Opakowanie", mass: "Masa", volume: "Objętość", length: "Długość", area: "Powierzchnia", time: "Czas", statistical: "Statystyczne" },
     notListed: "{unit} (spoza listy jednostek)",
   },
   nav: {

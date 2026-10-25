@@ -223,6 +223,19 @@ describe("BomService", () => {
       ).rejects.toMatchObject({ fieldErrors: { "components.0.quantity": [QUANTITY_OUT_OF_RANGE_MESSAGE] } });
     });
 
+    it("refuses a line entered in the statistical unit, though the material has an SU factor, writing nothing (#239)", async () => {
+      const em = scopedEm();
+      em.create(MaterialConversion, { material: await em.findOneOrFail(Material, { code: "00000002" }), unit: "SU", numerator: "1", denominator: "1.5" });
+      await em.flush();
+
+      await expect(
+        service().create({ ...CABINET, components: [line("00000004", "4"), line("00000002", "3", "SU")] }, ACTOR),
+      ).rejects.toMatchObject({ code: "VALIDATION_FAILED", status: 400, fieldErrors: { "components.1.unit": [UNIT_NOT_CONVERTIBLE_MESSAGE] } });
+      expect(await scopedEm().count(Bom, {})).toBe(0);
+      expect(await scopedEm().count(BomComponent, {})).toBe(0);
+      expect(await entries("boms.bom.created")).toEqual([]);
+    });
+
     it("lets any other failure of a line's conversion through", async () => {
       const em = scopedEm();
       vi.spyOn(em, "transactional").mockImplementation(async (callback) => callback(em));

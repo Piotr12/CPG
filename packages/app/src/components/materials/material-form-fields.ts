@@ -1,12 +1,13 @@
 import { MATERIAL_TYPES } from "@cpg/core/validators/materials/material-fields.schema";
+import { isStatisticalUnit } from "@cpg/core/validators/units/unit-registry";
 import type { CrudField } from "@cpg/ui/backend/forms/crud-form";
 import { unitSelect, type UnitChoices } from "../units/unit-choices";
 import type { MaterialsLabels } from "./labels";
 
 /**
  * The fields of the Create and Edit material forms: type, description and base unit, the unit chosen
- * from the registry (#217). `baseUnit` is the stored unit an edit starts from, offered even when the
- * registry doesn't list it.
+ * from the registry (#217), never the report-only SU (#239). `baseUnit` is the stored unit an edit
+ * starts from, offered even when the select wouldn't list it.
  */
 export function materialFormFields(labels: MaterialsLabels, units: UnitChoices, baseUnit?: string): CrudField[] {
   const t = labels.form;
@@ -25,7 +26,7 @@ export function materialFormFields(labels: MaterialsLabels, units: UnitChoices, 
       label: t.baseUnit,
       type: "select",
       placeholder: t.baseUnitPlaceholder,
-      ...unitSelect(units, { current: baseUnit }),
+      ...unitSelect(units, { current: baseUnit, physicalOnly: true }),
       description: t.baseUnitHint,
     },
   ];
@@ -33,7 +34,8 @@ export function materialFormFields(labels: MaterialsLabels, units: UnitChoices, 
 
 /**
  * The fields of the Add conversion and Change factor forms; the unit only when adding, from the
- * registry, with the base unit and the units already converted shown but unselectable.
+ * registry, with the base unit and the units already converted shown but unselectable. Choosing SU
+ * adds a hint on how its factor is entered (#239).
  */
 export function conversionFormFields(
   labels: MaterialsLabels,
@@ -52,7 +54,8 @@ export function conversionFormFields(
       name: "numerator",
       label: t.numerator,
       autoComplete: "off",
-      description: t.numeratorHint.replaceAll("{baseUnit}", baseUnit),
+      description: ({ unit: chosen }) =>
+        [t.numeratorHint, ...(chosen !== undefined && isStatisticalUnit(chosen) ? [t.statisticalHint] : [])].join(" ").replaceAll("{baseUnit}", baseUnit),
     },
   ];
 }
