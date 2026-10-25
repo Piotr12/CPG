@@ -189,7 +189,7 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 - **2026-10-23 — Judge a gate command by its exit code, never by a piped tail** — `… | tail` / `| head` reports the pipe's status, so type errors were committed (#92) and shipped (#162). Run `npm run typecheck > log; echo $?`. A bare `tsc -p packages/app` also misses `RouteContext` types, which `next typegen` (inside `npm run typecheck`) generates.
 - **2026-10-19 — A cezar worktree needs its own `npm ci`** — without it Node resolves `@cpg/*` to the main checkout's packages, and tests and typecheck run the wrong code.
 - **2026-10-24 — zsh traps** — four to avoid:
-  - never name a variable `path`: it is tied to `PATH`, and every later command fails;
+  - never name a variable `path`: it is tied to `PATH`, and every later command fails. The `attach-image-evidence` snippet in `.ai/trackers/github.md` uses `path=`: rename it (`ev`) when you copy it (#228);
   - zsh doesn't word-split `$cmd`, so run such loops under `bash -c` or `eval`;
   - macOS has no `timeout`: use the tool's own timeout or a background `gh run watch --exit-status`, and read its last lines before trusting the exit code: it exits 1 on a transient API error (an HTTP 502 fetching the jobs) with the run still in progress (#205), so a loop over `gh run view --json status,conclusion` that treats an API error as still pending is the safer wait;
   - quote globs meant for a tool, `grep --include='*.tsx'`: unquoted, zsh expands them against the current directory and aborts the whole command with "no matches found", so a verification sweep reports nothing instead of failing loudly.
