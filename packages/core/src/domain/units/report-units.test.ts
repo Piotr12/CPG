@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { formatDecimal, parseDecimal } from "../quantities/decimal";
-import { fromBase, NO_STATISTICAL_FACTOR, reportUnits, resolveReportUnit, statisticalFactor, type ReportMaterial } from "./report-units";
+import { fromBase, NO_STATISTICAL_FACTOR, reportFactor, reportUnits, resolveReportUnit, statisticalFactor, type ReportMaterial } from "./report-units";
 
 const micro = (text: string) => parseDecimal(text)!;
 const factor = (numerator: string, denominator: string) => ({ numerator: micro(numerator), denominator: micro(denominator) });
@@ -49,6 +49,17 @@ describe("statisticalFactor", () => {
     expect(statisticalFactor(letterbox)).toBeNull();
     expect(statisticalFactor(legacy)).toEqual(factor("1", "1"));
     expect(NO_STATISTICAL_FACTOR).toBe("NO_STATISTICAL_FACTOR");
+  });
+});
+
+describe("reportFactor", () => {
+  it("is 1:1 for the base unit, the SU factor for SU, the conversion for another unit, and null without one", () => {
+    expect(reportFactor(cabinet, "each")).toEqual(factor("1", "1"));
+    expect(reportFactor(cabinet, "SU")).toEqual(factor("1", "1.5"));
+    expect(reportFactor(cabinet, "pallet")).toEqual(factor("10", "1"));
+    expect(reportFactor(letterbox, "SU")).toBeNull();
+    expect(reportFactor(letterbox, "pallet")).toBeNull();
+    expect(reportFactor(legacy, "SU")).toEqual(factor("1", "1"));
   });
 });
 

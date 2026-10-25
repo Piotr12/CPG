@@ -61,6 +61,7 @@ export { TestResetService } from "./services/tenants/test-reset.service";
 
 export * from "./services/customer-orders/customer-order.service";
 export * from "./services/stock/stock.service";
+export * from "./services/reports/demand-review.service";
 export * from "./services/reports/stock-report.service";
 export * from "./services/reports/variance-report.service";
 

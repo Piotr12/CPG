@@ -10,7 +10,8 @@ const owned = tenantOwned();
 export const CustomerOrderLine = defineEntity({
   name: "CustomerOrderLine",
   filters: owned.filters,
-  indexes: [{ properties: ["tenant", "material", "removed", "status", "id"] }],
+  /** The material guards' lookup, then the demand review's window read by required date (#240). */
+  indexes: [{ properties: ["tenant", "material", "removed", "status", "id"] }, { properties: ["tenant", "requiredDate"] }],
   properties: {
     id: p.uuid().primary().onCreate(() => randomUUID()),
     tenant: owned.tenant,

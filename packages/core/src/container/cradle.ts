@@ -4,6 +4,7 @@ import type { ProductionCompletionService } from "../services/production-orders/
 import type { CustomerOrderService } from "../services/customer-orders/customer-order.service";
 import type { TestResetService } from "../services/tenants/test-reset.service";
 import type { StockService } from "../services/stock/stock.service";
+import type { DemandReviewService } from "../services/reports/demand-review.service";
 import type { StockReportService } from "../services/reports/stock-report.service";
 import type { VarianceReportService } from "../services/reports/variance-report.service";
 import type { EntityManager, Orm } from "@cpg/db";
@@ -76,6 +77,7 @@ export interface Cradle {
   customerOrderService: CustomerOrderService;
   importService: ImportService;
   stockImportService: StockImportService;
+  demandReviewService: DemandReviewService;
   stockReportService: StockReportService;
   varianceReportService: VarianceReportService;
   /** The active tenant. Only in scopes built by `tenantScope()`. */

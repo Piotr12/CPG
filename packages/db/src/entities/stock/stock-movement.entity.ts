@@ -34,7 +34,8 @@ export const StockMovement = defineEntity({
     channel: p.enum(["ui", "api", "seed"]),
   },
   uniques: [{ properties: ["tenant", "postingId", "position"] }],
-  indexes: [{ properties: ["tenant", "material", "location", "occurredAt"] }],
+  /** The ledger's history per pair, then the demand review's goods issues by business date (#240). */
+  indexes: [{ properties: ["tenant", "material", "location", "occurredAt"] }, { properties: ["tenant", "type", "businessDate"] }],
   triggers: [{
     name: "stock_movement_no_update", timing: "before", events: ["update"],
     body: `select raise(abort, '${STOCK_MOVEMENT_IMMUTABLE}');`,

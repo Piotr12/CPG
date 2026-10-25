@@ -44,6 +44,15 @@ export function statisticalFactor(material: ReportMaterial): ReportFactor | null
 }
 
 /**
+ * The factor that shows `material`'s base quantities in `unit`: 1:1 for its base unit, its SU factor
+ * for SU, its conversion for another unit, or `null` when it has none.
+ */
+export function reportFactor(material: ReportMaterial, unit: string): ReportFactor | null {
+  if (unit === material.baseUnit) return SAME;
+  return isStatisticalUnit(unit) ? statisticalFactor(material) : factorOf(material, unit);
+}
+
+/**
  * The units a report filtered to `selected` materials may show (#239, spec Q5): with none selected
  * (meaning all of them) or two or more, only SU, even when they share a base unit; with exactly one,
  * its base unit, its other conversions' units in order, and SU when it has a factor. The default is
