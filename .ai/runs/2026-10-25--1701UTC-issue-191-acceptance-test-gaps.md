@@ -3,7 +3,7 @@
 **Date:** 2026-10-25 17:01 UTC
 **Agent:** Claude Code / claude-opus-5-5 (cezar, `om-auto-fix-issue 191`)
 **Spec:** none (issue #191; catalogue `.ai/specs/research/CPG-acceptance.md`)
-**Status:** in progress
+**Status:** done
 
 ## Goal
 
@@ -34,6 +34,7 @@ Close the test gaps #191 lists, reword the extra-input validation message to say
 ## Verification
 - `npm run lint`, `npm run typecheck`, `npm run test:coverage` (588 files, 4,520 tests, 100% statements/branches/functions/lines), `npm run build`: all exit 0.
 - No integration file is touched and no integration test asserts the old message text (grep), so none ran locally; CI runs the full suite on the PR.
+- CI on 988d6d2a (run 40215616842): lint, typecheck, unit tests with coverage, build and integration shards 1–4 all green.
 
 ## Follow-ups
 - None new: the MRP halves stay with slice 3 (#14), as the catalogue rows say.
