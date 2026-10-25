@@ -49,18 +49,35 @@ The `@cpg/ui` pieces of Phase 2 (steps 6 and 7) touch only `packages/ui`, the de
 ## Log
 
 - 10:26 — Feature route: spec merged (#241), SU merged (#242), nothing built, no open PR references #240. 9 steps, so the plain engine. Two PRs as the spec's Phasing says; the `@cpg/ui` steps 6–7 go to two parallel workers.
+- 10:40 — Workers dispatched for steps 2.1 (chart) and 2.2 (filter controls), forked off the plan commit. 2.2 finished (e6fbb040 on cez/9969e46c). 2.1's first run died on a network error after committing most of its work; a continuation finished it (f8807162 on cez/69b02d2e).
+- 11:35 — 1.1 done: buckets, D08 netting, tally, 30 tests at 100%.
+- 12:00 — Deviation from the spec's indexes and reads, found by the 10× benchmark: the first service read goods-issue lines joined to their issue (`goods_issue(tenant, business_date)`). SQLite with no statistics (production never runs ANALYZE) planned it from `goods_issue_line`'s bare `tenant_code` index, whatever the join or an `issue IN (…)` list, and the month read took 814 ms, most of it hydrating populated entities and every issue's movements. Shipped now comes from the ledger: each goods-issue line posts one movement of its base quantity, out of its order's location, on the issue's business date, so one partial read of `stock_movement` by a new `(tenant, type, business_date)` index replaces the four-way join, and reversed lines come from the few `StockReversal` links of the window instead of every issue's movements. The `goods_issue` index is dropped from the migration. All reads use partial loads. Month read: 158 ms.
+- 12:05 — Deviation: a repeated `material`/`location` value is deduplicated rather than refused ("unique" in the spec), so no new message is needed.
+- 13:10 — Phase 1 gate: lint 0 (one pre-existing warning in `bom.service.ts`), typecheck 0, test:coverage 0 (4,377 tests, 100%), build 0. No Docker here: `demand-review-api.test.ts` and `smoke.test.ts` ran against a fresh standalone server copy (lesson 2026-10-23): 2 files, 8 tests passed.
+
+## Phase 1 timings (10× the realistic dataset, `demand-review-reads.test.ts` run alone)
+
+| Bucket | Read, fastest of three |
+| --- | --- |
+| day (43 buckets) | 52 ms |
+| week (27 buckets) | 95 ms |
+| month (16 buckets) | 158 ms |
+
+Budget: 300 ms. Under the full parallel coverage run the month read took 815 ms, so the test's CI bound is 3 s.
 
 ## Progress
+
+PR: #244 (Phase 1)
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Demand data and API
 
-- [ ] 1.1 Domain: buckets, D08 netting, tally
-- [ ] 1.2 Indexes and migration
-- [ ] 1.3 Service and validator
-- [ ] 1.4 API route and integration test
-- [ ] 1.5 Acceptance doc statuses
+- [x] 1.1 Domain: buckets, D08 netting, tally — 9109ba49
+- [x] 1.2 Indexes and migration — 99121a74
+- [x] 1.3 Service and validator — a1a96573
+- [x] 1.4 API route and integration test — 9e6dd5e5
+- [x] 1.5 Acceptance doc statuses — 9e6dd5e5
 
 ### Phase 2: Demand review screen
 
