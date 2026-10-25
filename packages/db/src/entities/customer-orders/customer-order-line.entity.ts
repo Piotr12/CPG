@@ -11,7 +11,12 @@ export const CustomerOrderLine = defineEntity({
   name: "CustomerOrderLine",
   filters: owned.filters,
   /** The material guards' lookup, then the demand review's window read by required date (#240). */
-  indexes: [{ properties: ["tenant", "material", "removed", "status", "id"] }, { properties: ["tenant", "requiredDate"] }],
+  indexes: [
+    { properties: ["tenant", "material", "removed", "status", "id"] },
+    { properties: ["tenant", "requiredDate"] },
+    /** Serve a list page's line read, `order IN (…)`, which SQLite would plan through the tenant alone (#247). */
+    { properties: ["tenant", "order"] },
+  ],
   properties: {
     id: p.uuid().primary().onCreate(() => randomUUID()),
     tenant: owned.tenant,

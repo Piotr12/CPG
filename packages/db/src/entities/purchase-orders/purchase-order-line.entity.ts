@@ -43,6 +43,8 @@ export const PurchaseOrderLine = defineEntity({
     status: p.enum(DOCUMENT_STATES).default("open"),
   },
   uniques: [{ properties: ["order", "position"] }],
+  /** Serve a list page's line read, `order IN (…)`, which SQLite would plan through the tenant alone (#247). */
+  indexes: [{ properties: ["tenant", "order"] }],
 });
 
 export type PurchaseOrderLine = InferEntity<typeof PurchaseOrderLine>;

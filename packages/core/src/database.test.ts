@@ -54,6 +54,7 @@ describe("migrateDatabase", () => {
       "Migration20261023201801_shipment_edit_cancel",
       "Migration20261025080239_list_sort_indexes",
       "Migration20261025120024_demand_review_indexes",
+      "Migration20261025171522_tenant_in_list_indexes",
     ]);
     expect(await migrateDatabase(config)).toEqual([]);
   });

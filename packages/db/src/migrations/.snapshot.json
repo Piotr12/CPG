@@ -1653,6 +1653,17 @@
         {
           "columnNames": [
             "tenant_code",
+            "order_id"
+          ],
+          "composite": true,
+          "constraint": false,
+          "keyName": "customer_order_line_tenant_code_order_id_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "tenant_code",
             "required_date"
           ],
           "composite": true,
@@ -2822,6 +2833,28 @@
         },
         {
           "columnNames": [
+            "tenant_code",
+            "issue_id"
+          ],
+          "composite": true,
+          "constraint": false,
+          "keyName": "goods_issue_line_tenant_code_issue_id_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "tenant_code",
+            "shipment_line_id"
+          ],
+          "composite": true,
+          "constraint": false,
+          "keyName": "goods_issue_line_tenant_code_shipment_line_id_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
             "id"
           ],
           "composite": false,
@@ -3280,6 +3313,28 @@
           "composite": false,
           "constraint": false,
           "keyName": "goods_receipt_line_tenant_code_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "tenant_code",
+            "order_line_id"
+          ],
+          "composite": true,
+          "constraint": false,
+          "keyName": "goods_receipt_line_tenant_code_order_line_id_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "tenant_code",
+            "receipt_id"
+          ],
+          "composite": true,
+          "constraint": false,
+          "keyName": "goods_receipt_line_tenant_code_receipt_id_index",
           "primary": false,
           "unique": false
         },
@@ -4779,6 +4834,17 @@
         },
         {
           "columnNames": [
+            "tenant_code",
+            "completion_id"
+          ],
+          "composite": true,
+          "constraint": false,
+          "keyName": "production_completion_line_tenant_code_completion_id_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
             "tenant_code"
           ],
           "composite": false,
@@ -5237,6 +5303,17 @@
           "keyName": "production_order_tenant_code_code_unique",
           "primary": false,
           "unique": true
+        },
+        {
+          "columnNames": [
+            "tenant_code",
+            "id"
+          ],
+          "composite": true,
+          "constraint": false,
+          "keyName": "production_order_tenant_code_id_index",
+          "primary": false,
+          "unique": false
         },
         {
           "columnNames": [
@@ -5987,6 +6064,17 @@
           "composite": false,
           "constraint": false,
           "keyName": "purchase_order_line_tenant_code_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "tenant_code",
+            "order_id"
+          ],
+          "composite": true,
+          "constraint": false,
+          "keyName": "purchase_order_line_tenant_code_order_id_index",
           "primary": false,
           "unique": false
         }
@@ -7411,6 +7499,17 @@
           "composite": false,
           "constraint": false,
           "keyName": "shipment_line_tenant_code_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "tenant_code",
+            "shipment_id"
+          ],
+          "composite": true,
+          "constraint": false,
+          "keyName": "shipment_line_tenant_code_shipment_id_index",
           "primary": false,
           "unique": false
         }

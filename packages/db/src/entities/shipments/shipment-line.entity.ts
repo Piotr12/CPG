@@ -33,6 +33,8 @@ export const ShipmentLine = defineEntity({
     issued: p.string().default("0.000000"),
   },
   uniques: [{ properties: ["shipment", "position"] }],
+  /** Serve a list page's line read, `shipment IN (…)`, which SQLite would plan through the tenant alone (#247). */
+  indexes: [{ properties: ["tenant", "shipment"] }],
 });
 
 export type ShipmentLine = InferEntity<typeof ShipmentLine>;
