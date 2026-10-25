@@ -4,7 +4,7 @@
 **Agent:** Claude Code (Opus 5.5), `om-auto-fix-issue` → `om-auto-implement-spec` → `om-auto-create-pr`
 **Issue:** #239 · **Spec PR:** #241 (merged)
 Source doc: .ai/specs/2026-10-25--0913UTC-statistical-unit.md
-**Status:** in progress
+**Status:** done (merge waits for the owner's step-0 production check and QA)
 
 ## Goal
 
@@ -67,6 +67,7 @@ Each product can carry one factor saying how many statistical units (SU) one bas
 - 11:00 — Report helpers and the Statistical units page. Deviation: count line is a label ("Finished products with an SU factor: 8 of 10.") to avoid two-number plural agreement. Coverage 100% (4,320 tests), build green.
 - 11:20 — No Docker on this machine: ran `statistical-units`, `navigation`, `materials-api` and `materials` integration files against a local standalone server (lesson 2026-10-23): 4 files, 41 tests passed. Spec moved to `implemented/`, references in the demand-review spec and D08 updated.
 - 11:50 — Review (`om-auto-review-pr`, fresh-context reviewer): APPROVE, no blockers or majors, merge gated on the owner's step-0 production check. Fixed in f35c3a4b: single rounding for other units in SU (R03), `fromBase` for negative totals, a true refusal message for SU, the SU unit hint and the Change factor hint and description, the compatibility text's legacy narrowing, PL copy, `Map` grouping, simpler `reportUnits`. Not changed: a shared entry-units helper (four small sources, listed in the lesson) and `NO_STATISTICAL_FACTOR` (kept for #240). Gate after fixes: lint 0, typecheck 0, coverage 100% (4,323 tests), build 0; the four integration files re-run green on the rebuilt server.
+- 12:05 — Re-review of f35c3a4b: APPROVE. Its one nit (the screens' `UNIT_NOT_CONVERTIBLE` copy) is filed as #243. Review, verification screenshots and manual-QA instructions posted on #242; draft flipped to ready; lock released.
 
 ## Progress
 
@@ -76,7 +77,7 @@ PR: #242
 
 ### Phase 0: production check
 
-- [ ] 0.1 Production check (owner, before merge)
+- [x] 0.1 Production check (owner, before merge) — handed to the owner on #242 (PR body, review comment); not run by the agent
 
 ### Phase 1: registry and refusals
 
