@@ -2,7 +2,12 @@ import { expect, it } from "vitest";
 import { en } from "../../i18n/messages/en";
 import { pl } from "../../i18n/messages/pl";
 import { CALENDAR_DATE_MESSAGE } from "@cpg/core/validators/dates/calendar-date.schema";
-import { MISSING_COMPONENT_MESSAGE } from "@cpg/core/validators/production-orders/production-completion.schema";
+import { EXTRA_INPUT_QUANTITY_MESSAGE, MISSING_COMPONENT_MESSAGE } from "@cpg/core/validators/production-orders/production-completion.schema";
+import {
+  PLANNED_START_YEAR_MESSAGE,
+  REQUIREMENT_OVERFLOW_MESSAGE,
+  TARGET_BELOW_PRODUCED_MESSAGE,
+} from "@cpg/core/validators/production-orders/production-order.schema";
 import { completionFieldError, productionLabels, productionFieldError } from "./labels";
 it("keeps every label serializable and translates known field errors while preserving unknown context", () => {
   for (const messages of [en, pl]) {
@@ -22,6 +27,21 @@ it("keeps every label serializable and translates known field errors while prese
     expect(labels.errors.PRODUCTION_OVERPRODUCTION).toContain("{target}");
   }
 });
+it("translates the planning and target messages by their exported constants, on both forms (#251)", () => {
+  const polish = productionLabels(pl);
+  for (const [message, text] of [
+    [PLANNED_START_YEAR_MESSAGE, "Wyliczony początek musi mieścić się w czterocyfrowym roku."],
+    [REQUIREMENT_OVERFLOW_MESSAGE, "Potrzeba składnika jest zbyt duża. Zmniejsz ilość docelową."],
+    [TARGET_BELOW_PRODUCED_MESSAGE, "Ilość docelowa nie może być mniejsza od już wyprodukowanej."],
+  ]) {
+    expect(productionFieldError(polish)(message)).toBe(text);
+    expect(completionFieldError(polish)(message)).toBe(text);
+  }
+  const english = productionLabels(en);
+  expect(productionFieldError(english)(PLANNED_START_YEAR_MESSAGE)).toBe(english.invalidStart);
+  expect(productionFieldError(english)(REQUIREMENT_OVERFLOW_MESSAGE)).toBe(english.requirementOverflow);
+  expect(productionFieldError(english)(TARGET_BELOW_PRODUCED_MESSAGE)).toBe(english.belowProduced);
+});
 it("calls a component outside the pinned recipe what the variance report calls it, on the form and in the history (#153)", () => {
   for (const messages of [en, pl]) {
     const { completion } = messages.productionOrders;
@@ -31,6 +51,8 @@ it("calls a component outside the pinned recipe what the variance report calls i
     expect(completion.removeInput).toContain(` ${term.toLowerCase()} `);
     expect(completion.fieldErrors.extraQuantity).toContain(term.toLowerCase().slice(0, -1));
   }
+  // The API says "extra" too, word for word what the English form shows (#191).
+  expect(EXTRA_INPUT_QUANTITY_MESSAGE).toBe(en.productionOrders.completion.fieldErrors.extraQuantity);
 });
 it("names every production audit action and snapshot field in both languages", () => {
   for (const messages of [en, pl]) {

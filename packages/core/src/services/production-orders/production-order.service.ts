@@ -8,7 +8,7 @@ import { parseDecimal } from "../../domain/quantities/decimal";
 import { ConflictError, ValidationError, versionConflict } from "../../http/errors";
 import { parseInput } from "../../http/parse-input";
 import { productionOrderCreateSchema, productionOrderOptionsSchema, productionOrderListSchema, productionOrderUpdateSchema, PRODUCTION_PAGE_SIZE,
-  type ProductionOrderInput, type ProductionOptionsInput, type ProductionOrderChanges } from "../../validators/production-orders/production-order.schema";
+  TARGET_BELOW_PRODUCED_MESSAGE, type ProductionOrderInput, type ProductionOptionsInput, type ProductionOrderChanges } from "../../validators/production-orders/production-order.schema";
 import type { ListOptions } from "../../validators/lists/list-query.schema";
 import type { ProductionOrderSort } from "../../validators/production-orders/production-order-list.schema";
 import { recordTenantAudit } from "../audit/audit-recorder";
@@ -92,7 +92,7 @@ export class ProductionOrderService {
         const unit = input.unit ?? order.enteredUnit;
         if (parseDecimal(quantity) !== parseDecimal(order.enteredQuantity) || unit !== order.enteredUnit) {
           const record = await convertToBaseQuantity(em, order.output, { quantity, unit });
-          if (parseDecimal(record.baseQuantity)! < parseDecimal(order.produced)!) throw new ValidationError({ quantity: ["The target cannot be less than the quantity already produced."] });
+          if (parseDecimal(record.baseQuantity)! < parseDecimal(order.produced)!) throw new ValidationError({ quantity: [TARGET_BELOW_PRODUCED_MESSAGE] });
           order.quantity = record.baseQuantity;
           // A target lowered to exactly what was produced completes the order (spec Q8).
           order.status = productionStatus(order.produced, order.quantity);

@@ -7,9 +7,11 @@ import { initOrm, migrate, Material, MaterialConversion, Location, Bom, BomRevis
 import { ProductionOrderService } from "./production-order.service";
 import { ProductionCompletionService } from "./production-completion.service";
 import { productionUsingMaterial, assertNoProductionOrders } from "./production-order-usage";
+import { BomService } from "../boms/bom.service";
 import { MaterialService } from "../materials/material.service";
 import { LocationService } from "../locations/location.service";
 import type { AuditActor } from "../audit/actor";
+import { TARGET_BELOW_PRODUCED_MESSAGE } from "../../validators/production-orders/production-order.schema";
 
 const actor: AuditActor = { userId: "user", username: "alice", sessionId: "session", channel: "ui", token: null };
 const input = { output: "00000001", location: "00000001", quantity: "30", unit: "each", plannedFinish: "2026-10-15" };
@@ -110,6 +112,27 @@ describe("manual production", () => {
     expect((await em().findOneOrFail(StockBalance, {})).quantity).toBe("30.000000");
     expect(await em().count(StockMovement, {})).toBe(0);
     expect((await service().create(input, actor)).shortages).toEqual([]);
+  });
+  it("preselects and pins priority 1 when both alternatives are feasible, whatever their creation order (BOM-009)", async () => {
+    // A second output whose priority 1 BOM is created after, and numbered above, its priority 2 one.
+    const manager = em();
+    const [component, location] = [await manager.findOneOrFail(Material, { code: "00000002" }), await manager.findOneOrFail(Location, { code: "00000001" })];
+    const output = manager.create(Material, { code: "00000003", type: "finished", description: "Shelf", baseUnit: "each" });
+    manager.create(PlanningParameterSet, { material: output, location, procurement: "make", leadTimeDays: 5, minimumQuantity: "1", lotMultiple: "1" });
+    for (const [code, priority, quantity] of [["00000003", 2, "1"], ["00000004", 1, "2"]] as const) {
+      const bom = manager.create(Bom, { code, output, revision: 1 });
+      const revision = manager.create(BomRevision, { bom, number: 1, priority, validFrom: "2026-01-01", validThrough: null });
+      manager.create(BomComponent, { revision, position: 0, material: component, quantity: `${quantity}.000000`, enteredQuantity: quantity, enteredUnit: "kg", numerator: "1", denominator: "1" });
+    }
+    await manager.flush();
+    await balance("60.000000");
+    const shelf = { ...input, output: "00000003" };
+    const options = await service().options(shelf);
+    expect(options.alternatives.map(({ bom, priority, components }) => [bom, priority, components[0].shortage])).toEqual([
+      ["00000004", 1, "0.000000"], ["00000003", 2, "0.000000"],
+    ]);
+    expect(options.selected).toEqual({ bom: "00000004", revision: 1 });
+    expect(await service().create(shelf, actor)).toMatchObject({ bom: "00000004", revision: 1, shortages: [] });
   });
   it("ignores other-site stock and isolates IDs, reads and shortages by tenant", async () => {
     await balance("1000.000000", "00000002"); await masters("test");
@@ -307,6 +330,29 @@ describe("production master references", () => {
     const unused = await manager.findOneOrFail(Material, { code: "00000002" });
     expect(await productionUsingMaterial(manager, unused)).toBeNull();
   });
+  it("deactivates a component only BOMs and an Open order's pinned recipe use, audited, leaving both unchanged (LFC-015, LFC-025, LFC-027)", async () => {
+    const order = await service().create({ ...input, bom: "00000001", revision: 1 }, actor);
+    const boms = () => new BomService({ em: em() });
+    // BOM 00000002's revision 1 becomes historic: the component is in a current and a historic revision.
+    await boms().update("00000002", { components: [{ material: "00000002", quantity: "3", unit: "kg" }] }, (await boms().get("00000002")).version, actor);
+    const recipes = async () => ({ current: await Promise.all(["00000001", "00000002"].map((code) => boms().get(code))), historic: await boms().getRevision("00000002", 1) });
+    const pinned = async () => {
+      const { bom, revision, status, version, updatedAt, components } = await service().get(order.id);
+      return { bom, revision, status, version, updatedAt, required: components.map(({ material, required }) => [material, required]) };
+    };
+    const [recipesBefore, orderBefore] = [await recipes(), await pinned()];
+    expect(recipesBefore.historic.components).toEqual([expect.objectContaining({ material: "00000002", quantity: "1.000000" })]);
+    const steel = await new MaterialService({ em: em() }).get("00000002");
+
+    expect(await new MaterialService({ em: em() }).update(steel.id, { active: false }, steel.version, actor)).toMatchObject({ id: "00000002", active: false });
+    expect(await em().findOneOrFail(TenantAuditEvent, { action: "materials.material.deactivated" })).toMatchObject({
+      subjectId: "00000002", before: { active: true }, after: { active: false },
+    });
+    expect(await recipes()).toEqual(recipesBefore);
+    expect(recipesBefore.current.map(({ active, revision }) => [active, revision])).toEqual([[true, 1], [true, 2]]);
+    expect(await pinned()).toEqual(orderBefore);
+    expect(orderBefore).toMatchObject({ bom: "00000001", revision: 1, status: "open", required: [["00000002", "60.000000"]] });
+  });
 });
 
 describe("demo", () => {
@@ -368,7 +414,7 @@ describe("edits after a first completion", () => {
   it("refuses a target below what was produced and allows raising it, audited (PRD-026, PRD-025)", async () => {
     const order = await partlyProduced();
     await expect(service().update(order.id, { quantity: "9" }, order.version, actor)).rejects.toMatchObject({ code: "VALIDATION_FAILED",
-      fieldErrors: { quantity: ["The target cannot be less than the quantity already produced."] } });
+      fieldErrors: { quantity: [TARGET_BELOW_PRODUCED_MESSAGE] } });
     const raised = await service().update(order.id, { quantity: "40" }, order.version, actor);
     expect(raised).toMatchObject({ quantity: "40.000000", produced: "10.000000", outstanding: "30.000000", status: "open", version: 3 });
     const audit = await em().findOneOrFail(TenantAuditEvent, { subjectId: order.id, action: "production-orders.production-order.updated" });

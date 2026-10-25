@@ -34,12 +34,12 @@ describe("document cancellation and early closure", () => {
   const po = (lines = [{ material, quantity: "10", unit: "kg", plannedDate: "2027-01-02" }]) => create("purchase-orders", { supplier, location, lines });
   const co = () => create("customer-orders", { customer, location, lines: [1, 2].map(() => ({ material, quantity: "10", unit: "kg", requiredDate: "2027-01-02" })) });
   const production = () => create("production-orders", { output, location, quantity: "10", unit: "each", plannedFinish: "2027-01-02" });
-  const transfer = () => create("transfers", { material, source: location, destination, quantity: "10", unit: "kg", plannedDispatch: "2027-01-02", plannedArrival: "2027-01-03" });
+  const transfer = (quantity = "10") => create("transfers", { material, source: location, destination, quantity, unit: "kg", plannedDispatch: "2027-01-02", plannedArrival: "2027-01-03" });
   const correct = async () => {
     const change = 100 - Number((await stock()).quantity);
     if (change !== 0) expect((await write(`${root}/stock/corrections`, { material, location, quantity: String(change), unit: "kg", reason: "Lifecycle opening stock" }, secret)).status).toBe(200);
   };
-  const stock = async () => json(await api("GET", `${root}/stock?material=${material}&location=${location}`)).data;
+  const stock = async (at = location) => json(await api("GET", `${root}/stock?material=${material}&location=${at}`)).data;
   const open = async (concept: string, id?: string) => {
     await user.open(`${baseUrl}/admin/prod/${concept}${id ? `/${id}` : ""}`);
     await user.waitUntil('document.querySelector("main") && Object.keys(document.querySelector("main")).some((key) => key.startsWith("__reactFiber"))');
@@ -327,21 +327,38 @@ describe("document cancellation and early closure", () => {
     expect((await stock()).quantity).toBe("60.000000");
   });
 
-  it("shows the transit refusal, then closes a loss-settled transfer on a narrow screen", async () => {
-    await correct(); const order = await transfer();
-    expect((await write(`${root}/transfers/${order.id}/dispatches`, { quantity: "10", unit: "kg" })).status).toBe(200);
+  it("refuses Close Early with 10 of 60 kg in transit after 50 received, then closes the 55/5 loss early on a narrow screen (TRF-012, E2E-009)", async () => {
+    await correct(); const order = await transfer("60");
+    expect([(await stock()).quantity, (await stock(destination)).quantity]).toEqual(["100.000000", "0.000000"]);
+    expect((await write(`${root}/transfers/${order.id}/dispatches`, { quantity: "60", unit: "kg" })).status).toBe(200);
+    expect((await write(`${root}/transfers/${order.id}/receipts`, { quantity: "50", unit: "kg" })).status).toBe(200);
     await user.setViewport(390, 844); await open("transfers", order.id);
     await user.clickRole("button", `Close transfer early… — Transfers ${order.id}`); await user.waitFor(dialog);
     expect(await user.text(dialog)).toContain("10 kg still in transit");
     await user.click(`${dialog} button[type=submit]`); await user.waitFor(`${dialog} [role=alert]`);
-    expect(await user.text(`${dialog} [role=alert]`)).toContain("10.000000 kg still in transit");
+    expect(await user.text(`${dialog} [role=alert]`)).toContain("Receive or write off the 10.000000 kg still in transit first.");
     expect(await user.evaluate<boolean>("document.documentElement.scrollWidth <= innerWidth")).toBe(true);
     await user.clickRole("button", "Keep open");
-    expect((await write(`${root}/transfers/${order.id}/receipts`, { quantity: "8", unit: "kg" })).status).toBe(200);
-    expect((await write(`${root}/transfers/${order.id}/write-offs`, { quantity: "2", unit: "kg", reason: "Lost" })).status).toBe(200);
-    await open("transfers", order.id); await confirm(`Close transfer early… — Transfers ${order.id}`, "2 kg");
-    expect(await get("transfers", order.id)).toMatchObject({ status: "closed-early", received: "8.000000", writtenOff: "2.000000", abandoned: "2.000000", inTransit: "0.000000", outstanding: "0.000000" });
-    expect((await stock()).quantity).toBe("90.000000"); await user.setViewport(1280, 800);
+    expect(await get("transfers", order.id)).toMatchObject({ status: "open", dispatched: "60.000000", received: "50.000000", inTransit: "10.000000" });
+
+    expect((await write(`${root}/transfers/${order.id}/receipts`, { quantity: "5", unit: "kg" })).status).toBe(200);
+    const writtenOff = await write(`${root}/transfers/${order.id}/write-offs`, { quantity: "5", unit: "kg", reason: "Lifecycle crate lost" });
+    expect(writtenOff.status).toBe(200);
+    const loss = json(writtenOff).data.posting.id as string;
+    // Every dispatched unit is accounted for, yet the loss keeps the transfer from Completed.
+    expect(await get("transfers", order.id)).toMatchObject({ status: "open", inTransit: "0.000000" });
+    await open("transfers", order.id); await confirm(`Close transfer early… — Transfers ${order.id}`, "5 kg");
+    const closed = await get("transfers", order.id);
+    expect(closed).toMatchObject({ status: "closed-early", quantity: "60.000000", dispatched: "60.000000", received: "55.000000", writtenOff: "5.000000",
+      abandoned: "5.000000", inTransit: "0.000000", outstanding: "0.000000" });
+    expect([(await stock()).quantity, (await stock(destination)).quantity]).toEqual(["40.000000", "55.000000"]);
+    // The loss in the transfer's ledger, and its audit entry naming that posting.
+    expect((closed.postings as { id: string }[]).find(({ id }) => id === loss)).toMatchObject({ kind: "write-off", reason: "Lifecycle crate lost",
+      legs: [{ place: "transit", location: null, quantity: "-5.000000" }] });
+    const audit = (json(await api("GET", "/api/tenants/prod/audit?limit=100")).data.entries as { action: string; subject: { id: string }; after: Record<string, unknown> }[])
+      .filter((entry) => entry.subject.id === order.id && entry.action === "transfers.transfer.written-off");
+    expect(audit).toEqual([expect.objectContaining({ after: expect.objectContaining({ posting: loss, moved: "5.000000", reason: "Lifecycle crate lost" }) })]);
+    await user.setViewport(1280, 800);
   });
 
   it("refuses stale versions, read-only mutations and missing/stale Test generations", async () => {

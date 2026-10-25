@@ -240,6 +240,26 @@ describe("ProductionCompletionService", () => {
       expect((await service().preview("00000001", { quantity: "4", unit: "each" })).components.map(({ material, expected }) => [material, expected])).toEqual([[COCOA, "2.000000"], [WRAPPER, "8.000000"]]);
     });
 
+    it("expects revision 1 before and after a partly completed order's BOM is revised, keeping both revisions apart (E2E-004)", async () => {
+      await order();
+      await correct(COCOA, "100");
+      await correct(WRAPPER, "300");
+      await service().post("00000001", completion("40", "20", "80"), ACTOR);
+      const boms = () => new BomService({ em: scoped() });
+      const revised = await boms().update("00000001", { components: [{ material: COCOA, quantity: "9", unit: "kg" }, { material: WRAPPER, quantity: "5", unit: "each" }] }, 1, ACTOR);
+      expect(revised.revision).toBe(2);
+
+      const { completion: next, order: progressed } = await service().post("00000001", completion("20", "10", "40"), ACTOR);
+      expect(next.lines.map(({ material, expected, variance }) => [material, expected, variance])).toEqual([[COCOA, "10.000000", "0.000000"], [WRAPPER, "40.000000", "0.000000"]]);
+      expect(progressed).toMatchObject({ bom: "00000001", revision: 1, produced: "60.000000", outstanding: "40.000000", status: "open" });
+      expect((await service().list("00000001")).map(({ id, lines }) => [id, lines.map(({ material, expected }) => `${material} ${expected}`)])).toEqual([
+        ["00000002", [`${COCOA} 10.000000`, `${WRAPPER} 40.000000`]],
+        ["00000001", [`${COCOA} 20.000000`, `${WRAPPER} 80.000000`]],
+      ]);
+      const perOutput = async (number: number) => (await boms().getRevision("00000001", number)).components.map(({ material, quantity }) => `${material} ${quantity}`);
+      expect([await perOutput(1), await perOutput(2)]).toEqual([[`${COCOA} 0.500000`, `${WRAPPER} 2.000000`], [`${COCOA} 9.000000`, `${WRAPPER} 5.000000`]]);
+    });
+
     it("adds a second partial completion and keeps the first (PRD-012), listing the newest first", async () => {
       await order();
       await correct(COCOA, "100");

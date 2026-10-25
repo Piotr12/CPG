@@ -140,7 +140,7 @@ describe("AuditService.reversalLinks", () => {
   const actor = { userId: "u1", username: "alice", sessionId: "s1", channel: "ui" as const, token: null };
   const pair = { material: "00000001", location: "00000001" };
 
-  it("links an original and its reversal from either side, in one query, within the tenant (AUD-004, REV-020)", async () => {
+  it("links an original and its reversal from either side, once, within the tenant (AUD-004, REV-020)", async () => {
     const em = scoped("prod");
     em.create(Material, { code: pair.material, type: "raw", description: "Bolts", baseUnit: "each" });
     em.create(Location, { code: pair.location, name: "Plant" });

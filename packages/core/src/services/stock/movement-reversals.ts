@@ -1,13 +1,20 @@
 import { StockMovement, StockReversal, type EntityManager } from "@cpg/db";
 
-/** Reads only links touching the requested movements, never the whole ledger. */
+/**
+ * Reads only links touching the requested movements, never the whole ledger: those whose original is
+ * one of them, then those whose inverse is, each through its own unique index. SQLite plans an `$or`
+ * of the two through the tenant alone, walking every link of the tenant (#247). A link touching two
+ * of the movements comes back once.
+ */
 export async function movementReversals(em: EntityManager, ids: readonly string[]): Promise<StockReversal[]> {
-  const links: StockReversal[] = [];
+  const links = new Map<string, StockReversal>();
   for (let start = 0; start < ids.length; start += 100) {
     const batch = ids.slice(start, start + 100);
-    links.push(...await em.find(StockReversal, { $or: [{ original: { $in: batch } }, { inverse: { $in: batch } }] }, { populate: ["original"] }));
+    const byOriginal = await em.find(StockReversal, { original: { $in: batch } }, { populate: ["original"] });
+    const byInverse = await em.find(StockReversal, { inverse: { $in: batch } }, { populate: ["original"] });
+    for (const link of [...byOriginal, ...byInverse]) links.set(link.id, link);
   }
-  return links;
+  return [...links.values()];
 }
 
 export interface DocumentMovement { movementId: string | null; reversedBy: string | null }

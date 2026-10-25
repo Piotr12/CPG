@@ -1,5 +1,6 @@
-import { GlobalAuditEvent, StockReversal, TenantAuditEvent, type AuditChannel, type AuditSnapshot, type EntityManager } from "@cpg/db";
+import { GlobalAuditEvent, TenantAuditEvent, type AuditChannel, type AuditSnapshot, type EntityManager } from "@cpg/db";
 import { NotFoundError } from "../../http/errors";
+import { movementReversals } from "../stock/movement-reversals";
 import type { AuditFilterQuery, AuditListQuery } from "../../validators/audit/audit-list.schema";
 
 /** One audit entry, as screens and the API show it. */
@@ -64,12 +65,10 @@ export class AuditService {
   /**
    * The reversal links (#91) in which any of these stock movements is the original or the inverse:
    * how a page of the tenant audit links an original posting and its reversal (AUD-004, REV-020).
-   * One query for a whole page; no ids, no query.
+   * Two key lookups for a whole page (#247); no ids, no query.
    */
   async reversalLinks(movementIds: readonly string[]): Promise<AuditReversalLink[]> {
-    if (movementIds.length === 0) return [];
-    const ids = [...movementIds];
-    const links = await this.em.find(StockReversal, { $or: [{ original: { $in: ids } }, { inverse: { $in: ids } }] });
+    const links = await movementReversals(this.em, movementIds);
     return links.map(({ original, inverse }) => ({ original: original.id, inverse: inverse.id }));
   }
 }

@@ -1,11 +1,12 @@
 import { ValidationError } from "../../http/errors";
+import { PLANNED_START_YEAR_MESSAGE, REQUIREMENT_OVERFLOW_MESSAGE } from "../../validators/production-orders/production-order.schema";
 import { formatDecimal, MAX_QUANTITY, ONE, parseDecimal } from "../quantities/decimal";
 
 /** Calendar days at UTC midnight, independent of daylight saving and working-day calendars. */
 export function plannedStart(finish: string, leadTimeDays: number): string {
   const date = new Date(`${finish}T00:00:00Z`);
   date.setUTCDate(date.getUTCDate() - leadTimeDays);
-  if (date.getUTCFullYear() < 0) throw new ValidationError({ plannedFinish: ["The planned start must fit a four-digit calendar year."] });
+  if (date.getUTCFullYear() < 0) throw new ValidationError({ plannedFinish: [PLANNED_START_YEAR_MESSAGE] });
   return date.toISOString().slice(0, 10);
 }
 
@@ -16,7 +17,7 @@ export function plannedStart(finish: string, leadTimeDays: number): string {
  */
 export function scaledRequirement(perOutput: string, output: string): bigint {
   const required = (parseDecimal(perOutput)! * parseDecimal(output)! + ONE - 1n) / ONE;
-  if (required > MAX_QUANTITY) throw new ValidationError({ quantity: ["The component requirement is too large to store."] });
+  if (required > MAX_QUANTITY) throw new ValidationError({ quantity: [REQUIREMENT_OVERFLOW_MESSAGE] });
   return required;
 }
 
