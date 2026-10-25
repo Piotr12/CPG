@@ -55,8 +55,8 @@ export const STOCK_SHEET: SheetSpec<StockSheetKey> = {
       required: "never",
       example: "each",
       meaning: {
-        en: "The material's base unit or a unit it converts. Blank: its base unit.",
-        pl: "Jednostka bazowa materiału lub jednostka z przelicznikiem. Puste: jednostka bazowa.",
+        en: "The material's base unit or a physical unit it converts (not SU). Blank: its base unit.",
+        pl: "Jednostka bazowa materiału lub fizyczna jednostka z przelicznikiem (nie SU). Puste: jednostka bazowa.",
       },
     },
   ],

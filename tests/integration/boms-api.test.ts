@@ -128,7 +128,7 @@ describe("BOMs through the API (R07)", () => {
     expect(json(cycle).error).toMatchObject({
       code: "BOM_CYCLE",
       message:
-        `This recipe would make a cycle: ${ids.subC} bomapi sub C →(BOM ${c.id}) ${ids.subA} bomapi sub A →(BOM ${a.id}) ` +
+        `This BOM would make a cycle: ${ids.subC} bomapi sub C →(BOM ${c.id}) ${ids.subA} bomapi sub A →(BOM ${a.id}) ` +
         `${ids.subB} bomapi sub B →(BOM ${b.id}) ${ids.subC} bomapi sub C.`,
     });
     const after = json(await api("GET", `/api/tenants/prod/boms/${c.id}`)).data;

@@ -13,6 +13,13 @@ describe("help topics", () => {
     }
   });
 
+  it.each([
+    ["en", "a unit without a conversion (or SU, which is never entered)"],
+    ["pl", "jednostkę bez przelicznika (lub SU, w której nie wpisuje się ilości)"],
+  ] as const)("lists an SU row among the stock import's dry-run problems in %s (#243)", (locale, problem) => {
+    expect(helpTopics(locale).find((topic) => topic.id === "stock-import")!.body.join(" ")).toContain(problem);
+  });
+
   it("is written separately in Polish, not copied from English", () => {
     const english = helpTopics("en");
     const polish = helpTopics("pl");

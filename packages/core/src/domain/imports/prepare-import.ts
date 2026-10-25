@@ -220,7 +220,7 @@ function prepareBoms(headerRows: SheetRow<Values>[], lineRows: SheetRow<Values>[
     if (named.has(targetKey(line.values.bom))) continue;
     const message =
       line.values.bom.kind === "id"
-        ? `BOM ${line.values.bom.id} has no row on the BOM headers sheet. Add its header: a BOM's lines are its complete recipe.`
+        ? `BOM ${line.values.bom.id} has no row on the BOM headers sheet. Add its header: a BOM's lines are all its components.`
         : `No row on the BOM headers sheet has the import reference ${line.values.bom.reference}.`;
     const missing = line.values.bom.kind === "id" ? line.values.bom.id : line.values.bom.reference;
     errors.push(issue(LINES, row, "BOM", "IMPORT_LINE_WITHOUT_HEADER", message, { bom: missing }));
@@ -229,7 +229,7 @@ function prepareBoms(headerRows: SheetRow<Values>[], lineRows: SheetRow<Values>[
   return prepared.filter((bom) => {
     if (incomplete.has(bom)) return false;
     if (bom.lines.length === 0) {
-      const message = "This BOM has no rows on the BOM lines sheet: list its complete recipe there.";
+      const message = "This BOM has no rows on the BOM lines sheet: list all its components there.";
       errors.push(issue(HEADERS, bom.row, null, "IMPORT_BOM_WITHOUT_LINES", message));
       return false;
     }

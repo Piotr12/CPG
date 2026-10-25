@@ -352,6 +352,21 @@ Since #221 the tenant list routes take three optional query parameters, the same
 
 These key names are part of the contract. Renaming or removing one is a breaking change; adding one is additive.
 
+#### BOM, never recipe, in the API's messages (#214)
+
+#206 made the screens say BOM, never recipe. #214 rewords the English `message` of six refusals the same way. Codes, statuses, `fieldErrors` keys and `params` stay the same:
+
+| Code (field) | Before | Since #214 |
+| --- | --- | --- |
+| `BOM_CYCLE` | This recipe would make a cycle: … | This BOM would make a cycle: … |
+| `PRODUCTION_BOM_CHANGED` | … Review the recipe choices again. | … Review the BOM choices again. |
+| `VALIDATION_FAILED` (`components.N.material`, BOM writes and the import) | This material is already in the recipe: enter its total quantity once. | This material is already in the BOM: enter its total quantity once. |
+| `VALIDATION_FAILED` (`components`, production completions) | Enter what was used of every recipe component, 0 when none was. | Enter what was used of every BOM component, 0 when none was. |
+| `IMPORT_LINE_WITHOUT_HEADER` (import report) | … Add its header: a BOM's lines are its complete recipe. | … Add its header: a BOM's lines are all its components. |
+| `IMPORT_BOM_WITHOUT_LINES` (import report) | … list its complete recipe there. | … list all its components there. |
+
+A client should switch on `code` and the field key, never on the English `message`. That is what the screens do: they translate by code, or by the exported message constants, which changed with the text. The text after `BOM_CYCLE`'s first colon, the cycle's path, is unchanged. During the deploy overlap, the previous release still answers with the old texts. `tests/api-messages-glossary.test.ts` keeps "recipe" out of every string and JSX text in `packages/core/src` and in `packages/app/src/{app,auth,routing}` (routes, pages, server actions).
+
 ### 5. Commands used by CI, deploy and the docs
 
 Source: root `package.json` scripts, `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `.ai/agentic.config.json`, `AGENTS.md`, `SDLC.md`.

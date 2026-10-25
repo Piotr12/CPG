@@ -178,7 +178,7 @@ describe("RecipeForm", () => {
     expect(await screen.findByText(pl.boms.fieldErrors.unitNotConvertible)).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
 
-    action.mockResolvedValueOnce({ ok: false, error: { code: "BOM_CYCLE", message: "This recipe would make a cycle: 00000005 C → 00000005 C." } });
+    action.mockResolvedValueOnce({ ok: false, error: { code: "BOM_CYCLE", message: "This BOM would make a cycle: 00000005 C → 00000005 C." } });
     fireEvent.click(screen.getByRole("button", { name: "Utwórz BOM" }));
     expect((await screen.findByRole("alert")).textContent).toBe(`${pl.boms.errors.BOM_CYCLE} 00000005 C → 00000005 C.`);
 

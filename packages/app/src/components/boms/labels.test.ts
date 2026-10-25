@@ -27,7 +27,7 @@ describe("BOM labels", () => {
   it("append a clash's or a cycle's language-neutral details to the translated sentence", () => {
     const format = errorFormatter(bomsLabels(pl));
     const clash = { code: "BOM_PRIORITY_CONFLICT", message: "Another active BOM …: BOM 00000001 (2027-03-01 – …)." };
-    const cycle = { code: "BOM_CYCLE", message: "This recipe would make a cycle: 00000008 Sub A → 00000008 Sub A." };
+    const cycle = { code: "BOM_CYCLE", message: "This BOM would make a cycle: 00000008 Sub A → 00000008 Sub A." };
 
     expect(format(clash)).toBe(`${pl.boms.errors.BOM_PRIORITY_CONFLICT} BOM 00000001 (2027-03-01 – …).`);
     expect(format(cycle)).toBe(`${pl.boms.errors.BOM_CYCLE} 00000008 Sub A → 00000008 Sub A.`);
@@ -37,7 +37,7 @@ describe("BOM labels", () => {
 
   it("show an untranslated code's server message as it is, details included", () => {
     const format = errorFormatter({ ...bomsLabels(en), errors: {} });
-    expect(format({ code: "BOM_CYCLE", message: "This recipe would make a cycle: A → A." })).toBe("This recipe would make a cycle: A → A.");
+    expect(format({ code: "BOM_CYCLE", message: "This BOM would make a cycle: A → A." })).toBe("This BOM would make a cycle: A → A.");
   });
 
   it("translate the shared and the service's field messages, and pass others through", () => {

@@ -17,4 +17,12 @@ describe("stock labels", () => {
     expect(labels.errors.TENANT_READ_ONLY).toBe(messages.errors.TENANT_READ_ONLY);
     expect(labels.errors.UNIT_NOT_CONVERTIBLE).toBe(messages.stock.errors.UNIT_NOT_CONVERTIBLE);
   });
+  it("names SU among the causes of UNIT_NOT_CONVERTIBLE, which the stock import reaches with SU too (#243)", () => {
+    expect(stockLabels(en).errors.UNIT_NOT_CONVERTIBLE).toBe(
+      "This unit can't be entered for this material: it has no conversion to the base unit, or it is SU, which is for reports only.",
+    );
+    expect(stockLabels(pl).errors.UNIT_NOT_CONVERTIBLE).toBe(
+      "Tej jednostki nie można wpisać dla tego materiału: nie ma przelicznika na jednostkę podstawową albo jest to SU, które służy tylko do raportów.",
+    );
+  });
 });
