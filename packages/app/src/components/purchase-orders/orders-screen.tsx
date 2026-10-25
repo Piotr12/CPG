@@ -3,7 +3,8 @@ import type { PurchaseOrderSort } from "@cpg/core/validators/purchasing/purchase
 import { PageHeader } from "@cpg/ui/backend/page-header";
 import type { Messages } from "../../i18n/messages/en";
 import { ListSearchBar } from "../lists/list-search-bar";
-import { activeOptions, materialPicks } from "../purchase-requisitions/choices";
+import { activeRecordOptions } from "../named-records/record-picker";
+import { materialPicks } from "../purchase-requisitions/choices";
 import type { DocumentListState } from "../purchasing/list-state";
 import { requisitionChoices } from "./choices";
 import { CreateOrderDialog } from "./create-order-dialog";
@@ -45,8 +46,8 @@ export function OrdersScreen({ tenant, orders, page, pages, list, suppliers, loc
           <CreateOrderDialog
             context={{ tenant: tenant.code, generation: tenant.generation }}
             labels={labels}
-            suppliers={activeOptions(suppliers)}
-            locations={activeOptions(locations)}
+            suppliers={activeRecordOptions(suppliers)}
+            locations={activeRecordOptions(locations)}
             materials={materialPicks(materials, units)}
             requisitions={requisitionChoices(requisitions, byId(materials), labels)}
             locale={locale}

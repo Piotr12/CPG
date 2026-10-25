@@ -9,8 +9,8 @@ vi.mock("../../app/admin/[tenant]/transfers/actions", () => ({ createTransfer: m
 
 const materials = [{ value: "00000001", code: "00000001", name: "Steel", detail: "kg", units: ["kg", "t"] }];
 const locations = [
-  { value: "00000001", label: "00000001 — Main plant" },
-  { value: "00000002", label: "00000002 — Warehouse" },
+  { value: "00000001", code: "00000001", name: "Main plant" },
+  { value: "00000002", code: "00000002", name: "Warehouse" },
 ];
 const dialog = () => <CreateTransferDialog context={{ tenant: "prod", generation: 1 }} labels={transfersLabels(en)} materials={materials} locations={locations} locale="en" />;
 
@@ -25,8 +25,12 @@ describe("CreateTransferDialog", () => {
     expect(screen.getByRole("dialog", { name: "Create a transfer" })).toBeTruthy();
     fireEvent.change(screen.getByRole("combobox", { name: "Material" }), { target: { value: "steel" } });
     fireEvent.mouseDown(within(screen.getByRole("listbox")).getByRole("option"));
-    fireEvent.change(screen.getByLabelText("From"), { target: { value: "00000001" } });
-    fireEvent.change(screen.getByLabelText("To"), { target: { value: "00000002" } });
+    const choose = (label: string, typed: string) => {
+      fireEvent.change(screen.getByRole("combobox", { name: label }), { target: { value: typed } });
+      fireEvent.mouseDown(within(screen.getByRole("listbox", { name: label })).getByRole("option"));
+    };
+    choose("From", "plant");
+    choose("To", "warehouse");
     fireEvent.change(screen.getByLabelText("Quantity"), { target: { value: "100" } });
     fireEvent.change(screen.getByLabelText("Planned dispatch"), { target: { value: "2027-03-01" } });
     fireEvent.change(screen.getByLabelText("Planned arrival"), { target: { value: "2027-03-01" } });

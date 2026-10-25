@@ -11,8 +11,8 @@ const dialog = () => (
   <CreateOrderDialog
     context={{ tenant: "prod", generation: 1 }}
     labels={ordersLabels(en)}
-    suppliers={[{ value: "00000001", label: "00000001 — Steel Service" }]}
-    locations={[{ value: "00000001", label: "00000001 — Main plant" }]}
+    suppliers={[{ value: "00000001", code: "00000001", name: "Steel Service" }]}
+    locations={[{ value: "00000001", code: "00000001", name: "Main plant" }]}
     materials={[{ value: "00000001", code: "00000001", name: "Steel", detail: "kg", units: ["kg"] }]}
     requisitions={[]}
     locale="en"
@@ -28,10 +28,13 @@ describe("CreateOrderDialog", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Create purchase order" }));
     expect(screen.getByRole("dialog", { name: "Create a purchase order" })).toBeTruthy();
-    fireEvent.change(screen.getByLabelText("Supplier"), { target: { value: "00000001" } });
-    fireEvent.change(screen.getByLabelText("Location"), { target: { value: "00000001" } });
-    fireEvent.change(screen.getByRole("combobox", { name: "Material, Line 1" }), { target: { value: "steel" } });
-    fireEvent.mouseDown(within(screen.getByRole("listbox", { name: "Material, Line 1" })).getByRole("option"));
+    const choose = (label: string, typed: string) => {
+      fireEvent.change(screen.getByRole("combobox", { name: label }), { target: { value: typed } });
+      fireEvent.mouseDown(within(screen.getByRole("listbox", { name: label })).getByRole("option"));
+    };
+    choose("Supplier", "00000001");
+    choose("Location", "plant");
+    choose("Material, Line 1", "steel");
     fireEvent.change(screen.getByLabelText("Quantity, Line 1"), { target: { value: "20" } });
     fireEvent.change(screen.getByLabelText("Planned, Line 1"), { target: { value: "2027-03-03" } });
     fireEvent.click(screen.getAllByRole("button", { name: "Create purchase order" }).at(-1)!);

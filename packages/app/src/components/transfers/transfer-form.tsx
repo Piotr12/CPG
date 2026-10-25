@@ -3,13 +3,12 @@
 import { useId, useState, useTransition, type FormEvent, type KeyboardEvent } from "react";
 import type { ApiResult, FieldErrors } from "@cpg/ui/backend/api/result";
 import { ErrorMessage } from "@cpg/ui/backend/feedback/error-message";
-import { Autocomplete } from "@cpg/ui/backend/forms/autocomplete";
+import { Autocomplete, type AutocompleteOption } from "@cpg/ui/backend/forms/autocomplete";
 import { toFieldErrors, type FormSchema } from "@cpg/ui/backend/forms/crud-form";
 import { Button } from "@cpg/ui/components/button";
 import { Input } from "@cpg/ui/components/input";
 import { Label } from "@cpg/ui/components/label";
 import { NativeSelect, NativeSelectOption } from "@cpg/ui/components/native-select";
-import type { FormOption } from "../forms/form-labels";
 import { fieldControls } from "../purchasing/field-controls";
 import type { MaterialPick } from "../purchase-requisitions/choices";
 import { errorFormatter, fieldErrorFormatter, type TransfersLabels } from "./labels";
@@ -29,7 +28,8 @@ export interface TransferFormProps<T> {
   labels: TransfersLabels;
   /** The materials the autocomplete offers (#217). */
   materials: MaterialPick[];
-  locations: FormOption[];
+  /** The locations both location autocompletes offer, source and destination alike (#222). */
+  locations: AutocompleteOption[];
   /** The reader's language, for the autocomplete's counts. */
   locale: string;
   schema: FormSchema;
@@ -105,17 +105,22 @@ export function TransferForm<T>({ labels, materials, locations, locale, schema, 
     const field = control(name);
     return (
       <div className="flex flex-col gap-2">
-        <Label htmlFor={field.props.id}>{t[name]}</Label>
-        <NativeSelect className="w-full" value={values[name]} onChange={(event) => set({ [name]: event.target.value })} {...field.props}>
-          <NativeSelectOption value="" disabled>
-            {t.choose}
-          </NativeSelectOption>
-          {locations.map((choice) => (
-            <NativeSelectOption key={choice.value} value={choice.value}>
-              {choice.label}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
+        <Label id={`${field.props.id}-label`} htmlFor={field.props.id}>
+          {t[name]}
+        </Label>
+        <Autocomplete
+          id={field.props.id}
+          aria-labelledby={`${field.props.id}-label`}
+          name={field.props.name}
+          options={locations}
+          value={values[name]}
+          onChange={(value) => set({ [name]: value })}
+          labels={labels.locationPicker.labels}
+          locale={locale}
+          placeholder={labels.locationPicker.placeholder}
+          aria-invalid={field.props["aria-invalid"]}
+          aria-describedby={field.props["aria-describedby"]}
+        />
         {field.node}
       </div>
     );

@@ -4,7 +4,8 @@ import { PageHeader } from "@cpg/ui/backend/page-header";
 import type { Messages } from "../../i18n/messages/en";
 import { ListSearchBar } from "../lists/list-search-bar";
 import type { DocumentListState } from "../purchasing/list-state";
-import { activeOptions, materialPicks } from "./choices";
+import { activeRecordOptions } from "../named-records/record-picker";
+import { materialPicks } from "./choices";
 import { CreateRequisitionDialog } from "./create-requisition-dialog";
 import { byId, requisitionsLabels } from "./labels";
 import { RequisitionsTable } from "./requisitions-table";
@@ -43,7 +44,7 @@ export function RequisitionsScreen({ tenant, requisitions, page, pages, list, ma
             context={{ tenant: tenant.code, generation: tenant.generation }}
             labels={labels}
             materials={materialPicks(materials, units)}
-            locations={activeOptions(locations)}
+            locations={activeRecordOptions(locations)}
             locale={locale}
           />
         )}

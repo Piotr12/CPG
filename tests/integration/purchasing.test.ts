@@ -17,6 +17,8 @@ const ready = (element: string) =>
 const button = (name: string) =>
   `[...document.querySelectorAll("main button")].find((b) => b.textContent.trim() === ${JSON.stringify(name)} || b.getAttribute("aria-label") === ${JSON.stringify(name)})`;
 const closed = `!document.querySelector("[role=dialog]")`;
+/** The open dialog's autocomplete for `field`, found by the label that names it (#222). */
+const picker = (field: string) => `[role=dialog][data-state=open] [role=combobox][aria-labelledby$="-${field}-label"]`;
 
 /** A page's table rows as their cells' text, once its first table is shown. */
 async function rows(browser: Browser, path: string): Promise<string[][]> {
@@ -239,8 +241,8 @@ async function createRequisition(browser: Browser, material: string, location: s
   await browser.waitUntil(ready(button("Create requisition")));
   await browser.clickRole("button", "Create requisition");
   await browser.waitFor("[role=dialog]");
-  await chooseMaterial(browser, "[role=dialog] input[aria-autocomplete=list]", material);
-  await browser.select("[role=dialog] select[name=location]", await optionFor(browser, location));
+  await chooseNamed(browser, picker("material"), material);
+  await chooseNamed(browser, picker("location"), location);
   await browser.fill("[role=dialog] [name=quantity]", quantity);
   expect(await browser.fillDate("[role=dialog] [name=requiredDate]", "2027-03-01")).toBe("2027-03-01");
   await browser.click("[role=dialog] button[type=submit]");
@@ -269,9 +271,9 @@ async function createOrder(browser: Browser, line: { material: string; quantity:
   await browser.waitUntil(ready(button("Create purchase order")));
   await browser.clickRole("button", "Create purchase order");
   await browser.waitFor("[role=dialog]");
-  await browser.select("[role=dialog] select[name=supplier]", await optionFor(browser, "buypo acme"));
-  await browser.select("[role=dialog] select[name=location]", await optionFor(browser, "buypo plant"));
-  await chooseMaterial(browser, `[role=dialog] input[aria-label="Material, Line 1"]`, line.material);
+  await chooseNamed(browser, picker("supplier"), "buypo acme");
+  await chooseNamed(browser, picker("location"), "buypo plant");
+  await chooseNamed(browser, `[role=dialog][data-state=open] [role=combobox][aria-label="Material, Line 1"]`, line.material);
   await browser.fill(`[role=dialog] [name="lines.0.quantity"]`, line.quantity);
   expect(await browser.fillDate(`[role=dialog] [name="lines.0.plannedDate"]`, line.plannedDate)).toBe(line.plannedDate);
   if (line.requisition) await browser.select(`[role=dialog] select[name="lines.0.requisition"]`, line.requisition);
@@ -300,22 +302,15 @@ async function ordersOf(browser: Browser, supplier: string): Promise<string[][]>
 }
 
 /**
- * Chooses the material named `name` in the material autocomplete matching `selector` (#217): types the
- * name, reads the ID of the option it lists, and chooses that option.
+ * Chooses the record named `name` (a material, supplier or location) in the autocomplete matching
+ * `selector` (#217, #222): types the name, reads the ID of the option it lists, and chooses that option.
  */
-async function chooseMaterial(browser: Browser, selector: string, name: string) {
+async function chooseNamed(browser: Browser, selector: string, name: string) {
   await browser.waitUntil(`[...document.querySelectorAll(${JSON.stringify(selector)})].some((input) => input.offsetParent && Object.keys(input).some((key) => key.startsWith("__reactFiber")))`);
   await browser.fill(selector, name);
   const option = `[...document.querySelectorAll("[role=listbox]:not([hidden]) [role=option]")].find((row) => row.offsetParent && row.textContent.includes(${JSON.stringify(name)}))`;
   await browser.waitUntil(`Boolean(${option})`);
   await chooseFromList(browser, selector, name, await browser.evaluate<string>(`${option}.querySelector(".font-mono").textContent`));
-}
-
-/** The value of the select option whose label contains `text`, in the open dialog's first matching select. */
-async function optionFor(browser: Browser, text: string): Promise<string> {
-  return browser.evaluate<string>(
-    `[...document.querySelectorAll("[role=dialog] option")].find((o) => o.textContent.includes(${JSON.stringify(text)})).value`,
-  );
 }
 
 /** Creates a Prod master through its screen's own dialog. */
