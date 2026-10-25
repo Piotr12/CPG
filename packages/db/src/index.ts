@@ -1,4 +1,5 @@
 export * from "./config";
+export { decimalLengthKey } from "./decimal-order";
 export * from "./entities";
 export * from "./orm";
 export { resetTestData, testResetEntities } from "./tenants/reset-test-data";
