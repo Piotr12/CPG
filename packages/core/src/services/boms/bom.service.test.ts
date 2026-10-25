@@ -394,7 +394,7 @@ describe("BomService", () => {
     it("refuses an output listed as its own component (BOM-024)", async () => {
       await expect(service().create(simple("00000008", "00000008"), ACTOR)).rejects.toMatchObject({
         code: "BOM_CYCLE",
-        message: "This recipe would make a cycle: 00000008 Sub A → 00000008 Sub A.",
+        message: "This BOM would make a cycle: 00000008 Sub A → 00000008 Sub A.",
       });
     });
 
@@ -406,7 +406,7 @@ describe("BomService", () => {
       await expect(service().update(c.id, { components: [line("00000008", "1")] }, c.version, ACTOR)).rejects.toMatchObject({
         code: "BOM_CYCLE",
         message:
-          "This recipe would make a cycle: 00000010 Sub C →(BOM 00000003) 00000008 Sub A →(BOM 00000001) 00000009 Sub B →(BOM 00000002) 00000010 Sub C.",
+          "This BOM would make a cycle: 00000010 Sub C →(BOM 00000003) 00000008 Sub A →(BOM 00000001) 00000009 Sub B →(BOM 00000002) 00000010 Sub C.",
       });
       expect(await service().get(c.id)).toMatchObject({ revision: 1, components: [expect.objectContaining({ material: "00000006" })] });
     });

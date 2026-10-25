@@ -25,7 +25,7 @@ describe("problemText", () => {
   });
 
   it("translates a service's refusal by code, with a cycle's path", () => {
-    const cycle = issue("BOM_CYCLE", "This recipe would make a cycle: 00000004 Panel →(BOM 00000001) 00000004 Panel.");
+    const cycle = issue("BOM_CYCLE", "This BOM would make a cycle: 00000004 Panel →(BOM 00000001) 00000004 Panel.");
     expect(problemText(cycle, importLabels(en), "Prod")).toBe(`${en.boms.errors.BOM_CYCLE} 00000004 Panel →(BOM 00000001) 00000004 Panel.`);
     expect(problemText(issue("SOMETHING_NEW", "As the server says."), importLabels(en), "Prod")).toBe("As the server says.");
   });

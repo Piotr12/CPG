@@ -324,7 +324,7 @@ function checkWaste(config: TestTenantConfig, issue: Issue): void {
     const path = ["supply", "waste", "orders", index];
     if (!production.some((pair) => pair.material === output && pair.location === location)) issue(path, `Material ${output} is not made at location ${location}.`);
     const recipe = boms.find((bom) => bom.output === output && bom.priority === 1);
-    if (!recipe?.components.some(({ material }) => material === sheet)) issue([...path, "sheet"], `Material ${output}'s recipe doesn't use ${sheet}.`);
+    if (!recipe?.components.some(({ material }) => material === sheet)) issue([...path, "sheet"], `Material ${output}'s priority-1 BOM doesn't use ${sheet}.`);
   });
 }
 
