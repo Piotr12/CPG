@@ -3,13 +3,12 @@
 import { useId, useState, useTransition, type FormEvent, type KeyboardEvent } from "react";
 import type { ApiResult, FieldErrors } from "@cpg/ui/backend/api/result";
 import { ErrorMessage } from "@cpg/ui/backend/feedback/error-message";
-import { Autocomplete } from "@cpg/ui/backend/forms/autocomplete";
+import { Autocomplete, type AutocompleteOption } from "@cpg/ui/backend/forms/autocomplete";
 import { toFieldErrors, type FormSchema } from "@cpg/ui/backend/forms/crud-form";
 import { Button } from "@cpg/ui/components/button";
 import { Input } from "@cpg/ui/components/input";
 import { Label } from "@cpg/ui/components/label";
 import { NativeSelect, NativeSelectOption } from "@cpg/ui/components/native-select";
-import type { FormOption } from "../forms/form-labels";
 import { fieldControls } from "../purchasing/field-controls";
 import type { MaterialPick } from "./choices";
 import { errorFormatter, fieldErrorFormatter, type RequisitionsLabels } from "./labels";
@@ -34,7 +33,8 @@ export interface RequisitionFormProps<T> {
   labels: RequisitionsLabels;
   /** The materials the autocomplete offers (#217). */
   materials: MaterialPick[];
-  locations: FormOption[];
+  /** The locations the location autocomplete offers (#222). */
+  locations: AutocompleteOption[];
   /** The reader's language, for the autocomplete's counts. */
   locale: string;
   schema: FormSchema;
@@ -129,17 +129,22 @@ export function RequisitionForm<T>({ labels, materials, locations, locale, schem
         {material.node}
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor={location.props.id}>{t.location}</Label>
-        <NativeSelect className="w-full" value={values.location} onChange={(event) => set({ location: event.target.value })} {...location.props}>
-          <NativeSelectOption value="" disabled>
-            {t.choose}
-          </NativeSelectOption>
-          {locations.map((choice) => (
-            <NativeSelectOption key={choice.value} value={choice.value}>
-              {choice.label}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
+        <Label id={`${location.props.id}-label`} htmlFor={location.props.id}>
+          {t.location}
+        </Label>
+        <Autocomplete
+          id={location.props.id}
+          aria-labelledby={`${location.props.id}-label`}
+          name={location.props.name}
+          options={locations}
+          value={values.location}
+          onChange={(value) => set({ location: value })}
+          labels={labels.locationPicker.labels}
+          locale={locale}
+          placeholder={labels.locationPicker.placeholder}
+          aria-invalid={location.props["aria-invalid"]}
+          aria-describedby={location.props["aria-describedby"]}
+        />
         {location.node}
       </div>
       <div className="grid gap-4 sm:grid-cols-2">

@@ -5,7 +5,8 @@ import { orderCreateSchema } from "@cpg/core/validators/purchasing/purchase-orde
 import { Button } from "@cpg/ui/components/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@cpg/ui/components/dialog";
 import { createOrder } from "../../app/admin/[tenant]/purchase-orders/actions";
-import { TALL_DIALOG, type FormOption } from "../forms/form-labels";
+import type { AutocompleteOption } from "@cpg/ui/backend/forms/autocomplete";
+import { TALL_DIALOG } from "../forms/form-labels";
 import type { MaterialPick } from "../purchase-requisitions/choices";
 import type { RequisitionChoice } from "./choices";
 import type { OrdersLabels, TenantContext } from "./labels";
@@ -14,8 +15,8 @@ import { OrderForm } from "./order-form";
 interface CreateOrderDialogProps {
   context: TenantContext;
   labels: OrdersLabels;
-  suppliers: FormOption[];
-  locations: FormOption[];
+  suppliers: AutocompleteOption[];
+  locations: AutocompleteOption[];
   materials: MaterialPick[];
   requisitions: RequisitionChoice[];
   locale: string;

@@ -3,13 +3,12 @@
 import { useId, useState, useTransition, type FormEvent, type KeyboardEvent } from "react";
 import type { ApiResult, FieldErrors } from "@cpg/ui/backend/api/result";
 import { ErrorMessage } from "@cpg/ui/backend/feedback/error-message";
-import { Autocomplete } from "@cpg/ui/backend/forms/autocomplete";
+import { Autocomplete, type AutocompleteOption } from "@cpg/ui/backend/forms/autocomplete";
 import { toFieldErrors, type FormSchema } from "@cpg/ui/backend/forms/crud-form";
 import { Button } from "@cpg/ui/components/button";
 import { Input } from "@cpg/ui/components/input";
 import { Label } from "@cpg/ui/components/label";
 import { NativeSelect, NativeSelectOption } from "@cpg/ui/components/native-select";
-import type { FormOption } from "../forms/form-labels";
 import { fieldControls } from "../purchasing/field-controls";
 import type { MaterialPick } from "../purchase-requisitions/choices";
 import type { RequisitionChoice } from "./choices";
@@ -34,8 +33,9 @@ export interface OrderValues {
 
 export interface OrderFormProps<T> {
   labels: OrdersLabels;
-  suppliers: FormOption[];
-  locations: FormOption[];
+  /** The suppliers and locations the header's autocompletes offer (#222). */
+  suppliers: AutocompleteOption[];
+  locations: AutocompleteOption[];
   /** The materials each line's autocomplete offers (#217). */
   materials: MaterialPick[];
   requisitions: RequisitionChoice[];
@@ -128,45 +128,45 @@ export function OrderForm<T>({ labels, suppliers, locations, materials, requisit
     <form onSubmit={submit} onKeyDown={onKeyDown} noValidate className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
-          <Label htmlFor={supplier.props.id}>{t.supplier}</Label>
-          <NativeSelect className="w-full" value={values.supplier} onChange={(event) => setValues({ ...values, supplier: event.target.value })} {...supplier.props}>
-            <NativeSelectOption value="" disabled>
-              {t.choose}
-            </NativeSelectOption>
-            {suppliers.map((choice) => (
-              <NativeSelectOption key={choice.value} value={choice.value}>
-                {choice.label}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
+          <Label id={`${supplier.props.id}-label`} htmlFor={supplier.props.id}>
+            {t.supplier}
+          </Label>
+          <Autocomplete
+            id={supplier.props.id}
+            aria-labelledby={`${supplier.props.id}-label`}
+            name={supplier.props.name}
+            options={suppliers}
+            value={values.supplier}
+            onChange={(value) => setValues((current) => ({ ...current, supplier: value }))}
+            labels={labels.supplierPicker.labels}
+            locale={locale}
+            placeholder={labels.supplierPicker.placeholder}
+            aria-invalid={supplier.props["aria-invalid"]}
+            aria-describedby={supplier.props["aria-describedby"]}
+          />
           {supplier.node}
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor={location.props.id}>{t.location}</Label>
-          <NativeSelect
-            className="w-full"
+          <Label id={`${location.props.id}-label`} htmlFor={location.props.id}>
+            {t.location}
+          </Label>
+          <Autocomplete
+            id={location.props.id}
+            aria-labelledby={`${location.props.id}-label`}
+            name={location.props.name}
+            options={locations}
             value={values.location}
-            onChange={(event) =>
-              // A requisition of another location can't be converted here: clear the lines' choices that no longer match.
-              setValues({
-                ...values,
-                location: event.target.value,
-                lines: values.lines.map((line) =>
-                  matching(line.material, event.target.value).some(({ value }) => value === line.requisition) ? line : { ...line, requisition: "" },
-                ),
-              })
+            onChange={(value) =>
+              // A requisition of another location can't be converted here. Each requisition has one location and the
+              // autocomplete only reports a different value, so no line's requisition matches any more: clear them all.
+              setValues((current) => ({ ...current, location: value, lines: current.lines.map((line) => ({ ...line, requisition: "" })) }))
             }
-            {...location.props}
-          >
-            <NativeSelectOption value="" disabled>
-              {t.choose}
-            </NativeSelectOption>
-            {locations.map((choice) => (
-              <NativeSelectOption key={choice.value} value={choice.value}>
-                {choice.label}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
+            labels={labels.locationPicker.labels}
+            locale={locale}
+            placeholder={labels.locationPicker.placeholder}
+            aria-invalid={location.props["aria-invalid"]}
+            aria-describedby={location.props["aria-describedby"]}
+          />
           {location.node}
         </div>
       </div>

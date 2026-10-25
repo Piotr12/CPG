@@ -5,7 +5,8 @@ import { requisitionCreateSchema } from "@cpg/core/validators/purchasing/purchas
 import { Button } from "@cpg/ui/components/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@cpg/ui/components/dialog";
 import { createRequisition } from "../../app/admin/[tenant]/purchase-requisitions/actions";
-import { TALL_DIALOG, type FormOption } from "../forms/form-labels";
+import type { AutocompleteOption } from "@cpg/ui/backend/forms/autocomplete";
+import { TALL_DIALOG } from "../forms/form-labels";
 import type { RequisitionsLabels, TenantContext } from "./labels";
 import type { MaterialPick } from "./choices";
 import { RequisitionForm } from "./requisition-form";
@@ -14,7 +15,7 @@ interface CreateRequisitionDialogProps {
   context: TenantContext;
   labels: RequisitionsLabels;
   materials: MaterialPick[];
-  locations: FormOption[];
+  locations: AutocompleteOption[];
   locale: string;
 }
 

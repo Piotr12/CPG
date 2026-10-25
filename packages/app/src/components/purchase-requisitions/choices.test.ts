@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activeOptions, materialChoices, materialPicks } from "./choices";
+import { materialChoices, materialPicks } from "./choices";
 
 const material = (id: string, description: string, baseUnit: string, active = true) => ({
   id,
@@ -28,13 +28,5 @@ describe("purchasing choices", () => {
     );
 
     expect(picks).toEqual([{ value: "00000001", code: "00000001", name: "Steel", detail: "kg", units: ["kg", "t"] }]);
-  });
-
-  it("offer the active suppliers or locations by business ID (LFC-019, LFC-023)", () => {
-    const record = (id: string, name: string, active: boolean) => ({ id, name, active, createdAt: new Date(), version: 1 });
-
-    expect(activeOptions([record("00000001", "Plant", true), record("00000002", "Quarry", false)])).toEqual([
-      { value: "00000001", label: "00000001 — Plant" },
-    ]);
   });
 });

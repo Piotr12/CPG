@@ -21,7 +21,6 @@ import { ShipmentDialog } from "../shipments/shipment-dialog";
 import { ShipmentsTable } from "../shipments/shipments-table";
 import { orderLabels } from "./labels";
 import { OrderDialog } from "./order-dialog";
-import type { OrderChoice } from "./order-form";
 
 export interface OrdersScreenProps {
   tenant: TenantInfo;
@@ -54,9 +53,10 @@ export function OrdersScreen({ tenant, orders, order, shipments = [], page = 1, 
   const pages = Math.ceil(total / ORDER_PAGE_SIZE);
   const byMaterial = new Map(materials.map((material) => [material.id, material]));
   const named = (records: NamedRecordView[], code: string) => `${code} ${records.find(({ id }) => id === code)!.name}`;
-  const choice = ({ id, name, active }: NamedRecordView): OrderChoice => ({ value: id, label: `${id} ${name}${active ? "" : ` (${t.inactive})`}`, active, units: [] });
+  // Only what the pickers need crosses to the client form (#222).
+  const pickable = (records: NamedRecordView[]) => records.map(({ id, name, active }) => ({ id, name, active }));
   const choices = {
-    customers: customers.map(choice), locations: locations.map(choice),
+    customers: pickable(customers), locations: pickable(locations),
     materials: materials.map(({ id, description, active, baseUnit }) => ({ value: id, code: id, name: `${description}${active ? "" : ` (${t.inactive})`}`, detail: baseUnit, active, units: units[id] ?? [baseUnit] })),
   };
   const shipmentChoices = order ? shipmentLineChoices(order, byMaterial, units, shipmentLabels) : [];

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { choices, labels, order } from "../../../../../tests/setup/customer-orders";
 import { OrderDialog } from "./order-dialog";
@@ -20,10 +20,11 @@ describe("OrderDialog", () => {
     render(<OrderDialog context={{ tenant: "test", generation: 7 }} labels={labels} choices={choices} />);
     fireEvent.click(screen.getByRole("button", { name: labels.create }));
     const change = (label: string, value: string) => fireEvent.change(field(label), { target: { value } });
-    change("Customer", "00000001"); change("Location", "00000001"); change("Material, Line 1", "00000005"); fireEvent.mouseDown(screen.getByRole("option", { name: /^00000005/ })); change("Ordered quantity, Line 1", "2"); change("Required date, Line 1", "2027-01-04");
+    const pick = (label: string, typed: string) => { change(label, typed); fireEvent.mouseDown(within(screen.getByRole("listbox", { name: label })).getByRole("option", { name: new RegExp(`^${typed}`) })); };
+    pick("Customer", "00000001"); pick("Location", "00000001"); pick("Material, Line 1", "00000005"); change("Ordered quantity, Line 1", "2"); change("Required date, Line 1", "2027-01-04");
     fireEvent.click(screen.getByRole("button", { name: "Save order" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    expect(mocks.create).toHaveBeenCalledWith("test", 7, expect.objectContaining({ customer: "00000001" }));
+    expect(mocks.create).toHaveBeenCalledWith("test", 7, expect.objectContaining({ customer: "00000001", location: "00000001" }));
   });
   it("edits stable line IDs at the page version and closes after success", async () => {
     mocks.update.mockResolvedValue({ ok: true, data: order });

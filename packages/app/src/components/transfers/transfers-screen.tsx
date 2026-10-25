@@ -11,7 +11,8 @@ import { transferStatusTone } from "../document-lifecycle/status-tone";
 import type { Messages } from "../../i18n/messages/en";
 import { PageLinks } from "../layout/page-links";
 import { ListSearchBar, NoSearchResults } from "../lists/list-search-bar";
-import { activeOptions, materialPicks } from "../purchase-requisitions/choices";
+import { activeRecordOptions } from "../named-records/record-picker";
+import { materialPicks } from "../purchase-requisitions/choices";
 import type { DocumentListState } from "../purchasing/list-state";
 import { CreateTransferDialog } from "./create-transfer-dialog";
 import { byId, fill, locationName, materialName, shownQuantity, transfersLabels } from "./labels";
@@ -108,7 +109,7 @@ export function TransfersScreen({ tenant, transfers, page, total, list, material
             context={{ tenant: tenant.code, generation: tenant.generation }}
             labels={labels}
             materials={materialPicks(materials, units)}
-            locations={activeOptions(locations)}
+            locations={activeRecordOptions(locations)}
             locale={locale}
           />
         )}
