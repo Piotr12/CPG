@@ -3,7 +3,7 @@
 **Date:** 2026-10-25 17:01 UTC
 **Agent:** Claude Code / claude-opus-5-5 (`om-auto-fix-issue 247`, dispatched by cezar)
 **Spec:** none
-**Status:** in progress
+**Status:** done (PR #259 in review; approval left to a human)
 
 ## Goal
 
@@ -41,3 +41,38 @@ page's lines (and records by `id IN`) cost the same whatever the tenant's size.
   production files reverted, all pass with them. Timing (100-order page, `em.find(PurchaseOrderLine, order IN)`,
   best of 7): 300 lines 1.8 ms / 100,000 lines 1.7 ms with the index; 1.6 ms / 8.5 ms without.
   Claimed #247 (claim comment), filed #257.
+- 18:05 PR #259 opened (labels `review`, `bug`, `skip-qa`, `priority-low`, `risk-medium`; lock handed to the PR).
+  Independent review (fresh subagent, `om-code-review`): approve, no blocker or major. Minors fixed: the stock
+  ledger, a paged list with `id IN` source reads, joined the test with its walks listed in `KNOWN_WALKS`, and
+  those walks were added to #257. Its completions read now starts from the new `production_order (tenant_code, id)`
+  index rather than `production_completion_tenant_code_index`, a walk of the same kind. Found while doing it: the
+  completions case took "the first production order", which has no stable order now that the new index can
+  serve `tenant_code = ?`, so it sometimes picked an order without completions. Fixtures are now picked by count.
+  Nit kept: `reversalLinks` now populates `original`, which the audit page doesn't need (a primary-key join).
+
+## Changes
+
+- `packages/db/src/migrations/Migration20261025171522_tenant_in_list_indexes.ts` (+ `.snapshot.json`, `index.ts`):
+  9 `(tenant_code, column)` indexes, declared on the line entities and `ProductionOrder`.
+- `packages/core/src/services/stock/movement-reversals.ts`: the `$or` becomes one read per side, deduplicated;
+  `AuditService.reversalLinks` reuses it.
+- Tests: `packages/core/src/services/list-page-reads.test.ts` (new), `packages/db/src/tenant-in-list-index-migration.test.ts`
+  (new), migration counts in `orm.test.ts`, `database.test.ts`, `system-status.service.test.ts`,
+  `transfer-reversal.entity.test.ts` and `tests/integration/smoke.test.ts`.
+- `.ai/lessons.md`: sharpened the 2026-10-25 EXPLAIN lesson.
+
+## Verification
+
+- `npm run lint`, `npm run typecheck`, `npm run test:coverage` (590 files, 4,525 tests, 100% thresholds) and
+  `npm run build`: all exit 0 at 19c71540. After the review fixes (test file and docs only), lint, typecheck
+  and the new test (three runs) were re-run.
+- `tests/integration/smoke.test.ts` passed (3/3) against a local standalone server on a fresh `DATA_DIR`
+  (Docker unavailable). The full integration suite runs in CI.
+- `list-page-reads.test.ts`: 7 of 8 original cases fail with the production files reverted.
+
+## Follow-ups
+
+- #257: the customer-order posted-line check (a join), the variance report's materials and the stock ledger's
+  source documents (`id IN`) still walk the tenant.
+- Possible later decision for the owner: fixed `sqlite_stat1` statistics would cover every `IN` read at once,
+  but only with per-column figures that keep the range plans #240 tuned (see 17:25 above).
