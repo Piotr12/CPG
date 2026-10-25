@@ -61,6 +61,8 @@ describe("dictionaries", () => {
       "audit/fields/bom",
       "audit/fields/id",
       "stock/channels/api",
+      // "1 {unit} = {factor} SU": only placeholders, a number and the unit symbol.
+      "demandReview/factor",
       "nav/menu",
       "nav/import",
       "nav/roles/admin",

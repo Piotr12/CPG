@@ -3,8 +3,8 @@
 **Date:** 2026-10-25 10:26 UTC
 **Agent:** Claude Code (Opus 5.5), `om-auto-fix-issue` → `om-auto-implement-spec` → `om-auto-create-pr`
 **Issue:** #240 · **Spec PR:** #241 (merged) · **Depends on:** #239 (merged in #242)
-Source doc: .ai/specs/2026-10-25--0913UTC-demand-review.md
-**Status:** in progress
+Source doc: .ai/specs/implemented/2026-10-25--0913UTC-demand-review.md
+**Status:** done (both PRs ready; merges wait for the owner)
 
 ## Goal
 
@@ -54,6 +54,11 @@ The `@cpg/ui` pieces of Phase 2 (steps 6 and 7) touch only `packages/ui`, the de
 - 12:00 — Deviation from the spec's indexes and reads, found by the 10× benchmark: the first service read goods-issue lines joined to their issue (`goods_issue(tenant, business_date)`). SQLite with no statistics (production never runs ANALYZE) planned it from `goods_issue_line`'s bare `tenant_code` index, whatever the join or an `issue IN (…)` list, and the month read took 814 ms, most of it hydrating populated entities and every issue's movements. Shipped now comes from the ledger: each goods-issue line posts one movement of its base quantity, out of its order's location, on the issue's business date, so one partial read of `stock_movement` by a new `(tenant, type, business_date)` index replaces the four-way join, and reversed lines come from the few `StockReversal` links of the window instead of every issue's movements. The `goods_issue` index is dropped from the migration. All reads use partial loads. Month read: 158 ms.
 - 12:05 — Deviation: a repeated `material`/`location` value is deduplicated rather than refused ("unique" in the spec), so no new message is needed.
 - 13:10 — Phase 1 gate: lint 0 (one pre-existing warning in `bom.service.ts`), typecheck 0, test:coverage 0 (4,377 tests, 100%), build 0. No Docker here: `demand-review-api.test.ts` and `smoke.test.ts` ran against a fresh standalone server copy (lesson 2026-10-23): 2 files, 8 tests passed.
+- 13:40 — PR #244 opened as a draft with Phase 1; fresh-context review (cezar review task): approve, no blocker or major. Its minor findings fixed in 59ecbe2f: the rounding rules proven apart, forecast reads bounded by the window's first month, cap after repeats removed, the offset message for a non-number, a DEM-008 tally case, spec implementation notes, BC wording, a §5 entry. #244 marked ready (CI green at 66db95e1, all integration shards).
+- 14:10 — Phase 2 on `feat/demand-review-screen`, stacked on Phase 1; both worker branches checked and merged (`--no-ff`). The screen does every sum in `bigint` on the server and hands the client grid display texts. `@cpg/core` now exports `parseDecimal`/`formatDecimal`/`isoWeek`/`DEMAND_WINDOWS`. A message key named `filters` tripped the tenant-filter lint rule (lesson 2026-10-19): renamed `filterForm`, as the audit screen does.
+- 14:50 — Real-browser check on a local standalone server: the overdue marker was struck through by the Today rule (fixed with a surface halo in the chart), and at 390 px the grid's sticky name column hid the figures (names now wrap at word boundaries in a bounded column). `demand-review.test.ts`, `navigation.test.ts` and `demand-review-api.test.ts` pass on a fresh server: 3 files, 27 tests. QA screenshots on the realistic dataset at 1440 px (light, dark) and 390 px.
+- 15:05 — Phase 2 gate: lint 0, typecheck 0, test:coverage 0 (4,498 tests, 100%), build 0. Spec moved to `implemented/` with implementation notes for both phases; lessons recorded.
+- 15:55 — #252 review (fresh-context): approve, no blocker or major. Fixed before merge: the grid is keyed by the window, because Earlier/Later change only search params, which don't remount in Next 16 (a rerender test fails without the key); a location-rows table name; the refusal styled as an error (icon + danger text); headline numbers from `DEMAND_WINDOWS`, and the moved headline counting today's shipped; the marker halo in `stroke-card`. Not done (nits, owner's call): SegmentedControl wrapping at 390 px with many disabled units; ring-/outline-/shadow-chart-* in the token scan. Gate: lint 0, typecheck 0, coverage 0 (4,499 tests, 100%), build 0; `demand-review.test.ts` 5/5 on a fresh server.
 
 ## Phase 1 timings (10× the realistic dataset, `demand-review-reads.test.ts` run alone)
 
@@ -81,7 +86,7 @@ PR: #244 (Phase 1)
 
 ### Phase 2: Demand review screen
 
-- [ ] 2.1 Chart tokens and chart components
-- [ ] 2.2 Filter controls
-- [ ] 2.3 Screen, nav, help, messages
-- [ ] 2.4 Integration test, QA, spec moved
+- [x] 2.1 Chart tokens and chart components — f4824f84, f8807162
+- [x] 2.2 Filter controls — e6fbb040
+- [x] 2.3 Screen, nav, help, messages — 199dada3
+- [x] 2.4 Integration test, QA, spec moved — db451b9a, a1e020c5

@@ -29,6 +29,7 @@ export type NavId =
   | "transfers"
   | "sales"
   | "forecasts"
+  | "demandReview"
   | "import"
   | "tenantAudit"
   | "administration"
@@ -69,7 +70,13 @@ export const TENANT_TREE: NavNode[] = [
       { id: "import", section: "import", match: "prefix", adminOnly: true },
     ],
   },
-  { id: "sales", children: [{ id: "forecasts", section: "forecasts", match: "prefix" }] },
+  {
+    id: "sales",
+    children: [
+      { id: "forecasts", section: "forecasts", match: "prefix" },
+      { id: "demandReview", section: "reports/demand-review", match: "prefix" },
+    ],
+  },
   {
     id: "transactions",
     children: [

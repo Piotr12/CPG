@@ -209,6 +209,7 @@ Authentication is server-side sessions (specs `2026-10-19--0746UTC-admin-sign-in
 - [ ] Pages/actions/routes go through services, never `em`/`orm`.
 - [ ] Actions/routes use the shared wrappers, forms use `CrudForm`, lists use `DataTable` and states use the `feedback/` components. A bespoke alternative needs a stated reason.
 - [ ] Uses tokens and components from the design system (spec `2026-10-24--0842UTC-design-system-v1`); no new palette classes, radius, size or spacing values; states use `StatusBadge` or `Callout`; copy is plain. `tests/design-tokens.test.ts` fails on an offender outside the spec's Exceptions table.
+- [ ] Chart colours (`--chart-1…3`) are series identity inside a chart, never text, never anything outside `packages/ui/src/backend/charts/`; `tests/design-tokens.test.ts` enforces it.
 - [ ] `npm run lint`, `npm run typecheck`, `npm run test:coverage`, `npm run build` and `npm run test:integration` pass in CI, which runs them all on the pull request. Locally the author runs the first four and only the integration files the change touches.
 
 **Security** (apply in full once authentication exists)
@@ -407,6 +408,8 @@ Done when these standards were adopted:
 - The demand review (2026-10-25, spec `2026-10-25--0913UTC-demand-review`, #240), the third report:
   - `core/src/domain/demand/` holds the time buckets (`demandWindow`, ISO weeks) and the D08 forecast netting (`netForecasts`), pure, for MRP (#14) to reuse unchanged; `demand-tally.ts` turns goods issues, order lines and forecasts into per-bucket figures.
   - `DemandReviewService` (`core/src/services/reports/`) reads shipped from the goods-issue stock movements (one per issue line, at the order's location, on the issue's business date) rather than joining issue lines to their documents, and every window read is a partial load (`fields`): at 10× the realistic dataset hydration, not SQLite, set the cost. `report-units.ts` gains `reportFactor`.
+  - `ui/src/backend/charts/` (`StackedColumnChart`, `ChartLegend`) are server-renderable SVG on the categorical `--chart-*` tokens, the only place series hues may appear; `ui/src/backend/forms/` gains `SegmentedControl` and `FilterMultiSelect`, the multiselect counterpart of `FilterAutocomplete`.
+  - The screen (`components/reports/demand-review-*`) does every sum in `bigint` on the server (`demand-review-view.ts`, with `parseDecimal`/`formatDecimal` from `@cpg/core`) and hands its client grid display texts only.
 - Idempotency and versions (2026-10-19, spec `2026-10-19--1548UTC-api-idempotency`): the global and tenant-owned idempotency key stores (`db/src/entities/idempotency/`), `IdempotencyService` (`core/src/services/idempotency/`), `inRequestTransaction`, `apiWrite`/`tenantApiWrite`, `User.version`, and the generation check in `tenantServerAction`.
 - API tokens (2026-10-19, spec `2026-10-19--1053UTC-api-tokens`): the global `ApiToken` entity, `ApiTokenService` (`core/src/services/api-tokens/`), bearer authentication in `requireApiUser(request)`, the `Actor` type, and `/admin/tokens`. It is the reference for a self-service screen (every account, own records only).
 - Test infrastructure: Vitest unit tests next to every source file at 100% coverage, integration tests (Testcontainers runs the production image, agent-browser drives it), and a CI workflow for pull requests.

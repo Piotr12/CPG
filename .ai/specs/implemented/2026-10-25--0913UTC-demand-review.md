@@ -1,6 +1,6 @@
 # Demand review: shipped and still to ship, per day, week or month
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-25 09:13 UTC
 **Issue:** #240 (decided by the owner on the issue; it also tracks the implementation) · **Depends on:** #239, `implemented/2026-10-25--0913UTC-statistical-unit.md` (SU, `report-units.ts`) · **Decision:** D08 (`research/decisions/D08-statistical-unit-and-demand-review.md`), which supersedes DEM-007's same-date netting · **Builds on:** the stock report (`implemented/2026-10-20--2221UTC-stock-report.md`: report service, route, filter form), the report filter autocomplete (#222, `FilterAutocomplete`), forecasts (`implemented/2026-10-20--1700UTC-forecasts.md`), shipments and goods issues (`implemented/2026-10-20--2045UTC-shipments-goods-issues.md`), stock reversals (`implemented/2026-10-21--0706UTC-stock-reversals.md`), design system v1 · **Design authority:** `.ai/specs/product-brief.md` (R03, R05, D04, D08), `research/CPG-acceptance.md` DEM-002…013
 
@@ -313,4 +313,15 @@ Phase 1 shipped on PR #244 (`.ai/pipeline/runs/2026-10-25--1026UTC-demand-review
 - **Validator:** a repeated `material` or `location` value is counted once rather than refused, and the cap of 500 applies after that.
 
 Forecasts are read from the later of today's month and the window's first month: with a positive offset, earlier months' residuals would land before the window.
+
+Phase 2 shipped on its own PR, stacked on #244. It differs from the text above in these places:
+
+- **The Unit control** is a `SegmentedControl` like the time bucket, with the disabled units shown as disabled segments. The spec doesn't name the control.
+- **The grid's sums** (each row's Total, the Total row for product rows) are added in `bigint` on the server (`components/reports/demand-review-view.ts`). The client grid receives display texts only, so no float sum ever reaches the screen. For location rows, each cell and the Total row's cells come from the API, which converts the summed base figure once. Each row's Total column, though, adds that row's converted cells, as for product rows. Across a window the two can differ by at most 0.000001 per cell, which the one-decimal display never shows.
+- **Bucket labels:** weeks are `W44` on the axis and `W44 · Oct 26` in the tooltip, days `Oct 26`, months `Nov`, with the year on the first month and on January. All follow the reader's locale; Polish weeks are `T44`.
+- **The header line** uses the spec's "Last {back} … · this {bucket} and the next {ahead}" only at offset 0, with the numbers taken from `DEMAND_WINDOWS`. Once Earlier or Later moved the window it reads "In this window: … shipped · … still to ship", because "last 13 weeks" would be untrue, and today's bucket's shipped then counts too.
+- **Earlier and Later** change only the address's search params, which don't remount a page in Next 16, so the grid is keyed by the window's first day: it starts afresh, rows closed and scrolled to today.
+- **A refused product** (only an edited address can name one that isn't finished) is explained above the form, through `ErrorSummary`, and the review is read without the product filter. A malformed address or an unknown record is the not-found state, as on the stock report.
+- **On a phone** the grid's row names wrap at word boundaries inside a bounded sticky column. The chart scrolls sideways from the start of the window; a mobile layout stays out of scope.
+- **The overdue marker** has a surface-coloured halo, so the Today rule never strikes through it.
 
