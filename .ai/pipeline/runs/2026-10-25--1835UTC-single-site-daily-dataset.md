@@ -56,6 +56,8 @@ Rework the generated Test dataset (`packages/core/src/domain/demo/`) into the si
 
 ## Progress
 
+PR: #261
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Configuration and daily demand
@@ -103,3 +105,5 @@ Rework the generated Test dataset (`packages/core/src/domain/demo/`) into the si
 
 - #262: re-baseline the demand review's budget at ten times the single-site realistic dataset.
 - For the owner: the Wednesday/Thursday partial-receipt gap (spec implementation notes, "Partial receipt").
+- 2026-10-25 22:30 UTC — CI on the first push: every job green except integration shard 3. `production-orders.test.ts` pinned Test's first production order to side panels, but on 118 of 1,095 days the opening stock covers them and the first order is a locker frame. Fixed in a7f60409.
+- 2026-10-25 22:50 UTC — Independent review (a fresh agent given the diff): no blocker; 1 major (Thursday's run orders missing from today's timeline, against the spec's Edge Cases) and minors (rate ≤ −1, no horizon guard, a test that couldn't fail, one-way B2B check, project key collisions, nits). All fixed in 5e7dbfd1. Gate after the fixes: lint 0, typecheck 0, coverage 0 (4,580 tests, 100 %), build 0. Review posted on the PR; it was marked ready.
