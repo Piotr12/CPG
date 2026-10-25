@@ -33,7 +33,7 @@ Every main-list column that shows a stored quantity sorts by its numeric value, 
 ## Risks
 
 - MikroORM `raw()` as an `orderBy` key with the root alias: covered by step 1's real-database test.
-- In-memory sorted lists must sort before paging: step 4's tests check page 2.
+- In-memory sorted lists must sort before paging: planning parameters and safety stock are not paged (they read the whole list, then sort), so nothing to page.
 
 ## Log
 
