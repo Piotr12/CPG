@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppError, type StockReportRow, type StockReportView } from "@cpg/core";
 import { resolveServerComponents } from "../../../../../../../../tests/setup/server-components";
@@ -40,6 +40,16 @@ beforeEach(() => {
 });
 afterEach(() => vi.clearAllMocks());
 
+/** A filter autocomplete's offered choices, read from its list (named by the field's label) while open. */
+function choices(name: string) {
+  const field = screen.getByRole("combobox", { name });
+  fireEvent.focus(field);
+  const offered = within(screen.getByRole("listbox", { name })).getAllByRole("option").map((option) => option.textContent);
+  fireEvent.keyDown(field, { key: "Escape" });
+  return offered;
+}
+const chosen = (name: string) => (screen.getByRole("combobox", { name }) as HTMLInputElement).value;
+
 describe("StockReportPage", () => {
   it("shows on hand and in transit out and in apart, each row opening its pair's ledger (UX-017, INV-012)", async () => {
     render(await resolveServerComponents(page()));
@@ -73,11 +83,11 @@ describe("StockReportPage", () => {
   it("offers every material and location as a filter, with All and the zero toggle unset", async () => {
     render(await resolveServerComponents(page()));
 
-    const material = screen.getByLabelText("Material") as HTMLSelectElement;
-    expect(material.name).toBe("material");
-    expect(material.value).toBe("");
-    expect([...material.options].map((option) => option.textContent)).toEqual(["All", "00000001 — Steel sheet", "00000002 — Bolt M8 (Inactive)"]);
-    expect([...(screen.getByLabelText("Location") as HTMLSelectElement).options].map((option) => option.value)).toEqual(["", "00000001", "00000002"]);
+    const material = screen.getByRole("combobox", { name: "Material" }) as HTMLInputElement;
+    expect([material.value, material.placeholder]).toEqual(["", "All"]);
+    expect(choices("Material")).toEqual(["00000001—Steel sheet", "00000002—Bolt M8Inactive"]);
+    expect(choices("Location")).toHaveLength(2);
+    expect(Object.fromEntries(new FormData(material.form!))).toEqual({ material: "", location: "" });
     expect(screen.getByRole("checkbox", { name: en.stockReport.includeZero }).getAttribute("aria-checked")).toBe("false");
     expect(screen.getByRole("button", { name: "Apply" }).closest("form")!.getAttribute("action")).toBe("/admin/test/reports/stock");
   });
@@ -90,8 +100,8 @@ describe("StockReportPage", () => {
 
     expect(mocks.read).toHaveBeenNthCalledWith(1, search);
     expect(mocks.read).toHaveBeenNthCalledWith(2, { ...search, page: "3" });
-    expect((screen.getByLabelText("Material") as HTMLSelectElement).value).toBe("00000001");
-    expect((screen.getByLabelText("Location") as HTMLSelectElement).value).toBe("00000002");
+    expect(chosen("Material")).toBe("00000001 — Steel sheet");
+    expect(chosen("Location")).toMatch(/^00000002 — /);
     expect(screen.getByRole("checkbox", { name: en.stockReport.includeZero }).getAttribute("aria-checked")).toBe("true");
     const pages = within(screen.getByRole("navigation", { name: en.stockReport.pagination }));
     expect(pages.getByText("Page 3 of 3")).toBeTruthy();

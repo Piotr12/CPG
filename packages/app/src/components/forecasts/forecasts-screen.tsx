@@ -64,9 +64,11 @@ export function ForecastsScreen({ tenant, forecasts, materials, locations, filte
       <ForecastsFilter
         action={`/admin/${tenant.code}/forecasts`}
         labels={labels}
-        materials={materials.map(({ id, description }) => ({ value: id, label: `${id} — ${description}` }))}
-        locations={locations.map(({ id, name }) => ({ value: id, label: `${id} — ${name}` }))}
+        materials={materials}
+        locations={locations}
         selected={filter}
+        notListed={messages.lists.notListed}
+        locale={locale}
         keep={{ q: search.q || undefined, sort: links.keep.sort, dir: links.keep.dir }}
       />
       <ForecastsTable

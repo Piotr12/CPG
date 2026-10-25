@@ -7,6 +7,7 @@ import { StatusBadge } from "@cpg/ui/backend/feedback/status-badge";
 import { PageHeader } from "@cpg/ui/backend/page-header";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { Badge } from "@cpg/ui/components/badge";
+import { FilterAutocomplete } from "@cpg/ui/backend/forms/filter-autocomplete";
 import { Button } from "@cpg/ui/components/button";
 import { Input } from "@cpg/ui/components/input";
 import { Label } from "@cpg/ui/components/label";
@@ -15,6 +16,8 @@ import type { Messages } from "../../i18n/messages/en";
 import { documentStatusTone, WASTE_TONE } from "../document-lifecycle/status-tone";
 import { fill, shownQuantity } from "../forms/form-labels";
 import { PageLinks } from "../layout/page-links";
+import { materialFilterOptions, materialPicker, withUnlisted } from "../materials/material-picker";
+import { recordOptions, recordPicker } from "../named-records/record-picker";
 import { shownVariance } from "../production-orders/completion-history";
 
 interface VarianceReportScreenProps {
@@ -41,8 +44,8 @@ interface VarianceReportScreenProps {
  */
 export function VarianceReportScreen({ tenant, report, selected, rangeError, materials, locations, locale, messages }: VarianceReportScreenProps) {
   const t = messages.varianceReport;
+  const pickers = { material: materialPicker(messages.lists), location: recordPicker(messages.lists, "location") };
   const path = `/admin/${tenant.code}`;
-  const inactive = (active: boolean) => (active ? "" : ` (${t.inactive})`);
   const amount = (quantity: string, unit: string) => `${shownQuantity(quantity)} ${unit}`;
   const figures = (row: VarianceReportRow) => (
     <div className="flex flex-col gap-1">
@@ -182,22 +185,32 @@ export function VarianceReportScreen({ tenant, report, selected, rangeError, mat
       <div className="flex min-w-0 flex-col gap-8">
         <form action={`${path}/reports/variance`} className="grid min-w-0 gap-4 sm:grid-cols-3 lg:grid-cols-[1fr_1fr_1fr_auto_auto_auto] lg:items-end">
           <div className="grid min-w-0 gap-2">
-            <Label htmlFor="variance-material">{t.material}</Label>
-            <NativeSelect id="variance-material" name="material" defaultValue={selected.material ?? ""} className="w-full">
-              <NativeSelectOption value="">{t.all}</NativeSelectOption>
-              {materials.map((material) => (
-                <NativeSelectOption key={material.id} value={material.id}>{`${material.id} — ${material.description}${inactive(material.active)}`}</NativeSelectOption>
-              ))}
-            </NativeSelect>
+            <Label id="variance-material-label" htmlFor="variance-material">{t.material}</Label>
+            <FilterAutocomplete
+              key={selected.material ?? ""}
+              id="variance-material"
+              name="material"
+              options={withUnlisted(materialFilterOptions(materials, t.inactive), selected.material, messages.lists.notListed)}
+              defaultValue={selected.material ?? ""}
+              emptyLabel={t.all}
+              labels={pickers.material.labels}
+              locale={locale}
+              aria-labelledby="variance-material-label"
+            />
           </div>
           <div className="grid min-w-0 gap-2">
-            <Label htmlFor="variance-location">{t.location}</Label>
-            <NativeSelect id="variance-location" name="location" defaultValue={selected.location ?? ""} className="w-full">
-              <NativeSelectOption value="">{t.all}</NativeSelectOption>
-              {locations.map((location) => (
-                <NativeSelectOption key={location.id} value={location.id}>{`${location.id} — ${location.name}${inactive(location.active)}`}</NativeSelectOption>
-              ))}
-            </NativeSelect>
+            <Label id="variance-location-label" htmlFor="variance-location">{t.location}</Label>
+            <FilterAutocomplete
+              key={selected.location ?? ""}
+              id="variance-location"
+              name="location"
+              options={withUnlisted(recordOptions(locations, t.inactive), selected.location, messages.lists.notListed)}
+              defaultValue={selected.location ?? ""}
+              emptyLabel={t.all}
+              labels={pickers.location.labels}
+              locale={locale}
+              aria-labelledby="variance-location-label"
+            />
           </div>
           <div className="grid min-w-0 gap-2">
             <Label htmlFor="variance-status">{t.status}</Label>
