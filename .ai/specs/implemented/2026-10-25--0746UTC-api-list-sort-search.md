@@ -1,6 +1,6 @@
 # API list routes: optional sort and search
 
-**Status:** ready
+**Status:** implemented (#231)
 **Created:** 2026-10-25 07:46 UTC
 **Issue:** #221 (follow-up to #217, decision D6 of `.ai/pipeline/runs/2026-10-24--2206UTC-list-sort-search-units/PLAN.md`)
 
@@ -121,3 +121,7 @@ One phase. The change is mechanical and the same on each route, small enough for
 - Every query key other than `q`, `sort` and `dir` behaves on each route exactly as before. On the routes that ignored every unknown key, those three are now applied, and an invalid value of one of them is a 400 (see Risks).
 - BACKWARD_COMPATIBILITY.md documents the parameters and the keys of each route.
 - Unit coverage stays at 100%. The touched integration files pass.
+
+## Implementation notes
+
+- **Merged with #224 and #229 before landing** (`om-auto-fix-pr`, 2026-10-25). The routes take each list's `*_SORTS` array, so the quantity sorts and the purchase-order `created` sort that #224 added are accepted on the API too; BACKWARD_COMPATIBILITY.md lists them. Since #229 search ignores the case of every letter, Polish ones included, so the "ASCII case-insensitive" wording above and the non-ASCII edge case no longer apply.

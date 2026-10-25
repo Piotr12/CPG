@@ -1,5 +1,6 @@
 import { apiActor, assertAdmin, parseInput, tenantScope } from "@cpg/core";
-import { forecastCreateSchema, forecastListQuerySchema } from "@cpg/core/validators/forecasts/forecast.schema";
+import { forecastCreateSchema } from "@cpg/core/validators/forecasts/forecast.schema";
+import { forecastApiQuerySchema } from "@cpg/core/validators/forecasts/forecast-list.schema";
 import { tenantApiWrite, type WriteContext } from "../../../../../auth/api-write";
 import { requireApiUser } from "../../../../../auth/require-api-user";
 import { apiHandler } from "../../../../../routing/api-handler";
@@ -9,13 +10,14 @@ type Context = RouteContext<"/api/tenants/[tenant]/forecasts">;
 /**
  * A page of 100 of the tenant's forecasts by material, location, then date (`page`, 1-based, the first
  * when left out; past the last, an empty list), narrowed by the optional `material` and `location`
- * query parameters (business IDs) before paging; 400 for anything else. Any signed-in account.
+ * query parameters (business IDs) and the search `q` before paging, in the optional `sort`/`dir` order
+ * (#221); a malformed one is 400. Any signed-in account.
  */
 export const GET = apiHandler(async (request: Request, { params }: Context) => {
   await requireApiUser(request);
-  const { page, ...filter } = parseInput(forecastListQuerySchema, Object.fromEntries(new URL(request.url).searchParams));
+  const { material, location, ...options } = parseInput(forecastApiQuerySchema, Object.fromEntries(new URL(request.url).searchParams));
   const { cradle } = await tenantScope((await params).tenant);
-  return cradle.forecastService.list(filter, { page });
+  return cradle.forecastService.list({ material, location }, options);
 });
 
 /**

@@ -255,4 +255,38 @@ describe("planning parameters and safety-stock targets through the API (R07)", (
       await una.close();
     }
   });
+
+  it("searches and sorts both lists on the server, and refuses a sort key they don't list (#221)", async () => {
+    const alpha = await createMaster("materials", { type: "raw", description: "ppsq alpha", baseUnit: "kg" });
+    const beta = await createMaster("materials", { type: "raw", description: "ppsq beta", baseUnit: "kg" });
+    const set = { location: plant, procurement: "buy", minimumQuantity: "1", lotMultiple: "1" };
+    for (const [material, leadTimeDays] of [[alpha, 4], [beta, 9]] as const) {
+      expect((await write("POST", "/api/tenants/prod/planning-parameters", adminSecret, { ...set, material, leadTimeDays })).status).toBe(200);
+    }
+    for (const [material, effectiveFrom] of [[alpha, "2027-03-01"], [beta, "2027-02-01"], [alpha, "2027-01-01"]] as const) {
+      const target = { material, location: plant, effectiveFrom, quantity: "10" };
+      expect((await write("POST", "/api/tenants/prod/safety-stock-targets", adminSecret, target)).status).toBe(200);
+    }
+    const list = async (path: string, query: string) => {
+      const response = await api("GET", `/api/tenants/prod/${path}?${query}`, adminSecret);
+      expect(response.status).toBe(200);
+      return json(response).data as { material: string; leadTimeDays?: number; effectiveFrom?: string }[];
+    };
+
+    expect((await list("planning-parameters", "q=ppsq")).map(({ material }) => material)).toEqual([alpha, beta]);
+    expect((await list("planning-parameters", "q=ppsq&sort=leadTime&dir=desc")).map(({ leadTimeDays }) => leadTimeDays)).toEqual([9, 4]);
+    expect((await list("planning-parameters", "q=ppsq+beta")).map(({ material }) => material)).toEqual([beta]);
+    expect((await list("safety-stock-targets", "q=ppsq")).map(({ material, effectiveFrom }) => [material, effectiveFrom])).toEqual([
+      [alpha, "2027-01-01"], [alpha, "2027-03-01"], [beta, "2027-02-01"],
+    ]);
+    expect((await list("safety-stock-targets", "q=ppsq&sort=effectiveFrom&dir=desc")).map(({ effectiveFrom }) => effectiveFrom)).toEqual([
+      "2027-03-01", "2027-02-01", "2027-01-01",
+    ]);
+
+    for (const path of ["planning-parameters", "safety-stock-targets"]) {
+      const refused = await api("GET", `/api/tenants/prod/${path}?sort=id`, adminSecret);
+      expect(refused.status).toBe(400);
+      expect(json(refused).error).toMatchObject({ code: "VALIDATION_FAILED", fieldErrors: { sort: ["Sort by one of this list's columns."] } });
+    }
+  });
 });

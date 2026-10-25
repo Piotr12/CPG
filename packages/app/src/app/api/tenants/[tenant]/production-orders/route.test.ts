@@ -18,7 +18,7 @@ afterEach(() => vi.clearAllMocks());
 it("authenticates reads and parses bounded collection pages and options", async () => {
   mocks.service.list.mockResolvedValue([]); mocks.service.get.mockResolvedValue({ id: "00000001" }); mocks.service.options.mockResolvedValue({ selected: "bom" });
   expect((await collection.GET(new Request("http://cpg.test/?page=2"), context())).status).toBe(200);
-  expect(mocks.service.list).toHaveBeenCalledWith({ page: 2 });
+  expect(mocks.service.list).toHaveBeenCalledWith({ page: 2, q: "" });
   expect(await (await item.GET(new Request("http://cpg.test/"), context())).json()).toEqual({ ok: true, data: { id: "00000001" } });
   expect(mocks.service.get).toHaveBeenCalledWith("00000001");
   expect((await options.GET(new Request(`http://cpg.test/?${new URLSearchParams(input)}`), context())).status).toBe(200);
@@ -47,4 +47,29 @@ it("refuses malformed creates and every locked edit field before writes", async 
     expect((await item.PATCH(request({ version: 1, [field]: "changed" }), context())).status).toBe(400);
   }
   expect(mocks.service.create).not.toHaveBeenCalled(); expect(mocks.service.update).not.toHaveBeenCalled();
+});
+
+const read = (query: string) => collection.GET(new Request(`http://cpg.test/api/tenants/test/production-orders?${query}`), context());
+
+it("GET forwards the search, sort and direction to the service, and leaves them out without a query (#221)", async () => {
+  mocks.service.list.mockResolvedValue([]);
+
+  expect((await read("page=2&q=+steel+&sort=finish&dir=desc")).status).toBe(200);
+  expect(mocks.service.list).toHaveBeenLastCalledWith({ page: 2, q: "steel", sort: "finish", dir: "desc" });
+  expect((await read("")).status).toBe(200);
+  expect(mocks.service.list).toHaveBeenLastCalledWith({ page: 1, q: "" });
+});
+
+it("GET refuses an unknown sort, a bad direction or a too-long search on that field, before reading (#221)", async () => {
+  for (const query of ["sort=material", "dir=up", "q=a+b+c+d+e+f"]) {
+    const response = await read(query);
+    expect(response.status).toBe(400);
+    expect(Object.keys((await response.json()).error.fieldErrors)).toEqual([query.split("=")[0]]);
+  }
+  expect(mocks.service.list).not.toHaveBeenCalled();
+});
+
+it("GET still refuses a query key it doesn't know (#221)", async () => {
+  expect((await read("status=open")).status).toBe(400);
+  expect(mocks.service.list).not.toHaveBeenCalled();
 });

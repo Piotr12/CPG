@@ -74,3 +74,40 @@ describe("/api/tenants/{tenant}/locations", () => {
     expect(mocks.create).not.toHaveBeenCalled();
   });
 });
+
+describe("/api/tenants/{tenant}/locations search and sort (#221)", () => {
+  const read = (query: string) => route.GET(new Request(`http://cpg.test/api/tenants/test/locations?${query}`), context("test"));
+
+  afterEach(() => vi.clearAllMocks());
+
+  it("GET forwards the search, sort and direction to the service, and leaves them out without a query (#221)", async () => {
+    mocks.requireApiUser.mockResolvedValue({ role: "user" });
+    mocks.tenantScope.mockResolvedValue({ cradle: { locationService: { list: mocks.list } } });
+    mocks.list.mockResolvedValue([]);
+
+    expect((await read("q=+steel+&sort=name&dir=desc")).status).toBe(200);
+    expect(mocks.list).toHaveBeenLastCalledWith({ q: "steel", sort: "name", dir: "desc" });
+    expect((await read("")).status).toBe(200);
+    expect(mocks.list).toHaveBeenLastCalledWith({ q: "" });
+  });
+
+  it("GET refuses an unknown sort, a bad direction or a too-long search on that field, before reading (#221)", async () => {
+    mocks.requireApiUser.mockResolvedValue({ role: "user" });
+    mocks.tenantScope.mockResolvedValue({ cradle: { locationService: { list: mocks.list } } });
+    for (const query of ["sort=quantity", "dir=up", "q=a+b+c+d+e+f"]) {
+      const response = await read(query);
+      expect(response.status).toBe(400);
+      expect(Object.keys((await response.json()).error.fieldErrors)).toEqual([query.split("=")[0]]);
+    }
+    expect(mocks.list).not.toHaveBeenCalled();
+  });
+
+  it("GET still ignores a query key it doesn't know (#221)", async () => {
+    mocks.requireApiUser.mockResolvedValue({ role: "user" });
+    mocks.tenantScope.mockResolvedValue({ cradle: { locationService: { list: mocks.list } } });
+    mocks.list.mockResolvedValue([]);
+
+    expect((await read("status=open")).status).toBe(200);
+    expect(mocks.list).toHaveBeenLastCalledWith({ q: "" });
+  });
+});

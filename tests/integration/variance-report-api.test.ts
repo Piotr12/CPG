@@ -163,4 +163,23 @@ describe("the production variance report through the API", () => {
       await write("PATCH", "/api/tenants/prod", { readOnly: false });
     }
   });
+
+  it("searches and sorts the production orders on the server, and still refuses an unknown query key (#221)", async () => {
+    const list = async (query: string) => {
+      const response = await api("GET", `/api/tenants/prod/production-orders?${query}`);
+      expect(response.status).toBe(200);
+      return (json(response).data as { id: string }[]).map(({ id }) => id);
+    };
+
+    expect(await list("q=vrapi+bar")).toEqual([ids.done, ids.running]);
+    expect(await list("q=VRAPI+bar&sort=location&dir=desc")).toEqual([ids.running, ids.done]);
+    expect(await list("q=vrapi+bar&page=2")).toEqual([]);
+
+    for (const [query, field] of [["sort=material", "sort"], ["dir=up", "dir"], ["q=a+b+c+d+e+f", "q"]]) {
+      const refused = await api("GET", `/api/tenants/prod/production-orders?${query}`);
+      expect(refused.status).toBe(400);
+      expect(Object.keys(json(refused).error.fieldErrors)).toEqual([field]);
+    }
+    expect((await api("GET", "/api/tenants/prod/production-orders?q=vrapi&surprise=1")).status).toBe(400);
+  });
 });

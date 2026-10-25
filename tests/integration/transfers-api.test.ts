@@ -316,4 +316,35 @@ describe("transfers through the API", () => {
     }
     expect(await physical(ids.a)).toBe("100.000000");
   });
+
+  it("searches and sorts the list on the server, and still refuses an unknown query key (#221)", async () => {
+    const copper = await create("/api/tenants/prod/materials", { type: "raw", description: "trsq copper", baseUnit: "kg" });
+    const north = await create("/api/tenants/prod/locations", { name: "trsq north" });
+    const south = await create("/api/tenants/prod/locations", { name: "trsq south" });
+    const created: string[] = [];
+    for (const [source, destination, plannedDispatch] of [[north, south, "2027-07-02"], [south, north, "2027-07-03"], [north, south, "2027-07-01"]]) {
+      const response = await write("POST", "/api/tenants/prod/transfers", {
+        material: copper, source, destination, quantity: "5", unit: "kg", plannedDispatch, plannedArrival: "2027-07-09",
+      });
+      expect(response.status).toBe(200);
+      created.push(json(response).data.id);
+    }
+    const list = async (query: string) => {
+      const response = await api("GET", `/api/tenants/prod/transfers?${query}`);
+      expect(response.status).toBe(200);
+      return json(response).data as TransferView[];
+    };
+
+    expect((await list("q=trsq")).map(({ id }) => id)).toEqual(created);
+    expect((await list("q=trsq&sort=plannedDispatch&dir=desc")).map(({ plannedDispatch }) => plannedDispatch)).toEqual(["2027-07-03", "2027-07-02", "2027-07-01"]);
+    expect((await list("q=trsq&sort=source")).map(({ id }) => id)).toEqual([created[0], created[2], created[1]]);
+    expect((await list("q=trsq&page=2"))).toEqual([]);
+
+    for (const [query, field] of [["sort=destination", "sort"], ["dir=up", "dir"]]) {
+      const refused = await api("GET", `/api/tenants/prod/transfers?${query}`);
+      expect(refused.status).toBe(400);
+      expect(Object.keys(json(refused).error.fieldErrors)).toEqual([field]);
+    }
+    expect((await api("GET", "/api/tenants/prod/transfers?q=trsq&surprise=1")).status).toBe(400);
+  });
 });

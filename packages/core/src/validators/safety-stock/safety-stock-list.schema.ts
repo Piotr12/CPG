@@ -1,4 +1,5 @@
-import { listSortSchema } from "../lists/list-query.schema";
+import { z } from "zod";
+import { listQueryShape, listSortSchema } from "../lists/list-query.schema";
 
 /**
  * The columns the safety stock list sorts by (#217); the first, the material's ID (then the
@@ -9,3 +10,6 @@ export const SAFETY_STOCK_SORTS = ["material", "location", "effectiveFrom", "qua
 export type SafetyStockSort = (typeof SAFETY_STOCK_SORTS)[number];
 
 export const safetyStockSortSchema = listSortSchema(SAFETY_STOCK_SORTS);
+
+/** `GET /api/tenants/{tenant}/safety-stock-targets`'s query (#221): an optional search and sort; other keys are ignored, as before. */
+export const safetyStockApiQuerySchema = z.object(listQueryShape(SAFETY_STOCK_SORTS));
