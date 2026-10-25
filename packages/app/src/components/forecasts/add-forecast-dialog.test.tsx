@@ -61,6 +61,12 @@ describe("AddForecastDialog", () => {
     });
   });
 
+  it("hints on the free-text unit field that SU can't be entered (#243)", () => {
+    render(dialog());
+    fireEvent.click(screen.getByRole("button", { name: "Add forecast" }));
+    expect(screen.getByText("Leave blank for the material's base unit, or use a physical unit it converts, such as case (not SU).")).toBeTruthy();
+  });
+
   it("shows a second forecast on the same day as refused, in the screen's words", async () => {
     mocks.addForecast.mockResolvedValue({ ok: false, error: { code: "FORECAST_EXISTS", message: "x" } });
     render(dialog());

@@ -650,7 +650,7 @@ export const en = {
       quantity: "Quantity",
       quantityHint: "A number of at least 0.",
       unit: "Unit",
-      unitHint: "Leave blank for the material's base unit, or use a unit it converts, such as case.",
+      unitHint: "Leave blank for the material's base unit, or use a physical unit it converts, such as case (not SU).",
     },
     add: {
       open: "Add forecast",
@@ -723,7 +723,7 @@ export const en = {
     intro: "Plan one Make output at one location and keep its chosen BOM revision. Planning never changes physical stock.",
     create: "Create production order", edit: "Edit production order", save: "Save changes", preview: "Preview BOMs", pending: "Working…", cancel: "Cancel", back: "Back",
     id: "ID", output: "Output material", location: "Location", quantity: "Planned quantity", unit: "Unit", finish: "Planned finish", start: "Planned start", recipe: "BOM / revision", status: "Status", entered: "Entered quantity / conversion",
-    unitHint: "Enter the output's base unit (shown beside its name) or a configured alternate unit.",
+    unitHint: "Enter the output's base unit (shown beside its name) or one of its physical alternate units (not SU).",
     previewDates: "Indicative start: {start} ({days} calendar days before finish). Dates are checked again when saving.",
     leadTime: "Captured lead time", leadTimeDays: "{days} calendar days",
     finishHint: "The planned start is recalculated from the captured lead time of {days} calendar days.",
@@ -787,7 +787,7 @@ export const en = {
     },
     states: { open: "Open", completed: "Completed", "closed-early": "Closed Early", cancelled: "Cancelled" },
     errors: {
-      UNIT_NOT_CONVERTIBLE: "Choose the output base unit or one of its configured conversions.",
+      UNIT_NOT_CONVERTIBLE: "Choose the output base unit or one of its physical alternate units. SU is for reports only.",
       QUANTITY_OUT_OF_RANGE: "That converted quantity is too large to store.",
       QUANTITY_ROUNDS_TO_ZERO: "That quantity rounds to zero in the output base unit.",
       NETWORK_ERROR: "The request failed. Try again.",
@@ -1895,7 +1895,7 @@ export const en = {
     inTransitFrom: "In transit from here", inTransitTo: "In transit to here", transitNote: "Stock in transit belongs to its transfer: neither location can use it until it is received.", transfers: "Transfers",
     form: { open: "Post correction", title: "Post stock correction", description: "Enter a signed change: 5 adds five; -5 removes five. This records a permanent movement today.", quantity: "Signed quantity", quantityHint: "Use up to six decimals. Negative quantities remove stock.", unit: "Unit", reason: "Reason", submit: "Post", pending: "Posting…", cancel: "Cancel" },
     fieldErrors: { quantity: "Enter a nonzero signed quantity, with at most 12 integer digits and 6 decimals.", reason: "Enter a reason, up to 500 characters.", unit: "Choose a valid unit." },
-    errors: { STOCK_ALREADY_REVERSED: "This movement was already reversed. View its reversal before making another posting.", STOCK_REVERSAL_UNSUPPORTED: "This kind of posting cannot be reversed here.", STOCK_REVERSAL_INCONSISTENT: "The original posting does not match its document. Ask an administrator to check it.", STOCK_MOVEMENT_NOT_FOUND: "This movement is no longer available in this tenant.", QUANTITY_OUT_OF_RANGE: "That quantity or resulting balance is too large.", QUANTITY_ROUNDS_TO_ZERO: "That quantity rounds to zero in the base unit.", MATERIAL_INACTIVE: "This material is inactive. New corrections are blocked.", LOCATION_INACTIVE: "This location is inactive. New corrections are blocked.", UNIT_NOT_CONVERTIBLE: "The unit has no conversion to this material's base unit." },
+    errors: { STOCK_ALREADY_REVERSED: "This movement was already reversed. View its reversal before making another posting.", STOCK_REVERSAL_UNSUPPORTED: "This kind of posting cannot be reversed here.", STOCK_REVERSAL_INCONSISTENT: "The original posting does not match its document. Ask an administrator to check it.", STOCK_MOVEMENT_NOT_FOUND: "This movement is no longer available in this tenant.", QUANTITY_OUT_OF_RANGE: "That quantity or resulting balance is too large.", QUANTITY_ROUNDS_TO_ZERO: "That quantity rounds to zero in the base unit.", MATERIAL_INACTIVE: "This material is inactive. New corrections are blocked.", LOCATION_INACTIVE: "This location is inactive. New corrections are blocked.", UNIT_NOT_CONVERTIBLE: "This unit can't be entered for this material: it has no conversion to the base unit, or it is SU, which is for reports only." },
   },
   /** The current stock report (E13-S01). */
   statisticalUnits: {

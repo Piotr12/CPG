@@ -77,6 +77,12 @@ describe("the import workbook layout", () => {
     expect(isInstructionSheet("Materials")).toBe(false);
   });
 
+  it("explains that a BOM line's unit is a physical one, never SU, in both languages (#243)", () => {
+    const unit = sheetSpec("bomLines").columns.find((column) => column.field === "unit")!;
+    expect(unit.meaning.en).toBe("The component's base unit or a physical unit it converts (not SU). Blank: its base unit.");
+    expect(unit.meaning.pl).toBe("Jednostka bazowa składnika lub fizyczna jednostka z przelicznikiem (nie SU). Puste: jednostka bazowa.");
+  });
+
   it("names a column by its field", () => {
     expect(columnHeader("materials", "baseUnit")).toBe("Base unit");
     expect(columnHeader("bomLines", "material")).toBe("Component material ID");
