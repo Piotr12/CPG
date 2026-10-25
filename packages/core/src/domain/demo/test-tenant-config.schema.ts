@@ -6,34 +6,45 @@ import { findCycle, type RecipeEdge } from "../boms/find-cycle";
 import { canBeBomComponent, canBeBomOutput } from "../boms/recipe-rules";
 import { formatSequentialId } from "../business-ids/sequential-id";
 import { ONE, parseDecimal } from "../quantities/decimal";
+import { isCalendarDate } from "../../validators/dates/calendar-date.schema";
+import { remainderShare } from "./customer-shares";
 import rawConfig from "./test-tenant-config.json";
 
 /*
  * The Test tenant's demonstration dataset is stated in one file, `test-tenant-config.json` (spec
- * `2026-10-21--0718UTC-test-tenant-dataset`, Q1): the shape the owner set (counts and horizons, every
- * period in months), the demand and supply parameters, the limits, and the catalogue that gives the
- * shape its names. This schema parses it and cross-checks the catalogue against the shape, so the
- * numbers stay the one statement of the shape and a catalogue that disagrees fails the unit tests.
- * Decimals are strings (R03); counts, days and months are whole JSON numbers.
+ * `2026-10-21--0718UTC-test-tenant-dataset`, Q1, reshaped by `2026-10-25--0848UTC-single-site-daily-dataset`):
+ * the shape the owner set (counts and horizons), the daily demand and weekly supply parameters, the
+ * limits, and the catalogue that gives the shape its names. This schema parses it and cross-checks the
+ * catalogue against the shape, so the numbers stay the one statement of the shape and a catalogue that
+ * disagrees fails the unit tests. Decimals are strings (R03); counts, days and months are whole JSON numbers.
  */
 
 /** Months in a year: a seasonality profile has one multiplier per calendar month, January first. */
 export const MONTHS_PER_YEAR = 12;
+/** Monday to Friday: a weekday profile has one multiplier per working day, and delivery days are numbered 1–5. */
+export const WEEKDAYS = 5;
+/** The least share of every SKU the remainder customers keep, up to the end of the forecast horizon (spec "Customers"). */
+export const REMAINDER_FLOOR = 0.2;
 
 const DECIMAL_MESSAGE = "Use a decimal string of at least 0 with at most 12 digits before the point and 6 after it.";
 const POSITIVE_DECIMAL_MESSAGE = "Use a decimal string greater than 0.";
 
 const decimalSchema = z.string().refine((text) => parseDecimal(text) !== null, DECIMAL_MESSAGE);
 const positiveDecimalSchema = z.string().refine((text) => (parseDecimal(text) ?? 0n) > 0n, POSITIVE_DECIMAL_MESSAGE);
+/** A growth rate, which may be negative: a customer that shrinks. */
+const rateSchema = z.string().regex(/^-?\d{1,3}(\.\d{1,6})?$/, "Use a decimal string such as 0.1 or -0.015.");
 const countSchema = z.number().int().positive();
 const monthsSchema = z.number().int().nonnegative();
+const weekdaySchema = z.number().int().min(1).max(WEEKDAYS);
+/** A day of the year, `MM-DD`, that exists in every year: 29 February doesn't. */
+const dayOfYearSchema = z.string().refine((text) => /^\d{2}-\d{2}$/.test(text) && isCalendarDate(`2025-${text}`), "Use a day of the year written MM-DD.");
 const nameSchema = descriptionSchema;
 
 const buySchema = z.strictObject({
   leadTimeDays: z.number().int().nonnegative(),
   minimumQuantity: positiveDecimalSchema,
   lotMultiple: positiveDecimalSchema,
-  suppliers: z.array(businessIdSchema).min(1),
+  supplier: businessIdSchema,
 });
 
 const materialSchema = z.strictObject({
@@ -55,34 +66,42 @@ const configSchema = z.strictObject({
     suppliers: countSchema,
     rawMaterials: countSchema,
     intermediates: countSchema,
-    finishedProducts: z.strictObject({ simple: countSchema, composed: countSchema }),
+    finishedProducts: z.strictObject({ types: countSchema, skus: countSchema }),
     alternateBoms: z.strictObject({ product: businessIdSchema, count: countSchema }),
   }),
   limits: z.strictObject({ documents: countSchema, movements: countSchema }),
   demand: z.strictObject({
     growthPerYear: decimalSchema,
     noise: decimalSchema,
+    drift: z.strictObject({ weeks: countSchema, decay: decimalSchema, amplitude: decimalSchema }),
+    weekday: z.array(positiveDecimalSchema).length(WEEKDAYS),
     seasonality: z.record(z.string(), z.array(positiveDecimalSchema).length(MONTHS_PER_YEAR)),
-    products: z.array(
-      z.strictObject({ material: businessIdSchema, monthlyBase: positiveDecimalSchema, profile: z.string(), enteredIn: unitSchema }),
-    ),
+    types: z.array(z.strictObject({ name: nameSchema, baseDaily: positiveDecimalSchema, profile: z.string() })),
+    products: z.array(z.strictObject({ material: businessIdSchema, type: nameSchema, mix: positiveDecimalSchema, enteredIn: unitSchema })),
     customers: z.array(
       z.strictObject({
         customer: businessIdSchema,
+        deliveryDays: z.array(weekdaySchema).min(1),
+        leadWorkingDays: countSchema,
         wholePacks: z.boolean(),
-        shares: z.record(businessIdSchema, positiveDecimalSchema),
+        trend: z.union([
+          z.strictObject({ quarterlyGrowth: rateSchema, shares: z.record(businessIdSchema, positiveDecimalSchema) }),
+          z.strictObject({ remainderWeights: z.record(businessIdSchema, positiveDecimalSchema) }),
+        ]),
       }),
     ),
+    projects: z.array(z.strictObject({ customer: businessIdSchema, material: businessIdSchema, date: dayOfYearSchema, days: countSchema })),
   }),
   supply: z.strictObject({
+    planningWeekday: weekdaySchema,
     partialShipmentEvery: countSchema,
     varianceEvery: countSchema,
     underConsumptionEvery: countSchema,
     overConsumption: decimalSchema,
     underConsumption: decimalSchema,
     safetyStock: z.strictObject({
-      finishedMonths: decimalSchema,
-      intermediateMonths: decimalSchema,
+      finishedDays: monthsSchema,
+      intermediateDays: monthsSchema,
       rawLeadTimeFactor: decimalSchema,
       laterIncreases: z.array(
         z.strictObject({ material: businessIdSchema, location: businessIdSchema, monthsAfterAnchor: monthsSchema, factor: positiveDecimalSchema }),
@@ -113,7 +132,6 @@ const configSchema = z.strictObject({
         lotMultiple: positiveDecimalSchema,
       }),
     ),
-    purchasedIntermediates: z.array(z.strictObject({ material: businessIdSchema, location: businessIdSchema, buy: buySchema })),
   }),
 });
 
@@ -121,7 +139,7 @@ const configSchema = z.strictObject({
 export type TestTenantConfig = z.infer<typeof configSchema>;
 export type CatalogueMaterial = TestTenantConfig["catalogue"]["materials"][number];
 export type CatalogueBom = TestTenantConfig["catalogue"]["boms"][number];
-export type BuyParameters = z.infer<typeof buySchema>;
+export type DemandCustomer = TestTenantConfig["demand"]["customers"][number];
 
 /** The catalogue entry a business ID names: IDs are the entry's index + 1 (R01). */
 export function byId<T>(entries: readonly T[], id: string): T | undefined {
@@ -133,12 +151,14 @@ export function idsOf(entries: readonly unknown[]): string[] {
   return entries.map((_, index) => formatSequentialId(index + 1));
 }
 
-/** Whether a finished material is simple: every recipe for it uses raw materials only. */
-export function isSimpleProduct(config: TestTenantConfig, product: string): boolean {
-  const { materials, boms } = config.catalogue;
-  return boms
-    .filter(({ output }) => output === product)
-    .every(({ components }) => components.every(({ material }) => byId(materials, material)?.type === "raw"));
+/** The finished products, in ID order: the SKUs customers buy. */
+export function finishedProducts(config: TestTenantConfig): string[] {
+  return idsOf(config.catalogue.materials).filter((id) => byId(config.catalogue.materials, id)!.type === "finished");
+}
+
+/** The SKUs a customer buys: the ones it has a share or a remainder weight of. */
+export function productsBoughtBy({ trend }: DemandCustomer): string[] {
+  return Object.keys("shares" in trend ? trend.shares : trend.remainderWeights);
 }
 
 /** The units a material may be entered in: its base unit and every conversion's unit but the report-only SU (#239). */
@@ -156,17 +176,14 @@ function checkCatalogueSizes(config: TestTenantConfig, issue: Issue): void {
   }
 }
 
-/** The catalogue's materials have the shape's counts per type, finished products split into simple and composed. */
+/** The catalogue's materials have the shape's counts per type, and the demand lists the shape's furniture types. */
 function checkMaterialCounts(config: TestTenantConfig, issue: Issue): void {
   const { shape, catalogue } = config;
-  const ids = idsOf(catalogue.materials);
-  const finished = ids.filter((id) => byId(catalogue.materials, id)!.type === "finished");
-  const simple = finished.filter((id) => isSimpleProduct(config, id)).length;
   const counts = {
     rawMaterials: catalogue.materials.filter(({ type }) => type === "raw").length,
     intermediates: catalogue.materials.filter(({ type }) => type === "intermediate").length,
-    simple,
-    composed: finished.length - simple,
+    types: config.demand.types.length,
+    skus: finishedProducts(config).length,
   };
   const expected = { rawMaterials: shape.rawMaterials, intermediates: shape.intermediates, ...shape.finishedProducts };
   for (const kind of Object.keys(counts) as (keyof typeof counts)[]) {
@@ -182,16 +199,15 @@ function checkReferences(config: TestTenantConfig, issue: Issue): void {
     if (byId<unknown>(lists[kind], id) === undefined) issue(path, `There is no ${kind} ${id} in the catalogue.`);
   };
   refer("material", shape.alternateBoms.product, ["shape", "alternateBoms", "product"]);
-  catalogue.materials.forEach(({ buy }, index) =>
-    buy?.suppliers.forEach((supplier, at) => refer("supplier", supplier, ["catalogue", "materials", index, "buy", "suppliers", at])),
-  );
+  catalogue.materials.forEach(({ buy }, index) => {
+    if (buy) refer("supplier", buy.supplier, ["catalogue", "materials", index, "buy", "supplier"]);
+  });
   catalogue.boms.forEach(({ output, components }, index) => {
     refer("material", output, ["catalogue", "boms", index, "output"]);
     components.forEach(({ material }, at) => refer("material", material, ["catalogue", "boms", index, "components", at, "material"]));
   });
   const pairs = [
     ...catalogue.production.map((pair, index) => ({ ...pair, path: ["catalogue", "production", index] })),
-    ...catalogue.purchasedIntermediates.map((pair, index) => ({ ...pair, path: ["catalogue", "purchasedIntermediates", index] })),
     ...supply.safetyStock.laterIncreases.map((pair, index) => ({ ...pair, path: ["supply", "safetyStock", "laterIncreases", index] })),
     ...supply.waste.orders.map((order, index) => ({ material: order.output, location: order.location, path: ["supply", "waste", "orders", index] })),
     ...supply.requisitions.open.map((pair, index) => ({ ...pair, path: ["supply", "requisitions", "open", index] })),
@@ -202,11 +218,15 @@ function checkReferences(config: TestTenantConfig, issue: Issue): void {
     refer("material", material, [...path, "material"]);
     refer("location", location, [...path, "location"]);
   }
-  catalogue.purchasedIntermediates.forEach(({ buy }, index) =>
-    buy.suppliers.forEach((supplier, at) => refer("supplier", supplier, ["catalogue", "purchasedIntermediates", index, "buy", "suppliers", at])),
-  );
   demand.products.forEach(({ material }, index) => refer("material", material, ["demand", "products", index, "material"]));
-  demand.customers.forEach(({ customer }, index) => refer("customer", customer, ["demand", "customers", index, "customer"]));
+  demand.customers.forEach((entry, index) => {
+    refer("customer", entry.customer, ["demand", "customers", index, "customer"]);
+    for (const product of productsBoughtBy(entry)) refer("material", product, ["demand", "customers", index, "trend", product]);
+  });
+  demand.projects.forEach(({ customer, material }, index) => {
+    refer("customer", customer, ["demand", "projects", index, "customer"]);
+    refer("material", material, ["demand", "projects", index, "material"]);
+  });
 }
 
 /** Recipes follow the type rules (R02): intermediate or finished outputs, raw or intermediate components, in units the component has. */
@@ -236,8 +256,8 @@ function checkNoCycles(config: TestTenantConfig, issue: Issue): void {
 }
 
 /**
- * One BOM, at priority 1, per made material, except the shape's alternate-BOM product: a simple
- * finished product with exactly `count` BOMs at priorities 1…count (spec Q6).
+ * One BOM, at priority 1, per made material, except the shape's alternate-BOM product: a finished
+ * product with exactly `count` BOMs at priorities 1…count (spec Q6, single-site spec Q13).
  */
 function checkBomCounts(config: TestTenantConfig, issue: Issue): void {
   const { shape, catalogue } = config;
@@ -250,9 +270,7 @@ function checkBomCounts(config: TestTenantConfig, issue: Issue): void {
       issue(["catalogue", "boms"], `Material ${material} needs BOMs at priorities ${expected.join(", ")}; the catalogue has ${priorities.join(", ") || "none"}.`);
     }
   }
-  if (byId(catalogue.materials, product)!.type !== "finished" || !isSimpleProduct(config, product)) {
-    issue(["shape", "alternateBoms", "product"], `Material ${product} is not a simple finished product.`);
-  }
+  if (byId(catalogue.materials, product)!.type !== "finished") issue(["shape", "alternateBoms", "product"], `Material ${product} is not a finished product.`);
 }
 
 /** Made pairs are intermediate or finished, once each; every finished product is made at exactly one plant (spec Q7). */
@@ -273,48 +291,81 @@ function checkProduction(config: TestTenantConfig, issue: Issue): void {
     });
 }
 
-/** Raw materials, and only they, carry buy parameters with a supplier; bought intermediates are intermediates. */
+/** Raw materials, and only they, are bought, each from exactly one supplier (spec Q4). */
 function checkBuying(config: TestTenantConfig, issue: Issue): void {
-  const { materials, purchasedIntermediates } = config.catalogue;
-  materials.forEach(({ type, buy }, index) => {
+  config.catalogue.materials.forEach(({ type, buy }, index) => {
     if (type === "raw" && !buy) issue(["catalogue", "materials", index, "buy"], `Raw material ${formatSequentialId(index + 1)} needs buy parameters and a supplier.`);
-    if (type !== "raw" && buy) issue(["catalogue", "materials", index, "buy"], `Only a raw material is bought everywhere; ${formatSequentialId(index + 1)} is ${type}.`);
-  });
-  purchasedIntermediates.forEach(({ material }, index) => {
-    if (byId(materials, material)!.type !== "intermediate") issue(["catalogue", "purchasedIntermediates", index, "material"], `Material ${material} is not an intermediate.`);
+    if (type !== "raw" && buy) issue(["catalogue", "materials", index, "buy"], `Only a raw material is bought; ${formatSequentialId(index + 1)} is ${type}.`);
   });
 }
 
 /**
- * Every finished product has one demand entry, in a profile that exists and a unit it has; the
- * customers' weights for each product sum to exactly 1.
+ * Every finished product has one demand entry, of a type that exists and in a unit it has; every type
+ * has a profile that exists, and the colour mixes of its SKUs sum to exactly 1.
  */
 function checkDemand(config: TestTenantConfig, issue: Issue): void {
   const { demand, catalogue } = config;
-  idsOf(catalogue.materials)
-    .filter((id) => byId(catalogue.materials, id)!.type === "finished")
-    .forEach((id) => {
-      const entries = demand.products.filter(({ material }) => material === id).length;
-      if (entries !== 1) issue(["demand", "products"], `Finished material ${id} needs exactly one demand entry; it has ${entries}.`);
-    });
-  demand.products.forEach(({ material, profile, enteredIn }, index) => {
+  finishedProducts(config).forEach((id) => {
+    const entries = demand.products.filter(({ material }) => material === id).length;
+    if (entries !== 1) issue(["demand", "products"], `Finished material ${id} needs exactly one demand entry; it has ${entries}.`);
+  });
+  const mixes = new Map<string, bigint>(demand.types.map(({ name }) => [name, 0n]));
+  demand.types.forEach(({ profile }, index) => {
+    if (!(profile in demand.seasonality)) issue(["demand", "types", index, "profile"], `There is no seasonality profile ${profile}.`);
+  });
+  demand.products.forEach(({ material, type, mix, enteredIn }, index) => {
     const product = byId(catalogue.materials, material)!;
     const path = ["demand", "products", index];
     if (product.type !== "finished") issue([...path, "material"], `Material ${material} is not a finished product.`);
-    if (!(profile in demand.seasonality)) issue([...path, "profile"], `There is no seasonality profile ${profile}.`);
     if (!unitsOf(product).includes(enteredIn)) issue([...path, "enteredIn"], `Material ${material} has no unit ${enteredIn}.`);
+    const sum = mixes.get(type);
+    if (sum === undefined) issue([...path, "type"], `There is no furniture type ${type}.`);
+    else mixes.set(type, sum + parseDecimal(mix)!);
   });
-  const sums = new Map<string, bigint>(demand.products.map(({ material }) => [material, 0n]));
-  demand.customers.forEach(({ shares }, index) => {
-    for (const [product, weight] of Object.entries(shares)) {
-      const sum = sums.get(product);
-      if (sum === undefined) issue(["demand", "customers", index, "shares", product], `Material ${product} has no demand entry.`);
-      else sums.set(product, sum + parseDecimal(weight)!);
+  for (const [type, sum] of mixes) {
+    if (sum !== ONE) issue(["demand", "types"], `The colour mixes of ${type} must sum to 1.`);
+  }
+}
+
+/**
+ * The customers (spec "Customers"): exactly one buys every SKU; every SKU has at least one remainder
+ * customer, whose weights for it sum to exactly 1; delivery days are distinct; and the trending
+ * customers leave the remainder customers at least `REMAINDER_FLOOR` of every SKU from the history
+ * start to the end of the forecast horizon. Shares move exponentially, so the remainder is concave in
+ * time and least at one of the two ends.
+ */
+function checkCustomers(config: TestTenantConfig, issue: Issue): void {
+  const { demand, horizon } = config;
+  const skus = finishedProducts(config);
+  const everything = demand.customers.filter((entry) => skus.every((sku) => productsBoughtBy(entry).includes(sku)));
+  if (everything.length !== 1) issue(["demand", "customers"], `Exactly one customer must buy every SKU; ${everything.length} do.`);
+  demand.customers.forEach(({ deliveryDays }, index) => {
+    if (new Set(deliveryDays).size !== deliveryDays.length) issue(["demand", "customers", index, "deliveryDays"], "A delivery day is listed twice.");
+  });
+  const weights = new Map<string, bigint>(skus.map((sku) => [sku, 0n]));
+  demand.customers.forEach(({ trend }, index) => {
+    const listed = "shares" in trend ? trend.shares : trend.remainderWeights;
+    for (const product of Object.keys(listed)) {
+      const sum = weights.get(product);
+      if (sum === undefined) issue(["demand", "customers", index, "trend", product], `Material ${product} is not a finished product.`);
+      else if (!("shares" in trend)) weights.set(product, sum + parseDecimal(trend.remainderWeights[product])!);
     }
   });
-  for (const [product, sum] of sums) {
-    if (sum !== ONE) issue(["demand", "customers"], `The customers' weights for ${product} must sum to 1.`);
+  const horizonQuarters = (horizon.historyMonths + 1 + horizon.forecastMonths) / 3;
+  for (const [sku, sum] of weights) {
+    if (sum !== ONE) issue(["demand", "customers"], `The remainder customers' weights for ${sku} must sum to 1.`);
+    const least = Math.min(remainderShare(demand, sku, 0), remainderShare(demand, sku, horizonQuarters));
+    if (least < REMAINDER_FLOOR) issue(["demand", "customers"], `The remainder customers keep ${least.toFixed(3)} of ${sku}; they need at least ${REMAINDER_FLOOR}.`);
   }
+}
+
+/** A project is for a SKU its customer buys. */
+function checkProjects(config: TestTenantConfig, issue: Issue): void {
+  const { customers, projects } = config.demand;
+  projects.forEach(({ customer, material }, index) => {
+    const buyer = customers.find((entry) => entry.customer === customer);
+    if (!buyer || !productsBoughtBy(buyer).includes(material)) issue(["demand", "projects", index], `Customer ${customer} doesn't buy ${material}.`);
+  });
 }
 
 /** Each waste order names a made pair whose priority-1 recipe uses the sheet it wastes. */
@@ -328,7 +379,7 @@ function checkWaste(config: TestTenantConfig, issue: Issue): void {
   });
 }
 
-/** Requisitions and top-up orders are for raw materials, which every plant buys. */
+/** Requisitions and top-up orders are for raw materials, which the plant buys. */
 function checkPurchaseRequests(config: TestTenantConfig, issue: Issue): void {
   const { supply, catalogue } = config;
   const lists = { open: supply.requisitions.open, converted: supply.requisitions.converted, topUps: supply.topUps };
@@ -349,6 +400,8 @@ const CROSS_CHECKS = [
   checkProduction,
   checkBuying,
   checkDemand,
+  checkCustomers,
+  checkProjects,
   checkWaste,
   checkPurchaseRequests,
 ];

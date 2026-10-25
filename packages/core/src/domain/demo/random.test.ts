@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { monthOf } from "./calendar";
-import { keyedRandom, mulberry32, uniformMicro } from "./random";
+import { keyedUniform, mulberry32 } from "./random";
 
 const draws = (next: () => number, count: number) => Array.from({ length: count }, () => next());
 
@@ -20,20 +19,20 @@ describe("mulberry32", () => {
   });
 });
 
-describe("keyedRandom", () => {
-  it("draws by seed, calendar month and product, so the same key always repeats", () => {
-    const october = monthOf("2026-10-01");
-    expect(draws(keyedRandom(20261021, october, 5), 3)).toEqual([4134881975, 3962488063, 650278359]);
-    const others = [keyedRandom(20261021, october + 1, 5), keyedRandom(20261021, october + 12, 5), keyedRandom(20261021, october, 18), keyedRandom(1, october, 5)];
-    for (const other of others) expect(other()).not.toBe(4134881975);
+describe("keyedUniform", () => {
+  it("draws by seed and keys, so the same key always repeats and any other key moves the draw", () => {
+    const draw = keyedUniform(20261021, [2, 20747, 5], 0.25);
+    expect(keyedUniform(20261021, [2, 20747, 5], 0.25)).toBe(draw);
+    for (const other of [keyedUniform(20261021, [2, 20748, 5], 0.25), keyedUniform(20261021, [2, 20747, 18], 0.25), keyedUniform(20261021, [1, 20747, 5], 0.25), keyedUniform(1, [2, 20747, 5], 0.25)]) {
+      expect(other).not.toBe(draw);
+    }
   });
-});
 
-describe("uniformMicro", () => {
-  it("maps a draw onto [−amplitude, +amplitude], both ends included", () => {
-    expect(uniformMicro(() => 0, 120000n)).toBe(-120000n);
-    expect(uniformMicro(() => 2 ** 32 - 1, 120000n)).toBe(120000n);
-    const next = mulberry32(1);
-    expect([uniformMicro(next, 120000n), uniformMicro(next, 120000n)]).toEqual([30497n, -119344n]);
+  it("stays within [−amplitude, +amplitude] and spreads over it", () => {
+    const values = Array.from({ length: 2000 }, (_, day) => keyedUniform(7, [day], 0.25));
+    expect(values.every((value) => value >= -0.25 && value <= 0.25)).toBe(true);
+    expect(Math.min(...values)).toBeLessThan(-0.24);
+    expect(Math.max(...values)).toBeGreaterThan(0.24);
+    expect(Math.abs(values.reduce((sum, value) => sum + value, 0) / values.length)).toBeLessThan(0.02);
   });
 });
