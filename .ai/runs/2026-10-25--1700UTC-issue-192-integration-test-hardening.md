@@ -55,6 +55,7 @@ Risks: integration files share one server and database; every new test asserts o
 - `npm run lint`: exit 0. `npm run typecheck`: exit 0.
 - `npm run test:coverage`: exit 0, 589 files, 4,522 tests, 100% thresholds held.
 - `npm run build`: exit 0.
+- CI on PR #258: every check green on both pushes (bca88098, d77e1230), all four integration shards included.
 - Integration, the 13 touched files in one pass on a fresh local standalone server (`CPG_BASE_URL`): 13 files, 141 tests passed; the 2,000-row dry run took 428 ms, the realistic reset 6.3 s. The full suite runs in CI against the Docker image.
 
 ## Follow-ups
