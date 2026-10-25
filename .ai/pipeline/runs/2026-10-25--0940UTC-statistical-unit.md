@@ -61,8 +61,15 @@ Each product can carry one factor saying how many statistical units (SU) one bas
 ## Log
 
 - 09:40 — Feature route: the spec is merged on `main` (#241), nothing is built yet, no PR references #239. 12 steps, so the plain engine runs it. Spec step 0 needs production access and goes to the owner.
+- 10:40 — Phase 1–2: registry `SU`/`ZSU`, `STATISTICAL_UNIT`, `isStatisticalUnit`; base-unit refusal in the create schema and `assertRegisteredUnit` (`baseUnit` only); `convertToBaseQuantity` refuses SU before the conversion lookup. A sub-agent wrote the seven per-family service tests (BOM, forecast, PO, customer order, shipment, stock correction, stock import); all eight SU tests fail with the refusal removed (mutation check) and pass with it. Document services surface the refusal as `VALIDATION_FAILED` on the line's unit field, stock and import as `UNIT_NOT_CONVERTIBLE`: the tests assert each family's shape.
+- 10:45 — Pickers: `listUnits` and the completion preview filter `unit != SU` in the query; the Stock page and `unitsOf` filter by `isStatisticalUnit`. Deviation: the SU hint is appended to the Base quantity hint through a new `CrudField.description` function (no conditional hint existed). `unitSelect` gains `physicalOnly`.
+- 10:50 — Dataset: ten SU factors; a test pins them in both datasets. Full unit suite green (4,302).
+- 11:00 — Report helpers and the Statistical units page. Deviation: count line is a label ("Finished products with an SU factor: 8 of 10.") to avoid two-number plural agreement. Coverage 100% (4,320 tests), build green.
+- 11:20 — No Docker on this machine: ran `statistical-units`, `navigation`, `materials-api` and `materials` integration files against a local standalone server (lesson 2026-10-23): 4 files, 41 tests passed. Spec moved to `implemented/`, references in the demand-review spec and D08 updated.
 
 ## Progress
+
+PR: #242
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
@@ -72,27 +79,27 @@ Each product can carry one factor saying how many statistical units (SU) one bas
 
 ### Phase 1: registry and refusals
 
-- [ ] 1.1 Registry entry and helpers
-- [ ] 1.2 Base-unit refusal
-- [ ] 1.3 Entry refusal in convertToBaseQuantity
+- [x] 1.1 Registry entry and helpers — e9035162
+- [x] 1.2 Base-unit refusal — e9035162
+- [x] 1.3 Entry refusal in convertToBaseQuantity — e9035162
 
 ### Phase 2: entry pickers and the conversion dialog
 
-- [ ] 2.1 Filter SU out of entry pickers
-- [ ] 2.2 Statistical group, base-unit select and SU hint
+- [x] 2.1 Filter SU out of entry pickers — e9035162
+- [x] 2.2 Statistical group, base-unit select and SU hint — e9035162
 
 ### Phase 3: report helpers
 
-- [ ] 3.1 report-units.ts
+- [x] 3.1 report-units.ts — 16a4edf1
 
 ### Phase 4: Statistical units page
 
-- [ ] 4.1 MaterialService.statisticalFactors
-- [ ] 4.2 Page, nav, help and labels
-- [ ] 4.3 Integration tests
+- [x] 4.1 MaterialService.statisticalFactors — 4b0c36a7
+- [x] 4.2 Page, nav, help and labels — 4b0c36a7
+- [x] 4.3 Integration tests — a14085a8
 
 ### Phase 5: datasets and docs
 
-- [ ] 5.1 Test dataset factors
-- [ ] 5.2 Standards, compatibility and lessons
-- [ ] 5.3 Move the spec to implemented
+- [x] 5.1 Test dataset factors — ab305c2a
+- [x] 5.2 Standards, compatibility and lessons — 86fd0001
+- [x] 5.3 Move the spec to implemented — 86fd0001
