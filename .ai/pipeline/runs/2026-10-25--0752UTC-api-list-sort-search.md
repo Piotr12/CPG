@@ -1,0 +1,54 @@
+# Execution plan: optional sort and search on the API list routes (#221)
+
+**Date:** 2026-10-25 07:52 UTC
+**Agent:** Claude Code / claude-opus-5-5 (cezar, `om-auto-fix-issue` feature route → `om-auto-implement-spec` → `om-auto-create-pr`)
+Source doc: .ai/specs/2026-10-25--0746UTC-api-list-sort-search.md (on spec PR #230)
+
+## Goal
+
+The thirteen tenant list routes accept optional `q`, `sort` and `dir` query parameters. They validate them strictly through each list's `*-list.schema.ts` and pass them to the services, which already apply them. A request without them is unchanged.
+
+## Scope
+
+- `core/src/validators/lists/list-query.schema.ts`: the shared strict query shape and the two fixed messages.
+- The eleven `*-list.schema.ts` files: one API query schema each.
+- The thirteen `GET` handlers in `app/src/app/api/tenants/[tenant]/*/route.ts` and their `route.test.ts`.
+- BACKWARD_COMPATIBILITY.md and `.ai/docs/engineering-standards.md`.
+- The integration API files named in the spec.
+
+## Non-goals
+
+- Services, screens, entities, migrations: none change.
+- `GET /api/users`, shipments, goods receipts and issues, audit and reports (spec Q2, Q4).
+- No change to how any route treats query keys other than the three (spec Q1).
+
+## Risks
+
+- The sort-key names become public. They are the existing `*_SORTS` arrays, unchanged.
+- The spec PR (#230) carries the spec file. This branch doesn't commit it, so the move to `implemented/` follows once both PRs merge.
+
+## Implementation Plan
+
+### Phase 1: sort and search on the tenant list routes
+
+1. Shared strict `q`/`sort`/`dir` shape and messages in `list-query.schema.ts`, with tests.
+2. One API query schema per `*-list.schema.ts`, keeping each route's unknown-key mode, with tests.
+3. The thirteen `GET` handlers parse with their schema and forward the options, with route tests.
+4. BACKWARD_COMPATIBILITY.md paragraph and per-route pointers, and the engineering-standards sentence.
+5. Integration coverage in the existing API files.
+
+## Progress
+
+> Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
+
+### Phase 1: sort and search on the tenant list routes
+
+- [ ] 1.1 Shared strict query shape in list-query.schema.ts
+- [ ] 1.2 Per-list API query schemas
+- [ ] 1.3 Route handlers parse and forward q/sort/dir
+- [ ] 1.4 BACKWARD_COMPATIBILITY.md and engineering standards
+- [ ] 1.5 Integration coverage in the API files
+
+## Log
+
+- 07:52 Plan drafted: 5 steps, so plain `om-auto-create-pr` (threshold 20).
