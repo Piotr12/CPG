@@ -376,10 +376,18 @@ async function resolveLines(em: EntityManager, { location, lines }: NewOrder): P
 /** The orders with their lines, in the order given, each line's material and requisition by business ID. */
 async function viewsOf(em: EntityManager, orders: readonly PurchaseOrder[]): Promise<OrderView[]> {
   if (orders.length === 0) return [];
+  // The tenant filter joins a populated requisition's own material and location too. Left to
+  // MikroORM, those are inner joins nested inside the line's left join, which SQLite can only
+  // materialize over every requisition of the tenant (#236). Populated as left joins, they stay flat
+  // and each is a primary-key lookup.
   const lines = await em.find(
     PurchaseOrderLine,
     { order: { $in: [...orders] } },
-    { populate: ["material", "requisition"], orderBy: { position: "asc" } },
+    {
+      populate: ["material", "requisition.material", "requisition.location"],
+      populateHints: { "requisition.material": { joinType: "left join" }, "requisition.location": { joinType: "left join" } },
+      orderBy: { position: "asc" },
+    },
   );
   const byOrder = groupBy(lines, (line) => line.order.id);
   const posted = await postedOrderLineIds(em, lines);
