@@ -79,9 +79,11 @@ describe("transfers in the UI", () => {
     await una.waitUntil(ready(button("Create transfer")));
     await una.clickRole("button", "Create transfer");
     await una.waitFor("[role=dialog]");
-    await chooseFromList(una, "[role=dialog] input[aria-autocomplete=list]", `${ids.steel} tr steel`, ids.steel);
-    await una.select("[role=dialog] select[name=source]", ids.plant);
-    await una.select("[role=dialog] select[name=destination]", ids.depot);
+    // Each autocomplete found by the label that names it: the dialog has three (#222).
+    const picker = (field: string) => `[role=dialog][data-state=open] [role=combobox][aria-labelledby$="-${field}-label"]`;
+    await chooseFromList(una, picker("material"), `${ids.steel} tr steel`, ids.steel);
+    await chooseFromList(una, picker("source"), ids.plant, ids.plant);
+    await chooseFromList(una, picker("destination"), ids.depot, ids.depot);
     await una.fill("[role=dialog] input[name=quantity]", "100");
     expect(await una.fillDate("[role=dialog] input[name=plannedDispatch]", "2026-10-19")).toBe("2026-10-19");
     expect(await una.fillDate("[role=dialog] input[name=plannedArrival]", "2026-10-21")).toBe("2026-10-21");
