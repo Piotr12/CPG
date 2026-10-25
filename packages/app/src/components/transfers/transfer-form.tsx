@@ -134,9 +134,12 @@ export function TransferForm<T>({ labels, materials, locations, locale, schema, 
   return (
     <form onSubmit={submit} onKeyDown={onKeyDown} noValidate className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <Label htmlFor={material.props.id}>{t.material}</Label>
+        <Label id={`${material.props.id}-label`} htmlFor={material.props.id}>
+          {t.material}
+        </Label>
         <Autocomplete
           id={material.props.id}
+          aria-labelledby={`${material.props.id}-label`}
           name={material.props.name}
           options={materials}
           value={values.material}

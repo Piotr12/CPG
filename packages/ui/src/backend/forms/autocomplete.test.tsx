@@ -249,6 +249,62 @@ describe("Autocomplete", () => {
     expect((input() as HTMLInputElement).value).toBe("");
   });
 
+  it("refuses unmatched text on Enter instead of submitting the previous value", () => {
+    const onChange = vi.fn();
+    render(<Field initial="m1" onChange={onChange} />);
+
+    type("brass");
+    const enter = fireEvent.keyDown(input(), { key: "Enter" });
+
+    expect(enter).toBe(false);
+    expect(onChange).toHaveBeenCalledWith("");
+    expect(input().getAttribute("aria-expanded")).toBe("false");
+    expect(screen.getByText("Choose a material from the list.")).toBeTruthy();
+  });
+
+  it("clears the value on Enter in an emptied field and lets the form submit", () => {
+    const onChange = vi.fn();
+    render(<Field initial="m1" onChange={onChange} />);
+
+    type("");
+    expect(input().getAttribute("aria-activedescendant")).toBeNull();
+    const enter = fireEvent.keyDown(input(), { key: "Enter" });
+
+    expect(enter).toBe(true);
+    expect(onChange).toHaveBeenCalledWith("");
+    expect(input().getAttribute("aria-invalid")).toBeNull();
+  });
+
+  it("lets Enter submit when the chosen option is left untouched", () => {
+    const onChange = vi.fn();
+    render(<Field initial="m7" onChange={onChange} />);
+
+    fireEvent.focus(input());
+    expect(fireEvent.keyDown(input(), { key: "Enter" })).toBe(true);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("names its list after the field's visible label when given one", () => {
+    render(
+      <>
+        <label id="location-label" htmlFor="location">
+          Location
+        </label>
+        <Autocomplete id="location" aria-labelledby="location-label" aria-label="ignored" options={options} value="" onChange={vi.fn()} labels={labels} />
+      </>,
+    );
+
+    fireEvent.focus(screen.getByRole("combobox", { name: "Location" }));
+    expect(screen.getByRole("listbox", { name: "Location" }).getAttribute("aria-label")).toBeNull();
+  });
+
+  it("names its list with aria-label when there is no visible label", () => {
+    render(<Field />);
+
+    fireEvent.focus(input());
+    expect(screen.getByRole("listbox", { name: "Material" })).toBeTruthy();
+  });
+
   it("submits the chosen value in a hidden input when named", () => {
     const { container } = render(<Field initial="m10" name="material" />);
 

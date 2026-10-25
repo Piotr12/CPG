@@ -43,7 +43,7 @@ const choose = (code: string, label = "Material") => {
     fireEvent.blur(combobox);
     return;
   }
-  fireEvent.mouseDown(within(screen.getByRole("listbox")).getAllByRole("option").find((option) => option.textContent!.startsWith(code))!);
+  fireEvent.mouseDown(within(screen.getByRole("listbox", { name: label })).getAllByRole("option").find((option) => option.textContent!.startsWith(code))!);
 };
 const fill = () => {
   choose("00000001");

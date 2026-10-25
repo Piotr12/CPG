@@ -3,10 +3,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { choices, initial, labels } from "../../../../../tests/setup/customer-orders";
 import { OrderForm } from "./order-form";
 const action = vi.fn(); const onSuccess = vi.fn(); const onCancel = vi.fn();
-const change = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
+/** A field by its label: a combobox by role, since its list carries the same name (#222). */
+const field = (label: string) => screen.queryByRole("combobox", { name: label }) ?? screen.getByLabelText(label);
+const change = (label: string, value: string) => fireEvent.change(field(label), { target: { value } });
 /** Picks a line's material through its picker: types part of it, then clicks the matching option. */
 const pick = (label: string, typed: string) => {
-  change(label, typed); fireEvent.mouseDown(screen.getByRole("option", { name: new RegExp(typed, "i") }));
+  change(label, typed); fireEvent.mouseDown(within(screen.getByRole("listbox", { name: label })).getByRole("option", { name: new RegExp(typed, "i") }));
 };
 const submit = () => fireEvent.click(screen.getByRole("button", { name: labels.save }));
 function renderForm(values?: typeof initial, options = choices) {

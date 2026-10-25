@@ -66,8 +66,8 @@ export function OrderForm<T>({ labels: t, choices, initial, action, onSuccess, o
     const id = `${formId}-${name}`;
     const props = { id, name, value, disabled: pending || locked, "aria-invalid": errors[name] ? true as const : undefined, "aria-describedby": errors[name] ? `${id}-error` : undefined };
     return <div key={name} className="flex min-w-0 flex-col gap-1">
-      <Label htmlFor={id}>{label}</Label>
-      {options && "picker" in options ? <Autocomplete id={id} value={value} onChange={onChange} options={options.picker} disabled={props.disabled}
+      <Label id={`${id}-label`} htmlFor={id}>{label}</Label>
+      {options && "picker" in options ? <Autocomplete id={id} aria-labelledby={`${id}-label`} value={value} onChange={onChange} options={options.picker} disabled={props.disabled}
         aria-invalid={props["aria-invalid"]} aria-describedby={props["aria-describedby"]} labels={t.picker.labels} placeholder={t.picker.placeholder} locale={locale} />
       : options ? <NativeSelect className="w-full" {...props} onChange={(event) => onChange(event.target.value)}>
         <NativeSelectOption value="" disabled>{t.choose}</NativeSelectOption>

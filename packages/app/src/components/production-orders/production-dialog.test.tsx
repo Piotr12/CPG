@@ -10,7 +10,7 @@ vi.mock("../../app/admin/[tenant]/production-orders/actions", () => ({ createPro
 const props = { context: { tenant: "test", generation: 7 }, labels: productionLabels(en), materials, locations };
 const open = (edit = false) => fireEvent.click(screen.getByRole("button", { name: edit ? en.productionOrders.edit : en.productionOrders.create }));
 async function preview() {
-  fireEvent.change(screen.getByLabelText(en.productionOrders.output), { target: { value: "cabinet" } });
+  fireEvent.change(screen.getByRole("combobox", { name: en.productionOrders.output }), { target: { value: "cabinet" } });
   fireEvent.mouseDown(screen.getByRole("option", { name: /^00000005/ }));
   fireEvent.change(screen.getByLabelText(en.productionOrders.location), { target: { value: "00000001" } });
   fireEvent.change(screen.getByLabelText(en.productionOrders.quantity), { target: { value: "2" } });
@@ -47,7 +47,7 @@ it("supports back, preview refusal, invalid input and cancellation without writi
   await preview(); await waitFor(() => expect(screen.getByLabelText(en.productionOrders.recipe)).toBeTruthy());
   fireEvent.click(screen.getByRole("button", { name: en.productionOrders.back }));
   expect(screen.queryByLabelText(en.productionOrders.recipe)).toBeNull();
-  expect((screen.getByLabelText(en.productionOrders.output) as HTMLInputElement).value).toBe(`${production.output} — Cabinet`);
+  expect((screen.getByRole("combobox", { name: en.productionOrders.output }) as HTMLInputElement).value).toBe(`${production.output} — Cabinet`);
   expect((screen.getByLabelText(en.productionOrders.quantity) as HTMLInputElement).value).toBe("2");
   expect((screen.getByLabelText(en.productionOrders.finish) as HTMLInputElement).value).toBe(production.plannedFinish);
   fireEvent.click(screen.getByRole("button", { name: en.productionOrders.cancel }));
@@ -65,7 +65,7 @@ it("holds the opening edit version through a conflict refresh; reopening capture
   mocks.update.mockResolvedValue({ ok: false, error: { code: "VERSION_CONFLICT", message: "stale" } });
   const view = render(<ProductionDialog {...props} order={production} />); open(true);
   expect((screen.getByLabelText(en.productionOrders.unit) as HTMLInputElement).value).toBe("case");
-  expect(screen.queryByLabelText(en.productionOrders.output)).toBeNull();
+  expect(screen.queryByRole("combobox", { name: en.productionOrders.output })).toBeNull();
   expect(screen.getByLabelText(en.productionOrders.finish).getAttribute("aria-describedby")).toBeTruthy();
   expect(screen.getByText("The planned start is recalculated from the captured lead time of 5 calendar days.")).toBeTruthy();
   fireEvent.change(screen.getByLabelText(en.productionOrders.quantity), { target: { value: "3" } });

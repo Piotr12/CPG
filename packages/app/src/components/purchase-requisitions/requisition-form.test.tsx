@@ -35,7 +35,7 @@ const change = (label: string, value: string) => fireEvent.change(screen.getByLa
 /** Types `code` into the material autocomplete named `label` and clicks its option. */
 const choose = (label: string, code: string) => {
   fireEvent.change(screen.getByRole("combobox", { name: label }), { target: { value: code } });
-  fireEvent.mouseDown(within(screen.getByRole("listbox")).getAllByRole("option").find((option) => option.textContent!.startsWith(code))!);
+  fireEvent.mouseDown(within(screen.getByRole("listbox", { name: label })).getAllByRole("option").find((option) => option.textContent!.startsWith(code))!);
 };
 const fill = () => {
   choose("Material", "00000001");

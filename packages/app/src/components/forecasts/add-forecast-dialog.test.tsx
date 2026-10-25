@@ -8,7 +8,9 @@ const mocks = vi.hoisted(() => ({ addForecast: vi.fn() }));
 vi.mock("../../app/admin/[tenant]/forecasts/actions", () => mocks);
 
 const labels = forecastsLabels(en);
-const fill = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
+/** A field by its label: a combobox by role, since its list carries the same name (#222). */
+const field = (label: string) => screen.queryByRole("combobox", { name: label }) ?? screen.getByLabelText(label);
+const fill = (label: string, value: string) => fireEvent.change(field(label), { target: { value } });
 /** Types into the material autocomplete and picks the option that matches. */
 const choose = (label: string, typed: string, option: RegExp) => {
   fill(label, typed);
