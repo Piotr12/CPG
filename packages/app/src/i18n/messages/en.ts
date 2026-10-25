@@ -1938,6 +1938,30 @@ export const en = {
       more: { other: "{count} more: keep typing to narrow the list" } as PluralForms,
       refused: "Choose a material from the list.",
     },
+    /** The customer, supplier and location pickers (#222): the same control, each in its own words. */
+    customerPicker: {
+      placeholder: "Type an ID or a name",
+      results: { one: "{count} customer", few: "{count} customers", other: "{count} customers" } as PluralForms,
+      noMatch: "No customer matches “{text}”.",
+      more: { other: "{count} more: keep typing to narrow the list" } as PluralForms,
+      refused: "Choose a customer from the list.",
+    },
+    supplierPicker: {
+      placeholder: "Type an ID or a name",
+      results: { one: "{count} supplier", few: "{count} suppliers", other: "{count} suppliers" } as PluralForms,
+      noMatch: "No supplier matches “{text}”.",
+      more: { other: "{count} more: keep typing to narrow the list" } as PluralForms,
+      refused: "Choose a supplier from the list.",
+    },
+    locationPicker: {
+      placeholder: "Type an ID or a name",
+      results: { one: "{count} location", few: "{count} locations", other: "{count} locations" } as PluralForms,
+      noMatch: "No location matches “{text}”.",
+      more: { other: "{count} more: keep typing to narrow the list" } as PluralForms,
+      refused: "Choose a location from the list.",
+    },
+    /** A filter's value from the address that names no record in the list (#222). */
+    notListed: "not in the list",
   },
   /** The unit registry's groups, and a stored unit it doesn't list (#217). */
   units: {

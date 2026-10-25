@@ -1874,6 +1874,28 @@ export const pl: Messages = {
       more: { other: "Jeszcze {count}: pisz dalej, aby zawęzić listę" },
       refused: "Wybierz materiał z listy.",
     },
+    customerPicker: {
+      placeholder: "Wpisz ID albo nazwę",
+      results: { one: "{count} klient", few: "{count} klientów", other: "{count} klientów" },
+      noMatch: "Żaden klient nie pasuje do „{text}”.",
+      more: { other: "Jeszcze {count}: pisz dalej, aby zawęzić listę" },
+      refused: "Wybierz klienta z listy.",
+    },
+    supplierPicker: {
+      placeholder: "Wpisz ID albo nazwę",
+      results: { one: "{count} dostawca", few: "{count} dostawców", other: "{count} dostawców" },
+      noMatch: "Żaden dostawca nie pasuje do „{text}”.",
+      more: { other: "Jeszcze {count}: pisz dalej, aby zawęzić listę" },
+      refused: "Wybierz dostawcę z listy.",
+    },
+    locationPicker: {
+      placeholder: "Wpisz ID albo nazwę",
+      results: { one: "{count} lokalizacja", few: "{count} lokalizacje", other: "{count} lokalizacji" },
+      noMatch: "Żadna lokalizacja nie pasuje do „{text}”.",
+      more: { other: "Jeszcze {count}: pisz dalej, aby zawęzić listę" },
+      refused: "Wybierz lokalizację z listy.",
+    },
+    notListed: "nie ma na liście",
   },
   units: {
     dimensions: { count: "Liczba", packaging: "Opakowanie", mass: "Masa", volume: "Objętość", length: "Długość", area: "Powierzchnia", time: "Czas" },
