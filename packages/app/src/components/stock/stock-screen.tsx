@@ -4,13 +4,15 @@ import { STOCK_LEDGER_PAGE_SIZE } from "@cpg/core/validators/stock/stock-correct
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { EmptyState } from "@cpg/ui/backend/feedback/empty-state";
 import { PageHeader } from "@cpg/ui/backend/page-header";
+import { FilterAutocomplete } from "@cpg/ui/backend/forms/filter-autocomplete";
 import { Button } from "@cpg/ui/components/button";
 import { Label } from "@cpg/ui/components/label";
-import { NativeSelect, NativeSelectOption } from "@cpg/ui/components/native-select";
 import type { Messages } from "../../i18n/messages/en";
 import { fill, shownQuantity } from "../forms/form-labels";
 import { PageLinks } from "../layout/page-links";
 import { ImportLink } from "../imports/import-link";
+import { materialFilterOptions, materialPicker } from "../materials/material-picker";
+import { recordOptions, recordPicker } from "../named-records/record-picker";
 import { CorrectionDialog } from "./correction-dialog";
 import { stockLabels } from "./labels";
 import { ReversalControls } from "./reversal-controls";
@@ -28,6 +30,7 @@ export function StockScreen({ tenant, view, materials, locations, units, locale,
   materials: MaterialSummary[]; locations: NamedRecordView[]; units: string[]; locale: Locale; messages: Messages;
 }) {
   const t = stockLabels(messages);
+  const pickers = { material: materialPicker(messages.lists), location: recordPicker(messages.lists, "location") };
   const path = `/admin/${tenant.code}`;
   const types: Record<string, string> = { reversal: t.reversal.type, correction: t.correction, "goods-receipt": t.goodsReceipt, "transfer-dispatch": t.transferDispatch, "transfer-receipt": t.transferReceipt, "goods-issue": t.goodsIssue, "production-completion": t.productionCompletion };
   const records: Record<string, string> = t.records;
@@ -61,15 +64,14 @@ export function StockScreen({ tenant, view, materials, locations, units, locale,
     <div className="flex min-w-0 flex-col gap-8">
       {view === null ? <EmptyState title={t.noMasters} /> : <>
         <form action={`${path}/stock`} className="grid min-w-0 gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-          <div className="grid min-w-0 gap-2"><Label htmlFor="stock-material">{t.material}</Label>
-            <NativeSelect id="stock-material" name="material" defaultValue={view.material} className="w-full">
-              {materials.map((material) => <NativeSelectOption key={material.id} value={material.id}>{material.id} — {material.description}{material.active ? "" : ` (${t.inactive})`}</NativeSelectOption>)}
-            </NativeSelect>
+          {/* Keyed by the pair shown, so a navigation to another pair starts the fields afresh (#222). */}
+          <div className="grid min-w-0 gap-2"><Label id="stock-material-label" htmlFor="stock-material">{t.material}</Label>
+            <FilterAutocomplete key={view.material} id="stock-material" name="material" options={materialFilterOptions(materials, t.inactive)} defaultValue={view.material}
+              labels={pickers.material.labels} placeholder={pickers.material.placeholder} locale={locale} aria-labelledby="stock-material-label" />
           </div>
-          <div className="grid min-w-0 gap-2"><Label htmlFor="stock-location">{t.location}</Label>
-            <NativeSelect id="stock-location" name="location" defaultValue={view.location} className="w-full">
-              {locations.map((location) => <NativeSelectOption key={location.id} value={location.id}>{location.id} — {location.name}{location.active ? "" : ` (${t.inactive})`}</NativeSelectOption>)}
-            </NativeSelect>
+          <div className="grid min-w-0 gap-2"><Label id="stock-location-label" htmlFor="stock-location">{t.location}</Label>
+            <FilterAutocomplete key={view.location} id="stock-location" name="location" options={recordOptions(locations, t.inactive)} defaultValue={view.location}
+              labels={pickers.location.labels} placeholder={pickers.location.placeholder} locale={locale} aria-labelledby="stock-location-label" />
           </div><Button type="submit" variant="outline">{t.show}</Button>
         </form>
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border p-4">
