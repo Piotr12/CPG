@@ -62,7 +62,9 @@ describe("manual production orders in the UI and API", () => {
   it("lets a normal user preview, choose a lower-priority recipe and save/edit through the UI (PRD-003/025/027)", async () => {
     await user.setViewport(1280, 800); await user.open(`${baseUrl}/admin/prod/production-orders`);
     await clickHydrated(user, "main button"); await user.waitFor("[role=dialog][data-state=open]");
-    await chooseFromList(user, "[role=dialog][data-state=open] [role=combobox]", output, output); await user.select("[role=dialog][data-state=open] [name=location]", plant);
+    // Each picker by its label (#222): the dialog has an output and a location combobox.
+    await chooseFromList(user, '[role=dialog][data-state=open] [role=combobox][aria-labelledby$="-output-label"]', output, output);
+    await chooseFromList(user, '[role=dialog][data-state=open] [role=combobox][aria-labelledby$="-location-label"]', plant, plant);
     await user.fill("[role=dialog][data-state=open] [name=quantity]", "60"); await user.fill("[role=dialog][data-state=open] [name=unit]", "each");
     await user.fillDate("[role=dialog][data-state=open] [name=plannedFinish]", "2026-10-15"); await user.click("[role=dialog][data-state=open] button[type=submit]");
     await user.waitFor("[role=dialog][data-state=open] [name=bom]");

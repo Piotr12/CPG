@@ -20,6 +20,7 @@ import { errorMessage } from "../../i18n/error-message";
 import type { Messages } from "../../i18n/messages/en";
 import { fill, shownQuantity, type TenantContext } from "../forms/form-labels";
 import { materialPicker, type MaterialPicker } from "../materials/material-picker";
+import { recordPicker } from "../named-records/record-picker";
 import { byId } from "../purchase-requisitions/labels";
 
 /**
@@ -30,6 +31,8 @@ export type OrdersLabels = Omit<Messages["purchaseOrders"], "heading" | "detailH
   errors: Record<string, string>;
   /** The form's material autocomplete (#217). */
   picker: MaterialPicker;
+  supplierPicker: MaterialPicker;
+  locationPicker: MaterialPicker;
 };
 
 /** Builds the purchase-order screens' labels from a dictionary (server side, where `messages` is available). */
@@ -40,7 +43,7 @@ export function ordersLabels(messages: Messages): OrdersLabels {
   return {
     ...(labels as Omit<Messages["purchaseOrders"], "heading" | "detailHeading">),
     errors: { ...messages.errors, ...messages.purchaseOrders.errors },
-    picker: materialPicker(messages.lists),
+    picker: materialPicker(messages.lists), supplierPicker: recordPicker(messages.lists, "supplier"), locationPicker: recordPicker(messages.lists, "location"),
   };
 }
 

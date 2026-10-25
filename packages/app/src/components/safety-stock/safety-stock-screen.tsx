@@ -7,7 +7,8 @@ import { fill } from "../forms/form-labels";
 import { listLinks, type ListSearchState } from "../lists/list-params";
 import { ListSearchBar } from "../lists/list-search-bar";
 import { activeMaterialOptions } from "../materials/material-picker";
-import { locationOptions, withReferences } from "../master-data/references";
+import { withReferences } from "../master-data/references";
+import { activeRecordOptions } from "../named-records/record-picker";
 import { AddSafetyStockTargetDialog } from "./add-safety-stock-target-dialog";
 import { safetyStockLabels } from "./labels";
 import { SafetyStockTable, type SafetyStockRow } from "./safety-stock-table";
@@ -54,7 +55,7 @@ export function SafetyStockScreen({ tenant, targets, materials, locations, today
               context={{ tenant: tenant.code, generation: tenant.generation }}
               labels={labels}
               materials={activeMaterialOptions(materials)}
-              locations={locationOptions(locations)}
+              locations={activeRecordOptions(locations)}
               locale={locale}
             />
           )

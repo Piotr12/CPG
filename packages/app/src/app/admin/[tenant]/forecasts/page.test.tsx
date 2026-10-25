@@ -124,7 +124,8 @@ describe("ForecastsPage", () => {
     const hidden = (form: Element) => [...form.querySelectorAll<HTMLInputElement>("input[type=hidden]")].map(({ name, value }) => `${name}=${value}`);
     const [searchForm, filterForm] = container.querySelectorAll("form[role=search]");
     expect(hidden(searchForm)).toEqual(["material=00000005", "sort=date", "dir=desc"]);
-    expect(hidden(filterForm)).toEqual(["q=cabinet", "sort=date", "dir=desc"]);
+    // The filter's own fields come first: each autocomplete submits its choice in a hidden input (#222).
+    expect(hidden(filterForm)).toEqual(["material=00000005", "location=", "q=cabinet", "sort=date", "dir=desc"]);
     const headers = within(screen.getByRole("table")).getAllByRole("columnheader");
     expect(headers.map((header) => header.getAttribute("aria-sort"))).toEqual(["none", "none", "descending", "none", null]);
     expect(within(headers[3]).getByRole("link").getAttribute("href")).toBe("/admin/test/forecasts?material=00000005&q=cabinet&sort=quantity&dir=asc");
@@ -164,9 +165,20 @@ describe("ForecastsPage", () => {
     render(await resolveServerComponents(page("test", { material: "00000005", location: ["00000001", "00000002"] })));
 
     expect(mocks.forecasts).toHaveBeenCalledWith({ material: "00000005", location: "00000001" }, { page: 1, q: "", sort: "material", dir: "asc" });
-    expect((screen.getByLabelText("Material") as HTMLSelectElement).value).toBe("00000005");
-    expect((screen.getByLabelText("Location") as HTMLSelectElement).value).toBe("00000001");
+    const filter = within(screen.getByRole("search", { name: "Filter forecasts" }));
+    expect((filter.getByRole("combobox", { name: "Material" }) as HTMLInputElement).value).toBe("00000005 — Cabinet, red");
+    expect((filter.getByRole("combobox", { name: "Location" }) as HTMLInputElement).value).toBe("00000001 — Main plant");
     expect(screen.getByRole("link", { name: "Clear filter" })).toBeTruthy();
+  });
+
+  it("shows a well-formed filter ID that names no record as itself, not in the list, over the list it narrows (#222)", async () => {
+    mocks.forecasts.mockResolvedValue([]);
+    mocks.getMessages.mockResolvedValue({ locale: "pl", messages: pl });
+    render(await resolveServerComponents(page("test", { location: "00000099" })));
+
+    expect(mocks.forecasts).toHaveBeenCalledWith({ location: "00000099" }, { page: 1, q: "", sort: "material", dir: "asc" });
+    const filter = within(screen.getByRole("search", { name: pl.forecasts.filter.label }));
+    expect((filter.getByRole("combobox", { name: pl.forecasts.filter.location }) as HTMLInputElement).value).toBe("00000099 — nie ma na liście");
   });
 
   it("ignores a filter that isn't a business ID, and says so when a real filter finds nothing", async () => {

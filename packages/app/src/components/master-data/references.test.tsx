@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { LocationCell, locationOptions, MaterialCell, withReferences } from "./references";
+import { LocationCell, MaterialCell, withReferences } from "./references";
 
 const materials = [
   { id: "00000001", type: "raw", description: "Bolt M8", baseUnit: "each", active: true, createdAt: new Date(), version: 1 },
@@ -25,12 +25,6 @@ describe("withReferences", () => {
         locationActive: false,
       },
     ]);
-  });
-});
-
-describe("options", () => {
-  it("offer only active locations for a new row (LFC-019)", () => {
-    expect(locationOptions(locations)).toEqual([{ value: "00000001", label: "00000001 — Main plant" }]);
   });
 });
 

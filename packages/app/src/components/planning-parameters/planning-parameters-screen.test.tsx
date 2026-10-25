@@ -5,7 +5,13 @@ import type { PlanningParameterSort } from "@cpg/core/validators/planning-parame
 import { en } from "../../i18n/messages/en";
 import { PlanningParametersScreen } from "./planning-parameters-screen";
 
-vi.mock("./add-planning-parameters-dialog", () => ({ AddPlanningParametersDialog: () => <button>Add parameters</button> }));
+const dialog = vi.hoisted(() => vi.fn());
+vi.mock("./add-planning-parameters-dialog", () => ({
+  AddPlanningParametersDialog: (props: object) => {
+    dialog(props);
+    return <button>Add parameters</button>;
+  },
+}));
 vi.mock("./planning-parameter-actions", () => ({ PlanningParameterActions: () => <button>Row actions</button> }));
 
 const MATERIALS = [{ id: "00000005", type: "finished" as const, description: "Cabinet", baseUnit: "each", active: true, createdAt: new Date(), version: 1 }];
@@ -50,6 +56,23 @@ describe("PlanningParametersScreen", () => {
     // Procurement is a category (a tag); the inactive location is a state (a dashed quiet badge).
     expect(within(cells[2]).getByText("Make").dataset.slot).toBe("badge");
     expect(within(cells[1]).getByText("Inactive").dataset.tone).toBe("neutral");
+  });
+
+  it("offers Add parameters only the active locations, as autocomplete choices (LFC-019, #222)", () => {
+    render(
+      <PlanningParametersScreen
+        tenant={TENANT}
+        sets={[]}
+        materials={MATERIALS}
+        locations={[...LOCATIONS, { id: "00000003", name: "North warehouse", active: true, createdAt: new Date(), version: 1 }]}
+        locale="en"
+        messages={en}
+        admin
+        {...LIST}
+      />,
+    );
+
+    expect(dialog).toHaveBeenCalledWith(expect.objectContaining({ locations: [{ value: "00000003", code: "00000003", name: "North warehouse" }] }));
   });
 
   it("tells a reader whom to ask when the list is empty", () => {

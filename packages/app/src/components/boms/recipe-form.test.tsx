@@ -276,6 +276,8 @@ describe("RecipeForm", () => {
 
     expect((picker("Output") as HTMLInputElement).value).toBe("");
     expect(screen.getByText("Per 1 base unit of the output")).toBeTruthy();
+    fireEvent.focus(picker("Output"));
+    expect(screen.getByRole("listbox", { name: "Output" })).toBeTruthy();
   });
 
   it("leaves Escape to an open material list, which closes only the list (#217)", () => {

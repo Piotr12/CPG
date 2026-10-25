@@ -14,6 +14,23 @@ export function activeMaterialOptions(materials: readonly { id: string; descript
   return materialOptions(materials.filter(({ active }) => active));
 }
 
+/**
+ * Materials as a filter's choices (#222): every material, since a filter may look for history, and an
+ * inactive one says so as its quiet detail. The value is the business ID.
+ */
+export function materialFilterOptions(materials: readonly { id: string; description: string; active: boolean }[], inactive: string): AutocompleteOption[] {
+  return materials.map(({ id, description, active }) => ({ value: id, code: id, name: description, ...(active ? {} : { detail: inactive }) }));
+}
+
+/**
+ * A filter's choices, plus the address's value when it names no record: shown as its own option,
+ * "not in the list", so the field never claims a choice the list isn't filtered by (#222, lesson 2026-10-23).
+ */
+export function withUnlisted(options: AutocompleteOption[], value: string | undefined, notListed: string): AutocompleteOption[] {
+  if (value === undefined || value === "" || options.some((option) => option.value === value)) return options;
+  return [...options, { value, code: value, name: notListed }];
+}
+
 /** A material picker's words and placeholder: plain data for a client form. */
 export interface MaterialPicker {
   labels: AutocompleteLabels;

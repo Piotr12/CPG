@@ -14,15 +14,15 @@ import {
   DialogTrigger,
 } from "@cpg/ui/components/dialog";
 import { addForecast } from "../../app/admin/[tenant]/forecasts/actions";
-import { errorFormatter, TALL_DIALOG, type FormOption, type TenantContext } from "../forms/form-labels";
+import { errorFormatter, TALL_DIALOG, type TenantContext } from "../forms/form-labels";
 import { fieldErrorFormatter, type ForecastsLabels } from "./labels";
 
 interface AddForecastDialogProps {
   context: TenantContext;
   labels: ForecastsLabels;
-  /** The active materials and locations a new forecast may pick (MAT-029, LFC-019); materials through an autocomplete (#217). */
+  /** The active materials and locations a new forecast may pick (MAT-029, LFC-019), each through an autocomplete (#217, #222). */
   materials: AutocompleteOption[];
-  locations: FormOption[];
+  locations: AutocompleteOption[];
   locale?: string;
 }
 
@@ -33,7 +33,7 @@ export function AddForecastDialog({ context, labels, materials, locations, local
   const t = labels.form;
   const fields: CrudField[] = [
     { name: "material", label: t.material, type: "autocomplete", placeholder: labels.picker.placeholder, choices: materials, autocompleteLabels: labels.picker.labels },
-    { name: "location", label: t.location, type: "select", placeholder: t.choose, options: locations },
+    { name: "location", label: t.location, type: "autocomplete", placeholder: labels.locationPicker.placeholder, choices: locations, autocompleteLabels: labels.locationPicker.labels },
     { name: "date", label: t.date, type: "date", description: t.dateHint },
     { name: "quantity", label: t.quantity, description: t.quantityHint, autoComplete: "off" },
     { name: "unit", label: t.unit, description: t.unitHint, autoComplete: "off" },

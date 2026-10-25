@@ -9,7 +9,8 @@ import { AddPlanningParametersDialog } from "./add-planning-parameters-dialog";
 import { planningParametersLabels } from "./labels";
 import { PlanningParametersTable } from "./planning-parameters-table";
 import { activeMaterialOptions } from "../materials/material-picker";
-import { locationOptions, withReferences } from "../master-data/references";
+import { withReferences } from "../master-data/references";
+import { activeRecordOptions } from "../named-records/record-picker";
 
 interface PlanningParametersScreenProps {
   tenant: { code: string; name: string; generation: number; readOnly: boolean };
@@ -51,7 +52,7 @@ export function PlanningParametersScreen({ tenant, sets, materials, locations, l
               context={{ tenant: tenant.code, generation: tenant.generation }}
               labels={labels}
               materials={activeMaterialOptions(materials)}
-              locations={locationOptions(locations)}
+              locations={activeRecordOptions(locations)}
               locale={locale}
             />
           )

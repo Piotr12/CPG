@@ -28,8 +28,9 @@ async function Stock({ params, searchParams }: Pick<PageProps<"/admin/[tenant]/s
   let units: string[] = [];
   if (materials.length > 0 && locations.length > 0) {
     const search = await searchParams;
+    // An emptied filter field submits "", which means "not given": the first record, never Not found (#222).
     const pair = await orNotFound(Promise.resolve().then(() => parseInput(stockLedgerQuerySchema, {
-      material: search.material ?? materials[0].id, location: search.location ?? locations[0].id, page: search.page,
+      material: search.material || materials[0].id, location: search.location || locations[0].id, page: search.page,
     })), ["VALIDATION_FAILED"]);
     view = await orNotFound(cradle.stockService.get(pair), ["MATERIAL_NOT_FOUND", "LOCATION_NOT_FOUND"]);
     // A ledger page past the last shows the last, as the other lists do.

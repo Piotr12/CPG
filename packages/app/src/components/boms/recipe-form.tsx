@@ -188,10 +188,13 @@ export function RecipeForm<T>({
     <form onSubmit={submit} onKeyDown={onKeyDown} noValidate className="flex flex-col gap-4">
       {outputs && (
         <div className="flex flex-col gap-2">
-          <Label htmlFor={outputControl.props.id}>{t.output}</Label>
+          <Label id={`${outputControl.props.id}-label`} htmlFor={outputControl.props.id}>
+            {t.output}
+          </Label>
           <Autocomplete
             {...picker}
             {...outputControl.props}
+            aria-labelledby={`${outputControl.props.id}-label`}
             options={outputs}
             value={values.output ?? ""}
             onChange={(value) => set({ output: value })}

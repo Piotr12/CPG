@@ -6,8 +6,9 @@ import type { Messages } from "../../i18n/messages/en";
 import { PageLinks } from "../layout/page-links";
 import type { ListLinks, ListSearchState } from "../lists/list-params";
 import { ListSearchBar } from "../lists/list-search-bar";
-import { locationOptions, withReferences } from "../master-data/references";
+import { withReferences } from "../master-data/references";
 import { activeMaterialOptions } from "../materials/material-picker";
+import { activeRecordOptions } from "../named-records/record-picker";
 import { AddForecastDialog } from "./add-forecast-dialog";
 import { ForecastsFilter } from "./forecasts-filter";
 import { ForecastsTable } from "./forecasts-table";
@@ -54,7 +55,7 @@ export function ForecastsScreen({ tenant, forecasts, materials, locations, filte
             context={{ tenant: tenant.code, generation: tenant.generation }}
             labels={labels}
             materials={activeMaterialOptions(materials)}
-            locations={locationOptions(locations)}
+            locations={activeRecordOptions(locations)}
             locale={locale}
           />
         )}
@@ -64,9 +65,11 @@ export function ForecastsScreen({ tenant, forecasts, materials, locations, filte
       <ForecastsFilter
         action={`/admin/${tenant.code}/forecasts`}
         labels={labels}
-        materials={materials.map(({ id, description }) => ({ value: id, label: `${id} — ${description}` }))}
-        locations={locations.map(({ id, name }) => ({ value: id, label: `${id} — ${name}` }))}
+        materials={materials}
+        locations={locations}
         selected={filter}
+        notListed={messages.lists.notListed}
+        locale={locale}
         keep={{ q: search.q || undefined, sort: links.keep.sort, dir: links.keep.dir }}
       />
       <ForecastsTable

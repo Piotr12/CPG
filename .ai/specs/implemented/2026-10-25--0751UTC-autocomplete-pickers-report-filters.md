@@ -1,6 +1,6 @@
 # Autocomplete for customer, supplier and location pickers and the report filters
 
-**Status:** ready
+**Status:** implemented (PR #233)
 **Created:** 2026-10-25 07:51 UTC
 **Issue:** #222 (follow-up to #217 / PR #225, whose decision D8 kept these controls as selects) · **Builds on:** the `Autocomplete` of #225 (`packages/ui/src/backend/forms/autocomplete.tsx`) and the material picker helpers (`app/src/components/materials/material-picker.ts`) · **Also bound by:** `BACKWARD_COMPATIBILITY.md`, `.ai/docs/engineering-standards.md` ("Reusable server & UI layers").
 
@@ -138,3 +138,14 @@ None. URL parameters of the filter pages are unchanged (`?material=&location=` p
    - `forecasts.test.ts`: filter through the autocomplete and submit with Enter; then clear the field, press Enter, and expect the unfiltered list;
    - `stock-report.test.ts`: through the autocomplete;
    - the no-JavaScript path: a plain HTTP `fetch` of the Forecasts page with the session cookie finds `<select name="material">` inside `form[role=search]`, and fetching the URL that form would submit returns the filtered list.
+
+## Implementation notes
+
+Implemented in #233 by a lead and three workers. The tracking plan is `.ai/pipeline/runs/2026-10-25--0757UTC-autocomplete-pickers-report-filters.md`. Where the code differs from the text above:
+
+- **Pickers.** A single `recordPicker(lists, kind)` covers all three kinds, in place of `customerPicker`/`supplierPicker`/`locationPicker` functions. Each concept's labels carry `customerPicker` / `supplierPicker` / `locationPicker` beside `picker`.
+- **Materials in filters.** Filters use `materialFilterOptions` and `withUnlisted` (`components/materials/material-picker.ts`). An inactive material's detail says "Inactive", in place of its base unit.
+- **`FilterAutocomplete`** takes a required `id`. It reads the server's select only while hydrating: a remount by `key` once read the previous combobox's display label, which the code review caught.
+- **Purchase order.** A location change clears every line's requisition link, because a linked requisition always belongs to the current location.
+- **Removed strings.** The "Choose…" placeholders of the converted selects are gone from both dictionaries.
+- **Focus.** Focus moving off a select the reader focused before hydration is accepted, as the spec says.

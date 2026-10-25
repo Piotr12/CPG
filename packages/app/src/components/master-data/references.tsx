@@ -1,7 +1,6 @@
 import Link from "next/link";
 import type { MaterialSummary, NamedRecordView } from "@cpg/core";
 import { Highlight } from "@cpg/ui/backend/tables/highlight";
-import type { FormOption } from "../forms/form-labels";
 import { InactiveMark } from "./active-status";
 
 /*
@@ -40,11 +39,6 @@ export function withReferences<T extends { material: string; location: string }>
       locationActive: location.active,
     };
   });
-}
-
-/** The active locations a new row may pick. */
-export function locationOptions(locations: NamedRecordView[]): FormOption[] {
-  return locations.filter(({ active }) => active).map(({ id, name }) => ({ value: id, label: `${id} — ${name}` }));
 }
 
 interface CellProps {

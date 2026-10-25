@@ -5,7 +5,8 @@ import { transferCreateSchema } from "@cpg/core/validators/transfers/transfer.sc
 import { Button } from "@cpg/ui/components/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@cpg/ui/components/dialog";
 import { createTransfer } from "../../app/admin/[tenant]/transfers/actions";
-import { TALL_DIALOG, type FormOption } from "../forms/form-labels";
+import type { AutocompleteOption } from "@cpg/ui/backend/forms/autocomplete";
+import { TALL_DIALOG } from "../forms/form-labels";
 import type { MaterialPick } from "../purchase-requisitions/choices";
 import type { TenantContext, TransfersLabels } from "./labels";
 import { TransferForm } from "./transfer-form";
@@ -14,7 +15,7 @@ interface CreateTransferDialogProps {
   context: TenantContext;
   labels: TransfersLabels;
   materials: MaterialPick[];
-  locations: FormOption[];
+  locations: AutocompleteOption[];
   locale: string;
 }
 

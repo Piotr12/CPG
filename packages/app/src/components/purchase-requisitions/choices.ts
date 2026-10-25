@@ -1,6 +1,5 @@
-import type { MaterialSummary, NamedRecordView } from "@cpg/core";
+import type { MaterialSummary } from "@cpg/core";
 import type { AutocompleteOption } from "@cpg/ui/backend/forms/autocomplete";
-import type { FormOption } from "../forms/form-labels";
 import { materialOptions } from "../materials/material-picker";
 import type { MaterialChoice } from "./requisition-form";
 
@@ -19,9 +18,4 @@ export interface MaterialPick extends AutocompleteOption {
 /** The materials a document's material autocomplete offers: the active ones, as `materialChoices` (MAT-029). */
 export function materialPicks(materials: MaterialSummary[], units: Record<string, string[]>): MaterialPick[] {
   return materialOptions(materials.filter(({ active }) => active)).map((option) => ({ ...option, units: units[option.value] }));
-}
-
-/** The active masters (locations, suppliers) a new document may pick, by business ID. */
-export function activeOptions(records: NamedRecordView[]): FormOption[] {
-  return records.filter(({ active }) => active).map(({ id, name }) => ({ value: id, label: `${id} — ${name}` }));
 }
