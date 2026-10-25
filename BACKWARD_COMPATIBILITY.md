@@ -363,7 +363,7 @@ These key names are part of the contract. Renaming or removing one is a breaking
 | `IMPORT_LINE_WITHOUT_HEADER` (import report) | … Add its header: a BOM's lines are its complete recipe. | … Add its header: a BOM's lines are all its components. |
 | `IMPORT_BOM_WITHOUT_LINES` (import report) | … list its complete recipe there. | … list all its components there. |
 
-A client should switch on `code` and the field key, never on the English `message`. That is what the screens do: they translate by code, or by the exported message constants, which changed with the text. The text after `BOM_CYCLE`'s first colon, the cycle's path, is unchanged. During the deploy overlap, the previous release still answers with the old texts. `tests/api-messages-glossary.test.ts` keeps "recipe" out of every string the server code writes.
+A client should switch on `code` and the field key, never on the English `message`. That is what the screens do: they translate by code, or by the exported message constants, which changed with the text. The text after `BOM_CYCLE`'s first colon, the cycle's path, is unchanged. During the deploy overlap, the previous release still answers with the old texts. `tests/api-messages-glossary.test.ts` keeps "recipe" out of every string and JSX text in `packages/core/src` and in `packages/app/src/{app,auth,routing}` (routes, pages, server actions).
 
 ### 5. Commands used by CI, deploy and the docs
 
