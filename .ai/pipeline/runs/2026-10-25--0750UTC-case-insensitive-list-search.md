@@ -33,8 +33,6 @@ Make every list search ignore the case of every letter, Polish ones included, by
 5. Integration: the materials search finds a description starting with `Ł` from a lower-case word, with the match marked.
 6. Measure a search over the realistic dataset's materials with and without the function.
 
-- [x] Post-review fix: escape checked before NULL, override documented as text-only, injected compiler in the cache test, test titles, Polish copy — 1e6a4ac7
-
 ### Phase 2: Paperwork
 
 1. Move the spec to `implemented/` with implementation notes; finalize this log and lessons.
@@ -90,6 +88,8 @@ PR: #229
 - [x] 1.4 Help copy in EN and PL — bed8b906
 - [x] 1.5 Integration test on the materials search — a60b0f5c
 - [x] 1.6 Measure a realistic-dataset search — cd2e6c3e (figures in the spec's implementation notes)
+
+- [x] Post-review fix: escape checked before NULL, override documented as text-only, injected compiler in the cache test, test titles, Polish copy — 1e6a4ac7
 
 ### Phase 2: Paperwork
 
