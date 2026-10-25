@@ -1,9 +1,13 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { openBrowser, type Browser } from "./browser";
-import { signedOutLayoutSettled, signInAsAdmin } from "./sign-in";
+import { signedInAndHydrated, signedOutLayoutSettled, signInAs, signInAsAdmin } from "./sign-in";
 
 const baseUrl = inject("baseUrl");
 const adminPassword = inject("adminPassword");
+
+// This file's normal user, for UX-009; other files share the app, and users are never deleted.
+const USERNAME = "footer-fern";
+const PASSWORD = "footer fern's password";
 
 const SENTENCE =
   "Caveman Planning Good! Made in Jozefoslaw with Tokens, Coffee and OpenMercato Skills during AITechLeaders training.";
@@ -45,8 +49,8 @@ describe("the footer", () => {
   });
   afterAll(() => browser.close());
 
-  async function expectFooter() {
-    const footer = await readFooter(browser);
+  async function expectFooter(reader = browser) {
+    const footer = await readFooter(reader);
     expect(footer.text).toBe(SENTENCE);
     expect(footer.after).toEqual([]);
     expect(footer.links).toEqual([
@@ -100,5 +104,35 @@ describe("the footer", () => {
     const shown = new URL(await browser.url());
     expect(shown.pathname + shown.search).toBe(path);
     await expectFooter();
+  });
+
+  // UX-009: a normal user's operational screens, a master-data list and a transaction list, end with it too.
+  it("ends a normal user's operational pages (UX-009)", async () => {
+    // Its own admin session creates the user, so the test doesn't lean on the admin sign-in above.
+    const admin = openBrowser();
+    const fern = openBrowser();
+    try {
+      await signInAsAdmin(admin, baseUrl, adminPassword);
+      await admin.open(`${baseUrl}/admin/users`);
+      await admin.waitUntil(`[...document.querySelectorAll("main button")].some((b) => b.textContent.trim() === "Create user" && Object.keys(b).some((key) => key.startsWith("__reactFiber")))`);
+      await admin.clickRole("button", "Create user");
+      await admin.fillLabel("Username", USERNAME);
+      await admin.fillLabel("Initial password", PASSWORD);
+      await admin.click("[role=dialog] button[type=submit]");
+      await admin.waitUntil(`!document.querySelector("[role=dialog]")`);
+      await signInAs(fern, baseUrl, USERNAME, PASSWORD);
+      for (const [path, content] of [
+        ["/admin/prod/materials", "main table"],
+        ["/admin/prod/customer-orders", "main table"],
+      ]) {
+        await fern.open(`${baseUrl}${path}`);
+        await fern.waitUntil(`${signedInAndHydrated(USERNAME)} && [...document.querySelectorAll(${JSON.stringify(content)})].some((element) => !element.closest("[hidden]"))`);
+        expect(new URL(await fern.url()).pathname).toBe(path);
+        expect(await fern.evaluate<string>(`document.querySelector("[data-signed-in-as]").dataset.signedInAs`)).toBe(USERNAME);
+        await expectFooter(fern);
+      }
+    } finally {
+      await Promise.all([admin.close(), fern.close()]);
+    }
   });
 });

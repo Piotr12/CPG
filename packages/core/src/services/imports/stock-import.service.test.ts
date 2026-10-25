@@ -355,6 +355,52 @@ describe("the stock import's commit", () => {
     expect((await counts()).audit).toBe(audit);
   });
 
+  it("posts no movement and changes no balance or audit when one line of 500, late in the workbook, is invalid, and reports only that line (AUD-022)", async () => {
+    await kit.write(async ({ em }) => {
+      for (let code = 3; code <= 250; code++) em.create(Location, { code: String(code).padStart(8, "0"), name: `Cave ${code}` });
+      await em.flush();
+    });
+    for (const location of ["00000001", "00000002"]) {
+      await correct("00000001", location, "100");
+      await correct("00000002", location, "40");
+    }
+    /**
+     * Both materials at 250 locations: 500 lines, 20 of the commit's flush chunks. With `invalid`,
+     * Mammoth hide at 00000240 (sheet row 481, in the 20th chunk) is counted in a unit it has no
+     * conversion for.
+     */
+    const workbook = (invalid: boolean) => {
+      const rows: Cell[][] = [];
+      for (let location = 1; location <= 250; location++) rows.push([1, location, location, null], [2, location, location, invalid && location === 240 ? "box" : null]);
+      return stock(...rows);
+    };
+    const balances = async () =>
+      (await (await scopeForTenant(kit.container, "prod")).cradle.em.find(StockBalance, {}, { populate: ["material", "location"], orderBy: { id: "asc" } })).map(
+        (row) => [row.material.code, row.location.code, row.quantity, row.version],
+      );
+    const before = { counts: await counts(), balances: await balances() };
+
+    const report = await dryRun(workbook(true));
+
+    expect(report.errors).toEqual([
+      { sheet: "Stock", row: 481, column: "Unit", code: "UNIT_NOT_CONVERTIBLE", message: "Material 00000002 has no conversion from box to its base unit kg." },
+    ]);
+    expect(report.previewToken).toBeNull();
+    expect(report.summary).toEqual([{ sheet: "Stock", created: 0, updated: 499, unchanged: 0, errors: 1 }]);
+
+    // The token of the same workbook without the bad line, as if that line was edited after a clean dry run.
+    const { previewToken } = await dryRun(workbook(false));
+    expect(previewToken).toMatch(/^[0-9a-f]{64}$/);
+    await expect(commit(workbook(true), previewToken!)).rejects.toMatchObject({ code: "IMPORT_STALE", message: STOCK_IMPORT_STALE_MESSAGE });
+
+    expect(await counts()).toEqual(before.counts);
+    expect(await balances()).toEqual(before.balances);
+
+    // The control: without the bad line, the same commit posts all 500 movements, each audited.
+    await commit(workbook(false), previewToken!);
+    expect(await counts()).toEqual({ movements: before.counts.movements + 500, audit: before.counts.audit + 500, balances: 500 });
+  }, 30_000);
+
   it("changes only the tenant it runs in", async () => {
     await apply(stock([1, 1, 7, null]), "Opening balance", ACTOR, "test");
     expect(await balance("00000001", "00000001", "test")).toBe("7.000000");

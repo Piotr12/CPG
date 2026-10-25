@@ -275,6 +275,22 @@ describe("sidebar navigation", () => {
     expect(await pathname(ursula)).toBe("/admin");
   });
 
+  it("offers no pricing, invoicing, payment or accounting function, in the sidebar or in help, beside the planning screens (UX-023)", async () => {
+    const money = /pric|invoic|payment|billing|accounting|ledger account|\bVAT\b|currenc/i;
+    await openPage(ursula, "/admin/prod");
+    const entries = await sidebarEntries(ursula);
+    expect(entries.filter(({ label, href }) => money.test(label) || money.test(href))).toEqual([]);
+    // Planning runs from these without any of them.
+    expect(entries.map(({ label }) => label)).toEqual(expect.arrayContaining(["Forecasts", "Demand review", "Production orders", "Purchase requisitions", "Purchase orders"]));
+
+    // Help covers every screen and the API, and names none of them either.
+    await ursula.open(`${baseUrl}/help`);
+    await ursula.waitFor("section#signing-in");
+    const help = await ursula.evaluate<string>(`document.querySelector("main").innerText`);
+    expect(help).toContain("API");
+    expect(help.match(new RegExp(money.source, "gi")) ?? []).toEqual([]);
+  });
+
   it("collapses to an icon rail, where the Master data fly-out reaches Locations, and expands back", async () => {
     await openPage(admin, "/admin/test/materials");
 
@@ -359,6 +375,8 @@ describe("sidebar navigation", () => {
       await browser.waitUntil(`!!document.querySelector(${JSON.stringify(`${drawer} a[href='/admin/test/suppliers']`)})`);
       await clickHydrated(browser, `${drawer} a[href='/admin/test/suppliers']`);
       await browser.waitUntil(`location.pathname === "/admin/test/suppliers" && !document.querySelector(${JSON.stringify(drawer)})`);
+      expect(new URL(await browser.url()).pathname).toBe("/admin/test/suppliers");
+      expect(await browser.evaluate<boolean>(`!!document.querySelector(${JSON.stringify(drawer)})`)).toBe(false);
     });
 
     it("switches tenant from the top bar, one tap away", async () => {

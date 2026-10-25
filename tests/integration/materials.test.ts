@@ -112,7 +112,7 @@ describe("materials and their unit conversions (E03-S01)", () => {
   });
 
   it("names a missing description before creating anything (MAT-008)", async () => {
-    await listRows(admin, "prod");
+    const before = await listRows(admin, "prod");
     await admin.waitUntil(ready(button("Create material")));
     await admin.clickRole("button", "Create material");
     await admin.select("[role=dialog] select[name=type]", "raw");
@@ -120,8 +120,10 @@ describe("materials and their unit conversions (E03-S01)", () => {
     await admin.click("[role=dialog] button[type=submit]");
 
     await admin.waitForText("Enter a description.");
+    expect(await admin.text("[role=dialog]")).toContain("Enter a description.");
     await admin.clickRole("button", "Cancel");
     await admin.waitUntil(`!document.querySelector("[role=dialog]")`);
+    expect(await listRows(admin, "prod")).toEqual(before);
   });
 
   it("adds 1 case = 12 each with its inverse, and refuses a zero factor (MAT-019, MAT-021, MAT-022)", async () => {

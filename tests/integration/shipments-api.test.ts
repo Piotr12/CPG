@@ -233,6 +233,60 @@ describe("shipments and goods issues through the API", () => {
     expect(json(await api("GET", `/api/tenants/prod/goods-issues?shipment=${shipment.id}`)).data).toHaveLength(1);
   });
 
+  it("lets one of two sessions racing issues of two order lines win the stock both need, with one audit entry and the ledger never below zero (E2E-006)", async () => {
+    await freshMaterials("10");
+    // Two outstanding order lines for 7 each, on two orders, each shipped.
+    const orders = [await placeOrder("7", "1"), await placeOrder("7", "1")];
+    const shipments = [await ship(orders[0], undefined, adminSecret), await ship(orders[1], undefined, userSecret)];
+
+    // Independent sessions: the admin's token and the normal user's.
+    const raced = await Promise.all([
+      issue(shipments[0].id, [{ line: 1, quantity: "7", unit: "each" }], adminSecret),
+      issue(shipments[1].id, [{ line: 1, quantity: "7", unit: "each" }], userSecret),
+    ]);
+    expect(raced.map(({ status }) => status).sort()).toEqual([200, 409]);
+    expect(json(raced.find(({ status }) => status === 409)!).error).toMatchObject({ code: "INSUFFICIENT_STOCK", params: { available: "3.000000", requested: "7.000000" } });
+    const winner = json(raced.find(({ status }) => status === 200)!).data as IssueView;
+
+    const ledger = json(await api("GET", `/api/tenants/prod/stock?material=${ids.widget}&location=${ids.plant}`)).data as StockView;
+    expect(ledger.quantity).toBe("3.000000");
+    // Oldest first: the count, then the one issue; the running balance never goes below zero.
+    const movements = [...ledger.movements].reverse();
+    expect(movements.map(({ type, quantity }) => [type, quantity])).toEqual([["correction", "10.000000"], ["goods-issue", "-7.000000"]]);
+    expect(movements.reduce((balances, { quantity }) => [...balances, (balances.at(-1) ?? 0) + Number(quantity)], [] as number[])).toEqual([10, 3]);
+    const issued = (json(await api("GET", "/api/tenants/prod/audit?limit=100")).data as AuditPage).entries.filter(
+      (entry) => entry.action === "goods-issues.goods-issue.posted" && shipments.some(({ id }) => entry.after?.shipment === id),
+    );
+    expect(issued.map(({ subject }) => subject.id)).toEqual([winner.id]);
+    expect((await Promise.all(orders.map(async ({ id }) => (await getOrder(id)).lines[0].fulfilled))).sort()).toEqual(["0.000000", "7.000000"]);
+  });
+
+  it("refuses a normal user's BOM edit through their token, then posts their goods issue attributed to their account and token (E2E-014)", async () => {
+    await freshMaterials();
+    const steel = await create("/api/tenants/prod/materials", { type: "raw", description: "shapi steel", baseUnit: "each" });
+    const recipe = { output: ids.widget, priority: 1, validFrom: "2026-01-01", validThrough: null, components: [{ material: steel, quantity: "2", unit: "each" }] };
+    const bom = json(await write("POST", "/api/tenants/prod/boms", recipe)).data as { id: string; version: number };
+    const before = json(await api("GET", `/api/tenants/prod/boms/${bom.id}`)).data;
+
+    const edit = await write("PATCH", `/api/tenants/prod/boms/${bom.id}`, { version: bom.version, components: [{ material: steel, quantity: "3", unit: "each" }] }, userSecret);
+    expect(edit.status).toBe(403);
+    expect(json(edit).error.code).toBe("FORBIDDEN");
+    expect(json(await api("GET", `/api/tenants/prod/boms/${bom.id}`)).data).toEqual(before);
+
+    const order = await placeOrder();
+    const shipment = await ship(order);
+    const posted = await issue(shipment.id, [{ line: 1, quantity: "5", unit: "each" }], userSecret);
+    expect(posted.status, posted.text).toBe(200);
+    const id = (json(posted).data as IssueView).id;
+    expect(await stockOf(ids.widget)).toBe("95.000000");
+    const entries = (json(await api("GET", "/api/tenants/prod/audit?limit=100")).data as AuditPage).entries;
+    expect(entries.filter((entry) => entry.action === "goods-issues.goods-issue.posted" && entry.subject.id === id)).toEqual([
+      expect.objectContaining({ channel: "api", actor: expect.objectContaining({ username: "shapi-una" }), token: expect.objectContaining({ name: "shapi-una-cli" }) }),
+    ]);
+    // The refused edit wrote nothing. By type and ID: every kind numbers its records from 00000001.
+    expect(entries.filter(({ subject }) => subject.type === "Bom" && subject.id === bom.id).map(({ action }) => action)).toEqual(["boms.bom.created"]);
+  });
+
   it("lets an issue of exactly the stock on hand take the balance to zero (INV-007)", async () => {
     await freshMaterials("10");
     const order = await placeOrder("60");
@@ -315,7 +369,7 @@ describe("shipments and goods issues through the API", () => {
     expect((await getOrder(order.id)).lines[0].fulfilled).toBe("0.000000");
   });
 
-  it("posts one issue and one movement for a keyed request, and returns the original for a retry with the same key and body (API-020, API-021)", async () => {
+  it("posts one issue, one movement and one audit entry for a keyed request, and returns the original for a retry with the same key and body (API-020, API-021, E2E-013)", async () => {
     await freshMaterials();
     const order = await placeOrder();
     const shipment = await ship(order);
@@ -330,6 +384,13 @@ describe("shipments and goods issues through the API", () => {
     expect(await stockOf(ids.widget)).toBe("90.000000");
     expect((await getOrder(order.id)).lines[0].fulfilled).toBe("10.000000");
     expect(json(await api("GET", `/api/tenants/prod/goods-issues?shipment=${shipment.id}`)).data).toHaveLength(1);
+    // The ledger and the audit hold the issue once: the retry wrote neither again.
+    const ledger = json(await api("GET", `/api/tenants/prod/stock?material=${ids.widget}&location=${ids.plant}`)).data as StockView;
+    expect(ledger.movements.filter(({ type }) => type === "goods-issue").map(({ quantity }) => quantity)).toEqual(["-10.000000"]);
+    const posted = (json(await api("GET", "/api/tenants/prod/audit?limit=100")).data as AuditPage).entries.filter(
+      (entry) => entry.action === "goods-issues.goods-issue.posted" && entry.subject.id === json(first).data.id,
+    );
+    expect(posted).toHaveLength(1);
   });
 
   /** The audit entries of `action` on shipment `id`, newest first. */
