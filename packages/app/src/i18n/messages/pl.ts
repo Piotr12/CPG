@@ -1856,7 +1856,7 @@ export const pl: Messages = {
       week: "Co wysłano i co jeszcze do wysłania, w podziale na tygodnie. Dziś jest {date}; otwarte zamówienia po wymaganej dacie liczą się jako należne dziś.",
       month: "Co wysłano i co jeszcze do wysłania, w podziale na miesiące. Dziś jest {date}; otwarte zamówienia po wymaganej dacie liczą się jako należne dziś.",
     },
-    filters: "Filtry",
+    filterForm: "Filtry",
     bucket: "Przedział czasu", buckets: { day: "Dzień", week: "Tydzień", month: "Miesiąc" },
     locations: "Lokalizacje", products: "Wyroby gotowe", unit: "Jednostka", apply: "Zastosuj", clear: "Wyczyść",
     allLocations: "Wszystkie lokalizacje", allProducts: "Wszystkie wyroby gotowe",

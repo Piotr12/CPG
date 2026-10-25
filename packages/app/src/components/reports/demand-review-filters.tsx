@@ -49,7 +49,7 @@ export function DemandReviewFilters({ action, view, products, locations, locale,
   const disabled = products.length === 0;
   const picker = (all: string): FilterMultiSelectLabels => ({ ...labels.picker, all });
   return (
-    <form action={action} aria-label={labels.filters} className="flex min-w-0 flex-col gap-4">
+    <form action={action} aria-label={labels.filterForm} className="flex min-w-0 flex-col gap-4">
       <div className="grid min-w-0 gap-4 lg:grid-cols-[auto_1fr_1fr_auto] lg:items-start">
         <div className="grid gap-2">
           <Label id="review-bucket-label">{labels.bucket}</Label>

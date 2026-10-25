@@ -45,7 +45,7 @@ describe("DemandReviewFilters", () => {
 
   it("is a GET form of the bucket, locations, products and unit, never carrying the offset", () => {
     renderForm(undefined, demandView({ offset: 2, materials: ["00000001"], locations: ["00000002"] }));
-    const form = screen.getByRole("form", { name: t.filters });
+    const form = screen.getByRole("form", { name: t.filterForm });
     expect(form.getAttribute("action")).toBe("/admin/test/reports/demand-review");
     expect(form.querySelector("[name=offset]")).toBeNull();
     const bucket = within(screen.getByRole("radiogroup", { name: t.bucket }));

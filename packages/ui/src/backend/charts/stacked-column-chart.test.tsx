@@ -264,6 +264,8 @@ describe("StackedColumnChart", () => {
     const text = marker.querySelector("text")!;
     expect(text.textContent).toBe("2.5 overdue");
     expect(text.getAttribute("class")).toContain("fill-warning");
+    // A surface-coloured halo keeps the Today rule from striking through it.
+    expect([text.getAttribute("class"), text.getAttribute("paint-order")]).toEqual([expect.stringContaining("stroke-background"), "stroke"]);
     // W43 totals 15 → top at 98; the text sits 6 px above it, the icon above the text.
     expect(text.getAttribute("y")).toBe("92");
     const icon = marker.querySelector("svg")!;

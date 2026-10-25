@@ -1919,7 +1919,7 @@ export const en = {
       week: "What shipped and what is still to ship, per week. Today is {date}; open orders past their required date count as due today.",
       month: "What shipped and what is still to ship, per month. Today is {date}; open orders past their required date count as due today.",
     },
-    filters: "Filters",
+    filterForm: "Filters",
     bucket: "Time bucket", buckets: { day: "Day", week: "Week", month: "Month" },
     locations: "Locations", products: "Finished products", unit: "Unit", apply: "Apply", clear: "Clear",
     allLocations: "All locations", allProducts: "All finished products",
