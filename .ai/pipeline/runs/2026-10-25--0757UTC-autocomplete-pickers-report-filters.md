@@ -1,6 +1,6 @@
 # Autocomplete for customer, supplier and location pickers and the report filters (#222)
 
-Source doc: .ai/specs/2026-10-25--0751UTC-autocomplete-pickers-report-filters.md
+Source doc: .ai/specs/implemented/2026-10-25--0751UTC-autocomplete-pickers-report-filters.md
 Spec PR: #232 (design-only)
 Issue: #222
 Engine: om-auto-create-pr (steps: 11, --loop: no)
@@ -171,3 +171,8 @@ PR: #233
   - `test:coverage` 0, with 4,113 tests and 100 % on all four measures;
   - build 0;
   - forecasts, stock-report, variance-report and stock on a fresh standalone server: 24/24.
+- After merging `main` (#224 list sort and spec PR #232):
+  - one conflict, in `engineering-standards.md`: kept main's sort line and this PR's autocomplete block;
+  - the spec moved to `implemented/`;
+  - gate: lint 0, typecheck 0, `test:coverage` 0 (4,125 tests, 100 %), build 0;
+  - integration on a fresh standalone server: transfers, purchasing, customer-orders, forecasts, planning-parameters and production-orders, 53/53.
