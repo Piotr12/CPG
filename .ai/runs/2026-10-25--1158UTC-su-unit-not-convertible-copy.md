@@ -45,6 +45,7 @@ Since #242, `convertToBaseQuantity` refuses a quantity entered in `SU` with `UNI
 - `npm run lint` exit 0; `npm run typecheck` exit 0; `npm run test:coverage` exit 0 (569 files, 4329 tests, 100% thresholds held); `npm run build` exit 0.
 - No integration test asserts the changed texts (grep of `tests/` for the old phrases found none), so no integration file was run locally; CI runs the suite.
 - After the review fixes: lint, typecheck and test:coverage exit 0 (569 files, 4331 tests), and build exit 0.
+- CI on PR #246 (run 40192137366, head c91bdd7c): lint, typecheck, unit-tests, build and integration-tests 1–4 all passed.
 - Browser: the forecast and production-order dialogs show the new hints (local standalone build, agent-browser). Screenshots are on PR #246.
 
 ## Follow-ups
