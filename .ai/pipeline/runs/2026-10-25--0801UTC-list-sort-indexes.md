@@ -39,6 +39,10 @@ Every date and status sort of a paged document list, in both directions, reads i
 ## Log
 
 - 08:01 — Spec written and reviewed on #234. A scratch benchmark (100,000 rows per list) measured the before and after figures quoted in the spec. A fresh-context review found that `columns: [{ sort: "desc" }]` indexes never leave the schema diff empty; the spec now requires `expression` indexes.
+- 08:20 — 1.1: both index directions come from one helper, `listSortIndexes` (`db/src/entities/lists/`), and both are `expression` indexes. That deviates from the spec's "ascending ones use `properties`": it keeps the names and SQL of all 18 in one place, and the migration and schema diff come out identical. The generated migration is 18 `create index` and 18 `drop index` statements, with no rebuild. Counts moved: `orm.test.ts`/`database.test.ts` lists, 31→32 in `orm.test.ts`, `system-status.service.test.ts` and `smoke.test.ts`; one more `down()` in the six rollback chains and in `transfer-reversal.entity.test.ts`; the forecast loop 17→18. Both "adopts …" tests now filter `list_sort` out with the tables it indexes (lesson 2026-10-23).
+- 08:30 — 1.2/1.3: mutation checks. With `columns: [{ sort: "desc" }]` instead of an expression, the migration test fails on the schema diff. Applied only up to the previous migration, all 36 plan cases fail.
+- 08:45 — 1.4: timings below. The migration takes 1.0 s at 100,000 rows in each of the five tables.
+- 08:50 — 2.1: filed #236 (the purchase-order lines' requisition join, spec Q6). Lesson added under Database.
 
 ## Timings (step 1.4)
 
@@ -194,12 +198,12 @@ it.runIf(process.env.SCRATCH_PO)("profiles the purchase order list", { timeout: 
 
 ### Phase 1: indexes, migration and proof
 
-- [ ] 1.1 Declare the indexes and generate the migration
-- [ ] 1.2 Migration test
-- [ ] 1.3 Plan test
-- [ ] 1.4 Record the timings
+- [x] 1.1 Declare the indexes and generate the migration — cb71a4f2
+- [x] 1.2 Migration test — 81efb38a
+- [x] 1.3 Plan test — 51dfa29b
+- [x] 1.4 Record the timings — dd72e8b6
 
 ### Phase 2: paperwork
 
-- [ ] 2.1 File the follow-up issue and add the lesson
+- [x] 2.1 File the follow-up issue and add the lesson — #236, see the lesson commit
 - [ ] 2.2 Move the spec to implemented/ after #234 merges
