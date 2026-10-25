@@ -10,6 +10,7 @@ import { productionUsingMaterial, assertNoProductionOrders } from "./production-
 import { MaterialService } from "../materials/material.service";
 import { LocationService } from "../locations/location.service";
 import type { AuditActor } from "../audit/actor";
+import { TARGET_BELOW_PRODUCED_MESSAGE } from "../../validators/production-orders/production-order.schema";
 
 const actor: AuditActor = { userId: "user", username: "alice", sessionId: "session", channel: "ui", token: null };
 const input = { output: "00000001", location: "00000001", quantity: "30", unit: "each", plannedFinish: "2026-10-15" };
@@ -368,7 +369,7 @@ describe("edits after a first completion", () => {
   it("refuses a target below what was produced and allows raising it, audited (PRD-026, PRD-025)", async () => {
     const order = await partlyProduced();
     await expect(service().update(order.id, { quantity: "9" }, order.version, actor)).rejects.toMatchObject({ code: "VALIDATION_FAILED",
-      fieldErrors: { quantity: ["The target cannot be less than the quantity already produced."] } });
+      fieldErrors: { quantity: [TARGET_BELOW_PRODUCED_MESSAGE] } });
     const raised = await service().update(order.id, { quantity: "40" }, order.version, actor);
     expect(raised).toMatchObject({ quantity: "40.000000", produced: "10.000000", outstanding: "30.000000", status: "open", version: 3 });
     const audit = await em().findOneOrFail(TenantAuditEvent, { subjectId: order.id, action: "production-orders.production-order.updated" });
