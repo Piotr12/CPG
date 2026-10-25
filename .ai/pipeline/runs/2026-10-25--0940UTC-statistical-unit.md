@@ -66,6 +66,7 @@ Each product can carry one factor saying how many statistical units (SU) one bas
 - 10:50 — Dataset: ten SU factors; a test pins them in both datasets. Full unit suite green (4,302).
 - 11:00 — Report helpers and the Statistical units page. Deviation: count line is a label ("Finished products with an SU factor: 8 of 10.") to avoid two-number plural agreement. Coverage 100% (4,320 tests), build green.
 - 11:20 — No Docker on this machine: ran `statistical-units`, `navigation`, `materials-api` and `materials` integration files against a local standalone server (lesson 2026-10-23): 4 files, 41 tests passed. Spec moved to `implemented/`, references in the demand-review spec and D08 updated.
+- 11:50 — Review (`om-auto-review-pr`, fresh-context reviewer): APPROVE, no blockers or majors, merge gated on the owner's step-0 production check. Fixed in f35c3a4b: single rounding for other units in SU (R03), `fromBase` for negative totals, a true refusal message for SU, the SU unit hint and the Change factor hint and description, the compatibility text's legacy narrowing, PL copy, `Map` grouping, simpler `reportUnits`. Not changed: a shared entry-units helper (four small sources, listed in the lesson) and `NO_STATISTICAL_FACTOR` (kept for #240). Gate after fixes: lint 0, typecheck 0, coverage 100% (4,323 tests), build 0; the four integration files re-run green on the rebuilt server.
 
 ## Progress
 
