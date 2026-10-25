@@ -112,14 +112,26 @@ describe("manual production", () => {
     expect(await em().count(StockMovement, {})).toBe(0);
     expect((await service().create(input, actor)).shortages).toEqual([]);
   });
-  it("preselects and pins priority 1 when both alternatives are feasible (BOM-009)", async () => {
+  it("preselects and pins priority 1 when both alternatives are feasible, whatever their creation order (BOM-009)", async () => {
+    // A second output whose priority 1 BOM is created after, and numbered above, its priority 2 one.
+    const manager = em();
+    const [component, location] = [await manager.findOneOrFail(Material, { code: "00000002" }), await manager.findOneOrFail(Location, { code: "00000001" })];
+    const output = manager.create(Material, { code: "00000003", type: "finished", description: "Shelf", baseUnit: "each" });
+    manager.create(PlanningParameterSet, { material: output, location, procurement: "make", leadTimeDays: 5, minimumQuantity: "1", lotMultiple: "1" });
+    for (const [code, priority, quantity] of [["00000003", 2, "1"], ["00000004", 1, "2"]] as const) {
+      const bom = manager.create(Bom, { code, output, revision: 1 });
+      const revision = manager.create(BomRevision, { bom, number: 1, priority, validFrom: "2026-01-01", validThrough: null });
+      manager.create(BomComponent, { revision, position: 0, material: component, quantity: `${quantity}.000000`, enteredQuantity: quantity, enteredUnit: "kg", numerator: "1", denominator: "1" });
+    }
+    await manager.flush();
     await balance("60.000000");
-    const options = await service().options(input);
+    const shelf = { ...input, output: "00000003" };
+    const options = await service().options(shelf);
     expect(options.alternatives.map(({ bom, priority, components }) => [bom, priority, components[0].shortage])).toEqual([
-      ["00000001", 1, "0.000000"], ["00000002", 2, "0.000000"],
+      ["00000004", 1, "0.000000"], ["00000003", 2, "0.000000"],
     ]);
-    expect(options.selected).toEqual({ bom: "00000001", revision: 1 });
-    expect(await service().create(input, actor)).toMatchObject({ bom: "00000001", revision: 1, shortages: [] });
+    expect(options.selected).toEqual({ bom: "00000004", revision: 1 });
+    expect(await service().create(shelf, actor)).toMatchObject({ bom: "00000004", revision: 1, shortages: [] });
   });
   it("ignores other-site stock and isolates IDs, reads and shortages by tenant", async () => {
     await balance("1000.000000", "00000002"); await masters("test");

@@ -653,7 +653,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/services/production-orders/production-order.service.test.ts` (with stock for both alternatives neither shows a shortage, priority 1 is preselected, and an order created without a choice pins it; with priority 1 short, priority 2 is preselected). MRP's own selection is slice 3 (#14). E10-S05, #191.
+- **Evidence:** `packages/core/src/services/production-orders/production-order.service.test.ts` (with stock for both alternatives neither shows a shortage, and the priority 1 BOM, created after and numbered above the priority 2 one, is listed first, preselected and pinned by an order created without a choice; with priority 1 short, priority 2 is preselected). MRP's own selection is slice 3 (#14). E10-S05, #191.
 - **Given:** Two valid alternatives, higher priority stock sufficient
 - **When:** Run MRP or create manual order with default selection
 - **Then:** Higher-priority currently valid BOM revision selected.

@@ -365,7 +365,7 @@ These key names are part of the contract. Renaming or removing one is a breaking
 | `IMPORT_LINE_WITHOUT_HEADER` (import report) | … Add its header: a BOM's lines are its complete recipe. | … Add its header: a BOM's lines are all its components. |
 | `IMPORT_BOM_WITHOUT_LINES` (import report) | … list its complete recipe there. | … list all its components there. |
 
-Since #191 a production completion's extra input says "extra", as the Post completion form has since #153. The code, status, field key and `params` stay the same:
+Since #191 a production completion's extra input says "extra", as the Post completion form has since #153. The code, status and field key stay the same:
 
 | Code (field) | Before | Since #191 |
 | --- | --- | --- |

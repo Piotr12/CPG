@@ -3,7 +3,7 @@
 **Date:** 2026-10-25 17:01 UTC
 **Agent:** Claude Code / claude-opus-5-5 (cezar, `om-auto-fix-issue 191`)
 **Spec:** none (issue #191; catalogue `.ai/specs/research/CPG-acceptance.md`)
-**Status:** done
+**Status:** in progress
 
 ## Goal
 
@@ -24,6 +24,8 @@ Close the test gaps #191 lists, reword the extra-input validation message to say
 - 17:05 — Five tests added and passing in isolation. The BOM-027 audit assertion compares entries sorted: three writes can land in one millisecond (lessons, 2026-10-19).
 - 17:06 — Message reworded to "an extra input" (the exported constant, so the screens' lookup follows); `labels.test.ts` pins it equal to the English form text. BACKWARD_COMPATIBILITY.md lists it beside #214's rewordings, under a renamed heading (no links pointed at the old one).
 - 17:07 — Catalogue: BOM-009, BOM-027, E2E-004, LFC-015 → Passed (automated), each naming its MRP remainder (#14) where the Then has one, as the issue's acceptance criteria ask; LFC-025, LFC-027 → Partially verified; E2E-015 stays Partially verified with only the MRP remainder.
+- 17:15 — PR #255 opened (labels `review`, `refactor`, `skip-qa`, `priority-low`, `risk-low`; lock moved to the PR). An independent review found the BOM-009 fixture's priority order equal to creation and code order: with the priority sort removed from `production-recipes.ts` the test still passed. The test now builds a second output whose priority 1 BOM is created after, and numbered above, its priority 2 one; with the sort removed it fails (checked, then restored). Also: the BACKWARD_COMPATIBILITY.md row no longer mentions `params` (the error carries none).
+- Decision: BOM-027 and LFC-015 stay Passed (automated) with their MRP remainder named in the Evidence, as #191's acceptance criteria ask and as LFC-004 already does; LFC-025/027 are Partially verified because #191 scopes only their non-MRP halves and doesn't ask for Passed. The catalogue's precedent is mixed (BUY-017 was demoted for an MRP remainder in #223). Recorded on the PR for the owner to override.
 
 ## Changes
 - `production-order.service.test.ts` (BOM-009; LFC-015/025/027), `production-completion.service.test.ts` (E2E-004), `planning-parameter.service.test.ts` (BOM-027), `import-boms.test.ts` (E2E-015), `labels.test.ts` (wording)
