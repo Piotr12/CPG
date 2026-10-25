@@ -42,10 +42,10 @@ export async function convertToBaseQuantity(
         ? null
         : await em.findOne(MaterialConversion, { material, unit });
   if (!factor) {
-    throw new AppError(
-      "UNIT_NOT_CONVERTIBLE",
-      `Material ${material.code} has no conversion from ${unit} to its base unit ${material.baseUnit}.`,
-    );
+    const message = isStatisticalUnit(unit)
+      ? `Material ${material.code} can't be entered in SU: the statistical unit is for reports only.`
+      : `Material ${material.code} has no conversion from ${unit} to its base unit ${material.baseUnit}.`;
+    throw new AppError("UNIT_NOT_CONVERTIBLE", message);
   }
   const base = convertToBase(entered, parseDecimal(factor.numerator)!, parseDecimal(factor.denominator)!);
   if (base > MAX_QUANTITY) {

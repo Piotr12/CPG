@@ -807,6 +807,15 @@ describe("MaterialService", () => {
       ]);
     });
 
+    it("rounds another unit in SU once, never through the base unit first (R03)", async () => {
+      const tray = await service().create({ type: "finished", description: "Tray", baseUnit: "each" }, ACTOR);
+      // 1 box = 1/3 each and 1 each = 3 SU, so 1 box = 1 SU; through the base unit it would read 0.999999.
+      await service().addConversion(tray.id, { unit: "box", numerator: "1", denominator: "3" }, ACTOR);
+      await service().addConversion(tray.id, { unit: "SU", numerator: "1", denominator: "3" }, ACTOR);
+
+      expect((await service().statisticalFactors())[0]).toMatchObject({ perBaseUnit: "3", otherUnits: [{ unit: "box", statisticalUnits: "1" }] });
+    });
+
     it("reads 50 products in two queries, materials then conversions", async () => {
       const em = scopedEm("prod");
       for (let index = 1; index <= 50; index += 1) {

@@ -296,8 +296,10 @@ export class MaterialService {
   async statisticalFactors(): Promise<StatisticalFactorView[]> {
     const materials = await this.em.find(Material, { type: "finished" }, { orderBy: { code: "asc" } });
     const conversions = await this.em.find(MaterialConversion, { material: { $in: materials } }, { orderBy: { unit: "asc" } });
+    const byMaterial = new Map<Material, MaterialConversion[]>(materials.map((material) => [material, []]));
+    for (const conversion of conversions) byMaterial.get(conversion.material)!.push(conversion);
     return materials.map((material) => {
-      const own = conversions.filter((conversion) => conversion.material === material);
+      const own = byMaterial.get(material)!;
       const factor = statisticalFactor({ code: material.code, baseUnit: material.baseUnit, conversions: own });
       return {
         id: material.code,
@@ -409,10 +411,13 @@ async function assertBaseUnitFree(em: EntityManager, material: Material): Promis
   }
 }
 
-/** One `unit` of a conversion in SU: its base quantity, converted once more (#239). */
+/**
+ * One `unit` of a conversion in SU (#239): `1 unit = n/d` base units and `1 SU = sn/sd` base units
+ * make `1 unit = (n × sd) / (d × sn)` SU, rounded once (R03).
+ */
 function inStatisticalUnits({ unit, numerator, denominator }: MaterialConversion, factor: ReportFactor) {
-  const base = convertToBase(ONE, parseDecimal(numerator)!, parseDecimal(denominator)!);
-  return { unit, statisticalUnits: formatDecimal(fromBase(base, factor)) };
+  const quantity = convertToBase(ONE, parseDecimal(numerator)! * factor.denominator, parseDecimal(denominator)! * factor.numerator);
+  return { unit, statisticalUnits: formatDecimal(quantity) };
 }
 
 /** Refuses deactivating a material while an Open purchase order has a line for it, naming the order (LFC-013). */

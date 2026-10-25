@@ -23,11 +23,13 @@ const SAME: ReportFactor = { numerator: ONE, denominator: ONE };
 
 /**
  * `base` (micro-units of the base unit) in the unit `factor` converts: `base × denominator ÷
- * numerator`, half-up once to six decimals, the same rounding as every conversion (R03). A report
- * converts each material's total once and adds the converted totals; it never adds base quantities
- * across materials.
+ * numerator`, half-up once to six decimals, the same rounding as every conversion (R03), away from
+ * zero for a negative total as for a positive one. A report converts each material's total once and
+ * adds the converted totals; it never adds base quantities across materials.
  */
 export function fromBase(base: bigint, factor: ReportFactor): bigint {
+  // `convertToBase` rounds half-up only for amounts ≥ 0: BigInt division truncates toward zero.
+  if (base < 0n) return -fromBase(-base, factor);
   return convertToBase(base, factor.denominator, factor.numerator);
 }
 
@@ -54,7 +56,8 @@ export function reportUnits(selected: readonly ReportMaterial[]): { units: strin
     .map(({ unit }) => unit)
     .filter((unit) => !isStatisticalUnit(unit))
     .sort();
-  const statistical = !isStatisticalUnit(material.baseUnit) && statisticalFactor(material) !== null ? [STATISTICAL_UNIT] : [];
+  // A base unit SU is listed once, as the base unit: such a material can't also have an SU conversion.
+  const statistical = factorOf(material, STATISTICAL_UNIT) !== null ? [STATISTICAL_UNIT] : [];
   return { units: [material.baseUnit, ...others, ...statistical], defaultUnit: material.baseUnit };
 }
 

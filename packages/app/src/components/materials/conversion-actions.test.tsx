@@ -41,6 +41,7 @@ describe("ConversionActions", () => {
 
     open("Change factor");
     expect(screen.getByRole("dialog", { name: "Change the factor of case" })).toBeTruthy();
+    expect(screen.queryByText("For SU,", { exact: false })).toBeNull();
     expect(screen.queryByLabelText("Unit")).toBeNull();
     expect((screen.getByLabelText("Base quantity") as HTMLInputElement).value).toBe("12");
     fireEvent.change(screen.getByLabelText("Base quantity"), { target: { value: "10" } });
@@ -48,6 +49,16 @@ describe("ConversionActions", () => {
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(mocks.changeConversion).toHaveBeenCalledWith("test", 1, "00000002", "case", 2, { numerator: "10", denominator: "1" });
+  });
+
+  it("says how an SU factor is entered when changing it, and only then (#239)", () => {
+    const hint = "For SU, enter Alternate quantity 1.5 and Base quantity 1 when 1 each = 1.5 SU.";
+    render(<ConversionActions material={bolt} conversion={{ ...caseConversion, unit: "SU" }} context={context} labels={materialsLabels(en)} />);
+    fireEvent.keyDown(screen.getByRole("button", { name: "Actions for SU" }), { key: "Enter" });
+    fireEvent.click(screen.getByRole("menuitem", { name: "Change factor" }));
+    expect(screen.getByText(hint, { exact: false })).toBeTruthy();
+    expect(screen.getByText("Reports use the new SU factor for all of history. No stored quantity changes.")).toBeTruthy();
+    expect(screen.queryByText("Only new entries use the new factor; quantities already stored keep theirs.")).toBeNull();
   });
 
   it("closes the factor form on cancel", () => {

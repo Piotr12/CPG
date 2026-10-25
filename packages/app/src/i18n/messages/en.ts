@@ -250,6 +250,7 @@ export const en = {
       menu: { label: "Actions for {unit}", change: "Change factor", remove: "Remove" },
       unit: "Unit",
       unitHint: "The unit people enter, such as case or t.",
+      statisticalUnitHint: "For reports only: SU adds up different products, and nothing is entered in it.",
       unitPlaceholder: "Choose a unit",
       unitReasons: { baseUnit: "base unit", converted: "already converted" },
       denominator: "Alternate quantity",
@@ -267,6 +268,7 @@ export const en = {
       change: {
         title: "Change the factor of {unit}",
         description: "Only new entries use the new factor; quantities already stored keep theirs.",
+        statisticalDescription: "Reports use the new SU factor for all of history. No stored quantity changes.",
         submit: "Save",
         submitting: "Saving…",
       },

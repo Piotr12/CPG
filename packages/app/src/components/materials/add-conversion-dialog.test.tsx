@@ -47,6 +47,8 @@ describe("AddConversionDialog", () => {
     expect(screen.queryByText(hint, { exact: false })).toBeNull();
     change("Unit", "SU");
     expect(screen.getByText(`How many each that many alternate units are. Up to six decimals. ${hint}`)).toBeTruthy();
+    expect(screen.getByText("For reports only: SU adds up different products, and nothing is entered in it.")).toBeTruthy();
+    expect(screen.queryByText("The unit people enter, such as case or t.")).toBeNull();
     change("Alternate quantity", "1.5");
     change("Base quantity", "1");
     fireEvent.click(screen.getAllByRole("button", { name: "Add conversion" }).at(-1)!);

@@ -34,6 +34,13 @@ describe("fromBase", () => {
     expect(shown("0.000001", "1", "0.5")).toBe("0.000001");
     expect(shown("0.000001", "1", "0.4")).toBe("0.000000");
   });
+
+  it("rounds a negative total away from zero, as its positive twin", () => {
+    // In micro-units: -3 each are -4.5 SU, -0.5 micro rounds to -1, -0.4 to 0.
+    expect(fromBase(-micro("3"), factor("1", "1.5"))).toBe(-micro("4.5"));
+    expect(fromBase(-1n, factor("1", "0.5"))).toBe(-1n);
+    expect(fromBase(-1n, factor("1", "0.4"))).toBe(0n);
+  });
 });
 
 describe("statisticalFactor", () => {

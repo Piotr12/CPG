@@ -34,18 +34,29 @@ export function materialFormFields(labels: MaterialsLabels, units: UnitChoices, 
 
 /**
  * The fields of the Add conversion and Change factor forms; the unit only when adding, from the
- * registry, with the base unit and the units already converted shown but unselectable. Choosing SU
- * adds a hint on how its factor is entered (#239).
+ * registry, with the base unit and the units already converted shown but unselectable. SU, chosen
+ * when adding or the `unit` a Change factor form edits, swaps in hints on what it is and how its
+ * factor is entered (#239).
  */
 export function conversionFormFields(
   labels: MaterialsLabels,
   baseUnit: string,
-  { units, converted = [] }: { units?: UnitChoices; converted?: string[] } = {},
+  { units, converted = [], unit: fixedUnit }: { units?: UnitChoices; converted?: string[]; unit?: string } = {},
 ): CrudField[] {
   const t = labels.conversions;
   const disabled = Object.fromEntries([[baseUnit, t.unitReasons.baseUnit], ...converted.map((unit) => [unit, t.unitReasons.converted])]);
+  const isStatistical = (values: Record<string, string>) => isStatisticalUnit(fixedUnit ?? values.unit);
   const unit: CrudField[] = units
-    ? [{ name: "unit", label: t.unit, type: "select", placeholder: t.unitPlaceholder, ...unitSelect(units, { disabled }), description: t.unitHint }]
+    ? [
+        {
+          name: "unit",
+          label: t.unit,
+          type: "select",
+          placeholder: t.unitPlaceholder,
+          ...unitSelect(units, { disabled }),
+          description: (values) => (isStatistical(values) ? t.statisticalUnitHint : t.unitHint),
+        },
+      ]
     : [];
   return [
     ...unit,
@@ -54,8 +65,7 @@ export function conversionFormFields(
       name: "numerator",
       label: t.numerator,
       autoComplete: "off",
-      description: ({ unit: chosen }) =>
-        [t.numeratorHint, ...(chosen !== undefined && isStatisticalUnit(chosen) ? [t.statisticalHint] : [])].join(" ").replaceAll("{baseUnit}", baseUnit),
+      description: (values) => [t.numeratorHint, ...(isStatistical(values) ? [t.statisticalHint] : [])].join(" ").replaceAll("{baseUnit}", baseUnit),
     },
   ];
 }

@@ -75,7 +75,7 @@ describe("convertToBaseQuantity", () => {
     await expect(convertToBaseQuantity(em, bolt, { quantity: "1", unit: "SU" })).rejects.toMatchObject({
       code: "UNIT_NOT_CONVERTIBLE",
       status: 400,
-      message: "Material 00000001 has no conversion from SU to its base unit each.",
+      message: "Material 00000001 can't be entered in SU: the statistical unit is for reports only.",
     });
   });
 

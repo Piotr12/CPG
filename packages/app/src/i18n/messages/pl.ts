@@ -237,13 +237,14 @@ export const pl: Messages = {
       menu: { label: "Akcje dla {unit}", change: "Zmień przelicznik", remove: "Usuń" },
       unit: "Jednostka",
       unitHint: "Jednostka, w której wpisuje się ilości, np. karton albo t.",
+      statisticalUnitHint: "Tylko do raportów: SU sumuje różne wyroby i nic się w niej nie wpisuje.",
       unitPlaceholder: "Wybierz jednostkę",
       unitReasons: { baseUnit: "jednostka bazowa", converted: "już przeliczana" },
       denominator: "Ilość w jednostce alternatywnej",
       denominatorHint: "Zwykle 1, jak w „1 karton = 12 szt.”.",
       numerator: "Ilość w jednostce bazowej",
       numeratorHint: "Ile {baseUnit} to tyle jednostek alternatywnych. Do sześciu miejsc po przecinku.",
-      statisticalHint: "Dla SU wpisz ilość w jednostce alternatywnej 1.5 i ilość w jednostce bazowej 1, gdy 1 {baseUnit} = 1.5 SU.",
+      statisticalHint: "Dla SU wpisz Ilość w jednostce alternatywnej 1.5 i Ilość w jednostce bazowej 1, gdy 1 {baseUnit} = 1.5 SU.",
       add: {
         open: "Dodaj przelicznik",
         title: "Dodaj przelicznik jednostek",
@@ -254,6 +255,7 @@ export const pl: Messages = {
       change: {
         title: "Zmień przelicznik dla {unit}",
         description: "Nowego przelicznika używają tylko nowe wpisy; ilości już zapisane zachowują swój.",
+        statisticalDescription: "Raporty stosują nowy współczynnik SU do całej historii. Żadna zapisana ilość się nie zmienia.",
         submit: "Zapisz",
         submitting: "Zapisywanie…",
       },
