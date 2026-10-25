@@ -24,17 +24,24 @@ export const MONTHS_PER_YEAR = 12;
 /** Monday to Friday: a weekday profile has one multiplier per working day, and delivery days are numbered 1–5. */
 export const WEEKDAYS = 5;
 /** The least share of every SKU the remainder customers keep, up to the end of the forecast horizon (spec "Customers"). */
-export const REMAINDER_FLOOR = 0.2;
+const REMAINDER_FLOOR = 0.2;
+/**
+ * The generator runs demand this many weekdays past the anchor month, so an order created in the
+ * month (its lead time ahead) holds its whole delivery period or project; the schema checks the
+ * customers fit.
+ */
+export const DEMAND_WEEKDAYS_PAST_MONTH = 25;
 
 const DECIMAL_MESSAGE = "Use a decimal string of at least 0 with at most 12 digits before the point and 6 after it.";
 const POSITIVE_DECIMAL_MESSAGE = "Use a decimal string greater than 0.";
 
 const decimalSchema = z.string().refine((text) => parseDecimal(text) !== null, DECIMAL_MESSAGE);
 const positiveDecimalSchema = z.string().refine((text) => (parseDecimal(text) ?? 0n) > 0n, POSITIVE_DECIMAL_MESSAGE);
-/** A growth rate, which may be negative: a customer that shrinks. */
-const rateSchema = z.string().regex(/^-?\d{1,3}(\.\d{1,6})?$/, "Use a decimal string such as 0.1 or -0.015.");
+/** A growth rate, which may be negative (a customer that shrinks) but above −1, which would leave it nothing. */
+const RATE_MESSAGE = "Use a decimal string above -1, such as 0.1 or -0.015.";
+const rateSchema = z.string().refine((text) => /^-?\d{1,3}(\.\d{1,6})?$/.test(text) && Number(text) > -1, RATE_MESSAGE);
 const countSchema = z.number().int().positive();
-const monthsSchema = z.number().int().nonnegative();
+const wholeSchema = z.number().int().nonnegative();
 const weekdaySchema = z.number().int().min(1).max(WEEKDAYS);
 /** A day of the year, `MM-DD`, that exists in every year: 29 February doesn't. */
 const dayOfYearSchema = z.string().refine((text) => /^\d{2}-\d{2}$/.test(text) && isCalendarDate(`2025-${text}`), "Use a day of the year written MM-DD.");
@@ -100,11 +107,11 @@ const configSchema = z.strictObject({
     overConsumption: decimalSchema,
     underConsumption: decimalSchema,
     safetyStock: z.strictObject({
-      finishedDays: monthsSchema,
-      intermediateDays: monthsSchema,
+      finishedDays: wholeSchema,
+      intermediateDays: wholeSchema,
       rawLeadTimeFactor: decimalSchema,
       laterIncreases: z.array(
-        z.strictObject({ material: businessIdSchema, location: businessIdSchema, monthsAfterAnchor: monthsSchema, factor: positiveDecimalSchema }),
+        z.strictObject({ material: businessIdSchema, location: businessIdSchema, monthsAfterAnchor: wholeSchema, factor: positiveDecimalSchema }),
       ),
     }),
     waste: z.strictObject({
@@ -359,6 +366,31 @@ function checkCustomers(config: TestTenantConfig, issue: Issue): void {
   }
 }
 
+/** The most weekdays from one of a customer's delivery days to its next: a week less the span of its delivery days. */
+function longestDeliveryGap(deliveryDays: readonly number[]): number {
+  const days = [...deliveryDays].sort((a, b) => a - b);
+  return Math.max(...days.map((day, index) => (days[index + 1] ?? days[0] + WEEKDAYS) - day));
+}
+
+/**
+ * Every order created in a month fits the demand the generator plans past it: a customer's lead time
+ * plus its longest delivery gap, and a project's lead time plus its days, are at most
+ * `DEMAND_WEEKDAYS_PAST_MONTH` weekdays. Past that an open order would be missing until the next month.
+ */
+function checkHorizon(config: TestTenantConfig, issue: Issue): void {
+  const { customers, projects } = config.demand;
+  const reach = (weekdays: number, path: (string | number)[], what: string) => {
+    if (weekdays > DEMAND_WEEKDAYS_PAST_MONTH) issue(path, `${what} reaches ${weekdays} weekdays past the month; the demand runs ${DEMAND_WEEKDAYS_PAST_MONTH}.`);
+  };
+  customers.forEach(({ customer, deliveryDays, leadWorkingDays }, index) =>
+    reach(leadWorkingDays + longestDeliveryGap(deliveryDays), ["demand", "customers", index], `Customer ${customer}'s lead time and delivery gap`),
+  );
+  projects.forEach(({ customer, days }, index) => {
+    const entry = customers.find((candidate) => candidate.customer === customer);
+    if (entry) reach(entry.leadWorkingDays + days, ["demand", "projects", index], `Project ${index + 1}'s lead time and days`);
+  });
+}
+
 /** A project is for a SKU its customer buys. */
 function checkProjects(config: TestTenantConfig, issue: Issue): void {
   const { customers, projects } = config.demand;
@@ -402,6 +434,7 @@ const CROSS_CHECKS = [
   checkDemand,
   checkCustomers,
   checkProjects,
+  checkHorizon,
   checkWaste,
   checkPurchaseRequests,
 ];

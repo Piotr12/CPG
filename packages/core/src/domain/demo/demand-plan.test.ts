@@ -252,7 +252,9 @@ describe("customer orders", () => {
         if (wholePacks) continue;
         const from = plan.days.indexOf(order.requiredDate);
         const to = plan.days.indexOf(deliveries[deliveries.indexOf(order.requiredDate) + 1]);
-        for (const { material, base } of order.lines) expect(units(base)).toBe(sum(plan.streams.get(customer)!.get(material)!.slice(from, to)));
+        // Every SKU with something in the period has its line, holding exactly that.
+        const period = [...plan.streams.get(customer)!].map(([material, stream]) => [material, sum(stream.slice(from, to))] as const).filter(([, total]) => total > 0);
+        expect(order.lines.map(({ material, base }) => [material, units(base)])).toEqual(period);
       }
     }
     expect(new Set(ordersOf("00000001").map(({ requiredDate }) => isoWeekday(requiredDate)))).toEqual(new Set([2, 4]));
@@ -295,6 +297,14 @@ describe("customer orders", () => {
     const may = projects[1];
     const mayStart = plan.days.indexOf(may.requiredDate);
     expect(Math.abs(units(may.lines[0].base) - sum(plan.demand.get("00000021")!.slice(mayStart, mayStart + 10)))).toBeLessThanOrEqual(5);
+  });
+
+  it("key two projects of one customer and SKU on the same day apart", () => {
+    const twice = changed((copy) => copy.demand.projects.push({ ...copy.demand.projects[0], date: "03-15" }));
+    const projects = planDemand(twice, anchor).orders.filter(({ key }) => key.includes(":project:") && key.includes(":00000026:"));
+    // In 2026 the 15th of March is a Sunday, so both projects deliver on Monday the 16th.
+    expect(projects.filter(({ requiredDate }) => requiredDate === "2026-03-16")).toHaveLength(2);
+    expect(new Set(planDemand(twice, anchor).orders.map(({ key }) => key)).size).toBe(planDemand(twice, anchor).orders.length);
   });
 
   it("enter a project of less than half a pallet as one pallet, and leave out a project whose days the demand doesn't cover", () => {
@@ -388,10 +398,14 @@ describe("forecasts", () => {
   });
 
   it("leave out the days that round to nothing", () => {
-    const sparse = changed((copy) => (copy.demand.types[4].baseDaily = "1.6"));
+    const sparse = changed((copy) => (copy.demand.types[4].baseDaily = "1.92"));
     const forecasts = planForecasts(sparse, "2026-11-02", "2026-11-06", "2024-10-01").filter(({ material }) => material === "00000030");
-    // 1.6 × 0.25 = 0.4 a day before the season, weekday and trend: Mondays and Tuesdays round up, the rest down.
-    expect(forecasts.map(({ date }) => date)).toEqual(["2026-11-02", "2026-11-03"].filter((date) => Math.round(expectedDemandOn(sparse, date, "2024-10-01").get("00000030")!) > 0));
-    expect(forecasts.length).toBeLessThan(5);
+    // 1.92 × 0.25 = 0.48 a day before the season, weekday and trend: Monday and Tuesday round to 1, the rest to nothing.
+    const expected = weekdaysFrom("2026-11-02", "2026-11-06").map((date) => expectedDemandOn(sparse, date, "2024-10-01").get("00000030")!);
+    expect(expected.map((value) => Math.round(value))).toEqual([1, 1, 0, 0, 0]);
+    expect(forecasts.map(({ date, quantity }) => [date, quantity])).toEqual([
+      ["2026-11-02", "1"],
+      ["2026-11-03", "1"],
+    ]);
   });
 });

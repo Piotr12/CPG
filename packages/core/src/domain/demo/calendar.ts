@@ -100,7 +100,7 @@ export function isWeekday(date: string): boolean {
   return day !== SATURDAY && day !== SUNDAY;
 }
 
-/** Each month's weekdays once worked out: the generator asks for them thousands of times. */
+/** Each month's weekdays once worked out. */
 const WEEKDAYS = new Map<Month, readonly string[]>();
 
 /** The weekdays of a month, in order: every month has at least 20. */

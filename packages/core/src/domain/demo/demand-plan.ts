@@ -2,7 +2,7 @@ import { convertToBase, formatDecimal, ONE, parseDecimal } from "../quantities/d
 import { addDays, addMonths, addWeekdays, dayNumber, daysInMonth, isoWeekday, isWeekday, mondayOf, monthEnd, monthOf, monthStart, weekdaysFrom, type Month } from "./calendar";
 import { sharesOf } from "./customer-shares";
 import { keyedUniform } from "./random";
-import { byId, finishedProducts, MONTHS_PER_YEAR, type CatalogueMaterial, type DemandCustomer, type TestTenantConfig } from "./test-tenant-config.schema";
+import { byId, DEMAND_WEEKDAYS_PAST_MONTH, finishedProducts, MONTHS_PER_YEAR, type CatalogueMaterial, type DemandCustomer, type TestTenantConfig } from "./test-tenant-config.schema";
 
 /*
  * Demand (single-site spec "Demand"): a daily series D(sku, day) on every weekday, split into each
@@ -12,11 +12,9 @@ import { byId, finishedProducts, MONTHS_PER_YEAR, type CatalogueMaterial, type D
  */
 
 /** The days in a year, on average: the trend and the customers' shares move with fractional years. */
-export const DAYS_PER_YEAR = 365.25;
+const DAYS_PER_YEAR = 365.25;
 const QUARTERS_PER_YEAR = 4;
 const DAYS_PER_WEEK = 7;
-/** Demand runs this many weekdays past the anchor month, so every order created in the month holds its whole delivery period. */
-const DEMAND_WEEKDAYS_PAST_MONTH = 25;
 /** The key families of the random draws, so a drift draw and a noise draw never share a key. */
 const DRIFT_DRAW = 1;
 const NOISE_DRAW = 2;
@@ -290,7 +288,7 @@ function weekdayOnOrAfter(date: string): string {
 function projectOrders(config: TestTenantConfig, plan: Pick<DemandPlan, "days" | "demand">): UnsequencedOrder[] {
   const first = Number(plan.days[0].slice(0, 4));
   const last = Number(plan.days.at(-1)!.slice(0, 4));
-  return config.demand.projects.flatMap(({ customer, material, date, days }) => {
+  return config.demand.projects.flatMap(({ customer, material, date, days }, project) => {
     const entry = config.demand.customers.find((candidate) => candidate.customer === customer)!;
     return Array.from({ length: last - first + 1 }, (_, offset) => weekdayOnOrAfter(`${first + offset}-${date}`)).flatMap((day) => {
       const start = plan.days.indexOf(day);
@@ -298,7 +296,7 @@ function projectOrders(config: TestTenantConfig, plan: Pick<DemandPlan, "days" |
       const units = BigInt(plan.demand.get(material)!.slice(start, start + days).reduce((sum, value) => sum + value, 0)) * ONE;
       const packs = packsFor(units, packSize(config, material));
       const line = entry.wholePacks ? packLine(config, material, packs > 1n ? packs : 1n) : baseLine(config, material, units);
-      return ordersFor(config, `customer-order:project:${day}:${customer}:${material}`, customer, day, addWeekdays(day, -entry.leadWorkingDays), [line]);
+      return ordersFor(config, `customer-order:project:${project + 1}:${day}:${customer}:${material}`, customer, day, addWeekdays(day, -entry.leadWorkingDays), [line]);
     });
   });
 }

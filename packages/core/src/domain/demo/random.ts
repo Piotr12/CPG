@@ -1,8 +1,8 @@
 /*
  * The demonstration dataset's only source of randomness: a small seeded generator, so the same
  * configuration always yields the same dataset (spec Q3). Every draw is keyed by what it belongs to,
- * a date or a week and a product or a type, never by its place in a sequence, so a day's figure is
- * the same whichever day the dataset is generated on (single-site spec "Demand").
+ * a date or a week and a product or a type, never by its place in a sequence, so a day's noise and
+ * drift are the same whichever day the dataset is generated on (single-site spec "Demand").
  */
 
 /** 2³² − 1: the largest value a draw can take. */

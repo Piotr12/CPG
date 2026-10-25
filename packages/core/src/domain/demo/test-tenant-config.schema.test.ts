@@ -274,6 +274,20 @@ describe("testTenantConfigSchema's cross-checks", () => {
     expect(messagesAfter((config) => (config.demand.projects[0].date = "3-16"))).toEqual(["Use a day of the year written MM-DD."]);
   });
 
+  it("refuses a customer or project whose orders created in a month would reach past the demand planned beyond it", () => {
+    // The exporter delivers on Mondays (a gap of 5) 15 weekdays ahead: 20 of 25. Its project holds 10 days: 25 of 25.
+    expect(messagesAfter((config) => (customerOf(config, "00000004").leadWorkingDays = 21))).toEqual([
+      "Customer 00000004's lead time and delivery gap reaches 26 weekdays past the month; the demand runs 25.",
+      "Project 2's lead time and days reaches 31 weekdays past the month; the demand runs 25.",
+    ]);
+    expect(messagesAfter((config) => (config.demand.projects[1].days = 11))).toEqual(["Project 2's lead time and days reaches 26 weekdays past the month; the demand runs 25."]);
+    // Tuesday and Thursday: the longest gap is Thursday to Tuesday, 3 weekdays.
+    expect(messagesAfter((config) => (customerOf(config, "00000001").leadWorkingDays = 23))).toEqual([
+      "Customer 00000001's lead time and delivery gap reaches 26 weekdays past the month; the demand runs 25.",
+    ]);
+    expect(messagesAfter((config) => (customerOf(config, "00000001").leadWorkingDays = 22))).toEqual([]);
+  });
+
   it("refuses a waste order on a pair that isn't made or a sheet its priority-1 BOM doesn't use", () => {
     expect(
       messagesAfter((config) => {
@@ -304,6 +318,9 @@ describe("testTenantConfigSchema's cross-checks", () => {
     expect(messagesAfter((config) => (config.demand.growthPerYear = "4 %"))).toEqual(["Use a decimal string of at least 0 with at most 12 digits before the point and 6 after it."]);
     expect(messagesAfter((config) => (config.catalogue.production[0].lotMultiple = "0"))).toEqual(["Use a decimal string greater than 0."]);
     expect(messagesAfter((config) => (config.catalogue.production[0].lotMultiple = "ten"))).toEqual(["Use a decimal string greater than 0."]);
-    expect(messagesAfter((config) => (trendOf(config, "00000001").quarterlyGrowth = "minus 1 %"))).toEqual(["Use a decimal string such as 0.1 or -0.015."]);
+    expect(messagesAfter((config) => (trendOf(config, "00000001").quarterlyGrowth = "minus 1 %"))).toEqual(["Use a decimal string above -1, such as 0.1 or -0.015."]);
+    // At -1 or below a trending share would be nothing or not a number.
+    expect(messagesAfter((config) => (trendOf(config, "00000001").quarterlyGrowth = "-1"))).toEqual(["Use a decimal string above -1, such as 0.1 or -0.015."]);
+    expect(messagesAfter((config) => (trendOf(config, "00000001").quarterlyGrowth = "-1.5"))).toEqual(["Use a decimal string above -1, such as 0.1 or -0.015."]);
   });
 });

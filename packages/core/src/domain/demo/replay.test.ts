@@ -24,9 +24,9 @@ function changed(change: (copy: TestTenantConfig) => void): TestTenantConfig {
 
 type Of<K extends TimelineEvent["kind"]> = Extract<TimelineEvent, { kind: K }>;
 
-/** The last Thursday before `today`: the planning run whose orders are the newest in its timeline. */
+/** The latest Thursday up to `today`: the planning run whose orders are the newest in its timeline, today's own on a Thursday (spec "Edge Cases"). */
 function lastPlanningRun(today: string): string {
-  let day = addDays(today, -1);
+  let day = today;
   while (isoWeekday(day) !== 4) day = addDays(day, -1);
   return day;
 }
@@ -66,9 +66,9 @@ function checkOpenDocuments(of: TestTenantConfig, today: string, timeline: reado
   const converting = timeline.flatMap((event) => (event.kind === "purchaseOrder" ? event.lines.filter(({ requisition }) => requisition) : []));
   expect(converting.map(({ requisition }) => requisition), today).toEqual(converted.map(({ key }) => key));
 
-  // The last planning run's orders exist: one purchase order per supplier and the week's production; the online shop's next order is in.
+  // The latest planning run's orders exist: one purchase order per supplier and the week's production; the online shop's next order is in.
   const run = lastPlanningRun(today);
-  const created = (kind: TimelineEvent["kind"]) => before.filter((event) => event.kind === kind && event.at.startsWith(run) && !("key" in event && event.key.includes(":top-up:"))).length;
+  const created = (kind: TimelineEvent["kind"]) => timeline.filter((event) => event.kind === kind && event.at.startsWith(run) && !("key" in event && event.key.includes(":top-up:"))).length;
   expect(created("purchaseOrder"), today).toBe(2);
   expect(created("productionOrder"), today).toBeGreaterThan(8);
   const next = addWeekdays(today, 1);
