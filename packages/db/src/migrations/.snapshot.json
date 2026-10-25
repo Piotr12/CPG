@@ -1652,6 +1652,17 @@
         },
         {
           "columnNames": [
+            "tenant_code",
+            "required_date"
+          ],
+          "composite": true,
+          "constraint": false,
+          "keyName": "customer_order_line_tenant_code_required_date_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
             "id"
           ],
           "composite": false,
@@ -1862,6 +1873,17 @@
           "keyName": "forecast_material_id_location_id_date_unique",
           "primary": false,
           "unique": true
+        },
+        {
+          "columnNames": [
+            "tenant_code",
+            "date"
+          ],
+          "composite": true,
+          "constraint": false,
+          "keyName": "forecast_tenant_code_date_index",
+          "primary": false,
+          "unique": false
         },
         {
           "columnNames": [
@@ -8060,6 +8082,18 @@
           "keyName": "stock_movement_tenant_code_posting_id_position_unique",
           "primary": false,
           "unique": true
+        },
+        {
+          "columnNames": [
+            "tenant_code",
+            "type",
+            "business_date"
+          ],
+          "composite": true,
+          "constraint": false,
+          "keyName": "stock_movement_tenant_code_type_business_date_index",
+          "primary": false,
+          "unique": false
         }
       ],
       "checks": [

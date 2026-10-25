@@ -32,6 +32,8 @@ export const Forecast = defineEntity({
     version: p.integer().version(),
   },
   uniques: [{ properties: ["material", "location", "date"] }],
+  /** Serves the demand review's window read by date (#240). */
+  indexes: [{ properties: ["tenant", "date"] }],
 });
 
 export type Forecast = InferEntity<typeof Forecast>;
