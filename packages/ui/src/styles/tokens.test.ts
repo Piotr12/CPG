@@ -51,7 +51,7 @@ function oklchTokens(css: string, selector: string): Map<string, number> {
 
 const css = readFileSync(path.join(import.meta.dirname, "globals.css"), "utf8");
 const light = oklchTokens(css, ":root");
-// `.dark` overrides `:root`; a token it doesn't repeat (the chart greys) keeps its light value.
+// `.dark` overrides `:root`; a token it doesn't repeat keeps its light value.
 const dark = new Map([...light, ...oklchTokens(css, ".dark")]);
 const themes = { light, dark };
 
@@ -77,7 +77,14 @@ const PAIRS: [string, string, number][] = [
   // The invalid control border (`aria-invalid:border-danger`): a boundary, so the non-text floor applies.
   ...["background", "card", "muted"].map((surface): [string, string, number] => ["danger", surface, NON_TEXT]),
   ["tenant-prod-edge", "background", NON_TEXT],
+  // Chart series (demand review, #240): a column is a graphical object, so the non-text floor applies.
+  ...["chart-1", "chart-2"].flatMap((series) => ["background", "card"].map((surface): [string, string, number] => [series, surface, NON_TEXT])),
 ];
+/** Pairs one theme alone must meet. The light `--chart-3` (2.82:1) is exempt: it is always hatched. */
+const THEME_PAIRS: Record<keyof typeof themes, [string, string, number][]> = {
+  light: [],
+  dark: ["background", "card"].map((surface): [string, string, number] => ["chart-3", surface, NON_TEXT]),
+};
 
 describe("OKLCH → WCAG maths", () => {
   it("maps the OKLCH white and black to luminance 1 and 0, 21:1 apart", () => {
@@ -121,7 +128,7 @@ describe("globals.css meets the accessibility floor", () => {
   });
 
   for (const [theme, tokens] of Object.entries(themes)) {
-    it.each(PAIRS)(`${theme}: %s on %s ≥ %s:1`, (foreground, background, minimum) => {
+    it.each([...PAIRS, ...THEME_PAIRS[theme as keyof typeof themes]])(`${theme}: %s on %s ≥ %s:1`, (foreground, background, minimum) => {
       const value = (name: string) => tokens.get(name);
       expect(value(foreground), `--${foreground} in ${theme}`).toBeTypeOf("number");
       expect(value(background), `--${background} in ${theme}`).toBeTypeOf("number");

@@ -1,6 +1,7 @@
 /*
  * Tailwind entry point + CPG design tokens (design system v1). Imported once by the app's globals.css.
  * Colour means state: neutrals + one ink action colour; hue only for the tenant, success, warning and danger.
+ * Chart hues are series identity inside a chart, never text, never anything outside packages/ui/src/backend/charts/.
  */
 @import "tailwindcss";
 @import "tw-animate-css";
@@ -48,8 +49,6 @@
     --color-chart-1: var(--chart-1);
     --color-chart-2: var(--chart-2);
     --color-chart-3: var(--chart-3);
-    --color-chart-4: var(--chart-4);
-    --color-chart-5: var(--chart-5);
 
     /* Tones: text-{tone}, bg-{tone}-surface, border-{tone}-edge. The neutral text tone is
        `neutral-tone` because Tailwind owns the `neutral-*` palette names. */
@@ -138,11 +137,10 @@
     --tenant-prod-tag: oklch(0.205 0 0);
     --tenant-prod-tag-foreground: oklch(0.985 0 0);
 
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
+    /* Chart series (demand review, #240): CVD-validated categorical hues. --chart-3 is always hatched. */
+    --chart-1: oklch(0.575 0.163 255.5);
+    --chart-2: oklch(0.671 0.175 40.6);
+    --chart-3: oklch(0.669 0.141 162.1);
 
     --sidebar: oklch(0.985 0 0);
     --sidebar-foreground: oklch(0.145 0 0);
@@ -201,6 +199,10 @@
     --tenant-prod-edge: oklch(0.637 0.237 25.33);
     --tenant-prod-tag: oklch(0.922 0 0);
     --tenant-prod-tag-foreground: oklch(0.205 0 0);
+
+    --chart-1: oklch(0.622 0.161 255.1);
+    --chart-2: oklch(0.622 0.173 40.1);
+    --chart-3: oklch(0.621 0.128 163.1);
 
     --sidebar: oklch(0.205 0 0);
     --sidebar-foreground: oklch(0.985 0 0);

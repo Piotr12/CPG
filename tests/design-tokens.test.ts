@@ -30,6 +30,8 @@ const START = "(?<=^|[\\s\"'`{(:!])";
 const END = "(?=$|[\\s\"'`})!,;])";
 
 const UI_COMPONENTS = "packages/ui/src/components/";
+const UI_CHARTS = "packages/ui/src/backend/charts/";
+const CHART_TOKEN = "(?:color-)?chart-\\d+";
 const PUBLIC_PAGES = ["packages/app/src/app/page.tsx", "packages/app/src/app/help/", "packages/app/src/app/login/"];
 const APP_PAGE = /^packages\/app\/src\/app\/.*\/?page\.tsx$/;
 const EMOJI_FILES = /\.tsx$|^packages\/app\/src\/i18n\/messages\/[^/]+\.ts$/;
@@ -77,6 +79,16 @@ export const RULES: Rule[] = [
   { name: "blur or gradient", pattern: new RegExp(`${START}(?:backdrop-blur(?:-[\\w]+)?|bg-(?:gradient|linear|radial)-[^\\s"'\`]+)${END}`, "g") },
   { name: "emoji", pattern: /\p{Extended_Pictographic}(?:️|‍\p{Extended_Pictographic})*|️|‍/gu, files: (file) => EMOJI_FILES.test(file), inProse: true },
   { name: "page width", pattern: new RegExp(`${START}max-w-(?:2xl|xl|5xl)${END}`, "g"), files: (file) => APP_PAGE.test(file) },
+  {
+    // Chart hues are series identity inside a chart (demand review, #240): never text, never outside the charts folder.
+    name: "chart colour",
+    pattern: new RegExp(
+      `${START}(?:bg|text|fill|stroke|border)(?:-[trblxyse])?-(?:chart-\\d+|\\(--${CHART_TOKEN}\\))(?:/[\\w.\\[\\]]+)?${END}|var\\(--${CHART_TOKEN}\\)`,
+      "g",
+    ),
+    allows: (match, file) => file.startsWith(UI_CHARTS) && !match.startsWith("text-"),
+    inProse: true,
+  },
 ];
 
 /** The spec's Exceptions table. An entry suppresses exactly its string, in exactly its file. */
@@ -203,6 +215,12 @@ describe("design-token scanner", () => {
     ["gradient", `"bg-linear-to-r"`, "bg-linear-to-r"],
     ["emoji", `<span>🦣</span>`, "🦣"],
     ["emoji with a variation selector", `<span>❤️</span>`, "❤️"],
+    ["chart fill outside the charts folder", `<rect className="fill-chart-1" />`, "fill-chart-1"],
+    ["chart background with an alpha suffix", `"bg-chart-2/40"`, "bg-chart-2/40"],
+    ["chart border on one side", `"border-l-chart-3"`, "border-l-chart-3"],
+    ["chart variable shorthand", `"stroke-(--chart-3)"`, "stroke-(--chart-3)"],
+    ["chart variable", `style={{ background: "var(--chart-1)" }}`, "var(--chart-1)"],
+    ["chart theme variable", `"[--bar:var(--color-chart-2)]"`, "var(--color-chart-2)"],
   ])("flags a %s", (_, source, expected) => {
     expect(matches(APP, source)).toContain(expected);
   });
@@ -233,6 +251,25 @@ describe("design-token scanner", () => {
     expect(matches("packages/app/src/app/page.tsx", `"max-w-2xl"`)).toEqual(["max-w-2xl"]);
     expect(matches(APP, `"max-w-5xl"`)).toEqual([]);
     expect(matches("packages/app/src/i18n/messages/en.ts", `title: "🦣 Sign in"`)).toEqual(["🦣"]);
+  });
+
+  it("allows chart colours only inside the charts folder, and chart text nowhere", () => {
+    const chart = "packages/ui/src/backend/charts/stacked-column-chart.tsx";
+    const series = `<rect className="fill-chart-1 stroke-chart-3 bg-chart-2 border-chart-1" /><path stroke="var(--chart-3)" />`;
+    expect(matches(chart, series)).toEqual([]);
+    expect(matches("packages/ui/src/backend/charts/nested/legend.tsx", `"bg-chart-3"`)).toEqual([]);
+    expect(matches("packages/ui/src/backend/tables/data-table.tsx", series)).toEqual([
+      "fill-chart-1",
+      "stroke-chart-3",
+      "bg-chart-2",
+      "border-chart-1",
+      "var(--chart-3)",
+    ]);
+    expect(matches(chart, `<text className="text-chart-1 fill-foreground">Shipped</text>`)).toEqual(["text-chart-1"]);
+    expect(matches(chart, `"hover:text-(--chart-2)"`)).toEqual(["text-(--chart-2)"]);
+    expect(matches(APP, `"text-chart-1"`)).toEqual(["text-chart-1"]);
+    expect(matches(APP, `"Use bg-chart-1, says the sentence."`)).toEqual(["bg-chart-1"]);
+    expect(matches(APP, `"bg-chart text-chart-foreground chart-1"`)).toEqual([]);
   });
 
   it("suppresses exactly an allow-listed string in exactly its file", () => {
