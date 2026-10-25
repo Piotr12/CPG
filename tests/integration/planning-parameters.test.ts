@@ -18,6 +18,8 @@ const button = (name: string) =>
 
 /** The open dialog's material picker (#217). */
 const MATERIAL = "[role=dialog] :has(> input[name=material]) > input[role=combobox]";
+/** The open dialog's location picker, by its label (#222). */
+const LOCATION = '[role=dialog][data-state=open] [role=combobox][aria-labelledby$="-location-label"]';
 
 /** A screen's rows as their cells' text, once its table is shown. */
 async function listRows(browser: Browser, path: string): Promise<string[][]> {
@@ -53,7 +55,7 @@ async function openAdd(admin: Browser, path: string, add: string) {
 async function addSet(admin: Browser, values: { material: string; location: string; procurement: string; days: string; min: string; multiple: string }) {
   await openAdd(admin, "/admin/prod/planning-parameters", "Add parameters");
   await chooseFromList(admin, MATERIAL, values.material, values.material);
-  await admin.select("[role=dialog] select[name=location]", values.location);
+  await chooseFromList(admin, LOCATION, values.location, values.location);
   await admin.select("[role=dialog] select[name=procurement]", values.procurement);
   await admin.fill("[role=dialog] input[name=leadTimeDays]", values.days);
   await admin.fill("[role=dialog] input[name=minimumQuantity]", values.min);
@@ -65,7 +67,7 @@ async function addSet(admin: Browser, values: { material: string; location: stri
 async function addTarget(admin: Browser, material: string, location: string, date: string, quantity: string) {
   await openAdd(admin, "/admin/prod/safety-stock", "Add target");
   await chooseFromList(admin, MATERIAL, material, material);
-  await admin.select("[role=dialog] select[name=location]", location);
+  await chooseFromList(admin, LOCATION, location, location);
   expect(await admin.fillDate("[role=dialog] input[name=effectiveFrom]", date)).toBe(date);
   await admin.fill("[role=dialog] input[name=quantity]", quantity);
   await admin.click("[role=dialog] button[type=submit]");
@@ -232,9 +234,11 @@ describe("planning parameters and safety stock (E03-S03)", () => {
     await admin.waitUntil(`!document.querySelector("[role=alertdialog]")`);
 
     await openAdd(admin, "/admin/prod/planning-parameters", "Add parameters");
-    const offered = await admin.evaluate<string[]>(`[...document.querySelectorAll("[role=dialog] select[name=location] option")].map((o) => o.value)`);
-    expect(offered).toContain(plant);
-    expect(offered).not.toContain(packer);
+    // The inactive location isn't offered: its ID matches nothing (#222). The active one is, and choosing it
+    // leaves nothing to refuse when the field loses focus, which would move Cancel under the click.
+    await admin.fill(LOCATION, packer);
+    await admin.waitUntil(`[...document.querySelectorAll("[role=dialog][data-state=open] [role=listbox]:not([hidden])")].some((list) => list.textContent === ${JSON.stringify(`No location matches “${packer}”.`)})`);
+    await chooseFromList(admin, LOCATION, plant, plant);
     await admin.clickRole("button", "Cancel");
     await admin.waitUntil(closed);
 

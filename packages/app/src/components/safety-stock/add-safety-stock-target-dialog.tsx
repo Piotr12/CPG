@@ -14,7 +14,7 @@ import {
   DialogTrigger,
 } from "@cpg/ui/components/dialog";
 import { addSafetyStockTarget } from "../../app/admin/[tenant]/safety-stock/actions";
-import { errorFormatter, TALL_DIALOG, type FormOption, type TenantContext } from "../forms/form-labels";
+import { errorFormatter, TALL_DIALOG, type TenantContext } from "../forms/form-labels";
 import { fieldErrorFormatter, type SafetyStockLabels } from "./labels";
 
 interface AddSafetyStockTargetDialogProps {
@@ -22,19 +22,19 @@ interface AddSafetyStockTargetDialogProps {
   labels: SafetyStockLabels;
   /** The active materials and locations a new target may pick (MAT-029, LFC-019). */
   materials: AutocompleteOption[];
-  locations: FormOption[];
-  /** The reader's language, for the material picker. */
+  locations: AutocompleteOption[];
+  /** The reader's language, for the material and location pickers. */
   locale: string;
 }
 
-/** The admin's Add target button and its form (DEM-015); the material is chosen with the material picker (#217). */
+/** The admin's Add target button and its form (DEM-015); the material and the location are chosen with autocompletes (#217, #222). */
 export function AddSafetyStockTargetDialog({ context, labels, materials, locations, locale }: AddSafetyStockTargetDialogProps) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
   const t = labels.form;
   const fields: CrudField[] = [
     { name: "material", label: t.material, type: "autocomplete", placeholder: labels.picker.placeholder, choices: materials, autocompleteLabels: labels.picker.labels },
-    { name: "location", label: t.location, type: "select", placeholder: t.choose, options: locations },
+    { name: "location", label: t.location, type: "autocomplete", placeholder: labels.locationPicker.placeholder, choices: locations, autocompleteLabels: labels.locationPicker.labels },
     { name: "effectiveFrom", label: t.effectiveFrom, type: "date", description: t.effectiveFromHint },
     { name: "quantity", label: t.quantity, description: t.quantityHint, autoComplete: "off" },
   ];

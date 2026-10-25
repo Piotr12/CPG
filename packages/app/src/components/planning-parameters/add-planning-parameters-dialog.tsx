@@ -14,7 +14,7 @@ import {
   DialogTrigger,
 } from "@cpg/ui/components/dialog";
 import { addPlanningParameters } from "../../app/admin/[tenant]/planning-parameters/actions";
-import { errorFormatter, TALL_DIALOG, type FormOption, type TenantContext } from "../forms/form-labels";
+import { errorFormatter, TALL_DIALOG, type TenantContext } from "../forms/form-labels";
 import { fieldErrorFormatter, type PlanningParametersLabels } from "./labels";
 import { addFields } from "./planning-parameter-fields";
 
@@ -23,7 +23,7 @@ interface AddPlanningParametersDialogProps {
   labels: PlanningParametersLabels;
   /** The active materials and locations a new set may pick (MAT-029, LFC-019). */
   materials: AutocompleteOption[];
-  locations: FormOption[];
+  locations: AutocompleteOption[];
   /** The reader's language, for the material picker. */
   locale: string;
 }

@@ -12,7 +12,8 @@ const open = (edit = false) => fireEvent.click(screen.getByRole("button", { name
 async function preview() {
   fireEvent.change(screen.getByRole("combobox", { name: en.productionOrders.output }), { target: { value: "cabinet" } });
   fireEvent.mouseDown(screen.getByRole("option", { name: /^00000005/ }));
-  fireEvent.change(screen.getByLabelText(en.productionOrders.location), { target: { value: "00000001" } });
+  fireEvent.change(screen.getByRole("combobox", { name: en.productionOrders.location }), { target: { value: "warehouse" } });
+  fireEvent.mouseDown(screen.getByRole("option", { name: /^00000001/ }));
   fireEvent.change(screen.getByLabelText(en.productionOrders.quantity), { target: { value: "2" } });
   fireEvent.change(screen.getByLabelText(en.productionOrders.unit), { target: { value: "case" } });
   fireEvent.change(screen.getByLabelText(en.productionOrders.finish), { target: { value: production.plannedFinish } });
@@ -97,6 +98,19 @@ it("offers only active Make outputs in an autocomplete that refuses free text (#
   expect(within(screen.getByRole("listbox")).getAllByRole("option").map((option) => option.textContent)).toEqual(["00000005—Cabineteach"]);
   fireEvent.change(output, { target: { value: "steel" } }); fireEvent.blur(output);
   expect(screen.getByText(en.lists.materialPicker.refused)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: en.productionOrders.preview }));
+  expect(mocks.preview).not.toHaveBeenCalled();
+});
+it("offers only active locations in an autocomplete named after its label that refuses free text (LFC-019, #222)", () => {
+  render(<ProductionDialog {...props} />); open();
+  const location = screen.getByRole("combobox", { name: en.productionOrders.location });
+  expect(location.getAttribute("placeholder")).toBe(en.lists.locationPicker.placeholder);
+  fireEvent.focus(location);
+  expect(within(screen.getByRole("listbox", { name: en.productionOrders.location })).getAllByRole("option").map((option) => option.textContent)).toEqual(["00000001—Warehouse"]);
+  fireEvent.change(location, { target: { value: "00000002" } });
+  expect(screen.getByRole("listbox", { name: en.productionOrders.location }).textContent).toBe("No location matches “00000002”.");
+  fireEvent.blur(location);
+  expect(screen.getByText(en.lists.locationPicker.refused)).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: en.productionOrders.preview }));
   expect(mocks.preview).not.toHaveBeenCalled();
 });
