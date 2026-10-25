@@ -123,6 +123,8 @@ Integration:
 
 ## Progress
 
+PR: #233
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Name the list, fix Enter
@@ -135,12 +137,27 @@ Integration:
 ### Phase 2: Entry pickers
 
 - [x] 2.1 record-picker helper and dictionary entries — cc6a460f, 22e7f265
-- [ ] 2.2 CrudForm dialogs (W1)
-- [ ] 2.3 Hand-built forms (W2)
-- [ ] 2.4 Integration helpers for entry pickers (W1, W2)
+- [x] 2.2 CrudForm dialogs (W1) — 77bc03e5, merged 81524dfd
+- [x] 2.3 Hand-built forms (W2) — 211dac85, merged 2a99600f
+- [x] 2.4 Integration helpers for entry pickers (W1, W2) — 4211fb0c, 68954ebb
 
 ### Phase 3: Filter pickers
 
 - [x] 3.1 FilterAutocomplete — cc6a460f
-- [ ] 3.2 Filter screens, Forecasts unknown value, Stock empty value (W3)
-- [ ] 3.3 Standards, Help and filter integration tests (lead, W3)
+- [x] 3.2 Filter screens, Forecasts unknown value, Stock empty value (W3) — 561cb03f, merged db554dc3
+- [x] 3.3 Standards, Help and filter integration tests (lead, W3) — 64b3922b, 0f26f1d2, c807d3a3
+
+## Verification log
+
+- 2026-10-25, after merging W1–W3 (db554dc3) and the dictionary cleanup:
+  - `npm run lint`: exit 0, with the one existing warning in `bom.service.ts`;
+  - `npm run typecheck`: exit 0;
+  - `npm run test:coverage`: exit 0, 555 files and 4,112 tests, 100 % statements, branches, functions and lines;
+  - `npm run build`: exit 0.
+- Integration on a local standalone build of that tip (port 3320, fresh `DATA_DIR`; Docker unavailable): exit 0, 11 files and 81 tests passed. The files: planning-parameters, production-orders, customer-orders, purchasing, transfers, forecasts (including the no-JS check), stock-report, variance-report, stock, boms and production-completions.
+- Browser QA on the same server, at 1440×900 and 390×844, in `.ai/qa/pr-233/`:
+  - the Forecasts location filter is named by its label; "plant", Enter and Enter filters to `location=00000001`;
+  - the customer-order customer picker;
+  - the stock report material filter;
+  - 390 px, with no horizontal overflow (`scrollWidth` 390 = `clientWidth` 390).
+- Workers: W1 $3.16, W2 $2.91, W3 $5.32. Each worker ran its own integration files green before merging; their reports are in the cezar tree.
