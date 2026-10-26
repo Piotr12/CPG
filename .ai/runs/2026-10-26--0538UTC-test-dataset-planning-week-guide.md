@@ -21,10 +21,9 @@ The owner asked for a documentation piece on the Q10 decision (weekly production
 
 - 05:38 Facts checked against the generator: `todaysDocuments` (timeline.ts) part-receives the first purchase order with `createdOn < today && plannedDate >= today`; `supply-plan.ts` plans receipts on the week's Monday (supplier 00000001) and Tuesday (00000002), created at the previous Thursday's run. So a partial receipt exists Fri, Sat, Sun, Mon, Tue; none on Wed (all received) or Thu (today's orders are created today).
 
-- 06:40 Chose a vertical flowchart over a horizontal one: five boxes in a 3xl column wrap badly side by side, and a top-down flow reads the same at 320 px. The week strip is a picture (`aria-hidden`); the day list under it carries every fact in words.
-- 06:43 Guard `tests/planning-week-guide.test.ts` generates two weeks across a month boundary and compares each day's partial receipt with `PLANNING_WEEK`. Flipping Wednesday to `true` fails it on 2026-10-21 and 2026-10-28, so it bites.
-- 06:47 Docker unavailable: integration files run against a fresh standalone copy (lesson of 2026-10-23).
-
+- 05:40 Chose a vertical flowchart over a horizontal one: five boxes in a 3xl column wrap badly side by side, and a top-down flow reads the same at 320 px. The week strip is a picture (`aria-hidden`); the day list under it carries every fact in words.
+- 05:43 Guard `tests/planning-week-guide.test.ts` generates two weeks across a month boundary and compares each day's partial receipt with `PLANNING_WEEK`. Flipping Wednesday to `true` fails it on 2026-10-21 and 2026-10-28, so it bites.
+- 05:47 Docker unavailable: integration files run against a fresh standalone copy (lesson of 2026-10-23).
 - 06:11 CI: lint, typecheck, build and the four integration shards passed; unit-tests was cancelled at its 10-minute `timeout-minutes` twice (first run and a re-run), every finished test passing. `main`'s last green run took 517 s (test-reset.service 377 s, seed-demo-data 173 s); here seed-demo-data alone took 214 s and the guard test 1.6 s. The limit had no headroom, so it is raised to 20 min in its own commit, pinned in `tests/ci-workflow.test.ts`, and the lesson on red runs extended. It unblocks #263 and the deploy too.
 
 ## Changes
