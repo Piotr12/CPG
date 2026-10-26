@@ -16,7 +16,7 @@ import type { EntityManager } from "@mikro-orm/sqlite";
 const GATE = Symbol.for("@cpg/db/write-gate");
 
 /** The longest a transaction waits for the gate: kamal-proxy's response timeout, past which its request answers 504 anyway. */
-export const WRITE_GATE_WAIT_MS = 120_000;
+export const WRITE_GATE_WAIT_MS = 600_000;
 
 interface Gate {
   /** The holder's connection: the ORM copy whose transactions pass without waiting. */
