@@ -9,9 +9,9 @@ import { DemandReviewService } from "./demand-review.service";
 // The demand review's reads on ten times the realistic Test dataset as #240 measured it (1,053
 // goods-issue lines, 988 order lines, 120 monthly forecasts): each window query must start from its
 // #240 index (lesson 2026-10-23: EXPLAIN the query MikroORM sends), and a whole read must stay well
-// inside its budget. The single-site realistic dataset (#237) is daily and larger: 8,277 goods-issue
-// lines, 7,817 order lines and 3,132 forecasts, whose month read takes 84 ms at 1×; re-baselining
-// the budget at ten times that is #262.
+// inside its budget. These volumes are the budget's contract (#262, recorded in the demand review
+// spec's implementation notes) and don't track the realistic dataset. #237's single-site daily
+// dataset is larger: its month read takes 84 ms at 1× and 1,247 ms at 10×, almost all of it hydration.
 
 const ISSUES = 10_530;
 const ORDER_LINES = 9_880;
@@ -57,7 +57,7 @@ const SEED = [
     select 'f' || x, 'prod', 'm' || (1 + (x - 1) % 10), 'l' || (1 + ((x - 1) / 10) % 2), date('2024-01-01', '+' || ((x - 1) / 20) || ' months'), '100.000000' from s`,
 ];
 
-describe("the demand review's reads at ten times the realistic dataset", () => {
+describe("the demand review's reads at ten times #240's realistic dataset", () => {
   const queries: { sql: string; params: readonly unknown[] }[] = [];
   let orm: Orm;
   const read = (query: Record<string, unknown>) => {
@@ -103,7 +103,7 @@ describe("the demand review's reads at ten times the realistic dataset", () => {
       fastest = Math.min(fastest, performance.now() - started);
       expect(view.rows).toHaveLength(10);
     }
-    process.stdout.write(`demand review, ${bucket} buckets, 10 products, 10x realistic: ${fastest.toFixed(0)} ms\n`);
+    process.stdout.write(`demand review, ${bucket} buckets, 10 products, 10x #240's realistic: ${fastest.toFixed(0)} ms\n`);
     expect(fastest).toBeLessThan(CI_BOUND_MS);
   }, TEST_TIMEOUT_MS);
 });

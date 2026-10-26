@@ -314,6 +314,8 @@ Phase 1 shipped on PR #244 (`.ai/pipeline/runs/2026-10-25--1026UTC-demand-review
 
 Forecasts are read from the later of today's month and the window's first month: with a positive offset, earlier months' residuals would land before the window.
 
+**The budget's volumes are absolute (#262).** "10×" above means ten times the realistic dataset *as #240 measured it*. That comes to 10,530 goods-issue lines, 9,880 order lines and 1,200 forecasts, and the budget (300 ms per read) holds at those volumes. It doesn't follow later changes to the realistic dataset. #237's single-site daily dataset is larger: 8,277 goods-issue lines, 7,817 order lines and 3,132 daily forecasts. Its month read takes 84 ms at 1×. At ten times its volumes, seeded in the benchmark's shape (10 products, 2 locations), the reads took 410 ms (day), 740 ms (week) and 1,247 ms (month), the fastest of three in an isolated run. About 90% of the month read is MikroORM hydrating some 110,000 partial entities; the same SQL takes about 100 ms. Meeting 300 ms at that size would take a tenant-scoped read in `@cpg/db` that returns plain or pre-aggregated rows (`core` may not use the QueryBuilder or raw SQL). That is a new persistence surface. Build it only when real volumes approach the benchmark's, and restate the budget then.
+
 Phase 2 shipped on its own PR, stacked on #244. It differs from the text above in these places:
 
 - **The Unit control** is a `SegmentedControl` like the time bucket, with the disabled units shown as disabled segments. The spec doesn't name the control.
