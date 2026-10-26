@@ -46,6 +46,7 @@ export const en = {
       confirmation: "Permanently delete Test generation {generation}, including all its business records and audit, and reseed it with the {dataset} demonstration dataset. Business IDs restart from 00000001. Prod, accounts, sessions, tokens, preferences and Global audit are kept. This cannot be undone.",
       datasetNames: { tiny: "tiny", realistic: "realistic" },
       slow: "Writing the realistic dataset can take a minute or two, and the app answers nobody else until it is done.",
+      guide: "How the datasets plan their week",
       readOnly: "Test will remain read-only.",
       writable: "Test will remain writable.",
       confirm: "Reset Test",
@@ -2120,6 +2121,57 @@ export const en = {
     noMatch: (query: string) => `No help topics match “${query}”.`,
     showAll: "Show all topics",
     screen: (route: string) => `Screen: ${route}`,
+    /** `/help/test-dataset`: the generated Test datasets' weekly cycle (decision Q10 of #237), drawn. Days run Monday to Sunday. */
+    planningWeek: {
+      title: "The Test dataset's planning week",
+      intro:
+        "Test's generated datasets, tiny and realistic, plan one plant the way a weekly MRP run would. Customers order every weekday, but production and purchasing are planned once a week, at Thursday's planning run. That choice decides which documents you find open on a given day.",
+      cycleHeading: "One planning cycle",
+      cycleCaption: "Each Thursday plans the next week, and that week's production stocks the week after it.",
+      cycle: [
+        {
+          when: "Thursday, week 1",
+          title: "Planning run",
+          text: "Creates week 2's production orders, up to next week's need plus safety stock, and one purchase order per supplier.",
+        },
+        { when: "Monday, week 2", title: "Steel arrives", text: "Steel Service Centre's order is received in full." },
+        { when: "Tuesday, week 2", title: "Supplies arrive", text: "Industrial Supplies Wholesale's order is received in full." },
+        {
+          when: "Monday to Thursday, week 2",
+          title: "Production",
+          text: "Intermediates are completed on Monday and Tuesday, after the receipts, and finished products on Wednesday and Thursday.",
+        },
+        { when: "Every weekday, week 3", title: "Shipments", text: "Customer orders ship from the stock week 2 built." },
+      ],
+      repeat: "On Thursday of week 2 the next run plans week 3: the cycle repeats every week.",
+      todayHeading: "What “Today” holds, day by day",
+      todayIntro:
+        "A reset writes the history up to yesterday and then, on today, one partial document of each kind, as a user would leave them. A partly received purchase order needs an order created before today and not yet due, so it follows the planning week.",
+      stripCaption: "Monday to Sunday: Thursday's run, the receipts it plans, and whether a reset on that day leaves a partly received purchase order.",
+      legend: {
+        planningRun: "Planning run",
+        receipt: "Purchase order received",
+        partial: "Partly received purchase order",
+        none: "None",
+      },
+      days: [
+        { short: "Mon", name: "Monday", note: "Steel's order from Thursday is due today: its first line is received." },
+        { short: "Tue", name: "Tuesday", note: "The supplies order from Thursday is due today: its first line is received." },
+        { short: "Wed", name: "Wednesday", note: "Both of Thursday's orders were received on Monday and Tuesday." },
+        { short: "Thu", name: "Thursday", note: "Today's run creates next week's orders, and nothing is received on the day an order is created." },
+        { short: "Fri", name: "Friday", note: "Thursday's orders wait for Monday: the first line of steel's order is received." },
+        { short: "Sat", name: "Saturday", note: "As on Friday: the first line of steel's order is received." },
+        { short: "Sun", name: "Sunday", note: "As on Friday: the first line of steel's order is received." },
+      ],
+      everyDay: "Whatever the day: the overdue top-up purchase order and the open purchase requisitions are there, and a partly completed production order whenever one is in progress.",
+      whyHeading: "Why weekly, at Thursday's run",
+      why: [
+        "Weekly planning keeps the documents few enough to read: one production order per made item and one purchase order per supplier each week. Daily production orders would make about three times as many.",
+        "The price is the gap on Wednesday and Thursday. Ordering two weeks ahead would keep a partly received purchase order open every day, but it changes the cadence, so the datasets keep the weekly one.",
+        "To see a partial receipt, reset Test on a day from Friday to Tuesday: a reset generates the dataset for the day it runs.",
+      ],
+      back: "All help topics",
+    },
   },
   preferences: {
     language: "Language",

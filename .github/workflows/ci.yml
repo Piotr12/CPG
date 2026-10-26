@@ -40,9 +40,11 @@ jobs:
       - run: npm run typecheck
 
   # Fails below 100% line/branch/function/statement coverage (vitest.config.mts).
+  # The suite takes 8.6 min on a quick runner and over 10 on a slow one (the dataset seed and reset tests),
+  # so the limit keeps about twice its length (tests/ci-workflow.test.ts).
   unit-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5

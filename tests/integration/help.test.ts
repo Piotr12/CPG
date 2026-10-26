@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import { openBrowser, type Browser } from "./browser";
+import { clickHydrated, openBrowser, type Browser } from "./browser";
 import { choosePreference, closeAccountMenu, restoreDefaultPreferences, signInAsAdmin } from "./sign-in";
 
 const baseUrl = inject("baseUrl");
@@ -66,11 +66,29 @@ describe("help", () => {
     expect(await browser.text("section#import")).toContain("wykonaj próbę");
   });
 
+  // The admin is signed in and Polish by now (the test above).
+  it("opens the datasets' planning week from beside Reset Test, and draws a partial receipt from Friday to Tuesday (Q10 of #237)", async () => {
+    await browser.open(`${baseUrl}/admin`);
+    await clickHydrated(browser, "[data-test-reset] a[href='/help/test-dataset']");
+    await browser.waitUntil(`location.pathname === "/help/test-dataset" && !!document.querySelector("[data-planning-strip]")`);
+
+    expect(await browser.text("main h1")).toBe("Tydzień planowania w zbiorze Test");
+    expect(
+      await browser.evaluate<[string, string][]>(
+        `[...document.querySelector("[data-planning-strip]").children].map((day) => [day.textContent, day.getAttribute("data-partial")])`,
+      ),
+    ).toEqual([["Pn", "true"], ["Wt", "true"], ["Śr", "false"], ["Cz", "false"], ["Pt", "true"], ["So", "true"], ["Nd", "true"]]);
+    expect(await browser.evaluate<number>(`document.querySelectorAll("[data-planning-cycle] > li").length`)).toBe(5);
+  });
+
   // Last, so its narrow viewport and scroll position can't move another test's clicks; in Polish by now.
-  it("fits a 320 px screen: long API paths in topics wrap instead of scrolling the page sideways", async () => {
+  it.each([
+    ["/help", "section#stock-report"],
+    ["/help/test-dataset", "[data-planning-strip]"],
+  ])("fits a 320 px screen: %s wraps instead of scrolling the page sideways", async (path, shown) => {
     await browser.setViewport(320, 800);
-    await browser.open(`${baseUrl}/help`);
-    await browser.waitFor("section#stock-report");
+    await browser.open(`${baseUrl}${path}`);
+    await browser.waitFor(shown);
 
     expect(await browser.evaluate<number>("document.documentElement.scrollWidth")).toBe(320);
   });

@@ -8,6 +8,7 @@ export const HELP_TOPIC_IDS = [
   "managing-users",
   "api-tokens",
   "test-and-prod",
+  "test-dataset-week",
   "global-audit",
   "tenant-audit",
   "materials",
@@ -54,6 +55,7 @@ export const HELP_TOPIC_ROUTES: Record<HelpTopicId, string> = {
   "managing-users": "/admin/users",
   "api-tokens": "/admin/tokens",
   "test-and-prod": "/admin/[tenant]",
+  "test-dataset-week": "/help/test-dataset",
   "global-audit": "/admin/audit",
   "tenant-audit": "/admin/[tenant]/audit",
   materials: "/admin/[tenant]/materials",
@@ -126,7 +128,7 @@ const en: Record<HelpTopicId, HelpText> = {
       "The administrator opens this page from Administration → Tenants in the sidebar, next to Users, and also sees the Database card here. The card shows where CPG keeps its data, how many migrations are applied, whether any are still pending, and how many settings are stored.",
       "A pending migration normally means CPG is still starting. If it stays, tell whoever runs CPG.",
       "The administrator's Read-only card makes Test or Prod read-only, and writable again, after a confirmation. Each tenant has its own flag, and every change is kept in the Global audit. A read-only tenant shows Read-only on the chooser, a lock on its side of the TEST | PROD switch, and a banner on its pages.",
-      "Reset Test, on this page for the administrator, permanently replaces Test business data and its audit with a fresh demonstration dataset, generated for today, and a new generation. Pick the dataset first: Tiny, two months of history, is written in a moment and is what a new installation starts with; Realistic, two years of history, can take a minute or two, and CPG answers nobody else until it is done. It restores the previous read-only flag. Prod, users, sessions, tokens, preferences and Global audit survive. Old Test forms must reload. The API is POST /api/tenants/test/reset with an empty object for tiny or { \"dataset\": \"realistic\" }, an admin bearer token, Idempotency-Key and the current Dataset-Generation. After a lost response, fetch the new generation and retry the same key, never a new one.",
+      "Reset Test, on this page for the administrator, permanently replaces Test business data and its audit with a fresh demonstration dataset, generated for today, and a new generation. Pick the dataset first: Tiny, two months of history, is written in a moment and is what a new installation starts with; Realistic, two years of history, can take a minute or two, and CPG answers nobody else until it is done. It restores the previous read-only flag. Prod, users, sessions, tokens, preferences and Global audit survive. Old Test forms must reload. The API is POST /api/tenants/test/reset with an empty object for tiny or { \"dataset\": \"realistic\" }, an admin bearer token, Idempotency-Key and the current Dataset-Generation. After a lost response, fetch the new generation and retry the same key, never a new one. How the datasets plan their week, beside Reset Test, shows which documents a reset leaves open on each weekday.",
       "Open Test or Open Prod takes you to that tenant's business data.",
     ],
   },
@@ -157,6 +159,12 @@ const en: Record<HelpTopicId, HelpText> = {
       "Revoke ends a token at once. A password reset or a deactivation ends all of an account's tokens. Tokens can be listed and revoked through the API too, but only created here.",
       "Every API request that changes something needs an Idempotency-Key header: a fresh value, such as a UUID, for each change. If the answer is lost, send the same request with the same key again within 24 hours: CPG returns the first answer and changes nothing twice. A key reused for a different request is refused.",
       "To change a record (a user, a material or one of its unit conversions, a location, a customer or a supplier), send the version you read with it, from GET /api/users or the tenant's GET routes. If someone changed the record since, CPG refuses with a version conflict and keeps their change: read it again and retry. For writes to the Test tenant, also send the Dataset-Generation header with the generation from GET /api/tenants/test.",
+    ],
+  },
+  "test-dataset-week": {
+    title: "The Test dataset's planning week",
+    body: [
+      "Test's generated datasets plan one plant once a week. Thursday's planning run creates next week's production orders and one purchase order per supplier; steel arrives on Monday and the other supplies on Tuesday; intermediates are made on Monday and Tuesday and finished products on Wednesday and Thursday, for the following week's shipments. So a reset leaves a partly received purchase order from Friday to Tuesday, and none on Wednesday or Thursday. This page draws the cycle and the week, and explains why the datasets plan weekly. It opens from How the datasets plan their week, beside Reset Test on the Tenants page.",
     ],
   },
   "global-audit": {
@@ -438,7 +446,7 @@ const pl: Record<HelpTopicId, HelpText> = {
   "admin-home": {
     title: "Środowiska",
     body: [
-      "Reset środowiska Test jest dostępny tu tylko dla administratora. Trwale zastępuje dane biznesowe i audyt środowiska Test świeżym zbiorem danych demonstracyjnych, wygenerowanym na dziś, w nowej generacji. Najpierw wybierz zbiór: mały, z dwoma miesiącami historii, zapisuje się w chwilę i od niego zaczyna nowa instalacja; realistyczny, z dwoma latami historii, zapisuje się minutę lub dwie, a w tym czasie CPG nie odpowiada nikomu innemu. Przywraca poprzednią flagę tylko do odczytu. Prod, użytkownicy, sesje, tokeny, preferencje i audyt globalny pozostają bez zmian. Stare formularze Test trzeba odświeżyć. API: POST /api/tenants/test/reset z pustym obiektem dla małego zbioru lub { \"dataset\": \"realistic\" }, tokenem administratora, Idempotency-Key i aktualnym Dataset-Generation. Po utracie odpowiedzi pobierz nową generację i ponów ten sam klucz, nigdy nowy.",
+      "Reset środowiska Test jest dostępny tu tylko dla administratora. Trwale zastępuje dane biznesowe i audyt środowiska Test świeżym zbiorem danych demonstracyjnych, wygenerowanym na dziś, w nowej generacji. Najpierw wybierz zbiór: mały, z dwoma miesiącami historii, zapisuje się w chwilę i od niego zaczyna nowa instalacja; realistyczny, z dwoma latami historii, zapisuje się minutę lub dwie, a w tym czasie CPG nie odpowiada nikomu innemu. Przywraca poprzednią flagę tylko do odczytu. Prod, użytkownicy, sesje, tokeny, preferencje i audyt globalny pozostają bez zmian. Stare formularze Test trzeba odświeżyć. API: POST /api/tenants/test/reset z pustym obiektem dla małego zbioru lub { \"dataset\": \"realistic\" }, tokenem administratora, Idempotency-Key i aktualnym Dataset-Generation. Po utracie odpowiedzi pobierz nową generację i ponów ten sam klucz, nigdy nowy. Odnośnik Jak zbiory planują tydzień, obok Resetuj Test, pokazuje, które dokumenty reset zostawia otwarte w każdym dniu tygodnia.",
       "Środowiska to strona, na którą trafia każde konto po zalogowaniu: wybierz tu środowisko Test lub Prod. Język i motyw, tokeny API oraz przycisk Wyloguj są na karcie konta na dole panelu bocznego. Nie ma tu zmiany hasła: hasła ustawia tylko administrator.",
       "Administrator otwiera tę stronę pozycją Administracja → Środowiska w panelu bocznym, obok Użytkowników, i widzi tu też kartę Baza danych. Karta pokazuje, gdzie CPG przechowuje dane, ile migracji zastosowano, czy jakieś jeszcze oczekują i ile ustawień zapisano.",
       "Oczekująca migracja zwykle oznacza, że CPG jeszcze się uruchamia. Jeśli nie znika, powiedz o tym osobie, która utrzymuje CPG.",
@@ -473,6 +481,12 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Unieważnij natychmiast kończy działanie tokenu. Reset hasła lub dezaktywacja kończy działanie wszystkich tokenów konta. Tokeny można też wyświetlać i unieważniać przez API, ale tworzyć tylko tutaj.",
       "Każde żądanie do API, które coś zmienia, wymaga nagłówka Idempotency-Key: nowej wartości, na przykład UUID, dla każdej zmiany. Jeśli odpowiedź zginie, wyślij to samo żądanie z tym samym kluczem ponownie w ciągu 24 godzin: CPG zwróci pierwszą odpowiedź i niczego nie zmieni dwa razy. Klucz użyty ponownie do innego żądania zostanie odrzucony.",
       "Aby zmienić rekord (użytkownika, materiał lub jeden z jego przeliczników jednostek, lokalizację, klienta lub dostawcę), wyślij wersję, którą odczytałeś z GET /api/users lub z tras GET środowiska. Jeśli ktoś w międzyczasie go zmienił, CPG odmówi z konfliktem wersji i zachowa tamtą zmianę: odczytaj go ponownie i spróbuj jeszcze raz. Przy zapisach w środowisku Test wyślij też nagłówek Dataset-Generation z generacją z GET /api/tenants/test.",
+    ],
+  },
+  "test-dataset-week": {
+    title: "Tydzień planowania w zbiorze Test",
+    body: [
+      "Generowane zbiory danych środowiska Test planują jeden zakład raz w tygodniu. Czwartkowy przebieg planowania tworzy zlecenia produkcyjne na następny tydzień i po jednym zamówieniu zakupu dla każdego dostawcy; stal przyjeżdża w poniedziałek, a pozostałe materiały we wtorek; półprodukty powstają w poniedziałek i wtorek, a wyroby gotowe w środę i czwartek, na wysyłki z kolejnego tygodnia. Dlatego reset zostawia częściowo przyjęte zamówienie zakupu od piątku do wtorku, a w środę i czwartek żadnego. Ta strona rysuje cykl i tydzień oraz wyjaśnia, dlaczego zbiory planują co tydzień. Otwiera się odnośnikiem Jak zbiory planują tydzień, obok Resetuj Test na stronie Środowiska.",
     ],
   },
   "global-audit": {

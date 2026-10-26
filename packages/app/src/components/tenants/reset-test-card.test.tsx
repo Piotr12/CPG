@@ -66,6 +66,18 @@ describe("ResetTestCard", () => {
     expect(select.value).toBe("tiny");
   });
 
+  it.each([
+    ["en", en, "How the datasets plan their week"],
+    ["pl", pl, "Jak zbiory planują tydzień"],
+  ] as const)("links the datasets' planning week beside the Reset Test button in %s (Q10 of #237)", (_, messages, name) => {
+    render(<ResetTestCard {...props} labels={messages.admin.reset} errors={messages.errors} />);
+
+    const link = screen.getByRole("link", { name });
+    expect(link.getAttribute("href")).toBe("/help/test-dataset");
+    // In the same row as the dataset choice and the button that opens the reset.
+    expect(link.parentElement).toBe(screen.getByRole("button", { name: messages.admin.reset.open }).parentElement);
+  });
+
   it("reports a writable result in Polish and blocks repeated submission while pending", async () => {
     let finish!: (result: unknown) => void;
     mocks.reset.mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
