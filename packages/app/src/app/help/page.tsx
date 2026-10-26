@@ -52,7 +52,16 @@ async function HelpContent({ searchParams }: Pick<PageProps<"/help">, "searchPar
       {topics.map((topic) => (
         <section key={topic.id} id={topic.id} className="flex max-w-prose min-w-0 flex-col gap-2 border-t border-border pt-4 wrap-break-word">
           <h2 className="text-lg font-semibold">{topic.title}</h2>
-          <p className="text-xs text-muted-foreground">{t.screen(topic.route)}</p>
+          <p className="text-xs text-muted-foreground">
+            {/* A topic about a help page of its own (the Test dataset's week) links to it; app screens need their tenant. */}
+            {topic.route.startsWith("/help/") ? (
+              <Link href={topic.route} className="underline underline-offset-4">
+                {t.screen(topic.route)}
+              </Link>
+            ) : (
+              t.screen(topic.route)
+            )}
+          </p>
           {topic.body.map((paragraph, i) => (
             <p key={`${topic.id}-${i}`}>{paragraph}</p>
           ))}

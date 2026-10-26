@@ -31,6 +31,7 @@ describe("HelpPage", () => {
       "Managing users",
       "API tokens",
       "Test and Prod",
+      "The Test dataset's planning week",
       "The Global audit",
       "A tenant's audit",
       "Materials",
@@ -65,6 +66,9 @@ describe("HelpPage", () => {
     ]);
     expect(screen.getByRole("heading", { name: "Signing in" }).closest("section")?.id).toBe("signing-in");
     expect(screen.getByText("Screen: /login")).toBeTruthy();
+    // App screens stay plain text; a help page of its own is a link.
+    expect(screen.queryByRole("link", { name: "Screen: /login" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Screen: /help/test-dataset" }).getAttribute("href")).toBe("/help/test-dataset");
     expect(screen.queryByRole("link", { name: "Show all topics" })).toBeNull();
     expect(mocks.connection).toHaveBeenCalledOnce();
   });

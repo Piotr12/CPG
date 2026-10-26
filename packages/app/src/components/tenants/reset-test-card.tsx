@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import Link from "next/link";
 import { ConfirmDialog } from "@cpg/ui/backend/dialogs/confirm-dialog";
 import { Callout } from "@cpg/ui/backend/feedback/callout";
 import { Badge } from "@cpg/ui/components/badge";
@@ -23,6 +24,9 @@ interface Props {
 /** Test's datasets as the card offers them, tiny (the default) first (spec `2026-10-22--0902UTC-test-tenant-two-datasets`). */
 type Dataset = keyof Messages["admin"]["reset"]["datasets"];
 const DATASETS: readonly Dataset[] = ["tiny", "realistic"];
+
+/** The help page that draws the datasets' weekly cycle (Q10 of #237), beside the button that generates them. */
+const PLANNING_WEEK_GUIDE = "/help/test-dataset";
 
 /**
  * Admin control for Test only. An open confirmation never silently changes its target generation or
@@ -73,6 +77,9 @@ export function ResetTestCard({ generation, readOnly, labels, errors }: Props) {
               }}
               formatError={(error) => errorMessage({ ...errors, ...labels.errors }, error)}
             />
+            <Link href={PLANNING_WEEK_GUIDE} className="text-sm underline underline-offset-4">
+              {labels.guide}
+            </Link>
           </div>
         </div>
         <p className="text-sm text-muted-foreground">{readOnly ? labels.readOnly : labels.writable}</p>
