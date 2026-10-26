@@ -61,3 +61,9 @@ test("the integration suite runs as numbered shards, each running its own slice 
 test("the browser install downloads only Chrome, nothing from apt", () => {
   assert.doesNotMatch(stepRunning("agent-browser install").run!, /--with-deps/);
 });
+
+// The unit suite took 517 s on main (2026-10-25) and passed 10 minutes on a slower runner, which cancelled
+// it mid-run twice on #264 with every test passing. The limit keeps about twice the suite's length.
+test("the unit-test job's limit leaves room for a slow runner", () => {
+  assert.ok((workflow.jobs["unit-tests"]["timeout-minutes"] ?? 360) >= 20);
+});

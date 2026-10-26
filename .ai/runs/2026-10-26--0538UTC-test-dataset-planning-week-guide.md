@@ -25,6 +25,8 @@ The owner asked for a documentation piece on the Q10 decision (weekly production
 - 06:43 Guard `tests/planning-week-guide.test.ts` generates two weeks across a month boundary and compares each day's partial receipt with `PLANNING_WEEK`. Flipping Wednesday to `true` fails it on 2026-10-21 and 2026-10-28, so it bites.
 - 06:47 Docker unavailable: integration files run against a fresh standalone copy (lesson of 2026-10-23).
 
+- 06:11 CI: lint, typecheck, build and the four integration shards passed; unit-tests was cancelled at its 10-minute `timeout-minutes` twice (first run and a re-run), every finished test passing. `main`'s last green run took 517 s (test-reset.service 377 s, seed-demo-data 173 s); here seed-demo-data alone took 214 s and the guard test 1.6 s. The limit had no headroom, so it is raised to 20 min in its own commit, pinned in `tests/ci-workflow.test.ts`, and the lesson on red runs extended. It unblocks #263 and the deploy too.
+
 ## Changes
 
 - `packages/app/src/app/help/test-dataset/` — new public page `/help/test-dataset` (flow, week strip, legend, day list, why) and `planning-week.ts`, the drawn week.
@@ -34,6 +36,7 @@ The owner asked for a documentation piece on the Q10 decision (weekly production
 - `i18n/messages/{en,pl}.ts` — `help.planningWeek`, `admin.reset.guide`.
 - Tests: page, card, help list, `tests/planning-week-guide.test.ts`, `tests/integration/help.test.ts` (follows the link from the card; 320 px fit).
 - Spec implementation note: Q10 kept, documented at `/help/test-dataset`.
+- `.github/workflows/ci.yml`: unit-tests `timeout-minutes` 10 → 20; `tests/ci-workflow.test.ts` pins it; `.ai/lessons.md` entry extended.
 
 ## Verification
 
