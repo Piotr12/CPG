@@ -31,9 +31,10 @@ proxy:
     - its.cpg.baby
   app_port: 3000
   # Seconds kamal-proxy waits for an answer before it sends 504 (its default is 30). A realistic Test
-  # reset takes 33–43 s on the CI runner and the server answers nothing else meanwhile, so the reset
-  # and every request queued behind it need longer (#185; tests/realistic-reset-duration.test.ts).
-  response_timeout: 120
+  # reset takes about 65 s on the CI runner, longer on a small VM, and the server answers nothing else
+  # meanwhile, so the reset and every request queued behind it need longer (#185, #78). The write gate's
+  # wait (WRITE_GATE_WAIT_MS in packages/db/src/write-gate.ts) matches it; tests/realistic-reset-duration.test.ts.
+  response_timeout: 600
   healthcheck:
     path: /up
 

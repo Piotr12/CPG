@@ -49,7 +49,7 @@ Source: `packages/core/src/config.ts` (`loadConfig`), `Dockerfile`, `config/depl
 | `DEBUG_SQL` | `1` logs SQL, development only |
 | `CPG_ADMIN_PASSWORD` | Required by the server: the built-in admin's password, 12+ characters, no leading or trailing whitespace. Missing or invalid → the process exits at startup, so `/up` never turns healthy. Comes from `.kamal/secrets` / the GitHub Actions secret of the same name |
 | `KEEP_ALIVE_TIMEOUT` | `3600000` (one hour, in ms) in the image: how long Next.js's `server.js` keeps an idle connection open. Node's 5 s default closed kamal-proxy's pooled connections unread behind a realistic Test reset (#185) |
-| kamal-proxy `response_timeout` | `120` s in `config/deploy.yml` (kamal-proxy's default is 30 s): the longest the proxy waits for an answer before it sends 504 |
+| kamal-proxy `response_timeout` | `600` s in `config/deploy.yml` (kamal-proxy's default is 30 s): the longest the proxy waits for an answer before it sends 504. `WRITE_GATE_WAIT_MS` in `@cpg/db` matches it |
 | Container user | uid 1001, which must be able to write `DATA_DIR` |
 | Everything the app persists | under `DATA_DIR` |
 
