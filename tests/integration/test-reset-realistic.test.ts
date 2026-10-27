@@ -97,6 +97,30 @@ describe("the realistic Test dataset, written by an API reset", () => {
     }
   }, 120_000);
 
+  it("runs MRP over the realistic dataset while /up keeps answering (E14-S02, lessons 2026-10-24)", async () => {
+    // A warm pooled connection first, as kamal-proxy keeps one (lesson 2026-10-24, "A blocked event loop closes pooled connections unread").
+    expect((await fetch(`${baseUrl}/up`)).status).toBe(200);
+    const started = performance.now();
+    let runMs = 0;
+    let upMs = 0;
+    const run = api("POST", "/api/tenants/test/mrp/runs", { key: randomUUID(), body: {}, generation: await generation() }).then((response) => {
+      runMs = performance.now() - started;
+      return response;
+    });
+    // Issued once the run is under way: the run yields while it reads and writes, so the health check answers first.
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const up = await fetch(`${baseUrl}/up`);
+    upMs = performance.now() - started;
+    const response = await run;
+
+    process.stdout.write(`An MRP run over the realistic Test dataset answered after ${runMs.toFixed(0)} ms; GET /up issued 20 ms into it after ${upMs.toFixed(0)} ms\n`);
+    expect(response.status, response.text).toBe(200);
+    expect(json(response).data).toMatchObject({ channel: "api", horizonDays: 90 });
+    expect((json(response).data as { pairs: number }).pairs).toBeGreaterThanOrEqual(30);
+    expect(up.status).toBe(200);
+    expect(upMs).toBeLessThan(runMs);
+  });
+
   it("writes two years of customer orders, many pages of them, and audits the reset as realistic (TEN-022, AUD-013)", async () => {
     const orders = await allPages(async (page) => json(await api("GET", `/api/tenants/test/customer-orders?page=${page}`)).data as { id: string; status: string }[]);
     expect(orders[0].id).toBe("00000001");

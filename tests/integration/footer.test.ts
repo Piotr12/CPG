@@ -94,6 +94,7 @@ describe("the footer", () => {
     ["/admin/test/audit", "main h1"],
     ["/admin/test/reports/stock", "table[aria-label='Current stock']"],
     ["/admin/test/reports/variance", "table[aria-label='Production variance']"],
+    ["/admin/test/mrp", "main h1"],
     ["/admin/test/audit?subjectType=Material&subjectId=00000001", "main table"],
   ])("ends %s", async (path, content) => {
     await browser.open(`${baseUrl}${path}`);
