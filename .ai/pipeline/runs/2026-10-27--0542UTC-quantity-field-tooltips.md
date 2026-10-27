@@ -52,10 +52,10 @@ As in the spec's Implementation Plan, Phases 1–3, Steps 1–9.
 
 ### Phase 2: CrudForm field tooltips and copy
 
-- [ ] 2.1 Dictionaries, forms.infoLabel and labels builders
-- [ ] 2.2 Production order Planned quantity tooltip with units
-- [ ] 2.3 Material base unit and conversion tooltips
-- [ ] 2.4 Planning parameters and safety stock tooltips
+- [x] 2.1 Dictionaries, forms.infoLabel and labels builders — 2e5ad3d9
+- [x] 2.2 Production order Planned quantity tooltip with units — fee5d472
+- [x] 2.3 Material base unit and conversion tooltips — 344a630f
+- [x] 2.4 Planning parameters and safety stock tooltips — b01651b1
 
 ### Phase 3: BOM form, integration, acceptance
 
@@ -71,3 +71,4 @@ As in the spec's Implementation Plan, Phases 1–3, Steps 1–9.
   - a blur while the tip is closed found no content ref, so it is read with `?.`.
 
   This Radix version defers an outside press to its `click`, so the `onInteractOutside` guard matters for hover-then-click. A mutation check confirmed the test fails without the guard.
+- 07:05 — Phase 2 done. The shared `baseUnitTip` and `chosenBaseUnit` helpers in `components/forms/form-labels.ts` name the chosen material's base unit (the picker option's `detail`) on the add forms. The change forms pass `row.baseUnit`. `ProductionContent` now loads `listUnits()` on the list page too.
