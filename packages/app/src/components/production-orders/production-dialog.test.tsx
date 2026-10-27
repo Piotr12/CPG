@@ -137,6 +137,11 @@ it("explains Planned quantity beside its label: generally until an output is cho
   expect(text).not.toContain("pallet");
   expect(text).toContain("rounded half up to six decimals, and keeps the unit and factor you entered with the order");
 });
+it("opens Edit with the cursor in Planned quantity, not on its info button, and the tooltip closed (#290 review)", async () => {
+  render(<ProductionDialog {...props} order={production} />); open(true);
+  await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText(en.productionOrders.quantity)));
+  expect(document.querySelector("[data-slot=popover-content]")).toBeNull();
+});
 it("says the output takes its base unit only when it converts no other physical unit", () => {
   render(<ProductionDialog {...props} units={{ "00000005": ["each"] }} order={production} />); open(true);
   expect(tip(en.productionOrders.quantity)).toBe(fill(en.productionOrders.quantityTipBaseOnly, { baseUnit: "each" }));

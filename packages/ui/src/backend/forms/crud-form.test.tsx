@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { Dialog, DialogContent, DialogTitle } from "../../components/dialog";
 import type { ApiResult } from "../api/result";
 import { CrudForm, toFieldErrors, type CrudField, type FormSchema } from "./crud-form";
 
@@ -415,6 +416,26 @@ describe("toFieldErrors", () => {
       expect(input.tagName).toBe("INPUT");
       expect(describedBy(input)).toBe("0 means no minimum.");
       expect(screen.queryByRole("button", { name: "About Lot multiple" })).toBeNull();
+    });
+
+    it("keeps a dialog's first focus on the first field when that field has a tooltip, not on its info button", async () => {
+      render(
+        <Dialog open>
+          <DialogContent aria-describedby={undefined}>
+            <DialogTitle>Change target</DialogTitle>
+            <CrudForm fields={[{ name: "quantity", label: "Target", tooltip: "In kg." }]} action={vi.fn()} submitLabel="Save" />
+          </DialogContent>
+        </Dialog>,
+      );
+
+      await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText("Target")));
+      expect(document.querySelector("[data-slot=popover-content]")).toBeNull();
+    });
+
+    it("leaves first focus alone when only a later field has a tooltip", () => {
+      render(<CrudForm fields={tipped.toReversed()} action={vi.fn()} submitLabel="Save" />);
+      expect(document.activeElement).toBe(document.body);
+      expect(screen.getByLabelText("Lot multiple").hasAttribute("autofocus")).toBe(false);
     });
 
     it("names the button in the reader's words", () => {

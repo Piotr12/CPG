@@ -151,7 +151,7 @@ export function CrudForm<T>({
 
   return (
     <form onSubmit={submit} onKeyDown={onKeyDown} noValidate className="flex flex-col gap-4">
-      {fields.map((field) => {
+      {fields.map((field, index) => {
         const inputId = `${id}-${field.name}`;
         const errors = fieldErrors[field.name];
         const hintId = `${inputId}-hint`;
@@ -166,6 +166,9 @@ export function CrudForm<T>({
           onChange: (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => set(event.target.value),
           "aria-invalid": errors ? true : undefined,
           "aria-describedby": errors || description ? hintId : undefined,
+          // A dialog focuses its first tabbable element, which a first field's info button would be:
+          // the field keeps first focus, and Radix leaves focus already inside the dialog alone.
+          autoFocus: index === 0 && tooltip ? true : undefined,
         };
         return (
           <div key={field.name} className="flex flex-col gap-2">
