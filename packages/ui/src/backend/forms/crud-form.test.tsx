@@ -397,4 +397,59 @@ describe("toFieldErrors", () => {
       expect(screen.queryAllByRole("option")).toEqual([]);
     });
   });
+
+  describe("tooltips", () => {
+    const tipped: CrudField[] = [
+      { name: "minimumQuantity", label: "Minimum lot", description: "0 means no minimum.", tooltip: "In kg, to six decimals." },
+      { name: "lotMultiple", label: "Lot multiple" },
+    ];
+    const describedBy = (element: HTMLElement) => document.getElementById(element.getAttribute("aria-describedby")!)!.textContent;
+
+    it("puts an info button named after the field beside its label, leaving the input's hint and other fields alone", () => {
+      render(<CrudForm fields={tipped} action={vi.fn()} submitLabel="Save" />);
+
+      const button = screen.getByRole("button", { name: "About Minimum lot" });
+      expect(describedBy(button)).toBe("In kg, to six decimals.");
+      expect(button.parentElement!.parentElement!.className).toContain("items-center");
+      const input = screen.getByLabelText("Minimum lot");
+      expect(input.tagName).toBe("INPUT");
+      expect(describedBy(input)).toBe("0 means no minimum.");
+      expect(screen.queryByRole("button", { name: "About Lot multiple" })).toBeNull();
+    });
+
+    it("names the button in the reader's words", () => {
+      render(<CrudForm fields={tipped} action={vi.fn()} submitLabel="Zapisz" infoLabel="Informacje o polu {field}" />);
+      expect(screen.getByRole("button", { name: "Informacje o polu Minimum lot" })).not.toBeNull();
+    });
+
+    it("follows the form's values with a function tooltip", () => {
+      const fields: CrudField[] = [
+        { name: "material", label: "Material" },
+        { name: "quantity", label: "Target", tooltip: (values) => (values.material ? `In the base unit of ${values.material}.` : undefined) },
+      ];
+      render(<CrudForm fields={fields} action={vi.fn()} submitLabel="Add" />);
+      expect(screen.queryByRole("button", { name: "About Target" })).toBeNull();
+
+      fill("Material", "00000001");
+
+      expect(describedBy(screen.getByRole("button", { name: "About Target" }))).toBe("In the base unit of 00000001.");
+    });
+
+    it("leaves Escape to an open tooltip, and cancels on the next", () => {
+      const onCancel = vi.fn();
+      const action = vi.fn();
+      render(<CrudForm fields={tipped} action={action} submitLabel="Save" onCancel={onCancel} />);
+      const button = screen.getByRole("button", { name: "About Minimum lot" });
+
+      fireEvent.click(button);
+      expect(document.querySelector("[data-slot=popover-content]")!.textContent).toBe("In kg, to six decimals.");
+      fireEvent.keyDown(button, { key: "Escape" });
+      expect(document.querySelector("[data-slot=popover-content]")).toBeNull();
+      expect(onCancel).not.toHaveBeenCalled();
+
+      fireEvent.keyDown(button, { key: "Escape" });
+      expect(onCancel).toHaveBeenCalledOnce();
+      expect(action).not.toHaveBeenCalled();
+    });
+  });
 });
