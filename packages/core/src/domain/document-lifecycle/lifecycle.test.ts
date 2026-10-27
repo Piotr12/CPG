@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { documentState, outstandingQuantity, resolveLines, type DocumentState, type LifecycleLine } from "./lifecycle";
+import { documentState, outstandingMicro, outstandingQuantity, resolveLines, type DocumentState, type LifecycleLine } from "./lifecycle";
 
 const line = (processed = "0.000000", status: DocumentState = "open"): LifecycleLine => ({
   quantity: "100.000000", processed, abandoned: "0.000000", status,
@@ -21,6 +21,13 @@ describe("document lifecycle", () => {
     expect(outstandingQuantity("999999999999.999999", "999999999999.999997", "0.000001")).toBe("0.000001");
     expect(outstandingQuantity("100", "40", "60")).toBe("0.000000");
     expect(outstandingQuantity("100", "101", "0")).toBe("0.000000");
+  });
+
+  it("computes the remainder in micro-units, clamped at zero", () => {
+    expect(outstandingMicro(50_000_000n, 20_000_000n, 0n)).toBe(30_000_000n);
+    expect(outstandingMicro(100n, 40n, 60n)).toBe(0n);
+    expect(outstandingMicro(100n, 101n, 0n)).toBe(0n);
+    expect(outstandingMicro(100n, 0n, 1n)).toBe(99n);
   });
 
   it("keeps explicit closure authoritative after a reversal while allowing active progress to return", () => {

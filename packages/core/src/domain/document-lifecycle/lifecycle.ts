@@ -22,12 +22,17 @@ export function documentState(states: readonly DocumentState[]): DocumentState {
   return "closed-early";
 }
 
+/** `quantity − processed − abandoned` in micro-units, never below zero: what an overreceipt or overproduction leaves is nothing. */
+export function outstandingMicro(quantity: bigint, processed: bigint, abandoned: bigint): bigint {
+  const remaining = quantity - processed - abandoned;
+  return remaining > 0n ? remaining : 0n;
+}
+
 /** Exact unresolved quantity, clamped after allowed overreceipt/overproduction. */
 export function outstandingQuantity(quantity: string, processed: string, abandoned: string, status?: DocumentState): string {
   // A reversal changes net progress, never the explicit decision to stop the remainder.
   if (status === "cancelled" || status === "closed-early") return "0.000000";
-  const remaining = parseDecimal(quantity)! - parseDecimal(processed)! - parseDecimal(abandoned)!;
-  return formatDecimal(remaining > 0n ? remaining : 0n, { fixed: true });
+  return formatDecimal(outstandingMicro(parseDecimal(quantity)!, parseDecimal(processed)!, parseDecimal(abandoned)!), { fixed: true });
 }
 
 /**
