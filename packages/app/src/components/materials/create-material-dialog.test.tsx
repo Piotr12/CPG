@@ -13,6 +13,12 @@ const context = { tenant: "prod", generation: 1 };
 const change = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
 const submit = () => fireEvent.click(screen.getAllByRole("button", { name: "Create material" }).at(-1)!);
 
+
+/** A field's tooltip as a screen reader gets it: its info button's description (UX-014, #290). */
+const tip = (name: string) => {
+  const button = screen.getByRole("button", { name });
+  return document.getElementById(button.getAttribute("aria-describedby")!)!.textContent;
+};
 describe("CreateMaterialDialog", () => {
   afterEach(() => vi.clearAllMocks());
 
@@ -27,6 +33,9 @@ describe("CreateMaterialDialog", () => {
     // The base unit is chosen from the registry, grouped by dimension (#217), never the report-only SU (#239).
     const unit = screen.getByLabelText("Base unit") as HTMLSelectElement;
     expect(unit.options[0].textContent).toBe("Choose a unit");
+    // Base unit's tooltip says what it stores and when it locks (UX-014, R02, #290).
+    expect(tip("About Base unit")).toBe(en.materials.form.baseUnitTip);
+    expect(tip("About Base unit")).toContain("stored in this unit, exactly to six decimals");
     expect([...unit.querySelectorAll("optgroup")].map((group) => group.label)).toEqual(["Count", "Packaging", "Mass", "Volume", "Length", "Area", "Time"]);
     expect([...unit.options].map((option) => option.value)).not.toContain("SU");
     expect([...unit.querySelectorAll("optgroup[label=Mass] option")].map((option) => option.textContent)).toEqual([
@@ -62,6 +71,7 @@ describe("CreateMaterialDialog", () => {
     render(<CreateMaterialDialog context={context} labels={materialsLabels(pl)} units={unitChoices("pl", pl.units)} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Utwórz materiał" }));
+    expect(tip("Informacje o polu Jednostka bazowa")).toBe(pl.materials.form.baseUnitTip);
     change("Typ", "raw");
     change("Opis", "Śruba");
     change("Jednostka bazowa", "pcs");

@@ -51,6 +51,7 @@ export function AddConversionDialog({ material, converted, units, context, label
           submitLabel={t.submit}
           pendingLabel={t.submitting}
           cancelLabel={labels.cancel}
+          infoLabel={labels.infoLabel}
           formatError={errorFormatter(labels)}
           formatFieldError={fieldErrorFormatter(labels)}
           onSuccess={close}

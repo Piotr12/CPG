@@ -65,6 +65,7 @@ export function ConversionActions({ material, conversion, context, labels }: Con
             submitLabel={t.change.submit}
             pendingLabel={t.change.submitting}
             cancelLabel={labels.cancel}
+            infoLabel={labels.infoLabel}
             formatError={errorFormatter(labels)}
             formatFieldError={fieldErrorFormatter(labels)}
             onSuccess={close}

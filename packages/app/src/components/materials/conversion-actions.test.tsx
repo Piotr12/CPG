@@ -25,6 +25,12 @@ function open(item: string) {
   fireEvent.click(screen.getByRole("menuitem", { name: item }));
 }
 
+
+/** A field's tooltip as a screen reader gets it: its info button's description (UX-014, #290). */
+const tip = (name: string) => {
+  const button = screen.getByRole("button", { name });
+  return document.getElementById(button.getAttribute("aria-describedby")!)!.textContent;
+};
 describe("ConversionActions", () => {
   afterEach(() => vi.clearAllMocks());
 
@@ -41,6 +47,8 @@ describe("ConversionActions", () => {
 
     open("Change factor");
     expect(screen.getByRole("dialog", { name: "Change the factor of case" })).toBeTruthy();
+    expect(tip("About Alternate quantity")).toContain("for example 1 bag = 25 each");
+    expect(tip("About Base quantity")).toContain("never revalues earlier postings");
     expect(screen.queryByText("For SU,", { exact: false })).toBeNull();
     expect(screen.queryByLabelText("Unit")).toBeNull();
     expect((screen.getByLabelText("Base quantity") as HTMLInputElement).value).toBe("12");
