@@ -1,14 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { defineEntity, p, type InferEntity } from "@mikro-orm/core";
+import { AUDIT_CHANNELS } from "../audit/audit-event";
 import { tenantOwned } from "../tenants/tenant-owned";
 
 /** How a run's proposals become documents: by hand (`manual`), or created by the run (E19-S03, not written yet). */
 export const MRP_RUN_MODES = ["manual", "automatic"] as const;
 export type MrpRunMode = (typeof MRP_RUN_MODES)[number];
-
-/** The channels a run is started from: CPG's own screens or a bearer-token API call. */
-export const MRP_RUN_CHANNELS = ["ui", "api"] as const;
-export type MrpRunChannel = (typeof MRP_RUN_CHANNELS)[number];
 
 const owned = tenantOwned();
 
@@ -34,7 +31,8 @@ export const MrpRun = defineEntity({
     pairs: p.integer(),
     actorUserId: p.string(),
     actorUsername: p.string(),
-    channel: p.enum(MRP_RUN_CHANNELS),
+    /** The actor's channel: CPG's own screens or a bearer-token API call. */
+    channel: p.enum(AUDIT_CHANNELS),
   },
   // Tenant-local business key: Test and Prod each number their runs from 00000001 (R05).
   uniques: [{ properties: ["tenant", "code"] }],

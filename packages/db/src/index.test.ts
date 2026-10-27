@@ -33,7 +33,6 @@ describe("@cpg/db", () => {
       "MATERIAL_DESCRIPTION_MAX",
       "MATERIAL_TYPES",
       "MATERIAL_UNIT_MAX",
-      "MRP_RUN_CHANNELS",
       "MRP_RUN_MODES",
       "Material",
       "MaterialConversion",
