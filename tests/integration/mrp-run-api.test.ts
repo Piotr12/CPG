@@ -154,17 +154,26 @@ describe("MRP runs through the API", () => {
   it("keeps Test's and Prod's runs apart, and a Test reset clears Test's runs only, restarting their IDs (MRP-002, R05, D06)", async () => {
     const test = json(await runIn("test", adminSecret, randomUUID(), await generation())).data as MrpRunView;
     expect((await runIn("test", adminSecret, randomUUID(), await generation())).status).toBe(200);
+    const testLatest = json(await latest("test")).data as MrpLatestView;
     const prod = json(await runIn("prod")).data as MrpRunView;
-    // A Prod run leaves Test's latest run as it was.
-    expect((await latestRun("test")).id).toBe(String(Number(test.id) + 1).padStart(8, "0"));
-    expect((await latestRun("test")).createdAt <= prod.createdAt).toBe(true);
+    // A Prod run leaves Test's latest run and its results as they were.
+    expect(json(await latest("test")).data).toEqual(testLatest);
+    expect(testLatest.run.id).toBe(String(Number(test.id) + 1).padStart(8, "0"));
+    expect(testLatest.plans.length).toBeGreaterThan(0);
+    expect(testLatest.plans.every(({ buckets }) => buckets.length === 90)).toBe(true);
+    expect(testLatest.run.createdAt <= prod.createdAt).toBe(true);
 
     const reset = await api("POST", "/api/tenants/test/reset", adminSecret, { key: randomUUID(), body: {}, generation: await generation() });
     expect(reset.status, reset.text).toBe(200);
 
     const none = await latest("test");
     expect([none.status, json(none).error.code]).toEqual([404, "MRP_RUN_NOT_FOUND"]);
-    expect((json(await runIn("test", adminSecret, randomUUID(), await generation())).data as MrpRunView).id).toBe("00000001");
+    const restarted = json(await runIn("test", adminSecret, randomUUID(), await generation())).data as MrpRunView;
+    expect(restarted.id).toBe("00000001");
+    // A client still paging the old generation's run 00000001 is told it was replaced, not handed the new one's rows.
+    const old = await latest("test", `?page=2&run=00000001&generation=${test.generation}`);
+    expect([old.status, json(old).error.code]).toEqual([409, "MRP_RUN_SUPERSEDED"]);
+    expect((await latest("test", `?run=00000001&generation=${restarted.generation}`)).status).toBe(200);
     expect(await latestRun("prod")).toEqual(prod);
   });
 });

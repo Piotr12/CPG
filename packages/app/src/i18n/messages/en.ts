@@ -2236,6 +2236,8 @@ export const en = {
     STOCK_NOT_EMPTY: "Material {material} at location {location} holds {quantity} {unit}. Clear its stock before deactivation.",
     MATERIAL_HAS_MOVEMENTS: "This material has stock history, so its type and base unit cannot change.",
 
+    MRP_RUN_NOT_FOUND: "No MRP run exists in this tenant yet.",
+    MRP_RUN_SUPERSEDED: "This MRP run is not the latest one any more. Read the latest run from its first page.",
     UNAUTHORIZED: "You need to sign in.",
     TOO_MANY_ATTEMPTS: "Too many attempts. Try again in a few minutes.",
     VALIDATION_FAILED: "Some fields are invalid.",

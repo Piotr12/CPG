@@ -106,6 +106,10 @@ describe("MrpRunService.run", () => {
     expect(await sql("select sum(firm_demand) as demand from mrp_daily_result where tenant_code = 'prod'")).toEqual([{ demand: 40 }]);
     expect(await (await scope("test")).cradle.mrpRunService.current()).toEqual(testRun);
     expect(testRun.createdAt).toEqual(NOW);
+    // Test unaffected: the Prod run's delete of superseded results reached none of Test's rows.
+    expect(await sql("select count(*) as n from mrp_daily_result where tenant_code = 'test'")).toEqual([{ n: 90 }]);
+    expect(await sql("select firm_demand from mrp_daily_result where tenant_code = 'test' and date = '2026-10-12'")).toEqual([{ firm_demand: "70.000000" }]);
+    expect((await latest({}, "test")).plans[0].buckets[11]).toMatchObject({ date: "2026-10-12", firmDemand: "70.000000" });
   });
 
   it("stores a negative projection while physical stock stays put, and changes no stock, document or master (INV-008, MRP-008, R10)", async () => {
@@ -238,12 +242,29 @@ describe("MrpRunService.current and latest", () => {
 
     await expect(latest({ run: first.id })).rejects.toMatchObject({ code: "MRP_RUN_SUPERSEDED", message: MRP_RUN_SUPERSEDED, status: 409, messageParams: { run: "00000001" } });
     expect((await latest({ run: "00000002" })).run.id).toBe("00000002");
+    expect((await latest({ run: "00000002", generation: "1" })).run.id).toBe("00000002");
+  });
+
+  it("refuse a run of another dataset generation even under the same ID, as a Test reset restarts IDs (D06), and don't know a run past the latest", async () => {
+    const first = await run("test");
+    await sql("update tenant set generation = 2 where code = 'test'");
+    await sql("delete from mrp_daily_result where tenant_code = 'test'");
+    await sql("delete from mrp_run where tenant_code = 'test'");
+    const restarted = await run("test");
+    expect([first.id, first.generation, restarted.id, restarted.generation]).toEqual(["00000001", 1, "00000001", 2]);
+
+    await expect(latest({ run: "00000001", generation: "1" }, "test")).rejects.toMatchObject({ code: "MRP_RUN_SUPERSEDED", status: 409, messageParams: { run: "00000001" } });
+    await expect(latest({ run: "00000005", generation: "1" }, "test")).rejects.toMatchObject({ code: "MRP_RUN_SUPERSEDED", status: 409 });
+    await expect(latest({ run: "00000005" }, "test")).rejects.toMatchObject({ code: "MRP_RUN_NOT_FOUND", message: MRP_RUN_NOT_FOUND, status: 404 });
+    expect((await latest({ run: "00000001", generation: "2" }, "test")).run).toEqual(restarted);
   });
 
   it.each([
     [{ page: "0" }, "page"],
     [{ page: "two" }, "page"],
     [{ run: "1" }, "run"],
+    [{ generation: "1" }, "generation"],
+    [{ run: "00000001", generation: "0" }, "generation"],
     [{ sort: "material" }, ""],
   ])("refuse a malformed query %o", async (query, field) => {
     await run();

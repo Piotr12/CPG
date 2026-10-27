@@ -107,13 +107,13 @@ describe("the realistic Test dataset, written by an API reset", () => {
       runMs = performance.now() - started;
       return response;
     });
-    // Issued once the run is under way: the run yields while it reads and writes, so the health check answers first.
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    // Issued right behind the run: a run that yields while it reads and writes lets the health check answer
+    // first; one that blocked the event loop would answer the run before it.
     const up = await fetch(`${baseUrl}/up`);
     upMs = performance.now() - started;
     const response = await run;
 
-    process.stdout.write(`An MRP run over the realistic Test dataset answered after ${runMs.toFixed(0)} ms; GET /up issued 20 ms into it after ${upMs.toFixed(0)} ms\n`);
+    process.stdout.write(`An MRP run over the realistic Test dataset answered after ${runMs.toFixed(0)} ms; GET /up issued right behind it after ${upMs.toFixed(0)} ms\n`);
     expect(response.status, response.text).toBe(200);
     expect(json(response).data).toMatchObject({ channel: "api", horizonDays: 90 });
     expect((json(response).data as { pairs: number }).pairs).toBeGreaterThanOrEqual(30);

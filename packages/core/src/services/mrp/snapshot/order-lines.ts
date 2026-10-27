@@ -21,7 +21,7 @@ export const MATERIAL_CHUNK = 10;
  * The horizon's end is checked here, not in SQL: with `required_date < ?` in the query, SQLite started
  * from the tenant filter's join on `material` and walked every line of the tenant due before that day,
  * history included, through `(tenant, required_date)` (lesson 2026-10-25, "EXPLAIN the query MikroORM
- * really sends"). Open lines beyond the horizon are few, so reading them costs little.
+ * really sends"). Hydrating the Open lines past the horizon costs less than that walk (`mrp-run-timing.test.ts`, where a third of them lie past it).
  */
 export async function readOrderLines(em: EntityManager, codes: SnapshotCodes, before: string): Promise<MrpOrderLine[]> {
   const materials = [...codes.materials.keys()];

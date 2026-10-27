@@ -97,15 +97,20 @@ export class MrpRunService {
 
   /**
    * The latest run and one page of its plans (`mrpLatestQuerySchema`), read in one transaction so a run
-   * committing in between can't pair this run's header with no rows. With `run`, a newer run is
-   * `MRP_RUN_SUPERSEDED`, so a client paging through results never mixes two runs.
+   * committing in between can't pair this run's header with no rows. With `run` (and, since a Test
+   * reset restarts run IDs, `generation`), a newer run is `MRP_RUN_SUPERSEDED`, so a client paging
+   * through results never mixes two runs; a run ID past the latest is `MRP_RUN_NOT_FOUND`.
    */
   async latest(raw: Record<string, unknown>): Promise<MrpLatestView> {
     const query = parseInput(mrpLatestQuerySchema, raw);
     return inRequestTransaction(this.em, async () => {
       const run = await this.latestRun();
       if (!run) throw new NotFoundError("MRP_RUN_NOT_FOUND", MRP_RUN_NOT_FOUND);
-      if (query.run !== undefined && query.run !== run.code) throw new ConflictError(MRP_RUN_SUPERSEDED, "MRP_RUN_SUPERSEDED", { run: query.run });
+      if (query.run !== undefined) {
+        const otherGeneration = query.generation !== undefined && query.generation !== run.generation;
+        if (!otherGeneration && query.run > run.code) throw new NotFoundError("MRP_RUN_NOT_FOUND", MRP_RUN_NOT_FOUND);
+        if (otherGeneration || query.run < run.code) throw new ConflictError(MRP_RUN_SUPERSEDED, "MRP_RUN_SUPERSEDED", { run: query.run });
+      }
       // Every pair has exactly `horizonDays` rows, so the offset falls on pair boundaries, and the
       // unique `(tenant, run, material, location, date)` index serves both the filter and the order.
       const days = MRP_LATEST_PAGE_SIZE * run.horizonDays;

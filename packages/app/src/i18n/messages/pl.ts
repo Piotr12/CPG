@@ -2164,6 +2164,8 @@ export const pl: Messages = {
     STOCK_NOT_EMPTY: "Materiał {material} w lokalizacji {location} ma zapas {quantity} {unit}. Wyzeruj zapas przed dezaktywacją.",
     MATERIAL_HAS_MOVEMENTS: "Materiał ma historię zapasu, więc nie można zmienić jego typu ani jednostki podstawowej.",
 
+    MRP_RUN_NOT_FOUND: "W tym środowisku nie było jeszcze przebiegu MRP.",
+    MRP_RUN_SUPERSEDED: "Ten przebieg MRP nie jest już ostatni. Przeczytaj ostatni przebieg od jego pierwszej strony.",
     UNAUTHORIZED: "Musisz się zalogować.",
     TOO_MANY_ATTEMPTS: "Zbyt wiele prób. Spróbuj ponownie za kilka minut.",
     VALIDATION_FAILED: "Niektóre pola są nieprawidłowe.",

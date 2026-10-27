@@ -47,6 +47,7 @@ function currentGate(): Gate | undefined {
  * waited for first, so the transactions queued behind it are never orphaned; this transaction's
  * snapshot is then stale and its first write fails as such, which the request wrappers retry. Past
  * `waitMs` behind one holder it takes the gate anyway, as `WriteGate` lets a transaction through.
+ * Production callers keep the default, kamal-proxy's response timeout; tests shorten it.
  */
 export async function holdWriteGate(em: EntityManager, { waitMs = WRITE_GATE_WAIT_MS }: { waitMs?: number } = {}): Promise<void> {
   if (!em.isInTransaction()) throw new Error("holdWriteGate needs an open transaction to hold the gate for.");

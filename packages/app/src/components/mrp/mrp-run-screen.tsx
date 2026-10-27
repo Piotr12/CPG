@@ -40,7 +40,7 @@ export function MrpRunScreen({ tenant, run, action, locale, messages }: MrpRunSc
       <PageHeader
         title={fill(t.heading, { tenant: tenant.name })}
         description={t.intro}
-        actions={writable && <RunMrpButton action={action} labels={{ run: t.run, running: t.running, errors: { ...messages.errors, ...t.errors } }} />}
+        actions={writable ? <RunMrpButton action={action} labels={{ run: t.run, running: t.running, errors: { ...messages.errors, ...t.errors } }} /> : undefined}
       />
       {details ? (
         <Card>
