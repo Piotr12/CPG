@@ -45,14 +45,19 @@ function currentGate(): Gate | undefined {
  * inside the transaction, after the reads a retried attempt repeats and before its first write; a
  * second call from the same connection changes nothing. A gate another connection still holds is
  * waited for first, so the transactions queued behind it are never orphaned; this transaction's
- * snapshot is then stale and its first write fails as such, which the request wrappers retry.
+ * snapshot is then stale and its first write fails as such, which the request wrappers retry. Past
+ * `waitMs` behind one holder it takes the gate anyway, as `WriteGate` lets a transaction through.
  */
-export async function holdWriteGate(em: EntityManager): Promise<void> {
+export async function holdWriteGate(em: EntityManager, { waitMs = WRITE_GATE_WAIT_MS }: { waitMs?: number } = {}): Promise<void> {
   if (!em.isInTransaction()) throw new Error("holdWriteGate needs an open transaction to hold the gate for.");
   const connection = em.getConnection();
   const database = await connection.getNativeClient();
-  await foreignGateReleased(connection, WRITE_GATE_WAIT_MS);
-  if (currentGate()?.connection === connection) return;
+  // Look again after every wait, and take the gate with no await between the last look and the take:
+  // two holders asking in the same tick would otherwise both find it free and both hold it (#274).
+  for (let gate = currentGate(); gate; gate = currentGate()) {
+    if (gate.connection === connection) return;
+    if (!(await releasedWithin(gate, waitMs))) break;
+  }
   let release!: () => void;
   const released = new Promise<void>((resolve) => { release = resolve; });
   registry[GATE] = { connection, alive: () => database.open, released, release };

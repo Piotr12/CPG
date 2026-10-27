@@ -122,6 +122,41 @@ describe("the write gate", () => {
     expect((await c.em.fork().find(Setting, { key: { $like: "queued-%" } })).map(({ key }) => key).sort()).toEqual(["queued-behind-first", "queued-behind-second"]);
   });
 
+  it("gives the gate to one of two holders that ask in the same tick, and makes the other wait for it", async () => {
+    const { a, b } = await twoOrms();
+    const first = a.em.fork();
+    const second = b.em.fork();
+    await first.begin();
+    await second.begin();
+    // Neither has awaited anything when the other asks: both found the gate free before either took it (#274).
+    const holdingFirst = holdWriteGate(first);
+    const holdingSecond = holdWriteGate(second);
+
+    await holdingFirst;
+    expect(await settled(holdingSecond)).toBe("pending");
+    await first.commit();
+    await holdingSecond;
+    await second.commit();
+  });
+
+  it("lets a holder wait at most its bound behind another one, then take the gate", async () => {
+    const { a, b } = await twoOrms();
+    // Begun before the first holds the gate, or its begin would wait for it.
+    const second = b.em.fork();
+    await second.begin();
+    const first = await holdAndWrite(a);
+    try {
+      const started = performance.now();
+      await holdWriteGate(second, { waitMs: 50 });
+      expect(performance.now() - started).toBeGreaterThanOrEqual(50);
+      // The late holder holds it now: a call from the first holder's connection no longer returns at once.
+      expect(await settled(holdWriteGate(first, { waitMs: 50 }), 25)).toBe("pending");
+    } finally {
+      await second.rollback();
+      await first.rollback();
+    }
+  });
+
   it("gates a native write only inside a transaction: wrap such writes, an autocommit one busy-waits in C instead", async () => {
     const { a, b } = await twoOrms();
     const holder = await holdAndWrite(a);
