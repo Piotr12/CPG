@@ -435,7 +435,7 @@ describe("toFieldErrors", () => {
     it("leaves first focus alone when only a later field has a tooltip", () => {
       render(<CrudForm fields={tipped.toReversed()} action={vi.fn()} submitLabel="Save" />);
       expect(document.activeElement).toBe(document.body);
-      expect(screen.getByLabelText("Lot multiple").hasAttribute("autofocus")).toBe(false);
+      expect(screen.getByLabelText("Lot multiple").hasAttribute("data-autofocus")).toBe(false);
     });
 
     it("names the button in the reader's words", () => {

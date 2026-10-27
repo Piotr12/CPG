@@ -36,8 +36,8 @@ export interface CrudField {
   /**
    * The field's fuller explanation, behind an info button beside its label (UX-014): which unit it
    * takes and how the entry is stored. Like `description`, a function follows the form's values.
-   * On the first field, it gives the field `autoFocus` so a dialog doesn't focus the info button
-   * first; an `autocomplete` field takes no `autoFocus`, so don't give a first autocomplete a tooltip.
+   * On the first field, it marks the field `data-autofocus`, which `DialogContent` focuses first instead
+   * of the info button; an `autocomplete` field takes no such mark, so don't give a first autocomplete a tooltip.
    */
   tooltip?: string | ((values: Record<string, string>) => string | undefined);
   /** A select's choices, in order. */
@@ -169,8 +169,8 @@ export function CrudForm<T>({
           "aria-invalid": errors ? true : undefined,
           "aria-describedby": errors || description ? hintId : undefined,
           // A dialog focuses its first tabbable element, which a first field's info button would be:
-          // the field keeps first focus, and Radix leaves focus already inside the dialog alone.
-          autoFocus: index === 0 && tooltip ? true : undefined,
+          // `DialogContent` focuses the control marked here instead (#297).
+          "data-autofocus": index === 0 && tooltip ? true : undefined,
         };
         return (
           <div key={field.name} className="flex flex-col gap-2">
