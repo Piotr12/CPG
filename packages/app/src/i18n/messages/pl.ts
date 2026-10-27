@@ -1612,6 +1612,7 @@ export const pl: Messages = {
       Transfer: "Przesunięcie",
       ProductionOrder: "Zlecenie produkcyjne",
       ProductionCompletion: "Wykonanie produkcji",
+      MrpRun: "Przebieg MRP",
     },
     columns: {
       time: "Czas (UTC)",
@@ -1653,6 +1654,7 @@ export const pl: Messages = {
       "production-orders.production-order.progressed": "Postęp zlecenia produkcyjnego",
       "production-orders.production-completion.posted": "Zaksięgowano wykonanie produkcji",
       "customer-orders.customer-order.created": "Utworzono zamówienie klienta",
+      "mrp.mrp-run.created": "Wykonano przebieg MRP",
       "customer-orders.customer-order.updated": "Zmieniono zamówienie klienta",
       "stock.movement.posted": "Zaksięgowano ruch zapasu",
       "users.user.created": "Utworzono użytkownika",

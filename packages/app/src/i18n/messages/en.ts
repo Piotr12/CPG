@@ -1668,6 +1668,7 @@ export const en = {
       Transfer: "Transfer",
       ProductionOrder: "Production order",
       ProductionCompletion: "Production completion",
+      MrpRun: "MRP run",
     },
     columns: {
       time: "Time (UTC)",
@@ -1710,6 +1711,7 @@ export const en = {
       "production-orders.production-order.progressed": "Production order progressed",
       "production-orders.production-completion.posted": "Production completion posted",
       "customer-orders.customer-order.created": "Customer order created",
+      "mrp.mrp-run.created": "MRP run completed",
       "customer-orders.customer-order.updated": "Customer order changed",
       "stock.movement.posted": "Stock movement posted",
       "users.user.created": "User created",
