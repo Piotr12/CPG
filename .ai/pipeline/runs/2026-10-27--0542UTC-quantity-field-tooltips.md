@@ -43,6 +43,8 @@ As in the spec's Implementation Plan, Phases 1–3, Steps 1–9.
 
 ## Progress
 
+PR: #297
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: InfoTip and CrudField.tooltip
