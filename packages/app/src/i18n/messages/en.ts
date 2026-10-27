@@ -2032,9 +2032,9 @@ export const en = {
     clear: "Clear filters",
     pagination: "Variance report pages", previous: "Previous", next: "Next", page: "Page {page} of {pages}",
   },
-  /** Every list's search box, result line and empty result, and the material picker (#217). */
   /** Shared by every form: a field's info button (UX-014, #290); `{field}` is the field's label. */
   forms: { infoLabel: "About {field}" },
+  /** Every list's search box, result line and empty result, and the material picker (#217). */
   lists: {
     search: "Search",
     clear: "Clear search",

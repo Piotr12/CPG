@@ -204,15 +204,28 @@ describe("InfoTip", () => {
 
   it("clears a pending close when it unmounts", () => {
     vi.useFakeTimers();
+    const set = vi.spyOn(globalThis, "setTimeout");
     const clear = vi.spyOn(globalThis, "clearTimeout");
     const { unmount } = render(<InfoTip label="About Base unit">{TEXT}</InfoTip>);
     const button = screen.getByRole("button", { name: "About Base unit" });
     fireEvent.pointerEnter(button, { pointerType: "mouse" });
     fireEvent.pointerLeave(button, { pointerType: "mouse" });
+    const pending = set.mock.results[set.mock.calls.findIndex(([, delay]) => delay === HOVER_CLOSE_DELAY_MS)].value;
+    clear.mockClear();
 
     unmount();
 
-    expect(clear).toHaveBeenCalled();
-    expect(() => vi.runAllTimers()).not.toThrow();
+    expect(clear).toHaveBeenCalledWith(pending);
+  });
+
+  it("closes even a pinned tip when focus moves to another control", () => {
+    const { button } = renderInDialog();
+    act(() => button.focus());
+    fireEvent.click(button);
+    expect(visible()).not.toBeNull();
+
+    act(() => screen.getByLabelText("Minimum lot").focus());
+
+    expect(visible()).toBeNull();
   });
 });

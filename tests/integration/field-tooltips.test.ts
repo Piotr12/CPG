@@ -103,7 +103,7 @@ describe("quantity-field tooltips", () => {
     await admin.setViewport(390, 844);
     await admin.open(`${baseUrl}/admin/prod/materials/${cement}`);
     await admin.waitUntil(
-      `[...document.querySelectorAll("main button")].some((b) => b.textContent.trim() === "Add conversion" && Object.keys(b).some((key) => key.startsWith("__reactFiber")))`,
+      `[...document.querySelectorAll("main button")].some((b) => b.textContent.trim() === "Add conversion" && !b.closest("[hidden]") && Object.keys(b).some((key) => key.startsWith("__reactFiber")))`,
     );
     await admin.clickRole("button", "Add conversion");
     await admin.waitUntil(`Boolean(${infoButton("About Base quantity")})`);
@@ -118,7 +118,8 @@ describe("quantity-field tooltips", () => {
       button.click();
       return true;
     })()`);
-    await admin.waitUntil(tipShown);
+    // Measure once Radix has placed it and its zoom-in has finished, not mid-animation.
+    await admin.waitUntil(`${tipShown} && document.querySelector(${JSON.stringify(TIP)}).getAnimations().every((animation) => animation.playState === "finished")`);
 
     expect(await admin.text(TIP)).toContain("How many kg the alternate quantity is, up to six decimals");
     const box = await admin.evaluate<{ left: number; right: number; top: number; bottom: number; width: number; height: number }>(`(() => {
