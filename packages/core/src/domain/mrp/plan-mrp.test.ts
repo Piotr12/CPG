@@ -100,6 +100,8 @@ describe("planMrp", () => {
       line({ quantity: q("10"), fulfilled: q("10"), status: "completed", requiredDate: "2026-10-05" }),
       line({ quantity: q("10"), fulfilled: q("12"), status: "completed", requiredDate: "2026-10-05" }),
       line({ quantity: q("10"), fulfilled: q("12"), requiredDate: "2026-10-05" }),
+      line({ quantity: q("10"), abandoned: q("6"), status: "closed-early", requiredDate: "2026-10-05" }),
+      line({ quantity: q("10"), status: "cancelled", requiredDate: "2026-10-05" }),
       line({ location: "L2", quantity: q("10"), fulfilled: q("3"), abandoned: q("2"), requiredDate: "2026-10-05" }),
     ];
     const result = planMrp(inputs({ stock: [stock("M1", "L1", "1")], orderLines }), TODAY);

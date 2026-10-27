@@ -121,6 +121,7 @@ The `[details]` link is optional — add a file in [`lessons/`](lessons/) only w
 ## Unit tests
 
 - **2026-10-21 — Cite a scenario only where a test asserts it** — a test title carries a catalogue ID only if its assertions cover the Then; wiring tests with mocked services describe the wiring (#70, #140). Before promoting a catalogue row to `Passed (automated)`, match every clause of its Evidence line to an `expect`.
+- **2026-10-27 — Test a status filter with quantities that would pass without it** — #273's firm demand skips lines that aren't Open, but every closed test line also had nothing left by arithmetic. Deleting the filter kept every test green and coverage at 100%, because both sides of the `||` still ran (review of #295). Give a Closed Early or Cancelled fixture a remainder, as a goods-issue reversal leaves one (`fulfilled` back to 0, status kept), and check the test fails without the filter. The same applies to every outstanding-quantity filter MRP adds (E15-S02, E15-S03).
 - **2026-10-21 — A spy on an `em` doesn't see a service's `em.transactional()`** — the callback gets a fork. Route it back with `vi.spyOn(em, "transactional").mockImplementation(async (cb) => cb(em))` (`spyableEm`). To prove a real rollback after a partial flush, make a call inside the transaction throw instead (`transfer.service.test.ts`).
 - **2026-10-23 — A new migration moves every migration count** — update:
   - the lists in `orm.test.ts` and `core/src/database.test.ts`;

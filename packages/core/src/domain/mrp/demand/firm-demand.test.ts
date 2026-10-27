@@ -45,6 +45,12 @@ describe("MRP firm demand", () => {
     expect(firmDemand(lines, dates)).toEqual([]);
   });
 
+  it("keeps a closed-early or cancelled line out even when a reversal left a remainder", () => {
+    // A goods-issue reversal returns `fulfilled` to zero but never reopens an explicitly closed line.
+    const lines = [line({ status: "closed-early", abandoned: 6_000_000n }), line({ status: "cancelled" })];
+    expect(firmDemand(lines, dates)).toEqual([]);
+  });
+
   it("SAL-017: moves an overdue line to today and keeps its required date", () => {
     const [item] = firmDemand([line({ requiredDate: "2026-09-30", quantity: 50_000_000n, fulfilled: 20_000_000n })], dates);
     expect(item).toMatchObject({ requiredDate: "2026-09-30", date: "2026-10-01", quantity: 30_000_000n });
