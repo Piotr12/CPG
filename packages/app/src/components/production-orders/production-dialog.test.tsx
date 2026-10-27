@@ -1,9 +1,11 @@
 import { fireEvent, render, screen, waitFor, cleanup, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { production, productionOptions, materials, locations } from "../../../../../tests/setup/production-orders";
+import { fill } from "../../i18n/fill";
 import { en } from "../../i18n/messages/en";
+import { pl } from "../../i18n/messages/pl";
 import { productionLabels } from "./labels";
-import { ProductionDialog } from "./production-dialog";
+import { plannedQuantityTip, ProductionDialog } from "./production-dialog";
 const mocks = vi.hoisted(() => ({ create: vi.fn(), preview: vi.fn(), update: vi.fn(), push: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push }) }));
 vi.mock("../../app/admin/[tenant]/production-orders/actions", () => ({ createProductionOrder: mocks.create, updateProductionOrder: mocks.update }));
@@ -117,4 +119,43 @@ it("offers only active locations in an autocomplete named after its label that r
 it("hints on the free-text unit field that SU can't be entered (#243)", () => {
   render(<ProductionDialog {...props} />); open();
   expect(screen.getByText("Enter the output's base unit (shown beside its name) or one of its physical alternate units (not SU).")).toBeTruthy();
+});
+/** A field's tooltip, as a screen reader gets it: the info button's description. */
+const tip = (field: string) => {
+  const button = screen.getByRole("button", { name: `About ${field}` });
+  return document.getElementById(button.getAttribute("aria-describedby")!)!.textContent;
+};
+it("explains Planned quantity beside its label: generally until an output is chosen, then in the output's units (UX-014, #290)", () => {
+  render(<ProductionDialog {...props} units={{ "00000005": ["each", "bag", "box", "case", "pallet"] }} />); open();
+  expect(tip(en.productionOrders.quantity)).toBe(en.productionOrders.quantityTipAny);
+
+  fireEvent.change(screen.getByRole("combobox", { name: en.productionOrders.output }), { target: { value: "cabinet" } });
+  fireEvent.mouseDown(screen.getByRole("option", { name: /^00000005/ }));
+
+  const text = tip(en.productionOrders.quantity);
+  expect(text).toContain("greater than 0 in each or in a physical alternate unit this output converts, such as bag, box, case (not SU)");
+  expect(text).not.toContain("pallet");
+  expect(text).toContain("rounded half up to six decimals, and keeps the unit and factor you entered with the order");
+});
+it("says the output takes its base unit only when it converts no other physical unit", () => {
+  render(<ProductionDialog {...props} units={{ "00000005": ["each"] }} order={production} />); open(true);
+  expect(tip(en.productionOrders.quantity)).toBe(fill(en.productionOrders.quantityTipBaseOnly, { baseUnit: "each" }));
+});
+it("names the edited order's output units, and its base unit alone when the units are not known", () => {
+  const view = render(<ProductionDialog {...props} units={{ "00000005": ["each", "case"] }} order={production} />); open(true);
+  expect(tip(en.productionOrders.quantity)).toBe(fill(en.productionOrders.quantityTip, { baseUnit: "each", units: "case" }));
+  fireEvent.click(screen.getByRole("button", { name: en.productionOrders.cancel }));
+  view.unmount();
+
+  render(<ProductionDialog {...props} order={production} />); open(true);
+  expect(tip(en.productionOrders.quantity)).toBe(fill(en.productionOrders.quantityTipBaseOnly, { baseUnit: "each" }));
+});
+it("words the tooltip for an output in kg that converts 1 bag = 25 kg (UX-014)", () => {
+  const cement = { ...materials[0], id: "00000010", description: "Cement mix", baseUnit: "kg", type: "finished" as const };
+  const text = plannedQuantityTip(productionLabels(en), [cement], { "00000010": ["kg", "bag"] }, "00000010");
+  expect(text).toBe(
+    "Enter a target greater than 0 in kg or in a physical alternate unit this output converts, such as bag (not SU). CPG converts it once, at the exact factor in force when you save, into kg, rounded half up to six decimals, and keeps the unit and factor you entered with the order. Changing the quantity or unit later converts it again.",
+  );
+  expect(plannedQuantityTip(productionLabels(pl), [cement], { "00000010": ["kg", "bag"] }, "00000010")).toContain("np. bag (nie SU)");
+  expect(plannedQuantityTip(productionLabels(en), [cement], {}, "00000099")).toBe(en.productionOrders.quantityTipAny);
 });

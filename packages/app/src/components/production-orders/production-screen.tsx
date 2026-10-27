@@ -26,7 +26,7 @@ import { ProductionRequirements } from "./production-requirements";
 
 interface Props { tenant: TenantInfo; orders: ProductionOrderView[]; order?: ProductionOrderDetail; materials: MaterialSummary[]; locations: NamedRecordView[];
   total: number; page: number; messages: Messages; locale: Locale;
-  /** A detail page's completions (one page of them) and the units every material's quantities may be entered in. */
+  /** A detail page's completions (one page of them), and the units every material's quantities may be entered in. */
   completions?: CompletionView[]; completionsPage?: number; units?: Record<string, string[]>;
   /** The list's search and sort (#217); the list without either when left out. */
   search?: ListSearchState; sort?: { sort: ProductionOrderSort; dir: SortDirection } }
@@ -53,7 +53,7 @@ export function ProductionScreen({ tenant, orders, order, materials, locations, 
   ];
   const pages = Math.ceil(total / PRODUCTION_PAGE_SIZE);
   const actions = !tenant.readOnly && <>
-    {(!order || order.status === "open") && <ProductionDialog context={{ tenant: tenant.code, generation: tenant.generation }} labels={t} materials={materials} locations={locations} order={order} locale={locale} />}
+    {(!order || order.status === "open") && <ProductionDialog context={{ tenant: tenant.code, generation: tenant.generation }} labels={t} materials={materials} locations={locations} units={units} order={order} locale={locale} />}
     {order && <CompletionDialog context={{ tenant: tenant.code, generation: tenant.generation }} labels={t} order={order}
       outputUnits={units[order.output] ?? [byMaterial.get(order.output)!.baseUnit]} locationLabel={location(order.location)}
       inputs={completionInputs(order, materials, units)}
