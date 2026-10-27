@@ -4,8 +4,12 @@ import { parseDecimal } from "../../../domain/quantities/decimal";
 import { yieldToEventLoop } from "../../../http/yield-to-event-loop";
 import type { SnapshotCodes } from "./codes";
 
-/** How many materials one `$in` list holds, as the demand review batches its reads. */
-const MATERIAL_CHUNK = 100;
+/**
+ * How many materials one read takes. Hydrating a line costs about 17 µs, and nothing else answers while
+ * a read hydrates: at ten times the realistic dataset 100 materials meant 13,000 Open lines and a 240 ms
+ * stall, 10 materials keep each read near 1,300 lines (spec budget: 250 ms, `mrp-run-timing.test.ts`).
+ */
+export const MATERIAL_CHUNK = 10;
 
 /**
  * The Open, non-removed customer-order lines due before `before` (the day after the horizon), overdue
