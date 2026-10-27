@@ -27,6 +27,11 @@ const dialog = () => (
   />
 );
 
+/** A field's tooltip as a screen reader gets it: its info button's description (UX-014, #290). */
+const tip = (name: string) => {
+  const button = screen.getByRole("button", { name });
+  return document.getElementById(button.getAttribute("aria-describedby")!)!.textContent;
+};
 describe("AddSafetyStockTargetDialog", () => {
   afterEach(() => vi.clearAllMocks());
 
@@ -35,7 +40,12 @@ describe("AddSafetyStockTargetDialog", () => {
     render(dialog());
 
     fireEvent.click(screen.getByRole("button", { name: "Add target" }));
+    expect(tip("About Target")).toBe(en.safetyStock.form.quantityTipAny);
     choose("00000005");
+    // Once the material is chosen, the target's tooltip names its base unit (UX-014, #290).
+    expect(tip("About Target")).toBe(
+      "In each, the material's base unit, to six decimals. The target applies from its date until the next target. 0 ends the buffer from this date.",
+    );
     choose("00000002", "Location");
     expect((screen.getByRole("combobox", { name: "Material" }) as HTMLInputElement).value).toBe("00000005 — Cabinet, red");
     expect((screen.getByRole("combobox", { name: "Location" }) as HTMLInputElement).value).toBe("00000002 — North warehouse");

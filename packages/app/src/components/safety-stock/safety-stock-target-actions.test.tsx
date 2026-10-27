@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { fill } from "../../i18n/fill";
 import { en } from "../../i18n/messages/en";
 import { safetyStockLabels } from "./labels";
 import { SafetyStockTargetActions } from "./safety-stock-target-actions";
@@ -35,6 +36,11 @@ function open(item: string) {
   fireEvent.click(screen.getByRole("menuitem", { name: item }));
 }
 
+/** A field's tooltip as a screen reader gets it: its info button's description (UX-014, #290). */
+const tip = (name: string) => {
+  const button = screen.getByRole("button", { name });
+  return document.getElementById(button.getAttribute("aria-describedby")!)!.textContent;
+};
 describe("SafetyStockTargetActions", () => {
   afterEach(() => vi.clearAllMocks());
 
@@ -47,6 +53,7 @@ describe("SafetyStockTargetActions", () => {
       "The quantity is in each.",
     );
     expect((screen.getByLabelText("Target") as HTMLInputElement).value).toBe("20");
+    expect(tip("About Target")).toBe(fill(en.safetyStock.form.quantityTip, { baseUnit: "each" }));
     fireEvent.change(screen.getByLabelText("Target"), { target: { value: "40" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
@@ -63,6 +70,20 @@ describe("SafetyStockTargetActions", () => {
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Remove" })));
 
     expect(mocks.removeSafetyStockTarget).toHaveBeenCalledWith("prod", 1, KEY, 2);
+  });
+
+  it("puts first focus in Target when Change target opens from the row menu, not back on the menu's trigger (#297 QA)", async () => {
+    render(<SafetyStockTargetActions row={row} context={context} labels={labels} />);
+
+    open("Change target");
+
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText("Target")));
+    // The closing menu returns focus to its trigger a moment later: the dialog's trap must send it back.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const target = screen.getByLabelText("Target") as HTMLInputElement;
+    expect(document.activeElement).toBe(target);
+    // Its value is selected, as Radix leaves a first field, so typing replaces it.
+    expect([target.selectionStart, target.selectionEnd]).toEqual([0, target.value.length]);
   });
 
   it("closes the change form on Cancel without writing", async () => {

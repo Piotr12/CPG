@@ -20,6 +20,11 @@ const choose = (code: string, label = "Material") => {
   fireEvent.mouseDown(within(screen.getByRole("listbox", { name: label })).getByRole("option", { name: new RegExp(`^${code}`) }));
 };
 
+/** A field's tooltip as a screen reader gets it: its info button's description (UX-014, #290). */
+const tip = (name: string) => {
+  const button = screen.getByRole("button", { name });
+  return document.getElementById(button.getAttribute("aria-describedby")!)!.textContent;
+};
 describe("AddPlanningParametersDialog", () => {
   afterEach(() => vi.clearAllMocks());
 
@@ -32,7 +37,15 @@ describe("AddPlanningParametersDialog", () => {
     expect(screen.getByRole("dialog", { name: "Add planning parameters" }).className).toContain("overflow-y-auto");
     expect(screen.getByRole("combobox", { name: "Material" }).getAttribute("placeholder")).toBe("Type an ID or a name");
     expect(screen.getByRole("combobox", { name: "Location" }).getAttribute("placeholder")).toBe(en.lists.locationPicker.placeholder);
+    // The quantity tooltips say "the material's base unit" until a material is chosen, then name it (UX-014, #290).
+    expect(tip("About Minimum lot")).toBe(en.planningParameters.form.minimumTipAny);
     choose("00000001");
+    expect(tip("About Minimum lot")).toBe(
+      "In each, the material's base unit, to six decimals. A planned supply is never smaller than this, even when the minimum is not a whole lot multiple. 0 means no minimum.",
+    );
+    expect(tip("About Lot multiple")).toBe(
+      "In each, the material's base unit, to six decimals. Planned supply is rounded up to whole multiples of this, then raised to the minimum lot if it is still below it. 0.000001 means no rounding.",
+    );
     choose("00000002", "Location");
     expect((screen.getByRole("combobox", { name: "Location" }) as HTMLInputElement).value).toBe("00000002 — North warehouse");
     fill("Make / Buy", "buy");

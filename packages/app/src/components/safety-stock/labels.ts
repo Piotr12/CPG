@@ -16,6 +16,8 @@ export type SafetyStockLabels = Omit<Messages["safetyStock"], "heading" | "error
   errors: Record<string, string>;
   picker: MaterialPicker;
   locationPicker: MaterialPicker;
+  /** A field's info button name, `{field}` for its label (UX-014). */
+  infoLabel: string;
 };
 
 /** Builds the labels from a dictionary (server side, where `messages` is available). */
@@ -26,6 +28,7 @@ export function safetyStockLabels(messages: Messages): SafetyStockLabels {
     ...(labels as Omit<Messages["safetyStock"], "heading">),
     errors: { ...messages.errors, ...messages.safetyStock.errors },
     picker: materialPicker(messages.lists), locationPicker: recordPicker(messages.lists, "location"),
+    infoLabel: messages.forms.infoLabel,
   };
 }
 

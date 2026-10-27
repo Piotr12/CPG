@@ -12,6 +12,12 @@ const context = { tenant: "prod", generation: 1 };
 const bolt = { id: "00000002", type: "raw" as const, description: "Bolt", baseUnit: "each", active: true, createdAt: new Date(), version: 1 };
 const change = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
 
+
+/** A field's tooltip as a screen reader gets it: its info button's description (UX-014, #290). */
+const tip = (name: string) => {
+  const button = screen.getByRole("button", { name });
+  return document.getElementById(button.getAttribute("aria-describedby")!)!.textContent;
+};
 describe("AddConversionDialog", () => {
   afterEach(() => vi.clearAllMocks());
 
@@ -28,6 +34,13 @@ describe("AddConversionDialog", () => {
     const disabled = [...unit.options].filter((option) => option.disabled).map((option) => option.textContent);
     expect(disabled).toEqual(["Choose a unit", "each (base unit)", "box (already converted)"]);
     expect(screen.getByText("The unit people enter, such as case or t.")).toBeTruthy();
+    // Both quantity fields explain the factor in the material's base unit (UX-014, R03, D08, #290).
+    expect(tip("About Alternate quantity")).toBe(
+      "A conversion reads “Alternate quantity alternate units = Base quantity base units”, for example 1 bag = 25 each. Enter the exact factor, greater than 0. Changing it later never revalues earlier postings. SU is a reporting unit only.",
+    );
+    expect(tip("About Base quantity")).toBe(
+      "How many each the alternate quantity is, up to six decimals: “Alternate quantity alternate units = Base quantity each”. The factor must be exact and greater than 0. Changing it later never revalues earlier postings. SU is a reporting unit only.",
+    );
     change("Unit", "case");
     change("Base quantity", "12");
     fireEvent.click(screen.getAllByRole("button", { name: "Add conversion" }).at(-1)!);

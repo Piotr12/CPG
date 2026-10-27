@@ -14,6 +14,8 @@ describe("planningParametersLabels", () => {
     expect(labels).not.toHaveProperty("heading");
     expect(labels.errors.PLANNING_PARAMETERS_EXIST).toBe(en.planningParameters.errors.PLANNING_PARAMETERS_EXIST);
     expect(labels.errors.TENANT_READ_ONLY).toBe(en.errors.TENANT_READ_ONLY);
+    expect(labels.infoLabel).toBe("About {field}");
+    expect(planningParametersLabels(pl).infoLabel).toBe("Informacje o polu {field}");
   });
 });
 

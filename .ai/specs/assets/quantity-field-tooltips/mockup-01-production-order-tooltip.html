@@ -1,0 +1,19 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Mockup — Planned quantity tooltip</title><style>*{box-sizing:border-box}body{margin:0;font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;color:#252525;background:#fff;font-size:14px;min-height:800px}
+.page{padding:40px 48px;color:#b5b5b5}h1{font-size:24px;margin:0 0 12px}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center}.dlg{width:640px;background:#fff;border-radius:14px;padding:24px;display:flex;flex-direction:column;gap:14px;position:relative}.dlg h2{margin:0;font-size:18px}.muted{color:#737373;margin:0}
+.f{display:flex;flex-direction:column;gap:6px;font-weight:500}.lr{display:flex;align-items:center;gap:4px}.in{height:36px;border:1px solid #e5e5e5;border-radius:8px;padding:0 10px;display:flex;align-items:center;font-weight:400;justify-content:space-between}.fh{font-size:12px;color:#737373;font-weight:400}.row{display:flex;justify-content:flex-end;gap:8px}.btn{height:32px;padding:0 12px;border:1px solid #e5e5e5;border-radius:8px;display:inline-flex;align-items:center;font-weight:500;background:#fff}.primary{background:#252525;color:#fff;border-color:#252525}
+.info{width:24px;height:24px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;color:#737373}.info.on{outline:2px solid #2f6feb;outline-offset:1px;color:#252525}.info svg{width:14px;height:14px}
+.tip{position:absolute;width:288px;background:#fff;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.14);outline:1px solid rgba(37,37,37,.1);padding:12px;font-size:14px;font-weight:400;line-height:1.45}.tip:after{content:"";position:absolute;bottom:-6px;left:128px;width:10px;height:10px;background:#fff;transform:rotate(45deg);box-shadow:2px 2px 2px rgba(0,0,0,.06)}
+.focus{border-color:#2f6feb}.mono{font-family:ui-monospace,monospace}.det{color:#737373}
+.note{position:fixed;bottom:10px;right:14px;font-size:12px;color:#d8d8d8;font-family:ui-monospace,monospace}</style></head><body>
+<div class="page"><h1>Production orders — Test</h1><p>Plan one Make output at one location…</p></div>
+<div class="overlay"><div class="dlg"><h2>Create production order</h2><p class="muted">Plan one Make output at one location and keep its chosen BOM revision. Planning never changes physical stock.</p>
+<div class="f">Output material<div class="in"><span><span class="mono">00000005</span> — Cement mix, bagged <span class="det">kg</span></span><span>▾</span></div></div>
+<div class="f">Location<div class="in"><span><span class="mono">00000001</span> — Main plant</span><span>▾</span></div></div>
+<div class="f"><span class="lr">Planned quantity <span class="info on" aria-label="About Planned quantity"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span></span><div class="in">40</div></div>
+<div class="f">Unit<div class="in">bag</div><span class="fh">Enter the output's base unit (shown beside its name) or one of its physical alternate units (not SU).</span></div>
+<div class="f">Planned finish<div class="in">2026-11-06</div></div>
+<div class="row"><span class="btn">Cancel</span><span class="btn primary">Preview BOMs</span></div>
+<div class="tip" style="left:24px;top:50px">Enter a target greater than 0 in kg or in a physical alternate unit this output converts, such as bag (not SU). CPG converts it once, at the exact factor in force when you save, into kg, rounded half up to six decimals, and keeps the unit and factor you entered with the order. Changing the quantity or unit later converts it again.</div>
+</div></div>
+<div class="note">mockup-01 (1280 px): Planned quantity's info button focused by Tab, tooltip open above it — illustrative; shadcn Popover decides the final look</div></body></html>

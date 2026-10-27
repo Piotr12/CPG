@@ -38,6 +38,11 @@ function open(item: string) {
   fireEvent.click(screen.getByRole("menuitem", { name: item }));
 }
 
+/** A field's tooltip as a screen reader gets it: its info button's description (UX-014, #290). */
+const tip = (name: string) => {
+  const button = screen.getByRole("button", { name });
+  return document.getElementById(button.getAttribute("aria-describedby")!)!.textContent;
+};
 describe("PlanningParameterActions", () => {
   afterEach(() => vi.clearAllMocks());
 
@@ -51,6 +56,8 @@ describe("PlanningParameterActions", () => {
     expect((screen.getByLabelText("Lead time (days)") as HTMLInputElement).value).toBe("2");
     expect((screen.getByLabelText("Minimum lot") as HTMLInputElement).value).toBe("50");
     expect((screen.getByLabelText("Lot multiple") as HTMLInputElement).value).toBe("10.5");
+    expect(tip("About Minimum lot")).toContain("In each, the material's base unit, to six decimals.");
+    expect(tip("About Lot multiple")).toContain("0.000001 means no rounding.");
     fireEvent.change(screen.getByLabelText("Lead time (days)"), { target: { value: "3" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 

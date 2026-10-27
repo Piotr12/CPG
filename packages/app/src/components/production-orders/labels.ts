@@ -34,10 +34,12 @@ export type ProductionLabels = Messages["productionOrders"] & {
   /** The output and added-input material pickers (#217). */
   picker: MaterialPicker;
   locationPicker: MaterialPicker;
+  /** A field's info button name, `{field}` for its label (UX-014). */
+  infoLabel: string;
 };
 export function productionLabels(messages: Messages): ProductionLabels {
   return { ...messages.productionOrders, errors: { ...messages.errors, ...messages.productionOrders.errors },
-    picker: materialPicker(messages.lists), locationPicker: recordPicker(messages.lists, "location") };
+    picker: materialPicker(messages.lists), locationPicker: recordPicker(messages.lists, "location"), infoLabel: messages.forms.infoLabel };
 }
 export function productionFieldError(labels: ProductionLabels) {
   const known: Record<string, string> = {

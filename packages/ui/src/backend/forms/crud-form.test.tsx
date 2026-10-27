@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { Dialog, DialogContent, DialogTitle } from "../../components/dialog";
 import type { ApiResult } from "../api/result";
 import { CrudForm, toFieldErrors, type CrudField, type FormSchema } from "./crud-form";
 
@@ -395,6 +396,81 @@ describe("toFieldErrors", () => {
       expect(document.getElementById(combobox.getAttribute("aria-describedby")!)!.textContent).toBe("Choose a material.");
       fireEvent.focus(combobox);
       expect(screen.queryAllByRole("option")).toEqual([]);
+    });
+  });
+
+  describe("tooltips", () => {
+    const tipped: CrudField[] = [
+      { name: "minimumQuantity", label: "Minimum lot", description: "0 means no minimum.", tooltip: "In kg, to six decimals." },
+      { name: "lotMultiple", label: "Lot multiple" },
+    ];
+    const describedBy = (element: HTMLElement) => document.getElementById(element.getAttribute("aria-describedby")!)!.textContent;
+
+    it("puts an info button named after the field beside its label, leaving the input's hint and other fields alone", () => {
+      render(<CrudForm fields={tipped} action={vi.fn()} submitLabel="Save" />);
+
+      const button = screen.getByRole("button", { name: "About Minimum lot" });
+      expect(describedBy(button)).toBe("In kg, to six decimals.");
+      expect(button.parentElement!.parentElement!.className).toContain("items-center");
+      const input = screen.getByLabelText("Minimum lot");
+      expect(input.tagName).toBe("INPUT");
+      expect(describedBy(input)).toBe("0 means no minimum.");
+      expect(screen.queryByRole("button", { name: "About Lot multiple" })).toBeNull();
+    });
+
+    it("keeps a dialog's first focus on the first field when that field has a tooltip, not on its info button", async () => {
+      render(
+        <Dialog open>
+          <DialogContent aria-describedby={undefined}>
+            <DialogTitle>Change target</DialogTitle>
+            <CrudForm fields={[{ name: "quantity", label: "Target", tooltip: "In kg." }]} action={vi.fn()} submitLabel="Save" />
+          </DialogContent>
+        </Dialog>,
+      );
+
+      await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText("Target")));
+      expect(document.querySelector("[data-slot=popover-content]")).toBeNull();
+    });
+
+    it("leaves first focus alone when only a later field has a tooltip", () => {
+      render(<CrudForm fields={tipped.toReversed()} action={vi.fn()} submitLabel="Save" />);
+      expect(document.activeElement).toBe(document.body);
+      expect(screen.getByLabelText("Lot multiple").hasAttribute("data-autofocus")).toBe(false);
+    });
+
+    it("names the button in the reader's words", () => {
+      render(<CrudForm fields={tipped} action={vi.fn()} submitLabel="Zapisz" infoLabel="Informacje o polu {field}" />);
+      expect(screen.getByRole("button", { name: "Informacje o polu Minimum lot" })).not.toBeNull();
+    });
+
+    it("follows the form's values with a function tooltip", () => {
+      const fields: CrudField[] = [
+        { name: "material", label: "Material" },
+        { name: "quantity", label: "Target", tooltip: (values) => (values.material ? `In the base unit of ${values.material}.` : undefined) },
+      ];
+      render(<CrudForm fields={fields} action={vi.fn()} submitLabel="Add" />);
+      expect(screen.queryByRole("button", { name: "About Target" })).toBeNull();
+
+      fill("Material", "00000001");
+
+      expect(describedBy(screen.getByRole("button", { name: "About Target" }))).toBe("In the base unit of 00000001.");
+    });
+
+    it("leaves Escape to an open tooltip, and cancels on the next", () => {
+      const onCancel = vi.fn();
+      const action = vi.fn();
+      render(<CrudForm fields={tipped} action={action} submitLabel="Save" onCancel={onCancel} />);
+      const button = screen.getByRole("button", { name: "About Minimum lot" });
+
+      fireEvent.click(button);
+      expect(document.querySelector("[data-slot=popover-content]")!.textContent).toBe("In kg, to six decimals.");
+      fireEvent.keyDown(button, { key: "Escape" });
+      expect(document.querySelector("[data-slot=popover-content]")).toBeNull();
+      expect(onCancel).not.toHaveBeenCalled();
+
+      fireEvent.keyDown(button, { key: "Escape" });
+      expect(onCancel).toHaveBeenCalledOnce();
+      expect(action).not.toHaveBeenCalled();
     });
   });
 });

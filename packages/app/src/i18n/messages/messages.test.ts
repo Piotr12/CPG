@@ -86,6 +86,14 @@ describe("dictionaries", () => {
     }
   });
 
+  it("say SU is never entered in every tooltip of a field where a unit is chosen or converted (D08, UX-014, #290)", () => {
+    for (const dictionary of [en, pl]) {
+      const { productionOrders: orders, materials, boms } = dictionary;
+      const tips = [orders.quantityTip, orders.quantityTipBaseOnly, orders.quantityTipAny, materials.conversions.denominatorTip, materials.conversions.numeratorTip, boms.form.quantityTip, boms.form.quantityTipAny];
+      expect(tips.filter((text) => !text.includes("SU"))).toEqual([]);
+    }
+  });
+
   it("say BOM, never recipe: one term per concept (design system v1, Principle 7; #206)", () => {
     expect(strings(en).filter((text) => /recipe/i.test(text))).toEqual([]);
     expect(strings(pl).filter((text) => /receptur/i.test(text))).toEqual([]);

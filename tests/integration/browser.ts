@@ -160,6 +160,13 @@ export function openBrowser() {
       await settled();
       return command("find", "role", role, "click", "--name", name, "--exact");
     },
+    /** Moves the mouse over the element matching the CSS selector, once the page's animations have finished. */
+    hover: async (selector: string) => {
+      await settled();
+      return command("hover", selector);
+    },
+    /** Focuses the element matching the CSS selector, as a script would. */
+    focus: (selector: string) => command("focus", selector),
     /** Presses a key in the focused element, e.g. `Escape`. */
     press: (key: string) => command("press", key),
     /** Clears the input labelled exactly `label` and types `value` into it. */

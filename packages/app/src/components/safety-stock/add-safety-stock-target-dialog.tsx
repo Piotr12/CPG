@@ -14,7 +14,7 @@ import {
   DialogTrigger,
 } from "@cpg/ui/components/dialog";
 import { addSafetyStockTarget } from "../../app/admin/[tenant]/safety-stock/actions";
-import { errorFormatter, TALL_DIALOG, type TenantContext } from "../forms/form-labels";
+import { baseUnitTip, chosenBaseUnit, errorFormatter, TALL_DIALOG, type TenantContext } from "../forms/form-labels";
 import { fieldErrorFormatter, type SafetyStockLabels } from "./labels";
 
 interface AddSafetyStockTargetDialogProps {
@@ -36,7 +36,7 @@ export function AddSafetyStockTargetDialog({ context, labels, materials, locatio
     { name: "material", label: t.material, type: "autocomplete", placeholder: labels.picker.placeholder, choices: materials, autocompleteLabels: labels.picker.labels },
     { name: "location", label: t.location, type: "autocomplete", placeholder: labels.locationPicker.placeholder, choices: locations, autocompleteLabels: labels.locationPicker.labels },
     { name: "effectiveFrom", label: t.effectiveFrom, type: "date", description: t.effectiveFromHint },
-    { name: "quantity", label: t.quantity, description: t.quantityHint, autoComplete: "off" },
+    { name: "quantity", label: t.quantity, description: t.quantityHint, autoComplete: "off", tooltip: baseUnitTip(t.quantityTip, t.quantityTipAny, chosenBaseUnit(materials)) },
   ];
 
   return (
@@ -56,6 +56,7 @@ export function AddSafetyStockTargetDialog({ context, labels, materials, locatio
           submitLabel={labels.add.submit}
           pendingLabel={labels.add.submitting}
           cancelLabel={labels.cancel}
+          infoLabel={labels.infoLabel}
           formatError={errorFormatter(labels)}
           formatFieldError={fieldErrorFormatter(labels)}
           onSuccess={close}

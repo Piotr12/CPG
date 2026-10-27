@@ -17,7 +17,8 @@ export async function ProductionContent({ cradle, locale, messages, id, page = 1
   const total = id === undefined ? await cradle.productionOrderService.count({ q: search.q }) : 0;
   const currentPage = Math.min(page, Math.max(1, Math.ceil(total / PRODUCTION_PAGE_SIZE)));
   const completions = id === undefined ? [] : await cradle.productionCompletionService.list(id, completionsPage);
-  const units = id === undefined ? {} : await cradle.materialService.listUnits();
+  // The detail page's completion lines and both pages' production forms (Planned quantity's tooltip names the units, #290).
+  const units = await cradle.materialService.listUnits();
   return <ProductionScreen tenant={cradle.tenant} order={order} orders={id === undefined ? await cradle.productionOrderService.list({ page: currentPage, q: search.q, ...sort }) : []}
     search={search} sort={sort}
     total={total} page={currentPage} materials={await cradle.materialService.list()} locations={await cradle.locationService.list()} messages={messages} locale={locale}

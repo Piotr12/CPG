@@ -1,4 +1,4 @@
-import { render, screen, within, cleanup } from "@testing-library/react";
+import { fireEvent, render, screen, within, cleanup } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { resolveServerComponents } from "../../../../../tests/setup/server-components";
 import { completionMaterials, completionView, production, tenant, materials, locations } from "../../../../../tests/setup/production-orders";
@@ -46,6 +46,13 @@ it("lists targets with recipe links behind request-time authentication", async (
   expect(badge?.getAttribute("data-tone")).toBe("neutral"); expect(badge?.querySelector("svg.lucide-circle-dot")).toBeTruthy();
   expect(screen.getByRole("heading", { level: 1 }).closest("[data-slot=page-header]")?.textContent).toContain(en.productionOrders.intro);
   expect(screen.getByRole("button", { name: en.productionOrders.create }).closest("[data-slot=page-header]")).toBeTruthy();
+  // The list page loads every material's units too, so the Create form's Planned quantity tooltip names them (#290).
+  expect(mocks.units).toHaveBeenCalledOnce();
+  fireEvent.click(screen.getByRole("button", { name: en.productionOrders.create }));
+  fireEvent.change(screen.getByRole("combobox", { name: en.productionOrders.output }), { target: { value: "cabinet" } });
+  fireEvent.mouseDown(screen.getByRole("option", { name: /^00000005/ }));
+  const info = screen.getByRole("button", { name: `About ${en.productionOrders.quantity}` });
+  expect(document.getElementById(info.getAttribute("aria-describedby")!)!.textContent).toContain("such as case (not SU)");
 });
 it("shows pinned revision, stored conversion and current shortage detail", async () => {
   render(await resolveServerComponents(detail()));
