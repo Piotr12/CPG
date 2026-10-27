@@ -72,6 +72,20 @@ describe("SafetyStockTargetActions", () => {
     expect(mocks.removeSafetyStockTarget).toHaveBeenCalledWith("prod", 1, KEY, 2);
   });
 
+  it("puts first focus in Target when Change target opens from the row menu, not back on the menu's trigger (#297 QA)", async () => {
+    render(<SafetyStockTargetActions row={row} context={context} labels={labels} />);
+
+    open("Change target");
+
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText("Target")));
+    // The closing menu returns focus to its trigger a moment later: the dialog's trap must send it back.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const target = screen.getByLabelText("Target") as HTMLInputElement;
+    expect(document.activeElement).toBe(target);
+    // Its value is selected, as Radix leaves a first field, so typing replaces it.
+    expect([target.selectionStart, target.selectionEnd]).toEqual([0, target.value.length]);
+  });
+
   it("closes the change form on Cancel without writing", async () => {
     render(<SafetyStockTargetActions row={row} context={context} labels={labels} />);
     open("Change target");

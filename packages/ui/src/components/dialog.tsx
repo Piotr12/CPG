@@ -51,6 +51,7 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  onOpenAutoFocus,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
@@ -65,6 +66,20 @@ function DialogContent({
           className
         )}
         {...props}
+        // First focus goes to an element marked `data-autofocus` (CrudForm's first field when its label
+        // carries an info button), else Radix's first tabbable. Focusing it here, not with React's
+        // `autoFocus`, keeps the focus trap able to win it back from a closing menu's trigger (#297).
+        onOpenAutoFocus={(event) => {
+          onOpenAutoFocus?.(event)
+          if (event.defaultPrevented) return
+          const first = (event.currentTarget as HTMLElement).querySelector<HTMLElement>("[data-autofocus]")
+          if (first) {
+            event.preventDefault()
+            // As Radix focuses: without scrolling, and with a field's value selected so typing replaces it.
+            first.focus({ preventScroll: true })
+            if (first instanceof HTMLInputElement) first.select()
+          }
+        }}
       >
         {children}
         {showCloseButton && (
