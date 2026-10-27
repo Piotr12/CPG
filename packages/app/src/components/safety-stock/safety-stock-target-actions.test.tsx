@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { fill } from "../../i18n/fill";
 import { en } from "../../i18n/messages/en";
 import { safetyStockLabels } from "./labels";
 import { SafetyStockTargetActions } from "./safety-stock-target-actions";
@@ -35,6 +36,11 @@ function open(item: string) {
   fireEvent.click(screen.getByRole("menuitem", { name: item }));
 }
 
+/** A field's tooltip as a screen reader gets it: its info button's description (UX-014, #290). */
+const tip = (name: string) => {
+  const button = screen.getByRole("button", { name });
+  return document.getElementById(button.getAttribute("aria-describedby")!)!.textContent;
+};
 describe("SafetyStockTargetActions", () => {
   afterEach(() => vi.clearAllMocks());
 
@@ -47,6 +53,7 @@ describe("SafetyStockTargetActions", () => {
       "The quantity is in each.",
     );
     expect((screen.getByLabelText("Target") as HTMLInputElement).value).toBe("20");
+    expect(tip("About Target")).toBe(fill(en.safetyStock.form.quantityTip, { baseUnit: "each" }));
     fireEvent.change(screen.getByLabelText("Target"), { target: { value: "40" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 

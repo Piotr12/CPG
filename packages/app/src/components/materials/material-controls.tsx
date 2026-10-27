@@ -64,6 +64,7 @@ export function MaterialControls({ material, context, labels, units }: MaterialC
             submitLabel={t.submit}
             pendingLabel={t.submitting}
             cancelLabel={labels.cancel}
+            infoLabel={labels.infoLabel}
             formatError={deactivationBlockerError(labels, context.tenant)}
             formatFieldError={fieldErrorFormatter(labels)}
             onSuccess={close}

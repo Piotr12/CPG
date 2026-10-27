@@ -15,6 +15,8 @@ describe("BOM labels", () => {
     expect(labels).not.toHaveProperty("heading");
     expect(labels).not.toHaveProperty("detailHeading");
     expect(labels.errors).toMatchObject({ VALIDATION_FAILED: "Some fields are invalid.", FORBIDDEN: "Only the administrator can change BOMs." });
+    expect(labels.infoLabel).toBe("About {field}");
+    expect(bomsLabels(pl).infoLabel).toBe("Informacje o polu {field}");
   });
 
   it("carry the shared material picker's words in the reader's language, as plain data (#217)", () => {

@@ -28,6 +28,7 @@ export function materialFormFields(labels: MaterialsLabels, units: UnitChoices, 
       placeholder: t.baseUnitPlaceholder,
       ...unitSelect(units, { current: baseUnit, physicalOnly: true }),
       description: t.baseUnitHint,
+      tooltip: t.baseUnitTip,
     },
   ];
 }
@@ -60,12 +61,13 @@ export function conversionFormFields(
     : [];
   return [
     ...unit,
-    { name: "denominator", label: t.denominator, autoComplete: "off", description: t.denominatorHint },
+    { name: "denominator", label: t.denominator, autoComplete: "off", description: t.denominatorHint, tooltip: t.denominatorTip.replaceAll("{baseUnit}", baseUnit) },
     {
       name: "numerator",
       label: t.numerator,
       autoComplete: "off",
       description: (values) => [t.numeratorHint, ...(isStatistical(values) ? [t.statisticalHint] : [])].join(" ").replaceAll("{baseUnit}", baseUnit),
+      tooltip: t.numeratorTip.replaceAll("{baseUnit}", baseUnit),
     },
   ];
 }

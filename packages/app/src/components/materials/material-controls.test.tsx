@@ -20,6 +20,12 @@ const bolt = {
   version: 3,
 };
 
+
+/** A field's tooltip as a screen reader gets it: its info button's description (UX-014, #290). */
+const tip = (name: string) => {
+  const button = screen.getByRole("button", { name });
+  return document.getElementById(button.getAttribute("aria-describedby")!)!.textContent;
+};
 describe("MaterialControls", () => {
   afterEach(() => vi.clearAllMocks());
 
@@ -30,6 +36,7 @@ describe("MaterialControls", () => {
     fireEvent.click(screen.getByRole("button", { name: "Edit" }));
     expect(screen.getByRole("dialog", { name: "Edit 00000002" })).toBeTruthy();
     expect((screen.getByLabelText("Type") as HTMLSelectElement).value).toBe("raw");
+    expect(tip("About Base unit")).toContain("It locks for good once stock moves");
     expect((screen.getByLabelText("Base unit") as HTMLInputElement).value).toBe("each");
     fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Bolt M8 × 40" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));

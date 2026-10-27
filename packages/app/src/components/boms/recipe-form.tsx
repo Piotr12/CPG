@@ -6,6 +6,7 @@ import type { ApiResult, FieldErrors } from "@cpg/ui/backend/api/result";
 import { ErrorMessage } from "@cpg/ui/backend/feedback/error-message";
 import { Autocomplete, type AutocompleteOption } from "@cpg/ui/backend/forms/autocomplete";
 import { toFieldErrors, type FormSchema } from "@cpg/ui/backend/forms/crud-form";
+import { InfoTip } from "@cpg/ui/backend/forms/info-tip";
 import { Button } from "@cpg/ui/components/button";
 import { Input } from "@cpg/ui/components/input";
 import { Label } from "@cpg/ui/components/label";
@@ -219,12 +220,20 @@ export function RecipeForm<T>({
           {validThrough.node}
         </div>
       </div>
-      <fieldset className="flex flex-col gap-3" aria-describedby={componentsNote.describedBy}>
-        <legend className="mb-1 text-sm font-medium">
-          {t.components}
-          <span className="ml-2 font-normal text-muted-foreground">
+      {/*
+        Named by the legend's two phrases alone, which aria-labelledby joins with a space: the info
+        button inside the legend would join a legend-given name.
+      */}
+      <fieldset className="flex flex-col gap-3" aria-labelledby={`${id}-components ${id}-components-per`} aria-describedby={componentsNote.describedBy}>
+        <legend className="mb-1 flex items-center gap-1 text-sm font-medium">
+          <span id={`${id}-components`}>{t.components}</span>
+          <span id={`${id}-components-per`} className="ml-1 font-normal text-muted-foreground">
             {chosenOutput ? fill(t.componentsPer, { baseUnit: chosenOutput.baseUnit, output: chosenOutput.description }) : t.componentsPerAny}
           </span>
+          {/* One tooltip for every line's quantity, whose inputs have no visible label (UX-014, spec Q3). */}
+          <InfoTip label={fill(labels.infoLabel, { field: t.quantityInfo })}>
+            {chosenOutput ? fill(t.quantityTip, { baseUnit: chosenOutput.baseUnit }) : t.quantityTipAny}
+          </InfoTip>
         </legend>
         {values.components.map((line, index) => {
           const number = String(index + 1);

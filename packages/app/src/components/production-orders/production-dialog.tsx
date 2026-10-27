@@ -15,20 +15,34 @@ import { activeRecordOptions } from "../named-records/record-picker";
 import { productionFieldError, type ProductionLabels } from "./labels";
 import { ProductionRequirements } from "./production-requirements";
 
-interface Props { context: TenantContext; labels: ProductionLabels; materials: MaterialSummary[]; locations: NamedRecordView[]; order?: ProductionOrderDetail; locale?: string }
+interface Props {
+  context: TenantContext; labels: ProductionLabels; materials: MaterialSummary[]; locations: NamedRecordView[]; order?: ProductionOrderDetail; locale?: string;
+  /** The units each material may be entered in, base unit first (`MaterialService.listUnits`), for Planned quantity's tooltip. */
+  units?: Record<string, string[]>;
+}
+/**
+ * Planned quantity's tooltip (UX-014, #290): the output's base unit and up to three of its alternate
+ * units, or the general text until an output is chosen.
+ */
+export function plannedQuantityTip(t: ProductionLabels, materials: MaterialSummary[], units: Record<string, string[]>, output: string | undefined): string {
+  const material = materials.find(({ id }) => id === output);
+  if (!material) return t.quantityTipAny;
+  const alternates = (units[material.id] ?? [material.baseUnit]).slice(1, 4);
+  return fill(alternates.length > 0 ? t.quantityTip : t.quantityTipBaseOnly, { baseUnit: material.baseUnit, units: alternates.join(", ") });
+}
 /** Capture the opening order/version; an RSC conflict refresh never upgrades a stale form's version. */
-export function ProductionDialog({ context, labels: t, materials, locations, order, locale }: Props) {
+export function ProductionDialog({ context, labels: t, materials, locations, units = {}, order, locale }: Props) {
   const [open, setOpen] = useState(false);
   const [openedOrder, setOpenedOrder] = useState(order);
   return <Dialog open={open} onOpenChange={(value) => { if (value) setOpenedOrder(order); setOpen(value); }}>
     <DialogTrigger asChild><Button variant={order ? "outline" : "default"}>{order ? t.edit : t.create}</Button></DialogTrigger>
     <DialogContent className={`sm:max-w-2xl ${TALL_DIALOG}`}>
       <DialogHeader><DialogTitle>{order ? t.edit : t.create}</DialogTitle><DialogDescription>{t.intro}</DialogDescription></DialogHeader>
-      <ProductionForm context={context} labels={t} materials={materials} locations={locations} order={openedOrder} locale={locale} close={() => setOpen(false)} />
+      <ProductionForm context={context} labels={t} materials={materials} locations={locations} units={units} order={openedOrder} locale={locale} close={() => setOpen(false)} />
     </DialogContent>
   </Dialog>;
 }
-function ProductionForm({ context, labels: t, materials, locations, order, locale, close }: Props & { close: () => void }) {
+function ProductionForm({ context, labels: t, materials, locations, units, order, locale, close }: Props & { units: Record<string, string[]>; close: () => void }) {
   const router = useRouter();
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState<{ values: Record<string, string>; options: ProductionOptions } | null>(null);
@@ -39,11 +53,11 @@ function ProductionForm({ context, labels: t, materials, locations, order, local
       { name: "location", label: t.location, type: "autocomplete" as const, placeholder: t.locationPicker.placeholder, autocompleteLabels: t.locationPicker.labels,
         choices: activeRecordOptions(locations) },
     ] : []),
-    { name: "quantity", label: t.quantity },
+    { name: "quantity", label: t.quantity, tooltip: (values) => plannedQuantityTip(t, materials, units, order?.output ?? values.output) },
     { name: "unit", label: t.unit, description: t.unitHint },
     { name: "plannedFinish", label: t.finish, type: "date", ...(order && { description: fill(t.finishHint, { days: String(order.leadTimeDays) }) }) },
   ];
-  const formatting = { formatError: errorFormatter(t), formatFieldError: productionFieldError(t), pendingLabel: t.pending, cancelLabel: t.cancel };
+  const formatting = { formatError: errorFormatter(t), formatFieldError: productionFieldError(t), pendingLabel: t.pending, cancelLabel: t.cancel, infoLabel: t.infoLabel };
   if (preview) return <div className="flex flex-col gap-4">
     <p className="text-sm">{fill(t.previewDates, { start: preview.options.plannedStart, days: String(preview.options.leadTimeDays) })}</p>
     <p className="text-sm text-muted-foreground">{t.previewNotice}</p>

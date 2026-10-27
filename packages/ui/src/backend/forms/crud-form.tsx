@@ -9,6 +9,7 @@ import { NativeSelect, NativeSelectOptGroup, NativeSelectOption } from "../../co
 import type { ApiResult, FieldErrors } from "../api/result";
 import { ErrorMessage } from "../feedback/error-message";
 import { Autocomplete, type AutocompleteLabels, type AutocompleteOption } from "./autocomplete";
+import { InfoTip } from "./info-tip";
 
 /** One choice of a select; a disabled one says why in its label ("box (already converted)"). */
 export interface CrudOption {
@@ -32,6 +33,13 @@ export interface CrudField {
    * one choice of another field). A function can only be built in a client component.
    */
   description?: string | ((values: Record<string, string>) => string | undefined);
+  /**
+   * The field's fuller explanation, behind an info button beside its label (UX-014): which unit it
+   * takes and how the entry is stored. Like `description`, a function follows the form's values.
+   * On the first field, it gives the field `autoFocus` so a dialog doesn't focus the info button
+   * first; an `autocomplete` field takes no `autoFocus`, so don't give a first autocomplete a tooltip.
+   */
+  tooltip?: string | ((values: Record<string, string>) => string | undefined);
   /** A select's choices, in order. */
   options?: CrudOption[];
   /** A select's choices in labelled `<optgroup>`s, after any `options` (units by dimension, #217). */
@@ -72,6 +80,8 @@ export interface CrudFormProps<T> {
   formatFieldError?: (message: string) => string;
   /** The reader's language, for an autocomplete's plural forms. */
   locale?: string;
+  /** An info button's accessible name; `{field}` becomes the field's label. */
+  infoLabel?: string;
 }
 
 /**
@@ -92,6 +102,7 @@ export function CrudForm<T>({
   formatError = ({ message }) => message,
   formatFieldError = (message) => message,
   locale,
+  infoLabel = "About {field}",
 }: CrudFormProps<T>) {
   const id = useId();
   const [values, setValues] = useState<Record<string, string>>(() =>
@@ -142,11 +153,12 @@ export function CrudForm<T>({
 
   return (
     <form onSubmit={submit} onKeyDown={onKeyDown} noValidate className="flex flex-col gap-4">
-      {fields.map((field) => {
+      {fields.map((field, index) => {
         const inputId = `${id}-${field.name}`;
         const errors = fieldErrors[field.name];
         const hintId = `${inputId}-hint`;
         const description = typeof field.description === "function" ? field.description(values) : field.description;
+        const tooltip = typeof field.tooltip === "function" ? field.tooltip(values) : field.tooltip;
         const labelId = `${inputId}-label`;
         const set = (value: string) => setValues((current) => ({ ...current, [field.name]: value }));
         const control = {
@@ -156,12 +168,24 @@ export function CrudForm<T>({
           onChange: (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => set(event.target.value),
           "aria-invalid": errors ? true : undefined,
           "aria-describedby": errors || description ? hintId : undefined,
+          // A dialog focuses its first tabbable element, which a first field's info button would be:
+          // the field keeps first focus, and Radix leaves focus already inside the dialog alone.
+          autoFocus: index === 0 && tooltip ? true : undefined,
         };
         return (
           <div key={field.name} className="flex flex-col gap-2">
-            <Label id={labelId} htmlFor={inputId}>
-              {field.label}
-            </Label>
+            {tooltip ? (
+              <div className="flex items-center gap-1">
+                <Label id={labelId} htmlFor={inputId}>
+                  {field.label}
+                </Label>
+                <InfoTip label={infoLabel.replaceAll("{field}", field.label)}>{tooltip}</InfoTip>
+              </div>
+            ) : (
+              <Label id={labelId} htmlFor={inputId}>
+                {field.label}
+              </Label>
+            )}
             {field.type === "select" ? (
               <NativeSelect className="w-full" {...control}>
                 {field.placeholder !== undefined && (

@@ -292,4 +292,33 @@ describe("RecipeForm", () => {
     fireEvent.keyDown(picker("Material, Line 1"), { key: "Escape" });
     expect(onCancel).toHaveBeenCalledOnce();
   });
+
+  it("explains every line's quantity once, beside the Components heading, keeping the heading as the lines' group name (UX-014, #290)", () => {
+    renderForm();
+    const info = screen.getByRole("button", { name: "About Component quantity" });
+    const tip = () => document.getElementById(info.getAttribute("aria-describedby")!)!.textContent;
+    expect(screen.getByRole("group", { name: "Components Per 1 base unit of the output" })).toBeTruthy();
+    expect(tip()).toBe(en.boms.form.quantityTipAny);
+
+    choose("Output", "00000005");
+
+    expect(screen.getByRole("group", { name: "Components Per 1 each of Cabinet, red" })).toBeTruthy();
+    expect(tip()).toBe(
+      "Per 1 each of the output. Enter it in the component's base unit or in a physical unit it converts (not SU). CPG stores it in the component's base unit to six decimals.",
+    );
+  });
+
+  it("leaves Escape to an open quantity tooltip, and cancels on the next", () => {
+    renderForm({ labels: bomsLabels(pl) });
+    const info = screen.getByRole("button", { name: "Informacje o polu Ilość składnika" });
+
+    fireEvent.click(info);
+    expect(document.querySelector("[data-slot=popover-content]")!.textContent).toBe(pl.boms.form.quantityTipAny);
+    fireEvent.keyDown(info, { key: "Escape" });
+    expect(document.querySelector("[data-slot=popover-content]")).toBeNull();
+    expect(onCancel).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(info, { key: "Escape" });
+    expect(onCancel).toHaveBeenCalledOnce();
+  });
 });
