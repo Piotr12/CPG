@@ -3,7 +3,7 @@
 **Date:** 2026-10-27 05:23 UTC
 **Agent:** Claude Code / claude-opus-5-5 (cezar task d75a69b6, `om-auto-fix-issue 290`)
 **Spec:** none at start — authored by this run
-**Status:** in progress
+**Status:** partial — spec PR #296 opened; implementation pending the owner's choice
 
 ## Goal
 
@@ -36,3 +36,7 @@ Drive issue #290 through `om-auto-fix-issue`'s feature route: no spec exists, so
 - Spec-only change: no lint, typecheck or build impact; the full gate runs in CI.
 
 ## Follow-ups
+
+- **Implementation not started.** The feature route chains into `om-auto-implement-spec .ai/specs/2026-10-27--0526UTC-quantity-field-tooltips.md`, which needs `npm ci` in a worktree. This worktree still holds the untracked `node_modules` symlink, and both `rm` and `mv` of it were denied. `npm ci` here would empty the main checkout's `node_modules` through the link, so the run stopped and asked the owner (lesson 2026-10-27 in `.ai/lessons.md`). Recommended: merge spec PR #296 first, then run `om-auto-implement-spec` as a fresh cezar task, whose new worktree has no symlink and can move the spec to `implemented/` once it is on `main`.
+- Local Docker was unavailable, so no current-app screenshots. The implementation run will need Docker or a local standalone server (lesson 2026-10-23) for `tests/integration/field-tooltips.test.ts`.
+- `.ai/trackers/github.md`'s `attach-image-evidence` snippet still assigns `path=`, which breaks zsh (lesson 2026-10-24). This run hit it again; renaming the variable in the descriptor would stop the repeats.
