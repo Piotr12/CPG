@@ -5,7 +5,7 @@
 **Source doc:** .ai/specs/2026-10-27--0526UTC-quantity-field-tooltips.md
 **Spec PR:** #296 (design-only, `Refs #290`)
 **Issue:** #290
-**Status:** in progress
+**Status:** complete — review pending
 
 ## Goal
 
@@ -59,9 +59,9 @@ As in the spec's Implementation Plan, Phases 1–3, Steps 1–9.
 
 ### Phase 3: BOM form, integration, acceptance
 
-- [ ] 3.1 BOM component quantity tooltip
-- [ ] 3.2 Integration test field-tooltips
-- [ ] 3.3 UX-014 acceptance and spec to implemented
+- [x] 3.1 BOM component quantity tooltip — efe2da29
+- [x] 3.2 Integration test field-tooltips — 6908ada7
+- [x] 3.3 UX-014 acceptance and spec to implemented — b93ba3a6
 
 ## Log
 
@@ -72,3 +72,9 @@ As in the spec's Implementation Plan, Phases 1–3, Steps 1–9.
 
   This Radix version defers an outside press to its `click`, so the `onInteractOutside` guard matters for hover-then-click. A mutation check confirmed the test fails without the guard.
 - 07:05 — Phase 2 done. The shared `baseUnitTip` and `chosenBaseUnit` helpers in `components/forms/form-labels.ts` name the chosen material's base unit (the picker option's `detail`) on the add forms. The change forms pass `row.baseUnit`. `ProductionContent` now loads `listUnits()` on the list page too.
+- 07:15 — Phase 3 done. `tests/integration/field-tooltips.test.ts` passed 3/3 against a local standalone server (Docker is down; lesson 2026-10-23), and so did the touched screens' files: production-orders, planning-parameters, materials and boms, 41/41. QA screenshots with a tooltip open were taken at 1280 px (production order by keyboard, planning parameters by hover, BOM) and at 390 px (conversion by tap).
+- 07:20 — Full gate green:
+  - `npm run lint` exit 0;
+  - `npm run typecheck` exit 0;
+  - `npm run test:coverage`: 597 files, 4634 tests, 100% statements, branches, functions and lines;
+  - `npm run build` exit 0.
