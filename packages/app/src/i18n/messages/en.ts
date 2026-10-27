@@ -214,6 +214,7 @@ export const en = {
       baseUnit: "Base unit",
       baseUnitPlaceholder: "Choose a unit",
       baseUnitHint: "Every quantity of this material is stored in this unit, exactly to six decimals.",
+      baseUnitTip: "Every quantity of this material is stored in this unit, exactly to six decimals: other units are converted into it. It locks for good once stock moves, or once a BOM, production order, customer order, purchase requisition, purchase order or transfer uses the material. While conversions, planning parameters, safety-stock targets or forecasts hold values in it, remove them before changing it.",
     },
     create: {
       open: "Create material",
@@ -259,6 +260,9 @@ export const en = {
       numerator: "Base quantity",
       numeratorHint: "How many {baseUnit} that many alternate units are. Up to six decimals.",
       statisticalHint: "For SU, enter Alternate quantity 1.5 and Base quantity 1 when 1 {baseUnit} = 1.5 SU.",
+      /** The two quantity fields' tooltips (UX-014, #290). */
+      denominatorTip: "A conversion reads “Alternate quantity alternate units = Base quantity base units”, for example 1 bag = 25 {baseUnit}. Enter the exact factor, greater than 0. Changing it later never revalues earlier postings. SU is a reporting unit only.",
+      numeratorTip: "How many {baseUnit} the alternate quantity is, up to six decimals: “Alternate quantity alternate units = Base quantity {baseUnit}”. The factor must be exact and greater than 0. Changing it later never revalues earlier postings. SU is a reporting unit only.",
       add: {
         open: "Add conversion",
         title: "Add a unit conversion",
@@ -507,6 +511,11 @@ export const en = {
       minimumHint: "In the material's base unit. 0 means no minimum.",
       lotMultiple: "Lot multiple",
       lotMultipleHint: "Supply comes in whole multiples of this, in the base unit. 0.000001 means no rounding.",
+      /** The quantity fields' tooltips (UX-014, #290); `…Any` until a material is chosen. */
+      minimumTip: "In {baseUnit}, the material's base unit, to six decimals. A planned supply is never smaller than this, even when the minimum is not a whole lot multiple. 0 means no minimum.",
+      minimumTipAny: "In the material's base unit, to six decimals. A planned supply is never smaller than this, even when the minimum is not a whole lot multiple. 0 means no minimum.",
+      lotMultipleTip: "In {baseUnit}, the material's base unit, to six decimals. Planned supply is rounded up to whole multiples of this, then raised to the minimum lot if it is still below it. 0.000001 means no rounding.",
+      lotMultipleTipAny: "In the material's base unit, to six decimals. Planned supply is rounded up to whole multiples of this, then raised to the minimum lot if it is still below it. 0.000001 means no rounding.",
     },
     add: {
       open: "Add parameters",
@@ -577,6 +586,9 @@ export const en = {
       effectiveFromHint: "The target applies from this date until the next one.",
       quantity: "Target",
       quantityHint: "In the material's base unit. 0 ends the buffer from this date.",
+      /** The target's tooltip (UX-014, #290); `…Any` until a material is chosen. */
+      quantityTip: "In {baseUnit}, the material's base unit, to six decimals. The target applies from its date until the next target. 0 ends the buffer from this date.",
+      quantityTipAny: "In the material's base unit, to six decimals. The target applies from its date until the next target. 0 ends the buffer from this date.",
     },
     add: {
       open: "Add target",
@@ -725,6 +737,10 @@ export const en = {
     create: "Create production order", edit: "Edit production order", save: "Save changes", preview: "Preview BOMs", pending: "Working…", cancel: "Cancel", back: "Back",
     id: "ID", output: "Output material", location: "Location", quantity: "Planned quantity", unit: "Unit", finish: "Planned finish", start: "Planned start", recipe: "BOM / revision", status: "Status", entered: "Entered quantity / conversion",
     unitHint: "Enter the output's base unit (shown beside its name) or one of its physical alternate units (not SU).",
+    /** Planned quantity's tooltip (UX-014, #290): with alternate units, base unit only, or before an output is chosen. */
+    quantityTip: "Enter a target greater than 0 in {baseUnit} or in a physical alternate unit this output converts, such as {units} (not SU). CPG converts it once, at the exact factor in force when you save, into {baseUnit}, rounded half up to six decimals, and keeps the unit and factor you entered with the order. Changing the quantity or unit later converts it again.",
+    quantityTipBaseOnly: "Enter a target greater than 0 in {baseUnit}, to six decimals: this output converts no other physical unit yet, and SU is never entered. CPG stores it in {baseUnit} and keeps the unit you entered with the order.",
+    quantityTipAny: "Enter a target greater than 0 in the output's base unit or in a physical alternate unit it converts (not SU). CPG converts it once, at the exact factor in force when you save, into the base unit, rounded half up to six decimals, and keeps the unit and factor you entered with the order. Changing the quantity or unit later converts it again.",
     previewDates: "Indicative start: {start} ({days} calendar days before finish). Dates are checked again when saving.",
     leadTime: "Captured lead time", leadTimeDays: "{days} calendar days",
     finishHint: "The planned start is recalculated from the captured lead time of {days} calendar days.",
@@ -896,6 +912,10 @@ export const en = {
       components: "Components",
       componentsPer: "Per 1 {baseUnit} of {output}",
       componentsPerAny: "Per 1 base unit of the output",
+      /** The component quantity's tooltip (UX-014, #290), beside the heading; `…Any` until an output is chosen. */
+      quantityInfo: "Component quantity",
+      quantityTip: "Per 1 {baseUnit} of the output. Enter it in the component's base unit or in a physical unit it converts (not SU). CPG stores it in the component's base unit to six decimals.",
+      quantityTipAny: "Per 1 base unit of the output. Enter it in the component's base unit or in a physical unit it converts (not SU). CPG stores it in the component's base unit to six decimals.",
       material: "Material",
       quantity: "Quantity",
       unit: "Unit",
@@ -2013,6 +2033,8 @@ export const en = {
     pagination: "Variance report pages", previous: "Previous", next: "Next", page: "Page {page} of {pages}",
   },
   /** Every list's search box, result line and empty result, and the material picker (#217). */
+  /** Shared by every form: a field's info button (UX-014, #290); `{field}` is the field's label. */
+  forms: { infoLabel: "About {field}" },
   lists: {
     search: "Search",
     clear: "Clear search",

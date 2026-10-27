@@ -20,6 +20,8 @@ describe("materialsLabels", () => {
     expect(labels).not.toHaveProperty("heading");
     expect(labels.errors.VALIDATION_FAILED).toBe(en.errors.VALIDATION_FAILED);
     expect(labels.errors.FORBIDDEN).toBe("Only the administrator can change materials.");
+    expect(labels.infoLabel).toBe("About {field}");
+    expect(materialsLabels(pl).infoLabel).toBe("Informacje o polu {field}");
   });
 });
 

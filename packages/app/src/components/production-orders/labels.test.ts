@@ -25,7 +25,9 @@ it("keeps every label serializable and translates known field errors while prese
     expect(completionFieldError(labels)("specific server context")).toBe("specific server context");
     expect(labels.errors.INSUFFICIENT_STOCK).toBe(messages.errors.INSUFFICIENT_STOCK);
     expect(labels.errors.PRODUCTION_OVERPRODUCTION).toContain("{target}");
+    expect(labels.infoLabel).toBe(messages.forms.infoLabel);
   }
+  expect([en.forms.infoLabel, pl.forms.infoLabel]).toEqual(["About {field}", "Informacje o polu {field}"]);
 });
 it("translates the planning and target messages by their exported constants, on both forms (#251)", () => {
   const polish = productionLabels(pl);

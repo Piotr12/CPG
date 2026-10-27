@@ -14,13 +14,21 @@ import type { Messages } from "../../i18n/messages/en";
  * The materials screens' strings in the reader's language: plain strings, so they can reach client
  * components (the server-side `heading` stays behind). `errors` holds every code the screens can show.
  */
-export type MaterialsLabels = Omit<Messages["materials"], "heading" | "errors"> & { errors: Record<string, string> };
+export type MaterialsLabels = Omit<Messages["materials"], "heading" | "errors"> & {
+  errors: Record<string, string>;
+  /** A field's info button name, `{field}` for its label (UX-014). */
+  infoLabel: string;
+};
 
 /** Builds the materials screens' labels from a dictionary (server side, where `messages` is available). */
 export function materialsLabels(messages: Messages): MaterialsLabels {
   const labels: Partial<Messages["materials"]> = { ...messages.materials };
   delete labels.heading;
-  return { ...(labels as Omit<Messages["materials"], "heading">), errors: { ...messages.errors, ...messages.materials.errors } };
+  return {
+    ...(labels as Omit<Messages["materials"], "heading">),
+    errors: { ...messages.errors, ...messages.materials.errors },
+    infoLabel: messages.forms.infoLabel,
+  };
 }
 
 /** The shared form helpers, re-exported for the materials components (`components/forms/`). */

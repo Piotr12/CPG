@@ -19,6 +19,8 @@ export type PlanningParametersLabels = Omit<Messages["planningParameters"], "hea
   errors: Record<string, string>;
   picker: MaterialPicker;
   locationPicker: MaterialPicker;
+  /** A field's info button name, `{field}` for its label (UX-014). */
+  infoLabel: string;
 };
 
 /** Builds the labels from a dictionary (server side, where `messages` is available). */
@@ -29,6 +31,7 @@ export function planningParametersLabels(messages: Messages): PlanningParameters
     ...(labels as Omit<Messages["planningParameters"], "heading">),
     errors: { ...messages.errors, ...messages.planningParameters.errors },
     picker: materialPicker(messages.lists), locationPicker: recordPicker(messages.lists, "location"),
+    infoLabel: messages.forms.infoLabel,
   };
 }
 

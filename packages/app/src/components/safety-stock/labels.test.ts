@@ -11,6 +11,8 @@ describe("safetyStockLabels", () => {
     expect(labels).not.toHaveProperty("heading");
     expect(labels.errors.SAFETY_STOCK_TARGET_EXISTS).toBe(en.safetyStock.errors.SAFETY_STOCK_TARGET_EXISTS);
     expect(labels.errors.VALIDATION_FAILED).toBe(en.errors.VALIDATION_FAILED);
+    expect(labels.infoLabel).toBe("About {field}");
+    expect(safetyStockLabels(pl).infoLabel).toBe("Informacje o polu {field}");
   });
 });
 

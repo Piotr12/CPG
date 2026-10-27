@@ -28,6 +28,8 @@ import { materialPicker, type MaterialPicker } from "../materials/material-picke
 export type BomsLabels = Omit<Messages["boms"], "heading" | "detailHeading" | "errors"> & {
   errors: Record<string, string>;
   picker: MaterialPicker;
+  /** A field's info button name, `{field}` for its label (UX-014). */
+  infoLabel: string;
 };
 
 /** Builds the BOM screens' labels from a dictionary (server side, where `messages` is available). */
@@ -39,6 +41,7 @@ export function bomsLabels(messages: Messages): BomsLabels {
     ...(labels as Omit<Messages["boms"], "heading" | "detailHeading">),
     errors: { ...messages.errors, ...messages.boms.errors },
     picker: materialPicker(messages.lists),
+    infoLabel: messages.forms.infoLabel,
   };
 }
 
