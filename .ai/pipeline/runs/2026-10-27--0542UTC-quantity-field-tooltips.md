@@ -47,8 +47,8 @@ As in the spec's Implementation Plan, Phases 1–3, Steps 1–9.
 
 ### Phase 1: InfoTip and CrudField.tooltip
 
-- [ ] 1.1 InfoTip control in @cpg/ui with tests
-- [ ] 1.2 CrudField.tooltip and CrudFormProps.infoLabel with tests
+- [x] 1.1 InfoTip control in @cpg/ui with tests — ff3a744b
+- [x] 1.2 CrudField.tooltip and CrudFormProps.infoLabel with tests — f858e454
 
 ### Phase 2: CrudForm field tooltips and copy
 
@@ -66,3 +66,8 @@ As in the spec's Implementation Plan, Phases 1–3, Steps 1–9.
 ## Log
 
 - 05:42 — Slot free (no `feat/quantity-field-tooltips` on the remote, no PR besides spec PR #296). Worktree created and `npm ci` done (913 packages).
+- 06:48 — Phase 1 done. Two findings while testing, both now in `InfoTip` with tests:
+  - a dialog focuses its first tabbable control when it opens, so a tooltip field first in the form (production-order edit, change target, change factor) would pop its tip unasked. Focus now opens the tip only when the button matches `:focus-visible`, which is keyboard focus; a click or tap pins it anyway;
+  - a blur while the tip is closed found no content ref, so it is read with `?.`.
+
+  This Radix version defers an outside press to its `click`, so the `onInteractOutside` guard matters for hover-then-click. A mutation check confirmed the test fails without the guard.
