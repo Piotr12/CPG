@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   ArrowLeftRightIcon,
   BlocksIcon,
+  CalendarRangeIcon,
   ChartColumnIcon,
   ChartColumnStackedIcon,
   ChartBarDecreasingIcon,
@@ -74,6 +75,7 @@ const ICONS: Record<NavId, LucideIcon> = {
   stockImport: FileUpIcon,
   stockReport: ChartColumnIcon,
   varianceReport: ChartBarDecreasingIcon,
+  mrp: CalendarRangeIcon,
   overview: HouseIcon,
   transactions: TruckIcon,
   productionOrders: BlocksIcon,

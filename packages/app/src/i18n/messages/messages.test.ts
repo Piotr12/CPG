@@ -63,7 +63,11 @@ describe("dictionaries", () => {
       "stock/channels/api",
       // "1 {unit} = {factor} SU": only placeholders, a number and the unit symbol.
       "demandReview/factor",
+      // MRP is the acronym Polish planners use as well.
+      "mrp/heading",
+      "mrp/channels/api",
       "nav/menu",
+      "nav/mrp",
       "nav/import",
       "nav/roles/admin",
     ]);

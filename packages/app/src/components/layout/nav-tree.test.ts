@@ -30,13 +30,14 @@ describe("isCurrentLeaf", () => {
 });
 
 describe("the trees", () => {
-  it("hold groups with their entries, Transactions above Stock and the reports (D6)", () => {
+  it("hold groups with their entries, Transactions above MRP, Stock and the reports (D6)", () => {
     expect(TENANT_TREE.filter(isGroup).map((group) => group.id)).toEqual(["masterData", "sales", "transactions"]);
     expect(TENANT_TREE.map((node) => node.id)).toEqual([
       "overview",
       "masterData",
       "sales",
       "transactions",
+      "mrp",
       "stock",
       "stockImport",
       "stockReport",
@@ -55,6 +56,7 @@ describe("trailOf", () => {
     ["/admin/test/materials", [{ label: "Master data" }, { label: "Materials" }]],
     ["/admin/test/forecasts", [{ label: "Sales" }, { label: "Forecasts" }]],
     ["/admin/test", [{ label: "Overview" }]],
+    ["/admin/test/mrp", [{ label: "MRP" }]],
     ["/admin/test/audit", [{ label: "Audit" }]],
     ["/admin/users", [{ label: "Administration" }, { label: "Users" }]],
     ["/admin", [{ label: "Administration" }, { label: "Tenants" }]],
