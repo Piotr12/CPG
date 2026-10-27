@@ -33,8 +33,12 @@ Phase 1 is the spec's Implementation Plan, steps 1–7. The branch is stacked on
 - 05:25–05:35 UTC — the spec was written autonomously with eight reversible defaults (Q1–Q8). A fresh-context review found no blockers; its findings are folded in. Spec PR #294 opened with `Refs #273` and labels review, documentation, skip-qa, priority-medium and risk-low.
 - 05:29 UTC — this plan; 7 steps, under the threshold of 20, so the plain engine applies.
 - 05:30–05:40 UTC — steps 1.1–1.7 landed: 26 new MRP tests and 1 for `outstandingMicro`. `compareCodes` is exported from `projection/pairs.ts` and shared by the pair order and the firm-demand order. No deviation from the spec.
+- 05:47 UTC — full gate green: lint, typecheck, test:coverage (601 files, 4,635 tests, 100% on all four measures), build.
+- 05:52 UTC — fresh-agent code review: one major (the status filter was untested because the closed fixtures had no remainder) and one nit (`lifecycle.ts` pulls `ConflictError` into the engine's import graph; allowed by the spec, declined). The major is fixed and proven by mutation (2 tests fail without the filter). A lesson was added.
 
 ## Progress
+
+PR: #295
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
@@ -47,3 +51,4 @@ Phase 1 is the spec's Implementation Plan, steps 1–7. The branch is stacked on
 - [x] 1.5 Add the bucket projection — 49ca8a8d
 - [x] 1.6 Add planMrp with one test per acceptance criterion — 88aa65d3
 - [x] 1.7 Document domain/mrp and move the spec to implemented — 2db4d259
+- [x] Post-review fix: tests prove the status filter, with reversed closed-early and cancelled lines that would otherwise add 4 and 10 — 30cf4b6d
