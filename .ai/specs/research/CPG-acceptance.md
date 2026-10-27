@@ -13,7 +13,7 @@ The original export marked every scenario `Not executed`. Scenarios are updated 
 - **Partially verified**: only part of the scenario can be or is asserted today; the **Evidence** line says which part is missing and why.
 - **Not executed**: not yet built or not yet checked.
 
-Last updated 2026-10-25 for #192: its tests move UX-009, API-031, AUD-022, E2E-006, E2E-013 and E2E-014 to Passed (automated), and UX-023 and UX-026 from Not executed to Partially verified (their MRP halves are #14). Before that, the same day for #191 (E10-S05): BOM-009, BOM-027, E2E-004 and LFC-015 move to Passed (automated), LFC-025 and LFC-027 to Partially verified (their non-MRP halves), and E2E-015 now waits only on MRP (#14). Before that, the same day for #190: TRF-012, E2E-009 and MAT-024 move from Partially verified to Passed (automated), with a 60/50/10 Close Early refusal in the service and on screen, a 60-planned transfer received 55 and written off 5 through the API and closed early on screen, and 0.123456 posted through the ledger; LFC-012 gains the 409 with its material, location and quantity, through the API and the Deactivate dialog, and STX-011 the Stock import screen's dry run. Before that, the same day for #240: the D08 netting tests move DEM-002…013 from Not executed to Partially verified; each still needs MRP's run (#14). Before that, 2026-10-24 for #200: E2E-020's test now owns both Test generations within one UTC day, and the tiny dataset's unissued shipment is checked on every day of 2025–2027; its status is unchanged. Before that, the same day for E09-S05 (#186): its tests move E2E-017 to Passed (automated) and add evidence to LFC-013. Before that, 2026-10-23 for the second slice 2 closing pass, against `main` at `db50cf07`: the slice 2 rows were rechecked against the tests that PRs #156 (#140), #159 (#142), #161 (#141), #170 (#168), #174 (#153), #177 (#152), #178 (#144), #179 (#138), #181 (#145) and #182 (#147) added. TEN-009, MAT-009, MAT-029, INV-023, LFC-019, API-034, AUD-001 and UX-025 move to Passed (automated), their whole Then now asserted; TRF-012 and BUY-017 go back to Partially verified (no test closes a transfer with 10 of 60 in transit after 50 received; BUY-017's scheduled supply is MRP, #14); SAL-015, E2E-004, E2E-006, E2E-009, E2E-013, E2E-017, E2E-018 and E2E-020 move from Not executed to Partially verified; REV-001, REV-010, SAL-008, SAL-018, AUD-002 and AUD-025 gain the #144 and #147 evidence, and the stale notes of TEN-001, TEN-025, TEN-029, MAT-006, MAT-024, INV-007, DEM-016 and E2E-015 are corrected. The gaps found are filed as #185–#192 and named in each row. Before that, the same day for E11-S04 (#144), against `main` at `8195a0b`: its tests moved LFC-004 and BUY-017 to Passed (automated) (their MRP halves are slice 3, #14) and added evidence to PRD-029. Before that, the same day for E13-S05 (#152), against `main` at `8adea42`: more evidence for AUD-004 and UX-010, whose status is unchanged. Before that, 2026-10-21 for E10-S03 (#143), against `main` at `1882d6a`, whose tests moved LFC-022, BOM-026, BOM-028, BOM-029, UX-013 and E2E-011 to Passed (automated). Before that, the same day: epics E07 (#73), E08 (#74), E09 (#75), E10 (#76), E11 (#77) and E13 (#79), against `main` at `d2300ef` (PRs #102, #104, #107, #108, #109, #111, #112, #114, #118, #119, #120, #123, #125, #130, #133, #135); the gaps found are filed as #139–#145, and #139 (PR #151) closes LFC-018, STX-006 and STX-018. Earlier: epic E05 (#13) against `2a2976a` (PR #99 for E05-S01), plus the tests and the workbook cell limit added with that update; epic E04 (#12) against `082f2d5`; epic E03 (#11) against `3f553a5`, and the E02 end-to-end follow-up (#67); epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
+Last updated 2026-10-27 for #274 (E14-S02): its tests move MRP-001, MRP-002, MRP-003, INV-008 and RUN-001 to Passed (automated), and MRP-008, RUN-002, RUN-021 and TEN-019 to Partially verified (the daily report screen is E18-S01, automatic runs E19-S03). Before that, 2026-10-25 for #192: its tests move UX-009, API-031, AUD-022, E2E-006, E2E-013 and E2E-014 to Passed (automated), and UX-023 and UX-026 from Not executed to Partially verified (their MRP halves are #14). Before that, the same day for #191 (E10-S05): BOM-009, BOM-027, E2E-004 and LFC-015 move to Passed (automated), LFC-025 and LFC-027 to Partially verified (their non-MRP halves), and E2E-015 now waits only on MRP (#14). Before that, the same day for #190: TRF-012, E2E-009 and MAT-024 move from Partially verified to Passed (automated), with a 60/50/10 Close Early refusal in the service and on screen, a 60-planned transfer received 55 and written off 5 through the API and closed early on screen, and 0.123456 posted through the ledger; LFC-012 gains the 409 with its material, location and quantity, through the API and the Deactivate dialog, and STX-011 the Stock import screen's dry run. Before that, the same day for #240: the D08 netting tests move DEM-002…013 from Not executed to Partially verified; each still needs MRP's run (#14). Before that, 2026-10-24 for #200: E2E-020's test now owns both Test generations within one UTC day, and the tiny dataset's unissued shipment is checked on every day of 2025–2027; its status is unchanged. Before that, the same day for E09-S05 (#186): its tests move E2E-017 to Passed (automated) and add evidence to LFC-013. Before that, 2026-10-23 for the second slice 2 closing pass, against `main` at `db50cf07`: the slice 2 rows were rechecked against the tests that PRs #156 (#140), #159 (#142), #161 (#141), #170 (#168), #174 (#153), #177 (#152), #178 (#144), #179 (#138), #181 (#145) and #182 (#147) added. TEN-009, MAT-009, MAT-029, INV-023, LFC-019, API-034, AUD-001 and UX-025 move to Passed (automated), their whole Then now asserted; TRF-012 and BUY-017 go back to Partially verified (no test closes a transfer with 10 of 60 in transit after 50 received; BUY-017's scheduled supply is MRP, #14); SAL-015, E2E-004, E2E-006, E2E-009, E2E-013, E2E-017, E2E-018 and E2E-020 move from Not executed to Partially verified; REV-001, REV-010, SAL-008, SAL-018, AUD-002 and AUD-025 gain the #144 and #147 evidence, and the stale notes of TEN-001, TEN-025, TEN-029, MAT-006, MAT-024, INV-007, DEM-016 and E2E-015 are corrected. The gaps found are filed as #185–#192 and named in each row. Before that, the same day for E11-S04 (#144), against `main` at `8195a0b`: its tests moved LFC-004 and BUY-017 to Passed (automated) (their MRP halves are slice 3, #14) and added evidence to PRD-029. Before that, the same day for E13-S05 (#152), against `main` at `8adea42`: more evidence for AUD-004 and UX-010, whose status is unchanged. Before that, 2026-10-21 for E10-S03 (#143), against `main` at `1882d6a`, whose tests moved LFC-022, BOM-026, BOM-028, BOM-029, UX-013 and E2E-011 to Passed (automated). Before that, the same day: epics E07 (#73), E08 (#74), E09 (#75), E10 (#76), E11 (#77) and E13 (#79), against `main` at `d2300ef` (PRs #102, #104, #107, #108, #109, #111, #112, #114, #118, #119, #120, #123, #125, #130, #133, #135); the gaps found are filed as #139–#145, and #139 (PR #151) closes LFC-018, STX-006 and STX-018. Earlier: epic E05 (#13) against `2a2976a` (PR #99 for E05-S01), plus the tests and the workbook cell limit added with that update; epic E04 (#12) against `082f2d5`; epic E03 (#11) against `3f553a5`, and the E02 end-to-end follow-up (#67); epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
 
 This document contains the complete acceptance catalogue for the CPG MVP. Each test preserves its ID, title, priority, execution channel, and Given / When / Then criteria.
 
@@ -183,7 +183,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### TEN-019 — Read-only blocks new MRP
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+
+- **Evidence:** The manual half, as RUN-021: `tests/integration/mrp-run-api.test.ts`, `tests/integration/mrp-run.test.ts` and `packages/core/src/services/mrp/mrp-run-gate.test.ts` refuse a run in a read-only tenant, store no run or result, and keep the earlier run readable. Automatic runs and proposed documents are E19-S03. E14-S02, #274.
 
 - **Given:** Test set read-only with existing results
 - **When:** Request a new manual or automatic MRP run
@@ -1895,7 +1897,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### INV-008 — Negative projected stock differs from actual
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
+
+- **Evidence:** `packages/core/src/services/mrp/mrp-run.service.test.ts` (physical 5, firm demand 20: −15 projected before replenishment, the balance still 5, and no other tenant-owned row changed), `tests/integration/mrp-run-api.test.ts` (the same through the API: the latest run shows −15.000000, the stock report 5.000000). #273, E14-S02, #274.
 
 - **Given:** Actual on-hand 5 and future firm demand 20
 - **When:** Run MRP
@@ -2711,7 +2715,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MRP-001 — Manual run covers all tenant locations
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
+
+- **Evidence:** `packages/core/src/services/mrp/mrp-run.service.test.ts` (three locations, each with an Open line of the same material: the stored run has 90 daily results for each of the three pairs, 1 October to 29 December, none omitted), `packages/core/src/services/mrp/mrp-snapshot.service.test.ts` (every location is read, inactive ones by their data). E14-S02, #274.
 
 - **Given:** Tenant has three active sites and valid demand at all
 - **When:** Run MRP
@@ -2719,7 +2725,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MRP-002 — MRP does not cross tenants
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
+
+- **Evidence:** `packages/core/src/services/mrp/mrp-run.service.test.ts` (material 00000001 at location 00000001 in both tenants, 40 ordered in Prod and 70 in Test: Prod's run holds 40 of firm demand and nothing of Test's, and Test's latest run keeps its ID and time), `packages/core/src/services/mrp/mrp-snapshot.service.test.ts` (neither tenant's snapshot reads the other's stock or lines), `tests/integration/mrp-run-api.test.ts` (Test and Prod runs through the API, and a Test reset that leaves Prod's run). E14-S02, #274.
 
 - **Given:** Prod and Test contain coincident material IDs but different demand
 - **When:** Run Prod MRP
@@ -2727,7 +2735,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MRP-003 — 90 days includes today
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
+
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` (today 1 October: 90 buckets, 1 October to 29 December), `packages/core/src/services/mrp/mrp-run.service.test.ts` (the stored run's `startDate`/`endDate` and every pair's 90 stored days from 1 October, read back page by page), `tests/integration/mrp-run-api.test.ts` (a run through the API plans today through today + 89). #273, E14-S02, #274.
 
 - **Given:** Fixed today 1 October
 - **When:** Run MRP
@@ -2767,7 +2777,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MRP-008 — Negative projected balance is diagnostic
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+
+- **Evidence:** `packages/core/src/services/mrp/mrp-run.service.test.ts` and `tests/integration/mrp-run-api.test.ts`: physical 5 and an Open line of 20 store −15 before proposals on the line's day, read back through `GET /api/tenants/{tenant}/mrp/runs/latest`, while the stock balance and the stock report API still say 5. The daily report screen that shows it is E18-S01. E14-S02, #274.
 
 - **Given:** Physical 5, future requirement 20 and no supply
 - **When:** Run MRP
@@ -3121,7 +3133,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### RUN-001 — On-demand only
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
+
+- **Evidence:** `tests/integration/mrp-run.test.ts`: after a customer order and a stock correction through the API and browsing three other pages, the MRP page and the API show the same latest run ID and time. Nothing but `MrpRunService.run` creates a run, called only by the Run MRP action and `POST …/mrp/runs`. E14-S02, #274.
 
 - **Given:** Demand changed but no user starts MRP
 - **When:** Wait or browse UI
@@ -3129,7 +3143,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### RUN-002 — Manual run records timestamp and ID
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Partially verified
+
+- **Evidence:** `tests/integration/mrp-run.test.ts` (a normal user runs MRP in writable Prod and the page shows the new run's ID, time and account, and `GET …/mrp/runs/latest` returns that run with 90 days for each of its pairs), `tests/integration/mrp-run-api.test.ts`. The daily report screen is E18-S01. E14-S02, #274.
 
 - **Given:** Normal user triggers planning in writable tenant
 - **When:** Run MRP
@@ -3281,7 +3297,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### RUN-021 — MRP cannot run in read-only mode
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+
+- **Evidence:** The manual half: `tests/integration/mrp-run.test.ts` (read-only Prod keeps the latest run on the page with no Run MRP, for a user and the admin), `tests/integration/mrp-run-api.test.ts` (a user's and the admin's tokens answer 409 `TENANT_READ_ONLY` and the earlier run and its results stay readable), `packages/core/src/services/mrp/mrp-run-gate.test.ts` (the real action and API wrappers store nothing). Automatic runs are E19-S03. E14-S02, #274.
 
 - **Given:** Tenant read-only while last MRP results exist
 - **When:** Try manual and automatic runs
