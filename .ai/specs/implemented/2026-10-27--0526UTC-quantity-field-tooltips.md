@@ -1,6 +1,6 @@
 # Quantity-field tooltips on the production-order and master-data forms
 
-**Status:** ready
+**Status:** implemented (PR #297; spec PR #296)
 **Created:** 2026-10-27 05:26 UTC
 **Issue:** #290 (E20-S01, epic #272) · **Scenario:** UX-014 (`.ai/specs/research/CPG-acceptance.md`) · **Builds on:** `CrudForm` (`packages/ui/src/backend/forms/crud-form.tsx`), the shadcn `Popover` (`packages/ui/src/components/popover.tsx`), the BOM form's own controls (`packages/app/src/components/boms/recipe-form.tsx`) · **Also bound by:** `.ai/docs/engineering-standards.md` ("Reusable server & UI layers"), lessons 2026-10-25 "A popup inside a Radix dialog" and 2026-10-24 "A label passed to a client component must be plain data".
 
@@ -101,9 +101,9 @@ The texts that name a unit have a "material not chosen yet" variant, which repla
 - **Screen readers.** The button is announced as "About Planned quantity, button" and then its description: the always-rendered `sr-only` text that its `aria-describedby` names. A virtual cursor reaches the same text right after the button. The visible Popover is `aria-hidden`, so nothing is read twice, and a click-opened tip needs no live region because the text was already announced on focus.
 - Prototype: `.ai/specs/assets/quantity-field-tooltips/` (static, illustrative mockups; the shadcn `Popover` decides the final look).
 
-  ![Planned quantity's tooltip, opened by Tab, at 1280 px](assets/quantity-field-tooltips/mockup-01-production-order-tooltip.png)
+  ![Planned quantity's tooltip, opened by Tab, at 1280 px](../assets/quantity-field-tooltips/mockup-01-production-order-tooltip.png)
 
-  ![Base quantity's tooltip, opened by a tap, at 390 px](assets/quantity-field-tooltips/mockup-02-conversion-tooltip-mobile.png)
+  ![Base quantity's tooltip, opened by a tap, at 390 px](../assets/quantity-field-tooltips/mockup-02-conversion-tooltip-mobile.png)
 
 ## 📝 Edge Cases & Failure Scenarios
 
@@ -182,3 +182,14 @@ One implementation PR, three commits that each leave the app working: the reusab
 9. Acceptance: move UX-014 to **Passed (automated)** in `.ai/specs/research/CPG-acceptance.md`, with an Evidence line citing the unit and integration tests that assert each clause (lesson 2026-10-21 "Cite a scenario only where a test asserts it"). Move this spec to `implemented/`.
 
 **Verification:** `npm run lint`, `npm run typecheck`, `npm run test:coverage` (100%), `npm run build`, `npm run test:integration -- tests/integration/field-tooltips.test.ts`, then the PR's CI. QA screenshots at 1280 px and 390 px with a tooltip open in each form family.
+
+## Implementation notes
+
+Built on PR #297, stacked on the spec PR #296. It differs from the text above in these places:
+
+- **Focus opens the tip only when it is keyboard focus.** A Radix `Dialog` focuses its first tabbable control when it opens. In the forms whose first field has a tooltip (production-order edit, change target, change factor), that is the info button, and the tip would pop open unasked. `InfoTip` therefore opens on focus only while the button matches `:focus-visible`. A click or tap still pins it, so the Android focus-then-click case needs no special handling.
+- **The BOM tooltip sits inside the `<legend>`.** A legend must stay the fieldset's direct child, so a wrapper beside it isn't possible. The fieldset is named by `aria-labelledby` on the legend's two phrases instead. The info button stays out of the name, and the name gains the space between "Components" and "Per 1 … of …" that the legend-derived name was missing.
+- **A blur while the tip is closed** reads no content ref: `InfoTip` handles it, with a test.
+- **Touch at 390 px.** agent-browser taps only on iOS, so `tests/integration/field-tooltips.test.ts` sends a touch pointer's events and a click rather than a real tap. No `setDevice` helper was needed. `tests/integration/browser.ts` gains `hover` and `focus`.
+- **Shared helpers.** `baseUnitTip` and `chosenBaseUnit` in `components/forms/form-labels.ts` name the chosen material's base unit on the planning-parameter and safety-stock forms. The production list page loads `materialService.listUnits()` for Planned quantity.
+- UX-014 is Passed (automated) in `.ai/specs/research/CPG-acceptance.md`.
