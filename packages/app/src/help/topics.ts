@@ -38,6 +38,7 @@ export const HELP_TOPIC_IDS = [
   "stock-report",
   "variance-report",
   "demand-review",
+  "mrp",
   "language-and-theme",
   "using-help",
 ] as const;
@@ -85,6 +86,7 @@ export const HELP_TOPIC_ROUTES: Record<HelpTopicId, string> = {
   "stock-report": "/admin/[tenant]/reports/stock",
   "variance-report": "/admin/[tenant]/reports/variance",
   "demand-review": "/admin/[tenant]/reports/demand-review",
+  mrp: "/admin/[tenant]/mrp",
   "language-and-theme": "/admin",
   "using-help": "/help",
 };
@@ -374,6 +376,15 @@ const en: Record<HelpTopicId, HelpText> = {
       "Forecast not yet ordered follows decision D08: a forecast is consumed by the orders of the same product and location whose required date falls in its calendar month, earliest forecast first. Orders closed early or cancelled release what they never shipped. What is left of this month's forecast is due today, and forecasts of months that have ended no longer count.",
       "The chart stacks shipped, open orders and forecast not yet ordered per bucket, with the Ordered line over the past and today: where it runs above shipped, shipping fell behind demand. The table below has the same figures per product, or per location when one product is chosen. Tinted columns are shipped, white ones still to ship, and today's column has both; open a row to see its open orders, the overdue part and the forecast. Earlier and Later move the window; Apply always returns to today.",
       "Several products can only be added up in statistical units (SU): choose one product to see it in its own units. A product without an SU factor is left out of an SU total and named above the chart; set its factor on Statistical units. Both roles can read the review, also in a read-only tenant. The API returns the same figures: GET /api/tenants/{tenant}/reports/demand-review?bucket=week&material=00000001&location=00000001&unit=SU&offset=0 (every parameter optional, material and location repeatable).",
+    ],
+  },
+  mrp: {
+    title: "MRP",
+    body: [
+      "MRP in the tenant menu plans every location of the tenant over the next 90 days, today included. For each material and location it starts from today's physical stock and takes away, day by day, what open customer orders still need; an order line that is already overdue counts today. A projected balance can go below zero: that is a shortage to plan for, not a change to stock.",
+      "Run MRP starts a run at once. MRP runs only when someone starts it, never by itself, and a run changes no stock, document or master record. The page shows the latest run: its ID, its time (UTC), the account that started it and from where (UI or API), the planned days and how many material–location pairs it planned. Its results stay until the next run replaces them; every run keeps its ID and time, but only the latest keeps its results.",
+      "Both roles can run MRP while the tenant is writable. In a read-only tenant the button is hidden and nobody can start a run, the administrator and the API included, while the latest run stays readable. Test and Prod each plan only their own data, and resetting Test clears its runs, so its next run is 00000001 again.",
+      "The API: POST /api/tenants/{tenant}/mrp/runs with a bearer token, an Idempotency-Key and, in Test, the Dataset-Generation header runs MRP. GET /api/tenants/{tenant}/mrp/runs/latest?page=1 returns the latest run and the daily results of 25 material–location pairs per page. When you read further pages, pass run={id}&generation={n} from the first one: if a newer run has replaced it, the answer is 409 MRP_RUN_SUPERSEDED.",
     ],
   },
   "variance-report": {
@@ -696,6 +707,15 @@ const pl: Record<HelpTopicId, HelpText> = {
       "Prognoza jeszcze niezamówiona wynika z decyzji D08: prognozę zużywają zamówienia tego samego wyrobu i lokalizacji, których wymagana data przypada w jej miesiącu kalendarzowym, zaczynając od najwcześniejszej prognozy. Zamówienia zamknięte wcześniej lub anulowane zwalniają to, czego nie wysłały. Reszta prognozy bieżącego miesiąca jest należna dziś, a prognozy miesięcy, które się skończyły, nie są już liczone.",
       "Wykres układa w stos wysłane, otwarte zamówienia i prognozę jeszcze niezamówioną w każdym przedziale, a linia Zamówiono biegnie nad przeszłością i dniem dzisiejszym: gdy jest wyżej niż wysłane, wysyłki nie nadążały za popytem. Tabela poniżej ma te same liczby na wyrób albo, gdy wybrano jeden wyrób, na lokalizację. Kolumny cieniowane to wysłane, białe to do wysłania, a dzisiejsza ma jedno i drugie; rozwiń wiersz, aby zobaczyć otwarte zamówienia, część zaległą i prognozę. Wcześniej i Później przesuwają okno; Zastosuj zawsze wraca do dziś.",
       "Kilka wyrobów można zsumować tylko w jednostkach statystycznych (SU): wybierz jeden wyrób, aby zobaczyć go w jego własnych jednostkach. Wyrób bez współczynnika SU jest pomijany w sumie SU i wymieniony nad wykresem; ustaw jego współczynnik w Jednostkach statystycznych. Obie role mogą czytać przegląd, także w środowisku tylko do odczytu. API zwraca te same liczby: GET /api/tenants/{tenant}/reports/demand-review?bucket=week&material=00000001&location=00000001&unit=SU&offset=0 (każdy parametr opcjonalny, material i location można powtarzać).",
+    ],
+  },
+  mrp: {
+    title: "Planowanie MRP",
+    body: [
+      "MRP w menu środowiska planuje wszystkie lokalizacje środowiska na najbliższe 90 dni, łącznie z dzisiejszym. Dla każdego materiału i lokalizacji zaczyna od dzisiejszego zapasu fizycznego i odejmuje, dzień po dniu, to, czego jeszcze potrzebują otwarte zamówienia klientów; przeterminowana pozycja zamówienia liczy się dzisiaj. Prognozowany stan może spaść poniżej zera: to niedobór do zaplanowania, a nie zmiana zapasu.",
+      "Uruchom MRP od razu wykonuje przebieg. MRP działa tylko wtedy, gdy ktoś je uruchomi, nigdy samo, a przebieg nie zmienia zapasu, dokumentów ani danych podstawowych. Strona pokazuje ostatni przebieg: jego ID, czas (UTC), konto, które go uruchomiło, i skąd (UI lub API), zaplanowane dni oraz liczbę zaplanowanych par materiał–lokalizacja. Wyniki obowiązują do następnego przebiegu; każdy przebieg zachowuje ID i czas, ale wyniki ma tylko ostatni.",
+      "Obie role mogą uruchomić MRP, gdy środowisko jest zapisywalne. W środowisku tylko do odczytu przycisku nie ma i nikt nie uruchomi przebiegu, także administrator i API, a ostatni przebieg nadal można przeczytać. Test i Prod planują tylko własne dane, a reset Testu usuwa jego przebiegi, więc kolejny ma znowu ID 00000001.",
+      "API: POST /api/tenants/{tenant}/mrp/runs z tokenem bearer, nagłówkiem Idempotency-Key i, w Teście, nagłówkiem Dataset-Generation uruchamia MRP. GET /api/tenants/{tenant}/mrp/runs/latest?page=1 zwraca ostatni przebieg i dzienne wyniki 25 par materiał–lokalizacja na stronę. Czytając kolejne strony, podaj run={id}&generation={n} z pierwszej: jeśli nowszy przebieg ją zastąpił, odpowiedź to 409 MRP_RUN_SUPERSEDED.",
     ],
   },
   "variance-report": {

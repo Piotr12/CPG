@@ -7,6 +7,7 @@ import { isCurrentPath, type NavMatch } from "./current-path";
 
 /** Every entry and group the sidebar can show. A new screen adds its id here and one line below. */
 export type NavId =
+  | "mrp"
   | "stock"
   | "stockImport"
   | "stockReport"
@@ -87,6 +88,7 @@ export const TENANT_TREE: NavNode[] = [
       { id: "transfers", section: "transfers", match: "prefix" },
     ],
   },
+  { id: "mrp", section: "mrp", match: "prefix" },
   { id: "stock", section: "stock", match: "prefix" },
   { id: "stockImport", section: "stock-import", match: "prefix" },
   { id: "stockReport", section: "reports/stock", match: "prefix" },

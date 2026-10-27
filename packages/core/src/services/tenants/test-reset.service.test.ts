@@ -215,6 +215,10 @@ describe("atomic Test reset", { timeout: 60_000 }, () => {
       components: recipe.components.map(({ material, enteredQuantity, enteredUnit }) => ({ material, quantity: enteredQuantity, unit: enteredUnit })) }, actor);
     const transfer = { material: "00000001", source: "00000001", destination: "00000002", quantity: "1", unit: "kg", plannedDispatch: "2026-10-21", plannedArrival: "2026-10-22" };
     for (let index = 0; index < 2; index++) await current.transferService.create(transfer, actor);
+    // Two MRP runs in Test and one in Prod: a reset clears Test's runs and their results, and leaves Prod's (#274, D06).
+    for (let index = 0; index < 2; index++) await inRequestTransaction(current.em, () => current.mrpRunService.run(actor));
+    const prod = (await scope("prod")).cradle;
+    const prodRun = await inRequestTransaction(prod.em, () => prod.mrpRunService.run(actor));
     const old = await sequences("test");
 
     await reset(2);
@@ -225,7 +229,7 @@ describe("atomic Test reset", { timeout: 60_000 }, () => {
       supplier: tiny.masters.suppliers.length, bom: tiny.masters.boms.length, customer_order: tiny.summary.customerOrders,
       shipment: tiny.summary.shipments, goods_issue: tiny.summary.goodsIssues, purchase_requisition: tiny.summary.requisitions,
       purchase_order: tiny.summary.purchaseOrders, goods_receipt: tiny.summary.goodsReceipts, production_order: tiny.summary.productionOrders,
-      production_completion: tiny.summary.completions, transfer: 0,
+      production_completion: tiny.summary.completions, transfer: 0, mrp_run: 0,
     };
     const fresh = await sequences("test");
     expect(Object.keys(fresh).sort()).toEqual(Object.keys(expected).sort());
@@ -237,6 +241,11 @@ describe("atomic Test reset", { timeout: 60_000 }, () => {
     // The new generation has one plant: a transfer needs a second, which takes the next location ID too.
     expect((await (await scope()).cradle.locationService.create({ name: "new generation location" }, actor)).id).toBe("00000002");
     expect((await (await scope()).cradle.transferService.create(transfer, actor)).id).toBe("00000001");
+    const next = (await scope()).cradle;
+    expect(await next.mrpRunService.current()).toBeNull();
+    expect(await next.em.getConnection().execute("select count(*) as n from mrp_daily_result where tenant_code = 'test'")).toEqual([{ n: 0 }]);
+    expect((await inRequestTransaction(next.em, () => next.mrpRunService.run(actor))).id).toBe("00000001");
+    expect(await (await scope("prod")).cradle.mrpRunService.current()).toEqual(prodRun);
   }, 300_000);
 
   it.each(["locations", "BOMs", "shipments"] as const)("rolls back deletion and partially seeded %s, including both flags and all audits (TEN-027)", async (kind) => {

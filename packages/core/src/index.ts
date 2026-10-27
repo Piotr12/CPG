@@ -62,6 +62,8 @@ export { TestResetService } from "./services/tenants/test-reset.service";
 export * from "./services/customer-orders/customer-order.service";
 export * from "./services/stock/stock.service";
 export * from "./services/reports/demand-review.service";
+export * from "./services/mrp/mrp-run.service";
+export type { MrpBucketView, MrpFigure, MrpLatestView, MrpPlanView, MrpRunView } from "./services/mrp/mrp-run-view";
 export { DEMAND_WINDOWS, isoWeek, MAX_DEMAND_OFFSET, type DemandBucket, type DemandBucketFrame } from "./domain/demand/demand-buckets";
 export { formatDecimal, parseDecimal } from "./domain/quantities/decimal";
 export * from "./services/reports/stock-report.service";

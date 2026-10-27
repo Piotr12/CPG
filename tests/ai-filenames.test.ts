@@ -90,3 +90,14 @@ test(".ai/pipeline/runs/ entries are named YYYY-MM-DD--HHMMUTC-slug", () => {
     `Rename these to YYYY-MM-DD--HHMMUTC-slug (see .ai/skills/README.md):\n${offenders.join("\n")}`,
   );
 });
+
+// A spec lives in one place: `specs/` while active, then `implemented/` or `archive/`. Stacking an
+// implementation PR on its squash-merged spec PR left #273's spec in both (#274).
+test("a spec is never active and implemented or archived at once", () => {
+  const specs = join(repoRoot, ".ai", "specs");
+  const names = (folder: string) => readdirSync(join(specs, folder)).filter((name) => isValidName(name));
+  const active = new Set(names("."));
+  const twice = ["implemented", "archive"].flatMap((folder) => names(folder).filter((name) => active.has(name)).map((name) => `${folder}/${name}`));
+
+  assert.deepEqual(twice, [], `Delete the active copy of these specs from .ai/specs/:\n${twice.join("\n")}`);
+});

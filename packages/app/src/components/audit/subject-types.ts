@@ -27,4 +27,5 @@ export const TENANT_SUBJECT_TYPES = [
   "Transfer",
   "ProductionOrder",
   "ProductionCompletion",
+  "MrpRun",
 ] as const satisfies readonly AuditSubjectType[];

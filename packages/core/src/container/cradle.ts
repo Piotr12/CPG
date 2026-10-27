@@ -36,6 +36,8 @@ import type { SupplierService } from "../services/suppliers/supplier.service";
 import type { UserPreferenceService } from "../services/preferences/user-preference.service";
 import type { SystemStatusService } from "../services/system/system-status.service";
 import type { UserService } from "../services/users/user.service";
+import type { MrpRunService } from "../services/mrp/mrp-run.service";
+import type { MrpSnapshotService } from "../services/mrp/mrp-snapshot.service";
 import type { TenantInfo, TenantService } from "../services/tenants/tenant.service";
 
 /** Everything the DI container can resolve — one entry per registration in `container.ts`. */
@@ -78,6 +80,8 @@ export interface Cradle {
   importService: ImportService;
   stockImportService: StockImportService;
   demandReviewService: DemandReviewService;
+  mrpSnapshotService: MrpSnapshotService;
+  mrpRunService: MrpRunService;
   stockReportService: StockReportService;
   varianceReportService: VarianceReportService;
   /** The active tenant. Only in scopes built by `tenantScope()`. */

@@ -33,8 +33,11 @@ describe("@cpg/db", () => {
       "MATERIAL_DESCRIPTION_MAX",
       "MATERIAL_TYPES",
       "MATERIAL_UNIT_MAX",
+      "MRP_RUN_MODES",
       "Material",
       "MaterialConversion",
+      "MrpDailyResult",
+      "MrpRun",
       "NAMED_RECORD_NAME_MAX",
       "OptimisticLockError",
       "PROCUREMENT_MODES",
@@ -137,6 +140,8 @@ describe("@cpg/db", () => {
       db.GoodsIssueLine,
       db.ProductionCompletion,
       db.ProductionCompletionLine,
+      db.MrpRun,
+      db.MrpDailyResult,
     ]);
     const tenantOwned: unknown[] = [
       db.TenantAuditEvent,
@@ -172,6 +177,8 @@ describe("@cpg/db", () => {
       db.GoodsIssueLine,
       db.ProductionCompletion,
       db.ProductionCompletionLine,
+      db.MrpRun,
+      db.MrpDailyResult,
     ];
     expect(db.GLOBAL_ENTITIES).toEqual(db.entities.filter((entity) => !tenantOwned.includes(entity)));
   });

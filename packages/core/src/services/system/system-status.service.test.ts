@@ -37,7 +37,7 @@ describe("SystemStatusService", () => {
     await expect(service().getStatus()).resolves.toEqual({
       databasePath: config.databasePath,
       appliedMigrations: 0,
-      pendingMigrations: 35,
+      pendingMigrations: 36,
       settings: 0,
     });
   });
@@ -52,7 +52,7 @@ describe("SystemStatusService", () => {
 
     await expect(service().getStatus()).resolves.toEqual({
       databasePath: config.databasePath,
-      appliedMigrations: 35,
+      appliedMigrations: 36,
       pendingMigrations: 0,
       settings: 1,
     });
