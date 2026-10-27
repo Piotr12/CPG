@@ -99,7 +99,11 @@ The texts that name a unit have a "material not chosen yet" variant, which repla
 - **Inside a dialog.** Every one of these forms sits in a Radix `Dialog`. The Popover is a nested Radix layer: Radix gives Escape to the topmost layer, which calls `preventDefault()`, and both `CrudForm` and the BOM form already skip a `defaultPrevented` Escape. So Escape closes the tooltip and leaves the dialog and its form open. A second Escape cancels the form as today. Tested inside a real `Dialog` (lesson 2026-10-25). Pressing on the tooltip content doesn't dismiss the dialog. Opening it never moves focus out of the form.
 - **Keyboard order.** Label's info button, then its input. Tab moves focus away, so blur closes the tooltip unless it was pinned. Enter or Space on the button pins or unpins it. It is `type="button"`, so neither key submits the form.
 - **Screen readers.** The button is announced as "About Planned quantity, button" and then its description: the always-rendered `sr-only` text that its `aria-describedby` names. A virtual cursor reaches the same text right after the button. The visible Popover is `aria-hidden`, so nothing is read twice, and a click-opened tip needs no live region because the text was already announced on focus.
-- Prototype: `.ai/specs/assets/quantity-field-tooltips/` (static mockups, when rendered by the spec PR).
+- Prototype: `.ai/specs/assets/quantity-field-tooltips/` (static, illustrative mockups; the shadcn `Popover` decides the final look).
+
+  ![Planned quantity's tooltip, opened by Tab, at 1280 px](assets/quantity-field-tooltips/mockup-01-production-order-tooltip.png)
+
+  ![Base quantity's tooltip, opened by a tap, at 390 px](assets/quantity-field-tooltips/mockup-02-conversion-tooltip-mobile.png)
 
 ## 📝 Edge Cases & Failure Scenarios
 
