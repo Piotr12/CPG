@@ -60,13 +60,14 @@ export function SafetyStockTargetActions({ row, context, labels }: SafetyStockTa
             <DialogDescription>{fill(labels.change.description, { baseUnit: row.baseUnit })}</DialogDescription>
           </DialogHeader>
           <CrudForm
-            fields={[{ name: "quantity", label: labels.form.quantity, description: labels.form.quantityHint, autoComplete: "off" }]}
+            fields={[{ name: "quantity", label: labels.form.quantity, description: labels.form.quantityHint, autoComplete: "off", tooltip: fill(labels.form.quantityTip, { baseUnit: row.baseUnit }) }]}
             initialValues={{ quantity: shownQuantity(row.quantity) }}
             schema={safetyStockTargetChangeFormSchema}
             action={(values) => changeSafetyStockTarget(tenant, generation, key, row.version, values)}
             submitLabel={labels.change.submit}
             pendingLabel={labels.change.submitting}
             cancelLabel={labels.cancel}
+            infoLabel={labels.infoLabel}
             formatError={errorFormatter(labels)}
             formatFieldError={fieldErrorFormatter(labels)}
             onSuccess={close}

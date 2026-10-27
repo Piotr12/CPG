@@ -59,7 +59,7 @@ export function PlanningParameterActions({ row, context, labels }: PlanningParam
             <DialogDescription>{fill(labels.change.description, { baseUnit: row.baseUnit })}</DialogDescription>
           </DialogHeader>
           <CrudForm
-            fields={valueFields(labels)}
+            fields={valueFields(labels, () => row.baseUnit)}
             initialValues={{
               procurement: row.procurement,
               leadTimeDays: String(row.leadTimeDays),
@@ -71,6 +71,7 @@ export function PlanningParameterActions({ row, context, labels }: PlanningParam
             submitLabel={labels.change.submit}
             pendingLabel={labels.change.submitting}
             cancelLabel={labels.cancel}
+            infoLabel={labels.infoLabel}
             formatError={errorFormatter(labels)}
             formatFieldError={fieldErrorFormatter(labels)}
             onSuccess={close}

@@ -51,6 +51,7 @@ export function AddPlanningParametersDialog({ context, labels, materials, locati
           submitLabel={t.submit}
           pendingLabel={t.submitting}
           cancelLabel={labels.cancel}
+          infoLabel={labels.infoLabel}
           formatError={errorFormatter(labels)}
           formatFieldError={fieldErrorFormatter(labels)}
           onSuccess={close}
