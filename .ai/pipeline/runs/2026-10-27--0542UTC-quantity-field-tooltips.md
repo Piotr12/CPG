@@ -5,7 +5,7 @@
 **Source doc:** .ai/specs/2026-10-27--0526UTC-quantity-field-tooltips.md
 **Spec PR:** #296 (design-only, `Refs #290`)
 **Issue:** #290
-**Status:** complete — review pending
+**Status:** complete
 
 ## Goal
 
@@ -78,3 +78,8 @@ As in the spec's Implementation Plan, Phases 1–3, Steps 1–9.
   - `npm run typecheck` exit 0;
   - `npm run test:coverage`: 597 files, 4634 tests, 100% statements, branches, functions and lines;
   - `npm run build` exit 0.
+- 07:45 — `om-auto-review-pr 297 --autofix`. A fresh-context review requested changes: one major (dialogs whose first field has a tooltip gave first focus to the info button) and five minors or nits. All six were fixed:
+  - `7dd6db7d` — `CrudForm` autofocuses that field, mutation-checked;
+  - `84e4b664` — the unmount test asserts the component's own timer id, mutation-checked; the pinned-tip-closes-on-Tab deviation is recorded and tested; the 390 px test waits for a shown button and finished animations; the doc comment is placed correctly.
+
+  Re-review: **approve**. Its one nit is documented in `CrudField.tooltip`. Gate green again: 4638 tests, 100% coverage, build. On a fresh standalone build: field-tooltips, production-orders, planning-parameters, materials, boms and statistical-units, 47/47.
