@@ -36,6 +36,8 @@ export interface CrudField {
   /**
    * The field's fuller explanation, behind an info button beside its label (UX-014): which unit it
    * takes and how the entry is stored. Like `description`, a function follows the form's values.
+   * On the first field, it gives the field `autoFocus` so a dialog doesn't focus the info button
+   * first; an `autocomplete` field takes no `autoFocus`, so don't give a first autocomplete a tooltip.
    */
   tooltip?: string | ((values: Record<string, string>) => string | undefined);
   /** A select's choices, in order. */
