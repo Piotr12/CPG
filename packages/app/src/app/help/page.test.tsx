@@ -61,6 +61,7 @@ describe("HelpPage", () => {
       "Stock report",
       "Variance report",
       "Demand review",
+      "MRP",
       "Language and theme",
       "Using help",
     ]);

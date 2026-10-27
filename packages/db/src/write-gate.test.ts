@@ -148,7 +148,8 @@ describe("the write gate", () => {
     try {
       const started = performance.now();
       await holdWriteGate(second, { waitMs: 50 });
-      expect(performance.now() - started).toBeGreaterThanOrEqual(50);
+      // A timer may fire a fraction of a millisecond early by `performance.now()` (49.99 ms under coverage).
+      expect(performance.now() - started).toBeGreaterThanOrEqual(45);
       // The late holder holds it now: a call from the first holder's connection no longer returns at once.
       expect(await settled(holdWriteGate(first, { waitMs: 50 }), 25)).toBe("pending");
     } finally {
