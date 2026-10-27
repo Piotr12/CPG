@@ -3,6 +3,7 @@ import type { Cradle } from "../../container/cradle";
 import { generateTestTenantDataset, type TimelineEvent } from "../../domain/demo/generate-dataset";
 import { notAfter } from "../../domain/demo/timeline";
 import { DEFAULT_TEST_DATASET, type TestDataset } from "../../domain/demo/test-datasets";
+import { yieldToEventLoop } from "../../http/yield-to-event-loop";
 
 /** What the generated dataset holds, in the order the seed writes it (spec `2026-10-21--0718UTC-test-tenant-dataset`). */
 export const DATASET_KINDS = [
@@ -17,14 +18,6 @@ export type DatasetServices = Pick<Cradle, "em" | "testDatasets" | "materialServ
   | "planningParameterService" | "safetyStockTargetService" | "bomService" | "forecastService" | "stockService"
   | "customerOrderService" | "shipmentService" | "goodsIssueService" | "purchaseRequisitionService" | "purchaseOrderService"
   | "goodsReceiptService" | "productionOrderService" | "productionCompletionService">;
-
-/**
- * Lets the event loop read its sockets before the next document. Every statement is a synchronous
- * better-sqlite3 call and the awaits between them resolve as microtasks, so without this a realistic
- * reset keeps the whole server, `/up` included, silent until it commits (#185). Other requests still
- * wait for the commit, on Kysely's connection mutex, and complete afterwards.
- */
-const yieldToEventLoop = () => new Promise<void>((resolve) => setImmediate(resolve));
 
 const EVENT_KIND = {
   opening: "stock openings", customerOrder: "customer orders", shipment: "shipments", goodsIssue: "goods issues",
