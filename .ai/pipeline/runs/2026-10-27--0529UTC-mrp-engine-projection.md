@@ -3,7 +3,7 @@
 **Date:** 2026-10-27 05:29 UTC
 **Agent:** Claude Code (Opus 5.5), `om-auto-fix-issue 273` → feature route (`om-auto-write-spec` → `om-auto-implement-spec` → `om-auto-create-pr`)
 **Issue:** #273 (E14-S01) · **Spec PR:** #294
-Source doc: .ai/specs/2026-10-27--0525UTC-mrp-engine-projection.md
+Source doc: .ai/specs/implemented/2026-10-27--0525UTC-mrp-engine-projection.md
 
 ## Goal
 

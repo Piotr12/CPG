@@ -1,6 +1,6 @@
 # MRP engine: 90 daily buckets from physical stock and open customer-order demand
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-27 05:25 UTC
 **Issue:** #273 (E14-S01, epic #266) · **Depends on:** customer orders (`implemented/2026-10-20--1635UTC-customer-orders.md`, #83), the stock ledger (`implemented/2026-10-20--1634UTC-stock-ledger-corrections.md`, #80), the document lifecycle (`implemented/2026-10-21--0707UTC-document-lifecycle.md`), the demand review's time axis and D08 netting (`implemented/2026-10-25--0913UTC-demand-review.md`) · **Design authority:** `.ai/specs/product-brief.md` (R03, R09, R10, D02, D08, N01, N04), `research/CPG-prd001.pdf` §04, `research/CPG-acceptance.md` MRP-003/004/007/008, INV-008, SAL-004/017
 
@@ -231,3 +231,16 @@ One phase, one PR: the engine, its types and its unit tests. No route, screen or
 7. **Docs.** In `.ai/docs/engineering-standards.md`, next to the demand bullet, add one bullet on `domain/mrp/`: the seams, the shapes and the one-property, one-call rule for later stories. Move this spec to `implemented/`.
 
 Each step leaves the suite green. Run `npm run lint`, `npm run typecheck`, `npm run test:coverage` (100%) and `npm run build`.
+
+## Implementation notes
+
+Implemented on #295 (stacked on the spec PR #294), as written:
+- `packages/core/src/domain/mrp/`: `plan-mrp.ts`, `mrp-inputs.ts`, `mrp-result.ts`, `projection/{horizon,pairs,project-buckets}.ts`, `demand/firm-demand.ts`;
+- `outstandingMicro` in `domain/document-lifecycle/lifecycle.ts`.
+
+`projection/pairs.ts` also exports `compareCodes`, the code-unit comparison that the pair order and the firm-demand order share.
+
+Each acceptance criterion of #273 has its own test in `plan-mrp.test.ts`, with today fixed at 1 October 2026. `firm-demand.test.ts` pins `MrpOrderLine` as a `ConsumingOrderLine` with `expectTypeOf`, which `npm run typecheck` checks.
+
+No acceptance-catalogue row moves: MRP-003/004/007/008, INV-008 and SAL-017 are "Both"-channel scenarios, which run once E14-S02 exposes a run through the UI and API.
+
