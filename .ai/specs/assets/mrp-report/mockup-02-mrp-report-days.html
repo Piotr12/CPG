@@ -1,0 +1,25 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Mockup: MRP report, one pair's days</title><link rel="stylesheet" href="mockup-base.css"></head><body><div class="app">
+<aside class="side"><div class="brand">CPG</div><div class="switch"><span class="on-test">TEST</span><span>PROD</span></div><div class="hint">Demonstration data, safe to experiment</div><div class="nav"><div>Overview</div><div>Master data</div><div>Sales</div><div>Transactions</div><div class="cur">MRP</div><div>Stock</div><div>Stock import</div><div>Stock report</div><div>Production variance</div><div>Audit</div></div></aside>
+<div class="main top-test"><div class="crumb"><span class="badge b-test">TEST</span> › MRP</div><div class="content">
+<div class="head"><div><h1>MRP — Test</h1><p class="lead">Plans every location of this tenant over the next 90 days.</p></div><button class="btn">Run MRP</button></div>
+<section class="report"><h2>Report</h2>
+<form class="filters"><div><label>Material</label><div class="field"><span>00000012 — Steel sheet 2 mm</span><span>▾</span></div></div><div><label>Location</label><div class="field"><span>00000003 — Kraków</span><span>▾</span></div></div><button class="btn-o" type="button">Apply</button></form>
+<a class="clear">Clear filters</a>
+<p class="count">1 planned material–location pair</p>
+<table><thead><tr><th>Material</th><th>Location</th><th class="n">Lowest projected balance</th><th>First shortage</th><th></th></tr></thead><tbody>
+<tr><td>00000012 — Steel sheet 2 mm</td><td>00000003 — Kraków</td><td class="n">25 KG</td><td>None</td><td><span class="btn-s">Days</span></td></tr></tbody></table>
+<p class="caption">00000012 Steel sheet 2 mm at 00000003 Kraków — quantities in KG</p>
+<table><thead><tr class="group"><th></th><th class="n" colspan="3">Demand</th><th class="n" colspan="2">Supply</th><th class="n" colspan="2">Projected balance</th><th></th></tr>
+<tr><th>Date</th><th class="n">Firm</th><th class="n">Forecast</th><th class="n">Safety</th><th class="n">Tentative</th><th class="n">Dependable</th><th class="n">Before proposals</th><th class="n">After proposals</th><th class="n">Shortage</th></tr></thead><tbody>
+<tr class="today"><td>2026-10-01</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">50</td><td class="n">50</td><td class="n">0</td></tr>
+<tr><td>2026-10-02</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">50</td><td class="n">50</td><td class="n">0</td></tr>
+<tr><td>2026-10-03</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">50</td><td class="n">50</td><td class="n">0</td></tr>
+<tr><td>2026-10-04</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">50</td><td class="n">50</td><td class="n">0</td></tr>
+<tr><td>2026-10-05</td><td class="n">10</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">40</td><td class="n">40</td><td class="n">0</td></tr>
+<tr><td>2026-10-06</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">40</td><td class="n">40</td><td class="n">0</td></tr>
+<tr><td>2026-10-07</td><td class="n">15</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">25</td><td class="n">25</td><td class="n">0</td></tr>
+<tr><td>2026-10-08</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">25</td><td class="n">25</td><td class="n">0</td></tr>
+<tr><td>2026-10-09</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">25</td><td class="n">25</td><td class="n">0</td></tr>
+<tr><td colspan="9" style="color:#71717a">… 81 more days, through 2026-12-29</td></tr>
+</tbody></table></section>
+</div></div></div><div class="note">Illustrative mockup — spec 2026-10-31--0907UTC-mrp-report (Latest run card above omitted. MRP-005: physical 50, lines of 10 on 5 Oct and 15 on 7 Oct, run on 1 Oct)</div></body></html>
