@@ -217,6 +217,8 @@ describe("planMrp", () => {
   });
 });
 
+// The status filter itself is pinned with fixtures that keep a remainder in `supply/purchasing-supply.test.ts`
+// ("counts no closed document…"); these tests assert each scenario's outcome through the whole plan.
 describe("planMrp: purchasing supply (#276)", () => {
   const supplyOn = (plan: MrpPlan, date: string) => {
     const { tentativeSupply, dependableSupply } = plan.buckets.find((bucket) => bucket.date === date)!;

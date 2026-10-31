@@ -99,7 +99,7 @@ describe("MRP runs through the API", () => {
     expect(stock.rows.map(({ quantity }) => quantity)).toEqual(["5.000000"]);
   });
 
-  it("projects open purchasing supply once: 60 ordered and 40 still requisitioned, an overdue 50 today, nothing cancelled (MRP-012, MRP-013, MRP-015)", async () => {
+  it("projects open purchasing supply once: 60 ordered and 40 still requisitioned, an overdue 50 today, nothing cancelled (MRP-012, MRP-013, MRP-015's stored figure)", async () => {
     // A second material at the same plant, so the first pair's figures stay put.
     const supplied = { material: (await created("/api/tenants/prod/materials", { type: "raw", description: "mrpapi steel", baseUnit: "each" })).id, location: pair.location };
     const supplier = (await created("/api/tenants/prod/suppliers", { name: "mrpapi mill" })).id;
