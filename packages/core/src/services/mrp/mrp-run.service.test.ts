@@ -133,6 +133,44 @@ describe("MrpRunService.run", () => {
     }]);
   });
 
+  it("stores a pair's forecast residual and its safety target on every day, and plans target-only and forecast-only pairs from zero (#275)", async () => {
+    const cabinet = await material("prod", "Cabinet");
+    const { cradle } = await scope();
+    await cradle.forecastService.create({ material: cabinet.id, location: PLANT, date: "2026-10-10", quantity: "100", unit: "each" }, ANNA);
+    await cradle.safetyStockTargetService.create({ material: cabinet.id, location: PLANT, effectiveFrom: "2026-09-01", quantity: "30" }, ANNA);
+    // An order later in October consumes 60 of the forecast (D08).
+    await order("prod", PLANT, [{ material: cabinet.id, quantity: "60", requiredDate: "2026-10-20" }]);
+    const target = await material("prod", "Shelf");
+    await cradle.safetyStockTargetService.create({ material: target.id, location: PLANT, effectiveFrom: "2026-10-31", quantity: "5" }, ANNA);
+    const forecastOnly = await material("prod", "Bracket");
+    await cradle.forecastService.create({ material: forecastOnly.id, location: PLANT, date: "2026-11-02", quantity: "7", unit: "each" }, ANNA);
+
+    expect((await run()).pairs).toBe(3);
+
+    expect(await day("00000001", cabinet.id, PLANT, "2026-10-10")).toMatchObject({
+      firm_demand: "0.000000", forecast_demand: "40.000000", safety_target: "30.000000", projected_before: "-40.000000", shortage: "40.000000",
+    });
+    expect(await day("00000001", cabinet.id, PLANT, "2026-10-20")).toMatchObject({ firm_demand: "60.000000", forecast_demand: "0.000000", projected_before: "-100.000000" });
+    expect(await sql("select count(*) as n from mrp_daily_result where material = ? and safety_target = '30.000000'", [cabinet.id])).toEqual([{ n: 90 }]);
+    // A target-only pair is planned from zero: 0 before its target starts, 5 from 31 October.
+    expect(await day("00000001", target.id, PLANT, "2026-10-30")).toMatchObject({ safety_target: "0.000000", projected_before: "0.000000" });
+    expect(await day("00000001", target.id, PLANT, "2026-10-31")).toMatchObject({ safety_target: "5.000000", projected_before: "0.000000" });
+    // A forecast-only pair is planned from zero too.
+    expect(await day("00000001", forecastOnly.id, PLANT, "2026-11-02")).toMatchObject({ forecast_demand: "7.000000", projected_before: "-7.000000", shortage: "7.000000" });
+  });
+
+  it("counts an earlier residual of this month in today's row when it runs mid-month (D08)", async () => {
+    vi.setSystemTime(new Date("2026-10-20T09:30:00.000Z"));
+    const cabinet = await material("prod", "Cabinet");
+    await (await scope()).cradle.forecastService.create({ material: cabinet.id, location: PLANT, date: "2026-10-05", quantity: "100", unit: "each" }, ANNA);
+    await order("prod", PLANT, [{ material: cabinet.id, quantity: "60", requiredDate: "2026-10-25" }]);
+
+    expect(await run()).toMatchObject({ startDate: "2026-10-20", endDate: "2027-01-17" });
+
+    expect(await day("00000001", cabinet.id, PLANT, "2026-10-20")).toMatchObject({ forecast_demand: "40.000000", projected_before: "-40.000000" });
+    expect(await day("00000001", cabinet.id, PLANT, "2026-10-25")).toMatchObject({ firm_demand: "60.000000", forecast_demand: "0.000000" });
+  });
+
   it("stores a fractional negative balance with its sign outside the fraction", async () => {
     const cabinet = await material("prod", "Cabinet");
     await stock("prod", cabinet.id, PLANT, "4.5");

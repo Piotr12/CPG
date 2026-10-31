@@ -1,8 +1,8 @@
 /**
  * What `planMrp` returns (#273). Every figure is base-unit micro-units (R03); E14-S02 stores each one
  * as a six-decimal text. The bucket carries every figure the MRP stories fill, so its shape never
- * changes for them: this story fills firm demand and the balances, and the others stay zero until
- * the story named beside them.
+ * changes for them: E14-S01 filled firm demand and the balances; each other figure stays zero until
+ * the story named beside it.
  */
 export interface MrpResult {
   today: string;
@@ -23,6 +23,8 @@ export interface MrpPlan {
   buckets: readonly MrpBucket[];
   /** The order lines behind the buckets' firm demand. */
   firmDemand: readonly MrpFirmDemand[];
+  /** The forecast residuals behind the buckets' forecast demand (E15-S01). */
+  forecastDemand: readonly MrpForecastDemand[];
   /** The document lines behind the buckets' tentative and dependable supply (E15-S02). */
   supply: readonly MrpSupply[];
 }
@@ -68,6 +70,20 @@ export interface MrpFirmDemand {
   requiredDate: string;
   /** The bucket it counts in: `requiredDate`, or today when the line is overdue. */
   date: string;
+  quantity: bigint;
+}
+
+/** What is left of one forecast once its month's orders consumed it (D08), in the bucket it counts in. */
+export interface MrpForecastDemand {
+  material: string;
+  location: string;
+  /** The forecast's own date, kept when its residual counts today. */
+  forecastDate: string;
+  /** The bucket it counts in: `forecastDate`, or today for an earlier residual of this month. */
+  date: string;
+  /** The forecast as entered, before consumption. */
+  forecastQuantity: bigint;
+  /** The residual counted on `date`: above zero, at most `forecastQuantity`. */
   quantity: bigint;
 }
 

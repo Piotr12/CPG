@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { formatDecimal, parseDecimal } from "../quantities/decimal";
-import type { MrpInputs, MrpOrderLine, MrpPurchaseOrderLine, MrpRequisition, MrpStock } from "./mrp-inputs";
+import type { MrpForecast, MrpInputs, MrpOrderLine, MrpPurchaseOrderLine, MrpRequisition, MrpSafetyTarget, MrpStock } from "./mrp-inputs";
 import type { MrpPlan } from "./mrp-result";
 import { planMrp } from "./plan-mrp";
+import { safetyGap } from "./projection/safety-gap";
 
 const TODAY = "2026-10-01";
 const q = (text: string) => parseDecimal(text)!;
@@ -44,7 +45,7 @@ const orderLine = (overrides: Partial<MrpPurchaseOrderLine> & { quantity: bigint
   ...overrides,
 });
 
-const inputs = (overrides: Partial<MrpInputs> = {}): MrpInputs => ({ stock: [], orderLines: [], requisitions: [], purchaseOrderLines: [], ...overrides });
+const inputs = (overrides: Partial<MrpInputs> = {}): MrpInputs => ({ stock: [], orderLines: [], forecasts: [], safetyTargets: [], requisitions: [], purchaseOrderLines: [], ...overrides });
 
 const only = (plans: readonly MrpPlan[]) => {
   expect(plans).toHaveLength(1);
@@ -176,7 +177,7 @@ describe("planMrp", () => {
     expect(forward.plans[3].firmDemand.map(({ order }) => order)).toEqual(["00000009", "00000008"]);
   });
 
-  it("leaves the figures later stories fill at zero, so the balance after proposals equals the one before", () => {
+  it("leaves the figures later stories fill at zero with no forecast, target or supply, so the balance after proposals equals the one before", () => {
     const plan = only(planMrp(inputs({ stock: [stock("M1", "L1", "7")], orderLines: [line({ quantity: q("2"), requiredDate: "2026-10-03" })] }), TODAY).plans);
     for (const bucket of plan.buckets) {
       expect(bucket).toMatchObject({
@@ -217,6 +218,229 @@ describe("planMrp", () => {
   });
 });
 
+const forecast = (date: string, quantity: string, overrides: Partial<MrpForecast> = {}): MrpForecast => ({
+  material: "M1",
+  location: "L1",
+  date,
+  quantity: q(quantity),
+  ...overrides,
+});
+const target = (effectiveFrom: string, quantity: string, overrides: Partial<MrpSafetyTarget> = {}): MrpSafetyTarget => ({
+  material: "M1",
+  location: "L1",
+  effectiveFrom,
+  quantity: q(quantity),
+  ...overrides,
+});
+const bucketOf = (plan: MrpPlan, date: string) => plan.buckets.find((bucket) => bucket.date === date)!;
+const demandOn = (plan: MrpPlan, date: string) => {
+  const { firmDemand, forecastDemand } = bucketOf(plan, date);
+  return { firm: formatDecimal(firmDemand, { fixed: true }), forecast: formatDecimal(forecastDemand, { fixed: true }) };
+};
+const planOf = (result: ReturnType<typeof planMrp>, material: string, location = "L1") => result.plans.find((plan) => plan.material === material && plan.location === location)!;
+const totals = (plan: MrpPlan) => ({
+  firm: formatDecimal(plan.buckets.reduce((sum, { firmDemand }) => sum + firmDemand, 0n), { fixed: true }),
+  forecast: formatDecimal(plan.buckets.reduce((sum, { forecastDemand }) => sum + forecastDemand, 0n), { fixed: true }),
+});
+
+describe("planMrp: forecast netting by calendar month (#275, D08)", () => {
+  it("DEM-002: a forecast of 100 and an order of 60 the same day, or later that month, plan 60 firm plus 40 forecast", () => {
+    const sameDay = only(planMrp(inputs({ forecasts: [forecast("2026-10-10", "100")], orderLines: [line({ quantity: q("60"), requiredDate: "2026-10-10" })] }), TODAY).plans);
+    expect(demandOn(sameDay, "2026-10-10")).toEqual({ firm: "60.000000", forecast: "40.000000" });
+    expect(balances(sameDay).get("2026-10-10")).toBe(-q("100"));
+    const later = only(planMrp(inputs({ forecasts: [forecast("2026-10-10", "100")], orderLines: [line({ quantity: q("60"), requiredDate: "2026-10-20" })] }), TODAY).plans);
+    expect(demandOn(later, "2026-10-10")).toEqual({ firm: "0.000000", forecast: "40.000000" });
+    expect(demandOn(later, "2026-10-20")).toEqual({ firm: "60.000000", forecast: "0.000000" });
+    expect(later.forecastDemand).toEqual([{ material: "M1", location: "L1", forecastDate: "2026-10-10", date: "2026-10-10", forecastQuantity: q("100"), quantity: q("40") }]);
+  });
+
+  it("DEM-003: orders of 120 against a forecast of 100 plan 120 firm and no forecast, never 220 or a negative residual", () => {
+    const orderLines = [line({ quantity: q("70"), requiredDate: "2026-10-10" }), line({ quantity: q("50"), requiredDate: "2026-10-28" })];
+    const plan = only(planMrp(inputs({ forecasts: [forecast("2026-10-10", "100")], orderLines }), TODAY).plans);
+    expect(totals(plan)).toEqual({ firm: "120.000000", forecast: "0.000000" });
+    expect(plan.forecastDemand).toEqual([]);
+  });
+
+  it("DEM-004: a forecast of 100 with no order plans 100 forecast, from zero stock into a shortage of 100", () => {
+    const plan = only(planMrp(inputs({ forecasts: [forecast("2026-10-10", "100")] }), TODAY).plans);
+    expect(plan).toMatchObject({ material: "M1", location: "L1", physical: 0n });
+    expect(demandOn(plan, "2026-10-10")).toEqual({ firm: "0.000000", forecast: "100.000000" });
+    expect(bucketOf(plan, "2026-10-10")).toMatchObject({ projectedBefore: -q("100"), shortage: q("100") });
+  });
+
+  it("DEM-005, DEM-006: an order of another material, or at another location, consumes nothing of the forecast", () => {
+    const materials = planMrp(
+      inputs({ forecasts: [forecast("2026-10-10", "100", { material: "A" })], orderLines: [line({ material: "B", quantity: q("60"), requiredDate: "2026-10-10" })] }),
+      TODAY,
+    );
+    expect(demandOn(planOf(materials, "A"), "2026-10-10")).toEqual({ firm: "0.000000", forecast: "100.000000" });
+    expect(demandOn(planOf(materials, "B"), "2026-10-10")).toEqual({ firm: "60.000000", forecast: "0.000000" });
+    const locations = planMrp(
+      inputs({ forecasts: [forecast("2026-10-10", "100", { location: "LA" })], orderLines: [line({ location: "LB", quantity: q("60"), requiredDate: "2026-10-10" })] }),
+      TODAY,
+    );
+    expect(demandOn(planOf(locations, "M1", "LA"), "2026-10-10")).toEqual({ firm: "0.000000", forecast: "100.000000" });
+    expect(demandOn(planOf(locations, "M1", "LB"), "2026-10-10")).toEqual({ firm: "60.000000", forecast: "0.000000" });
+  });
+
+  it("DEM-007 per D08: Tuesday's order consumes Monday's forecast in the same month, an order next month none of it", () => {
+    const tuesday = only(planMrp(inputs({ forecasts: [forecast("2026-10-05", "100")], orderLines: [line({ quantity: q("60"), requiredDate: "2026-10-06" })] }), TODAY).plans);
+    expect(demandOn(tuesday, "2026-10-05").forecast).toBe("40.000000");
+    const nextMonth = planOf(planMrp(inputs({ forecasts: [forecast("2026-10-05", "100")], orderLines: [line({ quantity: q("60"), requiredDate: "2026-11-02" })] }), TODAY), "M1");
+    expect(demandOn(nextMonth, "2026-10-05").forecast).toBe("100.000000");
+    expect(demandOn(nextMonth, "2026-11-02").firm).toBe("60.000000");
+  });
+
+  it("D08: orders of 70 consume a month's forecasts in date order, leaving 0 on the 1st and 30 on the 15th", () => {
+    const orderLines = [line({ quantity: q("70"), requiredDate: "2026-10-20" })];
+    const plan = only(planMrp(inputs({ forecasts: [forecast("2026-10-15", "50"), forecast("2026-10-01", "50")], orderLines }), TODAY).plans);
+    expect(demandOn(plan, "2026-10-01").forecast).toBe("0.000000");
+    expect(demandOn(plan, "2026-10-15").forecast).toBe("30.000000");
+  });
+
+  it("DEM-008: with 30 of the 60 ordered issued, plans 30 firm plus 40 forecast, 70 in all", () => {
+    const orderLines = [line({ quantity: q("60"), fulfilled: q("30"), requiredDate: "2026-10-10" })];
+    const plan = only(planMrp(inputs({ forecasts: [forecast("2026-10-10", "100")], orderLines }), TODAY).plans);
+    expect(demandOn(plan, "2026-10-10")).toEqual({ firm: "30.000000", forecast: "40.000000" });
+    expect(balances(plan).get("2026-10-10")).toBe(-q("70"));
+  });
+
+  it("DEM-009, SAL-014: a fully issued order plans no firm demand and its consumed forecast stays consumed", () => {
+    const orderLines = [line({ quantity: q("60"), fulfilled: q("60"), status: "completed", requiredDate: "2026-10-10" })];
+    const plan = only(planMrp(inputs({ forecasts: [forecast("2026-10-10", "100")], orderLines }), TODAY).plans);
+    expect(totals(plan)).toEqual({ firm: "0.000000", forecast: "40.000000" });
+  });
+
+  it("DEM-010, SAL-015: an order of 60 with 30 issued and the rest closed early plans no firm demand and a residual of 70", () => {
+    const closed = line({ quantity: q("60"), fulfilled: q("30"), abandoned: q("30"), status: "closed-early", requiredDate: "2026-10-10" });
+    // A reversed issue leaves 20 outstanding by arithmetic on a closed line: only the status keeps it out of firm demand.
+    const reversed = line({ order: "00000002", quantity: q("60"), fulfilled: q("10"), abandoned: q("30"), status: "closed-early", requiredDate: "2026-10-10" });
+    for (const orderLine of [closed, reversed]) {
+      const plan = only(planMrp(inputs({ forecasts: [forecast("2026-10-10", "100")], orderLines: [orderLine] }), TODAY).plans);
+      expect(totals(plan)).toEqual({ firm: "0.000000", forecast: "70.000000" });
+    }
+  });
+
+  it("DEM-011, SAL-016: an order cancelled before any issue consumes nothing, leaving the forecast at 100", () => {
+    const orderLines = [line({ quantity: q("60"), abandoned: q("60"), status: "cancelled", requiredDate: "2026-10-10" })];
+    const plan = only(planMrp(inputs({ forecasts: [forecast("2026-10-10", "100")], orderLines }), TODAY).plans);
+    expect(totals(plan)).toEqual({ firm: "0.000000", forecast: "100.000000" });
+  });
+
+  it("SAL-019, DEM-024, R10: a line edited from 60 to 80 plans 80 firm and 20 forecast from the current snapshot", () => {
+    const forecasts = [forecast("2026-10-10", "100")];
+    const before = only(planMrp(inputs({ forecasts, orderLines: [line({ order: "00000005", position: 1, quantity: q("60"), requiredDate: "2026-10-12" })] }), TODAY).plans);
+    expect(totals(before)).toEqual({ firm: "60.000000", forecast: "40.000000" });
+    const after = only(planMrp(inputs({ forecasts, orderLines: [line({ order: "00000005", position: 1, quantity: q("80"), requiredDate: "2026-10-12" })] }), TODAY).plans);
+    expect(totals(after)).toEqual({ firm: "80.000000", forecast: "20.000000" });
+  });
+
+  it("REV-015: reversing a completed order's final issue counts its outstanding quantity as firm again, with consumption unchanged", () => {
+    const forecasts = [forecast("2026-10-10", "100")];
+    const completed = only(planMrp(inputs({ forecasts, orderLines: [line({ quantity: q("60"), fulfilled: q("60"), status: "completed", requiredDate: "2026-10-10" })] }), TODAY).plans);
+    expect(totals(completed)).toEqual({ firm: "0.000000", forecast: "40.000000" });
+    const reopened = only(planMrp(inputs({ forecasts, orderLines: [line({ quantity: q("60"), fulfilled: q("25"), status: "open", requiredDate: "2026-10-10" })] }), TODAY).plans);
+    expect(totals(reopened)).toEqual({ firm: "35.000000", forecast: "40.000000" });
+  });
+
+  it("removes a removed line from consumption, and an order of the forecast's month past the horizon still consumes it", () => {
+    const removed = only(planMrp(inputs({ forecasts: [forecast("2026-10-10", "100")], orderLines: [line({ quantity: q("60"), requiredDate: "2026-10-12", removed: true })] }), TODAY).plans);
+    expect(totals(removed)).toEqual({ firm: "0.000000", forecast: "100.000000" });
+    // The horizon ends on 29 December; an order of 30 December adds no firm demand but consumes December's forecast.
+    const pastHorizon = only(planMrp(inputs({ forecasts: [forecast("2026-12-20", "100")], orderLines: [line({ quantity: q("60"), requiredDate: "2026-12-30" })] }), TODAY).plans);
+    expect(totals(pastHorizon)).toEqual({ firm: "0.000000", forecast: "40.000000" });
+  });
+
+  it("R03: a forecast of 0.3 less three orders of 0.1 leaves exactly nothing, and 0.3 less one leaves exactly 0.2", () => {
+    const tenth = (order: string) => line({ order, quantity: q("0.1"), requiredDate: "2026-10-10" });
+    const none = only(planMrp(inputs({ forecasts: [forecast("2026-10-10", "0.3")], orderLines: [tenth("1"), tenth("2"), tenth("3")] }), TODAY).plans);
+    expect(none.forecastDemand).toEqual([]);
+    expect(none.buckets.every(({ forecastDemand }) => forecastDemand === 0n)).toBe(true);
+    const some = only(planMrp(inputs({ forecasts: [forecast("2026-10-10", "0.3")], orderLines: [tenth("1")] }), TODAY).plans);
+    expect(bucketOf(some, "2026-10-10").forecastDemand).toBe(200_000n);
+    expect(typeof bucketOf(some, "2026-10-10").safetyTarget).toBe("bigint");
+  });
+
+  it("plans no pair for a fully consumed forecast whose orders are all issued, and gives an equal result in any input order", () => {
+    const issued = line({ quantity: q("120"), fulfilled: q("120"), status: "completed", requiredDate: "2026-10-10" });
+    expect(planMrp(inputs({ forecasts: [forecast("2026-10-10", "100")], orderLines: [issued] }), TODAY).plans).toEqual([]);
+    const forecasts = [forecast("2026-10-10", "5", { material: "M2" }), forecast("2026-10-03", "5"), forecast("2026-10-05", "5", { location: "L2" })];
+    const safetyTargets = [target("2026-10-10", "3", { material: "M3" }), target("2026-09-01", "1", { material: "M3" })];
+    const forward = planMrp(inputs({ forecasts, safetyTargets }), TODAY);
+    expect(planMrp(inputs({ forecasts: [...forecasts].reverse(), safetyTargets: [...safetyTargets].reverse() }), TODAY)).toEqual(forward);
+    expect(forward.plans.map(({ material, location }) => `${material}@${location}`)).toEqual(["M1@L1", "M1@L2", "M2@L1", "M3@L1"]);
+  });
+});
+
+describe("planMrp: past days (#275, PRD §04)", () => {
+  it("DEM-012: an order of 40 due yesterday counts 40 firm today and keeps its required date", () => {
+    const plan = only(planMrp(inputs({ orderLines: [line({ quantity: q("40"), requiredDate: "2026-09-30" })] }), TODAY).plans);
+    expect(demandOn(plan, TODAY).firm).toBe("40.000000");
+    expect(plan.firmDemand).toMatchObject([{ requiredDate: "2026-09-30", date: TODAY }]);
+  });
+
+  it("DEM-013: on Wednesday, Monday's unshipped order still consumes Monday's forecast and its 60 is due today", () => {
+    const wednesday = "2026-10-07";
+    const plan = only(planMrp(inputs({ forecasts: [forecast("2026-10-05", "100")], orderLines: [line({ quantity: q("60"), requiredDate: "2026-10-05" })] }), wednesday).plans);
+    expect(demandOn(plan, wednesday)).toEqual({ firm: "60.000000", forecast: "40.000000" });
+    expect(plan.forecastDemand).toMatchObject([{ forecastDate: "2026-10-05", date: wednesday, quantity: q("40") }]);
+  });
+
+  it("DEM-025 per D08: on 2 September the 30 still to ship of 31 August is due today, and August's residual of 40 has expired", () => {
+    const orderLines = [line({ quantity: q("60"), fulfilled: q("30"), requiredDate: "2026-08-31" })];
+    const plan = only(planMrp(inputs({ forecasts: [forecast("2026-08-31", "100")], orderLines }), "2026-09-02").plans);
+    expect(demandOn(plan, "2026-09-02")).toEqual({ firm: "30.000000", forecast: "0.000000" });
+    expect(totals(plan).forecast).toBe("0.000000");
+  });
+
+  it("MRP-048 per D08: on 1 October only the unfulfilled 40 of 30 September moves to today, and September's residual expires", () => {
+    const orderLines = [line({ quantity: q("60"), fulfilled: q("20"), requiredDate: "2026-09-30" })];
+    const plan = only(planMrp(inputs({ forecasts: [forecast("2026-09-30", "100")], orderLines }), TODAY).plans);
+    expect(totals(plan)).toEqual({ firm: "40.000000", forecast: "0.000000" });
+    expect(demandOn(plan, TODAY).firm).toBe("40.000000");
+  });
+
+  it("D08: an earlier residual of this month counts today, and a forecast after day 89 adds nothing", () => {
+    const today = "2026-10-20";
+    const plan = only(planMrp(inputs({ forecasts: [forecast("2026-10-05", "100")], orderLines: [line({ quantity: q("60"), requiredDate: "2026-10-25" })] }), today).plans);
+    expect(demandOn(plan, today).forecast).toBe("40.000000");
+    expect(plan.forecastDemand).toMatchObject([{ forecastDate: "2026-10-05", date: today }]);
+    expect(planMrp(inputs({ forecasts: [forecast("2026-12-30", "100")] }), TODAY).plans).toEqual([]);
+  });
+});
+
+describe("planMrp: safety-stock targets (#275, PRD §04)", () => {
+  it("DEM-014: with no target the safety target is 0.000000 every day, and no gap appears beyond a shortage", () => {
+    const plan = only(planMrp(inputs({ stock: [stock("M1", "L1", "10")], orderLines: [line({ quantity: q("15"), requiredDate: "2026-10-05" })] }), TODAY).plans);
+    expect(plan.buckets.every(({ safetyTarget }) => formatDecimal(safetyTarget, { fixed: true }) === "0.000000")).toBe(true);
+    expect(plan.buckets.map(safetyGap)).toEqual(plan.buckets.map(({ shortage }) => shortage));
+    expect(safetyGap(bucketOf(plan, "2026-10-04"))).toBe(0n);
+  });
+
+  it("DEM-015: a target of 100 effective 1 January is 100 on each of 1–15 January", () => {
+    const plan = only(planMrp(inputs({ safetyTargets: [target("2027-01-01", "100")] }), "2027-01-01").plans);
+    expect(plan.buckets.slice(0, 15).every(({ safetyTarget }) => safetyTarget === q("100"))).toBe(true);
+  });
+
+  it("DEM-016: 100 from 1 January and 150 from 1 February switch at the month boundary", () => {
+    const plan = only(planMrp(inputs({ safetyTargets: [target("2027-02-01", "150"), target("2027-01-01", "100")] }), "2027-01-01").plans);
+    expect(bucketOf(plan, "2027-01-31").safetyTarget).toBe(q("100"));
+    expect(bucketOf(plan, "2027-02-01").safetyTarget).toBe(q("150"));
+    expect(plan.buckets.at(-1)!.safetyTarget).toBe(q("150"));
+  });
+
+  it("MRP-043: a target rising from 20 to 40 measures each day's gap against the target of that day, the target-only pair from zero", () => {
+    const safetyTargets = [target("2026-09-01", "20"), target("2026-10-31", "40")];
+    const withStock = only(planMrp(inputs({ stock: [stock("M1", "L1", "30")], safetyTargets }), TODAY).plans);
+    expect(safetyGap(bucketOf(withStock, "2026-10-30"))).toBe(0n);
+    expect(safetyGap(bucketOf(withStock, "2026-10-31"))).toBe(q("10"));
+    expect(bucketOf(withStock, "2026-10-31")).toMatchObject({ projectedBefore: q("30"), shortage: 0n });
+    const alone = only(planMrp(inputs({ safetyTargets }), TODAY).plans);
+    expect(alone.physical).toBe(0n);
+    expect(alone.buckets.map(safetyGap).slice(29, 31)).toEqual([q("20"), q("40")]);
+  });
+});
+
 // The status filter itself is pinned with fixtures that keep a remainder in `supply/purchasing-supply.test.ts`
 // ("counts no closed document…"); these tests assert each scenario's outcome through the whole plan.
 describe("planMrp: purchasing supply (#276)", () => {
@@ -224,7 +448,7 @@ describe("planMrp: purchasing supply (#276)", () => {
     const { tentativeSupply, dependableSupply } = plan.buckets.find((bucket) => bucket.date === date)!;
     return { tentativeSupply, dependableSupply };
   };
-  const totals = (plan: MrpPlan) =>
+  const supplyTotals = (plan: MrpPlan) =>
     plan.buckets.reduce(
       (sum, { tentativeSupply, dependableSupply }) => ({
         tentativeSupply: sum.tentativeSupply + tentativeSupply,
@@ -236,7 +460,7 @@ describe("planMrp: purchasing supply (#276)", () => {
   it("BUY-002: projects a direct purchase order's 100 as dependable supply on its planned date", () => {
     const plan = only(planMrp(inputs({ purchaseOrderLines: [orderLine({ quantity: q("100"), plannedDate: "2026-10-15" })] }), TODAY).plans);
     expect(supplyOn(plan, "2026-10-15")).toEqual({ tentativeSupply: 0n, dependableSupply: q("100") });
-    expect(totals(plan)).toEqual({ tentativeSupply: 0n, dependableSupply: q("100") });
+    expect(supplyTotals(plan)).toEqual({ tentativeSupply: 0n, dependableSupply: q("100") });
     expect(balances(plan).get("2026-10-14")).toBe(0n);
     expect(balances(plan).get("2026-10-15")).toBe(q("100"));
   });
@@ -249,7 +473,7 @@ describe("planMrp: purchasing supply (#276)", () => {
       ).plans,
     );
     expect(plan.physical).toBe(q("40"));
-    expect(totals(plan).dependableSupply).toBe(q("60"));
+    expect(supplyTotals(plan).dependableSupply).toBe(q("60"));
     expect(plan.buckets.at(-1)!.projectedBefore).toBe(q("100"));
   });
 
@@ -278,7 +502,7 @@ describe("planMrp: purchasing supply (#276)", () => {
         TODAY,
       ).plans,
     );
-    expect(totals(plan)).toEqual({ tentativeSupply: 0n, dependableSupply: q("100") });
+    expect(supplyTotals(plan)).toEqual({ tentativeSupply: 0n, dependableSupply: q("100") });
     expect(plan.supply.map(({ kind }) => kind)).toEqual(["purchase-order"]);
   });
 
@@ -293,7 +517,7 @@ describe("planMrp: purchasing supply (#276)", () => {
         TODAY,
       ).plans,
     );
-    expect(totals(plan)).toEqual({ tentativeSupply: 0n, dependableSupply: 0n });
+    expect(supplyTotals(plan)).toEqual({ tentativeSupply: 0n, dependableSupply: 0n });
     expect(plan.supply).toEqual([]);
     expect(plan.buckets.at(-1)!.projectedBefore).toBe(q("5"));
   });
@@ -309,7 +533,7 @@ describe("planMrp: purchasing supply (#276)", () => {
       ).plans,
     );
     expect(plan.physical).toBe(q("60"));
-    expect(totals(plan).dependableSupply).toBe(0n);
+    expect(supplyTotals(plan).dependableSupply).toBe(0n);
     expect(plan.buckets.at(-1)!.projectedBefore).toBe(q("60"));
   });
 
@@ -319,7 +543,7 @@ describe("planMrp: purchasing supply (#276)", () => {
       orderLine({ quantity: q("100"), received: q("80"), abandoned: q("20"), status: "closed-early", plannedDate: "2026-10-20" }),
     ];
     const plan = only(planMrp(inputs({ stock: [stock("M1", "L1", "130")], purchaseOrderLines }), TODAY).plans);
-    expect(totals(plan).dependableSupply).toBe(0n);
+    expect(supplyTotals(plan).dependableSupply).toBe(0n);
     expect(plan.buckets.at(-1)!.projectedBefore).toBe(q("130"));
   });
 
@@ -390,7 +614,7 @@ describe("planMrp: purchasing supply (#276)", () => {
         TODAY,
       ).plans,
     );
-    expect(totals(plan).dependableSupply).toBe(0n);
+    expect(supplyTotals(plan).dependableSupply).toBe(0n);
     expect(plan.supply).toEqual([]);
   });
 
@@ -419,3 +643,26 @@ describe("planMrp: purchasing supply (#276)", () => {
   });
 });
 
+describe("planMrp: demand and supply seams together (#275, #276)", () => {
+  it("nets a forecast against its month's orders and projects it with purchasing supply and the day's safety target in one balance", () => {
+    const plan = only(
+      planMrp(
+        inputs({
+          stock: [stock("M1", "L1", "10")],
+          orderLines: [line({ quantity: q("60"), requiredDate: "2026-10-12" })],
+          forecasts: [forecast("2026-10-10", "100")],
+          safetyTargets: [target("2026-09-01", "25")],
+          requisitions: [requisition({ quantity: q("30"), requiredDate: "2026-10-11" })],
+          purchaseOrderLines: [orderLine({ quantity: q("50"), plannedDate: "2026-10-12" })],
+        }),
+        TODAY,
+      ).plans,
+    );
+    // 10 − 40 forecast left on the 10th, + 30 requisitioned on the 11th, + 50 ordered − 60 firm on the 12th.
+    expect(bucketOf(plan, "2026-10-10")).toMatchObject({ forecastDemand: q("40"), projectedBefore: -q("30"), shortage: q("30"), safetyTarget: q("25") });
+    expect(bucketOf(plan, "2026-10-11")).toMatchObject({ tentativeSupply: q("30"), projectedBefore: 0n, shortage: 0n });
+    expect(bucketOf(plan, "2026-10-12")).toMatchObject({ dependableSupply: q("50"), firmDemand: q("60"), projectedBefore: -q("10"), shortage: q("10") });
+    expect(safetyGap(bucketOf(plan, "2026-10-12"))).toBe(q("35"));
+    expect([plan.firmDemand.length, plan.forecastDemand.length, plan.supply.length]).toEqual([1, 1, 2]);
+  });
+});

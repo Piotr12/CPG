@@ -9,6 +9,10 @@ import type { DocumentState } from "../document-lifecycle/lifecycle";
 export interface MrpInputs {
   stock: readonly MrpStock[];
   orderLines: readonly MrpOrderLine[];
+  /** Forecasts from the first day of today's month through day 89 (E15-S01). */
+  forecasts: readonly MrpForecast[];
+  /** Every safety-stock target effective on or before day 89 (E15-S01). */
+  safetyTargets: readonly MrpSafetyTarget[];
   requisitions: readonly MrpRequisition[];
   purchaseOrderLines: readonly MrpPurchaseOrderLine[];
 }
@@ -23,7 +27,9 @@ export interface MrpStock {
 /**
  * A customer-order line with its order's location (SAL-004), whatever its status, removed lines
  * included: firm demand takes the open, non-removed ones, and forecast netting (E15-S01) passes every
- * non-removed line to `netForecasts`, which this shape satisfies as a `ConsumingOrderLine`.
+ * non-removed line to `netForecasts`, which this shape satisfies as a `ConsumingOrderLine`. The loader
+ * passes the Open lines due before the end of day 89's month and the other lines due in the months a
+ * counted forecast can fall in (#275).
  * `(order, position)` is the line's business ID.
  */
 export interface MrpOrderLine {
@@ -37,6 +43,22 @@ export interface MrpOrderLine {
   abandoned: bigint;
   status: DocumentState;
   removed: boolean;
+}
+
+/** A forecast of a material at a location on a day; it is a `DemandForecast`, so `netForecasts` takes it unchanged. */
+export interface MrpForecast {
+  material: string;
+  location: string;
+  date: string;
+  quantity: bigint;
+}
+
+/** A safety-stock target, in force from `effectiveFrom` until the next one of its pair (DEM-015/016). */
+export interface MrpSafetyTarget {
+  material: string;
+  location: string;
+  effectiveFrom: string;
+  quantity: bigint;
 }
 
 /**
