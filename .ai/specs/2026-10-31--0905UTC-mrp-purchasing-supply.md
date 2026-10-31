@@ -192,7 +192,7 @@ Each with today fixed at 1 October 2026:
 - **Over-receipt (BUY-015).** Received 110 of 100 → nothing, never negative supply.
 - **Another tenant (R05).** Its documents are never read.
 - **Past the horizon.** Planned 30 December (day 90) → no bucket, no item.
-- **Rounding (R03).** A line of 0.3 received 0.1 + 0.1 → exactly `200000n` micro-units.
+- **Rounding (R03).** A line of 0.3 received 0.1 + 0.1 → exactly `100000n` micro-units (0.1).
 - **A document edited mid-run.** The same as for every other input (#274, "Transactions already open elsewhere"): the run holds the write gate before its snapshot, and a write that was already open and commits during the reads makes the run's first write fail stale, so the wrappers retry it once from fresh data.
 
 ## 📝 Risks & Impact Review
