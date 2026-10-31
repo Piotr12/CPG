@@ -44,8 +44,13 @@ Phase 1 is the spec's steps 1–4 and Phase 2 its steps 5–10. The branch start
   - baseline before this change: 300 pairs, 1.23 s, 56 ms.
 
   A lesson was added.
+- 10:30 UTC — Full gate green. The first coverage run failed `tests/api-messages-glossary.test.ts` on the bare `"recipe"` field name; it now uses the key path `"recipe.id"` (87eb8e0e).
+- 10:40 UTC — Fresh-context code review (`om-code-review` checklist): approve. It found two minor gaps, the horizon's last day and movements due today, both fixed and mutation-checked. Two nits are fixed: `inTransitMicro`/`undispatchedMicro` are reused, and the redundant sort key is gone. One is declined: `MrpTransfer.abandoned` stays, as the spec lists it (f4286109).
+- 10:55 UTC — Final gate green after the review fixes: lint, typecheck, test:coverage (618 files, 4,800 tests, 100% on all four measures), build. No integration file is added or touched, and there is no migration; CI runs the full suite.
 
 ## Progress
+
+PR: #307
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
