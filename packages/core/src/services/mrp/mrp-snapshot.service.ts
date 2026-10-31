@@ -7,6 +7,7 @@ import { readCodes } from "./snapshot/codes";
 import { readOrderLines } from "./snapshot/order-lines";
 import { readProductionOrders } from "./snapshot/production-orders";
 import { readStock } from "./snapshot/stock";
+import { readTransfers } from "./snapshot/transfers";
 
 /**
  * Builds the snapshot `planMrp` plans from (#273), for every location of the scope's tenant, in a
@@ -28,6 +29,8 @@ export class MrpSnapshotService {
     const before = addDays(today, MRP_HORIZON_DAYS);
     const orderLines = await readOrderLines(this.em, codes, before);
     const productionOrders = await readProductionOrders(this.em, codes, before);
-    return { stock, orderLines, productionOrders, transfers: [] };
+    const transfers = await readTransfers(this.em, codes, before);
+    await yieldToEventLoop();
+    return { stock, orderLines, productionOrders, transfers };
   }
 }

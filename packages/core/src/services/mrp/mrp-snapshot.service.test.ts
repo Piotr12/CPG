@@ -14,6 +14,7 @@ import {
   ProductionOrder,
   selectTenant,
   StockBalance,
+  Transfer,
   type DocumentState,
   type Orm,
   type TenantCode,
@@ -124,6 +125,34 @@ describe("MrpSnapshotService", () => {
       produced: order.produced ?? "0.000000",
       abandoned: order.abandoned ?? "0.000000",
       status: order.status ?? "open",
+    });
+    await em.flush();
+  }
+
+  /** A transfer of `material` from `source` to `destination`, written as a stored row. */
+  async function transferRow(
+    tenant: TenantCode,
+    code: string,
+    row: { quantity: string; plannedDispatch: string; plannedArrival: string; dispatched?: string; received?: string; writtenOff?: string; abandoned?: string; status?: DocumentState },
+  ) {
+    const em = scoped(tenant);
+    em.create(Transfer, {
+      code,
+      material: await em.findOneOrFail(Material, { code: "00000002" }),
+      source: await em.findOneOrFail(Location, { code: "00000001" }),
+      destination: await em.findOneOrFail(Location, { code: "00000002" }),
+      quantity: row.quantity,
+      enteredQuantity: row.quantity,
+      enteredUnit: "kg",
+      numerator: "1",
+      denominator: "1",
+      plannedDispatch: row.plannedDispatch,
+      plannedArrival: row.plannedArrival,
+      dispatched: row.dispatched ?? "0.000000",
+      received: row.received ?? "0.000000",
+      writtenOff: row.writtenOff ?? "0.000000",
+      abandoned: row.abandoned ?? "0.000000",
+      status: row.status ?? "open",
     });
     await em.flush();
   }
@@ -302,6 +331,40 @@ describe("MrpSnapshotService", () => {
     for (const { order, components } of productionOrders) expect(components).toEqual([{ material: "00000002", perOutput: micro(Number(order)) }]);
   });
 
+  it("reads Open transfers with their progress as micro-units, by business ID, overdue and part-dispatched ones included", async () => {
+    await transferRow("prod", "00000001", { quantity: "100", dispatched: "30.5", received: "10", writtenOff: "0.5", plannedDispatch: "2026-09-25", plannedArrival: "2026-09-28" });
+
+    const { transfers } = await load();
+
+    expect(transfers).toEqual([
+      {
+        transfer: "00000001", material: "00000002", source: "00000001", destination: "00000002", plannedDispatch: "2026-09-25", plannedArrival: "2026-09-28",
+        quantity: micro(100), dispatched: 30_500_000n, received: micro(10), writtenOff: 500_000n, abandoned: 0n, status: "open",
+      },
+    ]);
+  });
+
+  it("reads no transfer that isn't Open, nor one dispatching after the horizon, but one dispatching on its last day", async () => {
+    // A closed transfer with a remainder by arithmetic, so only the status filter keeps it out (lesson 2026-10-27).
+    await transferRow("prod", "00000001", { quantity: "100", dispatched: "40", received: "40", abandoned: "40", status: "closed-early", plannedDispatch: "2026-10-05", plannedArrival: "2026-10-06" });
+    await transferRow("prod", "00000002", { quantity: "100", status: "cancelled", plannedDispatch: "2026-10-05", plannedArrival: "2026-10-06" });
+    await transferRow("prod", "00000003", { quantity: "100", dispatched: "100", received: "100", status: "completed", plannedDispatch: "2026-10-05", plannedArrival: "2026-10-06" });
+    await transferRow("prod", "00000004", { quantity: "100", plannedDispatch: "2026-12-30", plannedArrival: "2026-12-31" });
+    await transferRow("prod", "00000005", { quantity: "100", plannedDispatch: "2026-12-29", plannedArrival: "2027-01-02" });
+
+    const { transfers } = await load();
+
+    expect(transfers.map(({ transfer }) => transfer)).toEqual(["00000005"]);
+  });
+
+  it("never reads another tenant's transfers (MRP-002)", async () => {
+    await transferRow("prod", "00000001", { quantity: "30", plannedDispatch: "2026-10-05", plannedArrival: "2026-10-06" });
+    await transferRow("test", "00000001", { quantity: "70", plannedDispatch: "2026-10-05", plannedArrival: "2026-10-06" });
+
+    expect((await load("prod")).transfers.map(({ quantity }) => quantity)).toEqual([micro(30)]);
+    expect((await load("test")).transfers.map(({ quantity }) => quantity)).toEqual([micro(70)]);
+  });
+
   it("starts the line read from the (tenant, material, removed, status) index and joins each line's order by key", async () => {
     // EXPLAIN the query MikroORM really sends (lesson 2026-10-25), on a schema without ANALYZE statistics.
     const queries: { sql: string; params: readonly unknown[] }[] = [];
@@ -329,7 +392,7 @@ describe("MrpSnapshotService", () => {
     }
   });
 
-  it("seeks the production-order read through the (tenant, status, code) index and the line read by revision", async () => {
+  it("seeks the production-order and transfer reads through their (tenant, status, code) indexes and the line read by revision", async () => {
     const queries: { sql: string; params: readonly unknown[] }[] = [];
     const config = loadConfig({ DATA_DIR: mkdtempSync(path.join(tmpdir(), "cpg-mrp-snapshot-plan-")) });
     await migrateDatabase(config);
@@ -344,6 +407,10 @@ describe("MrpSnapshotService", () => {
       em.create(ProductionOrder, {
         code: "00000001", output, location, recipe: revision, quantity: "1.000000", enteredQuantity: "1", enteredUnit: "each", numerator: "1",
         denominator: "1", plannedStart: "2026-10-05", plannedFinish: "2026-10-10", leadTimeDays: 5,
+      });
+      em.create(Transfer, {
+        code: "00000001", material: output, source: location, destination: em.create(Location, { code: "00000002", name: "Store" }), quantity: "1.000000",
+        enteredQuantity: "1", enteredUnit: "each", numerator: "1", denominator: "1", plannedDispatch: "2026-10-05", plannedArrival: "2026-10-06",
       });
       await em.flush();
       await new MrpSnapshotService({ em }).load(TODAY);
@@ -365,6 +432,8 @@ describe("MrpSnapshotService", () => {
         "SEARCH m2 USING INDEX sqlite_autoindex_material_1 (id=?)",
         "SEARCH r1 USING INDEX sqlite_autoindex_bom_revision_1 (id=?)",
       ]);
+      expect((await explain("transfer")).join("\n")).toMatch(/^SEARCH t0 USING INDEX transfer_tenant_code_status(_desc)?_code_index \(tenant_code=\? AND status=\?\)$/m);
+      expect((await explain("transfer")).filter((detail) => !detail.startsWith("SEARCH"))).toEqual([]);
     } finally {
       await traced.close();
     }
