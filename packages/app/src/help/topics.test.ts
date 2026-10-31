@@ -40,6 +40,23 @@ describe("help topics", () => {
     expect(text).toContain(overdue);
   });
 
+  it.each([
+    ["en", "Open production orders add what they have still to produce", "Open transfers take stock from the source", "without its requisitions", "a transfer's dispatch or arrival", "dependent demand (components of open production orders)", "transfer in (open transfers arriving here)"],
+    [
+      "pl",
+      "Otwarte zlecenia produkcyjne dodają to, co mają jeszcze wyprodukować",
+      "Otwarte przesunięcia odejmują zapas w lokalizacji źródłowej",
+      "bez swoich zapotrzebowań",
+      "zaległa wysyłka lub przyjęcie przesunięcia",
+      "popyt zależny (składniki otwartych zleceń produkcyjnych)",
+      "przesunięcia przychodzące (otwarte przesunięcia docierające tutaj)",
+    ],
+  ] as const)("says in %s that an MRP run plans open production orders and transfers, and names their day columns (#277)", (locale, ...phrases) => {
+    const text = helpTopics(locale).find((topic) => topic.id === "mrp")!.body.join(" ");
+
+    for (const phrase of phrases) expect(text).toContain(phrase);
+  });
+
   it("is written separately in Polish, not copied from English", () => {
     const english = helpTopics("en");
     const polish = helpTopics("pl");

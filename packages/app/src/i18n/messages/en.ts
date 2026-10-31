@@ -2041,8 +2041,8 @@ export const en = {
       planIntro: "Quantities in {unit}. Each balance is at the end of its day; a negative balance is a shortage to plan for, not a change to stock.",
       planLabel: "Days of the plan",
       figures: {
-        date: "Date", firmDemand: "Firm demand", forecastDemand: "Forecast demand", safetyTarget: "Safety stock",
-        tentativeSupply: "Tentative supply", dependableSupply: "Dependable supply",
+        date: "Date", firmDemand: "Firm demand", forecastDemand: "Forecast demand", dependentDemand: "Dependent demand", transferOut: "Transfer out",
+        safetyTarget: "Safety stock", tentativeSupply: "Tentative supply", dependableSupply: "Dependable supply", transferIn: "Transfer in",
         projectedBefore: "Projected before proposals", projectedAfter: "Projected after proposals", shortage: "Shortage",
       },
     },
