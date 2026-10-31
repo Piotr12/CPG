@@ -85,7 +85,7 @@ describe("the footer", () => {
     await expectFooter();
   });
 
-  // The admin's other screens and a tenant's (UX-010 names user administration), its reports and a filtered audit.
+  // The admin's other screens and a tenant's (UX-010 names user administration and the MRP report), its reports, a filtered audit and a filtered MRP report.
   it.each([
     ["/admin/users", "table"],
     ["/admin/tokens", "table"],
@@ -95,6 +95,7 @@ describe("the footer", () => {
     ["/admin/test/reports/stock", "table[aria-label='Current stock']"],
     ["/admin/test/reports/variance", "table[aria-label='Production variance']"],
     ["/admin/test/mrp", "main h1"],
+    ["/admin/test/mrp?material=00000001", "main h1"],
     ["/admin/test/audit?subjectType=Material&subjectId=00000001", "main table"],
   ])("ends %s", async (path, content) => {
     await browser.open(`${baseUrl}${path}`);
