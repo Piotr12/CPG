@@ -59,6 +59,7 @@ As the spec's Implementation Plan says:
 - Timing (`mrp-run-timing.test.ts`, run alone, 2026-10-31):
   - realistic (30 pairs, 7,800 order lines, 1,200 purchase orders with 2,400 lines, 100 requisitions): 171 ms fastest of 3, longest stall 39 ms (budget 1 s / 250 ms);
   - ten times (300 pairs, 78,000 order lines, 12,100 purchase orders with 34,000 lines, 1,000 requisitions): 1,738 ms, longest stall 78 ms (budget 5 s / 250 ms).
+- `tests/integration/mrp-run-api.test.ts` against a local standalone build (Docker unavailable here, lesson 2026-10-23), fresh `DATA_DIR`: 7 passed, the new purchasing-supply test included.
 
 ## Progress
 
@@ -77,8 +78,8 @@ As the spec's Implementation Plan says:
 
 ### Phase 3: Surface and evidence
 
-- [ ] 3.1 Help copy
-- [ ] 3.2 API integration test
+- [x] 3.1 Help copy — 1f3031f2
+- [x] 3.2 API integration test — 938bb082
 
 ### Phase 4: Close-out
 
