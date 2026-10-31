@@ -67,4 +67,18 @@ describe("MRP run API wiring", () => {
     expect(superseded.status).toBe(409);
     expect(await superseded.json()).toMatchObject({ ok: false, error: { code: "MRP_RUN_SUPERSEDED", params: { run: "00000001" } } });
   });
+
+  it("passes the report's material and location filters to the service, and its not-found refusals back (E18-S01)", async () => {
+    mocks.requireApiUser.mockResolvedValue({ role: "user" });
+    mocks.tenantScope.mockResolvedValue({ cradle: { mrpRunService: { latest: mocks.latest } } });
+    mocks.latest.mockResolvedValue({ run, page: 1, pageSize: 25, total: 1, plans: [] });
+
+    expect((await get("?material=00000012&location=00000003")).status).toBe(200);
+    expect(mocks.latest).toHaveBeenCalledWith({ material: "00000012", location: "00000003" });
+
+    mocks.latest.mockRejectedValueOnce(new NotFoundError("MATERIAL_NOT_FOUND", "There is no material 00000099 in this tenant."));
+    const missing = await get("?material=00000099");
+    expect(missing.status).toBe(404);
+    expect(await missing.json()).toMatchObject({ ok: false, error: { code: "MATERIAL_NOT_FOUND" } });
+  });
 });
