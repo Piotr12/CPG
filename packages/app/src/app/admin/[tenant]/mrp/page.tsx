@@ -56,13 +56,16 @@ async function Mrp({ params, searchParams }: Pick<PageProps<"/admin/[tenant]/mrp
     if (report.page > last) report = await read({ ...search, page: String(last) });
   }
 
+  // The filters show only beside a report, so a tenant with no run needs no pickers.
+  const [materials, locations] = report ? await Promise.all([cradle.materialService.list(), cradle.locationService.list()]) : [[], []];
+
   return (
     <MrpRunScreen
       tenant={tenant}
       report={report}
       selected={query.data}
-      materials={await cradle.materialService.list()}
-      locations={await cradle.locationService.list()}
+      materials={materials}
+      locations={locations}
       action={runMrp.bind(null, tenant.code, tenant.generation)}
       locale={locale}
       messages={messages}

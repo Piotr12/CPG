@@ -108,19 +108,21 @@ describe("the MRP report in the UI", () => {
     expect(stock.rows.map((row: { quantity: string }) => row.quantity)).toEqual(["5.000000"]);
   });
 
-  it("covers every planned pair unfiltered, 25 a page, and opens a pair's days from the list", async () => {
+  it("covers every planned pair unfiltered, 25 a page, and opens a pair's days from the list's last page", async () => {
     const latest = json(await api("GET", "/api/tenants/prod/mrp/runs/latest")).data as MrpLatestView;
     await open("");
     expect(await rita.evaluate<string>(`${shown("[data-mrp-pair-count]")}.textContent`)).toBe(`Planned pairs: ${latest.total}`);
     expect(latest.total).toBe(latest.run.pairs);
+    expect(await rita.evaluate<number>(`${shown(PAIRS)}.querySelectorAll("tbody tr").length`)).toBe(Math.min(25, latest.total));
     expect(await rita.evaluate<boolean>(`Boolean(${shown(DAYS)})`)).toBe(latest.total === 1);
 
-    // This file's materials are the newest, so its pairs sort last: the page past the end shows the last page
-    // (lesson 2026-10-24, "Paging by ascending ID moves the row a test just created off the first page").
+    // The cabinet is this file's newest material, so its pair sorts last of the run: the page past the end shows
+    // the last page, which always holds it (lesson 2026-10-24, "Paging by ascending ID moves the row a test just
+    // created off the first page"). The sheet pair may sit on the page before.
     await open("?page=1000000");
-    await rita.clickRole("link", `Days of ${ids.sheet} mrprep sheet at ${ids.plant} mrprep plant`);
-    await rita.waitUntil(`location.search === "?material=${ids.sheet}&location=${ids.plant}" && Boolean(${shown(DAYS)})`);
-    expect(await figures(day(4))).toMatchObject({ firmDemand: "10", projectedBefore: "40" });
+    await rita.clickRole("link", `Days of ${ids.cabinet} mrprep cabinet at ${ids.plant} mrprep plant`);
+    await rita.waitUntil(`location.search === "?material=${ids.cabinet}&location=${ids.plant}" && Boolean(${shown(DAYS)})`);
+    expect(await figures(day(3))).toMatchObject({ firmDemand: "20", projectedBefore: "-15" });
   });
 
   it("is the not-found state for a material or location this tenant doesn't have", async () => {

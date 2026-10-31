@@ -308,7 +308,7 @@ describe("MrpRunService.latest", () => {
     const store = (await location("prod", "Store")).id;
     const products = [];
     for (let index = 0; index < 27; index += 1) products.push((await material("prod", `Product ${index}`)).id);
-    // Stock rows written in reverse ID order, so order by insertion and by ID differ.
+    // Stock posted in reverse ID order: the report's order comes from its own ORDER BY, whatever order the data arrived in.
     for (const product of [...products].reverse()) await stock("prod", product, store, "2");
     await stock("prod", products[0], PLANT, "1");
     const view = await run();

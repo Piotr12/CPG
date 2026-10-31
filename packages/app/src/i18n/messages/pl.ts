@@ -1966,6 +1966,7 @@ export const pl: Messages = {
       columns: { material: "Materiał", location: "Lokalizacja", lowest: "Najniższy prognozowany stan", firstShortage: "Pierwszy niedobór" },
       noShortage: "Brak",
       empty: "Żadna zaplanowana para nie pasuje do tych filtrów.",
+      emptyRun: "Ten przebieg nie zaplanował żadnej pary materiał–lokalizacja.",
       days: "Dni", daysOf: "Dni {material} w {location}", actions: "Dni",
       pagination: "Strony raportu MRP", previous: "Poprzednia", next: "Następna", page: "Strona {page} z {pages}",
       plan: "{material} w {location}",

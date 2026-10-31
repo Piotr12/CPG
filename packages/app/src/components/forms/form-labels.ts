@@ -29,8 +29,13 @@ export function shownQuantity(quantity: string): string {
  * every digit kept, so no binary float enters (R03). The MRP report uses it; other screens follow (#304).
  */
 export function localeQuantity(quantity: string, locale: string): string {
-  return new Intl.NumberFormat(locale, { maximumFractionDigits: 6 }).format(quantity as `${number}`);
+  let format = quantityFormats.get(locale);
+  if (!format) quantityFormats.set(locale, (format = new Intl.NumberFormat(locale, { maximumFractionDigits: 6 })));
+  return format.format(quantity as `${number}`);
 }
+
+/** One formatter per locale: a one-pair MRP report formats about 750 figures, and building a formatter costs more than using one. */
+const quantityFormats = new Map<string, Intl.NumberFormat>();
 
 /** One choice of a form's select, such as a material or a location. */
 export interface FormOption {

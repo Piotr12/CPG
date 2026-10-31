@@ -84,6 +84,13 @@ describe("MrpReport", () => {
     expect(document.querySelector("[data-mrp-pair-count]")?.textContent).toBe("Planned pairs: 0");
   });
 
+  it("says an unfiltered run planned nothing, rather than blaming filters it doesn't have", () => {
+    renderReport(report({ total: 0, plans: [], run: { ...run, pairs: 0 } }));
+
+    expect(screen.getByText(en.mrp.report.emptyRun)).toBeTruthy();
+    expect(screen.queryByText(en.mrp.report.empty)).toBeNull();
+  });
+
   it("shows the one pair the filters leave, day by day, with its eight figures in its base unit (MRP-005)", () => {
     renderReport(report({ total: 1, plans: [sheet] }), { material: "00000012", location: "00000003", page: 1 });
 

@@ -99,6 +99,9 @@ describe("MrpPage", () => {
     expect(screen.getByText(en.mrp.empty)).toBeTruthy();
     expect(screen.getByText(en.mrp.emptyWritable)).toBeTruthy();
     expect(screen.queryByRole("heading", { name: en.mrp.report.heading })).toBeNull();
+    // No report, no filters: the pickers' lists aren't read.
+    expect(mocks.materials).not.toHaveBeenCalled();
+    expect(mocks.locations).not.toHaveBeenCalled();
 
     mocks.tenantScope.mockResolvedValue(scope(true));
     document.body.innerHTML = "";

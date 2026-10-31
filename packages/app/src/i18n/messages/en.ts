@@ -2034,6 +2034,7 @@ export const en = {
       columns: { material: "Material", location: "Location", lowest: "Lowest projected balance", firstShortage: "First shortage" },
       noShortage: "None",
       empty: "No planned pairs match these filters.",
+      emptyRun: "This run planned no material–location pairs.",
       days: "Days", daysOf: "Days of {material} at {location}", actions: "Days",
       pagination: "MRP report pages", previous: "Previous", next: "Next", page: "Page {page} of {pages}",
       plan: "{material} at {location}",

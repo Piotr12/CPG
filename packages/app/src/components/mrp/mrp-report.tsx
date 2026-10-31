@@ -82,7 +82,7 @@ export function MrpReport({ tenant, report, selected, materials, locations, loca
             </Button>
           )}
           actionsLabel={t.actions}
-          empty={t.empty}
+          empty={filtered ? t.empty : t.emptyRun}
           pagination={<PageLinks page={report.page} pages={Math.ceil(report.total / report.pageSize)} href={query} labels={t} />}
         />
       </div>
