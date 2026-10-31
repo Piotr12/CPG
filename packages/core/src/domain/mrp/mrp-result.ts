@@ -23,6 +23,8 @@ export interface MrpPlan {
   buckets: readonly MrpBucket[];
   /** The order lines behind the buckets' firm demand. */
   firmDemand: readonly MrpFirmDemand[];
+  /** The forecast residuals behind the buckets' forecast demand (E15-S01). */
+  forecastDemand: readonly MrpForecastDemand[];
 }
 
 /** One day of one material at one location. */
@@ -66,6 +68,20 @@ export interface MrpFirmDemand {
   requiredDate: string;
   /** The bucket it counts in: `requiredDate`, or today when the line is overdue. */
   date: string;
+  quantity: bigint;
+}
+
+/** What is left of one forecast once its month's orders consumed it (D08), in the bucket it counts in. */
+export interface MrpForecastDemand {
+  material: string;
+  location: string;
+  /** The forecast's own date, kept when its residual counts today. */
+  forecastDate: string;
+  /** The bucket it counts in: `forecastDate`, or today for an earlier residual of this month. */
+  date: string;
+  /** The forecast as entered, before consumption. */
+  forecastQuantity: bigint;
+  /** The residual counted on `date`: above zero, at most `forecastQuantity`. */
   quantity: bigint;
 }
 

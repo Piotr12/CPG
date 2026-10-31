@@ -25,6 +25,6 @@ export class MrpSnapshotService {
     const stock = await readStock(this.em, codes);
     await yieldToEventLoop();
     const orderLines = await readOrderLines(this.em, codes, addDays(today, MRP_HORIZON_DAYS));
-    return { stock, orderLines };
+    return { stock, orderLines, forecasts: [], safetyTargets: [] };
   }
 }

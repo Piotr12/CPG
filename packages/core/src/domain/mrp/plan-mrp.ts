@@ -1,6 +1,8 @@
 import { firmDemand } from "./demand/firm-demand";
+import { forecastDemand } from "./demand/forecast-demand";
+import { safetyLevels } from "./demand/safety-levels";
 import type { MrpInputs } from "./mrp-inputs";
-import type { MrpFirmDemand, MrpPlan, MrpResult } from "./mrp-result";
+import type { MrpFirmDemand, MrpForecastDemand, MrpPlan, MrpResult } from "./mrp-result";
 import { horizonDates } from "./projection/horizon";
 import { comparePairs, pairKey } from "./projection/pairs";
 import { emptyFlows, projectBuckets, type MrpFlows } from "./projection/project-buckets";
@@ -11,12 +13,14 @@ interface PairDraft {
   physical: bigint;
   flows: MrpFlows[];
   firmDemand: MrpFirmDemand[];
+  forecastDemand: MrpForecastDemand[];
 }
 
 /**
  * Plans `inputs` over the 90 days from `today` (PRD §04, #273): one plan per material and location
- * the snapshot names, with a stock row or firm demand inside the horizon, by material code, then
- * location code. A pair without a stock row starts from zero. The result depends only on the
+ * the snapshot names, with a stock row, firm demand or a forecast residual inside the horizon, or a
+ * safety-stock target in force on one of its days (#275), by material code, then location code. A
+ * pair without a stock row starts from zero. The result depends only on the
  * snapshot's content, never its order, and the snapshot is never changed (R09, R10).
  */
 export function planMrp(inputs: MrpInputs, today: string): MrpResult {
@@ -27,7 +31,7 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
     const key = pairKey(material, location);
     let pair = pairs.get(key);
     if (!pair) {
-      pair = { material, location, physical: 0n, flows: dates.map(emptyFlows), firmDemand: [] };
+      pair = { material, location, physical: 0n, flows: dates.map(emptyFlows), firmDemand: [], forecastDemand: [] };
       pairs.set(key, pair);
     }
     return pair;
@@ -38,13 +42,23 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
     pair.flows[dayOf.get(item.date)!].firmDemand += item.quantity;
     pair.firmDemand.push(item);
   }
+  for (const item of forecastDemand(inputs.forecasts, inputs.orderLines, dates)) {
+    const pair = pairOf(item.material, item.location);
+    pair.flows[dayOf.get(item.date)!].forecastDemand += item.quantity;
+    pair.forecastDemand.push(item);
+  }
+  for (const { material, location, levels } of safetyLevels(inputs.safetyTargets, dates)) {
+    const { flows } = pairOf(material, location);
+    levels.forEach((level, day) => (flows[day].safetyTarget = level));
+  }
   const plans = [...pairs.values()].sort(comparePairs).map(
-    ({ material, location, physical, flows, firmDemand: items }): MrpPlan => ({
+    ({ material, location, physical, flows, firmDemand: firm, forecastDemand: forecast }): MrpPlan => ({
       material,
       location,
       physical,
       buckets: projectBuckets(physical, flows),
-      firmDemand: items,
+      firmDemand: firm,
+      forecastDemand: forecast,
     }),
   );
   return { today, dates, plans, proposals: [] };
