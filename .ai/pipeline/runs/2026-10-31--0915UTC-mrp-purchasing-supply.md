@@ -60,9 +60,9 @@ As the spec's Implementation Plan says:
 
 ### Phase 1: Engine
 
-- [ ] 1.1 Engine types and empty inputs
-- [ ] 1.2 Purchasing supply seam
-- [ ] 1.3 planMrp wiring and acceptance tests
+- [x] 1.1 Engine types and empty inputs — d5b7b28d
+- [x] 1.2 Purchasing supply seam — a1c210b9
+- [x] 1.3 planMrp wiring and acceptance tests — 735eb154
 
 ### Phase 2: Snapshot
 
