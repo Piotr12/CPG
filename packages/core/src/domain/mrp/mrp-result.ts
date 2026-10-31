@@ -23,6 +23,8 @@ export interface MrpPlan {
   buckets: readonly MrpBucket[];
   /** The order lines behind the buckets' firm demand. */
   firmDemand: readonly MrpFirmDemand[];
+  /** The document lines behind the buckets' tentative and dependable supply (E15-S02). */
+  supply: readonly MrpSupply[];
 }
 
 /** One day of one material at one location. */
@@ -66,6 +68,28 @@ export interface MrpFirmDemand {
   requiredDate: string;
   /** The bucket it counts in: `requiredDate`, or today when the line is overdue. */
   date: string;
+  quantity: bigint;
+}
+
+/**
+ * The outstanding part of one open supply document line, in the bucket it counts in (E15-S02). A
+ * requisition is tentative supply; a purchase-order line, and E15-S03's production output, dependable.
+ */
+export interface MrpSupply {
+  kind: "requisition" | "purchase-order";
+  reliability: "tentative" | "dependable";
+  /** The requisition's or the purchase order's business ID. */
+  document: string;
+  /** The purchase-order line's position; `null` for a requisition, which has no lines. */
+  position: number | null;
+  material: string;
+  location: string;
+  /** The document's own required or planned date, kept when it has passed (PRD §04). */
+  plannedDate: string;
+  /** The bucket it counts in: `plannedDate`, or today when that has passed. */
+  date: string;
+  /** The Overdue Supply marker: `plannedDate` is before today (MRP-015, BUY-019). */
+  overdue: boolean;
   quantity: bigint;
 }
 

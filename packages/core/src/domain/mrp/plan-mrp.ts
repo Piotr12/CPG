@@ -1,6 +1,6 @@
 import { firmDemand } from "./demand/firm-demand";
 import type { MrpInputs } from "./mrp-inputs";
-import type { MrpFirmDemand, MrpPlan, MrpResult } from "./mrp-result";
+import type { MrpFirmDemand, MrpPlan, MrpResult, MrpSupply } from "./mrp-result";
 import { horizonDates } from "./projection/horizon";
 import { comparePairs, pairKey } from "./projection/pairs";
 import { emptyFlows, projectBuckets, type MrpFlows } from "./projection/project-buckets";
@@ -11,6 +11,7 @@ interface PairDraft {
   physical: bigint;
   flows: MrpFlows[];
   firmDemand: MrpFirmDemand[];
+  supply: MrpSupply[];
 }
 
 /**
@@ -27,7 +28,7 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
     const key = pairKey(material, location);
     let pair = pairs.get(key);
     if (!pair) {
-      pair = { material, location, physical: 0n, flows: dates.map(emptyFlows), firmDemand: [] };
+      pair = { material, location, physical: 0n, flows: dates.map(emptyFlows), firmDemand: [], supply: [] };
       pairs.set(key, pair);
     }
     return pair;
@@ -39,12 +40,13 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
     pair.firmDemand.push(item);
   }
   const plans = [...pairs.values()].sort(comparePairs).map(
-    ({ material, location, physical, flows, firmDemand: items }): MrpPlan => ({
+    ({ material, location, physical, flows, firmDemand: items, supply }): MrpPlan => ({
       material,
       location,
       physical,
       buckets: projectBuckets(physical, flows),
       firmDemand: items,
+      supply,
     }),
   );
   return { today, dates, plans, proposals: [] };

@@ -22,7 +22,7 @@ const line = (overrides: Partial<MrpOrderLine> & { quantity: bigint; requiredDat
   ...overrides,
 });
 
-const inputs = (overrides: Partial<MrpInputs> = {}): MrpInputs => ({ stock: [], orderLines: [], ...overrides });
+const inputs = (overrides: Partial<MrpInputs> = {}): MrpInputs => ({ stock: [], orderLines: [], requisitions: [], purchaseOrderLines: [], ...overrides });
 
 const only = (plans: readonly MrpPlan[]) => {
   expect(plans).toHaveLength(1);
