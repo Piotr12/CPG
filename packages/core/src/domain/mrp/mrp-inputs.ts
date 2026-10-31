@@ -15,6 +15,8 @@ export interface MrpInputs {
   safetyTargets: readonly MrpSafetyTarget[];
   requisitions: readonly MrpRequisition[];
   purchaseOrderLines: readonly MrpPurchaseOrderLine[];
+  productionOrders: readonly MrpProductionOrder[];
+  transfers: readonly MrpTransfer[];
 }
 
 /** Physical on-hand of one material at one location today. In-transit stock is never physical. */
@@ -90,6 +92,50 @@ export interface MrpPurchaseOrderLine {
   plannedDate: string;
   quantity: bigint;
   received: bigint;
+  abandoned: bigint;
+  status: DocumentState;
+}
+
+/**
+ * A production order with its pinned BOM revision's lines, whatever its status (#277). Its output and
+ * its inputs are both at `location`, the producing site. `quantity` is the target and `produced` what
+ * completions have posted; `components` give each input's base quantity per base unit of output.
+ */
+export interface MrpProductionOrder {
+  order: string;
+  material: string;
+  location: string;
+  plannedStart: string;
+  plannedFinish: string;
+  quantity: bigint;
+  produced: bigint;
+  abandoned: bigint;
+  status: DocumentState;
+  components: readonly MrpComponentLine[];
+}
+
+/** One line of a pinned BOM revision: `perOutput` of `material` for one base unit of the output. */
+export interface MrpComponentLine {
+  material: string;
+  perOutput: bigint;
+}
+
+/**
+ * A transfer with its posting progress, whatever its status (#277): `quantity` is planned, and
+ * `dispatched`, `received` and `writtenOff` are what its postings have moved. What is in transit,
+ * `dispatched − received − writtenOff`, belongs to the transfer and to neither site (R09).
+ */
+export interface MrpTransfer {
+  transfer: string;
+  material: string;
+  source: string;
+  destination: string;
+  plannedDispatch: string;
+  plannedArrival: string;
+  quantity: bigint;
+  dispatched: bigint;
+  received: bigint;
+  writtenOff: bigint;
   abandoned: bigint;
   status: DocumentState;
 }

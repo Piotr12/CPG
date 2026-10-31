@@ -24,15 +24,27 @@ import type { AuditActor } from "../audit/actor";
  * Purchasing (#276, spec `2026-10-31--0905UTC-mrp-purchasing-supply`, Risks) is a chosen contract too,
  * well above the realistic dataset's: two lines per purchase order, a third of the orders Open, half the
  * requisitions Open, and at ten times also `fullOrders` Open orders of 100 lines, the most an order holds.
+ *
+ * #277 adds Open production orders, each pinning its output's one revision of four components homed
+ * at the same site, as a plant stocks what it consumes, and Open transfers from each material's home
+ * to a hub, a third of them part-dispatched, with dates before the horizon and over it.
  */
 const SIZES = [
-  { name: "realistic", materials: 30, locations: 1, lines: 7_800, forecasts: 3_100, orders: 1_200, requisitions: 100, fullOrders: 0, budgetMs: 1_000 },
-  { name: "ten times", materials: 300, locations: 10, lines: 78_000, forecasts: 31_000, orders: 12_000, requisitions: 1_000, fullOrders: 100, budgetMs: 5_000 },
+  {
+    name: "realistic", materials: 30, locations: 1, lines: 7_800, forecasts: 3_100, orders: 1_200, requisitions: 100, fullOrders: 0,
+    productionOrders: 40, transfers: 20, budgetMs: 1_000,
+  },
+  {
+    name: "ten times", materials: 300, locations: 10, lines: 78_000, forecasts: 31_000, orders: 12_000, requisitions: 1_000, fullOrders: 100,
+    productionOrders: 400, transfers: 200, budgetMs: 5_000,
+  },
 ] as const;
 /** Lines per order of the plain purchase orders. */
 const ORDER_LINES = 2;
 /** Lines of each full purchase order. */
 const FULL_ORDER_LINES = 100;
+/** The lines of each material's one BOM revision (#277). */
+const COMPONENTS = 4;
 /** The spec's bound on the longest stretch a ten-times run keeps the event loop from reading sockets. */
 const STALL_BUDGET_MS = 250;
 /**
@@ -50,7 +62,7 @@ const code = "printf('%08d', x)";
 /** Two years of dates around today, in an order other than the IDs'. */
 const spread = (step: number) => `date('2025-10-27', '+' || (x * ${step} % 730) || ' days')`;
 
-function seed({ materials, locations, lines, forecasts, orders, requisitions, fullOrders }: (typeof SIZES)[number]): string[] {
+function seed({ materials, locations, lines, forecasts, orders, requisitions, fullOrders, productionOrders, transfers }: (typeof SIZES)[number]): string[] {
   /** Material `n` lives at location `1 + n % locations`. */
   const home = (material: string) => `'l' || (1 + (${material}) % ${locations})`;
   return [
@@ -83,6 +95,22 @@ function seed({ materials, locations, lines, forecasts, orders, requisitions, fu
     `${seq(requisitions)} insert into purchase_requisition (id, tenant_code, code, material_id, location_id, quantity, entered_quantity, entered_unit, numerator, denominator, required_date, converted, status, created_at)
       select 'r' || x, 'prod', ${code}, 'm' || (1 + x % ${materials}), ${home(`1 + x % ${materials}`)}, '10.000000', '10', 'each', '1', '1', ${spread(5)},
         case when x % 2 = 0 then '0.000000' else '10.000000' end, case when x % 2 = 0 then 'open' else 'completed' end, 0 from s`,
+    `${seq(materials)} insert into bom (id, tenant_code, code, output_id, active, revision, created_at, version) select 'bom' || x, 'prod', ${code}, 'm' || x, 1, 1, 0, 1 from s`,
+    `${seq(materials)} insert into bom_revision (id, tenant_code, bom_id, number, priority, valid_from, created_at) select 'rev' || x, 'prod', 'bom' || x, 1, 1, '2026-01-01', 0 from s`,
+    `${seq(materials * COMPONENTS)} insert into bom_component (id, tenant_code, revision_id, position, material_id, quantity, entered_quantity, entered_unit, numerator, denominator)
+      select 'bc' || x, 'prod', 'rev' || (1 + (x - 1) / ${COMPONENTS}), 1 + (x - 1) % ${COMPONENTS},
+        'm' || (1 + ((x - 1) / ${COMPONENTS} + (1 + (x - 1) % ${COMPONENTS}) * ${locations}) % ${materials}),
+        '0.250000', '0.25', 'each', '1', '1' from s`,
+    `${seq(productionOrders)} insert into production_order (id, tenant_code, code, output_id, location_id, recipe_id, quantity, entered_quantity, entered_unit, numerator, denominator,
+        planned_start, planned_finish, lead_time_days, produced, abandoned, status, created_at, updated_at, version)
+      select 'mo' || x, 'prod', ${code}, 'm' || (1 + x % ${materials}), ${home(`1 + x % ${materials}`)}, 'rev' || (1 + x % ${materials}), '100.000000', '100', 'each', '1', '1',
+        date('2026-10-20', '+' || (x * 3 % 80) || ' days'), date('2026-10-25', '+' || (x * 3 % 80) || ' days'), 5, case when x % 3 = 0 then '40.000000' else '0.000000' end, '0.000000', 'open', 0, 0, 1 from s`,
+    "insert into location (id, tenant_code, code, name, created_at) values ('hub', 'prod', '99999999', 'Hub', 0)",
+    `${seq(transfers)} insert into transfer (id, tenant_code, code, material_id, source_id, destination_id, quantity, entered_quantity, entered_unit, numerator, denominator,
+        planned_dispatch, planned_arrival, dispatched, received, written_off, abandoned, status, created_at, updated_at, version)
+      select 'tr' || x, 'prod', ${code}, 'm' || (1 + x % ${materials}), ${home(`1 + x % ${materials}`)}, 'hub', '50.000000', '50', 'each', '1', '1',
+        date('2026-10-20', '+' || (x * 7 % 80) || ' days'), date('2026-10-22', '+' || (x * 7 % 80) || ' days'),
+        case when x % 3 = 0 then '20.000000' else '0.000000' end, '0.000000', '0.000000', '0.000000', 'open', 0, 0, 1 from s`,
   ];
 }
 
@@ -136,27 +164,35 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
       await run().finally(() => (running = false));
       fastest = Math.min(fastest, performance.now() - started);
     }
-    const rows = await orm.em.getConnection().execute<{ n: number }[]>("select count(*) as n from mrp_daily_result");
+    const [{ n: rows }] = await orm.em.getConnection().execute<{ n: number }[]>("select count(*) as n from mrp_daily_result");
+    const [{ pairs }] = await orm.em.getConnection().execute<{ pairs: number }[]>("select pairs from mrp_run order by code desc limit 1");
     const engine = await engineOnly();
     process.stdout.write(
-      `MRP run, ${size.name} (${size.materials} pairs, ${size.materials * 90} daily rows, ${size.lines} order lines, ${size.forecasts} forecasts, ` +
-        `${size.orders + size.fullOrders} purchase orders with ${size.orders * ORDER_LINES + size.fullOrders * FULL_ORDER_LINES} lines, ${size.requisitions} requisitions): ` +
+      `MRP run, ${size.name} (${pairs} pairs, ${rows} daily rows, ${size.lines} order lines, ${size.forecasts} forecasts, ` +
+        `${size.orders + size.fullOrders} purchase orders with ${size.orders * ORDER_LINES + size.fullOrders * FULL_ORDER_LINES} lines, ${size.requisitions} requisitions, ` +
+        `${size.productionOrders} production orders, ${size.transfers} transfers): ` +
         `${fastest.toFixed(0)} ms fastest of ${RUNS}, longest event-loop stall ${longestStall.toFixed(0)} ms, planMrp alone ${engine.toFixed(0)} ms\n`,
     );
     const forecast = await orm.em.getConnection().execute<{ n: number }[]>("select count(*) as n from mrp_daily_result where forecast_demand <> '0.000000'");
     const safety = await orm.em.getConnection().execute<{ n: number }[]>("select count(*) as n from mrp_daily_result where safety_target = '40.000000'");
     expect(forecast[0].n).toBeGreaterThan(0);
-    // Day 30, 26 November, through day 89.
+    // Day 30, 26 November, through day 89, at each material's home.
     expect(safety).toEqual([{ n: size.materials * 60 }]);
-    expect(rows).toEqual([{ n: size.materials * 90 }]);
-    // The run counted the pipeline it read: some days carry tentative and dependable supply.
+    // Every material at its home, plus the hub for each transferred material that receives something (#277 Q9).
+    expect(pairs).toBeGreaterThan(size.materials);
+    expect(pairs).toBeLessThanOrEqual(size.materials + Math.min(size.transfers, size.materials));
+    expect(rows).toBe(pairs * 90);
+    // The run counted the pipeline it read: some days carry tentative and dependable supply, dependent demand and transfers.
     const supplied = await orm.em
       .getConnection()
-      .execute<{ tentative: number; dependable: number }[]>(
-        "select sum(tentative_supply != '0.000000') as tentative, sum(dependable_supply != '0.000000') as dependable from mrp_daily_result",
+      .execute<{ tentative: number; dependable: number; dependent: number; transfers: number }[]>(
+        "select sum(tentative_supply != '0.000000') as tentative, sum(dependable_supply != '0.000000') as dependable, " +
+          "sum(dependent_demand != '0.000000') as dependent, sum(transfer_out != '0.000000' or transfer_in != '0.000000') as transfers from mrp_daily_result",
       );
     expect(supplied[0].tentative).toBeGreaterThan(0);
     expect(supplied[0].dependable).toBeGreaterThan(0);
+    expect(supplied[0].dependent).toBeGreaterThan(0);
+    expect(supplied[0].transfers).toBeGreaterThan(0);
     expect(fastest).toBeLessThan(CI_FACTOR * size.budgetMs);
     expect(longestStall).toBeLessThan(CI_FACTOR * STALL_BUDGET_MS);
   }, testTimeout);

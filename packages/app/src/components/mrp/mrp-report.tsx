@@ -21,8 +21,23 @@ interface MrpReportProps {
   messages: Messages;
 }
 
-/** The figures a day shows beside its date (spec Q5), in the order of PRD §07: demand, supply, balances, shortage. */
-const DAY_FIGURES = ["firmDemand", "forecastDemand", "safetyTarget", "tentativeSupply", "dependableSupply", "projectedBefore", "projectedAfter", "shortage"] as const;
+/**
+ * The figures a day shows beside its date (spec Q5), in the order of PRD §07: demand, supply, balances,
+ * shortage. #277 added dependent demand and the two transfer legs, so every term of the balance is a column.
+ */
+const DAY_FIGURES = [
+  "firmDemand",
+  "forecastDemand",
+  "dependentDemand",
+  "transferOut",
+  "safetyTarget",
+  "tentativeSupply",
+  "dependableSupply",
+  "transferIn",
+  "projectedBefore",
+  "projectedAfter",
+  "shortage",
+] as const;
 
 /** A stored figure below zero: a projected balance short of stock. */
 const negative = (quantity: string) => quantity.startsWith("-");
@@ -97,7 +112,7 @@ function PlanDays({ plan, locale, labels: t }: { plan: MrpPlanView; locale: Loca
     id: key,
     header: t.figures[key],
     kind: "quantity",
-    // Headers like "Projected before proposals" wrap, so all nine columns fit beside the menu at 1280 px.
+    // Headers like "Projected before proposals" wrap; past what fits beside the menu, the table scrolls in its own region.
     className: "whitespace-normal",
     cell: (day) => <span data-mrp-figure={key} className={cn(negative(day[key]) && "font-medium text-danger")}>{localeQuantity(day[key], locale)}</span>,
   });

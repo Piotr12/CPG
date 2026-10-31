@@ -28,7 +28,7 @@ describe("the MRP report in the UI", () => {
   let rita: Browser;
   let secret: string;
   let run: MrpRunView;
-  const ids: Record<"sheet" | "cabinet" | "plant", string> = {} as never;
+  const ids: Record<"sheet" | "cabinet" | "plant" | "depot", string> = {} as never;
 
   const api = (method: string, path: string, body?: unknown) => callApi(baseUrl, method, path, secret, body === undefined ? {} : { key: randomUUID(), body });
   const create = async (path: string, body: unknown) => {
@@ -58,6 +58,7 @@ describe("the MRP report in the UI", () => {
     ids.sheet = await create("/api/tenants/prod/materials", { type: "raw", description: "mrprep sheet", baseUnit: "kg" });
     ids.cabinet = await create("/api/tenants/prod/materials", { type: "finished", description: "mrprep cabinet", baseUnit: "each" });
     ids.plant = await create("/api/tenants/prod/locations", { name: "mrprep plant" });
+    ids.depot = await create("/api/tenants/prod/locations", { name: "mrprep depot" });
     const customer = await create("/api/tenants/prod/customers", { name: "mrprep retail" });
     // MRP-005: physical 50, Open lines of 10 and 15 two days apart. MRP-008: physical 5, an Open line of 20.
     await create("/api/tenants/prod/stock/corrections", { material: ids.sheet, location: ids.plant, quantity: "50", unit: "kg", reason: "mrprep count" });
@@ -70,6 +71,10 @@ describe("the MRP report in the UI", () => {
         { material: ids.sheet, quantity: "15", unit: "kg", requiredDate: day(6) },
         { material: ids.cabinet, quantity: "20", unit: "each", requiredDate: day(3) },
       ],
+    });
+    // #277: a planned transfer of 5 kg of sheet leaves the plant on day 8 and reaches the depot on day 9.
+    await create("/api/tenants/prod/transfers", {
+      material: ids.sheet, source: ids.plant, destination: ids.depot, quantity: "5", unit: "kg", plannedDispatch: day(8), plannedArrival: day(9),
     });
     run = await runMrp();
     await createUser(admin, baseUrl, USERNAME, PASSWORD);
@@ -97,6 +102,16 @@ describe("the MRP report in the UI", () => {
     expect(await figures(day(5))).toMatchObject({ firmDemand: "0", projectedBefore: "40" });
     expect(await figures(day(6))).toMatchObject({ firmDemand: "15", projectedBefore: "25", shortage: "0" });
     expect(await rita.evaluate<string>(`${shown("[data-mrp-field=id]")}.textContent`)).toBe(run.id);
+  });
+
+  it("shows a planned transfer leaving the plant on its dispatch day and reaching the depot on its arrival day (#277)", async () => {
+    await open(`?material=${ids.sheet}&location=${ids.plant}`, DAYS);
+    expect(await figures(day(8))).toMatchObject({ transferOut: "5", transferIn: "0", projectedBefore: "20" });
+
+    await open(`?material=${ids.sheet}&location=${ids.depot}`, DAYS);
+    expect(await rita.evaluate<string>(`${shown("main h3")}.textContent`)).toBe(`${ids.sheet} mrprep sheet at ${ids.depot} mrprep depot`);
+    expect(await figures(day(8))).toMatchObject({ transferIn: "0", projectedBefore: "0" });
+    expect(await figures(day(9))).toMatchObject({ transferOut: "0", transferIn: "5", projectedBefore: "5" });
   });
 
   it("shows a negative projected balance as a shortage while the stock itself stays 5 (MRP-008, INV-008)", async () => {
@@ -162,7 +177,7 @@ describe("the MRP report in the UI", () => {
         await rita.setViewport(width, height);
         await open(`?material=${ids.sheet}&location=${ids.plant}`, DAYS);
         expect(await rita.evaluate<boolean>(`document.documentElement.scrollWidth <= innerWidth`), `${width} px`).toBe(true);
-        expect(await rita.evaluate<number>(`${shown(DAYS)}.querySelectorAll("thead th").length`)).toBe(9);
+        expect(await rita.evaluate<number>(`${shown(DAYS)}.querySelectorAll("thead th").length`)).toBe(12);
       }
     } finally {
       await rita.setViewport(1280, 800);
@@ -173,7 +188,7 @@ describe("the MRP report in the UI", () => {
     await rita.open(`${baseUrl}/help?q=MRP`);
     await rita.waitFor("section#mrp");
     const english = await rita.text("section#mrp");
-    for (const words of ["firm demand", "forecast demand", "safety stock", "tentative supply", "dependable supply", "before and after", "shortage", "a projected balance of 40"]) {
+    for (const words of ["firm demand", "forecast demand", "dependent demand", "transfer out", "safety stock", "tentative supply", "dependable supply", "transfer in", "before and after", "shortage", "a projected balance of 40"]) {
       expect(english).toContain(words);
     }
 

@@ -1973,8 +1973,8 @@ export const pl: Messages = {
       planIntro: "Ilości w {unit}. Każdy stan jest na koniec dnia; ujemny stan to niedobór do zaplanowania, a nie zmiana zapasu.",
       planLabel: "Dni planu",
       figures: {
-        date: "Data", firmDemand: "Popyt pewny", forecastDemand: "Popyt z prognozy", safetyTarget: "Zapas bezpieczeństwa",
-        tentativeSupply: "Podaż wstępna", dependableSupply: "Podaż pewna",
+        date: "Data", firmDemand: "Popyt pewny", forecastDemand: "Popyt z prognozy", dependentDemand: "Popyt zależny", transferOut: "Przesunięcia wychodzące",
+        safetyTarget: "Zapas bezpieczeństwa", tentativeSupply: "Podaż wstępna", dependableSupply: "Podaż pewna", transferIn: "Przesunięcia przychodzące",
         projectedBefore: "Prognozowany stan przed propozycjami", projectedAfter: "Prognozowany stan po propozycjach", shortage: "Niedobór",
       },
     },

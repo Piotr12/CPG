@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { formatDecimal, parseDecimal } from "../quantities/decimal";
-import type { MrpForecast, MrpInputs, MrpOrderLine, MrpPurchaseOrderLine, MrpRequisition, MrpSafetyTarget, MrpStock } from "./mrp-inputs";
+import type {
+  MrpForecast,
+  MrpInputs,
+  MrpOrderLine,
+  MrpProductionOrder,
+  MrpPurchaseOrderLine,
+  MrpRequisition,
+  MrpSafetyTarget,
+  MrpStock,
+  MrpTransfer,
+} from "./mrp-inputs";
 import type { MrpPlan } from "./mrp-result";
 import { planMrp } from "./plan-mrp";
 import { safetyGap } from "./projection/safety-gap";
@@ -33,6 +43,33 @@ const requisition = (overrides: Partial<MrpRequisition> & { quantity: bigint; re
   status: "open",
   ...overrides,
 });
+/** A production order of product P at L1 needing 2 of A per unit unless overridden. */
+const production = (overrides: Partial<MrpProductionOrder> & { plannedStart: string; plannedFinish: string }): MrpProductionOrder => ({
+  order: "00000001",
+  material: "P",
+  location: "L1",
+  quantity: q("100"),
+  produced: 0n,
+  abandoned: 0n,
+  status: "open",
+  components: [{ material: "A", perOutput: q("2") }],
+  ...overrides,
+});
+/** A transfer of M1 from S to D, nothing posted yet, unless overridden. */
+const transfer = (overrides: Partial<MrpTransfer> & { quantity: bigint; plannedDispatch: string; plannedArrival: string }): MrpTransfer => ({
+  transfer: "00000001",
+  material: "M1",
+  source: "S",
+  destination: "D",
+  dispatched: 0n,
+  received: 0n,
+  writtenOff: 0n,
+  abandoned: 0n,
+  status: "open",
+  ...overrides,
+});
+/** The plan of `material` at `location` among `plans`. */
+const planAt = (plans: readonly MrpPlan[], material: string, location = "L1") => plans.find((plan) => plan.material === material && plan.location === location)!;
 
 const orderLine = (overrides: Partial<MrpPurchaseOrderLine> & { quantity: bigint; plannedDate: string }): MrpPurchaseOrderLine => ({
   order: "00000001",
@@ -45,7 +82,17 @@ const orderLine = (overrides: Partial<MrpPurchaseOrderLine> & { quantity: bigint
   ...overrides,
 });
 
-const inputs = (overrides: Partial<MrpInputs> = {}): MrpInputs => ({ stock: [], orderLines: [], forecasts: [], safetyTargets: [], requisitions: [], purchaseOrderLines: [], ...overrides });
+const inputs = (overrides: Partial<MrpInputs> = {}): MrpInputs => ({
+  stock: [],
+  orderLines: [],
+  forecasts: [],
+  safetyTargets: [],
+  requisitions: [],
+  purchaseOrderLines: [],
+  productionOrders: [],
+  transfers: [],
+  ...overrides,
+});
 
 const only = (plans: readonly MrpPlan[]) => {
   expect(plans).toHaveLength(1);
@@ -664,5 +711,466 @@ describe("planMrp: demand and supply seams together (#275, #276)", () => {
     expect(bucketOf(plan, "2026-10-12")).toMatchObject({ dependableSupply: q("50"), firmDemand: q("60"), projectedBefore: -q("10"), shortage: q("10") });
     expect(safetyGap(bucketOf(plan, "2026-10-12"))).toBe(q("35"));
     expect([plan.firmDemand.length, plan.forecastDemand.length, plan.supply.length]).toEqual([1, 1, 2]);
+  });
+});
+
+describe("planMrp: open production orders (#277)", () => {
+  // Wednesday 28 October 2026; 1 November is a Sunday, 2 November a Monday, 6 November a Friday.
+  const TODAY_PO = "2026-10-28";
+
+  it("MRP-017: expects a 5-day order's output on Friday 6 November and its inputs on Sunday 1 November, calendar days", () => {
+    const { plans } = planMrp(inputs({ productionOrders: [production({ plannedStart: "2026-11-01", plannedFinish: "2026-11-06" })] }), TODAY_PO);
+    const output = planAt(plans, "P");
+    const input = planAt(plans, "A");
+    expect(output.buckets.filter(({ dependableSupply }) => dependableSupply !== 0n).map(({ date }) => date)).toEqual(["2026-11-06"]);
+    expect(input.buckets.filter(({ dependentDemand }) => dependentDemand !== 0n).map(({ date }) => date)).toEqual(["2026-11-01"]);
+    expect(output.productionOutput).toEqual([
+      { order: "00000001", material: "P", location: "L1", plannedFinish: "2026-11-06", date: "2026-11-06", quantity: q("100"), overdue: false },
+    ]);
+    expect(input.componentDemand).toEqual([
+      { order: "00000001", material: "A", location: "L1", plannedStart: "2026-11-01", date: "2026-11-01", quantity: q("200"), overdue: false },
+    ]);
+  });
+
+  it("MRP-018: subtracts the pinned BOM's 80 of A from A's projection on Monday, the start day", () => {
+    const order = production({ quantity: q("40"), plannedStart: "2026-11-02", plannedFinish: "2026-11-06" });
+    const input = planAt(planMrp(inputs({ stock: [stock("A", "L1", "100")], productionOrders: [order] }), TODAY_PO).plans, "A");
+    expect(bucketOf(input, "2026-11-01").projectedBefore).toBe(q("100"));
+    expect(bucketOf(input, "2026-11-02")).toMatchObject({ dependentDemand: q("80"), projectedBefore: q("20") });
+    expect(bucketOf(input, "2026-11-06").projectedBefore).toBe(q("20"));
+  });
+
+  it("MRP-019: keeps the physical 100 while the projection after the start day is 20, writing nothing", () => {
+    const snapshot = deepFreeze(
+      inputs({ stock: [stock("A", "L1", "100")], productionOrders: [production({ quantity: q("40"), plannedStart: "2026-11-02", plannedFinish: "2026-11-06" })] }),
+    );
+    const before = structuredClone(snapshot);
+    const input = planAt(planMrp(snapshot, TODAY_PO).plans, "A");
+    expect(input.physical).toBe(q("100"));
+    expect(input.buckets.at(-1)!.projectedBefore).toBe(q("20"));
+    expect(snapshot).toEqual(before);
+  });
+
+  it("PRD-009: shows the shortage of unavailable components on the future order's start day, physical unchanged", () => {
+    const input = planAt(
+      planMrp(inputs({ stock: [stock("A", "L1", "0")], productionOrders: [production({ quantity: q("10"), plannedStart: "2026-11-02", plannedFinish: "2026-11-06" })] }), TODAY_PO).plans,
+      "A",
+    );
+    expect(input.physical).toBe(0n);
+    expect(bucketOf(input, "2026-11-01").shortage).toBe(0n);
+    expect(bucketOf(input, "2026-11-02")).toMatchObject({ dependentDemand: q("20"), shortage: q("20") });
+  });
+
+  it("MRP-023: Friday's output doesn't cover Wednesday's demand: Wednesday is short and the output lands Friday", () => {
+    const { plans } = planMrp(
+      inputs({
+        orderLines: [line({ material: "P", quantity: q("50"), requiredDate: "2026-11-04" })],
+        productionOrders: [production({ quantity: q("50"), plannedStart: "2026-11-02", plannedFinish: "2026-11-06" })],
+      }),
+      TODAY_PO,
+    );
+    const product = planAt(plans, "P");
+    expect(bucketOf(product, "2026-11-04")).toMatchObject({ projectedBefore: -q("50"), shortage: q("50") });
+    expect(bucketOf(product, "2026-11-05").shortage).toBe(q("50"));
+    expect(bucketOf(product, "2026-11-06")).toMatchObject({ dependableSupply: q("50"), projectedBefore: 0n, shortage: 0n });
+  });
+
+  it("MRP-011, MRP-021: projects only the unproduced 60 as output and 120 kg of A for it, the produced 40 being physical", () => {
+    const order = production({ produced: q("40"), plannedStart: "2026-11-02", plannedFinish: "2026-11-06" });
+    const { plans } = planMrp(inputs({ stock: [stock("P", "L1", "40")], productionOrders: [order] }), TODAY_PO);
+    const product = planAt(plans, "P");
+    expect(product.physical).toBe(q("40"));
+    expect(bucketOf(product, "2026-11-06")).toMatchObject({ dependableSupply: q("60"), projectedBefore: q("100") });
+    expect(bucketOf(planAt(plans, "A"), "2026-11-02").dependentDemand).toBe(q("120"));
+  });
+
+  it("PRD-028: plans the remaining 60 by the recipe, whatever the completion of 40 actually consumed", () => {
+    // The completion used 160 kg of A instead of 80, which is already out of A's physical 40.
+    const order = production({ produced: q("40"), plannedStart: "2026-11-02", plannedFinish: "2026-11-06" });
+    const input = planAt(planMrp(inputs({ stock: [stock("A", "L1", "40")], productionOrders: [order] }), TODAY_PO).plans, "A");
+    expect(bucketOf(input, "2026-11-02")).toMatchObject({ dependentDemand: q("120"), projectedBefore: -q("80") });
+  });
+
+  it("PRD-025: after a target raised to 120 with 40 produced, projects 80 of output and components for 80", () => {
+    const order = production({ quantity: q("120"), produced: q("40"), plannedStart: "2026-11-02", plannedFinish: "2026-11-06" });
+    const { plans } = planMrp(inputs({ productionOrders: [order] }), TODAY_PO);
+    expect(planAt(plans, "P").productionOutput.map(({ quantity }) => quantity)).toEqual([q("80")]);
+    expect(planAt(plans, "A").componentDemand.map(({ quantity }) => quantity)).toEqual([q("160")]);
+  });
+
+  it("PRD-027: after a finish moved to 13 November, projects output then and components on the recalculated start", () => {
+    const order = production({ produced: q("40"), plannedStart: "2026-11-08", plannedFinish: "2026-11-13" });
+    const { plans } = planMrp(inputs({ productionOrders: [order] }), TODAY_PO);
+    expect(planAt(plans, "P").productionOutput.map(({ date }) => date)).toEqual(["2026-11-13"]);
+    expect(planAt(plans, "A").componentDemand.map(({ date }) => date)).toEqual(["2026-11-08"]);
+  });
+
+  it("PRD-029, PRD-030, MRP-013: projects nothing for orders closed early, fully produced, overproduced or cancelled", () => {
+    const dates = { plannedStart: "2026-11-02", plannedFinish: "2026-11-06" };
+    const productionOrders = [
+      production({ ...dates, order: "00000001", produced: q("40"), abandoned: q("60"), status: "closed-early" }),
+      // A remainder by arithmetic, which only the status filter keeps out (lesson 2026-10-27).
+      production({ ...dates, order: "00000002", produced: q("40"), status: "closed-early" }),
+      production({ ...dates, order: "00000003", produced: q("100"), status: "completed" }),
+      production({ ...dates, order: "00000004", produced: q("110") }),
+      production({ ...dates, order: "00000005", abandoned: q("100"), status: "cancelled" }),
+      production({ ...dates, order: "00000006", status: "cancelled" }),
+    ];
+    const result = planMrp(inputs({ stock: [stock("P", "L1", "40")], productionOrders }), TODAY_PO);
+    const product = only(result.plans);
+    expect(product.material).toBe("P");
+    expect(product.productionOutput).toEqual([]);
+    expect(product.buckets.every(({ dependableSupply, projectedBefore }) => dependableSupply === 0n && projectedBefore === q("40"))).toBe(true);
+  });
+
+  it("MRP-016: expects yesterday's pending 20 today with an Overdue Supply marker, keeping the original finish day", () => {
+    const order = production({ quantity: q("20"), plannedStart: "2026-10-22", plannedFinish: "2026-10-27" });
+    const { plans } = planMrp(inputs({ productionOrders: [order] }), TODAY_PO);
+    const product = planAt(plans, "P");
+    expect(product.physical).toBe(0n);
+    expect(product.buckets[0]).toMatchObject({ date: TODAY_PO, dependableSupply: q("20") });
+    expect(product.productionOutput).toEqual([expect.objectContaining({ plannedFinish: "2026-10-27", date: TODAY_PO, quantity: q("20"), overdue: true })]);
+  });
+
+  it("MRP-022: projects a Monday start's remaining need on Wednesday, today, keeping the original start day", () => {
+    const order = production({ produced: q("40"), plannedStart: "2026-11-02", plannedFinish: "2026-11-06" });
+    const input = planAt(planMrp(inputs({ productionOrders: [order] }), "2026-11-04").plans, "A");
+    expect(input.buckets[0]).toMatchObject({ date: "2026-11-04", dependentDemand: q("120") });
+    expect(input.componentDemand).toEqual([expect.objectContaining({ plannedStart: "2026-11-02", date: "2026-11-04", overdue: true })]);
+  });
+
+  it("UX-024: projects two overlapping orders at one site in full, with no capacity check", () => {
+    const productionOrders = [
+      production({ order: "00000001", quantity: q("30"), plannedStart: "2026-11-02", plannedFinish: "2026-11-06" }),
+      production({ order: "00000002", quantity: q("20"), plannedStart: "2026-11-03", plannedFinish: "2026-11-05" }),
+    ];
+    const { plans } = planMrp(inputs({ productionOrders }), TODAY_PO);
+    expect(planAt(plans, "P").buckets.at(-1)!.projectedBefore).toBe(q("50"));
+    expect(planAt(plans, "A").buckets.at(-1)!.projectedBefore).toBe(-q("100"));
+  });
+
+  it("UX-026: shows a 10 kg shortage on the start day after a goods issue of 10 kg left 90 of the 100 needed", () => {
+    const order = production({ quantity: q("100"), components: [{ material: "A", perOutput: q("1") }], plannedStart: "2026-11-02", plannedFinish: "2026-11-06" });
+    const input = planAt(planMrp(inputs({ stock: [stock("A", "L1", "90")], productionOrders: [order] }), TODAY_PO).plans, "A");
+    expect(bucketOf(input, "2026-11-02").shortage).toBe(q("10"));
+  });
+
+  it("counts an in-horizon start without the output finishing after day 89, and rounds a sub-micro need upward", () => {
+    const productionOrders = [
+      production({ order: "00000001", plannedStart: "2027-01-20", plannedFinish: "2027-02-01" }),
+      production({ order: "00000002", quantity: q("0.5"), components: [{ material: "B", perOutput: q("0.000001") }], plannedStart: "2026-11-02", plannedFinish: "2026-11-06" }),
+    ];
+    const { plans } = planMrp(inputs({ productionOrders }), TODAY_PO);
+    expect(planAt(plans, "P").productionOutput.map(({ order }) => order)).toEqual(["00000002"]);
+    expect(planAt(plans, "A").componentDemand).toEqual([expect.objectContaining({ order: "00000001", date: "2027-01-20", quantity: q("200") })]);
+    expect(planAt(plans, "B").componentDemand.map(({ quantity }) => quantity)).toEqual([1n]);
+  });
+
+  it("gives an equal result for production orders in another order", () => {
+    const productionOrders = [
+      production({ order: "00000003", plannedStart: "2026-11-02", plannedFinish: "2026-11-06", components: [{ material: "B", perOutput: q("1") }, { material: "A", perOutput: q("1") }] }),
+      production({ order: "00000001", plannedStart: "2026-11-02", plannedFinish: "2026-11-06" }),
+      production({ order: "00000002", location: "L2", plannedStart: "2026-10-30", plannedFinish: "2026-11-01" }),
+    ];
+    const forward = planMrp(inputs({ productionOrders }), TODAY_PO);
+    const backward = planMrp(inputs({ productionOrders: [...productionOrders].reverse().map((order) => ({ ...order, components: [...order.components].reverse() })) }), TODAY_PO);
+    expect(backward).toEqual(forward);
+    expect(planAt(forward.plans, "A").componentDemand.map(({ order }) => order)).toEqual(["00000001", "00000003"]);
+  });
+});
+
+describe("planMrp: open transfers (#277)", () => {
+  // Wednesday 28 October 2026: "yesterday" is 27 October.
+  const TODAY_T = "2026-10-28";
+  const sum = (items: readonly { quantity: bigint }[]) => items.reduce((total, { quantity }) => total + quantity, 0n);
+
+  it("TRF-016: expects the 30 in transit at the destination today with an Overdue Transfer warning, at neither site physically", () => {
+    const snapshot = inputs({
+      stock: [stock("M1", "S", "0"), stock("M1", "D", "5")],
+      transfers: [transfer({ quantity: q("30"), dispatched: q("30"), plannedDispatch: "2026-10-25", plannedArrival: "2026-10-27" })],
+    });
+    const result = planMrp(snapshot, TODAY_T);
+    const destination = planAt(result.plans, "M1", "D");
+    const source = planAt(result.plans, "M1", "S");
+    expect(destination.physical).toBe(q("5"));
+    expect(destination.buckets[0]).toMatchObject({ date: TODAY_T, transferIn: q("30"), projectedBefore: q("35") });
+    expect(destination.transfersIn).toEqual([
+      { transfer: "00000001", material: "M1", location: "D", stage: "in-transit", plannedDate: "2026-10-27", date: TODAY_T, quantity: q("30"), overdue: true },
+    ]);
+    expect(source.physical).toBe(0n);
+    expect(source.buckets.every(({ transferOut, projectedBefore }) => transferOut === 0n && projectedBefore === 0n)).toBe(true);
+    expect(result.exceptions).toEqual([]);
+  });
+
+  it("MRP-040: plans the 25 in transit since yesterday for the destination today, with no physical stock there yet", () => {
+    const { plans } = planMrp(inputs({ transfers: [transfer({ quantity: q("25"), dispatched: q("25"), plannedDispatch: "2026-10-26", plannedArrival: "2026-10-27" })] }), TODAY_T);
+    const destination = only(plans);
+    expect(destination).toMatchObject({ location: "D", physical: 0n });
+    expect(destination.buckets[0].transferIn).toBe(q("25"));
+    expect(destination.transfersIn.map(({ overdue }) => overdue)).toEqual([true]);
+  });
+
+  it("projects an undispatched transfer leaving the source on the dispatch day and arriving on the arrival day", () => {
+    const { plans, exceptions } = planMrp(
+      inputs({ stock: [stock("M1", "S", "100")], transfers: [transfer({ quantity: q("40"), plannedDispatch: "2026-11-02", plannedArrival: "2026-11-04" })] }),
+      TODAY_T,
+    );
+    const source = planAt(plans, "M1", "S");
+    const destination = planAt(plans, "M1", "D");
+    expect(bucketOf(source, "2026-11-02")).toMatchObject({ transferOut: q("40"), projectedBefore: q("60") });
+    expect(bucketOf(destination, "2026-11-03").projectedBefore).toBe(0n);
+    expect(bucketOf(destination, "2026-11-04")).toMatchObject({ transferIn: q("40"), projectedBefore: q("40") });
+    expect(source.transfersOut).toEqual([
+      { transfer: "00000001", material: "M1", location: "S", stage: "planned", plannedDate: "2026-11-02", date: "2026-11-02", quantity: q("40"), overdue: false },
+    ]);
+    expect(destination.transfersIn).toEqual([expect.objectContaining({ stage: "planned", plannedDate: "2026-11-04", date: "2026-11-04", overdue: false })]);
+    expect(exceptions).toEqual([]);
+  });
+
+  it("moves an overdue dispatch to today, and the arrival too when it has also passed, keeping both planned days", () => {
+    const { plans } = planMrp(
+      inputs({
+        stock: [stock("M1", "S", "100")],
+        transfers: [
+          transfer({ transfer: "00000001", quantity: q("10"), plannedDispatch: "2026-10-20", plannedArrival: "2026-10-25" }),
+          transfer({ transfer: "00000002", quantity: q("20"), plannedDispatch: "2026-10-26", plannedArrival: "2026-11-02" }),
+        ],
+      }),
+      TODAY_T,
+    );
+    expect(planAt(plans, "M1", "S").transfersOut.map(({ transfer: id, plannedDate, date, overdue }) => [id, plannedDate, date, overdue])).toEqual([
+      ["00000001", "2026-10-20", TODAY_T, true],
+      ["00000002", "2026-10-26", TODAY_T, true],
+    ]);
+    expect(planAt(plans, "M1", "D").transfersIn.map(({ transfer: id, plannedDate, date, overdue }) => [id, plannedDate, date, overdue])).toEqual([
+      ["00000001", "2026-10-25", TODAY_T, true],
+      ["00000002", "2026-11-02", "2026-11-02", false],
+    ]);
+  });
+
+  it("TRF-017, MRP-039: counts only the 60 the source can supply at both sites, raises Insufficient Transfer Stock and changes no transfer", () => {
+    const snapshot = deepFreeze(
+      inputs({ stock: [stock("M1", "S", "60")], transfers: [transfer({ quantity: q("100"), plannedDispatch: "2026-11-02", plannedArrival: "2026-11-04" })] }),
+    );
+    const before = structuredClone(snapshot);
+    const { plans, exceptions } = planMrp(snapshot, TODAY_T);
+    const source = planAt(plans, "M1", "S");
+    const destination = planAt(plans, "M1", "D");
+    expect(bucketOf(source, "2026-11-02")).toMatchObject({ transferOut: q("60"), projectedBefore: 0n });
+    expect(destination.buckets.at(-1)!.projectedBefore).toBe(q("60"));
+    expect(sum(destination.transfersIn)).toBe(q("60"));
+    expect(exceptions).toEqual([
+      { kind: "insufficient-transfer-stock", transfer: "00000001", material: "M1", source: "S", destination: "D", date: "2026-11-02", planned: q("100"), available: q("60") },
+    ]);
+    expect(snapshot).toEqual(before);
+  });
+
+  it("projects nothing at either site for a Completed, Closed Early or Cancelled transfer", () => {
+    const dates = { plannedDispatch: "2026-11-02", plannedArrival: "2026-11-04" };
+    // Each keeps an undispatched remainder or stock in transit by arithmetic, so only the status filter keeps it out (lesson 2026-10-27).
+    const transfers = [
+      transfer({ ...dates, transfer: "00000001", quantity: q("100"), dispatched: q("40"), received: q("40"), abandoned: q("40"), status: "closed-early" }),
+      transfer({ ...dates, transfer: "00000002", quantity: q("100"), dispatched: q("50"), received: q("20"), status: "completed" }),
+      transfer({ ...dates, transfer: "00000003", quantity: q("100"), status: "cancelled" }),
+    ];
+    const result = planMrp(inputs({ stock: [stock("M1", "S", "100"), stock("M1", "D", "0")], transfers }), TODAY_T);
+    expect(result.exceptions).toEqual([]);
+    for (const plan of result.plans) {
+      expect([plan.transfersOut, plan.transfersIn]).toEqual([[], []]);
+      expect(plan.buckets.every(({ transferOut, transferIn }) => transferOut === 0n && transferIn === 0n)).toBe(true);
+    }
+  });
+
+  it("projects a part-dispatched transfer in both stages, in transit less what was written off, then the rest", () => {
+    const { plans } = planMrp(
+      inputs({
+        stock: [stock("M1", "S", "100")],
+        transfers: [transfer({ quantity: q("100"), dispatched: q("30"), writtenOff: q("5"), plannedDispatch: "2026-10-30", plannedArrival: "2026-11-02" })],
+      }),
+      TODAY_T,
+    );
+    expect(planAt(plans, "M1", "S").transfersOut.map(({ quantity }) => quantity)).toEqual([q("70")]);
+    expect(planAt(plans, "M1", "D").transfersIn.map(({ stage, quantity }) => [stage, quantity])).toEqual([
+      ["in-transit", q("25")],
+      ["planned", q("70")],
+    ]);
+  });
+
+  it("checks a source short of stock as able to supply nothing: no movement, an exception, and no plan at the destination", () => {
+    const { plans, exceptions } = planMrp(
+      inputs({
+        orderLines: [line({ location: "S", quantity: q("5"), requiredDate: "2026-10-30" })],
+        transfers: [
+          transfer({ transfer: "00000002", quantity: q("10"), plannedDispatch: "2026-11-02", plannedArrival: "2026-11-04" }),
+          transfer({ transfer: "00000001", quantity: q("20"), plannedDispatch: "2026-11-02", plannedArrival: "2026-11-04" }),
+        ],
+      }),
+      TODAY_T,
+    );
+    const source = only(plans);
+    expect(source).toMatchObject({ location: "S", transfersOut: [] });
+    expect(bucketOf(source, "2026-11-02")).toMatchObject({ transferOut: 0n, projectedBefore: -q("5") });
+    expect(exceptions.map(({ transfer: id, planned, available }) => [id, planned, available])).toEqual([
+      ["00000001", q("20"), 0n],
+      ["00000002", q("10"), 0n],
+    ]);
+  });
+
+  it("serves two same-day transfers from one source in ID order, the second seeing what the first took", () => {
+    const dates = { plannedDispatch: "2026-11-02", plannedArrival: "2026-11-03" };
+    const { plans, exceptions } = planMrp(
+      inputs({
+        stock: [stock("M1", "S", "50")],
+        transfers: [transfer({ ...dates, transfer: "00000002", quantity: q("30") }), transfer({ ...dates, transfer: "00000001", destination: "E", quantity: q("30") })],
+      }),
+      TODAY_T,
+    );
+    expect(sum(planAt(plans, "M1", "E").transfersIn)).toBe(q("30"));
+    expect(sum(planAt(plans, "M1", "D").transfersIn)).toBe(q("20"));
+    expect(exceptions).toEqual([expect.objectContaining({ transfer: "00000002", planned: q("30"), available: q("20") })]);
+  });
+
+  it("serves an older overdue transfer before a newer one with a lower ID, both counted today", () => {
+    const { exceptions } = planMrp(
+      inputs({
+        stock: [stock("M1", "S", "30")],
+        transfers: [
+          transfer({ transfer: "00000001", quantity: q("30"), plannedDispatch: "2026-10-25", plannedArrival: "2026-11-01" }),
+          transfer({ transfer: "00000002", quantity: q("30"), plannedDispatch: "2026-10-20", plannedArrival: "2026-11-01" }),
+        ],
+      }),
+      TODAY_T,
+    );
+    expect(exceptions.map(({ transfer: id, available }) => [id, available])).toEqual([["00000001", 0n]]);
+  });
+
+  it("counts a chain A → B → C across days: B can send on to C what arrives from A first", () => {
+    const { plans, exceptions } = planMrp(
+      inputs({
+        stock: [stock("M1", "A", "50")],
+        transfers: [
+          transfer({ transfer: "00000002", source: "B", destination: "C", quantity: q("50"), plannedDispatch: "2026-11-05", plannedArrival: "2026-11-06" }),
+          transfer({ transfer: "00000001", source: "A", destination: "B", quantity: q("50"), plannedDispatch: "2026-11-01", plannedArrival: "2026-11-03" }),
+        ],
+      }),
+      TODAY_T,
+    );
+    expect(exceptions).toEqual([]);
+    expect(planAt(plans, "M1", "B").buckets.at(-1)!.projectedBefore).toBe(0n);
+    expect(bucketOf(planAt(plans, "M1", "C"), "2026-11-06").transferIn).toBe(q("50"));
+  });
+
+  it("subtracts a dispatch on day 89 whose arrival falls after the horizon, and ignores one dispatching after it", () => {
+    const { plans } = planMrp(
+      inputs({
+        stock: [stock("M1", "S", "100")],
+        transfers: [
+          transfer({ transfer: "00000001", quantity: q("10"), plannedDispatch: "2027-01-25", plannedArrival: "2027-01-28" }),
+          transfer({ transfer: "00000002", quantity: q("10"), plannedDispatch: "2027-01-26", plannedArrival: "2027-01-27" }),
+        ],
+      }),
+      TODAY_T,
+    );
+    const source = only(plans);
+    expect(source.transfersOut.map(({ transfer: id, date }) => [id, date])).toEqual([["00000001", "2027-01-25"]]);
+    expect(source.buckets.at(-1)).toMatchObject({ date: "2027-01-25", projectedBefore: q("90") });
+  });
+
+  it("keeps every bucket's transfer figures equal to the items behind them, so no leg is counted twice", () => {
+    const { plans } = planMrp(
+      inputs({
+        stock: [stock("M1", "S", "45"), stock("M2", "S", "10")],
+        transfers: [
+          transfer({ transfer: "00000001", quantity: q("30"), dispatched: q("10"), plannedDispatch: "2026-10-29", plannedArrival: "2026-10-30" }),
+          transfer({ transfer: "00000002", quantity: q("30"), plannedDispatch: "2026-10-29", plannedArrival: "2026-10-30" }),
+          transfer({ transfer: "00000003", material: "M2", quantity: q("5"), plannedDispatch: "2026-10-27", plannedArrival: "2026-10-29" }),
+        ],
+      }),
+      TODAY_T,
+    );
+    for (const plan of plans) {
+      for (const bucket of plan.buckets) {
+        expect(bucket.transferOut).toBe(sum(plan.transfersOut.filter(({ date }) => date === bucket.date)));
+        expect(bucket.transferIn).toBe(sum(plan.transfersIn.filter(({ date }) => date === bucket.date)));
+      }
+    }
+    expect(sum(plans.flatMap(({ transfersOut }) => transfersOut))).toBe(q("50"));
+  });
+
+  it("gives an equal result for transfers in another order", () => {
+    const transfers = [
+      transfer({ transfer: "00000003", quantity: q("10"), dispatched: q("4"), plannedDispatch: "2026-11-02", plannedArrival: "2026-11-02" }),
+      transfer({ transfer: "00000001", quantity: q("10"), plannedDispatch: "2026-11-02", plannedArrival: "2026-11-02" }),
+      transfer({ transfer: "00000002", quantity: q("50"), plannedDispatch: "2026-11-02", plannedArrival: "2026-11-02" }),
+    ];
+    const forward = planMrp(inputs({ stock: [stock("M1", "S", "30")], transfers }), TODAY_T);
+    expect(planMrp(inputs({ stock: [stock("M1", "S", "30")], transfers: [...transfers].reverse() }), TODAY_T)).toEqual(forward);
+    expect(planAt(forward.plans, "M1", "D").transfersIn.map(({ transfer: id, stage }) => `${id}/${stage}`)).toEqual([
+      "00000001/planned",
+      "00000002/planned",
+      "00000003/in-transit",
+    ]);
+  });
+});
+
+describe("planMrp: transfer feasibility against the forecast and purchasing seams (#275, #276, #277 Q2)", () => {
+  it("checks a source's dispatch against purchase-order supply and forecast demand, never its requisitions", () => {
+    const { plans, exceptions } = planMrp(
+      inputs({
+        stock: [stock("M1", "S", "20")],
+        forecasts: [forecast("2026-11-01", "30", { location: "S" })],
+        requisitions: [requisition({ location: "S", quantity: q("100"), requiredDate: "2026-11-01" })],
+        purchaseOrderLines: [orderLine({ location: "S", quantity: q("50"), plannedDate: "2026-11-01" })],
+        transfers: [transfer({ quantity: q("80"), plannedDispatch: "2026-11-02", plannedArrival: "2026-11-03" })],
+      }),
+      "2026-10-28",
+    );
+    // Dependable on 2 November: 20 on hand + 50 ordered − 30 forecast = 40. The 100 requisitioned would cover all 80.
+    expect(exceptions).toEqual([
+      { kind: "insufficient-transfer-stock", transfer: "00000001", material: "M1", source: "S", destination: "D", date: "2026-11-02", planned: q("80"), available: q("40") },
+    ]);
+    const source = planAt(plans, "M1", "S");
+    expect(bucketOf(source, "2026-11-01")).toMatchObject({ forecastDemand: q("30"), tentativeSupply: q("100"), dependableSupply: q("50"), projectedBefore: q("140") });
+    expect(bucketOf(source, "2026-11-02")).toMatchObject({ transferOut: q("40"), projectedBefore: q("100") });
+    expect(bucketOf(planAt(plans, "M1", "D"), "2026-11-03")).toMatchObject({ transferIn: q("40"), projectedBefore: q("40") });
+  });
+});
+
+describe("planMrp: transfer feasibility against the production seam (#277)", () => {
+  it("counts a production order's output and component need at the source before it checks a dispatch", () => {
+    const { exceptions } = planMrp(
+      inputs({
+        stock: [stock("M1", "S", "10"), stock("A", "S", "100")],
+        productionOrders: [
+          production({ material: "M1", location: "S", quantity: q("50"), plannedStart: "2026-10-29", plannedFinish: "2026-10-30", components: [{ material: "A", perOutput: q("1") }] }),
+        ],
+        transfers: [
+          transfer({ quantity: q("100"), plannedDispatch: "2026-11-02", plannedArrival: "2026-11-03" }),
+          transfer({ transfer: "00000002", material: "A", quantity: q("80"), plannedDispatch: "2026-11-02", plannedArrival: "2026-11-03" }),
+        ],
+      }),
+      "2026-10-28",
+    );
+    // M1: 10 on hand + 50 produced on 30 October = 60. A: 100 on hand − 50 consumed on 29 October = 50.
+    expect(exceptions.map(({ transfer: id, available }) => [id, available])).toEqual([
+      ["00000001", q("60")],
+      ["00000002", q("50")],
+    ]);
+  });
+});
+
+describe("planMrp: purchasing and production on one day (#276, #277)", () => {
+  it("MRP-042: a purchase-order receipt of 40 and a production order's component need of 40 on the same day balance, with no shortage and physical unchanged", () => {
+    const { plans } = planMrp(
+      inputs({
+        purchaseOrderLines: [orderLine({ material: "A", quantity: q("40"), plannedDate: "2026-11-02" })],
+        productionOrders: [production({ quantity: q("20"), plannedStart: "2026-11-02", plannedFinish: "2026-11-04" })],
+      }),
+      "2026-10-28",
+    );
+    const component = planAt(plans, "A");
+    expect(bucketOf(component, "2026-11-02")).toMatchObject({ dependableSupply: q("40"), dependentDemand: q("40"), projectedBefore: 0n, shortage: 0n });
+    expect(component.physical).toBe(0n);
+    expect(component.buckets.every(({ shortage }) => shortage === 0n)).toBe(true);
   });
 });

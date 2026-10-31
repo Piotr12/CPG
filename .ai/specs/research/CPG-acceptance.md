@@ -2830,7 +2830,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("BUY-018, MRP-013": neither a Cancelled requisition nor a Cancelled purchase-order line adds supply), `tests/integration/mrp-run-api.test.ts` ("projects open purchasing supply once…": a run through `POST …/mrp/runs`, read back through `GET …/runs/latest`): a Cancelled requisition adds nothing. The production-order case is E15-S03 (#277). The report screen that shows these figures is E18-S01 (#284). E15-S02, #276.
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("BUY-018, MRP-013": neither a Cancelled requisition nor a Cancelled purchase-order line adds supply), `tests/integration/mrp-run-api.test.ts` ("projects open purchasing supply once…": a run through `POST …/mrp/runs`, read back through `GET …/runs/latest`): a Cancelled requisition adds nothing. The production-order case: `plan-mrp.test.ts` ("PRD-029, PRD-030, MRP-013": a Cancelled, Closed Early or fully produced order projects nothing) (E15-S03, #277). The report screen that shows these figures is E18-S01 (#284). E15-S02, #276.
 - **Given:** PR/PO/production document cancelled before processing
 - **When:** Run MRP
 - **Then:** Cancelled outstanding quantity not counted as incoming supply.
@@ -3065,7 +3065,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-042": a receipt of 40 and a customer-order line of 40 on the same day leave that day's balance at 0 with no shortage, physical unchanged). The production-component case is E15-S03 (#277). The report screen that shows these figures is E18-S01 (#284). E15-S02, #276.
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-042": a receipt of 40 and a customer-order line of 40 on the same day leave that day's balance at 0 with no shortage, physical unchanged). The production-component case: `plan-mrp.test.ts` ("MRP-042: a purchase-order receipt of 40 and a production order's component need of 40…") (E15-S03, #277). The report screen that shows these figures is E18-S01 (#284). E15-S02, #276.
 - **Given:** Scheduled PO receipt 40 and planned component requirement 40 on same day
 - **When:** Run MRP
 - **Then:** Same-day bucket can balance those quantities; physical completion still waits for actual receipt.

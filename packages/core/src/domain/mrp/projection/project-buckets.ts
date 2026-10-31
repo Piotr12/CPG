@@ -31,9 +31,35 @@ export function projectBuckets(physical: bigint, flows: readonly MrpFlows[]): Mr
   let balance = physical;
   let proposed = 0n;
   return flows.map((day) => {
-    balance += day.tentativeSupply + day.dependableSupply + day.transferIn;
-    balance -= day.firmDemand + day.forecastDemand + day.dependentDemand + day.transferOut;
+    balance += day.tentativeSupply + dependableChange(day);
     proposed += day.proposedReceipts;
     return { ...day, projectedBefore: balance, projectedAfter: balance + proposed, shortage: balance < 0n ? -balance : 0n };
   });
+}
+
+/**
+ * One day's change of the balance without tentative supply: dependable and transfer receipts less
+ * firm, forecast, dependent and transfer demand. `projectBuckets` adds tentative supply to it, so the
+ * balance formula has one list of terms.
+ */
+function dependableChange(day: MrpFlows): bigint {
+  return day.dependableSupply + day.transferIn - day.firmDemand - day.forecastDemand - day.dependentDemand - day.transferOut;
+}
+
+/** One material at one location while it is being planned: today's physical stock and the 90 days of flows the seams fill. */
+export interface MrpLedger {
+  physical: bigint;
+  flows: MrpFlows[];
+}
+
+/**
+ * What `ledger` can count on at the end of day `day` (0 = today), before proposals: physical stock
+ * plus every dependable flow up to that day, without tentative supply (requisitions are not approved
+ * supply). Transfer feasibility checks a source against it (#277 Q2), and it may be negative. With no
+ * tentative supply it equals that day's `projectedBefore`.
+ */
+export function dependableBalance({ physical, flows }: MrpLedger, day: number): bigint {
+  let balance = physical;
+  for (let index = 0; index <= day; index += 1) balance += dependableChange(flows[index]);
+  return balance;
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PLANNED_START_YEAR_MESSAGE, REQUIREMENT_OVERFLOW_MESSAGE } from "../../validators/production-orders/production-order.schema";
-import { componentRequirement, plannedStart } from "./production-planning";
+import { componentRequirement, plannedStart, scaledMicro } from "./production-planning";
 
 describe("production planning", () => {
   it("subtracts whole calendar days across weekends, leap days and years (PRD-007)", () => {
@@ -15,5 +15,12 @@ describe("production planning", () => {
     expect(componentRequirement("0.333333", "3", "2.000000")).toEqual({ required: "0.999999", available: "2.000000", shortage: "0.000000" });
     expect(componentRequirement("2", "30", "30.000000")).toEqual({ required: "60.000000", available: "30.000000", shortage: "30.000000" });
     expect(() => componentRequirement("999999999999", "2", "0")).toThrow(expect.objectContaining({ fieldErrors: { quantity: [REQUIREMENT_OVERFLOW_MESSAGE] } }));
+  });
+  it("scales micro-units exactly and rounds a remainder upward once (#277)", () => {
+    expect(scaledMicro(2_000_000n, 60_000_000n)).toBe(120_000_000n);
+    expect(scaledMicro(333_333n, 3_000_000n)).toBe(999_999n);
+    expect(scaledMicro(1n, 1n)).toBe(1n);
+    expect(scaledMicro(1_500_000n, 0n)).toBe(0n);
+    expect(scaledMicro(999_999_999_999_000_000n, 2_000_000n)).toBe(1_999_999_999_998_000_000n);
   });
 });

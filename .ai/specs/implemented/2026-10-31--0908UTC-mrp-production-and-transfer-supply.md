@@ -1,6 +1,6 @@
 # MRP projects open production orders and transfers
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-31 09:08 UTC
 **Issue:** #277 (E15-S03, epic #267) · **Depends on:** the MRP engine (`implemented/2026-10-27--0525UTC-mrp-engine-projection.md`, #273), MRP runs and the snapshot loader (`implemented/2026-10-27--0556UTC-mrp-runs.md`, #274), production orders (`implemented/2026-10-20--2047UTC-production-orders.md`), production completions (`implemented/2026-10-20--2221UTC-production-completions.md`), transfers (`implemented/2026-10-20--2046UTC-transfers.md`) · **Design authority:** `.ai/specs/product-brief.md` (R03, R09, R10, D04, N04, N06), `research/CPG-prd001.pdf` §04 "Component timing and execution", "Overdue and late starts", "Transfers", `research/CPG-acceptance.md` MRP-011/013/016/017/018/019/021/022/023/039/040, PRD-009/025/027/028/029/030, TRF-016/017, UX-024/026
 
@@ -282,3 +282,19 @@ Both phases ship on one PR. Each leaves the suite green. There's no route or scr
 10. **Docs.** Extend the `domain/mrp/` bullet in `.ai/docs/engineering-standards.md` with the supply seam and the transfers-last ordering rule. Move the acceptance-catalogue rows only as far as the lesson "Cite a scenario only where a test asserts it" allows: they are "Both"-channel, and the report is E18. Move this spec to `implemented/`.
 
 Run `npm run lint`, `npm run typecheck`, `npm run test:coverage` (100%) and `npm run build`.
+
+## Implementation notes
+
+Implemented on #307 (from `main`; the spec merges through #303), as written, with these deviations:
+- `productionMovements` keeps every component need. A BOM quantity is positive and rounds upward to at least 0.000001, so the "need rounds to zero" drop could never run.
+- `planTransfers` returns `{ dispatches, receipts, exceptions }`. `planMrp` files the dispatches and receipts into `transfersOut`/`transfersIn` and never adds them to the flows again.
+- The component read seeks `bom_component_revision_id_index` (`revision_id=?`), not the `(revision, material)` unique. Both seek by revision, so no migration was needed. The production-order and transfer reads seek their `(tenant_code, status, code)` list indexes; `mrp-snapshot.service.test.ts` pins all three plans.
+- The timing fixture gives each recipe four components stocked at the producing site. A first fixture spread components over every site and grew the ten-times run to 1,633 pairs (4.7 s, a 271 ms stall). Measured with the final fixture:
+  - realistic: 43 pairs, 176 ms, 38 ms stall;
+  - ten times: 433 pairs, 1.57 s, 74 ms stall.
+- After `main` merged in #275, #276 and #284 (2026-10-31, `om-auto-fix-pr`):
+  - `planMrp` runs the production and transfer seams after forecasts, safety targets and purchasing. A source's dependable balance therefore counts purchase-order supply and forecast demand, and still never requisitions (Q2). Tests in `plan-mrp.test.ts` pin both orderings.
+  - #284's report spec (Q5) left dependent demand, transfer out and transfer in to this story. The day table of the MRP report shows them, and the help text names them. The Risks line "API and screen show the same columns" holds from here on. The screen gained three columns, so the "no screen change" claim above no longer holds.
+  - Re-measured with the merged fixture, which adds forecasts, safety targets and purchasing to the one above. Realistic: 43 pairs, 244 ms, 40 ms stall. Ten times: 437 pairs, 2.09 s, 89 ms stall; another run took 2.30 s with a 106 ms stall.
+
+No acceptance-catalogue row moves. The scenarios are "Both"-channel, and the report that shows the columns, markers and exceptions is E18.

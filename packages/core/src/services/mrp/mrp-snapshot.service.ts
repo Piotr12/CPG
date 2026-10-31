@@ -6,9 +6,11 @@ import { yieldToEventLoop } from "../../http/yield-to-event-loop";
 import { readCodes } from "./snapshot/codes";
 import { readForecasts } from "./snapshot/forecasts";
 import { readConsumingLines, readOrderLines } from "./snapshot/order-lines";
+import { readProductionOrders } from "./snapshot/production-orders";
 import { readPurchaseOrderLines, readRequisitions } from "./snapshot/purchasing";
 import { readSafetyTargets } from "./snapshot/safety-targets";
 import { readStock } from "./snapshot/stock";
+import { readTransfers } from "./snapshot/transfers";
 
 /**
  * Builds the snapshot `planMrp` plans from (#273), for every location of the scope's tenant, in a
@@ -26,6 +28,7 @@ export class MrpSnapshotService {
    * The inputs for a run planning `today` (ISO day) and the 89 days after it. Forecasts count from today's
    * month (earlier ones expired, D08) to the horizon's last day, and the lines that consume them are read
    * to the end of that day's month, so a forecast late in the horizon sees its whole month (#275).
+   * Production orders and transfers are read only to the horizon's last day (#277).
    */
   async load(today: string): Promise<MrpInputs> {
     const last = addDays(today, MRP_HORIZON_DAYS - 1);
@@ -39,6 +42,11 @@ export class MrpSnapshotService {
     const forecasts = await readForecasts(this.em, codes, from, last);
     const requisitions = await readRequisitions(this.em, codes);
     const purchaseOrderLines = await readPurchaseOrderLines(this.em, codes);
-    return { stock, orderLines, forecasts, safetyTargets, requisitions, purchaseOrderLines };
+    await yieldToEventLoop();
+    const afterHorizon = addDays(last, 1);
+    const productionOrders = await readProductionOrders(this.em, codes, afterHorizon);
+    const transfers = await readTransfers(this.em, codes, afterHorizon);
+    await yieldToEventLoop();
+    return { stock, orderLines, forecasts, safetyTargets, requisitions, purchaseOrderLines, productionOrders, transfers };
   }
 }

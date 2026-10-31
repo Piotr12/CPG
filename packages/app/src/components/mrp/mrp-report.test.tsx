@@ -91,14 +91,15 @@ describe("MrpReport", () => {
     expect(screen.queryByText(en.mrp.report.empty)).toBeNull();
   });
 
-  it("shows the one pair the filters leave, day by day, with its eight figures in its base unit (MRP-005)", () => {
+  it("shows the one pair the filters leave, day by day, with its eleven figures in its base unit (MRP-005)", () => {
     renderReport(report({ total: 1, plans: [sheet] }), { material: "00000012", location: "00000003", page: 1 });
 
     expect(screen.getByRole("heading", { level: 3, name: "00000012 Steel sheet at 00000003 Kraków" })).toBeTruthy();
     expect(screen.getByText(/^Quantities in kg\./)).toBeTruthy();
     const days = within(screen.getByRole("table", { name: en.mrp.report.planLabel }));
     expect(days.getAllByRole("columnheader").map((header) => header.textContent)).toEqual([
-      "Date", "Firm demand", "Forecast demand", "Safety stock", "Tentative supply", "Dependable supply", "Projected before proposals", "Projected after proposals", "Shortage",
+      "Date", "Firm demand", "Forecast demand", "Dependent demand", "Transfer out", "Safety stock", "Tentative supply", "Dependable supply", "Transfer in",
+      "Projected before proposals", "Projected after proposals", "Shortage",
     ]);
     // The long headers wrap rather than push the last columns out of view at desktop widths.
     for (const header of days.getAllByRole("columnheader").slice(1)) expect(header.className).toContain("whitespace-normal");
@@ -109,6 +110,19 @@ describe("MrpReport", () => {
     expect(figures("2026-10-05")).toMatchObject({ firmDemand: "10", projectedBefore: "40", projectedAfter: "40", shortage: "0" });
     expect(figures("2026-10-06")).toMatchObject({ firmDemand: "0", projectedBefore: "40" });
     expect(figures("2026-10-07")).toMatchObject({ firmDemand: "15", projectedBefore: "25" });
+  });
+
+  it("shows the production and transfer figures behind a day's balance, so every term of it is a column (#277)", () => {
+    const plant: MrpPlanView = {
+      ...sheet,
+      buckets: [day("2026-10-05", { dependentDemand: "30.000000", transferOut: "20.000000", dependableSupply: "10.000000", transferIn: "5.000000", projectedBefore: "15.000000", projectedAfter: "15.000000" })],
+    };
+    renderReport(report({ total: 1, plans: [plant] }), { material: "00000012", location: "00000003", page: 1 });
+
+    const row = within(screen.getByRole("table", { name: en.mrp.report.planLabel })).getByText("2026-10-05").closest("tr")!;
+    const figures = Object.fromEntries([...row.querySelectorAll("[data-mrp-figure]")].map((cell) => [cell.getAttribute("data-mrp-figure"), cell.textContent]));
+    // 50 − 30 components − 20 dispatched + 10 produced + 5 received = 15.
+    expect(figures).toMatchObject({ dependentDemand: "30", transferOut: "20", dependableSupply: "10", transferIn: "5", projectedBefore: "15" });
   });
 
   it("marks a day short of stock, and its negative balances, in the reader's locale", () => {
