@@ -9,6 +9,7 @@ import { createAppContainer } from "../container/container";
 import type { Cradle } from "../container/cradle";
 import { scopeForTenant } from "../container/tenant-scope";
 import { toDbOptions } from "../database";
+import { inRequestTransaction } from "../http/request-transaction";
 import { seedTestTenantDataset } from "./demo/seed-demo-data";
 import { movementSources } from "./stock/movement-sources";
 import { TRANSFER_DISPATCH_MOVEMENT } from "./transfers/transfer.service";
@@ -50,6 +51,11 @@ async function everySource({ em }: Cradle): Promise<Pick<StockMovement, "type" |
   return [...(await em.find(StockMovement, {})), ...transfers];
 }
 
+/** Runs MRP over the tenant, so the report has a page of plans to name. */
+async function mrpRun({ em, mrpRunService }: Cradle): Promise<void> {
+  await inRequestTransaction(em, () => mrpRunService.run({ userId: "planner-id", username: "planner", sessionId: null, channel: "ui", token: null }));
+}
+
 describe("a list page's IN reads", () => {
   const queries: { sql: string; params: readonly unknown[] }[] = [];
   let orm: Orm;
@@ -78,6 +84,8 @@ describe("a list page's IN reads", () => {
     ["the audit's reversal links", async (c) => c.auditService.reversalLinks((await c.em.find(StockMovement, {}, { limit: 100 })).map(({ id }) => id))],
     ["the stock ledger", async (c) => c.stockService.get(await busiestPair(c))],
     ["the stock ledger's sources, of every kind", async (c) => movementSources(c.em, await everySource(c))],
+    // The Test dataset's 30 planned materials: a page names 25 of them, more IDs than SQLite's guess for a tenant.
+    ["the MRP report's names", async (c) => (await mrpRun(c), c.mrpRunService.latest({}))],
   ])("%s start every IN read from a key, never from the tenant alone", async (_name, read) => {
     queries.length = 0;
     await read(cradle);
