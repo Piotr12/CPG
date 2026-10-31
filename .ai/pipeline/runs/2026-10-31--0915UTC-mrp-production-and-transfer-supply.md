@@ -38,6 +38,12 @@ Phase 1 is the spec's steps 1–4 and Phase 2 its steps 5–10. The branch start
 - 09:15 UTC — Plan has 10 steps, under the threshold of 20, so the plain engine applies.
 
 - 09:40 UTC — Phase 1 landed. Deviations from the spec: no zero-need drop, because a BOM quantity is positive and rounds upward to at least 0.000001, so the branch can't be reached. The component read seeks `bom_component_revision_id_index`, not the `(revision, material)` unique; both seek by revision, so no migration.
+- 10:05 UTC — Phase 2 landed. `planTransfers` returns `{ dispatches, receipts, exceptions }` and writes its own flows, as the spec's review asked. A first timing fixture spread recipe components over every site and inflated the ten-times run to 1,633 pairs (4.7 s, a 271 ms stall). With site-local components:
+  - realistic: 43 pairs, 176 ms, 38 ms stall;
+  - ten times: 433 pairs, 1.57 s, 74 ms stall;
+  - baseline before this change: 300 pairs, 1.23 s, 56 ms.
+
+  A lesson was added.
 
 ## Progress
 
@@ -52,9 +58,9 @@ Phase 1 is the spec's steps 1–4 and Phase 2 its steps 5–10. The branch start
 
 ### Phase 2: Transfers
 
-- [ ] 2.1 Transfer types and dependable ledger
-- [ ] 2.2 Transfer seam in planMrp
-- [ ] 2.3 Transfer snapshot read
-- [ ] 2.4 Run stores the new figures
-- [ ] 2.5 Timing fixture
-- [ ] 2.6 Docs and spec move
+- [x] 2.1 Transfer types and dependable ledger — d910bafb
+- [x] 2.2 Transfer seam in planMrp — d910bafb
+- [x] 2.3 Transfer snapshot read — 45a6ab0c
+- [x] 2.4 Run stores the new figures — 4829c7bd
+- [x] 2.5 Timing fixture — f7e14396
+- [x] 2.6 Docs and spec move — 6d75f003
