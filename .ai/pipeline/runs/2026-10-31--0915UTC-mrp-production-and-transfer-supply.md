@@ -37,16 +37,18 @@ Phase 1 is the spec's steps 1–4 and Phase 2 its steps 5–10. The branch start
 
 - 09:15 UTC — Plan has 10 steps, under the threshold of 20, so the plain engine applies.
 
+- 09:40 UTC — Phase 1 landed. Deviations from the spec: no zero-need drop, because a BOM quantity is positive and rounds upward to at least 0.000001, so the branch can't be reached. The component read seeks `bom_component_revision_id_index`, not the `(revision, material)` unique; both seek by revision, so no migration.
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Production orders
 
-- [ ] 1.1 scaledMicro
-- [ ] 1.2 Production types
-- [ ] 1.3 Production seam in planMrp
-- [ ] 1.4 Production-order snapshot read
+- [x] 1.1 scaledMicro — e5cf59ee
+- [x] 1.2 Production types — 4e6ec501
+- [x] 1.3 Production seam in planMrp — 4e6ec501
+- [x] 1.4 Production-order snapshot read — 766fa2e9
 
 ### Phase 2: Transfers
 
