@@ -11,7 +11,7 @@ export const REVISION_CHUNK = 100;
  * The Open production orders starting before `before` (the day after the horizon), overdue ones
  * included, each with its pinned revision's lines (#277). An order starting later finishes later
  * still, so neither leg reaches a bucket. The order read seeks the `(tenant, status, code)` list index;
- * the lines are read per chunk of revisions through the `(revision, material)` unique, and orders
+ * the lines are read per chunk of revisions through `bom_component_revision_id_index`, and orders
  * pinning one revision share its lines. Each read is partial and followed by a yield.
  */
 export async function readProductionOrders(em: EntityManager, codes: SnapshotCodes, before: string): Promise<MrpProductionOrder[]> {

@@ -292,5 +292,9 @@ Implemented on #307 (from `main`; the spec merges through #303), as written, wit
 - The timing fixture gives each recipe four components stocked at the producing site. A first fixture spread components over every site and grew the ten-times run to 1,633 pairs (4.7 s, a 271 ms stall). Measured with the final fixture:
   - realistic: 43 pairs, 176 ms, 38 ms stall;
   - ten times: 433 pairs, 1.57 s, 74 ms stall.
+- After `main` merged in #275, #276 and #284 (2026-10-31, `om-auto-fix-pr`):
+  - `planMrp` runs the production and transfer seams after forecasts, safety targets and purchasing. A source's dependable balance therefore counts purchase-order supply and forecast demand, and still never requisitions (Q2). Tests in `plan-mrp.test.ts` pin both orderings.
+  - #284's report spec (Q5) left dependent demand, transfer out and transfer in to this story. The day table of the MRP report shows them, and the help text names them. The Risks line "API and screen show the same columns" holds from here on. The screen gained three columns, so the "no screen change" claim above no longer holds.
+  - Re-measured with the merged fixture, which adds forecasts, safety targets and purchasing to the one above. Realistic: 43 pairs, 244 ms, 40 ms stall. Ten times: 437 pairs, 2.09 s, 89 ms stall; another run took 2.30 s with a 106 ms stall.
 
 No acceptance-catalogue row moves. The scenarios are "Both"-channel, and the report that shows the columns, markers and exceptions is E18.

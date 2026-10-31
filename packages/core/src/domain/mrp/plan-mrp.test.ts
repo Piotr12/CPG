@@ -1135,3 +1135,42 @@ describe("planMrp: transfer feasibility against the forecast and purchasing seam
     expect(bucketOf(planAt(plans, "M1", "D"), "2026-11-03")).toMatchObject({ transferIn: q("40"), projectedBefore: q("40") });
   });
 });
+
+describe("planMrp: transfer feasibility against the production seam (#277)", () => {
+  it("counts a production order's output and component need at the source before it checks a dispatch", () => {
+    const { exceptions } = planMrp(
+      inputs({
+        stock: [stock("M1", "S", "10"), stock("A", "S", "100")],
+        productionOrders: [
+          production({ material: "M1", location: "S", quantity: q("50"), plannedStart: "2026-10-29", plannedFinish: "2026-10-30", components: [{ material: "A", perOutput: q("1") }] }),
+        ],
+        transfers: [
+          transfer({ quantity: q("100"), plannedDispatch: "2026-11-02", plannedArrival: "2026-11-03" }),
+          transfer({ transfer: "00000002", material: "A", quantity: q("80"), plannedDispatch: "2026-11-02", plannedArrival: "2026-11-03" }),
+        ],
+      }),
+      "2026-10-28",
+    );
+    // M1: 10 on hand + 50 produced on 30 October = 60. A: 100 on hand − 50 consumed on 29 October = 50.
+    expect(exceptions.map(({ transfer: id, available }) => [id, available])).toEqual([
+      ["00000001", q("60")],
+      ["00000002", q("50")],
+    ]);
+  });
+});
+
+describe("planMrp: purchasing and production on one day (#276, #277)", () => {
+  it("MRP-042: a purchase-order receipt of 40 and a production order's component need of 40 on the same day balance, with no shortage and physical unchanged", () => {
+    const { plans } = planMrp(
+      inputs({
+        purchaseOrderLines: [orderLine({ material: "A", quantity: q("40"), plannedDate: "2026-11-02" })],
+        productionOrders: [production({ quantity: q("20"), plannedStart: "2026-11-02", plannedFinish: "2026-11-04" })],
+      }),
+      "2026-10-28",
+    );
+    const component = planAt(plans, "A");
+    expect(bucketOf(component, "2026-11-02")).toMatchObject({ dependableSupply: q("40"), dependentDemand: q("40"), projectedBefore: 0n, shortage: 0n });
+    expect(component.physical).toBe(0n);
+    expect(component.buckets.every(({ shortage }) => shortage === 0n)).toBe(true);
+  });
+});
