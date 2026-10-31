@@ -1,7 +1,7 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { initOrm, isTenantOwned, MrpDailyResult, MrpRun, type Orm } from "@cpg/db";
+import { Bom, BomComponent, BomRevision, initOrm, isTenantOwned, Location, Material, MrpDailyResult, MrpRun, ProductionOrder, Transfer, type Orm } from "@cpg/db";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadConfig } from "../../config";
 import { createAppContainer } from "../../container/container";
@@ -131,6 +131,37 @@ describe("MrpRunService.run", () => {
       action: "mrp.mrp-run.created", subject_type: "MrpRun", subject_id: "00000001", subject_label: "00000001",
       before: null, after: JSON.stringify({ date: "2026-10-01", generation: 1 }), actor_username: "anna", channel: "ui",
     }]);
+  });
+
+  it("stores open production orders' output and component needs and open transfers' legs, changing no document (#277, R10)", async () => {
+    const cabinet = await material("prod", "Cabinet");
+    const steel = await (await scope()).cradle.materialService.create({ type: "raw", description: "Steel", baseUnit: "kg" }, ANNA);
+    const store = await location("prod", "Store");
+    await stock("prod", cabinet.id, PLANT, "50");
+    await (await scope()).cradle.stockService.correct({ material: steel.id, location: PLANT, quantity: "100", unit: "kg", reason: "Count" }, ANNA);
+    const { em } = (await scope()).cradle;
+    const [output, input] = [await em.findOneOrFail(Material, { code: cabinet.id }), await em.findOneOrFail(Material, { code: steel.id })];
+    const [plant, depot] = [await em.findOneOrFail(Location, { code: PLANT }), await em.findOneOrFail(Location, { code: store.id })];
+    const revision = em.create(BomRevision, { bom: em.create(Bom, { code: "00000001", output, revision: 1 }), number: 1, priority: 1, validFrom: "2026-01-01", validThrough: null });
+    em.create(BomComponent, { revision, position: 1, material: input, quantity: "2.000000", enteredQuantity: "2", enteredUnit: "kg", numerator: "1", denominator: "1" });
+    em.create(ProductionOrder, {
+      code: "00000001", output, location: plant, recipe: revision, quantity: "10.000000", enteredQuantity: "10", enteredUnit: "each", numerator: "1", denominator: "1",
+      plannedStart: "2026-10-05", plannedFinish: "2026-10-08", leadTimeDays: 3, produced: "4.000000",
+    });
+    em.create(Transfer, {
+      code: "00000001", material: output, source: plant, destination: depot, quantity: "30.000000", enteredQuantity: "30", enteredUnit: "each", numerator: "1",
+      denominator: "1", plannedDispatch: "2026-10-06", plannedArrival: "2026-10-07",
+    });
+    await em.flush();
+    const before = await everyOtherTable();
+
+    await run();
+
+    expect(await day("00000001", steel.id, PLANT, "2026-10-05")).toMatchObject({ dependent_demand: "12.000000", projected_before: "88.000000" });
+    expect(await day("00000001", cabinet.id, PLANT, "2026-10-06")).toMatchObject({ transfer_out: "30.000000", projected_before: "20.000000" });
+    expect(await day("00000001", cabinet.id, store.id, "2026-10-07")).toMatchObject({ transfer_in: "30.000000", projected_before: "30.000000" });
+    expect(await day("00000001", cabinet.id, PLANT, "2026-10-08")).toMatchObject({ dependable_supply: "6.000000", projected_before: "26.000000" });
+    expect(await everyOtherTable()).toEqual(before);
   });
 
   it("stores a fractional negative balance with its sign outside the fraction", async () => {
