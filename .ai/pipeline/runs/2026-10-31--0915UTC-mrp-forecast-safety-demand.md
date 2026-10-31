@@ -69,9 +69,9 @@ As the spec's Implementation Plan says:
 
 ### Phase 2: Loader
 
-- [ ] 2.1 Snapshot reads and plan tests
-- [ ] 2.2 Run service stores forecast and safety figures
-- [ ] 2.3 Benchmark extension
+- [x] 2.1 Snapshot reads and plan tests — 32e6616d
+- [x] 2.2 Run service stores forecast and safety figures — acab27aa
+- [x] 2.3 Benchmark extension — 731e002f
 
 ### Phase 3: Evidence and close-out
 
