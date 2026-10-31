@@ -1,4 +1,5 @@
-import { CustomerOrderLine, type EntityManager } from "@cpg/db";
+import { CustomerOrderLine, type EntityManager, type FilterQuery } from "@cpg/db";
+import { addMonths } from "../../../domain/demand/demand-buckets";
 import type { MrpOrderLine } from "../../../domain/mrp/mrp-inputs";
 import { parseDecimal } from "../../../domain/quantities/decimal";
 import { yieldToEventLoop } from "../../../http/yield-to-event-loop";
@@ -11,10 +12,35 @@ import type { SnapshotCodes } from "./codes";
  */
 export const MATERIAL_CHUNK = 10;
 
+/** The partial fields every line read loads, and the order's code and location through its key. */
+const LINE_FIELDS = ["position", "requiredDate", "quantity", "fulfilled", "abandoned", "status", "removed", "material", "order.code", "order.location"] as const;
+
+type ReadLine = Awaited<ReturnType<typeof findLines>>[number];
+
+const findLines = (em: EntityManager, where: FilterQuery<CustomerOrderLine>) =>
+  em.find(CustomerOrderLine, where, { populate: ["order"], fields: LINE_FIELDS, disableIdentityMap: true });
+
+/** A read line by business IDs and micro-units, as the engine takes it. */
+function toMrpLine(line: ReadLine, codes: SnapshotCodes): MrpOrderLine {
+  return {
+    order: line.order.code,
+    position: line.position,
+    material: codes.materials.get(line.material.id)!,
+    location: codes.locations.get(line.order.location.id)!,
+    requiredDate: line.requiredDate,
+    quantity: parseDecimal(line.quantity)!,
+    fulfilled: parseDecimal(line.fulfilled)!,
+    abandoned: parseDecimal(line.abandoned)!,
+    status: line.status,
+    removed: line.removed,
+  };
+}
+
 /**
- * The Open, non-removed customer-order lines due before `before` (the day after the horizon), overdue
- * ones included: the only lines that add firm demand (#273). E15-S01 widens it to the lines that
- * consume forecasts.
+ * The Open, non-removed customer-order lines due before `before`, overdue ones included: the only
+ * lines that add firm demand (#273). `before` is the first day after the month of the horizon's last
+ * day, so the Open lines later in that month, which add no firm demand, still consume its forecasts
+ * (#275).
  *
  * Each chunk of materials is one partial read through the `(tenant, material, removed, status, id)`
  * index, joined to its order by key, followed by a yield, so a large tenant never stalls the server.
@@ -27,30 +53,24 @@ export async function readOrderLines(em: EntityManager, codes: SnapshotCodes, be
   const materials = [...codes.materials.keys()];
   const lines: MrpOrderLine[] = [];
   for (let start = 0; start < materials.length; start += MATERIAL_CHUNK) {
-    const read = await em.find(
-      CustomerOrderLine,
-      { material: { $in: materials.slice(start, start + MATERIAL_CHUNK) }, removed: false, status: "open" },
-      {
-        populate: ["order"],
-        fields: ["position", "requiredDate", "quantity", "fulfilled", "abandoned", "status", "removed", "material", "order.code", "order.location"],
-        disableIdentityMap: true,
-      },
-    );
-    for (const line of read) {
-      if (line.requiredDate >= before) continue;
-      lines.push({
-        order: line.order.code,
-        position: line.position,
-        material: codes.materials.get(line.material.id)!,
-        location: codes.locations.get(line.order.location.id)!,
-        requiredDate: line.requiredDate,
-        quantity: parseDecimal(line.quantity)!,
-        fulfilled: parseDecimal(line.fulfilled)!,
-        abandoned: parseDecimal(line.abandoned)!,
-        status: line.status,
-        removed: line.removed,
-      });
-    }
+    const read = await findLines(em, { material: { $in: materials.slice(start, start + MATERIAL_CHUNK) }, removed: false, status: "open" });
+    for (const line of read) if (line.requiredDate < before) lines.push(toMrpLine(line, codes));
+    await yieldToEventLoop();
+  }
+  return lines;
+}
+
+/**
+ * The non-removed lines that aren't Open, due from `from` (the first day of today's month) to before
+ * `before`: they add no firm demand, but each consumes its month's forecast with `quantity − abandoned`
+ * (D08, DEM-009/010/011). One read per calendar month through `(tenant, required_date)`, a bounded range
+ * of the window only, never the history, followed by a yield, so no read stalls the server for long.
+ */
+export async function readConsumingLines(em: EntityManager, codes: SnapshotCodes, from: string, before: string): Promise<MrpOrderLine[]> {
+  const lines: MrpOrderLine[] = [];
+  for (let month = from; month < before; month = addMonths(month, 1)) {
+    const read = await findLines(em, { removed: false, status: { $ne: "open" }, requiredDate: { $gte: month, $lt: addMonths(month, 1) } });
+    for (const line of read) lines.push(toMrpLine(line, codes));
     await yieldToEventLoop();
   }
   return lines;
