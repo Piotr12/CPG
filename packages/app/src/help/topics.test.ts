@@ -20,6 +20,26 @@ describe("help topics", () => {
     expect(helpTopics(locale).find((topic) => topic.id === "stock-import")!.body.join(" ")).toContain(problem);
   });
 
+  it.each([
+    ["en", "the forecast not yet ordered", "due in its calendar month", "the forecasts of past months expire", "safety-stock target in force that day"],
+    ["pl", "prognozę jeszcze niezamówioną", "w jej miesiącu kalendarzowym", "prognozy minionych miesięcy wygasają", "cel zapasu bezpieczeństwa obowiązujący tego dnia"],
+  ] as const)("says in %s that MRP plans the forecast left after its month's orders and carries each day's safety target (#275)", (locale, forecast, month, expired, safety) => {
+    const text = helpTopics(locale).find((topic) => topic.id === "mrp")!.body.join(" ");
+
+    for (const phrase of [forecast, month, expired, safety]) expect(text).toContain(phrase);
+  });
+
+  it.each([
+    ["en", "what open purchase orders still have to deliver", "a requisition counts as tentative supply", "a requisition, counts today"],
+    ["pl", "co otwarte zamówienia zakupu mają jeszcze dostarczyć", "zapotrzebowanie liczy się jako dostawa niepewna", "czy zapotrzebowanie — liczy się dzisiaj"],
+  ] as const)("says in %s that an MRP run adds open purchasing supply, requisitions as tentative, overdue supply today (#276)", (locale, orders, tentative, overdue) => {
+    const text = helpTopics(locale).find((topic) => topic.id === "mrp")!.body.join(" ");
+
+    expect(text).toContain(orders);
+    expect(text).toContain(tentative);
+    expect(text).toContain(overdue);
+  });
+
   it("is written separately in Polish, not copied from English", () => {
     const english = helpTopics("en");
     const polish = helpTopics("pl");

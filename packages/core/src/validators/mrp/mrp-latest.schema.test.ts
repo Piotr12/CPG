@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { MRP_GENERATION_NEEDS_RUN_MESSAGE, MRP_RUN_ID_MESSAGE, mrpLatestQuerySchema } from "./mrp-latest.schema";
+import { LOCATION_CHOICE_MESSAGE, MATERIAL_CHOICE_MESSAGE } from "../planning-parameters/planning-parameter-fields.schema";
+import { MRP_GENERATION_NEEDS_RUN_MESSAGE, MRP_RUN_ID_MESSAGE, mrpLatestQuerySchema, mrpReportPageQuerySchema } from "./mrp-latest.schema";
 
 describe("mrpLatestQuerySchema", () => {
   it("defaults to the first page of whichever run is latest", () => {
@@ -29,5 +30,29 @@ describe("mrpLatestQuerySchema", () => {
 
   it("refuses another parameter, so a misspelt one never silently shows something else", () => {
     expect(mrpLatestQuerySchema.safeParse({ pages: "2" }).success).toBe(false);
+  });
+
+  it("filters by a material and a location, and reads an empty value, the form's All, as no filter (E18-S01)", () => {
+    expect(mrpLatestQuerySchema.parse({ material: "00000012", location: "00000003", page: "2" })).toEqual({ material: "00000012", location: "00000003", page: 2 });
+    expect(mrpLatestQuerySchema.parse({ material: "", location: "" })).toEqual({ page: 1 });
+  });
+
+  it("refuses a filter that isn't an eight-digit ID, naming the field", () => {
+    expect(mrpLatestQuerySchema.safeParse({ material: "12" }).error?.issues[0]).toMatchObject({ path: ["material"], message: MATERIAL_CHOICE_MESSAGE });
+    expect(mrpLatestQuerySchema.safeParse({ location: "x" }).error?.issues[0]).toMatchObject({ path: ["location"], message: LOCATION_CHOICE_MESSAGE });
+  });
+});
+
+describe("mrpReportPageQuerySchema", () => {
+  it("takes the page's filters and page", () => {
+    expect(mrpReportPageQuerySchema.parse({ material: "00000012", location: "", page: "3" })).toEqual({ material: "00000012", page: 3 });
+    expect(mrpReportPageQuerySchema.parse({})).toEqual({ page: 1 });
+  });
+
+  it("refuses run and generation, since the page always shows the latest run, and any other parameter", () => {
+    expect(mrpReportPageQuerySchema.safeParse({ run: "00000001" }).success).toBe(false);
+    expect(mrpReportPageQuerySchema.safeParse({ generation: "1" }).success).toBe(false);
+    expect(mrpReportPageQuerySchema.safeParse({ includeZero: "true" }).success).toBe(false);
+    expect(mrpReportPageQuerySchema.safeParse({ page: "0" }).success).toBe(false);
   });
 });

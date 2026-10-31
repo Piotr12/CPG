@@ -242,10 +242,10 @@ describe("atomic Test reset", { timeout: 60_000 }, () => {
     expect((await (await scope()).cradle.locationService.create({ name: "new generation location" }, actor)).id).toBe("00000002");
     expect((await (await scope()).cradle.transferService.create(transfer, actor)).id).toBe("00000001");
     const next = (await scope()).cradle;
-    expect(await next.mrpRunService.current()).toBeNull();
+    await expect(next.mrpRunService.latest({})).rejects.toMatchObject({ code: "MRP_RUN_NOT_FOUND" });
     expect(await next.em.getConnection().execute("select count(*) as n from mrp_daily_result where tenant_code = 'test'")).toEqual([{ n: 0 }]);
     expect((await inRequestTransaction(next.em, () => next.mrpRunService.run(actor))).id).toBe("00000001");
-    expect(await (await scope("prod")).cradle.mrpRunService.current()).toEqual(prodRun);
+    expect((await (await scope("prod")).cradle.mrpRunService.latest({})).run).toEqual(prodRun);
   }, 300_000);
 
   it.each(["locations", "BOMs", "shipments"] as const)("rolls back deletion and partially seeded %s, including both flags and all audits (TEN-027)", async (kind) => {

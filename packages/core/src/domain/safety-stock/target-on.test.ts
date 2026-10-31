@@ -25,6 +25,16 @@ describe("safetyTargetOn", () => {
 });
 
 describe("targetInForce", () => {
+  it("reads only the date, so MRP's bigint targets follow the same rule (MRP-043)", () => {
+    const targets = [
+      { effectiveFrom: "2026-10-31", quantity: 40_000_000n },
+      { effectiveFrom: "2026-10-01", quantity: 20_000_000n },
+    ];
+    expect(targetInForce(targets, "2026-09-30")).toBeNull();
+    expect(targetInForce(targets, "2026-10-30")?.quantity).toBe(20_000_000n);
+    expect(targetInForce(targets, "2026-10-31")?.quantity).toBe(40_000_000n);
+  });
+
   it("returns the row itself, so callers keep its other fields", () => {
     const row = { ...january, version: 3 };
     expect(targetInForce([row], "2027-01-02")).toBe(row);

@@ -68,8 +68,8 @@ describe("MRP runs on two connections", () => {
     const [first, second] = await Promise.all([wrappedRun(one.prod), wrappedRun(two.prod)]);
 
     expect([first.id, second.id].sort()).toEqual(["00000001", "00000002"]);
-    const latest = await (await one.prod()).cradle.mrpRunService.current();
-    expect(latest?.id).toBe("00000002");
+    const { run: latest } = await (await one.prod()).cradle.mrpRunService.latest({});
+    expect(latest.id).toBe("00000002");
     const rows = await one.orm.em.getConnection().execute<{ code: string; n: number }[]>(
       "select m.code, count(*) as n from mrp_daily_result r join mrp_run m on r.run_id = m.id group by m.code",
     );
@@ -143,6 +143,6 @@ describe("MRP runs on two connections", () => {
 
     expect(view.run.id).toBe("00000001");
     expect(view.plans).toHaveLength(20);
-    expect((await runner.prod().then(({ cradle }) => cradle.mrpRunService.current()))?.id).toBe("00000002");
+    expect((await runner.prod().then(({ cradle }) => cradle.mrpRunService.latest({}))).run.id).toBe("00000002");
   });
 });

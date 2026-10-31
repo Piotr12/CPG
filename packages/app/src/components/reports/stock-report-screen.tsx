@@ -3,15 +3,13 @@ import type { Locale, MaterialSummary, NamedRecordView, StockReportRow, StockRep
 import type { StockReportQuery } from "@cpg/core/validators/reports/stock-report.schema";
 import { PageHeader } from "@cpg/ui/backend/page-header";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
-import { FilterAutocomplete } from "@cpg/ui/backend/forms/filter-autocomplete";
 import { Button } from "@cpg/ui/components/button";
 import { Checkbox } from "@cpg/ui/components/checkbox";
 import { Label } from "@cpg/ui/components/label";
 import type { Messages } from "../../i18n/messages/en";
 import { fill, shownQuantity } from "../forms/form-labels";
 import { PageLinks } from "../layout/page-links";
-import { materialFilterOptions, materialPicker } from "../materials/material-picker";
-import { recordOptions, recordPicker } from "../named-records/record-picker";
+import { MaterialLocationFilters } from "./material-location-filters";
 
 interface StockReportScreenProps {
   tenant: { code: string; name: string };
@@ -32,7 +30,6 @@ interface StockReportScreenProps {
  */
 export function StockReportScreen({ tenant, report, selected, materials, locations, locale, messages }: StockReportScreenProps) {
   const t = messages.stockReport;
-  const pickers = { material: materialPicker(messages.lists), location: recordPicker(messages.lists, "location") };
   const path = `/admin/${tenant.code}`;
   const amount = (quantity: string, row: StockReportRow) => `${shownQuantity(quantity)} ${row.baseUnit}`;
   const inactive = (active: boolean) => (active ? "" : ` (${t.inactive})`);
@@ -69,44 +66,21 @@ export function StockReportScreen({ tenant, report, selected, materials, locatio
     <div lang={locale} className="min-w-0">
       <PageHeader title={fill(t.heading, { tenant: tenant.name })} description={fill(t.intro, { date: report.asOf })} />
       <div className="flex min-w-0 flex-col gap-8">
-        <form action={`${path}/reports/stock`} className="grid min-w-0 gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-          <div className="grid min-w-0 gap-2">
-            <Label id="report-material-label" htmlFor="report-material">{t.material}</Label>
-            <FilterAutocomplete
-              key={selected.material ?? ""}
-              id="report-material"
-              name="material"
-              options={materialFilterOptions(materials, t.inactive)}
-              defaultValue={selected.material ?? ""}
-              emptyLabel={t.all}
-              labels={pickers.material.labels}
-              locale={locale}
-              aria-labelledby="report-material-label"
-            />
+        <MaterialLocationFilters
+          action={`${path}/reports/stock`}
+          selected={selected}
+          filtered={filtered}
+          materials={materials}
+          locations={locations}
+          labels={t}
+          lists={messages.lists}
+          locale={locale}
+        >
+          <div className="flex items-center gap-2">
+            <Checkbox id="report-zero" name="includeZero" value="true" defaultChecked={selected.includeZero} />
+            <Label htmlFor="report-zero">{t.includeZero}</Label>
           </div>
-          <div className="grid min-w-0 gap-2">
-            <Label id="report-location-label" htmlFor="report-location">{t.location}</Label>
-            <FilterAutocomplete
-              key={selected.location ?? ""}
-              id="report-location"
-              name="location"
-              options={recordOptions(locations, t.inactive)}
-              defaultValue={selected.location ?? ""}
-              emptyLabel={t.all}
-              labels={pickers.location.labels}
-              locale={locale}
-              aria-labelledby="report-location-label"
-            />
-          </div>
-          <Button type="submit" variant="outline">{t.apply}</Button>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 sm:col-span-3">
-            <div className="flex items-center gap-2">
-              <Checkbox id="report-zero" name="includeZero" value="true" defaultChecked={selected.includeZero} />
-              <Label htmlFor="report-zero">{t.includeZero}</Label>
-            </div>
-            {filtered && <Link href={`${path}/reports/stock`} className="text-sm font-medium underline underline-offset-4">{t.clear}</Link>}
-          </div>
-        </form>
+        </MaterialLocationFilters>
         <div className="flex min-w-0 flex-col gap-4">
           <p className="text-sm text-muted-foreground">{fill(t.rows, { count: String(report.total) })}</p>
           <DataTable

@@ -1,8 +1,8 @@
 /**
  * What `planMrp` returns (#273). Every figure is base-unit micro-units (R03); E14-S02 stores each one
  * as a six-decimal text. The bucket carries every figure the MRP stories fill, so its shape never
- * changes for them: this story fills firm demand and the balances, and the others stay zero until
- * the story named beside them.
+ * changes for them: E14-S01 filled firm demand and the balances; each other figure stays zero until
+ * the story named beside it.
  */
 export interface MrpResult {
   today: string;
@@ -25,6 +25,10 @@ export interface MrpPlan {
   buckets: readonly MrpBucket[];
   /** The order lines behind the buckets' firm demand. */
   firmDemand: readonly MrpFirmDemand[];
+  /** The forecast residuals behind the buckets' forecast demand (E15-S01). */
+  forecastDemand: readonly MrpForecastDemand[];
+  /** The document lines behind the buckets' tentative and dependable supply (E15-S02). */
+  supply: readonly MrpSupply[];
   /** The production orders behind the production part of the buckets' dependable supply (#277). */
   productionOutput: readonly MrpProductionOutput[];
   /** The production orders' component needs behind the buckets' dependent demand (#277). */
@@ -76,6 +80,43 @@ export interface MrpFirmDemand {
   requiredDate: string;
   /** The bucket it counts in: `requiredDate`, or today when the line is overdue. */
   date: string;
+  quantity: bigint;
+}
+
+/** What is left of one forecast once its month's orders consumed it (D08), in the bucket it counts in. */
+export interface MrpForecastDemand {
+  material: string;
+  location: string;
+  /** The forecast's own date, kept when its residual counts today. */
+  forecastDate: string;
+  /** The bucket it counts in: `forecastDate`, or today for an earlier residual of this month. */
+  date: string;
+  /** The forecast as entered, before consumption. */
+  forecastQuantity: bigint;
+  /** The residual counted on `date`: above zero, at most `forecastQuantity`. */
+  quantity: bigint;
+}
+
+/**
+ * The outstanding part of one open supply document line, in the bucket it counts in (E15-S02). A
+ * requisition is tentative supply; a purchase-order line dependable. Production output, also dependable,
+ * has its own list (`MrpPlan.productionOutput`, #277).
+ */
+export interface MrpSupply {
+  kind: "requisition" | "purchase-order";
+  reliability: "tentative" | "dependable";
+  /** The requisition's or the purchase order's business ID. */
+  document: string;
+  /** The purchase-order line's position; `null` for a requisition, which has no lines. */
+  position: number | null;
+  material: string;
+  location: string;
+  /** The document's own required or planned date, kept when it has passed (PRD §04). */
+  plannedDate: string;
+  /** The bucket it counts in: `plannedDate`, or today when that has passed. */
+  date: string;
+  /** The Overdue Supply marker: `plannedDate` is before today (MRP-015, BUY-019). */
+  overdue: boolean;
   quantity: bigint;
 }
 

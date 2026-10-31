@@ -1,6 +1,6 @@
 # MRP demand: forecast residual by calendar month, overdue orders today, and each day's safety-stock target
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-31 09:02 UTC
 **Issue:** #275 (E15-S01, epic #267) · **Depends on:** the MRP engine (`implemented/2026-10-27--0525UTC-mrp-engine-projection.md`, #273), MRP runs and the snapshot loader (`implemented/2026-10-27--0556UTC-mrp-runs.md`, #274), forecasts (`implemented/2026-10-20--1700UTC-forecasts.md`, #85), safety-stock targets (`implemented/2026-10-20--0532UTC-planning-parameters-safety-stock.md`), the demand review's D08 netting (`implemented/2026-10-25--0913UTC-demand-review.md`, #240) · **Design authority:** `.ai/specs/product-brief.md` (R03, R05, R10, D04, D08, N01), `research/CPG-prd001.pdf` §04 "Demand and forecast consumption", "Overdue demand and priority", "Projection and safety stock", `research/decisions/D08-statistical-unit-and-demand-review.md`, `research/CPG-acceptance.md` DEM-002…016, DEM-024/025, MRP-043/048, SAL-014…016/019, REV-015
 
@@ -254,3 +254,23 @@ One phase, one PR: the two engine seams, the loader reads, the benchmark, one AP
    - Move this spec to `implemented/` with implementation notes.
 
 Each step leaves the suite green. Run `npm run lint`, `npm run typecheck`, `npm run test:coverage` (100%) and `npm run build`.
+
+## Implementation notes
+
+Implemented on #308, branched from `main` (the spec PR #302 stays design-only), as written:
+- `packages/core/src/domain/mrp/`: `demand/forecast-demand.ts`, `demand/safety-levels.ts`, `projection/safety-gap.ts`, the new types in `mrp-inputs.ts` and `mrp-result.ts`, and two loops in `plan-mrp.ts`;
+- `targetInForce` in `domain/safety-stock/target-on.ts` reads only `effectiveFrom`;
+- `packages/core/src/services/mrp/snapshot/`: `readConsumingLines` (in `order-lines.ts`), `forecasts.ts` and `safety-targets.ts`. The Open read keeps its query, and its cut-off is now the end of day 89's month.
+
+The plan tests pin `(tenant, required_date)` for the consuming lines, `(tenant, date)` for the forecasts, and the existing `(tenant, material, removed, status)` for the Open lines. The Q5 fallback wasn't needed.
+
+The benchmark, fastest of three, run alone:
+
+| Size | Run | Longest stall | `planMrp` alone |
+|---|---|---|---|
+| Realistic | 181 ms | 34 ms | 3 ms |
+| Ten times | 1,751 ms | 103 ms | 33 ms |
+
+The budgets are unchanged: 1 s and 5 s, and 250 ms for a stall.
+
+Every #275 acceptance criterion has its own test in `plan-mrp.test.ts`. `CPG-acceptance.md` cites them in the rows' Evidence lines, and DEM-025 and MRP-048 carry the Q1 "Superseded by D08" note. No row is promoted to `Passed (automated)`: they are "Both"-channel scenarios, and the screen columns come with E18-S01 (#284).

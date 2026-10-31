@@ -18,9 +18,10 @@ export type TargetStatus = "inEffect" | "scheduled" | "superseded";
 
 /**
  * The target of `targets` (one material at one location) in force on `date`: the one with the
- * latest effective date on or before it, or null when none has started yet.
+ * latest effective date on or before it, or null when none has started yet. Only the date is read,
+ * so MRP passes its `bigint` targets through the same rule (#275).
  */
-export function targetInForce<T extends DatedTarget>(targets: readonly T[], date: string): T | null {
+export function targetInForce<T extends Pick<DatedTarget, "effectiveFrom">>(targets: readonly T[], date: string): T | null {
   let inForce: T | null = null;
   for (const target of targets) {
     if (target.effectiveFrom <= date && (inForce === null || target.effectiveFrom > inForce.effectiveFrom)) {

@@ -3,7 +3,7 @@
 **Date:** 2026-10-31 09:02 UTC
 **Agent:** Claude Code (cezar, headless) / claude-opus-5-5
 **Spec:** `.ai/specs/2026-10-31--0902UTC-mrp-forecast-safety-demand.md`
-**Status:** in progress
+**Status:** done
 
 ## Goal
 
@@ -23,6 +23,12 @@ Take #275 end to end with `om-auto-fix-issue`. It is a `feature` issue, so the r
   - **Medium:** step 6 names the three snapshot tests the moved cut-off and the new read change.
   - **Medium:** closing early sets `abandoned` to the remainder, so the DEM-010 fixture can't catch a deleted status filter. A reversed-issue Closed Early fixture does, and the removed-line fixture has a quantity that moves the residual.
   - **Low:** the read fallback keeps the date range and splits off the order join; the benchmark prints `planMrp`'s synchronous time; MRP-048's due date is given; the catalogue notes reuse DEM-007's "Superseded by D08" wording.
+- 09:15 Opened the spec PR #302 with its labels, the assumptions, and a run summary. Handed the issue lock to `om-auto-implement-spec`. It runs on #308 (`feat/mrp-forecast-safety-demand`, from `main`), and its execution plan `.ai/pipeline/runs/2026-10-31--0915UTC-mrp-forecast-safety-demand.md` is that run's log.
+- 09:33 #302 merged. #308 merged `main` and deleted the spec's active copy, keeping the `implemented/` one.
+- 09:47 #308 is ready (`needs-qa`):
+  - its local gate is green (100% coverage), and `mrp-run-api.test.ts` passes on a standalone build;
+  - a fresh-context code review's major and minors are fixed;
+  - the help evidence is posted, and the issue lock is released.
 
 ## Changes
 
@@ -34,3 +40,6 @@ Take #275 end to end with `om-auto-fix-issue`. It is a `feature` issue, so the r
 - `npx vitest run tests/ai-filenames.test.ts tests/spec-images.test.ts`: 7 tests passed.
 
 ## Follow-ups
+
+- #308 still needs CI's full integration suite and a human QA pass (`needs-qa`).
+- Q1 asks the owner to confirm that D08 covers the same-month case of DEM-025 and MRP-048.

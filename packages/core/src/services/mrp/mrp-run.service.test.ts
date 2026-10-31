@@ -104,7 +104,7 @@ describe("MrpRunService.run", () => {
 
     expect(await day("00000001", "00000001", PLANT, "2026-10-12")).toMatchObject({ tenant_code: "prod", firm_demand: "40.000000", projected_before: "-40.000000" });
     expect(await sql("select sum(firm_demand) as demand from mrp_daily_result where tenant_code = 'prod'")).toEqual([{ demand: 40 }]);
-    expect(await (await scope("test")).cradle.mrpRunService.current()).toEqual(testRun);
+    expect((await latest({}, "test")).run).toEqual(testRun);
     expect(testRun.createdAt).toEqual(NOW);
     // Test unaffected: the Prod run's delete of superseded results reached none of Test's rows.
     expect(await sql("select count(*) as n from mrp_daily_result where tenant_code = 'test'")).toEqual([{ n: 90 }]);
@@ -164,6 +164,44 @@ describe("MrpRunService.run", () => {
     expect(await everyOtherTable()).toEqual(before);
   });
 
+  it("stores a pair's forecast residual and its safety target on every day, and plans target-only and forecast-only pairs from zero (#275)", async () => {
+    const cabinet = await material("prod", "Cabinet");
+    const { cradle } = await scope();
+    await cradle.forecastService.create({ material: cabinet.id, location: PLANT, date: "2026-10-10", quantity: "100", unit: "each" }, ANNA);
+    await cradle.safetyStockTargetService.create({ material: cabinet.id, location: PLANT, effectiveFrom: "2026-09-01", quantity: "30" }, ANNA);
+    // An order later in October consumes 60 of the forecast (D08).
+    await order("prod", PLANT, [{ material: cabinet.id, quantity: "60", requiredDate: "2026-10-20" }]);
+    const target = await material("prod", "Shelf");
+    await cradle.safetyStockTargetService.create({ material: target.id, location: PLANT, effectiveFrom: "2026-10-31", quantity: "5" }, ANNA);
+    const forecastOnly = await material("prod", "Bracket");
+    await cradle.forecastService.create({ material: forecastOnly.id, location: PLANT, date: "2026-11-02", quantity: "7", unit: "each" }, ANNA);
+
+    expect((await run()).pairs).toBe(3);
+
+    expect(await day("00000001", cabinet.id, PLANT, "2026-10-10")).toMatchObject({
+      firm_demand: "0.000000", forecast_demand: "40.000000", safety_target: "30.000000", projected_before: "-40.000000", shortage: "40.000000",
+    });
+    expect(await day("00000001", cabinet.id, PLANT, "2026-10-20")).toMatchObject({ firm_demand: "60.000000", forecast_demand: "0.000000", projected_before: "-100.000000" });
+    expect(await sql("select count(*) as n from mrp_daily_result where material = ? and safety_target = '30.000000'", [cabinet.id])).toEqual([{ n: 90 }]);
+    // A target-only pair is planned from zero: 0 before its target starts, 5 from 31 October.
+    expect(await day("00000001", target.id, PLANT, "2026-10-30")).toMatchObject({ safety_target: "0.000000", projected_before: "0.000000" });
+    expect(await day("00000001", target.id, PLANT, "2026-10-31")).toMatchObject({ safety_target: "5.000000", projected_before: "0.000000" });
+    // A forecast-only pair is planned from zero too.
+    expect(await day("00000001", forecastOnly.id, PLANT, "2026-11-02")).toMatchObject({ forecast_demand: "7.000000", projected_before: "-7.000000", shortage: "7.000000" });
+  });
+
+  it("counts an earlier residual of this month in today's row when it runs mid-month (D08)", async () => {
+    vi.setSystemTime(new Date("2026-10-20T09:30:00.000Z"));
+    const cabinet = await material("prod", "Cabinet");
+    await (await scope()).cradle.forecastService.create({ material: cabinet.id, location: PLANT, date: "2026-10-05", quantity: "100", unit: "each" }, ANNA);
+    await order("prod", PLANT, [{ material: cabinet.id, quantity: "60", requiredDate: "2026-10-25" }]);
+
+    expect(await run()).toMatchObject({ startDate: "2026-10-20", endDate: "2027-01-17" });
+
+    expect(await day("00000001", cabinet.id, PLANT, "2026-10-20")).toMatchObject({ forecast_demand: "40.000000", projected_before: "-40.000000" });
+    expect(await day("00000001", cabinet.id, PLANT, "2026-10-25")).toMatchObject({ firm_demand: "60.000000", forecast_demand: "0.000000" });
+  });
+
   it("stores a fractional negative balance with its sign outside the fraction", async () => {
     const cabinet = await material("prod", "Cabinet");
     await stock("prod", cabinet.id, PLANT, "4.5");
@@ -186,7 +224,7 @@ describe("MrpRunService.run", () => {
 
     expect([first.id, second.id]).toEqual(["00000001", "00000002"]);
     expect(second).toMatchObject({ account: "bot", channel: "api", createdAt: new Date("2026-10-01T11:00:00.000Z") });
-    expect(await (await scope()).cradle.mrpRunService.current()).toEqual(second);
+    expect((await latest()).run).toEqual(second);
     expect(await rowsOf("00000001")).toEqual([{ n: 0 }]);
     expect(await rowsOf("00000002")).toEqual([{ n: 90 }]);
     expect(await sql("select code from mrp_run order by code")).toEqual([{ code: "00000001" }, { code: "00000002" }]);
@@ -233,13 +271,12 @@ describe("MrpRunService.run", () => {
   });
 });
 
-describe("MrpRunService.current and latest", () => {
-  it("say there is no run yet before the first one", async () => {
-    expect(await (await scope()).cradle.mrpRunService.current()).toBeNull();
+describe("MrpRunService.latest", () => {
+  it("says there is no run yet before the first one", async () => {
     await expect(latest()).rejects.toMatchObject({ code: "MRP_RUN_NOT_FOUND", message: MRP_RUN_NOT_FOUND, status: 404 });
   });
 
-  it("page the latest run by pair, 25 pairs at a time, by material then location, each with its 90 days in order", async () => {
+  it("pages the latest run by pair, 25 pairs at a time, by material then location, each with its 90 days in order", async () => {
     const store = (await location("prod", "Store")).id;
     for (let index = 0; index < 15; index += 1) {
       const product = await material("prod", `Product ${index}`);
@@ -267,7 +304,7 @@ describe("MrpRunService.current and latest", () => {
     expect(first.plans[0].buckets[0]).toMatchObject({ projectedBefore: "1.000000", projectedAfter: "1.000000", shortage: "0.000000", forecastDemand: "0.000000" });
   });
 
-  it("refuse a page of a run a newer one has replaced, so a client never mixes two runs", async () => {
+  it("refuses a page of a run a newer one has replaced, so a client never mixes two runs", async () => {
     const first = await run();
     await run();
 
@@ -276,7 +313,7 @@ describe("MrpRunService.current and latest", () => {
     expect((await latest({ run: "00000002", generation: "1" })).run.id).toBe("00000002");
   });
 
-  it("refuse a run of another dataset generation even under the same ID, as a Test reset restarts IDs (D06), and don't know a run past the latest", async () => {
+  it("refuses a run of another dataset generation even under the same ID, as a Test reset restarts IDs (D06), and don't know a run past the latest", async () => {
     const first = await run("test");
     await sql("update tenant set generation = 2 where code = 'test'");
     await sql("delete from mrp_daily_result where tenant_code = 'test'");
@@ -290,6 +327,109 @@ describe("MrpRunService.current and latest", () => {
     expect((await latest({ run: "00000001", generation: "2" }, "test")).run).toEqual(restarted);
   });
 
+  it("keeps each day apart: demand on Monday and Wednesday are two stored days with their own balances, filtered to the pair (MRP-005)", async () => {
+    const sheet = await material("prod", "Steel sheet");
+    await stock("prod", sheet.id, PLANT, "50");
+    await order("prod", PLANT, [
+      { material: sheet.id, quantity: "10", requiredDate: "2026-10-05" },
+      { material: sheet.id, quantity: "15", requiredDate: "2026-10-07" },
+    ]);
+    await run();
+
+    const report = await latest({ material: sheet.id, location: PLANT });
+
+    expect(report).toMatchObject({ total: 1, page: 1 });
+    const [plan] = report.plans;
+    const week = plan.buckets.filter(({ date }) => date >= "2026-10-05" && date <= "2026-10-07");
+    expect(week.map(({ date, firmDemand, projectedBefore }) => ({ date, firmDemand, projectedBefore }))).toEqual([
+      { date: "2026-10-05", firmDemand: "10.000000", projectedBefore: "40.000000" },
+      { date: "2026-10-06", firmDemand: "0.000000", projectedBefore: "40.000000" },
+      { date: "2026-10-07", firmDemand: "15.000000", projectedBefore: "25.000000" },
+    ]);
+    // Three stored rows, not a sum folded into one: what the report shows is what the run stored.
+    for (const date of ["2026-10-05", "2026-10-06", "2026-10-07"]) expect(await day("00000001", sheet.id, PLANT, date)).toMatchObject({ date });
+    expect(plan).toMatchObject({ lowestProjectedBefore: "25.000000", firstShortageDate: null });
+  });
+
+  it("names each plan's material and location, with their active flags, base unit and summary", async () => {
+    const cabinet = await material("prod", "Cabinet");
+    const depot = (await location("prod", "Depot")).id;
+    await stock("prod", cabinet.id, depot, "5");
+    await order("prod", depot, [{ material: cabinet.id, quantity: "20", requiredDate: "2026-10-04" }]);
+    await run();
+    // Planned by data whatever the flags (#274 Q5); the report says which records are inactive.
+    await sql("update material set active = 0 where code = ? and tenant_code = 'prod'", [cabinet.id]);
+    await sql("update location set active = 0 where code = ? and tenant_code = 'prod'", [depot]);
+
+    const { plans } = await latest();
+
+    expect(Object.keys(plans[0])).toEqual([
+      "material", "materialDescription", "materialActive", "baseUnit", "location", "locationName", "locationActive", "lowestProjectedBefore", "firstShortageDate", "buckets",
+    ]);
+    expect(plans[0]).toMatchObject({
+      material: cabinet.id, materialDescription: "Cabinet", materialActive: false, baseUnit: "each",
+      location: depot, locationName: "Depot", locationActive: false,
+      lowestProjectedBefore: "-15.000000", firstShortageDate: "2026-10-04",
+    });
+  });
+
+  it("filters by material, by location or both, counting and paging only the pairs they leave, by ID", async () => {
+    const store = (await location("prod", "Store")).id;
+    const products = [];
+    for (let index = 0; index < 27; index += 1) products.push((await material("prod", `Product ${index}`)).id);
+    // Stock posted in reverse ID order: the report's order comes from its own ORDER BY, whatever order the data arrived in.
+    for (const product of [...products].reverse()) await stock("prod", product, store, "2");
+    await stock("prod", products[0], PLANT, "1");
+    const view = await run();
+    expect(view.pairs).toBe(28);
+
+    const byLocation = await latest({ location: store });
+    const second = await latest({ location: store, page: "2", run: view.id, generation: "1" });
+    expect(byLocation).toMatchObject({ total: 27, pageSize: 25 });
+    expect(byLocation.plans.map((plan) => plan.material)).toEqual(products.slice(0, 25));
+    expect(second.plans.map((plan) => `${plan.material}/${plan.location}`)).toEqual(products.slice(25).map((product) => `${product}/${store}`));
+    expect(byLocation.plans.every((plan) => plan.location === store && plan.buckets.length === 90)).toBe(true);
+
+    const byMaterial = await latest({ material: products[0] });
+    expect(byMaterial.total).toBe(2);
+    expect(byMaterial.plans.map((plan) => plan.location)).toEqual([PLANT, store]);
+
+    const both = await latest({ material: products[0], location: PLANT });
+    expect(both.total).toBe(1);
+    expect(both.plans.map((plan) => [plan.material, plan.location, plan.buckets[0].projectedBefore])).toEqual([[products[0], PLANT, "1.000000"]]);
+
+    expect(await latest({ material: "", location: "" })).toMatchObject({ total: 28 });
+  });
+
+  it("says a material or location this tenant doesn't have is not found, before looking for a run, the other tenant's included (R05)", async () => {
+    const cabinet = await material("prod", "Cabinet");
+    await expect(latest({ material: "99999999" })).rejects.toMatchObject({ code: "MATERIAL_NOT_FOUND", status: 404 });
+    await expect(latest({ location: "99999999" })).rejects.toMatchObject({ code: "LOCATION_NOT_FOUND", status: 404 });
+    await run("test");
+
+    // Test numbers its own materials and has none: Prod's 00000001 is not Test's.
+    await expect(latest({ material: cabinet.id }, "test")).rejects.toMatchObject({ code: "MATERIAL_NOT_FOUND", status: 404 });
+    expect((await latest({ location: PLANT }, "test")).plans).toEqual([]);
+  });
+
+  it("leaves no plans for a material the tenant has but the run didn't plan", async () => {
+    await material("prod", "Cabinet");
+    const unplanned = await material("prod", "Shelf");
+    await stock("prod", "00000001", PLANT, "3");
+    await run();
+
+    expect(await latest({ material: unplanned.id })).toMatchObject({ total: 0, plans: [] });
+  });
+
+  it("still refuses a filtered page of a run a newer one has replaced", async () => {
+    const cabinet = await material("prod", "Cabinet");
+    await stock("prod", cabinet.id, PLANT, "3");
+    const first = await run();
+    await run();
+
+    await expect(latest({ material: cabinet.id, run: first.id })).rejects.toMatchObject({ code: "MRP_RUN_SUPERSEDED", status: 409 });
+  });
+
   it.each([
     [{ page: "0" }, "page"],
     [{ page: "two" }, "page"],
@@ -297,7 +437,9 @@ describe("MrpRunService.current and latest", () => {
     [{ generation: "1" }, "generation"],
     [{ run: "00000001", generation: "0" }, "generation"],
     [{ sort: "material" }, ""],
-  ])("refuse a malformed query %o", async (query, field) => {
+    [{ material: "12" }, "material"],
+    [{ location: "plant" }, "location"],
+  ])("refuses a malformed query %o", async (query, field) => {
     await run();
 
     await expect(latest(query)).rejects.toMatchObject({ code: "VALIDATION_FAILED", status: 400 });

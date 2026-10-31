@@ -1,0 +1,90 @@
+# Execution plan — MRP purchasing supply (E15-S02, #276)
+
+**Date:** 2026-10-31 09:15 UTC
+**Agent:** Claude Code (cezar, headless) / claude-opus-5-5, via `om-auto-fix-issue` → `om-auto-implement-spec` → `om-auto-create-pr`
+Source doc: .ai/specs/implemented/2026-10-31--0905UTC-mrp-purchasing-supply.md
+Spec PR: #301 (design only; this branch carries the spec for reading and moves it to `implemented/` at close-out)
+Issue: #276
+Status: complete
+
+## Goal
+
+Every MRP run projects each Open purchase-order line's outstanding remainder as dependable supply and each Open requisition's unconverted remainder as tentative supply. Each lands at its document's location on its planned or required date, or today with an `overdue` flag when that date has passed. Nothing cancelled, closed early, completed, converted or already received is counted.
+
+## Scope
+
+As the spec's Implementation Plan says:
+- the engine types and the pure `domain/mrp/supply/` seam, wired into `planMrp`;
+- the snapshot read `services/mrp/snapshot/purchasing.ts`, wired into `load`;
+- the timing benchmark;
+- the `mrp` help paragraph in EN and PL;
+- one API integration test;
+- docs and the acceptance catalogue.
+
+**Non-goals:**
+- production orders and transfers (E15-S03);
+- forecasts and safety targets (E15-S01);
+- proposals (E16-S01) and exceptions (E16-S03);
+- BOM feasibility (E17-S02);
+- the report's supply columns and overdue marks (E18-S01/02);
+- storing supply entries;
+- any migration or new route.
+
+## Implementation Plan
+
+### Phase 1: Engine
+1.1 Types: `MrpRequisition`, `MrpPurchaseOrderLine`, `MrpSupply`, `MrpPlan.supply`, with empty lists from the loader and fixtures.
+1.2 Supply seam `supply/purchasing-supply.ts` (`purchasingSupply`, `compareSupply`) with its unit tests.
+1.3 `planMrp` wiring, with one test per acceptance criterion of #276.
+
+### Phase 2: Snapshot
+2.1 `snapshot/purchasing.ts` (`readRequisitions`, `readPurchaseOrderLines`) and `load`, with real-SQLite tests and the query-plan test.
+2.2 Timing benchmark with the spec's purchasing counts.
+
+### Phase 3: Surface and evidence
+3.1 The `mrp` help paragraph in EN and PL.
+3.2 API integration test in `tests/integration/mrp-run-api.test.ts`.
+
+### Phase 4: Close-out
+4.1 Engineering standards, acceptance catalogue, lessons, spec to `implemented/`, and the full validation gate.
+
+## Risks
+
+- **Query plans.** The tenant filter adds joins. A plan test pins the status seek, the `(tenant, order)` seek and each join's `SEARCH`.
+- **Stalls.** Line reads are capped at 10 orders, at most 1,000 rows each. The benchmark adds full 100-line orders.
+- **Docker.** If Docker is unavailable here, the integration file runs against a local standalone server (`CPG_BASE_URL`); CI runs the image.
+
+## Verification
+
+- Timing (`mrp-run-timing.test.ts`, run alone, 2026-10-31):
+  - realistic (30 pairs, 7,800 order lines, 1,200 purchase orders with 2,400 lines, 100 requisitions): 171 ms fastest of 3, longest stall 39 ms (budget 1 s / 250 ms);
+  - ten times (300 pairs, 78,000 order lines, 12,100 purchase orders with 34,000 lines, 1,000 requisitions): 1,738 ms, longest stall 78 ms (budget 5 s / 250 ms).
+- `tests/integration/mrp-run-api.test.ts` against a local standalone build (Docker unavailable here, lesson 2026-10-23), fresh `DATA_DIR`: 7 passed, the new purchasing-supply test included.
+- Full gate, 2026-10-31: `npm run lint` 0, `npm run typecheck` 0, `npm run test:coverage` 617 files / 4,780 tests passed at 100% statements, branches, functions and lines, `npm run build` 0.
+- Review: fresh-context `om-code-review` → approve; 4 minors + 2 nits fixed in 5b533b00 (lesson wording, BUY-024 evidence, integration test title, run log kept on the spec PR, standards precondition, plan-test comment).
+
+## Progress
+
+PR: #306
+
+> Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
+
+### Phase 1: Engine
+
+- [x] 1.1 Engine types and empty inputs — d5b7b28d
+- [x] 1.2 Purchasing supply seam — a1c210b9
+- [x] 1.3 planMrp wiring and acceptance tests — 735eb154
+
+### Phase 2: Snapshot
+
+- [x] 2.1 Purchasing snapshot read — e31b716f
+- [x] 2.2 Timing benchmark — beed803f
+
+### Phase 3: Surface and evidence
+
+- [x] 3.1 Help copy — 1f3031f2
+- [x] 3.2 API integration test — 938bb082
+
+### Phase 4: Close-out
+
+- [x] 4.1 Docs, catalogue, spec to implemented, full gate — aecd27d4
