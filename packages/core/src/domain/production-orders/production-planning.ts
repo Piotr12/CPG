@@ -16,9 +16,17 @@ export function plannedStart(finish: string, leadTimeDays: number): string {
  * completion's expected consumption both use it, so the two always agree.
  */
 export function scaledRequirement(perOutput: string, output: string): bigint {
-  const required = (parseDecimal(perOutput)! * parseDecimal(output)! + ONE - 1n) / ONE;
+  const required = scaledMicro(parseDecimal(perOutput)!, parseDecimal(output)!);
   if (required > MAX_QUANTITY) throw new ValidationError({ quantity: [REQUIREMENT_OVERFLOW_MESSAGE] });
   return required;
+}
+
+/**
+ * `scaledRequirement`'s arithmetic on micro-units, without its storage bound: `perOutput × output`,
+ * rounded upward once to six decimals. MRP sums these needs as `bigint`s, which can't overflow (#277).
+ */
+export function scaledMicro(perOutput: bigint, output: bigint): bigint {
+  return (perOutput * output + ONE - 1n) / ONE;
 }
 
 /** Direct component need rounded upward once, then compared with physical stock at this site only. */
