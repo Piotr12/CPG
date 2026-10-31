@@ -13,6 +13,8 @@ export interface MrpInputs {
   forecasts: readonly MrpForecast[];
   /** Every safety-stock target effective on or before day 89 (E15-S01). */
   safetyTargets: readonly MrpSafetyTarget[];
+  requisitions: readonly MrpRequisition[];
+  purchaseOrderLines: readonly MrpPurchaseOrderLine[];
 }
 
 /** Physical on-hand of one material at one location today. In-transit stock is never physical. */
@@ -57,4 +59,37 @@ export interface MrpSafetyTarget {
   location: string;
   effectiveFrom: string;
   quantity: bigint;
+}
+
+/**
+ * A purchase requisition at its own location (BUY-001), whatever its status: the supply seam takes the
+ * open ones (E15-S02). `converted` is what purchase-order lines have taken of it (BUY-003). `code` is
+ * its business ID.
+ */
+export interface MrpRequisition {
+  code: string;
+  material: string;
+  location: string;
+  requiredDate: string;
+  quantity: bigint;
+  converted: bigint;
+  abandoned: bigint;
+  status: DocumentState;
+}
+
+/**
+ * A purchase-order line with its order's location (BUY-006), whatever its status: the supply seam takes
+ * the open ones (E15-S02). `plannedDate` is the current one, edits included (BUY-024); `received` may
+ * exceed `quantity` (BUY-015). `(order, position)` is the line's business ID.
+ */
+export interface MrpPurchaseOrderLine {
+  order: string;
+  position: number;
+  material: string;
+  location: string;
+  plannedDate: string;
+  quantity: bigint;
+  received: bigint;
+  abandoned: bigint;
+  status: DocumentState;
 }

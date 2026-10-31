@@ -6,6 +6,7 @@ import { yieldToEventLoop } from "../../http/yield-to-event-loop";
 import { readCodes } from "./snapshot/codes";
 import { readForecasts } from "./snapshot/forecasts";
 import { readConsumingLines, readOrderLines } from "./snapshot/order-lines";
+import { readPurchaseOrderLines, readRequisitions } from "./snapshot/purchasing";
 import { readSafetyTargets } from "./snapshot/safety-targets";
 import { readStock } from "./snapshot/stock";
 
@@ -36,6 +37,8 @@ export class MrpSnapshotService {
     await yieldToEventLoop();
     const orderLines = [...(await readOrderLines(this.em, codes, before)), ...(await readConsumingLines(this.em, codes, from, before))];
     const forecasts = await readForecasts(this.em, codes, from, last);
-    return { stock, orderLines, forecasts, safetyTargets };
+    const requisitions = await readRequisitions(this.em, codes);
+    const purchaseOrderLines = await readPurchaseOrderLines(this.em, codes);
+    return { stock, orderLines, forecasts, safetyTargets, requisitions, purchaseOrderLines };
   }
 }
