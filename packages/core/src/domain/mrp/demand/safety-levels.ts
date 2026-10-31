@@ -19,7 +19,7 @@ export function safetyLevels(targets: readonly MrpSafetyTarget[], dates: readonl
   const byPair = new Map<string, MrpSafetyTarget[]>();
   for (const target of targets) {
     const key = pairKey(target.material, target.location);
-    byPair.set(key, [...(byPair.get(key) ?? []), target]);
+    (byPair.get(key) ?? byPair.set(key, []).get(key)!).push(target);
   }
   const result: MrpSafetyLevels[] = [];
   for (const pairTargets of byPair.values()) {

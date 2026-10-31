@@ -33,7 +33,7 @@ describe("MrpSnapshotService", () => {
     selectTenant(em, tenant);
     return em;
   };
-  const load = (tenant: TenantCode = "prod") => new MrpSnapshotService({ em: scoped(tenant) }).load(TODAY);
+  const load = (tenant: TenantCode = "prod", today = TODAY) => new MrpSnapshotService({ em: scoped(tenant) }).load(today);
 
   /** One order at `location` with one line per entry, written as stored rows (the snapshot only reads). */
   async function order(
@@ -101,7 +101,7 @@ describe("MrpSnapshotService", () => {
   }
 
   /** Runs a load on a fresh, traced database holding one material, and returns the SQL it sent. */
-  async function tracedLoad() {
+  async function tracedLoad(today = TODAY) {
     const queries: { sql: string; params: readonly unknown[] }[] = [];
     const config = loadConfig({ DATA_DIR: mkdtempSync(path.join(tmpdir(), "cpg-mrp-snapshot-plan-")) });
     await migrateDatabase(config);
@@ -110,7 +110,7 @@ describe("MrpSnapshotService", () => {
     selectTenant(em, "prod");
     em.create(Material, { code: "00000001", type: "finished", description: "Cabinet", baseUnit: "each" });
     await em.flush();
-    await new MrpSnapshotService({ em }).load(TODAY);
+    await new MrpSnapshotService({ em }).load(today);
     const explain = async ({ sql, params }: (typeof queries)[number]) =>
       (await traced.em.getConnection().execute<{ detail: string }[]>(`explain query plan ${sql}`, [...params])).map(({ detail }) => detail).sort();
     return { queries, explain, close: () => traced.close() };
@@ -253,6 +253,30 @@ describe("MrpSnapshotService", () => {
 
     expect(inputs.stock).toEqual([{ material: "00000003", location: "00000003", physical: micro(7) }]);
     expect(inputs.orderLines.map(({ material, location }) => [material, location])).toEqual([["00000003", "00000003"]]);
+  });
+
+  it("reads from the first of today's month in mid-month, so an earlier residual of the month counts today (D08)", async () => {
+    await forecast("prod", "00000001", "00000001", "2026-10-05", "100");
+    await forecast("prod", "00000001", "00000001", "2026-09-30", "1");
+    await order("prod", "00000001", "00000001", [
+      { material: "00000001", quantity: "60", fulfilled: "60", requiredDate: "2026-10-09", status: "completed" },
+      { material: "00000001", quantity: "7", fulfilled: "7", requiredDate: "2026-09-30", status: "completed" },
+    ]);
+
+    const { forecasts, orderLines } = await load("prod", "2026-10-20");
+
+    expect(forecasts.map(({ date }) => date)).toEqual(["2026-10-05"]);
+    expect(orderLines.map(({ requiredDate, status }) => [requiredDate, status])).toEqual([["2026-10-09", "completed"]]);
+    const { queries, close } = await tracedLoad("2026-10-20");
+    try {
+      const firstDates = (marker: string) =>
+        queries.filter(({ sql }) => sql.includes(marker)).map(({ params }) => params.find((param) => typeof param === "string" && /^\d{4}-\d{2}-\d{2}$/.test(param)));
+      // The horizon of 20 October runs to 17 January, so the reads go through January.
+      expect(firstDates("`c0`.`status` != ?")).toEqual(["2026-10-01", "2026-11-01", "2026-12-01", "2027-01-01"]);
+      expect(firstDates(" from `forecast` as ")).toEqual(["2026-10-01", "2026-11-01", "2026-12-01", "2027-01-01"]);
+    } finally {
+      await close();
+    }
   });
 
   it("never reads another tenant's stock, lines, forecasts or targets (MRP-002, R05)", async () => {

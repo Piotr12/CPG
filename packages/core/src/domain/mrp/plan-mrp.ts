@@ -18,10 +18,10 @@ interface PairDraft {
 
 /**
  * Plans `inputs` over the 90 days from `today` (PRD §04, #273): one plan per material and location
- * the snapshot names, with a stock row, firm demand or a forecast residual inside the horizon, or a
- * safety-stock target in force on one of its days (#275), by material code, then location code. A
- * pair without a stock row starts from zero. The result depends only on the
- * snapshot's content, never its order, and the snapshot is never changed (R09, R10).
+ * the snapshot names, by material code, then location code. A pair is named by a stock row, by firm
+ * demand or a forecast residual inside the horizon, or by a safety-stock target in force on one of its
+ * days (#275); without a stock row it starts from zero. The result depends only on the snapshot's
+ * content, never its order, and the snapshot is never changed (R09, R10).
  */
 export function planMrp(inputs: MrpInputs, today: string): MrpResult {
   const dates = horizonDates(today);

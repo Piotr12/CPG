@@ -2507,7 +2507,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (an order on the forecast's day, and per D08 one later in its month, leaves 40 of 100). The demand review shows it (#240). MRP plans 60 firm plus 40 forecast: `packages/core/src/domain/mrp/plan-mrp.test.ts` (#275); `tests/integration/mrp-run-api.test.ts` reads the stored run's 40 through the API.
+- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (an order on the forecast's day, and per D08 one later in its month, leaves 40 of 100). The demand review shows it (#240). MRP plans 60 firm plus 40 forecast: `packages/core/src/domain/mrp/plan-mrp.test.ts` (#275); `tests/integration/mrp-run-api.test.ts` reads the stored run's 40 through the API, with the order later in the forecast's month (per D08).
 - **Given:** Forecast M/L/D=100; customer order M/L/D=60
 - **When:** Run MRP
 - **Then:** Total demand 100, decomposed 60 firm plus 40 residual forecast.
@@ -2543,7 +2543,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (an order at another location consumes nothing). MRP: `packages/core/src/domain/mrp/plan-mrp.test.ts` and `packages/core/src/domain/mrp/demand/forecast-demand.test.ts` (#275).
+- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (an order at another location consumes nothing). MRP: `packages/core/src/domain/mrp/plan-mrp.test.ts` (#275).
 - **Given:** Forecast M at A=100, order M at B=60
 - **When:** Run MRP
 - **Then:** A forecast unaffected by order at B.
