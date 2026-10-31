@@ -8,6 +8,7 @@ import { loadConfig } from "../../config";
 import { createAppContainer } from "../../container/container";
 import { scopeForTenant } from "../../container/tenant-scope";
 import { migrateDatabase, toDbOptions } from "../../database";
+import { planMrp } from "../../domain/mrp/plan-mrp";
 import { inRequestTransaction } from "../../http/request-transaction";
 import type { AuditActor } from "../audit/actor";
 
@@ -16,7 +17,9 @@ import type { AuditActor } from "../audit/actor";
  * customer-order lines, 3,100 daily forecasts) and at ten times those counts. These absolute counts are
  * the spec's budget contract (`2026-10-27--0556UTC-mrp-runs`, Risks) and don't track the dataset. Each
  * material is stocked at one location and ordered there, so pairs scale with the materials; half the
- * lines are Open. Forecasts aren't read until E15-S01, which only has to extend this benchmark.
+ * lines are Open, the other half Completed, and those of the forecasts' months consume them (#275).
+ * Forecasts run daily from the first of today's month, and each pair has a safety target with one
+ * change inside the horizon.
  */
 const SIZES = [
   { name: "realistic", materials: 30, locations: 1, lines: 7_800, forecasts: 3_100, budgetMs: 1_000 },
@@ -53,13 +56,17 @@ function seed({ materials, locations, lines, forecasts }: (typeof SIZES)[number]
       select 'ol' || x, 'prod', 'o' || x, 1, 'm' || (1 + x % ${materials}), '10.000000', '10', 'each', '1', '1', ${spread(7)},
         case when x % 2 = 0 then '10.000000' else '0.000000' end, case when x % 2 = 0 then 'completed' else 'open' end from s`,
     `${seq(forecasts)} insert into forecast (id, tenant_code, material_id, location_id, date, quantity)
-      select 'f' || x, 'prod', 'm' || (1 + (x - 1) % ${materials}), ${home(`1 + (x - 1) % ${materials}`)}, date('2026-10-27', '+' || ((x - 1) / ${materials}) || ' days'), '5.000000' from s`,
+      select 'f' || x, 'prod', 'm' || (1 + (x - 1) % ${materials}), ${home(`1 + (x - 1) % ${materials}`)}, date('2026-10-01', '+' || ((x - 1) / ${materials}) || ' days'), '5.000000' from s`,
+    `${seq(2 * materials)} insert into safety_stock_target (id, tenant_code, material_id, location_id, effective_from, quantity, version)
+      select 't' || x, 'prod', 'm' || (1 + (x - 1) % ${materials}), ${home(`1 + (x - 1) % ${materials}`)},
+        case when x <= ${materials} then '2026-01-01' else '2026-11-26' end, case when x <= ${materials} then '20.000000' else '40.000000' end, 1 from s`,
   ];
 }
 
 describe.each(SIZES)("an MRP run at the $name size", (size) => {
   let orm: Orm;
   let run: () => Promise<unknown>;
+  let engineOnly: () => Promise<number>;
   const testTimeout = 2 * RUNS * CI_FACTOR * size.budgetMs + 60_000;
 
   beforeAll(async () => {
@@ -73,6 +80,14 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     run = async () => {
       const { cradle } = await scopeForTenant(container, "prod");
       return inRequestTransaction(cradle.em, () => cradle.mrpRunService.run(ACTOR));
+    };
+    // The engine is one synchronous call, so its own time is a stall the heartbeat also counts (#275).
+    engineOnly = async () => {
+      const { cradle } = await scopeForTenant(container, "prod");
+      const inputs = await cradle.mrpSnapshotService.load(NOW.toISOString().slice(0, 10));
+      const started = performance.now();
+      planMrp(inputs, NOW.toISOString().slice(0, 10));
+      return performance.now() - started;
     };
   }, 120_000);
   afterAll(async () => {
@@ -99,10 +114,16 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
       fastest = Math.min(fastest, performance.now() - started);
     }
     const rows = await orm.em.getConnection().execute<{ n: number }[]>("select count(*) as n from mrp_daily_result");
+    const engine = await engineOnly();
     process.stdout.write(
-      `MRP run, ${size.name} (${size.materials} pairs, ${size.materials * 90} daily rows, ${size.lines} order lines): ` +
-        `${fastest.toFixed(0)} ms fastest of ${RUNS}, longest event-loop stall ${longestStall.toFixed(0)} ms\n`,
+      `MRP run, ${size.name} (${size.materials} pairs, ${size.materials * 90} daily rows, ${size.lines} order lines, ${size.forecasts} forecasts): ` +
+        `${fastest.toFixed(0)} ms fastest of ${RUNS}, longest event-loop stall ${longestStall.toFixed(0)} ms, planMrp alone ${engine.toFixed(0)} ms\n`,
     );
+    const forecast = await orm.em.getConnection().execute<{ n: number }[]>("select count(*) as n from mrp_daily_result where forecast_demand <> '0.000000'");
+    const safety = await orm.em.getConnection().execute<{ n: number }[]>("select count(*) as n from mrp_daily_result where safety_target = '40.000000'");
+    expect(forecast[0].n).toBeGreaterThan(0);
+    // Day 30, 26 November, through day 89.
+    expect(safety).toEqual([{ n: size.materials * 60 }]);
     expect(rows).toEqual([{ n: size.materials * 90 }]);
     expect(fastest).toBeLessThan(CI_FACTOR * size.budgetMs);
     expect(longestStall).toBeLessThan(CI_FACTOR * STALL_BUDGET_MS);
