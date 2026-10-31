@@ -16,6 +16,11 @@ const ADMIN_TOKEN = "mrpapi-admin";
 
 /** A day `days` after the server's UTC today, as the run plans from it. */
 const day = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
+/** The `date`th of next month (UTC): the 2nd and the 4th are always days 2–34 of the run, and in one calendar month. */
+const nextMonth = (date: number) => {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, date)).toISOString().slice(0, 10);
+};
 
 // E14-S02 through the bearer API (R07): a keyed POST runs MRP for every location of a tenant, and a GET
 // reads the latest run with its results. Read-only and stale generations refuse a run (RUN-021, TEN-019).
@@ -40,13 +45,13 @@ describe("MRP runs through the API", () => {
   const latest = (tenant: "test" | "prod", query = "") => api("GET", `/api/tenants/${tenant}/mrp/runs/latest${query}`);
   const latestRun = async (tenant: "test" | "prod") => (json(await latest(tenant)).data as MrpLatestView).run;
   const setReadOnly = (readOnly: boolean) => api("PATCH", "/api/tenants/prod", adminSecret, { key: randomUUID(), body: { readOnly } });
-  /** This file's pair in the latest Prod run, paging with the run's ID so every page is of that run. */
-  async function ourPlan(run: MrpRunView): Promise<MrpPlanView | undefined> {
+  /** One of this file's pairs in the latest Prod run, paging with the run's ID so every page is of that run. */
+  async function ourPlan(run: MrpRunView, { material, location } = pair): Promise<MrpPlanView | undefined> {
     for (let page = 1; ; page += 1) {
       const response = await latest("prod", `?page=${page}&run=${run.id}`);
       expect(response.status, response.text).toBe(200);
       const { plans } = json(response).data as MrpLatestView;
-      const found = plans.find(({ material, location }) => material === pair.material && location === pair.location);
+      const found = plans.find((plan) => plan.material === material && plan.location === location);
       if (found || plans.length === 0) return found;
     }
   }
@@ -97,6 +102,24 @@ describe("MRP runs through the API", () => {
     expect(plan?.buckets[3]).toMatchObject({ date: day(3), firmDemand: "20.000000", projectedBefore: "-15.000000", shortage: "15.000000" });
     const stock = json(await api("GET", `/api/tenants/prod/reports/stock?material=${pair.material}&location=${pair.location}`)).data as { rows: { quantity: string }[] };
     expect(stock.rows.map(({ quantity }) => quantity)).toEqual(["5.000000"]);
+  });
+
+  it("plans the forecast left after its month's orders and every day's safety target, as stored by the run (#275, DEM-002, D08)", async () => {
+    const material = (await created("/api/tenants/prod/materials", { type: "finished", description: "mrpapi shelf", baseUnit: "each" })).id;
+    const location = (await created("/api/tenants/prod/locations", { name: "mrpapi depot" })).id;
+    const customer = (await created("/api/tenants/prod/customers", { name: "mrpapi wholesale" })).id;
+    await created("/api/tenants/prod/safety-stock-targets", { material, location, effectiveFrom: day(0), quantity: "30" });
+    await created("/api/tenants/prod/forecasts", { material, location, date: nextMonth(2), quantity: "100", unit: "each" });
+    await created("/api/tenants/prod/customer-orders", { customer, location, lines: [{ material, quantity: "60", unit: "each", requiredDate: nextMonth(4) }] });
+
+    const response = await runIn("prod", ulaSecret);
+    expect(response.status, response.text).toBe(200);
+
+    const plan = await ourPlan(json(response).data as MrpRunView, { material, location });
+    const on = (date: string) => plan?.buckets.find((bucket) => bucket.date === date);
+    expect(on(nextMonth(2))).toMatchObject({ firmDemand: "0.000000", forecastDemand: "40.000000", projectedBefore: "-40.000000", shortage: "40.000000" });
+    expect(on(nextMonth(4))).toMatchObject({ firmDemand: "60.000000", forecastDemand: "0.000000", projectedBefore: "-100.000000" });
+    expect(plan?.buckets.map(({ safetyTarget }) => safetyTarget)).toEqual(Array(90).fill("30.000000"));
   });
 
   it("needs an Idempotency-Key, and replays a repeated key without a second run (R07)", async () => {
