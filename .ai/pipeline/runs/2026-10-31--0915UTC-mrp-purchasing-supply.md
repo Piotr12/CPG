@@ -66,8 +66,8 @@ As the spec's Implementation Plan says:
 
 ### Phase 2: Snapshot
 
-- [ ] 2.1 Purchasing snapshot read
-- [ ] 2.2 Timing benchmark
+- [x] 2.1 Purchasing snapshot read — e31b716f
+- [x] 2.2 Timing benchmark — beed803f
 
 ### Phase 3: Surface and evidence
 
@@ -77,3 +77,9 @@ As the spec's Implementation Plan says:
 ### Phase 4: Close-out
 
 - [ ] 4.1 Docs, catalogue, spec to implemented, full gate
+
+## Verification
+
+- Timing (`mrp-run-timing.test.ts`, run alone, 2026-10-31):
+  - realistic (30 pairs, 7,800 order lines, 1,200 purchase orders with 2,400 lines, 100 requisitions): 171 ms fastest of 3, longest stall 39 ms (budget 1 s / 250 ms);
+  - ten times (300 pairs, 78,000 order lines, 12,100 purchase orders with 34,000 lines, 1,000 requisitions): 1,738 ms, longest stall 78 ms (budget 5 s / 250 ms).
