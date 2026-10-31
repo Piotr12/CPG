@@ -1222,8 +1222,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### SAL-014 — Fully delivered order consumes forecast
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (a fully shipped order still consumes) and `packages/core/src/domain/mrp/plan-mrp.test.ts` (MRP plans no firm demand and a residual of 40, #275).
 - **Given:** Forecast 100, order 60 and GI 60 same original date
 - **When:** Run MRP
 - **Then:** Demand from those records is remaining forecast 40; no firm outstanding 60.
@@ -1232,7 +1233,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** The order half: `packages/core/src/services/customer-orders/customer-order.service.test.ts` (:73: a line of 10 with 4 issued, Closed Early → 4 fulfilled and kept, 6 abandoned, stock and postings unchanged). The residual forecast is MRP, slice 3 (#14). E11-S01, #90.
+- **Evidence:** The order half: `packages/core/src/services/customer-orders/customer-order.service.test.ts` (:73: a line of 10 with 4 issued, Closed Early → 4 fulfilled and kept, 6 abandoned, stock and postings unchanged). MRP's residual of 70: `packages/core/src/domain/mrp/plan-mrp.test.ts` (#275). E11-S01, #90.
 - **Given:** Forecast 100, order 60 and GI 30
 - **When:** Close remaining order line Early
 - **Then:** MRP residual forecast 70; outstanding firm demand 0; 30 deliveries remain historical.
@@ -1241,7 +1242,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/services/customer-orders/customer-order.service.test.ts` (Cancel of a whole order before any issue: lines Cancelled, everything abandoned, the shipment context completed, audited), `tests/integration/document-lifecycle.test.ts` (API Cancel). Forecast consumption and the residual need MRP (slice 3, #14; DEM-011). E11-S01, #90.
+- **Evidence:** `packages/core/src/services/customer-orders/customer-order.service.test.ts` (Cancel of a whole order before any issue: lines Cancelled, everything abandoned, the shipment context completed, audited), `tests/integration/document-lifecycle.test.ts` (API Cancel). MRP's residual of 100: `packages/core/src/domain/mrp/plan-mrp.test.ts` (#275, DEM-011). E11-S01, #90.
 - **Given:** Forecast 100, new unfulfilled order 60
 - **When:** Cancel order before any GI
 - **Then:** Customer order no longer consumes 60; forecast residual 100.
@@ -1267,7 +1268,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `tests/integration/customer-orders.test.ts` (the admin changes 60 to 80 in the UI: stored 80.000000, version +1, audit before/after with UI channel and session), `packages/core/src/services/customer-orders/customer-order.service.test.ts` (the same on the API channel). Use by the next MRP and the forecast update wait for slice 3 (#14). E08-S01, #83.
+- **Evidence:** `tests/integration/customer-orders.test.ts` (the admin changes 60 to 80 in the UI: stored 80.000000, version +1, audit before/after with UI channel and session), `packages/core/src/services/customer-orders/customer-order.service.test.ts` (the same on the API channel). MRP plans the edited 80 firm and a residual of 20 from the current snapshot: `packages/core/src/domain/mrp/plan-mrp.test.ts` (#275). E08-S01, #83.
 - **Given:** Order line 60, no goods issue
 - **When:** Admin/normal user changes quantity 80
 - **Then:** New amount stored, audited and used by next MRP; customer forecasts update accordingly.
@@ -2190,7 +2191,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `tests/integration/stock-reversals.test.ts` and `packages/core/src/services/goods-issues/issue-reversal.test.ts` (a Completed order → Open with the quantity outstanding again). Availability to MRP is slice 3 (#14). E11-S02, #91.
+- **Evidence:** `tests/integration/stock-reversals.test.ts` and `packages/core/src/services/goods-issues/issue-reversal.test.ts` (a Completed order → Open with the quantity outstanding again). MRP counts the outstanding quantity as firm again with consumption unchanged: `packages/core/src/domain/mrp/plan-mrp.test.ts` (#275). E11-S02, #91.
 - **Given:** Customer order Completed after full GI
 - **When:** Reverse final issued line
 - **Then:** Order reverts to Open if amount outstanding; new demand available to subsequent MRP.
@@ -2506,7 +2507,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (an order on the forecast's day, and per D08 one later in its month, leaves 40 of 100). The demand review shows it (#240); MRP's run is #14.
+- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (an order on the forecast's day, and per D08 one later in its month, leaves 40 of 100). The demand review shows it (#240). MRP plans 60 firm plus 40 forecast: `packages/core/src/domain/mrp/plan-mrp.test.ts` (#275); `tests/integration/mrp-run-api.test.ts` reads the stored run's 40 through the API.
 - **Given:** Forecast M/L/D=100; customer order M/L/D=60
 - **When:** Run MRP
 - **Then:** Total demand 100, decomposed 60 firm plus 40 residual forecast.
@@ -2515,7 +2516,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (orders of 120 against 100 leave a residual of zero, never negative). MRP's 120 firm demand is #14.
+- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (orders of 120 against 100 leave a residual of zero, never negative). MRP plans 120 firm and no forecast: `packages/core/src/domain/mrp/plan-mrp.test.ts` (#275).
 - **Given:** Forecast 100 and orders 120 same M/L/D
 - **When:** Run MRP
 - **Then:** Total demand 120 firm, residual forecast zero, not 220.
@@ -2524,7 +2525,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (no order leaves the whole 100) and `packages/core/src/services/reports/demand-review.service.test.ts` (the forecast left, per bucket). MRP's run is #14.
+- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (no order leaves the whole 100) and `packages/core/src/services/reports/demand-review.service.test.ts` (the forecast left, per bucket). MRP plans the 100 from zero stock into a shortage: `packages/core/src/domain/mrp/plan-mrp.test.ts` (#275).
 - **Given:** Forecast 100 and no customer order matching
 - **When:** Run MRP
 - **Then:** Demand 100 forecast.
@@ -2533,7 +2534,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (an order of another material consumes nothing). MRP's run is #14.
+- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (an order of another material consumes nothing). MRP: `packages/core/src/domain/mrp/plan-mrp.test.ts` (#275).
 - **Given:** Forecast A 100, customer order B 60 on same site/day
 - **When:** Run MRP
 - **Then:** A forecast remains 100; B customer order remains 60.
@@ -2542,7 +2543,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (an order at another location consumes nothing). MRP's run is #14.
+- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (an order at another location consumes nothing). MRP: `packages/core/src/domain/mrp/plan-mrp.test.ts` and `packages/core/src/domain/mrp/demand/forecast-demand.test.ts` (#275).
 - **Given:** Forecast M at A=100, order M at B=60
 - **When:** Run MRP
 - **Then:** A forecast unaffected by order at B.
@@ -2551,7 +2552,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` restates it per D08: an order in another month consumes nothing, one later in the same month does. MRP's run is #14.
+- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` restates it per D08: an order in another month consumes nothing, one later in the same month does. MRP plans the same: `packages/core/src/domain/mrp/plan-mrp.test.ts` (#275).
 - **Given:** Forecast M/L Monday 100; customer order M/L Tuesday 60
 - **When:** Run MRP
 - **Then:** Tuesday order does not consume Monday forecast.
@@ -2561,7 +2562,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (shipping doesn't change consumption: residual 40) and `packages/core/src/domain/demand/demand-tally.test.ts` (the open quantity is what is left to ship). MRP's total is #14.
+- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (shipping doesn't change consumption: residual 40) and `packages/core/src/domain/demand/demand-tally.test.ts` (the open quantity is what is left to ship). MRP plans 30 firm plus 40 forecast: `packages/core/src/domain/mrp/plan-mrp.test.ts` (#275).
 - **Given:** Forecast 100, ordered 60, physically shipped 30
 - **When:** Run MRP
 - **Then:** Remaining firm 30 and residual forecast 40; total outstanding demand 70.
@@ -2570,7 +2571,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (a fully shipped order still consumes: residual 40). MRP's run is #14.
+- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (a fully shipped order still consumes: residual 40). MRP: `packages/core/src/domain/mrp/plan-mrp.test.ts` (#275).
 - **Given:** Forecast 100, customer order 60 fully shipped
 - **When:** Run MRP
 - **Then:** Outstanding firm zero; residual forecast 40.
@@ -2579,7 +2580,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (60 ordered, 30 abandoned on early closure: residual 70) and `packages/core/src/services/reports/demand-review.service.test.ts` (a cancelled order consumes nothing in the screen's read). MRP's run is #14.
+- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (60 ordered, 30 abandoned on early closure: residual 70) and `packages/core/src/services/reports/demand-review.service.test.ts` (a cancelled order consumes nothing in the screen's read). MRP plans no firm demand and 70 forecast, also for a closed line a reversal left a remainder on: `packages/core/src/domain/mrp/plan-mrp.test.ts` (#275).
 - **Given:** Forecast 100, order 60, GI 30, close rest Early
 - **When:** Run MRP
 - **Then:** Residual forecast 70, outstanding firm 0.
@@ -2588,7 +2589,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (a cancelled line consumes nothing: residual 100) and `packages/core/src/services/reports/demand-review.service.test.ts`. MRP's run is #14.
+- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (a cancelled line consumes nothing: residual 100) and `packages/core/src/services/reports/demand-review.service.test.ts`. MRP plans the 100: `packages/core/src/domain/mrp/plan-mrp.test.ts` (#275).
 - **Given:** Forecast 100, matching order 60 not fulfilled
 - **When:** Cancel order then run MRP
 - **Then:** Residual forecast returns to 100.
@@ -2597,7 +2598,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/domain/demand/demand-tally.test.ts` and `packages/core/src/services/reports/demand-review.service.test.ts` (an Open line past its required date counts in today's bucket as open and overdue, its own date kept for Ordered). MRP's planning bucket is #14.
+- **Evidence:** `packages/core/src/domain/demand/demand-tally.test.ts` and `packages/core/src/services/reports/demand-review.service.test.ts` (an Open line past its required date counts in today's bucket as open and overdue, its own date kept for Ordered). MRP counts it today with its required date kept: `packages/core/src/domain/mrp/plan-mrp.test.ts` (#273, #275).
 - **Given:** Order 40 due yesterday, nothing shipped
 - **When:** Run MRP today
 - **Then:** Demand 40 immediately due in today's planning bucket, original due date retained.
@@ -2606,7 +2607,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (an overdue line still consumes its own month) and `packages/core/src/domain/demand/demand-tally.test.ts` (its outstanding quantity counts today). MRP's run is #14.
+- **Evidence:** `packages/core/src/domain/demand/forecast-netting.test.ts` (an overdue line still consumes its own month) and `packages/core/src/domain/demand/demand-tally.test.ts` (its outstanding quantity counts today). MRP plans its 60 today, still consuming Monday's forecast: `packages/core/src/domain/mrp/plan-mrp.test.ts` (#275).
 - **Given:** Monday forecast 100, order 60 due Monday, now Wednesday and unfulfilled
 - **When:** Run MRP Wednesday
 - **Then:** Order still consumes Monday forecast; overdue outstanding firm need due today.
@@ -2615,7 +2616,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/domain/safety-stock/target-on.test.ts` (no target in force reads 0.000000). MRP's safety gap is slice 3. E03-S03, #24.
+- **Evidence:** `packages/core/src/domain/safety-stock/target-on.test.ts` (no target in force reads 0.000000). MRP's target is 0.000000 every day and its gap never exceeds the shortage: `packages/core/src/domain/mrp/plan-mrp.test.ts` (#275). E03-S03, #24.
 - **Given:** Material/site has no safety-stock record
 - **When:** Run MRP
 - **Then:** Safety gap uses target zero; no fictitious safety stock created.
@@ -2624,7 +2625,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `target-on.test.ts` (a target applies from its date until the next one), `packages/core/src/services/safety-stock/safety-stock-target.service.test.ts`, the safety-stock `page.test.tsx` (the target in force today). MRP's daily calculation is slice 3. E03-S03, #24.
+- **Evidence:** `target-on.test.ts` (a target applies from its date until the next one), `packages/core/src/services/safety-stock/safety-stock-target.service.test.ts`, the safety-stock `page.test.tsx` (the target in force today). MRP's daily target: `packages/core/src/domain/mrp/plan-mrp.test.ts` (#275). E03-S03, #24.
 - **Given:** Safety target M/L 100 effective January 1
 - **When:** Calculate January 1 through January 15
 - **Then:** Target 100 each day unless superseded.
@@ -2633,7 +2634,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `target-on.test.ts` (100 from January 1, 150 from February 1, across the boundary), `packages/core/src/services/safety-stock/safety-stock-target.service.test.ts`, `packages/core/src/domain/demo/supply-plan.test.ts` (the demo dataset raises two targets from a later date, three months after its anchor). The MRP run is slice 3. E03-S03, #24.
+- **Evidence:** `target-on.test.ts` (100 from January 1, 150 from February 1, across the boundary), `packages/core/src/services/safety-stock/safety-stock-target.service.test.ts`, `packages/core/src/domain/demo/supply-plan.test.ts` (the demo dataset raises two targets from a later date, three months after its anchor). MRP's days switch at the boundary: `packages/core/src/domain/mrp/plan-mrp.test.ts` (#275). E03-S03, #24.
 - **Given:** Target 100 from January 1 and 150 from February 1
 - **When:** Run MRP across boundary
 - **Then:** January uses 100; February uses 150.
@@ -2697,19 +2698,22 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### DEM-024 — Order state/quantity changes re-net forecast
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` (the line edited from 60 to 80 plans 80 firm and 20 forecast from the current snapshot, #275).
 - **Given:** Open order quantity adjusted within allowed range
 - **When:** Rerun MRP
 - **Then:** Only current active order amount consumes corresponding forecast; obsolete calculation not reused.
 
 ### DEM-025 — Historical forecast residual does not roll over
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` (31 August, run 2 September: 30 firm today, August's residual expired, #275).
 - **Given:** Monday forecast 100, customer order 60 due Monday, 30 shipped; current day Wednesday
 - **When:** Run MRP Wednesday
 - **Then:** Remaining firm order 30 becomes due today while consuming Monday forecast for history; past residual 40 expires rather than requiring 70 today.
+- **Superseded by D08 (2026-10-25):** D08 decision 3 counts the residual of a forecast dated before today **in the current month** as due today; only the forecasts of months that have ended expire. Across a month end this row holds as written, and that is what is asserted. Normative text: `research/decisions/D08-statistical-unit-and-demand-review.md`. Confirmation: #275 Q1.
 
 ## MRP time buckets, BOM explosion, netting & shortages
 
@@ -3059,8 +3063,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MRP-043 — Safety-stock date transition
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/mrp/demand/safety-levels.test.ts` and `packages/core/src/domain/mrp/plan-mrp.test.ts` (a target rising from 20 to 40 inside the horizon: each day's `safetyGap` uses that day's target, #275).
 - **Given:** Target rises 20→40 midway through horizon
 - **When:** Run MRP
 - **Then:** Target/shortage adapts on effective date and does not treat old 20 as perpetually valid.
@@ -3099,11 +3104,13 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MRP-048 — Past residual forecast expires
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` (30 September, run 1 October: the unfulfilled 40 today, September's residual expired, #275).
 - **Given:** Yesterday forecast 100, order 60 due yesterday with 20 fulfilled, today is next day
 - **When:** Run MRP today
 - **Then:** Only unfulfilled firm 40 moves to today; yesterday residual forecast 40 expires and cannot generate catch-up demand.
+- **Superseded by D08 (2026-10-25):** D08 decision 3 counts the residual of a forecast dated before today **in the current month** as due today; only the forecasts of months that have ended expire. Across a month end this row holds as written, and that is what is asserted. Normative text: `research/decisions/D08-statistical-unit-and-demand-review.md`. Confirmation: #275 Q1.
 
 ### MRP-049 — Beyond-horizon feasible finish separately visible
 
