@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { emptyFlows, projectBuckets } from "./project-buckets";
+import { dependableBalance, emptyFlows, projectBuckets } from "./project-buckets";
 
 describe("MRP bucket projection", () => {
   it("starts a day with every flow at zero", () => {
@@ -54,5 +54,18 @@ describe("MRP bucket projection", () => {
       [0n, 0n],
       [0n, 0n],
     ]);
+  });
+
+  it("dependableBalance: equals projectedBefore without tentative supply, and leaves tentative supply out otherwise (#277)", () => {
+    const flows = ["2026-10-01", "2026-10-02", "2026-10-03"].map(emptyFlows);
+    Object.assign(flows[0], { dependableSupply: 5n, transferIn: 3n, firmDemand: 1n, forecastDemand: 1n, dependentDemand: 1n, transferOut: 1n, atRiskSupply: 50n, proposedReceipts: 50n });
+    Object.assign(flows[1], { firmDemand: 20n });
+    Object.assign(flows[2], { dependableSupply: 7n });
+    const buckets = projectBuckets(10n, flows);
+    expect([0, 1, 2].map((day) => dependableBalance({ physical: 10n, flows }, day))).toEqual(buckets.map(({ projectedBefore }) => projectedBefore));
+    expect([0, 1, 2].map((day) => dependableBalance({ physical: 10n, flows }, day))).toEqual([14n, -6n, 1n]);
+    flows[1].tentativeSupply = 100n;
+    expect(dependableBalance({ physical: 10n, flows }, 2)).toBe(1n);
+    expect(projectBuckets(10n, flows)[2].projectedBefore).toBe(101n);
   });
 });

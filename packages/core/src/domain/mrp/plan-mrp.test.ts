@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { formatDecimal, parseDecimal } from "../quantities/decimal";
-import type { MrpInputs, MrpOrderLine, MrpProductionOrder, MrpStock } from "./mrp-inputs";
+import type { MrpInputs, MrpOrderLine, MrpProductionOrder, MrpStock, MrpTransfer } from "./mrp-inputs";
 import type { MrpPlan } from "./mrp-result";
 import { planMrp } from "./plan-mrp";
 
@@ -22,7 +22,7 @@ const line = (overrides: Partial<MrpOrderLine> & { quantity: bigint; requiredDat
   ...overrides,
 });
 
-const inputs = (overrides: Partial<MrpInputs> = {}): MrpInputs => ({ stock: [], orderLines: [], productionOrders: [], ...overrides });
+const inputs = (overrides: Partial<MrpInputs> = {}): MrpInputs => ({ stock: [], orderLines: [], productionOrders: [], transfers: [], ...overrides });
 
 /** A production order of product P at L1 needing 2 of A per unit unless overridden. */
 const production = (overrides: Partial<MrpProductionOrder> & { plannedStart: string; plannedFinish: string }): MrpProductionOrder => ({
@@ -34,6 +34,19 @@ const production = (overrides: Partial<MrpProductionOrder> & { plannedStart: str
   abandoned: 0n,
   status: "open",
   components: [{ material: "A", perOutput: q("2") }],
+  ...overrides,
+});
+/** A transfer of M1 from S to D, nothing posted yet, unless overridden. */
+const transfer = (overrides: Partial<MrpTransfer> & { quantity: bigint; plannedDispatch: string; plannedArrival: string }): MrpTransfer => ({
+  transfer: "00000001",
+  material: "M1",
+  source: "S",
+  destination: "D",
+  dispatched: 0n,
+  received: 0n,
+  writtenOff: 0n,
+  abandoned: 0n,
+  status: "open",
   ...overrides,
 });
 const planOf = (plans: readonly MrpPlan[], material: string, location = "L1") => plans.find((plan) => plan.material === material && plan.location === location)!;
@@ -372,5 +385,239 @@ describe("planMrp: open production orders (#277)", () => {
     const backward = planMrp(inputs({ productionOrders: [...productionOrders].reverse().map((order) => ({ ...order, components: [...order.components].reverse() })) }), TODAY_PO);
     expect(backward).toEqual(forward);
     expect(planOf(forward.plans, "A").componentDemand.map(({ order }) => order)).toEqual(["00000001", "00000003"]);
+  });
+});
+
+describe("planMrp: open transfers (#277)", () => {
+  // Wednesday 28 October 2026: "yesterday" is 27 October.
+  const TODAY_T = "2026-10-28";
+  const sum = (items: readonly { quantity: bigint }[]) => items.reduce((total, { quantity }) => total + quantity, 0n);
+
+  it("TRF-016: expects the 30 in transit at the destination today with an Overdue Transfer warning, at neither site physically", () => {
+    const snapshot = inputs({
+      stock: [stock("M1", "S", "0"), stock("M1", "D", "5")],
+      transfers: [transfer({ quantity: q("30"), dispatched: q("30"), plannedDispatch: "2026-10-25", plannedArrival: "2026-10-27" })],
+    });
+    const result = planMrp(snapshot, TODAY_T);
+    const destination = planOf(result.plans, "M1", "D");
+    const source = planOf(result.plans, "M1", "S");
+    expect(destination.physical).toBe(q("5"));
+    expect(destination.buckets[0]).toMatchObject({ date: TODAY_T, transferIn: q("30"), projectedBefore: q("35") });
+    expect(destination.transfersIn).toEqual([
+      { transfer: "00000001", material: "M1", location: "D", stage: "in-transit", plannedDate: "2026-10-27", date: TODAY_T, quantity: q("30"), overdue: true },
+    ]);
+    expect(source.physical).toBe(0n);
+    expect(source.buckets.every(({ transferOut, projectedBefore }) => transferOut === 0n && projectedBefore === 0n)).toBe(true);
+    expect(result.exceptions).toEqual([]);
+  });
+
+  it("MRP-040: plans the 25 in transit since yesterday for the destination today, with no physical stock there yet", () => {
+    const { plans } = planMrp(inputs({ transfers: [transfer({ quantity: q("25"), dispatched: q("25"), plannedDispatch: "2026-10-26", plannedArrival: "2026-10-27" })] }), TODAY_T);
+    const destination = only(plans);
+    expect(destination).toMatchObject({ location: "D", physical: 0n });
+    expect(destination.buckets[0].transferIn).toBe(q("25"));
+    expect(destination.transfersIn.map(({ overdue }) => overdue)).toEqual([true]);
+  });
+
+  it("projects an undispatched transfer leaving the source on the dispatch day and arriving on the arrival day", () => {
+    const { plans, exceptions } = planMrp(
+      inputs({ stock: [stock("M1", "S", "100")], transfers: [transfer({ quantity: q("40"), plannedDispatch: "2026-11-02", plannedArrival: "2026-11-04" })] }),
+      TODAY_T,
+    );
+    const source = planOf(plans, "M1", "S");
+    const destination = planOf(plans, "M1", "D");
+    expect(bucketOn(source, "2026-11-02")).toMatchObject({ transferOut: q("40"), projectedBefore: q("60") });
+    expect(bucketOn(destination, "2026-11-03").projectedBefore).toBe(0n);
+    expect(bucketOn(destination, "2026-11-04")).toMatchObject({ transferIn: q("40"), projectedBefore: q("40") });
+    expect(source.transfersOut).toEqual([
+      { transfer: "00000001", material: "M1", location: "S", stage: "planned", plannedDate: "2026-11-02", date: "2026-11-02", quantity: q("40"), overdue: false },
+    ]);
+    expect(destination.transfersIn).toEqual([expect.objectContaining({ stage: "planned", plannedDate: "2026-11-04", date: "2026-11-04", overdue: false })]);
+    expect(exceptions).toEqual([]);
+  });
+
+  it("moves an overdue dispatch to today, and the arrival too when it has also passed, keeping both planned days", () => {
+    const { plans } = planMrp(
+      inputs({
+        stock: [stock("M1", "S", "100")],
+        transfers: [
+          transfer({ transfer: "00000001", quantity: q("10"), plannedDispatch: "2026-10-20", plannedArrival: "2026-10-25" }),
+          transfer({ transfer: "00000002", quantity: q("20"), plannedDispatch: "2026-10-26", plannedArrival: "2026-11-02" }),
+        ],
+      }),
+      TODAY_T,
+    );
+    expect(planOf(plans, "M1", "S").transfersOut.map(({ transfer: id, plannedDate, date, overdue }) => [id, plannedDate, date, overdue])).toEqual([
+      ["00000001", "2026-10-20", TODAY_T, true],
+      ["00000002", "2026-10-26", TODAY_T, true],
+    ]);
+    expect(planOf(plans, "M1", "D").transfersIn.map(({ transfer: id, plannedDate, date, overdue }) => [id, plannedDate, date, overdue])).toEqual([
+      ["00000001", "2026-10-25", TODAY_T, true],
+      ["00000002", "2026-11-02", "2026-11-02", false],
+    ]);
+  });
+
+  it("TRF-017, MRP-039: counts only the 60 the source can supply at both sites, raises Insufficient Transfer Stock and changes no transfer", () => {
+    const snapshot = deepFreeze(
+      inputs({ stock: [stock("M1", "S", "60")], transfers: [transfer({ quantity: q("100"), plannedDispatch: "2026-11-02", plannedArrival: "2026-11-04" })] }),
+    );
+    const before = structuredClone(snapshot);
+    const { plans, exceptions } = planMrp(snapshot, TODAY_T);
+    const source = planOf(plans, "M1", "S");
+    const destination = planOf(plans, "M1", "D");
+    expect(bucketOn(source, "2026-11-02")).toMatchObject({ transferOut: q("60"), projectedBefore: 0n });
+    expect(destination.buckets.at(-1)!.projectedBefore).toBe(q("60"));
+    expect(sum(destination.transfersIn)).toBe(q("60"));
+    expect(exceptions).toEqual([
+      { kind: "insufficient-transfer-stock", transfer: "00000001", material: "M1", source: "S", destination: "D", date: "2026-11-02", planned: q("100"), available: q("60") },
+    ]);
+    expect(snapshot).toEqual(before);
+  });
+
+  it("projects nothing at either site for a Completed, Closed Early or Cancelled transfer", () => {
+    const dates = { plannedDispatch: "2026-11-02", plannedArrival: "2026-11-04" };
+    // Each keeps an undispatched remainder or stock in transit by arithmetic, so only the status filter keeps it out (lesson 2026-10-27).
+    const transfers = [
+      transfer({ ...dates, transfer: "00000001", quantity: q("100"), dispatched: q("40"), received: q("40"), abandoned: q("40"), status: "closed-early" }),
+      transfer({ ...dates, transfer: "00000002", quantity: q("100"), dispatched: q("50"), received: q("20"), status: "completed" }),
+      transfer({ ...dates, transfer: "00000003", quantity: q("100"), status: "cancelled" }),
+    ];
+    const result = planMrp(inputs({ stock: [stock("M1", "S", "100"), stock("M1", "D", "0")], transfers }), TODAY_T);
+    expect(result.exceptions).toEqual([]);
+    for (const plan of result.plans) {
+      expect([plan.transfersOut, plan.transfersIn]).toEqual([[], []]);
+      expect(plan.buckets.every(({ transferOut, transferIn }) => transferOut === 0n && transferIn === 0n)).toBe(true);
+    }
+  });
+
+  it("projects a part-dispatched transfer in both stages, in transit less what was written off, then the rest", () => {
+    const { plans } = planMrp(
+      inputs({
+        stock: [stock("M1", "S", "100")],
+        transfers: [transfer({ quantity: q("100"), dispatched: q("30"), writtenOff: q("5"), plannedDispatch: "2026-10-30", plannedArrival: "2026-11-02" })],
+      }),
+      TODAY_T,
+    );
+    expect(planOf(plans, "M1", "S").transfersOut.map(({ quantity }) => quantity)).toEqual([q("70")]);
+    expect(planOf(plans, "M1", "D").transfersIn.map(({ stage, quantity }) => [stage, quantity])).toEqual([
+      ["in-transit", q("25")],
+      ["planned", q("70")],
+    ]);
+  });
+
+  it("checks a source short of stock as able to supply nothing: no movement, an exception, and no plan at the destination", () => {
+    const { plans, exceptions } = planMrp(
+      inputs({
+        orderLines: [line({ location: "S", quantity: q("5"), requiredDate: "2026-10-30" })],
+        transfers: [
+          transfer({ transfer: "00000002", quantity: q("10"), plannedDispatch: "2026-11-02", plannedArrival: "2026-11-04" }),
+          transfer({ transfer: "00000001", quantity: q("20"), plannedDispatch: "2026-11-02", plannedArrival: "2026-11-04" }),
+        ],
+      }),
+      TODAY_T,
+    );
+    const source = only(plans);
+    expect(source).toMatchObject({ location: "S", transfersOut: [] });
+    expect(bucketOn(source, "2026-11-02")).toMatchObject({ transferOut: 0n, projectedBefore: -q("5") });
+    expect(exceptions.map(({ transfer: id, planned, available }) => [id, planned, available])).toEqual([
+      ["00000001", q("20"), 0n],
+      ["00000002", q("10"), 0n],
+    ]);
+  });
+
+  it("serves two same-day transfers from one source in ID order, the second seeing what the first took", () => {
+    const dates = { plannedDispatch: "2026-11-02", plannedArrival: "2026-11-03" };
+    const { plans, exceptions } = planMrp(
+      inputs({
+        stock: [stock("M1", "S", "50")],
+        transfers: [transfer({ ...dates, transfer: "00000002", quantity: q("30") }), transfer({ ...dates, transfer: "00000001", destination: "E", quantity: q("30") })],
+      }),
+      TODAY_T,
+    );
+    expect(sum(planOf(plans, "M1", "E").transfersIn)).toBe(q("30"));
+    expect(sum(planOf(plans, "M1", "D").transfersIn)).toBe(q("20"));
+    expect(exceptions).toEqual([expect.objectContaining({ transfer: "00000002", planned: q("30"), available: q("20") })]);
+  });
+
+  it("serves an older overdue transfer before a newer one with a lower ID, both counted today", () => {
+    const { exceptions } = planMrp(
+      inputs({
+        stock: [stock("M1", "S", "30")],
+        transfers: [
+          transfer({ transfer: "00000001", quantity: q("30"), plannedDispatch: "2026-10-25", plannedArrival: "2026-11-01" }),
+          transfer({ transfer: "00000002", quantity: q("30"), plannedDispatch: "2026-10-20", plannedArrival: "2026-11-01" }),
+        ],
+      }),
+      TODAY_T,
+    );
+    expect(exceptions.map(({ transfer: id, available }) => [id, available])).toEqual([["00000001", 0n]]);
+  });
+
+  it("counts a chain A → B → C across days: B can send on to C what arrives from A first", () => {
+    const { plans, exceptions } = planMrp(
+      inputs({
+        stock: [stock("M1", "A", "50")],
+        transfers: [
+          transfer({ transfer: "00000002", source: "B", destination: "C", quantity: q("50"), plannedDispatch: "2026-11-05", plannedArrival: "2026-11-06" }),
+          transfer({ transfer: "00000001", source: "A", destination: "B", quantity: q("50"), plannedDispatch: "2026-11-01", plannedArrival: "2026-11-03" }),
+        ],
+      }),
+      TODAY_T,
+    );
+    expect(exceptions).toEqual([]);
+    expect(planOf(plans, "M1", "B").buckets.at(-1)!.projectedBefore).toBe(0n);
+    expect(bucketOn(planOf(plans, "M1", "C"), "2026-11-06").transferIn).toBe(q("50"));
+  });
+
+  it("subtracts a dispatch on day 89 whose arrival falls after the horizon, and ignores one dispatching after it", () => {
+    const { plans } = planMrp(
+      inputs({
+        stock: [stock("M1", "S", "100")],
+        transfers: [
+          transfer({ transfer: "00000001", quantity: q("10"), plannedDispatch: "2027-01-25", plannedArrival: "2027-01-28" }),
+          transfer({ transfer: "00000002", quantity: q("10"), plannedDispatch: "2027-01-26", plannedArrival: "2027-01-27" }),
+        ],
+      }),
+      TODAY_T,
+    );
+    const source = only(plans);
+    expect(source.transfersOut.map(({ transfer: id, date }) => [id, date])).toEqual([["00000001", "2027-01-25"]]);
+    expect(source.buckets.at(-1)).toMatchObject({ date: "2027-01-25", projectedBefore: q("90") });
+  });
+
+  it("keeps every bucket's transfer figures equal to the items behind them, so no leg is counted twice", () => {
+    const { plans } = planMrp(
+      inputs({
+        stock: [stock("M1", "S", "45"), stock("M2", "S", "10")],
+        transfers: [
+          transfer({ transfer: "00000001", quantity: q("30"), dispatched: q("10"), plannedDispatch: "2026-10-29", plannedArrival: "2026-10-30" }),
+          transfer({ transfer: "00000002", quantity: q("30"), plannedDispatch: "2026-10-29", plannedArrival: "2026-10-30" }),
+          transfer({ transfer: "00000003", material: "M2", quantity: q("5"), plannedDispatch: "2026-10-27", plannedArrival: "2026-10-29" }),
+        ],
+      }),
+      TODAY_T,
+    );
+    for (const plan of plans) {
+      for (const bucket of plan.buckets) {
+        expect(bucket.transferOut).toBe(sum(plan.transfersOut.filter(({ date }) => date === bucket.date)));
+        expect(bucket.transferIn).toBe(sum(plan.transfersIn.filter(({ date }) => date === bucket.date)));
+      }
+    }
+    expect(sum(plans.flatMap(({ transfersOut }) => transfersOut))).toBe(q("50"));
+  });
+
+  it("gives an equal result for transfers in another order", () => {
+    const transfers = [
+      transfer({ transfer: "00000003", quantity: q("10"), dispatched: q("4"), plannedDispatch: "2026-11-02", plannedArrival: "2026-11-02" }),
+      transfer({ transfer: "00000001", quantity: q("10"), plannedDispatch: "2026-11-02", plannedArrival: "2026-11-02" }),
+      transfer({ transfer: "00000002", quantity: q("50"), plannedDispatch: "2026-11-02", plannedArrival: "2026-11-02" }),
+    ];
+    const forward = planMrp(inputs({ stock: [stock("M1", "S", "30")], transfers }), TODAY_T);
+    expect(planMrp(inputs({ stock: [stock("M1", "S", "30")], transfers: [...transfers].reverse() }), TODAY_T)).toEqual(forward);
+    expect(planOf(forward.plans, "M1", "D").transfersIn.map(({ transfer: id, stage }) => `${id}/${stage}`)).toEqual([
+      "00000001/planned",
+      "00000002/planned",
+      "00000003/in-transit",
+    ]);
   });
 });

@@ -12,6 +12,8 @@ export interface MrpResult {
   plans: readonly MrpPlan[];
   /** Proposed receipts; none until E16-S01 sizes them. */
   proposals: readonly MrpProposal[];
+  /** What the plan can't do as the documents say, by date, then document (#277); E16-S03 adds the other kinds. */
+  exceptions: readonly MrpException[];
 }
 
 export interface MrpPlan {
@@ -27,6 +29,10 @@ export interface MrpPlan {
   productionOutput: readonly MrpProductionOutput[];
   /** The production orders' component needs behind the buckets' dependent demand (#277). */
   componentDemand: readonly MrpComponentDemand[];
+  /** The transfers behind the buckets' transfer dispatch, at this source (#277). */
+  transfersOut: readonly MrpTransferMovement[];
+  /** The transfers behind the buckets' transfer receipt, at this destination (#277). */
+  transfersIn: readonly MrpTransferMovement[];
 }
 
 /** One day of one material at one location. */
@@ -99,6 +105,46 @@ export interface MrpComponentDemand {
   quantity: bigint;
   overdue: boolean;
 }
+
+/**
+ * One leg of an open transfer at one site (#277): stock in transit arriving at the destination, or the
+ * source-feasible part of the undispatched quantity leaving the source and arriving at the destination.
+ */
+export interface MrpTransferMovement {
+  transfer: string;
+  material: string;
+  /** The source for a dispatch, the destination for a receipt. */
+  location: string;
+  stage: "in-transit" | "planned";
+  /** The transfer's own day: planned dispatch for a dispatch, planned arrival for a receipt. */
+  plannedDate: string;
+  /** The bucket it counts in: `plannedDate`, or today when overdue. */
+  date: string;
+  quantity: bigint;
+  /** The day has passed; on a receipt it is the Overdue Transfer warning (TRF-016, MRP-040). */
+  overdue: boolean;
+}
+
+/**
+ * A transfer whose source can't supply its undispatched quantity on the dispatch day (TRF-017,
+ * MRP-039): only `available` is projected at either site, and the transfer itself is never changed.
+ */
+export interface MrpInsufficientTransferStock {
+  kind: "insufficient-transfer-stock";
+  transfer: string;
+  material: string;
+  source: string;
+  destination: string;
+  /** The dispatch day the source was checked on. */
+  date: string;
+  /** The undispatched quantity the transfer plans. */
+  planned: bigint;
+  /** The source's dependable balance that day, never below zero: less than `planned`. */
+  available: bigint;
+}
+
+/** An MRP exception. */
+export type MrpException = MrpInsufficientTransferStock;
 
 /** A proposed receipt. E16-S01 adds its kind, need date and lead time; E16-S02 its timing marks. */
 export interface MrpProposal {

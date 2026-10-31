@@ -28,6 +28,6 @@ export class MrpSnapshotService {
     const before = addDays(today, MRP_HORIZON_DAYS);
     const orderLines = await readOrderLines(this.em, codes, before);
     const productionOrders = await readProductionOrders(this.em, codes, before);
-    return { stock, orderLines, productionOrders };
+    return { stock, orderLines, productionOrders, transfers: [] };
   }
 }
