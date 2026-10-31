@@ -40,22 +40,33 @@ describe("productionMovements", () => {
     ]);
   });
 
-  it("counts a finish on day 89, drops one on day 90, and drops both legs when the start is after day 89", () => {
+  it("counts a finish or a start on day 89, drops a finish on day 90, and drops both legs when the start is after day 89", () => {
     const { output, components } = productionMovements(
       [
         order({ order: "00000001", plannedStart: "2026-12-20", plannedFinish: "2026-12-29" }),
         order({ order: "00000002", plannedStart: "2026-12-20", plannedFinish: "2026-12-30" }),
         order({ order: "00000003", plannedStart: "2026-12-30", plannedFinish: "2027-01-02" }),
+        order({ order: "00000004", plannedStart: "2026-12-29", plannedFinish: "2027-01-02" }),
       ],
       DATES,
     );
     expect(output.map(({ order: code }) => code)).toEqual(["00000001"]);
-    expect([...new Set(components.map(({ order: code }) => code))]).toEqual(["00000001", "00000002"]);
+    expect([...new Set(components.map(({ order: code }) => code))]).toEqual(["00000001", "00000002", "00000004"]);
+    expect(components.filter(({ order: code }) => code === "00000004").map(({ date }) => date)).toEqual(["2026-12-29", "2026-12-29"]);
   });
 
   it("moves an overdue start and finish to today, marking both and keeping the planned days", () => {
     const { output, components } = productionMovements([order({ plannedStart: "2026-09-20", plannedFinish: "2026-09-25" })], DATES);
     expect(output).toEqual([expect.objectContaining({ plannedFinish: "2026-09-25", date: "2026-10-01", overdue: true })]);
     expect(components.every(({ plannedStart, date, overdue }) => plannedStart === "2026-09-20" && date === "2026-10-01" && overdue)).toBe(true);
+  });
+
+  it("counts a start and finish due today on time, unmarked", () => {
+    const { output, components } = productionMovements([order({ plannedStart: "2026-10-01", plannedFinish: "2026-10-01" })], DATES);
+    expect([...output, ...components].map(({ date, overdue }) => [date, overdue])).toEqual([
+      ["2026-10-01", false],
+      ["2026-10-01", false],
+      ["2026-10-01", false],
+    ]);
   });
 });

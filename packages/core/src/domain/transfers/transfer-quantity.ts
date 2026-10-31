@@ -23,12 +23,22 @@ const text = (value: bigint) => formatDecimal(value, { fixed: true });
 
 /** What is on the road: dispatched, and neither received nor written off (INV-009). Never negative. */
 export function inTransitOf({ dispatched, received, writtenOff }: TransferProgress): string {
-  return text(micro(dispatched) - micro(received) - micro(writtenOff));
+  return text(inTransitMicro(micro(dispatched), micro(received), micro(writtenOff)));
 }
 
 /** What the source has still to send (TRF-004: "undispatched balance"). */
 export function undispatchedOf({ quantity, dispatched }: TransferProgress): string {
-  return text(micro(quantity) - micro(dispatched));
+  return text(undispatchedMicro(micro(quantity), micro(dispatched)));
+}
+
+/** `inTransitOf` on micro-units, as MRP plans them (#277). */
+export function inTransitMicro(dispatched: bigint, received: bigint, writtenOff: bigint): bigint {
+  return dispatched - received - writtenOff;
+}
+
+/** `undispatchedOf` on micro-units, as MRP plans them (#277). */
+export function undispatchedMicro(quantity: bigint, dispatched: bigint): bigint {
+  return quantity - dispatched;
 }
 
 /**

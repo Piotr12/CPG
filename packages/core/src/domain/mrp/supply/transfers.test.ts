@@ -70,4 +70,24 @@ describe("planTransfers", () => {
     expect(plan).toEqual({ dispatches: [], receipts: [], exceptions: [] });
     expect(made.size).toBe(0);
   });
+
+  it("counts an arrival on day 89 and drops one on day 90, and leaves a dispatch and arrival due today unmarked", () => {
+    const { ledgerOf } = ledgers({ S: q("100") });
+
+    const plan = planTransfers(
+      [
+        transfer({ transfer: "00000001", dispatched: q("40"), plannedDispatch: "2026-12-20", plannedArrival: "2026-12-29" }),
+        transfer({ transfer: "00000002", dispatched: q("40"), plannedDispatch: "2026-12-20", plannedArrival: "2026-12-30" }),
+        transfer({ transfer: "00000003", quantity: q("10"), plannedDispatch: "2026-10-01", plannedArrival: "2026-10-01" }),
+      ],
+      DATES,
+      ledgerOf,
+    );
+
+    expect(plan.receipts.map(({ transfer: id, date, overdue }) => [id, date, overdue])).toEqual([
+      ["00000003", "2026-10-01", false],
+      ["00000001", "2026-12-29", false],
+    ]);
+    expect(plan.dispatches.map(({ date, overdue }) => [date, overdue])).toEqual([["2026-10-01", false]]);
+  });
 });

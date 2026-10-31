@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { afterPosting, afterReversal, inTransitOf, isFullyReceived, postingLimit, undispatchedOf, type TransferProgress } from "./transfer-quantity";
+import { afterPosting, afterReversal, inTransitMicro, inTransitOf, isFullyReceived, postingLimit, undispatchedMicro, undispatchedOf, type TransferProgress } from "./transfer-quantity";
 
 const planned = (changes: Partial<TransferProgress> = {}): TransferProgress => ({
   quantity: "100.000000",
@@ -79,5 +79,10 @@ describe("afterReversal", () => {
   it("refuses a reversal that would make a quantity or transit negative", () => {
     expect(afterReversal(progress, "receipt", "51")).toBeNull();
     expect(afterReversal(progress, "dispatch", "10")).toBeNull();
+  });
+
+  it("computes transit and the undispatched balance on micro-units too, as MRP plans them (#277)", () => {
+    expect(inTransitMicro(30_000_000n, 10_000_000n, 500_000n)).toBe(19_500_000n);
+    expect(undispatchedMicro(100_000_000n, 30_500_000n)).toBe(69_500_000n);
   });
 });

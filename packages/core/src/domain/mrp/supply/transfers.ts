@@ -1,3 +1,4 @@
+import { inTransitMicro, undispatchedMicro } from "../../transfers/transfer-quantity";
 import type { MrpTransfer } from "../mrp-inputs";
 import type { MrpInsufficientTransferStock, MrpTransferMovement } from "../mrp-result";
 import { compareCodes } from "../projection/pairs";
@@ -43,19 +44,16 @@ export function planTransfers(
 
   const open = transfers.filter(({ status }) => status === "open");
   for (const transfer of open) {
-    const inTransit = transfer.dispatched - transfer.received - transfer.writtenOff;
+    const inTransit = inTransitMicro(transfer.dispatched, transfer.received, transfer.writtenOff);
     if (inTransit > 0n) receive(transfer, "in-transit", inTransit);
   }
   const checks = open
     // An open transfer's `abandoned` is zero; closing one sets it from `received`, not `dispatched`.
-    .map((transfer) => ({ transfer, planned: transfer.quantity - transfer.dispatched, date: counted(transfer.plannedDispatch) }))
+    .map((transfer) => ({ transfer, planned: undispatchedMicro(transfer.quantity, transfer.dispatched), date: counted(transfer.plannedDispatch) }))
     .filter(({ planned, date }) => planned > 0n && date <= last)
-    .sort(
-      (a, b) =>
-        compareCodes(a.date, b.date) ||
-        compareCodes(a.transfer.plannedDispatch, b.transfer.plannedDispatch) ||
-        compareCodes(a.transfer.transfer, b.transfer.transfer),
-    );
+    // By the planned dispatch day, then ID: the same order as by the day counted first (Q4), since an
+    // overdue day counts today and every other day counts as planned.
+    .sort((a, b) => compareCodes(a.transfer.plannedDispatch, b.transfer.plannedDispatch) || compareCodes(a.transfer.transfer, b.transfer.transfer));
   for (const { transfer, planned, date } of checks) {
     const source = ledgerOf(transfer.material, transfer.source);
     const day = dayOf.get(date)!;
