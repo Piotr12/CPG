@@ -61,11 +61,11 @@ As the spec's Implementation Plan says:
 
 ### Phase 1: Engine
 
-- [ ] 1.1 Widen targetInForce
-- [ ] 1.2 Types and empty inputs
-- [ ] 1.3 Forecast demand seam
-- [ ] 1.4 Safety levels and gap
-- [ ] 1.5 Wire planMrp with acceptance tests
+- [x] 1.1 Widen targetInForce — 99b33e36
+- [x] 1.2 Types and empty inputs — a2b34f09
+- [x] 1.3 Forecast demand seam — a2b34f09
+- [x] 1.4 Safety levels and gap — a2b34f09
+- [x] 1.5 Wire planMrp with acceptance tests — a2b34f09, 49e47ddf
 
 ### Phase 2: Loader
 
