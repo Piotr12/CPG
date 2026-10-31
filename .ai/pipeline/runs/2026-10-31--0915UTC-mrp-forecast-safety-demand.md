@@ -5,7 +5,7 @@
 Source doc: .ai/specs/2026-10-31--0902UTC-mrp-forecast-safety-demand.md
 Spec PR: #302 (design only; this branch is cut from `main` and carries the spec straight into `implemented/`, lesson 2026-10-23 "Close the paperwork")
 Issue: #275
-Status: in-progress
+Status: complete
 
 ## Goal
 
@@ -65,6 +65,8 @@ As the spec's Implementation Plan says:
 - Mutation checks: removing the engine's `removed` filter before netting, or the firm-demand status filter, fails tests (`plan-mrp.test.ts`, `forecast-demand.test.ts`).
 
 ## Progress
+
+PR: #308
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
