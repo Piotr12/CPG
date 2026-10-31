@@ -20,6 +20,15 @@ describe("help topics", () => {
     expect(helpTopics(locale).find((topic) => topic.id === "stock-import")!.body.join(" ")).toContain(problem);
   });
 
+  it.each([
+    ["en", "the forecast not yet ordered", "due in its calendar month", "the forecasts of past months expire", "safety-stock target in force that day"],
+    ["pl", "prognozę jeszcze niezamówioną", "w jej miesiącu kalendarzowym", "prognozy minionych miesięcy wygasają", "zapas bezpieczeństwa obowiązujący tego dnia"],
+  ] as const)("says in %s that MRP plans the forecast left after its month's orders and carries each day's safety target (#275)", (locale, forecast, month, expired, safety) => {
+    const text = helpTopics(locale).find((topic) => topic.id === "mrp")!.body.join(" ");
+
+    for (const phrase of [forecast, month, expired, safety]) expect(text).toContain(phrase);
+  });
+
   it("is written separately in Polish, not copied from English", () => {
     const english = helpTopics("en");
     const polish = helpTopics("pl");
