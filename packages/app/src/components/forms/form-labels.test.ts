@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { baseUnitTip, chosenBaseUnit, errorFormatter, fill, shownQuantity, TALL_DIALOG } from "./form-labels";
+import { baseUnitTip, chosenBaseUnit, errorFormatter, fill, localeQuantity, shownQuantity, TALL_DIALOG } from "./form-labels";
 
 describe("fill", () => {
   it("fills known placeholders and leaves unknown ones", () => {
@@ -24,6 +24,23 @@ describe("shownQuantity", () => {
     expect(shownQuantity("0.000001")).toBe("0.000001");
     expect(shownQuantity("0.000000")).toBe("0");
     expect(shownQuantity("120")).toBe("120");
+  });
+});
+
+describe("localeQuantity", () => {
+  it("shows a stored quantity in English and Polish, signed with a hyphen-minus, without trailing zeros", () => {
+    expect(localeQuantity("1234.500000", "en")).toBe("1,234.5");
+    expect(localeQuantity("1234.500000", "pl")).toBe("1234,5");
+    expect(localeQuantity("-15.500000", "en")).toBe("-15.5");
+    expect(localeQuantity("-15.500000", "pl")).toBe("-15,5");
+    expect(localeQuantity("40.000000", "pl")).toBe("40");
+    expect(localeQuantity("0.000001", "en")).toBe("0.000001");
+  });
+
+  it("keeps every digit of a value no binary float holds, grouped as the locale groups (R03)", () => {
+    expect(localeQuantity("12345678901234.123456", "en")).toBe("12,345,678,901,234.123456");
+    // Polish groups from five digits, with a no-break space.
+    expect(localeQuantity("12345678901234.123456", "pl")).toBe("12\u00a0345\u00a0678\u00a0901\u00a0234,123456");
   });
 });
 

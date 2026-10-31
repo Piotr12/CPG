@@ -23,6 +23,15 @@ export function shownQuantity(quantity: string): string {
   return quantity.includes(".") ? quantity.replace(/\.?0+$/, "") : quantity;
 }
 
+/**
+ * A stored six-decimal quantity in the reader's locale: `"-1234.500000"` is `-1,234.5` in English and
+ * `-1234,5` in Polish, grouped as the locale groups. `Intl.NumberFormat` formats the decimal text itself,
+ * every digit kept, so no binary float enters (R03). The MRP report uses it; other screens follow (#304).
+ */
+export function localeQuantity(quantity: string, locale: string): string {
+  return new Intl.NumberFormat(locale, { maximumFractionDigits: 6 }).format(quantity as `${number}`);
+}
+
 /** One choice of a form's select, such as a material or a location. */
 export interface FormOption {
   value: string;
