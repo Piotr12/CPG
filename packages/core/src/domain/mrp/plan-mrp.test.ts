@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { formatDecimal, parseDecimal } from "../quantities/decimal";
-import type { MrpInputs, MrpOrderLine, MrpStock } from "./mrp-inputs";
+import type { MrpInputs, MrpOrderLine, MrpProductionOrder, MrpStock } from "./mrp-inputs";
 import type { MrpPlan } from "./mrp-result";
 import { planMrp } from "./plan-mrp";
 
@@ -22,7 +22,22 @@ const line = (overrides: Partial<MrpOrderLine> & { quantity: bigint; requiredDat
   ...overrides,
 });
 
-const inputs = (overrides: Partial<MrpInputs> = {}): MrpInputs => ({ stock: [], orderLines: [], ...overrides });
+const inputs = (overrides: Partial<MrpInputs> = {}): MrpInputs => ({ stock: [], orderLines: [], productionOrders: [], ...overrides });
+
+/** A production order of product P at L1 needing 2 of A per unit unless overridden. */
+const production = (overrides: Partial<MrpProductionOrder> & { plannedStart: string; plannedFinish: string }): MrpProductionOrder => ({
+  order: "00000001",
+  material: "P",
+  location: "L1",
+  quantity: q("100"),
+  produced: 0n,
+  abandoned: 0n,
+  status: "open",
+  components: [{ material: "A", perOutput: q("2") }],
+  ...overrides,
+});
+const planOf = (plans: readonly MrpPlan[], material: string, location = "L1") => plans.find((plan) => plan.material === material && plan.location === location)!;
+const bucketOn = (plan: MrpPlan, date: string) => plan.buckets.find((bucket) => bucket.date === date)!;
 
 const only = (plans: readonly MrpPlan[]) => {
   expect(plans).toHaveLength(1);
@@ -192,5 +207,170 @@ describe("planMrp", () => {
     expect(m2.physical).toBe(0n);
     expect(balances(m2).get("2026-10-02")).toBe(-q("5"));
     expect(m3.buckets.every(({ projectedBefore }) => projectedBefore === 0n)).toBe(true);
+  });
+});
+
+describe("planMrp: open production orders (#277)", () => {
+  // Wednesday 28 October 2026; 1 November is a Sunday, 2 November a Monday, 6 November a Friday.
+  const TODAY_PO = "2026-10-28";
+
+  it("MRP-017: expects a 5-day order's output on Friday 6 November and its inputs on Sunday 1 November, calendar days", () => {
+    const { plans } = planMrp(inputs({ productionOrders: [production({ plannedStart: "2026-11-01", plannedFinish: "2026-11-06" })] }), TODAY_PO);
+    const output = planOf(plans, "P");
+    const input = planOf(plans, "A");
+    expect(output.buckets.filter(({ dependableSupply }) => dependableSupply !== 0n).map(({ date }) => date)).toEqual(["2026-11-06"]);
+    expect(input.buckets.filter(({ dependentDemand }) => dependentDemand !== 0n).map(({ date }) => date)).toEqual(["2026-11-01"]);
+    expect(output.productionOutput).toEqual([
+      { order: "00000001", material: "P", location: "L1", plannedFinish: "2026-11-06", date: "2026-11-06", quantity: q("100"), overdue: false },
+    ]);
+    expect(input.componentDemand).toEqual([
+      { order: "00000001", material: "A", location: "L1", plannedStart: "2026-11-01", date: "2026-11-01", quantity: q("200"), overdue: false },
+    ]);
+  });
+
+  it("MRP-018: subtracts the pinned BOM's 80 of A from A's projection on Monday, the start day", () => {
+    const order = production({ quantity: q("40"), plannedStart: "2026-11-02", plannedFinish: "2026-11-06" });
+    const input = planOf(planMrp(inputs({ stock: [stock("A", "L1", "100")], productionOrders: [order] }), TODAY_PO).plans, "A");
+    expect(bucketOn(input, "2026-11-01").projectedBefore).toBe(q("100"));
+    expect(bucketOn(input, "2026-11-02")).toMatchObject({ dependentDemand: q("80"), projectedBefore: q("20") });
+    expect(bucketOn(input, "2026-11-06").projectedBefore).toBe(q("20"));
+  });
+
+  it("MRP-019: keeps the physical 100 while the projection after the start day is 20, writing nothing", () => {
+    const snapshot = deepFreeze(
+      inputs({ stock: [stock("A", "L1", "100")], productionOrders: [production({ quantity: q("40"), plannedStart: "2026-11-02", plannedFinish: "2026-11-06" })] }),
+    );
+    const before = structuredClone(snapshot);
+    const input = planOf(planMrp(snapshot, TODAY_PO).plans, "A");
+    expect(input.physical).toBe(q("100"));
+    expect(input.buckets.at(-1)!.projectedBefore).toBe(q("20"));
+    expect(snapshot).toEqual(before);
+  });
+
+  it("PRD-009: shows the shortage of unavailable components on the future order's start day, physical unchanged", () => {
+    const input = planOf(
+      planMrp(inputs({ stock: [stock("A", "L1", "0")], productionOrders: [production({ quantity: q("10"), plannedStart: "2026-11-02", plannedFinish: "2026-11-06" })] }), TODAY_PO).plans,
+      "A",
+    );
+    expect(input.physical).toBe(0n);
+    expect(bucketOn(input, "2026-11-01").shortage).toBe(0n);
+    expect(bucketOn(input, "2026-11-02")).toMatchObject({ dependentDemand: q("20"), shortage: q("20") });
+  });
+
+  it("MRP-023: Friday's output doesn't cover Wednesday's demand: Wednesday is short and the output lands Friday", () => {
+    const { plans } = planMrp(
+      inputs({
+        orderLines: [line({ material: "P", quantity: q("50"), requiredDate: "2026-11-04" })],
+        productionOrders: [production({ quantity: q("50"), plannedStart: "2026-11-02", plannedFinish: "2026-11-06" })],
+      }),
+      TODAY_PO,
+    );
+    const product = planOf(plans, "P");
+    expect(bucketOn(product, "2026-11-04")).toMatchObject({ projectedBefore: -q("50"), shortage: q("50") });
+    expect(bucketOn(product, "2026-11-05").shortage).toBe(q("50"));
+    expect(bucketOn(product, "2026-11-06")).toMatchObject({ dependableSupply: q("50"), projectedBefore: 0n, shortage: 0n });
+  });
+
+  it("MRP-011, MRP-021: projects only the unproduced 60 as output and 120 kg of A for it, the produced 40 being physical", () => {
+    const order = production({ produced: q("40"), plannedStart: "2026-11-02", plannedFinish: "2026-11-06" });
+    const { plans } = planMrp(inputs({ stock: [stock("P", "L1", "40")], productionOrders: [order] }), TODAY_PO);
+    const product = planOf(plans, "P");
+    expect(product.physical).toBe(q("40"));
+    expect(bucketOn(product, "2026-11-06")).toMatchObject({ dependableSupply: q("60"), projectedBefore: q("100") });
+    expect(bucketOn(planOf(plans, "A"), "2026-11-02").dependentDemand).toBe(q("120"));
+  });
+
+  it("PRD-028: plans the remaining 60 by the recipe, whatever the completion of 40 actually consumed", () => {
+    // The completion used 160 kg of A instead of 80, which is already out of A's physical 40.
+    const order = production({ produced: q("40"), plannedStart: "2026-11-02", plannedFinish: "2026-11-06" });
+    const input = planOf(planMrp(inputs({ stock: [stock("A", "L1", "40")], productionOrders: [order] }), TODAY_PO).plans, "A");
+    expect(bucketOn(input, "2026-11-02")).toMatchObject({ dependentDemand: q("120"), projectedBefore: -q("80") });
+  });
+
+  it("PRD-025: after a target raised to 120 with 40 produced, projects 80 of output and components for 80", () => {
+    const order = production({ quantity: q("120"), produced: q("40"), plannedStart: "2026-11-02", plannedFinish: "2026-11-06" });
+    const { plans } = planMrp(inputs({ productionOrders: [order] }), TODAY_PO);
+    expect(planOf(plans, "P").productionOutput.map(({ quantity }) => quantity)).toEqual([q("80")]);
+    expect(planOf(plans, "A").componentDemand.map(({ quantity }) => quantity)).toEqual([q("160")]);
+  });
+
+  it("PRD-027: after a finish moved to 13 November, projects output then and components on the recalculated start", () => {
+    const order = production({ produced: q("40"), plannedStart: "2026-11-08", plannedFinish: "2026-11-13" });
+    const { plans } = planMrp(inputs({ productionOrders: [order] }), TODAY_PO);
+    expect(planOf(plans, "P").productionOutput.map(({ date }) => date)).toEqual(["2026-11-13"]);
+    expect(planOf(plans, "A").componentDemand.map(({ date }) => date)).toEqual(["2026-11-08"]);
+  });
+
+  it("PRD-029, PRD-030, MRP-013: projects nothing for orders closed early, fully produced, overproduced or cancelled", () => {
+    const dates = { plannedStart: "2026-11-02", plannedFinish: "2026-11-06" };
+    const productionOrders = [
+      production({ ...dates, order: "00000001", produced: q("40"), abandoned: q("60"), status: "closed-early" }),
+      // A remainder by arithmetic, which only the status filter keeps out (lesson 2026-10-27).
+      production({ ...dates, order: "00000002", produced: q("40"), status: "closed-early" }),
+      production({ ...dates, order: "00000003", produced: q("100"), status: "completed" }),
+      production({ ...dates, order: "00000004", produced: q("110") }),
+      production({ ...dates, order: "00000005", abandoned: q("100"), status: "cancelled" }),
+      production({ ...dates, order: "00000006", status: "cancelled" }),
+    ];
+    const result = planMrp(inputs({ stock: [stock("P", "L1", "40")], productionOrders }), TODAY_PO);
+    const product = only(result.plans);
+    expect(product.material).toBe("P");
+    expect(product.productionOutput).toEqual([]);
+    expect(product.buckets.every(({ dependableSupply, projectedBefore }) => dependableSupply === 0n && projectedBefore === q("40"))).toBe(true);
+  });
+
+  it("MRP-016: expects yesterday's pending 20 today with an Overdue Supply marker, keeping the original finish day", () => {
+    const order = production({ quantity: q("20"), plannedStart: "2026-10-22", plannedFinish: "2026-10-27" });
+    const { plans } = planMrp(inputs({ productionOrders: [order] }), TODAY_PO);
+    const product = planOf(plans, "P");
+    expect(product.physical).toBe(0n);
+    expect(product.buckets[0]).toMatchObject({ date: TODAY_PO, dependableSupply: q("20") });
+    expect(product.productionOutput).toEqual([expect.objectContaining({ plannedFinish: "2026-10-27", date: TODAY_PO, quantity: q("20"), overdue: true })]);
+  });
+
+  it("MRP-022: projects a Monday start's remaining need on Wednesday, today, keeping the original start day", () => {
+    const order = production({ produced: q("40"), plannedStart: "2026-11-02", plannedFinish: "2026-11-06" });
+    const input = planOf(planMrp(inputs({ productionOrders: [order] }), "2026-11-04").plans, "A");
+    expect(input.buckets[0]).toMatchObject({ date: "2026-11-04", dependentDemand: q("120") });
+    expect(input.componentDemand).toEqual([expect.objectContaining({ plannedStart: "2026-11-02", date: "2026-11-04", overdue: true })]);
+  });
+
+  it("UX-024: projects two overlapping orders at one site in full, with no capacity check", () => {
+    const productionOrders = [
+      production({ order: "00000001", quantity: q("30"), plannedStart: "2026-11-02", plannedFinish: "2026-11-06" }),
+      production({ order: "00000002", quantity: q("20"), plannedStart: "2026-11-03", plannedFinish: "2026-11-05" }),
+    ];
+    const { plans } = planMrp(inputs({ productionOrders }), TODAY_PO);
+    expect(planOf(plans, "P").buckets.at(-1)!.projectedBefore).toBe(q("50"));
+    expect(planOf(plans, "A").buckets.at(-1)!.projectedBefore).toBe(-q("100"));
+  });
+
+  it("UX-026: shows a 10 kg shortage on the start day after a goods issue of 10 kg left 90 of the 100 needed", () => {
+    const order = production({ quantity: q("100"), components: [{ material: "A", perOutput: q("1") }], plannedStart: "2026-11-02", plannedFinish: "2026-11-06" });
+    const input = planOf(planMrp(inputs({ stock: [stock("A", "L1", "90")], productionOrders: [order] }), TODAY_PO).plans, "A");
+    expect(bucketOn(input, "2026-11-02").shortage).toBe(q("10"));
+  });
+
+  it("counts an in-horizon start without the output finishing after day 89, and rounds a sub-micro need upward", () => {
+    const productionOrders = [
+      production({ order: "00000001", plannedStart: "2027-01-20", plannedFinish: "2027-02-01" }),
+      production({ order: "00000002", quantity: q("0.5"), components: [{ material: "B", perOutput: q("0.000001") }], plannedStart: "2026-11-02", plannedFinish: "2026-11-06" }),
+    ];
+    const { plans } = planMrp(inputs({ productionOrders }), TODAY_PO);
+    expect(planOf(plans, "P").productionOutput.map(({ order }) => order)).toEqual(["00000002"]);
+    expect(planOf(plans, "A").componentDemand).toEqual([expect.objectContaining({ order: "00000001", date: "2027-01-20", quantity: q("200") })]);
+    expect(planOf(plans, "B").componentDemand.map(({ quantity }) => quantity)).toEqual([1n]);
+  });
+
+  it("gives an equal result for production orders in another order", () => {
+    const productionOrders = [
+      production({ order: "00000003", plannedStart: "2026-11-02", plannedFinish: "2026-11-06", components: [{ material: "B", perOutput: q("1") }, { material: "A", perOutput: q("1") }] }),
+      production({ order: "00000001", plannedStart: "2026-11-02", plannedFinish: "2026-11-06" }),
+      production({ order: "00000002", location: "L2", plannedStart: "2026-10-30", plannedFinish: "2026-11-01" }),
+    ];
+    const forward = planMrp(inputs({ productionOrders }), TODAY_PO);
+    const backward = planMrp(inputs({ productionOrders: [...productionOrders].reverse().map((order) => ({ ...order, components: [...order.components].reverse() })) }), TODAY_PO);
+    expect(backward).toEqual(forward);
+    expect(planOf(forward.plans, "A").componentDemand.map(({ order }) => order)).toEqual(["00000001", "00000003"]);
   });
 });

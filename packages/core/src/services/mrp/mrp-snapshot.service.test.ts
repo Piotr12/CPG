@@ -203,6 +203,6 @@ describe("MrpSnapshotService", () => {
   });
 
   it("returns an empty snapshot for a tenant with nothing to plan", async () => {
-    expect(await load()).toEqual({ stock: [], orderLines: [] });
+    expect(await load()).toEqual({ stock: [], orderLines: [], productionOrders: [] });
   });
 });

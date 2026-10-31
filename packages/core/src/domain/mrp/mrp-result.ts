@@ -23,6 +23,10 @@ export interface MrpPlan {
   buckets: readonly MrpBucket[];
   /** The order lines behind the buckets' firm demand. */
   firmDemand: readonly MrpFirmDemand[];
+  /** The production orders behind the production part of the buckets' dependable supply (#277). */
+  productionOutput: readonly MrpProductionOutput[];
+  /** The production orders' component needs behind the buckets' dependent demand (#277). */
+  componentDemand: readonly MrpComponentDemand[];
 }
 
 /** One day of one material at one location. */
@@ -67,6 +71,33 @@ export interface MrpFirmDemand {
   /** The bucket it counts in: `requiredDate`, or today when the line is overdue. */
   date: string;
   quantity: bigint;
+}
+
+/** An open production order's unproduced balance, expected on its finish day (#277). */
+export interface MrpProductionOutput {
+  order: string;
+  material: string;
+  location: string;
+  /** The order's own finish day, kept when it is overdue (MRP-016). */
+  plannedFinish: string;
+  /** The bucket it counts in: `plannedFinish`, or today when overdue. */
+  date: string;
+  quantity: bigint;
+  /** The Overdue Supply marker: the finish day has passed and output is still pending. */
+  overdue: boolean;
+}
+
+/** What an open production order's unproduced balance needs of one pinned component, on its start day (#277). */
+export interface MrpComponentDemand {
+  order: string;
+  material: string;
+  location: string;
+  /** The order's own start day, kept when it is overdue (MRP-022). */
+  plannedStart: string;
+  /** The bucket it counts in: `plannedStart`, or today when overdue. */
+  date: string;
+  quantity: bigint;
+  overdue: boolean;
 }
 
 /** A proposed receipt. E16-S01 adds its kind, need date and lead time; E16-S02 its timing marks. */
