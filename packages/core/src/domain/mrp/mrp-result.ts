@@ -1,8 +1,8 @@
 /**
  * What `planMrp` returns (#273). Every figure is base-unit micro-units (R03); E14-S02 stores each one
  * as a six-decimal text. The bucket carries every figure the MRP stories fill, so its shape never
- * changes for them: this story fills firm demand and the balances, and the others stay zero until
- * the story named beside them.
+ * changes for them: E14-S01 filled firm demand and the balances; each other figure stays zero until
+ * the story named beside it.
  */
 export interface MrpResult {
   today: string;

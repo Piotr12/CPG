@@ -177,7 +177,7 @@ describe("planMrp", () => {
     expect(forward.plans[3].firmDemand.map(({ order }) => order)).toEqual(["00000009", "00000008"]);
   });
 
-  it("leaves the figures later stories fill at zero with no forecast or target, so the balance after proposals equals the one before", () => {
+  it("leaves the figures later stories fill at zero with no forecast, target or supply, so the balance after proposals equals the one before", () => {
     const plan = only(planMrp(inputs({ stock: [stock("M1", "L1", "7")], orderLines: [line({ quantity: q("2"), requiredDate: "2026-10-03" })] }), TODAY).plans);
     for (const bucket of plan.buckets) {
       expect(bucket).toMatchObject({
@@ -448,7 +448,7 @@ describe("planMrp: purchasing supply (#276)", () => {
     const { tentativeSupply, dependableSupply } = plan.buckets.find((bucket) => bucket.date === date)!;
     return { tentativeSupply, dependableSupply };
   };
-  const totals = (plan: MrpPlan) =>
+  const supplyTotals = (plan: MrpPlan) =>
     plan.buckets.reduce(
       (sum, { tentativeSupply, dependableSupply }) => ({
         tentativeSupply: sum.tentativeSupply + tentativeSupply,
@@ -460,7 +460,7 @@ describe("planMrp: purchasing supply (#276)", () => {
   it("BUY-002: projects a direct purchase order's 100 as dependable supply on its planned date", () => {
     const plan = only(planMrp(inputs({ purchaseOrderLines: [orderLine({ quantity: q("100"), plannedDate: "2026-10-15" })] }), TODAY).plans);
     expect(supplyOn(plan, "2026-10-15")).toEqual({ tentativeSupply: 0n, dependableSupply: q("100") });
-    expect(totals(plan)).toEqual({ tentativeSupply: 0n, dependableSupply: q("100") });
+    expect(supplyTotals(plan)).toEqual({ tentativeSupply: 0n, dependableSupply: q("100") });
     expect(balances(plan).get("2026-10-14")).toBe(0n);
     expect(balances(plan).get("2026-10-15")).toBe(q("100"));
   });
@@ -473,7 +473,7 @@ describe("planMrp: purchasing supply (#276)", () => {
       ).plans,
     );
     expect(plan.physical).toBe(q("40"));
-    expect(totals(plan).dependableSupply).toBe(q("60"));
+    expect(supplyTotals(plan).dependableSupply).toBe(q("60"));
     expect(plan.buckets.at(-1)!.projectedBefore).toBe(q("100"));
   });
 
@@ -502,7 +502,7 @@ describe("planMrp: purchasing supply (#276)", () => {
         TODAY,
       ).plans,
     );
-    expect(totals(plan)).toEqual({ tentativeSupply: 0n, dependableSupply: q("100") });
+    expect(supplyTotals(plan)).toEqual({ tentativeSupply: 0n, dependableSupply: q("100") });
     expect(plan.supply.map(({ kind }) => kind)).toEqual(["purchase-order"]);
   });
 
@@ -517,7 +517,7 @@ describe("planMrp: purchasing supply (#276)", () => {
         TODAY,
       ).plans,
     );
-    expect(totals(plan)).toEqual({ tentativeSupply: 0n, dependableSupply: 0n });
+    expect(supplyTotals(plan)).toEqual({ tentativeSupply: 0n, dependableSupply: 0n });
     expect(plan.supply).toEqual([]);
     expect(plan.buckets.at(-1)!.projectedBefore).toBe(q("5"));
   });
@@ -533,7 +533,7 @@ describe("planMrp: purchasing supply (#276)", () => {
       ).plans,
     );
     expect(plan.physical).toBe(q("60"));
-    expect(totals(plan).dependableSupply).toBe(0n);
+    expect(supplyTotals(plan).dependableSupply).toBe(0n);
     expect(plan.buckets.at(-1)!.projectedBefore).toBe(q("60"));
   });
 
@@ -543,7 +543,7 @@ describe("planMrp: purchasing supply (#276)", () => {
       orderLine({ quantity: q("100"), received: q("80"), abandoned: q("20"), status: "closed-early", plannedDate: "2026-10-20" }),
     ];
     const plan = only(planMrp(inputs({ stock: [stock("M1", "L1", "130")], purchaseOrderLines }), TODAY).plans);
-    expect(totals(plan).dependableSupply).toBe(0n);
+    expect(supplyTotals(plan).dependableSupply).toBe(0n);
     expect(plan.buckets.at(-1)!.projectedBefore).toBe(q("130"));
   });
 
@@ -614,7 +614,7 @@ describe("planMrp: purchasing supply (#276)", () => {
         TODAY,
       ).plans,
     );
-    expect(totals(plan).dependableSupply).toBe(0n);
+    expect(supplyTotals(plan).dependableSupply).toBe(0n);
     expect(plan.supply).toEqual([]);
   });
 
@@ -642,7 +642,6 @@ describe("planMrp: purchasing supply (#276)", () => {
     expect(balances(plan).get("2026-10-03")).toBe(q("5"));
   });
 });
-
 
 describe("planMrp: demand and supply seams together (#275, #276)", () => {
   it("nets a forecast against its month's orders and projects it with purchasing supply and the day's safety target in one balance", () => {
