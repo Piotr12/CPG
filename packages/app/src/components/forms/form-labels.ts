@@ -23,6 +23,20 @@ export function shownQuantity(quantity: string): string {
   return quantity.includes(".") ? quantity.replace(/\.?0+$/, "") : quantity;
 }
 
+/**
+ * A stored six-decimal quantity in the reader's locale: `"-1234.500000"` is `-1,234.5` in English and
+ * `-1234,5` in Polish, grouped as the locale groups. `Intl.NumberFormat` formats the decimal text itself,
+ * every digit kept, so no binary float enters (R03). The MRP report uses it; other screens follow (#304).
+ */
+export function localeQuantity(quantity: string, locale: string): string {
+  let format = quantityFormats.get(locale);
+  if (!format) quantityFormats.set(locale, (format = new Intl.NumberFormat(locale, { maximumFractionDigits: 6 })));
+  return format.format(quantity as `${number}`);
+}
+
+/** One formatter per locale: a one-pair MRP report formats about 750 figures, and building a formatter costs more than using one. */
+const quantityFormats = new Map<string, Intl.NumberFormat>();
+
 /** One choice of a form's select, such as a material or a location. */
 export interface FormOption {
   value: string;

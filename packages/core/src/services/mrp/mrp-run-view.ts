@@ -42,9 +42,20 @@ export interface MrpRunView {
 /** One planned day: six-decimal texts in the base unit, signed where a balance is negative. */
 export type MrpBucketView = { date: string } & Record<MrpFigure, string>;
 
+/** One planned material-location pair: its 90 days, and what the report shows beside them (E18-S01). */
 export interface MrpPlanView {
   material: string;
+  materialDescription: string;
+  materialActive: boolean;
+  /** The material's base unit: the unit of every figure. */
+  baseUnit: string;
   location: string;
+  locationName: string;
+  locationActive: boolean;
+  /** The lowest projected balance before proposals over the horizon (spec Q7). */
+  lowestProjectedBefore: string;
+  /** The first day with a shortage, or null. */
+  firstShortageDate: string | null;
   buckets: MrpBucketView[];
 }
 
@@ -53,7 +64,7 @@ export interface MrpLatestView {
   run: MrpRunView;
   page: number;
   pageSize: number;
-  /** Planned pairs in the whole run. */
+  /** Planned pairs the filters leave: the whole run's without filters. */
   total: number;
   plans: MrpPlanView[];
 }

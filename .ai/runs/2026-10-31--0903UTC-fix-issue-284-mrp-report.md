@@ -3,7 +3,7 @@
 **Date:** 2026-10-31 09:03 UTC
 **Agent:** Claude Code (cezar, headless) / claude-opus-5-5
 **Spec:** `.ai/specs/2026-10-31--0907UTC-mrp-report.md`
-**Status:** in progress
+**Status:** done
 
 ## Goal
 
@@ -38,6 +38,13 @@ This log covers the triage and the spec. The implementation's run log is its exe
     - plans carry `materialActive` and `locationActive`;
     - the strict page query is recorded as a client-visible change;
     - the locale follow-up is filed as #304.
+- 09:16 Opened the spec PR #305 with its labels, assumptions, visual evidence and run summary, and handed the issue lock to `om-auto-implement-spec`. It runs on #309 (`feat/mrp-report`, from `main`). Its execution plan, `.ai/pipeline/runs/2026-10-31--0916UTC-mrp-report.md`, is that run's log.
+- 10:45 #309 is ready.
+  - Gate green: 100% coverage.
+  - The touched integration files pass on a local standalone build.
+  - A fresh-context review's major and minors are fixed.
+  - UI evidence is posted, and the issue lock is released.
+- 11:20 #305 merged while #309's CI ran, so the duplicate-spec check failed. Merged `main`, deleted the active copy and re-ran the gate on the merged tree. Filed #310 for #306's catalogue rows that wait on this report.
 
 ## Changes
 
@@ -51,4 +58,5 @@ This log covers the triage and the spec. The implementation's run log is its exe
 ## Follow-ups
 
 - #304: show every other quantity in the reader's locale.
-- Merge the spec PR before the implementation PR. Then merge `main` into the implementation PR and delete the spec's active copy (`tests/ai-filenames.test.ts`).
+- #310: assert #306's purchasing rows through the MRP report.
+- #309 still needs a human QA pass (`needs-qa`) and approval.

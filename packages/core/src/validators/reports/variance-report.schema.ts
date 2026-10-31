@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { calendarDateSchema } from "../dates/calendar-date.schema";
 import { locationReferenceSchema, materialReferenceSchema } from "../planning-parameters/planning-parameter-fields.schema";
+import { optionalFilter } from "./optional-filter";
 
 /** How many orders one page of the variance report holds: each row carries a table of its components (spec Q7). */
 export const VARIANCE_REPORT_PAGE_SIZE = 50;
@@ -14,16 +15,13 @@ export const ORDER_STATES = ["open", "completed", "closed-early", "cancelled"] a
 /** The English message; screens translate it by matching this constant. */
 export const VARIANCE_RANGE_MESSAGE = "The end date must not be before the start date.";
 
-/** The report form's "All" choices and empty date fields send an empty value: no filter. */
-const optional = <T extends z.ZodType>(schema: T) => z.preprocess((value) => (value === "" ? undefined : value), schema.optional());
-
 /** Each of the report's query parameters on its own, before the range check: what the page's form shows again. */
 export const varianceReportFieldsSchema = z.strictObject({
-  material: optional(materialReferenceSchema),
-  location: optional(locationReferenceSchema),
-  status: optional(z.enum(ORDER_STATES)),
-  from: optional(calendarDateSchema),
-  to: optional(calendarDateSchema),
+  material: optionalFilter(materialReferenceSchema),
+  location: optionalFilter(locationReferenceSchema),
+  status: optionalFilter(z.enum(ORDER_STATES)),
+  from: optionalFilter(calendarDateSchema),
+  to: optionalFilter(calendarDateSchema),
   page: z.coerce.number().int().min(1).max(1_000_000).default(1),
 });
 
