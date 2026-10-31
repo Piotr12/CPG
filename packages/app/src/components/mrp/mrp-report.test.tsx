@@ -93,6 +93,8 @@ describe("MrpReport", () => {
     expect(days.getAllByRole("columnheader").map((header) => header.textContent)).toEqual([
       "Date", "Firm demand", "Forecast demand", "Safety stock", "Tentative supply", "Dependable supply", "Projected before proposals", "Projected after proposals", "Shortage",
     ]);
+    // The long headers wrap rather than push the last columns out of view at desktop widths.
+    for (const header of days.getAllByRole("columnheader").slice(1)) expect(header.className).toContain("whitespace-normal");
     const figures = (date: string) => {
       const row = days.getByText(date).closest("tr")!;
       return Object.fromEntries([...row.querySelectorAll("[data-mrp-figure]")].map((cell) => [cell.getAttribute("data-mrp-figure"), cell.textContent]));

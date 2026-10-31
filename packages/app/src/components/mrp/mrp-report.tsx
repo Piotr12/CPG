@@ -97,6 +97,8 @@ function PlanDays({ plan, locale, labels: t }: { plan: MrpPlanView; locale: Loca
     id: key,
     header: t.figures[key],
     kind: "quantity",
+    // Headers like "Projected before proposals" wrap, so all nine columns fit beside the menu at 1280 px.
+    className: "whitespace-normal",
     cell: (day) => <span data-mrp-figure={key} className={cn(negative(day[key]) && "font-medium text-danger")}>{localeQuantity(day[key], locale)}</span>,
   });
   const columns: DataTableColumn<MrpBucketView>[] = [
