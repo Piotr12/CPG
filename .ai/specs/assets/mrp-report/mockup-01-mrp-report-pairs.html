@@ -1,0 +1,18 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Mockup: MRP report, pair list</title><link rel="stylesheet" href="mockup-base.css"></head><body><div class="app">
+<aside class="side"><div class="brand">CPG</div><div class="switch"><span class="on-test">TEST</span><span>PROD</span></div><div class="hint">Demonstration data, safe to experiment</div><div class="nav"><div>Overview</div><div>Master data</div><div>Sales</div><div>Transactions</div><div class="cur">MRP</div><div>Stock</div><div>Stock import</div><div>Stock report</div><div>Production variance</div><div>Audit</div></div></aside>
+<div class="main top-test"><div class="crumb"><span class="badge b-test">TEST</span> › MRP</div><div class="content">
+<div class="head"><div><h1>MRP — Test</h1><p class="lead">Plans every location of this tenant over the next 90 days.</p></div><button class="btn">Run MRP</button></div>
+<section class="card"><h2>Latest run</h2><p class="desc">Its results stay until the next run replaces them.</p>
+<dl><dt>Run ID</dt><dd>00000004</dd><dt>Time</dt><dd>2026-10-31 07:12 UTC</dd><dt>Account</dt><dd>anna.nowak · UI</dd><dt>Planned days</dt><dd>2026-10-31 – 2027-01-28 (90 days)</dd><dt>Planned pairs</dt><dd>30</dd></dl></section>
+<section class="report"><h2>Report</h2><p class="desc">The latest run's projection, day by day, per material and location. Open a pair to see its 90 days.</p>
+<form class="filters"><div><label>Material</label><div class="field"><i>All materials</i><span>▾</span></div></div><div><label>Location</label><div class="field"><i>All locations</i><span>▾</span></div></div><button class="btn-o" type="button">Apply</button></form>
+<p class="count">30 planned material–location pairs</p>
+<table><thead><tr><th>Material</th><th>Location</th><th class="n">Lowest projected balance</th><th>First shortage</th><th></th></tr></thead><tbody>
+<tr><td>00000001 — Steel sheet 2 mm</td><td>00000001 — Main plant</td><td class="n">1,240 KG</td><td>None</td><td><span class="btn-s">Days</span></td></tr>
+<tr><td>00000002 — Bearing 6204</td><td>00000001 — Main plant</td><td class="n neg">−15.5 PC</td><td>2026-11-04</td><td><span class="btn-s">Days</span></td></tr>
+<tr><td>00000003 — Hex bolt M8</td><td>00000001 — Main plant</td><td class="n">2,000 PC</td><td>None</td><td><span class="btn-s">Days</span></td></tr>
+<tr><td>00000004 — Gear housing</td><td>00000001 — Main plant</td><td class="n neg">−120 PC</td><td>2026-12-01</td><td><span class="btn-s">Days</span></td></tr>
+<tr><td>00000005 — Drive shaft</td><td>00000001 — Main plant</td><td class="n">0 PC</td><td>None</td><td><span class="btn-s">Days</span></td></tr>
+<tr><td>00000006 — Lubricant ISO 68</td><td>00000001 — Main plant</td><td class="n">42.25 L</td><td>None</td><td><span class="btn-s">Days</span></td></tr>
+</tbody></table><div class="pager"><b>Page 1 of 2</b><span>Next ›</span></div></section>
+</div></div></div><div class="note">Illustrative mockup — spec 2026-10-31--0907UTC-mrp-report</div></body></html>
