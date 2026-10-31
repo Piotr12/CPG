@@ -40,13 +40,13 @@ describe("MRP runs through the API", () => {
   const latest = (tenant: "test" | "prod", query = "") => api("GET", `/api/tenants/${tenant}/mrp/runs/latest${query}`);
   const latestRun = async (tenant: "test" | "prod") => (json(await latest(tenant)).data as MrpLatestView).run;
   const setReadOnly = (readOnly: boolean) => api("PATCH", "/api/tenants/prod", adminSecret, { key: randomUUID(), body: { readOnly } });
-  /** This file's pair in the latest Prod run, paging with the run's ID so every page is of that run. */
-  async function ourPlan(run: MrpRunView): Promise<MrpPlanView | undefined> {
+  /** One of this file's pairs in the latest Prod run, paging with the run's ID so every page is of that run. */
+  async function ourPlan(run: MrpRunView, target = pair): Promise<MrpPlanView | undefined> {
     for (let page = 1; ; page += 1) {
       const response = await latest("prod", `?page=${page}&run=${run.id}`);
       expect(response.status, response.text).toBe(200);
       const { plans } = json(response).data as MrpLatestView;
-      const found = plans.find(({ material, location }) => material === pair.material && location === pair.location);
+      const found = plans.find(({ material, location }) => material === target.material && location === target.location);
       if (found || plans.length === 0) return found;
     }
   }
@@ -97,6 +97,38 @@ describe("MRP runs through the API", () => {
     expect(plan?.buckets[3]).toMatchObject({ date: day(3), firmDemand: "20.000000", projectedBefore: "-15.000000", shortage: "15.000000" });
     const stock = json(await api("GET", `/api/tenants/prod/reports/stock?material=${pair.material}&location=${pair.location}`)).data as { rows: { quantity: string }[] };
     expect(stock.rows.map(({ quantity }) => quantity)).toEqual(["5.000000"]);
+  });
+
+  it("projects open purchasing supply once: 60 ordered and 40 still requisitioned, an overdue 50 today, nothing cancelled (MRP-012, MRP-013, MRP-015)", async () => {
+    // A second material at the same plant, so the first pair's figures stay put.
+    const supplied = { material: (await created("/api/tenants/prod/materials", { type: "raw", description: "mrpapi steel", baseUnit: "each" })).id, location: pair.location };
+    const supplier = (await created("/api/tenants/prod/suppliers", { name: "mrpapi mill" })).id;
+    const requisition = (body: { quantity: string; requiredDate: string }) =>
+      created("/api/tenants/prod/purchase-requisitions", { material: supplied.material, location: supplied.location, unit: "each", ...body });
+    const converting = await requisition({ quantity: "100", requiredDate: day(10) });
+    await created("/api/tenants/prod/purchase-orders", {
+      supplier,
+      location: supplied.location,
+      lines: [
+        { material: supplied.material, quantity: "60", unit: "each", plannedDate: day(5), requisition: converting.id },
+        { material: supplied.material, quantity: "50", unit: "each", plannedDate: day(-1) },
+      ],
+    });
+    const cancelled = (await requisition({ quantity: "100", requiredDate: day(20) })) as { id: string; version: number };
+    const cancel = await write(`/api/tenants/prod/purchase-requisitions/${cancelled.id}/cancel`, { version: cancelled.version });
+    expect(cancel.status, cancel.text).toBe(200);
+
+    const response = await runIn("prod");
+    expect(response.status, response.text).toBe(200);
+    const plan = await ourPlan(json(response).data as MrpRunView, supplied);
+
+    // The overdue line counts today, the converted 60 on its planned day, and only the requisition's unconverted 40 on its own.
+    expect(plan?.buckets[0]).toMatchObject({ date: day(0), dependableSupply: "50.000000", tentativeSupply: "0.000000", projectedBefore: "50.000000" });
+    expect(plan?.buckets[5]).toMatchObject({ date: day(5), dependableSupply: "60.000000", tentativeSupply: "0.000000", projectedBefore: "110.000000" });
+    expect(plan?.buckets[10]).toMatchObject({ date: day(10), dependableSupply: "0.000000", tentativeSupply: "40.000000", projectedBefore: "150.000000" });
+    expect(plan?.buckets[20]).toMatchObject({ date: day(20), tentativeSupply: "0.000000", projectedBefore: "150.000000" });
+    const others = plan!.buckets.filter((_, index) => ![0, 5, 10].includes(index));
+    expect(others.every(({ tentativeSupply, dependableSupply }) => tentativeSupply === "0.000000" && dependableSupply === "0.000000")).toBe(true);
   });
 
   it("needs an Idempotency-Key, and replays a repeated key without a second run (R07)", async () => {
