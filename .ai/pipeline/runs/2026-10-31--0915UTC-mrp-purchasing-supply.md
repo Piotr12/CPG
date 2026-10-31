@@ -5,7 +5,7 @@
 Source doc: .ai/specs/implemented/2026-10-31--0905UTC-mrp-purchasing-supply.md
 Spec PR: #301 (design only; this branch carries the spec for reading and moves it to `implemented/` at close-out)
 Issue: #276
-Status: in-progress
+Status: complete
 
 ## Goal
 
@@ -61,8 +61,11 @@ As the spec's Implementation Plan says:
   - ten times (300 pairs, 78,000 order lines, 12,100 purchase orders with 34,000 lines, 1,000 requisitions): 1,738 ms, longest stall 78 ms (budget 5 s / 250 ms).
 - `tests/integration/mrp-run-api.test.ts` against a local standalone build (Docker unavailable here, lesson 2026-10-23), fresh `DATA_DIR`: 7 passed, the new purchasing-supply test included.
 - Full gate, 2026-10-31: `npm run lint` 0, `npm run typecheck` 0, `npm run test:coverage` 617 files / 4,780 tests passed at 100% statements, branches, functions and lines, `npm run build` 0.
+- Review: fresh-context `om-code-review` → approve; 4 minors + 2 nits fixed in 5b533b00 (lesson wording, BUY-024 evidence, integration test title, run log kept on the spec PR, standards precondition, plan-test comment).
 
 ## Progress
+
+PR: #306
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
