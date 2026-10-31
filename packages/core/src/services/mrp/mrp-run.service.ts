@@ -2,6 +2,7 @@ import { currentTenant, holdWriteGate, MrpDailyResult, MrpRun, type EntityManage
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
 import type { MrpBucket, MrpResult } from "../../domain/mrp/mrp-result";
 import { planMrp } from "../../domain/mrp/plan-mrp";
+import { summarizePlan } from "../../domain/mrp/report/plan-summary";
 import { MRP_HORIZON_DAYS } from "../../domain/mrp/projection/horizon";
 import { formatSignedQuantity } from "../../domain/stock/signed-quantity";
 import { ConflictError, NotFoundError } from "../../http/errors";
@@ -11,6 +12,8 @@ import { yieldToEventLoop } from "../../http/yield-to-event-loop";
 import { MRP_LATEST_PAGE_SIZE, mrpLatestQuerySchema } from "../../validators/mrp/mrp-latest.schema";
 import type { AuditActor } from "../audit/actor";
 import { recordTenantAudit } from "../audit/audit-recorder";
+import { findLocation, locationsByCode } from "../locations/find-location";
+import { findMaterial, materialsByCode } from "../materials/find-material";
 import type { TenantService } from "../tenants/tenant.service";
 import type { MrpSnapshotService } from "./mrp-snapshot.service";
 import { MRP_FIGURES, toRunView, type MrpBucketView, type MrpFigure, type MrpLatestView, type MrpPlanView, type MrpRunView } from "./mrp-run-view";
@@ -89,21 +92,21 @@ export class MrpRunService {
     return view;
   }
 
-  /** The latest run, or null before the first one. */
-  async current(): Promise<MrpRunView | null> {
-    const run = await this.latestRun();
-    return run ? toRunView(run) : null;
-  }
-
   /**
-   * The latest run and one page of its plans (`mrpLatestQuerySchema`), read in one transaction so a run
-   * committing in between can't pair this run's header with no rows. With `run` (and, since a Test
+   * The last MRP report (E18-S01): the latest run and one page of its plans (`mrpLatestQuerySchema`),
+   * read in one transaction so a run committing in between can't pair this run's header with no rows.
+   * The page and `GET …/mrp/runs/latest` both read it, so the screen and the API show the same figures.
+   *
+   * A `material` or `location` filter narrows the plans; one this tenant doesn't have is
+   * `MATERIAL_NOT_FOUND` / `LOCATION_NOT_FOUND`, checked before the run. With `run` (and, since a Test
    * reset restarts run IDs, `generation`), a newer run is `MRP_RUN_SUPERSEDED`, so a client paging
    * through results never mixes two runs; a run ID past the latest is `MRP_RUN_NOT_FOUND`.
    */
   async latest(raw: Record<string, unknown>): Promise<MrpLatestView> {
     const query = parseInput(mrpLatestQuerySchema, raw);
     return inRequestTransaction(this.em, async () => {
+      if (query.material !== undefined) await findMaterial(this.em, query.material);
+      if (query.location !== undefined) await findLocation(this.em, query.location);
       const run = await this.latestRun();
       if (!run) throw new NotFoundError("MRP_RUN_NOT_FOUND", MRP_RUN_NOT_FOUND);
       if (query.run !== undefined) {
@@ -112,11 +115,14 @@ export class MrpRunService {
         if (otherGeneration || query.run < run.code) throw new ConflictError(MRP_RUN_SUPERSEDED, "MRP_RUN_SUPERSEDED", { run: query.run });
       }
       // Every pair has exactly `horizonDays` rows, so the offset falls on pair boundaries, and the
-      // unique `(tenant, run, material, location, date)` index serves both the filter and the order.
+      // unique `(tenant, run, material, location, date)` index serves the filters and the order alike.
+      const where = { run, ...(query.material !== undefined && { material: query.material }), ...(query.location !== undefined && { location: query.location }) };
+      const filtered = query.material !== undefined || query.location !== undefined;
+      const total = filtered ? (await this.em.count(MrpDailyResult, where)) / run.horizonDays : run.pairs;
       const days = MRP_LATEST_PAGE_SIZE * run.horizonDays;
       const rows = await this.em.find(
         MrpDailyResult,
-        { run },
+        where,
         {
           orderBy: { material: "asc", location: "asc", date: "asc" },
           limit: days,
@@ -125,7 +131,28 @@ export class MrpRunService {
           disableIdentityMap: true,
         },
       );
-      return { run: toRunView(run), page: query.page, pageSize: MRP_LATEST_PAGE_SIZE, total: run.pairs, plans: groupPlans(rows) };
+      return { run: toRunView(run), page: query.page, pageSize: MRP_LATEST_PAGE_SIZE, total, plans: await this.describe(groupPlans(rows)) };
+    });
+  }
+
+  /**
+   * Each plan with what the report shows beside its days: the material's description and base unit,
+   * the location's name, both active flags, and the summary. Masters are never deleted, and a Test reset
+   * clears Test's runs, so every ID a run names resolves.
+   */
+  private async describe(plans: GroupedPlan[]): Promise<MrpPlanView[]> {
+    if (plans.length === 0) return [];
+    const materials = await materialsByCode(this.em, plans.map((plan) => plan.material));
+    const locations = await locationsByCode(this.em, plans.map((plan) => plan.location));
+    return plans.map(({ material, location, buckets }) => {
+      const { description, active, baseUnit } = materials.get(material)!;
+      const site = locations.get(location)!;
+      return {
+        material, materialDescription: description, materialActive: active, baseUnit,
+        location, locationName: site.name, locationActive: site.active,
+        ...summarizePlan(buckets as [MrpBucketView, ...MrpBucketView[]]),
+        buckets,
+      };
     });
   }
 
@@ -155,9 +182,12 @@ export class MrpRunService {
   }
 }
 
+/** One pair's days, before `describe` names it. */
+type GroupedPlan = Pick<MrpPlanView, "material" | "location" | "buckets">;
+
 /** Rows ordered by material, location and date, as one plan per pair. */
-function groupPlans(rows: readonly Pick<MrpDailyResult, "material" | "location" | "date" | MrpFigure>[]): MrpPlanView[] {
-  const plans: MrpPlanView[] = [];
+function groupPlans(rows: readonly Pick<MrpDailyResult, "material" | "location" | "date" | MrpFigure>[]): GroupedPlan[] {
+  const plans: GroupedPlan[] = [];
   for (const row of rows) {
     let plan = plans.at(-1);
     if (!plan || plan.material !== row.material || plan.location !== row.location) {
