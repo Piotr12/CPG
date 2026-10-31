@@ -39,9 +39,9 @@ No spec existed, so `om-auto-write-spec 276` writes one and `om-auto-implement-s
     - the help copy now covers overdue requisitions;
     - the benchmark counts are labelled as a chosen contract.
 - No UI surface changes beyond the `mrp` help paragraph, so no mockups or screenshots: the spec is text-only.
-- 09:40 Opened the spec PR #301 with its labels, the assumptions and a run summary, and handed the issue lock to `om-auto-implement-spec`. It runs on #306 (`feat/mrp-purchasing-supply`, from `main`); its execution plan `.ai/pipeline/runs/2026-10-31--0915UTC-mrp-purchasing-supply.md` is that run's log.
-- 10:20 Building #306 surfaced a slip in the spec's rounding example: 0.3 − 0.2 is `100000n` micro-units, not `200000n`. Corrected here.
-- 11:00 #306 is ready. Its gate is green (100% coverage). `mrp-run-api.test.ts` passed 7/7 on a standalone build. A fresh-context code review approved, and its minors are fixed. The UI evidence is posted, and every required CI check passed on 8c569a5d. The issue lock is released.
+- 09:13 Opened the spec PR #301 with its labels, the assumptions and a run summary, and handed the issue lock to `om-auto-implement-spec`. It runs on #306 (`feat/mrp-purchasing-supply`, from `main`); its execution plan `.ai/pipeline/runs/2026-10-31--0915UTC-mrp-purchasing-supply.md` is that run's log.
+- 09:25 Building #306 surfaced a slip in the spec's rounding example: 0.3 − 0.2 is `100000n` micro-units, not `200000n`. Corrected here.
+- 09:55 #306 is ready. Its gate is green (100% coverage). `mrp-run-api.test.ts` passed 7/7 on a standalone build. A fresh-context code review approved, and its minors are fixed. The UI evidence is posted, and every required CI check passed on 8c569a5d. The issue lock is released.
 
 ## Changes
 
