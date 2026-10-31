@@ -3,7 +3,7 @@
 **Date:** 2026-10-31 09:08 UTC
 **Agent:** Claude Code (cezar, headless) / claude-opus-5-5
 **Spec:** `.ai/specs/2026-10-31--0908UTC-mrp-production-and-transfer-supply.md`
-**Status:** in progress
+**Status:** done
 
 ## Goal
 
@@ -24,6 +24,9 @@ Take #277 end to end with `om-auto-fix-issue`. It is labelled `feature`, so the 
   - **Medium:** the balance stays in `project-buckets.ts` through `dependableBalance`. The dispatch-day trade-off is stated (Q2, edge case). The pair rule for zero-feasible checks is defined (Q9).
   - **Low:** overdue transfers are ordered by planned dispatch day; `abandoned` isn't subtracted from a transfer; the `status` cast; Q4's same-day wording.
 
+- 09:16 Opened spec PR #303 with its labels, assumptions and run summary, and handed the issue lock to `om-auto-implement-spec`. It runs on #307 (`feat/mrp-production-and-transfer-supply`, from `main`); its execution plan `.ai/pipeline/runs/2026-10-31--0915UTC-mrp-production-and-transfer-supply.md` is that run's log.
+- 10:55 #307 is ready. Its gate is green (100% coverage). A fresh-context code review approved, and its minors are fixed. The issue lock is released.
+
 ## Changes
 
 - `.ai/specs/2026-10-31--0908UTC-mrp-production-and-transfer-supply.md`
@@ -35,4 +38,5 @@ Take #277 end to end with `om-auto-fix-issue`. It is labelled `feature`, so the 
 
 ## Follow-ups
 
-- Merge the spec PR before the implementation PR, then delete the spec's active copy once it moves to `implemented/`.
+- Merge #303 before #307. Then merge `main` into #307 and delete the spec's active copy (`tests/ai-filenames.test.ts` enforces it).
+- #307 still needs CI's full integration suite and a human approval.
