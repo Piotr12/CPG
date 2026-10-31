@@ -61,6 +61,7 @@ As the spec's Implementation Plan says:
 - `npm run test:coverage`: exit 0, 619 files and 4,795 tests, every threshold at 100%.
 - Benchmark, run alone: 181 ms realistic, 1,751 ms at ten times, longest stall 103 ms, `planMrp` alone 33 ms. Under the parallel coverage run the figures were 764 ms and 8,658 ms, with a 721 ms stall, inside the CI bounds.
 - `npm run test:integration -- tests/integration/mrp-run-api.test.ts` against a standalone build (`node packages/app/server.js`, fresh `DATA_DIR`), since Docker is unavailable on this machine: 7 tests passed. CI runs the full suite on the image.
+- Code review (fresh-context, `om-auto-review-pr --autofix`): one major and seven minors and nits, all fixed in a79439f2. The major was that no test read from the first of today's month. The new mid-month loader and run tests fail when `from = monthStart(today)` becomes `from = today`. The gate re-ran green: 4,797 tests at 100%, lint, typecheck and build.
 - Mutation checks: removing the engine's `removed` filter before netting, or the firm-demand status filter, fails tests (`plan-mrp.test.ts`, `forecast-demand.test.ts`).
 
 ## Progress
