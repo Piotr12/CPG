@@ -1,6 +1,6 @@
 # MRP purchasing supply: open requisitions as tentative, purchase-order lines as dependable, each quantity once
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-10-31 09:05 UTC
 **Issue:** #276 (E15-S02, epic #267) · **Depends on:** the MRP engine (`implemented/2026-10-27--0525UTC-mrp-engine-projection.md`, #273), MRP runs and the snapshot loader (`implemented/2026-10-27--0556UTC-mrp-runs.md`, #274), purchasing (`implemented/2026-10-20--1636UTC-purchase-requisitions-orders.md`, #86/#87), the document lifecycle (#90, #144), purchasing date edits (`implemented/2026-10-21--2036UTC-purchasing-date-edits.md`, #142) · **Design authority:** `.ai/specs/product-brief.md` (R03, R05, R09, R10, D04, N06), `research/CPG-prd001.pdf` §04 "Supply pipeline and overdue", "Overdue and late", `research/CPG-acceptance.md` MRP-010/012/013/014/015/042, BUY-002/017/018/019/024/026, LFC-024
 
@@ -251,3 +251,15 @@ One phase, one PR: the engine seam, the loader read, their tests, the timing ben
 8. **Docs and catalogue.** In `.ai/docs/engineering-standards.md`'s MRP bullets, name `supply/` and the counting rule: each document's own Open remainder, with no cross-document netting. In `CPG-acceptance.md`, move MRP-010/012/013/014, BUY-017/018/026 and LFC-024 to Partially verified, with Evidence naming the tests above; the report screen (E18-S01) is the missing half. MRP-015 and BUY-019 move the same way, with the overdue mark's display (E18-S02) also missing. Match every clause to an `expect` first (lesson 2026-10-21, "Cite a scenario only where a test asserts it"). Move this spec to `implemented/`.
 
 Each step leaves the suite green. Run `npm run lint`, `npm run typecheck`, `npm run test:coverage` (100%), `npm run build`, and `npm run test:integration -- tests/integration/mrp-run-api.test.ts`.
+
+## Implementation notes
+
+Implemented on #306 (the spec PR is #301), as written:
+- `packages/core/src/domain/mrp/`:
+  - `supply/purchasing-supply.ts` (`purchasingSupply`, `compareSupply`);
+  - the input and result types;
+  - one loop in `plan-mrp.ts`.
+- `packages/core/src/services/mrp/snapshot/purchasing.ts`: `readRequisitions` pages 1,000 at a time. `readPurchaseOrderLines` pages 100 Open headers at a time and reads their lines 10 orders at a time. Both are wired into `MrpSnapshotService.load`.
+- `mrp-run-timing.test.ts` measured 171 ms at the realistic size and 1,738 ms at ten times (12,100 purchase orders with 34,000 lines, 100 of them full 100-line orders). The longest event-loop stall was 78 ms, against budgets of 1 s, 5 s and 250 ms.
+
+Each acceptance criterion of #276 has its own test in `plan-mrp.test.ts`, with today fixed at 1 October 2026. The over-receipt test is named BUY-015, the scenario it asserts, rather than R05; tenant isolation is the loader test's. `tests/integration/mrp-run-api.test.ts` covers MRP-012, MRP-013 and MRP-015's stored figures through the API. The catalogue rows move to Partially verified, since the report screen is E18-S01.
