@@ -55,6 +55,14 @@ As the spec's Implementation Plan says:
 - **Event-loop stalls at ten times.** `planMrp` is synchronous; the benchmark prints its time.
 - **Docker.** If it is unavailable, the integration file runs against a local standalone server (lesson 2026-10-23), and CI runs the image.
 
+## Verification
+
+- `npm run lint`, `npm run typecheck`, `npm run build`: exit 0.
+- `npm run test:coverage`: exit 0, 619 files and 4,795 tests, every threshold at 100%.
+- Benchmark, run alone: 181 ms realistic, 1,751 ms at ten times, longest stall 103 ms, `planMrp` alone 33 ms. Under the parallel coverage run the figures were 764 ms and 8,658 ms, with a 721 ms stall, inside the CI bounds.
+- `npm run test:integration -- tests/integration/mrp-run-api.test.ts` against a standalone build (`node packages/app/server.js`, fresh `DATA_DIR`), since Docker is unavailable on this machine: 7 tests passed. CI runs the full suite on the image.
+- Mutation checks: removing the engine's `removed` filter before netting, or the firm-demand status filter, fails tests (`plan-mrp.test.ts`, `forecast-demand.test.ts`).
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
@@ -75,7 +83,7 @@ As the spec's Implementation Plan says:
 
 ### Phase 3: Evidence and close-out
 
-- [ ] 3.1 API integration test
-- [ ] 3.2 MRP help copy
-- [ ] 3.3 Docs, catalogue, lessons, spec to implemented
-- [ ] 3.4 Full validation gate
+- [x] 3.1 API integration test — 7fa49f39
+- [x] 3.2 MRP help copy — bb1ef724
+- [x] 3.3 Docs, catalogue, lessons, spec to implemented — 3674b111
+- [x] 3.4 Full validation gate — 3674b111
