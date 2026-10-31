@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-31 09:15 UTC
 **Agent:** Claude Code (cezar, headless) / claude-opus-5-5, via `om-auto-fix-issue` → `om-auto-implement-spec` → `om-auto-create-pr`
-Source doc: .ai/specs/2026-10-31--0905UTC-mrp-purchasing-supply.md
+Source doc: .ai/specs/implemented/2026-10-31--0905UTC-mrp-purchasing-supply.md
 Spec PR: #301 (design only; this branch carries the spec for reading and moves it to `implemented/` at close-out)
 Issue: #276
 Status: in-progress
@@ -60,6 +60,7 @@ As the spec's Implementation Plan says:
   - realistic (30 pairs, 7,800 order lines, 1,200 purchase orders with 2,400 lines, 100 requisitions): 171 ms fastest of 3, longest stall 39 ms (budget 1 s / 250 ms);
   - ten times (300 pairs, 78,000 order lines, 12,100 purchase orders with 34,000 lines, 1,000 requisitions): 1,738 ms, longest stall 78 ms (budget 5 s / 250 ms).
 - `tests/integration/mrp-run-api.test.ts` against a local standalone build (Docker unavailable here, lesson 2026-10-23), fresh `DATA_DIR`: 7 passed, the new purchasing-supply test included.
+- Full gate, 2026-10-31: `npm run lint` 0, `npm run typecheck` 0, `npm run test:coverage` 617 files / 4,780 tests passed at 100% statements, branches, functions and lines, `npm run build` 0.
 
 ## Progress
 
@@ -83,4 +84,4 @@ As the spec's Implementation Plan says:
 
 ### Phase 4: Close-out
 
-- [ ] 4.1 Docs, catalogue, spec to implemented, full gate
+- [x] 4.1 Docs, catalogue, spec to implemented, full gate — aecd27d4
