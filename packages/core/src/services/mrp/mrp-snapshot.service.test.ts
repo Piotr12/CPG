@@ -421,11 +421,12 @@ describe("MrpSnapshotService", () => {
         return plan.map(({ detail }) => detail);
       };
       // The tenant filter joins each relation by key; either direction of the status list index seeks.
-      expect((await explain("production_order")).sort()).toEqual([
-        "SEARCH l2 USING INDEX sqlite_autoindex_location_1 (id=?)",
-        "SEARCH o1 USING INDEX sqlite_autoindex_material_1 (id=?)",
-        expect.stringMatching(/^SEARCH p0 USING INDEX production_order_tenant_code_status(_desc)?_code_index \(tenant_code=\? AND status=\?\)$/),
-        "SEARCH r3 USING INDEX sqlite_autoindex_bom_revision_1 (id=?)",
+      const unaliased = (details: string[]) => details.map((detail) => detail.replace(/^SEARCH \w+ /, "SEARCH ")).sort();
+      expect(unaliased(await explain("production_order"))).toEqual([
+        expect.stringMatching(/^SEARCH USING INDEX production_order_tenant_code_status(_desc)?_code_index \(tenant_code=\? AND status=\?\)$/),
+        "SEARCH USING INDEX sqlite_autoindex_bom_revision_1 (id=?)",
+        "SEARCH USING INDEX sqlite_autoindex_location_1 (id=?)",
+        "SEARCH USING INDEX sqlite_autoindex_material_1 (id=?)",
       ]);
       expect((await explain("bom_component")).sort()).toEqual([
         "SEARCH b0 USING INDEX bom_component_revision_id_index (revision_id=?)",

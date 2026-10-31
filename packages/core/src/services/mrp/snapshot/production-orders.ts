@@ -20,7 +20,7 @@ export async function readProductionOrders(em: EntityManager, codes: SnapshotCod
       ProductionOrder,
       { status: "open" },
       {
-        fields: ["code", "output", "location", "recipe", "quantity", "produced", "abandoned", "plannedStart", "plannedFinish", "status"],
+        fields: ["code", "output", "location", "recipe.id", "quantity", "produced", "abandoned", "plannedStart", "plannedFinish", "status"],
         disableIdentityMap: true,
       },
     )
