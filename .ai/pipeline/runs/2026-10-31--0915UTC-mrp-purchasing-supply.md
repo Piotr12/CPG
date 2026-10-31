@@ -54,6 +54,12 @@ As the spec's Implementation Plan says:
 - **Stalls.** Line reads are capped at 10 orders, at most 1,000 rows each. The benchmark adds full 100-line orders.
 - **Docker.** If Docker is unavailable here, the integration file runs against a local standalone server (`CPG_BASE_URL`); CI runs the image.
 
+## Verification
+
+- Timing (`mrp-run-timing.test.ts`, run alone, 2026-10-31):
+  - realistic (30 pairs, 7,800 order lines, 1,200 purchase orders with 2,400 lines, 100 requisitions): 171 ms fastest of 3, longest stall 39 ms (budget 1 s / 250 ms);
+  - ten times (300 pairs, 78,000 order lines, 12,100 purchase orders with 34,000 lines, 1,000 requisitions): 1,738 ms, longest stall 78 ms (budget 5 s / 250 ms).
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
@@ -77,9 +83,3 @@ As the spec's Implementation Plan says:
 ### Phase 4: Close-out
 
 - [ ] 4.1 Docs, catalogue, spec to implemented, full gate
-
-## Verification
-
-- Timing (`mrp-run-timing.test.ts`, run alone, 2026-10-31):
-  - realistic (30 pairs, 7,800 order lines, 1,200 purchase orders with 2,400 lines, 100 requisitions): 171 ms fastest of 3, longest stall 39 ms (budget 1 s / 250 ms);
-  - ten times (300 pairs, 78,000 order lines, 12,100 purchase orders with 34,000 lines, 1,000 requisitions): 1,738 ms, longest stall 78 ms (budget 5 s / 250 ms).
