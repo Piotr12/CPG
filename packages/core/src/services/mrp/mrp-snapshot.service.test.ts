@@ -1,7 +1,23 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { Customer, CustomerOrder, CustomerOrderLine, initOrm, Location, Material, selectTenant, StockBalance, type DocumentState, type Orm, type TenantCode } from "@cpg/db";
+import {
+  Bom,
+  BomComponent,
+  BomRevision,
+  Customer,
+  CustomerOrder,
+  CustomerOrderLine,
+  initOrm,
+  Location,
+  Material,
+  ProductionOrder,
+  selectTenant,
+  StockBalance,
+  type DocumentState,
+  type Orm,
+  type TenantCode,
+} from "@cpg/db";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { loadConfig } from "../../config";
 import { migrateDatabase, toDbOptions } from "../../database";
@@ -59,6 +75,55 @@ describe("MrpSnapshotService", () => {
       material: await em.findOneOrFail(Material, { code: material }),
       location: await em.findOneOrFail(Location, { code: location }),
       quantity,
+    });
+    await em.flush();
+  }
+
+  /** A BOM of `output` with one revision whose lines are `components` (material code → per-output quantity); returns the revision's ID. */
+  async function recipe(tenant: TenantCode, code: string, output: string, components: Record<string, string>): Promise<string> {
+    const em = scoped(tenant);
+    const bom = em.create(Bom, { code, output: await em.findOneOrFail(Material, { code: output }), revision: 1 });
+    const revision = em.create(BomRevision, { bom, number: 1, priority: 1, validFrom: "2026-01-01", validThrough: null });
+    for (const [position, [material, quantity]] of Object.entries(components).entries()) {
+      em.create(BomComponent, {
+        revision,
+        position: position + 1,
+        material: await em.findOneOrFail(Material, { code: material }),
+        quantity,
+        enteredQuantity: quantity,
+        enteredUnit: "kg",
+        numerator: "1",
+        denominator: "1",
+      });
+    }
+    await em.flush();
+    return revision.id;
+  }
+
+  /** A production order of `output` at `location` pinning `revision`, written as a stored row. */
+  async function production(
+    tenant: TenantCode,
+    code: string,
+    revision: string,
+    order: { output?: string; location?: string; quantity: string; plannedStart: string; plannedFinish: string; produced?: string; abandoned?: string; status?: DocumentState },
+  ) {
+    const em = scoped(tenant);
+    em.create(ProductionOrder, {
+      code,
+      output: await em.findOneOrFail(Material, { code: order.output ?? "00000001" }),
+      location: await em.findOneOrFail(Location, { code: order.location ?? "00000001" }),
+      recipe: await em.findOneOrFail(BomRevision, { id: revision }),
+      quantity: order.quantity,
+      enteredQuantity: order.quantity,
+      enteredUnit: "each",
+      numerator: "1",
+      denominator: "1",
+      plannedStart: order.plannedStart,
+      plannedFinish: order.plannedFinish,
+      leadTimeDays: 5,
+      produced: order.produced ?? "0.000000",
+      abandoned: order.abandoned ?? "0.000000",
+      status: order.status ?? "open",
     });
     await em.flush();
   }
@@ -175,6 +240,68 @@ describe("MrpSnapshotService", () => {
     expect(orderLines.map(({ material }) => material).sort()).toEqual(["00000004", "00000104", "00000205"]);
   });
 
+  it("reads Open production orders with their pinned lines as micro-units, sharing a revision's lines between orders", async () => {
+    const revision = await recipe("prod", "00000001", "00000001", { "00000002": "2.5", "00000003": "0.000001" });
+    await production("prod", "00000001", revision, { quantity: "100", produced: "40.5", plannedStart: "2026-09-28", plannedFinish: "2026-10-03" });
+    await production("prod", "00000002", revision, { location: "00000002", quantity: "10", plannedStart: "2026-10-05", plannedFinish: "2026-10-10" });
+
+    const { productionOrders } = await load();
+
+    const lines = expect.arrayContaining([
+      { material: "00000002", perOutput: 2_500_000n },
+      { material: "00000003", perOutput: 1n },
+    ]);
+    expect([...productionOrders].sort((a, b) => a.order.localeCompare(b.order))).toEqual([
+      {
+        order: "00000001", material: "00000001", location: "00000001", plannedStart: "2026-09-28", plannedFinish: "2026-10-03",
+        quantity: micro(100), produced: 40_500_000n, abandoned: 0n, status: "open", components: lines,
+      },
+      {
+        order: "00000002", material: "00000001", location: "00000002", plannedStart: "2026-10-05", plannedFinish: "2026-10-10",
+        quantity: micro(10), produced: 0n, abandoned: 0n, status: "open", components: lines,
+      },
+    ]);
+    expect(productionOrders.every(({ components }) => components.length === 2)).toBe(true);
+  });
+
+  it("reads no production order that isn't Open, nor one starting after the horizon, but one starting on its last day", async () => {
+    const revision = await recipe("prod", "00000001", "00000001", { "00000002": "1" });
+    const dates = { plannedStart: "2026-10-05", plannedFinish: "2026-10-10" };
+    // Each closed order keeps a remainder by arithmetic, so only the status filter keeps it out (lesson 2026-10-27).
+    await production("prod", "00000001", revision, { quantity: "100", produced: "40", status: "closed-early", ...dates });
+    await production("prod", "00000002", revision, { quantity: "100", status: "cancelled", ...dates });
+    await production("prod", "00000003", revision, { quantity: "100", produced: "40", status: "completed", ...dates });
+    await production("prod", "00000004", revision, { quantity: "100", plannedStart: "2026-12-30", plannedFinish: "2027-01-04" });
+    await production("prod", "00000005", revision, { quantity: "100", plannedStart: "2026-12-29", plannedFinish: "2027-01-03" });
+
+    const { productionOrders } = await load();
+
+    expect(productionOrders.map(({ order }) => order)).toEqual(["00000005"]);
+  });
+
+  it("never reads another tenant's production orders (MRP-002)", async () => {
+    for (const [tenant, quantity] of [["prod", "30"], ["test", "70"]] as const) {
+      const revision = await recipe(tenant, "00000001", "00000001", { "00000002": "1" });
+      await production(tenant, "00000001", revision, { quantity, plannedStart: "2026-10-05", plannedFinish: "2026-10-10" });
+    }
+
+    expect((await load("prod")).productionOrders.map(({ quantity }) => quantity)).toEqual([micro(30)]);
+    expect((await load("test")).productionOrders.map(({ quantity }) => quantity)).toEqual([micro(70)]);
+  });
+
+  it("reads the lines of more pinned revisions than one `$in` list holds, chunk by chunk", async () => {
+    for (let number = 1; number <= 101; number += 1) {
+      const code = String(number).padStart(8, "0");
+      const revision = await recipe("prod", code, "00000001", { "00000002": String(number) });
+      await production("prod", code, revision, { quantity: "1", plannedStart: "2026-10-05", plannedFinish: "2026-10-10" });
+    }
+
+    const { productionOrders } = await load();
+
+    expect(productionOrders).toHaveLength(101);
+    for (const { order, components } of productionOrders) expect(components).toEqual([{ material: "00000002", perOutput: micro(Number(order)) }]);
+  });
+
   it("starts the line read from the (tenant, material, removed, status) index and joins each line's order by key", async () => {
     // EXPLAIN the query MikroORM really sends (lesson 2026-10-25), on a schema without ANALYZE statistics.
     const queries: { sql: string; params: readonly unknown[] }[] = [];
@@ -196,6 +323,47 @@ describe("MrpSnapshotService", () => {
         "SEARCH c0 USING INDEX customer_order_line_tenant_code_material_id_removed_status_id_index (tenant_code=? AND material_id=? AND removed=? AND status=?)",
         "SEARCH m2 USING INDEX sqlite_autoindex_material_1 (id=?)",
         "SEARCH o1 USING INDEX sqlite_autoindex_customer_order_1 (id=?)",
+      ]);
+    } finally {
+      await traced.close();
+    }
+  });
+
+  it("seeks the production-order read through the (tenant, status, code) index and the line read by revision", async () => {
+    const queries: { sql: string; params: readonly unknown[] }[] = [];
+    const config = loadConfig({ DATA_DIR: mkdtempSync(path.join(tmpdir(), "cpg-mrp-snapshot-plan-")) });
+    await migrateDatabase(config);
+    const traced = await initOrm(toDbOptions(config), { onQuery: (sql, params) => (queries.push({ sql, params }), sql) });
+    try {
+      const em = traced.em.fork();
+      selectTenant(em, "prod");
+      const output = em.create(Material, { code: "00000001", type: "finished", description: "Cabinet", baseUnit: "each" });
+      const location = em.create(Location, { code: "00000001", name: "Plant" });
+      const bom = em.create(Bom, { code: "00000001", output, revision: 1 });
+      const revision = em.create(BomRevision, { bom, number: 1, priority: 1, validFrom: "2026-01-01", validThrough: null });
+      em.create(ProductionOrder, {
+        code: "00000001", output, location, recipe: revision, quantity: "1.000000", enteredQuantity: "1", enteredUnit: "each", numerator: "1",
+        denominator: "1", plannedStart: "2026-10-05", plannedFinish: "2026-10-10", leadTimeDays: 5,
+      });
+      await em.flush();
+      await new MrpSnapshotService({ em }).load(TODAY);
+      const explain = async (table: string) => {
+        const sent = queries.filter(({ sql }) => sql.startsWith("select") && sql.includes(` from \`${table}\` as `));
+        expect(sent).toHaveLength(1);
+        const plan = await traced.em.getConnection().execute<{ detail: string }[]>(`explain query plan ${sent[0].sql}`, [...sent[0].params]);
+        return plan.map(({ detail }) => detail);
+      };
+      // The tenant filter joins each relation by key; either direction of the status list index seeks.
+      expect((await explain("production_order")).sort()).toEqual([
+        "SEARCH l2 USING INDEX sqlite_autoindex_location_1 (id=?)",
+        "SEARCH o1 USING INDEX sqlite_autoindex_material_1 (id=?)",
+        expect.stringMatching(/^SEARCH p0 USING INDEX production_order_tenant_code_status(_desc)?_code_index \(tenant_code=\? AND status=\?\)$/),
+        "SEARCH r3 USING INDEX sqlite_autoindex_bom_revision_1 (id=?)",
+      ]);
+      expect((await explain("bom_component")).sort()).toEqual([
+        "SEARCH b0 USING INDEX bom_component_revision_id_index (revision_id=?)",
+        "SEARCH m2 USING INDEX sqlite_autoindex_material_1 (id=?)",
+        "SEARCH r1 USING INDEX sqlite_autoindex_bom_revision_1 (id=?)",
       ]);
     } finally {
       await traced.close();

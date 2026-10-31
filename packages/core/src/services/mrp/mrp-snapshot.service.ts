@@ -5,6 +5,7 @@ import { MRP_HORIZON_DAYS } from "../../domain/mrp/projection/horizon";
 import { yieldToEventLoop } from "../../http/yield-to-event-loop";
 import { readCodes } from "./snapshot/codes";
 import { readOrderLines } from "./snapshot/order-lines";
+import { readProductionOrders } from "./snapshot/production-orders";
 import { readStock } from "./snapshot/stock";
 
 /**
@@ -24,7 +25,9 @@ export class MrpSnapshotService {
     const codes = await readCodes(this.em);
     const stock = await readStock(this.em, codes);
     await yieldToEventLoop();
-    const orderLines = await readOrderLines(this.em, codes, addDays(today, MRP_HORIZON_DAYS));
-    return { stock, orderLines, productionOrders: [] };
+    const before = addDays(today, MRP_HORIZON_DAYS);
+    const orderLines = await readOrderLines(this.em, codes, before);
+    const productionOrders = await readProductionOrders(this.em, codes, before);
+    return { stock, orderLines, productionOrders };
   }
 }
