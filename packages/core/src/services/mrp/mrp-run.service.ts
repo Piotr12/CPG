@@ -1,9 +1,11 @@
-import { currentTenant, holdWriteGate, MrpDailyResult, MrpRun, type EntityManager } from "@cpg/db";
+import { currentTenant, holdWriteGate, MrpDailyResult, MrpRecommendation, MrpRun, type EntityManager } from "@cpg/db";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
 import type { MrpBucket, MrpResult } from "../../domain/mrp/mrp-result";
 import { planMrp } from "../../domain/mrp/plan-mrp";
 import { summarizePlan } from "../../domain/mrp/report/plan-summary";
 import { MRP_HORIZON_DAYS } from "../../domain/mrp/projection/horizon";
+import { pairKey } from "../../domain/mrp/projection/pairs";
+import { formatDecimal } from "../../domain/quantities/decimal";
 import { formatSignedQuantity } from "../../domain/stock/signed-quantity";
 import { ConflictError, NotFoundError } from "../../http/errors";
 import { parseInput } from "../../http/parse-input";
@@ -16,7 +18,16 @@ import { findLocation, locationsByCode } from "../locations/find-location";
 import { findMaterial, materialsByCode } from "../materials/find-material";
 import type { TenantService } from "../tenants/tenant.service";
 import type { MrpSnapshotService } from "./mrp-snapshot.service";
-import { MRP_FIGURES, toRunView, type MrpBucketView, type MrpFigure, type MrpLatestView, type MrpPlanView, type MrpRunView } from "./mrp-run-view";
+import {
+  MRP_FIGURES,
+  toRunView,
+  type MrpBucketView,
+  type MrpFigure,
+  type MrpLatestView,
+  type MrpPlanView,
+  type MrpProposalView,
+  type MrpRunView,
+} from "./mrp-run-view";
 
 /**
  * Daily rows per flush. Every flush walks the identity map, so the rows are written in chunks and the
@@ -39,7 +50,8 @@ const bucketFigures = (bucket: MrpBucket) =>
 /**
  * On-demand MRP runs of one tenant (E14-S02, PRD §04): a run plans every location over 90 days from
  * today and stores itself with its daily results; the latest run is shown until a newer one
- * supersedes it. A run writes only its own two tables and its audit entry (R10).
+ * supersedes it. A run writes only its own three tables (the run, its daily results and its
+ * recommendations, E16-S01) and its audit entry (R10).
  */
 export class MrpRunService {
   private readonly em: EntityManager;
@@ -66,8 +78,9 @@ export class MrpRunService {
     const result = planMrp(await this.mrpSnapshotService.load(today), today);
     const highest = await this.em.findOne(MrpRun, {}, { orderBy: { code: "desc" }, fields: ["code"], disableIdentityMap: true });
     const code = nextSequentialId(highest?.code ?? null, { code: "MRP_RUN_IDS_EXHAUSTED", message: "This tenant has used every eight-digit MRP run ID." });
-    // Only the latest run keeps its results (spec Q1). Deleting them before the insert keeps the index small.
+    // Only the latest run keeps its results and proposals (spec Q1). Deleting them before the insert keeps the indexes small.
     await this.em.nativeDelete(MrpDailyResult, {});
+    await this.em.nativeDelete(MrpRecommendation, {});
     const run = this.em.create(MrpRun, {
       code,
       startDate: today,
@@ -131,7 +144,9 @@ export class MrpRunService {
           disableIdentityMap: true,
         },
       );
-      return { run: toRunView(run), page: query.page, pageSize: MRP_LATEST_PAGE_SIZE, total, plans: await this.describe(groupPlans(rows)) };
+      const plans = groupPlans(rows);
+      const proposals = await this.proposalsOf(run, plans, query.location);
+      return { run: toRunView(run), page: query.page, pageSize: MRP_LATEST_PAGE_SIZE, total, plans: await this.describe(plans, proposals) };
     });
   }
 
@@ -140,7 +155,7 @@ export class MrpRunService {
    * the location's name, both active flags, and the summary. Masters are never deleted, and a Test reset
    * clears Test's runs, so every ID a run names resolves.
    */
-  private async describe(plans: GroupedPlan[]): Promise<MrpPlanView[]> {
+  private async describe(plans: GroupedPlan[], proposals: ReadonlyMap<string, MrpProposalView[]>): Promise<MrpPlanView[]> {
     if (plans.length === 0) return [];
     const materials = await materialsByCode(this.em, plans.map((plan) => plan.material));
     const locations = await locationsByCode(this.em, plans.map((plan) => plan.location));
@@ -152,30 +167,59 @@ export class MrpRunService {
         location, locationName: site.name, locationActive: site.active,
         ...summarizePlan(buckets as [MrpBucketView, ...MrpBucketView[]]),
         buckets,
+        proposals: proposals.get(pairKey(material, location)) ?? [],
       };
     });
+  }
+
+  /**
+   * The page's proposals by pair, in one read through the unique `(tenant, run, material, location,
+   * need_date)` index. The page is contiguous in material and location order, so only its first and
+   * last material can have pairs off the page; those rows are read and dropped here.
+   */
+  private async proposalsOf(run: MrpRun, plans: GroupedPlan[], location: string | undefined): Promise<Map<string, MrpProposalView[]>> {
+    const byPair = new Map<string, MrpProposalView[]>(plans.map((plan) => [pairKey(plan.material, plan.location), []]));
+    if (plans.length === 0) return byPair;
+    const materials = [...new Set(plans.map((plan) => plan.material))];
+    const rows = await this.em.find(
+      MrpRecommendation,
+      { run, material: { $in: materials }, ...(location !== undefined && { location }) },
+      { orderBy: { material: "asc", location: "asc", needDate: "asc" }, fields: ["material", "location", "kind", "needDate", "quantity"], disableIdentityMap: true },
+    );
+    for (const { material, location: site, kind, needDate, quantity } of rows) byPair.get(pairKey(material, site))?.push({ kind, needDate, quantity });
+    return byPair;
   }
 
   private latestRun(): Promise<MrpRun | null> {
     return this.em.findOne(MrpRun, {}, { orderBy: { code: "desc" } });
   }
 
-  /** Inserts every planned day in chunks, yielding between them; the run is re-loaded after each `em.clear()`. */
-  private async writeResults(stored: MrpRun, { plans }: MrpResult): Promise<void> {
+  /**
+   * Inserts every planned day, then every proposal, in chunks, yielding between them; the run is
+   * re-loaded after each `em.clear()`. Proposals are above zero, so they go through `formatDecimal`.
+   */
+  private async writeResults(stored: MrpRun, { plans, proposals }: MrpResult): Promise<void> {
     let run = stored;
     let pending = 0;
+    const created = async () => {
+      pending += 1;
+      if (pending < MRP_ROW_CHUNK) return;
+      await this.em.flush();
+      this.em.clear();
+      await yieldToEventLoop();
+      // A cleared reference would fail `TenantGuard`, which accepts only records loaded through the scope.
+      run = await this.em.findOneOrFail(MrpRun, run.id);
+      pending = 0;
+    };
     for (const { material, location, buckets } of plans) {
       for (const bucket of buckets) {
         this.em.create(MrpDailyResult, { run, material, location, date: bucket.date, ...bucketFigures(bucket) });
-        pending += 1;
-        if (pending < MRP_ROW_CHUNK) continue;
-        await this.em.flush();
-        this.em.clear();
-        await yieldToEventLoop();
-        // A cleared reference would fail `TenantGuard`, which accepts only records loaded through the scope.
-        run = await this.em.findOneOrFail(MrpRun, run.id);
-        pending = 0;
+        await created();
       }
+    }
+    for (const { kind, material, location, needDate, quantity } of proposals) {
+      this.em.create(MrpRecommendation, { run, material, location, kind, needDate, quantity: formatDecimal(quantity, { fixed: true }) });
+      await created();
     }
     await this.em.flush();
     this.em.clear();

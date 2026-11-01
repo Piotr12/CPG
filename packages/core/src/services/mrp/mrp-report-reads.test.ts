@@ -26,6 +26,7 @@ const CI_FACTOR = 6;
 const RUNS = 3;
 const DAYS = 90;
 const INDEX = "mrp_daily_result_tenant_code_run_id_material_location_date_unique";
+const PROPOSAL_INDEX = "mrp_recommendation_tenant_code_run_id_material_location_need_date_unique";
 
 const seq = (count: number) => `with recursive s(x) as (select 1 union all select x + 1 from s where x < ${count})`;
 const code = (n: string) => `printf('%08d', ${n})`;
@@ -43,6 +44,9 @@ function seed({ pairs, locations }: (typeof SIZES)[number]): string[] {
     `${seq(pairs * DAYS)}, r(x, m, d) as (select x, 1 + (x - 1) / ${DAYS}, (x - 1) % ${DAYS} from s)
       insert into mrp_daily_result (id, tenant_code, run_id, material, location, date, ${figures.join(", ")})
       select 'r' || x, 'prod', 'run', ${code("m")}, ${code(`1 + m % ${locations}`)}, date('2026-10-31', '+' || d || ' days'), ${figures.map(value).join(", ")} from r`,
+    // One proposal per pair, on the day its balance dips (#278).
+    `${seq(pairs)} insert into mrp_recommendation (id, tenant_code, run_id, material, location, kind, need_date, quantity)
+      select 'p' || x, 'prod', 'run', ${code("x")}, ${code(`1 + x % ${locations}`)}, 'purchase-requisition', date('2026-10-31', '+' || (x % ${DAYS}) || ' days'), '1.500000' from s`,
   ];
 }
 
@@ -94,6 +98,18 @@ describe.each(SIZES)("the MRP report's reads at the $name size", (size) => {
         expect(join).toMatch(/^SEARCH r1 USING INDEX sqlite_autoindex_mrp_run_1 \(id=\?\)$/);
       }
     }
+  });
+
+  it.each(reads)("reads the proposals of %s through their run's unique index, by the page's materials, with no sort (#278)", async (_name, query) => {
+    queries.length = 0;
+    const report = await latest(query);
+    expect(report.plans.every(({ proposals }) => proposals.length === 1)).toBe(true);
+    const sent = queries.filter(({ sql }) => sql.includes("from `mrp_recommendation`"));
+    expect(sent).toHaveLength(1);
+    const plan = (await orm.em.getConnection().execute<{ detail: string }[]>(`explain query plan ${sent[0].sql}`, [...sent[0].params])).map(({ detail }) => detail);
+    expect(plan.filter((line) => line.startsWith("SEARCH m0 "))).toEqual([expect.stringMatching(new RegExp(`^SEARCH m0 USING INDEX ${PROPOSAL_INDEX} \\(tenant_code=\\? AND run_id=\\? AND material=\\?`))]);
+    // Besides the seek, only the tenant filter's join of the run, by key: no sort, no walk.
+    expect(plan.filter((line) => !line.startsWith("SEARCH m0 ") && !/^SEARCH r1 USING INDEX sqlite_autoindex_mrp_run_1 \(id=\?\)$/.test(line))).toEqual([]);
   });
 
   it("answers every read within its budget, fastest of three", async () => {

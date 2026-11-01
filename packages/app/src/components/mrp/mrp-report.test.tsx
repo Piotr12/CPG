@@ -20,6 +20,7 @@ const sheet: MrpPlanView = {
     day("2026-10-06", { projectedBefore: "40.000000", projectedAfter: "40.000000" }),
     day("2026-10-07", { firmDemand: "15.000000", projectedBefore: "25.000000", projectedAfter: "25.000000" }),
   ],
+  proposals: [],
 };
 const bearing: MrpPlanView = {
   ...sheet, material: "00000013", materialDescription: "Bearing", materialActive: false, baseUnit: "each", locationActive: false,

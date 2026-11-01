@@ -1,4 +1,4 @@
-import type { AuditChannel, MrpRun, MrpRunMode } from "@cpg/db";
+import type { AuditChannel, MrpRecommendationKind, MrpRun, MrpRunMode } from "@cpg/db";
 import { addDays } from "../../domain/demand/demand-buckets";
 import type { MrpBucket } from "../../domain/mrp/mrp-result";
 
@@ -57,6 +57,15 @@ export interface MrpPlanView {
   /** The first day with a shortage, or null. */
   firstShortageDate: string | null;
   buckets: MrpBucketView[];
+  /** The run's replenishment proposals for this pair, by need date (E16-S01). */
+  proposals: MrpProposalView[];
+}
+
+/** One stored replenishment proposal (E16-S01): what it would create, the day it covers, a six-decimal BUoM quantity above zero. */
+export interface MrpProposalView {
+  kind: MrpRecommendationKind;
+  needDate: string;
+  quantity: string;
 }
 
 /** `GET /api/tenants/{tenant}/mrp/runs/latest`: the latest run and one page of its plans. */

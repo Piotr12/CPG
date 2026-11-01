@@ -1,13 +1,14 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { Bom, BomComponent, BomRevision, initOrm, isTenantOwned, Location, Material, MrpDailyResult, MrpRun, ProductionOrder, Transfer, type Orm } from "@cpg/db";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { Bom, BomComponent, BomRevision, initOrm, isTenantOwned, Location, Material, MrpDailyResult, MrpRecommendation, MrpRun, MRP_RECOMMENDATION_KINDS, ProductionOrder, Transfer, type MrpRecommendationKind, type Orm } from "@cpg/db";
+import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 import { loadConfig } from "../../config";
 import { createAppContainer } from "../../container/container";
 import type { AppContainer } from "../../container/cradle";
 import { scopeForTenant } from "../../container/tenant-scope";
 import { migrateDatabase, toDbOptions } from "../../database";
+import { MRP_PROPOSAL_KINDS, type MrpProposalKind } from "../../domain/mrp/mrp-result";
 import { inRequestTransaction } from "../../http/request-transaction";
 import type { AuditActor } from "../audit/actor";
 import { MRP_ROW_CHUNK, MRP_RUN_NOT_FOUND, MRP_RUN_SUPERSEDED } from "./mrp-run.service";
@@ -45,6 +46,10 @@ async function order(tenant: string, locationId: string, lines: { material: stri
     { customer: "00000001", location: locationId, lines: lines.map((line) => ({ ...line, unit: "each" })) },
     ANNA,
   );
+}
+/** A planning parameter set at `locationId`: the API's six-decimal quantities, lead time 2 days. */
+async function parameters(tenant: string, materialId: string, locationId: string, procurement: "make" | "buy", minimumQuantity: string, lotMultiple: string) {
+  await (await scope(tenant)).cradle.planningParameterService.create({ material: materialId, location: locationId, procurement, leadTimeDays: 2, minimumQuantity, lotMultiple }, ANNA);
 }
 /** The stored day of one pair of a Prod run, by business IDs. */
 async function day(runId: string, materialId: string, locationId: string, date: string) {
@@ -364,7 +369,7 @@ describe("MrpRunService.latest", () => {
     const { plans } = await latest();
 
     expect(Object.keys(plans[0])).toEqual([
-      "material", "materialDescription", "materialActive", "baseUnit", "location", "locationName", "locationActive", "lowestProjectedBefore", "firstShortageDate", "buckets",
+      "material", "materialDescription", "materialActive", "baseUnit", "location", "locationName", "locationActive", "lowestProjectedBefore", "firstShortageDate", "buckets", "proposals",
     ]);
     expect(plans[0]).toMatchObject({
       material: cabinet.id, materialDescription: "Cabinet", materialActive: false, baseUnit: "each",
@@ -447,9 +452,71 @@ describe("MrpRunService.latest", () => {
   });
 });
 
+describe("MrpRunService: replenishment proposals (#278)", () => {
+  const recommendations = () => sql("select m.code as run, r.material, r.location, r.kind, r.need_date, r.quantity from mrp_recommendation r join mrp_run m on r.run_id = m.id order by m.code, r.material, r.location, r.need_date");
+
+  it("stores a Buy and a Make proposal with their daily receipts, lists them with their plans, and keeps only the latest run's (MAT-016, R10)", async () => {
+    const cabinet = await material("prod", "Cabinet");
+    const store = (await location("prod", "Store")).id;
+    await parameters("prod", cabinet.id, PLANT, "buy", "10.000000", "5.000000");
+    await parameters("prod", cabinet.id, store, "make", "0.000000", "1.000000");
+    await order("prod", PLANT, [{ material: cabinet.id, quantity: "3", requiredDate: "2026-10-05" }]);
+    await order("prod", store, [{ material: cabinet.id, quantity: "3", requiredDate: "2026-10-05" }]);
+    const before = await everyOtherTable();
+
+    await run();
+
+    expect(await everyOtherTable()).toEqual(before);
+    expect(await recommendations()).toEqual([
+      { run: "00000001", material: cabinet.id, location: PLANT, kind: "purchase-requisition", need_date: "2026-10-05", quantity: "10.000000" },
+      { run: "00000001", material: cabinet.id, location: store, kind: "production-order", need_date: "2026-10-05", quantity: "3.000000" },
+    ]);
+    expect(await day("00000001", cabinet.id, PLANT, "2026-10-05")).toMatchObject({ proposed_receipts: "10.000000", projected_before: "-3.000000", projected_after: "7.000000", shortage: "3.000000" });
+    expect(await day("00000001", cabinet.id, store, "2026-10-05")).toMatchObject({ proposed_receipts: "3.000000", projected_after: "0.000000" });
+    const { plans } = await latest();
+    expect(plans.map(({ location: site, proposals }) => [site, proposals])).toEqual([
+      [PLANT, [{ kind: "purchase-requisition", needDate: "2026-10-05", quantity: "10.000000" }]],
+      [store, [{ kind: "production-order", needDate: "2026-10-05", quantity: "3.000000" }]],
+    ]);
+
+    await run();
+    expect((await recommendations()).map(({ run: code }) => code)).toEqual(["00000002", "00000002"]);
+  });
+
+  it("lists each page's proposals only, when a page ends between two locations of one material, and filtered by location", async () => {
+    const store = (await location("prod", "Store")).id;
+    for (let index = 0; index < 13; index += 1) {
+      const product = await material("prod", `Product ${index}`);
+      await stock("prod", product.id, store, "2");
+      await stock("prod", product.id, PLANT, "1");
+    }
+    // Pair 25, the last on page 1, is 00000013 at the plant; its store pair opens page 2.
+    for (const site of [PLANT, store]) {
+      await parameters("prod", "00000013", site, "buy", "0.000000", "1.000000");
+      await order("prod", site, [{ material: "00000013", quantity: site === PLANT ? "4" : "9", requiredDate: "2026-10-07" }]);
+    }
+    await run();
+
+    const first = await latest();
+    const second = await latest({ page: "2" });
+    const proposalsOf = (view: MrpLatestView) => view.plans.filter(({ proposals }) => proposals.length > 0).map(({ material: item, location: site, proposals }) => [item, site, proposals.map(({ quantity }) => quantity)]);
+
+    expect(proposalsOf(first)).toEqual([["00000013", PLANT, ["3.000000"]]]);
+    expect(first.plans.at(-1)).toMatchObject({ material: "00000013", location: PLANT });
+    expect(proposalsOf(second)).toEqual([["00000013", store, ["7.000000"]]]);
+    expect(proposalsOf(await latest({ location: store }))).toEqual([["00000013", store, ["7.000000"]]]);
+    expect((await latest({ material: "00000001" })).plans.every(({ proposals }) => proposals.length === 0)).toBe(true);
+  });
+
+  it("names the proposal kinds the engine sizes, and no other", () => {
+    expect(MRP_RECOMMENDATION_KINDS).toEqual(MRP_PROPOSAL_KINDS);
+    expectTypeOf<MrpRecommendationKind>().toEqualTypeOf<MrpProposalKind>();
+  });
+});
+
 /** Every row of every tenant-owned table but the MRP tables and the tenant audit, read raw. */
 async function everyOtherTable() {
-  const skipped = new Set([MrpRun.meta.className, MrpDailyResult.meta.className, "TenantAuditEvent"]);
+  const skipped = new Set([MrpRun.meta.className, MrpDailyResult.meta.className, MrpRecommendation.meta.className, "TenantAuditEvent"]);
   const result: Record<string, unknown> = {};
   for (const meta of orm.getMetadata().getAll().values()) {
     if (!isTenantOwned(meta) || skipped.has(meta.className)) continue;
