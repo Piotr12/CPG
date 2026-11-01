@@ -48,6 +48,6 @@ Phase 3, proof and paperwork (spec steps 9–11): benchmark, integration tests, 
 
 ### Phase 3: Proof and paperwork
 
-- [ ] 3.1 Benchmark with worst-case lots
+- [x] 3.1 Benchmark with worst-case lots — 19e34249
 - [ ] 3.2 Integration tests
 - [ ] 3.3 Help copy, compatibility, standards, catalogue and spec move
