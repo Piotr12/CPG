@@ -37,6 +37,8 @@ export interface MrpPlan {
   transfersOut: readonly MrpTransferMovement[];
   /** The transfers behind the buckets' transfer receipt, at this destination (#277). */
   transfersIn: readonly MrpTransferMovement[];
+  /** What the plan leaves uncovered, by date, then priority (E16-S02, `priority/rank-shortages.ts`); not stored. */
+  shortages: readonly MrpShortage[];
 }
 
 /** One day of one material at one location. */
@@ -186,6 +188,34 @@ export interface MrpInsufficientTransferStock {
 
 /** An MRP exception. */
 export type MrpException = MrpInsufficientTransferStock;
+
+/**
+ * What an uncovered requirement is, in the order MRP serves them on a day (PRD §04 "Overdue demand and
+ * priority", E16-S02): open documents' needs first, then customer orders, then the forecast residual,
+ * then the safety-stock target.
+ */
+export const MRP_SHORTAGE_KINDS = ["component", "transfer", "customer-order", "forecast", "safety-target"] as const;
+export type MrpShortageKind = (typeof MRP_SHORTAGE_KINDS)[number];
+
+/** One requirement that stock, existing supply and the proposals received by its day can't cover on that day (E16-S02). */
+export interface MrpShortage {
+  kind: MrpShortageKind;
+  /** The bucket the requirement counts in. */
+  date: string;
+  /**
+   * Its priority date: the order line's required date, the forecast's own date, the production order's
+   * start or the transfer's planned dispatch, kept when it counts today; the day itself for the target.
+   */
+  originalDate: string;
+  /** The customer order's, production order's or transfer's business ID; `null` for a forecast and the target. */
+  document: string | null;
+  /** The order line's position; `null` for every other kind. */
+  position: number | null;
+  /** What the requirement needs that day: its quantity, or the target in force. */
+  required: bigint;
+  /** What the day leaves of it uncovered: above zero, at most `required`. */
+  uncovered: bigint;
+}
 
 /** What a proposal would create: never a transfer (N06, TRF-018) and never a purchase order (MRP-030). */
 export const MRP_PROPOSAL_KINDS = ["purchase-requisition", "production-order"] as const;

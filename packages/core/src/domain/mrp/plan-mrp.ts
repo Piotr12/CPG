@@ -16,6 +16,7 @@ import type {
 import { horizonDates, MRP_HORIZON_DAYS } from "./projection/horizon";
 import { comparePairs, pairKey } from "./projection/pairs";
 import { emptyFlows, projectBuckets, type MrpLedger } from "./projection/project-buckets";
+import { rankShortages } from "./priority/rank-shortages";
 import { productionMovements } from "./supply/production-orders";
 import { purchasingSupply } from "./supply/purchasing-supply";
 import { scheduleProposal } from "./sizing/schedule-proposal";
@@ -51,7 +52,8 @@ interface PairDraft extends MrpLedger {
  * day's `proposedReceipts`, so `projectedAfter` keeps its one definition in `projectBuckets`.
  * Parameters name no pairs. Each proposal is then timed (E16-S02): its receipt counts on its planned
  * finish, which is later than its need when the lead time makes it late, and a Beyond Horizon
- * proposal counts in no bucket, so the days before its stock arrives keep their shortage.
+ * proposal counts in no bucket, so the days before its stock arrives keep their shortage. Last, every
+ * pair's uncovered requirements are ranked on its balance after proposals (`rankShortages`).
  */
 export function planMrp(inputs: MrpInputs, today: string): MrpResult {
   const dates = horizonDates(today);
@@ -113,7 +115,8 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
         proposals.push(proposal);
       }
     }
-    return { ...plan, buckets: projectBuckets(plan.physical, flows) };
+    const buckets = projectBuckets(plan.physical, flows);
+    return { ...plan, buckets, shortages: rankShortages({ ...plan, buckets }) };
   });
   return { today, dates, plans, proposals, exceptions: transfers.exceptions };
 }

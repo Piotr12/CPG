@@ -1448,3 +1448,85 @@ describe("planMrp: proposal timing (#279)", () => {
     expect(only(result.plans).buckets[6].proposedReceipts).toBe(q("7"));
   });
 });
+
+describe("planMrp: demand priority (#279)", () => {
+  const day = (offset: number) => addDays(TODAY, offset);
+  const set = (leadTimeDays: number, overrides: Partial<MrpPlanningParameters> = {}): MrpPlanningParameters => ({
+    material: "M1",
+    location: "L1",
+    materialType: "intermediate",
+    procurement: "buy",
+    leadTimeDays,
+    minimumQuantity: 0n,
+    lotMultiple: q("1"),
+    ...overrides,
+  });
+
+  it("DEM-019 end to end: with 15 in stock, an order of 10 is served and the forecast residual of 20 on its day is 15 short", () => {
+    const plan = only(
+      planMrp(inputs({ stock: [stock("M1", "L1", "15")], orderLines: [line({ order: "00000007", quantity: q("10"), requiredDate: day(2) })], forecasts: [forecast(day(2), "30")] }), TODAY).plans,
+    );
+    expect(plan.shortages).toEqual([
+      { kind: "forecast", date: day(2), originalDate: day(2), document: null, position: null, required: q("20"), uncovered: q("15") },
+    ]);
+  });
+
+  it("reports the customer order a late proposal leaves short on its need day, and nothing once the proposal lands", () => {
+    const result = planMrp(inputs({ orderLines: [line({ order: "00000003", quantity: q("5"), requiredDate: day(3) }), line({ quantity: q("1"), requiredDate: day(8) })], planningParameters: [set(7)] }), TODAY);
+    expect(only(result.plans).shortages.map(({ kind, document, date, uncovered }) => [kind, document, date, uncovered])).toEqual([["customer-order", "00000003", day(3), q("5")]]);
+  });
+
+  it("MRP-049: a Beyond Horizon proposal leaves its customer order short on day 20", () => {
+    const result = planMrp(inputs({ orderLines: [line({ quantity: q("5"), requiredDate: day(20) })], planningParameters: [set(120)] }), TODAY);
+    expect(only(result.plans).shortages).toMatchObject([{ kind: "customer-order", date: day(20), uncovered: q("5") }]);
+  });
+
+  it("reports nothing for a pair whose on-time proposals cover every requirement and the target", () => {
+    const result = planMrp(
+      inputs({ stock: [stock("M1", "L1", "3")], orderLines: [line({ quantity: q("5"), requiredDate: day(10) })], safetyTargets: [target(TODAY, "3")], planningParameters: [set(2)] }),
+      TODAY,
+    );
+    expect(result.proposals).toMatchObject([{ needDate: day(10), quantity: q("5") }]);
+    expect(result.proposals.every(({ lateDays }) => lateDays === 0)).toBe(true);
+    expect(only(result.plans).shortages).toEqual([]);
+  });
+
+  it("divides exactly the balance after proposals: a day's new shortages equal its deficit when the day before had none, and the target's gap is safetyGap capped at the target", () => {
+    const result = planMrp(
+      inputs({
+        stock: [stock("M1", "L1", "20"), stock("A", "L1", "10"), stock("M1", "S", "12")],
+        orderLines: [
+          line({ quantity: q("15"), requiredDate: day(-3) }),
+          line({ order: "00000002", quantity: q("8"), requiredDate: day(4) }),
+          line({ order: "00000003", quantity: q("9"), requiredDate: day(4) }),
+          line({ quantity: q("30"), requiredDate: day(40) }),
+          line({ material: "A", quantity: q("5"), requiredDate: day(6) }),
+        ],
+        forecasts: [forecast(day(4), "40"), forecast(day(50), "25")],
+        safetyTargets: [target(TODAY, "6"), target(TODAY, "4", { material: "A" })],
+        requisitions: [requisition({ quantity: q("7"), requiredDate: day(5) })],
+        purchaseOrderLines: [orderLine({ quantity: q("10"), plannedDate: day(12) })],
+        productionOrders: [production({ plannedStart: day(6), plannedFinish: day(9), quantity: q("20") })],
+        transfers: [transfer({ quantity: q("10"), plannedDispatch: day(5), plannedArrival: day(7), source: "S", destination: "L1" })],
+        planningParameters: [set(9, { minimumQuantity: q("10") }), set(9, { material: "A" })],
+      }),
+      TODAY,
+    );
+    expect(result.proposals.some(({ lateDays }) => lateDays > 0)).toBe(true);
+    const kinds = new Set<string>();
+    for (const plan of result.plans) {
+      plan.buckets.forEach(({ date, projectedAfter, safetyTarget }, index) => {
+        const today = plan.shortages.filter((shortage) => shortage.date === date);
+        today.forEach(({ kind }) => kinds.add(kind));
+        const flows = today.filter(({ kind }) => kind !== "safety-target").reduce((sum, { uncovered }) => sum + uncovered, 0n);
+        const before = index === 0 ? plan.physical : plan.buckets[index - 1].projectedAfter;
+        if (projectedAfter >= 0n) expect(flows).toBe(0n);
+        if (before >= 0n) expect(flows).toBe(projectedAfter < 0n ? -projectedAfter : 0n);
+        const gap = safetyGap({ safetyTarget, projectedBefore: projectedAfter });
+        const expected = gap < safetyTarget ? gap : safetyTarget;
+        expect(today.find(({ kind }) => kind === "safety-target")?.uncovered ?? 0n).toBe(expected);
+      });
+    }
+    expect([...kinds].sort()).toEqual(["component", "customer-order", "forecast", "safety-target"]);
+  });
+});
