@@ -57,6 +57,11 @@ export function addDays(date: string, days: number): string {
   return dateOf(dayNumber(date) + days);
 }
 
+/** The calendar days from `from` to `to`: negative when `to` comes first. */
+export function daysBetween(from: string, to: string): number {
+  return dayNumber(to) - dayNumber(from);
+}
+
 /** The first day of `date`'s calendar month. */
 export function monthStart(date: string): string {
   return `${date.slice(0, 7)}-01`;

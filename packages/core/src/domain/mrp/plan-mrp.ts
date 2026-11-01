@@ -13,11 +13,12 @@ import type {
   MrpSupply,
   MrpTransferMovement,
 } from "./mrp-result";
-import { horizonDates } from "./projection/horizon";
+import { horizonDates, MRP_HORIZON_DAYS } from "./projection/horizon";
 import { comparePairs, pairKey } from "./projection/pairs";
 import { emptyFlows, projectBuckets, type MrpLedger } from "./projection/project-buckets";
 import { productionMovements } from "./supply/production-orders";
 import { purchasingSupply } from "./supply/purchasing-supply";
+import { scheduleProposal } from "./sizing/schedule-proposal";
 import { sizeProposals } from "./sizing/size-proposals";
 import { planTransfers } from "./supply/transfers";
 
@@ -48,7 +49,9 @@ interface PairDraft extends MrpLedger {
  * Sizing runs last (E16-S01): a pair with planning parameters gets its proposals from its balances
  * before proposals, which never count them, and is then projected again with each proposal in its
  * day's `proposedReceipts`, so `projectedAfter` keeps its one definition in `projectBuckets`.
- * Parameters name no pairs.
+ * Parameters name no pairs. Each proposal is then timed (E16-S02): its receipt counts on its planned
+ * finish, which is later than its need when the lead time makes it late, and a Beyond Horizon
+ * proposal counts in no bucket, so the days before its stock arrives keep their shortage.
  */
 export function planMrp(inputs: MrpInputs, today: string): MrpResult {
   const dates = horizonDates(today);
@@ -104,8 +107,11 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
     const parameters = parametersOf.get(pairKey(plan.material, plan.location));
     if (parameters) {
       const sized = sizeProposals({ ...plan, buckets: projectBuckets(plan.physical, flows) }, parameters);
-      for (const proposal of sized) flows[dayOf.get(proposal.date)!].proposedReceipts += proposal.quantity;
-      proposals.push(...sized);
+      for (const item of sized) {
+        const proposal: MrpProposal = { ...item, ...scheduleProposal(item.needDate, item.leadTimeDays, today, MRP_HORIZON_DAYS) };
+        if (!proposal.beyondHorizon) flows[dayOf.get(proposal.plannedFinish)!].proposedReceipts += proposal.quantity;
+        proposals.push(proposal);
+      }
     }
     return { ...plan, buckets: projectBuckets(plan.physical, flows) };
   });

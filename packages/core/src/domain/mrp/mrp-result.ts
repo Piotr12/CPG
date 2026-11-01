@@ -191,17 +191,30 @@ export type MrpException = MrpInsufficientTransferStock;
 export const MRP_PROPOSAL_KINDS = ["purchase-requisition", "production-order"] as const;
 export type MrpProposalKind = (typeof MRP_PROPOSAL_KINDS)[number];
 
-/** A proposed receipt (E16-S01), sized by `sizing/size-proposals.ts`. E16-S02 adds its timing marks. */
-export interface MrpProposal {
+/** A proposed receipt (E16-S01), sized by `sizing/size-proposals.ts` and timed by `sizing/schedule-proposal.ts` (E16-S02). */
+export interface MrpProposal extends MrpProposalTiming {
   kind: MrpProposalKind;
   material: string;
   location: string;
-  /** The day the balance after earlier proposals falls below that day's target: what the receipt must cover. */
+  /** The day the balance after earlier proposals falls below that day's target: what the receipt must cover. It never moves (MRP-037). */
   needDate: string;
-  /** The bucket the receipt counts in: `needDate` until E16-S02 schedules late supply. */
-  date: string;
   /** Above zero, never below the need (R03, MAT-025). */
   quantity: bigint;
-  /** The pair's lead time in whole calendar days, for E16-S02's back-scheduling. */
+  /** The pair's lead time in whole calendar days (N04, MAT-018). */
   leadTimeDays: number;
+}
+
+/**
+ * When a proposal can start and finish (E16-S02, PRD §04 "Overdue and late starts"). Its receipt counts
+ * on `plannedFinish`, unless that is beyond the horizon, where it counts in no bucket.
+ */
+export interface MrpProposalTiming {
+  /** `needDate` less the lead time in calendar days, never before today (MRP-038). */
+  plannedStart: string;
+  /** `needDate` when the lead time allows it; otherwise today plus the lead time, the earliest feasible finish. */
+  plannedFinish: string;
+  /** Late Supply: the calendar days from `needDate` to `plannedFinish`, zero when on time (MRP-037). */
+  lateDays: number;
+  /** Beyond Horizon: `plannedFinish` is after day 89, so the receipt is shown but never in a bucket (MRP-049). */
+  beyondHorizon: boolean;
 }

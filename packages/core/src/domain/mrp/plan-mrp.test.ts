@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { addDays } from "../demand/demand-buckets";
 import { formatDecimal, parseDecimal } from "../quantities/decimal";
 import type {
   MrpForecast,
@@ -1194,6 +1195,8 @@ describe("planMrp: replenishment proposals (#278)", () => {
   const sized = (stockOf: string, need: string, overrides: Partial<MrpPlanningParameters>) =>
     planMrp(inputs({ stock: [stock("M1", "L1", stockOf)], orderLines: [line({ quantity: q(need), requiredDate: DAY })], planningParameters: [set(overrides)] }), TODAY);
   const quantities = (result: ReturnType<typeof planMrp>) => result.proposals.map(({ quantity }) => quantity);
+  /** A need on DAY with a lead time of 3 starts on 2 October and is on time. */
+  const onTime = { plannedStart: "2026-10-02", plannedFinish: DAY, lateDays: 0, beyondHorizon: false };
 
   it("MAT-016: each location uses its own material-location parameters: Buy minimum 10 multiple 5 proposes 10, Make minimum 0 multiple 1 proposes 3", () => {
     const result = planMrp(
@@ -1204,8 +1207,8 @@ describe("planMrp: replenishment proposals (#278)", () => {
       TODAY,
     );
     expect(result.proposals).toEqual([
-      { kind: "purchase-requisition", material: "M1", location: "L1", needDate: DAY, date: DAY, quantity: q("10"), leadTimeDays: 3 },
-      { kind: "production-order", material: "M1", location: "L2", needDate: DAY, date: DAY, quantity: q("3"), leadTimeDays: 3 },
+      { kind: "purchase-requisition", material: "M1", location: "L1", needDate: DAY, quantity: q("10"), leadTimeDays: 3, ...onTime },
+      { kind: "production-order", material: "M1", location: "L2", needDate: DAY, quantity: q("3"), leadTimeDays: 3, ...onTime },
     ]);
     expect(bucketOf(planAt(result.plans, "M1", "L1"), DAY)).toMatchObject({ proposedReceipts: q("10"), projectedBefore: -q("3"), projectedAfter: q("7") });
     expect(bucketOf(planAt(result.plans, "M1", "L2"), DAY)).toMatchObject({ proposedReceipts: q("3"), projectedAfter: 0n });
@@ -1289,7 +1292,7 @@ describe("planMrp: replenishment proposals (#278)", () => {
     expect(quantities(result)).toEqual([q("2.5"), q("1.5")]);
     expect(result.proposals.every(({ quantity }) => typeof quantity === "bigint" && quantity > 0n)).toBe(true);
     const receipts = only(result.plans).buckets.filter(({ proposedReceipts }) => proposedReceipts !== 0n).map(({ date, proposedReceipts }) => [date, proposedReceipts]);
-    expect(receipts).toEqual(result.proposals.map(({ date, quantity }) => [date, quantity]));
+    expect(receipts).toEqual(result.proposals.map(({ plannedFinish, quantity }) => [plannedFinish, quantity]));
   });
 
   it("leaves the balances before proposals and the shortage as they are without parameters", () => {
@@ -1314,7 +1317,8 @@ describe("planMrp: replenishment proposals (#278)", () => {
       inputs({
         orderLines: [line({ quantity: q("5"), requiredDate: "2026-10-03" })],
         purchaseOrderLines: [orderLine({ quantity: q("5"), plannedDate: "2026-10-04" })],
-        planningParameters: [set()],
+        // Lead time 0 keeps the receipt on the need date; a lead time of 3 would make it late (E16-S02).
+        planningParameters: [set({ leadTimeDays: 0 })],
       }),
       TODAY,
     );
@@ -1346,5 +1350,101 @@ describe("planMrp: replenishment proposals (#278)", () => {
       ["M2", "L1", DAY],
     ]);
     expect(planMrp(inputs({ orderLines: [...orderLines].reverse(), planningParameters: [...planningParameters].reverse() }), TODAY)).toEqual(forward);
+  });
+});
+
+describe("planMrp: proposal timing (#279)", () => {
+  /** Today plus `offset` days. */
+  const day = (offset: number) => addDays(TODAY, offset);
+  /** A Buy set of M1 at L1 with `leadTimeDays`, minimum 0, multiple 1, unless overridden. */
+  const set = (leadTimeDays: number, overrides: Partial<MrpPlanningParameters> = {}): MrpPlanningParameters => ({
+    material: "M1",
+    location: "L1",
+    materialType: "intermediate",
+    procurement: "buy",
+    leadTimeDays,
+    minimumQuantity: 0n,
+    lotMultiple: q("1"),
+    ...overrides,
+  });
+  const planned = (orderLines: MrpOrderLine[], parameters: MrpPlanningParameters) => planMrp(inputs({ orderLines, planningParameters: [parameters] }), TODAY);
+
+  it("MAT-018: a need on 15 October with a lead time of 7 starts on 8 October, in calendar days, and is received on its need date", () => {
+    const result = planned([line({ quantity: q("5"), requiredDate: "2026-10-15" })], set(7));
+    expect(result.proposals).toMatchObject([{ needDate: "2026-10-15", plannedStart: "2026-10-08", plannedFinish: "2026-10-15", lateDays: 0, beyondHorizon: false }]);
+    expect(bucketOf(only(result.plans), "2026-10-15")).toMatchObject({ proposedReceipts: q("5"), projectedAfter: 0n });
+  });
+
+  it("MRP-037: a need on day 3 with a lead time of 7 starts today, finishes on day 7, is 4 days late, and keeps its need on day 3", () => {
+    const result = planned([line({ quantity: q("5"), requiredDate: day(3) })], set(7));
+    expect(result.proposals).toEqual([
+      { kind: "purchase-requisition", material: "M1", location: "L1", needDate: day(3), quantity: q("5"), leadTimeDays: 7, plannedStart: TODAY, plannedFinish: day(7), lateDays: 4, beyondHorizon: false },
+    ]);
+    expect(only(result.plans).firmDemand).toMatchObject([{ requiredDate: day(3), date: day(3) }]);
+  });
+
+  it("counts a late proposal's receipt on its feasible finish, not its need date, so the days in between show the shortage", () => {
+    const plan = only(planned([line({ quantity: q("5"), requiredDate: day(3) })], set(7)).plans);
+    const after = plan.buckets.map(({ projectedAfter }) => projectedAfter);
+    expect(after.slice(0, 3)).toEqual([0n, 0n, 0n]);
+    expect(after.slice(3, 7)).toEqual([-q("5"), -q("5"), -q("5"), -q("5")]);
+    expect(after.slice(7).every((balance) => balance === 0n)).toBe(true);
+    expect(plan.buckets.map(({ proposedReceipts }) => proposedReceipts).findIndex((receipt) => receipt !== 0n)).toBe(7);
+    expect(bucketOf(plan, day(7)).proposedReceipts).toBe(q("5"));
+  });
+
+  it("MRP-038: an overdue production need starts today and finishes on day 4, and no proposal of the run starts before today", () => {
+    const made = set(4, { procurement: "make" });
+    const result = planMrp(
+      inputs({
+        orderLines: [
+          line({ quantity: q("3"), requiredDate: "2026-09-30" }),
+          line({ material: "M2", quantity: q("3"), requiredDate: day(2) }),
+          line({ material: "M3", quantity: q("3"), requiredDate: day(40) }),
+        ],
+        planningParameters: [made, set(9, { material: "M2" }), set(30, { material: "M3" })],
+      }),
+      TODAY,
+    );
+    expect(result.proposals[0]).toMatchObject({ kind: "production-order", needDate: TODAY, plannedStart: TODAY, plannedFinish: day(4), lateDays: 4 });
+    expect(result.proposals).toHaveLength(3);
+    expect(result.proposals.every(({ plannedStart }) => plannedStart >= TODAY)).toBe(true);
+    expect(result.proposals.map(({ plannedStart }) => plannedStart)).toEqual([TODAY, TODAY, day(10)]);
+  });
+
+  it("MRP-049: a need on day 20 with a Buy lead time of 120 is Late Supply by 100 days and Beyond Horizon on day 120, raising no bucket", () => {
+    const result = planned([line({ quantity: q("5"), requiredDate: day(20) })], set(120));
+    expect(result.proposals).toMatchObject([{ needDate: day(20), plannedStart: TODAY, plannedFinish: addDays(TODAY, 120), lateDays: 100, beyondHorizon: true }]);
+    const plan = only(result.plans);
+    expect(plan.buckets).toHaveLength(90);
+    expect(plan.buckets.every(({ proposedReceipts }) => proposedReceipts === 0n)).toBe(true);
+    expect(plan.buckets.slice(20).every(({ projectedAfter, shortage }) => projectedAfter === -q("5") && shortage === q("5"))).toBe(true);
+    expect(plan.buckets.slice(0, 20).every(({ projectedAfter }) => projectedAfter === 0n)).toBe(true);
+  });
+
+  it("MRP-004 (Q2): a line due on day 90 is in no bucket and gets no proposal; a finish on day 89 is in the horizon, one on day 90 is beyond it", () => {
+    expect(planned([line({ quantity: q("5"), requiredDate: "2026-12-30" })], set(0)).proposals).toEqual([]);
+    const lastDay = planned([line({ quantity: q("5"), requiredDate: day(10) })], set(89));
+    expect(lastDay.proposals).toMatchObject([{ plannedFinish: day(89), beyondHorizon: false }]);
+    expect(only(lastDay.plans).buckets[89].proposedReceipts).toBe(q("5"));
+    const beyond = planned([line({ quantity: q("5"), requiredDate: day(10) })], set(90));
+    expect(beyond.proposals).toMatchObject([{ plannedFinish: addDays(TODAY, 90), beyondHorizon: true }]);
+    expect(only(beyond.plans).buckets.every(({ proposedReceipts }) => proposedReceipts === 0n)).toBe(true);
+  });
+
+  it("sizes from need dates only (Q9): a late lot whose surplus covers the next day's need gets no second proposal before it lands", () => {
+    const result = planned([line({ quantity: q("3"), requiredDate: day(3) }), line({ quantity: q("2"), requiredDate: day(4) })], set(7, { minimumQuantity: q("10") }));
+    expect(result.proposals).toMatchObject([{ needDate: day(3), quantity: q("10"), plannedFinish: day(7), lateDays: 4 }]);
+    const after = only(result.plans).buckets.map(({ projectedAfter }) => projectedAfter);
+    expect([after[3], after[4], after[6], after[7]]).toEqual([-q("3"), -q("5"), -q("5"), q("5")]);
+  });
+
+  it("adds late proposals landing on the same feasible day together, each late by its own need", () => {
+    const result = planned([line({ quantity: q("3"), requiredDate: day(2) }), line({ quantity: q("4"), requiredDate: day(5) })], set(6));
+    expect(result.proposals.map(({ needDate, plannedFinish, lateDays }) => [needDate, plannedFinish, lateDays])).toEqual([
+      [day(2), day(6), 4],
+      [day(5), day(6), 1],
+    ]);
+    expect(only(result.plans).buckets[6].proposedReceipts).toBe(q("7"));
   });
 });
