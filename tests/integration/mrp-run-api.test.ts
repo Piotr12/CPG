@@ -172,8 +172,9 @@ describe("MRP runs through the API", () => {
     const plans = (json(filtered).data as MrpLatestView).plans;
 
     expect(plans.map(({ location, proposals }) => [location, proposals])).toEqual([
-      [bought, [{ kind: "purchase-requisition", needDate: day(6), quantity: "10.000000" }]],
-      [made, [{ kind: "production-order", needDate: day(6), quantity: "3.000000" }]],
+      // Since E19-S01 (#287) each proposal has its ID, whether it can be accepted (a Make one can't yet), and its document.
+      [bought, [{ id: expect.any(String), kind: "purchase-requisition", needDate: day(6), quantity: "10.000000", executable: true, document: null }]],
+      [made, [{ id: expect.any(String), kind: "production-order", needDate: day(6), quantity: "3.000000", executable: false, document: null }]],
     ]);
     expect(plans[0].buckets[6]).toMatchObject({ date: day(6), proposedReceipts: "10.000000", projectedBefore: "-3.000000", projectedAfter: "7.000000" });
     expect(plans[1].buckets[6]).toMatchObject({ date: day(6), proposedReceipts: "3.000000", projectedBefore: "-3.000000", projectedAfter: "0.000000" });

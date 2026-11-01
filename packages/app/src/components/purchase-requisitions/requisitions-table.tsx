@@ -42,7 +42,19 @@ export function RequisitionsTable({ tenant, requisitions, materials, locations, 
   const amount = (quantity: string, material: string) => `${shownQuantity(quantity)} ${materials.get(material)!.baseUnit}`;
   const dateLabels = { ...labels.changeDate, field: labels.form.requiredDate, cancel: labels.cancel, date: labels.fieldErrors.date };
   const columns: DataTableColumn<RequisitionView>[] = [
-    { id: "id", header: t.id, kind: "id", sortKey: "id", cell: (requisition) => <Highlight text={requisition.id} query={search} /> },
+    {
+      id: "id",
+      header: t.id,
+      kind: "id",
+      sortKey: "id",
+      // One accepted from an MRP proposal names its run under its ID (E19-S01), in view at every width without a column of its own.
+      cell: (requisition) => (
+        <div className="flex flex-col gap-0.5">
+          <Highlight text={requisition.id} query={search} />
+          {requisition.mrpRun && <span className="font-sans text-xs text-muted-foreground" data-requisition-mrp-run>{fill(labels.fromMrpRun, { run: requisition.mrpRun })}</span>}
+        </div>
+      ),
+    },
     {
       id: "material",
       header: t.material,
@@ -87,8 +99,6 @@ export function RequisitionsTable({ tenant, requisitions, materials, locations, 
     { id: "converted", header: t.converted, kind: "quantity", priority: 2, sortKey: "converted", cell: (requisition) => amount(requisition.converted, requisition.material) },
     { id: "outstanding", header: t.outstanding, kind: "quantity", priority: 2, cell: (requisition) => amount(requisition.outstanding, requisition.material) },
     { id: "requiredDate", header: t.requiredDate, kind: "date", priority: 2, sortKey: "requiredDate", cell: (requisition) => requisition.requiredDate },
-    // The MRP run whose proposal created it (E19-S01), or a dash for one entered by hand.
-    { id: "mrpRun", header: t.mrpRun, kind: "id", priority: 2, cell: (requisition) => <span data-requisition-mrp-run>{requisition.mrpRun ?? "—"}</span> },
     {
       id: "status",
       header: t.status,

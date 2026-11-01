@@ -107,6 +107,6 @@ describe("accepting an MRP proposal in the UI", () => {
     // The requisition's row names the run it came from.
     await ola.click("[data-mrp-document]");
     await ola.waitUntil(`location.pathname.endsWith("/purchase-requisitions") && Boolean(${shown("[data-requisition-mrp-run]")})`);
-    expect(await ola.evaluate<string>(`${shown("[data-requisition-mrp-run]")}.textContent`)).toBe(run.id);
+    expect(await ola.evaluate<string>(`${shown("[data-requisition-mrp-run]")}.textContent`)).toBe(`MRP run ${run.id}`);
   });
 });

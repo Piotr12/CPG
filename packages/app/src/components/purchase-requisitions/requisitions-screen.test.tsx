@@ -40,8 +40,8 @@ describe("RequisitionsScreen", () => {
   it("names the MRP run an accepted proposal created a requisition from, and a dash for one entered by hand (E19-S01)", () => {
     render(<RequisitionsScreen {...props} />);
 
-    expect(within(screen.getByRole("table")).getByRole("columnheader", { name: "MRP run" })).toBeTruthy();
-    expect(rows().map((row) => row.querySelector("[data-requisition-mrp-run]")?.textContent)).toEqual(["—", "00000004", "—"]);
+    expect(rows().map((row) => row.querySelector("[data-requisition-mrp-run]")?.textContent ?? null)).toEqual([null, "MRP run 00000004", null]);
+    expect(within(rows()[1]).getAllByRole("cell")[0].textContent).toBe("00000002MRP run 00000004");
   });
 
   it("badges an inactive material in Polish and offers no actions in a read-only tenant", () => {

@@ -1000,8 +1000,9 @@ export const en = {
       outstanding: "Outstanding",
       requiredDate: "Required",
       status: "Status",
-      mrpRun: "MRP run",
     },
+    /** Under the ID of a requisition an MRP proposal created (E19-S01). */
+    fromMrpRun: "MRP run {run}",
     status: { open: "Open", completed: "Completed", "closed-early": "Closed Early", cancelled: "Cancelled" },
     inactive: "Inactive",
     cancel: "Cancel",
