@@ -58,13 +58,13 @@ describe("help topics", () => {
   });
 
   it.each([
-    ["en", "a purchase requisition when the material is bought there", "a gap of 11 becomes 12", "carries into later days", "A proposal creates no document", "need date and quantity"],
+    ["en", "a purchase requisition when the material is bought there", "a gap of 11 becomes 12", "carries into later days", "A proposal creates no document until someone accepts it", "need date and quantity"],
     [
       "pl",
       "zapotrzebowanie zakupowe, gdy materiał jest tam kupowany",
       "brak 11 daje 12",
       "przechodzi na kolejne dni",
-      "Propozycja nie tworzy żadnego dokumentu",
+      "Propozycja nie tworzy żadnego dokumentu, dopóki ktoś jej nie zaakceptuje",
       "dzień potrzeby i ilość",
     ],
   ] as const)("says in %s that a run proposes supply sized to the lot rules, carrying the surplus and creating no document (#278)", (locale, ...phrases) => {
@@ -72,6 +72,17 @@ describe("help topics", () => {
 
     for (const phrase of phrases) expect(text).toContain(phrase);
     expect(text).not.toMatch(/Proposals show zero|Propozycje mają zero/);
+  });
+
+  it.each([
+    ["en", "has Accept: after you confirm", "records the run's ID", "refused as out of date and you run MRP again", "accepted once", "Production-order proposals can't be accepted yet",
+      "/mrp/runs/{run}/proposals/{proposal}/accept"],
+    ["pl", "ma przycisk Akceptuj: po potwierdzeniu", "zapisuje ID przebiegu", "odrzucona jako nieaktualna i trzeba ponownie uruchomić MRP", "zaakceptować raz",
+      "Propozycji zleceń produkcyjnych nie można jeszcze akceptować", "/mrp/runs/{run}/proposals/{proposal}/accept"],
+  ] as const)("says in %s how a proposal is accepted, refused as out of date, and through the API (E19-S01)", (locale, ...phrases) => {
+    const text = helpTopics(locale).find((topic) => topic.id === "mrp")!.body.join(" ");
+
+    for (const phrase of phrases) expect(text).toContain(phrase);
   });
 
   it("is written separately in Polish, not copied from English", () => {
