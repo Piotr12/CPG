@@ -9,6 +9,7 @@ import { summarizePlan } from "../../domain/mrp/report/plan-summary";
 import { MRP_HORIZON_DAYS } from "../../domain/mrp/projection/horizon";
 import { pairKey } from "../../domain/mrp/projection/pairs";
 import { scheduleProposal } from "../../domain/mrp/sizing/schedule-proposal";
+import { isMrpWarningCode, toStoredWarning } from "../../domain/mrp/warnings/overdue";
 import { formatDecimal } from "../../domain/quantities/decimal";
 import { formatSignedQuantity } from "../../domain/stock/signed-quantity";
 import { ConflictError, NotFoundError } from "../../http/errors";
@@ -56,7 +57,7 @@ const bucketFigures = (bucket: MrpBucket) =>
  * On-demand MRP runs of one tenant (E14-S02, PRD §04): a run plans every location over 90 days from
  * today and stores itself with its daily results; the latest run is shown until a newer one
  * supersedes it. A run writes only its own four tables (the run, its daily results, its
- * recommendations, E16-S01, and its exceptions, E16-S03) and its audit entry (R10).
+ * recommendations, E16-S01, and its exceptions, E16-S03, with its warnings, E18-S02) and its audit entry (R10).
  */
 export class MrpRunService {
   private readonly em: EntityManager;
@@ -228,6 +229,8 @@ export class MrpRunService {
       { orderBy: { material: "asc", location: "asc", position: "asc" }, fields: ["material", "location", "exceptionCode", "date", "details"], disableIdentityMap: true },
     );
     for (const row of rows) {
+      // Warnings share the table but are never exceptions (E18-S02, spec Q1): they are the report's marks.
+      if (isMrpWarningCode(row.exceptionCode)) continue;
       const params = exceptionParams({ material: row.material, location: row.location, date: row.date ?? null, details: row.details ?? null });
       byPair.get(pairKey(row.material, row.location))?.push({ code: row.exceptionCode, message: mrpExceptionMessage(row.exceptionCode), params });
     }
@@ -239,11 +242,11 @@ export class MrpRunService {
   }
 
   /**
-   * Inserts every planned day, then every proposal, then every exception at its position in the
-   * run's order, in chunks, yielding between them; the run is re-loaded after each `em.clear()`.
+   * Inserts every planned day, then every proposal, then every exception and every warning at its
+   * position in the run's order, in chunks, yielding between them; the run is re-loaded after each `em.clear()`.
    * Proposals are above zero, so they go through `formatDecimal`.
    */
-  private async writeResults(stored: MrpRun, { plans, proposals, exceptions }: MrpResult): Promise<void> {
+  private async writeResults(stored: MrpRun, { plans, proposals, exceptions, warnings }: MrpResult): Promise<void> {
     let run = stored;
     let pending = 0;
     const created = async () => {
@@ -269,6 +272,12 @@ export class MrpRunService {
     for (const [position, exception] of exceptions.entries()) {
       const { code: exceptionCode, ...stored } = toStoredException(exception);
       this.em.create(MrpRunException, { run, position, exceptionCode, ...stored });
+      await created();
+    }
+    // Warnings follow every exception, so each exception keeps the position it had before them (E18-S02).
+    for (const [index, warning] of warnings.entries()) {
+      const { code: exceptionCode, ...stored } = toStoredWarning(warning);
+      this.em.create(MrpRunException, { run, position: exceptions.length + index, exceptionCode, ...stored });
       await created();
     }
     await this.em.flush();

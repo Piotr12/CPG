@@ -19,6 +19,11 @@ export interface MrpResult {
    * `compareExceptions` order: by material, location, code rank, date, then transfer.
    */
   exceptions: readonly MrpException[];
+  /**
+   * What the plan counts as the documents say but late (E18-S02): every overdue supply item of a
+   * readable material, in `compareWarnings` order. A warning never stops a proposal.
+   */
+  warnings: readonly MrpWarning[];
 }
 
 export interface MrpPlan {
@@ -231,6 +236,47 @@ export interface MrpMissingBom {
 
 /** An MRP exception: `exceptions/codes.ts` lists the codes, their messages and their rank. */
 export type MrpException = MrpInvalidUomConversion | MrpMissingPlanningParameters | MrpMissingBom | MrpInsufficientTransferStock;
+
+/** The document behind an overdue supply item: what `MrpSupply` or `MrpProductionOutput` counts. */
+export type MrpOverdueSource = "purchase-order" | "requisition" | "production-order";
+
+/**
+ * Overdue Supply (MRP-015, MRP-016, BUY-019): an open document's remainder whose own date has passed,
+ * counted on the run's first day, `date`. It keeps the document's date and the quantity counted.
+ */
+export interface MrpOverdueSupply {
+  code: "OVERDUE_SUPPLY";
+  material: string;
+  location: string;
+  date: string;
+  source: MrpOverdueSource;
+  /** The purchase order's, requisition's or production order's business ID. */
+  document: string;
+  /** The purchase-order line's position; absent for a requisition or a production order. */
+  position?: number;
+  /** The document's own date: the line's planned date, the requisition's required date, or the order's planned finish. */
+  plannedDate: string;
+  quantity: bigint;
+}
+
+/**
+ * Overdue Transfer (MRP-040, TRF-016): a transfer arrival whose planned day has passed, counted at the
+ * destination (`location`) on the run's first day, `date`.
+ */
+export interface MrpOverdueTransfer {
+  code: "OVERDUE_TRANSFER";
+  material: string;
+  location: string;
+  date: string;
+  transfer: string;
+  stage: MrpTransferMovement["stage"];
+  /** The planned arrival. */
+  plannedDate: string;
+  quantity: bigint;
+}
+
+/** An MRP warning (E18-S02): stored with the run, shown as a mark, never listed among its exceptions. */
+export type MrpWarning = MrpOverdueSupply | MrpOverdueTransfer;
 
 /**
  * What an uncovered requirement is, in the order MRP serves them on a day (PRD §04 "Overdue demand and

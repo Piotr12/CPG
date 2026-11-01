@@ -652,6 +652,32 @@ describe("MrpRunService: planning exceptions (#280)", () => {
     ]);
   });
 
+  it("stores overdue supply as warnings after the exceptions, and never lists them as exceptions, so the pair keeps its proposals (E18-S02, spec Q1)", async () => {
+    const a = await material("prod", "Cabinet");
+    const store = (await location("prod", "Store")).id;
+    await stock("prod", a.id, PLANT, "6");
+    await parameters("prod", a.id, PLANT, "buy", "0.000000", "1.000000");
+    await parameters("prod", a.id, store, "buy", "0.000000", "1.000000");
+    const { cradle } = await scope();
+    await cradle.transferService.create({ material: a.id, source: PLANT, destination: store, quantity: "10", unit: "each", plannedDispatch: "2026-10-03", plannedArrival: "2026-10-04" }, ANNA);
+    await cradle.supplierService.create({ name: "Timber" }, ANNA);
+    const po = await cradle.purchaseOrderService.create({ supplier: "00000001", location: store, lines: [{ material: a.id, quantity: "4.5", unit: "each", plannedDate: "2026-09-28" }] }, ANNA);
+    await order("prod", store, [{ material: a.id, quantity: "20", requiredDate: "2026-10-08" }]);
+
+    await run();
+
+    const rows = await exceptions();
+    expect(rows.map(({ position, code, location: site, date, details }) => [position, code, site, date, details])).toEqual([
+      [0, "INSUFFICIENT_TRANSFER_STOCK", PLANT, "2026-10-03", expect.any(String)],
+      [1, "OVERDUE_SUPPLY", store, "2026-10-01", JSON.stringify({ source: "purchase-order", document: po.id, position: "1", plannedDate: "2026-09-28", quantity: "4.500000" })],
+    ]);
+    const { plans } = await latest();
+    const atStore = plans.find((plan) => plan.location === store)!;
+    expect(atStore.exceptions).toEqual([]);
+    expect(atStore.proposals.map(({ quantity }) => quantity)).toEqual(["10.000000"]);
+    expect(listed(await latest()).map(([, site, list]) => [site, (list as { code: string }[]).map(({ code }) => code)])).toEqual([[PLANT, ["INSUFFICIENT_TRANSFER_STOCK"]]]);
+  });
+
   it("lists a stored code this image doesn't know with the fallback message, as after a rollback (spec Q7)", async () => {
     const a = await material("prod", "Cabinet");
     await stock("prod", a.id, PLANT, "1");
