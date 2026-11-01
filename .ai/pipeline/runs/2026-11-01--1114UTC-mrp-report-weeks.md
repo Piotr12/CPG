@@ -65,9 +65,9 @@ Implement the spec: overdue supply and overdue transfer arrivals stored as warni
 
 ### Phase 3: The read and the API
 
-- [ ] 3.1 bucket on both schemas
-- [ ] 3.2 latest: warnings out of exceptions, marks, weeks, bucket
-- [ ] 3.3 read budget for the week read, route test
+- [x] 3.1 bucket on both schemas — be3b0130
+- [x] 3.2 latest: warnings out of exceptions, marks, weeks, bucket — be3b0130
+- [x] 3.3 read budget for the week read, route test — be3b0130
 
 ### Phase 4: The screen
 
