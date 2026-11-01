@@ -11,14 +11,19 @@ export const MRP_RUN_ID_MESSAGE = "A run ID is eight digits.";
 /** `generation` says which run `run` is: a Test reset restarts run IDs (D06). */
 export const MRP_GENERATION_NEEDS_RUN_MESSAGE = "Send generation only with the run it belongs to.";
 
+/** How the report shows one pair's days (E18-S02): as days, or folded into weeks for display. */
+export const MRP_REPORT_BUCKETS = ["day", "week"] as const;
+export type MrpReportBucket = (typeof MRP_REPORT_BUCKETS)[number];
+
 /**
  * What the MRP report filters and pages by, on the page and the API alike (E18-S01): a material and
- * a location (empty for the form's "All"), and the page of pairs they leave.
+ * a location (empty for the form's "All"), the page of pairs they leave, and the view (E18-S02).
  */
 const reportFields = {
   material: optionalFilter(materialReferenceSchema),
   location: optionalFilter(locationReferenceSchema),
   page: z.coerce.number().int().min(1).max(1_000_000).default(1),
+  bucket: z.enum(MRP_REPORT_BUCKETS).default("day"),
 };
 
 /**

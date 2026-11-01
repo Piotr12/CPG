@@ -28,9 +28,10 @@ const plan: MrpPlanView = {
     atRiskSupply: zero, transferIn: zero, proposedReceipts: zero, safetyTarget: zero, projectedBefore: "25.000000", projectedAfter: "25.000000", shortage: zero }],
   proposals: [],
   exceptions: [],
+  marks: [],
 };
 const proposal = { id: "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b", kind: "purchase-requisition" as const, needDate: "2026-10-30", quantity: "40.000000", plannedStart: "2026-10-28", plannedFinish: "2026-10-30", lateDays: 0, beyondHorizon: false, executable: true, document: null };
-const report = (overrides: Partial<MrpLatestView> = {}): MrpLatestView => ({ run, page: 1, pageSize: 25, total: 30, plans: [plan], ...overrides });
+const report = (overrides: Partial<MrpLatestView> = {}): MrpLatestView => ({ run, bucket: "day", page: 1, pageSize: 25, total: 30, plans: [plan], ...overrides });
 const steel = { id: "00000012", type: "raw", description: "Steel sheet", baseUnit: "kg", active: true, createdAt: new Date(), version: 1 };
 const plant = { id: "00000003", name: "Main plant", active: true, createdAt: new Date(), version: 1 };
 const scope = (readOnly = false) => ({
@@ -157,8 +158,18 @@ describe("MrpPage", () => {
     expect(screen.getByRole("heading", { level: 2, name: pl.mrp.report.heading })).toBeTruthy();
   });
 
+  it("reads the Week view with the page's query and checks it in the switch (E18-S02)", async () => {
+    mocks.latest.mockResolvedValue(report({ bucket: "week" }));
+
+    render(await resolveServerComponents(page({ bucket: "week" })));
+
+    expect(mocks.latest).toHaveBeenCalledWith({ bucket: "week" });
+    expect(within(screen.getByRole("radiogroup", { name: "View" })).getByRole("radio", { name: "Week" })).toHaveProperty("checked", true);
+  });
+
   it("renders not found for a malformed query, a page-only parameter of the API, a filter the tenant doesn't have, or a missing tenant", async () => {
     await expect(resolveServerComponents(page({ page: "0" }))).rejects.toThrow("404");
+    await expect(resolveServerComponents(page({ bucket: "month" }))).rejects.toThrow("404");
     await expect(resolveServerComponents(page({ run: "00000004" }))).rejects.toThrow("404");
     await expect(resolveServerComponents(page({ includeZero: "true" }))).rejects.toThrow("404");
     expect(mocks.latest).not.toHaveBeenCalled();

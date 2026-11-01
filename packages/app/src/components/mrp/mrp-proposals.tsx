@@ -5,6 +5,7 @@ import { fill } from "../../i18n/fill";
 import type { Messages } from "../../i18n/messages/en";
 import { localeQuantity } from "../forms/form-labels";
 import { AcceptProposalButton } from "./accept-proposal-button";
+import { MrpMarks } from "./mrp-marks";
 
 interface MrpProposalsProps {
   tenant: { code: string };
@@ -22,7 +23,7 @@ interface MrpProposalsProps {
 
 /**
  * The one-pair view's proposals (E19-S01, spec Q8), above its days: what each would create, its need
- * date (with its planned finish when it is late or Beyond Horizon, E16-S02) and quantity, and Accept for
+ * date (with its Late Supply or Beyond Horizon mark, E16-S02, E18-S02) and quantity, and Accept for
  * one that can be accepted, or the document accepting it created.
  * A read-only tenant, or a run from an earlier day, shows no Accept.
  */
@@ -61,13 +62,14 @@ export function MrpProposals({ tenant, run, plan, today, accept, locale, message
       />
     );
   };
+  // A late or Beyond Horizon proposal carries the same warning as its need date's day (E18-S02).
   const needDate = (proposal: MrpProposalView) => {
-    const timing = proposal.beyondHorizon ? "beyondHorizon" : proposal.lateDays > 0 ? "late" : null;
+    const marks = plan.marks.filter((mark) => "proposal" in mark && mark.proposal === proposal.id);
     return (
-      <>
+      <div className="flex flex-col items-start gap-1">
         <span data-mrp-need-date>{proposal.needDate}</span>
-        {timing && <span className="block text-sm text-muted-foreground" data-mrp-timing={timing}>{fill(t[timing], { date: proposal.plannedFinish })}</span>}
-      </>
+        {marks.length > 0 && <div data-mrp-timing={marks[0].kind}><MrpMarks marks={marks} unit={plan.baseUnit} locale={locale} labels={messages.mrp.report.marks} /></div>}
+      </div>
     );
   };
   const columns: DataTableColumn<MrpProposalView>[] = [

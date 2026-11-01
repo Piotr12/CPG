@@ -5,10 +5,13 @@ import { exceptionParams, toStoredException } from "../../domain/mrp/exceptions/
 import type { MrpBucket, MrpResult } from "../../domain/mrp/mrp-result";
 import { isExecutableProposal } from "../../domain/mrp/acceptance/executable-proposal";
 import { planMrp } from "../../domain/mrp/plan-mrp";
+import { planMarks, type StoredWarningRow } from "../../domain/mrp/report/plan-marks";
 import { summarizePlan } from "../../domain/mrp/report/plan-summary";
+import { foldWeeks } from "../../domain/mrp/report/weekly";
 import { MRP_HORIZON_DAYS } from "../../domain/mrp/projection/horizon";
 import { pairKey } from "../../domain/mrp/projection/pairs";
 import { scheduleProposal } from "../../domain/mrp/sizing/schedule-proposal";
+import { isMrpWarningCode, toStoredWarning } from "../../domain/mrp/warnings/overdue";
 import { formatDecimal } from "../../domain/quantities/decimal";
 import { formatSignedQuantity } from "../../domain/stock/signed-quantity";
 import { ConflictError, NotFoundError } from "../../http/errors";
@@ -56,7 +59,7 @@ const bucketFigures = (bucket: MrpBucket) =>
  * On-demand MRP runs of one tenant (E14-S02, PRD §04): a run plans every location over 90 days from
  * today and stores itself with its daily results; the latest run is shown until a newer one
  * supersedes it. A run writes only its own four tables (the run, its daily results, its
- * recommendations, E16-S01, and its exceptions, E16-S03) and its audit entry (R10).
+ * recommendations, E16-S01, and its exceptions, E16-S03, with its warnings, E18-S02) and its audit entry (R10).
  */
 export class MrpRunService {
   private readonly em: EntityManager;
@@ -152,20 +155,24 @@ export class MrpRunService {
       );
       const plans = groupPlans(rows);
       const proposals = await this.proposalsOf(run, plans, query.location);
-      const exceptions = await this.exceptionsOf(run, plans, query.location);
-      return { run: toRunView(run), page: query.page, pageSize: MRP_LATEST_PAGE_SIZE, total, plans: await this.describe(plans, proposals, exceptions) };
+      const { exceptions, warnings } = await this.exceptionsOf(run, plans, query.location);
+      const described = await this.describe(plans, proposals, exceptions, warnings, query.bucket === "week");
+      return { run: toRunView(run), bucket: query.bucket, page: query.page, pageSize: MRP_LATEST_PAGE_SIZE, total, plans: described };
     });
   }
 
   /**
    * Each plan with what the report shows beside its days: the material's description and base unit,
-   * the location's name, both active flags, and the summary. Masters are never deleted, and a Test reset
+   * the location's name, both active flags, the summary, its marks (E18-S02), and its weeks when the
+   * read asked for them. Masters are never deleted, and a Test reset
    * clears Test's runs, so every ID a run names resolves.
    */
   private async describe(
     plans: GroupedPlan[],
     proposals: ReadonlyMap<string, MrpProposalView[]>,
     exceptions: ReadonlyMap<string, MrpExceptionView[]>,
+    warnings: ReadonlyMap<string, StoredWarningRow[]>,
+    weekly: boolean,
   ): Promise<MrpPlanView[]> {
     if (plans.length === 0) return [];
     const materials = await materialsByCode(this.em, plans.map((plan) => plan.material));
@@ -173,14 +180,18 @@ export class MrpRunService {
     return plans.map(({ material, location, buckets }) => {
       const { description, active, baseUnit } = materials.get(material)!;
       const site = locations.get(location)!;
+      const key = pairKey(material, location);
+      // `proposalsOf` and `exceptionsOf` key every plan of the page, with or without rows.
+      const marks = planMarks(proposals.get(key)!, warnings.get(key)!);
       return {
         material, materialDescription: description, materialActive: active, baseUnit,
         location, locationName: site.name, locationActive: site.active,
         ...summarizePlan(buckets as [MrpBucketView, ...MrpBucketView[]]),
         buckets,
-        // `proposalsOf` and `exceptionsOf` key every plan of the page, with or without rows.
-        proposals: proposals.get(pairKey(material, location))!,
-        exceptions: exceptions.get(pairKey(material, location))!,
+        proposals: proposals.get(key)!,
+        exceptions: exceptions.get(key)!,
+        marks,
+        ...(weekly && { weeks: foldWeeks(buckets, marks) }),
       };
     });
   }
@@ -214,13 +225,19 @@ export class MrpRunService {
   }
 
   /**
-   * The page's exceptions by pair, in run order, read like `proposalsOf` through the unique `(tenant,
-   * run, material, location, position)` index. A code this image doesn't know, written by a newer one
-   * before a rollback, is listed with the fallback message (spec Q7).
+   * The page's exceptions and warnings by pair, in run order, read like `proposalsOf` through the unique
+   * `(tenant, run, material, location, position)` index. A code this image doesn't know, written by a
+   * newer one before a rollback, is listed with the fallback message (spec Q7). Warnings share the table
+   * but are never exceptions (E18-S02, spec Q1): they become the report's marks.
    */
-  private async exceptionsOf(run: MrpRun, plans: GroupedPlan[], location: string | undefined): Promise<Map<string, MrpExceptionView[]>> {
+  private async exceptionsOf(
+    run: MrpRun,
+    plans: GroupedPlan[],
+    location: string | undefined,
+  ): Promise<{ exceptions: Map<string, MrpExceptionView[]>; warnings: Map<string, StoredWarningRow[]> }> {
     const byPair = new Map<string, MrpExceptionView[]>(plans.map((plan) => [pairKey(plan.material, plan.location), []]));
-    if (plans.length === 0) return byPair;
+    const warnings = new Map<string, StoredWarningRow[]>(plans.map((plan) => [pairKey(plan.material, plan.location), []]));
+    if (plans.length === 0) return { exceptions: byPair, warnings };
     const materials = [...new Set(plans.map((plan) => plan.material))];
     const rows = await this.em.find(
       MrpRunException,
@@ -228,10 +245,14 @@ export class MrpRunService {
       { orderBy: { material: "asc", location: "asc", position: "asc" }, fields: ["material", "location", "exceptionCode", "date", "details"], disableIdentityMap: true },
     );
     for (const row of rows) {
+      if (isMrpWarningCode(row.exceptionCode)) {
+        warnings.get(pairKey(row.material, row.location))?.push({ code: row.exceptionCode, date: row.date ?? null, details: row.details ?? null });
+        continue;
+      }
       const params = exceptionParams({ material: row.material, location: row.location, date: row.date ?? null, details: row.details ?? null });
       byPair.get(pairKey(row.material, row.location))?.push({ code: row.exceptionCode, message: mrpExceptionMessage(row.exceptionCode), params });
     }
-    return byPair;
+    return { exceptions: byPair, warnings };
   }
 
   private latestRun(): Promise<MrpRun | null> {
@@ -239,11 +260,11 @@ export class MrpRunService {
   }
 
   /**
-   * Inserts every planned day, then every proposal, then every exception at its position in the
-   * run's order, in chunks, yielding between them; the run is re-loaded after each `em.clear()`.
+   * Inserts every planned day, then every proposal, then every exception and every warning at its
+   * position in the run's order, in chunks, yielding between them; the run is re-loaded after each `em.clear()`.
    * Proposals are above zero, so they go through `formatDecimal`.
    */
-  private async writeResults(stored: MrpRun, { plans, proposals, exceptions }: MrpResult): Promise<void> {
+  private async writeResults(stored: MrpRun, { plans, proposals, exceptions, warnings }: MrpResult): Promise<void> {
     let run = stored;
     let pending = 0;
     const created = async () => {
@@ -269,6 +290,12 @@ export class MrpRunService {
     for (const [position, exception] of exceptions.entries()) {
       const { code: exceptionCode, ...stored } = toStoredException(exception);
       this.em.create(MrpRunException, { run, position, exceptionCode, ...stored });
+      await created();
+    }
+    // Warnings follow every exception, so each exception keeps the position it had before them (E18-S02).
+    for (const [index, warning] of warnings.entries()) {
+      const { code: exceptionCode, ...stored } = toStoredWarning(warning);
+      this.em.create(MrpRunException, { run, position: exceptions.length + index, exceptionCode, ...stored });
       await created();
     }
     await this.em.flush();

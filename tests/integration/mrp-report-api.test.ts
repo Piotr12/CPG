@@ -19,7 +19,7 @@ const day = (days: number) => new Date(Date.now() + days * 86_400_000).toISOStri
 
 // E18-S01 through the bearer API (R07): GET …/mrp/runs/latest is the last MRP report, filtered by material
 // and location, with the same figures for a normal user and the admin (API-014, UX-021), tenant-scoped
-// (R05), and readable while the tenant is read-only (TEN-018).
+// (R05), and readable while the tenant is read-only (TEN-018). E18-S02: its weeks and marks too.
 describe("the MRP report through the API", () => {
   let admin: Browser;
   let rhea: Browser;
@@ -27,6 +27,7 @@ describe("the MRP report through the API", () => {
   let rheaSecret: string;
   let run: MrpRunView;
   const pair = { material: "", location: "" };
+  const overdue = { location: "", po: "" };
 
   const api = (method: string, path: string, secret = adminSecret, options?: { key?: string; body?: unknown; generation?: number }) =>
     callApi(baseUrl, method, path, secret, options);
@@ -74,6 +75,10 @@ describe("the MRP report through the API", () => {
         { material: pair.material, quantity: "15", unit: "kg", requiredDate: day(6) },
       ],
     });
+    // E18-S02: 20 kg ordered for a second location two days ago and not received, so it is overdue on the first day.
+    overdue.location = (await created("/api/tenants/prod/locations", { name: "mrprapi dock" })).id;
+    const supplier = (await created("/api/tenants/prod/suppliers", { name: "mrprapi mill" })).id;
+    overdue.po = (await created("/api/tenants/prod/purchase-orders", { supplier, location: overdue.location, lines: [{ material: pair.material, quantity: "20", unit: "kg", plannedDate: day(-2) }] })).id;
     const response = await api("POST", "/api/tenants/prod/mrp/runs", rheaSecret, { key: randomUUID(), body: {} });
     expect(response.status, response.text).toBe(200);
     run = json(response).data as MrpRunView;
@@ -108,6 +113,39 @@ describe("the MRP report through the API", () => {
       { date: day(6), firmDemand: "15.000000", projectedBefore: "25.000000" },
     ]);
     expect(plan.buckets).toHaveLength(90);
+  });
+
+  it("gives a normal user and the admin the same weeks with bucket=week, and the daily rows, run ID and time read the same before and after (UX-027, MRP-006, R07)", async () => {
+    const before = await report("prod", ourQuery(), rheaSecret);
+    const [mine, theirs] = [await report("prod", `${ourQuery()}&bucket=week`, rheaSecret), await report("prod", `${ourQuery()}&bucket=week`, adminSecret)];
+    const after = await report("prod", ourQuery(), rheaSecret);
+
+    expect(mine).toEqual(theirs);
+    expect(mine.bucket).toBe("week");
+    const [plan] = mine.plans;
+    expect(plan.buckets).toEqual(before.plans[0].buckets);
+    expect(plan.weeks!.length).toBeGreaterThanOrEqual(13);
+    expect(plan.weeks!.reduce((sum, week) => sum + Number(week.firmDemand), 0)).toBe(25);
+    for (const week of plan.weeks!) expect(week.projectedBefore).toBe(plan.buckets.find(({ date }) => date === week.end)!.projectedBefore);
+    expect(after).toEqual(before);
+    expect(after.run).toEqual(run);
+    expect(before.plans[0]).not.toHaveProperty("weeks");
+
+    const month = await api("GET", `/api/tenants/prod/mrp/runs/latest${ourQuery()}&bucket=month`, rheaSecret);
+    expect([month.status, json(month).error.code]).toEqual([400, "VALIDATION_FAILED"]);
+  });
+
+  it("marks the overdue purchase-order line on the first day with its own date, never as an exception, for both roles (UX-018, MRP-015, BUY-019)", async () => {
+    const query = `?material=${pair.material}&location=${overdue.location}&bucket=week`;
+    const [mine, theirs] = [await report("prod", query, rheaSecret), await report("prod", query, adminSecret)];
+
+    expect(mine).toEqual(theirs);
+    const [plan] = mine.plans;
+    const mark = { kind: "overdue-supply", date: day(0), source: "purchase-order", document: overdue.po, position: 1, plannedDate: day(-2), quantity: "20.000000" };
+    expect(plan.marks).toEqual([mark]);
+    expect(plan.weeks![0].marks).toEqual([mark]);
+    expect(plan.exceptions).toEqual([]);
+    expect(plan.buckets[0]).toMatchObject({ date: day(0), dependableSupply: "20.000000", projectedBefore: "20.000000" });
   });
 
   it("covers every planned pair of the run unfiltered, and narrows by location to this file's pair", async () => {

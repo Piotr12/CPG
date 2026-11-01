@@ -125,13 +125,14 @@ describe("accepting an MRP proposal in the UI", () => {
     expect(await ola.evaluate<string>(`${shown("[data-requisition-mrp-run]")}.textContent`)).toBe(`MRP run ${run.id}`);
   }));
 
-  it("shows a late proposal's planned finish under its need date, and accepts it on its need date (#279, MRP-037, spec Q3)", () => withinOneDay(async () => {
+  it("marks a late proposal's planned finish under its need date, and accepts it on its need date (#279, MRP-037, spec Q3)", () => withinOneDay(async () => {
     // A 2-day lead time can't meet tomorrow: that proposal finishes the day after, a day late.
     await create("/api/tenants/prod/customer-orders", { customer: ids.customer, location: ids.plant, lines: [{ material: ids.sugar, quantity: "5", unit: "kg", requiredDate: day(1) }] });
     await runAndOpen();
     expect(await ola.evaluate<string[]>(`[...document.querySelectorAll("[data-mrp-proposals] [data-mrp-need-date]")].filter((el) => el.offsetParent).map((el) => el.textContent)`))
       .toEqual([day(1), day(4)]);
-    expect(await ola.evaluate<string>(`${shown("[data-mrp-timing=late]")}.textContent`)).toBe(`Late: finishes ${day(2)}`);
+    // Since E18-S02 the note is the Late Supply warning badge, its finish in the reader's short date format.
+    expect(await ola.evaluate<string>(`${shown("[data-mrp-timing=late-supply]")}.textContent`)).toMatch(/^Late Supply · 1 day · finish .+ · 5 kg$/);
     expect(await ola.evaluate<number>(`[...document.querySelectorAll("[data-mrp-timing]")].filter((el) => el.offsetParent).length`)).toBe(1);
 
     // The first Accept is the late proposal's, by need date.
