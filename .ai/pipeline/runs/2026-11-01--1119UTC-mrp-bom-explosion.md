@@ -1,7 +1,7 @@
 # Execution plan — MRP BOM explosion (#281)
 
 Source doc: .ai/specs/implemented/2026-11-01--1107UTC-mrp-bom-explosion.md
-Spec PR: #325 (draft, design-only; Q9 awaits confirmation)
+Spec PR: #325 (design-only; Q9 confirmed by Piotr12 on 2026-11-01)
 Issue: #281
 Engine: om-auto-create-pr (steps: 12, --loop: no)
 
