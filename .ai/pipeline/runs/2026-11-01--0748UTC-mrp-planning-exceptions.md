@@ -44,8 +44,13 @@ The active copy of #278's spec is deleted here too, as on #314, because `tests/a
 ## Log
 
 - 07:48 Branched `feat/mrp-planning-exceptions` from `origin/main`. The spec is copied in from #314's branch, uncommitted, and moves straight to `implemented/` at the end (lesson 2026-10-23, "Don't stack the implementation PR").
-
-- Phase 1 (to 07:55): the engine change reached only four existing tests. Two Make tests needed a BOM fixture. The transfer tests read their exceptions through `planTransferExceptions`, because pairs with no set now add Missing Planning Parameters. One test's order changed to material first (spec Q11). 182 + 11 new engine tests passed, and core typecheck and lint exited 0.
+- Phase 1 (to 07:54): the engine change reached only four existing tests. Two Make tests needed a BOM fixture. The transfer tests read their exceptions through `planTransferExceptions`, because pairs with no set now add Missing Planning Parameters. One test's order changed to material first (spec Q11). 182 + 11 new engine tests passed, and core typecheck and lint exited 0.
+- Phase 2 (to 08:12):
+  - **BOM read plan.** The current-revision read (`$or: [{ bom, number }]`, the production dialog's own shape) seeks `bom_revision` through its tenant index and tests the OR terms per row. That is the reviewer's predicted walk. It runs in SQLite and hydrates only current revisions. The `$in` fallback plans the same way (lesson 2026-10-31), so the observed plan is pinned in `mrp-snapshot.service.test.ts`.
+  - **Column name.** The exception code column is `exception_code`, not `code`. In a tenant-owned table `code` means a business ID, and the Test reset's sequence test collected the new table as a sequence. The migration was regenerated before it was pushed (`Migration20261101080923_mrp_run_exceptions`).
+  - **Line positions.** Customer-order lines are stored from position 0 and purchase-order lines from 1. `document` reports the stored position, as MRP's own firm demand does.
+  - **Rollback test.** Its table list lacked `mrp_recommendation`, so the "rolled back" check could never fail. Both MRP tables are listed now.
+  - **Realistic dataset.** A realistic Test run raises no exception (`test-reset.service.test.ts` prints `[]`).
 
 ## Progress
 
@@ -60,9 +65,9 @@ The active copy of #278's spec is deleted here too, as on #314, because `tests/a
 
 ### Phase 2: Loader and storage
 
-- [ ] 2.1 Readable snapshot seams and BOM read
-- [ ] 2.2 MrpRunException table and migration
-- [ ] 2.3 Store and list exceptions in the run service and API
+- [x] 2.1 Readable snapshot seams and BOM read — acb0ec1a
+- [x] 2.2 MrpRunException table and migration — bf6a8f02
+- [x] 2.3 Store and list exceptions in the run service and API — 2393d6b2
 
 ### Phase 3: Proof and paperwork
 
