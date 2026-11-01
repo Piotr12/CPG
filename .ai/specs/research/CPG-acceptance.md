@@ -438,8 +438,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MAT-017 — Missing parameters explicit
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MAT-017": demand at a site with no planning parameter set raises Missing Planning Parameters dated at the shortage, no proposal, and the demand and shortage still in the buckets), `packages/core/src/domain/mrp/sizing/replenish-pair.test.ts`, `tests/integration/mrp-run-api.test.ts` (the exception and an empty `proposals`, read from the latest run through the API). The UI half, listing it on the MRP report, is E18-S03 (#286). E16-S03, #280.
 - **Given:** Material demand at a site with absent Make/Buy
 - **When:** Run MRP
 - **Then:** Missing Planning Parameters exception; no guessed supply document for affected material.
@@ -493,7 +494,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/services/materials/base-quantity.test.ts` and `packages/core/src/services/materials/material.service.test.ts` (a unit with no conversion is `UNIT_NOT_CONVERTIBLE`, never assumed 1:1). Saving: `packages/core/src/services/boms/bom.service.test.ts` (a BOM line in a unit its material doesn't convert is refused with a field error on that line's unit, `components.N.unit`, next to other lines' errors), `tests/integration/boms-api.test.ts` (a `POST` with a `pallet` line is 400 with that field error), `packages/app/src/components/boms/recipe-form.test.tsx` (the server's line error shown, translated, on its line). MRP's exception waits for slice 3. E03-S01, #22; E04-S01, #26.
+- **Evidence:** `packages/core/src/services/materials/base-quantity.test.ts` and `packages/core/src/services/materials/material.service.test.ts` (a unit with no conversion is `UNIT_NOT_CONVERTIBLE`, never assumed 1:1). Saving: `packages/core/src/services/boms/bom.service.test.ts` (a BOM line in a unit its material doesn't convert is refused with a field error on that line's unit, `components.N.unit`, next to other lines' errors), `tests/integration/boms-api.test.ts` (a `POST` with a `pallet` line is 400 with that field error), `packages/app/src/components/boms/recipe-form.test.tsx` (the server's line error shown, translated, on its line). MRP half: `packages/core/src/services/mrp/snapshot/readable.test.ts` (a factor of zero, negative or not a number is unreadable, never 1:1) and `mrp-snapshot.service.test.ts` (a stored line with a zero denominator is left out and its material raises Invalid UoM Conversion, `mrp-run.service.test.ts`). E03-S01, #22; E04-S01, #26; E16-S03, #280.
 - **Given:** Quantity entered in UoM not convertible for material
 - **When:** Attempt save or run dependent MRP
 - **Then:** Transaction cannot silently assume 1:1; actionable invalid conversion error/exception.
@@ -3000,31 +3001,34 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** Master half: MAT-014's evidence (Make refused for raw). MRP half: `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-033": a raw material whose stored set says Make gets no proposal at all) and `sizing/size-proposals.test.ts`. The exception for such a set is E16-S03 (#280). E16-S01, #278.
+- **Evidence:** Master half: MAT-014's evidence (Make refused for raw). MRP half: `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-033": a raw material whose stored set says Make gets no proposal at all) and `sizing/size-proposals.test.ts`. The exception for such a set: `plan-mrp.test.ts` ("MRP-033" under #280: Missing Planning Parameters with `reason: "raw-make"`, needed or not). E16-S01, #278; E16-S03, #280.
 - **Given:** Raw material has invalid Make setting attempted
 - **When:** Validate master and run
 - **Then:** Invalid master not accepted; MRP cannot produce a raw Make action.
 
 ### MRP-034 — Missing planning parameters isolated
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-034": A without a set raises Missing Planning Parameters, and B's plans and proposals deep-equal a run without A), `tests/integration/mrp-run-api.test.ts` (the API half). The report's exception list is E18-S03 (#286). E16-S03, #280.
 - **Given:** Material A lacks lot data but B valid
 - **When:** Run MRP
 - **Then:** A yields explicit Missing Planning Parameters, B still gets valid result/recommendation.
 
 ### MRP-035 — Missing BOM isolated
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-035": Make A with no BOM, or a current revision ending before or starting after the need date, raises Missing BOM with no proposal, and B plans as without A), `packages/core/src/domain/mrp/sizing/replenish-pair.test.ts` (an inactive BOM is never read: `mrp-snapshot.service.test.ts`), `tests/integration/mrp-run-api.test.ts` (Missing BOM through the API). The report's list is E18-S03 (#286). E16-S03, #280.
 - **Given:** Make intermediate A lacks any date-valid BOM; B valid
 - **When:** Run MRP
 - **Then:** A produces Missing BOM; B planning completes unaffected.
 
 ### MRP-036 — Invalid conversion explicit exception
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** MRP half: `packages/core/src/services/mrp/mrp-snapshot.service.test.ts` ("unreadable rows": each corrupt shape written around the services, such as a zero denominator, a negative or malformed quantity, a date that isn't real or a corrupt BOM line, is left out and reported), `packages/core/src/services/mrp/mrp-run.service.test.ts` ("MRP-036": the run completes, A's Invalid UoM Conversion is stored and listed, and B keeps its proposal), and `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-036": every pair of A, nothing guessed, B unchanged). Entry half: MAT-022's evidence. The UI listing is E18-S03 (#286). E16-S03, #280.
 - **Given:** Legacy or corrupt persisted factor/dependency detected in stored data; normal input validation would have rejected this
 - **When:** Run MRP with affected material
 - **Then:** MRP emits Invalid UoM Conversion without guessing, valid unrelated items still plan; new invalid conversion records are rejected at entry.
@@ -3282,8 +3286,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### RUN-016 — Independent exceptions do not suppress valid planning
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** Planning half: `packages/core/src/domain/mrp/plan-mrp.test.ts` ("RUN-016": A's Missing BOM beside B's Buy proposal in one result, where every proposal is executable). Automatic mode and the atomic batch are E19-S03 (#289). E16-S03, #280.
 - **Given:** Material A missing BOM, material B Buy recommendation valid
 - **When:** Run MRP auto mode
 - **Then:** A exception reported; eligible B recommendation still considered for atomic create batch.
