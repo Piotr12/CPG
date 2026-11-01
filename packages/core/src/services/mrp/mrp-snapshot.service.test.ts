@@ -1008,7 +1008,7 @@ describe("MrpSnapshotService", () => {
     (await em.findOneOrFail(Bom, { code: "00000002" })).active = false;
     await em.flush();
     expect((await load()).boms).toEqual([
-      { bom: "00000001", revision: 2, priority: 1, output: "00000001", validFrom: "2026-11-01", validThrough: "2027-06-30", componentsActive: true, components: [] },
+      { bom: "00000001", revision: 2, priority: 1, output: "00000001", validFrom: "2026-11-01", validThrough: "2027-06-30", inactiveComponents: [], components: [] },
     ]);
   });
 
@@ -1022,25 +1022,31 @@ describe("MrpSnapshotService", () => {
     }
     await em.flush();
     expect((await load()).boms).toEqual([
-      { bom: "00000001", revision: 1, priority: 1, output: "00000001", validFrom: "2026-01-01", validThrough: null, componentsActive: true, components: [{ material: "00000002", perOutput: micro(1) }] },
+      { bom: "00000001", revision: 1, priority: 1, output: "00000001", validFrom: "2026-01-01", validThrough: null, inactiveComponents: [], components: [{ material: "00000002", perOutput: micro(1) }] },
     ]);
   });
 
   describe("BOM lines for the explosion (#281)", () => {
-    it("reads each current revision's lines in base units by position, and whether every component is active", async () => {
+    it("reads each current revision's lines in base units by position, and its inactive components in code order (E17-S02)", async () => {
       await recipe("prod", "00000001", "00000001", { "00000003": "0.250000", "00000002": "2.000000" });
       await recipe("prod", "00000002", "00000003", { "00000002": "1.500000" });
       const em = scoped();
+      // The fixture's 00000003 starts inactive: activate it, so only 00000002 is inactive first.
+      (await em.findOneOrFail(Material, { code: "00000003" })).active = true;
       (await em.findOneOrFail(Material, { code: "00000002" })).active = false;
       await em.flush();
       expect((await load()).boms).toEqual([
-        expect.objectContaining({ bom: "00000001", componentsActive: false, components: [{ material: "00000003", perOutput: 250_000n }, { material: "00000002", perOutput: micro(2) }] }),
-        expect.objectContaining({ bom: "00000002", output: "00000003", componentsActive: false }),
+        expect.objectContaining({ bom: "00000001", inactiveComponents: ["00000002"], components: [{ material: "00000003", perOutput: 250_000n }, { material: "00000002", perOutput: micro(2) }] }),
+        expect.objectContaining({ bom: "00000002", output: "00000003", inactiveComponents: ["00000002"] }),
       ]);
       (await em.findOneOrFail(Material, { code: "00000002" })).active = true;
       (await em.findOneOrFail(Material, { code: "00000003" })).active = false;
       await em.flush();
-      expect((await load()).boms.map(({ bom, componentsActive }) => [bom, componentsActive])).toEqual([["00000001", false], ["00000002", true]]);
+      expect((await load()).boms.map(({ bom, inactiveComponents }) => [bom, inactiveComponents])).toEqual([["00000001", ["00000003"]], ["00000002", []]]);
+      // Both lines of BOM 00000001 inactive: listed by code, though 00000003 is its first line.
+      (await em.findOneOrFail(Material, { code: "00000002" })).active = false;
+      await em.flush();
+      expect((await load()).boms.map(({ bom, inactiveComponents }) => [bom, inactiveComponents])).toEqual([["00000001", ["00000002", "00000003"]], ["00000002", ["00000002"]]]);
     });
 
     it("leaves out a current revision with a line it can't read, reporting the line at its component at each of the output's Make sites, never at a Buy site", async () => {

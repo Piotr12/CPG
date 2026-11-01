@@ -8,7 +8,7 @@ import { createAppContainer } from "../../container/container";
 import type { AppContainer } from "../../container/cradle";
 import { scopeForTenant } from "../../container/tenant-scope";
 import { migrateDatabase, toDbOptions } from "../../database";
-import { MRP_EXCEPTION_FALLBACK_MESSAGE, MRP_EXCEPTION_MESSAGES } from "../../domain/mrp/exceptions/codes";
+import { MRP_EXCEPTION_FALLBACK_MESSAGE, MRP_EXCEPTION_MESSAGES, mrpExceptionMessage } from "../../domain/mrp/exceptions/codes";
 import { MRP_PROPOSAL_KINDS, type MrpProposalKind } from "../../domain/mrp/mrp-result";
 import { inRequestTransaction } from "../../http/request-transaction";
 import type { AuditActor } from "../audit/actor";
@@ -641,8 +641,10 @@ describe("MrpRunService: BOM explosion (#281)", () => {
     await run();
 
     const path = (from: string, via: string, to: string, back: string) => `${from} →(BOM ${via}) ${to} →(BOM ${back}) ${from}`;
-    // Other's own input has no parameters, so it adds Missing Planning Parameters: Other exploded, X and Y didn't.
-    expect(await sql("select e.exception_code as code, e.material, e.details from mrp_run_exception e where e.exception_code <> 'MISSING_PLANNING_PARAMETERS' order by e.position")).toEqual([
+    // Other's own input has no stock or parameters, so Other is provisional (No Feasible BOM, #282) and its input adds
+    // Missing Planning Parameters: Other exploded, X and Y didn't.
+    expect(await sql("select e.exception_code as code from mrp_run_exception e where e.material = ? order by e.position", [other.id])).toEqual([{ code: "NO_FEASIBLE_BOM" }]);
+    expect(await sql("select e.exception_code as code, e.material, e.details from mrp_run_exception e where e.exception_code = 'CYCLIC_BOM' order by e.position")).toEqual([
       { code: "CYCLIC_BOM", material: x.id, details: JSON.stringify({ path: path(x.id, xBom.id, y.id, "00000009") }) },
       { code: "CYCLIC_BOM", material: y.id, details: JSON.stringify({ path: path(y.id, "00000009", x.id, xBom.id) }) },
     ]);
@@ -876,3 +878,93 @@ async function everyOtherTable() {
   }
   return result;
 }
+
+describe("MrpRunService: BOM choice (#282)", () => {
+  const typed = async (type: "finished" | "intermediate" | "raw", description: string) =>
+    (await scope()).cradle.materialService.create({ type, description, baseUnit: "each" }, ANNA);
+  const recipe = async (output: string, components: Record<string, string>, priority = 1) =>
+    (await scope()).cradle.bomService.create(
+      { output, priority, validFrom: "2026-01-01", validThrough: null, components: Object.entries(components).map(([material, quantity]) => ({ material, quantity, unit: "each" })) },
+      ANNA,
+    );
+  const deactivate = async (materialId: string) => {
+    const { cradle } = await scope();
+    const { version } = await cradle.materialService.get(materialId);
+    await inRequestTransaction(cradle.em, () => cradle.materialService.update(materialId, { active: false }, version, ANNA));
+  };
+
+  it("LFC-025, LFC-026: R deactivated through MaterialService makes F's only BOM unusable: Missing Usable BOM is stored and listed, F and R get no proposal, and U still plans", async () => {
+    const f = await typed("finished", "Cabinet");
+    const r = await typed("raw", "Retired steel");
+    const u = await typed("raw", "Unrelated");
+    const fBom = await recipe(f.id, { [r.id]: "1" });
+    await parameters("prod", f.id, PLANT, "make", "0.000000", "0.000001");
+    await parameters("prod", r.id, PLANT, "buy", "0.000000", "0.000001");
+    await parameters("prod", u.id, PLANT, "buy", "0.000000", "0.000001");
+    await order("prod", PLANT, [
+      { material: f.id, quantity: "5", requiredDate: "2026-10-21" },
+      { material: u.id, quantity: "3", requiredDate: "2026-10-21" },
+    ]);
+    // Allowed while only BOMs use R (E10-S05, #191).
+    await deactivate(r.id);
+
+    await run();
+
+    const inactive = `${fBom.id}/1: ${r.id}`;
+    expect(await sql("select exception_code as code, material, date, details from mrp_run_exception order by position")).toEqual([
+      { code: "MISSING_USABLE_BOM", material: f.id, date: "2026-10-21", details: JSON.stringify({ inactive }) },
+    ]);
+    expect((await sql<{ material: string }>("select material from mrp_recommendation")).map(({ material: item }) => item)).toEqual([u.id]);
+    const listed = (await latest()).plans.find(({ material: item }) => item === f.id)!;
+    expect(listed.proposals).toEqual([]);
+    expect(listed.exceptions).toEqual([
+      { code: "MISSING_USABLE_BOM", message: mrpExceptionMessage("MISSING_USABLE_BOM"), params: { material: f.id, location: PLANT, date: "2026-10-21", inactive } },
+    ]);
+    expect((await latest()).plans.some(({ material: item }) => item === r.id)).toBe(false);
+  });
+
+  it("LFC-025: with a priority-2 BOM of active S beside it, F plans through that one while R is inactive, though R is the priority-1 input", async () => {
+    const f = await typed("finished", "Cabinet");
+    const r = await typed("raw", "Retired steel");
+    const s = await typed("raw", "Aluminium");
+    await recipe(f.id, { [r.id]: "1" });
+    const sBom = await recipe(f.id, { [s.id]: "1" }, 2);
+    await parameters("prod", f.id, PLANT, "make", "0.000000", "0.000001");
+    await stock("prod", s.id, PLANT, "10");
+    await order("prod", PLANT, [{ material: f.id, quantity: "5", requiredDate: "2026-10-21" }]);
+    await deactivate(r.id);
+
+    await run();
+
+    expect(await sql("select material, bom from mrp_recommendation")).toEqual([{ material: f.id, bom: sBom.id }]);
+    expect(await sql("select exception_code from mrp_run_exception")).toEqual([]);
+  });
+
+  it("stores No Feasible BOM for a proposal its components can't supply, with each short component's figures, and its provisional BOM on the recommendation", async () => {
+    const f = await typed("finished", "Cabinet");
+    const a = await typed("raw", "Steel");
+    const fBom = await recipe(f.id, { [a.id]: "1" });
+    await parameters("prod", f.id, PLANT, "make", "0.000000", "2.000000");
+    await parameters("prod", a.id, PLANT, "buy", "0.000000", "0.000001", 1);
+    await stock("prod", a.id, PLANT, "5");
+    // 4.1 rounds up to 6 by the multiple of 2 before the test (MRP-046).
+    await order("prod", PLANT, [{ material: f.id, quantity: "4.1", requiredDate: "2026-10-21" }]);
+
+    await run();
+
+    const missing = `${fBom.id}/1: ${a.id} 6.000000 5.000000 1.000000`;
+    expect(await sql("select exception_code as code, material, date, details from mrp_run_exception order by position")).toEqual([
+      { code: "NO_FEASIBLE_BOM", material: f.id, date: "2026-10-21", details: JSON.stringify({ missing }) },
+    ]);
+    expect(await sql("select material, kind, quantity, bom, bom_revision from mrp_recommendation order by material")).toEqual([
+      { material: f.id, kind: "production-order", quantity: "6.000000", bom: fBom.id, bom_revision: 1 },
+      // The provisional need still plans A: 6 needed, 5 on hand.
+      { material: a.id, kind: "purchase-requisition", quantity: "1.000000", bom: null, bom_revision: null },
+    ]);
+    const listed = (await latest()).plans.find(({ material: item }) => item === f.id)!;
+    expect(listed.exceptions).toEqual([
+      { code: "NO_FEASIBLE_BOM", message: mrpExceptionMessage("NO_FEASIBLE_BOM"), params: { material: f.id, location: PLANT, date: "2026-10-21", missing } },
+    ]);
+    expect(listed.proposals).toMatchObject([{ kind: "production-order", bom: fBom.id, executable: false }]);
+  });
+});

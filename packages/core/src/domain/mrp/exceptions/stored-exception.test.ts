@@ -31,6 +31,30 @@ describe("toStoredException and exceptionParams", () => {
     expect(exceptionParams(stored)).toEqual({ material: "M1", location: "L2", path });
   });
 
+  it("stores Missing Usable BOM with its date and each valid BOM's inactive components in the neutral notation (#282)", () => {
+    const inactive = [{ bom: "00000004", revision: 1, materials: ["00000011", "00000012"] }, { bom: "00000005", revision: 3, materials: ["00000013"] }];
+    const stored = toStoredException({ code: "MISSING_USABLE_BOM", material: "M1", location: "L2", date: "2026-10-09", inactive });
+    expect(stored).toEqual({ code: "MISSING_USABLE_BOM", material: "M1", location: "L2", date: "2026-10-09", details: { inactive: "00000004/1: 00000011, 00000012; 00000005/3: 00000013" } });
+    expect(exceptionParams(stored)).toEqual({ material: "M1", location: "L2", date: "2026-10-09", inactive: "00000004/1: 00000011, 00000012; 00000005/3: 00000013" });
+  });
+
+  it("stores No Feasible BOM on the proposal's need date, each usable BOM's shortages as required, available and shortage texts, and inactive BOMs only when there are some (#282)", () => {
+    const shortage = (material: string, required: bigint, available: bigint) => ({ material, required, available, shortage: required - available });
+    const short = [
+      { bom: "00000004", revision: 1, reason: "shortage" as const, shortages: [shortage("00000011", 6_000_000n, 5_000_000n), shortage("00000013", 500_000n, 0n)] },
+      { bom: "00000005", revision: 2, reason: "shortage" as const, shortages: [shortage("00000012", 6_000_000n, 3_000_000n)] },
+    ];
+    const missing = "00000004/1: 00000011 6.000000 5.000000 1.000000, 00000013 0.500000 0.000000 0.500000; 00000005/2: 00000012 6.000000 3.000000 3.000000";
+    const stored = toStoredException({ code: "NO_FEASIBLE_BOM", material: "M1", location: "L1", date: "2026-10-05", rejections: short });
+    expect(stored).toEqual({ code: "NO_FEASIBLE_BOM", material: "M1", location: "L1", date: "2026-10-05", details: { missing } });
+    expect(exceptionParams(stored)).toEqual({ material: "M1", location: "L1", date: "2026-10-05", missing });
+    const withInactive = toStoredException({
+      code: "NO_FEASIBLE_BOM", material: "M1", location: "L1", date: "2026-10-05",
+      rejections: [{ bom: "00000003", revision: 1, reason: "inactive-component", materials: ["00000014"] }, ...short],
+    });
+    expect(withInactive.details).toEqual({ missing, inactive: "00000003/1: 00000014" });
+  });
+
   it("stores Insufficient Transfer Stock at its source, its quantities as six-decimal texts", () => {
     const stored = toStoredException({
       code: "INSUFFICIENT_TRANSFER_STOCK", transfer: "00000003", material: "M1", source: "S", destination: "D", date: "2026-10-02", planned: 100_000_000n, available: 60_500_000n,

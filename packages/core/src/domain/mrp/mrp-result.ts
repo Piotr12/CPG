@@ -179,6 +179,11 @@ export interface MrpPlannedComponentDemand {
   /** The bucket it counts in: the proposal's planned start, never before today. */
   date: string;
   quantity: bigint;
+  /**
+   * The proposal has no feasible BOM, so it was exploded through its highest-priority usable one (E17-S02,
+   * BOM-011): the need counts in the component's projection, but never in a later feasibility test.
+   */
+  provisional: boolean;
 }
 
 /**
@@ -268,8 +273,48 @@ export interface MrpBomCycle {
   path: string;
 }
 
+/** One valid BOM's inactive components (E17-S02): the BOM and revision, then the materials' codes in code order. */
+export interface MrpInactiveBom {
+  bom: string;
+  revision: number;
+  materials: readonly string[];
+}
+
+/**
+ * A Make pair's proposal whose BOMs valid on its planned finish `date` all have an inactive component
+ * (E17-S02, LFC-026, MRP-050): the pair gets no proposal, so nothing is exploded. `inactive` lists those
+ * BOMs in priority order, then BOM code.
+ */
+export interface MrpMissingUsableBom {
+  code: "MISSING_USABLE_BOM";
+  material: string;
+  location: string;
+  date: string;
+  inactive: readonly MrpInactiveBom[];
+}
+
+/**
+ * The proposal of the pair needed on `date` has usable BOMs, but none whose components can all be supplied
+ * on its planned start (E17-S02, BOM-011): it is kept and exploded provisionally through its highest-priority
+ * usable BOM. `rejections` are every BOM valid on its planned finish, in priority order, then BOM code.
+ */
+export interface MrpNoFeasibleBom {
+  code: "NO_FEASIBLE_BOM";
+  material: string;
+  location: string;
+  date: string;
+  rejections: readonly MrpBomRejection[];
+}
+
 /** An MRP exception: `exceptions/codes.ts` lists the codes, their messages and their rank. */
-export type MrpException = MrpInvalidUomConversion | MrpMissingPlanningParameters | MrpMissingBom | MrpBomCycle | MrpInsufficientTransferStock;
+export type MrpException =
+  | MrpInvalidUomConversion
+  | MrpMissingPlanningParameters
+  | MrpMissingBom
+  | MrpMissingUsableBom
+  | MrpBomCycle
+  | MrpNoFeasibleBom
+  | MrpInsufficientTransferStock;
 
 /** The document behind an overdue supply item: what `MrpSupply` or `MrpProductionOutput` counts. */
 export type MrpOverdueSource = "purchase-order" | "requisition" | "production-order";
@@ -364,13 +409,42 @@ export interface MrpProposal extends MrpProposalTiming, MrpProposalRecipe {
   leadTimeDays: number;
 }
 
-/** The recipe a proposal is exploded through (E17-S01, MRP-031): both `null` for a requisition. */
+/**
+ * The recipe a proposal is exploded through (E17-S01, MRP-031) and how it was chosen (E17-S02): `null`
+ * and empty for a requisition.
+ */
 export interface MrpProposalRecipe {
   /** The BOM's business ID. */
   bom: string | null;
   /** Its current revision's number. */
   bomRevision: number | null;
+  /**
+   * Its components can all be supplied on the planned start (`chooseBom`). `false` for a provisional
+   * proposal, exploded through the highest-priority usable BOM; `null` for a requisition. Not stored.
+   */
+  feasible: boolean | null;
+  /** Every BOM tested before `bom`, in order, each with why it was passed over (BOM-010). Not stored. */
+  rejectedBoms: readonly MrpBomRejection[];
 }
+
+/** What one component of a BOM lacks for a proposal (E17-S02): the production dialog's names (`componentRequirement`). */
+export interface MrpComponentShortfall {
+  material: string;
+  /** The proposal's lot-rounded quantity times the line, rounded up once (R03). */
+  required: bigint;
+  /** What the component can give from the proposal's planned start, never below zero (`lowestDependableBalances`). */
+  available: bigint;
+  /** `required − available`, above zero. */
+  shortage: bigint;
+}
+
+/**
+ * Why `chooseBom` passed over a BOM valid on the proposal's planned finish (E17-S02, PRD §04 "BOM choice
+ * and explanation"): an inactive component, or components it can't be supplied with, by component code.
+ */
+export type MrpBomRejection =
+  | { bom: string; revision: number; reason: "inactive-component"; materials: readonly string[] }
+  | { bom: string; revision: number; reason: "shortage"; shortages: readonly MrpComponentShortfall[] };
 
 /**
  * When a proposal can start and finish (E16-S02, PRD §04 "Overdue and late starts"). Its receipt counts

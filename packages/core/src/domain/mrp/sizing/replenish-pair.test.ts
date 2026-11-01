@@ -25,15 +25,16 @@ const set = (overrides: Partial<MrpPlanningParameters> = {}): MrpPlanningParamet
   lotMultiple: q("1"),
   ...overrides,
 });
-const bom = (validFrom: string, validThrough: string | null = null): MrpBom => ({
+const bom = (validFrom: string, validThrough: string | null = null, overrides: Partial<MrpBom> = {}): MrpBom => ({
   bom: "00000001",
   revision: 1,
   priority: 1,
   output: "M1",
   validFrom,
   validThrough,
-  componentsActive: true,
+  inactiveComponents: [],
   components: [],
+  ...overrides,
 });
 /** A run start well before the days, so every proposal is on time unless a test moves it. */
 const EARLY = "2026-09-01";
@@ -176,6 +177,48 @@ describe("replenishPair", () => {
     it("raises nothing for a Make pair with no proposal, and never asks a Buy pair for a BOM", () => {
       expect(replenishPair(pair(["5", "5", "5", "5"]), context({ parameters: make }))).toEqual({ proposals: [], exception: null });
       expect(replenishPair(SHORT, context({ boms: [] })).exception).toBeNull();
+    });
+  });
+
+  describe("Missing Usable BOM (#282, LFC-026, MRP-050)", () => {
+    const make = set({ procurement: "make" });
+    const withR = bom("2026-01-01", null, { bom: "00000004", priority: 1, inactiveComponents: ["R"] });
+    const withRS = bom("2026-01-01", null, { bom: "00000005", priority: 2, inactiveComponents: ["R", "S"] });
+
+    it("LFC-026: raises it when every BOM valid on a proposal's finish has an inactive component, dated at the first, naming them, and proposes nothing", () => {
+      expect(replenishPair(SHORT, context({ parameters: make, boms: [withRS, withR] }))).toEqual({
+        proposals: [],
+        exception: {
+          code: "MISSING_USABLE_BOM",
+          material: "M1",
+          location: "L1",
+          date: "2026-10-02",
+          inactive: [
+            { bom: "00000004", revision: 1, materials: ["R"] },
+            { bom: "00000005", revision: 1, materials: ["R", "S"] },
+          ],
+        },
+      });
+    });
+
+    it("raises it for an earlier proposal when the only usable BOM is valid from a later one's finish, listing only that day's valid BOMs", () => {
+      const later = bom("2026-10-03", null, { bom: "00000006" });
+      expect(replenishPair(SHORT, context({ parameters: make, boms: [withR, later] })).exception).toEqual({
+        code: "MISSING_USABLE_BOM", material: "M1", location: "L1", date: "2026-10-02", inactive: [{ bom: "00000004", revision: 1, materials: ["R"] }],
+      });
+    });
+
+    it("keeps the proposals when a usable BOM covers every finish beside an unusable one", () => {
+      expect(replenishPair(SHORT, context({ parameters: make, boms: [withR, bom("2026-01-01", null, { bom: "00000006", priority: 2 })] }))).toEqual({
+        proposals: timed(SHORT, make),
+        exception: null,
+      });
+    });
+
+    it("comes after Missing BOM: a proposal with no valid BOM at all is Missing BOM, even beside an unusable one for another day", () => {
+      expect(replenishPair(SHORT, context({ parameters: make, boms: [bom("2026-10-04", null, { inactiveComponents: ["R"] })] })).exception).toEqual({
+        code: "MISSING_BOM", material: "M1", location: "L1", date: "2026-10-02",
+      });
     });
   });
 });

@@ -1,5 +1,6 @@
 import { Bom, BomComponent, BomRevision, Material, type EntityManager } from "@cpg/db";
 import type { MrpBom, MrpComponentLine, MrpPlanningParameters } from "../../../domain/mrp/mrp-inputs";
+import { compareCodes } from "../../../domain/mrp/projection/pairs";
 import { yieldToEventLoop } from "../../../http/yield-to-event-loop";
 import { isCalendarDate } from "../../../validators/dates/calendar-date.schema";
 import type { SnapshotCodes } from "./codes";
@@ -21,7 +22,7 @@ export const BOM_CHUNK = 100;
  * covers no date and a Make pair relying on it raises Missing BOM, never a proposal against a broken
  * window or a guessed recipe (#316 review, #281 spec Q8). An unreadable line is also reported at its
  * component, at every location where the output has a Make set (`parameters`), the pairs it would feed.
- * `componentsActive` is false when a line's material is inactive, as the production dialog's rule reads.
+ * `inactiveComponents` lists the lines' inactive materials, which make the revision unusable (E17-S02).
  */
 export async function readBoms(
   em: EntityManager,
@@ -70,8 +71,12 @@ export async function readBoms(
       const { validFrom } = revision;
       const validThrough = revision.validThrough ?? null;
       if (!readable || !isCalendarDate(validFrom) || (validThrough !== null && !isCalendarDate(validThrough))) continue;
-      const componentsActive = lines.get(revision.id)!.every((line) => !inactive.has(line.material.id));
-      read.push({ bom: bom.code, revision: revision.number, priority: revision.priority, output, validFrom, validThrough, componentsActive, components });
+      const inactiveComponents = lines
+        .get(revision.id)!
+        .filter((line) => inactive.has(line.material.id))
+        .map((line) => codes.materials.get(line.material.id)!)
+        .sort(compareCodes);
+      read.push({ bom: bom.code, revision: revision.number, priority: revision.priority, output, validFrom, validThrough, inactiveComponents, components });
     }
   }
   return read;

@@ -84,12 +84,16 @@ export class MrpRunService {
     const today = new Date().toISOString().slice(0, 10);
     const { generation } = await this.tenantService.currentState(currentTenant(this.em)!);
     const result = planMrp(await this.mrpSnapshotService.load(today), today);
+    // The engine is one synchronous stretch, and so are the deletes after it on better-sqlite3: yield between
+    // them, so the server reads its sockets (lesson 2026-10-24). The write gate is already held.
+    await yieldToEventLoop();
     const highest = await this.em.findOne(MrpRun, {}, { orderBy: { code: "desc" }, fields: ["code"], disableIdentityMap: true });
     const code = nextSequentialId(highest?.code ?? null, { code: "MRP_RUN_IDS_EXHAUSTED", message: "This tenant has used every eight-digit MRP run ID." });
     // Only the latest run keeps its results, proposals and exceptions (spec Q1). Deleting them before the insert keeps the indexes small.
     await this.em.nativeDelete(MrpDailyResult, {});
     await this.em.nativeDelete(MrpRecommendation, {});
     await this.em.nativeDelete(MrpRunException, {});
+    await yieldToEventLoop();
     const run = this.em.create(MrpRun, {
       code,
       startDate: today,

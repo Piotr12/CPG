@@ -10,7 +10,7 @@ const recipe = (bom: string, output: string, ...components: string[]): MrpBom =>
   output,
   validFrom: "2026-01-01",
   validThrough: null,
-  componentsActive: true,
+  inactiveComponents: [],
   components: components.map((material) => ({ material, perOutput: 1_000_000n })),
 });
 

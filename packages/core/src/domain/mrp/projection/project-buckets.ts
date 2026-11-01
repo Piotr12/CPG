@@ -63,3 +63,17 @@ export function dependableBalance({ physical, flows }: MrpLedger, day: number): 
   for (let index = 0; index <= day; index += 1) balance += dependableChange(flows[index]);
   return balance;
 }
+
+/**
+ * For each day, the lowest dependable balance of `ledger` from that day through the last, with `excluded[day]`
+ * added back on each day (E17-S02 spec Q1, Q4): what a component can still give a Make proposal starting
+ * that day without taking what an open document or an earlier choice needs later. `excluded` is the
+ * component's provisional dependent demand, which never counts against a feasibility test. A figure may be
+ * negative. Like `dependableBalance`, it never counts tentative supply or proposed receipts.
+ */
+export function lowestDependableBalances({ physical, flows }: MrpLedger, excluded: readonly bigint[]): bigint[] {
+  let balance = physical;
+  const balances = flows.map((day, index) => (balance += dependableChange(day) + excluded[index]));
+  for (let index = balances.length - 2; index >= 0; index -= 1) if (balances[index + 1] < balances[index]) balances[index] = balances[index + 1];
+  return balances;
+}
