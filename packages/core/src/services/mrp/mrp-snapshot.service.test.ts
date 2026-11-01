@@ -12,6 +12,7 @@ import {
   initOrm,
   Location,
   Material,
+  PlanningParameterSet,
   ProductionOrder,
   PurchaseOrder,
   PurchaseOrderLine,
@@ -35,6 +36,12 @@ import { ORDER_LINE_CHUNK, ORDER_PAGE, REQUISITION_PAGE } from "./snapshot/purch
 // month of its last day, other lines from 1 October to then, forecasts from 1 October to 29 December.
 const TODAY = "2026-10-01";
 const micro = (whole: number) => BigInt(whole) * 1_000_000n;
+/** The parameter read seeks the tenant's sets and joins the filter's relations by key: a set per pair, so no range is needed. */
+const PLANNING_PARAMETER_PLAN = [
+  "SEARCH l2 USING INDEX sqlite_autoindex_location_1 (id=?)",
+  "SEARCH m1 USING INDEX sqlite_autoindex_material_1 (id=?)",
+  "SEARCH p0 USING INDEX planning_parameter_set_tenant_code_index (tenant_code=?)",
+];
 
 describe("MrpSnapshotService", () => {
   let orm: Orm;
@@ -183,6 +190,17 @@ describe("MrpSnapshotService", () => {
       location: await em.findOneOrFail(Location, { code: location }),
       effectiveFrom,
       quantity,
+    });
+    await em.flush();
+  }
+
+  /** A planning parameter set of `material` at `location`, written as a stored row. */
+  async function parameters(tenant: TenantCode, material: string, location: string, set: { procurement: "make" | "buy"; leadTimeDays: number; minimumQuantity: string; lotMultiple: string }) {
+    const em = scoped(tenant);
+    em.create(PlanningParameterSet, {
+      material: await em.findOneOrFail(Material, { code: material }),
+      location: await em.findOneOrFail(Location, { code: location }),
+      ...set,
     });
     await em.flush();
   }
@@ -621,6 +639,34 @@ describe("MrpSnapshotService", () => {
       expect((await explain(sent[0])).filter((detail) => detail.includes(" f0 "))).toEqual([
         "SEARCH f0 USING INDEX forecast_tenant_code_date_index (tenant_code=? AND date>? AND date<?)",
       ]);
+    } finally {
+      await close();
+    }
+  });
+
+  it("reads every planning parameter set as micro-units, with its material's type, and never another tenant's (#278, MAT-016, R05)", async () => {
+    await parameters("prod", "00000001", "00000001", { procurement: "make", leadTimeDays: 4, minimumQuantity: "10.000000", lotMultiple: "0.000001" });
+    await parameters("prod", "00000002", "00000002", { procurement: "buy", leadTimeDays: 0, minimumQuantity: "0.000000", lotMultiple: "2.500000" });
+    await parameters("test", "00000003", "00000001", { procurement: "buy", leadTimeDays: 9, minimumQuantity: "1.000000", lotMultiple: "1.000000" });
+
+    const { planningParameters } = await load();
+
+    expect(planningParameters).toEqual(
+      expect.arrayContaining([
+        { material: "00000001", location: "00000001", materialType: "finished", procurement: "make", leadTimeDays: 4, minimumQuantity: micro(10), lotMultiple: 1n },
+        { material: "00000002", location: "00000002", materialType: "raw", procurement: "buy", leadTimeDays: 0, minimumQuantity: 0n, lotMultiple: 2_500_000n },
+      ]),
+    );
+    expect(planningParameters).toHaveLength(2);
+    expect((await load("test")).planningParameters.map(({ material, materialType }) => [material, materialType])).toEqual([["00000003", "finished"]]);
+  });
+
+  it("reads the planning parameter sets in one read through the tenant's index, joining each relation by key", async () => {
+    const { queries, explain, close } = await tracedLoad();
+    try {
+      const sent = queries.filter(({ sql }) => sql.startsWith("select") && sql.includes(" from `planning_parameter_set` as "));
+      expect(sent).toHaveLength(1);
+      expect(await explain(sent[0])).toEqual(PLANNING_PARAMETER_PLAN);
     } finally {
       await close();
     }

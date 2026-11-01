@@ -6,6 +6,7 @@ import { yieldToEventLoop } from "../../http/yield-to-event-loop";
 import { readCodes } from "./snapshot/codes";
 import { readForecasts } from "./snapshot/forecasts";
 import { readConsumingLines, readOrderLines } from "./snapshot/order-lines";
+import { readPlanningParameters } from "./snapshot/planning-parameters";
 import { readProductionOrders } from "./snapshot/production-orders";
 import { readPurchaseOrderLines, readRequisitions } from "./snapshot/purchasing";
 import { readSafetyTargets } from "./snapshot/safety-targets";
@@ -28,7 +29,8 @@ export class MrpSnapshotService {
    * The inputs for a run planning `today` (ISO day) and the 89 days after it. Forecasts count from today's
    * month (earlier ones expired, D08) to the horizon's last day, and the lines that consume them are read
    * to the end of that day's month, so a forecast late in the horizon sees its whole month (#275).
-   * Production orders and transfers are read only to the horizon's last day (#277).
+   * Production orders and transfers are read only to the horizon's last day (#277), and every planning
+   * parameter set is read for sizing (#278).
    */
   async load(today: string): Promise<MrpInputs> {
     const last = addDays(today, MRP_HORIZON_DAYS - 1);
@@ -37,6 +39,7 @@ export class MrpSnapshotService {
     const codes = await readCodes(this.em);
     const stock = await readStock(this.em, codes);
     const safetyTargets = await readSafetyTargets(this.em, codes, last);
+    const planningParameters = await readPlanningParameters(this.em, codes);
     await yieldToEventLoop();
     const orderLines = [...(await readOrderLines(this.em, codes, before)), ...(await readConsumingLines(this.em, codes, from, before))];
     const forecasts = await readForecasts(this.em, codes, from, last);
@@ -47,6 +50,6 @@ export class MrpSnapshotService {
     const productionOrders = await readProductionOrders(this.em, codes, afterHorizon);
     const transfers = await readTransfers(this.em, codes, afterHorizon);
     await yieldToEventLoop();
-    return { stock, orderLines, forecasts, safetyTargets, requisitions, purchaseOrderLines, productionOrders, transfers, planningParameters: [] };
+    return { stock, orderLines, forecasts, safetyTargets, requisitions, purchaseOrderLines, productionOrders, transfers, planningParameters };
   }
 }
