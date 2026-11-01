@@ -167,7 +167,8 @@ export class MrpRunService {
         location, locationName: site.name, locationActive: site.active,
         ...summarizePlan(buckets as [MrpBucketView, ...MrpBucketView[]]),
         buckets,
-        proposals: proposals.get(pairKey(material, location)) ?? [],
+        // `proposalsOf` keys every plan of the page, with or without proposals.
+        proposals: proposals.get(pairKey(material, location))!,
       };
     });
   }
