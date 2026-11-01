@@ -1725,7 +1725,7 @@ describe("planMrp: planning exceptions (E16-S03, #280)", () => {
       { code: "INVALID_UOM_CONVERSION", material: "M1", location: "D", record: "stock-balance" },
       { code: "INVALID_UOM_CONVERSION", material: "M1", location: "S", record: "stock-balance" },
     ]);
-    // Nor a warning: an overdue requisition of the material is counted from incomplete balances too.
+    // Nor a warning (spec, "The overdue warnings"): a material with an unreadable row gets none, even for supply that reads no balance.
     const overdue = planMrp(
       inputs({
         requisitions: [requisition({ location: "D", quantity: q("8"), requiredDate: "2026-09-25" }), requisition({ code: "00000009", material: "M2", quantity: q("3"), requiredDate: "2026-09-25" })],

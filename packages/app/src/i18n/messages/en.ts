@@ -2058,7 +2058,6 @@ export const en = {
         beyondHorizon: "Beyond Horizon · finish {date} · {quantity}",
         days: { one: "{count} day", few: "{count} days", many: "{count} days", other: "{count} days" } as PluralForms,
         documents: { "purchase-order": "PO {id}/{position}", requisition: "Requisition {id}", "production-order": "Production order {id}" },
-        transfer: "Transfer {id}",
       },
       figures: {
         date: "Date", firmDemand: "Firm demand", forecastDemand: "Forecast demand", dependentDemand: "Dependent demand", transferOut: "Transfer out",

@@ -1987,8 +1987,7 @@ export const pl: Messages = {
         lateSupply: "Opóźniona dostawa · {days} · koniec {date} · {quantity}",
         beyondHorizon: "Poza horyzontem · koniec {date} · {quantity}",
         days: { one: "{count} dzień", few: "{count} dni", many: "{count} dni", other: "{count} dnia" },
-        documents: { "purchase-order": "Zamówienie {id}/{position}", requisition: "Zapotrzebowanie {id}", "production-order": "Zlecenie produkcyjne {id}" },
-        transfer: "Przesunięcie {id}",
+        documents: { "purchase-order": "Zamówienie zakupu {id}/{position}", requisition: "Zapotrzebowanie zakupu {id}", "production-order": "Zlecenie produkcyjne {id}" },
       },
       figures: {
         date: "Data", firmDemand: "Popyt pewny", forecastDemand: "Popyt z prognozy", dependentDemand: "Popyt zależny", transferOut: "Przesunięcia wychodzące",

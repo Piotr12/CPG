@@ -33,7 +33,7 @@ export function markText(mark: MrpMarkView, unit: string, locale: Locale, t: Mar
       return fill(t.overdueSupply, { document, date: shortDate(mark.plannedDate, mark.date, locale), quantity });
     }
     case "overdue-transfer":
-      return fill(t.overdueTransfer, { transfer: fill(t.transfer, { id: mark.transfer }), date: shortDate(mark.plannedDate, mark.date, locale), quantity });
+      return fill(t.overdueTransfer, { transfer: mark.transfer, date: shortDate(mark.plannedDate, mark.date, locale), quantity });
     case "late-supply":
       return fill(t.lateSupply, { days: plural(locale, mark.lateDays, t.days), date: shortDate(mark.plannedFinish, mark.date, locale), quantity });
     case "beyond-horizon":

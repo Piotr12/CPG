@@ -246,8 +246,8 @@ describe("MrpReport", () => {
       const days = within(screen.getByRole("table", { name: pl.mrp.report.planLabel }));
       const marks = [...days.getByText("2026-10-01").closest("tr")!.querySelectorAll("[data-slot=status-badge]")];
       expect(marks.map((mark) => mark.textContent)).toEqual([
-        "Zaległa dostawa · Zamówienie 00000003/1 · termin 28 wrz · 30 kg",
-        "Zaległe przesunięcie · Przesunięcie 00000002 · termin 30 wrz · 25 kg",
+        "Zaległa dostawa · Zamówienie zakupu 00000003/1 · termin 28 wrz · 30 kg",
+        "Zaległe przesunięcie · 00000002 · termin 30 wrz · 25 kg",
       ]);
       expect(marks.every((mark) => mark.getAttribute("data-tone") === "warning" && mark.querySelector("svg"))).toBe(true);
       expect(days.getByText("2026-10-04").closest("tr")!.querySelector("[data-mrp-mark=late-supply]")?.textContent).toBe("Opóźniona dostawa · 4 dni · koniec 8 paź · 12 kg");
