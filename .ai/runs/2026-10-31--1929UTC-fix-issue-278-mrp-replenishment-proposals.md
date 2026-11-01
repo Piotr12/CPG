@@ -18,8 +18,9 @@ Take #278 end to end with `om-auto-fix-issue`. It is a `feature` issue, so the r
   - Q2: `sizing/` is the only module that turns a target into a requirement, and it reuses `safetyGap`;
   - Q3: proposals are stored in a new `MrpRecommendation` table, kept for the latest run only;
   - Q4: each plan in the latest-run API gains a `proposals` list.
-- 21:00 Sent the spec to a fresh-context reviewer. It found nothing Critical or High; all of its two Medium and eight Low findings are folded in:
+- 20:58 Sent the spec to a fresh-context reviewer; it reported back at about 22:35. It found nothing Critical or High; all of its two Medium and eight Low findings are folded in:
   - **Medium:** the recommendation's FK to the run cascades, so a Test reset by the previous image during a deploy still commits.
   - **Medium:** the benchmark seeds the worst-case lot rule (one proposal a day) and prints both row counts.
   - **Low:** the `roundUpToMultiple` test move, the app's `MrpPlanView` fixtures, the honest row bound of the `latest()` read, a generator check on seeded lot multiples, a report integration assertion, the kind names, and the `formatDecimal({ fixed: true })` formatter.
-- 23:44 Ran `npx vitest run tests/ai-filenames.test.ts tests/spec-images.test.ts` after `npm ci`: 2 files, 7 tests passed. No mockups: the spec adds no screen element, only a help paragraph.
+- 23:44 Folded in the review and ran `npx vitest run tests/ai-filenames.test.ts tests/spec-images.test.ts` after `npm ci`: 2 files, 7 tests passed. No mockups: the spec adds no screen element, only a help paragraph.
+- 00:13 Opened the spec PR #312 (`review`, `documentation`, `skip-qa`, `priority-medium`, `risk-low`; `Refs #278`, no closing keyword). Posted the assumptions table on #312 and #278, the label rationale and a run summary. Handed the issue lock to `om-auto-implement-spec`, which runs on its own implementation PR, branched from `main`. Its execution plan under `.ai/pipeline/runs/` is that run's log.
