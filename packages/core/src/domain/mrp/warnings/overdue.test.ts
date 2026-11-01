@@ -55,6 +55,7 @@ describe("compareWarnings", () => {
       supply({ material: "M1", location: "L1", plannedDate: "2026-09-28", source: "requisition", document: "00000007" }),
       arrival({ material: "M1", location: "L1", stage: "in-transit", transfer: "00000002" }),
       arrival({ material: "M1", location: "L1", stage: "planned", transfer: "00000002" }),
+      arrival({ material: "M1", location: "L1", stage: "planned", transfer: "00000003" }),
       supply({ material: "M1", location: "L2" }),
       arrival({ material: "M2", location: "L1" }),
     ];
@@ -62,6 +63,7 @@ describe("compareWarnings", () => {
     expect([...sorted.slice(5), ...sorted.slice(0, 5)].sort(compareWarnings)).toEqual(sorted);
     // A missing position sorts first.
     expect(compareWarnings(supply({ position: undefined }), supply({ position: 1 }))).toBeLessThan(0);
+    expect(compareWarnings(arrival({}), arrival({}))).toBe(0);
   });
 });
 
