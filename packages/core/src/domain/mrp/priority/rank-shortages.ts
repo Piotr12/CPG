@@ -21,7 +21,7 @@ interface Requirement {
 
 /**
  * Open documents' needs, then customer orders beside Make proposals' components, then the forecast residual
- * (PRD §04, #279 Q5). A planned component ranks with customer orders until root ranking replaces it (#281 Q9).
+ * (PRD §04, #279 Q5). A planned component ranks with customer orders until root ranking replaces it (#281 Q9, #327).
  */
 const RANK: Record<Requirement["kind"], number> = { component: 0, transfer: 0, "customer-order": 1, "planned-component": 1, forecast: 2 };
 const RANKS = 3;

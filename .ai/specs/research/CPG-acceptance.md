@@ -631,7 +631,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** A recipe is stored per one base unit of the output, with each component in its own base unit: `packages/core/src/services/boms/bom.service.test.ts` (0.25 t stored as 250 kg, 250 ml as 0.25 l), `packages/app/src/components/boms/recipe-form.test.tsx` (the lines are headed "Per 1 each of Cabinet, red"). Scaled to a production order: `packages/core/src/services/production-orders/production-order.service.test.ts` (30 × 2 kg = 60 kg required), `packages/core/src/domain/production-orders/production-planning.test.ts`. Scaling in MRP is slice 3. E04-S01, #26; E10-S01, #88.
+- **Evidence:** A recipe is stored per one base unit of the output, with each component in its own base unit: `packages/core/src/services/boms/bom.service.test.ts` (0.25 t stored as 250 kg, 250 ml as 0.25 l), `packages/app/src/components/boms/recipe-form.test.tsx` (the lines are headed "Per 1 each of Cabinet, red"). Scaled to a production order: `packages/core/src/services/production-orders/production-order.service.test.ts` (30 × 2 kg = 60 kg required), `packages/core/src/domain/production-orders/production-planning.test.ts`. Scaled in MRP (E17-S01, #281): `packages/core/src/domain/mrp/explosion/explode-proposal.test.ts` and `packages/core/src/domain/mrp/plan-mrp.test.ts` ("BOM-006, MRP-031": a Make proposal of 10 through 0.5 A and 0.2 B per one needs 5 A and 2 B on its planned start), and `tests/integration/mrp-run-api.test.ts` (2 I per F for 10 F, 0.5 R per I for 20 I, read back through the API). The MRP page doesn't show the explosion yet (E18-S03). E04-S01, #26; E10-S01, #88.
 - **Given:** Recipe needs 0.5 kg A and 0.2 litre B per finished each
 - **When:** Plan 10 finished units
 - **Then:** Expected component quantities are 5 kg A and 2 litres B (normalized in each material's BUoM).
@@ -2899,8 +2899,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MRP-020 — Later demand reveals component shortage
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-020": 100 C, an open order taking 80 C on its start and a proposal needing 50 C two days later leave −30 that day, and C gets one proposal of 30). Engine only; the API proves the pinned 80 (#277) and the exploded demand (MRP-027) separately. E17-S01, #281.
 - **Given:** Planned input 80 Mon from 100; new order needs 50 Wed
 - **When:** Rerun MRP
 - **Then:** Projected shortage of 30 is visible, rather than reusing same 80 twice.
@@ -2955,24 +2956,27 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MRP-027 — Recursive intermediate replenishment
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** The explosion half: `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-027": F's proposal explodes into I on F's start, I's into R on I's start, and R gets a requisition), `packages/core/src/services/mrp/mrp-run.service.test.ts` and `tests/integration/mrp-run-api.test.ts` (all three levels' quantities, dates and BOMs through the API). That F's and I's proposals aren't executable and their output is never parent supply is E17-S02 and E17-S03. E17-S01, #281.
 - **Given:** Finished F requires intermediate I; I requires raw R; neither present
 - **When:** Run MRP
 - **Then:** Provisional F to I to R dependency quantities/blockers shown; feasible lower-level supply may be proposed, but hypothetical I or F output is not dependable supply and does not make a parent executable in the same run.
 
 ### MRP-028 — No circular BOM explosion
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/mrp/explosion/bom-levels.test.ts` (finite levels for chains, diamonds and a 2,000-deep chain; cycles found with their path) and `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-028": A → B → C plans each material once; a stored cycle raises `BOM_CYCLE` on its members, which never explode). `packages/core/src/services/mrp/mrp-run.service.test.ts` writes a cycle around the BOM service and reads the stored exception. E17-S01, #281.
 - **Given:** A-B-C dependency graph is valid and acyclic
 - **When:** Run multi-level MRP
 - **Then:** Plan terminates with finite dependent demand, no recursive loop.
 
 ### MRP-029 — Multiple parent demands net same raw supply
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-029": P1 and P2 need 30 and 40 R on one day, with 50 R on hand: R shows 70 of dependent demand, one shortfall of 20 and one requisition of 20). Engine only. E17-S01, #281.
 - **Given:** Two products require same raw material at same site/day
 - **When:** Run MRP
 - **Then:** Raw component requirements aggregated/netted once against available physical and planned reliable supply.
@@ -2988,8 +2992,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MRP-031 — Make intermediate yields production proposal if feasible
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-031"), `packages/core/src/services/mrp/mrp-run.service.test.ts` and `tests/integration/mrp-run-api.test.ts`: a Make proposal is a `production-order` carrying the `bom` and `bomRevision` it was exploded through, listed by the API and shown on the MRP page's proposals table. "If feasible" is E17-S02's BOM choice; until then the highest-priority valid BOM is used. E17-S01, #281.
 - **Given:** Intermediate Make, date-valid BOM with projected components
 - **When:** Run MRP manual
 - **Then:** Production-order recommendation produced with pinned BOM revision.

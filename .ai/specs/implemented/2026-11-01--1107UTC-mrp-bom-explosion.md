@@ -1,6 +1,6 @@
 # MRP BOM explosion: every Make proposal explodes through its BOM, level by level, so intermediates and raw materials get dependent demand on the parent's start, shared components are netted once, and cycles are refused
 
-**Status:** ready. One default awaits the owner's confirmation (Q9). Either answer only changes one rank in one module.
+**Status:** implemented. One default awaits the owner's confirmation (Q9). Either answer only changes one rank in one module; root ranking is #327.
 **Created:** 2026-11-01 11:07 UTC
 **Issue:** #281 (E17-S01, epic #269) · **Depends on:** the MRP engine (`implemented/2026-10-27--0525UTC-mrp-engine-projection.md`, #273), MRP runs (`implemented/2026-10-27--0556UTC-mrp-runs.md`, #274), production and transfer supply (`implemented/2026-10-31--0908UTC-mrp-production-and-transfer-supply.md`, #277), replenishment proposals (`implemented/2026-10-31--2054UTC-mrp-replenishment-proposals.md`, #278), proposal timing and priority (`implemented/2026-11-01--0738UTC-mrp-proposal-timing-demand-priority.md`, #279), planning exceptions (`implemented/2026-11-01--0737UTC-mrp-planning-exceptions.md`, #280), proposal acceptance (`implemented/2026-11-01--0737UTC-mrp-proposal-acceptance.md`, #287), all merged · **Design authority:** `.ai/specs/product-brief.md` (R03, R04, R10, D04, N04), `research/CPG-prd001.pdf` §04 "Multilevel explosion", "Component timing and execution", "Parameters/precision", `research/CPG-prd-datamodel.pdf` ("MRP recommendation / exception"), `research/CPG-acceptance.md` BOM-006, BOM-007, MRP-020, MRP-027, MRP-028, MRP-029, MRP-031, MRP-047
 
@@ -273,3 +273,21 @@ One phase, one implementation PR, as the issue scopes it. The snapshot read, the
     - Move this spec to `implemented/` with implementation notes.
 
 Each step leaves the suite green. Run `npm run lint`, `npm run typecheck`, `npm run test:coverage` (100%) and `npm run build`.
+
+## Implementation notes
+
+- **Implementation PR** #326, from `main`; the spec PR #325 stays design-only.
+- **Priority key (Q9).** A planned component's tie-break position is the number of days from its date (the parent's start) to the parent's need date, not the need date's horizon day. Within one parent and one start day, both orders are the same, and the subtraction avoids passing the horizon into `rankShortages`. Root ranking is filed as #327.
+- **Snapshot.** `readBoms` takes `planningParameters` and `unreadable` from `load`, and reads the tenant's inactive materials once, as a partial `{ active: false }` list, for `componentsActive`. The new line read is the same SQL shape as the production orders' pinned-line read. The existing `EXPLAIN` test now pins both reads to `bom_component_revision_id_index`.
+- **Types.** `MrpProposal` gained `MrpProposalRecipe` (`bom`, `bomRevision`). `SizedProposal` omits it, and `replenishPair` returns a `TimedProposal`, the proposal before `planMrp` explodes it.
+- **Benchmark** (`mrp-run-timing.test.ts`, fastest of three, run locally, under the unchanged 1,000 ms and 5,000 ms budgets):
+
+  | Size | Pairs | Daily rows | Recommendations | Exploded | Active BOM lines | Run | Longest stall | `planMrp` alone |
+  | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+  | Realistic | 43 | 3,870 | 795 | 327 | 80 | 243 ms | 33 ms | 6 ms |
+  | Ten times | 441 | 39,690 | 4,869 | 2,323 | 800 | 2,439 ms | 121 ms | 59 ms |
+
+  The worst case for proposals (a proposal every day of every material) is 291 ms realistic and 3,367 ms at ten times, with a 210 ms longest stall. The fixture's only exceptions are `INSUFFICIENT_TRANSFER_STOCK`, and the test asserts that.
+- **Test dataset.** No unit or integration test pinned a dataset run's proposal counts, so none moved.
+- **Integration.** Docker was unavailable locally, so the files ran against a standalone build (lesson 2026-10-23). `mrp-run-api` and `smoke` passed (16 tests). `mrp-accept`, `mrp-accept-api`, `mrp-report`, `mrp-report-api` and `mrp-run` passed (27 tests).
+
