@@ -1,4 +1,3 @@
-import { isProcurementAllowed } from "../../planning-parameters/procurement";
 import type { MrpPlanningParameters } from "../mrp-inputs";
 import type { MrpBucket, MrpProposal, MrpProposalTiming } from "../mrp-result";
 import { safetyGap } from "../projection/safety-gap";
@@ -22,13 +21,12 @@ export interface SizedPair {
  * a proposal brings above the target carries into later days, so a later day gets a proposal only
  * where the balance would fall below its target again.
  *
- * This is the one place a target becomes a requirement (#278 Q2). A Make set for a raw material
- * proposes nothing (R02, MRP-033); E16-S03 reports it. Each pair is sized alone, so a surplus at
- * one location never covers another (TRF-018).
+ * This is the one place a target becomes a requirement (#278 Q2). `replenishPair` calls it only for
+ * a usable set, so a raw material's Make set never reaches it (R02, MRP-033, E16-S03). Each pair is
+ * sized alone, so a surplus at one location never covers another (TRF-018).
  */
 export function sizeProposals({ material, location, buckets }: SizedPair, parameters: MrpPlanningParameters): SizedProposal[] {
-  const { materialType, procurement, leadTimeDays, minimumQuantity, lotMultiple } = parameters;
-  if (!isProcurementAllowed(materialType, procurement)) return [];
+  const { procurement, leadTimeDays, minimumQuantity, lotMultiple } = parameters;
   const kind = procurement === "buy" ? "purchase-requisition" : "production-order";
   const proposals: SizedProposal[] = [];
   let carried = 0n;

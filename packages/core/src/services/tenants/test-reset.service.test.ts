@@ -223,6 +223,12 @@ describe("atomic Test reset", { timeout: 60_000 }, () => {
     const testRecommendations = () => current.em.getConnection().execute("select count(*) as n from mrp_recommendation where tenant_code = 'test'");
     // The realistic dataset's planning parameters give the latest Test run proposals of its own (#278).
     expect((await testRecommendations())[0].n).toBeGreaterThan(0);
+    const testExceptions = () => current.em.getConnection().execute("select exception_code as code, count(*) as n from mrp_run_exception where tenant_code = 'test' group by exception_code order by exception_code");
+    // What the realistic dataset raises (#280 spec, Risks), recorded with the run; then one more row, so the reset has one to clear.
+    process.stdout.write(`Realistic Test run exceptions by code: ${JSON.stringify(await testExceptions())}\n`);
+    await current.em.getConnection().execute(`insert into mrp_run_exception (id, tenant_code, run_id, position, exception_code, material, location, date, details)
+      select 'x1', 'test', id, 1000000, 'MISSING_BOM', '00000001', '00000001', '2026-10-21', null from mrp_run where tenant_code = 'test' order by code desc limit 1`);
+    expect((await testExceptions()).length).toBeGreaterThan(0);
 
     await reset(2);
 
@@ -248,6 +254,7 @@ describe("atomic Test reset", { timeout: 60_000 }, () => {
     await expect(next.mrpRunService.latest({})).rejects.toMatchObject({ code: "MRP_RUN_NOT_FOUND" });
     expect(await next.em.getConnection().execute("select count(*) as n from mrp_daily_result where tenant_code = 'test'")).toEqual([{ n: 0 }]);
     expect(await testRecommendations()).toEqual([{ n: 0 }]);
+    expect(await testExceptions()).toEqual([]);
     expect((await inRequestTransaction(next.em, () => next.mrpRunService.run(actor))).id).toBe("00000001");
     expect((await (await scope("prod")).cradle.mrpRunService.latest({})).run).toEqual(prodRun);
   }, 300_000);
