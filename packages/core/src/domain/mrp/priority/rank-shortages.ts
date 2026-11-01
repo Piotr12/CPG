@@ -73,17 +73,18 @@ function requirementsByDate({ firmDemand, forecastDemand, componentDemand, trans
     const list = byDate.get(requirement.date) ?? byDate.set(requirement.date, []).get(requirement.date)!;
     list.push({ ...requirement, outstanding: requirement.required });
   };
-  for (const { date, plannedStart, order, quantity } of componentDemand) {
-    add({ kind: "component", date, originalDate: plannedStart, document: order, position: 0, required: quantity });
-  }
-  for (const { date, plannedDate, transfer, quantity } of transfersOut) {
-    add({ kind: "transfer", date, originalDate: plannedDate, document: transfer, position: 0, required: quantity });
+  // Added lowest priority first, so the order comes from `compareRequirements` alone, never from the lists.
+  for (const { date, forecastDate, quantity } of forecastDemand) {
+    add({ kind: "forecast", date, originalDate: forecastDate, document: "", position: 0, required: quantity });
   }
   for (const { date, requiredDate, order, position, quantity } of firmDemand) {
     add({ kind: "customer-order", date, originalDate: requiredDate, document: order, position, required: quantity });
   }
-  for (const { date, forecastDate, quantity } of forecastDemand) {
-    add({ kind: "forecast", date, originalDate: forecastDate, document: "", position: 0, required: quantity });
+  for (const { date, plannedDate, transfer, quantity } of transfersOut) {
+    add({ kind: "transfer", date, originalDate: plannedDate, document: transfer, position: 0, required: quantity });
+  }
+  for (const { date, plannedStart, order, quantity } of componentDemand) {
+    add({ kind: "component", date, originalDate: plannedStart, document: order, position: 0, required: quantity });
   }
   return byDate;
 }

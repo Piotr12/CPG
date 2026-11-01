@@ -79,10 +79,11 @@ describe("rankShortages", () => {
   });
 
   it("DEM-020: O1 due Monday is served before O2 due Tuesday, and O2's shortage is shown against O2", () => {
-    const o1 = order(1, "10", { order: "00000002" });
-    const o2 = order(2, "10", { order: "00000001" });
+    // TODAY, 5 October 2026, is a Monday.
+    const o1 = order(0, "10", { order: "00000002" });
+    const o2 = order(1, "10", { order: "00000001" });
     expect(rankShortages(pair("12", { firmDemand: [o2, o1] }))).toEqual([
-      { kind: "customer-order", date: day(2), originalDate: day(2), document: "00000001", position: 1, required: q("10"), uncovered: q("8") },
+      { kind: "customer-order", date: day(1), originalDate: day(1), document: "00000001", position: 1, required: q("10"), uncovered: q("8") },
     ]);
   });
 

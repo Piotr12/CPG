@@ -1,6 +1,6 @@
 # Execution plan — MRP proposal timing and demand priority (#279)
 
-Source doc: .ai/specs/2026-11-01--0738UTC-mrp-proposal-timing-demand-priority.md
+Source doc: .ai/specs/implemented/2026-11-01--0738UTC-mrp-proposal-timing-demand-priority.md
 Spec PR: #315 (draft, design-only; Q2 and Q4 await confirmation)
 Issue: #279
 Engine: om-auto-create-pr (steps: 11, --loop: no)
@@ -49,25 +49,39 @@ Implement the spec. Every MRP proposal gets a calendar-day planned start (never 
 - Migration generation may rebuild the table. Review the SQL, and hand-edit it to an `ALTER` if needed (lesson 2026-10-23).
 - Docker may be unavailable locally. The integration tests then run against a standalone build (`CPG_BASE_URL`), as on #313.
 
+## Log
+
+- 2026-11-01:
+  - Phases 1 to 4 landed.
+  - Gate: lint, typecheck, `test:coverage` (633 files, 5,026 tests, 100%) and build, all green.
+  - Docker is unavailable here, so the integration files ran against a standalone build (lesson 2026-10-23). `mrp-run-api` and `smoke` passed (13 tests); `mrp-report`, `mrp-report-api` and `mrp-run` passed (19 tests).
+  - A fresh-context code review approved with four Low findings, all fixed:
+    - requirements are added lowest priority first, so each tie-break key is tested;
+    - the DEM-020 weekdays are corrected;
+    - the shuffled-snapshot test now produces shortages;
+    - the progress and benchmark are recorded, and the spec moved.
+
 ## Progress
+
+PR: #317
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Engine timing
-- [ ] 1.1 daysBetween helper
-- [ ] 1.2 scheduleProposal
-- [ ] 1.3 MrpProposal types and SizedProposal
-- [ ] 1.4 planMrp timing
+- [x] 1.1 daysBetween helper — 5490a1c3
+- [x] 1.2 scheduleProposal — 5490a1c3
+- [x] 1.3 MrpProposal types and SizedProposal — 5490a1c3
+- [x] 1.4 planMrp timing — 5490a1c3
 
 ### Phase 2: Engine priority
-- [ ] 2.1 rankShortages
-- [ ] 2.2 planMrp shortages
+- [x] 2.1 rankShortages — 9aae0d82
+- [x] 2.2 planMrp shortages — 9aae0d82
 
 ### Phase 3: Storage, read, API
-- [ ] 3.1 leadTimeDays column and migration
-- [ ] 3.2 Run write and read
-- [ ] 3.3 Benchmark
+- [x] 3.1 leadTimeDays column and migration — 0b68aa9b
+- [x] 3.2 Run write and read — 0b68aa9b
+- [x] 3.3 Benchmark — figures in the spec's implementation notes
 
 ### Phase 4: Integration, docs
-- [ ] 4.1 Integration tests
-- [ ] 4.2 Copy, docs, catalogue, spec moved
+- [x] 4.1 Integration tests — 0819d910
+- [x] 4.2 Copy, docs, catalogue, spec moved — 9e013fcd, review fixes

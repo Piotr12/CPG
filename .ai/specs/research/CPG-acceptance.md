@@ -2675,7 +2675,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Not executed
 
-- **Evidence:** `priority/rank-shortages.test.ts` ("DEM-020": O1 due Monday served before O2 due Tuesday, O2's shortage against O2; overdue orders on today ranked by their original dates), in the engine result only; no channel shows it yet (#279 spec Q4). E16-S02, #279.
+- **Evidence:** `priority/rank-shortages.test.ts` ("DEM-020": O1 due Monday, today, served before O2 due Tuesday, O2's shortage against O2; overdue orders on today ranked by their original dates), in the engine result only; no channel shows it yet (#279 spec Q4). E16-S02, #279.
 - **Given:** Customer O1 due Monday and O2 due Tuesday, insufficient stock
 - **When:** Run MRP
 - **Then:** O1's requirement scheduled first, O2 shortage transparent.

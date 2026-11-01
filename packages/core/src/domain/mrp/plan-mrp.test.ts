@@ -1340,16 +1340,20 @@ describe("planMrp: replenishment proposals (#278)", () => {
       line({ location: "L2", quantity: q("1"), requiredDate: DAY }),
       line({ quantity: q("1"), requiredDate: "2026-10-20" }),
       line({ quantity: q("1"), requiredDate: DAY }),
+      // Two same-date lines of a pair with no parameters and too little stock: shortages, ranked by order code (#279).
+      line({ material: "M3", order: "00000009", quantity: q("4"), requiredDate: DAY }),
+      line({ material: "M3", order: "00000008", quantity: q("4"), requiredDate: DAY }),
     ];
     const planningParameters = [set({ material: "M2" }), set({ location: "L2" }), set()];
-    const forward = planMrp(inputs({ orderLines, planningParameters }), TODAY);
+    const forward = planMrp(inputs({ orderLines, planningParameters, stock: [stock("M3", "L1", "5")] }), TODAY);
+    expect(planAt(forward.plans, "M3").shortages.map(({ document, uncovered }) => [document, uncovered])).toEqual([["00000009", q("3")]]);
     expect(forward.proposals.map(({ material, location, needDate }) => [material, location, needDate])).toEqual([
       ["M1", "L1", DAY],
       ["M1", "L1", "2026-10-20"],
       ["M1", "L2", DAY],
       ["M2", "L1", DAY],
     ]);
-    expect(planMrp(inputs({ orderLines: [...orderLines].reverse(), planningParameters: [...planningParameters].reverse() }), TODAY)).toEqual(forward);
+    expect(planMrp(inputs({ orderLines: [...orderLines].reverse(), planningParameters: [...planningParameters].reverse(), stock: [stock("M3", "L1", "5")] }), TODAY)).toEqual(forward);
   });
 });
 
