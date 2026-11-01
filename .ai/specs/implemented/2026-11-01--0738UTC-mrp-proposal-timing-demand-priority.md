@@ -256,3 +256,5 @@ Implemented on #317, branched from `main` (the spec PR #315 stays design-only), 
 - MAT-018 cites the MRP half.
 - DEM-018 to DEM-022 and MRP-044 keep "Not executed", with Evidence lines that cite the engine tests (Q4).
 - MRP-004 is unchanged (Q2).
+
+**After merging `main` with #280 (MRP planning exceptions, #316).** `replenishPair` now decides each pair, so it also times the sized proposals with `scheduleProposal`, and `planMrp` places their receipts. #280 checked Missing BOM on the need date. Its spec (Q3) chose that day as "its planned finish until E16-S02 back-schedules", so that an accepted proposal passes the production order's own BOM check on `plannedFinish`. The check now uses `plannedFinish`, so a late Make proposal is judged on the day its order would be. `MISSING_BOM`'s `date` is that day, and its message says "valid on the planned finish date". On-time proposals are unchanged.

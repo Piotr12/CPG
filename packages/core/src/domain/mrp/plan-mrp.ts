@@ -14,7 +14,7 @@ import type {
   MrpSupply,
   MrpTransferMovement,
 } from "./mrp-result";
-import { horizonDates, MRP_HORIZON_DAYS } from "./projection/horizon";
+import { horizonDates } from "./projection/horizon";
 import { compareCodes, comparePairs, pairKey } from "./projection/pairs";
 import { emptyFlows, projectBuckets, type MrpLedger } from "./projection/project-buckets";
 import { rankShortages } from "./priority/rank-shortages";
@@ -22,7 +22,6 @@ import { productionMovements } from "./supply/production-orders";
 import { purchasingSupply } from "./supply/purchasing-supply";
 import { compareExceptions } from "./exceptions/compare-exceptions";
 import { replenishPair } from "./sizing/replenish-pair";
-import { scheduleProposal } from "./sizing/schedule-proposal";
 import { planTransfers } from "./supply/transfers";
 
 interface PairDraft extends MrpLedger {
@@ -55,7 +54,7 @@ interface PairDraft extends MrpLedger {
  * its one definition in `projectBuckets`. Parameters name no pairs. An unreadable row names its pairs
  * like a stock row, and makes every planned pair of its material Invalid UoM Conversion (spec Q4): no
  * figure of one material depends on another's, so every other material plans as if it were absent.
- * Each proposal is then timed (E16-S02): its receipt counts on its planned finish, which is later than
+ * `replenishPair` also times each proposal (E16-S02): its receipt counts on its planned finish, which is later than
  * its need when the lead time makes it late, and a Beyond Horizon proposal counts in no bucket, so the
  * days before its stock arrives keep their shortage. Last, every pair's uncovered requirements are
  * ranked on its balance after proposals (`rankShortages`).
@@ -131,13 +130,12 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
     const key = pairKey(plan.material, plan.location);
     const replenished = replenishPair(
       { ...plan, buckets: projectBuckets(plan.physical, flows) },
-      { unreadable: unreadable.get(plan.material), parameters: parametersOf.get(key), invalidSet: invalidSets.has(key), boms: bomsOf.get(plan.material) ?? [] },
+      { unreadable: unreadable.get(plan.material), parameters: parametersOf.get(key), invalidSet: invalidSets.has(key), boms: bomsOf.get(plan.material) ?? [], today },
     );
-    for (const item of replenished.proposals) {
-      const proposal: MrpProposal = { ...item, ...scheduleProposal(item.needDate, item.leadTimeDays, today, MRP_HORIZON_DAYS) };
+    for (const proposal of replenished.proposals) {
       if (!proposal.beyondHorizon) flows[dayOf.get(proposal.plannedFinish)!].proposedReceipts += proposal.quantity;
-      proposals.push(proposal);
     }
+    proposals.push(...replenished.proposals);
     if (replenished.exception) exceptions.push(replenished.exception);
     const buckets = projectBuckets(plan.physical, flows);
     return { ...plan, buckets, shortages: rankShortages({ ...plan, buckets }) };

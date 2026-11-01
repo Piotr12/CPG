@@ -1421,7 +1421,7 @@ describe("planMrp: proposal timing (#279)", () => {
           line({ material: "M3", quantity: q("3"), requiredDate: day(40) }),
         ],
         planningParameters: [made, set(9, { material: "M2" }), set(30, { material: "M3" })],
-        // Since E16-S03 a Make proposal needs a BOM valid on its need date, or the pair is Missing BOM.
+        // Since E16-S03 a Make proposal needs a BOM valid on its planned finish, or the pair is Missing BOM.
         boms: [{ output: "M1", validFrom: "2026-01-01", validThrough: null }],
       }),
       TODAY,

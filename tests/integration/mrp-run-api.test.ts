@@ -243,7 +243,7 @@ describe("MRP runs through the API", () => {
       }]],
       [made, [], [{
         code: "MISSING_BOM",
-        message: "This material is made at this location, but no active BOM has a current revision valid on the need date, so MRP proposes no production.",
+        message: "This material is made at this location, but no active BOM has a current revision valid on the planned finish date, so MRP proposes no production.",
         params: { material, location: made, date: day(7) },
       }]],
     ]);
