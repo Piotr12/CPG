@@ -1992,6 +1992,7 @@ export const pl: Messages = {
       notExecutable: "Zleceń produkcyjnych nie można jeszcze akceptować",
       late: "Spóźniona: kończy się {date}",
       beyondHorizon: "Poza horyzontem: kończy się {date}",
+      bom: "BOM {bom} / rewizja {revision}",
       empty: "Ta para nie ma propozycji.",
       earlierDay: "Ten przebieg jest z wcześniejszego dnia. Uruchom MRP ponownie, aby akceptować jego propozycje.",
       confirm: {

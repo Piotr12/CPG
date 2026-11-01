@@ -77,7 +77,7 @@ export interface MrpExceptionView {
  * One stored replenishment proposal (E16-S01): what it would create, the day it covers, a six-decimal
  * BUoM quantity above zero, and its timing (E16-S02): its planned start, never before the run's start,
  * its planned finish, the days it is late (Late Supply) and whether it finishes after the run's last day
- * (Beyond Horizon).
+ * (Beyond Horizon), and the BOM and revision a production order is exploded through (E17-S01).
  */
 export interface MrpProposalView extends MrpProposalTiming {
   /** The proposal's ID for accepting it (E19-S01): unique across tenants, so another tenant's is never found. */
@@ -89,6 +89,10 @@ export interface MrpProposalView extends MrpProposalTiming {
   executable: boolean;
   /** The business ID of the document accepting it created, or null while it isn't accepted. */
   document: string | null;
+  /** The BOM a production-order proposal plans through (E17-S01, MRP-031); null for a requisition, or a row an older image wrote. */
+  bom: string | null;
+  /** That BOM's current revision number; null where `bom` is. */
+  bomRevision: number | null;
 }
 
 /** `GET /api/tenants/{tenant}/mrp/runs/latest`: the latest run and one page of its plans. */

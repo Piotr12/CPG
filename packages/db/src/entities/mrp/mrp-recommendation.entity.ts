@@ -20,6 +20,10 @@ const owned = tenantOwned();
  * planned start and finish, lateness and Beyond Horizon mark from it and the run's start, through the
  * engine's own rule. It defaults to 0, so a row an older image writes reads as received on its need date,
  * which is how that image planned it.
+ *
+ * `bom` and `bomRevision` name the BOM and current revision a production-order proposal was exploded
+ * through (E17-S01, MRP-031); both are null for a requisition, and for a row an older image writes, which
+ * exploded nothing.
  */
 export const MrpRecommendation = defineEntity({
   name: "MrpRecommendation",
@@ -34,6 +38,8 @@ export const MrpRecommendation = defineEntity({
     needDate: p.string().length(10),
     quantity: p.string(),
     leadTimeDays: p.integer().default(0),
+    bom: p.string().length(8).nullable(),
+    bomRevision: p.integer().nullable(),
     /** The business ID of the document accepting this proposal created (E19-S01), or null while it isn't accepted. */
     acceptedDocument: p.string().length(8).nullable(),
   },

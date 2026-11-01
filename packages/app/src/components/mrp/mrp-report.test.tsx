@@ -146,7 +146,7 @@ describe("MrpReport", () => {
   });
 
   it("counts each pair's proposals, and lists the one pair's proposals above its days with Accept (E19-S01)", () => {
-    const proposal = { id: "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b", kind: "purchase-requisition" as const, needDate: "2026-10-05", quantity: "40.000000", plannedStart: "2026-10-03", plannedFinish: "2026-10-05", lateDays: 0, beyondHorizon: false, executable: true, document: null };
+    const proposal = { id: "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b", kind: "purchase-requisition" as const, needDate: "2026-10-05", quantity: "40.000000", plannedStart: "2026-10-03", plannedFinish: "2026-10-05", lateDays: 0, beyondHorizon: false, executable: true, document: null, bom: null, bomRevision: null };
     const proposing = { ...sheet, proposals: [proposal] };
     renderReport(report({ plans: [proposing, bearing] }));
     expect([...document.querySelectorAll("[data-mrp-proposal-count]")].map((cell) => cell.textContent)).toEqual(["1", "0"]);

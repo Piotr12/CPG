@@ -486,10 +486,14 @@ describe("MrpRunService: replenishment proposals (#278)", () => {
     expect(await day("00000001", cabinet.id, store, "2026-10-05")).toMatchObject({ proposed_receipts: "3.000000", projected_after: "0.000000" });
     const { plans } = await latest();
     const uuid = expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
-    expect(plans.map(({ location: site, proposals }) => [site, proposals])).toEqual([
+    const none = { bom: null, bomRevision: null };
+    expect(plans.map(({ material: item, location: site, proposals }) => [item, site, proposals])).toEqual([
       // Only a Buy proposal can be accepted until MRP chooses BOMs (E19-S01 Q1); neither is accepted yet.
-      [PLANT, [{ id: uuid, kind: "purchase-requisition", needDate: "2026-10-05", quantity: "10.000000", ...onTime, executable: true, document: null }]],
-      [store, [{ id: uuid, kind: "production-order", needDate: "2026-10-05", quantity: "3.000000", ...onTime, executable: false, document: null }]],
+      [cabinet.id, PLANT, [{ id: uuid, kind: "purchase-requisition", needDate: "2026-10-05", quantity: "10.000000", ...onTime, executable: true, document: null, ...none }]],
+      // The Make proposal names the BOM it is exploded through (#281, MRP-031)…
+      [cabinet.id, store, [{ id: uuid, kind: "production-order", needDate: "2026-10-05", quantity: "3.000000", ...onTime, executable: false, document: null, bom: "00000001", bomRevision: 1 }]],
+      // …into its one input, planned at the store from its start, with no parameters there to propose with.
+      [expect.any(String), store, []],
     ]);
     const [stored] = await sql<{ id: string }>("select id from mrp_recommendation where location = ?", [PLANT]);
     expect(plans[0].proposals[0].id).toBe(stored.id);
@@ -519,10 +523,10 @@ describe("MrpRunService: replenishment proposals (#278)", () => {
     const { plans } = await latest();
     const proposalOf = (item: string) => plans.find((plan) => plan.material === item)!.proposals;
     expect(proposalOf(late.id)).toEqual([
-      { id: expect.any(String), kind: "purchase-requisition", needDate: "2026-10-04", quantity: "5.000000", plannedStart: "2026-10-01", plannedFinish: "2026-10-08", lateDays: 4, beyondHorizon: false, executable: true, document: null },
+      { id: expect.any(String), kind: "purchase-requisition", needDate: "2026-10-04", quantity: "5.000000", plannedStart: "2026-10-01", plannedFinish: "2026-10-08", lateDays: 4, beyondHorizon: false, executable: true, document: null, bom: null, bomRevision: null },
     ]);
     expect(proposalOf(far.id)).toEqual([
-      { id: expect.any(String), kind: "purchase-requisition", needDate: "2026-10-21", quantity: "5.000000", plannedStart: "2026-10-01", plannedFinish: "2027-01-29", lateDays: 100, beyondHorizon: true, executable: true, document: null },
+      { id: expect.any(String), kind: "purchase-requisition", needDate: "2026-10-21", quantity: "5.000000", plannedStart: "2026-10-01", plannedFinish: "2027-01-29", lateDays: 100, beyondHorizon: true, executable: true, document: null, bom: null, bomRevision: null },
     ]);
     // The late receipt lands on its finish; the Beyond Horizon one in no stored day.
     expect(await day("00000001", late.id, PLANT, "2026-10-07")).toMatchObject({ proposed_receipts: "0.000000", projected_after: "-5.000000" });
@@ -543,7 +547,7 @@ describe("MrpRunService: replenishment proposals (#278)", () => {
     await sql("update mrp_recommendation set lead_time_days = 0");
     const { plans } = await latest();
     expect(plans[0].proposals).toEqual([
-      { id: expect.any(String), kind: "purchase-requisition", needDate: "2026-10-05", quantity: "3.000000", plannedStart: "2026-10-05", plannedFinish: "2026-10-05", lateDays: 0, beyondHorizon: false, executable: true, document: null },
+      { id: expect.any(String), kind: "purchase-requisition", needDate: "2026-10-05", quantity: "3.000000", plannedStart: "2026-10-05", plannedFinish: "2026-10-05", lateDays: 0, beyondHorizon: false, executable: true, document: null, bom: null, bomRevision: null },
     ]);
   });
 
@@ -575,6 +579,76 @@ describe("MrpRunService: replenishment proposals (#278)", () => {
   it("names the proposal kinds the engine sizes, and no other", () => {
     expect(MRP_RECOMMENDATION_KINDS).toEqual(MRP_PROPOSAL_KINDS);
     expectTypeOf<MrpRecommendationKind>().toEqualTypeOf<MrpProposalKind>();
+  });
+});
+
+describe("MrpRunService: BOM explosion (#281)", () => {
+  const typed = async (type: "finished" | "intermediate" | "raw", description: string) =>
+    (await scope()).cradle.materialService.create({ type, description, baseUnit: "each" }, ANNA);
+  const recipe = async (output: string, components: Record<string, string>) =>
+    (await scope()).cradle.bomService.create(
+      { output, priority: 1, validFrom: "2026-01-01", validThrough: null, components: Object.entries(components).map(([material, quantity]) => ({ material, quantity, unit: "each" })) },
+      ANNA,
+    );
+
+  it("MRP-027, MRP-031: stores and lists F's, I's and R's proposals, each level on its parent's start, the production orders with their BOM and revision", async () => {
+    const f = await typed("finished", "Cabinet");
+    const i = await typed("intermediate", "Frame");
+    const r = await typed("raw", "Steel");
+    const fBom = await recipe(f.id, { [i.id]: "2" });
+    const iBom = await recipe(i.id, { [r.id]: "0.5" });
+    await parameters("prod", f.id, PLANT, "make", "0.000000", "0.000001", 2);
+    await parameters("prod", i.id, PLANT, "make", "0.000000", "0.000001", 3);
+    await parameters("prod", r.id, PLANT, "buy", "0.000000", "0.000001", 1);
+    await order("prod", PLANT, [{ material: f.id, quantity: "10", requiredDate: "2026-10-21" }]);
+
+    await run();
+
+    expect(await sql("select material, kind, need_date, quantity, bom, bom_revision from mrp_recommendation order by material")).toEqual([
+      { material: f.id, kind: "production-order", need_date: "2026-10-21", quantity: "10.000000", bom: fBom.id, bom_revision: 1 },
+      { material: i.id, kind: "production-order", need_date: "2026-10-19", quantity: "20.000000", bom: iBom.id, bom_revision: 1 },
+      { material: r.id, kind: "purchase-requisition", need_date: "2026-10-16", quantity: "10.000000", bom: null, bom_revision: null },
+    ]);
+    expect(await day("00000001", i.id, PLANT, "2026-10-19")).toMatchObject({ dependent_demand: "20.000000", projected_before: "-20.000000" });
+    expect(await day("00000001", r.id, PLANT, "2026-10-16")).toMatchObject({ dependent_demand: "10.000000", projected_before: "-10.000000" });
+    const { plans } = await latest();
+    expect(plans.map(({ material: item, proposals: [proposal] }) => [item, proposal.kind, proposal.plannedStart, proposal.bom, proposal.bomRevision])).toEqual([
+      [f.id, "production-order", "2026-10-19", fBom.id, 1],
+      [i.id, "production-order", "2026-10-16", iBom.id, 1],
+      [r.id, "purchase-requisition", "2026-10-15", null, null],
+    ]);
+  });
+
+  it("MRP-028: a cycle written around the BOM service is stored as BOM Cycle on both members with its path, they get no proposal, and the rest plans", async () => {
+    const x = await typed("intermediate", "Left");
+    const y = await typed("intermediate", "Right");
+    const other = await typed("intermediate", "Other");
+    const xBom = await recipe(x.id, { [y.id]: "1" });
+    await bom("prod", other.id);
+    // The service refuses Y's recipe (R04, BOM-024), so it is written that way, as a restore could.
+    const { em } = (await scope()).cradle;
+    const [output, input] = [await em.findOneOrFail(Material, { code: y.id }), await em.findOneOrFail(Material, { code: x.id })];
+    const revision = em.create(BomRevision, { bom: em.create(Bom, { code: "00000009", output, revision: 1 }), number: 1, priority: 1, validFrom: "2026-01-01", validThrough: null });
+    em.create(BomComponent, { revision, position: 1, material: input, quantity: "1.000000", enteredQuantity: "1", enteredUnit: "each", numerator: "1", denominator: "1" });
+    await em.flush();
+    for (const item of [x, y, other]) await parameters("prod", item.id, PLANT, "make", "0.000000", "1.000000");
+    await order("prod", PLANT, [
+      { material: x.id, quantity: "3", requiredDate: "2026-10-10" },
+      { material: y.id, quantity: "3", requiredDate: "2026-10-10" },
+      { material: other.id, quantity: "3", requiredDate: "2026-10-10" },
+    ]);
+
+    await run();
+
+    const path = (from: string, via: string, to: string, back: string) => `${from} →(BOM ${via}) ${to} →(BOM ${back}) ${from}`;
+    // Other's own input has no parameters, so it adds Missing Planning Parameters: Other exploded, X and Y didn't.
+    expect(await sql("select e.exception_code as code, e.material, e.details from mrp_run_exception e where e.exception_code <> 'MISSING_PLANNING_PARAMETERS' order by e.position")).toEqual([
+      { code: "BOM_CYCLE", material: x.id, details: JSON.stringify({ path: path(x.id, xBom.id, y.id, "00000009") }) },
+      { code: "BOM_CYCLE", material: y.id, details: JSON.stringify({ path: path(y.id, "00000009", x.id, xBom.id) }) },
+    ]);
+    expect((await sql<{ material: string }>("select material from mrp_recommendation")).map(({ material: item }) => item)).toEqual([other.id]);
+    const listed = (await latest()).plans.find(({ material: item }) => item === y.id)!.exceptions;
+    expect(listed).toEqual([{ code: "BOM_CYCLE", message: MRP_EXCEPTION_MESSAGES.BOM_CYCLE, params: { material: y.id, location: PLANT, path: path(y.id, "00000009", x.id, xBom.id) } }]);
   });
 });
 

@@ -111,6 +111,8 @@ describe("MrpAcceptanceService.accept: creating the document", () => {
     expect(accepted.proposal).toEqual({
       id: proposal.id, run: runId, material: sugar, location: PLANT, kind: "purchase-requisition", needDate: "2026-10-05",
       quantity: "100.000000", plannedStart: "2026-10-03", plannedFinish: "2026-10-05", lateDays: 0, beyondHorizon: false, executable: true, document: "00000001",
+      // A requisition is exploded through no BOM (#281).
+      bom: null, bomRevision: null,
     });
     expect(await count("purchase_requisition")).toBe(1);
     expect(await count("purchase_order")).toBe(0);
