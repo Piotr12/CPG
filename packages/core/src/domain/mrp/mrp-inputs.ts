@@ -1,6 +1,7 @@
 import type { MaterialType } from "../../validators/materials/material-fields.schema";
 import type { DocumentState } from "../document-lifecycle/lifecycle";
 import type { ProcurementMode } from "../planning-parameters/procurement";
+import type { MrpPair } from "./projection/pairs";
 
 /**
  * The snapshot MRP plans from (#273). Materials, locations and orders appear by business ID, never by
@@ -21,6 +22,10 @@ export interface MrpInputs {
   transfers: readonly MrpTransfer[];
   /** Every planning parameter set of the tenant, one per material and location (E16-S01). */
   planningParameters: readonly MrpPlanningParameters[];
+  /** The current revision of every active BOM, for the Missing BOM check (E16-S03). */
+  boms: readonly MrpBom[];
+  /** Every stored row the loader couldn't read, left out of the lists above (E16-S03). */
+  unreadable: readonly MrpUnreadableRow[];
 }
 
 /** Physical on-hand of one material at one location today. In-transit stock is never physical. */
@@ -158,4 +163,35 @@ export interface MrpPlanningParameters {
   leadTimeDays: number;
   minimumQuantity: bigint;
   lotMultiple: bigint;
+}
+
+/** The validity of one active BOM's current revision (R04, E16-S03). */
+export interface MrpBom {
+  output: string;
+  validFrom: string;
+  /** `null` when open-ended. */
+  validThrough: string | null;
+}
+
+/** The kinds of stored row the snapshot reads quantities, factors or dates from (E16-S03, spec Q8). */
+export type MrpRecordKind =
+  | "stock-balance"
+  | "customer-order-line"
+  | "forecast"
+  | "safety-stock-target"
+  | "purchase-requisition"
+  | "purchase-order-line"
+  | "production-order"
+  | "bom-line"
+  | "transfer";
+
+/**
+ * A stored row the loader couldn't read (E16-S03), at one pair it would feed: a row feeding several
+ * pairs gives one entry per pair. Each entry names a plan, as a stock row does. A planning parameter
+ * set's entry names no plan (parameters never do): its pair's set is unusable (`invalid-set`).
+ */
+export interface MrpUnreadableRow extends MrpPair {
+  record: MrpRecordKind | "planning-parameter-set";
+  /** The business ID, `order/position` for a line; absent for a balance, a forecast, a target or a set. */
+  document?: string;
 }

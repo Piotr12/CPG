@@ -13,7 +13,7 @@ describe("MRP recommendations migration (#278)", () => {
     const tables = async () => (await sql("select name from sqlite_master where type = 'table' and name like 'mrp_%'")).map(({ name }) => name as string).sort();
     try {
       await orm.migrator.up();
-      expect(await tables()).toEqual(["mrp_daily_result", "mrp_recommendation", "mrp_run"]);
+      expect(await tables()).toEqual(["mrp_daily_result", "mrp_recommendation", "mrp_run", "mrp_run_exception"]);
       expect(await orm.schema.getUpdateSchemaSQL()).not.toContain("`mrp_recommendation`");
       expect((await sql("select sql from sqlite_master where name = 'mrp_recommendation_tenant_code_run_id_material_location_need_date_unique'"))[0].sql).toBe(
         "CREATE UNIQUE INDEX `mrp_recommendation_tenant_code_run_id_material_location_need_date_unique` on `mrp_recommendation` (`tenant_code`, `run_id`, `material`, `location`, `need_date`)",
@@ -40,7 +40,8 @@ describe("MRP recommendations migration (#278)", () => {
       });
       expect(await sql("select id from mrp_recommendation")).toEqual([{ id: "p2" }]);
 
-      await orm.migrator.down();
+      // Back to the migration before it: the later MRP run exceptions migration goes first.
+      await orm.migrator.down({ to: "Migration20261027061605_mrp_runs" });
       expect(await tables()).toEqual(["mrp_daily_result", "mrp_run"]);
       expect(await sql("select id from mrp_run")).toEqual([{ id: "r2" }]);
     } finally {

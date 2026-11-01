@@ -21,6 +21,7 @@ const sheet: MrpPlanView = {
     day("2026-10-07", { firmDemand: "15.000000", projectedBefore: "25.000000", projectedAfter: "25.000000" }),
   ],
   proposals: [],
+  exceptions: [],
 };
 const bearing: MrpPlanView = {
   ...sheet, material: "00000013", materialDescription: "Bearing", materialActive: false, baseUnit: "each", locationActive: false,

@@ -1,4 +1,5 @@
 import { Bom, BomComponent, BomRevision, PlanningParameterSet, StockBalance, type EntityManager, type Location } from "@cpg/db";
+import { isRevisionValidOn } from "../../domain/boms/bom-validity";
 import { componentRequirement, plannedStart } from "../../domain/production-orders/production-planning";
 import { ConflictError } from "../../http/errors";
 import { convertToBaseQuantity } from "../materials/base-quantity";
@@ -63,11 +64,11 @@ export async function resolveProductionOptions(em: EntityManager, input: Product
   // The unique (bom, number) index fetches only current revisions; old recipe history never hydrates.
   // Batches keep SQLite's expression/parameter counts bounded even with many alternatives.
   for (let offset = 0; offset < boms.length; offset += REFERENCE_BATCH_SIZE) {
-    const recipes = await em.find(BomRevision, {
+    // The date check runs in code through `isRevisionValidOn`, the rule MRP's Missing BOM check shares (E16-S03).
+    const current = await em.find(BomRevision, {
       $or: boms.slice(offset, offset + REFERENCE_BATCH_SIZE).map((bom) => ({ bom, number: bom.revision })),
-      validFrom: { $lte: input.plannedFinish },
-      $and: [{ $or: [{ validThrough: null }, { validThrough: { $gte: input.plannedFinish } }] }],
     }, { populate: ["bom"] });
+    const recipes = current.filter((recipe) => isRevisionValidOn(recipe, input.plannedFinish));
     const componentsByRevision = await componentSets(em, recipes, location, record.baseQuantity);
     for (const recipe of recipes) {
       const components = componentsByRevision.get(recipe.id)!;

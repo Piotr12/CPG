@@ -1,8 +1,9 @@
 import type { EntityManager } from "@cpg/db";
 import { addDays, addMonths, monthStart } from "../../domain/demand/demand-buckets";
-import type { MrpInputs } from "../../domain/mrp/mrp-inputs";
+import type { MrpInputs, MrpUnreadableRow } from "../../domain/mrp/mrp-inputs";
 import { MRP_HORIZON_DAYS } from "../../domain/mrp/projection/horizon";
 import { yieldToEventLoop } from "../../http/yield-to-event-loop";
+import { readBoms } from "./snapshot/boms";
 import { readCodes } from "./snapshot/codes";
 import { readForecasts } from "./snapshot/forecasts";
 import { readConsumingLines, readOrderLines } from "./snapshot/order-lines";
@@ -29,27 +30,31 @@ export class MrpSnapshotService {
    * The inputs for a run planning `today` (ISO day) and the 89 days after it. Forecasts count from today's
    * month (earlier ones expired, D08) to the horizon's last day, and the lines that consume them are read
    * to the end of that day's month, so a forecast late in the horizon sees its whole month (#275).
-   * Production orders and transfers are read only to the horizon's last day (#277), and every planning
-   * parameter set is read for sizing (#278).
+   * Production orders and transfers are read only to the horizon's last day (#277), every planning
+   * parameter set is read for sizing (#278), and every active BOM's current revision for the Missing BOM
+   * check (#280).
    */
   async load(today: string): Promise<MrpInputs> {
     const last = addDays(today, MRP_HORIZON_DAYS - 1);
     const from = monthStart(today);
     const before = addMonths(last, 1);
     const codes = await readCodes(this.em);
-    const stock = await readStock(this.em, codes);
-    const safetyTargets = await readSafetyTargets(this.em, codes, last);
-    const planningParameters = await readPlanningParameters(this.em, codes);
+    // Every seam leaves out a row it can't read and reports it here (E16-S03): nothing is guessed.
+    const unreadable: MrpUnreadableRow[] = [];
+    const stock = await readStock(this.em, codes, unreadable);
+    const safetyTargets = await readSafetyTargets(this.em, codes, last, unreadable);
+    const planningParameters = await readPlanningParameters(this.em, codes, unreadable);
     await yieldToEventLoop();
-    const orderLines = [...(await readOrderLines(this.em, codes, before)), ...(await readConsumingLines(this.em, codes, from, before))];
-    const forecasts = await readForecasts(this.em, codes, from, last);
-    const requisitions = await readRequisitions(this.em, codes);
-    const purchaseOrderLines = await readPurchaseOrderLines(this.em, codes);
+    const orderLines = [...(await readOrderLines(this.em, codes, before, unreadable)), ...(await readConsumingLines(this.em, codes, from, before, unreadable))];
+    const forecasts = await readForecasts(this.em, codes, from, last, unreadable);
+    const requisitions = await readRequisitions(this.em, codes, unreadable);
+    const purchaseOrderLines = await readPurchaseOrderLines(this.em, codes, unreadable);
     await yieldToEventLoop();
     const afterHorizon = addDays(last, 1);
-    const productionOrders = await readProductionOrders(this.em, codes, afterHorizon);
-    const transfers = await readTransfers(this.em, codes, afterHorizon);
+    const productionOrders = await readProductionOrders(this.em, codes, afterHorizon, unreadable);
+    const transfers = await readTransfers(this.em, codes, afterHorizon, unreadable);
     await yieldToEventLoop();
-    return { stock, orderLines, forecasts, safetyTargets, requisitions, purchaseOrderLines, productionOrders, transfers, planningParameters };
+    const boms = await readBoms(this.em, codes);
+    return { stock, orderLines, forecasts, safetyTargets, requisitions, purchaseOrderLines, productionOrders, transfers, planningParameters, boms, unreadable };
   }
 }

@@ -40,6 +40,7 @@ describe("@cpg/db", () => {
       "MrpDailyResult",
       "MrpRecommendation",
       "MrpRun",
+      "MrpRunException",
       "NAMED_RECORD_NAME_MAX",
       "OptimisticLockError",
       "PROCUREMENT_MODES",
@@ -145,6 +146,7 @@ describe("@cpg/db", () => {
       db.MrpRun,
       db.MrpDailyResult,
       db.MrpRecommendation,
+      db.MrpRunException,
     ]);
     const tenantOwned: unknown[] = [
       db.TenantAuditEvent,
@@ -183,6 +185,7 @@ describe("@cpg/db", () => {
       db.MrpRun,
       db.MrpDailyResult,
       db.MrpRecommendation,
+      db.MrpRunException,
     ];
     expect(db.GLOBAL_ENTITIES).toEqual(db.entities.filter((entity) => !tenantOwned.includes(entity)));
   });

@@ -59,6 +59,18 @@ export interface MrpPlanView {
   buckets: MrpBucketView[];
   /** The run's replenishment proposals for this pair, by need date (E16-S01). */
   proposals: MrpProposalView[];
+  /** The run's exceptions for this pair, a transfer's at its source, in run order (E16-S03). */
+  exceptions: MrpExceptionView[];
+}
+
+/**
+ * One stored MRP exception (E16-S03): its code, its fixed English message, and `params` as strings,
+ * the pair and its date among them. Screens translate it by code and params (spec Q7).
+ */
+export interface MrpExceptionView {
+  code: string;
+  message: string;
+  params: Record<string, string>;
 }
 
 /** One stored replenishment proposal (E16-S01): what it would create, the day it covers, a six-decimal BUoM quantity above zero. */

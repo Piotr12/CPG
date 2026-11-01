@@ -37,9 +37,8 @@ describe("sizeProposals", () => {
     expect(sizeProposals(pair(["-3", "-3", "-3", "-3"]), parameters({ procurement: "make" })).map(({ kind }) => kind)).toEqual(["production-order"]);
   });
 
-  it("proposes nothing for a raw material whose set says Make, whatever its shortage (R02)", () => {
-    expect(sizeProposals(pair(["-3", "-9", "-9", "-9"]), parameters({ materialType: "raw", procurement: "make" }))).toEqual([]);
-    expect(sizeProposals(pair(["-3", "-3", "-3", "-3"]), parameters({ materialType: "raw" }))).toHaveLength(1);
+  it("proposes purchase requisitions for a raw material planned Buy (MRP-030)", () => {
+    expect(sizeProposals(pair(["-3", "-3", "-3", "-3"]), parameters({ materialType: "raw" })).map(({ kind }) => kind)).toEqual(["purchase-requisition"]);
   });
 
   it("carries a lot's surplus into later days, and proposes again only where the balance would fall below the target", () => {
