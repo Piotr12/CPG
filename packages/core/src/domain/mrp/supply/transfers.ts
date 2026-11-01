@@ -67,7 +67,7 @@ export function planTransfers(
     }
     if (feasible < planned) {
       const { transfer: code, material, source: from, destination } = transfer;
-      plan.exceptions.push({ kind: "insufficient-transfer-stock", transfer: code, material, source: from, destination, date, planned, available });
+      plan.exceptions.push({ code: "INSUFFICIENT_TRANSFER_STOCK", transfer: code, material, source: from, destination, date, planned, available });
     }
   }
   plan.dispatches.sort(byDateTransferStage);

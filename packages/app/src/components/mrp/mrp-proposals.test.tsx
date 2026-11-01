@@ -7,12 +7,12 @@ import { MrpProposals } from "./mrp-proposals";
 
 const RUN = { id: "00000004", startDate: "2026-10-01" };
 const buy = (overrides: Partial<MrpProposalView> = {}): MrpProposalView => ({
-  id: "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b", kind: "purchase-requisition", needDate: "2026-10-05", quantity: "100.000000", executable: true, document: null, ...overrides,
+  id: "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b", kind: "purchase-requisition", needDate: "2026-10-05", quantity: "100.000000", plannedStart: "2026-10-03", plannedFinish: "2026-10-05", lateDays: 0, beyondHorizon: false, executable: true, document: null, ...overrides,
 });
 const plan = (proposals: MrpProposalView[]): MrpPlanView => ({
   material: "00000031", materialDescription: "Sugar", materialActive: true, baseUnit: "kg",
   location: "00000002", locationName: "Plant North", locationActive: true, lowestProjectedBefore: "-100.000000", firstShortageDate: "2026-10-05",
-  buckets: [], proposals,
+  buckets: [], proposals, exceptions: [],
 });
 const accept = vi.fn();
 const refresh = vi.hoisted(() => vi.fn());

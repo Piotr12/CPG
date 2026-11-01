@@ -1,6 +1,6 @@
 import type { AuditChannel, MrpRecommendationKind, MrpRun, MrpRunMode } from "@cpg/db";
 import { addDays } from "../../domain/demand/demand-buckets";
-import type { MrpBucket } from "../../domain/mrp/mrp-result";
+import type { MrpBucket, MrpProposalTiming } from "../../domain/mrp/mrp-result";
 
 /** A bucket's figures, in the order the engine declares them; `date` is the bucket's key, not a figure. */
 export const MRP_FIGURES = [
@@ -59,10 +59,27 @@ export interface MrpPlanView {
   buckets: MrpBucketView[];
   /** The run's replenishment proposals for this pair, by need date (E16-S01). */
   proposals: MrpProposalView[];
+  /** The run's exceptions for this pair, a transfer's at its source, in run order (E16-S03). */
+  exceptions: MrpExceptionView[];
 }
 
-/** One stored replenishment proposal (E16-S01): what it would create, the day it covers, a six-decimal BUoM quantity above zero. */
-export interface MrpProposalView {
+/**
+ * One stored MRP exception (E16-S03): its code, its fixed English message, and `params` as strings,
+ * the pair and its date among them. Screens translate it by code and params (spec Q7).
+ */
+export interface MrpExceptionView {
+  code: string;
+  message: string;
+  params: Record<string, string>;
+}
+
+/**
+ * One stored replenishment proposal (E16-S01): what it would create, the day it covers, a six-decimal
+ * BUoM quantity above zero, and its timing (E16-S02): its planned start, never before the run's start,
+ * its planned finish, the days it is late (Late Supply) and whether it finishes after the run's last day
+ * (Beyond Horizon).
+ */
+export interface MrpProposalView extends MrpProposalTiming {
   /** The proposal's ID for accepting it (E19-S01): unique across tenants, so another tenant's is never found. */
   id: string;
   kind: MrpRecommendationKind;

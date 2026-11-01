@@ -4,6 +4,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { initOrm } from "./orm";
 
+const MIGRATION = "Migration20261101075151_mrp_acceptance";
 const tempDatabase = () => path.join(mkdtempSync(path.join(tmpdir(), "cpg-mrp-acceptance-migration-")), "cpg.sqlite");
 
 describe("MRP acceptance migration (#287)", () => {
@@ -27,9 +28,8 @@ describe("MRP acceptance migration (#287)", () => {
       await recommendation("p1", "2026-11-05");
       const before = await sql("select sql from sqlite_master where name in ('purchase_requisition', 'mrp_recommendation') order by name");
 
-      await orm.migrator.up();
+      await orm.migrator.up({ to: MIGRATION });
 
-      expect(await orm.schema.getUpdateSchemaSQL()).not.toMatch(/`(purchase_requisition|mrp_recommendation)`/);
       expect(await sql("select code, mrp_run from purchase_requisition")).toEqual([{ code: "00000001", mrp_run: null }]);
       expect(await sql("select id, accepted_document from mrp_recommendation")).toEqual([{ id: "p1", accepted_document: null }]);
       // Altered in place: SQLite writes an added column after the last one, before the table constraints, and keeps the rest verbatim.
@@ -42,6 +42,12 @@ describe("MRP acceptance migration (#287)", () => {
       await sql("update purchase_requisition set mrp_run = '00000004' where id = 'q2'");
       await sql("update mrp_recommendation set accepted_document = '00000002' where id = 'p2'");
 
+      // The later migrations (the lead time column, #279, and MRP run exceptions, #280) complete the schema the entities declare.
+      await orm.migrator.up();
+      expect(await orm.schema.getUpdateSchemaSQL()).not.toMatch(/`(purchase_requisition|mrp_recommendation)`/);
+
+      // Back to this migration, then through it: the later ones go first.
+      await orm.migrator.down({ to: MIGRATION });
       await orm.migrator.down();
 
       expect(await columnsOf("purchase_requisition")).not.toContain("mrp_run");

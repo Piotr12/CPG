@@ -438,8 +438,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MAT-017 — Missing parameters explicit
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MAT-017": demand at a site with no planning parameter set raises Missing Planning Parameters dated at the shortage, no proposal, and the demand and shortage still in the buckets), `packages/core/src/domain/mrp/sizing/replenish-pair.test.ts`, `tests/integration/mrp-run-api.test.ts` (the exception and an empty `proposals`, read from the latest run through the API). The UI half, listing it on the MRP report, is E18-S03 (#286). E16-S03, #280.
 - **Given:** Material demand at a site with absent Make/Buy
 - **When:** Run MRP
 - **Then:** Missing Planning Parameters exception; no guessed supply document for affected material.
@@ -448,7 +449,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** The lead time is stored in whole calendar days, 0–999 (`planning-parameter-fields.schema.test.ts`, the planning-parameters `route.test.ts`). An order's planned start is its finish minus those calendar days: `packages/core/src/domain/production-orders/production-planning.test.ts`, `packages/core/src/services/production-orders/production-order.service.test.ts`. Back-scheduling in MRP is slice 3. E03-S03, #24; E10-S01, #88.
+- **Evidence:** The lead time is stored in whole calendar days, 0–999 (`planning-parameter-fields.schema.test.ts`, the planning-parameters `route.test.ts`). An order's planned start is its finish minus those calendar days: `packages/core/src/domain/production-orders/production-planning.test.ts`, `packages/core/src/services/production-orders/production-order.service.test.ts`. MRP back-schedules every proposal the same way (`plannedStart`): `packages/core/src/domain/mrp/sizing/schedule-proposal.test.ts` and `plan-mrp.test.ts` ("MAT-018": need on 15 October, lead time 7, start 8 October). E03-S03, #24; E10-S01, #88; E16-S02, #279.
 - **Given:** Planning lead time 7 whole days
 - **When:** MRP computes need on October 15
 - **Then:** Back-scheduled start uses October 8, not seven business days earlier.
@@ -493,7 +494,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/services/materials/base-quantity.test.ts` and `packages/core/src/services/materials/material.service.test.ts` (a unit with no conversion is `UNIT_NOT_CONVERTIBLE`, never assumed 1:1). Saving: `packages/core/src/services/boms/bom.service.test.ts` (a BOM line in a unit its material doesn't convert is refused with a field error on that line's unit, `components.N.unit`, next to other lines' errors), `tests/integration/boms-api.test.ts` (a `POST` with a `pallet` line is 400 with that field error), `packages/app/src/components/boms/recipe-form.test.tsx` (the server's line error shown, translated, on its line). MRP's exception waits for slice 3. E03-S01, #22; E04-S01, #26.
+- **Evidence:** `packages/core/src/services/materials/base-quantity.test.ts` and `packages/core/src/services/materials/material.service.test.ts` (a unit with no conversion is `UNIT_NOT_CONVERTIBLE`, never assumed 1:1). Saving: `packages/core/src/services/boms/bom.service.test.ts` (a BOM line in a unit its material doesn't convert is refused with a field error on that line's unit, `components.N.unit`, next to other lines' errors), `tests/integration/boms-api.test.ts` (a `POST` with a `pallet` line is 400 with that field error), `packages/app/src/components/boms/recipe-form.test.tsx` (the server's line error shown, translated, on its line). MRP half: `packages/core/src/services/mrp/snapshot/readable.test.ts` (a factor of zero, negative or not a number is unreadable, never 1:1), `mrp-snapshot.service.test.ts` (a stored order line with a zero denominator, and a requisition with a zero numerator, are left out and reported as unreadable), and `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-036": a material with an unreadable row raises Invalid UoM Conversion on every pair, nothing guessed). E03-S01, #22; E04-S01, #26; E16-S03, #280.
 - **Given:** Quantity entered in UoM not convertible for material
 - **When:** Attempt save or run dependent MRP
 - **Then:** Transaction cannot silently assume 1:1; actionable invalid conversion error/exception.
@@ -2658,6 +2659,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Not executed
 
+- **Evidence:** `priority/rank-shortages.test.ts` ("DEM-018"): the order is served and the safety target's gap is listed as a `safety-target` shortage, in the engine result only; no channel shows it yet (#279 spec Q4). E16-S02, #279.
 - **Given:** Stock only sufficient for due customer order but not target buffer
 - **When:** Run MRP
 - **Then:** Customer demand prioritized, safety stock gap displayed as lower-priority requirement.
@@ -2666,6 +2668,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Not executed
 
+- **Evidence:** `priority/rank-shortages.test.ts` and `plan-mrp.test.ts` ("DEM-019": of 15 available, the order of 10 is served in full and the forecast is 15 short), in the engine result only; no channel shows it yet (#279 spec Q4). E16-S02, #279.
 - **Given:** Customer demand 10 and residual forecast 20 share day but supply limited 15
 - **When:** Run MRP
 - **Then:** Firm customer order is prioritized ahead of forecast; unmet forecast shown as shortage.
@@ -2674,6 +2677,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Not executed
 
+- **Evidence:** `priority/rank-shortages.test.ts` ("DEM-020": O1 due Monday, today, served before O2 due Tuesday, O2's shortage against O2; overdue orders on today ranked by their original dates), in the engine result only; no channel shows it yet (#279 spec Q4). E16-S02, #279.
 - **Given:** Customer O1 due Monday and O2 due Tuesday, insufficient stock
 - **When:** Run MRP
 - **Then:** O1's requirement scheduled first, O2 shortage transparent.
@@ -2682,6 +2686,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Not executed
 
+- **Evidence:** `priority/rank-shortages.test.ts` ("DEM-021": same-date lines tie-broken only by order code and position, identical for any input order), in the engine result only; no channel shows it yet (#279 spec Q4). E16-S02, #279.
 - **Given:** Two order lines due same date and site
 - **When:** Run MRP
 - **Then:** No preferential customer-specific priority configured; deterministic technical order does not alter equal business priority.
@@ -2690,6 +2695,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Not executed
 
+- **Evidence:** `priority/rank-shortages.test.ts` ("DEM-022": a forecast residual of 40 is served before a safety top-up of 20), in the engine result only; no channel shows it yet (#279 spec Q4). E16-S02, #279.
 - **Given:** Residual forecast 40 and safety top-up 20 compete for scarce supply
 - **When:** Run MRP
 - **Then:** Forecast is prioritized ahead of safety-stock replenishment.
@@ -3001,47 +3007,52 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** Master half: MAT-014's evidence (Make refused for raw). MRP half: `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-033": a raw material whose stored set says Make gets no proposal at all) and `sizing/size-proposals.test.ts`. The exception for such a set is E16-S03 (#280). E16-S01, #278.
+- **Evidence:** Master half: MAT-014's evidence (Make refused for raw). MRP half: `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-033": a raw material whose stored set says Make gets no proposal at all) and `sizing/replenish-pair.test.ts` ("MRP-033": never a production proposal). The exception for such a set: `plan-mrp.test.ts` ("MRP-033" under #280: Missing Planning Parameters with `reason: "raw-make"`, needed or not). E16-S01, #278; E16-S03, #280.
 - **Given:** Raw material has invalid Make setting attempted
 - **When:** Validate master and run
 - **Then:** Invalid master not accepted; MRP cannot produce a raw Make action.
 
 ### MRP-034 — Missing planning parameters isolated
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-034": A without a set raises Missing Planning Parameters, and B's plans and proposals deep-equal a run without A), `tests/integration/mrp-run-api.test.ts` (the API half). The report's exception list is E18-S03 (#286). E16-S03, #280.
 - **Given:** Material A lacks lot data but B valid
 - **When:** Run MRP
 - **Then:** A yields explicit Missing Planning Parameters, B still gets valid result/recommendation.
 
 ### MRP-035 — Missing BOM isolated
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-035": Make A with no BOM, or a current revision ending before or starting after the need date, raises Missing BOM with no proposal, and B plans as without A), `packages/core/src/domain/mrp/sizing/replenish-pair.test.ts` (an inactive BOM is never read: `mrp-snapshot.service.test.ts`), `tests/integration/mrp-run-api.test.ts` (Missing BOM through the API). The report's list is E18-S03 (#286). E16-S03, #280.
 - **Given:** Make intermediate A lacks any date-valid BOM; B valid
 - **When:** Run MRP
 - **Then:** A produces Missing BOM; B planning completes unaffected.
 
 ### MRP-036 — Invalid conversion explicit exception
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** MRP half: `packages/core/src/services/mrp/mrp-snapshot.service.test.ts` ("unreadable rows": each corrupt shape written around the services, such as a zero denominator, a negative or malformed quantity, a date that isn't real or a corrupt BOM line, is left out and reported), `packages/core/src/services/mrp/mrp-run.service.test.ts` ("MRP-036": the run completes, A's Invalid UoM Conversion is stored and listed, and B keeps its proposal), and `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-036": every pair of A, nothing guessed, B unchanged). Entry half: MAT-022's evidence. The UI listing is E18-S03 (#286). E16-S03, #280.
 - **Given:** Legacy or corrupt persisted factor/dependency detected in stored data; normal input validation would have rejected this
 - **When:** Run MRP with affected material
 - **Then:** MRP emits Invalid UoM Conversion without guessing, valid unrelated items still plan; new invalid conversion records are rejected at entry.
 
 ### MRP-037 — Late lead-time warning
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/mrp/sizing/schedule-proposal.test.ts` and `plan-mrp.test.ts` ("MRP-037": a need on day 3 with lead time 7 starts today, finishes on day 7, 4 days late, need kept on day 3; its receipt on day 7, days 3–6 short). Stored and listed through the API with `plannedStart`, `plannedFinish` and `lateDays` (`mrp-run.service.test.ts`, `tests/integration/mrp-run-api.test.ts`). No screen lists proposals yet (E19-S01). E16-S02, #279.
 - **Given:** Need due 3 days ahead, lead time 7 days
 - **When:** Run MRP
 - **Then:** Earliest proposed start today, completion 7 days hence, Late Supply by 4 days.
 
 ### MRP-038 — No backwards production starts
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `sizing/schedule-proposal.test.ts` and `plan-mrp.test.ts` ("MRP-038": an overdue production need starts today and finishes on day 4, and no proposal of a mixed run starts before today). The API's `plannedStart` is derived by the same rule (`mrp-run.service.test.ts`). No screen lists proposals yet (E19-S01). E16-S02, #279.
 - **Given:** Production need yesterday, lead 4 days
 - **When:** Run MRP today
 - **Then:** No newly recommended production start is dated in the past.
@@ -3092,6 +3103,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Not executed
 
+- **Evidence:** Single-pair case only: `packages/core/src/domain/mrp/priority/rank-shortages.test.ts` ("DEM-019, MRP-044"): the firm order is served and the forecast's shortage is listed in `MrpPlan.shortages`, which no channel shows yet (#279 spec Q4). The multi-level raw-material case needs E17's root ranking. E16-S02, #279.
 - **Given:** One raw shortage affects firm customer order and residual forecast
 - **When:** Run MRP
 - **Then:** Firm requirement given priority and forecast shortage remains visible.
@@ -3133,8 +3145,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MRP-049 — Beyond-horizon feasible finish separately visible
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `sizing/schedule-proposal.test.ts` and `plan-mrp.test.ts` ("MRP-049": need on day 20, Buy lead time 120, Late Supply by 100 days and Beyond Horizon on day 120; no bucket's `proposedReceipts` raised, `projectedAfter` below zero on days 20–89). Through the API, `beyondHorizon: true` with `plannedFinish` on day 120 (`tests/integration/mrp-run-api.test.ts`). No screen lists proposals yet (E19-S01). E16-S02, #279.
 - **Given:** Today is day 0, demand on day 20, required Buy lead time 120 days
 - **When:** Run 90-day MRP
 - **Then:** Show Late Supply and dated Beyond Horizon proposed finish day 120; projected day 0–89 supply is not increased by that future receipt.
@@ -3286,8 +3299,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### RUN-016 — Independent exceptions do not suppress valid planning
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** Planning half: `packages/core/src/domain/mrp/plan-mrp.test.ts` ("RUN-016": A's Missing BOM beside B's Buy proposal in one result, where every proposal is executable). Automatic mode and the atomic batch are E19-S03 (#289). E16-S03, #280.
 - **Given:** Material A missing BOM, material B Buy recommendation valid
 - **When:** Run MRP auto mode
 - **Then:** A exception reported; eligible B recommendation still considered for atomic create batch.

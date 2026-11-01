@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, addMonths, bucketIndex, bucketStart, DEMAND_WINDOWS, demandWindow, isoWeek, monthStart } from "./demand-buckets";
+import { addDays, addMonths, bucketIndex, bucketStart, daysBetween, DEMAND_WINDOWS, demandWindow, isoWeek, monthStart } from "./demand-buckets";
 
 // 2026-10-25 is a Sunday: the last day of ISO week 43, which started on Monday 19 October.
 const TODAY = "2026-10-25";
@@ -10,6 +10,15 @@ describe("calendar helpers", () => {
     expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
     expect(addDays("2026-03-01", -1)).toBe("2026-02-28");
     expect(addDays("2028-03-01", -1)).toBe("2028-02-29");
+  });
+
+  it("counts calendar days between two dates across months, years and leap days, negative backwards", () => {
+    expect(daysBetween("2026-10-04", "2026-10-08")).toBe(4);
+    expect(daysBetween("2026-12-31", "2027-01-01")).toBe(1);
+    expect(daysBetween("2028-02-28", "2028-03-01")).toBe(2);
+    expect(daysBetween("2026-10-08", "2026-10-01")).toBe(-7);
+    expect(daysBetween("2026-10-01", "2026-10-01")).toBe(0);
+    expect(daysBetween("2026-10-01", addDays("2026-10-01", 120))).toBe(120);
   });
 
   it("finds a month's first day and moves by whole months", () => {

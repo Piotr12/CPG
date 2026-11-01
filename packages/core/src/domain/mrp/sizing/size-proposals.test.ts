@@ -27,9 +27,9 @@ const parameters = (overrides: Partial<MrpPlanningParameters> = {}): MrpPlanning
 });
 
 describe("sizeProposals", () => {
-  it("proposes a purchase requisition for Buy, carrying the need date, the receipt day and the lead time", () => {
+  it("proposes a purchase requisition for Buy, carrying the need date and the lead time, and leaves the timing to planMrp (E16-S02)", () => {
     expect(sizeProposals(pair(["5", "-3", "-3", "-3"]), parameters())).toEqual([
-      { kind: "purchase-requisition", material: "M1", location: "L1", needDate: "2026-10-02", date: "2026-10-02", quantity: q("3"), leadTimeDays: 7 },
+      { kind: "purchase-requisition", material: "M1", location: "L1", needDate: "2026-10-02", quantity: q("3"), leadTimeDays: 7 },
     ]);
   });
 
@@ -37,9 +37,8 @@ describe("sizeProposals", () => {
     expect(sizeProposals(pair(["-3", "-3", "-3", "-3"]), parameters({ procurement: "make" })).map(({ kind }) => kind)).toEqual(["production-order"]);
   });
 
-  it("proposes nothing for a raw material whose set says Make, whatever its shortage (R02)", () => {
-    expect(sizeProposals(pair(["-3", "-9", "-9", "-9"]), parameters({ materialType: "raw", procurement: "make" }))).toEqual([]);
-    expect(sizeProposals(pair(["-3", "-3", "-3", "-3"]), parameters({ materialType: "raw" }))).toHaveLength(1);
+  it("proposes purchase requisitions for a raw material planned Buy (MRP-030)", () => {
+    expect(sizeProposals(pair(["-3", "-3", "-3", "-3"]), parameters({ materialType: "raw" })).map(({ kind }) => kind)).toEqual(["purchase-requisition"]);
   });
 
   it("carries a lot's surplus into later days, and proposes again only where the balance would fall below the target", () => {

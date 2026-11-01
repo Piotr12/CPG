@@ -1,6 +1,7 @@
 import { holdWriteGate, MrpRecommendation, MrpRun, type EntityManager } from "@cpg/db";
 import { isExecutableProposal } from "../../domain/mrp/acceptance/executable-proposal";
 import { planMrp } from "../../domain/mrp/plan-mrp";
+import { scheduleProposal } from "../../domain/mrp/sizing/schedule-proposal";
 import { formatDecimal } from "../../domain/quantities/decimal";
 import { ConflictError, NotFoundError } from "../../http/errors";
 import { parseInput } from "../../http/parse-input";
@@ -105,7 +106,11 @@ export class MrpAcceptanceService {
     proposal.acceptedDocument = document.id;
     await this.em.flush();
     return {
-      proposal: { id: proposal.id, run: run.code, material, location, kind, needDate, quantity, executable: true, document: document.id },
+      proposal: {
+        id: proposal.id, run: run.code, material, location, kind, needDate, quantity,
+        ...scheduleProposal(needDate, proposal.leadTimeDays, run.startDate, run.horizonDays),
+        executable: true, document: document.id,
+      },
       document,
     };
   }

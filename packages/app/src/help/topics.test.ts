@@ -75,6 +75,15 @@ describe("help topics", () => {
   });
 
   it.each([
+    ["en", "starts its lead time, in calendar days, before the day it is needed, and never before today", "is late by the days between", "beyond the horizon, and no day's balance counts it", "lateDays", "beyondHorizon"],
+    ["pl", "przed dniem potrzeby, nigdy przed dzisiaj", "jest spóźniona o dni pomiędzy", "jest poza horyzontem i nie liczy się w stanie żadnego dnia", "lateDays", "beyondHorizon"],
+  ] as const)("says in %s when a proposal starts, that a late one counts from its finish and that one beyond the horizon counts in no day (#279)", (locale, ...phrases) => {
+    const text = helpTopics(locale).find((topic) => topic.id === "mrp")!.body.join(" ");
+
+    for (const phrase of phrases) expect(text).toContain(phrase);
+  });
+
+  it.each([
     ["en", "has Accept: after you confirm", "records the run's ID", "refused as out of date and you run MRP again", "accepted once", "Production-order proposals can't be accepted yet",
       "/mrp/runs/{run}/proposals/{proposal}/accept", "whether they can be accepted (executable)"],
     ["pl", "ma przycisk Akceptuj: po potwierdzeniu", "zapisuje ID przebiegu", "odrzucona jako nieaktualna i trzeba ponownie uruchomić MRP", "zaakceptować raz",

@@ -15,6 +15,11 @@ const owned = tenantOwned();
  * and its quantity as a six-decimal text in the base unit (R03). Only the latest run keeps them, as
  * with its daily results. The run reference cascades, so deleting a run removes its recommendations
  * even from an image that predates this table (a Test reset during a deploy, #278 spec).
+ *
+ * `leadTimeDays` is the pair's lead time the proposal was timed with (E16-S02): the read derives its
+ * planned start and finish, lateness and Beyond Horizon mark from it and the run's start, through the
+ * engine's own rule. It defaults to 0, so a row an older image writes reads as received on its need date,
+ * which is how that image planned it.
  */
 export const MrpRecommendation = defineEntity({
   name: "MrpRecommendation",
@@ -28,6 +33,7 @@ export const MrpRecommendation = defineEntity({
     kind: p.enum(MRP_RECOMMENDATION_KINDS),
     needDate: p.string().length(10),
     quantity: p.string(),
+    leadTimeDays: p.integer().default(0),
     /** The business ID of the document accepting this proposal created (E19-S01), or null while it isn't accepted. */
     acceptedDocument: p.string().length(8).nullable(),
   },

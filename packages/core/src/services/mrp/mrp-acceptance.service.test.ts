@@ -59,6 +59,12 @@ async function parameters(materialId: string, procurement: "buy" | "make" = "buy
     ANNA,
   );
 }
+/** An active BOM of `output`, valid from 2026, made of a raw material of its own: a Make set may propose it (E16-S03, #280). */
+async function bom(output: string) {
+  const { cradle } = await scope();
+  const component = await cradle.materialService.create({ type: "raw", description: `Input of ${output}`, baseUnit: "each" }, ANNA);
+  await cradle.bomService.create({ output, priority: 1, validFrom: "2026-01-01", validThrough: null, components: [{ material: component.id, quantity: "1", unit: "each" }] }, ANNA);
+}
 /** The latest run's plan of `materialId` at the plant, with its proposals. */
 async function plan(materialId: string, tenant = "prod"): Promise<MrpPlanView & { run: string }> {
   const report = await (await scope(tenant)).cradle.mrpRunService.latest({ material: materialId, location: PLANT });
@@ -104,7 +110,7 @@ describe("MrpAcceptanceService.accept: creating the document", () => {
     });
     expect(accepted.proposal).toEqual({
       id: proposal.id, run: runId, material: sugar, location: PLANT, kind: "purchase-requisition", needDate: "2026-10-05",
-      quantity: "100.000000", executable: true, document: "00000001",
+      quantity: "100.000000", plannedStart: "2026-10-03", plannedFinish: "2026-10-05", lateDays: 0, beyondHorizon: false, executable: true, document: "00000001",
     });
     expect(await count("purchase_requisition")).toBe(1);
     expect(await count("purchase_order")).toBe(0);
@@ -299,6 +305,7 @@ describe("MrpAcceptanceService.accept: refusals, with nothing created", () => {
   it("refuses a Make proposal as not executable until MRP chooses its BOM (spec Q1)", async () => {
     const jam = await material("Jam");
     await parameters(jam.id, "make");
+    await bom(jam.id);
     await order(jam.id, "12", "2026-10-08");
     await run();
     const { run: runId, proposals: [proposal] } = await plan(jam.id);

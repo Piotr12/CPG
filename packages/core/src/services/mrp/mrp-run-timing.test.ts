@@ -188,9 +188,10 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     const [{ n: rows }] = await orm.em.getConnection().execute<{ n: number }[]>("select count(*) as n from mrp_daily_result");
     const [{ pairs }] = await orm.em.getConnection().execute<{ pairs: number }[]>("select pairs from mrp_run order by code desc limit 1");
     const proposals = await count("select count(*) as n from mrp_recommendation");
+    const exceptions = await count("select count(*) as n from mrp_run_exception");
     const engine = await engineOnly();
     process.stdout.write(
-      `MRP run, ${size.name} (${pairs} pairs, ${rows} daily rows, ${proposals} recommendations, ${size.lines} order lines, ${size.forecasts} forecasts, ` +
+      `MRP run, ${size.name} (${pairs} pairs, ${rows} daily rows, ${proposals} recommendations, ${exceptions} exceptions, ${size.lines} order lines, ${size.forecasts} forecasts, ` +
         `${size.orders + size.fullOrders} purchase orders with ${size.orders * ORDER_LINES + size.fullOrders * FULL_ORDER_LINES} lines, ${size.requisitions} requisitions, ` +
         `${size.productionOrders} production orders, ${size.transfers} transfers): ` +
         `${fastest.toFixed(0)} ms fastest of ${RUNS}, longest event-loop stall ${longestStall.toFixed(0)} ms, planMrp alone ${engine.toFixed(0)} ms\n`,
@@ -251,8 +252,9 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     const { fastest, longestStall } = await measure();
     const rows = await count("select count(*) as n from mrp_daily_result");
     const proposals = await count("select count(*) as n from mrp_recommendation");
+    const exceptions = await count("select count(*) as n from mrp_run_exception");
     process.stdout.write(
-      `MRP run, worst case for proposals, ${size.name} (${rows} daily rows, ${proposals} recommendations, ${size.lines + size.materials * days} order lines): ` +
+      `MRP run, worst case for proposals, ${size.name} (${rows} daily rows, ${proposals} recommendations, ${exceptions} exceptions, ${size.lines + size.materials * days} order lines): ` +
         `${fastest.toFixed(0)} ms fastest of ${RUNS}, longest event-loop stall ${longestStall.toFixed(0)} ms\n`,
     );
     // Every day but, for some materials, today: overdue purchase-order lines all land today and can cover it.

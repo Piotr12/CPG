@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { addDays } from "../demand/demand-buckets";
 import { formatDecimal, parseDecimal } from "../quantities/decimal";
 import type {
+  MrpBom,
   MrpForecast,
   MrpInputs,
   MrpOrderLine,
@@ -12,7 +14,7 @@ import type {
   MrpStock,
   MrpTransfer,
 } from "./mrp-inputs";
-import { MRP_PROPOSAL_KINDS, type MrpPlan } from "./mrp-result";
+import { MRP_PROPOSAL_KINDS, type MrpInsufficientTransferStock, type MrpPlan } from "./mrp-result";
 import { planMrp } from "./plan-mrp";
 import { safetyGap } from "./projection/safety-gap";
 
@@ -93,8 +95,16 @@ const inputs = (overrides: Partial<MrpInputs> = {}): MrpInputs => ({
   productionOrders: [],
   transfers: [],
   planningParameters: [],
+  boms: [],
+  unreadable: [],
   ...overrides,
 });
+
+/** `planMrp`, with only its transfer exceptions: a pair without planning parameters adds its own since E16-S03. */
+const planTransferExceptions = (snapshot: MrpInputs, today: string) => {
+  const result = planMrp(snapshot, today);
+  return { ...result, exceptions: result.exceptions.filter((exception): exception is MrpInsufficientTransferStock => exception.code === "INSUFFICIENT_TRANSFER_STOCK") };
+};
 
 const only = (plans: readonly MrpPlan[]) => {
   expect(plans).toHaveLength(1);
@@ -913,7 +923,7 @@ describe("planMrp: open transfers (#277)", () => {
   });
 
   it("projects an undispatched transfer leaving the source on the dispatch day and arriving on the arrival day", () => {
-    const { plans, exceptions } = planMrp(
+    const { plans, exceptions } = planTransferExceptions(
       inputs({ stock: [stock("M1", "S", "100")], transfers: [transfer({ quantity: q("40"), plannedDispatch: "2026-11-02", plannedArrival: "2026-11-04" })] }),
       TODAY_T,
     );
@@ -955,14 +965,14 @@ describe("planMrp: open transfers (#277)", () => {
       inputs({ stock: [stock("M1", "S", "60")], transfers: [transfer({ quantity: q("100"), plannedDispatch: "2026-11-02", plannedArrival: "2026-11-04" })] }),
     );
     const before = structuredClone(snapshot);
-    const { plans, exceptions } = planMrp(snapshot, TODAY_T);
+    const { plans, exceptions } = planTransferExceptions(snapshot, TODAY_T);
     const source = planAt(plans, "M1", "S");
     const destination = planAt(plans, "M1", "D");
     expect(bucketOf(source, "2026-11-02")).toMatchObject({ transferOut: q("60"), projectedBefore: 0n });
     expect(destination.buckets.at(-1)!.projectedBefore).toBe(q("60"));
     expect(sum(destination.transfersIn)).toBe(q("60"));
     expect(exceptions).toEqual([
-      { kind: "insufficient-transfer-stock", transfer: "00000001", material: "M1", source: "S", destination: "D", date: "2026-11-02", planned: q("100"), available: q("60") },
+      { code: "INSUFFICIENT_TRANSFER_STOCK", transfer: "00000001", material: "M1", source: "S", destination: "D", date: "2026-11-02", planned: q("100"), available: q("60") },
     ]);
     expect(snapshot).toEqual(before);
   });
@@ -999,7 +1009,7 @@ describe("planMrp: open transfers (#277)", () => {
   });
 
   it("checks a source short of stock as able to supply nothing: no movement, an exception, and no plan at the destination", () => {
-    const { plans, exceptions } = planMrp(
+    const { plans, exceptions } = planTransferExceptions(
       inputs({
         orderLines: [line({ location: "S", quantity: q("5"), requiredDate: "2026-10-30" })],
         transfers: [
@@ -1020,7 +1030,7 @@ describe("planMrp: open transfers (#277)", () => {
 
   it("serves two same-day transfers from one source in ID order, the second seeing what the first took", () => {
     const dates = { plannedDispatch: "2026-11-02", plannedArrival: "2026-11-03" };
-    const { plans, exceptions } = planMrp(
+    const { plans, exceptions } = planTransferExceptions(
       inputs({
         stock: [stock("M1", "S", "50")],
         transfers: [transfer({ ...dates, transfer: "00000002", quantity: q("30") }), transfer({ ...dates, transfer: "00000001", destination: "E", quantity: q("30") })],
@@ -1033,7 +1043,7 @@ describe("planMrp: open transfers (#277)", () => {
   });
 
   it("serves an older overdue transfer before a newer one with a lower ID, both counted today", () => {
-    const { exceptions } = planMrp(
+    const { exceptions } = planTransferExceptions(
       inputs({
         stock: [stock("M1", "S", "30")],
         transfers: [
@@ -1047,7 +1057,7 @@ describe("planMrp: open transfers (#277)", () => {
   });
 
   it("counts a chain A → B → C across days: B can send on to C what arrives from A first", () => {
-    const { plans, exceptions } = planMrp(
+    const { plans, exceptions } = planTransferExceptions(
       inputs({
         stock: [stock("M1", "A", "50")],
         transfers: [
@@ -1117,7 +1127,7 @@ describe("planMrp: open transfers (#277)", () => {
 
 describe("planMrp: transfer feasibility against the forecast and purchasing seams (#275, #276, #277 Q2)", () => {
   it("checks a source's dispatch against purchase-order supply and forecast demand, never its requisitions", () => {
-    const { plans, exceptions } = planMrp(
+    const { plans, exceptions } = planTransferExceptions(
       inputs({
         stock: [stock("M1", "S", "20")],
         forecasts: [forecast("2026-11-01", "30", { location: "S" })],
@@ -1129,7 +1139,7 @@ describe("planMrp: transfer feasibility against the forecast and purchasing seam
     );
     // Dependable on 2 November: 20 on hand + 50 ordered − 30 forecast = 40. The 100 requisitioned would cover all 80.
     expect(exceptions).toEqual([
-      { kind: "insufficient-transfer-stock", transfer: "00000001", material: "M1", source: "S", destination: "D", date: "2026-11-02", planned: q("80"), available: q("40") },
+      { code: "INSUFFICIENT_TRANSFER_STOCK", transfer: "00000001", material: "M1", source: "S", destination: "D", date: "2026-11-02", planned: q("80"), available: q("40") },
     ]);
     const source = planAt(plans, "M1", "S");
     expect(bucketOf(source, "2026-11-01")).toMatchObject({ forecastDemand: q("30"), tentativeSupply: q("100"), dependableSupply: q("50"), projectedBefore: q("140") });
@@ -1140,7 +1150,7 @@ describe("planMrp: transfer feasibility against the forecast and purchasing seam
 
 describe("planMrp: transfer feasibility against the production seam (#277)", () => {
   it("counts a production order's output and component need at the source before it checks a dispatch", () => {
-    const { exceptions } = planMrp(
+    const { exceptions } = planTransferExceptions(
       inputs({
         stock: [stock("M1", "S", "10"), stock("A", "S", "100")],
         productionOrders: [
@@ -1154,9 +1164,10 @@ describe("planMrp: transfer feasibility against the production seam (#277)", () 
       "2026-10-28",
     );
     // M1: 10 on hand + 50 produced on 30 October = 60. A: 100 on hand − 50 consumed on 29 October = 50.
+    // Exceptions list by material first since E16-S03 (spec Q11), so A's comes before M1's.
     expect(exceptions.map(({ transfer: id, available }) => [id, available])).toEqual([
-      ["00000001", q("60")],
       ["00000002", q("50")],
+      ["00000001", q("60")],
     ]);
   });
 });
@@ -1190,22 +1201,27 @@ describe("planMrp: replenishment proposals (#278)", () => {
     lotMultiple: q("1"),
     ...overrides,
   });
+  /** An open-ended current revision of M1's BOM, so a Make set may propose (E16-S03). */
+  const BOM: MrpBom = { output: "M1", validFrom: "2026-01-01", validThrough: null };
   const target = (quantity: string, location = "L1"): MrpSafetyTarget => ({ material: "M1", location, effectiveFrom: TODAY, quantity: q(quantity) });
   const sized = (stockOf: string, need: string, overrides: Partial<MrpPlanningParameters>) =>
     planMrp(inputs({ stock: [stock("M1", "L1", stockOf)], orderLines: [line({ quantity: q(need), requiredDate: DAY })], planningParameters: [set(overrides)] }), TODAY);
   const quantities = (result: ReturnType<typeof planMrp>) => result.proposals.map(({ quantity }) => quantity);
+  /** A need on DAY with a lead time of 3 starts on 2 October and is on time. */
+  const onTime = { plannedStart: "2026-10-02", plannedFinish: DAY, lateDays: 0, beyondHorizon: false };
 
   it("MAT-016: each location uses its own material-location parameters: Buy minimum 10 multiple 5 proposes 10, Make minimum 0 multiple 1 proposes 3", () => {
     const result = planMrp(
       inputs({
         orderLines: [line({ quantity: q("3"), requiredDate: DAY }), line({ location: "L2", quantity: q("3"), requiredDate: DAY })],
         planningParameters: [set({ minimumQuantity: q("10"), lotMultiple: q("5") }), set({ location: "L2", procurement: "make" })],
+        boms: [BOM],
       }),
       TODAY,
     );
     expect(result.proposals).toEqual([
-      { kind: "purchase-requisition", material: "M1", location: "L1", needDate: DAY, date: DAY, quantity: q("10"), leadTimeDays: 3 },
-      { kind: "production-order", material: "M1", location: "L2", needDate: DAY, date: DAY, quantity: q("3"), leadTimeDays: 3 },
+      { kind: "purchase-requisition", material: "M1", location: "L1", needDate: DAY, quantity: q("10"), leadTimeDays: 3, ...onTime },
+      { kind: "production-order", material: "M1", location: "L2", needDate: DAY, quantity: q("3"), leadTimeDays: 3, ...onTime },
     ]);
     expect(bucketOf(planAt(result.plans, "M1", "L1"), DAY)).toMatchObject({ proposedReceipts: q("10"), projectedBefore: -q("3"), projectedAfter: q("7") });
     expect(bucketOf(planAt(result.plans, "M1", "L2"), DAY)).toMatchObject({ proposedReceipts: q("3"), projectedAfter: 0n });
@@ -1271,6 +1287,7 @@ describe("planMrp: replenishment proposals (#278)", () => {
         stock: [stock("M1", "A", "50")],
         orderLines: [line({ location: "B", quantity: q("20"), requiredDate: DAY })],
         planningParameters: [set({ location: "A" }), set({ location: "B", procurement: "make" })],
+        boms: [BOM],
       }),
       TODAY,
     );
@@ -1289,7 +1306,7 @@ describe("planMrp: replenishment proposals (#278)", () => {
     expect(quantities(result)).toEqual([q("2.5"), q("1.5")]);
     expect(result.proposals.every(({ quantity }) => typeof quantity === "bigint" && quantity > 0n)).toBe(true);
     const receipts = only(result.plans).buckets.filter(({ proposedReceipts }) => proposedReceipts !== 0n).map(({ date, proposedReceipts }) => [date, proposedReceipts]);
-    expect(receipts).toEqual(result.proposals.map(({ date, quantity }) => [date, quantity]));
+    expect(receipts).toEqual(result.proposals.map(({ plannedFinish, quantity }) => [plannedFinish, quantity]));
   });
 
   it("leaves the balances before proposals and the shortage as they are without parameters", () => {
@@ -1314,7 +1331,8 @@ describe("planMrp: replenishment proposals (#278)", () => {
       inputs({
         orderLines: [line({ quantity: q("5"), requiredDate: "2026-10-03" })],
         purchaseOrderLines: [orderLine({ quantity: q("5"), plannedDate: "2026-10-04" })],
-        planningParameters: [set()],
+        // Lead time 0 keeps the receipt on the need date; a lead time of 3 would make it late (E16-S02).
+        planningParameters: [set({ leadTimeDays: 0 })],
       }),
       TODAY,
     );
@@ -1336,15 +1354,388 @@ describe("planMrp: replenishment proposals (#278)", () => {
       line({ location: "L2", quantity: q("1"), requiredDate: DAY }),
       line({ quantity: q("1"), requiredDate: "2026-10-20" }),
       line({ quantity: q("1"), requiredDate: DAY }),
+      // Two same-date lines of a pair with no parameters and too little stock: shortages, ranked by order code (#279).
+      line({ material: "M3", order: "00000009", quantity: q("4"), requiredDate: DAY }),
+      line({ material: "M3", order: "00000008", quantity: q("4"), requiredDate: DAY }),
     ];
     const planningParameters = [set({ material: "M2" }), set({ location: "L2" }), set()];
-    const forward = planMrp(inputs({ orderLines, planningParameters }), TODAY);
+    const forward = planMrp(inputs({ orderLines, planningParameters, stock: [stock("M3", "L1", "5")] }), TODAY);
+    expect(planAt(forward.plans, "M3").shortages.map(({ document, uncovered }) => [document, uncovered])).toEqual([["00000009", q("3")]]);
     expect(forward.proposals.map(({ material, location, needDate }) => [material, location, needDate])).toEqual([
       ["M1", "L1", DAY],
       ["M1", "L1", "2026-10-20"],
       ["M1", "L2", DAY],
       ["M2", "L1", DAY],
     ]);
-    expect(planMrp(inputs({ orderLines: [...orderLines].reverse(), planningParameters: [...planningParameters].reverse() }), TODAY)).toEqual(forward);
+    expect(planMrp(inputs({ orderLines: [...orderLines].reverse(), planningParameters: [...planningParameters].reverse(), stock: [stock("M3", "L1", "5")] }), TODAY)).toEqual(forward);
+  });
+});
+
+describe("planMrp: proposal timing (#279)", () => {
+  /** Today plus `offset` days. */
+  const day = (offset: number) => addDays(TODAY, offset);
+  /** A Buy set of M1 at L1 with `leadTimeDays`, minimum 0, multiple 1, unless overridden. */
+  const set = (leadTimeDays: number, overrides: Partial<MrpPlanningParameters> = {}): MrpPlanningParameters => ({
+    material: "M1",
+    location: "L1",
+    materialType: "intermediate",
+    procurement: "buy",
+    leadTimeDays,
+    minimumQuantity: 0n,
+    lotMultiple: q("1"),
+    ...overrides,
+  });
+  const planned = (orderLines: MrpOrderLine[], parameters: MrpPlanningParameters) => planMrp(inputs({ orderLines, planningParameters: [parameters] }), TODAY);
+
+  it("MAT-018: a need on 15 October with a lead time of 7 starts on 8 October, in calendar days, and is received on its need date", () => {
+    const result = planned([line({ quantity: q("5"), requiredDate: "2026-10-15" })], set(7));
+    expect(result.proposals).toMatchObject([{ needDate: "2026-10-15", plannedStart: "2026-10-08", plannedFinish: "2026-10-15", lateDays: 0, beyondHorizon: false }]);
+    expect(bucketOf(only(result.plans), "2026-10-15")).toMatchObject({ proposedReceipts: q("5"), projectedAfter: 0n });
+  });
+
+  it("MRP-037: a need on day 3 with a lead time of 7 starts today, finishes on day 7, is 4 days late, and keeps its need on day 3", () => {
+    const result = planned([line({ quantity: q("5"), requiredDate: day(3) })], set(7));
+    expect(result.proposals).toEqual([
+      { kind: "purchase-requisition", material: "M1", location: "L1", needDate: day(3), quantity: q("5"), leadTimeDays: 7, plannedStart: TODAY, plannedFinish: day(7), lateDays: 4, beyondHorizon: false },
+    ]);
+    expect(only(result.plans).firmDemand).toMatchObject([{ requiredDate: day(3), date: day(3) }]);
+  });
+
+  it("counts a late proposal's receipt on its feasible finish, not its need date, so the days in between show the shortage", () => {
+    const plan = only(planned([line({ quantity: q("5"), requiredDate: day(3) })], set(7)).plans);
+    const after = plan.buckets.map(({ projectedAfter }) => projectedAfter);
+    expect(after.slice(0, 3)).toEqual([0n, 0n, 0n]);
+    expect(after.slice(3, 7)).toEqual([-q("5"), -q("5"), -q("5"), -q("5")]);
+    expect(after.slice(7).every((balance) => balance === 0n)).toBe(true);
+    expect(plan.buckets.map(({ proposedReceipts }) => proposedReceipts).findIndex((receipt) => receipt !== 0n)).toBe(7);
+    expect(bucketOf(plan, day(7)).proposedReceipts).toBe(q("5"));
+  });
+
+  it("MRP-038: an overdue production need starts today and finishes on day 4, and no proposal of the run starts before today", () => {
+    const made = set(4, { procurement: "make" });
+    const result = planMrp(
+      inputs({
+        orderLines: [
+          line({ quantity: q("3"), requiredDate: "2026-09-30" }),
+          line({ material: "M2", quantity: q("3"), requiredDate: day(2) }),
+          line({ material: "M3", quantity: q("3"), requiredDate: day(40) }),
+        ],
+        planningParameters: [made, set(9, { material: "M2" }), set(30, { material: "M3" })],
+        // Since E16-S03 a Make proposal needs a BOM valid on its planned finish, or the pair is Missing BOM.
+        boms: [{ output: "M1", validFrom: "2026-01-01", validThrough: null }],
+      }),
+      TODAY,
+    );
+    expect(result.proposals[0]).toMatchObject({ kind: "production-order", needDate: TODAY, plannedStart: TODAY, plannedFinish: day(4), lateDays: 4 });
+    expect(result.proposals).toHaveLength(3);
+    expect(result.proposals.every(({ plannedStart }) => plannedStart >= TODAY)).toBe(true);
+    expect(result.proposals.map(({ plannedStart }) => plannedStart)).toEqual([TODAY, TODAY, day(10)]);
+  });
+
+  it("MRP-049: a need on day 20 with a Buy lead time of 120 is Late Supply by 100 days and Beyond Horizon on day 120, raising no bucket", () => {
+    const result = planned([line({ quantity: q("5"), requiredDate: day(20) })], set(120));
+    expect(result.proposals).toMatchObject([{ needDate: day(20), plannedStart: TODAY, plannedFinish: addDays(TODAY, 120), lateDays: 100, beyondHorizon: true }]);
+    const plan = only(result.plans);
+    expect(plan.buckets).toHaveLength(90);
+    expect(plan.buckets.every(({ proposedReceipts }) => proposedReceipts === 0n)).toBe(true);
+    expect(plan.buckets.slice(20).every(({ projectedAfter, shortage }) => projectedAfter === -q("5") && shortage === q("5"))).toBe(true);
+    expect(plan.buckets.slice(0, 20).every(({ projectedAfter }) => projectedAfter === 0n)).toBe(true);
+  });
+
+  it("MRP-004 (Q2): a line due on day 90 is in no bucket and gets no proposal; a finish on day 89 is in the horizon, one on day 90 is beyond it", () => {
+    expect(planned([line({ quantity: q("5"), requiredDate: "2026-12-30" })], set(0)).proposals).toEqual([]);
+    const lastDay = planned([line({ quantity: q("5"), requiredDate: day(10) })], set(89));
+    expect(lastDay.proposals).toMatchObject([{ plannedFinish: day(89), beyondHorizon: false }]);
+    expect(only(lastDay.plans).buckets[89].proposedReceipts).toBe(q("5"));
+    const beyond = planned([line({ quantity: q("5"), requiredDate: day(10) })], set(90));
+    expect(beyond.proposals).toMatchObject([{ plannedFinish: addDays(TODAY, 90), beyondHorizon: true }]);
+    expect(only(beyond.plans).buckets.every(({ proposedReceipts }) => proposedReceipts === 0n)).toBe(true);
+  });
+
+  it("sizes from need dates only (Q9): a late lot whose surplus covers the next day's need gets no second proposal before it lands", () => {
+    const result = planned([line({ quantity: q("3"), requiredDate: day(3) }), line({ quantity: q("2"), requiredDate: day(4) })], set(7, { minimumQuantity: q("10") }));
+    expect(result.proposals).toMatchObject([{ needDate: day(3), quantity: q("10"), plannedFinish: day(7), lateDays: 4 }]);
+    const after = only(result.plans).buckets.map(({ projectedAfter }) => projectedAfter);
+    expect([after[3], after[4], after[6], after[7]]).toEqual([-q("3"), -q("5"), -q("5"), q("5")]);
+  });
+
+  it("adds late proposals landing on the same feasible day together, each late by its own need", () => {
+    const result = planned([line({ quantity: q("3"), requiredDate: day(2) }), line({ quantity: q("4"), requiredDate: day(5) })], set(6));
+    expect(result.proposals.map(({ needDate, plannedFinish, lateDays }) => [needDate, plannedFinish, lateDays])).toEqual([
+      [day(2), day(6), 4],
+      [day(5), day(6), 1],
+    ]);
+    expect(only(result.plans).buckets[6].proposedReceipts).toBe(q("7"));
+  });
+});
+
+describe("planMrp: demand priority (#279)", () => {
+  const day = (offset: number) => addDays(TODAY, offset);
+  const set = (leadTimeDays: number, overrides: Partial<MrpPlanningParameters> = {}): MrpPlanningParameters => ({
+    material: "M1",
+    location: "L1",
+    materialType: "intermediate",
+    procurement: "buy",
+    leadTimeDays,
+    minimumQuantity: 0n,
+    lotMultiple: q("1"),
+    ...overrides,
+  });
+
+  it("DEM-019 end to end: with 15 in stock, an order of 10 is served and the forecast residual of 20 on its day is 15 short", () => {
+    const plan = only(
+      planMrp(inputs({ stock: [stock("M1", "L1", "15")], orderLines: [line({ order: "00000007", quantity: q("10"), requiredDate: day(2) })], forecasts: [forecast(day(2), "30")] }), TODAY).plans,
+    );
+    expect(plan.shortages).toEqual([
+      { kind: "forecast", date: day(2), originalDate: day(2), document: null, position: null, required: q("20"), uncovered: q("15") },
+    ]);
+  });
+
+  it("reports the customer order a late proposal leaves short on its need day, and nothing once the proposal lands", () => {
+    const result = planMrp(inputs({ orderLines: [line({ order: "00000003", quantity: q("5"), requiredDate: day(3) }), line({ quantity: q("1"), requiredDate: day(8) })], planningParameters: [set(7)] }), TODAY);
+    expect(only(result.plans).shortages.map(({ kind, document, date, uncovered }) => [kind, document, date, uncovered])).toEqual([["customer-order", "00000003", day(3), q("5")]]);
+  });
+
+  it("MRP-049: a Beyond Horizon proposal leaves its customer order short on day 20", () => {
+    const result = planMrp(inputs({ orderLines: [line({ quantity: q("5"), requiredDate: day(20) })], planningParameters: [set(120)] }), TODAY);
+    expect(only(result.plans).shortages).toMatchObject([{ kind: "customer-order", date: day(20), uncovered: q("5") }]);
+  });
+
+  it("reports nothing for a pair whose on-time proposals cover every requirement and the target", () => {
+    const result = planMrp(
+      inputs({ stock: [stock("M1", "L1", "3")], orderLines: [line({ quantity: q("5"), requiredDate: day(10) })], safetyTargets: [target(TODAY, "3")], planningParameters: [set(2)] }),
+      TODAY,
+    );
+    expect(result.proposals).toMatchObject([{ needDate: day(10), quantity: q("5") }]);
+    expect(result.proposals.every(({ lateDays }) => lateDays === 0)).toBe(true);
+    expect(only(result.plans).shortages).toEqual([]);
+  });
+
+  it("divides exactly the balance after proposals: a day's new shortages equal its deficit when the day before had none, and the target's gap is safetyGap capped at the target", () => {
+    const result = planMrp(
+      inputs({
+        stock: [stock("M1", "L1", "20"), stock("A", "L1", "10"), stock("M1", "S", "12")],
+        orderLines: [
+          line({ quantity: q("15"), requiredDate: day(-3) }),
+          line({ order: "00000002", quantity: q("8"), requiredDate: day(4) }),
+          line({ order: "00000003", quantity: q("9"), requiredDate: day(4) }),
+          line({ quantity: q("30"), requiredDate: day(40) }),
+          line({ material: "A", quantity: q("5"), requiredDate: day(6) }),
+        ],
+        forecasts: [forecast(day(4), "40"), forecast(day(50), "25")],
+        safetyTargets: [target(TODAY, "6"), target(TODAY, "4", { material: "A" })],
+        requisitions: [requisition({ quantity: q("7"), requiredDate: day(5) })],
+        purchaseOrderLines: [orderLine({ quantity: q("10"), plannedDate: day(12) })],
+        productionOrders: [production({ plannedStart: day(6), plannedFinish: day(9), quantity: q("20") })],
+        transfers: [transfer({ quantity: q("10"), plannedDispatch: day(5), plannedArrival: day(7), source: "S", destination: "L1" })],
+        planningParameters: [set(9, { minimumQuantity: q("10") }), set(9, { material: "A" })],
+      }),
+      TODAY,
+    );
+    expect(result.proposals.some(({ lateDays }) => lateDays > 0)).toBe(true);
+    const kinds = new Set<string>();
+    for (const plan of result.plans) {
+      plan.buckets.forEach(({ date, projectedAfter, safetyTarget }, index) => {
+        const today = plan.shortages.filter((shortage) => shortage.date === date);
+        today.forEach(({ kind }) => kinds.add(kind));
+        const flows = today.filter(({ kind }) => kind !== "safety-target").reduce((sum, { uncovered }) => sum + uncovered, 0n);
+        const before = index === 0 ? plan.physical : plan.buckets[index - 1].projectedAfter;
+        if (projectedAfter >= 0n) expect(flows).toBe(0n);
+        if (before >= 0n) expect(flows).toBe(projectedAfter < 0n ? -projectedAfter : 0n);
+        const gap = safetyGap({ safetyTarget, projectedBefore: projectedAfter });
+        const expected = gap < safetyTarget ? gap : safetyTarget;
+        expect(today.find(({ kind }) => kind === "safety-target")?.uncovered ?? 0n).toBe(expected);
+      });
+    }
+    expect([...kinds].sort()).toEqual(["component", "customer-order", "forecast", "safety-target"]);
+  });
+});
+
+describe("planMrp: planning exceptions (E16-S03, #280)", () => {
+  const DAY = "2026-10-04";
+  const set = (overrides: Partial<MrpPlanningParameters> = {}): MrpPlanningParameters => ({
+    material: "B",
+    location: "L1",
+    materialType: "intermediate",
+    procurement: "buy",
+    leadTimeDays: 2,
+    minimumQuantity: 0n,
+    lotMultiple: q("1"),
+    ...overrides,
+  });
+  /** B at L1 and L2: valid Buy sets and orders of its own, so it plans proposals whatever A does. */
+  const B: Partial<MrpInputs> = {
+    orderLines: [line({ order: "00000090", material: "B", quantity: q("4"), requiredDate: DAY }), line({ order: "00000091", material: "B", location: "L2", quantity: q("6"), requiredDate: "2026-10-09" })],
+    planningParameters: [set(), set({ location: "L2", minimumQuantity: q("10") })],
+  };
+  /** Snapshot lists of `B` with `extra` appended. */
+  const withB = (extra: Partial<MrpInputs>): MrpInputs => {
+    const merged: Partial<MrpInputs> = { ...B };
+    for (const [key, list] of Object.entries(extra) as [keyof MrpInputs, readonly unknown[]][]) {
+      (merged as Record<string, readonly unknown[]>)[key] = [...((B[key] as readonly unknown[] | undefined) ?? []), ...list];
+    }
+    return inputs(merged);
+  };
+  const ofB = (result: ReturnType<typeof planMrp>) => ({
+    plans: result.plans.filter(({ material }) => material === "B"),
+    proposals: result.proposals.filter(({ material }) => material === "B"),
+    exceptions: result.exceptions.filter(({ material }) => material === "B"),
+  });
+  const alone = planMrp(inputs(B), TODAY);
+  const BOM: MrpBom = { output: "A", validFrom: "2026-01-01", validThrough: null };
+
+  it("plans B alone with its two proposals and no exception: the baseline the isolation tests compare with", () => {
+    expect(alone.proposals.map(({ location, quantity }) => [location, quantity])).toEqual([
+      ["L1", q("4")],
+      ["L2", q("10")],
+    ]);
+    expect(alone.exceptions).toEqual([]);
+  });
+
+  it("MAT-017: demand at a site with no planning parameter set raises Missing Planning Parameters, guesses no supply, and still shows the demand and the shortage", () => {
+    const result = planMrp(inputs({ orderLines: [line({ material: "A", quantity: q("5"), requiredDate: DAY })] }), TODAY);
+    expect(result.exceptions).toEqual([{ code: "MISSING_PLANNING_PARAMETERS", material: "A", location: "L1", date: DAY, reason: "no-set" }]);
+    expect(result.proposals).toEqual([]);
+    const plan = only(result.plans);
+    expect(bucketOf(plan, DAY)).toMatchObject({ firmDemand: q("5"), projectedBefore: -q("5"), shortage: q("5"), proposedReceipts: 0n, projectedAfter: -q("5") });
+    expect(plan.buckets.every(({ projectedAfter, projectedBefore }) => projectedAfter === projectedBefore)).toBe(true);
+  });
+
+  it("raises nothing for a pair with no set that never falls below its target", () => {
+    const result = planMrp(inputs({ stock: [stock("A", "L1", "10")], orderLines: [line({ material: "A", quantity: q("4"), requiredDate: DAY })] }), TODAY);
+    expect(result.exceptions).toEqual([]);
+  });
+
+  it("MRP-034: A with no planning parameter set raises Missing Planning Parameters, and B's plans and proposals are exactly those of a run without A", () => {
+    const result = planMrp(withB({ orderLines: [line({ material: "A", quantity: q("3"), requiredDate: DAY })] }), TODAY);
+    expect(result.exceptions).toEqual([{ code: "MISSING_PLANNING_PARAMETERS", material: "A", location: "L1", date: DAY, reason: "no-set" }]);
+    expect(result.proposals.filter(({ material }) => material === "A")).toEqual([]);
+    expect(ofB(result)).toEqual(ofB(alone));
+  });
+
+  it("MRP-035: Make A with no BOM, or only a current revision whose validity misses the date, raises Missing BOM and no proposal, and B plans unaffected", () => {
+    const a = { orderLines: [line({ material: "A", quantity: q("3"), requiredDate: DAY })], planningParameters: [set({ material: "A", procurement: "make" })] };
+    for (const boms of [[], [{ ...BOM, validThrough: "2026-10-03" }], [{ ...BOM, validFrom: "2026-10-05" }]]) {
+      const result = planMrp(withB({ ...a, boms }), TODAY);
+      expect(result.exceptions).toEqual([{ code: "MISSING_BOM", material: "A", location: "L1", date: DAY }]);
+      expect(result.proposals.filter(({ material }) => material === "A")).toEqual([]);
+      expect(bucketOf(planAt(result.plans, "A"), DAY)).toMatchObject({ projectedBefore: -q("3"), projectedAfter: -q("3") });
+      expect(ofB(result)).toEqual(ofB(alone));
+    }
+    // With a valid BOM, the same A is proposed production, whichever of its BOMs covers the date.
+    expect(planMrp(withB({ ...a, boms: [BOM] }), TODAY).proposals.filter(({ material }) => material === "A").map(({ kind }) => kind)).toEqual(["production-order"]);
+    const twoBoms = planMrp(withB({ ...a, boms: [{ ...BOM, validThrough: "2026-10-03" }, { ...BOM, validFrom: "2026-10-04" }] }), TODAY);
+    expect(twoBoms.exceptions).toEqual([]);
+    expect(twoBoms.proposals.filter(({ material }) => material === "A")).toHaveLength(1);
+  });
+
+  it("RUN-016: A's Missing BOM is reported beside B's valid Buy proposal in the same result, where every proposal is executable", () => {
+    const result = planMrp(
+      withB({ orderLines: [line({ material: "A", quantity: q("3"), requiredDate: DAY })], planningParameters: [set({ material: "A", procurement: "make" })] }),
+      TODAY,
+    );
+    expect(result.exceptions.map(({ code, material }) => [code, material])).toEqual([["MISSING_BOM", "A"]]);
+    expect(result.proposals.map(({ material, kind }) => [material, kind])).toEqual([
+      ["B", "purchase-requisition"],
+      ["B", "purchase-requisition"],
+    ]);
+  });
+
+  it("MRP-033: a raw material whose stored set says Make is reported as a planning-parameters exception, needed or not, and never planned for production", () => {
+    const raw = set({ material: "A", materialType: "raw", procurement: "make" });
+    const needed = planMrp(withB({ orderLines: [line({ material: "A", quantity: q("3"), requiredDate: DAY })], planningParameters: [raw] }), TODAY);
+    expect(needed.exceptions).toEqual([{ code: "MISSING_PLANNING_PARAMETERS", material: "A", location: "L1", date: DAY, reason: "raw-make" }]);
+    expect(needed.proposals.some(({ material }) => material === "A")).toBe(false);
+    expect(ofB(needed)).toEqual(ofB(alone));
+    const idle = planMrp(inputs({ stock: [stock("A", "L1", "50")], planningParameters: [raw] }), TODAY);
+    expect(idle.exceptions).toEqual([{ code: "MISSING_PLANNING_PARAMETERS", material: "A", location: "L1", reason: "raw-make" }]);
+  });
+
+  it("reports a set the loader couldn't read as invalid-set on its planned pair, and names no plan with it alone", () => {
+    const bad = { material: "A", location: "L1", record: "planning-parameter-set" as const };
+    const result = planMrp(withB({ stock: [stock("A", "L1", "5")], unreadable: [bad] }), TODAY);
+    expect(result.exceptions).toEqual([{ code: "MISSING_PLANNING_PARAMETERS", material: "A", location: "L1", reason: "invalid-set" }]);
+    expect(ofB(result)).toEqual(ofB(alone));
+    expect(planMrp(inputs({ unreadable: [bad] }), TODAY)).toMatchObject({ plans: [], exceptions: [] });
+  });
+
+  it("MRP-036: an unreadable row of A raises Invalid UoM Conversion on every planned pair of A, guesses nothing, plans A from its readable rows, and B still plans", () => {
+    const result = planMrp(
+      withB({
+        stock: [stock("A", "L2", "7")],
+        orderLines: [line({ material: "A", quantity: q("3"), requiredDate: DAY })],
+        planningParameters: [set({ material: "A" }), set({ material: "A", location: "L2" })],
+        // A pair known only from the corrupt row is planned from zero.
+        unreadable: [{ material: "A", location: "L3", record: "customer-order-line", document: "00000007/1" }],
+      }),
+      TODAY,
+    );
+    const invalid = (location: string) => ({ code: "INVALID_UOM_CONVERSION", material: "A", location, record: "customer-order-line", document: "00000007/1" });
+    expect(result.exceptions).toEqual([invalid("L1"), invalid("L2"), invalid("L3")]);
+    expect(result.proposals.filter(({ material }) => material === "A")).toEqual([]);
+    expect(bucketOf(planAt(result.plans, "A"), DAY)).toMatchObject({ firmDemand: q("3"), projectedBefore: -q("3"), projectedAfter: -q("3") });
+    expect(planAt(result.plans, "A", "L3").buckets.every(({ projectedBefore }) => projectedBefore === 0n)).toBe(true);
+    expect(ofB(result)).toEqual(ofB(alone));
+  });
+
+  it("flags the material at a transfer's destination too when its source's stock row is unreadable, so neither site gets a guessed proposal", () => {
+    const result = planMrp(
+      inputs({
+        orderLines: [line({ location: "D", quantity: q("50"), requiredDate: "2026-10-10" })],
+        transfers: [transfer({ quantity: q("40"), plannedDispatch: "2026-10-03", plannedArrival: "2026-10-05" })],
+        planningParameters: [set({ material: "M1", location: "S" }), set({ material: "M1", location: "D" })],
+        unreadable: [{ material: "M1", location: "S", record: "stock-balance" }],
+      }),
+      TODAY,
+    );
+    expect(result.proposals).toEqual([]);
+    // No Insufficient Transfer Stock either: its "available" would come from the incomplete balance (#316 review).
+    expect(result.exceptions).toEqual([
+      { code: "INVALID_UOM_CONVERSION", material: "M1", location: "D", record: "stock-balance" },
+      { code: "INVALID_UOM_CONVERSION", material: "M1", location: "S", record: "stock-balance" },
+    ]);
+    // Without the unreadable row, the same transfer is short and says so.
+    const sound = planMrp(inputs({ transfers: [transfer({ quantity: q("40"), plannedDispatch: "2026-10-03", plannedArrival: "2026-10-05" })] }), TODAY);
+    expect(sound.exceptions.map(({ code }) => code)).toEqual(["INSUFFICIENT_TRANSFER_STOCK"]);
+  });
+
+  it("names a material's first unreadable row by record kind, then business ID, whatever the order the loader found them in", () => {
+    const rows = [
+      { material: "A", location: "L1", record: "transfer" as const, document: "00000001" },
+      { material: "A", location: "L1", record: "customer-order-line" as const, document: "00000009/2" },
+      { material: "A", location: "L1", record: "customer-order-line" as const, document: "00000003/1" },
+      { material: "A", location: "L1", record: "stock-balance" as const },
+      { material: "A", location: "L2", record: "stock-balance" as const },
+    ];
+    for (const unreadable of [rows, [...rows].reverse()]) {
+      const first = { code: "INVALID_UOM_CONVERSION", material: "A", record: "customer-order-line", document: "00000003/1" };
+      expect(planMrp(inputs({ unreadable }), TODAY).exceptions).toEqual([
+        { ...first, location: "L1" },
+        { ...first, location: "L2" },
+      ]);
+    }
+  });
+
+  it("orders every exception by material, location, code rank and date, and gives an equal result for a shuffled snapshot (PRD §04 Invocation)", () => {
+    const snapshot = inputs({
+      orderLines: [
+        line({ material: "C", quantity: q("1"), requiredDate: DAY }),
+        line({ material: "A", location: "L2", quantity: q("1"), requiredDate: DAY }),
+        line({ material: "A", quantity: q("1"), requiredDate: DAY }),
+      ],
+      stock: [stock("M1", "S", "10")],
+      transfers: [transfer({ quantity: q("30"), plannedDispatch: "2026-10-02", plannedArrival: "2026-10-03" })],
+      planningParameters: [set({ material: "A", location: "L2", procurement: "make" }), set({ material: "M1", location: "S" }), set({ material: "M1", location: "D" })],
+      unreadable: [{ material: "C", location: "L1", record: "forecast" }],
+    });
+    const forward = planMrp(snapshot, TODAY);
+    expect(forward.exceptions.map(({ code, material, ...rest }) => [material, "location" in rest ? rest.location : rest.source, code])).toEqual([
+      ["A", "L1", "MISSING_PLANNING_PARAMETERS"],
+      ["A", "L2", "MISSING_BOM"],
+      ["C", "L1", "INVALID_UOM_CONVERSION"],
+      ["M1", "S", "INSUFFICIENT_TRANSFER_STOCK"],
+    ]);
+    const shuffled = Object.fromEntries(Object.entries(snapshot).map(([key, list]) => [key, [...(list as readonly unknown[])].reverse()])) as unknown as MrpInputs;
+    expect(planMrp(shuffled, TODAY)).toEqual(forward);
   });
 });
