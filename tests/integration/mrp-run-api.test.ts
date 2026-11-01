@@ -161,6 +161,9 @@ describe("MRP runs through the API", () => {
     const customer = (await created("/api/tenants/prod/customers", { name: "mrpapi frames" })).id;
     await created("/api/tenants/prod/planning-parameters", { material, location: bought, procurement: "buy", leadTimeDays: 4, minimumQuantity: "10", lotMultiple: "5" });
     await created("/api/tenants/prod/planning-parameters", { material, location: made, procurement: "make", leadTimeDays: 1, minimumQuantity: "0", lotMultiple: "1" });
+    // Since #280 a Make proposal needs an active BOM valid on its need date.
+    const input = (await created("/api/tenants/prod/materials", { type: "raw", description: "mrpapi timber", baseUnit: "each" })).id;
+    await created("/api/tenants/prod/boms", { output: material, priority: 1, validFrom: day(-30), validThrough: null, components: [{ material: input, quantity: "1", unit: "each" }] });
     for (const location of [bought, made]) {
       await created("/api/tenants/prod/customer-orders", { customer, location, lines: [{ material, quantity: "3", unit: "each", requiredDate: day(6) }] });
     }
@@ -177,6 +180,39 @@ describe("MRP runs through the API", () => {
     ]);
     expect(plans[0].buckets[6]).toMatchObject({ date: day(6), proposedReceipts: "10.000000", projectedBefore: "-3.000000", projectedAfter: "7.000000" });
     expect(plans[1].buckets[6]).toMatchObject({ date: day(6), proposedReceipts: "3.000000", projectedBefore: "-3.000000", projectedAfter: "0.000000" });
+  });
+
+  it("raises Missing Planning Parameters without a set and Missing BOM for Make without a BOM, with no guessed proposal and the demand still shown, read from the latest run (#280, MAT-017, MRP-035)", async () => {
+    const material = (await created("/api/tenants/prod/materials", { type: "intermediate", description: "mrpapi bracket", baseUnit: "each" })).id;
+    const unplanned = pair.location;
+    const made = (await created("/api/tenants/prod/locations", { name: "mrpapi forge" })).id;
+    const customer = (await created("/api/tenants/prod/customers", { name: "mrpapi brackets" })).id;
+    await created("/api/tenants/prod/planning-parameters", { material, location: made, procurement: "make", leadTimeDays: 1, minimumQuantity: "0", lotMultiple: "1" });
+    for (const location of [unplanned, made]) {
+      await created("/api/tenants/prod/customer-orders", { customer, location, lines: [{ material, quantity: "4", unit: "each", requiredDate: day(7) }] });
+    }
+
+    const response = await runIn("prod");
+    expect(response.status, response.text).toBe(200);
+    const filtered = await latest("prod", `?material=${material}`);
+    expect(filtered.status, filtered.text).toBe(200);
+    const plans = (json(filtered).data as MrpLatestView).plans;
+
+    expect(plans.map(({ location, proposals, exceptions }) => [location, proposals, exceptions])).toEqual([
+      [unplanned, [], [{
+        code: "MISSING_PLANNING_PARAMETERS",
+        message: "This material has no usable planning parameters at this location, so MRP proposes no supply for it there.",
+        params: { material, location: unplanned, date: day(7), reason: "no-set" },
+      }]],
+      [made, [], [{
+        code: "MISSING_BOM",
+        message: "This material is made at this location, but no active BOM has a current revision valid on the need date, so MRP proposes no production.",
+        params: { material, location: made, date: day(7) },
+      }]],
+    ]);
+    for (const plan of plans) {
+      expect(plan.buckets[7]).toMatchObject({ date: day(7), firmDemand: "4.000000", projectedBefore: "-4.000000", shortage: "4.000000", proposedReceipts: "0.000000", projectedAfter: "-4.000000" });
+    }
   });
 
   it("needs an Idempotency-Key, and replays a repeated key without a second run (R07)", async () => {
