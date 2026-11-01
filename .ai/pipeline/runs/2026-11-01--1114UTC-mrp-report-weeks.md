@@ -77,9 +77,13 @@ Implement the spec: overdue supply and overdue transfer arrivals stored as warni
 
 ### Phase 5: Integration and close-out
 
-- [ ] 5.1 integration tests
-- [ ] 5.2 docs, catalogue, spec notes
+- [x] 5.1 integration tests — aa907462
+- [x] 5.2 docs, catalogue, spec notes — 9abbc2ec
 
 ## Log
 
 - 11:14 UTC — spec PR #323 opened; implementation branch `feat/mrp-report-weeks` from `main`, spec carried into `implemented/` (lesson 2026-10-23, "Close the paperwork"). 12 steps → `om-auto-create-pr` (no loop).
+- Phases 1–4 — engine warnings, fold and marks, read and API, screen; each phase's tests green before its commit.
+- 11:31 UTC — full `npm run test:coverage`: 651 files, 5208 tests passed; one branch of `mrp-run.service.ts` (a warning row with no date or details) was uncovered, now covered by its own test. `npm run lint`, `npm run typecheck`, `npm run build` exit 0.
+- 11:31 UTC — integration, no Docker on this machine (lesson 2026-10-23): standalone build on a fresh `DATA_DIR`, `mrp-report.test.ts`, `mrp-report-api.test.ts`, `mrp-accept.test.ts` 21/21 passed, `mrp-run-api.test.ts` 11/11 passed.
+- Deviation from the spec: the warning codes carry no messages (never listed), recorded in the spec's implementation notes.
