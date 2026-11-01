@@ -51,6 +51,11 @@ The active copy of #278's spec is deleted here too, as on #314, because `tests/a
   - **Line positions.** Customer-order lines are stored from position 0 and purchase-order lines from 1. `document` reports the stored position, as MRP's own firm demand does.
   - **Rollback test.** Its table list lacked `mrp_recommendation`, so the "rolled back" check could never fail. Both MRP tables are listed now.
   - **Realistic dataset.** A realistic Test run raises no exception (`test-reset.service.test.ts` prints `[]`).
+- Phase 3 (to 08:17):
+  - **#278's Make case.** Its integration case expected a production order for a Make pair with no BOM, which now raises Missing BOM. The test now creates a BOM; the new #280 case reads both exceptions back through the API.
+  - **Integration files.** Docker is unavailable here, so they ran on a local standalone build (lesson 2026-10-23): `mrp-run-api`, `smoke`, `mrp-report-api` and `mrp-run`, 4 files and 22 tests passed, then `mrp-report`, 10 tests passed.
+  - **Benchmark.** Realistic 234 ms with a 36 ms stall; ten times 2,544 ms with a 113 ms stall, storing 87 exceptions; the worst case at ten times 3,180 ms with a 143 ms stall. All are within the budgets: 1 s, 5 s and 250 ms.
+  - **Catalogue.** MAT-017, MRP-034, MRP-035, MRP-036 and RUN-016 move to Partially verified. Their UI half (E18-S03) and automatic mode (E19-S03) are not asserted yet. MAT-023 and MRP-033 cite their new MRP evidence.
 
 ## Progress
 
@@ -71,6 +76,6 @@ The active copy of #278's spec is deleted here too, as on #314, because `tests/a
 
 ### Phase 3: Proof and paperwork
 
-- [ ] 3.1 Integration test
-- [ ] 3.2 Realistic dataset count and benchmark print
-- [ ] 3.3 Compatibility, standards, catalogue and spec move
+- [x] 3.1 Integration test — 46120698
+- [x] 3.2 Realistic dataset count and benchmark print — f52942a3
+- [x] 3.3 Compatibility, standards, catalogue and spec move — d4800f05
