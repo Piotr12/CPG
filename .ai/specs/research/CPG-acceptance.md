@@ -13,7 +13,7 @@ The original export marked every scenario `Not executed`. Scenarios are updated 
 - **Partially verified**: only part of the scenario can be or is asserted today; the **Evidence** line says which part is missing and why.
 - **Not executed**: not yet built or not yet checked.
 
-Last updated 2026-11-01 for #281 (E17-S01): its tests move MRP-020, MRP-027, MRP-028, MRP-029 and MRP-031 to Partially verified (the explosion's screen is E18-S03, feasibility and executability are E17-S02 and E17-S03), and add MRP's scaling to BOM-006's evidence. Before that, the same day for #285 (E18-S02): its tests move UX-019, UX-027, MRP-006, MRP-015 and BUY-019 to Passed (automated), and UX-018, MRP-016, MRP-040 and TRF-016 to Partially verified (the overdue transfer and production marks are not yet asserted through the API or a browser). Before that, the same day for #287 (E19-S01): its tests move BUY-001, RUN-004 and RUN-005 to Passed (automated), and RUN-003, RUN-017 and RUN-022 to Partially verified (the creation option is E19-S03, and RUN-017's and RUN-022's screen halves are component tests only). RUN-006, the Make half, waits on the follow-up blocked on #282. Before that, 2026-10-31 for #284 (E18-S01): its tests move MRP-005, MRP-008, RUN-002, TEN-018, API-014, UX-010 and UX-021 to Passed (automated). Before that, the same day for #276 (E15-S02): its tests move MRP-010, MRP-012, MRP-013, MRP-014, MRP-015, MRP-042, BUY-019, BUY-026 and LFC-024 to Partially verified, and add the MRP half to BUY-002, BUY-017, BUY-018 and BUY-024's evidence (the report screen is E18-S01, the overdue mark's display E18-S02, the production cases E15-S03). Before that, 2026-10-27 for #274 (E14-S02): its tests move MRP-001, MRP-002, MRP-003, INV-008 and RUN-001 to Passed (automated), and MRP-008, RUN-002, RUN-021 and TEN-019 to Partially verified (the daily report screen is E18-S01, automatic runs E19-S03). Before that, the same day for #290 (E20-S01): its tests move UX-014 to Passed (automated). Before that, 2026-10-25 for #192: its tests move UX-009, API-031, AUD-022, E2E-006, E2E-013 and E2E-014 to Passed (automated), and UX-023 and UX-026 from Not executed to Partially verified (their MRP halves are #14). Before that, the same day for #191 (E10-S05): BOM-009, BOM-027, E2E-004 and LFC-015 move to Passed (automated), LFC-025 and LFC-027 to Partially verified (their non-MRP halves), and E2E-015 now waits only on MRP (#14). Before that, the same day for #190: TRF-012, E2E-009 and MAT-024 move from Partially verified to Passed (automated), with a 60/50/10 Close Early refusal in the service and on screen, a 60-planned transfer received 55 and written off 5 through the API and closed early on screen, and 0.123456 posted through the ledger; LFC-012 gains the 409 with its material, location and quantity, through the API and the Deactivate dialog, and STX-011 the Stock import screen's dry run. Before that, the same day for #240: the D08 netting tests move DEM-002…013 from Not executed to Partially verified; each still needs MRP's run (#14). Before that, 2026-10-24 for #200: E2E-020's test now owns both Test generations within one UTC day, and the tiny dataset's unissued shipment is checked on every day of 2025–2027; its status is unchanged. Before that, the same day for E09-S05 (#186): its tests move E2E-017 to Passed (automated) and add evidence to LFC-013. Before that, 2026-10-23 for the second slice 2 closing pass, against `main` at `db50cf07`: the slice 2 rows were rechecked against the tests that PRs #156 (#140), #159 (#142), #161 (#141), #170 (#168), #174 (#153), #177 (#152), #178 (#144), #179 (#138), #181 (#145) and #182 (#147) added. TEN-009, MAT-009, MAT-029, INV-023, LFC-019, API-034, AUD-001 and UX-025 move to Passed (automated), their whole Then now asserted; TRF-012 and BUY-017 go back to Partially verified (no test closes a transfer with 10 of 60 in transit after 50 received; BUY-017's scheduled supply is MRP, #14); SAL-015, E2E-004, E2E-006, E2E-009, E2E-013, E2E-017, E2E-018 and E2E-020 move from Not executed to Partially verified; REV-001, REV-010, SAL-008, SAL-018, AUD-002 and AUD-025 gain the #144 and #147 evidence, and the stale notes of TEN-001, TEN-025, TEN-029, MAT-006, MAT-024, INV-007, DEM-016 and E2E-015 are corrected. The gaps found are filed as #185–#192 and named in each row. Before that, the same day for E11-S04 (#144), against `main` at `8195a0b`: its tests moved LFC-004 and BUY-017 to Passed (automated) (their MRP halves are slice 3, #14) and added evidence to PRD-029. Before that, the same day for E13-S05 (#152), against `main` at `8adea42`: more evidence for AUD-004 and UX-010, whose status is unchanged. Before that, 2026-10-21 for E10-S03 (#143), against `main` at `1882d6a`, whose tests moved LFC-022, BOM-026, BOM-028, BOM-029, UX-013 and E2E-011 to Passed (automated). Before that, the same day: epics E07 (#73), E08 (#74), E09 (#75), E10 (#76), E11 (#77) and E13 (#79), against `main` at `d2300ef` (PRs #102, #104, #107, #108, #109, #111, #112, #114, #118, #119, #120, #123, #125, #130, #133, #135); the gaps found are filed as #139–#145, and #139 (PR #151) closes LFC-018, STX-006 and STX-018. Earlier: epic E05 (#13) against `2a2976a` (PR #99 for E05-S01), plus the tests and the workbook cell limit added with that update; epic E04 (#12) against `082f2d5`; epic E03 (#11) against `3f553a5`, and the E02 end-to-end follow-up (#67); epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
+Last updated 2026-11-01 for #282 (E17-S02): its tests move MRP-024, MRP-025, MRP-026, MRP-041, MRP-046, MRP-050, BOM-010, BOM-011 and LFC-026 to Partially verified (the screen is E18-S03, the provisional plan E17-S03 and the automatic batch E19-S03), and add MRP's halves to LFC-025's and PRD-002's evidence. Before that, the same day for #281 (E17-S01): its tests move MRP-020, MRP-027, MRP-028, MRP-029 and MRP-031 to Partially verified (the explosion's screen is E18-S03, feasibility and executability are E17-S02 and E17-S03), and add MRP's scaling to BOM-006's evidence. Before that, the same day for #285 (E18-S02): its tests move UX-019, UX-027, MRP-006, MRP-015 and BUY-019 to Passed (automated), and UX-018, MRP-016, MRP-040 and TRF-016 to Partially verified (the overdue transfer and production marks are not yet asserted through the API or a browser). Before that, the same day for #287 (E19-S01): its tests move BUY-001, RUN-004 and RUN-005 to Passed (automated), and RUN-003, RUN-017 and RUN-022 to Partially verified (the creation option is E19-S03, and RUN-017's and RUN-022's screen halves are component tests only). RUN-006, the Make half, waits on the follow-up blocked on #282. Before that, 2026-10-31 for #284 (E18-S01): its tests move MRP-005, MRP-008, RUN-002, TEN-018, API-014, UX-010 and UX-021 to Passed (automated). Before that, the same day for #276 (E15-S02): its tests move MRP-010, MRP-012, MRP-013, MRP-014, MRP-015, MRP-042, BUY-019, BUY-026 and LFC-024 to Partially verified, and add the MRP half to BUY-002, BUY-017, BUY-018 and BUY-024's evidence (the report screen is E18-S01, the overdue mark's display E18-S02, the production cases E15-S03). Before that, 2026-10-27 for #274 (E14-S02): its tests move MRP-001, MRP-002, MRP-003, INV-008 and RUN-001 to Passed (automated), and MRP-008, RUN-002, RUN-021 and TEN-019 to Partially verified (the daily report screen is E18-S01, automatic runs E19-S03). Before that, the same day for #290 (E20-S01): its tests move UX-014 to Passed (automated). Before that, 2026-10-25 for #192: its tests move UX-009, API-031, AUD-022, E2E-006, E2E-013 and E2E-014 to Passed (automated), and UX-023 and UX-026 from Not executed to Partially verified (their MRP halves are #14). Before that, the same day for #191 (E10-S05): BOM-009, BOM-027, E2E-004 and LFC-015 move to Passed (automated), LFC-025 and LFC-027 to Partially verified (their non-MRP halves), and E2E-015 now waits only on MRP (#14). Before that, the same day for #190: TRF-012, E2E-009 and MAT-024 move from Partially verified to Passed (automated), with a 60/50/10 Close Early refusal in the service and on screen, a 60-planned transfer received 55 and written off 5 through the API and closed early on screen, and 0.123456 posted through the ledger; LFC-012 gains the 409 with its material, location and quantity, through the API and the Deactivate dialog, and STX-011 the Stock import screen's dry run. Before that, the same day for #240: the D08 netting tests move DEM-002…013 from Not executed to Partially verified; each still needs MRP's run (#14). Before that, 2026-10-24 for #200: E2E-020's test now owns both Test generations within one UTC day, and the tiny dataset's unissued shipment is checked on every day of 2025–2027; its status is unchanged. Before that, the same day for E09-S05 (#186): its tests move E2E-017 to Passed (automated) and add evidence to LFC-013. Before that, 2026-10-23 for the second slice 2 closing pass, against `main` at `db50cf07`: the slice 2 rows were rechecked against the tests that PRs #156 (#140), #159 (#142), #161 (#141), #170 (#168), #174 (#153), #177 (#152), #178 (#144), #179 (#138), #181 (#145) and #182 (#147) added. TEN-009, MAT-009, MAT-029, INV-023, LFC-019, API-034, AUD-001 and UX-025 move to Passed (automated), their whole Then now asserted; TRF-012 and BUY-017 go back to Partially verified (no test closes a transfer with 10 of 60 in transit after 50 received; BUY-017's scheduled supply is MRP, #14); SAL-015, E2E-004, E2E-006, E2E-009, E2E-013, E2E-017, E2E-018 and E2E-020 move from Not executed to Partially verified; REV-001, REV-010, SAL-008, SAL-018, AUD-002 and AUD-025 gain the #144 and #147 evidence, and the stale notes of TEN-001, TEN-025, TEN-029, MAT-006, MAT-024, INV-007, DEM-016 and E2E-015 are corrected. The gaps found are filed as #185–#192 and named in each row. Before that, the same day for E11-S04 (#144), against `main` at `8195a0b`: its tests moved LFC-004 and BUY-017 to Passed (automated) (their MRP halves are slice 3, #14) and added evidence to PRD-029. Before that, the same day for E13-S05 (#152), against `main` at `8adea42`: more evidence for AUD-004 and UX-010, whose status is unchanged. Before that, 2026-10-21 for E10-S03 (#143), against `main` at `1882d6a`, whose tests moved LFC-022, BOM-026, BOM-028, BOM-029, UX-013 and E2E-011 to Passed (automated). Before that, the same day: epics E07 (#73), E08 (#74), E09 (#75), E10 (#76), E11 (#77) and E13 (#79), against `main` at `d2300ef` (PRs #102, #104, #107, #108, #109, #111, #112, #114, #118, #119, #120, #123, #125, #130, #133, #135); the gaps found are filed as #139–#145, and #139 (PR #151) closes LFC-018, STX-006 and STX-018. Earlier: epic E05 (#13) against `2a2976a` (PR #99 for E05-S01), plus the tests and the workbook cell limit added with that update; epic E04 (#12) against `082f2d5`; epic E03 (#11) against `3f553a5`, and the E02 end-to-end follow-up (#67); epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
 
 This document contains the complete acceptance catalogue for the CPG MVP. Each test preserves its ID, title, priority, execution channel, and Given / When / Then criteria.
 
@@ -665,7 +665,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### BOM-010 — Fallback to lower-priority feasible BOM
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+
+- **Evidence:** `packages/core/src/domain/mrp/explosion/choose-bom.test.ts` ("BOM-010": the higher BOM's rejection lists each missing component with its required, available and shortage, by code, and the lower one is chosen), `packages/core/src/domain/mrp/plan-mrp.test.ts`, `tests/integration/mrp-run-api.test.ts`. The screen that shows rejections and exceptions is E18-S03 (#286). E17-S02, #282.
 
 - **Given:** High-priority BOM missing component, lower-priority fully available
 - **When:** Select via MRP
@@ -673,7 +675,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### BOM-011 — No feasible BOM
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+
+- **Evidence:** `packages/core/src/domain/mrp/explosion/choose-bom.test.ts` and `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-026, BOM-011": no auto-order is executable, since `isExecutableProposal` refuses every Make proposal; the parent's `NO_FEASIBLE_BOM` lists each BOM's missing inputs, and its subcomponents are planned through the highest-priority usable BOM). Showing that plan as provisional is E17-S03 (#283), and the screen E18-S03 (#286). E17-S02, #282.
 
 - **Given:** Both active valid BOMs lack inputs
 - **When:** Run MRP
@@ -1581,7 +1585,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/services/production-orders/production-order.service.test.ts` (with 30 kg on hand, the priority-1 recipe needing 60 kg is passed over for the feasible priority-2 one; with no stock, priority 1 is preselected), `packages/app/src/components/production-orders/production-dialog.test.tsx`, `tests/integration/production-orders.test.ts` (the options select the feasible alternative). Feasibility is current physical stock at the location (spec Q1); projected supply is MRP, slice 3 (#14). E10-S01, #88.
+- **Evidence:** `packages/core/src/services/production-orders/production-order.service.test.ts` (with 30 kg on hand, the priority-1 recipe needing 60 kg is passed over for the feasible priority-2 one; with no stock, priority 1 is preselected), `packages/app/src/components/production-orders/production-dialog.test.tsx`, `tests/integration/production-orders.test.ts` (the options select the feasible alternative). Feasibility is current physical stock at the location (spec Q1); projected supply is MRP, slice 3 (#14). E10-S01, #88. MRP's half, projected dependable supply: `packages/core/src/domain/mrp/plan-mrp.test.ts` ("PRD-002 (the MRP half)": priority 1's A arrives on a purchase order before the parent's start, so priority 1 is chosen). E17-S02, #282.
 - **Given:** Two valid alternatives, top one has projected components
 - **When:** Create production order with default BOM selection
 - **Then:** Highest-priority feasible revision preselected.
@@ -2935,7 +2939,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MRP-024 — Top priority valid feasible BOM
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+
+- **Evidence:** `packages/core/src/domain/mrp/explosion/choose-bom.test.ts` and `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-024": priority 1 feasible is chosen, with no rejection and no exception). The screen that shows rejections and exceptions is E18-S03 (#286). E17-S02, #282.
 
 - **Given:** Two date-valid recipes, priority 1 and 2, priority 1 feasible
 - **When:** Run MRP
@@ -2943,7 +2949,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MRP-025 — Fallback transparently captures shortage
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+
+- **Evidence:** `packages/core/src/domain/mrp/explosion/choose-bom.test.ts` and `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-046, MRP-025": priority 1 is rejected with A 6 required, 5 available, 1 short; priority 2 is chosen only with its full 6 B, and with 5.9 B the proposal is provisional with both rejections), `tests/integration/mrp-run-api.test.ts` (the fallback to priority 2 through the API). The screen that shows rejections and exceptions is E18-S03 (#286). E17-S02, #282.
 
 - **Given:** Priority 1 BOM needs 1 A per finished unit and priority 2 needs B; final output lot-adjusted quantity is 6 with only 5 A dependable
 - **When:** Run MRP
@@ -2951,7 +2959,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MRP-026 — No infeasible parent auto-production
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-026, BOM-011": the infeasible parent is provisional, while a lower-level proposal for its own demand is feasible). The provisional chain is E17-S03 (#283), and the automatic batch E19-S03 (#289). E17-S02, #282.
 
 - **Given:** All valid parent BOMs lack dependable inputs
 - **When:** Run automatic MRP on multi-level product with missing component supply
@@ -3084,7 +3094,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MRP-041 — Tentative PR not reliable BOM availability
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-041": an open requisition of 50 R never makes the BOM needing it feasible; the choice falls back, or raises `NO_FEASIBLE_BOM` without a fallback). The screen that shows rejections and exceptions is E18-S03 (#286). E17-S02, #282.
 
 - **Given:** Open PR 50 for raw input, no PO/GR, higher-priority BOM needs that 50
 - **When:** Run MRP
@@ -3128,7 +3140,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MRP-046 — Lot rounding precedes BOM feasibility
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+
+- **Evidence:** `packages/core/src/domain/mrp/explosion/choose-bom.test.ts`, `packages/core/src/domain/mrp/plan-mrp.test.ts` and `packages/core/src/services/mrp/mrp-run.service.test.ts` (4.1 rounds to 6 by a lot multiple of 2, and 6 A against 5 dependable is `feasible: false` with 1 short; the stored `NO_FEASIBLE_BOM` row), `tests/integration/mrp-run-api.test.ts`. The screen that shows rejections and exceptions is E18-S03 (#286). E17-S02, #282.
 
 - **Given:** Demand 4.1 output units, production lot multiple 2; each output needs 1 raw A, dependable A stock 5
 - **When:** Run MRP with active recipe
@@ -3163,7 +3177,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MRP-050 — Inactive-input alternative triggers fallback or parent exception
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+
+- **Evidence:** `packages/core/src/domain/mrp/explosion/choose-bom.test.ts` and `packages/core/src/domain/mrp/plan-mrp.test.ts` ("LFC-025 (the MRP half), MRP-050": priority 1 with inactive R is rejected as inactive-component and priority 2 is chosen; "LFC-026": with no usable alternative, `MISSING_USABLE_BOM` and no F proposal), `tests/integration/mrp-run-api.test.ts` (Missing Usable BOM through the API). The screen that shows rejections and exceptions is E18-S03 (#286). E17-S02, #282.
 
 - **Given:** Make output F has priority 1 active BOM requiring inactive raw R, and priority 2 BOM with available active material S
 - **When:** Run MRP for F
@@ -4628,14 +4644,16 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/services/production-orders/production-order.service.test.ts` (the same test as LFC-015: the deactivation is allowed and audited as `materials.material.deactivated`, and the BOM is unchanged). MRP not selecting the recipe is slice 3 (#14). E10-S05, #191.
+- **Evidence:** `packages/core/src/services/production-orders/production-order.service.test.ts` (the same test as LFC-015: the deactivation is allowed and audited as `materials.material.deactivated`, and the BOM is unchanged). MRP not selecting the recipe is slice 3 (#14). E10-S05, #191. MRP never plans through that BOM while R is inactive: `packages/core/src/domain/mrp/plan-mrp.test.ts` ("LFC-025 (the MRP half), MRP-050") and `packages/core/src/services/mrp/mrp-run.service.test.ts` (R deactivated through `MaterialService`, so F plans through its BOM of active S). The screen half of MRP is E18-S03 (#286). E17-S02, #282.
 - **Given:** Raw R is referenced by currently active BOM of F but R has no stock/transit or unfinished direct document
 - **When:** Admin deactivates R
 - **Then:** Allowed, audited; historic BOM unchanged; new MRP must not select the recipe without active R.
 
 ### LFC-026 — No usable BOM with inactive component raises exception
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("LFC-026": `MISSING_USABLE_BOM`, no F proposal, no requisition for R, and an unrelated material still plans), `packages/core/src/services/mrp/mrp-run.service.test.ts` (R deactivated through `MaterialService`; the stored and listed exception), `tests/integration/mrp-run-api.test.ts`. The screen that shows rejections and exceptions is E18-S03 (#286). E17-S02, #282.
 
 - **Given:** Output F has only an active BOM whose raw input R was deactivated
 - **When:** Run MRP requesting F
