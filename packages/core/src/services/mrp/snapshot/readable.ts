@@ -31,4 +31,13 @@ export function readRow<K extends string>({ quantities, factor, dates = [] }: St
   return dates.every(isCalendarDate) ? read : null;
 }
 
+/**
+ * Whether a row dated `date` falls before the seam's cut-off `before`, or can't be dated at all: a
+ * date that isn't real must reach `readRow` and be reported, never be dropped by a string comparison
+ * that happens to sort it past the cut-off (#316 review).
+ */
+export function beforeCutOff(date: string, before: string): boolean {
+  return date < before || !isCalendarDate(date);
+}
+
 const positive = (text: string) => (parseDecimal(text) ?? 0n) > 0n;

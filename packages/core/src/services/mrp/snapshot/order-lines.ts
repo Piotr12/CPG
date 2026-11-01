@@ -3,7 +3,7 @@ import { addMonths } from "../../../domain/demand/demand-buckets";
 import type { MrpOrderLine } from "../../../domain/mrp/mrp-inputs";
 import { yieldToEventLoop } from "../../../http/yield-to-event-loop";
 import type { SnapshotCodes } from "./codes";
-import { readRow, type UnreadableRows } from "./readable";
+import { beforeCutOff, readRow, type UnreadableRows } from "./readable";
 
 /**
  * How many materials one read takes. Hydrating a line costs about 17 µs, and nothing else answers while
@@ -57,7 +57,7 @@ export async function readOrderLines(em: EntityManager, codes: SnapshotCodes, be
   for (let start = 0; start < materials.length; start += MATERIAL_CHUNK) {
     const read = await findLines(em, { material: { $in: materials.slice(start, start + MATERIAL_CHUNK) }, removed: false, status: "open" });
     // The cut-off comes first, so a corrupt line that would count nowhere flags nothing (spec, Snapshot loader).
-    for (const line of read) if (line.requiredDate < before) addLine(lines, line, codes, unreadable);
+    for (const line of read) if (beforeCutOff(line.requiredDate, before)) addLine(lines, line, codes, unreadable);
     await yieldToEventLoop();
   }
   return lines;

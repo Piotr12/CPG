@@ -118,7 +118,9 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
   const bomsOf = new Map<string, MrpBom[]>();
   for (const bom of inputs.boms) bomsOf.set(bom.output, [...(bomsOf.get(bom.output) ?? []), bom]);
   const proposals: MrpProposal[] = [];
-  const exceptions: MrpException[] = [...transfers.exceptions];
+  // A transfer's shortfall is measured on balances an unreadable row left incomplete, so for such a
+  // material only Invalid UoM Conversion is reported: no figure from the incomplete data (#316 review).
+  const exceptions: MrpException[] = transfers.exceptions.filter(({ material }) => !unreadable.has(material));
   const plans = [...pairs.values()].sort(comparePairs).map(({ flows, ...plan }): MrpPlan => {
     const key = pairKey(plan.material, plan.location);
     const replenished = replenishPair(

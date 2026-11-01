@@ -1,7 +1,7 @@
 import { Transfer, type DocumentState, type EntityManager } from "@cpg/db";
 import type { MrpTransfer } from "../../../domain/mrp/mrp-inputs";
 import type { SnapshotCodes } from "./codes";
-import { readRow, type UnreadableRows } from "./readable";
+import { beforeCutOff, readRow, type UnreadableRows } from "./readable";
 
 /**
  * The Open transfers dispatching before `before` (the day after the horizon), overdue ones included
@@ -23,7 +23,7 @@ export async function readTransfers(em: EntityManager, codes: SnapshotCodes, bef
     },
   );
   const read: MrpTransfer[] = [];
-  for (const transfer of transfers.filter(({ plannedDispatch }) => plannedDispatch < before)) {
+  for (const transfer of transfers.filter(({ plannedDispatch }) => beforeCutOff(plannedDispatch, before))) {
     const material = codes.materials.get(transfer.material.id)!;
     const source = codes.locations.get(transfer.source.id)!;
     const destination = codes.locations.get(transfer.destination.id)!;

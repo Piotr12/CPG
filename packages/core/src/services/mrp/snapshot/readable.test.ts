@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { readRow } from "./readable";
+import { beforeCutOff, readRow } from "./readable";
 
 const factor = { numerator: "12", denominator: "1" };
+
+describe("beforeCutOff", () => {
+  it("keeps a real date before the cut-off and drops one on or after it, but always keeps a date that isn't real, so it is reported", () => {
+    expect(beforeCutOff("2026-12-31", "2027-01-01")).toBe(true);
+    expect(beforeCutOff("2027-01-01", "2027-01-01")).toBe(false);
+    // "30/10/2026" sorts after "2027-01-01" as text, and would vanish silently without the check.
+    expect(beforeCutOff("30/10/2026", "2027-01-01")).toBe(true);
+  });
+});
 
 describe("readRow", () => {
   it("reads every quantity as micro-units when the factor is above zero and every date is real", () => {

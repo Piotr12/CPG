@@ -963,6 +963,25 @@ describe("MrpSnapshotService", () => {
       ]);
     });
 
+    it("flags nothing for a corrupt production order or transfer past the horizon, but reports one whose date sorts past it only because it isn't real", async () => {
+      const revision = await recipe("prod", "00000001", "00000001", { "00000002": "1.000000" });
+      await production("prod", "00000001", revision, { quantity: "x", plannedStart: "2027-02-01", plannedFinish: "2027-02-05" });
+      await production("prod", "00000002", revision, { quantity: "5.000000", plannedStart: "30/10/2026", plannedFinish: "2026-11-02" });
+      await transferRow("prod", "00000001", { quantity: "x", plannedDispatch: "2027-02-01", plannedArrival: "2027-02-02" });
+      await transferRow("prod", "00000002", { quantity: "5.000000", plannedDispatch: "30/10/2026", plannedArrival: "2026-11-02" });
+      await order("prod", "00000008", "00000001", [{ material: "00000001", quantity: "2.000000", requiredDate: "30/10/2026" }]);
+      const snapshot = await load();
+      expect(snapshot.productionOrders).toEqual([]);
+      expect(snapshot.transfers).toEqual([]);
+      expect([...snapshot.unreadable].sort((a, b) => `${a.record}${a.document}${a.material}${a.location}`.localeCompare(`${b.record}${b.document}${b.material}${b.location}`))).toEqual([
+        { material: "00000001", location: "00000001", record: "customer-order-line", document: "00000008/1" },
+        { material: "00000001", location: "00000001", record: "production-order", document: "00000002" },
+        { material: "00000002", location: "00000001", record: "production-order", document: "00000002" },
+        { material: "00000002", location: "00000001", record: "transfer", document: "00000002" },
+        { material: "00000002", location: "00000002", record: "transfer", document: "00000002" },
+      ]);
+    });
+
     it("leaves out a transfer it can't read and reports it at its source and its destination", async () => {
       await transferRow("prod", "00000001", { quantity: "10.000000", plannedDispatch: "2026-10-05", plannedArrival: "2026-10-5" });
       await transferRow("prod", "00000002", { quantity: "10.000000", plannedDispatch: "2026-10-05", plannedArrival: "2026-10-06" });
@@ -986,6 +1005,18 @@ describe("MrpSnapshotService", () => {
     (await em.findOneOrFail(Bom, { code: "00000002" })).active = false;
     await em.flush();
     expect((await load()).boms).toEqual([{ output: "00000001", validFrom: "2026-11-01", validThrough: "2027-06-30" }]);
+  });
+
+  it("leaves out a current revision whose validity dates aren't real days, so it covers no date (#316 review)", async () => {
+    await recipe("prod", "00000001", "00000001", { "00000002": "1.000000" });
+    // Revisions refuse updates (R04), so the corrupt ones are written that way, around the services.
+    const em = scoped();
+    const output = await em.findOneOrFail(Material, { code: "00000003" });
+    for (const [code, dates] of [["00000002", { validFrom: "", validThrough: null }], ["00000003", { validFrom: "2026-01-01", validThrough: "9" }]] as const) {
+      em.create(BomRevision, { bom: em.create(Bom, { code, output, revision: 1 }), number: 1, priority: 1, ...dates });
+    }
+    await em.flush();
+    expect((await load()).boms).toEqual([{ output: "00000001", validFrom: "2026-01-01", validThrough: null }]);
   });
 
   it("reads the BOMs more than one OR list holds, chunk by chunk, filtering the current revisions in SQL as the production dialog does", async () => {

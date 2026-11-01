@@ -342,5 +342,12 @@ Implemented on #316 (spec PR #314). Where the build departs from the text above:
 - **Plan tests.** The BOM reads are pinned in `mrp-snapshot.service.test.ts` beside the other loader reads. The exceptions read is pinned in `mrp-report-reads.test.ts`, beside the proposals read.
 - **`MRP_RECORD_KINDS`** is a type union (`MrpRecordKind`), not a runtime list. Nothing reads it at run time.
 - **Realistic dataset** (Risks). A realistic Test run raises no exception (`test-reset.service.test.ts` prints `[]`). The benchmark's synthetic fixture raises 10 exceptions at the realistic size and 87 at ten times, from transfer destinations without a set.
+- **Code review (#316)** brought three refinements:
+  - A material with an unreadable row reports only Invalid UoM Conversion, never Insufficient Transfer Stock. That exception's `available` would come from the incomplete balance, the guess Q4's reason rules out. Q4's "independent" now holds only for materials whose rows all read.
+  - A row whose cut-off date isn't a real day is no longer dropped by the string comparison (`beforeCutOff`). It reaches `readRow` and is reported.
+  - A current BOM revision whose validity dates aren't real days is left out, so it covers no date.
+- **Known limits**, filed as #321:
+  - Forecasts and safety targets are cut off by a SQL date range, so a corrupt date that sorts outside the range is not read, and is not reported either.
+  - The BOM revision read walks the tenant's revisions once per chunk of 100 BOMs.
 - **Migration** `Migration20261101080923_mrp_run_exceptions` only creates the table, with no `CHECK` and `on delete cascade` on `run_id`. While updating the counts, the rollback test's table list gained `mrp_recommendation` and `mrp_run_exception`. Without them, its "dropped on the way down" checks could not fail.
 

@@ -244,7 +244,7 @@ Route handlers under `app/api/` are protected the same way: their paths, methods
       - `MISSING_BOM`: `date`, the first proposal's need date that no active BOM's current revision covers.
       - `INSUFFICIENT_TRANSFER_STOCK`: `date`, `transfer`, `destination`, and `planned` and `available` as six-decimal texts.
     - `record` is one of `stock-balance`, `customer-order-line`, `forecast`, `safety-stock-target`, `purchase-requisition`, `purchase-order-line`, `production-order`, `bom-line` or `transfer`. `document` is the row's business ID, written `order/position` for a line, with the position as stored, and `BOM/revision/position` for a BOM line.
-    - A plan with any exception but `INSUFFICIENT_TRANSFER_STOCK` has `proposals: []`.
+    - A plan with any exception but `INSUFFICIENT_TRANSFER_STOCK` has `proposals: []`. A material with `INVALID_UOM_CONVERSION` reports no `INSUFFICIENT_TRANSFER_STOCK`, because its balances are incomplete.
     - The messages are fixed texts, protected like every API `message`. Clients switch on `code`:
       - `INVALID_UOM_CONVERSION`: "A stored quantity, unit factor or date of this material isn't valid, so MRP proposes no supply for it."
       - `MISSING_PLANNING_PARAMETERS`: "This material has no usable planning parameters at this location, so MRP proposes no supply for it there."

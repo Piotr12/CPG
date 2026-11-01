@@ -2,7 +2,7 @@ import { BomComponent, BomRevision, ProductionOrder, type EntityManager } from "
 import type { MrpComponentLine, MrpProductionOrder } from "../../../domain/mrp/mrp-inputs";
 import { yieldToEventLoop } from "../../../http/yield-to-event-loop";
 import type { SnapshotCodes } from "./codes";
-import { readRow, type UnreadableRows } from "./readable";
+import { beforeCutOff, readRow, type UnreadableRows } from "./readable";
 
 /** How many pinned revisions one component read takes: a bounded `$in` list (lesson 2026-10-24, "Paging a list"). */
 export const REVISION_CHUNK = 100;
@@ -35,7 +35,7 @@ export async function readProductionOrders(em: EntityManager, codes: SnapshotCod
         disableIdentityMap: true,
       },
     )
-  ).filter(({ plannedStart }) => plannedStart < before);
+  ).filter(({ plannedStart }) => beforeCutOff(plannedStart, before));
   await yieldToEventLoop();
   const revisions = [...new Set(orders.map(({ recipe }) => recipe.id))];
   const pinned = new Map<string, PinnedLines>(revisions.map((id) => [id, { readable: [], materials: [], unreadable: [] }]));

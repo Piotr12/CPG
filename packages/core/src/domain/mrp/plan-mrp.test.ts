@@ -1501,10 +1501,14 @@ describe("planMrp: planning exceptions (E16-S03, #280)", () => {
       TODAY,
     );
     expect(result.proposals).toEqual([]);
-    expect(result.exceptions.filter(({ code }) => code === "INVALID_UOM_CONVERSION")).toEqual([
+    // No Insufficient Transfer Stock either: its "available" would come from the incomplete balance (#316 review).
+    expect(result.exceptions).toEqual([
       { code: "INVALID_UOM_CONVERSION", material: "M1", location: "D", record: "stock-balance" },
       { code: "INVALID_UOM_CONVERSION", material: "M1", location: "S", record: "stock-balance" },
     ]);
+    // Without the unreadable row, the same transfer is short and says so.
+    const sound = planMrp(inputs({ transfers: [transfer({ quantity: q("40"), plannedDispatch: "2026-10-03", plannedArrival: "2026-10-05" })] }), TODAY);
+    expect(sound.exceptions.map(({ code }) => code)).toEqual(["INSUFFICIENT_TRANSFER_STOCK"]);
   });
 
   it("names a material's first unreadable row by record kind, then business ID, whatever the order the loader found them in", () => {
