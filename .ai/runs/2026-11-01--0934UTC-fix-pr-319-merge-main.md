@@ -3,7 +3,7 @@
 **Date:** 2026-11-01 09:34 UTC
 **Agent:** Claude Code (cezar) / claude-opus-5-5, `om-auto-fix-pr`
 **Spec:** `.ai/specs/implemented/2026-11-01--0737UTC-mrp-proposal-acceptance.md`
-**Status:** in progress
+**Status:** done
 
 ## Goal
 Drive PR #319 (accept a Buy MRP proposal, #287) to merge-ready. It was `CONFLICTING` with `main` after #316 (planning exceptions, #280) and #317 (proposal timing and demand priority, #279) merged.
@@ -31,12 +31,14 @@ Drive PR #319 (accept a Buy MRP proposal, #287) to merge-ready. It was `CONFLICT
   - Declined Nit: "restore the lesson's date"; `lessons.md` dates an extended lesson by its latest change.
 
 ## Changes
-- Merge commit `7590f289`, then a follow-up commit with the Late Supply test, the spec note, the stale spec copy's removal and this log.
+- `7590f289` merge of `main`; `335abd2d` Late Supply test, spec note, stale spec copy removed; `7f345ab2` review fixes (stale check on planned finish, Late/Beyond Horizon in the Proposals table, production-order migration test, docs).
 
 ## Verification
 - `npm run lint` 0, `npm run typecheck` 0, `npm run build` 0.
 - `npm run test:coverage` 0: 647 files, 5,153 tests, 100% statements, branches, functions and lines.
-- Integration on a local standalone build: smoke, mrp-run-api, mrp-accept-api, mrp-accept, mrp-run, mrp-report, purchasing, purchasing-api: 8 files, 61 tests, all passed. CI runs the full suite.
+- Integration on a local standalone build: smoke, mrp-run-api, mrp-accept-api, mrp-accept, mrp-run, mrp-report, purchasing, purchasing-api: 8 files, 61 tests, all passed. After the review fixes: smoke, mrp-run-api, mrp-accept-api, mrp-accept, mrp-run, mrp-report, help: 7 files, 43 tests, all passed (5,157 unit tests, 100% coverage).
+- CI: run 41294822943 (`335abd2d`) and run 41295560056 (`7f345ab2`) green, every job (lint, typecheck, build, unit tests, four integration shards).
+- PR left in `review` + `needs-qa`: the pipeline can't approve its own PR; a human review and QA sign-off gate the merge (`om-approve-merge-pr 319`).
 
 ## Follow-ups
 - #322: which date a Late Supply proposal's requisition should take.
