@@ -10,7 +10,7 @@ export interface MrpResult {
   dates: readonly string[];
   /** One plan per planned material and location, by material code, then location code. */
   plans: readonly MrpPlan[];
-  /** Proposed receipts; none until E16-S01 sizes them. */
+  /** Proposed receipts (E16-S01), by material code, then location code, then need date. */
   proposals: readonly MrpProposal[];
   /** What the plan can't do as the documents say, by date, then document (#277); E16-S03 adds the other kinds. */
   exceptions: readonly MrpException[];
@@ -187,10 +187,21 @@ export interface MrpInsufficientTransferStock {
 /** An MRP exception. */
 export type MrpException = MrpInsufficientTransferStock;
 
-/** A proposed receipt. E16-S01 adds its kind, need date and lead time; E16-S02 its timing marks. */
+/** What a proposal would create: never a transfer (N06, TRF-018) and never a purchase order (MRP-030). */
+export const MRP_PROPOSAL_KINDS = ["purchase-requisition", "production-order"] as const;
+export type MrpProposalKind = (typeof MRP_PROPOSAL_KINDS)[number];
+
+/** A proposed receipt (E16-S01), sized by `sizing/size-proposals.ts`. E16-S02 adds its timing marks. */
 export interface MrpProposal {
+  kind: MrpProposalKind;
   material: string;
   location: string;
+  /** The day the balance after earlier proposals falls below that day's target: what the receipt must cover. */
+  needDate: string;
+  /** The bucket the receipt counts in: `needDate` until E16-S02 schedules late supply. */
   date: string;
+  /** Above zero, never below the need (R03, MAT-025). */
   quantity: bigint;
+  /** The pair's lead time in whole calendar days, for E16-S02's back-scheduling. */
+  leadTimeDays: number;
 }

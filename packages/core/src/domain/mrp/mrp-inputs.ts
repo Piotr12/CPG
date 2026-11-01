@@ -1,4 +1,6 @@
+import type { MaterialType } from "../../validators/materials/material-fields.schema";
 import type { DocumentState } from "../document-lifecycle/lifecycle";
+import type { ProcurementMode } from "../planning-parameters/procurement";
 
 /**
  * The snapshot MRP plans from (#273). Materials, locations and orders appear by business ID, never by
@@ -17,6 +19,8 @@ export interface MrpInputs {
   purchaseOrderLines: readonly MrpPurchaseOrderLine[];
   productionOrders: readonly MrpProductionOrder[];
   transfers: readonly MrpTransfer[];
+  /** Every planning parameter set of the tenant, one per material and location (E16-S01). */
+  planningParameters: readonly MrpPlanningParameters[];
 }
 
 /** Physical on-hand of one material at one location today. In-transit stock is never physical. */
@@ -138,4 +142,20 @@ export interface MrpTransfer {
   writtenOff: bigint;
   abandoned: bigint;
   status: DocumentState;
+}
+
+/**
+ * How one material is planned at one location (E03-S03), with the material's type so the engine
+ * applies R02 itself (E16-S01). The validators keep `minimumQuantity` at zero or more and
+ * `lotMultiple` above zero on every entry path, and the demo seed's sets pass them too.
+ */
+export interface MrpPlanningParameters {
+  material: string;
+  location: string;
+  materialType: MaterialType;
+  procurement: ProcurementMode;
+  /** Whole calendar days (MAT-018), carried to each proposal for E16-S02. */
+  leadTimeDays: number;
+  minimumQuantity: bigint;
+  lotMultiple: bigint;
 }

@@ -31,7 +31,8 @@ describe("MRP runs migration", () => {
         values ('d1', 'prod', 'r1', '00000001', '00000001', '2026-10-27', ${FIGURES})`);
       await expect(sql("update mrp_run set mode = 'scheduled' where id = 'r1'")).rejects.toThrow(/CHECK constraint failed/);
 
-      await orm.migrator.down();
+      // Back to the migration before it: the later MRP recommendations migration goes first.
+      await orm.migrator.down({ to: "Migration20261025180850_list_key_read_indexes" });
       expect(await tables()).toEqual([]);
     } finally {
       await orm.close();

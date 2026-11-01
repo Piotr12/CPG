@@ -28,7 +28,7 @@ describe("the MRP report in the UI", () => {
   let rita: Browser;
   let secret: string;
   let run: MrpRunView;
-  const ids: Record<"sheet" | "cabinet" | "plant" | "depot", string> = {} as never;
+  const ids: Record<"sheet" | "cabinet" | "plant" | "depot" | "yard", string> = {} as never;
 
   const api = (method: string, path: string, body?: unknown) => callApi(baseUrl, method, path, secret, body === undefined ? {} : { key: randomUUID(), body });
   const create = async (path: string, body: unknown) => {
@@ -59,6 +59,7 @@ describe("the MRP report in the UI", () => {
     ids.cabinet = await create("/api/tenants/prod/materials", { type: "finished", description: "mrprep cabinet", baseUnit: "each" });
     ids.plant = await create("/api/tenants/prod/locations", { name: "mrprep plant" });
     ids.depot = await create("/api/tenants/prod/locations", { name: "mrprep depot" });
+    ids.yard = await create("/api/tenants/prod/locations", { name: "mrprep yard" });
     const customer = await create("/api/tenants/prod/customers", { name: "mrprep retail" });
     // MRP-005: physical 50, Open lines of 10 and 15 two days apart. MRP-008: physical 5, an Open line of 20.
     await create("/api/tenants/prod/stock/corrections", { material: ids.sheet, location: ids.plant, quantity: "50", unit: "kg", reason: "mrprep count" });
@@ -76,6 +77,9 @@ describe("the MRP report in the UI", () => {
     await create("/api/tenants/prod/transfers", {
       material: ids.sheet, source: ids.plant, destination: ids.depot, quantity: "5", unit: "kg", plannedDispatch: day(8), plannedArrival: day(9),
     });
+    // #278: sheet is bought at the yard in lots of at least 10, multiples of 5, and the yard needs 3 on day 5.
+    await create("/api/tenants/prod/planning-parameters", { material: ids.sheet, location: ids.yard, procurement: "buy", leadTimeDays: 2, minimumQuantity: "10", lotMultiple: "5" });
+    await create("/api/tenants/prod/customer-orders", { customer, location: ids.yard, lines: [{ material: ids.sheet, quantity: "3", unit: "kg", requiredDate: day(5) }] });
     run = await runMrp();
     await createUser(admin, baseUrl, USERNAME, PASSWORD);
     await signIn(rita, baseUrl, PASSWORD, USERNAME);
@@ -138,6 +142,14 @@ describe("the MRP report in the UI", () => {
     await rita.clickRole("link", `Days of ${ids.cabinet} mrprep cabinet at ${ids.plant} mrprep plant`);
     await rita.waitUntil(`location.search === "?material=${ids.cabinet}&location=${ids.plant}" && Boolean(${shown(DAYS)})`);
     expect(await figures(day(3))).toMatchObject({ firmDemand: "20", projectedBefore: "-15" });
+  });
+
+  it("shows the balance after a proposal of 10 where the yard is 3 short, the balance before it unchanged (#278)", async () => {
+    await open(`?material=${ids.sheet}&location=${ids.yard}`, DAYS);
+
+    expect(await figures(day(4))).toMatchObject({ projectedBefore: "0", projectedAfter: "0" });
+    expect(await figures(day(5))).toMatchObject({ firmDemand: "3", projectedBefore: "-3", projectedAfter: "7", shortage: "3" });
+    expect(await figures(day(30))).toMatchObject({ projectedBefore: "-3", projectedAfter: "7" });
   });
 
   it("is the not-found state for a material or location this tenant doesn't have", async () => {

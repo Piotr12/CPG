@@ -431,7 +431,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** Stored and read back per material and location: `packages/core/src/services/planning-parameters/planning-parameter.service.test.ts`, the planning-parameters route, schema and page tests, `tests/integration/planning-parameters.test.ts` and `planning-parameters-api.test.ts`. MRP reading them is slice 3. E03-S03, #24.
+- **Evidence:** Stored and read back per material and location: `packages/core/src/services/planning-parameters/planning-parameter.service.test.ts`, the planning-parameters route, schema and page tests, `tests/integration/planning-parameters.test.ts` and `planning-parameters-api.test.ts`. MRP reads them per material and location: `packages/core/src/services/mrp/mrp-snapshot.service.test.ts` (the sets of the scope's tenant, with their material's type), `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MAT-016": Buy minimum 10 multiple 5 proposes 10 at L1, Make minimum 0 multiple 1 proposes 3 at L2) and `tests/integration/mrp-run-api.test.ts` (the same two proposals read back through `GET …/mrp/runs/latest`). No screen lists proposals yet (E19-S01). E03-S03, #24; E16-S01, #278.
 - **Given:** Material-location pair with valid Make/Buy, days, minimum, lot multiple
 - **When:** Save and use in MRP
 - **Then:** MRP reads the parameters for that exact site/material combination.
@@ -509,16 +509,18 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MAT-025 — Supply rounding upward
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MAT-025": a need of 1.000001 with multiple 0.000001 is proposed as 1.000001) and `packages/core/src/domain/mrp/sizing/lot-quantity.test.ts`. The proposal is stored and listed by `GET …/mrp/runs/latest` (`mrp-run.service.test.ts`); no screen lists proposals yet (E19-S01). E16-S01, #278.
 - **Given:** Calculation requires 1.000001 BUoM with compatible lot parameters
 - **When:** MRP proposes procurement/production
 - **Then:** Proposal is never below 1.000001; no rounding down causing shortage.
 
 ### MAT-026 — Minimum and lot multiple
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MAT-026": minimum 10, multiple 6, need 11 propose 12) and `sizing/lot-quantity.test.ts` (need 2 also gives 12, #278 Q1). The screen shows only the balance after proposals (`tests/integration/mrp-report.test.ts`). E16-S01, #278.
 - **Given:** Site min 10, multiple 6 and raw need 11
 - **When:** Calculate proposal
 - **Then:** Proposed supply satisfies both constraints and is no less than 11 (e.g. 12).
@@ -2407,8 +2409,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### TRF-018 — No automatic transfers
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** Planning half: `packages/core/src/domain/mrp/plan-mrp.test.ts` ("TRF-018": a deficit at B gets its own proposal, A's surplus is not netted, and no transfer kind exists: `MRP_PROPOSAL_KINDS` is `purchase-requisition` and `production-order` only). That automatic creation creates no transfer either is E19-S03 (#289). E16-S01, #278.
 - **Given:** Deficit at B and stock surplus at A
 - **When:** Run MRP auto-create
 - **Then:** No transfer order created automatically.
@@ -2692,8 +2695,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### DEM-023 — Safety replenishment respects lot rules
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("DEM-023": ending stock 8 against a target of 20, minimum 10, multiple 5: need 12, proposal 15, 23 after; a later day 2 lower gets none). E16-S01, #278.
 - **Given:** Projected ending stock 8, safety target 20, minimum 10 and lot multiple 5
 - **When:** Run MRP
 - **Then:** Recommended quantity at least 12, rounded up to suitable lot multiple (15).
@@ -2794,8 +2798,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MRP-009 — Suggested replenishment restores safety target
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-009": a projection of 4 against a target of 10 gets 6, and the balance after proposals is 10). The report's "Projected after proposals" column shows the stored figure (`tests/integration/mrp-report.test.ts`, its #278 test, without a target). E16-S01, #278.
 - **Given:** Material-site projection drops to 4, safety target 10
 - **When:** Run MRP
 - **Then:** Suggested incoming quantity restores projected stock at least to 10, respecting rounding rules.
@@ -2967,8 +2972,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MRP-030 — Buy material yields PR proposal
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-030": a raw material with a need and no supply gets a `purchase-requisition`; the kind union has no purchase order) and `tests/integration/mrp-run-api.test.ts` ("proposes a requisition of 10 for Buy…": the kind read back through the API). The manual-run screen lists no proposals yet (E19-S01). E16-S01, #278.
 - **Given:** Net raw requirement positive with no supply
 - **When:** Run MRP manual
 - **Then:** Suggested action is Create Purchase Requisition, not Create PO.
@@ -2983,16 +2989,18 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MRP-032 — Finished Buy yields purchase proposal
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-032": a finished product planned Buy gets a purchase requisition). The kind is read back through the API (`tests/integration/mrp-run-api.test.ts`), not yet on a screen (E19-S01). E16-S01, #278.
 - **Given:** Finished product material-location mode Buy
 - **When:** Run MRP
 - **Then:** Suggestion uses Buy / PR path rather than assuming finished goods always manufactured.
 
 ### MRP-033 — Raw Make mode rejected before MRP
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** Master half: MAT-014's evidence (Make refused for raw). MRP half: `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-033": a raw material whose stored set says Make gets no proposal at all) and `sizing/size-proposals.test.ts`. The exception for such a set is E16-S03 (#280). E16-S01, #278.
 - **Given:** Raw material has invalid Make setting attempted
 - **When:** Validate master and run
 - **Then:** Invalid master not accepted; MRP cannot produce a raw Make action.
@@ -3089,8 +3097,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MRP-045 — Lot-size never underplans
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-045": an exact need of 4.000001 with multiple 2 proposes 6) and `sizing/lot-quantity.test.ts`. Stored and listed through the API (`mrp-run.service.test.ts`). E16-S01, #278.
 - **Given:** Exact computed need 4.000001 and multiple 2
 - **When:** Run MRP
 - **Then:** Proposal at least 6 (assuming no stricter minimum), not 4.

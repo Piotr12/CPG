@@ -220,6 +220,9 @@ describe("atomic Test reset", { timeout: 60_000 }, () => {
     const prod = (await scope("prod")).cradle;
     const prodRun = await inRequestTransaction(prod.em, () => prod.mrpRunService.run(actor));
     const old = await sequences("test");
+    const testRecommendations = () => current.em.getConnection().execute("select count(*) as n from mrp_recommendation where tenant_code = 'test'");
+    // The realistic dataset's planning parameters give the latest Test run proposals of its own (#278).
+    expect((await testRecommendations())[0].n).toBeGreaterThan(0);
 
     await reset(2);
 
@@ -244,6 +247,7 @@ describe("atomic Test reset", { timeout: 60_000 }, () => {
     const next = (await scope()).cradle;
     await expect(next.mrpRunService.latest({})).rejects.toMatchObject({ code: "MRP_RUN_NOT_FOUND" });
     expect(await next.em.getConnection().execute("select count(*) as n from mrp_daily_result where tenant_code = 'test'")).toEqual([{ n: 0 }]);
+    expect(await testRecommendations()).toEqual([{ n: 0 }]);
     expect((await inRequestTransaction(next.em, () => next.mrpRunService.run(actor))).id).toBe("00000001");
     expect((await (await scope("prod")).cradle.mrpRunService.latest({})).run).toEqual(prodRun);
   }, 300_000);

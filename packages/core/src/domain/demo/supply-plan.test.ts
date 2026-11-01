@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { plannedStart, scaledRequirement } from "../production-orders/production-planning";
-import { formatDecimal, ONE } from "../quantities/decimal";
+import { formatDecimal, ONE, roundUpToMultiple } from "../quantities/decimal";
 import { addDays, addWeekdays, isoWeekday, monthEnd, monthOf, monthStart } from "./calendar";
 import { planDemand } from "./demand-plan";
 import { Ledger } from "./ledger";
-import { largerOf, lotFor, pairKey, planningPairs, planSupply, recipeOf, roundUpToMultiple, smallerOf, toBase, varied, type SupplyPlan } from "./supply-plan";
+import { largerOf, lotFor, pairKey, planningPairs, planSupply, recipeOf, smallerOf, toBase, varied, type SupplyPlan } from "./supply-plan";
 import { byId, TEST_TENANT_CONFIG, type TestTenantConfig } from "./test-tenant-config.schema";
 import { planEvents } from "./timeline";
 
@@ -50,8 +50,6 @@ function lowestBalances(supply: SupplyPlan): Map<string, bigint> {
 
 describe("lot rounding", () => {
   it("rounds a need up to the lot multiple, at least the minimum, and orders nothing for no need", () => {
-    expect(roundUpToMultiple(101n * ONE, 50n * ONE)).toBe(150n * ONE);
-    expect(roundUpToMultiple(100n * ONE, 50n * ONE)).toBe(100n * ONE);
     expect(lotFor(101n * ONE, 500n * ONE, 100n * ONE)).toBe(500n * ONE);
     expect(lotFor(501n * ONE, 500n * ONE, 100n * ONE)).toBe(600n * ONE);
     expect(lotFor(0n, 500n * ONE, 100n * ONE)).toBe(0n);
