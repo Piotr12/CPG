@@ -55,8 +55,8 @@ Implement the spec: overdue supply and overdue transfer arrivals stored as warni
 
 ### Phase 1: Overdue warnings in the run
 
-- [ ] 1.1 warnings/overdue.ts, MrpResult.warnings, planMrp
-- [ ] 1.2 MrpRunService.run stores warnings after exceptions
+- [x] 1.1 warnings/overdue.ts, MrpResult.warnings, planMrp — 7a920d17
+- [x] 1.2 MrpRunService.run stores warnings after exceptions — 7a920d17
 
 ### Phase 2: Weeks and marks (pure)
 
