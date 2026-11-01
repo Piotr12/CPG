@@ -40,6 +40,7 @@ describe("MRP recommendations migration (#278)", () => {
       });
       expect(await sql("select id from mrp_recommendation")).toEqual([{ id: "p2" }]);
 
+      await orm.migrator.down(); // MRP acceptance.
       await orm.migrator.down();
       expect(await tables()).toEqual(["mrp_daily_result", "mrp_run"]);
       expect(await sql("select id from mrp_run")).toEqual([{ id: "r2" }]);
