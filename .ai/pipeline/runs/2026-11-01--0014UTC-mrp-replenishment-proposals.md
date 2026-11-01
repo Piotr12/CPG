@@ -34,11 +34,11 @@ Phase 3, proof and paperwork (spec steps 9–11): benchmark, integration tests, 
 
 ### Phase 1: Engine
 
-- [ ] 1.1 Move roundUpToMultiple into decimal.ts
-- [ ] 1.2 Proposal and parameter types
-- [ ] 1.3 Lot quantity
-- [ ] 1.4 Size proposals
-- [ ] 1.5 Wire sizing into planMrp
+- [x] 1.1 Move roundUpToMultiple into decimal.ts — e94603fa
+- [x] 1.2 Proposal and parameter types — 48a14302
+- [x] 1.3 Lot quantity — dddbdfcb
+- [x] 1.4 Size proposals — 50673430
+- [x] 1.5 Wire sizing into planMrp — 663e78b1
 
 ### Phase 2: Loader and storage
 
