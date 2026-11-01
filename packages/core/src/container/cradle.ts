@@ -36,6 +36,7 @@ import type { SupplierService } from "../services/suppliers/supplier.service";
 import type { UserPreferenceService } from "../services/preferences/user-preference.service";
 import type { SystemStatusService } from "../services/system/system-status.service";
 import type { UserService } from "../services/users/user.service";
+import type { MrpAcceptanceService } from "../services/mrp/mrp-acceptance.service";
 import type { MrpRunService } from "../services/mrp/mrp-run.service";
 import type { MrpSnapshotService } from "../services/mrp/mrp-snapshot.service";
 import type { TenantInfo, TenantService } from "../services/tenants/tenant.service";
@@ -82,6 +83,7 @@ export interface Cradle {
   demandReviewService: DemandReviewService;
   mrpSnapshotService: MrpSnapshotService;
   mrpRunService: MrpRunService;
+  mrpAcceptanceService: MrpAcceptanceService;
   stockReportService: StockReportService;
   varianceReportService: VarianceReportService;
   /** The active tenant. Only in scopes built by `tenantScope()`. */
