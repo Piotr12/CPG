@@ -71,9 +71,9 @@ Implement the spec: overdue supply and overdue transfer arrivals stored as warni
 
 ### Phase 4: The screen
 
-- [ ] 4.1 MrpMarks and the Proposals badge
-- [ ] 4.2 switch, week table, Warnings column, messages, page
-- [ ] 4.3 mrp help topic
+- [x] 4.1 MrpMarks and the Proposals badge — e89907d5
+- [x] 4.2 switch, week table, Warnings column, messages, page — e89907d5
+- [x] 4.3 mrp help topic — e89907d5
 
 ### Phase 5: Integration and close-out
 
