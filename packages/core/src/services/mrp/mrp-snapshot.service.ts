@@ -47,6 +47,6 @@ export class MrpSnapshotService {
     const productionOrders = await readProductionOrders(this.em, codes, afterHorizon);
     const transfers = await readTransfers(this.em, codes, afterHorizon);
     await yieldToEventLoop();
-    return { stock, orderLines, forecasts, safetyTargets, requisitions, purchaseOrderLines, productionOrders, transfers };
+    return { stock, orderLines, forecasts, safetyTargets, requisitions, purchaseOrderLines, productionOrders, transfers, planningParameters: [] };
   }
 }
