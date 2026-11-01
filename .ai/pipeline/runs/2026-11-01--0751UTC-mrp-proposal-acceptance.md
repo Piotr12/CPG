@@ -34,6 +34,7 @@ Phase 4, proof and paperwork (spec steps 7–9): benchmark, integration tests, d
 - 07:51 The implementation branch was cut from `main`, not stacked on the spec PR, and carries the spec in. It also deletes #278's stale active spec copy, as #318 does.
 
 - Phase 1: the generator wrote two `add column`s, no rebuild. `mrp-acceptance-migration.test.ts` checks the populated upgrade, in place, and old-style inserts. The migration counts, lists and rollback-by-count tests take it. Core and app suites: 533 files, 4,065 tests green.
+- Phase 2: `MrpAcceptanceService` at 100% on its own tests (15, plus a two-ORM race: one requisition, the loser refused `MRP_PROPOSAL_ACCEPTED` after 2 plannings in all). Test fixes, not code fixes: a same-pair order line a day *earlier* than the need leaves the proposal unchanged (planned again it gets its own), so RUN-017's line goes on the need date; a material with open demand can't be deactivated, so Q11's test sets the flag directly.
 
 ## Progress
 
@@ -47,8 +48,8 @@ Phase 4, proof and paperwork (spec steps 7–9): benchmark, integration tests, d
 
 ### Phase 2: Acceptance
 
-- [ ] 2.1 Acceptance service
-- [ ] 2.2 Accept route
+- [x] 2.1 Acceptance service — 20fca54d
+- [x] 2.2 Accept route — d3fc8476
 
 ### Phase 3: Screen
 
