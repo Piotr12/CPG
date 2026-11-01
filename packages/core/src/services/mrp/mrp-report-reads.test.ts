@@ -27,6 +27,7 @@ const RUNS = 3;
 const DAYS = 90;
 const INDEX = "mrp_daily_result_tenant_code_run_id_material_location_date_unique";
 const PROPOSAL_INDEX = "mrp_recommendation_tenant_code_run_id_material_location_need_date_unique";
+const EXCEPTION_INDEX = "mrp_run_exception_tenant_code_run_id_material_location_position_unique";
 
 const seq = (count: number) => `with recursive s(x) as (select 1 union all select x + 1 from s where x < ${count})`;
 const code = (n: string) => `printf('%08d', ${n})`;
@@ -47,6 +48,9 @@ function seed({ pairs, locations }: (typeof SIZES)[number]): string[] {
     // One proposal per pair, on the day its balance dips (#278).
     `${seq(pairs)} insert into mrp_recommendation (id, tenant_code, run_id, material, location, kind, need_date, quantity)
       select 'p' || x, 'prod', 'run', ${code("x")}, ${code(`1 + x % ${locations}`)}, 'purchase-requisition', date('2026-10-31', '+' || (x % ${DAYS}) || ' days'), '1.500000' from s`,
+    // One exception per pair, as a run without planning parameters would store (#280).
+    `${seq(pairs)} insert into mrp_run_exception (id, tenant_code, run_id, position, exception_code, material, location, date, details)
+      select 'e' || x, 'prod', 'run', x, 'MISSING_PLANNING_PARAMETERS', ${code("x")}, ${code(`1 + x % ${locations}`)}, '2026-10-31', '{"reason":"no-set"}' from s`,
   ];
 }
 
@@ -111,6 +115,18 @@ describe.each(SIZES)("the MRP report's reads at the $name size", (size) => {
     const seek = `tenant_code=\\? AND run_id=\\? AND material=\\?${query.location ? " AND location=\\?" : ""}`;
     expect(plan.filter((line) => line.startsWith("SEARCH m0 "))).toEqual([expect.stringMatching(new RegExp(`^SEARCH m0 USING INDEX ${PROPOSAL_INDEX} \\(${seek}\\)`))]);
     // Besides the seek, only the tenant filter's join of the run, by key: no sort, no walk.
+    expect(plan.filter((line) => !line.startsWith("SEARCH m0 ") && !/^SEARCH r1 USING INDEX sqlite_autoindex_mrp_run_1 \(id=\?\)$/.test(line))).toEqual([]);
+  });
+
+  it.each(reads)("reads the exceptions of %s through their run's unique index, by the page's materials, with no sort (#280)", async (_name, query) => {
+    queries.length = 0;
+    const report = await latest(query);
+    expect(report.plans.every(({ exceptions }) => exceptions.length === 1 && exceptions[0].params.reason === "no-set")).toBe(true);
+    const sent = queries.filter(({ sql }) => sql.includes("from `mrp_run_exception`"));
+    expect(sent).toHaveLength(1);
+    const plan = (await orm.em.getConnection().execute<{ detail: string }[]>(`explain query plan ${sent[0].sql}`, [...sent[0].params])).map(({ detail }) => detail);
+    const seek = `tenant_code=\\? AND run_id=\\? AND material=\\?${query.location ? " AND location=\\?" : ""}`;
+    expect(plan.filter((line) => line.startsWith("SEARCH m0 "))).toEqual([expect.stringMatching(new RegExp(`^SEARCH m0 USING INDEX ${EXCEPTION_INDEX} \\(${seek}\\)`))]);
     expect(plan.filter((line) => !line.startsWith("SEARCH m0 ") && !/^SEARCH r1 USING INDEX sqlite_autoindex_mrp_run_1 \(id=\?\)$/.test(line))).toEqual([]);
   });
 

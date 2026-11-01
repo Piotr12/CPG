@@ -1,13 +1,14 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { Bom, BomComponent, BomRevision, initOrm, isTenantOwned, Location, Material, MrpDailyResult, MrpRecommendation, MrpRun, MRP_RECOMMENDATION_KINDS, ProductionOrder, Transfer, type MrpRecommendationKind, type Orm } from "@cpg/db";
+import { Bom, BomComponent, BomRevision, initOrm, isTenantOwned, Location, Material, MrpDailyResult, MrpRecommendation, MrpRun, MrpRunException, MRP_RECOMMENDATION_KINDS, ProductionOrder, Transfer, type MrpRecommendationKind, type Orm } from "@cpg/db";
 import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 import { loadConfig } from "../../config";
 import { createAppContainer } from "../../container/container";
 import type { AppContainer } from "../../container/cradle";
 import { scopeForTenant } from "../../container/tenant-scope";
 import { migrateDatabase, toDbOptions } from "../../database";
+import { MRP_EXCEPTION_FALLBACK_MESSAGE, MRP_EXCEPTION_MESSAGES } from "../../domain/mrp/exceptions/codes";
 import { MRP_PROPOSAL_KINDS, type MrpProposalKind } from "../../domain/mrp/mrp-result";
 import { inRequestTransaction } from "../../http/request-transaction";
 import type { AuditActor } from "../audit/actor";
@@ -375,7 +376,7 @@ describe("MrpRunService.latest", () => {
     const { plans } = await latest();
 
     expect(Object.keys(plans[0])).toEqual([
-      "material", "materialDescription", "materialActive", "baseUnit", "location", "locationName", "locationActive", "lowestProjectedBefore", "firstShortageDate", "buckets", "proposals",
+      "material", "materialDescription", "materialActive", "baseUnit", "location", "locationName", "locationActive", "lowestProjectedBefore", "firstShortageDate", "buckets", "proposals", "exceptions",
     ]);
     expect(plans[0]).toMatchObject({
       material: cabinet.id, materialDescription: "Cabinet", materialActive: false, baseUnit: "each",
@@ -521,9 +522,93 @@ describe("MrpRunService: replenishment proposals (#278)", () => {
   });
 });
 
+describe("MrpRunService: planning exceptions (#280)", () => {
+  const exceptions = () =>
+    sql("select m.code as run, e.position, e.exception_code as code, e.material, e.location, e.date, e.details from mrp_run_exception e join mrp_run m on e.run_id = m.id order by m.code, e.position");
+  const listed = (view: MrpLatestView) => view.plans.filter((plan) => plan.exceptions.length > 0).map(({ material: item, location: site, exceptions: list }) => [item, site, list]);
+
+  it("MRP-036: a corrupt quantity written around the services makes the run complete with Invalid UoM Conversion for that material, stored and listed, and B still plans its proposal", async () => {
+    const a = await material("prod", "Cabinet");
+    const b = await material("prod", "Shelf");
+    await parameters("prod", a.id, PLANT, "buy", "0.000000", "1.000000");
+    await parameters("prod", b.id, PLANT, "buy", "10.000000", "5.000000");
+    const written = await order("prod", PLANT, [
+      { material: a.id, quantity: "3", requiredDate: "2026-10-05" },
+      { material: b.id, quantity: "3", requiredDate: "2026-10-05" },
+    ]);
+    await sql("update customer_order_line set quantity = '3,5' where material_id = (select id from material where code = ? and tenant_code = 'prod')", [a.id]);
+
+    await run();
+
+    expect(await exceptions()).toEqual([
+      { run: "00000001", position: 0, code: "INVALID_UOM_CONVERSION", material: a.id, location: PLANT, date: null, details: JSON.stringify({ record: "customer-order-line", document: `${written.id}/0` }) },
+    ]);
+    const { plans } = await latest();
+    const params = { material: a.id, location: PLANT, record: "customer-order-line", document: `${written.id}/0` };
+    expect(plans.map(({ material: item, proposals, exceptions: list }) => [item, proposals.map(({ quantity }) => quantity), list])).toEqual([
+      [a.id, [], [{ code: "INVALID_UOM_CONVERSION", message: MRP_EXCEPTION_MESSAGES.INVALID_UOM_CONVERSION, params }]],
+      [b.id, ["10.000000"], []],
+    ]);
+  });
+
+  it("stores the same exceptions in the same positions on every run of the same data, replacing the previous run's (PRD §04 Invocation)", async () => {
+    const a = await material("prod", "Cabinet");
+    const store = (await location("prod", "Store")).id;
+    await parameters("prod", a.id, store, "make", "0.000000", "1.000000");
+    await order("prod", PLANT, [{ material: a.id, quantity: "3", requiredDate: "2026-10-05" }]);
+    await order("prod", store, [{ material: a.id, quantity: "2", requiredDate: "2026-10-06" }]);
+
+    await run();
+    const first = await exceptions();
+    await run();
+    const second = await exceptions();
+
+    expect(first.map(({ position, code, location: site, date, details }) => [position, code, site, date, details])).toEqual([
+      [0, "MISSING_PLANNING_PARAMETERS", PLANT, "2026-10-05", JSON.stringify({ reason: "no-set" })],
+      [1, "MISSING_BOM", store, "2026-10-06", null],
+    ]);
+    expect(second).toEqual(first.map((row) => ({ ...row, run: "00000002" })));
+    expect(listed(await latest())).toEqual([
+      [a.id, PLANT, [{ code: "MISSING_PLANNING_PARAMETERS", message: MRP_EXCEPTION_MESSAGES.MISSING_PLANNING_PARAMETERS, params: { material: a.id, location: PLANT, date: "2026-10-05", reason: "no-set" } }]],
+      [a.id, store, [{ code: "MISSING_BOM", message: MRP_EXCEPTION_MESSAGES.MISSING_BOM, params: { material: a.id, location: store, date: "2026-10-06" } }]],
+    ]);
+    // Filtered by location, only that pair's exceptions are listed.
+    expect(listed(await latest({ location: store })).map(([, site]) => site)).toEqual([store]);
+  });
+
+  it("stores an Insufficient Transfer Stock exception and lists it on its source's plan, its quantities as six-decimal texts (#277)", async () => {
+    const a = await material("prod", "Cabinet");
+    const store = (await location("prod", "Store")).id;
+    await stock("prod", a.id, PLANT, "6");
+    await parameters("prod", a.id, PLANT, "buy", "0.000000", "1.000000");
+    await parameters("prod", a.id, store, "buy", "0.000000", "1.000000");
+    const { cradle } = await scope();
+    const created = await cradle.transferService.create({ material: a.id, source: PLANT, destination: store, quantity: "10", unit: "each", plannedDispatch: "2026-10-03", plannedArrival: "2026-10-04" }, ANNA);
+
+    await run();
+
+    expect(listed(await latest())).toEqual([
+      [a.id, PLANT, [{
+        code: "INSUFFICIENT_TRANSFER_STOCK",
+        message: MRP_EXCEPTION_MESSAGES.INSUFFICIENT_TRANSFER_STOCK,
+        params: { material: a.id, location: PLANT, date: "2026-10-03", transfer: created.id, destination: store, planned: "10.000000", available: "6.000000" },
+      }]],
+    ]);
+  });
+
+  it("lists a stored code this image doesn't know with the fallback message, as after a rollback (spec Q7)", async () => {
+    const a = await material("prod", "Cabinet");
+    await stock("prod", a.id, PLANT, "1");
+    await run();
+    await sql(`insert into mrp_run_exception (id, tenant_code, run_id, position, exception_code, material, location, date, details)
+      select 'x1', 'prod', id, 0, 'A_LATER_CODE', ?, ?, null, null from mrp_run where tenant_code = 'prod'`, [a.id, PLANT]);
+    expect(listed(await latest())).toEqual([[a.id, PLANT, [{ code: "A_LATER_CODE", message: MRP_EXCEPTION_FALLBACK_MESSAGE, params: { material: a.id, location: PLANT } }]]]);
+  });
+});
+
 /** Every row of every tenant-owned table but the MRP tables and the tenant audit, read raw. */
 async function everyOtherTable() {
-  const skipped = new Set([MrpRun.meta.className, MrpDailyResult.meta.className, MrpRecommendation.meta.className, "TenantAuditEvent"]);
+  const skipped = new Set([MrpRun.meta.className, MrpDailyResult.meta.className, MrpRecommendation.meta.className, MrpRunException.meta.className, "TenantAuditEvent"]);
   const result: Record<string, unknown> = {};
   for (const meta of orm.getMetadata().getAll().values()) {
     if (!isTenantOwned(meta) || skipped.has(meta.className)) continue;

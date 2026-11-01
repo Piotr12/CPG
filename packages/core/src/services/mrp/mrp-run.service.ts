@@ -1,5 +1,7 @@
-import { currentTenant, holdWriteGate, MrpDailyResult, MrpRecommendation, MrpRun, type EntityManager } from "@cpg/db";
+import { currentTenant, holdWriteGate, MrpDailyResult, MrpRecommendation, MrpRun, MrpRunException, type EntityManager } from "@cpg/db";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
+import { mrpExceptionMessage } from "../../domain/mrp/exceptions/codes";
+import { exceptionParams, toStoredException } from "../../domain/mrp/exceptions/stored-exception";
 import type { MrpBucket, MrpResult } from "../../domain/mrp/mrp-result";
 import { planMrp } from "../../domain/mrp/plan-mrp";
 import { summarizePlan } from "../../domain/mrp/report/plan-summary";
@@ -22,6 +24,7 @@ import {
   MRP_FIGURES,
   toRunView,
   type MrpBucketView,
+  type MrpExceptionView,
   type MrpFigure,
   type MrpLatestView,
   type MrpPlanView,
@@ -50,8 +53,8 @@ const bucketFigures = (bucket: MrpBucket) =>
 /**
  * On-demand MRP runs of one tenant (E14-S02, PRD §04): a run plans every location over 90 days from
  * today and stores itself with its daily results; the latest run is shown until a newer one
- * supersedes it. A run writes only its own three tables (the run, its daily results and its
- * recommendations, E16-S01) and its audit entry (R10).
+ * supersedes it. A run writes only its own four tables (the run, its daily results, its
+ * recommendations, E16-S01, and its exceptions, E16-S03) and its audit entry (R10).
  */
 export class MrpRunService {
   private readonly em: EntityManager;
@@ -78,9 +81,10 @@ export class MrpRunService {
     const result = planMrp(await this.mrpSnapshotService.load(today), today);
     const highest = await this.em.findOne(MrpRun, {}, { orderBy: { code: "desc" }, fields: ["code"], disableIdentityMap: true });
     const code = nextSequentialId(highest?.code ?? null, { code: "MRP_RUN_IDS_EXHAUSTED", message: "This tenant has used every eight-digit MRP run ID." });
-    // Only the latest run keeps its results and proposals (spec Q1). Deleting them before the insert keeps the indexes small.
+    // Only the latest run keeps its results, proposals and exceptions (spec Q1). Deleting them before the insert keeps the indexes small.
     await this.em.nativeDelete(MrpDailyResult, {});
     await this.em.nativeDelete(MrpRecommendation, {});
+    await this.em.nativeDelete(MrpRunException, {});
     const run = this.em.create(MrpRun, {
       code,
       startDate: today,
@@ -146,7 +150,8 @@ export class MrpRunService {
       );
       const plans = groupPlans(rows);
       const proposals = await this.proposalsOf(run, plans, query.location);
-      return { run: toRunView(run), page: query.page, pageSize: MRP_LATEST_PAGE_SIZE, total, plans: await this.describe(plans, proposals) };
+      const exceptions = await this.exceptionsOf(run, plans, query.location);
+      return { run: toRunView(run), page: query.page, pageSize: MRP_LATEST_PAGE_SIZE, total, plans: await this.describe(plans, proposals, exceptions) };
     });
   }
 
@@ -155,7 +160,11 @@ export class MrpRunService {
    * the location's name, both active flags, and the summary. Masters are never deleted, and a Test reset
    * clears Test's runs, so every ID a run names resolves.
    */
-  private async describe(plans: GroupedPlan[], proposals: ReadonlyMap<string, MrpProposalView[]>): Promise<MrpPlanView[]> {
+  private async describe(
+    plans: GroupedPlan[],
+    proposals: ReadonlyMap<string, MrpProposalView[]>,
+    exceptions: ReadonlyMap<string, MrpExceptionView[]>,
+  ): Promise<MrpPlanView[]> {
     if (plans.length === 0) return [];
     const materials = await materialsByCode(this.em, plans.map((plan) => plan.material));
     const locations = await locationsByCode(this.em, plans.map((plan) => plan.location));
@@ -167,8 +176,9 @@ export class MrpRunService {
         location, locationName: site.name, locationActive: site.active,
         ...summarizePlan(buckets as [MrpBucketView, ...MrpBucketView[]]),
         buckets,
-        // `proposalsOf` keys every plan of the page, with or without proposals.
+        // `proposalsOf` and `exceptionsOf` key every plan of the page, with or without rows.
         proposals: proposals.get(pairKey(material, location))!,
+        exceptions: exceptions.get(pairKey(material, location))!,
       };
     });
   }
@@ -191,15 +201,37 @@ export class MrpRunService {
     return byPair;
   }
 
+  /**
+   * The page's exceptions by pair, in run order, read like `proposalsOf` through the unique `(tenant,
+   * run, material, location, position)` index. A code this image doesn't know, written by a newer one
+   * before a rollback, is listed with the fallback message (spec Q7).
+   */
+  private async exceptionsOf(run: MrpRun, plans: GroupedPlan[], location: string | undefined): Promise<Map<string, MrpExceptionView[]>> {
+    const byPair = new Map<string, MrpExceptionView[]>(plans.map((plan) => [pairKey(plan.material, plan.location), []]));
+    if (plans.length === 0) return byPair;
+    const materials = [...new Set(plans.map((plan) => plan.material))];
+    const rows = await this.em.find(
+      MrpRunException,
+      { run, material: { $in: materials }, ...(location !== undefined && { location }) },
+      { orderBy: { material: "asc", location: "asc", position: "asc" }, fields: ["material", "location", "exceptionCode", "date", "details"], disableIdentityMap: true },
+    );
+    for (const row of rows) {
+      const params = exceptionParams({ material: row.material, location: row.location, date: row.date ?? null, details: row.details ?? null });
+      byPair.get(pairKey(row.material, row.location))?.push({ code: row.exceptionCode, message: mrpExceptionMessage(row.exceptionCode), params });
+    }
+    return byPair;
+  }
+
   private latestRun(): Promise<MrpRun | null> {
     return this.em.findOne(MrpRun, {}, { orderBy: { code: "desc" } });
   }
 
   /**
-   * Inserts every planned day, then every proposal, in chunks, yielding between them; the run is
-   * re-loaded after each `em.clear()`. Proposals are above zero, so they go through `formatDecimal`.
+   * Inserts every planned day, then every proposal, then every exception at its position in the
+   * run's order, in chunks, yielding between them; the run is re-loaded after each `em.clear()`.
+   * Proposals are above zero, so they go through `formatDecimal`.
    */
-  private async writeResults(stored: MrpRun, { plans, proposals }: MrpResult): Promise<void> {
+  private async writeResults(stored: MrpRun, { plans, proposals, exceptions }: MrpResult): Promise<void> {
     let run = stored;
     let pending = 0;
     const created = async () => {
@@ -220,6 +252,11 @@ export class MrpRunService {
     }
     for (const { kind, material, location, needDate, quantity } of proposals) {
       this.em.create(MrpRecommendation, { run, material, location, kind, needDate, quantity: formatDecimal(quantity, { fixed: true }) });
+      await created();
+    }
+    for (const [position, exception] of exceptions.entries()) {
+      const { code: exceptionCode, ...stored } = toStoredException(exception);
+      this.em.create(MrpRunException, { run, position, exceptionCode, ...stored });
       await created();
     }
     await this.em.flush();

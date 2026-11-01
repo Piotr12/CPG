@@ -26,6 +26,7 @@ const plan: MrpPlanView = {
   buckets: [{ date: "2026-10-27", firmDemand: zero, forecastDemand: zero, dependentDemand: zero, transferOut: zero, tentativeSupply: zero, dependableSupply: zero,
     atRiskSupply: zero, transferIn: zero, proposedReceipts: zero, safetyTarget: zero, projectedBefore: "25.000000", projectedAfter: "25.000000", shortage: zero }],
   proposals: [],
+  exceptions: [],
 };
 const report = (overrides: Partial<MrpLatestView> = {}): MrpLatestView => ({ run, page: 1, pageSize: 25, total: 30, plans: [plan], ...overrides });
 const steel = { id: "00000012", type: "raw", description: "Steel sheet", baseUnit: "kg", active: true, createdAt: new Date(), version: 1 };
