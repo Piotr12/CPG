@@ -81,4 +81,16 @@ describe("MRP run API wiring", () => {
     expect(missing.status).toBe(404);
     expect(await missing.json()).toMatchObject({ ok: false, error: { code: "MATERIAL_NOT_FOUND" } });
   });
+
+  it("passes the week view to the service and returns its weeks as read (E18-S02)", async () => {
+    mocks.requireApiUser.mockResolvedValue({ role: "user" });
+    mocks.tenantScope.mockResolvedValue({ cradle: { mrpRunService: { latest: mocks.latest } } });
+    mocks.latest.mockResolvedValue({ run, bucket: "week", page: 1, pageSize: 25, total: 0, plans: [] });
+
+    const response = await get("?bucket=week&material=00000012");
+
+    expect(response.status).toBe(200);
+    expect(mocks.latest).toHaveBeenCalledWith({ bucket: "week", material: "00000012" });
+    expect(await response.json()).toMatchObject({ ok: true, data: { bucket: "week" } });
+  });
 });

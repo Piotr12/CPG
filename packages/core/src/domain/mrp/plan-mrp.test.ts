@@ -617,8 +617,15 @@ describe("planMrp: purchasing supply (#276)", () => {
       }),
     );
     const before = structuredClone(snapshot);
-    const plan = only(planMrp(snapshot, TODAY).plans);
+    const result = planMrp(snapshot, TODAY);
+    const plan = only(result.plans);
     expect(plan.buckets[0]).toMatchObject({ date: TODAY, dependableSupply: q("90"), projectedBefore: q("95") });
+    // Stored with the run as Overdue Supply warnings (E18-S02), each with its line, date and quantity; no exception.
+    expect(result.warnings).toEqual([
+      { code: "OVERDUE_SUPPLY", material: "M1", location: "L1", date: TODAY, source: "purchase-order", document: "00000001", position: snapshot.purchaseOrderLines[0].position, plannedDate: "2026-09-30", quantity: q("50") },
+      { code: "OVERDUE_SUPPLY", material: "M1", location: "L1", date: TODAY, source: "purchase-order", document: "00000002", position: snapshot.purchaseOrderLines[1].position, plannedDate: "2026-09-30", quantity: q("40") },
+    ]);
+    expect(result.exceptions).toEqual([]);
     expect(plan.supply.map(({ document, plannedDate, date, overdue, quantity }) => ({ document, plannedDate, date, overdue, quantity }))).toEqual([
       { document: "00000001", plannedDate: "2026-09-30", date: TODAY, overdue: true, quantity: q("50") },
       { document: "00000002", plannedDate: "2026-09-30", date: TODAY, overdue: true, quantity: q("40") },
@@ -837,8 +844,11 @@ describe("planMrp: open production orders (#277)", () => {
 
   it("MRP-016: expects yesterday's pending 20 today with an Overdue Supply marker, keeping the original finish day", () => {
     const order = production({ quantity: q("20"), plannedStart: "2026-10-22", plannedFinish: "2026-10-27" });
-    const { plans } = planMrp(inputs({ productionOrders: [order] }), TODAY_PO);
+    const { plans, warnings } = planMrp(inputs({ productionOrders: [order] }), TODAY_PO);
     const product = planAt(plans, "P");
+    expect(warnings).toEqual([
+      { code: "OVERDUE_SUPPLY", material: "P", location: "L1", date: TODAY_PO, source: "production-order", document: "00000001", plannedDate: "2026-10-27", quantity: q("20") },
+    ]);
     expect(product.physical).toBe(0n);
     expect(product.buckets[0]).toMatchObject({ date: TODAY_PO, dependableSupply: q("20") });
     expect(product.productionOutput).toEqual([expect.objectContaining({ plannedFinish: "2026-10-27", date: TODAY_PO, quantity: q("20"), overdue: true })]);
@@ -912,6 +922,10 @@ describe("planMrp: open transfers (#277)", () => {
     expect(source.physical).toBe(0n);
     expect(source.buckets.every(({ transferOut, projectedBefore }) => transferOut === 0n && projectedBefore === 0n)).toBe(true);
     expect(result.exceptions).toEqual([]);
+    // The Overdue Transfer warning sits at the destination (E18-S02).
+    expect(result.warnings).toEqual([
+      { code: "OVERDUE_TRANSFER", material: "M1", location: "D", date: TODAY_T, transfer: "00000001", stage: "in-transit", plannedDate: "2026-10-27", quantity: q("30") },
+    ]);
   });
 
   it("MRP-040: plans the 25 in transit since yesterday for the destination today, with no physical stock there yet", () => {
@@ -957,6 +971,23 @@ describe("planMrp: open transfers (#277)", () => {
     expect(planAt(plans, "M1", "D").transfersIn.map(({ transfer: id, plannedDate, date, overdue }) => [id, plannedDate, date, overdue])).toEqual([
       ["00000001", "2026-10-25", TODAY_T, true],
       ["00000002", "2026-11-02", "2026-11-02", false],
+    ]);
+  });
+
+  it("warns of an overdue arrival only, never of an overdue dispatch or anything due today (E18-S02, spec Q2)", () => {
+    const { warnings } = planMrp(
+      inputs({
+        stock: [stock("M1", "S", "100")],
+        transfers: [
+          transfer({ transfer: "00000001", quantity: q("10"), plannedDispatch: "2026-10-20", plannedArrival: "2026-10-25" }),
+          transfer({ transfer: "00000002", quantity: q("20"), plannedDispatch: "2026-10-26", plannedArrival: "2026-11-02" }),
+          transfer({ transfer: "00000003", quantity: q("5"), plannedDispatch: "2026-10-26", plannedArrival: TODAY_T }),
+        ],
+      }),
+      TODAY_T,
+    );
+    expect(warnings).toEqual([
+      { code: "OVERDUE_TRANSFER", material: "M1", location: "D", date: TODAY_T, transfer: "00000001", stage: "planned", plannedDate: "2026-10-25", quantity: q("10") },
     ]);
   });
 
@@ -1693,6 +1724,17 @@ describe("planMrp: planning exceptions (E16-S03, #280)", () => {
     expect(result.exceptions).toEqual([
       { code: "INVALID_UOM_CONVERSION", material: "M1", location: "D", record: "stock-balance" },
       { code: "INVALID_UOM_CONVERSION", material: "M1", location: "S", record: "stock-balance" },
+    ]);
+    // Nor a warning (spec, "The overdue warnings"): a material with an unreadable row gets none, even for supply that reads no balance.
+    const overdue = planMrp(
+      inputs({
+        requisitions: [requisition({ location: "D", quantity: q("8"), requiredDate: "2026-09-25" }), requisition({ code: "00000009", material: "M2", quantity: q("3"), requiredDate: "2026-09-25" })],
+        unreadable: [{ material: "M1", location: "S", record: "stock-balance" }],
+      }),
+      TODAY,
+    );
+    expect(overdue.warnings).toEqual([
+      { code: "OVERDUE_SUPPLY", material: "M2", location: "L1", date: TODAY, source: "requisition", document: "00000009", plannedDate: "2026-09-25", quantity: q("3") },
     ]);
     // Without the unreadable row, the same transfer is short and says so.
     const sound = planMrp(inputs({ transfers: [transfer({ quantity: q("40"), plannedDispatch: "2026-10-03", plannedArrival: "2026-10-05" })] }), TODAY);
