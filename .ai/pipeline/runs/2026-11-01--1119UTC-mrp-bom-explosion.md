@@ -55,7 +55,7 @@ Implement the spec. MRP plans materials level by level. Every Make proposal expl
 
 ## Log
 
-- 2026-11-01 11:20–12:50 UTC:
+- 2026-11-01 11:20–11:45 UTC:
   - Phases 1 to 4 landed. Deviations from the spec are in its implementation notes: the priority tie-break uses days from start to need, and `readBoms` reads inactive materials once.
   - Benchmark under the unchanged budgets: realistic 243 ms, ten times 2,439 ms, longest stall 121 ms.
   - Docker is unavailable here, so the integration files ran against a standalone build (lesson 2026-10-23). `mrp-run-api` and `smoke` passed (16 tests). `mrp-accept`, `mrp-accept-api`, `mrp-report`, `mrp-report-api` and `mrp-run` passed (27 tests).
