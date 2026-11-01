@@ -60,8 +60,8 @@ Implement the spec: overdue supply and overdue transfer arrivals stored as warni
 
 ### Phase 2: Weeks and marks (pure)
 
-- [ ] 2.1 report/plan-marks.ts
-- [ ] 2.2 report/weekly.ts
+- [x] 2.1 report/plan-marks.ts — caeff841
+- [x] 2.2 report/weekly.ts — caeff841
 
 ### Phase 3: The read and the API
 
