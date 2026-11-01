@@ -3,7 +3,7 @@
 **Date:** 2026-11-01 11:02 UTC
 **Agent:** Claude Code (cezar, headless) / claude-opus-5-5
 **Spec:** `.ai/specs/2026-11-01--1107UTC-mrp-bom-explosion.md`
-**Status:** in progress
+**Status:** done (both PRs are drafts, pending the owner's Q9 confirmation)
 
 ## Goal
 
@@ -19,7 +19,6 @@ Take #281 end to end with `om-auto-fix-issue`. It is a `feature` issue, so the r
   - the snapshot's `boms.ts` and `production-orders.ts`, `MrpRecommendation`, `MrpRunService`, the run view and the proposals table;
   - the #277, #278, #279, #280 and #287 specs (#277's transfer-ordering rule for E17-S01, #279's "rank exploded components by their root");
   - the acceptance rows BOM-006, BOM-007, MRP-020, MRP-027 to MRP-031 and MRP-047.
-
 - 11:08 Wrote the spec and answered twelve questions with reversible defaults:
   - Q1, components are needed on the parent's `plannedStart` (E16-S02 has merged);
   - Q2, every Make proposal explodes;
@@ -46,8 +45,21 @@ Take #281 end to end with `om-auto-fix-issue`. It is a `feature` issue, so the r
   - pair existence is stated for "needed or not".
 - 11:17 `npx vitest run tests/ai-filenames.test.ts tests/spec-images.test.ts`: 2 files, 7 tests passed.
 
+- 11:18 Opened spec PR #325 as a draft under the ⚠ guard. Labels: `review`, `documentation`, `skip-qa`, `priority-medium`, `risk-low`. Posted the assumptions table on #325 and #281, and handed the issue lock to `om-auto-implement-spec`.
+- 11:19 Implementation PR #326, on `feat/mrp-bom-explosion` from `main`. The execution plan `.ai/pipeline/runs/2026-11-01--1119UTC-mrp-bom-explosion.md` is that run's log. The implementation renamed the exception `CYCLIC_BOM`, because the BOM service already uses `BOM_CYCLE` (review finding). The implemented copy of the spec records this.
+- 11:58 #326 complete and reviewed. Its gate is green (5,199 tests, 100% coverage). It stays a draft under the same ⚠ guard. Swapped the issue's `in-progress` for `ci-monitoring` while #326's CI runs. Follow-up #327 filed for root ranking (Q9).
+
 ## Changes
+
+- `.ai/specs/2026-11-01--1107UTC-mrp-bom-explosion.md` (new)
 
 ## Verification
 
+- Spec review by a fresh-context subagent: nothing Critical. Its two High and ten Medium/Low findings are folded in.
+- `npx vitest run tests/ai-filenames.test.ts tests/spec-images.test.ts`: 2 files, 7 tests passed.
+
 ## Follow-ups
+
+- Piotr12 to confirm Q9 on #325, or answer it otherwise (#327 tracks root ranking).
+- Merge #325 before #326, then merge `main` into #326 and delete the spec's active copy before #326 merges.
+- #326 needs a human QA pass (`needs-qa`).
