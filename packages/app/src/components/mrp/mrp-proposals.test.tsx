@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { MrpPlanView, MrpProposalView } from "@cpg/core";
+import type { MrpMarkView, MrpPlanView, MrpProposalView } from "@cpg/core";
 import { en } from "../../i18n/messages/en";
 import { pl } from "../../i18n/messages/pl";
 import { MrpProposals } from "./mrp-proposals";
@@ -13,6 +13,10 @@ const plan = (proposals: MrpProposalView[]): MrpPlanView => ({
   material: "00000031", materialDescription: "Sugar", materialActive: true, baseUnit: "kg",
   location: "00000002", locationName: "Plant North", locationActive: true, lowestProjectedBefore: "-100.000000", firstShortageDate: "2026-10-05",
   buckets: [], proposals, exceptions: [],
+  // The read's marks of these proposals (planMarks): a late one on its need date.
+  marks: proposals.filter(({ lateDays }) => lateDays > 0).map(({ id, needDate, plannedFinish, lateDays, beyondHorizon, quantity }): MrpMarkView => ({
+    kind: beyondHorizon ? "beyond-horizon" : "late-supply", date: needDate, proposal: id, plannedFinish, lateDays, quantity,
+  })),
 });
 const accept = vi.fn();
 const refresh = vi.hoisted(() => vi.fn());
@@ -49,9 +53,9 @@ describe("MrpProposals", () => {
   });
 
   it.each([
-    ["en", "Late: finishes 2026-10-08", "Beyond the horizon: finishes 2027-01-29"],
-    ["pl", "Spóźniona: kończy się 2026-10-08", "Poza horyzontem: kończy się 2027-01-29"],
-  ] as const)("shows in %s a late proposal's and a Beyond Horizon one's planned finish under the need date (E16-S02, MRP-037, MRP-049)", (locale, late, beyond) => {
+    ["en", "Late Supply · 4 days · finish Oct 8 · 100 kg", "Beyond Horizon · finish Jan 29, 2027 · 100 kg"],
+    ["pl", "Opóźniona dostawa · 4 dni · koniec 8 paź · 100 kg", "Poza horyzontem · koniec 29 sty 2027 · 100 kg"],
+  ] as const)("marks in %s a late proposal and a Beyond Horizon one under the need date, with their planned finish (E16-S02, E18-S02, MRP-037, MRP-049)", (locale, late, beyond) => {
     renderProposals([
       buy({ id: "a", needDate: "2026-10-04", plannedFinish: "2026-10-08", lateDays: 4 }),
       buy({ id: "b", needDate: "2026-10-21", plannedFinish: "2027-01-29", lateDays: 100, beyondHorizon: true }),
@@ -59,10 +63,11 @@ describe("MrpProposals", () => {
 
     const [lateRow, beyondRow] = within(screen.getByRole("table")).getAllByRole("row").slice(1);
     expect(lateRow.querySelector("[data-mrp-need-date]")?.textContent).toBe("2026-10-04");
-    expect(lateRow.querySelector("[data-mrp-timing=late]")?.textContent).toBe(late);
+    expect(lateRow.querySelector("[data-mrp-timing=late-supply]")?.textContent).toBe(late);
+    expect(lateRow.querySelector("[data-slot=status-badge]")?.getAttribute("data-tone")).toBe("warning");
     expect(beyondRow.querySelector("[data-mrp-need-date]")?.textContent).toBe("2026-10-21");
-    expect(beyondRow.querySelector("[data-mrp-timing=beyondHorizon]")?.textContent).toBe(beyond);
-    expect(beyondRow.querySelector("[data-mrp-timing=late]")).toBeNull();
+    expect(beyondRow.querySelector("[data-mrp-timing=beyond-horizon]")?.textContent).toBe(beyond);
+    expect(beyondRow.querySelector("[data-mrp-timing=late-supply]")).toBeNull();
   });
 
   it("asks before accepting, naming the document, material, location, quantity in its base unit, date and run, and creates nothing on Cancel (RUN-004)", async () => {

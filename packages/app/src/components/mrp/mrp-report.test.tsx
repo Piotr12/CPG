@@ -1,6 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { MrpBucketView, MrpLatestView, MrpPlanView } from "@cpg/core";
+import type { MrpBucketView, MrpLatestView, MrpMarkView, MrpPlanView, MrpWeekView } from "@cpg/core";
+import type { MrpReportPageQuery } from "@cpg/core/validators/mrp/mrp-latest.schema";
 import { en } from "../../i18n/messages/en";
 import { pl } from "../../i18n/messages/pl";
 import { MrpReport } from "./mrp-report";
@@ -22,6 +23,7 @@ const sheet: MrpPlanView = {
   ],
   proposals: [],
   exceptions: [],
+  marks: [],
 };
 const bearing: MrpPlanView = {
   ...sheet, material: "00000013", materialDescription: "Bearing", materialActive: false, baseUnit: "each", locationActive: false,
@@ -29,12 +31,22 @@ const bearing: MrpPlanView = {
   buckets: [day("2026-10-01", { projectedBefore: "5.000000" }), day("2026-10-02", { firmDemand: "1239.500000", projectedBefore: "-1234.500000", projectedAfter: "-1234.500000", shortage: "1234.500000" })],
 };
 const run = { id: "00000004", createdAt: new Date(), account: "anna", channel: "ui" as const, mode: "manual" as const, generation: 1, startDate: "2026-10-01", endDate: "2026-12-29", horizonDays: 90, pairs: 2 };
-const report = (overrides: Partial<MrpLatestView> = {}): MrpLatestView => ({ run, page: 1, pageSize: 25, total: 2, plans: [sheet, bearing], ...overrides });
+const report = (overrides: Partial<MrpLatestView> = {}): MrpLatestView => ({ run, bucket: "day", page: 1, pageSize: 25, total: 2, plans: [sheet, bearing], ...overrides });
 vi.mock("next/navigation", async (original) => ({ ...(await original<typeof import("next/navigation")>()), useRouter: () => ({ refresh: vi.fn() }) }));
 const accept = vi.fn();
-const renderReport = (view: MrpLatestView, selected: { material?: string; location?: string; page: number } = { page: 1 }, locale: "en" | "pl" = "en") =>
+const renderReport = (view: MrpLatestView, selected: Partial<MrpReportPageQuery> = {}, locale: "en" | "pl" = "en") =>
   render(
-    <MrpReport tenant={{ code: "test" }} report={view} selected={selected} materials={[]} locations={[]} today="2026-10-01" accept={accept} locale={locale} messages={locale === "en" ? en : pl} />,
+    <MrpReport
+      tenant={{ code: "test" }}
+      report={view}
+      selected={{ page: 1, bucket: "day", ...selected }}
+      materials={[]}
+      locations={[]}
+      today="2026-10-01"
+      accept={accept}
+      locale={locale}
+      messages={locale === "en" ? en : pl}
+    />,
   );
 const pairs = () => within(screen.getByRole("table", { name: en.mrp.report.label }));
 
@@ -105,10 +117,10 @@ describe("MrpReport", () => {
     const days = within(screen.getByRole("table", { name: en.mrp.report.planLabel }));
     expect(days.getAllByRole("columnheader").map((header) => header.textContent)).toEqual([
       "Date", "Firm demand", "Forecast demand", "Dependent demand", "Transfer out", "Safety stock", "Tentative supply", "Dependable supply", "Transfer in",
-      "Projected before proposals", "Projected after proposals", "Shortage",
+      "Projected before proposals", "Projected after proposals", "Shortage", "Warnings",
     ]);
     // The long headers wrap rather than push the last columns out of view at desktop widths.
-    for (const header of days.getAllByRole("columnheader").slice(1)) expect(header.className).toContain("whitespace-normal");
+    for (const header of days.getAllByRole("columnheader").slice(1, -1)) expect(header.className).toContain("whitespace-normal");
     const figures = (date: string) => {
       const row = days.getByText(date).closest("tr")!;
       return Object.fromEntries([...row.querySelectorAll("[data-mrp-figure]")].map((cell) => [cell.getAttribute("data-mrp-figure"), cell.textContent]));
@@ -156,5 +168,83 @@ describe("MrpReport", () => {
     const section = document.querySelector("[data-mrp-proposals]")!;
     expect(section.compareDocumentPosition(screen.getByRole("table", { name: en.mrp.report.planLabel })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(within(section as HTMLElement).getByRole("button", { name: "Accept the Purchase requisition of 40 kg on 2026-10-05" })).toBeTruthy();
+  });
+
+  describe("weeks and marks (E18-S02)", () => {
+    const zeroWeek = Object.fromEntries(["firmDemand", "forecastDemand", "dependentDemand", "transferOut", "tentativeSupply", "dependableSupply", "atRiskSupply", "transferIn", "proposedReceipts", "safetyTarget", "projectedBefore", "projectedAfter"].map((key) => [key, zero]));
+    const week = (overrides: Partial<MrpWeekView>): MrpWeekView => ({
+      ...(zeroWeek as Record<string, string>), start: "2026-10-05", end: "2026-10-11", year: 2026, week: 41, partial: false, lowestProjectedBefore: zero, peakShortage: zero, marks: [], ...overrides,
+    }) as MrpWeekView;
+    const overdue: MrpMarkView = { kind: "overdue-supply", date: "2026-10-01", source: "purchase-order", document: "00000003", position: 1, plannedDate: "2026-09-28", quantity: "30.000000" };
+    const transit: MrpMarkView = { kind: "overdue-transfer", date: "2026-10-01", transfer: "00000002", stage: "in-transit", plannedDate: "2026-09-30", quantity: "25.000000" };
+    const late: MrpMarkView = { kind: "late-supply", date: "2026-10-04", proposal: "p1", plannedFinish: "2026-10-08", lateDays: 4, quantity: "12.000000" };
+    /** UX-027's W41 after a partial W40 that holds the UX-018 marks. */
+    const weeks = [
+      week({ start: "2026-10-01", end: "2026-10-04", week: 40, partial: true, projectedBefore: "10.000000", projectedAfter: "10.000000", lowestProjectedBefore: "10.000000", marks: [overdue, transit, late] }),
+      week({ firmDemand: "56.000000", dependableSupply: "50.000000", projectedBefore: "4.000000", projectedAfter: "4.000000", lowestProjectedBefore: "-10.000000", peakShortage: "10.000000" }),
+    ];
+    const weekly: MrpPlanView = { ...sheet, buckets: [day("2026-10-01"), day("2026-10-04")], marks: [overdue, transit, late], weeks };
+
+    it("offers a View switch on Day by default, and Week alone shows Clear filters but keeps the run's empty text", () => {
+      renderReport(report());
+      const group = screen.getByRole("radiogroup", { name: "View" });
+      expect(within(group).getByRole("radio", { name: "Day" })).toHaveProperty("checked", true);
+      expect(within(group).getByRole("radio", { name: "Week" })).toHaveProperty("checked", false);
+      expect(screen.getByText(en.mrp.report.viewHint)).toBeTruthy();
+      expect(screen.queryByRole("link", { name: en.mrp.report.clear })).toBeNull();
+
+      renderReport(report({ total: 0, plans: [], run: { ...run, pairs: 0 } }), { bucket: "week" });
+      expect(screen.getAllByRole("link", { name: en.mrp.report.clear }).at(-1)!.getAttribute("href")).toBe("/admin/test/mrp");
+      expect(screen.getByText(en.mrp.report.emptyRun)).toBeTruthy();
+    });
+
+    it("keeps the Week view in the Days links and the page links (spec Q9)", () => {
+      renderReport(report({ total: 60, page: 2, bucket: "week" }), { bucket: "week", page: 2 });
+      expect(screen.getByRole("link", { name: "Days of 00000012 Steel sheet at 00000003 Kraków" }).getAttribute("href")).toBe("/admin/test/mrp?material=00000012&location=00000003&bucket=week");
+      const pages = within(screen.getByRole("navigation", { name: en.mrp.report.pagination }));
+      expect(pages.getByRole("link", { name: "Next" }).getAttribute("href")).toBe("/admin/test/mrp?bucket=week&page=3");
+      expect(within(screen.getByRole("radiogroup", { name: "View" })).getByRole("radio", { name: "Week" })).toHaveProperty("checked", true);
+    });
+
+    it("UX-027: shows the one pair's weeks, flows summed, balances at week end, the weakest day's two figures, a cut week labelled partial", () => {
+      renderReport(report({ total: 1, plans: [weekly], bucket: "week" }), { material: "00000012", location: "00000003", bucket: "week" });
+
+      expect(screen.queryByRole("table", { name: en.mrp.report.planLabel })).toBeNull();
+      expect(screen.getByRole("heading", { level: 3, name: "00000012 Steel sheet at 00000003 Kraków, by week" })).toBeTruthy();
+      expect(screen.getByText(/^Quantities in kg\. Flows are summed/)).toBeTruthy();
+      const table = within(screen.getByRole("table", { name: en.mrp.report.weekLabel }));
+      expect(table.getAllByRole("columnheader").map((header) => header.textContent)).toEqual([
+        "Week", "Firm demand", "Forecast demand", "Dependent demand", "Transfer out", "Safety stock", "Tentative supply", "Dependable supply", "Transfer in",
+        "Projected before proposals", "Projected after proposals", "Lowest projected balance", "Peak shortage", "Warnings",
+      ]);
+      const [first, second] = table.getAllByRole("row").slice(1);
+      expect(first.querySelector("[data-mrp-week]")?.textContent).toBe("W40 · Oct 1");
+      expect(first.querySelector("[data-mrp-week-range]")?.textContent).toBe("Oct 1–Oct 4, partial");
+      expect(second.querySelector("[data-mrp-week-range]")?.textContent).toBe("Oct 5–Oct 11");
+      const figures = Object.fromEntries([...second.querySelectorAll("[data-mrp-figure]")].map((cell) => [cell.getAttribute("data-mrp-figure"), cell.textContent]));
+      expect(figures).toMatchObject({ firmDemand: "56", dependableSupply: "50", projectedBefore: "4", lowestProjectedBefore: "-10", peakShortage: "10" });
+      expect(second.querySelector("[data-mrp-figure=lowestProjectedBefore]")?.className).toContain("text-danger");
+      expect(second.querySelector("td")?.className).toContain("border-l-danger");
+      expect(first.querySelector("td")?.className).not.toContain("border-l-danger");
+      expect([...first.querySelectorAll("[data-mrp-mark]")].map((mark) => mark.getAttribute("data-mrp-mark"))).toEqual(["overdue-supply", "overdue-transfer", "late-supply"]);
+      expect(second.querySelector("[data-mrp-marks]")).toBeNull();
+    });
+
+    it("shows the day view when a weekly read has no weeks, as a plan read by day", () => {
+      renderReport(report({ total: 1, plans: [sheet] }), { material: "00000012", location: "00000003", bucket: "week" });
+      expect(screen.getByRole("table", { name: en.mrp.report.planLabel })).toBeTruthy();
+    });
+
+    it("UX-018: marks each day with its warnings, in Polish too, icon and text on the warning tone", () => {
+      renderReport(report({ total: 1, plans: [weekly] }), { material: "00000012", location: "00000003" }, "pl");
+      const days = within(screen.getByRole("table", { name: pl.mrp.report.planLabel }));
+      const marks = [...days.getByText("2026-10-01").closest("tr")!.querySelectorAll("[data-slot=status-badge]")];
+      expect(marks.map((mark) => mark.textContent)).toEqual([
+        "Zaległa dostawa · Zamówienie 00000003/1 · termin 28 wrz · 30 kg",
+        "Zaległe przesunięcie · Przesunięcie 00000002 · termin 30 wrz · 25 kg",
+      ]);
+      expect(marks.every((mark) => mark.getAttribute("data-tone") === "warning" && mark.querySelector("svg"))).toBe(true);
+      expect(days.getByText("2026-10-04").closest("tr")!.querySelector("[data-mrp-mark=late-supply]")?.textContent).toBe("Opóźniona dostawa · 4 dni · koniec 8 paź · 12 kg");
+    });
   });
 });

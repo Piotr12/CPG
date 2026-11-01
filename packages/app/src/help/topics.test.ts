@@ -84,11 +84,22 @@ describe("help topics", () => {
   });
 
   it.each([
-    ["en", "has Accept: after you confirm", "shows its planned finish under its need date", "records the run's ID", "refused as out of date and you run MRP again", "accepted once", "Production-order proposals can't be accepted yet",
+    ["en", "has Accept: after you confirm", "carries its warning under its need date", "records the run's ID", "refused as out of date and you run MRP again", "accepted once", "Production-order proposals can't be accepted yet",
       "/mrp/runs/{run}/proposals/{proposal}/accept", "whether they can be accepted (executable)"],
-    ["pl", "ma przycisk Akceptuj: po potwierdzeniu", "pokazuje pod datą potrzeby planowany koniec", "zapisuje ID przebiegu", "odrzucona jako nieaktualna i trzeba ponownie uruchomić MRP", "zaakceptować raz",
+    ["pl", "ma przycisk Akceptuj: po potwierdzeniu", "ma pod datą potrzeby swoje ostrzeżenie", "zapisuje ID przebiegu", "odrzucona jako nieaktualna i trzeba ponownie uruchomić MRP", "zaakceptować raz",
       "Propozycji zleceń produkcyjnych nie można jeszcze akceptować", "/mrp/runs/{run}/proposals/{proposal}/accept", "czy można je zaakceptować (executable)"],
   ] as const)("says in %s how a proposal is accepted, refused as out of date, and through the API (E19-S01)", (locale, ...phrases) => {
+    const text = helpTopics(locale).find((topic) => topic.id === "mrp")!.body.join(" ");
+
+    for (const phrase of phrases) expect(text).toContain(phrase);
+  });
+
+  it.each([
+    ["en", "View switches one pair's table between Day and Week", "the stored days don't change", "W41 shows demand 56, receipts 50, a projected balance of 4, a lowest balance of −10 and a peak shortage of 10",
+      "not 6, the sum of the balances, nor 18, the sum of the shortages", "marked partial", "Overdue Transfer", "Late Supply", "Beyond Horizon", "add bucket=week"],
+    ["pl", "Widok przełącza tabelę jednej pary między Dniem a Tygodniem", "zapisane dni się nie zmieniają", "T41 pokazuje popyt 56, przyjęcia 50, prognozowany stan 4, najniższy stan −10 i największy niedobór 10",
+      "nie 6, czyli sumę stanów, ani 18, czyli sumę niedoborów", "oznaczone jako niepełne", "Zaległe przesunięcie", "Opóźniona dostawa", "Poza horyzontem", "dodaj bucket=week"],
+  ] as const)("says in %s how weeks fold flows and balances, with UX-027's example, what each warning means, and the API's weeks (E18-S02, D03)", (locale, ...phrases) => {
     const text = helpTopics(locale).find((topic) => topic.id === "mrp")!.body.join(" ");
 
     for (const phrase of phrases) expect(text).toContain(phrase);
