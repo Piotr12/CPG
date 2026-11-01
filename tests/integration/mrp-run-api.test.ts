@@ -164,6 +164,8 @@ describe("MRP runs through the API", () => {
     // Since #280 a Make proposal needs an active BOM valid on its need date.
     const input = (await created("/api/tenants/prod/materials", { type: "raw", description: "mrpapi timber", baseUnit: "each" })).id;
     const bom = (await created("/api/tenants/prod/boms", { output: material, priority: 1, validFrom: day(-30), validThrough: null, components: [{ material: input, quantity: "1", unit: "each" }] })).id;
+    // Since #283 a Make proposal its BOM can't supply is a provisional action: the timber is on hand at the workshop.
+    await created("/api/tenants/prod/stock/corrections", { material: input, location: made, quantity: "3", unit: "each", reason: "mrpapi count" });
     for (const location of [bought, made]) {
       await created("/api/tenants/prod/customer-orders", { customer, location, lines: [{ material, quantity: "3", unit: "each", requiredDate: day(6) }] });
     }
@@ -272,7 +274,7 @@ describe("MRP runs through the API", () => {
   let threeLevels: ReturnType<typeof levels> | undefined;
   const threeLevelPlant = () => (threeLevels ??= levels());
 
-  it("explodes F's proposal into I on F's start and I's into R on I's start, R bought, each production order with its BOM and revision, read from the latest run (#281, MRP-027, MRP-031)", async () => {
+  it("lists F's and I's provisional plan, each level on its parent's start with its BOM, components and blockers, and only R's requisition as a proposal, read from the latest run (#281, #283, MRP-027, MRP-031, MRP-047)", async () => {
     const { f, i, r, site, boms } = await threeLevelPlant();
     const response = await runIn("prod");
     expect(response.status, response.text).toBe(200);
@@ -282,18 +284,60 @@ describe("MRP runs through the API", () => {
       return (json(read).data as MrpLatestView).plans[0];
     };
     const [fPlan, iPlan, rPlan] = [await planOf(f), await planOf(i), await planOf(r)];
-    const summary = ({ proposals }: MrpPlanView) => proposals.map(({ kind, needDate, plannedStart, quantity, bom, bomRevision }) => ({ kind, needDate, plannedStart, quantity, bom, bomRevision }));
-    expect(summary(fPlan)).toEqual([{ kind: "production-order", needDate: day(20), plannedStart: day(18), quantity: "10.000000", bom: boms.f, bomRevision: 1 }]);
-    expect(summary(iPlan)).toEqual([{ kind: "production-order", needDate: day(18), plannedStart: day(15), quantity: "20.000000", bom: boms.i, bomRevision: 1 }]);
-    expect(summary(rPlan)).toEqual([{ kind: "purchase-requisition", needDate: day(15), plannedStart: day(14), quantity: "10.000000", bom: null, bomRevision: null }]);
-    // Each component's need is dependent demand on its parent's start, covered by its own proposal.
-    expect(iPlan.buckets[18]).toMatchObject({ date: day(18), dependentDemand: "20.000000", projectedBefore: "-20.000000", projectedAfter: "0.000000" });
+    // None on hand: F and I can't be supplied, so both are provisional, never proposals (#283, MRP-047).
+    expect([fPlan, iPlan].map(({ proposals }) => proposals)).toEqual([[], []]);
+    expect(fPlan.provisional).toEqual([{
+      kind: "production-order", needDate: day(20), quantity: "10.000000", plannedStart: day(18), plannedFinish: day(20), lateDays: 0, beyondHorizon: false,
+      bom: boms.f, bomRevision: 1, components: [{ material: i, quantity: "20.000000" }], blockers: ["no-feasible-bom"], missing: `${boms.f}/1: ${i} 20.000000 0.000000 20.000000`,
+    }]);
+    expect(iPlan.provisional).toEqual([{
+      kind: "production-order", needDate: day(18), quantity: "20.000000", plannedStart: day(15), plannedFinish: day(18), lateDays: 0, beyondHorizon: false,
+      bom: boms.i, bomRevision: 1, components: [{ material: r, quantity: "10.000000" }], blockers: ["no-feasible-bom", "provisional-demand"], missing: `${boms.i}/1: ${r} 10.000000 0.000000 10.000000`,
+    }]);
+    // Buying R is the only executable action.
+    expect(rPlan.proposals.map(({ kind, needDate, plannedStart, quantity, bom, executable }) => ({ kind, needDate, plannedStart, quantity, bom, executable }))).toEqual([
+      { kind: "purchase-requisition", needDate: day(15), plannedStart: day(14), quantity: "10.000000", bom: null, executable: true },
+    ]);
+    // Each component's need is dependent demand on its parent's start. No hypothetical output is a receipt: F and I stay short.
+    expect(fPlan.buckets[20]).toMatchObject({ date: day(20), proposedReceipts: "0.000000", projectedAfter: "-10.000000" });
+    expect(iPlan.buckets[18]).toMatchObject({ date: day(18), dependentDemand: "20.000000", projectedBefore: "-20.000000", proposedReceipts: "0.000000", projectedAfter: "-20.000000" });
     expect(rPlan.buckets[15]).toMatchObject({ date: day(15), dependentDemand: "10.000000", projectedBefore: "-10.000000", projectedAfter: "0.000000" });
-    // None on hand: F and I can't be supplied, so both are provisional (#282, MRP-047), and only R's requisition isn't.
+    // Only F, sized for real demand, raises No Feasible BOM; I's action carries its own `missing`.
     expect([fPlan, iPlan, rPlan].flatMap(({ exceptions }) => exceptions.map(({ code, params }) => [code, params.material, params.missing]))).toEqual([
       ["NO_FEASIBLE_BOM", f, `${boms.f}/1: ${i} 20.000000 0.000000 20.000000`],
-      ["NO_FEASIBLE_BOM", i, `${boms.i}/1: ${r} 10.000000 0.000000 10.000000`],
     ]);
+  });
+
+  it("reports G's open order as at risk once its pinned raw S is deactivated: the balance is at-risk supply, the shortage shows and no G replaces it, read from the latest run (#283, MRP-051, LFC-027)", async () => {
+    const material = async (type: string, description: string) => (await created("/api/tenants/prod/materials", { type, description, baseUnit: "each" })).id;
+    const [g, s] = [await material("finished", "mrpapi risk g"), await material("raw", "mrpapi risk s")];
+    const site = (await created("/api/tenants/prod/locations", { name: "mrpapi risk plant" })).id;
+    const bom = (await created("/api/tenants/prod/boms", { output: g, priority: 1, validFrom: day(-30), validThrough: null, components: [{ material: s, quantity: "1", unit: "each" }] })).id;
+    await created("/api/tenants/prod/planning-parameters", { material: g, location: site, procurement: "make", leadTimeDays: 2, minimumQuantity: "0", lotMultiple: "1" });
+    const order = (await created("/api/tenants/prod/production-orders", { output: g, location: site, quantity: "10", unit: "each", plannedFinish: day(8), bom, revision: 1 })).id;
+    const customer = (await created("/api/tenants/prod/customers", { name: "mrpapi risk" })).id;
+    await created("/api/tenants/prod/customer-orders", { customer, location: site, lines: [{ material: g, quantity: "10", unit: "each", requiredDate: day(12) }] });
+    // Allowed while only BOMs and the open order's pinned revision use S (E10-S05, LFC-015).
+    const { version } = json(await api("GET", `/api/tenants/prod/materials/${s}`)).data as { version: number };
+    const deactivated = await api("PATCH", `/api/tenants/prod/materials/${s}`, adminSecret, { key: randomUUID(), body: { active: false, version } });
+    expect(deactivated.status, deactivated.text).toBe(200);
+
+    const response = await runIn("prod");
+    expect(response.status, response.text).toBe(200);
+    const read = await latest("prod", `?location=${site}`);
+    expect(read.status, read.text).toBe(200);
+    const { plans } = json(read).data as MrpLatestView;
+
+    // The demand equals the order, so no excess raises Missing Usable BOM; S gets no demand from the order.
+    expect(plans.map(({ material: item, proposals, provisional, exceptions }) => [item, proposals, provisional, exceptions])).toEqual([
+      [g, [], [], [{
+        code: "AT_RISK_PRODUCTION",
+        message: "An open production order of this material pins a BOM revision with an inactive component, so its unproduced output is at risk: MRP doesn't count it as supply, and proposes no replacement for the demand it was to cover until the order is closed or cancelled or the component is reactivated.",
+        params: { material: g, location: site, date: day(8), order, quantity: "10.000000", inactiveComponents: s },
+      }]],
+    ]);
+    expect(plans[0].buckets[8]).toMatchObject({ date: day(8), atRiskSupply: "10.000000", dependableSupply: "0.000000" });
+    expect(plans[0].buckets[12]).toMatchObject({ date: day(12), projectedBefore: "-10.000000", projectedAfter: "-10.000000", shortage: "10.000000" });
   });
 
   it("falls back from F's priority-1 BOM, short of A for the lot-rounded 6, to its priority-2 BOM of B, with no exception, read from the latest run (#282, MRP-025, MRP-046, BOM-010)", async () => {
@@ -355,7 +399,15 @@ describe("MRP runs through the API", () => {
   });
 
   it("names a production-order proposal's BOM and revision in the MRP page's proposals table (#281, MRP-031)", async () => {
-    const { f, site, boms } = await threeLevelPlant();
+    // A feasible proposal of its own: since #283 one its BOM can't supply is a provisional action, not in the table.
+    const material = async (type: string, description: string) => (await created("/api/tenants/prod/materials", { type, description, baseUnit: "each" })).id;
+    const [f, input] = [await material("finished", "mrpapi page f"), await material("raw", "mrpapi page input")];
+    const site = (await created("/api/tenants/prod/locations", { name: "mrpapi page plant" })).id;
+    const boms = { f: (await created("/api/tenants/prod/boms", { output: f, priority: 1, validFrom: day(-30), validThrough: null, components: [{ material: input, quantity: "1", unit: "each" }] })).id };
+    await created("/api/tenants/prod/planning-parameters", { material: f, location: site, procurement: "make", leadTimeDays: 2, minimumQuantity: "0", lotMultiple: "1" });
+    await created("/api/tenants/prod/stock/corrections", { material: input, location: site, quantity: "10", unit: "each", reason: "mrpapi count" });
+    const customer = (await created("/api/tenants/prod/customers", { name: "mrpapi page" })).id;
+    await created("/api/tenants/prod/customer-orders", { customer, location: site, lines: [{ material: f, quantity: "10", unit: "each", requiredDate: day(20) }] });
     expect((await runIn("prod")).status).toBe(200);
     await admin.open(`${baseUrl}/admin/prod/mrp?material=${f}&location=${site}`);
     const shown = (selector: string) => `[...document.querySelectorAll(${JSON.stringify(selector)})].filter((e) => !e.closest("[hidden]") && e.offsetParent !== null)`;
