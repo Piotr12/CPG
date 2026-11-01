@@ -8,6 +8,7 @@ import type {
   MrpForecastDemand,
   MrpPlan,
   MrpProductionOutput,
+  MrpProposal,
   MrpResult,
   MrpSupply,
   MrpTransferMovement,
@@ -17,6 +18,7 @@ import { comparePairs, pairKey } from "./projection/pairs";
 import { emptyFlows, projectBuckets, type MrpLedger } from "./projection/project-buckets";
 import { productionMovements } from "./supply/production-orders";
 import { purchasingSupply } from "./supply/purchasing-supply";
+import { sizeProposals } from "./sizing/size-proposals";
 import { planTransfers } from "./supply/transfers";
 
 interface PairDraft extends MrpLedger {
@@ -42,6 +44,11 @@ interface PairDraft extends MrpLedger {
  * Each seam adds its figures to the day it counts in. Transfers come last among them: a source's
  * feasibility needs every demand and dependable supply in place. A later seam that adds demand or
  * dependable supply runs before `planTransfers`; one that adds proposals runs after it.
+ *
+ * Sizing runs last (E16-S01): a pair with planning parameters gets its proposals from its balances
+ * before proposals, which never count them, and is then projected again with each proposal in its
+ * day's `proposedReceipts`, so `projectedAfter` keeps its one definition in `projectBuckets`.
+ * Parameters name no pairs.
  */
 export function planMrp(inputs: MrpInputs, today: string): MrpResult {
   const dates = horizonDates(today);
@@ -91,6 +98,16 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
   const transfers = planTransfers(inputs.transfers, dates, pairOf);
   for (const item of transfers.dispatches) pairOf(item.material, item.location).transfersOut.push(item);
   for (const item of transfers.receipts) pairOf(item.material, item.location).transfersIn.push(item);
-  const plans = [...pairs.values()].sort(comparePairs).map(({ flows, ...plan }): MrpPlan => ({ ...plan, buckets: projectBuckets(plan.physical, flows) }));
-  return { today, dates, plans, proposals: [], exceptions: transfers.exceptions };
+  const parametersOf = new Map(inputs.planningParameters.map((set) => [pairKey(set.material, set.location), set]));
+  const proposals: MrpProposal[] = [];
+  const plans = [...pairs.values()].sort(comparePairs).map(({ flows, ...plan }): MrpPlan => {
+    const parameters = parametersOf.get(pairKey(plan.material, plan.location));
+    if (parameters) {
+      const sized = sizeProposals({ ...plan, buckets: projectBuckets(plan.physical, flows) }, parameters);
+      for (const proposal of sized) flows[dayOf.get(proposal.date)!].proposedReceipts += proposal.quantity;
+      proposals.push(...sized);
+    }
+    return { ...plan, buckets: projectBuckets(plan.physical, flows) };
+  });
+  return { today, dates, plans, proposals, exceptions: transfers.exceptions };
 }
