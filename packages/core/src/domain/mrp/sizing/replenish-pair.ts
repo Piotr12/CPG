@@ -68,8 +68,9 @@ export interface Replenishment {
  *    components, and none of the pair's proposals, so no inactive material is ever planned (E17-S02,
  *    LFC-026, MRP-050).
  *
- * No Feasible BOM (E17-S02), which `planMrp` raises once BOMs are chosen, is the one planning exception a
- * pair has beside its proposals: an infeasible proposal is kept, provisionally.
+ * No Feasible BOM (E17-S02), which `planMrp` raises once BOMs are chosen, and At-Risk Production (E17-S03)
+ * are the planning exceptions a pair has beside its proposals: an infeasible proposal becomes a provisional
+ * action, and an at-risk order blocks only its own quantity.
  *
  * Sizing reads `sizingBuckets` (E17-S03): at-risk output is added back, so the demand it was to cover is
  * blocked, never replanned (spec Q2), and the rules above read that balance. A Buy pair is sized once, on all

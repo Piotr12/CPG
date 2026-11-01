@@ -24,7 +24,7 @@ export interface MrpResult {
   provisional: readonly MrpProvisionalAction[];
   /**
    * What the plan can't do as the documents say (#277), or can't plan without guessing (E16-S03), in
-   * `compareExceptions` order: by material, location, code rank, date, then transfer.
+   * `compareExceptions` order: by material, location, code rank, date, then transfer, then production order.
    */
   exceptions: readonly MrpException[];
   /**
@@ -194,8 +194,9 @@ export interface MrpPlannedComponentDemand {
   date: string;
   quantity: bigint;
   /**
-   * The proposal has no feasible BOM, so it was exploded through its highest-priority usable one (E17-S02,
-   * BOM-011): the need counts in the component's projection, but never in a later feasibility test.
+   * The need is a provisional action's (E17-S03): a proposal with no feasible BOM, exploded through its
+   * highest-priority usable one (E17-S02, BOM-011), or one sized only for a provisional parent's need. It
+   * counts in the component's projection, but never in a later feasibility test.
    */
   provisional: boolean;
 }
@@ -525,7 +526,7 @@ export interface MrpProvisionalAction extends MrpProposalTiming {
   bomRevision: number;
   /** Its components' needs, by material code. */
   components: readonly MrpProvisionalComponent[];
-  /** In `MRP_PROVISIONAL_BLOCKERS` order, never empty. */
+  /** In `MRP_PROVISIONAL_BLOCKERS` order, never empty (a stored row a newer image wrote may read back with none this image knows). */
   blockers: readonly MrpProvisionalBlocker[];
   /** Every BOM `chooseBom` passed over, as on a proposal; with `no-feasible-bom`, every valid BOM. */
   rejectedBoms: readonly MrpBomRejection[];

@@ -293,6 +293,8 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
   }
   plans.sort(comparePairs);
   proposals.sort((a, b) => comparePairs(a, b) || compareCodes(a.needDate, b.needDate));
+  // A total order on content: on one pair and day, the action sized for real demand comes first. Insertion order
+  // already gives it, since a level's infeasible proposals are kept before its provisional ones; this states it.
   const drivenByParent = (action: MrpProvisionalAction) => (action.blockers.includes("provisional-demand") ? 1 : 0);
   provisional.sort((a, b) => comparePairs(a, b) || compareCodes(a.needDate, b.needDate) || drivenByParent(a) - drivenByParent(b));
   // Like Insufficient Transfer Stock, no warning for a material whose balances an unreadable row left incomplete (#316).

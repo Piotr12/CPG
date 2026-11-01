@@ -111,7 +111,7 @@ describe("help topics", () => {
       "until the order is closed or cancelled or the component is reactivated"],
     ["pl", "przebieg nie proponuje tej produkcji", "Tworzy zamiast niej plan tymczasowy", "Produkcja składników na potrzeby tego planu też jest tymczasowa",
       "Zapotrzebowania zakupowe na to, czego plan potrzebuje, są nadal proponowane", "nigdy nie liczy się w stanie, więc brak pozostaje widoczny", "jest zagrożone", "wyjątek zagrożonej produkcji",
-      "dopóki zlecenie nie zostanie zamknięte lub anulowane albo składnik ponownie włączony"],
+      "składnik zdezaktywowany po utworzeniu zlecenia", "dopóki zlecenie nie zostanie zamknięte lub anulowane albo składnik ponownie aktywowany"],
   ] as const)("says in %s that production no BOM can supply is a provisional plan, never supply, and that an order pinning a deactivated component is at risk (#283)", (locale, ...phrases) => {
     const text = helpTopics(locale).find((topic) => topic.id === "mrp")!.body.join(" ");
 

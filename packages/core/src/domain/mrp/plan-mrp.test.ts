@@ -2026,8 +2026,15 @@ describe("planMrp: BOM explosion (E17-S01, #281)", () => {
         recipe("I", { R: "0.5" }, { bom: "00000002" }),
         recipe("X", { X: "1" }, { bom: "00000009" }),
       ],
+      // Two at-risk orders of G finishing on one day (E17-S03): their order rests on the order ID, never the input's.
+      productionOrders: [
+        production({ order: "00000004", material: "G", plannedStart: day(2), plannedFinish: day(6), inactiveComponents: ["Q"], components: [{ material: "Q", perOutput: q("1") }] }),
+        production({ order: "00000003", material: "G", plannedStart: day(3), plannedFinish: day(6), quantity: q("50"), inactiveComponents: ["Q"], components: [{ material: "Q", perOutput: q("1") }] }),
+      ],
     });
     const forward = planMrp(snapshot, TODAY);
+    expect(forward.exceptions.filter(({ code }) => code === "AT_RISK_PRODUCTION").map((exception) => ("order" in exception ? exception.order : null))).toEqual(["00000003", "00000004"]);
+    expect(planAt(forward.plans, "G").atRiskOutput.map(({ order: code }) => code)).toEqual(["00000003", "00000004"]);
     expect(forward.exceptions.filter(({ code }) => code === "CYCLIC_BOM")).toEqual([{ code: "CYCLIC_BOM", material: "X", location: "L1", path: "X →(BOM 00000009) X" }]);
     // The new fields are in the comparison: rejected BOMs and provisional needs (E17-S02) and provisional actions (E17-S03).
     expect(forward.provisional.some(({ rejectedBoms }) => rejectedBoms.length > 0)).toBe(true);
@@ -2428,6 +2435,25 @@ describe("planMrp: at-risk production and provisional plans (E17-S03, #283)", ()
     expect(f.buckets.slice(10).every(({ projectedAfter, proposedReceipts }) => projectedAfter === -q("10") && proposedReceipts === 0n)).toBe(true);
     expect(f.shortages).toEqual([expect.objectContaining({ kind: "customer-order", uncovered: q("10") })]);
     expect(result.proposals).toEqual([]);
+  });
+
+  it("Q7: a provisional action chooses after every claim of its level, so a later executable proposal's claim leaves it nothing", () => {
+    // F can't be supplied (no I), so I's need is provisional and its action starts on day 6. K, on I's level through H,
+    // starts on day 18 and claims all 10 C first: the action then finds C short.
+    const snapshot = (k: string) =>
+      inputs({
+        stock: [stock("C", "L1", "10")],
+        orderLines: [order("F", "5", 10), order("K", k, 20)],
+        planningParameters: [params("F", "make"), params("I", "make", 2, { materialType: "intermediate" }), params("K", "make", 2, { materialType: "intermediate" })],
+        boms: [recipe("F", { I: "1" }), recipe("H", { K: "1" }, { bom: "00000002" }), recipe("I", { C: "1" }, { bom: "00000003" }), recipe("K", { C: "1" }, { bom: "00000004" })],
+      });
+    const claimed = planMrp(snapshot("10"), TODAY);
+    expect(claimed.proposals.map(({ material }) => material)).toEqual(["K"]);
+    expect(claimed.provisional.find(({ material }) => material === "I")).toMatchObject({ plannedStart: day(6), blockers: ["no-feasible-bom", "provisional-demand"] });
+    // With K needing only 5, 5 C are left for the action, which is then feasible: still provisional, still claiming nothing.
+    const spare = planMrp(snapshot("5"), TODAY);
+    expect(spare.provisional.find(({ material }) => material === "I")).toMatchObject({ blockers: ["provisional-demand"] });
+    expect(planAt(spare.plans, "C").plannedComponentDemand.map(({ parent, provisional }) => [parent, provisional])).toEqual([["K", false], ["I", true]]);
   });
 
   it("sizes the executable part of a Make component apart from its provisional part, the second carried over the first", () => {
