@@ -10,7 +10,7 @@ export type MrpExceptionCode = (typeof MRP_EXCEPTION_CODES)[number];
 export const MRP_EXCEPTION_MESSAGES: Readonly<Record<MrpExceptionCode, string>> = {
   INVALID_UOM_CONVERSION: "A stored quantity, unit factor or date of this material isn't valid, so MRP proposes no supply for it.",
   MISSING_PLANNING_PARAMETERS: "This material has no usable planning parameters at this location, so MRP proposes no supply for it there.",
-  MISSING_BOM: "This material is made at this location, but no active BOM has a current revision valid on the need date, so MRP proposes no production.",
+  MISSING_BOM: "This material is made at this location, but no active BOM has a current revision valid on the planned finish date, so MRP proposes no production.",
   INSUFFICIENT_TRANSFER_STOCK: "The source can't supply this transfer's undispatched quantity on its dispatch day, so only the available part is planned.",
 };
 

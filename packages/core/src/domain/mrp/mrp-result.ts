@@ -42,6 +42,8 @@ export interface MrpPlan {
   transfersOut: readonly MrpTransferMovement[];
   /** The transfers behind the buckets' transfer receipt, at this destination (#277). */
   transfersIn: readonly MrpTransferMovement[];
+  /** What the plan leaves uncovered, by date, then priority (E16-S02, `priority/rank-shortages.ts`); not stored. */
+  shortages: readonly MrpShortage[];
 }
 
 /** One day of one material at one location. */
@@ -230,21 +232,62 @@ export interface MrpMissingBom {
 /** An MRP exception: `exceptions/codes.ts` lists the codes, their messages and their rank. */
 export type MrpException = MrpInvalidUomConversion | MrpMissingPlanningParameters | MrpMissingBom | MrpInsufficientTransferStock;
 
+/**
+ * What an uncovered requirement is, in the order MRP serves them on a day (PRD §04 "Overdue demand and
+ * priority", E16-S02): open documents' needs first, then customer orders, then the forecast residual,
+ * then the safety-stock target.
+ */
+export const MRP_SHORTAGE_KINDS = ["component", "transfer", "customer-order", "forecast", "safety-target"] as const;
+export type MrpShortageKind = (typeof MRP_SHORTAGE_KINDS)[number];
+
+/** One requirement that stock, existing supply and the proposals received by its day can't cover on that day (E16-S02). */
+export interface MrpShortage {
+  kind: MrpShortageKind;
+  /** The bucket the requirement counts in. */
+  date: string;
+  /**
+   * Its priority date: the order line's required date, the forecast's own date, the production order's
+   * start or the transfer's planned dispatch, kept when it counts today; the day itself for the target.
+   */
+  originalDate: string;
+  /** The customer order's, production order's or transfer's business ID; `null` for a forecast and the target. */
+  document: string | null;
+  /** The order line's position; `null` for every other kind. */
+  position: number | null;
+  /** What the requirement needs that day: its quantity, or the target in force. */
+  required: bigint;
+  /** What the day leaves of it uncovered: above zero, at most `required`. */
+  uncovered: bigint;
+}
+
 /** What a proposal would create: never a transfer (N06, TRF-018) and never a purchase order (MRP-030). */
 export const MRP_PROPOSAL_KINDS = ["purchase-requisition", "production-order"] as const;
 export type MrpProposalKind = (typeof MRP_PROPOSAL_KINDS)[number];
 
-/** A proposed receipt (E16-S01), sized by `sizing/size-proposals.ts`. E16-S02 adds its timing marks. */
-export interface MrpProposal {
+/** A proposed receipt (E16-S01), sized by `sizing/size-proposals.ts` and timed by `sizing/schedule-proposal.ts` (E16-S02). */
+export interface MrpProposal extends MrpProposalTiming {
   kind: MrpProposalKind;
   material: string;
   location: string;
-  /** The day the balance after earlier proposals falls below that day's target: what the receipt must cover. */
+  /** The day the balance after earlier proposals falls below that day's target: what the receipt must cover. It never moves (MRP-037). */
   needDate: string;
-  /** The bucket the receipt counts in: `needDate` until E16-S02 schedules late supply. */
-  date: string;
   /** Above zero, never below the need (R03, MAT-025). */
   quantity: bigint;
-  /** The pair's lead time in whole calendar days, for E16-S02's back-scheduling. */
+  /** The pair's lead time in whole calendar days (N04, MAT-018). */
   leadTimeDays: number;
+}
+
+/**
+ * When a proposal can start and finish (E16-S02, PRD §04 "Overdue and late starts"). Its receipt counts
+ * on `plannedFinish`, unless that is beyond the horizon, where it counts in no bucket.
+ */
+export interface MrpProposalTiming {
+  /** `needDate` less the lead time in calendar days, never before today (MRP-038). */
+  plannedStart: string;
+  /** `needDate` when the lead time allows it; otherwise today plus the lead time, the earliest feasible finish. */
+  plannedFinish: string;
+  /** Late Supply: the calendar days from `needDate` to `plannedFinish`, zero when on time (MRP-037). */
+  lateDays: number;
+  /** Beyond Horizon: `plannedFinish` is after day 89, so the receipt is shown but never in a bucket (MRP-049). */
+  beyondHorizon: boolean;
 }

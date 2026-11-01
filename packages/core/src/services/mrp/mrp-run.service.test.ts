@@ -49,8 +49,8 @@ async function order(tenant: string, locationId: string, lines: { material: stri
   );
 }
 /** A planning parameter set at `locationId`: the API's six-decimal quantities, lead time 2 days. */
-async function parameters(tenant: string, materialId: string, locationId: string, procurement: "make" | "buy", minimumQuantity: string, lotMultiple: string) {
-  await (await scope(tenant)).cradle.planningParameterService.create({ material: materialId, location: locationId, procurement, leadTimeDays: 2, minimumQuantity, lotMultiple }, ANNA);
+async function parameters(tenant: string, materialId: string, locationId: string, procurement: "make" | "buy", minimumQuantity: string, lotMultiple: string, leadTimeDays = 2) {
+  await (await scope(tenant)).cradle.planningParameterService.create({ material: materialId, location: locationId, procurement, leadTimeDays, minimumQuantity, lotMultiple }, ANNA);
 }
 /** An active BOM of `output`, valid from 2026, made of a raw material of its own: a Make set may propose it (E16-S03). */
 async function bom(tenant: string, output: string) {
@@ -460,7 +460,10 @@ describe("MrpRunService.latest", () => {
 });
 
 describe("MrpRunService: replenishment proposals (#278)", () => {
-  const recommendations = () => sql("select m.code as run, r.material, r.location, r.kind, r.need_date, r.quantity from mrp_recommendation r join mrp_run m on r.run_id = m.id order by m.code, r.material, r.location, r.need_date");
+  const recommendations = () =>
+    sql("select m.code as run, r.material, r.location, r.kind, r.need_date, r.quantity, r.lead_time_days from mrp_recommendation r join mrp_run m on r.run_id = m.id order by m.code, r.material, r.location, r.need_date");
+  /** A need on 5 October with the helper's lead time of 2 starts on 3 October, on time. */
+  const onTime = { plannedStart: "2026-10-03", plannedFinish: "2026-10-05", lateDays: 0, beyondHorizon: false };
 
   it("stores a Buy and a Make proposal with their daily receipts, lists them with their plans, and keeps only the latest run's (MAT-016, R10)", async () => {
     const cabinet = await material("prod", "Cabinet");
@@ -476,19 +479,66 @@ describe("MrpRunService: replenishment proposals (#278)", () => {
 
     expect(await everyOtherTable()).toEqual(before);
     expect(await recommendations()).toEqual([
-      { run: "00000001", material: cabinet.id, location: PLANT, kind: "purchase-requisition", need_date: "2026-10-05", quantity: "10.000000" },
-      { run: "00000001", material: cabinet.id, location: store, kind: "production-order", need_date: "2026-10-05", quantity: "3.000000" },
+      { run: "00000001", material: cabinet.id, location: PLANT, kind: "purchase-requisition", need_date: "2026-10-05", quantity: "10.000000", lead_time_days: 2 },
+      { run: "00000001", material: cabinet.id, location: store, kind: "production-order", need_date: "2026-10-05", quantity: "3.000000", lead_time_days: 2 },
     ]);
     expect(await day("00000001", cabinet.id, PLANT, "2026-10-05")).toMatchObject({ proposed_receipts: "10.000000", projected_before: "-3.000000", projected_after: "7.000000", shortage: "3.000000" });
     expect(await day("00000001", cabinet.id, store, "2026-10-05")).toMatchObject({ proposed_receipts: "3.000000", projected_after: "0.000000" });
     const { plans } = await latest();
     expect(plans.map(({ location: site, proposals }) => [site, proposals])).toEqual([
-      [PLANT, [{ kind: "purchase-requisition", needDate: "2026-10-05", quantity: "10.000000" }]],
-      [store, [{ kind: "production-order", needDate: "2026-10-05", quantity: "3.000000" }]],
+      [PLANT, [{ kind: "purchase-requisition", needDate: "2026-10-05", quantity: "10.000000", ...onTime }]],
+      [store, [{ kind: "production-order", needDate: "2026-10-05", quantity: "3.000000", ...onTime }]],
     ]);
 
     await run();
     expect((await recommendations()).map(({ run: code }) => code)).toEqual(["00000002", "00000002"]);
+  });
+
+  it("stores each proposal's lead time and lists a Late Supply and a Beyond Horizon proposal with their timing (#279, MRP-037, MRP-049)", async () => {
+    const late = await material("prod", "Late");
+    const far = await material("prod", "Far");
+    await parameters("prod", late.id, PLANT, "buy", "0.000000", "1.000000", 7);
+    await parameters("prod", far.id, PLANT, "buy", "0.000000", "1.000000", 120);
+    await order("prod", PLANT, [
+      { material: late.id, quantity: "5", requiredDate: "2026-10-04" },
+      { material: far.id, quantity: "5", requiredDate: "2026-10-21" },
+    ]);
+
+    await run();
+
+    expect((await recommendations()).map(({ material: item, need_date, lead_time_days }) => [item, need_date, lead_time_days])).toEqual([
+      [late.id, "2026-10-04", 7],
+      [far.id, "2026-10-21", 120],
+    ]);
+    const { plans } = await latest();
+    const proposalOf = (item: string) => plans.find((plan) => plan.material === item)!.proposals;
+    expect(proposalOf(late.id)).toEqual([
+      { kind: "purchase-requisition", needDate: "2026-10-04", quantity: "5.000000", plannedStart: "2026-10-01", plannedFinish: "2026-10-08", lateDays: 4, beyondHorizon: false },
+    ]);
+    expect(proposalOf(far.id)).toEqual([
+      { kind: "purchase-requisition", needDate: "2026-10-21", quantity: "5.000000", plannedStart: "2026-10-01", plannedFinish: "2027-01-29", lateDays: 100, beyondHorizon: true },
+    ]);
+    // The late receipt lands on its finish; the Beyond Horizon one in no stored day.
+    expect(await day("00000001", late.id, PLANT, "2026-10-07")).toMatchObject({ proposed_receipts: "0.000000", projected_after: "-5.000000" });
+    expect(await day("00000001", late.id, PLANT, "2026-10-08")).toMatchObject({ proposed_receipts: "5.000000", projected_after: "0.000000" });
+    const [farReceipts] = await sql(
+      "select count(*) as days from mrp_daily_result r join mrp_run m on r.run_id = m.id where m.code = '00000001' and r.material = ? and r.proposed_receipts <> '0.000000'",
+      [far.id],
+    );
+    expect(farReceipts).toEqual({ days: 0 });
+  });
+
+  it("reads a row an older image wrote without a lead time as on time, finishing on its need date", async () => {
+    const cabinet = await material("prod", "Cabinet");
+    await parameters("prod", cabinet.id, PLANT, "buy", "0.000000", "1.000000", 9);
+    await order("prod", PLANT, [{ material: cabinet.id, quantity: "3", requiredDate: "2026-10-05" }]);
+    await run();
+    // An older image's insert names no lead time and gets the column's default, 0 (the migration test).
+    await sql("update mrp_recommendation set lead_time_days = 0");
+    const { plans } = await latest();
+    expect(plans[0].proposals).toEqual([
+      { kind: "purchase-requisition", needDate: "2026-10-05", quantity: "3.000000", plannedStart: "2026-10-05", plannedFinish: "2026-10-05", lateDays: 0, beyondHorizon: false },
+    ]);
   });
 
   it("lists each page's proposals only, when a page ends between two locations of one material, and filtered by location", async () => {

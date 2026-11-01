@@ -74,6 +74,15 @@ describe("help topics", () => {
     expect(text).not.toMatch(/Proposals show zero|Propozycje mają zero/);
   });
 
+  it.each([
+    ["en", "starts its lead time, in calendar days, before the day it is needed, and never before today", "is late by the days between", "beyond the horizon, and no day's balance counts it", "lateDays", "beyondHorizon"],
+    ["pl", "przed dniem potrzeby, nigdy przed dzisiaj", "jest spóźniona o dni pomiędzy", "jest poza horyzontem i nie liczy się w stanie żadnego dnia", "lateDays", "beyondHorizon"],
+  ] as const)("says in %s when a proposal starts, that a late one counts from its finish and that one beyond the horizon counts in no day (#279)", (locale, ...phrases) => {
+    const text = helpTopics(locale).find((topic) => topic.id === "mrp")!.body.join(" ");
+
+    for (const phrase of phrases) expect(text).toContain(phrase);
+  });
+
   it("is written separately in Polish, not copied from English", () => {
     const english = helpTopics("en");
     const polish = helpTopics("pl");

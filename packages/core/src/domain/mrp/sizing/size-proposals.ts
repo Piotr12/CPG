@@ -1,7 +1,10 @@
 import type { MrpPlanningParameters } from "../mrp-inputs";
-import type { MrpBucket, MrpProposal } from "../mrp-result";
+import type { MrpBucket, MrpProposal, MrpProposalTiming } from "../mrp-result";
 import { safetyGap } from "../projection/safety-gap";
 import { lotQuantity } from "./lot-quantity";
+
+/** A proposal as sizing leaves it: `replenishPair` adds its timing through `scheduleProposal` (E16-S02). */
+export type SizedProposal = Omit<MrpProposal, keyof MrpProposalTiming>;
 
 /** One planned pair's days, before proposals: what sizing reads. */
 export interface SizedPair {
@@ -22,16 +25,16 @@ export interface SizedPair {
  * a usable set, so a raw material's Make set never reaches it (R02, MRP-033, E16-S03). Each pair is
  * sized alone, so a surplus at one location never covers another (TRF-018).
  */
-export function sizeProposals({ material, location, buckets }: SizedPair, parameters: MrpPlanningParameters): MrpProposal[] {
+export function sizeProposals({ material, location, buckets }: SizedPair, parameters: MrpPlanningParameters): SizedProposal[] {
   const { procurement, leadTimeDays, minimumQuantity, lotMultiple } = parameters;
   const kind = procurement === "buy" ? "purchase-requisition" : "production-order";
-  const proposals: MrpProposal[] = [];
+  const proposals: SizedProposal[] = [];
   let carried = 0n;
   for (const { date, safetyTarget, projectedBefore } of buckets) {
     const need = safetyGap({ safetyTarget, projectedBefore: projectedBefore + carried });
     if (need === 0n) continue;
     const quantity = lotQuantity(need, minimumQuantity, lotMultiple);
-    proposals.push({ kind, material, location, needDate: date, date, quantity, leadTimeDays });
+    proposals.push({ kind, material, location, needDate: date, quantity, leadTimeDays });
     carried += quantity;
   }
   return proposals;

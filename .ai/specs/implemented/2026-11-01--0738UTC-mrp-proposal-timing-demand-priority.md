@@ -1,6 +1,6 @@
 # MRP proposal timing and demand priority: calendar-day back-scheduling, Late Supply, Beyond Horizon, and customer orders before forecast before safety stock
 
-**Status:** ready. Two defaults await the owner's confirmation (Q2, Q4); either answer only adds work.
+**Status:** implemented. Two defaults await the owner's confirmation (Q2, Q4); either answer only adds work.
 **Created:** 2026-11-01 07:38 UTC
 **Issue:** #279 (E16-S02, epic #268) · **Depends on:** the MRP engine (`implemented/2026-10-27--0525UTC-mrp-engine-projection.md`, #273), MRP runs (`implemented/2026-10-27--0556UTC-mrp-runs.md`, #274), MRP demand (`implemented/2026-10-31--0902UTC-mrp-forecast-safety-demand.md`, #275), production and transfer supply (`implemented/2026-10-31--0908UTC-mrp-production-and-transfer-supply.md`, #277), replenishment proposals (`implemented/2026-10-31--2054UTC-mrp-replenishment-proposals.md`, #278), all merged · **Design authority:** `.ai/specs/product-brief.md` (R03, R10, D04, D08, N04), `research/CPG-prd001.pdf` §04 "Overdue demand and priority", "Component timing and execution", "Overdue and late starts" and the closure defaults, `research/CPG-prd-datamodel.pdf` ("MRP run", "MRP recommendation / exception"), `research/CPG-acceptance.md` MAT-018, MRP-004, MRP-037, MRP-038, MRP-044, MRP-049, DEM-018 to DEM-022
 
@@ -235,3 +235,26 @@ One phase, one implementation PR, as the issue scopes it. Timing, the column and
     - Move this spec to `implemented/` with implementation notes.
 
 Each step leaves the suite green. Run `npm run lint`, `npm run typecheck`, `npm run test:coverage` (100%) and `npm run build`.
+
+## Implementation notes
+
+Implemented on #317, branched from `main` (the spec PR #315 stays design-only), as written, with these details:
+- `sizing/schedule-proposal.ts` (`scheduleProposal`) and `domain/demand/demand-buckets.ts` (`daysBetween`). `planMrp` schedules what `sizeProposals` returns (`SizedProposal`), so the only edit to #278's sizing file drops `date`. `MrpProposalTiming` lives in `mrp-result.ts`, and `MrpProposalView` extends it.
+- `priority/rank-shortages.ts` (`rankShortages`) keeps one queue per rank, sorted because each day's batch is appended in `compareRequirements` order. It adds the requirements lowest priority first, so the order never comes from the input lists, and a test fails without each tie-break key. `MRP_SHORTAGE_KINDS` and `MrpShortage` live in `mrp-result.ts`.
+- Migration `Migration20261101075645_mrp_recommendation_lead_time` is one `ALTER TABLE … ADD COLUMN`, as generated. `mrp-recommendation-lead-time-migration.test.ts` covers four cases: an upgrade on populated rows, an insert by an older image, the table altered in place (its SQL gains only the column) and `down()`.
+- Benchmark (`mrp-run-timing.test.ts`), fastest of three, budgets unchanged (1,000 ms and 5,000 ms, stall 250 ms):
+
+| Run | Run | Longest stall | `planMrp` alone |
+|---|---|---|---|
+| Realistic | 219 ms | 35 ms | 5 ms |
+| Realistic, worst case | 275 ms | 38 ms | — |
+| Ten times | 2,237 ms | 112 ms | 49 ms |
+| Ten times, worst case | 2,891 ms | 175 ms | — |
+
+`CPG-acceptance.md`:
+- MRP-037, MRP-038 and MRP-049 move to "Partially verified". They are "Both"-channel scenarios, and no screen lists proposals yet (E19-S01).
+- MAT-018 cites the MRP half.
+- DEM-018 to DEM-022 and MRP-044 keep "Not executed", with Evidence lines that cite the engine tests (Q4).
+- MRP-004 is unchanged (Q2).
+
+**After merging `main` with #280 (MRP planning exceptions, #316).** `replenishPair` now decides each pair, so it also times the sized proposals with `scheduleProposal`, and `planMrp` places their receipts. #280 checked Missing BOM on the need date. Its spec (Q3) chose that day as "its planned finish until E16-S02 back-schedules", so that an accepted proposal passes the production order's own BOM check on `plannedFinish`. The check now uses `plannedFinish`, so a late Make proposal is judged on the day its order would be. `MISSING_BOM`'s `date` is that day, and its message says "valid on the planned finish date". On-time proposals are unchanged.

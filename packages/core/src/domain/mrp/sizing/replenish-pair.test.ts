@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parseDecimal } from "../../quantities/decimal";
 import type { MrpBom, MrpPlanningParameters } from "../mrp-inputs";
 import { replenishPair, type PairContext } from "./replenish-pair";
+import { scheduleProposal } from "./schedule-proposal";
 import { sizeProposals, type SizedPair } from "./size-proposals";
 
 const q = (text: string) => parseDecimal(text)!;
@@ -25,13 +26,19 @@ const set = (overrides: Partial<MrpPlanningParameters> = {}): MrpPlanningParamet
   ...overrides,
 });
 const bom = (validFrom: string, validThrough: string | null = null): MrpBom => ({ output: "M1", validFrom, validThrough });
-const context = (overrides: Partial<PairContext> = {}): PairContext => ({ unreadable: undefined, parameters: set(), invalidSet: false, boms: [], ...overrides });
+/** A run start well before the days, so every proposal is on time unless a test moves it. */
+const EARLY = "2026-09-01";
+const context = (overrides: Partial<PairContext> = {}): PairContext => ({ unreadable: undefined, parameters: set(), invalidSet: false, boms: [], today: EARLY, ...overrides });
+/** What sizing proposes, timed from `today` as `replenishPair` times it. */
+const timed = (sized: SizedPair, parameters: MrpPlanningParameters, today = EARLY) =>
+  sizeProposals(sized, parameters).map((item) => ({ ...item, ...scheduleProposal(item.needDate, item.leadTimeDays, today, 90) }));
 /** Short on day 1 (3) and again on day 3 (2 more): two proposals with multiple 1. */
 const SHORT = pair(["0", "-3", "-3", "-5"]);
 
 describe("replenishPair", () => {
   it("gives a usable Buy set its proposals, exactly as sizeProposals sizes them, with no exception", () => {
-    expect(replenishPair(SHORT, context())).toEqual({ proposals: sizeProposals(SHORT, set()), exception: null });
+    expect(replenishPair(SHORT, context())).toEqual({ proposals: timed(SHORT, set()), exception: null });
+    expect(replenishPair(SHORT, context()).proposals.map(({ plannedFinish, lateDays }) => [plannedFinish, lateDays])).toEqual([["2026-10-02", 0], ["2026-10-04", 0]]);
     expect(replenishPair(SHORT, context()).proposals).toHaveLength(2);
   });
 
@@ -107,7 +114,25 @@ describe("replenishPair", () => {
 
     it("keeps the proposals when some BOM covers every need date, any of several", () => {
       const boms = [bom("2026-01-01", "2026-10-02"), bom("2026-10-03")];
-      expect(replenishPair(SHORT, context({ parameters: make, boms }))).toEqual({ proposals: sizeProposals(SHORT, make), exception: null });
+      expect(replenishPair(SHORT, context({ parameters: make, boms }))).toEqual({ proposals: timed(SHORT, make), exception: null });
+    });
+
+    // Run on 10-01 with a 7-day lead time: both needs (10-02, 10-04) are late and finish on 10-08,
+    // the day the production order would check its BOM (#317 review).
+    const late = set({ procurement: "make", leadTimeDays: 7 });
+    const lateContext = (boms: MrpBom[]) => context({ parameters: late, boms, today: "2026-10-01" });
+
+    it("checks a late proposal's BOM on its planned finish: a revision from after the need but by the finish covers it", () => {
+      const replenished = replenishPair(SHORT, lateContext([bom("2026-10-06")]));
+      expect(replenished).toEqual({ proposals: timed(SHORT, late, "2026-10-01"), exception: null });
+      expect(replenished.proposals.map(({ needDate, plannedFinish, lateDays }) => [needDate, plannedFinish, lateDays])).toEqual([
+        ["2026-10-02", "2026-10-08", 6],
+        ["2026-10-04", "2026-10-08", 4],
+      ]);
+    });
+
+    it("raises it, dated at the planned finish, when the revision covers a late proposal's need but ends before its finish", () => {
+      expect(replenishPair(SHORT, lateContext([bom("2026-01-01", "2026-10-05")]))).toEqual(missing("2026-10-08"));
     });
 
     it("raises nothing for a Make pair with no proposal, and never asks a Buy pair for a BOM", () => {
