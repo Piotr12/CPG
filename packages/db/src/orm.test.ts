@@ -798,8 +798,8 @@ describe("purchasing migration", () => {
       await execute(orm, "delete from purchase_order_line");
       await execute(orm, "delete from purchase_order");
       await execute(orm, "delete from purchase_requisition");
-      await orm.migrator.down(); // MRP recommendation lead time.
       await orm.migrator.down(); // MRP run exceptions.
+      await orm.migrator.down(); // MRP recommendation lead time.
       await orm.migrator.down(); // MRP recommendations.
       await orm.migrator.down(); // MRP runs.
       await orm.migrator.down(); // List key read indexes.
@@ -861,8 +861,8 @@ describe("goods-receipts migration", () => {
       await expect(execute(orm, "update goods_receipt set business_date = '2026-10-01'")).rejects.toThrow(GOODS_RECEIPT_IMMUTABLE);
       await expect(execute(orm, "update goods_receipt_line set quantity = '1.000000'")).rejects.toThrow(GOODS_RECEIPT_IMMUTABLE);
 
-      await orm.migrator.down(); // MRP recommendation lead time.
       await orm.migrator.down(); // MRP run exceptions.
+      await orm.migrator.down(); // MRP recommendation lead time.
       await orm.migrator.down(); // MRP recommendations.
 
       await orm.migrator.down(); // MRP runs.
@@ -933,8 +933,8 @@ describe("transfers migration", () => {
       ).rejects.toThrow(/CHECK/);
 
       // Rolls back with postings still in place: they are dropped before the transfers they reference.
-      await orm.migrator.down(); // MRP recommendation lead time.
       await orm.migrator.down(); // MRP run exceptions.
+      await orm.migrator.down(); // MRP recommendation lead time.
       await orm.migrator.down(); // MRP recommendations.
       await orm.migrator.down(); // MRP runs.
       await orm.migrator.down(); // List key read indexes.
@@ -1002,8 +1002,8 @@ describe("shipments and goods-issues migration", () => {
       await execute(orm, "update shipment_line set issued = '20.000000'");
       await execute(orm, "update shipment set status = 'completed'");
 
-      await orm.migrator.down(); // MRP recommendation lead time.
       await orm.migrator.down(); // MRP run exceptions.
+      await orm.migrator.down(); // MRP recommendation lead time.
       await orm.migrator.down(); // MRP recommendations.
 
       await orm.migrator.down(); // MRP runs.
@@ -1080,8 +1080,8 @@ describe("production-completions migration", () => {
       await expect(execute(orm, "update production_completion set quantity = '1.000000'")).rejects.toThrow(PRODUCTION_COMPLETION_IMMUTABLE);
       await expect(execute(orm, "update production_completion_line set actual = '1.000000'")).rejects.toThrow(PRODUCTION_COMPLETION_IMMUTABLE);
 
-      await orm.migrator.down(); // MRP recommendation lead time.
       await orm.migrator.down(); // MRP run exceptions.
+      await orm.migrator.down(); // MRP recommendation lead time.
       await orm.migrator.down(); // MRP recommendations.
 
       await orm.migrator.down(); // MRP runs.
