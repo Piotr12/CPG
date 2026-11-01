@@ -1,6 +1,7 @@
 import { currentTenant, holdWriteGate, MrpDailyResult, MrpRecommendation, MrpRun, type EntityManager } from "@cpg/db";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
 import type { MrpBucket, MrpResult } from "../../domain/mrp/mrp-result";
+import { isExecutableProposal } from "../../domain/mrp/acceptance/executable-proposal";
 import { planMrp } from "../../domain/mrp/plan-mrp";
 import { summarizePlan } from "../../domain/mrp/report/plan-summary";
 import { MRP_HORIZON_DAYS } from "../../domain/mrp/projection/horizon";
@@ -185,9 +186,15 @@ export class MrpRunService {
     const rows = await this.em.find(
       MrpRecommendation,
       { run, material: { $in: materials }, ...(location !== undefined && { location }) },
-      { orderBy: { material: "asc", location: "asc", needDate: "asc" }, fields: ["material", "location", "kind", "needDate", "quantity"], disableIdentityMap: true },
+      {
+        orderBy: { material: "asc", location: "asc", needDate: "asc" },
+        fields: ["id", "material", "location", "kind", "needDate", "quantity", "acceptedDocument"],
+        disableIdentityMap: true,
+      },
     );
-    for (const { material, location: site, kind, needDate, quantity } of rows) byPair.get(pairKey(material, site))?.push({ kind, needDate, quantity });
+    for (const { id, material, location: site, kind, needDate, quantity, acceptedDocument } of rows) {
+      byPair.get(pairKey(material, site))?.push({ id, kind, needDate, quantity, executable: isExecutableProposal(kind), document: acceptedDocument ?? null });
+    }
     return byPair;
   }
 

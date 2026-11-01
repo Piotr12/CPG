@@ -63,9 +63,15 @@ export interface MrpPlanView {
 
 /** One stored replenishment proposal (E16-S01): what it would create, the day it covers, a six-decimal BUoM quantity above zero. */
 export interface MrpProposalView {
+  /** The proposal's ID for accepting it (E19-S01): unique across tenants, so another tenant's is never found. */
+  id: string;
   kind: MrpRecommendationKind;
   needDate: string;
   quantity: string;
+  /** Whether it can be accepted at all (`isExecutableProposal`): a Make proposal can't yet. */
+  executable: boolean;
+  /** The business ID of the document accepting it created, or null while it isn't accepted. */
+  document: string | null;
 }
 
 /** `GET /api/tenants/{tenant}/mrp/runs/latest`: the latest run and one page of its plans. */

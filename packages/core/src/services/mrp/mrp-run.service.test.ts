@@ -474,10 +474,16 @@ describe("MrpRunService: replenishment proposals (#278)", () => {
     expect(await day("00000001", cabinet.id, PLANT, "2026-10-05")).toMatchObject({ proposed_receipts: "10.000000", projected_before: "-3.000000", projected_after: "7.000000", shortage: "3.000000" });
     expect(await day("00000001", cabinet.id, store, "2026-10-05")).toMatchObject({ proposed_receipts: "3.000000", projected_after: "0.000000" });
     const { plans } = await latest();
+    const uuid = expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     expect(plans.map(({ location: site, proposals }) => [site, proposals])).toEqual([
-      [PLANT, [{ kind: "purchase-requisition", needDate: "2026-10-05", quantity: "10.000000" }]],
-      [store, [{ kind: "production-order", needDate: "2026-10-05", quantity: "3.000000" }]],
+      // Only a Buy proposal can be accepted until MRP chooses BOMs (E19-S01 Q1); neither is accepted yet.
+      [PLANT, [{ id: uuid, kind: "purchase-requisition", needDate: "2026-10-05", quantity: "10.000000", executable: true, document: null }]],
+      [store, [{ id: uuid, kind: "production-order", needDate: "2026-10-05", quantity: "3.000000", executable: false, document: null }]],
     ]);
+    const [stored] = await sql<{ id: string }>("select id from mrp_recommendation where location = ?", [PLANT]);
+    expect(plans[0].proposals[0].id).toBe(stored.id);
+    await sql("update mrp_recommendation set accepted_document = '00000007' where id = ?", [stored.id]);
+    expect((await latest()).plans[0].proposals[0]).toMatchObject({ id: stored.id, document: "00000007" });
 
     await run();
     expect((await recommendations()).map(({ run: code }) => code)).toEqual(["00000002", "00000002"]);
