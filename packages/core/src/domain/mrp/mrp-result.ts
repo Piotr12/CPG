@@ -1,3 +1,5 @@
+import type { MrpRecordKind } from "./mrp-inputs";
+
 /**
  * What `planMrp` returns (#273). Every figure is base-unit micro-units (R03); E14-S02 stores each one
  * as a six-decimal text. The bucket carries every figure the MRP stories fill, so its shape never
@@ -12,7 +14,10 @@ export interface MrpResult {
   plans: readonly MrpPlan[];
   /** Proposed receipts (E16-S01), by material code, then location code, then need date. */
   proposals: readonly MrpProposal[];
-  /** What the plan can't do as the documents say, by date, then document (#277); E16-S03 adds the other kinds. */
+  /**
+   * What the plan can't do as the documents say (#277), or can't plan without guessing (E16-S03), in
+   * `compareExceptions` order: by material, location, code rank, date, then transfer.
+   */
   exceptions: readonly MrpException[];
 }
 
@@ -171,7 +176,7 @@ export interface MrpTransferMovement {
  * MRP-039): only `available` is projected at either site, and the transfer itself is never changed.
  */
 export interface MrpInsufficientTransferStock {
-  kind: "insufficient-transfer-stock";
+  code: "INSUFFICIENT_TRANSFER_STOCK";
   transfer: string;
   material: string;
   source: string;
@@ -184,8 +189,46 @@ export interface MrpInsufficientTransferStock {
   available: bigint;
 }
 
-/** An MRP exception. */
-export type MrpException = MrpInsufficientTransferStock;
+/**
+ * A stored row of the material couldn't be read (E16-S03, MRP-036): a quantity or a date that isn't
+ * valid, or a unit factor that isn't above zero. Raised on every planned pair of the material, needed
+ * or not; the row is left out and nothing is guessed in its place.
+ */
+export interface MrpInvalidUomConversion {
+  code: "INVALID_UOM_CONVERSION";
+  material: string;
+  location: string;
+  /** The kind of the first unreadable row of the material (spec Q8). */
+  record: MrpRecordKind;
+  /** Its business ID, `order/position` for a line; absent for a balance, a forecast or a target. */
+  document?: string;
+}
+
+/** Why a pair has no usable planning parameter set (E16-S03, spec Q5). */
+export type MrpMissingParametersReason = "no-set" | "raw-make" | "invalid-set";
+
+/**
+ * The pair has no usable planning parameter set (MAT-017, MRP-034, MRP-033): with `no-set` only when
+ * it needs supply, otherwise always. `date` is the first day it needs supply, absent when it doesn't.
+ */
+export interface MrpMissingPlanningParameters {
+  code: "MISSING_PLANNING_PARAMETERS";
+  material: string;
+  location: string;
+  date?: string;
+  reason: MrpMissingParametersReason;
+}
+
+/** A Make pair's proposal has no active BOM whose current revision is valid on its need date `date` (MRP-035). */
+export interface MrpMissingBom {
+  code: "MISSING_BOM";
+  material: string;
+  location: string;
+  date: string;
+}
+
+/** An MRP exception: `exceptions/codes.ts` lists the codes, their messages and their rank. */
+export type MrpException = MrpInvalidUomConversion | MrpMissingPlanningParameters | MrpMissingBom | MrpInsufficientTransferStock;
 
 /** What a proposal would create: never a transfer (N06, TRF-018) and never a purchase order (MRP-030). */
 export const MRP_PROPOSAL_KINDS = ["purchase-requisition", "production-order"] as const;
