@@ -4,7 +4,7 @@
 **Agent:** Claude Code (cezar, headless) / claude-opus-5-5, via `om-auto-fix-issue` → `om-auto-implement-spec` → `om-auto-create-pr`
 **Source doc:** `.ai/specs/2026-10-31--2054UTC-mrp-replenishment-proposals.md` (spec PR #312)
 **Issue:** #278
-**Status:** in progress
+**Status:** done
 
 ## Goal
 
@@ -36,6 +36,7 @@ Phase 3, proof and paperwork (spec steps 9–11): benchmark, integration tests, 
 - 3.1: the seeded worst-case lot rule alone proposed on about a tenth of the days, since stock and receipts keep balances up, so the worst case adds a 1,000 Open line per material per day (spec implementation notes). Ten times, worst case: 2,684 ms, 127 ms stall, 26,969 recommendations.
 - 3.2: Docker is unavailable here, so the integration files ran against a local standalone build (lesson 2026-10-23): `smoke`, `mrp-run-api` and `mrp-report`, 3 files, 22 tests passed.
 - Gate: lint 0; coverage 630 files, 4,987 tests, 100% branches/lines/functions/statements after dropping a dead `?? []` (324b8d1f); typecheck 0; build 0.
+- Review: a fresh-context code review approved. Its Medium (the spec's two copies) follows the merge order from lesson 2026-10-23. Its two test gaps are fixed in e71b6e14, with a mutation check: 6 tests fail without the location filter. QA evidence (3 screenshots) and the review are posted on #313.
 
 ## Progress
 
