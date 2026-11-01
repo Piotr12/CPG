@@ -28,7 +28,17 @@ Phase 3, proof and paperwork (spec steps 9–11): benchmark, integration tests, 
 - A new migration moves every migration count (lesson 2026-10-23).
 - The integration suite needs Docker, which may be unavailable here. If so, run on a standalone build (lesson 2026-10-23).
 
+## Log
+
+- 00:14 Plan committed; draft PR #313 opened from `main`; the spec copied in from #312's branch and moved to `implemented/` at the end (lesson 2026-10-23, "Don't stack the implementation PR").
+- Phase 1: a test fixture fed `parseDecimal("-3")`, which is `null` (it takes values of zero or more only), so 4 sizing tests failed on BigInt mixing; a signed helper fixed the fixture, not the code.
+- Phase 2: the new migration moved every count the lesson lists. The `mrp-runs` up/down test now rolls back to the migration before it, the six rollback-by-count tests take one more `down()`, and the forecasts test's loop takes 23. Under this machine's load `write-gate.test.ts` timed out once in the full db run and passed alone.
+- 3.1: the seeded worst-case lot rule alone proposed on about a tenth of the days, since stock and receipts keep balances up, so the worst case adds a 1,000 Open line per material per day (spec implementation notes). Ten times, worst case: 2,684 ms, 127 ms stall, 26,969 recommendations.
+- 3.2: Docker is unavailable here, so the integration files run against a local standalone build (lesson 2026-10-23).
+
 ## Progress
+
+PR: #313
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
@@ -50,4 +60,4 @@ Phase 3, proof and paperwork (spec steps 9–11): benchmark, integration tests, 
 
 - [x] 3.1 Benchmark with worst-case lots — 19e34249
 - [ ] 3.2 Integration tests
-- [ ] 3.3 Help copy, compatibility, standards, catalogue and spec move
+- [x] 3.3 Help copy, compatibility, standards, catalogue and spec move — ffae1596
