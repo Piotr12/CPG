@@ -1,6 +1,6 @@
 # MRP proposal acceptance: one click, after confirmation, turns a Buy proposal into a purchase requisition tagged with its run, and a stale proposal is refused
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-11-01 07:37 UTC
 **Issue:** #287 (E19-S01, epic #271) · **Depends on:** MRP runs (`implemented/2026-10-27--0556UTC-mrp-runs.md`, #274), replenishment proposals (`implemented/2026-10-31--2054UTC-mrp-replenishment-proposals.md`, #278), the MRP report (`implemented/2026-10-31--0907UTC-mrp-report.md`, #284), purchase requisitions (`implemented/2026-10-20--1636UTC-purchase-requisitions-orders.md`, #86), API idempotency (`implemented/2026-10-19--1548UTC-api-idempotency.md`) · **Design authority:** `.ai/specs/product-brief.md` (R03, R05, R07, R08, R10, N06), `research/CPG-prd001.pdf` §04 "Manual/auto creation", "Stale and concurrent", §05 "Optimistic edits and freshness", §06, `research/CPG-prd-datamodel.pdf` ("Purchase requisition", "MRP recommendation"), `research/CPG-acceptance.md` BUY-001, RUN-003, RUN-004, RUN-005, RUN-017, RUN-022
 
@@ -170,9 +170,9 @@ The Purchase requisitions list gains an **MRP run** column, priority 2, showing 
 
 Mockups: `assets/mrp-proposal-acceptance/mockup-01-mrp-proposals.png` (the one-pair view) and `mockup-02-accept-dialog.png` (the dialog). The page as it is today, with no list of proposals, is #284's `assets/mrp-report/current-01-mrp-page.png`.
 
-![The Proposals table in the one-pair view](assets/mrp-proposal-acceptance/mockup-01-mrp-proposals.png)
+![The Proposals table in the one-pair view](../assets/mrp-proposal-acceptance/mockup-01-mrp-proposals.png)
 
-![The Accept confirmation](assets/mrp-proposal-acceptance/mockup-02-accept-dialog.png)
+![The Accept confirmation](../assets/mrp-proposal-acceptance/mockup-02-accept-dialog.png)
 
 ## 📝 Edge Cases & Failure Scenarios
 
@@ -249,3 +249,25 @@ One phase, one PR: the columns and migration, the requisition's run link, the ac
    - Move this spec to `implemented/` with implementation notes.
 
 Each step leaves the suite green. Run `npm run lint`, `npm run typecheck`, `npm run test:coverage` (100%) and `npm run build`.
+
+## Implementation notes
+
+Implemented on #319, branched from `main` (the spec PR #318 stays design-only), as written, except:
+
+- **The run on the requisitions list sits under the requisition's ID, not in its own column.** At 1280 px a priority-2 column after Required sat past the table's visible width (QA screenshot), and moving it last shifted no index but left it out of view. Under the ID it is in view at every width, and no other column moves (`requisitions-table.tsx`, `fromMrpRun`). Requisitions entered by hand show nothing there.
+- **The screen's stale and not-executable texts don't name the material and location.** The dialog already names them, and `MRP_PROPOSAL_STALE` from a superseded run has no params, which `errorMessage` would answer in the server's English. `MRP_PROPOSAL_ACCEPTED` names its document. The API keeps every param the spec lists.
+- **The earlier-day note** shows only on a writable tenant, for a pair with proposals: a read-only tenant offers no Accept to explain.
+- **The Make half** is #320, blocked on #282.
+
+Notes:
+- `MrpAcceptanceService` (`core/src/services/mrp/`) follows the spec's steps 0–8. Its tests cover every edge case line with a fixed clock. The two-ORM race test (`mrp-acceptance-concurrency.test.ts`) gives one requisition and an `MRP_PROPOSAL_ACCEPTED` refusal after two plannings in all.
+- Test fixes, not code fixes: a same-pair order line a day *before* the need date leaves the proposal unchanged, since planned again that day gets a proposal of its own, so RUN-017's line goes on the need date. A material with open demand can't be deactivated, so Q11's test sets the flag directly.
+- Migration `Migration20261101075151_mrp_acceptance`: the generator wrote two `add column`s. `mrp-acceptance-migration.test.ts` checks that each table's definition is the old one with the column added, the populated upgrade, old-style inserts, and `down()`.
+- Seams found by the integration files and fixed here: `mrp-run-api.test.ts` compared #278's proposals exactly, and `mrp-report.test.ts` read the first `main h3`, now the Proposals heading, so it reads `[data-mrp-plan-heading]`.
+- Benchmark (`mrp-run-timing.test.ts`), fastest of three, run alone, budgets unchanged:
+
+  | Size | Accept | Its longest stall | The run, for comparison |
+  |---|---|---|---|
+  | Realistic | 135 ms | 26 ms | 241 ms |
+  | Ten times | 1,394 ms | 83 ms | 2,579 ms |
+

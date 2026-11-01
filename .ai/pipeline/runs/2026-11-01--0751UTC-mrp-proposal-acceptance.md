@@ -53,12 +53,12 @@ Phase 4, proof and paperwork (spec steps 7–9): benchmark, integration tests, d
 
 ### Phase 3: Screen
 
-- [ ] 3.1 refreshAfterWrite extra codes and the accept action
-- [ ] 3.2 Proposals table, dialog and columns
-- [ ] 3.3 Messages and help
+- [x] 3.1 refreshAfterWrite extra codes and the accept action — 6ce9ac8b
+- [x] 3.2 Proposals table, dialog and columns — 51656ab7
+- [x] 3.3 Messages and help — 50bc7eda
 
 ### Phase 4: Proof and paperwork
 
-- [ ] 4.1 Benchmark
-- [ ] 4.2 Integration tests
+- [x] 4.1 Benchmark — e2555d0a
+- [x] 4.2 Integration tests — 7ef63df0
 - [ ] 4.3 Docs, catalogue, follow-up issue and spec move
