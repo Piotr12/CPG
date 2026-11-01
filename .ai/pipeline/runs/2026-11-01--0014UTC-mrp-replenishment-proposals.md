@@ -34,7 +34,8 @@ Phase 3, proof and paperwork (spec steps 9–11): benchmark, integration tests, 
 - Phase 1: a test fixture fed `parseDecimal("-3")`, which is `null` (it takes values of zero or more only), so 4 sizing tests failed on BigInt mixing; a signed helper fixed the fixture, not the code.
 - Phase 2: the new migration moved every count the lesson lists. The `mrp-runs` up/down test now rolls back to the migration before it, the six rollback-by-count tests take one more `down()`, and the forecasts test's loop takes 23. Under this machine's load `write-gate.test.ts` timed out once in the full db run and passed alone.
 - 3.1: the seeded worst-case lot rule alone proposed on about a tenth of the days, since stock and receipts keep balances up, so the worst case adds a 1,000 Open line per material per day (spec implementation notes). Ten times, worst case: 2,684 ms, 127 ms stall, 26,969 recommendations.
-- 3.2: Docker is unavailable here, so the integration files run against a local standalone build (lesson 2026-10-23).
+- 3.2: Docker is unavailable here, so the integration files ran against a local standalone build (lesson 2026-10-23): `smoke`, `mrp-run-api` and `mrp-report`, 3 files, 22 tests passed.
+- Gate: lint 0; coverage 630 files, 4,987 tests, 100% branches/lines/functions/statements after dropping a dead `?? []` (324b8d1f); typecheck 0; build 0.
 
 ## Progress
 
@@ -59,5 +60,5 @@ PR: #313
 ### Phase 3: Proof and paperwork
 
 - [x] 3.1 Benchmark with worst-case lots — 19e34249
-- [ ] 3.2 Integration tests
+- [x] 3.2 Integration tests — 1e40172f
 - [x] 3.3 Help copy, compatibility, standards, catalogue and spec move — ffae1596
