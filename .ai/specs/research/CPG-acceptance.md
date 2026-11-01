@@ -448,7 +448,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** The lead time is stored in whole calendar days, 0–999 (`planning-parameter-fields.schema.test.ts`, the planning-parameters `route.test.ts`). An order's planned start is its finish minus those calendar days: `packages/core/src/domain/production-orders/production-planning.test.ts`, `packages/core/src/services/production-orders/production-order.service.test.ts`. Back-scheduling in MRP is slice 3. E03-S03, #24; E10-S01, #88.
+- **Evidence:** The lead time is stored in whole calendar days, 0–999 (`planning-parameter-fields.schema.test.ts`, the planning-parameters `route.test.ts`). An order's planned start is its finish minus those calendar days: `packages/core/src/domain/production-orders/production-planning.test.ts`, `packages/core/src/services/production-orders/production-order.service.test.ts`. MRP back-schedules every proposal the same way (`plannedStart`): `packages/core/src/domain/mrp/sizing/schedule-proposal.test.ts` and `plan-mrp.test.ts` ("MAT-018": need on 15 October, lead time 7, start 8 October). E03-S03, #24; E10-S01, #88; E16-S02, #279.
 - **Given:** Planning lead time 7 whole days
 - **When:** MRP computes need on October 15
 - **Then:** Back-scheduled start uses October 8, not seven business days earlier.
@@ -2657,6 +2657,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Not executed
 
+- **Evidence:** `priority/rank-shortages.test.ts` ("DEM-018"): the order is served and the safety target's gap is listed as a `safety-target` shortage, in the engine result only; no channel shows it yet (#279 spec Q4). E16-S02, #279.
 - **Given:** Stock only sufficient for due customer order but not target buffer
 - **When:** Run MRP
 - **Then:** Customer demand prioritized, safety stock gap displayed as lower-priority requirement.
@@ -2665,6 +2666,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Not executed
 
+- **Evidence:** `priority/rank-shortages.test.ts` and `plan-mrp.test.ts` ("DEM-019": of 15 available, the order of 10 is served in full and the forecast is 15 short), in the engine result only; no channel shows it yet (#279 spec Q4). E16-S02, #279.
 - **Given:** Customer demand 10 and residual forecast 20 share day but supply limited 15
 - **When:** Run MRP
 - **Then:** Firm customer order is prioritized ahead of forecast; unmet forecast shown as shortage.
@@ -2673,6 +2675,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Not executed
 
+- **Evidence:** `priority/rank-shortages.test.ts` ("DEM-020": O1 due Monday served before O2 due Tuesday, O2's shortage against O2; overdue orders on today ranked by their original dates), in the engine result only; no channel shows it yet (#279 spec Q4). E16-S02, #279.
 - **Given:** Customer O1 due Monday and O2 due Tuesday, insufficient stock
 - **When:** Run MRP
 - **Then:** O1's requirement scheduled first, O2 shortage transparent.
@@ -2681,6 +2684,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Not executed
 
+- **Evidence:** `priority/rank-shortages.test.ts` ("DEM-021": same-date lines tie-broken only by order code and position, identical for any input order), in the engine result only; no channel shows it yet (#279 spec Q4). E16-S02, #279.
 - **Given:** Two order lines due same date and site
 - **When:** Run MRP
 - **Then:** No preferential customer-specific priority configured; deterministic technical order does not alter equal business priority.
@@ -2689,6 +2693,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Not executed
 
+- **Evidence:** `priority/rank-shortages.test.ts` ("DEM-022": a forecast residual of 40 is served before a safety top-up of 20), in the engine result only; no channel shows it yet (#279 spec Q4). E16-S02, #279.
 - **Given:** Residual forecast 40 and safety top-up 20 compete for scarce supply
 - **When:** Run MRP
 - **Then:** Forecast is prioritized ahead of safety-stock replenishment.
@@ -3031,16 +3036,18 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MRP-037 — Late lead-time warning
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/mrp/sizing/schedule-proposal.test.ts` and `plan-mrp.test.ts` ("MRP-037": a need on day 3 with lead time 7 starts today, finishes on day 7, 4 days late, need kept on day 3; its receipt on day 7, days 3–6 short). Stored and listed through the API with `plannedStart`, `plannedFinish` and `lateDays` (`mrp-run.service.test.ts`, `tests/integration/mrp-run-api.test.ts`). No screen lists proposals yet (E19-S01). E16-S02, #279.
 - **Given:** Need due 3 days ahead, lead time 7 days
 - **When:** Run MRP
 - **Then:** Earliest proposed start today, completion 7 days hence, Late Supply by 4 days.
 
 ### MRP-038 — No backwards production starts
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `sizing/schedule-proposal.test.ts` and `plan-mrp.test.ts` ("MRP-038": an overdue production need starts today and finishes on day 4, and no proposal of a mixed run starts before today). The API's `plannedStart` is derived by the same rule (`mrp-run.service.test.ts`). No screen lists proposals yet (E19-S01). E16-S02, #279.
 - **Given:** Production need yesterday, lead 4 days
 - **When:** Run MRP today
 - **Then:** No newly recommended production start is dated in the past.
@@ -3091,6 +3098,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Not executed
 
+- **Evidence:** Single-pair case only: `packages/core/src/domain/mrp/priority/rank-shortages.test.ts` ("DEM-019, MRP-044"): the firm order is served and the forecast's shortage is listed in `MrpPlan.shortages`, which no channel shows yet (#279 spec Q4). The multi-level raw-material case needs E17's root ranking. E16-S02, #279.
 - **Given:** One raw shortage affects firm customer order and residual forecast
 - **When:** Run MRP
 - **Then:** Firm requirement given priority and forecast shortage remains visible.
@@ -3132,8 +3140,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MRP-049 — Beyond-horizon feasible finish separately visible
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `sizing/schedule-proposal.test.ts` and `plan-mrp.test.ts` ("MRP-049": need on day 20, Buy lead time 120, Late Supply by 100 days and Beyond Horizon on day 120; no bucket's `proposedReceipts` raised, `projectedAfter` below zero on days 20–89). Through the API, `beyondHorizon: true` with `plannedFinish` on day 120 (`tests/integration/mrp-run-api.test.ts`). No screen lists proposals yet (E19-S01). E16-S02, #279.
 - **Given:** Today is day 0, demand on day 20, required Buy lead time 120 days
 - **When:** Run 90-day MRP
 - **Then:** Show Late Supply and dated Beyond Horizon proposed finish day 120; projected day 0–89 supply is not increased by that future receipt.
