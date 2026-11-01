@@ -72,6 +72,7 @@ import { Forecast } from "./forecasts/forecast.entity";
 import { LOCALES, THEMES, UserPreference, type Locale, type Theme } from "./preferences/user-preference.entity";
 import { MRP_RUN_MODES, MrpRun, type MrpRunMode } from "./mrp/mrp-run.entity";
 import { MrpDailyResult } from "./mrp/mrp-daily-result.entity";
+import { MRP_RECOMMENDATION_KINDS, MrpRecommendation, type MrpRecommendationKind } from "./mrp/mrp-recommendation.entity";
 import { Setting } from "./settings/setting.entity";
 import { Tenant, TENANT_CODES, type TenantCode } from "./tenants/tenant.entity";
 import {
@@ -104,8 +105,8 @@ export type { ShipmentStatus };
 export { Bom, BomComponent, BOM_REVISION_IMMUTABLE, BomRevision };
 export { PURCHASE_ORDER_STATUSES, PurchaseOrder, PurchaseOrderLine, PurchaseRequisition, REQUISITION_STATUSES };
 export type { ProcurementMode, PurchaseOrderStatus, RequisitionStatus };
-export { MRP_RUN_MODES, MrpDailyResult, MrpRun };
-export type { MrpRunMode };
+export { MRP_RECOMMENDATION_KINDS, MRP_RUN_MODES, MrpDailyResult, MrpRecommendation, MrpRun };
+export type { MrpRecommendationKind, MrpRunMode };
 export type { AuditChannel, AuditSnapshot, AuditValue, Locale, TenantCode, Theme, UserRole };
 export { currentTenant, isTenantOwned, TENANT_FILTER, tenantOwned, TenantViolationError, selectTenant };
 
@@ -154,6 +155,7 @@ export const entities = [
   ProductionCompletionLine,
   MrpRun,
   MrpDailyResult,
+  MrpRecommendation,
 ];
 
 /**

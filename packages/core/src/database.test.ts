@@ -57,6 +57,7 @@ describe("migrateDatabase", () => {
       "Migration20261025171522_tenant_in_list_indexes",
       "Migration20261025180850_list_key_read_indexes",
       "Migration20261027061605_mrp_runs",
+      "Migration20261101053705_mrp_recommendations",
     ]);
     expect(await migrateDatabase(config)).toEqual([]);
   });
