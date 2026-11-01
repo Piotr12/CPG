@@ -44,7 +44,7 @@ Phase 3, proof and paperwork (spec steps 9–11): benchmark, integration tests, 
 
 - [x] 2.1 Planning-parameter snapshot read — 633d8335
 - [x] 2.2 MrpRecommendation table and migration — 64b152e1
-- [ ] 2.3 Store and list proposals in the run service and API
+- [x] 2.3 Store and list proposals in the run service and API — 2eb3d820
 
 ### Phase 3: Proof and paperwork
 
