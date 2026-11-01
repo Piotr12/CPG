@@ -55,30 +55,38 @@ Implement the spec. MRP plans materials level by level. Every Make proposal expl
 
 ## Log
 
+- 2026-11-01 11:20–12:50 UTC:
+  - Phases 1 to 4 landed. Deviations from the spec are in its implementation notes: the priority tie-break uses days from start to need, and `readBoms` reads inactive materials once.
+  - Benchmark under the unchanged budgets: realistic 243 ms, ten times 2,439 ms, longest stall 121 ms.
+  - Docker is unavailable here, so the integration files ran against a standalone build (lesson 2026-10-23). `mrp-run-api` and `smoke` passed (16 tests). `mrp-accept`, `mrp-accept-api`, `mrp-report`, `mrp-report-api` and `mrp-run` passed (27 tests).
+  - Follow-up #327 filed for root ranking (spec Q9).
+
 ## Progress
+
+PR: #326
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Inputs and types
 
-- [ ] 1.1 MrpBom lines and the snapshot read
-- [ ] 1.2 Types, BOM_CYCLE code and stored shape
+- [x] 1.1 MrpBom lines and the snapshot read — 616a5f98
+- [x] 1.2 Types, BOM_CYCLE code and stored shape — 616a5f98
 
 ### Phase 2: Engine
 
-- [ ] 2.1 bomLevels
-- [ ] 2.2 explodeProposal
-- [ ] 2.3 replenishPair BOM Cycle check
-- [ ] 2.4 planMrp level loop
-- [ ] 2.5 rankShortages planned-component
+- [x] 2.1 bomLevels — 616a5f98
+- [x] 2.2 explodeProposal — 616a5f98
+- [x] 2.3 replenishPair BOM Cycle check — 616a5f98
+- [x] 2.4 planMrp level loop — 616a5f98
+- [x] 2.5 rankShortages planned-component — 616a5f98
 
 ### Phase 3: Storage, read, API, UI
 
-- [ ] 3.1 Columns, migration, write and read
-- [ ] 3.2 Benchmark
-- [ ] 3.3 Proposals table BOM line
+- [x] 3.1 Columns, migration, write and read — f4a9fa77
+- [x] 3.2 Benchmark — e6af6d3a
+- [x] 3.3 Proposals table BOM line — f4a9fa77
 
 ### Phase 4: Integration, docs
 
-- [ ] 4.1 Integration tests
-- [ ] 4.2 Copy, docs, catalogue, follow-up, spec notes
+- [x] 4.1 Integration tests — 506bee2f
+- [x] 4.2 Copy, docs, catalogue, follow-up, spec notes — c457bc99
