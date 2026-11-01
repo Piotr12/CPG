@@ -45,6 +45,24 @@ describe("MrpProposals", () => {
     expect(make.querySelector("[data-mrp-not-executable]")?.textContent).toBe(en.mrp.proposals.notExecutable);
     expect(make.querySelector("[data-mrp-accept]")).toBeNull();
     expect(screen.queryByText(en.mrp.proposals.earlierDay)).toBeNull();
+    expect(document.querySelector("[data-mrp-timing]")).toBeNull();
+  });
+
+  it.each([
+    ["en", "Late: finishes 2026-10-08", "Beyond the horizon: finishes 2027-01-29"],
+    ["pl", "Spóźniona: kończy się 2026-10-08", "Poza horyzontem: kończy się 2027-01-29"],
+  ] as const)("shows in %s a late proposal's and a Beyond Horizon one's planned finish under the need date (E16-S02, MRP-037, MRP-049)", (locale, late, beyond) => {
+    renderProposals([
+      buy({ id: "a", needDate: "2026-10-04", plannedFinish: "2026-10-08", lateDays: 4 }),
+      buy({ id: "b", needDate: "2026-10-21", plannedFinish: "2027-01-29", lateDays: 100, beyondHorizon: true }),
+    ], { locale });
+
+    const [lateRow, beyondRow] = within(screen.getByRole("table")).getAllByRole("row").slice(1);
+    expect(lateRow.querySelector("[data-mrp-need-date]")?.textContent).toBe("2026-10-04");
+    expect(lateRow.querySelector("[data-mrp-timing=late]")?.textContent).toBe(late);
+    expect(beyondRow.querySelector("[data-mrp-need-date]")?.textContent).toBe("2026-10-21");
+    expect(beyondRow.querySelector("[data-mrp-timing=beyondHorizon]")?.textContent).toBe(beyond);
+    expect(beyondRow.querySelector("[data-mrp-timing=late]")).toBeNull();
   });
 
   it("asks before accepting, naming the document, material, location, quantity in its base unit, date and run, and creates nothing on Cancel (RUN-004)", async () => {

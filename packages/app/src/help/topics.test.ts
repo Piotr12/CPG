@@ -84,9 +84,9 @@ describe("help topics", () => {
   });
 
   it.each([
-    ["en", "has Accept: after you confirm", "records the run's ID", "refused as out of date and you run MRP again", "accepted once", "Production-order proposals can't be accepted yet",
+    ["en", "has Accept: after you confirm", "shows its planned finish under its need date", "records the run's ID", "refused as out of date and you run MRP again", "accepted once", "Production-order proposals can't be accepted yet",
       "/mrp/runs/{run}/proposals/{proposal}/accept", "whether they can be accepted (executable)"],
-    ["pl", "ma przycisk Akceptuj: po potwierdzeniu", "zapisuje ID przebiegu", "odrzucona jako nieaktualna i trzeba ponownie uruchomić MRP", "zaakceptować raz",
+    ["pl", "ma przycisk Akceptuj: po potwierdzeniu", "pokazuje pod datą potrzeby planowany koniec", "zapisuje ID przebiegu", "odrzucona jako nieaktualna i trzeba ponownie uruchomić MRP", "zaakceptować raz",
       "Propozycji zleceń produkcyjnych nie można jeszcze akceptować", "/mrp/runs/{run}/proposals/{proposal}/accept", "czy można je zaakceptować (executable)"],
   ] as const)("says in %s how a proposal is accepted, refused as out of date, and through the API (E19-S01)", (locale, ...phrases) => {
     const text = helpTopics(locale).find((topic) => topic.id === "mrp")!.body.join(" ");

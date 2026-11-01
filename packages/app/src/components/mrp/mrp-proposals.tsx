@@ -22,7 +22,8 @@ interface MrpProposalsProps {
 
 /**
  * The one-pair view's proposals (E19-S01, spec Q8), above its days: what each would create, its need
- * date and quantity, and Accept for one that can be accepted, or the document accepting it created.
+ * date (with its planned finish when it is late or Beyond Horizon, E16-S02) and quantity, and Accept for
+ * one that can be accepted, or the document accepting it created.
  * A read-only tenant, or a run from an earlier day, shows no Accept.
  */
 export function MrpProposals({ tenant, run, plan, today, accept, locale, messages }: MrpProposalsProps) {
@@ -60,9 +61,18 @@ export function MrpProposals({ tenant, run, plan, today, accept, locale, message
       />
     );
   };
+  const needDate = (proposal: MrpProposalView) => {
+    const timing = proposal.beyondHorizon ? "beyondHorizon" : proposal.lateDays > 0 ? "late" : null;
+    return (
+      <>
+        <span data-mrp-need-date>{proposal.needDate}</span>
+        {timing && <span className="block text-sm text-muted-foreground" data-mrp-timing={timing}>{fill(t[timing], { date: proposal.plannedFinish })}</span>}
+      </>
+    );
+  };
   const columns: DataTableColumn<MrpProposalView>[] = [
     { id: "document", header: t.columns.document, kind: "text", cell: (proposal) => t.kinds[proposal.kind] },
-    { id: "needDate", header: t.columns.needDate, kind: "date", cell: (proposal) => <span data-mrp-need-date>{proposal.needDate}</span> },
+    { id: "needDate", header: t.columns.needDate, kind: "date", cell: needDate },
     { id: "quantity", header: t.columns.quantity, kind: "quantity", cell: (proposal) => <span data-mrp-proposal-quantity>{amount(proposal.quantity)}</span> },
     { id: "action", header: t.columns.action, kind: "text", className: "whitespace-normal", cell: action },
   ];

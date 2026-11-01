@@ -512,7 +512,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MAT-025": a need of 1.000001 with multiple 0.000001 is proposed as 1.000001) and `packages/core/src/domain/mrp/sizing/lot-quantity.test.ts`. The proposal is stored and listed by `GET …/mrp/runs/latest` (`mrp-run.service.test.ts`); no screen lists proposals yet (E19-S01). E16-S01, #278.
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MAT-025": a need of 1.000001 with multiple 0.000001 is proposed as 1.000001) and `packages/core/src/domain/mrp/sizing/lot-quantity.test.ts`. The proposal is stored and listed by `GET …/mrp/runs/latest` (`mrp-run.service.test.ts`); since E19-S01 the one-pair view's Proposals table lists it with its quantity (`mrp-proposals.test.tsx`). E16-S01, #278.
 - **Given:** Calculation requires 1.000001 BUoM with compatible lot parameters
 - **When:** MRP proposes procurement/production
 - **Then:** Proposal is never below 1.000001; no rounding down causing shortage.
@@ -3043,7 +3043,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/domain/mrp/sizing/schedule-proposal.test.ts` and `plan-mrp.test.ts` ("MRP-037": a need on day 3 with lead time 7 starts today, finishes on day 7, 4 days late, need kept on day 3; its receipt on day 7, days 3–6 short). Stored and listed through the API with `plannedStart`, `plannedFinish` and `lateDays` (`mrp-run.service.test.ts`, `tests/integration/mrp-run-api.test.ts`). No screen lists proposals yet (E19-S01). E16-S02, #279.
+- **Evidence:** `packages/core/src/domain/mrp/sizing/schedule-proposal.test.ts` and `plan-mrp.test.ts` ("MRP-037": a need on day 3 with lead time 7 starts today, finishes on day 7, 4 days late, need kept on day 3; its receipt on day 7, days 3–6 short). Stored and listed through the API with `plannedStart`, `plannedFinish` and `lateDays` (`mrp-run.service.test.ts`, `tests/integration/mrp-run-api.test.ts`). Since E19-S01 the one-pair view's Proposals table shows a late proposal's planned finish under its need date (`mrp-proposals.test.tsx`, `tests/integration/mrp-accept.test.ts`, #319). E16-S02, #279.
 - **Given:** Need due 3 days ahead, lead time 7 days
 - **When:** Run MRP
 - **Then:** Earliest proposed start today, completion 7 days hence, Late Supply by 4 days.
@@ -3052,7 +3052,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `sizing/schedule-proposal.test.ts` and `plan-mrp.test.ts` ("MRP-038": an overdue production need starts today and finishes on day 4, and no proposal of a mixed run starts before today). The API's `plannedStart` is derived by the same rule (`mrp-run.service.test.ts`). No screen lists proposals yet (E19-S01). E16-S02, #279.
+- **Evidence:** `sizing/schedule-proposal.test.ts` and `plan-mrp.test.ts` ("MRP-038": an overdue production need starts today and finishes on day 4, and no proposal of a mixed run starts before today). The API's `plannedStart` is derived by the same rule (`mrp-run.service.test.ts`). The Proposals table (E19-S01) shows no planned start: only the need date, and the planned finish of a late proposal. E16-S02, #279.
 - **Given:** Production need yesterday, lead 4 days
 - **When:** Run MRP today
 - **Then:** No newly recommended production start is dated in the past.
@@ -3147,7 +3147,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `sizing/schedule-proposal.test.ts` and `plan-mrp.test.ts` ("MRP-049": need on day 20, Buy lead time 120, Late Supply by 100 days and Beyond Horizon on day 120; no bucket's `proposedReceipts` raised, `projectedAfter` below zero on days 20–89). Through the API, `beyondHorizon: true` with `plannedFinish` on day 120 (`tests/integration/mrp-run-api.test.ts`). No screen lists proposals yet (E19-S01). E16-S02, #279.
+- **Evidence:** `sizing/schedule-proposal.test.ts` and `plan-mrp.test.ts` ("MRP-049": need on day 20, Buy lead time 120, Late Supply by 100 days and Beyond Horizon on day 120; no bucket's `proposedReceipts` raised, `projectedAfter` below zero on days 20–89). Through the API, `beyondHorizon: true` with `plannedFinish` on day 120 (`tests/integration/mrp-run-api.test.ts`). Since E19-S01 the one-pair view's Proposals table shows a Beyond Horizon proposal's planned finish under its need date (`mrp-proposals.test.tsx`, #319). E16-S02, #279.
 - **Given:** Today is day 0, demand on day 20, required Buy lead time 120 days
 - **When:** Run 90-day MRP
 - **Then:** Show Late Supply and dated Beyond Horizon proposed finish day 120; projected day 0–89 supply is not increased by that future receipt.

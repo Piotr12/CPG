@@ -71,9 +71,9 @@ export class MrpAcceptanceService {
    * safe to repeat. Every check reads; the requisition is the first write (spec, "Read first, write last").
    *
    * Just before creating, the tenant is planned again from a fresh snapshot (spec Q2): the proposal is
-   * `MRP_PROPOSAL_STALE` when that plan has no proposal of the same kind and quantity for its material,
-   * location and need date, when a newer run superseded its run, or when the run started on an earlier
-   * day (Q7). A requisition this run already created counts as tentative supply, which leaves the run's
+   * `MRP_PROPOSAL_STALE` when that plan has no proposal of the same kind, quantity and planned finish
+   * (E16-S02, so a changed lead time counts) for its material, location and need date, when a newer run
+   * superseded its run, or when the run started on an earlier day (Q7). A requisition this run already created counts as tentative supply, which leaves the run's
    * other proposals as they were.
    */
   async accept(runId: string, proposalId: string, actor: AuditActor): Promise<MrpAcceptanceView> {
@@ -91,14 +91,18 @@ export class MrpAcceptanceService {
     if (proposal.acceptedDocument) {
       throw new ConflictError(MRP_PROPOSAL_ACCEPTED, "MRP_PROPOSAL_ACCEPTED", { document: proposal.acceptedDocument, kind: proposal.kind });
     }
-    const { material, location, kind, needDate, quantity } = proposal;
+    const { material, location, kind, needDate, quantity, leadTimeDays } = proposal;
     if (!isExecutableProposal(kind)) throw new ConflictError(MRP_PROPOSAL_NOT_EXECUTABLE, "MRP_PROPOSAL_NOT_EXECUTABLE", { material, location, kind });
     const today = new Date().toISOString().slice(0, 10);
     if (run.startDate !== today) throw stale(proposal);
     const fresh = planMrp(await this.mrpSnapshotService.load(today), today).proposals.find(
       (candidate) => candidate.material === material && candidate.location === location && candidate.needDate === needDate,
     );
-    if (!fresh || fresh.kind !== kind || formatDecimal(fresh.quantity, { fixed: true }) !== quantity) throw stale(proposal);
+    // The run started today (above), so the stored lead time times the proposal as the run showed it.
+    const timing = scheduleProposal(needDate, leadTimeDays, run.startDate, run.horizonDays);
+    if (!fresh || fresh.kind !== kind || formatDecimal(fresh.quantity, { fixed: true }) !== quantity || fresh.plannedFinish !== timing.plannedFinish) {
+      throw stale(proposal);
+    }
 
     const { baseUnit } = await findMaterial(this.em, material);
     const input = parseInput(requisitionCreateSchema, { material, location, quantity, unit: baseUnit, requiredDate: needDate });
@@ -108,7 +112,7 @@ export class MrpAcceptanceService {
     return {
       proposal: {
         id: proposal.id, run: run.code, material, location, kind, needDate, quantity,
-        ...scheduleProposal(needDate, proposal.leadTimeDays, run.startDate, run.horizonDays),
+        ...timing,
         executable: true, document: document.id,
       },
       document,

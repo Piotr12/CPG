@@ -2,6 +2,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { migrations } from "./migrations";
 import { initOrm } from "./orm";
 
 const MIGRATION = "Migration20261101075151_mrp_acceptance";
@@ -54,6 +55,31 @@ describe("MRP acceptance migration (#287)", () => {
       expect(await columnsOf("mrp_recommendation")).not.toContain("accepted_document");
       expect(await sql("select code from purchase_requisition order by code")).toEqual([{ code: "00000001" }, { code: "00000002" }]);
       expect(await sql("select id from mrp_recommendation order by id")).toEqual([{ id: "p1" }, { id: "p2" }]);
+    } finally {
+      await orm.close();
+    }
+  });
+
+  it("applies after the later migrations production already ran, completing the schema, and rolls back on its own (#319)", async () => {
+    const orm = await initOrm({ databasePath: tempDatabase() });
+    const sql = (query: string) => orm.em.getConnection().execute(query);
+    const columnsOf = async (table: string) => (await sql(`pragma table_info(${table})`)).map(({ name }) => name as string);
+    try {
+      // Production ran #279's lead time and #280's exceptions migrations before this one was merged.
+      await orm.migrator.up({ migrations: migrations.map(({ name }) => name).filter((name) => name !== MIGRATION) });
+      expect(await columnsOf("mrp_recommendation")).toContain("lead_time_days");
+      expect(await columnsOf("mrp_recommendation")).not.toContain("accepted_document");
+
+      await orm.migrator.up();
+
+      expect((await orm.migrator.getPending()).length).toBe(0);
+      expect(await orm.schema.getUpdateSchemaSQL()).not.toMatch(/`(purchase_requisition|mrp_recommendation)`/);
+      // The last executed migration is this one, so one step down drops only its columns.
+      await orm.migrator.down();
+      expect(await columnsOf("mrp_recommendation")).toEqual(expect.arrayContaining(["lead_time_days"]));
+      expect(await columnsOf("mrp_recommendation")).not.toContain("accepted_document");
+      expect(await columnsOf("purchase_requisition")).not.toContain("mrp_run");
+      expect(await sql("select name from sqlite_master where name = 'mrp_run_exception'")).toEqual([{ name: "mrp_run_exception" }]);
     } finally {
       await orm.close();
     }

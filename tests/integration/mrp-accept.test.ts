@@ -124,4 +124,22 @@ describe("accepting an MRP proposal in the UI", () => {
     await ola.waitUntil(`location.pathname.endsWith("/purchase-requisitions") && Boolean(${shown("[data-requisition-mrp-run]")})`);
     expect(await ola.evaluate<string>(`${shown("[data-requisition-mrp-run]")}.textContent`)).toBe(`MRP run ${run.id}`);
   }));
+
+  it("shows a late proposal's planned finish under its need date, and accepts it on its need date (#279, MRP-037, spec Q3)", () => withinOneDay(async () => {
+    // A 2-day lead time can't meet tomorrow: that proposal finishes the day after, a day late.
+    await create("/api/tenants/prod/customer-orders", { customer: ids.customer, location: ids.plant, lines: [{ material: ids.sugar, quantity: "5", unit: "kg", requiredDate: day(1) }] });
+    await runAndOpen();
+    expect(await ola.evaluate<string[]>(`[...document.querySelectorAll("[data-mrp-proposals] [data-mrp-need-date]")].filter((el) => el.offsetParent).map((el) => el.textContent)`))
+      .toEqual([day(1), day(4)]);
+    expect(await ola.evaluate<string>(`${shown("[data-mrp-timing=late]")}.textContent`)).toBe(`Late: finishes ${day(2)}`);
+    expect(await ola.evaluate<number>(`[...document.querySelectorAll("[data-mrp-timing]")].filter((el) => el.offsetParent).length`)).toBe(1);
+
+    // The first Accept is the late proposal's, by need date.
+    await ola.click(`[data-mrp-accept]`);
+    await ola.waitUntil(`Boolean(document.querySelector(${JSON.stringify(DIALOG)}))`);
+    expect(await ola.evaluate<string>(`document.querySelector(${JSON.stringify(DIALOG)}).textContent`)).toContain(`5 kg, required by ${day(1)}.`);
+    await ola.clickRole("button", "Create requisition");
+    await ola.waitUntil(`Boolean(${shown("[data-mrp-document]")})`);
+    expect(await requisitionsOf(ids.sugar)).toEqual([expect.objectContaining({ quantity: "5.000000", requiredDate: day(1) })]);
+  }));
 });

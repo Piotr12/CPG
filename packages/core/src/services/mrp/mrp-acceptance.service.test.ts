@@ -230,6 +230,16 @@ describe("MrpAcceptanceService.accept: refusals, with nothing created", () => {
     expect((await plan(sugar)).proposals[0].document).toBeNull();
   });
 
+  it("refuses it as stale when the pair's lead time changed since the run, though its quantity didn't (E16-S02)", async () => {
+    const { material: sugar, runId, proposal } = await buyProposal();
+    expect(proposal).toMatchObject({ plannedFinish: "2026-10-05", beyondHorizon: false });
+    // Sizing ignores the lead time, so the new plan repeats the quantity, finishing on 30 January instead: Beyond Horizon.
+    await sql("update planning_parameter_set set lead_time_days = 120 where material_id = (select id from material where code = ? and tenant_code = 'prod')", [sugar]);
+
+    await expect(accept(runId, proposal.id)).rejects.toMatchObject({ code: "MRP_PROPOSAL_STALE", status: 409, messageParams: { material: sugar, location: PLANT } });
+    expect(await count("purchase_requisition")).toBe(0);
+  });
+
   it("refuses it as stale after another open order line for the pair, or a requisition entered by hand for it (RUN-017)", async () => {
     const { material: sugar, runId, proposal } = await buyProposal();
     // One more kilogram on the need date: the proposal would now be 101.
