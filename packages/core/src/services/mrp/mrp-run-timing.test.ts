@@ -28,6 +28,12 @@ import type { AuditActor } from "../audit/actor";
  * #277 adds Open production orders, each pinning its output's one revision of four components homed
  * at the same site, as a plant stocks what it consumes, and Open transfers from each material's home
  * to a hub, a third of them part-dispatched, with dates before the horizon and over it.
+ *
+ * #278 gives every material a Buy set at its home with the worst-case lot rule for the rows written:
+ * minimum 0 and multiple 0.000001, so each day whose balance falls below its target gets a proposal
+ * of exactly its need. A second measurement adds, for each material at its home, an Open order line of
+ * 1,000 due on every horizon day, which no receipt covers: each day of every material then gets a
+ * proposal, the most recommendations a run can write beside its daily rows.
  */
 const SIZES = [
   {
@@ -80,6 +86,8 @@ function seed({ materials, locations, lines, forecasts, orders, requisitions, fu
     `${seq(2 * materials)} insert into safety_stock_target (id, tenant_code, material_id, location_id, effective_from, quantity, version)
       select 't' || x, 'prod', 'm' || (1 + (x - 1) % ${materials}), ${home(`1 + (x - 1) % ${materials}`)},
         case when x <= ${materials} then '2026-01-01' else '2026-11-26' end, case when x <= ${materials} then '20.000000' else '40.000000' end, 1 from s`,
+    `${seq(materials)} insert into planning_parameter_set (id, tenant_code, material_id, location_id, procurement, lead_time_days, minimum_quantity, lot_multiple, version)
+      select 'pp' || x, 'prod', 'm' || x, ${home("x")}, 'buy', 3, '0.000000', '0.000001', 1 from s`,
     "insert into supplier (id, tenant_code, code, name, created_at) values ('s1', 'prod', '00000001', 'Mill', 0)",
     // Order `x` delivers material `1 + x % materials` to its home; every third plain order, and every full one, is Open.
     `${seq(orders + fullOrders)} insert into purchase_order (id, tenant_code, code, supplier_id, location_id, status, created_at, updated_at)
@@ -146,7 +154,8 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     await orm.close();
   });
 
-  it("stays within its budget, fastest of three, and never keeps the server from reading its sockets for long", async () => {
+  /** The fastest of three runs, and the longest gap between event-loop ticks across them. */
+  async function measure(): Promise<{ fastest: number; longestStall: number }> {
     let fastest = Infinity;
     let longestStall = 0;
     for (let attempt = 0; attempt < RUNS; attempt += 1) {
@@ -164,11 +173,18 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
       await run().finally(() => (running = false));
       fastest = Math.min(fastest, performance.now() - started);
     }
+    return { fastest, longestStall };
+  }
+  const count = async (sql: string) => (await orm.em.getConnection().execute<{ n: number }[]>(sql))[0].n;
+
+  it("stays within its budget, fastest of three, and never keeps the server from reading its sockets for long", async () => {
+    const { fastest, longestStall } = await measure();
     const [{ n: rows }] = await orm.em.getConnection().execute<{ n: number }[]>("select count(*) as n from mrp_daily_result");
     const [{ pairs }] = await orm.em.getConnection().execute<{ pairs: number }[]>("select pairs from mrp_run order by code desc limit 1");
+    const proposals = await count("select count(*) as n from mrp_recommendation");
     const engine = await engineOnly();
     process.stdout.write(
-      `MRP run, ${size.name} (${pairs} pairs, ${rows} daily rows, ${size.lines} order lines, ${size.forecasts} forecasts, ` +
+      `MRP run, ${size.name} (${pairs} pairs, ${rows} daily rows, ${proposals} recommendations, ${size.lines} order lines, ${size.forecasts} forecasts, ` +
         `${size.orders + size.fullOrders} purchase orders with ${size.orders * ORDER_LINES + size.fullOrders * FULL_ORDER_LINES} lines, ${size.requisitions} requisitions, ` +
         `${size.productionOrders} production orders, ${size.transfers} transfers): ` +
         `${fastest.toFixed(0)} ms fastest of ${RUNS}, longest event-loop stall ${longestStall.toFixed(0)} ms, planMrp alone ${engine.toFixed(0)} ms\n`,
@@ -182,6 +198,8 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     expect(pairs).toBeGreaterThan(size.materials);
     expect(pairs).toBeLessThanOrEqual(size.materials + Math.min(size.transfers, size.materials));
     expect(rows).toBe(pairs * 90);
+    // Where demand outruns the stock and receipts, the run proposes (#278).
+    expect(proposals).toBeGreaterThan(0);
     // The run counted the pipeline it read: some days carry tentative and dependable supply, dependent demand and transfers.
     const supplied = await orm.em
       .getConnection()
@@ -193,6 +211,28 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     expect(supplied[0].dependable).toBeGreaterThan(0);
     expect(supplied[0].dependent).toBeGreaterThan(0);
     expect(supplied[0].transfers).toBeGreaterThan(0);
+    expect(fastest).toBeLessThan(CI_FACTOR * size.budgetMs);
+    expect(longestStall).toBeLessThan(CI_FACTOR * STALL_BUDGET_MS);
+  }, testTimeout);
+
+  it("writes a recommendation for every day of every material in the worst case, and still stays within its budget (#278)", async () => {
+    const execute = (sql: string) => orm.em.getConnection().execute(sql);
+    const days = 90;
+    await execute(`${seq(size.materials)} insert into customer_order (id, tenant_code, code, customer_id, location_id, status, created_at, updated_at)
+      select 'wo' || x, 'prod', printf('%08d', ${size.lines} + x), 'k1', 'l' || (1 + x % ${size.locations}), 'open', 0, 0 from s`);
+    await execute(`${seq(size.materials * days)} insert into customer_order_line (id, tenant_code, order_id, position, material_id, quantity, entered_quantity, entered_unit, numerator, denominator, required_date, fulfilled, status)
+      select 'wl' || x, 'prod', 'wo' || o, 1 + (x - 1) % ${days}, 'm' || o, '1000.000000', '1000', 'each', '1', '1', date('2026-10-27', '+' || ((x - 1) % ${days}) || ' days'), '0.000000', 'open'
+      from (select x, 1 + (x - 1) / ${days} as o from s)`);
+    const { fastest, longestStall } = await measure();
+    const rows = await count("select count(*) as n from mrp_daily_result");
+    const proposals = await count("select count(*) as n from mrp_recommendation");
+    process.stdout.write(
+      `MRP run, worst case for proposals, ${size.name} (${rows} daily rows, ${proposals} recommendations, ${size.lines + size.materials * days} order lines): ` +
+        `${fastest.toFixed(0)} ms fastest of ${RUNS}, longest event-loop stall ${longestStall.toFixed(0)} ms\n`,
+    );
+    // Every day but, for some materials, today: overdue purchase-order lines all land today and can cover it.
+    expect(proposals).toBeGreaterThanOrEqual(size.materials * (days - 1));
+    expect(proposals).toBeLessThanOrEqual(size.materials * days);
     expect(fastest).toBeLessThan(CI_FACTOR * size.budgetMs);
     expect(longestStall).toBeLessThan(CI_FACTOR * STALL_BUDGET_MS);
   }, testTimeout);
