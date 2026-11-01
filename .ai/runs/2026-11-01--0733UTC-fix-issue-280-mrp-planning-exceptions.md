@@ -3,7 +3,7 @@
 **Date:** 2026-11-01 07:33 UTC
 **Agent:** Claude Code (cezar, headless) / claude-opus-5-5
 **Spec:** `.ai/specs/2026-11-01--0737UTC-mrp-planning-exceptions.md`
-**Status:** in progress
+**Status:** done
 
 ## Goal
 
@@ -33,6 +33,13 @@ Take #280 end to end with `om-auto-fix-issue`. It is a `feature` issue, so the r
   - **Medium:** the BOM revision read's expected plan is pinned, and a fallback named.
   - **Low:** dates join the readability check, which runs after each seam's cut-off. BOM lines are corrupted by insert, because of `noUpdateTriggers`. Invalid UoM names its record and document (Q8). The isolation fixtures must not cross materials. The spec reuses `MrpPair` and moves the raw-Make guard.
 - 07:47 Deleted the active copy of #278's spec, which was also in `implemented/`. That made `tests/ai-filenames.test.ts` fail on `main`, and #278's run log names it as a follow-up. `npx vitest run tests/ai-filenames.test.ts tests/spec-images.test.ts`: 2 files, 7 tests passed.
+- 07:47 Opened the spec PR #314 (`review`, `documentation`, `skip-qa`, `priority-medium`, `risk-low`; `Refs #280`, with no closing keyword). Posted the assumptions table on #314 and #280, the label rationale and a run summary. Handed the issue lock to `om-auto-implement-spec`, which builds on its own implementation PR, branched from `main`. Its execution plan, `.ai/pipeline/runs/2026-11-01--0748UTC-mrp-planning-exceptions.md`, is that run's log.
+- 08:32 #316 is ready:
+  - gate green: 100% coverage over 5,055 tests, plus lint, typecheck and build;
+  - the five MRP integration files pass on a standalone build;
+  - a fresh-context code review approved, and its fixes are in;
+  - the known limits are filed as #321;
+  - the issue lock is released.
 
 ## Changes
 
@@ -45,3 +52,7 @@ Take #280 end to end with `om-auto-fix-issue`. It is a `feature` issue, so the r
 - `npx vitest run tests/ai-filenames.test.ts tests/spec-images.test.ts`: 2 files, 7 tests passed.
 
 ## Follow-ups
+
+- Merge #314 before #316. Then merge `main` into #316 and delete the spec's active copy (`tests/ai-filenames.test.ts` enforces it).
+- #316 still needs CI's full integration suite and a human QA pass of the API output (`needs-qa`).
+- #321: corrupt dates the SQL-ranged forecast and target reads skip, and the scaling of the BOM revision read.
