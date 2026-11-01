@@ -43,6 +43,8 @@ export interface MrpPlan {
   productionOutput: readonly MrpProductionOutput[];
   /** The production orders' component needs behind the buckets' dependent demand (#277). */
   componentDemand: readonly MrpComponentDemand[];
+  /** The Make proposals' component needs behind the rest of the buckets' dependent demand (E17-S01). */
+  plannedComponentDemand: readonly MrpPlannedComponentDemand[];
   /** The transfers behind the buckets' transfer dispatch, at this source (#277). */
   transfersOut: readonly MrpTransferMovement[];
   /** The transfers behind the buckets' transfer receipt, at this destination (#277). */
@@ -160,6 +162,26 @@ export interface MrpComponentDemand {
 }
 
 /**
+ * What one Make proposal of `parent` at `location` needs of one component (E17-S01, PRD §04 "Multilevel
+ * explosion"): the proposal's quantity times the line's per-output quantity, rounded upward once (R03,
+ * BOM-007), on the proposal's planned start, at the same location.
+ */
+export interface MrpPlannedComponentDemand {
+  /** The proposal's material. */
+  parent: string;
+  /** The proposal's need date: one proposal per parent pair and need date. */
+  parentNeedDate: string;
+  /** The BOM and current revision the proposal was exploded through. */
+  bom: string;
+  bomRevision: number;
+  material: string;
+  location: string;
+  /** The bucket it counts in: the proposal's planned start, never before today. */
+  date: string;
+  quantity: bigint;
+}
+
+/**
  * One leg of an open transfer at one site (#277): stock in transit arriving at the destination, or the
  * source-feasible part of the undispatched quantity leaving the source and arriving at the destination.
  */
@@ -234,8 +256,20 @@ export interface MrpMissingBom {
   date: string;
 }
 
+/**
+ * The material is on a cycle of active BOMs in stored data (E17-S01, R04, MRP-028): its Make pair at
+ * `location` gets no proposal, so nothing on the cycle is exploded. `path` is a shortest cycle through
+ * the material, in the BOM service's notation without descriptions: `M1 →(BOM B1) M2 →(BOM B2) M1`.
+ */
+export interface MrpBomCycle {
+  code: "CYCLIC_BOM";
+  material: string;
+  location: string;
+  path: string;
+}
+
 /** An MRP exception: `exceptions/codes.ts` lists the codes, their messages and their rank. */
-export type MrpException = MrpInvalidUomConversion | MrpMissingPlanningParameters | MrpMissingBom | MrpInsufficientTransferStock;
+export type MrpException = MrpInvalidUomConversion | MrpMissingPlanningParameters | MrpMissingBom | MrpBomCycle | MrpInsufficientTransferStock;
 
 /** The document behind an overdue supply item: what `MrpSupply` or `MrpProductionOutput` counts. */
 export type MrpOverdueSource = "purchase-order" | "requisition" | "production-order";
@@ -280,10 +314,10 @@ export type MrpWarning = MrpOverdueSupply | MrpOverdueTransfer;
 
 /**
  * What an uncovered requirement is, in the order MRP serves them on a day (PRD §04 "Overdue demand and
- * priority", E16-S02): open documents' needs first, then customer orders, then the forecast residual,
- * then the safety-stock target.
+ * priority", E16-S02): open documents' needs first, then customer orders beside Make proposals'
+ * components (E17-S01, #281 spec Q9), then the forecast residual, then the safety-stock target.
  */
-export const MRP_SHORTAGE_KINDS = ["component", "transfer", "customer-order", "forecast", "safety-target"] as const;
+export const MRP_SHORTAGE_KINDS = ["component", "transfer", "customer-order", "planned-component", "forecast", "safety-target"] as const;
 export type MrpShortageKind = (typeof MRP_SHORTAGE_KINDS)[number];
 
 /** One requirement that stock, existing supply and the proposals received by its day can't cover on that day (E16-S02). */
@@ -293,10 +327,14 @@ export interface MrpShortage {
   date: string;
   /**
    * Its priority date: the order line's required date, the forecast's own date, the production order's
-   * start or the transfer's planned dispatch, kept when it counts today; the day itself for the target.
+   * start or the transfer's planned dispatch, kept when it counts today; a planned component's parent
+   * start; the day itself for the target.
    */
   originalDate: string;
-  /** The customer order's, production order's or transfer's business ID; `null` for a forecast and the target. */
+  /**
+   * The customer order's, production order's or transfer's business ID, or a planned component's parent
+   * material; `null` for a forecast and the target.
+   */
   document: string | null;
   /** The order line's position; `null` for every other kind. */
   position: number | null;
@@ -310,8 +348,11 @@ export interface MrpShortage {
 export const MRP_PROPOSAL_KINDS = ["purchase-requisition", "production-order"] as const;
 export type MrpProposalKind = (typeof MRP_PROPOSAL_KINDS)[number];
 
-/** A proposed receipt (E16-S01), sized by `sizing/size-proposals.ts` and timed by `sizing/schedule-proposal.ts` (E16-S02). */
-export interface MrpProposal extends MrpProposalTiming {
+/**
+ * A proposed receipt (E16-S01), sized by `sizing/size-proposals.ts`, timed by `sizing/schedule-proposal.ts`
+ * (E16-S02) and, when it is a production order, exploded by `explosion/explode-proposal.ts` (E17-S01).
+ */
+export interface MrpProposal extends MrpProposalTiming, MrpProposalRecipe {
   kind: MrpProposalKind;
   material: string;
   location: string;
@@ -321,6 +362,14 @@ export interface MrpProposal extends MrpProposalTiming {
   quantity: bigint;
   /** The pair's lead time in whole calendar days (N04, MAT-018). */
   leadTimeDays: number;
+}
+
+/** The recipe a proposal is exploded through (E17-S01, MRP-031): both `null` for a requisition. */
+export interface MrpProposalRecipe {
+  /** The BOM's business ID. */
+  bom: string | null;
+  /** Its current revision's number. */
+  bomRevision: number | null;
 }
 
 /**

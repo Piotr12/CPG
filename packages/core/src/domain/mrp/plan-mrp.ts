@@ -8,6 +8,7 @@ import type {
   MrpFirmDemand,
   MrpForecastDemand,
   MrpPlan,
+  MrpPlannedComponentDemand,
   MrpProductionOutput,
   MrpProposal,
   MrpResult,
@@ -21,6 +22,8 @@ import { rankShortages } from "./priority/rank-shortages";
 import { productionMovements } from "./supply/production-orders";
 import { purchasingSupply } from "./supply/purchasing-supply";
 import { compareExceptions } from "./exceptions/compare-exceptions";
+import { bomLevels } from "./explosion/bom-levels";
+import { explodeProposal } from "./explosion/explode-proposal";
 import { replenishPair } from "./sizing/replenish-pair";
 import { planTransfers } from "./supply/transfers";
 import { compareWarnings, overdueWarnings } from "./warnings/overdue";
@@ -33,6 +36,7 @@ interface PairDraft extends MrpLedger {
   supply: MrpSupply[];
   productionOutput: MrpProductionOutput[];
   componentDemand: MrpComponentDemand[];
+  plannedComponentDemand: MrpPlannedComponentDemand[];
   transfersOut: MrpTransferMovement[];
   transfersIn: MrpTransferMovement[];
 }
@@ -60,18 +64,32 @@ interface PairDraft extends MrpLedger {
  * days before its stock arrives keep their shortage. Last, every pair's uncovered requirements are
  * ranked on its balance after proposals (`rankShortages`), and every overdue supply item of a readable
  * material becomes a warning (E18-S02), which stops nothing.
+ *
+ * Pairs are sized level by level (E17-S01, PRD §04 "Multilevel explosion"): by their material's low-level
+ * code (`bomLevels`), then material and location. Each production-order proposal is exploded through its
+ * BOM (`explodeProposal`) into its components' dependent demand on its planned start, at its location,
+ * before any component is sized, so a component nets the needs of every parent and open production order
+ * once, in its one projection (MRP-020, MRP-029). It comes after `planTransfers`, so a proposal never cuts
+ * an open transfer (#277's later-seams rule). A material on a cycle of BOMs gets BOM Cycle on its Make
+ * pairs and never explodes, so the levels terminate (MRP-028). Plans and proposals keep their order.
  */
 export function planMrp(inputs: MrpInputs, today: string): MrpResult {
   const dates = horizonDates(today);
   const dayOf = new Map(dates.map((date, day) => [date, day]));
+  const { levelOf, cycles } = bomLevels(inputs.boms);
+  let lastLevel = 0;
+  for (const level of levelOf.values()) if (level > lastLevel) lastLevel = level;
+  /** Every pair, under its material's level, as `pairOf` creates it: a material without BOM edges is level 0. */
+  const byLevel: PairDraft[][] = Array.from({ length: lastLevel + 1 }, () => []);
   const pairs = new Map<string, PairDraft>();
   const pairOf = (material: string, location: string): PairDraft => {
     const key = pairKey(material, location);
     let pair = pairs.get(key);
     if (!pair) {
-      const lists = { firmDemand: [], forecastDemand: [], supply: [], productionOutput: [], componentDemand: [], transfersOut: [], transfersIn: [] };
+      const lists = { firmDemand: [], forecastDemand: [], supply: [], productionOutput: [], componentDemand: [], plannedComponentDemand: [], transfersOut: [], transfersIn: [] };
       pair = { material, location, physical: 0n, flows: dates.map(emptyFlows), ...lists };
       pairs.set(key, pair);
+      byLevel[levelOf.get(material) ?? 0].push(pair);
     }
     return pair;
   };
@@ -128,20 +146,43 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
   // A transfer's shortfall is measured on balances an unreadable row left incomplete, so for such a
   // material only Invalid UoM Conversion is reported: no figure from the incomplete data (#316 review).
   const exceptions: MrpException[] = transfers.exceptions.filter(({ material }) => !unreadable.has(material));
-  const plans = [...pairs.values()].sort(comparePairs).map(({ flows, ...plan }): MrpPlan => {
-    const key = pairKey(plan.material, plan.location);
-    const replenished = replenishPair(
-      { ...plan, buckets: projectBuckets(plan.physical, flows) },
-      { unreadable: unreadable.get(plan.material), parameters: parametersOf.get(key), invalidSet: invalidSets.has(key), boms: bomsOf.get(plan.material) ?? [], today },
-    );
-    for (const proposal of replenished.proposals) {
-      if (!proposal.beyondHorizon) flows[dayOf.get(proposal.plannedFinish)!].proposedReceipts += proposal.quantity;
+  const plans: MrpPlan[] = [];
+  // A component's level is above every parent's, so a level's explosions only add to later levels.
+  for (const level of byLevel) {
+    for (const { flows, ...plan } of level.sort(comparePairs)) {
+      const key = pairKey(plan.material, plan.location);
+      const replenished = replenishPair(
+        { ...plan, buckets: projectBuckets(plan.physical, flows) },
+        {
+          unreadable: unreadable.get(plan.material),
+          parameters: parametersOf.get(key),
+          invalidSet: invalidSets.has(key),
+          boms: bomsOf.get(plan.material) ?? [],
+          today,
+          cycle: cycles.get(plan.material),
+        },
+      );
+      for (const proposal of replenished.proposals) {
+        if (!proposal.beyondHorizon) flows[dayOf.get(proposal.plannedFinish)!].proposedReceipts += proposal.quantity;
+        if (proposal.kind === "purchase-requisition") {
+          proposals.push({ ...proposal, bom: null, bomRevision: null });
+          continue;
+        }
+        const { bom, bomRevision, components } = explodeProposal(proposal, bomsOf.get(plan.material)!);
+        proposals.push({ ...proposal, bom, bomRevision });
+        for (const item of components) {
+          const component = pairOf(item.material, item.location);
+          component.flows[dayOf.get(item.date)!].dependentDemand += item.quantity;
+          component.plannedComponentDemand.push(item);
+        }
+      }
+      if (replenished.exception) exceptions.push(replenished.exception);
+      const buckets = projectBuckets(plan.physical, flows);
+      plans.push({ ...plan, buckets, shortages: rankShortages({ ...plan, buckets }) });
     }
-    proposals.push(...replenished.proposals);
-    if (replenished.exception) exceptions.push(replenished.exception);
-    const buckets = projectBuckets(plan.physical, flows);
-    return { ...plan, buckets, shortages: rankShortages({ ...plan, buckets }) };
-  });
+  }
+  plans.sort(comparePairs);
+  proposals.sort((a, b) => comparePairs(a, b) || compareCodes(a.needDate, b.needDate));
   // Like Insufficient Transfer Stock, no warning for a material whose balances an unreadable row left incomplete (#316).
   const warnings = plans.filter(({ material }) => !unreadable.has(material)).flatMap(overdueWarnings).sort(compareWarnings);
   return { today, dates, plans, proposals, exceptions: exceptions.sort(compareExceptions), warnings };

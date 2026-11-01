@@ -14,7 +14,7 @@ const arrival = (overrides: Partial<MrpOverdueTransfer>): MrpOverdueTransfer => 
 });
 
 describe("overdueWarnings", () => {
-  const empty = { physical: 0n, buckets: [], firmDemand: [], forecastDemand: [], componentDemand: [], transfersOut: [], shortages: [] };
+  const empty = { physical: 0n, buckets: [], firmDemand: [], forecastDemand: [], componentDemand: [], plannedComponentDemand: [], transfersOut: [], shortages: [] };
 
   it("warns of every overdue purchase-order line, requisition, production output and arrival of the pair, and of nothing on time", () => {
     const plan: MrpPlan = {

@@ -210,15 +210,15 @@ export class MrpRunService {
       { run, material: { $in: materials }, ...(location !== undefined && { location }) },
       {
         orderBy: { material: "asc", location: "asc", needDate: "asc" },
-        fields: ["id", "material", "location", "kind", "needDate", "quantity", "leadTimeDays", "acceptedDocument"],
+        fields: ["id", "material", "location", "kind", "needDate", "quantity", "leadTimeDays", "acceptedDocument", "bom", "bomRevision"],
         disableIdentityMap: true,
       },
     );
-    for (const { id, material, location: site, kind, needDate, quantity, leadTimeDays, acceptedDocument } of rows) {
+    for (const { id, material, location: site, kind, needDate, quantity, leadTimeDays, acceptedDocument, bom, bomRevision } of rows) {
       // The engine's own timing rule, from the run's first day (E16-S02): one rule for the plan and its read.
       byPair.get(pairKey(material, site))?.push({
         id, kind, needDate, quantity, ...scheduleProposal(needDate, leadTimeDays, run.startDate, run.horizonDays),
-        executable: isExecutableProposal(kind), document: acceptedDocument ?? null,
+        executable: isExecutableProposal(kind), document: acceptedDocument ?? null, bom: bom ?? null, bomRevision: bomRevision ?? null,
       });
     }
     return byPair;
@@ -283,8 +283,8 @@ export class MrpRunService {
         await created();
       }
     }
-    for (const { kind, material, location, needDate, quantity, leadTimeDays } of proposals) {
-      this.em.create(MrpRecommendation, { run, material, location, kind, needDate, quantity: formatDecimal(quantity, { fixed: true }), leadTimeDays });
+    for (const { kind, material, location, needDate, quantity, leadTimeDays, bom, bomRevision } of proposals) {
+      this.em.create(MrpRecommendation, { run, material, location, kind, needDate, quantity: formatDecimal(quantity, { fixed: true }), leadTimeDays, bom, bomRevision });
       await created();
     }
     for (const [position, exception] of exceptions.entries()) {

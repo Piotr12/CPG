@@ -34,6 +34,11 @@ import type { AuditActor } from "../audit/actor";
  * of exactly its need. A second measurement adds, for each material at its home, an Open order line of
  * 1,000 due on every horizon day, which no receipt covers: each day of every material then gets a
  * proposal, the most recommendations a run can write beside its daily rows.
+ *
+ * #281 explodes Make proposals level by level. The materials are split in thirds: the top third is Make
+ * at home with an active BOM of four components from the middle third, the middle third is Make too with
+ * BOMs from the bottom third, and the bottom third is Buy, its BOMs inactive (production orders still pin
+ * them). Every component is homed at its parent's site, so the run has two exploding levels and no new pair.
  */
 const SIZES = [
   {
@@ -69,6 +74,8 @@ const code = "printf('%08d', x)";
 const spread = (step: number) => `date('2025-10-27', '+' || (x * ${step} % 730) || ' days')`;
 
 function seed({ materials, locations, lines, forecasts, orders, requisitions, fullOrders, productionOrders, transfers }: (typeof SIZES)[number]): string[] {
+  /** A third of the materials: the levels of #281's BOMs. */
+  const third = materials / 3;
   /** Material `n` lives at location `1 + n % locations`. */
   const home = (material: string) => `'l' || (1 + (${material}) % ${locations})`;
   return [
@@ -87,7 +94,7 @@ function seed({ materials, locations, lines, forecasts, orders, requisitions, fu
       select 't' || x, 'prod', 'm' || (1 + (x - 1) % ${materials}), ${home(`1 + (x - 1) % ${materials}`)},
         case when x <= ${materials} then '2026-01-01' else '2026-11-26' end, case when x <= ${materials} then '20.000000' else '40.000000' end, 1 from s`,
     `${seq(materials)} insert into planning_parameter_set (id, tenant_code, material_id, location_id, procurement, lead_time_days, minimum_quantity, lot_multiple, version)
-      select 'pp' || x, 'prod', 'm' || x, ${home("x")}, 'buy', 3, '0.000000', '0.000001', 1 from s`,
+      select 'pp' || x, 'prod', 'm' || x, ${home("x")}, case when x <= ${2 * third} then 'make' else 'buy' end, 3, '0.000000', '0.000001', 1 from s`,
     "insert into supplier (id, tenant_code, code, name, created_at) values ('s1', 'prod', '00000001', 'Mill', 0)",
     // Order `x` delivers material `1 + x % materials` to its home; every third plain order, and every full one, is Open.
     `${seq(orders + fullOrders)} insert into purchase_order (id, tenant_code, code, supplier_id, location_id, status, created_at, updated_at)
@@ -103,12 +110,16 @@ function seed({ materials, locations, lines, forecasts, orders, requisitions, fu
     `${seq(requisitions)} insert into purchase_requisition (id, tenant_code, code, material_id, location_id, quantity, entered_quantity, entered_unit, numerator, denominator, required_date, converted, status, created_at)
       select 'r' || x, 'prod', ${code}, 'm' || (1 + x % ${materials}), ${home(`1 + x % ${materials}`)}, '10.000000', '10', 'each', '1', '1', ${spread(5)},
         case when x % 2 = 0 then '0.000000' else '10.000000' end, case when x % 2 = 0 then 'open' else 'completed' end, 0 from s`,
-    `${seq(materials)} insert into bom (id, tenant_code, code, output_id, active, revision, created_at, version) select 'bom' || x, 'prod', ${code}, 'm' || x, 1, 1, 0, 1 from s`,
+    `${seq(materials)} insert into bom (id, tenant_code, code, output_id, active, revision, created_at, version)
+      select 'bom' || x, 'prod', ${code}, 'm' || x, x <= ${2 * third}, 1, 0, 1 from s`,
     `${seq(materials)} insert into bom_revision (id, tenant_code, bom_id, number, priority, valid_from, created_at) select 'rev' || x, 'prod', 'bom' || x, 1, 1, '2026-01-01', 0 from s`,
+    // Parent `p` of third `k` takes components of the next third (the bottom third its own), each a multiple
+    // of `locations` along so it shares the parent's home; the third is a multiple of `locations`.
     `${seq(materials * COMPONENTS)} insert into bom_component (id, tenant_code, revision_id, position, material_id, quantity, entered_quantity, entered_unit, numerator, denominator)
-      select 'bc' || x, 'prod', 'rev' || (1 + (x - 1) / ${COMPONENTS}), 1 + (x - 1) % ${COMPONENTS},
-        'm' || (1 + ((x - 1) / ${COMPONENTS} + (1 + (x - 1) % ${COMPONENTS}) * ${locations}) % ${materials}),
-        '0.250000', '0.25', 'each', '1', '1' from s`,
+      select 'bc' || x, 'prod', 'rev' || p, 1 + c,
+        'm' || (min(k + 1, 2) * ${third} + 1 + ((p - 1 - k * ${third}) + (c + (k = 2)) * ${locations}) % ${third}),
+        '0.250000', '0.25', 'each', '1', '1'
+      from (select x, p, c, (p - 1) / ${third} as k from (select x, 1 + (x - 1) / ${COMPONENTS} as p, (x - 1) % ${COMPONENTS} as c from s))`,
     `${seq(productionOrders)} insert into production_order (id, tenant_code, code, output_id, location_id, recipe_id, quantity, entered_quantity, entered_unit, numerator, denominator,
         planned_start, planned_finish, lead_time_days, produced, abandoned, status, created_at, updated_at, version)
       select 'mo' || x, 'prod', ${code}, 'm' || (1 + x % ${materials}), ${home(`1 + x % ${materials}`)}, 'rev' || (1 + x % ${materials}), '100.000000', '100', 'each', '1', '1',
@@ -189,9 +200,12 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     const [{ pairs }] = await orm.em.getConnection().execute<{ pairs: number }[]>("select pairs from mrp_run order by code desc limit 1");
     const proposals = await count("select count(*) as n from mrp_recommendation");
     const exceptions = await count("select count(*) as n from mrp_run_exception");
+    const made = await count("select count(*) as n from mrp_recommendation where kind = 'production-order'");
+    const lines = await count("select count(*) as n from bom_component c join bom_revision r on r.id = c.revision_id join bom b on b.id = r.bom_id where b.active = 1");
     const engine = await engineOnly();
     process.stdout.write(
-      `MRP run, ${size.name} (${pairs} pairs, ${rows} daily rows, ${proposals} recommendations, ${exceptions} exception and warning rows, ${size.lines} order lines, ${size.forecasts} forecasts, ` +
+      `MRP run, ${size.name} (${pairs} pairs, ${rows} daily rows, ${proposals} recommendations of which ${made} exploded, ${exceptions} exception and warning rows, ${lines} active BOM lines, ` +
+        `${size.lines} order lines, ${size.forecasts} forecasts, ` +
         `${size.orders + size.fullOrders} purchase orders with ${size.orders * ORDER_LINES + size.fullOrders * FULL_ORDER_LINES} lines, ${size.requisitions} requisitions, ` +
         `${size.productionOrders} production orders, ${size.transfers} transfers): ` +
         `${fastest.toFixed(0)} ms fastest of ${RUNS}, longest event-loop stall ${longestStall.toFixed(0)} ms, planMrp alone ${engine.toFixed(0)} ms\n`,
@@ -205,8 +219,14 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     expect(pairs).toBeGreaterThan(size.materials);
     expect(pairs).toBeLessThanOrEqual(size.materials + Math.min(size.transfers, size.materials));
     expect(rows).toBe(pairs * 90);
-    // Where demand outruns the stock and receipts, the run proposes (#278).
+    // Where demand outruns the stock and receipts, the run proposes (#278), and explodes its Make proposals (#281).
     expect(proposals).toBeGreaterThan(0);
+    expect(made).toBeGreaterThan(0);
+    // The fixture's BOMs are acyclic and valid and every component has its parameters: only transfers fall short (#277).
+    // The table also holds the run's overdue warnings (E18-S02), which are not exceptions.
+    expect(
+      await count("select count(*) as n from mrp_run_exception where exception_code not in ('INSUFFICIENT_TRANSFER_STOCK', 'OVERDUE_SUPPLY', 'OVERDUE_TRANSFER')"),
+    ).toBe(0);
     // The run counted the pipeline it read: some days carry tentative and dependable supply, dependent demand and transfers.
     const supplied = await orm.em
       .getConnection()

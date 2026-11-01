@@ -31,6 +31,7 @@ describe("compareExceptions", () => {
       { code: "MISSING_PLANNING_PARAMETERS", material: "M1", location: "L2", date: "2026-10-02", reason: "no-set" },
       { code: "MISSING_PLANNING_PARAMETERS", material: "M1", location: "L2", date: "2026-10-04", reason: "no-set" },
       { code: "MISSING_BOM", material: "M1", location: "L2", date: "2026-10-01" },
+      { code: "CYCLIC_BOM", material: "M1", location: "L2", path: "M1 →(BOM 00000001) M1" },
       { code: "INVALID_UOM_CONVERSION", material: "M2", location: "L0", record: "transfer", document: "00000001" },
     ];
     expect([...ordered].reverse().sort(compareExceptions)).toEqual(ordered);

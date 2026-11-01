@@ -7,7 +7,7 @@ import { MrpProposals } from "./mrp-proposals";
 
 const RUN = { id: "00000004", startDate: "2026-10-01" };
 const buy = (overrides: Partial<MrpProposalView> = {}): MrpProposalView => ({
-  id: "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b", kind: "purchase-requisition", needDate: "2026-10-05", quantity: "100.000000", plannedStart: "2026-10-03", plannedFinish: "2026-10-05", lateDays: 0, beyondHorizon: false, executable: true, document: null, ...overrides,
+  id: "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b", kind: "purchase-requisition", needDate: "2026-10-05", quantity: "100.000000", plannedStart: "2026-10-03", plannedFinish: "2026-10-05", lateDays: 0, beyondHorizon: false, executable: true, document: null, bom: null, bomRevision: null, ...overrides,
 });
 const plan = (proposals: MrpProposalView[]): MrpPlanView => ({
   material: "00000031", materialDescription: "Sugar", materialActive: true, baseUnit: "kg",
@@ -164,5 +164,14 @@ describe("MrpProposals", () => {
     const values = (value: unknown): unknown[] => (value && typeof value === "object" ? Object.values(value).flatMap(values) : [value]);
     expect(values(en.mrp.proposals).every((value) => typeof value === "string")).toBe(true);
     expect(values(pl.mrp.proposals).every((value) => typeof value === "string")).toBe(true);
+  });
+
+  it("names the BOM and revision a production-order proposal plans through, in EN and PL, and none for a requisition or a row without one (E17-S01, MRP-031)", () => {
+    const make = buy({ id: "m", kind: "production-order", executable: false, bom: "00000004", bomRevision: 2 });
+    renderProposals([make, buy({ id: "b" }), buy({ id: "o", kind: "production-order", executable: false })]);
+    expect([...document.querySelectorAll("[data-mrp-proposal-bom]")].map((line) => line.textContent)).toEqual(["BOM 00000004 / revision 2"]);
+    expect(table().getAllByRole("row")[1].textContent).toContain("Production orderBOM 00000004 / revision 2");
+    renderProposals([make], { locale: "pl" });
+    expect(document.querySelectorAll("[data-mrp-proposal-bom]")[1].textContent).toBe("BOM 00000004 / rewizja 2");
   });
 });

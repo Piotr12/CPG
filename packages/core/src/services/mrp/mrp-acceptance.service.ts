@@ -113,7 +113,8 @@ export class MrpAcceptanceService {
       proposal: {
         id: proposal.id, run: run.code, material, location, kind, needDate, quantity,
         ...timing,
-        executable: true, document: document.id,
+        // Only a requisition can be accepted, and it is exploded through no BOM.
+        executable: true, document: document.id, bom: null, bomRevision: null,
       },
       document,
     };

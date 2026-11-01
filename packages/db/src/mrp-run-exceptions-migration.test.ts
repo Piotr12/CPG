@@ -41,6 +41,7 @@ describe("MRP run exceptions migration (#280)", () => {
       });
       expect(await sql("select id from mrp_run_exception order by id")).toEqual([{ id: "e2" }, { id: "e3" }]);
 
+      await orm.migrator.down(); // #281's BOM columns come off first.
       await orm.migrator.down();
       expect(await tables()).toEqual(["mrp_daily_result", "mrp_recommendation", "mrp_run"]);
       expect(await sql("select id from mrp_run")).toEqual([{ id: "r2" }]);

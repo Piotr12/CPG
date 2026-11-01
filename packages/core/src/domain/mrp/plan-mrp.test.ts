@@ -71,6 +71,18 @@ const transfer = (overrides: Partial<MrpTransfer> & { quantity: bigint; plannedD
   status: "open",
   ...overrides,
 });
+/** The open-ended current revision 1 of BOM `bom` making `output`, priority 1, from `components` (code → per-output text). */
+const recipe = (output: string, components: Record<string, string> = {}, overrides: Partial<MrpBom> = {}): MrpBom => ({
+  bom: "00000001",
+  revision: 1,
+  priority: 1,
+  output,
+  validFrom: "2026-01-01",
+  validThrough: null,
+  componentsActive: true,
+  components: Object.entries(components).map(([material, perOutput]) => ({ material, perOutput: q(perOutput) })),
+  ...overrides,
+});
 /** The plan of `material` at `location` among `plans`. */
 const planAt = (plans: readonly MrpPlan[], material: string, location = "L1") => plans.find((plan) => plan.material === material && plan.location === location)!;
 
@@ -1233,7 +1245,7 @@ describe("planMrp: replenishment proposals (#278)", () => {
     ...overrides,
   });
   /** An open-ended current revision of M1's BOM, so a Make set may propose (E16-S03). */
-  const BOM: MrpBom = { output: "M1", validFrom: "2026-01-01", validThrough: null };
+  const BOM = recipe("M1");
   const target = (quantity: string, location = "L1"): MrpSafetyTarget => ({ material: "M1", location, effectiveFrom: TODAY, quantity: q(quantity) });
   const sized = (stockOf: string, need: string, overrides: Partial<MrpPlanningParameters>) =>
     planMrp(inputs({ stock: [stock("M1", "L1", stockOf)], orderLines: [line({ quantity: q(need), requiredDate: DAY })], planningParameters: [set(overrides)] }), TODAY);
@@ -1251,8 +1263,8 @@ describe("planMrp: replenishment proposals (#278)", () => {
       TODAY,
     );
     expect(result.proposals).toEqual([
-      { kind: "purchase-requisition", material: "M1", location: "L1", needDate: DAY, quantity: q("10"), leadTimeDays: 3, ...onTime },
-      { kind: "production-order", material: "M1", location: "L2", needDate: DAY, quantity: q("3"), leadTimeDays: 3, ...onTime },
+      { kind: "purchase-requisition", material: "M1", location: "L1", needDate: DAY, quantity: q("10"), leadTimeDays: 3, ...onTime, bom: null, bomRevision: null },
+      { kind: "production-order", material: "M1", location: "L2", needDate: DAY, quantity: q("3"), leadTimeDays: 3, ...onTime, bom: "00000001", bomRevision: 1 },
     ]);
     expect(bucketOf(planAt(result.plans, "M1", "L1"), DAY)).toMatchObject({ proposedReceipts: q("10"), projectedBefore: -q("3"), projectedAfter: q("7") });
     expect(bucketOf(planAt(result.plans, "M1", "L2"), DAY)).toMatchObject({ proposedReceipts: q("3"), projectedAfter: 0n });
@@ -1427,7 +1439,8 @@ describe("planMrp: proposal timing (#279)", () => {
   it("MRP-037: a need on day 3 with a lead time of 7 starts today, finishes on day 7, is 4 days late, and keeps its need on day 3", () => {
     const result = planned([line({ quantity: q("5"), requiredDate: day(3) })], set(7));
     expect(result.proposals).toEqual([
-      { kind: "purchase-requisition", material: "M1", location: "L1", needDate: day(3), quantity: q("5"), leadTimeDays: 7, plannedStart: TODAY, plannedFinish: day(7), lateDays: 4, beyondHorizon: false },
+      { kind: "purchase-requisition", material: "M1", location: "L1", needDate: day(3), quantity: q("5"), leadTimeDays: 7, plannedStart: TODAY, plannedFinish: day(7), lateDays: 4, beyondHorizon: false,
+        bom: null, bomRevision: null },
     ]);
     expect(only(result.plans).firmDemand).toMatchObject([{ requiredDate: day(3), date: day(3) }]);
   });
@@ -1453,7 +1466,7 @@ describe("planMrp: proposal timing (#279)", () => {
         ],
         planningParameters: [made, set(9, { material: "M2" }), set(30, { material: "M3" })],
         // Since E16-S03 a Make proposal needs a BOM valid on its planned finish, or the pair is Missing BOM.
-        boms: [{ output: "M1", validFrom: "2026-01-01", validThrough: null }],
+        boms: [recipe("M1")],
       }),
       TODAY,
     );
@@ -1613,7 +1626,7 @@ describe("planMrp: planning exceptions (E16-S03, #280)", () => {
     exceptions: result.exceptions.filter(({ material }) => material === "B"),
   });
   const alone = planMrp(inputs(B), TODAY);
-  const BOM: MrpBom = { output: "A", validFrom: "2026-01-01", validThrough: null };
+  const BOM = recipe("A");
 
   it("plans B alone with its two proposals and no exception: the baseline the isolation tests compare with", () => {
     expect(alone.proposals.map(({ location, quantity }) => [location, quantity])).toEqual([
@@ -1779,5 +1792,211 @@ describe("planMrp: planning exceptions (E16-S03, #280)", () => {
     ]);
     const shuffled = Object.fromEntries(Object.entries(snapshot).map(([key, list]) => [key, [...(list as readonly unknown[])].reverse()])) as unknown as MrpInputs;
     expect(planMrp(shuffled, TODAY)).toEqual(forward);
+  });
+});
+
+describe("planMrp: BOM explosion (E17-S01, #281)", () => {
+  const day = (offset: number) => addDays(TODAY, offset);
+  /** A set at L1: Buy for a raw material, Make for an intermediate, exact lots, lead time `leadTimeDays`. */
+  const params = (material: string, procurement: "make" | "buy", leadTimeDays = 0, overrides: Partial<MrpPlanningParameters> = {}): MrpPlanningParameters => ({
+    material,
+    location: "L1",
+    materialType: procurement === "buy" ? "raw" : "intermediate",
+    procurement,
+    leadTimeDays,
+    minimumQuantity: 0n,
+    lotMultiple: q("0.000001"),
+    ...overrides,
+  });
+  const order = (material: string, quantity: string, offset: number) => line({ material, quantity: q(quantity), requiredDate: day(offset) });
+  const proposalsOf = (result: ReturnType<typeof planMrp>, material: string) => result.proposals.filter((proposal) => proposal.material === material);
+
+  it("BOM-006, MRP-031: a Make proposal of 10 through 0.5 A and 0.2 B per one needs 5 A and 2 B on its planned start, and carries its BOM and revision", () => {
+    const result = planMrp(
+      inputs({
+        orderLines: [order("I", "10", 5)],
+        planningParameters: [params("I", "make", 2)],
+        boms: [recipe("I", { A: "0.5", B: "0.2" }, { bom: "00000004", revision: 2 })],
+      }),
+      TODAY,
+    );
+    expect(proposalsOf(result, "I")).toEqual([
+      expect.objectContaining({ kind: "production-order", needDate: day(5), plannedStart: day(3), quantity: q("10"), bom: "00000004", bomRevision: 2 }),
+    ]);
+    expect(planAt(result.plans, "A").plannedComponentDemand).toEqual([
+      { parent: "I", parentNeedDate: day(5), bom: "00000004", bomRevision: 2, material: "A", location: "L1", date: day(3), quantity: q("5") },
+    ]);
+    expect(bucketOf(planAt(result.plans, "A"), day(3))).toMatchObject({ dependentDemand: q("5"), projectedBefore: -q("5") });
+    expect(bucketOf(planAt(result.plans, "B"), day(3))).toMatchObject({ dependentDemand: q("2"), projectedBefore: -q("2") });
+    // The components have no parameters: their need is reported, never guessed (E16-S03).
+    expect(result.exceptions.filter(({ material }) => material !== "I")).toEqual([
+      { code: "MISSING_PLANNING_PARAMETERS", material: "A", location: "L1", date: day(3), reason: "no-set" },
+      { code: "MISSING_PLANNING_PARAMETERS", material: "B", location: "L1", date: day(3), reason: "no-set" },
+    ]);
+  });
+
+  it("MRP-029: P1 and P2 need 30 and 40 of R on one day; with 50 R on hand, R shows 70 of dependent demand, one shortfall of 20 and one requisition", () => {
+    const result = planMrp(
+      inputs({
+        stock: [stock("R", "L1", "50")],
+        orderLines: [order("P1", "10", 6), order("P2", "10", 6)],
+        planningParameters: [params("P1", "make", 2), params("P2", "make", 2), params("R", "buy")],
+        boms: [recipe("P1", { R: "3" }), recipe("P2", { R: "4" }, { bom: "00000002" })],
+      }),
+      TODAY,
+    );
+    const r = planAt(result.plans, "R");
+    expect(bucketOf(r, day(4))).toMatchObject({ dependentDemand: q("70"), projectedBefore: -q("20"), proposedReceipts: q("20"), projectedAfter: 0n });
+    expect(r.plannedComponentDemand.map(({ parent, quantity }) => [parent, quantity])).toEqual([["P1", q("30")], ["P2", q("40")]]);
+    expect(proposalsOf(result, "R").map(({ kind, needDate, quantity, bom }) => [kind, needDate, quantity, bom])).toEqual([["purchase-requisition", day(4), q("20"), null]]);
+  });
+
+  it("MRP-020: 100 C, an open order taking 80 C on Monday and a proposal needing 50 C on Wednesday leave −30 on Wednesday, which drives a proposal for C", () => {
+    const result = planMrp(
+      inputs({
+        stock: [stock("C", "L1", "100")],
+        productionOrders: [production({ plannedStart: day(2), plannedFinish: day(3), components: [{ material: "C", perOutput: q("0.8") }] })],
+        orderLines: [order("Q", "10", 6)],
+        planningParameters: [params("Q", "make", 2), params("C", "buy")],
+        boms: [recipe("Q", { C: "5" })],
+      }),
+      TODAY,
+    );
+    const c = planAt(result.plans, "C");
+    expect(bucketOf(c, day(2))).toMatchObject({ dependentDemand: q("80"), projectedBefore: q("20") });
+    expect(bucketOf(c, day(4))).toMatchObject({ dependentDemand: q("50"), projectedBefore: -q("30"), shortage: q("30") });
+    expect(proposalsOf(result, "C").map(({ needDate, quantity }) => [needDate, quantity])).toEqual([[day(4), q("30")]]);
+  });
+
+  it("MRP-027: F made from 2 I, I made from 0.5 R, none on hand: each level explodes on its parent's start, and R, Buy, gets a requisition", () => {
+    const result = planMrp(
+      inputs({
+        orderLines: [order("F", "10", 20)],
+        planningParameters: [params("F", "make", 2, { materialType: "finished" }), params("I", "make", 3), params("R", "buy", 1)],
+        boms: [recipe("F", { I: "2" }), recipe("I", { R: "0.5" }, { bom: "00000002" })],
+      }),
+      TODAY,
+    );
+    expect(result.proposals.map(({ material, kind, needDate, plannedStart, quantity, bom }) => [material, kind, needDate, plannedStart, quantity, bom])).toEqual([
+      ["F", "production-order", day(20), day(18), q("10"), "00000001"],
+      ["I", "production-order", day(18), day(15), q("20"), "00000002"],
+      ["R", "purchase-requisition", day(15), day(14), q("10"), null],
+    ]);
+    expect(bucketOf(planAt(result.plans, "I"), day(18)).dependentDemand).toBe(q("20"));
+    expect(bucketOf(planAt(result.plans, "R"), day(15)).dependentDemand).toBe(q("10"));
+    expect(result.exceptions).toEqual([]);
+  });
+
+  it("MRP-028: a chain A → B → C terminates with each material planned once; a stored cycle X ↔ Y is reported on both and never exploded, and the rest still plans", () => {
+    const result = planMrp(
+      inputs({
+        orderLines: [order("A", "2", 10), order("F", "5", 10), order("X", "3", 10), order("Y", "3", 10)],
+        planningParameters: [params("A", "make"), params("B", "make"), params("C", "buy"), params("F", "make"), params("X", "make"), params("Y", "make")],
+        boms: [
+          recipe("A", { B: "1" }),
+          recipe("B", { C: "1" }, { bom: "00000002" }),
+          recipe("F", { X: "1" }, { bom: "00000010" }),
+          recipe("X", { Y: "1" }, { bom: "00000011" }),
+          recipe("Y", { X: "1" }, { bom: "00000012" }),
+        ],
+      }),
+      TODAY,
+    );
+    expect(result.plans.map(({ material }) => material)).toEqual(["A", "B", "C", "F", "X", "Y"]);
+    expect(result.proposals.map(({ material, quantity }) => [material, quantity])).toEqual([["A", q("2")], ["B", q("2")], ["C", q("2")], ["F", q("5")]]);
+    expect(result.exceptions).toEqual([
+      { code: "CYCLIC_BOM", material: "X", location: "L1", path: "X →(BOM 00000011) Y →(BOM 00000012) X" },
+      { code: "CYCLIC_BOM", material: "Y", location: "L1", path: "Y →(BOM 00000012) X →(BOM 00000011) Y" },
+    ]);
+    // F still explodes into X, so X's shortage shows; X never explodes, so Y sees nothing from it.
+    expect(bucketOf(planAt(result.plans, "X"), day(10))).toMatchObject({ dependentDemand: q("5"), projectedBefore: -q("8") });
+    expect(planAt(result.plans, "Y").plannedComponentDemand).toEqual([]);
+  });
+
+  it("explodes a Late Supply parent and a Beyond Horizon parent on their start, today", () => {
+    const result = planMrp(
+      inputs({
+        orderLines: [order("P", "4", 2), order("H", "3", 20)],
+        planningParameters: [params("P", "make", 5), params("H", "make", 120)],
+        boms: [recipe("P", { A: "1" }), recipe("H", { A: "2" }, { bom: "00000002" })],
+      }),
+      TODAY,
+    );
+    expect(result.proposals.map(({ material, lateDays, beyondHorizon, plannedStart }) => [material, lateDays, beyondHorizon, plannedStart])).toEqual([
+      ["H", 100, true, TODAY],
+      ["P", 3, false, TODAY],
+    ]);
+    expect(bucketOf(planAt(result.plans, "A"), TODAY).dependentDemand).toBe(q("10"));
+  });
+
+  it("explodes nothing for a parent with Missing BOM, so its component isn't planned at all", () => {
+    const result = planMrp(
+      inputs({ orderLines: [order("P", "4", 5)], planningParameters: [params("P", "make")], boms: [recipe("P", { A: "1" }, { validFrom: day(50) })] }),
+      TODAY,
+    );
+    expect(result.exceptions).toEqual([{ code: "MISSING_BOM", material: "P", location: "L1", date: day(5) }]);
+    expect(result.plans.map(({ material }) => material)).toEqual(["P"]);
+  });
+
+  it("explodes a proposal at its own location only, into a component pair it creates there", () => {
+    const result = planMrp(
+      inputs({
+        orderLines: [line({ material: "P", location: "L2", quantity: q("4"), requiredDate: day(5) })],
+        planningParameters: [params("P", "make", 0, { location: "L2" })],
+        boms: [recipe("P", { A: "1.5" })],
+      }),
+      TODAY,
+    );
+    expect(result.plans.map(({ material, location }) => [material, location])).toEqual([["A", "L2"], ["P", "L2"]]);
+    expect(bucketOf(planAt(result.plans, "A", "L2"), day(5)).dependentDemand).toBe(q("6"));
+  });
+
+  it("ranks a short component's exploded need as a planned component, and every pair's shortages still add up to how far projectedAfter is below zero", () => {
+    // F's proposal needs 10 R on day 3; R also has its own order of 4 that day, 6 on hand, and a lead time too long to help.
+    const result = planMrp(
+      inputs({
+        stock: [stock("R", "L1", "6")],
+        orderLines: [order("F", "10", 5), order("R", "4", 3), order("G", "2", 8)],
+        planningParameters: [params("F", "make", 2), params("G", "make", 1), params("R", "buy", 30)],
+        boms: [recipe("F", { R: "1" }), recipe("G", { R: "3" }, { bom: "00000002" })],
+      }),
+      TODAY,
+    );
+    const r = planAt(result.plans, "R");
+    // Rank 1 serves the order first on one original date (by kind), so all 8 short fall on F's need.
+    expect(r.shortages.filter(({ date }) => date === day(3))).toEqual([
+      { kind: "planned-component", date: day(3), originalDate: day(3), document: "F", position: null, required: q("10"), uncovered: q("8") },
+    ]);
+    const kinds = new Set<string>();
+    for (const plan of result.plans) {
+      plan.buckets.forEach(({ date, projectedAfter }, index) => {
+        const today = plan.shortages.filter((shortage) => shortage.date === date && shortage.kind !== "safety-target");
+        today.forEach(({ kind }) => kinds.add(kind));
+        const flows = today.reduce((sum, { uncovered }) => sum + uncovered, 0n);
+        const before = index === 0 ? plan.physical : plan.buckets[index - 1].projectedAfter;
+        if (projectedAfter >= 0n) expect(flows).toBe(0n);
+        if (before >= 0n) expect(flows).toBe(projectedAfter < 0n ? -projectedAfter : 0n);
+      });
+    }
+    expect([...kinds].sort()).toEqual(["planned-component"]);
+  });
+
+  it("gives an equal result for a shuffled snapshot, BOMs and their lines included", () => {
+    const snapshot = inputs({
+      stock: [stock("R", "L1", "5")],
+      orderLines: [order("F", "10", 20), order("G", "4", 12), order("X", "1", 3)],
+      planningParameters: [params("F", "make", 2), params("G", "make", 1), params("I", "make", 3), params("R", "buy", 1), params("S", "buy"), params("X", "make")],
+      boms: [
+        recipe("F", { I: "2", S: "1" }),
+        recipe("G", { R: "1", I: "1" }, { bom: "00000003" }),
+        recipe("I", { R: "0.5" }, { bom: "00000002" }),
+        recipe("X", { X: "1" }, { bom: "00000009" }),
+      ],
+    });
+    const forward = planMrp(snapshot, TODAY);
+    expect(forward.exceptions).toEqual([{ code: "CYCLIC_BOM", material: "X", location: "L1", path: "X →(BOM 00000009) X" }]);
+    const shuffled = Object.fromEntries(Object.entries(snapshot).map(([key, list]) => [key, [...(list as readonly unknown[])].reverse()])) as unknown as MrpInputs;
+    const boms = shuffled.boms.map((bom) => ({ ...bom, components: [...bom.components].reverse() }));
+    expect(planMrp({ ...shuffled, boms }, TODAY)).toEqual(forward);
   });
 });

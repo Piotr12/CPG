@@ -2076,6 +2076,7 @@ export const en = {
       acceptLabel: "Accept the {document} of {quantity} on {date}",
       accepted: "{document} {id}",
       notExecutable: "Production orders can't be accepted yet",
+      bom: "BOM {bom} / revision {revision}",
       empty: "This pair has no proposals.",
       earlierDay: "This run is from an earlier day. Run MRP again to accept its proposals.",
       confirm: {

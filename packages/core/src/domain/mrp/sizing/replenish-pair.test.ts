@@ -25,10 +25,27 @@ const set = (overrides: Partial<MrpPlanningParameters> = {}): MrpPlanningParamet
   lotMultiple: q("1"),
   ...overrides,
 });
-const bom = (validFrom: string, validThrough: string | null = null): MrpBom => ({ output: "M1", validFrom, validThrough });
+const bom = (validFrom: string, validThrough: string | null = null): MrpBom => ({
+  bom: "00000001",
+  revision: 1,
+  priority: 1,
+  output: "M1",
+  validFrom,
+  validThrough,
+  componentsActive: true,
+  components: [],
+});
 /** A run start well before the days, so every proposal is on time unless a test moves it. */
 const EARLY = "2026-09-01";
-const context = (overrides: Partial<PairContext> = {}): PairContext => ({ unreadable: undefined, parameters: set(), invalidSet: false, boms: [], today: EARLY, ...overrides });
+const context = (overrides: Partial<PairContext> = {}): PairContext => ({
+  unreadable: undefined,
+  parameters: set(),
+  invalidSet: false,
+  boms: [],
+  today: EARLY,
+  cycle: undefined,
+  ...overrides,
+});
 /** What sizing proposes, timed from `today` as `replenishPair` times it. */
 const timed = (sized: SizedPair, parameters: MrpPlanningParameters, today = EARLY) =>
   sizeProposals(sized, parameters).map((item) => ({ ...item, ...scheduleProposal(item.needDate, item.leadTimeDays, today, 90) }));
@@ -92,6 +109,27 @@ describe("replenishPair", () => {
       material: "M1",
       location: "L1",
       reason: "invalid-set",
+    });
+  });
+
+  describe("BOM Cycle (MRP-028, #281 Q7)", () => {
+    const PATH = "M1 →(BOM 00000001) M2 →(BOM 00000002) M1";
+    const make = set({ procurement: "make" });
+
+    it("gives a Make pair of a material on a cycle BOM Cycle naming the path, needed or not, and no proposal", () => {
+      const exception = { code: "CYCLIC_BOM", material: "M1", location: "L1", path: PATH };
+      expect(replenishPair(SHORT, context({ parameters: make, boms: [bom("2026-01-01")], cycle: PATH }))).toEqual({ proposals: [], exception });
+      expect(replenishPair(pair(["5", "5", "5", "5"]), context({ parameters: make, cycle: PATH }))).toEqual({ proposals: [], exception });
+    });
+
+    it("still proposes for a Buy pair of a material on a cycle: the BOM is never used there", () => {
+      expect(replenishPair(SHORT, context({ cycle: PATH }))).toEqual({ proposals: timed(SHORT, set()), exception: null });
+    });
+
+    it("leaves the parameter exceptions before it", () => {
+      expect(replenishPair(SHORT, context({ parameters: set({ procurement: "make", materialType: "raw" }), cycle: PATH })).exception).toMatchObject({ reason: "raw-make" });
+      expect(replenishPair(SHORT, context({ parameters: undefined, invalidSet: true, cycle: PATH })).exception).toMatchObject({ reason: "invalid-set" });
+      expect(replenishPair(SHORT, context({ parameters: undefined, cycle: PATH })).exception).toMatchObject({ reason: "no-set" });
     });
   });
 

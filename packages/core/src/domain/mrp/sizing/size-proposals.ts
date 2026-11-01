@@ -1,10 +1,13 @@
 import type { MrpPlanningParameters } from "../mrp-inputs";
-import type { MrpBucket, MrpProposal, MrpProposalTiming } from "../mrp-result";
+import type { MrpBucket, MrpProposal, MrpProposalRecipe, MrpProposalTiming } from "../mrp-result";
 import { safetyGap } from "../projection/safety-gap";
 import { lotQuantity } from "./lot-quantity";
 
-/** A proposal as sizing leaves it: `replenishPair` adds its timing through `scheduleProposal` (E16-S02). */
-export type SizedProposal = Omit<MrpProposal, keyof MrpProposalTiming>;
+/**
+ * A proposal as sizing leaves it: `replenishPair` adds its timing through `scheduleProposal` (E16-S02),
+ * and `planMrp` its recipe through `explodeProposal` (E17-S01).
+ */
+export type SizedProposal = Omit<MrpProposal, keyof MrpProposalTiming | keyof MrpProposalRecipe>;
 
 /** One planned pair's days, before proposals: what sizing reads. */
 export interface SizedPair {

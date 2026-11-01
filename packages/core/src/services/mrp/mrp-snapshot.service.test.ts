@@ -820,7 +820,7 @@ describe("MrpSnapshotService", () => {
     }
   });
 
-  it("seeks the production-order and transfer reads through their (tenant, status, code) indexes and the line read by revision", async () => {
+  it("seeks the production-order and transfer reads through their (tenant, status, code) indexes and both line reads by revision", async () => {
     const queries: { sql: string; params: readonly unknown[] }[] = [];
     const config = loadConfig({ DATA_DIR: mkdtempSync(path.join(tmpdir(), "cpg-mrp-snapshot-plan-")) });
     await migrateDatabase(config);
@@ -842,11 +842,13 @@ describe("MrpSnapshotService", () => {
       });
       await em.flush();
       await new MrpSnapshotService({ em }).load(TODAY);
-      const explain = async (table: string) => {
+      const explain = async (table: string, reads = 1) => {
         const sent = queries.filter(({ sql }) => sql.startsWith("select") && sql.includes(` from \`${table}\` as `));
-        expect(sent).toHaveLength(1);
-        const plan = await traced.em.getConnection().execute<{ detail: string }[]>(`explain query plan ${sent[0].sql}`, [...sent[0].params]);
-        return plan.map(({ detail }) => detail);
+        expect(sent).toHaveLength(reads);
+        const plans = await Promise.all(sent.map(({ sql, params }) => traced.em.getConnection().execute<{ detail: string }[]>(`explain query plan ${sql}`, [...params])));
+        // Every read of the table plans alike.
+        for (const plan of plans) expect(plan).toEqual(plans[0]);
+        return plans[0].map(({ detail }) => detail);
       };
       // The tenant filter joins each relation by key; either direction of the status list index seeks.
       const unaliased = (details: string[]) => details.map((detail) => detail.replace(/^SEARCH \w+ /, "SEARCH ")).sort();
@@ -856,7 +858,8 @@ describe("MrpSnapshotService", () => {
         "SEARCH USING INDEX sqlite_autoindex_location_1 (id=?)",
         "SEARCH USING INDEX sqlite_autoindex_material_1 (id=?)",
       ]);
-      expect((await explain("bom_component")).sort()).toEqual([
+      // Two line reads, each by revision: the production orders' pinned lines (#277) and the active BOMs' current lines (#281).
+      expect((await explain("bom_component", 2)).sort()).toEqual([
         "SEARCH b0 USING INDEX bom_component_revision_id_index (revision_id=?)",
         "SEARCH m2 USING INDEX sqlite_autoindex_material_1 (id=?)",
         "SEARCH r1 USING INDEX sqlite_autoindex_bom_revision_1 (id=?)",
@@ -1004,7 +1007,9 @@ describe("MrpSnapshotService", () => {
     current.revision = 2;
     (await em.findOneOrFail(Bom, { code: "00000002" })).active = false;
     await em.flush();
-    expect((await load()).boms).toEqual([{ output: "00000001", validFrom: "2026-11-01", validThrough: "2027-06-30" }]);
+    expect((await load()).boms).toEqual([
+      { bom: "00000001", revision: 2, priority: 1, output: "00000001", validFrom: "2026-11-01", validThrough: "2027-06-30", componentsActive: true, components: [] },
+    ]);
   });
 
   it("leaves out a current revision whose validity dates aren't real days, so it covers no date (#316 review)", async () => {
@@ -1016,7 +1021,38 @@ describe("MrpSnapshotService", () => {
       em.create(BomRevision, { bom: em.create(Bom, { code, output, revision: 1 }), number: 1, priority: 1, ...dates });
     }
     await em.flush();
-    expect((await load()).boms).toEqual([{ output: "00000001", validFrom: "2026-01-01", validThrough: null }]);
+    expect((await load()).boms).toEqual([
+      { bom: "00000001", revision: 1, priority: 1, output: "00000001", validFrom: "2026-01-01", validThrough: null, componentsActive: true, components: [{ material: "00000002", perOutput: micro(1) }] },
+    ]);
+  });
+
+  describe("BOM lines for the explosion (#281)", () => {
+    it("reads each current revision's lines in base units by position, and whether every component is active", async () => {
+      await recipe("prod", "00000001", "00000001", { "00000003": "0.250000", "00000002": "2.000000" });
+      await recipe("prod", "00000002", "00000003", { "00000002": "1.500000" });
+      const em = scoped();
+      (await em.findOneOrFail(Material, { code: "00000002" })).active = false;
+      await em.flush();
+      expect((await load()).boms).toEqual([
+        expect.objectContaining({ bom: "00000001", componentsActive: false, components: [{ material: "00000003", perOutput: 250_000n }, { material: "00000002", perOutput: micro(2) }] }),
+        expect.objectContaining({ bom: "00000002", output: "00000003", componentsActive: false }),
+      ]);
+      (await em.findOneOrFail(Material, { code: "00000002" })).active = true;
+      (await em.findOneOrFail(Material, { code: "00000003" })).active = false;
+      await em.flush();
+      expect((await load()).boms.map(({ bom, componentsActive }) => [bom, componentsActive])).toEqual([["00000001", false], ["00000002", true]]);
+    });
+
+    it("leaves out a current revision with a line it can't read, reporting the line at its component at each of the output's Make sites, never at a Buy site", async () => {
+      // Lines refuse updates (R04), so the corrupt one is written that way: seven decimals.
+      await recipe("prod", "00000001", "00000001", { "00000002": "2.000000", "00000003": "0.0000001" });
+      const set = { leadTimeDays: 1, minimumQuantity: "0.000000", lotMultiple: "1.000000" };
+      await parameters("prod", "00000001", "00000001", { procurement: "make", ...set });
+      await parameters("prod", "00000001", "00000002", { procurement: "buy", ...set });
+      const snapshot = await load();
+      expect(snapshot.boms).toEqual([]);
+      expect(snapshot.unreadable).toEqual([{ material: "00000003", location: "00000001", record: "bom-line", document: "00000001/1/2" }]);
+    });
   });
 
   it("reads the BOMs more than one OR list holds, chunk by chunk, filtering the current revisions in SQL as the production dialog does", async () => {
@@ -1028,16 +1064,22 @@ describe("MrpSnapshotService", () => {
       const em = traced.em.fork();
       selectTenant(em, "prod");
       const output = em.create(Material, { code: "00000001", type: "finished", description: "Cabinet", baseUnit: "each" });
+      const input = (index: number) => em.create(Material, { code: code(1_000 + index), type: "raw", description: `Input ${index}`, baseUnit: "each" });
       for (let index = 1; index <= BOM_CHUNK + 1; index += 1) {
         const bom = em.create(Bom, { code: code(index), output, revision: 2 });
-        em.create(BomRevision, { bom, number: 1, priority: index, validFrom: "2026-01-01", validThrough: "2026-06-30" });
-        em.create(BomRevision, { bom, number: 2, priority: index, validFrom: "2026-07-01", validThrough: null });
+        const line = { position: 1, quantity: "1.000000", enteredQuantity: "1", enteredUnit: "each", numerator: "1", denominator: "1" };
+        em.create(BomComponent, { ...line, material: input(index), revision: em.create(BomRevision, { bom, number: 1, priority: index, validFrom: "2026-01-01", validThrough: "2026-06-30" }) });
+        // Each current revision's one line names its own input, so a line attached to the wrong revision or chunk shows.
+        em.create(BomComponent, { ...line, material: input(BOM_CHUNK + 1 + index), revision: em.create(BomRevision, { bom, number: 2, priority: index, validFrom: "2026-07-01", validThrough: null }) });
       }
       await em.flush();
       queries.length = 0;
       const { boms } = await new MrpSnapshotService({ em }).load(TODAY);
       expect(boms).toHaveLength(BOM_CHUNK + 1);
       expect(boms.every(({ validFrom }) => validFrom === "2026-07-01")).toBe(true);
+      expect(boms.every(({ bom, components }) => components.length === 1 && components[0].material === code(1_000 + BOM_CHUNK + 1 + Number(bom)))).toBe(true);
+      // Lines are read per chunk of revisions too: one read per chunk.
+      expect(queries.filter(({ sql }) => sql.startsWith("select") && sql.includes(" from `bom_component` as "))).toHaveLength(2);
       const reads = queries.filter(({ sql }) => sql.startsWith("select") && sql.includes(" from `bom_revision` as "));
       expect(reads).toHaveLength(2);
       const plan = await traced.em.getConnection().execute<{ detail: string }[]>(`explain query plan ${reads[0].sql}`, [...reads[0].params]);

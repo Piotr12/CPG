@@ -163,7 +163,7 @@ describe("MRP runs through the API", () => {
     await created("/api/tenants/prod/planning-parameters", { material, location: made, procurement: "make", leadTimeDays: 1, minimumQuantity: "0", lotMultiple: "1" });
     // Since #280 a Make proposal needs an active BOM valid on its need date.
     const input = (await created("/api/tenants/prod/materials", { type: "raw", description: "mrpapi timber", baseUnit: "each" })).id;
-    await created("/api/tenants/prod/boms", { output: material, priority: 1, validFrom: day(-30), validThrough: null, components: [{ material: input, quantity: "1", unit: "each" }] });
+    const bom = (await created("/api/tenants/prod/boms", { output: material, priority: 1, validFrom: day(-30), validThrough: null, components: [{ material: input, quantity: "1", unit: "each" }] })).id;
     for (const location of [bought, made]) {
       await created("/api/tenants/prod/customer-orders", { customer, location, lines: [{ material, quantity: "3", unit: "each", requiredDate: day(6) }] });
     }
@@ -177,8 +177,9 @@ describe("MRP runs through the API", () => {
     expect(plans.map(({ location, proposals }) => [location, proposals])).toEqual([
       // Lead times 4 and 1 before day 6 start on days 2 and 5: on time (#279). Since E19-S01 (#287) each proposal has its ID,
       // whether it can be accepted (a Make one can't yet), and its document.
-      [bought, [{ id: expect.any(String), kind: "purchase-requisition", needDate: day(6), quantity: "10.000000", plannedStart: day(2), plannedFinish: day(6), lateDays: 0, beyondHorizon: false, executable: true, document: null }]],
-      [made, [{ id: expect.any(String), kind: "production-order", needDate: day(6), quantity: "3.000000", plannedStart: day(5), plannedFinish: day(6), lateDays: 0, beyondHorizon: false, executable: false, document: null }]],
+      // Since #281 a production order names the BOM and revision it is exploded through.
+      [bought, [{ id: expect.any(String), kind: "purchase-requisition", needDate: day(6), quantity: "10.000000", plannedStart: day(2), plannedFinish: day(6), lateDays: 0, beyondHorizon: false, executable: true, document: null, bom: null, bomRevision: null }]],
+      [made, [{ id: expect.any(String), kind: "production-order", needDate: day(6), quantity: "3.000000", plannedStart: day(5), plannedFinish: day(6), lateDays: 0, beyondHorizon: false, executable: false, document: null, bom, bomRevision: 1 }]],
     ]);
     expect(plans[0].buckets[6]).toMatchObject({ date: day(6), proposedReceipts: "10.000000", projectedBefore: "-3.000000", projectedAfter: "7.000000" });
     expect(plans[1].buckets[6]).toMatchObject({ date: day(6), proposedReceipts: "3.000000", projectedBefore: "-3.000000", projectedAfter: "0.000000" });
@@ -205,7 +206,7 @@ describe("MRP runs through the API", () => {
 
     const latePlan = await planOf(late);
     expect(latePlan.proposals).toEqual([
-      { id: expect.any(String), kind: "purchase-requisition", needDate: day(3), quantity: "5.000000", plannedStart: day(0), plannedFinish: day(7), lateDays: 4, beyondHorizon: false, executable: true, document: null },
+      { id: expect.any(String), kind: "purchase-requisition", needDate: day(3), quantity: "5.000000", plannedStart: day(0), plannedFinish: day(7), lateDays: 4, beyondHorizon: false, executable: true, document: null, bom: null, bomRevision: null },
     ]);
     // The receipt counts on day 7, not on the need date: days 3 to 6 keep their shortage.
     expect(latePlan.buckets.slice(3, 7).map(({ projectedAfter }) => projectedAfter)).toEqual(["-5.000000", "-5.000000", "-5.000000", "-5.000000"]);
@@ -213,7 +214,7 @@ describe("MRP runs through the API", () => {
 
     const farPlan = await planOf(far);
     expect(farPlan.proposals).toEqual([
-      { id: expect.any(String), kind: "purchase-requisition", needDate: day(20), quantity: "5.000000", plannedStart: day(0), plannedFinish: day(120), lateDays: 100, beyondHorizon: true, executable: true, document: null },
+      { id: expect.any(String), kind: "purchase-requisition", needDate: day(20), quantity: "5.000000", plannedStart: day(0), plannedFinish: day(120), lateDays: 100, beyondHorizon: true, executable: true, document: null, bom: null, bomRevision: null },
     ]);
     expect(farPlan.buckets).toHaveLength(90);
     expect(farPlan.buckets.every(({ proposedReceipts }) => proposedReceipts === "0.000000")).toBe(true);
@@ -251,6 +252,53 @@ describe("MRP runs through the API", () => {
     for (const plan of plans) {
       expect(plan.buckets[7]).toMatchObject({ date: day(7), firmDemand: "4.000000", projectedBefore: "-4.000000", shortage: "4.000000", proposedReceipts: "0.000000", projectedAfter: "-4.000000" });
     }
+  });
+
+  /** F made from 2 I, I from 0.5 R, R bought, at a site of their own, none on hand, and 10 F ordered for day 20 (#281). */
+  const levels = (async () => {
+    const material = async (type: string, description: string) => (await created("/api/tenants/prod/materials", { type, description, baseUnit: "each" })).id;
+    const [f, i, r] = [await material("finished", "mrpapi cabinet f"), await material("intermediate", "mrpapi frame i"), await material("raw", "mrpapi steel r")];
+    const site = (await created("/api/tenants/prod/locations", { name: "mrpapi levels plant" })).id;
+    const recipe = async (output: string, input: string, quantity: string) =>
+      (await created("/api/tenants/prod/boms", { output, priority: 1, validFrom: day(-30), validThrough: null, components: [{ material: input, quantity, unit: "each" }] })).id;
+    const boms = { f: await recipe(f, i, "2"), i: await recipe(i, r, "0.5") };
+    for (const [material, procurement, leadTimeDays] of [[f, "make", 2], [i, "make", 3], [r, "buy", 1]] as const) {
+      await created("/api/tenants/prod/planning-parameters", { material, location: site, procurement, leadTimeDays, minimumQuantity: "0", lotMultiple: "1" });
+    }
+    const customer = (await created("/api/tenants/prod/customers", { name: "mrpapi levels" })).id;
+    await created("/api/tenants/prod/customer-orders", { customer, location: site, lines: [{ material: f, quantity: "10", unit: "each", requiredDate: day(20) }] });
+    return { f, i, r, site, boms };
+  });
+  let threeLevels: ReturnType<typeof levels> | undefined;
+  const threeLevelPlant = () => (threeLevels ??= levels());
+
+  it("explodes F's proposal into I on F's start and I's into R on I's start, R bought, each production order with its BOM and revision, read from the latest run (#281, MRP-027, MRP-031)", async () => {
+    const { f, i, r, site, boms } = await threeLevelPlant();
+    const response = await runIn("prod");
+    expect(response.status, response.text).toBe(200);
+    const planOf = async (material: string) => {
+      const read = await latest("prod", `?material=${material}&location=${site}`);
+      expect(read.status, read.text).toBe(200);
+      return (json(read).data as MrpLatestView).plans[0];
+    };
+    const [fPlan, iPlan, rPlan] = [await planOf(f), await planOf(i), await planOf(r)];
+    const summary = ({ proposals }: MrpPlanView) => proposals.map(({ kind, needDate, plannedStart, quantity, bom, bomRevision }) => ({ kind, needDate, plannedStart, quantity, bom, bomRevision }));
+    expect(summary(fPlan)).toEqual([{ kind: "production-order", needDate: day(20), plannedStart: day(18), quantity: "10.000000", bom: boms.f, bomRevision: 1 }]);
+    expect(summary(iPlan)).toEqual([{ kind: "production-order", needDate: day(18), plannedStart: day(15), quantity: "20.000000", bom: boms.i, bomRevision: 1 }]);
+    expect(summary(rPlan)).toEqual([{ kind: "purchase-requisition", needDate: day(15), plannedStart: day(14), quantity: "10.000000", bom: null, bomRevision: null }]);
+    // Each component's need is dependent demand on its parent's start, covered by its own proposal.
+    expect(iPlan.buckets[18]).toMatchObject({ date: day(18), dependentDemand: "20.000000", projectedBefore: "-20.000000", projectedAfter: "0.000000" });
+    expect(rPlan.buckets[15]).toMatchObject({ date: day(15), dependentDemand: "10.000000", projectedBefore: "-10.000000", projectedAfter: "0.000000" });
+    expect([fPlan, iPlan, rPlan].flatMap(({ exceptions }) => exceptions)).toEqual([]);
+  });
+
+  it("names a production-order proposal's BOM and revision in the MRP page's proposals table (#281, MRP-031)", async () => {
+    const { f, site, boms } = await threeLevelPlant();
+    expect((await runIn("prod")).status).toBe(200);
+    await admin.open(`${baseUrl}/admin/prod/mrp?material=${f}&location=${site}`);
+    const shown = (selector: string) => `[...document.querySelectorAll(${JSON.stringify(selector)})].filter((e) => !e.closest("[hidden]") && e.offsetParent !== null)`;
+    await admin.waitUntil(`${shown("[data-mrp-proposals] [data-mrp-proposal-bom]")}.length > 0`);
+    expect(await admin.evaluate<string[]>(`${shown("[data-mrp-proposals] [data-mrp-proposal-bom]")}.map((el) => el.textContent)`)).toEqual([`BOM ${boms.f} / revision 1`]);
   });
 
   it("needs an Idempotency-Key, and replays a repeated key without a second run (R07)", async () => {

@@ -22,7 +22,8 @@ interface MrpProposalsProps {
 }
 
 /**
- * The one-pair view's proposals (E19-S01, spec Q8), above its days: what each would create, its need
+ * The one-pair view's proposals (E19-S01, spec Q8), above its days: what each would create (a production
+ * order with the BOM and revision it plans through, E17-S01), its need
  * date (with its Late Supply or Beyond Horizon mark, E16-S02, E18-S02) and quantity, and Accept for
  * one that can be accepted, or the document accepting it created.
  * A read-only tenant, or a run from an earlier day, shows no Accept.
@@ -72,8 +73,17 @@ export function MrpProposals({ tenant, run, plan, today, accept, locale, message
       </div>
     );
   };
+  /** What it would create; a production order also names the BOM it plans through (E17-S01, MRP-031). */
+  const documentCell = (proposal: MrpProposalView) => (
+    <>
+      {t.kinds[proposal.kind]}
+      {proposal.bom !== null && (
+        <span className="block text-sm text-muted-foreground" data-mrp-proposal-bom>{fill(t.bom, { bom: proposal.bom, revision: String(proposal.bomRevision) })}</span>
+      )}
+    </>
+  );
   const columns: DataTableColumn<MrpProposalView>[] = [
-    { id: "document", header: t.columns.document, kind: "text", cell: (proposal) => t.kinds[proposal.kind] },
+    { id: "document", header: t.columns.document, kind: "text", cell: documentCell },
     { id: "needDate", header: t.columns.needDate, kind: "date", cell: needDate },
     { id: "quantity", header: t.columns.quantity, kind: "quantity", cell: (proposal) => <span data-mrp-proposal-quantity>{amount(proposal.quantity)}</span> },
     { id: "action", header: t.columns.action, kind: "text", className: "whitespace-normal", cell: action },
