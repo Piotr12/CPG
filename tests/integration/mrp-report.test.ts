@@ -100,7 +100,7 @@ describe("the MRP report in the UI", () => {
   it("shows a pair's days apart, each with its own demand and balance, filtered to the pair (MRP-005)", async () => {
     await open(`?material=${ids.sheet}&location=${ids.plant}`, DAYS);
 
-    expect(await rita.evaluate<string>(`${shown("main h3")}.textContent`)).toBe(`${ids.sheet} mrprep sheet at ${ids.plant} mrprep plant`);
+    expect(await rita.evaluate<string>(`${shown("[data-mrp-plan-heading]")}.textContent`)).toBe(`${ids.sheet} mrprep sheet at ${ids.plant} mrprep plant`);
     expect(await rita.evaluate<number>(`${shown(DAYS)}.querySelectorAll("tbody tr").length`)).toBe(90);
     expect(await figures(day(4))).toMatchObject({ firmDemand: "10", projectedBefore: "40", projectedAfter: "40", shortage: "0" });
     expect(await figures(day(5))).toMatchObject({ firmDemand: "0", projectedBefore: "40" });
@@ -113,7 +113,7 @@ describe("the MRP report in the UI", () => {
     expect(await figures(day(8))).toMatchObject({ transferOut: "5", transferIn: "0", projectedBefore: "20" });
 
     await open(`?material=${ids.sheet}&location=${ids.depot}`, DAYS);
-    expect(await rita.evaluate<string>(`${shown("main h3")}.textContent`)).toBe(`${ids.sheet} mrprep sheet at ${ids.depot} mrprep depot`);
+    expect(await rita.evaluate<string>(`${shown("[data-mrp-plan-heading]")}.textContent`)).toBe(`${ids.sheet} mrprep sheet at ${ids.depot} mrprep depot`);
     expect(await figures(day(8))).toMatchObject({ transferIn: "0", projectedBefore: "0" });
     expect(await figures(day(9))).toMatchObject({ transferOut: "0", transferIn: "5", projectedBefore: "5" });
   });

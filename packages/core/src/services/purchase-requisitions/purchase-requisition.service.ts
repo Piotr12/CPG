@@ -42,6 +42,11 @@ export interface NewRequisition {
   requiredDate: string;
 }
 
+/** Where a requisition came from, when not from a person's entry: the MRP run whose proposal was accepted (E19-S01). */
+export interface RequisitionOrigin {
+  mrpRun?: string;
+}
+
 /** What the Purchase requisitions search matches, and the column each sort key orders by (#217). */
 const REQUISITION_SEARCH_FIELDS = ["code", "material.code", "material.description", "location.code", "location.name"];
 const REQUISITION_SORT_PATHS: Record<RequisitionSort, SortField> = {
@@ -109,9 +114,12 @@ export class PurchaseRequisitionService {
     return toRequisitionView(await findRequisition(this.em, id));
   }
 
-  /** A new Open requisition with the next ID and nothing converted (LFC-001). */
-  create(input: NewRequisition, actor: AuditActor): Promise<RequisitionView> {
-    return this.createWith(input, { kind: "user", actor });
+  /**
+   * A new Open requisition with the next ID and nothing converted (LFC-001). `origin.mrpRun` names the
+   * MRP run whose proposal is being accepted (`MrpAcceptanceService`), and the creation entry records it.
+   */
+  create(input: NewRequisition, actor: AuditActor, origin: RequisitionOrigin = {}): Promise<RequisitionView> {
+    return this.createWith(input, { kind: "user", actor }, origin);
   }
 
   /** The demo seed's requisition, stamped at `at` and unaudited; every business rule of `create` still applies. */
@@ -119,10 +127,10 @@ export class PurchaseRequisitionService {
     return this.createWith(input, { kind: "seed", at });
   }
 
-  private async createWith(input: NewRequisition, context: PostingContext): Promise<RequisitionView> {
+  private async createWith(input: NewRequisition, context: PostingContext, origin: RequisitionOrigin = {}): Promise<RequisitionView> {
     try {
       return await this.em.transactional(async (em) => {
-        const requisition = await insertRequisition(em, input, context.kind === "seed" ? context.at : undefined);
+        const requisition = await insertRequisition(em, input, context.kind === "seed" ? context.at : undefined, origin);
         if (context.kind === "user") {
           recordTenantAudit(em, context.actor, requisitionEntry("created", requisition, null, requisitionSnapshot(requisition)));
         }
@@ -188,7 +196,7 @@ export class PurchaseRequisitionService {
 }
 
 /** Checks and inserts (unflushed) a requisition with the tenant's next ID; shared by `create` and the demo seeds; `at` stamps the seed's `createdAt`. */
-async function insertRequisition(em: EntityManager, input: NewRequisition, at?: Date): Promise<PurchaseRequisition> {
+async function insertRequisition(em: EntityManager, input: NewRequisition, at: Date | undefined, { mrpRun }: RequisitionOrigin): Promise<PurchaseRequisition> {
   const material = await findActiveMaterial(em, input.material);
   const location = await findActiveLocation(em, input.location);
   const record = await convertEntered(em, material, input);
@@ -210,6 +218,7 @@ async function insertRequisition(em: EntityManager, input: NewRequisition, at?: 
     requiredDate: input.requiredDate,
     converted: "0.000000",
     status: "open",
+    ...(mrpRun && { mrpRun }),
     ...(at && { createdAt: at }),
   });
 }

@@ -34,6 +34,8 @@ export const MrpRecommendation = defineEntity({
     needDate: p.string().length(10),
     quantity: p.string(),
     leadTimeDays: p.integer().default(0),
+    /** The business ID of the document accepting this proposal created (E19-S01), or null while it isn't accepted. */
+    acceptedDocument: p.string().length(8).nullable(),
   },
   /** One proposal per pair and day; it also serves the latest-run read of a page's proposals. */
   uniques: [{ properties: ["tenant", "run", "material", "location", "needDate"] }],

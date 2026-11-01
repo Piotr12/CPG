@@ -8,7 +8,7 @@ export const AUDIT_FIELDS = [
   "customer", "customerOrder", "dataset", "date", "denominator", "description", "destination", "dispatched",
   "effectiveFrom", "enteredQuantity", "enteredUnit", "fulfilled", "generation", "id", "inTransit", "issue", "issued",
   "kind", "leadTimeDays", "line", "lineStatus", "lines", "locale", "location", "lotMultiple", "material",
-  "minimumQuantity", "moved", "movement", "movements", "name", "numerator", "order", "original", "output",
+  "minimumQuantity", "moved", "movement", "movements", "mrpRun", "name", "numerator", "order", "original", "output",
   "plannedArrival", "plannedDate", "plannedDispatch", "plannedFinish", "plannedStart", "posting", "postingId",
   "priority", "procurement", "produced", "purchaseOrder", "quantity", "readOnly", "reason", "receipt", "received",
   "requiredDate", "reversal", "reversed", "revision", "role", "shipment", "source", "status", "supplier", "theme",

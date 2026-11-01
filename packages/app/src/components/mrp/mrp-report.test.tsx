@@ -1,5 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { MrpBucketView, MrpLatestView, MrpPlanView } from "@cpg/core";
 import { en } from "../../i18n/messages/en";
 import { pl } from "../../i18n/messages/pl";
@@ -30,8 +30,12 @@ const bearing: MrpPlanView = {
 };
 const run = { id: "00000004", createdAt: new Date(), account: "anna", channel: "ui" as const, mode: "manual" as const, generation: 1, startDate: "2026-10-01", endDate: "2026-12-29", horizonDays: 90, pairs: 2 };
 const report = (overrides: Partial<MrpLatestView> = {}): MrpLatestView => ({ run, page: 1, pageSize: 25, total: 2, plans: [sheet, bearing], ...overrides });
+vi.mock("next/navigation", async (original) => ({ ...(await original<typeof import("next/navigation")>()), useRouter: () => ({ refresh: vi.fn() }) }));
+const accept = vi.fn();
 const renderReport = (view: MrpLatestView, selected: { material?: string; location?: string; page: number } = { page: 1 }, locale: "en" | "pl" = "en") =>
-  render(<MrpReport tenant={{ code: "test" }} report={view} selected={selected} materials={[]} locations={[]} locale={locale} messages={locale === "en" ? en : pl} />);
+  render(
+    <MrpReport tenant={{ code: "test" }} report={view} selected={selected} materials={[]} locations={[]} today="2026-10-01" accept={accept} locale={locale} messages={locale === "en" ? en : pl} />,
+  );
 const pairs = () => within(screen.getByRole("table", { name: en.mrp.report.label }));
 
 describe("MrpReport", () => {
@@ -139,5 +143,18 @@ describe("MrpReport", () => {
     expect(row.querySelector("td")?.className).toContain("border-l-danger");
     expect(days.getByText("2026-10-01").closest("tr")!.querySelector("td")?.className).not.toContain("border-l-danger");
     expect(screen.getByText(/^Ilości w each\./)).toBeTruthy();
+  });
+
+  it("counts each pair's proposals, and lists the one pair's proposals above its days with Accept (E19-S01)", () => {
+    const proposal = { id: "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b", kind: "purchase-requisition" as const, needDate: "2026-10-05", quantity: "40.000000", plannedStart: "2026-10-03", plannedFinish: "2026-10-05", lateDays: 0, beyondHorizon: false, executable: true, document: null };
+    const proposing = { ...sheet, proposals: [proposal] };
+    renderReport(report({ plans: [proposing, bearing] }));
+    expect([...document.querySelectorAll("[data-mrp-proposal-count]")].map((cell) => cell.textContent)).toEqual(["1", "0"]);
+    expect(document.querySelector("[data-mrp-proposals]")).toBeNull();
+
+    renderReport(report({ total: 1, plans: [proposing] }), { material: "00000012", location: "00000003", page: 1 });
+    const section = document.querySelector("[data-mrp-proposals]")!;
+    expect(section.compareDocumentPosition(screen.getByRole("table", { name: en.mrp.report.planLabel })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(section as HTMLElement).getByRole("button", { name: "Accept the Purchase requisition of 40 kg on 2026-10-05" })).toBeTruthy();
   });
 });

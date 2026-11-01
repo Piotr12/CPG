@@ -26,6 +26,8 @@ export interface RequisitionView {
   /** What no line has taken yet, six decimals. */
   outstanding: string;
   status: PurchaseRequisition["status"];
+  /** The MRP run whose proposal created it (E19-S01), or null when it was entered by hand. */
+  mrpRun: string | null;
   createdAt: Date;
   /** The optimistic-lock version an edit must carry back (AUD-024, API-029). */
   version: number;
@@ -49,7 +51,7 @@ export async function findRequisition(
 
 export function toRequisitionView(requisition: PurchaseRequisition): RequisitionView {
   const { code, material, location, quantity, enteredQuantity, enteredUnit, numerator, denominator } = requisition;
-  const { requiredDate, converted, abandoned, status, createdAt, version } = requisition;
+  const { requiredDate, converted, abandoned, status, mrpRun, createdAt, version } = requisition;
   return {
     id: code,
     material: material.code,
@@ -64,15 +66,20 @@ export function toRequisitionView(requisition: PurchaseRequisition): Requisition
     abandoned,
     outstanding: outstandingQuantity(quantity, converted, abandoned),
     status: status as RequisitionView["status"],
+    // Unset on a requisition this request created without one (lesson 2026-10-19).
+    mrpRun: mrpRun ?? null,
     createdAt,
     version,
   };
 }
 
-/** The fields of a requisition the audit may show: an allowlist (R08). */
+/**
+ * The fields of a requisition the audit may show: an allowlist (R08). `mrpRun` only when an MRP proposal
+ * created it (E19-S01), so a requisition entered by hand keeps the snapshot it always had.
+ */
 export function requisitionSnapshot(requisition: PurchaseRequisition) {
-  const { code, material, location, quantity, requiredDate, converted, abandoned, status } = requisition;
-  return { id: code, material: material.code, location: location.code, quantity, requiredDate, converted, abandoned, status };
+  const { code, material, location, quantity, requiredDate, converted, abandoned, status, mrpRun } = requisition;
+  return { id: code, material: material.code, location: location.code, quantity, requiredDate, converted, abandoned, status, ...(mrpRun && { mrpRun }) };
 }
 
 export function requisitionEntry(

@@ -3,6 +3,7 @@ import { nextSequentialId } from "../../domain/business-ids/sequential-id";
 import { mrpExceptionMessage } from "../../domain/mrp/exceptions/codes";
 import { exceptionParams, toStoredException } from "../../domain/mrp/exceptions/stored-exception";
 import type { MrpBucket, MrpResult } from "../../domain/mrp/mrp-result";
+import { isExecutableProposal } from "../../domain/mrp/acceptance/executable-proposal";
 import { planMrp } from "../../domain/mrp/plan-mrp";
 import { summarizePlan } from "../../domain/mrp/report/plan-summary";
 import { MRP_HORIZON_DAYS } from "../../domain/mrp/projection/horizon";
@@ -198,13 +199,16 @@ export class MrpRunService {
       { run, material: { $in: materials }, ...(location !== undefined && { location }) },
       {
         orderBy: { material: "asc", location: "asc", needDate: "asc" },
-        fields: ["material", "location", "kind", "needDate", "quantity", "leadTimeDays"],
+        fields: ["id", "material", "location", "kind", "needDate", "quantity", "leadTimeDays", "acceptedDocument"],
         disableIdentityMap: true,
       },
     );
-    for (const { material, location: site, kind, needDate, quantity, leadTimeDays } of rows) {
+    for (const { id, material, location: site, kind, needDate, quantity, leadTimeDays, acceptedDocument } of rows) {
       // The engine's own timing rule, from the run's first day (E16-S02): one rule for the plan and its read.
-      byPair.get(pairKey(material, site))?.push({ kind, needDate, quantity, ...scheduleProposal(needDate, leadTimeDays, run.startDate, run.horizonDays) });
+      byPair.get(pairKey(material, site))?.push({
+        id, kind, needDate, quantity, ...scheduleProposal(needDate, leadTimeDays, run.startDate, run.horizonDays),
+        executable: isExecutableProposal(kind), document: acceptedDocument ?? null,
+      });
     }
     return byPair;
   }

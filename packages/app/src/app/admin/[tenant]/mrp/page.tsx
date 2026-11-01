@@ -9,7 +9,7 @@ import { requireUser } from "../../../../auth/require-admin";
 import { MrpRunScreen } from "../../../../components/mrp/mrp-run-screen";
 import { getMessages } from "../../../../i18n/get-messages";
 import { orNotFound } from "../../../../routing/or-not-found";
-import { runMrp } from "./actions";
+import { acceptMrpProposal, runMrp } from "./actions";
 
 /** The tenant layout's title template puts the tenant first: "Test · MRP". */
 export const metadata: Metadata = { title: "MRP" };
@@ -35,7 +35,8 @@ function noRun(error: unknown): null {
  * account, read-only tenants included (TEN-018): the latest run and its report, filtered by
  * `?material&location&page`, and Run MRP bound to the tenant and the dataset generation this page
  * showed. A malformed query, or a filter naming a record this tenant doesn't have, is the not-found
- * state; a page past the last shows the last.
+ * state; a page past the last shows the last. Accept is bound the same way, and today's UTC date tells
+ * the screen whether the run's proposals can still be accepted.
  */
 async function Mrp({ params, searchParams }: Pick<PageProps<"/admin/[tenant]/mrp">, "params" | "searchParams">) {
   await connection();
@@ -67,6 +68,8 @@ async function Mrp({ params, searchParams }: Pick<PageProps<"/admin/[tenant]/mrp
       materials={materials}
       locations={locations}
       action={runMrp.bind(null, tenant.code, tenant.generation)}
+      accept={acceptMrpProposal.bind(null, tenant.code, tenant.generation)}
+      today={new Date().toISOString().slice(0, 10)}
       locale={locale}
       messages={messages}
     />

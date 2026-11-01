@@ -21,7 +21,8 @@ const owned = tenantOwned();
  * never deleted. The quantity is six-decimal base-unit text (R03) with the entered quantity, unit
  * and factor kept (MAT-019). `converted` is how much purchase-order lines have taken so far, in the
  * same form; it reaches `quantity` exactly when the status becomes `completed`. A requisition is
- * planned supply only: it never touches stock (BUY-009).
+ * planned supply only: it never touches stock (BUY-009). One accepted from an MRP proposal names
+ * its run (`mrpRun`, E19-S01).
  */
 export const PurchaseRequisition = defineEntity({
   name: "PurchaseRequisition",
@@ -45,6 +46,8 @@ export const PurchaseRequisition = defineEntity({
     abandoned: p.string().default("0.000000"),
     status: p.string().length(12).default("open"),
     createdAt: p.datetime().onCreate(() => new Date()),
+    /** The MRP run whose proposal created it (E19-S01): the run's eight-digit ID, or null when entered by hand. */
+    mrpRun: p.string().length(8).nullable(),
     /** Optimistic-lock version (AUD-024, API-029): an edit and a conversion advance it. */
     version: p.integer().version(),
   },

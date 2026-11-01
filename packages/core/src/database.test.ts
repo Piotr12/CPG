@@ -58,6 +58,7 @@ describe("migrateDatabase", () => {
       "Migration20261025180850_list_key_read_indexes",
       "Migration20261027061605_mrp_runs",
       "Migration20261101053705_mrp_recommendations",
+      "Migration20261101075151_mrp_acceptance",
       "Migration20261101075645_mrp_recommendation_lead_time",
       "Migration20261101080923_mrp_run_exceptions",
     ]);

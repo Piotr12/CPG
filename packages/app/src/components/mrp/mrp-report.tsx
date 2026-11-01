@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { Locale, MaterialSummary, MrpBucketView, MrpLatestView, MrpPlanView, NamedRecordView } from "@cpg/core";
+import type { Locale, MaterialSummary, MrpAcceptanceView, MrpBucketView, MrpLatestView, MrpPlanView, NamedRecordView, Result } from "@cpg/core";
 import type { MrpReportPageQuery } from "@cpg/core/validators/mrp/mrp-latest.schema";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { Button } from "@cpg/ui/components/button";
@@ -8,6 +8,7 @@ import type { Messages } from "../../i18n/messages/en";
 import { fill, localeQuantity } from "../forms/form-labels";
 import { PageLinks } from "../layout/page-links";
 import { MaterialLocationFilters } from "../reports/material-location-filters";
+import { MrpProposals } from "./mrp-proposals";
 
 interface MrpReportProps {
   tenant: { code: string };
@@ -17,6 +18,10 @@ interface MrpReportProps {
   /** The tenant's materials and locations, for the filters. */
   materials: MaterialSummary[];
   locations: NamedRecordView[];
+  /** The server's UTC date, for whether the run's proposals can still be accepted (E19-S01). */
+  today: string;
+  /** Accepts a proposal: the page's bound server action, or absent on a read-only tenant. */
+  accept?: (raw: { run: string; proposal: string }) => Promise<Result<MrpAcceptanceView>>;
   locale: Locale;
   messages: Messages;
 }
@@ -47,10 +52,11 @@ const short = (day: MrpBucketView) => day.shortage !== "0.000000";
 /**
  * The last MRP report (E18-S01, PRD §07) under the run card: material and location filters, the
  * run's planned pairs, 25 a page, each with its lowest projected balance and first shortage, and,
- * once the filters leave one pair, that pair's 90 days. Figures are in the material's base unit, in
- * the reader's locale. It writes nothing, so a read-only tenant shows it unchanged (TEN-018).
+ * once the filters leave one pair, that pair's proposals (with Accept, E19-S01) and its 90 days. Figures
+ * are in the material's base unit, in the reader's locale. Only Accept writes, so a read-only tenant
+ * shows the report without it (TEN-018).
  */
-export function MrpReport({ tenant, report, selected, materials, locations, locale, messages }: MrpReportProps) {
+export function MrpReport({ tenant, report, selected, materials, locations, today, accept, locale, messages }: MrpReportProps) {
   const t = messages.mrp.report;
   const path = `/admin/${tenant.code}/mrp`;
   const amount = (quantity: string, plan: MrpPlanView) => `${localeQuantity(quantity, locale)} ${plan.baseUnit}`;
@@ -66,6 +72,7 @@ export function MrpReport({ tenant, report, selected, materials, locations, loca
       <span data-mrp-lowest className={cn(negative(plan.lowestProjectedBefore) && "font-medium text-danger")}>{amount(plan.lowestProjectedBefore, plan)}</span>
     ) },
     { id: "firstShortage", header: t.columns.firstShortage, kind: "date", cell: (plan) => <span data-mrp-first-shortage>{plan.firstShortageDate ?? t.noShortage}</span> },
+    { id: "proposals", header: t.columns.proposals, kind: "quantity", priority: 2, cell: (plan) => <span data-mrp-proposal-count>{plan.proposals.length}</span> },
   ];
   const filtered = Boolean(selected.material || selected.location);
   const query = (page: number) => `${path}?${new URLSearchParams({ ...(selected.material && { material: selected.material }), ...(selected.location && { location: selected.location }), page: String(page) })}`;
@@ -101,6 +108,7 @@ export function MrpReport({ tenant, report, selected, materials, locations, loca
           pagination={<PageLinks page={report.page} pages={Math.ceil(report.total / report.pageSize)} href={query} labels={t} />}
         />
       </div>
+      {only && <MrpProposals tenant={tenant} run={report.run} plan={only} today={today} accept={accept} locale={locale} messages={messages} />}
       {only && <PlanDays plan={only} locale={locale} labels={t} />}
     </section>
   );
@@ -123,7 +131,7 @@ function PlanDays({ plan, locale, labels: t }: { plan: MrpPlanView; locale: Loca
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <h3 className="font-semibold">{fill(t.plan, { material: `${plan.material} ${plan.materialDescription}`, location: `${plan.location} ${plan.locationName}` })}</h3>
+        <h3 className="font-semibold" data-mrp-plan-heading>{fill(t.plan, { material: `${plan.material} ${plan.materialDescription}`, location: `${plan.location} ${plan.locationName}` })}</h3>
         <p className="text-sm text-muted-foreground">{fill(t.planIntro, { unit: plan.baseUnit })}</p>
       </div>
       <DataTable label={t.planLabel} columns={columns} rows={plan.buckets} rowKey={(day) => day.date} rowTone={(day) => (short(day) ? "danger" : undefined)} empty={t.empty} />

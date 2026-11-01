@@ -126,6 +126,7 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
   let orm: Orm;
   let run: () => Promise<unknown>;
   let engineOnly: () => Promise<number>;
+  let accept: (run: string, proposal: string) => Promise<unknown>;
   const testTimeout = 2 * RUNS * CI_FACTOR * size.budgetMs + 60_000;
 
   beforeAll(async () => {
@@ -139,6 +140,11 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     run = async () => {
       const { cradle } = await scopeForTenant(container, "prod");
       return inRequestTransaction(cradle.em, () => cradle.mrpRunService.run(ACTOR));
+    };
+    // An accept plans the tenant again under the write gate (E19-S01 spec, Risks), as the wrappers run it.
+    accept = async (runId, proposal) => {
+      const { cradle } = await scopeForTenant(container, "prod");
+      return inRequestTransaction(cradle.em, () => cradle.mrpAcceptanceService.accept(runId, proposal, ACTOR));
     };
     // The engine is one synchronous call, so its own time is a stall the heartbeat also counts (#275).
     engineOnly = async () => {
@@ -155,7 +161,7 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
   });
 
   /** The fastest of three runs, and the longest gap between event-loop ticks across them. */
-  async function measure(): Promise<{ fastest: number; longestStall: number }> {
+  async function measure(work: (attempt: number) => Promise<unknown> = () => run()): Promise<{ fastest: number; longestStall: number }> {
     let fastest = Infinity;
     let longestStall = 0;
     for (let attempt = 0; attempt < RUNS; attempt += 1) {
@@ -170,7 +176,7 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
       };
       setImmediate(beat);
       const started = performance.now();
-      await run().finally(() => (running = false));
+      await work(attempt).finally(() => (running = false));
       fastest = Math.min(fastest, performance.now() - started);
     }
     return { fastest, longestStall };
@@ -212,6 +218,25 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     expect(supplied[0].dependable).toBeGreaterThan(0);
     expect(supplied[0].dependent).toBeGreaterThan(0);
     expect(supplied[0].transfers).toBeGreaterThan(0);
+    expect(fastest).toBeLessThan(CI_FACTOR * size.budgetMs);
+    expect(longestStall).toBeLessThan(CI_FACTOR * STALL_BUDGET_MS);
+  }, testTimeout);
+
+  it("accepts a Buy proposal, planning the tenant again, within the run's budget (E19-S01)", async () => {
+    // One proposal of three different pairs of active masters: accepting one leaves the others as they were (spec Q2).
+    const proposals = await orm.em.getConnection().execute<{ id: string; run: string }[]>(
+      `select min(r.id) as id, m.code as run from mrp_recommendation r join mrp_run m on m.id = r.run_id
+         join material t on t.code = r.material and t.tenant_code = r.tenant_code and t.active = 1
+         join location l on l.code = r.location and l.tenant_code = r.tenant_code and l.active = 1
+       where r.kind = 'purchase-requisition' and r.accepted_document is null group by r.material, r.location order by r.material, r.location limit ${RUNS}`,
+    );
+    expect(proposals).toHaveLength(RUNS);
+    const before = await count("select count(*) as n from purchase_requisition where mrp_run is not null");
+
+    const { fastest, longestStall } = await measure((attempt) => accept(proposals[attempt].run, proposals[attempt].id));
+
+    process.stdout.write(`MRP accept, ${size.name}: ${fastest.toFixed(0)} ms fastest of ${RUNS}, longest event-loop stall ${longestStall.toFixed(0)} ms\n`);
+    expect(await count("select count(*) as n from purchase_requisition where mrp_run is not null")).toBe(before + RUNS);
     expect(fastest).toBeLessThan(CI_FACTOR * size.budgetMs);
     expect(longestStall).toBeLessThan(CI_FACTOR * STALL_BUDGET_MS);
   }, testTimeout);

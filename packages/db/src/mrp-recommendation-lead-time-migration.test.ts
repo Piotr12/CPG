@@ -38,7 +38,8 @@ describe("MRP recommendation lead time migration (#279)", () => {
       await expect(sql("update mrp_recommendation set lead_time_days = null where id = 'p3'")).rejects.toThrow(/NOT NULL constraint failed/);
       // Altered in place, not rebuilt: the table's own definition gains only the column, its cascade kept.
       const altered = (await sql("select sql from sqlite_master where name = 'mrp_recommendation'"))[0].sql as string;
-      expect(altered).toBe(table.replace("`quantity` text not null, ", "`quantity` text not null, `lead_time_days` integer not null default 0, "));
+      // SQLite writes an added column after the last one, before the table constraints (after #287's `accepted_document`).
+      expect(altered).toBe(table.replace(", constraint", ", `lead_time_days` integer not null default 0, constraint"));
       expect(altered).toContain("on delete cascade");
       expect(await orm.schema.getUpdateSchemaSQL()).not.toContain("`mrp_recommendation`");
 

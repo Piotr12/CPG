@@ -134,10 +134,37 @@ describe("PurchaseRequisitionService", () => {
         abandoned: "0.000000",
         outstanding: "100.000000",
         status: "open",
+        mrpRun: null,
         createdAt: expect.any(Date),
         version: 1,
       });
       expect(second).toMatchObject({ id: "00000002", quantity: "500.000000", enteredQuantity: "0.5", enteredUnit: "t", numerator: "1000" });
+    });
+
+    it("names the MRP run an accepted proposal came from, in the view, a later read and the creation entry (E19-S01, R08)", async () => {
+      const manual = await service().create(NEW, ACTOR);
+      const accepted = await service().create(NEW, ACTOR, { mrpRun: "00000004" });
+
+      expect(manual.mrpRun).toBeNull();
+      expect(accepted).toMatchObject({ id: "00000002", mrpRun: "00000004", status: "open", converted: "0.000000" });
+      expect(await service().get(accepted.id)).toMatchObject({ mrpRun: "00000004" });
+      const [entered, fromMrp] = await entries("purchase-requisitions.purchase-requisition.created");
+      expect(entered.after).not.toHaveProperty("mrpRun");
+      expect(fromMrp.after).toMatchObject({ id: "00000002", mrpRun: "00000004" });
+    });
+
+    it("keeps the run in the requisition's later audit entries: a conversion and a close-early (E19-S01)", async () => {
+      const accepted = await service().create(NEW, ACTOR, { mrpRun: "00000004" });
+      const manager = scopedEm(); manager.create(Supplier, { code: "00000001", name: "Steelworks" }); await manager.flush();
+      await new PurchaseOrderService({ em: scopedEm() }).create({ supplier: "00000001", location: NEW.location,
+        lines: [{ material: NEW.material, quantity: "40", unit: "kg", plannedDate: NEW.requiredDate, requisition: accepted.id }] }, ACTOR);
+      await service().closeEarly(accepted.id, (await service().get(accepted.id)).version, ACTOR);
+
+      const [closed] = await entries("purchase-requisitions.purchase-requisition.closed-early");
+      expect(closed.before).toMatchObject({ mrpRun: "00000004", converted: "40.000000" });
+      expect(closed.after).toMatchObject({ mrpRun: "00000004", status: "closed-early" });
+      const converted = (await entries("purchase-requisitions.purchase-requisition.converted")).find(({ subjectId }) => subjectId === accepted.id);
+      expect(converted?.after).toMatchObject({ mrpRun: "00000004", converted: "40.000000" });
     });
 
     it("numbers each tenant on its own (R05)", async () => {

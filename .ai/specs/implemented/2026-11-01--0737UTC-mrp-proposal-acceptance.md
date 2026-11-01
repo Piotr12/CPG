@@ -1,6 +1,6 @@
 # MRP proposal acceptance: one click, after confirmation, turns a Buy proposal into a purchase requisition tagged with its run, and a stale proposal is refused
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-11-01 07:37 UTC
 **Issue:** #287 (E19-S01, epic #271) · **Depends on:** MRP runs (`implemented/2026-10-27--0556UTC-mrp-runs.md`, #274), replenishment proposals (`implemented/2026-10-31--2054UTC-mrp-replenishment-proposals.md`, #278), the MRP report (`implemented/2026-10-31--0907UTC-mrp-report.md`, #284), purchase requisitions (`implemented/2026-10-20--1636UTC-purchase-requisitions-orders.md`, #86), API idempotency (`implemented/2026-10-19--1548UTC-api-idempotency.md`) · **Design authority:** `.ai/specs/product-brief.md` (R03, R05, R07, R08, R10, N06), `research/CPG-prd001.pdf` §04 "Manual/auto creation", "Stale and concurrent", §05 "Optimistic edits and freshness", §06, `research/CPG-prd-datamodel.pdf` ("Purchase requisition", "MRP recommendation"), `research/CPG-acceptance.md` BUY-001, RUN-003, RUN-004, RUN-005, RUN-017, RUN-022
 
@@ -170,9 +170,9 @@ The Purchase requisitions list gains an **MRP run** column, priority 2, showing 
 
 Mockups: `assets/mrp-proposal-acceptance/mockup-01-mrp-proposals.png` (the one-pair view) and `mockup-02-accept-dialog.png` (the dialog). The page as it is today, with no list of proposals, is #284's `assets/mrp-report/current-01-mrp-page.png`.
 
-![The Proposals table in the one-pair view](assets/mrp-proposal-acceptance/mockup-01-mrp-proposals.png)
+![The Proposals table in the one-pair view](../assets/mrp-proposal-acceptance/mockup-01-mrp-proposals.png)
 
-![The Accept confirmation](assets/mrp-proposal-acceptance/mockup-02-accept-dialog.png)
+![The Accept confirmation](../assets/mrp-proposal-acceptance/mockup-02-accept-dialog.png)
 
 ## 📝 Edge Cases & Failure Scenarios
 
@@ -249,3 +249,29 @@ One phase, one PR: the columns and migration, the requisition's run link, the ac
    - Move this spec to `implemented/` with implementation notes.
 
 Each step leaves the suite green. Run `npm run lint`, `npm run typecheck`, `npm run test:coverage` (100%) and `npm run build`.
+
+## Implementation notes
+
+Implemented on #319, branched from `main` (the spec PR #318 stays design-only), as written, except:
+
+- **The run on the requisitions list sits under the requisition's ID, not in its own column.** At 1280 px a priority-2 column after Required sat past the table's visible width (QA screenshot), and moving it last shifted no index but left it out of view. Under the ID it is in view at every width, and no other column moves (`requisitions-table.tsx`, `fromMrpRun`). Requisitions entered by hand show nothing there.
+- **The screen's stale and not-executable texts don't name the material and location.** The dialog already names them, and `MRP_PROPOSAL_STALE` from a superseded run has no params, which `errorMessage` would answer in the server's English. `MRP_PROPOSAL_ACCEPTED` names its document. The API keeps every param the spec lists.
+- **The earlier-day note** shows only on a writable tenant, for a pair with proposals: a read-only tenant offers no Accept to explain.
+- **`refreshAfterWrite` is unchanged; the dialog refreshes the page itself, on close, after `MRP_PROPOSAL_ACCEPTED`** (`accept-proposal-button.tsx`). The code review found that a server-side refresh on that refusal replaced the row's Accept button with its document link, and the open dialog with it, so the refusal was never read (lesson 2026-10-21).
+- **The dialog also translates `MATERIAL_INACTIVE`, `LOCATION_INACTIVE` and `VALIDATION_FAILED`** (an over-limit quantity), which Q11's refusals reach.
+- **The Make half** is #320, blocked on #282.
+
+Notes:
+- `MrpAcceptanceService` (`core/src/services/mrp/`) follows the spec's steps 0–8. Its tests cover every edge case line with a fixed clock. The two-ORM race test (`mrp-acceptance-concurrency.test.ts`) gives one requisition and an `MRP_PROPOSAL_ACCEPTED` refusal after two plannings in all.
+- Test fixes, not code fixes: a same-pair order line a day *before* the need date leaves the proposal unchanged, since planned again that day gets a proposal of its own, so RUN-017's line goes on the need date. A material with open demand can't be deactivated, so Q11's test sets the flag directly.
+- Migration `Migration20261101075151_mrp_acceptance`: the generator wrote two `add column`s. `mrp-acceptance-migration.test.ts` checks that each table's definition is the old one with the column added, the populated upgrade, old-style inserts, and `down()`.
+- Seams found by the integration files and fixed here: `mrp-run-api.test.ts` compared #278's proposals exactly, and `mrp-report.test.ts` read the first `main h3`, now the Proposals heading, so it reads `[data-mrp-plan-heading]`.
+- Benchmark (`mrp-run-timing.test.ts`), fastest of three, run alone, budgets unchanged:
+
+  | Size | Accept | Its longest stall | The run, for comparison |
+  |---|---|---|---|
+  | Realistic | 135 ms | 26 ms | 241 ms |
+  | Ten times | 1,394 ms | 83 ms | 2,579 ms |
+
+- **After merging `main` with #279 (proposal timing, #317) and #280 (planning exceptions, #316).** Each proposal now also carries its timing (`plannedStart`, `plannedFinish`, `lateDays`, `beyondHorizon`), the accept answer included. A Make pair needs an active BOM before it gets a proposal at all, so the not-executable test gives its material one. Q3 expected #279 to move the requisition's date to the proposal's feasible date. It still takes the **need date**: #279 sizes each proposal from its need date and counts existing supply on its own date, so a requisition on a late proposal's planned finish would leave the need date short. Planning again would then propose that shortage once more and refuse the pair's later proposals as stale, which breaks Q2. `mrp-acceptance.service.test.ts` pins that a Late Supply proposal is required on its need date and that the later proposal stays acceptable. Which date a late proposal's document should take is the owner's decision in #322.
+- **Review of the merge (fresh context).** The stale rule also compares the fresh plan's `plannedFinish` with the run's: sizing ignores the lead time, so a lead-time edit after the run would otherwise accept a proposal whose answer shows timing the new plan doesn't repeat. The Proposals table shows a late or Beyond Horizon proposal's planned finish under its need date, inside the existing cell, so no column moves. A migration test applies this migration after #279's and #280's, as production does.

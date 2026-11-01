@@ -485,10 +485,16 @@ describe("MrpRunService: replenishment proposals (#278)", () => {
     expect(await day("00000001", cabinet.id, PLANT, "2026-10-05")).toMatchObject({ proposed_receipts: "10.000000", projected_before: "-3.000000", projected_after: "7.000000", shortage: "3.000000" });
     expect(await day("00000001", cabinet.id, store, "2026-10-05")).toMatchObject({ proposed_receipts: "3.000000", projected_after: "0.000000" });
     const { plans } = await latest();
+    const uuid = expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     expect(plans.map(({ location: site, proposals }) => [site, proposals])).toEqual([
-      [PLANT, [{ kind: "purchase-requisition", needDate: "2026-10-05", quantity: "10.000000", ...onTime }]],
-      [store, [{ kind: "production-order", needDate: "2026-10-05", quantity: "3.000000", ...onTime }]],
+      // Only a Buy proposal can be accepted until MRP chooses BOMs (E19-S01 Q1); neither is accepted yet.
+      [PLANT, [{ id: uuid, kind: "purchase-requisition", needDate: "2026-10-05", quantity: "10.000000", ...onTime, executable: true, document: null }]],
+      [store, [{ id: uuid, kind: "production-order", needDate: "2026-10-05", quantity: "3.000000", ...onTime, executable: false, document: null }]],
     ]);
+    const [stored] = await sql<{ id: string }>("select id from mrp_recommendation where location = ?", [PLANT]);
+    expect(plans[0].proposals[0].id).toBe(stored.id);
+    await sql("update mrp_recommendation set accepted_document = '00000007' where id = ?", [stored.id]);
+    expect((await latest()).plans[0].proposals[0]).toMatchObject({ id: stored.id, document: "00000007" });
 
     await run();
     expect((await recommendations()).map(({ run: code }) => code)).toEqual(["00000002", "00000002"]);
@@ -513,10 +519,10 @@ describe("MrpRunService: replenishment proposals (#278)", () => {
     const { plans } = await latest();
     const proposalOf = (item: string) => plans.find((plan) => plan.material === item)!.proposals;
     expect(proposalOf(late.id)).toEqual([
-      { kind: "purchase-requisition", needDate: "2026-10-04", quantity: "5.000000", plannedStart: "2026-10-01", plannedFinish: "2026-10-08", lateDays: 4, beyondHorizon: false },
+      { id: expect.any(String), kind: "purchase-requisition", needDate: "2026-10-04", quantity: "5.000000", plannedStart: "2026-10-01", plannedFinish: "2026-10-08", lateDays: 4, beyondHorizon: false, executable: true, document: null },
     ]);
     expect(proposalOf(far.id)).toEqual([
-      { kind: "purchase-requisition", needDate: "2026-10-21", quantity: "5.000000", plannedStart: "2026-10-01", plannedFinish: "2027-01-29", lateDays: 100, beyondHorizon: true },
+      { id: expect.any(String), kind: "purchase-requisition", needDate: "2026-10-21", quantity: "5.000000", plannedStart: "2026-10-01", plannedFinish: "2027-01-29", lateDays: 100, beyondHorizon: true, executable: true, document: null },
     ]);
     // The late receipt lands on its finish; the Beyond Horizon one in no stored day.
     expect(await day("00000001", late.id, PLANT, "2026-10-07")).toMatchObject({ proposed_receipts: "0.000000", projected_after: "-5.000000" });
@@ -537,7 +543,7 @@ describe("MrpRunService: replenishment proposals (#278)", () => {
     await sql("update mrp_recommendation set lead_time_days = 0");
     const { plans } = await latest();
     expect(plans[0].proposals).toEqual([
-      { kind: "purchase-requisition", needDate: "2026-10-05", quantity: "3.000000", plannedStart: "2026-10-05", plannedFinish: "2026-10-05", lateDays: 0, beyondHorizon: false },
+      { id: expect.any(String), kind: "purchase-requisition", needDate: "2026-10-05", quantity: "3.000000", plannedStart: "2026-10-05", plannedFinish: "2026-10-05", lateDays: 0, beyondHorizon: false, executable: true, document: null },
     ]);
   });
 
