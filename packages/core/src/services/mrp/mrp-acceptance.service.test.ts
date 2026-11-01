@@ -29,7 +29,7 @@ const wrapped = <T>(tenant: string, write: (cradle: AppContainer["cradle"]) => P
   retryingStaleSnapshot(async () => {
     const { cradle } = await scope(tenant);
     return inRequestTransaction(cradle.em, async () => {
-      await cradle.tenantService.currentState(tenant);
+      await cradle.tenantService.currentState(cradle.tenant.code);
       return write(cradle);
     });
   });
