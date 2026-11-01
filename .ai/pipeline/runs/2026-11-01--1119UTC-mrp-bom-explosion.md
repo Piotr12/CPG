@@ -60,6 +60,15 @@ Implement the spec. MRP plans materials level by level. Every Make proposal expl
   - Benchmark under the unchanged budgets: realistic 243 ms, ten times 2,439 ms, longest stall 121 ms.
   - Docker is unavailable here, so the integration files ran against a standalone build (lesson 2026-10-23). `mrp-run-api` and `smoke` passed (16 tests). `mrp-accept`, `mrp-accept-api`, `mrp-report`, `mrp-report-api` and `mrp-run` passed (27 tests).
   - Follow-up #327 filed for root ranking (spec Q9).
+- 2026-11-01 11:57 UTC: a fresh-context code review found no engine defect. It requested changes on two Medium and four Low findings, all fixed in 2ec60682:
+  - the MRP exception is renamed `CYCLIC_BOM`, since `BOM_CYCLE` is already the BOM service's 409;
+  - each member's cycle path is now truly the shortest, with a test that fails on the old first-component path;
+  - a `planMrp` invariant test on a multilevel fixture with a `planned-component` shortage;
+  - lines across the BOM chunk boundary;
+  - the spec's UI-copy note;
+  - the acceptance catalogue's header.
+
+  Full gate after the fixes: lint, typecheck and build pass, and `test:coverage` runs 650 files and 5,199 tests at 100%. UI evidence (two screenshots) is posted on the PR.
 
 ## Progress
 
