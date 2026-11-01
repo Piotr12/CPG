@@ -51,6 +51,8 @@ Implement the spec: overdue supply and overdue transfer arrivals stored as warni
 
 ## Progress
 
+PR: #324
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Overdue warnings in the run
@@ -87,3 +89,4 @@ Implement the spec: overdue supply and overdue transfer arrivals stored as warni
 - 11:31 UTC — full `npm run test:coverage`: 651 files, 5208 tests passed; one branch of `mrp-run.service.ts` (a warning row with no date or details) was uncovered, now covered by its own test. `npm run lint`, `npm run typecheck`, `npm run build` exit 0.
 - 11:31 UTC — integration, no Docker on this machine (lesson 2026-10-23): standalone build on a fresh `DATA_DIR`, `mrp-report.test.ts`, `mrp-report-api.test.ts`, `mrp-accept.test.ts` 21/21 passed, `mrp-run-api.test.ts` 11/11 passed.
 - Deviation from the spec: the warning codes carry no messages (never listed), recorded in the spec's implementation notes.
+- 11:40 UTC — review (fresh context): approve, six minor/nit findings fixed in e82bcf53; QA screenshots posted; PR #324 ready.
