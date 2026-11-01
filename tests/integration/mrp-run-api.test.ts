@@ -154,6 +154,31 @@ describe("MRP runs through the API", () => {
     expect(others.every(({ tentativeSupply, dependableSupply }) => tentativeSupply === "0.000000" && dependableSupply === "0.000000")).toBe(true);
   });
 
+  it("proposes a requisition of 10 for Buy and a production order of 3 for Make, each location by its own parameters, read from the latest run (#278, MAT-016)", async () => {
+    const material = (await created("/api/tenants/prod/materials", { type: "intermediate", description: "mrpapi frame", baseUnit: "each" })).id;
+    const bought = pair.location;
+    const made = (await created("/api/tenants/prod/locations", { name: "mrpapi workshop" })).id;
+    const customer = (await created("/api/tenants/prod/customers", { name: "mrpapi frames" })).id;
+    await created("/api/tenants/prod/planning-parameters", { material, location: bought, procurement: "buy", leadTimeDays: 4, minimumQuantity: "10", lotMultiple: "5" });
+    await created("/api/tenants/prod/planning-parameters", { material, location: made, procurement: "make", leadTimeDays: 1, minimumQuantity: "0", lotMultiple: "1" });
+    for (const location of [bought, made]) {
+      await created("/api/tenants/prod/customer-orders", { customer, location, lines: [{ material, quantity: "3", unit: "each", requiredDate: day(6) }] });
+    }
+
+    const response = await runIn("prod");
+    expect(response.status, response.text).toBe(200);
+    const filtered = await latest("prod", `?material=${material}`);
+    expect(filtered.status, filtered.text).toBe(200);
+    const plans = (json(filtered).data as MrpLatestView).plans;
+
+    expect(plans.map(({ location, proposals }) => [location, proposals])).toEqual([
+      [bought, [{ kind: "purchase-requisition", needDate: day(6), quantity: "10.000000" }]],
+      [made, [{ kind: "production-order", needDate: day(6), quantity: "3.000000" }]],
+    ]);
+    expect(plans[0].buckets[6]).toMatchObject({ date: day(6), proposedReceipts: "10.000000", projectedBefore: "-3.000000", projectedAfter: "7.000000" });
+    expect(plans[1].buckets[6]).toMatchObject({ date: day(6), proposedReceipts: "3.000000", projectedBefore: "-3.000000", projectedAfter: "0.000000" });
+  });
+
   it("needs an Idempotency-Key, and replays a repeated key without a second run (R07)", async () => {
     const unkeyed = await api("POST", "/api/tenants/prod/mrp/runs", adminSecret, { body: {} });
     expect(unkeyed.status).toBe(400);
