@@ -230,6 +230,12 @@ describe("MrpReport", () => {
       expect(second.querySelector("[data-mrp-marks]")).toBeNull();
     });
 
+    it("labels a one-day week by its single date, as when a run starts on a Sunday", () => {
+      const sunday = { ...weekly, weeks: [week({ start: "2026-11-01", end: "2026-11-01", week: 44, partial: true })] };
+      renderReport(report({ total: 1, plans: [sunday], bucket: "week" }), { material: "00000012", location: "00000003", bucket: "week" });
+      expect(document.querySelector("[data-mrp-week-range]")?.textContent).toBe("Nov 1, partial");
+    });
+
     it("shows the day view when a weekly read has no weeks, as a plan read by day", () => {
       renderReport(report({ total: 1, plans: [sheet] }), { material: "00000012", location: "00000003", bucket: "week" });
       expect(screen.getByRole("table", { name: en.mrp.report.planLabel })).toBeTruthy();

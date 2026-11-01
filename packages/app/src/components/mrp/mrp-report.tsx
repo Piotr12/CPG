@@ -186,7 +186,8 @@ function PlanWeeks({ plan, weeks, locale, labels: t }: { plan: MrpPlanView; week
     <span data-mrp-figure={key} className={cn(negative(quantity) && "font-medium text-danger")}>{localeQuantity(quantity, locale)}</span>
   );
   // A date range reads the same in both languages: the dates are the locale's.
-  const range = (week: MrpWeekView) => `${shortDate(week.start, week.start, locale)}–${shortDate(week.end, week.start, locale)}`;
+  const range = (week: MrpWeekView) =>
+    week.start === week.end ? shortDate(week.start, week.start, locale) : `${shortDate(week.start, week.start, locale)}–${shortDate(week.end, week.start, locale)}`;
   const columns: DataTableColumn<MrpWeekView>[] = [
     { id: "week", header: t.weekFigures.week, kind: "date", cell: (week) => (
       <div className="flex flex-col">
