@@ -33,15 +33,17 @@ Phase 4, proof and paperwork (spec steps 7–9): benchmark, integration tests, d
 
 - 07:51 The implementation branch was cut from `main`, not stacked on the spec PR, and carries the spec in. It also deletes #278's stale active spec copy, as #318 does.
 
+- Phase 1: the generator wrote two `add column`s, no rebuild. `mrp-acceptance-migration.test.ts` checks the populated upgrade, in place, and old-style inserts. The migration counts, lists and rollback-by-count tests take it. Core and app suites: 533 files, 4,065 tests green.
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Storage and documents
 
-- [ ] 1.1 Columns and migration
-- [ ] 1.2 Requisition run link
-- [ ] 1.3 Proposal view fields
+- [x] 1.1 Columns and migration — 8433e688
+- [x] 1.2 Requisition run link — a9561430
+- [x] 1.3 Proposal view fields — 717c2704
 
 ### Phase 2: Acceptance
 
