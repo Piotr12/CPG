@@ -51,6 +51,12 @@ async function order(tenant: string, locationId: string, lines: { material: stri
 async function parameters(tenant: string, materialId: string, locationId: string, procurement: "make" | "buy", minimumQuantity: string, lotMultiple: string) {
   await (await scope(tenant)).cradle.planningParameterService.create({ material: materialId, location: locationId, procurement, leadTimeDays: 2, minimumQuantity, lotMultiple }, ANNA);
 }
+/** An active BOM of `output`, valid from 2026, made of a raw material of its own: a Make set may propose it (E16-S03). */
+async function bom(tenant: string, output: string) {
+  const { cradle } = await scope(tenant);
+  const component = await cradle.materialService.create({ type: "raw", description: `Input of ${output}`, baseUnit: "each" }, ANNA);
+  await cradle.bomService.create({ output, priority: 1, validFrom: "2026-01-01", validThrough: null, components: [{ material: component.id, quantity: "1", unit: "each" }] }, ANNA);
+}
 /** The stored day of one pair of a Prod run, by business IDs. */
 async function day(runId: string, materialId: string, locationId: string, date: string) {
   const [row] = await sql(
@@ -460,6 +466,7 @@ describe("MrpRunService: replenishment proposals (#278)", () => {
     const store = (await location("prod", "Store")).id;
     await parameters("prod", cabinet.id, PLANT, "buy", "10.000000", "5.000000");
     await parameters("prod", cabinet.id, store, "make", "0.000000", "1.000000");
+    await bom("prod", cabinet.id);
     await order("prod", PLANT, [{ material: cabinet.id, quantity: "3", requiredDate: "2026-10-05" }]);
     await order("prod", store, [{ material: cabinet.id, quantity: "3", requiredDate: "2026-10-05" }]);
     const before = await everyOtherTable();

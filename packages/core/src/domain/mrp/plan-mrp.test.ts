@@ -1434,8 +1434,11 @@ describe("planMrp: planning exceptions (E16-S03, #280)", () => {
       expect(bucketOf(planAt(result.plans, "A"), DAY)).toMatchObject({ projectedBefore: -q("3"), projectedAfter: -q("3") });
       expect(ofB(result)).toEqual(ofB(alone));
     }
-    // With a valid BOM, the same A is proposed production.
+    // With a valid BOM, the same A is proposed production, whichever of its BOMs covers the date.
     expect(planMrp(withB({ ...a, boms: [BOM] }), TODAY).proposals.filter(({ material }) => material === "A").map(({ kind }) => kind)).toEqual(["production-order"]);
+    const twoBoms = planMrp(withB({ ...a, boms: [{ ...BOM, validThrough: "2026-10-03" }, { ...BOM, validFrom: "2026-10-04" }] }), TODAY);
+    expect(twoBoms.exceptions).toEqual([]);
+    expect(twoBoms.proposals.filter(({ material }) => material === "A")).toHaveLength(1);
   });
 
   it("RUN-016: A's Missing BOM is reported beside B's valid Buy proposal in the same result, where every proposal is executable", () => {
@@ -1510,10 +1513,13 @@ describe("planMrp: planning exceptions (E16-S03, #280)", () => {
       { material: "A", location: "L1", record: "customer-order-line" as const, document: "00000009/2" },
       { material: "A", location: "L1", record: "customer-order-line" as const, document: "00000003/1" },
       { material: "A", location: "L1", record: "stock-balance" as const },
+      { material: "A", location: "L2", record: "stock-balance" as const },
     ];
     for (const unreadable of [rows, [...rows].reverse()]) {
+      const first = { code: "INVALID_UOM_CONVERSION", material: "A", record: "customer-order-line", document: "00000003/1" };
       expect(planMrp(inputs({ unreadable }), TODAY).exceptions).toEqual([
-        { code: "INVALID_UOM_CONVERSION", material: "A", location: "L1", record: "customer-order-line", document: "00000003/1" },
+        { ...first, location: "L1" },
+        { ...first, location: "L2" },
       ]);
     }
   });

@@ -1,9 +1,9 @@
 import { CustomerOrderLine, type EntityManager, type FilterQuery } from "@cpg/db";
 import { addMonths } from "../../../domain/demand/demand-buckets";
 import type { MrpOrderLine } from "../../../domain/mrp/mrp-inputs";
-import { parseDecimal } from "../../../domain/quantities/decimal";
 import { yieldToEventLoop } from "../../../http/yield-to-event-loop";
 import type { SnapshotCodes } from "./codes";
+import { readRow, type UnreadableRows } from "./readable";
 
 /**
  * How many materials one read takes. Hydrating a line costs about 17 µs, and nothing else answers while
@@ -13,27 +13,29 @@ import type { SnapshotCodes } from "./codes";
 export const MATERIAL_CHUNK = 10;
 
 /** The partial fields every line read loads, and the order's code and location through its key. */
-const LINE_FIELDS = ["position", "requiredDate", "quantity", "fulfilled", "abandoned", "status", "removed", "material", "order.code", "order.location"] as const;
+const LINE_FIELDS = ["position", "requiredDate", "quantity", "fulfilled", "abandoned", "numerator", "denominator", "status", "removed", "material", "order.code", "order.location"] as const;
 
 type ReadLine = Awaited<ReturnType<typeof findLines>>[number];
 
 const findLines = (em: EntityManager, where: FilterQuery<CustomerOrderLine>) =>
   em.find(CustomerOrderLine, where, { populate: ["order"], fields: LINE_FIELDS, disableIdentityMap: true });
 
-/** A read line by business IDs and micro-units, as the engine takes it. */
-function toMrpLine(line: ReadLine, codes: SnapshotCodes): MrpOrderLine {
-  return {
-    order: line.order.code,
-    position: line.position,
-    material: codes.materials.get(line.material.id)!,
-    location: codes.locations.get(line.order.location.id)!,
-    requiredDate: line.requiredDate,
-    quantity: parseDecimal(line.quantity)!,
-    fulfilled: parseDecimal(line.fulfilled)!,
-    abandoned: parseDecimal(line.abandoned)!,
-    status: line.status,
-    removed: line.removed,
-  };
+/**
+ * A read line by business IDs and micro-units, as the engine takes it, added to `lines`; a line that
+ * can't be read (E16-S03) is reported to `unreadable` instead.
+ */
+function addLine(lines: MrpOrderLine[], line: ReadLine, codes: SnapshotCodes, unreadable: UnreadableRows): void {
+  const pair = { material: codes.materials.get(line.material.id)!, location: codes.locations.get(line.order.location.id)! };
+  const read = readRow({
+    quantities: { quantity: line.quantity, fulfilled: line.fulfilled, abandoned: line.abandoned },
+    factor: line,
+    dates: [line.requiredDate],
+  });
+  if (!read) {
+    unreadable.push({ ...pair, record: "customer-order-line", document: `${line.order.code}/${line.position}` });
+    return;
+  }
+  lines.push({ order: line.order.code, position: line.position, ...pair, requiredDate: line.requiredDate, ...read, status: line.status, removed: line.removed });
 }
 
 /**
@@ -49,12 +51,13 @@ function toMrpLine(line: ReadLine, codes: SnapshotCodes): MrpOrderLine {
  * history included, through `(tenant, required_date)` (lesson 2026-10-25, "EXPLAIN the query MikroORM
  * really sends"). Hydrating the Open lines past the horizon costs less than that walk (`mrp-run-timing.test.ts`, where a third of them lie past it).
  */
-export async function readOrderLines(em: EntityManager, codes: SnapshotCodes, before: string): Promise<MrpOrderLine[]> {
+export async function readOrderLines(em: EntityManager, codes: SnapshotCodes, before: string, unreadable: UnreadableRows): Promise<MrpOrderLine[]> {
   const materials = [...codes.materials.keys()];
   const lines: MrpOrderLine[] = [];
   for (let start = 0; start < materials.length; start += MATERIAL_CHUNK) {
     const read = await findLines(em, { material: { $in: materials.slice(start, start + MATERIAL_CHUNK) }, removed: false, status: "open" });
-    for (const line of read) if (line.requiredDate < before) lines.push(toMrpLine(line, codes));
+    // The cut-off comes first, so a corrupt line that would count nowhere flags nothing (spec, Snapshot loader).
+    for (const line of read) if (line.requiredDate < before) addLine(lines, line, codes, unreadable);
     await yieldToEventLoop();
   }
   return lines;
@@ -66,11 +69,11 @@ export async function readOrderLines(em: EntityManager, codes: SnapshotCodes, be
  * (D08, DEM-009/010/011). One read per calendar month through `(tenant, required_date)`, a bounded range
  * of the window only, never the history, followed by a yield, so no read stalls the server for long.
  */
-export async function readConsumingLines(em: EntityManager, codes: SnapshotCodes, from: string, before: string): Promise<MrpOrderLine[]> {
+export async function readConsumingLines(em: EntityManager, codes: SnapshotCodes, from: string, before: string, unreadable: UnreadableRows): Promise<MrpOrderLine[]> {
   const lines: MrpOrderLine[] = [];
   for (let month = from; month < before; month = addMonths(month, 1)) {
     const read = await findLines(em, { removed: false, status: { $ne: "open" }, requiredDate: { $gte: month, $lt: addMonths(month, 1) } });
-    for (const line of read) lines.push(toMrpLine(line, codes));
+    for (const line of read) addLine(lines, line, codes, unreadable);
     await yieldToEventLoop();
   }
   return lines;

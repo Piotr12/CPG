@@ -174,18 +174,16 @@ export interface MrpBom {
 }
 
 /** The kinds of stored row the snapshot reads quantities, factors or dates from (E16-S03, spec Q8). */
-export const MRP_RECORD_KINDS = [
-  "stock-balance",
-  "customer-order-line",
-  "forecast",
-  "safety-stock-target",
-  "purchase-requisition",
-  "purchase-order-line",
-  "production-order",
-  "bom-line",
-  "transfer",
-] as const;
-export type MrpRecordKind = (typeof MRP_RECORD_KINDS)[number];
+export type MrpRecordKind =
+  | "stock-balance"
+  | "customer-order-line"
+  | "forecast"
+  | "safety-stock-target"
+  | "purchase-requisition"
+  | "purchase-order-line"
+  | "production-order"
+  | "bom-line"
+  | "transfer";
 
 /**
  * A stored row the loader couldn't read (E16-S03), at one pair it would feed: a row feeding several

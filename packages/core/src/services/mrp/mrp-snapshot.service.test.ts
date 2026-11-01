@@ -30,6 +30,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { loadConfig } from "../../config";
 import { migrateDatabase, toDbOptions } from "../../database";
 import { MrpSnapshotService } from "./mrp-snapshot.service";
+import { BOM_CHUNK } from "./snapshot/boms";
 import { ORDER_LINE_CHUNK, ORDER_PAGE, REQUISITION_PAGE } from "./snapshot/purchasing";
 
 // The horizon of 1 October 2026 runs to 29 December. Open lines are read to the end of December, the
@@ -674,7 +675,7 @@ describe("MrpSnapshotService", () => {
 
   it("returns an empty snapshot for a tenant with nothing to plan", async () => {
     expect(await load()).toEqual({
-      stock: [], orderLines: [], forecasts: [], safetyTargets: [], requisitions: [], purchaseOrderLines: [], productionOrders: [], transfers: [], planningParameters: [],
+      stock: [], orderLines: [], forecasts: [], safetyTargets: [], requisitions: [], purchaseOrderLines: [], productionOrders: [], transfers: [], planningParameters: [], boms: [], unreadable: [],
     });
   });
 
@@ -862,6 +863,160 @@ describe("MrpSnapshotService", () => {
       ]);
       expect((await explain("transfer")).join("\n")).toMatch(/^SEARCH t0 USING INDEX transfer_tenant_code_status(_desc)?_code_index \(tenant_code=\? AND status=\?\)$/m);
       expect((await explain("transfer")).filter((detail) => !detail.startsWith("SEARCH"))).toEqual([]);
+    } finally {
+      await traced.close();
+    }
+  });
+
+  describe("unreadable rows (E16-S03, MRP-036)", () => {
+    // Rows are written around the services, as a legacy import or a hand edit would: the helpers above
+    // store whatever text they get, and `nativeUpdate` rewrites the factors they always store as 1:1.
+    it("leaves out a stock row, a forecast and a safety target it can't read, and reports each at its pair, every other row unchanged", async () => {
+      await stock("prod", "00000001", "00000001", "abc");
+      await stock("prod", "00000002", "00000001", "4.000000");
+      await forecast("prod", "00000001", "00000002", "2026-10-20", "-3");
+      await forecast("prod", "00000002", "00000002", "2026-10-20", "5.000000");
+      await target("prod", "00000002", "00000002", "2026-10-01", "1.0000001");
+      const snapshot = await load();
+      expect(snapshot.stock).toEqual([{ material: "00000002", location: "00000001", physical: micro(4) }]);
+      expect(snapshot.forecasts).toEqual([{ material: "00000002", location: "00000002", date: "2026-10-20", quantity: micro(5) }]);
+      expect(snapshot.safetyTargets).toEqual([]);
+      expect(snapshot.unreadable).toEqual([
+        { material: "00000001", location: "00000001", record: "stock-balance" },
+        { material: "00000002", location: "00000002", record: "safety-stock-target" },
+        { material: "00000001", location: "00000002", record: "forecast" },
+      ]);
+    });
+
+    it("leaves out an order line with a zero denominator or a date that isn't real, naming the line, but flags nothing for one past the cut-off", async () => {
+      await order("prod", "00000005", "00000002", [
+        { material: "00000001", quantity: "3.000000", requiredDate: "2026-10-10" },
+        { material: "00000002", quantity: "2.000000", requiredDate: "2026-10-10" },
+        { material: "00000002", quantity: "2.000000", requiredDate: "2026-11-5" },
+        // Due after the end of the horizon's last month: read, but it counts nowhere.
+        { material: "00000001", quantity: "x", requiredDate: "2027-03-01" },
+      ]);
+      const em = scoped();
+      const header = await em.findOneOrFail(CustomerOrder, { code: "00000005" });
+      await em.nativeUpdate(CustomerOrderLine, { order: header, position: 1 }, { denominator: "0" });
+      const snapshot = await load();
+      expect(snapshot.orderLines.map(({ order: id, position }) => `${id}/${position}`)).toEqual(["00000005/2"]);
+      // Lines are read by material chunk; the engine sorts what it reports, so the order here is free.
+      expect([...snapshot.unreadable].sort((a, b) => a.document!.localeCompare(b.document!))).toEqual([
+        { material: "00000001", location: "00000002", record: "customer-order-line", document: "00000005/1" },
+        { material: "00000002", location: "00000002", record: "customer-order-line", document: "00000005/3" },
+      ]);
+    });
+
+    it("leaves out a non-Open consuming line it can't read, naming the line", async () => {
+      await order("prod", "00000006", "00000001", [{ material: "00000001", quantity: "4.000000", fulfilled: "nope", requiredDate: "2026-10-12", status: "completed" }]);
+      const snapshot = await load();
+      expect(snapshot.orderLines).toEqual([]);
+      expect(snapshot.unreadable).toEqual([{ material: "00000001", location: "00000001", record: "customer-order-line", document: "00000006/1" }]);
+    });
+
+    it("leaves out a requisition and a purchase-order line it can't read, naming each document", async () => {
+      await requisitions("prod", [
+        { code: "00000001", quantity: "5.000000", requiredDate: "2026-10-10" },
+        { code: "00000002", quantity: "5.000000", requiredDate: "2026-10-10" },
+      ]);
+      await scoped().nativeUpdate(PurchaseRequisition, { code: "00000002" }, { numerator: "0" });
+      await purchaseOrder("prod", "00000007", "00000002", [
+        { quantity: "8.000000", plannedDate: "2026-10-11", received: "1,5" },
+        { quantity: "8.000000", plannedDate: "2026-10-11" },
+      ]);
+      const snapshot = await load();
+      expect(snapshot.requisitions.map(({ code: id }) => id)).toEqual(["00000001"]);
+      expect(snapshot.purchaseOrderLines.map(({ position }) => position)).toEqual([2]);
+      expect(snapshot.unreadable).toEqual([
+        { material: "00000001", location: "00000001", record: "purchase-requisition", document: "00000002" },
+        { material: "00000001", location: "00000002", record: "purchase-order-line", document: "00000007/1" },
+      ]);
+    });
+
+    it("leaves out a planning parameter set whose lot multiple is zero or whose minimum isn't a number, reporting it as a set", async () => {
+      await parameters("prod", "00000001", "00000001", { procurement: "buy", leadTimeDays: 2, minimumQuantity: "0.000000", lotMultiple: "0.000000" });
+      await parameters("prod", "00000001", "00000002", { procurement: "buy", leadTimeDays: 2, minimumQuantity: "ten", lotMultiple: "1.000000" });
+      await parameters("prod", "00000002", "00000001", { procurement: "buy", leadTimeDays: 2, minimumQuantity: "0.000000", lotMultiple: "1.000000" });
+      const snapshot = await load();
+      expect(snapshot.planningParameters.map(({ material, location }) => [material, location])).toEqual([["00000002", "00000001"]]);
+      expect(snapshot.unreadable).toEqual([
+        { material: "00000001", location: "00000001", record: "planning-parameter-set" },
+        { material: "00000001", location: "00000002", record: "planning-parameter-set" },
+      ]);
+    });
+
+    it("leaves out a production order it can't read and reports its output and every component; a BOM line it can't read only at its component", async () => {
+      // 00000003 is a second output, so each order pins its own revision.
+      const sound = await recipe("prod", "00000001", "00000001", { "00000002": "2.000000" });
+      const broken = await recipe("prod", "00000002", "00000003", { "00000002": "0.0000001", "00000001": "1.000000" });
+      await production("prod", "00000001", sound, { quantity: "10.000000", produced: "-1", plannedStart: "2026-10-05", plannedFinish: "2026-10-08" });
+      await production("prod", "00000002", broken, { output: "00000003", location: "00000002", quantity: "4.000000", plannedStart: "2026-10-05", plannedFinish: "2026-10-08" });
+      const snapshot = await load();
+      expect(snapshot.productionOrders).toEqual([
+        expect.objectContaining({ order: "00000002", material: "00000003", components: [{ material: "00000001", perOutput: micro(1) }] }),
+      ]);
+      expect(snapshot.unreadable).toEqual([
+        { material: "00000001", location: "00000001", record: "production-order", document: "00000001" },
+        { material: "00000002", location: "00000001", record: "production-order", document: "00000001" },
+        { material: "00000002", location: "00000002", record: "bom-line", document: "00000002/1/1" },
+      ]);
+    });
+
+    it("leaves out a transfer it can't read and reports it at its source and its destination", async () => {
+      await transferRow("prod", "00000001", { quantity: "10.000000", plannedDispatch: "2026-10-05", plannedArrival: "2026-10-5" });
+      await transferRow("prod", "00000002", { quantity: "10.000000", plannedDispatch: "2026-10-05", plannedArrival: "2026-10-06" });
+      const snapshot = await load();
+      expect(snapshot.transfers.map(({ transfer }) => transfer)).toEqual(["00000002"]);
+      expect(snapshot.unreadable).toEqual([
+        { material: "00000002", location: "00000001", record: "transfer", document: "00000001" },
+        { material: "00000002", location: "00000002", record: "transfer", document: "00000001" },
+      ]);
+    });
+  });
+
+  it("reads the current revision of every active BOM, never an older revision or an inactive BOM, and never another tenant's (#280)", async () => {
+    await recipe("prod", "00000001", "00000001", { "00000002": "1.000000" });
+    await recipe("prod", "00000002", "00000003", { "00000002": "1.000000" });
+    await recipe("test", "00000001", "00000001", { "00000002": "1.000000" });
+    const em = scoped();
+    const current = await em.findOneOrFail(Bom, { code: "00000001" });
+    em.create(BomRevision, { bom: current, number: 2, priority: 1, validFrom: "2026-11-01", validThrough: "2027-06-30" });
+    current.revision = 2;
+    (await em.findOneOrFail(Bom, { code: "00000002" })).active = false;
+    await em.flush();
+    expect((await load()).boms).toEqual([{ output: "00000001", validFrom: "2026-11-01", validThrough: "2027-06-30" }]);
+  });
+
+  it("reads the BOMs more than one OR list holds, chunk by chunk, filtering the current revisions in SQL as the production dialog does", async () => {
+    const queries: { sql: string; params: readonly unknown[] }[] = [];
+    const config = loadConfig({ DATA_DIR: mkdtempSync(path.join(tmpdir(), "cpg-mrp-snapshot-plan-")) });
+    await migrateDatabase(config);
+    const traced = await initOrm(toDbOptions(config), { onQuery: (sql, params) => (queries.push({ sql, params }), sql) });
+    try {
+      const em = traced.em.fork();
+      selectTenant(em, "prod");
+      const output = em.create(Material, { code: "00000001", type: "finished", description: "Cabinet", baseUnit: "each" });
+      for (let index = 1; index <= BOM_CHUNK + 1; index += 1) {
+        const bom = em.create(Bom, { code: code(index), output, revision: 2 });
+        em.create(BomRevision, { bom, number: 1, priority: index, validFrom: "2026-01-01", validThrough: "2026-06-30" });
+        em.create(BomRevision, { bom, number: 2, priority: index, validFrom: "2026-07-01", validThrough: null });
+      }
+      await em.flush();
+      queries.length = 0;
+      const { boms } = await new MrpSnapshotService({ em }).load(TODAY);
+      expect(boms).toHaveLength(BOM_CHUNK + 1);
+      expect(boms.every(({ validFrom }) => validFrom === "2026-07-01")).toBe(true);
+      const reads = queries.filter(({ sql }) => sql.startsWith("select") && sql.includes(" from `bom_revision` as "));
+      expect(reads).toHaveLength(2);
+      const plan = await traced.em.getConnection().execute<{ detail: string }[]>(`explain query plan ${reads[0].sql}`, [...reads[0].params]);
+      // Without ANALYZE statistics SQLite seeks the tenant's revisions and tests each OR term per row, as
+      // for the production dialog's own read (lesson 2026-10-31): a walk in SQLite over a table of about
+      // one row per BOM change, which hydrates only the current revisions (spec implementation notes).
+      expect(plan.map(({ detail }) => detail.replace(/^SEARCH \w+ /, "SEARCH ")).sort()).toEqual([
+        "SEARCH USING INDEX bom_revision_tenant_code_index (tenant_code=?)",
+        "SEARCH USING INDEX sqlite_autoindex_bom_1 (id=?)",
+      ]);
     } finally {
       await traced.close();
     }
