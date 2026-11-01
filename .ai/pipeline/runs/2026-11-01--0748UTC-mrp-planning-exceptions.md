@@ -4,7 +4,7 @@
 **Agent:** Claude Code (cezar, headless) / claude-opus-5-5, via `om-auto-fix-issue` → `om-auto-implement-spec` → `om-auto-create-pr`
 **Source doc:** `.ai/specs/2026-11-01--0737UTC-mrp-planning-exceptions.md` (spec PR #314)
 **Issue:** #280
-**Status:** in progress
+**Status:** done
 
 ## Goal
 
@@ -56,8 +56,18 @@ The active copy of #278's spec is deleted here too, as on #314, because `tests/a
   - **Integration files.** Docker is unavailable here, so they ran on a local standalone build (lesson 2026-10-23): `mrp-run-api`, `smoke`, `mrp-report-api` and `mrp-run`, 4 files and 22 tests passed, then `mrp-report`, 10 tests passed.
   - **Benchmark.** Realistic 234 ms with a 36 ms stall; ten times 2,544 ms with a 113 ms stall, storing 87 exceptions; the worst case at ten times 3,180 ms with a 143 ms stall. All are within the budgets: 1 s, 5 s and 250 ms.
   - **Catalogue.** MAT-017, MRP-034, MRP-035, MRP-036 and RUN-016 move to Partially verified. Their UI half (E18-S03) and automatic mode (E19-S03) are not asserted yet. MAT-023 and MRP-033 cite their new MRP evidence.
+- Review (08:20–08:32): a fresh-context code review approved, with no Critical or High findings. f6bb0f77 fixes its Medium and four of its Lows:
+  - a material with an unreadable row no longer reports Insufficient Transfer Stock;
+  - an unreal cut-off date is reported (`beforeCutOff`), not sorted away;
+  - a BOM revision with corrupt dates is left out;
+  - the catalogue Evidence lines are re-pointed.
+
+  The rest is filed as #321: SQL-ranged forecast and target dates, and the scaling of the BOM read.
+- Gate after the fixes: lint 0, typecheck 0, build 0; coverage 637 files, 5,055 tests, 100% on all four measures. The fixes touch corrupt-data paths only, so the integration files weren't re-run locally; CI runs the full suite.
 
 ## Progress
+
+PR: #316
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
