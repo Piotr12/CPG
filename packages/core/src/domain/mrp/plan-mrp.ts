@@ -26,6 +26,7 @@ import { bomLevels } from "./explosion/bom-levels";
 import { explodeProposal } from "./explosion/explode-proposal";
 import { replenishPair } from "./sizing/replenish-pair";
 import { planTransfers } from "./supply/transfers";
+import { compareWarnings, overdueWarnings } from "./warnings/overdue";
 
 interface PairDraft extends MrpLedger {
   material: string;
@@ -61,7 +62,8 @@ interface PairDraft extends MrpLedger {
  * `replenishPair` also times each proposal (E16-S02): its receipt counts on its planned finish, which is later than
  * its need when the lead time makes it late, and a Beyond Horizon proposal counts in no bucket, so the
  * days before its stock arrives keep their shortage. Last, every pair's uncovered requirements are
- * ranked on its balance after proposals (`rankShortages`).
+ * ranked on its balance after proposals (`rankShortages`), and every overdue supply item of a readable
+ * material becomes a warning (E18-S02), which stops nothing.
  *
  * Pairs are sized level by level (E17-S01, PRD §04 "Multilevel explosion"): by their material's low-level
  * code (`bomLevels`), then material and location. Each production-order proposal is exploded through its
@@ -181,5 +183,7 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
   }
   plans.sort(comparePairs);
   proposals.sort((a, b) => comparePairs(a, b) || compareCodes(a.needDate, b.needDate));
-  return { today, dates, plans, proposals, exceptions: exceptions.sort(compareExceptions) };
+  // Like Insufficient Transfer Stock, no warning for a material whose balances an unreadable row left incomplete (#316).
+  const warnings = plans.filter(({ material }) => !unreadable.has(material)).flatMap(overdueWarnings).sort(compareWarnings);
+  return { today, dates, plans, proposals, exceptions: exceptions.sort(compareExceptions), warnings };
 }

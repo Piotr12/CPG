@@ -13,7 +13,7 @@ The original export marked every scenario `Not executed`. Scenarios are updated 
 - **Partially verified**: only part of the scenario can be or is asserted today; the **Evidence** line says which part is missing and why.
 - **Not executed**: not yet built or not yet checked.
 
-Last updated 2026-11-01 for #281 (E17-S01): its tests move MRP-020, MRP-027, MRP-028, MRP-029 and MRP-031 to Partially verified (the explosion's screen is E18-S03, feasibility and executability are E17-S02 and E17-S03), and add MRP's scaling to BOM-006's evidence. Before that, the same day for #287 (E19-S01): its tests move BUY-001, RUN-004 and RUN-005 to Passed (automated), and RUN-003, RUN-017 and RUN-022 to Partially verified (the creation option is E19-S03, and RUN-017's and RUN-022's screen halves are component tests only). RUN-006, the Make half, waits on the follow-up blocked on #282. Before that, 2026-10-31 for #284 (E18-S01): its tests move MRP-005, MRP-008, RUN-002, TEN-018, API-014, UX-010 and UX-021 to Passed (automated). Before that, the same day for #276 (E15-S02): its tests move MRP-010, MRP-012, MRP-013, MRP-014, MRP-015, MRP-042, BUY-019, BUY-026 and LFC-024 to Partially verified, and add the MRP half to BUY-002, BUY-017, BUY-018 and BUY-024's evidence (the report screen is E18-S01, the overdue mark's display E18-S02, the production cases E15-S03). Before that, 2026-10-27 for #274 (E14-S02): its tests move MRP-001, MRP-002, MRP-003, INV-008 and RUN-001 to Passed (automated), and MRP-008, RUN-002, RUN-021 and TEN-019 to Partially verified (the daily report screen is E18-S01, automatic runs E19-S03). Before that, the same day for #290 (E20-S01): its tests move UX-014 to Passed (automated). Before that, 2026-10-25 for #192: its tests move UX-009, API-031, AUD-022, E2E-006, E2E-013 and E2E-014 to Passed (automated), and UX-023 and UX-026 from Not executed to Partially verified (their MRP halves are #14). Before that, the same day for #191 (E10-S05): BOM-009, BOM-027, E2E-004 and LFC-015 move to Passed (automated), LFC-025 and LFC-027 to Partially verified (their non-MRP halves), and E2E-015 now waits only on MRP (#14). Before that, the same day for #190: TRF-012, E2E-009 and MAT-024 move from Partially verified to Passed (automated), with a 60/50/10 Close Early refusal in the service and on screen, a 60-planned transfer received 55 and written off 5 through the API and closed early on screen, and 0.123456 posted through the ledger; LFC-012 gains the 409 with its material, location and quantity, through the API and the Deactivate dialog, and STX-011 the Stock import screen's dry run. Before that, the same day for #240: the D08 netting tests move DEM-002…013 from Not executed to Partially verified; each still needs MRP's run (#14). Before that, 2026-10-24 for #200: E2E-020's test now owns both Test generations within one UTC day, and the tiny dataset's unissued shipment is checked on every day of 2025–2027; its status is unchanged. Before that, the same day for E09-S05 (#186): its tests move E2E-017 to Passed (automated) and add evidence to LFC-013. Before that, 2026-10-23 for the second slice 2 closing pass, against `main` at `db50cf07`: the slice 2 rows were rechecked against the tests that PRs #156 (#140), #159 (#142), #161 (#141), #170 (#168), #174 (#153), #177 (#152), #178 (#144), #179 (#138), #181 (#145) and #182 (#147) added. TEN-009, MAT-009, MAT-029, INV-023, LFC-019, API-034, AUD-001 and UX-025 move to Passed (automated), their whole Then now asserted; TRF-012 and BUY-017 go back to Partially verified (no test closes a transfer with 10 of 60 in transit after 50 received; BUY-017's scheduled supply is MRP, #14); SAL-015, E2E-004, E2E-006, E2E-009, E2E-013, E2E-017, E2E-018 and E2E-020 move from Not executed to Partially verified; REV-001, REV-010, SAL-008, SAL-018, AUD-002 and AUD-025 gain the #144 and #147 evidence, and the stale notes of TEN-001, TEN-025, TEN-029, MAT-006, MAT-024, INV-007, DEM-016 and E2E-015 are corrected. The gaps found are filed as #185–#192 and named in each row. Before that, the same day for E11-S04 (#144), against `main` at `8195a0b`: its tests moved LFC-004 and BUY-017 to Passed (automated) (their MRP halves are slice 3, #14) and added evidence to PRD-029. Before that, the same day for E13-S05 (#152), against `main` at `8adea42`: more evidence for AUD-004 and UX-010, whose status is unchanged. Before that, 2026-10-21 for E10-S03 (#143), against `main` at `1882d6a`, whose tests moved LFC-022, BOM-026, BOM-028, BOM-029, UX-013 and E2E-011 to Passed (automated). Before that, the same day: epics E07 (#73), E08 (#74), E09 (#75), E10 (#76), E11 (#77) and E13 (#79), against `main` at `d2300ef` (PRs #102, #104, #107, #108, #109, #111, #112, #114, #118, #119, #120, #123, #125, #130, #133, #135); the gaps found are filed as #139–#145, and #139 (PR #151) closes LFC-018, STX-006 and STX-018. Earlier: epic E05 (#13) against `2a2976a` (PR #99 for E05-S01), plus the tests and the workbook cell limit added with that update; epic E04 (#12) against `082f2d5`; epic E03 (#11) against `3f553a5`, and the E02 end-to-end follow-up (#67); epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
+Last updated 2026-11-01 for #281 (E17-S01): its tests move MRP-020, MRP-027, MRP-028, MRP-029 and MRP-031 to Partially verified (the explosion's screen is E18-S03, feasibility and executability are E17-S02 and E17-S03), and add MRP's scaling to BOM-006's evidence. Before that, the same day for #285 (E18-S02): its tests move UX-019, UX-027, MRP-006, MRP-015 and BUY-019 to Passed (automated), and UX-018, MRP-016, MRP-040 and TRF-016 to Partially verified (the overdue transfer and production marks are not yet asserted through the API or a browser). Before that, the same day for #287 (E19-S01): its tests move BUY-001, RUN-004 and RUN-005 to Passed (automated), and RUN-003, RUN-017 and RUN-022 to Partially verified (the creation option is E19-S03, and RUN-017's and RUN-022's screen halves are component tests only). RUN-006, the Make half, waits on the follow-up blocked on #282. Before that, 2026-10-31 for #284 (E18-S01): its tests move MRP-005, MRP-008, RUN-002, TEN-018, API-014, UX-010 and UX-021 to Passed (automated). Before that, the same day for #276 (E15-S02): its tests move MRP-010, MRP-012, MRP-013, MRP-014, MRP-015, MRP-042, BUY-019, BUY-026 and LFC-024 to Partially verified, and add the MRP half to BUY-002, BUY-017, BUY-018 and BUY-024's evidence (the report screen is E18-S01, the overdue mark's display E18-S02, the production cases E15-S03). Before that, 2026-10-27 for #274 (E14-S02): its tests move MRP-001, MRP-002, MRP-003, INV-008 and RUN-001 to Passed (automated), and MRP-008, RUN-002, RUN-021 and TEN-019 to Partially verified (the daily report screen is E18-S01, automatic runs E19-S03). Before that, the same day for #290 (E20-S01): its tests move UX-014 to Passed (automated). Before that, 2026-10-25 for #192: its tests move UX-009, API-031, AUD-022, E2E-006, E2E-013 and E2E-014 to Passed (automated), and UX-023 and UX-026 from Not executed to Partially verified (their MRP halves are #14). Before that, the same day for #191 (E10-S05): BOM-009, BOM-027, E2E-004 and LFC-015 move to Passed (automated), LFC-025 and LFC-027 to Partially verified (their non-MRP halves), and E2E-015 now waits only on MRP (#14). Before that, the same day for #190: TRF-012, E2E-009 and MAT-024 move from Partially verified to Passed (automated), with a 60/50/10 Close Early refusal in the service and on screen, a 60-planned transfer received 55 and written off 5 through the API and closed early on screen, and 0.123456 posted through the ledger; LFC-012 gains the 409 with its material, location and quantity, through the API and the Deactivate dialog, and STX-011 the Stock import screen's dry run. Before that, the same day for #240: the D08 netting tests move DEM-002…013 from Not executed to Partially verified; each still needs MRP's run (#14). Before that, 2026-10-24 for #200: E2E-020's test now owns both Test generations within one UTC day, and the tiny dataset's unissued shipment is checked on every day of 2025–2027; its status is unchanged. Before that, the same day for E09-S05 (#186): its tests move E2E-017 to Passed (automated) and add evidence to LFC-013. Before that, 2026-10-23 for the second slice 2 closing pass, against `main` at `db50cf07`: the slice 2 rows were rechecked against the tests that PRs #156 (#140), #159 (#142), #161 (#141), #170 (#168), #174 (#153), #177 (#152), #178 (#144), #179 (#138), #181 (#145) and #182 (#147) added. TEN-009, MAT-009, MAT-029, INV-023, LFC-019, API-034, AUD-001 and UX-025 move to Passed (automated), their whole Then now asserted; TRF-012 and BUY-017 go back to Partially verified (no test closes a transfer with 10 of 60 in transit after 50 received; BUY-017's scheduled supply is MRP, #14); SAL-015, E2E-004, E2E-006, E2E-009, E2E-013, E2E-017, E2E-018 and E2E-020 move from Not executed to Partially verified; REV-001, REV-010, SAL-008, SAL-018, AUD-002 and AUD-025 gain the #144 and #147 evidence, and the stale notes of TEN-001, TEN-025, TEN-029, MAT-006, MAT-024, INV-007, DEM-016 and E2E-015 are corrected. The gaps found are filed as #185–#192 and named in each row. Before that, the same day for E11-S04 (#144), against `main` at `8195a0b`: its tests moved LFC-004 and BUY-017 to Passed (automated) (their MRP halves are slice 3, #14) and added evidence to PRD-029. Before that, the same day for E13-S05 (#152), against `main` at `8adea42`: more evidence for AUD-004 and UX-010, whose status is unchanged. Before that, 2026-10-21 for E10-S03 (#143), against `main` at `1882d6a`, whose tests moved LFC-022, BOM-026, BOM-028, BOM-029, UX-013 and E2E-011 to Passed (automated). Before that, the same day: epics E07 (#73), E08 (#74), E09 (#75), E10 (#76), E11 (#77) and E13 (#79), against `main` at `d2300ef` (PRs #102, #104, #107, #108, #109, #111, #112, #114, #118, #119, #120, #123, #125, #130, #133, #135); the gaps found are filed as #139–#145, and #139 (PR #151) closes LFC-018, STX-006 and STX-018. Earlier: epic E05 (#13) against `2a2976a` (PR #99 for E05-S01), plus the tests and the workbook cell limit added with that update; epic E04 (#12) against `082f2d5`; epic E03 (#11) against `3f553a5`, and the E02 end-to-end follow-up (#67); epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
 
 This document contains the complete acceptance catalogue for the CPG MVP. Each test preserves its ID, title, priority, execution channel, and Given / When / Then criteria.
 
@@ -1496,9 +1496,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### BUY-019 — Overdue PO considered today
 
-**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-015, BUY-019": a line with 40 outstanding due yesterday projected today as dependable supply, `overdue: true`, no receipt posted and the snapshot unchanged). The marker isn't stored; showing it is E18-S02 (#285). E15-S02, #276.
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-015, BUY-019": 40 outstanding due yesterday projected today as dependable supply with an `OVERDUE_SUPPLY` warning, no receipt posted and the snapshot unchanged), `tests/integration/mrp-report-api.test.ts` and `mrp-report.test.ts` (the Overdue mark through the API and on screen). E15-S02, #276; E18-S02, #285.
 - **Given:** PO due yesterday with 40 outstanding
 - **When:** Run MRP today
 - **Then:** Expected supply 40 allocated today with Overdue Supply warning, no actual GR posted.
@@ -2395,8 +2395,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### TRF-016 — Overdue transfer arrival in MRP
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("TRF-016": 30 in transit due yesterday expected at the destination today with an `OVERDUE_TRANSFER` warning, physical stock unchanged at both sites), `packages/core/src/services/mrp/mrp-run.service.test.ts` ("UX-018"). Not yet through the API or a browser. #277; E18-S02, #285.
 - **Given:** Dispatched 30, originally due yesterday, not yet received
 - **When:** Run MRP
 - **Then:** Expected destination supply today, Overdue Transfer warning, destination physical stock still unchanged.
@@ -2779,8 +2780,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MRP-006 — Weekly display not mutate data
 
-**Priority:** P1 · **Channel:** UI · **Status:** Not executed
+**Priority:** P1 · **Channel:** UI · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/mrp/mrp-run.service.test.ts` ("MRP-006": a weekly read leaves every table, the run and the audit as they were, and the daily read after it equals the one before), `tests/integration/mrp-report-api.test.ts` (daily `buckets`, run ID and time identical before and after a weekly read), `tests/integration/mrp-report.test.ts` (Week and back to Day in the UI). E18-S02, #285.
 - **Given:** Daily MRP saved for seven days
 - **When:** Toggle weekly UI aggregate
 - **Then:** Weekly view changes presentation only; underlying daily result unchanged.
@@ -2858,17 +2860,18 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MRP-015 — Overdue PO shifted to today
 
-**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-015, BUY-019": 50 projected today as dependable supply, its planned date kept, `overdue: true`, physical stock and the snapshot unchanged), `tests/integration/mrp-run-api.test.ts` ("projects open purchasing supply once…": a run through `POST …/mrp/runs`, read back through `GET …/runs/latest`): the overdue 50 stored as today's dependable supply. The Overdue Supply marker lives on the engine result's supply entry and is not stored; showing it is E18-S02 (#285). E15-S02, #276.
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-015, BUY-019": 50 projected today as dependable supply, its planned date kept, an `OVERDUE_SUPPLY` warning, physical stock and the snapshot unchanged), `tests/integration/mrp-run-api.test.ts` (the overdue 50 stored as today's dependable supply), `tests/integration/mrp-report-api.test.ts` and `mrp-report.test.ts` (an overdue line's Overdue mark on the first day with its own date, through the API and on screen). E15-S02, #276; E18-S02, #285.
 - **Given:** PO 50 unreceived with due yesterday
 - **When:** Run today
 - **Then:** 50 expected today with Overdue Supply marker; physical balance unchanged.
 
 ### MRP-016 — Overdue production shifted to today
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-016": yesterday's pending 20 counted today as dependable supply with an `OVERDUE_SUPPLY` warning of source `production-order` and its finish day kept, physical stock 0), `packages/core/src/domain/mrp/warnings/overdue.test.ts`. Not yet through the API or a browser. #277; E18-S02, #285.
 - **Given:** Production output 20 pending and planned completion yesterday
 - **When:** Run today
 - **Then:** 20 expected today with overdue marker, no physical completion until posting.
@@ -3072,8 +3075,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### MRP-040 — Overdue in-transit transfer projected today
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-040" and "TRF-016": in transit since yesterday, counted at the destination today with an `OVERDUE_TRANSFER` warning, no physical stock there), `packages/core/src/services/mrp/mrp-run.service.test.ts` ("UX-018": 25 in transit due yesterday marked Overdue Transfer on the first day through the read). Not yet through the API or a browser. #277; E18-S02, #285.
 - **Given:** In-transit 25 with arrival date yesterday
 - **When:** Run MRP
 - **Then:** 25 planned for destination today with Overdue Transfer warning; no physical destination stock yet.
@@ -4315,16 +4319,18 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### UX-018 — MRP report overdue indicators
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/services/mrp/mrp-run.service.test.ts` ("UX-018": filtered to the pair, an overdue PO line of 30 planned 28 September and 25 in transit due 30 September marked on 1 October with their own dates, and a proposal 4 days late marked on its need date), `tests/integration/mrp-report.test.ts` (the overdue PO line's mark on the first day and in the first week, filtered to its pair), `tests/integration/mrp-report-api.test.ts` (the same mark for both roles), `tests/integration/mrp-accept.test.ts` (the Late Supply badge under the need date). The overdue transfer's mark is asserted in service and component tests only, not in a browser. E18-S02, #285.
 - **Given:** Last MRP has overdue PO, overdue transfer and late recommendation
 - **When:** Open MRP results
 - **Then:** Warnings and affected material/date visible in material/location filter context.
 
 ### UX-019 — MRP report daily/weekly presentation
 
-**Priority:** P1 · **Channel:** UI · **Status:** Not executed
+**Priority:** P1 · **Channel:** UI · **Status:** Passed (automated)
 
+- **Evidence:** `tests/integration/mrp-report.test.ts` ("switches one pair's days to weeks…": a normal user chooses Week and Apply, the week table shows the API's weekly figures, then Day shows the 90 days again), `tests/integration/mrp-report-api.test.ts` ("…bucket=week…": the daily `buckets` before, inside and after a weekly read are identical), `packages/core/src/services/mrp/mrp-run.service.test.ts` ("MRP-006"). E18-S02, #285.
 - **Given:** Daily results across a week
 - **When:** Toggle aggregation
 - **Then:** Weekly totals computed for display; daily results preserved.
@@ -4393,8 +4399,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### UX-027 — Weekly aggregation distinguishes flow and balances
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/domain/mrp/report/weekly.test.ts` ("UX-027": days 2, −6, 6, −2, −10, 12, 4; W41 demand 56, receipts 50, projected 4, lowest −10, peak shortage 10, and neither 6 nor 18 in any field; partial weeks; the safety target at week end), `packages/app/src/components/mrp/mrp-report.test.tsx` ("UX-027": the week table's figures), `tests/integration/mrp-report.test.ts` and `mrp-report-api.test.ts` (the screen's weeks equal the API's for both roles, demand summed and each week's balance its last day's). E18-S02, #285.
 - **Given:** Seven days of receipts/demand and daily projected balances including a recurring shortage
 - **When:** Open weekly MRP view
 - **Then:** Demand/receipt/issue flows are summed, projected stock is last-day balance, shortage peak/minimum inventory comes from weakest day; stock balances and persistent deficits are not summed across days.

@@ -14,6 +14,10 @@ const owned = tenantOwned();
  * `code`, named apart from the `code` business ID other tenant tables carry. It is a plain string, not
  * an enum: core owns the codes, and a code a later story adds needs no table rebuild (spec Q6). Only
  * the latest run keeps its exceptions; the run reference cascades, as for `MrpRecommendation`.
+ *
+ * Since E18-S02 the run also stores its warnings here, after its exceptions: `OVERDUE_SUPPLY` and
+ * `OVERDUE_TRANSFER`, overdue supply counted on the run's first day. The read never lists them as
+ * exceptions; the report shows them as marks.
  */
 export const MrpRunException = defineEntity({
   name: "MrpRunException",

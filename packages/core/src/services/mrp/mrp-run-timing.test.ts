@@ -204,7 +204,7 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     const lines = await count("select count(*) as n from bom_component c join bom_revision r on r.id = c.revision_id join bom b on b.id = r.bom_id where b.active = 1");
     const engine = await engineOnly();
     process.stdout.write(
-      `MRP run, ${size.name} (${pairs} pairs, ${rows} daily rows, ${proposals} recommendations of which ${made} exploded, ${exceptions} exceptions, ${lines} active BOM lines, ` +
+      `MRP run, ${size.name} (${pairs} pairs, ${rows} daily rows, ${proposals} recommendations of which ${made} exploded, ${exceptions} exception and warning rows, ${lines} active BOM lines, ` +
         `${size.lines} order lines, ${size.forecasts} forecasts, ` +
         `${size.orders + size.fullOrders} purchase orders with ${size.orders * ORDER_LINES + size.fullOrders * FULL_ORDER_LINES} lines, ${size.requisitions} requisitions, ` +
         `${size.productionOrders} production orders, ${size.transfers} transfers): ` +
@@ -223,7 +223,10 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     expect(proposals).toBeGreaterThan(0);
     expect(made).toBeGreaterThan(0);
     // The fixture's BOMs are acyclic and valid and every component has its parameters: only transfers fall short (#277).
-    expect(await count("select count(*) as n from mrp_run_exception where exception_code <> 'INSUFFICIENT_TRANSFER_STOCK'")).toBe(0);
+    // The table also holds the run's overdue warnings (E18-S02), which are not exceptions.
+    expect(
+      await count("select count(*) as n from mrp_run_exception where exception_code not in ('INSUFFICIENT_TRANSFER_STOCK', 'OVERDUE_SUPPLY', 'OVERDUE_TRANSFER')"),
+    ).toBe(0);
     // The run counted the pipeline it read: some days carry tentative and dependable supply, dependent demand and transfers.
     const supplied = await orm.em
       .getConnection()
@@ -271,7 +274,7 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     const proposals = await count("select count(*) as n from mrp_recommendation");
     const exceptions = await count("select count(*) as n from mrp_run_exception");
     process.stdout.write(
-      `MRP run, worst case for proposals, ${size.name} (${rows} daily rows, ${proposals} recommendations, ${exceptions} exceptions, ${size.lines + size.materials * days} order lines): ` +
+      `MRP run, worst case for proposals, ${size.name} (${rows} daily rows, ${proposals} recommendations, ${exceptions} exception and warning rows, ${size.lines + size.materials * days} order lines): ` +
         `${fastest.toFixed(0)} ms fastest of ${RUNS}, longest event-loop stall ${longestStall.toFixed(0)} ms\n`,
     );
     // Every day but, for some materials, today: overdue purchase-order lines all land today and can cover it.
