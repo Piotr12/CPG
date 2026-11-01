@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { formValues, refreshAfterWrite } from "./refresh-after-write";
+import { formValues, refreshAfterWrite, refreshAfterWriteOr } from "./refresh-after-write";
 
 const mocks = vi.hoisted(() => ({ revalidatePath: vi.fn() }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
@@ -28,5 +28,20 @@ describe("refreshAfterWrite", () => {
     refreshAfterWrite({ ok: false, error: { code: "TENANT_READ_ONLY", message: "x" } }, "/a");
 
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+});
+
+describe("refreshAfterWriteOr", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("also refreshes after the refusals it names, and after nothing else", () => {
+    const accepted = { ok: false as const, error: { code: "MRP_PROPOSAL_ACCEPTED", message: "x" } };
+    const stale = { ok: false as const, error: { code: "MRP_PROPOSAL_STALE", message: "x" } };
+
+    expect(refreshAfterWriteOr(accepted, ["MRP_PROPOSAL_ACCEPTED"], "/a")).toBe(accepted);
+    expect(refreshAfterWriteOr(stale, ["MRP_PROPOSAL_ACCEPTED"], "/b")).toBe(stale);
+    refreshAfterWriteOr({ ok: true, data: 1 }, ["MRP_PROPOSAL_ACCEPTED"], "/c");
+
+    expect(mocks.revalidatePath.mock.calls).toEqual([["/a"], ["/c"]]);
   });
 });
