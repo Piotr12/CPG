@@ -172,11 +172,48 @@ describe("MRP runs through the API", () => {
     const plans = (json(filtered).data as MrpLatestView).plans;
 
     expect(plans.map(({ location, proposals }) => [location, proposals])).toEqual([
-      [bought, [{ kind: "purchase-requisition", needDate: day(6), quantity: "10.000000" }]],
-      [made, [{ kind: "production-order", needDate: day(6), quantity: "3.000000" }]],
+      // Lead times 4 and 1 before day 6 start on days 2 and 5: on time (#279).
+      [bought, [{ kind: "purchase-requisition", needDate: day(6), quantity: "10.000000", plannedStart: day(2), plannedFinish: day(6), lateDays: 0, beyondHorizon: false }]],
+      [made, [{ kind: "production-order", needDate: day(6), quantity: "3.000000", plannedStart: day(5), plannedFinish: day(6), lateDays: 0, beyondHorizon: false }]],
     ]);
     expect(plans[0].buckets[6]).toMatchObject({ date: day(6), proposedReceipts: "10.000000", projectedBefore: "-3.000000", projectedAfter: "7.000000" });
     expect(plans[1].buckets[6]).toMatchObject({ date: day(6), proposedReceipts: "3.000000", projectedBefore: "-3.000000", projectedAfter: "0.000000" });
+  });
+
+  it("lists a Late Supply proposal on its feasible finish and a Beyond Horizon one in no day, read from the latest run (#279, MRP-037, MRP-049)", async () => {
+    const customer = (await created("/api/tenants/prod/customers", { name: "mrpapi timing" })).id;
+    const proposalsFor = async (description: string, leadTimeDays: number, due: number) => {
+      const material = (await created("/api/tenants/prod/materials", { type: "intermediate", description, baseUnit: "each" })).id;
+      await created("/api/tenants/prod/planning-parameters", { material, location: pair.location, procurement: "buy", leadTimeDays, minimumQuantity: "0", lotMultiple: "1" });
+      await created("/api/tenants/prod/customer-orders", { customer, location: pair.location, lines: [{ material, quantity: "5", unit: "each", requiredDate: day(due) }] });
+      return material;
+    };
+    const late = await proposalsFor("mrpapi late", 7, 3);
+    const far = await proposalsFor("mrpapi far", 120, 20);
+
+    const response = await runIn("prod");
+    expect(response.status, response.text).toBe(200);
+    const planOf = async (material: string) => {
+      const read = await latest("prod", `?material=${material}`);
+      expect(read.status, read.text).toBe(200);
+      return (json(read).data as MrpLatestView).plans[0];
+    };
+
+    const latePlan = await planOf(late);
+    expect(latePlan.proposals).toEqual([
+      { kind: "purchase-requisition", needDate: day(3), quantity: "5.000000", plannedStart: day(0), plannedFinish: day(7), lateDays: 4, beyondHorizon: false },
+    ]);
+    // The receipt counts on day 7, not on the need date: days 3 to 6 keep their shortage.
+    expect(latePlan.buckets.slice(3, 7).map(({ projectedAfter }) => projectedAfter)).toEqual(["-5.000000", "-5.000000", "-5.000000", "-5.000000"]);
+    expect(latePlan.buckets[7]).toMatchObject({ date: day(7), proposedReceipts: "5.000000", projectedAfter: "0.000000" });
+
+    const farPlan = await planOf(far);
+    expect(farPlan.proposals).toEqual([
+      { kind: "purchase-requisition", needDate: day(20), quantity: "5.000000", plannedStart: day(0), plannedFinish: day(120), lateDays: 100, beyondHorizon: true },
+    ]);
+    expect(farPlan.buckets).toHaveLength(90);
+    expect(farPlan.buckets.every(({ proposedReceipts }) => proposedReceipts === "0.000000")).toBe(true);
+    expect(farPlan.buckets.slice(20).every(({ projectedAfter }) => projectedAfter === "-5.000000")).toBe(true);
   });
 
   it("needs an Idempotency-Key, and replays a repeated key without a second run (R07)", async () => {
