@@ -1,6 +1,6 @@
 # MRP report weeks and marks: a Day/Week switch that sums flows but keeps balances, and a warning on every overdue, late or beyond-horizon date
 
-**Status:** in progress
+**Status:** implemented
 **Created:** 2026-11-01 11:05 UTC
 **Issue:** #285 (E18-S02, epic #270) · **Depends on:** the MRP report (`implemented/2026-10-31--0907UTC-mrp-report.md`, #284), purchasing supply (`implemented/2026-10-31--0905UTC-mrp-purchasing-supply.md`, #276), production and transfer supply (`implemented/2026-10-31--0908UTC-mrp-production-and-transfer-supply.md`, #277), proposal timing (`implemented/2026-11-01--0738UTC-mrp-proposal-timing-demand-priority.md`, #279), planning exceptions (`implemented/2026-11-01--0737UTC-mrp-planning-exceptions.md`, #280), all merged · **Design authority:** `.ai/specs/product-brief.md` (R03, R07, R10, D03, N04), `research/CPG-prd001.pdf` §04 "Overdue and late starts", "Transfers", §07 "UI and preferences", "Last MRP report", `research/CPG-prd-datamodel.pdf` ("MRP daily result", "MRP recommendation / exception"), `research/CPG-acceptance.md` UX-018, UX-019, UX-027, MRP-006, MRP-015, MRP-016, MRP-037, MRP-040, MRP-049, BUY-019, TRF-016
 
@@ -245,3 +245,19 @@ One phase, one PR: the engine's overdue warnings, the fold and marks, the read a
 7. **Docs and close-out.** `BACKWARD_COMPATIBILITY.md` §4 records the parameter, fields, codes and messages. The engineering standards' MRP bullets name `report/weekly.ts` and `plan-marks.ts`. In the acceptance catalogue, move only rows whose every Then is asserted (lesson 2026-10-21). UX-019, UX-027 and MRP-006 are expected to move to Passed. MRP-015, BUY-019, MRP-016, MRP-040, TRF-016 and UX-018 should move as far as their tests reach. Move this spec to `implemented/` with implementation notes.
 
 Run `npm run lint`, `npm run typecheck`, `npm run test:coverage` (100%) and `npm run build`, then the two integration files.
+
+## Implementation notes
+
+Implemented on #324, as written, with these deviations and findings.
+
+- **The warning codes have no messages.** The spec gave `OVERDUE_SUPPLY` and `OVERDUE_TRANSFER` fixed English messages, but the read never lists a warning, so no response carries one. `warnings/overdue.ts` holds the codes, `overdueWarnings`, `compareWarnings` and `toStoredWarning`. During a rollback the previous image shows the rows with #280's fallback message, as BACKWARD_COMPATIBILITY.md now records.
+- **Dates follow the reader's locale.** Marks and week titles use `Intl.DateTimeFormat` short dates, with the year only when it differs from the mark's own day: "W41 · Oct 5" and "due Sep 28" in English, "T41 · 5 paź" in Polish. The spec's English examples read "5 Oct". A week's date range is built inline (`Oct 1–Oct 4`), since a placeholder-only dictionary entry fails `messages.test.ts`.
+- **The switch's hint** sits beside the switch as text. `SegmentedControl` takes no `aria-describedby`.
+- **A cut-week label.** "Oct 1–Oct 4, partial" under "W40 · Oct 1".
+- **The Proposals table** keeps its `data-mrp-timing` hook, now valued with the mark kind (`late-supply`, `beyond-horizon`). `mrp-accept.test.ts` reads the badge's text.
+- **Measured** (fastest of three, `mrp-report-reads.test.ts`): page 1 by week took 26 ms realistic and 28 ms at ten times, against 22 and 21 ms for the plain page.
+- **The realistic Test dataset** raises one `OVERDUE_SUPPLY` warning (`test-reset.service.test.ts` prints it). The ten-times timing fixture's stored rows grew with its overdue documents, within the existing budgets.
+- **Acceptance catalogue.**
+  - UX-019, UX-027, MRP-006, MRP-015 and BUY-019 move to Passed (automated).
+  - UX-018, MRP-016, MRP-040 and TRF-016 move to Partially verified: the overdue transfer and production marks aren't asserted through the API or in a browser yet.
+
