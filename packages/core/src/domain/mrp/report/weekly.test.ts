@@ -100,8 +100,8 @@ describe("foldWeeks", () => {
     const mark = (date: string, proposal: string): MrpMark => ({ kind: "late-supply", date, proposal, plannedFinish: "2026-10-20", lateDays: 2, quantity: "1.000000" });
     const marks = [mark("2026-10-01", "a"), mark("2026-10-04", "b"), mark("2026-10-05", "c"), mark("2026-10-11", "d")];
     const weeks = foldWeeks(ux027(), marks);
-    expect(weeks[0].marks.map(({ proposal }) => proposal as string)).toEqual(["a", "b"]);
-    expect(weeks[1].marks.map(({ proposal }) => proposal as string)).toEqual(["c", "d"]);
+    expect(weeks[0].marks.map((m) => ("proposal" in m ? m.proposal : null))).toEqual(["a", "b"]);
+    expect(weeks[1].marks.map((m) => ("proposal" in m ? m.proposal : null))).toEqual(["c", "d"]);
     expect(weeks[2].marks).toEqual([]);
   });
 

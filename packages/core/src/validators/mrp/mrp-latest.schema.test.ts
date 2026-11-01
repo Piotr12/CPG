@@ -4,12 +4,12 @@ import { MRP_GENERATION_NEEDS_RUN_MESSAGE, MRP_RUN_ID_MESSAGE, mrpLatestQuerySch
 
 describe("mrpLatestQuerySchema", () => {
   it("defaults to the first page of whichever run is latest", () => {
-    expect(mrpLatestQuerySchema.parse({})).toEqual({ page: 1 });
+    expect(mrpLatestQuerySchema.parse({})).toEqual({ bucket: "day", page: 1 });
   });
 
   it("reads the page and the run the client paged from out of the query string", () => {
-    expect(mrpLatestQuerySchema.parse({ page: "3", run: "00000012" })).toEqual({ page: 3, run: "00000012" });
-    expect(mrpLatestQuerySchema.parse({ run: "00000012", generation: "4" })).toEqual({ page: 1, run: "00000012", generation: 4 });
+    expect(mrpLatestQuerySchema.parse({ page: "3", run: "00000012" })).toEqual({ bucket: "day", page: 3, run: "00000012" });
+    expect(mrpLatestQuerySchema.parse({ run: "00000012", generation: "4" })).toEqual({ bucket: "day", page: 1, run: "00000012", generation: 4 });
   });
 
   it("refuses a generation without the run it belongs to, or one that isn't a whole number from 1", () => {
@@ -33,8 +33,17 @@ describe("mrpLatestQuerySchema", () => {
   });
 
   it("filters by a material and a location, and reads an empty value, the form's All, as no filter (E18-S01)", () => {
-    expect(mrpLatestQuerySchema.parse({ material: "00000012", location: "00000003", page: "2" })).toEqual({ material: "00000012", location: "00000003", page: 2 });
-    expect(mrpLatestQuerySchema.parse({ material: "", location: "" })).toEqual({ page: 1 });
+    expect(mrpLatestQuerySchema.parse({ material: "00000012", location: "00000003", page: "2" })).toEqual({ bucket: "day", material: "00000012", location: "00000003", page: 2 });
+    expect(mrpLatestQuerySchema.parse({ material: "", location: "" })).toEqual({ bucket: "day", page: 1 });
+  });
+
+  it("reads the view, a day by default or a week, and refuses any other (E18-S02)", () => {
+    expect(mrpLatestQuerySchema.parse({ bucket: "week" })).toEqual({ bucket: "week", page: 1 });
+    expect(mrpReportPageQuerySchema.parse({ bucket: "week", material: "00000012" })).toEqual({ bucket: "week", material: "00000012", page: 1 });
+    for (const bucket of ["month", "", "WEEK"]) {
+      expect(mrpLatestQuerySchema.safeParse({ bucket }).error?.issues[0]).toMatchObject({ path: ["bucket"] });
+      expect(mrpReportPageQuerySchema.safeParse({ bucket }).success).toBe(false);
+    }
   });
 
   it("refuses a filter that isn't an eight-digit ID, naming the field", () => {
@@ -45,8 +54,8 @@ describe("mrpLatestQuerySchema", () => {
 
 describe("mrpReportPageQuerySchema", () => {
   it("takes the page's filters and page", () => {
-    expect(mrpReportPageQuerySchema.parse({ material: "00000012", location: "", page: "3" })).toEqual({ material: "00000012", page: 3 });
-    expect(mrpReportPageQuerySchema.parse({})).toEqual({ page: 1 });
+    expect(mrpReportPageQuerySchema.parse({ material: "00000012", location: "", page: "3" })).toEqual({ bucket: "day", material: "00000012", page: 3 });
+    expect(mrpReportPageQuerySchema.parse({})).toEqual({ bucket: "day", page: 1 });
   });
 
   it("refuses run and generation, since the page always shows the latest run, and any other parameter", () => {

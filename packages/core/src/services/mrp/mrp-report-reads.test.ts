@@ -65,6 +65,8 @@ describe.each(SIZES)("the MRP report's reads at the $name size", (size) => {
     ["by location", { location: "00000001" }],
     ["by material and location", { material: "00000010", location: "00000001" }],
     ["the last page by location", { location: "00000001", page: String(lastPage) }],
+    // The week view reads the same rows and folds them in memory (E18-S02).
+    ["page 1 by week", { bucket: "week" }],
   ];
   const latest = async (query: Record<string, string>) => (await scopeForTenant(container, "prod")).cradle.mrpRunService.latest(query);
 

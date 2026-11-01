@@ -376,7 +376,7 @@ describe("MrpRunService.latest", () => {
     const { plans } = await latest();
 
     expect(Object.keys(plans[0])).toEqual([
-      "material", "materialDescription", "materialActive", "baseUnit", "location", "locationName", "locationActive", "lowestProjectedBefore", "firstShortageDate", "buckets", "proposals", "exceptions",
+      "material", "materialDescription", "materialActive", "baseUnit", "location", "locationName", "locationActive", "lowestProjectedBefore", "firstShortageDate", "buckets", "proposals", "exceptions", "marks",
     ]);
     expect(plans[0]).toMatchObject({
       material: cabinet.id, materialDescription: "Cabinet", materialActive: false, baseUnit: "each",
@@ -685,6 +685,100 @@ describe("MrpRunService: planning exceptions (#280)", () => {
     await sql(`insert into mrp_run_exception (id, tenant_code, run_id, position, exception_code, material, location, date, details)
       select 'x1', 'prod', id, 0, 'A_LATER_CODE', ?, ?, null, null from mrp_run where tenant_code = 'prod'`, [a.id, PLANT]);
     expect(listed(await latest())).toEqual([[a.id, PLANT, [{ code: "A_LATER_CODE", message: MRP_EXCEPTION_FALLBACK_MESSAGE, params: { material: a.id, location: PLANT } }]]]);
+  });
+});
+
+describe("MrpRunService: weeks and marks (#285)", () => {
+  /**
+   * The issue's UX-018 run on Thursday 1 October 2026, at the Store: a purchase-order line of 30 planned
+   * for 28 September, 25 in transit due 30 September, and a need of 5 on the 4th, three days ahead, with
+   * a 7-day lead time: a proposal starting today and finishing on the 8th, 4 days late (MRP-037).
+   */
+  async function ux018() {
+    const cabinet = await material("prod", "Cabinet");
+    const store = (await location("prod", "Store")).id;
+    const { cradle } = await scope();
+    await cradle.supplierService.create({ name: "Timber" }, ANNA);
+    const po = await cradle.purchaseOrderService.create({ supplier: "00000001", location: store, lines: [{ material: cabinet.id, quantity: "30", unit: "each", plannedDate: "2026-09-28" }] }, ANNA);
+    const { em } = cradle;
+    em.create(Transfer, {
+      code: "00000001", material: await em.findOneOrFail(Material, { code: cabinet.id }), source: await em.findOneOrFail(Location, { code: PLANT }),
+      destination: await em.findOneOrFail(Location, { code: store }), quantity: "25.000000", enteredQuantity: "25", enteredUnit: "each", numerator: "1", denominator: "1",
+      plannedDispatch: "2026-09-29", plannedArrival: "2026-09-30", dispatched: "25.000000",
+    });
+    await em.flush();
+    await parameters("prod", cabinet.id, store, "buy", "0.000000", "1.000000", 7);
+    await order("prod", store, [{ material: cabinet.id, quantity: "60", requiredDate: "2026-10-04" }]);
+    return { cabinet: cabinet.id, store, po: po.id };
+  }
+
+  it("UX-018: marks the overdue PO line and transfer on 1 October with their own dates, and the late proposal on its need date, filtered to the pair", async () => {
+    const { cabinet, store, po } = await ux018();
+    await run();
+
+    const [plan] = (await latest({ material: cabinet, location: store })).plans;
+
+    expect(plan.marks).toEqual([
+      { kind: "overdue-supply", date: "2026-10-01", source: "purchase-order", document: po, position: 1, plannedDate: "2026-09-28", quantity: "30.000000" },
+      { kind: "overdue-transfer", date: "2026-10-01", transfer: "00000001", stage: "in-transit", plannedDate: "2026-09-30", quantity: "25.000000" },
+      { kind: "late-supply", date: "2026-10-04", proposal: plan.proposals[0].id, plannedFinish: "2026-10-08", lateDays: 4, quantity: "5.000000" },
+    ]);
+    // The need's own date is unchanged; the warnings aren't exceptions, and the pair keeps its proposal.
+    expect(plan.proposals.map(({ needDate }) => needDate)).toEqual(["2026-10-04"]);
+    expect(plan.exceptions).toEqual([]);
+    expect(plan.buckets[0]).toMatchObject({ date: "2026-10-01", dependableSupply: "30.000000", transferIn: "25.000000" });
+  });
+
+  it("MRP-049: marks a Beyond Horizon proposal (100-day lead time, need 15 October, finish 9 January 2027) and adds it to no day", async () => {
+    const far = await material("prod", "Far");
+    await parameters("prod", far.id, PLANT, "buy", "0.000000", "1.000000", 100);
+    await order("prod", PLANT, [{ material: far.id, quantity: "40", requiredDate: "2026-10-15" }]);
+    await run();
+
+    const [plan] = (await latest({ material: far.id, bucket: "week" })).plans;
+
+    expect(plan.marks).toEqual([{ kind: "beyond-horizon", date: "2026-10-15", proposal: plan.proposals[0].id, plannedFinish: "2027-01-09", lateDays: 86, quantity: "40.000000" }]);
+    expect(plan.buckets.every(({ proposedReceipts }) => proposedReceipts === "0.000000")).toBe(true);
+    expect(plan.weeks!.every(({ proposedReceipts }) => proposedReceipts === "0.000000")).toBe(true);
+    expect(plan.weeks!.find(({ week }) => week === 42)!.marks).toEqual(plan.marks);
+  });
+
+  it("folds each plan into weeks only when asked, with the same marks, and says which view it read", async () => {
+    const { cabinet, store } = await ux018();
+    await run();
+
+    const daily = await latest({ material: cabinet, location: store });
+    const weekly = await latest({ material: cabinet, location: store, bucket: "week" });
+
+    expect(daily.bucket).toBe("day");
+    expect(daily.plans[0]).not.toHaveProperty("weeks");
+    expect(weekly.bucket).toBe("week");
+    const weeks = weekly.plans[0].weeks!;
+    expect(weeks.map(({ start, end, week, partial }) => [start, end, week, partial]).slice(0, 2)).toEqual([["2026-10-01", "2026-10-04", 40, true], ["2026-10-05", "2026-10-11", 41, false]]);
+    expect(weeks).toHaveLength(14);
+    expect(weeks[0]).toMatchObject({ firmDemand: "60.000000", dependableSupply: "30.000000", transferIn: "25.000000", projectedBefore: "-5.000000", lowestProjectedBefore: "-5.000000", peakShortage: "5.000000" });
+    expect(weeks[0].marks.map(({ kind }) => kind)).toEqual(["overdue-supply", "overdue-transfer", "late-supply"]);
+    expect(weeks.slice(1).every(({ marks }) => marks.length === 0)).toBe(true);
+  });
+
+  it("MRP-006: a weekly read changes nothing, so the daily rows, the run's ID and time read the same before and after", async () => {
+    const { cabinet } = await ux018();
+    await run();
+    const tables = async () => ({ ...(await everyOtherTable()), runs: await sql("select * from mrp_run order by code"), rows: await sql("select * from mrp_daily_result order by rowid"), audit: await sql("select count(*) as n from tenant_audit_event") });
+    const before = await latest({ material: cabinet });
+    const stored = await tables();
+
+    await latest({ material: cabinet, bucket: "week" });
+
+    const after = await latest({ material: cabinet });
+    expect(after).toEqual(before);
+    expect(after.run).toEqual(before.run);
+    expect(await tables()).toEqual(stored);
+  });
+
+  it("refuses a view that isn't a day or a week", async () => {
+    await run();
+    await expect(latest({ bucket: "month" })).rejects.toMatchObject({ code: "VALIDATION_FAILED", status: 400 });
   });
 });
 
