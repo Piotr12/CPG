@@ -50,28 +50,33 @@ Implement the spec. An open production order whose pinned revision has an inacti
 - 20:44 `/om-auto-fix-pr 283` was asked, but #283 is an issue with no PR. Told to proceed autonomously, the run took the issue's own pick-up command, `om-auto-fix-issue 283` (feature route), and claimed the issue.
 - 20:49 Spec written (`om-auto-write-spec`). A fresh-context review found nothing Critical. Its findings are folded in, and spec PR #330 is open.
 - 21:00 Branched `feat/mrp-at-risk-and-provisional-plans` from `origin/main` and carried the spec straight into `implemented/` (lesson 2026-10-23). The spec PR #330 stays design-only. This plan is the run log.
+- 22:45 Phases 1 to 3 landed in one commit: inputs, types, engine and storage are coupled, and the suite is red between them. Deviations, all in the spec's implementation notes: the inactive materials come from `readCodes` rather than a new read; a provisional action's components are listed by code, so a shuffled snapshot gives an equal result; a pair without provisional demand is sized once. A test that read a version through a new scope inside another scope's transaction hung (lesson extended).
+- 22:50 Benchmark against `main`'s source on this machine: worst case at ten times, `planMrp` 163 → 212 ms and the stall 164 → 236 ms, under the 250 ms budget. The cost is Q6: the middle third plans an executable and a provisional action per day, where `main` merged them. Skipping the second sizing for pairs with no provisional demand didn't move the worst case, where every pair has some.
+- 23:30 Gate: lint, typecheck, `test:coverage` (657 files, 5,326 tests, 100%), build. Docker unavailable, so the integration files ran against a standalone build: `mrp-run-api` (16), plus `mrp-accept-api`, `mrp-accept`, `mrp-report`, `mrp-report-api`, `mrp-run` and `production-orders` (38), all passed.
 
 ## Progress
+
+PR: #331
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Inputs and types
 
-- [ ] 1.1 readInactiveMaterials and MrpProductionOrder.inactiveComponents
-- [ ] 1.2 Types, codes, messages, stored shapes
+- [x] 1.1 readInactiveMaterials and MrpProductionOrder.inactiveComponents — b9ebb49e
+- [x] 1.2 Types, codes, messages, stored shapes — b9ebb49e
 
 ### Phase 2: Engine
 
-- [ ] 2.1 At-risk supply
-- [ ] 2.2 sizingBuckets and the two sizings in replenishPair
-- [ ] 2.3 The level loop
+- [x] 2.1 At-risk supply — b9ebb49e
+- [x] 2.2 sizingBuckets and the two sizings in replenishPair — b9ebb49e
+- [x] 2.3 The level loop — b9ebb49e
 
 ### Phase 3: Service, benchmark, integration
 
-- [ ] 3.1 Storage, read and service tests
-- [ ] 3.2 Benchmark
-- [ ] 3.3 Integration test
+- [x] 3.1 Storage, read and service tests — b9ebb49e
+- [x] 3.2 Benchmark — b9ebb49e
+- [x] 3.3 Integration test — 78f79bd8
 
 ### Phase 4: Docs
 
-- [ ] 4.1 Help copy, compatibility notes, standards, acceptance catalogue, spec notes
+- [x] 4.1 Help copy, compatibility notes, standards, acceptance catalogue, spec notes — fceb0845
