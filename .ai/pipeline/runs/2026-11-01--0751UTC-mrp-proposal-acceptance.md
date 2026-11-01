@@ -4,7 +4,7 @@
 **Agent:** Claude Code (cezar, headless) / claude-opus-5-5, via `om-auto-fix-issue` → `om-auto-write-spec` (#318) → `om-auto-implement-spec` → `om-auto-create-pr`
 **Source doc:** `.ai/specs/2026-11-01--0737UTC-mrp-proposal-acceptance.md` (spec PR #318)
 **Issue:** #287
-**Status:** in progress
+**Status:** done
 
 ## Goal
 
@@ -35,8 +35,15 @@ Phase 4, proof and paperwork (spec steps 7–9): benchmark, integration tests, d
 
 - Phase 1: the generator wrote two `add column`s, no rebuild. `mrp-acceptance-migration.test.ts` checks the populated upgrade, in place, and old-style inserts. The migration counts, lists and rollback-by-count tests take it. Core and app suites: 533 files, 4,065 tests green.
 - Phase 2: `MrpAcceptanceService` at 100% on its own tests (15, plus a two-ORM race: one requisition, the loser refused `MRP_PROPOSAL_ACCEPTED` after 2 plannings in all). Test fixes, not code fixes: a same-pair order line a day *earlier* than the need leaves the proposal unchanged (planned again it gets its own), so RUN-017's line goes on the need date; a material with open demand can't be deactivated, so Q11's test sets the flag directly.
+- Phase 3: QA screenshots showed the new MRP run column past the table's visible edge at 1280 px, so the run moved under the requisition's ID. The integration files caught three seams, all fixed: `purchasing.test.ts` read requisition cells by position, `mrp-run-api.test.ts` compared #278's proposals exactly, and `mrp-report.test.ts` read the first `main h3`. The seam lesson was extended.
+- Phase 4: the benchmark, run alone, takes 135 ms realistic and 1,394 ms at ten times to accept (stalls of 26 and 83 ms), against budgets of 1 s, 5 s and 250 ms. The Make half was filed as #320. The spec moved to `implemented/`.
+- Review: a fresh-context code review asked for changes, with no Critical or High findings. Medium: the refresh on `MRP_PROPOSAL_ACCEPTED` hid the refusal, so the dialog now refreshes the page on close; untranslated `MATERIAL_INACTIVE`, `LOCATION_INACTIVE` and `VALIDATION_FAILED` texts were added. Low: test gaps, the midnight guard and help fields, all fixed in bfdee3ea. One point is not addressed: focus after a successful accept goes to the page, since the trigger is replaced.
+- Gate on bfdee3ea: lint 0, typecheck 0, coverage 637 files and 5,045 tests at 100% on every measure, build 0. Integration on a local standalone build (no Docker here): 10 files and 80 tests, then 6 files and 39 tests after the fixes.
+- Process slip: `git stash` was used once, briefly, despite the worktree note; the entry was applied by its SHA and dropped by its tag at once.
 
 ## Progress
+
+PR: #319
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
