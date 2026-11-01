@@ -107,7 +107,9 @@ describe.each(SIZES)("the MRP report's reads at the $name size", (size) => {
     const sent = queries.filter(({ sql }) => sql.includes("from `mrp_recommendation`"));
     expect(sent).toHaveLength(1);
     const plan = (await orm.em.getConnection().execute<{ detail: string }[]>(`explain query plan ${sent[0].sql}`, [...sent[0].params])).map(({ detail }) => detail);
-    expect(plan.filter((line) => line.startsWith("SEARCH m0 "))).toEqual([expect.stringMatching(new RegExp(`^SEARCH m0 USING INDEX ${PROPOSAL_INDEX} \\(tenant_code=\\? AND run_id=\\? AND material=\\?`))]);
+    // A location filter narrows the seek too, so a filtered page never reads the other locations of its materials.
+    const seek = `tenant_code=\\? AND run_id=\\? AND material=\\?${query.location ? " AND location=\\?" : ""}`;
+    expect(plan.filter((line) => line.startsWith("SEARCH m0 "))).toEqual([expect.stringMatching(new RegExp(`^SEARCH m0 USING INDEX ${PROPOSAL_INDEX} \\(${seek}\\)`))]);
     // Besides the seek, only the tenant filter's join of the run, by key: no sort, no walk.
     expect(plan.filter((line) => !line.startsWith("SEARCH m0 ") && !/^SEARCH r1 USING INDEX sqlite_autoindex_mrp_run_1 \(id=\?\)$/.test(line))).toEqual([]);
   });

@@ -1309,6 +1309,21 @@ describe("planMrp: replenishment proposals (#278)", () => {
     expect(result.proposals).toEqual([]);
   });
 
+  it("proposes for a shortage that a purchase order arriving the next day doesn't cover, and shows the balance above target from then", () => {
+    const result = planMrp(
+      inputs({
+        orderLines: [line({ quantity: q("5"), requiredDate: "2026-10-03" })],
+        purchaseOrderLines: [orderLine({ quantity: q("5"), plannedDate: "2026-10-04" })],
+        planningParameters: [set()],
+      }),
+      TODAY,
+    );
+    expect(result.proposals.map(({ needDate, quantity }) => [needDate, quantity])).toEqual([["2026-10-03", q("5")]]);
+    const plan = only(result.plans);
+    expect(bucketOf(plan, "2026-10-03")).toMatchObject({ projectedBefore: -q("5"), projectedAfter: 0n });
+    expect(bucketOf(plan, "2026-10-04")).toMatchObject({ projectedBefore: 0n, projectedAfter: q("5") });
+  });
+
   it("plans no pair for a parameter set alone, and proposes today for an overdue need", () => {
     expect(planMrp(inputs({ planningParameters: [set()] }), TODAY)).toMatchObject({ plans: [], proposals: [] });
     const overdue = planMrp(inputs({ orderLines: [line({ quantity: q("4"), requiredDate: "2026-09-20" })], planningParameters: [set()] }), TODAY);
