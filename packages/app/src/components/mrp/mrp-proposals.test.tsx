@@ -15,6 +15,8 @@ const plan = (proposals: MrpProposalView[]): MrpPlanView => ({
   buckets: [], proposals,
 });
 const accept = vi.fn();
+const refresh = vi.hoisted(() => vi.fn());
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 const renderProposals = (proposals: MrpProposalView[], { today = "2026-10-01", writable = true, locale = "en" as "en" | "pl" } = {}) =>
   render(
     <MrpProposals tenant={{ code: "test" }} run={RUN} plan={plan(proposals)} today={today} accept={writable ? accept : undefined} locale={locale} messages={locale === "en" ? en : pl} />,
@@ -76,6 +78,9 @@ describe("MrpProposals", () => {
     ["en", { code: "MRP_PROPOSAL_ACCEPTED", message: "x", params: { document: "00000012", kind: "purchase-requisition" } }, "This proposal has already been accepted: document 00000012."],
     ["pl", { code: "MRP_PROPOSAL_STALE", message: "x" }, pl.mrp.proposals.errors.MRP_PROPOSAL_STALE],
     ["pl", { code: "TENANT_READ_ONLY", message: "x" }, pl.errors.TENANT_READ_ONLY],
+    ["pl", { code: "MATERIAL_INACTIVE", message: "x" }, pl.mrp.proposals.errors.MATERIAL_INACTIVE],
+    ["pl", { code: "LOCATION_INACTIVE", message: "x" }, pl.mrp.proposals.errors.LOCATION_INACTIVE],
+    ["en", { code: "VALIDATION_FAILED", message: "x" }, "The proposal's quantity is more than a requisition can hold."],
   ] as const)("keeps a refusal in the dialog, in the reader's language (%s, %o)", async (locale, error, text) => {
     accept.mockResolvedValue({ ok: false, error });
     renderProposals([buy()], { locale });
@@ -85,6 +90,33 @@ describe("MrpProposals", () => {
 
     expect(await screen.findByText(text)).toBeTruthy();
     expect(screen.getByRole("alertdialog")).toBeTruthy();
+  });
+
+  it("keeps an already accepted refusal on screen, and refreshes the page only once its dialog closes (lesson 2026-10-21)", async () => {
+    accept.mockResolvedValue({ ok: false, error: { code: "MRP_PROPOSAL_ACCEPTED", message: "x", params: { document: "00000012", kind: "purchase-requisition" } } });
+    renderProposals([buy()]);
+
+    fireEvent.click(screen.getByRole("button", { name: /^Accept the/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "Create requisition" }));
+    expect(await screen.findByText("This proposal has already been accepted: document 00000012.")).toBeTruthy();
+    expect(refresh).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("closes a stale refusal without refreshing, keeping the page the reader was looking at", async () => {
+    accept.mockResolvedValue({ ok: false, error: { code: "MRP_PROPOSAL_STALE", message: "x" } });
+    renderProposals([buy()]);
+
+    fireEvent.click(screen.getByRole("button", { name: /^Accept the/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "Create requisition" }));
+    await screen.findByText(en.mrp.proposals.errors.MRP_PROPOSAL_STALE);
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    expect(refresh).not.toHaveBeenCalled();
   });
 
   it("offers no Accept on a read-only tenant, or for a run from an earlier day, which says to run MRP again (spec Q9, Q13)", () => {

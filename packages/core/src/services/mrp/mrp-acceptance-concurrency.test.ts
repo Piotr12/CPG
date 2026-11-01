@@ -76,6 +76,8 @@ describe("Accepting one MRP proposal on two connections", () => {
     ]);
     const connection = (await setup()).cradle.em.getConnection();
     expect(await connection.execute("select code, mrp_run from purchase_requisition")).toEqual([{ code: "00000001", mrp_run: run.id }]);
+    // One creation in the audit: the loser's first attempt rolled back with its write (R08).
+    expect(await connection.execute("select subject_id from tenant_audit_event where action = 'purchase-requisitions.purchase-requisition.created'")).toEqual([{ subject_id: "00000001" }]);
     // The winner planned once; the loser planned on the data it had read, failed its first write and was refused on the retry.
     expect(plannings).toHaveBeenCalledTimes(2);
   });

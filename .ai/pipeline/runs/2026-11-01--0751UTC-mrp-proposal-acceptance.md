@@ -61,4 +61,4 @@ Phase 4, proof and paperwork (spec steps 7–9): benchmark, integration tests, d
 
 - [x] 4.1 Benchmark — e2555d0a
 - [x] 4.2 Integration tests — 7ef63df0
-- [ ] 4.3 Docs, catalogue, follow-up issue and spec move
+- [x] 4.3 Docs, catalogue, follow-up issue and spec move — ef1fecd0

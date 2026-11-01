@@ -55,7 +55,7 @@ describe("acceptMrpProposal", () => {
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/test/mrp");
   });
 
-  it("refreshes after an already accepted proposal, so its row shows the document, but keeps a stale or read-only refusal", async () => {
+  it("refreshes after no refusal, so the dialog showing it stays: stale, read-only or already accepted", async () => {
     mocks.currentUser.mockResolvedValue({ userId: "u", username: "alice", sessionId: "s", role: "user" });
     mocks.accept.mockRejectedValueOnce(new ConflictError("Stale", "MRP_PROPOSAL_STALE", { material: "00000031", location: "00000001" }));
     expect(await acceptMrpProposal("prod", 1, PROPOSAL)).toMatchObject({ ok: false, error: { code: "MRP_PROPOSAL_STALE", params: { material: "00000031" } } });
@@ -65,7 +65,7 @@ describe("acceptMrpProposal", () => {
 
     mocks.accept.mockRejectedValueOnce(new ConflictError("Accepted", "MRP_PROPOSAL_ACCEPTED", { document: "00000012", kind: "purchase-requisition" }));
     expect(await acceptMrpProposal("prod", 1, PROPOSAL)).toMatchObject({ ok: false, error: { code: "MRP_PROPOSAL_ACCEPTED" } });
-    expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/prod/mrp");
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 
   it("refuses without a session, or without the dialog's proposal, before accepting", async () => {

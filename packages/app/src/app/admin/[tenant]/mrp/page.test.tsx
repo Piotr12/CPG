@@ -13,6 +13,7 @@ vi.mock("next/server", () => ({ connection: mocks.connection }));
 vi.mock("@cpg/core", async (original) => ({ ...(await original<typeof import("@cpg/core")>()), tenantScope: mocks.tenantScope }));
 vi.mock("../../../../auth/require-admin", () => ({ requireUser: mocks.requireUser }));
 vi.mock("../../../../i18n/get-messages", () => ({ getMessages: mocks.getMessages }));
+vi.mock("next/navigation", async (original) => ({ ...(await original<typeof import("next/navigation")>()), useRouter: () => ({ refresh: vi.fn() }) }));
 vi.mock("./actions", () => ({ runMrp: mocks.runMrp, acceptMrpProposal: mocks.acceptMrpProposal }));
 
 const run: MrpRunView = {

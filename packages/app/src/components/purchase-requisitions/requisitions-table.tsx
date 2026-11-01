@@ -49,7 +49,7 @@ export function RequisitionsTable({ tenant, requisitions, materials, locations, 
       sortKey: "id",
       // One accepted from an MRP proposal names its run under its ID (E19-S01), in view at every width without a column of its own.
       cell: (requisition) => (
-        <div className="flex flex-col gap-0.5">
+        <div className="flex flex-col gap-1">
           <Highlight text={requisition.id} query={search} />
           {requisition.mrpRun && <span className="font-sans text-xs text-muted-foreground" data-requisition-mrp-run>{fill(labels.fromMrpRun, { run: requisition.mrpRun })}</span>}
         </div>

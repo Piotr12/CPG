@@ -14,16 +14,7 @@ export function formValues(values: unknown): object {
  * explains the refusal.
  */
 export function refreshAfterWrite<T>(result: Result<T>, ...paths: string[]): Result<T> {
-  return refreshAfterWriteOr(result, [], ...paths);
-}
-
-/**
- * `refreshAfterWrite`, refreshing after the refusals in `codes` too: those whose dialog row survives the
- * refresh and reads better for it. An already accepted MRP proposal (`MRP_PROPOSAL_ACCEPTED`) then
- * shows the document another session created, while a stale one keeps its "Run MRP again" advice.
- */
-export function refreshAfterWriteOr<T>(result: Result<T>, codes: readonly string[], ...paths: string[]): Result<T> {
-  if (result.ok || result.error.code === "VERSION_CONFLICT" || codes.includes(result.error.code)) {
+  if (result.ok || result.error.code === "VERSION_CONFLICT") {
     for (const path of paths) revalidatePath(path);
   }
   return result;

@@ -11,6 +11,7 @@ import { migrateDatabase, toDbOptions } from "../../database";
 import { inRequestTransaction, retryingStaleSnapshot } from "../../http/request-transaction";
 import type { AuditActor } from "../audit/actor";
 import { MRP_PROPOSAL_ACCEPTED, MRP_PROPOSAL_NOT_EXECUTABLE, MRP_PROPOSAL_NOT_FOUND, MRP_PROPOSAL_STALE } from "./mrp-acceptance.service";
+import { PurchaseRequisitionService } from "../purchase-requisitions/purchase-requisition.service";
 import { MRP_RUN_NOT_FOUND } from "./mrp-run.service";
 import type { MrpPlanView } from "./mrp-run-view";
 
@@ -176,6 +177,22 @@ describe("MrpAcceptanceService.accept: creating the document", () => {
 });
 
 describe("MrpAcceptanceService.accept: refusals, with nothing created", () => {
+  it("rolls back the requisition and its audit entry when the write fails after the insert (R08)", async () => {
+    const { material: sugar, runId, proposal } = await buyProposal();
+    const create = PurchaseRequisitionService.prototype.create;
+    vi.spyOn(PurchaseRequisitionService.prototype, "create").mockImplementation(async function (this: PurchaseRequisitionService, ...args) {
+      await create.apply(this, args);
+      throw new Error("the disk is full");
+    });
+
+    await expect(accept(runId, proposal.id)).rejects.toThrow("the disk is full");
+
+    expect(await count("purchase_requisition")).toBe(0);
+    expect(await sql("select id from tenant_audit_event where action = 'purchase-requisitions.purchase-requisition.created'")).toEqual([]);
+    expect((await plan(sugar)).proposals[0].document).toBeNull();
+  });
+
+
   it("refuses a proposal whose stock changed since the run as stale, naming its material and location (RUN-017)", async () => {
     const { material: sugar, runId, proposal } = await buyProposal();
     await stock(sugar, "30");
@@ -210,6 +227,21 @@ describe("MrpAcceptanceService.accept: refusals, with nothing created", () => {
     await cradle.planningParameterService.update(salt.material, PLANT, { procurement: "make" }, set.version, ANNA);
     await expect(accept(salt.runId, salt.proposal.id)).rejects.toMatchObject({ code: "MRP_PROPOSAL_STALE" });
     expect(await count("purchase_requisition")).toBe(0);
+  });
+
+  it("refuses it as stale once a requisition the run counted is cancelled (RUN-017)", async () => {
+    const sugar = await material("Sugar");
+    await parameters(sugar.id);
+    await order(sugar.id, "100", "2026-10-05");
+    const { cradle } = await scope();
+    const counted = await cradle.purchaseRequisitionService.create({ material: sugar.id, location: PLANT, quantity: "40", unit: "kg", requiredDate: "2026-10-03" }, ANNA);
+    await run();
+    const { run: runId, proposals: [proposal] } = await plan(sugar.id);
+    expect(proposal.quantity).toBe("60.000000");
+    await (await scope()).cradle.purchaseRequisitionService.cancel(counted.id, counted.version, ANNA);
+
+    await expect(accept(runId, proposal.id)).rejects.toMatchObject({ code: "MRP_PROPOSAL_STALE" });
+    expect(await count("purchase_requisition")).toBe(1);
   });
 
   it("accepts a proposal when only something it doesn't depend on changed, such as an earlier day's new demand a new proposal would cover", async () => {
@@ -276,6 +308,24 @@ describe("MrpAcceptanceService.accept: refusals, with nothing created", () => {
       code: "MRP_PROPOSAL_NOT_EXECUTABLE", status: 409, message: MRP_PROPOSAL_NOT_EXECUTABLE, messageParams: { material: jam.id, location: PLANT, kind: "production-order" },
     });
     expect(await count("production_order")).toBe(0);
+  });
+
+  it("refuses an inactive location, and a quantity more than an entry may hold, as a manual requisition would (spec Q11)", async () => {
+    const pepper = await buyProposal("Pepper");
+    await sql("update location set active = 0 where code = ? and tenant_code = 'prod'", [PLANT]);
+    await expect(accept(pepper.runId, pepper.proposal.id)).rejects.toMatchObject({ code: "LOCATION_INACTIVE" });
+    await sql("update location set active = 1 where code = ? and tenant_code = 'prod'", [PLANT]);
+
+    // Two lines of 999,999,999,999 kg: a need no entered quantity can carry (12 integer digits, R03).
+    const bulk = await material("Bulk");
+    await parameters(bulk.id);
+    await order(bulk.id, "999999999999", "2026-10-05");
+    await order(bulk.id, "999999999999", "2026-10-05");
+    await run();
+    const { run: runId, proposals: [proposal] } = await plan(bulk.id);
+    expect(proposal.quantity).toBe("1999999999998.000000");
+    await expect(accept(runId, proposal.id)).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+    expect(await count("purchase_requisition")).toBe(0);
   });
 
   it("refuses an inactive material as a manual requisition would, leaving the proposal unaccepted (spec Q11)", async () => {

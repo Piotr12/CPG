@@ -26,7 +26,7 @@ describe("accepting an MRP proposal in the UI", () => {
   let admin: Browser;
   let ola: Browser;
   let secret: string;
-  const ids: Record<"sugar" | "plant", string> = {} as never;
+  const ids: Record<"sugar" | "plant" | "customer", string> = {} as never;
 
   const api = (method: string, path: string, body?: unknown) => callApi(baseUrl, method, path, secret, body === undefined ? {} : { key: randomUUID(), body });
   const create = async (path: string, body: unknown) => {
@@ -38,15 +38,35 @@ describe("accepting an MRP proposal in the UI", () => {
     (json(await api("GET", `/api/tenants/prod/purchase-requisitions?q=${material}`)).data as { id: string; material: string; quantity: string; mrpRun: string | null }[])
       .filter((requisition) => requisition.material === material);
   const purchaseOrders = () => allPages(async (page) => json(await api("GET", `/api/tenants/prod/purchase-orders?page=${page}`)).data as { id: string }[]);
-  /** Runs MRP and opens the page filtered to this file's pair, its proposals shown; again if the run and the page straddled midnight UTC. */
-  async function runAndOpen(attempt = 1): Promise<MrpRunView> {
-    const started = day(0);
+  /** A Buy pair of its own with no lot rule and an Open line of 50 kg four days out: one proposal of exactly 50 (RUN-005). */
+  async function buyPair() {
+    ids.sugar = await create("/api/tenants/prod/materials", { type: "finished", description: "mrpacc ui sugar", baseUnit: "kg" });
+    ids.plant = await create("/api/tenants/prod/locations", { name: "mrpacc ui plant" });
+    await create("/api/tenants/prod/planning-parameters", { material: ids.sugar, location: ids.plant, procurement: "buy", leadTimeDays: 2, minimumQuantity: "0", lotMultiple: "1" });
+    await create("/api/tenants/prod/customer-orders", { customer: ids.customer, location: ids.plant, lines: [{ material: ids.sugar, quantity: "50", unit: "kg", requiredDate: day(4) }] });
+  }
+  /** Runs MRP and opens the page filtered to this file's pair, its proposals shown. */
+  async function runAndOpen(): Promise<MrpRunView> {
     const run = json(await api("POST", "/api/tenants/prod/mrp/runs", {})).data as MrpRunView;
     await ola.open(`${baseUrl}/admin/prod/mrp?material=${ids.sugar}&location=${ids.plant}`);
     await ola.waitUntil(`Boolean(${shown("[data-mrp-proposals]")})`);
-    if (day(0) === started) return run;
-    expect(attempt, "a run crosses midnight UTC at most once").toBe(1);
-    return runAndOpen(attempt + 1);
+    return run;
+  }
+  /**
+   * Runs `scenario` once more, on a new pair, when the UTC day changed while it ran, whether it passed or failed:
+   * a run from an earlier day can't be accepted (spec Q7).
+   */
+  async function withinOneDay(scenario: () => Promise<void>, attempt = 1): Promise<void> {
+    const started = day(0);
+    try {
+      await buyPair();
+      await scenario();
+      if (day(0) === started) return;
+    } catch (error) {
+      if (day(0) === started) throw error;
+    }
+    expect(attempt, "a scenario crosses midnight UTC at most once").toBe(1);
+    return withinOneDay(scenario, attempt + 1);
   }
 
   beforeAll(async () => {
@@ -54,12 +74,7 @@ describe("accepting an MRP proposal in the UI", () => {
     await signInAsAdmin(admin, baseUrl, adminPassword);
     await openTokens(admin, baseUrl);
     secret = await createToken(admin, SETUP_TOKEN);
-    ids.sugar = await create("/api/tenants/prod/materials", { type: "finished", description: "mrpacc ui sugar", baseUnit: "kg" });
-    ids.plant = await create("/api/tenants/prod/locations", { name: "mrpacc ui plant" });
-    const customer = await create("/api/tenants/prod/customers", { name: "mrpacc ui retail" });
-    // A Buy pair with no lot rule and an Open line of 50 kg four days out: one proposal of exactly 50 (RUN-005).
-    await create("/api/tenants/prod/planning-parameters", { material: ids.sugar, location: ids.plant, procurement: "buy", leadTimeDays: 2, minimumQuantity: "0", lotMultiple: "1" });
-    await create("/api/tenants/prod/customer-orders", { customer, location: ids.plant, lines: [{ material: ids.sugar, quantity: "50", unit: "kg", requiredDate: day(4) }] });
+    ids.customer = await create("/api/tenants/prod/customers", { name: "mrpacc ui retail" });
     await createUser(admin, baseUrl, USERNAME, PASSWORD);
     await signIn(ola, baseUrl, PASSWORD, USERNAME);
     await ola.waitUntil(signedInAndHydrated(USERNAME));
@@ -75,7 +90,7 @@ describe("accepting an MRP proposal in the UI", () => {
     }
   });
 
-  it("asks before creating, names the proposal, creates nothing on Cancel, then one requisition of 50 kg tagged with the run on confirm (RUN-004, RUN-005)", async () => {
+  it("asks before creating, names the proposal, creates nothing on Cancel, then one requisition of 50 kg tagged with the run on confirm (RUN-004, RUN-005)", () => withinOneDay(async () => {
     const run = await runAndOpen();
     const ordersBefore = (await purchaseOrders()).length;
     expect(await ola.evaluate<string>(`${shown("[data-mrp-proposal-count]")}.textContent`)).toBe("1");
@@ -108,5 +123,5 @@ describe("accepting an MRP proposal in the UI", () => {
     await ola.click("[data-mrp-document]");
     await ola.waitUntil(`location.pathname.endsWith("/purchase-requisitions") && Boolean(${shown("[data-requisition-mrp-run]")})`);
     expect(await ola.evaluate<string>(`${shown("[data-requisition-mrp-run]")}.textContent`)).toBe(`MRP run ${run.id}`);
-  });
+  }));
 });

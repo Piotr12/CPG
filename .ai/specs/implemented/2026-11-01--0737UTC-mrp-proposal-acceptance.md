@@ -257,6 +257,8 @@ Implemented on #319, branched from `main` (the spec PR #318 stays design-only), 
 - **The run on the requisitions list sits under the requisition's ID, not in its own column.** At 1280 px a priority-2 column after Required sat past the table's visible width (QA screenshot), and moving it last shifted no index but left it out of view. Under the ID it is in view at every width, and no other column moves (`requisitions-table.tsx`, `fromMrpRun`). Requisitions entered by hand show nothing there.
 - **The screen's stale and not-executable texts don't name the material and location.** The dialog already names them, and `MRP_PROPOSAL_STALE` from a superseded run has no params, which `errorMessage` would answer in the server's English. `MRP_PROPOSAL_ACCEPTED` names its document. The API keeps every param the spec lists.
 - **The earlier-day note** shows only on a writable tenant, for a pair with proposals: a read-only tenant offers no Accept to explain.
+- **`refreshAfterWrite` is unchanged; the dialog refreshes the page itself, on close, after `MRP_PROPOSAL_ACCEPTED`** (`accept-proposal-button.tsx`). The code review found that a server-side refresh on that refusal replaced the row's Accept button with its document link, and the open dialog with it, so the refusal was never read (lesson 2026-10-21).
+- **The dialog also translates `MATERIAL_INACTIVE`, `LOCATION_INACTIVE` and `VALIDATION_FAILED`** (an over-limit quantity), which Q11's refusals reach.
 - **The Make half** is #320, blocked on #282.
 
 Notes:

@@ -17,11 +17,18 @@ const ADMIN_TOKEN = "mrpacc-admin";
 /** A day `days` after the server's UTC today, as the run plans from it. */
 const day = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
 const today = () => day(0);
-/** Runs `scenario` again when it crossed midnight UTC: a run from an earlier day can't be accepted (spec Q7). */
+/**
+ * Runs `scenario` once more when the UTC day changed while it ran, whether it passed or failed: a run from an
+ * earlier day can't be accepted (spec Q7), so a run before midnight and an accept after it is refused as stale.
+ */
 async function withinOneDay<T>(scenario: () => Promise<T>, attempt = 1): Promise<T> {
   const started = today();
-  const result = await scenario();
-  if (today() === started) return result;
+  try {
+    const result = await scenario();
+    if (today() === started) return result;
+  } catch (error) {
+    if (today() === started) throw error;
+  }
   expect(attempt, "a scenario crosses midnight UTC at most once").toBe(1);
   return withinOneDay(scenario, attempt + 1);
 }
@@ -111,7 +118,7 @@ describe("Accepting MRP proposals through the API", () => {
     expect(await counts()).toEqual(before);
   });
 
-  it("accepts a Buy need of exactly 100 kg as one Open requisition tagged with the run, with no purchase order, once; a replay returns it (BUY-001, RUN-005, R07)", async () => {
+  it("accepts a Buy need of exactly 100 kg as one Open requisition tagged with the run, with no purchase order, once; a replay returns it (BUY-001, RUN-005, R07)", () => withinOneDay(async () => {
     const pair = await buyPair("sugar", "100");
     const { runId, proposal, before } = await withinOneDay(async () => {
       await run();
@@ -138,9 +145,9 @@ describe("Accepting MRP proposals through the API", () => {
     expect(again.status).toBe(409);
     expect(refusal(again)).toMatchObject({ code: "MRP_PROPOSAL_ACCEPTED", params: { document: document.id, kind: "purchase-requisition" } });
     expect((await counts())["purchase-requisitions"]).toBe(before["purchase-requisitions"] + 1);
-  });
+  }));
 
-  it("refuses a proposal as stale once a stock correction changed it, advising to run MRP again, and creates nothing (RUN-017)", async () => {
+  it("refuses a proposal as stale once a stock correction changed it, advising to run MRP again, and creates nothing (RUN-017)", () => withinOneDay(async () => {
     const pair = await buyPair("salt", "50");
     const { runId, proposal } = await withinOneDay(async () => {
       await run();
@@ -156,9 +163,9 @@ describe("Accepting MRP proposals through the API", () => {
     expect(refusal(response)).toMatchObject({ code: "MRP_PROPOSAL_STALE", params: { material: pair.material, location: pair.location } });
     expect(json(response).error.message).toContain("Run MRP again");
     expect(await counts()).toEqual(before);
-  });
+  }));
 
-  it("refuses a Make proposal as not executable, creating no production order (spec Q1)", async () => {
+  it("refuses a Make proposal as not executable, creating no production order (spec Q1)", () => withinOneDay(async () => {
     const pair = await buyPair("jam", "12", "make");
     const { runId, proposal } = await withinOneDay(async () => {
       await run();
@@ -171,9 +178,9 @@ describe("Accepting MRP proposals through the API", () => {
 
     expect(response.status).toBe(409);
     expect(refusal(response)).toMatchObject({ code: "MRP_PROPOSAL_NOT_EXECUTABLE", params: { material: pair.material, kind: "production-order" } });
-  });
+  }));
 
-  it("doesn't find a Test proposal under Prod, and Test's generation guards its own acceptance (RUN-022, R05)", async () => {
+  it("doesn't find a Test proposal under Prod, and Test's generation guards its own acceptance (RUN-022, R05)", () => withinOneDay(async () => {
     const pair = await buyPair("pepper", "30", "buy", "test");
     const { testRun, testProposal, prodRun } = await withinOneDay(async () => {
       const generation = await testGeneration();
@@ -196,9 +203,9 @@ describe("Accepting MRP proposals through the API", () => {
     const accepted = await accept(testRun, testProposal.id, { tenant: "test", generation: await testGeneration() });
     expect(accepted.status, accepted.text).toBe(200);
     expect(await counts("prod")).toEqual(before.prod);
-  });
+  }));
 
-  it("refuses every acceptance in a read-only tenant, the admin's included, and accepts with the admin's token once writable (R05, R07)", async () => {
+  it("refuses every acceptance in a read-only tenant, the admin's included, and accepts with the admin's token once writable (R05, R07)", () => withinOneDay(async () => {
     const pair = await buyPair("flour", "25");
     const { runId, proposal } = await withinOneDay(async () => {
       await run();
@@ -220,5 +227,5 @@ describe("Accepting MRP proposals through the API", () => {
     const response = await accept(runId, proposal.id);
     expect(response.status, response.text).toBe(200);
     expect(json(response).data.document).toMatchObject({ quantity: "25.000000", mrpRun: runId });
-  });
+  }));
 });
