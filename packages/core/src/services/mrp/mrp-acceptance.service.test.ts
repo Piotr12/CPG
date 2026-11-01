@@ -180,6 +180,26 @@ describe("MrpAcceptanceService.accept: creating the document", () => {
 
     await expect(accept(runId, proposals[1].id)).resolves.toMatchObject({ document: { quantity: "30.000000", requiredDate: "2026-10-20" } });
   });
+
+  it("requires a Late Supply proposal on its need date, which leaves the pair's later proposal acceptable (spec Q2, Q3, #279)", async () => {
+    const sugar = await material("Sugar");
+    await parameters(sugar.id);
+    // A 2-day lead time can't meet 2 October from 1 October: the proposal finishes on the 3rd, a day late.
+    await order(sugar.id, "5", "2026-10-02");
+    await order(sugar.id, "7", "2026-10-10");
+    await run();
+    const { run: runId, proposals } = await plan(sugar.id);
+    expect(proposals.map(({ needDate, plannedFinish, lateDays }) => [needDate, plannedFinish, lateDays])).toEqual([["2026-10-02", "2026-10-03", 1], ["2026-10-10", "2026-10-10", 0]]);
+
+    const late = await accept(runId, proposals[0].id);
+
+    // Sizing counts a proposal from its need date (#279), and the requisition stands there too, so planning
+    // again repeats the later proposal. On its planned finish it would leave the 2nd short, and MRP would
+    // propose that shortage once more.
+    expect(late.document).toMatchObject({ quantity: "5.000000", requiredDate: "2026-10-02" });
+    expect(late.proposal).toMatchObject({ needDate: "2026-10-02", plannedFinish: "2026-10-03", lateDays: 1, document: late.document.id });
+    await expect(accept(runId, proposals[1].id)).resolves.toMatchObject({ document: { quantity: "7.000000", requiredDate: "2026-10-10" } });
+  });
 });
 
 describe("MrpAcceptanceService.accept: refusals, with nothing created", () => {

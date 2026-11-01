@@ -167,6 +167,9 @@ describe("Accepting MRP proposals through the API", () => {
 
   it("refuses a Make proposal as not executable, creating no production order (spec Q1)", () => withinOneDay(async () => {
     const pair = await buyPair("jam", "12", "make");
+    // Since #280 a Make pair gets a proposal only with an active BOM valid on its planned finish.
+    const input = (await created("/api/tenants/prod/materials", { type: "raw", description: "mrpacc jam fruit", baseUnit: "each" })).id;
+    await created("/api/tenants/prod/boms", { output: pair.material, priority: 1, validFrom: day(-30), validThrough: null, components: [{ material: input, quantity: "1", unit: "each" }] });
     const { runId, proposal } = await withinOneDay(async () => {
       await run();
       const { run: latest, proposals } = await proposalsOf(pair.material, pair.location);

@@ -205,7 +205,7 @@ describe("MRP runs through the API", () => {
 
     const latePlan = await planOf(late);
     expect(latePlan.proposals).toEqual([
-      { kind: "purchase-requisition", needDate: day(3), quantity: "5.000000", plannedStart: day(0), plannedFinish: day(7), lateDays: 4, beyondHorizon: false },
+      { id: expect.any(String), kind: "purchase-requisition", needDate: day(3), quantity: "5.000000", plannedStart: day(0), plannedFinish: day(7), lateDays: 4, beyondHorizon: false, executable: true, document: null },
     ]);
     // The receipt counts on day 7, not on the need date: days 3 to 6 keep their shortage.
     expect(latePlan.buckets.slice(3, 7).map(({ projectedAfter }) => projectedAfter)).toEqual(["-5.000000", "-5.000000", "-5.000000", "-5.000000"]);
@@ -213,7 +213,7 @@ describe("MRP runs through the API", () => {
 
     const farPlan = await planOf(far);
     expect(farPlan.proposals).toEqual([
-      { kind: "purchase-requisition", needDate: day(20), quantity: "5.000000", plannedStart: day(0), plannedFinish: day(120), lateDays: 100, beyondHorizon: true },
+      { id: expect.any(String), kind: "purchase-requisition", needDate: day(20), quantity: "5.000000", plannedStart: day(0), plannedFinish: day(120), lateDays: 100, beyondHorizon: true, executable: true, document: null },
     ]);
     expect(farPlan.buckets).toHaveLength(90);
     expect(farPlan.buckets.every(({ proposedReceipts }) => proposedReceipts === "0.000000")).toBe(true);
