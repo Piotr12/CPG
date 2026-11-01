@@ -3,7 +3,7 @@
 **Date:** 2026-11-01 08:57 UTC
 **Agent:** Claude Code / Opus 5.5 (`om-auto-fix-pr` → `om-auto-review-pr --autofix`)
 **Spec:** `.ai/specs/implemented/2026-11-01--0738UTC-mrp-proposal-timing-demand-priority.md`
-**Status:** in progress
+**Status:** done
 
 ## Goal
 
@@ -22,16 +22,26 @@ Make #317 mergeable without merging it. Bring it up to date with `main`, which g
   - `tests/integration/mrp-run-api.test.ts`: kept both `it` blocks.
 - Seam fix: #279's MRP-038 test planned a Make proposal with no BOM. Since #280 that pair raises Missing BOM and gets no proposal, so the test now gives M1 an open-ended BOM.
 - `tests/ai-filenames.test.ts` failed on the merged tree, and fails on `main` itself. #316 merged with #280's active spec copy still in `.ai/specs/`, and #315's squash re-added #279's. Deleted both active copies; the `implemented/` copies carry the implementation notes.
-- Review of the merged seam, direction question: #280's Missing BOM checks BOM validity on the proposal's `needDate`. Its spec Q3 chose that date because it "is its planned finish until E16-S02 back-schedules", so an accepted proposal passes the production order's own check, which uses `plannedFinish` (`production-recipes.ts`). After #279, a late Make proposal finishes after its need date. Nothing accepts a Make proposal yet, and both specs' texts still hold, including the protected `MISSING_BOM` `date` = need date. Filed as a follow-up for the owner rather than changed here.
+- Review of the merged seam (own reading plus an independent reviewer, who rated it Major): #280's Missing BOM checked BOM validity on the proposal's `needDate`. Its spec Q3 chose that date because it "is its planned finish until E16-S02 back-schedules", so that an accepted proposal passes the production order's own check on `plannedFinish` (`production-recipes.ts`). After #279, a late Make proposal finishes after its need date:
+  - a revision starting between the two raised a wrong Missing BOM and dropped the pair's proposals;
+  - a revision ending between them let through a proposal its production order would refuse.
+- Asked the owner first, because the protected `MISSING_BOM` `date` and message change. The owner said to proceed autonomously, so I fixed it here (`2c6b7163`). `replenishPair` times each proposal before the check and checks `plannedFinish`. The `date` is that day, and the message says "valid on the planned finish date" (precedent: #214's rewording). On-time proposals are unchanged. Two regression tests fail without the fix.
+- Reviewer nit: the rollback comments are now in the order the rollbacks run (`add07f09`).
+- UI QA (`om-auto-qa-pr`, evidence only) on the production build: Late Supply and Beyond Horizon in the Days view, the help paragraph, and the mobile viewport. 5 of 5 steps pass: https://github.com/Piotr12/CPG/pull/317#issuecomment-6555943118
 
 ## Changes
 
-- Merge commit of `origin/main` into `feat/mrp-proposal-timing-demand-priority`, with the conflict resolutions above.
+- `abcf4d69`: merge of `origin/main`, with the resolutions above.
+- `add07f09`: rollback comments in order.
+- `2c6b7163`: Missing BOM on `plannedFinish` (`replenish-pair.ts`, `plan-mrp.ts`, `exceptions/codes.ts`, tests, `BACKWARD_COMPATIBILITY.md`, standards, spec implementation note).
+- This log and the lesson (seam: identical migration-count bumps, a spec premise broken by the merge).
 
 ## Verification
 
-- (filled in below)
+- On the merged tree with the fix, every command passed: `npm run lint`, `npm run typecheck`, `npm run test:coverage` (640 files, 5,095 tests, 100% statements, branches, functions and lines) and `npm run build`.
+- Docker isn't running on this machine, so the integration files ran against the production build (`next start`, empty `DATA_DIR`, all 39 migrations applied) with `CPG_BASE_URL`. `mrp-run-api`, `smoke`, `help`, `mrp-run`, `mrp-report` and `mrp-report-api` all passed: 6 files, 40 tests.
+- CI on the PR head: see the PR's CI result comment.
 
 ## Follow-ups
 
-- Missing BOM's validity date versus a late proposal's `plannedFinish`: follow-up issue (link below).
+- None filed: both review findings were fixed in this PR.
