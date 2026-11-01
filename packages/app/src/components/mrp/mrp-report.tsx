@@ -131,7 +131,7 @@ function PlanDays({ plan, locale, labels: t }: { plan: MrpPlanView; locale: Loca
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <h3 className="font-semibold">{fill(t.plan, { material: `${plan.material} ${plan.materialDescription}`, location: `${plan.location} ${plan.locationName}` })}</h3>
+        <h3 className="font-semibold" data-mrp-plan-heading>{fill(t.plan, { material: `${plan.material} ${plan.materialDescription}`, location: `${plan.location} ${plan.locationName}` })}</h3>
         <p className="text-sm text-muted-foreground">{fill(t.planIntro, { unit: plan.baseUnit })}</p>
       </div>
       <DataTable label={t.planLabel} columns={columns} rows={plan.buckets} rowKey={(day) => day.date} rowTone={(day) => (short(day) ? "danger" : undefined)} empty={t.empty} />
