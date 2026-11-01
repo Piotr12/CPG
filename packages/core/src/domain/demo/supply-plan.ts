@@ -1,6 +1,6 @@
 import { formatSequentialId } from "../business-ids/sequential-id";
 import { plannedStart, scaledRequirement } from "../production-orders/production-planning";
-import { convertToBase, formatDecimal, ONE, parseDecimal } from "../quantities/decimal";
+import { convertToBase, formatDecimal, ONE, parseDecimal, roundUpToMultiple } from "../quantities/decimal";
 import { addDays, addWeekdays, mondayOf, monthEnd, monthOf, monthStart, type Month } from "./calendar";
 import type { DemandPlan } from "./demand-plan";
 import { byId, idsOf, type CatalogueMaterial, type TestTenantConfig } from "./test-tenant-config.schema";
@@ -119,11 +119,6 @@ export interface SupplyPlan {
 /** The key of a material at a location. */
 export function pairKey(material: string, location: string): string {
   return `${material}@${location}`;
-}
-
-/** `quantity` rounded up to a whole number of `multiple`s. */
-export function roundUpToMultiple(quantity: bigint, multiple: bigint): bigint {
-  return ((quantity + multiple - 1n) / multiple) * multiple;
 }
 
 /** The larger of two quantities. */

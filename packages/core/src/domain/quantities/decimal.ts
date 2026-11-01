@@ -45,6 +45,11 @@ export function formatDecimal(micro: bigint, { fixed = false }: { fixed?: boolea
   return shown ? `${whole}.${shown}` : `${whole}`;
 }
 
+/** `quantity` rounded up to a whole number of `multiple`s (`multiple` above zero): never below `quantity`. */
+export function roundUpToMultiple(quantity: bigint, multiple: bigint): bigint {
+  return ((quantity + multiple - 1n) / multiple) * multiple;
+}
+
 /**
  * `entered × numerator ÷ denominator`, computed exactly and rounded half-up once to six decimals
  * (PRD §02: alternate-unit input converts once, half-up). All three are micro-units; the result is

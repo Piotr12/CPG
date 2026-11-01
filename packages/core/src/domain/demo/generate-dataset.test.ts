@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { planningParameterCreateSchema } from "../../validators/planning-parameters/planning-parameter-create.schema";
+import { isProcurementAllowed } from "../planning-parameters/procurement";
 import { addMonths, isWeekday, weekdaysFrom } from "./calendar";
 import { generateTestTenantDataset, type TimelineEvent } from "./generate-dataset";
 import { TEST_TENANT_CONFIG } from "./test-tenant-config.schema";
@@ -37,6 +39,14 @@ describe("generateTestTenantDataset", () => {
     expect(masters.planningParameters.filter(({ procurement }) => procurement === "make")).toHaveLength(16);
     expect(masters.planningParameters[0]).toEqual({ material: "00000004", location: "00000001", procurement: "make", leadTimeDays: 2, minimumQuantity: "50", lotMultiple: "10" });
     expect(masters.safetyStockTargets).toHaveLength(32);
+  });
+
+  it("seeds only planning parameter sets the API would accept, so MRP's lot sizing never divides by zero (#278)", () => {
+    const { materials, planningParameters } = dataset.masters;
+    for (const set of planningParameters) {
+      expect(planningParameterCreateSchema.safeParse(set).success).toBe(true);
+      expect(isProcurementAllowed(materials[Number(set.material) - 1].type, set.procurement)).toBe(true);
+    }
   });
 
   it("forecasts every SKU for each weekday from tomorrow through the same date a year on, daily (spec 'Forecasts')", () => {

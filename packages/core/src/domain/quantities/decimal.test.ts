@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compareDecimals, convertToBase, formatDecimal, inverseFactor, MAX_QUANTITY, ONE, parseDecimal } from "./decimal";
+import { compareDecimals, convertToBase, formatDecimal, inverseFactor, MAX_QUANTITY, ONE, parseDecimal, roundUpToMultiple } from "./decimal";
 
 /** Parses a value the test knows is valid. */
 const d = (text: string) => parseDecimal(text)!;
@@ -56,6 +56,14 @@ describe("formatDecimal", () => {
     for (const text of ["12", "0.5", "0.453592", "999999999999.999999"]) {
       expect(formatDecimal(d(text))).toBe(text);
     }
+  });
+});
+
+describe("roundUpToMultiple", () => {
+  it("rounds up to a whole number of multiples, and keeps a quantity already on one", () => {
+    expect(roundUpToMultiple(101n * ONE, 50n * ONE)).toBe(150n * ONE);
+    expect(roundUpToMultiple(100n * ONE, 50n * ONE)).toBe(100n * ONE);
+    expect(roundUpToMultiple(1_000_001n, 1n)).toBe(1_000_001n);
   });
 });
 
