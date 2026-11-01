@@ -10,10 +10,11 @@ vi.mock("../../app/admin/[tenant]/purchase-requisitions/actions", () => ({ cance
 
 const material = (active: boolean) => ({ id: "00000001", type: "raw", description: "Steel sheet", baseUnit: "kg", active, createdAt: new Date(), version: 1 }) as const;
 const location = { id: "00000001", name: "Main plant", active: true, createdAt: new Date(), version: 1 };
-const requisition = (id: string, converted: string, status: string) => ({ id, material: "00000001", location: "00000001", quantity: "100.000000", enteredQuantity: "100", enteredUnit: "kg",
-  numerator: "1", denominator: "1", requiredDate: "2027-03-01", converted, abandoned: "0.000000", outstanding: "40.000000", status, createdAt: new Date(), version: 1 }) as unknown as RequisitionView;
+const requisition = (id: string, converted: string, status: string, mrpRun: string | null = null) => ({ id, material: "00000001", location: "00000001", quantity: "100.000000",
+  enteredQuantity: "100", enteredUnit: "kg", numerator: "1", denominator: "1", requiredDate: "2027-03-01", converted, abandoned: "0.000000", outstanding: "40.000000", status,
+  mrpRun, createdAt: new Date(), version: 1 }) as unknown as RequisitionView;
 const tenant = { code: "test", name: "Test", generation: 1, readOnly: false };
-const props = { tenant, requisitions: [requisition("00000001", "60.000000", "open"), requisition("00000002", "0.000000", "open"), requisition("00000003", "100.000000", "completed")],
+const props = { tenant, requisitions: [requisition("00000001", "60.000000", "open"), requisition("00000002", "0.000000", "open", "00000004"), requisition("00000003", "100.000000", "completed")],
   page: 1, pages: 1, list: { search: { q: "", typed: "" }, sort: { sort: "id" as const, dir: "asc" as const }, count: 3,
     links: listLinks({ path: "/admin/test/purchase-requisitions", search: "", sort: { sort: "id", dir: "asc" }, defaults: { sort: "id", dir: "asc" } }) },
   materials: [material(true)], locations: [location], units: {}, locale: "en" as const, messages: en };
@@ -34,6 +35,13 @@ describe("RequisitionsScreen", () => {
     expect(within(done).queryByRole("button")).toBeNull();
     const cells = within(converted).getAllByRole("cell");
     expect(cells[0].className).toContain("font-mono"); expect(cells[3].className).toContain("tabular-nums"); expect(cells[6].className).toContain("hidden md:table-cell");
+  });
+
+  it("names the MRP run an accepted proposal created a requisition from, and a dash for one entered by hand (E19-S01)", () => {
+    render(<RequisitionsScreen {...props} />);
+
+    expect(within(screen.getByRole("table")).getByRole("columnheader", { name: "MRP run" })).toBeTruthy();
+    expect(rows().map((row) => row.querySelector("[data-requisition-mrp-run]")?.textContent)).toEqual(["—", "00000004", "—"]);
   });
 
   it("badges an inactive material in Polish and offers no actions in a read-only tenant", () => {

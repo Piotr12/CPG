@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppError, type MrpLatestView, type MrpPlanView, type MrpRunView } from "@cpg/core";
 import { resolveServerComponents } from "../../../../../../../tests/setup/server-components";
@@ -7,13 +7,13 @@ import { pl } from "../../../../i18n/messages/pl";
 import MrpPage from "./page";
 
 const mocks = vi.hoisted(() => ({
-  connection: vi.fn(), requireUser: vi.fn(), tenantScope: vi.fn(), getMessages: vi.fn(), latest: vi.fn(), runMrp: vi.fn(), materials: vi.fn(), locations: vi.fn(),
+  connection: vi.fn(), requireUser: vi.fn(), tenantScope: vi.fn(), getMessages: vi.fn(), latest: vi.fn(), runMrp: vi.fn(), acceptMrpProposal: vi.fn(), materials: vi.fn(), locations: vi.fn(),
 }));
 vi.mock("next/server", () => ({ connection: mocks.connection }));
 vi.mock("@cpg/core", async (original) => ({ ...(await original<typeof import("@cpg/core")>()), tenantScope: mocks.tenantScope }));
 vi.mock("../../../../auth/require-admin", () => ({ requireUser: mocks.requireUser }));
 vi.mock("../../../../i18n/get-messages", () => ({ getMessages: mocks.getMessages }));
-vi.mock("./actions", () => ({ runMrp: mocks.runMrp }));
+vi.mock("./actions", () => ({ runMrp: mocks.runMrp, acceptMrpProposal: mocks.acceptMrpProposal }));
 
 const run: MrpRunView = {
   id: "00000004", createdAt: new Date("2026-10-27T07:12:45.000Z"), account: "anna", channel: "ui", mode: "manual", generation: 3,
@@ -27,6 +27,7 @@ const plan: MrpPlanView = {
     atRiskSupply: zero, transferIn: zero, proposedReceipts: zero, safetyTarget: zero, projectedBefore: "25.000000", projectedAfter: "25.000000", shortage: zero }],
   proposals: [],
 };
+const proposal = { id: "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b", kind: "purchase-requisition" as const, needDate: "2026-10-30", quantity: "40.000000", executable: true, document: null };
 const report = (overrides: Partial<MrpLatestView> = {}): MrpLatestView => ({ run, page: 1, pageSize: 25, total: 30, plans: [plan], ...overrides });
 const steel = { id: "00000012", type: "raw", description: "Steel sheet", baseUnit: "kg", active: true, createdAt: new Date(), version: 1 };
 const plant = { id: "00000003", name: "Main plant", active: true, createdAt: new Date(), version: 1 };
@@ -84,14 +85,43 @@ describe("MrpPage", () => {
     expect(pages.getByText("Page 3 of 3")).toBeTruthy();
   });
 
-  it("keeps the latest run and its report readable in a read-only tenant, without Run MRP (RUN-021, TEN-019, TEN-018)", async () => {
+  it("keeps the latest run and its report readable in a read-only tenant, without Run MRP or Accept (RUN-021, TEN-019, TEN-018, spec Q9)", async () => {
+    vi.useFakeTimers({ now: new Date("2026-10-27T10:00:00.000Z"), toFake: ["Date"] });
     mocks.tenantScope.mockResolvedValue(scope(true));
+    mocks.latest.mockResolvedValue(report({ total: 1, plans: [{ ...plan, proposals: [proposal] }] }));
 
-    render(await resolveServerComponents(page()));
+    render(await resolveServerComponents(page({ material: "00000012", location: "00000003" })));
+    vi.useRealTimers();
 
     expect(field("id")).toBe("00000004");
     expect(screen.getByRole("table", { name: en.mrp.report.label })).toBeTruthy();
     expect(screen.queryByRole("button", { name: en.mrp.run })).toBeNull();
+    expect(document.querySelector("[data-mrp-proposals]")).toBeTruthy();
+    expect(document.querySelector("[data-mrp-accept]")).toBeNull();
+  });
+
+  it("accepts a proposal of today's run through the action bound to the tenant and generation, once confirmed (E19-S01, RUN-004)", async () => {
+    vi.useFakeTimers({ now: new Date("2026-10-27T10:00:00.000Z"), toFake: ["Date"] });
+    mocks.latest.mockResolvedValue(report({ total: 1, plans: [{ ...plan, proposals: [proposal] }] }));
+    mocks.acceptMrpProposal.mockResolvedValue({ ok: true, data: {} });
+
+    render(await resolveServerComponents(page({ material: "00000012", location: "00000003" })));
+    vi.useRealTimers();
+    fireEvent.click(screen.getByRole("button", { name: "Accept the Purchase requisition of 40 kg on 2026-10-30" }));
+    fireEvent.click(await screen.findByRole("button", { name: en.mrp.proposals.confirm.confirm }));
+
+    await vi.waitFor(() => expect(mocks.acceptMrpProposal).toHaveBeenCalledWith("test", 3, { run: "00000004", proposal: proposal.id }));
+  });
+
+  it("offers no Accept for a run from an earlier day, and says to run MRP again (spec Q13)", async () => {
+    vi.useFakeTimers({ now: new Date("2026-10-28T00:00:01.000Z"), toFake: ["Date"] });
+    mocks.latest.mockResolvedValue(report({ total: 1, plans: [{ ...plan, proposals: [proposal] }] }));
+
+    render(await resolveServerComponents(page({ material: "00000012", location: "00000003" })));
+    vi.useRealTimers();
+
+    expect(document.querySelector("[data-mrp-accept]")).toBeNull();
+    expect(screen.getByText(en.mrp.proposals.earlierDay)).toBeTruthy();
   });
 
   it("says no run exists yet, with no report, and how to make one only where one can be made", async () => {

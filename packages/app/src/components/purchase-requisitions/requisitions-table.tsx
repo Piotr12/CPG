@@ -87,6 +87,8 @@ export function RequisitionsTable({ tenant, requisitions, materials, locations, 
     { id: "converted", header: t.converted, kind: "quantity", priority: 2, sortKey: "converted", cell: (requisition) => amount(requisition.converted, requisition.material) },
     { id: "outstanding", header: t.outstanding, kind: "quantity", priority: 2, cell: (requisition) => amount(requisition.outstanding, requisition.material) },
     { id: "requiredDate", header: t.requiredDate, kind: "date", priority: 2, sortKey: "requiredDate", cell: (requisition) => requisition.requiredDate },
+    // The MRP run whose proposal created it (E19-S01), or a dash for one entered by hand.
+    { id: "mrpRun", header: t.mrpRun, kind: "id", priority: 2, cell: (requisition) => <span data-requisition-mrp-run>{requisition.mrpRun ?? "—"}</span> },
     {
       id: "status",
       header: t.status,

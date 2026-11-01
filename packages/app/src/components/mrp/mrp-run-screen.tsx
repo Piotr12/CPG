@@ -1,4 +1,4 @@
-import type { Locale, MaterialSummary, MrpLatestView, MrpRunView, NamedRecordView, Result } from "@cpg/core";
+import type { Locale, MaterialSummary, MrpAcceptanceView, MrpLatestView, MrpRunView, NamedRecordView, Result } from "@cpg/core";
 import type { MrpReportPageQuery } from "@cpg/core/validators/mrp/mrp-latest.schema";
 import { EmptyState } from "@cpg/ui/backend/feedback/empty-state";
 import { PageHeader } from "@cpg/ui/backend/page-header";
@@ -18,6 +18,10 @@ interface MrpRunScreenProps {
   locations: NamedRecordView[];
   /** Runs MRP: the page's server action, bound to its tenant and generation. */
   action: () => Promise<Result<MrpRunView>>;
+  /** Accepts a proposal: the page's server action, bound to its tenant and generation (E19-S01). */
+  accept: (raw: { run: string; proposal: string }) => Promise<Result<MrpAcceptanceView>>;
+  /** The server's UTC date: proposals of a run from an earlier day can't be accepted. */
+  today: string;
   locale: Locale;
   messages: Messages;
 }
@@ -28,9 +32,10 @@ const minute = (date: Date) => `${date.toISOString().slice(0, 16).replace("T", "
 /**
  * The body of the MRP page (E14-S02, E18-S01): Run MRP while the tenant is writable, the latest run,
  * its ID, time and account (RUN-002), and its report, until a newer run supersedes it. A read-only
- * tenant shows both without the button (RUN-021, TEN-019, TEN-018); the read-only banner says why.
+ * tenant shows both without the Run and Accept buttons (RUN-021, TEN-019, TEN-018); the read-only
+ * banner says why.
  */
-export function MrpRunScreen({ tenant, report, selected, materials, locations, action, locale, messages }: MrpRunScreenProps) {
+export function MrpRunScreen({ tenant, report, selected, materials, locations, action, accept, today, locale, messages }: MrpRunScreenProps) {
   const t = messages.mrp;
   const writable = !tenant.readOnly;
 
@@ -44,7 +49,17 @@ export function MrpRunScreen({ tenant, report, selected, materials, locations, a
       {report ? (
         <>
           <RunCard run={report.run} labels={t} />
-          <MrpReport tenant={tenant} report={report} selected={selected} materials={materials} locations={locations} locale={locale} messages={messages} />
+          <MrpReport
+            tenant={tenant}
+            report={report}
+            selected={selected}
+            materials={materials}
+            locations={locations}
+            today={today}
+            accept={writable ? accept : undefined}
+            locale={locale}
+            messages={messages}
+          />
         </>
       ) : (
         <EmptyState title={t.empty}>{writable && t.emptyWritable}</EmptyState>
