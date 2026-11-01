@@ -3,7 +3,7 @@
 **Date:** 2026-11-01 19:10 UTC
 **Agent:** Claude Code (cezar, headless) / claude-opus-5-5
 **Spec:** `.ai/specs/2026-11-01--1918UTC-mrp-bom-choice.md`
-**Status:** done (spec merged as #328; implementation #329 is a draft until Q1 is confirmed)
+**Status:** done (spec merged as #328; implementation on #329)
 
 ## Goal
 
@@ -28,7 +28,7 @@ Take #282 end to end with `om-auto-fix-issue`. It is a `feature` issue, so the r
   - M3: changed test expectations are budgeted.
   - L1 to L5: the forecast note, the row volume in the benchmark, `provisional` kept out of `MrpPlan`, the step-2 build break, and the extra tests.
 
-- 19:45 Piotr12 merged the spec PR #328. The implementation's benchmark then showed Q1's window making every Make proposal provisional on forecast-heavy data. Q1 is now marked ⚠ in the implemented copy on #329, and the question is on #282. The spec PR's own update was held back by the push gate, because the PR had already merged.
+- 19:45 Piotr12 merged the spec PR #328. The implementation's benchmark then showed Q1's window making every Make proposal provisional on forecast-heavy data. Q1 was briefly marked ⚠ on #329, then withdrawn once the cause turned out to be the fixture. The spec PR's own update was held back by the push gate, because the PR had already merged.
 
 ## Changes
 
@@ -40,5 +40,5 @@ Take #282 end to end with `om-auto-fix-issue`. It is a `feature` issue, so the r
 - `npx vitest run tests/ai-filenames.test.ts tests/spec-images.test.ts`: passed.
 
 ## Follow-ups
-- Q1's availability window: Piotr12 decides on #282 before #329 merges.
+- Q1's ⚠ was withdrawn on #329: the benchmark result behind it came from the fixture, not the rule.
 - E17-S03 (#283): store the provisional mark, take provisional output out of the balances, and carry the mark down a level (spec Q4's known limit).

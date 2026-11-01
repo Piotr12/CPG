@@ -51,9 +51,12 @@ Implement the spec. Each Make proposal tests its valid BOMs in priority order at
 ## Log
 
 - 19:27 Branched `feat/mrp-bom-choice` from `origin/main` and carried the spec straight into `implemented/` (lesson 2026-10-23). The spec PR #328 stays design-only.
-- 19:42 The benchmark showed every Make proposal provisional: the fixture gives every material its own forecast, the effect Q1 predicts. Kept as the costliest case and recorded for the owner. The worst-case stall rose from `main`'s 213 ms (measured in a throwaway `main` checkout on the same machine) to 309 ms. Caching `lowestDependableBalances` per component and yielding after the engine and the deletes brought it to 171 ms.
+- 19:42 The benchmark showed every Make proposal provisional, first misread as Q1's window at work and sent to the owner as a decision (corrected below). The worst-case stall rose from `main`'s 213 ms (measured in a throwaway `main` checkout on the same machine) to 309 ms. Caching `lowestDependableBalances` per component and yielding after the engine and the deletes brought it to 171 ms.
 - 19:45 Phases 1 and 2 landed in one commit: the inputs, types, choice and loop are coupled, and the suite stays red between them. #281's explosion fixtures had no component stock, so they now assert provisional needs and `NO_FEASIBLE_BOM`.
 - 19:49 Docker unavailable, so the integration files ran against a standalone build: `mrp-run-api` (15) and the other MRP and production-order files (38) passed.
+
+- 20:05 Review: no code defects; the documentation fixes are in (`0a8c25ed`). Spec PR #328 was merged by Piotr12 at 19:45, so `main` is merged in and the active spec copy dropped.
+- 20:20 Asked to continue autonomously. Tracing one rejection showed the all-provisional result came from the fixture, not Q1: every open order line is of an even material, so even components are short from day 0. A lead-time window was tried and reverted. Q1 stays the issue's proposal, the ⚠ is withdrawn, and the fixture now exercises fallbacks and claims at the realistic size.
 
 ## Progress
 

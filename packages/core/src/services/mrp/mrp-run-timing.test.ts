@@ -41,8 +41,12 @@ import type { AuditActor } from "../audit/actor";
  * them). Every component is homed at its parent's site, so the run has two exploding levels and no new pair.
  *
  * #282 chooses each Make proposal's BOM by feasibility: every top-third material has a second, priority-2 BOM
- * of four other middle-third components, so its proposals test two candidates when the first is short.
- * Every component has its own forecast, so every proposal tests both and is provisional: the costliest case.
+ * of four other middle-third components, so its proposals test two candidates when the first is short. Every
+ * open order line is of an even material, and its overdue ones count today, so an even component can supply
+ * nothing; the middle third's odd materials hold 1,500 instead of 500. With one location an even output's
+ * priority 1 has an even component and its priority 2 doesn't, so its proposals fall back and claim. With ten,
+ * a component shares its output's home and so its parity: every proposal is provisional, the cached path. The
+ * claim path's cost is bounded by #282's uncached measurement, which walked 90 days for every check.
  */
 const SIZES = [
   {
@@ -86,7 +90,10 @@ function seed({ materials, locations, lines, forecasts, orders, requisitions, fu
     `${seq(materials)} insert into material (id, tenant_code, code, type, description, base_unit, created_at) select 'm' || x, 'prod', ${code}, 'finished', 'Product ' || x, 'each', 0 from s`,
     `${seq(locations)} insert into location (id, tenant_code, code, name, created_at) select 'l' || x, 'prod', ${code}, 'Site ' || x, 0 from s`,
     "insert into customer (id, tenant_code, code, name, created_at) values ('k1', 'prod', '00000001', 'Retail', 0)",
-    `${seq(materials)} insert into stock_balance (id, tenant_code, material_id, location_id, quantity, version) select 'b' || x, 'prod', 'm' || x, ${home("x")}, '500.000000', 1 from s`,
+    // Odd materials carry no open order line (below); since #282 the middle third's odd ones, components of the top
+    // third's BOMs, hold enough stock to supply them.
+    `${seq(materials)} insert into stock_balance (id, tenant_code, material_id, location_id, quantity, version)
+      select 'b' || x, 'prod', 'm' || x, ${home("x")}, case when x % 2 = 1 and x > ${third} and x <= ${2 * third} then '1500.000000' else '500.000000' end, 1 from s`,
     `${seq(lines)} insert into customer_order (id, tenant_code, code, customer_id, location_id, status, created_at, updated_at)
       select 'o' || x, 'prod', ${code}, 'k1', ${home(`1 + x % ${materials}`)}, 'open', 0, 0 from s`,
     `${seq(lines)} insert into customer_order_line (id, tenant_code, order_id, position, material_id, quantity, entered_quantity, entered_unit, numerator, denominator, required_date, fulfilled, status)
@@ -124,12 +131,13 @@ function seed({ materials, locations, lines, forecasts, orders, requisitions, fu
         'm' || (min(k + 1, 2) * ${third} + 1 + ((p - 1 - k * ${third}) + (c + (k = 2)) * ${locations}) % ${third}),
         '0.250000', '0.25', 'each', '1', '1'
       from (select x, p, c, (p - 1) / ${third} as k from (select x, 1 + (x - 1) / ${COMPONENTS} as p, (x - 1) % ${COMPONENTS} as c from s))`,
-    // Each top-third output's priority-2 alternative (#282): four other middle-third components, at the same home.
+    // Each top-third output's priority-2 alternative (#282): four other middle-third components at the same home, an odd
+    // number of homes along each, so with one location an even output's are all odd while its priority 1 mixes parities.
     `${seq(third)} insert into bom (id, tenant_code, code, output_id, active, revision, created_at, version)
       select 'bomb' || x, 'prod', printf('%08d', ${materials} + x), 'm' || x, 1, 1, 0, 1 from s`,
     `${seq(third)} insert into bom_revision (id, tenant_code, bom_id, number, priority, valid_from, created_at) select 'revb' || x, 'prod', 'bomb' || x, 1, 2, '2026-01-01', 0 from s`,
     `${seq(third * COMPONENTS)} insert into bom_component (id, tenant_code, revision_id, position, material_id, quantity, entered_quantity, entered_unit, numerator, denominator)
-      select 'bcb' || x, 'prod', 'revb' || p, 1 + c, 'm' || (${third} + 1 + ((p - 1) + (c + ${COMPONENTS}) * ${locations}) % ${third}), '0.250000', '0.25', 'each', '1', '1'
+      select 'bcb' || x, 'prod', 'revb' || p, 1 + c, 'm' || (${third} + 1 + ((p - 1) + (2 * c + 1) * ${locations}) % ${third}), '0.250000', '0.25', 'each', '1', '1'
       from (select x, 1 + (x - 1) / ${COMPONENTS} as p, (x - 1) % ${COMPONENTS} as c from s)`,
     `${seq(productionOrders)} insert into production_order (id, tenant_code, code, output_id, location_id, recipe_id, quantity, entered_quantity, entered_unit, numerator, denominator,
         planned_start, planned_finish, lead_time_days, produced, abandoned, status, created_at, updated_at, version)
@@ -243,11 +251,12 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
         "select count(*) as n from mrp_run_exception where exception_code in ('INVALID_UOM_CONVERSION', 'MISSING_PLANNING_PARAMETERS', 'MISSING_BOM', 'MISSING_USABLE_BOM', 'CYCLIC_BOM')",
       ),
     ).toBe(0);
-    // Every material has its own forecast, so each component's dependable balance falls below zero later in the
-    // horizon and no proposal can take it (#282 spec Q1): every Make proposal tests both of its BOMs and is
-    // provisional, the choice's costliest case. Each gets its one No Feasible BOM row.
-    expect(fallbacks).toBe(0);
-    expect(provisional).toBe(made);
+    // Provisional proposals at both sizes; with one location also fallbacks, each claiming its components (above).
+    expect(provisional).toBeGreaterThan(0);
+    if (size.locations === 1) {
+      expect(fallbacks).toBeGreaterThan(0);
+      expect(provisional).toBeLessThan(made);
+    }
     // The run counted the pipeline it read: some days carry tentative and dependable supply, dependent demand and transfers.
     const supplied = await orm.em
       .getConnection()
