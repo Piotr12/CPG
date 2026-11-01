@@ -39,6 +39,14 @@ import type { AuditActor } from "../audit/actor";
  * at home with an active BOM of four components from the middle third, the middle third is Make too with
  * BOMs from the bottom third, and the bottom third is Buy, its BOMs inactive (production orders still pin
  * them). Every component is homed at its parent's site, so the run has two exploding levels and no new pair.
+ *
+ * #282 chooses each Make proposal's BOM by feasibility: every top-third material has a second, priority-2 BOM
+ * of four other middle-third components, so its proposals test two candidates when the first is short. Every
+ * open order line is of an even material, and its overdue ones count today, so an even component can supply
+ * nothing; the middle third's odd materials hold 1,500 instead of 500. With one location an even output's
+ * priority 1 has an even component and its priority 2 doesn't, so its proposals fall back and claim. With ten,
+ * a component shares its output's home and so its parity: every proposal is provisional, the cached path. The
+ * claim path's cost is bounded by #282's uncached measurement, which walked 90 days for every check.
  */
 const SIZES = [
   {
@@ -82,7 +90,10 @@ function seed({ materials, locations, lines, forecasts, orders, requisitions, fu
     `${seq(materials)} insert into material (id, tenant_code, code, type, description, base_unit, created_at) select 'm' || x, 'prod', ${code}, 'finished', 'Product ' || x, 'each', 0 from s`,
     `${seq(locations)} insert into location (id, tenant_code, code, name, created_at) select 'l' || x, 'prod', ${code}, 'Site ' || x, 0 from s`,
     "insert into customer (id, tenant_code, code, name, created_at) values ('k1', 'prod', '00000001', 'Retail', 0)",
-    `${seq(materials)} insert into stock_balance (id, tenant_code, material_id, location_id, quantity, version) select 'b' || x, 'prod', 'm' || x, ${home("x")}, '500.000000', 1 from s`,
+    // Odd materials carry no open order line (below); since #282 the middle third's odd ones, components of the top
+    // third's BOMs, hold enough stock to supply them.
+    `${seq(materials)} insert into stock_balance (id, tenant_code, material_id, location_id, quantity, version)
+      select 'b' || x, 'prod', 'm' || x, ${home("x")}, case when x % 2 = 1 and x > ${third} and x <= ${2 * third} then '1500.000000' else '500.000000' end, 1 from s`,
     `${seq(lines)} insert into customer_order (id, tenant_code, code, customer_id, location_id, status, created_at, updated_at)
       select 'o' || x, 'prod', ${code}, 'k1', ${home(`1 + x % ${materials}`)}, 'open', 0, 0 from s`,
     `${seq(lines)} insert into customer_order_line (id, tenant_code, order_id, position, material_id, quantity, entered_quantity, entered_unit, numerator, denominator, required_date, fulfilled, status)
@@ -120,6 +131,14 @@ function seed({ materials, locations, lines, forecasts, orders, requisitions, fu
         'm' || (min(k + 1, 2) * ${third} + 1 + ((p - 1 - k * ${third}) + (c + (k = 2)) * ${locations}) % ${third}),
         '0.250000', '0.25', 'each', '1', '1'
       from (select x, p, c, (p - 1) / ${third} as k from (select x, 1 + (x - 1) / ${COMPONENTS} as p, (x - 1) % ${COMPONENTS} as c from s))`,
+    // Each top-third output's priority-2 alternative (#282): four other middle-third components at the same home, an odd
+    // number of homes along each, so with one location an even output's are all odd while its priority 1 mixes parities.
+    `${seq(third)} insert into bom (id, tenant_code, code, output_id, active, revision, created_at, version)
+      select 'bomb' || x, 'prod', printf('%08d', ${materials} + x), 'm' || x, 1, 1, 0, 1 from s`,
+    `${seq(third)} insert into bom_revision (id, tenant_code, bom_id, number, priority, valid_from, created_at) select 'revb' || x, 'prod', 'bomb' || x, 1, 2, '2026-01-01', 0 from s`,
+    `${seq(third * COMPONENTS)} insert into bom_component (id, tenant_code, revision_id, position, material_id, quantity, entered_quantity, entered_unit, numerator, denominator)
+      select 'bcb' || x, 'prod', 'revb' || p, 1 + c, 'm' || (${third} + 1 + ((p - 1) + (2 * c + 1) * ${locations}) % ${third}), '0.250000', '0.25', 'each', '1', '1'
+      from (select x, 1 + (x - 1) / ${COMPONENTS} as p, (x - 1) % ${COMPONENTS} as c from s)`,
     `${seq(productionOrders)} insert into production_order (id, tenant_code, code, output_id, location_id, recipe_id, quantity, entered_quantity, entered_unit, numerator, denominator,
         planned_start, planned_finish, lead_time_days, produced, abandoned, status, created_at, updated_at, version)
       select 'mo' || x, 'prod', ${code}, 'm' || (1 + x % ${materials}), ${home(`1 + x % ${materials}`)}, 'rev' || (1 + x % ${materials}), '100.000000', '100', 'each', '1', '1',
@@ -202,9 +221,12 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     const exceptions = await count("select count(*) as n from mrp_run_exception");
     const made = await count("select count(*) as n from mrp_recommendation where kind = 'production-order'");
     const lines = await count("select count(*) as n from bom_component c join bom_revision r on r.id = c.revision_id join bom b on b.id = r.bom_id where b.active = 1");
+    // #282: proposals planned through a priority-2 alternative, and provisional ones (one row each).
+    const fallbacks = await count(`select count(*) as n from mrp_recommendation where bom > '${String(size.materials).padStart(8, "0")}'`);
+    const provisional = await count("select count(*) as n from mrp_run_exception where exception_code = 'NO_FEASIBLE_BOM'");
     const engine = await engineOnly();
     process.stdout.write(
-      `MRP run, ${size.name} (${pairs} pairs, ${rows} daily rows, ${proposals} recommendations of which ${made} exploded, ${exceptions} exception and warning rows, ${lines} active BOM lines, ` +
+      `MRP run, ${size.name} (${pairs} pairs, ${rows} daily rows, ${proposals} recommendations of which ${made} exploded, ${fallbacks} through a fallback BOM, ${provisional} No Feasible BOM, ${exceptions} exception and warning rows, ${lines} active BOM lines, ` +
         `${size.lines} order lines, ${size.forecasts} forecasts, ` +
         `${size.orders + size.fullOrders} purchase orders with ${size.orders * ORDER_LINES + size.fullOrders * FULL_ORDER_LINES} lines, ${size.requisitions} requisitions, ` +
         `${size.productionOrders} production orders, ${size.transfers} transfers): ` +
@@ -222,11 +244,19 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     // Where demand outruns the stock and receipts, the run proposes (#278), and explodes its Make proposals (#281).
     expect(proposals).toBeGreaterThan(0);
     expect(made).toBeGreaterThan(0);
-    // The fixture's BOMs are acyclic and valid and every component has its parameters: only transfers fall short (#277).
-    // The table also holds the run's overdue warnings (E18-S02), which are not exceptions.
+    // The fixture's BOMs are acyclic, valid and usable, and every component has its parameters: no pair is stopped (#280, #281,
+    // #282). Counted by the codes meant, since the table also holds transfers' and feasibility's exceptions and the warnings.
     expect(
-      await count("select count(*) as n from mrp_run_exception where exception_code not in ('INSUFFICIENT_TRANSFER_STOCK', 'OVERDUE_SUPPLY', 'OVERDUE_TRANSFER')"),
+      await count(
+        "select count(*) as n from mrp_run_exception where exception_code in ('INVALID_UOM_CONVERSION', 'MISSING_PLANNING_PARAMETERS', 'MISSING_BOM', 'MISSING_USABLE_BOM', 'CYCLIC_BOM')",
+      ),
     ).toBe(0);
+    // Provisional proposals at both sizes; with one location also fallbacks, each claiming its components (above).
+    expect(provisional).toBeGreaterThan(0);
+    if (size.locations === 1) {
+      expect(fallbacks).toBeGreaterThan(0);
+      expect(provisional).toBeLessThan(made);
+    }
     // The run counted the pipeline it read: some days carry tentative and dependable supply, dependent demand and transfers.
     const supplied = await orm.em
       .getConnection()
@@ -275,7 +305,7 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     const exceptions = await count("select count(*) as n from mrp_run_exception");
     process.stdout.write(
       `MRP run, worst case for proposals, ${size.name} (${rows} daily rows, ${proposals} recommendations, ${exceptions} exception and warning rows, ${size.lines + size.materials * days} order lines): ` +
-        `${fastest.toFixed(0)} ms fastest of ${RUNS}, longest event-loop stall ${longestStall.toFixed(0)} ms\n`,
+        `${fastest.toFixed(0)} ms fastest of ${RUNS}, longest event-loop stall ${longestStall.toFixed(0)} ms, planMrp alone ${(await engineOnly()).toFixed(0)} ms\n`,
     );
     // Every day but, for some materials, today: overdue purchase-order lines all land today and can cover it.
     expect(proposals).toBeGreaterThanOrEqual(size.materials * (days - 1));

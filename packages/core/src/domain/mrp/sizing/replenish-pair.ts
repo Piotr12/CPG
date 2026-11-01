@@ -1,7 +1,8 @@
-import { isRevisionValidOn } from "../../boms/bom-validity";
+import { isRevisionValidOn, isUsableRevision } from "../../boms/bom-validity";
 import { isProcurementAllowed } from "../../planning-parameters/procurement";
 import type { MrpBom, MrpPlanningParameters, MrpRecordKind } from "../mrp-inputs";
 import type { MrpException, MrpMissingParametersReason, MrpProposal, MrpProposalRecipe } from "../mrp-result";
+import { validBoms } from "../explosion/choose-bom";
 import { MRP_HORIZON_DAYS } from "../projection/horizon";
 import { safetyGap } from "../projection/safety-gap";
 import { scheduleProposal } from "./schedule-proposal";
@@ -34,7 +35,7 @@ export interface Replenishment {
 
 /**
  * The one per-pair decision (E16-S03, spec "One pair"): a pair gets its proposals, or exactly one of
- * four exceptions and no proposal, checked in this order:
+ * these exceptions and no proposal, checked in this order:
  *
  * 1. a row of the material couldn't be read: Invalid UoM Conversion, needed or not (MRP-036);
  * 2. a stored set that can't be used, a raw Make set or one with unreadable lot data: Missing Planning
@@ -43,7 +44,14 @@ export interface Replenishment {
  * 4. a Make set of a material on a cycle of active BOMs: BOM Cycle naming the path, needed or not, so
  *    nothing on the cycle is ever exploded (E17-S01, MRP-028, #281 spec Q7);
  * 5. a Make set with a proposal that no BOM covers on its planned finish: Missing BOM dated at the
- *    first such proposal's finish, and none of the pair's proposals (MRP-035, spec Q3).
+ *    first such proposal's finish, and none of the pair's proposals (MRP-035, spec Q3);
+ * 6. a Make set with a proposal whose BOMs valid on its planned finish all have an inactive component:
+ *    Missing Usable BOM dated at the first such proposal's finish, listing those BOMs' inactive
+ *    components, and none of the pair's proposals, so no inactive material is ever planned (E17-S02,
+ *    LFC-026, MRP-050).
+ *
+ * No Feasible BOM (E17-S02), which `planMrp` raises once BOMs are chosen, is the one planning exception a
+ * pair has beside its proposals: an infeasible proposal is kept, provisionally.
  *
  * Each proposal is timed by `scheduleProposal` (E16-S02) before the BOM check. The production order a
  * proposal becomes checks its BOM on its planned finish (`production-recipes.ts`), and a late proposal
@@ -71,6 +79,12 @@ export function replenishPair(pair: SizedPair, { unreadable, parameters, invalid
   if (parameters.procurement === "make") {
     const uncovered = proposals.find(({ plannedFinish }) => !boms.some((bom) => isRevisionValidOn(bom, plannedFinish)));
     if (uncovered) return none({ code: "MISSING_BOM", material, location, date: uncovered.plannedFinish });
+    const unusable = proposals.find(({ plannedFinish }) => !boms.some((bom) => isUsableRevision(bom, bom.inactiveComponents.length === 0, plannedFinish)));
+    if (unusable) {
+      const date = unusable.plannedFinish;
+      const inactive = validBoms(boms, date).map(({ bom, revision, inactiveComponents }) => ({ bom, revision, materials: inactiveComponents }));
+      return none({ code: "MISSING_USABLE_BOM", material, location, date, inactive });
+    }
   }
   return { proposals, exception: null };
 }

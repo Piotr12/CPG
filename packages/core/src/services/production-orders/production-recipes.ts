@@ -1,5 +1,5 @@
 import { Bom, BomComponent, BomRevision, PlanningParameterSet, StockBalance, type EntityManager, type Location } from "@cpg/db";
-import { isRevisionValidOn } from "../../domain/boms/bom-validity";
+import { isRevisionValidOn, isUsableRevision } from "../../domain/boms/bom-validity";
 import { componentRequirement, plannedStart } from "../../domain/production-orders/production-planning";
 import { ConflictError } from "../../http/errors";
 import { convertToBaseQuantity } from "../materials/base-quantity";
@@ -72,7 +72,8 @@ export async function resolveProductionOptions(em: EntityManager, input: Product
     const componentsByRevision = await componentSets(em, recipes, location, record.baseQuantity);
     for (const recipe of recipes) {
       const components = componentsByRevision.get(recipe.id)!;
-      if (components.some(({ active }) => !active)) continue;
+      // The shared rule (MRP's `chooseBom` reads it too); the date filter above keeps invalid revisions unloaded.
+      if (!isUsableRevision(recipe, components.every(({ active }) => active), input.plannedFinish)) continue;
       alternatives.push({ bom: recipe.bom.code, revision: recipe.number, priority: recipe.priority,
         validFrom: recipe.validFrom, validThrough: recipe.validThrough ?? null, components });
       records.set(recipe.bom.code, recipe);

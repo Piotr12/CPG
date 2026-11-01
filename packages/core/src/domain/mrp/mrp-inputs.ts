@@ -181,8 +181,11 @@ export interface MrpBom {
   validFrom: string;
   /** `null` when open-ended. */
   validThrough: string | null;
-  /** Every line's material is active: the production dialog offers only such recipes (#281 spec Q4). */
-  componentsActive: boolean;
+  /**
+   * The codes of the lines' materials that are inactive, in code order: empty when every one is active.
+   * Such a BOM isn't usable (`isUsableRevision`), as the production dialog reads it (E17-S02).
+   */
+  inactiveComponents: readonly string[];
   /** `perOutput` of each component for one base unit of `output`, in the component's base unit. */
   components: readonly MrpComponentLine[];
 }

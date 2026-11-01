@@ -17,14 +17,15 @@ import type {
 } from "./mrp-result";
 import { horizonDates } from "./projection/horizon";
 import { compareCodes, comparePairs, pairKey } from "./projection/pairs";
-import { emptyFlows, projectBuckets, type MrpLedger } from "./projection/project-buckets";
+import { emptyFlows, lowestDependableBalances, projectBuckets, type MrpLedger } from "./projection/project-buckets";
 import { rankShortages } from "./priority/rank-shortages";
 import { productionMovements } from "./supply/production-orders";
 import { purchasingSupply } from "./supply/purchasing-supply";
 import { compareExceptions } from "./exceptions/compare-exceptions";
 import { bomLevels } from "./explosion/bom-levels";
+import { chooseBom } from "./explosion/choose-bom";
 import { explodeProposal } from "./explosion/explode-proposal";
-import { replenishPair } from "./sizing/replenish-pair";
+import { replenishPair, type TimedProposal } from "./sizing/replenish-pair";
 import { planTransfers } from "./supply/transfers";
 import { compareWarnings, overdueWarnings } from "./warnings/overdue";
 
@@ -72,6 +73,16 @@ interface PairDraft extends MrpLedger {
  * once, in its one projection (MRP-020, MRP-029). It comes after `planTransfers`, so a proposal never cuts
  * an open transfer (#277's later-seams rule). A material on a cycle of BOMs gets BOM Cycle on its Make
  * pairs and never explodes, so the levels terminate (MRP-028). Plans and proposals keep their order.
+ *
+ * Each production-order proposal plans through `chooseBom`'s BOM (E17-S02, PRD §04 "BOM choice and
+ * explanation"): the highest-priority usable BOM whose every component can give the lot-rounded need from
+ * the proposal's start, by `lowestDependableBalances`. That counts stock and dependable supply only, net of
+ * open documents' and earlier choices' needs (spec Q1). Within a level every pair is sized first, then the
+ * level's proposals choose in E16-S02's order for planned components, earliest start first, each claiming
+ * its components before the next (Q5); a higher level always claims first (Q12). A proposal no usable BOM
+ * can supply raises No Feasible BOM and is kept, exploded through its highest-priority usable BOM, so its
+ * components still plan (BOM-011); its needs count in their projections but in no later feasibility test
+ * (Q4).
  */
 export function planMrp(inputs: MrpInputs, today: string): MrpResult {
   const dates = horizonDates(today);
@@ -147,35 +158,78 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
   // material only Invalid UoM Conversion is reported: no figure from the incomplete data (#316 review).
   const exceptions: MrpException[] = transfers.exceptions.filter(({ material }) => !unreadable.has(material));
   const plans: MrpPlan[] = [];
-  // A component's level is above every parent's, so a level's explosions only add to later levels.
+  /** Each pair's provisional dependent demand by day (E17-S02 spec Q4): in its projection, never in a feasibility test. */
+  const provisionalOf = new Map<string, bigint[]>();
+  const noProvisional: readonly bigint[] = dates.map(() => 0n);
+  /**
+   * Each tested component's `lowestDependableBalances`, computed once and dropped when a feasible choice
+   * claims from it. A provisional need is added to its demand and its exclusion alike, so it changes nothing.
+   */
+  const lowestOf = new Map<string, bigint[]>();
+  /**
+   * What a component at `location` can still give a proposal starting on `day` (spec Q1): nothing when an
+   * unreadable row left its balances incomplete (Q9), or when nothing names its pair. It never creates one.
+   */
+  const availableOf = (material: string, location: string, day: number): bigint => {
+    const key = pairKey(material, location);
+    const pair = pairs.get(key);
+    if (!pair || unreadable.has(material)) return 0n;
+    let lowest = lowestOf.get(key);
+    if (!lowest) lowestOf.set(key, (lowest = lowestDependableBalances(pair, provisionalOf.get(key) ?? noProvisional)));
+    return lowest[day];
+  };
+  // A component's level is above every parent's, so a level's explosions only add to later levels, and its
+  // pairs can all be sized before any of its proposals claims a component.
   for (const level of byLevel) {
-    for (const { flows, ...plan } of level.sort(comparePairs)) {
-      const key = pairKey(plan.material, plan.location);
+    const sized = level.sort(comparePairs).map((draft) => {
+      const key = pairKey(draft.material, draft.location);
       const replenished = replenishPair(
-        { ...plan, buckets: projectBuckets(plan.physical, flows) },
+        { ...draft, buckets: projectBuckets(draft.physical, draft.flows) },
         {
-          unreadable: unreadable.get(plan.material),
+          unreadable: unreadable.get(draft.material),
           parameters: parametersOf.get(key),
           invalidSet: invalidSets.has(key),
-          boms: bomsOf.get(plan.material) ?? [],
+          boms: bomsOf.get(draft.material) ?? [],
           today,
-          cycle: cycles.get(plan.material),
+          cycle: cycles.get(draft.material),
         },
       );
+      return { draft, replenished };
+    });
+    const makes: TimedProposal[] = [];
+    for (const { draft, replenished } of sized) {
       for (const proposal of replenished.proposals) {
-        if (!proposal.beyondHorizon) flows[dayOf.get(proposal.plannedFinish)!].proposedReceipts += proposal.quantity;
-        if (proposal.kind === "purchase-requisition") {
-          proposals.push({ ...proposal, bom: null, bomRevision: null });
-          continue;
-        }
-        const { bom, bomRevision, components } = explodeProposal(proposal, bomsOf.get(plan.material)!);
-        proposals.push({ ...proposal, bom, bomRevision });
-        for (const item of components) {
-          const component = pairOf(item.material, item.location);
-          component.flows[dayOf.get(item.date)!].dependentDemand += item.quantity;
-          component.plannedComponentDemand.push(item);
+        if (!proposal.beyondHorizon) draft.flows[dayOf.get(proposal.plannedFinish)!].proposedReceipts += proposal.quantity;
+        if (proposal.kind === "production-order") makes.push(proposal);
+        else proposals.push({ ...proposal, bom: null, bomRevision: null, feasible: null, rejectedBoms: [] });
+      }
+    }
+    // E16-S02's order for planned components (#281 Q9): the earlier start claims first (spec Q5).
+    makes.sort((a, b) => compareCodes(a.plannedStart, b.plannedStart) || comparePairs(a, b) || compareCodes(a.needDate, b.needDate));
+    for (const proposal of makes) {
+      const start = dayOf.get(proposal.plannedStart)!;
+      const choice = chooseBom(proposal, bomsOf.get(proposal.material)!, (component) => availableOf(component, proposal.location, start));
+      const provisional = !choice.feasible;
+      proposals.push({ ...proposal, bom: choice.bom.bom, bomRevision: choice.bom.revision, feasible: choice.feasible, rejectedBoms: choice.rejected });
+      for (const item of explodeProposal(proposal, choice.bom, provisional)) {
+        const component = pairOf(item.material, item.location);
+        const day = dayOf.get(item.date)!;
+        component.flows[day].dependentDemand += item.quantity;
+        component.plannedComponentDemand.push(item);
+        if (!provisional) lowestOf.delete(pairKey(item.material, item.location));
+        if (provisional) {
+          const key = pairKey(item.material, item.location);
+          const excluded = provisionalOf.get(key) ?? provisionalOf.set(key, dates.map(() => 0n)).get(key)!;
+          excluded[day] += item.quantity;
         }
       }
+      if (provisional) {
+        const { material, location, needDate: date } = proposal;
+        exceptions.push({ code: "NO_FEASIBLE_BOM", material, location, date, rejections: choice.rejected });
+      }
+    }
+    for (const { draft, replenished } of sized) {
+      const { flows, ...plan } = draft;
       if (replenished.exception) exceptions.push(replenished.exception);
       const buckets = projectBuckets(plan.physical, flows);
       plans.push({ ...plan, buckets, shortages: rankShortages({ ...plan, buckets }) });

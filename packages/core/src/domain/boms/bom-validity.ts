@@ -12,3 +12,12 @@ export interface RevisionValidity {
 export function isRevisionValidOn({ validFrom, validThrough }: RevisionValidity, date: string): boolean {
   return validFrom <= date && (validThrough === null || validThrough === undefined || date <= validThrough);
 }
+
+/**
+ * Whether a revision can be produced with on `date` (R04, PRD §04 "BOM choice and explanation"): valid
+ * then, and every component active. The production dialog (`resolveProductionOptions`) and MRP's BOM
+ * choice (`chooseBom`, E17-S02) both use it on a current revision of an active BOM, so they can't drift.
+ */
+export function isUsableRevision(revision: RevisionValidity, componentsActive: boolean, date: string): boolean {
+  return componentsActive && isRevisionValidOn(revision, date);
+}

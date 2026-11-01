@@ -1,6 +1,6 @@
 # MRP BOM choice: every Make proposal plans through the highest-priority usable BOM it can be made from after lot rounding, against stock and dependable supply only, passes over each rejected BOM with its reason, and raises a parent exception when none qualifies
 
-**Status:** ready
+**Status:** implemented. Feasibility reads `lowestDependableBalances`, one array per component, rather than the design's per-day `lowestDependableBalance` (Implementation notes).
 **Created:** 2026-11-01 19:18 UTC
 **Issue:** #282 (E17-S02, epic #269) · **Depends on:** BOM explosion (`implemented/2026-11-01--1107UTC-mrp-bom-explosion.md`, #281), purchasing supply (`implemented/2026-10-31--0905UTC-mrp-purchasing-supply.md`, #276), production and transfer supply (`implemented/2026-10-31--0908UTC-mrp-production-and-transfer-supply.md`, #277), replenishment proposals (#278), proposal timing and priority (#279), planning exceptions (#280), all merged · **Design authority:** `.ai/specs/product-brief.md` (R03, R04, R10, D04, N04), `research/CPG-prd001.pdf` §04 "BOM choice and explanation", "Parameters/precision", closure defaults, `research/CPG-acceptance.md` MRP-024, MRP-025, MRP-026, MRP-041, MRP-046, MRP-050, BOM-010, BOM-011, LFC-025, LFC-026, PRD-002
 
@@ -298,3 +298,24 @@ One phase, one implementation PR, as the issue scopes it. The choice, the claim 
     - Move this spec to `implemented/` with implementation notes.
 
 Each step leaves the suite green. Run `npm run lint`, `npm run typecheck`, `npm run test:coverage` (100%) and `npm run build`.
+
+## Implementation notes
+
+- **Implementation PR** #329, from `main`. The spec PR #328 stays design-only.
+- **Availability.** `lowestDependableBalances(ledger, excluded)` returns each day's lowest balance to the horizon's end in one backward pass. `planMrp` caches it per component pair, and drops the cache only when a feasible choice claims from that component. A provisional need is added to the component's demand and to its exclusion alike, so it leaves the cache valid. Without the cache, every candidate line cost a 90-day walk.
+- **Candidates.** `validBoms(boms, date)` (`choose-bom.ts`) is the one candidate order, by priority then BOM code. `chooseBom` and Missing Usable BOM's `inactive` list both use it.
+- **The run yields after `planMrp` and after its deletes.** The worst-case benchmark found the engine, the deletes of the previous run's rows (now about 18,000 more exception rows) and the run's insert running as one synchronous stretch on better-sqlite3 (lesson 2026-10-24). Two `yieldToEventLoop` calls split it.
+- **Benchmark** (`mrp-run-timing.test.ts`, fastest of three, run locally). Every top-level output has a second, priority-2 BOM. Every open order line in the fixture is of an even material, and its overdue lines count today, so an even component can supply nothing. The middle third's odd materials now hold 1,500 instead of 500. With one location, an even output's priority 1 has an even component and its priority 2 doesn't, so the realistic run chooses, falls back and claims: 98 proposals fall back and 133 are provisional. With ten locations a component shares its output's home and so its parity, and all 2,323 are provisional: the cached path. The claim path is bounded by the uncached figures below, which walked 90 days for every check.
+
+  | Run | `main` stall | This PR stall | `main` `planMrp` | This PR `planMrp` |
+  | --- | --- | --- | --- | --- |
+  | Realistic | 33 ms | 33 ms | 6 ms | 6 ms |
+  | Ten times | 134 ms | 100 ms | 56 ms | 63 ms |
+  | Worst case, ten times | 213 ms | 179 ms | 134 ms | 164 ms |
+
+  Before the cache and the yields, the worst case at ten times stalled for 309 ms. Runs take 248 ms realistic and 2,655 ms at ten times, under the unchanged 1,000 ms and 5,000 ms budgets. The `main` figures come from a throwaway `main` checkout on the same machine, with the fixture of the day.
+- **Q1 kept, after a misread.** An earlier benchmark run had every Make proposal provisional, and this was first put down to Q1's whole-horizon window, briefly marked ⚠. Reading one rejection showed only the even components short, from day 0, under the fixture's overdue order lines. A start-day rule gives the same result there. The issue's proposal stands. A component with independent demand that existing supply doesn't cover still can't supply a new proposal, which is the conservative intent.
+- **Changed expectations.** #281's explosion tests had no component stock, so their parents are now provisional. They assert `provisional: true` and the `NO_FEASIBLE_BOM` rows rather than empty exception lists. The integration test of the three levels lists F's and I's `NO_FEASIBLE_BOM` with their `missing`. #281's inactive-component fallback test is replaced by the Missing Usable BOM tests.
+- **Acceptance.** `mrp-acceptance.service.test.ts` accepts the requisition a provisional parent's need drives: the replan repeats the choice.
+- **Integration.** Docker was unavailable locally, so the files ran against a standalone build (lesson 2026-10-23). `mrp-run-api` passed (15 tests). `mrp-accept`, `mrp-accept-api`, `mrp-report`, `mrp-report-api`, `mrp-run` and `production-orders` passed (38 tests).
+

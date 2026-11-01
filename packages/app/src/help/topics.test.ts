@@ -95,6 +95,17 @@ describe("help topics", () => {
   });
 
   it.each([
+    ["en", "can all be supplied on its planned start", "never requisitions or other proposals", "from that day to the end of the horizon", "rounded by the lot rules first",
+      "is passed over for the next one", "a no usable BOM exception and no production proposal", "a no feasible BOM exception listing each BOM's missing components"],
+    ["pl", "mogą zostać dostarczone w dniu jej planowanego startu", "nigdy z zapotrzebowań ani innych propozycji", "od tego dnia do końca horyzontu", "najpierw zaokrąglana według zasad partii",
+      "jest pomijany na rzecz następnego", "wyjątek braku używalnego BOM-u i żadnej propozycji produkcji", "wyjątek braku wykonalnego BOM-u, wymieniający brakujące składniki każdego BOM-u"],
+  ] as const)("says in %s how a production-order proposal chooses its BOM by what its components can be supplied with, and the two BOM exceptions (#282)", (locale, ...phrases) => {
+    const text = helpTopics(locale).find((topic) => topic.id === "mrp")!.body.join(" ");
+
+    for (const phrase of phrases) expect(text).toContain(phrase);
+  });
+
+  it.each([
     ["en", "has Accept: after you confirm", "carries its warning under its need date", "records the run's ID", "refused as out of date and you run MRP again", "accepted once", "Production-order proposals can't be accepted yet",
       "/mrp/runs/{run}/proposals/{proposal}/accept", "whether they can be accepted (executable)"],
     ["pl", "ma przycisk Akceptuj: po potwierdzeniu", "ma pod datą potrzeby swoje ostrzeżenie", "zapisuje ID przebiegu", "odrzucona jako nieaktualna i trzeba ponownie uruchomić MRP", "zaakceptować raz",

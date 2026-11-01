@@ -202,6 +202,27 @@ describe("MrpAcceptanceService.accept: creating the document", () => {
     expect(late.proposal).toMatchObject({ needDate: "2026-10-02", plannedFinish: "2026-10-03", lateDays: 1, document: late.document.id });
     await expect(accept(runId, proposals[1].id)).resolves.toMatchObject({ document: { quantity: "7.000000", requiredDate: "2026-10-10" } });
   });
+
+  it("accepts the requisition a provisional parent's need drives, since the new plan repeats the same BOM choice (#282, MRP-047)", async () => {
+    const jam = await material("Jam");
+    const fruit = await (await scope()).cradle.materialService.create({ type: "raw", description: "Fruit", baseUnit: "kg" }, ANNA);
+    await parameters(jam.id, "make");
+    await parameters(fruit.id);
+    await (await scope()).cradle.bomService.create(
+      { output: jam.id, priority: 1, validFrom: "2026-01-01", validThrough: null, components: [{ material: fruit.id, quantity: "2", unit: "kg" }] },
+      ANNA,
+    );
+    await order(jam.id, "12", "2026-10-08");
+    await run();
+    // No fruit is on hand, so Jam's proposal is provisional; its 24 kg still plan Fruit's requisition.
+    expect((await plan(jam.id)).exceptions.map(({ code }) => code)).toEqual(["NO_FEASIBLE_BOM"]);
+    const { run: runId, proposals: [proposal] } = await plan(fruit.id);
+    expect(proposal).toMatchObject({ kind: "purchase-requisition", quantity: "24.000000", executable: true });
+
+    await accept(runId, proposal.id);
+
+    expect(await count("purchase_requisition")).toBe(1);
+  });
 });
 
 describe("MrpAcceptanceService.accept: refusals, with nothing created", () => {
@@ -334,7 +355,7 @@ describe("MrpAcceptanceService.accept: refusals, with nothing created", () => {
     expect([await count("purchase_requisition"), await count("purchase_requisition", "test")]).toEqual([0, 0]);
   });
 
-  it("refuses a Make proposal as not executable until MRP chooses its BOM (spec Q1)", async () => {
+  it("refuses a Make proposal as not executable until a provisional one is stored apart from a feasible one (spec Q1, #282, #283)", async () => {
     const jam = await material("Jam");
     await parameters(jam.id, "make");
     await bom(jam.id);

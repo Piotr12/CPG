@@ -1,5 +1,5 @@
 import { formatDecimal } from "../../quantities/decimal";
-import type { MrpException } from "../mrp-result";
+import type { MrpBomRejection, MrpException, MrpInactiveBom } from "../mrp-result";
 import { exceptionLocation } from "./compare-exceptions";
 
 /** An exception as an `MrpRunException` row stores it (E16-S03): the pair, the date when it has one, and its other params as strings. */
@@ -22,13 +22,39 @@ export function toStoredException(exception: MrpException): StoredException {
       return { ...row, date: exception.date ?? null, details: { reason: exception.reason } };
     case "MISSING_BOM":
       return { ...row, date: exception.date, details: null };
+    case "MISSING_USABLE_BOM":
+      return { ...row, date: exception.date, details: { inactive: inactiveNotation(exception.inactive) } };
     case "CYCLIC_BOM":
       return { ...row, date: null, details: { path: exception.path } };
+    case "NO_FEASIBLE_BOM": {
+      const inactive = exception.rejections.flatMap((rejection) => (rejection.reason === "inactive-component" ? [rejection] : []));
+      const missing = exception.rejections.flatMap((rejection) => (rejection.reason === "shortage" ? [rejection] : []));
+      return { ...row, date: exception.date, details: { missing: missingNotation(missing), ...(inactive.length > 0 && { inactive: inactiveNotation(inactive) }) } };
+    }
     case "INSUFFICIENT_TRANSFER_STOCK": {
       const { transfer, destination, planned, available } = exception;
       return { ...row, date: exception.date, details: { transfer, destination, planned: formatDecimal(planned, { fixed: true }), available: formatDecimal(available, { fixed: true }) } };
     }
   }
+}
+
+/**
+ * Each BOM's inactive components, in the language-neutral notation the API lists (E17-S02 spec):
+ * `00000004/1: 00000011, 00000012`, BOMs separated by `; `.
+ */
+function inactiveNotation(boms: readonly Pick<MrpInactiveBom, "bom" | "revision" | "materials">[]): string {
+  return boms.map(({ bom, revision, materials }) => `${bom}/${revision}: ${materials.join(", ")}`).join("; ");
+}
+
+/**
+ * Each BOM's short components with their required, available and shortage quantities as six-decimal texts:
+ * `00000005/2: 00000013 6.000000 5.000000 1.000000, …`, BOMs separated by `; `.
+ */
+function missingNotation(boms: readonly Extract<MrpBomRejection, { reason: "shortage" }>[]): string {
+  const fixed = (quantity: bigint) => formatDecimal(quantity, { fixed: true });
+  return boms
+    .map(({ bom, revision, shortages }) => `${bom}/${revision}: ${shortages.map(({ material, required, available, shortage }) => `${material} ${fixed(required)} ${fixed(available)} ${fixed(shortage)}`).join(", ")}`)
+    .join("; ");
 }
 
 /** A stored row's `params`, as the API lists them: the pair, the date when there is one, then the code's other params. */

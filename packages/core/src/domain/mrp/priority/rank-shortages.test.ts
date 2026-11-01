@@ -57,6 +57,7 @@ const planned = (offset: number, quantity: string, parent = "P1", needOffset = o
   location: "L1",
   date: day(offset),
   quantity: q(quantity),
+  provisional: false,
 });
 
 /** Six days from TODAY; `receipts` and `targets` by day offset. */
