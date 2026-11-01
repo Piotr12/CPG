@@ -3,7 +3,7 @@
 **Date:** 2026-10-31 19:29 UTC
 **Agent:** Claude Code (cezar, headless) / claude-opus-5-5
 **Spec:** `.ai/specs/2026-10-31--2054UTC-mrp-replenishment-proposals.md`
-**Status:** in progress
+**Status:** done
 
 ## Goal
 
@@ -24,3 +24,18 @@ Take #278 end to end with `om-auto-fix-issue`. It is a `feature` issue, so the r
   - **Low:** the `roundUpToMultiple` test move, the app's `MrpPlanView` fixtures, the honest row bound of the `latest()` read, a generator check on seeded lot multiples, a report integration assertion, the kind names, and the `formatDecimal({ fixed: true })` formatter.
 - 23:44 Folded in the review and ran `npx vitest run tests/ai-filenames.test.ts tests/spec-images.test.ts` after `npm ci`: 2 files, 7 tests passed. No mockups: the spec adds no screen element, only a help paragraph.
 - 00:13 Opened the spec PR #312 (`review`, `documentation`, `skip-qa`, `priority-medium`, `risk-low`; `Refs #278`, no closing keyword). Posted the assumptions table on #312 and #278, the label rationale and a run summary. Handed the issue lock to `om-auto-implement-spec`, which runs on its own implementation PR, branched from `main`. Its execution plan under `.ai/pipeline/runs/` is that run's log.
+- 2026-11-01 07:17 #313 is ready. Its gate is green: 100% coverage over 4,987 tests, lint, typecheck and build. The three touched integration files pass on a standalone build. A fresh-context code review approved, and its fixes are applied. The UI evidence is posted. The issue lock is released.
+
+## Changes
+
+- `.ai/specs/2026-10-31--2054UTC-mrp-replenishment-proposals.md`
+
+## Verification
+
+- Spec review by a fresh-context subagent: no Critical or High findings. Its two Medium and eight Low findings are folded in.
+- `npx vitest run tests/ai-filenames.test.ts tests/spec-images.test.ts`: 2 files, 7 tests passed.
+
+## Follow-ups
+
+- Merge #312 before #313. Then merge `main` into #313 and delete the spec's active copy (`tests/ai-filenames.test.ts` enforces it).
+- #313 still needs CI's full integration suite and a human QA pass (`needs-qa`).
