@@ -57,27 +57,35 @@ Implement the spec. Each Make proposal tests its valid BOMs in priority order at
 
 ## Progress
 
+PR: #329
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Rules and inputs
 
-- [ ] 1.1 isUsableRevision
-- [ ] 1.2 MrpBom inactiveComponents
-- [ ] 1.3 Types, codes and stored shapes
+- [x] 1.1 isUsableRevision — 8d8ed908
+- [x] 1.2 MrpBom inactiveComponents — 8d8ed908
+- [x] 1.3 Types, codes and stored shapes — 8d8ed908
 
 ### Phase 2: Engine
 
-- [ ] 2.1 lowestDependableBalance
-- [ ] 2.2 chooseBom and explodeProposal
-- [ ] 2.3 replenishPair Missing Usable BOM
-- [ ] 2.4 planMrp claim pass
+- [x] 2.1 lowestDependableBalance — 8d8ed908
+- [x] 2.2 chooseBom and explodeProposal — 8d8ed908
+- [x] 2.3 replenishPair Missing Usable BOM — 8d8ed908
+- [x] 2.4 planMrp claim pass — 8d8ed908
 
 ### Phase 3: Service, benchmark, integration
 
-- [ ] 3.1 Service tests
-- [ ] 3.2 Benchmark
-- [ ] 3.3 Integration test
+- [x] 3.1 Service tests — 68066402
+- [x] 3.2 Benchmark — 8d8ed908
+- [x] 3.3 Integration test — 68066402
 
 ### Phase 4: Docs
 
-- [ ] 4.1 Copy, docs, catalogue, spec notes
+- [x] 4.1 Copy, docs, catalogue, spec notes — 07c15ac6
+
+## Verification
+
+- `npm run lint`: exit 0. `npm run typecheck`: exit 0. `npm run build`: exit 0.
+- `npm run test:coverage`: 655 files, 5,293 tests passed. Statements 100% (13,232/13,232), branches 100% (6,043/6,043).
+- Integration against a standalone build: `mrp-run-api` 15 passed; `mrp-accept`, `mrp-accept-api`, `mrp-report`, `mrp-report-api`, `mrp-run` and `production-orders` 38 passed.
