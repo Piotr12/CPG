@@ -31,8 +31,8 @@ export class MrpSnapshotService {
    * month (earlier ones expired, D08) to the horizon's last day, and the lines that consume them are read
    * to the end of that day's month, so a forecast late in the horizon sees its whole month (#275).
    * Production orders and transfers are read only to the horizon's last day (#277), every planning
-   * parameter set is read for sizing (#278), and every active BOM's current revision for the Missing BOM
-   * check (#280).
+   * parameter set is read for sizing (#278), and every active BOM's current revision, with its lines, for the
+   * Missing BOM check (#280) and the explosion (#281).
    */
   async load(today: string): Promise<MrpInputs> {
     const last = addDays(today, MRP_HORIZON_DAYS - 1);
@@ -54,7 +54,7 @@ export class MrpSnapshotService {
     const productionOrders = await readProductionOrders(this.em, codes, afterHorizon, unreadable);
     const transfers = await readTransfers(this.em, codes, afterHorizon, unreadable);
     await yieldToEventLoop();
-    const boms = await readBoms(this.em, codes);
+    const boms = await readBoms(this.em, codes, planningParameters, unreadable);
     return { stock, orderLines, forecasts, safetyTargets, requisitions, purchaseOrderLines, productionOrders, transfers, planningParameters, boms, unreadable };
   }
 }

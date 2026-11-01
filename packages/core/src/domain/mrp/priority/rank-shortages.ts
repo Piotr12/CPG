@@ -1,9 +1,10 @@
 import type { MrpBucket, MrpPlan, MrpShortage, MrpShortageKind } from "../mrp-result";
 import { MRP_SHORTAGE_KINDS } from "../mrp-result";
+import { daysBetween } from "../../demand/demand-buckets";
 import { compareCodes } from "../projection/pairs";
 
 /** One projected pair: what the priority pass reads. */
-export interface RankedPair extends Pick<MrpPlan, "physical" | "firmDemand" | "forecastDemand" | "componentDemand" | "transfersOut"> {
+export interface RankedPair extends Pick<MrpPlan, "physical" | "firmDemand" | "forecastDemand" | "componentDemand" | "plannedComponentDemand" | "transfersOut"> {
   buckets: readonly Pick<MrpBucket, "date" | "tentativeSupply" | "dependableSupply" | "transferIn" | "proposedReceipts" | "safetyTarget">[];
 }
 
@@ -18,8 +19,11 @@ interface Requirement {
   outstanding: bigint;
 }
 
-/** Open documents' needs, then customer orders, then the forecast residual (PRD §04, #279 Q5). */
-const RANK: Record<Requirement["kind"], number> = { component: 0, transfer: 0, "customer-order": 1, forecast: 2 };
+/**
+ * Open documents' needs, then customer orders beside Make proposals' components, then the forecast residual
+ * (PRD §04, #279 Q5). A planned component ranks with customer orders until root ranking replaces it (#281 Q9).
+ */
+const RANK: Record<Requirement["kind"], number> = { component: 0, transfer: 0, "customer-order": 1, "planned-component": 1, forecast: 2 };
 const RANKS = 3;
 
 /**
@@ -28,7 +32,8 @@ const RANKS = 3;
  *
  * Stock is consumed day by day. Each day, its receipts add to what is available and its requirements
  * join the outstanding ones, which are served in priority order: rank (open production orders'
- * components and transfer dispatches, then customer orders, then the forecast residual), original
+ * components and transfer dispatches, then customer orders and Make proposals' components, then the
+ * forecast residual), original
  * date, kind, document and position. A requirement left outstanding on its own day is reported once,
  * on that day. It is still served first by a later receipt of its rank. Orders on one original date are
  * equal; the stable ID only keeps the result deterministic (DEM-021). Where the target in force is above
@@ -67,7 +72,7 @@ export function rankShortages(pair: RankedPair): MrpShortage[] {
 }
 
 /** Every requirement of `pair`, by the date it counts in. */
-function requirementsByDate({ firmDemand, forecastDemand, componentDemand, transfersOut }: RankedPair): Map<string, Requirement[]> {
+function requirementsByDate({ firmDemand, forecastDemand, componentDemand, plannedComponentDemand, transfersOut }: RankedPair): Map<string, Requirement[]> {
   const byDate = new Map<string, Requirement[]>();
   const add = (requirement: Omit<Requirement, "outstanding">) => {
     const list = byDate.get(requirement.date) ?? byDate.set(requirement.date, []).get(requirement.date)!;
@@ -76,6 +81,10 @@ function requirementsByDate({ firmDemand, forecastDemand, componentDemand, trans
   // Added lowest priority first, so the order comes from `compareRequirements` alone, never from the lists.
   for (const { date, forecastDate, quantity } of forecastDemand) {
     add({ kind: "forecast", date, originalDate: forecastDate, document: "", position: 0, required: quantity });
+  }
+  // A parent pair has one proposal per need date, so its day number keeps the key total.
+  for (const { date, parent, parentNeedDate, quantity } of plannedComponentDemand) {
+    add({ kind: "planned-component", date, originalDate: date, document: parent, position: daysBetween(date, parentNeedDate), required: quantity });
   }
   for (const { date, requiredDate, order, position, quantity } of firmDemand) {
     add({ kind: "customer-order", date, originalDate: requiredDate, document: order, position, required: quantity });

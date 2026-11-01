@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { addDays } from "../../demand/demand-buckets";
 import { parseDecimal } from "../../quantities/decimal";
-import type { MrpComponentDemand, MrpFirmDemand, MrpForecastDemand, MrpTransferMovement } from "../mrp-result";
+import type { MrpComponentDemand, MrpFirmDemand, MrpForecastDemand, MrpPlannedComponentDemand, MrpTransferMovement } from "../mrp-result";
 import { emptyFlows } from "../projection/project-buckets";
 import { rankShortages, type RankedPair } from "./rank-shortages";
 
@@ -47,10 +47,22 @@ const dispatch = (offset: number, quantity: string, transfer = "00000001"): MrpT
   overdue: false,
 });
 
+/** What a Make proposal of `parent` needed on day `needOffset` and started on day `offset` needs of M1 (E17-S01). */
+const planned = (offset: number, quantity: string, parent = "P1", needOffset = offset): MrpPlannedComponentDemand => ({
+  parent,
+  parentNeedDate: day(needOffset),
+  bom: "00000001",
+  bomRevision: 1,
+  material: "M1",
+  location: "L1",
+  date: day(offset),
+  quantity: q(quantity),
+});
+
 /** Six days from TODAY; `receipts` and `targets` by day offset. */
 const pair = (
   physical: string,
-  lists: Partial<Pick<RankedPair, "firmDemand" | "forecastDemand" | "componentDemand" | "transfersOut">>,
+  lists: Partial<Pick<RankedPair, "firmDemand" | "forecastDemand" | "componentDemand" | "plannedComponentDemand" | "transfersOut">>,
   receipts: Record<number, string> = {},
   targets: Record<number, string> = {},
 ): RankedPair => ({
@@ -63,6 +75,7 @@ const pair = (
   firmDemand: [],
   forecastDemand: [],
   componentDemand: [],
+  plannedComponentDemand: [],
   transfersOut: [],
   ...lists,
 });
@@ -155,5 +168,32 @@ describe("rankShortages", () => {
       ["forecast", q("10")],
       ["safety-target", q("5")],
     ]);
+  });
+
+  describe("Make proposals' components (E17-S01, #281 Q9)", () => {
+    it("rank them with customer orders, after open documents and before the forecast, a customer order first on one original date", () => {
+      const shortages = rankShortages(
+        pair("6", { forecastDemand: [forecast(2, "2")], plannedComponentDemand: [planned(2, "4")], firmDemand: [order(2, "3")], componentDemand: [component(2, "1")] }),
+      );
+      expect(shortages).toEqual([
+        { kind: "planned-component", date: day(2), originalDate: day(2), document: "P1", position: null, required: q("4"), uncovered: q("2") },
+        { kind: "forecast", date: day(2), originalDate: day(2), document: null, position: null, required: q("2"), uncovered: q("2") },
+      ]);
+    });
+
+    it("serve an earlier parent start before a later customer order, by original date within the rank", () => {
+      const shortages = rankShortages(pair("4", { firmDemand: [order(3, "4")], plannedComponentDemand: [planned(1, "4")] }));
+      expect(shortages.map(({ kind, uncovered }) => [kind, uncovered])).toEqual([["customer-order", q("4")]]);
+    });
+
+    it("order two parents on one day by parent code, and two late proposals of one parent, both starting today, by need date", () => {
+      const parents = rankShortages(pair("3", { plannedComponentDemand: [planned(2, "3", "P2"), planned(2, "3", "P1")] }));
+      expect(parents.map(({ document, uncovered }) => [document, uncovered])).toEqual([["P2", q("3")]]);
+      const late = rankShortages(pair("3", { plannedComponentDemand: [planned(0, "3", "P1", 4), planned(0, "3", "P1", 2)] }));
+      // Both report P1 on today; the one needed on day 2 was served first, so the day-4 one is short.
+      expect(late.map(({ required, uncovered }) => [required, uncovered])).toEqual([[q("3"), q("3")]]);
+      const reversed = rankShortages(pair("3", { plannedComponentDemand: [planned(0, "2", "P1", 2), planned(0, "3", "P1", 4)] }));
+      expect(reversed.map(({ required, uncovered }) => [required, uncovered])).toEqual([[q("3"), q("2")]]);
+    });
   });
 });

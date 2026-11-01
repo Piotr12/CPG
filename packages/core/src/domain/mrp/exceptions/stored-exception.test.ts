@@ -24,6 +24,13 @@ describe("toStoredException and exceptionParams", () => {
     expect(exceptionParams(stored)).toEqual({ material: "M1", location: "L2", date: "2026-10-09" });
   });
 
+  it("stores BOM Cycle with no date and its path as its one detail (#281)", () => {
+    const path = "M1 →(BOM 00000002) M2 →(BOM 00000003) M1";
+    const stored = toStoredException({ code: "BOM_CYCLE", material: "M1", location: "L2", path });
+    expect(stored).toEqual({ code: "BOM_CYCLE", material: "M1", location: "L2", date: null, details: { path } });
+    expect(exceptionParams(stored)).toEqual({ material: "M1", location: "L2", path });
+  });
+
   it("stores Insufficient Transfer Stock at its source, its quantities as six-decimal texts", () => {
     const stored = toStoredException({
       code: "INSUFFICIENT_TRANSFER_STOCK", transfer: "00000003", material: "M1", source: "S", destination: "D", date: "2026-10-02", planned: 100_000_000n, available: 60_500_000n,

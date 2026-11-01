@@ -22,6 +22,8 @@ export function toStoredException(exception: MrpException): StoredException {
       return { ...row, date: exception.date ?? null, details: { reason: exception.reason } };
     case "MISSING_BOM":
       return { ...row, date: exception.date, details: null };
+    case "BOM_CYCLE":
+      return { ...row, date: null, details: { path: exception.path } };
     case "INSUFFICIENT_TRANSFER_STOCK": {
       const { transfer, destination, planned, available } = exception;
       return { ...row, date: exception.date, details: { transfer, destination, planned: formatDecimal(planned, { fixed: true }), available: formatDecimal(available, { fixed: true }) } };

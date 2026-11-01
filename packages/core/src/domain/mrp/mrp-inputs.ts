@@ -22,7 +22,7 @@ export interface MrpInputs {
   transfers: readonly MrpTransfer[];
   /** Every planning parameter set of the tenant, one per material and location (E16-S01). */
   planningParameters: readonly MrpPlanningParameters[];
-  /** The current revision of every active BOM, for the Missing BOM check (E16-S03). */
+  /** The current revision of every active BOM, for the Missing BOM check (E16-S03) and the explosion (E17-S01). */
   boms: readonly MrpBom[];
   /** Every stored row the loader couldn't read, left out of the lists above (E16-S03). */
   unreadable: readonly MrpUnreadableRow[];
@@ -165,12 +165,26 @@ export interface MrpPlanningParameters {
   lotMultiple: bigint;
 }
 
-/** The validity of one active BOM's current revision (R04, E16-S03). */
+/**
+ * One active BOM's current revision (R04): its validity for the Missing BOM check (E16-S03), and its
+ * priority and lines for the explosion (E17-S01). A revision with a line the loader couldn't read is
+ * never here (#281 spec Q8).
+ */
 export interface MrpBom {
+  /** The BOM's business ID. */
+  bom: string;
+  /** The current revision's number. */
+  revision: number;
+  /** 1 is the highest (R04). */
+  priority: number;
   output: string;
   validFrom: string;
   /** `null` when open-ended. */
   validThrough: string | null;
+  /** Every line's material is active: the production dialog offers only such recipes (#281 spec Q4). */
+  componentsActive: boolean;
+  /** `perOutput` of each component for one base unit of `output`, in the component's base unit. */
+  components: readonly MrpComponentLine[];
 }
 
 /** The kinds of stored row the snapshot reads quantities, factors or dates from (E16-S03, spec Q8). */
