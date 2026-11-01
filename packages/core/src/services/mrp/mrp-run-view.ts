@@ -1,6 +1,6 @@
 import type { AuditChannel, MrpRecommendationKind, MrpRun, MrpRunMode } from "@cpg/db";
 import { addDays } from "../../domain/demand/demand-buckets";
-import type { MrpBucket } from "../../domain/mrp/mrp-result";
+import type { MrpBucket, MrpProposalTiming } from "../../domain/mrp/mrp-result";
 
 /** A bucket's figures, in the order the engine declares them; `date` is the bucket's key, not a figure. */
 export const MRP_FIGURES = [
@@ -61,8 +61,13 @@ export interface MrpPlanView {
   proposals: MrpProposalView[];
 }
 
-/** One stored replenishment proposal (E16-S01): what it would create, the day it covers, a six-decimal BUoM quantity above zero. */
-export interface MrpProposalView {
+/**
+ * One stored replenishment proposal (E16-S01): what it would create, the day it covers, a six-decimal
+ * BUoM quantity above zero, and its timing (E16-S02): its planned start, never before the run's start,
+ * its planned finish, the days it is late (Late Supply) and whether it finishes after the run's last day
+ * (Beyond Horizon).
+ */
+export interface MrpProposalView extends MrpProposalTiming {
   kind: MrpRecommendationKind;
   needDate: string;
   quantity: string;

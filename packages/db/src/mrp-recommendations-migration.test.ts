@@ -40,7 +40,8 @@ describe("MRP recommendations migration (#278)", () => {
       });
       expect(await sql("select id from mrp_recommendation")).toEqual([{ id: "p2" }]);
 
-      await orm.migrator.down();
+      // Back to the migration before it: the later lead-time column goes first.
+      await orm.migrator.down({ to: "Migration20261027061605_mrp_runs" });
       expect(await tables()).toEqual(["mrp_daily_result", "mrp_run"]);
       expect(await sql("select id from mrp_run")).toEqual([{ id: "r2" }]);
     } finally {

@@ -5,6 +5,7 @@ import { planMrp } from "../../domain/mrp/plan-mrp";
 import { summarizePlan } from "../../domain/mrp/report/plan-summary";
 import { MRP_HORIZON_DAYS } from "../../domain/mrp/projection/horizon";
 import { pairKey } from "../../domain/mrp/projection/pairs";
+import { scheduleProposal } from "../../domain/mrp/sizing/schedule-proposal";
 import { formatDecimal } from "../../domain/quantities/decimal";
 import { formatSignedQuantity } from "../../domain/stock/signed-quantity";
 import { ConflictError, NotFoundError } from "../../http/errors";
@@ -185,9 +186,16 @@ export class MrpRunService {
     const rows = await this.em.find(
       MrpRecommendation,
       { run, material: { $in: materials }, ...(location !== undefined && { location }) },
-      { orderBy: { material: "asc", location: "asc", needDate: "asc" }, fields: ["material", "location", "kind", "needDate", "quantity"], disableIdentityMap: true },
+      {
+        orderBy: { material: "asc", location: "asc", needDate: "asc" },
+        fields: ["material", "location", "kind", "needDate", "quantity", "leadTimeDays"],
+        disableIdentityMap: true,
+      },
     );
-    for (const { material, location: site, kind, needDate, quantity } of rows) byPair.get(pairKey(material, site))?.push({ kind, needDate, quantity });
+    for (const { material, location: site, kind, needDate, quantity, leadTimeDays } of rows) {
+      // The engine's own timing rule, from the run's first day (E16-S02): one rule for the plan and its read.
+      byPair.get(pairKey(material, site))?.push({ kind, needDate, quantity, ...scheduleProposal(needDate, leadTimeDays, run.startDate, run.horizonDays) });
+    }
     return byPair;
   }
 
@@ -218,8 +226,8 @@ export class MrpRunService {
         await created();
       }
     }
-    for (const { kind, material, location, needDate, quantity } of proposals) {
-      this.em.create(MrpRecommendation, { run, material, location, kind, needDate, quantity: formatDecimal(quantity, { fixed: true }) });
+    for (const { kind, material, location, needDate, quantity, leadTimeDays } of proposals) {
+      this.em.create(MrpRecommendation, { run, material, location, kind, needDate, quantity: formatDecimal(quantity, { fixed: true }), leadTimeDays });
       await created();
     }
     await this.em.flush();

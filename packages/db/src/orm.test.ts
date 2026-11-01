@@ -121,6 +121,7 @@ describe("migrate", () => {
       "Migration20261025180850_list_key_read_indexes",
       "Migration20261027061605_mrp_runs",
       "Migration20261101053705_mrp_recommendations",
+      "Migration20261101075645_mrp_recommendation_lead_time",
     ]);
     expect(await migrate({ databasePath })).toEqual([]);
   });
@@ -132,10 +133,10 @@ describe("migrate", () => {
         .map((migration) => migration.name)
         .filter((name) => !["customer_order", "shipment", "location_guard", "list_sort", "demand_review", "tenant_in_list", "list_key_read", "mrp_r"].some((part) => name.includes(part)));
       await orm.migrator.up({ migrations: previous });
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 25, pending: 12 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 25, pending: 13 });
       await orm.em.getConnection().execute("update tenant set generation = 23 where code = 'prod'");
       await orm.migrator.up();
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 37, pending: 0 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 38, pending: 0 });
       expect(await orm.em.getConnection().execute("select generation from tenant where code = 'prod'")).toEqual([{ generation: 23 }]);
       expect(await orm.em.getConnection().execute("select count(*) as count from stock_movement")).toEqual([{ count: 0 }]);
       expect(await orm.em.getConnection().execute("select count(*) as count from customer_order")).toEqual([{ count: 0 }]);
@@ -154,9 +155,9 @@ describe("migrate", () => {
         .map((migration) => migration.name)
         .filter((name) => !["production_", "list_sort", "tenant_in_list", "list_key_read", "mrp_r"].some((part) => name.includes(part)));
       await orm.migrator.up({ migrations: previous });
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 30, pending: 7 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 30, pending: 8 });
       await orm.migrator.up();
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 37, pending: 0 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 38, pending: 0 });
       expect(await orm.em.getConnection().execute("select count(*) as count from production_order")).toEqual([{ count: 0 }]);
       expect(await orm.em.getConnection().execute("select count(*) as count from transfer")).toEqual([{ count: 0 }]);
       expect(await orm.schema.getUpdateSchemaSQL()).not.toMatch(/production_order|transfer/);
@@ -172,9 +173,9 @@ describe("getMigrationStatus", () => {
     const orm = await initOrm({ databasePath });
 
     try {
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 37 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 0, pending: 38 });
       await orm.migrator.up();
-      expect(await getMigrationStatus(orm)).toEqual({ applied: 37, pending: 0 });
+      expect(await getMigrationStatus(orm)).toEqual({ applied: 38, pending: 0 });
     } finally {
       await orm.close();
     }
@@ -294,6 +295,10 @@ describe("migrations", () => {
       const indexesOf = async (names: string[]) =>
         (await orm.em.getConnection().execute<{ name: string }[]>("select name from sqlite_master where type = 'index'")).filter(({ name }) => names.includes(name)).length;
       const inListIndexes = () => indexesOf(TENANT_IN_LIST_INDEXES);
+      await orm.migrator.down();
+      const recommendationColumns = await orm.em.getConnection().execute<{ name: string }[]>("select name from pragma_table_info('mrp_recommendation')");
+      expect(recommendationColumns.map(({ name }) => name)).toContain("need_date");
+      expect(recommendationColumns.map(({ name }) => name)).not.toContain("lead_time_days");
       await orm.migrator.down();
       expect(await tables()).not.toContain("mrp_recommendation");
       expect(await tables()).toContain("mrp_run");
@@ -673,7 +678,7 @@ describe("forecasts migration", () => {
       ]);
 
       // The migrations that landed after the forecasts come off first.
-      for (let later = 0; later < 23; later += 1) await orm.migrator.down();
+      for (let later = 0; later < 24; later += 1) await orm.migrator.down();
       expect(await execute(orm, "select name from sqlite_master where name = 'forecast'")).toEqual([{ name: "forecast" }]);
       await orm.migrator.down();
       expect(await execute(orm, "select name from sqlite_master where name = 'forecast'")).toEqual([]);
@@ -787,6 +792,7 @@ describe("purchasing migration", () => {
       await execute(orm, "delete from purchase_order_line");
       await execute(orm, "delete from purchase_order");
       await execute(orm, "delete from purchase_requisition");
+      await orm.migrator.down(); // MRP recommendation lead time.
       await orm.migrator.down(); // MRP recommendations.
       await orm.migrator.down(); // MRP runs.
       await orm.migrator.down(); // List key read indexes.
@@ -848,6 +854,7 @@ describe("goods-receipts migration", () => {
       await expect(execute(orm, "update goods_receipt set business_date = '2026-10-01'")).rejects.toThrow(GOODS_RECEIPT_IMMUTABLE);
       await expect(execute(orm, "update goods_receipt_line set quantity = '1.000000'")).rejects.toThrow(GOODS_RECEIPT_IMMUTABLE);
 
+      await orm.migrator.down(); // MRP recommendation lead time.
       await orm.migrator.down(); // MRP recommendations.
 
       await orm.migrator.down(); // MRP runs.
@@ -918,6 +925,7 @@ describe("transfers migration", () => {
       ).rejects.toThrow(/CHECK/);
 
       // Rolls back with postings still in place: they are dropped before the transfers they reference.
+      await orm.migrator.down(); // MRP recommendation lead time.
       await orm.migrator.down(); // MRP recommendations.
       await orm.migrator.down(); // MRP runs.
       await orm.migrator.down(); // List key read indexes.
@@ -985,6 +993,7 @@ describe("shipments and goods-issues migration", () => {
       await execute(orm, "update shipment_line set issued = '20.000000'");
       await execute(orm, "update shipment set status = 'completed'");
 
+      await orm.migrator.down(); // MRP recommendation lead time.
       await orm.migrator.down(); // MRP recommendations.
 
       await orm.migrator.down(); // MRP runs.
@@ -1061,6 +1070,7 @@ describe("production-completions migration", () => {
       await expect(execute(orm, "update production_completion set quantity = '1.000000'")).rejects.toThrow(PRODUCTION_COMPLETION_IMMUTABLE);
       await expect(execute(orm, "update production_completion_line set actual = '1.000000'")).rejects.toThrow(PRODUCTION_COMPLETION_IMMUTABLE);
 
+      await orm.migrator.down(); // MRP recommendation lead time.
       await orm.migrator.down(); // MRP recommendations.
 
       await orm.migrator.down(); // MRP runs.
