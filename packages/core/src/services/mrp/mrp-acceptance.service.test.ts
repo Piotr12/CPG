@@ -355,7 +355,7 @@ describe("MrpAcceptanceService.accept: refusals, with nothing created", () => {
     expect([await count("purchase_requisition"), await count("purchase_requisition", "test")]).toEqual([0, 0]);
   });
 
-  it("refuses a Make proposal as not executable until MRP chooses its BOM (spec Q1)", async () => {
+  it("refuses a Make proposal as not executable until a provisional one is stored apart from a feasible one (spec Q1, #282, #283)", async () => {
     const jam = await material("Jam");
     await parameters(jam.id, "make");
     await bom(jam.id);

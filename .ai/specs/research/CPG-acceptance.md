@@ -677,7 +677,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** `packages/core/src/domain/mrp/explosion/choose-bom.test.ts` and `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-026, BOM-011": no auto-order is executable, since `isExecutableProposal` refuses every Make proposal; the parent's `NO_FEASIBLE_BOM` lists each BOM's missing inputs, and its subcomponents are planned through the highest-priority usable BOM). Showing that plan as provisional is E17-S03 (#283), and the screen E18-S03 (#286). E17-S02, #282.
+- **Evidence:** `packages/core/src/domain/mrp/explosion/choose-bom.test.ts` and `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-026, BOM-011": the parent's `NO_FEASIBLE_BOM` lists each BOM's missing inputs, and its subcomponents are planned through the highest-priority usable BOM). No parent auto-order is executable: `packages/core/src/services/mrp/mrp-acceptance.service.test.ts` refuses every Make proposal as not executable. Showing that plan as provisional is E17-S03 (#283), and the screen E18-S03 (#286). E17-S02, #282.
 
 - **Given:** Both active valid BOMs lack inputs
 - **When:** Run MRP
