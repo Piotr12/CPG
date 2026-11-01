@@ -18,6 +18,7 @@ const SETUP_TOKEN = "mrprep-setup";
 const shown = (selector: string) => `[...document.querySelectorAll(${JSON.stringify(selector)})].find((e) => !e.closest("[hidden]"))`;
 const PAIRS = "table[aria-label='Planned material–location pairs']";
 const DAYS = "table[aria-label='Days of the plan']";
+const WEEKS = "table[aria-label='Weeks of the plan']";
 /** A day `days` after the server's UTC today, as the run plans from it. */
 const day = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
 
@@ -28,7 +29,7 @@ describe("the MRP report in the UI", () => {
   let rita: Browser;
   let secret: string;
   let run: MrpRunView;
-  const ids: Record<"sheet" | "cabinet" | "plant" | "depot" | "yard", string> = {} as never;
+  const ids: Record<"sheet" | "cabinet" | "plant" | "depot" | "yard" | "dock" | "po", string> = {} as never;
 
   const api = (method: string, path: string, body?: unknown) => callApi(baseUrl, method, path, secret, body === undefined ? {} : { key: randomUUID(), body });
   const create = async (path: string, body: unknown) => {
@@ -80,6 +81,10 @@ describe("the MRP report in the UI", () => {
     // #278: sheet is bought at the yard in lots of at least 10, multiples of 5, and the yard needs 3 on day 5.
     await create("/api/tenants/prod/planning-parameters", { material: ids.sheet, location: ids.yard, procurement: "buy", leadTimeDays: 2, minimumQuantity: "10", lotMultiple: "5" });
     await create("/api/tenants/prod/customer-orders", { customer, location: ids.yard, lines: [{ material: ids.sheet, quantity: "3", unit: "kg", requiredDate: day(5) }] });
+    // E18-S02: 30 kg of sheet ordered for the dock three days ago and not received: Overdue on the first day.
+    ids.dock = await create("/api/tenants/prod/locations", { name: "mrprep dock" });
+    const supplier = await create("/api/tenants/prod/suppliers", { name: "mrprep mill" });
+    ids.po = await create("/api/tenants/prod/purchase-orders", { supplier, location: ids.dock, lines: [{ material: ids.sheet, quantity: "30", unit: "kg", plannedDate: day(-3) }] });
     run = await runMrp();
     await createUser(admin, baseUrl, USERNAME, PASSWORD);
     await signIn(rita, baseUrl, PASSWORD, USERNAME);
@@ -152,6 +157,41 @@ describe("the MRP report in the UI", () => {
     expect(await figures(day(30))).toMatchObject({ projectedBefore: "-3", projectedAfter: "7" });
   });
 
+  it("switches one pair's days to weeks that sum its demand and keep each week's last balance, and back, as the API folds them (UX-019, UX-027)", async () => {
+    await open(`?material=${ids.sheet}&location=${ids.plant}`, DAYS);
+    await rita.clickRole("radio", "Week");
+    await rita.clickRole("button", "Apply");
+    await rita.waitUntil(`new URLSearchParams(location.search).get("bucket") === "week" && Boolean(${shown(WEEKS)})`);
+
+    const [plan] = (json(await api("GET", `/api/tenants/prod/mrp/runs/latest?material=${ids.sheet}&location=${ids.plant}&bucket=week`)).data as MrpLatestView).plans;
+    const shownWeeks = await rita.evaluate<Record<string, string>[]>(`[...${shown(WEEKS)}.querySelectorAll("tbody tr")].map((tr) => Object.fromEntries([...tr.querySelectorAll("[data-mrp-figure]")].map((cell) => [cell.getAttribute("data-mrp-figure"), cell.textContent])))`);
+    expect(shownWeeks).toHaveLength(plan.weeks!.length);
+    expect(shownWeeks.map(({ firmDemand, projectedBefore, lowestProjectedBefore, peakShortage }) => [firmDemand, projectedBefore, lowestProjectedBefore, peakShortage].map(Number))).toEqual(
+      plan.weeks!.map(({ firmDemand, projectedBefore, lowestProjectedBefore, peakShortage }) => [firmDemand, projectedBefore, lowestProjectedBefore, peakShortage].map(Number)),
+    );
+    // MRP-005's 10 and 15 are summed, and each week's balance is its last day's, never a sum.
+    expect(shownWeeks.reduce((sum, week) => sum + Number(week.firmDemand), 0)).toBe(25);
+    for (const week of plan.weeks!) expect(week.projectedBefore).toBe(plan.buckets.find(({ date }) => date === week.end)!.projectedBefore);
+
+    await rita.clickRole("radio", "Day");
+    await rita.clickRole("button", "Apply");
+    await rita.waitUntil(`new URLSearchParams(location.search).get("bucket") === "day" && Boolean(${shown(DAYS)})`);
+    expect(await rita.evaluate<number>(`${shown(DAYS)}.querySelectorAll("tbody tr").length`)).toBe(90);
+  });
+
+  it("marks the overdue purchase-order line on the first day and in the first week, filtered to its pair (UX-018, MRP-015)", async () => {
+    const mark = (table: string) => rita.evaluate<string>(`${shown(table)}.querySelector("tbody tr [data-mrp-mark=overdue-supply]")?.textContent ?? ""`);
+    await open(`?material=${ids.sheet}&location=${ids.dock}`, DAYS);
+    expect(await rita.evaluate<string>(`${shown(DAYS)}.querySelector("tbody tr [data-mrp-date]").textContent`)).toBe(day(0));
+    const text = await mark(DAYS);
+    expect(text).toMatch(new RegExp(`^Overdue · PO ${ids.po}/1 · due .+ · 30 kg$`));
+    expect(await figures(day(0))).toMatchObject({ dependableSupply: "30", projectedBefore: "30" });
+
+    await open(`?material=${ids.sheet}&location=${ids.dock}&bucket=week`, WEEKS);
+    expect(await mark(WEEKS)).toBe(text);
+    expect(await rita.evaluate<boolean>(`${shown(WEEKS)}.querySelector("[data-slot=status-badge][data-tone=warning] svg") !== null`)).toBe(true);
+  });
+
   it("is the not-found state for a material or location this tenant doesn't have", async () => {
     for (const query of ["?material=99999999", "?location=99999999"]) {
       await rita.open(`${baseUrl}/admin/prod/mrp${query}`);
@@ -183,13 +223,15 @@ describe("the MRP report in the UI", () => {
     }
   });
 
-  it("keeps the page itself from scrolling sideways at 1280 and 390 px; the day table scrolls in its own region", async () => {
+  it("keeps the page itself from scrolling sideways at 1280 and 390 px; the day and week tables scroll in their own region", async () => {
     try {
       for (const [width, height] of [[1280, 800], [390, 844]]) {
         await rita.setViewport(width, height);
         await open(`?material=${ids.sheet}&location=${ids.plant}`, DAYS);
         expect(await rita.evaluate<boolean>(`document.documentElement.scrollWidth <= innerWidth`), `${width} px`).toBe(true);
-        expect(await rita.evaluate<number>(`${shown(DAYS)}.querySelectorAll("thead th").length`)).toBe(12);
+        expect(await rita.evaluate<number>(`${shown(DAYS)}.querySelectorAll("thead th").length`)).toBe(13);
+        await open(`?material=${ids.sheet}&location=${ids.plant}&bucket=week`, WEEKS);
+        expect(await rita.evaluate<boolean>(`document.documentElement.scrollWidth <= innerWidth`), `${width} px, by week`).toBe(true);
       }
     } finally {
       await rita.setViewport(1280, 800);

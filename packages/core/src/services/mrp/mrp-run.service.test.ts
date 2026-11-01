@@ -686,6 +686,16 @@ describe("MrpRunService: planning exceptions (#280)", () => {
       select 'x1', 'prod', id, 0, 'A_LATER_CODE', ?, ?, null, null from mrp_run where tenant_code = 'prod'`, [a.id, PLANT]);
     expect(listed(await latest())).toEqual([[a.id, PLANT, [{ code: "A_LATER_CODE", message: MRP_EXCEPTION_FALLBACK_MESSAGE, params: { material: a.id, location: PLANT } }]]]);
   });
+
+  it("neither lists nor marks a warning row it can't read, such as one without a date or details (E18-S02)", async () => {
+    const a = await material("prod", "Cabinet");
+    await stock("prod", a.id, PLANT, "1");
+    await run();
+    await sql(`insert into mrp_run_exception (id, tenant_code, run_id, position, exception_code, material, location, date, details)
+      select 'x1', 'prod', id, 0, 'OVERDUE_SUPPLY', ?, ?, null, null from mrp_run where tenant_code = 'prod'`, [a.id, PLANT]);
+    const [plan] = (await latest()).plans;
+    expect(plan).toMatchObject({ material: a.id, exceptions: [], marks: [] });
+  });
 });
 
 describe("MrpRunService: weeks and marks (#285)", () => {
