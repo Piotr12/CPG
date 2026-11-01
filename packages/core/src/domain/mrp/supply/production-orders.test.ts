@@ -18,6 +18,7 @@ const order = (overrides: Partial<MrpProductionOrder>): MrpProductionOrder => ({
   produced: 0n,
   abandoned: 0n,
   status: "open",
+  inactiveComponents: [],
   components: [
     { material: "B", perOutput: q("1.5") },
     { material: "A", perOutput: q("0.333333") },
@@ -68,5 +69,27 @@ describe("productionMovements", () => {
       ["2026-10-01", false],
       ["2026-10-01", false],
     ]);
+  });
+
+  it("counts an order pinning an inactive component as at risk: its balance out of the output, only its active lines as demand (E17-S03, MRP-051)", () => {
+    const { output, atRisk, components } = productionMovements(
+      [order({ order: "00000002", inactiveComponents: ["B"], produced: q("4") }), order({ order: "00000001", plannedFinish: "2026-10-14" })],
+      DATES,
+    );
+    expect(output.map(({ order: code, quantity }) => [code, quantity])).toEqual([["00000001", q("10")]]);
+    // Only the unproduced balance is at risk: 4 of 10 are posted, physical stock already.
+    expect(atRisk).toEqual([{ order: "00000002", material: "P", location: "L1", plannedFinish: "2026-10-12", date: "2026-10-12", quantity: q("6"), overdue: false }]);
+    expect(components.filter(({ order: code }) => code === "00000002").map(({ material, quantity }) => [material, quantity])).toEqual([["A", q("1.999998")]]);
+  });
+
+  it("drops an at-risk finish after the horizon like any other, and moves an overdue one to today", () => {
+    const { atRisk } = productionMovements(
+      [
+        order({ order: "00000001", inactiveComponents: ["A"], plannedStart: "2026-12-20", plannedFinish: "2026-12-30" }),
+        order({ order: "00000002", inactiveComponents: ["A"], plannedStart: "2026-09-20", plannedFinish: "2026-09-25" }),
+      ],
+      DATES,
+    );
+    expect(atRisk.map(({ order: code, date, overdue }) => [code, date, overdue])).toEqual([["00000002", "2026-10-01", true]]);
   });
 });

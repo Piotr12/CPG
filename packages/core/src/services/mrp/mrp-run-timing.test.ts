@@ -47,6 +47,11 @@ import type { AuditActor } from "../audit/actor";
  * priority 1 has an even component and its priority 2 doesn't, so its proposals fall back and claim. With ten,
  * a component shares its output's home and so its parity: every proposal is provisional, the cached path. The
  * claim path's cost is bounded by #282's uncached measurement, which walked 90 days for every check.
+ *
+ * #283 gives each bottom-third revision, which only production orders pin, a fifth line of a retired, inactive
+ * material no active BOM uses, so about a third of the production orders are at risk. A Make proposal no BOM
+ * can supply is now a provisional action, stored apart from the recommendations, and a Make component is sized
+ * a second time for its provisional demand.
  */
 const SIZES = [
   {
@@ -143,6 +148,10 @@ function seed({ materials, locations, lines, forecasts, orders, requisitions, fu
         planned_start, planned_finish, lead_time_days, produced, abandoned, status, created_at, updated_at, version)
       select 'mo' || x, 'prod', ${code}, 'm' || (1 + x % ${materials}), ${home(`1 + x % ${materials}`)}, 'rev' || (1 + x % ${materials}), '100.000000', '100', 'each', '1', '1',
         date('2026-10-20', '+' || (x * 3 % 80) || ' days'), date('2026-10-25', '+' || (x * 3 % 80) || ' days'), 5, case when x % 3 = 0 then '40.000000' else '0.000000' end, '0.000000', 'open', 0, 0, 1 from s`,
+    // #283: a retired material on every bottom-third revision only, so the orders pinning those revisions are at risk.
+    "insert into material (id, tenant_code, code, type, description, base_unit, active, created_at) values ('mx', 'prod', '99999998', 'raw', 'Retired', 'each', 0, 0)",
+    `${seq(third)} insert into bom_component (id, tenant_code, revision_id, position, material_id, quantity, entered_quantity, entered_unit, numerator, denominator)
+      select 'bcx' || x, 'prod', 'rev' || (${2 * third} + x), 1 + ${COMPONENTS}, 'mx', '0.250000', '0.25', 'each', '1', '1' from s`,
     "insert into location (id, tenant_code, code, name, created_at) values ('hub', 'prod', '99999999', 'Hub', 0)",
     `${seq(transfers)} insert into transfer (id, tenant_code, code, material_id, source_id, destination_id, quantity, entered_quantity, entered_unit, numerator, denominator,
         planned_dispatch, planned_arrival, dispatched, received, written_off, abandoned, status, created_at, updated_at, version)
@@ -224,9 +233,14 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     // #282: proposals planned through a priority-2 alternative, and provisional ones (one row each).
     const fallbacks = await count(`select count(*) as n from mrp_recommendation where bom > '${String(size.materials).padStart(8, "0")}'`);
     const provisional = await count("select count(*) as n from mrp_run_exception where exception_code = 'NO_FEASIBLE_BOM'");
+    // #283: provisional actions, those sized for a provisional parent's need among them, and at-risk orders.
+    const actions = await count("select count(*) as n from mrp_run_exception where exception_code = 'PROVISIONAL_PRODUCTION'");
+    const driven = await count("select count(*) as n from mrp_run_exception where exception_code = 'PROVISIONAL_PRODUCTION' and details like '%provisional-demand%'");
+    const atRisk = await count("select count(*) as n from mrp_run_exception where exception_code = 'AT_RISK_PRODUCTION'");
     const engine = await engineOnly();
     process.stdout.write(
-      `MRP run, ${size.name} (${pairs} pairs, ${rows} daily rows, ${proposals} recommendations of which ${made} exploded, ${fallbacks} through a fallback BOM, ${provisional} No Feasible BOM, ${exceptions} exception and warning rows, ${lines} active BOM lines, ` +
+      `MRP run, ${size.name} (${pairs} pairs, ${rows} daily rows, ${proposals} recommendations of which ${made} exploded, ${fallbacks} through a fallback BOM, ${provisional} No Feasible BOM, ` +
+        `${actions} provisional actions of which ${driven} for a provisional parent, ${atRisk} at-risk orders, ${exceptions} exception, warning and provisional rows, ${lines} active BOM lines, ` +
         `${size.lines} order lines, ${size.forecasts} forecasts, ` +
         `${size.orders + size.fullOrders} purchase orders with ${size.orders * ORDER_LINES + size.fullOrders * FULL_ORDER_LINES} lines, ${size.requisitions} requisitions, ` +
         `${size.productionOrders} production orders, ${size.transfers} transfers): ` +
@@ -241,9 +255,9 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     expect(pairs).toBeGreaterThan(size.materials);
     expect(pairs).toBeLessThanOrEqual(size.materials + Math.min(size.transfers, size.materials));
     expect(rows).toBe(pairs * 90);
-    // Where demand outruns the stock and receipts, the run proposes (#278), and explodes its Make proposals (#281).
+    // Where demand outruns the stock and receipts, the run proposes (#278), and explodes its Make proposals (#281), executable or provisional (#283).
     expect(proposals).toBeGreaterThan(0);
-    expect(made).toBeGreaterThan(0);
+    expect(made + actions).toBeGreaterThan(0);
     // The fixture's BOMs are acyclic, valid and usable, and every component has its parameters: no pair is stopped (#280, #281,
     // #282). Counted by the codes meant, since the table also holds transfers' and feasibility's exceptions and the warnings.
     expect(
@@ -251,11 +265,17 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
         "select count(*) as n from mrp_run_exception where exception_code in ('INVALID_UOM_CONVERSION', 'MISSING_PLANNING_PARAMETERS', 'MISSING_BOM', 'MISSING_USABLE_BOM', 'CYCLIC_BOM')",
       ),
     ).toBe(0);
-    // Provisional proposals at both sizes; with one location also fallbacks, each claiming its components (above).
+    // Provisional proposals at both sizes, each a provisional action, and actions for their components' needs; with one
+    // location also fallbacks, each an executable proposal claiming its components (above). At-risk orders at both sizes.
     expect(provisional).toBeGreaterThan(0);
+    expect(actions).toBe(provisional + driven);
+    expect(atRisk).toBeGreaterThan(0);
+    // With ten locations a provisional parent's components have nothing to spare, so their provisional needs are sized
+    // a second time; with one, the middle third's surplus covers them.
+    if (size.locations > 1) expect(driven).toBeGreaterThan(0);
     if (size.locations === 1) {
       expect(fallbacks).toBeGreaterThan(0);
-      expect(provisional).toBeLessThan(made);
+      expect(made).toBeGreaterThan(0);
     }
     // The run counted the pipeline it read: some days carry tentative and dependable supply, dependent demand and transfers.
     const supplied = await orm.em
@@ -301,10 +321,13 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
       from (select x, 1 + (x - 1) / ${days} as o from s)`);
     const { fastest, longestStall } = await measure();
     const rows = await count("select count(*) as n from mrp_daily_result");
-    const proposals = await count("select count(*) as n from mrp_recommendation");
+    const recommendations = await count("select count(*) as n from mrp_recommendation");
+    // A Make proposal no BOM can supply is a provisional action since #283; those sized for a provisional parent's need come on top.
+    const infeasible = await count("select count(*) as n from mrp_run_exception where exception_code = 'PROVISIONAL_PRODUCTION' and details not like '%provisional-demand%'");
+    const proposals = recommendations + infeasible;
     const exceptions = await count("select count(*) as n from mrp_run_exception");
     process.stdout.write(
-      `MRP run, worst case for proposals, ${size.name} (${rows} daily rows, ${proposals} recommendations, ${exceptions} exception and warning rows, ${size.lines + size.materials * days} order lines): ` +
+      `MRP run, worst case for proposals, ${size.name} (${rows} daily rows, ${recommendations} recommendations and ${infeasible} infeasible Make proposals, ${exceptions} exception, warning and provisional rows, ${size.lines + size.materials * days} order lines): ` +
         `${fastest.toFixed(0)} ms fastest of ${RUNS}, longest event-loop stall ${longestStall.toFixed(0)} ms, planMrp alone ${(await engineOnly()).toFixed(0)} ms\n`,
     );
     // Every day but, for some materials, today: overdue purchase-order lines all land today and can cover it.

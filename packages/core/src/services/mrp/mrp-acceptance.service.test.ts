@@ -59,11 +59,12 @@ async function parameters(materialId: string, procurement: "buy" | "make" = "buy
     ANNA,
   );
 }
-/** An active BOM of `output`, valid from 2026, made of a raw material of its own: a Make set may propose it (E16-S03, #280). */
+/** An active BOM of `output`, valid from 2026, made of a raw material of its own: a Make set may propose it (E16-S03, #280). Returns the component's code. */
 async function bom(output: string) {
   const { cradle } = await scope();
   const component = await cradle.materialService.create({ type: "raw", description: `Input of ${output}`, baseUnit: "each" }, ANNA);
   await cradle.bomService.create({ output, priority: 1, validFrom: "2026-01-01", validThrough: null, components: [{ material: component.id, quantity: "1", unit: "each" }] }, ANNA);
+  return component.id;
 }
 /** The latest run's plan of `materialId` at the plant, with its proposals. */
 async function plan(materialId: string, tenant = "prod"): Promise<MrpPlanView & { run: string }> {
@@ -355,11 +356,18 @@ describe("MrpAcceptanceService.accept: refusals, with nothing created", () => {
     expect([await count("purchase_requisition"), await count("purchase_requisition", "test")]).toEqual([0, 0]);
   });
 
-  it("refuses a Make proposal as not executable until a provisional one is stored apart from a feasible one (spec Q1, #282, #283)", async () => {
+  it("refuses a Make proposal as not executable, its Make half being E19-S01's; one its BOM can't supply isn't a proposal at all (spec Q1, #282, #283)", async () => {
     const jam = await material("Jam");
     await parameters(jam.id, "make");
-    await bom(jam.id);
+    const input = await bom(jam.id);
     await order(jam.id, "12", "2026-10-08");
+    await run();
+    // No input on hand: the production is a provisional action, with no ID to accept (E17-S03).
+    const provisional = await plan(jam.id);
+    expect(provisional.proposals).toEqual([]);
+    expect(provisional.provisional).toEqual([expect.objectContaining({ kind: "production-order", quantity: "12.000000", blockers: ["no-feasible-bom"] })]);
+    expect(provisional.provisional[0]).not.toHaveProperty("id");
+    await (await scope()).cradle.stockService.correct({ material: input, location: PLANT, quantity: "12", unit: "each", reason: "Count" }, ANNA);
     await run();
     const { run: runId, proposals: [proposal] } = await plan(jam.id);
     expect(proposal).toMatchObject({ kind: "production-order", executable: false });

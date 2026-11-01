@@ -12,8 +12,16 @@ export interface MrpResult {
   dates: readonly string[];
   /** One plan per planned material and location, by material code, then location code. */
   plans: readonly MrpPlan[];
-  /** Proposed receipts (E16-S01), by material code, then location code, then need date. */
+  /**
+   * Proposed receipts (E16-S01), by material code, then location code, then need date: executable ones only,
+   * every requisition and every feasible Make proposal (E17-S03).
+   */
   proposals: readonly MrpProposal[];
+  /**
+   * The Make actions that can't execute (E17-S03, PRD §04 "Multilevel explosion"): kept apart from
+   * `proposals`, never in a balance, by material, location and need date, then a `no-feasible-bom`-only one first.
+   */
+  provisional: readonly MrpProvisionalAction[];
   /**
    * What the plan can't do as the documents say (#277), or can't plan without guessing (E16-S03), in
    * `compareExceptions` order: by material, location, code rank, date, then transfer.
@@ -41,6 +49,8 @@ export interface MrpPlan {
   supply: readonly MrpSupply[];
   /** The production orders behind the production part of the buckets' dependable supply (#277). */
   productionOutput: readonly MrpProductionOutput[];
+  /** The at-risk production orders behind the buckets' at-risk supply (E17-S03): shown, never counted. */
+  atRiskOutput: readonly MrpProductionOutput[];
   /** The production orders' component needs behind the buckets' dependent demand (#277). */
   componentDemand: readonly MrpComponentDemand[];
   /** The Make proposals' component needs behind the rest of the buckets' dependent demand (E17-S01). */
@@ -68,7 +78,11 @@ export interface MrpBucket {
   tentativeSupply: bigint;
   /** Purchase orders (E15-S02) and executable production output (E15-S03). */
   dependableSupply: bigint;
-  /** Output of production orders at risk (E17-S03): shown, never counted in the balance. */
+  /**
+   * Output of production orders at risk (E17-S03): an open order whose pinned revision has an inactive
+   * component. Shown, never counted in a balance; sizing adds it back, so the demand it was to cover is
+   * blocked rather than replanned.
+   */
   atRiskSupply: bigint;
   /** Planned transfer receipt at the destination (E15-S03). */
   transferIn: bigint;
@@ -306,6 +320,23 @@ export interface MrpNoFeasibleBom {
   rejections: readonly MrpBomRejection[];
 }
 
+/**
+ * At-Risk Existing Production / Inactive BOM Component (E17-S03, MRP-051, LFC-027): the open production
+ * order `order` of the pair pins a revision with an inactive component, so its unproduced balance `quantity`
+ * is at-risk supply, never dependable, and the demand it was to cover gets no replacement. `date` is the
+ * order's own planned finish; only an order whose output counts inside the horizon raises it.
+ */
+export interface MrpAtRiskProduction {
+  code: "AT_RISK_PRODUCTION";
+  material: string;
+  location: string;
+  date: string;
+  order: string;
+  quantity: bigint;
+  /** The pinned revision's inactive components, in code order. */
+  inactiveComponents: readonly string[];
+}
+
 /** An MRP exception: `exceptions/codes.ts` lists the codes, their messages and their rank. */
 export type MrpException =
   | MrpInvalidUomConversion
@@ -314,6 +345,7 @@ export type MrpException =
   | MrpMissingUsableBom
   | MrpBomCycle
   | MrpNoFeasibleBom
+  | MrpAtRiskProduction
   | MrpInsufficientTransferStock;
 
 /** The document behind an overdue supply item: what `MrpSupply` or `MrpProductionOutput` counts. */
@@ -419,8 +451,9 @@ export interface MrpProposalRecipe {
   /** Its current revision's number. */
   bomRevision: number | null;
   /**
-   * Its components can all be supplied on the planned start (`chooseBom`). `false` for a provisional
-   * proposal, exploded through the highest-priority usable BOM; `null` for a requisition. Not stored.
+   * Its components can all be supplied on the planned start (`chooseBom`): `true` for every production-order
+   * proposal, since one that can't be supplied is a provisional action instead (E17-S03); `null` for a
+   * requisition. Not stored.
    */
   feasible: boolean | null;
   /** Every BOM tested before `bom`, in order, each with why it was passed over (BOM-010). Not stored. */
@@ -459,4 +492,41 @@ export interface MrpProposalTiming {
   lateDays: number;
   /** Beyond Horizon: `plannedFinish` is after day 89, so the receipt is shown but never in a bucket (MRP-049). */
   beyondHorizon: boolean;
+}
+
+/**
+ * Why a provisional action can't execute (E17-S03): no usable BOM can supply it (`no-feasible-bom`), or it
+ * was sized only for a provisional parent's need (`provisional-demand`).
+ */
+export const MRP_PROVISIONAL_BLOCKERS = ["no-feasible-bom", "provisional-demand"] as const;
+export type MrpProvisionalBlocker = (typeof MRP_PROVISIONAL_BLOCKERS)[number];
+
+/** What one provisional action would need of one component, on its planned start (the explosion's figure). */
+export interface MrpProvisionalComponent {
+  material: string;
+  quantity: bigint;
+}
+
+/**
+ * A hypothetical production order of a provisional plan (E17-S03, MRP-047, BOM-011): sized and timed like
+ * a proposal and exploded through `bom`, its every component need provisional, but never executable, never
+ * a receipt in any balance and never a claim on a component.
+ */
+export interface MrpProvisionalAction extends MrpProposalTiming {
+  kind: "production-order";
+  material: string;
+  location: string;
+  /** The day it would cover: one action per pair, need date and kind of sizing. */
+  needDate: string;
+  quantity: bigint;
+  leadTimeDays: number;
+  /** The highest-priority usable BOM it is exploded through, or the feasible one `chooseBom` chose. */
+  bom: string;
+  bomRevision: number;
+  /** Its components' needs, by material code. */
+  components: readonly MrpProvisionalComponent[];
+  /** In `MRP_PROVISIONAL_BLOCKERS` order, never empty. */
+  blockers: readonly MrpProvisionalBlocker[];
+  /** Every BOM `chooseBom` passed over, as on a proposal; with `no-feasible-bom`, every valid BOM. */
+  rejectedBoms: readonly MrpBomRejection[];
 }

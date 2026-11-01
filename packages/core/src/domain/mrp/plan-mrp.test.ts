@@ -55,6 +55,7 @@ const production = (overrides: Partial<MrpProductionOrder> & { plannedStart: str
   produced: 0n,
   abandoned: 0n,
   status: "open",
+  inactiveComponents: [],
   components: [{ material: "A", perOutput: q("2") }],
   ...overrides,
 });
@@ -1810,6 +1811,7 @@ describe("planMrp: BOM explosion (E17-S01, #281)", () => {
   });
   const order = (material: string, quantity: string, offset: number) => line({ material, quantity: q(quantity), requiredDate: day(offset) });
   const proposalsOf = (result: ReturnType<typeof planMrp>, material: string) => result.proposals.filter((proposal) => proposal.material === material);
+  const actionsOf = (result: ReturnType<typeof planMrp>, material: string) => result.provisional.filter((action) => action.material === material);
 
   it("BOM-006, MRP-031: a Make proposal of 10 through 0.5 A and 0.2 B per one needs 5 A and 2 B on its planned start, and carries its BOM and revision", () => {
     const result = planMrp(
@@ -1820,8 +1822,13 @@ describe("planMrp: BOM explosion (E17-S01, #281)", () => {
       }),
       TODAY,
     );
-    expect(proposalsOf(result, "I")).toEqual([
-      expect.objectContaining({ kind: "production-order", needDate: day(5), plannedStart: day(3), quantity: q("10"), bom: "00000004", bomRevision: 2 }),
+    // Nothing of A or B is on hand, so I's BOM can't be supplied: a provisional action, not a proposal (E17-S03).
+    expect(proposalsOf(result, "I")).toEqual([]);
+    expect(actionsOf(result, "I")).toEqual([
+      expect.objectContaining({
+        kind: "production-order", needDate: day(5), plannedStart: day(3), quantity: q("10"), bom: "00000004", bomRevision: 2,
+        components: [{ material: "A", quantity: q("5") }, { material: "B", quantity: q("2") }], blockers: ["no-feasible-bom"],
+      }),
     ]);
     expect(planAt(result.plans, "A").plannedComponentDemand).toEqual([
       // Nothing of A or B is on hand, so I's BOM can't be supplied: the need is provisional (E17-S02), still exploded.
@@ -1869,7 +1876,7 @@ describe("planMrp: BOM explosion (E17-S01, #281)", () => {
     expect(proposalsOf(result, "C").map(({ needDate, quantity }) => [needDate, quantity])).toEqual([[day(4), q("30")]]);
   });
 
-  it("MRP-027: F made from 2 I, I made from 0.5 R, none on hand: each level explodes on its parent's start, and R, Buy, gets a requisition", () => {
+  it("MRP-027, MRP-047: F made from 2 I, I made from 0.5 R, none on hand: each level explodes on its parent's start, F and I are provisional, and only R's requisition is a proposal", () => {
     const result = planMrp(
       inputs({
         orderLines: [order("F", "10", 20)],
@@ -1878,18 +1885,27 @@ describe("planMrp: BOM explosion (E17-S01, #281)", () => {
       }),
       TODAY,
     );
+    // None on hand: neither F nor I can be supplied, so both are provisional, down to R (E17-S03, MRP-047).
+    expect(result.provisional.map(({ material, needDate, plannedStart, plannedFinish, quantity, bom, components, blockers }) => [material, needDate, plannedStart, plannedFinish, quantity, bom, components, blockers])).toEqual([
+      ["F", day(20), day(18), day(20), q("10"), "00000001", [{ material: "I", quantity: q("20") }], ["no-feasible-bom"]],
+      ["I", day(18), day(15), day(18), q("20"), "00000002", [{ material: "R", quantity: q("10") }], ["no-feasible-bom", "provisional-demand"]],
+    ]);
+    // R's requisition, which buying R needs whatever F and I do, is the only executable action.
     expect(result.proposals.map(({ material, kind, needDate, plannedStart, quantity, bom }) => [material, kind, needDate, plannedStart, quantity, bom])).toEqual([
-      ["F", "production-order", day(20), day(18), q("10"), "00000001"],
-      ["I", "production-order", day(18), day(15), q("20"), "00000002"],
       ["R", "purchase-requisition", day(15), day(14), q("10"), null],
     ]);
     expect(bucketOf(planAt(result.plans, "I"), day(18)).dependentDemand).toBe(q("20"));
     expect(bucketOf(planAt(result.plans, "R"), day(15)).dependentDemand).toBe(q("10"));
-    // None on hand: neither F nor I can be supplied, so both are provisional (E17-S02, MRP-047), and only R's requisition isn't.
-    expect(result.exceptions.map(({ code, material, ...rest }) => [code, material, "date" in rest ? rest.date : null])).toEqual([
-      ["NO_FEASIBLE_BOM", "F", day(20)],
-      ["NO_FEASIBLE_BOM", "I", day(18)],
-    ]);
+    // Neither hypothetical output is a receipt in any balance: F and I stay short after proposals.
+    for (const material of ["F", "I"]) {
+      const plan = planAt(result.plans, material);
+      expect(plan.buckets.every(({ proposedReceipts, dependableSupply }) => proposedReceipts === 0n && dependableSupply === 0n)).toBe(true);
+    }
+    expect(bucketOf(planAt(result.plans, "F"), day(20)).projectedAfter).toBe(-q("10"));
+    expect(bucketOf(planAt(result.plans, "I"), day(18)).projectedAfter).toBe(-q("20"));
+    // I's own BOM can't be supplied either, but only F, sized for real demand, raises No Feasible BOM: I's action says so itself.
+    expect(result.exceptions.map(({ code, material, ...rest }) => [code, material, "date" in rest ? rest.date : null])).toEqual([["NO_FEASIBLE_BOM", "F", day(20)]]);
+    expect(actionsOf(result, "I")[0].rejectedBoms).toEqual([{ bom: "00000002", revision: 1, reason: "shortage", shortages: [{ material: "R", required: q("10"), available: 0n, shortage: q("10") }] }]);
   });
 
   it("MRP-028: a chain A → B → C terminates with each material planned once; a stored cycle X ↔ Y is reported on both and never exploded, and the rest still plans", () => {
@@ -1908,15 +1924,20 @@ describe("planMrp: BOM explosion (E17-S01, #281)", () => {
       TODAY,
     );
     expect(result.plans.map(({ material }) => material)).toEqual(["A", "B", "C", "F", "X", "Y"]);
-    expect(result.proposals.map(({ material, quantity }) => [material, quantity])).toEqual([["A", q("2")], ["B", q("2")], ["C", q("2")], ["F", q("5")]]);
+    // Nothing is on hand, so every exploded parent is provisional, and only C's requisition is a proposal (E17-S03).
+    expect(result.proposals.map(({ material, quantity }) => [material, quantity])).toEqual([["C", q("2")]]);
+    expect(result.provisional.map(({ material, quantity, blockers }) => [material, quantity, blockers])).toEqual([
+      ["A", q("2"), ["no-feasible-bom"]],
+      ["B", q("2"), ["no-feasible-bom", "provisional-demand"]],
+      ["F", q("5"), ["no-feasible-bom"]],
+    ]);
     expect(result.exceptions.filter(({ code }) => code === "CYCLIC_BOM")).toEqual([
       { code: "CYCLIC_BOM", material: "X", location: "L1", path: "X →(BOM 00000011) Y →(BOM 00000012) X" },
       { code: "CYCLIC_BOM", material: "Y", location: "L1", path: "Y →(BOM 00000012) X →(BOM 00000011) Y" },
     ]);
-    // Nothing is on hand, so every exploded parent is provisional (E17-S02).
+    // B's action exists only for A's provisional need, so it raises no No Feasible BOM of its own.
     expect(result.exceptions.filter(({ code }) => code !== "CYCLIC_BOM").map(({ code, material }) => [code, material])).toEqual([
       ["NO_FEASIBLE_BOM", "A"],
-      ["NO_FEASIBLE_BOM", "B"],
       ["NO_FEASIBLE_BOM", "F"],
     ]);
     // F still explodes into X, so X's shortage shows; X never explodes, so Y sees nothing from it.
@@ -1933,7 +1954,8 @@ describe("planMrp: BOM explosion (E17-S01, #281)", () => {
       }),
       TODAY,
     );
-    expect(result.proposals.map(({ material, lateDays, beyondHorizon, plannedStart }) => [material, lateDays, beyondHorizon, plannedStart])).toEqual([
+    // No A on hand: both are provisional actions, timed and exploded like proposals.
+    expect(result.provisional.map(({ material, lateDays, beyondHorizon, plannedStart }) => [material, lateDays, beyondHorizon, plannedStart])).toEqual([
       ["H", 100, true, TODAY],
       ["P", 3, false, TODAY],
     ]);
@@ -1989,7 +2011,8 @@ describe("planMrp: BOM explosion (E17-S01, #281)", () => {
         if (before >= 0n) expect(flows).toBe(projectedAfter < 0n ? -projectedAfter : 0n);
       });
     }
-    expect([...kinds].sort()).toEqual(["planned-component"]);
+    // F's and G's proposals can't be supplied, so they are provisional and their own orders stay short (E17-S03).
+    expect([...kinds].sort()).toEqual(["customer-order", "planned-component"]);
   });
 
   it("gives an equal result for a shuffled snapshot, BOMs and their lines included", () => {
@@ -2006,8 +2029,9 @@ describe("planMrp: BOM explosion (E17-S01, #281)", () => {
     });
     const forward = planMrp(snapshot, TODAY);
     expect(forward.exceptions.filter(({ code }) => code === "CYCLIC_BOM")).toEqual([{ code: "CYCLIC_BOM", material: "X", location: "L1", path: "X →(BOM 00000009) X" }]);
-    // The new fields are in the comparison: rejected BOMs and provisional needs (E17-S02).
-    expect(forward.proposals.some(({ rejectedBoms }) => rejectedBoms.length > 0)).toBe(true);
+    // The new fields are in the comparison: rejected BOMs and provisional needs (E17-S02) and provisional actions (E17-S03).
+    expect(forward.provisional.some(({ rejectedBoms }) => rejectedBoms.length > 0)).toBe(true);
+    expect(forward.provisional.some(({ blockers }) => blockers.includes("provisional-demand"))).toBe(true);
     const shuffled = Object.fromEntries(Object.entries(snapshot).map(([key, list]) => [key, [...(list as readonly unknown[])].reverse()])) as unknown as MrpInputs;
     const boms = shuffled.boms.map((bom) => ({ ...bom, components: [...bom.components].reverse() }));
     expect(planMrp({ ...shuffled, boms }, TODAY)).toEqual(forward);
@@ -2015,6 +2039,7 @@ describe("planMrp: BOM explosion (E17-S01, #281)", () => {
 });
 
 describe("planMrp: BOM choice (E17-S02, #282)", () => {
+  const actionsOf = (result: ReturnType<typeof planMrp>, material: string) => result.provisional.filter((action) => action.material === material);
   const day = (offset: number) => addDays(TODAY, offset);
   /** A set at L1: Buy for a raw material, Make for an intermediate, exact lots, lead time `leadTimeDays`. */
   const params = (material: string, procurement: "make" | "buy", leadTimeDays = 2, overrides: Partial<MrpPlanningParameters> = {}): MrpPlanningParameters => ({
@@ -2029,6 +2054,11 @@ describe("planMrp: BOM choice (E17-S02, #282)", () => {
   });
   const order = (material: string, quantity: string, offset: number) => line({ material, quantity: q(quantity), requiredDate: day(offset) });
   const proposalOf = (result: ReturnType<typeof planMrp>, material: string) => result.proposals.find((proposal) => proposal.material === material)!;
+  /** A material's first provisional action (E17-S03): where a Make proposal no BOM can supply goes. */
+  const actionOf = (result: ReturnType<typeof planMrp>, material: string) => result.provisional.find((action) => action.material === material)!;
+  /** Whether `material`'s proposal is executable (`true`) or a provisional action (`false`). */
+  const executable = (result: ReturnType<typeof planMrp>, material: string) =>
+    result.proposals.some((proposal) => proposal.material === material) && !result.provisional.some((action) => action.material === material);
   const exceptionsOf = (result: ReturnType<typeof planMrp>, material: string) => result.exceptions.filter((exception) => exception.material === material);
   const short = (material: string, required: string, available: string) => ({ material, required: q(required), available: q(available), shortage: q(required) - q(available) });
   /** F's two alternatives: priority 1 needs 1 A per unit, priority 2 needs 1 B. */
@@ -2058,7 +2088,8 @@ describe("planMrp: BOM choice (E17-S02, #282)", () => {
     expect(planAt(fallback.plans, "A").plannedComponentDemand).toEqual([]);
     // 5.9 B can't give the full 6 either: no executable production, a provisional one through priority 1 instead.
     const neither = planMrp(snapshot("5.9"), TODAY);
-    expect(proposalOf(neither, "F")).toMatchObject({ quantity: q("6"), bom: "00000001", feasible: false });
+    expect(neither.proposals.filter(({ material }) => material === "F")).toEqual([]);
+    expect(actionOf(neither, "F")).toMatchObject({ quantity: q("6"), bom: "00000001", blockers: ["no-feasible-bom"] });
     expect(exceptionsOf(neither, "F")).toEqual([
       {
         code: "NO_FEASIBLE_BOM",
@@ -2086,7 +2117,7 @@ describe("planMrp: BOM choice (E17-S02, #282)", () => {
       rejectedBoms: [{ bom: "00000001", revision: 1, reason: "shortage", shortages: [short("R", "50", "0")] }],
     });
     const alone = planMrp(snapshot([withR]), TODAY);
-    expect(proposalOf(alone, "F")).toMatchObject({ bom: "00000001", feasible: false });
+    expect(actionOf(alone, "F")).toMatchObject({ bom: "00000001", blockers: ["no-feasible-bom"] });
     expect(exceptionsOf(alone, "F").map(({ code }) => code)).toEqual(["NO_FEASIBLE_BOM"]);
   });
 
@@ -2115,7 +2146,7 @@ describe("planMrp: BOM choice (E17-S02, #282)", () => {
         }),
         TODAY,
       );
-    const feasibility = (result: ReturnType<typeof planMrp>) => ["PA", "PB"].map((material) => proposalOf(result, material).feasible);
+    const feasibility = (result: ReturnType<typeof planMrp>) => ["PA", "PB"].map((material) => executable(result, material));
     // PB starts on day 3 and PA on day 5: PB claims, though PA's code comes first.
     expect(feasibility(run(7, 5))).toEqual([false, true]);
     expect(exceptionsOf(run(7, 5), "PA")[0]).toMatchObject({ code: "NO_FEASIBLE_BOM", rejections: [{ shortages: [short("C", "8", "2")] }] });
@@ -2136,7 +2167,7 @@ describe("planMrp: BOM choice (E17-S02, #282)", () => {
       );
     // The open order takes 8 C on day 50: from F's start on day 5 only 2 are left.
     const later = production({ plannedStart: day(50), plannedFinish: day(51), components: [{ material: "C", perOutput: q("0.08") }] });
-    expect(proposalOf(run([later]), "F")).toMatchObject({ feasible: false, rejectedBoms: [{ shortages: [short("C", "5", "2")] }] });
+    expect(actionOf(run([later]), "F")).toMatchObject({ blockers: ["no-feasible-bom"], rejectedBoms: [{ shortages: [short("C", "5", "2")] }] });
     expect(proposalOf(run([]), "F").feasible).toBe(true);
   });
 
@@ -2152,7 +2183,7 @@ describe("planMrp: BOM choice (E17-S02, #282)", () => {
       TODAY,
     );
     expect(proposalOf(result, "G")).toMatchObject({ plannedStart: day(60), feasible: true });
-    expect(proposalOf(result, "I")).toMatchObject({ plannedStart: day(5), feasible: false, rejectedBoms: [{ shortages: [short("C", "5", "2")] }] });
+    expect(actionOf(result, "I")).toMatchObject({ plannedStart: day(5), blockers: ["no-feasible-bom"], rejectedBoms: [{ shortages: [short("C", "5", "2")] }] });
   });
 
   it("Q4: a provisional parent's needs drive its component's projection and proposal, but never make a feasible parent tested after it infeasible", () => {
@@ -2166,15 +2197,15 @@ describe("planMrp: BOM choice (E17-S02, #282)", () => {
       TODAY,
     );
     // P1 starts on day 3 and lacks B, so it is provisional; its 10 A would leave P2 nothing on day 6.
-    expect(proposalOf(result, "P1").feasible).toBe(false);
-    expect(proposalOf(result, "P2").feasible).toBe(true);
+    expect(executable(result, "P1")).toBe(false);
+    expect(executable(result, "P2")).toBe(true);
     const a = planAt(result.plans, "A");
     expect(bucketOf(a, day(3)).dependentDemand).toBe(q("10"));
     expect(a.plannedComponentDemand.map(({ parent, provisional }) => [parent, provisional])).toEqual([["P1", true], ["P2", false]]);
     expect(result.proposals.filter(({ material }) => material === "A").map(({ quantity }) => quantity)).toEqual([q("8")]);
   });
 
-  it("MRP-026, BOM-011: F is provisional because I has no stock, yet I is planned from F's need, and I's proposal for its own order is feasible from R's stock", () => {
+  it("MRP-026, BOM-011: F is provisional because I has no stock, yet I is planned from F's need, provisionally, and I's proposal for its own order is feasible from R's stock", () => {
     const result = planMrp(
       inputs({
         stock: [stock("R", "L1", "100")],
@@ -2184,13 +2215,13 @@ describe("planMrp: BOM choice (E17-S02, #282)", () => {
       }),
       TODAY,
     );
-    expect(proposalOf(result, "F")).toMatchObject({ feasible: false, rejectedBoms: [{ shortages: [short("I", "10", "0")] }] });
+    expect(actionOf(result, "F")).toMatchObject({ blockers: ["no-feasible-bom"], rejectedBoms: [{ shortages: [short("I", "10", "0")] }] });
     expect(bucketOf(planAt(result.plans, "I"), day(18)).dependentDemand).toBe(q("10"));
-    const i = result.proposals.filter(({ material }) => material === "I");
-    expect(i.map(({ needDate, quantity, feasible }) => [needDate, quantity, feasible])).toEqual([
-      [day(10), q("5"), true],
-      [day(18), q("10"), true],
-    ]);
+    // I's own order is an executable proposal; F's need is a provisional action whose BOM R could supply (E17-S03 Q5).
+    expect(result.proposals.filter(({ material }) => material === "I").map(({ needDate, quantity, feasible }) => [needDate, quantity, feasible])).toEqual([[day(10), q("5"), true]]);
+    expect(actionsOf(result, "I")).toEqual([expect.objectContaining({ needDate: day(18), quantity: q("10"), blockers: ["provisional-demand"], rejectedBoms: [] })]);
+    // The provisional action never claims: R's need from it is provisional.
+    expect(planAt(result.plans, "R").plannedComponentDemand.map(({ parent, provisional }) => [parent, provisional])).toEqual([["I", false], ["I", true]]);
     expect(result.exceptions.map(({ code, material }) => [code, material])).toEqual([["NO_FEASIBLE_BOM", "F"]]);
   });
 
@@ -2235,7 +2266,7 @@ describe("planMrp: BOM choice (E17-S02, #282)", () => {
       }),
       TODAY,
     );
-    expect(proposalOf(result, "F")).toMatchObject({ feasible: false, rejectedBoms: [{ shortages: [short("A", "5", "0")] }] });
+    expect(actionOf(result, "F")).toMatchObject({ blockers: ["no-feasible-bom"], rejectedBoms: [{ shortages: [short("A", "5", "0")] }] });
   });
 
   it("a component no pair names gives nothing, and testing a BOM that isn't chosen creates no plan for it", () => {
@@ -2263,10 +2294,159 @@ describe("planMrp: BOM choice (E17-S02, #282)", () => {
       }),
       TODAY,
     );
-    expect(result.proposals.filter(({ material }) => material === "F").map(({ feasible }) => feasible)).toEqual([true, false, false]);
+    expect(result.proposals.filter(({ material }) => material === "F").map(({ needDate }) => needDate)).toEqual([day(10)]);
+    expect(actionsOf(result, "F").map(({ needDate, blockers }) => [needDate, blockers])).toEqual([[day(17), ["no-feasible-bom"]], [day(24), ["no-feasible-bom"]]]);
     expect(exceptionsOf(result, "F").map(({ code, ...rest }) => [code, "date" in rest ? rest.date : null])).toEqual([
       ["NO_FEASIBLE_BOM", day(17)],
       ["NO_FEASIBLE_BOM", day(24)],
     ]);
+  });
+});
+
+describe("planMrp: at-risk production and provisional plans (E17-S03, #283)", () => {
+  const day = (offset: number) => addDays(TODAY, offset);
+  const params = (material: string, procurement: "make" | "buy", leadTimeDays = 2, overrides: Partial<MrpPlanningParameters> = {}): MrpPlanningParameters => ({
+    material,
+    location: "L1",
+    materialType: procurement === "buy" ? "raw" : "finished",
+    procurement,
+    leadTimeDays,
+    minimumQuantity: 0n,
+    lotMultiple: q("0.000001"),
+    ...overrides,
+  });
+  const order = (material: string, quantity: string, offset: number) => line({ material, quantity: q(quantity), requiredDate: day(offset) });
+  /** An open order of 10 F, from day 5 to day 8, pinning 1 R (inactive unless `active`) and 2 A per unit. */
+  const pinned = (overrides: Partial<MrpProductionOrder> = {}) =>
+    production({
+      order: "00000007", material: "F", plannedStart: day(5), plannedFinish: day(8), quantity: q("10"),
+      inactiveComponents: ["R"], components: [{ material: "R", perOutput: q("1") }, { material: "A", perOutput: q("2") }],
+      ...overrides,
+    });
+  /** F's BOM with R, which the order pins, and a second, usable one with S. */
+  const withR = recipe("F", { R: "1", A: "2" }, { inactiveComponents: ["R"] });
+  const withS = recipe("F", { S: "1" }, { bom: "00000002", priority: 2 });
+  const atRisk = (result: ReturnType<typeof planMrp>) => result.exceptions.filter(({ code }) => code === "AT_RISK_PRODUCTION");
+  /** F's exceptions: the order's active A, with no planning parameters, raises its own. */
+  const exceptionsOfF = (result: ReturnType<typeof planMrp>) => result.exceptions.filter(({ material }) => material === "F");
+
+  it("MRP-051, LFC-027: the order's balance is at-risk supply, never dependable; F's shortage shows, no F production replaces it, and the order is flagged", () => {
+    const result = planMrp(
+      inputs({ productionOrders: [pinned()], orderLines: [order("F", "10", 12)], planningParameters: [params("F", "make"), params("R", "buy")], boms: [withR] }),
+      TODAY,
+    );
+    const f = planAt(result.plans, "F");
+    expect(bucketOf(f, day(8))).toMatchObject({ atRiskSupply: q("10"), dependableSupply: 0n, projectedBefore: 0n });
+    expect(bucketOf(f, day(12))).toMatchObject({ projectedBefore: -q("10"), projectedAfter: -q("10"), shortage: q("10") });
+    expect(f.atRiskOutput).toEqual([{ order: "00000007", material: "F", location: "L1", plannedFinish: day(8), date: day(8), quantity: q("10"), overdue: false }]);
+    expect(f.productionOutput).toEqual([]);
+    expect(f.shortages).toEqual([expect.objectContaining({ kind: "customer-order", date: day(12), uncovered: q("10") })]);
+    expect([...result.proposals, ...result.provisional].filter(({ material }) => material === "F")).toEqual([]);
+    // The demand equals the order's balance, so nothing reaches Missing Usable BOM.
+    expect(exceptionsOfF(result)).toEqual([
+      { code: "AT_RISK_PRODUCTION", material: "F", location: "L1", date: day(8), order: "00000007", quantity: q("10"), inactiveComponents: ["R"] },
+    ]);
+  });
+
+  it("Q1: the order's active component keeps its demand on its start, and inactive R gets none, so no requisition for R", () => {
+    const result = planMrp(
+      inputs({ productionOrders: [pinned()], orderLines: [order("F", "10", 12)], planningParameters: [params("F", "make"), params("R", "buy"), params("A", "buy")], boms: [withR] }),
+      TODAY,
+    );
+    expect(bucketOf(planAt(result.plans, "A"), day(5)).dependentDemand).toBe(q("20"));
+    expect(result.plans.map(({ material }) => material)).toEqual(["A", "F"]);
+    expect(result.proposals.map(({ material, quantity }) => [material, quantity])).toEqual([["A", q("20")]]);
+  });
+
+  it("Q2: demand beyond the at-risk balance is planned through a usable BOM; with R in every valid BOM it raises Missing Usable BOM", () => {
+    const snapshot = (boms: MrpBom[]) =>
+      inputs({ stock: [stock("S", "L1", "100")], productionOrders: [pinned()], orderLines: [order("F", "15", 12)], planningParameters: [params("F", "make")], boms });
+    const usable = planMrp(snapshot([withR, withS]), TODAY);
+    expect(usable.proposals.map(({ material, needDate, quantity, bom }) => [material, needDate, quantity, bom])).toEqual([["F", day(12), q("5"), "00000002"]]);
+    expect(bucketOf(planAt(usable.plans, "F"), day(12))).toMatchObject({ projectedBefore: -q("15"), projectedAfter: -q("10") });
+    const only = planMrp(snapshot([withR]), TODAY);
+    expect(only.proposals).toEqual([]);
+    expect(exceptionsOfF(only).map(({ code }) => code)).toEqual(["MISSING_USABLE_BOM", "AT_RISK_PRODUCTION"]);
+  });
+
+  it("puts only the unproduced balance at risk: output already posted is physical stock", () => {
+    const result = planMrp(
+      inputs({ stock: [stock("F", "L1", "4")], productionOrders: [pinned({ produced: q("4") })], orderLines: [order("F", "10", 12)], planningParameters: [params("F", "make")], boms: [withR] }),
+      TODAY,
+    );
+    const f = planAt(result.plans, "F");
+    expect(bucketOf(f, day(8)).atRiskSupply).toBe(q("6"));
+    expect(bucketOf(f, day(12))).toMatchObject({ projectedBefore: -q("6"), projectedAfter: -q("6") });
+    expect(atRisk(result)).toEqual([expect.objectContaining({ quantity: q("6") })]);
+  });
+
+  it("keeps an at-risk F out of its parent's BOM test: G can't rely on F's at-risk output, but can when R is active", () => {
+    const snapshot = (inactiveComponents: string[]) =>
+      inputs({
+        productionOrders: [pinned({ inactiveComponents })],
+        orderLines: [order("G", "5", 20)],
+        planningParameters: [params("G", "make")],
+        boms: [recipe("G", { F: "1" }, { bom: "00000009" }), withR],
+      });
+    expect(planMrp(snapshot(["R"]), TODAY).provisional.map(({ material, blockers }) => [material, blockers])).toEqual([["G", ["no-feasible-bom"]]]);
+    expect(planMrp(snapshot([]), TODAY).proposals.map(({ material, bom }) => [material, bom])).toEqual([["G", "00000009"]]);
+  });
+
+  it("plans F again on a rerun once the order is cancelled, and counts its output as dependable once R is active again", () => {
+    const snapshot = (order0: MrpProductionOrder) =>
+      inputs({ stock: [stock("S", "L1", "100")], productionOrders: [order0], orderLines: [order("F", "10", 12)], planningParameters: [params("F", "make")], boms: [withR, withS] });
+    const cancelled = planMrp(snapshot(pinned({ status: "cancelled" })), TODAY);
+    expect(cancelled.proposals.map(({ material, quantity, bom }) => [material, quantity, bom])).toEqual([["F", q("10"), "00000002"]]);
+    expect(atRisk(cancelled)).toEqual([]);
+    const reactivated = planMrp(snapshot(pinned({ inactiveComponents: [] })), TODAY);
+    expect(bucketOf(planAt(reactivated.plans, "F"), day(8))).toMatchObject({ dependableSupply: q("10"), atRiskSupply: 0n });
+    expect(reactivated.proposals).toEqual([]);
+    expect(exceptionsOfF(reactivated)).toEqual([]);
+  });
+
+  it("raises no at-risk exception for an unreadable material, or for an order finishing after the horizon, and no overdue warning for an overdue one", () => {
+    const unreadable = planMrp(
+      inputs({ productionOrders: [pinned()], unreadable: [{ material: "F", location: "L1", record: "forecast" }], planningParameters: [params("F", "make")], boms: [withR] }),
+      TODAY,
+    );
+    expect(atRisk(unreadable)).toEqual([]);
+    const late = planMrp(inputs({ productionOrders: [pinned({ plannedStart: day(80), plannedFinish: day(95) })], boms: [withR] }), TODAY);
+    expect(atRisk(late)).toEqual([]);
+    const overdue = planMrp(inputs({ productionOrders: [pinned({ plannedStart: day(-5), plannedFinish: day(-2) })], boms: [withR] }), TODAY);
+    expect(bucketOf(planAt(overdue.plans, "F"), TODAY).atRiskSupply).toBe(q("10"));
+    expect(atRisk(overdue)).toEqual([expect.objectContaining({ date: day(-2) })]);
+    expect(overdue.warnings).toEqual([]);
+  });
+
+  it("issue criterion 6: a provisional plan suppresses no shortage, supplies nothing, and is listed once per need, not on each later day of the shortage", () => {
+    const result = planMrp(
+      inputs({ orderLines: [order("F", "10", 10)], planningParameters: [params("F", "make")], boms: [recipe("F", { A: "1" })] }),
+      TODAY,
+    );
+    const f = planAt(result.plans, "F");
+    expect(result.provisional.map(({ material, needDate, quantity }) => [material, needDate, quantity])).toEqual([["F", day(10), q("10")]]);
+    expect(f.buckets.slice(10).every(({ projectedAfter, proposedReceipts }) => projectedAfter === -q("10") && proposedReceipts === 0n)).toBe(true);
+    expect(f.shortages).toEqual([expect.objectContaining({ kind: "customer-order", uncovered: q("10") })]);
+    expect(result.proposals).toEqual([]);
+  });
+
+  it("sizes the executable part of a Make component apart from its provisional part, the second carried over the first", () => {
+    // F can't be supplied (no I), so its 10 I on day 8 are provisional; I's own order of 4 on day 6 is real, and R covers both.
+    const result = planMrp(
+      inputs({
+        stock: [stock("R", "L1", "100")],
+        orderLines: [order("F", "10", 10), order("I", "4", 6), order("I", "3", 8)],
+        planningParameters: [params("F", "make"), params("I", "make", 1, { materialType: "intermediate" })],
+        boms: [recipe("F", { I: "1" }), recipe("I", { R: "1" }, { bom: "00000002" })],
+      }),
+      TODAY,
+    );
+    expect(result.proposals.map(({ material, needDate, quantity }) => [material, needDate, quantity])).toEqual([["I", day(6), q("4")], ["I", day(8), q("3")]]);
+    expect(result.provisional.map(({ material, needDate, quantity, blockers }) => [material, needDate, quantity, blockers])).toEqual([
+      ["F", day(10), q("10"), ["no-feasible-bom"]],
+      ["I", day(8), q("10"), ["provisional-demand"]],
+    ]);
+    // I's executable proposals are booked; the provisional 10 stay short after proposals.
+    expect(bucketOf(planAt(result.plans, "I"), day(8))).toMatchObject({ dependentDemand: q("10"), proposedReceipts: q("3"), projectedAfter: -q("10") });
   });
 });

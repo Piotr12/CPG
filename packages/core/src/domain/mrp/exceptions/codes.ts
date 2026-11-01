@@ -2,8 +2,8 @@
  * The MRP exception codes (E16-S03), in rank order: within one pair they sort in this order (spec Q11).
  * They are the API's codes, so a screen translates an exception by code and `params`, never by its
  * message (lesson 2026-10-23). E17 adds its codes here (`CYCLIC_BOM`, E17-S01; `MISSING_USABLE_BOM` and
- * `NO_FEASIBLE_BOM`, E17-S02). A pair with `NO_FEASIBLE_BOM` keeps its proposals, so it never also has
- * one of the codes before it, which stop them.
+ * `NO_FEASIBLE_BOM`, E17-S02; `AT_RISK_PRODUCTION`, E17-S03). The codes from `NO_FEASIBLE_BOM` on keep the
+ * pair's other proposals; the ones before it stop them.
  */
 export const MRP_EXCEPTION_CODES = [
   "INVALID_UOM_CONVERSION",
@@ -12,6 +12,7 @@ export const MRP_EXCEPTION_CODES = [
   "MISSING_USABLE_BOM",
   "CYCLIC_BOM",
   "NO_FEASIBLE_BOM",
+  "AT_RISK_PRODUCTION",
   "INSUFFICIENT_TRANSFER_STOCK",
 ] as const;
 export type MrpExceptionCode = (typeof MRP_EXCEPTION_CODES)[number];
@@ -25,6 +26,8 @@ export const MRP_EXCEPTION_MESSAGES: Readonly<Record<MrpExceptionCode, string>> 
   CYCLIC_BOM: "This material is on a cycle of BOMs, so MRP doesn't explode it and proposes no production for it here.",
   NO_FEASIBLE_BOM:
     "No usable BOM of this material can be supplied from stock and dependable supply on the proposal's planned start, so the proposal can't be produced as planned; its components are planned through the highest-priority usable BOM.",
+  AT_RISK_PRODUCTION:
+    "An open production order of this material pins a BOM revision with an inactive component, so its unproduced output is at risk: MRP doesn't count it as supply, and proposes no replacement for the demand it was to cover until the order is closed or cancelled or the component is reactivated.",
   INSUFFICIENT_TRANSFER_STOCK: "The source can't supply this transfer's undispatched quantity on its dispatch day, so only the available part is planned.",
 };
 

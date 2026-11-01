@@ -55,6 +55,14 @@ describe("toStoredException and exceptionParams", () => {
     expect(withInactive.details).toEqual({ missing, inactive: "00000003/1: 00000014" });
   });
 
+  it("stores At-Risk Production on the order's planned finish, its quantity as a six-decimal text and its inactive components joined (#283)", () => {
+    const stored = toStoredException({
+      code: "AT_RISK_PRODUCTION", material: "M1", location: "L1", date: "2026-10-08", order: "00000007", quantity: 12_500_000n, inactiveComponents: ["00000011", "00000012"],
+    });
+    expect(stored).toEqual({ code: "AT_RISK_PRODUCTION", material: "M1", location: "L1", date: "2026-10-08", details: { order: "00000007", quantity: "12.500000", inactiveComponents: "00000011, 00000012" } });
+    expect(exceptionParams(stored)).toEqual({ material: "M1", location: "L1", date: "2026-10-08", order: "00000007", quantity: "12.500000", inactiveComponents: "00000011, 00000012" });
+  });
+
   it("stores Insufficient Transfer Stock at its source, its quantities as six-decimal texts", () => {
     const stored = toStoredException({
       code: "INSUFFICIENT_TRANSFER_STOCK", transfer: "00000003", material: "M1", source: "S", destination: "D", date: "2026-10-02", planned: 100_000_000n, available: 60_500_000n,
