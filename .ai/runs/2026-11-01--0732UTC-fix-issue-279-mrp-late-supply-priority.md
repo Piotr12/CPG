@@ -3,7 +3,7 @@
 **Date:** 2026-11-01 07:32 UTC
 **Agent:** Claude Code (cezar, headless) / claude-opus-5-5
 **Spec:** `.ai/specs/2026-11-01--0738UTC-mrp-proposal-timing-demand-priority.md`
-**Status:** in progress
+**Status:** done (both PRs are drafts, pending the owner's Q2/Q4 confirmation)
 
 ## Goal
 
@@ -37,6 +37,13 @@ Take #279 end to end with `om-auto-fix-issue`. It is a `feature` issue, so the r
   - the over-buy of late lots acknowledged;
   - scheduling moved into `planMrp`, and priority into a `priority/` seam.
 - 08:48 `tests/ai-filenames.test.ts` failed on `main` itself. #312 and #313 both merged, and #278's spec kept its active copy beside `implemented/`. Deleted the active copy on this branch, so every later PR's CI passes that check.
+- 08:55 Opened spec PR #315 as a draft, under the ⚠ guard. Labels: `review`, `documentation`, `skip-qa`, `priority-medium`, `risk-low`. Posted the assumptions table on #315 and #279, and handed the issue lock to `om-auto-implement-spec`. Its CI is green.
+- 09:00 Implementation PR #317, on `feat/mrp-proposal-timing-demand-priority` from `main`. The execution plan `.ai/pipeline/runs/2026-11-01--0749UTC-mrp-proposal-timing-demand-priority.md` is that run's log.
+  - Gate: 5,026 tests at 100% coverage, lint, typecheck and build, all green.
+  - Docker is unavailable here, so 5 integration files ran on a standalone build: 32 tests passed.
+  - A fresh-context code review approved, and its four Low findings are fixed.
+  - Kept as a draft under the ⚠ guard. Labels: `review`, `feature`, `needs-qa`, `priority-medium`, `risk-medium`.
+  - Swapped the issue's `in-progress` for `ci-monitoring` while #317's CI runs.
 
 ## Changes
 
@@ -49,3 +56,7 @@ Take #279 end to end with `om-auto-fix-issue`. It is a `feature` issue, so the r
 - `npx vitest run tests/ai-filenames.test.ts tests/spec-images.test.ts`: 2 files, 7 tests passed (1 failed before the stale copy was deleted).
 
 ## Follow-ups
+
+- Piotr12 to confirm Q2 (no Beyond Horizon proposal for demand after day 89) and Q4 (typed shortages engine-only) on #315.
+- Merge #315 before #317, then merge `main` into #317 and delete the spec's active copy.
+- #317 needs a human QA pass (`needs-qa`).
