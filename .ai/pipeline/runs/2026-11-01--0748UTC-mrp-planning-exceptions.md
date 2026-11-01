@@ -45,16 +45,18 @@ The active copy of #278's spec is deleted here too, as on #314, because `tests/a
 
 - 07:48 Branched `feat/mrp-planning-exceptions` from `origin/main`. The spec is copied in from #314's branch, uncommitted, and moves straight to `implemented/` at the end (lesson 2026-10-23, "Don't stack the implementation PR").
 
+- Phase 1 (to 07:55): the engine change reached only four existing tests. Two Make tests needed a BOM fixture. The transfer tests read their exceptions through `planTransferExceptions`, because pairs with no set now add Missing Planning Parameters. One test's order changed to material first (spec Q11). 182 + 11 new engine tests passed, and core typecheck and lint exited 0.
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Engine
 
-- [ ] 1.1 BOM validity predicate shared with the production dialog
-- [ ] 1.2 Exception codes, order and input types
-- [ ] 1.3 Per-pair decision
-- [ ] 1.4 Wire exceptions into planMrp
+- [x] 1.1 BOM validity predicate shared with the production dialog — 07d969df
+- [x] 1.2 Exception codes, order and input types — 721b4dd6
+- [x] 1.3 Per-pair decision — 721b4dd6
+- [x] 1.4 Wire exceptions into planMrp — 721b4dd6
 
 ### Phase 2: Loader and storage
 
