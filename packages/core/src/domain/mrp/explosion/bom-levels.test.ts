@@ -57,6 +57,16 @@ describe("bomLevels", () => {
     });
   });
 
+  it("names the shortest cycle across a BOM's components, not the first component's: X → Z → X over X → A → C → X", () => {
+    const { cycles } = bomLevels([recipe("B1", "X", "A", "Z"), recipe("B2", "A", "C"), recipe("B3", "C", "X"), recipe("B4", "Z", "X")]);
+    expect(cycles.get("X")).toBe("X →(BOM B1) Z →(BOM B4) X");
+  });
+
+  it("breaks a tie between equally short cycles by BOM code, then component code", () => {
+    const { cycles } = bomLevels([recipe("B2", "X", "A"), recipe("B1", "X", "Z", "Y"), recipe("B3", "A", "X"), recipe("B4", "Y", "X"), recipe("B5", "Z", "X")]);
+    expect(cycles.get("X")).toBe("X →(BOM B1) Y →(BOM B4) X");
+  });
+
   it("tries a member's BOMs in code order until one closes a cycle", () => {
     const { cycles } = bomLevels([recipe("B1", "X", "R"), recipe("B2", "X", "Y"), recipe("B3", "Y", "X")]);
     expect(cycles.get("X")).toBe("X →(BOM B2) Y →(BOM B3) X");

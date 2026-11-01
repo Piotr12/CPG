@@ -1064,16 +1064,22 @@ describe("MrpSnapshotService", () => {
       const em = traced.em.fork();
       selectTenant(em, "prod");
       const output = em.create(Material, { code: "00000001", type: "finished", description: "Cabinet", baseUnit: "each" });
+      const input = (index: number) => em.create(Material, { code: code(1_000 + index), type: "raw", description: `Input ${index}`, baseUnit: "each" });
       for (let index = 1; index <= BOM_CHUNK + 1; index += 1) {
         const bom = em.create(Bom, { code: code(index), output, revision: 2 });
-        em.create(BomRevision, { bom, number: 1, priority: index, validFrom: "2026-01-01", validThrough: "2026-06-30" });
-        em.create(BomRevision, { bom, number: 2, priority: index, validFrom: "2026-07-01", validThrough: null });
+        const line = { position: 1, quantity: "1.000000", enteredQuantity: "1", enteredUnit: "each", numerator: "1", denominator: "1" };
+        em.create(BomComponent, { ...line, material: input(index), revision: em.create(BomRevision, { bom, number: 1, priority: index, validFrom: "2026-01-01", validThrough: "2026-06-30" }) });
+        // Each current revision's one line names its own input, so a line attached to the wrong revision or chunk shows.
+        em.create(BomComponent, { ...line, material: input(BOM_CHUNK + 1 + index), revision: em.create(BomRevision, { bom, number: 2, priority: index, validFrom: "2026-07-01", validThrough: null }) });
       }
       await em.flush();
       queries.length = 0;
       const { boms } = await new MrpSnapshotService({ em }).load(TODAY);
       expect(boms).toHaveLength(BOM_CHUNK + 1);
       expect(boms.every(({ validFrom }) => validFrom === "2026-07-01")).toBe(true);
+      expect(boms.every(({ bom, components }) => components.length === 1 && components[0].material === code(1_000 + BOM_CHUNK + 1 + Number(bom)))).toBe(true);
+      // Lines are read per chunk of revisions too: one read per chunk.
+      expect(queries.filter(({ sql }) => sql.startsWith("select") && sql.includes(" from `bom_component` as "))).toHaveLength(2);
       const reads = queries.filter(({ sql }) => sql.startsWith("select") && sql.includes(" from `bom_revision` as "));
       expect(reads).toHaveLength(2);
       const plan = await traced.em.getConnection().execute<{ detail: string }[]>(`explain query plan ${reads[0].sql}`, [...reads[0].params]);

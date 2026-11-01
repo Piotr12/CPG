@@ -643,12 +643,12 @@ describe("MrpRunService: BOM explosion (#281)", () => {
     const path = (from: string, via: string, to: string, back: string) => `${from} →(BOM ${via}) ${to} →(BOM ${back}) ${from}`;
     // Other's own input has no parameters, so it adds Missing Planning Parameters: Other exploded, X and Y didn't.
     expect(await sql("select e.exception_code as code, e.material, e.details from mrp_run_exception e where e.exception_code <> 'MISSING_PLANNING_PARAMETERS' order by e.position")).toEqual([
-      { code: "BOM_CYCLE", material: x.id, details: JSON.stringify({ path: path(x.id, xBom.id, y.id, "00000009") }) },
-      { code: "BOM_CYCLE", material: y.id, details: JSON.stringify({ path: path(y.id, "00000009", x.id, xBom.id) }) },
+      { code: "CYCLIC_BOM", material: x.id, details: JSON.stringify({ path: path(x.id, xBom.id, y.id, "00000009") }) },
+      { code: "CYCLIC_BOM", material: y.id, details: JSON.stringify({ path: path(y.id, "00000009", x.id, xBom.id) }) },
     ]);
     expect((await sql<{ material: string }>("select material from mrp_recommendation")).map(({ material: item }) => item)).toEqual([other.id]);
     const listed = (await latest()).plans.find(({ material: item }) => item === y.id)!.exceptions;
-    expect(listed).toEqual([{ code: "BOM_CYCLE", message: MRP_EXCEPTION_MESSAGES.BOM_CYCLE, params: { material: y.id, location: PLANT, path: path(y.id, "00000009", x.id, xBom.id) } }]);
+    expect(listed).toEqual([{ code: "CYCLIC_BOM", message: MRP_EXCEPTION_MESSAGES.CYCLIC_BOM, params: { material: y.id, location: PLANT, path: path(y.id, "00000009", x.id, xBom.id) } }]);
   });
 });
 

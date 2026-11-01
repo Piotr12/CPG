@@ -257,7 +257,7 @@ export interface MrpMissingBom {
  * the material, in the BOM service's notation without descriptions: `M1 →(BOM B1) M2 →(BOM B2) M1`.
  */
 export interface MrpBomCycle {
-  code: "BOM_CYCLE";
+  code: "CYCLIC_BOM";
   material: string;
   location: string;
   path: string;

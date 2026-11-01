@@ -20,8 +20,8 @@ export interface BomLevels {
  *
  * The BOM service refuses a cycle at entry (R04, BOM-024), so a cycle here was written around it. A
  * material is on a cycle when its strongly connected component has two members or more, or an edge to
- * itself. Each one's path comes from `findCycle`, the service's own search, over edges and components
- * in code order, so the result never depends on the snapshot's order. The cycle members' own edges are
+ * itself. Each one's path is the shortest of `findCycle`'s, the service's own search, over each BOM and
+ * component in code order, so the result never depends on the snapshot's order. The cycle members' own edges are
  * dropped before levelling, so every level is finite (MRP-028). A member keeps the level its other
  * outputs give it, and never explodes (`replenishPair`).
  */
@@ -41,14 +41,17 @@ export function bomLevels(boms: readonly MrpBom[]): BomLevels {
   for (const bom of [...boms].sort((a, b) => compareCodes(a.bom, b.bom))) (bomsOf.get(bom.output) ?? bomsOf.set(bom.output, []).get(bom.output)!).push(bom);
   const cycles = new Map<string, string>();
   for (const material of materials.filter((each) => cyclic.has(each))) {
-    // A member reaches itself through one of its own BOMs, so one of them always closes a cycle.
+    // `findCycle` returns the first component's cycle, not the shortest across them, so each BOM and
+    // component is searched alone and the strictly shortest kept: ties go to the lowest BOM code, then
+    // component code. A member reaches itself through one of its own BOMs, so some search finds one.
+    let shortest: CycleStep[] | null = null;
     for (const { bom, components } of bomsOf.get(material)!) {
-      const steps = findCycle(edges, { bom, output: material, components: components.map((line) => line.material).sort(compareCodes) });
-      if (steps) {
-        cycles.set(material, cyclePath(steps));
-        break;
+      for (const component of components.map((line) => line.material).sort(compareCodes)) {
+        const steps = findCycle(edges, { bom, output: material, components: [component] });
+        if (steps && (shortest === null || steps.length < shortest.length)) shortest = steps;
       }
     }
+    cycles.set(material, cyclePath(shortest!));
   }
   return { levelOf: levels(materials, outgoing, cyclic), cycles };
 }

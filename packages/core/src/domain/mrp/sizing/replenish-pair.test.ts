@@ -117,7 +117,7 @@ describe("replenishPair", () => {
     const make = set({ procurement: "make" });
 
     it("gives a Make pair of a material on a cycle BOM Cycle naming the path, needed or not, and no proposal", () => {
-      const exception = { code: "BOM_CYCLE", material: "M1", location: "L1", path: PATH };
+      const exception = { code: "CYCLIC_BOM", material: "M1", location: "L1", path: PATH };
       expect(replenishPair(SHORT, context({ parameters: make, boms: [bom("2026-01-01")], cycle: PATH }))).toEqual({ proposals: [], exception });
       expect(replenishPair(pair(["5", "5", "5", "5"]), context({ parameters: make, cycle: PATH }))).toEqual({ proposals: [], exception });
     });

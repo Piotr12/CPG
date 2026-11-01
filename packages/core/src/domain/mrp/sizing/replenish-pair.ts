@@ -64,7 +64,7 @@ export function replenishPair(pair: SizedPair, { unreadable, parameters, invalid
   if (invalidSet) return missing("invalid-set");
   if (!parameters) return firstNeed === undefined ? { proposals: [], exception: null } : missing("no-set");
   if (!isProcurementAllowed(parameters.materialType, parameters.procurement)) return missing("raw-make");
-  if (parameters.procurement === "make" && cycle !== undefined) return none({ code: "BOM_CYCLE", material, location, path: cycle });
+  if (parameters.procurement === "make" && cycle !== undefined) return none({ code: "CYCLIC_BOM", material, location, path: cycle });
   const proposals = sizeProposals(pair, parameters).map(
     (item): TimedProposal => ({ ...item, ...scheduleProposal(item.needDate, item.leadTimeDays, today, MRP_HORIZON_DAYS) }),
   );

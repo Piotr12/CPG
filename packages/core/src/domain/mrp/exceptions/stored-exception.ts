@@ -22,7 +22,7 @@ export function toStoredException(exception: MrpException): StoredException {
       return { ...row, date: exception.date ?? null, details: { reason: exception.reason } };
     case "MISSING_BOM":
       return { ...row, date: exception.date, details: null };
-    case "BOM_CYCLE":
+    case "CYCLIC_BOM":
       return { ...row, date: null, details: { path: exception.path } };
     case "INSUFFICIENT_TRANSFER_STOCK": {
       const { transfer, destination, planned, available } = exception;

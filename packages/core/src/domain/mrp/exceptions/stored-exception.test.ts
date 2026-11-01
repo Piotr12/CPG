@@ -26,8 +26,8 @@ describe("toStoredException and exceptionParams", () => {
 
   it("stores BOM Cycle with no date and its path as its one detail (#281)", () => {
     const path = "M1 →(BOM 00000002) M2 →(BOM 00000003) M1";
-    const stored = toStoredException({ code: "BOM_CYCLE", material: "M1", location: "L2", path });
-    expect(stored).toEqual({ code: "BOM_CYCLE", material: "M1", location: "L2", date: null, details: { path } });
+    const stored = toStoredException({ code: "CYCLIC_BOM", material: "M1", location: "L2", path });
+    expect(stored).toEqual({ code: "CYCLIC_BOM", material: "M1", location: "L2", date: null, details: { path } });
     expect(exceptionParams(stored)).toEqual({ material: "M1", location: "L2", path });
   });
 
