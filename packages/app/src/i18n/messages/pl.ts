@@ -1796,6 +1796,7 @@ export const pl: Messages = {
       lineStatus: "stan pozycji",
       moved: "ilość przesunięta",
       movements: "liczba ruchów",
+      mrpRun: "przebieg MRP",
       order: "zlecenie",
       original: "ruch pierwotny",
       plannedArrival: "planowane przybycie",

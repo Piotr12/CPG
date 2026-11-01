@@ -1859,6 +1859,7 @@ export const en = {
       lineStatus: "line status",
       moved: "moved quantity",
       movements: "movement count",
+      mrpRun: "MRP run",
       order: "order",
       original: "original movement",
       plannedArrival: "planned arrival",
