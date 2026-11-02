@@ -25,7 +25,7 @@ const balancesOf = (plan: MrpPlanView) => [...new Set(plan.buckets.map(({ projec
 type Line = { line: number; status: string; quantity: string; received: string; abandoned: string; outstanding: string; plannedDate: string; requisition: string | null };
 type Versioned = { id: string; version: number };
 
-// #310: the purchasing-supply rows #306 (E15-S02) left Partially verified, read through the report #309 (E18-S01)
+// #310: the purchasing-supply rows E15-S02 (#276) left Partially verified, read through the report E18-S01 (#284)
 // added: each row's documents built in Prod through the API, one MRP run, then each pair's days read through
 // GET …/mrp/runs/latest and on the MRP page's day table, which must show the same figures on all 90 days.
 describe("purchasing supply in the MRP report", () => {
@@ -35,9 +35,12 @@ describe("purchasing supply in the MRP report", () => {
   let plant: string;
   let supplier: string;
   const ids = {} as Record<
-    "direct" | "closed" | "revised" | "converted" | "partial" | "split" | "cancelled" | "resin" | "lines" | "board" | "frame",
+    "direct" | "closed" | "reopened" | "revised" | "converted" | "partial" | "split" | "cancelled" | "resin" | "lines" | "board" | "frame",
     string
-  > & { closedPo: string; directPo: string; revisedPo: string; linesPo: string; boardPo: string; requisition: string; production: string };
+  > & {
+    closedPo: string; reopenedPo: string; directPo: string; revisedPo: string; linesPo: string; boardPo: string;
+    requisition: string; splitRequisition: string; cancelledRequisition: string; convertedPo: string; production: string;
+  };
 
   const api = (method: string, path: string, body?: unknown) => callApi(baseUrl, method, path, secret, body === undefined ? {} : { key: randomUUID(), body });
   const created = async <T = Versioned>(path: string, body: unknown) => {
@@ -62,7 +65,7 @@ describe("purchasing supply in the MRP report", () => {
   const requisition = (of: string, quantity: string, requiredDate: string) =>
     created("/api/tenants/prod/purchase-requisitions", { material: of, location: plant, quantity, unit: "kg", requiredDate });
   const receive = (purchaseOrder: string, lines: { line: number; quantity: string }[]) =>
-    created("/api/tenants/prod/goods-receipts", { purchaseOrder, lines: lines.map((line) => ({ unit: "kg", ...line })) });
+    created<{ lines: { movementId: string }[] }>("/api/tenants/prod/goods-receipts", { purchaseOrder, lines: lines.map((line) => ({ unit: "kg", ...line })) });
   const stock = async (of: string) => (await read<{ quantity: string }>(`/api/tenants/prod/stock?material=${of}&location=${plant}`)).quantity;
   const linesOf = async (po: string) => (await read<{ lines: Line[] }>(`/api/tenants/prod/purchase-orders/${po}`)).lines;
   /** The latest run's report for `of` at the plant, through the API: this file's run, one pair. */
@@ -77,6 +80,8 @@ describe("purchasing supply in the MRP report", () => {
     const [plan] = view.plans;
     expect(plan.buckets).toHaveLength(90);
     expect(plan.buckets[0].date).toBe(day(0));
+    // None of this file's pairs has at-risk supply, a transfer or a proposal: dependable and tentative are all its supply.
+    expect(plan.buckets.every(({ atRiskSupply, transferIn, proposedReceipts }) => [atRiskSupply, transferIn, proposedReceipts].every((figure) => figure === ZERO))).toBe(true);
     return plan;
   };
   /**
@@ -86,6 +91,7 @@ describe("purchasing supply in the MRP report", () => {
   const onScreen = async (plan: MrpPlanView) => {
     await admin.open(`${baseUrl}/admin/prod/mrp?material=${plan.material}&location=${plan.location}`);
     await admin.waitUntil(`Boolean(${shown(DAYS)})`);
+    expect(await admin.evaluate<string>(`${shown("[data-mrp-plan-heading]")}.textContent`)).toBe(`${plan.material} ${plan.materialDescription} at ${plant} mrpsup plant`);
     expect(await admin.evaluate<string>(`${shown("[data-mrp-field=id]")}.textContent`)).toBe(run.id);
     const rows = await admin.evaluate<Record<string, string>[]>(`[...${shown(DAYS)}.querySelectorAll("tbody tr")].map((tr) => ({
       date: tr.querySelector("[data-mrp-date]").textContent,
@@ -115,6 +121,14 @@ describe("purchasing supply in the MRP report", () => {
     ids.closedPo = await order([{ material: ids.closed, quantity: "100", plannedDate: day(6) }]);
     await receive(ids.closedPo, [{ line: 1, quantity: "60" }]);
     await atVersion(`/api/tenants/prod/purchase-orders/${ids.closedPo}`, `/api/tenants/prod/purchase-orders/${ids.closedPo}/close-early`, { lines: [1] });
+    // The same, then the 60's receipt reversed: the line stays Closed Early with 60 left by arithmetic, which only
+    // its status keeps out of supply (lesson 2026-10-27). 5 on hand make it a planned pair.
+    ids.reopened = await material("mrpsup reopened sheet");
+    await created("/api/tenants/prod/stock/corrections", { material: ids.reopened, location: plant, quantity: "5", unit: "kg", reason: "mrpsup count" });
+    ids.reopenedPo = await order([{ material: ids.reopened, quantity: "100", plannedDate: day(6) }]);
+    const reopened = await receive(ids.reopenedPo, [{ line: 1, quantity: "60" }]);
+    await atVersion(`/api/tenants/prod/purchase-orders/${ids.reopenedPo}`, `/api/tenants/prod/purchase-orders/${ids.reopenedPo}/close-early`, { lines: [1] });
+    await created(`/api/tenants/prod/stock/movements/${reopened.lines[0].movementId}/reverse`, { reason: "mrpsup reversal" });
     // BUY-024: 100 ordered for day 8, 30 received, the open 70 moved to day 12.
     ids.revised = await material("mrpsup revised sheet");
     ids.revisedPo = await order([{ material: ids.revised, quantity: "100", plannedDate: day(8) }]);
@@ -125,14 +139,14 @@ describe("purchasing supply in the MRP report", () => {
     // BUY-026: a requisition of 100 converted entirely into an order of 100, nothing received.
     ids.converted = await material("mrpsup converted sheet");
     ids.requisition = (await requisition(ids.converted, "100", day(9))).id;
-    await order([{ material: ids.converted, quantity: "100", plannedDate: day(9), requisition: ids.requisition }]);
+    ids.convertedPo = await order([{ material: ids.converted, quantity: "100", plannedDate: day(9), requisition: ids.requisition }]);
     // MRP-010: 100 ordered for day 10, 40 received.
     ids.partial = await material("mrpsup partial sheet");
     await receive(await order([{ material: ids.partial, quantity: "100", plannedDate: day(10) }]), [{ line: 1, quantity: "40" }]);
     // MRP-012: a requisition of 100 for day 14, 60 of it converted into an order line for day 11.
     ids.split = await material("mrpsup split sheet");
-    const split = await requisition(ids.split, "100", day(14));
-    await order([{ material: ids.split, quantity: "60", plannedDate: day(11), requisition: split.id }]);
+    ids.splitRequisition = (await requisition(ids.split, "100", day(14))).id;
+    await order([{ material: ids.split, quantity: "60", plannedDate: day(11), requisition: ids.splitRequisition }]);
     // MRP-013, BUY-018: a requisition, a purchase order and a production order of the panel, all cancelled before
     // anything was processed. 10 on hand make the panel a planned pair.
     ids.cancelled = await material("mrpsup cancelled panel", "intermediate");
@@ -140,8 +154,9 @@ describe("purchasing supply in the MRP report", () => {
     await created("/api/tenants/prod/stock/corrections", { material: ids.cancelled, location: plant, quantity: "10", unit: "kg", reason: "mrpsup count" });
     await created("/api/tenants/prod/planning-parameters", { material: ids.cancelled, location: plant, procurement: "make", leadTimeDays: 2, minimumQuantity: "0", lotMultiple: "1" });
     await created("/api/tenants/prod/boms", { output: ids.cancelled, priority: 1, validFrom: day(-30), validThrough: null, components: [{ material: ids.resin, quantity: "1", unit: "kg" }] });
-    const cancelledPr = (await requisition(ids.cancelled, "100", day(7))).id;
-    await atVersion(`/api/tenants/prod/purchase-requisitions/${cancelledPr}`, `/api/tenants/prod/purchase-requisitions/${cancelledPr}/cancel`);
+    ids.cancelledRequisition = (await requisition(ids.cancelled, "100", day(7))).id;
+    const cancelledPr = `/api/tenants/prod/purchase-requisitions/${ids.cancelledRequisition}`;
+    await atVersion(cancelledPr, `${cancelledPr}/cancel`);
     const cancelledPo = await order([{ material: ids.cancelled, quantity: "100", plannedDate: day(7) }]);
     await atVersion(`/api/tenants/prod/purchase-orders/${cancelledPo}`, `/api/tenants/prod/purchase-orders/${cancelledPo}/cancel`);
     const cancelledMo = (await created("/api/tenants/prod/production-orders", { output: ids.cancelled, location: plant, quantity: "50", unit: "kg", plannedFinish: day(7) })).id;
@@ -196,9 +211,19 @@ describe("purchasing supply in the MRP report", () => {
     expect(balancesOf(plan)).toEqual(["60.000000"]);
     const days = await onScreen(plan);
     expect(days.get(day(6))).toMatchObject({ dependableSupply: "0", tentativeSupply: "0", projectedBefore: "60" });
+
+    // With the receipt reversed, the 60 the line still lacks by arithmetic is not supply either: it is Closed Early.
+    expect(await linesOf(ids.reopenedPo)).toMatchObject([{ status: "closed-early", quantity: "100.000000", received: ZERO, abandoned: "40.000000" }]);
+    expect(await stock(ids.reopened)).toBe("5.000000");
+    const reopened = await planOf(ids.reopened);
+    expect(supplyOf(reopened)).toEqual({});
+    expect(balancesOf(reopened)).toEqual(["5.000000"]);
+    expect((await onScreen(reopened)).get(day(6))).toMatchObject({ dependableSupply: "0", projectedBefore: "5" });
   });
 
   it("counts no tentative supply from a cancelled requisition, nor any supply from a cancelled order or production order (BUY-018, MRP-013)", async () => {
+    expect(await read(`/api/tenants/prod/purchase-requisitions/${ids.cancelledRequisition}`)).toMatchObject({ status: "cancelled", converted: ZERO });
+
     const plan = await planOf(ids.cancelled);
 
     expect(supplyOf(plan)).toEqual({});
@@ -224,6 +249,7 @@ describe("purchasing supply in the MRP report", () => {
 
   it("counts a requisition of 100 converted entirely into an order of 100 as 100 planned, not 200 (BUY-026)", async () => {
     expect(await read(`/api/tenants/prod/purchase-requisitions/${ids.requisition}`)).toMatchObject({ status: "completed", converted: "100.000000" });
+    expect(await linesOf(ids.convertedPo)).toMatchObject([{ status: "open", quantity: "100.000000", received: ZERO, requisition: ids.requisition }]);
 
     const plan = await planOf(ids.converted);
 
@@ -248,6 +274,8 @@ describe("purchasing supply in the MRP report", () => {
   });
 
   it("counts a requisition of 100 with 60 converted as 60 ordered and 40 tentative, 100 in all (MRP-012)", async () => {
+    expect(await read(`/api/tenants/prod/purchase-requisitions/${ids.splitRequisition}`)).toMatchObject({ status: "open", quantity: "100.000000", converted: "60.000000" });
+
     const plan = await planOf(ids.split);
 
     expect(supplyOf(plan)).toEqual({ 11: ["60.000000", ZERO], 14: [ZERO, "40.000000"] });

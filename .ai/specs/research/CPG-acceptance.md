@@ -1484,7 +1484,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** The inventory half: `packages/core/src/services/purchase-orders/purchase-order.service.test.ts` (:244, "keeps what was received in stock…": a PO line of 100 kg with 60 received, Closed Early → received 60, abandoned 40, outstanding 0, no new movement and stock still 60; :227/:236: a later receipt on a Closed Early line is refused, `DOCUMENT_NOT_OPEN`), `tests/integration/document-lifecycle.test.ts` (:160: a PO of 10 with 3 received, Closed Early in the UI → received 3, abandoned 7, outstanding 0, stock unchanged). E11-S01, #90; E11-S04, #144. MRP: `packages/core/src/domain/mrp/plan-mrp.test.ts` ("BUY-017, MRP-014") projects no remaining 40, and the 60 stays physical. Report: `tests/integration/mrp-report-supply.test.ts` (100 ordered, 60 received and the line Closed Early with 40 abandoned: no supply on any day and a balance of 60 throughout, through the API and in the MRP page's day table, with 60 in stock). E15-S02, #276; #310.
+- **Evidence:** The inventory half: `packages/core/src/services/purchase-orders/purchase-order.service.test.ts` (:244, "keeps what was received in stock…": a PO line of 100 kg with 60 received, Closed Early → received 60, abandoned 40, outstanding 0, no new movement and stock still 60; :227/:236: a later receipt on a Closed Early line is refused, `DOCUMENT_NOT_OPEN`), `tests/integration/document-lifecycle.test.ts` (:160: a PO of 10 with 3 received, Closed Early in the UI → received 3, abandoned 7, outstanding 0, stock unchanged). E11-S01, #90; E11-S04, #144. MRP: `packages/core/src/domain/mrp/plan-mrp.test.ts` ("BUY-017, MRP-014") projects no remaining 40, and the 60 stays physical. Report: `tests/integration/mrp-report-supply.test.ts` (100 ordered, 60 received and the line Closed Early with 40 abandoned: no supply on any day and a balance of 60 throughout, through the API and in the MRP page's day table, with 60 in stock; and with the 60's receipt then reversed, the 60 the Closed Early line lacks by arithmetic is not supply either). E15-S02, #276; #310.
 - **Given:** PO line ordered 100, received 60
 - **When:** Close Early
 - **Then:** Remaining 40 no longer counted as scheduled supply; actual 60 remains in inventory.
@@ -2857,7 +2857,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("BUY-017, MRP-014": 60 in physical stock, no 40 projected). Report: `tests/integration/mrp-report-supply.test.ts` (the BUY-017 case: 60 in the balance throughout and no 40 on any day, through the API and in the MRP page's day table). E15-S02, #276; #310.
+- **Evidence:** `packages/core/src/domain/mrp/plan-mrp.test.ts` ("BUY-017, MRP-014": 60 in physical stock, no 40 projected). Report: `tests/integration/mrp-report-supply.test.ts` (the BUY-017 case: 60 in the balance throughout and no 40 on any day, through the API and in the MRP page's day table, and no supply from the line once its receipt is reversed). E15-S02, #276; #310.
 - **Given:** PO 100 received 60 and Closed Early
 - **When:** Run MRP
 - **Then:** 60 reflected in physical balance; no planned remaining 40.
