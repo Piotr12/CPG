@@ -33,7 +33,8 @@ export interface DataTableColumn<Row> {
    * From `lg` up, sticks to the right edge of the table's scroll region (#311), so a figure the reader
    * must always see stays in view however many columns scroll past it. At most two; the last pinned
    * column sits at the edge and the one before it beside it. Not the first column (already sticky at
-   * the left), and always priority 1.
+   * the left), always priority 1, and not in a table with row actions, whose column the pinned ones
+   * would cover. The fixed 8rem width is part of the contract: the neighbour's offset assumes it.
    */
   pin?: "end";
 }
@@ -122,14 +123,15 @@ const PINNED_EDGE = "lg:shadow-[inset_1px_0_0_var(--color-border)]";
 
 /**
  * Each column's pinned-end classes, empty for an unpinned one. Throws for a pinned first column, a pinned
- * column that is not priority 1, and a third pinned column.
+ * column that is not priority 1, a pinned column in a table `withActions`, and a third pinned column.
  */
-export function pinnedClasses<Row>(columns: DataTableColumn<Row>[]): string[] {
+export function pinnedClasses<Row>(columns: DataTableColumn<Row>[], withActions = false): string[] {
   const pinned = columns.flatMap((column, index) => (column.pin === "end" ? [index] : []));
   for (const index of pinned) {
     const { id, priority = 1 } = columns[index];
     if (index === 0) throw new Error(`DataTable column "${id}": the first column is sticky at the left, so it can't be pinned to the end`);
     if (priority !== 1) throw new Error(`DataTable column "${id}": a pinned column is always priority 1, not ${priority}`);
+    if (withActions) throw new Error(`DataTable column "${id}": a pinned column would cover the row actions, so a table with them can't pin`);
   }
   if (pinned.length > PINNED_OFFSETS.length) {
     throw new Error(`DataTable column "${columns[pinned[PINNED_OFFSETS.length]].id}": at most ${PINNED_OFFSETS.length} columns can be pinned to the end`);
@@ -153,8 +155,8 @@ export function columnClasses<Row>(column: DataTableColumn<Row>): string {
 /**
  * Every list screen's table: columns from config, an empty state, and a row-actions slot. It scrolls
  * sideways inside a labelled, keyboard-reachable container with the first column sticky, and from `lg` up
- * any columns pinned to its right edge (#311), so the page never does. With `sort`, a column's header sorts the list on the server (#217); filtering is a
- * `ListSearch` above the table.
+ * any columns pinned to its right edge (#311), so the page never does. With `sort`, a column's header
+ * sorts the list on the server (#217); filtering is a `ListSearch` above the table.
  */
 export function DataTable<Row>({
   columns,
@@ -170,7 +172,7 @@ export function DataTable<Row>({
 }: DataTableProps<Row>) {
   const width = columns.length + (rowActions ? 1 : 0);
   const shared = columns.map(columnClasses);
-  const pinned = pinnedClasses(columns);
+  const pinned = pinnedClasses(columns, Boolean(rowActions));
   return (
     <>
     <Table aria-label={label} scrollLabel={label}>

@@ -346,7 +346,7 @@ describe("the MRP report in the UI", () => {
       const max = region.scrollWidth - region.clientWidth;
       const positions = [0, max / 2, max].map((scroll) => {
         region.scrollLeft = scroll;
-        return { region: box(region), columns: [0, first, second].flatMap((i) => [{ ...box(heads[i]), onTop: onTop(heads[i]) }, { ...box(cells[i]), onTop: true }]) };
+        return { region: box(region), columns: [0, first, second].flatMap((i) => [{ ...box(heads[i]), onTop: onTop(heads[i]) }, { ...box(cells[i]), onTop: onTop(cells[i]) }]) };
       });
       const gaps = heads.slice(1, first).map((head) => {
         region.scrollLeft = 0;
@@ -372,6 +372,8 @@ describe("the MRP report in the UI", () => {
       const [date, , before, , after] = columns;
       expect(date.right, `${label}, position ${at}`).toBeLessThanOrEqual(before.left + 1);
       expect(before.right, `${label}, position ${at}`).toBeLessThanOrEqual(after.left + 1);
+      // Scrolled to the start both are stuck, so they touch: nothing scrolling shows between them.
+      if (at === 0) expect(after.left - before.right, label).toBeLessThanOrEqual(1);
     }
     expect(measured.gaps.length, label).toBe(gaps);
     for (const gap of measured.gaps) {
@@ -379,7 +381,12 @@ describe("the MRP report in the UI", () => {
       expect(gap.right, `${label}: ${gap.name}`).toBeLessThanOrEqual(gap.pin + 1);
     }
     expect(measured.ends.map(({ name }) => name), label).toEqual(ends);
-    for (const end of measured.ends) expect(end.onTop, `${label}: ${end.name}`).toBe(true);
+    const { region } = measured.positions[2];
+    for (const end of measured.ends) {
+      expect(end.onTop, `${label}: ${end.name}`).toBe(true);
+      expect(end.left, `${label}: ${end.name}`).toBeGreaterThanOrEqual(region.left - 1);
+      expect(end.right, `${label}: ${end.name}`).toBeLessThanOrEqual(region.right + 1);
+    }
   };
 
   it("keeps the date, Projected before proposals and Shortage in view at 1280 px beside the expanded menu, however far the day table scrolls, in English and Polish; every other figure stays reachable (#311)", async () => {

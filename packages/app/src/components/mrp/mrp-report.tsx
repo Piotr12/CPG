@@ -55,7 +55,7 @@ const DAY_FIGURES = [
  * The figures pinned to the table's right edge from `lg` up (#311): the balance and the shortage, in view
  * with the date however many figures scroll between them.
  */
-const PINNED_DAY_FIGURES: ReadonlySet<string> = new Set(["projectedBefore", "shortage"]);
+const PINNED_DAY_FIGURES: ReadonlySet<(typeof DAY_FIGURES)[number]> = new Set(["projectedBefore", "shortage"]);
 
 /** The figures a week shows (E18-S02): the day table's, with the shortage replaced by the weakest day's two. */
 const WEEK_FIGURES = [

@@ -142,12 +142,12 @@ describe("DataTable", () => {
       }
     });
 
-    it("puts a single pinned column at the edge, with the edge shadow, and lets the caller's className override it", () => {
-      render(<DataTable label="Pets" columns={[wide[0], { ...wide[1], className: "lg:w-40" }, wide[2]]} rows={pets} rowKey={(pet) => pet.id} empty="No pets" />);
+    it("puts a single pinned column at the edge, with the edge shadow, and lets the caller's className override its background", () => {
+      render(<DataTable label="Pets" columns={[wide[0], { ...wide[1], className: "lg:bg-muted" }, wide[2]]} rows={pets} rowKey={(pet) => pet.id} empty="No pets" />);
       const { heads, cells } = parts();
       for (const element of [heads[1], cells[1]]) {
-        expect([...element.classList]).toEqual(expect.arrayContaining(["lg:right-0", EDGE, "lg:w-40"]));
-        expect(element.classList).not.toContain("lg:w-32");
+        expect([...element.classList]).toEqual(expect.arrayContaining(["lg:right-0", EDGE, "lg:w-32", "lg:bg-muted"]));
+        expect(element.classList).not.toContain("lg:bg-background");
       }
       expect(pinnedClasses([wide[0], wide[2]])).toEqual(["", ""]);
     });
@@ -159,6 +159,14 @@ describe("DataTable", () => {
     ])("refuses %s", (_, given, message) => {
       expect(() => pinnedClasses(given)).toThrow(message);
       expect(() => render(<DataTable label="Pets" columns={given} rows={pets} rowKey={(pet) => pet.id} empty="No pets" />)).toThrow(message);
+    });
+
+    it("refuses to pin in a table with row actions, whose column the pinned ones would cover", () => {
+      const message = 'DataTable column "legs": a pinned column would cover the row actions, so a table with them can\'t pin';
+      expect(() => pinnedClasses(wide, true)).toThrow(message);
+      expect(() => render(<DataTable label="Pets" columns={wide} rows={pets} rowKey={(pet) => pet.id} rowActions={() => null} empty="No pets" />)).toThrow(message);
+      // Without a pinned column, row actions are as they were.
+      expect(pinnedClasses([wide[0], wide[2]], true)).toEqual(["", ""]);
     });
   });
 
