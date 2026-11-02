@@ -213,13 +213,19 @@ describe("rankShortages", () => {
       expect(after.filter(({ date }) => date === day(3))).toEqual([]);
     });
 
-    it("ranks a share rooted at an open document's need at rank 0, and one rooted at the parent's target after the pair's own forecast", () => {
-      const shares: [MrpDemandRoot, string][] = [[root("safety-target", 2), "2"], [root("component", 2), "2"]];
-      const shortages = rankShortages(pair("4", { firmDemand: [order(2, "2")], forecastDemand: [forecast(2, "2")], plannedComponentDemand: [planned(2, shares)] }));
-      expect(shortages.map(({ kind, root: of, uncovered }) => [kind, of?.kind ?? null, uncovered])).toEqual([
-        ["forecast", null, q("2")],
-        ["planned-component", "safety-target", q("2")],
-      ]);
+    it("ranks a share rooted at an open document's need at rank 0, and one rooted at the parent's target after the pair's own forecast (Q3, Q4)", () => {
+      // The component's root is due on day 3, after the pair's own order due on day 2, yet rank 0 serves it first.
+      const first = rankShortages(pair("2", { firmDemand: [order(2, "2")], plannedComponentDemand: [planned(2, [[root("component", 3), "2"]])] }));
+      expect(first.map(({ kind, uncovered }) => [kind, uncovered])).toEqual([["customer-order", q("2")]]);
+      // The target's share is dated day 1, before the pair's forecast on day 2, yet rank 3 serves it last.
+      const last = rankShortages(pair("2", { forecastDemand: [forecast(2, "2")], plannedComponentDemand: [planned(2, [[root("safety-target", 1), "2"]])] }));
+      expect(last.map(({ kind, root: of, uncovered }) => [kind, of?.kind ?? null, uncovered])).toEqual([["planned-component", "safety-target", q("2")]]);
+    });
+
+    it("tells one parent's shares of one root apart by the parent's need date, never summing them", () => {
+      const shortages = rankShortages(pair("1", { plannedComponentDemand: [planned(2, [[root("forecast", 2), "2"]], "P1", 4), planned(2, [[root("forecast", 2), "2"]], "P1", 3)] }));
+      // The day-3 proposal's share is served first: 1 of 2, and the day-4 one's 2 stay short.
+      expect(shortages.map(({ required, uncovered }) => [required, uncovered])).toEqual([[q("2"), q("1")], [q("2"), q("2")]]);
     });
 
     it("serves the pair's own requirement before a share of the same root, then two parents by parent code, then an executable parent before a provisional one", () => {

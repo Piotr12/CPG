@@ -2027,6 +2027,8 @@ describe("planMrp: BOM explosion (E17-S01, #281)", () => {
     const snapshot = inputs({
       stock: [stock("R", "L1", "5")],
       orderLines: [order("F", "10", 20), order("G", "4", 12), order("X", "1", 3)],
+      // F's proposal serves its order and its forecast's residual, so its components' needs carry two roots (#327).
+      forecasts: [forecast(day(20), "15", { material: "F" })],
       planningParameters: [params("F", "make", 2), params("G", "make", 1), params("I", "make", 3), params("R", "buy", 1), params("S", "buy"), params("X", "make")],
       boms: [
         recipe("F", { I: "2", S: "1" }),
@@ -2047,6 +2049,9 @@ describe("planMrp: BOM explosion (E17-S01, #281)", () => {
     // The new fields are in the comparison: rejected BOMs and provisional needs (E17-S02) and provisional actions (E17-S03).
     expect(forward.provisional.some(({ rejectedBoms }) => rejectedBoms.length > 0)).toBe(true);
     expect(forward.provisional.some(({ blockers }) => blockers.includes("provisional-demand"))).toBe(true);
+    // And root shares (#327): a need split between two roots, and a shortage that names its root.
+    expect(forward.plans.some(({ plannedComponentDemand }) => plannedComponentDemand.some(({ roots }) => roots.length > 1))).toBe(true);
+    expect(forward.plans.some(({ shortages }) => shortages.some(({ root }) => root !== null))).toBe(true);
     const shuffled = Object.fromEntries(Object.entries(snapshot).map(([key, list]) => [key, [...(list as readonly unknown[])].reverse()])) as unknown as MrpInputs;
     const boms = shuffled.boms.map((bom) => ({ ...bom, components: [...bom.components].reverse() }));
     expect(planMrp({ ...shuffled, boms }, TODAY)).toEqual(forward);

@@ -151,4 +151,28 @@ describe("pegProposals (#327)", () => {
     const free = pegProposals(pair("17", lists), [], [proposal(4, "6")]);
     expect(free.provisional).toEqual([[share(orderRoot(6, "A", "G"), "4"), share(targetRoot(4), "2")]]);
   });
+
+  it("keeps two forecasts of one date apart by their material: the pair's own and a parent's", () => {
+    const fromG = planned(3, [share({ ...forecastRoot(3), material: "G" }, "1")]);
+    const { proposals: shares } = pegProposals(pair("0", { forecastDemand: [forecast(3, "2")], plannedComponentDemand: [fromG] }), [proposal(3, "3")], []);
+    expect(shares).toEqual([[share(forecastRoot(3), "2"), share({ ...forecastRoot(3), material: "G" }, "1")]]);
+  });
+
+  it("lists a proposal's shares by priority, not by the day they were served", () => {
+    // Day 2 serves the forecast, day 3 the order: the order's share still comes first.
+    const { proposals: shares } = pegProposals(pair("0", { forecastDemand: [forecast(2, "2")], firmDemand: [order(3, "3")] }), [proposal(2, "5")], []);
+    expect(shares).toEqual([[share(orderRoot(3), "3"), share(forecastRoot(2), "2")]]);
+  });
+
+  it("re-roots an executable lot's surplus to a provisional need it serves, after stock pass 1 never takes (review of #356)", () => {
+    // Pass 1: stock 8 serves order B's 3 and keeps 5 to the end; the lot of 10 serves nothing. G's provisional need of 7
+    // takes those 5 first, then 2 of the lot, which leave the target's share.
+    const provisionalNeed = planned(3, [share(orderRoot(4, "A", "G"), "7")], { parentNeed: 4, provisional: true });
+    const lists = { firmDemand: [order(2, "3", "B")], plannedComponentDemand: [provisionalNeed] };
+    expect(pegProposals(pair("8", lists), [proposal(2, "10")], []).proposals).toEqual([[share(orderRoot(4, "A", "G"), "2"), share(targetRoot(2), "8")]]);
+    // Without stock to spare, the lot's surplus serves the whole need, though the need comes before the lot's day.
+    const later = { firmDemand: [order(2, "3", "B"), order(5, "6", "C")], plannedComponentDemand: [planned(1, [share(orderRoot(4, "A", "G"), "4")], { parentNeed: 4, provisional: true })] };
+    expect(pegProposals(pair("5", later), [proposal(5, "10")], []).proposals).toEqual([[share(orderRoot(4, "A", "G"), "4"), share(orderRoot(5, "C"), "4"), share(targetRoot(5), "2")]]);
+  });
 });
+

@@ -96,4 +96,16 @@ describe("RequirementQueues (#327)", () => {
     expect(queues.serve(5n)).toBe(3n);
     expect(later.outstanding).toBe(0n);
   });
+
+  it("inserts a requirement between two queued ones by its priority, never at the head or the tail", () => {
+    const order = (code: string, requiredDate: string) => ({ order: code, position: 1, material: "M1", location: "L1", requiredDate, date: "2026-10-05", quantity: 1n });
+    const due = requirementsByDate({ ...lists([]), firmDemand: [order("A", "2026-10-06"), order("B", "2026-10-08"), order("C", "2026-10-09")] }).get("2026-10-05")!;
+    const queues = new RequirementQueues();
+    queues.push(due[0]);
+    queues.push(due[2]);
+    queues.push(due[1]);
+    const served: (string | null)[] = [];
+    queues.serve(3n, (one) => served.push(rootOf(one).document));
+    expect(served).toEqual(["A", "B", "C"]);
+  });
 });
