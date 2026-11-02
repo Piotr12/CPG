@@ -313,6 +313,46 @@ describe("manual production", () => {
   });
 });
 
+describe("from an MRP proposal (#320)", () => {
+  const pinned = { ...input, bom: "00000002", revision: 1 };
+
+  it("pins the proposal's BOM revision, records the run on the order and in its audit, and answers the order without its components", async () => {
+    const order = await service().createFromMrp(pinned, actor, { mrpRun: "00000004" });
+    expect(order).toMatchObject({ id: "00000001", bom: "00000002", revision: 1, quantity: "30.000000", plannedFinish: "2026-10-15", plannedStart: "2026-10-10",
+      leadTimeDays: 5, status: "open", mrpRun: "00000004" });
+    expect(order).not.toHaveProperty("components");
+    expect(order).not.toHaveProperty("shortages");
+    // Read back through a fresh `em`, and in the audit entry written in the same transaction (R08).
+    expect(await service().get(order.id)).toMatchObject({ mrpRun: "00000004", bom: "00000002" });
+    const audit = await em().findOneOrFail(TenantAuditEvent, { subjectId: order.id, action: "production-orders.production-order.created" });
+    expect(audit.after).toMatchObject({ id: order.id, bom: "00000002", revision: 1, mrpRun: "00000004" });
+    expect(await em().count(StockMovement, {})).toBe(0);
+  });
+
+  it("keeps a manual order's view and audit shape: no run, and no `mrpRun` key in its snapshot", async () => {
+    const order = await service().create(input, actor);
+    expect(order.mrpRun).toBeNull();
+    const audit = await em().findOneOrFail(TenantAuditEvent, { subjectId: order.id, action: "production-orders.production-order.created" });
+    expect(audit.after).not.toHaveProperty("mrpRun");
+    expect((await service().list())[0].mrpRun).toBeNull();
+  });
+
+  it("refuses a revision that is no longer current as PRODUCTION_BOM_CHANGED, never picking another BOM, and writes nothing", async () => {
+    const before = await auditCount();
+    await expect(service().createFromMrp({ ...pinned, revision: 2 }, actor, { mrpRun: "00000004" })).rejects.toMatchObject({ code: "PRODUCTION_BOM_CHANGED" });
+    expect(await service().count()).toBe(0);
+    expect(await auditCount()).toBe(before);
+  });
+
+  it("keeps the run in the order's later audit snapshots", async () => {
+    const order = await service().createFromMrp(pinned, actor, { mrpRun: "00000004" });
+    const edited = await service().update(order.id, { plannedFinish: "2026-10-20" }, order.version, actor);
+    expect(edited.mrpRun).toBe("00000004");
+    const audit = await em().findOneOrFail(TenantAuditEvent, { subjectId: order.id, action: "production-orders.production-order.updated" });
+    expect(audit).toMatchObject({ before: { mrpRun: "00000004", plannedFinish: "2026-10-15" }, after: { mrpRun: "00000004", plannedFinish: "2026-10-20" } });
+  });
+});
+
 describe("production master references", () => {
   it("links blocking direct references, locks historic output units/type, and permits terminal deactivation", async () => {
     const order = await service().create(input, actor); const manager = em();
