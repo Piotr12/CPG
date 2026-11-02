@@ -3,7 +3,7 @@
 **Date:** 2026-11-02 13:02 UTC
 **Agent:** Claude Code / claude-opus-5-5 (cezar, `om-auto-fix-issue`)
 **Spec:** none (follow-up of `.ai/specs/implemented/2026-10-31--0905UTC-mrp-purchasing-supply.md` and #309)
-**Status:** in progress
+**Status:** done (PR open; CI pending)
 
 ## Goal
 
@@ -22,9 +22,21 @@ Issue #310: eleven catalogue rows (BUY-002, BUY-017, BUY-018, BUY-024, BUY-026, 
 ## Log
 
 - 13:02 UTC: claimed #310 (assignee, `in-progress`, claim comment); branch `fix/issue-310-supply-rows-mrp-report` from `origin/main` `ab0b20da`; `npm ci`.
+- 13:06 UTC: no Docker on this machine, so the integration file ran against a local standalone server (lesson 2026-10-23). All 9 tests passed on the first run. `mrp-report`, `mrp-report-api` and `mrp-run-api` then passed on the same server with this file's records in place (37 tests).
+- 13:07 UTC: all eleven rows moved to Passed (automated). Every Then clause is matched to an `expect`: the documents' states (PO lines, the requisition, the production order) are read back through the API, the figures are read through the API and on screen, and MRP-042's "physical completion waits for the receipt" is a refused completion (`INSUFFICIENT_STOCK`) that posts after the receipt. BUY-024's "allowed and audited" stays on the existing `goods-receipts` tests. None of the rows waited on E18-S02's marks, which merged in #324.
+- 13:10 UTC: `test:coverage` failed only `tests/ai-filenames.test.ts`. #339 (spec) merged 18 s before #340 (implementation), and #340 still held the spec's active copy, so `main` at `ab0b20da` fails the test and its Deploy is red. Opened #347 off `main` to delete the active copy, and made the same deletion on this branch so its CI passes either way. Extended lesson 2026-11-02 "Close the paperwork in the PR that does the work".
 
 ## Changes
+- `tests/integration/mrp-report-supply.test.ts` (new): one test per scenario, each asserting through `GET …/mrp/runs/latest` and on the MRP page's day table (all 90 rows equal to the API's figures).
+- `.ai/specs/research/CPG-acceptance.md`: BUY-002, BUY-017, BUY-018, BUY-024, BUY-026, MRP-010, MRP-012, MRP-013, MRP-014, MRP-042 and LFC-024 → Passed (automated), with their Evidence; the Execution status paragraph.
+- `.ai/specs/2026-11-02--1031UTC-mrp-automatic-mode.md` deleted (also #347).
+- `.ai/lessons.md`: the paperwork lesson gains #340's case.
 
 ## Verification
+- `npm run lint` → 0; `npm run typecheck` → 0; `npm run build` → 0.
+- `npm run test:integration -- tests/integration/mrp-report-supply.test.ts` against a local standalone server → 9 passed.
+- The same server, `mrp-report.test.ts mrp-report-api.test.ts mrp-run-api.test.ts` → 37 passed.
+- `npm run test:coverage`: the first run failed one test (`ai-filenames`, the duplicate spec on `main`; 5,445 passed). After the deletion it exits 0: 665 files, 5,446 passed, 1 skipped, thresholds met.
 
 ## Follow-ups
+- #347 must merge to unblock `main`'s deploy.
