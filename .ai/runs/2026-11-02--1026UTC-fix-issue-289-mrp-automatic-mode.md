@@ -2,8 +2,8 @@
 
 **Date:** 2026-11-02 10:26 UTC
 **Agent:** Claude Code (cezar, headless) / claude-opus-5-5
-**Spec:** to be written by `om-auto-write-spec 289`
-**Status:** in progress
+**Spec:** `.ai/specs/2026-11-02--1031UTC-mrp-automatic-mode.md`
+**Status:** blocked. The spec PR #339 is open as a draft, and the implementation waits on the owner confirming Q3.
 
 ## Goal
 
@@ -30,6 +30,8 @@ Take #289 end to end with `om-auto-fix-issue`. It is a `feature` issue, so the r
   - M: a batch cap (Q15, `MRP_BATCH_TOO_LARGE`, 2,500), budgeted at the cap, plus the deploy-overlap risk.
   - M: the integration RUN-019 test is stated to prove same-bundle queuing only.
   - L: `REQUISITION_ID_RACE` propagates. The run's audit entry moves after the batch and carries `creation`. The replay and fingerprint notes go to `BACKWARD_COMPATIBILITY.md`. A trigger raises the driver-error case. The over-limit fixture is cleaned up in a `finally`. The card distinguishes "no proposals to create" from "failed".
+- 10:48 Opened the draft spec PR #339 (`Refs #289`), with labels `review`, `documentation`, `skip-qa`, `priority-medium` and `risk-low`. Posted the label rationale, the UI evidence (on `qa-evidence`, `spec-mrp-automatic-mode/`), the defaults table on the PR and the issue, and the run summary. Released the issue's `in-progress` lock; it stays assigned to its author.
+- 10:48 Stopped before `om-auto-implement-spec`. Q3 is the transaction design, so building on it before the owner confirms would risk a rewrite (AGENTS.md: ask instead of guessing).
 
 ## Changes
 
@@ -42,3 +44,6 @@ Take #289 end to end with `om-auto-fix-issue`. It is a `feature` issue, so the r
 - `npx vitest run tests/ai-filenames.test.ts tests/spec-images.test.ts`: 7 passed.
 
 ## Follow-ups
+
+- The owner confirms Q3 (or picks the three-transaction reading) on #339. Then: `om-auto-implement-spec .ai/specs/2026-11-02--1031UTC-mrp-automatic-mode.md`, branched from `main`.
+- During implementation, comment on #320 with what it owes the batch (spec Q1).
