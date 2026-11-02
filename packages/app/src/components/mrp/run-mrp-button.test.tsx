@@ -12,7 +12,7 @@ const labels: RunMrpLabels = {
 /** An action whose answer the test hands over when it chooses. */
 function deferred() {
   let answer!: (result: Result<MrpRunAnswer>) => void;
-  const action = vi.fn((_raw: { mode: "manual" | "automatic" }) => new Promise<Result<MrpRunAnswer>>((resolve) => (answer = resolve)));
+  const action = vi.fn<(raw: { mode: "manual" | "automatic" }) => Promise<Result<MrpRunAnswer>>>(() => new Promise((resolve) => (answer = resolve)));
   return { action, answer: (result: Result<MrpRunAnswer>) => act(async () => answer(result)) };
 }
 const open = () => {
