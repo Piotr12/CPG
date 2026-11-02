@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { en } from "../../i18n/messages/en";
+import { pl } from "../../i18n/messages/pl";
 import { requisitionChoices } from "./choices";
 import { byId, ordersLabels } from "./labels";
 
@@ -27,8 +28,15 @@ describe("requisitionChoices", () => {
       [requisition("00000001", "open", "40.000000"), requisition("00000002", "completed", "0.000000")] as never,
       materials,
       ordersLabels(en),
+      "en",
     );
 
     expect(choices).toEqual([{ value: "00000001", label: "00000001 — 40 kg outstanding", material: "00000001", location: "00000002" }]);
+  });
+
+  it("say the outstanding quantity in the reader's locale, every digit kept (#304)", () => {
+    const open = [requisition("00000001", "open", "12345.500000")] as never;
+    expect(requisitionChoices(open, materials, ordersLabels(en), "en")[0].label).toBe("00000001 — 12,345.5 kg outstanding");
+    expect(requisitionChoices(open, materials, ordersLabels(pl), "pl")[0].label).toBe("00000001 — pozostało 12\u00a0345,5 kg");
   });
 });

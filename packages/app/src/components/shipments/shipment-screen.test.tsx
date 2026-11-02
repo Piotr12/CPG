@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { CustomerOrderView, ShipmentView, TenantInfo } from "@cpg/core";
 import { en } from "../../i18n/messages/en";
@@ -44,5 +44,21 @@ describe("ShipmentScreen", () => {
     rerender(<ShipmentScreen {...props} tenant={{ ...props.tenant, readOnly: true }} shipment={{ ...shipment, status: "cancelled" }} />);
     expect(within(header()).getByText("Cancelled").closest("[data-slot=status-badge]")?.querySelector("svg.lucide-circle-x")).toBeTruthy();
     expect(screen.queryByText(en.shipments.cancel.issued)).toBeNull();
+  });
+
+  it("shows every figure in the reader's locale: planned, issued, to issue and the post hint (#304)", () => {
+    const big = { ...shipment, lines: [{ ...shipmentLine, quantity: "32345.500000", issued: "10000.250000", posted: true, toIssue: "22345.250000" }] };
+    const figures = (name: string) => within(screen.getByRole("table", { name })).getAllByRole("cell").slice(2).map((cell) => cell.textContent);
+
+    const { unmount } = render(<ShipmentScreen {...props} shipment={big} />);
+    expect(figures(en.shipments.lines)).toEqual(["32,345.5 each", "10,000.25 each", "22,345.25 each"]);
+    fireEvent.click(screen.getByRole("button", { name: en.goodsIssues.post.open }));
+    expect(screen.getByText("22,345.25 each to issue")).toBeTruthy();
+    unmount();
+
+    render(<ShipmentScreen {...props} shipment={big} messages={pl} locale="pl" />);
+    expect(figures(pl.shipments.lines)).toEqual(["32\u00a0345,5 each", "10\u00a0000,25 each", "22\u00a0345,25 each"]);
+    fireEvent.click(screen.getByRole("button", { name: pl.goodsIssues.post.open }));
+    expect(screen.getByText("do wydania 22 345,25 each")).toBeTruthy();
   });
 });

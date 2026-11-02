@@ -37,7 +37,13 @@ describe("purchase-order labels", () => {
   });
 
   it("say how a line was entered when not in the base unit (MAT-019), and nothing when it was", () => {
-    expect(enteredAs(line, materials, ordersLabels(en))).toBe("0.5 t at 1 t = 1000 kg");
-    expect(enteredAs({ ...line, enteredUnit: "kg" }, materials, ordersLabels(en))).toBe("");
+    expect(enteredAs(line, materials, ordersLabels(en), "en")).toBe("0.5 t at 1 t = 1,000 kg");
+    expect(enteredAs({ ...line, enteredUnit: "kg" }, materials, ordersLabels(en), "en")).toBe("");
+  });
+
+  it("say the entered quantity and both sides of its conversion in the reader's locale (#304)", () => {
+    const entered = { ...line, enteredQuantity: "12345.5", enteredUnit: "box", denominator: "10000.25", numerator: "12345.125" };
+    expect(enteredAs(entered, materials, ordersLabels(en), "en")).toBe("12,345.5 box at 10,000.25 box = 12,345.125 kg");
+    expect(enteredAs(entered, materials, ordersLabels(pl), "pl")).toBe("12\u00a0345,5 box przy 10\u00a0000,25 box = 12\u00a0345,125 kg");
   });
 });

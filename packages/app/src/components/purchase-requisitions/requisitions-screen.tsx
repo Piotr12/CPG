@@ -63,6 +63,7 @@ export function RequisitionsScreen({ tenant, requisitions, page, pages, list, ma
         sort={list.sort}
         links={list.links}
         lists={messages.lists}
+        locale={locale}
       />
     </div>
   );
