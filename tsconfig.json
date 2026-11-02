@@ -1,8 +1,10 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "types": ["node"]
+    "types": ["node"],
+    // scripts/ runs under plain Node in CI, which needs its own modules imported by their .ts name (#351).
+    "allowImportingTsExtensions": true
   },
-  "include": ["tests/**/*.ts", "*.mts"],
+  "include": ["scripts/**/*.ts", "tests/**/*.ts", "*.mts"],
   "exclude": ["node_modules"]
 }

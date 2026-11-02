@@ -22,7 +22,7 @@ export default defineConfig({
         test: {
           name: "node",
           environment: "node",
-          include: ["packages/*/{src,scripts}/**/*.test.ts", "tests/*.test.ts"],
+          include: ["packages/*/{src,scripts}/**/*.test.ts", "scripts/**/*.test.ts", "tests/*.test.ts"],
           exclude: [...configDefaults.exclude, ...TIMING_TESTS],
         },
       },
@@ -45,7 +45,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       // Every source file counts, imported by a test or not, so untested files show up as 0%.
-      include: ["packages/*/src/**/*.{ts,tsx}", "packages/*/scripts/**/*.ts"],
+      include: ["packages/*/src/**/*.{ts,tsx}", "packages/*/scripts/**/*.ts", "scripts/**/*.ts"],
       exclude: ["**/*.test.{ts,tsx}"],
       // AGENTS.md: every change keeps unit-test coverage at 100%. Don't lower this.
       thresholds: { 100: true },
