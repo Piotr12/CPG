@@ -1,4 +1,4 @@
-import type { OrderView } from "@cpg/core";
+import type { Locale, OrderView } from "@cpg/core";
 import { UNIT_FORMAT_MESSAGE } from "@cpg/core/validators/materials/material-fields.schema";
 import {
   QUANTITY_OUT_OF_RANGE_MESSAGE,
@@ -9,7 +9,7 @@ import { RECEIPT_LINE_COUNT_MESSAGE, RECEIPT_LINE_ORDER_MESSAGE } from "@cpg/cor
 import { DUPLICATE_LINE_MESSAGE, LINE_NO_SUCH_LINE_MESSAGE, LINE_NUMBER_MESSAGE } from "@cpg/core/validators/purchasing/purchasing-fields.schema";
 import { POSITIVE_QUANTITY_MESSAGE } from "@cpg/core/validators/quantities/quantity.schema";
 import type { Messages } from "../../i18n/messages/en";
-import { errorFormatter, fill, formQuantity } from "../forms/form-labels";
+import { errorFormatter, fill, localeQuantity } from "../forms/form-labels";
 import type { MaterialsById } from "../purchase-orders/labels";
 
 /** The goods-receipt strings in the reader's language, all plain strings; `errors` holds every code the dialog can show. */
@@ -20,7 +20,7 @@ export function receiptsLabels(messages: Messages): ReceiptsLabels {
   return { ...messages.goodsReceipts, errors: { ...messages.errors, ...messages.goodsReceipts.errors } };
 }
 
-export { errorFormatter, fill, formQuantity };
+export { errorFormatter, fill, localeQuantity };
 
 /** A field message from the shared schemas or the service in the reader's language; unknown ones pass through. */
 export function fieldErrorFormatter(labels: ReceiptsLabels) {
@@ -49,14 +49,17 @@ export interface ReceiptLineChoice {
   units: string[];
 }
 
-/** Every line of `order`, each labelled with its material and outstanding quantity; a received line may still take an excess (BUY-015). */
-export function receiptLineChoices(order: OrderView, materials: MaterialsById, units: Record<string, string[]>, labels: ReceiptsLabels): ReceiptLineChoice[] {
+/**
+ * Every line of `order`, each labelled with its material and outstanding quantity in the reader's locale (#304); a received
+ * line may still take an excess (BUY-015).
+ */
+export function receiptLineChoices(order: OrderView, materials: MaterialsById, units: Record<string, string[]>, labels: ReceiptsLabels, locale: Locale): ReceiptLineChoice[] {
   return order.lines.filter(({ status }) => status === "open" || status === "completed").map(({ line, material, outstanding }) => {
     const { id, description, baseUnit } = materials.get(material)!;
     return {
       line,
       label: fill(labels.post.line, { line: String(line), material: `${id} ${description}` }),
-      outstanding: fill(labels.post.outstanding, { outstanding: formQuantity(outstanding), baseUnit }),
+      outstanding: fill(labels.post.outstanding, { outstanding: localeQuantity(outstanding, locale), baseUnit }),
       units: units[material] ?? [baseUnit],
     };
   });

@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { OrderView } from "@cpg/core";
 import { en } from "../../i18n/messages/en";
@@ -47,6 +47,29 @@ describe("OrderScreen", () => {
     rerender(<OrderScreen {...detail} tenant={{ ...tenant, readOnly: true }} messages={pl} locale="pl" order={{ ...order, status: "cancelled" } as unknown as OrderView} />);
     expect(within(header()).queryByRole("button")).toBeNull();
     expect(within(header()).getByText(pl.purchaseOrders.status.cancelled).closest("[data-slot=status-badge]")?.querySelector("svg.lucide-circle-x")).toBeTruthy();
+  });
+
+  it("shows every figure in the reader's locale: amounts, the entered-as conversion and the lifecycle quantities (#304)", () => {
+    const big = { ...line, quantity: "32345.500000", enteredQuantity: "12345.5", enteredUnit: "box", denominator: "10000.25", numerator: "12345.125",
+      received: "10000.250000", outstanding: "22345.250000", abandoned: "10000.000000" };
+    const bigOrder = { ...order, lines: [big] } as unknown as OrderView;
+    const figures = () => within(screen.getByRole("table", { name: en.purchaseOrders.lines.heading })).getAllByRole("cell").map((cell) => cell.textContent);
+    const abandoned = (button: RegExp, list: string) => {
+      fireEvent.click(within(header()).getByRole("button", { name: button }));
+      return within(screen.getByRole("list", { name: list })).getAllByRole("listitem").map((item) => item.textContent);
+    };
+
+    const { unmount } = render(<OrderScreen {...detail} order={bigOrder} />);
+    expect(figures()).toEqual(["1", "00000002Bolt M8", "32,345.5 each", "12,345.5 box at 10,000.25 box = 12,345.125 each", "2027-03-05", "—",
+      "10,000.25 each", "22,345.25 each", "Open", "10,000 each", "Change dateClose line early…"]);
+    expect(abandoned(/^Close order early…/, en.lifecycle.abandoned)).toEqual(["Bolt M8: 22,345.25 each"]);
+    unmount();
+
+    render(<OrderScreen {...detail} order={bigOrder} messages={pl} locale="pl" />);
+    const cells = within(screen.getByRole("table", { name: pl.purchaseOrders.lines.heading })).getAllByRole("cell").map((cell) => cell.textContent);
+    expect([cells[2], cells[3], cells[6], cells[7], cells[9]]).toEqual(["32\u00a0345,5 each", "12\u00a0345,5 box przy 10\u00a0000,25 box = 12\u00a0345,125 each",
+      "10\u00a0000,25 each", "22\u00a0345,25 each", "10\u00a0000 each"]);
+    expect(abandoned(/^Zamknij zamówienie wcześniej…/, pl.lifecycle.abandoned)).toEqual(["Bolt M8: 22\u00a0345,25 each"]);
   });
 });
 

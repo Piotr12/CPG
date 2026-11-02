@@ -1,7 +1,7 @@
 import { cancelPurchaseOrder, closeEarlyPurchaseOrder, setPurchaseOrderLineDate } from "../../app/admin/[tenant]/purchase-orders/[id]/actions";
 import { LifecycleControl } from "../document-lifecycle/lifecycle-control";
 import { ChangeDateDialog } from "../purchasing/change-date-dialog";
-import { fill } from "../forms/form-labels";
+import { fill, localeQuantity } from "../forms/form-labels";
 import Link from "next/link";
 import { stockLabels } from "../stock/labels";
 import type { Locale, MaterialSummary, NamedRecordView, OrderLineView, OrderView, ReceiptView } from "@cpg/core";
@@ -15,7 +15,7 @@ import { receiptLineChoices, receiptsLabels } from "../goods-receipts/labels";
 import { ReceiptDialog } from "../goods-receipts/receipt-dialog";
 import { ReceiptsTable } from "../goods-receipts/receipts-table";
 import { requisitionHref } from "../purchase-requisitions/requisition-link";
-import { byId, enteredAs, ordersLabels, formQuantity } from "./labels";
+import { byId, enteredAs, ordersLabels } from "./labels";
 
 interface OrderScreenProps {
   tenant: { code: string; name: string; generation: number; readOnly: boolean };
@@ -45,6 +45,8 @@ export function OrderScreen({ tenant, order, receipts, materials, units, supplie
   const location = byId(locations).get(order.location)!;
   const t = labels.details;
   const c = labels.lines.columns;
+  // A figure as the reader writes it, in its material's base unit (#304).
+  const amount = (quantity: string, material: string) => `${localeQuantity(quantity, locale)} ${materialsById.get(material)!.baseUnit}`;
   const lineEditable = (line: OrderLineView) => !tenant.readOnly && order.status === "open" && line.status === "open";
   const lineSubject = (line: OrderLineView) => `${labels.link} ${order.id} — ${fill(messages.lifecycle.line, { line: String(line.line) })}`;
   const dateLabels = { ...labels.changeDate, field: labels.form.plannedDate, cancel: labels.cancel, date: labels.fieldErrors.date };
@@ -77,9 +79,9 @@ export function OrderScreen({ tenant, order, receipts, materials, units, supplie
       id: "quantity",
       header: c.quantity,
       kind: "quantity",
-      cell: (line) => `${formQuantity(line.quantity)} ${materialsById.get(line.material)!.baseUnit}`,
+      cell: (line) => amount(line.quantity, line.material),
     },
-    { id: "enteredAs", header: c.enteredAs, kind: "longText", priority: 2, cell: (line) => enteredAs(line, materialsById, labels) },
+    { id: "enteredAs", header: c.enteredAs, kind: "longText", priority: 2, cell: (line) => enteredAs(line, materialsById, labels, locale) },
     { id: "plannedDate", header: c.plannedDate, kind: "date", cell: (line) => line.plannedDate },
     {
       id: "requisition",
@@ -99,13 +101,13 @@ export function OrderScreen({ tenant, order, receipts, materials, units, supplie
       id: "received",
       header: c.received,
       kind: "quantity",
-      cell: (line) => `${formQuantity(line.received)} ${materialsById.get(line.material)!.baseUnit}`,
+      cell: (line) => amount(line.received, line.material),
     },
     {
       id: "outstanding",
       header: c.outstanding,
       kind: "quantity",
-      cell: (line) => `${formQuantity(line.outstanding)} ${materialsById.get(line.material)!.baseUnit}`,
+      cell: (line) => amount(line.outstanding, line.material),
     },
     {
       id: "status",
@@ -113,14 +115,14 @@ export function OrderScreen({ tenant, order, receipts, materials, units, supplie
       kind: "status",
       cell: (line) => <StatusBadge {...documentStatusTone(line.status)}>{labels.lines.status[line.status]}</StatusBadge>,
     },
-    { id: "abandoned", header: messages.lifecycle.abandoned, kind: "quantity", priority: 2, cell: (line) => `${formQuantity(line.abandoned)} ${materialsById.get(line.material)!.baseUnit}` },
+    { id: "abandoned", header: messages.lifecycle.abandoned, kind: "quantity", priority: 2, cell: (line) => amount(line.abandoned, line.material) },
     { id: "actions", header: messages.lifecycle.actions, kind: "actions", cell: (line) => <div className="flex flex-col items-start gap-2">
       <ChangeDateDialog kind="orderLine" available={lineEditable(line)} subject={lineSubject(line)} value={line.plannedDate} version={order.version}
         save={setPurchaseOrderLineDate.bind(null, tenant.code, tenant.generation, order.id, line.line)} labels={dateLabels} errors={dateErrors} />
       <LifecycleControl kind="line"
         available={lineEditable(line)} processed={line.posted}
         subject={lineSubject(line)}
-        version={order.version} lines={[line.line]} quantities={[`${formQuantity(line.outstanding)} ${materialsById.get(line.material)!.baseUnit}`]}
+        version={order.version} lines={[line.line]} quantities={[amount(line.outstanding, line.material)]}
         labels={messages.lifecycle} errors={messages.errors}
         cancel={cancelPurchaseOrder.bind(null, tenant.code, tenant.generation, order.id)} closeEarly={closeEarlyPurchaseOrder.bind(null, tenant.code, tenant.generation, order.id)} />
     </div> },
@@ -138,7 +140,7 @@ export function OrderScreen({ tenant, order, receipts, materials, units, supplie
         meta={<StatusBadge {...documentStatusTone(order.status as DocumentStatus)}>{labels.status[order.status as keyof typeof labels.status]}</StatusBadge>}
         actions={!tenant.readOnly && order.status === "open" && <LifecycleControl kind="order" available processed={order.lines.some((line) => line.posted)}
           subject={`${labels.link} ${order.id}`} version={order.version}
-          quantities={order.lines.filter((line) => line.status === "open").map((line) => `${materialsById.get(line.material)!.description}: ${formQuantity(line.outstanding)} ${materialsById.get(line.material)!.baseUnit}`)}
+          quantities={order.lines.filter((line) => line.status === "open").map((line) => `${materialsById.get(line.material)!.description}: ${amount(line.outstanding, line.material)}`)}
           labels={messages.lifecycle} errors={messages.errors}
           cancel={cancelPurchaseOrder.bind(null, tenant.code, tenant.generation, order.id)} closeEarly={closeEarlyPurchaseOrder.bind(null, tenant.code, tenant.generation, order.id)} />}
       />
@@ -169,7 +171,8 @@ export function OrderScreen({ tenant, order, receipts, materials, units, supplie
             purchaseOrder={order.id}
             location={`${location.id} ${location.name}`}
             labels={receiptLabels}
-            lines={receiptLineChoices(order, materialsById, units, receiptLabels)}
+            lines={receiptLineChoices(order, materialsById, units, receiptLabels, locale)}
+            locale={locale}
             baseUnits={Object.fromEntries(order.lines.map(({ line, material }) => [line, materialsById.get(material)!.baseUnit]))}
             canPost={order.status === "open"}
           />

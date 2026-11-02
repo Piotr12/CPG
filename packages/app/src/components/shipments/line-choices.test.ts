@@ -1,7 +1,8 @@
 import type { CustomerOrderView, ShipmentView } from "@cpg/core";
 import { describe, expect, it } from "vitest";
 import { en } from "../../i18n/messages/en";
-import { shipmentEditChoices } from "./line-choices";
+import { pl } from "../../i18n/messages/pl";
+import { shipmentEditChoices, shipmentLineChoices } from "./line-choices";
 import { shipmentsLabels } from "./labels";
 
 const A = "00000000-0000-4000-8000-00000000000a";
@@ -29,7 +30,7 @@ const SHIPMENT: ShipmentView = {
 
 describe("shipmentEditChoices", () => {
   it("lists the shipment's lines filled, then the order's other lines with anything outstanding, empty, each named by its order line (shipment edit spec Q8)", () => {
-    const choices = shipmentEditChoices(SHIPMENT, ORDER, materials, { "00000005": ["each", "box"], "00000006": ["kg"] }, shipmentsLabels(en));
+    const choices = shipmentEditChoices(SHIPMENT, ORDER, materials, { "00000005": ["each", "box"], "00000006": ["kg"] }, shipmentsLabels(en), "en");
 
     expect(choices).toEqual([
       { key: A, label: "Line 1: 00000005 Widget", hint: "Planned 50 each, issued 30 each, at least 30 each", units: ["each", "box"], initial: { quantity: "50", unit: "each" } },
@@ -41,8 +42,31 @@ describe("shipmentEditChoices", () => {
   });
 
   it("falls back to the base unit for a material with no listed units", () => {
-    const [kept, added] = shipmentEditChoices({ ...SHIPMENT, lines: [SHIPMENT.lines[0]] }, { ...ORDER, lines: [ORDER.lines[0], ORDER.lines[1]] }, materials, {}, shipmentsLabels(en));
+    const [kept, added] = shipmentEditChoices({ ...SHIPMENT, lines: [SHIPMENT.lines[0]] }, { ...ORDER, lines: [ORDER.lines[0], ORDER.lines[1]] }, materials, {}, shipmentsLabels(en), "en");
     expect(kept.units).toEqual(["each"]);
     expect(added.units).toEqual(["kg"]);
+  });
+
+  it("says every hint figure in the reader's locale and keeps the raw entered quantity as the prefill (#304)", () => {
+    const order = { ...ORDER, lines: [orderLine(A, "00000005", "30000.000000", "0.000000"), orderLine(B, "00000006", "12345.500000", "0.000000")] };
+    const shipment = { ...SHIPMENT, lines: [shipmentLine(1, A, "00000005", "12345.500000", "10000.250000", { quantity: "12345.5", unit: "each" })] };
+    const [kept, added] = shipmentEditChoices(shipment, order, materials, {}, shipmentsLabels(en), "en");
+    expect(kept.hint).toBe("Planned 12,345.5 each, issued 10,000.25 each, at least 10,000.25 each");
+    expect(kept.initial).toEqual({ quantity: "12345.5", unit: "each" });
+    expect(added.hint).toBe("12,345.5 kg outstanding");
+    const [keptPl, addedPl] = shipmentEditChoices(shipment, order, materials, {}, shipmentsLabels(pl), "pl");
+    expect(keptPl.hint).toBe("Zaplanowano 12\u00a0345,5 each, wydano 10\u00a0000,25 each, co najmniej 10\u00a0000,25 each");
+    expect(keptPl.initial).toEqual({ quantity: "12345.5", unit: "each" });
+    expect(addedPl.hint).toBe("pozostało 12\u00a0345,5 kg");
+  });
+});
+
+describe("shipmentLineChoices", () => {
+  it("offers the lines with anything outstanding, the outstanding in the reader's locale (#304)", () => {
+    const order = { ...ORDER, lines: [orderLine(A, "00000005", "12345.500000", "0.000000"), orderLine(C, "00000005", "10.000000", "10.000000")] };
+    expect(shipmentLineChoices(order, materials, {}, shipmentsLabels(en), "en")).toEqual([
+      { key: A, label: expect.stringContaining("00000005 Widget"), hint: "12,345.5 each outstanding", units: ["each"] },
+    ]);
+    expect(shipmentLineChoices(order, materials, {}, shipmentsLabels(pl), "pl")[0].hint).toBe("pozostało 12\u00a0345,5 each");
   });
 });

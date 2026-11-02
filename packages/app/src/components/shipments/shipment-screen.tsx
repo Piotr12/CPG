@@ -13,7 +13,7 @@ import { IssuesTable } from "../goods-issues/issues-table";
 import { byId } from "../purchase-requisitions/labels";
 import { CancelShipmentButton } from "./cancel-shipment-button";
 import { EditShipmentDialog } from "./edit-shipment-dialog";
-import { fill, shipmentsLabels, formQuantity } from "./labels";
+import { fill, localeQuantity, shipmentsLabels } from "./labels";
 import { shipmentEditChoices } from "./line-choices";
 
 interface ShipmentScreenProps {
@@ -50,6 +50,8 @@ export function ShipmentScreen({ tenant, shipment, order, issues, materials, uni
   const t = labels.details;
   const c = labels.lineColumns;
   const baseUnit = (line: ShipmentLineView) => materialsById.get(line.material)!.baseUnit;
+  // A figure as the reader writes it, in the line's base unit (#304).
+  const amount = (quantity: string, line: ShipmentLineView) => `${localeQuantity(quantity, locale)} ${baseUnit(line)}`;
   const details = [
     { label: t.customerOrder, value: <Link className="font-mono underline underline-offset-4" href={orderPath}>{shipment.customerOrder}</Link> },
     { label: t.customer, value: `${customer.id} ${customer.name}` },
@@ -68,9 +70,9 @@ export function ShipmentScreen({ tenant, shipment, order, issues, materials, uni
         </Link>
       ),
     },
-    { id: "quantity", header: c.quantity, kind: "quantity", priority: 2, cell: (line) => `${formQuantity(line.quantity)} ${baseUnit(line)}` },
-    { id: "issued", header: c.issued, kind: "quantity", cell: (line) => `${formQuantity(line.issued)} ${baseUnit(line)}` },
-    { id: "toIssue", header: c.toIssue, kind: "quantity", cell: (line) => `${formQuantity(line.toIssue)} ${baseUnit(line)}` },
+    { id: "quantity", header: c.quantity, kind: "quantity", priority: 2, cell: (line) => amount(line.quantity, line) },
+    { id: "issued", header: c.issued, kind: "quantity", cell: (line) => amount(line.issued, line) },
+    { id: "toIssue", header: c.toIssue, kind: "quantity", cell: (line) => amount(line.toIssue, line) },
   ];
   const choices: LineQuantityChoice[] = shipment.lines
     .filter(({ toIssue }) => !isNothing(toIssue))
@@ -79,7 +81,7 @@ export function ShipmentScreen({ tenant, shipment, order, issues, materials, uni
       return {
         key: line.line,
         label: fill(issueLabels.post.line, { line: String(line.line), material: `${material.id} ${material.description}` }),
-        hint: fill(issueLabels.post.toIssue, { toIssue: formQuantity(line.toIssue), baseUnit: material.baseUnit }),
+        hint: fill(issueLabels.post.toIssue, { toIssue: localeQuantity(line.toIssue, locale), baseUnit: material.baseUnit }),
         units: units[line.material] ?? [material.baseUnit],
       };
     });
@@ -106,7 +108,7 @@ export function ShipmentScreen({ tenant, shipment, order, issues, materials, uni
             version={shipment.version}
             location={`${location.id} ${location.name}`}
             labels={labels}
-            lines={shipmentEditChoices(shipment, order, materialsById, units, labels)}
+            lines={shipmentEditChoices(shipment, order, materialsById, units, labels, locale)}
             plannedDate={shipment.plannedDate}
           />
           {!issued && <CancelShipmentButton context={context} shipment={shipment.id} customerOrder={shipment.customerOrder} version={shipment.version} labels={labels} />}
