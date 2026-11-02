@@ -247,6 +247,17 @@ describe("an automatic MRP run's batch (E19-S03)", () => {
     expect(await count("purchase_requisition")).toBe(0);
   });
 
+  it("keeps a refusal's params on the run, beside its candidate", async () => {
+    await buyMaterials(2);
+    vi.spyOn(MrpProposalDocumentService.prototype, "create").mockRejectedValueOnce(new ConflictError("A newer refusal.", "SOMETHING_NEW", { document: "00000042" }));
+
+    const view = await run();
+
+    expect(view.creation).toMatchObject({ status: "failed", code: "SOMETHING_NEW", message: "A newer refusal.", params: { document: "00000042" } });
+    expect(view.creation).not.toHaveProperty("fieldErrors");
+    expect(await count("purchase_requisition")).toBe(0);
+  });
+
   it("RUN-016: an independent exception doesn't fail the batch: A's Missing BOM is reported and B's requisition created", async () => {
     const a = await material("Cabinet");
     await parameters(a.id, "make");

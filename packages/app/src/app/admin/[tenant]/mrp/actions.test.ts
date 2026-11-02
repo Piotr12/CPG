@@ -24,7 +24,7 @@ describe("runMrp", () => {
     mocks.currentUser.mockResolvedValue({ userId: "u", username: "alice", sessionId: "s", role });
     mocks.run.mockResolvedValue({ id: "00000001" });
 
-    expect(await runMrp("test", 4)).toEqual({ ok: true, data: { id: "00000001" } });
+    expect(await runMrp("test", 4, {})).toEqual({ ok: true, data: { id: "00000001" } });
     expect(mocks.bound).toHaveBeenCalledWith("test", 4, {});
     expect(mocks.run).toHaveBeenCalledWith({ userId: "u", username: "alice", sessionId: "s", channel: "ui", token: null }, {});
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/test/mrp");
@@ -42,14 +42,22 @@ describe("runMrp", () => {
     expect(mocks.run).not.toHaveBeenCalled();
   });
 
+  it("runs manually when the body is empty, as the schema allows", async () => {
+    mocks.currentUser.mockResolvedValue({ userId: "u", username: "alice", sessionId: "s", role: "user" });
+    mocks.run.mockResolvedValue({ id: "00000003" });
+
+    expect(await runMrp("prod", 1, null)).toEqual({ ok: true, data: { id: "00000003" } });
+    expect(mocks.run).toHaveBeenCalledWith(expect.objectContaining({ channel: "ui" }), {});
+  });
+
   it("refuses without a session, and keeps a refusal on the page rather than refreshing it away", async () => {
     mocks.currentUser.mockResolvedValue(null);
-    expect(await runMrp("prod", 1)).toMatchObject({ ok: false, error: { code: "UNAUTHORIZED" } });
+    expect(await runMrp("prod", 1, {})).toMatchObject({ ok: false, error: { code: "UNAUTHORIZED" } });
     expect(mocks.run).not.toHaveBeenCalled();
 
     mocks.currentUser.mockResolvedValue({ userId: "u", username: "alice", sessionId: "s", role: "admin" });
     mocks.run.mockRejectedValue(new ConflictError("Read-only", "TENANT_READ_ONLY"));
-    expect(await runMrp("prod", 1)).toMatchObject({ ok: false, error: { code: "TENANT_READ_ONLY" } });
+    expect(await runMrp("prod", 1, {})).toMatchObject({ ok: false, error: { code: "TENANT_READ_ONLY" } });
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 });

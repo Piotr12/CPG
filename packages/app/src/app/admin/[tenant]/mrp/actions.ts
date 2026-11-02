@@ -10,7 +10,7 @@ import { refreshAfterWrite } from "../../../../routing/refresh-after-write";
  * when absent (E19-S03). Both roles may; `tenantServerAction` refuses a read-only tenant, the admin included,
  * and a page bound to an older Test generation.
  */
-export async function runMrp(tenant: string, generation: number, raw: unknown = {}): Promise<Result<MrpRunAnswer>> {
+export async function runMrp(tenant: string, generation: number, raw: unknown): Promise<Result<MrpRunAnswer>> {
   const user = await currentUser();
   const result = await tenantServerAction(mrpRunSchema, (input, { cradle }) => cradle.mrpRunService.run(uiActor(assertSignedIn(user)), input ?? {}))(
     tenant,
