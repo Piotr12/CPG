@@ -107,8 +107,24 @@ describe("foldWeeks", () => {
     expect(foldWeeks(ux027(), [late])[1].marks).toEqual([late]);
   });
 
+  it("#336: folds stored figures past what one entry may hold, as a balance summing two of the largest needs (R03)", () => {
+    // Two lines of 999,999,999,999 on Wednesday 7 October: 13 integer digits, more than any entry may hold.
+    const stored = days("2026-10-05", 7, (day, index) => {
+      const short = index >= 2;
+      day.firmDemand = index === 2 ? "1999999999998.000000" : ZERO;
+      day.projectedBefore = short ? "-1999999999998.000000" : ZERO;
+      day.projectedAfter = day.projectedBefore;
+      day.shortage = short ? "1999999999998.000000" : ZERO;
+      day.proposedReceipts = index === 6 ? "2000000000001.500000" : ZERO;
+    });
+    expect(foldWeeks(stored, [])).toEqual([expect.objectContaining({
+      week: 41, firmDemand: "1999999999998.000000", proposedReceipts: "2000000000001.500000",
+      projectedBefore: "-1999999999998.000000", lowestProjectedBefore: "-1999999999998.000000", peakShortage: "1999999999998.000000",
+    })]);
+  });
+
   it("refuses a stored figure that isn't a six-decimal quantity rather than guessing", () => {
-    expect(() => foldWeeks(days("2026-10-05", 1, (day) => (day.firmDemand = "8,5")), [])).toThrow('An MRP daily figure isn\'t a six-decimal quantity: "8,5".');
+    expect(() => foldWeeks(days("2026-10-05", 1, (day) => (day.firmDemand = "8,5")), [])).toThrow('A stored figure isn\'t a six-decimal quantity: "8,5".');
   });
 
   it("sums or levels every figure but the shortage, which only its peak stands for", () => {

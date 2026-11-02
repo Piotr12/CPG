@@ -27,12 +27,15 @@
   - a negative case: required on today + lead time, no mark;
   - a 390 px viewport.
 - 20:20 Pitfall: in zsh, a loop variable named `path` overwrites `PATH`, so every command in the loop fails with "command not found".
+- 20:28 Reported, then swapped `in-progress` for `ci-monitoring`. CI run 41515879689 on `139f8503` passed all 11 jobs.
+- 21:05 #353 had merged meanwhile, with the PR showing `DIRTY`. It deleted #327's active copy on `main` and wrote the same incident into the spec-copy lesson, which conflicted with this run's line. Took `main`'s lesson. Merged with typecheck clean and the MRP unit tests passing (55 files, 735 tests).
+- 21:05 Correction: this run had moved the pipeline label to `merge-queue`. Lesson 2026-10-17 keeps a self-authored PR in `review` and leaves approval to a human, so it went back to `review`.
 
 ## Changes
 
 - `127d4dca`: merged `origin/main`.
 - `0a53602b`: spec copies (#322's synced to #352's final text and its active copy deleted, #327's active copy deleted).
-- `.ai/lessons.md`: the spec-copy lesson records the #355/#356 recurrence.
+- A second merge of `origin/main` (`e6de7705`, #353). Its lesson replaced this run's own line.
 - This run log.
 
 ## Verification
@@ -45,9 +48,9 @@
 - `npx vitest run tests/ai-filenames.test.ts`: 5/5 after the spec cleanup.
 - `CPG_BASE_URL=http://localhost:3217 npm run test:integration -- tests/integration/mrp-accept.test.ts`: 3/3 against the production build.
 - Browser QA: PASS, 8/8 ([evidence](https://github.com/Piotr12/CPG/pull/354#issuecomment-6587181049)).
-- CI on `9503cfc7` (run 41514429487): lint, typecheck, build, `unit-tests (2)` and `unit-timing` passed. The integration shards and `unit-tests (1)` were still running when this log was pushed. The final head, which carries only this log and the lesson, gets its own run, reported in the PR's CI-result comment.
+- CI on `9503cfc7` (run 41514429487): lint, typecheck, build, `unit-tests (2)` and `unit-timing` passed. The integration shards and `unit-tests (1)` were still running when this log was pushed. The final head, which carries only this log and the lesson, passed all 11 jobs (run 41515879689). The head after the #353 merge gets its own run, reported in the PR's CI-result comment.
 
 ## Follow-ups
 
-- `main` fails `tests/ai-filenames.test.ts` at `fb574a24` because of #327's duplicate spec copy, and its Deploy fails with it. This PR deletes the copy. If #354 waits long for QA, a one-file PR deleting it would unblock `main` sooner.
+- `main` failed `tests/ai-filenames.test.ts` at `fb574a24` because of #327's duplicate spec copy. #353 has since deleted it on `main`.
 - No review findings to file. The QA reviewer still owes the `needs-qa` sign-off, and a human owns the merge (`om-approve-merge-pr`).

@@ -903,6 +903,25 @@ describe("MrpRunService: weeks and marks (#285)", () => {
     expect(await tables()).toEqual(stored);
   });
 
+  it("#336: reads a plan whose balance sums needs past what one entry may hold, by day and by week (R03)", async () => {
+    const bulk = await material("prod", "Bulk");
+    // Two lines of 999,999,999,999 each: a need no single entry may carry (12 integer digits).
+    await order("prod", PLANT, [{ material: bulk.id, quantity: "999999999999", requiredDate: "2026-10-07" }]);
+    await order("prod", PLANT, [{ material: bulk.id, quantity: "999999999999", requiredDate: "2026-10-07" }]);
+    await run();
+    expect(await day("00000001", bulk.id, PLANT, "2026-10-07")).toMatchObject({ projected_before: "-1999999999998.000000" });
+
+    const [daily] = (await latest({ material: bulk.id })).plans;
+    const [weekly] = (await latest({ material: bulk.id, bucket: "week" })).plans;
+
+    expect(daily).toMatchObject({ lowestProjectedBefore: "-1999999999998.000000", firstShortageDate: "2026-10-07" });
+    expect(daily.buckets.find(({ date }) => date === "2026-10-07")).toMatchObject({ firmDemand: "1999999999998.000000", projectedBefore: "-1999999999998.000000" });
+    expect(weekly.weeks!.find(({ week }) => week === 41)).toMatchObject({
+      start: "2026-10-05", end: "2026-10-11", firmDemand: "1999999999998.000000",
+      projectedBefore: "-1999999999998.000000", lowestProjectedBefore: "-1999999999998.000000", peakShortage: "1999999999998.000000",
+    });
+  });
+
   it("refuses a view that isn't a day or a week", async () => {
     await run();
     await expect(latest({ bucket: "month" })).rejects.toMatchObject({ code: "VALIDATION_FAILED", status: 400 });
