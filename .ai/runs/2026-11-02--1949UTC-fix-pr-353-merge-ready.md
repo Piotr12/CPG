@@ -16,8 +16,8 @@ Get PR #353 merge-ready: up to date with `main`, an approvable review, and all r
 - 19:49 — Re-review: there are new commits since the 16:17 review (the docs-only run-log commit and this merge). The code diff (`weekly.ts` now reads stored figures with `parseStoredFigure`, plus two regression tests) is unchanged and still correct. No inherited review or inline comments are open.
 - 19:54 — `npm run test:coverage` on the merge: 671/672 files pass and the coverage thresholds hold, but `tests/ai-filenames.test.ts` fails again on `main`'s own state. #356 merged after its spec PR #355 without deleting the active copy, so `.ai/specs/2026-11-02--1613UTC-mrp-root-requirement-ranking.md` is in both `.ai/specs/` and `implemented/`. No open PR fixes it. I deleted the active copy here, as #335 and #348 did for earlier copies, so #353 doesn't wait on another PR, and merging it repairs `main`. If a separate fix lands first, both delete the same file and the merge stays clean. The case is added to the existing spec-stacking lesson.
 
-- 20:00 — Pushed `e98a5adf`. Posted the re-review (approve, as a comment, because the author can't approve their own PR). Swapped `in-progress` for `ci-monitoring`. Labels: `bug`, `merge-queue`, `skip-qa`, `priority-low`, `risk-low`.
-- 20:25 — CI run 41514324377 on `e98a5adf`: all 11 checks pass, and the PR is `CLEAN` / `MERGEABLE`. This log is committed after that run, so CI runs once more on a docs-only commit.
+- 19:55 — Pushed `e98a5adf`. Posted the re-review (approve, as a comment, because the author can't approve their own PR). Swapped `in-progress` for `ci-monitoring`. Labels: `bug`, `merge-queue`, `skip-qa`, `priority-low`, `risk-low`.
+- 20:08 — CI run 41514324377 on `e98a5adf`: all 11 checks pass, and the PR is `CLEAN` / `MERGEABLE`. This log is committed after that run, so CI runs once more on a docs-only commit.
 
 ## Changes
 
