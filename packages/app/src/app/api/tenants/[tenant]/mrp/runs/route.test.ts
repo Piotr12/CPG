@@ -28,16 +28,29 @@ describe("MRP run API wiring", () => {
 
     expect(await result.json()).toEqual({ ok: true, data: run });
     expect(mocks.run).toHaveBeenCalledTimes(2);
-    expect(mocks.run).toHaveBeenCalledWith({ userId: "u1", username: "alice", sessionId: null, channel: "api", token: { id: "t1", name: "planner" } });
+    expect(mocks.run).toHaveBeenCalledWith({ userId: "u1", username: "alice", sessionId: null, channel: "api", token: { id: "t1", name: "planner" } }, {});
   });
 
-  it("refuses a body with any field before running anything", async () => {
+  it("passes the body's mode to the run, and answers an automatic run with its documents (E19-S03)", async () => {
+    mocks.state.caller = { userId: "u1", username: "alice", role: "user", tokenId: "t1", tokenName: "planner" };
     mocks.state.cradle = { mrpRunService: { run: mocks.run } };
+    const answer = { ...run, mode: "automatic", creation: { status: "created", documents: 1 }, documents: [{ proposal: "p1", kind: "purchase-requisition", id: "00000009" }] };
+    mocks.run.mockResolvedValue(answer);
 
     const result = await post(JSON.stringify({ mode: "automatic" }));
 
-    expect(result.status).toBe(400);
-    expect(await result.json()).toMatchObject({ ok: false, error: { code: "VALIDATION_FAILED" } });
+    expect(await result.json()).toEqual({ ok: true, data: answer });
+    expect(mocks.run).toHaveBeenCalledWith(expect.objectContaining({ channel: "api" }), { mode: "automatic" });
+  });
+
+  it("refuses another mode, or any other field, before running anything", async () => {
+    mocks.state.cradle = { mrpRunService: { run: mocks.run } };
+
+    for (const body of [{ mode: "auto" }, { extra: 1 }]) {
+      const result = await post(JSON.stringify(body));
+      expect(result.status).toBe(400);
+      expect(await result.json()).toMatchObject({ ok: false, error: { code: "VALIDATION_FAILED" } });
+    }
     expect(mocks.run).not.toHaveBeenCalled();
   });
 

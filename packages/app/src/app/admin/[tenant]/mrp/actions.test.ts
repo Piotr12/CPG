@@ -26,8 +26,20 @@ describe("runMrp", () => {
 
     expect(await runMrp("test", 4)).toEqual({ ok: true, data: { id: "00000001" } });
     expect(mocks.bound).toHaveBeenCalledWith("test", 4, {});
-    expect(mocks.run).toHaveBeenCalledWith({ userId: "u", username: "alice", sessionId: "s", channel: "ui", token: null });
+    expect(mocks.run).toHaveBeenCalledWith({ userId: "u", username: "alice", sessionId: "s", channel: "ui", token: null }, {});
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/test/mrp");
+  });
+
+  it("runs in the dialog's mode, and refuses a mode the run doesn't take before running (E19-S03)", async () => {
+    mocks.currentUser.mockResolvedValue({ userId: "u", username: "alice", sessionId: "s", role: "user" });
+    mocks.run.mockResolvedValue({ id: "00000002", documents: [] });
+
+    expect(await runMrp("prod", 1, { mode: "automatic" })).toEqual({ ok: true, data: { id: "00000002", documents: [] } });
+    expect(mocks.run).toHaveBeenCalledWith(expect.objectContaining({ channel: "ui" }), { mode: "automatic" });
+
+    mocks.run.mockClear();
+    expect(await runMrp("prod", 1, { mode: "auto" })).toMatchObject({ ok: false, error: { code: "VALIDATION_FAILED" } });
+    expect(mocks.run).not.toHaveBeenCalled();
   });
 
   it("refuses without a session, and keeps a refusal on the page rather than refreshing it away", async () => {
