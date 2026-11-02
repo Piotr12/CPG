@@ -12,9 +12,9 @@ import { readRow, type UnreadableRows } from "./readable";
  * changes no earlier residual, since a month's orders consume its forecasts in date order. One that
  * can't be read is left out and reported (E16-S03).
  *
- * A date that isn't a real day can sort outside every month, `30/10/2026` among them, so a last read
- * finds those with `notCalendarDate` and reports them too, as `beforeCutOff` does in the in-code
- * cut-offs (#321). It walks the tenant's forecasts in SQLite (25 ms at 310,000 rows), hydrating only
+ * A date that isn't a real day can sort outside every month, `30/10/2026` after it and `1/10/2026`
+ * before it, so a last read finds those with `notCalendarDate` and reports them too, as `beforeCutOff`
+ * does in the in-code cut-offs (#321): the day such a date means is unknown, so both sides count. It walks the tenant's forecasts in SQLite (25 ms at 310,000 rows), hydrating only
  * the corrupt ones; those inside the window were reported by their month's read.
  */
 export async function readForecasts(em: EntityManager, codes: SnapshotCodes, from: string, last: string, unreadable: UnreadableRows): Promise<MrpForecast[]> {
