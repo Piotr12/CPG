@@ -58,6 +58,16 @@ describe("the MRP report in the UI", () => {
     await signInAsAdmin(admin, baseUrl, adminPassword);
     await openTokens(admin, baseUrl);
     secret = await createToken(admin, SETUP_TOKEN);
+    // E18-S03: the fallback, inactive-input, no-usable-BOM, provisional-chain and at-risk cases, at a site of their own,
+    // first, so the cabinet below stays this file's newest material and its pair sorts last.
+    explained = await explanationSetup({
+      create,
+      deactivate: async (id) => {
+        const { version } = json(await api("GET", `/api/tenants/prod/materials/${id}`)).data as { version: number };
+        const response = await api("PATCH", `/api/tenants/prod/materials/${id}`, { active: false, version });
+        expect(response.status, response.text).toBe(200);
+      },
+    }, "mrprep");
     ids.sheet = await create("/api/tenants/prod/materials", { type: "raw", description: "mrprep sheet", baseUnit: "kg" });
     ids.cabinet = await create("/api/tenants/prod/materials", { type: "finished", description: "mrprep cabinet", baseUnit: "each" });
     ids.plant = await create("/api/tenants/prod/locations", { name: "mrprep plant" });
@@ -87,15 +97,6 @@ describe("the MRP report in the UI", () => {
     ids.dock = await create("/api/tenants/prod/locations", { name: "mrprep dock" });
     const supplier = await create("/api/tenants/prod/suppliers", { name: "mrprep mill" });
     ids.po = await create("/api/tenants/prod/purchase-orders", { supplier, location: ids.dock, lines: [{ material: ids.sheet, quantity: "30", unit: "kg", plannedDate: day(-3) }] });
-    // E18-S03: the fallback, inactive-input, no-usable-BOM, provisional-chain and at-risk cases, at a site of their own.
-    explained = await explanationSetup({
-      create,
-      deactivate: async (id) => {
-        const { version } = json(await api("GET", `/api/tenants/prod/materials/${id}`)).data as { version: number };
-        const response = await api("PATCH", `/api/tenants/prod/materials/${id}`, { active: false, version });
-        expect(response.status, response.text).toBe(200);
-      },
-    }, "mrprep");
     run = await runMrp();
     await createUser(admin, baseUrl, USERNAME, PASSWORD);
     await signIn(rita, baseUrl, PASSWORD, USERNAME);
