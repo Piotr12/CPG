@@ -1,6 +1,6 @@
 # MRP Make acceptance: a feasible Make proposal becomes an Open production order pinned to its BOM revision and tagged with the run, by Accept or by an automatic run
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-11-02 13:04 UTC
 **Issue:** #320 (E19-S01, Make half; epic #271) · **Depends on:** proposal acceptance (`implemented/2026-11-01--0737UTC-mrp-proposal-acceptance.md`, #287), BOM choice (`implemented/2026-11-01--1918UTC-mrp-bom-choice.md`, #282), at-risk and provisional plans (`implemented/2026-11-01--2049UTC-mrp-at-risk-and-provisional-plans.md`, #283), automatic mode (`implemented/2026-11-02--1031UTC-mrp-automatic-mode.md`, #289), production orders (`implemented/2026-10-20--0757UTC-boms.md` and the production-order services), all merged · **Related:** #322 (open: the date of a document accepted from a Late Supply proposal) · **Design authority:** `.ai/specs/product-brief.md` (R03, R05, R07, R08, R10, N06), `research/CPG-prd001.pdf` §04 "Manual/auto creation", "Stale and concurrent", "BOM choice and explanation", `research/CPG-acceptance.md` RUN-006, RUN-007, RUN-014, RUN-015, RUN-017
 
@@ -189,3 +189,22 @@ One phase, one PR: the column and migration, the run link on production orders, 
    - Move this spec to `implemented/` with implementation notes, and record the Q7 outcome there.
 
 Each step leaves the suite green. Run `npm run lint`, `npm run typecheck`, `npm run test:coverage` (100%) and `npm run build`.
+
+## Implementation notes
+
+Implemented on #345, branched from `main` (the spec PR #344 stays design-only), as written, except:
+
+- **The automatic batch yields after every document, not every 25.** On the realistic fixture a production order cost about 20 ms on the machine that ran the benchmark. With Make in the batch, a chunk of 25 between yields stalled the server for 489 ms, against the 250 ms budget. Yielding after every document took it to 30 ms. Flushing and clearing stay per chunk (`mrp-batch.service.ts`).
+- **The Make accept is timed at the realistic size only.** The ten-times fixture plans no feasible Make proposal: every Make need there is provisional, #282's fixture shape. The cap batch therefore inserts 525 production-order candidates on that fixture's Make pairs, the realistic run's Make share, each pinned to an active BOM with active components, beside 1,975 requisitions.
+- **Q7 held in every case tested.** Accepting a parent leaves its input's requisition acceptable, and accepting the input first leaves the parent acceptable. Two parents sharing an input are accepted in either order. The second case shows that an Open order's component needs claim what its proposal claimed. Each is a test in `mrp-acceptance.service.test.ts`.
+- **The integration files have no Make case for `TENANT_READ_ONLY`, and none for a Test proposal under Prod.** Both refusals come from the shared wrapper and the run/proposal lookup, which don't look at the kind. Unit tests cover the Make case of the second (`mrp-acceptance.service.test.ts`, RUN-022).
+- **The dialog's start date** comes from the proposal's timing. `orderStart` (`app/src/components/mrp/order-start.ts`) subtracts the lead time, the span from `plannedStart` to `plannedFinish`, from the need date, so the view gains no field.
+
+Benchmark (`mrp-run-timing.test.ts`), fastest of three. Timings on that machine varied up to 3× between passes; all budgets are unchanged.
+
+| Measurement | Fastest | Longest stall |
+|---|---|---|
+| Make accept, realistic | 183 ms | 30 ms |
+| Automatic run, realistic (354 Buy and 95 Make proposals) | 873 ms | 30 ms |
+| Batch at the cap, ten times (1,975 requisitions and 525 production orders) | 3,953 ms | 37 ms |
+
