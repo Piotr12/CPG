@@ -234,4 +234,34 @@ describe("the realistic Test dataset, written by an API reset", () => {
     await admin.waitForText(`Page ${pages} of ${pages}`);
     expect((await ledger()).at(-1)).toMatchObject({ type: "Correction", source: "This correction", reason: expect.stringContaining("Demonstration opening balance") });
   });
+
+  // After the list walks above: an automatic batch adds a requisition for every Buy proposal of the dataset.
+  it("runs automatically over the realistic dataset, timed, while /up and a latest-run read answer on a reused connection (E19-S03 Q13, lesson 2026-10-24)", async () => {
+    // A warm pooled connection first, as kamal-proxy keeps one; Node's fetch reuses it for the probes.
+    expect((await fetch(`${baseUrl}/up`)).status).toBe(200);
+    const started = performance.now();
+    let runMs = 0;
+    const run = api("POST", "/api/tenants/test/mrp/runs", { key: randomUUID(), body: { mode: "automatic" }, generation: await generation() }).then((response) => {
+      runMs = performance.now() - started;
+      return response;
+    });
+    // Issued right behind the run: /up answers while the batch yields, and the read queues behind it and answers after.
+    const up = await fetch(`${baseUrl}/up`);
+    const upMs = performance.now() - started;
+    const read = await api("GET", "/api/tenants/test/mrp/runs/latest");
+    const response = await run;
+
+    const answer = json(response).data as { id: string; creation: { status: string; documents?: number }; documents: { id: string }[] };
+    process.stdout.write(
+      `An automatic MRP run over the realistic Test dataset created ${answer.documents?.length} documents and answered after ${runMs.toFixed(0)} ms; GET /up issued right behind it after ${upMs.toFixed(0)} ms\n`,
+    );
+    expect(response.status, response.text).toBe(200);
+    expect(answer.creation).toEqual({ status: "created", documents: answer.documents.length });
+    expect(answer.documents.length).toBeGreaterThan(0);
+    expect(up.status).toBe(200);
+    expect(upMs).toBeLessThan(runMs);
+    expect(read.status, read.text).toBe(200);
+    // The unit benchmark holds the 3 s budget (spec Q13); the image on a shared CI runner gets the loose factor the timing tests use.
+    expect(runMs).toBeLessThan(6 * 3_000);
+  });
 });
