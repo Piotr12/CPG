@@ -11,7 +11,7 @@ import { migrateDatabase, toDbOptions } from "../../database";
 import { inRequestTransaction, retryingStaleSnapshot } from "../../http/request-transaction";
 import type { AuditActor } from "../audit/actor";
 import { MRP_PROPOSAL_ACCEPTED, MRP_PROPOSAL_NOT_EXECUTABLE, MRP_PROPOSAL_NOT_FOUND, MRP_PROPOSAL_STALE } from "./mrp-acceptance.service";
-import { PurchaseRequisitionService } from "../purchase-requisitions/purchase-requisition.service";
+import { PurchaseRequisitionService, type RequisitionView } from "../purchase-requisitions/purchase-requisition.service";
 import { MRP_RUN_NOT_FOUND } from "./mrp-run.service";
 import type { MrpPlanView } from "./mrp-run-view";
 
@@ -79,6 +79,43 @@ async function buyProposal(description = "Sugar", quantity = "100", tenant = "pr
   await run(tenant);
   const { run: runId, proposals } = await plan(sugar.id, tenant);
   return { material: sugar.id, runId, proposal: proposals[0] };
+}
+
+/** Make at the plant with lead time `leadTimeDays` and lot multiple `lotMultiple`, no minimum. */
+async function makeParameters(materialId: string, { leadTimeDays = 2, lotMultiple = "1.000000" } = {}) {
+  await (await scope()).cradle.planningParameterService.create(
+    { material: materialId, location: PLANT, procurement: "make", leadTimeDays, minimumQuantity: "0.000000", lotMultiple },
+    ANNA,
+  );
+}
+/** One BOM of `output` made of one `component` per unit, valid from `validFrom`, at `priority`. Returns the BOM's ID. */
+async function recipe(output: string, component: string, { priority = 1, validFrom = "2026-01-01" } = {}) {
+  const created = await (await scope()).cradle.bomService.create(
+    { output, priority, validFrom, validThrough: null, components: [{ material: component, quantity: "1", unit: "each" }] },
+    ANNA,
+  );
+  return created.id;
+}
+/** A raw input with `onHand` each at the plant. */
+async function input(description: string, onHand: string) {
+  const { cradle } = await scope();
+  const created = await cradle.materialService.create({ type: "raw", description, baseUnit: "each" }, ANNA);
+  await cradle.stockService.correct({ material: created.id, location: PLANT, quantity: onHand, unit: "each", reason: "Count" }, ANNA);
+  return created.id;
+}
+/**
+ * A feasible Make proposal (#320): `description` made at the plant through one BOM of an input with enough on hand,
+ * for an order of `quantity` due `needDate`, planned by a run. Returns the pair, the BOM and the plan's proposals.
+ */
+async function makeProposal(description: string, { quantity = "12", needDate = "2026-10-08", onHand = "1000", leadTimeDays = 2, lotMultiple = "1.000000" } = {}) {
+  const made = await material(description);
+  await makeParameters(made.id, { leadTimeDays, lotMultiple });
+  const component = await input(`Input of ${description}`, onHand);
+  const bomId = await recipe(made.id, component);
+  await order(made.id, quantity, needDate);
+  await run();
+  const { run: runId, proposals } = await plan(made.id);
+  return { material: made.id, component, bom: bomId, runId, proposals, proposal: proposals[0] };
 }
 
 beforeEach(async () => {
@@ -167,7 +204,7 @@ describe("MrpAcceptanceService.accept: creating the document", () => {
     const later = await accept(runId, proposals[1].id);
     const earlier = await accept(runId, proposals[0].id);
 
-    expect([earlier.document, later.document].map(({ quantity, requiredDate }) => [requiredDate, quantity])).toEqual([["2026-10-05", "10.000000"], ["2026-10-20", "30.000000"]]);
+    expect([earlier.document, later.document].map((document) => [(document as RequisitionView).requiredDate, document.quantity])).toEqual([["2026-10-05", "10.000000"], ["2026-10-20", "30.000000"]]);
     expect((await plan(sugar.id)).proposals.map(({ document }) => document)).toEqual(["00000002", "00000001"]);
   });
 
@@ -356,7 +393,7 @@ describe("MrpAcceptanceService.accept: refusals, with nothing created", () => {
     expect([await count("purchase_requisition"), await count("purchase_requisition", "test")]).toEqual([0, 0]);
   });
 
-  it("refuses a Make proposal as not executable, its Make half being E19-S01's; one its BOM can't supply isn't a proposal at all (spec Q1, #282, #283)", async () => {
+  it("refuses a Make row with no BOM as not executable; a Make need no BOM can supply isn't a proposal at all (#320 Q2, #282, #283)", async () => {
     const jam = await material("Jam");
     await parameters(jam.id, "make");
     const input = await bom(jam.id);
@@ -369,8 +406,10 @@ describe("MrpAcceptanceService.accept: refusals, with nothing created", () => {
     expect(provisional.provisional[0]).not.toHaveProperty("id");
     await (await scope()).cradle.stockService.correct({ material: input, location: PLANT, quantity: "12", unit: "each", reason: "Count" }, ANNA);
     await run();
+    // As an image older than E17-S01 stores a Make proposal: with no BOM to pin.
+    await sql("update mrp_recommendation set bom = null, bom_revision = null where material = ?", [jam.id]);
     const { run: runId, proposals: [proposal] } = await plan(jam.id);
-    expect(proposal).toMatchObject({ kind: "production-order", executable: false });
+    expect(proposal).toMatchObject({ kind: "production-order", executable: false, bom: null });
 
     await expect(accept(runId, proposal.id)).rejects.toMatchObject({
       code: "MRP_PROPOSAL_NOT_EXECUTABLE", status: 409, message: MRP_PROPOSAL_NOT_EXECUTABLE, messageParams: { material: jam.id, location: PLANT, kind: "production-order" },
@@ -404,6 +443,244 @@ describe("MrpAcceptanceService.accept: refusals, with nothing created", () => {
     await expect(accept(runId, proposal.id)).rejects.toMatchObject({ code: "MATERIAL_INACTIVE" });
     expect(await count("purchase_requisition")).toBe(0);
     expect((await plan(sugar)).proposals[0].document).toBeNull();
+  });
+});
+
+describe("MrpAcceptanceService.accept: Make proposals (#320)", () => {
+  it("turns a feasible Make proposal into one Open production order pinned to its BOM revision, finishing on the need date, tagged with the run, moving no stock (RUN-006)", async () => {
+    const { material: jam, bom: bomId, runId, proposal } = await makeProposal("Jam");
+    expect(proposal).toMatchObject({ kind: "production-order", needDate: "2026-10-08", quantity: "12.000000", bom: bomId, bomRevision: 1, executable: true, document: null });
+    const movements = await count("stock_movement");
+
+    const accepted = await accept(runId, proposal.id);
+
+    expect(accepted.document).toMatchObject({
+      id: "00000001", output: jam, location: PLANT, bom: bomId, revision: 1, quantity: "12.000000", enteredQuantity: "12", enteredUnit: "kg",
+      numerator: "1", denominator: "1", plannedFinish: "2026-10-08", plannedStart: "2026-10-06", leadTimeDays: 2,
+      produced: "0.000000", status: "open", mrpRun: runId,
+    });
+    expect(accepted.proposal).toEqual({
+      id: proposal.id, run: runId, material: jam, location: PLANT, kind: "production-order", needDate: "2026-10-08", quantity: "12.000000",
+      plannedStart: "2026-10-06", plannedFinish: "2026-10-08", lateDays: 0, beyondHorizon: false, executable: true, document: "00000001",
+      bom: bomId, bomRevision: 1, rejectedBoms: [],
+    });
+    expect(await count("production_order")).toBe(1);
+    expect(await count("stock_movement")).toBe(movements);
+    expect(await count("production_completion")).toBe(0);
+    expect((await plan(jam)).proposals[0].document).toBe("00000001");
+    expect(await (await scope()).cradle.productionOrderService.get("00000001")).toMatchObject({ mrpRun: runId, bom: bomId, revision: 1 });
+  });
+
+  it("creates the order for the proposal's lot-rounded quantity (R03)", async () => {
+    const { runId, proposal } = await makeProposal("Syrup", { quantity: "37", lotMultiple: "50.000000" });
+    expect(proposal.quantity).toBe("50.000000");
+
+    await expect(accept(runId, proposal.id)).resolves.toMatchObject({ document: { quantity: "50.000000", enteredQuantity: "50" } });
+  });
+
+  it("records the creation with the run, the account, the session and the channel, and a refused accept records nothing (R08)", async () => {
+    const { runId, proposal } = await makeProposal("Jam");
+    const entries = await count("tenant_audit_event");
+
+    const { document } = await accept(runId, proposal.id, { actor: BOT });
+    await expect(accept(runId, proposal.id)).rejects.toMatchObject({ code: "MRP_PROPOSAL_ACCEPTED" });
+
+    const created = await sql<{ after: string }>(
+      "select action, after, actor_username, session_id, channel, token_name from tenant_audit_event where subject_type = 'ProductionOrder' and subject_id = ?", [document.id]);
+    expect(created).toEqual([{
+      action: "production-orders.production-order.created", actor_username: "bot", session_id: null, channel: "api", token_name: "planner", after: expect.any(String),
+    }]);
+    expect(JSON.parse(created[0].after)).toMatchObject({ id: document.id, mrpRun: runId, bom: proposal.bom, revision: 1 });
+    expect(await count("tenant_audit_event")).toBe(entries + 1);
+  });
+
+  it("refuses a second accept naming the production order, and keeps exactly one (R07)", async () => {
+    const { runId, proposal } = await makeProposal("Jam");
+    await accept(runId, proposal.id);
+
+    await expect(accept(runId, proposal.id)).rejects.toMatchObject({
+      code: "MRP_PROPOSAL_ACCEPTED", status: 409, message: MRP_PROPOSAL_ACCEPTED, messageParams: { document: "00000001", kind: "production-order" },
+    });
+    expect(await count("production_order")).toBe(1);
+  });
+
+  it("refuses it as stale when the BOM has a new current revision since the run, creating nothing (RUN-017, spec Q3)", async () => {
+    const { material: jam, bom: bomId, runId, proposal } = await makeProposal("Jam");
+    const { cradle } = await scope();
+    const current = await cradle.bomService.get(bomId);
+    await cradle.bomService.update(bomId, { validFrom: "2025-01-01" }, current.version, ANNA);
+
+    await expect(accept(runId, proposal.id)).rejects.toMatchObject({
+      code: "MRP_PROPOSAL_STALE", status: 409, message: MRP_PROPOSAL_STALE, messageParams: { material: jam, location: PLANT },
+    });
+    expect(await count("production_order")).toBe(0);
+    // Planned again, the same pair now proposes revision 2, and that one is accepted.
+    await run();
+    const fresh = await plan(jam);
+    expect(fresh.proposals[0]).toMatchObject({ bom: bomId, bomRevision: 2 });
+    await expect(accept(fresh.run, fresh.proposals[0].id)).resolves.toMatchObject({ document: { bom: bomId, revision: 2 } });
+  });
+
+  it("refuses it as stale when another BOM is now chosen, or the pair turned to Buy (RUN-017, spec Q3)", async () => {
+    const jam = await makeProposal("Jam");
+    // A higher-priority BOM, feasible from stock: the fresh plan chooses it instead.
+    const other = await input("Other input", "1000");
+    const { cradle } = await scope();
+    const first = await cradle.bomService.get(jam.bom);
+    await cradle.bomService.update(jam.bom, { priority: 2 }, first.version, ANNA);
+    await recipe(jam.material, other, { priority: 1 });
+    await expect(accept(jam.runId, jam.proposal.id)).rejects.toMatchObject({ code: "MRP_PROPOSAL_STALE" });
+
+    const tea = await makeProposal("Tea");
+    const set = (await cradle.planningParameterService.list()).find(({ material: item }) => item === tea.material)!;
+    await cradle.planningParameterService.update(tea.material, PLANT, { procurement: "buy" }, set.version, ANNA);
+    await expect(accept(tea.runId, tea.proposal.id)).rejects.toMatchObject({ code: "MRP_PROPOSAL_STALE" });
+    expect(await count("production_order")).toBe(0);
+  });
+
+  it("refuses an on-time proposal as stale when the pair's lead time changed, though its finish didn't, since the order's start would (spec Q3)", async () => {
+    const { material: jam, runId, proposal } = await makeProposal("Jam");
+    expect(proposal).toMatchObject({ plannedStart: "2026-10-06", plannedFinish: "2026-10-08", lateDays: 0 });
+    const { cradle } = await scope();
+    const set = (await cradle.planningParameterService.list()).find(({ material: item }) => item === jam)!;
+    await cradle.planningParameterService.update(jam, PLANT, { leadTimeDays: 3 }, set.version, ANNA);
+
+    await expect(accept(runId, proposal.id)).rejects.toMatchObject({ code: "MRP_PROPOSAL_STALE" });
+    expect(await count("production_order")).toBe(0);
+  });
+
+  it("still accepts an on-time Buy proposal after its lead time changed, since a requisition takes no start (spec Q3)", async () => {
+    const { material: sugar, runId, proposal } = await buyProposal();
+    expect(proposal).toMatchObject({ needDate: "2026-10-05", plannedFinish: "2026-10-05", lateDays: 0 });
+    const { cradle } = await scope();
+    const set = (await cradle.planningParameterService.list()).find(({ material: item }) => item === sugar)!;
+    await cradle.planningParameterService.update(sugar, PLANT, { leadTimeDays: 3 }, set.version, ANNA);
+
+    await expect(accept(runId, proposal.id)).resolves.toMatchObject({ document: { quantity: "100.000000" } });
+  });
+
+  it("accepts a proposal when a BOM edit left the choice and its revision as they were", async () => {
+    const { bom: bomId, runId, proposal } = await makeProposal("Jam");
+    const { cradle } = await scope();
+    // A second BOM of lower priority adds a choice MRP doesn't make.
+    const spare = await input("Spare input", "1000");
+    const jam = (await cradle.bomService.get(bomId)).output;
+    await recipe(jam, spare, { priority: 2 });
+
+    await expect(accept(runId, proposal.id)).resolves.toMatchObject({ document: { bom: bomId, revision: 1 } });
+  });
+
+  it("finishes a Late Supply proposal's order on its need date, starting before today, and leaves the pair's later proposal acceptable (spec Q1)", async () => {
+    const jam = await makeProposal("Jam", { needDate: "2026-10-02", leadTimeDays: 4 });
+    await order(jam.material, "8", "2026-10-20");
+    await run();
+    const { run: runId, proposals: [late, later] } = await plan(jam.material);
+    expect(late).toMatchObject({ needDate: "2026-10-02", plannedStart: "2026-10-01", plannedFinish: "2026-10-05", lateDays: 3 });
+    expect(later).toMatchObject({ needDate: "2026-10-20", quantity: "8.000000" });
+
+    await expect(accept(runId, late.id)).resolves.toMatchObject({ document: { plannedFinish: "2026-10-02", plannedStart: "2026-09-28", leadTimeDays: 4 } });
+    await expect(accept(runId, later.id)).resolves.toMatchObject({ document: { plannedFinish: "2026-10-20", quantity: "8.000000" } });
+    expect(await count("production_order")).toBe(2);
+  });
+
+  it("refuses a Late Supply proposal whose BOM is valid on its late finish but not yet on its need date, as the production-order service judges it there (spec Q6)", async () => {
+    const jam = await material("Jam");
+    await makeParameters(jam.id, { leadTimeDays: 5 });
+    const component = await input("Input of Jam", "1000");
+    await recipe(jam.id, component, { validFrom: "2026-10-04" });
+    await order(jam.id, "12", "2026-10-02");
+    await run();
+    const { run: runId, proposals: [proposal] } = await plan(jam.id);
+    expect(proposal).toMatchObject({ needDate: "2026-10-02", plannedFinish: "2026-10-06", bomRevision: 1 });
+
+    await expect(accept(runId, proposal.id)).rejects.toMatchObject({ code: "PRODUCTION_NO_USABLE_BOM" });
+    expect(await count("production_order")).toBe(0);
+    expect((await plan(jam.id)).proposals[0].document).toBeNull();
+  });
+
+  it("leaves a parent's component proposal acceptable after accepting the parent, and the parent after accepting the component first (spec Q7)", async () => {
+    const accepted = async (first: "parent" | "component") => {
+      const jam = await makeProposal(`Jam ${first}`, { onHand: "12" });
+      // The input's own need, a safety target of 5 it falls below once the parent consumes its 12 on hand: a
+      // requisition the parent's production leaves as it was. A target is no demand, so the parent stays feasible.
+      const { cradle } = await scope();
+      await cradle.planningParameterService.create(
+        { material: jam.component, location: PLANT, procurement: "buy", leadTimeDays: 2, minimumQuantity: "0.000000", lotMultiple: "1.000000" },
+        ANNA,
+      );
+      await cradle.safetyStockTargetService.create({ material: jam.component, location: PLANT, effectiveFrom: "2026-09-01", quantity: "5" }, ANNA);
+      await run();
+      const parent = await plan(jam.material);
+      const component = await plan(jam.component);
+      expect(parent.proposals).toEqual([expect.objectContaining({ kind: "production-order", quantity: "12.000000", executable: true })]);
+      expect(component.proposals).toEqual([expect.objectContaining({ kind: "purchase-requisition", needDate: "2026-10-06", quantity: "5.000000" })]);
+      const order1 = first === "parent" ? parent.proposals[0] : component.proposals[0];
+      const order2 = first === "parent" ? component.proposals[0] : parent.proposals[0];
+      await accept(parent.run, order1.id);
+      return accept(parent.run, order2.id);
+    };
+
+    await expect(accepted("parent")).resolves.toMatchObject({ proposal: { kind: "purchase-requisition", quantity: "5.000000" } });
+    await expect(accepted("component")).resolves.toMatchObject({ proposal: { kind: "production-order", quantity: "12.000000" } });
+  });
+
+  it("accepts two parents sharing an input in either order: an accepted order claims what its proposal claimed (spec Q7)", async () => {
+    const shared = async (first: "earlier" | "later") => {
+      const component = await input(`Shared ${first}`, "24");
+      const [jam, tea] = [await material(`Jam ${first}`), await material(`Tea ${first}`)];
+      for (const made of [jam, tea]) {
+        await makeParameters(made.id);
+        await recipe(made.id, component);
+      }
+      await order(jam.id, "12", "2026-10-08");
+      await order(tea.id, "12", "2026-10-10");
+      await run();
+      const [earlier, later] = [await plan(jam.id), await plan(tea.id)];
+      expect([earlier.proposals, later.proposals]).toEqual([[expect.objectContaining({ executable: true })], [expect.objectContaining({ executable: true })]]);
+      const [one, two] = first === "earlier" ? [earlier, later] : [later, earlier];
+      await accept(one.run, one.proposals[0].id);
+      return accept(two.run, two.proposals[0].id);
+    };
+
+    await expect(shared("earlier")).resolves.toMatchObject({ document: { quantity: "12.000000", plannedFinish: "2026-10-10" } });
+    await expect(shared("later")).resolves.toMatchObject({ document: { quantity: "12.000000", plannedFinish: "2026-10-08" } });
+  });
+
+  it("refuses an inactive output or location and a quantity above the entry limit as a manual production order would, creating nothing (spec Q6)", async () => {
+    const jam = await makeProposal("Jam");
+    // The Materials and Locations screens refuse this while an order is open; the flags are set directly.
+    await sql("update material set active = 0 where code = ? and tenant_code = 'prod'", [jam.material]);
+    await expect(accept(jam.runId, jam.proposal.id)).rejects.toMatchObject({ code: "MATERIAL_INACTIVE" });
+    await sql("update material set active = 1 where code = ? and tenant_code = 'prod'", [jam.material]);
+    await sql("update location set active = 0 where code = ? and tenant_code = 'prod'", [PLANT]);
+    await expect(accept(jam.runId, jam.proposal.id)).rejects.toMatchObject({ code: "LOCATION_INACTIVE" });
+    await sql("update location set active = 1 where code = ? and tenant_code = 'prod'", [PLANT]);
+
+    // Two lines of 999,999,999,999 kg: a production need no entered quantity can carry (12 integer digits, R03).
+    // A BOM of 0.000001 of an input per kg keeps the input's need, about 2,000,000, one stock can hold, so the proposal is feasible.
+    const bulk = await material("Bulk");
+    await makeParameters(bulk.id);
+    const grain = await input("Grain", "3000000");
+    await (await scope()).cradle.bomService.create(
+      { output: bulk.id, priority: 1, validFrom: "2026-01-01", validThrough: null, components: [{ material: grain, quantity: "0.000001", unit: "each" }] },
+      ANNA,
+    );
+    await order(bulk.id, "999999999999", "2026-10-08");
+    await order(bulk.id, "999999999999", "2026-10-08");
+    await run();
+    const { run: runId, proposals: [proposal] } = await plan(bulk.id);
+    expect(proposal).toMatchObject({ kind: "production-order", quantity: "1999999999998.000000", executable: true });
+    await expect(accept(runId, proposal.id)).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+    expect(await count("production_order")).toBe(0);
+    expect((await plan(jam.material)).proposals[0].document).toBeNull();
+  });
+
+  it("doesn't find a Test Make proposal under Prod's latest run (RUN-022, R05)", async () => {
+    const { runId, proposal } = await makeProposal("Jam");
+    await run("test");
+
+    await expect(accept(runId, proposal.id, { tenant: "test" })).rejects.toMatchObject({ code: "MRP_PROPOSAL_NOT_FOUND", status: 404, message: MRP_PROPOSAL_NOT_FOUND });
+    expect([await count("production_order"), await count("production_order", "test")]).toEqual([0, 0]);
   });
 });
 

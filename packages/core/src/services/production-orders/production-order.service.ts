@@ -15,7 +15,7 @@ import { recordTenantAudit } from "../audit/audit-recorder";
 import type { AuditActor } from "../audit/actor";
 import { convertToBaseQuantity } from "../materials/base-quantity";
 import type { PostingContext } from "../stock/stock-posting";
-import { findProductionOrder, PRODUCTION_POPULATE, productionOrderView, productionSnapshot, productionSubject } from "./production-order-records";
+import { findProductionOrder, PRODUCTION_POPULATE, productionOrderView, productionSnapshot, productionSubject, type ProductionOrderView } from "./production-order-records";
 import { componentShortages, recipeComponents, resolveProductionOptions } from "./production-recipes";
 
 export type { ProductionOrderView } from "./production-order-records";
@@ -27,6 +27,13 @@ const PRODUCTION_SEARCH_FIELDS = ["code", "output.code", "output.description"];
 const PRODUCTION_SORT_PATHS: Record<ProductionOrderSort, SortField> = {
   id: "code", output: "output.code", quantity: { decimal: "quantity" }, location: "location.code", finish: "plannedFinish", start: "plannedStart", status: "status",
 };
+
+export const PRODUCTION_ORDER_ID_RACE = "Another production order was created at the same moment. Try again.";
+
+/** Where an order came from: `mrpRun` names the MRP run whose proposal created it (#320). */
+export interface ProductionOrderOrigin {
+  mrpRun?: string;
+}
 
 /** Manual planned production. All writes and their audit share the caller's tenant transaction; stock changes only through completions. */
 export class ProductionOrderService {
@@ -56,6 +63,17 @@ export class ProductionOrderService {
   }
 
   /**
+   * An order an MRP proposal creates (#320, spec Q4): the same checks, ID and audit entry as `create`, pinned to
+   * the explicit `bom` and `revision` the proposal chose (a changed revision is `PRODUCTION_BOM_CHANGED`, never
+   * another BOM), with `origin.mrpRun` recorded on the order and in its audit entry. It answers the order's view
+   * without `create`'s components and shortages: Accept and the automatic batch need only the order, and each
+   * read saved counts in a batch (lesson 2026-10-22).
+   */
+  createFromMrp(input: ProductionOrderInput & { bom: string; revision: number }, actor: AuditActor, origin: Required<ProductionOrderOrigin>): Promise<ProductionOrderView> {
+    return this.createWith(input, { kind: "user", actor }, (_em, order) => productionOrderView(order), origin);
+  }
+
+  /**
    * The demo seed's order, stamped at `at` and unaudited. The same checks apply, and the BOM revision's
    * validity is judged at the order's own planned finish, as for a user (the planned start, the finish
    * less the lead time, may precede the revision's start). It returns only the order's ID: the seed
@@ -66,17 +84,18 @@ export class ProductionOrderService {
   }
 
   /** Inserts the order in one transaction and returns what `result` makes of it. */
-  private async createWith<T>(input: ProductionOrderInput, context: PostingContext, result: (em: EntityManager, order: ProductionOrder) => T | Promise<T>): Promise<T> {
+  private async createWith<T>(input: ProductionOrderInput, context: PostingContext, result: (em: EntityManager, order: ProductionOrder) => T | Promise<T>,
+    origin: ProductionOrderOrigin = {}): Promise<T> {
     const values = parseInput(productionOrderCreateSchema, input);
     try {
       return await this.em.transactional(async (em) => {
-        const order = await insertOrder(em, values, context.kind === "seed" ? context.at : undefined);
+        const order = await insertOrder(em, values, context.kind === "seed" ? context.at : undefined, origin);
         if (context.kind === "user") recordTenantAudit(em, context.actor, { action: "production-orders.production-order.created", subject: productionSubject(order), before: null, after: productionSnapshot(order) });
         await em.flush();
         return result(em, order);
       });
     } catch (error) {
-      if (error instanceof UniqueConstraintViolationException) throw new ConflictError("Another production order was created at the same moment. Try again.", "PRODUCTION_ORDER_ID_RACE");
+      if (error instanceof UniqueConstraintViolationException) throw new ConflictError(PRODUCTION_ORDER_ID_RACE, "PRODUCTION_ORDER_ID_RACE");
       throw error;
     }
   }
@@ -146,7 +165,7 @@ export class ProductionOrderService {
     }
   }
 }
-async function insertOrder(em: EntityManager, input: ProductionOrderInput, at?: Date) {
+async function insertOrder(em: EntityManager, input: ProductionOrderInput, at: Date | undefined, { mrpRun }: ProductionOrderOrigin) {
   const { output, location, record, records, options } = await resolveProductionOptions(em, input);
   const selection = input.bom === undefined ? options.selected : { bom: input.bom, revision: input.revision };
   const recipe = records.get(selection.bom);
@@ -156,7 +175,7 @@ async function insertOrder(em: EntityManager, input: ProductionOrderInput, at?: 
   const { baseQuantity, enteredQuantity, enteredUnit, numerator, denominator } = record;
   return em.create(ProductionOrder, { code, output, location, recipe, quantity: baseQuantity, enteredQuantity, enteredUnit, numerator, denominator,
     plannedFinish: input.plannedFinish, plannedStart: options.plannedStart, leadTimeDays: options.leadTimeDays,
-    ...(at && { createdAt: at, updatedAt: at }) });
+    ...(at && { createdAt: at, updatedAt: at }), ...(mrpRun && { mrpRun }) });
 }
 /** Requirements cover only what is still to be made: none once the order is resolved (LFC-004, PRD-029). */
 async function detail(em: EntityManager, order: ProductionOrder) {

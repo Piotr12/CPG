@@ -8,7 +8,10 @@ import { Material } from "../materials/material.entity";
 import { tenantOwned } from "../tenants/tenant-owned";
 
 const owned = tenantOwned();
-/** Manual planned supply: an immutable recipe reference, captured lead time and exact entered target. */
+/**
+ * Planned supply: an immutable recipe reference, captured lead time and exact entered target. One created
+ * from an MRP proposal names its run (`mrpRun`, E19-S01 Make half, #320).
+ */
 export const ProductionOrder = defineEntity({
   name: "ProductionOrder",
   filters: owned.filters,
@@ -33,6 +36,8 @@ export const ProductionOrder = defineEntity({
     createdAt: p.datetime().onCreate(() => new Date()),
     updatedAt: p.datetime().onCreate(() => new Date()),
     version: p.integer().version(),
+    /** The MRP run whose proposal created it (#320): the run's eight-digit ID, or null when entered by hand. */
+    mrpRun: p.string().length(8).nullable(),
   },
   uniques: [{ properties: ["tenant", "code"] }],
   indexes: [

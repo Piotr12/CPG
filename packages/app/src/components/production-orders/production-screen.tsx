@@ -42,7 +42,11 @@ export function ProductionScreen({ tenant, orders, order, materials, locations, 
   const recipe = (row: ProductionOrderView) => <Link className="underline" href={`/admin/${tenant.code}/boms/${row.bom}?revision=${row.revision}`}>{row.bom} / {row.revision}</Link>;
   const status = (value: ProductionOrderView["status"]) => <StatusBadge {...documentStatusTone(value)}>{t.states[value]}</StatusBadge>;
   const columns: DataTableColumn<ProductionOrderView>[] = [
-    { id: "id", header: t.id, kind: "id", sortKey: "id", cell: (row) => <Link className="underline" href={`${path}/${row.id}`}><Highlight text={row.id} query={search.q} /></Link> },
+    // One an MRP proposal created names its run under its ID (#320), in view at every width, as requisitions do.
+    { id: "id", header: t.id, kind: "id", sortKey: "id", cell: (row) => <div className="flex flex-col gap-1">
+      <Link className="underline" href={`${path}/${row.id}`}><Highlight text={row.id} query={search.q} /></Link>
+      {row.mrpRun && <span className="font-sans text-xs text-muted-foreground" data-production-mrp-run>{fill(t.fromMrpRun, { run: row.mrpRun })}</span>}
+    </div> },
     { id: "output", header: t.output, kind: "longText", sortKey: "output", cell: (row) => <Highlight text={output(row)} query={search.q} /> },
     { id: "quantity", header: t.quantity, kind: "quantity", sortKey: "quantity", cell: quantity },
     { id: "location", header: t.location, kind: "longText", priority: 2, sortKey: "location", cell: (row) => location(row.location) },
@@ -76,7 +80,8 @@ export function ProductionScreen({ tenant, orders, order, materials, locations, 
           { label: t.outstanding, value: `${localeQuantity(order.outstanding, locale)} ${byMaterial.get(order.output)!.baseUnit}` },
           { label: t.entered, value: `${localeQuantity(order.enteredQuantity, locale)} ${order.enteredUnit} (${localeQuantity(order.denominator, locale)} ${order.enteredUnit} = ${localeQuantity(order.numerator, locale)} ${byMaterial.get(order.output)!.baseUnit})` },
           { label: t.finish, value: order.plannedFinish }, { label: t.start, value: order.plannedStart },
-          { label: t.leadTime, value: fill(t.leadTimeDays, { days: String(order.leadTimeDays) }) }, { label: t.recipe, value: recipe(order) }].map(({ label, value }) => <div key={label}><dt className="text-muted-foreground">{label}</dt><dd className="mt-1 wrap-anywhere">{value}</dd></div>)}
+          { label: t.leadTime, value: fill(t.leadTimeDays, { days: String(order.leadTimeDays) }) }, { label: t.recipe, value: recipe(order) },
+          ...(order.mrpRun ? [{ label: t.mrpRun, value: <span data-production-mrp-run>{order.mrpRun}</span> }] : [])].map(({ label, value }) => <div key={label}><dt className="text-muted-foreground">{label}</dt><dd className="mt-1 wrap-anywhere">{value}</dd></div>)}
       </dl>
       {order.status !== "open" ? <Callout tone="neutral">{fill(t.resolved, { status: t.states[order.status] })}</Callout>
         : shortages ? <Callout tone="warning" title={plural(t.shortageTitle, shortages)}>{t.shortageBody}</Callout>

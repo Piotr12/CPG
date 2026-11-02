@@ -18,7 +18,8 @@ const ADMIN_TOKEN = "mrpauto-admin";
 const day = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
 
 /*
- * E19-S03 through the bearer API (R07): an automatic run creates every executable proposal of the tenant in one
+ * E19-S03 through the bearer API (R07): an automatic run creates every executable proposal of the tenant, Make
+ * included since #320, in one
  * all-or-nothing batch, tagged with the run, and a replay answers the same run and documents. It creates documents
  * for every material of the tenant, other files' included, so it runs in Test, reset before and after (spec Q12).
  */
@@ -121,6 +122,25 @@ describe("Automatic MRP runs through the API", () => {
 
     const reused = await runIn("test", {}, { key });
     expect([reused.status, refusal(reused).code]).toEqual([409, "IDEMPOTENCY_KEY_REUSED"]);
+  });
+
+  it("RUN-007, RUN-014: creates an own feasible Make proposal as an Open production order pinned to its BOM and tagged with the run (#320)", async () => {
+    const jam = (await created("/api/tenants/test/materials", { type: "finished", description: "mrpauto jam", baseUnit: "kg" })).id;
+    const fruit = (await created("/api/tenants/test/materials", { type: "raw", description: "mrpauto fruit", baseUnit: "each" })).id;
+    const location = (await created("/api/tenants/test/locations", { name: "mrpauto jam plant" })).id;
+    const bom = (await created("/api/tenants/test/boms", { output: jam, priority: 1, validFrom: day(-30), validThrough: null, components: [{ material: fruit, quantity: "1", unit: "each" }] })).id;
+    await created("/api/tenants/test/stock/corrections", { material: fruit, location, quantity: "20", unit: "each", reason: "mrpauto count" });
+    await created("/api/tenants/test/planning-parameters", { material: jam, location, procurement: "make", leadTimeDays: 2, minimumQuantity: "0", lotMultiple: "1" });
+    await created("/api/tenants/test/customer-orders", { customer, location, lines: [{ material: jam, quantity: "20", unit: "kg", requiredDate: day(5) }] });
+
+    const run = await automatic();
+
+    expect(run.creation).toEqual({ status: "created", documents: run.documents!.length });
+    const [proposal] = await proposalsOf(jam, location);
+    expect(proposal).toMatchObject({ kind: "production-order", bom, bomRevision: 1, executable: true, document: expect.any(String) });
+    expect(run.documents).toContainEqual({ proposal: proposal.id, kind: "production-order", id: proposal.document });
+    const order = json(await api("GET", `/api/tenants/test/production-orders/${proposal.document}`)).data;
+    expect(order).toMatchObject({ output: jam, location, bom, revision: 1, quantity: "20.000000", plannedFinish: day(5), plannedStart: day(3), status: "open", mrpRun: run.id });
   });
 
   it("RUN-008: an automatic rerun on unchanged data creates nothing for needs the first run's documents cover", async () => {

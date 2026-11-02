@@ -34,7 +34,8 @@ async function withinOneDay<T>(scenario: () => Promise<T>, attempt = 1): Promise
 }
 
 // E19-S01 through the bearer API (R07): accepting a proposal of the latest run creates a requisition
-// tagged with the run, once; a stale, foreign, Make or read-only acceptance creates nothing.
+// tagged with the run, once, and a feasible Make proposal a production order pinned to its BOM revision (#320);
+// a stale, foreign or read-only acceptance creates nothing.
 describe("Accepting MRP proposals through the API", () => {
   let admin: Browser;
   let una: Browser;
@@ -165,24 +166,64 @@ describe("Accepting MRP proposals through the API", () => {
     expect(await counts()).toEqual(before);
   }));
 
-  it("refuses a Make proposal as not executable, creating no production order (spec Q1)", () => withinOneDay(async () => {
-    const pair = await buyPair("jam", "12", "make");
-    // Since #280 a Make pair gets a proposal only with an active BOM valid on its planned finish.
-    const input = (await created("/api/tenants/prod/materials", { type: "raw", description: "mrpacc jam fruit", baseUnit: "each" })).id;
-    await created("/api/tenants/prod/boms", { output: pair.material, priority: 1, validFrom: day(-30), validThrough: null, components: [{ material: input, quantity: "1", unit: "each" }] });
-    // Since #283 a Make proposal its BOM can't supply is a provisional action, not a proposal: the fruit is on hand.
-    await created("/api/tenants/prod/stock/corrections", { material: input, location: pair.location, quantity: "12", unit: "each", reason: "mrpacc count" });
+  /** A feasible Make pair of its own (#320): a BOM of one input with enough on hand, so the proposal carries its BOM. */
+  async function makePair(name: string, quantity: string) {
+    const pair = await buyPair(name, quantity, "make");
+    const input = (await created("/api/tenants/prod/materials", { type: "raw", description: `mrpacc ${name} input`, baseUnit: "each" })).id;
+    const bom = (await created("/api/tenants/prod/boms", {
+      output: pair.material, priority: 1, validFrom: day(-30), validThrough: null, components: [{ material: input, quantity: "1", unit: "each" }],
+    })) as { id: string; version: number };
+    await created("/api/tenants/prod/stock/corrections", { material: input, location: pair.location, quantity: quantity, unit: "each", reason: "mrpacc count" });
+    return { ...pair, bom };
+  }
+
+  it("accepts a feasible Make proposal as one Open production order pinned to its BOM revision and tagged with the run, once; a replay returns it (RUN-006, R07, #320)", () => withinOneDay(async () => {
+    const pair = await makePair("jam", "12");
+    const { runId, proposal, before } = await withinOneDay(async () => {
+      await run();
+      const { run: latest, proposals } = await proposalsOf(pair.material, pair.location);
+      return { runId: latest, proposal: proposals[0] as MrpProposalView, before: await counts() };
+    });
+    expect(proposal).toMatchObject({ kind: "production-order", needDate: day(3), quantity: "12.000000", bom: pair.bom.id, bomRevision: 1, executable: true, document: null });
+    const key = randomUUID();
+
+    const response = await accept(runId, proposal.id, { secret: unaSecret, key });
+
+    expect(response.status, response.text).toBe(200);
+    const { document, proposal: accepted } = json(response).data as { document: { id: string }; proposal: MrpProposalView & { run: string } };
+    expect(document).toMatchObject({
+      output: pair.material, location: pair.location, bom: pair.bom.id, revision: 1, quantity: "12.000000",
+      plannedFinish: day(3), plannedStart: day(1), leadTimeDays: 2, produced: "0.000000", status: "open", mrpRun: runId,
+    });
+    expect(accepted).toMatchObject({ id: proposal.id, run: runId, kind: "production-order", bom: pair.bom.id, bomRevision: 1, document: document.id });
+    expect(json(await api("GET", `/api/tenants/prod/production-orders/${document.id}`)).data).toMatchObject({ mrpRun: runId, bom: pair.bom.id, revision: 1 });
+    expect(await counts()).toEqual({ ...before, "production-orders": before["production-orders"] + 1 });
+
+    const replay = await accept(runId, proposal.id, { secret: unaSecret, key });
+    expect(replay.replayed).toBe("true");
+    expect((json(replay).data as { document: { id: string } }).document.id).toBe(document.id);
+    const again = await accept(runId, proposal.id);
+    expect(again.status).toBe(409);
+    expect(refusal(again)).toMatchObject({ code: "MRP_PROPOSAL_ACCEPTED", params: { document: document.id, kind: "production-order" } });
+    expect((await counts())["production-orders"]).toBe(before["production-orders"] + 1);
+  }));
+
+  it("refuses a Make proposal as stale once its BOM has a new revision, creating no production order (RUN-017, #320)", () => withinOneDay(async () => {
+    const pair = await makePair("syrup", "8");
     const { runId, proposal } = await withinOneDay(async () => {
       await run();
       const { run: latest, proposals } = await proposalsOf(pair.material, pair.location);
       return { runId: latest, proposal: proposals[0] };
     });
-    expect(proposal).toMatchObject({ kind: "production-order", executable: false });
+    const revised = await api("PATCH", `/api/tenants/prod/boms/${pair.bom.id}`, adminSecret, { key: randomUUID(), body: { version: pair.bom.version, validFrom: day(-60) } });
+    expect(revised.status, revised.text).toBe(200);
+    const before = await counts();
 
-    const response = await accept(runId, proposal.id);
+    const response = await accept(runId, proposal.id, { secret: unaSecret });
 
     expect(response.status).toBe(409);
-    expect(refusal(response)).toMatchObject({ code: "MRP_PROPOSAL_NOT_EXECUTABLE", params: { material: pair.material, kind: "production-order" } });
+    expect(refusal(response)).toMatchObject({ code: "MRP_PROPOSAL_STALE", params: { material: pair.material, location: pair.location } });
+    expect(await counts()).toEqual(before);
   }));
 
   it("doesn't find a Test proposal under Prod, and Test's generation guards its own acceptance (RUN-022, R05)", () => withinOneDay(async () => {

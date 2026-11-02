@@ -132,12 +132,21 @@ describe("help topics", () => {
   });
 
   it.each([
-    ["en", "has Accept: after you confirm", "carries its warning under its need date", "records the run's ID", "refused as out of date and you run MRP again", "accepted once", "Production-order proposals can't be accepted yet",
+    ["en", "has Accept: after you confirm", "carries its warning under its need date", "records the run's ID", "refused as out of date and you run MRP again", "accepted once", "creates an Open production order pinned to the BOM and revision MRP chose", "shown under its ID in Production orders", "A changed BOM revision or lead time makes it out of date too",
       "/mrp/runs/{run}/proposals/{proposal}/accept", "whether they can be accepted (executable)"],
     ["pl", "ma przycisk Akceptuj: po potwierdzeniu", "ma pod datą potrzeby swoje ostrzeżenie", "zapisuje ID przebiegu", "odrzucona jako nieaktualna i trzeba ponownie uruchomić MRP", "zaakceptować raz",
-      "Propozycji zleceń produkcyjnych nie można jeszcze akceptować", "/mrp/runs/{run}/proposals/{proposal}/accept", "czy można je zaakceptować (executable)"],
+      "tworzy otwarte zlecenie produkcyjne przypięte do BOM-u i rewizji wybranych przez MRP", "widoczne pod jego ID na liście zleceń produkcyjnych", "/mrp/runs/{run}/proposals/{proposal}/accept", "czy można je zaakceptować (executable)"],
   ] as const)("says in %s how a proposal is accepted, refused as out of date, and through the API (E19-S01)", (locale, ...phrases) => {
     const text = helpTopics(locale).find((topic) => topic.id === "mrp")!.body.join(" ");
+
+    for (const phrase of phrases) expect(text).toContain(phrase);
+  });
+
+  it.each([
+    ["en", "accepting an MRP proposal, or by an automatic MRP run", "shows the run's ID under its own ID", "pinned to the BOM revision MRP chose"],
+    ["pl", "akceptację propozycji MRP albo automatyczny przebieg MRP", "pokazuje ID przebiegu pod swoim ID", "przypięte do rewizji BOM-u wybranej przez MRP"],
+  ] as const)("says in %s that a production order MRP created shows its run and keeps the BOM revision MRP chose (#320)", (locale, ...phrases) => {
+    const text = helpTopics(locale).find((topic) => topic.id === "production-orders")!.body.join(" ");
 
     for (const phrase of phrases) expect(text).toContain(phrase);
   });

@@ -54,6 +54,25 @@ it("lists targets with recipe links behind request-time authentication", async (
   const info = screen.getByRole("button", { name: `About ${en.productionOrders.quantity}` });
   expect(document.getElementById(info.getAttribute("aria-describedby")!)!.textContent).toContain("such as case (not SU)");
 });
+it("names the MRP run an order came from under its ID in the list and as a field of the order, and nothing for a manual one (#320)", async () => {
+  const fromMrp = { ...production, id: "00000002", mrpRun: "00000004" };
+  mocks.list.mockResolvedValue([production, fromMrp]);
+  render(await resolveServerComponents(page()));
+  const [manual, planned] = within(screen.getByRole("table", { name: en.productionOrders.title })).getAllByRole("row").slice(1);
+  expect(manual.querySelector("[data-production-mrp-run]")).toBeNull();
+  expect(planned.querySelector("[data-production-mrp-run]")?.textContent).toBe("MRP run 00000004");
+  expect(within(planned).getAllByRole("cell")[0].textContent).toBe("00000002MRP run 00000004");
+  cleanup();
+
+  mocks.get.mockResolvedValue(fromMrp);
+  render(await resolveServerComponents(detail()));
+  expect(screen.getByText(en.productionOrders.mrpRun).nextElementSibling?.textContent).toBe("00000004");
+  cleanup();
+
+  mocks.get.mockResolvedValue(production);
+  render(await resolveServerComponents(detail()));
+  expect(screen.queryByText(en.productionOrders.mrpRun)).toBeNull();
+});
 it("shows pinned revision, stored conversion and current shortage detail", async () => {
   render(await resolveServerComponents(detail()));
   expect(mocks.get).toHaveBeenCalledWith(production.id); expect(mocks.list).not.toHaveBeenCalled();
