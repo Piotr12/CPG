@@ -95,6 +95,7 @@ describe("@cpg/db", () => {
       "initOrm",
       "isTenantOwned",
       "migrate",
+      "notCalendarDate",
       "pingDatabase",
       "resetTestData",
       "selectTenant",

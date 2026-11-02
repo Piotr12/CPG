@@ -29,14 +29,17 @@ import {
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { loadConfig } from "../../config";
 import { migrateDatabase, toDbOptions } from "../../database";
+import { isCalendarDate } from "../../validators/dates/calendar-date.schema";
 import { MrpSnapshotService } from "./mrp-snapshot.service";
-import { BOM_CHUNK } from "./snapshot/boms";
+import { BOM_CHUNK, REVISION_TERMS } from "./snapshot/boms";
 import { ORDER_LINE_CHUNK, ORDER_PAGE, REQUISITION_PAGE } from "./snapshot/purchasing";
 
 // The horizon of 1 October 2026 runs to 29 December. Open lines are read to the end of December, the
 // month of its last day, other lines from 1 October to then, forecasts from 1 October to 29 December.
 const TODAY = "2026-10-01";
 const micro = (whole: number) => BigInt(whole) * 1_000_000n;
+/** What only a read of the corrupt dates a date range skips sends (`notCalendarDate`, #321). */
+const CORRUPT_DATES = "(date(";
 /** The parameter read seeks the tenant's sets and joins the filter's relations by key: a set per pair, so no range is needed. */
 const PLANNING_PARAMETER_PLAN = [
   "SEARCH l2 USING INDEX sqlite_autoindex_location_1 (id=?)",
@@ -452,7 +455,7 @@ describe("MrpSnapshotService", () => {
     const { queries, close } = await tracedLoad("2026-10-20");
     try {
       const firstDates = (marker: string) =>
-        queries.filter(({ sql }) => sql.includes(marker)).map(({ params }) => params.find((param) => typeof param === "string" && /^\d{4}-\d{2}-\d{2}$/.test(param)));
+        queries.filter(({ sql }) => sql.includes(marker) && !sql.includes(CORRUPT_DATES)).map(({ params }) => params.find((param) => typeof param === "string" && /^\d{4}-\d{2}-\d{2}$/.test(param)));
       // The horizon of 20 October runs to 17 January, so the reads go through January.
       expect(firstDates("`c0`.`status` != ?")).toEqual(["2026-10-01", "2026-11-01", "2026-12-01", "2027-01-01"]);
       expect(firstDates(" from `forecast` as ")).toEqual(["2026-10-01", "2026-11-01", "2026-12-01", "2027-01-01"]);
@@ -629,7 +632,8 @@ describe("MrpSnapshotService", () => {
   it("reads the consuming lines one month at a time through (tenant, required_date), and joins each line's order by key", async () => {
     const { queries, explain, close } = await tracedLoad();
     try {
-      const sent = queries.filter(({ sql }) => sql.includes(" from `customer_order_line` as ") && sql.includes("`c0`.`status` != ?"));
+      const consuming = queries.filter(({ sql }) => sql.includes(" from `customer_order_line` as ") && sql.includes("`c0`.`status` != ?"));
+      const sent = consuming.filter(({ sql }) => !sql.includes(CORRUPT_DATES));
       // October, November and December 2026: the months from today's to the horizon's last day's.
       expect(sent.map(({ params }) => params.filter((param) => typeof param === "string" && /^\d{4}-\d{2}-01$/.test(param)))).toEqual([
         ["2026-10-01", "2026-11-01"],
@@ -641,6 +645,18 @@ describe("MrpSnapshotService", () => {
         "SEARCH m2 USING INDEX sqlite_autoindex_material_1 (id=?)",
         "SEARCH o1 USING INDEX sqlite_autoindex_customer_order_1 (id=?)",
       ]);
+      // Then one read of the corrupt dates outside the window (#321): a walk in SQLite, hydrating only those.
+      const corrupt = consuming.filter(({ sql }) => sql.includes(CORRUPT_DATES));
+      expect(corrupt.map(({ params }) => params.filter((param) => typeof param === "string" && /^\d{4}-\d{2}-\d{2}$/.test(param)))).toEqual([["2026-10-01", "2027-01-01"]]);
+      expect(await explain(corrupt[0])).toEqual([
+        "INDEX 1",
+        "INDEX 2",
+        "MULTI-INDEX OR",
+        "SEARCH c0 USING INDEX customer_order_line_tenant_code_required_date_index (tenant_code=? AND required_date<?)",
+        "SEARCH c0 USING INDEX customer_order_line_tenant_code_required_date_index (tenant_code=? AND required_date>?)",
+        "SEARCH m2 USING INDEX sqlite_autoindex_material_1 (id=?)",
+        "SEARCH o1 USING INDEX sqlite_autoindex_customer_order_1 (id=?)",
+      ]);
     } finally {
       await close();
     }
@@ -649,7 +665,8 @@ describe("MrpSnapshotService", () => {
   it("reads forecasts one month at a time through (tenant, date), up to the horizon's last day", async () => {
     const { queries, explain, close } = await tracedLoad();
     try {
-      const sent = queries.filter(({ sql }) => sql.includes(" from `forecast` as "));
+      const read = queries.filter(({ sql }) => sql.includes(" from `forecast` as "));
+      const sent = read.filter(({ sql }) => !sql.includes(CORRUPT_DATES));
       expect(sent.map(({ params }) => params.filter((param) => typeof param === "string" && /^\d{4}-\d{2}-\d{2}$/.test(param)))).toEqual([
         ["2026-10-01", "2026-11-01"],
         ["2026-11-01", "2026-12-01"],
@@ -657,6 +674,14 @@ describe("MrpSnapshotService", () => {
       ]);
       expect((await explain(sent[0])).filter((detail) => detail.includes(" f0 "))).toEqual([
         "SEARCH f0 USING INDEX forecast_tenant_code_date_index (tenant_code=? AND date>? AND date<?)",
+      ]);
+      // Then one read of the corrupt dates outside the window (#321): a walk in SQLite, hydrating only those.
+      const corrupt = read.filter(({ sql }) => sql.includes(CORRUPT_DATES));
+      expect(corrupt.map(({ params }) => params.filter((param) => typeof param === "string" && /^\d{4}-\d{2}-\d{2}$/.test(param)))).toEqual([["2026-10-01", "2026-12-30"]]);
+      expect(await explain(corrupt[0])).toEqual([
+        "SEARCH f0 USING INDEX forecast_tenant_code_index (tenant_code=?)",
+        "SEARCH l2 USING INDEX sqlite_autoindex_location_1 (id=?)",
+        "SEARCH m1 USING INDEX sqlite_autoindex_material_1 (id=?)",
       ]);
     } finally {
       await close();
@@ -686,6 +711,21 @@ describe("MrpSnapshotService", () => {
       const sent = queries.filter(({ sql }) => sql.startsWith("select") && sql.includes(" from `planning_parameter_set` as "));
       expect(sent).toHaveLength(1);
       expect(await explain(sent[0])).toEqual(PLANNING_PARAMETER_PLAN);
+    } finally {
+      await close();
+    }
+  });
+
+  it("reads the safety targets in one read through the tenant's index, joining each relation by key, as with its former date range (#321)", async () => {
+    const { queries, explain, close } = await tracedLoad();
+    try {
+      const sent = queries.filter(({ sql }) => sql.startsWith("select") && sql.includes(" from `safety_stock_target` as "));
+      expect(sent).toHaveLength(1);
+      expect(await explain(sent[0])).toEqual([
+        "SEARCH l2 USING INDEX sqlite_autoindex_location_1 (id=?)",
+        "SEARCH m1 USING INDEX sqlite_autoindex_material_1 (id=?)",
+        "SEARCH s0 USING INDEX safety_stock_target_tenant_code_index (tenant_code=?)",
+      ]);
     } finally {
       await close();
     }
@@ -1003,6 +1043,51 @@ describe("MrpSnapshotService", () => {
       ]);
     });
 
+    it("reports a forecast whose date isn't a real day wherever it sorts, once, and flags nothing for a real one outside the window (#321)", async () => {
+      // All but the last sort outside 1 October to 29 December, so no month read sees them; `isCalendarDate` decides which are corrupt.
+      const outside = ["30/10/2026", "1/10/2026", "", "2026-02-30", "2027-02-29", "2026-9-30", "2028-02-29", "2026-09-30", "2026-12-30"];
+      for (const date of outside) await forecast("prod", "00000001", "00000001", date, "1.000000");
+      // Inside the window: its month's read reports it, so the corrupt-date read leaves it out.
+      await forecast("prod", "00000002", "00000002", "2026-10-5", "1.000000");
+      const snapshot = await load();
+      expect(snapshot.forecasts).toEqual([]);
+      const corrupt = outside.filter((date) => !isCalendarDate(date));
+      expect(corrupt).toHaveLength(6);
+      expect(snapshot.unreadable).toEqual([
+        { material: "00000002", location: "00000002", record: "forecast" },
+        ...corrupt.map(() => ({ material: "00000001", location: "00000001", record: "forecast" })),
+      ]);
+    });
+
+    it("reports a safety target whose date sorts past the horizon only because it isn't real, and reads none dated after it (#321)", async () => {
+      await target("prod", "00000001", "00000001", "30/10/2026", "5.000000");
+      await target("prod", "00000002", "00000002", "2026-12-30", "5.000000");
+      await target("prod", "00000002", "00000002", "2026-12-29", "x");
+      const snapshot = await load();
+      expect(snapshot.safetyTargets).toEqual([]);
+      expect([...snapshot.unreadable].sort((a, b) => a.material.localeCompare(b.material))).toEqual([
+        { material: "00000001", location: "00000001", record: "safety-stock-target" },
+        { material: "00000002", location: "00000002", record: "safety-stock-target" },
+      ]);
+    });
+
+    it("reports a non-Open line whose date isn't a real day wherever it sorts, once, and flags nothing for a real one outside the window (#321)", async () => {
+      await order("prod", "00000009", "00000001", [
+        { material: "00000001", quantity: "2.000000", requiredDate: "30/10/2026", status: "completed" },
+        { material: "00000001", quantity: "2.000000", requiredDate: "1/10/2026", status: "cancelled" },
+        // Inside the window: its month's read reports it.
+        { material: "00000001", quantity: "2.000000", requiredDate: "2026-10-5", status: "completed" },
+        { material: "00000001", quantity: "x", requiredDate: "2026-09-30", status: "completed" },
+        { material: "00000001", quantity: "x", requiredDate: "2027-01-01", status: "completed" },
+        // Removed lines are never read, and an Open one is the Open read's (`beforeCutOff`), reported once.
+        { material: "00000001", quantity: "2.000000", requiredDate: "30/10/2026", status: "completed", removed: true },
+        { material: "00000001", quantity: "2.000000", requiredDate: "31/10/2026" },
+      ]);
+      const snapshot = await load();
+      expect(snapshot.orderLines).toEqual([]);
+      expect(snapshot.unreadable.map(({ document }) => document).sort()).toEqual(["00000009/1", "00000009/2", "00000009/3", "00000009/7"]);
+    });
+
     it("leaves out a transfer it can't read and reports it at its source and its destination", async () => {
       await transferRow("prod", "00000001", { quantity: "10.000000", plannedDispatch: "2026-10-05", plannedArrival: "2026-10-5" });
       await transferRow("prod", "00000002", { quantity: "10.000000", plannedDispatch: "2026-10-05", plannedArrival: "2026-10-06" });
@@ -1079,7 +1164,7 @@ describe("MrpSnapshotService", () => {
     });
   });
 
-  it("reads the BOMs more than one OR list holds, chunk by chunk, filtering the current revisions in SQL as the production dialog does", async () => {
+  it("reads the BOMs chunk by chunk, seeking each current revision by (bom, number), never walking the tenant's revisions (#321)", async () => {
     const queries: { sql: string; params: readonly unknown[] }[] = [];
     const config = loadConfig({ DATA_DIR: mkdtempSync(path.join(tmpdir(), "cpg-mrp-snapshot-plan-")) });
     await migrateDatabase(config);
@@ -1104,16 +1189,16 @@ describe("MrpSnapshotService", () => {
       expect(boms.every(({ bom, components }) => components.length === 1 && components[0].material === code(1_000 + BOM_CHUNK + 1 + Number(bom)))).toBe(true);
       // Lines are read per chunk of revisions too: one read per chunk.
       expect(queries.filter(({ sql }) => sql.startsWith("select") && sql.includes(" from `bom_component` as "))).toHaveLength(2);
+      // `REVISION_TERMS` BOMs per revision read: 50 reads for the first chunk, one for the 101st BOM.
       const reads = queries.filter(({ sql }) => sql.startsWith("select") && sql.includes(" from `bom_revision` as "));
-      expect(reads).toHaveLength(2);
-      const plan = await traced.em.getConnection().execute<{ detail: string }[]>(`explain query plan ${reads[0].sql}`, [...reads[0].params]);
-      // Without ANALYZE statistics SQLite seeks the tenant's revisions and tests each OR term per row, as
-      // for the production dialog's own read (lesson 2026-10-31): a walk in SQLite over a table of about
-      // one row per BOM change, which hydrates only the current revisions (spec implementation notes).
-      expect(plan.map(({ detail }) => detail.replace(/^SEARCH \w+ /, "SEARCH ")).sort()).toEqual([
-        "SEARCH USING INDEX bom_revision_tenant_code_index (tenant_code=?)",
-        "SEARCH USING INDEX sqlite_autoindex_bom_1 (id=?)",
-      ]);
+      expect(reads).toHaveLength(Math.ceil(BOM_CHUNK / REVISION_TERMS) + 1);
+      const plan = async ({ sql, params }: (typeof reads)[number]) =>
+        (await traced.em.getConnection().execute<{ detail: string }[]>(`explain query plan ${sql}`, [...params])).map(({ detail }) => detail.replace(/^SEARCH \w+ /, "SEARCH ")).sort();
+      // Each term seeks the unique (bom, number) index. With three terms or more, SQLite, without ANALYZE
+      // statistics, walked the tenant's revisions per read, testing each term per row (lesson 2026-10-31).
+      const seek = "SEARCH USING INDEX bom_revision_bom_id_number_unique (bom_id=? AND number=?)";
+      expect(await plan(reads[0])).toEqual(["INDEX 1", "INDEX 2", "MULTI-INDEX OR", seek, seek, "SEARCH USING INDEX sqlite_autoindex_bom_1 (id=?)"]);
+      expect(await plan(reads.at(-1)!)).toEqual([seek, "SEARCH USING INDEX sqlite_autoindex_bom_1 (id=?)"]);
     } finally {
       await traced.close();
     }
