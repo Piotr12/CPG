@@ -26,8 +26,8 @@ async function sortBy(browser: Browser, key: string, dir: "asc" | "desc"): Promi
   })()`);
 }
 
-/** A quantity cell's number: `"1900 kg"` → 1900. */
-const amount = (cell: string) => Number(cell.split(" ")[0]);
+/** A quantity cell's number, as an English reader sees it (#304): `"1,900 kg"` → 1900. */
+const amount = (cell: string) => Number(cell.split(" ")[0].replaceAll(",", ""));
 
 describe("Lists sort by quantity columns and purchase orders by Created (#224)", () => {
   let admin: Browser;

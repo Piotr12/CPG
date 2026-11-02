@@ -1,7 +1,9 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/messages/en";
+import { pl } from "../../i18n/messages/pl";
 import { BomScreen } from "./bom-screen";
+import { fill } from "./labels";
 
 vi.mock("./bom-controls", () => ({ BomControls: ({ bom }: { bom: { id: string } }) => <button>{`controls ${bom.id}`}</button> }));
 
@@ -32,7 +34,7 @@ const BOM = {
 };
 const TENANT = { code: "test", name: "Test", generation: 1, readOnly: false };
 
-const renderScreen = (overrides: { bom?: object; historic?: object | null; admin?: boolean; tenant?: object } = {}) =>
+const renderScreen = (overrides: { bom?: object; historic?: object | null; admin?: boolean; tenant?: object; polish?: boolean } = {}) =>
   render(
     <BomScreen
       tenant={{ ...TENANT, ...overrides.tenant }}
@@ -40,8 +42,8 @@ const renderScreen = (overrides: { bom?: object; historic?: object | null; admin
       historic={(overrides.historic ?? null) as never}
       materials={MATERIALS}
       units={{}}
-      locale="en"
-      messages={en}
+      locale={overrides.polish ? "pl" : "en"}
+      messages={overrides.polish ? pl : en}
       admin={overrides.admin ?? true}
     />,
   );
@@ -89,5 +91,17 @@ describe("BomScreen", () => {
     renderScreen({ tenant: { readOnly: true } });
 
     expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("shows a line's quantity, entered quantity and factor in the reader's locale (#304)", () => {
+    const big = { ...bolts, quantity: "12345.500000", enteredQuantity: "10288.75", enteredUnit: "case", numerator: "1.2", denominator: "1000.5" };
+    const recipe = (name: string) => within(screen.getByRole("table", { name })).getAllByRole("row").slice(1).map((row) => within(row).getAllByRole("cell").slice(1).map((cell) => cell.textContent));
+
+    const { unmount } = renderScreen({ bom: { components: [big] } });
+    expect(recipe("Components (revision 2)")).toEqual([["12,345.5 each", "10,288.75 case at 1,000.5 case = 1.2 each"]]);
+    unmount();
+
+    renderScreen({ bom: { components: [big] }, polish: true });
+    expect(recipe(fill(pl.boms.recipe.heading, { number: "2" }))).toEqual([["12\u00a0345,5 each", "10\u00a0288,75 case przy 1000,5 case = 1,2 each"]]);
   });
 });

@@ -1,8 +1,8 @@
-import type { NamedRecordView, TransferLegView, TransferPostingView, TransferReversalView } from "@cpg/core";
+import type { Locale, NamedRecordView, TransferLegView, TransferPostingView, TransferReversalView } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { StatusBadge } from "@cpg/ui/backend/feedback/status-badge";
 import { reversalStatusTone } from "../document-lifecycle/status-tone";
-import { fill, locationName, shownQuantity, type TenantContext, type TransfersLabels } from "./labels";
+import { fill, locationName, localeQuantity, type TenantContext, type TransfersLabels } from "./labels";
 import { TransferReversalDialog } from "./transfer-reversal-dialog";
 
 /** A posting or a reversal of one, as one entry of the ledger. */
@@ -22,6 +22,7 @@ interface LedgerTableProps {
   locations: Map<string, NamedRecordView>;
   baseUnit: string;
   labels: TransfersLabels;
+  locale: Locale;
   /** The transfer a writable tenant may reverse postings of (E11-S03); without it the ledger has no actions. */
   reversible?: { context: TenantContext; transfer: string; path: string };
 }
@@ -31,7 +32,7 @@ interface LedgerTableProps {
  * the order the goods move, with the signed change and the balance after it. Postings are never
  * changed: a mistaken one is reversed in full (E11-S03), and both stay in the ledger, linked.
  */
-export function LedgerTable({ postings, reversals, locations, baseUnit, labels, reversible }: LedgerTableProps) {
+export function LedgerTable({ postings, reversals, locations, baseUnit, labels, locale, reversible }: LedgerTableProps) {
   const t = labels.ledger;
   const entries: Entry[] = [...postings.map((posting) => ({ posting })), ...reversals.map((reversal) => ({ reversal }))];
   const occurred = (entry: Entry) => (entry.posting ?? entry.reversal).occurredAt.getTime();
@@ -40,7 +41,7 @@ export function LedgerTable({ postings, reversals, locations, baseUnit, labels, 
     const { id, legs } = entry.posting ?? entry.reversal;
     return legs.map((leg, index) => ({ key: `${id}-${index}`, entry, leg, first: index === 0 }));
   });
-  const amount = (quantity: string) => `${shownQuantity(quantity)} ${baseUnit}`;
+  const amount = (quantity: string) => `${localeQuantity(quantity, locale)} ${baseUnit}`;
   const signed = (quantity: string) => `${quantity.startsWith("-") ? "" : "+"}${amount(quantity)}`;
   const place = (leg: TransferLegView) => (leg.location === null ? t.places.transit : fill(t.places[leg.place as "source" | "destination"], { location: locationName(locations, leg.location) }));
   const today = new Date().toISOString().slice(0, 10);
@@ -64,7 +65,7 @@ export function LedgerTable({ postings, reversals, locations, baseUnit, labels, 
         if (!first) return null;
         const { reason, actorUsername, channel } = entry.posting ?? entry.reversal;
         const detail = entry.posting
-          ? fill(t.entered, { quantity: shownQuantity(entry.posting.enteredQuantity), unit: entry.posting.enteredUnit })
+          ? fill(t.entered, { quantity: localeQuantity(entry.posting.enteredQuantity, locale), unit: entry.posting.enteredUnit })
           : fill(t.reverses, { date: originals.get(entry.reversal.original)!.businessDate });
         return (
           <div className="flex min-w-0 flex-col gap-1">

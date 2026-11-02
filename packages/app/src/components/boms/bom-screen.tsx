@@ -132,7 +132,7 @@ export function BomScreen({ tenant, bom, historic, materials, units, locale, mes
             </Callout>
           )}
           <p className="text-sm text-muted-foreground">{fill(labels.recipe.intro, { baseUnit: output.baseUnit, output: output.description })}</p>
-          <RecipeTable tenant={tenant.code} lines={shown.components} materials={byId} labels={labels} label={recipeHeading} />
+          <RecipeTable tenant={tenant.code} lines={shown.components} materials={byId} labels={labels} label={recipeHeading} locale={locale} />
         </section>
         <section aria-labelledby="revisions-heading" className="flex flex-col gap-4">
           <h2 id="revisions-heading" className="text-lg font-semibold">

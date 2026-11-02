@@ -95,8 +95,8 @@ describe("BomsPage", () => {
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("BOMs — Test");
     const rows = within(screen.getByRole("table", { name: "BOMs" })).getAllByRole("row").slice(1);
     expect(rows.map((row) => within(row).getAllByRole("cell").map((cell) => cell.textContent))).toEqual([
-      ["00000002", "00000005Cabinet, redInactive", "1", "rev 2", "2026-01-01", "—", "4 each 00000004 Painted side panel, 24 each 00000002 Bolt M8", "Active"],
-      ["00000003", "00000005Cabinet, redInactive", "2", "rev 2", "2026-01-01", "2026-12-31", "4 each 00000004 Painted side panel, 24 each 00000002 Bolt M8", "Inactive"],
+      ["00000002", "00000005Cabinet, redInactive", "1", "rev 2", "2026-01-01", "—", "4 each 00000004 Painted side panel · 24 each 00000002 Bolt M8", "Active"],
+      ["00000003", "00000005Cabinet, redInactive", "2", "rev 2", "2026-01-01", "2026-12-31", "4 each 00000004 Painted side panel · 24 each 00000002 Bolt M8", "Inactive"],
     ]);
     expect(screen.getByRole("link", { name: "00000002" }).getAttribute("href")).toBe("/admin/test/boms/00000002");
     expect(screen.getAllByRole("link", { name: "00000005" })[0].getAttribute("href")).toBe("/admin/test/materials/00000005");

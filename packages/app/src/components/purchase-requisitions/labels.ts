@@ -10,7 +10,7 @@ import { LOCATION_CHOICE_MESSAGE, MATERIAL_CHOICE_MESSAGE } from "@cpg/core/vali
 import { POSITIVE_QUANTITY_MESSAGE } from "@cpg/core/validators/quantities/quantity.schema";
 import { errorMessage } from "../../i18n/error-message";
 import type { Messages } from "../../i18n/messages/en";
-import { fill, shownQuantity, type TenantContext } from "../forms/form-labels";
+import { fill, localeQuantity, type TenantContext } from "../forms/form-labels";
 import { materialPicker, type MaterialPicker } from "../materials/material-picker";
 import { recordPicker } from "../named-records/record-picker";
 
@@ -38,7 +38,7 @@ export function requisitionsLabels(messages: Messages): RequisitionsLabels {
   };
 }
 
-export { fill, shownQuantity, type TenantContext };
+export { fill, localeQuantity, type TenantContext };
 
 /** An error envelope as the requisition screen says it, translated by code. */
 export function errorFormatter(labels: Pick<RequisitionsLabels, "errors">) {

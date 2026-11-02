@@ -98,7 +98,7 @@ async function Material({ params }: { params: Promise<{ tenant: string; id: stri
             )}
           </div>
           <p className="text-sm text-muted-foreground">{fill(labels.conversions.intro, { baseUnit: material.baseUnit })}</p>
-          <ConversionsTable material={material} conversions={conversions} context={context} labels={labels} editable={editable} />
+          <ConversionsTable material={material} conversions={conversions} context={context} labels={labels} locale={locale} editable={editable} />
         </section>
       </div>
     </div>

@@ -67,6 +67,7 @@ export function BomsScreen({ tenant, boms, materials, units, locale, messages, a
           sort={sort}
           links={links}
           lists={messages.lists}
+          locale={locale}
         />
       </div>
     </div>

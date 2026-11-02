@@ -2,7 +2,7 @@ import { cancelRequisition, closeEarlyRequisition, setRequisitionRequiredDate } 
 import { LifecycleControl } from "../document-lifecycle/lifecycle-control";
 import { ChangeDateDialog } from "../purchasing/change-date-dialog";
 import Link from "next/link";
-import type { RequisitionView } from "@cpg/core";
+import type { Locale, RequisitionView } from "@cpg/core";
 import type { SortDirection } from "@cpg/core/validators/lists/list-query.schema";
 import type { RequisitionSort } from "@cpg/core/validators/purchasing/purchase-requisition-list.schema";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
@@ -13,7 +13,7 @@ import type { Messages } from "../../i18n/messages/en";
 import { PageLinks } from "../layout/page-links";
 import type { ListLinks } from "../lists/list-params";
 import { NoSearchResults } from "../lists/list-search-bar";
-import { fill, shownQuantity, type LocationsById, type MaterialsById, type RequisitionsLabels } from "./labels";
+import { fill, localeQuantity, type LocationsById, type MaterialsById, type RequisitionsLabels } from "./labels";
 
 interface RequisitionsTableProps {
   tenant: { code: string; name: string; generation: number };
@@ -31,15 +31,17 @@ interface RequisitionsTableProps {
   sort: { sort: RequisitionSort; dir: SortDirection };
   links: ListLinks;
   lists: Messages["lists"];
+  /** The reader's locale, for every figure (#304). */
+  locale: Locale;
 }
 
 /**
  * A tenant's purchase requisitions, by ID unless sorted by a header (#217), with how much of each purchase orders have converted, and
  * an Open row's Change date and lifecycle actions while the tenant is writable.
  */
-export function RequisitionsTable({ tenant, requisitions, materials, locations, labels, page, pages, editable, search, sort, links, lists }: RequisitionsTableProps) {
+export function RequisitionsTable({ tenant, requisitions, materials, locations, labels, page, pages, editable, search, sort, links, lists, locale }: RequisitionsTableProps) {
   const t = labels.columns;
-  const amount = (quantity: string, material: string) => `${shownQuantity(quantity)} ${materials.get(material)!.baseUnit}`;
+  const amount = (quantity: string, material: string) => `${localeQuantity(quantity, locale)} ${materials.get(material)!.baseUnit}`;
   const dateLabels = { ...labels.changeDate, field: labels.form.requiredDate, cancel: labels.cancel, date: labels.fieldErrors.date };
   const columns: DataTableColumn<RequisitionView>[] = [
     {

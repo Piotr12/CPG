@@ -1,7 +1,7 @@
-import { isNothing, outstandingOf, type CustomerOrderView, type ShipmentView } from "@cpg/core";
+import { isNothing, outstandingOf, type CustomerOrderView, type Locale, type ShipmentView } from "@cpg/core";
 import type { LineQuantityChoice } from "../forms/line-quantities-form";
 import type { MaterialsById } from "../purchase-orders/labels";
-import { fill, shownQuantity, type ShipmentsLabels } from "./labels";
+import { fill, localeQuantity, type ShipmentsLabels } from "./labels";
 
 /*
  * Server side only: it reads `@cpg/core`, which a client component must never import (lesson
@@ -10,9 +10,10 @@ import { fill, shownQuantity, type ShipmentsLabels } from "./labels";
 
 /**
  * The lines of `order` a shipment can still plan: those with anything outstanding (spec Q3), each
- * named by its stable ID and numbered as the order's page lists it, with its outstanding as the hint.
+ * named by its stable ID and numbered as the order's page lists it, with its outstanding in the
+ * reader's locale as the hint (#304).
  */
-export function shipmentLineChoices(order: CustomerOrderView, materials: MaterialsById, units: Record<string, string[]>, labels: ShipmentsLabels): LineQuantityChoice[] {
+export function shipmentLineChoices(order: CustomerOrderView, materials: MaterialsById, units: Record<string, string[]>, labels: ShipmentsLabels, locale: Locale): LineQuantityChoice[] {
   return order.lines.flatMap((line, index) => {
     const outstanding = outstandingOf(line);
     if (isNothing(outstanding)) return [];
@@ -21,7 +22,7 @@ export function shipmentLineChoices(order: CustomerOrderView, materials: Materia
       {
         key: line.id,
         label: fill(labels.create.line, { line: String(index + 1), material: `${id} ${description}` }),
-        hint: fill(labels.create.outstanding, { outstanding: shownQuantity(outstanding), baseUnit }),
+        hint: fill(labels.create.outstanding, { outstanding: localeQuantity(outstanding, locale), baseUnit }),
         units: units[line.material] ?? [baseUnit],
       },
     ];
@@ -40,7 +41,8 @@ export function firstDueDate(order: CustomerOrderView): string {
  * The Edit shipment dialog's rows (shipment edit spec Q8): the shipment's lines first, filled with what
  * was entered, then the order's other lines with anything outstanding, empty. Every row is named by its
  * order line, as create's are. A kept row always offers its stored unit, even one whose conversion has
- * since been removed, so it can be sent unchanged.
+ * since been removed, so it can be sent unchanged. Hints show figures in the reader's locale (#304);
+ * a kept row's prefill stays the raw entered quantity, the form a field accepts.
  */
 export function shipmentEditChoices(
   shipment: ShipmentView,
@@ -48,12 +50,13 @@ export function shipmentEditChoices(
   materials: MaterialsById,
   units: Record<string, string[]>,
   labels: ShipmentsLabels,
+  locale: Locale,
 ): LineQuantityChoice[] {
   const t = labels.edit;
   const kept = shipment.lines.map((line): LineQuantityChoice => {
     const { id, description, baseUnit } = materials.get(line.material)!;
     const offered = units[line.material] ?? [baseUnit];
-    const quantities = { quantity: shownQuantity(line.quantity), issued: shownQuantity(line.issued), baseUnit };
+    const quantities = { quantity: localeQuantity(line.quantity, locale), issued: localeQuantity(line.issued, locale), baseUnit };
     return {
       key: line.orderLine,
       label: fill(t.line, { line: String(line.line), material: `${id} ${description}` }),
@@ -71,7 +74,7 @@ export function shipmentEditChoices(
       {
         key: line.id,
         label: fill(t.orderLine, { line: String(index + 1), material: `${id} ${description}` }),
-        hint: fill(t.outstanding, { outstanding: shownQuantity(outstanding), baseUnit }),
+        hint: fill(t.outstanding, { outstanding: localeQuantity(outstanding, locale), baseUnit }),
         units: units[line.material] ?? [baseUnit],
       },
     ];

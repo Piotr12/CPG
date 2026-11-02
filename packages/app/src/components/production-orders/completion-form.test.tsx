@@ -25,6 +25,7 @@ const props = (overrides: Partial<CompletionFormProps> = {}): CompletionFormProp
   preview,
   unit: "each",
   inputs,
+  locale: "en",
   formatError: errorFormatter(labels),
   formatFieldError: completionFieldError(labels),
   ...mocks,
@@ -208,6 +209,21 @@ describe("CompletionForm", () => {
     fireEvent.click(screen.getByRole("button", { name: t.back }));
     expect(mocks.onCancel).toHaveBeenCalledTimes(2);
     expect(mocks.onBack).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ["en", en, "12,345.5", "23,456.25", "35,801.75", "12,000", "1,234.5"],
+    ["pl", pl, "12 345,5", "23 456,25", "35 801,75", "12 000", "1234,5"],
+  ] as const)("shows the expected, available and over-target figures in %s, and pre-fills the dot form", (locale, messages, expected, available, produced, target, output) => {
+    const polish = productionLabels(messages);
+    const big = { ...preview, produced: "35801.750000", target: "12000.000000", baseQuantity: "1234.500000", exceedsTarget: true,
+      components: [{ ...preview.components[0], expected: "12345.500000", available: "23456.250000" }] };
+    render(<CompletionForm {...props({ labels: polish, locale, preview: big })} />);
+    const c = polish.completion;
+    expect(screen.getByText(`${c.expected}: ${expected} kg · ${c.available}: ${available} kg`)).toBeTruthy();
+    expect((screen.getByLabelText(`${c.actual}, 00000006 Cocoa`) as HTMLInputElement).value).toBe("12345.5");
+    expect(screen.getByRole("alert").textContent!.replace(/\u00a0/g, " "))
+      .toContain(c.over.replace("{produced}", produced).replace("{target}", target).replace("{output}", output).replaceAll("{unit}", "each"));
   });
 
   it("speaks Polish", () => {

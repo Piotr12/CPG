@@ -51,16 +51,23 @@ describe("goods-receipt labels", () => {
   it("excludes abandoned lines while retaining completed lines for overreceipt", () => {
     const materials = byId([material("00000001", "Steel", "kg")]);
     const lines = (["open", "completed", "cancelled", "closed-early"] as const).map((status, index) => ({ ...line(index + 1, "00000001", "0.000000"), status }));
-    expect(receiptLineChoices({ ...ORDER, lines }, materials, {}, receiptsLabels(en)).map(({ line }) => line)).toEqual([1, 2]);
+    expect(receiptLineChoices({ ...ORDER, lines }, materials, {}, receiptsLabels(en), "en").map(({ line }) => line)).toEqual([1, 2]);
   });
 
   it("offer every line of the order with its material, outstanding and units, a received one too (BUY-015)", () => {
     const materials = byId([material("00000001", "Steel sheet", "kg"), material("00000002", "Bolt M8", "each")]);
 
-    expect(receiptLineChoices(ORDER, materials, { "00000001": ["kg", "t"] }, receiptsLabels(en))).toEqual([
+    expect(receiptLineChoices(ORDER, materials, { "00000001": ["kg", "t"] }, receiptsLabels(en), "en")).toEqual([
       { line: 1, label: "Line 1: 00000001 Steel sheet", outstanding: "70 kg outstanding", units: ["kg", "t"] },
       // A material missing from the units map can still be received in its base unit.
       { line: 2, label: "Line 2: 00000002 Bolt M8", outstanding: "0 each outstanding", units: ["each"] },
     ]);
+  });
+
+  it("say the outstanding quantity in the reader's locale, every digit kept (#304)", () => {
+    const materials = byId([material("00000001", "Steel sheet", "kg")]);
+    const order = { ...ORDER, lines: [line(1, "00000001", "12345.500000")] };
+    expect(receiptLineChoices(order, materials, {}, receiptsLabels(en), "en")[0].outstanding).toBe("12,345.5 kg outstanding");
+    expect(receiptLineChoices(order, materials, {}, receiptsLabels(pl), "pl")[0].outstanding).toBe("pozostało 12\u00a0345,5 kg");
   });
 });

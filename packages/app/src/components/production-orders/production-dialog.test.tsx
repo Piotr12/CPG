@@ -9,7 +9,7 @@ import { plannedQuantityTip, ProductionDialog } from "./production-dialog";
 const mocks = vi.hoisted(() => ({ create: vi.fn(), preview: vi.fn(), update: vi.fn(), push: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push }) }));
 vi.mock("../../app/admin/[tenant]/production-orders/actions", () => ({ createProductionOrder: mocks.create, updateProductionOrder: mocks.update }));
-const props = { context: { tenant: "test", generation: 7 }, labels: productionLabels(en), materials, locations };
+const props = { context: { tenant: "test", generation: 7 }, labels: productionLabels(en), materials, locations, locale: "en" as const };
 const open = (edit = false) => fireEvent.click(screen.getByRole("button", { name: edit ? en.productionOrders.edit : en.productionOrders.create }));
 async function preview() {
   fireEvent.change(screen.getByRole("combobox", { name: en.productionOrders.output }), { target: { value: "cabinet" } });
@@ -163,4 +163,11 @@ it("words the tooltip for an output in kg that converts 1 bag = 25 kg (UX-014)",
   );
   expect(plannedQuantityTip(productionLabels(pl), [cement], { "00000010": ["kg", "bag"] }, "00000010")).toContain("np. bag (nie SU)");
   expect(plannedQuantityTip(productionLabels(en), [cement], {}, "00000099")).toBe(en.productionOrders.quantityTipAny);
+});
+
+it.each([["en", "12,345.5 kg"], ["pl", "12 345,5 kg"]] as const)("shows the preview's requirements in %s", async (locale, required) => {
+  const components = production.components.map((component) => ({ ...component, required: "12345.500000" }));
+  mocks.preview.mockResolvedValue({ ok: true, data: { ...productionOptions, alternatives: productionOptions.alternatives.map((recipe) => ({ ...recipe, components })) } });
+  render(<ProductionDialog {...props} locale={locale} />); open(); await preview();
+  await waitFor(() => expect(screen.getAllByText(required)).toHaveLength(2));
 });

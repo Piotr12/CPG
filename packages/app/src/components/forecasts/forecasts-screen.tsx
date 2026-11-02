@@ -82,6 +82,7 @@ export function ForecastsScreen({ tenant, forecasts, materials, locations, filte
         sort={sort}
         links={links}
         lists={messages.lists}
+        locale={locale}
         pagination={<PageLinks page={page} pages={pages} labels={labels} href={links.pageHref} />}
       />
       </div>

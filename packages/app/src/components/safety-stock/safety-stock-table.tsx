@@ -1,12 +1,12 @@
 import Link from "next/link";
-import type { SafetyStockTargetView, TargetStatus } from "@cpg/core";
+import type { Locale, SafetyStockTargetView, TargetStatus } from "@cpg/core";
 import type { SortDirection } from "@cpg/core/validators/lists/list-query.schema";
 import type { SafetyStockSort } from "@cpg/core/validators/safety-stock/safety-stock-list.schema";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { StatusBadge } from "@cpg/ui/backend/feedback/status-badge";
 import type { Messages } from "../../i18n/messages/en";
 import { targetStatusTone } from "../document-lifecycle/status-tone";
-import { shownQuantity, type TenantContext } from "../forms/form-labels";
+import { localeQuantity, type TenantContext } from "../forms/form-labels";
 import type { ListLinks } from "../lists/list-params";
 import { NoSearchResults } from "../lists/list-search-bar";
 import { EmptyText } from "../master-data/empty-text";
@@ -28,13 +28,14 @@ interface SafetyStockTableProps {
   sort: { sort: SafetyStockSort; dir: SortDirection };
   links: ListLinks;
   lists: Messages["lists"];
+  locale: Locale;
 }
 
 /**
  * A tenant's safety-stock targets by material, location, then date, unless sorted by another column
  * (#217), each with its status today (DEM-015, DEM-016).
  */
-export function SafetyStockTable({ tenant, rows, labels, editable, search, sort, links, lists }: SafetyStockTableProps) {
+export function SafetyStockTable({ tenant, rows, labels, editable, search, sort, links, lists, locale }: SafetyStockTableProps) {
   const t = labels.columns;
   const context: TenantContext = { tenant: tenant.code, generation: tenant.generation };
   const columns: DataTableColumn<SafetyStockRow>[] = [
@@ -53,7 +54,7 @@ export function SafetyStockTable({ tenant, rows, labels, editable, search, sort,
       cell: (row) => <LocationCell row={row} inactive={labels.inactive} query={search} />,
     },
     { id: "effectiveFrom", header: t.effectiveFrom, kind: "date", sortKey: "effectiveFrom", cell: (row) => row.effectiveFrom },
-    { id: "quantity", header: t.quantity, kind: "quantity", sortKey: "quantity", cell: (row) => `${shownQuantity(row.quantity)} ${row.baseUnit}` },
+    { id: "quantity", header: t.quantity, kind: "quantity", sortKey: "quantity", cell: (row) => `${localeQuantity(row.quantity, locale)} ${row.baseUnit}` },
     {
       id: "status",
       header: t.status,

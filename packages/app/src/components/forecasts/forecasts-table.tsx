@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import type { ForecastView } from "@cpg/core";
+import type { ForecastView, Locale } from "@cpg/core";
 import type { ForecastSort } from "@cpg/core/validators/forecasts/forecast-list.schema";
 import type { SortDirection } from "@cpg/core/validators/lists/list-query.schema";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import type { Messages } from "../../i18n/messages/en";
-import { fill, shownQuantity, type TenantContext } from "../forms/form-labels";
+import { fill, localeQuantity, type TenantContext } from "../forms/form-labels";
 import type { ListLinks } from "../lists/list-params";
 import { NoSearchResults } from "../lists/list-search-bar";
 import { LocationCell, MaterialCell, type ReferenceDetails } from "../master-data/references";
@@ -29,6 +29,7 @@ interface ForecastsTableProps {
   sort: { sort: ForecastSort; dir: SortDirection };
   links: ListLinks;
   lists: Messages["lists"];
+  locale: Locale;
   /** The page links under the table. */
   pagination?: ReactNode;
 }
@@ -37,7 +38,7 @@ interface ForecastsTableProps {
  * A tenant's forecasts by material, location, then day unless a header sorts them by another of
  * those columns (#217): the quantity per day (DEM-001).
  */
-export function ForecastsTable({ tenant, rows, labels, editable, filtered, search, sort, links, lists, pagination }: ForecastsTableProps) {
+export function ForecastsTable({ tenant, rows, labels, editable, filtered, search, sort, links, lists, locale, pagination }: ForecastsTableProps) {
   const t = labels.columns;
   const context: TenantContext = { tenant: tenant.code, generation: tenant.generation };
   const columns: DataTableColumn<ForecastRow>[] = [
@@ -56,7 +57,7 @@ export function ForecastsTable({ tenant, rows, labels, editable, filtered, searc
       cell: (row) => <LocationCell row={row} inactive={labels.inactive} query={search} />,
     },
     { id: "date", header: t.date, kind: "date", sortKey: "date", cell: (row) => row.date },
-    { id: "quantity", header: t.quantity, kind: "quantity", sortKey: "quantity", cell: (row) => `${shownQuantity(row.quantity)} ${row.baseUnit}` },
+    { id: "quantity", header: t.quantity, kind: "quantity", sortKey: "quantity", cell: (row) => `${localeQuantity(row.quantity, locale)} ${row.baseUnit}` },
   ];
   const empty = search
     ? <NoSearchResults links={links} query={search} lists={lists} />

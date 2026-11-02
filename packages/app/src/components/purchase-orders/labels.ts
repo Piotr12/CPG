@@ -1,4 +1,4 @@
-import type { MaterialSummary, NamedRecordView, OrderLineView } from "@cpg/core";
+import type { Locale, MaterialSummary, NamedRecordView, OrderLineView } from "@cpg/core";
 import { UNIT_FORMAT_MESSAGE } from "@cpg/core/validators/materials/material-fields.schema";
 import {
   QUANTITY_OUT_OF_RANGE_MESSAGE,
@@ -18,7 +18,7 @@ import {
 import { POSITIVE_QUANTITY_MESSAGE } from "@cpg/core/validators/quantities/quantity.schema";
 import { errorMessage } from "../../i18n/error-message";
 import type { Messages } from "../../i18n/messages/en";
-import { fill, shownQuantity, type TenantContext } from "../forms/form-labels";
+import { fill, localeQuantity, type TenantContext } from "../forms/form-labels";
 import { materialPicker, type MaterialPicker } from "../materials/material-picker";
 import { recordPicker } from "../named-records/record-picker";
 import { byId } from "../purchase-requisitions/labels";
@@ -47,7 +47,7 @@ export function ordersLabels(messages: Messages): OrdersLabels {
   };
 }
 
-export { byId, fill, shownQuantity, type TenantContext };
+export { byId, fill, localeQuantity, type TenantContext };
 
 /** An error envelope as the purchase-order screens say it, translated by code. */
 export function errorFormatter(labels: Pick<OrdersLabels, "errors">) {
@@ -80,12 +80,12 @@ export type MaterialsById = Map<string, MaterialSummary>;
 export type PartiesById = Map<string, NamedRecordView>;
 
 /**
- * How a line was entered, when not in the base unit: "2 case at 1 case = 12 each". Empty for a line
- * entered in the base unit, where it would only repeat the quantity.
+ * How a line was entered, when not in the base unit: "2 case at 1 case = 12 each", every figure in the
+ * reader's locale (#304). Empty for a line entered in the base unit, where it would only repeat the quantity.
  */
-export function enteredAs(line: OrderLineView, materials: MaterialsById, labels: OrdersLabels): string {
+export function enteredAs(line: OrderLineView, materials: MaterialsById, labels: OrdersLabels, locale: Locale): string {
   const { baseUnit } = materials.get(line.material)!;
   if (line.enteredUnit === baseUnit) return "";
-  const conversion = `${line.denominator} ${line.enteredUnit} = ${line.numerator} ${baseUnit}`;
-  return fill(labels.lines.enteredAs, { quantity: line.enteredQuantity, unit: line.enteredUnit, conversion });
+  const conversion = `${localeQuantity(line.denominator, locale)} ${line.enteredUnit} = ${localeQuantity(line.numerator, locale)} ${baseUnit}`;
+  return fill(labels.lines.enteredAs, { quantity: localeQuantity(line.enteredQuantity, locale), unit: line.enteredUnit, conversion });
 }
