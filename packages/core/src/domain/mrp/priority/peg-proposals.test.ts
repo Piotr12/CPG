@@ -174,5 +174,15 @@ describe("pegProposals (#327)", () => {
     const later = { firmDemand: [order(2, "3", "B"), order(5, "6", "C")], plannedComponentDemand: [planned(1, [share(orderRoot(4, "A", "G"), "4")], { parentNeed: 4, provisional: true })] };
     expect(pegProposals(pair("5", later), [proposal(5, "10")], []).proposals).toEqual([[share(orderRoot(4, "A", "G"), "4"), share(orderRoot(5, "C"), "4"), share(targetRoot(5), "2")]]);
   });
+
+  it("lets an executable proposal's surplus serve a provisional need before a provisional proposal of the same need date", () => {
+    // The executable 5 serve order B's 3 and leave 2; G's provisional need of 7 takes those 2, then 5 of the provisional 10.
+    const provisionalNeed = planned(3, [share(orderRoot(3, "A", "G"), "7")], { parentNeed: 3, provisional: true });
+    const result = pegProposals(pair("0", { firmDemand: [order(3, "3", "B")], plannedComponentDemand: [provisionalNeed] }), [proposal(3, "5")], [proposal(3, "10")]);
+    expect(result).toEqual({
+      proposals: [[share(orderRoot(3, "A", "G"), "2"), share(orderRoot(3, "B"), "3")]],
+      provisional: [[share(orderRoot(3, "A", "G"), "5"), share(targetRoot(3), "5")]],
+    });
+  });
 });
 
