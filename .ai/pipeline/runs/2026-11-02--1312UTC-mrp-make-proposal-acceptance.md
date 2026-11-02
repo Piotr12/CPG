@@ -78,3 +78,4 @@ PR: #345
   - the stale contract line and doc comments.
 
   The gate after the fixes: coverage 668 files, 5,485 tests, 100%, exit 0; build exit 0.
+- 16:55 CI on c9c80ff6: integration shard 4 failed in `mrp-run-api.test.ts`, which compares a Make proposal exactly and still expected `executable: false`. This is a seam with #278's test, not run locally. Fixed. That file and `mrp-report-api` pass against a standalone build (24 tests). The seam lesson is extended.
