@@ -33,6 +33,11 @@
 - `npm run lint`, `npm run typecheck`: pass.
 - `npm run test:coverage`: 672 files, 5584 tests passed, thresholds met (after the spec deletion; before it, only `ai-filenames.test.ts` failed, as on `main`).
 - `npm run build`: pass.
-- Integration, against a standalone build on :3358: 13 files, 116 tests passed.
+- Integration, against a standalone build on :3358: 13 files, 116 tests passed (run before the slip, on identically re-applied edits; typecheck after re-applying confirms no `title()` caller is left).
+- Re-run after re-applying: lint, typecheck, `test:coverage` (672 files, 5584 tests, thresholds met), build all pass.
+- Unit regression: `tests/integration-helpers.test.ts` › `expectTitle`, 2 tests. They fail with a one-shot read (mutation check above).
+- Probe (temporary file, deleted): 5 fresh sign-ins and 100 `/admin` reloads on the local server, each reading the title once right after `[data-slot=badge]`. All 105 reads already had the right title, so the race did **not** reproduce on this unloaded machine. The cause stays inferred from the CI failure (`''` on a loaded shard) and from how Next.js streams metadata. The fix makes no timing assumption either way.
 
 ## Follow-ups
+
+- The CI integration shards on the PR: the full suite runs there, and that result is what decides.
