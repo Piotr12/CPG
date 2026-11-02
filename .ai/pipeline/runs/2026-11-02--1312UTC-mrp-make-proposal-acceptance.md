@@ -38,14 +38,14 @@ Phases follow the spec's Implementation Plan.
 
 ### Phase 1: Persistence and production orders
 
-- [ ] 1.1 Column and migration
-- [ ] 1.2 Run link on production orders
+- [x] 1.1 Column and migration — 06e960dd
+- [x] 1.2 Run link on production orders — 0558a2f5
 
 ### Phase 2: MRP core
 
-- [ ] 2.1 Predicate and read
-- [ ] 2.2 Document step and acceptance
-- [ ] 2.3 Batch
+- [x] 2.1 Predicate and read — 64b9c116
+- [x] 2.2 Document step and acceptance — 64b9c116
+- [x] 2.3 Batch — 64b9c116
 
 ### Phase 3: Screen and copy
 
@@ -53,10 +53,13 @@ Phases follow the spec's Implementation Plan.
 
 ### Phase 4: Verification and docs
 
-- [ ] 4.1 Benchmark
+- [x] 4.1 Benchmark — b731b6d8
 - [ ] 4.2 Integration tests
 - [ ] 4.3 Docs and catalogue
 
 ## Log
 
 - 13:12 Branch `feat/mrp-make-proposal-acceptance` from `origin/main` (`ab0b20da`). Engine: om-auto-create-pr (steps: 9, --loop: no).
+- 13:25 Phase 1: the migration is a plain `add column` (the generator didn't rebuild `production_order`). The migration lists and counts are raised to 43.
+- 13:45 Phase 2: the stale rule also compares `leadTimeDays` for Make (the spec review's fix). Spec Q7: accepting a parent leaves its input's requisition acceptable and vice versa, and two parents sharing an input are acceptable in either order. Tests pin both.
+- 14:05 Benchmark: the realistic automatic run's stall rose to 489 ms with Make in the batch (a production order costs about 20 ms here). The batch now yields after every document, which gives 30 ms. The ten-times fixture plans no feasible Make proposal (#282's shape), so the Make accept is timed at realistic only, and the cap batch gets 525 production-order candidates inserted on Make pairs with usable BOMs. Figures are in commit b731b6d8. Timings on this machine vary 3× between passes.
