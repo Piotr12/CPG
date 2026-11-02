@@ -13,7 +13,7 @@ The original export marked every scenario `Not executed`. Scenarios are updated 
 - **Partially verified**: only part of the scenario can be or is asserted today; the **Evidence** line says which part is missing and why.
 - **Not executed**: not yet built or not yet checked.
 
-Last updated 2026-11-02 for #286 (E18-S03): its tests move UX-020, MRP-025, MRP-047, MRP-050 and LFC-026 to Passed (automated), and add the report's screen and API explanations to MRP-051's and LFC-027's evidence (their automatic-batch halves, E19-S03, stay open); the other rows that waited on this screen say no test asserts their screen half. Before that, the same day for #288 (E19-S02): its tests move RUN-009, RUN-011, RUN-012 and RUN-020 to Passed (automated), and RUN-008, RUN-010 and RUN-013 to Partially verified (their automatic halves are E19-S03, #289). Before that, 2026-11-01 for #283 (E17-S03): its tests move MRP-047 and MRP-051 to Partially verified (the screen is E18-S03, #286), and add the provisional plan and the at-risk report to MRP-026's, MRP-027's, BOM-011's and LFC-027's evidence (their screen and automatic-batch halves stay open). Before that, the same day for #282 (E17-S02): its tests move MRP-024, MRP-025, MRP-026, MRP-041, MRP-046, MRP-050, BOM-010, BOM-011 and LFC-026 to Partially verified (the screen is E18-S03, the provisional plan E17-S03 and the automatic batch E19-S03), and add MRP's halves to LFC-025's and PRD-002's evidence. Before that, the same day for #281 (E17-S01): its tests move MRP-020, MRP-027, MRP-028, MRP-029 and MRP-031 to Partially verified (the explosion's screen is E18-S03, feasibility and executability are E17-S02 and E17-S03), and add MRP's scaling to BOM-006's evidence. Before that, the same day for #285 (E18-S02): its tests move UX-019, UX-027, MRP-006, MRP-015 and BUY-019 to Passed (automated), and UX-018, MRP-016, MRP-040 and TRF-016 to Partially verified (the overdue transfer and production marks are not yet asserted through the API or a browser). Before that, the same day for #287 (E19-S01): its tests move BUY-001, RUN-004 and RUN-005 to Passed (automated), and RUN-003, RUN-017 and RUN-022 to Partially verified (the creation option is E19-S03, and RUN-017's and RUN-022's screen halves are component tests only). RUN-006, the Make half, waits on the follow-up blocked on #282. Before that, 2026-10-31 for #284 (E18-S01): its tests move MRP-005, MRP-008, RUN-002, TEN-018, API-014, UX-010 and UX-021 to Passed (automated). Before that, the same day for #276 (E15-S02): its tests move MRP-010, MRP-012, MRP-013, MRP-014, MRP-015, MRP-042, BUY-019, BUY-026 and LFC-024 to Partially verified, and add the MRP half to BUY-002, BUY-017, BUY-018 and BUY-024's evidence (the report screen is E18-S01, the overdue mark's display E18-S02, the production cases E15-S03). Before that, 2026-10-27 for #274 (E14-S02): its tests move MRP-001, MRP-002, MRP-003, INV-008 and RUN-001 to Passed (automated), and MRP-008, RUN-002, RUN-021 and TEN-019 to Partially verified (the daily report screen is E18-S01, automatic runs E19-S03). Before that, the same day for #290 (E20-S01): its tests move UX-014 to Passed (automated). Before that, 2026-10-25 for #192: its tests move UX-009, API-031, AUD-022, E2E-006, E2E-013 and E2E-014 to Passed (automated), and UX-023 and UX-026 from Not executed to Partially verified (their MRP halves are #14). Before that, the same day for #191 (E10-S05): BOM-009, BOM-027, E2E-004 and LFC-015 move to Passed (automated), LFC-025 and LFC-027 to Partially verified (their non-MRP halves), and E2E-015 now waits only on MRP (#14). Before that, the same day for #190: TRF-012, E2E-009 and MAT-024 move from Partially verified to Passed (automated), with a 60/50/10 Close Early refusal in the service and on screen, a 60-planned transfer received 55 and written off 5 through the API and closed early on screen, and 0.123456 posted through the ledger; LFC-012 gains the 409 with its material, location and quantity, through the API and the Deactivate dialog, and STX-011 the Stock import screen's dry run. Before that, the same day for #240: the D08 netting tests move DEM-002…013 from Not executed to Partially verified; each still needs MRP's run (#14). Before that, 2026-10-24 for #200: E2E-020's test now owns both Test generations within one UTC day, and the tiny dataset's unissued shipment is checked on every day of 2025–2027; its status is unchanged. Before that, the same day for E09-S05 (#186): its tests move E2E-017 to Passed (automated) and add evidence to LFC-013. Before that, 2026-10-23 for the second slice 2 closing pass, against `main` at `db50cf07`: the slice 2 rows were rechecked against the tests that PRs #156 (#140), #159 (#142), #161 (#141), #170 (#168), #174 (#153), #177 (#152), #178 (#144), #179 (#138), #181 (#145) and #182 (#147) added. TEN-009, MAT-009, MAT-029, INV-023, LFC-019, API-034, AUD-001 and UX-025 move to Passed (automated), their whole Then now asserted; TRF-012 and BUY-017 go back to Partially verified (no test closes a transfer with 10 of 60 in transit after 50 received; BUY-017's scheduled supply is MRP, #14); SAL-015, E2E-004, E2E-006, E2E-009, E2E-013, E2E-017, E2E-018 and E2E-020 move from Not executed to Partially verified; REV-001, REV-010, SAL-008, SAL-018, AUD-002 and AUD-025 gain the #144 and #147 evidence, and the stale notes of TEN-001, TEN-025, TEN-029, MAT-006, MAT-024, INV-007, DEM-016 and E2E-015 are corrected. The gaps found are filed as #185–#192 and named in each row. Before that, the same day for E11-S04 (#144), against `main` at `8195a0b`: its tests moved LFC-004 and BUY-017 to Passed (automated) (their MRP halves are slice 3, #14) and added evidence to PRD-029. Before that, the same day for E13-S05 (#152), against `main` at `8adea42`: more evidence for AUD-004 and UX-010, whose status is unchanged. Before that, 2026-10-21 for E10-S03 (#143), against `main` at `1882d6a`, whose tests moved LFC-022, BOM-026, BOM-028, BOM-029, UX-013 and E2E-011 to Passed (automated). Before that, the same day: epics E07 (#73), E08 (#74), E09 (#75), E10 (#76), E11 (#77) and E13 (#79), against `main` at `d2300ef` (PRs #102, #104, #107, #108, #109, #111, #112, #114, #118, #119, #120, #123, #125, #130, #133, #135); the gaps found are filed as #139–#145, and #139 (PR #151) closes LFC-018, STX-006 and STX-018. Earlier: epic E05 (#13) against `2a2976a` (PR #99 for E05-S01), plus the tests and the workbook cell limit added with that update; epic E04 (#12) against `082f2d5`; epic E03 (#11) against `3f553a5`, and the E02 end-to-end follow-up (#67); epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
+Last updated 2026-11-02 for #289 (E19-S03): its tests move RUN-003, RUN-008, RUN-015, RUN-019, RUN-021, RUN-023, RUN-024, API-027 and AUD-023 to Passed (automated), and RUN-007, RUN-014, RUN-018 and RUN-025 to Partially verified, adding the automatic halves to RUN-010, RUN-013 and RUN-016. The production-order halves of RUN-007 and RUN-014 wait on #320, and RUN-018 waits on the owner confirming spec Q3. Before that, the same day for #286 (E18-S03): its tests move UX-020, MRP-025, MRP-047, MRP-050 and LFC-026 to Passed (automated), and add the report's screen and API explanations to MRP-051's and LFC-027's evidence (their automatic-batch halves, E19-S03, stay open); the other rows that waited on this screen say no test asserts their screen half. Before that, the same day for #288 (E19-S02): its tests move RUN-009, RUN-011, RUN-012 and RUN-020 to Passed (automated), and RUN-008, RUN-010 and RUN-013 to Partially verified (their automatic halves are E19-S03, #289). Before that, 2026-11-01 for #283 (E17-S03): its tests move MRP-047 and MRP-051 to Partially verified (the screen is E18-S03, #286), and add the provisional plan and the at-risk report to MRP-026's, MRP-027's, BOM-011's and LFC-027's evidence (their screen and automatic-batch halves stay open). Before that, the same day for #282 (E17-S02): its tests move MRP-024, MRP-025, MRP-026, MRP-041, MRP-046, MRP-050, BOM-010, BOM-011 and LFC-026 to Partially verified (the screen is E18-S03, the provisional plan E17-S03 and the automatic batch E19-S03), and add MRP's halves to LFC-025's and PRD-002's evidence. Before that, the same day for #281 (E17-S01): its tests move MRP-020, MRP-027, MRP-028, MRP-029 and MRP-031 to Partially verified (the explosion's screen is E18-S03, feasibility and executability are E17-S02 and E17-S03), and add MRP's scaling to BOM-006's evidence. Before that, the same day for #285 (E18-S02): its tests move UX-019, UX-027, MRP-006, MRP-015 and BUY-019 to Passed (automated), and UX-018, MRP-016, MRP-040 and TRF-016 to Partially verified (the overdue transfer and production marks are not yet asserted through the API or a browser). Before that, the same day for #287 (E19-S01): its tests move BUY-001, RUN-004 and RUN-005 to Passed (automated), and RUN-003, RUN-017 and RUN-022 to Partially verified (the creation option is E19-S03, and RUN-017's and RUN-022's screen halves are component tests only). RUN-006, the Make half, waits on the follow-up blocked on #282. Before that, 2026-10-31 for #284 (E18-S01): its tests move MRP-005, MRP-008, RUN-002, TEN-018, API-014, UX-010 and UX-021 to Passed (automated). Before that, the same day for #276 (E15-S02): its tests move MRP-010, MRP-012, MRP-013, MRP-014, MRP-015, MRP-042, BUY-019, BUY-026 and LFC-024 to Partially verified, and add the MRP half to BUY-002, BUY-017, BUY-018 and BUY-024's evidence (the report screen is E18-S01, the overdue mark's display E18-S02, the production cases E15-S03). Before that, 2026-10-27 for #274 (E14-S02): its tests move MRP-001, MRP-002, MRP-003, INV-008 and RUN-001 to Passed (automated), and MRP-008, RUN-002, RUN-021 and TEN-019 to Partially verified (the daily report screen is E18-S01, automatic runs E19-S03). Before that, the same day for #290 (E20-S01): its tests move UX-014 to Passed (automated). Before that, 2026-10-25 for #192: its tests move UX-009, API-031, AUD-022, E2E-006, E2E-013 and E2E-014 to Passed (automated), and UX-023 and UX-026 from Not executed to Partially verified (their MRP halves are #14). Before that, the same day for #191 (E10-S05): BOM-009, BOM-027, E2E-004 and LFC-015 move to Passed (automated), LFC-025 and LFC-027 to Partially verified (their non-MRP halves), and E2E-015 now waits only on MRP (#14). Before that, the same day for #190: TRF-012, E2E-009 and MAT-024 move from Partially verified to Passed (automated), with a 60/50/10 Close Early refusal in the service and on screen, a 60-planned transfer received 55 and written off 5 through the API and closed early on screen, and 0.123456 posted through the ledger; LFC-012 gains the 409 with its material, location and quantity, through the API and the Deactivate dialog, and STX-011 the Stock import screen's dry run. Before that, the same day for #240: the D08 netting tests move DEM-002…013 from Not executed to Partially verified; each still needs MRP's run (#14). Before that, 2026-10-24 for #200: E2E-020's test now owns both Test generations within one UTC day, and the tiny dataset's unissued shipment is checked on every day of 2025–2027; its status is unchanged. Before that, the same day for E09-S05 (#186): its tests move E2E-017 to Passed (automated) and add evidence to LFC-013. Before that, 2026-10-23 for the second slice 2 closing pass, against `main` at `db50cf07`: the slice 2 rows were rechecked against the tests that PRs #156 (#140), #159 (#142), #161 (#141), #170 (#168), #174 (#153), #177 (#152), #178 (#144), #179 (#138), #181 (#145) and #182 (#147) added. TEN-009, MAT-009, MAT-029, INV-023, LFC-019, API-034, AUD-001 and UX-025 move to Passed (automated), their whole Then now asserted; TRF-012 and BUY-017 go back to Partially verified (no test closes a transfer with 10 of 60 in transit after 50 received; BUY-017's scheduled supply is MRP, #14); SAL-015, E2E-004, E2E-006, E2E-009, E2E-013, E2E-017, E2E-018 and E2E-020 move from Not executed to Partially verified; REV-001, REV-010, SAL-008, SAL-018, AUD-002 and AUD-025 gain the #144 and #147 evidence, and the stale notes of TEN-001, TEN-025, TEN-029, MAT-006, MAT-024, INV-007, DEM-016 and E2E-015 are corrected. The gaps found are filed as #185–#192 and named in each row. Before that, the same day for E11-S04 (#144), against `main` at `8195a0b`: its tests moved LFC-004 and BUY-017 to Passed (automated) (their MRP halves are slice 3, #14) and added evidence to PRD-029. Before that, the same day for E13-S05 (#152), against `main` at `8adea42`: more evidence for AUD-004 and UX-010, whose status is unchanged. Before that, 2026-10-21 for E10-S03 (#143), against `main` at `1882d6a`, whose tests moved LFC-022, BOM-026, BOM-028, BOM-029, UX-013 and E2E-011 to Passed (automated). Before that, the same day: epics E07 (#73), E08 (#74), E09 (#75), E10 (#76), E11 (#77) and E13 (#79), against `main` at `d2300ef` (PRs #102, #104, #107, #108, #109, #111, #112, #114, #118, #119, #120, #123, #125, #130, #133, #135); the gaps found are filed as #139–#145, and #139 (PR #151) closes LFC-018, STX-006 and STX-018. Earlier: epic E05 (#13) against `2a2976a` (PR #99 for E05-S01), plus the tests and the workbook cell limit added with that update; epic E04 (#12) against `082f2d5`; epic E03 (#11) against `3f553a5`, and the E02 end-to-end follow-up (#67); epic E02 (#10) against `3e46bf8`, with its AUD-008 end-to-end test; epic E01 (#9) against `9ea5973`, and its end-to-end follow-up (#52).
 
 This document contains the complete acceptance catalogue for the CPG MVP. Each test preserves its ID, title, priority, execution channel, and Given / When / Then criteria.
 
@@ -3221,9 +3221,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### RUN-003 — Default manual mode
 
-**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** `tests/integration/mrp-accept-api.test.ts` ("RUN-003": a run at the default manual mode leaves the requisition, purchase-order and production-order counts unchanged, read across every page) and `mrp-run.service.test.ts` (a run writes only its own records). The creation option itself, and so the Run MRP dialog's default, arrives with E19-S03. E19-S01, #287.
+- **Evidence:** `tests/integration/mrp-accept-api.test.ts` ("RUN-003": a run at the default manual mode leaves the requisition, purchase-order and production-order counts unchanged, read across every page) and `mrp-run.service.test.ts` (a run writes only its own records). E19-S01, #287. The creation option arrives with E19-S03 (#289): `run-mrp-button.test.tsx` (the dialog opens on Manual every time, and runs `{ mode: "manual" }`), `tests/integration/mrp-run.test.ts` and `tests/integration/mrp-automatic.test.ts` (the dialog opens on Manual in a browser, a manual run creates no requisition and the card says Manual), and `packages/core/src/services/mrp/mrp-batch.service.test.ts` ("RUN-003": a manual run creates no requisition, purchase order or production order, with `creation: null`).
 - **Given:** User opens Run MRP dialog
 - **When:** Leave creation option at default and run
 - **Then:** Recommendations shown without automatically creating transactional PRs/orders.
@@ -3256,17 +3256,18 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### RUN-007 — Automatic mode explicit opt-in
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/services/mrp/mrp-batch.service.test.ts` ("RUN-007, RUN-014": only an explicit `{ mode: "automatic" }` run creates, a requisition per executable proposal tagged with the run; Make proposals create nothing until #320), `run-mrp-button.test.tsx` (Automatic runs only when chosen), `tests/integration/mrp-automatic.test.ts` ("RUN-003, RUN-007": chosen in the dialog, it creates the pair's requisition with the run's ID) and `tests/integration/mrp-automatic-api.test.ts`. The feasible production-order half waits on Make acceptance (#320). E19-S03, #289.
 - **Given:** Writable tenant with valid recommendations
 - **When:** Choose automatic creation before MRP run
 - **Then:** Only eligible PRs/feasible production orders created and linked to run ID.
 
 ### RUN-008 — Immediate identical rerun does not duplicate
 
-**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** Manual half: `tests/integration/mrp-rerun.test.ts` ("RUN-008, RUN-012": a requisition of 100 accepted from run 1's proposal, then run 2 has no proposal for the pair and the requisition, purchase-order and production-order counts, read across every page, are unchanged), `mrp-acceptance.service.test.ts` and `plan-mrp.test.ts` ("RUN-008": the same fixture planned before and after the requisition exists). The automatic rerun is E19-S03 (#289). E19-S02, #288.
+- **Evidence:** Manual half: `tests/integration/mrp-rerun.test.ts` ("RUN-008, RUN-012": a requisition of 100 accepted from run 1's proposal, then run 2 has no proposal for the pair and the requisition, purchase-order and production-order counts, read across every page, are unchanged), `mrp-acceptance.service.test.ts` and `plan-mrp.test.ts` ("RUN-008": the same fixture planned before and after the requisition exists). E19-S02, #288. Automatic half: `packages/core/src/services/mrp/mrp-batch.service.test.ts` ("RUN-008, RUN-013": an automatic rerun creates nothing and leaves run 1's requisition as it was) and `tests/integration/mrp-automatic-api.test.ts` ("RUN-008": `documents: 0`, every requisition equal across every page). E19-S03, #289.
 - **Given:** First auto run creates PR 100
 - **When:** Run same auto MRP with unchanged state
 - **Then:** No duplicate PR for same uncovered demand.
@@ -3284,7 +3285,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** Manual half: `tests/integration/mrp-rerun.test.ts` ("RUN-010": an Open production order of 100 and demand of 80, run twice, keep the order's quantity, dates, status and version; the pair gets no proposal, the latest-run read gives `excess` 20.000000 and the MRP page states "Excess: 20 each of open supply …"), `mrp-acceptance.service.test.ts` and `plan-mrp.test.ts` ("RUN-010"). The automatic rerun is E19-S03 (#289). E19-S02, #288.
+- **Evidence:** Manual half: `tests/integration/mrp-rerun.test.ts` ("RUN-010": an Open production order of 100 and demand of 80, run twice, keep the order's quantity, dates, status and version; the pair gets no proposal, the latest-run read gives `excess` 20.000000 and the MRP page states "Excess: 20 each of open supply …"), `mrp-acceptance.service.test.ts` and `plan-mrp.test.ts` ("RUN-010"). E19-S02, #288. Automatic half: `packages/core/src/services/mrp/mrp-batch.service.test.ts` ("RUN-010": an automatic run keeps the Open production order of 100 against demand of 80, creates nothing and shows `excess` 20). No integration test runs it automatically. E19-S03, #289.
 - **Given:** Existing active production order 100, demand now 80
 - **When:** Rerun automatic MRP
 - **Then:** Existing 100 order untouched; surplus planned supply visible, no cancel/delete.
@@ -3311,23 +3312,25 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** Manual half: `tests/integration/mrp-rerun.test.ts` ("RUN-013, R10": new demand that wants more and earlier leaves an Open purchase-order line and production order with the same detail, version included, and every requisition, purchase order and production order equal across every page; the extra need is a new Make proposal of 130 and a requisition proposal of 70; the tenant audit gains only the run's `mrp.mrp-run.created`), `tests/integration/test-reset-realistic.test.ts` (a rerun over more than one page of each list edits none of them) and `mrp-acceptance.service.test.ts`. The automatic rerun is E19-S03 (#289). E19-S02, #288.
+- **Evidence:** Manual half: `tests/integration/mrp-rerun.test.ts` ("RUN-013, R10": new demand that wants more and earlier leaves an Open purchase-order line and production order with the same detail, version included, and every requisition, purchase order and production order equal across every page; the extra need is a new Make proposal of 130 and a requisition proposal of 70; the tenant audit gains only the run's `mrp.mrp-run.created`), `tests/integration/test-reset-realistic.test.ts` (a rerun over more than one page of each list edits none of them) and `mrp-acceptance.service.test.ts`. E19-S02, #288. Automatic half: `packages/core/src/services/mrp/mrp-batch.service.test.ts` ("RUN-008, RUN-013", "RUN-010", "N06": an automatic run leaves an earlier requisition, a production order and a transfer as they were). No integration test reruns automatically over purchase orders. E19-S03, #289.
 - **Given:** Old PO/production order has fixed date/quantity
 - **When:** Run automatic MRP
 - **Then:** Old date/quantity/status unchanged, regardless of new needs.
 
 ### RUN-014 — Atomic automatic order batch
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/services/mrp/mrp-batch.service.test.ts` ("RUN-007, RUN-014, R08": 5 executable proposals become exactly 5 Open requisitions tagged with the run, each with its creation entry, and the answer lists them) and `tests/integration/mrp-automatic-api.test.ts` ("RUN-007, RUN-014, …": each own proposal names its requisition, tagged with the run). The production-order half waits on #320. E19-S03, #289.
 - **Given:** Auto-run has 5 eligible new PR/orders
 - **When:** Execute creation with all valid
 - **Then:** Exactly 5 new documents created, all linked to run ID.
 
 ### RUN-015 — Automatic creation one invalid document
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/mrp/mrp-batch.service.test.ts` ("RUN-015, RUN-023, AUD-023": the third of 5 candidates has an inactive material, so none is created, no proposal is marked and the results stay whole; "RUN-015": a quantity above the entry limit fails as `VALIDATION_FAILED` with its field errors), `tests/integration/mrp-automatic-api.test.ts` ("RUN-015, RUN-023": 200 with the cause and candidate, nothing created, the run readable) and `tests/integration/mrp-automatic.test.ts` ("RUN-023"). E19-S03, #289.
 - **Given:** Automatic batch has 5 candidates; one fails late validation
 - **When:** Commit batch
 - **Then:** Zero of five created; run's calculated output/exceptions retained with failure explanation.
@@ -3336,7 +3339,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P1 · **Channel:** Both · **Status:** Partially verified
 
-- **Evidence:** Planning half: `packages/core/src/domain/mrp/plan-mrp.test.ts` ("RUN-016": A's Missing BOM beside B's Buy proposal in one result, where every proposal is executable). Automatic mode and the atomic batch are E19-S03 (#289). E16-S03, #280.
+- **Evidence:** Planning half: `packages/core/src/domain/mrp/plan-mrp.test.ts` ("RUN-016": A's Missing BOM beside B's Buy proposal in one result, where every proposal is executable). E16-S03, #280. Automatic half: `packages/core/src/services/mrp/mrp-batch.service.test.ts` ("RUN-016": A's Missing BOM is reported and B's requisition created, and the batch succeeds). No integration test runs it automatically. E19-S03, #289.
 - **Given:** Material A missing BOM, material B Buy recommendation valid
 - **When:** Run MRP auto mode
 - **Then:** A exception reported; eligible B recommendation still considered for atomic create batch.
@@ -3352,16 +3355,18 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### RUN-018 — Stale auto creation
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/services/mrp/mrp-run-concurrency.test.ts` ("fails a run whose snapshot another connection's commit made stale…": a recount committed on a second ORM after the run's first read fails it at its first write, before any plan, and the retry plans from the recount) and `mrp-batch-concurrency.test.ts` (a second stale attempt fails the request, storing no run and no document). Spec Q3 (`2026-11-02--1031UTC-mrp-automatic-mode`): the run holds SQLite's write lock from before it plans until the batch commits, so a posting can't change its data in between, and the Then ("batch revalidation fails … results remain") is never observed. It stays Partially verified until the owner confirms that reading. E19-S03, #289.
 - **Given:** MRP calculation based on stock; concurrent posting changes it before auto commit
 - **When:** Attempt automatic batch commit
 - **Then:** Batch revalidation fails, zero new documents created, results remain.
 
 ### RUN-019 — Concurrent automatic runs serialized
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/mrp/mrp-batch-concurrency.test.ts` (two automatic runs on two ORMs over one file, started in the same tick: one batch creates the 30 requisitions, the other plans against them and creates none, and the retry is counted) and `tests/integration/mrp-automatic-api.test.ts` ("RUN-019": two requests at once leave one requisition per need; both run in one bundle, so this proves queuing on one connection, and the two-ORM test proves it across connections). E19-S03, #289.
 - **Given:** Two sessions request automatic MRP in same tenant at once
 - **When:** Execute both
 - **Then:** No duplicate order creation; at most one automatic create runs against given state at a time.
@@ -3377,9 +3382,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### RUN-021 — MRP cannot run in read-only mode
 
-**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
-- **Evidence:** The manual half: `tests/integration/mrp-run.test.ts` (read-only Prod keeps the latest run on the page with no Run MRP, for a user and the admin), `tests/integration/mrp-run-api.test.ts` (a user's and the admin's tokens answer 409 `TENANT_READ_ONLY` and the earlier run and its results stay readable), `packages/core/src/services/mrp/mrp-run-gate.test.ts` (the real action and API wrappers store nothing). Automatic runs are E19-S03. E14-S02, #274.
+- **Evidence:** The manual half: `tests/integration/mrp-run.test.ts` (read-only Prod keeps the latest run on the page with no Run MRP, for a user and the admin), `tests/integration/mrp-run-api.test.ts` (a user's and the admin's tokens answer 409 `TENANT_READ_ONLY` and the earlier run and its results stay readable), `packages/core/src/services/mrp/mrp-run-gate.test.ts` (the real action and API wrappers store nothing). E14-S02, #274. The automatic half: `packages/core/src/services/mrp/mrp-run-gate.test.ts` (an automatic run from the page and through the API is `TENANT_READ_ONLY`, the admin's token included, and stores nothing) and `tests/integration/mrp-automatic-api.test.ts` ("RUN-021": both modes refused to a user's and the admin's token, the earlier run kept). E19-S03, #289.
 
 - **Given:** Tenant read-only while last MRP results exist
 - **When:** Try manual and automatic runs
@@ -3396,24 +3401,27 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### RUN-023 — Failure visibly identifies candidate
 
-**Priority:** P1 · **Channel:** Both · **Status:** Not executed
+**Priority:** P1 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/mrp/mrp-batch.service.test.ts` (the failed outcome names the code, the material, the location and the candidate proposal), `packages/app/src/app/admin/[tenant]/mrp/page.test.tsx` ("RUN-023": the card names the cause by code and the candidate), `tests/integration/mrp-automatic.test.ts` ("RUN-023", in a browser) and `tests/integration/mrp-automatic-api.test.ts` ("RUN-015, RUN-023"). E19-S03, #289.
 - **Given:** One auto-create candidate invalid
 - **When:** Run automatic MRP
 - **Then:** Report identifies cause/material/document candidate without silent partial creation.
 
 ### RUN-024 — API repeat of automatic run
 
-**Priority:** P0 · **Channel:** API · **Status:** Not executed
+**Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/mrp/mrp-run-gate.test.ts` ("RUN-024, API-027": the replay answers the same run and 3 documents, and the tenant holds 3) and `tests/integration/mrp-automatic-api.test.ts` (`Idempotent-Replayed: true`, the same body, every requisition equal across every page). E19-S03, #289.
 - **Given:** Completed automatic MRP API request with idempotency key
 - **When:** Replay key with same payload within 24 hours
 - **Then:** Same original run/result returned, no duplicate orders.
 
 ### RUN-025 — Provisional Make orders never auto-created
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Partially verified
 
+- **Evidence:** `packages/core/src/services/mrp/mrp-batch.service.test.ts` ("RUN-025": R's requisition is created, no production order exists for F or I, and they stay in the provisional plan). No integration test runs it automatically. E19-S03, #289.
 - **Given:** F and I missing dependable input; raw R Buy procurement can be recommended; MRP shows hypothetical F/I and feasible R PR
 - **When:** Run automatic MRP
 - **Then:** R PR may be created, F and I production orders not created; hypothetical projected outputs do not hide shortage or duplicate an actionable order.
@@ -3847,8 +3855,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### API-027 — MRP auto-run idempotency
 
-**Priority:** P0 · **Channel:** API · **Status:** Not executed
+**Priority:** P0 · **Channel:** API · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/mrp/mrp-run-gate.test.ts` ("RUN-024, API-027": 3 documents, not 6, after a replay with the same key; the same key with `{}` is `IDEMPOTENCY_KEY_REUSED`; after a reset the old generation is `GENERATION_STALE`) and `tests/integration/mrp-automatic-api.test.ts`. E19-S03, #289.
 - **Given:** Automatic run creates 3 documents with key K
 - **When:** Retry identical API call within 24h
 - **Then:** Returns same run result and 3 documents, not 6.
@@ -4119,8 +4128,9 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 ### AUD-023 — Atomic auto-MRP batch
 
-**Priority:** P0 · **Channel:** Both · **Status:** Not executed
+**Priority:** P0 · **Channel:** Both · **Status:** Passed (automated)
 
+- **Evidence:** `packages/core/src/services/mrp/mrp-batch.service.test.ts` ("RUN-015, RUN-023, AUD-023": no requisition and no requisition audit entry, the run's results whole and its own entry naming the failure) and `tests/integration/mrp-automatic-api.test.ts` ("RUN-015, RUN-023"). E19-S03, #289.
 - **Given:** Several orders to create, one candidate invalid
 - **When:** Attempt auto-create
 - **Then:** Zero new orders; saved MRP results and error explanation remain.
