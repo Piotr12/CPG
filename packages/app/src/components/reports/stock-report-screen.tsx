@@ -7,7 +7,7 @@ import { Button } from "@cpg/ui/components/button";
 import { Checkbox } from "@cpg/ui/components/checkbox";
 import { Label } from "@cpg/ui/components/label";
 import type { Messages } from "../../i18n/messages/en";
-import { fill, formQuantity } from "../forms/form-labels";
+import { fill, localeQuantity } from "../forms/form-labels";
 import { PageLinks } from "../layout/page-links";
 import { MaterialLocationFilters } from "./material-location-filters";
 
@@ -31,7 +31,7 @@ interface StockReportScreenProps {
 export function StockReportScreen({ tenant, report, selected, materials, locations, locale, messages }: StockReportScreenProps) {
   const t = messages.stockReport;
   const path = `/admin/${tenant.code}`;
-  const amount = (quantity: string, row: StockReportRow) => `${formQuantity(quantity)} ${row.baseUnit}`;
+  const amount = (quantity: string, row: StockReportRow) => `${localeQuantity(quantity, locale)} ${row.baseUnit}`;
   const inactive = (active: boolean) => (active ? "" : ` (${t.inactive})`);
   const material = (row: StockReportRow) => `${row.material} — ${row.materialDescription}${inactive(row.materialActive)}`;
   const location = (row: StockReportRow) => `${row.location} — ${row.locationName}${inactive(row.locationActive)}`;

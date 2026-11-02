@@ -14,10 +14,16 @@ const depot = { ...plant, id: "00000002", name: "Depot", active: false };
 
 describe("productOptions", () => {
   it("shows each product's SU factor, or that it has none, and marks an inactive one", () => {
-    expect(productOptions([widget, gadget], t)).toEqual([
+    expect(productOptions([widget, gadget], "en", t)).toEqual([
       { value: "00000001", code: "00000001", name: "Widget", detail: "1 each = 1.5 SU" },
       { value: "00000002", code: "00000002", name: "Gadget", detail: "No SU factor", inactive: true },
     ]);
+  });
+
+  it("shows the SU factor in the reader's locale (#304)", () => {
+    const heavy = { ...widget, perBaseUnit: "12345.5" };
+    expect(productOptions([heavy], "en", t)[0].detail).toBe("1 each = 12,345.5 SU");
+    expect(productOptions([heavy], "pl", pl.demandReview)[0].detail).toBe("1 each = 12\u00a0345,5 SU");
   });
 });
 

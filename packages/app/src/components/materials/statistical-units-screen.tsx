@@ -6,7 +6,7 @@ import { PageHeader } from "@cpg/ui/backend/page-header";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { Button } from "@cpg/ui/components/button";
 import type { Messages } from "../../i18n/messages/en";
-import { fill } from "../forms/form-labels";
+import { fill, localeQuantity } from "../forms/form-labels";
 
 interface StatisticalUnitsScreenProps {
   tenant: { code: string; name: string };
@@ -38,7 +38,7 @@ export function StatisticalUnitsScreen({ tenant, rows, locale, messages }: Stati
             {t.notSet}
           </span>
         ) : (
-          <span className="whitespace-nowrap">{`1 ${row.baseUnit} = ${row.perBaseUnit} ${STATISTICAL_UNIT}`}</span>
+          <span className="whitespace-nowrap">{`1 ${row.baseUnit} = ${localeQuantity(row.perBaseUnit, locale)} ${STATISTICAL_UNIT}`}</span>
         ),
     },
     {
@@ -46,7 +46,7 @@ export function StatisticalUnitsScreen({ tenant, rows, locale, messages }: Stati
       header: t.columns.otherUnits,
       kind: "longText",
       priority: 2,
-      cell: (row) => row.otherUnits.map(({ unit, statisticalUnits }) => `1 ${unit} = ${statisticalUnits} ${STATISTICAL_UNIT}`).join(" · "),
+      cell: (row) => row.otherUnits.map(({ unit, statisticalUnits }) => `1 ${unit} = ${localeQuantity(statisticalUnits, locale)} ${STATISTICAL_UNIT}`).join(" · "),
     },
   ];
   const withFactor = rows.filter((row) => row.perBaseUnit !== null).length;

@@ -50,9 +50,18 @@ describe("BOM labels", () => {
   });
 
   it("summarize a line by base quantity, unit and material, and say how it was entered (MAT-019)", () => {
-    expect(lineSummary(bolts, materials)).toBe("24 each 00000002 Bolt M8");
-    expect(enteredAs(bolts, materials, bomsLabels(en))).toBe("2 case at 1 case = 12 each");
-    expect(enteredAs({ ...bolts, enteredUnit: "each" }, materials, bomsLabels(en))).toBe("");
+    expect(lineSummary(bolts, materials, "en")).toBe("24 each 00000002 Bolt M8");
+    expect(enteredAs(bolts, materials, bomsLabels(en), "en")).toBe("2 case at 1 case = 12 each");
+    expect(enteredAs({ ...bolts, enteredUnit: "each" }, materials, bomsLabels(en), "en")).toBe("");
+  });
+
+  it("show every figure of a line in the reader's locale: base quantity, entered quantity and both sides of the factor (#304)", () => {
+    const big = { ...bolts, quantity: "12345.500000", enteredQuantity: "10288.75", numerator: "1.2", denominator: "1000.5" };
+
+    expect(lineSummary(big, materials, "en")).toBe("12,345.5 each 00000002 Bolt M8");
+    expect(lineSummary(big, materials, "pl")).toBe("12\u00a0345,5 each 00000002 Bolt M8");
+    expect(enteredAs(big, materials, bomsLabels(en), "en")).toBe("10,288.75 case at 1,000.5 case = 1.2 each");
+    expect(enteredAs(big, materials, bomsLabels(pl), "pl")).toBe("10\u00a0288,75 case przy 1000,5 case = 1,2 each");
   });
 
   it("write a validity with its end, or the no-end word", () => {
