@@ -63,6 +63,8 @@ Every worker reads `AGENTS.md`, `.ai/lessons.md` and the spec (`Source doc:` abo
 - 13:50 UTC — Unit D done in `a367973a` (100% coverage of its three folders). The Polish integration test is in `e4a789e7`, and it runs once A and B are merged. Docker isn't available here, so integration runs on a local standalone server (lesson 2026-10-23).
 - 14:05 UTC — Unit A (worker c753a157) merged in `25b3d31d` after a diff review. On the merged tree typecheck and lint exit 0, and the unit suite passes 391 files and 2,640 tests. `boms/labels.ts` now re-exports `localeQuantity`.
 - 14:15 UTC — Unit B (worker c05b4b92) merged in `a891a728` after a diff review. Typecheck and lint exit 0, and the unit suite passes 391 files and 2,650 tests. The `list-quantity-sort` reader it flagged was already fixed in Unit D.
+- 14:30 UTC — Unit C (worker dd70a68e) merged in `a9bc5a7c` after a diff review. `locale` is now required on the production dialogs, the completion history, the requirements table and the ledger table.
+- 14:45 UTC — Full gate on `a9bc5a7c`: lint 0, typecheck 0, `test:coverage` 0 (665 files, 5,491 tests, 100%), build 0. `locale-quantities.test.ts` passed 2/2 on a local standalone server.
 
 ## Progress
 
@@ -76,10 +78,10 @@ Every worker reads `AGENTS.md`, `.ai/lessons.md` and the spec (`Source doc:` abo
 
 - [x] 2.1 Unit A: stock, reports, materials, BOMs — f2b25b5c (merge 25b3d31d)
 - [x] 2.2 Unit B: purchasing, receipts, issues, customer orders, shipments — cc5004be (merge a891a728)
-- [ ] 2.3 Unit C: transfers, production, variance report
+- [x] 2.3 Unit C: transfers, production, variance report — b193a6e9 (merge a9bc5a7c)
 - [x] 2.4 Unit D: planning parameters, safety stock, forecasts — a367973a
 
 ### Phase 3: Integration and docs
 
-- [ ] 3.1 Polish integration test
-- [ ] 3.2 Standards and spec paperwork
+- [x] 3.1 Polish integration test — e4a789e7
+- [x] 3.2 Standards and spec paperwork — 1db2ca23
