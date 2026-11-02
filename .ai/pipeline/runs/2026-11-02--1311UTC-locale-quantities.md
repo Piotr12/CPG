@@ -62,6 +62,7 @@ Every worker reads `AGENTS.md`, `.ai/lessons.md` and the spec (`Source doc:` abo
 - 13:25 UTC — Step 1.1: zero checks stay on `formQuantity` text instead of `isNothing`. `production-requirements.tsx` and `materials/labels.ts` reach client bundles (`production-dialog.tsx`, `conversions-table.tsx`), where a value import of `@cpg/core` would pull in the ORM (lesson 2026-10-19). `formQuantity` doesn't depend on the locale, so the checks were already correct. Spec Q7 is updated in its implementation notes. Receipts and issues tables were converted in 1.1, because they pass `locale` to the stock reversal controls. App/UI unit suite: 391 files, 2,625 tests passed.
 - 13:50 UTC — Unit D done in `a367973a` (100% coverage of its three folders). The Polish integration test is in `e4a789e7`, and it runs once A and B are merged. Docker isn't available here, so integration runs on a local standalone server (lesson 2026-10-23).
 - 14:05 UTC — Unit A (worker c753a157) merged in `25b3d31d` after a diff review. On the merged tree typecheck and lint exit 0, and the unit suite passes 391 files and 2,640 tests. `boms/labels.ts` now re-exports `localeQuantity`.
+- 14:15 UTC — Unit B (worker c05b4b92) merged in `a891a728` after a diff review. Typecheck and lint exit 0, and the unit suite passes 391 files and 2,650 tests. The `list-quantity-sort` reader it flagged was already fixed in Unit D.
 
 ## Progress
 
@@ -74,7 +75,7 @@ Every worker reads `AGENTS.md`, `.ai/lessons.md` and the spec (`Source doc:` abo
 ### Phase 2: Screens
 
 - [x] 2.1 Unit A: stock, reports, materials, BOMs — f2b25b5c (merge 25b3d31d)
-- [ ] 2.2 Unit B: purchasing, receipts, issues, customer orders, shipments
+- [x] 2.2 Unit B: purchasing, receipts, issues, customer orders, shipments — cc5004be (merge a891a728)
 - [ ] 2.3 Unit C: transfers, production, variance report
 - [x] 2.4 Unit D: planning parameters, safety stock, forecasts — a367973a
 
