@@ -1,6 +1,6 @@
 # MRP root ranking: a Make proposal's component needs rank by the requirement they serve at the root, split by share, through every level
 
-**Status:** ready. Q4 awaits Piotr12's confirmation; the other answer is a one-line change.
+**Status:** ready. Q4 and the narrowed Q6 are autonomous defaults, kept at the owner's instruction to proceed (2026-11-02) and open to correction in review. The implementation (#356) narrows Q6, so a root is a priority (kind and original date), not a document, to stay within CI's timing bound. It also ranks shortages on first read, and pass 2 re-roots executable surplus. Its implementation notes record each deviation.
 **Created:** 2026-11-02 16:13 UTC
 **Issue:** #327 (follow-up to #281's Q9) · **Depends on:** MRP proposal timing and demand priority (`implemented/2026-11-01--0738UTC-mrp-proposal-timing-demand-priority.md`, #279), BOM explosion (`implemented/2026-11-01--1107UTC-mrp-bom-explosion.md`, #281), BOM choice (`implemented/2026-11-01--1918UTC-mrp-bom-choice.md`, #282), at-risk and provisional plans (`implemented/2026-11-01--2049UTC-mrp-at-risk-and-provisional-plans.md`, #283), all merged · **Design authority:** `.ai/specs/product-brief.md` (R03, R10, D04), `research/CPG-prd001.pdf` §04 "Overdue demand and priority", "Multilevel explosion", `research/CPG-acceptance.md` MRP-044, DEM-018 to DEM-022
 
