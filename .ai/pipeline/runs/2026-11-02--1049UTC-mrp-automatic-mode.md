@@ -4,7 +4,7 @@
 **Agent:** Claude Code / claude-opus-5-5 (cezar, `om-auto-fix-issue 289` → `om-auto-implement-spec`)
 **Source doc:** .ai/specs/implemented/2026-11-02--1031UTC-mrp-automatic-mode.md (spec PR #339)
 **Issue:** #289
-**Status:** in progress
+**Status:** done
 
 ## Goal
 
@@ -53,6 +53,7 @@ A run started as Automatic, from the Run MRP dialog or with `{ "mode": "automati
   - `mrp-automatic` + `mrp-run`: 6/6;
   - a fresh server with `smoke`, `test-reset-realistic`, both automatic files, the MRP files, `purchasing`, `production-orders` and `test-reset-api`: 93/93. The realistic automatic run created 424 requisitions in 397 ms, with `/up` answering in 3 ms.
 - Full gate on `e46bdeef`: lint 0, typecheck 0, `test:coverage` 0 (665 files, 5,444 tests, 100%), build 0.
+- 11:25 UTC: a fresh-context review (`om-auto-review-pr --autofix`) found no blocker or major. Its 4 minors and 4 nits were fixed in `f65ac570`. Gate on `f65ac570`: lint 0, typecheck 0, `test:coverage` 0 (5,446 tests, 100%), build 0; `mrp-automatic`, `mrp-run`, `mrp-automatic-api` and `help` 19/19. Posted on #340: the review, the UI evidence (4 screenshots) and the manual-QA instructions.
 
 ## Implementation Plan
 
@@ -84,6 +85,8 @@ A run started as Automatic, from the Run MRP dialog or with `{ "mode": "automati
 2. Full gate
 
 ## Progress
+
+PR: #340
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
