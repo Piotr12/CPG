@@ -40,6 +40,20 @@ A run started as Automatic, from the Run MRP dialog or with `{ "mode": "automati
 
 - 10:49 UTC: branched `feat/mrp-automatic-mode` from `origin/main`. The owner told the run to continue autonomously, so Q3 is applied as recommended, and #339 is marked ready.
 
+- 11:00 UTC: moving the run's deletes before its snapshot changed #274's concurrency test. Its "write held open across the snapshot" now makes the run busy-wait for SQLite's lock, a pattern production never uses (lesson 2026-10-24). The test now commits after the wrapper's first read and asserts one plan in all.
+- 11:30 UTC: deviations, recorded in the spec's notes:
+  - candidates are read in one bounded read;
+  - the run's audit entry carries scalar `mode`, `documents` and `failure`;
+  - the failure note is a `Callout`;
+  - the modes are re-declared in the validator.
+- 12:05 UTC: benchmark. Realistic automatic run: 442 ms, longest stall 30 ms. A batch at the cap: 1,322 ms, longest stall 32 ms.
+- 12:30 UTC: the coverage run found two rollback-count tests (lesson 2026-10-23) and two uncovered branches. Fixed (12cb469c, e46bdeef).
+- 13:00 UTC: integration on a local standalone server (no Docker):
+  - `mrp-automatic-api`: 6/6;
+  - `mrp-automatic` + `mrp-run`: 6/6;
+  - a fresh server with `smoke`, `test-reset-realistic`, both automatic files, the MRP files, `purchasing`, `production-orders` and `test-reset-api`: 93/93. The realistic automatic run created 424 requisitions in 397 ms, with `/up` answering in 3 ms.
+- Full gate on `e46bdeef`: lint 0, typecheck 0, `test:coverage` 0 (665 files, 5,444 tests, 100%), build 0.
+
 ## Implementation Plan
 
 ### Phase 1: schema
@@ -91,11 +105,11 @@ A run started as Automatic, from the Run MRP dialog or with `{ "mode": "automati
 
 ### Phase 4: benchmark and integration
 
-- [ ] 4.1 Benchmark
-- [ ] 4.2 API integration file
-- [ ] 4.3 Browser integration, realistic file, mrp-run update
+- [x] 4.1 Benchmark — 77e656e4
+- [x] 4.2 API integration file — 4858e73a
+- [x] 4.3 Browser integration, realistic file, mrp-run update — 4858e73a
 
 ### Phase 5: paperwork and gate
 
-- [ ] 5.1 Docs, catalogue, spec to implemented
-- [ ] 5.2 Full gate
+- [x] 5.1 Docs, catalogue, spec to implemented — 12cb469c, 8726ee8b
+- [x] 5.2 Full gate — e46bdeef
