@@ -60,6 +60,7 @@ Every worker reads `AGENTS.md`, `.ai/lessons.md` and the spec (`Source doc:` abo
 - 13:11 UTC — Plan drafted with 7 steps, which is under the loop threshold of 20. Branch `feat/locale-quantities` from `origin/main`. It carries the spec straight into `implemented/` and deletes the stray active copy of the MRP automatic mode spec, as #341 does, because `main` fails `ai-filenames.test.ts`.
 
 - 13:25 UTC — Step 1.1: zero checks stay on `formQuantity` text instead of `isNothing`. `production-requirements.tsx` and `materials/labels.ts` reach client bundles (`production-dialog.tsx`, `conversions-table.tsx`), where a value import of `@cpg/core` would pull in the ORM (lesson 2026-10-19). `formQuantity` doesn't depend on the locale, so the checks were already correct. Spec Q7 is updated in its implementation notes. Receipts and issues tables were converted in 1.1, because they pass `locale` to the stock reversal controls. App/UI unit suite: 391 files, 2,625 tests passed.
+- 13:50 UTC — Unit D done in `a367973a` (100% coverage of its three folders). The Polish integration test is in `e4a789e7`, and it runs once A and B are merged. Docker isn't available here, so integration runs on a local standalone server (lesson 2026-10-23).
 
 ## Progress
 
@@ -74,7 +75,7 @@ Every worker reads `AGENTS.md`, `.ai/lessons.md` and the spec (`Source doc:` abo
 - [ ] 2.1 Unit A: stock, reports, materials, BOMs
 - [ ] 2.2 Unit B: purchasing, receipts, issues, customer orders, shipments
 - [ ] 2.3 Unit C: transfers, production, variance report
-- [ ] 2.4 Unit D: planning parameters, safety stock, forecasts
+- [x] 2.4 Unit D: planning parameters, safety stock, forecasts — a367973a
 
 ### Phase 3: Integration and docs
 
