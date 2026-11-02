@@ -3,30 +3,30 @@ import { MRP_SHORTAGE_KINDS } from "../mrp-result";
 import { compareCodes } from "../projection/pairs";
 
 /** The lists of one projected pair that hold its requirements. */
-export type RequirementLists = Pick<MrpPlan, "material" | "firmDemand" | "forecastDemand" | "componentDemand" | "plannedComponentDemand" | "transfersOut">;
+export type RequirementLists = Pick<MrpPlan, "firmDemand" | "forecastDemand" | "componentDemand" | "plannedComponentDemand" | "transfersOut">;
 
-/** A root requirement's priority, flat, so the queues compare it without building or reading nested objects. */
-interface RootKey {
+/** A requirement's priority and business ID, flat, so the queues compare it without reading nested objects. */
+interface RequirementKey {
+  /** The root's rank. */
   rank: number;
+  /** The root's original date. */
   originalDate: string;
   /** The root kind's place in `MRP_SHORTAGE_KINDS`. */
   kindOrder: number;
-  /** "" where the root has none. */
+  /** The pair's own requirement's business ID: "" and 0 where it has none, and for a share. */
   document: string;
-  /** 0 where the root has none. */
   position: number;
-  rootMaterial: string;
 }
 
 /**
  * A requirement while it is served. A pair's own requirement is its own root; a Make proposal's component need
  * is one requirement per share (#327), each with the share's root, its parent as `via` and its parent's need date.
  */
-export interface Requirement extends RootKey {
+export interface Requirement extends RequirementKey {
   kind: Exclude<MrpShortageKind, "safety-target">;
   /** The bucket it counts in. */
   date: string;
-  /** A planned component's root; `null` for the pair's own requirements, whose root is the requirement (`rootOf`). */
+  /** A planned component's root; `null` for the pair's own requirements, whose root is their kind and original date. */
   share: MrpDemandRoot | null;
   /** The parent material of a planned component's share; "" for the pair's own requirements. */
   via: string;
@@ -48,49 +48,33 @@ const RANKS = 4;
 /** Each root kind's place in `MRP_SHORTAGE_KINDS`, which orders kinds of one rank and original date. */
 const KIND_ORDER = Object.fromEntries(MRP_SHORTAGE_KINDS.map((kind, index) => [kind, index])) as Record<MrpDemandRoot["kind"], number>;
 
+/** The priority of two roots (PRD §04): rank, original date, then kind. Equal roots are one share. */
+export function compareRoots(a: MrpDemandRoot, b: MrpDemandRoot): number {
+  return RANK[a.kind] - RANK[b.kind] || compareCodes(a.originalDate, b.originalDate) || KIND_ORDER[a.kind] - KIND_ORDER[b.kind];
+}
+
 /**
- * The priority of two roots (PRD §04, DEM-021): rank, original date, kind, then the business ID (document,
- * position and material), which only keeps the result deterministic. Dates and codes compare in code-unit order.
+ * The order requirements are served in: by root priority, then the pair's own before any share, then the pair's
+ * own by business ID (document, position: DEM-021, which only keeps the result deterministic), and shares by
+ * parent, parent need date and an executable parent before a provisional one. `requirementsByDate` merges shares
+ * whose key is equal, so the order is total.
  */
-function compareKeys(a: RootKey, b: RootKey): number {
+export function compareRequirements(a: Requirement, b: Requirement): number {
   return (
     a.rank - b.rank ||
     compareCodes(a.originalDate, b.originalDate) ||
     a.kindOrder - b.kindOrder ||
+    compareCodes(a.via, b.via) ||
     compareCodes(a.document, b.document) ||
     a.position - b.position ||
-    compareCodes(a.rootMaterial, b.rootMaterial)
+    compareCodes(a.parentNeedDate, b.parentNeedDate) ||
+    Number(a.provisional) - Number(b.provisional)
   );
 }
 
-const keyOf = ({ kind, originalDate, document, position, material }: MrpDemandRoot): RootKey => ({
-  rank: RANK[kind],
-  originalDate,
-  kindOrder: KIND_ORDER[kind],
-  document: document ?? "",
-  position: position ?? 0,
-  rootMaterial: material,
-});
-
-/** The order of two roots, as the queues serve them. */
-export function compareRoots(a: MrpDemandRoot, b: MrpDemandRoot): number {
-  return compareKeys(keyOf(a), keyOf(b));
-}
-
-/**
- * The order requirements are served in: by root, then the pair's own before a share of the same root, then
- * shares by parent, parent need date and an executable parent before a provisional one. `requirementsByDate`
- * merges shares whose key is equal, so the order is total.
- */
-export function compareRequirements(a: Requirement, b: Requirement): number {
-  return compareKeys(a, b) || compareCodes(a.via, b.via) || compareCodes(a.parentNeedDate, b.parentNeedDate) || Number(a.provisional) - Number(b.provisional);
-}
-
-/** The requirement's root: its share's, or itself for the pair's own requirement. */
+/** The requirement's root priority: its share's, or its own kind and original date. */
 export function rootOf(requirement: Requirement): MrpDemandRoot {
-  if (requirement.share) return requirement.share;
-  const { kind, rootMaterial: material, originalDate, document, position } = requirement as Requirement & { kind: MrpDemandRoot["kind"] };
-  return { kind, material, originalDate, document: kind === "forecast" ? null : document, position: kind === "customer-order" ? position : null };
+  return requirement.share ?? { kind: requirement.kind as MrpDemandRoot["kind"], originalDate: requirement.originalDate };
 }
 
 /**
@@ -100,7 +84,6 @@ export function rootOf(requirement: Requirement): MrpDemandRoot {
  * the result (`pegProposals`, `rankShortages`), each serving from `required` again.
  */
 export function requirementsByDate(pair: RequirementLists): Map<string, Requirement[]> {
-  const { material } = pair;
   const byDate = new Map<string, Requirement[]>();
   const add = (requirement: Requirement) => {
     const list = byDate.get(requirement.date);
@@ -110,7 +93,7 @@ export function requirementsByDate(pair: RequirementLists): Map<string, Requirem
   // One literal shape, never spreads or nested objects: this runs for every requirement of every pair.
   const own = (kind: MrpDemandRoot["kind"] & Requirement["kind"], date: string, originalDate: string, document: string, position: number, required: bigint) =>
     add({
-      kind, date, rank: RANK[kind], originalDate, kindOrder: KIND_ORDER[kind], document, position, rootMaterial: material,
+      kind, date, rank: RANK[kind], originalDate, kindOrder: KIND_ORDER[kind], document, position,
       share: null, via: "", parentNeedDate: "", provisional: false, required, outstanding: required,
     });
   for (const { date, forecastDate, quantity } of pair.forecastDemand) own("forecast", date, forecastDate, "", 0, quantity);
@@ -120,8 +103,8 @@ export function requirementsByDate(pair: RequirementLists): Map<string, Requirem
   for (const { date, parent, parentNeedDate, provisional, roots } of pair.plannedComponentDemand) {
     for (const { root, quantity } of roots) {
       add({
-        kind: "planned-component", date, rank: RANK[root.kind], originalDate: root.originalDate, kindOrder: KIND_ORDER[root.kind], document: root.document ?? "",
-        position: root.position ?? 0, rootMaterial: root.material, share: root, via: parent, parentNeedDate, provisional, required: quantity, outstanding: quantity,
+        kind: "planned-component", date, rank: RANK[root.kind], originalDate: root.originalDate, kindOrder: KIND_ORDER[root.kind], document: "",
+        position: 0, share: root, via: parent, parentNeedDate, provisional, required: quantity, outstanding: quantity,
       });
     }
   }

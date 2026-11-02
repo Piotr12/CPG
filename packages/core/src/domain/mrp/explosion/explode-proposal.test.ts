@@ -25,8 +25,8 @@ const proposal = (quantity: string, overrides: Partial<ExplodedProposal> = {}): 
   ...overrides,
 });
 
-const forecast: MrpDemandRoot = { kind: "forecast", material: "P", originalDate: "2026-10-10", document: null, position: null };
-const order: MrpDemandRoot = { kind: "customer-order", material: "P", originalDate: "2026-10-10", document: "00000001", position: 1 };
+const forecast: MrpDemandRoot = { kind: "forecast", originalDate: "2026-10-10" };
+const order: MrpDemandRoot = { kind: "customer-order", originalDate: "2026-10-10" };
 /** The whole proposal serving one forecast, as `pegProposals` would trace a proposal of `quantity` for it. */
 const all = (quantity: string): MrpDemandShare[] => [{ root: forecast, quantity: q(quantity) }];
 

@@ -1837,7 +1837,7 @@ describe("planMrp: BOM explosion (E17-S01, #281)", () => {
       {
         parent: "I", parentNeedDate: day(5), bom: "00000004", bomRevision: 2, material: "A", location: "L1", date: day(3), quantity: q("5"), provisional: true,
         // The whole proposal serves I's order, so A's whole need is rooted there (#327).
-        roots: [{ root: { kind: "customer-order", material: "I", originalDate: day(5), document: due.order, position: due.position }, quantity: q("5") }],
+        roots: [{ root: { kind: "customer-order", originalDate: due.requiredDate }, quantity: q("5") }],
       },
     ]);
     expect(bucketOf(planAt(result.plans, "A"), day(3))).toMatchObject({ dependentDemand: q("5"), projectedBefore: -q("5") });
@@ -2004,7 +2004,7 @@ describe("planMrp: BOM explosion (E17-S01, #281)", () => {
     );
     const r = planAt(result.plans, "R");
     // F's need ranks as F's order, due on day 5 (#327), after R's own order due on day 3, so all 8 short fall on it.
-    const root = { kind: "customer-order", material: "F", originalDate: day(5), document: forF.order, position: forF.position } as const;
+    const root = { kind: "customer-order", originalDate: forF.requiredDate } as const;
     expect(r.shortages.filter(({ date }) => date === day(3))).toEqual([
       { kind: "planned-component", date: day(3), originalDate: day(5), document: "F", position: null, required: q("10"), uncovered: q("8"), root },
     ]);
@@ -2069,9 +2069,8 @@ describe("planMrp: root ranking (#327, PRD §04 \"Overdue demand and priority\")
     minimumQuantity: 0n,
     lotMultiple: q("0.000001"),
   });
-  const orderRoot = ({ material, requiredDate, order, position }: MrpOrderLine) =>
-    ({ kind: "customer-order", material, originalDate: requiredDate, document: order, position }) as const;
-  const forecastRoot = (material: string, offset: number) => ({ kind: "forecast", material, originalDate: day(offset), document: null, position: null }) as const;
+  const orderRoot = ({ requiredDate }: MrpOrderLine) => ({ kind: "customer-order", originalDate: requiredDate }) as const;
+  const forecastRoot = (offset: number) => ({ kind: "forecast", originalDate: day(offset) }) as const;
 
   it("MRP-044, multilevel: R short under F's customer order and forecast serves the order's share first, and the forecast's share is short", () => {
     // F (1 R per F) has an order of 6 and a forecast residual of 4 on day 10; R has 7 on hand and a lead time too long to help.
@@ -2090,11 +2089,11 @@ describe("planMrp: root ranking (#327, PRD §04 \"Overdue demand and priority\")
     expect(result.provisional).toEqual([expect.objectContaining({ material: "F", needDate: day(10), quantity: q("10"), blockers: ["no-feasible-bom"] })]);
     const r = planAt(result.plans, "R");
     expect(r.plannedComponentDemand.map(({ date, roots }) => [date, roots])).toEqual([
-      [day(8), [{ root: orderRoot(due), quantity: q("6") }, { root: forecastRoot("F", 10), quantity: q("4") }]],
+      [day(8), [{ root: orderRoot(due), quantity: q("6") }, { root: forecastRoot(10), quantity: q("4") }]],
     ]);
     // Of 7, the order's 6 are served and 1 of the forecast's 4: the firm requirement first, the forecast shortage visible.
     expect(r.shortages.filter(({ kind }) => kind === "planned-component")).toEqual([
-      { kind: "planned-component", date: day(8), originalDate: day(10), document: "F", position: null, required: q("4"), uncovered: q("3"), root: forecastRoot("F", 10) },
+      { kind: "planned-component", date: day(8), originalDate: day(10), document: "F", position: null, required: q("4"), uncovered: q("3"), root: forecastRoot(10) },
     ]);
   });
 
@@ -2116,12 +2115,12 @@ describe("planMrp: root ranking (#327, PRD §04 \"Overdue demand and priority\")
     expect(result.proposals.filter(({ material }) => material === "F")).toEqual([expect.objectContaining({ needDate: day(11), quantity: q("3") })]);
     const r = planAt(result.plans, "R");
     expect(r.plannedComponentDemand.map(({ quantity, provisional, roots }) => [quantity, provisional, roots])).toEqual([
-      [q("3"), false, [{ root: forecastRoot("F", 11), quantity: q("3") }]],
+      [q("3"), false, [{ root: forecastRoot(11), quantity: q("3") }]],
       [q("5"), true, [{ root: orderRoot(due), quantity: q("5") }]],
     ]);
     // R serves G's order (rank 1) before F's forecast (rank 2), whatever the parents' order: 2 of the forecast's 3 are short.
     expect(r.shortages).toEqual([
-      { kind: "planned-component", date: day(9), originalDate: day(11), document: "F", position: null, required: q("3"), uncovered: q("2"), root: forecastRoot("F", 11) },
+      { kind: "planned-component", date: day(9), originalDate: day(11), document: "F", position: null, required: q("3"), uncovered: q("2"), root: forecastRoot(11) },
     ]);
   });
 
@@ -2152,7 +2151,7 @@ describe("planMrp: root ranking (#327, PRD §04 \"Overdue demand and priority\")
     const r = planAt(result.plans, "R");
     expect(r.plannedComponentDemand[0].roots).toEqual([
       { root: orderRoot(due), quantity: q("3") },
-      { root: { kind: "safety-target", material: "F", originalDate: day(6), document: null, position: null }, quantity: q("2") },
+      { root: { kind: "safety-target", originalDate: day(6) }, quantity: q("2") },
     ]);
     // Day 4: of 5, F's order takes 3 and the target's share 2, both on day 4; R's own forecast of 1 that day outranks the target's share.
     expect(r.shortages.map(({ kind, root, uncovered }) => [kind, root?.kind ?? null, uncovered])).toEqual([["planned-component", "safety-target", q("1")]]);

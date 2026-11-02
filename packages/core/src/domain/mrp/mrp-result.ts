@@ -197,7 +197,7 @@ export interface MrpPlannedComponentDemand {
   date: string;
   quantity: bigint;
   /**
-   * The root requirements the parent proposal serves (#327, `priority/peg-proposals.ts`), each with its part of
+   * The root priorities the parent proposal serves (#327, `priority/peg-proposals.ts`), each with its part of
    * `quantity`: in priority order, adding up to `quantity`, none zero and no two with one root.
    */
   roots: readonly MrpDemandShare[];
@@ -411,22 +411,18 @@ export type MrpShortageKind = (typeof MRP_SHORTAGE_KINDS)[number];
 export type MrpDemandRootKind = Exclude<MrpShortageKind, "planned-component">;
 
 /**
- * A requirement at the root of a Make proposal's component need (#327, PRD §04 "Overdue demand and priority"):
- * what the top parent's units serve, carried unchanged down every level. A pair's own requirement is its own root.
+ * The priority of a requirement at the root of a Make proposal's component need (#327, PRD §04 "Overdue demand
+ * and priority"): what the top parent's units serve, carried unchanged down every level. It is the priority only,
+ * kind and original date, never the document: requirements of one kind on one original date have equal business
+ * priority (PRD §04, DEM-021), so a need holds one share per priority it serves, whatever the levels multiply.
  */
 export interface MrpDemandRoot {
   kind: MrpDemandRootKind;
-  /** The root requirement's material, at the same location. */
-  material: string;
-  /** Its priority date, as `MrpShortage.originalDate` has it for the kind; for the target, the proposal's need date. */
+  /** The priority date, as `MrpShortage.originalDate` has it for the kind; for the target, the proposal's need date. */
   originalDate: string;
-  /** The customer order's, production order's or transfer's business ID; `null` for a forecast and the target. */
-  document: string | null;
-  /** The order line's position; `null` for every other kind. */
-  position: number | null;
 }
 
-/** The part of a need that serves one root requirement (#327). */
+/** The part of a need that serves one root priority (#327). */
 export interface MrpDemandShare {
   root: MrpDemandRoot;
   quantity: bigint;
@@ -454,7 +450,7 @@ export interface MrpShortage {
   required: bigint;
   /** What the day leaves of it uncovered: above zero, at most `required`. */
   uncovered: bigint;
-  /** A planned component's root requirement, which sets its priority (#327); `null` for every other kind. */
+  /** A planned component's root priority (#327); `null` for every other kind. */
   root: MrpDemandRoot | null;
 }
 

@@ -45,10 +45,11 @@ export function rankShortages(pair: RankedPair, due?: Map<string, Requirement[]>
   return shortages;
 }
 
-/** A planned component names its parent and its root; every other kind is its own root. */
+/** A planned component names its parent and its root priority; every other kind its own business ID. */
 function shortageOf(requirement: Requirement): MrpShortage {
-  const { kind, date, originalDate, via, required, outstanding } = requirement;
-  const root = rootOf(requirement);
-  if (kind === "planned-component") return { kind, date, originalDate, document: via, position: null, required, uncovered: outstanding, root };
-  return { kind, date, originalDate, document: root.document, position: root.position, required, uncovered: outstanding, root: null };
+  const { kind, date, originalDate, document, position, via, required, outstanding } = requirement;
+  if (kind === "planned-component") return { kind, date, originalDate, document: via, position: null, required, uncovered: outstanding, root: rootOf(requirement) };
+  return {
+    kind, date, originalDate, document: kind === "forecast" ? null : document, position: kind === "customer-order" ? position : null, required, uncovered: outstanding, root: null,
+  };
 }

@@ -47,15 +47,8 @@ const dispatch = (offset: number, quantity: string, transfer = "00000001"): MrpT
   overdue: false,
 });
 
-/** A root requirement of kind `kind` on day `offset` (#327); a customer order's document is "O1", line 1. */
-const root = (kind: MrpDemandRoot["kind"], offset: number, overrides: Partial<MrpDemandRoot> = {}): MrpDemandRoot => ({
-  kind,
-  material: "F",
-  originalDate: day(offset),
-  document: kind === "customer-order" || kind === "component" || kind === "transfer" ? "O1" : null,
-  position: kind === "customer-order" ? 1 : null,
-  ...overrides,
-});
+/** The root priority of kind `kind` on day `offset` (#327). */
+const root = (kind: MrpDemandRoot["kind"], offset: number): MrpDemandRoot => ({ kind, originalDate: day(offset) });
 
 /** What a Make proposal of `parent` needed on day `needOffset` and started on day `offset` needs of M1, by root share (E17-S01, #327). */
 const planned = (offset: number, shares: [MrpDemandRoot, string][], parent = "P1", needOffset = offset, provisional = false): MrpPlannedComponentDemand => ({
@@ -78,7 +71,6 @@ const pair = (
   receipts: Record<number, string> = {},
   targets: Record<number, string> = {},
 ): RankedPair => ({
-  material: "M1",
   physical: q(physical),
   buckets: Array.from({ length: 6 }, (_, offset) => ({
     ...emptyFlows(day(offset)),
@@ -234,9 +226,9 @@ describe("rankShortages", () => {
         ...pair("2", {
           firmDemand: [own],
           plannedComponentDemand: [
-            planned(2, [[root("customer-order", 2, { material: "M1" }), "2"]], "P2"),
-            planned(2, [[root("customer-order", 2, { material: "M1" }), "2"]], "P1", 2, true),
-            planned(2, [[root("customer-order", 2, { material: "M1" }), "2"]], "P1"),
+            planned(2, [[root("customer-order", 2), "2"]], "P2"),
+            planned(2, [[root("customer-order", 2), "2"]], "P1", 2, true),
+            planned(2, [[root("customer-order", 2), "2"]], "P1"),
           ],
         }),
       });

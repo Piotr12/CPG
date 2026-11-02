@@ -60,7 +60,7 @@ export function pegProposals(
     });
   }
   const finish = (entry: PoolEntry) => {
-    if (entry.left > 0n) addShare(entry.shares, { kind: "safety-target", material: pair.material, originalDate: entry.needDate, document: null, position: null }, entry.left);
+    if (entry.left > 0n) addShare(entry.shares, { kind: "safety-target", originalDate: entry.needDate }, entry.left);
     return entry.shares.sort((a, b) => compareRoots(a.root, b.root));
   };
   return { proposals: executable.map(finish), provisional: sized.map(finish) };

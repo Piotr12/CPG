@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { MrpDemandRoot, MrpPlannedComponentDemand } from "../mrp-result";
 import { compareRequirements, RequirementQueues, requirementsByDate, rootOf, unserved, type Requirement, type RequirementLists } from "./requirements";
 
-const root = (kind: MrpDemandRoot["kind"], originalDate: string): MrpDemandRoot => ({ kind, material: "M1", originalDate, document: null, position: null });
+const root = (kind: MrpDemandRoot["kind"], originalDate: string): MrpDemandRoot => ({ kind, originalDate });
 const need = (provisional: boolean, quantity: bigint): MrpPlannedComponentDemand => ({
   parent: "P1",
   parentNeedDate: "2026-10-07",
@@ -16,7 +16,6 @@ const need = (provisional: boolean, quantity: bigint): MrpPlannedComponentDemand
   provisional,
 });
 const lists = (plannedComponentDemand: MrpPlannedComponentDemand[]): RequirementLists => ({
-  material: "M1",
   firmDemand: [{ order: "00000001", position: 1, material: "M1", location: "L1", requiredDate: "2026-10-05", date: "2026-10-05", quantity: 2n }],
   forecastDemand: [],
   componentDemand: [],
@@ -40,14 +39,14 @@ describe("compareRequirements (#327)", () => {
     };
     const due = requirementsByDate(pair).get(day)!;
     const expected = [
-      ["component", "05", "A", null],
-      ["transfer", "05", "A", null],
+      ["component", "05", "A", 0],
+      ["transfer", "05", "A", 0],
       ["customer-order", "05", "A", 2],
       ["customer-order", "05", "B", 1],
       ["customer-order", "06", "A", 1],
-      ["forecast", "05", null, null],
+      ["forecast", "05", "", 0],
     ];
-    const keys = (list: Requirement[]) => list.map((one) => [one.kind, one.originalDate.slice(-2), rootOf(one).document, rootOf(one).position]);
+    const keys = (list: Requirement[]) => list.map((one) => [one.kind, one.originalDate.slice(-2), one.document, one.position]);
     expect(keys(due)).toEqual(expected);
     expect(keys([...due].reverse().sort(compareRequirements))).toEqual(expected);
   });
@@ -62,7 +61,7 @@ describe("requirementsByDate (#327)", () => {
       ["planned-component", true, 7n],
     ]);
     expect(rootOf(due[1])).toEqual(root("forecast", "2026-10-07"));
-    expect(rootOf(due[0])).toEqual({ kind: "customer-order", material: "M1", originalDate: "2026-10-05", document: "00000001", position: 1 });
+    expect(rootOf(due[0])).toEqual({ kind: "customer-order", originalDate: "2026-10-05" });
   });
 
   it("serves a shared list afresh after `unserved`", () => {
@@ -91,7 +90,7 @@ describe("RequirementQueues (#327)", () => {
     queues.push(first);
     queues.push(due.get("2026-10-06")![0]);
     const served: [string | null, bigint][] = [];
-    expect(queues.serve(4n, (one, quantity) => served.push([rootOf(one).document, quantity]))).toBe(0n);
+    expect(queues.serve(4n, (one, quantity) => served.push([one.document, quantity]))).toBe(0n);
     expect(served).toEqual([["C", 1n], ["A", 2n], ["B", 1n]]);
     expect(queues.serve(5n)).toBe(3n);
     expect(later.outstanding).toBe(0n);
@@ -105,7 +104,7 @@ describe("RequirementQueues (#327)", () => {
     queues.push(due[2]);
     queues.push(due[1]);
     const served: (string | null)[] = [];
-    queues.serve(3n, (one) => served.push(rootOf(one).document));
+    queues.serve(3n, (one) => served.push(one.document));
     expect(served).toEqual(["A", "B", "C"]);
   });
 });

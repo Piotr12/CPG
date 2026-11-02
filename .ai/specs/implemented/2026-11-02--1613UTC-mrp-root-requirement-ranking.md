@@ -1,6 +1,6 @@
 # MRP root ranking: a Make proposal's component needs rank by the requirement they serve at the root, split by share, through every level
 
-**Status:** implemented (#356). Q4 awaits Piotr12's confirmation; the other answer is a one-line change. The worst-case run time is a decision for the owner (Implementation notes).
+**Status:** implemented (#356). Q4 awaits Piotr12's confirmation; the other answer is a one-line change. A root names its priority (kind and original date), not its document, which narrows Q6: ⚠ NEEDS HUMAN CONFIRMATION (Implementation notes).
 **Created:** 2026-11-02 16:13 UTC
 **Issue:** #327 (follow-up to #281's Q9) · **Depends on:** MRP proposal timing and demand priority (`implemented/2026-11-01--0738UTC-mrp-proposal-timing-demand-priority.md`, #279), BOM explosion (`implemented/2026-11-01--1107UTC-mrp-bom-explosion.md`, #281), BOM choice (`implemented/2026-11-01--1918UTC-mrp-bom-choice.md`, #282), at-risk and provisional plans (`implemented/2026-11-01--2049UTC-mrp-at-risk-and-provisional-plans.md`, #283), all merged · **Design authority:** `.ai/specs/product-brief.md` (R03, R10, D04), `research/CPG-prd001.pdf` §04 "Overdue demand and priority", "Multilevel explosion", `research/CPG-acceptance.md` MRP-044, DEM-018 to DEM-022
 
@@ -240,18 +240,18 @@ One phase, one implementation PR: the trace, the split and the ranking are usele
 Implemented on #356, spec PR #355. Where the code differs from the design above:
 
 - **One requirement list per traced pair.** `requirementsByDate(pair)` takes no option: it lists every requirement, and the trace pushes only those whose `provisional` flag its pass serves. `planMrp` builds a traced pair's list once, and `pegProposals` and `rankShortages` both take it (an optional last argument), each serving from `required` again (`unserved`). A pair that isn't traced builds its list in `rankShortages`, as before.
-- **A flat key.** `Requirement` carries its root's key flat (`rank`, `originalDate`, `kindOrder`, `document`, `position`, `rootMaterial`) and the share's root as `share`, `null` for the pair's own requirement, whose root `rootOf` builds when it is reported or traced. `compareRoots` orders `MrpDemandRoot`s by the same key. The parent's need date is compared as a date string (`parentNeedDate`), not a day number.
+- **⚠ A root is a priority, not a document (deviation from Q6, needs Piotr12's confirmation).** `MrpDemandRoot` holds only `kind` and `originalDate`, and shares with equal ones merge. As designed, with document, position and material, roots compounded down the levels: a bottom component held one requirement per distinct root of every parent, about 20 times as many at the second exploding level. CI's ten-times worst case then stalled 2,089 ms against its 1,500 ms bound (`mrp-run-timing.test.ts`, run on 31ce791a). PRD §04 gives requirements of one kind on one original date equal business priority, and the ID only keeps the result deterministic (DEM-021). So merging them changes no ranking between priorities, and a need holds one share per priority it serves at every level. A short share's `root` therefore says "ranked as a customer order due on day N", not which order. Naming the document again would need a bound on the count instead, such as a cap per need.
+- **A flat key.** `Requirement` carries its priority flat (`rank`, `originalDate`, `kindOrder`), its own business ID (`document`, `position`; "" and 0 for a share) and the share's root as `share`, `null` for the pair's own requirement. `compareRequirements` orders by priority, then the pair's own before any share (`via`), then own business ID, then the parent and its need date. The parent's need date is compared as a date string (`parentNeedDate`), not a day number.
 - **Pass 2 (code review of #356).** As designed, an executable lot's surplus that served a provisional need stayed rooted at the target, and pass 2 ran only with provisional proposals. It now runs whenever the pair has provisional needs. It serves them, in Q2's order, from existing supply pass 1 never takes from that day on (unattributed), then from each executable proposal's surplus, re-rooted from the target to the need it serves, then from the provisional proposals. So pass 1's target-rooted shares can change, and no other share does. The executable surplus is never consumed in pass 1, from its need date on, so taking it changes nothing there.
 - **Queues.** Each rank keeps a head pointer. `push` appends when a requirement sorts last, which is the usual case, and otherwise inserts by binary search.
 - **Tests.** `requirements.test.ts` pins the order, the merge and the queues; `peg-proposals.test.ts` the trace, both review counterexamples included; `rank-shortages.test.ts` and `plan-mrp.test.ts` the ranking, MRP-044's multilevel case and a three-level provisional chain.
-- **Run time, a decision for the owner.** Each component need becomes one requirement per root its parent serves, and roots compound over levels. On `mrp-run-timing.test.ts` (this machine, fastest of 3), `planMrp` alone takes:
+- **Run time.** On `mrp-run-timing.test.ts` (this machine, fastest of 3), `planMrp` alone takes:
 
   | Case | `main` | #356 |
   |---|---|---|
-  | realistic | 7 ms | 10 ms |
-  | worst case for proposals, realistic | 21 ms | 50 ms |
-  | ten times | 70 ms | 140 ms |
-  | worst case for proposals, ten times | 224 ms | 458 ms |
+  | realistic | 7 ms | 7 ms |
+  | worst case for proposals, realistic | 21 ms | 27 ms |
+  | ten times | 70 ms | 87 ms |
+  | worst case for proposals, ten times | 224 ms | 296 ms |
 
-  The ten-times worst case was already above the 250 ms stall budget on `main` (270 ms) and is about 550 ms here. The CI bounds still pass. Profiling showed the extra time is the larger requirement count, not the trace (about 15 ms of a 230 ms synthetic run). Merging shares of equal business priority (rank, original date, kind and material) into one would bring the count back. But `root` would then name only one of those order lines, which changes Q6, so it is left to the owner.
-
+  The ten-times worst case's stall is 325 ms (`main`: 270 ms, already above the 250 ms budget). CI runs about 4.3 times slower than this machine, where `main` shows about 970 ms against the 1,500 ms bound. The trace itself costs about 12 ms of a 307 ms synthetic three-level run; the rest is the larger requirement records.
