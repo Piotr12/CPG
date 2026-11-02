@@ -19,13 +19,22 @@ Issue: #351
 ## Non-goals
 Branch protection, required checks or a merge queue. Where specs live. Deploying refs other than `main` (#360).
 
+## Verification
+- Full gate on b44e025b: `npm run lint` 0, `npm run typecheck` 0, `npm run test:coverage` 0 (675 files, 5,600 tests, 100% statements/branches/functions/lines), `npm run build` 0.
+- After the review fixes (b38dd8c6): `npx vitest run scripts tests/spec-copies-workflows.test.ts tests/ai-filenames.test.ts tests/spec-images.test.ts` 29 passed, lint and typecheck 0.
+- No integration test: no page or flow changes.
+
 ## Risks
 - A workflow that pushes to `main` can only be exercised on `main`. The unit tests pin its wiring, and the command runs as a real `node` child process in a test. The first real run happens after merge: watch the first `spec-copies` run on `main`.
 
 ## Progress
+PR: #361
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Guard, workflows, docs
 - [x] 1.1 The guard's decision and its command — 256aea83
 - [x] 1.2 The workflows — d75ee21d
 - [x] 1.3 Docs, lesson and the spec into implemented/ — cf4c11a4
+
+### Review
+- [x] R.1 Fresh-context review (approve, 3 minors + nits) fixed — b38dd8c6
