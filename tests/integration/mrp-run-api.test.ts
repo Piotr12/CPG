@@ -180,8 +180,8 @@ describe("MRP runs through the API", () => {
       // Lead times 4 and 1 before day 6 start on days 2 and 5: on time (#279). Since E19-S01 (#287) each proposal has its ID,
       // whether it can be accepted (a Make one can't yet), and its document.
       // Since #281 a production order names the BOM and revision it is exploded through.
-      [bought, [{ id: expect.any(String), kind: "purchase-requisition", needDate: day(6), quantity: "10.000000", plannedStart: day(2), plannedFinish: day(6), lateDays: 0, beyondHorizon: false, executable: true, document: null, bom: null, bomRevision: null }]],
-      [made, [{ id: expect.any(String), kind: "production-order", needDate: day(6), quantity: "3.000000", plannedStart: day(5), plannedFinish: day(6), lateDays: 0, beyondHorizon: false, executable: false, document: null, bom, bomRevision: 1 }]],
+      [bought, [{ id: expect.any(String), kind: "purchase-requisition", needDate: day(6), quantity: "10.000000", plannedStart: day(2), plannedFinish: day(6), lateDays: 0, beyondHorizon: false, executable: true, document: null, bom: null, bomRevision: null, rejectedBoms: [] }]],
+      [made, [{ id: expect.any(String), kind: "production-order", needDate: day(6), quantity: "3.000000", plannedStart: day(5), plannedFinish: day(6), lateDays: 0, beyondHorizon: false, executable: false, document: null, bom, bomRevision: 1, rejectedBoms: [] }]],
     ]);
     expect(plans[0].buckets[6]).toMatchObject({ date: day(6), proposedReceipts: "10.000000", projectedBefore: "-3.000000", projectedAfter: "7.000000" });
     expect(plans[1].buckets[6]).toMatchObject({ date: day(6), proposedReceipts: "3.000000", projectedBefore: "-3.000000", projectedAfter: "0.000000" });
@@ -208,7 +208,7 @@ describe("MRP runs through the API", () => {
 
     const latePlan = await planOf(late);
     expect(latePlan.proposals).toEqual([
-      { id: expect.any(String), kind: "purchase-requisition", needDate: day(3), quantity: "5.000000", plannedStart: day(0), plannedFinish: day(7), lateDays: 4, beyondHorizon: false, executable: true, document: null, bom: null, bomRevision: null },
+      { id: expect.any(String), kind: "purchase-requisition", needDate: day(3), quantity: "5.000000", plannedStart: day(0), plannedFinish: day(7), lateDays: 4, beyondHorizon: false, executable: true, document: null, bom: null, bomRevision: null, rejectedBoms: [] },
     ]);
     // The receipt counts on day 7, not on the need date: days 3 to 6 keep their shortage.
     expect(latePlan.buckets.slice(3, 7).map(({ projectedAfter }) => projectedAfter)).toEqual(["-5.000000", "-5.000000", "-5.000000", "-5.000000"]);
@@ -216,7 +216,7 @@ describe("MRP runs through the API", () => {
 
     const farPlan = await planOf(far);
     expect(farPlan.proposals).toEqual([
-      { id: expect.any(String), kind: "purchase-requisition", needDate: day(20), quantity: "5.000000", plannedStart: day(0), plannedFinish: day(120), lateDays: 100, beyondHorizon: true, executable: true, document: null, bom: null, bomRevision: null },
+      { id: expect.any(String), kind: "purchase-requisition", needDate: day(20), quantity: "5.000000", plannedStart: day(0), plannedFinish: day(120), lateDays: 100, beyondHorizon: true, executable: true, document: null, bom: null, bomRevision: null, rejectedBoms: [] },
     ]);
     expect(farPlan.buckets).toHaveLength(90);
     expect(farPlan.buckets.every(({ proposedReceipts }) => proposedReceipts === "0.000000")).toBe(true);
@@ -289,10 +289,12 @@ describe("MRP runs through the API", () => {
     expect(fPlan.provisional).toEqual([{
       kind: "production-order", needDate: day(20), quantity: "10.000000", plannedStart: day(18), plannedFinish: day(20), lateDays: 0, beyondHorizon: false,
       bom: boms.f, bomRevision: 1, components: [{ material: i, quantity: "20.000000" }], blockers: ["no-feasible-bom"], missing: `${boms.f}/1: ${i} 20.000000 0.000000 20.000000`,
+      order: `${boms.f}/1`, rejectedBoms: [{ bom: boms.f, revision: 1, reason: "shortage", shortages: [{ material: i, required: "20.000000", available: "0.000000", shortage: "20.000000" }] }],
     }]);
     expect(iPlan.provisional).toEqual([{
       kind: "production-order", needDate: day(18), quantity: "20.000000", plannedStart: day(15), plannedFinish: day(18), lateDays: 0, beyondHorizon: false,
       bom: boms.i, bomRevision: 1, components: [{ material: r, quantity: "10.000000" }], blockers: ["no-feasible-bom", "provisional-demand"], missing: `${boms.i}/1: ${r} 10.000000 0.000000 10.000000`,
+      order: `${boms.i}/1`, rejectedBoms: [{ bom: boms.i, revision: 1, reason: "shortage", shortages: [{ material: r, required: "10.000000", available: "0.000000", shortage: "10.000000" }] }],
     }]);
     // Buying R is the only executable action.
     expect(rPlan.proposals.map(({ kind, needDate, plannedStart, quantity, bom, executable }) => ({ kind, needDate, plannedStart, quantity, bom, executable }))).toEqual([
@@ -394,6 +396,8 @@ describe("MRP runs through the API", () => {
         code: "MISSING_USABLE_BOM",
         message: "This material is made at this location, but every BOM valid on the planned finish date has an inactive component, so MRP proposes no production.",
         params: { material: g, location: site, date: day(10), inactive: `${bom}/1: ${r}` },
+        // E18-S03: the rejected BOM and why, structured.
+        rejectedBoms: [{ bom, revision: 1, reason: "inactive-component", materials: [r] }],
       }]],
     ]);
   });

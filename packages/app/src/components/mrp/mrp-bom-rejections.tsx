@@ -48,7 +48,7 @@ export function MrpBomRejections({ rejections, materials, locale, labels: t }: M
         return (
           <li key={key} data-mrp-rejection={rejection.reason}>
             {fill(t.shortage, { bom })}
-            <ul className="mt-0.5 flex flex-col gap-0.5 pl-4 text-muted-foreground">
+            <ul className="mt-1 flex flex-col gap-1 pl-4 text-muted-foreground">
               {rejection.shortages.map(({ material, required, available, shortage }) => (
                 <li key={material} data-mrp-shortage>
                   {fill(t.line, { material: name(material), required: amount(required, material), available: amount(available, material), shortage: amount(shortage, material) })}

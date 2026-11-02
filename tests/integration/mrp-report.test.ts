@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import type { MrpLatestView, MrpRunView } from "@cpg/core";
 import { callApi, json } from "./api";
+import { explanationSetup, type ExplanationIds } from "./mrp-explanations";
 import { openBrowser, type Browser } from "./browser";
 import { choosePreference, closeAccountMenu, signedInAndHydrated, signIn, signInAsAdmin } from "./sign-in";
 import { createToken, openTokens } from "./tokens";
@@ -30,6 +31,7 @@ describe("the MRP report in the UI", () => {
   let secret: string;
   let run: MrpRunView;
   const ids: Record<"sheet" | "cabinet" | "plant" | "depot" | "yard" | "dock" | "po", string> = {} as never;
+  let explained: ExplanationIds;
 
   const api = (method: string, path: string, body?: unknown) => callApi(baseUrl, method, path, secret, body === undefined ? {} : { key: randomUUID(), body });
   const create = async (path: string, body: unknown) => {
@@ -85,6 +87,15 @@ describe("the MRP report in the UI", () => {
     ids.dock = await create("/api/tenants/prod/locations", { name: "mrprep dock" });
     const supplier = await create("/api/tenants/prod/suppliers", { name: "mrprep mill" });
     ids.po = await create("/api/tenants/prod/purchase-orders", { supplier, location: ids.dock, lines: [{ material: ids.sheet, quantity: "30", unit: "kg", plannedDate: day(-3) }] });
+    // E18-S03: the fallback, inactive-input, no-usable-BOM, provisional-chain and at-risk cases, at a site of their own.
+    explained = await explanationSetup({
+      create,
+      deactivate: async (id) => {
+        const { version } = json(await api("GET", `/api/tenants/prod/materials/${id}`)).data as { version: number };
+        const response = await api("PATCH", `/api/tenants/prod/materials/${id}`, { active: false, version });
+        expect(response.status, response.text).toBe(200);
+      },
+    }, "mrprep");
     run = await runMrp();
     await createUser(admin, baseUrl, USERNAME, PASSWORD);
     await signIn(rita, baseUrl, PASSWORD, USERNAME);
@@ -223,13 +234,80 @@ describe("the MRP report in the UI", () => {
     }
   });
 
+  it("explains the run on the page: Why this BOM, provisional plans with no Accept, at-risk orders and the at-risk column, and exceptions in English and Polish (E18-S03, UX-020, MRP-047, MRP-050, MRP-051, LFC-026)", async () => {
+    const x = explained;
+    const EXPLANATIONS = "[data-mrp-explanations]";
+    await open(`?location=${x.site}`, EXPLANATIONS);
+
+    const lists = await rita.evaluate<{ callout: string; provisional: string[]; accept: number; link: string | null; atRisk: string; codes: string[]; parent: string }>(`(() => {
+      const section = ${shown(EXPLANATIONS)};
+      const provisional = section.querySelector("[data-mrp-provisional]");
+      return {
+        callout: provisional.querySelector("[data-slot=callout]").textContent,
+        provisional: [...provisional.querySelectorAll("tbody tr")].map((row) => row.textContent),
+        accept: [...provisional.querySelectorAll("button")].filter((button) => /Accept/.test(button.textContent)).length,
+        link: provisional.querySelector('[data-mrp-provisional-component="${x.v}"] a')?.getAttribute("href") ?? null,
+        atRisk: section.querySelector("[data-mrp-at-risk] tbody tr").textContent,
+        codes: [...section.querySelectorAll("[data-mrp-exceptions] [data-mrp-exception-code]")].map((cell) => cell.getAttribute("data-mrp-exception-code")),
+        parent: [...section.querySelectorAll("[data-mrp-exceptions] tbody tr")].find((row) => row.querySelector('[data-mrp-exception-code="MISSING_USABLE_BOM"]')).textContent,
+      };
+    })()`);
+    // MRP-047: P and I, provisional and labelled so, with nothing to accept; I's component V opens V's own pair.
+    expect(lists.callout).toContain("Provisional — not executable");
+    expect(lists.provisional).toHaveLength(2);
+    expect(lists.provisional[0]).toContain("Provisional");
+    expect(lists.provisional[0]).toContain("mrprep cabinet p");
+    expect(lists.provisional[1]).toContain("mrprep frame i");
+    expect(lists.provisional[1]).toContain(`${x.v} mrprep steel v 10 each`);
+    expect(lists.accept).toBe(0);
+    expect(lists.link).toBe(`/admin/prod/mrp?material=${x.v}&location=${x.site}`);
+    // MRP-051: the order, its unproduced balance, its inactive U and the label.
+    for (const part of [x.order, "10 each", `${x.u} mrprep glaze u`, "At-Risk Existing Production / Inactive BOM Component"]) expect(lists.atRisk).toContain(part);
+    // LFC-026 and the parent planning exception, each naming the BOM it rejected and why.
+    expect(lists.codes.sort()).toEqual(["MISSING_USABLE_BOM", "NO_FEASIBLE_BOM"]);
+    expect(lists.parent).toContain(`BOM ${x.hBom} / revision 1 — Inactive BOM Component: ${x.t} mrprep retired t`);
+
+    // UX-020: F's proposal names priority 2, and Why this BOM shows priority 1's exact shortage of A in A's unit.
+    const WHY = "[data-mrp-why-bom] button";
+    await open(`?material=${x.f}&location=${x.site}`, WHY);
+    expect(await rita.evaluate<string>(`${shown("[data-mrp-proposal-bom]")}.textContent`)).toBe(`BOM ${x.fSecond} / revision 1`);
+    await rita.waitUntil(`Object.keys(${shown(WHY)}).some((key) => key.startsWith("__reactFiber"))`);
+    await rita.click(WHY);
+    await rita.waitUntil(`Boolean(${shown("[data-mrp-shortage]")})`);
+    expect(await rita.evaluate<string>(`${shown("[data-mrp-rejections] > li")}.firstChild.textContent`)).toBe(`BOM ${x.fFirst} / revision 1 — Component shortage`);
+    expect(await rita.evaluate<string>(`${shown("[data-mrp-shortage]")}.textContent`)).toBe(`${x.a} mrprep sugar a: needs 6 each, dependable 5 each, short 1 each`);
+
+    // MRP-051: W's day shows the order's output as at-risk supply, apart from dependable supply, and the shortage it was to cover.
+    await open(`?material=${x.w}&location=${x.site}`, DAYS);
+    expect(await figures(day(8))).toMatchObject({ dependableSupply: "0", atRiskSupply: "10" });
+    expect(await figures(day(12))).toMatchObject({ shortage: "10" });
+
+    // D03: the same lists in Polish.
+    await rita.open(`${baseUrl}/admin`);
+    await rita.waitUntil(signedInAndHydrated(USERNAME));
+    await choosePreference(rita, "pl");
+    await closeAccountMenu(rita);
+    try {
+      await open(`?location=${x.site}`, EXPLANATIONS);
+      expect(await rita.evaluate<string>(`${shown(EXPLANATIONS)}.querySelector("h3").textContent`)).toBe("Wyjaśnienia");
+      expect(await rita.evaluate<string>(`${shown('[data-mrp-exception-code="MISSING_USABLE_BOM"]')}.textContent`)).toBe("Brak używalnego BOM-u");
+      expect(await rita.evaluate<string>(`${shown("[data-mrp-provisional] [data-slot=callout]")}.textContent`)).toContain("Tymczasowe — niewykonalne");
+    } finally {
+      await rita.open(`${baseUrl}/admin`);
+      await rita.waitUntil(signedInAndHydrated(USERNAME));
+      await choosePreference(rita, "en");
+      await closeAccountMenu(rita);
+    }
+  });
+
   it("keeps the page itself from scrolling sideways at 1280 and 390 px; the day and week tables scroll in their own region", async () => {
     try {
       for (const [width, height] of [[1280, 800], [390, 844]]) {
         await rita.setViewport(width, height);
         await open(`?material=${ids.sheet}&location=${ids.plant}`, DAYS);
         expect(await rita.evaluate<boolean>(`document.documentElement.scrollWidth <= innerWidth`), `${width} px`).toBe(true);
-        expect(await rita.evaluate<number>(`${shown(DAYS)}.querySelectorAll("thead th").length`)).toBe(13);
+        // Twelve figures since E18-S03's At-risk supply, beside the date and the warnings.
+        expect(await rita.evaluate<number>(`${shown(DAYS)}.querySelectorAll("thead th").length`)).toBe(14);
         await open(`?material=${ids.sheet}&location=${ids.plant}&bucket=week`, WEEKS);
         expect(await rita.evaluate<boolean>(`document.documentElement.scrollWidth <= innerWidth`), `${width} px, by week`).toBe(true);
       }

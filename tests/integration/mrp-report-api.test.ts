@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import type { MrpLatestView, MrpPlanView, MrpRunView } from "@cpg/core";
 import { callApi, json } from "./api";
+import { explanationSetup, type ExplanationIds } from "./mrp-explanations";
 import { openBrowser, type Browser } from "./browser";
 import { signInAs, signInAsAdmin } from "./sign-in";
 import { createToken, openTokens } from "./tokens";
@@ -28,6 +29,7 @@ describe("the MRP report through the API", () => {
   let run: MrpRunView;
   const pair = { material: "", location: "" };
   const overdue = { location: "", po: "" };
+  let explained: ExplanationIds;
 
   const api = (method: string, path: string, secret = adminSecret, options?: { key?: string; body?: unknown; generation?: number }) =>
     callApi(baseUrl, method, path, secret, options);
@@ -79,6 +81,15 @@ describe("the MRP report through the API", () => {
     overdue.location = (await created("/api/tenants/prod/locations", { name: "mrprapi dock" })).id;
     const supplier = (await created("/api/tenants/prod/suppliers", { name: "mrprapi mill" })).id;
     overdue.po = (await created("/api/tenants/prod/purchase-orders", { supplier, location: overdue.location, lines: [{ material: pair.material, quantity: "20", unit: "kg", plannedDate: day(-2) }] })).id;
+    // E18-S03: the fallback, inactive-input, no-usable-BOM, provisional-chain and at-risk cases, at a site of their own.
+    explained = await explanationSetup({
+      create: async (path, body) => (await created(path, body)).id,
+      deactivate: async (id) => {
+        const { version } = json(await api("GET", `/api/tenants/prod/materials/${id}`)).data as { version: number };
+        const deactivated = await api("PATCH", `/api/tenants/prod/materials/${id}`, adminSecret, { key: randomUUID(), body: { active: false, version } });
+        expect(deactivated.status, deactivated.text).toBe(200);
+      },
+    }, "mrprapi");
     const response = await api("POST", "/api/tenants/prod/mrp/runs", rheaSecret, { key: randomUUID(), body: {} });
     expect(response.status, response.text).toBe(200);
     run = json(response).data as MrpRunView;
@@ -148,6 +159,41 @@ describe("the MRP report through the API", () => {
     expect(plan.buckets[0]).toMatchObject({ date: day(0), dependableSupply: "20.000000", projectedBefore: "20.000000" });
   });
 
+  it("explains the run alike for both roles: each fallback's rejected BOMs with exact shortages, provisional plans apart, at-risk orders and exceptions (E18-S03, UX-020, MRP-025, MRP-047, MRP-050, MRP-051, LFC-026, R07)", async () => {
+    const x = explained;
+    const query = `?location=${x.site}`;
+    const [mine, theirs] = [await report("prod", query, rheaSecret), await report("prod", query, adminSecret)];
+
+    expect(mine).toEqual(theirs);
+    expect(mine.plans).toHaveLength(mine.total);
+    const plan = (material: string) => mine.plans.find((candidate) => candidate.material === material)!;
+    const chosen = (material: string) => plan(material).proposals.map(({ kind, quantity, bom, bomRevision, rejectedBoms }) => ({ kind, quantity, bom, bomRevision, rejectedBoms }));
+    // UX-020, MRP-025: priority 2 chosen, priority 1 rejected for 1 A short of the lot-rounded 6, as six-decimal texts.
+    expect(chosen(x.f)).toEqual([{
+      kind: "production-order", quantity: "6.000000", bom: x.fSecond, bomRevision: 1,
+      rejectedBoms: [{ bom: x.fFirst, revision: 1, reason: "shortage", shortages: [{ material: x.a, required: "6.000000", available: "5.000000", shortage: "1.000000" }] }],
+    }]);
+    // MRP-050: priority 1 rejected for its inactive R.
+    expect(chosen(x.g)).toEqual([{ kind: "production-order", quantity: "5.000000", bom: x.gSecond, bomRevision: 1, rejectedBoms: [{ bom: x.gFirst, revision: 1, reason: "inactive-component", materials: [x.r] }] }]);
+    // LFC-026: no usable BOM, so no proposal, and a parent exception naming the rejected BOM and why.
+    expect(plan(x.h).proposals).toEqual([]);
+    expect(plan(x.h).exceptions).toMatchObject([{ code: "MISSING_USABLE_BOM", rejectedBoms: [{ bom: x.hBom, revision: 1, reason: "inactive-component", materials: [x.t] }] }]);
+    // MRP-047: P and I are provisional, never proposals or supply; buying V stays executable.
+    const pRejected = [{ bom: x.pBom, revision: 1, reason: "shortage", shortages: [{ material: x.i, required: "20.000000", available: "0.000000", shortage: "20.000000" }] }];
+    expect(plan(x.p).proposals).toEqual([]);
+    expect(plan(x.p).provisional).toMatchObject([{ needDate: day(20), quantity: "10.000000", bom: x.pBom, blockers: ["no-feasible-bom"], rejectedBoms: pRejected }]);
+    expect(plan(x.p).exceptions).toMatchObject([{ code: "NO_FEASIBLE_BOM", params: { order: `${x.pBom}/1` }, rejectedBoms: pRejected }]);
+    expect(plan(x.i).provisional).toMatchObject([{ quantity: "20.000000", bom: x.iBom, components: [{ material: x.v, quantity: "10.000000" }], blockers: ["no-feasible-bom", "provisional-demand"] }]);
+    expect(plan(x.v).proposals.map(({ kind, quantity }) => [kind, quantity])).toEqual([["purchase-requisition", "10.000000"]]);
+    for (const material of [x.p, x.i]) expect(plan(material).buckets.every(({ proposedReceipts }) => proposedReceipts === "0.000000")).toBe(true);
+    // MRP-051, LFC-027: the order's output is at-risk supply, apart from dependable, and the shortage stays.
+    expect(plan(x.w).exceptions).toMatchObject([{ code: "AT_RISK_PRODUCTION", params: { order: x.order, quantity: "10.000000", inactiveComponents: x.u } }]);
+    expect(plan(x.w).buckets.find(({ date }) => date === day(8))).toMatchObject({ atRiskSupply: "10.000000", dependableSupply: "0.000000" });
+    expect(plan(x.w).buckets.find(({ date }) => date === day(12))).toMatchObject({ shortage: "10.000000" });
+    // A fallback's stored rejections are never an exception.
+    expect(mine.plans.flatMap(({ exceptions }) => exceptions.map(({ code }) => code)).sort()).toEqual(["AT_RISK_PRODUCTION", "MISSING_USABLE_BOM", "NO_FEASIBLE_BOM"]);
+  });
+
   it("covers every planned pair of the run unfiltered, and narrows by location to this file's pair", async () => {
     const { first, plans } = await everyPlan("prod");
 
@@ -184,6 +230,9 @@ describe("the MRP report through the API", () => {
     try {
       const view = await report("prod", ourQuery(), rheaSecret);
       expect(view.plans.map(({ lowestProjectedBefore }) => lowestProjectedBefore)).toEqual(["25.000000"]);
+      // E18-S03's explanations read the same (R05).
+      const fallback = (await report("prod", `?material=${explained.f}&location=${explained.site}`, rheaSecret)).plans[0];
+      expect(fallback.proposals[0].rejectedBoms.map(({ bom, reason }) => [bom, reason])).toEqual([[explained.fFirst, "shortage"]]);
     } finally {
       expect((await setReadOnly(false)).status).toBe(200);
     }

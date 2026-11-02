@@ -76,7 +76,7 @@ export function MrpExplanations({ tenant, plans, materials, locations, view, loc
     { id: "quantity", header: p.columns.quantity, kind: "quantity", cell: ({ plan, action }) => <span data-mrp-provisional-quantity>{amount(action.quantity, plan.baseUnit)}</span> },
     { id: "bom", header: p.columns.bom, kind: "text", cell: ({ action }) => fill(messages.mrp.proposals.bom, { bom: action.bom, revision: String(action.bomRevision) }) },
     { id: "components", header: p.columns.components, kind: "text", className: "whitespace-normal", cell: ({ plan, action }) => (
-      <ul className="flex flex-col gap-0.5">
+      <ul className="flex flex-col gap-1">
         {action.components.map((component) => (
           <li key={component.material} data-mrp-provisional-component={component.material}>
             {/* A chain stays walkable when a filter leaves only its parent here: each component opens its own pair (spec Q4). */}
