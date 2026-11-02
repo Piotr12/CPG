@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import { openBrowser, type Browser } from "./browser";
+import { expectTitle, openBrowser, type Browser } from "./browser";
 import { signIn, signInAsAdmin } from "./sign-in";
 import { createToken, openTokens as openTokensAt, submitToken } from "./tokens";
 import { createUser } from "./users";
@@ -46,7 +46,7 @@ describe("named API tokens", () => {
 
   it("lets a normal user create a token whose secret is shown once (API-001, API-006)", async () => {
     await openTokens(tara);
-    expect(await tara.title()).toBe("API tokens · Caveman Planning Good");
+    await expectTitle(tara, "API tokens · Caveman Planning Good");
     expect(await tara.text("main p")).toMatch(/until you revoke it\. Tokens never expire\.$/);
 
     secrets.agent1 = await createToken(tara, "agent1");

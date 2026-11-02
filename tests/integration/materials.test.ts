@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import { clickHydrated, openBrowser, type Browser } from "./browser";
+import { clickHydrated, expectTitle, openBrowser, type Browser } from "./browser";
 import { signIn, signInAsAdmin } from "./sign-in";
 
 const baseUrl = inject("baseUrl");
@@ -75,7 +75,7 @@ describe("materials and their unit conversions (E03-S01)", () => {
     await admin.waitForText("Materials — Test");
 
     const rows = await listRows(admin, "test");
-    expect(await admin.title()).toBe("Test · Materials");
+    await expectTitle(admin, "Test · Materials");
     expect(rows.slice(0, 3)).toEqual([
       ["00000001", "Steel sheet 2 mm", "Raw", "kg", "Active"],
       ["00000002", "Bolt M8", "Raw", "each", "Active"],

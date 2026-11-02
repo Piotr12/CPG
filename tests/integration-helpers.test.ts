@@ -1,5 +1,33 @@
 import { describe, expect, it } from "vitest";
 import { allPages, LIST_PAGE_SIZE, untilOk, type ApiResponse } from "./integration/api";
+import { expectTitle } from "./integration/browser";
+
+// Every integration title assertion (#358): the title streams in after the body that a test waited for.
+describe("expectTitle", () => {
+  /** A page whose `document.title` reads as `titles` in turn and then stays at the last one, recording each script it ran. */
+  const page = (...titles: string[]) => {
+    const scripts: string[] = [];
+    const evaluate = async <T>(script: string) => {
+      scripts.push(script);
+      return titles[Math.min(scripts.length, titles.length) - 1] as T;
+    };
+    return { scripts, evaluate };
+  };
+
+  it("waits past an empty title and the previous page's for the expected one", async () => {
+    const admin = page("", "Sign in · Caveman Planning Good", "Admin · Caveman Planning Good");
+    await expectTitle(admin, "Admin · Caveman Planning Good");
+    expect(admin.scripts).toEqual(["document.title", "document.title", "document.title"]);
+  });
+
+  it("fails with the last title read when the expected one never comes", async () => {
+    const stuck = page("", "Sign in · Caveman Planning Good");
+    await expect(expectTitle(stuck, "Admin · Caveman Planning Good", 100)).rejects.toThrow(
+      "expected 'Sign in · Caveman Planning Good' to be 'Admin · Caveman Planning Good'",
+    );
+    expect(stuck.scripts.length).toBeGreaterThan(2);
+  });
+});
 
 /** A list of `count` numbered rows served `LIST_PAGE_SIZE` to a page, recording the pages asked for. */
 const pagedList = (count: number) => {

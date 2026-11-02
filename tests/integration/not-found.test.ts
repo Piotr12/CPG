@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import { openBrowser, type Browser } from "./browser";
+import { expectTitle, openBrowser, type Browser } from "./browser";
 import { signInAsAdmin } from "./sign-in";
 
 const baseUrl = inject("baseUrl");
@@ -40,7 +40,7 @@ describe("the not-found pages", () => {
       "Go to Tenants",
       "/admin",
     ]);
-    expect(await browser.title()).toBe("Page not found · Caveman Planning Good");
+    await expectTitle(browser, "Page not found · Caveman Planning Good");
     expect(await noindex()).toBe(true);
   });
 

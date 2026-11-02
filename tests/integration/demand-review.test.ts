@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import { clickHydrated, openBrowser, type Browser } from "./browser";
+import { clickHydrated, expectTitle, openBrowser, type Browser } from "./browser";
 import { signInAsAdmin } from "./sign-in";
 
 const baseUrl = inject("baseUrl");
@@ -49,7 +49,7 @@ describe("the demand review in the UI", () => {
 
   it("opens per week in SU, every product together, with the chart over the grid", async () => {
     await open();
-    expect(await admin.title()).toBe("Test · Demand review");
+    await expectTitle(admin, "Test · Demand review");
     expect(await chartTitle()).toBe("Shipped and still to ship per week, in SU");
     expect(await checked("bucket")).toBe("week");
     expect(await admin.evaluate<boolean>(`${shown("main [data-slot=stacked-column-chart][role=img]")}?.querySelector("svg") !== null`)).toBe(true);

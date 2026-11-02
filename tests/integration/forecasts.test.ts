@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import { chooseFromList, openBrowser, type Browser } from "./browser";
+import { chooseFromList, expectTitle, openBrowser, type Browser } from "./browser";
 import { signIn, signInAsAdmin } from "./sign-in";
 
 const baseUrl = inject("baseUrl");
@@ -128,7 +128,7 @@ describe("forecasts (E08-S03)", () => {
     await admin.waitUntil(ready(`document.querySelector("main a[href='/admin/test/forecasts']")`));
     await admin.click("main a[href='/admin/test/forecasts']");
     await admin.waitForText("Forecasts — Test");
-    expect(await admin.title()).toBe("Test · Forecasts");
+    await expectTitle(admin, "Test · Forecasts");
 
     // About 3,100 daily forecasts in pages of 100; by material, the first two pages are the red cabinet's earliest weekdays.
     const firstPage = await listRows(admin, "/admin/test/forecasts");

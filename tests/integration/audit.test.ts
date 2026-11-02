@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import { openBrowser, type Browser } from "./browser";
+import { expectTitle, openBrowser, type Browser } from "./browser";
 import { choosePreference, hydrated, signedInAs, signIn, signInAsAdmin } from "./sign-in";
 
 const baseUrl = inject("baseUrl");
@@ -72,7 +72,7 @@ describe("every change is kept in an append-only audit", () => {
     await admin.waitUntil(ownRow(`row.innerText.includes("Inactive")`));
 
     const rows = await auditRows(admin);
-    expect(await admin.title()).toBe("Global audit · Caveman Planning Good");
+    await expectTitle(admin, "Global audit · Caveman Planning Good");
     expect(rows.map(([, account, , channel, action, , changes]) => [account, channel, action, changes])).toEqual([
       ["admin", "UI", "User deactivated", "active: yes → no"],
       ["admin", "UI", "Password reset", "Password replaced (not recorded)"],
@@ -202,7 +202,7 @@ describe("every change is kept in an append-only audit", () => {
     expect(actions).not.toBeNull();
     expect(actions!.filter((action) => action.startsWith("User ") || action.startsWith("Password"))).toEqual([]);
     expect(new URL(await alice.url()).pathname).toBe("/admin/test/audit");
-    expect(await alice.title()).toBe("Test · Audit");
+    await expectTitle(alice, "Test · Audit");
     expect(await alice.text("h1")).toBe("Audit — Test");
   });
 

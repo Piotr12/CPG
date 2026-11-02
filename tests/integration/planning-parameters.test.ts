@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import { chooseFromList, clickHydrated, openBrowser, type Browser } from "./browser";
+import { chooseFromList, clickHydrated, expectTitle, openBrowser, type Browser } from "./browser";
 import { signIn, signInAsAdmin } from "./sign-in";
 
 const baseUrl = inject("baseUrl");
@@ -129,7 +129,7 @@ describe("planning parameters and safety stock (E03-S03)", () => {
     await admin.waitUntil(ready(`document.querySelector("main a[href='/admin/test/planning-parameters']")`));
     await admin.click("main a[href='/admin/test/planning-parameters']");
     await admin.waitForText("Planning parameters — Test");
-    expect(await admin.title()).toBe("Test · Planning parameters");
+    await expectTitle(admin, "Test · Planning parameters");
 
     // Other files may add Test rows for their own masters, whose IDs come after the dataset's 30 materials and one location.
     const dataset = (rows: string[][]) => rows.filter(([material, location]) => material.slice(0, 8) <= "00000030" && location.slice(0, 8) <= "00000001");

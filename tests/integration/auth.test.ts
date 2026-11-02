@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import { openBrowser, type Browser } from "./browser";
+import { expectTitle, openBrowser, type Browser } from "./browser";
 import { signedInAs, signIn, signInAsAdmin, signOut } from "./sign-in";
 
 const baseUrl = inject("baseUrl");
@@ -19,7 +19,7 @@ describe("signing in", () => {
     await browser.waitFor("#username");
 
     expect(new URL(await browser.url()).pathname).toBe("/login");
-    expect(await browser.title()).toBe("Sign in · Caveman Planning Good");
+    await expectTitle(browser, "Sign in · Caveman Planning Good");
     expect(await browser.texts("[data-slot=badge]")).toEqual([]);
   });
 
