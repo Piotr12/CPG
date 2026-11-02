@@ -69,3 +69,12 @@ PR: #345
 - 15:10 Gate. `npm run lint` 0. `npm run typecheck` 0. `npm run test:coverage` 0: 667 files, 5,480 tests, 100%. The first pass caught two more rollback-by-count tests (`transfer-reversal.entity.test.ts`, `mrp-run-exceptions-migration.test.ts`). `npm run build` 0.
 - 15:40 Integration, against a local standalone server (no Docker here; lesson 2026-10-23): `smoke`, `mrp-accept-api`, `mrp-accept` and `mrp-automatic-api`, 20 passed; `mrp-automatic`, `production-orders`, `mrp-report` and `test-reset-realistic`, 30 passed. The full suite runs in CI.
 
+- 16:20 Review (`om-auto-review-pr --autofix`, a fresh-context reviewer): approve, no blockers or majors. All ten minor and nit findings are fixed in f39fc05d:
+  - the predicate also requires `bomRevision`;
+  - Make refusal tests (inactive output, inactive location, over-limit quantity);
+  - a Buy proposal is still accepted after a lead-time change;
+  - a test pins the per-document yield;
+  - copy: the real causes, `PRODUCTION_ORDER_IDS_EXHAUSTED`, Polish genitives, the production-orders help;
+  - the stale contract line and doc comments.
+
+  The gate after the fixes: coverage 668 files, 5,485 tests, 100%, exit 0; build exit 0.
