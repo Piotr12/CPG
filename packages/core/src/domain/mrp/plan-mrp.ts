@@ -8,6 +8,7 @@ import type {
   MrpFirmDemand,
   MrpForecastDemand,
   MrpPlan,
+  MrpDemandShare,
   MrpPlannedComponentDemand,
   MrpProductionOutput,
   MrpProposal,
@@ -20,6 +21,7 @@ import type {
 import { horizonDates } from "./projection/horizon";
 import { compareCodes, comparePairs, pairKey } from "./projection/pairs";
 import { emptyFlows, lowestDependableBalances, projectBuckets, type MrpLedger } from "./projection/project-buckets";
+import { pegProposals } from "./priority/peg-proposals";
 import { rankShortages } from "./priority/rank-shortages";
 import { productionMovements } from "./supply/production-orders";
 import { purchasingSupply } from "./supply/purchasing-supply";
@@ -94,6 +96,11 @@ interface PairDraft extends MrpLedger {
  * chain to the purchased level, whose requisitions stay executable. An open production order pinning an
  * inactive component is at risk: its output is at-risk supply, which no balance counts, raised as
  * At-Risk Production, and sizing adds it back so no proposal replaces it (MRP-051).
+ *
+ * Before a level's proposals claim, each Make pair's proposals are traced to the requirements they serve
+ * (`pegProposals`, #327): the order lines, forecasts, open documents' needs and target of the pair, or the
+ * root requirements a parent's share carries down. Each component need is split into those shares, so a short
+ * component ranks each share as its root requirement, through every level (PRD §04, MRP-044).
  */
 export function planMrp(inputs: MrpInputs, today: string): MrpResult {
   const dates = horizonDates(today);
@@ -205,8 +212,9 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
   for (const level of byLevel) {
     const sized = level.sort(comparePairs).map((draft) => {
       const key = pairKey(draft.material, draft.location);
+      const buckets = projectBuckets(draft.physical, draft.flows);
       const replenished = replenishPair(
-        { ...draft, buckets: projectBuckets(draft.physical, draft.flows) },
+        { ...draft, buckets },
         {
           unreadable: unreadable.get(draft.material),
           parameters: parametersOf.get(key),
@@ -217,8 +225,18 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
           provisional: provisionalOf.get(key) ?? null,
         },
       );
-      return { draft, replenished };
+      return { draft, buckets, replenished };
     });
+    // Every pair of the level is complete: only a lower level explodes into it. Traced before any claim, on the
+    // sized quantities and need dates, so feasibility changes no share (#327).
+    const sharesOf = new Map<TimedProposal, readonly MrpDemandShare[]>();
+    for (const { draft, buckets, replenished } of sized) {
+      const makes = replenished.proposals.filter(({ kind }) => kind === "production-order");
+      if (makes.length === 0 && replenished.provisional.length === 0) continue;
+      const pegged = pegProposals({ ...draft, buckets }, makes, replenished.provisional);
+      makes.forEach((proposal, index) => sharesOf.set(proposal, pegged.proposals[index]));
+      replenished.provisional.forEach((proposal, index) => sharesOf.set(proposal, pegged.provisional[index]));
+    }
     const book = (proposal: TimedProposal) => {
       if (!proposal.beyondHorizon) pairs.get(pairKey(proposal.material, proposal.location))!.flows[dayOf.get(proposal.plannedFinish)!].proposedReceipts += proposal.quantity;
     };
@@ -240,7 +258,7 @@ export function planMrp(inputs: MrpInputs, today: string): MrpResult {
      * the components' cached balances.
      */
     const explode = (proposal: TimedProposal, bom: MrpBom, isProvisional: boolean) => {
-      const items = explodeProposal(proposal, bom, isProvisional);
+      const items = explodeProposal(proposal, bom, isProvisional, sharesOf.get(proposal)!);
       for (const item of items) {
         const key = pairKey(item.material, item.location);
         const component = pairOf(item.material, item.location);

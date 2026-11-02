@@ -183,7 +183,10 @@ export interface MrpComponentDemand {
 export interface MrpPlannedComponentDemand {
   /** The proposal's material. */
   parent: string;
-  /** The proposal's need date: one proposal per parent pair and need date. */
+  /**
+   * The proposal's need date. A parent pair has one executable proposal per need date, but since E17-S03 a
+   * provisional one can share it, so the date and `provisional` tell two parents' proposals apart.
+   */
   parentNeedDate: string;
   /** The BOM and current revision the proposal was exploded through. */
   bom: string;
@@ -193,6 +196,11 @@ export interface MrpPlannedComponentDemand {
   /** The bucket it counts in: the proposal's planned start, never before today. */
   date: string;
   quantity: bigint;
+  /**
+   * The root requirements the parent proposal serves (#327, `priority/peg-proposals.ts`), each with its part of
+   * `quantity`: in priority order, adding up to `quantity`, none zero and no two with one root.
+   */
+  roots: readonly MrpDemandShare[];
   /**
    * The need is a provisional action's (E17-S03): a proposal with no feasible BOM, exploded through its
    * highest-priority usable one (E17-S02, BOM-011), or one sized only for a provisional parent's need. It
@@ -392,11 +400,37 @@ export type MrpWarning = MrpOverdueSupply | MrpOverdueTransfer;
 
 /**
  * What an uncovered requirement is, in the order MRP serves them on a day (PRD §04 "Overdue demand and
- * priority", E16-S02): open documents' needs first, then customer orders beside Make proposals'
- * components (E17-S01, #281 spec Q9), then the forecast residual, then the safety-stock target.
+ * priority", E16-S02): open documents' needs first, then customer orders, then the forecast residual, then
+ * the safety-stock target. A Make proposal's component need (E17-S01) ranks as the root requirement each of
+ * its shares serves (#327): `planned-component` only names it, and breaks a tie with the root's own kind.
  */
 export const MRP_SHORTAGE_KINDS = ["component", "transfer", "customer-order", "planned-component", "forecast", "safety-target"] as const;
 export type MrpShortageKind = (typeof MRP_SHORTAGE_KINDS)[number];
+
+/** What can be at the root of a Make proposal's component need: every requirement kind but the planned component. */
+export type MrpDemandRootKind = Exclude<MrpShortageKind, "planned-component">;
+
+/**
+ * A requirement at the root of a Make proposal's component need (#327, PRD §04 "Overdue demand and priority"):
+ * what the top parent's units serve, carried unchanged down every level. A pair's own requirement is its own root.
+ */
+export interface MrpDemandRoot {
+  kind: MrpDemandRootKind;
+  /** The root requirement's material, at the same location. */
+  material: string;
+  /** Its priority date, as `MrpShortage.originalDate` has it for the kind; for the target, the proposal's need date. */
+  originalDate: string;
+  /** The customer order's, production order's or transfer's business ID; `null` for a forecast and the target. */
+  document: string | null;
+  /** The order line's position; `null` for every other kind. */
+  position: number | null;
+}
+
+/** The part of a need that serves one root requirement (#327). */
+export interface MrpDemandShare {
+  root: MrpDemandRoot;
+  quantity: bigint;
+}
 
 /** One requirement that stock, existing supply and the proposals received by its day can't cover on that day (E16-S02). */
 export interface MrpShortage {
@@ -405,8 +439,8 @@ export interface MrpShortage {
   date: string;
   /**
    * Its priority date: the order line's required date, the forecast's own date, the production order's
-   * start or the transfer's planned dispatch, kept when it counts today; a planned component's parent
-   * start; the day itself for the target.
+   * start or the transfer's planned dispatch, kept when it counts today; a planned component's root's
+   * (#327); the day itself for the target.
    */
   originalDate: string;
   /**
@@ -416,10 +450,12 @@ export interface MrpShortage {
   document: string | null;
   /** The order line's position; `null` for every other kind. */
   position: number | null;
-  /** What the requirement needs that day: its quantity, or the target in force. */
+  /** What the requirement needs that day: its quantity, a planned component's share, or the target in force. */
   required: bigint;
   /** What the day leaves of it uncovered: above zero, at most `required`. */
   uncovered: bigint;
+  /** A planned component's root requirement, which sets its priority (#327); `null` for every other kind. */
+  root: MrpDemandRoot | null;
 }
 
 /** What a proposal would create: never a transfer (N06, TRF-018) and never a purchase order (MRP-030). */
