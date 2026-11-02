@@ -77,7 +77,7 @@ const unitRun = (candidate: Job, command: string) => {
   return step.run!.replace(/\s+/g, " ");
 };
 
-// One runner's CPUs, shared by the whole suite, slowed the MRP timing test past its CI bound (#337).
+// The whole suite on one runner took 8.6 to over 10 minutes (#338).
 test("the unit suite runs as numbered shards, each writing a blob of its results and coverage without the threshold", () => {
   const shards = units.strategy?.matrix?.shard ?? [];
   assert.ok(shards.length > 1, "the unit-test job is not sharded");
@@ -85,16 +85,33 @@ test("the unit suite runs as numbered shards, each writing a blob of its results
   assert.equal(units.strategy?.["fail-fast"], false);
   const run = unitRun(units, "npm run test:coverage");
   assert.match(run, /--shard=\$\{\{ matrix\.shard \}\}\/\$\{\{ strategy\.job-total \}\}/);
+  // The timing tests run in unit-timing instead.
+  assert.match(run, /--project=!timing /);
   // No shard covers every file, so each skips the threshold; the merge enforces it.
   assert.match(run, /--coverage\.thresholds\.100=false/);
   assert.match(run, /--reporter=blob/);
   assert.match(run, /--outputFile\.blob=blob-reports\/blob-\$\{\{ matrix\.shard \}\}\.json/);
 });
 
-// A skipped job counts as passed, so a merge that only ran after green shards would let a red shard's
+// Beside the rest of the suite, the MRP timing test's bound measured the runner's other test files too and
+// failed on unchanged code (#337). A runner of their own, one file at a time, leaves only the code to measure.
+test("the timing tests run on a runner of their own, one file at a time, writing a blob of their results and coverage", () => {
+  const timing = workflow.jobs["unit-timing"];
+  assert.ok(timing, "no unit-timing job");
+  assert.equal(timing.strategy, undefined);
+  const run = unitRun(timing, "npm run test:coverage");
+  assert.match(run, /--project=timing /);
+  assert.match(run, /--no-file-parallelism/);
+  assert.match(run, /--coverage\.thresholds\.100=false/);
+  assert.match(run, /--reporter=blob/);
+  assert.match(run, /--outputFile\.blob=blob-reports\/blob-timing\.json/);
+  assert.ok((timing["timeout-minutes"] ?? 360) >= 20);
+});
+
+// A skipped job counts as passed, so a merge that only ran after green shards and timing tests would let a red job's
 // coverage gap through as "skipped". It runs unless the workflow was cancelled, and a missing blob fails it.
-test("unit-coverage merges every shard's blob and enforces the 100% threshold, even after a red shard", () => {
-  assert.deepEqual([merge.needs].flat(), ["unit-tests"]);
+test("unit-coverage merges every shard's blob and the timing tests', and enforces the 100% threshold, even after a red job", () => {
+  assert.deepEqual([merge.needs].flat(), ["unit-tests", "unit-timing"]);
   assert.equal(merge.if, "${{ !cancelled() }}");
   const run = unitRun(merge, "npm run test:coverage");
   assert.match(run, /--merge-reports=blob-reports$/);

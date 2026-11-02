@@ -127,7 +127,8 @@ describe("rerunning MRP", () => {
 
     // On screen: Purchase requisitions names run 1 under the requisition's ID (RUN-012), which a new row sits on the last page of.
     await admin.open(`${baseUrl}/admin/prod/purchase-requisitions?page=1000000`);
-    const row = `[...document.querySelectorAll("main tbody tr")].find((tr) => !tr.closest("[hidden]") && tr.textContent.includes(${JSON.stringify(document.id)}))`;
+    // Matched by its ID cell: another row's material or location can carry the same eight digits (#310's CI).
+    const row = `[...document.querySelectorAll("main tbody tr")].find((tr) => !tr.closest("[hidden]") && tr.cells[0]?.textContent.startsWith(${JSON.stringify(document.id)}))`;
     await admin.waitUntil(`Boolean(${row}?.querySelector("[data-requisition-mrp-run]"))`);
     expect(await admin.evaluate<string>(`${row}.querySelector("[data-requisition-mrp-run]").textContent`)).toBe(`MRP run ${first.id}`);
   }));
