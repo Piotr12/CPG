@@ -150,7 +150,8 @@ function CreationFailure({ creation, labels: t, locale }: { creation: FailedCrea
 /** The cause by code; a quantity above the entry limit from its field errors; any other code keeps the server's English text. */
 function failureCause({ code, message, params, fieldErrors }: FailedCreation, t: Messages["mrp"]): string {
   const causes = t.creation.causes;
-  if (code === "MATERIAL_INACTIVE" || code === "LOCATION_INACTIVE") return causes[code];
+  // The two BOM refusals a Make candidate meets join the inactive masters since #320.
+  if (code === "MATERIAL_INACTIVE" || code === "LOCATION_INACTIVE" || code === "PRODUCTION_NO_USABLE_BOM" || code === "PRODUCTION_BOM_CHANGED") return causes[code];
   if (code === "MRP_BATCH_TOO_LARGE") return fill(causes.MRP_BATCH_TOO_LARGE, { candidates: String(params?.candidates), limit: String(params?.limit) });
   if (code === "VALIDATION_FAILED" && fieldErrors?.quantity) return causes.quantity;
   return message;

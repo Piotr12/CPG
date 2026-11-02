@@ -129,7 +129,7 @@ export interface MrpProposalView extends MrpProposalTiming {
   kind: MrpRecommendationKind;
   needDate: string;
   quantity: string;
-  /** Whether it can be accepted at all (`isExecutableProposal`): a Make proposal can't yet. */
+  /** Whether it can be accepted at all (`isExecutableProposal`): a requisition, or a production order carrying its BOM (#320). */
   executable: boolean;
   /** The business ID of the document accepting it created, or null while it isn't accepted. */
   document: string | null;

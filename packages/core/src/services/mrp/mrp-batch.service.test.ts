@@ -1,7 +1,7 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { initOrm, type MrpRunMode, type Orm } from "@cpg/db";
+import { initOrm, MrpRun, type MrpRunMode, type Orm } from "@cpg/db";
 import { asValue } from "awilix";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadConfig } from "../../config";
@@ -12,6 +12,7 @@ import { migrateDatabase, toDbOptions } from "../../database";
 import { ConflictError } from "../../http/errors";
 import { inRequestTransaction, retryingStaleSnapshot } from "../../http/request-transaction";
 import type { AuditActor } from "../audit/actor";
+import { PRODUCTION_ORDER_ID_RACE } from "../production-orders/production-order.service";
 import { REQUISITION_ID_RACE } from "../purchase-requisitions/purchase-requisition.service";
 import { MRP_BATCH_TOO_LARGE } from "./mrp-batch.service";
 import { MrpProposalDocumentService } from "./mrp-proposal-document.service";
@@ -81,6 +82,33 @@ async function buyMaterials(n: number, tenant = "prod") {
   }
   return codes;
 }
+/**
+ * `n` Make materials, each made through one BOM of its own input with 500 on hand and one order of `20 + i` due
+ * on 9 October: one feasible production-order proposal each (#320). Returns the outputs, the inputs and the BOMs.
+ */
+async function makeMaterials(n: number) {
+  const { cradle } = await scope();
+  const made: { output: string; input: string; bom: string }[] = [];
+  for (let index = 0; index < n; index += 1) {
+    const output = await material(`Made ${index}`);
+    const input = await cradle.materialService.create({ type: "raw", description: `Input ${index}`, baseUnit: "each" }, ANNA);
+    await cradle.stockService.correct({ material: input.id, location: PLANT, quantity: "500", unit: "each", reason: "Count" }, ANNA);
+    const bom = await cradle.bomService.create(
+      { output: output.id, priority: 1, validFrom: "2026-01-01", validThrough: null, components: [{ material: input.id, quantity: "1", unit: "each" }] },
+      ANNA,
+    );
+    await parameters(output.id, "make");
+    await order(output.id, [[String(20 + index), "2026-10-09"]]);
+    made.push({ output: output.id, input: input.id, bom: bom.id });
+  }
+  return made;
+}
+const productionOrders = (tenant = "prod") =>
+  sql<{ code: string; output: string; quantity: string; planned_finish: string; mrp_run: string | null }>(
+    "select p.code, m.code as output, p.quantity, p.planned_finish, p.mrp_run from production_order p join material m on p.output_id = m.id where p.tenant_code = ? order by p.code",
+    [tenant],
+  );
+
 /** The latest run's plan of `materialId` at the plant. */
 async function plan(materialId: string, tenant = "prod"): Promise<MrpPlanView> {
   return (await (await scope(tenant)).cradle.mrpRunService.latest({ material: materialId, location: PLANT })).plans[0];
@@ -137,21 +165,60 @@ describe("an automatic MRP run's batch (E19-S03)", () => {
     expect((await audits("mrp.mrp-run.created")).map(({ after }) => after)).toEqual([{ date: "2026-10-01", generation: 1, mode: "automatic", documents: 5 }]);
   });
 
-  it("creates nothing for a Make proposal: it stays listed without a document until Make proposals can be created (#320, spec Q1)", async () => {
-    const shelf = await material("Shelf");
+  it("RUN-007, RUN-014: creates 3 Buy and 2 Make executable proposals as 5 documents, each production order pinned to its BOM and tagged with the run (#320)", async () => {
+    const bought = await buyMaterials(3);
+    const made = await makeMaterials(2);
+
+    const view = await run("automatic", { actor: BOT });
+
+    expect(view.creation).toEqual({ status: "created", documents: 5 });
+    expect((await requisitions()).map(({ material: item, mrp_run }) => [item, mrp_run])).toEqual(bought.map((item) => [item, "00000001"]));
+    expect(await productionOrders()).toEqual(
+      made.map(({ output }, index) => ({ code: `0000000${index + 1}`, output, quantity: `${20 + index}.000000`, planned_finish: "2026-10-09", mrp_run: "00000001" })),
+    );
+    // Each production order is pinned to the BOM its proposal chose, and each proposal names its own document.
+    for (const [index, { output, bom }] of made.entries()) {
+      const { proposals: [proposal] } = await plan(output);
+      expect(proposal).toMatchObject({ kind: "production-order", bom, bomRevision: 1, document: `0000000${index + 1}` });
+      expect(await (await scope()).cradle.productionOrderService.get(proposal.document!)).toMatchObject({ bom, revision: 1, mrpRun: "00000001" });
+    }
+    expect(view.documents?.map(({ kind }) => kind)).toEqual([...bought.map(() => "purchase-requisition"), "production-order", "production-order"]);
+    expect((await audits("production-orders.production-order.created")).map(({ after, channel }) => [after.mrpRun, channel])).toEqual([["00000001", "api"], ["00000001", "api"]]);
+  });
+
+  it("RUN-015: a Make candidate whose BOM input was deactivated since the plan fails the batch with the production-order service's refusal, and none is created (#320)", async () => {
+    const bought = await buyMaterials(1);
+    const [made] = await makeMaterials(1);
+    const stored = await run("manual");
+    // The plan chose the BOM while its input was active; the flag is set directly, as an open order's input can't be deactivated through its service.
+    await sql("update material set active = 0 where code = ? and tenant_code = 'prod'", [made.input]);
     const { cradle } = await scope();
-    const input = await cradle.materialService.create({ type: "raw", description: "Board", baseUnit: "each" }, ANNA);
-    await cradle.stockService.correct({ material: input.id, location: PLANT, quantity: "500", unit: "each", reason: "Count" }, ANNA);
-    await cradle.bomService.create({ output: shelf.id, priority: 1, validFrom: "2026-01-01", validThrough: null, components: [{ material: input.id, quantity: "1", unit: "each" }] }, ANNA);
-    await parameters(shelf.id, "make");
-    await order(shelf.id, [["20", "2026-10-09"]]);
-    const [sugar] = await buyMaterials(1);
 
-    const view = await run();
+    const outcome = await inRequestTransaction(cradle.em, async () =>
+      cradle.mrpBatchService.createAll(await cradle.em.findOneOrFail(MrpRun, { code: stored.id }), ANNA));
 
-    expect(view.creation).toEqual({ status: "created", documents: 1 });
-    expect((await plan(shelf.id)).proposals).toEqual([expect.objectContaining({ kind: "production-order", executable: false, document: null })]);
-    expect((await plan(sugar)).proposals[0].document).toBe("00000001");
+    expect(outcome).toEqual({
+      creation: expect.objectContaining({
+        status: "failed", code: "PRODUCTION_NO_USABLE_BOM",
+        candidate: expect.objectContaining({ kind: "production-order", material: made.output, quantity: "20.000000" }),
+      }),
+      documents: [],
+    });
+    // The Buy candidate before it was rolled back with it.
+    expect([await count("purchase_requisition"), await count("production_order")]).toEqual([0, 0]);
+    expect((await plan(bought[0])).proposals[0].document).toBeNull();
+  });
+
+  it("leaves a Make row with no BOM out of the batch: only an image older than E17-S01 writes one (#320 Q9)", async () => {
+    const [made] = await makeMaterials(1);
+    const stored = await run("manual");
+    await sql("update mrp_recommendation set bom = null, bom_revision = null where material = ?", [made.output]);
+    const { cradle } = await scope();
+
+    const outcome = await inRequestTransaction(cradle.em, async () =>
+      cradle.mrpBatchService.createAll(await cradle.em.findOneOrFail(MrpRun, { code: stored.id }), ANNA));
+
+    expect(outcome).toEqual({ creation: { status: "created", documents: 0 }, documents: [] });
     expect(await count("production_order")).toBe(0);
   });
 
@@ -256,12 +323,15 @@ describe("an automatic MRP run's batch (E19-S03)", () => {
     expect(await audits("mrp.mrp-run.created")).toEqual([]);
   });
 
-  it("lets REQUISITION_ID_RACE fail the request instead of storing it as the run's outcome (spec Q10)", async () => {
+  it.each([
+    ["REQUISITION_ID_RACE", REQUISITION_ID_RACE],
+    ["PRODUCTION_ORDER_ID_RACE", PRODUCTION_ORDER_ID_RACE],
+  ])("lets %s fail the request instead of storing it as the run's outcome (spec Q10, #320)", async (code, message) => {
     await buyMaterials(2);
-    vi.spyOn(MrpProposalDocumentService.prototype, "create").mockRejectedValueOnce(new ConflictError(REQUISITION_ID_RACE, "REQUISITION_ID_RACE"));
+    vi.spyOn(MrpProposalDocumentService.prototype, "create").mockRejectedValueOnce(new ConflictError(message, code));
     const { cradle } = await scope();
 
-    await expect(inRequestTransaction(cradle.em, () => cradle.mrpRunService.run(ANNA, { mode: "automatic" }))).rejects.toMatchObject({ code: "REQUISITION_ID_RACE" });
+    await expect(inRequestTransaction(cradle.em, () => cradle.mrpRunService.run(ANNA, { mode: "automatic" }))).rejects.toMatchObject({ code });
 
     expect(await count("mrp_run")).toBe(0);
     expect(await count("purchase_requisition")).toBe(0);

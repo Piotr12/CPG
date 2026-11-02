@@ -76,6 +76,8 @@ const STALL_BUDGET_MS = 250;
 /** E19-S03 Q13: an automatic run on the realistic fixture, plan and batch together, and a batch of exactly the cap's candidates. */
 const AUTOMATIC_BUDGET_MS = 3_000;
 const BATCH_AT_CAP_BUDGET_MS = 15_000;
+/** Production orders in the batch at the cap: the realistic automatic run's Make share of it (#320 Q10). */
+const MAKE_AT_CAP = 525;
 /**
  * The CI bounds: the assertions are far looser than the budgets, which this test checks on the figures
  * it prints when run alone. Under the parallel coverage run on a CI runner a read took ~10× longer than
@@ -334,25 +336,49 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
     expect(longestStall).toBeLessThan(CI_FACTOR * STALL_BUDGET_MS);
   }, testTimeout);
 
-  it("runs automatically, creating every Buy proposal in one batch, within its budget (E19-S03 Q13)", async () => {
+  // Only the realistic fixture plans feasible Make proposals: at ten times every Make need is provisional (#282's shape).
+  it.runIf(size.locations === 1)("accepts a Make proposal, planning the tenant again, within the run's budget (#320 Q10)", async () => {
+    // One feasible Make proposal of three different pairs of active masters, as for Buy above.
+    const proposals = await orm.em.getConnection().execute<{ id: string; run: string }[]>(
+      `select min(r.id) as id, m.code as run from mrp_recommendation r join mrp_run m on m.id = r.run_id
+         join material t on t.code = r.material and t.tenant_code = r.tenant_code and t.active = 1
+         join location l on l.code = r.location and l.tenant_code = r.tenant_code and l.active = 1
+       where r.kind = 'production-order' and r.bom is not null and r.accepted_document is null group by r.material, r.location order by r.material, r.location limit ${RUNS}`,
+    );
+    expect(proposals).toHaveLength(RUNS);
+    const before = await count("select count(*) as n from production_order where mrp_run is not null");
+
+    const { fastest, longestStall } = await measure((attempt) => accept(proposals[attempt].run, proposals[attempt].id));
+
+    process.stdout.write(`MRP accept of a Make proposal, ${size.name}: ${fastest.toFixed(0)} ms fastest of ${RUNS}, longest event-loop stall ${longestStall.toFixed(0)} ms\n`);
+    expect(await count("select count(*) as n from production_order where mrp_run is not null")).toBe(before + RUNS);
+    expect(fastest).toBeLessThan(CI_FACTOR * size.budgetMs);
+    expect(longestStall).toBeLessThan(CI_FACTOR * STALL_BUDGET_MS);
+  }, testTimeout);
+
+  it("runs automatically, creating every Buy and Make proposal in one batch, within its budget (E19-S03 Q13, #320 Q10)", async () => {
     const outcomes: MrpRunCreation[] = [];
     let candidates = 0;
+    let made = 0;
     const { fastest, longestStall } = await measure(async () => {
       const view = await rolledBack(async (cradle) => {
         const answer = await cradle.mrpRunService.run(ACTOR, { mode: "automatic" });
         // Counted inside the timed transaction: its run, not the committed one, is what the batch created from.
-        candidates = await cradle.em.count(MrpRecommendation, { kind: "purchase-requisition" });
+        candidates = await cradle.em.count(MrpRecommendation, {});
+        made = await cradle.em.count(MrpRecommendation, { kind: "production-order" });
         return answer;
       });
       outcomes.push(view.creation!);
     });
 
     process.stdout.write(
-      `MRP automatic run, ${size.name} (${candidates} Buy proposals, outcome ${JSON.stringify(outcomes[0])}): ${fastest.toFixed(0)} ms fastest of ${RUNS}, longest event-loop stall ${longestStall.toFixed(0)} ms\n`,
+      `MRP automatic run, ${size.name} (${candidates - made} Buy and ${made} Make proposals, outcome ${JSON.stringify(outcomes[0])}): ${fastest.toFixed(0)} ms fastest of ${RUNS}, longest event-loop stall ${longestStall.toFixed(0)} ms\n`,
     );
     // Rolled back, the three attempts planned the same data and came to the same outcome.
     expect(outcomes).toEqual([outcomes[0], outcomes[0], outcomes[0]]);
     expect(candidates).toBeGreaterThan(0);
+    // The realistic fixture's feasible Make proposals join the batch (#320); at ten times every Make need is provisional.
+    if (size.locations === 1) expect(made).toBeGreaterThan(0);
     if (size.locations === 1) {
       expect(outcomes[0]).toEqual({ status: "created", documents: candidates });
       expect(fastest).toBeLessThan(CI_FACTOR * AUTOMATIC_BUDGET_MS);
@@ -389,10 +415,19 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
   // Ten times the worst case has more Buy proposals than the cap, so the batch at exactly the cap is timed there.
   it.runIf(size.locations > 1)("creates a batch of exactly the cap's candidates within its budget (E19-S03 Q13, Q15)", async () => {
     const execute = (sql: string) => orm.em.getConnection().execute(sql);
-    // The worst case (above) left its run's recommendations: keep the first `MRP_BATCH_LIMIT` Buy proposals of active masters.
+    // The worst case (above) left its run's recommendations, all Buy: every Make need there is provisional. Keep the first
+    // Buy proposals of active masters, and since #320 add the realistic run's Make share (95 of 449, about 21%), one
+    // production-order proposal per Make pair pinned to its active priority-1 BOM, whose components are all active.
+    const made = MAKE_AT_CAP;
     await execute(`delete from mrp_recommendation where kind = 'production-order' or material = '99999998'`);
-    await execute(`delete from mrp_recommendation where id not in (select id from mrp_recommendation order by material, location, need_date limit ${MRP_BATCH_LIMIT})`);
+    await execute(`delete from mrp_recommendation where id not in (select id from mrp_recommendation order by material, location, need_date limit ${MRP_BATCH_LIMIT - made})`);
+    await execute(`insert into mrp_recommendation (id, tenant_code, run_id, material, location, kind, need_date, quantity, lead_time_days, bom, bom_revision)
+      select 'mk' || m.id || d.day, 'prod', (select id from mrp_run order by code desc limit 1), m.code, l.code, 'production-order', d.day, '10.000000', p.lead_time_days, b.code, b.revision
+      from planning_parameter_set p join material m on m.id = p.material_id join location l on l.id = p.location_id join bom b on b.id = 'bom' || substr(m.id, 2)
+        cross join (select '2026-11-20' as day union all select '2026-11-21' union all select '2026-11-22') d
+      where p.procurement = 'make' and b.active = 1 order by m.code, d.day limit ${made}`);
     expect(await count("select count(*) as n from mrp_recommendation")).toBe(MRP_BATCH_LIMIT);
+    expect(await count("select count(*) as n from mrp_recommendation where kind = 'production-order'")).toBe(made);
     const outcomes: MrpRunCreation[] = [];
 
     const { fastest, longestStall } = await measure(async () => {
@@ -404,7 +439,7 @@ describe.each(SIZES)("an MRP run at the $name size", (size) => {
       outcomes.push(outcome.creation);
     });
 
-    process.stdout.write(`MRP automatic batch at the cap, ${size.name} (${MRP_BATCH_LIMIT} requisitions): ${fastest.toFixed(0)} ms fastest of ${RUNS}, longest event-loop stall ${longestStall.toFixed(0)} ms\n`);
+    process.stdout.write(`MRP automatic batch at the cap, ${size.name} (${MRP_BATCH_LIMIT - made} requisitions and ${made} production orders): ${fastest.toFixed(0)} ms fastest of ${RUNS}, longest event-loop stall ${longestStall.toFixed(0)} ms\n`);
     expect(outcomes[0]).toEqual({ status: "created", documents: MRP_BATCH_LIMIT });
     expect(fastest).toBeLessThan(CI_FACTOR * BATCH_AT_CAP_BUDGET_MS);
     expect(longestStall).toBeLessThan(CI_FACTOR * STALL_BUDGET_MS);

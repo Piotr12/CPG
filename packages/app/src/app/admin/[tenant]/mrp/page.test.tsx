@@ -232,6 +232,9 @@ describe("MrpPage: the latest run's creation (E19-S03)", () => {
     [{ code: "VALIDATION_FAILED", message: "Some fields are invalid.", fieldErrors: { quantity: ["Too large."] } }, en.mrp.creation.causes.quantity],
     [{ code: "VALIDATION_FAILED", message: "Some fields are invalid.", fieldErrors: { unit: ["Unknown."] } }, "Some fields are invalid."],
     [{ code: "SOMETHING_NEW", message: "A newer refusal." }, "A newer refusal."],
+    // A Make candidate's BOM refusals since #320.
+    [{ code: "PRODUCTION_NO_USABLE_BOM", message: "x" }, en.mrp.creation.causes.PRODUCTION_NO_USABLE_BOM],
+    [{ code: "PRODUCTION_BOM_CHANGED", message: "x" }, en.mrp.creation.causes.PRODUCTION_BOM_CHANGED],
   ])("explains a %o refusal in the reader's language, or keeps the server's text", async (refusal, cause) => {
     await withCreation({ status: "failed", ...refusal, candidate });
     expect(failure()).toContain(cause);

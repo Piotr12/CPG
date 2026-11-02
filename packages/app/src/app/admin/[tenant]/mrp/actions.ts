@@ -22,7 +22,7 @@ export async function runMrp(tenant: string, generation: number, raw: unknown): 
 
 /**
  * Accepts one proposal of the latest MRP run in the bound tenant (E19-S01): a Buy proposal becomes an
- * Open purchase requisition tagged with the run. Both roles may; `tenantServerAction` refuses a read-only
+ * Open purchase requisition and a Make proposal an Open production order (#320), each tagged with the run. Both roles may; `tenantServerAction` refuses a read-only
  * tenant and a page bound to an older Test generation. The page refreshes after a success; a refusal
  * keeps its dialog, which refreshes the page itself when it closes on `MRP_PROPOSAL_ACCEPTED`.
  */
