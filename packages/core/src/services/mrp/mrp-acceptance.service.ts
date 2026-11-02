@@ -5,8 +5,7 @@ import { scheduleProposal } from "../../domain/mrp/sizing/schedule-proposal";
 import { formatDecimal } from "../../domain/quantities/decimal";
 import { ConflictError, NotFoundError } from "../../http/errors";
 import type { AuditActor } from "../audit/actor";
-import type { RequisitionView } from "../purchase-requisitions/purchase-requisition.service";
-import type { MrpProposalDocumentService } from "./mrp-proposal-document.service";
+import type { MrpProposalDocumentService, MrpProposalDocumentView } from "./mrp-proposal-document.service";
 import type { MrpSnapshotService } from "./mrp-snapshot.service";
 import { MRP_RUN_NOT_FOUND } from "./mrp-run.service";
 import type { MrpProposalView } from "./mrp-run-view";
@@ -28,10 +27,13 @@ export interface MrpAcceptedProposalView extends MrpProposalView {
   location: string;
 }
 
-/** What accepting answers (spec Q10): the proposal, now with its document, and the document it created. */
+/**
+ * What accepting answers (spec Q10): the proposal, now with its document, and the document it created: a requisition
+ * for a Buy proposal, a production order for a Make one (#320), told apart by `proposal.kind`.
+ */
 export interface MrpAcceptanceView {
   proposal: MrpAcceptedProposalView;
-  document: RequisitionView;
+  document: MrpProposalDocumentView;
 }
 
 interface Deps {
@@ -48,8 +50,9 @@ const stale = (pair?: { material: string; location: string }) =>
 /**
  * Accepting an MRP proposal (E19-S01, PRD §04 "Manual/auto creation", "Stale and concurrent"): one
  * confirmed proposal of the tenant's latest run becomes its document, tagged with the run, and no
- * existing document changes (R10). A Buy proposal creates an Open purchase requisition; a Make
- * proposal can't be accepted until MRP chooses its BOM (`isExecutableProposal`, spec Q1).
+ * existing document changes (R10). A Buy proposal creates an Open purchase requisition, and a Make
+ * proposal an Open production order pinned to the BOM revision MRP chose (#320); a Make row with no BOM,
+ * which only an image older than E17-S01 writes, can't be accepted (`isExecutableProposal`).
  */
 export class MrpAcceptanceService {
   private readonly em: EntityManager;
@@ -66,11 +69,12 @@ export class MrpAcceptanceService {
    * Accepts proposal `proposalId` of run `runId`. Must run inside the caller's write transaction
    * (`tenantServerAction`, or `IdempotencyService.run` behind `tenantApiWrite`), which has refused a
    * stale Test generation and a read-only tenant and retries a stale SQLite snapshot once, so this is
-   * safe to repeat. Every check reads; the requisition is the first write (spec, "Read first, write last").
+   * safe to repeat. Every check reads; the document is the first write (spec, "Read first, write last").
    *
    * Just before creating, the tenant is planned again from a fresh snapshot (spec Q2): the proposal is
-   * `MRP_PROPOSAL_STALE` when that plan has no proposal of the same kind, quantity and planned finish
-   * (E16-S02, so a changed lead time counts) for its material, location and need date, when a newer run
+   * `MRP_PROPOSAL_STALE` when that plan has no proposal of the same kind, quantity, planned finish (E16-S02),
+   * BOM and BOM revision (#320 Q3) for its material, location and need date, or, for a production order, of
+   * the same lead time, which the order's start takes from the current parameters; when a newer run
    * superseded its run, or when the run started on an earlier day (Q7). A requisition this run already created counts as tentative supply, which leaves the run's
    * other proposals as they were.
    */
@@ -90,7 +94,9 @@ export class MrpAcceptanceService {
       throw new ConflictError(MRP_PROPOSAL_ACCEPTED, "MRP_PROPOSAL_ACCEPTED", { document: proposal.acceptedDocument, kind: proposal.kind });
     }
     const { material, location, kind, needDate, quantity, leadTimeDays } = proposal;
-    if (!isExecutableProposal(kind)) throw new ConflictError(MRP_PROPOSAL_NOT_EXECUTABLE, "MRP_PROPOSAL_NOT_EXECUTABLE", { material, location, kind });
+    const bom = proposal.bom ?? null;
+    const bomRevision = proposal.bomRevision ?? null;
+    if (!isExecutableProposal({ kind, bom, bomRevision })) throw new ConflictError(MRP_PROPOSAL_NOT_EXECUTABLE, "MRP_PROPOSAL_NOT_EXECUTABLE", { material, location, kind });
     const today = new Date().toISOString().slice(0, 10);
     if (run.startDate !== today) throw stale(proposal);
     const fresh = planMrp(await this.mrpSnapshotService.load(today), today).proposals.find(
@@ -98,18 +104,19 @@ export class MrpAcceptanceService {
     );
     // The run started today (above), so the stored lead time times the proposal as the run showed it.
     const timing = scheduleProposal(needDate, leadTimeDays, run.startDate, run.horizonDays);
-    if (!fresh || fresh.kind !== kind || formatDecimal(fresh.quantity, { fixed: true }) !== quantity || fresh.plannedFinish !== timing.plannedFinish) {
+    if (!fresh || fresh.kind !== kind || formatDecimal(fresh.quantity, { fixed: true }) !== quantity || fresh.plannedFinish !== timing.plannedFinish
+      || fresh.bom !== bom || fresh.bomRevision !== bomRevision || (kind === "production-order" && fresh.leadTimeDays !== leadTimeDays)) {
       throw stale(proposal);
     }
 
     // The document and the proposal's mark, as the automatic batch creates them (E19-S03).
-    const document = await this.mrpProposalDocumentService.create(run.code, { id: proposal.id, kind, material, location, needDate, quantity }, actor);
+    const document = await this.mrpProposalDocumentService.create(run.code, { id: proposal.id, kind, material, location, needDate, quantity, bom, bomRevision }, actor);
     return {
       proposal: {
         id: proposal.id, run: run.code, material, location, kind, needDate, quantity,
         ...timing,
-        // Only a requisition can be accepted, and it is exploded through no BOM, so it passed over none (E18-S03).
-        executable: true, document: document.id, bom: null, bomRevision: null, rejectedBoms: [],
+        // The proposal stands alone here: the latest-run read is where its rejected BOMs are explained (E18-S03).
+        executable: true, document: document.id, bom, bomRevision, rejectedBoms: [],
       },
       document,
     };

@@ -11,17 +11,20 @@ export async function findProductionOrder(em: EntityManager, id: string, options
 /** Explicit scalar view doubles as an audit allowlist; never serialize ORM internals. */
 export function productionOrderView(order: ProductionOrder) {
   const { code, output, location, recipe, quantity, enteredQuantity, enteredUnit, numerator, denominator,
-    plannedFinish, plannedStart, leadTimeDays, produced, abandoned, status, createdAt, updatedAt, version } = order;
+    plannedFinish, plannedStart, leadTimeDays, produced, abandoned, status, mrpRun, createdAt, updatedAt, version } = order;
   return { id: code, output: output.code, location: location.code, bom: recipe.bom.code, revision: recipe.number,
     quantity, enteredQuantity, enteredUnit, numerator, denominator, plannedFinish, plannedStart, leadTimeDays,
-    produced, outstanding: outstandingQuantity(quantity, produced, abandoned, status as DocumentState), abandoned, status: status as DocumentState, createdAt, updatedAt, version };
+    produced, outstanding: outstandingQuantity(quantity, produced, abandoned, status as DocumentState), abandoned, status: status as DocumentState,
+    // The MRP run whose proposal created it (#320); an entity created in this request has it unset (lesson 2026-10-19).
+    mrpRun: mrpRun ?? null, createdAt, updatedAt, version };
 }
 export type ProductionOrderView = ReturnType<typeof productionOrderView>;
+/** The audit's allowlist (R08): `mrpRun` only when an MRP proposal created the order, so manual orders keep their entries' shape (#320). */
 export function productionSnapshot(order: ProductionOrder) {
   const { id, output, location, bom, revision, quantity, enteredQuantity, enteredUnit, numerator, denominator,
-    plannedFinish, plannedStart, leadTimeDays, produced, abandoned, status } = productionOrderView(order);
+    plannedFinish, plannedStart, leadTimeDays, produced, abandoned, status, mrpRun } = productionOrderView(order);
   return { id, output, location, bom, revision, quantity, enteredQuantity, enteredUnit, numerator, denominator,
-    plannedFinish, plannedStart, leadTimeDays, produced, abandoned, status };
+    plannedFinish, plannedStart, leadTimeDays, produced, abandoned, status, ...(mrpRun && { mrpRun }) };
 }
 export function productionSubject(order: ProductionOrder) {
   return { type: "ProductionOrder", id: order.code, label: `${order.code} — ${order.output.code} ${order.output.description}` };

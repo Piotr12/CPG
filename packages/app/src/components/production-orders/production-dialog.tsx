@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ProductionOrderDetail, ProductionOptions, MaterialSummary, NamedRecordView } from "@cpg/core";
+import type { Locale, ProductionOrderDetail, ProductionOptions, MaterialSummary, NamedRecordView } from "@cpg/core";
 import { productionOrderOptionsSchema } from "@cpg/core/validators/production-orders/production-order.schema";
 import { apiCall } from "@cpg/ui/backend/api/api-call";
 import { CrudForm, type CrudField } from "@cpg/ui/backend/forms/crud-form";
@@ -16,7 +16,7 @@ import { productionFieldError, type ProductionLabels } from "./labels";
 import { ProductionRequirements } from "./production-requirements";
 
 interface Props {
-  context: TenantContext; labels: ProductionLabels; materials: MaterialSummary[]; locations: NamedRecordView[]; order?: ProductionOrderDetail; locale?: string;
+  context: TenantContext; labels: ProductionLabels; materials: MaterialSummary[]; locations: NamedRecordView[]; order?: ProductionOrderDetail; locale: Locale;
   /** The units each material may be entered in, base unit first (`MaterialService.listUnits`), for Planned quantity's tooltip. */
   units?: Record<string, string[]>;
 }
@@ -63,7 +63,7 @@ function ProductionForm({ context, labels: t, materials, locations, units, order
     <p className="text-sm text-muted-foreground">{t.previewNotice}</p>
     {preview.options.alternatives.map((recipe) => <section key={recipe.bom} className="flex flex-col gap-2">
       <h3 className="font-medium">{fill(t.recipeLabel, { bom: recipe.bom, revision: String(recipe.revision), priority: String(recipe.priority) })}</h3>
-      <ProductionRequirements components={recipe.components} labels={t} materials={materials} tenant={context.tenant} />
+      <ProductionRequirements components={recipe.components} labels={t} materials={materials} tenant={context.tenant} locale={locale} />
     </section>)}
     <CrudForm fields={[{ name: "bom", label: t.recipe, type: "select", options: preview.options.alternatives.map((recipe) => ({ value: recipe.bom,
       label: fill(t.recipeLabel, { bom: recipe.bom, revision: String(recipe.revision), priority: String(recipe.priority) }) })) }]}

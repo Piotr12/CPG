@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { TransferDetailView, TransferView } from "@cpg/core";
 import { en } from "../../i18n/messages/en";
@@ -49,6 +49,42 @@ describe("TransferScreen", () => {
   });
 });
 
+describe("TransferScreen quantities", () => {
+  const text = (element: Element) => element.textContent!.replace(/\u00a0/g, " ");
+  const big = { ...base, quantity: "12345.500000", dispatched: "12345.500000", undispatched: "23456.250000", inTransit: "12345.500000", outstanding: "35801.750000" };
+  const bigDispatch = { ...dispatch, enteredQuantity: "12345.5", canReverse: true,
+    legs: [leg("source", "00000001", "-12345.500000", "23456.250000"), leg("transit", null, "12345.500000", "12345.500000")] };
+
+  it.each([
+    ["en", en, "12,345.5", "23,456.25", "35,801.75"],
+    ["pl", pl, "12 345,5", "23 456,25", "35 801,75"],
+  ] as const)("shows every figure, the post limit, the transit notice and the reversal legs in %s", (locale, messages, quantity, undispatched, outstanding) => {
+    render(<TransferScreen {...props} locale={locale} messages={messages} transfer={{ ...big, postings: [bigDispatch], reversals: [] } as unknown as TransferDetailView} />);
+    expect(text(document.querySelector("[data-transfer-in-transit]")!)).toBe(`${quantity} kg`);
+    const details = text(document.querySelector("dl")!);
+    expect(details).toContain(`${undispatched} kg`);
+    const ledger = screen.getByRole("table", { name: messages.transfers.ledger.heading });
+    expect(within(ledger).getAllByRole("cell").slice(3, 5).map(text)).toEqual([`-${quantity} kg`, `${undispatched} kg`]);
+    expect(text(ledger)).toContain(`+${quantity} kg`);
+    expect(text(ledger)).toContain(messages.transfers.ledger.entered.replace("{quantity}", quantity).replace("{unit}", "kg"));
+    fireEvent.click(within(ledger).getByRole("button"));
+    const { places } = messages.transfers.ledger;
+    expect(within(screen.getByRole("dialog")).getAllByRole("listitem").map(text))
+      .toEqual([`${places.transit}-${quantity} kg`, `${places.source.replace("{location}", "00000001 Main plant")}+${quantity} kg`]);
+    cleanup();
+    render(<TransferScreen {...props} locale={locale} messages={messages} transfer={{ ...big, postings: [bigDispatch], reversals: [] } as unknown as TransferDetailView} />);
+    const buttons = within(header()).getAllByRole("button");
+    fireEvent.click(buttons[0]);
+    expect(text(screen.getByRole("dialog"))).toContain(`${undispatched} kg`);
+    cleanup();
+    render(<TransferScreen {...props} locale={locale} messages={messages} transfer={{ ...big, postings: [bigDispatch], reversals: [] } as unknown as TransferDetailView} />);
+    fireEvent.click(within(header()).getAllByRole("button").at(-1)!);
+    const dialog = within(screen.getByRole("dialog"));
+    expect(dialog.getAllByRole("listitem").map(text)).toEqual([`${outstanding} kg`]);
+    expect(text(dialog.getByRole("status"))).toBe(messages.errors.TRANSFER_IN_TRANSIT.replace("{quantity}", quantity).replace("{unit}", "kg"));
+  });
+});
+
 describe("TransfersScreen", () => {
   const row = (id: string, status: string) => ({ ...base, id, status }) as unknown as TransferView;
   const list = { tenant, transfers: [row("00000001", "open"), row("00000002", "closed-early"), row("00000003", "cancelled")], page: 1, total: 3,
@@ -68,6 +104,12 @@ describe("TransfersScreen", () => {
     })).toEqual([["Open", "neutral", "circle-dot"], ["Closed Early", "warning", "circle-minus"], ["Cancelled", "neutral", "circle-x"]]);
     const cells = within(rows[0]).getAllByRole("cell");
     expect(cells[0].className).toContain("font-mono"); expect(cells[2].className).toContain("hidden md:table-cell"); expect(cells[7].className).toContain("hidden lg:table-cell");
+  });
+
+  it.each([["en", en, "12,345.5"], ["pl", pl, "12 345,5"]] as const)("shows the list's amounts in %s", (locale, messages, quantity) => {
+    render(<TransfersScreen {...list} locale={locale} messages={messages} transfers={[{ ...row("00000001", "open"), quantity: "12345.500000" } as TransferView]} />);
+    const cells = within(screen.getByRole("table", { name: messages.transfers.link })).getAllByRole("row")[1].querySelectorAll("td");
+    expect(cells[3].textContent!.replace(/\u00a0/g, " ")).toBe(`${quantity} kg`);
   });
 
   it("offers no create action in a read-only tenant", () => {

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/messages/en";
+import { pl } from "../../i18n/messages/pl";
 import { listLinks } from "../lists/list-params";
 import { ForecastsScreen } from "./forecasts-screen";
 
@@ -15,6 +16,14 @@ const props = { tenant: { code: "test", name: "Test", generation: 2, readOnly: f
 const header = () => screen.getByRole("heading", { level: 1 }).closest("[data-slot=page-header]") as HTMLElement;
 
 describe("ForecastsScreen", () => {
+  it.each([
+    ["en", en, "12,345.5 each"],
+    ["pl", pl, "12\u00a0345,5 each"],
+  ] as const)("shows each day's quantity in the reader's locale (%s, #304)", (locale, messages, quantity) => {
+    render(<ForecastsScreen {...props} forecasts={[{ ...props.forecasts[0], quantity: "12345.500000" }]} locale={locale} messages={messages} />);
+    expect(within(screen.getByRole("table", { name: messages.forecasts.link })).getAllByRole("cell")[3].textContent).toBe(quantity);
+  });
+
   it("heads the page with its intro and the admin's Add forecast, and shows each day as a date and a right-aligned quantity", () => {
     render(<ForecastsScreen {...props} />);
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Forecasts — Test");

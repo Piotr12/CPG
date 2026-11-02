@@ -143,7 +143,9 @@ describe("planning parameters and safety stock (E03-S03)", () => {
       const series = targets.filter((row) => row[0] === material && row[1] === location).sort((a, b) => a[2].localeCompare(b[2]));
       expect(series).toHaveLength(2);
       expect(series[0][2]).not.toBe(series[1][2]);
-      expect(Number.parseFloat(series[1][3])).toBeGreaterThan(Number.parseFloat(series[0][3]));
+      // An English reader's figures group thousands with a comma (#304): strip it before reading the number.
+      const figure = (cell: string) => Number(cell.split(" ")[0].replaceAll(",", ""));
+      expect(figure(series[1][3])).toBeGreaterThan(figure(series[0][3]));
     }
   });
 

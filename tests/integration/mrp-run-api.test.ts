@@ -181,7 +181,7 @@ describe("MRP runs through the API", () => {
       // whether it can be accepted (a Make one can't yet), and its document.
       // Since #281 a production order names the BOM and revision it is exploded through.
       [bought, [{ id: expect.any(String), kind: "purchase-requisition", needDate: day(6), quantity: "10.000000", plannedStart: day(2), plannedFinish: day(6), lateDays: 0, beyondHorizon: false, executable: true, document: null, bom: null, bomRevision: null, rejectedBoms: [] }]],
-      [made, [{ id: expect.any(String), kind: "production-order", needDate: day(6), quantity: "3.000000", plannedStart: day(5), plannedFinish: day(6), lateDays: 0, beyondHorizon: false, executable: false, document: null, bom, bomRevision: 1, rejectedBoms: [] }]],
+      [made, [{ id: expect.any(String), kind: "production-order", needDate: day(6), quantity: "3.000000", plannedStart: day(5), plannedFinish: day(6), lateDays: 0, beyondHorizon: false, executable: true, document: null, bom, bomRevision: 1, rejectedBoms: [] }]],
     ]);
     expect(plans[0].buckets[6]).toMatchObject({ date: day(6), proposedReceipts: "10.000000", projectedBefore: "-3.000000", projectedAfter: "7.000000" });
     expect(plans[1].buckets[6]).toMatchObject({ date: day(6), proposedReceipts: "3.000000", projectedBefore: "-3.000000", projectedAfter: "0.000000" });

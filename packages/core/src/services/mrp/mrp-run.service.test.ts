@@ -495,7 +495,7 @@ describe("MrpRunService: replenishment proposals (#278)", () => {
       [cabinet.id, PLANT, [{ id: uuid, kind: "purchase-requisition", needDate: "2026-10-05", quantity: "10.000000", ...onTime, executable: true, document: null, ...none, rejectedBoms: [] }]],
       // The Make proposal names the BOM it is exploded through (#281, MRP-031)…
       // …and its first BOM passed over none (E18-S03).
-      [cabinet.id, store, [{ id: uuid, kind: "production-order", needDate: "2026-10-05", quantity: "3.000000", ...onTime, executable: false, document: null, bom: "00000001", bomRevision: 1, rejectedBoms: [] }]],
+      [cabinet.id, store, [{ id: uuid, kind: "production-order", needDate: "2026-10-05", quantity: "3.000000", ...onTime, executable: true, document: null, bom: "00000001", bomRevision: 1, rejectedBoms: [] }]],
       // …into its one input, planned at the store from its start, its stock covering the need.
       [input, store, []],
     ]);

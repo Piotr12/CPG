@@ -117,8 +117,9 @@ describe("physical stock and reasoned corrections (#80)", () => {
   it("shows demo openings and Polish help, and blocks both roles when read-only (INV-022, D06)", async () => {
     await admin.open(`${baseUrl}/admin/test/stock`); await admin.waitFor("[data-stock-balance]");
     expect(await admin.text("main")).toContain("Demonstration opening balance");
-    // Two years of receipts and consumption follow the opening: the balance depends on the day, but stays positive.
-    expect(await admin.text("[data-stock-balance]")).toMatch(/^[1-9]\d*(\.\d+)? kg$/);
+    // Two years of receipts and consumption follow the opening: the balance depends on the day, but stays positive,
+    // in English figures with thousands grouped by a comma (#304).
+    expect(await admin.text("[data-stock-balance]")).toMatch(/^[1-9]\d{0,2}(,\d{3})*(\.\d+)? kg$/);
     try {
       await choosePreference(admin, "pl");
       await admin.open(`${baseUrl}/admin/prod/stock?material=${material}&location=${location}`); await admin.waitForText("Zapas — Prod");

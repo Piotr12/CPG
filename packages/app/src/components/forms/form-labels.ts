@@ -16,17 +16,26 @@ export function errorFormatter(labels: { errors: Record<string, string> }) {
 }
 
 /**
- * A stored six-decimal quantity as screens show it and forms prefill it: without trailing zeros
- * (`"50.000000"` → `"50"`, `"0.500000"` → `"0.5"`). Text only, so no binary float enters (R03).
+ * A stored six-decimal quantity as a form field prefills it: without trailing zeros (`"50.000000"` →
+ * `"50"`, `"0.500000"` → `"0.5"`), with the dot every quantity field accepts. Text only, so no binary
+ * float enters (R03). Screens show quantities with `localeQuantity` (#304).
  */
-export function shownQuantity(quantity: string): string {
+export function formQuantity(quantity: string): string {
   return quantity.includes(".") ? quantity.replace(/\.?0+$/, "") : quantity;
+}
+
+/**
+ * Whether a stored quantity text is zero (`"0.000000"`, `"0"`), judged on the text itself, never on a
+ * localized figure (#304). Safe in client components, where `isNothing` from `@cpg/core` would pull in the ORM.
+ */
+export function isZeroQuantity(quantity: string): boolean {
+  return formQuantity(quantity) === "0";
 }
 
 /**
  * A stored six-decimal quantity in the reader's locale: `"-1234.500000"` is `-1,234.5` in English and
  * `-1234,5` in Polish, grouped as the locale groups. `Intl.NumberFormat` formats the decimal text itself,
- * every digit kept, so no binary float enters (R03). The MRP report uses it; other screens follow (#304).
+ * every digit kept, so no binary float enters (R03). Every screen shows quantities and factors with it (#304).
  */
 export function localeQuantity(quantity: string, locale: string): string {
   let format = quantityFormats.get(locale);

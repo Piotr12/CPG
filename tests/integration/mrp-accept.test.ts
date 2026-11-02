@@ -21,7 +21,8 @@ const DIALOG = "[role=alertdialog][data-state=open]";
 const day = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
 
 // E19-S01 in a real browser: a normal user accepts a Buy proposal on the MRP page after a confirmation
-// that names it (RUN-004, RUN-005), and the requisition lists the run that created it.
+// that names it (RUN-004, RUN-005), and the requisition lists the run that created it; a Make proposal
+// becomes a production order the same way, named with its BOM revision and dates (#320).
 describe("accepting an MRP proposal in the UI", () => {
   let admin: Browser;
   let ola: Browser;
@@ -46,9 +47,9 @@ describe("accepting an MRP proposal in the UI", () => {
     await create("/api/tenants/prod/customer-orders", { customer: ids.customer, location: ids.plant, lines: [{ material: ids.sugar, quantity: "50", unit: "kg", requiredDate: day(4) }] });
   }
   /** Runs MRP and opens the page filtered to this file's pair, its proposals shown. */
-  async function runAndOpen(): Promise<MrpRunView> {
+  async function runAndOpen(material = ids.sugar): Promise<MrpRunView> {
     const run = json(await api("POST", "/api/tenants/prod/mrp/runs", {})).data as MrpRunView;
-    await ola.open(`${baseUrl}/admin/prod/mrp?material=${ids.sugar}&location=${ids.plant}`);
+    await ola.open(`${baseUrl}/admin/prod/mrp?material=${material}&location=${ids.plant}`);
     await ola.waitUntil(`Boolean(${shown("[data-mrp-proposals]")})`);
     return run;
   }
@@ -123,6 +124,35 @@ describe("accepting an MRP proposal in the UI", () => {
     await ola.click("[data-mrp-document]");
     await ola.waitUntil(`location.pathname.endsWith("/purchase-requisitions") && Boolean(${shown("[data-requisition-mrp-run]")})`);
     expect(await ola.evaluate<string>(`${shown("[data-requisition-mrp-run]")}.textContent`)).toBe(`MRP run ${run.id}`);
+  }));
+
+  it("asks before creating a production order, naming its BOM revision and dates, then creates it tagged with the run on confirm (RUN-006, #320)", () => withinOneDay(async () => {
+    // A Make pair of its own at this file's plant: a BOM of one input with enough on hand, so the proposal is feasible.
+    const jam = await create("/api/tenants/prod/materials", { type: "finished", description: "mrpacc ui jam", baseUnit: "kg" });
+    const fruit = await create("/api/tenants/prod/materials", { type: "raw", description: "mrpacc ui fruit", baseUnit: "each" });
+    const bom = await create("/api/tenants/prod/boms", { output: jam, priority: 1, validFrom: day(-30), validThrough: null, components: [{ material: fruit, quantity: "1", unit: "each" }] });
+    await create("/api/tenants/prod/stock/corrections", { material: fruit, location: ids.plant, quantity: "12", unit: "each", reason: "mrpacc count" });
+    await create("/api/tenants/prod/planning-parameters", { material: jam, location: ids.plant, procurement: "make", leadTimeDays: 2, minimumQuantity: "0", lotMultiple: "1" });
+    await create("/api/tenants/prod/customer-orders", { customer: ids.customer, location: ids.plant, lines: [{ material: jam, quantity: "12", unit: "kg", requiredDate: day(4) }] });
+    const run = await runAndOpen(jam);
+
+    await ola.click(`[data-mrp-accept]`);
+    await ola.waitUntil(`Boolean(document.querySelector(${JSON.stringify(DIALOG)}))`);
+    expect(await ola.evaluate<string>(`document.querySelector(${JSON.stringify(DIALOG)}).textContent`)).toContain(
+      `Production order for ${jam} — mrpacc ui jam at ${ids.plant} — mrpacc ui plant: 12 kg through BOM ${bom} / revision 1, finishing by ${day(4)} and starting ${day(2)}. It records MRP run ${run.id}.`,
+    );
+    await ola.clickRole("button", "Create production order");
+    await ola.waitUntil(`Boolean(${shown("[data-mrp-document]")})`);
+
+    const orders = (json(await api("GET", `/api/tenants/prod/production-orders?q=${jam}`)).data as { id: string; output: string; bom: string; revision: number; mrpRun: string | null; plannedFinish: string }[])
+      .filter(({ output }) => output === jam);
+    expect(orders).toEqual([expect.objectContaining({ bom, revision: 1, plannedFinish: day(4), mrpRun: run.id })]);
+    expect(await ola.evaluate<string>(`${shown("[data-mrp-document]")}.textContent`)).toBe(`Production order ${orders[0].id}`);
+
+    // The order's row names the run it came from.
+    await ola.click("[data-mrp-document]");
+    await ola.waitUntil(`location.pathname.endsWith("/production-orders") && Boolean(${shown("[data-production-mrp-run]")})`);
+    expect(await ola.evaluate<string>(`${shown("[data-production-mrp-run]")}.textContent`)).toBe(`MRP run ${run.id}`);
   }));
 
   it("marks a late proposal's planned finish under its need date, and accepts it on its need date (#279, MRP-037, spec Q3)", () => withinOneDay(async () => {

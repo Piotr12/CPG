@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@cpg/ui/components/dropdown-menu";
 import { changePlanningParameters, removePlanningParameters } from "../../app/admin/[tenant]/planning-parameters/actions";
-import { errorFormatter, TALL_DIALOG, fill, shownQuantity, type TenantContext } from "../forms/form-labels";
+import { errorFormatter, TALL_DIALOG, fill, formQuantity, type TenantContext } from "../forms/form-labels";
 import { fieldErrorFormatter, type PlanningParametersLabels } from "./labels";
 import { valueFields } from "./planning-parameter-fields";
 import type { PlanningParameterRow } from "./planning-parameters-table";
@@ -63,8 +63,8 @@ export function PlanningParameterActions({ row, context, labels }: PlanningParam
             initialValues={{
               procurement: row.procurement,
               leadTimeDays: String(row.leadTimeDays),
-              minimumQuantity: shownQuantity(row.minimumQuantity),
-              lotMultiple: shownQuantity(row.lotMultiple),
+              minimumQuantity: formQuantity(row.minimumQuantity),
+              lotMultiple: formQuantity(row.lotMultiple),
             }}
             schema={planningParameterChangeFormSchema}
             action={(values) => changePlanningParameters(tenant, generation, row.material, row.location, row.version, values)}

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { BomSort } from "@cpg/core/validators/boms/bom-list.schema";
 import type { SortDirection } from "@cpg/core/validators/lists/list-query.schema";
 import { en } from "../../i18n/messages/en";
+import { pl } from "../../i18n/messages/pl";
 import { BomsScreen } from "./boms-screen";
 
 vi.mock("./create-bom-dialog", () => ({ CreateBomDialog: () => <button>Create BOM</button> }));
@@ -99,5 +100,20 @@ describe("BomsScreen", () => {
     renderScreen([], true, false, { search: { q: "brass", typed: "brass" }, sort: LIST.sort });
 
     expect(screen.getByRole("cell").textContent).toBe("Nothing matches “brass”. Clear search");
+  });
+
+  it("joins the Components column's lines with a middle dot, each quantity in the reader's locale (#304)", () => {
+    const lines = [
+      { material: "00000002", quantity: "12345.500000", enteredQuantity: "12345.5", enteredUnit: "each", numerator: "1", denominator: "1" },
+      { material: "00000005", quantity: "2.500000", enteredQuantity: "2.5", enteredUnit: "each", numerator: "1", denominator: "1" },
+    ];
+    const summary = () => document.querySelector("span[title]")!.getAttribute("title");
+
+    const { unmount } = renderScreen([{ ...bom("00000001", true), components: lines }]);
+    expect(summary()).toBe("12,345.5 each 00000002 Bolt M8 · 2.5 each 00000005 Old cabinet");
+    unmount();
+
+    render(<BomsScreen tenant={TENANT} boms={[{ ...bom("00000001", true), components: lines }] as never} materials={MATERIALS} units={{}} locale="pl" messages={pl} admin {...LIST} />);
+    expect(summary()).toBe("12\u00a0345,5 each 00000002 Bolt M8 · 2,5 each 00000005 Old cabinet");
   });
 });

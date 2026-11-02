@@ -93,7 +93,7 @@ describe("PurchaseOrderPage", () => {
     expect(screen.getByText("2027-02-01")).toBeTruthy();
     const rows = within(screen.getByRole("table", { name: "Lines" })).getAllByRole("row").slice(1);
     expect(rows.map((row) => within(row).getAllByRole("cell").map((cell) => cell.textContent))).toEqual([
-      ["1", "00000001Steel sheet", "500 kg", "0.5 t at 1 t = 1000 kg", "2027-03-03", "00000007", "530 kg", "0 kg", "Received", "0 kg", ""],
+      ["1", "00000001Steel sheet", "500 kg", "0.5 t at 1 t = 1,000 kg", "2027-03-03", "00000007", "530 kg", "0 kg", "Received", "0 kg", ""],
       ["2", "00000002Bolt M8", "10 each", "", "2027-03-05", "—", "4 each", "6 each", "Open", "0 each", "Change dateClose line early…"],
     ]);
     expect(screen.getByRole("link", { name: "00000007" }).getAttribute("href")).toBe("/admin/test/purchase-requisitions?page=1");
