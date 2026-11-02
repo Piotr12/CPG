@@ -98,7 +98,7 @@ Takeaway: on a clean commit Deploy runs as today, one short job later, and `spec
 - Branch protection, required checks or a merge queue (Q1, Q8).
 - Changing where specs live, or the spec-PR / implementation-PR split.
 - Any other file-placement rule.
-- A hand-started Deploy on a branch other than `main` deploys that branch once its CI passes. That is a separate issue, filed as a follow-up.
+- A hand-started Deploy on a branch other than `main` deploys that branch once its CI passes. That is #360.
 
 ## 📋 Phasing
 

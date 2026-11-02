@@ -17,8 +17,9 @@ Run `om-auto-fix-issue 351`: stop a spec PR's squash merge from leaving a duplic
   - The deletion moved out of Deploy into its own `spec-copies.yml`. Deploy runs in one serial queue, so a pair's dirty second merge would have waited 15–25 min behind the first deploy. Deploy now only checks, and skips CI and the deploy.
   - The pure `activeCopies` is split from the command `delete-spec-copies.ts`, so importing it in a test can't delete files, and it reaches 100% without an `import.meta.main` branch.
   - Added `erasableSyntaxOnly`, a `node` child-process test, exact shell commands, a top-level `permissions: contents: read` on Deploy, the `ls-remote` check for "main moved on", and "no loop".
-  - Filed as a follow-up: a hand-started Deploy on another branch deploys that branch.
+  - Filed #360: a hand-started Deploy on another branch deploys that branch.
 - 19:58 `main` (fb574a24) fails `ai-filenames` right now. #355 and #356 raced at 19:46 (16 s apart), which is this issue again. Open PR #354 deletes the active copy of #327's spec, and this branch deletes it too.
+- 20:02 Spec PR #359 opened, ready, with labels, the label rationale and the defaults comment (on #359 and #351). Filed #360.
 
 ## Changes
 
