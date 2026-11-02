@@ -110,14 +110,14 @@ describe("MrpReport", () => {
     expect(screen.queryByText(en.mrp.report.empty)).toBeNull();
   });
 
-  it("shows the one pair the filters leave, day by day, with its eleven figures in its base unit (MRP-005)", () => {
+  it("shows the one pair the filters leave, day by day, with its twelve figures in its base unit, at-risk supply apart from dependable (MRP-005, MRP-051)", () => {
     renderReport(report({ total: 1, plans: [sheet] }), { material: "00000012", location: "00000003", page: 1 });
 
     expect(screen.getByRole("heading", { level: 3, name: "00000012 Steel sheet at 00000003 Kraków" })).toBeTruthy();
     expect(screen.getByText(/^Quantities in kg\./)).toBeTruthy();
     const days = within(screen.getByRole("table", { name: en.mrp.report.planLabel }));
     expect(days.getAllByRole("columnheader").map((header) => header.textContent)).toEqual([
-      "Date", "Firm demand", "Forecast demand", "Dependent demand", "Transfer out", "Safety stock", "Tentative supply", "Dependable supply", "Transfer in",
+      "Date", "Firm demand", "Forecast demand", "Dependent demand", "Transfer out", "Safety stock", "Tentative supply", "Dependable supply", "At-risk supply", "Transfer in",
       "Projected before proposals", "Projected after proposals", "Shortage", "Warnings",
     ]);
     // The long headers wrap rather than push the last columns out of view at desktop widths.
@@ -159,7 +159,7 @@ describe("MrpReport", () => {
   });
 
   it("counts each pair's proposals, and lists the one pair's proposals above its days with Accept (E19-S01)", () => {
-    const proposal = { id: "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b", kind: "purchase-requisition" as const, needDate: "2026-10-05", quantity: "40.000000", plannedStart: "2026-10-03", plannedFinish: "2026-10-05", lateDays: 0, beyondHorizon: false, executable: true, document: null, bom: null, bomRevision: null };
+    const proposal = { id: "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b", kind: "purchase-requisition" as const, needDate: "2026-10-05", quantity: "40.000000", plannedStart: "2026-10-03", plannedFinish: "2026-10-05", lateDays: 0, beyondHorizon: false, executable: true, document: null, bom: null, bomRevision: null, rejectedBoms: [] };
     const proposing = { ...sheet, proposals: [proposal] };
     renderReport(report({ plans: [proposing, bearing] }));
     expect([...document.querySelectorAll("[data-mrp-proposal-count]")].map((cell) => cell.textContent)).toEqual(["1", "0"]);
@@ -215,7 +215,7 @@ describe("MrpReport", () => {
       expect(screen.getByText(/^Quantities in kg\. Flows are summed/)).toBeTruthy();
       const table = within(screen.getByRole("table", { name: en.mrp.report.weekLabel }));
       expect(table.getAllByRole("columnheader").map((header) => header.textContent)).toEqual([
-        "Week", "Firm demand", "Forecast demand", "Dependent demand", "Transfer out", "Safety stock", "Tentative supply", "Dependable supply", "Transfer in",
+        "Week", "Firm demand", "Forecast demand", "Dependent demand", "Transfer out", "Safety stock", "Tentative supply", "Dependable supply", "At-risk supply", "Transfer in",
         "Projected before proposals", "Projected after proposals", "Lowest projected balance", "Peak shortage", "Warnings",
       ]);
       const [first, second] = table.getAllByRole("row").slice(1);
@@ -252,6 +252,33 @@ describe("MrpReport", () => {
       ]);
       expect(marks.every((mark) => mark.getAttribute("data-tone") === "warning" && mark.querySelector("svg"))).toBe(true);
       expect(days.getByText("2026-10-04").closest("tr")!.querySelector("[data-mrp-mark=late-supply]")?.textContent).toBe("Opóźniona dostawa · 4 dni · koniec 8 paź · 12 kg");
+    });
+  });
+
+  describe("Explanations (E18-S03)", () => {
+    const atRisk = { code: "AT_RISK_PRODUCTION", message: "", params: { material: "00000012", location: "00000003", date: "2026-10-05", order: "00000017", quantity: "10.000000", inactiveComponents: "00000021" } };
+    const missing = { code: "MISSING_PLANNING_PARAMETERS", message: "", params: { material: "00000013", location: "00000003", reason: "no-set" } };
+
+    it("explains every pair on the page, after the pairs, and says so when nothing needs explaining", () => {
+      renderReport(report({ plans: [{ ...sheet, exceptions: [atRisk] }, { ...bearing, exceptions: [missing] }] }));
+      const section = document.querySelector("[data-mrp-explanations]")!;
+      expect(pairs().getAllByRole("row")[1].compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(section.querySelector("[data-mrp-at-risk]")?.textContent).toContain("00000017");
+      expect(section.querySelector("[data-mrp-exceptions] [data-mrp-exception-code]")?.getAttribute("data-mrp-exception-code")).toBe("MISSING_PLANNING_PARAMETERS");
+
+      renderReport(report({ plans: [sheet, bearing] }));
+      expect(document.querySelectorAll("[data-mrp-explanations-empty]")).toHaveLength(1);
+    });
+
+    it("MRP-051: comes after the one pair's days, whose at-risk supply sits apart from its dependable supply", () => {
+      const pinned = { ...sheet, exceptions: [atRisk], buckets: [day("2026-10-05", { firmDemand: "10.000000", atRiskSupply: "10.000000", projectedBefore: "-10.000000", projectedAfter: "-10.000000", shortage: "10.000000" })] };
+      renderReport(report({ total: 1, plans: [pinned] }), { material: "00000012", location: "00000003", bucket: "week" }, "pl");
+      const days = screen.getByRole("table", { name: pl.mrp.report.planLabel });
+      expect(days.compareDocumentPosition(document.querySelector("[data-mrp-explanations]")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      const figures = Object.fromEntries([...days.querySelectorAll("tbody [data-mrp-figure]")].map((cell) => [cell.getAttribute("data-mrp-figure"), cell.textContent]));
+      expect(figures).toMatchObject({ dependableSupply: "0", atRiskSupply: "10", shortage: "10" });
+      expect(within(days).getAllByRole("columnheader").map((header) => header.textContent)).toContain("Podaż zagrożona");
+      expect(document.querySelector("[data-mrp-at-risk]")?.textContent).toContain("Zagrożona istniejąca produkcja");
     });
   });
 });

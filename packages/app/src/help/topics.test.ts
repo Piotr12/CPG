@@ -119,6 +119,19 @@ describe("help topics", () => {
   });
 
   it.each([
+    ["en", "Why this BOM, under a production-order proposal", "in the order it tried them", "Inactive BOM Component", "Sugar: needs 6 KG, dependable 5 KG, short 1 KG",
+      "cover the pairs on the page", "Provisional — not executable", "follow the chain down to the materials to buy", "never in a supply column or a balance and can't be accepted",
+      "At-Risk Existing Production / Inactive BOM Component", "At-risk supply column", "No Feasible BOM (naming each rejected BOM and why)", "rejectedBoms"],
+    ["pl", "Dlaczego ten BOM, pod propozycją zlecenia produkcyjnego", "w kolejności, w jakiej je sprawdzał", "Nieaktywny składnik BOM-u", "Cukier: potrzeba 6 KG, pewne 5 KG, brakuje 1 KG",
+      "dotyczą par na stronie", "Tymczasowe — niewykonalne", "zejść łańcuchem do materiałów do zakupu", "nigdy nie jest w kolumnie podaży ani w stanie i nie można go zaakceptować",
+      "Zagrożona istniejąca produkcja / Nieaktywny składnik BOM-u", "kolumnie Podaż zagrożona", "Brak wykonalnego BOM-u (z każdym odrzuconym BOM-em i powodem)", "rejectedBoms"],
+  ] as const)("says in %s how the report explains a fallback BOM, provisional plans, at-risk orders and exceptions (E18-S03)", (locale, ...phrases) => {
+    const text = helpTopics(locale).find((topic) => topic.id === "mrp")!.body.join(" ");
+
+    for (const phrase of phrases) expect(text).toContain(phrase);
+  });
+
+  it.each([
     ["en", "has Accept: after you confirm", "carries its warning under its need date", "records the run's ID", "refused as out of date and you run MRP again", "accepted once", "Production-order proposals can't be accepted yet",
       "/mrp/runs/{run}/proposals/{proposal}/accept", "whether they can be accepted (executable)"],
     ["pl", "ma przycisk Akceptuj: po potwierdzeniu", "ma pod datą potrzeby swoje ostrzeżenie", "zapisuje ID przebiegu", "odrzucona jako nieaktualna i trzeba ponownie uruchomić MRP", "zaakceptować raz",

@@ -66,6 +66,9 @@ describe("dictionaries", () => {
       // MRP is the acronym Polish planners use as well.
       "mrp/heading",
       "mrp/channels/api",
+      // The report's explanation tables (E18-S03): BOM and Status, column headers Polish shares.
+      "mrp/explanations/provisional/columns/bom",
+      "mrp/explanations/atRisk/columns/status",
       "nav/menu",
       "nav/mrp",
       "nav/import",

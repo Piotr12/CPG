@@ -5,6 +5,7 @@ import { fill } from "../../i18n/fill";
 import type { Messages } from "../../i18n/messages/en";
 import { localeQuantity } from "../forms/form-labels";
 import { AcceptProposalButton } from "./accept-proposal-button";
+import { WhyBom, type MaterialsByCode } from "./mrp-bom-rejections";
 import { MrpMarks } from "./mrp-marks";
 
 interface MrpProposalsProps {
@@ -15,6 +16,8 @@ interface MrpProposalsProps {
   plan: MrpPlanView;
   /** The server's UTC date: a run that started earlier can't be accepted (spec Q7, Q13). */
   today: string;
+  /** The tenant's materials by ID, for a rejected BOM's component descriptions and units (E18-S03). */
+  materials: MaterialsByCode;
   /** Accepts a proposal: the page's bound server action, or absent on a read-only tenant (spec Q9). */
   accept?: (raw: { run: string; proposal: string }) => Promise<Result<MrpAcceptanceView>>;
   locale: Locale;
@@ -24,11 +27,12 @@ interface MrpProposalsProps {
 /**
  * The one-pair view's proposals (E19-S01, spec Q8), above its days: what each would create (a production
  * order with the BOM and revision it plans through, E17-S01), its need
- * date (with its Late Supply or Beyond Horizon mark, E16-S02, E18-S02) and quantity, and Accept for
+ * date (with its Late Supply or Beyond Horizon mark, E16-S02, E18-S02) and quantity, why MRP passed over
+ * each higher-priority BOM (E18-S03, UX-020), and Accept for
  * one that can be accepted, or the document accepting it created.
  * A read-only tenant, or a run from an earlier day, shows no Accept.
  */
-export function MrpProposals({ tenant, run, plan, today, accept, locale, messages }: MrpProposalsProps) {
+export function MrpProposals({ tenant, run, plan, today, materials, accept, locale, messages }: MrpProposalsProps) {
   const t = messages.mrp.proposals;
   const current = run.startDate === today;
   const pair = { material: `${plan.material} — ${plan.materialDescription}`, location: `${plan.location} — ${plan.locationName}` };
@@ -80,10 +84,11 @@ export function MrpProposals({ tenant, run, plan, today, accept, locale, message
       {proposal.bom !== null && (
         <span className="block text-sm text-muted-foreground" data-mrp-proposal-bom>{fill(t.bom, { bom: proposal.bom, revision: String(proposal.bomRevision) })}</span>
       )}
+      <WhyBom rejections={proposal.rejectedBoms} materials={materials} locale={locale} labels={messages.mrp.explanations.rejections} />
     </>
   );
   const columns: DataTableColumn<MrpProposalView>[] = [
-    { id: "document", header: t.columns.document, kind: "text", cell: documentCell },
+    { id: "document", header: t.columns.document, kind: "text", className: "whitespace-normal", cell: documentCell },
     { id: "needDate", header: t.columns.needDate, kind: "date", cell: needDate },
     { id: "quantity", header: t.columns.quantity, kind: "quantity", cell: (proposal) => <span data-mrp-proposal-quantity>{amount(proposal.quantity)}</span> },
     { id: "action", header: t.columns.action, kind: "text", className: "whitespace-normal", cell: action },
