@@ -248,7 +248,6 @@ export const en = {
         "Quantities entered in another unit are converted into {baseUnit} once, rounded half-up to six decimals. Changing a factor never changes quantities already stored.",
       empty: "No conversions: quantities of this material are entered in its base unit.",
       columns: { unit: "Unit", conversion: "Conversion", inverse: "Inverse (indicative)", actions: "Actions" },
-      tiny: "< 0.000001",
       menu: { label: "Actions for {unit}", change: "Change factor", remove: "Remove" },
       unit: "Unit",
       unitHint: "The unit people enter, such as case or t.",

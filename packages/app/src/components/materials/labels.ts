@@ -7,7 +7,7 @@ import {
   UNIT_FORMAT_MESSAGE,
 } from "@cpg/core/validators/materials/material-fields.schema";
 import { STATISTICAL_BASE_UNIT_MESSAGE, UNIT_NOT_REGISTERED_MESSAGE } from "@cpg/core/validators/units/unit-registry";
-import { errorFormatter, fill, type TenantContext } from "../forms/form-labels";
+import { errorFormatter, fill, localeQuantity, type TenantContext } from "../forms/form-labels";
 import type { Messages } from "../../i18n/messages/en";
 
 /**
@@ -49,15 +49,19 @@ export function fieldErrorFormatter(labels: MaterialsLabels) {
   return (message: string): string => known[message] ?? message;
 }
 
-/** A conversion as people read it: "1 case = 12 each", or "2 half = 1 each" for a factor of 1/2. */
-export function conversionText({ unit, numerator, denominator }: ConversionView, baseUnit: string): string {
-  return `${denominator} ${unit} = ${numerator} ${baseUnit}`;
+/**
+ * A conversion as people read it, both sides in the reader's locale (#304): "1 case = 12 each", or
+ * "2 half = 1 each" for a factor of 1/2; "1 box = 1,234.5 kg" in English and "1 box = 1234,5 kg" in Polish.
+ */
+export function conversionText({ unit, numerator, denominator }: ConversionView, baseUnit: string, locale: string): string {
+  return `${localeQuantity(denominator, locale)} ${unit} = ${localeQuantity(numerator, locale)} ${baseUnit}`;
 }
 
 /**
- * The indicative inverse (MAT-021): "1 each = 0.083333 case". An inverse that rounds to zero at six
- * decimals reads "< 0.000001" rather than a misleading 0.
+ * The indicative inverse (MAT-021) in the reader's locale: "1 each = 0.083333 case", or "0,083333" in
+ * Polish. An inverse that rounds to zero at six decimals reads "< 0.000001" (Polish "< 0,000001")
+ * rather than a misleading 0; the zero test reads the stored text, never the localized one.
  */
-export function inverseText({ unit, inverse }: ConversionView, baseUnit: string, labels: MaterialsLabels): string {
-  return `1 ${baseUnit} = ${inverse === "0" ? labels.conversions.tiny : inverse} ${unit}`;
+export function inverseText({ unit, inverse }: ConversionView, baseUnit: string, locale: string): string {
+  return `1 ${baseUnit} = ${inverse === "0" ? `< ${localeQuantity("0.000001", locale)}` : localeQuantity(inverse, locale)} ${unit}`;
 }
