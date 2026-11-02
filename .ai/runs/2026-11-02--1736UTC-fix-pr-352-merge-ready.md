@@ -20,6 +20,9 @@
   - Nit: the Problem Statement's Late Supply example reads "Oct 3", as the English screen shows it.
 - 17:39 The review went in as a comment, because the pipeline account can't approve its own PR (lesson 2026-10-17). `review` stays the pipeline label, with `skip-qa`. UI QA: n/a, since the PR is one spec document.
 
+- 17:42 Posted the summary and the label rationale, then swapped `in-progress` for `ci-monitoring`. CI run 41493399904 on `fced907a` followed.
+- 17:56 Every job passed except `integration-tests (2)`. It failed in `smoke.test.ts:39`, where `browser.title()` read `''` right after `signInAsAdmin`, in a file this PR doesn't touch. Reran the failed job once, and it passed at 18:05. A confirmed flake: filed #358, whose likely cause is a title read before the metadata streams in.
+
 ## Changes
 
 - `9218a234`: merged `origin/main` (no conflict).
@@ -30,8 +33,8 @@
 
 - `npx vitest run tests/` after the merge and again after the fixes: 26 files, 449 tests passed (`ai-filenames` and `spec-images` included).
 - Not run: `npm run lint`, `typecheck`, `test:coverage` and `build`. The PR changes no code, so they would test only `main`'s code; CI runs them on the merged tree.
-- CI on the PR head: see the PR's CI-result comment.
+- CI at `fced907a`: 11 checks, 1 workflow run, all completed and green after the one rerun of `integration-tests (2)`. The final head, which carries only this run log's update, is reported in the PR's CI-result comment.
 
 ## Follow-ups
 
-- None filed. Every review finding was fixed. Merge order: merge #352 first, then merge `main` into #354, which deletes the active copy, and wait for a fresh green run (lesson 2026-11-02).
+- #358: the `smoke.test.ts` title-read flake. Every review finding was fixed in the PR, so it needed no follow-up. Merge order: merge #352 first, then merge `main` into #354, which deletes the active copy, and wait for a fresh green run (lesson 2026-11-02).
