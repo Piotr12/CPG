@@ -6,7 +6,7 @@
 
 ## 📝 TLDR
 
-Today a pair's day table on the MRP page has 14 columns: the date, 12 figures and Warnings. At 1280 px with the menu expanded, only the date stays in view while the table scrolls sideways, and Projected before proposals and Shortage start past its right edge. This spec proposes that, from 1024 px (`lg`) up, `DataTable` can pin up to two columns to the table's right edge. The day table pins **Projected before proposals** and **Shortage**, and the week table pins **Lowest projected balance** and **Peak shortage**. A planner then sees the date, the balance and the shortage at once, and scrolls the other figures between them. Column order and count stay the same, so a new figure only widens the scrolling middle.
+Today a pair's day table on the MRP page has 14 columns: the date, 12 figures and Warnings. At 1280 px with the menu expanded, only the date stays in view while the table scrolls sideways, and Projected after proposals and Shortage start past its right edge (#307's QA). Projected before proposals sits right at that edge. This spec proposes that, from 1024 px (`lg`) up, `DataTable` can pin up to two columns to the table's right edge. The day table pins **Projected before proposals** and **Shortage**, and the week table pins **Lowest projected balance** and **Peak shortage**. A planner then sees the date, the balance and the shortage at once, and scrolls the other figures between them. Column order and count stay the same, so a new figure only widens the scrolling middle.
 
 ## 📝 Problem Statement
 
@@ -23,7 +23,7 @@ At 1280 × 800, the content column is 1280 − 256 (the menu) − 48 (`md:px-6`)
 | Q1 | Pin the columns, group the figures, or reorder them? | **Pin**: Projected before proposals and Shortage stick to the table's right edge (CSS `position: sticky; right: …`), in their current DOM order. | It is the frozen pane spreadsheets and AG Grid's "pinned right" use. Order and count stay unchanged, so readers that count `thead th` (14) or read `[data-mrp-figure]` keep working (lesson 2026-11-01). New figures widen the scrolling middle, not the pinned part. Grouping several figures into one cell makes numbers harder to scan and still grows. Reordering breaks the PRD §07 order (demand, supply, balances, shortage). |
 | Q2 | Does the week table get the same treatment? | **Yes**: pin **Lowest projected balance** and **Peak shortage**, the week's equivalents of the day's balance and shortage (#285). | The Day/Week switch should not move the shortage out of view. The week table is wider than the day table, and it costs only two `pin` flags on columns that are already adjacent. |
 | Q3 | At which widths are the columns pinned? | **From `lg` (1024 px) up.** Below that, only the date sticks, as today. | At 390 px, the date plus two 128 px columns would fill the whole region (≈ 358 px), leaving no room to scroll. At 1024 px with the menu expanded, about 350 px remain for the scrolling figures, at 1280 px about 610 px. |
-| Q4 | Is Projected after proposals pinned too? | **No.** | The issue names the date, the balance and the shortage. A third pinned column would leave about 220 px at 1024 px. Projected after proposals sits just left of Projected before proposals in DOM order, so the planner reaches it with a short scroll. |
+| Q4 | Is Projected after proposals pinned too? | **No.** It stays between the pinned pair in DOM order (`projectedBefore, projectedAfter, shortage`), so it comes into view, in its own place, at the end of the scroll. | The issue names the date, the balance and the shortage. A third pinned column would leave about 220 px at 1024 px. Moving it out from between the pair would change the PRD order (before, after). Being reachable at the end of the scroll is enough to meet the acceptance criterion "every other figure stays reachable". |
 | Q5 | Does the pair list (the page's first table) pin columns? | **No.** | It has five columns and fits at 1280 px. |
 
 ## 📝 Proposed Solution
@@ -52,14 +52,16 @@ Only presentation changes: no data, service, API or migration change.
   The classes are complete strings in a constant, since Tailwind generates only classes it finds whole in the source:
   - shared by header and cells: `lg:sticky lg:w-32 lg:min-w-32 lg:bg-background lg:whitespace-normal lg:wrap-anywhere`;
   - the offset: `lg:right-0` for the last pinned column, `lg:right-32` for the one before it;
-  - the first pinned column (the left edge of the frozen part): `lg:border-l`, a 1 px edge that shows where the pinned part starts while figures scroll under it;
+  - the first pinned column (the left edge of the frozen part): a 1 px inset shadow in the border token, `lg:shadow-[inset_1px_0_0_var(--color-border)]`, showing where the pinned part starts while figures scroll under it. Not `border-l`: Tailwind's preflight sets `border-collapse: collapse`, so the table paints that border, not the cell. The border could be left behind as the sticky cell moves, and its half-pixel would blur the edge measurements;
   - the header: `lg:z-10`, as the sticky first header has.
   
-  The fixed width makes the right-hand column's offset exact. In auto table layout, a column is never narrower than its min-content. `wrap-anywhere` keeps the min-content small, so an unusually long figure wraps inside its 128 px instead of widening the column and sliding under its pinned neighbour. 128 px fits a value such as `−12 345 678,5` on one line.
+  The pinned classes go after the kind and priority classes, and before `column.className`, so a caller can still override them. They don't clash with a quantity's `min-w-24 whitespace-nowrap`: they're different variants, and `lg:` wins in the cascade.
+
+  The fixed width makes the right-hand column's offset exact. In auto table layout, a column is never narrower than its min-content. `wrap-anywhere` keeps the min-content small, so an unusually long figure wraps inside its 128 px instead of widening the column and sliding under its pinned neighbour. 128 px fits a value such as `−12 345 678,5` on one line. The trade-off: a longer value can break mid-number. Only `wrap-anywhere` lowers the min-content. `wrap-break-word` doesn't, so it would widen the column instead.
 - `packages/app/src/components/mrp/mrp-report.tsx`: the four `pin: "end"` flags. `PlanDays`'s `figure()` sets it for `projectedBefore` and `shortage` only. The comment above `PlanDays` changes from "every figure in view at any width: the table scrolls sideways" to state what stays pinned.
 - Nothing else uses `pin`. Other dense tables can opt in later (stock report, variance report), but that is out of scope.
 
-Sticky stacking: a sticky cell paints above the non-positioned cells that scroll under it. The pinned cells come after the scrolling figures in DOM order, so they paint above them. Warnings, the last column, scrolls under the pinned pair until the region reaches its end, where every column is back in its own place. At `lg` and wider, the date (sticky left) and the pinned pair never meet: about 350 px stay free between them at 1024 px.
+Sticky stacking: a sticky cell paints above the non-positioned cells that scroll under it. A right-sticky cell stays pinned while its own place is past the right edge. Shortage pins until only Warnings' width is left to scroll, Projected before proposals until only Projected after proposals' and Warnings' widths are left. In the day table, Projected after proposals sits between the pair. It stays under the pinned cells or past the edge until the last part of the scroll, and Warnings stays past the edge. Both come into view in their own places at the end, where every column is in its natural position. In the week table the pinned pair is adjacent, and only Warnings behaves that way. At `lg` and wider, the date (sticky left) and the pinned pair never meet: about 350 px stay free between them at 1024 px.
 
 ## 📝 API Contracts
 
@@ -69,9 +71,9 @@ None. The report's HTML keeps every column, header text and `data-mrp-*` hook. `
 
 The one-pair section of the MRP page, in Day and Week view, from 1024 px up:
 
-- **Scrolled to the start:** the date, then the demand and supply figures as far as they fit, then, at the right edge, **Projected before proposals** and **Shortage**, separated from the scrolling figures by a 1 px border. A negative balance stays danger-toned in the pinned cell, and a short day keeps the danger edge on its date cell.
-- **Scrolling sideways** (wheel, trackpad, or arrow keys in the focused region, which stays labelled "Days of the plan"): the figures move between the date and the pinned pair. Every figure, Projected after proposals and Warnings included, passes through that gap, and none hides behind a pinned column.
-- **Scrolled to the end:** every column is in its own place, so Projected after proposals and Warnings show in natural order, with Warnings last.
+- **Scrolled to the start:** the date, then the demand and supply figures as far as they fit, then, at the right edge, **Projected before proposals** and **Shortage**, separated from the scrolling figures by a 1 px edge. A negative balance stays danger-toned in the pinned cell, and a short day keeps the danger edge on its date cell.
+- **Scrolling sideways** (wheel, trackpad, or arrow keys in the focused region, which stays labelled "Days of the plan"): the demand and supply figures move through the gap between the date and the pinned pair.
+- **Scrolled to the end:** the pinned pair returns to its own place, so Projected after proposals shows between Projected before proposals and Shortage, and Warnings shows last, in natural order. Those two are the only columns that need the full scroll.
 - **Week view:** the same, with **Lowest projected balance** and **Peak shortage** pinned.
 - **Below 1024 px** (tablet, 390 px phone): unchanged. Only the date sticks, and the whole row scrolls in the table's region. The page never scrolls sideways at any width.
 - **Headers:** a pinned header wraps within 128 px, for example "Projected before / proposals" and "Prognozowany stan / przed propozycjami". The longest single words fit: "propozycjami" and "zapotrzebowanie" are about 100 px at `text-sm`.
@@ -107,11 +109,14 @@ One phase: the `DataTable` option and the MRP report's use of it ship together, 
    - Compute each pinned column's position among the pinned columns, and add the shared, offset, edge and header classes from the Architecture section to header and body cells.
    - Throw for a third pinned column, a pinned first column, and a pinned column whose priority isn't 1, naming the column id.
    - Unit tests, rendered through Testing Library:
-     - two pinned columns get `lg:sticky`, `lg:w-32`, `lg:bg-background` and `lg:wrap-anywhere`, the last gets `lg:right-0`, the one before `lg:right-32`, and only the first gets `lg:border-l`;
+     - two pinned columns get `lg:sticky`, `lg:w-32`, `lg:bg-background` and `lg:wrap-anywhere`, the last gets `lg:right-0`, the one before `lg:right-32`, and only the first gets the inset-shadow edge;
      - the pinned header gets `lg:z-10`;
-     - a single pinned column gets `lg:right-0` and `lg:border-l`;
+     - a single pinned column gets `lg:right-0` and the edge;
+     - a `className` given by the caller is applied after the pinned classes;
      - the unpinned columns of the same table and the existing sticky first column are unchanged;
      - each of the three throws, with its message.
+
+     These tests check classes only. Step 3 proves the layout in a real browser.
 2. **The MRP report's pinned columns** (`packages/app/src/components/mrp/mrp-report.tsx`, `mrp-report.test.tsx`).
    - Set `pin: "end"` on `projectedBefore` and `shortage` in `PlanDays`, and on `lowestProjectedBefore` and `peakShortage` in `PlanWeeks`.
    - Update the `PlanDays` comment.
@@ -121,12 +126,14 @@ One phase: the `DataTable` option and the MRP report's use of it ship together, 
      - the header count and order are unchanged (14 day, 15 week).
 3. **Real-browser proof** (`tests/integration/mrp-report.test.ts`). Add one test, next to the existing "keeps the page itself from scrolling sideways" test, with the same pair (`?material=${ids.sheet}&location=${ids.plant}`).
    - At 1280 × 800, assert the menu is expanded (`[data-slot=sidebar][data-state=expanded]`).
-   - In the Days region, with `scrollLeft` at 0 and then at its maximum, assert that:
+   - Find each header by its column: the index of a figure's `td` in the first body row (found by `[data-mrp-figure=…]`) is its `thead th` index. `th` cells carry no hook, and Warnings is the last `th`.
+   - In the Days region, at `scrollLeft` 0, at half its maximum and at its maximum, assert that:
      - the date, Projected before proposals and Shortage headers, and the first row's cells, each lie inside the region's bounding box horizontally;
-     - Projected before proposals' right edge ≤ Shortage's left edge, and the date's right edge ≤ Projected before proposals' left edge;
+     - Projected before proposals' right edge ≤ Shortage's left edge + 1 px, and the date's right edge ≤ Projected before proposals' left edge + 1 px;
      - `document.elementFromPoint` at each pinned header's centre is that header or inside it.
-   - For every other `[data-mrp-figure]` header and Warnings, set `scrollLeft` so the header is centred between the date's right edge and Projected before proposals' left edge. Assert it then lies entirely in that gap, which proves it is reachable and unobstructed.
-   - Repeat the checks for the Weeks region (`bucket=week`), pinning Lowest projected balance and Peak shortage.
+   - For every figure header before Projected before proposals in DOM order, set `scrollLeft` so the header is centred between the date's right edge and Projected before proposals' left edge. Assert it then lies entirely in that gap, which proves it is reachable and unobstructed.
+   - At the maximum `scrollLeft`, assert that `elementFromPoint` at the centre of Projected after proposals' header and of Warnings' header returns that header. Those are the two columns that only come into view at the end of the scroll.
+   - Repeat the checks for the Weeks region (`bucket=week`), pinning Lowest projected balance and Peak shortage. Only Warnings needs the end-of-scroll check there.
    - Switch the preference to Polish, repeat the Day checks, and restore English in a `finally` (as the explanations test does).
    - At 390 × 844, assert the Shortage header's computed `position` is not `sticky`, and that the page's `scrollWidth ≤ innerWidth`.
    - Restore 1280 × 800 in `finally`.
