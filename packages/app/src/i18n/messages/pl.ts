@@ -235,7 +235,6 @@ export const pl: Messages = {
         "Ilości wpisane w innej jednostce są przeliczane na {baseUnit} raz, z zaokrągleniem połówek w górę do sześciu miejsc po przecinku. Zmiana przelicznika nigdy nie zmienia ilości już zapisanych.",
       empty: "Brak przeliczników: ilości tego materiału wpisuje się w jednostce bazowej.",
       columns: { unit: "Jednostka", conversion: "Przelicznik", inverse: "Odwrotność (orientacyjnie)", actions: "Akcje" },
-      tiny: "< 0.000001",
       menu: { label: "Akcje dla {unit}", change: "Zmień przelicznik", remove: "Usuń" },
       unit: "Jednostka",
       unitHint: "Jednostka, w której wpisuje się ilości, np. karton albo t.",

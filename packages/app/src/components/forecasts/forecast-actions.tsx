@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@cpg/ui/components/dropdown-menu";
 import { changeForecast, removeForecast } from "../../app/admin/[tenant]/forecasts/actions";
-import { errorFormatter, fill, shownQuantity, type TenantContext } from "../forms/form-labels";
+import { errorFormatter, fill, formQuantity, type TenantContext } from "../forms/form-labels";
 import { fieldErrorFormatter, type ForecastsLabels } from "./labels";
 import type { ForecastRow } from "./forecasts-table";
 
@@ -64,7 +64,7 @@ export function ForecastActions({ row, context, labels }: ForecastActionsProps) 
               { name: "quantity", label: labels.form.quantity, description: labels.form.quantityHint, autoComplete: "off" },
               { name: "unit", label: labels.form.unit, description: labels.form.unitHint, autoComplete: "off" },
             ]}
-            initialValues={{ quantity: shownQuantity(row.quantity), unit: row.baseUnit }}
+            initialValues={{ quantity: formQuantity(row.quantity), unit: row.baseUnit }}
             schema={forecastChangeFormSchema}
             action={(values) => changeForecast(tenant, generation, key, row.version, values)}
             submitLabel={labels.change.submit}

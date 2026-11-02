@@ -8,7 +8,7 @@ import { FilterAutocomplete } from "@cpg/ui/backend/forms/filter-autocomplete";
 import { Button } from "@cpg/ui/components/button";
 import { Label } from "@cpg/ui/components/label";
 import type { Messages } from "../../i18n/messages/en";
-import { fill, shownQuantity } from "../forms/form-labels";
+import { fill, localeQuantity } from "../forms/form-labels";
 import { PageLinks } from "../layout/page-links";
 import { ImportLink } from "../imports/import-link";
 import { materialFilterOptions, materialPicker } from "../materials/material-picker";
@@ -38,7 +38,7 @@ export function StockScreen({ tenant, view, materials, locations, units, locale,
   const columns: DataTableColumn<LedgerMovementView>[] = [
     { id: "date", header: t.date, kind: "date", cell: (row) => row.businessDate },
     { id: "type", header: t.type, kind: "text", cell: (row) => types[row.type] ?? row.type },
-    { id: "quantity", header: t.movement, kind: "quantity", cell: (row) => `${row.quantity.startsWith("-") ? "" : "+"}${shownQuantity(row.quantity)} ${row.baseUnit}` },
+    { id: "quantity", header: t.movement, kind: "quantity", cell: (row) => `${row.quantity.startsWith("-") ? "" : "+"}${localeQuantity(row.quantity, locale)} ${row.baseUnit}` },
     { id: "source", header: t.source, kind: "longText", priority: 2, cell: ({ type, source }) => source.document === null ? (type === "correction" ? <span className="text-muted-foreground">{t.ownSource}</span> : <span aria-label="none" className="text-muted-foreground">—</span>) : <div className="flex min-w-0 flex-col gap-1">
       <Link href={`${path}/${DOCUMENT_SECTIONS[source.document.type]}/${source.document.id}`} className="underline underline-offset-4">{fill(t.documents[source.document.type], { id: source.document.id })}</Link>
       {type in records && <span className="text-xs text-muted-foreground">{fill(records[type], { id: source.id! })}</span>}
@@ -48,11 +48,11 @@ export function StockScreen({ tenant, view, materials, locations, units, locale,
       <span className="text-xs text-muted-foreground">{row.actorUsername} · {t.channels[row.channel]}</span>
       <details className="text-xs"><summary className="cursor-pointer">{t.details}</summary>
         <p>{t.posting}: {row.postingId}</p>
-        <p>{t.entered}: {shownQuantity(row.enteredQuantity)} {row.enteredUnit} · {t.factor}: {row.numerator}/{row.denominator}</p>
-        <p>{t.after}: {shownQuantity(row.balanceAfter)} {row.baseUnit}</p>
+        <p>{t.entered}: {localeQuantity(row.enteredQuantity, locale)} {row.enteredUnit} · {t.factor}: {localeQuantity(row.numerator, locale)}/{localeQuantity(row.denominator, locale)}</p>
+        <p>{t.after}: {localeQuantity(row.balanceAfter, locale)} {row.baseUnit}</p>
       </details>
     </div> },
-    { id: "reversal", header: t.reversal.type, kind: "text", className: "whitespace-normal", cell: (row) => <ReversalControls tenant={tenant} movement={{ ...row, sourceLabel: `${types[row.type] ?? row.type}${row.source.id === null ? "" : ` ${row.source.id}`} · ${fill(t.reversal.line, { line: String(row.position + 1) })}` }} reversedBy={row.reversedBy} reverses={row.reverses} canReverse={row.canReverse} labels={t} /> },
+    { id: "reversal", header: t.reversal.type, kind: "text", className: "whitespace-normal", cell: (row) => <ReversalControls tenant={tenant} movement={{ ...row, sourceLabel: `${types[row.type] ?? row.type}${row.source.id === null ? "" : ` ${row.source.id}`} · ${fill(t.reversal.line, { line: String(row.position + 1) })}` }} reversedBy={row.reversedBy} reverses={row.reverses} canReverse={row.canReverse} locale={locale} labels={t} /> },
   ];
   const editable = view !== null && !tenant.readOnly && view.materialActive && view.locationActive;
   return <div lang={locale} className="min-w-0">
@@ -76,9 +76,9 @@ export function StockScreen({ tenant, view, materials, locations, units, locale,
         </form>
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border p-4">
           <div className="flex flex-wrap gap-x-8 gap-y-3">
-            <div><h2 className="text-sm text-muted-foreground">{t.quantity}</h2><p className="text-2xl font-semibold tabular-nums" data-stock-balance>{shownQuantity(view.quantity)} {view.baseUnit}</p></div>
-            <div><h2 className="text-sm text-muted-foreground">{t.inTransitFrom}</h2><p className="text-lg tabular-nums" data-stock-transit-from>{shownQuantity(view.inTransitFrom)} {view.baseUnit}</p></div>
-            <div><h2 className="text-sm text-muted-foreground">{t.inTransitTo}</h2><p className="text-lg tabular-nums" data-stock-transit-to>{shownQuantity(view.inTransitTo)} {view.baseUnit}</p></div>
+            <div><h2 className="text-sm text-muted-foreground">{t.quantity}</h2><p className="text-2xl font-semibold tabular-nums" data-stock-balance>{localeQuantity(view.quantity, locale)} {view.baseUnit}</p></div>
+            <div><h2 className="text-sm text-muted-foreground">{t.inTransitFrom}</h2><p className="text-lg tabular-nums" data-stock-transit-from>{localeQuantity(view.inTransitFrom, locale)} {view.baseUnit}</p></div>
+            <div><h2 className="text-sm text-muted-foreground">{t.inTransitTo}</h2><p className="text-lg tabular-nums" data-stock-transit-to>{localeQuantity(view.inTransitTo, locale)} {view.baseUnit}</p></div>
             <p className="basis-full text-xs text-muted-foreground">{t.transitNote} <Link href={`${path}/transfers`} className="underline underline-offset-4">{t.transfers}</Link>
               {view.transitTransfers.map((id) => <span key={id}> · <Link href={`${path}/transfers/${id}`} className="font-mono underline underline-offset-4">{id}</Link></span>)}</p>
           </div>

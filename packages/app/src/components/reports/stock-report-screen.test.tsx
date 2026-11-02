@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { StockReportRow, StockReportView } from "@cpg/core";
 import { en } from "../../i18n/messages/en";
+import { pl } from "../../i18n/messages/pl";
 import { StockReportScreen } from "./stock-report-screen";
 
 const steel = { id: "00000001", type: "raw" as const, description: "Steel sheet", baseUnit: "kg", active: true, createdAt: new Date(), version: 1 };
@@ -30,6 +31,22 @@ describe("StockReportScreen", () => {
     // The phone stand-in for the three figures shows only below md.
     expect(cells[5].className).toContain("md:hidden");
     expect(screen.queryByRole("link", { name: en.stockReport.clear })).toBeNull();
+  });
+
+  it("shows on-hand and both transit figures in the reader's locale, in the columns and the phone stand-in (#304)", () => {
+    const big: StockReportView = { ...report, rows: [{ ...row, quantity: "12345.500000", inTransitFrom: "1234.5", inTransitTo: "98765.25" }] };
+    const figures = () => {
+      const cells = within(screen.getByRole("table")).getAllByRole("cell");
+      return [cells[2], cells[3], cells[4], ...cells[5].querySelectorAll("dd")].map((cell) => cell.textContent);
+    };
+    const props = { tenant: { code: "test", name: "Test" }, report: big, selected: { includeZero: false, page: 1 } as never, materials: [steel], locations: [plant] };
+
+    const { unmount } = render(<StockReportScreen {...props} locale="en" messages={en} />);
+    expect(figures()).toEqual(["12,345.5 kg", "1,234.5 kg", "98,765.25 kg", "12,345.5 kg", "1,234.5 kg", "98,765.25 kg"]);
+    unmount();
+
+    render(<StockReportScreen {...props} locale="pl" messages={pl} />);
+    expect(figures()).toEqual(["12\u00a0345,5 kg", "1234,5 kg", "98\u00a0765,25 kg", "12\u00a0345,5 kg", "1234,5 kg", "98\u00a0765,25 kg"]);
   });
 
   it("offers Clear filters once a filter is applied", () => {

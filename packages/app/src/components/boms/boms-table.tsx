@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { BomView } from "@cpg/core";
+import type { BomView, Locale } from "@cpg/core";
 import type { BomSort } from "@cpg/core/validators/boms/bom-list.schema";
 import type { SortDirection } from "@cpg/core/validators/lists/list-query.schema";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
@@ -23,13 +23,15 @@ interface BomsTableProps {
   sort: { sort: BomSort; dir: SortDirection };
   links: ListLinks;
   lists: Messages["lists"];
+  /** The reader's locale, for the Components column's quantities (#304). */
+  locale: Locale;
 }
 
 /**
  * A tenant's BOMs with their current recipes, by output, then priority (BOM-008), unless sorted by
  * another column (#217); each ID opens the BOM.
  */
-export function BomsTable({ tenant, boms, materials, labels, editable, search, sort, links, lists }: BomsTableProps) {
+export function BomsTable({ tenant, boms, materials, labels, editable, search, sort, links, lists, locale }: BomsTableProps) {
   const t = labels.columns;
   const columns: DataTableColumn<BomView>[] = [
     {
@@ -87,7 +89,8 @@ export function BomsTable({ tenant, boms, materials, labels, editable, search, s
       kind: "longText",
       priority: 3,
       cell: (bom) => {
-        const summary = bom.components.map((line) => lineSummary(line, materials)).join(", ");
+        // A middle dot, not a comma, between lines: a Polish quantity has a decimal comma (#304).
+        const summary = bom.components.map((line) => lineSummary(line, materials, locale)).join(" · ");
         return (
           <span title={summary} className="line-clamp-2 text-muted-foreground">
             {summary}

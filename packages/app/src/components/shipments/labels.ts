@@ -12,7 +12,7 @@ import {
   SHIPMENT_QUANTITY_OUTSTANDING_MESSAGE,
 } from "@cpg/core/validators/shipments/shipment.schema";
 import type { Messages } from "../../i18n/messages/en";
-import { errorFormatter, fill, shownQuantity } from "../forms/form-labels";
+import { errorFormatter, fill, localeQuantity } from "../forms/form-labels";
 
 /** The shipment strings in the reader's language, all plain strings; `errors` holds every code the dialog can show. */
 export type ShipmentsLabels = Omit<Messages["shipments"], "errors"> & { errors: Record<string, string> };
@@ -22,7 +22,7 @@ export function shipmentsLabels(messages: Messages): ShipmentsLabels {
   return { ...messages.shipments, errors: { ...messages.errors, ...messages.shipments.errors } };
 }
 
-export { errorFormatter, fill, shownQuantity };
+export { errorFormatter, fill, localeQuantity };
 
 /** A field message from the shared schemas or the service in the reader's language; unknown ones pass through. */
 export function shipmentFieldErrorFormatter(labels: ShipmentsLabels) {

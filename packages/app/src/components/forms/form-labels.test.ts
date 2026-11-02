@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { baseUnitTip, chosenBaseUnit, errorFormatter, fill, localeQuantity, shownQuantity, TALL_DIALOG } from "./form-labels";
+import { baseUnitTip, chosenBaseUnit, errorFormatter, fill, isZeroQuantity, localeQuantity, formQuantity, TALL_DIALOG } from "./form-labels";
 
 describe("fill", () => {
   it("fills known placeholders and leaves unknown ones", () => {
@@ -16,14 +16,20 @@ describe("errorFormatter", () => {
   });
 });
 
-describe("shownQuantity", () => {
+describe("isZeroQuantity", () => {
+  it("tells zero from a value by the stored text, whatever its trailing zeros (#304)", () => {
+    expect([isZeroQuantity("0.000000"), isZeroQuantity("0"), isZeroQuantity("0.000001"), isZeroQuantity("10.000000"), isZeroQuantity("-2.5")]).toEqual([true, true, false, false, false]);
+  });
+});
+
+describe("formQuantity", () => {
   it("drops trailing zeros from a stored six-decimal quantity, and keeps everything else", () => {
-    expect(shownQuantity("50.000000")).toBe("50");
-    expect(shownQuantity("100.000000")).toBe("100");
-    expect(shownQuantity("0.500000")).toBe("0.5");
-    expect(shownQuantity("0.000001")).toBe("0.000001");
-    expect(shownQuantity("0.000000")).toBe("0");
-    expect(shownQuantity("120")).toBe("120");
+    expect(formQuantity("50.000000")).toBe("50");
+    expect(formQuantity("100.000000")).toBe("100");
+    expect(formQuantity("0.500000")).toBe("0.5");
+    expect(formQuantity("0.000001")).toBe("0.000001");
+    expect(formQuantity("0.000000")).toBe("0");
+    expect(formQuantity("120")).toBe("120");
   });
 });
 

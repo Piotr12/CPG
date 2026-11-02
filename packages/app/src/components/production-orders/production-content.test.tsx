@@ -161,6 +161,27 @@ it("tells a resolved order's reader it needs no more components, never that stoc
   render(<ProductionScreen {...props} order={{ ...production, shortages: [] }} />);
   expect(screen.getByRole("note").textContent).toBe(en.productionOrders.sufficient); expect(screen.getByRole("note").getAttribute("data-tone")).toBe("neutral");
 });
+it.each([
+  ["en", en, ["12,345.5", "1,234.25", "11,111.25", "23,456.75", "12,345.5 case (10,000 case = 12,345.25 each)"], ["12,345.5 kg", "10,000.25 kg", "2,345.25 kg"]],
+  ["pl", pl, ["12 345,5", "1234,25", "11 111,25", "23 456,75", "12 345,5 case (10 000 case = 12 345,25 each)"], ["12 345,5 kg", "10 000,25 kg", "2345,25 kg"]],
+] as const)("shows the order's quantities, conversion, requirements and abandoned quantity in %s", (locale, messages, [quantity, abandoned, produced, outstanding, entered], requirements) => {
+  const text = (element: Element) => element.textContent!.replace(/\u00a0/g, " ");
+  const components = [{ ...production.components[0], required: "12345.500000", available: "10000.250000", shortage: "2345.250000" }];
+  const big = { ...production, quantity: "12345.500000", abandoned: "1234.250000", produced: "11111.250000", outstanding: "23456.750000",
+    enteredQuantity: "12345.5", numerator: "12345.25", denominator: "10000", components, shortages: components };
+  const props = { tenant, orders: [], total: 0, page: 1, materials, locations, messages, locale };
+  render(<ProductionScreen {...props} order={big} />);
+  const t = messages.productionOrders;
+  const details = Object.fromEntries([...document.querySelectorAll("dl > div")].map((item) => [item.querySelector("dt")!.textContent, text(item.querySelector("dd")!)]));
+  expect([details[t.quantity], details[messages.lifecycle.abandoned], details[t.produced], details[t.outstanding], details[t.entered]])
+    .toEqual([`${quantity} each`, `${abandoned} each`, `${produced} each`, `${outstanding} each`, entered]);
+  expect(within(screen.getByRole("table", { name: t.components })).getAllByRole("cell").slice(1).map(text)).toEqual(requirements);
+  fireEvent.click(screen.getByRole("button", { name: new RegExp(`— ${t.title} 00000001$`) }));
+  expect(within(screen.getByRole("dialog")).getAllByRole("listitem").map(text)).toEqual([`${outstanding} each`]);
+  cleanup();
+  render(<ProductionScreen {...props} orders={[big]} total={1} />);
+  expect(text(within(screen.getByRole("table", { name: t.title })).getAllByRole("cell")[2])).toBe(`${quantity} each`);
+});
 it("returns not-found for missing tenants or orders and propagates other failures", async () => {
   mocks.tenantScope.mockRejectedValueOnce(new mocks.AppError("TENANT_NOT_FOUND"));
   await expect(resolveServerComponents(page())).rejects.toThrow("404");

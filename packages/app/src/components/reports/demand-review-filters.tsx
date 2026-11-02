@@ -6,7 +6,7 @@ import { plural } from "@cpg/ui/lib/plural";
 import { Button } from "@cpg/ui/components/button";
 import { Label } from "@cpg/ui/components/label";
 import type { Messages } from "../../i18n/messages/en";
-import { fill } from "../forms/form-labels";
+import { fill, localeQuantity } from "../forms/form-labels";
 
 type Labels = Messages["demandReview"];
 
@@ -21,12 +21,12 @@ interface DemandReviewFiltersProps {
 }
 
 /** Each finished product with its SU factor as its detail, so one without a factor shows before it is picked. */
-export function productOptions(products: readonly StatisticalFactorView[], labels: Labels): FilterMultiSelectOption[] {
+export function productOptions(products: readonly StatisticalFactorView[], locale: Locale, labels: Labels): FilterMultiSelectOption[] {
   return products.map(({ id, description, active, baseUnit, perBaseUnit }) => ({
     value: id,
     code: id,
     name: description,
-    detail: perBaseUnit === null ? labels.noFactor : fill(labels.factor, { unit: baseUnit, factor: perBaseUnit }),
+    detail: perBaseUnit === null ? labels.noFactor : fill(labels.factor, { unit: baseUnit, factor: localeQuantity(perBaseUnit, locale) }),
     ...(!active && { inactive: true }),
   }));
 }
@@ -82,7 +82,7 @@ export function DemandReviewFilters({ action, view, products, locations, locale,
             key={view.materials.join(",")}
             id="review-material"
             name="material"
-            options={productOptions(products, labels)}
+            options={productOptions(products, locale, labels)}
             defaultValue={view.materials}
             labels={picker(labels.allProducts)}
             locale={locale}

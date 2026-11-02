@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { RequisitionView } from "@cpg/core";
 import { en } from "../../i18n/messages/en";
@@ -51,5 +51,23 @@ describe("RequisitionsScreen", () => {
     const inactive = within(rows()[0]).getByText(pl.purchaseRequisitions.inactive).closest("[data-slot=status-badge]")!;
     expect(inactive.getAttribute("data-tone")).toBe("neutral"); expect(inactive.className).toContain("border-dashed");
     expect(within(rows()[0]).queryByRole("button")).toBeNull();
+  });
+
+  it("shows every figure in the reader's locale: quantity, converted, outstanding, abandoned and the lifecycle quantities (#304)", () => {
+    const big = { ...requisition("00000001", "10000.250000", "open"), quantity: "32345.500000", outstanding: "12345.250000", abandoned: "10000.000000" } as RequisitionView;
+    const figures = () => [3, 4, 5, 8].map((index) => within(rows()[0]).getAllByRole("cell")[index].textContent);
+    const abandoned = (button: RegExp, list: string) => {
+      fireEvent.click(within(rows()[0]).getByRole("button", { name: button }));
+      return within(screen.getByRole("list", { name: list })).getAllByRole("listitem").map((item) => item.textContent);
+    };
+
+    const { unmount } = render(<RequisitionsScreen {...props} requisitions={[big]} />);
+    expect(figures()).toEqual(["32,345.5 kg", "10,000.25 kg", "12,345.25 kg", "10,000 kg"]);
+    expect(abandoned(/^Close requisition early…/, en.lifecycle.abandoned)).toEqual(["12,345.25 kg"]);
+    unmount();
+
+    render(<RequisitionsScreen {...props} requisitions={[big]} messages={pl} locale="pl" />);
+    expect(figures()).toEqual(["32\u00a0345,5 kg", "10\u00a0000,25 kg", "12\u00a0345,25 kg", "10\u00a0000 kg"]);
+    expect(abandoned(/^Zamknij zapotrzebowanie wcześniej…/, pl.lifecycle.abandoned)).toEqual(["12\u00a0345,25 kg"]);
   });
 });

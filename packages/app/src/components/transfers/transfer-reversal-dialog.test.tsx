@@ -36,7 +36,7 @@ const reversal: TransferReversalView = {
 };
 const reversible = { context: { tenant: "test", generation: 4 }, transfer: "00000001", path: "/admin/test/transfers/00000001" };
 const ledger = (props: Partial<Parameters<typeof LedgerTable>[0]> = {}) =>
-  <LedgerTable postings={[loss, receipt, dispatch]} reversals={[]} locations={locations} baseUnit="kg" labels={transfersLabels(en)} reversible={reversible} {...props} />;
+  <LedgerTable postings={[loss, receipt, dispatch]} reversals={[]} locations={locations} baseUnit="kg" labels={transfersLabels(en)} locale="en" reversible={reversible} {...props} />;
 const t = en.transfers.reversal;
 const rows = () => within(screen.getByRole("table")).getAllByRole("row").slice(1);
 afterEach(() => vi.clearAllMocks());

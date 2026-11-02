@@ -49,7 +49,7 @@ export function OrdersScreen({ tenant, orders, page, pages, list, suppliers, loc
             suppliers={activeRecordOptions(suppliers)}
             locations={activeRecordOptions(locations)}
             materials={materialPicks(materials, units)}
-            requisitions={requisitionChoices(requisitions, byId(materials), labels)}
+            requisitions={requisitionChoices(requisitions, byId(materials), labels, locale)}
             locale={locale}
           />
         )}
