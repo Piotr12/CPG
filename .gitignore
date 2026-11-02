@@ -12,6 +12,9 @@ node_modules/
 
 # testing
 /coverage
+# Vitest's blob reports: CI's unit-test shards, or a local --merge-reports run.
+/blob-reports
+/.vitest
 
 # next.js
 .next/

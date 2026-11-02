@@ -39,12 +39,18 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
 
-  # Fails below 100% line/branch/function/statement coverage (vitest.config.mts).
-  # The suite takes 8.6 min on a quick runner and over 10 on a slow one (the dataset seed and reset tests),
-  # so the limit keeps about twice its length (tests/ci-workflow.test.ts).
+  # The unit suite with coverage, split across parallel runners. Whole, it took 8.6 min on a quick runner
+  # and over 10 on a slow one (the dataset seed and reset tests), and sharing one runner's CPUs slowed the
+  # MRP timing test past its CI bound (#337). Each shard writes its results and raw coverage as a blob
+  # and skips the threshold, which no single shard can reach; unit-coverage merges the blobs and enforces
+  # it. The limit keeps about twice the whole suite's length (tests/ci-workflow.test.ts).
   unit-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -52,7 +58,40 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm run test:coverage
+      - run: >-
+          npm run test:coverage -- --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+          --coverage.thresholds.100=false --reporter=default --reporter=blob
+          --outputFile.blob=blob-reports/blob-${{ matrix.shard }}.json
+      # A shard whose tests fail still uploads its blob, so the merge reports every failure.
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: unit-blob-${{ matrix.shard }}
+          path: blob-reports/
+          if-no-files-found: error
+          retention-days: 1
+
+  # Fails below 100% line/branch/function/statement coverage (vitest.config.mts) over every shard's
+  # coverage, and on any test a shard failed. It runs even when a shard failed, so a red shard can't
+  # leave it skipped: a missing blob drops coverage below the threshold.
+  unit-coverage:
+    needs: unit-tests
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: unit-blob-*
+          path: blob-reports/
+          merge-multiple: true
+      - run: npm run test:coverage -- --merge-reports=blob-reports
 
   build:
     runs-on: ubuntu-latest
