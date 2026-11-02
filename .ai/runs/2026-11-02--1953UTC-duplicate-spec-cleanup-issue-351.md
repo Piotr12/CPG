@@ -3,7 +3,7 @@
 **Date:** 2026-11-02 19:53 UTC
 **Agent:** Claude Code / Claude Opus 5.5 (cezar task 62cb60f1)
 **Spec:** `.ai/specs/2026-11-02--1953UTC-duplicate-spec-cleanup.md`
-**Status:** in progress
+**Status:** done (CI pending on #359 and #361 at writing)
 
 ## Goal
 Run `om-auto-fix-issue 351`: stop a spec PR's squash merge from leaving a duplicate active spec copy on `main`, by blocking the merge or by removing the copy automatically before `main`'s deploy runs.
@@ -20,9 +20,21 @@ Run `om-auto-fix-issue 351`: stop a spec PR's squash merge from leaving a duplic
   - Filed #360: a hand-started Deploy on another branch deploys that branch.
 - 19:58 `main` (fb574a24) fails `ai-filenames` right now. #355 and #356 raced at 19:46 (16 s apart), which is this issue again. Open PR #354 deletes the active copy of #327's spec, and this branch deletes it too.
 - 20:02 Spec PR #359 opened, ready, with labels, the label rationale and the defaults comment (on #359 and #351). Filed #360.
+- 20:00–20:16 Implementation PR #361 (`om-auto-implement-spec` → `om-auto-create-pr`, plan `.ai/pipeline/runs/2026-11-02--2000UTC-duplicate-spec-cleanup.md`).
+  - Plan deviations: no `erasableSyntaxOnly`, since it also checks the package files the tests import. A `node` child-process test proves the scripts run instead. No lint change was needed.
+  - Added a behavioural test of both workflows' shell steps, against a throwaway bare repository with `gh` stubbed.
+  - Fresh-context review: approve, with 3 minors and 2 nits, fixed in b38dd8c6. The main one: a failed `ls-remote` passed as "main moved on".
+  - Merged `main` (#353, which deleted #327's copy too, and extended the lesson's incident list). Kept the rewritten lesson.
+- 20:17 Released the #351 lock (`ci-monitoring` while CI runs). #361 closes #351 on merge; #359 merges first.
 
 ## Changes
+- Spec, this log, and the deletion of #327's stray active copy (#359).
+- `scripts/spec-copies.ts`, `scripts/delete-spec-copies.ts`, `.github/workflows/spec-copies.yml`, `deploy.yml`'s check job, `tests/spec-copies-workflows.test.ts`, `tests/ai-filenames.test.ts`, config, docs and two lessons (#361).
 
 ## Verification
+- #361 on b44e025b: `npm run lint` 0, `npm run typecheck` 0, `npm run test:coverage` 0 (675 files, 5,600 tests, 100%), `npm run build` 0. After the review fixes: targeted tests (29) passed, lint and typecheck 0.
+- #359: `tests/ai-filenames.test.ts` and `tests/spec-images.test.ts` pass.
+- Not verifiable before merge: the first live `Spec copies` run on `main`.
 
 ## Follow-ups
+- #360: a hand-started Deploy on a branch other than `main` deploys that branch.
