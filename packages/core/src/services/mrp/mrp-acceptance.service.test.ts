@@ -408,7 +408,8 @@ describe("MrpAcceptanceService.accept: refusals, with nothing created", () => {
 });
 
 describe("MrpAcceptanceService and MrpRunService: reruns (E19-S02)", () => {
-  const without = <T extends { id: string }>(proposals: readonly T[]) => proposals.map(({ id: _id, ...rest }) => rest);
+  /** A run's proposals without their IDs, which every run draws afresh (spec Q8). */
+  const without = <T extends { id: string }>(proposals: readonly T[]) => proposals.map((proposal) => ({ ...proposal, id: undefined }));
   /** A Make material at the plant whose BOM needs 1 of a stocked raw material per kg, exact lots. Returns the output, its BOM and the component. */
   async function makeable(description: string) {
     const output = await material(description);

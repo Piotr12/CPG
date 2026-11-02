@@ -23,7 +23,7 @@ const run: MrpRunView = {
 const zero = "0.000000";
 const plan: MrpPlanView = {
   material: "00000012", materialDescription: "Steel sheet", materialActive: true, baseUnit: "kg",
-  location: "00000003", locationName: "Main plant", locationActive: true, lowestProjectedBefore: "25.000000", firstShortageDate: null,
+  location: "00000003", locationName: "Main plant", locationActive: true, lowestProjectedBefore: "25.000000", firstShortageDate: null, excess: "0.000000",
   buckets: [{ date: "2026-10-27", firmDemand: zero, forecastDemand: zero, dependentDemand: zero, transferOut: zero, tentativeSupply: zero, dependableSupply: zero,
     atRiskSupply: zero, transferIn: zero, proposedReceipts: zero, safetyTarget: zero, projectedBefore: "25.000000", projectedAfter: "25.000000", shortage: zero }],
   proposals: [],
