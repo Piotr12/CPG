@@ -4,7 +4,7 @@
 **Agent:** Claude Code / Opus 5.5 (cezar task b9337d0d, `om-auto-fix-issue 311` → feature route)
 **Source doc:** `.ai/specs/2026-11-02--1303UTC-mrp-report-pinned-columns.md` (spec PR #341)
 **Issue:** #311
-**Status:** in progress
+**Status:** done
 
 ## Goal
 
@@ -47,22 +47,33 @@ From 1024 px up, `DataTable` pins up to two columns to the table's right edge. T
 
 ## Progress
 
+PR: #342
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: DataTable pinned-end columns
 
-- [ ] 1.1 DataTable pin end option with unit tests
+- [x] 1.1 DataTable pin end option with unit tests — 3f805112
 
 ### Phase 2: MRP report
 
-- [ ] 2.1 Pin the day and week balance and shortage columns
-- [ ] 2.2 Integration test for pinned columns at 1280 and 390 px
+- [x] 2.1 Pin the day and week balance and shortage columns — 5dd477ba, b43fcfcb
+- [x] 2.2 Integration test for pinned columns at 1280 and 390 px — a105507e
 
 ### Phase 3: Close
 
-- [ ] 3.1 Spec to implemented, stale spec copy deleted, lessons
-- [ ] 3.2 Full validation gate and screenshots
+- [x] 3.1 Spec to implemented, stale spec copy deleted, lessons — e58a62ff
+- [x] 3.2 Full validation gate and screenshots — e58a62ff
 
 ## Log
 
 - 13:09 UTC — Branched `feat/mrp-report-pinned-columns` from `origin/main` (not stacked on #341, lesson 2026-10-23). Started `npm ci` (lesson 2026-10-27).
+- 13:50 UTC — Phases 1–2 landed. Docker isn't available on this machine, so the integration tests ran against a local standalone production build (lesson 2026-10-23). `mrp-report.test.ts` passed 14/14, and `mrp-accept.test.ts` with `mrp-report-api.test.ts` passed 10/10.
+- 13:22 UTC — Full gate green: `npm run lint` 0, `npm run typecheck` 0, `npm run test:coverage` 0 (665 files, 5454 tests, 100% statements and lines), `npm run build` 0. Screenshots (EN and PL, Day and Week, at the start and the middle of the scroll) are on PR #342.
+
+## Verification
+
+- Lint, typecheck, coverage and build: all exit 0, as above.
+- Integration: run locally on the standalone build; the full suite runs in CI.
+- `tests/ai-filenames.test.ts` passes now that #289's stale copy is deleted.
+
