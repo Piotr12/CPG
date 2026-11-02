@@ -31,7 +31,7 @@ const bearing: MrpPlanView = {
   lowestProjectedBefore: "-1234.500000", firstShortageDate: "2026-10-02",
   buckets: [day("2026-10-01", { projectedBefore: "5.000000" }), day("2026-10-02", { firmDemand: "1239.500000", projectedBefore: "-1234.500000", projectedAfter: "-1234.500000", shortage: "1234.500000" })],
 };
-const run = { id: "00000004", createdAt: new Date(), account: "anna", channel: "ui" as const, mode: "manual" as const, generation: 1, startDate: "2026-10-01", endDate: "2026-12-29", horizonDays: 90, pairs: 2 };
+const run = { id: "00000004", createdAt: new Date(), account: "anna", channel: "ui" as const, mode: "manual" as const, generation: 1, startDate: "2026-10-01", endDate: "2026-12-29", horizonDays: 90, pairs: 2, creation: null };
 const report = (overrides: Partial<MrpLatestView> = {}): MrpLatestView => ({ run, bucket: "day", page: 1, pageSize: 25, total: 2, plans: [sheet, bearing], ...overrides });
 vi.mock("next/navigation", async (original) => ({ ...(await original<typeof import("next/navigation")>()), useRouter: () => ({ refresh: vi.fn() }) }));
 const accept = vi.fn();
