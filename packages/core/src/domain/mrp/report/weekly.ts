@@ -1,5 +1,5 @@
 import { bucketStart, isoWeek } from "../../demand/demand-buckets";
-import { formatSignedQuantity, parseSignedQuantity } from "../../stock/signed-quantity";
+import { formatSignedQuantity, parseStoredFigure as figure } from "../../stock/signed-quantity";
 import type { MrpMark } from "./plan-marks";
 
 /** The figures a week sums: what flows in or out on its days. */
@@ -48,13 +48,6 @@ export type MrpWeek = {
 
 const DAYS_PER_WEEK = 7;
 
-/** A stored figure as exact micro-units. The run wrote it with `formatSignedQuantity`, so a text that doesn't parse is a defect, not data. */
-function micro(text: string): bigint {
-  const value = parseSignedQuantity(text);
-  if (value === null) throw new Error(`An MRP daily figure isn't a six-decimal quantity: ${JSON.stringify(text)}.`);
-  return value;
-}
-
 /**
  * Folds a plan's days, in date order, into its ISO weeks (Monday to Sunday, calendar days, N04), cut to
  * the days given (spec Q3), and gives each week the marks whose date it holds. Exact `bigint` sums, never
@@ -70,13 +63,13 @@ export function foldWeeks(days: readonly WeekDay[], marks: readonly MrpMark[]): 
   return groups.map((group) => {
     const first = group[0];
     const last = group.at(-1)!;
-    const flows = Object.fromEntries(MRP_WEEK_FLOWS.map((flow) => [flow, formatSignedQuantity(group.reduce((sum, day) => sum + micro(day[flow]), 0n))]));
+    const flows = Object.fromEntries(MRP_WEEK_FLOWS.map((flow) => [flow, formatSignedQuantity(group.reduce((sum, day) => sum + figure(day[flow]), 0n))]));
     const levels = Object.fromEntries(MRP_WEEK_LEVELS.map((level) => [level, last[level]]));
     let lowest = first;
     let peak = first;
     for (const day of group) {
-      if (micro(day.projectedBefore) < micro(lowest.projectedBefore)) lowest = day;
-      if (micro(day.shortage) > micro(peak.shortage)) peak = day;
+      if (figure(day.projectedBefore) < figure(lowest.projectedBefore)) lowest = day;
+      if (figure(day.shortage) > figure(peak.shortage)) peak = day;
     }
     const { year, week } = isoWeek(first.date);
     return {
