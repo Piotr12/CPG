@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { addDays } from "../../demand/demand-buckets";
 import { parseDecimal } from "../../quantities/decimal";
-import type { MrpComponentDemand, MrpFirmDemand, MrpForecastDemand, MrpPlannedComponentDemand, MrpTransferMovement } from "../mrp-result";
+import type { MrpComponentDemand, MrpDemandRoot, MrpFirmDemand, MrpForecastDemand, MrpPlannedComponentDemand, MrpTransferMovement } from "../mrp-result";
 import { emptyFlows } from "../projection/project-buckets";
 import { rankShortages, type RankedPair } from "./rank-shortages";
 
@@ -47,8 +47,11 @@ const dispatch = (offset: number, quantity: string, transfer = "00000001"): MrpT
   overdue: false,
 });
 
-/** What a Make proposal of `parent` needed on day `needOffset` and started on day `offset` needs of M1 (E17-S01). */
-const planned = (offset: number, quantity: string, parent = "P1", needOffset = offset): MrpPlannedComponentDemand => ({
+/** The root priority of kind `kind` on day `offset` (#327). */
+const root = (kind: MrpDemandRoot["kind"], offset: number): MrpDemandRoot => ({ kind, originalDate: day(offset) });
+
+/** What a Make proposal of `parent` needed on day `needOffset` and started on day `offset` needs of M1, by root share (E17-S01, #327). */
+const planned = (offset: number, shares: [MrpDemandRoot, string][], parent = "P1", needOffset = offset, provisional = false): MrpPlannedComponentDemand => ({
   parent,
   parentNeedDate: day(needOffset),
   bom: "00000001",
@@ -56,8 +59,9 @@ const planned = (offset: number, quantity: string, parent = "P1", needOffset = o
   material: "M1",
   location: "L1",
   date: day(offset),
-  quantity: q(quantity),
-  provisional: false,
+  quantity: shares.reduce((sum, [, quantity]) => sum + q(quantity), 0n),
+  roots: shares.map(([root, quantity]) => ({ root, quantity: q(quantity) })),
+  provisional,
 });
 
 /** Six days from TODAY; `receipts` and `targets` by day offset. */
@@ -88,7 +92,7 @@ describe("rankShortages", () => {
 
   it("DEM-019, MRP-044: of 15 available, a customer order of 10 is served in full and the forecast's 15 short is a forecast shortage", () => {
     expect(rankShortages(pair("15", { forecastDemand: [forecast(2, "20")], firmDemand: [order(2, "10")] }))).toEqual([
-      { kind: "forecast", date: day(2), originalDate: day(2), document: null, position: null, required: q("20"), uncovered: q("15") },
+      { kind: "forecast", date: day(2), originalDate: day(2), document: null, position: null, required: q("20"), uncovered: q("15"), root: null },
     ]);
   });
 
@@ -97,7 +101,7 @@ describe("rankShortages", () => {
     const o1 = order(0, "10", { order: "00000002" });
     const o2 = order(1, "10", { order: "00000001" });
     expect(rankShortages(pair("12", { firmDemand: [o2, o1] }))).toEqual([
-      { kind: "customer-order", date: day(1), originalDate: day(1), document: "00000001", position: 1, required: q("10"), uncovered: q("8") },
+      { kind: "customer-order", date: day(1), originalDate: day(1), document: "00000001", position: 1, required: q("10"), uncovered: q("8"), root: null },
     ]);
   });
 
@@ -105,15 +109,15 @@ describe("rankShortages", () => {
     const later = order(-2, "10", { order: "00000001" });
     const earlier = order(-3, "10", { order: "00000002" });
     expect(rankShortages(pair("12", { firmDemand: [later, earlier] }))).toEqual([
-      { kind: "customer-order", date: TODAY, originalDate: day(-2), document: "00000001", position: 1, required: q("10"), uncovered: q("8") },
+      { kind: "customer-order", date: TODAY, originalDate: day(-2), document: "00000001", position: 1, required: q("10"), uncovered: q("8"), root: null },
     ]);
   });
 
   it("DEM-021: lines due on one date share a priority; only the order code, then the position, decides, the same for any input order", () => {
     const lines = [order(1, "5", { order: "B" }), order(1, "5", { order: "A", position: 2 }), order(1, "5", { order: "A", position: 1 })];
     const expected = [
-      { kind: "customer-order", date: day(1), originalDate: day(1), document: "A", position: 2, required: q("5"), uncovered: q("2") },
-      { kind: "customer-order", date: day(1), originalDate: day(1), document: "B", position: 1, required: q("5"), uncovered: q("5") },
+      { kind: "customer-order", date: day(1), originalDate: day(1), document: "A", position: 2, required: q("5"), uncovered: q("2"), root: null },
+      { kind: "customer-order", date: day(1), originalDate: day(1), document: "B", position: 1, required: q("5"), uncovered: q("5"), root: null },
     ];
     expect(rankShortages(pair("8", { firmDemand: lines }))).toEqual(expected);
     expect(rankShortages(pair("8", { firmDemand: [...lines].reverse() }))).toEqual(expected);
@@ -121,13 +125,13 @@ describe("rankShortages", () => {
 
   it("DEM-022: a forecast residual of 40 is served before a safety top-up of 20", () => {
     expect(rankShortages(pair("40", { forecastDemand: [forecast(1, "40")] }, {}, { 1: "20" }))).toEqual([
-      { kind: "safety-target", date: day(1), originalDate: day(1), document: null, position: null, required: q("20"), uncovered: q("20") },
+      { kind: "safety-target", date: day(1), originalDate: day(1), document: null, position: null, required: q("20"), uncovered: q("20"), root: null },
     ]);
   });
 
   it("DEM-018: stock that covers a due order but not the target serves the order and shows the gap as the lower-priority requirement", () => {
     expect(rankShortages(pair("12", { firmDemand: [order(0, "10")] }, {}, { 0: "15" }))).toEqual([
-      { kind: "safety-target", date: TODAY, originalDate: TODAY, document: null, position: null, required: q("15"), uncovered: q("13") },
+      { kind: "safety-target", date: TODAY, originalDate: TODAY, document: null, position: null, required: q("15"), uncovered: q("13"), root: null },
     ]);
   });
 
@@ -151,8 +155,8 @@ describe("rankShortages", () => {
   it("serves open production orders' components and transfer dispatches first (rank 0), a component before a transfer of the same code and day", () => {
     const shortages = rankShortages(pair("5", { firmDemand: [order(2, "3")], transfersOut: [dispatch(2, "5")], componentDemand: [component(2, "5")] }));
     expect(shortages).toEqual([
-      { kind: "transfer", date: day(2), originalDate: day(2), document: "00000001", position: null, required: q("5"), uncovered: q("5") },
-      { kind: "customer-order", date: day(2), originalDate: day(2), document: "00000001", position: 1, required: q("3"), uncovered: q("3") },
+      { kind: "transfer", date: day(2), originalDate: day(2), document: "00000001", position: null, required: q("5"), uncovered: q("5"), root: null },
+      { kind: "customer-order", date: day(2), originalDate: day(2), document: "00000001", position: 1, required: q("3"), uncovered: q("3"), root: null },
     ]);
   });
 
@@ -171,30 +175,80 @@ describe("rankShortages", () => {
     ]);
   });
 
-  describe("Make proposals' components (E17-S01, #281 Q9)", () => {
-    it("rank them with customer orders, after open documents and before the forecast, a customer order first on one original date", () => {
-      const shortages = rankShortages(
-        pair("6", { forecastDemand: [forecast(2, "2")], plannedComponentDemand: [planned(2, "4")], firmDemand: [order(2, "3")], componentDemand: [component(2, "1")] }),
-      );
-      expect(shortages).toEqual([
-        { kind: "planned-component", date: day(2), originalDate: day(2), document: "P1", position: null, required: q("4"), uncovered: q("2") },
-        { kind: "forecast", date: day(2), originalDate: day(2), document: null, position: null, required: q("2"), uncovered: q("2") },
+  describe("Make proposals' components, by root requirement (#327)", () => {
+    it("MRP-044: a need split between a parent's customer order and its forecast serves the order's share first, and the forecast's is short", () => {
+      const shares: [MrpDemandRoot, string][] = [[root("forecast", 4), "4"], [root("customer-order", 4), "6"]];
+      expect(rankShortages(pair("7", { plannedComponentDemand: [planned(2, shares)] }))).toEqual([
+        { kind: "planned-component", date: day(2), originalDate: day(4), document: "P1", position: null, required: q("4"), uncovered: q("3"), root: root("forecast", 4) },
       ]);
     });
 
-    it("serve an earlier parent start before a later customer order, by original date within the rank", () => {
-      const shortages = rankShortages(pair("4", { firmDemand: [order(3, "4")], plannedComponentDemand: [planned(1, "4")] }));
-      expect(shortages.map(({ kind, uncovered }) => [kind, uncovered])).toEqual([["customer-order", q("4")]]);
+    it("ranks a share by its root's original date: a parent's order due on day 4 before the pair's own order due on day 5, and the forecast's share after both", () => {
+      const shares: [MrpDemandRoot, string][] = [[root("customer-order", 4), "3"], [root("forecast", 3), "3"]];
+      const shortages = rankShortages(pair("6", { firmDemand: [order(5, "3")], plannedComponentDemand: [planned(1, shares)] }, {}, {}));
+      // Day 1 serves both shares from 6; day 5's own order finds nothing left. A later order never takes an earlier day's stock.
+      expect(shortages.map(({ kind, date, uncovered }) => [kind, date, uncovered])).toEqual([["customer-order", day(5), q("3")]]);
+      const outstanding = rankShortages(pair("0", { firmDemand: [order(5, "3")], plannedComponentDemand: [planned(1, shares)] }, { 5: "4" }));
+      // Both shares are outstanding from day 1; on day 5 the receipt of 4 serves the day-4 order's share, then the day-5 order.
+      expect(outstanding.map(({ kind, root: of, uncovered }) => [kind, of?.kind ?? null, uncovered])).toEqual([
+        ["planned-component", "customer-order", q("3")],
+        ["planned-component", "forecast", q("3")],
+        ["customer-order", null, q("2")],
+      ]);
     });
 
-    it("order two parents on one day by parent code, and two late proposals of one parent, both starting today, by need date", () => {
-      const parents = rankShortages(pair("3", { plannedComponentDemand: [planned(2, "3", "P2"), planned(2, "3", "P1")] }));
-      expect(parents.map(({ document, uncovered }) => [document, uncovered])).toEqual([["P2", q("3")]]);
-      const late = rankShortages(pair("3", { plannedComponentDemand: [planned(0, "3", "P1", 4), planned(0, "3", "P1", 2)] }));
-      // Both report P1 on today; the one needed on day 2 was served first, so the day-4 one is short.
-      expect(late.map(({ required, uncovered }) => [required, uncovered])).toEqual([[q("3"), q("3")]]);
-      const reversed = rankShortages(pair("3", { plannedComponentDemand: [planned(0, "2", "P1", 2), planned(0, "3", "P1", 4)] }));
-      expect(reversed.map(({ required, uncovered }) => [required, uncovered])).toEqual([[q("3"), q("2")]]);
+    it("keeps a later-dated share queued behind an earlier requirement that joins after it (#327 Q8)", () => {
+      // Day 0: a share rooted at an order due on day 5 joins, unserved; day 1: the pair's own order due on day 1 joins.
+      // Day 2's receipt serves the day-1 order first, though it joined later, so day 3's receipt finds it served and
+      // serves day 3's own order before the share. Appended queues would leave day 3's order 1 short.
+      const after = rankShortages(pair("0", { firmDemand: [order(1, "2"), order(3, "1", { order: "00000002" })], plannedComponentDemand: [planned(0, [[root("customer-order", 5), "2"]])] }, { 2: "2", 3: "2" }));
+      expect(after.filter(({ date }) => date === day(3))).toEqual([]);
+    });
+
+    it("ranks a share rooted at an open document's need at rank 0, and one rooted at the parent's target after the pair's own forecast (Q3, Q4)", () => {
+      // The component's root is due on day 3, after the pair's own order due on day 2, yet rank 0 serves it first.
+      const first = rankShortages(pair("2", { firmDemand: [order(2, "2")], plannedComponentDemand: [planned(2, [[root("component", 3), "2"]])] }));
+      expect(first.map(({ kind, uncovered }) => [kind, uncovered])).toEqual([["customer-order", q("2")]]);
+      // The target's share is dated day 1, before the pair's forecast on day 2, yet rank 3 serves it last.
+      const last = rankShortages(pair("2", { forecastDemand: [forecast(2, "2")], plannedComponentDemand: [planned(2, [[root("safety-target", 1), "2"]])] }));
+      expect(last.map(({ kind, root: of, uncovered }) => [kind, of?.kind ?? null, uncovered])).toEqual([["planned-component", "safety-target", q("2")]]);
+    });
+
+    it("tells one parent's shares of one root apart by the parent's need date, never summing them", () => {
+      const shortages = rankShortages(pair("1", { plannedComponentDemand: [planned(2, [[root("forecast", 2), "2"]], "P1", 4), planned(2, [[root("forecast", 2), "2"]], "P1", 3)] }));
+      // The day-3 proposal's share is served first: 1 of 2, and the day-4 one's 2 stay short.
+      expect(shortages.map(({ required, uncovered }) => [required, uncovered])).toEqual([[q("2"), q("1")], [q("2"), q("2")]]);
+    });
+
+    it("serves the pair's own requirement before a share of the same root, then two parents by parent code, then an executable parent before a provisional one", () => {
+      const own = order(2, "2", { order: "O1", position: 1 });
+      const shortages = rankShortages({
+        ...pair("2", {
+          firmDemand: [own],
+          plannedComponentDemand: [
+            planned(2, [[root("customer-order", 2), "2"]], "P2"),
+            planned(2, [[root("customer-order", 2), "2"]], "P1", 2, true),
+            planned(2, [[root("customer-order", 2), "2"]], "P1"),
+          ],
+        }),
+      });
+      expect(shortages.map(({ kind, document, root: of }) => [kind, document, of === null ? null : 1])).toEqual([
+        ["planned-component", "P1", 1],
+        ["planned-component", "P1", 1],
+        ["planned-component", "P2", 1],
+      ]);
+      // Of 2, the executable parent's 2 are served in full and the provisional one's 3 stay short, whatever the input order.
+      const provisionalFirst = rankShortages(pair("2", { plannedComponentDemand: [planned(2, [[root("forecast", 2), "3"]], "P1", 2, true), planned(2, [[root("forecast", 2), "2"]], "P1")] }));
+      expect(provisionalFirst).toEqual([
+        { kind: "planned-component", date: day(2), originalDate: day(2), document: "P1", position: null, required: q("3"), uncovered: q("3"), root: root("forecast", 2) },
+      ]);
+    });
+
+    it("sums two shares with an equal key into one requirement: two provisional proposals of one parent on one need date", () => {
+      const twice = planned(2, [[root("forecast", 2), "2"]], "P1", 2, true);
+      expect(rankShortages(pair("1", { plannedComponentDemand: [twice, twice] }))).toEqual([
+        { kind: "planned-component", date: day(2), originalDate: day(2), document: "P1", position: null, required: q("4"), uncovered: q("3"), root: root("forecast", 2) },
+      ]);
     });
   });
 });

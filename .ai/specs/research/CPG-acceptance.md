@@ -3124,7 +3124,7 @@ This document contains the complete acceptance catalogue for the CPG MVP. Each t
 
 **Priority:** P0 · **Channel:** Both · **Status:** Not executed
 
-- **Evidence:** Single-pair case only: `packages/core/src/domain/mrp/priority/rank-shortages.test.ts` ("DEM-019, MRP-044"): the firm order is served and the forecast's shortage is listed in `MrpPlan.shortages`, which no channel shows yet (#279 spec Q4). The multi-level raw-material case needs E17's root ranking. E16-S02, #279.
+- **Evidence:** Engine only. Single pair: `packages/core/src/domain/mrp/priority/rank-shortages.test.ts` ("DEM-019, MRP-044"): the firm order is served and the forecast's shortage is listed in `MrpPlan.shortages`. Multilevel, the raw-material case: `packages/core/src/domain/mrp/plan-mrp.test.ts` ("MRP-044, multilevel"): R, short under F's customer order and forecast, serves the order's share, and the forecast's share is listed short with its root (#327). No channel shows `MrpPlan.shortages` yet (#279 spec Q4). E16-S02, #279, #327.
 - **Given:** One raw shortage affects firm customer order and residual forecast
 - **When:** Run MRP
 - **Then:** Firm requirement given priority and forecast shortage remains visible.
