@@ -3,7 +3,7 @@
 **Date:** 2026-11-02 10:26 UTC
 **Agent:** Claude Code (cezar, headless) / claude-opus-5-5
 **Spec:** `.ai/specs/2026-11-02--1031UTC-mrp-automatic-mode.md`
-**Status:** blocked. The spec PR #339 is open as a draft, and the implementation waits on the owner confirming Q3.
+**Status:** done (spec #339, implementation #340)
 
 ## Goal
 
@@ -33,6 +33,9 @@ Take #289 end to end with `om-auto-fix-issue`. It is a `feature` issue, so the r
 - 10:48 Opened the draft spec PR #339 (`Refs #289`), with labels `review`, `documentation`, `skip-qa`, `priority-medium` and `risk-low`. Posted the label rationale, the UI evidence (on `qa-evidence`, `spec-mrp-automatic-mode/`), the defaults table on the PR and the issue, and the run summary. Released the issue's `in-progress` lock; it stays assigned to its author.
 - 10:48 Stopped before `om-auto-implement-spec`. Q3 is the transaction design, so building on it before the owner confirms would risk a rewrite (AGENTS.md: ask instead of guessing).
 
+- 10:49 The owner told the run to continue autonomously, so Q3 was applied as recommended and noted in the spec. #339 is marked ready. `om-auto-implement-spec` opened the implementation PR #340 from `main`; its run log is `.ai/pipeline/runs/2026-11-02--1049UTC-mrp-automatic-mode.md`.
+- 11:32 #340 is ready. The gate is green on `f65ac570`, and the integration files passed on a local standalone server. A fresh-context review approved, and its minors were fixed. The UI evidence and the manual-QA instructions are posted. CI's full suite had already passed on `de546b0f`.
+
 ## Changes
 
 - `.ai/specs/2026-11-02--1031UTC-mrp-automatic-mode.md` (new)
@@ -45,5 +48,6 @@ Take #289 end to end with `om-auto-fix-issue`. It is a `feature` issue, so the r
 
 ## Follow-ups
 
-- The owner confirms Q3 (or picks the three-transaction reading) on #339. Then: `om-auto-implement-spec .ai/specs/2026-11-02--1031UTC-mrp-automatic-mode.md`, branched from `main`.
-- During implementation, comment on #320 with what it owes the batch (spec Q1).
+- Confirm spec Q3 (the RUN-018 reading). RUN-018 stays Partially verified until then.
+- Merge #339 before #340 (lesson 2026-10-23). After #339 merges, merge `main` into #340 and delete the active copy of the spec.
+- #320 (the Make half) owes the batch's production-order tests. Commented on #320.
