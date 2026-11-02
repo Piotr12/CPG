@@ -1,6 +1,6 @@
 # Every quantity on screen in the reader's locale, as the MRP report already shows them
 
-**Status:** ready
+**Status:** implemented
 **Created:** 2026-11-02 13:03 UTC
 **Issue:** #304 (follow-up of #284) · **Depends on:** the MRP report (`implemented/2026-10-31--0907UTC-mrp-report.md`, Q6), which added `localeQuantity` · **Design authority:** `.ai/specs/product-brief.md` (R03, D03), `.ai/docs/engineering-standards.md` "Exact quantities (R03)"
 
@@ -100,3 +100,13 @@ One phase, one PR: a display sweep is only consistent once it covers every scree
 4. **Production and master data.** Same for production orders (screen, requirements, completion history, form and dialog), BOMs, materials conversions, statistical units, planning parameters, safety stock and forecasts. The prefills keep `formQuantity`. The BOM list joins its lines with `" · "` (Q8). Unit tests as above, plus one on `completion-form.tsx`, which receives `locale`: under `pl` its displayed figures use a comma while its pinned rows prefill the dot form.
 5. **Integration tests.** Update every assertion that reads a quantity of 1,000 or more, or a factor, on the screens above. Fix the readers that parse screen text (`list-quantity-sort.test.ts`, `planning-parameters.test.ts`). Add one test that switches a user to Polish with `choosePreference(…, "pl")` and reads a stock balance, a purchase-order line and a BOM line entered in another unit (its conversion factor included), each with a decimal and five integer digits. Run the integration files of every touched screen.
 6. **Docs.** `.ai/docs/engineering-standards.md` "Exact quantities (R03)": one sentence saying that screens show quantities and factors with `localeQuantity`, and that forms prefill with `formQuantity`. Move this spec to `implemented/`.
+
+## Implementation notes
+
+Implemented on #346, plan `.ai/pipeline/runs/2026-11-02--1311UTC-locale-quantities.md`.
+
+- **Zero checks (Q7).** They stay on raw or `formQuantity` text instead of moving to `isNothing`. `production-requirements.tsx` is rendered by the client `production-dialog.tsx`, and `materials/labels.ts` by the client `conversions-table.tsx`. A value import of `@cpg/core` there would pull the ORM into the browser bundle (lesson 2026-10-19). `formQuantity` doesn't depend on the locale, so the checks were already correct, and what Q7 rules out, a test on *localized* text, still holds.
+- **Phase 1 converted more than the rename.** The stock reversal dialog and controls took `locale`, and so did the goods receipt and issue tables that render them. Their line summaries were converted there too, so the later units never shared a file.
+- **`conversions.tiny` left both dictionaries.** `inverseText` builds `< ` + `localeQuantity("0.000001", locale)` in code.
+- **Delivery.** The lead did the helpers, the planning, safety-stock and forecast tables, the Polish integration test (`tests/integration/locale-quantities.test.ts`) and the docs. Three cezar workers did stock, reports, materials and BOMs (A); purchasing, receipts, customer orders and shipments (B); and transfers, production and the variance report (C). The lead merged each after a diff review.
+
