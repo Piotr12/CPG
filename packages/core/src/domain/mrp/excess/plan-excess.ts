@@ -12,10 +12,9 @@ export type ExcessDay = Pick<MrpBucket, "tentativeSupply" | "dependableSupply" |
  * `projectedAfter` only, so neither counts. Surplus physical stock alone is never excess. It describes the
  * current documents: an accepted lot-rounded proposal shows its rounding on the next run. MRP never acts on it (R10).
  */
-export function planExcess(days: readonly ExcessDay[]): bigint {
+export function planExcess(days: readonly [ExcessDay, ...ExcessDay[]]): bigint {
   let supply = 0n;
   for (const { tentativeSupply, dependableSupply, transferIn } of days) supply += tentativeSupply + dependableSupply + transferIn;
-  // A plan always has its 90 days (`horizonDates`).
   const last = days[days.length - 1];
   const surplus = last.projectedBefore - last.safetyTarget;
   if (surplus <= 0n) return 0n;

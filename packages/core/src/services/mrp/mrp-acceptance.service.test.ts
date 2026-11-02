@@ -541,6 +541,7 @@ describe("MrpAcceptanceService and MrpRunService: reruns (E19-S02)", () => {
     const proposals = (plans: readonly MrpPlanView[]) => plans.flatMap((each) => without(each.proposals).map((proposal) => ({ material: each.material, ...proposal })));
     expect(proposals(first).length).toBeGreaterThanOrEqual(3);
     expect(proposals(second)).toEqual(proposals(first));
-    expect(second.flatMap((each) => each.proposals.map(({ id }) => id))).not.toEqual(expect.arrayContaining(first.flatMap((each) => each.proposals.map(({ id }) => id))));
+    const idsOf = (plans: readonly MrpPlanView[]) => plans.flatMap((each) => each.proposals.map(({ id }) => id));
+    expect(idsOf(second).filter((id) => idsOf(first).includes(id))).toEqual([]);
   });
 });

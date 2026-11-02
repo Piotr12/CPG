@@ -199,7 +199,7 @@ describe("rerunning MRP", () => {
   }));
 
   // Prod's lists stay short here, since other files read their first page; test-reset-realistic.test.ts walks lists of many pages (lesson 2026-10-22).
-  it("RUN-013, R10: new demand wanting more and earlier leaves an Open purchase-order line and production order as they were, every list read across its pages, and audits only the run", () => withinOneDay(async () => {
+  it("RUN-013, R10: new demand wanting more and earlier leaves an Open purchase-order line and production order as they were, and every document as it was, and audits only the run", () => withinOneDay(async () => {
     const made = await makePair();
     const productionOrderId = (await produce(made.material, made.location)).id;
     const bought = await pair("buy");

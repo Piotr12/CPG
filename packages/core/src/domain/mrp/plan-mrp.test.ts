@@ -15,7 +15,7 @@ import type {
   MrpTransfer,
 } from "./mrp-inputs";
 import { planExcess } from "./excess/plan-excess";
-import { MRP_PROPOSAL_KINDS, type MrpInsufficientTransferStock, type MrpPlan } from "./mrp-result";
+import { MRP_PROPOSAL_KINDS, type MrpBucket, type MrpInsufficientTransferStock, type MrpPlan } from "./mrp-result";
 import { planMrp } from "./plan-mrp";
 import { safetyGap } from "./projection/safety-gap";
 
@@ -2492,6 +2492,8 @@ describe("planMrp: reruns (E19-S02, PRD §04 \"Reruns and duplicate avoidance\")
     ...overrides,
   });
   const lastDay = (plan: MrpPlan) => plan.buckets.at(-1)!;
+  /** A plan's excess: its 90 days are never empty. */
+  const excessOf = (plan: MrpPlan) => planExcess(plan.buckets as [MrpBucket, ...MrpBucket[]]);
   /** P (Make, 1 A per unit) with A stocked for 500: every Make proposal of P is feasible, never provisional. */
   const makeP = (overrides: Partial<MrpInputs>, lot: Partial<MrpPlanningParameters> = {}) =>
     planMrp(
@@ -2514,7 +2516,7 @@ describe("planMrp: reruns (E19-S02, PRD §04 \"Reruns and duplicate avoidance\")
     const second = planMrp({ ...fixture, requisitions: [requisition({ quantity: q("100"), requiredDate: DAY })] }, TODAY);
 
     expect(second.proposals).toEqual([]);
-    expect(planExcess(only(second.plans).buckets)).toBe(0n);
+    expect(excessOf(only(second.plans))).toBe(0n);
   });
 
   it("RUN-009: an Open production order of 100 against demand now 120 gives exactly one Make proposal of 20.000000, or 25.000000 with lot multiple 25, and no excess", () => {
@@ -2530,7 +2532,7 @@ describe("planMrp: reruns (E19-S02, PRD §04 \"Reruns and duplicate avoidance\")
       ]);
       expect(result.provisional).toEqual([]);
       // Before proposals the pair ends 20 short, so the order is all needed: no excess, and the 5 lot-rounded units of the second aren't excess either.
-      expect(planExcess(planAt(result.plans, "P").buckets)).toBe(0n);
+      expect(excessOf(planAt(result.plans, "P"))).toBe(0n);
     }
     expect(planAt(lotted.plans, "P").productionOutput).toEqual([expect.objectContaining({ order: "00000001", quantity: q("100") })]);
   });
@@ -2542,7 +2544,7 @@ describe("planMrp: reruns (E19-S02, PRD §04 \"Reruns and duplicate avoidance\")
     const plan = planAt(result.plans, "P");
     expect(plan.productionOutput).toEqual([expect.objectContaining({ order: "00000001", quantity: q("100"), plannedFinish: "2026-10-12" })]);
     expect(lastDay(plan).projectedBefore).toBe(q("20"));
-    expect(planExcess(plan.buckets)).toBe(q("20"));
+    expect(excessOf(plan)).toBe(q("20"));
   });
 
   it("RUN-020: a cancelled requisition of 100 doesn't count as supply, so a new requisition proposal of 100 is made", () => {
@@ -2562,12 +2564,12 @@ describe("planMrp: reruns (E19-S02, PRD §04 \"Reruns and duplicate avoidance\")
     const fixture = inputs({ orderLines: [line({ quantity: q("20"), requiredDate: DAY })], planningParameters: [set("M1", "buy", { lotMultiple: q("25") })] });
     const first = planMrp(fixture, TODAY);
     expect(first.proposals.map(({ quantity }) => quantity)).toEqual([q("25")]);
-    expect(planExcess(only(first.plans).buckets)).toBe(0n);
+    expect(excessOf(only(first.plans))).toBe(0n);
 
     const second = planMrp({ ...fixture, requisitions: [requisition({ quantity: q("25"), requiredDate: DAY })] }, TODAY);
 
     expect(second.proposals).toEqual([]);
-    expect(planExcess(only(second.plans).buckets)).toBe(q("5"));
+    expect(excessOf(only(second.plans))).toBe(q("5"));
   });
 
   it("counts no component supply a parent's Make proposal takes as excess", () => {
@@ -2584,7 +2586,7 @@ describe("planMrp: reruns (E19-S02, PRD §04 \"Reruns and duplicate avoidance\")
     );
 
     expect(result.proposals.map(({ material, quantity }) => ({ material, quantity }))).toEqual([{ material: "P", quantity: q("30") }]);
-    expect(planExcess(planAt(result.plans, "A").buckets)).toBe(q("20"));
+    expect(excessOf(planAt(result.plans, "A"))).toBe(q("20"));
   });
 
   it("gives the same proposals, in the same order, when the same snapshot is planned twice (PRD §04 closure defaults)", () => {
