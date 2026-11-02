@@ -69,6 +69,7 @@ export function PlanningParametersScreen({ tenant, sets, materials, locations, l
           sort={sort}
           links={links}
           lists={messages.lists}
+          locale={locale}
         />
       </div>
     </div>

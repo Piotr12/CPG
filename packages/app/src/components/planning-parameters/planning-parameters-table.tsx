@@ -1,11 +1,11 @@
 import Link from "next/link";
-import type { PlanningParameterView } from "@cpg/core";
+import type { Locale, PlanningParameterView } from "@cpg/core";
 import type { SortDirection } from "@cpg/core/validators/lists/list-query.schema";
 import type { PlanningParameterSort } from "@cpg/core/validators/planning-parameters/planning-parameter-list.schema";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { Badge } from "@cpg/ui/components/badge";
 import type { Messages } from "../../i18n/messages/en";
-import { formQuantity, type TenantContext } from "../forms/form-labels";
+import { localeQuantity, type TenantContext } from "../forms/form-labels";
 import type { ListLinks } from "../lists/list-params";
 import { NoSearchResults } from "../lists/list-search-bar";
 import { EmptyText } from "../master-data/empty-text";
@@ -27,16 +27,17 @@ interface PlanningParametersTableProps {
   sort: { sort: PlanningParameterSort; dir: SortDirection };
   links: ListLinks;
   lists: Messages["lists"];
+  locale: Locale;
 }
 
 /**
  * A tenant's planning parameter sets by material, then location, unless sorted by another column
  * (#217); quantities in each material's base unit.
  */
-export function PlanningParametersTable({ tenant, rows, labels, editable, search, sort, links, lists }: PlanningParametersTableProps) {
+export function PlanningParametersTable({ tenant, rows, labels, editable, search, sort, links, lists, locale }: PlanningParametersTableProps) {
   const t = labels.columns;
   const context: TenantContext = { tenant: tenant.code, generation: tenant.generation };
-  const quantity = (value: string, row: PlanningParameterRow) => `${formQuantity(value)} ${row.baseUnit}`;
+  const quantity = (value: string, row: PlanningParameterRow) => `${localeQuantity(value, locale)} ${row.baseUnit}`;
   const columns: DataTableColumn<PlanningParameterRow>[] = [
     {
       id: "material",
