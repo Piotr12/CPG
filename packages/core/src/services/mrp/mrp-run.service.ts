@@ -260,7 +260,7 @@ export class MrpRunService {
       // The engine's own timing rule, from the run's first day (E16-S02): one rule for the plan and its read.
       byPair.get(pairKey(material, site))?.push({
         id, kind, needDate, quantity, ...scheduleProposal(needDate, leadTimeDays, run.startDate, run.horizonDays),
-        executable: isExecutableProposal(kind), document: acceptedDocument ?? null, bom: bom ?? null, bomRevision: bomRevision ?? null,
+        executable: isExecutableProposal({ kind, bom }), document: acceptedDocument ?? null, bom: bom ?? null, bomRevision: bomRevision ?? null,
       });
     }
     return byPair;

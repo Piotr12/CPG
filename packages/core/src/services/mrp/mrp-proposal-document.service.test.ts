@@ -27,13 +27,16 @@ afterEach(async () => {
 });
 
 describe("MrpProposalDocumentService.create", () => {
-  it("refuses a kind MRP can't create yet, as an internal error no caller should reach, and creates nothing (#320)", async () => {
+  it("refuses a Make proposal with no BOM to pin, as an internal error no caller should reach, and creates nothing (#320)", async () => {
     const { cradle } = await scopeForTenant(container, "prod");
-    const proposal = { id: "6f1c0000-0000-4000-8000-000000000000", kind: "production-order" as const, material: "00000001", location: "00000001", needDate: "2026-10-05", quantity: "1.000000" };
+    const proposal = {
+      id: "6f1c0000-0000-4000-8000-000000000000", kind: "production-order" as const, material: "00000001", location: "00000001",
+      needDate: "2026-10-05", quantity: "1.000000", bom: null, bomRevision: null,
+    };
 
     await expect(inRequestTransaction(cradle.em, () => cradle.mrpProposalDocumentService.create("00000001", proposal, ANNA))).rejects.toThrow(
       "MRP can't create a production-order proposal's document.",
     );
-    expect(await orm.em.getConnection().execute("select count(*) as n from purchase_requisition")).toEqual([{ n: 0 }]);
+    expect(await orm.em.getConnection().execute("select count(*) as n from production_order")).toEqual([{ n: 0 }]);
   });
 });
