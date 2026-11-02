@@ -28,6 +28,8 @@ interface MrpExplanationsProps {
 
 type Provisional = { plan: MrpPlanView; action: MrpProvisionalView };
 type Explained = { plan: MrpPlanView; exception: MrpExceptionView; index: number };
+/** An exception row with its label and text worked out once (`exceptionText`). */
+type Described = Explained & { described: { label: string; text: string } };
 
 /**
  * The report's Explanations part (E18-S03, PRD §07), after everything else on the page: the provisional plans
@@ -54,9 +56,12 @@ export function MrpExplanations({ tenant, plans, materials, locations, view, loc
 
   const provisional: Provisional[] = plans.flatMap((plan) => plan.provisional.map((action) => ({ plan, action })));
   const atRisk: Explained[] = [];
-  const exceptions: Explained[] = [];
+  const exceptions: Described[] = [];
   for (const plan of plans) {
-    for (const [index, exception] of plan.exceptions.entries()) (exception.code === AT_RISK ? atRisk : exceptions).push({ plan, exception, index });
+    for (const [index, exception] of plan.exceptions.entries()) {
+      if (exception.code === AT_RISK) atRisk.push({ plan, exception, index });
+      else exceptions.push({ plan, exception, index, described: exceptionText(exception, { unit: plan.baseUnit, locale, location }, t.exceptions) });
+    }
   }
 
   const p = t.provisional;
@@ -123,18 +128,18 @@ export function MrpExplanations({ tenant, plans, materials, locations, view, loc
   ];
 
   const e = t.exceptions;
-  const exceptionColumns: DataTableColumn<Explained>[] = [
-    { id: "type", header: e.columns.type, kind: "status", cell: ({ plan, exception }) => (
+  const exceptionColumns: DataTableColumn<Described>[] = [
+    { id: "type", header: e.columns.type, kind: "status", cell: ({ exception, described }) => (
       <span data-mrp-exception-code={exception.code}>
-        <StatusBadge tone="warning" icon={CircleAlert}>{exceptionText(exception, { unit: plan.baseUnit, locale, location }, e).label}</StatusBadge>
+        <StatusBadge tone="warning" icon={CircleAlert}>{described.label}</StatusBadge>
       </span>
     ) },
     { id: "material", header: e.columns.material, kind: "text", className: "whitespace-normal", cell: ({ plan }) => `${plan.material} ${plan.materialDescription}` },
     { id: "location", header: e.columns.location, kind: "text", className: "whitespace-normal", cell: ({ plan }) => `${plan.location} ${plan.locationName}` },
     { id: "date", header: e.columns.date, kind: "date", cell: ({ exception }) => exception.params.date ?? NO_DATE },
-    { id: "explanation", header: e.columns.explanation, kind: "text", className: "min-w-64 whitespace-normal", cell: ({ plan, exception }) => (
+    { id: "explanation", header: e.columns.explanation, kind: "text", className: "min-w-64 whitespace-normal", cell: ({ exception, described }) => (
       <div className="flex flex-col gap-1" data-mrp-exception-text>
-        <span>{exceptionText(exception, { unit: plan.baseUnit, locale, location }, e).text}</span>
+        <span>{described.text}</span>
         {exception.rejectedBoms && exception.rejectedBoms.length > 0 && <MrpBomRejections rejections={exception.rejectedBoms} {...rejections} />}
       </div>
     ) },

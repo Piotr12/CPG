@@ -293,3 +293,10 @@ Implemented on #335. What differs from the plan above, or settles what it left o
 - **The Polish copy follows the help topic's glossary**: "plan tymczasowy" and "BOM-u", not a new term.
 - **Spacing uses whole design-token steps** (`gap-1`, `mt-1`), as `tests/design-tokens.test.ts` requires.
 - **The worst-case benchmark stall is unchanged.** On this machine the ten-times worst case stalled 247, 263 and 275 ms. With `main`'s `core` and `db` source on the same machine it stalled 257 and 274 ms, with the same row counts. No `BOM_REJECTIONS` row is written there, and the test passes.
+- **The Polish column header is "Podaż zagrożona"**, matching "Podaż pewna" beside it, not the "Zagrożona podaż" the UI/UX section names.
+- **The code review's three minors are fixed.**
+  - A `BOM_REJECTIONS` row without details reads as no rejections instead of failing the read.
+  - An exception's `reason` or `record` is looked up among the dictionary's own keys only.
+  - The Explanations part is left out when the page has no pairs.
+
+  The review's nit about Why this BOM's accessible name is declined. The visible text is the button's name (label in name, WCAG 2.5.3), and its table row gives the context.

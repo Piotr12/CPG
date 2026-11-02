@@ -258,7 +258,7 @@ export class MrpRunService {
     );
     for (const row of rows) {
       if (isMrpBomRejectionsCode(row.exceptionCode)) {
-        rejections.get(pairKey(row.material, row.location))?.set(row.date!, readBomRejections(row.details as Record<string, string>));
+        rejections.get(pairKey(row.material, row.location))?.set(row.date!, readBomRejections((row.details ?? {}) as Record<string, string>));
         continue;
       }
       if (isMrpProvisionalCode(row.exceptionCode)) {

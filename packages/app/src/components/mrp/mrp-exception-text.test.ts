@@ -17,6 +17,8 @@ describe("exceptionText (E18-S03): an exception's label and text by code and par
     expect(english("MISSING_PLANNING_PARAMETERS", { reason: "invalid-set" }).text).toContain("can't be used");
     expect(english("MISSING_PLANNING_PARAMETERS", { reason: "a-newer-reason" }).text).toBe(en.mrp.explanations.exceptions.codes.MISSING_PLANNING_PARAMETERS.plain);
     expect(english("MISSING_PLANNING_PARAMETERS").text).toBe(en.mrp.explanations.exceptions.codes.MISSING_PLANNING_PARAMETERS.plain);
+    // An inherited property name is no reason: the plain text, never a function (review of #335).
+    expect(english("MISSING_PLANNING_PARAMETERS", { reason: "constructor" }).text).toBe(en.mrp.explanations.exceptions.codes.MISSING_PLANNING_PARAMETERS.plain);
   });
 
   it("fills Missing BOM, Missing Usable BOM and BOM cycle from their params, or gives the plain text", () => {
@@ -36,6 +38,8 @@ describe("exceptionText (E18-S03): an exception's label and text by code and par
     });
     expect(english("INVALID_UOM_CONVERSION", { record: "stock-balance" }).text).toBe("A stored stock balance of this material can't be read, so MRP proposes no supply for it.");
     expect(english("INVALID_UOM_CONVERSION", { record: "a-newer-record" }).text).toBe(en.mrp.explanations.exceptions.codes.INVALID_UOM_CONVERSION.plain);
+    expect(english("INVALID_UOM_CONVERSION", { record: "toString" }).text).toBe(en.mrp.explanations.exceptions.codes.INVALID_UOM_CONVERSION.plain);
+    expect(english("INVALID_UOM_CONVERSION").text).toBe(en.mrp.explanations.exceptions.codes.INVALID_UOM_CONVERSION.plain);
   });
 
   it("explains No Feasible BOM as a provisional plan", () => {

@@ -1011,6 +1011,9 @@ describe("MrpRunService: BOM choice (#282)", () => {
     expect(cake.exceptions).toEqual([]);
     expect(cake.marks).toEqual([]);
     expect(plans.find(({ material: item }) => item === g.id)!.provisional).toMatchObject([{ bom: gBom.id, rejectedBoms: [{ bom: gBom.id, reason: "shortage" }] }]);
+    // A row without details (written around the service) explains nothing rather than failing the whole read (review of #335).
+    await sql("update mrp_run_exception set details = null where exception_code = 'BOM_REJECTIONS'");
+    expect((await latest()).plans.find(({ material: item }) => item === f.id)!.proposals).toMatchObject([{ bom: p2.id, rejectedBoms: [] }]);
   });
 
   it("stores No Feasible BOM for a proposal its components can't supply, with each short component's figures, and the proposal as a provisional action, not a recommendation", async () => {

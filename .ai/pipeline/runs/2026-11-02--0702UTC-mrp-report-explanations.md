@@ -59,6 +59,7 @@ To get there, the run stores a feasible fallback's rejections as `BOM_REJECTIONS
 - 07:25 Phase 3: one shared setup (`tests/integration/mrp-explanations.ts`) at a location of its own, built before each file's MRP run. Docker unavailable, so the integration files ran against a standalone build. Both report files passed alone (21), but with every MRP file on one server `mrp-report.test.ts` lost its "cabinet sorts last" premise, because the setup's materials were newer. The setup now runs first, and all six MRP files pass (49). The design-token test refused half-step spacing.
 - 07:27 Screenshots from the standalone server: the Explanations part, Why this BOM opened, and 390 px with no page overflow.
 - 07:34 Gate: `npm run lint` 0, `npm run typecheck` 0, `npm run build` 0, `npm run test:coverage` 0 (660 files, 5,360 tests, 100% after adding the unknown-component shortage line to `mrp-proposals.test.tsx`; the first run stopped at 99.98% branches).
+- 07:43 Review (`om-auto-review-pr 335 --autofix`, a fresh-context `om-code-review` pass): no blocker or major. Fixed its three minors: a details-less `BOM_REJECTIONS` row, own-key lookups for `reason` and `record`, and no Explanations when the page has no pairs. Also computed each exception's text once. Declined the accessible-name nit (label in name). Gate again: lint, typecheck, `test:coverage` (100%), build, all 0.
 
 ## Progress
 

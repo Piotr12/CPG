@@ -151,7 +151,9 @@ export function MrpReport({ tenant, report, selected, materials, locations, toda
       {only && <MrpProposals tenant={tenant} run={report.run} plan={only} today={today} materials={byCode} accept={accept} locale={locale} messages={messages} />}
       {only && (weekly && only.weeks ? <PlanWeeks plan={only} weeks={only.weeks} locale={locale} labels={t} /> : <PlanDays plan={only} locale={locale} labels={t} />)}
       {/* Last, so every heading and table before it keeps its place (spec Q4, lesson 2026-11-01). */}
-      <MrpExplanations tenant={tenant} plans={report.plans} materials={byCode} locations={locations} view={view} locale={locale} messages={messages} />
+      {report.plans.length > 0 && (
+        <MrpExplanations tenant={tenant} plans={report.plans} materials={byCode} locations={locations} view={view} locale={locale} messages={messages} />
+      )}
     </section>
   );
 }

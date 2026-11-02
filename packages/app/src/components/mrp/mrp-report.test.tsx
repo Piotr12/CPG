@@ -101,6 +101,8 @@ describe("MrpReport", () => {
 
     expect(screen.getByText(en.mrp.report.empty)).toBeTruthy();
     expect(document.querySelector("[data-mrp-pair-count]")?.textContent).toBe("Planned pairs: 0");
+    // No pairs, nothing to explain: no Explanations under the empty table (review of #335).
+    expect(document.querySelector("[data-mrp-explanations]")).toBeNull();
   });
 
   it("says an unfiltered run planned nothing, rather than blaming filters it doesn't have", () => {

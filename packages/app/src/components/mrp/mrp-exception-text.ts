@@ -27,8 +27,10 @@ export function exceptionText({ code, params }: MrpExceptionView, context: Excep
   switch (code) {
     case "MISSING_PLANNING_PARAMETERS": {
       const labels = t.codes.MISSING_PLANNING_PARAMETERS;
-      const reason = params.reason as keyof typeof labels.reasons | undefined;
-      return { label: labels.label, text: (reason !== undefined && labels.reasons[reason]) || labels.plain };
+      // Own keys only: a stored value like "constructor" must not reach an inherited property.
+      const reason = params.reason;
+      const known = reason !== undefined && Object.hasOwn(labels.reasons, reason);
+      return { label: labels.label, text: known ? labels.reasons[reason as keyof typeof labels.reasons] : labels.plain };
     }
     case "MISSING_BOM":
     case "MISSING_USABLE_BOM":
@@ -38,7 +40,7 @@ export function exceptionText({ code, params }: MrpExceptionView, context: Excep
     }
     case "INVALID_UOM_CONVERSION": {
       const labels = t.codes.INVALID_UOM_CONVERSION;
-      const record = labels.records[params.record as keyof typeof labels.records] as string | undefined;
+      const record = params.record !== undefined && Object.hasOwn(labels.records, params.record) ? labels.records[params.record as keyof typeof labels.records] : undefined;
       const template = params.document === undefined ? labels.text : labels.document;
       return { label: labels.label, text: filled(template, { record, document: params.document }) ?? labels.plain };
     }
