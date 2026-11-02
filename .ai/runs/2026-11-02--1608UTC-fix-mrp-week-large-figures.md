@@ -29,8 +29,9 @@
 - `npm run test:coverage`: 667/668 files pass; the one failure, `tests/ai-filenames.test.ts`, is `main`'s duplicate active copy of #320's spec, fixed by open PR #350. With that copy removed in the working tree only (not committed), 668/668 files, 5,542 tests, coverage thresholds (100%) met.
 - `npm run build`: pass.
 - Without the `weekly.ts` change, both #336 tests fail with `An MRP daily figure isn't a six-decimal quantity: "1999999999998.000000".`
+- PR #353 CI (run 41479860567, head f3f6f921): lint, typecheck, build, `unit-tests (1)` and all four integration shards pass. `unit-tests (2)` and `unit-coverage` fail only on `tests/ai-filenames.test.ts` (667/668 files, no coverage threshold missed), `main`'s duplicate spec that #350 removes.
 - No integration file touched: the HTTP route only calls the service, which the service test covers.
 
 ## Follow-ups
 
-- none
+- Re-run #353's CI once #350 is on `main`; it should then be fully green.
