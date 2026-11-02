@@ -1972,6 +1972,7 @@ export const pl: Messages = {
       days: "Dni", daysOf: "Dni {material} w {location}", actions: "Dni",
       pagination: "Strony raportu MRP", previous: "Poprzednia", next: "Następna", page: "Strona {page} z {pages}",
       plan: "{material} w {location}",
+      excess: "Nadwyżka: {quantity} {unit} otwartego zaopatrzenia, którego popyt i zapas bezpieczeństwa najbliższych 90 dni nie potrzebują. MRP nigdy nie anuluje, nie zmniejsza ani nie przesuwa dokumentu.",
       planIntro: "Ilości w {unit}. Każdy stan jest na koniec dnia; ujemny stan to niedobór do zaplanowania, a nie zmiana zapasu.",
       planLabel: "Dni planu",
       view: "Widok", viewHint: "Tydzień grupuje dni jednej pary w tygodnie ISO.", buckets: { day: "Dzień", week: "Tydzień" },

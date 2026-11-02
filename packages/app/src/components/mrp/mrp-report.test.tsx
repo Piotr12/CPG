@@ -14,7 +14,7 @@ const day = (date: string, figures: Partial<MrpBucketView> = {}): MrpBucketView 
 /** MRP-005: physical 50, Open lines of 10 due 5 October and 15 due 7 October, a run on 1 October. */
 const sheet: MrpPlanView = {
   material: "00000012", materialDescription: "Steel sheet", materialActive: true, baseUnit: "kg",
-  location: "00000003", locationName: "Kraków", locationActive: true, lowestProjectedBefore: "25.000000", firstShortageDate: null,
+  location: "00000003", locationName: "Kraków", locationActive: true, lowestProjectedBefore: "25.000000", firstShortageDate: null, excess: zero,
   buckets: [
     day("2026-10-04"),
     day("2026-10-05", { firmDemand: "10.000000", projectedBefore: "40.000000", projectedAfter: "40.000000" }),
@@ -173,6 +173,26 @@ describe("MrpReport", () => {
     expect(within(section as HTMLElement).getByRole("button", { name: "Accept the Purchase requisition of 40 kg on 2026-10-05" })).toBeTruthy();
   });
 
+  it("states a pair's excess under its days' intro, in the reader's locale, and nothing when there is none (E19-S02, RUN-010)", () => {
+    const surplus = { ...sheet, excess: "1234.500000" };
+    const { unmount } = renderReport(report({ total: 1, plans: [surplus] }), { material: "00000012", location: "00000003" });
+    expect(document.querySelector("[data-mrp-excess]")?.textContent).toBe(
+      "Excess: 1,234.5 kg of open supply that the demand and safety stock of the next 90 days don't need. MRP never cancels, reduces or moves a document.",
+    );
+    unmount();
+
+    renderReport(report({ total: 1, plans: [surplus] }), { material: "00000012", location: "00000003" }, "pl");
+    expect(document.querySelector("[data-mrp-excess]")?.textContent).toMatch(/^Nadwyżka: 1234,5 kg otwartego zaopatrzenia/);
+  });
+
+  it("states no excess for a pair without one, nor in the pairs list", () => {
+    renderReport(report({ total: 1, plans: [sheet] }), { material: "00000012", location: "00000003" });
+    expect(screen.getByRole("table", { name: en.mrp.report.planLabel })).toBeTruthy();
+    expect(document.querySelector("[data-mrp-excess]")).toBeNull();
+    renderReport(report({ plans: [{ ...sheet, excess: "20.000000" }, bearing] }));
+    expect(document.querySelectorAll("[data-mrp-excess]")).toHaveLength(0);
+  });
+
   describe("weeks and marks (E18-S02)", () => {
     const zeroWeek = Object.fromEntries(["firmDemand", "forecastDemand", "dependentDemand", "transferOut", "tentativeSupply", "dependableSupply", "atRiskSupply", "transferIn", "proposedReceipts", "safetyTarget", "projectedBefore", "projectedAfter"].map((key) => [key, zero]));
     const week = (overrides: Partial<MrpWeekView>): MrpWeekView => ({
@@ -231,6 +251,12 @@ describe("MrpReport", () => {
       expect(first.querySelector("td")?.className).not.toContain("border-l-danger");
       expect([...first.querySelectorAll("[data-mrp-mark]")].map((mark) => mark.getAttribute("data-mrp-mark"))).toEqual(["overdue-supply", "overdue-transfer", "late-supply"]);
       expect(second.querySelector("[data-mrp-marks]")).toBeNull();
+    });
+
+    it("states the excess in the Week view too (E19-S02)", () => {
+      renderReport(report({ total: 1, plans: [{ ...weekly, excess: "20.000000" }], bucket: "week" }), { material: "00000012", location: "00000003", bucket: "week" });
+      expect(screen.getByRole("table", { name: en.mrp.report.weekLabel })).toBeTruthy();
+      expect(document.querySelector("[data-mrp-excess]")?.textContent).toMatch(/^Excess: 20 kg of open supply/);
     });
 
     it("labels a one-day week by its single date, as when a run starts on a Sunday", () => {

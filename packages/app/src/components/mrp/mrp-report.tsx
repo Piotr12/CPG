@@ -158,6 +158,15 @@ export function MrpReport({ tenant, report, selected, materials, locations, toda
   );
 }
 
+/**
+ * The open supply the plan's documents bring beyond its need (E19-S02 spec Q3), in the day and week views
+ * alike: stated, never acted on, since MRP edits no document (R10). Nothing when there is none.
+ */
+function PlanExcess({ plan, locale, labels: t }: { plan: MrpPlanView; locale: Locale; labels: Messages["mrp"]["report"] }) {
+  if (plan.excess === "0.000000") return null;
+  return <p className="text-sm text-muted-foreground" data-mrp-excess>{fill(t.excess, { quantity: localeQuantity(plan.excess, locale), unit: plan.baseUnit })}</p>;
+}
+
 /** One pair's 90 days, today first, every figure in view at any width: the table scrolls sideways. */
 function PlanDays({ plan, locale, labels: t }: { plan: MrpPlanView; locale: Locale; labels: Messages["mrp"]["report"] }) {
   const figure = (key: (typeof DAY_FIGURES)[number]): DataTableColumn<MrpBucketView> => ({
@@ -181,6 +190,7 @@ function PlanDays({ plan, locale, labels: t }: { plan: MrpPlanView; locale: Loca
       <div className="flex flex-col gap-1">
         <h3 className="font-semibold" data-mrp-plan-heading>{fill(t.plan, { material: `${plan.material} ${plan.materialDescription}`, location: `${plan.location} ${plan.locationName}` })}</h3>
         <p className="text-sm text-muted-foreground">{fill(t.planIntro, { unit: plan.baseUnit })}</p>
+        <PlanExcess plan={plan} locale={locale} labels={t} />
       </div>
       <DataTable label={t.planLabel} columns={columns} rows={plan.buckets} rowKey={(day) => day.date} rowTone={(day) => (short(day) ? "danger" : undefined)} empty={t.empty} />
     </div>
@@ -216,6 +226,7 @@ function PlanWeeks({ plan, weeks, locale, labels: t }: { plan: MrpPlanView; week
       <div className="flex flex-col gap-1">
         <h3 className="font-semibold" data-mrp-plan-heading>{fill(t.weekPlan, { material: `${plan.material} ${plan.materialDescription}`, location: `${plan.location} ${plan.locationName}` })}</h3>
         <p className="text-sm text-muted-foreground">{fill(t.weekIntro, { unit: plan.baseUnit })}</p>
+        <PlanExcess plan={plan} locale={locale} labels={t} />
       </div>
       <DataTable label={t.weekLabel} columns={columns} rows={weeks} rowKey={(week) => week.start} rowTone={(week) => (week.peakShortage !== "0.000000" ? "danger" : undefined)} empty={t.empty} />
     </div>

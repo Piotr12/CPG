@@ -2041,6 +2041,7 @@ export const en = {
       days: "Days", daysOf: "Days of {material} at {location}", actions: "Days",
       pagination: "MRP report pages", previous: "Previous", next: "Next", page: "Page {page} of {pages}",
       plan: "{material} at {location}",
+      excess: "Excess: {quantity} {unit} of open supply that the demand and safety stock of the next 90 days don't need. MRP never cancels, reduces or moves a document.",
       planIntro: "Quantities in {unit}. Each balance is at the end of its day; a negative balance is a shortage to plan for, not a change to stock.",
       planLabel: "Days of the plan",
       view: "View", viewHint: "Week groups one pair's days into ISO weeks.", buckets: { day: "Day", week: "Week" },
