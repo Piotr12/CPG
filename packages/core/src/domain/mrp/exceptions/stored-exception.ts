@@ -40,13 +40,19 @@ export function toStoredException(exception: MrpException): StoredException {
 }
 
 /**
- * Why no usable BOM could be supplied (E17-S02): `missing`, each usable BOM's short components, and `inactive`,
- * each valid BOM's inactive ones, only when there are some. No Feasible BOM and a provisional action share it.
+ * Why BOMs were passed over (E17-S02): `missing`, each usable BOM's short components, `inactive`, each valid
+ * BOM's inactive ones, only when there are some, and `order`, every rejected BOM/revision in the order
+ * `chooseBom` tested them (E18-S03 spec Q3), which the two lists alone lose. No Feasible BOM, a provisional
+ * action and a feasible fallback's `BOM_REJECTIONS` row share it.
  */
-export function rejectionDetails(rejections: readonly MrpBomRejection[]): { missing: string; inactive?: string } {
+export function rejectionDetails(rejections: readonly MrpBomRejection[]): { missing: string; inactive?: string; order: string } {
   const inactive = rejections.flatMap((rejection) => (rejection.reason === "inactive-component" ? [rejection] : []));
   const missing = rejections.flatMap((rejection) => (rejection.reason === "shortage" ? [rejection] : []));
-  return { missing: missingNotation(missing), ...(inactive.length > 0 && { inactive: inactiveNotation(inactive) }) };
+  return {
+    missing: missingNotation(missing),
+    ...(inactive.length > 0 && { inactive: inactiveNotation(inactive) }),
+    order: rejections.map(({ bom, revision }) => `${bom}/${revision}`).join(", "),
+  };
 }
 
 /**

@@ -51,6 +51,10 @@ function seed({ pairs, locations }: (typeof SIZES)[number]): string[] {
     // One exception per pair, as a run without planning parameters would store (#280).
     `${seq(pairs)} insert into mrp_run_exception (id, tenant_code, run_id, position, exception_code, material, location, date, details)
       select 'e' || x, 'prod', 'run', x, 'MISSING_PLANNING_PARAMETERS', ${code("x")}, ${code(`1 + x % ${locations}`)}, '2026-10-31', '{"reason":"no-set"}' from s`,
+    // One fallback's rejected BOM per proposal, on its need date, after the exceptions (E18-S03 spec Q1).
+    `${seq(pairs)} insert into mrp_run_exception (id, tenant_code, run_id, position, exception_code, material, location, date, details)
+      select 'b' || x, 'prod', 'run', ${pairs} + x, 'BOM_REJECTIONS', ${code("x")}, ${code(`1 + x % ${locations}`)}, date('2026-10-31', '+' || (x % ${DAYS}) || ' days'),
+        '{"missing":"00000001/1: 00000002 6.000000 5.000000 1.000000","order":"00000001/1"}' from s`,
   ];
 }
 
@@ -124,6 +128,8 @@ describe.each(SIZES)("the MRP report's reads at the $name size", (size) => {
     queries.length = 0;
     const report = await latest(query);
     expect(report.plans.every(({ exceptions }) => exceptions.length === 1 && exceptions[0].params.reason === "no-set")).toBe(true);
+    // The same read attaches each fallback's rejection to its proposal, never as an exception (E18-S03).
+    expect(report.plans.every(({ proposals }) => proposals.length === 1 && proposals[0].rejectedBoms.length === 1 && proposals[0].rejectedBoms[0].reason === "shortage")).toBe(true);
     const sent = queries.filter(({ sql }) => sql.includes("from `mrp_run_exception`"));
     expect(sent).toHaveLength(1);
     const plan = (await orm.em.getConnection().execute<{ detail: string }[]>(`explain query plan ${sent[0].sql}`, [...sent[0].params])).map(({ detail }) => detail);

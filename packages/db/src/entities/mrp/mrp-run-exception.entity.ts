@@ -17,7 +17,9 @@ const owned = tenantOwned();
  *
  * Since E18-S02 the run also stores its warnings here, after its exceptions: `OVERDUE_SUPPLY` and
  * `OVERDUE_TRANSFER`, overdue supply counted on the run's first day. The read never lists them as
- * exceptions; the report shows them as marks.
+ * exceptions; the report shows them as marks. Since E17-S03 its provisional actions follow
+ * (`PROVISIONAL_PRODUCTION`), and since E18-S03 each feasible fallback's rejected BOMs (`BOM_REJECTIONS`, on
+ * the proposal's need date), which the read attaches to that proposal.
  */
 export const MrpRunException = defineEntity({
   name: "MrpRunException",

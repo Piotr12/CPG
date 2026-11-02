@@ -44,7 +44,7 @@ describe("stored provisional actions (E17-S03 spec Q8)", () => {
         { bom: "00000004", revision: 2, reason: "shortage", shortages: [{ material: "00000012", required: 6_000_000n, available: 0n, shortage: 6_000_000n }] },
       ],
     }));
-    expect(stored.details).toMatchObject({ blockers: "no-feasible-bom,provisional-demand", missing: "00000004/2: 00000012 6.000000 0.000000 6.000000", inactive: "00000003/1: 00000014" });
+    expect(stored.details).toMatchObject({ blockers: "no-feasible-bom,provisional-demand", missing: "00000004/2: 00000012 6.000000 0.000000 6.000000", inactive: "00000003/1: 00000014", order: "00000003/1, 00000004/2" });
     expect(toStoredProvisional(action({ blockers: ["no-feasible-bom"], rejectedBoms: [] })).details).toMatchObject({ missing: "" });
     expect(toStoredProvisional(action()).details).not.toHaveProperty("missing");
   });
@@ -55,11 +55,19 @@ describe("stored provisional actions (E17-S03 spec Q8)", () => {
     expect(readStoredProvisional(date, details)).toEqual({
       needDate: "2026-10-09", quantity: "6.000000", leadTimeDays: 3, bom: "00000004", bomRevision: 2,
       components: [{ material: "00000012", quantity: "6.000000" }, { material: "00000011", quantity: "1.500000" }],
-      blockers: ["no-feasible-bom", "provisional-demand"], missing: "", inactive: "00000003/1: 00000014",
+      blockers: ["no-feasible-bom", "provisional-demand"], missing: "", inactive: "00000003/1: 00000014", order: "00000003/1",
     });
     const plain = toStoredProvisional(action({ components: [] }));
     expect(readStoredProvisional(plain.date, plain.details)).toEqual(expect.objectContaining({ components: [], blockers: ["provisional-demand"] }));
     expect(readStoredProvisional(plain.date, plain.details)).not.toHaveProperty("missing");
+  });
+
+  it("store a provisional-demand action's fallback too, so its explanation isn't lost (E18-S03 spec Q3a)", () => {
+    const fallback = action({ rejectedBoms: [{ bom: "00000003", revision: 1, reason: "shortage", shortages: [{ material: "00000012", required: 6_000_000n, available: 2_000_000n, shortage: 4_000_000n }] }] });
+    const { date, details } = toStoredProvisional(fallback);
+    expect(details).toMatchObject({ blockers: "provisional-demand", missing: "00000003/1: 00000012 6.000000 2.000000 4.000000", order: "00000003/1" });
+    expect(details).not.toHaveProperty("inactive");
+    expect(readStoredProvisional(date, details)).toMatchObject({ missing: "00000003/1: 00000012 6.000000 2.000000 4.000000", order: "00000003/1" });
   });
 
   it("drop a blocker a newer image wrote, keeping the ones this image knows in their order", () => {

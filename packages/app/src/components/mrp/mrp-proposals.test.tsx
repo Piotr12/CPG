@@ -6,8 +6,9 @@ import { pl } from "../../i18n/messages/pl";
 import { MrpProposals } from "./mrp-proposals";
 
 const RUN = { id: "00000004", startDate: "2026-10-01" };
+const MATERIALS = new Map([["00000013", { description: "Sugar", baseUnit: "KG" }], ["00000021", { description: "Colouring", baseUnit: "L" }]]);
 const buy = (overrides: Partial<MrpProposalView> = {}): MrpProposalView => ({
-  id: "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b", kind: "purchase-requisition", needDate: "2026-10-05", quantity: "100.000000", plannedStart: "2026-10-03", plannedFinish: "2026-10-05", lateDays: 0, beyondHorizon: false, executable: true, document: null, bom: null, bomRevision: null, ...overrides,
+  id: "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b", kind: "purchase-requisition", needDate: "2026-10-05", quantity: "100.000000", plannedStart: "2026-10-03", plannedFinish: "2026-10-05", lateDays: 0, beyondHorizon: false, executable: true, document: null, bom: null, bomRevision: null, rejectedBoms: [], ...overrides,
 });
 const plan = (proposals: MrpProposalView[]): MrpPlanView => ({
   material: "00000031", materialDescription: "Sugar", materialActive: true, baseUnit: "kg",
@@ -23,7 +24,7 @@ const refresh = vi.hoisted(() => vi.fn());
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 const renderProposals = (proposals: MrpProposalView[], { today = "2026-10-01", writable = true, locale = "en" as "en" | "pl" } = {}) =>
   render(
-    <MrpProposals tenant={{ code: "test" }} run={RUN} plan={plan(proposals)} today={today} accept={writable ? accept : undefined} locale={locale} messages={locale === "en" ? en : pl} />,
+    <MrpProposals tenant={{ code: "test" }} run={RUN} plan={plan(proposals)} today={today} materials={MATERIALS} accept={writable ? accept : undefined} locale={locale} messages={locale === "en" ? en : pl} />,
   );
 const table = () => within(screen.getByRole("table", { name: en.mrp.proposals.label }));
 afterEach(() => vi.clearAllMocks());
@@ -173,5 +174,48 @@ describe("MrpProposals", () => {
     expect(table().getAllByRole("row")[1].textContent).toContain("Production orderBOM 00000004 / revision 2");
     renderProposals([make], { locale: "pl" });
     expect(document.querySelectorAll("[data-mrp-proposal-bom]")[1].textContent).toBe("BOM 00000004 / rewizja 2");
+  });
+
+  describe("Why this BOM (E18-S03, UX-020)", () => {
+    // Priority 1 needs 6 A with 5 dependable; priority 3 has an inactive component; priority 2 was chosen.
+    const fallback = buy({
+      id: "f", kind: "production-order", executable: false, quantity: "6.000000", bom: "00000005", bomRevision: 2,
+      rejectedBoms: [
+        { bom: "00000004", revision: 1, reason: "shortage", shortages: [
+          { material: "00000013", required: "6.000000", available: "5.000000", shortage: "1.000000" },
+          { material: "00000098", required: "2.000000", available: "0.000000", shortage: "2.000000" },
+        ] },
+        { bom: "00000007", revision: 3, reason: "inactive-component", materials: ["00000021", "00000099"] },
+      ],
+    });
+
+    it("explains a fallback behind a closed disclosure: each rejected BOM, its reason and each short component in its own unit", () => {
+      renderProposals([fallback, buy({ id: "b" })]);
+      const [make, requisition] = table().getAllByRole("row").slice(1);
+      expect(requisition.querySelector("[data-mrp-why-bom]")).toBeNull();
+      const trigger = within(make).getByRole("button", { name: "Why this BOM (2 rejected)" });
+      expect(trigger.getAttribute("aria-expanded")).toBe("false");
+      expect(make.querySelector("[data-mrp-rejections]")).toBeNull();
+
+      fireEvent.click(trigger);
+
+      expect(trigger.getAttribute("aria-expanded")).toBe("true");
+      const rejections = within(make).getByRole("list", { name: "Rejected BOMs" });
+      expect([...rejections.querySelectorAll(":scope > li")].map((item) => item.getAttribute("data-mrp-rejection"))).toEqual(["shortage", "inactive-component"]);
+      expect(rejections.querySelector(":scope > li")!.firstChild?.textContent).toBe("BOM 00000004 / revision 1 — Component shortage");
+      // A component the screen doesn't know shows its code, its quantities without a unit.
+      expect([...rejections.querySelectorAll("[data-mrp-shortage]")].map((line) => line.textContent)).toEqual([
+        "00000013 Sugar: needs 6 KG, dependable 5 KG, short 1 KG",
+        "00000098: needs 2, dependable 0, short 2",
+      ]);
+      expect(rejections.querySelectorAll(":scope > li")[1].textContent).toBe("BOM 00000007 / revision 3 — Inactive BOM Component: 00000021 Colouring, 00000099");
+    });
+
+    it("says it in Polish, with Polish plural forms and quantities", () => {
+      renderProposals([buy({ ...fallback, rejectedBoms: [{ bom: "00000004", revision: 1, reason: "shortage", shortages: [{ material: "00000013", required: "6.500000", available: "5.000000", shortage: "1.500000" }] }] })], { locale: "pl" });
+      fireEvent.click(screen.getByRole("button", { name: "Dlaczego ten BOM (1 odrzucony)" }));
+      expect(document.querySelector("[data-mrp-shortage]")?.textContent).toBe("00000013 Sugar: potrzeba 6,5 KG, pewne 5 KG, brakuje 1,5 KG");
+      expect(document.querySelector("[data-mrp-rejections] > li")!.firstChild?.textContent).toBe("BOM 00000004 / rewizja 1 — Brak składnika");
+    });
   });
 });

@@ -10,6 +10,8 @@ import type { Messages } from "../../i18n/messages/en";
 import { fill, localeQuantity } from "../forms/form-labels";
 import { PageLinks } from "../layout/page-links";
 import { MaterialLocationFilters } from "../reports/material-location-filters";
+import { materialsByCode } from "./mrp-bom-rejections";
+import { MrpExplanations } from "./mrp-explanations";
 import { MrpMarks, shortDate } from "./mrp-marks";
 import { MrpProposals } from "./mrp-proposals";
 
@@ -41,6 +43,8 @@ const DAY_FIGURES = [
   "safetyTarget",
   "tentativeSupply",
   "dependableSupply",
+  // Apart from dependable supply, never in a balance (E17-S03, E18-S03 spec Q6, MRP-051).
+  "atRiskSupply",
   "transferIn",
   "projectedBefore",
   "projectedAfter",
@@ -56,6 +60,7 @@ const WEEK_FIGURES = [
   "safetyTarget",
   "tentativeSupply",
   "dependableSupply",
+  "atRiskSupply",
   "transferIn",
   "projectedBefore",
   "projectedAfter",
@@ -70,7 +75,8 @@ const short = (day: MrpBucketView) => day.shortage !== "0.000000";
  * The last MRP report (E18-S01, PRD §07) under the run card: material and location filters, the
  * run's planned pairs, 25 a page, each with its lowest projected balance and first shortage, and,
  * once the filters leave one pair, that pair's proposals (with Accept, E19-S01) and its 90 days, or its
- * weeks in the Week view (E18-S02), each with its warnings. Figures are in the material's base unit, in
+ * weeks in the Week view (E18-S02), each with its warnings, and last the Explanations of the page's pairs
+ * (E18-S03). Figures are in the material's base unit, in
  * the reader's locale. Only Accept writes, so a read-only tenant shows the report without it (TEN-018).
  */
 export function MrpReport({ tenant, report, selected, materials, locations, today, accept, locale, messages }: MrpReportProps) {
@@ -98,6 +104,7 @@ export function MrpReport({ tenant, report, selected, materials, locations, toda
   const query = (page: number) =>
     `${path}?${new URLSearchParams({ ...(selected.material && { material: selected.material }), ...(selected.location && { location: selected.location }), ...view, page: String(page) })}`;
   const only = report.total === 1 ? report.plans[0] : undefined;
+  const byCode = materialsByCode(materials);
 
   return (
     <section aria-labelledby="mrp-report-heading" className="mt-8 flex min-w-0 flex-col gap-6">
@@ -141,8 +148,12 @@ export function MrpReport({ tenant, report, selected, materials, locations, toda
           pagination={<PageLinks page={report.page} pages={Math.ceil(report.total / report.pageSize)} href={query} labels={t} />}
         />
       </div>
-      {only && <MrpProposals tenant={tenant} run={report.run} plan={only} today={today} accept={accept} locale={locale} messages={messages} />}
+      {only && <MrpProposals tenant={tenant} run={report.run} plan={only} today={today} materials={byCode} accept={accept} locale={locale} messages={messages} />}
       {only && (weekly && only.weeks ? <PlanWeeks plan={only} weeks={only.weeks} locale={locale} labels={t} /> : <PlanDays plan={only} locale={locale} labels={t} />)}
+      {/* Last, so every heading and table before it keeps its place (spec Q4, lesson 2026-11-01). */}
+      {report.plans.length > 0 && (
+        <MrpExplanations tenant={tenant} plans={report.plans} materials={byCode} locations={locations} view={view} locale={locale} messages={messages} />
+      )}
     </section>
   );
 }

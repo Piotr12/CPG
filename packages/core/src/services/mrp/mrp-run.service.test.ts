@@ -492,9 +492,10 @@ describe("MrpRunService: replenishment proposals (#278)", () => {
     const none = { bom: null, bomRevision: null };
     expect(plans.map(({ material: item, location: site, proposals }) => [item, site, proposals])).toEqual([
       // Only a Buy proposal can be accepted until MRP chooses BOMs (E19-S01 Q1); neither is accepted yet.
-      [cabinet.id, PLANT, [{ id: uuid, kind: "purchase-requisition", needDate: "2026-10-05", quantity: "10.000000", ...onTime, executable: true, document: null, ...none }]],
+      [cabinet.id, PLANT, [{ id: uuid, kind: "purchase-requisition", needDate: "2026-10-05", quantity: "10.000000", ...onTime, executable: true, document: null, ...none, rejectedBoms: [] }]],
       // The Make proposal names the BOM it is exploded through (#281, MRP-031)…
-      [cabinet.id, store, [{ id: uuid, kind: "production-order", needDate: "2026-10-05", quantity: "3.000000", ...onTime, executable: false, document: null, bom: "00000001", bomRevision: 1 }]],
+      // …and its first BOM passed over none (E18-S03).
+      [cabinet.id, store, [{ id: uuid, kind: "production-order", needDate: "2026-10-05", quantity: "3.000000", ...onTime, executable: false, document: null, bom: "00000001", bomRevision: 1, rejectedBoms: [] }]],
       // …into its one input, planned at the store from its start, its stock covering the need.
       [input, store, []],
     ]);
@@ -526,10 +527,10 @@ describe("MrpRunService: replenishment proposals (#278)", () => {
     const { plans } = await latest();
     const proposalOf = (item: string) => plans.find((plan) => plan.material === item)!.proposals;
     expect(proposalOf(late.id)).toEqual([
-      { id: expect.any(String), kind: "purchase-requisition", needDate: "2026-10-04", quantity: "5.000000", plannedStart: "2026-10-01", plannedFinish: "2026-10-08", lateDays: 4, beyondHorizon: false, executable: true, document: null, bom: null, bomRevision: null },
+      { id: expect.any(String), kind: "purchase-requisition", needDate: "2026-10-04", quantity: "5.000000", plannedStart: "2026-10-01", plannedFinish: "2026-10-08", lateDays: 4, beyondHorizon: false, executable: true, document: null, bom: null, bomRevision: null, rejectedBoms: [] },
     ]);
     expect(proposalOf(far.id)).toEqual([
-      { id: expect.any(String), kind: "purchase-requisition", needDate: "2026-10-21", quantity: "5.000000", plannedStart: "2026-10-01", plannedFinish: "2027-01-29", lateDays: 100, beyondHorizon: true, executable: true, document: null, bom: null, bomRevision: null },
+      { id: expect.any(String), kind: "purchase-requisition", needDate: "2026-10-21", quantity: "5.000000", plannedStart: "2026-10-01", plannedFinish: "2027-01-29", lateDays: 100, beyondHorizon: true, executable: true, document: null, bom: null, bomRevision: null, rejectedBoms: [] },
     ]);
     // The late receipt lands on its finish; the Beyond Horizon one in no stored day.
     expect(await day("00000001", late.id, PLANT, "2026-10-07")).toMatchObject({ proposed_receipts: "0.000000", projected_after: "-5.000000" });
@@ -550,7 +551,7 @@ describe("MrpRunService: replenishment proposals (#278)", () => {
     await sql("update mrp_recommendation set lead_time_days = 0");
     const { plans } = await latest();
     expect(plans[0].proposals).toEqual([
-      { id: expect.any(String), kind: "purchase-requisition", needDate: "2026-10-05", quantity: "3.000000", plannedStart: "2026-10-05", plannedFinish: "2026-10-05", lateDays: 0, beyondHorizon: false, executable: true, document: null, bom: null, bomRevision: null },
+      { id: expect.any(String), kind: "purchase-requisition", needDate: "2026-10-05", quantity: "3.000000", plannedStart: "2026-10-05", plannedFinish: "2026-10-05", lateDays: 0, beyondHorizon: false, executable: true, document: null, bom: null, bomRevision: null, rejectedBoms: [] },
     ]);
   });
 
@@ -614,11 +615,11 @@ describe("MrpRunService: BOM explosion (#281)", () => {
     expect(await sql("select exception_code as code, material, date, details from mrp_run_exception where exception_code = 'PROVISIONAL_PRODUCTION' order by position")).toEqual([
       {
         code: "PROVISIONAL_PRODUCTION", material: f.id, date: "2026-10-21",
-        details: JSON.stringify({ quantity: "10.000000", leadTimeDays: "2", bom: fBom.id, bomRevision: "1", components: `${i.id} 20.000000`, blockers: "no-feasible-bom", missing: `${fBom.id}/1: ${i.id} 20.000000 0.000000 20.000000` }),
+        details: JSON.stringify({ quantity: "10.000000", leadTimeDays: "2", bom: fBom.id, bomRevision: "1", components: `${i.id} 20.000000`, blockers: "no-feasible-bom", missing: `${fBom.id}/1: ${i.id} 20.000000 0.000000 20.000000`, order: `${fBom.id}/1` }),
       },
       {
         code: "PROVISIONAL_PRODUCTION", material: i.id, date: "2026-10-19",
-        details: JSON.stringify({ quantity: "20.000000", leadTimeDays: "3", bom: iBom.id, bomRevision: "1", components: `${r.id} 10.000000`, blockers: "no-feasible-bom,provisional-demand", missing: `${iBom.id}/1: ${r.id} 10.000000 0.000000 10.000000` }),
+        details: JSON.stringify({ quantity: "20.000000", leadTimeDays: "3", bom: iBom.id, bomRevision: "1", components: `${r.id} 10.000000`, blockers: "no-feasible-bom,provisional-demand", missing: `${iBom.id}/1: ${r.id} 10.000000 0.000000 10.000000`, order: `${iBom.id}/1` }),
       },
     ]);
     expect(await day("00000001", i.id, PLANT, "2026-10-19")).toMatchObject({ dependent_demand: "20.000000", projected_before: "-20.000000", proposed_receipts: "0.000000", projected_after: "-20.000000" });
@@ -629,6 +630,9 @@ describe("MrpRunService: BOM explosion (#281)", () => {
       [f.id, [], [{
         kind: "production-order", needDate: "2026-10-21", quantity: "10.000000", plannedStart: "2026-10-19", plannedFinish: "2026-10-21", lateDays: 0, beyondHorizon: false,
         bom: fBom.id, bomRevision: 1, components: [{ material: i.id, quantity: "20.000000" }], blockers: ["no-feasible-bom"], missing: `${fBom.id}/1: ${i.id} 20.000000 0.000000 20.000000`,
+        order: `${fBom.id}/1`,
+        // The same rejection, structured (E18-S03): the API's and the screen's one shape.
+        rejectedBoms: [{ bom: fBom.id, revision: 1, reason: "shortage", shortages: [{ material: i.id, required: "20.000000", available: "0.000000", shortage: "20.000000" }] }],
       }]],
       [i.id, [], [expect.objectContaining({ needDate: "2026-10-19", plannedStart: "2026-10-16", bom: iBom.id, components: [{ material: r.id, quantity: "10.000000" }], blockers: ["no-feasible-bom", "provisional-demand"] })]],
       [r.id, ["purchase-requisition"], []],
@@ -937,16 +941,20 @@ describe("MrpRunService: BOM choice (#282)", () => {
     const listed = (await latest()).plans.find(({ material: item }) => item === f.id)!;
     expect(listed.proposals).toEqual([]);
     expect(listed.exceptions).toEqual([
-      { code: "MISSING_USABLE_BOM", message: mrpExceptionMessage("MISSING_USABLE_BOM"), params: { material: f.id, location: PLANT, date: "2026-10-21", inactive } },
+      {
+        code: "MISSING_USABLE_BOM", message: mrpExceptionMessage("MISSING_USABLE_BOM"), params: { material: f.id, location: PLANT, date: "2026-10-21", inactive },
+        // LFC-026 explained (E18-S03): the only BOM, rejected for its inactive R.
+        rejectedBoms: [{ bom: fBom.id, revision: 1, reason: "inactive-component", materials: [r.id] }],
+      },
     ]);
     expect((await latest()).plans.some(({ material: item }) => item === r.id)).toBe(false);
   });
 
-  it("LFC-025: with a priority-2 BOM of active S beside it, F plans through that one while R is inactive, though R is the priority-1 input", async () => {
+  it("LFC-025, MRP-050: with a priority-2 BOM of active S beside it, F plans through that one while R is inactive, and the run explains the rejected priority 1", async () => {
     const f = await typed("finished", "Cabinet");
     const r = await typed("raw", "Retired steel");
     const s = await typed("raw", "Aluminium");
-    await recipe(f.id, { [r.id]: "1" });
+    const rBom = await recipe(f.id, { [r.id]: "1" });
     const sBom = await recipe(f.id, { [s.id]: "1" }, 2);
     await parameters("prod", f.id, PLANT, "make", "0.000000", "0.000001");
     await stock("prod", s.id, PLANT, "10");
@@ -956,7 +964,56 @@ describe("MrpRunService: BOM choice (#282)", () => {
     await run();
 
     expect(await sql("select material, bom from mrp_recommendation")).toEqual([{ material: f.id, bom: sBom.id }]);
-    expect(await sql("select exception_code from mrp_run_exception")).toEqual([]);
+    // The fallback's rejection is stored on the proposal's need date, never as an exception (E18-S03 spec Q1).
+    expect(await sql("select exception_code as code, material, date, details from mrp_run_exception")).toEqual([
+      { code: "BOM_REJECTIONS", material: f.id, date: "2026-10-21", details: JSON.stringify({ missing: "", inactive: `${rBom.id}/1: ${r.id}`, order: `${rBom.id}/1` }) },
+    ]);
+    const listed = (await latest()).plans.find(({ material: item }) => item === f.id)!;
+    expect(listed.proposals).toMatchObject([{ bom: sBom.id, bomRevision: 1, rejectedBoms: [{ bom: rBom.id, revision: 1, reason: "inactive-component", materials: [r.id] }] }]);
+    expect(listed.exceptions).toEqual([]);
+    expect(listed.marks).toEqual([]);
+  });
+
+  it("UX-020, MRP-025: stores a fallback's rejected priority 1 after every exception and provisional row, and lists it on the proposal with its exact shortage", async () => {
+    const f = await typed("finished", "Cake");
+    const a = await typed("raw", "Sugar");
+    const b = await typed("raw", "Honey");
+    const g = await typed("finished", "Tart");
+    const c = await typed("raw", "Flour");
+    const p1 = await recipe(f.id, { [a.id]: "1" });
+    const p2 = await recipe(f.id, { [b.id]: "1" }, 2);
+    const gBom = await recipe(g.id, { [c.id]: "1" });
+    // F's lot multiple of 2 lifts 4.1 to 6, with 5 A dependable: priority 1 is short 1 A, priority 2 has its 6 B.
+    await parameters("prod", f.id, PLANT, "make", "0.000000", "2.000000");
+    await parameters("prod", g.id, PLANT, "make", "0.000000", "0.000001");
+    await stock("prod", a.id, PLANT, "5");
+    await stock("prod", b.id, PLANT, "6");
+    // G has no C at all, so it is a provisional action with No Feasible BOM, and C has no planning parameters.
+    await order("prod", PLANT, [{ material: f.id, quantity: "4.1", requiredDate: "2026-10-21" }, { material: g.id, quantity: "2", requiredDate: "2026-10-21" }]);
+
+    await run();
+
+    expect(await sql("select material, bom from mrp_recommendation")).toEqual([{ material: f.id, bom: p2.id }]);
+    // The fallback's row follows every exception and provisional row, so each keeps its position (spec Q1).
+    expect(await sql("select exception_code as code, material, date from mrp_run_exception order by position")).toEqual([
+      { code: "NO_FEASIBLE_BOM", material: g.id, date: "2026-10-21" },
+      { code: "MISSING_PLANNING_PARAMETERS", material: c.id, date: "2026-10-19" },
+      { code: "PROVISIONAL_PRODUCTION", material: g.id, date: "2026-10-21" },
+      { code: "BOM_REJECTIONS", material: f.id, date: "2026-10-21" },
+    ]);
+    const { plans } = await latest();
+    const cake = plans.find(({ material: item }) => item === f.id)!;
+    expect(cake.proposals).toMatchObject([{
+      kind: "production-order", needDate: "2026-10-21", quantity: "6.000000", bom: p2.id, bomRevision: 1,
+      rejectedBoms: [{ bom: p1.id, revision: 1, reason: "shortage", shortages: [{ material: a.id, required: "6.000000", available: "5.000000", shortage: "1.000000" }] }],
+    }]);
+    // Never an exception or a mark: F keeps its proposal and lists none.
+    expect(cake.exceptions).toEqual([]);
+    expect(cake.marks).toEqual([]);
+    expect(plans.find(({ material: item }) => item === g.id)!.provisional).toMatchObject([{ bom: gBom.id, rejectedBoms: [{ bom: gBom.id, reason: "shortage" }] }]);
+    // A row without details (written around the service) explains nothing rather than failing the whole read (review of #335).
+    await sql("update mrp_run_exception set details = null where exception_code = 'BOM_REJECTIONS'");
+    expect((await latest()).plans.find(({ material: item }) => item === f.id)!.proposals).toMatchObject([{ bom: p2.id, rejectedBoms: [] }]);
   });
 
   it("stores No Feasible BOM for a proposal its components can't supply, with each short component's figures, and the proposal as a provisional action, not a recommendation", async () => {
@@ -972,21 +1029,26 @@ describe("MrpRunService: BOM choice (#282)", () => {
     await run();
 
     const missing = `${fBom.id}/1: ${a.id} 6.000000 5.000000 1.000000`;
+    const shortOfA = { bom: fBom.id, revision: 1, reason: "shortage", shortages: [{ material: a.id, required: "6.000000", available: "5.000000", shortage: "1.000000" }] };
     expect(await sql("select exception_code as code, material, date from mrp_run_exception order by position")).toEqual([
       { code: "NO_FEASIBLE_BOM", material: f.id, date: "2026-10-21" },
       { code: "PROVISIONAL_PRODUCTION", material: f.id, date: "2026-10-21" },
     ]);
-    expect((await sql<{ details: string }>("select details from mrp_run_exception where exception_code = 'NO_FEASIBLE_BOM'"))[0].details).toBe(JSON.stringify({ missing }));
+    expect((await sql<{ details: string }>("select details from mrp_run_exception where exception_code = 'NO_FEASIBLE_BOM'"))[0].details).toBe(JSON.stringify({ missing, order: `${fBom.id}/1` }));
     expect(await sql("select material, kind, quantity, bom, bom_revision from mrp_recommendation order by material")).toEqual([
       // The provisional need still plans A: 6 needed, 5 on hand, and buying A is executable.
       { material: a.id, kind: "purchase-requisition", quantity: "1.000000", bom: null, bom_revision: null },
     ]);
     const listed = (await latest()).plans.find(({ material: item }) => item === f.id)!;
     expect(listed.exceptions).toEqual([
-      { code: "NO_FEASIBLE_BOM", message: mrpExceptionMessage("NO_FEASIBLE_BOM"), params: { material: f.id, location: PLANT, date: "2026-10-21", missing } },
+      {
+        code: "NO_FEASIBLE_BOM", message: mrpExceptionMessage("NO_FEASIBLE_BOM"), params: { material: f.id, location: PLANT, date: "2026-10-21", missing, order: `${fBom.id}/1` },
+        rejectedBoms: [shortOfA],
+      },
     ]);
     expect(listed.proposals).toEqual([]);
-    expect(listed.provisional).toMatchObject([{ kind: "production-order", quantity: "6.000000", bom: fBom.id, blockers: ["no-feasible-bom"], missing }]);
+    // The parent planning exception and the provisional action explain the same rejection (E18-S03).
+    expect(listed.provisional).toMatchObject([{ kind: "production-order", quantity: "6.000000", bom: fBom.id, blockers: ["no-feasible-bom"], missing, rejectedBoms: [shortOfA] }]);
   });
 });
 
@@ -1068,6 +1130,7 @@ describe("MrpRunService: at-risk production (#283)", () => {
     await inRequestTransaction(cradle.em, () => cradle.productionOrderService.cancel(created.id, version, ANNA));
     await run();
     expect(await sql("select material, quantity, bom from mrp_recommendation")).toEqual([{ material: f.id, quantity: "10.000000", bom: sBom.id }]);
-    expect(await sql("select exception_code as code from mrp_run_exception")).toEqual([]);
+    // The replacement passed over R's BOM, which the run explains (E18-S03).
+    expect(await sql("select exception_code as code from mrp_run_exception")).toEqual([{ code: "BOM_REJECTIONS" }]);
   });
 });

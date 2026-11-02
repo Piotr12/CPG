@@ -2062,7 +2062,7 @@ export const en = {
       },
       figures: {
         date: "Date", firmDemand: "Firm demand", forecastDemand: "Forecast demand", dependentDemand: "Dependent demand", transferOut: "Transfer out",
-        safetyTarget: "Safety stock", tentativeSupply: "Tentative supply", dependableSupply: "Dependable supply", transferIn: "Transfer in",
+        safetyTarget: "Safety stock", tentativeSupply: "Tentative supply", dependableSupply: "Dependable supply", atRiskSupply: "At-risk supply", transferIn: "Transfer in",
         projectedBefore: "Projected before proposals", projectedAfter: "Projected after proposals", shortage: "Shortage",
       },
     },
@@ -2097,6 +2097,92 @@ export const en = {
         MATERIAL_INACTIVE: "The proposal's material is inactive, so no requisition can be created for it.",
         LOCATION_INACTIVE: "The proposal's location is inactive, so no requisition can be created there.",
         VALIDATION_FAILED: "The proposal's quantity is more than a requisition can hold.",
+      },
+    },
+    /** The report's explanations (E18-S03): why each BOM, provisional plans, at-risk orders and exceptions, for the page's pairs. */
+    explanations: {
+      heading: "Explanations",
+      intro: "For the pairs on this page.",
+      empty: "No provisional plans, at-risk orders or exceptions for the pairs on this page.",
+      /** One rejected BOM per line (UX-020); quantities carry their component's unit. */
+      rejections: {
+        why: { one: "Why this BOM ({count} rejected)", few: "Why this BOM ({count} rejected)", many: "Why this BOM ({count} rejected)", other: "Why this BOM ({count} rejected)" } as PluralForms,
+        label: "Rejected BOMs",
+        bom: "BOM {bom} / revision {revision}",
+        shortage: "{bom} — Component shortage",
+        inactive: "{bom} — Inactive BOM Component: {materials}",
+        line: "{material}: needs {required}, dependable {available}, short {shortage}",
+      },
+      provisional: {
+        heading: "Provisional plans",
+        calloutTitle: "Provisional — not executable",
+        callout: "These production orders can't be made as planned. They show what the chain would need. They are never counted as supply in any balance, and they can't be accepted.",
+        label: "Provisional plans of the pairs on this page",
+        badge: "Provisional",
+        columns: { pair: "Material / location", needDate: "Need date", quantity: "Quantity", bom: "BOM", components: "Components", blockers: "Blockers" },
+        planned: "start {start} · finish {finish}",
+        blockers: { "no-feasible-bom": "No feasible BOM", "provisional-demand": "Provisional demand" },
+        component: "Open {material} at {location}",
+      },
+      atRisk: {
+        heading: "At-risk production orders",
+        label: "At-risk production orders of the pairs on this page",
+        status: "At-Risk Existing Production / Inactive BOM Component",
+        columns: { order: "Order", pair: "Material / location", finish: "Finish", unproduced: "Unproduced", inactive: "Inactive components", status: "Status" },
+        order: "Find production order {order}",
+      },
+      exceptions: {
+        heading: "Exceptions",
+        label: "Planning exceptions of the pairs on this page",
+        columns: { type: "Type", material: "Material", location: "Location", date: "Date", explanation: "Explanation" },
+        /** By code, IDs and quantities from `params` (lesson 2026-10-23); `plain` when a param is missing. */
+        codes: {
+          MISSING_PLANNING_PARAMETERS: {
+            label: "Missing Planning Parameters",
+            reasons: {
+              "no-set": "This material has no planning parameters at this location, so MRP proposes no supply for it there.",
+              "raw-make": "This raw material is set to Make at this location, which MRP can't plan, so it proposes no supply for it there.",
+              "invalid-set": "This material's planning parameters at this location can't be used, so MRP proposes no supply for it there.",
+            },
+            plain: "This material has no usable planning parameters at this location, so MRP proposes no supply for it there.",
+          },
+          MISSING_BOM: {
+            label: "Missing BOM",
+            text: "No active BOM has a current revision valid on {date}, so MRP proposes no production.",
+            plain: "No active BOM has a current revision valid on the planned finish date, so MRP proposes no production.",
+          },
+          MISSING_USABLE_BOM: {
+            label: "Missing Usable BOM",
+            text: "Every BOM valid on {date} has an inactive component, so MRP proposes no production.",
+            plain: "Every BOM valid on the planned finish date has an inactive component, so MRP proposes no production.",
+          },
+          INVALID_UOM_CONVERSION: {
+            label: "Unit not convertible",
+            text: "A stored {record} of this material can't be read, so MRP proposes no supply for it.",
+            document: "A stored {record} of this material, {document}, can't be read, so MRP proposes no supply for it.",
+            plain: "A stored quantity, unit factor or date of this material can't be read, so MRP proposes no supply for it.",
+            records: {
+              "stock-balance": "stock balance", "customer-order-line": "customer order line", forecast: "forecast", "safety-stock-target": "safety stock target",
+              "purchase-requisition": "purchase requisition", "purchase-order-line": "purchase order line", "production-order": "production order",
+              "bom-line": "BOM line", transfer: "transfer",
+            },
+          },
+          CYCLIC_BOM: {
+            label: "BOM cycle",
+            text: "This material is on a cycle of BOMs, so MRP doesn't explode it: {path}.",
+            plain: "This material is on a cycle of BOMs, so MRP doesn't explode it and proposes no production for it here.",
+          },
+          NO_FEASIBLE_BOM: {
+            label: "No Feasible BOM",
+            text: "No usable BOM can be supplied from stock and dependable supply on the planned start, so this production is a provisional plan.",
+          },
+          INSUFFICIENT_TRANSFER_STOCK: {
+            label: "Insufficient Transfer Stock",
+            text: "Transfer {transfer} to {destination} plans {planned}, but only {available} is available at the source on its dispatch day, so only that part is planned.",
+            plain: "The source can't supply this transfer's undispatched quantity on its dispatch day, so only the available part is planned.",
+          },
+        },
+        fallback: { label: "MRP exception", text: "MRP raised an exception for this material at this location." },
       },
     },
   },
