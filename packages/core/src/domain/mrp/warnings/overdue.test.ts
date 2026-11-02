@@ -59,7 +59,7 @@ describe("compareWarnings", () => {
       arrival({ material: "M1", location: "L1", stage: "in-transit", transfer: "00000002" }),
       arrival({ material: "M1", location: "L1", stage: "planned", transfer: "00000002" }),
       arrival({ material: "M1", location: "L1", stage: "planned", transfer: "00000003" }),
-      // After both overdue codes (#322), then by its required date and ID; one ID may be overdue and late at once.
+      // After both overdue codes by code rank, even beside an overdue warning with the same ID (#322), then by its required date and ID.
       late({ material: "M1", location: "L1", plannedDate: "2026-10-02", document: "00000007" }),
       late({ material: "M1", location: "L1", plannedDate: "2026-10-02", document: "00000008" }),
       late({ material: "M1", location: "L1", plannedDate: "2026-10-03", document: "00000001" }),

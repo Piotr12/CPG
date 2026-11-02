@@ -1541,11 +1541,18 @@ describe("planMrp: Late Requisition (#322)", () => {
     const onTime = requisition({ quantity: q("5"), requiredDate: day(2) });
     expect(planMrp(inputs({ requisitions: [onTime], planningParameters: [set(2)] }), TODAY).warnings).toEqual([]);
     const soon = requisition({ quantity: q("5"), requiredDate: day(1) });
+    // An unreadable set never reaches `parametersOf`, so it reads as no set: nothing to judge by (spec Q4).
     const invalidSet = { material: "M1", location: "L1", record: "planning-parameter-set" as const };
     expect(planMrp(inputs({ requisitions: [soon], unreadable: [invalidSet] }), TODAY).warnings).toEqual([]);
-    expect(planMrp(inputs({ requisitions: [soon] }), TODAY).warnings).toEqual([]);
     const corrupt = { material: "M1", location: "L1", record: "customer-order-line" as const, document: "00000009/1" };
     expect(planMrp(inputs({ requisitions: [soon], planningParameters: [set(2)], unreadable: [corrupt] }), TODAY).warnings).toEqual([]);
+  });
+
+  it("MRP-012: names only the part of a partly converted requisition MRP still counts", () => {
+    const partly = requisition({ code: "00000005", quantity: q("100"), converted: q("60"), requiredDate: day(1) });
+    expect(planMrp(inputs({ requisitions: [partly], planningParameters: [set(2)] }), TODAY).warnings).toEqual([
+      { code: "LATE_REQUISITION", material: "M1", location: "L1", date: day(1), document: "00000005", plannedDate: day(1), plannedFinish: day(2), lateDays: 1, quantity: q("40") },
+    ]);
   });
 
   it("lists it after the pair's overdue warnings, each pair in code order", () => {

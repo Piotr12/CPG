@@ -32,7 +32,7 @@ describe("lateRequisitionWarnings", () => {
     ]);
   });
 
-  it("names only what the requisition still counts, as a partly converted one does (MRP-012)", () => {
+  it("names the quantity the plan counts, and times a longer lead time the same way", () => {
     const [warning] = lateRequisitionWarnings(planOf([requisition("00000005", "2026-10-04", "40")]), buy(7), TODAY);
     expect(warning).toMatchObject({ quantity: q("40"), plannedFinish: "2026-10-08", lateDays: 4 });
   });
