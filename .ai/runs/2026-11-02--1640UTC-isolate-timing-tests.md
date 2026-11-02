@@ -14,8 +14,8 @@ Make the CI bound measure the code, not the runner's contention, without looseni
 
 - 16:00 Triage. Since #338 split the unit suite (merged 10:23 UTC) the timing test has not failed: the five red
   unit runs since then failed in `tests/ai-filenames.test.ts` (four) and two migration tests (one). The margin
-  is thin, though: across four post-split runs the ten-times worst case reached 26,066 ms of 30,000 and the
-  longest stall 1,113 ms of 1,500, against 15.7–21.4 s right after the split.
+  is thin, though: across four post-split runs the ten-times run reached 26,066 ms of 30,000 (worst case 15,915–23,419)
+  and the longest stall 1,113 ms of 1,500, against a worst case of 15.7–21.4 s right after the split.
 - 16:35 Decision. The issue leaves the choice to the owner; the owner told the run to proceed on reasonable
   assumptions, so it takes the issue's first option and the one that keeps the contract: run the timing files
   on their own. `CI_FACTOR` and the budgets are unchanged.
@@ -31,8 +31,8 @@ Make the CI bound measure the code, not the runner's contention, without looseni
   `--no-file-parallelism`, then `--merge-reports`): 669 files, 100% coverage on all four measures. One failure,
   `tests/ai-filenames.test.ts`, is `main`'s own (the active copy of #320's spec), fixed by open PR #350.
 
-- 17:35 CI on #357 (run 41486362110): `unit-timing` green in 232 s. Ten-times worst case 16,439 ms (up to 26,066
-  in a shard), run 11,131 ms (15,915–17,814), longest stall 861 ms (up to 1,113). `unit-tests (2)` failed only on
+- 17:35 CI on #357 (run 41486362110): `unit-timing` green in 232 s. Ten-times worst case 16,439 ms (15,915–23,419
+  in a shard), run 11,131 ms (17,076–26,066), longest stall 861 ms (up to 1,113). `unit-tests (2)` failed only on
   `main`'s spec duplicate, so this PR deletes the active copy too, as #338 did; #350 deletes the same file.
 
 ## Changes
