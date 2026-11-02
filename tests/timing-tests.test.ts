@@ -17,12 +17,22 @@ const project = (name: string) => {
   return found!.test;
 };
 
-/** Measures elapsed time and asserts it stays under something. A lower bound (`write-gate.test.ts`) can't fail from a busy runner. */
-const boundsItsOwnTime = (source: string) => source.includes("performance.now()") && /\.toBeLessThan\(/.test(source);
+/**
+ * Times something with a high-resolution clock and asserts it stays under a bound. A lower bound (`write-gate.test.ts`)
+ * can't fail from a busy runner; `Date.now()` mostly stamps data (`login-throttle.test.ts`), so it doesn't count.
+ */
+const CLOCK = /performance\.now\(\)|process\.hrtime/;
+const UPPER_BOUND = /\.toBeLessThan(OrEqual)?\(|assert\.ok\([^)]*<(?!<)/;
+const boundsItsOwnTime = (source: string) => CLOCK.test(source) && UPPER_BOUND.test(source);
+/** This file names both patterns, so it would flag itself. */
+const SELF = "tests/timing-tests.test.ts";
 
 test("every unit test bounding its own running time is in the timing project, and nothing else is", () => {
-  const unitTests = globSync(["packages/*/{src,scripts}/**/*.test.{ts,tsx}", "tests/*.test.ts"], { cwd: repoRoot });
+  // The timing project runs in Node, so a timing test is a `.test.ts` file; the node project's include.
+  const unitTests = globSync(project("node").include, { cwd: repoRoot }).filter((file) => file !== SELF);
   const timed = unitTests.filter((file) => boundsItsOwnTime(readFileSync(path.join(repoRoot, file), "utf8")));
+  // The include is the node project's, which leaves the timing tests out only through `exclude`.
+  expect(unitTests).toEqual(expect.arrayContaining(TIMING_TESTS));
   expect(timed.toSorted()).toEqual(TIMING_TESTS.toSorted());
 });
 

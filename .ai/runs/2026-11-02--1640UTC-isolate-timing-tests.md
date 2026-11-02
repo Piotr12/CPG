@@ -26,9 +26,8 @@ Make the CI bound measure the code, not the runner's contention, without looseni
   `--project=!timing`; a `unit-timing` job runs `--project=timing --no-file-parallelism`, writes a blob with
   coverage, and `unit-coverage` merges it with the shards'. `tests/ci-workflow.test.ts` checks the jobs, and a
   repo test checks every test file asserting an upper time bound is in the timing project.
-
-- 16:50 Implemented as planned; the owner's instruction to proceed counts as the decision the issue asked for.
-- 17:47 Local CI flow (shard 1/2, shard 2/2 with `--project=!timing`, then the timing project with
+- 16:45 Implemented as planned; the owner's instruction to proceed counts as the decision the issue asked for.
+- 16:47 Local CI flow (shard 1/2, shard 2/2 with `--project=!timing`, then the timing project with
   `--no-file-parallelism`, then `--merge-reports`): 669 files, 100% coverage on all four measures. One failure,
   `tests/ai-filenames.test.ts`, is `main`'s own (the active copy of #320's spec), fixed by open PR #350.
 
@@ -49,7 +48,9 @@ Make the CI bound measure the code, not the runner's contention, without looseni
 - Local CI flow as above: shard 1 333 files passed (135 s), shard 2 332 of 333 (59 s, `main`'s spec failure),
   timing 3 files 54 tests passed, 2 skipped (92 s), merge 100% statements/branches/functions/lines.
 - Timing job alone, locally: ten-times run 4,880 ms, worst case 6,639 ms, longest stall 339 ms.
-- The CI run on the PR is the evidence that matters for the bound; recorded on the PR.
+- Review (independent subagent): approve, minors only. Applied: the detector also counts `toBeLessThanOrEqual`,
+  `assert.ok(… < …)` and `process.hrtime`, skips itself, and scans the node project's include; comment fixes.
+- The CI run on #357 is the evidence that matters for the bound; its figures are recorded on the PR.
 
 ## Follow-ups
 
