@@ -75,19 +75,19 @@ A run started as Automatic, from the Run MRP dialog or with `{ "mode": "automati
 
 ### Phase 1: schema
 
-- [ ] 1.1 MrpRun.creation and migration
+- [x] 1.1 MrpRun.creation and migration — 366c9f2b
 
 ### Phase 2: core
 
-- [ ] 2.1 Mode, view, audit fields, lock order
-- [ ] 2.2 Extract MrpProposalDocumentService
-- [ ] 2.3 MrpBatchService wired into run
-- [ ] 2.4 Concurrency and staleness tests
-- [ ] 2.5 Route and server action
+- [x] 2.1 Mode, view, audit fields, lock order — 4f2ca802
+- [x] 2.2 Extract MrpProposalDocumentService — 4f2ca802
+- [x] 2.3 MrpBatchService wired into run — 4f2ca802, 90c45e4d
+- [x] 2.4 Concurrency and staleness tests — 90c45e4d
+- [x] 2.5 Route and server action — 827ab3d0
 
 ### Phase 3: screen
 
-- [ ] 3.1 Dialog, card, copy and help
+- [x] 3.1 Dialog, card, copy and help — 265c7d14
 
 ### Phase 4: benchmark and integration
 
