@@ -64,7 +64,7 @@ describe("planMarks", () => {
       { ...lateRequisition, details: { ...lateRequisition.details!, plannedFinish: "" } },
       { ...lateRequisition, details: { ...lateRequisition.details!, lateDays: "0" } },
       { ...lateRequisition, details: { ...lateRequisition.details!, lateDays: "1.5" } },
-      { ...lateRequisition, details: (({ lateDays: _, ...rest }) => rest)(lateRequisition.details!) },
+      { ...lateRequisition, details: { document: "00000007", plannedDate: "2026-10-02", plannedFinish: "2026-10-03", quantity: "5.000000" } },
       { ...po, code: "MISSING_BOM" },
     ];
     expect(planMarks([], broken)).toEqual([]);
