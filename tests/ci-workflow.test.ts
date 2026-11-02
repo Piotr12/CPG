@@ -63,7 +63,40 @@ test("the browser install downloads only Chrome, nothing from apt", () => {
 });
 
 // The unit suite took 517 s on main (2026-10-25) and passed 10 minutes on a slower runner, which cancelled
-// it mid-run twice on #264 with every test passing. The limit keeps about twice the suite's length.
+// it mid-run twice on #264 with every test passing. The limit keeps about twice the whole suite's length,
+// so one shard still fits if the files split unevenly.
 test("the unit-test job's limit leaves room for a slow runner", () => {
   assert.ok((workflow.jobs["unit-tests"]["timeout-minutes"] ?? 360) >= 20);
+});
+
+const units = workflow.jobs["unit-tests"];
+const merge = workflow.jobs["unit-coverage"] as Job & { needs?: string | string[]; if?: string };
+const unitRun = (candidate: Job, command: string) => {
+  const step = candidate.steps.find((one) => one.run?.includes(command));
+  assert.ok(step, `no step runs ${command}`);
+  return step.run!.replace(/\s+/g, " ");
+};
+
+// One runner's CPUs, shared by the whole suite, slowed the MRP timing test past its CI bound (#337).
+test("the unit suite runs as numbered shards, each writing a blob of its results and coverage without the threshold", () => {
+  const shards = units.strategy?.matrix?.shard ?? [];
+  assert.ok(shards.length > 1, "the unit-test job is not sharded");
+  assert.deepEqual(shards, shards.map((_, index) => index + 1));
+  assert.equal(units.strategy?.["fail-fast"], false);
+  const run = unitRun(units, "npm run test:coverage");
+  assert.match(run, /--shard=\$\{\{ matrix\.shard \}\}\/\$\{\{ strategy\.job-total \}\}/);
+  // No shard covers every file, so each skips the threshold; the merge enforces it.
+  assert.match(run, /--coverage\.thresholds\.100=false/);
+  assert.match(run, /--reporter=blob/);
+  assert.match(run, /--outputFile\.blob=blob-reports\/blob-\$\{\{ matrix\.shard \}\}\.json/);
+});
+
+// A skipped job counts as passed, so a merge that only ran after green shards would let a red shard's
+// coverage gap through as "skipped". It runs unless the workflow was cancelled, and a missing blob fails it.
+test("unit-coverage merges every shard's blob and enforces the 100% threshold, even after a red shard", () => {
+  assert.deepEqual([merge.needs].flat(), ["unit-tests"]);
+  assert.equal(merge.if, "${{ !cancelled() }}");
+  const run = unitRun(merge, "npm run test:coverage");
+  assert.match(run, /--merge-reports=blob-reports$/);
+  assert.doesNotMatch(run, /thresholds/);
 });
