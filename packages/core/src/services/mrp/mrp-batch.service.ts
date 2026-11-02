@@ -14,7 +14,7 @@ import type { MrpCreatedDocumentView } from "./mrp-run-view";
  */
 export const MRP_BATCH_LIMIT = 2_500;
 
-/** Documents per flush: every flush walks the identity map, so it is cleared after each chunk (lesson 2026-10-22). */
+/** Documents per flush: every flush walks the identity map, so it is cleared after each chunk (lesson 2026-10-22). The batch yields after every document. */
 export const MRP_BATCH_CHUNK = 25;
 
 /**
@@ -96,8 +96,10 @@ export class MrpBatchService {
             if ((index + 1) % MRP_BATCH_CHUNK === 0) {
               await this.em.flush();
               this.em.clear();
-              await yieldToEventLoop();
             }
+            // After every document, not every chunk: a production order reads its BOMs, components and balances,
+            // so a chunk of 25 kept the server from reading its sockets for too long (#320 Q10, lesson 2026-10-24).
+            await yieldToEventLoop();
           }
         },
         { keep: true },
