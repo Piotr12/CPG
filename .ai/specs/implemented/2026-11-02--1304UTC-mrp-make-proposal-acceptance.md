@@ -109,7 +109,7 @@ No new route. Additive:
 
 ## 📝 UI/UX
 
-Prototype: `assets/mrp-make-proposal-acceptance/mockup-01-make-proposals.png`, `assets/mrp-make-proposal-acceptance/mockup-02-accept-make-dialog.png`
+Prototype: `../assets/mrp-make-proposal-acceptance/mockup-01-make-proposals.png`, `assets/mrp-make-proposal-acceptance/mockup-02-accept-make-dialog.png`
 
 - **Proposals table** (`mrp-proposals.tsx`, unchanged layout): a Make row with a BOM gets **Accept** (`data-mrp-accept`). Once accepted it links "Production order 00000007" to `/admin/{tenant}/production-orders?q=00000007` (`data-mrp-document`). The link's path follows the proposal's kind. A Make row without a BOM shows the muted "This proposal can't be accepted. Run MRP again." (`data-mrp-not-executable`).
 - **Confirmation** (`ConfirmDialog`, not destructive), per kind:
@@ -122,9 +122,9 @@ Prototype: `assets/mrp-make-proposal-acceptance/mockup-01-make-proposals.png`, `
 - **Production orders:** the list shows "MRP run 00000004" under the order's ID (`data-production-mrp-run`), and nothing for an order entered by hand. The detail's fields add "MRP run" when it is set.
 - **Help (EN, PL):** "Production-order proposals can't be accepted yet" and "Production-order proposals aren't created yet" are replaced by one sentence: a Make proposal's Accept creates an Open production order pinned to the BOM and revision MRP chose, finishing on the need date and starting the lead time before it, and recording the run; a changed BOM revision makes it out of date.
 
-![The Proposals table with a Make proposal accepted](assets/mrp-make-proposal-acceptance/mockup-01-make-proposals.png)
+![The Proposals table with a Make proposal accepted](../assets/mrp-make-proposal-acceptance/mockup-01-make-proposals.png)
 
-![The Make confirmation](assets/mrp-make-proposal-acceptance/mockup-02-accept-make-dialog.png)
+![The Make confirmation](../assets/mrp-make-proposal-acceptance/mockup-02-accept-make-dialog.png)
 
 ## 📝 Edge Cases & Failure Scenarios
 
