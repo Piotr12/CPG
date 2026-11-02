@@ -70,6 +70,8 @@ PR: #342
 - 13:09 UTC — Branched `feat/mrp-report-pinned-columns` from `origin/main` (not stacked on #341, lesson 2026-10-23). Started `npm ci` (lesson 2026-10-27).
 - 13:20 UTC — Phases 1–2 landed. Docker isn't available on this machine, so the integration tests ran against a local standalone production build (lesson 2026-10-23). `mrp-report.test.ts` passed 14/14, and `mrp-accept.test.ts` with `mrp-report-api.test.ts` passed 10/10.
 - 13:22 UTC — Full gate green: `npm run lint` 0, `npm run typecheck` 0, `npm run test:coverage` 0 (665 files, 5454 tests, 100% statements and lines), `npm run build` 0. Screenshots (EN and PL, Day and Week, at the start and the middle of the scroll) are on PR #342.
+- 13:33 UTC — Review (fresh-context reviewer, `om-auto-review-pr --autofix`): approve, with three minors and four nits, all fixed in 22160edb (`DataTable` refuses `pin` with row actions, the 8rem width is part of the contract, tighter integration assertions). Re-ran lint 0, typecheck 0, `test:coverage` 0 (5455 tests, 100% on all four metrics), build 0, and `mrp-report.test.ts` 14/14 on a fresh standalone server.
+- 13:33 UTC — UI evidence (EN and PL, Day and Week, 1280 px) was captured by this run on the standalone production build and posted on #342. `om-auto-qa-pr` wasn't run separately: its evidence-only pass would capture the same screens. The `needs-qa` sign-off stays with a human.
 
 ## Verification
 
