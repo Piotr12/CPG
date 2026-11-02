@@ -40,10 +40,10 @@ jobs:
       - run: npm run typecheck
 
   # The unit suite with coverage, split across parallel runners. Whole, it took 8.6 min on a quick runner
-  # and over 10 on a slow one (the dataset seed and reset tests), and sharing one runner's CPUs slowed the
-  # MRP timing test past its CI bound (#337). Each shard writes its results and raw coverage as a blob
-  # and skips the threshold, which no single shard can reach; unit-coverage merges the blobs and enforces
-  # it. The limit keeps about twice the whole suite's length (tests/ci-workflow.test.ts).
+  # and over 10 on a slow one (the dataset seed and reset tests). The timing tests run apart, in
+  # unit-timing. Each shard writes its results and raw coverage as a blob and skips the threshold, which
+  # no single shard can reach; unit-coverage merges the blobs and enforces it. The limit keeps about twice
+  # the whole suite's length (tests/ci-workflow.test.ts).
   unit-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -59,7 +59,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: >-
-          npm run test:coverage -- --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+          npm run test:coverage -- --project=!timing --shard=${{ matrix.shard }}/${{ strategy.job-total }}
           --coverage.thresholds.100=false --reporter=default --reporter=blob
           --outputFile.blob=blob-reports/blob-${{ matrix.shard }}.json
       # A shard whose tests fail still uploads its blob, so the merge reports every failure.
@@ -71,11 +71,37 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  # Fails below 100% line/branch/function/statement coverage (vitest.config.mts) over every shard's
-  # coverage, and on any test a shard failed. It runs even when a shard failed, so a red shard can't
-  # leave it skipped: a missing blob drops coverage below the threshold.
+  # The tests that bound how long the code takes (the timing project, vitest.config.mts), on a runner of
+  # their own and one file at a time. Beside the rest of the suite the MRP timing test went over its CI
+  # bound on unchanged code, because the bound measured the runner's other test files too (#337). Its
+  # blob joins the shards' in unit-coverage.
+  unit-timing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: >-
+          npm run test:coverage -- --project=timing --no-file-parallelism
+          --coverage.thresholds.100=false --reporter=default --reporter=blob
+          --outputFile.blob=blob-reports/blob-timing.json
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: unit-blob-timing
+          path: blob-reports/
+          if-no-files-found: error
+          retention-days: 1
+
+  # Fails below 100% line/branch/function/statement coverage (vitest.config.mts) over every shard's and
+  # the timing tests' coverage, and on any test they failed. It runs even when one of them failed, so a red
+  # job can't leave it skipped: a missing blob drops coverage below the threshold.
   unit-coverage:
-    needs: unit-tests
+    needs: [unit-tests, unit-timing]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
