@@ -28,11 +28,14 @@ Issue #310: eleven catalogue rows (BUY-002, BUY-017, BUY-018, BUY-024, BUY-026, 
 
 - 13:40 UTC: an independent review found nothing blocking. Its should-fix: every Closed Early or cancelled fixture left nothing outstanding by arithmetic, so the tests would pass without MRP's status filters (lesson 2026-10-27). Added a Closed Early line whose 60 receipt is then reversed: received 0 and abandoned 40, so 60 is left by arithmetic and only the status keeps it out. Also from its nits: the screen check asserts the pair's heading, every plan has no at-risk, transfer or proposed supply, and the requisitions and the converted line are read back. Re-ran on a fresh local server: 9 passed.
 
+- 14:00 UTC: CI on `aa808528` was green except integration shard 4. There, `mrp-rerun.test.ts` (RUN-012) timed out finding requisition 00000010's row. It took the first row whose text contained the ID, and this file's requisitions, run earlier on the shard, contain those digits in another column. Reproduced locally in shard 4's file order (old matcher: 1 failed, 66 passed). The matcher now uses the ID cell, and all 67 pass. New lesson: "Find a list row by its ID cell, never by the row's text".
+
 ## Changes
 - `tests/integration/mrp-report-supply.test.ts` (new): one test per scenario, each asserting through `GET …/mrp/runs/latest` and on the MRP page's day table (all 90 rows equal to the API's figures).
 - `.ai/specs/research/CPG-acceptance.md`: BUY-002, BUY-017, BUY-018, BUY-024, BUY-026, MRP-010, MRP-012, MRP-013, MRP-014, MRP-042 and LFC-024 → Passed (automated), with their Evidence; the Execution status paragraph.
 - `.ai/specs/2026-11-02--1031UTC-mrp-automatic-mode.md` deleted (also #347).
-- `.ai/lessons.md`: the paperwork lesson gains #340's case.
+- `.ai/lessons.md`: the paperwork lesson gains #340's case; a new lesson on matching list rows by ID cell.
+- `tests/integration/mrp-rerun.test.ts`: the RUN-012 row matcher uses the ID cell.
 
 ## Verification
 - `npm run lint` → 0; `npm run typecheck` → 0; `npm run build` → 0.
