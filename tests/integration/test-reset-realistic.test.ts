@@ -121,6 +121,33 @@ describe("the realistic Test dataset, written by an API reset", () => {
     expect(upMs).toBeLessThan(runMs);
   });
 
+  it("reruns MRP over many pages of requisitions, purchase orders and production orders and edits none of them (E19-S02, R10, RUN-013)", async () => {
+    const lists = ["purchase-requisitions", "purchase-orders", "production-orders"] as const;
+    const all = (kind: string) => allPages(async (page) => json(await api("GET", `/api/tenants/test/${kind}?page=${page}`)).data as { id: string }[]);
+    const snapshot = async () => Object.fromEntries(await Promise.all(lists.map(async (kind) => [kind, await all(kind)])));
+    const run = async () => {
+      const response = await api("POST", "/api/tenants/test/mrp/runs", { key: randomUUID(), body: {}, generation: await generation() });
+      expect(response.status, response.text).toBe(200);
+    };
+    // The realistic dataset has a few requisitions only: top them up past one page, so a first-page read can't pass (lesson 2026-10-24).
+    // The reset in afterAll removes them with the rest of this dataset.
+    const { baseUnit } = json(await api("GET", "/api/tenants/test/materials/00000007")).data as { baseUnit: string };
+    const requiredDate = new Date(Date.now() + 80 * 86_400_000).toISOString().slice(0, 10);
+    for (let count = (await all("purchase-requisitions")).length; count <= 100; count += 1) {
+      const body = { material: "00000007", location: "00000001", quantity: "1", unit: baseUnit, requiredDate };
+      const response = await api("POST", "/api/tenants/test/purchase-requisitions", { key: randomUUID(), body, generation: await generation() });
+      expect(response.status, response.text).toBe(200);
+    }
+    await run();
+    const before = await snapshot();
+
+    await run();
+
+    const after = await snapshot();
+    for (const kind of lists) expect(after[kind].length, kind).toBeGreaterThan(100);
+    expect(after).toEqual(before);
+  });
+
   it("writes two years of customer orders, many pages of them, and audits the reset as realistic (TEN-022, AUD-013)", async () => {
     const orders = await allPages(async (page) => json(await api("GET", `/api/tenants/test/customer-orders?page=${page}`)).data as { id: string; status: string }[]);
     expect(orders[0].id).toBe("00000001");

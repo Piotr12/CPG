@@ -5,7 +5,7 @@ import { yieldToEventLoop } from "../../../http/yield-to-event-loop";
 import type { SnapshotCodes } from "./codes";
 import { beforeCutOff, readRow, type UnreadableRows } from "./readable";
 
-/** How many pinned revisions one component read takes: a bounded `$in` list (lesson 2026-10-24, "Paging a list"). */
+/** How many pinned revisions one component read takes: a bounded `$in` list (lesson "Paging a list"). */
 export const REVISION_CHUNK = 100;
 
 /** One pinned revision's lines: the readable ones, every component's material, its inactive ones, and its unreadable lines' positions. */

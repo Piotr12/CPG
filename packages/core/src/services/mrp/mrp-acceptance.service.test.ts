@@ -406,3 +406,142 @@ describe("MrpAcceptanceService.accept: refusals, with nothing created", () => {
     expect((await plan(sugar)).proposals[0].document).toBeNull();
   });
 });
+
+describe("MrpAcceptanceService and MrpRunService: reruns (E19-S02)", () => {
+  /** A run's proposals without their IDs, which every run draws afresh (spec Q8). */
+  const without = (proposals: readonly MrpPlanView["proposals"][number][]) => proposals.map((proposal) => ({ ...proposal, id: undefined }));
+  /** A Make material at the plant whose BOM needs 1 of a stocked raw material per kg, exact lots. Returns the output, its BOM and the component. */
+  async function makeable(description: string) {
+    const output = await material(description);
+    const { cradle } = await scope();
+    const component = await cradle.materialService.create({ type: "raw", description: `Input of ${description}`, baseUnit: "each" }, ANNA);
+    await cradle.stockService.correct({ material: component.id, location: PLANT, quantity: "500", unit: "each", reason: "Count" }, ANNA);
+    const bom = await cradle.bomService.create({ output: output.id, priority: 1, validFrom: "2026-01-01", validThrough: null, components: [{ material: component.id, quantity: "1", unit: "each" }] }, ANNA);
+    await cradle.planningParameterService.create({ material: output.id, location: PLANT, procurement: "make", leadTimeDays: 2, minimumQuantity: "0.000000", lotMultiple: "0.000001" }, ANNA);
+    await cradle.planningParameterService.create({ material: component.id, location: PLANT, procurement: "buy", leadTimeDays: 2, minimumQuantity: "0.000000", lotMultiple: "0.000001" }, ANNA);
+    return { output: output.id, bom: bom.id, component: component.id };
+  }
+  /** An Open production order of 100 kg finishing on 12 October, as the production dialog creates it. */
+  async function produce(output: string, bom: string) {
+    const { cradle } = await scope();
+    return inRequestTransaction(cradle.em, () => cradle.productionOrderService.create({ output, location: PLANT, quantity: "100", unit: "kg", plannedFinish: "2026-10-12", bom, revision: 1 }, ANNA));
+  }
+  const productionOrder = async (id: string) => {
+    const { quantity, plannedStart, plannedFinish, status, version } = await (await scope()).cradle.productionOrderService.get(id);
+    return { quantity, plannedStart, plannedFinish, status, version };
+  };
+  const audits = async () => sql<{ action: string; subject_type: string }>("select action, subject_type from tenant_audit_event where tenant_code = 'prod' order by rowid");
+
+  it("RUN-008, RUN-012: a requisition accepted from run 1 stays Open and tagged with run 1, and run 2 nets it, proposing nothing more for its pair", async () => {
+    const { material: sugar, runId, proposal } = await buyProposal();
+    const { document } = await accept(runId, proposal.id);
+
+    const rerun = await run();
+
+    expect(rerun.id).toBe("00000002");
+    const after = await plan(sugar);
+    expect(after.run).toBe("00000002");
+    expect(after.proposals).toEqual([]);
+    expect(after.buckets.find(({ date }) => date === "2026-10-05")).toMatchObject({ tentativeSupply: "100.000000", projectedBefore: "0.000000" });
+    expect(after.excess).toBe("0.000000");
+    expect(await count("purchase_requisition")).toBe(1);
+    expect(await (await scope()).cradle.purchaseRequisitionService.get(document.id)).toMatchObject({ status: "open", quantity: "100.000000", mrpRun: "00000001", version: document.version });
+  });
+
+  it("RUN-011: run 2 replaces run 1's unaccepted proposals with its own, and accepting run 1's is refused as stale, creating nothing", async () => {
+    const { material: sugar, runId, proposal } = await buyProposal();
+
+    await run();
+
+    const report = await (await scope()).cradle.mrpRunService.latest({});
+    expect(report.run).toMatchObject({ id: "00000002", createdAt: expect.any(Date), startDate: "2026-10-01" });
+    const { proposals } = await plan(sugar);
+    expect(proposals).toHaveLength(1);
+    expect(proposals[0].id).not.toBe(proposal.id);
+    expect(await count("mrp_recommendation")).toBe(1);
+    await expect(accept(runId, proposal.id)).rejects.toMatchObject({ code: "MRP_PROPOSAL_STALE", status: 409, message: MRP_PROPOSAL_STALE });
+    expect(await count("purchase_requisition")).toBe(0);
+  });
+
+  it("an accepted lot-rounded proposal shows its rounding as excess on the next run, with nothing else changed (spec Q1)", async () => {
+    const pepper = await material("Pepper");
+    await (await scope()).cradle.planningParameterService.create({ material: pepper.id, location: PLANT, procurement: "buy", leadTimeDays: 2, minimumQuantity: "0.000000", lotMultiple: "25.000000" }, ANNA);
+    await order(pepper.id, "20", "2026-10-05");
+    await run();
+    const first = await plan(pepper.id);
+    expect(first.proposals.map(({ quantity }) => quantity)).toEqual(["25.000000"]);
+    expect(first.excess).toBe("0.000000");
+
+    await accept(first.run, first.proposals[0].id);
+    await run();
+
+    const second = await plan(pepper.id);
+    expect(second.proposals).toEqual([]);
+    expect(second.excess).toBe("5.000000");
+  });
+
+  it("RUN-010: an Open production order of 100 against demand now 80 is left as it was, and the read shows an excess of 20", async () => {
+    const { output, bom } = await makeable("Cabinet");
+    const order100 = await produce(output, bom);
+    await order(output, "80", "2026-10-20");
+    const before = await productionOrder(order100.id);
+
+    await run();
+    await run();
+
+    const report = await plan(output);
+    expect(report.proposals).toEqual([]);
+    expect(report.excess).toBe("20.000000");
+    expect(await productionOrder(order100.id)).toEqual(before);
+    expect(before).toMatchObject({ quantity: "100.000000", plannedFinish: "2026-10-12", status: "open" });
+  });
+
+  it("RUN-013, R10: a rerun leaves an Open purchase-order line and production order as they were when new demand wants more and earlier, proposes the rest, and audits only the run", async () => {
+    const { output, bom } = await makeable("Shelf");
+    const order100 = await produce(output, bom);
+    const sugar = await material("Sugar");
+    await parameters(sugar.id);
+    const { cradle } = await scope();
+    await cradle.supplierService.create({ name: "Mill" }, ANNA);
+    const po = await cradle.purchaseOrderService.create({ supplier: "00000001", location: PLANT, lines: [{ material: sugar.id, quantity: "40", unit: "kg", plannedDate: "2026-10-15" }] }, ANNA);
+    await run();
+    const [orderBefore, poBefore] = [await productionOrder(order100.id), await (await scope()).cradle.purchaseOrderService.get(po.id)];
+    // More, and earlier, than either document brings.
+    await order(output, "130", "2026-10-08");
+    await order(sugar.id, "70", "2026-10-06");
+    const audited = (await audits()).length;
+
+    await run();
+
+    expect(await productionOrder(order100.id)).toEqual(orderBefore);
+    expect(await (await scope()).cradle.purchaseOrderService.get(po.id)).toEqual(poBefore);
+    expect((await plan(output)).proposals.map(({ kind, needDate, quantity }) => ({ kind, needDate, quantity }))).toEqual([
+      { kind: "production-order", needDate: "2026-10-08", quantity: "130.000000" },
+    ]);
+    expect((await plan(sugar.id)).proposals.map(({ kind, needDate, quantity }) => ({ kind, needDate, quantity }))).toEqual([
+      { kind: "purchase-requisition", needDate: "2026-10-06", quantity: "70.000000" },
+    ]);
+    expect((await audits()).slice(audited)).toEqual([{ action: "mrp.mrp-run.created", subject_type: "MrpRun" }]);
+  });
+
+  it("gives identical proposals, in the same order, from two reruns over unchanged data, apart from their new IDs (spec Q8)", async () => {
+    const { output, bom } = await makeable("Desk");
+    await produce(output, bom);
+    await order(output, "120", "2026-10-20");
+    const salt = await material("Salt");
+    await parameters(salt.id);
+    await order(salt.id, "7", "2026-10-03");
+    await order(salt.id, "9", "2026-10-09");
+    await run();
+    const first = (await (await scope()).cradle.mrpRunService.latest({})).plans;
+
+    await run();
+
+    const second = (await (await scope()).cradle.mrpRunService.latest({})).plans;
+    const proposals = (plans: readonly MrpPlanView[]) => plans.flatMap((each) => without(each.proposals).map((proposal) => ({ material: each.material, ...proposal })));
+    expect(proposals(first).length).toBeGreaterThanOrEqual(3);
+    expect(proposals(second)).toEqual(proposals(first));
+    const idsOf = (plans: readonly MrpPlanView[]) => plans.flatMap((each) => each.proposals.map(({ id }) => id));
+    expect(idsOf(second).filter((id) => idsOf(first).includes(id))).toEqual([]);
+  });
+});

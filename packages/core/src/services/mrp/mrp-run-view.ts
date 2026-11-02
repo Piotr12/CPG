@@ -60,6 +60,11 @@ export interface MrpPlanView {
   lowestProjectedBefore: string;
   /** The first day with a shortage, or null. */
   firstShortageDate: string | null;
+  /**
+   * The open supply its documents bring beyond the horizon's need (E19-S02, `planExcess`): the last day's
+   * `projectedBefore` above its `safetyTarget`, capped at its open supply. A six-decimal text, `0.000000` when none.
+   */
+  excess: string;
   buckets: MrpBucketView[];
   /** The run's replenishment proposals for this pair, by need date (E16-S01). */
   proposals: MrpProposalView[];

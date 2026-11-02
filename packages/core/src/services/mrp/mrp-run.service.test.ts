@@ -377,12 +377,12 @@ describe("MrpRunService.latest", () => {
     const { plans } = await latest();
 
     expect(Object.keys(plans[0])).toEqual([
-      "material", "materialDescription", "materialActive", "baseUnit", "location", "locationName", "locationActive", "lowestProjectedBefore", "firstShortageDate", "buckets", "proposals", "exceptions", "provisional", "marks",
+      "material", "materialDescription", "materialActive", "baseUnit", "location", "locationName", "locationActive", "lowestProjectedBefore", "firstShortageDate", "excess", "buckets", "proposals", "exceptions", "provisional", "marks",
     ]);
     expect(plans[0]).toMatchObject({
       material: cabinet.id, materialDescription: "Cabinet", materialActive: false, baseUnit: "each",
       location: depot, locationName: "Depot", locationActive: false,
-      lowestProjectedBefore: "-15.000000", firstShortageDate: "2026-10-04",
+      lowestProjectedBefore: "-15.000000", firstShortageDate: "2026-10-04", excess: "0.000000",
     });
   });
 
