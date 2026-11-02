@@ -30,6 +30,18 @@ Record #322's decision (a document accepted from a Late Supply proposal keeps it
 - Analysis: option 3 (planned finish, accept staleness) double-orders on the next run. Option 2 (planned finish plus sizing) hides shortages for all late supply. Option 1 is what #319 and #345 ship.
 - Found `main` failing `tests/ai-filenames.test.ts`. #350 (open, by someone else) already deletes the duplicate, so no PR from this run.
 - 16:15 UTC Spec PR #352 opened. A fresh-context review (no Critical findings) was folded in.
+- 16:17 UTC Implementation branch `feat/mrp-late-requisition-warning` from `main`, draft PR #354. A second git worktree for it couldn't install dependencies (the tool denied `npm ci` there), so the run switched branches in the cezar worktree instead.
+- Deviation from the spec text: the English date reads "Oct 3" (en-US `shortDate`) and the Polish word is "Opóźnione", matching "Opóźniona dostawa". Both spec copies were updated.
+- 17:28 UTC Gate and integration green (see Verification).
+
+## Verification
+
+- `npm run lint`: clean, after one unused-binding warning in a test was fixed.
+- `npm run typecheck`: passes.
+- `npm run test:coverage`: 5550 passed. The only failure is `tests/ai-filenames.test.ts`, from `main`'s duplicate #320 spec, which #350 fixes. Re-run without that file: 100% statements, branches, functions and lines.
+- `npm run build`: passes.
+- Integration against the built app (`npm start`, fresh `DATA_DIR`, `CPG_BASE_URL`): `mrp-accept.test.ts` 3/3, `mrp-report.test.ts` + `mrp-report-api.test.ts` 22/22.
+- Screenshot of the Late badge on the requisition's required date, taken from the running app, is posted on #354.
 
 ## Implementation Plan
 
@@ -47,19 +59,21 @@ Record #322's decision (a document accepted from a Late Supply proposal keeps it
 
 ## Progress
 
+PR: #354
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Engine and stored warning
 
-- [ ] 1.1 Late requisition warnings in the engine
+- [x] 1.1 Late requisition warnings in the engine — 2efcf489
 
 ### Phase 2: Read and screen
 
-- [ ] 2.1 Late requisition marks on read
-- [ ] 2.2 Mark text, copy and help
+- [x] 2.1 Late requisition marks on read — bc002a69
+- [x] 2.2 Mark text, copy and help — 0f8e8f85
 
 ### Phase 3: Docs and integration
 
-- [ ] 3.1 Compatibility notes and acceptance evidence
-- [ ] 3.2 Integration test
-- [ ] 3.3 Full validation gate
+- [x] 3.1 Compatibility notes and acceptance evidence — c9592690
+- [x] 3.2 Integration test — 2f188bba
+- [x] 3.3 Full validation gate — 2157578f
