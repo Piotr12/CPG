@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { CompletionPreview, ProductionOrderDetail } from "@cpg/core";
+import type { CompletionPreview, Locale, ProductionOrderDetail } from "@cpg/core";
 import { productionCompletionPreviewSchema } from "@cpg/core/validators/production-orders/production-completion.schema";
 import { apiCall } from "@cpg/ui/backend/api/api-call";
 import { Callout } from "@cpg/ui/backend/feedback/callout";
@@ -9,7 +9,7 @@ import { CrudForm } from "@cpg/ui/backend/forms/crud-form";
 import { Button } from "@cpg/ui/components/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@cpg/ui/components/dialog";
 import { postProductionCompletion } from "../../app/admin/[tenant]/production-orders/actions";
-import { errorFormatter, fill, TALL_DIALOG, type TenantContext } from "../forms/form-labels";
+import { errorFormatter, fill, localeQuantity, TALL_DIALOG, type TenantContext } from "../forms/form-labels";
 import { CompletionForm, type CompletionInputChoice } from "./completion-form";
 import { completionFieldError, type ProductionLabels } from "./labels";
 
@@ -24,8 +24,8 @@ interface Props {
   inputs: CompletionInputChoice[];
   /** Whether the order still takes completions: Open, in a writable tenant. The notice of a post outlives the button. */
   canPost: boolean;
-  /** The reader's language, for the material picker's counts. */
-  locale?: string;
+  /** The reader's language, for the figures it shows and the material picker's counts. */
+  locale: Locale;
 }
 
 /**
@@ -62,7 +62,7 @@ export function CompletionDialog({ context, labels: t, order, outputUnits, locat
               <DialogTitle>{fill(t.completion.title, { id: order.id })}</DialogTitle>
               <DialogDescription>
                 {preview
-                  ? fill(t.completion.summary, { quantity: preview.quantity, unit: draft.unit, location: locationLabel, bom: order.bom, revision: String(order.revision) })
+                  ? fill(t.completion.summary, { quantity: localeQuantity(preview.quantity, locale), unit: draft.unit, location: locationLabel, bom: order.bom, revision: String(order.revision) })
                   : t.completion.description}
               </DialogDescription>
             </DialogHeader>

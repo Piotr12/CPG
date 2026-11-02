@@ -1,23 +1,23 @@
 import Link from "next/link";
 import { TriangleAlert } from "lucide-react";
-import type { MaterialSummary, ProductionComponent } from "@cpg/core";
+import type { Locale, MaterialSummary, ProductionComponent } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
-import { formQuantity } from "../forms/form-labels";
+import { formQuantity, localeQuantity } from "../forms/form-labels";
 import type { ProductionLabels } from "./labels";
 
 const isShort = (row: ProductionComponent) => formQuantity(row.shortage) !== "0";
 
-/** Direct pinned quantities compared with current physical stock, never projected or reserved inventory. A short row is marked in the warning tone. */
-export function ProductionRequirements({ components, labels: t, materials, tenant }: { components: ProductionComponent[]; labels: ProductionLabels; materials: MaterialSummary[]; tenant: string }) {
+/** Direct pinned quantities, in the reader's locale, compared with current physical stock, never projected or reserved inventory. A short row is marked in the warning tone. */
+export function ProductionRequirements({ components, labels: t, materials, tenant, locale }: { components: ProductionComponent[]; labels: ProductionLabels; materials: MaterialSummary[]; tenant: string; locale: Locale }) {
   const columns: DataTableColumn<ProductionComponent>[] = [
     { id: "material", header: t.component, kind: "longText", cell: (row) => <Link className="underline" href={`/admin/${tenant}/materials/${row.material}`}>{row.material} {materials.find(({ id }) => id === row.material)!.description}</Link> },
-    { id: "required", header: t.required, kind: "quantity", cell: (row) => `${formQuantity(row.required)} ${row.baseUnit}` },
-    { id: "available", header: t.available, kind: "quantity", priority: 2, cell: (row) => `${formQuantity(row.available)} ${row.baseUnit}` },
+    { id: "required", header: t.required, kind: "quantity", cell: (row) => `${localeQuantity(row.required, locale)} ${row.baseUnit}` },
+    { id: "available", header: t.available, kind: "quantity", priority: 2, cell: (row) => `${localeQuantity(row.available, locale)} ${row.baseUnit}` },
     {
       id: "shortage", header: t.shortage, kind: "quantity",
       cell: (row) => isShort(row)
-        ? <span className="inline-flex items-center gap-1 text-warning" data-shortage><TriangleAlert aria-hidden="true" className="size-3.5 shrink-0" />{formQuantity(row.shortage)} {row.baseUnit}</span>
-        : `${formQuantity(row.shortage)} ${row.baseUnit}`,
+        ? <span className="inline-flex items-center gap-1 text-warning" data-shortage><TriangleAlert aria-hidden="true" className="size-3.5 shrink-0" />{localeQuantity(row.shortage, locale)} {row.baseUnit}</span>
+        : `${localeQuantity(row.shortage, locale)} ${row.baseUnit}`,
     },
   ];
   return <DataTable label={t.components} columns={columns} rows={components} rowKey={(row) => row.material} rowTone={(row) => (isShort(row) ? "warning" : undefined)} empty={t.empty} />;

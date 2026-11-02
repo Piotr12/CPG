@@ -10,8 +10,8 @@ const mocks = vi.hoisted(() => ({ reverseProductionCompletion: vi.fn() }));
 vi.mock("../../app/admin/[tenant]/production-orders/actions", () => mocks);
 const path = "/admin/test/production-orders/00000001";
 const reversible = { context: { tenant: "test", generation: 3 }, order: { id: "00000001", output: "00000006", location: "00000001 Main plant", produced: "40.000000" } };
-const history = (messages = en, completions = [completionView, wasteView]) =>
-  <CompletionHistory completions={completions} page={2} materials={completionMaterials} labels={productionLabels(messages)} path={path} reversible={reversible} />;
+const history = (messages = en, completions = [completionView, wasteView], locale: "en" | "pl" = "en", order = reversible.order) =>
+  <CompletionHistory completions={completions} page={2} materials={completionMaterials} labels={productionLabels(messages)} locale={locale} path={path} reversible={{ ...reversible, order }} />;
 const t = en.productionOrders.completion.reversal;
 const reverseButtons = () => screen.getAllByRole("button", { name: /^Reverse completion \d{8}$/ });
 const openFirst = () => fireEvent.click(reverseButtons()[0]);
@@ -32,6 +32,21 @@ it("confirms every inverse leg, the order effect and today's date, then reverses
   reason(); await submit();
   expect(mocks.reverseProductionCompletion).toHaveBeenCalledWith("test", 3, "00000001", "00000002", { reason: "Entered twice" });
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+});
+
+it.each([
+  ["en", en, "12,345.5", "12,000.25", "23,456.75"],
+  ["pl", pl, "12 345,5", "12 000,25", "23 456,75"],
+] as const)("confirms the legs and the order effect in %s", (locale, messages, quantity, actual, produced) => {
+  const big = { ...completionView, quantity: "12345.500000", lines: [{ ...completionView.lines[0], actual: "12000.250000" }] };
+  render(history(messages, [big], locale, { ...reversible.order, produced: "23456.750000" }));
+  const r = messages.productionOrders.completion.reversal;
+  fireEvent.click(screen.getByRole("button", { name: r.openLabel.replace("{id}", "00000002") }));
+  const dialog = within(screen.getByRole("dialog"));
+  const text = (element: HTMLElement) => element.textContent!.replace(/\u00a0/g, " ");
+  expect(dialog.getAllByRole("listitem").map(text)).toEqual([`00000006 Cocoa-${quantity} each`, `00000006 Cocoa+${actual} kg`]);
+  expect(text(screen.getByRole("dialog"))).toContain(`2026-10-21 · ${r.output.replace("{quantity}", quantity).replace("{unit}", "each")}`);
+  expect(text(screen.getByRole("dialog"))).toContain(r.effect.replace("{produced}", produced).replace("{output}", quantity).replaceAll("{unit}", "each"));
 });
 
 it("lists only the inputs a waste completion used back, never an output", () => {
