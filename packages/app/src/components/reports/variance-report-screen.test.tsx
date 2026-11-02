@@ -12,7 +12,7 @@ const row = (overrides: Partial<VarianceReportRow> = {}): VarianceReportRow => (
   ...overrides,
 });
 const report = (rows: VarianceReportRow[]): VarianceReportView => ({ asOf: "2026-10-21", page: 1, pageSize: 50, total: rows.length, rows });
-const renderScreen = (props: { report?: VarianceReportView | null; selected?: object; rangeError?: string; messages?: typeof en } = {}) =>
+const renderScreen = (props: { report?: VarianceReportView | null; selected?: object; rangeError?: string; messages?: typeof en; locale?: "en" | "pl" } = {}) =>
   render(
     <VarianceReportScreen
       tenant={{ code: "test", name: "Test" }}
@@ -21,7 +21,7 @@ const renderScreen = (props: { report?: VarianceReportView | null; selected?: ob
       rangeError={props.rangeError}
       materials={[]}
       locations={[]}
-      locale="en"
+      locale={props.locale ?? "en"}
       messages={props.messages ?? en}
     />,
   );
@@ -60,6 +60,19 @@ describe("VarianceReportScreen", () => {
     expect(screen.getByLabelText(en.varianceReport.to).getAttribute("aria-invalid")).toBe("true");
     expect(screen.getByRole("link", { name: en.varianceReport.clear }).getAttribute("href")).toBe("/admin/test/reports/variance");
     expect(screen.queryByRole("table")).toBeNull();
+  });
+
+  it.each([
+    ["en", en, "12,345.5", "12,000.25", "-345.25", ["12,345.5 kg", "13,579.75 kg", "+1,234.25 kg", "10,000.5 kg"]],
+    ["pl", pl, "12 345,5", "12 000,25", "-345,25", ["12 345,5 kg", "13 579,75 kg", "+1234,25 kg", "10 000,5 kg"]],
+  ] as const)("shows the targets, output variance and component figures in %s", (locale, messages, target, produced, variance, figures) => {
+    const component = { material: "00000002", description: "Cocoa", baseUnit: "kg", expected: "12345.500000", actual: "13579.750000", variance: "1234.250000", waste: "10000.500000", extra: false };
+    renderScreen({ locale, messages, report: report([row({ target: "12345.500000", produced: "12000.250000", outputVariance: "-345.250000", components: [component] })]) });
+    const text = (element: Element) => element.textContent!.replace(/\u00a0/g, " ");
+    const output = document.querySelector("td [data-report-output]")!;
+    expect([...output.querySelectorAll("dd")].slice(0, 3).map(text)).toEqual([`${target} each`, `${produced} each`, `${variance} each`]);
+    expect([...document.querySelectorAll("[data-report-component] td")].slice(1).map(text)).toEqual(figures);
+    expect([...document.querySelectorAll("[data-report-stacked] dd")].map(text)).toEqual(figures);
   });
 
   it("speaks Polish", () => {

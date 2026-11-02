@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { SortDirection } from "@cpg/core/validators/lists/list-query.schema";
 import type { SafetyStockSort } from "@cpg/core/validators/safety-stock/safety-stock-list.schema";
 import { en } from "../../i18n/messages/en";
+import { pl } from "../../i18n/messages/pl";
 import { SafetyStockScreen } from "./safety-stock-screen";
 
 const dialog = vi.hoisted(() => vi.fn());
@@ -35,6 +36,15 @@ const renderScreen = (targets: object[], admin = true, list = LIST) =>
   );
 
 describe("SafetyStockScreen", () => {
+  it.each([
+    ["en", en, "12,345.5 each"],
+    ["pl", pl, "12\u00a0345,5 each"],
+  ] as const)("shows each target's quantity in the reader's locale (%s, #304)", (locale, messages, quantity) => {
+    render(<SafetyStockScreen tenant={TENANT} targets={[{ ...target("2027-01-01"), quantity: "12345.500000" }] as never} materials={MATERIALS}
+      locations={LOCATIONS} today="2027-01-15" locale={locale} messages={messages} admin={false} {...LIST} />);
+    expect(screen.getAllByRole("cell").map((cell) => cell.textContent)).toContain(quantity);
+  });
+
   it("heads the list with the one h1 and Add target, then each target's state from the tone map", () => {
     renderScreen([target("2026-12-01"), target("2027-01-01"), target("2027-02-01")]);
 

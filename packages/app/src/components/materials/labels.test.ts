@@ -68,14 +68,23 @@ describe("fieldErrorFormatter", () => {
 
 describe("conversion sentences", () => {
   it("say the factor as 'denominator unit = numerator base' (MAT-019, MAT-021)", () => {
-    expect(conversionText(caseConversion, "each")).toBe("1 case = 12 each");
-    expect(conversionText({ ...caseConversion, unit: "alt", numerator: "3", denominator: "2" }, "each")).toBe("2 alt = 3 each");
+    expect(conversionText(caseConversion, "each", "en")).toBe("1 case = 12 each");
+    expect(conversionText({ ...caseConversion, unit: "alt", numerator: "3", denominator: "2" }, "each", "en")).toBe("2 alt = 3 each");
   });
 
-  it("show the inverse, and '< 0.000001' instead of zero", () => {
-    const labels = materialsLabels(en);
+  it("say both sides of the factor in the reader's locale (#304)", () => {
+    const pallet = { ...caseConversion, unit: "pallet", numerator: "12345.5", denominator: "2.5" };
 
-    expect(inverseText(caseConversion, "each", labels)).toBe("1 each = 0.083333 case");
-    expect(inverseText({ ...caseConversion, inverse: "0" }, "g", labels)).toBe("1 g = < 0.000001 case");
+    expect(conversionText(pallet, "kg", "en")).toBe("2.5 pallet = 12,345.5 kg");
+    expect(conversionText(pallet, "kg", "pl")).toBe("2,5 pallet = 12\u00a0345,5 kg");
+  });
+
+  it("show the inverse in the reader's locale, and '< 0.000001' instead of zero (#304)", () => {
+    expect(inverseText(caseConversion, "each", "en")).toBe("1 each = 0.083333 case");
+    expect(inverseText(caseConversion, "each", "pl")).toBe("1 each = 0,083333 case");
+    expect(inverseText({ ...caseConversion, inverse: "12345.5" }, "g", "en")).toBe("1 g = 12,345.5 case");
+    expect(inverseText({ ...caseConversion, inverse: "12345.5" }, "g", "pl")).toBe("1 g = 12\u00a0345,5 case");
+    expect(inverseText({ ...caseConversion, inverse: "0" }, "g", "en")).toBe("1 g = < 0.000001 case");
+    expect(inverseText({ ...caseConversion, inverse: "0" }, "g", "pl")).toBe("1 g = < 0,000001 case");
   });
 });

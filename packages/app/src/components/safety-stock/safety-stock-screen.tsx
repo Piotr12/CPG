@@ -63,7 +63,7 @@ export function SafetyStockScreen({ tenant, targets, materials, locations, today
       />
       <ListSearchBar links={links} search={search} labels={labels.search} lists={messages.lists} locale={locale} count={targets.length} />
       <div className="flex flex-col gap-8">
-        <SafetyStockTable tenant={tenant} rows={rows} labels={labels} editable={editable} search={search.q} sort={sort} links={links} lists={messages.lists} />
+        <SafetyStockTable tenant={tenant} rows={rows} labels={labels} editable={editable} search={search.q} sort={sort} links={links} lists={messages.lists} locale={locale} />
       </div>
     </div>
   );

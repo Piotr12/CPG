@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@cpg/ui/components/dropdown-menu";
 import { changeSafetyStockTarget, removeSafetyStockTarget } from "../../app/admin/[tenant]/safety-stock/actions";
-import { errorFormatter, fill, shownQuantity, type TenantContext } from "../forms/form-labels";
+import { errorFormatter, fill, formQuantity, type TenantContext } from "../forms/form-labels";
 import { fieldErrorFormatter, type SafetyStockLabels } from "./labels";
 import type { SafetyStockRow } from "./safety-stock-table";
 
@@ -61,7 +61,7 @@ export function SafetyStockTargetActions({ row, context, labels }: SafetyStockTa
           </DialogHeader>
           <CrudForm
             fields={[{ name: "quantity", label: labels.form.quantity, description: labels.form.quantityHint, autoComplete: "off", tooltip: fill(labels.form.quantityTip, { baseUnit: row.baseUnit }) }]}
-            initialValues={{ quantity: shownQuantity(row.quantity) }}
+            initialValues={{ quantity: formQuantity(row.quantity) }}
             schema={safetyStockTargetChangeFormSchema}
             action={(values) => changeSafetyStockTarget(tenant, generation, key, row.version, values)}
             submitLabel={labels.change.submit}

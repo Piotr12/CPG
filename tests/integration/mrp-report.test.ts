@@ -20,6 +20,8 @@ const shown = (selector: string) => `[...document.querySelectorAll(${JSON.string
 const PAIRS = "table[aria-label='Planned material–location pairs']";
 const DAYS = "table[aria-label='Days of the plan']";
 const WEEKS = "table[aria-label='Weeks of the plan']";
+/** A column's horizontal extent in the viewport. */
+type Box = { left: number; right: number };
 /** A day `days` after the server's UTC today, as the run plans from it. */
 const day = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
 
@@ -314,6 +316,110 @@ describe("the MRP report in the UI", () => {
       }
     } finally {
       await rita.setViewport(1280, 800);
+    }
+  });
+
+  /**
+   * Measures the one-pair table `selector` in its scroll region (#311): its date and the two pinned figures
+   * scrolled to the start, the middle and the end; every figure before the pinned pair centred in the gap
+   * between the date and the pair; and every column after it at the end of the scroll.
+   */
+  const measurePinned = (selector: string, pinned: [string, string]) =>
+    rita.evaluate<{
+      sticky: boolean[];
+      positions: { region: Box; columns: (Box & { onTop: boolean })[] }[];
+      gaps: (Box & { name: string; date: number; pin: number })[];
+      ends: (Box & { name: string; onTop: boolean })[];
+    }>(`(() => {
+      const table = ${shown(selector)};
+      const region = table.closest("[data-slot=table-container]");
+      const heads = [...table.querySelectorAll("thead th")];
+      const cells = [...table.querySelector("tbody tr").cells];
+      const [first, second] = ${JSON.stringify(pinned)}.map((figure) => cells.findIndex((cell) => cell.querySelector("[data-mrp-figure=" + figure + "]")));
+      const box = (element) => { const { left, right } = element.getBoundingClientRect(); return { left, right }; };
+      const onTop = (element) => {
+        const { left, right, top, bottom } = element.getBoundingClientRect();
+        return element.contains(document.elementFromPoint((left + right) / 2, (top + bottom) / 2));
+      };
+      region.scrollLeft = 0;
+      heads[0].scrollIntoView({ block: "center" });
+      const max = region.scrollWidth - region.clientWidth;
+      const positions = [0, max / 2, max].map((scroll) => {
+        region.scrollLeft = scroll;
+        return { region: box(region), columns: [0, first, second].flatMap((i) => [{ ...box(heads[i]), onTop: onTop(heads[i]) }, { ...box(cells[i]), onTop: onTop(cells[i]) }]) };
+      });
+      const gaps = heads.slice(1, first).map((head) => {
+        region.scrollLeft = 0;
+        const { left, right } = head.getBoundingClientRect();
+        region.scrollLeft = (left + right) / 2 - (heads[0].getBoundingClientRect().right + heads[first].getBoundingClientRect().left) / 2;
+        return { name: head.textContent, ...box(head), date: heads[0].getBoundingClientRect().right, pin: heads[first].getBoundingClientRect().left };
+      });
+      region.scrollLeft = max;
+      const ends = heads.slice(first + 1).filter((head) => head !== heads[second]).map((head) => ({ name: head.textContent, ...box(head), onTop: onTop(head) }));
+      region.scrollLeft = 0;
+      return { sticky: [first, second].map((i) => getComputedStyle(heads[i]).position === "sticky"), positions, gaps, ends };
+    })()`);
+  /** Asserts what {@link measurePinned} measured: the three columns in view, in order and on top, every other one reachable. */
+  const expectPinned = async (selector: string, pinned: [string, string], gaps: number, ends: string[], label: string) => {
+    const measured = await measurePinned(selector, pinned);
+    expect(measured.sticky, label).toEqual([true, true]);
+    for (const [at, { region, columns }] of measured.positions.entries()) {
+      for (const column of columns) {
+        expect(column.left, `${label}, position ${at}`).toBeGreaterThanOrEqual(region.left - 1);
+        expect(column.right, `${label}, position ${at}`).toBeLessThanOrEqual(region.right + 1);
+        expect(column.onTop, `${label}, position ${at}`).toBe(true);
+      }
+      const [date, , before, , after] = columns;
+      expect(date.right, `${label}, position ${at}`).toBeLessThanOrEqual(before.left + 1);
+      expect(before.right, `${label}, position ${at}`).toBeLessThanOrEqual(after.left + 1);
+      // Scrolled to the start both are stuck, so they touch: nothing scrolling shows between them.
+      if (at === 0) expect(after.left - before.right, label).toBeLessThanOrEqual(1);
+    }
+    expect(measured.gaps.length, label).toBe(gaps);
+    for (const gap of measured.gaps) {
+      expect(gap.left, `${label}: ${gap.name}`).toBeGreaterThanOrEqual(gap.date - 1);
+      expect(gap.right, `${label}: ${gap.name}`).toBeLessThanOrEqual(gap.pin + 1);
+    }
+    expect(measured.ends.map(({ name }) => name), label).toEqual(ends);
+    const { region } = measured.positions[2];
+    for (const end of measured.ends) {
+      expect(end.onTop, `${label}: ${end.name}`).toBe(true);
+      expect(end.left, `${label}: ${end.name}`).toBeGreaterThanOrEqual(region.left - 1);
+      expect(end.right, `${label}: ${end.name}`).toBeLessThanOrEqual(region.right + 1);
+    }
+  };
+
+  it("keeps the date, Projected before proposals and Shortage in view at 1280 px beside the expanded menu, however far the day table scrolls, in English and Polish; every other figure stays reachable (#311)", async () => {
+    try {
+      await rita.setViewport(1280, 800);
+      await open(`?material=${ids.sheet}&location=${ids.plant}`, DAYS);
+      expect(await rita.evaluate<boolean>(`Boolean(document.querySelector("[data-slot=sidebar][data-state=expanded]"))`)).toBe(true);
+      // The table is still wider than its region, so this proves the pinning, not a table that fits.
+      expect(await rita.evaluate<boolean>(`(() => { const region = ${shown(DAYS)}.closest("[data-slot=table-container]"); return region.scrollWidth > region.clientWidth; })()`)).toBe(true);
+      await expectPinned(DAYS, ["projectedBefore", "shortage"], 9, ["Projected after proposals", "Warnings"], "day");
+      // Spec Q2: the week's lowest balance and peak shortage, pinned the same way.
+      await open(`?material=${ids.sheet}&location=${ids.plant}&bucket=week`, WEEKS);
+      await expectPinned(WEEKS, ["lowestProjectedBefore", "peakShortage"], 11, ["Warnings"], "week");
+
+      await rita.open(`${baseUrl}/admin`);
+      await rita.waitUntil(signedInAndHydrated(USERNAME));
+      await choosePreference(rita, "pl");
+      await closeAccountMenu(rita);
+      const dni = "table[aria-label='Dni planu']";
+      await open(`?material=${ids.sheet}&location=${ids.plant}`, dni);
+      await expectPinned(dni, ["projectedBefore", "shortage"], 9, ["Prognozowany stan po propozycjach", "Ostrzeżenia"], "day, Polish");
+
+      // Spec Q3: at 390 px only the date sticks, so the figures keep the region's width to scroll in.
+      await rita.setViewport(390, 844);
+      await open(`?material=${ids.sheet}&location=${ids.plant}`, dni);
+      expect((await measurePinned(dni, ["projectedBefore", "shortage"])).sticky).toEqual([false, false]);
+      expect(await rita.evaluate<boolean>(`document.documentElement.scrollWidth <= innerWidth`)).toBe(true);
+    } finally {
+      await rita.setViewport(1280, 800);
+      await rita.open(`${baseUrl}/admin`);
+      await rita.waitUntil(signedInAndHydrated(USERNAME));
+      await choosePreference(rita, "en");
+      await closeAccountMenu(rita);
     }
   });
 

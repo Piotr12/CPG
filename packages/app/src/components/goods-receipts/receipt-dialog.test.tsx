@@ -1,6 +1,8 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { en } from "../../i18n/messages/en";
+import type { Locale } from "@cpg/core";
+import { en, type Messages } from "../../i18n/messages/en";
+import { pl } from "../../i18n/messages/pl";
 import { receiptsLabels } from "./labels";
 import { ReceiptDialog } from "./receipt-dialog";
 
@@ -9,21 +11,23 @@ vi.mock("../../app/admin/[tenant]/purchase-orders/[id]/actions", () => ({ postRe
 
 const LINES = [{ line: 1, label: "Line 1: 00000001 Steel sheet", outstanding: "100 kg outstanding", units: ["kg"] }];
 
-const dialog = (canPost = true) => (
+const dialog = (canPost = true, locale: Locale = "en", messages: Messages = en) => (
   <ReceiptDialog
     context={{ tenant: "prod", generation: 3 }}
     purchaseOrder="00000002"
     location="00000001 Main plant"
-    labels={receiptsLabels(en)}
+    labels={receiptsLabels(messages)}
     lines={LINES}
     baseUnits={{ 1: "kg" }}
     canPost={canPost}
+    locale={locale}
   />
 );
-const post = (quantity: string) => {
-  fireEvent.click(screen.getByRole("button", { name: "Post goods receipt" }));
-  fireEvent.change(screen.getByLabelText(`Quantity received, ${LINES[0].label}`), { target: { value: quantity } });
-  fireEvent.click(screen.getAllByRole("button", { name: "Post goods receipt" }).at(-1)!);
+const post = (quantity: string, messages: Messages = en) => {
+  const t = messages.goodsReceipts.post;
+  fireEvent.click(screen.getByRole("button", { name: t.open }));
+  fireEvent.change(screen.getByLabelText(`${t.quantity}, ${LINES[0].label}`), { target: { value: quantity } });
+  fireEvent.click(screen.getAllByRole("button", { name: t.submit }).at(-1)!);
 };
 
 describe("ReceiptDialog", () => {
@@ -61,6 +65,18 @@ describe("ReceiptDialog", () => {
     expect(screen.getByRole("status")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
     expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("says the excess in the reader's locale, every digit kept (#304)", async () => {
+    mocks.postReceipt.mockResolvedValue({ ok: true, data: { id: "00000008", warnings: [{ code: "OVER_RECEIPT", line: 1, excess: "12345.500000" }] } });
+    const { unmount } = render(dialog());
+    post("12445.5");
+    expect(await screen.findByText("Line 1 received 12,345.5 kg more than was outstanding.")).toBeTruthy();
+    unmount();
+
+    render(dialog(true, "pl", pl));
+    post("12445.5", pl);
+    expect(await screen.findByText("Pozycja 1 przyjęła o 12 345,5 kg więcej, niż pozostało.")).toBeTruthy();
   });
 
   it("clears an earlier notice when a new receipt is started", async () => {

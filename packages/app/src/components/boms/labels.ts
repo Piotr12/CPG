@@ -1,4 +1,4 @@
-import type { BomComponentView, MaterialSummary } from "@cpg/core";
+import type { BomComponentView, Locale, MaterialSummary } from "@cpg/core";
 import {
   COMPONENT_COUNT_MESSAGE,
   DUPLICATE_COMPONENT_MESSAGE,
@@ -17,7 +17,7 @@ import { MATERIAL_CHOICE_MESSAGE } from "@cpg/core/validators/planning-parameter
 import { POSITIVE_QUANTITY_MESSAGE } from "@cpg/core/validators/quantities/quantity.schema";
 import { errorMessage } from "../../i18n/error-message";
 import type { Messages } from "../../i18n/messages/en";
-import { fill, shownQuantity, type TenantContext } from "../forms/form-labels";
+import { fill, localeQuantity, type TenantContext } from "../forms/form-labels";
 import { materialPicker, type MaterialPicker } from "../materials/material-picker";
 
 /**
@@ -45,7 +45,7 @@ export function bomsLabels(messages: Messages): BomsLabels {
   };
 }
 
-export { fill, shownQuantity, type TenantContext };
+export { fill, localeQuantity, type TenantContext };
 
 /**
  * The codes whose server message carries language-neutral details after its first colon: the BOM a
@@ -93,21 +93,25 @@ export function materialsById(materials: MaterialSummary[]): MaterialsById {
   return new Map(materials.map((material) => [material.id, material]));
 }
 
-/** A line as the list summarizes it: "24 each 00000002 Bolt M8" (base quantity and unit, then the material). */
-export function lineSummary(line: BomComponentView, materials: MaterialsById): string {
+/**
+ * A line as the list summarizes it: "24 each 00000002 Bolt M8" (base quantity in the reader's locale
+ * and unit, then the material, #304).
+ */
+export function lineSummary(line: BomComponentView, materials: MaterialsById, locale: Locale): string {
   const material = materials.get(line.material)!;
-  return `${shownQuantity(line.quantity)} ${material.baseUnit} ${material.id} ${material.description}`;
+  return `${localeQuantity(line.quantity, locale)} ${material.baseUnit} ${material.id} ${material.description}`;
 }
 
 /**
- * How a line was entered, when not in the base unit: "2 case at 1 case = 12 each". Empty for a line
- * entered in the base unit, where it would only repeat the quantity.
+ * How a line was entered, when not in the base unit: "2 case at 1 case = 12 each", every figure in the
+ * reader's locale (#304). Empty for a line entered in the base unit, where it would only repeat the quantity.
  */
-export function enteredAs(line: BomComponentView, materials: MaterialsById, labels: BomsLabels): string {
+export function enteredAs(line: BomComponentView, materials: MaterialsById, labels: BomsLabels, locale: Locale): string {
   const { baseUnit } = materials.get(line.material)!;
   if (line.enteredUnit === baseUnit) return "";
-  const conversion = `${line.denominator} ${line.enteredUnit} = ${line.numerator} ${baseUnit}`;
-  return fill(labels.recipe.enteredAs, { quantity: line.enteredQuantity, unit: line.enteredUnit, conversion });
+  const shown = (figure: string) => localeQuantity(figure, locale);
+  const conversion = `${shown(line.denominator)} ${line.enteredUnit} = ${shown(line.numerator)} ${baseUnit}`;
+  return fill(labels.recipe.enteredAs, { quantity: shown(line.enteredQuantity), unit: line.enteredUnit, conversion });
 }
 
 /** A validity period as the screens show it: "2026-01-01 – 2026-12-31", or "2026-01-01 – " plus the no-end word. */

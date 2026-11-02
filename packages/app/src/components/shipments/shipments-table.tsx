@@ -1,20 +1,22 @@
 import Link from "next/link";
-import type { ShipmentView } from "@cpg/core";
+import type { Locale, ShipmentView } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { StatusBadge } from "@cpg/ui/backend/feedback/status-badge";
 import { documentStatusTone } from "../document-lifecycle/status-tone";
 import type { MaterialsById } from "../purchase-orders/labels";
-import { fill, shownQuantity, type ShipmentsLabels } from "./labels";
+import { fill, localeQuantity, type ShipmentsLabels } from "./labels";
 
 interface ShipmentsTableProps {
   tenant: string;
   shipments: ShipmentView[];
   materials: MaterialsById;
   labels: ShipmentsLabels;
+  /** The reader's locale, for the line figures (#304). */
+  locale: Locale;
 }
 
 /** One order's shipments, newest first: ID (to its page), planned date, status, and what each line has issued of its plan. */
-export function ShipmentsTable({ tenant, shipments, materials, labels }: ShipmentsTableProps) {
+export function ShipmentsTable({ tenant, shipments, materials, labels, locale }: ShipmentsTableProps) {
   const c = labels.columns;
   const columns: DataTableColumn<ShipmentView>[] = [
     {
@@ -38,7 +40,7 @@ export function ShipmentsTable({ tenant, shipments, materials, labels }: Shipmen
         <ul className="flex flex-col gap-1">
           {shipment.lines.map(({ line, material, quantity, issued }) => (
             <li key={line}>
-              {fill(labels.lineSummary, { line: String(line), issued: shownQuantity(issued), quantity: shownQuantity(quantity), baseUnit: materials.get(material)!.baseUnit })}
+              {fill(labels.lineSummary, { line: String(line), issued: localeQuantity(issued, locale), quantity: localeQuantity(quantity, locale), baseUnit: materials.get(material)!.baseUnit })}
             </li>
           ))}
         </ul>
