@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
-import { DataTable, columnClasses, type DataTableColumn } from "./data-table";
+import { DataTable, columnClasses, pinnedClasses, type DataTableColumn } from "./data-table";
 
 interface Pet {
   id: string;
@@ -97,6 +97,69 @@ describe("DataTable", () => {
     expect(legsCell.classList).not.toContain("sticky");
     // Without rowTone, no row gets an edge.
     expect(nameCell.className).not.toMatch(/border-l/);
+  });
+
+  describe("pinned to the end (#311)", () => {
+    const wide: DataTableColumn<Pet>[] = [
+      { id: "name", header: "Name", cell: (pet) => pet.name },
+      { id: "legs", header: "Legs", cell: (pet) => pet.legs, kind: "quantity", pin: "end" },
+      { id: "id", header: "ID", cell: (pet) => pet.id, kind: "id" },
+      { id: "count", header: "Count", cell: (pet) => pet.legs * 2, kind: "quantity", pin: "end" },
+      { id: "notes", header: "Notes", cell: () => "–", kind: "text" },
+    ];
+    const SHARED = ["lg:sticky", "lg:w-32", "lg:min-w-32", "lg:bg-background", "lg:whitespace-normal", "lg:wrap-anywhere"];
+    const EDGE = "lg:shadow-[inset_1px_0_0_var(--color-border)]";
+    const parts = () => ({ heads: screen.getAllByRole("columnheader"), cells: within(screen.getAllByRole("row")[1]).getAllByRole("cell") });
+
+    it("sticks two columns to the right edge from lg up, the last at the edge and the one before beside it, with an edge on the first", () => {
+      render(<DataTable label="Pets" columns={wide} rows={pets} rowKey={(pet) => pet.id} empty="No pets" />);
+      const { heads, cells } = parts();
+      for (const element of [heads[1], cells[1], heads[3], cells[3]]) expect([...element.classList]).toEqual(expect.arrayContaining(SHARED));
+      for (const element of [heads[1], cells[1]]) {
+        expect([...element.classList]).toEqual(expect.arrayContaining(["lg:right-32", EDGE]));
+        expect(element.classList).not.toContain("lg:right-0");
+      }
+      for (const element of [heads[3], cells[3]]) {
+        expect(element.classList).toContain("lg:right-0");
+        expect(element.classList).not.toContain(EDGE);
+      }
+      // Headers stack above the cells scrolling under them; body cells don't need to.
+      expect(heads[1].classList).toContain("lg:z-10");
+      expect(cells[1].classList).not.toContain("lg:z-10");
+      // The kind's classes stay below lg.
+      expect([...cells[1].classList]).toEqual(expect.arrayContaining(["min-w-24", "whitespace-nowrap", "text-right"]));
+    });
+
+    it("leaves unpinned columns and the sticky first column as they are", () => {
+      render(<DataTable label="Pets" columns={wide} rows={pets} rowKey={(pet) => pet.id} empty="No pets" />);
+      const { heads, cells } = parts();
+      for (const index of [2, 4]) {
+        for (const element of [heads[index], cells[index]]) expect(element.className).not.toMatch(/lg:|sticky|shadow/);
+      }
+      for (const element of [heads[0], cells[0]]) {
+        expect([...element.classList]).toEqual(expect.arrayContaining(["sticky", "left-0", "bg-background"]));
+        expect(element.className).not.toMatch(/lg:/);
+      }
+    });
+
+    it("puts a single pinned column at the edge, with the edge shadow, and lets the caller's className override it", () => {
+      render(<DataTable label="Pets" columns={[wide[0], { ...wide[1], className: "lg:w-40" }, wide[2]]} rows={pets} rowKey={(pet) => pet.id} empty="No pets" />);
+      const { heads, cells } = parts();
+      for (const element of [heads[1], cells[1]]) {
+        expect([...element.classList]).toEqual(expect.arrayContaining(["lg:right-0", EDGE, "lg:w-40"]));
+        expect(element.classList).not.toContain("lg:w-32");
+      }
+      expect(pinnedClasses([wide[0], wide[2]])).toEqual(["", ""]);
+    });
+
+    it.each([
+      ["a pinned first column", [{ ...wide[0], pin: "end" as const }, wide[2]], 'DataTable column "name": the first column is sticky at the left, so it can\'t be pinned to the end'],
+      ["a pinned column that is not priority 1", [wide[0], { ...wide[1], priority: 2 as const }], 'DataTable column "legs": a pinned column is always priority 1, not 2'],
+      ["a third pinned column", [wide[0], wide[1], wide[3], { ...wide[4], pin: "end" as const }], 'DataTable column "notes": at most 2 columns can be pinned to the end'],
+    ])("refuses %s", (_, given, message) => {
+      expect(() => pinnedClasses(given)).toThrow(message);
+      expect(() => render(<DataTable label="Pets" columns={given} rows={pets} rowKey={(pet) => pet.id} empty="No pets" />)).toThrow(message);
+    });
   });
 
   it.each([
