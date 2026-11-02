@@ -31,6 +31,10 @@ Make the CI bound measure the code, not the runner's contention, without looseni
   `--no-file-parallelism`, then `--merge-reports`): 669 files, 100% coverage on all four measures. One failure,
   `tests/ai-filenames.test.ts`, is `main`'s own (the active copy of #320's spec), fixed by open PR #350.
 
+- 17:35 CI on #357 (run 41486362110): `unit-timing` green in 232 s. Ten-times worst case 16,439 ms (up to 26,066
+  in a shard), run 11,131 ms (15,915–17,814), longest stall 861 ms (up to 1,113). `unit-tests (2)` failed only on
+  `main`'s spec duplicate, so this PR deletes the active copy too, as #338 did; #350 deletes the same file.
+
 ## Changes
 
 - `vitest.config.mts`: `TIMING_TESTS` and a `timing` project; the `node` project excludes those files.
@@ -39,6 +43,7 @@ Make the CI bound measure the code, not the runner's contention, without looseni
 - `tests/timing-tests.test.ts` (new): every test asserting an upper bound on a `performance.now()` figure is in
   the timing project and nothing else is; the node project excludes them.
 - `.ai/lessons.md`: new timing-project lesson.
+- `.ai/specs/2026-11-02--1304UTC-mrp-make-proposal-acceptance.md`: deleted (its `implemented/` copy stays).
 
 ## Verification
 
@@ -54,4 +59,4 @@ Make the CI bound measure the code, not the runner's contention, without looseni
 
 ## Follow-ups
 
-- The PR's `unit-coverage` stays red on `tests/ai-filenames.test.ts` until #350 lands on `main`.
+- #350 deletes the same spec copy; whichever lands second merges cleanly.
