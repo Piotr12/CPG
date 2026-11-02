@@ -8,7 +8,7 @@ import { Card, CardContent } from "@cpg/ui/components/card";
 import type { Messages } from "../../i18n/messages/en";
 import { transferStatusTone } from "../document-lifecycle/status-tone";
 import { DatesDialog } from "./dates-dialog";
-import { byId, fill, isPositive, locationName, materialName, shownQuantity, transfersLabels } from "./labels";
+import { byId, fill, isPositive, locationName, materialName, formQuantity, transfersLabels } from "./labels";
 import { LedgerTable } from "./ledger-table";
 import { PostingDialog } from "./posting-dialog";
 
@@ -34,7 +34,7 @@ export function TransferScreen({ tenant, transfer, materials, locations, units, 
   const materialsById = byId(materials);
   const locationsById = byId(locations);
   const { baseUnit } = materialsById.get(transfer.material)!;
-  const amount = (quantity: string) => `${shownQuantity(quantity)} ${baseUnit}`;
+  const amount = (quantity: string) => `${formQuantity(quantity)} ${baseUnit}`;
   const source = locationName(locationsById, transfer.source);
   const destination = locationName(locationsById, transfer.destination);
   const details = [
@@ -80,7 +80,7 @@ export function TransferScreen({ tenant, transfer, materials, locations, units, 
               transfer={transfer.id}
               kind={kind}
               title={fill(labels.post[kind].title, fills)}
-              description={fill(labels.post[kind].description, { ...fills, limit: shownQuantity(limit) })}
+              description={fill(labels.post[kind].description, { ...fills, limit: formQuantity(limit) })}
               units={units}
               labels={labels}
               primary={index === 0}
@@ -93,7 +93,7 @@ export function TransferScreen({ tenant, transfer, materials, locations, units, 
           />
           <LifecycleControl kind="transfer" available processed={transfer.postings.length > 0}
             subject={`${labels.link} ${transfer.id}`} version={transfer.version} quantities={[amount(transfer.outstanding)]}
-            notice={isPositive(transfer.inTransit) ? fill(messages.errors.TRANSFER_IN_TRANSIT, { quantity: shownQuantity(transfer.inTransit), unit: baseUnit }) : undefined}
+            notice={isPositive(transfer.inTransit) ? fill(messages.errors.TRANSFER_IN_TRANSIT, { quantity: formQuantity(transfer.inTransit), unit: baseUnit }) : undefined}
             labels={messages.lifecycle} errors={messages.errors}
             cancel={cancelTransfer.bind(null, tenant.code, tenant.generation, transfer.id)} closeEarly={closeEarlyTransfer.bind(null, tenant.code, tenant.generation, transfer.id)} />
         </>}

@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { postReceipt } from "../../app/admin/[tenant]/purchase-orders/[id]/actions";
 import { TALL_DIALOG, type TenantContext } from "../forms/form-labels";
 import { LineQuantitiesForm } from "../forms/line-quantities-form";
-import { errorFormatter, fieldErrorFormatter, fill, shownQuantity, type ReceiptLineChoice, type ReceiptsLabels } from "./labels";
+import { errorFormatter, fieldErrorFormatter, fill, formQuantity, type ReceiptLineChoice, type ReceiptsLabels } from "./labels";
 
 interface ReceiptDialogProps {
   context: TenantContext;
@@ -83,7 +83,7 @@ export function ReceiptDialog({ context, purchaseOrder, location, labels, lines,
                 <li key={line}>
                   {fill(labels.overReceipt, {
                     line: String(line),
-                    excess: shownQuantity(excess),
+                    excess: formQuantity(excess),
                     baseUnit: baseUnits[line],
                   })}
                 </li>

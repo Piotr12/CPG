@@ -1,5 +1,5 @@
 import type { RequisitionView } from "@cpg/core";
-import { fill, shownQuantity, type MaterialsById, type OrdersLabels } from "./labels";
+import { fill, formQuantity, type MaterialsById, type OrdersLabels } from "./labels";
 
 /** An open requisition a line may convert, with the material and location it has to match. */
 export interface RequisitionChoice {
@@ -18,7 +18,7 @@ export function requisitionChoices(requisitions: RequisitionView[], materials: M
     .filter(({ status }) => status === "open")
     .map(({ id, material, location, outstanding }) => ({
       value: id,
-      label: fill(labels.form.requisitionOption, { id, outstanding: shownQuantity(outstanding), baseUnit: materials.get(material)!.baseUnit }),
+      label: fill(labels.form.requisitionOption, { id, outstanding: formQuantity(outstanding), baseUnit: materials.get(material)!.baseUnit }),
       material,
       location,
     }));

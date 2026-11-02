@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { BomComponentView } from "@cpg/core";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { InactiveMark } from "../master-data/active-status";
-import { enteredAs, shownQuantity, type BomsLabels, type MaterialsById } from "./labels";
+import { enteredAs, formQuantity, type BomsLabels, type MaterialsById } from "./labels";
 
 interface RecipeTableProps {
   tenant: string;
@@ -38,7 +38,7 @@ export function RecipeTable({ tenant, lines, materials, labels, label }: RecipeT
       id: "quantity",
       header: t.quantity,
       kind: "quantity",
-      cell: (line) => `${shownQuantity(line.quantity)} ${materials.get(line.material)!.baseUnit}`,
+      cell: (line) => `${formQuantity(line.quantity)} ${materials.get(line.material)!.baseUnit}`,
     },
     {
       id: "enteredAs",

@@ -9,7 +9,7 @@ import { UNIT_FORMAT_MESSAGE } from "@cpg/core/validators/materials/material-fie
 import { DUPLICATE_LINE_MESSAGE, LINE_NUMBER_MESSAGE } from "@cpg/core/validators/purchasing/purchasing-fields.schema";
 import { POSITIVE_QUANTITY_MESSAGE } from "@cpg/core/validators/quantities/quantity.schema";
 import type { Messages } from "../../i18n/messages/en";
-import { errorFormatter, fill, shownQuantity } from "../forms/form-labels";
+import { errorFormatter, fill, formQuantity } from "../forms/form-labels";
 
 /** The goods-issue strings in the reader's language, all plain strings; `errors` holds every code the dialog can show. */
 export type IssuesLabels = Omit<Messages["goodsIssues"], "errors"> & { errors: Record<string, string> };
@@ -19,7 +19,7 @@ export function issuesLabels(messages: Messages): IssuesLabels {
   return { ...messages.goodsIssues, errors: { ...messages.errors, ...messages.goodsIssues.errors } };
 }
 
-export { errorFormatter, fill, shownQuantity };
+export { errorFormatter, fill, formQuantity };
 
 /** A field message from the shared schemas or the service in the reader's language; unknown ones pass through. */
 export function issueFieldErrorFormatter(labels: IssuesLabels) {

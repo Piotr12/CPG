@@ -11,7 +11,7 @@ import { customerOrderSortSchema, type CustomerOrderSort } from "@cpg/core/valid
 import type { SortDirection } from "@cpg/core/validators/lists/list-query.schema";
 import { documentStatusTone } from "../document-lifecycle/status-tone";
 import type { Messages } from "../../i18n/messages/en";
-import { fill, shownQuantity } from "../forms/form-labels";
+import { fill, formQuantity } from "../forms/form-labels";
 import { PageLinks } from "../layout/page-links";
 import { listLinks, type ListSearchState } from "../lists/list-params";
 import { ListSearchBar, NoSearchResults } from "../lists/list-search-bar";
@@ -70,17 +70,17 @@ export function OrdersScreen({ tenant, orders, order, shipments = [], page = 1, 
   ];
   const lineColumns: DataTableColumn<CustomerOrderView["lines"][number]>[] = [
     { id: "material", header: t.material, kind: "longText", cell: (line) => <Link className="underline underline-offset-4" href={`/admin/${tenant.code}/materials/${line.material}`}>{line.material} {byMaterial.get(line.material)!.description}</Link> },
-    { id: "quantity", header: t.quantity, kind: "quantity", cell: (line) => `${shownQuantity(line.quantity)} ${byMaterial.get(line.material)!.baseUnit}` },
+    { id: "quantity", header: t.quantity, kind: "quantity", cell: (line) => `${formQuantity(line.quantity)} ${byMaterial.get(line.material)!.baseUnit}` },
     { id: "entered", header: t.entered, kind: "longText", priority: 2, cell: (line) => `${line.enteredQuantity} ${line.enteredUnit} (${line.denominator} ${line.enteredUnit} = ${line.numerator} ${byMaterial.get(line.material)!.baseUnit})` },
     { id: "date", header: t.requiredDate, kind: "date", cell: (line) => line.requiredDate },
-    { id: "fulfilled", header: t.fulfilled, kind: "quantity", priority: 2, cell: (line) => shownQuantity(line.fulfilled) },
-    { id: "outstanding", header: t.outstanding, kind: "quantity", priority: 2, cell: (line) => shownQuantity(outstandingOf(line)) },
+    { id: "fulfilled", header: t.fulfilled, kind: "quantity", priority: 2, cell: (line) => formQuantity(line.fulfilled) },
+    { id: "outstanding", header: t.outstanding, kind: "quantity", priority: 2, cell: (line) => formQuantity(outstandingOf(line)) },
     { id: "status", header: t.status, kind: "status", cell: (line) => status(line.status) },
-    { id: "abandoned", header: messages.lifecycle.abandoned, kind: "quantity", cell: (line) => shownQuantity(line.abandoned) },
+    { id: "abandoned", header: messages.lifecycle.abandoned, kind: "quantity", cell: (line) => formQuantity(line.abandoned) },
     { id: "actions", header: messages.lifecycle.actions, kind: "actions", cell: (line) => order && <LifecycleControl kind="line"
       available={!tenant.readOnly && order.status === "open" && line.status === "open"} processed={line.posted || line.fulfilled !== "0.000000"}
       subject={`${t.link} ${order.id} — ${fill(messages.lifecycle.line, { line: String(order.lines.indexOf(line) + 1) })}`}
-      version={order.version} lines={[line.id]} quantities={[`${shownQuantity(outstandingOf(line))} ${byMaterial.get(line.material)!.baseUnit}`]}
+      version={order.version} lines={[line.id]} quantities={[`${formQuantity(outstandingOf(line))} ${byMaterial.get(line.material)!.baseUnit}`]}
       labels={messages.lifecycle} errors={messages.errors}
       cancel={cancelCustomerOrder.bind(null, tenant.code, tenant.generation, order.id)} closeEarly={closeEarlyCustomerOrder.bind(null, tenant.code, tenant.generation, order.id)} /> },
   ];
@@ -88,7 +88,7 @@ export function OrdersScreen({ tenant, orders, order, shipments = [], page = 1, 
     <OrderDialog context={{ tenant: tenant.code, generation: tenant.generation }} labels={t} choices={choices} order={order} locale={locale} />
     {order && <LifecycleControl kind="order" available processed={order.lines.some((line) => line.posted || line.fulfilled !== "0.000000")}
       subject={`${t.link} ${order.id}`} version={order.version}
-      quantities={order.lines.filter((line) => line.status === "open").map((line) => `${byMaterial.get(line.material)!.description}: ${shownQuantity(outstandingOf(line))} ${byMaterial.get(line.material)!.baseUnit}`)}
+      quantities={order.lines.filter((line) => line.status === "open").map((line) => `${byMaterial.get(line.material)!.description}: ${formQuantity(outstandingOf(line))} ${byMaterial.get(line.material)!.baseUnit}`)}
       labels={messages.lifecycle} errors={messages.errors}
       cancel={cancelCustomerOrder.bind(null, tenant.code, tenant.generation, order.id)} closeEarly={closeEarlyCustomerOrder.bind(null, tenant.code, tenant.generation, order.id)} />}
   </>;

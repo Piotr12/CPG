@@ -13,7 +13,7 @@ import { IssuesTable } from "../goods-issues/issues-table";
 import { byId } from "../purchase-requisitions/labels";
 import { CancelShipmentButton } from "./cancel-shipment-button";
 import { EditShipmentDialog } from "./edit-shipment-dialog";
-import { fill, shipmentsLabels, shownQuantity } from "./labels";
+import { fill, shipmentsLabels, formQuantity } from "./labels";
 import { shipmentEditChoices } from "./line-choices";
 
 interface ShipmentScreenProps {
@@ -68,9 +68,9 @@ export function ShipmentScreen({ tenant, shipment, order, issues, materials, uni
         </Link>
       ),
     },
-    { id: "quantity", header: c.quantity, kind: "quantity", priority: 2, cell: (line) => `${shownQuantity(line.quantity)} ${baseUnit(line)}` },
-    { id: "issued", header: c.issued, kind: "quantity", cell: (line) => `${shownQuantity(line.issued)} ${baseUnit(line)}` },
-    { id: "toIssue", header: c.toIssue, kind: "quantity", cell: (line) => `${shownQuantity(line.toIssue)} ${baseUnit(line)}` },
+    { id: "quantity", header: c.quantity, kind: "quantity", priority: 2, cell: (line) => `${formQuantity(line.quantity)} ${baseUnit(line)}` },
+    { id: "issued", header: c.issued, kind: "quantity", cell: (line) => `${formQuantity(line.issued)} ${baseUnit(line)}` },
+    { id: "toIssue", header: c.toIssue, kind: "quantity", cell: (line) => `${formQuantity(line.toIssue)} ${baseUnit(line)}` },
   ];
   const choices: LineQuantityChoice[] = shipment.lines
     .filter(({ toIssue }) => !isNothing(toIssue))
@@ -79,7 +79,7 @@ export function ShipmentScreen({ tenant, shipment, order, issues, materials, uni
       return {
         key: line.line,
         label: fill(issueLabels.post.line, { line: String(line.line), material: `${material.id} ${material.description}` }),
-        hint: fill(issueLabels.post.toIssue, { toIssue: shownQuantity(line.toIssue), baseUnit: material.baseUnit }),
+        hint: fill(issueLabels.post.toIssue, { toIssue: formQuantity(line.toIssue), baseUnit: material.baseUnit }),
         units: units[line.material] ?? [material.baseUnit],
       };
     });
@@ -137,7 +137,7 @@ export function ShipmentScreen({ tenant, shipment, order, issues, materials, uni
             canPost={shipment.status === "open" && choices.length > 0}
           />
         )}
-        <IssuesTable tenant={tenant} reversalLabels={stockLabels(messages)} issues={issues} materials={materialsById} labels={issueLabels} />
+        <IssuesTable tenant={tenant} locale={locale} reversalLabels={stockLabels(messages)} issues={issues} materials={materialsById} labels={issueLabels} />
       </section>
       </div>
     </div>

@@ -14,7 +14,7 @@ import { Checkbox } from "@cpg/ui/components/checkbox";
 import { Input } from "@cpg/ui/components/input";
 import { NativeSelect, NativeSelectOption } from "@cpg/ui/components/native-select";
 import { masterDataStatusTone } from "../document-lifecycle/status-tone";
-import { fill, shownQuantity } from "../forms/form-labels";
+import { fill, formQuantity } from "../forms/form-labels";
 import { fieldControls } from "../purchasing/field-controls";
 import type { ProductionLabels } from "./labels";
 
@@ -66,7 +66,7 @@ interface AddedRow {
 export function CompletionForm({ labels, preview, unit, inputs, formatError, formatFieldError, action, onSuccess, onBack, onCancel, locale }: CompletionFormProps) {
   const t = labels.completion;
   const id = useId();
-  const [pinned, setPinned] = useState(() => preview.components.map(({ material, expected, baseUnit }) => ({ material, quantity: shownQuantity(expected), unit: baseUnit })));
+  const [pinned, setPinned] = useState(() => preview.components.map(({ material, expected, baseUnit }) => ({ material, quantity: formQuantity(expected), unit: baseUnit })));
   const [added, setAdded] = useState<AddedRow[]>([]);
   const [nextKey, setNextKey] = useState(0);
   const [accepted, setAccepted] = useState(false);
@@ -155,7 +155,7 @@ export function CompletionForm({ labels, preview, unit, inputs, formatError, for
       {over && (
         <Callout tone="warning" role="alert" title={t.overTitle}>
           <div className="flex flex-col gap-2">
-            <p>{fill(t.over, { produced: shownQuantity(over.produced), target: shownQuantity(over.target), output: shownQuantity(over.output), unit: over.unit })}</p>
+            <p>{fill(t.over, { produced: formQuantity(over.produced), target: formQuantity(over.target), output: formQuantity(over.output), unit: over.unit })}</p>
             <label className="flex items-center gap-2">
               <Checkbox checked={accepted} onCheckedChange={(checked) => setAccepted(checked === true)} />
               {t.accept}
@@ -178,7 +178,7 @@ export function CompletionForm({ labels, preview, unit, inputs, formatError, for
               <span className="wrap-anywhere">{name}</span>
               <span id={hint} className="text-xs text-muted-foreground">
                 {!component.active && <span className="mr-2"><StatusBadge {...masterDataStatusTone(false)}>{t.inactive}</StatusBadge></span>}
-                {t.expected}: {shownQuantity(component.expected)} {component.baseUnit} · {t.available}: {shownQuantity(component.available)} {component.baseUnit}
+                {t.expected}: {formQuantity(component.expected)} {component.baseUnit} · {t.available}: {formQuantity(component.available)} {component.baseUnit}
               </span>
             </div>
             <div className="flex flex-col gap-1">

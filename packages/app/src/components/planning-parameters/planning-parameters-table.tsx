@@ -5,7 +5,7 @@ import type { PlanningParameterSort } from "@cpg/core/validators/planning-parame
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { Badge } from "@cpg/ui/components/badge";
 import type { Messages } from "../../i18n/messages/en";
-import { shownQuantity, type TenantContext } from "../forms/form-labels";
+import { formQuantity, type TenantContext } from "../forms/form-labels";
 import type { ListLinks } from "../lists/list-params";
 import { NoSearchResults } from "../lists/list-search-bar";
 import { EmptyText } from "../master-data/empty-text";
@@ -36,7 +36,7 @@ interface PlanningParametersTableProps {
 export function PlanningParametersTable({ tenant, rows, labels, editable, search, sort, links, lists }: PlanningParametersTableProps) {
   const t = labels.columns;
   const context: TenantContext = { tenant: tenant.code, generation: tenant.generation };
-  const quantity = (value: string, row: PlanningParameterRow) => `${shownQuantity(value)} ${row.baseUnit}`;
+  const quantity = (value: string, row: PlanningParameterRow) => `${formQuantity(value)} ${row.baseUnit}`;
   const columns: DataTableColumn<PlanningParameterRow>[] = [
     {
       id: "material",

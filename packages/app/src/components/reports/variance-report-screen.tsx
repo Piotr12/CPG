@@ -14,7 +14,7 @@ import { Label } from "@cpg/ui/components/label";
 import { NativeSelect, NativeSelectOption } from "@cpg/ui/components/native-select";
 import type { Messages } from "../../i18n/messages/en";
 import { documentStatusTone, WASTE_TONE } from "../document-lifecycle/status-tone";
-import { fill, shownQuantity } from "../forms/form-labels";
+import { fill, formQuantity } from "../forms/form-labels";
 import { PageLinks } from "../layout/page-links";
 import { materialFilterOptions, materialPicker, withUnlisted } from "../materials/material-picker";
 import { recordOptions, recordPicker } from "../named-records/record-picker";
@@ -46,7 +46,7 @@ export function VarianceReportScreen({ tenant, report, selected, rangeError, mat
   const t = messages.varianceReport;
   const pickers = { material: materialPicker(messages.lists), location: recordPicker(messages.lists, "location") };
   const path = `/admin/${tenant.code}`;
-  const amount = (quantity: string, unit: string) => `${shownQuantity(quantity)} ${unit}`;
+  const amount = (quantity: string, unit: string) => `${formQuantity(quantity)} ${unit}`;
   const figures = (row: VarianceReportRow) => (
     <div className="flex flex-col gap-1">
       <dl className="grid grid-cols-[auto_auto] gap-x-3 gap-y-1 text-sm" data-report-output>

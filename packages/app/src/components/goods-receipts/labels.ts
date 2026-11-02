@@ -9,7 +9,7 @@ import { RECEIPT_LINE_COUNT_MESSAGE, RECEIPT_LINE_ORDER_MESSAGE } from "@cpg/cor
 import { DUPLICATE_LINE_MESSAGE, LINE_NO_SUCH_LINE_MESSAGE, LINE_NUMBER_MESSAGE } from "@cpg/core/validators/purchasing/purchasing-fields.schema";
 import { POSITIVE_QUANTITY_MESSAGE } from "@cpg/core/validators/quantities/quantity.schema";
 import type { Messages } from "../../i18n/messages/en";
-import { errorFormatter, fill, shownQuantity } from "../forms/form-labels";
+import { errorFormatter, fill, formQuantity } from "../forms/form-labels";
 import type { MaterialsById } from "../purchase-orders/labels";
 
 /** The goods-receipt strings in the reader's language, all plain strings; `errors` holds every code the dialog can show. */
@@ -20,7 +20,7 @@ export function receiptsLabels(messages: Messages): ReceiptsLabels {
   return { ...messages.goodsReceipts, errors: { ...messages.errors, ...messages.goodsReceipts.errors } };
 }
 
-export { errorFormatter, fill, shownQuantity };
+export { errorFormatter, fill, formQuantity };
 
 /** A field message from the shared schemas or the service in the reader's language; unknown ones pass through. */
 export function fieldErrorFormatter(labels: ReceiptsLabels) {
@@ -56,7 +56,7 @@ export function receiptLineChoices(order: OrderView, materials: MaterialsById, u
     return {
       line,
       label: fill(labels.post.line, { line: String(line), material: `${id} ${description}` }),
-      outstanding: fill(labels.post.outstanding, { outstanding: shownQuantity(outstanding), baseUnit }),
+      outstanding: fill(labels.post.outstanding, { outstanding: formQuantity(outstanding), baseUnit }),
       units: units[material] ?? [baseUnit],
     };
   });

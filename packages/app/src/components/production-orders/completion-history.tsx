@@ -4,14 +4,14 @@ import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-tab
 import { StatusBadge } from "@cpg/ui/backend/feedback/status-badge";
 import { Badge } from "@cpg/ui/components/badge";
 import { reversalStatusTone } from "../document-lifecycle/status-tone";
-import { fill, shownQuantity, type TenantContext } from "../forms/form-labels";
+import { fill, formQuantity, type TenantContext } from "../forms/form-labels";
 import { PageLinks } from "../layout/page-links";
 import { CompletionReversalDialog, type CompletionReversalTarget } from "./completion-reversal-dialog";
 import type { ProductionLabels } from "./labels";
 
 /** A signed variance as screens show it: `+3`, `-2`, or `0` for none. */
 export function shownVariance(variance: string): string {
-  const shown = shownQuantity(variance);
+  const shown = formQuantity(variance);
   return variance.startsWith("-") || shown === "0" ? shown : `+${shown}`;
 }
 
@@ -32,13 +32,13 @@ export function CompletionHistory({ completions, page, materials, labels, path, 
   const name = (code: string) => `${code} ${materials.find(({ id }) => id === code)!.description}`;
   const today = new Date().toISOString().slice(0, 10);
   const target = (row: CompletionView, order: NonNullable<Props["reversible"]>["order"]): CompletionReversalTarget => {
-    const used = row.lines.filter(({ actual }) => shownQuantity(actual) !== "0");
+    const used = row.lines.filter(({ actual }) => formQuantity(actual) !== "0");
     return {
-      id: row.id, businessDate: row.businessDate, output: fill(t.reversal.output, { quantity: shownQuantity(row.quantity), unit: row.baseUnit }),
-      location: order.location, produced: shownQuantity(order.produced), quantity: shownQuantity(row.quantity), unit: row.baseUnit,
+      id: row.id, businessDate: row.businessDate, output: fill(t.reversal.output, { quantity: formQuantity(row.quantity), unit: row.baseUnit }),
+      location: order.location, produced: formQuantity(order.produced), quantity: formQuantity(row.quantity), unit: row.baseUnit,
       legs: [
-        ...(row.waste ? [] : [{ label: name(order.output), quantity: `-${shownQuantity(row.quantity)} ${row.baseUnit}` }]),
-        ...used.map((line) => ({ label: name(line.material), quantity: `+${shownQuantity(line.actual)} ${line.baseUnit}` })),
+        ...(row.waste ? [] : [{ label: name(order.output), quantity: `-${formQuantity(row.quantity)} ${row.baseUnit}` }]),
+        ...used.map((line) => ({ label: name(line.material), quantity: `+${formQuantity(line.actual)} ${line.baseUnit}` })),
       ],
     };
   };
@@ -52,7 +52,7 @@ export function CompletionHistory({ completions, page, materials, labels, path, 
       cell: (row) => (
         <span className="flex flex-wrap items-center gap-2">
           {row.waste && <Badge variant="secondary">{t.waste}</Badge>}
-          {shownQuantity(row.quantity)} {row.baseUnit}
+          {formQuantity(row.quantity)} {row.baseUnit}
           {row.reversal && <>
             <StatusBadge {...reversalStatusTone("reversed")}>{t.reversal.reversed}</StatusBadge>
             <span className="basis-full text-xs text-muted-foreground wrap-anywhere">
@@ -73,8 +73,8 @@ export function CompletionHistory({ completions, page, materials, labels, path, 
             <li key={line.material}>
               {fill(t.line, {
                 material: name(line.material),
-                expected: shownQuantity(line.expected),
-                actual: shownQuantity(line.actual),
+                expected: formQuantity(line.expected),
+                actual: formQuantity(line.actual),
                 unit: line.baseUnit,
                 variance: shownVariance(line.variance),
               })}

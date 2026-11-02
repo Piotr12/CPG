@@ -2,7 +2,7 @@ import type { NamedRecordView, TransferLegView, TransferPostingView, TransferRev
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import { StatusBadge } from "@cpg/ui/backend/feedback/status-badge";
 import { reversalStatusTone } from "../document-lifecycle/status-tone";
-import { fill, locationName, shownQuantity, type TenantContext, type TransfersLabels } from "./labels";
+import { fill, locationName, formQuantity, type TenantContext, type TransfersLabels } from "./labels";
 import { TransferReversalDialog } from "./transfer-reversal-dialog";
 
 /** A posting or a reversal of one, as one entry of the ledger. */
@@ -40,7 +40,7 @@ export function LedgerTable({ postings, reversals, locations, baseUnit, labels, 
     const { id, legs } = entry.posting ?? entry.reversal;
     return legs.map((leg, index) => ({ key: `${id}-${index}`, entry, leg, first: index === 0 }));
   });
-  const amount = (quantity: string) => `${shownQuantity(quantity)} ${baseUnit}`;
+  const amount = (quantity: string) => `${formQuantity(quantity)} ${baseUnit}`;
   const signed = (quantity: string) => `${quantity.startsWith("-") ? "" : "+"}${amount(quantity)}`;
   const place = (leg: TransferLegView) => (leg.location === null ? t.places.transit : fill(t.places[leg.place as "source" | "destination"], { location: locationName(locations, leg.location) }));
   const today = new Date().toISOString().slice(0, 10);
@@ -64,7 +64,7 @@ export function LedgerTable({ postings, reversals, locations, baseUnit, labels, 
         if (!first) return null;
         const { reason, actorUsername, channel } = entry.posting ?? entry.reversal;
         const detail = entry.posting
-          ? fill(t.entered, { quantity: shownQuantity(entry.posting.enteredQuantity), unit: entry.posting.enteredUnit })
+          ? fill(t.entered, { quantity: formQuantity(entry.posting.enteredQuantity), unit: entry.posting.enteredUnit })
           : fill(t.reverses, { date: originals.get(entry.reversal.original)!.businessDate });
         return (
           <div className="flex min-w-0 flex-col gap-1">

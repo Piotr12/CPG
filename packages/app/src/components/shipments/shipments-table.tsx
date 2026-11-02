@@ -4,7 +4,7 @@ import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-tab
 import { StatusBadge } from "@cpg/ui/backend/feedback/status-badge";
 import { documentStatusTone } from "../document-lifecycle/status-tone";
 import type { MaterialsById } from "../purchase-orders/labels";
-import { fill, shownQuantity, type ShipmentsLabels } from "./labels";
+import { fill, formQuantity, type ShipmentsLabels } from "./labels";
 
 interface ShipmentsTableProps {
   tenant: string;
@@ -38,7 +38,7 @@ export function ShipmentsTable({ tenant, shipments, materials, labels }: Shipmen
         <ul className="flex flex-col gap-1">
           {shipment.lines.map(({ line, material, quantity, issued }) => (
             <li key={line}>
-              {fill(labels.lineSummary, { line: String(line), issued: shownQuantity(issued), quantity: shownQuantity(quantity), baseUnit: materials.get(material)!.baseUnit })}
+              {fill(labels.lineSummary, { line: String(line), issued: formQuantity(issued), quantity: formQuantity(quantity), baseUnit: materials.get(material)!.baseUnit })}
             </li>
           ))}
         </ul>

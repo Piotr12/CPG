@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({ reverseStockMovement: vi.fn() }));
 vi.mock("../../app/admin/[tenant]/stock/actions", () => mocks);
 const movement = { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", material: "00000001", location: "00000002", quantity: "5.000000", baseUnit: "each", businessDate: "2026-10-20", sourceLabel: "Goods receipt 00000003 · Line 2" };
 const context = { tenant: "test", generation: 3 };
-const dialog = (messages = en, target = movement) => <ReversalDialog context={context} movement={target} today="2026-10-21" labels={stockLabels(messages)} />;
+const dialog = (messages = en, target = movement) => <ReversalDialog context={context} movement={target} today="2026-10-21" locale={messages === pl ? "pl" : "en"} labels={stockLabels(messages)} />;
 const open = () => fireEvent.click(screen.getByRole("button", { name: en.stock.reversal.open }));
 const reason = () => fireEvent.change(screen.getByLabelText("Reason"), { target: { value: "Duplicate receipt" } });
 afterEach(() => vi.clearAllMocks());
@@ -38,6 +38,14 @@ it("requires a reason in Polish, supports escape, and never exposes quantity/dat
   fireEvent.keyDown(screen.getByLabelText(pl.stock.reason), { key: "Escape" });
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 });
+it("shows the original and its inverse in the reader's locale, every digit kept (#304)", () => {
+  const large = { ...movement, quantity: "12345.500000" };
+  const { unmount } = render(dialog(pl, large)); fireEvent.click(screen.getByRole("button", { name: pl.stock.reversal.open }));
+  expect(screen.getByText("-12 345,5 each")).toBeTruthy(); expect(screen.getByText(/2026-10-20 · 12 345,5 each/)).toBeTruthy();
+  unmount();
+  render(dialog(en, { ...large, quantity: "-1234.000001" })); open();
+  expect(screen.getByText("1,234.000001 each")).toBeTruthy(); expect(screen.getByText(/2026-10-20 · -1,234.000001 each/)).toBeTruthy();
+});
 it.each(["TENANT_READ_ONLY", "INSUFFICIENT_STOCK", "STOCK_REVERSAL_INCONSISTENT", "STOCK_ALREADY_REVERSED"])("retains the reason and explanation for %s", async (code) => {
   mocks.reverseStockMovement.mockResolvedValue({ ok: false, error: { code, message: "Refused" } });
   render(dialog()); open(); reason();
@@ -53,7 +61,7 @@ it("offers the existing inverse on a stale duplicate without dismissing the refu
   expect(screen.getByRole("link", { name: en.stock.reversal.viewInverse }).getAttribute("href")).toBe(movementHref("test", movement, "inverse-id"));
 });
 it("shows links on read-only history, hides unsupported actions and permits inactive historical targets", () => {
-  const props = { tenant: { code: "test", generation: 1, readOnly: true }, movement, reversedBy: "inverse-id", reverses: null, canReverse: false, labels: stockLabels(en) };
+  const props = { tenant: { code: "test", generation: 1, readOnly: true }, movement, reversedBy: "inverse-id", reverses: null, canReverse: false, locale: "en" as const, labels: stockLabels(en) };
   const { rerender } = render(<ReversalControls {...props} />);
   expect(screen.getByText(en.stock.reversal.reversed)).toBeTruthy(); expect(screen.getByRole("link", { name: en.stock.reversal.viewInverse })).toBeTruthy();
   expect(screen.queryByRole("button")).toBeNull();

@@ -17,7 +17,7 @@ import { MATERIAL_CHOICE_MESSAGE } from "@cpg/core/validators/planning-parameter
 import { POSITIVE_QUANTITY_MESSAGE } from "@cpg/core/validators/quantities/quantity.schema";
 import { errorMessage } from "../../i18n/error-message";
 import type { Messages } from "../../i18n/messages/en";
-import { fill, shownQuantity, type TenantContext } from "../forms/form-labels";
+import { fill, formQuantity, type TenantContext } from "../forms/form-labels";
 import { materialPicker, type MaterialPicker } from "../materials/material-picker";
 
 /**
@@ -45,7 +45,7 @@ export function bomsLabels(messages: Messages): BomsLabels {
   };
 }
 
-export { fill, shownQuantity, type TenantContext };
+export { fill, formQuantity, type TenantContext };
 
 /**
  * The codes whose server message carries language-neutral details after its first colon: the BOM a
@@ -96,7 +96,7 @@ export function materialsById(materials: MaterialSummary[]): MaterialsById {
 /** A line as the list summarizes it: "24 each 00000002 Bolt M8" (base quantity and unit, then the material). */
 export function lineSummary(line: BomComponentView, materials: MaterialsById): string {
   const material = materials.get(line.material)!;
-  return `${shownQuantity(line.quantity)} ${material.baseUnit} ${material.id} ${material.description}`;
+  return `${formQuantity(line.quantity)} ${material.baseUnit} ${material.id} ${material.description}`;
 }
 
 /**

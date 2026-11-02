@@ -13,7 +13,7 @@ import type { Messages } from "../../i18n/messages/en";
 import { PageLinks } from "../layout/page-links";
 import type { ListLinks } from "../lists/list-params";
 import { NoSearchResults } from "../lists/list-search-bar";
-import { fill, shownQuantity, type LocationsById, type MaterialsById, type RequisitionsLabels } from "./labels";
+import { fill, formQuantity, type LocationsById, type MaterialsById, type RequisitionsLabels } from "./labels";
 
 interface RequisitionsTableProps {
   tenant: { code: string; name: string; generation: number };
@@ -39,7 +39,7 @@ interface RequisitionsTableProps {
  */
 export function RequisitionsTable({ tenant, requisitions, materials, locations, labels, page, pages, editable, search, sort, links, lists }: RequisitionsTableProps) {
   const t = labels.columns;
-  const amount = (quantity: string, material: string) => `${shownQuantity(quantity)} ${materials.get(material)!.baseUnit}`;
+  const amount = (quantity: string, material: string) => `${formQuantity(quantity)} ${materials.get(material)!.baseUnit}`;
   const dateLabels = { ...labels.changeDate, field: labels.form.requiredDate, cancel: labels.cancel, date: labels.fieldErrors.date };
   const columns: DataTableColumn<RequisitionView>[] = [
     {

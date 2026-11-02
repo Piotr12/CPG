@@ -6,7 +6,7 @@ import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-tab
 import { StatusBadge } from "@cpg/ui/backend/feedback/status-badge";
 import type { Messages } from "../../i18n/messages/en";
 import { targetStatusTone } from "../document-lifecycle/status-tone";
-import { shownQuantity, type TenantContext } from "../forms/form-labels";
+import { formQuantity, type TenantContext } from "../forms/form-labels";
 import type { ListLinks } from "../lists/list-params";
 import { NoSearchResults } from "../lists/list-search-bar";
 import { EmptyText } from "../master-data/empty-text";
@@ -53,7 +53,7 @@ export function SafetyStockTable({ tenant, rows, labels, editable, search, sort,
       cell: (row) => <LocationCell row={row} inactive={labels.inactive} query={search} />,
     },
     { id: "effectiveFrom", header: t.effectiveFrom, kind: "date", sortKey: "effectiveFrom", cell: (row) => row.effectiveFrom },
-    { id: "quantity", header: t.quantity, kind: "quantity", sortKey: "quantity", cell: (row) => `${shownQuantity(row.quantity)} ${row.baseUnit}` },
+    { id: "quantity", header: t.quantity, kind: "quantity", sortKey: "quantity", cell: (row) => `${formQuantity(row.quantity)} ${row.baseUnit}` },
     {
       id: "status",
       header: t.status,

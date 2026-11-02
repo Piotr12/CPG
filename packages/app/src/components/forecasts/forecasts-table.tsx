@@ -5,7 +5,7 @@ import type { ForecastSort } from "@cpg/core/validators/forecasts/forecast-list.
 import type { SortDirection } from "@cpg/core/validators/lists/list-query.schema";
 import { DataTable, type DataTableColumn } from "@cpg/ui/backend/tables/data-table";
 import type { Messages } from "../../i18n/messages/en";
-import { fill, shownQuantity, type TenantContext } from "../forms/form-labels";
+import { fill, formQuantity, type TenantContext } from "../forms/form-labels";
 import type { ListLinks } from "../lists/list-params";
 import { NoSearchResults } from "../lists/list-search-bar";
 import { LocationCell, MaterialCell, type ReferenceDetails } from "../master-data/references";
@@ -56,7 +56,7 @@ export function ForecastsTable({ tenant, rows, labels, editable, filtered, searc
       cell: (row) => <LocationCell row={row} inactive={labels.inactive} query={search} />,
     },
     { id: "date", header: t.date, kind: "date", sortKey: "date", cell: (row) => row.date },
-    { id: "quantity", header: t.quantity, kind: "quantity", sortKey: "quantity", cell: (row) => `${shownQuantity(row.quantity)} ${row.baseUnit}` },
+    { id: "quantity", header: t.quantity, kind: "quantity", sortKey: "quantity", cell: (row) => `${formQuantity(row.quantity)} ${row.baseUnit}` },
   ];
   const empty = search
     ? <NoSearchResults links={links} query={search} lists={lists} />

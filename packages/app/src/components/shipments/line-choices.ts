@@ -1,7 +1,7 @@
 import { isNothing, outstandingOf, type CustomerOrderView, type ShipmentView } from "@cpg/core";
 import type { LineQuantityChoice } from "../forms/line-quantities-form";
 import type { MaterialsById } from "../purchase-orders/labels";
-import { fill, shownQuantity, type ShipmentsLabels } from "./labels";
+import { fill, formQuantity, type ShipmentsLabels } from "./labels";
 
 /*
  * Server side only: it reads `@cpg/core`, which a client component must never import (lesson
@@ -21,7 +21,7 @@ export function shipmentLineChoices(order: CustomerOrderView, materials: Materia
       {
         key: line.id,
         label: fill(labels.create.line, { line: String(index + 1), material: `${id} ${description}` }),
-        hint: fill(labels.create.outstanding, { outstanding: shownQuantity(outstanding), baseUnit }),
+        hint: fill(labels.create.outstanding, { outstanding: formQuantity(outstanding), baseUnit }),
         units: units[line.material] ?? [baseUnit],
       },
     ];
@@ -53,7 +53,7 @@ export function shipmentEditChoices(
   const kept = shipment.lines.map((line): LineQuantityChoice => {
     const { id, description, baseUnit } = materials.get(line.material)!;
     const offered = units[line.material] ?? [baseUnit];
-    const quantities = { quantity: shownQuantity(line.quantity), issued: shownQuantity(line.issued), baseUnit };
+    const quantities = { quantity: formQuantity(line.quantity), issued: formQuantity(line.issued), baseUnit };
     return {
       key: line.orderLine,
       label: fill(t.line, { line: String(line.line), material: `${id} ${description}` }),
@@ -71,7 +71,7 @@ export function shipmentEditChoices(
       {
         key: line.id,
         label: fill(t.orderLine, { line: String(index + 1), material: `${id} ${description}` }),
-        hint: fill(t.outstanding, { outstanding: shownQuantity(outstanding), baseUnit }),
+        hint: fill(t.outstanding, { outstanding: formQuantity(outstanding), baseUnit }),
         units: units[line.material] ?? [baseUnit],
       },
     ];

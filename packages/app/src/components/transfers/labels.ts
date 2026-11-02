@@ -15,7 +15,7 @@ import {
   TRANSFER_SINGLE_MATERIAL_MESSAGE,
 } from "@cpg/core/validators/transfers/transfer.schema";
 import type { Messages } from "../../i18n/messages/en";
-import { errorFormatter, fill, shownQuantity, type TenantContext } from "../forms/form-labels";
+import { errorFormatter, fill, formQuantity, type TenantContext } from "../forms/form-labels";
 import { materialPicker, type MaterialPicker } from "../materials/material-picker";
 import { recordPicker } from "../named-records/record-picker";
 
@@ -42,7 +42,7 @@ export function transfersLabels(messages: Messages): TransfersLabels {
   };
 }
 
-export { errorFormatter, fill, shownQuantity, type TenantContext };
+export { errorFormatter, fill, formQuantity, type TenantContext };
 
 /** A field message from the shared schemas or the service in the reader's language; unknown ones pass through. */
 export function fieldErrorFormatter(labels: Pick<TransfersLabels, "fieldErrors">) {

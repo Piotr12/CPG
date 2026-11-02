@@ -15,7 +15,7 @@ import { receiptLineChoices, receiptsLabels } from "../goods-receipts/labels";
 import { ReceiptDialog } from "../goods-receipts/receipt-dialog";
 import { ReceiptsTable } from "../goods-receipts/receipts-table";
 import { requisitionHref } from "../purchase-requisitions/requisition-link";
-import { byId, enteredAs, ordersLabels, shownQuantity } from "./labels";
+import { byId, enteredAs, ordersLabels, formQuantity } from "./labels";
 
 interface OrderScreenProps {
   tenant: { code: string; name: string; generation: number; readOnly: boolean };
@@ -77,7 +77,7 @@ export function OrderScreen({ tenant, order, receipts, materials, units, supplie
       id: "quantity",
       header: c.quantity,
       kind: "quantity",
-      cell: (line) => `${shownQuantity(line.quantity)} ${materialsById.get(line.material)!.baseUnit}`,
+      cell: (line) => `${formQuantity(line.quantity)} ${materialsById.get(line.material)!.baseUnit}`,
     },
     { id: "enteredAs", header: c.enteredAs, kind: "longText", priority: 2, cell: (line) => enteredAs(line, materialsById, labels) },
     { id: "plannedDate", header: c.plannedDate, kind: "date", cell: (line) => line.plannedDate },
@@ -99,13 +99,13 @@ export function OrderScreen({ tenant, order, receipts, materials, units, supplie
       id: "received",
       header: c.received,
       kind: "quantity",
-      cell: (line) => `${shownQuantity(line.received)} ${materialsById.get(line.material)!.baseUnit}`,
+      cell: (line) => `${formQuantity(line.received)} ${materialsById.get(line.material)!.baseUnit}`,
     },
     {
       id: "outstanding",
       header: c.outstanding,
       kind: "quantity",
-      cell: (line) => `${shownQuantity(line.outstanding)} ${materialsById.get(line.material)!.baseUnit}`,
+      cell: (line) => `${formQuantity(line.outstanding)} ${materialsById.get(line.material)!.baseUnit}`,
     },
     {
       id: "status",
@@ -113,14 +113,14 @@ export function OrderScreen({ tenant, order, receipts, materials, units, supplie
       kind: "status",
       cell: (line) => <StatusBadge {...documentStatusTone(line.status)}>{labels.lines.status[line.status]}</StatusBadge>,
     },
-    { id: "abandoned", header: messages.lifecycle.abandoned, kind: "quantity", priority: 2, cell: (line) => `${shownQuantity(line.abandoned)} ${materialsById.get(line.material)!.baseUnit}` },
+    { id: "abandoned", header: messages.lifecycle.abandoned, kind: "quantity", priority: 2, cell: (line) => `${formQuantity(line.abandoned)} ${materialsById.get(line.material)!.baseUnit}` },
     { id: "actions", header: messages.lifecycle.actions, kind: "actions", cell: (line) => <div className="flex flex-col items-start gap-2">
       <ChangeDateDialog kind="orderLine" available={lineEditable(line)} subject={lineSubject(line)} value={line.plannedDate} version={order.version}
         save={setPurchaseOrderLineDate.bind(null, tenant.code, tenant.generation, order.id, line.line)} labels={dateLabels} errors={dateErrors} />
       <LifecycleControl kind="line"
         available={lineEditable(line)} processed={line.posted}
         subject={lineSubject(line)}
-        version={order.version} lines={[line.line]} quantities={[`${shownQuantity(line.outstanding)} ${materialsById.get(line.material)!.baseUnit}`]}
+        version={order.version} lines={[line.line]} quantities={[`${formQuantity(line.outstanding)} ${materialsById.get(line.material)!.baseUnit}`]}
         labels={messages.lifecycle} errors={messages.errors}
         cancel={cancelPurchaseOrder.bind(null, tenant.code, tenant.generation, order.id)} closeEarly={closeEarlyPurchaseOrder.bind(null, tenant.code, tenant.generation, order.id)} />
     </div> },
@@ -138,7 +138,7 @@ export function OrderScreen({ tenant, order, receipts, materials, units, supplie
         meta={<StatusBadge {...documentStatusTone(order.status as DocumentStatus)}>{labels.status[order.status as keyof typeof labels.status]}</StatusBadge>}
         actions={!tenant.readOnly && order.status === "open" && <LifecycleControl kind="order" available processed={order.lines.some((line) => line.posted)}
           subject={`${labels.link} ${order.id}`} version={order.version}
-          quantities={order.lines.filter((line) => line.status === "open").map((line) => `${materialsById.get(line.material)!.description}: ${shownQuantity(line.outstanding)} ${materialsById.get(line.material)!.baseUnit}`)}
+          quantities={order.lines.filter((line) => line.status === "open").map((line) => `${materialsById.get(line.material)!.description}: ${formQuantity(line.outstanding)} ${materialsById.get(line.material)!.baseUnit}`)}
           labels={messages.lifecycle} errors={messages.errors}
           cancel={cancelPurchaseOrder.bind(null, tenant.code, tenant.generation, order.id)} closeEarly={closeEarlyPurchaseOrder.bind(null, tenant.code, tenant.generation, order.id)} />}
       />
@@ -174,7 +174,7 @@ export function OrderScreen({ tenant, order, receipts, materials, units, supplie
             canPost={order.status === "open"}
           />
         )}
-        <ReceiptsTable tenant={tenant} reversalLabels={stockLabels(messages)} receipts={receipts} materials={materialsById} labels={receiptLabels} />
+        <ReceiptsTable tenant={tenant} locale={locale} reversalLabels={stockLabels(messages)} receipts={receipts} materials={materialsById} labels={receiptLabels} />
       </section>
       </div>
     </div>

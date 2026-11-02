@@ -18,7 +18,7 @@ import {
 import { POSITIVE_QUANTITY_MESSAGE } from "@cpg/core/validators/quantities/quantity.schema";
 import { errorMessage } from "../../i18n/error-message";
 import type { Messages } from "../../i18n/messages/en";
-import { fill, shownQuantity, type TenantContext } from "../forms/form-labels";
+import { fill, formQuantity, type TenantContext } from "../forms/form-labels";
 import { materialPicker, type MaterialPicker } from "../materials/material-picker";
 import { recordPicker } from "../named-records/record-picker";
 import { byId } from "../purchase-requisitions/labels";
@@ -47,7 +47,7 @@ export function ordersLabels(messages: Messages): OrdersLabels {
   };
 }
 
-export { byId, fill, shownQuantity, type TenantContext };
+export { byId, fill, formQuantity, type TenantContext };
 
 /** An error envelope as the purchase-order screens say it, translated by code. */
 export function errorFormatter(labels: Pick<OrdersLabels, "errors">) {
