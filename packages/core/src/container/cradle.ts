@@ -37,6 +37,8 @@ import type { UserPreferenceService } from "../services/preferences/user-prefere
 import type { SystemStatusService } from "../services/system/system-status.service";
 import type { UserService } from "../services/users/user.service";
 import type { MrpAcceptanceService } from "../services/mrp/mrp-acceptance.service";
+import type { MrpBatchService } from "../services/mrp/mrp-batch.service";
+import type { MrpProposalDocumentService } from "../services/mrp/mrp-proposal-document.service";
 import type { MrpRunService } from "../services/mrp/mrp-run.service";
 import type { MrpSnapshotService } from "../services/mrp/mrp-snapshot.service";
 import type { TenantInfo, TenantService } from "../services/tenants/tenant.service";
@@ -46,6 +48,8 @@ export interface Cradle {
   config: AppConfig;
   /** The configuration of each of Test's generated datasets: tiny and realistic (`domain/demo/test-datasets.ts`). */
   testDatasets: Readonly<Record<TestDataset, TestTenantConfig>>;
+  /** The most proposals one automatic MRP batch may create (E19-S03, `MRP_BATCH_LIMIT`). */
+  mrpBatchLimit: number;
   orm: Orm;
   /** A fresh EntityManager fork per container scope (i.e. per request). */
   em: EntityManager;
@@ -83,6 +87,8 @@ export interface Cradle {
   demandReviewService: DemandReviewService;
   mrpSnapshotService: MrpSnapshotService;
   mrpRunService: MrpRunService;
+  mrpProposalDocumentService: MrpProposalDocumentService;
+  mrpBatchService: MrpBatchService;
   mrpAcceptanceService: MrpAcceptanceService;
   stockReportService: StockReportService;
   varianceReportService: VarianceReportService;

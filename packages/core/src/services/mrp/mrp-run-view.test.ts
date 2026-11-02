@@ -20,7 +20,16 @@ describe("toRunView", () => {
 
     expect(toRunView(run)).toEqual({
       id: "00000003", createdAt, account: "anna", channel: "api", mode: "manual", generation: 4,
-      startDate: "2026-12-15", endDate: "2027-03-14", horizonDays: 90, pairs: 12,
+      startDate: "2026-12-15", endDate: "2027-03-14", horizonDays: 90, pairs: 12, creation: null,
     });
+  });
+
+  it("carries an automatic run's stored creation outcome (E19-S03)", () => {
+    const run = {
+      id: "uuid", code: "00000004", createdAt: new Date(), startDate: "2026-12-15", horizonDays: 90, mode: "automatic", generation: 4, pairs: 12,
+      actorUserId: "anna-id", actorUsername: "anna", channel: "ui", creation: { status: "created", documents: 3 },
+    } as MrpRun;
+
+    expect(toRunView(run)).toMatchObject({ mode: "automatic", creation: { status: "created", documents: 3 } });
   });
 });

@@ -5,10 +5,10 @@
  */
 export const AUDIT_FIELDS = [
   "abandoned", "active", "balance", "baseUnit", "bom", "businessDate", "completion", "components", "converted",
-  "customer", "customerOrder", "dataset", "date", "denominator", "description", "destination", "dispatched",
-  "effectiveFrom", "enteredQuantity", "enteredUnit", "fulfilled", "generation", "id", "inTransit", "issue", "issued",
+  "customer", "customerOrder", "dataset", "date", "denominator", "description", "destination", "dispatched", "documents",
+  "effectiveFrom", "enteredQuantity", "enteredUnit", "failure", "fulfilled", "generation", "id", "inTransit", "issue", "issued",
   "kind", "leadTimeDays", "line", "lineStatus", "lines", "locale", "location", "lotMultiple", "material",
-  "minimumQuantity", "moved", "movement", "movements", "mrpRun", "name", "numerator", "order", "original", "output",
+  "minimumQuantity", "mode", "moved", "movement", "movements", "mrpRun", "name", "numerator", "order", "original", "output",
   "plannedArrival", "plannedDate", "plannedDispatch", "plannedFinish", "plannedStart", "posting", "postingId",
   "priority", "procurement", "produced", "purchaseOrder", "quantity", "readOnly", "reason", "receipt", "received",
   "requiredDate", "reversal", "reversed", "revision", "role", "shipment", "source", "status", "supplier", "theme",

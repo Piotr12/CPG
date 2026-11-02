@@ -5,6 +5,8 @@ import { CustomerOrderService } from "../services/customer-orders/customer-order
 import { StockService } from "../services/stock/stock.service";
 import { DemandReviewService } from "../services/reports/demand-review.service";
 import { MrpAcceptanceService } from "../services/mrp/mrp-acceptance.service";
+import { MRP_BATCH_LIMIT, MrpBatchService } from "../services/mrp/mrp-batch.service";
+import { MrpProposalDocumentService } from "../services/mrp/mrp-proposal-document.service";
 import { MrpRunService } from "../services/mrp/mrp-run.service";
 import { MrpSnapshotService } from "../services/mrp/mrp-snapshot.service";
 import { StockReportService } from "../services/reports/stock-report.service";
@@ -54,6 +56,7 @@ export function createAppContainer(config: AppConfig, orm: Orm): AppContainer {
   container.register({
     config: asValue(config),
     testDatasets: asValue(TEST_DATASET_CONFIGS),
+    mrpBatchLimit: asValue(MRP_BATCH_LIMIT),
     orm: asValue(orm),
     em: asFunction(({ orm }: { orm: Orm }) => orm.em.fork()).scoped(),
     systemStatusService: asClass(SystemStatusService).scoped(),
@@ -92,6 +95,8 @@ export function createAppContainer(config: AppConfig, orm: Orm): AppContainer {
     demandReviewService: asClass(DemandReviewService).scoped(),
     mrpSnapshotService: asClass(MrpSnapshotService).scoped(),
     mrpRunService: asClass(MrpRunService).scoped(),
+    mrpProposalDocumentService: asClass(MrpProposalDocumentService).scoped(),
+    mrpBatchService: asClass(MrpBatchService).scoped(),
     mrpAcceptanceService: asClass(MrpAcceptanceService).scoped(),
     stockReportService: asClass(StockReportService).scoped(),
     varianceReportService: asClass(VarianceReportService).scoped(),

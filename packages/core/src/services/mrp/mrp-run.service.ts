@@ -1,4 +1,4 @@
-import { currentTenant, holdWriteGate, MrpDailyResult, MrpRecommendation, MrpRun, MrpRunException, type EntityManager } from "@cpg/db";
+import { currentTenant, holdWriteGate, MrpDailyResult, MrpRecommendation, MrpRun, MrpRunException, type EntityManager, type MrpRunMode } from "@cpg/db";
 import { nextSequentialId } from "../../domain/business-ids/sequential-id";
 import { mrpExceptionMessage } from "../../domain/mrp/exceptions/codes";
 import { exceptionParams, toStoredException } from "../../domain/mrp/exceptions/stored-exception";
@@ -26,6 +26,7 @@ import { recordTenantAudit } from "../audit/audit-recorder";
 import { findLocation, locationsByCode } from "../locations/find-location";
 import { findMaterial, materialsByCode } from "../materials/find-material";
 import type { TenantService } from "../tenants/tenant.service";
+import type { MrpBatchService } from "./mrp-batch.service";
 import type { MrpSnapshotService } from "./mrp-snapshot.service";
 import {
   MRP_FIGURES,
@@ -37,7 +38,7 @@ import {
   type MrpPlanView,
   type MrpProposalView,
   type MrpProvisionalView,
-  type MrpRunView,
+  type MrpRunAnswer,
 } from "./mrp-run-view";
 
 /**
@@ -53,6 +54,7 @@ interface Deps {
   em: EntityManager;
   tenantService: TenantService;
   mrpSnapshotService: MrpSnapshotService;
+  mrpBatchService: MrpBatchService;
 }
 
 const bucketFigures = (bucket: MrpBucket) =>
@@ -69,57 +71,86 @@ export class MrpRunService {
   private readonly em: EntityManager;
   private readonly tenantService: TenantService;
   private readonly mrpSnapshotService: MrpSnapshotService;
+  private readonly mrpBatchService: MrpBatchService;
 
-  constructor({ em, tenantService, mrpSnapshotService }: Deps) {
+  constructor({ em, tenantService, mrpSnapshotService, mrpBatchService }: Deps) {
     this.em = em;
     this.tenantService = tenantService;
     this.mrpSnapshotService = mrpSnapshotService;
+    this.mrpBatchService = mrpBatchService;
   }
 
   /**
-   * Runs MRP and stores the run. Must run inside the caller's write transaction (`tenantServerAction`,
-   * or `IdempotencyService.run` behind `tenantApiWrite`), which has already refused a stale generation
-   * and a read-only tenant. The write gate is taken first, before the snapshot: the snapshot yields to
-   * the event loop, and every transaction another connection starts meanwhile then waits for this run
-   * instead of making its snapshot stale or meeting a locked database (spec, "The run").
+   * Runs MRP and stores the run; an `automatic` run then creates every executable proposal's document in one
+   * all-or-nothing batch (E19-S03). Must run inside the caller's write transaction (`tenantServerAction`, or
+   * `IdempotencyService.run` behind `tenantApiWrite`), which has already refused a stale generation and a
+   * read-only tenant, and which commits the run, its results, its documents and the idempotency key together.
+   *
+   * The write gate is taken first, then the run writes before it reads anything it plans from: deleting the
+   * previous run's rows takes SQLite's write lock (spec Q3). A commit by another connection since the caller's
+   * first read fails that write as a stale snapshot, before anything is planned, and the wrapper retries once;
+   * after it, no other writer can change what the plan and the batch see until the commit. The gate keeps this
+   * process's other bundles out while the run yields.
    */
-  async run(actor: AuditActor): Promise<MrpRunView> {
+  async run(actor: AuditActor, { mode = "manual" }: { mode?: MrpRunMode } = {}): Promise<MrpRunAnswer> {
     await holdWriteGate(this.em);
-    const today = new Date().toISOString().slice(0, 10);
-    const { generation } = await this.tenantService.currentState(currentTenant(this.em)!);
-    const result = planMrp(await this.mrpSnapshotService.load(today), today);
-    // The engine is one synchronous stretch, and so are the deletes after it on better-sqlite3: yield between
-    // them, so the server reads its sockets (lesson 2026-10-24). The write gate is already held.
-    await yieldToEventLoop();
-    const highest = await this.em.findOne(MrpRun, {}, { orderBy: { code: "desc" }, fields: ["code"], disableIdentityMap: true });
-    const code = nextSequentialId(highest?.code ?? null, { code: "MRP_RUN_IDS_EXHAUSTED", message: "This tenant has used every eight-digit MRP run ID." });
     // Only the latest run keeps its results, proposals and exceptions (spec Q1). Deleting them before the insert keeps the indexes small.
     await this.em.nativeDelete(MrpDailyResult, {});
     await this.em.nativeDelete(MrpRecommendation, {});
     await this.em.nativeDelete(MrpRunException, {});
+    // The deletes and the engine are each one synchronous stretch on better-sqlite3: yield between them, so the
+    // server reads its sockets (lesson 2026-10-24). The write gate is already held.
     await yieldToEventLoop();
-    const run = this.em.create(MrpRun, {
+    const today = new Date().toISOString().slice(0, 10);
+    const { generation } = await this.tenantService.currentState(currentTenant(this.em)!);
+    const result = planMrp(await this.mrpSnapshotService.load(today), today);
+    await yieldToEventLoop();
+    const highest = await this.em.findOne(MrpRun, {}, { orderBy: { code: "desc" }, fields: ["code"], disableIdentityMap: true });
+    const code = nextSequentialId(highest?.code ?? null, { code: "MRP_RUN_IDS_EXHAUSTED", message: "This tenant has used every eight-digit MRP run ID." });
+    let run = this.em.create(MrpRun, {
       code,
       startDate: today,
       horizonDays: MRP_HORIZON_DAYS,
-      mode: "manual",
+      mode,
       generation,
       pairs: result.plans.length,
       actorUserId: actor.userId,
       actorUsername: actor.username,
       channel: actor.channel,
     });
-    recordTenantAudit(this.em, actor, {
-      // One entry per run (spec Q3): the run is a new tenant record, though it changes no business record (R10).
-      action: "mrp.mrp-run.created",
-      subject: { type: "MrpRun", id: code, label: code },
-      before: null,
-      after: { date: today, generation },
+    await this.em.flush();
+    await this.writeResults(run, result);
+    if (mode === "manual") {
+      run = await this.em.findOneOrFail(MrpRun, { code });
+      this.recordRun(actor, run, {});
+      await this.em.flush();
+      return toRunView(run);
+    }
+    // `writeResults` cleared the identity map; the batch clears it again.
+    const { creation, documents } = await this.mrpBatchService.createAll(await this.em.findOneOrFail(MrpRun, { code }), actor);
+    run = await this.em.findOneOrFail(MrpRun, { code });
+    run.creation = creation;
+    this.recordRun(actor, run, {
+      mode,
+      documents: creation.status === "created" ? creation.documents : 0,
+      ...(creation.status === "failed" && { failure: creation.code }),
     });
     await this.em.flush();
-    const view = toRunView(run);
-    await this.writeResults(run, result);
-    return view;
+    return { ...toRunView(run), documents };
+  }
+
+  /**
+   * The run's one audit entry (spec Q3 of E14-S02), written last so an automatic run's records what its batch did
+   * (E19-S03 Q11): its mode, the documents created, and the refusal's code when it failed. A manual run's entry
+   * keeps its shape. The run is a new tenant record, though it changes no business record (R10).
+   */
+  private recordRun(actor: AuditActor, run: MrpRun, automatic: { mode?: MrpRunMode; documents?: number; failure?: string }): void {
+    recordTenantAudit(this.em, actor, {
+      action: "mrp.mrp-run.created",
+      subject: { type: "MrpRun", id: run.code, label: run.code },
+      before: null,
+      after: { date: run.startDate, generation: run.generation, ...automatic },
+    });
   }
 
   /**

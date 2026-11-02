@@ -19,7 +19,7 @@ import { fingerprintOf, operationOf } from "../idempotency/fingerprint";
  */
 const ANNA: AuditActor = { userId: "anna-id", username: "anna", sessionId: "anna-session", channel: "ui", token: null };
 const ADMIN_TOKEN: AuditActor = { userId: "admin-id", username: "admin", sessionId: null, channel: "api", token: { id: "t", name: "ops" } };
-const runAction = tenantServerAction(mrpRunSchema, (_input, { cradle }) => cradle.mrpRunService.run(ANNA));
+const runAction = tenantServerAction(mrpRunSchema, (input, { cradle }) => cradle.mrpRunService.run(ANNA, input ?? {}));
 
 const sql = async (query: string) => (await getContainer()).cradle.orm.em.getConnection().execute(query);
 const runs = async () => (await sql("select tenant_code, code from mrp_run order by tenant_code, code")) as { tenant_code: string; code: string }[];
@@ -72,8 +72,10 @@ describe("the gate around an MRP run", () => {
     }
   });
 
-  it("refuses an input the run doesn't take", async () => {
-    await expect(runAction("prod", 1, { mode: "automatic" })).resolves.toMatchObject({ ok: false, error: { code: "VALIDATION_FAILED" } });
+  it("refuses a mode or key the run doesn't take, and stores nothing (E19-S03)", async () => {
+    for (const input of [{ mode: "auto" }, { mode: null }, { extra: 1 }]) {
+      await expect(runAction("prod", 1, input)).resolves.toMatchObject({ ok: false, error: { code: "VALIDATION_FAILED" } });
+    }
     expect(await runs()).toEqual([]);
   });
 
