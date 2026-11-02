@@ -196,6 +196,26 @@ describe("an automatic MRP run's batch (E19-S03)", () => {
     ]);
   });
 
+  it("AUD-023: a candidate failing after a flush boundary still takes back every earlier chunk's documents, entries and marks", async () => {
+    const sugar = await material("Sugar");
+    await parameters(sugar.id);
+    // 26 proposals of Sugar, one more than a chunk, then Flour's, the 27th, whose material is inactive.
+    await order(sugar.id, Array.from({ length: 26 }, (_, day) => ["1", `2026-10-${String(5 + day).padStart(2, "0")}`] as [string, string]));
+    const flour = await material("Flour");
+    await parameters(flour.id);
+    await order(flour.id, [["5", "2026-10-07"]]);
+    await sql("update material set active = 0 where code = ? and tenant_code = 'prod'", [flour.id]);
+
+    const view = await run();
+
+    expect(view.creation).toMatchObject({ status: "failed", code: "MATERIAL_INACTIVE", candidate: { material: flour.id } });
+    expect(await count("purchase_requisition")).toBe(0);
+    expect(await audits("purchase-requisitions.purchase-requisition.created")).toEqual([]);
+    const { proposals } = await plan(sugar.id);
+    expect(proposals).toHaveLength(26);
+    expect(proposals.every(({ document }) => document === null)).toBe(true);
+  });
+
   it("RUN-015: a quantity above what one document may hold fails the batch as VALIDATION_FAILED, keeping its field errors", async () => {
     const [sugar] = await buyMaterials(1);
     const flour = await material("Flour");

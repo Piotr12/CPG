@@ -39,9 +39,9 @@ export interface RunMrpLabels {
 
 /**
  * The MRP page's Run MRP (E14-S02): a dialog that asks how documents are created (E19-S03, RUN-003, RUN-007).
- * It opens on Manual every time, so Automatic is always an explicit choice; Cancel and Escape run nothing. The
- * page refreshes with the new run; a refusal stays in the dialog, in the reader's language. `action` is the
- * server action, bound by the page to its tenant and dataset generation.
+ * It opens on Manual every time, so Automatic is always an explicit choice; Cancel and Escape run nothing, and
+ * while a run is going the dialog can't be closed. The page refreshes with the new run; a refusal stays in the
+ * dialog, in the reader's language. `action` is the server action, bound by the page to its tenant and generation.
  */
 export function RunMrpButton({ action, labels }: { action: (raw: { mode: RunMrpMode }) => Promise<Result<MrpRunAnswer>>; labels: RunMrpLabels }) {
   const [open, setOpen] = useState(false);
@@ -50,6 +50,8 @@ export function RunMrpButton({ action, labels }: { action: (raw: { mode: RunMrpM
   const creationId = useId();
 
   function change(next: boolean) {
+    // A running run can't be cancelled: the dialog stays open, so its outcome or refusal is read where it was asked.
+    if (!next && isPending) return;
     setError(null);
     setOpen(next);
   }
@@ -92,7 +94,7 @@ export function RunMrpButton({ action, labels }: { action: (raw: { mode: RunMrpM
           </div>
           {error && <ErrorMessage>{error}</ErrorMessage>}
           <AlertDialogFooter>
-            <AlertDialogCancel type="button">{labels.cancel}</AlertDialogCancel>
+            <AlertDialogCancel type="button" disabled={isPending}>{labels.cancel}</AlertDialogCancel>
             <Button type="submit" disabled={isPending} data-mrp-run-submit>
               {isPending ? labels.running : labels.run}
             </Button>

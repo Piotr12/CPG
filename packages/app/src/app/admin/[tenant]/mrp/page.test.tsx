@@ -5,6 +5,7 @@ import { resolveServerComponents } from "../../../../../../../tests/setup/server
 import { en } from "../../../../i18n/messages/en";
 import { pl } from "../../../../i18n/messages/pl";
 import MrpPage from "./page";
+import { runMrpLabels } from "../../../../components/mrp/mrp-run-screen";
 
 const mocks = vi.hoisted(() => ({
   connection: vi.fn(), requireUser: vi.fn(), tenantScope: vi.fn(), getMessages: vi.fn(), latest: vi.fn(), runMrp: vi.fn(), acceptMrpProposal: vi.fn(), materials: vi.fn(), locations: vi.fn(),
@@ -193,7 +194,7 @@ describe("MrpPage", () => {
 });
 
 describe("MrpPage: the latest run's creation (E19-S03)", () => {
-  const candidate = { proposal: proposal.id, kind: "purchase-requisition", material: "00000031", location: "00000002", needDate: "2026-11-05", quantity: "1234.500000" };
+  const candidate = { proposal: proposal.id, kind: "purchase-requisition" as const, material: "00000031", location: "00000002", needDate: "2026-11-05", quantity: "1234.500000" };
   const withCreation = (creation: MrpRunView["creation"]) => {
     mocks.latest.mockResolvedValue(report({ run: { ...run, mode: "automatic", creation } }));
     return resolveServerComponents(page()).then(render);
@@ -244,8 +245,8 @@ describe("MrpPage: the latest run's creation (E19-S03)", () => {
     );
   });
 
-  it("names a candidate kind it has no label for as stored", async () => {
-    await withCreation({ status: "failed", code: "MATERIAL_INACTIVE", message: "x", candidate: { ...candidate, kind: "transfer" } });
+  it("names a candidate kind it has no label for, stored by a newer image, as stored", async () => {
+    await withCreation({ status: "failed", code: "MATERIAL_INACTIVE", message: "x", candidate: { ...candidate, kind: "transfer" as never } });
     expect(failure()).toContain("Candidate: transfer for material 00000031");
   });
 
@@ -253,5 +254,18 @@ describe("MrpPage: the latest run's creation (E19-S03)", () => {
     mocks.getMessages.mockResolvedValue({ locale: "pl", messages: pl });
     await withCreation({ status: "created", documents: 3 });
     expect(field("creation")).toBe("Automatyczne: utworzono 3 dokumenty");
+  });
+});
+
+describe("runMrpLabels", () => {
+  it("gives the client dialog plain strings only, the tenant filled in, in either language (lesson 2026-10-24)", () => {
+    for (const messages of [en, pl]) {
+      const labels = runMrpLabels(messages, "Test");
+      const { errors, ...texts } = labels;
+      expect(Object.values(texts).every((value) => typeof value === "string")).toBe(true);
+      expect(Object.values(errors).every((value) => typeof value === "string")).toBe(true);
+      expect(labels.description).toContain("Test");
+      expect(labels.description).not.toContain("{tenant}");
+    }
   });
 });

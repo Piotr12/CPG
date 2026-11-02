@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { defineEntity, p, type InferEntity } from "@mikro-orm/core";
 import { AUDIT_CHANNELS } from "../audit/audit-event";
 import { tenantOwned } from "../tenants/tenant-owned";
+import type { MrpRecommendationKind } from "./mrp-recommendation.entity";
 
 /** How a run's proposals become documents: by hand (`manual`), or created by the run's own batch (`automatic`, E19-S03). */
 export const MRP_RUN_MODES = ["manual", "automatic"] as const;
@@ -11,7 +12,7 @@ export type MrpRunMode = (typeof MRP_RUN_MODES)[number];
 export interface MrpBatchCandidate {
   /** The recommendation's UUID. */
   proposal: string;
-  kind: string;
+  kind: MrpRecommendationKind;
   material: string;
   location: string;
   needDate: string;

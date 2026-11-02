@@ -310,3 +310,15 @@ Implemented on #340, branched from `main`. The spec PR #339 stays design-only. T
 
   The manual run's figures were unchanged by the deletes moving first: 248 ms and 2,699 ms, longest stall 33 ms and 103 ms. The cap stays at 2,500. At 1.3 s for a full batch it could go higher, but the other container's writes during a deploy wait at most 5 s, so the cap is kept well under that.
 - **Make proposals** stay out of the batch until #320 (Q1). The comment on #320 lists what it owes the batch.
+- **The dialog's first focus** is `AlertDialog`'s default, the Cancel button, rather than `data-autofocus` on the creation choice (step 6). A dialog that starts a run, and may create many documents, should land on its safest control. While a run is going the dialog can't be closed, and Cancel is disabled: the run continues on the server either way, so the dialog stays to show its outcome or refusal.
+- **The realistic probe** (`test-reset-realistic.test.ts`) issues `/up` right behind the automatic run and asserts it answers first, so the run yields. It doesn't separate planning from the batch. The latest-run read is sent after `/up` answers and is asserted to answer 200; it isn't timed against the batch. The batch's own stalls are what `mrp-run-timing.test.ts` measures.
+- **Review (fresh context) of #340** found no blocker or major. Its minors were fixed here:
+  - the dialog can't be closed mid-run;
+  - an Escape test;
+  - the labels the screen passes are tested (`runMrpLabels`);
+  - a failure after a flush boundary takes back every earlier chunk;
+  - the Polish help says "planów tymczasowych";
+  - the candidate's `kind` is typed;
+  - the two help paragraphs no longer open alike.
+
+  The empty first-run `DELETE` takes the write lock too: the stale test in `mrp-run-concurrency.test.ts` runs before any run exists.

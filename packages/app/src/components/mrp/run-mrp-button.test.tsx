@@ -64,14 +64,31 @@ describe("RunMrpButton", () => {
     expect((within(open()).getByRole("radio", { name: "Manual" }) as HTMLInputElement).checked).toBe(true);
   });
 
-  it("Cancel closes the dialog and runs nothing", () => {
+  it("Cancel and Escape close the dialog and run nothing", () => {
     const { action } = deferred();
     render(<RunMrpButton action={action} labels={labels} />);
 
     fireEvent.click(within(open()).getByRole("button", { name: en.mrp.dialog.cancel }));
-
     expect(screen.queryByRole("alertdialog")).toBeNull();
+    fireEvent.keyDown(open(), { key: "Escape" });
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+
     expect(action).not.toHaveBeenCalled();
+  });
+
+  it("can't be closed while a run is going, so its outcome is read in the dialog that asked for it", async () => {
+    const { action, answer } = deferred();
+    render(<RunMrpButton action={action} labels={labels} />);
+
+    const dialog = open();
+    submit(dialog);
+    await within(dialog).findByRole("button", { name: "Running MRP…" });
+    expect((within(dialog).getByRole("button", { name: en.mrp.dialog.cancel }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    expect(screen.getByRole("alertdialog")).toBe(dialog);
+
+    await answer({ ok: false, error: { code: "TENANT_READ_ONLY", message: "Read-only (server)." } });
+    expect(within(dialog).getByRole("alert").textContent).toBe("This tenant is read-only.");
   });
 
   it("keeps a refusal in the dialog in the reader's language, keeps the server's text for others, and clears it on the next try", async () => {
@@ -89,7 +106,4 @@ describe("RunMrpButton", () => {
     expect(within(dialog).getByRole("alert").textContent).toBe("Something went wrong. Try again.");
   });
 
-  it("takes plain-data labels only, so the page can pass them to this client component (lesson 2026-10-24)", () => {
-    expect(Object.values(en.mrp.dialog).every((value) => typeof value === "string")).toBe(true);
-  });
 });

@@ -9,7 +9,7 @@ import { fill } from "../../i18n/fill";
 import type { Messages } from "../../i18n/messages/en";
 import { localeQuantity } from "../forms/form-labels";
 import { MrpReport } from "./mrp-report";
-import { RunMrpButton, type RunMrpMode } from "./run-mrp-button";
+import { RunMrpButton, type RunMrpLabels, type RunMrpMode } from "./run-mrp-button";
 
 interface MrpRunScreenProps {
   tenant: { code: string; name: string; readOnly: boolean };
@@ -49,10 +49,7 @@ export function MrpRunScreen({ tenant, report, selected, materials, locations, a
         description={t.intro}
         actions={
           writable ? (
-            <RunMrpButton
-              action={action}
-              labels={{ run: t.run, running: t.running, ...t.dialog, description: fill(t.dialog.description, { tenant: tenant.name }), errors: { ...messages.errors, ...t.errors } }}
-            />
+            <RunMrpButton action={action} labels={runMrpLabels(messages, tenant.name)} />
           ) : undefined
         }
       />
@@ -76,6 +73,12 @@ export function MrpRunScreen({ tenant, report, selected, materials, locations, a
       )}
     </div>
   );
+}
+
+/** The Run MRP dialog's labels: plain strings, the tenant filled in, so they can cross to the client component (lesson 2026-10-24). */
+export function runMrpLabels(messages: Messages, tenantName: string): RunMrpLabels {
+  const t = messages.mrp;
+  return { run: t.run, running: t.running, ...t.dialog, description: fill(t.dialog.description, { tenant: tenantName }), errors: { ...messages.errors, ...t.errors } };
 }
 
 /** The latest run's header: its ID, time, account and channel, horizon, pair count and creation mode (E19-S03). */
@@ -131,7 +134,7 @@ function CreationFailure({ creation, labels: t, locale }: { creation: FailedCrea
         {candidate && (
           <p>
             {fill(t.creation.candidate, {
-              kind: (t.proposals.kinds[candidate.kind as keyof typeof t.proposals.kinds] ?? candidate.kind).toLocaleLowerCase(locale),
+              kind: (t.proposals.kinds[candidate.kind] ?? candidate.kind).toLocaleLowerCase(locale),
               material: candidate.material,
               location: candidate.location,
               quantity: localeQuantity(candidate.quantity, locale),
