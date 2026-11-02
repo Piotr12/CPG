@@ -1,4 +1,16 @@
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
+
+/**
+ * The tests that assert an upper bound on how long the code takes. CI runs them as their own project, on a
+ * runner of their own and one file at a time, so the bound measures the code rather than whichever test
+ * files the runner schedules beside it (#337). `tests/timing-tests.test.ts` checks that every test file
+ * timing itself against an upper bound is listed here.
+ */
+export const TIMING_TESTS = [
+  "packages/core/src/services/mrp/mrp-report-reads.test.ts",
+  "packages/core/src/services/mrp/mrp-run-timing.test.ts",
+  "packages/core/src/services/reports/demand-review-reads.test.ts",
+];
 
 // Unit tests (`npm test`, `npm run test:coverage`). Tests sit next to the code they cover as
 // `<name>.test.ts` (Node) or `<name>.test.tsx` (React, rendered in jsdom); repo-wide checks live in
@@ -11,6 +23,14 @@ export default defineConfig({
           name: "node",
           environment: "node",
           include: ["packages/*/{src,scripts}/**/*.test.ts", "tests/*.test.ts"],
+          exclude: [...configDefaults.exclude, ...TIMING_TESTS],
+        },
+      },
+      {
+        test: {
+          name: "timing",
+          environment: "node",
+          include: TIMING_TESTS,
         },
       },
       {
