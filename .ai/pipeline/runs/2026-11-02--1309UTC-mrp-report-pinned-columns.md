@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-02 13:09 UTC
 **Agent:** Claude Code / Opus 5.5 (cezar task b9337d0d, `om-auto-fix-issue 311` → feature route)
-**Source doc:** `.ai/specs/2026-11-02--1303UTC-mrp-report-pinned-columns.md` (spec PR #341)
+**Source doc:** `.ai/specs/implemented/2026-11-02--1303UTC-mrp-report-pinned-columns.md` (spec PR #341)
 **Issue:** #311
 **Status:** done
 
@@ -68,7 +68,7 @@ PR: #342
 ## Log
 
 - 13:09 UTC — Branched `feat/mrp-report-pinned-columns` from `origin/main` (not stacked on #341, lesson 2026-10-23). Started `npm ci` (lesson 2026-10-27).
-- 13:50 UTC — Phases 1–2 landed. Docker isn't available on this machine, so the integration tests ran against a local standalone production build (lesson 2026-10-23). `mrp-report.test.ts` passed 14/14, and `mrp-accept.test.ts` with `mrp-report-api.test.ts` passed 10/10.
+- 13:20 UTC — Phases 1–2 landed. Docker isn't available on this machine, so the integration tests ran against a local standalone production build (lesson 2026-10-23). `mrp-report.test.ts` passed 14/14, and `mrp-accept.test.ts` with `mrp-report-api.test.ts` passed 10/10.
 - 13:22 UTC — Full gate green: `npm run lint` 0, `npm run typecheck` 0, `npm run test:coverage` 0 (665 files, 5454 tests, 100% statements and lines), `npm run build` 0. Screenshots (EN and PL, Day and Week, at the start and the middle of the scroll) are on PR #342.
 
 ## Verification
