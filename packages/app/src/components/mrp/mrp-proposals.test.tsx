@@ -104,7 +104,7 @@ describe("MrpProposals", () => {
     ["pl", { code: "TENANT_READ_ONLY", message: "x" }, pl.errors.TENANT_READ_ONLY],
     ["pl", { code: "MATERIAL_INACTIVE", message: "x" }, pl.mrp.proposals.errors.MATERIAL_INACTIVE],
     ["pl", { code: "LOCATION_INACTIVE", message: "x" }, pl.mrp.proposals.errors.LOCATION_INACTIVE],
-    ["en", { code: "VALIDATION_FAILED", message: "x" }, "The proposal's quantity is more than its document can hold."],
+    ["en", { code: "VALIDATION_FAILED", message: "x" }, "The proposal's quantity, or a date derived from it, is outside what its document can hold."],
   ] as const)("keeps a refusal in the dialog, in the reader's language (%s, %o)", async (locale, error, text) => {
     accept.mockResolvedValue({ ok: false, error });
     renderProposals([buy()], { locale });
@@ -189,7 +189,7 @@ describe("MrpProposals", () => {
       fireEvent.click(screen.getByRole("button", { name: /^Akceptuj/ }));
       const dialog = within(await screen.findByRole("alertdialog"));
       expect(dialog.getByText("Utworzyć zlecenie produkcyjne?")).toBeTruthy();
-      expect(dialog.getByText(/według BOM 00000003 \/ rewizja 2, z końcem do 2026-10-02 i początkiem 2026-09-28\./)).toBeTruthy();
+      expect(dialog.getByText(/według BOM-u 00000003 \/ rewizji 2, z końcem do 2026-10-02 i początkiem 2026-09-28\./)).toBeTruthy();
       expect(dialog.getByRole("button", { name: "Utwórz zlecenie produkcyjne" })).toBeTruthy();
     });
 

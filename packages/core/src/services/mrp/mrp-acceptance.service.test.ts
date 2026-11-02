@@ -549,6 +549,16 @@ describe("MrpAcceptanceService.accept: Make proposals (#320)", () => {
     expect(await count("production_order")).toBe(0);
   });
 
+  it("still accepts an on-time Buy proposal after its lead time changed, since a requisition takes no start (spec Q3)", async () => {
+    const { material: sugar, runId, proposal } = await buyProposal();
+    expect(proposal).toMatchObject({ needDate: "2026-10-05", plannedFinish: "2026-10-05", lateDays: 0 });
+    const { cradle } = await scope();
+    const set = (await cradle.planningParameterService.list()).find(({ material: item }) => item === sugar)!;
+    await cradle.planningParameterService.update(sugar, PLANT, { leadTimeDays: 3 }, set.version, ANNA);
+
+    await expect(accept(runId, proposal.id)).resolves.toMatchObject({ document: { quantity: "100.000000" } });
+  });
+
   it("accepts a proposal when a BOM edit left the choice and its revision as they were", async () => {
     const { bom: bomId, runId, proposal } = await makeProposal("Jam");
     const { cradle } = await scope();
@@ -634,6 +644,35 @@ describe("MrpAcceptanceService.accept: Make proposals (#320)", () => {
 
     await expect(shared("earlier")).resolves.toMatchObject({ document: { quantity: "12.000000", plannedFinish: "2026-10-10" } });
     await expect(shared("later")).resolves.toMatchObject({ document: { quantity: "12.000000", plannedFinish: "2026-10-08" } });
+  });
+
+  it("refuses an inactive output or location and a quantity above the entry limit as a manual production order would, creating nothing (spec Q6)", async () => {
+    const jam = await makeProposal("Jam");
+    // The Materials and Locations screens refuse this while an order is open; the flags are set directly.
+    await sql("update material set active = 0 where code = ? and tenant_code = 'prod'", [jam.material]);
+    await expect(accept(jam.runId, jam.proposal.id)).rejects.toMatchObject({ code: "MATERIAL_INACTIVE" });
+    await sql("update material set active = 1 where code = ? and tenant_code = 'prod'", [jam.material]);
+    await sql("update location set active = 0 where code = ? and tenant_code = 'prod'", [PLANT]);
+    await expect(accept(jam.runId, jam.proposal.id)).rejects.toMatchObject({ code: "LOCATION_INACTIVE" });
+    await sql("update location set active = 1 where code = ? and tenant_code = 'prod'", [PLANT]);
+
+    // Two lines of 999,999,999,999 kg: a production need no entered quantity can carry (12 integer digits, R03).
+    // A BOM of 0.000001 of an input per kg keeps the input's need, about 2,000,000, one stock can hold, so the proposal is feasible.
+    const bulk = await material("Bulk");
+    await makeParameters(bulk.id);
+    const grain = await input("Grain", "3000000");
+    await (await scope()).cradle.bomService.create(
+      { output: bulk.id, priority: 1, validFrom: "2026-01-01", validThrough: null, components: [{ material: grain, quantity: "0.000001", unit: "each" }] },
+      ANNA,
+    );
+    await order(bulk.id, "999999999999", "2026-10-08");
+    await order(bulk.id, "999999999999", "2026-10-08");
+    await run();
+    const { run: runId, proposals: [proposal] } = await plan(bulk.id);
+    expect(proposal).toMatchObject({ kind: "production-order", quantity: "1999999999998.000000", executable: true });
+    await expect(accept(runId, proposal.id)).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+    expect(await count("production_order")).toBe(0);
+    expect((await plan(jam.material)).proposals[0].document).toBeNull();
   });
 
   it("doesn't find a Test Make proposal under Prod's latest run (RUN-022, R05)", async () => {

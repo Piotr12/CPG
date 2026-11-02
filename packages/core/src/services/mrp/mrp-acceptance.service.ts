@@ -69,7 +69,7 @@ export class MrpAcceptanceService {
    * Accepts proposal `proposalId` of run `runId`. Must run inside the caller's write transaction
    * (`tenantServerAction`, or `IdempotencyService.run` behind `tenantApiWrite`), which has refused a
    * stale Test generation and a read-only tenant and retries a stale SQLite snapshot once, so this is
-   * safe to repeat. Every check reads; the requisition is the first write (spec, "Read first, write last").
+   * safe to repeat. Every check reads; the document is the first write (spec, "Read first, write last").
    *
    * Just before creating, the tenant is planned again from a fresh snapshot (spec Q2): the proposal is
    * `MRP_PROPOSAL_STALE` when that plan has no proposal of the same kind, quantity, planned finish (E16-S02),
@@ -96,7 +96,7 @@ export class MrpAcceptanceService {
     const { material, location, kind, needDate, quantity, leadTimeDays } = proposal;
     const bom = proposal.bom ?? null;
     const bomRevision = proposal.bomRevision ?? null;
-    if (!isExecutableProposal({ kind, bom })) throw new ConflictError(MRP_PROPOSAL_NOT_EXECUTABLE, "MRP_PROPOSAL_NOT_EXECUTABLE", { material, location, kind });
+    if (!isExecutableProposal({ kind, bom, bomRevision })) throw new ConflictError(MRP_PROPOSAL_NOT_EXECUTABLE, "MRP_PROPOSAL_NOT_EXECUTABLE", { material, location, kind });
     const today = new Date().toISOString().slice(0, 10);
     if (run.startDate !== today) throw stale(proposal);
     const fresh = planMrp(await this.mrpSnapshotService.load(today), today).proposals.find(

@@ -143,6 +143,15 @@ describe("help topics", () => {
   });
 
   it.each([
+    ["en", "accepting an MRP proposal, or by an automatic MRP run", "shows the run's ID under its own ID", "pinned to the BOM revision MRP chose"],
+    ["pl", "akceptację propozycji MRP albo automatyczny przebieg MRP", "pokazuje ID przebiegu pod swoim ID", "przypięte do rewizji BOM-u wybranej przez MRP"],
+  ] as const)("says in %s that a production order MRP created shows its run and keeps the BOM revision MRP chose (#320)", (locale, ...phrases) => {
+    const text = helpTopics(locale).find((topic) => topic.id === "production-orders")!.body.join(" ");
+
+    for (const phrase of phrases) expect(text).toContain(phrase);
+  });
+
+  it.each([
     ["en", "View switches one pair's table between Day and Week", "the stored days don't change", "W41 shows demand 56, receipts 50, a projected balance of 4, a lowest balance of −10 and a peak shortage of 10",
       "not 6, the sum of the balances, nor 18, the sum of the shortages", "marked partial", "Overdue Transfer", "Late Supply", "Beyond Horizon", "add bucket=week"],
     ["pl", "Widok przełącza tabelę jednej pary między Dniem a Tygodniem", "zapisane dni się nie zmieniają", "T41 pokazuje popyt 56, przyjęcia 50, prognozowany stan 4, najniższy stan −10 i największy niedobór 10",
