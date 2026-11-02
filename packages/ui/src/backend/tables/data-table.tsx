@@ -29,6 +29,14 @@ export interface DataTableColumn<Row> {
   truncate?: (row: Row) => string;
   /** Makes the header a link that sorts the whole list by this key (#217), when the table has a `sort`. */
   sortKey?: string;
+  /**
+   * From `lg` up, sticks to the right edge of the table's scroll region (#311), so a figure the reader
+   * must always see stays in view however many columns scroll past it. At most two; the last pinned
+   * column sits at the edge and the one before it beside it. Not the first column (already sticky at
+   * the left), always priority 1, and not in a table with row actions, whose column the pinned ones
+   * would cover. The fixed 8rem width is part of the contract: the neighbour's offset assumes it.
+   */
+  pin?: "end";
 }
 
 export type DataTableSortDirection = "asc" | "desc";
@@ -97,6 +105,44 @@ const ROW_TONE_EDGES: Record<StatusTone, string> = {
 /** The first column stays in view while the table scrolls sideways. */
 const STICKY_CELL = "sticky left-0 bg-background";
 
+/**
+ * A pinned-end column's header and cells, from `lg` up: a fixed 8rem, so its neighbour's offset is exact,
+ * wrapping anywhere so a long figure grows the row rather than the column (auto table layout never makes
+ * a column narrower than its min-content).
+ */
+const PINNED_CELL = "lg:sticky lg:w-32 lg:min-w-32 lg:bg-background lg:whitespace-normal lg:wrap-anywhere";
+
+/** Right offsets of the pinned-end columns, counted from the edge: the last pinned column first. */
+const PINNED_OFFSETS = ["lg:right-0", "lg:right-32"] as const;
+
+/**
+ * Where the pinned part starts: an inset 1 px shadow, since preflight collapses table borders, which
+ * the table then paints rather than the moving sticky cell.
+ */
+const PINNED_EDGE = "lg:shadow-[inset_1px_0_0_var(--color-border)]";
+
+/**
+ * Each column's pinned-end classes, empty for an unpinned one. Throws for a pinned first column, a pinned
+ * column that is not priority 1, a pinned column in a table `withActions`, and a third pinned column.
+ */
+export function pinnedClasses<Row>(columns: DataTableColumn<Row>[], withActions = false): string[] {
+  const pinned = columns.flatMap((column, index) => (column.pin === "end" ? [index] : []));
+  for (const index of pinned) {
+    const { id, priority = 1 } = columns[index];
+    if (index === 0) throw new Error(`DataTable column "${id}": the first column is sticky at the left, so it can't be pinned to the end`);
+    if (priority !== 1) throw new Error(`DataTable column "${id}": a pinned column is always priority 1, not ${priority}`);
+    if (withActions) throw new Error(`DataTable column "${id}": a pinned column would cover the row actions, so a table with them can't pin`);
+  }
+  if (pinned.length > PINNED_OFFSETS.length) {
+    throw new Error(`DataTable column "${columns[pinned[PINNED_OFFSETS.length]].id}": at most ${PINNED_OFFSETS.length} columns can be pinned to the end`);
+  }
+  return columns.map((_, index) => {
+    const position = pinned.indexOf(index);
+    if (position === -1) return "";
+    return cn(PINNED_CELL, PINNED_OFFSETS[pinned.length - 1 - position], position === 0 && PINNED_EDGE);
+  });
+}
+
 /** The classes a column's header and cells share. Throws when a `status` column is not priority 1. */
 export function columnClasses<Row>(column: DataTableColumn<Row>): string {
   const priority = column.priority ?? 1;
@@ -108,9 +154,9 @@ export function columnClasses<Row>(column: DataTableColumn<Row>): string {
 
 /**
  * Every list screen's table: columns from config, an empty state, and a row-actions slot. It scrolls
- * sideways inside a labelled, keyboard-reachable container with the first column sticky, so the page
- * never does. With `sort`, a column's header sorts the list on the server (#217); filtering is a
- * `ListSearch` above the table.
+ * sideways inside a labelled, keyboard-reachable container with the first column sticky, and from `lg` up
+ * any columns pinned to its right edge (#311), so the page never does. With `sort`, a column's header
+ * sorts the list on the server (#217); filtering is a `ListSearch` above the table.
  */
 export function DataTable<Row>({
   columns,
@@ -126,6 +172,7 @@ export function DataTable<Row>({
 }: DataTableProps<Row>) {
   const width = columns.length + (rowActions ? 1 : 0);
   const shared = columns.map(columnClasses);
+  const pinned = pinnedClasses(columns, Boolean(rowActions));
   return (
     <>
     <Table aria-label={label} scrollLabel={label}>
@@ -135,7 +182,7 @@ export function DataTable<Row>({
             <TableHead
               key={column.id}
               aria-sort={sort && column.sortKey ? ariaSort(sort, column.sortKey) : undefined}
-              className={cn(shared[index], index === 0 && cn(STICKY_CELL, "z-10"), column.className)}
+              className={cn(shared[index], index === 0 && cn(STICKY_CELL, "z-10"), pinned[index] && cn(pinned[index], "lg:z-10"), column.className)}
             >
               {sort && column.sortKey ? (
                 <SortLink sort={sort} sortKey={column.sortKey} reverse={column.kind === "quantity"}>
@@ -175,6 +222,7 @@ export function DataTable<Row>({
                       shared[index],
                       index === 0 && STICKY_CELL,
                       index === 0 && rowTone && cn("border-l-2 border-l-transparent", tone && ROW_TONE_EDGES[tone]),
+                      pinned[index],
                       column.className,
                     )}
                   >
