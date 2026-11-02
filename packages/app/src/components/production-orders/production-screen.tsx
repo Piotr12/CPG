@@ -11,7 +11,7 @@ import type { SortDirection } from "@cpg/core/validators/lists/list-query.schema
 import { PRODUCTION_PAGE_SIZE } from "@cpg/core/validators/production-orders/production-order.schema";
 import { productionOrderSortSchema, type ProductionOrderSort } from "@cpg/core/validators/production-orders/production-order-list.schema";
 import type { Messages } from "../../i18n/messages/en";
-import { fill, formQuantity } from "../forms/form-labels";
+import { fill, localeQuantity } from "../forms/form-labels";
 import { documentStatusTone } from "../document-lifecycle/status-tone";
 import { PageLinks } from "../layout/page-links";
 import { listLinks, type ListSearchState } from "../lists/list-params";
@@ -38,7 +38,7 @@ export function ProductionScreen({ tenant, orders, order, materials, locations, 
   const byMaterial = new Map(materials.map((m) => [m.id, m]));
   const location = (code: string) => `${code} ${locations.find((l) => l.id === code)!.name}`;
   const output = (row: ProductionOrderView) => `${row.output} ${byMaterial.get(row.output)!.description}`;
-  const quantity = (row: ProductionOrderView) => `${formQuantity(row.quantity)} ${byMaterial.get(row.output)!.baseUnit}`;
+  const quantity = (row: ProductionOrderView) => `${localeQuantity(row.quantity, locale)} ${byMaterial.get(row.output)!.baseUnit}`;
   const recipe = (row: ProductionOrderView) => <Link className="underline" href={`/admin/${tenant.code}/boms/${row.bom}?revision=${row.revision}`}>{row.bom} / {row.revision}</Link>;
   const status = (value: ProductionOrderView["status"]) => <StatusBadge {...documentStatusTone(value)}>{t.states[value]}</StatusBadge>;
   const columns: DataTableColumn<ProductionOrderView>[] = [
@@ -59,7 +59,7 @@ export function ProductionScreen({ tenant, orders, order, materials, locations, 
       inputs={completionInputs(order, materials, units)}
       canPost={order.status === "open"} locale={locale} />}
     {order && <LifecycleControl kind="productionOrder" available={order.status === "open"} processed={order.hasProcessing}
-      subject={`${t.title} ${order.id}`} version={order.version} quantities={[`${formQuantity(order.outstanding)} ${byMaterial.get(order.output)!.baseUnit}`]}
+      subject={`${t.title} ${order.id}`} version={order.version} quantities={[`${localeQuantity(order.outstanding, locale)} ${byMaterial.get(order.output)!.baseUnit}`]}
       labels={messages.lifecycle} errors={messages.errors}
       cancel={cancelProductionOrder.bind(null, tenant.code, tenant.generation, order.id)} closeEarly={closeEarlyProductionOrder.bind(null, tenant.code, tenant.generation, order.id)} />}
   </>;
@@ -71,18 +71,18 @@ export function ProductionScreen({ tenant, orders, order, materials, locations, 
     {order ? <>
       <dl className="grid gap-4 rounded-md border p-4 text-sm sm:grid-cols-3">
         {[{ label: t.output, value: output(order) }, { label: t.location, value: location(order.location) }, { label: t.quantity, value: quantity(order) },
-          { label: messages.lifecycle.abandoned, value: `${formQuantity(order.abandoned)} ${byMaterial.get(order.output)!.baseUnit}` },
-          { label: t.produced, value: `${formQuantity(order.produced)} ${byMaterial.get(order.output)!.baseUnit}` },
-          { label: t.outstanding, value: `${formQuantity(order.outstanding)} ${byMaterial.get(order.output)!.baseUnit}` },
-          { label: t.entered, value: `${order.enteredQuantity} ${order.enteredUnit} (${order.denominator} ${order.enteredUnit} = ${order.numerator} ${byMaterial.get(order.output)!.baseUnit})` },
+          { label: messages.lifecycle.abandoned, value: `${localeQuantity(order.abandoned, locale)} ${byMaterial.get(order.output)!.baseUnit}` },
+          { label: t.produced, value: `${localeQuantity(order.produced, locale)} ${byMaterial.get(order.output)!.baseUnit}` },
+          { label: t.outstanding, value: `${localeQuantity(order.outstanding, locale)} ${byMaterial.get(order.output)!.baseUnit}` },
+          { label: t.entered, value: `${localeQuantity(order.enteredQuantity, locale)} ${order.enteredUnit} (${localeQuantity(order.denominator, locale)} ${order.enteredUnit} = ${localeQuantity(order.numerator, locale)} ${byMaterial.get(order.output)!.baseUnit})` },
           { label: t.finish, value: order.plannedFinish }, { label: t.start, value: order.plannedStart },
           { label: t.leadTime, value: fill(t.leadTimeDays, { days: String(order.leadTimeDays) }) }, { label: t.recipe, value: recipe(order) }].map(({ label, value }) => <div key={label}><dt className="text-muted-foreground">{label}</dt><dd className="mt-1 wrap-anywhere">{value}</dd></div>)}
       </dl>
       {order.status !== "open" ? <Callout tone="neutral">{fill(t.resolved, { status: t.states[order.status] })}</Callout>
         : shortages ? <Callout tone="warning" title={plural(t.shortageTitle, shortages)}>{t.shortageBody}</Callout>
         : <Callout tone="neutral">{t.sufficient}</Callout>}
-      <ProductionRequirements labels={t} components={order.components} materials={materials} tenant={tenant.code} />
-      <CompletionHistory completions={completions} page={completionsPage} materials={materials} labels={t} path={`${path}/${order.id}`}
+      <ProductionRequirements labels={t} components={order.components} materials={materials} tenant={tenant.code} locale={locale} />
+      <CompletionHistory completions={completions} page={completionsPage} materials={materials} labels={t} locale={locale} path={`${path}/${order.id}`}
         reversible={tenant.readOnly ? undefined : { context: { tenant: tenant.code, generation: tenant.generation },
           order: { id: order.id, output: order.output, location: location(order.location), produced: order.produced } }} />
     </> : <div>

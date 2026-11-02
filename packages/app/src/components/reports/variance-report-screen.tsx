@@ -14,7 +14,7 @@ import { Label } from "@cpg/ui/components/label";
 import { NativeSelect, NativeSelectOption } from "@cpg/ui/components/native-select";
 import type { Messages } from "../../i18n/messages/en";
 import { documentStatusTone, WASTE_TONE } from "../document-lifecycle/status-tone";
-import { fill, formQuantity } from "../forms/form-labels";
+import { fill, localeQuantity } from "../forms/form-labels";
 import { PageLinks } from "../layout/page-links";
 import { materialFilterOptions, materialPicker, withUnlisted } from "../materials/material-picker";
 import { recordOptions, recordPicker } from "../named-records/record-picker";
@@ -46,7 +46,7 @@ export function VarianceReportScreen({ tenant, report, selected, rangeError, mat
   const t = messages.varianceReport;
   const pickers = { material: materialPicker(messages.lists), location: recordPicker(messages.lists, "location") };
   const path = `/admin/${tenant.code}`;
-  const amount = (quantity: string, unit: string) => `${formQuantity(quantity)} ${unit}`;
+  const amount = (quantity: string, unit: string) => `${localeQuantity(quantity, locale)} ${unit}`;
   const figures = (row: VarianceReportRow) => (
     <div className="flex flex-col gap-1">
       <dl className="grid grid-cols-[auto_auto] gap-x-3 gap-y-1 text-sm" data-report-output>
@@ -56,7 +56,7 @@ export function VarianceReportScreen({ tenant, report, selected, rangeError, mat
         <dd className="text-right tabular-nums">{amount(row.produced, row.baseUnit)}</dd>
         <dt className="text-muted-foreground">{t.figures.outputVariance}</dt>
         <dd className="text-right tabular-nums">
-          {row.outputVariance === null ? <span aria-label="none">—</span> : `${shownVariance(row.outputVariance)} ${row.baseUnit}`}
+          {row.outputVariance === null ? <span aria-label="none">—</span> : `${shownVariance(row.outputVariance, locale)} ${row.baseUnit}`}
         </dd>
         <dt className="text-muted-foreground">{t.figures.completions}</dt>
         <dd className="text-right tabular-nums">{row.completions}</dd>
@@ -101,7 +101,7 @@ export function VarianceReportScreen({ tenant, report, selected, rangeError, mat
               </td>
               <td className="py-1 pr-2 text-right tabular-nums whitespace-nowrap">{amount(component.expected, component.baseUnit)}</td>
               <td className="py-1 pr-2 text-right tabular-nums whitespace-nowrap">{amount(component.actual, component.baseUnit)}</td>
-              <td className="py-1 pr-2 text-right tabular-nums whitespace-nowrap">{`${shownVariance(component.variance)} ${component.baseUnit}`}</td>
+              <td className="py-1 pr-2 text-right tabular-nums whitespace-nowrap">{`${shownVariance(component.variance, locale)} ${component.baseUnit}`}</td>
               <td className="py-1 text-right tabular-nums whitespace-nowrap">{amount(component.waste, component.baseUnit)}</td>
             </tr>
           ))}
@@ -125,7 +125,7 @@ export function VarianceReportScreen({ tenant, report, selected, rangeError, mat
                 <div key={figure} className="contents">
                   <dt className="text-muted-foreground">{t.component[figure]}</dt>
                   <dd className="text-right tabular-nums">
-                    {figure === "variance" ? `${shownVariance(component.variance)} ${component.baseUnit}` : amount(component[figure], component.baseUnit)}
+                    {figure === "variance" ? `${shownVariance(component.variance, locale)} ${component.baseUnit}` : amount(component[figure], component.baseUnit)}
                   </dd>
                 </div>
               ))}

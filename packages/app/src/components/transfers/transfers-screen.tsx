@@ -15,7 +15,7 @@ import { activeRecordOptions } from "../named-records/record-picker";
 import { materialPicks } from "../purchase-requisitions/choices";
 import type { DocumentListState } from "../purchasing/list-state";
 import { CreateTransferDialog } from "./create-transfer-dialog";
-import { byId, fill, locationName, materialName, formQuantity, transfersLabels } from "./labels";
+import { byId, fill, locationName, materialName, localeQuantity, transfersLabels } from "./labels";
 
 interface TransfersScreenProps {
   tenant: { code: string; name: string; generation: number; readOnly: boolean };
@@ -46,7 +46,7 @@ export function TransfersScreen({ tenant, transfers, page, total, list, material
   const pages = Math.ceil(total / TRANSFER_PAGE_SIZE);
   const materialsById = byId(materials);
   const locationsById = byId(locations);
-  const amount = (quantity: string, material: string) => `${formQuantity(quantity)} ${materialsById.get(material)!.baseUnit}`;
+  const amount = (quantity: string, material: string) => `${localeQuantity(quantity, locale)} ${materialsById.get(material)!.baseUnit}`;
   const columns: DataTableColumn<TransferView>[] = [
     {
       id: "id",

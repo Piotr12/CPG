@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState, useTransition, type FormEvent, type KeyboardEvent } from "react";
-import type { CompletionPreview, CompletionResult } from "@cpg/core";
+import type { CompletionPreview, CompletionResult, Locale } from "@cpg/core";
 import { productionCompletionCreateSchema } from "@cpg/core/validators/production-orders/production-completion.schema";
 import type { ApiResult, FieldErrors } from "@cpg/ui/backend/api/result";
 import { Callout } from "@cpg/ui/backend/feedback/callout";
@@ -14,7 +14,7 @@ import { Checkbox } from "@cpg/ui/components/checkbox";
 import { Input } from "@cpg/ui/components/input";
 import { NativeSelect, NativeSelectOption } from "@cpg/ui/components/native-select";
 import { masterDataStatusTone } from "../document-lifecycle/status-tone";
-import { fill, formQuantity } from "../forms/form-labels";
+import { fill, formQuantity, localeQuantity } from "../forms/form-labels";
 import { fieldControls } from "../purchasing/field-controls";
 import type { ProductionLabels } from "./labels";
 
@@ -42,8 +42,8 @@ export interface CompletionFormProps {
   onSuccess: (result: CompletionResult) => void;
   onBack: () => void;
   onCancel: () => void;
-  /** The reader's language, for the material picker's counts. */
-  locale?: string;
+  /** The reader's language, for the figures it shows and the material picker's counts. */
+  locale: Locale;
 }
 
 /** What the overproduction warning says: the preview's figures, or the server's when another completion got there first. */
@@ -155,7 +155,7 @@ export function CompletionForm({ labels, preview, unit, inputs, formatError, for
       {over && (
         <Callout tone="warning" role="alert" title={t.overTitle}>
           <div className="flex flex-col gap-2">
-            <p>{fill(t.over, { produced: formQuantity(over.produced), target: formQuantity(over.target), output: formQuantity(over.output), unit: over.unit })}</p>
+            <p>{fill(t.over, { produced: localeQuantity(over.produced, locale), target: localeQuantity(over.target, locale), output: localeQuantity(over.output, locale), unit: over.unit })}</p>
             <label className="flex items-center gap-2">
               <Checkbox checked={accepted} onCheckedChange={(checked) => setAccepted(checked === true)} />
               {t.accept}
@@ -178,7 +178,7 @@ export function CompletionForm({ labels, preview, unit, inputs, formatError, for
               <span className="wrap-anywhere">{name}</span>
               <span id={hint} className="text-xs text-muted-foreground">
                 {!component.active && <span className="mr-2"><StatusBadge {...masterDataStatusTone(false)}>{t.inactive}</StatusBadge></span>}
-                {t.expected}: {formQuantity(component.expected)} {component.baseUnit} · {t.available}: {formQuantity(component.available)} {component.baseUnit}
+                {t.expected}: {localeQuantity(component.expected, locale)} {component.baseUnit} · {t.available}: {localeQuantity(component.available, locale)} {component.baseUnit}
               </span>
             </div>
             <div className="flex flex-col gap-1">

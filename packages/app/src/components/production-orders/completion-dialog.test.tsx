@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { completionPreview, completionView, production } from "../../../../../tests/setup/production-orders";
 import { en } from "../../i18n/messages/en";
+import { pl } from "../../i18n/messages/pl";
 import { CompletionDialog } from "./completion-dialog";
 import { productionLabels } from "./labels";
 
@@ -16,6 +17,7 @@ const props = {
   locationLabel: "00000001 Warehouse",
   inputs: [{ value: "00000008", code: "00000008", name: "Milk", detail: "kg", units: ["kg"] }],
   canPost: true,
+  locale: "en" as const,
 };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const open = () => fireEvent.click(screen.getByRole("button", { name: t.post }));
@@ -113,4 +115,18 @@ it("closes from the dialog's own close button without posting", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Close" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   expect(mocks.post).not.toHaveBeenCalled();
+});
+
+it.each([["en", en, "12,345.5"], ["pl", pl, "12 345,5"]] as const)("summarizes the previewed output quantity in %s", async (locale, messages, quantity) => {
+  const labels = productionLabels(messages);
+  const c = labels.completion;
+  mocks.fetch.mockResolvedValue({ ok: true, data: { ...completionPreview, quantity: "12345.5" } });
+  render(<CompletionDialog {...props} labels={labels} locale={locale} />);
+  fireEvent.click(screen.getByRole("button", { name: c.post }));
+  fireEvent.change(screen.getByLabelText(c.output), { target: { value: "12345.5" } });
+  fireEvent.click(screen.getByRole("button", { name: c.continue }));
+  await waitFor(() => expect(screen.getByRole("button", { name: c.submit })).toBeTruthy());
+  expect(screen.getByRole("dialog").textContent!.replace(/\u00a0/g, " "))
+    .toContain(c.summary.replace("{quantity}", quantity).replace("{unit}", "each").replace("{location}", props.locationLabel)
+      .replace("{bom}", production.bom).replace("{revision}", String(production.revision)));
 });
