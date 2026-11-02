@@ -103,6 +103,8 @@ describe("foldWeeks", () => {
     expect(weeks[0].marks.map((m) => ("proposal" in m ? m.proposal : null))).toEqual(["a", "b"]);
     expect(weeks[1].marks.map((m) => ("proposal" in m ? m.proposal : null))).toEqual(["c", "d"]);
     expect(weeks[2].marks).toEqual([]);
+    const late: MrpMark = { kind: "late-requisition", date: "2026-10-06", document: "00000007", plannedDate: "2026-10-06", plannedFinish: "2026-10-08", lateDays: 2, quantity: "5.000000" };
+    expect(foldWeeks(ux027(), [late])[1].marks).toEqual([late]);
   });
 
   it("refuses a stored figure that isn't a six-decimal quantity rather than guessing", () => {

@@ -1,7 +1,7 @@
 import type { MrpOverdueSource, MrpTransferMovement } from "../mrp-result";
 
 /** What a mark warns of, in the order a day lists them (spec, "Marks"). */
-export const MRP_MARK_KINDS = ["overdue-supply", "overdue-transfer", "late-supply", "beyond-horizon"] as const;
+export const MRP_MARK_KINDS = ["overdue-supply", "overdue-transfer", "late-requisition", "late-supply", "beyond-horizon"] as const;
 export type MrpMarkKind = (typeof MRP_MARK_KINDS)[number];
 
 /**
@@ -22,6 +22,17 @@ export type MrpMark =
       quantity: string;
     }
   | { kind: "overdue-transfer"; date: string; transfer: string; stage: MrpTransferMovement["stage"]; plannedDate: string; quantity: string }
+  | {
+      kind: "late-requisition";
+      /** The requisition's required date, where it counts (#322). */
+      date: string;
+      document: string;
+      plannedDate: string;
+      /** The earliest date its lead time allows from the run's first day. */
+      plannedFinish: string;
+      lateDays: number;
+      quantity: string;
+    }
   | {
       kind: "late-supply" | "beyond-horizon";
       /** The proposal's need date, which never moves (MRP-037). */
@@ -53,7 +64,7 @@ const SOURCES: readonly string[] = ["purchase-order", "requisition", "production
 const STAGES: readonly string[] = ["in-transit", "planned"] satisfies MrpTransferMovement["stage"][];
 
 /**
- * One pair's marks (spec, "Marks"): its stored overdue warnings, and its late proposals, a Beyond Horizon
+ * One pair's marks (spec, "Marks"): its stored warnings (overdue supply and transfers, late requisitions), and its late proposals, a Beyond Horizon
  * one marked as such, each on its need date. By date, then kind, then the stored order. A warning row
  * whose details this image can't read (another image's shape) is left out rather than guessed.
  */
@@ -82,6 +93,11 @@ function warningMark({ code, date, details }: StoredWarningRow): MrpMark | null 
     const { transfer, stage } = details;
     if (!transfer || !STAGES.includes(stage)) return null;
     return { kind: "overdue-transfer", date, transfer, stage: stage as MrpTransferMovement["stage"], plannedDate, quantity };
+  }
+  if (code === "LATE_REQUISITION") {
+    const { document, plannedFinish, lateDays } = details;
+    if (!document || !plannedFinish || !/^[1-9]\d*$/.test(lateDays ?? "")) return null;
+    return { kind: "late-requisition", date, document, plannedDate, plannedFinish, lateDays: Number(lateDays), quantity };
   }
   return null;
 }
