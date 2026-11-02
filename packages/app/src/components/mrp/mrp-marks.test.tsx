@@ -6,6 +6,7 @@ import { pl } from "../../i18n/messages/pl";
 import { markText, MrpMarks, shortDate } from "./mrp-marks";
 
 const TODAY = "2026-10-01";
+const lateRequisition: MrpMarkView = { kind: "late-requisition", date: "2026-10-02", document: "00000007", plannedDate: "2026-10-02", plannedFinish: "2026-10-03", lateDays: 1, quantity: "5.000000" };
 const po: MrpMarkView = { kind: "overdue-supply", date: TODAY, source: "purchase-order", document: "00000003", position: 1, plannedDate: "2026-09-28", quantity: "30.000000" };
 
 describe("markText", () => {
@@ -14,6 +15,7 @@ describe("markText", () => {
     [{ ...po, source: "requisition", position: null, document: "00000004", quantity: "7.5" } as MrpMarkView, "Overdue · Requisition 00000004 · due Sep 28 · 7.5 KG"],
     [{ ...po, source: "production-order", position: null } as MrpMarkView, "Overdue · Production order 00000003 · due Sep 28 · 30 KG"],
     [{ kind: "overdue-transfer", date: TODAY, transfer: "00000002", stage: "planned", plannedDate: "2026-09-30", quantity: "25.000000" } as MrpMarkView, "Overdue Transfer · 00000002 · due Sep 30 · 25 KG"],
+    [lateRequisition, "Late · Requisition 00000007 · 1 day · earliest Oct 3 · 5 KG"],
     [{ kind: "late-supply", date: "2026-10-04", proposal: "p", plannedFinish: "2026-10-05", lateDays: 1, quantity: "1234.5" } as MrpMarkView, "Late Supply · 1 day · finish Oct 5 · 1,234.5 KG"],
     [{ kind: "beyond-horizon", date: "2026-10-15", proposal: "p", plannedFinish: "2027-01-09", lateDays: 86, quantity: "40.000000" } as MrpMarkView, "Beyond Horizon · finish Jan 9, 2027 · 40 KG"],
   ])("names %o in English", (mark, text) => {
@@ -23,6 +25,7 @@ describe("markText", () => {
   it("speaks Polish, with its plural forms of days", () => {
     const late = (lateDays: number): MrpMarkView => ({ kind: "late-supply", date: "2026-10-04", proposal: "p", plannedFinish: "2026-10-08", lateDays, quantity: "12.000000" });
     expect(markText(po, "kg", "pl", pl.mrp.report.marks)).toBe("Zaległa dostawa · Zamówienie zakupu 00000003/1 · termin 28 wrz · 30 kg");
+    expect(markText({ ...lateRequisition, lateDays: 4 } as MrpMarkView, "kg", "pl", pl.mrp.report.marks)).toBe("Opóźnione · Zapotrzebowanie zakupu 00000007 · 4 dni · najwcześniej 3 paź · 5 kg");
     expect([1, 4, 5].map((days) => markText(late(days), "kg", "pl", pl.mrp.report.marks).split(" · ")[1])).toEqual(["1 dzień", "4 dni", "5 dni"]);
   });
 });
@@ -42,5 +45,7 @@ describe("MrpMarks", () => {
     const badges = [...container.querySelectorAll("[data-slot=status-badge]")];
     expect(badges).toHaveLength(2);
     expect(badges.every((badge) => badge.getAttribute("data-tone") === "warning" && badge.querySelector("svg[aria-hidden=true]"))).toBe(true);
+    rerender(<MrpMarks marks={[lateRequisition]} unit="KG" locale="en" labels={en.mrp.report.marks} />);
+    expect(container.querySelector("[data-mrp-mark=late-requisition] svg.lucide-hourglass")).not.toBeNull();
   });
 });

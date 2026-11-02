@@ -2014,6 +2014,7 @@ export const pl: Messages = {
       marks: {
         overdueSupply: "Zaległa dostawa · {document} · termin {date} · {quantity}",
         overdueTransfer: "Zaległe przesunięcie · {transfer} · termin {date} · {quantity}",
+        lateRequisition: "Opóźnione · {document} · {days} · najwcześniej {date} · {quantity}",
         lateSupply: "Opóźniona dostawa · {days} · koniec {date} · {quantity}",
         beyondHorizon: "Poza horyzontem · koniec {date} · {quantity}",
         days: { one: "{count} dzień", few: "{count} dni", many: "{count} dni", other: "{count} dnia" },
