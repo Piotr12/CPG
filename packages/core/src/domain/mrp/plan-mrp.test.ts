@@ -14,6 +14,7 @@ import type {
   MrpStock,
   MrpTransfer,
 } from "./mrp-inputs";
+import { planExcess } from "./excess/plan-excess";
 import { MRP_PROPOSAL_KINDS, type MrpInsufficientTransferStock, type MrpPlan } from "./mrp-result";
 import { planMrp } from "./plan-mrp";
 import { safetyGap } from "./projection/safety-gap";
@@ -2474,5 +2475,138 @@ describe("planMrp: at-risk production and provisional plans (E17-S03, #283)", ()
     ]);
     // I's executable proposals are booked; the provisional 10 stay short after proposals.
     expect(bucketOf(planAt(result.plans, "I"), day(8))).toMatchObject({ dependentDemand: q("10"), proposedReceipts: q("3"), projectedAfter: -q("10") });
+  });
+});
+
+describe("planMrp: reruns (E19-S02, PRD §04 \"Reruns and duplicate avoidance\")", () => {
+  const DAY = "2026-10-20";
+  /** A set of `material` at L1, exact lots unless overridden, lead time 2. */
+  const set = (material: string, procurement: "make" | "buy", overrides: Partial<MrpPlanningParameters> = {}): MrpPlanningParameters => ({
+    material,
+    location: "L1",
+    materialType: procurement === "buy" ? "raw" : "intermediate",
+    procurement,
+    leadTimeDays: 2,
+    minimumQuantity: 0n,
+    lotMultiple: q("0.000001"),
+    ...overrides,
+  });
+  const lastDay = (plan: MrpPlan) => plan.buckets.at(-1)!;
+  /** P (Make, 1 A per unit) with A stocked for 500: every Make proposal of P is feasible, never provisional. */
+  const makeP = (overrides: Partial<MrpInputs>, lot: Partial<MrpPlanningParameters> = {}) =>
+    planMrp(
+      inputs({
+        stock: [stock("A", "L1", "500")],
+        boms: [recipe("P", { A: "1" })],
+        planningParameters: [set("P", "make", lot), set("A", "buy")],
+        ...overrides,
+      }),
+      TODAY,
+    );
+  const producing100 = production({ quantity: q("100"), plannedStart: "2026-10-10", plannedFinish: "2026-10-12", components: [{ material: "A", perOutput: q("1") }] });
+
+  it("RUN-008: a requisition of 100 accepted from a run's proposal leaves the next run nothing to propose for its pair, the same fixture planned twice", () => {
+    const fixture = inputs({ orderLines: [line({ quantity: q("100"), requiredDate: DAY })], planningParameters: [set("M1", "buy")] });
+    const first = planMrp(fixture, TODAY);
+    expect(first.proposals.map(({ kind, quantity, needDate }) => ({ kind, quantity, needDate }))).toEqual([{ kind: "purchase-requisition", quantity: q("100"), needDate: DAY }]);
+
+    // Accepted: the run's proposal is now an Open requisition. The engine's input carries no run tag (spec Q6), so it nets as any other.
+    const second = planMrp({ ...fixture, requisitions: [requisition({ quantity: q("100"), requiredDate: DAY })] }, TODAY);
+
+    expect(second.proposals).toEqual([]);
+    expect(planExcess(only(second.plans).buckets)).toBe(0n);
+  });
+
+  it("RUN-009: an Open production order of 100 against demand now 120 gives exactly one Make proposal of 20.000000, or 25.000000 with lot multiple 25, and no excess", () => {
+    const demand = { orderLines: [line({ material: "P", quantity: q("120"), requiredDate: DAY })], productionOrders: [producing100] };
+
+    const exact = makeP(demand);
+    const lotted = makeP(demand, { lotMultiple: q("25") });
+
+    for (const [result, quantity] of [[exact, "20.000000"], [lotted, "25.000000"]] as const) {
+      const proposals = result.proposals.filter(({ material }) => material === "P");
+      expect(proposals.map(({ kind, quantity: proposed, needDate }) => ({ kind, quantity: formatDecimal(proposed, { fixed: true }), needDate }))).toEqual([
+        { kind: "production-order", quantity, needDate: DAY },
+      ]);
+      expect(result.provisional).toEqual([]);
+      // Before proposals the pair ends 20 short, so the order is all needed: no excess, and the 5 lot-rounded units of the second aren't excess either.
+      expect(planExcess(planAt(result.plans, "P").buckets)).toBe(0n);
+    }
+    expect(planAt(lotted.plans, "P").productionOutput).toEqual([expect.objectContaining({ order: "00000001", quantity: q("100") })]);
+  });
+
+  it("RUN-010: an Open production order of 100 against demand now 80 gets no proposal cancelling or reducing it, and an excess of 20", () => {
+    const result = makeP({ orderLines: [line({ material: "P", quantity: q("80"), requiredDate: DAY })], productionOrders: [producing100] });
+
+    expect(result.proposals.filter(({ material }) => material === "P")).toEqual([]);
+    const plan = planAt(result.plans, "P");
+    expect(plan.productionOutput).toEqual([expect.objectContaining({ order: "00000001", quantity: q("100"), plannedFinish: "2026-10-12" })]);
+    expect(lastDay(plan).projectedBefore).toBe(q("20"));
+    expect(planExcess(plan.buckets)).toBe(q("20"));
+  });
+
+  it("RUN-020: a cancelled requisition of 100 doesn't count as supply, so a new requisition proposal of 100 is made", () => {
+    const fixture = (status: "cancelled" | "open") =>
+      inputs({
+        orderLines: [line({ quantity: q("100"), requiredDate: DAY })],
+        planningParameters: [set("M1", "buy")],
+        // A cancelled requisition keeps its remainder in `quantity`, so only the status filter keeps it out (lesson 2026-10-27).
+        requisitions: [requisition({ quantity: q("100"), status, requiredDate: DAY })],
+      });
+
+    expect(planMrp(fixture("cancelled"), TODAY).proposals.map(({ kind, quantity }) => ({ kind, quantity }))).toEqual([{ kind: "purchase-requisition", quantity: q("100") }]);
+    expect(planMrp(fixture("open"), TODAY).proposals).toEqual([]);
+  });
+
+  it("an accepted lot-rounded proposal shows its rounding as excess on the next run, with nothing else changed (spec Q1)", () => {
+    const fixture = inputs({ orderLines: [line({ quantity: q("20"), requiredDate: DAY })], planningParameters: [set("M1", "buy", { lotMultiple: q("25") })] });
+    const first = planMrp(fixture, TODAY);
+    expect(first.proposals.map(({ quantity }) => quantity)).toEqual([q("25")]);
+    expect(planExcess(only(first.plans).buckets)).toBe(0n);
+
+    const second = planMrp({ ...fixture, requisitions: [requisition({ quantity: q("25"), requiredDate: DAY })] }, TODAY);
+
+    expect(second.proposals).toEqual([]);
+    expect(planExcess(only(second.plans).buckets)).toBe(q("5"));
+  });
+
+  it("counts no component supply a parent's Make proposal takes as excess", () => {
+    // P needs 30 from A; A has a purchase order of 50 and no stock, so 20 of it is unneeded.
+    const result = planMrp(
+      inputs({
+        stock: [stock("A", "L1", "0")],
+        orderLines: [line({ material: "P", quantity: q("30"), requiredDate: DAY })],
+        purchaseOrderLines: [orderLine({ material: "A", quantity: q("50"), plannedDate: "2026-10-05" })],
+        boms: [recipe("P", { A: "1" })],
+        planningParameters: [set("P", "make"), set("A", "buy")],
+      }),
+      TODAY,
+    );
+
+    expect(result.proposals.map(({ material, quantity }) => ({ material, quantity }))).toEqual([{ material: "P", quantity: q("30") }]);
+    expect(planExcess(planAt(result.plans, "A").buckets)).toBe(q("20"));
+  });
+
+  it("gives the same proposals, in the same order, when the same snapshot is planned twice (PRD §04 closure defaults)", () => {
+    const snapshot = deepFreeze(
+      inputs({
+        stock: [stock("A", "L1", "500"), stock("M1", "L2", "3")],
+        orderLines: [
+          line({ material: "P", quantity: q("120"), requiredDate: DAY }),
+          line({ quantity: q("7"), requiredDate: "2026-10-03" }),
+          line({ location: "L2", quantity: q("9"), requiredDate: "2026-10-04" }),
+          line({ quantity: q("40"), requiredDate: DAY }),
+        ],
+        productionOrders: [producing100],
+        boms: [recipe("P", { A: "1" })],
+        planningParameters: [set("P", "make"), set("A", "buy"), set("M1", "buy"), { ...set("M1", "buy"), location: "L2" }],
+      }),
+    );
+
+    const [first, second] = [planMrp(snapshot, TODAY), planMrp(snapshot, TODAY)];
+
+    expect(first.proposals.length).toBeGreaterThan(2);
+    expect(second.proposals).toEqual(first.proposals);
+    expect(second.plans).toEqual(first.plans);
   });
 });
