@@ -120,6 +120,11 @@ export interface MrpProductionOrder {
   produced: bigint;
   abandoned: bigint;
   status: DocumentState;
+  /**
+   * The codes of the pinned revision's inactive component materials, in code order, empty when all are
+   * active: an order with one is at risk (E17-S03, MRP-051), its output never dependable.
+   */
+  inactiveComponents: readonly string[];
   components: readonly MrpComponentLine[];
 }
 

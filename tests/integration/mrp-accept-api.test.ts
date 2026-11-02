@@ -170,6 +170,8 @@ describe("Accepting MRP proposals through the API", () => {
     // Since #280 a Make pair gets a proposal only with an active BOM valid on its planned finish.
     const input = (await created("/api/tenants/prod/materials", { type: "raw", description: "mrpacc jam fruit", baseUnit: "each" })).id;
     await created("/api/tenants/prod/boms", { output: pair.material, priority: 1, validFrom: day(-30), validThrough: null, components: [{ material: input, quantity: "1", unit: "each" }] });
+    // Since #283 a Make proposal its BOM can't supply is a provisional action, not a proposal: the fruit is on hand.
+    await created("/api/tenants/prod/stock/corrections", { material: input, location: pair.location, quantity: "12", unit: "each", reason: "mrpacc count" });
     const { runId, proposal } = await withinOneDay(async () => {
       await run();
       const { run: latest, proposals } = await proposalsOf(pair.material, pair.location);

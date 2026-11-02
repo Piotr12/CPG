@@ -106,6 +106,19 @@ describe("help topics", () => {
   });
 
   it.each([
+    ["en", "the run doesn't propose that production", "It makes a provisional plan instead", "The components' own production for that plan is provisional too",
+      "Purchase requisitions for what it needs are still proposed", "never counted in a balance, so the shortage stays visible", "is at risk", "an at-risk production exception",
+      "until the order is closed or cancelled or the component is reactivated"],
+    ["pl", "przebieg nie proponuje tej produkcji", "Tworzy zamiast niej plan tymczasowy", "Produkcja składników na potrzeby tego planu też jest tymczasowa",
+      "Zapotrzebowania zakupowe na to, czego plan potrzebuje, są nadal proponowane", "nigdy nie liczy się w stanie, więc brak pozostaje widoczny", "jest zagrożone", "wyjątek zagrożonej produkcji",
+      "składnik zdezaktywowany po utworzeniu zlecenia", "dopóki zlecenie nie zostanie zamknięte lub anulowane albo składnik ponownie aktywowany"],
+  ] as const)("says in %s that production no BOM can supply is a provisional plan, never supply, and that an order pinning a deactivated component is at risk (#283)", (locale, ...phrases) => {
+    const text = helpTopics(locale).find((topic) => topic.id === "mrp")!.body.join(" ");
+
+    for (const phrase of phrases) expect(text).toContain(phrase);
+  });
+
+  it.each([
     ["en", "has Accept: after you confirm", "carries its warning under its need date", "records the run's ID", "refused as out of date and you run MRP again", "accepted once", "Production-order proposals can't be accepted yet",
       "/mrp/runs/{run}/proposals/{proposal}/accept", "whether they can be accepted (executable)"],
     ["pl", "ma przycisk Akceptuj: po potwierdzeniu", "ma pod datą potrzeby swoje ostrzeżenie", "zapisuje ID przebiegu", "odrzucona jako nieaktualna i trzeba ponownie uruchomić MRP", "zaakceptować raz",

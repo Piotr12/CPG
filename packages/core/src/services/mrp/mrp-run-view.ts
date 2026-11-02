@@ -1,6 +1,7 @@
 import type { AuditChannel, MrpRecommendationKind, MrpRun, MrpRunMode } from "@cpg/db";
 import { addDays } from "../../domain/demand/demand-buckets";
 import type { MrpBucket, MrpProposalTiming } from "../../domain/mrp/mrp-result";
+import type { ReadProvisional } from "../../domain/mrp/provisional/stored-provisional";
 import type { MrpMark } from "../../domain/mrp/report/plan-marks";
 import type { MrpWeek } from "../../domain/mrp/report/weekly";
 import type { MrpReportBucket } from "../../validators/mrp/mrp-latest.schema";
@@ -64,6 +65,8 @@ export interface MrpPlanView {
   proposals: MrpProposalView[];
   /** The run's exceptions for this pair, a transfer's at its source, in run order (E16-S03). Never a warning. */
   exceptions: MrpExceptionView[];
+  /** The run's provisional actions for this pair, in run order (E17-S03): never proposals, never in a balance. */
+  provisional: MrpProvisionalView[];
   /** What the report marks on its days (E18-S02): overdue supply and transfers, late and Beyond Horizon proposals. */
   marks: MrpMarkView[];
   /** Its days folded into ISO weeks, for display: only when the read asked for `bucket=week` (E18-S02). */
@@ -106,6 +109,16 @@ export interface MrpProposalView extends MrpProposalTiming {
   bom: string | null;
   /** That BOM's current revision number; null where `bom` is. */
   bomRevision: number | null;
+}
+
+/**
+ * One stored provisional action (E17-S03): a hypothetical production order of a provisional plan, with its
+ * timing derived as a proposal's is, its BOM, its components' needs as six-decimal BUoM texts, and why it
+ * can't execute. With the `no-feasible-bom` blocker it carries No Feasible BOM's `missing` and `inactive`.
+ * It has no ID: nothing can accept it.
+ */
+export interface MrpProvisionalView extends MrpProposalTiming, Omit<ReadProvisional, "leadTimeDays"> {
+  kind: "production-order";
 }
 
 /** `GET /api/tenants/{tenant}/mrp/runs/latest`: the latest run and one page of its plans. */

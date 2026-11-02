@@ -1,5 +1,6 @@
 import { BomComponent, BomRevision, ProductionOrder, type EntityManager } from "@cpg/db";
 import type { MrpComponentLine, MrpProductionOrder } from "../../../domain/mrp/mrp-inputs";
+import { compareCodes } from "../../../domain/mrp/projection/pairs";
 import { yieldToEventLoop } from "../../../http/yield-to-event-loop";
 import type { SnapshotCodes } from "./codes";
 import { beforeCutOff, readRow, type UnreadableRows } from "./readable";
@@ -7,10 +8,11 @@ import { beforeCutOff, readRow, type UnreadableRows } from "./readable";
 /** How many pinned revisions one component read takes: a bounded `$in` list (lesson 2026-10-24, "Paging a list"). */
 export const REVISION_CHUNK = 100;
 
-/** One pinned revision's lines: the readable ones, every component's material, and its unreadable lines' positions. */
+/** One pinned revision's lines: the readable ones, every component's material, its inactive ones, and its unreadable lines' positions. */
 interface PinnedLines {
   readable: MrpComponentLine[];
   materials: string[];
+  inactive: string[];
   unreadable: { material: string; position: number }[];
 }
 
@@ -24,6 +26,9 @@ interface PinnedLines {
  * A row that can't be read is left out and reported (E16-S03): an order at its output and every
  * component at its location, since it would feed them all; a BOM line at its component, at the location
  * of every order pinning its revision, the order keeping its other lines.
+ *
+ * `inactiveComponents` lists the pinned revision's inactive materials, readable lines or not, in code order:
+ * an order with one is at risk (E17-S03, MRP-051).
  */
 export async function readProductionOrders(em: EntityManager, codes: SnapshotCodes, before: string, unreadable: UnreadableRows): Promise<MrpProductionOrder[]> {
   const orders = (
@@ -38,7 +43,7 @@ export async function readProductionOrders(em: EntityManager, codes: SnapshotCod
   ).filter(({ plannedStart }) => beforeCutOff(plannedStart, before));
   await yieldToEventLoop();
   const revisions = [...new Set(orders.map(({ recipe }) => recipe.id))];
-  const pinned = new Map<string, PinnedLines>(revisions.map((id) => [id, { readable: [], materials: [], unreadable: [] }]));
+  const pinned = new Map<string, PinnedLines>(revisions.map((id) => [id, { readable: [], materials: [], inactive: [], unreadable: [] }]));
   for (let start = 0; start < revisions.length; start += REVISION_CHUNK) {
     const lines = await em.find(
       BomComponent,
@@ -49,6 +54,7 @@ export async function readProductionOrders(em: EntityManager, codes: SnapshotCod
       const material = codes.materials.get(line.material.id)!;
       const into = pinned.get(line.revision.id)!;
       into.materials.push(material);
+      if (codes.inactiveMaterials.has(line.material.id)) into.inactive.push(material);
       const read = readRow({ quantities: { perOutput: line.quantity }, factor: line });
       if (read) into.readable.push({ material, perOutput: read.perOutput });
       else into.unreadable.push({ material, position: line.position });
@@ -70,7 +76,8 @@ export async function readProductionOrders(em: EntityManager, codes: SnapshotCod
       for (const flagged of [material, ...lines.materials]) unreadable.push({ material: flagged, location, record: "production-order", document: order.code });
       continue;
     }
-    read.push({ order: order.code, material, location, plannedStart, plannedFinish, ...quantities, status: order.status, components: lines.readable });
+    const inactiveComponents = [...lines.inactive].sort(compareCodes);
+    read.push({ order: order.code, material, location, plannedStart, plannedFinish, ...quantities, status: order.status, inactiveComponents, components: lines.readable });
   }
   return read;
 }

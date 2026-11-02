@@ -1,4 +1,4 @@
-import { Bom, BomComponent, BomRevision, Material, type EntityManager } from "@cpg/db";
+import { Bom, BomComponent, BomRevision, type EntityManager } from "@cpg/db";
 import type { MrpBom, MrpComponentLine, MrpPlanningParameters } from "../../../domain/mrp/mrp-inputs";
 import { compareCodes } from "../../../domain/mrp/projection/pairs";
 import { yieldToEventLoop } from "../../../http/yield-to-event-loop";
@@ -31,7 +31,6 @@ export async function readBoms(
   unreadable: UnreadableRows,
 ): Promise<MrpBom[]> {
   const boms = await em.find(Bom, { active: true }, { fields: ["code", "output", "revision"], disableIdentityMap: true });
-  const inactive = new Set((await em.find(Material, { active: false }, { fields: ["id"], disableIdentityMap: true })).map(({ id }) => id));
   const bomOf = new Map(boms.map((bom) => [bom.id, bom]));
   const read: MrpBom[] = [];
   for (let start = 0; start < boms.length; start += BOM_CHUNK) {
@@ -73,7 +72,7 @@ export async function readBoms(
       if (!readable || !isCalendarDate(validFrom) || (validThrough !== null && !isCalendarDate(validThrough))) continue;
       const inactiveComponents = lines
         .get(revision.id)!
-        .filter((line) => inactive.has(line.material.id))
+        .filter((line) => codes.inactiveMaterials.has(line.material.id))
         .map((line) => codes.materials.get(line.material.id)!)
         .sort(compareCodes);
       read.push({ bom: bom.code, revision: revision.number, priority: revision.priority, output, validFrom, validThrough, inactiveComponents, components });

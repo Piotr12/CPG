@@ -57,6 +57,7 @@ async function bom(tenant: string, output: string) {
   const { cradle } = await scope(tenant);
   const component = await cradle.materialService.create({ type: "raw", description: `Input of ${output}`, baseUnit: "each" }, ANNA);
   await cradle.bomService.create({ output, priority: 1, validFrom: "2026-01-01", validThrough: null, components: [{ material: component.id, quantity: "1", unit: "each" }] }, ANNA);
+  return component.id;
 }
 /** The stored day of one pair of a Prod run, by business IDs. */
 async function day(runId: string, materialId: string, locationId: string, date: string) {
@@ -376,7 +377,7 @@ describe("MrpRunService.latest", () => {
     const { plans } = await latest();
 
     expect(Object.keys(plans[0])).toEqual([
-      "material", "materialDescription", "materialActive", "baseUnit", "location", "locationName", "locationActive", "lowestProjectedBefore", "firstShortageDate", "buckets", "proposals", "exceptions", "marks",
+      "material", "materialDescription", "materialActive", "baseUnit", "location", "locationName", "locationActive", "lowestProjectedBefore", "firstShortageDate", "buckets", "proposals", "exceptions", "provisional", "marks",
     ]);
     expect(plans[0]).toMatchObject({
       material: cabinet.id, materialDescription: "Cabinet", materialActive: false, baseUnit: "each",
@@ -470,7 +471,9 @@ describe("MrpRunService: replenishment proposals (#278)", () => {
     const store = (await location("prod", "Store")).id;
     await parameters("prod", cabinet.id, PLANT, "buy", "10.000000", "5.000000");
     await parameters("prod", cabinet.id, store, "make", "0.000000", "1.000000");
-    await bom("prod", cabinet.id);
+    const input = await bom("prod", cabinet.id);
+    // The input on hand at the store makes the Make proposal feasible, so it is a proposal, not a provisional action (E17-S03).
+    await stock("prod", input, store, "3");
     await order("prod", PLANT, [{ material: cabinet.id, quantity: "3", requiredDate: "2026-10-05" }]);
     await order("prod", store, [{ material: cabinet.id, quantity: "3", requiredDate: "2026-10-05" }]);
     const before = await everyOtherTable();
@@ -492,8 +495,8 @@ describe("MrpRunService: replenishment proposals (#278)", () => {
       [cabinet.id, PLANT, [{ id: uuid, kind: "purchase-requisition", needDate: "2026-10-05", quantity: "10.000000", ...onTime, executable: true, document: null, ...none }]],
       // The Make proposal names the BOM it is exploded through (#281, MRP-031)…
       [cabinet.id, store, [{ id: uuid, kind: "production-order", needDate: "2026-10-05", quantity: "3.000000", ...onTime, executable: false, document: null, bom: "00000001", bomRevision: 1 }]],
-      // …into its one input, planned at the store from its start, with no parameters there to propose with.
-      [expect.any(String), store, []],
+      // …into its one input, planned at the store from its start, its stock covering the need.
+      [input, store, []],
     ]);
     const [stored] = await sql<{ id: string }>("select id from mrp_recommendation where location = ?", [PLANT]);
     expect(plans[0].proposals[0].id).toBe(stored.id);
@@ -591,7 +594,7 @@ describe("MrpRunService: BOM explosion (#281)", () => {
       ANNA,
     );
 
-  it("MRP-027, MRP-031: stores and lists F's, I's and R's proposals, each level on its parent's start, the production orders with their BOM and revision", async () => {
+  it("MRP-027, MRP-031, MRP-047: stores F's and I's provisional actions apart from R's requisition, each level on its parent's start, with their BOM and revision", async () => {
     const f = await typed("finished", "Cabinet");
     const i = await typed("intermediate", "Frame");
     const r = await typed("raw", "Steel");
@@ -604,19 +607,35 @@ describe("MrpRunService: BOM explosion (#281)", () => {
 
     await run();
 
+    // Nothing is on hand, so F and I can't execute: only R's requisition is a recommendation, and nothing can accept F or I.
     expect(await sql("select material, kind, need_date, quantity, bom, bom_revision from mrp_recommendation order by material")).toEqual([
-      { material: f.id, kind: "production-order", need_date: "2026-10-21", quantity: "10.000000", bom: fBom.id, bom_revision: 1 },
-      { material: i.id, kind: "production-order", need_date: "2026-10-19", quantity: "20.000000", bom: iBom.id, bom_revision: 1 },
       { material: r.id, kind: "purchase-requisition", need_date: "2026-10-16", quantity: "10.000000", bom: null, bom_revision: null },
     ]);
-    expect(await day("00000001", i.id, PLANT, "2026-10-19")).toMatchObject({ dependent_demand: "20.000000", projected_before: "-20.000000" });
+    expect(await sql("select exception_code as code, material, date, details from mrp_run_exception where exception_code = 'PROVISIONAL_PRODUCTION' order by position")).toEqual([
+      {
+        code: "PROVISIONAL_PRODUCTION", material: f.id, date: "2026-10-21",
+        details: JSON.stringify({ quantity: "10.000000", leadTimeDays: "2", bom: fBom.id, bomRevision: "1", components: `${i.id} 20.000000`, blockers: "no-feasible-bom", missing: `${fBom.id}/1: ${i.id} 20.000000 0.000000 20.000000` }),
+      },
+      {
+        code: "PROVISIONAL_PRODUCTION", material: i.id, date: "2026-10-19",
+        details: JSON.stringify({ quantity: "20.000000", leadTimeDays: "3", bom: iBom.id, bomRevision: "1", components: `${r.id} 10.000000`, blockers: "no-feasible-bom,provisional-demand", missing: `${iBom.id}/1: ${r.id} 10.000000 0.000000 10.000000` }),
+      },
+    ]);
+    expect(await day("00000001", i.id, PLANT, "2026-10-19")).toMatchObject({ dependent_demand: "20.000000", projected_before: "-20.000000", proposed_receipts: "0.000000", projected_after: "-20.000000" });
+    expect(await day("00000001", f.id, PLANT, "2026-10-21")).toMatchObject({ proposed_receipts: "0.000000", projected_after: "-10.000000" });
     expect(await day("00000001", r.id, PLANT, "2026-10-16")).toMatchObject({ dependent_demand: "10.000000", projected_before: "-10.000000" });
     const { plans } = await latest();
-    expect(plans.map(({ material: item, proposals: [proposal] }) => [item, proposal.kind, proposal.plannedStart, proposal.bom, proposal.bomRevision])).toEqual([
-      [f.id, "production-order", "2026-10-19", fBom.id, 1],
-      [i.id, "production-order", "2026-10-16", iBom.id, 1],
-      [r.id, "purchase-requisition", "2026-10-15", null, null],
+    expect(plans.map(({ material: item, proposals, provisional }) => [item, proposals.map(({ kind }) => kind), provisional])).toEqual([
+      [f.id, [], [{
+        kind: "production-order", needDate: "2026-10-21", quantity: "10.000000", plannedStart: "2026-10-19", plannedFinish: "2026-10-21", lateDays: 0, beyondHorizon: false,
+        bom: fBom.id, bomRevision: 1, components: [{ material: i.id, quantity: "20.000000" }], blockers: ["no-feasible-bom"], missing: `${fBom.id}/1: ${i.id} 20.000000 0.000000 20.000000`,
+      }]],
+      [i.id, [], [expect.objectContaining({ needDate: "2026-10-19", plannedStart: "2026-10-16", bom: iBom.id, components: [{ material: r.id, quantity: "10.000000" }], blockers: ["no-feasible-bom", "provisional-demand"] })]],
+      [r.id, ["purchase-requisition"], []],
     ]);
+    // Provisional rows are never listed as exceptions or marks.
+    expect(plans.flatMap(({ exceptions }) => exceptions.map(({ code }) => code))).toEqual(["NO_FEASIBLE_BOM"]);
+    expect(plans.flatMap(({ marks }) => marks)).toEqual([]);
   });
 
   it("MRP-028: a cycle written around the BOM service is stored as BOM Cycle on both members with its path, they get no proposal, and the rest plans", async () => {
@@ -641,14 +660,14 @@ describe("MrpRunService: BOM explosion (#281)", () => {
     await run();
 
     const path = (from: string, via: string, to: string, back: string) => `${from} →(BOM ${via}) ${to} →(BOM ${back}) ${from}`;
-    // Other's own input has no stock or parameters, so Other is provisional (No Feasible BOM, #282) and its input adds
-    // Missing Planning Parameters: Other exploded, X and Y didn't.
-    expect(await sql("select e.exception_code as code from mrp_run_exception e where e.material = ? order by e.position", [other.id])).toEqual([{ code: "NO_FEASIBLE_BOM" }]);
+    // Other's own input has no stock or parameters, so Other is provisional (No Feasible BOM, #282, stored apart since #283)
+    // and its input adds Missing Planning Parameters: Other exploded, X and Y didn't.
+    expect(await sql("select e.exception_code as code from mrp_run_exception e where e.material = ? order by e.position", [other.id])).toEqual([{ code: "NO_FEASIBLE_BOM" }, { code: "PROVISIONAL_PRODUCTION" }]);
     expect(await sql("select e.exception_code as code, e.material, e.details from mrp_run_exception e where e.exception_code = 'CYCLIC_BOM' order by e.position")).toEqual([
       { code: "CYCLIC_BOM", material: x.id, details: JSON.stringify({ path: path(x.id, xBom.id, y.id, "00000009") }) },
       { code: "CYCLIC_BOM", material: y.id, details: JSON.stringify({ path: path(y.id, "00000009", x.id, xBom.id) }) },
     ]);
-    expect((await sql<{ material: string }>("select material from mrp_recommendation")).map(({ material: item }) => item)).toEqual([other.id]);
+    expect(await sql("select material from mrp_recommendation")).toEqual([]);
     const listed = (await latest()).plans.find(({ material: item }) => item === y.id)!.exceptions;
     expect(listed).toEqual([{ code: "CYCLIC_BOM", message: MRP_EXCEPTION_MESSAGES.CYCLIC_BOM, params: { material: y.id, location: PLANT, path: path(y.id, "00000009", x.id, xBom.id) } }]);
   });
@@ -940,7 +959,7 @@ describe("MrpRunService: BOM choice (#282)", () => {
     expect(await sql("select exception_code from mrp_run_exception")).toEqual([]);
   });
 
-  it("stores No Feasible BOM for a proposal its components can't supply, with each short component's figures, and its provisional BOM on the recommendation", async () => {
+  it("stores No Feasible BOM for a proposal its components can't supply, with each short component's figures, and the proposal as a provisional action, not a recommendation", async () => {
     const f = await typed("finished", "Cabinet");
     const a = await typed("raw", "Steel");
     const fBom = await recipe(f.id, { [a.id]: "1" });
@@ -953,18 +972,102 @@ describe("MrpRunService: BOM choice (#282)", () => {
     await run();
 
     const missing = `${fBom.id}/1: ${a.id} 6.000000 5.000000 1.000000`;
-    expect(await sql("select exception_code as code, material, date, details from mrp_run_exception order by position")).toEqual([
-      { code: "NO_FEASIBLE_BOM", material: f.id, date: "2026-10-21", details: JSON.stringify({ missing }) },
+    expect(await sql("select exception_code as code, material, date from mrp_run_exception order by position")).toEqual([
+      { code: "NO_FEASIBLE_BOM", material: f.id, date: "2026-10-21" },
+      { code: "PROVISIONAL_PRODUCTION", material: f.id, date: "2026-10-21" },
     ]);
+    expect((await sql<{ details: string }>("select details from mrp_run_exception where exception_code = 'NO_FEASIBLE_BOM'"))[0].details).toBe(JSON.stringify({ missing }));
     expect(await sql("select material, kind, quantity, bom, bom_revision from mrp_recommendation order by material")).toEqual([
-      { material: f.id, kind: "production-order", quantity: "6.000000", bom: fBom.id, bom_revision: 1 },
-      // The provisional need still plans A: 6 needed, 5 on hand.
+      // The provisional need still plans A: 6 needed, 5 on hand, and buying A is executable.
       { material: a.id, kind: "purchase-requisition", quantity: "1.000000", bom: null, bom_revision: null },
     ]);
     const listed = (await latest()).plans.find(({ material: item }) => item === f.id)!;
     expect(listed.exceptions).toEqual([
       { code: "NO_FEASIBLE_BOM", message: mrpExceptionMessage("NO_FEASIBLE_BOM"), params: { material: f.id, location: PLANT, date: "2026-10-21", missing } },
     ]);
-    expect(listed.proposals).toMatchObject([{ kind: "production-order", bom: fBom.id, executable: false }]);
+    expect(listed.proposals).toEqual([]);
+    expect(listed.provisional).toMatchObject([{ kind: "production-order", quantity: "6.000000", bom: fBom.id, blockers: ["no-feasible-bom"], missing }]);
+  });
+});
+
+describe("MrpRunService: at-risk production (#283)", () => {
+  const typed = async (type: "finished" | "raw", description: string) => (await scope()).cradle.materialService.create({ type, description, baseUnit: "each" }, ANNA);
+  const recipe = async (output: string, component: string, priority = 1) =>
+    (await scope()).cradle.bomService.create({ output, priority, validFrom: "2026-01-01", validThrough: null, components: [{ material: component, quantity: "1", unit: "each" }] }, ANNA);
+  const setActive = async (materialId: string, active: boolean) => {
+    const { cradle } = await scope();
+    const { version } = await cradle.materialService.get(materialId);
+    await inRequestTransaction(cradle.em, () => cradle.materialService.update(materialId, { active }, version, ANNA));
+  };
+  /** An open order of 10 F finishing on 8 October, through `bom`, as the production dialog creates it. */
+  const produce = async (output: string, bom: string) => {
+    const { cradle } = await scope();
+    return inRequestTransaction(cradle.em, () =>
+      cradle.productionOrderService.create({ output, location: PLANT, quantity: "10", unit: "each", plannedFinish: "2026-10-08", bom, revision: 1 }, ANNA),
+    );
+  };
+  const pinned = async (id: string) => {
+    const { bom, revision, quantity, status, version } = await (await scope()).cradle.productionOrderService.get(id);
+    return { bom, revision, quantity, status, version };
+  };
+
+  it("LFC-027, MRP-051: deactivating R under an open F order keeps the order unchanged, stores its balance as at-risk supply and AT_RISK_PRODUCTION, and proposes no F in its place", async () => {
+    const f = await typed("finished", "Cabinet");
+    const r = await typed("raw", "Retired steel");
+    const fBom = await recipe(f.id, r.id);
+    await parameters("prod", f.id, PLANT, "make", "0.000000", "0.000001");
+    await parameters("prod", r.id, PLANT, "buy", "0.000000", "0.000001");
+    const created = await produce(f.id, fBom.id);
+    await order("prod", PLANT, [{ material: f.id, quantity: "10", requiredDate: "2026-10-12" }]);
+    const before = await pinned(created.id);
+    // Allowed while only BOMs and the open order's pinned revision use R (E10-S05, LFC-015).
+    await setActive(r.id, false);
+
+    await run();
+
+    expect(await pinned(created.id)).toEqual(before);
+    expect(before).toMatchObject({ bom: fBom.id, revision: 1, quantity: "10.000000", status: "open" });
+    expect(await day("00000001", f.id, PLANT, "2026-10-08")).toMatchObject({ at_risk_supply: "10.000000", dependable_supply: "0.000000", projected_before: "0.000000" });
+    expect(await day("00000001", f.id, PLANT, "2026-10-12")).toMatchObject({ projected_before: "-10.000000", projected_after: "-10.000000", shortage: "10.000000" });
+    expect(await sql("select exception_code as code, material, date, details from mrp_run_exception order by position")).toEqual([
+      { code: "AT_RISK_PRODUCTION", material: f.id, date: "2026-10-08", details: JSON.stringify({ order: created.id, quantity: "10.000000", inactiveComponents: r.id }) },
+    ]);
+    // Neither a replacement F nor a requisition for inactive R.
+    expect(await sql("select material from mrp_recommendation")).toEqual([]);
+    const listed = (await latest()).plans.find(({ material: item }) => item === f.id)!;
+    expect(listed.exceptions).toEqual([
+      { code: "AT_RISK_PRODUCTION", message: mrpExceptionMessage("AT_RISK_PRODUCTION"), params: { material: f.id, location: PLANT, date: "2026-10-08", order: created.id, quantity: "10.000000", inactiveComponents: r.id } },
+    ]);
+    expect(listed.buckets.find(({ date }) => date === "2026-10-08")).toMatchObject({ atRiskSupply: "10.000000" });
+  });
+
+  it("plans F again on a rerun: dependable once R is reactivated, and replaced through a usable BOM once the order is cancelled", async () => {
+    const f = await typed("finished", "Cabinet");
+    const r = await typed("raw", "Retired steel");
+    const s = await typed("raw", "Oak");
+    const fBom = await recipe(f.id, r.id);
+    const sBom = await recipe(f.id, s.id, 2);
+    await parameters("prod", f.id, PLANT, "make", "0.000000", "0.000001");
+    await stock("prod", s.id, PLANT, "100");
+    const created = await produce(f.id, fBom.id);
+    await order("prod", PLANT, [{ material: f.id, quantity: "10", requiredDate: "2026-10-12" }]);
+    await setActive(r.id, false);
+    await run();
+    expect(await sql("select exception_code as code from mrp_run_exception")).toEqual([{ code: "AT_RISK_PRODUCTION" }]);
+
+    await setActive(r.id, true);
+    await run();
+    expect(await day("00000002", f.id, PLANT, "2026-10-08")).toMatchObject({ dependable_supply: "10.000000", at_risk_supply: "0.000000" });
+    // Active again, R is the order's demand once more, and gets its own Missing Planning Parameters; F has nothing.
+    expect(await sql("select exception_code as code, material from mrp_run_exception")).toEqual([{ code: "MISSING_PLANNING_PARAMETERS", material: r.id }]);
+    expect(await sql("select material from mrp_recommendation")).toEqual([]);
+
+    await setActive(r.id, false);
+    const { version } = await pinned(created.id);
+    const { cradle } = await scope();
+    await inRequestTransaction(cradle.em, () => cradle.productionOrderService.cancel(created.id, version, ANNA));
+    await run();
+    expect(await sql("select material, quantity, bom from mrp_recommendation")).toEqual([{ material: f.id, quantity: "10.000000", bom: sBom.id }]);
+    expect(await sql("select exception_code as code from mrp_run_exception")).toEqual([]);
   });
 });

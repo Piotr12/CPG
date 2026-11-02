@@ -28,6 +28,7 @@ const plan: MrpPlanView = {
     atRiskSupply: zero, transferIn: zero, proposedReceipts: zero, safetyTarget: zero, projectedBefore: "25.000000", projectedAfter: "25.000000", shortage: zero }],
   proposals: [],
   exceptions: [],
+  provisional: [],
   marks: [],
 };
 const proposal = { id: "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b", kind: "purchase-requisition" as const, needDate: "2026-10-30", quantity: "40.000000", plannedStart: "2026-10-28", plannedFinish: "2026-10-30", lateDays: 0, beyondHorizon: false, executable: true, document: null, bom: null, bomRevision: null };

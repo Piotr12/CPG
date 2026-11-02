@@ -26,16 +26,27 @@ export function toStoredException(exception: MrpException): StoredException {
       return { ...row, date: exception.date, details: { inactive: inactiveNotation(exception.inactive) } };
     case "CYCLIC_BOM":
       return { ...row, date: null, details: { path: exception.path } };
-    case "NO_FEASIBLE_BOM": {
-      const inactive = exception.rejections.flatMap((rejection) => (rejection.reason === "inactive-component" ? [rejection] : []));
-      const missing = exception.rejections.flatMap((rejection) => (rejection.reason === "shortage" ? [rejection] : []));
-      return { ...row, date: exception.date, details: { missing: missingNotation(missing), ...(inactive.length > 0 && { inactive: inactiveNotation(inactive) }) } };
+    case "NO_FEASIBLE_BOM":
+      return { ...row, date: exception.date, details: rejectionDetails(exception.rejections) };
+    case "AT_RISK_PRODUCTION": {
+      const { order, quantity, inactiveComponents } = exception;
+      return { ...row, date: exception.date, details: { order, quantity: formatDecimal(quantity, { fixed: true }), inactiveComponents: inactiveComponents.join(", ") } };
     }
     case "INSUFFICIENT_TRANSFER_STOCK": {
       const { transfer, destination, planned, available } = exception;
       return { ...row, date: exception.date, details: { transfer, destination, planned: formatDecimal(planned, { fixed: true }), available: formatDecimal(available, { fixed: true }) } };
     }
   }
+}
+
+/**
+ * Why no usable BOM could be supplied (E17-S02): `missing`, each usable BOM's short components, and `inactive`,
+ * each valid BOM's inactive ones, only when there are some. No Feasible BOM and a provisional action share it.
+ */
+export function rejectionDetails(rejections: readonly MrpBomRejection[]): { missing: string; inactive?: string } {
+  const inactive = rejections.flatMap((rejection) => (rejection.reason === "inactive-component" ? [rejection] : []));
+  const missing = rejections.flatMap((rejection) => (rejection.reason === "shortage" ? [rejection] : []));
+  return { missing: missingNotation(missing), ...(inactive.length > 0 && { inactive: inactiveNotation(inactive) }) };
 }
 
 /**

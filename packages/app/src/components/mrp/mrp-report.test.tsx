@@ -23,6 +23,7 @@ const sheet: MrpPlanView = {
   ],
   proposals: [],
   exceptions: [],
+  provisional: [],
   marks: [],
 };
 const bearing: MrpPlanView = {

@@ -9,7 +9,7 @@ export function exceptionLocation(exception: MrpException): string {
 
 /**
  * The run's exception order (spec Q11), whatever the snapshot's order: by material, location, the code's
- * rank, the date (none first), then the transfer ID, all in code-unit order.
+ * rank, the date (none first), then the transfer ID, then the production order's (E17-S03), all in code-unit order.
  */
 export function compareExceptions(a: MrpException, b: MrpException): number {
   return (
@@ -17,9 +17,11 @@ export function compareExceptions(a: MrpException, b: MrpException): number {
     compareCodes(exceptionLocation(a), exceptionLocation(b)) ||
     mrpExceptionRank(a.code) - mrpExceptionRank(b.code) ||
     compareCodes(dateOf(a), dateOf(b)) ||
-    compareCodes(transferOf(a), transferOf(b))
+    compareCodes(transferOf(a), transferOf(b)) ||
+    compareCodes(orderOf(a), orderOf(b))
   );
 }
 
 const dateOf = (exception: MrpException) => ("date" in exception && exception.date !== undefined ? exception.date : "");
 const transferOf = (exception: MrpException) => (exception.code === "INSUFFICIENT_TRANSFER_STOCK" ? exception.transfer : "");
+const orderOf = (exception: MrpException) => (exception.code === "AT_RISK_PRODUCTION" ? exception.order : "");

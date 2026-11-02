@@ -4,9 +4,11 @@ import type { MrpBom, MrpPlanningParameters, MrpRecordKind } from "../mrp-inputs
 import type { MrpException, MrpMissingParametersReason, MrpProposal, MrpProposalRecipe } from "../mrp-result";
 import { validBoms } from "../explosion/choose-bom";
 import { MRP_HORIZON_DAYS } from "../projection/horizon";
+import { compareCodes } from "../projection/pairs";
 import { safetyGap } from "../projection/safety-gap";
 import { scheduleProposal } from "./schedule-proposal";
-import { sizeProposals, type SizedPair } from "./size-proposals";
+import { sizingBuckets, type SizingDay } from "./sizing-balance";
+import { sizeProposals, type SizedProposal } from "./size-proposals";
 
 /** What `replenishPair` knows of one planned pair besides its days. */
 export interface PairContext {
@@ -22,14 +24,30 @@ export interface PairContext {
   today: string;
   /** The material's cycle path when it is on a cycle of active BOMs (E17-S01, `bomLevels`). */
   cycle: string | undefined;
+  /**
+   * The pair's provisional dependent demand by day (E17-S02 Q4), which its executable proposals never cover
+   * (E17-S03); `null` when it has none, so it is sized once.
+   */
+  provisional: readonly bigint[] | null;
+}
+
+/** One planned pair's days, as `planMrp` projects them before proposals. */
+export interface ReplenishedPair {
+  material: string;
+  location: string;
+  buckets: readonly SizingDay[];
 }
 
 /** A timed proposal, before `planMrp` explodes it and adds its recipe (E17-S01). */
 export type TimedProposal = Omit<MrpProposal, keyof MrpProposalRecipe>;
 
-/** One planned pair's timed proposals, or the one exception that stops them (E16-S03). */
+/**
+ * One planned pair's timed proposals and, for a Make pair, the timed proposals its provisional demand alone
+ * needs (E17-S03); or the one exception that stops both (E16-S03).
+ */
 export interface Replenishment {
   proposals: TimedProposal[];
+  provisional: TimedProposal[];
   exception: MrpException | null;
 }
 
@@ -50,8 +68,16 @@ export interface Replenishment {
  *    components, and none of the pair's proposals, so no inactive material is ever planned (E17-S02,
  *    LFC-026, MRP-050).
  *
- * No Feasible BOM (E17-S02), which `planMrp` raises once BOMs are chosen, is the one planning exception a
- * pair has beside its proposals: an infeasible proposal is kept, provisionally.
+ * No Feasible BOM (E17-S02), which `planMrp` raises once BOMs are chosen, and At-Risk Production (E17-S03)
+ * are the planning exceptions a pair has beside its proposals: an infeasible proposal becomes a provisional
+ * action, and an at-risk order blocks only its own quantity.
+ *
+ * Sizing reads `sizingBuckets` (E17-S03): at-risk output is added back, so the demand it was to cover is
+ * blocked, never replanned (spec Q2), and the rules above read that balance. A Buy pair is sized once, on all
+ * its demand, so its requisitions cover provisional needs too and stay executable (Q5). A Make pair is sized
+ * twice (Q6): without its provisional demand, its `proposals`, then with it, those proposals carried in from
+ * their need dates, its `provisional` proposals, which cover only what the provisional needs add. Rules 5
+ * and 6 test both lists.
  *
  * Each proposal is timed by `scheduleProposal` (E16-S02) before the BOM check. The production order a
  * proposal becomes checks its BOM on its planned finish (`production-recipes.ts`), and a late proposal
@@ -60,33 +86,37 @@ export interface Replenishment {
  *
  * Nothing is guessed in their place, and each pair is decided alone, so no other pair changes.
  */
-export function replenishPair(pair: SizedPair, { unreadable, parameters, invalidSet, boms, today, cycle }: PairContext): Replenishment {
+export function replenishPair(pair: ReplenishedPair, { unreadable, parameters, invalidSet, boms, today, cycle, provisional }: PairContext): Replenishment {
   const { material, location } = pair;
+  const full = sizingBuckets(pair.buckets, null, []);
   if (unreadable) {
     const { record, document } = unreadable;
     return none({ code: "INVALID_UOM_CONVERSION", material, location, record, ...(document !== undefined && { document }) });
   }
-  const firstNeed = pair.buckets.find((bucket) => safetyGap(bucket) > 0n)?.date;
+  const firstNeed = full.find((bucket) => safetyGap(bucket) > 0n)?.date;
   const missing = (reason: MrpMissingParametersReason) =>
     none({ code: "MISSING_PLANNING_PARAMETERS", material, location, ...(firstNeed !== undefined && { date: firstNeed }), reason });
   if (invalidSet) return missing("invalid-set");
-  if (!parameters) return firstNeed === undefined ? { proposals: [], exception: null } : missing("no-set");
+  if (!parameters) return firstNeed === undefined ? { proposals: [], provisional: [], exception: null } : missing("no-set");
   if (!isProcurementAllowed(parameters.materialType, parameters.procurement)) return missing("raw-make");
   if (parameters.procurement === "make" && cycle !== undefined) return none({ code: "CYCLIC_BOM", material, location, path: cycle });
-  const proposals = sizeProposals(pair, parameters).map(
-    (item): TimedProposal => ({ ...item, ...scheduleProposal(item.needDate, item.leadTimeDays, today, MRP_HORIZON_DAYS) }),
-  );
-  if (parameters.procurement === "make") {
-    const uncovered = proposals.find(({ plannedFinish }) => !boms.some((bom) => isRevisionValidOn(bom, plannedFinish)));
-    if (uncovered) return none({ code: "MISSING_BOM", material, location, date: uncovered.plannedFinish });
-    const unusable = proposals.find(({ plannedFinish }) => !boms.some((bom) => isUsableRevision(bom, bom.inactiveComponents.length === 0, plannedFinish)));
-    if (unusable) {
-      const date = unusable.plannedFinish;
-      const inactive = validBoms(boms, date).map(({ bom, revision, inactiveComponents }) => ({ bom, revision, materials: inactiveComponents }));
-      return none({ code: "MISSING_USABLE_BOM", material, location, date, inactive });
-    }
+  const timed = (sized: SizedProposal[]) =>
+    sized.map((item): TimedProposal => ({ ...item, ...scheduleProposal(item.needDate, item.leadTimeDays, today, MRP_HORIZON_DAYS) }));
+  if (parameters.procurement === "buy") return { proposals: timed(sizeProposals({ material, location, buckets: full }, parameters)), provisional: [], exception: null };
+  const executable = sizeProposals({ material, location, buckets: provisional === null ? full : sizingBuckets(pair.buckets, provisional, []) }, parameters);
+  const proposals = timed(executable);
+  const provisionalProposals = provisional === null ? [] : timed(sizeProposals({ material, location, buckets: sizingBuckets(pair.buckets, null, executable) }, parameters));
+  // Both lists by need date, so each rule is dated at the first proposal it stops.
+  const all = [...proposals, ...provisionalProposals].sort((a, b) => compareCodes(a.needDate, b.needDate));
+  const uncovered = all.find(({ plannedFinish }) => !boms.some((bom) => isRevisionValidOn(bom, plannedFinish)));
+  if (uncovered) return none({ code: "MISSING_BOM", material, location, date: uncovered.plannedFinish });
+  const unusable = all.find(({ plannedFinish }) => !boms.some((bom) => isUsableRevision(bom, bom.inactiveComponents.length === 0, plannedFinish)));
+  if (unusable) {
+    const date = unusable.plannedFinish;
+    const inactive = validBoms(boms, date).map(({ bom, revision, inactiveComponents }) => ({ bom, revision, materials: inactiveComponents }));
+    return none({ code: "MISSING_USABLE_BOM", material, location, date, inactive });
   }
-  return { proposals, exception: null };
+  return { proposals, provisional: provisionalProposals, exception: null };
 }
 
-const none = (exception: MrpException): Replenishment => ({ proposals: [], exception });
+const none = (exception: MrpException): Replenishment => ({ proposals: [], provisional: [], exception });

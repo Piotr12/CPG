@@ -509,14 +509,32 @@ describe("MrpSnapshotService", () => {
     expect([...productionOrders].sort((a, b) => a.order.localeCompare(b.order))).toEqual([
       {
         order: "00000001", material: "00000001", location: "00000001", plannedStart: "2026-09-28", plannedFinish: "2026-10-03",
-        quantity: micro(100), produced: 40_500_000n, abandoned: 0n, status: "open", components: lines,
+        quantity: micro(100), produced: 40_500_000n, abandoned: 0n, status: "open", inactiveComponents: ["00000003"], components: lines,
       },
       {
         order: "00000002", material: "00000001", location: "00000002", plannedStart: "2026-10-05", plannedFinish: "2026-10-10",
-        quantity: micro(10), produced: 0n, abandoned: 0n, status: "open", components: lines,
+        quantity: micro(10), produced: 0n, abandoned: 0n, status: "open", inactiveComponents: ["00000003"], components: lines,
       },
     ]);
     expect(productionOrders.every(({ components }) => components.length === 2)).toBe(true);
+  });
+
+  it("lists a pinned revision's inactive components in code order, an unreadable line's among them, and none when all are active (E17-S03)", async () => {
+    const em = scoped();
+    em.create(Material, { code: "00000004", type: "raw", description: "Glue", baseUnit: "kg", active: false });
+    await em.flush();
+    // 00000003 starts inactive; its line has seven decimals, so it can't be read, yet it still puts the order at risk.
+    const atRisk = await recipe("prod", "00000001", "00000001", { "00000004": "1", "00000002": "1", "00000003": "0.0000001" });
+    const sound = await recipe("prod", "00000002", "00000001", { "00000002": "1" });
+    await production("prod", "00000001", atRisk, { quantity: "10", plannedStart: "2026-10-05", plannedFinish: "2026-10-10" });
+    await production("prod", "00000002", sound, { quantity: "10", plannedStart: "2026-10-05", plannedFinish: "2026-10-10" });
+
+    const { productionOrders } = await load();
+
+    expect(productionOrders.map(({ order, inactiveComponents }) => [order, inactiveComponents])).toEqual([
+      ["00000001", ["00000003", "00000004"]],
+      ["00000002", []],
+    ]);
   });
 
   it("reads no production order that isn't Open, nor one starting after the horizon, but one starting on its last day", async () => {

@@ -20,7 +20,7 @@ describe("compareExceptions", () => {
     expect(exceptionLocation({ code: "MISSING_BOM", material: "M1", location: "L9", date: "2026-10-01" })).toBe("L9");
   });
 
-  it("orders by material, location, code rank, date (none first), then transfer, whatever the input order", () => {
+  it("orders by material, location, code rank, date (none first), then transfer, then production order, whatever the input order", () => {
     const ordered: MrpException[] = [
       { code: "INVALID_UOM_CONVERSION", material: "M1", location: "L1", record: "stock-balance" },
       { code: "MISSING_PLANNING_PARAMETERS", material: "M1", location: "L1", reason: "raw-make" },
@@ -36,6 +36,10 @@ describe("compareExceptions", () => {
       // One per provisional proposal, told apart by the need date (#282).
       { code: "NO_FEASIBLE_BOM", material: "M1", location: "L2", date: "2026-10-03", rejections: [] },
       { code: "NO_FEASIBLE_BOM", material: "M1", location: "L2", date: "2026-10-07", rejections: [] },
+      // One per at-risk order: two finishing on one day are told apart by the order (#283).
+      { code: "AT_RISK_PRODUCTION", material: "M1", location: "L2", date: "2026-10-04", order: "00000002", quantity: 1n, inactiveComponents: ["R"] },
+      { code: "AT_RISK_PRODUCTION", material: "M1", location: "L2", date: "2026-10-04", order: "00000005", quantity: 1n, inactiveComponents: ["R"] },
+      { code: "AT_RISK_PRODUCTION", material: "M1", location: "L2", date: "2026-10-06", order: "00000001", quantity: 1n, inactiveComponents: ["R"] },
       { code: "INVALID_UOM_CONVERSION", material: "M2", location: "L0", record: "transfer", document: "00000001" },
     ];
     expect([...ordered].reverse().sort(compareExceptions)).toEqual(ordered);
