@@ -7,6 +7,10 @@ import { localeQuantity } from "../forms/form-labels";
 import { AcceptProposalButton } from "./accept-proposal-button";
 import { WhyBom, type MaterialsByCode } from "./mrp-bom-rejections";
 import { MrpMarks } from "./mrp-marks";
+import { orderStart } from "./order-start";
+
+/** Where each kind's documents are listed: an accepted proposal links its document there (#320). */
+const DOCUMENT_LISTS: Record<MrpProposalView["kind"], string> = { "purchase-requisition": "purchase-requisitions", "production-order": "production-orders" };
 
 interface MrpProposalsProps {
   tenant: { code: string };
@@ -29,7 +33,8 @@ interface MrpProposalsProps {
  * order with the BOM and revision it plans through, E17-S01), its need
  * date (with its Late Supply or Beyond Horizon mark, E16-S02, E18-S02) and quantity, why MRP passed over
  * each higher-priority BOM (E18-S03, UX-020), and Accept for
- * one that can be accepted, or the document accepting it created.
+ * one that can be accepted, or the document accepting it created: a requisition, or since #320 a production
+ * order, whose confirmation names its BOM revision and dates.
  * A read-only tenant, or a run from an earlier day, shows no Accept.
  */
 export function MrpProposals({ tenant, run, plan, today, materials, accept, locale, messages }: MrpProposalsProps) {
@@ -41,7 +46,7 @@ export function MrpProposals({ tenant, run, plan, today, materials, accept, loca
   const action = (proposal: MrpProposalView) => {
     if (proposal.document) {
       return (
-        <Link className="font-medium underline" href={`/admin/${tenant.code}/purchase-requisitions?${new URLSearchParams({ q: proposal.document })}`} data-mrp-document>
+        <Link className="font-medium underline" href={`/admin/${tenant.code}/${DOCUMENT_LISTS[proposal.kind]}?${new URLSearchParams({ q: proposal.document })}`} data-mrp-document>
           {fill(t.accepted, { document: t.kinds[proposal.kind], id: proposal.document })}
         </Link>
       );
@@ -49,6 +54,12 @@ export function MrpProposals({ tenant, run, plan, today, materials, accept, loca
     if (!proposal.executable) return <span className="text-sm text-muted-foreground" data-mrp-not-executable>{t.notExecutable}</span>;
     if (!accept || !current) return null;
     const details = { ...pair, quantity: amount(proposal.quantity), date: proposal.needDate, run: run.id };
+    // A Make proposal's order is pinned to its BOM revision and starts the lead time before its need date (#320).
+    const confirm = proposal.kind === "production-order"
+      ? { ...t.confirm, ...t.confirmMake, description: fill(t.confirmMake.description, {
+        ...details, bom: String(proposal.bom), revision: String(proposal.bomRevision), start: orderStart(proposal.needDate, proposal.plannedStart, proposal.plannedFinish),
+      }) }
+      : { ...t.confirm, description: fill(t.confirm.description, details) };
     return (
       <AcceptProposalButton
         run={run.id}
@@ -57,11 +68,11 @@ export function MrpProposals({ tenant, run, plan, today, materials, accept, loca
         labels={{
           accept: t.accept,
           acceptLabel: fill(t.acceptLabel, { document: t.kinds[proposal.kind], ...details }),
-          title: t.confirm.title,
-          description: fill(t.confirm.description, details),
-          confirm: t.confirm.confirm,
-          pending: t.confirm.pending,
-          cancel: t.confirm.cancel,
+          title: confirm.title,
+          description: confirm.description,
+          confirm: confirm.confirm,
+          pending: confirm.pending,
+          cancel: confirm.cancel,
           errors,
         }}
       />

@@ -104,7 +104,7 @@ describe("MrpProposals", () => {
     ["pl", { code: "TENANT_READ_ONLY", message: "x" }, pl.errors.TENANT_READ_ONLY],
     ["pl", { code: "MATERIAL_INACTIVE", message: "x" }, pl.mrp.proposals.errors.MATERIAL_INACTIVE],
     ["pl", { code: "LOCATION_INACTIVE", message: "x" }, pl.mrp.proposals.errors.LOCATION_INACTIVE],
-    ["en", { code: "VALIDATION_FAILED", message: "x" }, "The proposal's quantity is more than a requisition can hold."],
+    ["en", { code: "VALIDATION_FAILED", message: "x" }, "The proposal's quantity is more than its document can hold."],
   ] as const)("keeps a refusal in the dialog, in the reader's language (%s, %o)", async (locale, error, text) => {
     accept.mockResolvedValue({ ok: false, error });
     renderProposals([buy()], { locale });
@@ -159,6 +159,60 @@ describe("MrpProposals", () => {
 
     expect(screen.getByText(en.mrp.proposals.empty)).toBeTruthy();
     expect(screen.queryByText(en.mrp.proposals.earlierDay)).toBeNull();
+  });
+
+  describe("a Make proposal (#320)", () => {
+    // Needed on 12 November with a 3-day lead time, pinned to BOM 00000003 revision 2.
+    const make = (overrides: Partial<MrpProposalView> = {}) => buy({
+      id: "7a2b3c4d-5e6f-4a70-8b9c-0d1e2f3a4b5c", kind: "production-order", needDate: "2026-11-12", quantity: "250.000000",
+      plannedStart: "2026-11-09", plannedFinish: "2026-11-12", bom: "00000003", bomRevision: 2, ...overrides,
+    });
+
+    it("asks before accepting, naming the BOM revision, the finish and the start, and creates nothing on Cancel (RUN-006)", async () => {
+      renderProposals([make()]);
+
+      fireEvent.click(screen.getByRole("button", { name: "Accept the Production order of 250 kg on 2026-11-12" }));
+      const dialog = within(await screen.findByRole("alertdialog"));
+      expect(dialog.getByText("Create a production order?")).toBeTruthy();
+      expect(dialog.getByText(
+        "Production order for 00000031 — Sugar at 00000002 — Plant North: 250 kg through BOM 00000003 / revision 2, finishing by 2026-11-12 and starting 2026-11-09. It records MRP run 00000004. Nothing is created until you confirm.",
+      )).toBeTruthy();
+      fireEvent.click(dialog.getByRole("button", { name: "Cancel" }));
+
+      await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+      expect(accept).not.toHaveBeenCalled();
+    });
+
+    it("says a late one starts the lead time before its need date, before today, in Polish too (spec Q1)", async () => {
+      renderProposals([make({ needDate: "2026-10-02", plannedStart: "2026-10-01", plannedFinish: "2026-10-05", lateDays: 3 })], { locale: "pl" });
+
+      fireEvent.click(screen.getByRole("button", { name: /^Akceptuj/ }));
+      const dialog = within(await screen.findByRole("alertdialog"));
+      expect(dialog.getByText("Utworzyć zlecenie produkcyjne?")).toBeTruthy();
+      expect(dialog.getByText(/według BOM 00000003 \/ rewizja 2, z końcem do 2026-10-02 i początkiem 2026-09-28\./)).toBeTruthy();
+      expect(dialog.getByRole("button", { name: "Utwórz zlecenie produkcyjne" })).toBeTruthy();
+    });
+
+    it("accepts it on confirm, and translates the production-order service's refusals", async () => {
+      accept.mockResolvedValueOnce({ ok: false, error: { code: "PRODUCTION_NO_USABLE_BOM", message: "x" } });
+      renderProposals([make()]);
+
+      fireEvent.click(screen.getByRole("button", { name: /^Accept the/ }));
+      fireEvent.click(await screen.findByRole("button", { name: "Create production order" }));
+
+      expect(await screen.findByText(en.mrp.proposals.errors.PRODUCTION_NO_USABLE_BOM)).toBeTruthy();
+      expect(accept).toHaveBeenCalledWith({ run: "00000004", proposal: "7a2b3c4d-5e6f-4a70-8b9c-0d1e2f3a4b5c" });
+    });
+
+    it("links an accepted one to its production order, and says a row with no BOM can't be accepted", () => {
+      renderProposals([make({ document: "00000007" }), make({ id: "o", needDate: "2026-11-20", bom: null, bomRevision: null, executable: false })]);
+
+      const [accepted, orphan] = table().getAllByRole("row").slice(1);
+      const link = within(accepted).getByRole("link", { name: "Production order 00000007" });
+      expect(link.getAttribute("href")).toBe("/admin/test/production-orders?q=00000007");
+      expect(orphan.querySelector("[data-mrp-not-executable]")?.textContent).toBe("This proposal can't be accepted. Run MRP again.");
+      expect(orphan.querySelector("[data-mrp-accept]")).toBeNull();
+    });
   });
 
   it("passes the dialog plain strings only (lesson 2026-10-24)", () => {
