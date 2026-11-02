@@ -3,7 +3,7 @@
 **Date:** 2026-11-02 19:50 UTC
 **Agent:** Claude Code / Opus 5.5 (`om-auto-fix-issue 358`, dispatched by cezar)
 **Spec:** none (test-only bug fix)
-**Status:** in progress
+**Status:** done
 
 ## Goal
 
@@ -39,6 +39,8 @@
 - Unit regression: `tests/integration-helpers.test.ts` › `expectTitle`, 2 tests. They fail with a one-shot read (mutation check above).
 - Probe (temporary file, deleted): 5 fresh sign-ins and 100 `/admin` reloads on the local server, each reading the title once right after `[data-slot=badge]`. All 105 reads already had the right title, so the race did **not** reproduce on this unloaded machine. The cause stays inferred from the CI failure (`''` on a loaded shard) and from how Next.js streams metadata. The fix makes no timing assumption either way.
 
+- CI run 41518233441 on `a6b4cbb7` (PR #362): every check green, all 4 integration shards included.
+
 ## Follow-ups
 
-- The CI integration shards on the PR: the full suite runs there, and that result is what decides.
+- A human approves and merges #362. GitHub refuses the author's own approval, so the review verdict (approve) is a comment.
